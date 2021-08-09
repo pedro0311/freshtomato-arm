@@ -89,6 +89,25 @@ static int is_sta(int idx, int unit, int subunit, void *param)
 	return (nvram_match(wl_nvname("mode", unit, subunit), "sta") && (nvram_match(wl_nvname("bss_enabled", unit, subunit), "1")));
 }
 
+#ifdef TCONFIG_BCMARM
+void ip2class(char *lan_ip, char *netmask, char *buf)
+{
+	unsigned int val, ip;
+	struct in_addr in;
+	int i = 0;
+
+	val = (unsigned int)inet_addr(netmask);
+	ip = (unsigned int)inet_addr(lan_ip);
+
+	in.s_addr = ip & val;
+
+	for (val = ntohl(val); val; i++)
+		val <<= 1;
+
+	sprintf(buf, "%s/%d", inet_ntoa(in), i);
+}
+#endif
+
 void allow_fastnat(const char *service, int allow)
 {
 	char p[64];
@@ -603,6 +622,10 @@ static void ipt_webmon()
 static void mangle_table(void)
 {
 	int ttl;
+#ifdef TCONFIG_BCMARM
+	char lan_class[32];
+	int i, n;
+#endif	/* TCONFIG_BCMARM */
 
 	char *p, *wanface, *wan2face;
 #ifdef TCONFIG_MULTIWAN
@@ -720,8 +743,18 @@ static void mangle_table(void)
 		syslog(LOG_INFO, "Firewall: No Clamping of TCP MSS to PMTU of WAN interface"); /* Ex.: case MTU 1500 for ISPs that support RFC 4638 */
 
 #ifdef TCONFIG_BCMARM
-	int i, n;
+	/* set mark for NAT loopback to work if CTF is enabled! (bypass) */
+	if (!nvram_get_int("ctf_disable")) {
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			if ((strcmp(lanface[i], "") != 0) && (strcmp(lanaddr[i], "") != 0)) { /* check LAN setup */
+				ip2class(lanaddr[i], lanmask[i], lan_class);
+				ipt_write("-A FORWARD -o %s -s %s -d %s -j MARK --set-mark 0x01/0x7\n", lanface[i], lan_class, lan_class);
+			}
+		}
+	}
+#endif	/* TCONFIG_BCMARM */
 
+#ifdef TCONFIG_BCMARM
 	if (gateway_mode) {
 		for (i = 0; i < wanfaces.count; ++i) {
 			if ((*(wanfaces.iface[i].name)) && (wanup)) {
