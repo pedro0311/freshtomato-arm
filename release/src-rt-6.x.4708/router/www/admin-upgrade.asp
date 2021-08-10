@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("jffs2_on,http_remote,remote_upgrade"); %>
+//	<% nvram("jffs2_on,remote_upgrade"); %>
 
 //	<% sysinfo(); %>
 
@@ -60,10 +60,10 @@ function upgrade() {
 }
 
 function earlyInit() {
-	if (nvram.http_remote == 1 && nvram.remote_upgrade == 0)
-		E('upgradenotice').style.display = 'block';
-	else
+	if (nvram.remote_upgrade == 1)
 		E('upgradenotice').style.display = 'none';
+	else
+		E('upgradenotice').style.display = 'block';
 
 	E('afu-size').innerHTML = '&nbsp; '+scaleSize(sysinfo.totalfreeram)+'&nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>';
 /* JFFS2-BEGIN */
