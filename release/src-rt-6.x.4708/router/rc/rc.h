@@ -276,10 +276,6 @@ extern void stop_ipv6(void);
 extern int start_bsd(void);
 extern void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
-#ifdef TCONFIG_SAMBASRV
-extern void start_samba(void);
-extern void stop_samba(void);
-#endif /* TCONFIG_SAMBASRV */
 #ifdef TCONFIG_MDNS
 extern void start_mdns(void);
 extern void stop_mdns(void);
