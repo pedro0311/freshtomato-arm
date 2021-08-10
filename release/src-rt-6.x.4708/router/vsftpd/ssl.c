@@ -740,17 +740,25 @@ ssl_alpn_callback(SSL* p_ssl,
 
   (void) p_ssl;
 
-  /* Select everything but return an error if we don't like it. */
+  /* Initialize just in case. */
   *p_out = p_in;
-  *outlen = inlen;
+  *outlen = 0;
 
-  if (inlen == 4) {
-    if (p_in[0] == 3 && p_in[1] == 'f' && p_in[2] == 't' && p_in[3] == 'p')
+  for (i = 0; i < inlen; ++i) {
+    unsigned int left = (inlen - i);
+    if (left < 4) {
+      continue;
+    }
+    if (p_in[i] == 3 && p_in[i + 1] == 'f' && p_in[i + 2] == 't' &&
+        p_in[i + 3] == 'p')
     {
       is_ok = 1;
+      *p_out = &p_in[i + 1];
+      *outlen = 3;
+      break;
     }
   }
-
+  
   if (!is_ok)
   {
     str_alloc_text(&debug_str, "ALPN rejection");

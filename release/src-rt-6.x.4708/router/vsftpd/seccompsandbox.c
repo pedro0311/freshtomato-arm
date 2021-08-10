@@ -45,6 +45,12 @@
 #ifndef __NR_openat
   #define __NR_openat 257
 #endif
+#ifndef __NR_newfstatat
+  #define __NR_newfstatat 262
+#endif
+#ifndef __NR_pselect6
+  #define __NR_pselect6 270
+#endif
 #ifndef __NR_getrandom
   #define __NR_getrandom 318
 #endif
@@ -270,6 +276,7 @@ seccomp_sandbox_setup_data_connections()
                        3, IPPROTO_TCP);
   allow_nr(__NR_bind);
   allow_nr(__NR_select);
+  allow_nr(__NR_pselect6);
   if (tunable_port_enable)
   {
     allow_nr(__NR_connect);
@@ -401,6 +408,7 @@ seccomp_sandbox_setup_postlogin(const struct vsf_session* p_sess)
   allow_nr_2_arg_match(__NR_setsockopt, 2, SOL_SOCKET, 3, SO_LINGER);
   allow_nr_2_arg_match(__NR_setsockopt, 2, IPPROTO_IP, 3, IP_TOS);
   allow_nr(__NR_fstat);
+  allow_nr(__NR_newfstatat);
   allow_nr(__NR_lseek);
   /* Since we use chroot() to restrict filesystem access, we can just blanket
    * allow open().
