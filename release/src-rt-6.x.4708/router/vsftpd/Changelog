@@ -1387,3 +1387,10 @@ At this point: v3.0.3 released!
 
 At this point: v3.0.4 released!
 ===============================
+
+- Fix ALPN callback to correctly select the 'ftp' string if present. Works
+with FileZilla-3.55.0.
+- Fix a couple of seccomp policy issues with Fedora 34.
+
+At this point: v3.0.5 released!
+===============================

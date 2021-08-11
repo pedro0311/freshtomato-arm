@@ -60,36 +60,50 @@
  static char *get_smbparm(const char *name, const char *_default)
  {
  #define __FUNCTION__	"get_smbparm"
-@@ -616,6 +618,93 @@
+@@ -616,6 +618,103 @@
  	return result;
  #undef __FUNCTION__
  }
 +#else
++void trim(char *s)
++{
++	char *p = s;
++	int l = strlen(p);
++
++	if (l == 0) return;
++	while (isspace(p[l - 1])) p[--l] = 0;
++	while (* p && isspace(* p)) ++p, --l;
++
++	memmove(s, p, l + 1);
++}
++
 +char *get_smbparm(const char *name, const char *_default)
 +{
-+#define __FUNCTION__    "get_smbparm"
++#define __FUNCTION__	"get_smbparm"
 +	char buf[256], *result;
 +	FILE *fp;
 +	char parm[64];
-+	char value[64];
++	char value[256];
 +	char *p, *dstp, *dstv;
 +	int stage = 0, c = 0;
 +
 +	*value = '\0';
 +	*parm = '\0';
 +
-+	if (!(fp = fopen("/etc/smb.conf","r"))) {
++	if (!(fp = fopen("/etc/smb.conf", "r"))) {
 +		DEBUG(0, W, __FUNCTION__ ": can't access smb.conf");
 +		return strdup(_default);
 +	}
 +
 +	while (fgets(buf, sizeof(buf), fp)) {
++		stage = 0;
++		c = 0;
 +		p = buf;
 +		dstp = parm;
 +		dstv = value;
 +
 +		/* Retrieve name */
-+		while (*p && c < 63) {
++		while (*p && c < sizeof(parm) - 1) {
 +			if (stage == 0 && isspace(*p)) {
 +				p++;
 +				continue;
@@ -106,11 +120,9 @@
 +		}
 +		*dstp = '\0';
 +
-+		/* Trim trailing whitespace */
-+		for (dstp = parm + strlen(parm) - 1; parm < dstp && isspace(*dstp); dstp--)
-+			*dstp = '\0';
++		trim(parm);
 +
-+		/* Is is the desired parameter? */
++		/* Is it the desired parameter? */
 +		if (strcmp(parm, name))
 +			continue;
 +
@@ -118,7 +130,7 @@
 +		stage = 0;
 +		c = 0;
 +
-+		while (*p && c < 63) {
++		while (*p && c < sizeof(parm) - 1) {
 +			if (stage == 0 && isspace(*p)) {
 +				p++;
 +				continue;
@@ -134,9 +146,7 @@
 +		}
 +		*dstv = '\0';
 +
-+		/* Trim trailing whitespace */
-+		for (dstv = value + strlen(value) - 1; value < dstv && isspace(*dstv); dstv--)
-+			*dstv = '\0';
++		trim(value);
 +
 +		break;
 +	}

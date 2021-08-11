@@ -1,6 +1,6 @@
 /*
 
-	Copyright (C) 2014 Lance Fredrickson
+	Copyright (C) 2014-2021 Lance Fredrickson
 	lancethepants@gmail.com
 
 */
@@ -260,8 +260,8 @@ void start_tinc(void)
 	modprobe("tun");
 	f_wait_exists("/dev/net/tun", 5);
 
-	run_tinc_firewall_script();
 	xstart("/usr/sbin/tinc", "start");
+	run_tinc_firewall_script();
 
 	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
 		memset(cru, 0, 128);
