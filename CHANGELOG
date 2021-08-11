@@ -5,18 +5,74 @@ FreshTomato-ARM Changelog
 
 
 
-2021.4          2021.06.17
---------------------------
+2021.5          2021.08.14
+---------------------------
 
-- SDK7: update wireless driver - fix for FragAttacks
-- nginx: update to 1.21.0
-- libcurl: update to 7.77.0
-- snmp: update to 5.9.1
-- libcurl: update CA certificate bundle as of 2021-05-25
-- httpd: devlist.c: fix display of devices in wds mode
-- others: mymotd: code improvements, thanks to @WildFireSG
-- rc: firewall.c: fix removing ipt_web/xt_web module
-- rc: restrict: disable web for ip6tables in ARM branch
+Note: because of changes in GUI, clean your browser cache and/or use Ctrl+F5 (FF) to avoid artifacts.
+
+- Add mDNS (Avahi) support (https://github.com/lathiat/avahi)
+- Add ZFS support for 'z' (AIO) targets (@lancethepants)
+- kernel: fix from upstream for CVE-2021-22555
+- Wireless Client Mode: repair that operation mode for SDK6 and up!
+- SDK6: update ctf (part 3) (for single and dual-core)
+- SDK7: help multiSSID setups
+- WL SDK6/SDK7: turn On wl setting "probresp_sw" for wireless band steering (BSD)
+- openvpn: update to 2.5.3
+- getdns/stubby: update to 1.7.0/0.4.0
+- ntfs-3g: update to 2021.04.05 (added handling of Windows 8/Windows 10 file systems)
+- tor: update to 0.4.6.6
+- tinc: update to 1.1pre18
+- nano: update to 5.8
+- sqlite: update to 3.36.0
+- pcre: update to 8.45
+- nginx: update to 1.21.1
+- iperf: update to 3.10
+- nettle: update to 3.7.3
+- libogg: update to 1.3.5
+- libpng: update to 1.6.37
+- libvorbis: update to 1.3.7
+- e2fsprogs: update to 1.46.3
+- libcurl: update to 7.78.0
+- wsdd2: update to 1.8.6
+- vsftpd: update to 3.0.5
+- libcurl: update CA certificate bundle as of 2021-07-05
+- GUI: Admin: Access: tweaks Web Admin panel, reorder (thanks @rs232)
+- GUI: advanced-wireless - adjust name/label for wl country "GB" to GREAT BRITAIN
+- GUI: Advanced: Virtual Wireless: add Interface status in Details table
+- GUI: Basic: Network: allow 0.0.0.0 as a valid address (in special cases) for all bridges
+- GUI: NAS: File Sharing: limit samba workgroup name to 15 chars
+- GUI: Tools: WOL: also show in the table devices from other than primary bridge
+- GUI: Status: Device List: fix some issues with disconnected WL devices
+- GUI: Status: Device List: fix some issues with WDS devices
+- GUI: Status: Device List: improve IPv6 support
+- GUI: Status: Device List: add images to Noise Floor level
+- GUI: Status: Device List: add additional confirmation when deleting lease
+- GUI: Status: Device List: display Virtual Wireless Interface reference within parentheses like bridges and vlans
+- GUI: Status: Overview: do not display any virtual interface linked to the chip/frequency that is disabled
+- GUI: Status: Overview: add a graphic bars to CQI1 and CQI2 LTE strenght indicator
+- GUI: Status: Overview: switch 'Free' to 'Used', change order
+- GUI: Status: Overview: add progress bars (thanks @rs232)
+- GUI: fix a bug when scaling size is less than 10KB
+- Fix container build on updated Debian 10
+- busybox: add CONFIG_DIFF to configuration
+- httpd: buffer overflow protection (snprintf)
+- httpd: make asp_lanip() multi-lan aware
+- OpenVPN: bypass CTF (if enabled)
+- rstats: make it multiwan aware for daily/weekly/monthly history
+- tinc: run firewall rules after bringing up the vpn. If adding custom routes into the firewall rules, the interface needs to pre-exist
+- transmission: fix when runned without auth
+- TTB: v3.02 change default URLs and add URL redundancy/randomisation; thanks to @rs232
+- rc: do not restart nas services/wsdd2 on WAN up (fixed in recent wsdd2 update)
+- rc: firewall.c: make NAT loopback work if CTF is enabled
+- rc: init.c: set unique machine-id during init
+- rc: mwan.c: don't log multiwan status update continually
+- rc: nginx.c: add svg/svgz support
+- rc: nginx.c: add h5ai support (https://larsjung.de/h5ai/)
+- rc: transmission.c: TCP buffers tune, lost in one of the previous commits
+- rc: services.c: add logging when starting/stopping httpd
+- rc: services.c: avahi: improve generated config
+- Netgear R6250 - adjust LED table (logic fix for logo LED, was inverted) 
+- Netgear R6300v2 - adjust LED table (logic fix for logo LED, was inverted)
 
 
 2021.3          2021.06.05
