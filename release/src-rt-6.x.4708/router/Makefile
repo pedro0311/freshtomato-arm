@@ -2631,7 +2631,7 @@ zfs-install:
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
 
 util-linux/stamp-h1:
-	cd util-linux && \
+	cd util-linux && autoreconf -fsi && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) \
