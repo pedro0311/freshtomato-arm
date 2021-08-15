@@ -128,7 +128,6 @@ function verifyFields(focused, quiet) {
 
 	elem.display(PR('_http_lanport'), (a.value == 1) || (a.value == 3));
 	elem.display(PR('_f_http_wireless'), a.value != 0);
-	elem.display(PR('_f_remote_upgrade'), b != 0);
 
 	c = (a.value == 2) || (a.value == 3);
 /* HTTPS-BEGIN */
@@ -393,8 +392,8 @@ function init() {
 				        (nvram.remote_mgt_https == 1) ? 2 :
 /* HTTPS-END */
 				        1) : 0 },
+			{ title: 'Allow Remote Upgrade', name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
 				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
-				{ title: 'Allow Remote Upgrade', indent: 2, name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
 /* HTTPS-BEGIN */
 			null,
 			{ title: 'SSL Certificate', rid: 'row_sslcert' },
