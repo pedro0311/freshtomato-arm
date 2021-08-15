@@ -677,25 +677,6 @@ function tick() {
 	}
 }
 
-function setNoiseBar(i, lvl) {
-	var num;
-
-	if (lvl >= -69)
-		num = 1;
-	else if (lvl >= -75)
-		num = 2;
-	else if (lvl >= -81)
-		num = 3;
-	else if (lvl >= -87)
-		num = 4;
-	else if (lvl >= -93)
-		num = 5;
-	else
-		num = 6;
-
-	elem.setInnerHTML(E('noiseimg_'+i), '<img src="bar'+num+'.gif" id="barnoise_'+i+'" alt="">');
-}
-
 function verifyFields(f, c) {
 	if (discovery.running)
 		discovery.stop();
@@ -716,6 +697,25 @@ function verifyFields(f, c) {
 	return true;
 }
 /* DISCOVERY-END */
+
+function setNoiseBar(i, lvl) {
+	var num;
+
+	if (lvl >= -69)
+		num = 1;
+	else if (lvl >= -75)
+		num = 2;
+	else if (lvl >= -81)
+		num = 3;
+	else if (lvl >= -87)
+		num = 4;
+	else if (lvl >= -93)
+		num = 5;
+	else
+		num = 6;
+
+	elem.setInnerHTML(E('noiseimg_'+i), '<img src="bar'+num+'.gif" id="barnoise_'+i+'" alt="">');
+}
 
 function earlyInit() {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
