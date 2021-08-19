@@ -341,6 +341,15 @@ ifneq ($(TCONFIG_MDNS),y)
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/MDNS-BEGIN/,/MDNS-END/d"
 endif
 
+# Only include the QR Code page if it is compiled in
+ifneq ($(TCONFIG_QRCODE),y)
+	rm -f $(INSTALLDIR)/www/tools-qr.asp
+	rm -f $(INSTALLDIR)/www/html5-qrcode.js
+	rm -f $(INSTALLDIR)/www/qrcode.js
+	sed -i $(INSTALLDIR)/www/tomato.js -e "/QRCODE-BEGIN/,/QRCODE-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/QRCODE-BEGIN/,/QRCODE-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
@@ -386,6 +395,7 @@ endif
 		-e "/DISCOVERY-BEGIN/d"	-e "/DISCOVERY-END/d" \
 		-e "/MDNS-BEGIN/d"	-e "/MDNS-END/d" \
 		-e "/ZFS-BEGIN/d"	-e "/ZFS-END/d" \
+		-e "/QRCODE-BEGIN/d"	-e "/QRCODE-END/d" \
 		|| true; \
 	done
 

@@ -282,6 +282,10 @@ config TCONFIG_IPERF
 	bool "IP Bandwidth monitoring utility"
 	default n
 
+config TCONFIG_QRCODE
+	bool "WiFi QR Code generator"
+	default n
+
 config TCONFIG_KEYGEN
 	bool "TLS keys generator in GUI for VPN Server"
 	default y

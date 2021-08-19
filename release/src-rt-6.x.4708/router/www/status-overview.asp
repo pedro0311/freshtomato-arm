@@ -612,6 +612,9 @@ function init() {
 			{ title: 'Channel Width', rid: 'nbw'+uidx, text: wlstats[uidx].nbw, ignore: ((!nphy) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Interference Level', rid: 'interference'+uidx, text: stats.interference[uidx], ignore: (wl_sunit(uidx) >= 0) },
 			{ title: 'Rate', rid: 'rate'+uidx, text: wlstats[uidx].rate, ignore: (wl_sunit(uidx) >= 0) },
+/* QRCODE-BEGIN */
+			{ title: ' ', rid: 'qr-code'+uidx, text: '<a href="tools-qr.asp?wl='+wl_unit(uidx)+(wl_sunit(uidx) >= 0 ? '.'+wl_sunit(uidx) : '')+'">Show QR code<\/a>' },
+/* QRCODE-END */
 			{ title: 'RSSI', rid: 'rssi'+uidx, text: wlstats[uidx].rssi || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Noise', rid: 'noise'+uidx, text: wlstats[uidx].noise || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) }
