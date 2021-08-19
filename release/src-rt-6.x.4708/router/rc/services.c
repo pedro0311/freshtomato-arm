@@ -2607,7 +2607,7 @@ void enable_gro(int interval)
 }
 #endif
 
-static void start_samba(void)
+void start_samba(void)
 {
 	FILE *fp;
 	DIR *dir = NULL;
@@ -2859,7 +2859,7 @@ static void start_samba(void)
 	}
 }
 
-static void stop_samba(void)
+void stop_samba(void)
 {
 	if (getpid() != 1) {
 		stop_service("smbd");
