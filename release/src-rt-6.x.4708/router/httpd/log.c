@@ -108,7 +108,7 @@ void get_logfilename(char *lfn)
 	char cfg[256];
 	char *nv;
 
-	nv = "/var/log/messages";
+	nv = (nvram_get_int("log_file_custom") != 0 ? nvram_safe_get("log_file_path") : "/var/log/messages");
 	if (f_read_string("/etc/syslogd.cfg", cfg, sizeof(cfg)) > 0) {
 		if ((p = strchr(cfg, '\n')))
 			*p = 0;
