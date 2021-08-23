@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("log_remote,log_remoteip,log_remoteport,log_file,log_file_custom,log_file_path,log_limit,log_in,log_out,log_mark,log_events,log_wm,log_wmtype,log_wmip,log_wmdmax,log_wmsmax,log_file_size,log_file_keep,log_dropdups,webmon_bkp,webmon_dir,webmon_shrink"); %>
+//	<% nvram("log_remote,log_remoteip,log_remoteport,log_file,log_file_custom,log_file_path,log_limit,log_in,log_out,log_mark,log_events,log_wm,log_wmtype,log_wmip,log_wmdmax,log_wmsmax,log_file_size,log_file_keep,log_dropdups,log_min_level,webmon_bkp,webmon_dir,webmon_shrink"); %>
 
 function verifyFields(focused, quiet) {
 	var a, b, c;
@@ -130,6 +130,7 @@ function save() {
 	if (E('_f_log_sched').checked)
 		a.push('sched');
 	fom.log_events.value = a.join(',');
+	fom.log_min_level.value = E('_f_log_min_level').value;
 
 	fom.log_wm.value = E('_f_log_wm').checked ? 1 : 0;
 	fom.log_wmip.value = fom.f_log_wmip.value.split(/\s*,\s*/).join(',');
@@ -161,6 +162,7 @@ function save() {
 <input type="hidden" name="log_file">
 <input type="hidden" name="log_file_custom">
 <input type="hidden" name="log_events">
+<input type="hidden" name="log_min_level">
 <input type="hidden" name="log_wm">
 <input type="hidden" name="log_wmip">
 <input type="hidden" name="webmon_bkp">
@@ -198,6 +200,7 @@ REMOVE-END */
 				{ title: 'DHCP Client', indent: 2, name: 'f_log_dhcpc', type: 'checkbox', value: (nvram.log_events.indexOf('dhcpc') != -1) },
 				{ title: 'NTP', indent: 2, name: 'f_log_ntp', type: 'checkbox', value: (nvram.log_events.indexOf('ntp') != -1) },
 				{ title: 'Scheduler', indent: 2, name: 'f_log_sched', type: 'checkbox', value: (nvram.log_events.indexOf('sched') != -1) },
+			{ title: 'Minimum log level', name: 'f_log_min_level', type: 'select', options: [[1,'Emergency'],[2,'Alert'],[3,'Critical'],[4,'Error'],[5,'Warning'],[6,'Notice'],[7,'Info'],[8,'Debug']], value: nvram.log_min_level },
 			{ title: 'Connection Logging' },
 				{ title: 'Inbound', indent: 2, name: 'log_in', type: 'select', options: [[0,'Disabled (recommended)'],[1,'If Blocked By Firewall'],[2,'If Allowed By Firewall'],[3,'Both']], value: nvram.log_in },
 				{ title: 'Outbound', indent: 2, name: 'log_out', type: 'select', options: [[0,'Disabled (recommended)'],[1,'If Blocked By Firewall'],[2,'If Allowed By Firewall'],[3,'Both']], value: nvram.log_out },

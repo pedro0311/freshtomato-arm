@@ -961,6 +961,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "log_mark",			"60"				, 0 },
 	{ "log_events",			""				, 0 },
 	{ "log_dropdups",		"0"				, 0 },
+	{ "log_min_level",		"8"				, 0 },
 
 /* admin-log-webmonitor */
 	{ "log_wm",			"0"				, 0 },
