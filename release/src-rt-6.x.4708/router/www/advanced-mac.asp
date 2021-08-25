@@ -21,6 +21,8 @@
 
 //	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr,wl_nband"); %>
 
+var cprefix = 'advanced_mac';
+
 function et0plus(plus) {
 	var mac = nvram.et0macaddr.split(':');
 	if (mac.length != 6) return '';
@@ -63,13 +65,19 @@ function bdefault(which) {
 	verifyFields(null, true);
 }
 
-function brand(which) {
+function brand(which, biaonly) {
 	var mac;
 	var i;
 
-	mac = ['00'];
-	for (i = 5; i > 0; --i)
-		mac.push(Math.floor(Math.random() * 255).hex(2));
+	var UAA_validILBit=['2','6','A','E'];
+	mac = E('_f_'+which+'_hwaddr').value.split(':');
+	for (i = 5; i > (biaonly ? 2 : 0); --i)
+		mac[i] = Math.floor(Math.random() * 255).hex(2);
+
+	if (!biaonly) {
+		/* Let's make sure UL Bit in MAC is correctly set Unicast */
+		mac[0] = mac[0].substr(0,1) + UAA_validILBit[Math.floor(Math.random() * UAA_validILBit.length)];
+	}
 
 	E('_f_' + which + '_hwaddr').value = mac.join(':');
 	verifyFields(null, true);
@@ -80,40 +88,55 @@ function bclone(which) {
 	verifyFields(null, true);
 }
 
-function findPrevMAC(mac, maxidx) {
-	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
-		if (E('_f_wan'+u+'_hwaddr').value == mac) return 1;
+function checkUniqueMac() {
+	var uidx, u1, u2, a1, a2;
+
+	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
+		for (uidx2 = uidx; uidx2 <= nvram.mwan_num; ++ uidx2 ) {
+			u1 = (uidx > 1) ? uidx : '';
+			a1 = E('_f_wan'+u+'_hwaddr');
+			u2 = (uidx2 > 1) ? uidx2 : '';
+			a2 = E('_f_wan'+u+'_hwaddr');
+			if (a1 && a2 && (a1.value == a2.value)) {
+				ferror.set(a1, 'Addresses must be unique', true);
+				ferror.set(a2, 'Addresses must be unique', true);
+			}
+		}
 	}
 
-	for (var uidx = 0; uidx < maxidx; ++uidx) {
-		if (E('_f_wl'+wl_fface(uidx)+'_hwaddr').value == mac) return 1;
+	for (uidx = 0; uidx <= wl_ifaces.length; ++uidx) {
+		for (uidx2 = uidx; uidx2 <= wl_ifaces.length; ++ uidx2 ) {
+			if (uidx != uidx2) {
+				a1 = E('_f_wl'+uidx+'_hwaddr');
+				a2 = E('_f_wl'+uidx2+'_hwaddr');
+				if (a1 && a2 && (a1.value == a2.value)) {
+					ferror.set(a1, 'Addresses must be unique', true);
+					ferror.set(a2, 'Addresses must be unique', true);
+				}
+			}
+		}
 	}
-
-	return 0;
 }
 
 function verifyFields(focused, quiet) {
 	var uidx, u, a;
+	var retValue = 1;
 
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 		u = (uidx > 1) ? uidx : '';
 		a = E('_f_wan'+u+'_hwaddr');
-		if (!v_mac(a, quiet)) return 0;
+		if (!v_mac(a, quiet)) retValue = 0;
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		u = wl_fface(uidx);
 		a = E('_f_wl'+u+'_hwaddr');
-		if (!v_mac(a, quiet)) return 0;
+		if (!v_mac(a, quiet)) retValue = 0;
 
-		if (findPrevMAC(a.value, uidx)) {
-			ferror.set(a, 'Addresses must be unique', quiet);
-			return 0;
-		}
+		checkUniqueMac();
 	}
 
-	return 1;
+	return retValue;
 }
 
 function save() {
@@ -137,10 +160,17 @@ function save() {
 
 	form.submit(fom, 1);
 }
+
+function init() {
+	var c;
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'notes');
+}
+
 </script>
 </head>
 
-<body>
+<body onload="init()">
 <form id="t_fom" method="post" action="tomato.cgi">
 <table id="container">
 <tr><td colspan="2" id="header">
@@ -179,7 +209,7 @@ function save() {
 			var u = (uidx > 1) ? uidx : '';
 			f.push(
 				{ title: 'WAN'+(uidx - 1)+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wan'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
+					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random LLA (Whole MAC)" onclick="brand(\'wan'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wan'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
 					value: nvram['wan'+u+'_mac'] || defmac('wan'+u) }
 			);
 		}
@@ -188,7 +218,7 @@ function save() {
 			var u = wl_fface(uidx);
 			f.push(
 				{ title: 'WL '+((wl_ifaces.length > 1) ? wl_display_ifname(uidx) : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random" onclick="brand(\'wl'+u+'\')"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
+					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random LLA (Whole MAC)" onclick="brand(\'wl'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wl'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
 					value: nvram['wl'+u+'_hwaddr'] || defmac('wl' + u) }
 			);
 		}
@@ -200,6 +230,20 @@ function save() {
 		<tr><td>Router's LAN MAC Address:</td><td><b><script>W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
 		<tr><td>Computer's MAC Address:</td><td><b><script>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
 	</table>
+</div>
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
+	<ul>
+		<li><b>Default</b> - Reset the MAC address to the Burn-in address, this is defined by the vendor</li>
+		<li><b>Random LLA</b> - XY:XX:XX:XX:XX:XX - Randomize the MAC to a locally administered address will randomise the full address apart from the I/B bit</li>
+		<li><b>OUI + Random UAA</b> - YY:YY:YY:XX:XX:XX - This retains the first 6 vendor specific HEX digits (OUI) and randomizes the last 6 digits (UAA) only</li>
+		<li><b>Clone PC</b> - If the computer's MAC address is detected it will set the relevant interface's MAC to its clone</li>
+	</ul>
+	<br>
+	<ul>
+		<li><b>Router's br0 MAC Address</b> - This is the MAC address of the router's br0 interface</li>
+		<li><b>Computer's MAC Address</b> - If connected to your router from the LAN you will see your device MAC address appearing here</li>
+	</ul>
 </div>
 
 <!-- / / / -->

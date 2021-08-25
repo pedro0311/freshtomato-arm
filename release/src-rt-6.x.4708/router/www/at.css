@@ -2161,7 +2161,8 @@ input[type="button"][value="OK"],
 input[type="button"][value="Delete"],
 input[type="button"][value="Delete All"],
 input[type="button"][value="Scan"],
-input[type="button"][value="Random"],
+input[type="button"][value^="Random"],
+input[type="button"][value="OUI + Random UAA"],
 input[type="button"][value="Cancel"],
 input[type="button"][value="Save"],
 input[type="button"][value="Add"],
@@ -2232,7 +2233,8 @@ input[type="button"][value="Cancel"] {
 	background-image: var(--icon-button-cancel);
 }
 
-input[type="button"][value="Random"] {
+input[type="button"][value^="Random"],
+input[type="button"][value="OUI + Random UAA"] {
 	background-image: var(--icon-button-random);
 }
 
