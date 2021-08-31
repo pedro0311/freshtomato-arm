@@ -299,7 +299,8 @@ function show() {
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 
-		elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
+		if (nvram['wan'+u+'_proto'] == 'disabled') /* disabled? */
+			elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
 
 		c('wan'+u+'ip', stats.wanip[uidx - 1]);
 		c('wan'+u+'netmask', stats.wannetmask[uidx - 1]);
@@ -354,7 +355,8 @@ function show() {
 		}
 		else {
 				/* do not display any virtual interface linked to the chip/frequency that is disabled */
-				elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
+				if (!wlstats[uidx].radio) /* disabled? */
+					elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
 		}
 		c('ifstatus'+uidx, wlstats[uidx].ifstatus || '');
 	}
