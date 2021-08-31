@@ -69,7 +69,7 @@ function toggle(service, isup) {
 	fom._service.value = bup;
 }
 
-var changed = 0;
+var changed = 0, i;
 
 function CCDGrid() {return this;}
 CCDGrid.prototype = new TomatoGrid;
@@ -78,14 +78,14 @@ function UsersGrid() {return this;}
 UsersGrid.prototype = new TomatoGrid;
 
 var tabs =  [];
-for (var i = 1; i <= OVPN_SERVER_COUNT; ++i)
+for (i = 1; i <= OVPN_SERVER_COUNT; ++i)
 	tabs.push(['server'+i,'Server '+i]);
 var sections = [['basic','Basic'],['advanced','Advanced'],['keys','Keys'],['status','Status']];
 
 var ccdTables = [];
 var usersTables = [];
 var statusUpdaters = [];
-for (var i = 0; i < tabs.length; ++i) {
+for (i = 0; i < tabs.length; ++i) {
 	ccdTables.push(new CCDGrid());
 	ccdTables[i].servername = tabs[i][0];
 	usersTables.push(new UsersGrid());
@@ -444,33 +444,36 @@ function generateKeys(num) {
 	if (keyGenRequest)
 		return;
 
-	changed = 1;
-	var caKeyTextArea = E('_vpn_server'+num+'_ca_key');
-	var doGeneration = true;
-	if (caKeyTextArea.value == '') {
-		doGeneration = confirm('WARNING: You haven\'t provided Certificate Authority Key.\n'+
-				       'This means, that CA Key needs to be regenerated, but it WILL break ALL your existing client certificates.\n'+
-				       'You will need to reconfigure all your existing VPN clients!\n Are you sure to continue?');
+	if (changed) {
+		alert('Changes have been made. You need to save before continue!');
+		return;
 	}
-	if (doGeneration) {
-		disableKeyButtons(num, true);
-		showTLSProgressDivs(num, true);
-		var cakey, cacert, generated_crt, generated_key;
-		keyGenRequest = new XmlHttp();
 
-		keyGenRequest.onCompleted = function(text, xml) {
-			eval(text);
-			E('_vpn_server'+num+'_ca_key').value = cakey;
-			E('_vpn_server'+num+'_ca').value = cacert;
-			E('_vpn_server'+num+'_crt').value = generated_crt;
-			E('_vpn_server'+num+'_key').value = generated_key;
-			keyGenRequest = null;
-			disableKeyButtons(num, false);
-			showTLSProgressDivs(num, false);
-		}
-		keyGenRequest.onError = function(ex) { keyGenRequest = null; }
-		keyGenRequest.post('vpngenkey.cgi', '_mode=key&_server='+num);
+	if (E('_vpn_server'+num+'_ca_key').value == '') {
+		if (!confirm('WARNING: You haven\'t provided Certificate Authority Key.\n'+
+		             'This means, that CA Key needs to be regenerated, but it WILL break ALL your existing client certificates.\n'+
+		             'You will need to reconfigure all your existing VPN clients!\n Are you sure to continue?'))
+			return;
 	}
+
+	changed = 1;
+	disableKeyButtons(num, true);
+	showTLSProgressDivs(num, true);
+	var cakey, cacert, generated_crt, generated_key;
+	keyGenRequest = new XmlHttp();
+
+	keyGenRequest.onCompleted = function(text, xml) {
+		eval(text);
+		E('_vpn_server'+num+'_ca_key').value = cakey;
+		E('_vpn_server'+num+'_ca').value = cacert;
+		E('_vpn_server'+num+'_crt').value = generated_crt;
+		E('_vpn_server'+num+'_key').value = generated_key;
+		keyGenRequest = null;
+		disableKeyButtons(num, false);
+		showTLSProgressDivs(num, false);
+	}
+	keyGenRequest.onError = function(ex) { keyGenRequest = null; }
+	keyGenRequest.post('vpngenkey.cgi', '_mode=key&_server='+num);
 }
 
 function disableKeyButtons(num, state) {
