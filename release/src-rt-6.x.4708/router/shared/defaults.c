@@ -494,7 +494,8 @@ struct nvram_tuple router_defaults[] = {
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				, 0 },	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				, 0 },	// RIFS mode advertisement
-	{ "wl_stbc_tx",			"auto"				, 0 },	// Default STBC TX setting
+	{ "wl_stbc_tx",			"auto"				, 0 },	/* Default STBC TX setting */
+	{ "wl_stbc_rx", 		"1"				, 0 },	/* Default STBC RX setting */
 	{ "wl_mcast_regen_bss_enable",	"1"				, 0 },	// MCAST REGEN Enable/Disable
 #endif
 #ifdef TCONFIG_BCMWL6
