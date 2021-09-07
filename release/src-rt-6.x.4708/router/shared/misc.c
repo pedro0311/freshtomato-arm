@@ -214,11 +214,33 @@ int using_dhcpc(char *prefix)
 	return 0;
 }
 
+#ifdef TCONFIG_BCMWL6
+int is_psta_client(int unit, int subunit)
+{
+	char *mode;
+	int ret = 0;
+
+	if (unit < 0)
+		return ret;
+
+	mode = nvram_safe_get(wl_nvname("mode", unit, subunit));
+	
+	if (strcmp(mode, "psta") == 0)
+		ret = 1;
+
+	return ret;
+}
+#endif /* TCONFIG_BCMWL6 */
+
 int wl_client(int unit, int subunit)
 {
 	char *mode = nvram_safe_get(wl_nvname("mode", unit, subunit));
 
-	return ((strcmp(mode, "sta") == 0) || (strcmp(mode, "wet") == 0));
+	return ((strcmp(mode, "sta") == 0) || (strcmp(mode, "wet") == 0)
+#ifdef TCONFIG_BCMWL6
+		|| (strcmp(mode, "psta") == 0)
+#endif /* TCONFIG_BCMWL6 */
+		);
 }
 
 int foreach_wif(int include_vifs, void *param,

@@ -221,6 +221,12 @@ ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
 endif
 
+ifneq ($(TCONFIG_BCMWL6),y)
+	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
+endif
+
 # Only include the wireless band steering option if is compiled in
 ifneq ($(TCONFIG_BCMBSD),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BSD-BEGIN/,/BSD-END/d"
@@ -371,6 +377,7 @@ endif
 		-e "/VPN-BEGIN/,/VPN-END/d" \
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
+		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
 		-e "/BSD-BEGIN/d"	-e "/BSD-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \

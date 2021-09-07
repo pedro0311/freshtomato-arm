@@ -144,6 +144,9 @@ extern const dns_list_t *get_dns(char *prefix);
 extern void set_action(int a);
 extern int check_action(void);
 extern int wait_action_idle(int n);
+#ifdef TCONFIG_BCMWL6
+extern int is_psta_client(int unit, int subunit);
+#endif
 extern int wl_client(int unit, int subunit);
 extern const wanface_list_t *get_wanfaces(char *prefix);
 extern const char *get_wanface(char *prefix);

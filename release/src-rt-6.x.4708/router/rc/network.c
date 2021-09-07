@@ -73,6 +73,8 @@ typedef u_int8_t u8;
 
 #ifdef TCONFIG_BCMWL6
 #include <d11.h>
+#include <wlif_utils.h>
+#include <security_ipc.h>
 #define WLCONF_PHYTYPE2STR(phy)	((phy) == PHY_TYPE_A ? "a" : \
 				 (phy) == PHY_TYPE_B ? "b" : \
 				 (phy) == PHY_TYPE_LP ? "l" : \
@@ -95,6 +97,7 @@ void start_lan_wl(void);
 int wl_sta_prepare(void);
 void wl_sta_start(void);
 void wl_sta_stop(void);
+int wl_send_dif_event(const char *ifname, uint32 event);
 #endif
 
 #ifdef TCONFIG_BCMWL6
@@ -862,7 +865,11 @@ void start_lan_wl(void)
 						}
 
 						sta |= (strcmp(mode, "sta") == 0);
-						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)) continue;
+						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)
+#ifdef TCONFIG_BCMWL6
+						    && (strcmp(mode, "psta") != 0)
+#endif
+						    ) continue;
 					}
 #endif
 					eval("brctl", "addif", lan_ifname, ifname);
@@ -1335,11 +1342,13 @@ void start_lan(void)
 					/* bring up interface */
 					if (ifconfig(ifname, IFUP | IFF_ALLMULTI, NULL, NULL) != 0) continue;
 
-					/* set the logical bridge address to that of the first interface */
+					/* set the logical bridge address to that of the first interface OR Media Bridge interface address! */
 					strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 					if ((!hwaddrset) ||
-						(ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0 &&
-						memcmp(ifr.ifr_hwaddr.sa_data, "\0\0\0\0\0\0", ETHER_ADDR_LEN) == 0)) {
+#ifdef TCONFIG_BCMWL6
+					    (is_psta_client(unit, subunit)) ||
+#endif
+					    (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0 && memcmp(ifr.ifr_hwaddr.sa_data, "\0\0\0\0\0\0", ETHER_ADDR_LEN) == 0)) {
 						strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 						if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
 							strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
@@ -1406,7 +1415,11 @@ void start_lan(void)
 						}
 
 						sta |= (strcmp(mode, "sta") == 0);
-						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)) continue;
+						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)
+#ifdef TCONFIG_BCMWL6
+						    && (strcmp(mode, "psta") != 0)
+#endif
+						    ) continue;
 					}
 					eval("brctl", "addif", lan_ifname, ifname);
 #ifdef TCONFIG_EMF
@@ -1667,12 +1680,23 @@ void hotplug_net(void)
 {
 	char *interface, *action;
 	char *lan_ifname;
+#ifdef TCONFIG_BCMWL6
+	int psta;
+#endif
 
 	if (((interface = getenv("INTERFACE")) == NULL) || ((action = getenv("ACTION")) == NULL)) return;
 
-	logmsg(LOG_DEBUG, "*** %s: hotplug net INTERFACE=%s ACTION=%s", __FUNCTION__, interface, action);
+	logmsg(LOG_DEBUG, "*** %s: hotplug_net(): INTERFACE=%s ACTION=%s", __FUNCTION__, interface, action);
 
-	if ((strncmp(interface, "wds", 3) == 0) &&
+#ifdef TCONFIG_BCMWL6
+	psta = wl_wlif_is_psta(interface);
+#endif
+
+	if (((strncmp(interface, "wds", 3) == 0)
+#ifdef TCONFIG_BCMWL6
+	     || psta
+#endif
+	     ) &&
 	    (strcmp(action, "register") == 0 || strcmp(action, "add") == 0)) {
 		ifconfig(interface, IFUP, NULL, NULL);
 		lan_ifname = nvram_safe_get("lan_ifname");
@@ -1684,6 +1708,14 @@ void hotplug_net(void)
 			emf_rtport_update(lan_ifname, interface, 1);
 		}
 #endif
+#ifdef TCONFIG_BCMWL6
+		/* Indicate interface create event to eapd */
+		if (psta) {
+			logmsg(LOG_DEBUG, "*** %s: hotplug_net(): send dif event to %s\n", __FUNCTION__, interface);
+			wl_send_dif_event(interface, 0);
+			return;
+		}
+#endif
 		if (strncmp(lan_ifname, "br", 2) == 0) {
 			eval("brctl", "addif", lan_ifname, interface);
 			notify_nas(interface);
@@ -1691,6 +1723,50 @@ void hotplug_net(void)
 	}
 }
 
+#ifdef TCONFIG_BCMWL6
+int wl_send_dif_event(const char *ifname, uint32 event)
+{
+	static int s = -1;
+	int len, n;
+	struct sockaddr_in to;
+	char data[IFNAMSIZ + sizeof(uint32)];
+
+	if (ifname == NULL) return -1;
+
+	/* create a socket to receive dynamic i/f events */
+	if (s < 0) {
+		s = socket(AF_INET, SOCK_DGRAM, 0);
+		if (s < 0) {
+			perror("socket");
+			return -1;
+		}
+	}
+
+	/* Init the message contents to send to eapd. Specify the interface
+	 * and the event that occured on the interface.
+	 */
+	strncpy(data, ifname, IFNAMSIZ);
+	*(uint32 *)(data + IFNAMSIZ) = event;
+	len = IFNAMSIZ + sizeof(uint32);
+
+	/* send to eapd */
+	to.sin_addr.s_addr = inet_addr(EAPD_WKSP_UDP_ADDR);
+	to.sin_family = AF_INET;
+	to.sin_port = htons(EAPD_WKSP_DIF_UDP_PORT);
+
+	n = sendto(s, data, len, 0, (struct sockaddr *)&to,
+		sizeof(struct sockaddr_in));
+
+	if (n != len) {
+		perror("udp send failed\n");
+		return -1;
+	}
+
+	logmsg(LOG_DEBUG, "hotplug_net(): sent event %d\n", event);
+
+	return n;
+}
+#endif /* TCONFIG_BCMWL6 */
 
 static int is_same_addr(struct ether_addr *addr1, struct ether_addr *addr2)
 {

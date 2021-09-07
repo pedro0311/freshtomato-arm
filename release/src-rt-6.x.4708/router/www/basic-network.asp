@@ -654,7 +654,11 @@ function verifyFields(focused, quiet) {
 		if (wl_sunit(uidx) < 0) {
 			wmode = E('_f_wl'+wl_unit(uidx)+'_mode').value;
 
-			if (wmode == 'wet') {
+			if ((wmode == 'wet') ||
+/* BCMWL6-BEGIN */
+			    (wmode == 'psta') ||
+/* BCMWL6-END */
+			    0) {
 				E('_mwan_num').value = 1;
 				E('_mwan_cktime').value = 0;
 				elem.display('mwan-title', 'mwan-section', 0);
@@ -665,7 +669,7 @@ function verifyFields(focused, quiet) {
 					wanproto[wan_uidx - 1] = 'disabled';
 					elem.display('wan'+u+'-title', 'sesdiv_wan'+u, 0);
 				}
-				break; /* break the loop! one wlan module is using wireless bridge mode --> hide wan options! */
+				break; /* break the loop! one wlan module is using wireless ethernet bridge or media bridge mode --> hide wan options! */
 			}
 			else { /* not in wireless bridge mode - show wan options */
 				elem.display('mwan-title', 'mwan-section', 1);
@@ -910,6 +914,9 @@ function verifyFields(focused, quiet) {
 			case 'wds':
 				break;
 			case 'wet':
+/* BCMWL6-BEGIN */
+			case 'psta':
+/* BCMWL6-END */
 			case 'sta':
 				wl_vis[uidx]._f_wl_bcast = 0;
 				/* wl_vis[uidx]._wl_channel = 0; */
@@ -1103,7 +1110,11 @@ REMOVE-END */
 			ferror.clear(a);
 			b = E('_f_wl'+u+'_mode');
 			ferror.clear(b);
-			if ((wmode == 'sta') || (wmode == 'wet')) {
+			if ((wmode == 'sta') || (wmode == 'wet') ||
+/* BCMWL6-BEGIN */
+			    (wmode == 'psta') ||
+/* BCMWL6-END */
+			    0) {
 				++wlclnt;
 				if (wlclnt > 1) {
 					ferror.set(b, 'Only one wireless interface can be configured in client mode.', quiet || !ok);
@@ -1340,7 +1351,11 @@ function save() {
 			else
 				E('_wl'+u+'_mode').value = wmode;
 
-			if (wmode == 'wet') {
+			if ((wmode == 'wet') ||
+/* BCMWL6-BEGIN */
+			    (wmode == 'psta') ||
+/* BCMWL6-END */
+			    0) {
 				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
 					var v = (wan_uidx > 1) ? wan_uidx : '';
 					E('_wan'+v+'_proto').disabled = 0;
@@ -1834,7 +1849,11 @@ REMOVE-END -->
 					value: (eval('nvram.wl'+u+'_radio') == '1') && (eval('nvram.wl'+u+'_net_mode') != 'disabled') },
 				{ title: 'MAC Address', text: '<a href="advanced-mac.asp">'+eval('nvram.wl'+u+'_hwaddr')+'<\/a>' },
 				{ title: 'Wireless Mode', name: 'f_wl'+u+'_mode', type: 'select',
-					options: [['ap','Access Point'],['apwds','Access Point + WDS'],['sta','Wireless Client'],['wet','Wireless Ethernet Bridge'],['wds','WDS']],
+					options: [['ap','Access Point'],['apwds','Access Point + WDS'],['sta','Wireless Client'],['wet','Wireless Ethernet Bridge'],['wds','WDS']
+/* BCMWL6-BEGIN */
+						  ,['psta','Media Bridge']
+/* BCMWL6-END */
+						 ],
 					value: ((eval('nvram.wl'+u+'_mode') == 'ap') && (eval('nvram.wl'+u+'_wds_enable') == '1')) ? 'apwds' : eval('nvram.wl'+u+'_mode') },
 				{ title: 'Radio Band', name: 'f_wl'+u+'_nband', type: 'select', options: bands[uidx],
 					value: eval('nvram.wl'+u+'_nband') || '0' == '0' ? bands[uidx][0][0] : eval('nvram.wl'+u+'_nband') },
