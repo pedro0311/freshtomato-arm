@@ -140,31 +140,6 @@ var elem = {
 
 // -----------------------------------------------------------------------------
 
-var docu = {
-	getViewSize: function() {
-		if (window.innerHeight) {
-			return { width: window.innerWidth, height: window.innerHeight };
-		}
-		else if (document.documentElement && document.documentElement.clientHeight) {
-			return { width: document.documentElement.clientWidth, height: document.documentElement.clientHeight };
-		}
-		return { width: document.body.clientWidth, height: document.body.clientHeight };
-	},
-
-	getPageOffset: function()
-	{
-		if (typeof(window.pageYOffset) != 'undefined') {
-			return { x: window.pageXOffset, y: window.pageYOffset };
-		}
-		else if ((document.documentElement) && (typeof(document.documentElement.scrollTop) != 'undefined')) {
-			return { x: document.documentElement.scrollLeft, y: document.documentElement.scrollTop };
-		}
-		return { x: document.body.scrollLeft, y: document.body.scrollTop };
-	}
-};
-
-// -----------------------------------------------------------------------------
-
 var fields = {
 	getAll: function(e) {
 		var a = [];
