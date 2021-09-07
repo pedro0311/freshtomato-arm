@@ -1528,35 +1528,35 @@ div#sptime {
 }
 
 .loglevel-1 {
-	background: #ffad4a;
+	background: #ffad4a !important;
 }
 
 .loglevel-2 {
-	background: #e2c471;
+	background: #e2c471 !important;
 }
 
 .loglevel-3 {
-	background: #ffdac4;
+	background: #ffdac4 !important;
 }
 
 .loglevel-4 {
-	background: #ffddef;
+	background: #ffddef !important;
 }
 
 .loglevel-5 {
-	background: #bfece6;
+	background: #bfece6 !important;
 }
 
 .loglevel-6 {
-	background: #dcf3f9;
+	background: #dcf3f9 !important;
 }
 
 .loglevel-7 {
-	background: #e2f8cd;
+	background: #e2f8cd !important;
 }
 
 .loglevel-8 {
-	background: #fdffb7;
+	background: #fdffb7 !important;
 }
 
 /* SVG */
