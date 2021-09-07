@@ -23,10 +23,13 @@
 <% css(); %>
 <script src="tomato.js"></script>
 <script src="md5.js"></script>
-<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
-<script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 <script src="interfaces.js"></script>
 <script src="wireless.js"></script>
+<script>
+var lastjiffiestotal = 0, lastjiffiesidle = 0, lastjiffiesusage = 100;
+</script>
+<script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
+<script src="status-data.jsx?_http_id=<% nv(http_id); %>"></script>
 
 <script>
 
