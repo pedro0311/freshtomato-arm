@@ -86,7 +86,7 @@ logGrid.populate = function() {
 			messagesToAdd = messagesToAdd.slice(-1 * entriesMode);
 
 		if (currentSearch)
-			messagesToAdd = messagesToAdd.filter(line => line.includes(currentSearch));
+			messagesToAdd = messagesToAdd.filter( function(line) { if (line != 'undefined') { return line.indexOf(currentSearch) >= 0; } } );
 
 		var count = 0;
 		for (var index = 0; index < messagesToAdd.length; ++index) {
@@ -163,10 +163,10 @@ var emergencyRegex = new RegExp(/^(.*?)emer.*/i);
 var debugRegex = new RegExp(/^(.*?)debu.*/i);
 
 function containsSearch(logLineMap, text) {
-	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).includes(text) ||
-			String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).includes(text) ||
-			String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).includes(text) ||
-			String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).includes(text));
+	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).indexOf(text) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).indexOf(text) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).indexOf(text) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).indexOf(text) >= 0);
 }
 
 function getLevelColor(level) {
@@ -222,10 +222,10 @@ function getLogLineParsedMap(logLine) {
 
 function createHighlightedRow(logLineMap) {
 	return [ generateHighlightSpan(logLineMap[LINE_PARSE_MAP_DATE_POS], 'co1', null),
-				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_FACILITY_POS], 'co2', null),
-				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_POS], 'co3', logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][0]),
-				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS], 'co4', null),
-				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS], 'co5', null)
+	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_FACILITY_POS], 'co2', null),
+	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_POS], 'co3', logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][0]),
+	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS], 'co4', null),
+	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS], 'co5', null)
 	];
 }
 
@@ -233,7 +233,7 @@ function generateHighlightSpan(innerText, classN, customStyle) {
 	var newText = document.createElement('td');
 	newText.className = classN;
 	if (customStyle)
-		newText.classList.add(customStyle);
+		newText.className += ' '+customStyle;
 
 	var indexOfSearch = innerText.indexOf(currentSearch);
 	if (indexOfSearch == -1)
@@ -308,8 +308,12 @@ function onTableScroll() {
 }
 
 function onKeyUpEvent(event) {
-	if (event.code == 'Escape') {
-		const findTextInput = E('log-find-text');
+	if (event.defaultPrevented)
+		return;
+
+	var key = event.key || event.keyCode;
+	if (key === 'Escape' || key === 'Esc' || key === 27) {
+		var findTextInput = E('log-find-text');
 		findTextInput.value = '';
 		currentSearch = '';
 		var occurenceSpan = E('log-occurence-span');
@@ -334,8 +338,8 @@ function init() {
 	logHeaderGrid.setup();
 	logGrid.setup();
 
-	const findTextInput = E('log-find-text');
-	addEvent(findTextInput, 'input', (event) => {
+	var findTextInput = E('log-find-text');
+	addEvent(findTextInput, 'input', function(event) {
 		setTimeout(function() {
 			currentSearch = findTextInput.value;
 			logGrid.populate();
