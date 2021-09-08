@@ -108,11 +108,13 @@ logGrid.populate = function() {
 		occurenceValue.innerHTML = count;
 
 		var e = E('log-table').children[0].children[0].children[0];
-		var d = E('log-table-header').children[0].children[0].children[0];
-		d.children[0].style.width = getComputedStyle(e.children[0]).width;
-		d.children[1].style.width = getComputedStyle(e.children[1]).width;
-		d.children[2].style.width = getComputedStyle(e.children[2]).width;
-		d.children[3].style.width = getComputedStyle(e.children[3]).width;
+		if (e) {
+			var d = E('log-table-header').children[0].children[0].children[0];
+			d.children[0].style.width = getComputedStyle(e.children[0]).width;
+			d.children[1].style.width = getComputedStyle(e.children[1]).width;
+			d.children[2].style.width = getComputedStyle(e.children[2]).width;
+			d.children[3].style.width = getComputedStyle(e.children[3]).width;
+		}
 	}
 }
 
