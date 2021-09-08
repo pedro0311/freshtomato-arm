@@ -88,6 +88,15 @@ function createWWANStatusSection(wannum, wwanstatus) {
 
 		code += '</td></tr>';
 	}
+
+	valMap = wwan_getOperator(wwanstatus);
+	if (valMap) {
+		if (valMap['OPERATOR']) {
+			code += '<tr><td class="title indent1">Current Operator</td>';
+			code += '<td class="content">'+valMap['OPERATOR']+'</td></tr>';
+		}
+	}
+
 	valMap = wwan_getCarrierMap(wwanstatus);
 	if (valMap) {
 		if (valMap['BBAND']) {
@@ -195,6 +204,18 @@ function wwan_getCarrierMap(buffer) {
 		returnMap['UP_FREQ'] = matchedArrs[4];
 		returnMap['DOWN_BW'] = matchedArrs[5];
 		returnMap['UP_BW'] = matchedArrs[6];
+		return returnMap;
+	}
+	return undefined;
+}
+
+function wwan_getOperator(buffer) {
+	var regExtract = new RegExp('MODEM Current Operator: (.*)', 'gm');
+
+	var matchedArrs = regExtract.exec(buffer);
+	if (matchedArrs) {
+		var returnMap = [];
+		returnMap['OPERATOR'] = matchedArrs[1];
 		return returnMap;
 	}
 	return undefined;

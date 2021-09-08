@@ -80,6 +80,9 @@ signal4g() {
 
 		SPEED=$(echo "$HCSQ" | cut -d "," -f1 | cut -d '"' -f2)
 
+		OPERATOR="$(MODE="AT+COPS?" gcom -d "$DEVNR" -s /etc/gcom/setverbose.gcom | grep "COPS" | tr -d '\r' | tr -d ' ' | cut -d ',' -f 3)"
+		$LOGS "MODEM Current Operator: $OPERATOR"
+
 		case "$SPEED" in
 			"LTE")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
