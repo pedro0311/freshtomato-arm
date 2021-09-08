@@ -1,9 +1,9 @@
-/* $Id: options.h,v 1.32 2020/04/09 18:40:42 nanard Exp $ */
+/* $Id: options.h,v 1.33 2021/08/21 08:22:46 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
- * (c) 2006-2020 Thomas Bernard
+ * (c) 2006-2021 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -72,6 +72,9 @@ enum upnpconfigoptions {
 	UPNPSECUREMODE,			/* secure_mode */
 #ifdef ENABLE_LEASEFILE
 	UPNPLEASEFILE,			/* lease_file */
+#ifdef ENABLE_UPNPPINHOLE
+	UPNPLEASEFILE6,			/* lease_file v6 */
+#endif
 #endif
 	UPNPMINISSDPDSOCKET,	/* minissdpdsocket */
 #ifdef IGD_V2
@@ -84,7 +87,7 @@ enum upnpconfigoptions {
  * parse and store the option file values
  * returns: 0 success, -1 failure */
 int
-readoptionsfile(const char * fname);
+readoptionsfile(const char * fname, int debug_flag);
 
 /* freeoptions()
  * frees memory allocated to option values */
