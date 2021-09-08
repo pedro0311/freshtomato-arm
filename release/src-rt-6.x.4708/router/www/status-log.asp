@@ -30,6 +30,13 @@ var messages;
 var entriesMode = 0;
 var entriesLast = -1;
 
+var LINE_PARSE_MAP_DATE_POS = 0;
+var LINE_PARSE_MAP_FACILITY_POS = 1;
+var LINE_PARSE_MAP_LEVEL_POS = 2;
+var LINE_PARSE_MAP_LEVEL_ATTR_POS = 3;
+var LINE_PARSE_MAP_LEVEL_PROCESS_POS = 4;
+var LINE_PARSE_MAP_LEVEL_MESSAGE_POS = 5;
+
 var ref = new TomatoRefresh('update.cgi', 'exec=showlog', 5, 'status_log');
 
 ref.refresh = function(text) {
@@ -84,10 +91,10 @@ logGrid.populate = function() {
 		var count = 0;
 		for (var index = 0; index < messagesToAdd.length; ++index) {
 			if (messagesToAdd[index]) {
-				var logE = new logEntry(messagesToAdd[index]);
-				if ((currentFilterValue == 0) || (logE.levelNum == currentFilterValue)) {
-						if (!currentSearch || logE.containsSearch(currentSearch)) {
-							var row = logE.createHighlightedRow();
+				var logLineMap = getLogLineParsedMap(messagesToAdd[index]);
+				if ((currentFilterValue == 0) || (logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1] == currentFilterValue)) {
+						if (!currentSearch || containsSearch(logLineMap, currentSearch)) {
+							var row = createHighlightedRow(logLineMap);
 							this.insert(-1, row, row, true);
 							count++;
 					}
@@ -143,82 +150,81 @@ function copyRowContent(el) {
 	}
 }
 
-class logEntry {
-	static logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\w+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
-	static errRegex = new RegExp(/^(.*?)err.*/i);
-	static infRegex = new RegExp(/^(.*?)inf.*/i);
-	static noticeRegex = new RegExp(/^(.*?)notic.*/i);
-	static warnRegex = new RegExp(/^(.*?)war.*/i);
-	static alertRegex = new RegExp(/^(.*?)aler.*/i);
-	static criticalRegex = new RegExp(/^(.*?)crit.*/i);
-	static emergencyRegex = new RegExp(/^(.*?)emer.*/i);
-	static debugRegex = new RegExp(/^(.*?)debu.*/i);
-	date;
-	facility;
-	level;
-	levelColor;
-	levelNum;
-	process;
-	message;
+var logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\w+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
+var errRegex = new RegExp(/^(.*?)err.*/i);
+var infRegex = new RegExp(/^(.*?)inf.*/i);
+var noticeRegex = new RegExp(/^(.*?)notic.*/i);
+var warnRegex = new RegExp(/^(.*?)war.*/i);
+var alertRegex = new RegExp(/^(.*?)aler.*/i);
+var criticalRegex = new RegExp(/^(.*?)crit.*/i);
+var emergencyRegex = new RegExp(/^(.*?)emer.*/i);
+var debugRegex = new RegExp(/^(.*?)debu.*/i);
 
-	constructor(logLine) {
-		var matchedArray = logLine.match(logEntry.logLineRegex);
-		if (matchedArray != null) {
-			this.date = matchedArray[1];
-			this.facility = matchedArray[2];
-			this.level = matchedArray[3];
-			this.levelColor = this.getLevelColor();
-			this.process = matchedArray[4].slice(0, -1);
-			this.message = escapeHTML(matchedArray[5]);
-		}
-	}
-	getLevelColor() {
-		if (logEntry.emergencyRegex.test(this.level)) {
-			this.levelColor = 'loglevel-1';
-			this.levelNum = 1;
-		}
-		else if (logEntry.alertRegex.test(this.level)) {
-			this.levelColor = 'loglevel-2';
-			this.levelNum = 2;
-		}
-		else if (logEntry.criticalRegex.test(this.level)) {
-			this.levelColor = 'loglevel-3';
-			this.levelNum = 3;
-		}
-		else if (logEntry.errRegex.test(this.level)) {
-			this.levelColor = 'loglevel-4';
-			this.levelNum = 4;
-		}
-		else if (logEntry.warnRegex.test(this.level)) {
-			this.levelColor = 'loglevel-5';
-			this.levelNum = 5;
-		}
-		else if (logEntry.noticeRegex.test(this.level)) {
-			this.levelColor = 'loglevel-6';
-			this.levelNum = 6;
-		}
-		else if (logEntry.infRegex.test(this.level)) {
-			this.levelColor = 'loglevel-7';
-			this.levelNum = 7;
-		}
-		else if (logEntry.debugRegex.test(this.level)) {
-			this.levelColor = 'loglevel-8';
-			this.levelNum = 8;
-		}
+function containsSearch(logLineMap, text) {
+	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).includes(text) ||
+			String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).includes(text) ||
+			String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).includes(text) ||
+			String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).includes(text));
+}
 
-		return this.levelColor;
+function getLevelColor(level) {
+	if (emergencyRegex.test(level)) {
+		this.levelColor = 'loglevel-1';
+		this.levelNum = 1;
 	}
-	containsSearch(text) {
-		return (String(this.date).includes(text) || String(this.facility).includes(text) || String(this.process).includes(text) || String(this.message).includes(text));
+	else if (alertRegex.test(level)) {
+		this.levelColor = 'loglevel-2';
+		this.levelNum = 2;
 	}
-	createHighlightedRow() {
-		return [ generateHighlightSpan(this.date, 'co1', null),
-		         generateHighlightSpan(this.facility, 'co2', null),
-		         generateHighlightSpan(this.level, 'co3', this.levelColor),
-		         generateHighlightSpan(this.process, 'co4', null),
-		         generateHighlightSpan(this.message, 'co5', null)
-		];
+	else if (criticalRegex.test(level)) {
+		this.levelColor = 'loglevel-3';
+		this.levelNum = 3;
 	}
+	else if (errRegex.test(level)) {
+		this.levelColor = 'loglevel-4';
+		this.levelNum = 4;
+	}
+	else if (warnRegex.test(level)) {
+		this.levelColor = 'loglevel-5';
+		this.levelNum = 5;
+	}
+	else if (noticeRegex.test(level)) {
+		this.levelColor = 'loglevel-6';
+		this.levelNum = 6;
+	}
+	else if (infRegex.test(level)) {
+		this.levelColor = 'loglevel-7';
+		this.levelNum = 7;
+	}
+	else if (debugRegex.test(level)) {
+		this.levelColor = 'loglevel-8';
+		this.levelNum = 8;
+	}
+
+	return [this.levelColor, this.levelNum];
+}
+
+function getLogLineParsedMap(logLine) {
+	var returnedArray = [];
+	var matchedArray = logLine.match(logLineRegex);
+	if (matchedArray != null) {
+		returnedArray[LINE_PARSE_MAP_DATE_POS] = matchedArray[1];
+		returnedArray[LINE_PARSE_MAP_FACILITY_POS] = matchedArray[2];
+		returnedArray[LINE_PARSE_MAP_LEVEL_POS] = matchedArray[3];
+		returnedArray[LINE_PARSE_MAP_LEVEL_ATTR_POS] = getLevelColor(returnedArray[LINE_PARSE_MAP_LEVEL_POS]);
+		returnedArray[LINE_PARSE_MAP_LEVEL_PROCESS_POS] = matchedArray[4].slice(0, -1);
+		returnedArray[LINE_PARSE_MAP_LEVEL_MESSAGE_POS] = escapeHTML(matchedArray[5]);
+	}
+	return returnedArray;
+}
+
+function createHighlightedRow(logLineMap) {
+	return [ generateHighlightSpan(logLineMap[LINE_PARSE_MAP_DATE_POS], 'co1', null),
+				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_FACILITY_POS], 'co2', null),
+				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_POS], 'co3', logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][0]),
+				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS], 'co4', null),
+				generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS], 'co5', null)
+	];
 }
 
 function generateHighlightSpan(innerText, classN, customStyle) {
