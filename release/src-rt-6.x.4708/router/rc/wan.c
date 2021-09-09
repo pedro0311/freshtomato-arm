@@ -1254,6 +1254,10 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 			start_pptp_client_eas();
 			start_adblock(0);
+#ifdef TCONFIG_SAMBASRV
+			stop_samba();
+			start_samba();
+#endif
 		}
 
 		stop_upnp();

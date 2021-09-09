@@ -21,6 +21,38 @@ img[src^="rp"] {
 	filter: grayscale(1) invert(1) brightness(3) contrast(.7);
 }
 
+.loglevel-1 {
+	background: #8f3d00 !important;
+}
+
+.loglevel-2 {
+	background: #705200 !important;
+}
+
+.loglevel-3 {
+	background: #87624c !important;
+}
+
+.loglevel-4 {
+	background: #856375 !important;
+}
+
+.loglevel-5 {
+	background: #48756f !important;
+}
+
+.loglevel-6 {
+	background: #62797f !important;
+}
+
+.loglevel-7 {
+	background: #687e53 !important;
+}
+
+.loglevel-8 {
+	background: #81833b !important;
+}
+
 /* SVG */
 #svg text {
 	fill: #c9c9c9;

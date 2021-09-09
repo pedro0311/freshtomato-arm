@@ -299,7 +299,8 @@ function show() {
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 
-		elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
+		if (nvram['wan'+u+'_proto'] == 'disabled') /* disabled? */
+			elem.display('wan'+u+'-title', 'sesdiv_wan'+u, (nvram['wan'+u+'_proto'] != 'disabled'));
 
 		c('wan'+u+'ip', stats.wanip[uidx - 1]);
 		c('wan'+u+'netmask', stats.wannetmask[uidx - 1]);
@@ -354,7 +355,8 @@ function show() {
 		}
 		else {
 				/* do not display any virtual interface linked to the chip/frequency that is disabled */
-				elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
+				if (!wlstats[uidx].radio) /* disabled? */
+					elem.display('wl'+wl_fface(uidx)+'-title', 'sesdiv_wl_'+wl_fface(uidx), wlstats[uidx].radio);
 		}
 		c('ifstatus'+uidx, wlstats[uidx].ifstatus || '');
 	}
@@ -610,6 +612,9 @@ function init() {
 			{ title: 'Channel Width', rid: 'nbw'+uidx, text: wlstats[uidx].nbw, ignore: ((!nphy) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Interference Level', rid: 'interference'+uidx, text: stats.interference[uidx], ignore: (wl_sunit(uidx) >= 0) },
 			{ title: 'Rate', rid: 'rate'+uidx, text: wlstats[uidx].rate, ignore: (wl_sunit(uidx) >= 0) },
+/* QRCODE-BEGIN */
+			{ title: ' ', rid: 'qr-code'+uidx, text: '<a href="tools-qr.asp?wl='+wl_unit(uidx)+(wl_sunit(uidx) >= 0 ? '.'+wl_sunit(uidx) : '')+'">Show QR code<\/a>' },
+/* QRCODE-END */
 			{ title: 'RSSI', rid: 'rssi'+uidx, text: wlstats[uidx].rssi || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Noise', rid: 'noise'+uidx, text: wlstats[uidx].noise || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) },
 			{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) }

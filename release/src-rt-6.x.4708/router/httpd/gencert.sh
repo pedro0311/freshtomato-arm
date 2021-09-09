@@ -39,6 +39,7 @@ sed -i "/\[ v3_ca \]/aextendedKeyUsage=serverAuth" $OPENSSLCNF
 # Start of SAN extensions
 sed -i "/\[ CA_default \]/acopy_extensions=copy" $OPENSSLCNF
 sed -i "/\[ v3_ca \]/asubjectAltName=@alt_names" $OPENSSLCNF
+sed -i "/\[ v3_ca \]/akeyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment" $OPENSSLCNF
 sed -i "/\[ v3_req \]/asubjectAltName=@alt_names" $OPENSSLCNF
 echo "[alt_names]" >> $OPENSSLCNF
 

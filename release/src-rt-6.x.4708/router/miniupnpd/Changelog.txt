@@ -1,4 +1,19 @@
-$Id: Changelog.txt,v 1.476 2021/05/11 22:36:16 nanard Exp $
+$Id: Changelog.txt,v 1.479 2021/08/21 08:28:28 nanard Exp $
+
+2021/08/18:
+  lease file for IPv6 pinholes
+
+2021/08/11:
+  Detect Microsoft User-Agent: and force IGDv1 in that case
+
+2021/06/18:
+  Fails on config parsing and init errors.
+  print errors during init to both syslog and stderr.
+
+2021/05/22:
+  dynamically retrieve `uname -r`
+
+VERSION 2.2.2 : released on 2021/05/13
 
 2021/04/22:
   Add SO_REUSEPORT option for SSDP receive sockets

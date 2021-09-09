@@ -13,7 +13,7 @@
 #include <netdb.h>
 
 /* Max number of log lines for GUI to display */
-#define MAX_LOG_LINES	2000
+#define MAX_LOG_LINES	4000
 
 /* Size of each input chunk to be read and allocate for. */
 #ifndef READALL_CHUNK
@@ -108,7 +108,7 @@ void get_logfilename(char *lfn)
 	char cfg[256];
 	char *nv;
 
-	nv = "/var/log/messages";
+	nv = (nvram_get_int("log_file_custom") != 0 ? nvram_safe_get("log_file_path") : "/var/log/messages");
 	if (f_read_string("/etc/syslogd.cfg", cfg, sizeof(cfg)) > 0) {
 		if ((p = strchr(cfg, '\n')))
 			*p = 0;
@@ -125,53 +125,18 @@ void get_logfilename(char *lfn)
 		strcpy(lfn, nv);
 }
 
-void wo_viewlog(char *url)
+void asp_showsyslog(int argc, char **argv)
 {
-	char *p;
-	char *c;
 	char s[128];
-	char t[128];
-	int n;
+	int logLines = MAX_LOG_LINES;
 	char lfn[256];
 
 	if (!logok()) return;
 
 	get_logfilename(lfn);
-	if ((p = webcgi_get("find")) != NULL) {
-		send_header(200, NULL, mime_plain, 0);
-		if (strlen(p) > 64) return;
-		c = t;
-		while (*p) {
-			switch (*p) {
-			case '<':
-			case '>':
-			case '|':
-			case '"':
-			case '\\':
-				*c++ = '\\';
-				*c++ = *p;
-				break;
-			default:
-				if (isprint(*p)) *c++ = *p;
-				break;
-			}
-			++p;
-		}
-		*c = 0;
-		snprintf(s, sizeof(s), "grep -ih \"%s\" $(ls -1rv %s %s.*)", t, lfn, lfn);
-		web_pipecmd(s, WOF_NONE);
-		return;
-	}
-
-	if ((p = webcgi_get("which")) == NULL) return;
-
-	if (strcmp(p, "all") == 0)
-		n = MAX_LOG_LINES;
-	else if ((n = atoi(p)) <= 0)
-		return;
-
-	send_header(200, NULL, mime_plain, 0);
-	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.*) | tail -n %d", lfn, lfn, n);
+	if (argc > 1)
+		logLines = atoi(argv[1]);
+	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.*) | tail -n %d", lfn, lfn, logLines);
 	web_pipecmd(s, WOF_NONE);
 }
 

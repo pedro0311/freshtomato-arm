@@ -172,7 +172,8 @@ input[type="submit"][disabled] {
 	width: 80px;
 }
 
-#footer-msg {
+#footer-msg,
+#footer-msg2 {
 	margin-right: 10px;
 	padding: 2px 10px;
 	color: #222;
@@ -506,8 +507,9 @@ div[id^="media_"] {
 	opacity: 0;
 }
 
-#bwm-controls .selected {
-	padding: 0 0 0 4px;
+#bwm-controls .selected,
+#logging .selected {
+	padding: 0;
 	font-weight: bold;
 	text-decoration: underline;
 }
@@ -584,7 +586,8 @@ div[id^="media_"] {
 #bwm-ctrl,
 #pptp-ctrl,
 #webmon-controls,
-.webmon-clear {
+.webmon-clear,
+.log-clear {
 	float: right;
 	text-align: right;
 }
@@ -832,7 +835,8 @@ div[id$="_users"] .co2 {
 	margin: 15px 0 15px 0;
 }
 
-#survey-controls {
+#survey-controls,
+.log-controls {
 	text-align: right;
 }
 
@@ -881,6 +885,7 @@ div[id$="_users"] .co2 {
 	text-decoration: underline;
 }
 
+.log-searchbox,
 #webmon-controls > div#webmon-mc {
 	padding-bottom: 10px;
 }
@@ -962,6 +967,7 @@ img[id^="barnoise_"] {
 	width: 70%;
 }
 
+#log-find-text,
 #res-bp-grid .box6,
 #sm-grid .co1 {
 	width: 30%;
@@ -1340,6 +1346,15 @@ div[id$="_users"] .co1 {
 	text-align: center;
 }
 
+#log-table .co1 {
+	width: 1%;
+}
+
+#log-table .co3,
+#log-table-header .co3 {
+	text-align: center;
+}
+
 #fmsg {
 	background: #b55;
 	color: #fff;
@@ -1495,6 +1510,53 @@ div#sptime {
 .progress-bar {
 	height: 2px;
 	border-radius: 0;
+}
+
+#log-occurence-span {
+	font-style: italic;
+}
+
+#log-table {
+	display: block;
+	overflow: auto;
+	max-height: 570px;
+}
+
+#log-table-header.tomato-grid,
+#log-table-header.tomato-grid > table.tomato-grid {
+	margin: 0;
+}
+
+.loglevel-1 {
+	background: #ffad4a !important;
+}
+
+.loglevel-2 {
+	background: #e2c471 !important;
+}
+
+.loglevel-3 {
+	background: #ffdac4 !important;
+}
+
+.loglevel-4 {
+	background: #ffddef !important;
+}
+
+.loglevel-5 {
+	background: #bfece6 !important;
+}
+
+.loglevel-6 {
+	background: #dcf3f9 !important;
+}
+
+.loglevel-7 {
+	background: #e2f8cd !important;
+}
+
+.loglevel-8 {
+	background: #fdffb7 !important;
 }
 
 /* SVG */

@@ -124,18 +124,18 @@
 
 		GETCH=$(NV wl0_channel)
 		[ "$GETCH" -eq 0 ] && CH="auto" || CH=$GETCH
-		[ "$(NV wl0_nband)" == 2 ] && BAND="2,4GHz" || BAND="5GHz"
+		[ "$(NV wl0_nband)" == 2 ] && BAND="2.4GHz" || BAND="5GHz"
 		[ "$(NV wl0_radio)" == 1 ] && /bin/echo " WL0 : $BAND @ $(NV wl0_ssid) @ channel: $(NV wl0_country)$CH @ $(NV wl0_hwaddr)"
 		[ "$(NV landevs | /bin/grep wl1 | /usr/bin/wc -l)" -eq 1 ] && {
 			GETCH=$(NV wl1_channel)
 			[ "$GETCH" -eq 0 ] && CH="auto" || CH=$GETCH
-			[ "$(NV wl1_nband)" == 2 ] && BAND="2,4GHz" || BAND="5GHz"
+			[ "$(NV wl1_nband)" == 2 ] && BAND="2.4GHz" || BAND="5GHz"
 			[ "$(NV wl1_radio)" == 1 ] && /bin/echo " WL1 : $BAND @ $(NV wl1_ssid) @ channel: $(NV wl1_country)$CH @ $(NV wl1_hwaddr)"
 		}
 		[ "$(NV landevs | /bin/grep wl2 | /usr/bin/wc -l)" -eq 1 ] && {
 			GETCH=$(NV wl2_channel)
 			[ "$GETCH" -eq 0 ] && CH="auto" || CH=$GETCH
-			[ "$(NV wl2_nband)" == 2 ] && BAND="2,4GHz" || BAND="5GHz"
+			[ "$(NV wl2_nband)" == 2 ] && BAND="2.4GHz" || BAND="5GHz"
 			[ "$(NV wl2_radio)" == 1 ] && /bin/echo " WL2 : $BAND @ $(NV wl2_ssid) @ channel: $(NV wl2_country)$CH @ $(NV wl2_hwaddr)"
 		}
 		/bin/echo -e "\033[1;34m ======================================================== \033[0m"

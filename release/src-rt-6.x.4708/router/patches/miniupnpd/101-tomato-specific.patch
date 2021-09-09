@@ -1,6 +1,6 @@
 --- miniupnpd/configure
 +++ miniupnpd/configure
-@@ -114,11 +114,11 @@
+@@ -118,11 +118,11 @@
  	OS_VERSION=$(cat ./os.astlinux)
  fi
  
@@ -15,7 +15,7 @@
  fi
  
  # OpenEmbedded special case
-@@ -396,8 +396,8 @@
+@@ -400,8 +400,8 @@
  		FW=iptables
  		;;
  	Tomato)
@@ -26,7 +26,7 @@
  		echo "" >> ${CONFIGFILE}
  		echo "#ifndef TOMATO" >> ${CONFIGFILE}
  		echo "#define TOMATO" >> ${CONFIGFILE}
-@@ -409,6 +409,7 @@
+@@ -413,6 +413,7 @@
  		echo "#ifdef TCONFIG_IPV6" >> ${CONFIGFILE}
  		echo "#define ENABLE_IPV6" >> ${CONFIGFILE}
  		echo "#endif" >> ${CONFIGFILE}
@@ -34,7 +34,7 @@
  		FW=iptables
  		;;
  	Darwin)
-@@ -490,8 +491,14 @@
+@@ -494,8 +495,14 @@
  				fi
  				if [ "$IPTABLES_143" -eq 1 ] ; then
  					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
@@ -102,8 +102,8 @@
 +#endif # ($(TEST),1)
  endif # ($(TARGET_OPENWRT,)
  
- GLIBC_VERSION := $(shell ldd --version | head -n 1 | sed 's/^.* //')
-@@ -105,10 +107,11 @@
+ ifneq ($(shell ldd --version | grep GLIBC),)
+@@ -107,10 +109,11 @@
  
  TESTUPNPDESCGENOBJS = testupnpdescgen.o upnpdescgen.o
  

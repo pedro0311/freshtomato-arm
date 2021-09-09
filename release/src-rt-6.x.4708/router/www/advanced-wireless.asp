@@ -299,6 +299,7 @@ function init() {
 		<li><b>ES / 4</b> - Country: ES (Spain) AND Country Rev: 4</li>
 		<li><b>IT / 4</b> - Country: IT (Italy) AND Country Rev: 4</li>
 		<li><b>US / 0</b> - Country: US (USA) AND Country Rev: 0</li>
+		<li><b>Q2 / 96</b> - Country: Q2 (USA) AND Country Rev: 96</li>
 		<li><b>CA / 223</b> - Country: CA (Canada) AND Country Rev: 223</li>
 		<li><b>BR / 17</b> - Country: BR (Brazil) AND Country Rev: 17</li>
 		<li><b>BR / 20</b> - Country: BR (Brazil) AND Country Rev: 20</li>

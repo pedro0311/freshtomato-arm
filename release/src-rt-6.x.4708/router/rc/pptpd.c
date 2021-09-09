@@ -83,6 +83,9 @@ void start_pptpd(void)
 	FILE *fp;
 	int count = 0, ret = 0, nowins = 0, pptpd_opt;
 	char bcast[32];
+#ifdef TCONFIG_BCMARM
+	int ctf_disable = nvram_get_int("ctf_disable");
+#endif /* TCONFIG_BCMARM */
 
 	if (!nvram_match("pptpd_enable", "1"))
 		return;
@@ -229,6 +232,10 @@ void start_pptpd(void)
 	            "%s\n",
 	            bcast,
 	            nvram_safe_get("pptpd_ipup_script"));
+#ifdef TCONFIG_BCMARM
+	if (!ctf_disable) /* bypass CTF if enabled */
+		fprintf(fp, "iptables -t mangle -I PREROUTING -i $1 -j MARK --set-mark 0x01/0x7\n");
+#endif /* TCONFIG_BCMARM */
 
 	fclose(fp);
 
@@ -243,6 +250,10 @@ void start_pptpd(void)
 	            "%s\n",
 	            bcast,
 	            nvram_safe_get("pptpd_ipdown_script"));
+#ifdef TCONFIG_BCMARM
+	if (!ctf_disable) /* bypass CTF if enabled */
+		fprintf(fp, "iptables -t mangle -D PREROUTING -i $1 -j MARK --set-mark 0x01/0x7\n");
+#endif /* TCONFIG_BCMARM */
 
 	fclose(fp);
 

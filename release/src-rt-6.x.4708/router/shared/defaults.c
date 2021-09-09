@@ -505,7 +505,8 @@ struct nvram_tuple router_defaults[] = {
 	/* misc */
 	{ "wl_wmf_bss_enable",		"0"				, 0 },	// Wireless Multicast Forwarding Enable/Disable
 	{ "wl_rifs_advert",		"auto"				, 0 },	// RIFS mode advertisement
-	{ "wl_stbc_tx",			"auto"				, 0 },	// Default STBC TX setting
+	{ "wl_stbc_tx",			"auto"				, 0 },	/* Default STBC TX setting */
+	{ "wl_stbc_rx", 		"1"				, 0 },	/* Default STBC RX setting */
 	{ "wl_mcast_regen_bss_enable",	"1"				, 0 },	// MCAST REGEN Enable/Disable
 #endif
 #ifdef TCONFIG_BCMWL6
@@ -705,7 +706,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_NVRAM_32K
 	{ "adblock_blacklist",		""				, 0 },
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://www.malwaredomainlist.com/hostslist/hosts.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>" , 0 },
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>" , 0 },
 #endif
 	{ "adblock_blacklist_custom",	""				, 0 },
 	{ "adblock_whitelist",		""				, 0 },
@@ -989,6 +990,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "log_mark",			"60"				, 0 },
 	{ "log_events",			""				, 0 },
 	{ "log_dropdups",		"0"				, 0 },
+	{ "log_min_level",		"8"				, 0 },
 
 /* admin-log-webmonitor */
 	{ "log_wm",			"0"				, 0 },
