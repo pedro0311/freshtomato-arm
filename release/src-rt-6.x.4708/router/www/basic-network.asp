@@ -1278,9 +1278,9 @@ REMOVE-END */
 			}
 		}
 		else if (wl_ifaces.length > 0) {
-			for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-				if (wl_sunit(uidx) < 0) {
-					u = wl_unit(uidx);
+			for (i = 0; i < wl_ifaces.length; ++i) {
+				if (wl_sunit(i) < 0) {
+					u = wl_unit(i);
 					if (E('_f_wl'+u+'_mode').value == 'sta')
 						E('_f_wl'+u+'_mode').value = wl_mode_last[u];
 				}
