@@ -1679,7 +1679,7 @@ void do_static_routes(int add)
 void hotplug_net(void)
 {
 	char *interface, *action;
-	char *lan_ifname;
+	char *lan_ifname = nvram_safe_get("lan_ifname");
 #ifdef TCONFIG_BCMWL6
 	int psta;
 #endif
@@ -1698,8 +1698,10 @@ void hotplug_net(void)
 #endif
 	     ) &&
 	    (strcmp(action, "register") == 0 || strcmp(action, "add") == 0)) {
+
+		/* interface up! */
 		ifconfig(interface, IFUP, NULL, NULL);
-		lan_ifname = nvram_safe_get("lan_ifname");
+
 #ifdef TCONFIG_EMF
 		if (nvram_get_int("emf_enable")) {
 			eval("emf", "add", "iface", lan_ifname, interface);
@@ -1720,7 +1722,22 @@ void hotplug_net(void)
 			eval("brctl", "addif", lan_ifname, interface);
 			notify_nas(interface);
 		}
+
+		return;
 	}
+
+#ifdef TCONFIG_BCMWL6
+	if (strcmp(action, "unregister") == 0 || strcmp(action, "remove") == 0) {
+		/* Indicate interface delete event to eapd */
+		logmsg(LOG_DEBUG, "*** %s: hotplug_net(): send dif event (delete) to %s\n", __FUNCTION__, interface);
+		wl_send_dif_event(interface, 1);
+
+#ifdef TCONFIG_EMF
+		if (nvram_get_int("emf_enable"))
+			eval("emf", "del", "iface", lan_ifname, interface);
+#endif /* TCONFIG_EMF */
+	}
+#endif
 }
 
 #ifdef TCONFIG_BCMWL6
@@ -1782,6 +1799,9 @@ static int is_same_addr(struct ether_addr *addr1, struct ether_addr *addr2)
 static int check_wl_client(char *ifname, int unit, int subunit)
 {
 	struct ether_addr bssid;
+#ifdef TCONFIG_BCMWL6
+	char macaddr[32];
+#endif /* TCONFIG_BCMWL6 */
 	wl_bss_info_t *bi;
 	char buf[WLC_IOCTL_MAXLEN];
 	struct maclist *mlist;
@@ -1830,6 +1850,15 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 		}
 		free(mlist);
 	}
+
+#ifdef TCONFIG_BCMWL6
+	if (associated && authorized && !strcmp(nvram_safe_get(wl_nvname("mode", unit, subunit)), "psta")) {
+		ether_etoa((const unsigned char *) &bssid, macaddr);
+		logmsg(LOG_DEBUG, "*** %s: check_wl_client(): %s send keepalive nulldata to %s\n", __FUNCTION__, ifname, macaddr);
+		eval("wl", "-i", ifname, "send_nulldata", macaddr);
+
+	}
+#endif /* TCONFIG_BCMWL6 */
 
 	return (associated && authorized);
 }
