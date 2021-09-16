@@ -152,7 +152,7 @@ function copyRowContent(el) {
 	}
 }
 
-var logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\w+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
+var logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\S+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
 var errRegex = new RegExp(/^(.*?)err.*/i);
 var infRegex = new RegExp(/^(.*?)inf.*/i);
 var noticeRegex = new RegExp(/^(.*?)notic.*/i);
