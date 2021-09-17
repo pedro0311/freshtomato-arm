@@ -283,6 +283,11 @@ function showEntries() {
 		elem.addClass(e, 'selected');
 		e.blur();
 	}
+
+	/* retrieve only needed number of lines */
+	ref.postData = 'exec=showlog'+(entriesMode > 0 ? '&arg0=&arg1='+entriesMode : '');
+	ref.initPage(0, 1);
+
 	entriesLast = entriesMode;
 }
 
