@@ -443,7 +443,7 @@ dg.populate = function() {
 
 		f = '';
 		if (e.freq != '') {
-			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
 			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {
