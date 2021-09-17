@@ -416,10 +416,10 @@ function init() {
 		</div>
 
 		<div class="log-viewlast">
-			&raquo; <a href="javascript:viewLast(0)" id="entries0">View all</a><br>
-			&raquo; <a href="javascript:viewLast(25)" id="entries25">View last 25 entries</a><br>
-			&raquo; <a href="javascript:viewLast(50)" id="entries50">View last 50 entries</a><br>
-			&raquo; <a href="javascript:viewLast(100)" id="entries100">View last 100 entries</a><br>
+			&raquo; <a href="javascript:viewLast(0)" id="entries0">View all </a> &nbsp; <a href="logs/view.cgi?which=all&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
+			&raquo; <a href="javascript:viewLast(25)" id="entries25">View last 25 entries</a> &nbsp; <a href="logs/view.cgi?which=25&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
+			&raquo; <a href="javascript:viewLast(50)" id="entries50">View last 50 entries</a> &nbsp; <a href="logs/view.cgi?which=50&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
+			&raquo; <a href="javascript:viewLast(100)" id="entries100">View last 100 entries</a> &nbsp; <a href="logs/view.cgi?which=100&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
 		</div>
 	</div>
 </div>
