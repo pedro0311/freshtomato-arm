@@ -289,7 +289,7 @@ static int check_connect(char *prefix)
 {
 	char tmp[64];
 	FILE *f;
-	int result;
+	int result = 0;
 
 	memset(tmp, 0, 64);
 	snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_state", prefix);
@@ -298,17 +298,14 @@ static int check_connect(char *prefix)
 		if (nvram_get_int("mwan_cktime") == 0)
 			return 1;
 
-		f = fopen(tmp, "r");
+		if ((f = fopen(tmp, "r")) == NULL)
+			return 0;
+
 		fscanf(f, "%d", &result);
 		fclose(f);
-
-		if (result == 1)
-			return 1;
-		else
-			return 0;
 	}
-	else
-		return 0;
+
+	return result;
 }
 
 #ifdef TCONFIG_IPV6
