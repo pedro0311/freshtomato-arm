@@ -1488,7 +1488,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "NC_GatewayMode",		"Open"				, 0 },
 	{ "NC_DocumentRoot",		"/tmp/splashd"			, 0 },
 	{ "NC_ExcludePorts",		"1863"				, 0 },
-	{ "NC_HomePage",		"http://google.com"		, 0 },
+	{ "NC_HomePage",		"https://startpage.com"		, 0 },
 	{ "NC_ForcedRedirect",		"0"				, 0 },
 	{ "NC_IdleTimeout",		"0"				, 0 },
 	{ "NC_MaxMissedARP",		"5"				, 0 },

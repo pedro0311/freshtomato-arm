@@ -16,10 +16,12 @@
 #include <syslog.h>
 #include <sys/stat.h>
 
+#define NOCAT_SCRIPTS		"/usr/libexec/nocat/"
 #define NOCAT_CONF		"/tmp/etc/nocat.conf"
 #define NOCAT_START_SCRIPT	"/tmp/start_splashd.sh"
 #define NOCAT_LEASES		"/tmp/nocat.leases"
 #define NOCAT_LOGFILE		"/tmp/nocat.log"
+#define NOCAT_LOCKFILE		"/tmp/var/lock/splashd.lock"
 
 
 void build_nocat_conf(void)
@@ -106,7 +108,7 @@ void build_nocat_conf(void)
 	            "HomePage\t%s\n"
 	            "PeerCheckTimeout\t%s\n",
 	            NOCAT_LEASES,
-	            "/usr/libexec/nocat/",
+	            NOCAT_SCRIPTS,
 	            nvram_safe_get("NC_ExcludePorts"),
 	            nvram_safe_get("NC_IncludePorts"),
 	            nvram_safe_get("lan_ipaddr"),
@@ -187,20 +189,20 @@ void start_nocat(void)
 		return;
 	}
 	
-	/*if (!pidof("splashd") > 0 && (fp = fopen("/tmp/var/lock/splashd.lock", "r"))) {
-		unlink("/tmp/var/lock/splashd.lock");
+	/*if (!pidof("splashd") > 0 && (fp = fopen(NOCAT_LOCKFILE, "r"))) {
+		unlink(NOCAT_LOCKFILE);
 	}*/
 
 	fprintf(fp, "#!/bin/sh\n"
-	            "LOGGER=logger\n"
-	            "LOCK_FILE=/tmp/var/lock/splashd.lock\n"
+	            "LOGGER=\"logger -t splashd\"\n"
+	            "LOCK_FILE="NOCAT_LOCKFILE"\n"
 	            "if [ -f $LOCK_FILE ]; then\n"
-	            "	$LOGGER \"Captive Portal halted (0), other process starting\" \n"
+	            "	$LOGGER \"Captive Portal halted (0), other process starting\"\n"
 	            "	exit\n"
 	            "fi\n"
 	            "echo \"FRESHTOMATO\" > $LOCK_FILE\n"
 	            "sleep 20\n"
-	            "$LOGGER \"splashd: Captive Portal Splash Daemon successfully started\" \n"
+	            "$LOGGER \"Captive Portal Splash Daemon successfully started\"\n"
 	            "echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse\n"
 	            "/usr/sbin/splashd >> "NOCAT_LOGFILE" 2>&1 &\n"
 	            "sleep 2\n"
@@ -219,13 +221,13 @@ void stop_nocat(void)
 	if (pidof("splashd") > 0) {
 		killall_tk_period_wait("splashd", 50);
 
-		eval("/usr/libexec/nocat/uninitialize.fw");
+		eval(NOCAT_SCRIPTS"/uninitialize.fw");
 
 		system("rm "NOCAT_LEASES);
 		system("rm "NOCAT_START_SCRIPT);
 		system("rm "NOCAT_LOGFILE);
 		start_wan();
 
-		syslog(LOG_INFO, "splashd: Captive Portal Splash daemon successfully stopped");
+		syslog(LOG_INFO, "Captive Portal Splash daemon successfully stopped");
 	}
 }
