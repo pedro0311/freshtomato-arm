@@ -273,7 +273,7 @@ else
     nonauth="4"
 fi
 #for port in 80 443; do
-for port in 80 443; do
+for port in 80; do
     if [ $Verbosity -gt 4 ]; then logger "nat::Nocat_Capture: REDIRECTING outbound, unauthenticated, traffic on port: $port to the local gateway"; fi
     for mark in $nonauth; do
 	$redirect -m mark --mark $mark -p tcp --dport $port  -j DNAT \
