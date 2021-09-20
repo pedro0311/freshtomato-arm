@@ -564,7 +564,6 @@ void restart_wl(void)
 {
 	char *lan_ifname, *lan_ifnames, *ifname, *p;
 	int unit, subunit;
-	int is_client = 0;
 	int model;
 
 	char tmp[32];
@@ -618,8 +617,6 @@ void restart_wl(void)
 					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
 						continue;
 
-					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
-
 #ifdef CONFIG_BCMWL5
 					memset(prefix, 0, sizeof(prefix));
 					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
@@ -663,9 +660,6 @@ void restart_wl(void)
 
 	killall("wldist", SIGTERM);
 	eval("wldist");
-
-	if (is_client)
-		xstart("radio", "join");
 
 	/* do some LED setup */
 	if ((model == MODEL_WS880) ||
