@@ -23,6 +23,7 @@
 var cprefix = 'status_log';
 
 var currentSearch = '';
+var negativeSearch = 0;
 var currentFilterValue = 0;
 var currentlyScrolling = false;
 var scrollingDetectorTimeout;
@@ -43,18 +44,16 @@ var ref = new TomatoRefresh('update.cgi', 'exec=showlog', 5, 'status_log');
 ref.refresh = function(text) {
 	try {
 		messages = text.split('\n');
-		if (E('log-find-text').value.length == 0) {
-			if (!currentlyScrolling) {
-				var willScroll = false;
-				var tableDiv = E('log-table');
-				if (tableDiv.offsetHeight + tableDiv.scrollTop >= tableDiv.scrollHeight)
-					willScroll = true;
+		if (!currentlyScrolling) {
+			var willScroll = false;
+			var tableDiv = E('log-table');
+			if (tableDiv.offsetHeight + tableDiv.scrollTop >= tableDiv.scrollHeight)
+				willScroll = true;
 
-				logGrid.populate();
+			logGrid.populate();
 
-				if (willScroll)
-					scrollToBottom();
-			}
+			if (willScroll)
+				scrollToBottom();
 		}
 	}
 	catch (ex) {
@@ -71,7 +70,7 @@ logHeaderGrid.setup = function() {
 var logGrid = new TomatoGrid();
 
 logGrid.setup = function() {
-	this.init('log-table', '', 4000);
+	this.init('log-table', '', 4001);
 	this.canSort = false;
 	this.canEdit = false;
 	this.canMove = false;
@@ -83,21 +82,29 @@ logGrid.populate = function() {
 	this.removeAllData();
 
 	if (messages != null) {
-		var messagesToAdd = messages;
+		var messagesToAdd = messages.concat();
 		time = messagesToAdd.shift(); /* always present in response */
 
 		if (entriesMode != 0)
 			messagesToAdd = messagesToAdd.slice(-1 * entriesMode - 1);
 
-		if (currentSearch)
-			messagesToAdd = messagesToAdd.filter( function(line) { if (line != 'undefined') { return line.toUpperCase().indexOf(currentSearch.toUpperCase()) >= 0; } } );
+		var localSearch;
+		if (currentSearch) {
+			localSearch = currentSearch;
+			if (localSearch.substr(0, 1) == '-') {
+				localSearch = localSearch.substr(1);
+				negativeSearch = 1;
+			}
+			else
+				negativeSearch = 0;
+		}
 
 		var count = 0;
 		for (var index = 0; index < messagesToAdd.length; ++index) {
 			if (messagesToAdd[index]) {
 				var logLineMap = getLogLineParsedMap(messagesToAdd[index]);
 				if ((currentFilterValue == 0) || (logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1] == currentFilterValue)) {
-						if (!currentSearch || containsSearch(logLineMap, currentSearch)) {
+						if (!localSearch || containsSearch(logLineMap, localSearch)) {
 							var row = createHighlightedRow(logLineMap);
 							this.insert(-1, row, row, true);
 							count++;
@@ -168,10 +175,15 @@ var emergencyRegex = new RegExp(/^(.*?)emer.*/i);
 var debugRegex = new RegExp(/^(.*?)debu.*/i);
 
 function containsSearch(logLineMap, text) {
-	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_FACILITY_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0);
+	var ret = (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0);
+
+	if (negativeSearch == 1)
+		return !ret;
+	else
+		return ret;
 }
 
 function getLevelColor(level) {
@@ -220,7 +232,7 @@ function getLogLineParsedMap(logLine) {
 		returnedArray[LINE_PARSE_MAP_LEVEL_POS] = matchedArray[3];
 		returnedArray[LINE_PARSE_MAP_LEVEL_ATTR_POS] = getLevelColor(returnedArray[LINE_PARSE_MAP_LEVEL_POS]);
 		returnedArray[LINE_PARSE_MAP_LEVEL_PROCESS_POS] = matchedArray[4].slice(0, -1);
-		returnedArray[LINE_PARSE_MAP_LEVEL_MESSAGE_POS] = escapeHTML(matchedArray[5]);
+		returnedArray[LINE_PARSE_MAP_LEVEL_MESSAGE_POS] = matchedArray[5];
 	}
 	return returnedArray;
 }
@@ -336,6 +348,32 @@ function onKeyUpEvent(event) {
 	}
 }
 
+var onInputEvent = debounce(function() {
+	currentSearch = E('log-find-text').value;
+	logGrid.populate();
+	if (currentSearch.length == 0) {
+		E('log-occurence-span').style.display = 'none';
+		scrollToBottom();
+	}
+}, 1500);
+
+function debounce(func, wait, immediate) {
+	var timeout;
+	return function() {
+		var context = this, args = arguments;
+		var later = function() {
+			timeout = null;
+			if (!immediate)
+				func.apply(context, args);
+		};
+		var callNow = immediate && !timeout;
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+		if (callNow)
+			func.apply(context, args);
+	};
+}
+
 function init() {
 	if (nvram.log_file != 1) {
 		E('logging').style.display = 'none';
@@ -352,17 +390,7 @@ function init() {
 	logHeaderGrid.setup();
 	logGrid.setup();
 
-	var findTextInput = E('log-find-text');
-	addEvent(findTextInput, 'input', function(event) {
-		setTimeout(function() {
-			currentSearch = findTextInput.value;
-			logGrid.populate();
-			if (currentSearch.length == 0) {
-				E('log-occurence-span').style.display = 'none';
-				scrollToBottom();
-			}
-		}, 1500);
-	});
+	addEvent(E('log-find-text'), 'input', onInputEvent);
 	addEvent(document, 'keyup', onKeyUpEvent);
 
 	ref.initPage(0, 1);
@@ -371,7 +399,6 @@ function init() {
 
 	ref.start();
 }
-
 </script>
 </head>
 
@@ -414,7 +441,7 @@ function init() {
 			&nbsp; &nbsp;
 			<span>
 				Find in syslog: &nbsp;
-				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search">
+				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search; use '-' in front to make a negative search">
 				<span style="display:none" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
 			</span>
 
