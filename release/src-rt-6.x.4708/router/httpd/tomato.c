@@ -896,7 +896,9 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wep",			V_LENGTH(1, 32)			},	//  off, on, restricted,tkip,aes,tkip+aes
 	{ "wl_akm",			V_LENGTH(0, 32)			},	//  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, ""
 	{ "wl_auth_mode",		V_LENGTH(4, 6)			},	//  none, radius
-
+#ifdef TCONFIG_BCMARM
+	{ "wl_mfp",			V_RANGE(0, 2)			},	/* Protected Management Frames: 0 - Disable, 1 - Capable, 2 - Required */
+#endif
 	{ "wl_nmode",			V_NONE				},
 	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
 	{ "wl_nreqd",			V_NONE				},

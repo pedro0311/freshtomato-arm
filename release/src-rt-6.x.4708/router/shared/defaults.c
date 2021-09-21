@@ -396,9 +396,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_crypto",			"aes"				, 0 },	// WPA data encryption
 	{ "wl_net_reauth",		"36000"				, 0 },	// Network Re-auth/PMK caching duration
 	{ "wl_akm",			""				, 0 },	// WPA akm list
-
-	{ "wl_mfp",			"0"				, 0 },	/* Protected Management Frame */
-
+#ifdef TCONFIG_BCMARM
+	{ "wl_mfp",			"0"				, 0 },	/* Protected Management Frames: 0 - Disable, 1 - Capable, 2 - Required */
+#endif
 	/* WME parameters (cwmin cwmax aifsn txop_b txop_ag adm_control oldest_first) */
 	/* EDCA parameters for STA */
 	{ "wl_wme_sta_bk",		"15 1023 7 0 0 off off"		, 0 },	// WME STA AC_BK paramters
