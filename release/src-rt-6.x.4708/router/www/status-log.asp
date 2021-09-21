@@ -29,6 +29,7 @@ var scrollingDetectorTimeout;
 var messages;
 var entriesMode = 0;
 var entriesLast = -1;
+var time = '';
 
 var LINE_PARSE_MAP_DATE_POS = 0;
 var LINE_PARSE_MAP_FACILITY_POS = 1;
@@ -80,13 +81,16 @@ logGrid.setup = function() {
 
 logGrid.populate = function() {
 	this.removeAllData();
+
 	if (messages != null) {
 		var messagesToAdd = messages;
+		time = messagesToAdd.shift(); /* always present in response */
+
 		if (entriesMode != 0)
-			messagesToAdd = messagesToAdd.slice(-1 * entriesMode);
+			messagesToAdd = messagesToAdd.slice(-1 * entriesMode - 1);
 
 		if (currentSearch)
-			messagesToAdd = messagesToAdd.filter( function(line) { if (line != 'undefined') { return line.indexOf(currentSearch) >= 0; } } );
+			messagesToAdd = messagesToAdd.filter( function(line) { if (line != 'undefined') { return line.toUpperCase().indexOf(currentSearch.toUpperCase()) >= 0; } } );
 
 		var count = 0;
 		for (var index = 0; index < messagesToAdd.length; ++index) {
@@ -102,10 +106,11 @@ logGrid.populate = function() {
 			}
 		}
 
-		var occurenceSpan = E('log-occurence-span');
-		occurenceSpan.style.visibility = (currentSearch ? 'visible' : 'hidden');
-		var occurenceValue = E('log-occurence-value');
-		occurenceValue.innerHTML = count;
+		E('log-occurence-span').style.display = (currentSearch ? 'inline' : 'none');
+		elem.setInnerHTML('log-occurence-value', count);
+
+		if (time != 'Not Available')
+			elem.setInnerHTML('log-refresh-time', time.match(/(\d+\:\d+\:\d+)\s(.*)/i)[1]+' - Last Refreshed');
 
 		var e = E('log-table').children[0].children[0].children[0];
 		if (e) {
@@ -163,10 +168,10 @@ var emergencyRegex = new RegExp(/^(.*?)emer.*/i);
 var debugRegex = new RegExp(/^(.*?)debu.*/i);
 
 function containsSearch(logLineMap, text) {
-	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).indexOf(text) >= 0);
+	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_FACILITY_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0 ||
+	        String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS].toUpperCase()).indexOf(text.toUpperCase()) >= 0);
 }
 
 function getLevelColor(level) {
@@ -235,9 +240,9 @@ function generateHighlightSpan(innerText, classN, customStyle) {
 	if (customStyle)
 		newText.className += ' '+customStyle;
 
-	var indexOfSearch = innerText.indexOf(currentSearch);
+	var indexOfSearch = innerText.toUpperCase().indexOf(currentSearch.toUpperCase());
 	if (indexOfSearch == -1)
-		newText.innerHTML = innerText;
+		elem.setInnerHTML(newText, innerText);
 	else {
 		var sizeOfSearch = currentSearch.length;
 
@@ -265,6 +270,7 @@ function filterLevelChanged() {
 	var filterSelector = E('filterLevelSelector');
 	currentFilterValue = parseInt(filterSelector.options[filterSelector.selectedIndex].value, 10);
 	logGrid.populate();
+	filterSelector.blur();
 	scrollToBottom();
 }
 
@@ -287,6 +293,10 @@ function showEntries() {
 	/* retrieve only needed number of lines */
 	ref.postData = 'exec=showlog'+(entriesMode > 0 ? '&arg0=&arg1='+entriesMode : '');
 	ref.initPage(0, 1);
+	if (!ref.running)
+		ref.once = 1;
+
+	ref.start();
 
 	entriesLast = entriesMode;
 }
@@ -318,11 +328,9 @@ function onKeyUpEvent(event) {
 
 	var key = event.key || event.keyCode;
 	if (key === 'Escape' || key === 'Esc' || key === 27) {
-		var findTextInput = E('log-find-text');
-		findTextInput.value = '';
+		E('log-find-text').value = '';
 		currentSearch = '';
-		var occurenceSpan = E('log-occurence-span');
-		occurenceSpan.style.visibility = 'hidden';
+		E('log-occurence-span').style.display = 'none';
 		logGrid.populate();
 		scrollToBottom();
 	}
@@ -338,6 +346,7 @@ function init() {
 	var c;
 	if (((c = cookie.get(cprefix+'_entries')) != null) && (c >= '0'))
 		entriesMode = (cookie.get(cprefix+'_entries'));
+
 	showEntries();
 
 	logHeaderGrid.setup();
@@ -349,8 +358,7 @@ function init() {
 			currentSearch = findTextInput.value;
 			logGrid.populate();
 			if (currentSearch.length == 0) {
-				var occurenceSpan = E('log-occurence-span');
-				occurenceSpan.style.visibility = 'hidden';
+				E('log-occurence-span').style.display = 'none';
 				scrollToBottom();
 			}
 		}, 1500);
@@ -407,7 +415,7 @@ function init() {
 			<span>
 				Find in syslog: &nbsp;
 				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search">
-				<span style="visibility:hidden" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
+				<span style="display:none" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
 			</span>
 
 		</div>
@@ -415,16 +423,18 @@ function init() {
 		<div class="tomato-grid" id="log-table-header"></div>
 		<div class="tomato-grid" id="log-table" onscroll="onTableScroll();"></div>
 
-		<div class="log-clear">
+		<div id="log-refresh-time"></div>
+
+		<div class="log-clear log-viewlast">
 			<span>&raquo; <a href="logs/syslog.txt?_http_id=<% nv(http_id) %>">Download Log File</a></span><br>
 			<span>&raquo; <a href="admin-log.asp">Logging Configuration</a></span><br><br>
 		</div>
 
 		<div class="log-viewlast">
-			&raquo; <a href="javascript:viewLast(0)" id="entries0">View all </a> &nbsp; <a href="logs/view.cgi?which=all&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
-			&raquo; <a href="javascript:viewLast(25)" id="entries25">View last 25 entries</a> &nbsp; <a href="logs/view.cgi?which=25&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
-			&raquo; <a href="javascript:viewLast(50)" id="entries50">View last 50 entries</a> &nbsp; <a href="logs/view.cgi?which=50&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
-			&raquo; <a href="javascript:viewLast(100)" id="entries100">View last 100 entries</a> &nbsp; <a href="logs/view.cgi?which=100&amp;_http_id=<% nv(http_id) %>">(RAW)</a><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(25)" id="entries25">Trim to last 25 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=25&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(50)" id="entries50">Trim to last 50 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=50&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(100)" id="entries100">Trim to last 100 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=100&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(0)" id="entries0">Show all </a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=all&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
 		</div>
 	</div>
 </div>

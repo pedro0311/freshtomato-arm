@@ -134,12 +134,15 @@ void wo_viewlog(char *url)
 	int n;
 	char lfn[256];
 
-	if (!logok()) return;
+	if (!logok())
+		return;
 
 	get_logfilename(lfn);
 	if ((p = webcgi_get("find")) != NULL) {
 			send_header(200, NULL, mime_plain, 0);
-			if (strlen(p) > 64) return;
+			if (strlen(p) > 64)
+				return;
+
 			c = t;
 			while (*p) {
 					switch (*p) {
@@ -148,12 +151,13 @@ void wo_viewlog(char *url)
 					case '|':
 					case '"':
 					case '\\':
-							*c++ = '\\';
-							*c++ = *p;
-							break;
+						*c++ = '\\';
+						*c++ = *p;
+						break;
 					default:
-							if (isprint(*p)) *c++ = *p;
-							break;
+						if (isprint(*p))
+							*c++ = *p;
+						break;
 					}
 					++p;
 			}
@@ -163,12 +167,13 @@ void wo_viewlog(char *url)
 			return;
 	}
 
-	if ((p = webcgi_get("which")) == NULL) return;
+	if ((p = webcgi_get("which")) == NULL)
+		return;
 
 	if (strcmp(p, "all") == 0)
-			n = MAX_LOG_LINES;
+		n = MAX_LOG_LINES;
 	else if ((n = atoi(p)) <= 0)
-			return;
+		return;
 
 	send_header(200, NULL, mime_plain, 0);
 	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.*) | tail -n %d", lfn, lfn, n);
@@ -182,11 +187,16 @@ void asp_showsyslog(int argc, char **argv)
 	int logLines = MAX_LOG_LINES;
 	char lfn[256];
 
-	if (!logok()) return;
+	if (!logok())
+		return;
 
 	get_logfilename(lfn);
 	if (argc > 1)
 		logLines = atoi(argv[1]);
+
+	asp_time(0, 0); /* get current time and print in the first line */
+	web_puts("\n");
+
 	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.*) | tail -n %d", lfn, lfn, logLines);
 	web_pipecmd(s, WOF_NONE);
 }
