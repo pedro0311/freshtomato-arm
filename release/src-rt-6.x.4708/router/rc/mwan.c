@@ -31,7 +31,6 @@ typedef struct
 
 static waninfo_t wan_info;
 
-#ifdef TCONFIG_BCMWL6
 int get_sta_wan_prefix(char *sPrefix)
 {
 	int mwan_num;
@@ -60,7 +59,6 @@ int get_sta_wan_prefix(char *sPrefix)
 
 	return found;
 }
-#endif
 
 void get_wan_info(char *sPrefix)
 {

@@ -883,18 +883,17 @@ void start_lan_wl(void)
 
 void stop_wireless(void) {
 
-#ifdef TCONFIG_BCMWL6
 	char prefix[] = "wanXX";
-#endif
 
 #ifdef CONFIG_BCMWL5
 	stop_nas();
 #endif
-#ifdef TCONFIG_BCMWL6
+
 	if (get_sta_wan_prefix(prefix)) { /* wl client will be down */
 		logmsg(LOG_INFO, "wireless client WAN: stopping %s (WL down)", prefix);
 		stop_wan_if(prefix);
 	}
+#ifdef TCONFIG_BCMWL6
 	wl_sta_stop();
 #endif
 	stop_lan_wl();
@@ -906,8 +905,9 @@ void start_wireless(void) {
 
 #ifdef TCONFIG_BCMWL6
 	int ret = 0;
-	char prefix[] = "wanXX";
 #endif
+	char prefix[] = "wanXX";
+
 	//load_wl();
 
 #ifdef TCONFIG_BCMWL6
@@ -921,14 +921,17 @@ void start_wireless(void) {
 #endif
 	restart_wl();
 
+	if (1 &&
 #ifdef TCONFIG_BCMWL6
-	if (ret && get_sta_wan_prefix(prefix)) { /* wl client up again */
+	    ret &&
+#endif
+	    get_sta_wan_prefix(prefix)) { /* wl client up again */
 		logmsg(LOG_INFO, "wireless client WAN: starting %s (WL up)", prefix);
 		start_wan_if(prefix);
 		sleep(5);
 		force_to_dial(prefix);
 	}
-#endif
+
 }
 
 void restart_wireless(void) {
