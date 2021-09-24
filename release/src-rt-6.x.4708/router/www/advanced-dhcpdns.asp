@@ -467,9 +467,6 @@ function init() {
 /* STUBBY-END */
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
-			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
-			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == 1 },
-			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 			null,
 			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'textarea', value: nvram.dhcpc_custom },
 			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == 1 }
@@ -508,6 +505,9 @@ function init() {
 			{ title: 'Mute dhcpv6 logging', name: 'f_dnsmasq_q6', type: 'checkbox', value: (nvram.dnsmasq_q & 2) },
 			{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
 /* IPV6-END */
+			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
+			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', value: nvram.dns_norebind == 1 },
+			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 /* MDNS-BEGIN */
 			{ title: 'Enable multicast DNS<br>(Avahi mDNS)', name: 'f_mdns_enable', type: 'checkbox', value: nvram.mdns_enable == 1 },
 				{ title: 'Enable reflector', indent: 2, name: 'f_mdns_reflector', type: 'checkbox', value: nvram.mdns_reflector == 1 },
