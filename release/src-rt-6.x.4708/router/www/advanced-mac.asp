@@ -209,7 +209,7 @@ function init() {
 			var u = (uidx > 1) ? uidx : '';
 			f.push(
 				{ title: 'WAN'+(uidx - 1)+' Port', indent: 1, name: 'f_wan'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random LLA (Whole MAC)" onclick="brand(\'wan'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wan'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
+					suffix: ' <input type="button" value="Default" onclick="bdefault(\'wan'+u+'\')"> <input type="button" value="Random LLA" onclick="brand(\'wan'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wan'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wan'+u+'\')">',
 					value: nvram['wan'+u+'_mac'] || defmac('wan'+u) }
 			);
 		}
@@ -218,7 +218,7 @@ function init() {
 			var u = wl_fface(uidx);
 			f.push(
 				{ title: 'WL '+((wl_ifaces.length > 1) ? wl_display_ifname(uidx) : ''), indent: 1, name: 'f_wl'+u+'_hwaddr', type: 'text', maxlen: 17, size: 20,
-					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random LLA (Whole MAC)" onclick="brand(\'wl'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wl'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
+					suffix:' <input type="button" value="Default" onclick="bdefault(\'wl'+u+'\')"> <input type="button" value="Random LLA" onclick="brand(\'wl'+u+'\',false)"> <input type="button" value="OUI + Random UAA" onclick="brand(\'wl'+u+'\',true)"> <input type="button" value="Clone PC" onclick="bclone(\'wl'+u+'\')">',
 					value: nvram['wl'+u+'_hwaddr'] || defmac('wl' + u) }
 			);
 		}

@@ -250,7 +250,7 @@ void start_dnsmasq()
 
 		dns = get_dns(wan_prefix); /* this always points to a static buffer */
 
-		/* check dns entries only for active connections (checkConnect might have false-negative response) */
+		/* check dns entries only for active connections */
 		if ((check_wanup(wan_prefix) == 0) && (dns->count == 0))
 			continue;
 
@@ -319,7 +319,7 @@ void start_dnsmasq()
 
 				for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 					get_wan_prefix(wan_unit, wan_prefix);
-					/* skip inactive WAN connections (checkConnect might have false-negative response)
+					/* skip inactive WAN connections
 					 * TBD: need to check if there is no WANs active do we need skip here also?!?
 					 */
 					if (check_wanup(wan_prefix) == 0)
@@ -1048,7 +1048,7 @@ void dns_to_resolv(void)
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
 
-		/* skip inactive WAN connections (checkConnect might have false-negative response) */
+		/* skip inactive WAN connections */
 		if ((check_wanup(wan_prefix) == 0) &&
 		    get_wanx_proto(wan_prefix) != WP_DISABLED &&
 		    get_wanx_proto(wan_prefix) != WP_PPTP &&
