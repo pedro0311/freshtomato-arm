@@ -73,6 +73,8 @@ typedef u_int8_t u8;
 
 #ifdef TCONFIG_BCMWL6
 #include <d11.h>
+#include <wlif_utils.h>
+#include <security_ipc.h>
 #define WLCONF_PHYTYPE2STR(phy)	((phy) == PHY_TYPE_A ? "a" : \
 				 (phy) == PHY_TYPE_B ? "b" : \
 				 (phy) == PHY_TYPE_LP ? "l" : \
@@ -95,6 +97,7 @@ void start_lan_wl(void);
 int wl_sta_prepare(void);
 void wl_sta_start(void);
 void wl_sta_stop(void);
+int wl_send_dif_event(const char *ifname, uint32 event);
 #endif
 
 #ifdef TCONFIG_BCMWL6
@@ -588,7 +591,6 @@ void restart_wl(void)
 {
 	char *lan_ifname, *lan_ifnames, *ifname, *p;
 	int unit, subunit;
-	int is_client = 0;
 	int model;
 
 	char tmp[32];
@@ -644,8 +646,6 @@ void restart_wl(void)
 					else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
 						continue;
 
-					is_client |= wl_client(unit, subunit) && nvram_get_int(wl_nvname("radio", unit, 0));
-
 #ifdef CONFIG_BCMWL5
 					memset(prefix, 0, sizeof(prefix));
 					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
@@ -695,9 +695,6 @@ void restart_wl(void)
 
 	killall("wldist", SIGTERM);
 	eval("wldist");
-
-	if (is_client)
-		xstart("radio", "join");
 
 	/* do some LED setup */
 	if ((model == MODEL_WS880) ||
@@ -899,7 +896,11 @@ void start_lan_wl(void)
 						}
 
 						sta |= (strcmp(mode, "sta") == 0);
-						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)) continue;
+						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)
+#ifdef TCONFIG_BCMWL6
+						    && (strcmp(mode, "psta") != 0)
+#endif
+						    ) continue;
 					}
 #endif
 					eval("brctl", "addif", lan_ifname, ifname);
@@ -919,18 +920,17 @@ void start_lan_wl(void)
 
 void stop_wireless(void) {
 
-#ifdef TCONFIG_BCMWL6
 	char prefix[] = "wanXX";
-#endif
 
 #ifdef CONFIG_BCMWL5
 	stop_nas();
 #endif
-#ifdef TCONFIG_BCMWL6
+
 	if (get_sta_wan_prefix(prefix)) { /* wl client will be down */
 		logmsg(LOG_INFO, "wireless client WAN: stopping %s (WL down)", prefix);
 		stop_wan_if(prefix);
 	}
+#ifdef TCONFIG_BCMWL6
 	wl_sta_stop();
 #endif
 	stop_lan_wl();
@@ -942,8 +942,9 @@ void start_wireless(void) {
 
 #ifdef TCONFIG_BCMWL6
 	int ret = 0;
-	char prefix[] = "wanXX";
 #endif
+	char prefix[] = "wanXX";
+
 	//load_wl();
 
 #ifdef TCONFIG_BCMWL6
@@ -957,14 +958,17 @@ void start_wireless(void) {
 #endif
 	restart_wl();
 
+	if (1 &&
 #ifdef TCONFIG_BCMWL6
-	if (ret && get_sta_wan_prefix(prefix)) { /* wl client up again */
+	    ret &&
+#endif
+	    get_sta_wan_prefix(prefix)) { /* wl client up again */
 		logmsg(LOG_INFO, "wireless client WAN: starting %s (WL up)", prefix);
 		start_wan_if(prefix);
 		sleep(5);
 		force_to_dial(prefix);
 	}
-#endif
+
 }
 
 void restart_wireless(void) {
@@ -1374,11 +1378,13 @@ void start_lan(void)
 					/* bring up interface */
 					if (ifconfig(ifname, IFUP | IFF_ALLMULTI, NULL, NULL) != 0) continue;
 
-					/* set the logical bridge address to that of the first interface */
+					/* set the logical bridge address to that of the first interface OR Media Bridge interface address! */
 					strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
 					if ((!hwaddrset) ||
-						(ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0 &&
-						memcmp(ifr.ifr_hwaddr.sa_data, "\0\0\0\0\0\0", ETHER_ADDR_LEN) == 0)) {
+#ifdef TCONFIG_BCMWL6
+					    (is_psta_client(unit, subunit)) ||
+#endif
+					    (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0 && memcmp(ifr.ifr_hwaddr.sa_data, "\0\0\0\0\0\0", ETHER_ADDR_LEN) == 0)) {
 						strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 						if (ioctl(sfd, SIOCGIFHWADDR, &ifr) == 0) {
 							strlcpy(ifr.ifr_name, lan_ifname, IFNAMSIZ);
@@ -1445,7 +1451,11 @@ void start_lan(void)
 						}
 
 						sta |= (strcmp(mode, "sta") == 0);
-						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)) continue;
+						if ((strcmp(mode, "ap") != 0) && (strcmp(mode, "wet") != 0)
+#ifdef TCONFIG_BCMWL6
+						    && (strcmp(mode, "psta") != 0)
+#endif
+						    ) continue;
 					}
 					eval("brctl", "addif", lan_ifname, ifname);
 #ifdef TCONFIG_EMF
@@ -1707,16 +1717,29 @@ void do_static_routes(int add)
 void hotplug_net(void)
 {
 	char *interface, *action;
-	char *lan_ifname;
+	char *lan_ifname = nvram_safe_get("lan_ifname");
+#ifdef TCONFIG_BCMWL6
+	int psta;
+#endif
 
 	if (((interface = getenv("INTERFACE")) == NULL) || ((action = getenv("ACTION")) == NULL)) return;
 
-	logmsg(LOG_DEBUG, "*** %s: hotplug net INTERFACE=%s ACTION=%s", __FUNCTION__, interface, action);
+	logmsg(LOG_DEBUG, "*** %s: hotplug_net(): INTERFACE=%s ACTION=%s", __FUNCTION__, interface, action);
 
-	if ((strncmp(interface, "wds", 3) == 0) &&
+#ifdef TCONFIG_BCMWL6
+	psta = wl_wlif_is_psta(interface);
+#endif
+
+	if (((strncmp(interface, "wds", 3) == 0)
+#ifdef TCONFIG_BCMWL6
+	     || psta
+#endif
+	     ) &&
 	    (strcmp(action, "register") == 0 || strcmp(action, "add") == 0)) {
+
+		/* interface up! */
 		ifconfig(interface, IFUP, NULL, NULL);
-		lan_ifname = nvram_safe_get("lan_ifname");
+
 #ifdef TCONFIG_EMF
 		if (nvram_get_int("emf_enable")) {
 			eval("emf", "add", "iface", lan_ifname, interface);
@@ -1725,13 +1748,80 @@ void hotplug_net(void)
 			emf_rtport_update(lan_ifname, interface, 1);
 		}
 #endif
+#ifdef TCONFIG_BCMWL6
+		/* Indicate interface create event to eapd */
+		if (psta) {
+			logmsg(LOG_DEBUG, "*** %s: hotplug_net(): send dif event to %s\n", __FUNCTION__, interface);
+			wl_send_dif_event(interface, 0);
+			return;
+		}
+#endif
 		if (strncmp(lan_ifname, "br", 2) == 0) {
 			eval("brctl", "addif", lan_ifname, interface);
 			notify_nas(interface);
 		}
+
+		return;
 	}
+
+#ifdef TCONFIG_BCMWL6
+	if (strcmp(action, "unregister") == 0 || strcmp(action, "remove") == 0) {
+		/* Indicate interface delete event to eapd */
+		logmsg(LOG_DEBUG, "*** %s: hotplug_net(): send dif event (delete) to %s\n", __FUNCTION__, interface);
+		wl_send_dif_event(interface, 1);
+
+#ifdef TCONFIG_EMF
+		if (nvram_get_int("emf_enable"))
+			eval("emf", "del", "iface", lan_ifname, interface);
+#endif /* TCONFIG_EMF */
+	}
+#endif
 }
 
+#ifdef TCONFIG_BCMWL6
+int wl_send_dif_event(const char *ifname, uint32 event)
+{
+	static int s = -1;
+	int len, n;
+	struct sockaddr_in to;
+	char data[IFNAMSIZ + sizeof(uint32)];
+
+	if (ifname == NULL) return -1;
+
+	/* create a socket to receive dynamic i/f events */
+	if (s < 0) {
+		s = socket(AF_INET, SOCK_DGRAM, 0);
+		if (s < 0) {
+			perror("socket");
+			return -1;
+		}
+	}
+
+	/* Init the message contents to send to eapd. Specify the interface
+	 * and the event that occured on the interface.
+	 */
+	strncpy(data, ifname, IFNAMSIZ);
+	*(uint32 *)(data + IFNAMSIZ) = event;
+	len = IFNAMSIZ + sizeof(uint32);
+
+	/* send to eapd */
+	to.sin_addr.s_addr = inet_addr(EAPD_WKSP_UDP_ADDR);
+	to.sin_family = AF_INET;
+	to.sin_port = htons(EAPD_WKSP_DIF_UDP_PORT);
+
+	n = sendto(s, data, len, 0, (struct sockaddr *)&to,
+		sizeof(struct sockaddr_in));
+
+	if (n != len) {
+		perror("udp send failed\n");
+		return -1;
+	}
+
+	logmsg(LOG_DEBUG, "hotplug_net(): sent event %d\n", event);
+
+	return n;
+}
+#endif /* TCONFIG_BCMWL6 */
 
 static int is_same_addr(struct ether_addr *addr1, struct ether_addr *addr2)
 {
@@ -1747,6 +1837,9 @@ static int is_same_addr(struct ether_addr *addr1, struct ether_addr *addr2)
 static int check_wl_client(char *ifname, int unit, int subunit)
 {
 	struct ether_addr bssid;
+#ifdef TCONFIG_BCMWL6
+	char macaddr[32];
+#endif /* TCONFIG_BCMWL6 */
 	wl_bss_info_t *bi;
 	char buf[WLC_IOCTL_MAXLEN];
 	struct maclist *mlist;
@@ -1795,6 +1888,15 @@ static int check_wl_client(char *ifname, int unit, int subunit)
 		}
 		free(mlist);
 	}
+
+#ifdef TCONFIG_BCMWL6
+	if (associated && authorized && !strcmp(nvram_safe_get(wl_nvname("mode", unit, subunit)), "psta")) {
+		ether_etoa((const unsigned char *) &bssid, macaddr);
+		logmsg(LOG_DEBUG, "*** %s: check_wl_client(): %s send keepalive nulldata to %s\n", __FUNCTION__, ifname, macaddr);
+		eval("wl", "-i", ifname, "send_nulldata", macaddr);
+
+	}
+#endif /* TCONFIG_BCMWL6 */
 
 	return (associated && authorized);
 }

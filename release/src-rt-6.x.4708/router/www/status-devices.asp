@@ -443,7 +443,7 @@ dg.populate = function() {
 
 		f = '';
 		if (e.freq != '') {
-			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
 			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {
@@ -603,34 +603,6 @@ function addRestrict(n) {
 	var e = list[n];
 	cookie.set('addrestrict', [e.mac, e.name.split(',')[0]].join(','), 1);
 	form.submitHidden('tomato.cgi', { _redirect: 'restrict-edit.asp', rruleN: -1 });
-}
-
-function searchOUI(n, i) {
-	spin(1, 'gW_'+i);
-
-	cmd = new XmlHttp();
-	cmd.onCompleted = function(text, xml) {
-		eval(text);
-		displayOUI(i);
-	}
-	cmd.onError = function(x) {
-		cmdresult = 'ERROR: '+x;
-		displayOUI(i);
-	}
-
-	var commands = '/usr/bin/wget -T 6 -q http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
-	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
-}
-
-function displayOUI(i) {
-	spin(0, 'gW_'+i);
-	if (cmdresult.indexOf('Not Found') == -1)
-		cmdresult = 'Manufacturer: \n'+cmdresult;
-	else
-		cmdresult = 'Manufacturer not found!';
-
-	alert(cmdresult);
-	cmdresult = '';
 }
 
 function spin(x, which) {

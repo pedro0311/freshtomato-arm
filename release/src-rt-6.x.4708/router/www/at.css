@@ -1855,7 +1855,7 @@ table.fields tr td.wwan-parser-view {
 #webmon-config a[href^="admin"],
 #pptp-ctrl [href^="vpn"],
 #logging a[href^="admin"],
-.log-viewlast a,
+.log-viewlast-left a,
 .log-clear a {
 	position: relative;
 	left: -10px;
@@ -2353,7 +2353,11 @@ div#sptime {
 }
 
 #log-table {
-	max-height: 604px;
+	max-height: 590px;
+}
+
+#log-refresh-time {
+	padding: 5px 0 0 0;
 }
 
 /* SVG */

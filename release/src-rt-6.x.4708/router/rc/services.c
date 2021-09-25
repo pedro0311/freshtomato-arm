@@ -104,6 +104,13 @@ static int is_wet(int idx, int unit, int subunit, void *param)
 	return nvram_match(wl_nvname("mode", unit, subunit), "wet");
 }
 
+#ifdef TCONFIG_BCMWL6
+static int is_psta(int idx, int unit, int subunit, void *param)
+{
+	return nvram_match(wl_nvname("mode", unit, subunit), "psta");
+}
+#endif /* TCONFIG_BCMWL6 */
+
 void start_dnsmasq()
 {
 	FILE *f, *hf;
@@ -144,11 +151,19 @@ void start_dnsmasq()
 
 	stop_dnsmasq();
 
-	/* check wireless bridge after stop_dnsmasq() */
+	/* check wireless ethernet bridge (wet) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_wet)) {
 		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
 		return;
 	}
+
+#ifdef TCONFIG_BCMWL6
+	/* check media bridge (psta) after stop_dnsmasq() */
+	if (foreach_wif(1, NULL, is_psta)) {
+		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the Media Bridge mode enabled");
+		return;
+	}
+#endif /* TCONFIG_BCMWL6 */
 
 	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
 		perror(DNSMASQ_CONF);
@@ -235,7 +250,7 @@ void start_dnsmasq()
 
 		dns = get_dns(wan_prefix); /* this always points to a static buffer */
 
-		/* check dns entries only for active connections (checkConnect might have false-negative response) */
+		/* check dns entries only for active connections */
 		if ((check_wanup(wan_prefix) == 0) && (dns->count == 0))
 			continue;
 
@@ -304,7 +319,7 @@ void start_dnsmasq()
 
 				for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 					get_wan_prefix(wan_unit, wan_prefix);
-					/* skip inactive WAN connections (checkConnect might have false-negative response)
+					/* skip inactive WAN connections
 					 * TBD: need to check if there is no WANs active do we need skip here also?!?
 					 */
 					if (check_wanup(wan_prefix) == 0)
@@ -1033,7 +1048,7 @@ void dns_to_resolv(void)
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, wan_prefix);
 
-		/* skip inactive WAN connections (checkConnect might have false-negative response) */
+		/* skip inactive WAN connections */
 		if ((check_wanup(wan_prefix) == 0) &&
 		    get_wanx_proto(wan_prefix) != WP_DISABLED &&
 		    get_wanx_proto(wan_prefix) != WP_PPTP &&

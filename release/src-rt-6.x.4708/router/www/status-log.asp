@@ -23,12 +23,14 @@
 var cprefix = 'status_log';
 
 var currentSearch = '';
+var negativeSearch = 0;
 var currentFilterValue = 0;
 var currentlyScrolling = false;
 var scrollingDetectorTimeout;
 var messages;
 var entriesMode = 0;
 var entriesLast = -1;
+var time = '';
 
 var LINE_PARSE_MAP_DATE_POS = 0;
 var LINE_PARSE_MAP_FACILITY_POS = 1;
@@ -42,18 +44,16 @@ var ref = new TomatoRefresh('update.cgi', 'exec=showlog', 5, 'status_log');
 ref.refresh = function(text) {
 	try {
 		messages = text.split('\n');
-		if (E('log-find-text').value.length == 0) {
-			if (!currentlyScrolling) {
-				var willScroll = false;
-				var tableDiv = E('log-table');
-				if (tableDiv.offsetHeight + tableDiv.scrollTop >= tableDiv.scrollHeight)
-					willScroll = true;
+		if (!currentlyScrolling) {
+			var willScroll = false;
+			var tableDiv = E('log-table');
+			if (tableDiv.offsetHeight + tableDiv.scrollTop >= tableDiv.scrollHeight)
+				willScroll = true;
 
-				logGrid.populate();
+			logGrid.populate();
 
-				if (willScroll)
-					scrollToBottom();
-			}
+			if (willScroll)
+				scrollToBottom();
 		}
 	}
 	catch (ex) {
@@ -70,7 +70,7 @@ logHeaderGrid.setup = function() {
 var logGrid = new TomatoGrid();
 
 logGrid.setup = function() {
-	this.init('log-table', '', 4000);
+	this.init('log-table', '', 4001);
 	this.canSort = false;
 	this.canEdit = false;
 	this.canMove = false;
@@ -80,20 +80,31 @@ logGrid.setup = function() {
 
 logGrid.populate = function() {
 	this.removeAllData();
-	if (messages != null) {
-		var messagesToAdd = messages;
-		if (entriesMode != 0)
-			messagesToAdd = messagesToAdd.slice(-1 * entriesMode);
 
-		if (currentSearch)
-			messagesToAdd = messagesToAdd.filter( function(line) { if (line != 'undefined') { return line.indexOf(currentSearch) >= 0; } } );
+	if (messages != null) {
+		var messagesToAdd = messages.concat();
+		time = messagesToAdd.shift(); /* always present in response */
+
+		if (entriesMode != 0)
+			messagesToAdd = messagesToAdd.slice(-1 * entriesMode - 1);
+
+		var localSearch;
+		if (currentSearch) {
+			localSearch = currentSearch;
+			if (localSearch.substr(0, 1) == '-') {
+				localSearch = localSearch.substr(1);
+				negativeSearch = 1;
+			}
+			else
+				negativeSearch = 0;
+		}
 
 		var count = 0;
 		for (var index = 0; index < messagesToAdd.length; ++index) {
 			if (messagesToAdd[index]) {
 				var logLineMap = getLogLineParsedMap(messagesToAdd[index]);
 				if ((currentFilterValue == 0) || (logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1] == currentFilterValue)) {
-						if (!currentSearch || containsSearch(logLineMap, currentSearch)) {
+						if (!localSearch || containsSearch(logLineMap, localSearch)) {
 							var row = createHighlightedRow(logLineMap);
 							this.insert(-1, row, row, true);
 							count++;
@@ -102,10 +113,11 @@ logGrid.populate = function() {
 			}
 		}
 
-		var occurenceSpan = E('log-occurence-span');
-		occurenceSpan.style.visibility = (currentSearch ? 'visible' : 'hidden');
-		var occurenceValue = E('log-occurence-value');
-		occurenceValue.innerHTML = count;
+		E('log-occurence-span').style.display = (currentSearch ? 'inline' : 'none');
+		elem.setInnerHTML('log-occurence-value', count);
+
+		if (time != 'Not Available')
+			elem.setInnerHTML('log-refresh-time', time.match(/(\d+\:\d+\:\d+)\s(.*)/i)[1]+' - Last Refreshed');
 
 		var e = E('log-table').children[0].children[0].children[0];
 		if (e) {
@@ -152,7 +164,7 @@ function copyRowContent(el) {
 	}
 }
 
-var logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\w+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
+var logLineRegex = new RegExp(/(\w+\s+\d+\s\d+\:\d+\:\d+)\s\S+\s(\w+).(\w+)\s(\S+)\s(.*)/mi);
 var errRegex = new RegExp(/^(.*?)err.*/i);
 var infRegex = new RegExp(/^(.*?)inf.*/i);
 var noticeRegex = new RegExp(/^(.*?)notic.*/i);
@@ -163,10 +175,15 @@ var emergencyRegex = new RegExp(/^(.*?)emer.*/i);
 var debugRegex = new RegExp(/^(.*?)debu.*/i);
 
 function containsSearch(logLineMap, text) {
-	return (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).indexOf(text) >= 0 ||
-	        String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).indexOf(text) >= 0);
+	var ret = (String(logLineMap[LINE_PARSE_MAP_DATE_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_FACILITY_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0 ||
+		   String(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]).toUpperCase().indexOf(text.toUpperCase()) >= 0);
+
+	if (negativeSearch == 1)
+		return !ret;
+	else
+		return ret;
 }
 
 function getLevelColor(level) {
@@ -215,7 +232,7 @@ function getLogLineParsedMap(logLine) {
 		returnedArray[LINE_PARSE_MAP_LEVEL_POS] = matchedArray[3];
 		returnedArray[LINE_PARSE_MAP_LEVEL_ATTR_POS] = getLevelColor(returnedArray[LINE_PARSE_MAP_LEVEL_POS]);
 		returnedArray[LINE_PARSE_MAP_LEVEL_PROCESS_POS] = matchedArray[4].slice(0, -1);
-		returnedArray[LINE_PARSE_MAP_LEVEL_MESSAGE_POS] = escapeHTML(matchedArray[5]);
+		returnedArray[LINE_PARSE_MAP_LEVEL_MESSAGE_POS] = matchedArray[5];
 	}
 	return returnedArray;
 }
@@ -235,9 +252,9 @@ function generateHighlightSpan(innerText, classN, customStyle) {
 	if (customStyle)
 		newText.className += ' '+customStyle;
 
-	var indexOfSearch = innerText.indexOf(currentSearch);
+	var indexOfSearch = innerText.toUpperCase().indexOf(currentSearch.toUpperCase());
 	if (indexOfSearch == -1)
-		newText.innerHTML = innerText;
+		elem.setInnerHTML(newText, innerText);
 	else {
 		var sizeOfSearch = currentSearch.length;
 
@@ -265,6 +282,7 @@ function filterLevelChanged() {
 	var filterSelector = E('filterLevelSelector');
 	currentFilterValue = parseInt(filterSelector.options[filterSelector.selectedIndex].value, 10);
 	logGrid.populate();
+	filterSelector.blur();
 	scrollToBottom();
 }
 
@@ -283,6 +301,15 @@ function showEntries() {
 		elem.addClass(e, 'selected');
 		e.blur();
 	}
+
+	/* retrieve only needed number of lines */
+	ref.postData = 'exec=showlog'+(entriesMode > 0 ? '&arg0=&arg1='+entriesMode : '');
+	ref.initPage(0, 1);
+	if (!ref.running)
+		ref.once = 1;
+
+	ref.start();
+
 	entriesLast = entriesMode;
 }
 
@@ -313,14 +340,38 @@ function onKeyUpEvent(event) {
 
 	var key = event.key || event.keyCode;
 	if (key === 'Escape' || key === 'Esc' || key === 27) {
-		var findTextInput = E('log-find-text');
-		findTextInput.value = '';
+		E('log-find-text').value = '';
 		currentSearch = '';
-		var occurenceSpan = E('log-occurence-span');
-		occurenceSpan.style.visibility = 'hidden';
+		E('log-occurence-span').style.display = 'none';
 		logGrid.populate();
 		scrollToBottom();
 	}
+}
+
+var onInputEvent = debounce(function() {
+	currentSearch = E('log-find-text').value;
+	logGrid.populate();
+	if (currentSearch.length == 0) {
+		E('log-occurence-span').style.display = 'none';
+		scrollToBottom();
+	}
+}, 1500);
+
+function debounce(func, wait, immediate) {
+	var timeout;
+	return function() {
+		var context = this, args = arguments;
+		var later = function() {
+			timeout = null;
+			if (!immediate)
+				func.apply(context, args);
+		};
+		var callNow = immediate && !timeout;
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+		if (callNow)
+			func.apply(context, args);
+	};
 }
 
 function init() {
@@ -333,23 +384,13 @@ function init() {
 	var c;
 	if (((c = cookie.get(cprefix+'_entries')) != null) && (c >= '0'))
 		entriesMode = (cookie.get(cprefix+'_entries'));
+
 	showEntries();
 
 	logHeaderGrid.setup();
 	logGrid.setup();
 
-	var findTextInput = E('log-find-text');
-	addEvent(findTextInput, 'input', function(event) {
-		setTimeout(function() {
-			currentSearch = findTextInput.value;
-			logGrid.populate();
-			if (currentSearch.length == 0) {
-				var occurenceSpan = E('log-occurence-span');
-				occurenceSpan.style.visibility = 'hidden';
-				scrollToBottom();
-			}
-		}, 1500);
-	});
+	addEvent(E('log-find-text'), 'input', onInputEvent);
 	addEvent(document, 'keyup', onKeyUpEvent);
 
 	ref.initPage(0, 1);
@@ -358,7 +399,6 @@ function init() {
 
 	ref.start();
 }
-
 </script>
 </head>
 
@@ -401,8 +441,8 @@ function init() {
 			&nbsp; &nbsp;
 			<span>
 				Find in syslog: &nbsp;
-				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search">
-				<span style="visibility:hidden" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
+				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search; use '-' in front to make a negative search">
+				<span style="display:none" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
 			</span>
 
 		</div>
@@ -410,16 +450,18 @@ function init() {
 		<div class="tomato-grid" id="log-table-header"></div>
 		<div class="tomato-grid" id="log-table" onscroll="onTableScroll();"></div>
 
-		<div class="log-clear">
+		<div id="log-refresh-time"></div>
+
+		<div class="log-clear log-viewlast">
 			<span>&raquo; <a href="logs/syslog.txt?_http_id=<% nv(http_id) %>">Download Log File</a></span><br>
 			<span>&raquo; <a href="admin-log.asp">Logging Configuration</a></span><br><br>
 		</div>
 
 		<div class="log-viewlast">
-			&raquo; <a href="javascript:viewLast(0)" id="entries0">View all</a><br>
-			&raquo; <a href="javascript:viewLast(25)" id="entries25">View last 25 entries</a><br>
-			&raquo; <a href="javascript:viewLast(50)" id="entries50">View last 50 entries</a><br>
-			&raquo; <a href="javascript:viewLast(100)" id="entries100">View last 100 entries</a><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(25)" id="entries25">Trim to last 25 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=25&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(50)" id="entries50">Trim to last 50 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=50&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(100)" id="entries100">Trim to last 100 entries</a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=100&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
+			<div class="log-viewlast-left">&raquo; <a href="javascript:viewLast(0)" id="entries0">Show all </a></div><div class="log-viewlast-right"><a href="logs/view.cgi?which=all&amp;_http_id=<% nv(http_id) %>">(RAW)</a></div><br>
 		</div>
 	</div>
 </div>

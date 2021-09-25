@@ -2913,6 +2913,34 @@ function toggleVisibility(where, whichone) {
 	}
 }
 
+function searchOUI(n, i) {
+	spin(1, 'gW_'+i);
+
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		displayOUI(i);
+	}
+	cmd.onError = function(x) {
+		cmdresult = 'ERROR: '+x;
+		displayOUI(i);
+	}
+
+	var commands = '/usr/bin/wget -T 6 -q http://api.macvendors.com/'+n+' -O /tmp/oui.txt \n /bin/cat /tmp/oui.txt';
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
+}
+
+function displayOUI(i) {
+	spin(0, 'gW_'+i);
+	if (cmdresult.indexOf('Not Found') == -1)
+		cmdresult = 'Manufacturer: \n'+cmdresult;
+	else
+		cmdresult = 'Manufacturer not found!';
+
+	alert(cmdresult);
+	cmdresult = '';
+}
+
 // -----------------------------------------------------------------------------
 
 // ---- debug

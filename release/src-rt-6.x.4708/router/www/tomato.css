@@ -1559,6 +1559,24 @@ div#sptime {
 	background: #fdffb7 !important;
 }
 
+.log-viewlast {
+	padding-top: 5px;
+}
+
+.log-viewlast-left {
+	display: inline-block;
+	width: 14em;
+}
+
+.log-viewlast-right {
+	display: inline-block;
+	padding-left: 5px;
+}
+
+#log-refresh-time {
+	padding-left: 12px;
+}
+
 /* SVG */
 #svg text {
 	font: 11px monospace;

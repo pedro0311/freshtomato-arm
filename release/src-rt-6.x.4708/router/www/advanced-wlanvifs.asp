@@ -43,7 +43,11 @@ var max_no_vifs = 0;
 
 var wl_modes_available = [];
 
-var wmo = {'ap':'Access Point','apwds':'Access Point + WDS','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'};
+var wmo = {'ap':'Access Point','apwds':'Access Point + WDS','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'
+/* BCMWL6-BEGIN */
+	   ,'psta':'Media Bridge'
+/* BCMWL6-END */
+	   };
 var macmode = {'disabled':'Disabled','deny':'Block','allow':'Permit'};
 
 var tabs = [['overview','Overview']];
@@ -686,13 +690,20 @@ REMOVE-END */
 			}
 		}
 
-		E('wl'+u+'_mode_msg').style.display = (((wmode == 'sta') || (wmode == 'wet')) ? 'inline' : 'none');
+		E('wl'+u+'_mode_msg').style.display = (((wmode == 'sta') || (wmode == 'wet') ||
+/* BCMWL6-BEGIN */
+							(wmode == 'psta') ||
+/* BCMWL6-END */
+							0) ? 'inline' : 'none');
 
 		switch (wmode) {
 			case 'apwds':
 			case 'wds':
 			break;
 			case 'wet':
+/* BCMWL6-BEGIN */
+			case 'psta':
+/* BCMWL6-END */
 			case 'sta':
 				wl_vis[vidx]._f_wl_bcast = 0;
 				if (u.toString().indexOf('.') < 0) {
@@ -875,7 +886,11 @@ REMOVE-END */
 		b = E('_f_wl'+u+'_mode');
 		ferror.clear(b);
 
-		if ((wmode == 'sta') || (wmode == 'wet')) {
+		if ((wmode == 'sta') || (wmode == 'wet') ||
+/* BCMWL6-BEGIN */
+		    (wmode == 'psta') ||
+/* BCMWL6-END */
+		    0) {
 			++wlclnt;
 			if (wlclnt > 1) {
 				ferror.set(b, 'Only one wireless interface can be configured in client mode.', quiet || !ok);
@@ -1017,6 +1032,9 @@ function save() {
 	var w, uidx, wmode, sm2, wradio;
 
 	var i, u, vidx, vif;
+/* BCMWL6-BEGIN */
+	var router_restart = 0;
+/* BCMWL6-END */
 
 	var fom = E('t_fom');
 
@@ -1199,6 +1217,26 @@ REMOVE-END */
 REMOVE-END */
 		E('_wl'+u+'_key').value = (a) ? a.value : '1';
 	}
+
+/* BCMWL6-BEGIN */
+	for (vidx = 0; vidx < vifs_possible.length; ++vidx) {
+		u = vifs_possible[vidx][0].toString();
+		if (definedVIFidx(u) < 0)
+			continue;
+
+		var check_psta = fom['wl'+u+'_mode'].value;
+
+		if ((check_psta == 'psta') && (nvram['wl'+u+'_mode'] != check_psta))
+			router_restart = 1;
+	}
+
+	if (router_restart) {
+		fom._service.value = '*'; /* special case for Media Bridge mode: restart all */
+	}
+	else {
+		fom._service.value = 'wlgui-restart'; /* always restart wireless */
+	}
+/* BCMWL6-END */
 
 	do_pre_submit_form(fom);
 

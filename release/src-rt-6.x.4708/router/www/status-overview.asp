@@ -26,7 +26,11 @@
 
 <script>
 
-var wmo = {'ap':'Access Point','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'};
+var wmo = {'ap':'Access Point','sta':'Wireless Client','wet':'Wireless Ethernet Bridge','wds':'WDS'
+/* BCMWL6-BEGIN */
+	   ,'psta':'Media Bridge'
+/* BCMWL6-END */
+	   };
 var auth = {'disabled':'-','wep':'WEP','wpa_personal':'WPA Personal (PSK)','wpa_enterprise':'WPA Enterprise','wpa2_personal':'WPA2 Personal (PSK)','wpa2_enterprise':'WPA2 Enterprise','wpaX_personal':'WPA / WPA2 Personal','wpaX_enterprise':'WPA / WPA2 Enterprise','radius':'Radius'};
 var enc = {'tkip':'TKIP','aes':'AES','tkip+aes':'TKIP / AES'};
 var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','bg-mixed':'B/G Mixed','lrs':'LRS','n-only':'N Only'};
@@ -40,6 +44,7 @@ var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi =
 
 <script>
 var cprefix = 'status_overview';
+var u;
 nphy = features('11n');
 
 var ref = new TomatoRefresh('status-data.jsx?_http_id=<% nv(http_id); %>', '', 5, cprefix+'_refresh');
@@ -69,7 +74,7 @@ foreach_wwan(function(i) {
 /* USB-END */
 
 for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-	var u = (uidx > 1) ? uidx : '';
+	u = (uidx > 1) ? uidx : '';
 
 	if (nvram['wan'+u+'_status_script'] == 1) {
 		customStatusTimers[uidx - 1] = new TomatoRefresh('/user/cgi-bin/wan'+u+'_status.sh', null, 15, '', 1);
@@ -152,6 +157,7 @@ function wan_disconnect(uidx) {
 }
 
 function onRefToggle() {
+	var u;
 	ref.toggle();
 	if (!ref.running) {
 /* USB-BEGIN */
@@ -161,7 +167,7 @@ function onRefToggle() {
 		}
 /* USB-END */
 		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-			var u = (uidx > 1) ? uidx : '';
+			u = (uidx > 1) ? uidx : '';
 			if (nvram['wan'+u+'_status_script'] == 1) {
 				if (customStatusTimers[uidx - 1].running)
 					customStatusTimers[uidx - 1].stop();
@@ -174,7 +180,7 @@ function onRefToggle() {
 			updateWWANTimers[i].toggle();
 /* USB-END */
 		for (var uidx = 1; uidx <= nvram.mwan_num; uidx++) {
-			var u = (uidx > 1) ? uidx : '';
+			u = (uidx > 1) ? uidx : '';
 			if (nvram['wan'+u+'_status_script'] == 1)
 				customStatusTimers[uidx - 1].toggle();
 		}
@@ -491,7 +497,7 @@ function init() {
 	});
 /* USB-END */
 	for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
+		u = (uidx > 1) ? uidx : '';
 		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' <small><i><a href="javascript:toggleVisibility(cprefix,\'wan'+u+'\');"><span id="sesdiv_wan'+u+'_showhide">(Hide)<\/span><\/a><\/i><\/small><\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [

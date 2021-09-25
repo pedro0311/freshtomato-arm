@@ -76,6 +76,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_hilink_ip",		"0.0.0.0"			, 0 },
 	{ "wan_status_script",		"0"				, 0 },
 	{ "wan_ckmtd",			"2"				, 0 },
+	{ "wan_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
 	{ "wan2_proto",			"dhcp"				, 0 },	// [static|dhcp|pppoe|disabled]
 	{ "wan2_ipaddr",		"0.0.0.0"			, 0 },	// WAN IP address
@@ -90,6 +91,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_hilink_ip",		"0.0.0.0"			, 0 },
 	{ "wan2_status_script",		"0"				, 0 },
 	{ "wan2_ckmtd",			"2"				, 0 },
+	{ "wan2_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
 #ifdef TCONFIG_MULTIWAN
 	{ "wan3_proto",			"dhcp"				, 0 },	// [static|dhcp|pppoe|disabled]
@@ -105,6 +107,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_hilink_ip",		"0.0.0.0"			, 0 },
 	{ "wan3_status_script",		"0"				, 0 },
 	{ "wan3_ckmtd",			"2"				, 0 },
+	{ "wan3_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
 	{ "wan4_proto",			"dhcp"				, 0 },	// [static|dhcp|pppoe|disabled]
 	{ "wan4_ipaddr",		"0.0.0.0"			, 0 },	// WAN IP address
@@ -119,6 +122,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_hilink_ip",		"0.0.0.0"			, 0 },
 	{ "wan4_status_script",		"0"				, 0 },
 	{ "wan4_ckmtd",			"2"				, 0 },
+	{ "wan4_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 #endif /* TCONFIG_MULTIWAN */
 
 #ifdef TCONFIG_DNSSEC
@@ -404,7 +408,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_crypto",			"aes"				, 0 },	// WPA data encryption
 	{ "wl_net_reauth",		"36000"				, 0 },	// Network Re-auth/PMK caching duration
 	{ "wl_akm",			""				, 0 },	// WPA akm list
-
+#ifdef TCONFIG_BCMARM
+	{ "wl_mfp",			"0"				, 0 },	/* Protected Management Frames: 0 - Disable, 1 - Capable, 2 - Required */
+#endif
 	/* WME parameters (cwmin cwmax aifsn txop_b txop_ag adm_control oldest_first) */
 	/* EDCA parameters for STA */
 	{ "wl_wme_sta_bk",		"15 1023 7 0 0 off off"		, 0 },	// WME STA AC_BK paramters
@@ -706,7 +712,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_NVRAM_32K
 	{ "adblock_blacklist",		""				, 0 },
 #else
-	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/iplist.txt<DoH servers>" , 0 },
+	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>" , 0 },
 #endif
 	{ "adblock_blacklist_custom",	""				, 0 },
 	{ "adblock_whitelist",		""				, 0 },
@@ -1516,7 +1522,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "NC_GatewayMode",		"Open"				, 0 },
 	{ "NC_DocumentRoot",		"/tmp/splashd"			, 0 },
 	{ "NC_ExcludePorts",		"1863"				, 0 },
-	{ "NC_HomePage",		"http://google.com"		, 0 },
+	{ "NC_HomePage",		"https://startpage.com"		, 0 },
 	{ "NC_ForcedRedirect",		"0"				, 0 },
 	{ "NC_IdleTimeout",		"0"				, 0 },
 	{ "NC_MaxMissedARP",		"5"				, 0 },

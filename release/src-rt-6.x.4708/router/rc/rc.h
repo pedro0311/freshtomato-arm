@@ -149,15 +149,12 @@ extern void do_wan_routes(char *ifname, int metric, int add, char *prefix);
 extern void preset_wan(char *ifname, char *gw, char *netmask, char *prefix);
 
 /* mwan.c */
-#ifdef TCONFIG_BCMWL6
 extern int get_sta_wan_prefix(char *sPrefix);
-#endif
 extern void get_wan_info(char *sPrefix);
 extern void mwan_table_add(char *sPrefix);
 extern void mwan_table_del(char *sPrefix);
 extern void mwan_load_balance(void);
 extern int mwan_route_main(int argc, char **argv);
-extern int checkConnect(char *sPrefix);
 extern void mwan_state_files(void);
 
 /* pbr.c */

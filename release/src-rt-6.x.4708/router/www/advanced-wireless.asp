@@ -18,7 +18,7 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_nband,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_nband,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp,wl_mfp"); %>
 
 //	<% wlcountries(); %>
 
@@ -30,6 +30,7 @@ function verifyFields(focused, quiet) {
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		if (wl_sunit(uidx) < 0) {
 			var u = wl_unit(uidx);
+			var sm = nvram['wl'+u+'_security_mode'];
 
 			if (!v_range('_f_wl'+u+'_distance', quiet, 0, 99999)) return 0;
 			if (!v_range('_wl'+u+'_maxassoc', quiet, 0, 255)) return 0;
@@ -39,6 +40,14 @@ function verifyFields(focused, quiet) {
 			if (!v_range('_wl'+u+'_rts', quiet, 0, 2347)) return 0;
 			if (!v_range('_wl'+u+'_country_rev', quiet, 0, 999)) return 0;
 			if ((E('_wl'+u+'_txpwr').value != 0) && !v_range(E('_wl'+u+'_txpwr'), quiet, 5, hp ? 251 : 1000)) return 0;
+
+			/* for Protected Management Frames - only allow/possible for wpa2 */
+			if ((E('_wl'+u+'_mfp').value != 0) && (sm != "wpa2_personal") && (sm != "wpa2_enterprise")) {
+				ferror.set('_wl'+u+'_mfp', 'Protected Management Frames only possible for WPA2', quiet);
+				return 0;
+			}
+			else
+				ferror.clear('_wl'+u+'_mfp');
 
 			var b = E('_wl'+u+'_wme').value == 'off';
 			E('_wl'+u+'_wme_no_ack').disabled = b;
@@ -196,6 +205,8 @@ function init() {
 				{ title: 'Authentication Type', name: 'wl'+u+'_auth', type: 'select',
 					options: [['0','Auto *'],['1','Shared Key']], attrib: at ? 'disabled' : '',
 					value: at ? 0 : nvram['wl'+u+'_auth'] },
+				{ title: 'Protected Management Frames', name: 'wl'+u+'_mfp', type: 'select', options: [['0','Disable *'],['1','Capable'],['2','Required']],
+					value: nvram['wl'+u+'_mfp'] },
 				{ title: 'Basic Rate', name: 'wl'+u+'_rateset', type: 'select', options: [['default','Default *'],['12','1-2 Mbps'],['all','All']],
 					value: nvram['wl'+u+'_rateset'] },
 				{ title: 'Beacon Interval', name: 'wl'+u+'_bcn', type: 'text', maxlen: 5, size: 7,
