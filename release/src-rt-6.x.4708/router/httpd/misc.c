@@ -285,29 +285,6 @@ static char* get_cfeversion(char *buf)
 	return buf;
 }
 
-static int check_connect(char *prefix)
-{
-	char tmp[64];
-	FILE *f;
-	int result = 0;
-
-	memset(tmp, 0, 64);
-	snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_state", prefix);
-
-	if (check_wanup(prefix)) {
-		if (nvram_get_int("mwan_cktime") == 0)
-			return 1;
-
-		if ((f = fopen(tmp, "r")) == NULL)
-			return 0;
-
-		fscanf(f, "%d", &result);
-		fclose(f);
-	}
-
-	return result;
-}
-
 #ifdef TCONFIG_IPV6
 static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
@@ -866,7 +843,7 @@ void asp_wanstatus(int argc, char **argv)
 
 	if ((using_dhcpc(prefix)) && (f_exists(renew_file)))
 		p = "Renewing...";
-	else if (check_connect(prefix))
+	else if (check_wanup(prefix))
 		p = "Connected";
 	else if (f_exists(wanconn_file))
 		p = "Connecting...";

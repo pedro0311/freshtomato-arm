@@ -436,7 +436,7 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 							}
 							pclose(f);
 						}
-                                        }
+					}
 				}
 			}
 			if (up) ++count;
@@ -494,6 +494,7 @@ long check_wanup_time(char *prefix)
 
 int check_wanup(char *prefix)
 {
+	FILE *f;
 	int up = 0;
 	int proto;
 	char buf1[64];
@@ -506,27 +507,35 @@ int check_wanup(char *prefix)
 	char pppd_name[256];
 
 	proto = get_wanx_proto(prefix);
-	if (proto == WP_DISABLED)
-	{
+
+	if (proto == WP_DISABLED) {
 		return 0;
 	}
 
 	if ((proto == WP_PPTP) || (proto == WP_L2TP) || (proto == WP_PPPOE) || (proto == WP_PPP3G)) {
 		memset(ppplink_file , 0, 256);
 		sprintf(ppplink_file, "/tmp/ppp/%s_link", prefix);
+
 		if (f_read_string(ppplink_file, buf1, sizeof(buf1)) > 0) {
 			/* contains the base name of a file in /var/run/ containing pid of a daemon */
 			snprintf(buf2, sizeof(buf2), "/var/run/%s.pid", buf1);
+
 			if (f_read_string(buf2, buf1, sizeof(buf1)) > 0) {
 				name = psname(atoi(buf1), buf2, sizeof(buf2));
+
 				memset(pppd_name, 0, 256);
 				sprintf(pppd_name, "pppd%s", prefix);
 				logmsg(LOG_DEBUG, "*** %s: pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
-				if (strcmp(name, pppd_name) == 0) up = 1;
+
+				if (strcmp(name, pppd_name) == 0)
+					up = 1;
+
 				if (proto == WP_L2TP) {
 					sprintf(pppd_name, "pppd");
 					logmsg(LOG_DEBUG, "*** %s: L2TP pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
-					if (strcmp(name, pppd_name) == 0) up = 1;
+
+					if (strcmp(name, pppd_name) == 0)
+						up = 1;
 				}
 			}
 			else {
@@ -547,20 +556,23 @@ int check_wanup(char *prefix)
 	}
 	else {
 		logmsg(LOG_DEBUG, "*** %s: default !up", __FUNCTION__);
-		return up;	/* don't turn off WAN LED */
+		goto state;	/* don't turn off WAN LED */
 	}
 
 	if ((up) && ((s = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {
 		strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(prefix, "_iface", tmp)), sizeof(ifr.ifr_name));
+
 		if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
 			up = 0;
 			logmsg(LOG_DEBUG, "*** %s: SIOCGIFFLAGS", __FUNCTION__);
 		}
 		close(s);
+
 		if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0) {
 			up = 0;
 			logmsg(LOG_DEBUG, "*** %s: !IFF_UP || !IFF_RUNNING", __FUNCTION__);
 		}
+
 		if (proto == WP_STATIC) {
 			/* Ethernet WAN port state checker (static IF is always UP and RUNNING)
 			   ifr.ifr_name = vlan2, vlan3 etc
@@ -591,7 +603,7 @@ int check_wanup(char *prefix)
 			if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
 				while (fgets(tmp, sizeof(tmp), f)) {
 					if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
-						if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
+						if ((strncmp(b, "DOWN", 4) == 0) && (c == vlannum)) {
 							logmsg(LOG_DEBUG, "*** %s: port state = DOWN for vlan%d", __FUNCTION__, vlannum);
 							up = 0;
 						}
@@ -600,6 +612,23 @@ int check_wanup(char *prefix)
 				pclose(f);
 			}
 		}
+	}
+
+state:
+	memset(buf1, 0, 64);
+	snprintf(buf1, sizeof(buf1), "wan%s_ck_pause", prefix);
+
+	if (up == 1) { /* also check result from watchdog */
+		if ((nvram_get_int("mwan_cktime") == 0) || (nvram_get_int(buf1) == 1))
+			return 1;
+
+		memset(buf1, 0, 64);
+		snprintf(buf1, sizeof(buf1), "/var/lib/misc/%s_state", prefix);
+		if ((f = fopen(buf1, "r")) == NULL) /* no state file? */
+			return 0;
+
+		fscanf(f, "%d", &up);
+		fclose(f);
 	}
 
 	return up;
