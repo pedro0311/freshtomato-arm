@@ -46,7 +46,17 @@ NASOBJS = mppe.o wpa.o nas.o nas_linux.o nas_wl.o nas_wksp.o
 NASOBJS += nas_radius.o nas_wksp_radius.o
 UTLOBJS = bcmwpa.o bcmutils.o
 
+ifeq ($(wildcard $(SRCBASE)/router/nas${BCMEX}/*.c),)
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
+all:
+	-cp prebuilt/nas nas
+else #for single-core
+all:
+	-cp prebuilt/up/nas nas
+endif
+else
 all: nas
+endif
 
 nas: $(NASOBJS) $(UTLOBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)

@@ -30,7 +30,17 @@ vpath %.c $(SRCBASE)/shared $(WLAN_ComponentSrcDirs)
 
 OBJS := wlconf.o bcmwifi_channels.o
 
+ifeq ($(wildcard $(SRCBASE)/router/wlconf$(BCMEX)/*.c),)
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
+all:
+	-cp -f $(SRCBASE)/router/wlconf$(BCMEX)/prebuilt/wlconf wlconf
+else #for single-core
+all:
+	-cp -f $(SRCBASE)/router/wlconf$(BCMEX)/prebuilt/up/wlconf wlconf
+endif
+else
 all: wlconf
+endif
 
 clean:
 	rm -f *.o wlconf

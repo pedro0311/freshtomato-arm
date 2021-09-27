@@ -27,7 +27,17 @@ endif
 
 vpath %.c $(SRCBASE)/shared $(WLAN_ComponentSrcDirs)
 
+ifeq ($(wildcard $(SRCBASE)/router/bsd/*.c),)
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
+all:
+	-cp prebuilt${BCMEX}/bsd bsd
+else #for single-core
+all:
+	-cp prebuilt${BCMEX}/up/bsd bsd
+endif
+else
 all: bsd
+endif
 
 OBJS = bsd_main.o bsd.o bsd_engine.o  bsd_util.o bsd_comm.o bcmwifi_channels.o bsd_default.o
 

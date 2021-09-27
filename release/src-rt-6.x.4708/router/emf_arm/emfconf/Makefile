@@ -19,9 +19,14 @@ ifeq ($(TCONFIG_BCMARM),y)
 CCFLAGS += -DTOMATO_ARM
 endif
 
-ifneq ($(wildcard ./prebuilt),)
+ifeq ($(wildcard $(SRCBASE)/router/emf$(BCMEX)/emfconf/*.c),)
+ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
 all:
 	-cp prebuilt/emf emf
+else #for single-core
+all:
+	-cp prebuilt/up/emf emf
+endif
 else
 all: emf
 endif
