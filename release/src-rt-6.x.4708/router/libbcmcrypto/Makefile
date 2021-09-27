@@ -22,7 +22,7 @@ LDFLAGS += -L.
 
 vpath %.c $(SRCBASE)/bcmcrypto
 ifeq ($(TCONFIG_BCMARM),y)
-vpath %.o $(SRCBASE)/router/libbcmcrypto/prebuilt.arm
+vpath %.o $(SRCBASE)/router/libbcmcrypto/prebuilt$(BCMEX)
 else
 vpath %.o $(SRCBASE)/router/libbcmcrypto/prebuilt.mipsel
 endif
