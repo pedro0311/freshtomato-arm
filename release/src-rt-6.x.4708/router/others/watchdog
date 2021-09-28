@@ -22,7 +22,7 @@ while [ $i -le $MWAN ]; do
 done
 
 LOGS="logger -t watchdog[$PID]"
-[ "$(nvram get mwan_debug)" -gt 0 ] && DEBUG="logger -p DEBUG -t watchdog[$PID] *** " || DEBUG="echo"
+[ "$(nvram get mwan_debug)" -gt 0 ] && DEBUG="logger -p DEBUG -t watchdog[$PID]" || DEBUG="echo"
 
 timeout() {
 	local cmd_pid sleep_pid retval
