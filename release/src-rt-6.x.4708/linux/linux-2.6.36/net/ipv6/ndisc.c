@@ -1116,6 +1116,7 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 	int optlen;
 	unsigned int pref = 0;
 	__u32 old_if_flags;
+	bool send_ifinfo_notify = false;
 
 	__u8 * opt = (__u8 *)(ra_msg + 1);
 
@@ -1189,7 +1190,7 @@ static void ndisc_router_discovery(struct sk_buff *skb)
 					IF_RA_OTHERCONF : 0);
 
 	if (old_if_flags != in6_dev->if_flags)
-		inet6_ifinfo_notify(RTM_NEWLINK, in6_dev);
+		send_ifinfo_notify = true;
 
 	if (!in6_dev->cnf.accept_ra_defrtr)
 		goto skip_defrtr;
@@ -1266,7 +1267,7 @@ skip_defrtr:
 				rtime = HZ/10;
 			in6_dev->nd_parms->retrans_time = rtime;
 			in6_dev->tstamp = jiffies;
-			inet6_ifinfo_notify(RTM_NEWLINK, in6_dev);
+			send_ifinfo_notify = true;
 		}
 
 		rtime = ntohl(ra_msg->reachable_time);
@@ -1281,10 +1282,16 @@ skip_defrtr:
 				in6_dev->nd_parms->gc_staletime = 3 * rtime;
 				in6_dev->nd_parms->reachable_time = neigh_rand_reach_time(rtime);
 				in6_dev->tstamp = jiffies;
-				inet6_ifinfo_notify(RTM_NEWLINK, in6_dev);
+				send_ifinfo_notify = true;
 			}
 		}
 	}
+
+	/*
+	 *	Send a notify if RA changed managed/otherconf flags or timer settings
+	 */
+	if (send_ifinfo_notify)
+		inet6_ifinfo_notify(RTM_NEWLINK, in6_dev);
 
 skip_linkparms:
 
