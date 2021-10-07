@@ -615,17 +615,17 @@ int check_wanup(char *prefix)
 	}
 
 state:
-	memset(buf1, 0, 64);
-	snprintf(buf1, sizeof(buf1), "wan%s_ck_pause", prefix);
+	memset(buf1, 0, sizeof(buf1));
+	snprintf(buf1, sizeof(buf1), "%s_ck_pause", prefix);
 
 	if (up == 1) { /* also check result from watchdog */
-		if ((nvram_get_int("mwan_cktime") == 0) || (nvram_get_int(buf1) == 1))
-			return 1;
+		if ((nvram_get_int("mwan_cktime") == 0) || nvram_get_int(buf1)) /* skip checking on this WAN */
+			return up;
 
-		memset(buf1, 0, 64);
+		memset(buf1, 0, sizeof(buf1));
 		snprintf(buf1, sizeof(buf1), "/var/lib/misc/%s_state", prefix);
-		if ((f = fopen(buf1, "r")) == NULL) /* no state file? */
-			return 0;
+		if ((f = fopen(buf1, "r")) == NULL) /* no state file? so probably wan is just up */
+			return up;
 
 		fscanf(f, "%d", &up);
 		fclose(f);
