@@ -30,6 +30,7 @@
 #include <libexif/i18n.h>
 #include <libexif/exif-system.h>
 
+#include <libexif/apple/exif-mnote-data-apple.h>
 #include <libexif/canon/exif-mnote-data-canon.h>
 #include <libexif/fuji/exif-mnote-data-fuji.h>
 #include <libexif/olympus/exif-mnote-data-olympus.h>
@@ -46,6 +47,8 @@
 #define JPEG_MARKER_APP0 0xe0
 #undef JPEG_MARKER_APP1
 #define JPEG_MARKER_APP1 0xe1
+
+#define CHECKOVERFLOW(offset,datasize,structsize) (( offset >= datasize) || (structsize > datasize) || (offset > datasize - structsize ))
 
 static const unsigned char ExifHeader[] = {0x45, 0x78, 0x69, 0x66, 0x00, 0x00};
 
@@ -327,7 +330,7 @@ exif_data_load_data_thumbnail (ExifData *data, const unsigned char *d,
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData", "Bogus thumbnail offset (%u).", o);
 		return;
 	}
-	if (s > ds - o) {
+	if (CHECKOVERFLOW(o,ds,s)) {
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData", "Bogus thumbnail size (%u), max would be %u.", s, ds-o);
 		return;
 	}
@@ -420,9 +423,9 @@ exif_data_load_data_content (ExifData *data, ExifIfd ifd,
 	}
 
 	/* Read the number of entries */
-	if ((offset + 2 < offset) || (offset + 2 < 2) || (offset + 2 > ds)) {
+	if (CHECKOVERFLOW(offset, ds, 2)) {
 		exif_log (data->priv->log, EXIF_LOG_CODE_CORRUPT_DATA, "ExifData",
-			  "Tag data past end of buffer (%u > %u)", offset+2, ds);
+			  "Tag data past end of buffer (%u+2 > %u)", offset, ds);
 		return;
 	}
 	n = exif_get_short (d + offset, data->priv->order);
@@ -431,7 +434,7 @@ exif_data_load_data_content (ExifData *data, ExifIfd ifd,
 	offset += 2;
 
 	/* Check if we have enough data. */
-	if (offset + 12 * n > ds) {
+	if (CHECKOVERFLOW(offset, ds, 12*n)) {
 		n = (ds - offset) / 12;
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 				  "Short data; only loading %hu entries...", n);
@@ -814,6 +817,10 @@ interpret_maker_note(ExifData *data, const unsigned char *d, unsigned int ds)
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
 			"ExifData", "Pentax MakerNote variant type %d", mnoteid);
 		data->priv->md = exif_mnote_data_pentax_new (data->priv->mem);
+	} else if ((mnoteid = exif_mnote_data_apple_identify (data, e)) != 0) {
+		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG,
+			"ExifData", "Apple MakerNote variant type %d", mnoteid);
+		data->priv->md = exif_mnote_data_apple_new (data->priv->mem);
 	}
 
 	/* 
@@ -875,9 +882,15 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 			}
 
 			/* JPEG_MARKER_APP1 */
-			if (ds && d[0] == JPEG_MARKER_APP1)
-				break;
-
+			if (ds && d[0] == JPEG_MARKER_APP1) {
+				/*
+				 * Verify the exif header
+				 * (offset 2, length 6).
+				 */
+				if ((ds >= 10) && !memcmp (d+4, ExifHeader, 6))
+					break;
+				/* fallthrough */
+			}
 			/* Skip irrelevant APP markers. The branch for APP1 must come before this,
 			   otherwise this code block will cause APP1 to be skipped. This code path
 			   is only relevant for files that are nonconformant to the EXIF
@@ -886,7 +899,7 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 			if (ds >= 3 && d[0] >= 0xe0 && d[0] <= 0xef) {  /* JPEG_MARKER_APPn */
 				d++;
 				ds--;
-				l = (d[0] << 8) | d[1];
+				l = (((unsigned int)d[0]) << 8) | d[1];
 				if (l > ds)
 					return;
 				d += l;
@@ -905,12 +918,12 @@ exif_data_load_data (ExifData *data, const unsigned char *d_orig,
 		}
 		d++;
 		ds--;
-		len = (d[0] << 8) | d[1];
+		len = (((unsigned int)d[0]) << 8) | d[1];
 		exif_log (data->priv->log, EXIF_LOG_CODE_DEBUG, "ExifData",
 			  "We have to deal with %i byte(s) of EXIF data.",
 			  len);
 		d += 2;
-		ds -= 2;
+		ds = len - 2;	/* we do not want the full rest size, but only the size of the tag */
 	}
 
 	/*

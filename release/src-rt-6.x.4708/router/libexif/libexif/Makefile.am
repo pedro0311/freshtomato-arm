@@ -2,6 +2,7 @@ EXTRA_DIST =
 lib_LTLIBRARIES =
 noinst_LTLIBRARIES =
 
+include apple/Makefile-files
 include canon/Makefile-files
 include fuji/Makefile-files
 include olympus/Makefile-files
@@ -29,15 +30,20 @@ libexif_la_SOURCES =		\
 	exif-mnote-data-priv.h	\
 	exif-tag.c		\
 	exif-utils.c		\
-	i18n.h
+	i18n.h          \
+	exif-gps-ifd.c  \
+	exif-gps-ifd.h
+
 libexif_la_DEPENDENCIES = \
 	$(srcdir)/libexif.sym \
+	libmnote-apple.la		\
 	libmnote-canon.la		\
 	libmnote-fuji.la		\
 	libmnote-olympus.la	\
 	libmnote-pentax.la
 libexif_la_LIBADD =			\
 	$(LTLIBINTL)			\
+	libmnote-apple.la		\
 	libmnote-canon.la		\
 	libmnote-fuji.la	\
 	libmnote-olympus.la	\
