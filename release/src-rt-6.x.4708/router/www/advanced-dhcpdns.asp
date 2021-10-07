@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_dnssec,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -96,12 +96,17 @@ function verifyFields(focused, quiet) {
 	vis._stubby_port = v;
 	vis._stubby_servers = v;
 	vis._f_stubby_force_tls13 = v;
-	vis._stubby_dnssec_1 = (v
-/* DNSSEC-BEGIN */
-	                        && E('_dnssec_enable').checked
-	                        );
-/* DNSSEC-END */
+	vis._dnssec_enable = v;
+	vis._dnssec_method_1 = (v && E('_dnssec_enable').checked);
+	vis._dnssec_method_2 = (v && E('_dnssec_enable').checked);
+	if (E('_dnssec_method_0') != null)
+		if (!E('_dnssec_method_0').checked)
+			E('_dnssec_method_0').checked = !v;
 /* STUBBY-END */
+/* DNSSEC-BEGIN */
+	vis._dnssec_enable = 1;
+	vis._dnssec_method_0 = E('_dnssec_enable').checked;
+/* DNSSEC-END */
 /* MDNS-BEGIN */
 	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
 /* MDNS-END */
@@ -227,9 +232,18 @@ function save() {
 	if (fom.f_dnsmasq_qr.checked)
 		fom.dnsmasq_q.value |= 4;
 /* IPV6-END */
-/* DNSSEC-BEGIN */
+/* STORSEC-BEGIN */
 	fom.dnssec_enable.value = fom.f_dnssec_enable.checked ? 1 : 0;
+	fom.dnssec_method.value = (
+/* STUBBY-BEGIN */
+	                           fom._dnssec_method_1.checked ? 1 : 
+/* STUBBY-END */
+	                           (
+/* DNSSEC-BEGIN */
+	                           fom._dnssec_method_0.checked ? 0 :
 /* DNSSEC-END */
+	                           2));
+/* STORSEC-END */
 /* DNSCRYPT-BEGIN */
 	fom.dnscrypt_proxy.value = fom.f_dnscrypt_proxy.checked ? 1 : 0;
 	fom.dnscrypt_manual.value = fom.f_dnscrypt_manual.checked ? 1 : 0;
@@ -238,7 +252,6 @@ function save() {
 /* STUBBY-BEGIN */
 	fom.stubby_proxy.value = fom.f_stubby_proxy.checked ? 1 : 0;
 	fom.stubby_force_tls13.value = fom._f_stubby_force_tls13.checked ? 1 : 0;
-	fom.stubby_dnssec.value = (fom._stubby_dnssec_1.checked ? 1 : (fom._stubby_dnssec_0.checked ? 0 : 2));
 
 	var count = 0, stubby_list = '', e;
 	var reg = /^_upstream_active_/;
@@ -370,9 +383,10 @@ function init() {
 <!-- TOR-BEGIN -->
 <input type="hidden" name="dnsmasq_onion_support">
 <!-- TOR-END -->
-<!-- DNSSEC-BEGIN -->
+<!-- STORSEC-BEGIN -->
 <input type="hidden" name="dnssec_enable">
-<!-- DNSSEC-END -->
+<input type="hidden" name="dnssec_method">
+<!-- STORSEC-END -->
 <!-- DNSCRYPT-BEGIN -->
 <input type="hidden" name="dnscrypt_proxy">
 <input type="hidden" name="dnscrypt_manual">
@@ -381,7 +395,6 @@ function init() {
 <!-- STUBBY-BEGIN -->
 <input type="hidden" name="stubby_proxy">
 <input type="hidden" name="stubby_resolvers">
-<input type="hidden" name="stubby_dnssec">
 <input type="hidden" name="stubby_force_tls13">
 <!-- STUBBY-END -->
 <!-- MDNS-BEGIN -->
@@ -395,17 +408,28 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('noclose', [
+/* STORSEC-BEGIN */
+			{ title: 'Enable DNSSEC support', name: 'f_dnssec_enable', id: '_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>DNS servers must support DNSSEC<\/small>', value: (nvram.dnssec_enable == 1) },
+			{ title: 'DNSSEC validation method', multi: [
 /* DNSSEC-BEGIN */
-			{ title: 'Enable DNSSEC support', name: 'f_dnssec_enable', id: '_dnssec_enable', type: 'checkbox', suffix: '&nbsp; <small>DNS servers must support DNSSEC<\/small>', value: (nvram.dnssec_enable == 1) }
+				{ suffix: '&nbsp; Dnsmasq&nbsp;&nbsp;&nbsp;', name: 'f_dnssec_method', id: '_dnssec_method_0', type: 'radio', value: nvram.dnssec_method == 0 }
+/* DNSSEC-END */
+/* DNSSEC-BEGIN */
+/* STUBBY-BEGIN */
+				,
+/* STUBBY-END */
 /* DNSSEC-END */
 /* STUBBY-BEGIN */
-			, { title: 'DNSSEC validation method', multi: [
-				{ suffix: '&nbsp; Stubby&nbsp;&nbsp;&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_1', type: 'radio', value: nvram.stubby_dnssec == 1 },
-				{ suffix: '&nbsp; Dnsmasq&nbsp;&nbsp;&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_0', type: 'radio', value: nvram.stubby_dnssec == 0 },
-				{ suffix: '&nbsp; Server Only&nbsp;', name: 'f_stubby_dnssec', id: '_stubby_dnssec_2', type: 'radio', value: nvram.stubby_dnssec == 2 } ]}
+				{ suffix: '&nbsp; Stubby&nbsp;&nbsp;&nbsp;', name: 'f_dnssec_method', id: '_dnssec_method_1', type: 'radio', value: nvram.dnssec_method == 1 },
+				{ suffix: '&nbsp; Server Only', name: 'f_dnssec_method', id: '_dnssec_method_2', type: 'radio', value: nvram.dnssec_method == 2 }
 /* STUBBY-END */
+			] }
 /* DNSCRYPT-BEGIN */
-			, { title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: nvram.dnscrypt_proxy == 1 },
+			,
+/* DNSCRYPT-END */
+/* STORSEC-END */
+/* DNSCRYPT-BEGIN */
+			{ title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: nvram.dnscrypt_proxy == 1 },
 				{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: nvram.dnscrypt_ephemeral_keys == 1 },
 				{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: nvram.dnscrypt_manual == 1 },
 				{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: _dnscrypt_resolvers_, value: nvram.dnscrypt_resolver },
@@ -523,21 +547,16 @@ function init() {
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>DHCP / DNS Client (WAN):</i><br>
 	<ul>
-<!-- DNSSEC-BEGIN -->
+<!-- STORSEC-BEGIN -->
 		<li><b>Enable DNSSEC support</b> - Ensures that DNS lookups haven't been hijacked by a malicious third party when querying a DNSSEC-enabled domain. Make sure your WAN/ISP/Stubby DNS are DNSSEC-compatible, otherwise DNS lookups will always fail.</li>
-<!-- DNSSEC-END -->
-<!-- STUBBY-BEGIN -->
-		<li><b>DNSSEC validation method</b> - choose between dnsmasq/Stubby/server only DNSSEC validation.</li>
-<!-- STUBBY-END -->
+<!-- STORSEC-END -->
 <!-- DNSCRYPT-BEGIN -->
 		<li><b>Use dnscrypt-proxy</b> - Wraps unmodified DNS traffic between a client and a DNS resolver in a cryptographic construction in order to detect forgery. Uses the DNSCrypt (v1) protocol.</li>
 <!-- DNSCRYPT-END -->
 <!-- STUBBY-BEGIN -->
 		<li><b>Use Stubby</b> - Acts as a local DNS Privacy stub resolver (using DNS-over-TLS). Stubby encrypts DNS queries sent to a DNS Privacy resolver increasing end user privacy. You can use your own custom config file (/etc/stubby/stubby_alt.yml)</li>
-		<li><b>Prevent client auto DoH</b> - Some clients like Firefox will automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
 <!-- STUBBY-END -->
 		<li><b>WINS <small>(for DHCP)</small></b> - The Windows Internet Naming Service manages interaction of each PC with the Internet. If you use a WINS server, enter IP Address of server here.</li>
-		<li><b>Enable DNS Rebind protection</b> - Enabling this will protect your LAN against DNS rebind attacks, however it will prevent upstream DNS servers from resolving queries to any non-routable IP (for example, 192.168.1.1).</li>
 		<li><b>DHCPC Options</b> - Extra options for the DHCP client.</li>
 		<li><b>Reduce packet size</b> - Self-explanatory.</li>
 	</ul>
@@ -554,6 +573,8 @@ function init() {
 <!-- IPV6-BEGIN -->
 		<li><b>Fast RA mode</b> - Forces dnsmasq to be always in frequent RA mode. (Recommendation: enable also "Mute RA logging" option)</li>
 <!-- IPV6-END -->
+		<li><b>Prevent client auto DoH</b> - Some clients like Firefox will automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
+		<li><b>Enable DNS Rebind protection</b> - Enabling this will protect your LAN against DNS rebind attacks, however it will prevent upstream DNS servers from resolving queries to any non-routable IP (for example, 192.168.1.1).</li>
 <!-- MDNS-BEGIN -->
 		<li><b>Enable multicast DNS (Avahi mDNS)</b> - You will probably also like to add some <a href="advanced-access.asp">LAN access rules</a> (by default all communications between bridges is blocked) and/or use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. (br0 = private network, br1 = IOT): <i>iptables -I FORWARD -i br0 -o br+ -j ACCEPT</i> and <i>iptables -I INPUT -i br1 -p udp --dport 5353 -j ACCEPT</i>. Alternative config file is available (/etc/avahi/avahi-daemon_alt.conf).</li>
 <!-- MDNS-END -->

@@ -479,10 +479,10 @@ void start_dnsmasq()
 	if ((nvram_get_int("adblock_enable")) && (f_exists("/etc/dnsmasq.adblock")))
 		fprintf(f, "conf-file=/etc/dnsmasq.adblock\n");
 
-#ifdef TCONFIG_DNSSEC
+#if defined(TCONFIG_DNSSEC) || defined(TCONFIG_STUBBY)
 	if (nvram_get_int("dnssec_enable")) {
 #ifdef TCONFIG_STUBBY
-		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("stubby_dnssec", "0"))) {
+		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("dnssec_method", "0"))) {
 #endif
 			fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
 			           "dnssec\n");
@@ -496,7 +496,7 @@ void start_dnsmasq()
 			fprintf(f, "proxy-dnssec\n");
 #endif
 	}
-#endif /* TCONFIG_DNSSEC */
+#endif /* TCONFIG_DNSSEC || TCONFIG_STUBBY */
 
 #ifdef TCONFIG_DNSCRYPT
 	if (nvram_get_int("dnscrypt_proxy")) {
@@ -768,7 +768,7 @@ void start_stubby(void)
 	}
 
 	ntp_ready = nvram_get_int("ntp_ready");
-	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("stubby_dnssec", "1"));
+	dnssec = (nvram_get_int("dnssec_enable") && nvram_match("dnssec_method", "1"));
 
 	/* basic & privacy settings */
 	fprintf(fp, "appdata_dir: \"/var/lib/misc\"\n"

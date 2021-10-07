@@ -2733,7 +2733,8 @@ function createFieldTable(flags, desc) {
 	var id1;
 	var tr;
 
-	if ((flags.indexOf('noopen') == -1)) buf.push('<table class="fields">');
+	if (!desc.length) return;
+	if (flags.indexOf('noopen') == -1) buf.push('<table class="fields">');
 	for (var desci = 0; desci < desc.length; ++desci) {
 		var v = desc[desci];
 
