@@ -34,7 +34,11 @@ ifneq ($(wildcard $(src)/$(EMFSRCDIR)),)
 	EXTRA_CFLAGS += -I$(SRCBASE)/include/emf/emf -I$(SRCBASE)/include/emf/igs
 	emf-objs := $(EMF_OBJS)
 else
+ifneq ($(CONFIG_SMP),y)
+	emf-objs := $(EMFDIR)/up/emf.o
+else
 	emf-objs := $(EMFDIR)/emf.o
+endif
 endif
 
 obj-$(CONFIG_EMF) := emf.o

@@ -1577,6 +1577,14 @@ div#sptime {
 	padding-left: 12px;
 }
 
+.stats_mwan1 {
+	padding-bottom: 1px;
+}
+
+.stats_mwan2 {
+	padding-top: 1px;
+}
+
 /* SVG */
 #svg text {
 	font: 11px monospace;

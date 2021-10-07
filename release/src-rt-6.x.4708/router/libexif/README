@@ -41,8 +41,9 @@ the results available at https://libexif.github.io/api/
 
 The short test programs in the test directory illustrates how to create
 valid EXIF data from scratch, how to save EXIF data and how to load EXIF
-data from data in memory. There are also a few simple example programs
-available in the contrib/examples/ directory.  Don't hesitate to contact
+data from data in memory. To run the test programs, just run make check.
+There are also a few simple example programs available in the
+contrib/examples/ directory.  Don't hesitate to contact
 us at <libexif-devel@lists.sourceforge.net> if you have any questions
 on how to use libexif.
 
@@ -93,18 +94,6 @@ to build. Building from the source tar ball usually involves the commands:
 
 When building from source out of git, something like the following will be
 necessary:
-
-  gettextize
-  mv po/Makevars.template po/Makevars
-  aclocal -I auto-m4 -I m4m
-  autoheader
-  libtoolize --force
-  automake --add-missing
-  autoconf
-  ./configure
-  make
-
-Or, probably just:
 
   autoreconf -i
   ./configure

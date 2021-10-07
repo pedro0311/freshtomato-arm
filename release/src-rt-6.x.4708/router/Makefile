@@ -156,14 +156,14 @@ DNSSEC_OPENSSL :=
 DNSSEC_NETTLE :=
 ifeq ($(TCONFIG_DNSSEC),y)
 ifneq ($(TCONFIG_HTTPS),)
-ifneq ($(TCONFIG_OPENSSL11),)
-DNSSEC_BACKEND := $(OPENSSLDIR)
-DNSSEC_OPENSSL := y
-else
+#ifneq ($(TCONFIG_OPENSSL11),)
+#DNSSEC_BACKEND := $(OPENSSLDIR)
+#DNSSEC_OPENSSL := y
+#else
 obj-y += nettle
 DNSSEC_BACKEND := nettle
 DNSSEC_NETTLE := y
-endif
+#endif
 endif
 endif
 
@@ -1086,11 +1086,11 @@ dnsmasq: $(DNSSEC_BACKEND)
 	@$(SEP)
 	$(call patch_files,dnsmasq)
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
-	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DUSE_IPSET -DEDNS_PKTSZ=1280 \
+	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DUSE_IPSET \
 		$(if $(TCONFIG_USB_EXTRAS),,-DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_INOTIFY) \
 		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/include -DHAVE_DNSSEC,) \
 		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,)" \
-	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections $(EXTRACFLAGS) -std=gnu99" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
 		$(if $(DNSSEC_OPENSSL),-pthread -L$(TOP)/$(OPENSSLDIR),) \
 		$(if $(DNSSEC_NETTLE),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
@@ -1110,7 +1110,7 @@ nettle/stamp-h1: gmp
 	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 	CPPFLAGS="-I$(TOP)/gmp -fPIC" \
 	LDFLAGS="-L$(TOP)/gmp/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared --disable-openssl
+	$(CONFIGURE) prefix=$(TOP)/nettle --enable-mini-gmp --disable-documentation --disable-shared --disable-openssl --disable-fat
 	@touch $@
 
 nettle: nettle/stamp-h1
@@ -1752,7 +1752,7 @@ endif
 	@true
 
 libexif/stamp-h1:
-	cd libexif && autoreconf -fsi && CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+	cd libexif && autoreconf -fsi && CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -fPIC -ffunction-sections -fdata-sections" \
 	LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' \
 		--disable-docs --disable-rpath --disable-nls --without-libiconv-prefix --without-libintl-prefix

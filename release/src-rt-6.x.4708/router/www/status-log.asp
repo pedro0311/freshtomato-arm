@@ -403,7 +403,7 @@ function init() {
 </head>
 
 <body onload="init()">
-<form id="t_fom">
+<form id="t_fom" onsubmit="return false;">
 <table id="container">
 <tr><td colspan="2" id="header">
 	<div class="title">FreshTomato</div>

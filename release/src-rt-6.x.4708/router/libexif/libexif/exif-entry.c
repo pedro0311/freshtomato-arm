@@ -25,6 +25,8 @@
 #include <libexif/exif-utils.h>
 #include <libexif/i18n.h>
 
+#include <libexif/exif-gps-ifd.h>
+
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -708,7 +710,7 @@ static const struct {
 static const struct {
   ExifTag tag;
   struct {
-    int index;
+    ExifShort index;
     const char *values[4]; /*!< list of progressively shorter string
 			    descriptions; the longest one that fits will be
 			    selected */
@@ -777,6 +779,16 @@ static const struct {
 	      "of focus)"), N_("Portrait"), NULL}},
       {8, {N_("Landscape mode (for landscape photos with the background "
 	      "in focus)"), N_("Landscape"), NULL}},
+      {0, {NULL}}}},
+  { EXIF_TAG_SENSITIVITY_TYPE,
+    { {0, {N_("Unknown"), NULL}},
+      {1, {N_("Standard output sensitivity (SOS)"), NULL}},
+      {2, {N_("Recommended exposure index (REI)"), NULL}},
+      {3, {N_("ISO speed"), NULL}},
+      {4, {N_("Standard output sensitivity (SOS) and recommended exposure index (REI)"), NULL}},
+      {5, {N_("Standard output sensitivity (SOS) and ISO speed"), NULL}},
+      {6, {N_("Recommended exposure index (REI) and ISO speed"), NULL}},
+      {7, {N_("Standard output sensitivity (SOS) and recommended exposure index (REI) and ISO speed"), NULL}},
       {0, {NULL}}}},
   { EXIF_TAG_FLASH,
     { {0x0000, {N_("Flash did not fire"), N_("No flash"), NULL}},
@@ -854,6 +866,8 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 		{"0220", 2,  2},
 		{"0221", 2, 21},
 		{"0230", 2,  3},
+		{"0231", 2, 31},
+		{"0232", 2, 32},
 		{""    , 0,  0}
 	};
 
@@ -1293,6 +1307,7 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 	case EXIF_TAG_FOCAL_PLANE_RESOLUTION_UNIT:
 	case EXIF_TAG_RESOLUTION_UNIT:
 	case EXIF_TAG_EXPOSURE_PROGRAM:
+	case EXIF_TAG_SENSITIVITY_TYPE:
 	case EXIF_TAG_FLASH:
 	case EXIF_TAG_SUBJECT_DISTANCE_RANGE:
 	case EXIF_TAG_COLOR_SPACE:
@@ -1371,8 +1386,8 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 	{
 		unsigned char *utf16;
 
-		/* Sanity check the size to prevent overflow */
-		if (e->size+sizeof(uint16_t)+1 < e->size) break;
+		/* Sanity check the size to prevent overflow. Note EXIF files are 64kb at most. */
+		if (e->size >= 65536 - sizeof(uint16_t)*2) break;
 
 		/* The tag may not be U+0000-terminated , so make a local
 		   U+0000-terminated copy before converting it */
@@ -1403,6 +1418,39 @@ exif_entry_get_value (ExifEntry *e, char *val, unsigned int maxlen)
 	return val;
 }
 
+static
+void exif_entry_initialize_gps(ExifEntry *e, ExifTag tag) {
+  const ExifGPSIfdTagInfo* info = exif_get_gps_tag_info(tag);
+
+  if(!info) {
+    e->components = 0;
+    e->format = EXIF_FORMAT_UNDEFINED;
+    e->size = 0;
+    e->data = NULL;
+    return;
+  }
+
+  e->format = info->format;
+  e->components = info->components;
+
+  if(info->components == 0) {
+    /* No pre-allocation */
+    e->size = 0;
+    e->data = NULL;
+  } else {
+    int hasDefault = (info->default_size && info->default_value);
+    int allocSize = hasDefault ? info->default_size : (exif_format_get_size (e->format) * e->components);
+    e->size = allocSize;
+    e->data = exif_entry_alloc (e, e->size);
+    if(!e->data) {
+      clear_entry(e);
+      return;
+    }
+    if(hasDefault) {
+      memcpy(e->data, info->default_value, info->default_size);
+    }
+  }
+}
 
 /*!
  * \bug Log and report failed exif_mem_malloc() calls.
@@ -1419,6 +1467,12 @@ exif_entry_initialize (ExifEntry *e, ExifTag tag)
 	o = exif_data_get_byte_order (e->parent->parent);
 
 	e->tag = tag;
+
+	if(exif_entry_get_ifd(e) == EXIF_IFD_GPS) {
+	  exif_entry_initialize_gps(e, tag);
+      return;
+	}
+
 	switch (tag) {
 
 	/* LONG, 1 component, no default */
@@ -1448,6 +1502,7 @@ exif_entry_initialize (ExifEntry *e, ExifTag tag)
 	case EXIF_TAG_SUBJECT_DISTANCE_RANGE:
 	case EXIF_TAG_FLASH:
 	case EXIF_TAG_ISO_SPEED_RATINGS:
+	case EXIF_TAG_SENSITIVITY_TYPE:
 
 	/* SHORT, 1 component, default 0 */
 	case EXIF_TAG_IMAGE_WIDTH:
@@ -1627,7 +1682,7 @@ exif_entry_initialize (ExifEntry *e, ExifTag tag)
 	case EXIF_TAG_DATE_TIME_DIGITIZED:
 	{
 		time_t t;
-#ifdef HAVE_LOCALTIME_R
+#if defined(HAVE_LOCALTIME_R) || defined(HAVE_LOCALTIME_S)
 		struct tm tms;
 #endif
 		struct tm *tm;
@@ -1635,6 +1690,9 @@ exif_entry_initialize (ExifEntry *e, ExifTag tag)
 		t = time (NULL);
 #ifdef HAVE_LOCALTIME_R
 		tm = localtime_r (&t, &tms);
+#elif HAVE_LOCALTIME_S
+		localtime_s (&tms, &t);
+		tm = &tms;
 #else
 		tm = localtime (&t);
 #endif

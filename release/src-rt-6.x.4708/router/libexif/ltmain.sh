@@ -1,5 +1,5 @@
 #! /bin/sh
-## DO NOT EDIT - This file generated from ../build-aux/ltmain.in
+## DO NOT EDIT - This file generated from ./build-aux/ltmain.in
 ##               by inline-source v2014-01-03.01
 
 # libtool (GNU libtool) 2.4.6
@@ -7272,14 +7272,10 @@ func_mode_link ()
       # -tp=*                Portland pgcc target processor selection
       # --sysroot=*          for sysroot support
       # -O*, -g*, -flto*, -fwhopr*, -fuse-linker-plugin GCC link-time optimization
-      # -specs=*             GCC specs files
       # -stdlib=*            select c++ std lib with clang
-      # -fsanitize=*         Clang/GCC memory and address sanitizer
-      # -fuse-ld=*           Linker select flags for GCC
       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*| \
       -t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*| \
-      -O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*| \
-      -specs=*|-fsanitize=*|-fuse-ld=*)
+      -O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*)
         func_quote_for_eval "$arg"
 	arg=$func_quote_for_eval_result
         func_append compile_command " $arg"
@@ -7442,12 +7438,6 @@ func_mode_link ()
       fi
     done # argument parsing loop
 
-    if test "$module" = yes ; then
-      # [Mageia] dropping ld option "--no-undefined" which is wrong for plugins
-      linker_flags=`$ECHO "X $linker_flags" | $Xsed -e 's/ --no-undefined//'`
-      compiler_flags=`$ECHO "X $compiler_flags" | $Xsed -e 's/ -Wl,--no-undefined//'`
-    fi
-
     test -n "$prev" && \
       func_fatal_help "the '$prevarg' option requires an argument"
 
@@ -7578,10 +7568,7 @@ func_mode_link ()
 	case $pass in
 	dlopen) libs=$dlfiles ;;
 	dlpreopen) libs=$dlprefiles ;;
-	link)
-	  libs="$deplibs %DEPLIBS%"
-	  test "X$link_all_deplibs" != Xno && libs="$libs $dependency_libs"
-	  ;;
+	link) libs="$deplibs %DEPLIBS% $dependency_libs" ;;
 	esac
       fi
       if test lib,dlpreopen = "$linkmode,$pass"; then

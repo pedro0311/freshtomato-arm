@@ -156,6 +156,20 @@ function wan_disconnect(uidx) {
 	serv('wan'+uidx+'-stop', uidx, 2);
 }
 
+function watchdog_check(uidx) {
+	var e = E('b'+uidx+'_check');
+	e.disabled = 1;
+
+	var c = '/usr/sbin/watchdog';
+	var cmd = new XmlHttp();
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(c.replace(/\r/g, '')));
+
+	setTimeout(
+		function() {
+			e.disabled = 0;
+		}, 15000);
+}
+
 function onRefToggle() {
 	var u;
 	ref.toggle();
@@ -326,6 +340,10 @@ function show() {
 			E('b'+u+'_connect').disabled = (stats.wanup[uidx - 1] || (!stats.wanup[uidx - 1] && stats.wanstatus[uidx - 1].substring(3, 13) == 'Connecting'));
 			E('b'+u+'_disconnect').disabled = (!stats.wanup[uidx - 1] && stats.wanstatus[uidx - 1].substring(3, 13) != 'Connecting');
 		}
+
+		elem.display('b'+u+'_multiwan', (nvram.mwan_num > 1 && nvram.mwan_cktime > 0 && stats.wanck_pause != 1));
+		elem.display('wan'+u+'multiwan', (nvram.mwan_num > 1));
+		c('wan'+u+'multiwan', '<div class="stats_mwan1">'+(stats.wanweight[uidx - 1] == '0' ? 'Failover' : 'Load balance with weight: '+stats.wanweight[uidx - 1])+'<\/div><div class="stats_mwan2">Watchdog '+(nvram.mwan_cktime > 0 && stats.wanck_pause != 1 ? 'enabled, check time: '+(nvram.mwan_cktime / 60)+' minute(s)' : '<b>disabled<\/b>')+'<\/div>');
 	}
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
@@ -519,6 +537,7 @@ function init() {
 			{ title: 'MTU', text: nvram['wan'+u+'_run_mtu'] },
 			null,
 			{ title: 'Status', rid: 'wan'+u+'status', text: stats.wanstatus[uidx - 1] },
+			{ title: 'MultiWAN Status', rid: 'wan'+u+'multiwan', text: stats.wanweight[uidx - 1] },
 			{ title: 'Connection Uptime', rid: 'wan'+u+'uptime', text: stats.wanuptime[uidx - 1] },
 			{ title: 'Remaining Lease Time', rid: 'wan'+u+'lease', text: stats.wanlease[uidx - 1], ignore: !show_dhcpc[uidx - 1] }
 /* USB-BEGIN */
@@ -531,7 +550,10 @@ function init() {
 		W('<\/span>');
 		W('<span id="b'+u+'_codi" style="display:none">');
 		W('<input type="button" class="status-controls" onclick="wan_connect('+uidx+')" value="Connect" id="b'+u+'_connect"> &nbsp;');
-		W('<input type="button" class="status-controls" onclick="wan_disconnect('+uidx+')" value="Disconnect" id="b'+u+'_disconnect">');
+		W('<input type="button" class="status-controls" onclick="wan_disconnect('+uidx+')" value="Disconnect" id="b'+u+'_disconnect"> &nbsp;');
+		W('<\/span>');
+		W('<span id="b'+u+'_multiwan" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="watchdog_check(\''+u+'\')" value="Force Check" id="b'+u+'_check" title="Force MultiWAN availability check">');
 		W('<\/span>');
 		W('<\/div>');
 	}
