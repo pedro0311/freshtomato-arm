@@ -50,6 +50,19 @@ static void put_to_file(const char *filePath, const char *content)
 	fclose(fkey);
 }
 
+char *read_from_file(const char *filePath, char *buf, size_t buf_len)
+{
+	int datalen;
+
+	datalen = f_read(filePath, buf, buf_len - 1);
+	if (datalen < 0)
+		buf[0] = '\0';
+	else
+		buf[datalen] = '\0';
+
+	return buf;
+}
+
 static void prepareCAGeneration(int serverNum)
 {
 	char buffer[512];
@@ -84,15 +97,6 @@ static void prepareCAGeneration(int serverNum)
 		put_to_file(OPENSSL_TMP_DIR"/cakey.pem", getNVRAMVar("vpn_server%d_ca_key", serverNum));
 		put_to_file(OPENSSL_TMP_DIR"/cacert.pem", getNVRAMVar("vpn_server%d_ca", serverNum));
 	}
-}
-
-static void print_generated_ca_to_user()
-{
-	web_puts("cakey = '");
-	web_putfile(OPENSSL_TMP_DIR"/cakey.pem", WOF_JAVASCRIPT);
-	web_puts("';\ncacert = '");
-	web_putfile(OPENSSL_TMP_DIR"/cacert.pem", WOF_JAVASCRIPT);
-	web_puts("';");
 }
 
 static void generateKey(const char *prefix, const int userid)
@@ -141,6 +145,15 @@ static void generateKey(const char *prefix, const int userid)
 	snprintf(buffer, sizeof(buffer), "openssl x509 -in "OPENSSL_TMP_DIR"/%s.crt -inform PEM -out "OPENSSL_TMP_DIR"/%s.crt -outform PEM >>"OPENSSL_TMP_DIR"/openssl.log 2>&1", prefix, prefix);
 	syslog(LOG_WARNING, buffer);
 	system(buffer);
+}
+
+static void print_generated_ca_to_user()
+{
+	web_puts("cakey = '");
+	web_putfile(OPENSSL_TMP_DIR"/cakey.pem", WOF_JAVASCRIPT);
+	web_puts("';\ncacert = '");
+	web_putfile(OPENSSL_TMP_DIR"/cacert.pem", WOF_JAVASCRIPT);
+	web_puts("';");
 }
 
 static void print_generated_keys_to_user(const char *prefix)
@@ -207,7 +220,7 @@ void wo_ovpn_genkey(char *url)
 	int server;
 
 	strlcpy(buffer, webcgi_safeget("_mode", ""), sizeof(buffer));
-	modeStr = js_string(buffer);	/* quicky scrub */
+	modeStr = js_string(buffer); /* quicky scrub */
 	if (modeStr == NULL) {
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		syslog(LOG_WARNING, "No mode was set to wo_vpn_genkey!");
@@ -216,7 +229,7 @@ void wo_ovpn_genkey(char *url)
 	}
 
 	strlcpy(buffer, webcgi_safeget("_server", ""), sizeof(buffer));
-	serverStr = js_string(buffer);	/* quicky scrub */
+	serverStr = js_string(buffer); /* quicky scrub */
 	if (serverStr == NULL && ((!strncmp(modeStr, "static", 6)) || (!strcmp(modeStr, "key")))) {
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		syslog(LOG_WARNING, "No server was set to wo_vpn_genkey but it was required by mode!");
@@ -226,10 +239,10 @@ void wo_ovpn_genkey(char *url)
 
 	server = atoi(serverStr);
 
-	if (!strcmp(modeStr, "static1"))	/* tls-auth / tls-crypt */
+	if (!strcmp(modeStr, "static1")) /* tls-auth / tls-crypt */
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 		web_pipecmd("openvpn --genkey secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
-	else if (!strcmp(modeStr, "static2"))	/* tls-crypt-v2 */
+	else if (!strcmp(modeStr, "static2")) /* tls-crypt-v2 */
 		web_pipecmd("openvpn --genkey tls-crypt-v2-server /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey && rm /tmp/genvpnkey", WOF_NONE);
 #else
 		web_pipecmd("openvpn --genkey --secret /tmp/genvpnkey >/dev/null 2>&1 && cat /tmp/genvpnkey | tail -n +4 && rm /tmp/genvpnkey", WOF_NONE);
@@ -252,6 +265,7 @@ void wo_ovpn_genclientconfig(char *url)
 #ifdef TCONFIG_OPENVPN
 #ifdef TCONFIG_KEYGEN
 	char buffer[256];
+	char buffer2[8192];
 	char *serverStr;
 	char *dummy, *uname, *passwd;
 	char *u, *nv, *nvp, *b;
@@ -261,7 +275,7 @@ void wo_ovpn_genclientconfig(char *url)
 	FILE *fa;
 
 	strlcpy(buffer, webcgi_safeget("_server", ""), sizeof(buffer));
-	serverStr = js_string(buffer);	/* quicky scrub */
+	serverStr = js_string(buffer); /* quicky scrub */
 
 	strlcpy(buffer, url, sizeof(buffer));
 	u = js_string(buffer);
@@ -275,6 +289,7 @@ void wo_ovpn_genclientconfig(char *url)
 
 	userauth = atoi(getNVRAMVar("vpn_server%d_userpass", server));
 	useronly = userauth && atoi(getNVRAMVar("vpn_server%d_nocert", server));
+	userid = atoi(webcgi_safeget("_userid", "0"));
 
 	eval("rm", "-Rf", OVPN_CLIENT_DIR);
 	eval("mkdir", "-m", "0777", "-p", OVPN_CLIENT_DIR);
@@ -311,7 +326,7 @@ void wo_ovpn_genclientconfig(char *url)
 		else if (!strcmp(buffer, "adaptive"))
 			fprintf(fp, "comp-lzo adaptive\n");
 		else if (!strcmp(buffer, "no"))
-			fprintf(fp, "compress\n");	/* Disable, but can be overriden */
+			fprintf(fp, "compress\n"); /* disable, but can be overriden */
 	}
 
 	/* Interface */
@@ -323,7 +338,7 @@ void wo_ovpn_genclientconfig(char *url)
 		if (buffer[0] != '\0')
 			fprintf(fp, "ncp-ciphers %s\n", buffer);
 	}
-	else {	/* secret */
+	else { /* secret */
 		memset(buffer, 0, 256);
 		snprintf(buffer, sizeof(buffer), "vpn_server%d_cipher", server);
 		if (!nvram_contains_word(buffer, "default"))
@@ -339,50 +354,57 @@ void wo_ovpn_genclientconfig(char *url)
 	if (tls == 1) {
 		fprintf(fp, "client\n"
 		            "remote-cert-tls server\n"
-		            "ca ca.pem\n");
+		            "; ca ca.pem\n"
+		            "<ca>\n%s\n</ca>\n\n", getNVRAMVar("vpn_server%d_ca", server));
 
-		if (!useronly)
-			fprintf(fp, "cert client.crt\n"
-			            "key client.key\n");
+		put_to_file(OVPN_CLIENT_DIR"/ca.pem", getNVRAMVar("vpn_server%d_ca", server));
 
 		memset(buffer, 0, 256);
 		snprintf(buffer, sizeof(buffer), "vpn_server%d_hmac", server);
 		hmac = nvram_get_int(buffer);
 		if (hmac >= 0) {
 			if (hmac == 3)
-				fprintf(fp, "tls-crypt static.key");
+				fprintf(fp, "; tls-crypt static.key");
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 			else if (hmac == 4)
-				fprintf(fp, "tls-crypt-v2 static.key");
+				fprintf(fp, "; tls-crypt-v2 static.key");
 #endif /* TCONFIG_OPTIMIZE_SIZE_MORE */
 			else {
-				fprintf(fp, "tls-auth static.key");
-				if (hmac == 0)
+				fprintf(fp, "; tls-auth static.key");
+				if (hmac == 0) {
 					fprintf(fp, " 1");
-				else if (hmac == 1)
+					fprintf(fp, "key-direction 1\n");
+				}
+				else if (hmac == 1) {
 					fprintf(fp, " 0");
+					fprintf(fp, "key-direction 0\n");
+				}
+				else if (hmac == 2)
+					fprintf(fp, "key-direction bidirectional\n");
 			}
 			fprintf(fp, "\n");
 
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
-			if (hmac == 4) {
-				/* tls-crypt-v2 */
+			if (hmac == 4) { /* tls-crypt-v2 */
 				put_to_file(OVPN_CLIENT_DIR"/static-server.key", getNVRAMVar("vpn_server%d_static", server));
 				system("openvpn --tls-crypt-v2 "OVPN_CLIENT_DIR"/static-server.key --genkey tls-crypt-v2-client "OVPN_CLIENT_DIR"/static.key >/dev/null 2>&1");
 				eval("rm", OVPN_CLIENT_DIR"/static-server.key");
+
+				fprintf(fp, "<tls-crypt-v2>\n%s\n</tls-crypt-v2>\n\n", read_from_file(OVPN_CLIENT_DIR"/static.key", buffer2, sizeof(buffer2)));
 			}
 			else
 #endif /* TCONFIG_OPTIMIZE_SIZE_MORE */
-			{
-				/* tls-auth / tls-crypt */
+			{ /* tls-auth / tls-crypt */
 				put_to_file(OVPN_CLIENT_DIR"/static.key", getNVRAMVar("vpn_server%d_static", server));
+
+				if (hmac == 3) /* tls-crypt */
+					fprintf(fp, "<tls-crypt>\n%s\n</tls-crypt>\n\n", getNVRAMVar("vpn_server%d_static", server));
+				else /* tls-auth */
+					fprintf(fp, "<tls-auth>\n%s\n</tls-auth>\n\n", getNVRAMVar("vpn_server%d_static", server));
 			}
 		}
 
-		put_to_file(OVPN_CLIENT_DIR"/ca.pem", getNVRAMVar("vpn_server%d_ca", server));
-
 		/* Auth */
-		userid = atoi(webcgi_safeget("_userid", "0"));
 		if (userauth) {
 			fprintf(fp, "auth-user-pass auth.txt\n");
 
@@ -418,6 +440,11 @@ void wo_ovpn_genclientconfig(char *url)
 
 			eval("cp", OPENSSL_TMP_DIR"/client.crt", OVPN_CLIENT_DIR);
 			eval("cp", OPENSSL_TMP_DIR"/client.key", OVPN_CLIENT_DIR);
+
+			fprintf(fp, "; cert client.crt\n<cert>\n%s\n</cert>\n\n"
+			            "; key client.key\n<key>\n%s\n</key>\n\n",
+			            read_from_file(OVPN_CLIENT_DIR"/client.crt", buffer2, sizeof(buffer2)),
+			            read_from_file(OVPN_CLIENT_DIR"/client.key", buffer2, sizeof(buffer2)));
 		}
 	}
 	else {
@@ -432,7 +459,7 @@ void wo_ovpn_genclientconfig(char *url)
 			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_remote", server));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_local", server));
 		}
-		fprintf(fp, "secret static.key\n");
+		fprintf(fp, "; secret static.key\n<secret>\n%s\n</secret>\n\n", getNVRAMVar("vpn_server%d_static", server));
 		put_to_file(OVPN_CLIENT_DIR"/static.key", getNVRAMVar("vpn_server%d_static", server));
 	}
 
