@@ -5,6 +5,62 @@ FreshTomato-ARM Changelog
 
 
 
+2021.6          2021.10.12
+---------------------------
+
+Note1: because of changes in GUI, clean your browser cache and/or use Ctrl+F5 (FF) to avoid artifacts.
+Note2: because of changes in nvram variables, check your settings on 'Advanced -> DHCP/DNS -> Client (WAN)' page.
+
+- kernel: ipv6: send NEWLINK on RA managed/otherconf changes (fix from upstream https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=a394eef562d781f37a50d99cf1dfe596dc1ed96d)
+- kernel: ipv6: send only one NEWLINK when RA causes changes (fix from upstream https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=2053aeb69a53224717296db31b13d5b45b4f1a0e)
+- openssl-1.1: update to 1.1.1l
+- e2fsprogs: update to 1.46.4
+- nginx: update to 1.21.3
+- ntfs-3g: update to 2021.8.22
+- tor: update to 0.4.6.7
+- miniupnpd: update to 2.2.3
+- dnsmasq: update to 2.86 
+- libcurl: update to 7.79.1
+- libexif: update to 0.6.23
+- openvpn: update to 2.5.4
+- Add Media Bridge Mode (for SDK6 and up)
+- WL SDK (RT-N branch and up): turn On wl setting STBC RX
+- Correct JFFS and crash memory storage R6400/R6400v2 NVRAM_128K
+- build: Makefile: nettle: compile with --disable-fat
+- build: Makefile: dnsmasq: switch to nettle for crypto backend
+- build: allow to build dnssec and stubby independently
+- GUI: Administration: Access: show 'Allow Remote Upgrade' regardless of 'Remote Access' state
+- GUI: Status: Device List: fix javascript error in targets without network discovery helper
+- GUI: Status: Overview: add missing space between unit and flash size/cpu clock
+- GUI: OpenVPN Server: fix the case in which after removing the CA key in GUI, re-generating keys will use its old version from nvram
+- GUI: OpenVPN Server: fix generation of the correct CA Key previously caused clients errors. In order to work properly, the key must be generated again both for the server and client(s).
+- GUI: Status: Overview: fix toggle of WAN and Virtual Wireless nodes
+- GUI: Improvements to Advanced MAC page; closes #125
+- GUI: add WiFi QR Code generator to 'z' (AIO) targets
+- GUI: Admin: Logging: add minimum log level watched for syslogd
+- GUI: Admin: Debugging: rename console log level into Kernel printk log level (it has better meaning); add a reboot after changing log level, since we setup klogd only at init, so it is required to reboot; add Notes
+- GUI: add new, improved log viewer
+- GUI: Basic: Network: fix javascript freezing when more than 1 WAN has been set
+- GUI: Status: Overview: fix WL label issue on some routers
+- GUI: Advanced: DHCP/DNS: move some options from Client to Server section
+- GUI: Admin: Configuration: add current date to backup file (closes #156)
+- GUI: Status: Overview: add MultiWAN Status and button to force watchdog check manually
+- GUI: advanced-wireless: - add one more example for USA country setup (Q2 / 96)
+- GUI: advanced-wireless - add Protected Management Frames option
+- adblock: remove inactive list (http://www.malwaredomainlist.com/hostslist/hosts.txt)
+- adblock: correct url of DOH servers list
+- ebtables: libebtc: fix malloc usage (fix from upstream)
+- httpd: log.c: fix a bug not showing all logs when external log is configured
+- OpenVPN: Server: add generated keys for client also to .ovpn configuration file
+- PPTP Server: bypass CTF (if enabled)
+- Revert "rc: do not restart nas services/wsdd2 on WAN up"
+- rc: network.c - repair function restart_wl() and do not start radio join (again) 
+- rc: services.c: start_ntpd(): eval() will wait until process quits, so use _eval() with pid; otherwise, start_ntpd() never returns
+- watchdog/multiwan: fix a whole bunch of problems
+- www: at.css: add icons to Connect/Disconnect buttons for Advanced themes
+- www: advanced-wlanvifs.asp: fix bug causing js error
+
+
 2021.5          2021.08.14
 ---------------------------
 
