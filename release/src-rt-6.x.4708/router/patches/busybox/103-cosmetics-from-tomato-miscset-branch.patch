@@ -1,6 +1,6 @@
 --- busybox/coreutils/df.c
 +++ busybox/coreutils/df.c
-@@ -213,6 +213,10 @@
+@@ -215,6 +215,10 @@
  
  		mount_point = mount_entry->mnt_dir;
  		fs_type = mount_entry->mnt_type;
@@ -9,5 +9,5 @@
 +		if ((strcmp(mount_point, "proc") == 0) || (strcmp(mount_point, "ramfs") == 0))
 +			continue;
  
- 		if (statvfs(mount_point, &s) != 0) {
- 			bb_simple_perror_msg(mount_point);
+ 		if (opt & OPT_t) {
+ 			if (strcmp(fs_type, opt_t) != 0)
