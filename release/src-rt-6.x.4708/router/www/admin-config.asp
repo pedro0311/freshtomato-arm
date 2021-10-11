@@ -108,7 +108,7 @@ function init() {
 <div class="section">
 	<div>
 		<script>
-			W('<input type="text" size="60" maxlength="128" id="backup-name" onchange="backupNameChanged()" value="FreshTomato_'+('<% version(); %>'.replace(/\./g, '_'))+'~m'+nvram.et0macaddr.replace(/:/g, '').substring(6, 12)+'~'+nvram.t_model_name.replace(/\ /g, '_')+'~'+now.getFullYear()+('0'+(now.getMonth()+1)).slice(-2)+now.getDate()+'">');
+			W('<input type="text" size="60" maxlength="128" id="backup-name" onchange="backupNameChanged()" value="FreshTomato_'+('<% version(); %>'.replace(/\./g, '_'))+'~m'+nvram.et0macaddr.replace(/:/g, '').substring(6, 12)+'~'+nvram.t_model_name.replace(/\/| /g, '_')+'~'+now.getFullYear()+('0'+(now.getMonth()+1)).slice(-2)+now.getDate()+'">');
 		</script>
 		<div style="display:inline">.cfg &nbsp;
 			<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">
