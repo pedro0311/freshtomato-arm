@@ -1585,6 +1585,30 @@ div#sptime {
 	padding-top: 1px;
 }
 
+.blinking {
+	-webkit-animation: blinker 1s linear infinite; /* Safari & Chrome */
+	-moz-animation: blinker 1s linear infinite; /* Firefox */
+	-ms-animation: blinker 1s linear infinite; /* Internet Explorer */
+	-o-animation: blinker 1s linear infinite; /* Opera */
+	animation: blinker 1s linear infinite; /* W3C */
+}
+
+@-webkit-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-moz-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-ms-keyframes blinker {
+	50% { opacity: 0; }
+}
+@-o-keyframes blinker {
+	50% { opacity: 0; }
+}
+@keyframes blinker {
+	50% { opacity: 0; }
+}
+
 /* SVG */
 #svg text {
 	font: 11px monospace;

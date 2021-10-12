@@ -115,8 +115,7 @@ logGrid.populate = function() {
 
 		E('log-occurence-span').style.display = (currentSearch ? 'inline' : 'none');
 		elem.setInnerHTML('log-occurence-value', count);
-
-		if (time != 'Not Available')
+		if (time.indexOf('Not Available') === -1)
 			elem.setInnerHTML('log-refresh-time', time.match(/(\d+\:\d+\:\d+)\s(.*)/i)[1]+' - Last Refreshed');
 
 		var e = E('log-table').children[0].children[0].children[0];
