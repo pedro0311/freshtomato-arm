@@ -343,7 +343,7 @@ function show() {
 
 		elem.display('b'+u+'_multiwan', (nvram.mwan_num > 1 && nvram.mwan_cktime > 0 && stats.wanck_pause != 1));
 		elem.display('wan'+u+'multiwan', (nvram.mwan_num > 1));
-		c('wan'+u+'multiwan', '<div class="stats_mwan1">'+(stats.wanweight[uidx - 1] == '0' ? 'Failover' : 'Load balance with weight: '+stats.wanweight[uidx - 1])+'<\/div><div class="stats_mwan2">Watchdog '+(nvram.mwan_cktime > 0 && stats.wanck_pause != 1 ? 'enabled, check time: '+(nvram.mwan_cktime / 60)+' minute(s)' : '<b>disabled<\/b>')+'<\/div>');
+		c('wan'+u+'multiwan', '<div class="stats_mwan1">Weight '+stats.wanweight[uidx - 1]+'<\/div><div class="stats_mwan2">Watchdog '+(nvram.mwan_cktime > 0 && stats.wanck_pause != 1 ? 'enabled, check time: '+(nvram.mwan_cktime / 60)+' minute(s)' : '<b>disabled<\/b>')+'<\/div>');
 	}
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
