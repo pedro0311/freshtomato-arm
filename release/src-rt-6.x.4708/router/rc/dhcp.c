@@ -442,10 +442,13 @@ int dhcpc_renew_main(int argc, char **argv)
 void start_dhcpc(char *prefix)
 {
 	char pid_file[64];
-	char cmd[256];
+	char cmd[512];
 	char tmp[64];
 	char *ifname;
 	int proto;
+	char *argv[128];
+	int argc = 0;
+	pid_t pid;
 
 	nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 
@@ -471,7 +474,7 @@ void start_dhcpc(char *prefix)
 	}
 
 	memset(cmd, 0, sizeof(cmd));
-	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s dhcpc-event -p %s %s %s %s %s %s %s",
+	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s %s",
 	                           ifname,
 	                           pid_file,
 	                           tmp,
@@ -486,9 +489,10 @@ void start_dhcpc(char *prefix)
 	                           nvram_safe_get("dhcpc_custom")
 	);
 
-	logmsg(LOG_DEBUG, "*** %s: prefix=%s cmd=/bin/sh -c %s", __FUNCTION__, prefix, cmd);
+	logmsg(LOG_DEBUG, "*** %s: prefix=%s cmd=%s", __FUNCTION__, prefix, cmd);
 
-	xstart("/bin/sh", "-c", cmd);
+	for (argv[argc = 0] = strtok(cmd, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
+	_eval(argv, NULL, 0, &pid);
 }
 
 void stop_dhcpc(char *prefix)
