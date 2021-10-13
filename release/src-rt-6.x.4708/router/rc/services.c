@@ -2136,7 +2136,7 @@ void start_ntpd(void)
 	 * therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
-	if (ntp_updates_int >= 0) {
+	if (ntp_updates_int >= 0) { /* -1 = never */
 		servers_len = strlen(nvram_safe_get("ntp_server"));
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
@@ -2176,11 +2176,13 @@ void start_ntpd(void)
 
 			if (nvram_get_int("ntpd_enable")) /* enable local NTP server */
 				ntpd_argv[index++] = "-l";
-
-			ret = _eval(ntpd_argv, NULL, 0, &pid);
-			if (ret == 0)
-				logmsg(LOG_INFO, "ntpd is started");
 		}
+
+		ret = _eval(ntpd_argv, NULL, 0, &pid);
+		if (ret)
+			logmsg(LOG_ERR, "starting ntpd failed ...");
+		else
+			logmsg(LOG_INFO, "ntpd is started");
 	}
 }
 
