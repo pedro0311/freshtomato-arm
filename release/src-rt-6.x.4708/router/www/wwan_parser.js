@@ -114,7 +114,7 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	code += '</tbody>'
 	var modemType = nvram[wanNumStr+'_modem_type'];
 	var connType = nvram[wanNumStr+'_proto'];
-	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'huawei-non-hilink') {
+	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'huawei-non-hilink' || modemType == 'hw-ether') {
 		code += '<tr><td class="title indent1"></td>';
 		code += '<td class="content wwan-parser-view"><a href="#" onclick="showSMSForWWAN('+wannum+')">Click to view SMS</a></td></tr>';
 	}

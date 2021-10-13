@@ -17,32 +17,31 @@
  //usage:     "\n	-S PROG	Run PROG after stepping time, stratum change, and every 11 min"
  //usage:	IF_NOT_FEATURE_NTP_AUTH(
  //usage:     "\n	-p PEER	Obtain time from PEER (may be repeated)"
-@@ -162,7 +163,7 @@
+@@ -160,7 +161,7 @@
   *   datapoints after the step.
   */
  
--#define INITIAL_SAMPLES    4    /* how many samples do we want for init */
+-#define INITIAL_SAMPLES    3    /* how many samples do we want for init */
 +#define INITIAL_SAMPLES    1    /* how many samples do we want for init */
  #define MIN_FREQHOLD      10    /* adjust offset, but not freq in this many first adjustments */
  #define BAD_DELAY_GROWTH   4    /* drop packet if its delay grew by more than this factor */
  
-@@ -196,13 +197,13 @@
+@@ -191,12 +192,12 @@
  
  #define FREQ_TOLERANCE  0.000015 /* frequency tolerance (15 PPM) */
  #define BURSTPOLL       0       /* initial poll */
 -#define MINPOLL         5       /* minimum poll interval. std ntpd uses 6 (6: 64 sec) */
 +#define MINPOLL         6       /* minimum poll interval. std ntpd uses 6 (6: 64 sec) */
- /*
-  * If offset > discipline_jitter * POLLADJ_GATE, and poll interval is > 2^BIGPOLL,
+ /* If offset > discipline_jitter * POLLADJ_GATE, and poll interval is > 2^BIGPOLL,
   * then it is decreased _at once_. (If <= 2^BIGPOLL, it will be decreased _eventually_).
   */
  #define BIGPOLL         9       /* 2^9 sec ~= 8.5 min */
 -#define MAXPOLL         12      /* maximum poll interval (12: 1.1h, 17: 36.4h). std ntpd uses 17 */
 +#define MAXPOLL         16      /* maximum poll interval (12: 1.1h, 17: 36.4h). std ntpd uses 17 */
- /*
-  * Actively lower poll when we see such big offsets.
+ /* Actively lower poll when we see such big offsets.
   * With SLEW_THRESHOLD = 0.125, it means we try to sync more aggressively
-@@ -225,7 +226,7 @@
+  * if offset increases over ~0.04 sec
+@@ -227,7 +228,7 @@
   * and when it goes below -POLLADJ_LIMIT, we poll_exp--.
   * (Bumped from 30 to 40 since otherwise I often see poll_exp going *2* steps down)
   */
@@ -51,7 +50,7 @@
  /* If offset < discipline_jitter * POLLADJ_GATE, then we decide to increase
   * poll interval (we think we can't improve timekeeping
   * by staying at smaller poll).
-@@ -374,14 +375,15 @@
+@@ -366,14 +367,15 @@
  	OPT_q = (1 << 1),
  	OPT_N = (1 << 2),
  	OPT_x = (1 << 3),
@@ -73,7 +72,7 @@
  	/* We hijack some bits for other purposes */
  	OPT_qq = (1 << 31),
  };
-@@ -1238,6 +1240,9 @@
+@@ -1129,6 +1131,9 @@
  				"unreachable", p->p_dotted);
  		return 0;
  	}
@@ -83,7 +82,7 @@
  #if 0 /* we filter out such packets earlier */
  	if ((p->lastpkt_status & LI_ALARM) == LI_ALARM
  	 || p->lastpkt_stratum >= MAXSTRAT
-@@ -2086,9 +2091,10 @@
+@@ -1880,9 +1885,10 @@
  	close(p->p_fd);
  	p->p_fd = -1;
  
@@ -96,7 +95,7 @@
  	) {
  		bb_error_msg("reply from %s: peer is unsynced", p->p_dotted);
  		/*
-@@ -2475,7 +2481,7 @@
+@@ -2275,7 +2281,7 @@
  	opts = getopt32(argv, "^"
  			"nqNx" /* compat */
  			IF_FEATURE_NTP_AUTH("k:")  /* compat */

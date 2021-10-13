@@ -467,7 +467,7 @@ void start_dnsmasq()
 
 	/* NTP server */
 	if (nvram_get_int("ntpd_enable"))
-		fprintf(f, "dhcp-option=42,%s\n", "0.0.0.0");
+		fprintf(f, "dhcp-option-force=42,%s\n", "0.0.0.0");
 
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
@@ -2114,7 +2114,7 @@ void start_ntpd(void)
 	FILE *f;
 	char *servers, *ptr;
 	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
-	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL };
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -d6 -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
 	if (getpid() != 1) {
@@ -2136,7 +2136,7 @@ void start_ntpd(void)
 	 * therefore, the nvram variable contains a string of 3 NTP servers - This code separates them and passes them to
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
-	if (ntp_updates_int >= 0) {
+	if (ntp_updates_int >= 0) { /* -1 = never */
 		servers_len = strlen(nvram_safe_get("ntp_server"));
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
@@ -2176,11 +2176,13 @@ void start_ntpd(void)
 
 			if (nvram_get_int("ntpd_enable")) /* enable local NTP server */
 				ntpd_argv[index++] = "-l";
-
-			ret = _eval(ntpd_argv, NULL, 0, &pid);
-			if (ret == 0)
-				logmsg(LOG_INFO, "ntpd is started");
 		}
+
+		ret = _eval(ntpd_argv, NULL, 0, &pid);
+		if (ret)
+			logmsg(LOG_ERR, "starting ntpd failed ...");
+		else
+			logmsg(LOG_INFO, "ntpd is started");
 	}
 }
 

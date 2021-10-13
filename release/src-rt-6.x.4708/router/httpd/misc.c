@@ -758,7 +758,7 @@ void asp_time(int argc, char **argv)
 
 	t = time(NULL);
 	if (t < Y2K)
-		web_puts("Not Available");
+		web_puts("<span class=\"blinking\">Not Available</span>");
 	else {
 		strftime(s, sizeof(s), "%a, %d %b %Y %H:%M:%S %z", localtime(&t));
 		web_puts(s);

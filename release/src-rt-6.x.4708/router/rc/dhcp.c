@@ -50,23 +50,23 @@ static void expires(unsigned int seconds, char *prefix)
 {
 	struct sysinfo info;
 	char s[32];
-	char expires_file[64];
+	char buf[64];
 
 	sysinfo(&info);
-	memset(s, 0, 32);
-	sprintf(s, "%u", (unsigned int)info.uptime + seconds);
+	memset(s, 0, sizeof(s));
+	snprintf(s, sizeof(s), "%u", (unsigned int)info.uptime + seconds);
 
-	memset(expires_file, 0, 64);
-	sprintf(expires_file, "/var/lib/misc/dhcpc-%s.expires", prefix);
-	f_write_string(expires_file, s, 0, 0);
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "/var/lib/misc/dhcpc-%s.expires", prefix);
+	f_write_string(buf, s, 0, 0);
 }
 
 static void do_renew_file(unsigned int renew, char *prefix)
 {
 	char buf[64];
 
-	memset(buf, 0, 64);
-	sprintf(buf, "/var/lib/misc/%s_dhcpc.renewing", prefix);
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "/var/lib/misc/%s_dhcpc.renewing", prefix);
 
 	if (renew)
 		f_write(buf, NULL, 0, 0, 0);
@@ -78,8 +78,8 @@ void do_connect_file(unsigned int connect, char *prefix)
 {
 	char buf[64];
 
-	memset(buf, 0, 64);
-	sprintf(buf, "/var/lib/misc/%s.connecting", prefix);
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "/var/lib/misc/%s.connecting", prefix);
 
 	if (connect)
 		f_write(buf, NULL, 0, 0, 0);
@@ -395,8 +395,8 @@ int dhcpc_release_main(int argc, char **argv)
 	if (!using_dhcpc(prefix))
 		return 1;
 
-	memset(dhcpc_file, 0, 64);
-	sprintf(dhcpc_file, "/var/run/udhcpc-%s.pid", prefix);
+	memset(dhcpc_file, 0, sizeof(dhcpc_file));
+	snprintf(dhcpc_file, sizeof(dhcpc_file), "/var/run/udhcpc-%s.pid", prefix);
 	if (kill_pidfile_s(dhcpc_file, SIGUSR2) == 0)
 		sleep(2);
 
@@ -415,7 +415,7 @@ int dhcpc_release_main(int argc, char **argv)
 int dhcpc_renew_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
-	char dhcpcpid_file[64];
+	char pid_file[64];
 
 	if (argc > 1)
 		strcpy(prefix, argv[1]);
@@ -427,9 +427,9 @@ int dhcpc_renew_main(int argc, char **argv)
 	if (!using_dhcpc(prefix))
 		return 1;
 
-	memset(dhcpcpid_file, 0, 64);
-	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
-	if (kill_pidfile_s(dhcpcpid_file, SIGUSR1) == 0)
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-%s.pid", prefix);
+	if (kill_pidfile_s(pid_file, SIGUSR1) == 0)
 		do_renew_file(1, prefix);
 	else {
 		stop_dhcpc(prefix);
@@ -441,11 +441,14 @@ int dhcpc_renew_main(int argc, char **argv)
 
 void start_dhcpc(char *prefix)
 {
-	char dhcpcpid_file[64];
-	char cmd[256];
-	char tmp[32];
+	char pid_file[64];
+	char cmd[512];
+	char tmp[64];
 	char *ifname;
 	int proto;
+	char *argv[128];
+	int argc = 0;
+	pid_t pid;
 
 	nvram_set(strcat_r(prefix, "_get_dns", tmp), "");
 
@@ -461,43 +464,50 @@ void start_dhcpc(char *prefix)
 	if ((proto == WP_DHCP) || (proto == WP_LTE))
 		nvram_set(strcat_r(prefix, "_iface", tmp), ifname);
 
-	memset(dhcpcpid_file, 0, 64);
-	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
-	snprintf(cmd, sizeof(cmd), "udhcpc -i %s -b -s dhcpc-event %s %s %s %s %s %s %s -p %s",
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-%s.pid", prefix);
+
+	memset(tmp, 0, sizeof(tmp));
+	if (nvram_invmatch("wan_hostname", "")) {
+		strcpy(tmp, "-x hostname:");
+		strcat(tmp, nvram_safe_get("wan_hostname"));
+	}
+
+	memset(cmd, 0, sizeof(cmd));
+	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s %s",
 	                           ifname,
-	                           nvram_invmatch("wan_hostname", "") ? "-H" : "", nvram_safe_get("wan_hostname"),
-	                           /* This params required to get static / classless routes from DHCP server */
-	                           nvram_get_int("dhcp_routes") ? "-O 33 -O 121 -O 249" : "",
+	                           pid_file,
+	                           tmp,
+	                           nvram_get_int("dhcp_routes") ? "-O33 -O121 -O249" : "", /* routes/staticroutes/msstaticroutes */
 	                           nvram_get_int("dhcpc_minpkt") ? "-m" : "",
 	                           nvram_contains_word("log_events", "dhcpc") ? "-S" : "",
-	                           nvram_safe_get("dhcpc_custom"),
 #ifdef TCONFIG_IPV6
-	                           (get_ipv6_service() == IPV6_6RD_DHCP) ? "-O ip6rd" : ""
+	                           (get_ipv6_service() == IPV6_6RD_DHCP) ? "-O212 -O150" : "", /* ip6rd rfc/ip6rd comcast */
 #else
-	                           ""
+	                           "",
 #endif
-	                           ,
-	                           dhcpcpid_file
+	                           nvram_safe_get("dhcpc_custom")
 	);
 
-	logmsg(LOG_DEBUG, "*** %s: prefix=%s cmd = /bin/sh -c %s", __FUNCTION__, prefix, cmd);
+	logmsg(LOG_DEBUG, "*** %s: prefix=%s cmd=%s", __FUNCTION__, prefix, cmd);
 
-	xstart("/bin/sh", "-c", cmd);
+	for (argv[argc = 0] = strtok(cmd, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
+	_eval(argv, NULL, 0, &pid);
 }
 
 void stop_dhcpc(char *prefix)
 {
-	char dhcpcpid_file[64];
+	char pid_file[64];
 
 	killall("dhcpc-event", SIGTERM);
 
-	memset(dhcpcpid_file, 0, 64);
-	sprintf(dhcpcpid_file, "/var/run/udhcpc-%s.pid", prefix);
-	if (kill_pidfile_s(dhcpcpid_file, SIGUSR2) == 0) /* release */
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-%s.pid", prefix);
+	if (kill_pidfile_s(pid_file, SIGUSR2) == 0) /* release */
 		sleep(2);
 
-	kill_pidfile_s(dhcpcpid_file, SIGTERM);
-	unlink(dhcpcpid_file);
+	kill_pidfile_s(pid_file, SIGTERM);
+	unlink(pid_file);
 
 	do_renew_file(0, prefix);
 
@@ -552,7 +562,7 @@ void start_dhcp6c(void)
 	FILE *f;
 	int prefix_len;
 	char *wan6face;
-	char *argv[] = { "dhcp6c", "-T", "LL", NULL, NULL, NULL }; /* DUID type 3 (DUID-LL) */
+	char *argv[] = { "/usr/sbin/dhcp6c", "-T", "LL", NULL, NULL, NULL }; /* DUID type 3 (DUID-LL) */
 	int argc;
 	int ipv6_vlan = 0; /* bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3, 1 == TRUE, 0 == FALSE */
 

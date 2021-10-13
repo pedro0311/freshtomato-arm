@@ -11,15 +11,7 @@
  						bb_perror_msg("can't unload module '%s'",
 --- busybox/networking/udhcp/dhcpc.c
 +++ busybox/networking/udhcp/dhcpc.c
-@@ -66,6 +66,7 @@
- 	"request\0"        Required_argument "r"
- 	"script\0"         Required_argument "s"
- 	"timeout\0"        Required_argument "T"
-+	"version\0"        No_argument       "v"
- 	"retries\0"        Required_argument "t"
- 	"tryagain\0"       Required_argument "A"
- 	"syslog\0"         No_argument       "S"
-@@ -128,7 +129,7 @@
+@@ -125,7 +126,7 @@
  	[OPTION_IP              ] = sizeof("255.255.255.255 "),
  	[OPTION_IP_PAIR         ] = sizeof("255.255.255.255 ") * 2,
  	[OPTION_STATIC_ROUTES   ] = sizeof("255.255.255.255/32 255.255.255.255 "),
@@ -28,58 +20,6 @@
  	[OPTION_STRING          ] = 1,
  	[OPTION_STRING_HOST     ] = 1,
  #if ENABLE_FEATURE_UDHCP_RFC3397
-@@ -1117,11 +1118,11 @@
- 	bb_simple_info_msg("performing DHCP renew");
- 	switch (client_data.state) {
- 	case BOUND:
--		change_listen_mode(LISTEN_KERNEL);
-+		change_listen_mode(LISTEN_RAW);
- 	case RENEWING:
- 	case REBINDING:
--		client_data.state = RENEW_REQUESTED;
--		break;
-+		//client_data.state = RENEW_REQUESTED;
-+		//break;
- 	case RENEW_REQUESTED: /* impatient are we? fine, square 1 */
- 		udhcp_run_script(NULL, "deconfig");
- 	case REQUESTING:
-@@ -1227,6 +1228,7 @@
- //usage:     "\n			-x 0x3d:0100BEEFC0FFEE - option 61 (client id)"
- //usage:     "\n			-x 14:'\"dumpfile\"' - option 14 (shell-quoted)"
- //usage:     "\n	-F NAME		Ask server to update DNS mapping for NAME"
-+//usage:     "\n	-H,-h NAME	Send NAME as client hostname (default none)"
- //usage:     "\n	-V VENDOR	Vendor identifier (default 'udhcp VERSION')"
- //usage:     "\n	-C		Don't send MAC as client identifier"
- //usage:	IF_UDHCP_VERBOSE(
-@@ -1519,7 +1521,7 @@
- 				/* 1/2 lease passed, enter renewing state */
- 				client_data.state = RENEWING;
- 				client_data.first_secs = 0; /* make secs field count from 0 */
--				change_listen_mode(LISTEN_KERNEL);
-+				change_listen_mode(LISTEN_RAW);
- 				log1s("entering renew state");
- 				/* fall right through */
- 			case RENEW_REQUESTED: /* manual (SIGUSR1) renew */
-@@ -1588,7 +1590,7 @@
- 		switch (udhcp_sp_read()) {
- 		case SIGUSR1:
- 			client_data.first_secs = 0; /* make secs field count from 0 */
--			already_waited_sec = 0;
-+			//already_waited_sec = 0;	/* breaks tomato renew button */
- 			perform_renew();
- 			if (client_data.state == RENEW_REQUESTED) {
- 				/* We might be either on the same network
-@@ -1599,8 +1601,8 @@
- 				 * is not too big, or else we can send
- 				 * futile renew requests for hours.
- 				 */
--				if (timeout > 60)
--					timeout = 60;
-+				//if (timeout > 60)	/* breaks tomato renew button */
-+					//timeout = 60;	/* breaks tomato renew button */
- 				goto case_RENEW_REQUESTED;
- 			}
- 			/* Start things over */
 --- busybox/libbb/bb_strtonum.c
 +++ busybox/libbb/bb_strtonum.c
 @@ -61,7 +61,8 @@

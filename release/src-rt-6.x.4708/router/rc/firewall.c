@@ -893,21 +893,14 @@ static void nat_table(void)
 			if (nvram_match("dns_intcpt", "1")) {
 				/* Need to intercept both TCP and UDP DNS requests for all lan interfaces */
 				modprobe("ipt_REDIRECT");
-				for (i = 0; i < BRIDGE_COUNT; i++) {
-					if ((strcmp(lanface[i], "") != 0) || (i == 0)) {
-						ipt_write("-A PREROUTING -p tcp -m tcp -i %s --dport 53 -j REDIRECT --to-port 53\n", lanface[i]);
-						ipt_write("-A PREROUTING -p udp -m udp -i %s --dport 53 -j REDIRECT --to-port 53\n", lanface[i]);
-					}
-				}
+				ipt_write("-A PREROUTING -i br+ -p tcp -m tcp --dport 53 -j REDIRECT\n");
+				ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 53 -j REDIRECT\n");
 			}
 
 			/* NTP server redir */
 			if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
 				modprobe("ipt_REDIRECT");
-				for (i = 0; i < BRIDGE_COUNT; i++) {
-					if ((strcmp(lanface[i], "") != 0) || (i == 0))
-						ipt_write("-A PREROUTING -p udp -m udp -i %s --dport 123 -j REDIRECT --to-port 123\n", lanface[i]);
-				}
+				ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 123 -j REDIRECT\n");
 			}
 
 			/* ICMP packets are always redirected to INPUT chains */

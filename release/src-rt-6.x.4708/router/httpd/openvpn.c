@@ -441,10 +441,8 @@ void wo_ovpn_genclientconfig(char *url)
 			eval("cp", OPENSSL_TMP_DIR"/client.crt", OVPN_CLIENT_DIR);
 			eval("cp", OPENSSL_TMP_DIR"/client.key", OVPN_CLIENT_DIR);
 
-			fprintf(fp, "; cert client.crt\n<cert>\n%s\n</cert>\n\n"
-			            "; key client.key\n<key>\n%s\n</key>\n\n",
-			            read_from_file(OVPN_CLIENT_DIR"/client.crt", buffer2, sizeof(buffer2)),
-			            read_from_file(OVPN_CLIENT_DIR"/client.key", buffer2, sizeof(buffer2)));
+			fprintf(fp, "; cert client.crt\n<cert>\n%s\n</cert>\n\n", read_from_file(OVPN_CLIENT_DIR"/client.crt", buffer2, sizeof(buffer2)));
+			fprintf(fp, "; key client.key\n<key>\n%s\n</key>\n\n", read_from_file(OVPN_CLIENT_DIR"/client.key", buffer2, sizeof(buffer2)));
 		}
 	}
 	else {

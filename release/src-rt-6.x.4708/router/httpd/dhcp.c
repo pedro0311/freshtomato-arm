@@ -46,7 +46,7 @@ void asp_dhcpc_time(int argc, char **argv)
 void wo_dhcpc(char *url)
 {
 	char *p;
-	char *argv[] = { NULL, NULL };
+	char *argv[] = { NULL, NULL, NULL };
 	int pid;
 
 	if ((p = webcgi_get("exec")) != NULL) {
