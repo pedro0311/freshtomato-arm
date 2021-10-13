@@ -198,7 +198,7 @@ pbr.setup = function() {
 	a = [[-2, 'All Protocols'],[-1,'TCP/UDP'],[6,'TCP'],[17,'UDP'],[2, 'ICMP']];
 
 	this.init('pbr-grid', 'move', 100, [
-		{ type: 'checkbox' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'select', prefix: '<div class="x2a">', suffix: '<\/div>', options: a },
 		{ multi: [
 			{ type: 'select', options: [['0','All'],['1','IP'],['2','MAC']], prefix: '<div class="x1a">', suffix: '<\/div>' },

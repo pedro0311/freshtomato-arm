@@ -729,7 +729,13 @@ table.tomato-grid.vpn-status-table {
 #survey-grid .co7,
 #lan-grid,
 #lan-grid .centered,
+#la-grid,
+#tg-grid .centered,
+#bwlg-grid .centered,
 #bs-grid .centered,
+#adblock-grid .centered,
+#th-grid .centered,
+#pbr-grid .centered,
 div[id$="_ccd"] .centered,
 div[id$="_users"] .centered,
 div[id^="table_client"] td.co1,
@@ -1285,10 +1291,6 @@ div[id$="_users"] .co1 {
 
 #adblock-grid .co3 {
 	width: 25%;
-}
-
-#la-grid {
-	text-align: center;
 }
 
 #la-grid .co1 {
