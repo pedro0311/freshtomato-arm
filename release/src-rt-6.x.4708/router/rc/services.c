@@ -2114,7 +2114,7 @@ void start_ntpd(void)
 	FILE *f;
 	char *servers, *ptr;
 	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
-	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL };
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -d6 -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
 	if (getpid() != 1) {
