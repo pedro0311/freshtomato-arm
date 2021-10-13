@@ -467,7 +467,7 @@ void start_dnsmasq()
 
 	/* NTP server */
 	if (nvram_get_int("ntpd_enable"))
-		fprintf(f, "dhcp-option=42,%s\n", "0.0.0.0");
+		fprintf(f, "dhcp-option-force=42,%s\n", "0.0.0.0");
 
 	if (nvram_get_int("dnsmasq_debug"))
 		fprintf(f, "log-queries\n");
