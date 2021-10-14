@@ -5,6 +5,29 @@ FreshTomato-ARM Changelog
 
 
 
+2021.7          2021.10.15
+---------------------------
+
+Note: mainly bugfixes release.
+
+- busybox: update to 1.34.1
+- libcurl: update CA certificate bundle as of 2021-09-30
+- dnscrypt-proxy: update resolvers csv file
+- GUI: correct display (center) of some checkbox in tables
+- GUI: Status: Overview: display 'Click to view SMS' link also for hw-ether (MIPS) module modem type
+- GUI: Status: Overview: fix minor problem with reported multiWAN status
+- GUI: Status: Overview: fix javascript error caused by the lack of 'wanX_ifnames' nvram values
+- GUI: add blinking to Time status when it's unavailable
+- httpd: openvpn.c: fix adding correct keys for client config file
+- rc: dhcp.c: buffer overflow protection (snprintf) + cosmetic
+- rc: dhcp.c: start_dhcpc(): use _eval() with pid to start udhcpc
+- rc: firewall.c: change condition for source in 'Intercept NTP/DNS client traffic' FW rules
+- rc: services.c: add 'force' to dnsmasq dhcp-option 42
+- rc: service: start_ntpd(): fix start of ntpd when more arguments are given
+- www: admin-config.asp: also replace '/' to '_' in filename
+- www: tomato.js: fix createFieldTable() function
+
+
 2021.6          2021.10.12
 ---------------------------
 
