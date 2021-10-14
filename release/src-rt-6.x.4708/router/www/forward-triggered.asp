@@ -74,7 +74,7 @@ tg.resetNewEditor = function() {
 
 tg.setup = function() {
 	this.init('tg-grid', 'sort', 50, [
-		{ type: 'checkbox' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'select', options: [[1, 'TCP'],[2, 'UDP'],[3,'Both']] },
 		{ type: 'text', maxlen: 16 },
 		{ type: 'text', maxlen: 16 },

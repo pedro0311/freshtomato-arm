@@ -64,7 +64,7 @@ adblockg.resetNewEditor = function() {
 
 adblockg.setup = function() {
 	this.init('adblock-grid', '', 50, [
-		{ type: 'checkbox' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 130 },
 		{ type: 'text', maxlen: 40 }
 	]);

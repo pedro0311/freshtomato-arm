@@ -252,7 +252,7 @@ function init() {
 <div class="section" id="backup-section">
 	<div>
 		<script>
-			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="tomato_rstats_'+nvram.et0macaddr.replace(/:/g, '').toLowerCase()+'">');
+			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="FreshTomato_rstats_'+nvram.et0macaddr.replace(/:/g, '').toLowerCase()+'">');
 		</script>
 		<div style="display:inline">.gz &nbsp;
 			<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">

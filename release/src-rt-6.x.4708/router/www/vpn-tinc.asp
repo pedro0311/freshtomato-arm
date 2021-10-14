@@ -101,7 +101,7 @@ var th = new TomatoGrid();
 
 th.setup = function() {
 	this.init('th-grid', '', 50, [
-		{ type: 'checkbox' },
+		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 30 },
 		{ type: 'text', maxlen: 100 },
 		{ type: 'text', maxlen: 5 },
