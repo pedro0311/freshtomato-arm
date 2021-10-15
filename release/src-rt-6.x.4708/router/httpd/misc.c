@@ -254,24 +254,41 @@ static char* get_cfeversion(char *buf)
 	char s[16] = "";
 	int len = 0;
 	char *netgear = nvram_get("board_id"); /* U12HXXXXXX_NETGEAR for FT mips and arm */
+	char *cfe_version = nvram_get("cfe_version"); /* Ex.: Netgear R7000 cfe_version=v1.0.22 ; for FT mips and arm */
+	char *bl_version = nvram_get("bl_version"); /* Ex.: Asus RT-N18U bl_version=2.0.0.9 ; for FT mips and arm */
 
 	strcpy(buf, "");
 
-	/* get ASUS Bootloader version */
-	if ((netgear == NULL) && ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL)) {
-		if (fgets(s, 15, f) != NULL)
-			len = strlen(s);
-
-		pclose(f);
+	/* check nvram first to speed up */
+	/* Asus */
+	if (bl_version != NULL) {
+		len = strlen(bl_version);
+		strncpy(s, bl_version, sizeof(s)-1);
+		s[sizeof(s)-1] = '\0';
 	}
-
-	if (len == 0 && netgear != NULL && !strncmp(netgear, "U12H", 4)) { /* check for netgear router to speed up here! */
-		/* get NETGEAR CFE version */
-		if ((f = popen("strings /dev/mtd1ro | grep cfe_version | cut -d '=' -f2", "r")) != NULL) {
+	/* Netgear */
+	else if (cfe_version != NULL) {
+		len = strlen(cfe_version);
+		strncpy(s, cfe_version, sizeof(s)-1);
+		s[sizeof(s)-1] = '\0';
+	}
+	else {
+		/* get ASUS Bootloader version */
+		if ((netgear == NULL) && ((f = popen("strings /dev/mtd0ro | grep bl_version | cut -d '=' -f2", "r")) != NULL)) {
 			if (fgets(s, 15, f) != NULL)
 				len = strlen(s);
 
 			pclose(f);
+		}
+
+		if (len == 0 && netgear != NULL && !strncmp(netgear, "U12H", 4)) { /* check for netgear router to speed up here! */
+			/* get NETGEAR CFE version */
+			if ((f = popen("strings /dev/mtd1ro | grep cfe_version | cut -d '=' -f2", "r")) != NULL) {
+				if (fgets(s, 15, f) != NULL)
+					len = strlen(s);
+
+				pclose(f);
+			}
 		}
 	}
 
