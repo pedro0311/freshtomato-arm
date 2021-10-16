@@ -148,18 +148,26 @@ void ipt_routerpolicy(void)
 				continue;
 
 			if (atoi(dst_type) == 3) {
-				int i;
-				struct hostent *he;
-				struct in_addr **addr_list;
-				if ((he = gethostbyname(dst_addr)) == NULL)
+				struct in_addr *addr;
+				struct addrinfo hints, *p;
+				struct addrinfo *res;
+				char buf[192];
+
+				memset(&hints, 0, sizeof(hints));
+				hints.ai_family = AF_INET; /* TODO: IPv6 support(?) */
+				hints.ai_socktype = SOCK_STREAM;
+				hints.ai_flags    = AI_PASSIVE;
+
+				if (getaddrinfo(dst_addr, NULL, &hints, &res) != 0)
 					continue;
 
-				addr_list = (struct in_addr **)he->h_addr_list;
+				for (p = res; p != NULL; p = p->ai_next) {
+					struct sockaddr_in *ipv = (struct sockaddr_in *)p->ai_addr;
+					addr = &(ipv->sin_addr);
+					inet_ntop(p->ai_family, addr, buf, sizeof(buf));
 
-				i = 0;
-				while (addr_list[i] != NULL) {
 					memset(mdst, 0, sizeof(mdst));
-					sprintf(mdst, "-d %s", inet_ntoa(*addr_list[i]));
+					sprintf(mdst, "-d %s", buf);
 
 					msport = (strchr(srt_port, ',') != NULL) ? " -m multiport --sports " : " --sport ";
 					mdport = (strchr(dst_port, ',') != NULL) ? " -m multiport --dports " : " --dport ";
@@ -197,8 +205,8 @@ void ipt_routerpolicy(void)
 						ipt_write("-A WAN_PBR %s %s -j %s\n",
 						          msrt, mdst, jump);
 					}
-					i++;
 				}
+				freeaddrinfo(res);
 			}
 			else {
 				memset(mdst, 0, sizeof(mdst));
