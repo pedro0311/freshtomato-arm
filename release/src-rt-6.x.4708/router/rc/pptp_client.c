@@ -27,8 +27,9 @@ void start_pptp_client(void)
 	char *argv[5];
 	int argc = 0;
 
-	struct hostent *he;
-	struct in_addr **addr_list;
+	struct in_addr *addr;
+	struct addrinfo hints;
+	struct addrinfo *res;
 
 	char *srv_addr = nvram_safe_get("pptp_client_srvip");
 
@@ -59,14 +60,23 @@ void start_pptp_client(void)
 
 	/* Get IP from hostname */
 	if (inet_addr(srv_addr) == INADDR_NONE) {
-		if ((he = gethostbyname(srv_addr)) == NULL) {
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_family   = AF_INET; /* TODO: IPv6 support(?) */
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags    = AI_PASSIVE;
+
+		if (getaddrinfo(srv_addr, NULL, &hints, &res) != 0) {
+			syslog(LOG_WARNING, "Can't get server IP...");
 			return;
 		}
-		addr_list = (struct in_addr **)he->h_addr_list;
-		if (inet_ntoa(*addr_list[0]) == NULL) {
+		struct sockaddr_in *ipv = (struct sockaddr_in *)res->ai_addr;
+		addr = &(ipv->sin_addr);
+		if (inet_ntop(res->ai_family, addr, srv_addr, sizeof(srv_addr)) == NULL) {
+			freeaddrinfo(res);
+			syslog(LOG_WARNING, "Can't get server IP...");
 			return;
 		}
-		srv_addr = inet_ntoa(*addr_list[0]);
+		freeaddrinfo(res);
 	}
 
 	/* Generate ppp options */
