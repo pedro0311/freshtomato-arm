@@ -3247,6 +3247,7 @@ void start_services(void)
 void stop_services(void)
 {
 	clear_resolv();
+	stop_ntpd();
 #ifdef TCONFIG_FANCTRL
 	stop_phy_tempsense();
 #endif
