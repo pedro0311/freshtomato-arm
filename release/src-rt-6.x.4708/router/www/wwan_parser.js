@@ -17,7 +17,7 @@ function createWWANTableItem(value, unit, bar) {
 }
 
 function getAltText(bar) {
-	var altTextMap = { "bar6.gif":"6/6", "bar5.gif":"5/6", "bar4.gif":"4/6", "bar3.gif":"3/6", "bar2.gif":"2/6", "bar1.gif":"1/6" };
+	var altTextMap = { 'bar6.gif':'6/6', 'bar5.gif':'5/6', 'bar4.gif':'4/6', 'bar3.gif':'3/6', 'bar2.gif':'2/6', 'bar1.gif':'1/6' };
 	return altTextMap[bar];
 }
 
@@ -28,6 +28,7 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	code += '<td class="content">'+nvram[wanNumStr+'_modem_type']+'</td></tr>';
 	code += '<tr><td class="title indent1">Current Mode</td>';
 	code += '<td class="content">'+wwan_getCurrentMode(wwanstatus)+'</td></tr>';
+
 	var valMap = [];
 	wwan_getSignalStrengthMap(wwanstatus, valMap);
 	if (valMap['RSSI']) {
@@ -116,19 +117,19 @@ function createWWANStatusSection(wannum, wwanstatus) {
 	var connType = nvram[wanNumStr+'_proto'];
 	if (connType == 'ppp3g' || modemType == 'non-hilink' || modemType == 'huawei-non-hilink' || modemType == 'hw-ether') {
 		code += '<tr><td class="title indent1"></td>';
-		code += '<td class="content wwan-parser-view"><a href="#" onclick="showSMSForWWAN('+wannum+')">Click to view SMS</a></td></tr>';
+		code += '<td class="content wwan-parser-view"><a href="javascript:showSMSForWWAN('+wannum+')">Click to view SMS</a></td></tr>';
 	}
 	code += '</table>';
 	return code;
 }
 
 function showSMSForWWAN(wwannum) {
-	cookie.set("wwansms_selection", wwannum);
+	cookie.set('wwansms_selection', wwannum);
 	document.location.href = 'wwan-sms.asp';
 }
 
 function wwan_getSignalStrengthMap(buffer, returnMap) {
-	var itemsToFind = ['RSSI', 'RSRP', 'RSRQ', 'RSSP', 'RSCP', 'SINR', 'CQI1', 'CQI2', 'ECIO'];
+	var index, itemsToFind = ['RSSI', 'RSRP', 'RSRQ', 'RSSP', 'RSCP', 'SINR', 'CQI1', 'CQI2', 'ECIO'];
 	for (index = 0; index < itemsToFind.length; ++index) {
 		var element = itemsToFind[index];
 		returnMap[element] = extractStringItem(element, buffer);
@@ -136,7 +137,7 @@ function wwan_getSignalStrengthMap(buffer, returnMap) {
 }
 
 function wwan_getLocationMap(buffer, returnMap) {
-	var itemsToFind = ['LAC', 'CID', 'PCI', 'Cell ID'];
+	var index, itemsToFind = ['LAC', 'CID', 'PCI', 'Cell ID'];
 	for (index = 0; index < itemsToFind.length; ++index) {
 		var element = itemsToFind[index];
 		returnMap[element] = extractLocationItem(element, buffer);
@@ -149,8 +150,9 @@ function wwan_getLocationMap(buffer, returnMap) {
 }
 
 function extractStringItem(tag, buffer) {
-	var regExtract = new RegExp(tag+" (.*?)(?:(\\s|\\,|$))", "gm");
+	var regExtract = new RegExp(tag+' (.*?)(?:(\\s|\\,|$))', 'gm');
 	var matchedArrs = regExtract.exec(buffer);
+
 	if (matchedArrs)
 		return matchedArrs[1];
 
@@ -158,7 +160,7 @@ function extractStringItem(tag, buffer) {
 }
 
 function extractMCCMNC(buffer) {
-	var regExtract = new RegExp("MCCMNC (\\d*)(?:\\,?)", "gm");
+	var regExtract = new RegExp('MCCMNC (\\d*)(?:\\,?)', 'gm');
 	var matchedArrs = regExtract.exec(buffer);
 	if (matchedArrs) {
 		var returnMap = [];
@@ -171,7 +173,7 @@ function extractMCCMNC(buffer) {
 }
 
 function extractLocationItem(tag, buffer) {
-	var regExtract = new RegExp(tag+" ((.*?))\\((.*?)\\)", "gm");
+	var regExtract = new RegExp(tag+' ((.*?))\\((.*?)\\)', 'gm');
 	var matchedArrs = regExtract.exec(buffer);
 	if (matchedArrs) {
 		var returnMap = [];
@@ -183,7 +185,7 @@ function extractLocationItem(tag, buffer) {
 }
 
 function wwan_getCarrierMap(buffer) {
-	var regExtract = new RegExp("MODEM Carrier: (.[0-9]) \\((.*) MHz\\)\\, Downlink FQ (.*) MHz, Uplink FQ (.*) MHz, Downlink BW (.*) MHz, Uplink BW (.*) MHz", "gm");
+	var regExtract = new RegExp('MODEM Carrier: (.[0-9]) \\((.*) MHz\\)\\, Downlink FQ (.*) MHz, Uplink FQ (.*) MHz, Downlink BW (.*) MHz, Uplink BW (.*) MHz', 'gm');
 	var matchedArrs = regExtract.exec(buffer);
 	if (matchedArrs) {
 		var returnMap = [];
@@ -199,64 +201,67 @@ function wwan_getCarrierMap(buffer) {
 }
 
 function wwan_getRSSIBar(value) {
-	if (value > -51)
-		return "bar6.gif";
-	else if (value <= -51 && value >= -73)
-		return "bar5.gif";
+	if (value.substr(0, 5) == '&gt;=')
+		value = parseInt(value.substr(5)); /* special case for hilink modems */
+
+	if (value > -50)
+		return 'bar6.gif';
+	else if (value <= -50 && value >= -73)
+		return 'bar5.gif';
 	else if (value <= -75 && value >= -85)
-		return "bar4.gif";
+		return 'bar4.gif';
 	else if (value <= -87 && value >= -93)
-		return "bar3.gif";
+		return 'bar3.gif';
 	else
-		return "bar2.gif";
+		return 'bar2.gif';
 }
 
 function wwan_getRSRPBar(value) {
 	if (value > -79)
-		return "bar6.gif";
+		return 'bar6.gif';
 	else if (value <= -80 && value >= -90)
-		return "bar5.gif";
+		return 'bar5.gif';
 	else if (value <= -91 && value >= -100)
-		return "bar4.gif";
+		return 'bar4.gif';
 	else
-		return "bar2.gif";
+		return 'bar2.gif';
 }
 
 function wwan_getRSRQBar(value) {
 	if (value >= -9)
-		return "bar6.gif";
+		return 'bar6.gif';
 	else if (value <= -10 && value >= -15)
-		return "bar5.gif";
+		return 'bar5.gif';
 	else if (value <= -16 && value >= -20)
-		return "bar4.gif";
+		return 'bar4.gif';
 	else
-		return "bar2.gif";
+		return 'bar2.gif';
 }
 
 function wwan_getSINRBar(value) {
 	if (value >= 21)
-		return "bar6.gif";
+		return 'bar6.gif';
 	else if (value <= 20 && value >= 13)
-		return "bar5.gif";
+		return 'bar5.gif';
 	else if (value <= 12 && value >= 0)
-		return "bar4.gif";
+		return 'bar4.gif';
 	else
-		return "bar2.gif";
+		return 'bar2.gif';
 }
 
 function wwan_getRSCPBar(value) {
 	if (value > -65)
-		return "bar6.gif";
+		return 'bar6.gif';
 	else if (value <= -65 && value > -75)
-		return "bar5.gif";
+		return 'bar5.gif';
 	else if (value <= -75 && value > -85)
-		return "bar4.gif";
+		return 'bar4.gif';
 	else if (value <= -85 && value > -95)
-		return "bar3.gif";
+		return 'bar3.gif';
 	else if (value <= -95 && value > -105)
-		return "bar2.gif";
+		return 'bar2.gif';
 	else
-		return "bar1.gif";
+		return 'bar1.gif';
 }
 
 function wwan_getCQIBar(value) {

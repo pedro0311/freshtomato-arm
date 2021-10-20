@@ -24,7 +24,7 @@
 
 var sms_remover = null;
 var wwansms = '';
-var wannum_selection = 1;
+var wannum_selection = cookie.get('wwansms_selection') || 1;
 var wwansms_error;
 
 var ref = new TomatoRefresh('wwansms.cgi', 'mwan_num='+wannum_selection, 15, 'wwan_sms_refresh');
@@ -109,9 +109,6 @@ function verifyFields(focused, quiet) {
 }
 
 function init() {
-	if ((wannum_selection = cookie.get('wwansms_selection')) == null)
-		wannum_selection = 1;
-
 	E('sec-title').innerHTML = 'WWAN SMS list for modem '+wannum_selection;
 
 	ref.initPage(250, 15);

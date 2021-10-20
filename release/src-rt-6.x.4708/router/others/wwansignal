@@ -4,8 +4,7 @@
 # Copyright (C) 2015 shibby
 #
 # - changes/fixes
-# - add support for rndis protocol
-# Copyright (C) 2018 - 2019 by pedro
+# Copyright (C) 2018 - 2021 by pedro
 #
 
 
@@ -20,9 +19,9 @@ LOGS="logger -t wwansignal[$PID]"
 
 HILINK_IP=$(nvram get "$PREFIX"_hilink_ip)
 if ! [ -z "$HILINK_IP" ]  && [ "$HILINK_IP" != "0.0.0.0" ]; then
-    MODE=lte
-    MTYPE=hilink
-    WANIP=$HILINK_IP
+	MODE=lte
+	MTYPE=hilink
+	WANIP=$HILINK_IP
 fi
 
 [ -z "$PREFIX" ] && {
@@ -38,7 +37,7 @@ fi
 signal3g() {
 	local CSQ RSSI i
 	local DIAGSFILE="/tmp/switch3g_$PREFIX.diags"
-	local SDEVNR=$(nvram get "$PREFIX"_modem_sdev)
+	local SDEVNR=$(nvram get "$PREFIX"_modem_dev)
 
 	[ -z "$SDEVNR" ] && {
 		DEVALL=$(cat "$DIAGSFILE")
@@ -54,7 +53,7 @@ signal3g() {
 			break
 		}
 	done
-	nvram set "$PREFIX"_modem_sdev="$i"
+	nvram set "$PREFIX"_modem_dev="$i"
 
 	CSQ=$(echo "$CSQ" | grep "CSQ:" | cut -d " " -f2 | cut -d "," -f1)
 	RSSI=$((-113+CSQ*2))
@@ -65,7 +64,7 @@ signal4g() {
 	local HCSQ SPEED VALUE CERSSI LOCINFO MCC RSSI RSRP LAC CID SINR ECIO RSRQ CQI1 CQI2 BAND BBAND="" i
 	local DIAGSFILE="/tmp/switch4g_$PREFIX.diags"
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
 		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for i in $DEVALL; do	# find working interface
@@ -82,7 +81,7 @@ signal4g() {
 		SPEED=$(echo "$HCSQ" | cut -d "," -f1 | cut -d '"' -f2)
 
 		case "$SPEED" in
-		     "LTE")
+			"LTE")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
 				RSSI=$(awk "BEGIN {print -120+$VALUE}")
 				VALUE=$(echo $HCSQ | cut -d "," -f3)
@@ -142,7 +141,7 @@ signal4g() {
 				[ -n "$HFREQINFO" ] && $LOGS "MODEM Carrier: $BBAND, Downlink FQ $DOWNFREQ MHz, Uplink FQ $UPFREQ MHz, Downlink BW $DOWNWIDTH MHz, Uplink BW $UPWIDTH MHz"
 				[ -n "$LOCINFO" ] && $LOGS "MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
 			;;
-		     "WCDMA")
+			"WCDMA")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
 				RSSI=$(awk "BEGIN {print -120+$VALUE}")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f3)
@@ -161,13 +160,13 @@ signal4g() {
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm, RSSP $RSRP dBm, ECIO $ECIO dB"
 				[ -n "$LOCINFO" ] && $LOGS "MODEM BTS: MCCMNC $MCCMNC, LAC $LAC ($(printf "%d" $LAC)), CID $CID ($(printf "%d" $CID)), Cell ID $CELL ($(printf "%d" $CELL))"
 			;;
-		     "GSM")
+			"GSM")
 				VALUE=$(echo "$HCSQ" | cut -d "," -f2)
 				RSSI=$(awk "BEGIN {print -120+$VALUE}")
 				$LOGS "MODEM Current Mode: $SPEED"
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm"
 			;;
-		     *)
+			*)
 				$LOGS "MODEM Current Mode: unknown"
 				$LOGS "MODEM Signal Strength: no data"
 			;;
@@ -180,7 +179,7 @@ signal4g() {
 		MCCMNC=$(echo "$MCC" | cut -d "," -f2 | cut -d ":" -f2)$(printf "%02d" $(echo "$MCC" | cut -d "," -f3 | cut -d ":" -f2))
 
 		case "$SPEED" in
-		     "lte")
+			"lte")
 				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
 				RSRQ=$(echo "$SIGNAL" | cut -d "," -f3 | cut -d ":" -f2)
 				RSRP=$(echo "$SIGNAL" | cut -d "," -f4 | cut -d ":" -f2)
@@ -189,20 +188,20 @@ signal4g() {
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm, RSRP $RSRP dBm, RSRQ $RSRQ dB, SINR $SINR dB"
 				$LOGS "MODEM BTS: MCCMNC $MCCMNC"
 			;;
-		     "wcdma" | "umts")
+			"wcdma" | "umts")
 				RSSI=$(echo "$SIGNAL" | cut -d "," -f2 | cut -d ":" -f2)
 				ECIO=$(echo "$SIGNAL" | cut -d ":" -f4 | cut -d "}" -f1)
 				$LOGS "MODEM Current Mode: $(echo $SPEED | tr '[a-z]' '[A-Z]')"
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm, ECIO $ECIO dB"
 				$LOGS "MODEM BTS: MCCMNC $MCCMNC"
 			;;
-		     "gsm")
+			"gsm")
 				RSSI=$(echo "$SIGNAL" | cut -d ":" -f3 | cut -d "}" -f1)
 				$LOGS "MODEM Current Mode: GSM"
 				$LOGS "MODEM Signal Strength: RSSI $RSSI dBm"
 				$LOGS "MODEM BTS: MCCMNC $MCCMNC"
 			;;
-		     *)
+			*)
 				$LOGS "MODEM Current Mode: unknown"
 				$LOGS "MODEM Signal Strength: no data"
 			;;
@@ -246,7 +245,7 @@ signal4g() {
 			}
 
 			case "$SPEED" in
-			     "03")
+				"03")
 					RSRP=$(echo "$SIGNAL" | grep "<rsrp>" | cut -d '>' -f2 | cut -d 'd' -f1)
 					RSRQ=$(echo "$SIGNAL" | grep "<rsrq>" | cut -d '>' -f2 | cut -d 'd' -f1)
 					PCI=$(echo "$SIGNAL" | grep "<pci>" | cut -d '>' -f2 | cut -d '<' -f1)
@@ -273,7 +272,7 @@ signal4g() {
 					[ -n "$CELL" ] && $LOGS "MODEM BTS: MCCMNC $MCCMNC, LAC 0x$(printf "%X" $LAC) ($LAC), PCI 0x$(printf "%X" $PCI) ($PCI), Cell ID 0x$(printf "%X" $CELL) ($CELL)"
 					$LOGS "MODEM Band(s): $BBAND"
 				;;
-			     "02")
+				"02")
 					ECIO=$(echo "$SIGNAL" | grep "<ecio>" | cut -d '>' -f2 | cut -d 'd' -f1)
 					RSCP=$(echo "$SIGNAL" | grep "<rscp>" | cut -d '>' -f2 | cut -d 'd' -f1)
 
@@ -281,12 +280,12 @@ signal4g() {
 					[ -n "$RSSI" ] && $LOGS "MODEM Signal Strength: RSSI $RSSI dBm, RSCP $RSCP dBm, ECIO $ECIO dB"
 					[ -n "$CELL" ] && $LOGS "MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
 				;;
-			     "01")
+				"01")
 					$LOGS "MODEM Current Mode: GSM"
 					$LOGS "MODEM Signal Strength: RSSI $RSSI dBm"
 					[ -n "$CELL" ] && $LOGS "MODEM BTS: MCCMNC $MCCMNC, Cell ID 0x$(printf "%X" $CELL) ($CELL)"
 				;;
-			     *)
+				*)
 					$LOGS "MODEM Current Mode: unknown"
 					$LOGS "MODEM Signal Strength: no data"
 				;;
@@ -296,7 +295,7 @@ signal4g() {
 }
 
 checkPid() {
-	local PRIORITY="$1" PIDNO
+	local PIDNO
 
 	[ -f $PIDFILE ] && {
 		PIDNO=$(cat $PIDFILE)
@@ -304,21 +303,6 @@ checkPid() {
 
 		[ $? -eq 0 ] && {
 			$LOGS "MODEM - another process in action - exiting"
-			exit 0
-		} || {
-			[ "$PRIORITY" -eq 0 ] && return
-			# Process not found assume not running
-			echo $PID > $PIDFILE
-			[ $? -ne 0 ] && {
-				$LOGS "MODEM - could not create PID file"
-				exit 0
-			}
-		}
-	} || {
-		[ "$PRIORITY" -eq 0 ] && return
-		echo $PID > $PIDFILE
-		[ $? -ne 0 ] && {
-			$LOGS "MODEM - could not create PID file"
 			exit 0
 		}
 	}
@@ -362,12 +346,12 @@ uqmiCall() {
 if [ "$MODE" == "ppp3g" ]; then
 	$LOGS "MODEM Type: 3G"
 	PIDFILE="/var/run/switch3g_$PREFIX.pid"
-	checkPid 0
+	checkPid
 	signal3g
 elif [ "$MODE" == "lte" ]; then
 	$LOGS "MODEM Type: "$MTYPE
 	PIDFILE="/var/run/switch4g_$PREFIX.pid"
-	checkPid 0
+	checkPid
 	signal4g
 else
 	$LOGS "Warning, $PREFIX not in 3G/LTE mode. Aborting ..."
