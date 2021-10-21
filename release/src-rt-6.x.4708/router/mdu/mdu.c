@@ -364,7 +364,7 @@ static struct curl_slist *curl_headers(const char *header)
 
 	return headers;
 }
-#else
+#else /* !USE_LIBCURL */
 static int _http_req(int ssl, const char *host, int port, const char *request, char *buffer, int bufsize, char **body)
 {
 	struct hostent *he;
@@ -486,7 +486,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 
 	return -1;
 }
-#endif
+#endif /* USE_LIBCURL */
 
 static int http_req(int ssl, int static_host, const char *host, const char *req, const char *query, const char *header, int auth, char *data, char **body)
 {
@@ -499,7 +499,9 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	int trys;
 	long code;
 
-	if (!static_host) host = get_option_or("server", host);
+	if (!static_host)
+		host = get_option_or("server", host);
+
 	if (ssl) {
 		if (curl_sslerr) {
 			curl_cleanup();
@@ -511,9 +513,8 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 		snprintf(url, HALF_BLOB, "http://%s%s", host, query);
 
 	curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-	if (header) {
+	if (header)
 		headers = curl_headers(header);
-	}
 	else
 		headers = curl_headers("User-Agent: " AGENT);
 
@@ -573,7 +574,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 
 	*body = blob;
 	return code;
-#else
+#else /* !USE_LIBCURL */
 	char *p;
 	int port;
 	char a[512];
@@ -581,14 +582,13 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	int n;
 	char *httpv;
 
-	if (strncmp(host, "updates.opendns.com", 19) == 0 || strncmp(host, "api.cloudflare.com", 18) == 0) {
+	if (strncmp(host, "updates.opendns.com", 19) == 0 || strncmp(host, "api.cloudflare.com", 18) == 0)
 		httpv = "HTTP/1.1";
-	}
-	else {
+	else
 		httpv = "HTTP/1.0";
-	}
 
-	if (!static_host) host = get_option_or("server", host);
+	if (!static_host)
+		host = get_option_or("server", host);
 
 	n = strlen(query);
 	if (header)
@@ -638,7 +638,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	logmsg(LOG_DEBUG, "*** %s: n=%d", __FUNCTION__, n);
 
 	return n;
-#endif
+#endif /* USE_LIBCURL */
 }
 
 static int wget(int ssl, int static_host, const char *host, const char *get, const char *header, int auth, char **body)
@@ -1338,8 +1338,9 @@ static void update_afraid(int ssl)
 PUT https://api.cloudflare.com/client/v4/zones/zone_id/dns_records/record_id
 Headers: X-Auth-Email: user_email
          X-Auth-Key: user_api_key
-		 Content-Type: application/json
+         Content-Type: application/json
 Data:    {"type":"A","name":"e.example.com","content":"198.51.100.4","proxied":false}
+
 good:
 "HTTP/1.1 200 OK
  {
@@ -1362,11 +1363,13 @@ good:
     "data": {}
   }
 }"
+
 bad: HTTP non-200 response and JSON response has 'success:"false"'; 400 and 403
      mean bad or invalid auth and JSON response will include "code:6003" for 400
-	 and "code:9103" for 403
-	 HTTP 200 response but JSON response has "total_count:0", which means the
-	 search for the given hostname produced no results
+     and "code:9103" for 403
+     HTTP 200 response but JSON response has "total_count:0", which means the
+     search for the given hostname produced no results
+
 
 records can be created via a POST request to the same URL, minus the record_id:
 PUT https://api.cloudflare.com/client/v4/zones/zone_id/dns_records
@@ -1461,7 +1464,7 @@ static void update_cloudflare(int ssl)
 	prox = get_option_onoff("wildcard", 0);
 	if (r == 1) {
 		if (get_option_onoff("backmx", 0)) {
-			req = "POST";
+			//req = "POST";
 			snprintf(query, QUARTER_BLOB, "/client/v4/zones/%s/dns_records", zone);
 		}
 		else
@@ -1590,8 +1593,10 @@ static void update_wget(void)
 	switch (r) {
 	case 200:
 	case 302: /* redirect -- assume ok */
-		if (body && *body) success_msg((char *)body);
-		else success();
+		if (body && *body)
+			success_msg((char *)body);
+		else
+			success();
 		break;
 	case 401:
 		error(M_INVALID_AUTH);
