@@ -1,12 +1,8 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) #-mips32
+CFLAGS	= -Os -Wall $(EXTRACFLAGS)
 CFLAGS	+= -I$(SRCBASE)/include -D_GNU_SOURCE
 LDFLAGS	=
-
-ifeq ($(TCONFIG_BCMARM),y)
-LIBS += -lgcc_s
-endif
 
 OBJS = pdureader.o
 
