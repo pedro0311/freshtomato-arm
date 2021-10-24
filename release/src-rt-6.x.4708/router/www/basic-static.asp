@@ -239,9 +239,21 @@ REMOVE-END */
 			}
 		}
 		else {
-			if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
-				ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
-				return 0;
+			if (s.indexOf('.') != -1) {
+				if (s.search(/^[a-zA-Z0-9_\-\.]+$/) == -1) {
+					ferror.set(f[5], 'Invalid hostname. Only a single hostname containing the characters "A-Z 0-9 - _ ." is allowed', quiet);
+					return 0;
+				}
+				if (!quiet) {
+					if (!confirm('Hostname contains dot(s). Are you sure to continue?'))
+						return 0;
+				}
+			}
+			else {
+				if (s.search(/^[a-zA-Z0-9_\- ]+$/) == -1) {
+					ferror.set(f[5], 'Invalid hostname. Only characters "A-Z 0-9 - _" are allowed', quiet);
+					return 0;
+				}
 			}
 		}
 		if (this.existName(s)) {
