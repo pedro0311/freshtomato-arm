@@ -218,7 +218,7 @@ sg.verifyFields = function(row, quiet) {
 			}
 		}
 
-		if ((!isMAC0(f[0].value)) && (this.inStatic(f[3].value))) {
+		if (this.inStatic(f[3].value)) {
 			ferror.set(f[3], 'Duplicate IP address', quiet);
 			return 0;
 		}
