@@ -39,7 +39,10 @@ ifneq ($(TCONFIG_HTTPS),)
 LIBS += -L$(TOP)/mssl -lmssl
 ifeq ($(TCONFIG_OPENSSL11),y)
 CFLAGS += -I$(TOP)/openssl-1.1/include
-LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto -lpthread
+LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto
+ifeq ($(TCONFIG_BCMARM),y)
+LIBS += -lpthread
+endif
 else
 CFLAGS += -I$(TOP)/openssl/include
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
@@ -48,10 +51,6 @@ endif
 
 ifeq ($(TCONFIG_PPTPD),y)
 OBJS += pptpd.o
-endif
-
-ifeq ($(TCONFIG_BCMARM),y)
-LIBS += -lgcc_s
 endif
 
 ifeq ($(TCONFIG_IPERF),y)
@@ -63,10 +62,10 @@ all: httpd
 httpd: $(OBJS)
 	@echo " [httpd] CC $@"
 	@$(CC) -o $@ $(OBJS) $(LIBS)
-
-#	$(SIZECHECK)
-#	$(CPTMP)
-
+ifneq ($(TCONFIG_BCMARM),y)
+	$(SIZECHECK)
+	$(CPTMP)
+endif
 
 install:
 	@echo " [httpd] Installing to $(INSTALLDIR)"
@@ -77,8 +76,11 @@ install:
 clean:
 	rm -f httpd *.o .*.depend
 
-#size: httpd
-#	mipsel-uclibc-nm --print-size --size-sort httpd
+size: httpd
+ifneq ($(TCONFIG_BCMARM),y)
+	mipsel-uclibc-nm --print-size --size-sort httpd
+endif
+	@true
 
 %.o: %.c .%.depend
 	@echo " [httpd] CC $@"

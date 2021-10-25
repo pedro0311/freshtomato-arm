@@ -869,7 +869,11 @@ static const nvset_t nvset_list[] = {
 
 	// wireless
 	{ "wl_radio",			V_01				},
-	{ "wl_mode",			V_LENGTH(2, 4)			},	// ap, sta, wet, wds, psta
+#if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
+	{ "wl_mode",			V_LENGTH(2, 4)			},	/* ap, sta, wet, wds, psta */
+#else
+	{ "wl_mode",			V_LENGTH(2, 3)			},	/* ap, sta, wet, wds */
+#endif
 	{ "wl_net_mode",		V_LENGTH(5, 8)			},	// disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
 	{ "wl_ssid",			V_LENGTH(1, 32)			},
 	{ "wl_closed",			V_01				},
