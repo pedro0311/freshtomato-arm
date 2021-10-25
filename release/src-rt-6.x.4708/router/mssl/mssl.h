@@ -1,6 +1,6 @@
 /*
 
-	Minimal MatrixSSL Helper
+	Minimal CyaSSL/OpenSSL Helper
 	Copyright (C) 2006-2009 Jonathan Zarate
 
 	Licensed under GNU GPL v2 or later.

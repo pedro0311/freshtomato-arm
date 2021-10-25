@@ -27,10 +27,15 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#ifdef USE_OPENSSL
 #include <openssl/rsa.h>
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
+#else
+/* CyaSSL */
+#include <cyassl_error.h>
+#endif
 
 #ifdef MSSL_DEBUG
 /* Line number as text string */
@@ -43,17 +48,17 @@
 #endif
 
 /* refer https://mozilla.github.io/server-side-tls/ssl-config-generator/ w/o DES ciphers */
+#ifdef USE_OPENSSL
 #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
+#else
+#define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"
+#endif
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 /* use reasonable defaults */
 #define CLIENT_CIPHERS NULL
 #else
 #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
-#endif
-
-#ifndef SSL_is_server
-#define SSL_is_server(s) ((s)->server)
 #endif
 
 typedef struct {
@@ -65,7 +70,11 @@ static SSL_CTX* ctx;
 
 static inline void mssl_print_err(SSL* ssl)
 {
+#ifdef USE_OPENSSL
 	ERR_print_errors_fp(stderr);
+#else
+	mssllog(LOG_DEBUG, "CyaSSL error %d\n", ssl ? SSL_get_error(ssl, 0) : -1);
+#endif
 }
 
 static inline void mssl_cleanup(int err)
@@ -194,6 +203,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 	}
 
 	/* SSL structure for client authenticate after SSL_new() */
+#ifdef USE_OPENSSL
 	SSL_set_verify(kuki->ssl, SSL_VERIFY_NONE, NULL);
 	SSL_set_mode(kuki->ssl, SSL_MODE_AUTO_RETRY);
 
@@ -212,7 +222,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 		}
 #endif
 	}
-
+#endif
 	/* Bind the socket to SSL structure
 	 * kuki->ssl : SSL structure
 	 * kuki->sd  : socket_fd
@@ -233,8 +243,10 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 		mssl_print_err(kuki->ssl);
 		goto ERROR;
 	}
-	
+
+#ifdef USE_OPENSSL
 	mssllog(LOG_DEBUG, "SSL connection using %s cipher\n", SSL_get_cipher(kuki->ssl));
+#endif
 
 	if ((f = fopencookie(kuki, "r+", mssl)) == NULL) {
 		mssllog(LOG_DEBUG, "%s: fopencookie failed\n", __FUNCTION__);
@@ -288,9 +300,11 @@ int mssl_init(char *cert, char *priv)
 
 	server = (cert != NULL);
 
+#ifdef USE_OPENSSL
 	/* Register error strings for libcrypto and libssl functions */
 	SSL_load_error_strings();
 	SSLeay_add_ssl_algorithms();
+#endif
 
 	/* Create the new CTX with the method 
 	 * If server=1, use TLSv1_server_method() or SSLv23_server_method()
@@ -307,6 +321,7 @@ int mssl_init(char *cert, char *priv)
 		return 0;
 	}
 
+#ifdef USE_OPENSSL
 	/* Setup common modes */
 	SSL_CTX_set_mode(ctx,
 #ifdef SSL_MODE_RELEASE_BUFFERS
@@ -326,6 +341,7 @@ int mssl_init(char *cert, char *priv)
 				 SSL_OP_SINGLE_DH_USE |
 #endif
 				 SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
+#endif
 
 	/* Setup EC support */
 #ifdef NID_X9_62_prime256v1
@@ -348,9 +364,10 @@ int mssl_init(char *cert, char *priv)
 	}
 
 	if (server) {
+#ifdef USE_OPENSSL
 		/* Enforce server cipher order */
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
-
+#endif
 		/* Set the certificate to be used */
 		mssllog(LOG_DEBUG, "SSL_CTX_use_certificate_chain_file(%s)\n", cert);
 		if (SSL_CTX_use_certificate_chain_file(ctx, cert) <= 0) {
@@ -365,12 +382,14 @@ int mssl_init(char *cert, char *priv)
 			mssl_cleanup(1);
 			return 0;
 		}
+#ifdef USE_OPENSSL
 		/* Make sure the key and certificate file match */
 		if (!SSL_CTX_check_private_key(ctx)) {
 			mssllog(LOG_DEBUG, "Private key does not match the certificate public key\n");
 			mssl_cleanup(0);
 			return 0;
 		}
+#endif
 
 		/* Disable renegotiation */
 #ifdef SSL_OP_NO_RENGOTIATION
