@@ -11,8 +11,7 @@
 #define NUMBER_IN_7BIT_ASCII 0xD0
 #define TIMESTAMP_STR_SIZE 21
 #define TIMESTAMP_BUF_SIZE 7
-#define MAX_MESSAGE_SIZE 160
-#define MAX_NUMFIELD_SIZE
+
 
 typedef struct sms_entry {
 	char dbId;
@@ -37,18 +36,18 @@ int gsmString2Bytes(const char* pSrc, unsigned char* pDst, size_t nSrcLength)
 {
 	size_t i;
 	for (i = 0; i < nSrcLength; i += 2) {
-		if (*pSrc >= '0' && *pSrc <= '9') {
+		if (*pSrc >= '0' && *pSrc <= '9')
 			*pDst = (*pSrc - '0') << 4;
-		} else {
+		else
 			*pDst = (*pSrc - 'A' + 10) << 4;
-		}
+
 		pSrc++;
 
-		if (*pSrc >= '0' && *pSrc <= '9') {
+		if (*pSrc >= '0' && *pSrc <= '9')
 			*pDst |= *pSrc - '0';
-		} else {
+		else
 			*pDst |= *pSrc - 'A' + 10;
-		}
+
 		pSrc++;
 		pDst++;
 	}
@@ -56,7 +55,8 @@ int gsmString2Bytes(const char* pSrc, unsigned char* pDst, size_t nSrcLength)
 	return nSrcLength / 2;
 }
 
-int gsmDecode7bit(const unsigned char* pSrc, wchar_t* pDst, int nSrcLength) {
+int gsmDecode7bit(const unsigned char* pSrc, wchar_t* pDst, int nSrcLength)
+{
 	int nSrc = 0;
 	int nDst = 0;
 	int nByte = 0;
@@ -64,7 +64,9 @@ int gsmDecode7bit(const unsigned char* pSrc, wchar_t* pDst, int nSrcLength) {
 
 	while (nDst < nSrcLength) {
 		*pDst = ((*pSrc << nByte) | nLeft) & 0x7f;
-		if (*pDst < 32 ) *pDst = 127;
+		if (*pDst < 32 )
+			*pDst = 127;
+
 		nLeft = *pSrc >> (7-nByte);
 
 		pDst++;
@@ -74,7 +76,8 @@ int gsmDecode7bit(const unsigned char* pSrc, wchar_t* pDst, int nSrcLength) {
 		if (nByte == 7) {
 			*pDst = nLeft;
 
-			if (*pDst < 32 ) *pDst = 127;
+			if (*pDst < 32 )
+				*pDst = 127;
 
 			pDst++;
 			nDst++;
@@ -89,7 +92,8 @@ int gsmDecode7bit(const unsigned char* pSrc, wchar_t* pDst, int nSrcLength) {
 	return nDst;
 }
 
-void swapByteArray(unsigned char* array, size_t length) {
+void swapByteArray(unsigned char* array, size_t length)
+{
 	unsigned char tmp;
 	size_t i;
 	for (i = 0 ; i < length; i++) {
@@ -98,7 +102,8 @@ void swapByteArray(unsigned char* array, size_t length) {
 	}
 }
 
-void semiOctetToWString(unsigned char* array, wchar_t* outStr, size_t length) {
+void semiOctetToWString(unsigned char* array, wchar_t* outStr, size_t length)
+{
 	unsigned char tmp;
 	size_t i, k;
 
@@ -112,7 +117,8 @@ void semiOctetToWString(unsigned char* array, wchar_t* outStr, size_t length) {
 	}
 }
 
-void convertTimestamp(unsigned char *timestampBuf, sms_entry_t* entry) {
+void convertTimestamp(unsigned char *timestampBuf, sms_entry_t* entry)
+{
 	unsigned char tmp[TIMESTAMP_STR_SIZE];
 	size_t i;
 
@@ -126,31 +132,34 @@ void convertTimestamp(unsigned char *timestampBuf, sms_entry_t* entry) {
 	        (unsigned)tmp[4], (unsigned)tmp[5], (unsigned)tmp[6]);
 }
 
-void convertMessage(sms_entry_t* entry, locale_support localeSupport) {
+void convertMessage(sms_entry_t* entry, locale_support localeSupport)
+{
 	unsigned char tmp[SMS_MSG_MAX_SIZE] = {0};
 	unsigned char tmpChar;
 	unsigned char bufPos = 2;
 	size_t i, k;
 
-	if (entry->dbId < 0 || entry->status < 0) return;
+	if (entry->dbId < 0 || entry->status < 0)
+		return;
+
 	gsmString2Bytes(entry->message_raw, tmp, strlen(entry->message_raw));
 
-	entry->smscenter_length = tmp[0] - 1;	/* -1 remove tel phone type field */
+	entry->smscenter_length = tmp[0] - 1; /* -1 remove tel phone type field */
 	memcpy(entry->smscenter, tmp + bufPos, entry->smscenter_length);
 	swapByteArray(entry->smscenter, entry->smscenter_length);
-	bufPos += entry->smscenter_length + 1;	/* Remove first octet of SMS_DELIVER */
+	bufPos += entry->smscenter_length + 1; /* Remove first octet of SMS_DELIVER */
 
 	entry->smssender_length = tmp[bufPos];
-	if (entry->smssender_length % 2 != 0) {
+	if (entry->smssender_length % 2 != 0)
 		entry->smssender_length++;
-	}
+
 	entry->smssender_length /= 2;
 	bufPos += 1;
 	tmpChar = tmp[bufPos];
 	bufPos += 1;
-	if ((tmpChar & NUMBER_IN_7BIT_ASCII) == NUMBER_IN_7BIT_ASCII) {
+	if ((tmpChar & NUMBER_IN_7BIT_ASCII) == NUMBER_IN_7BIT_ASCII)
 		gsmDecode7bit(tmp + bufPos, entry->smssender, entry->smssender_length);
-	} else {
+	else {
 		swapByteArray(tmp + bufPos, entry->smssender_length);
 		semiOctetToWString(tmp + bufPos, entry->smssender, entry->smssender_length);
 	}
@@ -166,21 +175,20 @@ void convertMessage(sms_entry_t* entry, locale_support localeSupport) {
 	bufPos += 1;
 
 	switch(entry->encoding_scheme & 0x0F) {
-		case 0:	/* 7Bit message */
+		case 0: /* 7Bit message */
 			gsmDecode7bit(tmp + bufPos, entry->message_ucs, entry->message_length);
 		break;
-		case 4:	/* 8Bit message */
+		case 4: /* 8Bit message */
 			memcpy(entry->message_ucs, tmp + bufPos, entry->message_length);
 		break;
-		case 8:	/* UCS-2 message */
+		case 8: /* UCS-2 message */
 			for (k = 0, i = 0; i < entry->message_length; k++, i += 2) {
 				wchar_t tmpWChar = 0;
 				tmpWChar = (tmp[bufPos+i] << 8) | tmp[bufPos+i+1];
-				if (localeSupport == LOCALE_SUPPORTED) {
+				if (localeSupport == LOCALE_SUPPORTED)
 					entry->message_ucs[k] = tmpWChar;
-				} else {
+				else
 					entry->message_ucs[k] = (tmpWChar < 20 || tmpWChar > 125) ? L' ' : tmpWChar;
-				}
 			}
 			entry->message_ucs[entry->message_length] = L'\0';
 		break;
@@ -189,7 +197,8 @@ void convertMessage(sms_entry_t* entry, locale_support localeSupport) {
 	}
 }
 
-sms_entry_t* parse_modem_response(FILE* fp, size_t* count) {
+sms_entry_t* parse_modem_response(FILE* fp, size_t* count)
+{
 	ssize_t read;
 	size_t len, dbLen = 0;
 	unsigned tmp1;
@@ -198,13 +207,16 @@ sms_entry_t* parse_modem_response(FILE* fp, size_t* count) {
 	sms_entry_t* db = NULL;
 	sms_entry_t* entry = NULL;
 	char* currentLine = NULL;
+	unsigned int add_entry = 0;
 
-	while ((read = getline (&currentLine, &len, fp)) != -1) {
+	while ((read = getline(&currentLine, &len, fp)) != -1) {
 		read = strlen(currentLine);
-		if (read < 2) continue;
-		if (strncmp("OK", currentLine, 2) == 0) break;
+		if (read < 2)
+			continue;
+		if ((strncmp("OK", currentLine, 2) == 0) || (strncmp("ERROR", currentLine, 5) == 0))
+			break;
 
-		if (strncmp("+CMGL: ", currentLine, 7) == 0) {	/* +CMGL line, resize db */
+		if (strncmp("+CMGL: ", currentLine, 7) == 0) { /* +CMGL line, resize db */
 			db = realloc(db, (dbLen + 1) * sizeof(sms_entry_t));
 			entry = &db[dbLen];
 			dbLen += 1;
@@ -215,10 +227,16 @@ sms_entry_t* parse_modem_response(FILE* fp, size_t* count) {
 			                            entry->dbId = successfullyParsed == 3 ? (char)tmp1 : -1;
 			                            entry->status = successfullyParsed == 3 ? (char)tmp2 : -1;
 			                            entry->message_raw = NULL;
-		} else {	/* PDU Line, copy PDU to db */
-			entry->message_raw = calloc((read + 1), sizeof(char));
-			strcpy(entry->message_raw, currentLine);
-			entry->message_length = read;
+			if (successfullyParsed == 3)
+				add_entry = 1;
+		}
+		else { /* PDU Line, copy PDU to db */
+			if (add_entry == 1) { /* avoid SIGSEGV */
+				entry->message_raw = calloc((read + 1), sizeof(char));
+				strcpy(entry->message_raw, currentLine);
+				entry->message_length = read;
+				add_entry = 0;
+			}
 		}
 	}
 	*count = dbLen;
@@ -226,20 +244,21 @@ sms_entry_t* parse_modem_response(FILE* fp, size_t* count) {
 	return db;
 }
 
-const char* translateMessageStatus(const unsigned char numericStatus) {
+const char* translateMessageStatus(const unsigned char numericStatus)
+{
 	switch (numericStatus) {
 		case 0: return "REC UNREAD";
 		case 1: return "REC READ";
 		case 2: return "STO UNREAD";
 		case 3: return "STO READ";
-		case 4: return "ALL";	/* ?? What does it mean? added for sake */
+		case 4: return "ALL"; /* ?? What does it mean? added for sake */
 		default: return "ERROR";
 	}
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 	size_t entries_count, i;
-	// const char *fileName = argc > 1 ? argv[1] : NULL;
 	FILE *infile = stdin;
 	FILE *outfile = stdout;
 	sms_entry_t *parsed_entries;
@@ -258,8 +277,7 @@ int main(int argc, char** argv) {
 	};
 
 	while ((c = getopt_long (argc, argv, short_opt, long_opt, NULL)) != -1) {
-		switch (c)
-		{
+		switch (c) {
 			case 0:
 			case -1:
 			break;
@@ -302,9 +320,9 @@ int main(int argc, char** argv) {
 
 	parsed_entries = parse_modem_response(infile, &entries_count);
 
-	if (setlocale(LC_ALL,  "C.UTF-8") != NULL) {
+	if (setlocale(LC_ALL,  "C.UTF-8") != NULL)
 		ucsSupport = LOCALE_SUPPORTED;
-	}
+
 	for (i = 0; i < entries_count; i++) {
 		sms_entry_t* entry = &parsed_entries[i];
 		if (entry->status > 0) {
@@ -322,10 +340,10 @@ int main(int argc, char** argv) {
 	free(parsed_entries);
 	fclose(infile);
 
-	if (entries_count == 0) {
+	if (entries_count == 0)
 		fwprintf(stderr, L"No parseable entries found!\n");
-	} else if (pduEntries == 0 && entries_count > 0) {
+	else if (pduEntries == 0 && entries_count > 0)
 		fwprintf(stderr, L"No correct PDU entries found!\n");
-	}
+
 	return 0;
 }

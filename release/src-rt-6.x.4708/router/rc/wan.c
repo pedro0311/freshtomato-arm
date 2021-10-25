@@ -1344,7 +1344,6 @@ void stop_wan(void)
 #ifdef TCONFIG_TINC
 	stop_tinc();
 #endif
-
 	stop_bwlimit();
 	stop_upnp();
 #ifdef TCONFIG_OPENVPN
@@ -1353,8 +1352,6 @@ void stop_wan(void)
 	stop_pptp_client_eas();
 	stop_igmp_proxy();
 	stop_udpxy();
-	stop_ntpd();
-
 #ifdef TCONFIG_IPV6
 	stop_ipv6_tunnel();
 	stop_dhcp6c();
@@ -1365,7 +1362,6 @@ void stop_wan(void)
 	clear_resolv();
 	stop_wan_if("wan");
 	stop_wan_if("wan2");
-
 #ifdef TCONFIG_MULTIWAN
 	stop_wan_if("wan3");
 	stop_wan_if("wan4");

@@ -1087,6 +1087,23 @@ int wl_sta_prepare(void)
 	char *wl_sta = NULL;
 	char *wlc = NULL;
 	int sta = 0;
+	char word[128], *next;
+
+	/* quick pre-check for non-sta setups (help FT with CTF on!) */
+	foreach (word, nvram_safe_get("wl_ifnames"), next) {
+		snprintf(wl_prefix, sizeof(wl_prefix), "wl%d_", wl_unit);
+		if (nvram_match(strcat_r(wl_prefix, "mode", tmp), "sta")) {
+			sta = 1; /* found! */
+		}
+		wl_unit++;
+	}
+
+	if (sta) { /* quick pre-check found sta */
+		sta = 0; /* reset again - prepare for final check and nvram config (comes next) */
+	}
+	else { /* no sta setup found (anymore) */
+		goto CLEANUP;
+	}
 
 	mwan_num = nvram_get_int("mwan_num");
 	if (mwan_num < 1 || mwan_num > MWAN_MAX)
@@ -1141,6 +1158,7 @@ int wl_sta_prepare(void)
 		}
 	}
 
+CLEANUP:
 	/* prepare & clean-up nvram */
 	/* case 1: new setup/interface */
 	if (sta && nvram_is_empty("wlc_ifname")) {
