@@ -864,7 +864,7 @@ openssl/stamp-h1:
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
 	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-	./Configure $(HOSTCONFIG) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc/ssl \
+	./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc/ssl \
 	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared enable-rc5 no-ssl2 no-ssl3 no-err
 	@$(MAKE) -C openssl depend clean
@@ -897,7 +897,7 @@ openssl-1.1/stamp-h1:
 	AR=$(AR:$(CROSS_COMPILE)%=%) \
 	NM=$(NM:$(CROSS_COMPILE)%=%) \
 	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-	./Configure $(HOSTCONFIG) --prefix=/usr --openssldir=/etc/ssl \
+	./Configure $(HOSTCONFIG) $(EXTRACFLAGS) --prefix=/usr --openssldir=/etc/ssl \
 	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 	shared no-ssl3 no-err no-async --api=1.0.0 \
 	no-aria no-sm2 no-sm3 no-sm4 \
@@ -1095,14 +1095,6 @@ iptables-1.8.x-clean:
 	[ ! -f iptables-1.8.x/Makefile ] || $(MAKE) -C iptables-1.8.x KERNEL_DIR=$(LINUXDIR) distclean
 	@rm -f iptables-1.8.x/stamp-h1
 	$(call unpatch_files,iptables-1.8.x)
-
-ppp:
-	@$(SEP)
-	$(MAKE) -C ppp/pppoecd $* INSTALLDIR=$(INSTALLDIR)/ppp $(if $(TCONFIG_IPV6),HAVE_INET6=y,) $(PARALLEL_BUILD)
-#	$(MAKE) -C ppp/pppoecd $* INSTALLDIR=$(INSTALLDIR)/ppp DFLAGS="-DDEBUG -DDEBUGALL"
-
-ppp-%:
-	$(MAKE) -C ppp/pppoecd $* INSTALLDIR=$(INSTALLDIR)/ppp $(if $(TCONFIG_IPV6),HAVE_INET6=y,)
 
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
@@ -1386,10 +1378,6 @@ xl2tpd-install:
 xl2tpd-clean:
 	-@$(MAKE) -C xl2tpd clean
 	$(call unpatch_files,xl2tpd)
-
-bpalogin-install:
-	install -D bpalogin/bpalogin $(INSTALLDIR)/bpalogin/usr/sbin/bpalogin
-	$(STRIP) $(INSTALLDIR)/bpalogin/usr/sbin/bpalogin
 
 libbcm:
 	@$(SEP)
@@ -1989,7 +1977,7 @@ libpng-clean:
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && \
-	CFLAGS="-Os -Wall -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
 		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
@@ -2164,7 +2152,7 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
 	$(call patch_files,mysql)
 	cd mysql && \
-	CFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
+	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
 		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
 	CPPFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
