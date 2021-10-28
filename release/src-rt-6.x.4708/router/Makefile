@@ -2740,6 +2740,8 @@ apcupsd-install:
 
 libsodium/stamp-h1:
 	cd libsodium && autoreconf -fsi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC"  \
 		$(CONFIGURE) --prefix=/usr --disable-ssp --enable-minimal
 	@touch $@
 
