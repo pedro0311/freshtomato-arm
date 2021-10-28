@@ -241,7 +241,7 @@ function createHighlightedRow(logLineMap) {
 	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_FACILITY_POS], 'co2', null),
 	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_POS], 'co3', logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][0]),
 	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_PROCESS_POS], 'co4', null),
-	         generateHighlightSpan(logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS], 'co5', null)
+	         generateHighlightSpan(escapeHTML(''+logLineMap[LINE_PARSE_MAP_LEVEL_MESSAGE_POS]), 'co5', null)
 	];
 }
 
