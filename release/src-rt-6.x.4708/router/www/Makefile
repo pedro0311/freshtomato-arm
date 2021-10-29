@@ -307,9 +307,7 @@ ifneq ($(TCONFIG_TINC),y)
 endif
 
 # Only include the dnscrypt option if is compiled in
-ifeq ($(TCONFIG_DNSCRYPT),y)
-	$(TOP)/www/dnscrypt-helper.sh $(INSTALLDIR)/../rom/rom/etc/dnscrypt-resolvers.csv $(INSTALLDIR)/www/advanced-dhcpdns.asp
-else
+ifneq ($(TCONFIG_DNSCRYPT),y)
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/DNSCRYPT-BEGIN/,/DNSCRYPT-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/DNSCRYPT-BEGIN/,/DNSCRYPT-END/d"
 endif

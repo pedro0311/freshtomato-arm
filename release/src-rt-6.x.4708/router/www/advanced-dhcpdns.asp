@@ -58,6 +58,9 @@ function active_resolvers(ip, port, domain, pinset) {
 	return 0;
 }
 /* STUBBY-END */
+/* DNSCRYPT-BEGIN */
+var up_dnscrypt_arr = [<% dnscrypt_presets("dot"); %>];
+/* DNSCRYPT-END */
 
 if ((isNaN(nvram.dhcpd_lmax)) || ((nvram.dhcpd_lmax *= 1) < 1))
 	nvram.dhcpd_lmax = 255;
@@ -432,7 +435,7 @@ function init() {
 			{ title: 'Use dnscrypt-proxy', name: 'f_dnscrypt_proxy', type: 'checkbox', value: nvram.dnscrypt_proxy == 1 },
 				{ title: 'Ephemeral Keys', indent: 2, name: 'f_dnscrypt_ephemeral_keys', type: 'checkbox', suffix: '&nbsp; <small>warning: this option requires extra CPU cycles!<\/small>', value: nvram.dnscrypt_ephemeral_keys == 1 },
 				{ title: 'Manual Entry', indent: 2, name: 'f_dnscrypt_manual', type: 'checkbox', value: nvram.dnscrypt_manual == 1 },
-				{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: _dnscrypt_resolvers_, value: nvram.dnscrypt_resolver },
+				{ title: '<a href="https://dnscrypt.info/public-servers" title="Resolver details" class="new_window">Resolver<\/a>', indent: 2, name: 'dnscrypt_resolver', type: 'select', options: up_dnscrypt_arr, value: nvram.dnscrypt_resolver },
 				{ title: 'Resolver Address', indent: 2, name: 'dnscrypt_resolver_address', type: 'text', maxlen: 50, size: 25, value: nvram.dnscrypt_resolver_address },
 				{ title: 'Provider Name', indent: 2, name: 'dnscrypt_provider_name', type: 'text', maxlen: 60, size: 25, value: nvram.dnscrypt_provider_name },
 				{ title: 'Provider Public Key', indent: 2, name: 'dnscrypt_provider_key', type: 'text', maxlen: 80, size: 25, value: nvram.dnscrypt_provider_key },
@@ -548,10 +551,10 @@ function init() {
 	<i>DHCP / DNS Client (WAN):</i><br>
 	<ul>
 <!-- STORSEC-BEGIN -->
-		<li><b>Enable DNSSEC support</b> - Ensures that DNS lookups haven't been hijacked by a malicious third party when querying a DNSSEC-enabled domain. Make sure your WAN/ISP/Stubby DNS are DNSSEC-compatible, otherwise DNS lookups will always fail.</li>
+		<li><b>Enable DNSSEC support</b> - Ensures that DNS lookups haven't been hijacked by a malicious third party when querying a DNSSEC-enabled domain. Make sure your WAN/ISP/Stubby/dnscrypt-proxy DNS are DNSSEC-compatible, otherwise DNS lookups will always fail.</li>
 <!-- STORSEC-END -->
 <!-- DNSCRYPT-BEGIN -->
-		<li><b>Use dnscrypt-proxy</b> - Wraps unmodified DNS traffic between a client and a DNS resolver in a cryptographic construction in order to detect forgery. Uses the DNSCrypt (v1) protocol.</li>
+		<li><b>Use dnscrypt-proxy</b> - Wraps unmodified DNS traffic between a client and a DNS resolver in a cryptographic construction in order to detect forgery. Uses the DNSCrypt (v1/v2) protocol. You can use your own custom config file (/etc/dnscrypt-resolvers-alt.csv)</li>
 <!-- DNSCRYPT-END -->
 <!-- STUBBY-BEGIN -->
 		<li><b>Use Stubby</b> - Acts as a local DNS Privacy stub resolver (using DNS-over-TLS). Stubby encrypts DNS queries sent to a DNS Privacy resolver increasing end user privacy. You can use your own custom config file (/etc/stubby/stubby_alt.yml)</li>
