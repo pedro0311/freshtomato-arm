@@ -1132,6 +1132,7 @@ libnfnetlink/stamp-h1:
 libnfnetlink: libnfnetlink/stamp-h1
 	@$(SEP)
 	$(MAKE) -C libnfnetlink $(PARALLEL_BUILD)
+	@rm -f libnfnetlink/src/libnfnetlink.la
 
 libnfnetlink-install:
 	install -D libnfnetlink/src/.libs/libnfnetlink.so.0.2.0 $(INSTALLDIR)/libnfnetlink/usr/lib/libnfnetlink.so.0.2.0
@@ -1930,7 +1931,7 @@ pcre-clean:
 libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared \
+		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
 
@@ -1961,6 +1962,8 @@ libpng: libpng/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C libpng all $(PARALLEL_BUILD)
 	@$(MAKE) -C libpng DESTDIR=$(TOP)/libpng/staged install
+	@rm -f $(TOP)/libpng/staged/usr/lib/libpng.la
+	@rm -f $(TOP)/libpng/staged/usr/lib/libpng12.la
 
 libpng-install:
 	install -D libpng/.libs/libpng16.so.16.37.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.37.0
@@ -2897,6 +2900,7 @@ libmnl: libmnl/stamp-h1
 	@$(SEP)
 	$(MAKE) -C libmnl
 	$(MAKE) -C libmnl DESTDIR=$(TOP)/libmnl/staged install
+	rm -f $(TOP)/libmnl/staged/usr/lib/libmnl.la
 
 libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
@@ -2923,6 +2927,7 @@ libnetfilter_conntrack: libnetfilter_conntrack/stamp-h1
 	@$(SEP)
 	$(MAKE) -C libnetfilter_conntrack
 	$(MAKE) -C libnetfilter_conntrack DESTDIR=$(TOP)/libnetfilter_conntrack/staged install
+	@rm -f libnetfilter_conntrack/staged/usr/lib/libnetfilter_conntrack.la
 
 libnetfilter_conntrack-install:
 	install -d $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/
@@ -2942,7 +2947,7 @@ libnetfilter_conntrack-clean:
 libnetfilter_log/stamp-h1: libnfnetlink
 	cd libnetfilter_log && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOOLCHAIN)/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib -L$(TOP)/libnfnetlink/src/.libs" \
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
@@ -3018,14 +3023,14 @@ conntrack-tools-clean:
 
 conntrack-tools-install:
 	install -d $(INSTALLDIR)/conntrack-tools/usr/sbin
-	install conntrack-tools/src/.libs/conntrack $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
+	install conntrack-tools/src/conntrack $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
 	$(STRIP) -s $(INSTALLDIR)/conntrack-tools/usr/sbin/conntrack
 
 ipset/stamp-h1: libmnl
 	$(call patch_files,ipset)
 	cd ipset && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
 		libmnl_CFLAGS="-I$(TOP)/libmnl/staged/usr/include" \
 		libmnl_LIBS="-L$(TOP)/libmnl/staged/usr/lib -lmnl" \
 		$(CONFIGURE) --prefix=/usr --with-kmod=no
