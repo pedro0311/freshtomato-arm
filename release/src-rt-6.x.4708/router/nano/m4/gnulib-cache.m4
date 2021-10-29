@@ -45,6 +45,7 @@
 #  isblank \
 #  iswblank \
 #  lstat \
+#  mkstemps \
 #  nl_langinfo \
 #  regex \
 #  sigaction \
@@ -70,6 +71,7 @@ gl_MODULES([
   isblank
   iswblank
   lstat
+  mkstemps
   nl_langinfo
   regex
   sigaction

@@ -6,7 +6,7 @@
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
  *   Copyright (C) 2018 Marco Diego Aurélio Mesquita                      *
- *   Copyright (C) 2015-2020 Benno Schulenberg                            *
+ *   Copyright (C) 2015-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -39,7 +39,7 @@
 #ifdef ENABLE_WORDCOMPLETION
 static int pletion_x = 0;
 		/* The x position in pletion_line of the last found completion. */
-static completion_word *list_of_completions;
+static completionstruct *list_of_completions;
 		/* A linked list of the completions that have been attempted. */
 #endif
 
@@ -58,7 +58,7 @@ void do_mark(void)
 		refresh_needed = TRUE;
 	}
 }
-#endif /* !NANO_TINY */
+#endif
 
 /* Insert a tab.  Or, if --tabstospaces is in effect, insert the number
  * of spaces that a tab would normally take up at this position. */
@@ -186,7 +186,7 @@ size_t length_of_white(const char *text)
 
 	while (TRUE) {
 		if (*text == '\t')
-			return ++white_count;
+			return white_count + 1;
 
 		if (*text != ' ')
 			return white_count;
@@ -463,6 +463,10 @@ void undo_cut(undostruct *u)
 {
 	goto_line_posx(u->head_lineno, (u->xflags & WAS_WHOLE_LINE) ? 0 : u->head_x);
 
+	/* Clear an inherited anchor but not a user-placed one. */
+	if (!(u->xflags & HAD_ANCHOR_AT_START))
+		openfile->current->has_anchor = FALSE;
+
 	if (u->cutbuffer)
 		copy_from_buffer(u->cutbuffer);
 
@@ -661,7 +665,7 @@ void do_undo(void)
 
 	openfile->totsize = u->wassize;
 
-	/* When at the point where the file was last saved, unset "Modified". */
+	/* When at the point where the buffer was last saved, unset "Modified". */
 	if (openfile->current_undo == openfile->last_saved) {
 		openfile->modified = FALSE;
 		titlebar(NULL);
@@ -821,7 +825,7 @@ void do_redo(void)
 
 	openfile->totsize = u->newsize;
 
-	/* When at the point where the file was last saved, unset "Modified". */
+	/* When at the point where the buffer was last saved, unset "Modified". */
 	if (openfile->current_undo == openfile->last_saved) {
 		openfile->modified = FALSE;
 		titlebar(NULL);
@@ -1023,6 +1027,8 @@ void add_undo(undo_type action, const char *message)
 #endif
 	case CUT_TO_EOF:
 		u->xflags |= (INCLUDED_LAST_LINE | CURSOR_WAS_AT_HEAD);
+		if (openfile->current->has_anchor)
+			u->xflags |= HAD_ANCHOR_AT_START;
 		break;
 	case ZAP:
 	case CUT:
@@ -1044,6 +1050,9 @@ void add_undo(undo_type action, const char *message)
 			u->tail_x = 0;
 		} else
 			u->xflags |= CURSOR_WAS_AT_HEAD;
+		if ((openfile->mark && mark_is_before_cursor() && openfile->mark->has_anchor) ||
+				((!openfile->mark || !mark_is_before_cursor()) && openfile->current->has_anchor))
+			u->xflags |= HAD_ANCHOR_AT_START;
 		break;
 	case PASTE:
 		u->cutbuffer = copy_buffer(cutbuffer);
@@ -1933,9 +1942,11 @@ void justify_text(bool whole_buffer)
 	}
 
 #ifndef NANO_TINY
-	add_undo(PASTE, NULL);
+	/* Wipe an anchor on the first paragraph if it was only inherited. */
 	if (whole_buffer && !openfile->mark && !cutbuffer->has_anchor)
 		openfile->current->has_anchor = FALSE;
+
+	add_undo(PASTE, NULL);
 #endif
 	/* Do the equivalent of a paste of the justified text. */
 	ingraft_buffer(cutbuffer);
@@ -1954,13 +1965,8 @@ void justify_text(bool whole_buffer)
 	}
 
 	add_undo(COUPLE_END, N_("justification"));
-#endif
 
-	/* We're done justifying.  Restore the old cutbuffer. */
-	cutbuffer = was_cutbuffer;
-
-	/* Show what we justified on the status bar. */
-#ifndef NANO_TINY
+	/* Report on the status bar what we justified. */
 	if (openfile->mark)
 		statusline(REMARK, _("Justified selection"));
 	else
@@ -1969,6 +1975,9 @@ void justify_text(bool whole_buffer)
 		statusline(REMARK, _("Justified file"));
 	else
 		statusbar(_("Justified paragraph"));
+
+	/* We're done justifying.  Restore the cutbuffer. */
+	cutbuffer = was_cutbuffer;
 
 	/* Set the desired screen column (always zero, except at EOF). */
 	openfile->placewewant = xplustabs();
@@ -2052,9 +2061,9 @@ bool replace_buffer(const char *filename, undo_type action, const char *operatio
 /* Execute the given program, with the given temp file as last argument. */
 void treat(char *tempfile_name, char *theprogram, bool spelling)
 {
-	ssize_t lineno_save = openfile->current->lineno;
-	size_t current_x_save = openfile->current_x;
-	size_t pww_save = openfile->placewewant;
+	ssize_t was_lineno = openfile->current->lineno;
+	size_t was_pww = openfile->placewewant;
+	size_t was_x = openfile->current_x;
 	bool was_at_eol = (openfile->current->data[openfile->current_x] == '\0');
 	struct stat fileinfo;
 	long timestamp_sec = 0;
@@ -2138,7 +2147,7 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		/* Adjust the end point of the marked region for any change in
 		 * length of the region's last line. */
 		if (upright)
-			current_x_save = openfile->current_x;
+			was_x = openfile->current_x;
 		else
 			openfile->mark_x = openfile->current_x;
 
@@ -2156,7 +2165,7 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 	}
 
 	/* Go back to the old position. */
-	goto_line_posx(lineno_save, current_x_save);
+	goto_line_posx(was_lineno, was_x);
 	if (was_at_eol || openfile->current_x > strlen(openfile->current->data))
 		openfile->current_x = strlen(openfile->current->data);
 
@@ -2167,7 +2176,7 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 #endif
 	}
 
-	openfile->placewewant = pww_save;
+	openfile->placewewant = was_pww;
 	adjust_viewport(STATIONARY);
 
 	if (spelling)
@@ -2490,10 +2499,10 @@ void do_spell(void)
 
 #ifndef NANO_TINY
 	if (openfile->mark)
-		okay = write_marked_file(temp_name, stream, TRUE, OVERWRITE);
+		okay = write_region_to_file(temp_name, stream, TEMPORARY, OVERWRITE);
 	else
 #endif
-		okay = write_file(temp_name, stream, TRUE, OVERWRITE, TRUE);
+		okay = write_file(temp_name, stream, TEMPORARY, OVERWRITE, NONOTES);
 
 	if (!okay) {
 		statusline(ALERT, _("Error writing temp file: %s"), strerror(errno));
@@ -2894,7 +2903,7 @@ void do_formatter(void)
 	temp_name = safe_tempfile(&stream);
 
 	if (temp_name != NULL)
-		okay = write_file(temp_name, stream, TRUE, OVERWRITE, TRUE);
+		okay = write_file(temp_name, stream, TEMPORARY, OVERWRITE, NONOTES);
 
 	if (!okay) {
 		statusline(ALERT, _("Error writing temp file: %s"), strerror(errno));
@@ -3027,7 +3036,7 @@ void complete_a_word(void)
 	char *shard, *completion = NULL;
 	size_t start_of_shard, shard_length = 0;
 	size_t i = 0, j = 0;
-	completion_word *some_word;
+	completionstruct *some_word;
 #ifdef ENABLE_WRAPPING
 	bool was_set_wrapping = ISSET(BREAK_LONG_LINES);
 #endif
@@ -3036,7 +3045,7 @@ void complete_a_word(void)
 	if (pletion_line == NULL) {
 		/* Clear the list of words of a previous completion run. */
 		while (list_of_completions != NULL) {
-			completion_word *dropit = list_of_completions;
+			completionstruct *dropit = list_of_completions;
 			list_of_completions = list_of_completions->next;
 			free(dropit->word);
 			free(dropit);
@@ -3129,7 +3138,7 @@ void complete_a_word(void)
 			}
 
 			/* Add the found word to the list of completions. */
-			some_word = nmalloc(sizeof(completion_word));
+			some_word = nmalloc(sizeof(completionstruct));
 			some_word->word = completion;
 			some_word->next = list_of_completions;
 			list_of_completions = some_word;

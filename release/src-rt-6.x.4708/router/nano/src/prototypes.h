@@ -191,6 +191,8 @@ typedef void (*functionptrtype)(void);
 #ifdef ENABLE_BROWSER
 void browser_refresh(void);
 char *browse_in(const char *inpath);
+void to_first_file(void);
+void to_last_file(void);
 #endif
 
 /* Most functions in chars.c. */
@@ -294,11 +296,11 @@ bool outside_of_confinement(const char *currpath, bool allow_tabcomp);
 void init_backup_dir(void);
 #endif
 int copy_file(FILE *inn, FILE *out, bool close_out);
-bool write_file(const char *name, FILE *thefile, bool tmp,
-		kind_of_writing_type method, bool fullbuffer);
+bool write_file(const char *name, FILE *thefile, bool normal,
+				kind_of_writing_type method, bool annotate);
 #ifndef NANO_TINY
-bool write_marked_file(const char *name, FILE *stream, bool tmp,
-		kind_of_writing_type method);
+bool write_region_to_file(const char *name, FILE *stream, bool normal,
+				kind_of_writing_type method);
 #endif
 int do_writeout(bool exiting, bool withprompt);
 void do_writeout_void(void);
@@ -636,8 +638,6 @@ void flip_replace(void);
 void flip_goto(void);
 #ifdef ENABLE_BROWSER
 void to_files(void);
-void to_first_file(void);
-void to_last_file(void);
 void goto_dir(void);
 #endif
 #ifndef NANO_TINY

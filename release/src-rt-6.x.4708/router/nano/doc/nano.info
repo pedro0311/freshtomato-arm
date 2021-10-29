@@ -1,4 +1,4 @@
-This is nano.info, produced by makeinfo version 6.7 from nano.texi.
+This is nano.info, produced by makeinfo version 6.8 from nano.texi.
 
 INFO-DIR-SECTION Editors
 START-INFO-DIR-ENTRY
@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 nano
 ****
 
-This manual documents the GNU ‘nano’ editor, version 5.8.
+This manual documents the GNU ‘nano’ editor, version 5.9.
 
 * Menu:
 
@@ -125,7 +125,8 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
 
 ‘-E’
 ‘--tabstospaces’
-     Convert typed tabs to spaces.
+     Convert each typed tab to spaces — to the number of spaces that a
+     tab at that position would take up.
 
 ‘-F’
 ‘--multibuffer’
@@ -415,14 +416,14 @@ File: nano.info,  Node: Command-line Options,  Next: Editor Basics,  Prev: Invok
 ‘--minibar’
      Suppress the title bar and instead show information about the
      current buffer at the bottom of the screen, in the space for the
-     status bar.  In this "minibar" the file name is shown on the left,
+     status bar.  In this "minibar" the filename is shown on the left,
      followed by an asterisk if the buffer has been modified.  On the
      right are displayed the current line and column number, the code of
      the character under the cursor (in Unicode format: U+xxxx), the
      same flags as are shown by ‘--stateflags’, and a percentage that
      expresses how far the cursor is into the file (linewise).  When a
      file is loaded or saved, and also when switching between buffers,
-     the number of lines in the buffer is displayed after the file name.
+     the number of lines in the buffer is displayed after the filename.
      This number is cleared upon the next keystroke, or replaced with an
      [i/n] counter when multiple buffers are open.  The line plus column
      numbers and the character code are displayed only when
@@ -525,7 +526,7 @@ then moving the cursor to the other end of the portion to be selected.
 The selected portion of text will be highlighted.  This selection can
 now be cut or copied in its entirety with a single ‘^K’ or ‘M-6’.  Or
 the selection can be used to limit the scope of a search-and-replace
-(‘^\’) or spell-checking session (‘^T’).
+(‘^\’) or spell-checking session (‘^T^T’).
 
    On some terminals, text can be selected also by holding down ‘Shift’
 while using the cursor keys.  Holding down the ‘Ctrl’ or ‘Alt’ key too
@@ -815,7 +816,7 @@ The supported settings in a nanorc file are:
 
 ‘set errorcolor [bold,][italic,]FGCOLOR,BGCOLOR’
      Use this color combination for the status bar when an error message
-     is displayed.  The default value is brightwhite,red.  *Note set
+     is displayed.  The default value is bold,white,red.  *Note set
      functioncolor:: for valid color names.
 
 ‘set fill NUMBER’
@@ -886,14 +887,14 @@ The supported settings in a nanorc file are:
 ‘set minibar’
      Suppress the title bar and instead show information about the
      current buffer at the bottom of the screen, in the space for the
-     status bar.  In this "minibar" the file name is shown on the left,
+     status bar.  In this "minibar" the filename is shown on the left,
      followed by an asterisk if the buffer has been modified.  On the
      right are displayed the current line and column number, the code of
      the character under the cursor (in Unicode format: U+xxxx), the
      same flags as are shown by ‘set stateflags’, and a percentage that
      expresses how far the cursor is into the file (linewise).  When a
      file is loaded or saved, and also when switching between buffers,
-     the number of lines in the buffer is displayed after the file name.
+     the number of lines in the buffer is displayed after the filename.
      This number is cleared upon the next keystroke, or replaced with an
      [i/n] counter when multiple buffers are open.  The line plus column
      numbers and the character code are displayed only when ‘set
@@ -1049,7 +1050,8 @@ The supported settings in a nanorc file are:
      greater than 0.  The default value is 8.
 
 ‘set tabstospaces’
-     Convert typed tabs to spaces.
+     Convert each typed tab to spaces — to the number of spaces that a
+     tab at that position would take up.
 
 ‘set titlecolor [bold,][italic,]FGCOLOR,BGCOLOR’
      Use this color combination for the title bar.  *Note set
@@ -1342,8 +1344,8 @@ that of the Backspace key.
      ’curpos’, is deprecated.)
 
 ‘wordcount’
-     Counts the number of words, lines and characters in the current
-     buffer.
+     Counts and reports on the status bar the number of lines, words,
+     and characters in the current buffer (or in the marked region).
 
 ‘execute’
      Prompts for a program to execute.  The program’s output will be
@@ -1363,28 +1365,29 @@ that of the Backspace key.
      one).
 
 ‘justify’
-     Justifies the current paragraph.  A paragraph is a group of
-     contiguous lines that, apart from possibly the first line, all have
-     the same indentation.  The beginning of a paragraph is detected by
-     either this lone line with a differing indentation or by a
-     preceding blank line.
+     Justifies the current paragraph (or the marked region).  A
+     paragraph is a group of contiguous lines that, apart from possibly
+     the first line, all have the same indentation.  The beginning of a
+     paragraph is detected by either this lone line with a differing
+     indentation or by a preceding blank line.
 
 ‘fulljustify’
-     Justifies the entire current buffer.
+     Justifies the entire current buffer (or the marked region).
 
 ‘indent’
-     Indents (shifts to the right) the currently marked text.
+     Indents (shifts to the right) the current line or the marked lines.
 
 ‘unindent’
-     Unindents (shifts to the left) the currently marked text.
+     Unindents (shifts to the left) the current line or the marked
+     lines.
 
 ‘comment’
-     Comments or uncomments the current line or marked lines, using the
-     comment style specified in the active syntax.
+     Comments or uncomments the current line or the marked lines, using
+     the comment style specified in the active syntax.
 
 ‘complete’
-     Completes the fragment before the cursor to a full word found
-     elsewhere in the current buffer.
+     Completes (when possible) the fragment before the cursor to a full
+     word found elsewhere in the current buffer.
 
 ‘left’
      Goes left one position (in the editor or browser).
@@ -1401,10 +1404,14 @@ that of the Backspace key.
 ‘scrollup’
      Scrolls the viewport up one row (meaning that the text slides down)
      while keeping the cursor in the same text position, if possible.
+     (This function is bound by default to <Alt+Up>.  If <Alt+Up> does
+     nothing on your Linux console, see the FAQ:
+     <https://nano-editor.org/dist/latest/faq.html#4.1>.)
 
 ‘scrolldown’
      Scrolls the viewport down one row (meaning that the text slides up)
      while keeping the cursor in the same text position, if possible.
+     (This function is bound by default to <Alt+Down>.)
 
 ‘center’
      Scrolls the line with the cursor to the middle of the screen.
@@ -1915,29 +1922,29 @@ Node: Top199
 Node: Introduction554
 Node: Invoking1750
 Node: Command-line Options3366
-Ref: --speller12499
-Node: Editor Basics16290
-Node: Entering Text16586
-Node: Commands17575
-Node: The Cutbuffer18372
-Node: The Mark18946
-Node: Screen Layout19916
-Node: Search and Replace21095
-Node: Using the Mouse21830
-Node: Anchors22443
-Node: Limitations23248
-Node: Built-in Help23565
-Node: The File Browser23990
-Node: Feature Toggles24881
-Node: Nanorc Files26688
-Node: Settings28309
-Ref: set functioncolor31579
-Ref: set matchbrackets34051
-Ref: Whitespace42230
-Node: Syntax Highlighting42985
-Node: Rebinding Keys49750
-Node: Pico Compatibility64202
-Node: Building and Configure Options68742
+Ref: --speller12578
+Node: Editor Basics16367
+Node: Entering Text16663
+Node: Commands17652
+Node: The Cutbuffer18449
+Node: The Mark19023
+Node: Screen Layout19995
+Node: Search and Replace21174
+Node: Using the Mouse21909
+Node: Anchors22522
+Node: Limitations23327
+Node: Built-in Help23644
+Node: The File Browser24069
+Node: Feature Toggles24960
+Node: Nanorc Files26767
+Node: Settings28388
+Ref: set functioncolor31657
+Ref: set matchbrackets34129
+Ref: Whitespace42385
+Node: Syntax Highlighting43140
+Node: Rebinding Keys49905
+Node: Pico Compatibility64741
+Node: Building and Configure Options69281
 
 End Tag Table
 

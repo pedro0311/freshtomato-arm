@@ -60,9 +60,15 @@
 #ifndef VASNPRINTF
 # include <config.h>
 #endif
-#ifndef IN_LIBINTL
-# include <alloca.h>
+
+/* As of GCC 11.2.1, gcc -Wanalyzer-too-complex reports that main's
+   use of CHECK macros expands to code that is too complicated for gcc
+   -fanalyzer.  Suppress the resulting bogus warnings.  */
+#if 10 <= __GNUC__
+# pragma GCC diagnostic ignored "-Wanalyzer-null-argument"
 #endif
+
+#include <alloca.h>
 
 /* Specification.  */
 #ifndef VASNPRINTF

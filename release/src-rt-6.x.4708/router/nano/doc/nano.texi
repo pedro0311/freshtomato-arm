@@ -8,8 +8,8 @@
 
 @smallbook
 @set EDITION 0.6
-@set VERSION 5.8
-@set UPDATED June 2021
+@set VERSION 5.9
+@set UPDATED October 2021
 
 @dircategory Editors
 @direntry
@@ -23,7 +23,7 @@
 @titlepage
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 5.8
+@subtitle version 5.9
 
 @author Chris Allegretta
 @page
@@ -65,7 +65,7 @@ For suggesting improvements: @email{nano-devel@@gnu.org}@*
 @node Top
 @top
 
-This manual documents the GNU @command{nano} editor, version 5.8.
+This manual documents the GNU @command{nano} editor, version 5.9.
 
 @menu
 * Introduction::
@@ -195,7 +195,8 @@ nanorc file.  @xref{@code{set functioncolor}} for details.
 
 @item -E
 @itemx --tabstospaces
-Convert typed tabs to spaces.
+Convert each typed tab to spaces --- to the number of spaces
+that a tab at that position would take up.
 
 @item -F
 @itemx --multibuffer
@@ -483,14 +484,14 @@ filename in the center of the title bar.
 @itemx --minibar
 Suppress the title bar and instead show information about
 the current buffer at the bottom of the screen, in the space
-for the status bar.  In this "minibar" the file name is shown
+for the status bar.  In this "minibar" the filename is shown
 on the left, followed by an asterisk if the buffer has been modified.
 On the right are displayed the current line and column number, the
 code of the character under the cursor (in Unicode format: U+xxxx),
 the same flags as are shown by @code{--stateflags}, and a percentage
 that expresses how far the cursor is into the file (linewise).
 When a file is loaded or saved, and also when switching between buffers,
-the number of lines in the buffer is displayed after the file name.
+the number of lines in the buffer is displayed after the filename.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
 The line plus column numbers and the character code are displayed only when
@@ -590,7 +591,7 @@ or @kbd{M-A} and then moving the cursor to the other end of the portion
 to be selected.  The selected portion of text will be highlighted.
 This selection can now be cut or copied in its entirety with a single
 @kbd{^K} or @kbd{M-6}.  Or the selection can be used to limit the scope of
-a search-and-replace (@kbd{^\}) or spell-checking session (@kbd{^T}).
+a search-and-replace (@kbd{^\}) or spell-checking session (@kbd{^T^T}).
 
 On some terminals, text can be selected also by holding down @kbd{Shift}
 while using the cursor keys.  Holding down the @kbd{Ctrl} or @kbd{Alt}
@@ -858,7 +859,7 @@ Do not use the line below the title bar, leaving it entirely blank.
 
 @item set errorcolor [bold,][italic,]@var{fgcolor},@var{bgcolor}
 Use this color combination for the status bar when an error message is displayed.
-The default value is @t{brightwhite,red}.
+The default value is @t{bold,white,red}.
 @xref{@code{set functioncolor}} for valid color names.
 
 @item set fill @var{number}
@@ -936,14 +937,14 @@ The default value is "@t{(<[@{)>]@}}".
 @item set minibar
 Suppress the title bar and instead show information about
 the current buffer at the bottom of the screen, in the space
-for the status bar.  In this "minibar" the file name is shown
+for the status bar.  In this "minibar" the filename is shown
 on the left, followed by an asterisk if the buffer has been modified.
 On the right are displayed the current line and column number, the
 code of the character under the cursor (in Unicode format: U+xxxx),
 the same flags as are shown by @code{set stateflags}, and a percentage
 that expresses how far the cursor is into the file (linewise).
 When a file is loaded or saved, and also when switching between buffers,
-the number of lines in the buffer is displayed after the file name.
+the number of lines in the buffer is displayed after the filename.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
 The line plus column numbers and the character code are displayed only when
@@ -1095,7 +1096,8 @@ Use a tab size of @var{number} columns.  The value of @var{number} must be
 greater than 0.  The default value is @t{8}.
 
 @item set tabstospaces
-Convert typed tabs to spaces.
+Convert each typed tab to spaces --- to the number of spaces
+that a tab at that position would take up.
 
 @item set titlecolor [bold,][italic,]@var{fgcolor},@var{bgcolor}
 Use this color combination for the title bar.
@@ -1412,7 +1414,8 @@ the line, column, and character positions.
 (The old name of this function, 'curpos', is deprecated.)
 
 @item wordcount
-Counts the number of words, lines and characters in the current buffer.
+Counts and reports on the status bar the number of lines, words,
+and characters in the current buffer (or in the marked region).
 
 @item execute
 Prompts for a program to execute.  The program's output will be inserted
@@ -1430,27 +1433,28 @@ Invokes a full-buffer-processing program (if the active syntax defines one).
 Invokes a syntax-checking program (if the active syntax defines one).
 
 @item justify
-Justifies the current paragraph.  A paragraph is a group of contiguous lines
+Justifies the current paragraph (or the marked region).
+A paragraph is a group of contiguous lines
 that, apart from possibly the first line, all have the same indentation.  The
 beginning of a paragraph is detected by either this lone line with a differing
 indentation or by a preceding blank line.
 
 @item fulljustify
-Justifies the entire current buffer.
+Justifies the entire current buffer (or the marked region).
 
 @item indent
-Indents (shifts to the right) the currently marked text.
+Indents (shifts to the right) the current line or the marked lines.
 
 @item unindent
-Unindents (shifts to the left) the currently marked text.
+Unindents (shifts to the left) the current line or the marked lines.
 
 @item comment
-Comments or uncomments the current line or marked lines, using the comment
-style specified in the active syntax.
+Comments or uncomments the current line or the marked lines,
+using the comment style specified in the active syntax.
 
 @item complete
-Completes the fragment before the cursor to a full word found elsewhere
-in the current buffer.
+Completes (when possible) the fragment before the cursor
+to a full word found elsewhere in the current buffer.
 
 @item left
 Goes left one position (in the editor or browser).
@@ -1467,10 +1471,14 @@ Goes one line down (in the editor or browser).
 @item scrollup
 Scrolls the viewport up one row (meaning that the text slides down)
 while keeping the cursor in the same text position, if possible.
+(This function is bound by default to <Alt+Up>.
+If <Alt+Up> does nothing on your Linux console, see the FAQ:
+@url{https://nano-editor.org/dist/latest/faq.html#4.1}.)
 
 @item scrolldown
 Scrolls the viewport down one row (meaning that the text slides up)
 while keeping the cursor in the same text position, if possible.
+(This function is bound by default to <Alt+Down>.)
 
 @item center
 Scrolls the line with the cursor to the middle of the screen.

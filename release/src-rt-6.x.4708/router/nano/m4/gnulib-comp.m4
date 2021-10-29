@@ -47,20 +47,28 @@ AC_DEFUN([gl_EARLY],
   # Code from module alloca:
   # Code from module alloca-opt:
   # Code from module attribute:
+  # Code from module basename-lgpl:
   # Code from module btowc:
   # Code from module builtin-expect:
   # Code from module c99:
   # Code from module clock-time:
+  # Code from module cloexec:
+  # Code from module close:
   # Code from module closedir:
   # Code from module ctype:
   # Code from module d-type:
   # Code from module dirent:
   # Code from module dirfd:
+  # Code from module dirname-lgpl:
+  # Code from module double-slash-root:
+  # Code from module dup2:
   # Code from module dynarray:
   # Code from module errno:
   # Code from module extensions:
   # Code from module extern-inline:
+  # Code from module fcntl:
   # Code from module fcntl-h:
+  # Code from module fd-hook:
   # Code from module filename:
   # Code from module flexmember:
   # Code from module float:
@@ -75,10 +83,12 @@ AC_DEFUN([gl_EARLY],
   # Code from module fstat:
   # Code from module futimens:
   # Code from module getdelim:
+  # Code from module getdtablesize:
   # Code from module getline:
   # Code from module getlogin_r:
   # Code from module getopt-gnu:
   # Code from module getopt-posix:
+  # Code from module getrandom:
   # Code from module gettext-h:
   # Code from module gettime:
   # Code from module gettimeofday:
@@ -97,6 +107,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module langinfo:
   # Code from module largefile:
   AC_REQUIRE([AC_SYS_LARGEFILE])
+  AC_REQUIRE([gl_YEAR2038_EARLY])
   # Code from module libc-config:
   # Code from module limits-h:
   # Code from module localcharset:
@@ -113,11 +124,15 @@ AC_DEFUN([gl_EARLY],
   # Code from module mbtowc:
   # Code from module memchr:
   # Code from module mempcpy:
+  # Code from module minmax:
+  # Code from module mkdir:
+  # Code from module mkstemps:
   # Code from module msvc-inval:
   # Code from module msvc-nothrow:
   # Code from module multiarch:
   # Code from module nl_langinfo:
   # Code from module nocrash:
+  # Code from module open:
   # Code from module opendir:
   # Code from module pathmax:
   # Code from module printf-frexp:
@@ -144,6 +159,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module stat:
   # Code from module stat-time:
   # Code from module std-gnu11:
+  # Code from module stdalign:
   # Code from module stdarg:
   dnl Some compilers (e.g., AIX 5.3 cc) need to be in c99 mode
   dnl for the builtin va_copy to work.  gl_PROG_CC_C99 arranges for this.
@@ -160,10 +176,12 @@ AC_DEFUN([gl_EARLY],
   # Code from module strings:
   # Code from module strnlen:
   # Code from module strnlen1:
+  # Code from module sys_random:
   # Code from module sys_stat:
   # Code from module sys_time:
   # Code from module sys_types:
   # Code from module sys_wait:
+  # Code from module tempname:
   # Code from module threadlib:
   gl_THREADLIB_EARLY
   # Code from module time:
@@ -220,6 +238,12 @@ AC_DEFUN([gl_INIT],
   gl_WCHAR_MODULE_INDICATOR([btowc])
   gl___BUILTIN_EXPECT
   gl_CLOCK_TIME
+  gl_MODULE_INDICATOR_FOR_TESTS([cloexec])
+  gl_FUNC_CLOSE
+  if test $REPLACE_CLOSE = 1; then
+    AC_LIBOBJ([close])
+  fi
+  gl_UNISTD_MODULE_INDICATOR([close])
   gl_FUNC_CLOSEDIR
   if test $HAVE_CLOSEDIR = 0 || test $REPLACE_CLOSEDIR = 1; then
     AC_LIBOBJ([closedir])
@@ -237,9 +261,21 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_DIRFD
   fi
   gl_DIRENT_MODULE_INDICATOR([dirfd])
+  gl_DOUBLE_SLASH_ROOT
+  gl_FUNC_DUP2
+  if test $REPLACE_DUP2 = 1; then
+    AC_LIBOBJ([dup2])
+    gl_PREREQ_DUP2
+  fi
+  gl_UNISTD_MODULE_INDICATOR([dup2])
   AC_PROG_MKDIR_P
   gl_HEADER_ERRNO_H
   AC_REQUIRE([gl_EXTERN_INLINE])
+  gl_FUNC_FCNTL
+  if test $HAVE_FCNTL = 0 || test $REPLACE_FCNTL = 1; then
+    AC_LIBOBJ([fcntl])
+  fi
+  gl_FCNTL_MODULE_INDICATOR([fcntl])
   gl_FCNTL_H
   gl_FCNTL_H_REQUIRE_DEFAULTS
   AC_C_FLEXIBLE_ARRAY_MEMBER
@@ -296,6 +332,12 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_GETDELIM
   fi
   gl_STDIO_MODULE_INDICATOR([getdelim])
+  gl_FUNC_GETDTABLESIZE
+  if test $HAVE_GETDTABLESIZE = 0 || test $REPLACE_GETDTABLESIZE = 1; then
+    AC_LIBOBJ([getdtablesize])
+    gl_PREREQ_GETDTABLESIZE
+  fi
+  gl_UNISTD_MODULE_INDICATOR([getdtablesize])
   gl_FUNC_GETLINE
   if test $REPLACE_GETLINE = 1; then
     AC_LIBOBJ([getline])
@@ -317,11 +359,17 @@ AC_DEFUN([gl_INIT],
   if test $REPLACE_GETOPT = 1; then
     AC_LIBOBJ([getopt])
     AC_LIBOBJ([getopt1])
-    dnl Arrange for unistd.h to include getopt.h.
-    GNULIB_GL_UNISTD_H_GETOPT=1
+    dnl Define the substituted variable GNULIB_UNISTD_H_GETOPT to 1.
+    gl_UNISTD_H_REQUIRE_DEFAULTS
+    gl_MODULE_INDICATOR_INIT_VARIABLE([GNULIB_UNISTD_H_GETOPT], [1])
   fi
-  AC_SUBST([GNULIB_GL_UNISTD_H_GETOPT])
   gl_UNISTD_MODULE_INDICATOR([getopt-posix])
+  AC_REQUIRE([AC_CANONICAL_HOST])
+  gl_FUNC_GETRANDOM
+  if test $HAVE_GETRANDOM = 0 || test $REPLACE_GETRANDOM = 1; then
+    AC_LIBOBJ([getrandom])
+  fi
+  gl_SYS_RANDOM_MODULE_INDICATOR([getrandom])
   AC_SUBST([LIBINTL])
   AC_SUBST([LTLIBINTL])
   gl_GETTIME
@@ -453,6 +501,18 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_MEMPCPY
   fi
   gl_STRING_MODULE_INDICATOR([mempcpy])
+  gl_MINMAX
+  gl_FUNC_MKDIR
+  if test $REPLACE_MKDIR = 1; then
+    AC_LIBOBJ([mkdir])
+  fi
+  gl_SYS_STAT_MODULE_INDICATOR([mkdir])
+  gl_FUNC_MKSTEMPS
+  if test $HAVE_MKSTEMPS = 0; then
+    AC_LIBOBJ([mkstemps])
+  fi
+  gl_MODULE_INDICATOR([mkstemps])
+  gl_STDLIB_MODULE_INDICATOR([mkstemps])
   AC_REQUIRE([gl_MSVC_INVAL])
   if test $HAVE_MSVC_INVALID_PARAMETER_HANDLER = 1; then
     AC_LIBOBJ([msvc-inval])
@@ -472,6 +532,12 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_NL_LANGINFO_LOCK
   fi
   gl_LANGINFO_MODULE_INDICATOR([nl_langinfo])
+  gl_FUNC_OPEN
+  if test $REPLACE_OPEN = 1; then
+    AC_LIBOBJ([open])
+    gl_PREREQ_OPEN
+  fi
+  gl_FCNTL_MODULE_INDICATOR([open])
   gl_FUNC_OPENDIR
   if test $HAVE_OPENDIR = 0 || test $REPLACE_OPENDIR = 1; then
     AC_LIBOBJ([opendir])
@@ -549,6 +615,7 @@ AC_DEFUN([gl_INIT],
   gl_SYS_STAT_MODULE_INDICATOR([stat])
   gl_STAT_TIME
   gl_STAT_BIRTHTIME
+  gl_STDALIGN_H
   gl_STDARG_H
   AM_STDBOOL_H
   gl_STDDEF_H
@@ -606,6 +673,9 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_STRNLEN
   fi
   gl_STRING_MODULE_INDICATOR([strnlen])
+  gl_SYS_RANDOM_H
+  gl_SYS_RANDOM_H_REQUIRE_DEFAULTS
+  AC_PROG_MKDIR_P
   gl_SYS_STAT_H
   gl_SYS_STAT_H_REQUIRE_DEFAULTS
   AC_PROG_MKDIR_P
@@ -618,6 +688,8 @@ AC_DEFUN([gl_INIT],
   gl_SYS_WAIT_H
   gl_SYS_WAIT_H_REQUIRE_DEFAULTS
   AC_PROG_MKDIR_P
+  gl_FUNC_GEN_TEMPNAME
+  gl_MODULE_INDICATOR([tempname])
   AC_REQUIRE([gl_THREADLIB])
   gl_TIME_H
   gl_TIME_H_REQUIRE_DEFAULTS
@@ -625,6 +697,21 @@ AC_DEFUN([gl_INIT],
   gl_UNISTD_H
   gl_UNISTD_H_REQUIRE_DEFAULTS
   gl_LIBUNISTRING_LIBHEADER([0.9.11], [unitypes.h])
+  AH_VERBATIM([unitypes_restrict], [
+  /* This definition is a duplicate of the one in unitypes.h.
+     It is here so that we can cope with an older version of unitypes.h
+     that does not contain this definition and that is pre-installed among
+     the public header files.  */
+  # if defined __restrict \
+       || 2 < __GNUC__ + (95 <= __GNUC_MINOR__) \
+       || __clang_major__ >= 3
+  #  define _UC_RESTRICT __restrict
+  # elif 199901L <= __STDC_VERSION__ || defined restrict
+  #  define _UC_RESTRICT restrict
+  # else
+  #  define _UC_RESTRICT
+  # endif
+  ])
   gl_LIBUNISTRING_LIBHEADER([0.9.11], [uniwidth.h])
   gl_LIBUNISTRING_MODULE([0.9.8], [uniwidth/width])
   gl_FUNC_UTIME
@@ -844,17 +931,28 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/arg-nonnull.h
   lib/asnprintf.c
   lib/attribute.h
+  lib/basename-lgpl.c
+  lib/basename-lgpl.h
   lib/btowc.c
   lib/c++defs.h
   lib/cdefs.h
+  lib/cloexec.c
+  lib/cloexec.h
+  lib/close.c
   lib/closedir.c
   lib/ctype.in.h
   lib/dirent-private.h
   lib/dirent.in.h
   lib/dirfd.c
+  lib/dirname-lgpl.c
+  lib/dirname.h
+  lib/dup2.c
   lib/dynarray.h
   lib/errno.in.h
+  lib/fcntl.c
   lib/fcntl.in.h
+  lib/fd-hook.c
+  lib/fd-hook.h
   lib/filename.h
   lib/flexmember.h
   lib/float+.h
@@ -870,6 +968,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/fstat.c
   lib/futimens.c
   lib/getdelim.c
+  lib/getdtablesize.c
   lib/getline.c
   lib/getlogin_r.c
   lib/getopt-cdefs.in.h
@@ -881,6 +980,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/getopt.in.h
   lib/getopt1.c
   lib/getopt_int.h
+  lib/getrandom.c
   lib/gettext.h
   lib/gettime.c
   lib/gettimeofday.c
@@ -949,12 +1049,16 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/memchr.c
   lib/memchr.valgrind
   lib/mempcpy.c
+  lib/minmax.h
+  lib/mkdir.c
+  lib/mkstemps.c
   lib/msvc-inval.c
   lib/msvc-inval.h
   lib/msvc-nothrow.c
   lib/msvc-nothrow.h
   lib/nl_langinfo-lock.c
   lib/nl_langinfo.c
+  lib/open.c
   lib/opendir.c
   lib/pathmax.h
   lib/printf-args.c
@@ -993,6 +1097,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stat-w32.c
   lib/stat-w32.h
   lib/stat.c
+  lib/stdalign.in.h
   lib/stdarg.in.h
   lib/stdbool.in.h
   lib/stddef.in.h
@@ -1005,14 +1110,18 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/streq.h
   lib/string.in.h
   lib/strings.in.h
+  lib/stripslash.c
   lib/strncasecmp.c
   lib/strnlen.c
   lib/strnlen1.c
   lib/strnlen1.h
+  lib/sys_random.in.h
   lib/sys_stat.in.h
   lib/sys_time.in.h
   lib/sys_types.in.h
   lib/sys_wait.in.h
+  lib/tempname.c
+  lib/tempname.h
   lib/time.in.h
   lib/timespec.c
   lib/timespec.h
@@ -1058,12 +1167,15 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/btowc.m4
   m4/builtin-expect.m4
   m4/clock_time.m4
+  m4/close.m4
   m4/closedir.m4
   m4/codeset.m4
   m4/ctype_h.m4
   m4/d-type.m4
   m4/dirent_h.m4
   m4/dirfd.m4
+  m4/double-slash-root.m4
+  m4/dup2.m4
   m4/eealloc.m4
   m4/errno_h.m4
   m4/exponentd.m4
@@ -1072,6 +1184,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/extensions.m4
   m4/extern-inline.m4
   m4/fcntl-o.m4
+  m4/fcntl.m4
   m4/fcntl_h.m4
   m4/flexmember.m4
   m4/float_h.m4
@@ -1084,10 +1197,12 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/fstat.m4
   m4/futimens.m4
   m4/getdelim.m4
+  m4/getdtablesize.m4
   m4/getline.m4
   m4/getlogin.m4
   m4/getlogin_r.m4
   m4/getopt.m4
+  m4/getrandom.m4
   m4/gettime.m4
   m4/gettimeofday.m4
   m4/glob.m4
@@ -1125,13 +1240,20 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/mbtowc.m4
   m4/memchr.m4
   m4/mempcpy.m4
+  m4/minmax.m4
+  m4/mkdir.m4
+  m4/mkstemps.m4
   m4/mmap-anon.m4
+  m4/mode_t.m4
   m4/msvc-inval.m4
   m4/msvc-nothrow.m4
   m4/multiarch.m4
   m4/nl_langinfo.m4
   m4/nocrash.m4
   m4/off_t.m4
+  m4/open-cloexec.m4
+  m4/open-slash.m4
+  m4/open.m4
   m4/opendir.m4
   m4/pathmax.m4
   m4/pid_t.m4
@@ -1155,6 +1277,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/stat-time.m4
   m4/stat.m4
   m4/std-gnu11.m4
+  m4/stdalign.m4
   m4/stdarg.m4
   m4/stdbool.m4
   m4/stddef_h.m4
@@ -1167,11 +1290,13 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/string_h.m4
   m4/strings_h.m4
   m4/strnlen.m4
+  m4/sys_random_h.m4
   m4/sys_socket_h.m4
   m4/sys_stat_h.m4
   m4/sys_time_h.m4
   m4/sys_types_h.m4
   m4/sys_wait_h.m4
+  m4/tempname.m4
   m4/threadlib.m4
   m4/time_h.m4
   m4/timespec.m4
@@ -1194,5 +1319,6 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/wmemchr.m4
   m4/wmempcpy.m4
   m4/xsize.m4
+  m4/year2038.m4
   m4/zzgnulib.m4
 ])

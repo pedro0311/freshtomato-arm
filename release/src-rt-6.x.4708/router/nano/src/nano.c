@@ -2,7 +2,7 @@
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2020 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -154,7 +154,7 @@ linestruct *copy_node(const linestruct *src)
 #endif
 	dst->lineno = src->lineno;
 #ifndef NANO_TINY
-	dst->has_anchor = FALSE;
+	dst->has_anchor = src->has_anchor;
 #endif
 
 	return dst;
@@ -309,40 +309,37 @@ void do_exit(void)
 		statusbar(_("Cancelled"));
 }
 
-/* Save the current buffer under the given name (or under the name "nano"
- * for a nameless buffer).  If needed, the name is modified to be unique. */
-void emergency_save(const char *plainname)
+/* Save the current buffer under the given name (or "nano.<pid>" when nameless)
+ * with suffix ".save".  If needed, the name is further suffixed to be unique. */
+void emergency_save(const char *filename)
 {
-	bool failed = TRUE;
-	char *targetname;
+	char *plainname, *targetname;
 
-	if (*plainname == '\0')
-		plainname = "nano";
+	if (*filename == '\0') {
+		plainname = nmalloc(28);
+		sprintf(plainname, "nano.%u", getpid());
+	} else
+		plainname = copy_of(filename);
 
 	targetname = get_next_filename(plainname, ".save");
 
-	if (*targetname != '\0')
-		failed = !write_file(targetname, NULL, TRUE, OVERWRITE, FALSE);
-
-	if (!failed)
+	if (*targetname == '\0')
+		fprintf(stderr, _("\nToo many .save files\n"));
+	else if (write_file(targetname, NULL, SPECIAL, OVERWRITE, NONOTES)) {
 		fprintf(stderr, _("\nBuffer written to %s\n"), targetname);
-	else if (*targetname != '\0')
-		fprintf(stderr, _("\nBuffer not written to %s: %s\n"),
-										targetname, strerror(errno));
-	else
-		fprintf(stderr, _("\nToo many .save files"));
-
 #ifndef NANO_TINY
-	/* Try to chmod/chown the saved file to the values of the original file,
-	 * but ignore any failure as we are in a hurry to get out. */
-	if (openfile->statinfo) {
-		IGNORE_CALL_RESULT(chmod(targetname, openfile->statinfo->st_mode));
-		IGNORE_CALL_RESULT(chown(targetname, openfile->statinfo->st_uid,
-												openfile->statinfo->st_gid));
-	}
+		/* Try to chmod/chown the saved file to the values of the original file,
+		 * but ignore any failure as we are in a hurry to get out. */
+		if (openfile->statinfo) {
+			IGNORE_CALL_RESULT(chmod(targetname, openfile->statinfo->st_mode));
+			IGNORE_CALL_RESULT(chown(targetname, openfile->statinfo->st_uid,
+													openfile->statinfo->st_gid));
+		}
 #endif
+	}
 
 	free(targetname);
+	free(plainname);
 }
 
 /* Die gracefully -- by restoring the terminal state and saving any buffers
@@ -351,6 +348,11 @@ void die(const char *msg, ...)
 {
 	va_list ap;
 	openfilestruct *firstone = openfile;
+	static int stabs = 0;
+
+	/* When dying for a second time, just give up. */
+	if (++stabs > 1)
+		exit(11);
 
 	restore_terminal();
 
@@ -365,7 +367,7 @@ void die(const char *msg, ...)
 
 	while (openfile) {
 #ifndef NANO_TINY
-		/* If the current buffer has a lockfile, remove it. */
+		/* If the current buffer has a lock file, remove it. */
 		if (openfile->lock_filename)
 			delete_lockfile(openfile->lock_filename);
 #endif
@@ -518,7 +520,7 @@ void usage(void)
 #ifdef ENABLE_HISTORIES
 	if (!ISSET(RESTRICTED))
 		print_opt("-H", "--historylog",
-					N_("Log & read search/replace string history"));
+					N_("Save & reload old search/replace strings"));
 #endif
 #ifdef ENABLE_NANORC
 	print_opt("-I", "--ignorercfiles", N_("Don't look at nanorc files"));
@@ -546,7 +548,7 @@ void usage(void)
 #ifdef ENABLE_HISTORIES
 	if (!ISSET(RESTRICTED))
 		print_opt("-P", "--positionlog",
-					N_("Log & read location of cursor position"));
+					N_("Save & restore position of the cursor"));
 #endif
 #ifdef ENABLE_JUSTIFY
 	print_opt(_("-Q <regex>"), _("--quotestr=<regex>"),
@@ -1094,7 +1096,7 @@ void do_toggle(int flag)
 		if (flag == AUTOINDENT || flag == BREAK_LONG_LINES || flag == SOFTWRAP)
 			titlebar(NULL);
 
-	if (ISSET(MINIBAR) && (flag == NO_HELP || flag == LINE_NUMBERS ))
+	if (ISSET(MINIBAR) && (flag == NO_HELP || flag == LINE_NUMBERS))
 		return;
 
 	if (flag == CONSTANT_SHOW)
@@ -2053,6 +2055,10 @@ int main(int argc, char **argv)
 		}
 	}
 
+	/* Curses needs TERM; if it is unset, try falling back to a VT220. */
+	if (getenv("TERM") == NULL)
+		setenv("TERM", "vt220", 0);
+
 	/* Enter into curses mode.  Abort if this fails. */
 	if (initscr() == NULL)
 		exit(1);
@@ -2203,7 +2209,7 @@ int main(int argc, char **argv)
 		load_history();
 	if (ISSET(POSITIONLOG))
 		load_poshistory();
-#endif /* ENABLE_HISTORIES */
+#endif
 
 #ifndef NANO_TINY
 	/* If a backup directory was specified and we're not in restricted mode,
@@ -2237,7 +2243,7 @@ int main(int argc, char **argv)
 		die(_("Bad quoting regex \"%s\": %s\n"), quotestr, message);
 	} else
 		free(quotestr);
-#endif /* ENABLE_JUSTIFY */
+#endif
 
 #ifdef ENABLE_SPELLER
 	/* If we don't have an alternative spell checker after reading the
