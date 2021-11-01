@@ -2818,8 +2818,7 @@ getdns/build/Makefile:
 		-DLIBYAML_LIBRARY=$(TOP)/libyaml/src/.libs/libyaml.a \
 		-DCMAKE_DISABLE_FIND_PACKAGE_Libsystemd=TRUE \
 		-DUSE_LIBIDN2=FALSE \
-		-DSTRPTIME_WORKS_EXITCODE=0 \
-		-DSTRPTIME_WORKS_EXITCODE__TRYRUN_OUTPUT=1 \
+		-DFORCE_COMPAT_STRPTIME=TRUE \
 		..
 
 getdns: $(OPENSSLDIR) libyaml getdns/build/Makefile
