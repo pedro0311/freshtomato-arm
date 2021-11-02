@@ -2405,35 +2405,41 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
-transmission/stamp-h1: $(OPENSSLDIR) libcurl libevent zlib
-	cd transmission && ./autogen.sh && \
-		CFLAGS="-O3 -Wall -pipe -marm -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		CPPFLAGS="-O3 -Wall -pipe -marm -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		CXXFLAGS="-O3 -Wall -pipe -marm -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		LDFLAGS="-L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr --enable-lightweight --enable-largefile --enable-utp \
-			--disable-nls --disable-cli --without-gtk --disable-dependency-tracking \
-			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
-			LIBCURL_LIBS="-lcurl" \
-			LIBEVENT_CFLAGS="-I$(TOP)/libevent/include" \
-			LIBEVENT_LIBS="-levent" \
-			OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
-			OPENSSL_LIBS="-lcrypto -lssl" \
-			ZLIB_CFLAGS="-I$(TOP)/zlib" \
-			ZLIB_LIBS="-lz"
-	@touch $@
+transmission/build/Makefile: $(OPENSSLDIR) libcurl libevent zlib
+	@rm -rf transmission/build && mkdir -p transmission/build
+	$(call patch_files,transmission)
+	cd transmission/build && \
+	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+	cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+		-DCMAKE_C_FLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+		-DCMAKE_CXX_FLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+		-DENABLE_LIGHTWEIGHT=TRUE -DENABLE_UTP=TRUE -DENABLE_NLS=FALSE -DENABLE_CLI=FALSE -DENABLE_GTK=FALSE -DENABLE_TESTS=FALSE \
+		-DENABLE_NLS=FALSE -DINSTALL_DOC=FALSE -DUSE_SYSTEM_UTP=FALSE -DUSE_SYSTEM_DHT=FALSE -DUSE_SYSTEM_B64=FALSE -DWITH_SYSTEMD=FALSE \
+		-DCURL_INCLUDE_DIR=$(TOP)/libcurl/include \
+		-DCURL_LIBRARY=$(TOP)/libcurl/lib/.libs/libcurl.so \
+		-DEVENT2_INCLUDE_DIR=$(TOP)/libevent/include \
+		-DEVENT2_LIBRARY=$(TOP)/libevent/.libs/libevent.so \
+		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/include \
+		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/libcrypto.so \
+		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/libssl.so \
+		-DZLIB_INCLUDE_DIR=$(TOP)/zlib \
+		-DZLIB_LIBRARY=$(TOP)/zlib/staged/usr/lib/libz.so \
+		..
 
-transmission: transmission/stamp-h1
+transmission: transmission/build/Makefile
 	@$(SEP)
-	$(MAKE) -C transmission $(PARALLEL_BUILD)
+	$(MAKE) -C transmission/build $(PARALLEL_BUILD)
 
 transmission-clean:
 	-@$(MAKE) -C transmission clean
-	@rm -f transmission/stamp-h1 transmission/Makefile
+	@rm -rf transmission/build
+	$(call unpatch_files,transmission)
 
 transmission-install:
-	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
-	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
+	$(MAKE) -C transmission/build DESTDIR=$(INSTALLDIR)/transmission install
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-show
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-edit
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-create
