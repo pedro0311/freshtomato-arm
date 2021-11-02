@@ -9,7 +9,7 @@ Subject: [PATCH] No return in a function returning non-void
 
 --- minidlna/upnpdescgen.c
 +++ minidlna/upnpdescgen.c
-@@ -526,6 +526,7 @@ genXML(char * str, int * len, int * tmpl
+@@ -525,6 +525,7 @@ genXML(char * str, int * len, int * tmpl
  			pile[top].eltname = eltname;
  		}
  	}
