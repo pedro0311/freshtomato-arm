@@ -435,6 +435,9 @@ const aspapi_t aspapi[] = {
 #ifdef TCONFIG_STUBBY
 	{ "stubby_presets",		asp_stubby_presets		},
 #endif
+#ifdef TCONFIG_DNSCRYPT
+	{ "dnscrypt_presets",		asp_dnscrypt_presets		},
+#endif
 	{ NULL,				NULL				}
 };
 

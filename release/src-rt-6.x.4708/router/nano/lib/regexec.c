@@ -191,7 +191,7 @@ static reg_errcode_t extend_buffers (re_match_context_t *mctx, int min_len);
 
 int
 regexec (const regex_t *__restrict preg, const char *__restrict string,
-	 size_t nmatch, regmatch_t pmatch[], int eflags)
+	 size_t nmatch, regmatch_t pmatch[_REGEX_NELTS (nmatch)], int eflags)
 {
   reg_errcode_t err;
   Idx start, length;
@@ -235,7 +235,7 @@ int
 attribute_compat_text_section
 __compat_regexec (const regex_t *__restrict preg,
 		  const char *__restrict string, size_t nmatch,
-		  regmatch_t pmatch[], int eflags)
+		  regmatch_t pmatch[_REGEX_NELTS (nmatch)], int eflags)
 {
   return regexec (preg, string, nmatch, pmatch,
 		  eflags & (REG_NOTBOL | REG_NOTEOL));
@@ -1220,9 +1220,13 @@ proceed_next_node (const re_match_context_t *mctx, Idx nregs, regmatch_t *regs,
     {
       re_node_set *cur_nodes = &mctx->state_log[*pidx]->nodes;
       re_node_set *edests = &dfa->edests[node];
-      bool ok = re_node_set_insert (eps_via_nodes, node);
-      if (__glibc_unlikely (! ok))
-	return -2;
+
+      if (! re_node_set_contains (eps_via_nodes, node))
+        {
+          bool ok = re_node_set_insert (eps_via_nodes, node);
+          if (__glibc_unlikely (! ok))
+            return -2;
+        }
 
       /* Pick a valid destination, or return -1 if none is found.  */
       Idx dest_node = -1;

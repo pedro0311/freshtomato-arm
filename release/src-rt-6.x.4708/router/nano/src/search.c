@@ -550,7 +550,7 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 			openfile->current_x = bot_x;
 		}
 	}
-#endif /* !NANO_TINY */
+#endif
 
 	came_full_circle = FALSE;
 
@@ -606,17 +606,16 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 		}
 
 		if (choice == 1 || replaceall) {  /* Yes, replace it. */
-			char *copy;
 			size_t length_change;
+			char *altered;
+
+			altered = replace_line(needle);
+
+			length_change = strlen(altered) - strlen(openfile->current->data);
 
 #ifndef NANO_TINY
 			add_undo(REPLACE, NULL);
-#endif
-			copy = replace_line(needle);
 
-			length_change = strlen(copy) - strlen(openfile->current->data);
-
-#ifndef NANO_TINY
 			/* If the mark was on and it was located after the cursor,
 			 * then adjust its x position for any text length changes. */
 			if (was_mark && !right_side_up) {
@@ -632,8 +631,9 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 
 			/* If the mark was not on or it was before the cursor, then
 			 * adjust the cursor's x position for any text length changes. */
-			if (!was_mark || right_side_up) {
+			if (!was_mark || right_side_up)
 #endif
+			{
 				if (openfile->current == real_current &&
 						openfile->current_x < *real_current_x) {
 					if (*real_current_x < openfile->current_x + match_len)
@@ -641,8 +641,8 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 					*real_current_x += length_change;
 #ifndef NANO_TINY
 					bot_x = *real_current_x;
-				}
 #endif
+				}
 			}
 
 			/* Don't find the same zero-length or BOL match again. */
@@ -655,9 +655,9 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 				openfile->current_x += match_len + length_change;
 
 			/* Update the file size, and put the changed line into place. */
-			openfile->totsize += mbstrlen(copy) - mbstrlen(openfile->current->data);
+			openfile->totsize += mbstrlen(altered) - mbstrlen(openfile->current->data);
 			free(openfile->current->data);
-			openfile->current->data = copy;
+			openfile->current->data = altered;
 
 			set_modified();
 			as_an_at = TRUE;

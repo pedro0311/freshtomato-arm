@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANO 1 "version 5.8" "June 2021"
+.TH NANO 1 "version 5.9" "October 2021"
 
 .SH NAME
 nano \- Nano's ANOther editor, inspired by Pico
@@ -26,20 +26,6 @@ nano \- Nano's ANOther editor, inspired by Pico
 .RI [ options "] [[\fB+" line [\fB, column "]] " file ]...
 .sp
 .BR nano " [" \fIoptions "] [[" + [ crCR ]( / | ? ) \fIstring "] " \fIfile ]...
-
-.SH NOTICE
-Since version 4.0, \fBnano\fR by default:
-.sp
-.RS 4
-\(bu does not automatically hard-wrap lines that become overlong,
-.br
-\(bu includes the line below the title bar in the editing area,
-.br
-\(bu does linewise (smooth) scrolling.
-.RE
-.sp
-If you want the old, Pico behavior back, you can use \fB\-\-breaklonglines\fR,
-\fB\-\-emptyline\fR, and \fB\-\-jumpyscrolling\fR (or \fB\-bej\fR for short).
 
 .SH DESCRIPTION
 \fBnano\fP is a small and friendly editor.  It copies the look and feel
@@ -58,7 +44,7 @@ regular expression by inserting \fBc\fR and/or \fBr\fR after the \fB+\fR sign.
 These search modes can be explicitly disabled by using the uppercase variant
 of those letters: \fBC\fR and/or \fBR\fR.  When the string contains spaces,
 it needs to be enclosed in quotes.  To give an example: to open a file at
-the first occurrence of the word "Foo", one would do:
+the first occurrence of the word "Foo", you would do:
 .sp
 .RS 4
 .BI "nano +c/Foo " file
@@ -77,11 +63,11 @@ Any cursor movement or executing any other command will cause the next
 \fB^K\fR to overwrite the cutbuffer.  A \fB^U\fR will paste the current
 contents of the cutbuffer at the current cursor position.
 .sp
-When a more precise piece of text needs to be cut or copied, one can mark
+When a more precise piece of text needs to be cut or copied, you can mark
 its start with \fB^6\fR, move the cursor to its end (the marked text will be
 highlighted), and then use \fB^K\fR to cut it, or \fBM\-6\fR to copy it to the
-cutbuffer.  One can also save the marked text to a file with \fB^O\fR, or
-spell check it with \fB^T\fR.
+cutbuffer.  You can also save the marked text to a file with \fB^O\fR, or
+spell check it with \fB^T^T\fR.
 .sp
 On some terminals, text can be selected also by holding down Shift while
 using the arrow keys.  Holding down the Ctrl or Alt key too will increase
@@ -92,6 +78,20 @@ The two lines at the bottom of the screen show some important commands;
 the built-in help (\fB^G\fR) lists all the available ones.
 The default key bindings can be changed via a \fInanorc\fR file -- see
 .BR nanorc (5).
+
+.SH NOTICE
+Since version 4.0, \fBnano\fR by default:
+.sp
+.RS 4
+\(bu does not automatically hard-wrap lines that become overlong,
+.br
+\(bu includes the line below the title bar in the editing area,
+.br
+\(bu does linewise (smooth) scrolling.
+.RE
+.sp
+If you want the old, Pico behavior back, you can use \fB\-\-breaklonglines\fR,
+\fB\-\-emptyline\fR, and \fB\-\-jumpyscrolling\fR (or \fB\-bej\fR for short).
 
 .SH OPTIONS
 .TP
@@ -118,7 +118,8 @@ by setting the options \fBtitlecolor\fP, \fBstatuscolor\fP, \fBkeycolor\fP,
 nanorc file.  See \fBnanorc\fR(5).
 .TP
 .BR \-E ", " \-\-tabstospaces
-Convert typed tabs to spaces.
+Convert each typed tab to spaces -- to the number of spaces
+that a tab at that position would take up.
 .TP
 .BR \-F ", " \-\-multibuffer
 Read a file into a new buffer by default.
@@ -340,14 +341,14 @@ filename in the center of the title bar.
 .BR \-_ ", " \-\-minibar
 Suppress the title bar and instead show information about
 the current buffer at the bottom of the screen, in the space
-for the status bar.  In this "minibar" the file name is shown
+for the status bar.  In this "minibar" the filename is shown
 on the left, followed by an asterisk if the buffer has been modified.
 On the right are displayed the current line and column number, the
 code of the character under the cursor (in Unicode format: U+xxxx),
 the same flags as are shown by \fB\-\-stateflags\fR, and a percentage
 that expresses how far the cursor is into the file (linewise).
 When a file is loaded or saved, and also when switching between buffers,
-the number of lines in the buffer is displayed after the file name.
+the number of lines in the buffer is displayed after the filename.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
 The line plus column numbers and the character code are displayed only when

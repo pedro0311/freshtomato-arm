@@ -301,12 +301,6 @@ void flip_goto(void)
 void to_files(void)
 {
 }
-void to_first_file(void)
-{
-}
-void to_last_file(void)
-{
-}
 void goto_dir(void)
 {
 }
@@ -1448,11 +1442,9 @@ void shortcut_init(void)
 	add_to_sclist(MGOTOLINE, "^W", 0, to_para_begin, 0);
 	add_to_sclist(MGOTOLINE, "^O", 0, to_para_end, 0);
 #endif
-	add_to_sclist(MGOTOLINE, "^Y", 0, to_first_line, 0);
-	add_to_sclist(MGOTOLINE, "^V", 0, to_last_line, 0);
 	/* Some people are used to having these keystrokes in the Search menu. */
-	add_to_sclist(MWHEREIS, "^Y", 0, to_first_line, 0);
-	add_to_sclist(MWHEREIS, "^V", 0, to_last_line, 0);
+	add_to_sclist(MGOTOLINE|MWHEREIS|MFINDINHELP, "^Y", 0, to_first_line, 0);
+	add_to_sclist(MGOTOLINE|MWHEREIS|MFINDINHELP, "^V", 0, to_last_line, 0);
 #ifdef ENABLE_BROWSER
 	add_to_sclist(MWHEREISFILE, "^Y", 0, to_first_file, 0);
 	add_to_sclist(MWHEREISFILE, "^V", 0, to_last_file, 0);

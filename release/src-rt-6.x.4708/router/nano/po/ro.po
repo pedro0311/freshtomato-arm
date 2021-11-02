@@ -10,7 +10,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nano-5.7-pre1\n"
 "Report-Msgid-Bugs-To: nano-devel@gnu.org\n"
-"POT-Creation-Date: 2021-06-15 10:25+0200\n"
+"POT-Creation-Date: 2021-10-06 10:50+0200\n"
 "PO-Revision-Date: 2021-06-07 11:29+0200\n"
 "Last-Translator: Mihai Cristescu <mihai.cristescu@gmail.com>\n"
 "Language-Team: Romanian <translation-team-ro@lists.sourceforge.net>\n"
@@ -60,45 +60,45 @@ msgstr "Caută"
 msgid " [Backwards]"
 msgstr " [Înapoi]"
 
-#: src/browser.c:350 src/browser.c:590 src/files.c:1176 src/files.c:2136
+#: src/browser.c:350 src/browser.c:603 src/files.c:1178 src/files.c:2160
 #: src/nano.c:309 src/search.c:111 src/search.c:289 src/search.c:714
-#: src/search.c:761 src/text.c:2556 src/text.c:2752
+#: src/search.c:761 src/text.c:2565 src/text.c:2761
 msgid "Cancelled"
 msgstr "S-a renunțat"
 
-#: src/browser.c:376 src/search.c:367
+#: src/browser.c:377 src/search.c:367
 msgid "No current search pattern"
 msgstr "Nici un termen de căutare definit"
 
-#: src/browser.c:419
+#: src/browser.c:432
 #, c-format
 msgid "Cannot open directory: %s"
 msgstr "Nu se poate deschide directorul: %s"
 
 #. TRANSLATORS: This is a prompt.
-#: src/browser.c:589
+#: src/browser.c:602
 msgid "Go To Directory"
 msgstr "Mergi la director"
 
 #. TRANSLATORS: This refers to the confining effect of the
 #. * option --operatingdir, not of --restricted.
-#: src/browser.c:607 src/browser.c:638
+#: src/browser.c:620 src/browser.c:651
 #, c-format
 msgid "Can't go outside of %s"
 msgstr "Nu se poate deplasa în afara %s"
 
-#: src/browser.c:629
+#: src/browser.c:642
 msgid "Can't move up a directory"
 msgstr "Nu se poate schimba mai sus directorul"
 
-#: src/browser.c:644 src/files.c:890 src/files.c:896 src/files.c:1799
-#: src/files.c:1814 src/history.c:292 src/history.c:320 src/history.c:389
-#: src/history.c:447 src/rcfile.c:919 src/rcfile.c:1660
+#: src/browser.c:657 src/files.c:892 src/files.c:898 src/files.c:1816
+#: src/files.c:1831 src/history.c:292 src/history.c:320 src/history.c:390
+#: src/history.c:448 src/rcfile.c:919 src/rcfile.c:1660
 #, c-format
 msgid "Error reading %s: %s"
 msgstr "Eroare la citirea %s: %s"
 
-#: src/browser.c:717
+#: src/browser.c:730
 msgid "The working directory has disappeared"
 msgstr "Directorul de lucru a dispărut"
 
@@ -117,15 +117,15 @@ msgstr "magic_load() a eșuat: %s"
 msgid "magic_file(%s) failed: %s"
 msgstr "magic_file(%s) a eșuat: %s"
 
-#: src/cut.c:162 src/cut.c:227 src/cut.c:540
+#: src/cut.c:162 src/cut.c:227 src/cut.c:548
 msgid "Nothing was cut"
 msgstr "Nimic nu a fost decupat"
 
-#: src/cut.c:590 src/cut.c:636
+#: src/cut.c:598 src/cut.c:644
 msgid "Copied nothing"
 msgstr "Nu s-a copiat nimic"
 
-#: src/cut.c:695
+#: src/cut.c:706
 msgid "Cutbuffer is empty"
 msgstr "Memoria temporară este goală"
 
@@ -149,22 +149,22 @@ msgstr "Nu s-a putut determina numele gazdei: %s"
 msgid "Error writing lock file %s: %s"
 msgstr "Eroare la scrierea fișierului de blocare %s: %s"
 
-#: src/files.c:249
+#: src/files.c:250
 msgid "Someone else is also editing this file"
 msgstr "Cineva mai editează acest fișier"
 
-#: src/files.c:257
+#: src/files.c:259
 #, c-format
 msgid "Error opening lock file %s: %s"
 msgstr "Eroare la deschiderea fișierului de blocare %s: %s"
 
-#: src/files.c:272
+#: src/files.c:274
 #, c-format
 msgid "Bad lock file is ignored: %s"
 msgstr "Fișierul de blocare greșit este ignorat: %s"
 
 #. TRANSLATORS: The second %s is the name of the user, the third that of the editor.
-#: src/files.c:293
+#: src/files.c:295
 #, c-format
 msgid "File %s is being edited by %s (with %s, PID %s); open anyway?"
 msgstr ""
@@ -172,58 +172,58 @@ msgstr ""
 "deschiderea?"
 
 #. TRANSLATORS: Keep the next ten messages at most 76 characters.
-#: src/files.c:351
+#: src/files.c:353
 #, c-format
 msgid "Directory '%s' does not exist"
 msgstr "Directorul „%s” nu există"
 
-#: src/files.c:353
+#: src/files.c:355
 #, c-format
 msgid "Path '%s': %s"
 msgstr "Calea „%s”: %s"
 
-#: src/files.c:355
+#: src/files.c:357
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Calea „%s” nu este un director"
 
-#: src/files.c:357
+#: src/files.c:359
 #, c-format
 msgid "Path '%s' is not accessible"
 msgstr "Calea „%s” nu este accesibilă"
 
-#: src/files.c:360
+#: src/files.c:362
 #, c-format
 msgid "Directory '%s' is not writable"
 msgstr "Directorul „%s” nu este editabil"
 
-#: src/files.c:387
+#: src/files.c:389
 #, c-format
 msgid "Can't read file from outside of %s"
 msgstr "Nu se poate citi un fișier din afara %s"
 
-#: src/files.c:397 src/rcfile.c:895
+#: src/files.c:399 src/rcfile.c:895
 #, c-format
 msgid "\"%s\" is a directory"
 msgstr "„%s” este un director"
 
-#: src/files.c:402 src/rcfile.c:896
+#: src/files.c:404 src/rcfile.c:896
 #, c-format
 msgid "\"%s\" is a device file"
 msgstr "„%s” este un fișier dispozitiv"
 
-#: src/files.c:408
+#: src/files.c:410
 #, c-format
 msgid "\"%s\" is a FIFO"
 msgstr "„%s” este un FIFO"
 
-#: src/files.c:415
+#: src/files.c:417
 #, c-format
 msgid "%s is meant to be read-only"
 msgstr "%s este menit să fie doar pentru citire"
 
 #. TRANSLATORS: First %s is file name, second %s is file format.
-#: src/files.c:526
+#: src/files.c:528
 #, c-format
 msgid "%s -- %zu line (%s)"
 msgid_plural "%s -- %zu lines (%s)"
@@ -231,19 +231,19 @@ msgstr[0] "%s — %zu linie (%s)"
 msgstr[1] "%s — %zu linii (%s)"
 msgstr[2] "%s — %zu de linii (%s)"
 
-#: src/files.c:528 src/files.c:534 src/global.c:1091 src/winio.c:2009
+#: src/files.c:530 src/files.c:536 src/global.c:1085 src/winio.c:2009
 msgid "New Buffer"
 msgstr "Spațiu nou"
 
-#: src/files.c:529
+#: src/files.c:531
 msgid "DOS"
 msgstr "DOS"
 
-#: src/files.c:529
+#: src/files.c:531
 msgid "Mac"
 msgstr "Mac"
 
-#: src/files.c:532
+#: src/files.c:534
 #, c-format
 msgid "%s -- %zu line"
 msgid_plural "%s -- %zu lines"
@@ -251,21 +251,21 @@ msgstr[0] "%s — %zu linie"
 msgstr[1] "%s — %zu linii"
 msgstr[2] "%s — %zu de linii"
 
-#: src/files.c:542
+#: src/files.c:544
 msgid "No more open file buffers"
 msgstr "Nu mai sunt fișiere deschise"
 
-#: src/files.c:762 src/files.c:888 src/files.c:1851
+#: src/files.c:764 src/files.c:890 src/files.c:1870
 msgid "Interrupted"
 msgstr "Întrerupt"
 
-#: src/files.c:808
+#: src/files.c:810
 #, c-format
 msgid "File '%s' is unwritable"
 msgstr "Fișierul „%s” este needitabil"
 
 #. TRANSLATORS: Keep the next three messages at most 78 characters.
-#: src/files.c:812
+#: src/files.c:814
 #, c-format
 msgid "Read %zu line (Converted from Mac format)"
 msgid_plural "Read %zu lines (Converted from Mac format)"
@@ -273,7 +273,7 @@ msgstr[0] "S-a citit %zu linie (convertită din formatul Mac)"
 msgstr[1] "S-au citit %zu linii (convertite din formatul Mac)"
 msgstr[2] "S-au citit %zu de linii (convertite din formatul Mac)"
 
-#: src/files.c:816
+#: src/files.c:818
 #, c-format
 msgid "Read %zu line (Converted from DOS format)"
 msgid_plural "Read %zu lines (Converted from DOS format)"
@@ -281,7 +281,7 @@ msgstr[0] "S-a citit %zu linie (convertită din formatul DOS)"
 msgstr[1] "S-au citit %zu linii (convertite din formatul DOS)"
 msgstr[2] "S-au citit %zu de linii (convertite din formatul DOS)"
 
-#: src/files.c:821
+#: src/files.c:823
 #, c-format
 msgid "Read %zu line"
 msgid_plural "Read %zu lines"
@@ -289,156 +289,156 @@ msgstr[0] "S-a citit %zu linie"
 msgstr[1] "S-au citit %zu linii"
 msgstr[2] "S-au citit %zu de linii"
 
-#: src/files.c:862
+#: src/files.c:864
 msgid "New File"
 msgstr "Fișier nou"
 
-#: src/files.c:865
+#: src/files.c:867
 #, c-format
 msgid "File \"%s\" not found"
 msgstr "Fișierul „%s” nu a fost găsit"
 
-#: src/files.c:872
+#: src/files.c:874
 msgid "Reading from FIFO..."
 msgstr "Se citește din FIFO..."
 
-#: src/files.c:900
+#: src/files.c:902
 msgid "Reading..."
 msgstr "Se citește..."
 
-#: src/files.c:982 src/text.c:2298 src/text.c:2564
+#: src/files.c:984 src/text.c:2307 src/text.c:2573
 #, c-format
 msgid "Could not create pipe: %s"
 msgstr "Nu s-a putut crea o legătură: %s"
 
-#: src/files.c:1021 src/text.c:2110 src/text.c:2378 src/text.c:2599
+#: src/files.c:1023 src/text.c:2119 src/text.c:2387 src/text.c:2608
 #, c-format
 msgid "Could not fork: %s"
 msgstr "Nu s-a putut bifurca: %s"
 
-#: src/files.c:1026
+#: src/files.c:1028
 msgid "Executing..."
 msgstr "Se execută..."
 
 #. TRANSLATORS: This one goes with Undid/Redid messages.
-#: src/files.c:1046 src/files.c:1090
+#: src/files.c:1048 src/files.c:1092
 msgid "filtering"
 msgstr "filtrare"
 
-#: src/files.c:1085
+#: src/files.c:1087
 #, c-format
 msgid "Failed to open pipe: %s"
 msgstr "Eroare la deschidere intrării țeavă: %s"
 
 #. TRANSLATORS: The next six messages are prompts.
-#: src/files.c:1132
+#: src/files.c:1134
 msgid "Command to execute in new buffer"
 msgstr "Comandă de executat într-un spațiu nou"
 
-#: src/files.c:1135
+#: src/files.c:1137
 msgid "Command to execute"
 msgstr "Comandă de executat"
 
-#: src/files.c:1143
+#: src/files.c:1145
 #, c-format
 msgid "File to read unconverted into new buffer [from %s]"
 msgstr "Fișier de citit neconvertit într-un spațiu nou [din %s]"
 
-#: src/files.c:1146
+#: src/files.c:1148
 #, c-format
 msgid "File to read into new buffer [from %s]"
 msgstr "Fișier de citit într-un spațiu nou [din %s]"
 
-#: src/files.c:1151
+#: src/files.c:1153
 #, c-format
 msgid "File to insert unconverted [from %s]"
 msgstr "Fișier de inserat neconvertit [din %s]"
 
-#: src/files.c:1154
+#: src/files.c:1156
 #, c-format
 msgid "File to insert [from %s]"
 msgstr "Fișier de inserat [din %s]"
 
-#: src/files.c:1490
+#: src/files.c:1501
 #, c-format
 msgid "Invalid operating directory: %s\n"
 msgstr "Director de operare nevalid: %s\n"
 
-#: src/files.c:1539
+#: src/files.c:1550
 #, c-format
 msgid "Invalid backup directory: %s\n"
 msgstr "Director pentru copii de rezervă nevalid: %s\n"
 
-#: src/files.c:1594
+#: src/files.c:1605
 msgid "Making backup..."
 msgstr "Se realizează o copie de rezervă..."
 
-#: src/files.c:1626
+#: src/files.c:1637
 msgid "Too many existing backup files"
 msgstr "Prea multe copii de rezervă"
 
-#: src/files.c:1671
+#: src/files.c:1682
 msgid "Cannot read original file"
 msgstr "Nu se poate citi fișierul original"
 
-#: src/files.c:1703
+#: src/files.c:1714
 msgid "Cannot make regular backup"
 msgstr "Nu se poate realiza o copie de rezervă normală"
 
-#: src/files.c:1704
+#: src/files.c:1715
 msgid "Trying again in your home directory"
 msgstr "Se încearcă din nou în directorul dvs. de user"
 
-#: src/files.c:1716
+#: src/files.c:1727
 msgid "Cannot make backup"
 msgstr "Nu se poate realiza o copie de rezervă"
 
 #. TRANSLATORS: Try to keep this message at most 76 characters.
-#: src/files.c:1727
+#: src/files.c:1738
 msgid "Cannot make backup; continue and save actual file? "
 msgstr ""
 "Nu se poate realiza o copie de rezervă; se continuă cu salvarea fișierului "
 "actual?"
 
 #. TRANSLATORS: The %s is the reason of failure.
-#: src/files.c:1732
+#: src/files.c:1743
 #, c-format
 msgid "Cannot make backup: %s"
 msgstr "Nu se poate realiza o copie de rezervă: %s"
 
-#: src/files.c:1768
+#: src/files.c:1777
 #, c-format
 msgid "Can't write outside of %s"
 msgstr "Nu se poate scrie în afara %s"
 
-#: src/files.c:1806 src/files.c:1818 src/text.c:2481 src/text.c:2499
-#: src/text.c:2900
-#, c-format
-msgid "Error writing temp file: %s"
-msgstr "Eroare la scrierea fișierului temporar: %s"
-
-#: src/files.c:1825
-msgid "Writing to FIFO..."
-msgstr "Se scrie în FIFO..."
-
-#: src/files.c:1853 src/files.c:1864 src/files.c:1886 src/files.c:1903
-#: src/files.c:1912 src/files.c:1940 src/files.c:1951 src/files.c:1957
-#: src/history.c:364 src/history.c:374 src/history.c:377 src/history.c:463
-#: src/history.c:487 src/history.c:493
+#: src/files.c:1809 src/files.c:1872 src/files.c:1883 src/files.c:1905
+#: src/files.c:1922 src/files.c:1931 src/files.c:1959 src/files.c:1970
+#: src/files.c:1977 src/history.c:364 src/history.c:375 src/history.c:378
+#: src/history.c:464 src/history.c:489 src/history.c:495
 #, c-format
 msgid "Error writing %s: %s"
 msgstr "Eroare la scrierea %s: %s"
 
-#: src/files.c:1871
+#: src/files.c:1823 src/files.c:1835 src/text.c:2490 src/text.c:2508
+#: src/text.c:2909
+#, c-format
+msgid "Error writing temp file: %s"
+msgstr "Eroare la scrierea fișierului temporar: %s"
+
+#: src/files.c:1842
+msgid "Writing to FIFO..."
+msgstr "Se scrie în FIFO..."
+
+#: src/files.c:1890
 msgid "Writing..."
 msgstr "Se scrie..."
 
-#: src/files.c:1928 src/files.c:1936
+#: src/files.c:1947 src/files.c:1955
 #, c-format
 msgid "Error reading temp file: %s"
 msgstr "Eroare la citirea fișierului temporar: %s"
 
-#: src/files.c:2012
+#: src/files.c:2038
 #, c-format
 msgid "Wrote %zu line"
 msgid_plural "Wrote %zu lines"
@@ -446,927 +446,927 @@ msgstr[0] "S-a scris %zu linie"
 msgstr[1] "S-au scris %zu linii"
 msgstr[2] "S-au scris %zu de linii"
 
-#: src/files.c:2099
+#: src/files.c:2123
 msgid " [DOS Format]"
 msgstr " [Format DOS]"
 
-#: src/files.c:2100
+#: src/files.c:2124
 msgid " [Mac Format]"
 msgstr " [Format Mac]"
 
-#: src/files.c:2101
+#: src/files.c:2125
 msgid " [Backup]"
 msgstr " [Copie de rezervă]"
 
 #. TRANSLATORS: The next six strings are prompts.
-#: src/files.c:2108
+#: src/files.c:2132
 msgid "Prepend Selection to File"
 msgstr "Adaugă selecție la începutul fișierului"
 
-#: src/files.c:2109
+#: src/files.c:2133
 msgid "Append Selection to File"
 msgstr "Adaugă selecție la fișier"
 
-#: src/files.c:2110
+#: src/files.c:2134
 msgid "Write Selection to File"
 msgstr "Scrie selecție în fișier"
 
-#: src/files.c:2112
+#: src/files.c:2136
 msgid "File Name to Prepend to"
 msgstr "Numele fișierului la începutul căruia se adaugă"
 
-#: src/files.c:2113
+#: src/files.c:2137
 msgid "File Name to Append to"
 msgstr "Numele fișierului la sfârșitul căruia se adaugă"
 
-#: src/files.c:2116
+#: src/files.c:2140
 msgid "File Name to Write"
 msgstr "Numele fișierului pentru scriere"
 
 #. TRANSLATORS: Concisely say the screen is too small.
-#: src/files.c:2194
+#: src/files.c:2218
 msgid "Too tiny"
 msgstr "Prea mic"
 
 #. TRANSLATORS: Restricted mode forbids overwriting.
-#: src/files.c:2227
+#: src/files.c:2251
 msgid "File exists -- cannot overwrite"
 msgstr "Fișierul există — nu se poate suprascrie"
 
-#: src/files.c:2237
+#: src/files.c:2260
 msgid "Save file under DIFFERENT NAME? "
 msgstr "Se salvează fișierul cu un NUME DIFERIT? "
 
-#: src/files.c:2245
+#: src/files.c:2268
 #, c-format
 msgid "File \"%s\" exists; OVERWRITE? "
 msgstr "Fișierul „%s” există; SE SUPRASCRIE? "
 
-#: src/files.c:2269
+#: src/files.c:2292
 msgid "File on disk has changed"
 msgstr "Fișierul de pe disc s-a schimbat"
 
 #. TRANSLATORS: Try to keep this at most 76 characters.
-#: src/files.c:2272
+#: src/files.c:2295
 msgid "File was modified since you opened it; continue saving? "
 msgstr ""
 "Fișierul a fost modificat de când a fost deschis, se continuă salvarea? "
 
-#: src/files.c:2648
+#: src/files.c:2671
 msgid "(more)"
 msgstr "(mai mult)"
 
 #. TRANSLATORS: Try to keep the next two strings at most 10 characters.
-#: src/global.c:565
+#: src/global.c:559
 msgid "Exit"
 msgstr "Ieșire"
 
-#: src/global.c:566
+#: src/global.c:560
 msgid "Close"
 msgstr "Închide"
 
 #. TRANSLATORS: The next long series of strings are shortcut descriptions;
 #. * they are best kept shorter than 56 characters, but may be longer.
-#: src/global.c:574
+#: src/global.c:568
 msgid "Cancel the current function"
 msgstr "Anulează funcția curentă"
 
-#: src/global.c:575
+#: src/global.c:569
 msgid "Display this help text"
 msgstr "Afișează acest text de ajutor"
 
-#: src/global.c:576
+#: src/global.c:570
 msgid "Close the current buffer / Exit from nano"
 msgstr "Închide spațiul curent / Ieșire din nano"
 
-#: src/global.c:578
+#: src/global.c:572
 msgid "Write the current buffer (or the marked region) to disk"
 msgstr "Scrie spațiul curent (sau regiunea marcată) pe disc"
 
-#: src/global.c:580
+#: src/global.c:574
 msgid "Insert another file into current buffer (or into new buffer)"
 msgstr "Inserează alt fișier în spațiul curent (sau într-un spațiu nou)"
 
-#: src/global.c:582
+#: src/global.c:576
 msgid "Search forward for a string or a regular expression"
 msgstr "Caută înainte un text sau o expresie regulată"
 
-#: src/global.c:584
+#: src/global.c:578
 msgid "Search backward for a string or a regular expression"
 msgstr "Caută înapoi un text sau o expresie regulată"
 
-#: src/global.c:586
+#: src/global.c:580
 msgid "Cut current line (or marked region) and store it in cutbuffer"
 msgstr ""
 "Decupează linia curentă (sau regiunea marcată) și salveaz-o în memoria "
 "temporară"
 
-#: src/global.c:588
+#: src/global.c:582
 msgid "Paste the contents of cutbuffer at current cursor position"
 msgstr ""
 "Inserează conținutul memoriei temporare la poziția curentă a cursorului"
 
-#: src/global.c:589
+#: src/global.c:583
 msgid "Display the position of the cursor"
 msgstr "Afișează poziția cursorului"
 
-#: src/global.c:591
+#: src/global.c:585
 msgid "Invoke the spell checker, if available"
 msgstr "Lansează corectorul ortografic, dacă este disponibil"
 
-#: src/global.c:593
+#: src/global.c:587
 msgid "Replace a string or a regular expression"
 msgstr "Înlocuiește un text sau o expresie regulată"
 
-#: src/global.c:594
+#: src/global.c:588
 msgid "Go to line and column number"
 msgstr "Sari la linia și coloana numărul"
 
-#: src/global.c:596
+#: src/global.c:590
 msgid "Mark text starting from the cursor position"
 msgstr "Marchează începutul textului de la poziția cursorului"
 
-#: src/global.c:598
+#: src/global.c:592
 msgid "Copy current line (or marked region) and store it in cutbuffer"
 msgstr ""
 "Copiază linia curentă (sau regiunea marcată) și salveaz-o în memoria "
 "temporară"
 
-#: src/global.c:599
+#: src/global.c:593
 msgid "Throw away the current line (or marked region)"
 msgstr "Renunță la linia curentă (sau regiunea marcată)"
 
-#: src/global.c:600
+#: src/global.c:594
 msgid "Indent the current line (or marked lines)"
 msgstr "Indentează linia curentă (sau liniile marcate)"
 
-#: src/global.c:601
+#: src/global.c:595
 msgid "Unindent the current line (or marked lines)"
 msgstr "Deindentează linia curentă (sau liniile marcate)"
 
-#: src/global.c:602
+#: src/global.c:596
 msgid "Undo the last operation"
 msgstr "Anulează ultima operație"
 
-#: src/global.c:603
+#: src/global.c:597
 msgid "Redo the last undone operation"
 msgstr "Refă ultima operație anulată"
 
-#: src/global.c:605
+#: src/global.c:599
 msgid "Go back one character"
 msgstr "Înapoi cu un caracter"
 
-#: src/global.c:606
+#: src/global.c:600
 msgid "Go forward one character"
 msgstr "Avansează cu un caracter"
 
-#: src/global.c:607
+#: src/global.c:601
 msgid "Go back one word"
 msgstr "Înapoi cu un cuvânt"
 
-#: src/global.c:608
+#: src/global.c:602
 msgid "Go forward one word"
 msgstr "Avansează cu un cuvânt"
 
-#: src/global.c:609
+#: src/global.c:603
 msgid "Go to previous line"
 msgstr "Sari la rândul anterior"
 
-#: src/global.c:610
+#: src/global.c:604
 msgid "Go to next line"
 msgstr "Sari la rândul următor"
 
-#: src/global.c:611
+#: src/global.c:605
 msgid "Go to beginning of current line"
 msgstr "Sari la începutul rândului curent"
 
-#: src/global.c:612
+#: src/global.c:606
 msgid "Go to end of current line"
 msgstr "Sari la sfârșitul rândului curent"
 
-#: src/global.c:613
+#: src/global.c:607
 msgid "Go to previous block of text"
 msgstr "Sari la blocul de text anterior"
 
-#: src/global.c:614
+#: src/global.c:608
 msgid "Go to next block of text"
 msgstr "Sari la blocul de text următor"
 
-#: src/global.c:617
+#: src/global.c:611
 msgid "Go to beginning of paragraph; then of previous paragraph"
 msgstr ""
 "Deplasează cursorul la începutul paragrafului; apoi la începutul "
 "paragrafului anterior"
 
-#: src/global.c:619
+#: src/global.c:613
 msgid "Go just beyond end of paragraph; then of next paragraph"
 msgstr ""
 "Deplasează cursorul dincolo de sfârșitul paragrafului; apoi la sfârșitul "
 "paragrafului următor"
 
-#: src/global.c:621
+#: src/global.c:615
 msgid "Go one screenful up"
 msgstr "Deplasează cursorul în sus cu un ecran"
 
-#: src/global.c:622
+#: src/global.c:616
 msgid "Go one screenful down"
 msgstr "Deplasează cursorul în jos cu un ecran"
 
-#: src/global.c:623
+#: src/global.c:617
 msgid "Go to the first line of the file"
 msgstr "Sari la prima linie din fișier"
 
-#: src/global.c:624
+#: src/global.c:618
 msgid "Go to the last line of the file"
 msgstr "Sari la ultima linie din fișier"
 
-#: src/global.c:626
+#: src/global.c:620
 msgid "Go to the matching bracket"
 msgstr "Sari la paranteza pereche"
 
-#: src/global.c:630
+#: src/global.c:624
 msgid "Scroll up one line without moving the cursor textually"
 msgstr "Derulează în sus un rând fără a deplasa textual cursorul"
 
-#: src/global.c:632
+#: src/global.c:626
 msgid "Scroll down one line without moving the cursor textually"
 msgstr "Derulează în jos un rând fără a deplasa textual cursorul"
 
-#: src/global.c:633
+#: src/global.c:627
 msgid "Center the line where the cursor is"
 msgstr "Centrează linia unde este cursorul"
 
-#: src/global.c:636
+#: src/global.c:630
 msgid "Switch to the previous file buffer"
 msgstr "Comută la spațiul fișier anterior"
 
-#: src/global.c:637
+#: src/global.c:631
 msgid "Switch to the next file buffer"
 msgstr "Comută la următorul spațiu fișier"
 
-#: src/global.c:639
+#: src/global.c:633
 msgid "Insert the next keystroke verbatim"
 msgstr "Inserează următoarea apăsare de tastă verbatim"
 
-#: src/global.c:640
+#: src/global.c:634
 msgid "Insert a tab at the cursor position"
 msgstr "Inserează un tab la poziția cursorului"
 
-#: src/global.c:641
+#: src/global.c:635
 msgid "Insert a newline at the cursor position"
 msgstr "Inserează o linie nouă la poziția cursorului"
 
-#: src/global.c:642
+#: src/global.c:636
 msgid "Delete the character under the cursor"
 msgstr "Șterge caracterul de sub cursor"
 
-#: src/global.c:644
+#: src/global.c:638
 msgid "Delete the character to the left of the cursor"
 msgstr "Șterge caracterul de la stânga cursorului"
 
-#: src/global.c:647
+#: src/global.c:641
 msgid "Delete backward from cursor to word start"
 msgstr "Decupează înapoi de la cursor până la începutul cuvântului"
 
-#: src/global.c:649
+#: src/global.c:643
 msgid "Delete forward from cursor to next word start"
 msgstr "Decupează înainte de la cursor până la începutul cuvântului următor"
 
-#: src/global.c:651
+#: src/global.c:645
 msgid "Cut from the cursor position to the end of the file"
 msgstr "Decupează de la cursor până la sfârșitul fișierului"
 
-#: src/global.c:654
+#: src/global.c:648
 msgid "Justify the current paragraph"
 msgstr "Aliniază paragraful curent"
 
-#: src/global.c:655
+#: src/global.c:649
 msgid "Justify the entire file"
 msgstr "Aliniază întregul fișier"
 
-#: src/global.c:659
+#: src/global.c:653
 msgid "Count the number of words, lines, and characters"
 msgstr "Contorizează numărul cuvintelor, liniilor și caracterelor"
 
-#: src/global.c:661
+#: src/global.c:655
 msgid "Refresh (redraw) the current screen"
 msgstr "Reîmprospătează zona de ecran curentă"
 
-#: src/global.c:662
+#: src/global.c:656
 msgid "Suspend the editor (if suspension is enabled)"
 msgstr "Suspendă editorul (dacă suspendarea este activată)"
 
-#: src/global.c:664
+#: src/global.c:658
 msgid "Try and complete the current word"
 msgstr "Încearcă completarea cuvântului curent"
 
-#: src/global.c:668
+#: src/global.c:662
 msgid "Comment/uncomment the current line (or marked lines)"
 msgstr "Comentează/decomentează linia curentă (sau liniile marcate)"
 
-#: src/global.c:670
+#: src/global.c:664
 msgid "Save file without prompting"
 msgstr "Salvează fișierul fără confirmare"
 
-#: src/global.c:671
+#: src/global.c:665
 msgid "Search next occurrence backward"
 msgstr "Caută următoarea apariție înapoi"
 
-#: src/global.c:672
+#: src/global.c:666
 msgid "Search next occurrence forward"
 msgstr "Caută următoarea apariție înainte"
 
-#: src/global.c:674
+#: src/global.c:668
 msgid "Start/stop recording a macro"
 msgstr "Pornește/Oprește înregistrarea unui macro"
 
-#: src/global.c:675
+#: src/global.c:669
 msgid "Run the last recorded macro"
 msgstr "Rulează ultimul macro înregistrat"
 
-#: src/global.c:676
+#: src/global.c:670
 msgid "Place or remove an anchor at the current line"
 msgstr "Adăugă sau elimină o ancoră la linia curentă"
 
-#: src/global.c:677
+#: src/global.c:671
 msgid "Jump backward to the nearest anchor"
 msgstr "Sari înapoi la cea mai apropiată ancoră"
 
-#: src/global.c:678
+#: src/global.c:672
 msgid "Jump forward to the nearest anchor"
 msgstr "Sari înainte la cea mai apropiată ancoră"
 
-#: src/global.c:680
+#: src/global.c:674
 msgid "Toggle the case sensitivity of the search"
 msgstr "Comută sensibilitatea la majuscule a căutării"
 
-#: src/global.c:681
+#: src/global.c:675
 msgid "Reverse the direction of the search"
 msgstr "Inversează direcția căutării"
 
-#: src/global.c:682
+#: src/global.c:676
 msgid "Toggle the use of regular expressions"
 msgstr "Comută folosirea expresiilor regulate"
 
-#: src/global.c:684
+#: src/global.c:678
 msgid "Recall the previous search/replace string"
 msgstr "Reapelează șirul anterior caută/înlocuiește"
 
-#: src/global.c:685
+#: src/global.c:679
 msgid "Recall the next search/replace string"
 msgstr "Reapelează șirul următor caută/înlocuiește"
 
-#: src/global.c:688
+#: src/global.c:682
 msgid "Toggle the use of DOS format"
 msgstr "Comută folosirea formatului DOS"
 
-#: src/global.c:689
+#: src/global.c:683
 msgid "Toggle the use of Mac format"
 msgstr "Comuta folosirea formatului Mac"
 
-#: src/global.c:690
+#: src/global.c:684
 msgid "Toggle appending"
 msgstr "Comută adăugarea la sfârșit"
 
-#: src/global.c:691
+#: src/global.c:685
 msgid "Toggle prepending"
 msgstr "Comută adăugarea la început"
 
-#: src/global.c:692
+#: src/global.c:686
 msgid "Toggle backing up of the original file"
 msgstr "Comută realizarea copiei de rezervă a fișierului original"
 
-#: src/global.c:693
+#: src/global.c:687
 msgid "Execute a function or an external command"
 msgstr "Execută o funcție sau o comandă externă"
 
-#: src/global.c:695
+#: src/global.c:689
 msgid "Pipe the current buffer (or marked region) to the command"
 msgstr "Transmite spațiul curent (sau regiunea marcată) la comanda"
 
-#: src/global.c:696
+#: src/global.c:690
 msgid "Do not convert from DOS/Mac format"
 msgstr "Nu converti fișierele din formatul DOS/Mac"
 
-#: src/global.c:699
+#: src/global.c:693
 msgid "Toggle the use of a new buffer"
 msgstr "Comută folosirea unui spațiu nou"
 
-#: src/global.c:701
+#: src/global.c:695
 msgid "Close buffer without saving it"
 msgstr "Închide spațiul fără a-l salva"
 
-#: src/global.c:703
+#: src/global.c:697
 msgid "Go to file browser"
 msgstr "Mergi la navigatorul de fișiere"
 
-#: src/global.c:704
+#: src/global.c:698
 msgid "Exit from the file browser"
 msgstr "Ieși din navigatorul de fișiere"
 
-#: src/global.c:705
+#: src/global.c:699
 msgid "Go to the first file in the list"
 msgstr "Sari la primul fișier din listă"
 
-#: src/global.c:706
+#: src/global.c:700
 msgid "Go to the last file in the list"
 msgstr "Sari la ultimul fișier din listă"
 
-#: src/global.c:707
+#: src/global.c:701
 msgid "Go to the previous file in the list"
 msgstr "Sari la fișierul anterior din listă"
 
-#: src/global.c:708
+#: src/global.c:702
 msgid "Go to the next file in the list"
 msgstr "Sari la următorul fișier din listă"
 
-#: src/global.c:710
+#: src/global.c:704
 msgid "Go to lefthand column"
 msgstr "Sari la coloana de pe stânga"
 
-#: src/global.c:711
+#: src/global.c:705
 msgid "Go to righthand column"
 msgstr "Sari la coloana de pe dreapta"
 
-#: src/global.c:712
+#: src/global.c:706
 msgid "Go to first row in this column"
 msgstr "Sari la primul rând în această coloană"
 
-#: src/global.c:713
+#: src/global.c:707
 msgid "Go to last row in this column"
 msgstr "Sari la ultimul rând în această coloană"
 
-#: src/global.c:715
+#: src/global.c:709
 msgid "Search forward for a string"
 msgstr "Caută înainte un text"
 
-#: src/global.c:716
+#: src/global.c:710
 msgid "Search backward for a string"
 msgstr "Caută înapoi un text"
 
-#: src/global.c:717
+#: src/global.c:711
 msgid "Refresh the file list"
 msgstr "Reîmprospătează lista de fișiere"
 
-#: src/global.c:718
+#: src/global.c:712
 msgid "Go to directory"
 msgstr "Mergi la director"
 
-#: src/global.c:721
+#: src/global.c:715
 msgid "Invoke the linter, if available"
 msgstr "Lansează analiza statică, dacă este disponibilă"
 
-#: src/global.c:722
+#: src/global.c:716
 msgid "Go to previous linter msg"
 msgstr "Sari la mesajul anterior al analizei statice"
 
-#: src/global.c:723
+#: src/global.c:717
 msgid "Go to next linter msg"
 msgstr "Sari la mesajul următor al analizei statice"
 
-#: src/global.c:725
+#: src/global.c:719
 msgid "Invoke a program to format/arrange/manipulate the buffer"
 msgstr ""
 "Lansează un program pentru a formata/aranja/manipula spațiul de scriere"
 
 #. TRANSLATORS: Try to keep the next thirteen strings at most 10 characters.
-#: src/global.c:739
+#: src/global.c:733
 msgid "Help"
 msgstr "Ajutor"
 
-#: src/global.c:743 src/prompt.c:691
+#: src/global.c:737 src/prompt.c:691
 msgid "Cancel"
 msgstr "Renunță"
 
-#: src/global.c:765
+#: src/global.c:759
 msgid "Write Out"
 msgstr "Salvează"
 
-#: src/global.c:773
+#: src/global.c:767
 msgid "Read File"
 msgstr "Citire fiș."
 
-#: src/global.c:780 src/global.c:819
+#: src/global.c:774 src/global.c:813
 msgid "Justify"
 msgstr "Aliniază"
 
-#: src/global.c:786 src/global.c:877 src/global.c:1023
+#: src/global.c:780 src/global.c:871 src/global.c:1017
 msgid "Refresh"
 msgstr "Reîmprospătează"
 
-#: src/global.c:791 src/global.c:880
+#: src/global.c:785 src/global.c:874
 msgid "Where Is"
 msgstr "Caută"
 
-#: src/global.c:794 src/global.c:855
+#: src/global.c:788 src/global.c:849
 msgid "Replace"
 msgstr "Înlocuiește"
 
 #. TRANSLATORS: This starts a backward search.
-#: src/global.c:798 src/global.c:882 src/global.c:901 src/global.c:1077
+#: src/global.c:792 src/global.c:876 src/global.c:895 src/global.c:1071
 msgid "Where Was"
 msgstr "Caută înapoi"
 
 #. TRANSLATORS: This refers to searching the preceding occurrence.
-#: src/global.c:801 src/global.c:885 src/global.c:905
+#: src/global.c:795 src/global.c:879 src/global.c:899
 msgid "Previous"
 msgstr "Precedent"
 
-#: src/global.c:803 src/global.c:887 src/global.c:907
+#: src/global.c:797 src/global.c:881 src/global.c:901
 msgid "Next"
 msgstr "Următor"
 
-#: src/global.c:807
+#: src/global.c:801
 msgid "Cut"
 msgstr "Taie"
 
-#: src/global.c:810
+#: src/global.c:804
 msgid "Paste"
 msgstr "Lipește"
 
-#: src/global.c:815
+#: src/global.c:809
 msgid "Execute"
 msgstr "Execută"
 
 #. TRANSLATORS: This refers to the position of the cursor.
-#: src/global.c:825
+#: src/global.c:819
 msgid "Location"
 msgstr "Locație"
 
-#: src/global.c:831 src/global.c:868 src/global.c:978
+#: src/global.c:825 src/global.c:862 src/global.c:972
 msgid "Go To Line"
 msgstr "Sari la linie"
 
 #. TRANSLATORS: Try to keep the next ten strings at most 12 characters.
-#: src/global.c:837
+#: src/global.c:831
 msgid "Undo"
 msgstr "Anulează"
 
-#: src/global.c:839
+#: src/global.c:833
 msgid "Redo"
 msgstr "Refă"
 
-#: src/global.c:842
+#: src/global.c:836
 msgid "Set Mark"
 msgstr "Setează marcaj"
 
-#: src/global.c:844
+#: src/global.c:838
 msgid "Copy"
 msgstr "Copiază"
 
-#: src/global.c:848
+#: src/global.c:842
 msgid "Case Sens"
 msgstr "Sensibil Majusc."
 
-#: src/global.c:850
+#: src/global.c:844
 msgid "Reg.exp."
 msgstr "Exp. reg."
 
-#: src/global.c:852
+#: src/global.c:846
 msgid "Backwards"
 msgstr "Înapoi"
 
-#: src/global.c:857
+#: src/global.c:851
 msgid "No Replace"
 msgstr "Nicio înlocuire"
 
-#: src/global.c:861
+#: src/global.c:855
 msgid "Older"
 msgstr "Mai vechi"
 
-#: src/global.c:863
+#: src/global.c:857
 msgid "Newer"
 msgstr "Mai noi"
 
 #. TRANSLATORS: Try to keep the next seven strings at most 10 characters.
-#: src/global.c:874
+#: src/global.c:868
 msgid "Go To Dir"
 msgstr "Mergi la director"
 
-#: src/global.c:897
+#: src/global.c:891
 msgid "To Bracket"
 msgstr "Paranteză"
 
 #. TRANSLATORS: This means move the cursor one character back.
-#: src/global.c:912 src/global.c:917
+#: src/global.c:906 src/global.c:911
 msgid "Back"
 msgstr "Înapoi"
 
-#: src/global.c:914 src/global.c:919
+#: src/global.c:908 src/global.c:913
 msgid "Forward"
 msgstr "Înainte"
 
 #. TRANSLATORS: Try to keep the next ten strings at most 12 characters.
-#: src/global.c:925
+#: src/global.c:919
 msgid "Prev Word"
 msgstr "Cuvântul anterior"
 
-#: src/global.c:927
+#: src/global.c:921
 msgid "Next Word"
 msgstr "Cuvântul următor"
 
-#: src/global.c:931
+#: src/global.c:925
 msgid "Home"
 msgstr "Acasă"
 
-#: src/global.c:933
+#: src/global.c:927
 msgid "End"
 msgstr "Sfârșit"
 
-#: src/global.c:936
+#: src/global.c:930
 msgid "Prev Line"
 msgstr "Rândul ant."
 
-#: src/global.c:938
+#: src/global.c:932
 msgid "Next Line"
 msgstr "Rândul urm."
 
-#: src/global.c:941
+#: src/global.c:935
 msgid "Scroll Up"
 msgstr "Derulează în sus"
 
-#: src/global.c:943
+#: src/global.c:937
 msgid "Scroll Down"
 msgstr "Derulează în jos"
 
-#: src/global.c:947
+#: src/global.c:941
 msgid "Prev Block"
 msgstr "Bloc prec."
 
-#: src/global.c:949
+#: src/global.c:943
 msgid "Next Block"
 msgstr "Bloc următ."
 
 #. TRANSLATORS: Try to keep these two strings at most 16 characters.
-#: src/global.c:953
+#: src/global.c:947
 msgid "Begin of Paragr."
 msgstr "Început paragraf"
 
-#: src/global.c:955
+#: src/global.c:949
 msgid "End of Paragraph"
 msgstr "Sfârșit paragraf"
 
 #. TRANSLATORS: Try to keep the next six strings at most 12 characters.
-#: src/global.c:960 src/global.c:1163
+#: src/global.c:954 src/global.c:1157
 msgid "Prev Page"
 msgstr "Pagina ant."
 
-#: src/global.c:962 src/global.c:1165
+#: src/global.c:956 src/global.c:1159
 msgid "Next Page"
 msgstr "Pagina urm."
 
-#: src/global.c:965
+#: src/global.c:959
 msgid "First Line"
 msgstr "Prima linie"
 
-#: src/global.c:967
+#: src/global.c:961
 msgid "Last Line"
 msgstr "Ultima linie"
 
-#: src/global.c:971
+#: src/global.c:965
 msgid "Prev File"
 msgstr "Fișierul anterior"
 
-#: src/global.c:973
+#: src/global.c:967
 msgid "Next File"
 msgstr "Fișierul următor"
 
 #. TRANSLATORS: The next four strings are names of keyboard keys.
-#: src/global.c:983
+#: src/global.c:977
 msgid "Tab"
 msgstr "Tab"
 
-#: src/global.c:985
+#: src/global.c:979
 msgid "Enter"
 msgstr "Enter"
 
-#: src/global.c:988
+#: src/global.c:982
 msgid "Backspace"
 msgstr "Șterge înapoi"
 
-#: src/global.c:990
+#: src/global.c:984
 msgid "Delete"
 msgstr "Șterge"
 
 #. TRANSLATORS: The next two strings refer to deleting words.
-#: src/global.c:1001
+#: src/global.c:995
 msgid "Chop Left"
 msgstr "Taie stânga"
 
-#: src/global.c:1003
+#: src/global.c:997
 msgid "Chop Right"
 msgstr "Taie dreapta"
 
-#: src/global.c:1005 src/global.c:1148
+#: src/global.c:999 src/global.c:1142
 msgid "Cut Till End"
 msgstr "Taie->Sfârșit"
 
-#: src/global.c:1010 src/global.c:1107
+#: src/global.c:1004 src/global.c:1101
 msgid "Full Justify"
 msgstr "Alin.compl"
 
-#: src/global.c:1015
+#: src/global.c:1009
 msgid "Word Count"
 msgstr "Contorizare cuvinte"
 
-#: src/global.c:1019
+#: src/global.c:1013
 msgid "Verbatim"
 msgstr "Verbatim"
 
-#: src/global.c:1027 src/global.c:1151
+#: src/global.c:1021 src/global.c:1145
 msgid "Suspend"
 msgstr "Suspendă"
 
-#: src/global.c:1031
+#: src/global.c:1025
 msgid "Indent"
 msgstr "Indentează"
 
-#: src/global.c:1033
+#: src/global.c:1027
 msgid "Unindent"
 msgstr "Deindentează"
 
-#: src/global.c:1037
+#: src/global.c:1031
 msgid "Comment Lines"
 msgstr "Comentează"
 
-#: src/global.c:1041
+#: src/global.c:1035
 msgid "Complete"
 msgstr "Completează"
 
-#: src/global.c:1046
+#: src/global.c:1040
 msgid "Record"
 msgstr "Înregistrează"
 
-#: src/global.c:1048
+#: src/global.c:1042
 msgid "Run Macro"
 msgstr "Rulează macro"
 
-#: src/global.c:1051
+#: src/global.c:1045
 msgid "Anchor"
 msgstr "Ancoră"
 
-#: src/global.c:1053
+#: src/global.c:1047
 msgid "Up to anchor"
 msgstr "Sus până la ancoră"
 
-#: src/global.c:1055
+#: src/global.c:1049
 msgid "Down to anchor"
 msgstr "Jos până la ancoră"
 
 #. TRANSLATORS: This *deletes* a line or marked region.
-#: src/global.c:1059
+#: src/global.c:1053
 msgid "Zap"
 msgstr "Zap"
 
-#: src/global.c:1064 src/global.c:1099
+#: src/global.c:1058 src/global.c:1093
 msgid "Spell Check"
 msgstr "Verificare ortografică"
 
-#: src/global.c:1068 src/global.c:1103
+#: src/global.c:1062 src/global.c:1097
 msgid "Linter"
 msgstr "Analiză statică"
 
-#: src/global.c:1070 src/global.c:1111
+#: src/global.c:1064 src/global.c:1105
 msgid "Formatter"
 msgstr "Formator"
 
-#: src/global.c:1082
+#: src/global.c:1076
 msgid "Center"
 msgstr "Centrează"
 
-#: src/global.c:1085
+#: src/global.c:1079
 msgid "Save"
 msgstr "Salvează"
 
-#: src/global.c:1095
+#: src/global.c:1089
 msgid "Pipe Text"
 msgstr "Transmite text"
 
-#: src/global.c:1116
+#: src/global.c:1110
 msgid "Go To Text"
 msgstr "Sari la text"
 
-#: src/global.c:1121
+#: src/global.c:1115
 msgid "DOS Format"
 msgstr "Format DOS"
 
-#: src/global.c:1123
+#: src/global.c:1117
 msgid "Mac Format"
 msgstr "Format Mac"
 
-#: src/global.c:1131
+#: src/global.c:1125
 msgid "Append"
 msgstr "Adaugă la sfârșit"
 
-#: src/global.c:1133
+#: src/global.c:1127
 msgid "Prepend"
 msgstr "Adaugă la început"
 
-#: src/global.c:1136
+#: src/global.c:1130
 msgid "Backup File"
 msgstr "Fișier copie de rezervă"
 
-#: src/global.c:1140
+#: src/global.c:1134
 msgid "No Conversion"
 msgstr "Nicio conversie"
 
-#: src/global.c:1145
+#: src/global.c:1139
 msgid "Execute Command"
 msgstr "Execută comandă"
 
 #. TRANSLATORS: This invokes the file browser.
-#: src/global.c:1160
+#: src/global.c:1154
 msgid "Browse"
 msgstr "Navigator"
 
-#: src/global.c:1168
+#: src/global.c:1162
 msgid "First File"
 msgstr "Primul fișier"
 
-#: src/global.c:1170
+#: src/global.c:1164
 msgid "Last File"
 msgstr "Ultimul fișier"
 
-#: src/global.c:1174
+#: src/global.c:1168
 msgid "Left Column"
 msgstr "Coloana stângă"
 
-#: src/global.c:1176
+#: src/global.c:1170
 msgid "Right Column"
 msgstr "Coloana dreaptă"
 
-#: src/global.c:1178
+#: src/global.c:1172
 msgid "Top Row"
 msgstr "Rândul de sus"
 
-#: src/global.c:1180
+#: src/global.c:1174
 msgid "Bottom Row"
 msgstr "Rândul de jos"
 
-#: src/global.c:1185
+#: src/global.c:1179
 msgid "Discard buffer"
 msgstr "Renunță la spațiu"
 
 #. TRANSLATORS: The next two strings may be up to 37 characters each.
-#: src/global.c:1190
+#: src/global.c:1184
 msgid "Previous Linter message"
 msgstr "Mesajul anterior"
 
-#: src/global.c:1192
+#: src/global.c:1186
 msgid "Next Linter message"
 msgstr "Mesajul următor"
 
 #. TRANSLATORS: The next thirteen strings are toggle descriptions;
 #. * they are best kept shorter than 40 characters, but may be longer.
-#: src/global.c:1548
+#: src/global.c:1540
 msgid "Help mode"
 msgstr "Bara de ajutor"
 
-#: src/global.c:1550
+#: src/global.c:1542
 msgid "Constant cursor position display"
 msgstr "Afișare continuă poziție cursor"
 
-#: src/global.c:1552
+#: src/global.c:1544
 msgid "Soft wrapping of overlong lines"
 msgstr "Despărțire temporară a liniilor lungi"
 
-#: src/global.c:1554
+#: src/global.c:1546
 msgid "Whitespace display"
 msgstr "Afișare spațiu-alb"
 
-#: src/global.c:1556
+#: src/global.c:1548
 msgid "Color syntax highlighting"
 msgstr "Evidențiere sintaxă color"
 
-#: src/global.c:1558
+#: src/global.c:1550
 msgid "Smart home key"
 msgstr "Tastă acasă inteligentă"
 
-#: src/global.c:1560
+#: src/global.c:1552
 msgid "Auto indent"
 msgstr "Auto indentare"
 
-#: src/global.c:1562
+#: src/global.c:1554
 msgid "Cut to end"
 msgstr "Decupare până la sfârșit"
 
-#: src/global.c:1564
+#: src/global.c:1556
 msgid "Hard wrapping of overlong lines"
 msgstr "Despărțire permanentă a liniilor lungi"
 
-#: src/global.c:1566
+#: src/global.c:1558
 msgid "Conversion of typed tabs to spaces"
 msgstr "Conversie a tab-urilor introduse în spații"
 
-#: src/global.c:1568
+#: src/global.c:1560
 msgid "Mouse support"
 msgstr "Funcționalitate maus"
 
-#: src/global.c:1570
+#: src/global.c:1562
 msgid "Suspension"
 msgstr "Suspendare"
 
-#: src/global.c:1572
+#: src/global.c:1564
 msgid "Line numbering"
 msgstr "Numerotare linii"
 
@@ -1722,7 +1722,7 @@ msgstr ""
 msgid "enable/disable"
 msgstr "activare/dezactivare"
 
-#: src/help.c:574 src/nano.c:1576
+#: src/help.c:574 src/nano.c:1578
 msgid "^W = Ctrl+W    M-W = Alt+W"
 msgstr "^W = Ctrl+W    M-W = Alt+W"
 
@@ -1746,6 +1746,11 @@ msgstr ""
 "Nano nu va putea să încarce sau să salveze istoricul sau pozițiile "
 "cursorului.\n"
 
+#: src/history.c:371 src/history.c:470
+#, c-format
+msgid "Cannot limit permissions on %s: %s"
+msgstr ""
+
 #: src/nano.c:201
 msgid "Key is invalid in view mode"
 msgstr "Tastă nevalidă în modul vizualizare"
@@ -1762,7 +1767,14 @@ msgstr "Nici un nume de fișier"
 msgid "Save modified buffer? "
 msgstr "Se salvează spațiul modificat? "
 
-#: src/nano.c:328
+#: src/nano.c:327
+#, c-format
+msgid ""
+"\n"
+"Too many .save files\n"
+msgstr ""
+
+#: src/nano.c:329
 #, c-format
 msgid ""
 "\n"
@@ -1771,25 +1783,7 @@ msgstr ""
 "\n"
 "Spațiu scris în %s\n"
 
-#: src/nano.c:330
-#, c-format
-msgid ""
-"\n"
-"Buffer not written to %s: %s\n"
-msgstr ""
-"\n"
-"Spațiu nu s-a scris în %s: %s\n"
-
-#: src/nano.c:333
-#, c-format
-msgid ""
-"\n"
-"Too many .save files"
-msgstr ""
-"\n"
-"Prea multe fișiere .save"
-
-#: src/nano.c:488
+#: src/nano.c:490
 #, c-format
 msgid ""
 "Usage: nano [OPTIONS] [[+LINE[,COLUMN]] FILE]...\n"
@@ -1800,7 +1794,7 @@ msgstr ""
 
 #. TRANSLATORS: The next two strings are part of the --help output.
 #. * It's best to keep its lines within 80 characters.
-#: src/nano.c:492
+#: src/nano.c:494
 #, c-format
 msgid ""
 "To place the cursor on a specific line of a file, put the line number with\n"
@@ -1811,7 +1805,7 @@ msgstr ""
 "cu un „+” înainte de numele fişierului.  Numărul coloanei poate fi adăugat\n"
 "după o virgulă.\n"
 
-#: src/nano.c:494
+#: src/nano.c:496
 #, c-format
 msgid ""
 "When a filename is '-', nano reads data from standard input.\n"
@@ -1821,460 +1815,460 @@ msgstr ""
 "\n"
 
 #. TRANSLATORS: The next three are column headers of the --help output.
-#: src/nano.c:496
+#: src/nano.c:498
 msgid "Option"
 msgstr "Opțiune"
 
-#: src/nano.c:496
+#: src/nano.c:498
 msgid "Long option"
 msgstr "Opțiune lungă"
 
-#: src/nano.c:496
+#: src/nano.c:498
 msgid "Meaning"
 msgstr "Semnificație"
 
 #. TRANSLATORS: The next forty or so strings are option descriptions
 #. * for the --help output.  Try to keep them at most 40 characters.
-#: src/nano.c:499
+#: src/nano.c:501
 msgid "Enable smart home key"
 msgstr "Activează tasta acasă inteligentă"
 
-#: src/nano.c:501
+#: src/nano.c:503
 msgid "Save backups of existing files"
 msgstr "Salvează copii de rezervă ale fișierelor existente"
 
-#: src/nano.c:502
+#: src/nano.c:504
 msgid "-C <dir>"
 msgstr "-C <dir>"
 
-#: src/nano.c:502
+#: src/nano.c:504
 msgid "--backupdir=<dir>"
 msgstr "--backupdir=<dir>"
 
-#: src/nano.c:503
+#: src/nano.c:505
 msgid "Directory for saving unique backup files"
 msgstr "Director pentru salvarea fișierelor unice copii de rezervă"
 
-#: src/nano.c:506
+#: src/nano.c:508
 msgid "Use bold instead of reverse video text"
 msgstr "Folosește gras în loc de video inversat"
 
-#: src/nano.c:508
+#: src/nano.c:510
 msgid "Convert typed tabs to spaces"
 msgstr "Convertește tab-urile introduse în spații"
 
-#: src/nano.c:513
+#: src/nano.c:515
 msgid "Read a file into a new buffer by default"
 msgstr "Citește un fișier într-un spațiu nou în mod implicit"
 
-#: src/nano.c:516
+#: src/nano.c:518
 msgid "Use (vim-style) lock files"
 msgstr "Folosește fișiere de blocare în stilul vim"
 
-#: src/nano.c:521
-msgid "Log & read search/replace string history"
-msgstr "Scrie în jurnal și citește istoria șirurilor de căutare/înlocuire"
+#: src/nano.c:523
+msgid "Save & reload old search/replace strings"
+msgstr ""
 
-#: src/nano.c:524
+#: src/nano.c:526
 msgid "Don't look at nanorc files"
 msgstr "Nu te uita la fișierele nanorc"
 
-#: src/nano.c:527
+#: src/nano.c:529
 msgid "-J <number>"
 msgstr "-J <număr>"
 
-#: src/nano.c:527
+#: src/nano.c:529
 msgid "--guidestripe=<number>"
 msgstr "--guidestripe=<număr>"
 
-#: src/nano.c:528
+#: src/nano.c:530
 msgid "Show a guiding bar at this column"
 msgstr "Arată o bară de ghidare la această coloană"
 
-#: src/nano.c:531
+#: src/nano.c:533
 msgid "Fix numeric keypad key confusion problem"
 msgstr "Rezolvă problema de confuzie a tastelor numerice"
 
-#: src/nano.c:534
+#: src/nano.c:536
 msgid "Don't add an automatic newline"
 msgstr "Nu adăuga automat o linie nouă"
 
-#: src/nano.c:538
+#: src/nano.c:540
 msgid "Trim tail spaces when hard-wrapping"
 msgstr "Elimină spațiile de capăt atunci când se despart permanent liniile"
 
-#: src/nano.c:542
+#: src/nano.c:544
 msgid "Don't convert files from DOS/Mac format"
 msgstr "Nu converti fișierele din formatul DOS/Mac"
 
-#: src/nano.c:544
+#: src/nano.c:546
 msgid "Leading whitespace means new paragraph"
 msgstr "Spațiu alb la început înseamnă un paragraf nou"
 
-#: src/nano.c:549
-msgid "Log & read location of cursor position"
-msgstr "Scrie în jurnal & citește locația poziției cursorului"
+#: src/nano.c:551
+msgid "Save & restore position of the cursor"
+msgstr ""
 
-#: src/nano.c:552
+#: src/nano.c:554
 msgid "-Q <regex>"
 msgstr "-Q <regex>"
 
-#: src/nano.c:552
+#: src/nano.c:554
 msgid "--quotestr=<regex>"
 msgstr "--quotestr=<regex>"
 
 #. TRANSLATORS: This refers to email quoting,
 #. * like the > in: > quoted text.
-#: src/nano.c:555
+#: src/nano.c:557
 msgid "Regular expression to match quoting"
 msgstr "Expresie regulată care potrivește citări"
 
-#: src/nano.c:558
+#: src/nano.c:560
 msgid "Restrict access to the filesystem"
 msgstr "Restricționează accesul la sistemul de fișiere"
 
-#: src/nano.c:560
+#: src/nano.c:562
 msgid "Display overlong lines on multiple rows"
 msgstr "Afișează liniile supralungi pe mai multe rânduri"
 
-#: src/nano.c:561
+#: src/nano.c:563
 msgid "-T <number>"
 msgstr "-T <număr>"
 
-#: src/nano.c:561
+#: src/nano.c:563
 msgid "--tabsize=<number>"
 msgstr "--tabsize=<număr>"
 
-#: src/nano.c:562
+#: src/nano.c:564
 msgid "Make a tab this number of columns wide"
 msgstr "Realizează un tab de lățime atâtea coloane"
 
-#: src/nano.c:564
+#: src/nano.c:566
 msgid "Wipe status bar upon next keystroke"
 msgstr "Șterge bara de status la următoarea apăsare de tastă"
 
-#: src/nano.c:565
+#: src/nano.c:567
 msgid "Print version information and exit"
 msgstr "Afișează informații despre versiune și termină"
 
-#: src/nano.c:568
+#: src/nano.c:570
 msgid "Detect word boundaries more accurately"
 msgstr "Detectează limitele cuvântului mai exact"
 
-#: src/nano.c:569
+#: src/nano.c:571
 msgid "-X <string>"
 msgstr "-X <string>"
 
-#: src/nano.c:569
+#: src/nano.c:571
 msgid "--wordchars=<string>"
 msgstr "--wordchars=<string>"
 
-#: src/nano.c:570
+#: src/nano.c:572
 msgid "Which other characters are word parts"
 msgstr "Care celelalte caractere sunt părți de cuvânt"
 
-#: src/nano.c:574
+#: src/nano.c:576
 msgid "-Y <name>"
 msgstr "-Y <nume>"
 
-#: src/nano.c:574
+#: src/nano.c:576
 msgid "--syntax=<name>"
 msgstr "--syntax=<nume>"
 
-#: src/nano.c:575
+#: src/nano.c:577
 msgid "Syntax definition to use for coloring"
 msgstr "Definiția sintaxei de folosit pentru colorare"
 
-#: src/nano.c:578
+#: src/nano.c:580
 msgid "Let Bsp and Del erase a marked region"
 msgstr "Bsp și Del șterg o regiune marcată"
 
-#: src/nano.c:579
+#: src/nano.c:581
 msgid "When soft-wrapping, do it at whitespace"
 msgstr "Despărțirea temporară se face la spațiile albe"
 
-#: src/nano.c:582
+#: src/nano.c:584
 msgid "Automatically hard-wrap overlong lines"
 msgstr "Rupe permanent liniile lungi"
 
-#: src/nano.c:584
+#: src/nano.c:586
 msgid "Constantly show cursor position"
 msgstr "Arată continuu poziția cursorului"
 
-#: src/nano.c:586
+#: src/nano.c:588
 msgid "Fix Backspace/Delete confusion problem"
 msgstr "Repară confuzia cu tastele Backspace/Delete"
 
-#: src/nano.c:588
+#: src/nano.c:590
 msgid "Keep the line below the title bar empty"
 msgstr "Păstrează linia de sub bara de titlu goală"
 
-#: src/nano.c:591
+#: src/nano.c:593
 msgid "-f <file>"
 msgstr "-f <fișier>"
 
-#: src/nano.c:591
+#: src/nano.c:593
 msgid "--rcfile=<file>"
 msgstr "--rcfile=<fișier>"
 
-#: src/nano.c:592
+#: src/nano.c:594
 msgid "Use only this file for configuring nano"
 msgstr "Folosește numai acest fișier pentru a configura nano"
 
-#: src/nano.c:595
+#: src/nano.c:597
 msgid "Show cursor in file browser & help text"
 msgstr "Arată cursor în navigatorul de fișiere & textul de ajutor"
 
-#: src/nano.c:597
+#: src/nano.c:599
 msgid "Show this help text and exit"
 msgstr "Arată acest text de ajutor și termină"
 
-#: src/nano.c:599
+#: src/nano.c:601
 msgid "Automatically indent new lines"
 msgstr "Indentează automat liniile noi"
 
-#: src/nano.c:600
+#: src/nano.c:602
 msgid "Scroll per half-screen, not per line"
 msgstr "Deruleză cu jumătăți de ecran, nu cu rânduri"
 
-#: src/nano.c:601
+#: src/nano.c:603
 msgid "Cut from cursor to end of line"
 msgstr "Decupează de la cursor până la sfârșitul liniei"
 
-#: src/nano.c:604
+#: src/nano.c:606
 msgid "Show line numbers in front of the text"
 msgstr "Arată numărul liniei în fața textului"
 
-#: src/nano.c:607
+#: src/nano.c:609
 msgid "Enable the use of the mouse"
 msgstr "Activează folosirea mausului"
 
-#: src/nano.c:610
+#: src/nano.c:612
 msgid "Do not read the file (only write it)"
 msgstr "Nu citi fișierul (doar scrie-l)"
 
-#: src/nano.c:613
+#: src/nano.c:615
 msgid "-o <dir>"
 msgstr "-o <dir>"
 
-#: src/nano.c:613
+#: src/nano.c:615
 msgid "--operatingdir=<dir>"
 msgstr "--operatingdir=<dir>"
 
-#: src/nano.c:614
+#: src/nano.c:616
 msgid "Set operating directory"
 msgstr "Setează directorul de operare"
 
-#: src/nano.c:616
+#: src/nano.c:618
 msgid "Preserve XON (^Q) and XOFF (^S) keys"
 msgstr "Conservă tastele XON (^Q) și XOFF (^S)"
 
-#: src/nano.c:618
+#: src/nano.c:620
 msgid "Show a position+portion indicator"
 msgstr "Afișează o poziție+indicator de porțiune"
 
-#: src/nano.c:621
+#: src/nano.c:623
 msgid "-r <number>"
 msgstr "-r <număr>"
 
-#: src/nano.c:621
+#: src/nano.c:623
 msgid "--fill=<number>"
 msgstr "--fill=<număr>"
 
-#: src/nano.c:622
+#: src/nano.c:624
 msgid "Set width for hard-wrap and justify"
 msgstr "Setează lățimea pentru ruperea permanentă și aliniază"
 
-#: src/nano.c:626
+#: src/nano.c:628
 msgid "-s <program>"
 msgstr "-s <program>"
 
-#: src/nano.c:626
+#: src/nano.c:628
 msgid "--speller=<program>"
 msgstr "--speller=<program>"
 
-#: src/nano.c:627
+#: src/nano.c:629
 msgid "Use this alternative spell checker"
 msgstr "Folosește corectorul ortografic alternativ"
 
-#: src/nano.c:629
+#: src/nano.c:631
 msgid "Save changes on exit, don't prompt"
 msgstr "Salvează schimbările la ieșire, nu întreba"
 
-#: src/nano.c:631
+#: src/nano.c:633
 msgid "Save a file by default in Unix format"
 msgstr "Salvează un fișier în mod implicit în format Unix"
 
-#: src/nano.c:633
+#: src/nano.c:635
 msgid "View mode (read-only)"
 msgstr "Mod vizualizare (doar citire)"
 
-#: src/nano.c:635
+#: src/nano.c:637
 msgid "Don't hard-wrap long lines [default]"
 msgstr "Nu rupe permanent liniile lungi [implicit]"
 
-#: src/nano.c:637
+#: src/nano.c:639
 msgid "Don't show the two help lines"
 msgstr "Nu arăta cele două rânduri de ajutor"
 
-#: src/nano.c:639
+#: src/nano.c:641
 msgid "Make Ctrl+Right stop at word ends"
 msgstr "Face Ctrl+Dreapta să se oprească la sfârșitul cuvintelor"
 
-#: src/nano.c:642
+#: src/nano.c:644
 msgid "Enable suspension"
 msgstr "Activează suspendarea"
 
-#: src/nano.c:644
+#: src/nano.c:646
 msgid "Show some states on the title bar"
 msgstr "Arată câteva stări pe bara de titlu"
 
-#: src/nano.c:645
+#: src/nano.c:647
 msgid "Show a feedback bar at the bottom"
 msgstr "Arată o bară de informații jos"
 
-#: src/nano.c:648
+#: src/nano.c:650
 msgid "Also try magic to determine syntax"
 msgstr "Încearcă și magie pentru determinarea sintaxei"
 
-#: src/nano.c:659
+#: src/nano.c:661
 #, c-format
 msgid " GNU nano, version %s\n"
 msgstr " GNU nano, versiunea %s\n"
 
-#: src/nano.c:663
+#: src/nano.c:665
 #, c-format
 msgid " (C) 2014-%s the contributors to nano\n"
 msgstr " (C) 2014-%s colaboratorii la nano\n"
 
-#: src/nano.c:665
+#: src/nano.c:667
 #, c-format
 msgid " Compiled options:"
 msgstr " Opțiuni compilate:"
 
-#: src/nano.c:814
+#: src/nano.c:816
 msgid "Could not reconnect stdin to keyboard\n"
 msgstr "Nu s-a putut reconecta stdin la tastatură\n"
 
-#: src/nano.c:832
+#: src/nano.c:834
 #, c-format
 msgid "Reading data from keyboard; type ^D or ^D^D to finish.\n"
 msgstr "Se citește de la tastatură; scrieți ^D sau ^D^D pentru a finaliza.\n"
 
-#: src/nano.c:842
+#: src/nano.c:844
 #, c-format
 msgid "Failed to open stdin: %s"
 msgstr "Deschiderea stdin a eșuat: %s"
 
-#: src/nano.c:919
+#: src/nano.c:921
 msgid "Received SIGHUP or SIGTERM\n"
 msgstr "Am recepționat SIGHUP sau SIGTERM\n"
 
-#: src/nano.c:926
+#: src/nano.c:928
 #, c-format
 msgid "Sorry! Nano crashed!  Code: %d.  Please report a bug.\n"
 msgstr ""
 "Ne pare rău! Nano s-a întrerupt! Cod: %d. Vă rugăm să raportați problema.\n"
 
-#: src/nano.c:941
+#: src/nano.c:943
 #, c-format
 msgid "Use \"fg\" to return to nano.\n"
 msgstr "Folosiți „fg” pentru a reveni la nano.\n"
 
-#: src/nano.c:957
+#: src/nano.c:959
 msgid "Suspension is not enabled"
 msgstr "Suspendarea nu este activată"
 
-#: src/nano.c:1112
+#: src/nano.c:1114
 msgid "enabled"
 msgstr "activată"
 
-#: src/nano.c:1112
+#: src/nano.c:1114
 msgid "disabled"
 msgstr "dezactivată"
 
 #. TRANSLATORS: This refers to a sequence of escape codes
 #. * (from the keyboard) that nano does not recognize.
-#: src/nano.c:1255
+#: src/nano.c:1257
 msgid "Unknown sequence"
 msgstr "Secvență necunoscută"
 
-#: src/nano.c:1257
+#: src/nano.c:1259
 msgid "Unbound key"
 msgstr "Tastă nealocată"
 
-#: src/nano.c:1261
+#: src/nano.c:1263
 #, c-format
 msgid "Unbindable key: M-^%c"
 msgstr "Tastă nealocabilă: M-^%c"
 
-#: src/nano.c:1266
+#: src/nano.c:1268
 #, c-format
 msgid "Unbound key: Sh-M-%c"
 msgstr "Tastă nealocată: Sh-M-%c"
 
-#: src/nano.c:1269
+#: src/nano.c:1271
 #, c-format
 msgid "Unbound key: M-%c"
 msgstr "Tastă nealocată: M-%c"
 
-#: src/nano.c:1271
+#: src/nano.c:1273
 msgid "Unbindable key: ^["
 msgstr "Tastă nealocabilă: ^["
 
-#: src/nano.c:1273
+#: src/nano.c:1275
 #, c-format
 msgid "Unbound key: ^%c"
 msgstr "Tastă nealocată: ^%c"
 
-#: src/nano.c:1276
+#: src/nano.c:1278
 #, c-format
 msgid "Unbound key: %c"
 msgstr "Tastă nealocată: %c"
 
-#: src/nano.c:1845 src/rcfile.c:1626
+#: src/nano.c:1847 src/rcfile.c:1626
 #, c-format
 msgid "Guide column \"%s\" is invalid"
 msgstr "Coloana de ghidare „%s” este nevalidă"
 
-#: src/nano.c:1892 src/rcfile.c:1631
+#: src/nano.c:1894 src/rcfile.c:1631
 #, c-format
 msgid "Requested tab size \"%s\" is invalid"
 msgstr "Mărimea tab solicitată „%s” este nevalidă"
 
-#: src/nano.c:1996 src/rcfile.c:1576
+#: src/nano.c:1998 src/rcfile.c:1576
 #, c-format
 msgid "Requested fill size \"%s\" is invalid"
 msgstr "Mărimea de umplere solicitată „%s” este nevalidă"
 
-#: src/nano.c:2051
+#: src/nano.c:2053
 #, c-format
 msgid "Type '%s -h' for a list of available options.\n"
 msgstr "Tastați „%s -h” pentru o listă de opțiuni disponibile.\n"
 
-#: src/nano.c:2237
+#: src/nano.c:2243
 #, c-format
 msgid "Bad quoting regex \"%s\": %s\n"
 msgstr "Citare regex greșită „%s”: %s\n"
 
-#: src/nano.c:2392
+#: src/nano.c:2398
 #, c-format
 msgid "Invalid search modifier '%c'"
 msgstr "Modificator de căutare nevalid „%c”"
 
-#: src/nano.c:2403
+#: src/nano.c:2409
 msgid "Empty search string"
 msgstr "Șir de căutare gol"
 
-#: src/nano.c:2412 src/search.c:778
+#: src/nano.c:2418 src/search.c:778
 msgid "Invalid line or column number"
 msgstr "Număr de linie sau coloană nevalid"
 
-#: src/nano.c:2474
+#: src/nano.c:2480
 msgid "Can open just one file\n"
 msgstr "Se poate deschide doar un fișier\n"
 
-#: src/nano.c:2492
+#: src/nano.c:2498
 msgid "Welcome to nano.  For basic help, type Ctrl+G."
 msgstr "Bine ați venit la Nano. Pentru ajutor de bază, tastați CTRL+G."
 
@@ -2615,234 +2609,234 @@ msgstr "Comentarea nu este suportată pentru acest tip de fișier"
 msgid "Cannot comment past end of file"
 msgstr "Nu se poate comenta după sfârșitul fișierului"
 
-#: src/text.c:507
+#: src/text.c:511
 msgid "Nothing to undo"
 msgstr "Nimic de anulat"
 
 #. TRANSLATORS: The next thirteen strings describe actions
 #. * that are undone or redone.  They are all nouns, not verbs.
-#: src/text.c:518 src/text.c:578 src/text.c:694 src/text.c:754
+#: src/text.c:522 src/text.c:582 src/text.c:698 src/text.c:758
 msgid "addition"
 msgstr "adiție"
 
-#: src/text.c:526 src/text.c:706
+#: src/text.c:530 src/text.c:710
 msgid "line break"
 msgstr "întrerupere liniei"
 
-#: src/text.c:542 src/text.c:716
+#: src/text.c:546 src/text.c:720
 msgid "deletion"
 msgstr "ștergere"
 
-#: src/text.c:552 src/text.c:722
+#: src/text.c:556 src/text.c:726
 msgid "line join"
 msgstr "fuziune de linii"
 
-#: src/text.c:568 src/text.c:737
+#: src/text.c:572 src/text.c:741
 msgid "replacement"
 msgstr "înlocuire"
 
-#: src/text.c:588 src/text.c:758
+#: src/text.c:592 src/text.c:762
 msgid "erasure"
 msgstr "ștergere"
 
 #. TRANSLATORS: Remember: these are nouns, NOT verbs.
-#: src/text.c:594 src/text.c:763
+#: src/text.c:598 src/text.c:767
 msgid "cut"
 msgstr "decupaj"
 
-#: src/text.c:598 src/text.c:767
+#: src/text.c:602 src/text.c:771
 msgid "paste"
 msgstr "lipire"
 
-#: src/text.c:605 src/text.c:771
+#: src/text.c:609 src/text.c:775
 msgid "insertion"
 msgstr "inserare"
 
-#: src/text.c:634 src/text.c:794
+#: src/text.c:638 src/text.c:798
 msgid "indent"
 msgstr "indentare"
 
-#: src/text.c:638 src/text.c:798
+#: src/text.c:642 src/text.c:802
 msgid "unindent"
 msgstr "deindentare"
 
-#: src/text.c:643 src/text.c:803
+#: src/text.c:647 src/text.c:807
 msgid "comment"
 msgstr "comentare"
 
-#: src/text.c:647 src/text.c:807
+#: src/text.c:651 src/text.c:811
 msgid "uncomment"
 msgstr "decomentare"
 
-#: src/text.c:655
+#: src/text.c:659
 #, c-format
 msgid "Undid %s"
 msgstr "Acțiune %s anulată"
 
-#: src/text.c:681
+#: src/text.c:685
 msgid "Nothing to redo"
 msgstr "Nimic de refăcut"
 
-#: src/text.c:815
+#: src/text.c:819
 #, c-format
 msgid "Redid %s"
 msgstr "Acțiune %s refăcută"
 
 #. TRANSLATORS: This one goes with Undid/Redid messages.
-#: src/text.c:1742 src/text.c:1956
+#: src/text.c:1751 src/text.c:1967
 msgid "justification"
 msgstr "aliniere"
 
-#: src/text.c:1753 src/text.c:2073
+#: src/text.c:1762 src/text.c:2082
 msgid "Selection is empty"
 msgstr "Selecția este goală"
 
-#: src/text.c:1965
+#: src/text.c:1971
 msgid "Justified selection"
 msgstr "Selecție aliniată"
 
-#: src/text.c:1969
+#: src/text.c:1975
 msgid "Justified file"
 msgstr "Fișier aliniat"
 
-#: src/text.c:1971
+#: src/text.c:1977
 msgid "Justified paragraph"
 msgstr "Paragraful aliniat"
 
-#: src/text.c:2076
+#: src/text.c:2085
 msgid "Buffer is empty"
 msgstr "Spațiul este gol"
 
-#: src/text.c:2114 src/text.c:2702
+#: src/text.c:2123 src/text.c:2711
 #, c-format
 msgid "Error invoking '%s'"
 msgstr "Eroare la apelarea „%s”"
 
-#: src/text.c:2118
+#: src/text.c:2127
 #, c-format
 msgid "Program '%s' complained"
 msgstr "Programul „%s” a obiectat"
 
-#: src/text.c:2126
+#: src/text.c:2135
 msgid "Nothing changed"
 msgstr "Nu s-a schimbat nimic"
 
 #. TRANSLATORS: The next two go with Undid/Redid messages.
-#: src/text.c:2155
+#: src/text.c:2164
 msgid "spelling correction"
 msgstr "corecție ortografică"
 
-#: src/text.c:2155
+#: src/text.c:2164
 msgid "formatting"
 msgstr "formatare"
 
-#: src/text.c:2174 src/text.c:2461
+#: src/text.c:2183 src/text.c:2470
 msgid "Finished checking spelling"
 msgstr "Verificarea ortografică s-a terminat"
 
-#: src/text.c:2176
+#: src/text.c:2185
 msgid "Buffer has been processed"
 msgstr "Spațiul de scriere a fost procesat"
 
-#: src/text.c:2219
+#: src/text.c:2228
 #, c-format
 msgid "Unfindable word: %s"
 msgstr "Cuvânt negăsit: %s"
 
 #. TRANSLATORS: This is a prompt.
-#: src/text.c:2238
+#: src/text.c:2247
 msgid "Edit a replacement"
 msgstr "Editează o înlocuire"
 
 #. TRANSLATORS: Shown after fixing misspellings in one word.
-#: src/text.c:2251
+#: src/text.c:2260
 msgid "Next word..."
 msgstr "Cuvântul următor..."
 
-#: src/text.c:2302
+#: src/text.c:2311
 msgid "Invoking spell checker..."
 msgstr "Se lansează corectorul ortografic..."
 
-#: src/text.c:2387 src/text.c:2608
+#: src/text.c:2396 src/text.c:2617
 msgid "Could not get size of pipe buffer"
 msgstr "Nu am putut obține dimensiunea spațiului țeavă"
 
-#: src/text.c:2455
+#: src/text.c:2464
 msgid "Error invoking \"uniq\""
 msgstr "Eroare la apelarea „uniq”"
 
-#: src/text.c:2457
+#: src/text.c:2466
 msgid "Error invoking \"sort\""
 msgstr "Eroare la apelarea „sort”"
 
-#: src/text.c:2459
+#: src/text.c:2468
 msgid "Error invoking \"spell\""
 msgstr "Eroare la apelarea „spell”"
 
-#: src/text.c:2543
+#: src/text.c:2552
 msgid "No linter is defined for this type of file"
 msgstr "Nu este definit niciun linter pentru acest tip de fișier"
 
-#: src/text.c:2553
+#: src/text.c:2562
 msgid "Save modified buffer before linting?"
 msgstr "Se salvează spațiul modificat înainte de analiza statică?"
 
-#: src/text.c:2570
+#: src/text.c:2579
 msgid "Invoking linter..."
 msgstr "Se lansează analiza statică..."
 
-#: src/text.c:2707
+#: src/text.c:2716
 #, c-format
 msgid "Got 0 parsable lines from command: %s"
 msgstr "Comanda „%s” nu a produs niciun rând analizabil"
 
-#: src/text.c:2745
+#: src/text.c:2754
 #, c-format
 msgid "This message is for unopened file %s, open it in a new buffer?"
 msgstr ""
 "Acest mesaj este pentru fișierul nedeschis %s, se deschide într-un spațiu "
 "nou?"
 
-#: src/text.c:2784
+#: src/text.c:2793
 msgid "No messages for this file"
 msgstr "Nicun mesaj pentru acest fișier"
 
-#: src/text.c:2834
+#: src/text.c:2843
 msgid "At first message"
 msgstr "Primul mesaj"
 
-#: src/text.c:2844
+#: src/text.c:2853
 msgid "At last message"
 msgstr "Ultimul mesaj"
 
-#: src/text.c:2886
+#: src/text.c:2895
 msgid "No formatter is defined for this type of file"
 msgstr "Nu este definit niciun reformator pentru acest tip de fișier"
 
-#: src/text.c:2963
+#: src/text.c:2972
 #, c-format
 msgid "%s%zd %s,  %zu %s,  %zu %s"
 msgstr "%s%zd %s,  %zu %s,  %zu %s"
 
-#: src/text.c:2964
+#: src/text.c:2973
 msgid "In Selection:  "
 msgstr "În selecție:  "
 
-#: src/text.c:2965
+#: src/text.c:2974
 msgid "line"
 msgid_plural "lines"
 msgstr[0] "linie"
 msgstr[1] "linii"
 msgstr[2] "de linii"
 
-#: src/text.c:2966
+#: src/text.c:2975
 msgid "word"
 msgid_plural "words"
 msgstr[0] "cuvânt"
 msgstr[1] "cuvinte"
 msgstr[2] "de cuvinte"
 
-#: src/text.c:2967
+#: src/text.c:2976
 msgid "character"
 msgid_plural "characters"
 msgstr[0] "caracter"
@@ -2850,26 +2844,26 @@ msgstr[1] "caractere"
 msgstr[2] "de caractere"
 
 #. TRANSLATORS: Shown when the next keystroke will be inserted verbatim.
-#: src/text.c:2978
+#: src/text.c:2987
 msgid "Verbatim Input"
 msgstr "Intrare Verbatim"
 
 #. TRANSLATORS: An invalid verbatim Unicode code was typed.
-#: src/text.c:2996
+#: src/text.c:3005
 msgid "Invalid code"
 msgstr "Cod nevalid"
 
 #. TRANSLATORS: Shown when no text is directly left of the cursor.
-#: src/text.c:3072
+#: src/text.c:3081
 msgid "No word fragment"
 msgstr "Niciun fragment de cuvânt"
 
-#: src/text.c:3165
+#: src/text.c:3174
 msgid "No further matches"
 msgstr "Nu mai sunt potriviri"
 
 #. TRANSLATORS: Shown when there are zero possible completions.
-#: src/text.c:3168
+#: src/text.c:3177
 msgid "No matches"
 msgstr "Nu sunt potriviri"
 
@@ -2937,45 +2931,45 @@ msgstr[0] " (%zu linie)"
 msgstr[1] " (%zu linii)"
 msgstr[2] " (%zu de linii)"
 
-#: src/winio.c:3523
+#: src/winio.c:3527
 #, c-format
 msgid "line %*zd/%zd (%2d%%), col %2zu/%2zu (%3d%%), char %*zu/%zu (%2d%%)"
 msgstr ""
 "linie %*zd/%zd (%2d%%), coloană %2zu/%2zu (%3d%%), caracter %*zu/%zu (%2d%%)"
 
-#: src/winio.c:3677
+#: src/winio.c:3681
 msgid "The nano text editor"
 msgstr "Editorul de texte nano"
 
-#: src/winio.c:3678
+#: src/winio.c:3682
 msgid "version"
 msgstr "versiune"
 
-#: src/winio.c:3679
+#: src/winio.c:3683
 msgid "Brought to you by:"
 msgstr "Prezentat de:"
 
-#: src/winio.c:3680
+#: src/winio.c:3684
 msgid "Special thanks to:"
 msgstr "Mulțumiri speciale pentru:"
 
-#: src/winio.c:3681
+#: src/winio.c:3685
 msgid "The Free Software Foundation"
 msgstr "Fundația Free Software"
 
-#: src/winio.c:3682
+#: src/winio.c:3686
 msgid "the many translators and the TP"
 msgstr "traducătorilor cei mulți și pentru TP"
 
-#: src/winio.c:3683
+#: src/winio.c:3687
 msgid "For ncurses:"
 msgstr "Pentru ncurses:"
 
-#: src/winio.c:3684
+#: src/winio.c:3688
 msgid "and anyone else we forgot..."
 msgstr "și oricine altcineva a fost uitat..."
 
-#: src/winio.c:3685
+#: src/winio.c:3689
 msgid "Thank you for using nano!"
 msgstr "Mulțumim că folosiți nano!"
 

@@ -666,6 +666,7 @@ void clear_resolv(void)
 void start_dnscrypt(void)
 {
 	const static char *dnscrypt_resolv = "/etc/dnscrypt-resolvers.csv";
+	const static char *dnscrypt_resolv_alt = "/etc/dnscrypt-resolvers-alt.csv";
 	char dnscrypt_local[30];
 	char *dnscrypt_ekeys;
 
@@ -695,7 +696,7 @@ void start_dnscrypt(void)
 		     "-a", dnscrypt_local,
 		     "-m", nvram_safe_get("dnscrypt_log"),
 		     "-R", nvram_safe_get("dnscrypt_resolver"),
-		     "-L", (char *) dnscrypt_resolv);
+		     "-L", f_exists(dnscrypt_resolv_alt) ? (char *) dnscrypt_resolv_alt : (char *) dnscrypt_resolv);
 #ifdef TCONFIG_IPV6
 	memset(dnscrypt_local, 0, 30);
 	sprintf(dnscrypt_local, "::1:%s", nvram_safe_get("dnscrypt_port"));
@@ -713,7 +714,7 @@ void start_dnscrypt(void)
 			     "-a", dnscrypt_local,
 			     "-m", nvram_safe_get("dnscrypt_log"),
 			     "-R", nvram_safe_get("dnscrypt_resolver"),
-			     "-L", (char *) dnscrypt_resolv);
+			     "-L", f_exists(dnscrypt_resolv_alt) ? (char *) dnscrypt_resolv_alt : (char *) dnscrypt_resolv);
 	}
 #endif
 }

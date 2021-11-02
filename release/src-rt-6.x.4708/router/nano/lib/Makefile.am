@@ -40,6 +40,7 @@
 #  isblank \
 #  iswblank \
 #  lstat \
+#  mkstemps \
 #  nl_langinfo \
 #  regex \
 #  sigaction \
@@ -130,6 +131,14 @@ EXTRA_DIST += attribute.h
 
 ## end   gnulib module attribute
 
+## begin gnulib module basename-lgpl
+
+libgnu_a_SOURCES += basename-lgpl.c
+
+EXTRA_DIST += basename-lgpl.h
+
+## end   gnulib module basename-lgpl
+
 ## begin gnulib module btowc
 
 
@@ -138,6 +147,23 @@ EXTRA_DIST += btowc.c
 EXTRA_libgnu_a_SOURCES += btowc.c
 
 ## end   gnulib module btowc
+
+## begin gnulib module cloexec
+
+libgnu_a_SOURCES += cloexec.c
+
+EXTRA_DIST += cloexec.h
+
+## end   gnulib module cloexec
+
+## begin gnulib module close
+
+
+EXTRA_DIST += close.c
+
+EXTRA_libgnu_a_SOURCES += close.c
+
+## end   gnulib module close
 
 ## begin gnulib module closedir
 
@@ -232,6 +258,23 @@ EXTRA_libgnu_a_SOURCES += dirfd.c
 
 ## end   gnulib module dirfd
 
+## begin gnulib module dirname-lgpl
+
+libgnu_a_SOURCES += dirname-lgpl.c stripslash.c
+
+EXTRA_DIST += dirname.h
+
+## end   gnulib module dirname-lgpl
+
+## begin gnulib module dup2
+
+
+EXTRA_DIST += dup2.c
+
+EXTRA_libgnu_a_SOURCES += dup2.c
+
+## end   gnulib module dup2
+
 ## begin gnulib module dynarray
 
 BUILT_SOURCES += malloc/dynarray.gl.h malloc/dynarray-skeleton.gl.h
@@ -302,6 +345,15 @@ EXTRA_DIST += errno.in.h
 
 ## end   gnulib module errno
 
+## begin gnulib module fcntl
+
+
+EXTRA_DIST += fcntl.c
+
+EXTRA_libgnu_a_SOURCES += fcntl.c
+
+## end   gnulib module fcntl
+
 ## begin gnulib module fcntl-h
 
 BUILT_SOURCES += fcntl.h
@@ -340,6 +392,14 @@ MOSTLYCLEANFILES += fcntl.h fcntl.h-t
 EXTRA_DIST += fcntl.in.h
 
 ## end   gnulib module fcntl-h
+
+## begin gnulib module fd-hook
+
+libgnu_a_SOURCES += fd-hook.c
+
+EXTRA_DIST += fd-hook.h
+
+## end   gnulib module fd-hook
 
 ## begin gnulib module filename
 
@@ -490,6 +550,15 @@ EXTRA_libgnu_a_SOURCES += getdelim.c
 
 ## end   gnulib module getdelim
 
+## begin gnulib module getdtablesize
+
+
+EXTRA_DIST += getdtablesize.c
+
+EXTRA_libgnu_a_SOURCES += getdtablesize.c
+
+## end   gnulib module getdtablesize
+
 ## begin gnulib module getline
 
 
@@ -543,6 +612,15 @@ EXTRA_DIST += getopt-cdefs.in.h getopt-core.h getopt-ext.h getopt-pfx-core.h get
 EXTRA_libgnu_a_SOURCES += getopt.c getopt1.c
 
 ## end   gnulib module getopt-posix
+
+## begin gnulib module getrandom
+
+
+EXTRA_DIST += getrandom.c
+
+EXTRA_libgnu_a_SOURCES += getrandom.c
+
+## end   gnulib module getrandom
 
 ## begin gnulib module gettext-h
 
@@ -613,6 +691,7 @@ glob-libc.gl.h: glob-libc.h
 	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
 	  sed -e '/__BEGIN_DECLS/{ s/__BEGIN_DECLS/#ifdef __cplusplus%extern "C" {%#endif/; y/%/\n/; }' \
 	      -e '/__END_DECLS/{ s/__END_DECLS/#ifdef __cplusplus%}%#endif/; y/%/\n/; }' \
+	      -e 's|__THROWNL||g' \
 	      -e 's|__THROW||g' \
 	      -e 's|__restrict|restrict|g' \
 	      -e 's|defined __USE_MISC|1|' \
@@ -1257,6 +1336,30 @@ EXTRA_libgnu_a_SOURCES += mempcpy.c
 
 ## end   gnulib module mempcpy
 
+## begin gnulib module minmax
+
+libgnu_a_SOURCES += minmax.h
+
+## end   gnulib module minmax
+
+## begin gnulib module mkdir
+
+
+EXTRA_DIST += mkdir.c
+
+EXTRA_libgnu_a_SOURCES += mkdir.c
+
+## end   gnulib module mkdir
+
+## begin gnulib module mkstemps
+
+
+EXTRA_DIST += mkstemps.c
+
+EXTRA_libgnu_a_SOURCES += mkstemps.c
+
+## end   gnulib module mkstemps
+
 ## begin gnulib module msvc-inval
 
 
@@ -1283,6 +1386,15 @@ EXTRA_DIST += nl_langinfo-lock.c nl_langinfo.c windows-initguard.h
 EXTRA_libgnu_a_SOURCES += nl_langinfo-lock.c nl_langinfo.c
 
 ## end   gnulib module nl_langinfo
+
+## begin gnulib module open
+
+
+EXTRA_DIST += open.c
+
+EXTRA_libgnu_a_SOURCES += open.c
+
+## end   gnulib module open
 
 ## begin gnulib module opendir
 
@@ -1536,6 +1648,29 @@ libgnu_a_SOURCES += stat-time.c
 EXTRA_DIST += stat-time.h
 
 ## end   gnulib module stat-time
+
+## begin gnulib module stdalign
+
+BUILT_SOURCES += $(STDALIGN_H)
+
+# We need the following in order to create <stdalign.h> when the system
+# doesn't have one that works.
+if GL_GENERATE_STDALIGN_H
+stdalign.h: stdalign.in.h $(top_builddir)/config.status
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  cat $(srcdir)/stdalign.in.h; \
+	} > $@-t && \
+	mv $@-t $@
+else
+stdalign.h: $(top_builddir)/config.status
+	rm -f $@
+endif
+MOSTLYCLEANFILES += stdalign.h stdalign.h-t
+
+EXTRA_DIST += stdalign.in.h
+
+## end   gnulib module stdalign
 
 ## begin gnulib module stdarg
 
@@ -2030,6 +2165,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_STRVERSCMP''@/$(GL_GNULIB_STRVERSCMP)/g' \
 	      -e 's/@''GNULIB_MDA_MEMCCPY''@/$(GL_GNULIB_MDA_MEMCCPY)/g' \
 	      -e 's/@''GNULIB_MDA_STRDUP''@/$(GL_GNULIB_MDA_STRDUP)/g' \
+	      -e 's/@''GNULIB_FREE_POSIX''@/$(GL_GNULIB_FREE_POSIX)/g' \
 	      < $(srcdir)/string.in.h | \
 	  sed -e 's|@''HAVE_EXPLICIT_BZERO''@|$(HAVE_EXPLICIT_BZERO)|g' \
 	      -e 's|@''HAVE_FFSL''@|$(HAVE_FFSL)|g' \
@@ -2058,6 +2194,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''REPLACE_FFSLL''@|$(REPLACE_FFSLL)|g' \
 	      -e 's|@''REPLACE_MEMCHR''@|$(REPLACE_MEMCHR)|g' \
 	      -e 's|@''REPLACE_MEMMEM''@|$(REPLACE_MEMMEM)|g' \
+	      -e 's|@''REPLACE_FREE''@|$(REPLACE_FREE)|g' \
 	      -e 's|@''REPLACE_STPNCPY''@|$(REPLACE_STPNCPY)|g' \
 	      -e 's|@''REPLACE_STRCHRNUL''@|$(REPLACE_STRCHRNUL)|g' \
 	      -e 's|@''REPLACE_STRDUP''@|$(REPLACE_STRDUP)|g' \
@@ -2129,6 +2266,38 @@ EXTRA_libgnu_a_SOURCES += strnlen.c
 libgnu_a_SOURCES += strnlen1.h strnlen1.c
 
 ## end   gnulib module strnlen1
+
+## begin gnulib module sys_random
+
+BUILT_SOURCES += sys/random.h
+
+# We need the following in order to create <sys/random.h> when the system
+# doesn't have one.
+sys/random.h: sys_random.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(WARN_ON_USE_H)
+	$(AM_V_at)$(MKDIR_P) sys
+	$(AM_V_GEN)rm -f $@-t $@ && \
+	{ echo '/* DO NOT EDIT! GENERATED AUTOMATICALLY! */'; \
+	  sed -e 's|@''GUARD_PREFIX''@|GL|g' \
+	      -e 's|@''INCLUDE_NEXT''@|$(INCLUDE_NEXT)|g' \
+	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
+	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
+	      -e 's|@''NEXT_SYS_RANDOM_H''@|$(NEXT_SYS_RANDOM_H)|g' \
+	      -e 's|@''HAVE_SYS_RANDOM_H''@|$(HAVE_SYS_RANDOM_H)|g' \
+	      -e 's/@''GNULIB_GETRANDOM''@/$(GL_GNULIB_GETRANDOM)/g' \
+	      -e 's/@''HAVE_GETRANDOM''@/$(HAVE_GETRANDOM)/g' \
+	      -e 's/@''REPLACE_GETRANDOM''@/$(REPLACE_GETRANDOM)/g' \
+	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
+	      -e '/definition of _GL_ARG_NONNULL/r $(ARG_NONNULL_H)' \
+	      -e '/definition of _GL_WARN_ON_USE/r $(WARN_ON_USE_H)' \
+	      < $(srcdir)/sys_random.in.h; \
+	} > $@-t && \
+	mv -f $@-t $@
+MOSTLYCLEANFILES += sys/random.h sys/random.h-t
+MOSTLYCLEANDIRS += sys
+
+EXTRA_DIST += sys_random.in.h
+
+## end   gnulib module sys_random
 
 ## begin gnulib module sys_stat
 
@@ -2291,6 +2460,14 @@ EXTRA_DIST += sys_wait.in.h
 
 ## end   gnulib module sys_wait
 
+## begin gnulib module tempname
+
+libgnu_a_SOURCES += tempname.c
+
+EXTRA_DIST += tempname.h
+
+## end   gnulib module tempname
+
 ## begin gnulib module threadlib
 
 libgnu_a_SOURCES += glthread/threadlib.c
@@ -2435,7 +2612,7 @@ unistd.h: unistd.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_SYMLINKAT''@/$(GL_GNULIB_SYMLINKAT)/g' \
 	      -e 's/@''GNULIB_TRUNCATE''@/$(GL_GNULIB_TRUNCATE)/g' \
 	      -e 's/@''GNULIB_TTYNAME_R''@/$(GL_GNULIB_TTYNAME_R)/g' \
-	      -e 's/@''GNULIB_UNISTD_H_GETOPT''@/0$(GL_GNULIB_GL_UNISTD_H_GETOPT)/g' \
+	      -e 's/@''GNULIB_UNISTD_H_GETOPT''@/0$(GL_GNULIB_UNISTD_H_GETOPT)/g' \
 	      -e 's/@''GNULIB_UNISTD_H_NONBLOCKING''@/$(GL_GNULIB_UNISTD_H_NONBLOCKING)/g' \
 	      -e 's/@''GNULIB_UNISTD_H_SIGPIPE''@/$(GL_GNULIB_UNISTD_H_SIGPIPE)/g' \
 	      -e 's/@''GNULIB_UNLINK''@/$(GL_GNULIB_UNLINK)/g' \
@@ -2743,6 +2920,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's/@''GNULIB_WCSWIDTH''@/$(GL_GNULIB_WCSWIDTH)/g' \
 	      -e 's/@''GNULIB_WCSFTIME''@/$(GL_GNULIB_WCSFTIME)/g' \
 	      -e 's/@''GNULIB_MDA_WCSDUP''@/$(GL_GNULIB_MDA_WCSDUP)/g' \
+	      -e 's/@''GNULIB_FREE_POSIX''@/$(GL_GNULIB_FREE_POSIX)/g' \
 	      < $(srcdir)/wchar.in.h | \
 	  sed -e 's|@''HAVE_WINT_T''@|$(HAVE_WINT_T)|g' \
 	      -e 's|@''HAVE_BTOWC''@|$(HAVE_BTOWC)|g' \
@@ -2791,6 +2969,7 @@ wchar.h: wchar.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	  sed -e 's|@''REPLACE_MBSTATE_T''@|$(REPLACE_MBSTATE_T)|g' \
 	      -e 's|@''REPLACE_BTOWC''@|$(REPLACE_BTOWC)|g' \
 	      -e 's|@''REPLACE_WCTOB''@|$(REPLACE_WCTOB)|g' \
+	      -e 's|@''REPLACE_FREE''@|$(REPLACE_FREE)|g' \
 	      -e 's|@''REPLACE_MBSINIT''@|$(REPLACE_MBSINIT)|g' \
 	      -e 's|@''REPLACE_MBRTOWC''@|$(REPLACE_MBRTOWC)|g' \
 	      -e 's|@''REPLACE_MBRLEN''@|$(REPLACE_MBRLEN)|g' \

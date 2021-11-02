@@ -249,27 +249,29 @@ void extract_segment(linestruct *top, size_t top_x, linestruct *bot, size_t bot_
 	bool same_line = (openfile->mark == top);
 	bool post_marked = (openfile->mark && (openfile->mark->lineno > top->lineno ||
 						(same_line && openfile->mark_x > top_x)));
-	bool was_anchored = top->has_anchor;
+	static bool inherited_anchor = FALSE;
+	bool had_anchor = top->has_anchor;
 
 	if (top == bot && top_x == bot_x)
 		return;
 
 	if (top != bot)
 		for (linestruct *line = top->next; line != bot->next; line = line->next)
-			was_anchored |= line->has_anchor;
+			had_anchor |= line->has_anchor;
 #endif
 
 	if (top == bot) {
 		taken = make_new_node(NULL);
 		taken->data = measured_copy(top->data + top_x, bot_x - top_x);
-		memmove(top->data + top_x, top->data + bot_x,
-										strlen(top->data + bot_x) + 1);
+		memmove(top->data + top_x, top->data + bot_x, strlen(top->data + bot_x) + 1);
 		last = taken;
 	} else if (top_x == 0 && bot_x == 0) {
 		taken = top;
 		last = make_new_node(NULL);
 		last->data = copy_of("");
-
+#ifndef NANO_TINY
+		last->has_anchor = bot->has_anchor;
+#endif
 		last->prev = bot->prev;
 		bot->prev->next = last;
 		last->next = NULL;
@@ -309,11 +311,17 @@ void extract_segment(linestruct *top, size_t top_x, linestruct *bot, size_t bot_
 	if (cutbuffer == NULL) {
 		cutbuffer = taken;
 		cutbottom = last;
+#ifndef NANO_TINY
+		inherited_anchor = taken->has_anchor;
+#endif
 	} else {
 		cutbottom->data = nrealloc(cutbottom->data,
 							strlen(cutbottom->data) + strlen(taken->data) + 1);
 		strcat(cutbottom->data, taken->data);
-
+#ifndef NANO_TINY
+		cutbottom->has_anchor = taken->has_anchor && !inherited_anchor;
+		inherited_anchor |= taken->has_anchor;
+#endif
 		cutbottom->next = taken->next;
 		delete_node(taken);
 
@@ -326,7 +334,7 @@ void extract_segment(linestruct *top, size_t top_x, linestruct *bot, size_t bot_
 	openfile->current_x = top_x;
 
 #ifndef NANO_TINY
-	openfile->current->has_anchor = was_anchored;
+	openfile->current->has_anchor = had_anchor;
 
 	if (post_marked || same_line)
 		openfile->mark = openfile->current;
@@ -686,10 +694,13 @@ void copy_text(void)
 /* Copy text from the cutbuffer into the current buffer. */
 void paste_text(void)
 {
+#ifndef NANO_TINY
+	/* Remember where the paste started. */
+	linestruct *was_current = openfile->current;
+	bool had_anchor = was_current->has_anchor;
+#endif
 	ssize_t was_lineno = openfile->current->lineno;
-		/* The line number where we started the paste. */
 	size_t was_leftedge = 0;
-		/* The leftedge where we started the paste. */
 
 	if (cutbuffer == NULL) {
 		statusline(AHEM, _("Cutbuffer is empty"));
@@ -708,6 +719,12 @@ void paste_text(void)
 	copy_from_buffer(cutbuffer);
 
 #ifndef NANO_TINY
+	/* Wipe any anchors in the pasted text, so that they don't proliferate. */
+	for (linestruct *line = was_current; line != openfile->current->next; line = line->next)
+		line->has_anchor = FALSE;
+
+	was_current->has_anchor = had_anchor;
+
 	update_undo(PASTE);
 #endif
 

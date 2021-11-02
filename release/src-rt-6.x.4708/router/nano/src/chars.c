@@ -2,7 +2,7 @@
  *   chars.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 2001-2011, 2013-2021 Free Software Foundation, Inc.    *
- *   Copyright (C) 2016-2020 Benno Schulenberg                            *
+ *   Copyright (C) 2016-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -644,7 +644,7 @@ bool has_blank_char(const char *string)
 
 	return *string;
 }
-#endif /* ENABLE_NANORC && (!NANO_TINY || ENABLE_JUSTIFY) */
+#endif
 
 /* Return TRUE when the given string is empty or consists of only blanks. */
 bool white_string(const char *string)

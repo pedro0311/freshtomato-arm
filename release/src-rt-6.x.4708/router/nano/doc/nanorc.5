@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 5.8 "June 2021"
+.TH NANORC 5 "version 5.9" "October 2021"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -127,7 +127,7 @@ Do not use the line below the title bar, leaving it entirely blank.
 .TP
 .B set errorcolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the status bar when an error message is displayed.
-The default value is \fBbrightwhite,red\fR.
+The default value is \fBbold,white,red\fR.
 See \fBset titlecolor\fR for valid color names.
 .TP
 .B set fill \fInumber\fR
@@ -185,14 +185,14 @@ The default value is "\fB(<[{)>]}\fP".
 .B set minibar
 Suppress the title bar and instead show information about
 the current buffer at the bottom of the screen, in the space
-for the status bar.  In this "minibar" the file name is shown
+for the status bar.  In this "minibar" the filename is shown
 on the left, followed by an asterisk if the buffer has been modified.
 On the right are displayed the current line and column number, the
 code of the character under the cursor (in Unicode format: U+xxxx),
 the same flags as are shown by \fBset stateflags\fR, and a percentage
 that expresses how far the cursor is into the file (linewise).
 When a file is loaded or saved, and also when switching between buffers,
-the number of lines in the buffer is displayed after the file name.
+the number of lines in the buffer is displayed after the filename.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
 The line plus column numbers and the character code are displayed only when
@@ -297,8 +297,9 @@ Use this color combination for selected text.
 See \fBset titlecolor\fR for more details.
 .TP
 .B set showcursor
-Put the cursor on the highlighted item in the file browser, to aid
-braille users.
+Put the cursor on the highlighted item in the file browser, and show
+the cursor in the help viewer, to aid braille users and people with
+poor vision.
 .TP
 .B set smarthome
 Make the Home key smarter.  When Home is pressed anywhere but at the
@@ -345,7 +346,8 @@ Use a tab size of \fInumber\fR columns.  The value of \fInumber\fP must be
 greater than 0.  The default value is \fB8\fR.
 .TP
 .B set tabstospaces
-Convert typed tabs to spaces.
+Convert each typed tab to spaces -- to the number of spaces
+that a tab at that position would take up.
 .TP
 .B set titlecolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the title bar.
@@ -655,7 +657,8 @@ the line, column, and character positions.
 (The old name of this function, 'curpos', is deprecated.)
 .TP
 .B wordcount
-Counts the number of words, lines and characters in the current buffer.
+Counts and reports on the status bar the number of lines, words,
+and characters in the current buffer (or in the marked region).
 .TP
 .B execute
 Prompts for a program to execute.  The program's output will be inserted
@@ -672,27 +675,28 @@ Invokes a full-buffer-processing program (if the active syntax defines one).
 Invokes a syntax-checking program (if the active syntax defines one).
 .TP
 .B justify
-Justifies the current paragraph.  A paragraph is a group of contiguous lines
+Justifies the current paragraph (or the marked region).
+A paragraph is a group of contiguous lines
 that, apart from possibly the first line, all have the same indentation.  The
 beginning of a paragraph is detected by either this lone line with a differing
 indentation or by a preceding blank line.
 .TP
 .B fulljustify
-Justifies the entire current buffer.
+Justifies the entire current buffer (or the marked region).
 .TP
 .B indent
-Indents (shifts to the right) the currently marked text.
+Indents (shifts to the right) the current line or the marked lines.
 .TP
 .B unindent
-Unindents (shifts to the left) the currently marked text.
+Unindents (shifts to the left) the current line or the marked lines.
 .TP
 .B comment
-Comments or uncomments the current line or marked lines, using the comment
-style specified in the active syntax.
+Comments or uncomments the current line or the marked lines,
+using the comment style specified in the active syntax.
 .TP
 .B complete
-Completes the fragment before the cursor to a full word found elsewhere
-in the current buffer.
+Completes (when possible) the fragment before the cursor
+to a full word found elsewhere in the current buffer.
 .TP
 .B left
 Goes left one position (in the editor or browser).
@@ -709,10 +713,15 @@ Goes one line down (in the editor or browser).
 .B scrollup
 Scrolls the viewport up one row (meaning that the text slides down)
 while keeping the cursor in the same text position, if possible.
+(This function is bound by default to <Alt+Up>.
+If <Alt+Up> does nothing on your Linux console, see the FAQ:
+.UR https://nano\-editor.org/dist/latest/faq.html#4.1
+.UE .)
 .TP
 .B scrolldown
 Scrolls the viewport down one row (meaning that the text slides up)
 while keeping the cursor in the same text position, if possible.
+(This function is bound by default to <Alt+Down>.)
 .TP
 .B center
 Scrolls the line with the cursor to the middle of the screen.

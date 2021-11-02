@@ -99,6 +99,9 @@ extern void wo_resolve(char *url);
 #ifdef TCONFIG_STUBBY
 extern void asp_stubby_presets(int argc, char **argv);
 #endif
+#ifdef TCONFIG_DNSCRYPT
+extern void asp_dnscrypt_presets(int argc, char **argv);
+#endif
 #ifdef TCONFIG_IPV6
 extern void asp_calc6rdlocalprefix(int argc, char **argv);
 #endif

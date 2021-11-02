@@ -29,6 +29,10 @@
 #endif
 #endif
 
+#if defined(__HAIKU__) && !defined(_DEFAULT_SOURCE)
+#define _DEFAULT_SOURCE  1
+#endif
+
 #ifdef __TANDEM
 /* Tandem NonStop Kernel support. */
 #include <floss.h>
@@ -110,6 +114,13 @@
 #define JUSTFIND   0
 #define REPLACING  1
 #define INREGION   2
+
+#define NORMAL  TRUE
+#define SPECIAL  FALSE
+#define TEMPORARY  FALSE
+
+#define ANNOTATE  TRUE
+#define NONOTES  FALSE
 
 #ifdef ENABLE_UTF8
 /* In UTF-8 a valid character is at most four bytes long. */
@@ -216,6 +227,7 @@
 #define INCLUDED_LAST_LINE    (1<<3)
 #define MARK_WAS_SET          (1<<4)
 #define CURSOR_WAS_AT_HEAD    (1<<5)
+#define HAD_ANCHOR_AT_START   (1<<6)
 #endif /* !NANO_TINY */
 
 /* Identifiers for the different menus. */
@@ -624,8 +636,8 @@ typedef struct funcstruct {
 } funcstruct;
 
 #ifdef ENABLE_WORDCOMPLETION
-typedef struct completion_word {
+typedef struct completionstruct {
 	char *word;
-	struct completion_word *next;
-} completion_word;
+	struct completionstruct *next;
+} completionstruct;
 #endif

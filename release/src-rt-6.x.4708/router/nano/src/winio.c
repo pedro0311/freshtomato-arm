@@ -2,7 +2,7 @@
  *   winio.c  --  This file is part of GNU nano.                          *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2020 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -233,11 +233,11 @@ void read_keys_from(WINDOW *win)
 			}
 		}
 #endif
-		/* When we've failed to get a keycode over a hundred times in a row,
+		/* When we've failed to get a keycode millions of times in a row,
 		 * assume our input source is gone and die gracefully.  We could
 		 * check if errno is set to EIO ("Input/output error") and die in
 		 * that case, but it's not always set properly.  Argh. */
-		if (input == ERR && ++errcount == 123)
+		if (input == ERR && ++errcount == 12345678)
 			die(_("Too many errors from stdin\n"));
 	}
 
@@ -2149,7 +2149,7 @@ void minibar(void)
 	}
 
 	/* Right after reading or writing a file, display its number of lines;
-	 * otherwise, when there a mutiple buffers, display an [x/n] counter. */
+	 * otherwise, when there are multiple buffers, display an [x/n] counter. */
 	if (report_size && COLS > 35) {
 		size_t count = openfile->filebot->lineno - (openfile->filebot->data[0] == '\0');
 
@@ -2176,7 +2176,7 @@ void minibar(void)
 		mvwaddstr(bottomwin, 0, COLS - 27 - placewidth, location);
 
 	/* Display the hexadecimal code of the character under the cursor,
-	 * plus the codes of upto two succeeding zero-width characters. */
+	 * plus the codes of up to two succeeding zero-width characters. */
 	if (ISSET(CONSTANT_SHOW) && namewidth + tallywidth + 28 < COLS) {
 		char *this_position = openfile->current->data + openfile->current_x;
 
@@ -2254,19 +2254,11 @@ void statusline(message_type importance, const char *msg, ...)
 	bool old_whitespace = ISSET(WHITESPACE_DISPLAY);
 
 	UNSET(WHITESPACE_DISPLAY);
-
-	if (isendwin())
-		die("Out of curses -- please report a bug\n");
 #endif
 
 	/* Ignore a message with an importance that is lower than the last one. */
 	if (importance < lastmessage && lastmessage > NOTICE)
 		return;
-
-	/* On a one-row terminal, ensure that any changes in the edit window are
-	 * written out first, to prevent them from overwriting the message. */
-	if (LINES == 1 && importance < INFO)
-		wnoutrefresh(edit);
 
 	/* Construct the message out of all the arguments. */
 	compound = nmalloc(MAXCHARLEN * COLS + 1);
@@ -2274,11 +2266,23 @@ void statusline(message_type importance, const char *msg, ...)
 	vsnprintf(compound, MAXCHARLEN * COLS + 1, msg, ap);
 	va_end(ap);
 
+	/* When not in curses mode, write the message to standard error. */
+	if (isendwin()) {
+		fprintf(stderr, "\n%s\n", compound);
+		free(compound);
+		return;
+	}
+
 #if !defined(NANO_TINY) && defined(ENABLE_MULTIBUFFER)
 	if (!we_are_running && importance == ALERT && openfile && !openfile->fmt &&
 						!openfile->errormessage && openfile->next != openfile)
 		openfile->errormessage = copy_of(compound);
 #endif
+
+	/* On a one-row terminal, ensure that any changes in the edit window are
+	 * written out first, to prevent them from overwriting the message. */
+	if (LINES == 1 && importance < INFO)
+		wnoutrefresh(edit);
 
 	/* If there are multiple alert messages, add trailing dots to the first. */
 	if (lastmessage == ALERT) {
@@ -2498,7 +2502,7 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		if (line->has_anchor && (from_col == 0 || !ISSET(SOFTWRAP)))
 #ifdef ENABLE_UTF8
 			if (using_utf8())
-				wprintw(edit, "\xE2\x97\x86");  /* black diamond */
+				wprintw(edit, "\xE2\xAC\xA5");  /* black medium diamond */
 			else
 #endif
 				wprintw(edit, "+");

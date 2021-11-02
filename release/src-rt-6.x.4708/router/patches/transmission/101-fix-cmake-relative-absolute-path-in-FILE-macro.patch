@@ -1,0 +1,23 @@
+--- transmission/CMakeLists.txt
++++ transmission/CMakeLists.txt
+@@ -39,6 +39,20 @@
+ 
+ set(TR_NAME ${PROJECT_NAME})
+ 
++include(CheckCCompilerFlag)
++check_c_compiler_flag(-Wno-builtin-macro-redefined SUPPORT_C_WNO_BUILTIN_MACRO_REDEFINED)
++if (SUPPORT_C_WNO_BUILTIN_MACRO_REDEFINED)
++  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-builtin-macro-redefined")
++endif (SUPPORT_C_WNO_BUILTIN_MACRO_REDEFINED)
++include(CheckCXXCompilerFlag)
++check_cxx_compiler_flag(-Wno-builtin-macro-redefined SUPPORT_CXX_WNO_BUILTIN_MACRO_REDEFINED)
++if (SUPPORT_CXX_WNO_BUILTIN_MACRO_REDEFINED)
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-builtin-macro-redefined")
++endif (SUPPORT_CXX_WNO_BUILTIN_MACRO_REDEFINED)
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D'__FILE__=\"$(subst $(realpath ${CMAKE_SOURCE_DIR})/,,$(abspath $<))\"'")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D'__FILE__=\"$(subst $(realpath ${CMAKE_SOURCE_DIR})/,,$(abspath $<))\"'")
++
++
+ # convention: -TR MAJOR MINOR MAINT STATUS - (each a single char)
+ # STATUS: "X" for prerelease beta builds,
+ #         "Z" for unsupported trunk builds,
