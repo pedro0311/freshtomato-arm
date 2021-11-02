@@ -87,6 +87,7 @@ ifeq ($(TCONFIG_BCMBSD),y)
 export CFLAGS += -DBCM_BSD
 endif
 
+
 #
 # standard packages
 #
@@ -132,7 +133,10 @@ obj-y += udpxy
 ifeq ($(TCONFIG_IPERF),y)
 obj-y += iperf
 endif
+
+ifneq ($(TCONFIG_TOR)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_BBT),)
 obj-y += zlib
+endif
 ifeq ($(TCONFIG_BCMBSD),y)
 obj-y += bsd
 endif
@@ -197,6 +201,7 @@ obj-$(TCONFIG_NFS) += nfs-utils
 obj-$(TCONFIG_HFS) += diskdev_cmds-332.25
 
 #Roadkill
+obj-$(TCONFIG_NOCAT) += glib
 obj-$(TCONFIG_NOCAT) += nocat
 
 # !!TB
@@ -261,6 +266,8 @@ obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
 obj-$(TCONFIG_MEDIA_SERVER) += minidlna
 MEDIA_SERVER_STATIC=
+INSTALL_ZLIB := $(if $(or $(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_NGINX),$(if $(MEDIA_SERVER_STATIC),,y)),y,)
+INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(if $(MEDIA_SERVER_STATIC),,y)),y,)
 
 obj-y += libnfnetlink
 obj-y += miniupnpd
@@ -408,7 +415,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	if grep -q "CONFIG_MODULES=y" $(LINUXDIR)/.config ; then \
 	    $(MAKE) -C $(LINUXDIR) modules CC=$(KERNELCC) $(PARALLEL_BUILD); \
 	fi
-	$(MAKE) -C $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed srctree=$(LINUXDIR) $(PARALLEL_BUILD)
+	$(MAKE) -C $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed srctree=$(LINUXDIR) TCONFIG_MIPSR2=$(TCONFIG_MIPSR2) $(PARALLEL_BUILD)
 else	# TCONFIG_BCMARM
 	$(MAKE) compressed-clean #shibby
 	(echo '.NOTPARALLEL:' ; cat ${LINUXDIR}/Makefile) |\
@@ -432,9 +439,9 @@ endif   # TCONFIG_BCMARM
 ifneq ($(TCONFIG_BCMARM),y)
 lzma-loader:
 	@$(SEP)
-	$(MAKE) -C $(SRCBASE)/lzma-loader CROSS_COMPILE=$(CROSS_COMPILE) LD=$(LD) $(PARALLEL_BUILD)
+	$(MAKE) -C $(SRCBASE)/lzma-loader CROSS_COMPILE=$(CROSS_COMPILE) TCONFIG_MIPSR2=$(TCONFIG_MIPSR2) $(PARALLEL_BUILD)
 
-lzma-loader-install: lzma-loader
+lzma-loader-install:
 endif
 
 kmod: dummy
@@ -665,7 +672,7 @@ endif
 	$(if $(TCONFIG_CTF),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/ctf*.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_PPTP),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/pptp.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_L2TP),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/pppol2tp.*o $(PLATFORMDIR)/extras/ || true
-	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/net/ppp_deflate.*o  $(PLATFORMDIR)/extras/ || true
+	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/net/ppp_deflate.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_IPSEC),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/crypto/*.ko $(PLATFORMDIR)/extras/ipsec/ || true
 	$(if $(TCONFIG_IPSEC),@ls,@rm -rf) $(TARGETDIR)/lib/modules/*/kernel/crypto || true
 	$(if $(TCONFIG_IPSEC),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/net/xfrm/*.ko $(PLATFORMDIR)/extras/ipsec/ || true
@@ -942,7 +949,8 @@ eapd$(BCMEX)-clean:
 	-@cd eapd$(BCMEX)/linux && make clean
 
 bridge/Makefile:
-	cd bridge && autoreconf -fsi && CFLAGS="-Os -g $(EXTRACFLAGS)" \
+	cd bridge && autoreconf -fsi && CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --prefix="" --with-linux-headers=$(LINUXDIR)/include
 
 bridge: bridge/Makefile
@@ -1368,7 +1376,7 @@ pppd-clean:
 xl2tpd: pppd
 	@$(SEP)
 	$(call patch_files,xl2tpd)
-	CFLAGS="-g $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 	$(MAKE) -C $@ PREFIX=/usr xl2tpd $(PARALLEL_BUILD)
 
@@ -1471,7 +1479,7 @@ sqlite-clean:
 	@rm -f sqlite/stamp-h1
 
 sqlite-install:
-ifeq ($(TCONFIG_NGINX),y)
+ifeq ($(INSTALL_SQLITE),y)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
@@ -1659,15 +1667,18 @@ zlib-clean:
 	@rm -rf zlib/staged
 
 zlib-install:
+ifeq ($(INSTALL_ZLIB),y)
 	install -d $(INSTALLDIR)/zlib/usr/lib
 	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
 	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
+endif
+	@true
 
 libid3tag/stamp-h1: zlib
 	$(call patch_files,libid3tag)
 	cd libid3tag && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-	CPPFLAGS="-Os -I$(TOP)/zlib -fPIC" \
+	CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib" \
 	LDFLAGS="-L$(TOP)/zlib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' \
 		--disable-debugging --disable-profiling --disable-dependency-tracking
@@ -1768,8 +1779,9 @@ igmpproxy-clean:
 
 hotplug2:
 	@$(SEP)
-	$(MAKE) -C $@ CROSS_COMPILE=$(CROSS_COMPILE) \
-		EXTRACFLAGS="$(EXTRACFLAGS)"
+	$(MAKE) -C $@ \
+		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 hotplug2-install:
 	$(MAKE) -C hotplug2 install PREFIX=$(INSTALLDIR)/hotplug2 SUBDIRS=""
@@ -1948,7 +1960,7 @@ pcre-clean:
 
 libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
 		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
@@ -2279,7 +2291,7 @@ openvpn/Makefile:
 	OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 	OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/zlib -lz -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
 	PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
@@ -2287,7 +2299,7 @@ openvpn/Makefile:
 		--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn/.conf
 
-openvpn: $(OPENSSLDIR) lzo zlib openvpn/Makefile
+openvpn: $(OPENSSLDIR) lzo $(if $(INSTALL_ZLIB),zlib,) openvpn/Makefile
 	@$(SEP)
 	@$(MAKE) -C openvpn $(PARALLEL_BUILD)
 
@@ -2338,9 +2350,15 @@ nano-install:
 	install -D nano/src/nano $(INSTALLDIR)/nano/usr/sbin/nano
 	$(STRIP) -s $(INSTALLDIR)/nano/usr/sbin/nano
 
+ifeq ($(TCONFIG_STUBBY),y)
+CACERT:=--with-ca-fallback
+else
+CACERT:=
+endif
+
 libcurl/stamp-h1: zlib $(OPENSSLDIR)
 	$(call patch_files,libcurl)
-	cd libcurl && ./buildconf && \
+	cd libcurl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
@@ -2353,8 +2371,7 @@ libcurl/stamp-h1: zlib $(OPENSSLDIR)
 			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
 			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
-			--with-linux-headers=$(LINUXDIR)/include \
-			--with-ca-fallback
+			--with-linux-headers=$(LINUXDIR)/include $(CACERT)
 	@touch $@
 
 libcurl: libcurl/stamp-h1
@@ -2378,6 +2395,7 @@ libcurl-clean:
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
 			--disable-debug-mode --disable-samples --disable-dependency-tracking
@@ -2729,7 +2747,8 @@ apcupsd/stamp-h1:
 	$(call patch_files,apcupsd)
 	cd apcupsd && touch autoconf/variables.mak && \
 	$(MAKE) configure && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
 	LDFLAGS="-L$(TOOLCHAIN)/lib -ffunction-sections -fdata-sections" \
 	$(CONFIGURE) --prefix=/usr --without-x --enable-usb --disable-pcnet --enable-cgi \
 		--disable-lgd --enable-net --sysconfdir=/usr/local/apcupsd --bindir=/bin \
@@ -2825,7 +2844,7 @@ getdns/build/Makefile:
 	cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 		-DCMAKE_INSTALL_PREFIX:PATH=/usr \
 		-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+		-DCMAKE_C_FLAGS="-Os -DNDEBUG -ffunction-sections -fdata-sections -std=c99 $(EXTRACFLAGS)" \
 		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
 		-DENABLE_STATIC=TRUE -DENABLE_SHARED=FALSE -DENABLE_GOST=FALSE \
 		-DBUILD_GETDNS_QUERY=FALSE \
@@ -2859,8 +2878,9 @@ getdns-clean:
 
 tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 	cd tor && autoreconf -fsi && \
-		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include" \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
@@ -3119,7 +3139,7 @@ uqmi-clean: libjson-c-clean
 comgt:
 	@$(SEP)
 	$(call patch_files,comgt)
-	@$(MAKE) -C comgt CFLAGS="$(EXTRACFLAGS)" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" comgt
+	@$(MAKE) -C comgt CFLAGS="-Os $(EXTRACFLAGS)" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" comgt
 
 comgt-install:
 	install -D comgt/comgt $(INSTALLDIR)/comgt/usr/sbin/comgt
