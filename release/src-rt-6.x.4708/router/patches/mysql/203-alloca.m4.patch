@@ -1,5 +1,5 @@
---- mysql/config/ac-macro/alloca.m4
-+++ mysql/config/ac-macro/alloca.m4
+--- mysql/config/ac-macros/alloca.m4
++++ mysql/config/ac-macros/alloca.m4
 @@ -54,12 +54,12 @@
   wenotbecray
   #endif
