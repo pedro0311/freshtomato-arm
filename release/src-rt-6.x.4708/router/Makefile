@@ -2448,7 +2448,7 @@ transmission/build/Makefile: $(OPENSSLDIR) libcurl libevent zlib
 	$(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 	cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 		-DCMAKE_INSTALL_PREFIX=/usr \
-		-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+		-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
 		-DCMAKE_C_FLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
 		-DCMAKE_CXX_FLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
 		-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
