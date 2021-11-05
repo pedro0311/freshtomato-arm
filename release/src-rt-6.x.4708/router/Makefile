@@ -2944,7 +2944,7 @@ libmnl: libmnl/stamp-h1
 	@$(SEP)
 	$(MAKE) -C libmnl
 	$(MAKE) -C libmnl DESTDIR=$(TOP)/libmnl/staged install
-	rm -f $(TOP)/libmnl/staged/usr/lib/libmnl.la
+	@rm -f $(TOP)/libmnl/staged/usr/lib/libmnl.la
 
 libmnl-install:
 	install -d $(INSTALLDIR)/libmnl/usr/lib/
