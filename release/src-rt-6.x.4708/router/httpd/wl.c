@@ -881,11 +881,7 @@ static int print_wlstats(int idx, int unit, int subunit, void *param)
 	scan = 0;
 	interference = -1;
 
-#ifdef CONFIG_BCMWL6
-	if (wl_phytype_n(phytype) || phytype == WLC_PHY_TYPE_AC) {
-#else
 	if (wl_phytype_n(phytype)) {
-#endif
 		if (wl_iovar_getint(ifname, "chanspec", &chanspec) != 0) {
 			ctrlsb = nvram_safe_get(wl_nvname("nctrlsb", unit, 0));
 			nbw = nvram_get_int(wl_nvname("nbw", unit, 0));
@@ -1064,11 +1060,7 @@ void asp_wlchannels(int argc, char **argv)
 		nphy = atoi(argv[1]);
 	else {
 		wl_ioctl(ifname, WLC_GET_PHYTYPE, &phytype, sizeof(phytype));
-#ifdef CONFIG_BCMWL6
-		nphy = wl_phytype_n(phytype) || phytype == WLC_PHY_TYPE_AC;
-#else
 		nphy = wl_phytype_n(phytype);
-#endif
 	}
 
 	bw = (argc > 2) ? atoi(argv[2]) : 0;
