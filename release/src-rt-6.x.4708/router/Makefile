@@ -1138,7 +1138,7 @@ libnfnetlink/stamp-h1:
 
 libnfnetlink: libnfnetlink/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libnfnetlink $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 	@rm -f libnfnetlink/src/libnfnetlink.la
 
 libnfnetlink-install:
@@ -1745,7 +1745,7 @@ minidlna/stamp-h1: zlib sqlite ffmpeg libogg flac jpeg libexif libid3tag libvorb
 
 minidlna: minidlna/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C minidlna $(if $(MEDIA_SERVER_STATIC),STATIC=1,) $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ $(if $(MEDIA_SERVER_STATIC),STATIC=1,) $(PARALLEL_BUILD)
 
 minidlna-install:
 	install -D minidlna/minidlnad $(INSTALLDIR)/minidlna/usr/sbin/minidlna
@@ -1837,7 +1837,7 @@ endif
 
 ebtables: ebtables/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C ebtables
+	@$(MAKE) -C $@
 
 ebtables-install:
 	@mkdir -p $(TARGETDIR)/rom/etc
@@ -2401,18 +2401,18 @@ libevent/stamp-h1:
 
 libevent: libevent/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libevent $(PARALLEL_BUILD)
-	$(MAKE) -C libevent DESTDIR=$(TOP)/libevent/staged install
-
-libevent-clean:
-	-@$(MAKE) -C libevent clean
-	@rm -f libevent/stamp-h1 libevent/Makefile
-	@rm -rf libevent/staged
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
+	$(MAKE) -C $@ DESTDIR=$(TOP)/libevent/staged install
 
 libevent-install:
 	install -d $(INSTALLDIR)/libevent/usr/lib
 	install libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+
+libevent-clean:
+	-@$(MAKE) -C libevent clean
+	@rm -f libevent/stamp-h1 libevent/Makefile
+	@rm -rf libevent/staged
 
 libiconv/stamp-h1:
 	cd libiconv && \
@@ -2494,7 +2494,7 @@ libnfsidmap/stamp-h1:
 
 libnfsidmap: libnfsidmap/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libnfsidmap $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 libnfsidmap-install:
 	install -d $(TOP)/libnfsidmap/staged
@@ -2568,16 +2568,16 @@ e2fsprogs-clean:
 
 nfs-utils/stamp-h1: libevent-install e2fsprogs portmap libnfsidmap-install
 	cd nfs-utils && ./autogen.sh && \
-	CPPFLAGS="-Os $(EXTRACFLAGS)" \
-	CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time \
-		-I$(TOP)/libevent/staged/usr/local/include \
-		-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
-		-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		knfsd_cv_bsd_signals=no \
-	CC_FOR_BUILD=$(CC) $(CONFIGURE) --disable-gss --without-tcp-wrappers \
-		--disable-nfsv4 --disable-nfsv41 --disable-ipv6 --disable-nfsdcltrack \
-		--disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
+		CPPFLAGS="-Os $(EXTRACFLAGS)" \
+		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time -marm \
+			-I$(TOP)/libevent/staged/usr/local/include \
+			-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
+			-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+			knfsd_cv_bsd_signals=no \
+		CC_FOR_BUILD=$(CC) $(CONFIGURE) \
+			--disable-gss --without-tcp-wrappers --disable-nfsv4 --disable-nfsv41 --disable-ipv6 \
+			--disable-nfsdcltrack --disable-uuid --disable-mount --disable-tirpc --disable-dependency-tracking
 	@touch $@
 
 nfs-utils: nfs-utils/stamp-h1
@@ -2600,21 +2600,21 @@ nfs-utils-clean:
 tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 	$(call patch_files,tinc)
 	cd tinc && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
-	LIBS="-lpthread" \
-	$(CONFIGURE) \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--localstatedir=/var \
-		--with-zlib-include="$(TOP)/zlib" \
-		--with-zlib-lib="$(TOP)/zlib" \
-		--with-lzo-include="$(TOP)/lzo/include" \
-		--with-lzo-lib="$(TOP)/lzo/src/.libs" \
-		--with-openssl-include="$(TOP)/$(OPENSSLDIR)/include" \
-		--with-openssl-lib="$(TOP)/$(OPENSSLDIR)" \
-		--disable-curses \
-		--disable-readline
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+		LIBS="-lpthread" \
+		$(CONFIGURE) \
+			--prefix=/usr \
+			--sysconfdir=/etc \
+			--localstatedir=/var \
+			--with-zlib-include="$(TOP)/zlib" \
+			--with-zlib-lib="$(TOP)/zlib" \
+			--with-lzo-include="$(TOP)/lzo/include" \
+			--with-lzo-lib="$(TOP)/lzo/src/.libs" \
+			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/include" \
+			--with-openssl-lib="$(TOP)/$(OPENSSLDIR)" \
+			--disable-curses \
+			--disable-readline
 	@touch $@
 
 tinc: tinc/stamp-h1
@@ -2632,53 +2632,25 @@ tinc-install:
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
 
-zfs/stamp-h1: zlib $(OPENSSLDIR) gettext-tiny util-linux
-	$(call patch_files,zfs)
-	cd zfs && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	CPPFLAGS="-I$(TOP)/zlib/staged/usr/include -I$(TOP)/util-linux/staged/include -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/gettext-tiny/staged/include" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/util-linux/staged/lib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/gettext-tiny/staged/lib" \
-	$(CONFIGURE) \
-		--prefix=/usr \
-		--sysconfdir=/etc \
-		--localstatedir=/var \
-		--with-config=user \
-		--disable-nls \
-		--disable-pyzfs \
-		--disable-shared
-	@touch $@
-
-zfs: zfs/stamp-h1
-	@$(SEP)
-	@$(MAKE) -C zfs $(PARALLEL_BUILD)
-
-zfs-clean:
-	-@$(MAKE) -C zfs clean
-	@rm -f zfs/stamp-h1
-	$(call unpatch_files,zfs)
-
-zfs-install:
-	install -D zfs/cmd/zfs/zfs $(INSTALLDIR)/zfs/usr/sbin/zfs
-	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
-	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
-	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
-
 util-linux/stamp-h1:
 	cd util-linux && autoreconf -fsi && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	$(CONFIGURE) \
-		--prefix=/ \
-		--disable-all-programs \
-		--enable-libuuid \
-		--enable-libblkid \
-		--disable-shared
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		$(CONFIGURE) \
+			--prefix=/ \
+			--disable-all-programs \
+			--enable-libuuid \
+			--enable-libblkid \
+			--disable-shared
 	@touch $@
 
 util-linux: util-linux/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C util-linux
 	@$(MAKE) -C util-linux DESTDIR=$(TOP)/util-linux/staged install
+
+util-linux-install:
+	@true
 
 util-linux-clean:
 	-@$(MAKE) -C util-linux clean
@@ -2705,6 +2677,37 @@ gettext-tiny-clean:
 	-@$(MAKE) -C gettext-tiny clean
 	@rm -f gettext-tiny/stamp-h1
 	-@rm -rf gettext-tiny/staged
+
+zfs/stamp-h1: zlib $(OPENSSLDIR) gettext-tiny util-linux
+	$(call patch_files,zfs)
+	cd zfs && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/zlib/staged/usr/include -I$(TOP)/util-linux/staged/include -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/gettext-tiny/staged/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/util-linux/staged/lib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/gettext-tiny/staged/lib" \
+		$(CONFIGURE) \
+			--prefix=/usr \
+			--sysconfdir=/etc \
+			--localstatedir=/var \
+			--with-config=user \
+			--disable-nls \
+			--disable-pyzfs \
+			--disable-shared
+	@touch $@
+
+zfs: zfs/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C zfs $(PARALLEL_BUILD)
+
+zfs-install:
+	install -D zfs/cmd/zfs/zfs $(INSTALLDIR)/zfs/usr/sbin/zfs
+	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
+	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
+	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
+
+zfs-clean:
+	-@$(MAKE) -C zfs clean
+	@rm -f zfs/stamp-h1
+	$(call unpatch_files,zfs)
 
 snmp/stamp-h1:
 	$(call patch_files,snmp)
@@ -2940,8 +2943,8 @@ libmnl/stamp-h1:
 
 libmnl: libmnl/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libmnl
-	$(MAKE) -C libmnl DESTDIR=$(TOP)/libmnl/staged install
+	$(MAKE) -C $@
+	$(MAKE) -C $@ DESTDIR=$(TOP)/libmnl/staged install
 	@rm -f $(TOP)/libmnl/staged/usr/lib/libmnl.la
 
 libmnl-install:
@@ -3283,7 +3286,7 @@ avahi/stamp-h1:
 
 avahi: avahi/stamp-h1 expat libdaemon
 	@$(SEP)
-	@$(MAKE) $(PARALLEL_BUILD) -C $@
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 avahi-install: avahi
 	install -D avahi/avahi-daemon/.libs/avahi-daemon $(INSTALLDIR)/avahi/usr/sbin/avahi-daemon
