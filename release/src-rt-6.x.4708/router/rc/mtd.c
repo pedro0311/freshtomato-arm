@@ -738,7 +738,10 @@ mtd_write(const char *path, const char *mtd)
         if (trx.magic != TRX_MAGIC ||
             trx.len > mtd_info.size ||
             trx.len < sizeof(struct trx_header)) {
-                fprintf(stderr, "%s: Bad trx header\n", path);
+            if (trx.magic != TRX_MAGIC) { fprintf(stderr, "Trx magic %d != 30524448 Expected TRX_MAGIC \n", trx.magic);}
+            if (trx.len > mtd_info.size) { fprintf(stderr, "trx size %d > memory size %d \n", trx.len ,mtd_info.size );}
+            if (trx.len < sizeof(struct trx_header)) { fprintf(stderr, "trx size %d < header size %d \n", trx.len ,sizeof(struct trx_header));}
+
                 goto fail;
         }
 
