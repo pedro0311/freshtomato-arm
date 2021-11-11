@@ -525,11 +525,11 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	        maxsize = 0x200000;
 	        size = maxsize;
 	}
-	/* R6400 (and also R6400v2 and R6700v3 at arm-ng branch) */
+	/* R6400, R6400v2, R6700v3 and XR300 */
 	else if (nvram_match("boardnum", "32") &&
 		 nvram_match("boardtype", "0x0646") &&
 		 nvram_match("boardrev", "0x1601")) {
-	        maxsize = 0x200000;
+	        maxsize = 0x3200000;
 	        size = maxsize;
 	}
 	
@@ -938,11 +938,11 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1301")) {
 			bcm947xx_nflash_parts[nparts].size += 0x200000;
 		}
-		/* R6400 (and also R6400v2 and R6700v3 at arm-ng branch) */
+		/* R6400, R6400v2, R6700v3 and XR300 */
 		else if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1601")) {
-			bcm947xx_nflash_parts[nparts].size += 0x200000;
+			bcm947xx_nflash_parts[nparts].size += 0x3200000;
 		}
 		
 		bcm947xx_nflash_parts[nparts].offset = offset;
@@ -994,7 +994,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
 			nparts++;
 		}
-		/* again, to fix R6400 (and also R6400v2 and R6700v3 at arm-ng branch) */
+		/* again, to fix R6400, R6400v2, R6700v3 and XR300 */
 		else if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1601")) {
