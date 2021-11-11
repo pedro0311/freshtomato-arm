@@ -1,0 +1,146 @@
+--- glib2/autogen.sh
++++ glib2/autogen.sh
+@@ -32,5 +32,3 @@
+ 
+ autoreconf --force --install --verbose || exit $?
+ 
+-cd "$olddir"
+-test -n "$NOCONFIGURE" || "$srcdir/configure" "$@"
+--- glib2/configure.ac
++++ glib2/configure.ac
+@@ -56,6 +56,12 @@
+ AC_INIT(glib, [glib_version],
+         [http://bugzilla.gnome.org/enter_bug.cgi?product=glib])
+ 
++glib_cv_stack_grows=no
++glib_cv_rtldglobal_broken=no
++glib_cv_uscore=no
++ac_cv_func_posix_getpwuid_r=yes
++ac_cv_func_posix_getgrgid_r=yes
++
+ AC_CONFIG_HEADERS([config.h])
+ AC_CONFIG_SRCDIR([glib/glib.h])
+ AC_CONFIG_MACRO_DIR([m4macros])
+--- glib2/gio/gnetworkmonitornetlink.c
++++ glib2/gio/gnetworkmonitornetlink.c
+@@ -17,6 +17,9 @@
+  * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+  * Boston, MA 02111-1307, USA.
+  */
++#include <string.h>
++#include <glib/glib.h>
++#include <gio/gio.h>
+ 
+ #include "config.h"
+ 
+--- glib2/gio/Makefile.am
++++ glib2/gio/Makefile.am
+@@ -670,6 +670,7 @@
+ glib_compile_resources_LDADD = \
+ 	$(top_builddir)/glib/libglib-2.0.la \
+ 	$(top_builddir)/gobject/libgobject-2.0.la	\
++	$(top_builddir)/gmodule/libgmodule-2.0.la	\
+ 	libgio-2.0.la
+ 
+ glib_compile_resources_SOURCES = \
+@@ -700,6 +701,7 @@
+ gsettings_LDADD = \
+ 	$(top_builddir)/glib/libglib-2.0.la		\
+ 	$(top_builddir)/gobject/libgobject-2.0.la	\
++	$(top_builddir)/gmodule/libgmodule-2.0.la	\
+ 	libgio-2.0.la
+ gsettings_SOURCES = gsettings-tool.c
+ 
+@@ -713,6 +715,7 @@
+ gdbus_SOURCES = gdbus-tool.c
+ gdbus_LDADD = libgio-2.0.la \
+ 	$(top_builddir)/glib/libglib-2.0.la 		\
++	$(top_builddir)/gmodule/libgmodule-2.0.la	\
+ 	$(top_builddir)/gobject/libgobject-2.0.la
+ 
+ completiondir = $(datadir)/bash-completion/completions
+@@ -731,6 +734,7 @@
+ gresource_LDADD = libgio-2.0.la \
+ 	$(top_builddir)/glib/libglib-2.0.la 		\
+ 	$(top_builddir)/gobject/libgobject-2.0.la \
++	$(top_builddir)/gmodule/libgmodule-2.0.la	\
+ 	$(LIBELF_LIBS)
+ 
+ # ------------------------------------------------------------------------
+--- glib2/libintl.h
++++ glib2/libintl.h
+@@ -0,0 +1,53 @@
++/*
++ * This code is lifted from http://permalink.gmane.org/gmane.linux.gentoo.embedded/3218
++ */
++
++#ifndef _LIBINTL_H
++#define _LIBINTL_H      1
++
++#include <locale.h>
++
++/* Undef gettext macros, if any... */
++#undef gettext
++#undef dgettext
++#undef dcgettext
++#undef ngettext
++#undef dngettext
++#undef dcngettext
++#undef textdomain
++#undef bindtextdomain
++#undef bind_textdomain_codeset
++
++/* part of locale.h */
++/* #undef setlocale */
++
++#undef _
++#undef N_
++
++/* Define gettext stubs that map back to the original strings */
++#define gettext(String) (String)
++#define dgettext(Domain, String) (String)
++#define dcgettext(Domain, String, Type) (String)
++
++#define ngettext(Singular, Plural, Count) \
++	((Count) == 1 ? (const char *) (Singular) : (const char *) (Plural))
++
++#define dngettext(Domain, Singular, Plural, Count) \
++	((Count) == 1 ? (const char *) (Singular) : (const char *) (Plural))
++
++#define dcngettext(Domain, Singular, Plural, Count, Category) \
++	((Count) == 1 ? (const char *) (Singular) : (const char *) (Plural))
++
++#define _(String) (String)
++#define N_(String) String
++
++#ifndef _LOCALE_H
++/* #define setlocale(Category, Locale) ((char *)NULL) */
++#endif
++
++/* No-ops for textdomain operations */
++#define bindtextdomain(Domain, Directory) (Domain)
++#define bind_textdomain_codeset(Domain, Codeset) (Codeset)
++#define textdomain(String) (String) ?: "messages"
++
++#endif  /* _LIBINTL_H */
+--- glib2/m4macros/glib-gettext.m4
++++ glib2/m4macros/glib-gettext.m4
+@@ -313,7 +313,7 @@
+ # on various variables needed by the Makefile.in.in installed by 
+ # glib-gettextize.
+ dnl
+-glib_DEFUN([GLIB_GNU_GETTEXT],
++AU_DEFUN([GLIB_GNU_GETTEXT],
+   [AC_REQUIRE([AC_PROG_CC])dnl
+    
+    GLIB_LC_MESSAGES
+@@ -383,7 +383,8 @@
+    rm -f po/POTFILES
+    sed -e "/^#/d" -e "/^\$/d" -e "s,.*,	$posrcprefix& \\\\," -e "\$s/\(.*\) \\\\/\1/" \
+ 	< $srcdir/po/POTFILES.in > po/POTFILES
+-  ])
++  ],
++  [[$0: This macro is deprecated. You should use upstream gettext instead.]])
+ 
+ # AM_GLIB_DEFINE_LOCALEDIR(VARIABLE)
+ # -------------------------------
