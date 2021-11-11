@@ -65,7 +65,7 @@ _install_package()
 {
     PACKAGE=$1
     echo "Installing package ${PACKAGE} ..."
-    wget -O ${TMP}/${PACKAGE} ${REPOSITORY}/${PACKAGE}
+    wget --no-check-certificate -O ${TMP}/${PACKAGE} ${REPOSITORY}/${PACKAGE}
     cd  ${TMP} 
     tar xzf ${TMP}/${PACKAGE} 
     tar xzf ${TMP}/control.tar.gz

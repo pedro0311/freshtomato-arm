@@ -31,7 +31,7 @@ ttbdownload() {
 	rm $DIR2/*  >/dev/null 2>&1
 	echo $(nvram get ttb_url | tr ' ' '\n' | ttbshuf ) | tr ' ' '\n' | sed 's/\/$//' |
 	while read l; do
-		wget -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 10 -t 1 $l/$TTB.zip -O $DIR2/$TTB.zip >/dev/null 2>&1 && echo $l && break
+		wget --no-check-certificate -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 10 -t 1 $l/$TTB.zip -O $DIR2/$TTB.zip >/dev/null 2>&1 && echo $l && break
 	done
 	unzip -p $DIR2/$TTB.zip >/dev/null 2>&1 && {
 		cru d ttbDL
@@ -98,7 +98,7 @@ touch $LOCK
 	elif [ $1 == "list" ]; then
 		echo $(nvram get ttb_url | tr ' ' '\n' | ttbshuf ) | tr ' ' '\n' | sed 's/\/$//' |
 		while read l; do
-			( wget -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 6 -t 1 -q -O - $l/themes.txt | more ) && break
+			( wget --no-check-certificate -U "Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/88.0" -T 6 -t 1 -q -O - $l/themes.txt | more ) && break
 		done
 		ttbexit 0
 	else

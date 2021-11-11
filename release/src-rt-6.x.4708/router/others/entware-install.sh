@@ -2,6 +2,7 @@
 
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
+WGET="/usr/bin/wget --no-check-certificate"
 
 echo "Info: Checking for prerequisites and creating folders..."
 
@@ -26,13 +27,13 @@ done
 echo "Info: Opkg package manager deployment..."
 DLOADER="ld-linux.so.3"
 URL=https://bin.entware.net/armv7sf-k2.6/installer
-wget $URL/opkg -O /opt/bin/opkg
+$WGET $URL/opkg -O /opt/bin/opkg
 chmod 755 /opt/bin/opkg
-wget $URL/opkg.conf -O /opt/etc/opkg.conf
-wget $URL/ld-2.23.so -O /opt/lib/ld-2.23.so
-wget $URL/libc-2.23.so -O /opt/lib/libc-2.23.so
-wget $URL/libgcc_s.so.1 -O /opt/lib/libgcc_s.so.1
-wget $URL/libpthread-2.23.so -O /opt/lib/libpthread-2.23.so
+$WGET $URL/opkg.conf -O /opt/etc/opkg.conf
+$WGET $URL/ld-2.23.so -O /opt/lib/ld-2.23.so
+$WGET $URL/libc-2.23.so -O /opt/lib/libc-2.23.so
+$WGET $URL/libgcc_s.so.1 -O /opt/lib/libgcc_s.so.1
+$WGET $URL/libpthread-2.23.so -O /opt/lib/libpthread-2.23.so
 cd /opt/lib
 chmod 755 ld-2.23.so
 ln -s ld-2.23.so $DLOADER
