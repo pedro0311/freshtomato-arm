@@ -327,6 +327,12 @@ obj-y += hotplug2
 obj-y += udevtrigger
 obj-y += wanuptime
 
+obj-$(TCONFIG_IRQBALANCE) += libffi
+obj-$(TCONFIG_IRQBALANCE) += libiconv
+obj-$(TCONFIG_IRQBALANCE) += zlib
+obj-$(TCONFIG_IRQBALANCE) += glib2
+obj-$(TCONFIG_IRQBALANCE) += irqbalance
+
 ifeq ($(TCONFIG_IPV6),y)
 export TCONFIG_IPV6 := y
 IPTABLES_IPV6_OPT := --enable-ipv6
@@ -3302,6 +3308,91 @@ avahi-clean:
 	[ ! -f avahi/stamp-h1 ] || $(MAKE) -C avahi distclean
 	@rm -f avahi/stamp-h1
 	$(call unpatch_files,avahi)
+
+libffi/stamp-h1:
+	cd libffi && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		$(CONFIGURE) \
+			--prefix=/usr --libdir=/usr/lib --disable-builddir --disable-dependency-tracking
+	@touch $@
+
+libffi: libffi/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/libffi/staged install
+
+libffi-install:
+	install -D $(TOP)/libffi/.libs/libffi.so.6.0.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.6.0.4
+	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.6.0.4
+	cd $(INSTALLDIR)/libffi/usr/lib && \
+		ln -sf libffi.so.6.0.4 libffi.so.6 && \
+		ln -sf libffi.so.6.0.4 libffi.so
+
+libffi-clean:
+	[ ! -f libffi/stamp-h1 ] || $(MAKE) -C libffi distclean
+	@rm -f libffi/stamp-h1
+
+glib2/stamp-h1:
+	$(call patch_files,glib2)
+	cd glib2 && ./autogen.sh && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/include -I$(TOP)/glib2" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/include -I$(TOP)/glib2" \
+		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libffi/staged/usr/lib -ldl -lpthread -lz -liconv -lffi" \
+		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include" \
+		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
+		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/lib/.libs/libiconv.so" \
+		$(CONFIGURE) \
+			--prefix=/usr --libdir=/usr/lib \
+			--enable-debug=no --disable-selinux --disable-fam --enable-man=no --with-libiconv=gnu --disable-dependency-tracking
+	@touch $@
+
+glib2: glib2/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/glib2/staged install
+	@sed 's|\(\W\)/usr/lib|\1$(TOP)/glib2/staged/usr/lib|g' -i $(TOP)/glib2/staged/usr/lib/libglib-2.0.la
+
+glib2-install: glib2
+	install -D glib2/glib/.libs/libglib-2.0.so.0.3707.0 $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.3707.0
+	$(STRIP) $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.3707.0
+	-@rm -rf $(INSTALLDIR)/glib2/usr/share
+	cd $(INSTALLDIR)/glib2/usr/lib && \
+		ln -sf libglib-2.0.so.0.3707.0 libglib-2.0.so.0 && \
+		ln -sf libglib-2.0.so.0.3707.0 libglib-2.0.so
+
+glib2-clean:
+	[ ! -f glib2/stamp-h1 ] || $(MAKE) -C glib2 distclean
+	@rm -f glib2/stamp-h1
+	$(call unpatch_files,glib2)
+
+irqbalance/stamp-h1:
+	$(call patch_files,irqbalance)
+	cd irqbalance && ./autogen.sh && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include" \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libffi/staged/usr/lib" \
+		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/lib/.libs/libiconv.so" \
+		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2" \
+		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
+		$(CONFIGURE) \
+			--prefix=/usr \
+			--enable-static=glib2 \
+			--with-libcap_ng=no --with-systemd=no --without-irqbalance-ui --disable-numa --disable-dependency-tracking
+	@touch $@
+
+irqbalance: irqbalance/stamp-h1
+	@$(SEP)
+	$(MAKE) -C $@
+
+irqbalance-install: 
+	install -D irqbalance/irqbalance $(INSTALLDIR)/irqbalance/usr/sbin/irqbalance
+	$(STRIP) $(INSTALLDIR)/irqbalance/usr/sbin/irqbalance
+	@rm -rf $(INSTALLDIR)/irqbalance/usr/share
+
+irqbalance-clean: 
+	[ ! -f irqbalance/stamp-h1 ] || $(MAKE) -C irqbalance clean
+	@rm -f irqbalance/stamp-h1
+	$(call unpatch_files,irqbalance)
 
 
 #

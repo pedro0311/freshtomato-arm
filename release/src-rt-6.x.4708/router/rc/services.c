@@ -977,6 +977,36 @@ void stop_mdns(void)
 }
 #endif /* TCONFIG_MDNS */
 
+#ifdef TCONFIG_IRQBALANCE
+void start_irqbalance(void)
+{
+	int ret;
+
+	if (getpid() != 1) {
+		start_service("irqbalance");
+		return;
+	}
+
+	stop_irqbalance();
+
+	mkdir_if_none("/var/run/irqbalance");
+	ret = eval("irqbalance", "-t", "10");
+
+	if (ret)
+		logmsg(LOG_ERR, "starting irqbalance failed ...");
+	else
+		logmsg(LOG_INFO, "irqbalance is started");
+}
+
+void stop_irqbalance(void)
+{
+	if (pidof("irqbalance") > 0) {
+		killall_tk_period_wait("irqbalance", 50);
+		logmsg(LOG_INFO, "irqbalance is stopped");
+	}
+}
+#endif /* TCONFIG_IRQBALANCE */
+
 #ifdef TCONFIG_FANCTRL
 void start_phy_tempsense()
 {
@@ -3242,7 +3272,10 @@ void start_services(void)
 #endif
 #ifdef TCONFIG_BCMBSD
 	start_bsd();
-#endif /* TCONFIG_BCMBSD */
+#endif
+#ifdef TCONFIG_IRQBALANCE
+	start_irqbalance();
+#endif
 }
 
 void stop_services(void)
@@ -3297,7 +3330,10 @@ void stop_services(void)
 	stop_nas();
 #ifdef TCONFIG_BCMBSD
 	stop_bsd();
-#endif /* TCONFIG_BCMBSD */
+#endif
+#ifdef TCONFIG_IRQBALANCE
+	stop_irqbalance();
+#endif
 }
 
 /* nvram "action_service" is: "service-action[-modifier]"
@@ -3404,6 +3440,14 @@ TOP:
 	if (strcmp(service, "mdns") == 0) {
 		if (act_stop) stop_mdns();
 		if (act_start) start_mdns();
+		goto CLEAR;
+	}
+#endif
+
+#ifdef TCONFIG_IRQBALANCE
+	if (strcmp(service, "irqbalance") == 0) {
+		if (act_stop) stop_irqbalance();
+		if (act_start) start_irqbalance();
 		goto CLEAR;
 	}
 #endif
@@ -3613,6 +3657,9 @@ TOP:
 			stop_tor();
 #endif
 			stop_tomatoanon();
+#ifdef TCONFIG_IRQBALANCE
+			stop_irqbalance();
+#endif
 			killall("rstats", SIGTERM);
 			killall("cstats", SIGTERM);
 			killall("buttons", SIGTERM);
