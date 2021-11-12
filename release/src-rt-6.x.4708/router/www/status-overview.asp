@@ -33,8 +33,11 @@ var wmo = {'ap':'Access Point','sta':'Wireless Client','wet':'Wireless Ethernet 
 	   };
 var auth = {'disabled':'-','wep':'WEP','wpa_personal':'WPA Personal (PSK)','wpa_enterprise':'WPA Enterprise','wpa2_personal':'WPA2 Personal (PSK)','wpa2_enterprise':'WPA2 Enterprise','wpaX_personal':'WPA / WPA2 Personal','wpaX_enterprise':'WPA / WPA2 Enterprise','radius':'Radius'};
 var enc = {'tkip':'TKIP','aes':'AES','tkip+aes':'TKIP / AES'};
-var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','bg-mixed':'B/G Mixed','lrs':'LRS','n-only':'N Only'};
-
+var bgmo = {'disabled':'-','mixed':'Auto','b-only':'B Only','g-only':'G Only','bg-mixed':'B/G Mixed','lrs':'LRS','n-only':'N Only'
+/* BCMWL6-BEGIN */
+	    ,'nac-mixed':'N/AC Mixed','ac-only':'AC Only'
+/* BCMWL6-END */
+};
 var lastjiffiestotal = 0, lastjiffiesidle = 0, lastjiffiesusage = 100;
 var updateWWANTimers = [], customStatusTimers = [], show_dhcpc = [], show_codi = [], show_radio = [];
 </script>

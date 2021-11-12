@@ -877,7 +877,11 @@ static const nvset_t nvset_list[] = {
 #else
 	{ "wl_mode",			V_LENGTH(2, 3)			},	/* ap, sta, wet, wds */
 #endif
-	{ "wl_net_mode",		V_LENGTH(5, 8)			},	// disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster]
+#ifdef CONFIG_BCMWL6
+	{ "wl_net_mode",		V_LENGTH(5, 9)			},	/* disabled, mixed, b-only, g-only, bg-mixed, n-only, nac-mixed, ac-only [speedbooster] */
+#else
+	{ "wl_net_mode",		V_LENGTH(5, 8)			},	/* disabled, mixed, b-only, g-only, bg-mixed, n-only [speedbooster] */
+#endif
 	{ "wl_ssid",			V_LENGTH(1, 32)			},
 	{ "wl_closed",			V_01				},
 	{ "wl_channel",			V_RANGE(0, 216)			},
@@ -917,6 +921,9 @@ static const nvset_t nvset_list[] = {
 	{ "wl_nbw_cap",			V_RANGE(0, 3)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto, 3 - 80M */
 #else
 	{ "wl_nbw_cap",			V_RANGE(0, 2)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto */
+#endif
+#ifdef CONFIG_BCMWL6
+	{ "wl_bss_opmode_cap_reqd",	V_RANGE(0, 3)			},	/* 0 - all possible, 1 - 11g cap., 2 - 11n cap., 3 - 11ac cap. */
 #endif
 	{ "wl_nbw",			V_NONE				},
 	{ "wl_mimo_preamble",		V_WORD				},	// 802.11n Preamble: mm/gf/auto/gfbcm
