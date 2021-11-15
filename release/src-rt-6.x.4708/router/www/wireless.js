@@ -24,6 +24,10 @@ function refreshNetModes(uidx) {
 		if (nphy) {
 			m.push(['n-only','N Only']);
 		}
+		if (acphy) {
+			m.push(['nac-mixed','N/AC Mixed']);
+			m.push(['ac-only','AC Only']);
+		}
 	}
 	else {
 		m.push(['b-only','B Only']);

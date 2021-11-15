@@ -1,12 +1,10 @@
-AC_PREREQ([2.65])
-AC_INIT([libsodium],[1.0.18],
-  [https://github.com/jedisct1/libsodium/issues],
-  [libsodium],
-  [https://github.com/jedisct1/libsodium])
+AC_PREREQ([2.69])
+AC_INIT([libsodium],[1.0.18],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/libsodium/sodium/version.c])
 AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 tar-ustar foreign subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AM_MAINTAINER_MODE
@@ -44,7 +42,7 @@ AS_IF([pwd | fgrep ' ' > /dev/null 2>&1],
   [AC_MSG_ERROR([The build directory contains whitespaces - This can cause tests/installation to fail due to limitations of some libtool versions])]
 )
 
-AC_PROG_CC_C99
+AC_PROG_CC
 AM_PROG_AS
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -119,7 +117,7 @@ AC_ARG_ENABLE(minimal,
 AM_CONDITIONAL([MINIMAL], [test x$enable_minimal = xyes])
 AC_SUBST(SODIUM_LIBRARY_MINIMAL_DEF)
 
-AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads],
+AC_ARG_WITH(pthreads, AS_HELP_STRING([--with-pthreads],
  [use pthreads library, or --without-pthreads to disable threading support.]),
  [ ], [withval="yes"])
 
@@ -260,7 +258,7 @@ int main(void) { return 0; }
 LIBTOOL_OLD_FLAGS="$LIBTOOL_EXTRA_FLAGS"
 LIBTOOL_EXTRA_FLAGS="$LIBTOOL_EXTRA_FLAGS -version-info $SODIUM_LIBRARY_VERSION"
 AC_ARG_ENABLE(soname-versions,
-  [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for Android) (default: enabled)])],
+  [AS_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for Android) (default: enabled)])],
     [
         AS_IF([test "x$enableval" = "xno"], [
           LIBTOOL_EXTRA_FLAGS="$LIBTOOL_OLD_FLAGS -avoid-version"
@@ -571,7 +569,7 @@ AC_SUBST(CFLAGS_AESNI)
 AC_SUBST(CFLAGS_PCLMUL)
 AC_SUBST(CFLAGS_RDRAND)
 
-AC_CHECK_HEADERS([sys/mman.h sys/random.h intrin.h])
+AC_CHECK_HEADERS([sys/mman.h sys/param.h sys/random.h intrin.h])
 
 AC_MSG_CHECKING([if _xgetbv() is available])
 AC_LINK_IFELSE(
@@ -812,8 +810,11 @@ dnl Checks for functions and headers
 AC_FUNC_ALLOCA
 AS_IF([test "x$EMSCRIPTEN" = "x"],[
   AC_CHECK_FUNCS([arc4random arc4random_buf])
-  AC_CHECK_FUNCS([mmap mlock madvise mprotect])
-
+  AS_IF([test "x$WASI" = "x"],[
+    AC_CHECK_FUNCS([mmap mlock madvise mprotect])
+    AC_CHECK_FUNCS([raise])
+    AC_CHECK_FUNCS([sysconf])
+  ])
   AC_MSG_CHECKING(for getrandom with a standard API)
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <stdlib.h>
@@ -859,8 +860,17 @@ if (&getentropy != NULL) {
   [AC_MSG_RESULT(no)
   ])
 ])
-AC_CHECK_FUNCS([posix_memalign getpid nanosleep])
-AC_CHECK_FUNCS([memset_s explicit_bzero explicit_memset])
+
+AS_IF([test "x$WASI" = "x"],[
+  AC_CHECK_FUNCS([getpid])
+  AC_CHECK_FUNCS([getauxva elf_aux_info])
+])
+
+AC_CHECK_FUNCS([posix_memalign nanosleep])
+
+AS_IF([test "x$WASI" = "x"],[
+  AC_CHECK_FUNCS([memset_s explicit_bzero explicit_memset])
+])
 
 AC_SUBST([LIBTOOL_EXTRA_FLAGS])
 
@@ -877,8 +887,7 @@ AC_DEFINE([CONFIGURED], [1], [the build system was properly configured])
 
 dnl Libtool.
 
-LT_INIT([dlopen])
-AC_LIBTOOL_WIN32_DLL
+LT_INIT([dlopen win32-dll])
 gl_LD_OUTPUT_DEF
 
 dnl Output.

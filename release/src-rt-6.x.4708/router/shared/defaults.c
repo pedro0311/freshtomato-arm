@@ -498,7 +498,10 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_amsdu",			"auto"				, 0 },	// Default AMSDU setting
 	/* power save */
 #ifdef TCONFIG_BCMWL6
-	{ "wl_bss_opmode_cap_reqd",	"0"				, 0 },  // 0 == no requirements on joining devices
+	{ "wl_bss_opmode_cap_reqd",	"0"				, 0 },  // 0 = no requirements on joining devices
+										// 1 = client must advertise ERP / 11g cap. to be able to join
+										// 2 = client must advertise HT / 11n cap. to be able to join
+										// 3 = client must advertise VHT / 11ac cap. to be able to join
 #endif
 	{ "wl_rxchain_pwrsave_enable",	"0"				, 0 },	// Rxchain powersave enable
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			, 0 },	// Quiet time for power save

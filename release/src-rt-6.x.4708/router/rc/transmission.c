@@ -185,7 +185,7 @@ void start_bittorrent(void)
 	            pk);
 
 	if (nvram_match( "bt_blocklist", "1"))
-		fprintf(fp, "wget %s -O %s/.settings/blocklists/level1.gz\n"
+		fprintf(fp, "wget --no-check-certificate %s -O %s/.settings/blocklists/level1.gz\n"
 		            "gunzip %s/.settings/blocklists/level1.gz\n",
 		            nvram_safe_get("bt_blocklist_url"), pk,
 		            pk);

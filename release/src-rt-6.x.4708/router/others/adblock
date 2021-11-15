@@ -14,7 +14,7 @@ WORK1="$PREFIX/hosts.work1"
 WORK2="$PREFIX/hosts.work2"
 FINAL="/etc/dnsmasq.adblock"
 CHK_FILE="/tmp/adblock.time"
-WGET="/usr/bin/wget -T 15"
+WGET="/usr/bin/wget --no-check-certificate -T 15"
 
 BLACKLIST=$(nvram get adblock_blacklist)
 WHITELIST=$(nvram get adblock_whitelist)
