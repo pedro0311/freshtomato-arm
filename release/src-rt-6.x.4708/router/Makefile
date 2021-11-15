@@ -2784,12 +2784,12 @@ libsodium/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-Wl,--gc-sections -fPIC"  \
-		$(CONFIGURE) --prefix=/usr --disable-ssp --disable-shared --enable-static --enable-minimal --disable-dependency-tracking
+		$(CONFIGURE) --prefix=/usr --disable-ssp --enable-minimal --without-pthreads --disable-shared --enable-static --disable-dependency-tracking
 	@touch $@
 
 libsodium: libsodium/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libsodium $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 libsodium-install:
 	@true
@@ -2800,30 +2800,25 @@ libsodium-clean:
 
 dnscrypt/stamp-h1: libsodium
 	cd dnscrypt && autoreconf && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include/ -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include/ -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections -fPIC" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs" \
 		$(CONFIGURE) --prefix=/usr --disable-ssp --disable-dependency-tracking
 	@touch $@
 
 dnscrypt: dnscrypt/stamp-h1
 	@$(SEP)
-	$(MAKE) -C dnscrypt/libltdl $(PARALLEL_BUILD)
-	$(MAKE) -C dnscrypt $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 dnscrypt-install:
-	make -C dnscrypt install DESTDIR=$(INSTALLDIR)/dnscrypt
-	@rm -rf $(INSTALLDIR)/dnscrypt/usr/etc
-	@rm -rf $(INSTALLDIR)/dnscrypt/usr/include
-	@rm -rf $(INSTALLDIR)/dnscrypt/usr/lib
-	@rm -rf $(INSTALLDIR)/dnscrypt/usr/share
+	install -D dnscrypt/src/proxy/dnscrypt-proxy $(INSTALLDIR)/dnscrypt/usr/sbin/dnscrypt-proxy
+	install -D dnscrypt/src/hostip/hostip $(INSTALLDIR)/dnscrypt/usr/sbin/hostip
 	$(STRIP) -s $(INSTALLDIR)/dnscrypt/usr/sbin/dnscrypt-proxy
-	$(STRIP) -s $(INSTALLDIR)/dnscrypt/usr/bin/hostip
+	$(STRIP) -s $(INSTALLDIR)/dnscrypt/usr/sbin/hostip
 
 dnscrypt-clean:
-	-@$(MAKE) -C dnscrypt/libltdl clean
 	-@$(MAKE) -C dnscrypt clean
-	@rm -rf dnscrypt/stamp-h1 dnscrypt/src/dnscrypt-proxy/.deps dnscrypt/Makefile
+	@rm -rf dnscrypt/stamp-h1 dnscrypt/src/proxy/.deps dnscrypt/Makefile
 
 libyaml/stamp-h1:
 	cd libyaml && autoreconf -fsi && \
