@@ -2,7 +2,12 @@
 
 unset LD_LIBRARY_PATH
 unset LD_PRELOAD
+# STUBBYNO-BEGIN
 WGET="/usr/bin/wget --no-check-certificate"
+# STUBBYNO-END
+# STUBBY-BEGIN
+WGET="/usr/bin/wget"
+# STUBBY-END
 
 echo "Info: Checking for prerequisites and creating folders..."
 

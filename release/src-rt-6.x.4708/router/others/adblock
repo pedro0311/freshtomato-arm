@@ -14,7 +14,12 @@ WORK1="$PREFIX/hosts.work1"
 WORK2="$PREFIX/hosts.work2"
 FINAL="/etc/dnsmasq.adblock"
 CHK_FILE="/tmp/adblock.time"
+# STUBBYNO-BEGIN
 WGET="/usr/bin/wget --no-check-certificate -T 15"
+# STUBBYNO-END
+# STUBBY-BEGIN
+WGET="/usr/bin/wget -T 15"
+# STUBBY-END
 
 BLACKLIST=$(nvram get adblock_blacklist)
 WHITELIST=$(nvram get adblock_whitelist)
