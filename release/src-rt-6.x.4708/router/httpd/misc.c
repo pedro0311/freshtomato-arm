@@ -926,7 +926,7 @@ void asp_statfs(int argc, char **argv)
 
 	/* used for /cifs/, /jffs/... if it returns squashfs type, assume it's not mounted */
 	if ((statfs(argv[0], &sf) != 0) || (sf.f_type == 0x73717368)
-#ifdef TCONFIG_BCMARM
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_BLINK)
 	    || (sf.f_type == 0x71736873)
 #endif
 	) {
