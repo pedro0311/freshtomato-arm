@@ -2123,6 +2123,7 @@ nginx/stamp-h1: $(OPENSSLDIR) zlib pcre
 		--with-http_ssl_module \
 		--with-http_gzip_static_module \
 		--with-http_v2_module \
+		--with-http_realip_module \
 		$(ADDITIONAL_MODULES)
 	@touch $@
 
