@@ -978,6 +978,14 @@ void stop_mdns(void)
 #endif /* TCONFIG_MDNS */
 
 #ifdef TCONFIG_IRQBALANCE
+void stop_irqbalance(void)
+{
+	if (pidof("irqbalance") > 0) {
+		killall_tk_period_wait("irqbalance", 50);
+		logmsg(LOG_INFO, "irqbalance is stopped");
+	}
+}
+
 void start_irqbalance(void)
 {
 	int ret;
@@ -996,14 +1004,6 @@ void start_irqbalance(void)
 		logmsg(LOG_ERR, "starting irqbalance failed ...");
 	else
 		logmsg(LOG_INFO, "irqbalance is started");
-}
-
-void stop_irqbalance(void)
-{
-	if (pidof("irqbalance") > 0) {
-		killall_tk_period_wait("irqbalance", 50);
-		logmsg(LOG_INFO, "irqbalance is stopped");
-	}
 }
 #endif /* TCONFIG_IRQBALANCE */
 

@@ -26,15 +26,16 @@ install:
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/services > $(INSTALLDIR)/rom/etc/services
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/protocols > $(INSTALLDIR)/rom/etc/protocols
 
-ifeq ($(TCONFIG_STUBBY),y)
+ifneq ($(TCONFIG_STUBBY),y)
+	rm -f $(INSTALLDIR)/rom/etc/ssl/certs/ca-certificates.crt
+else
 ifneq ($(TCONFIG_IPV6),y)
 	install -m 0644 others/dot-servers-ipv4.dat $(INSTALLDIR)/rom/dot-servers.dat
 else
 	install -m 0644 others/dot-servers.dat $(INSTALLDIR)/rom/dot-servers.dat
 endif
-endif
-
 	$(MAKE) certs-install
+endif
 
 ifeq ($(TCONFIG_HTTPS),y)
 	sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < rom/etc/ssl/openssl.cnf > $(INSTALLDIR)/rom/etc/ssl/openssl.cnf

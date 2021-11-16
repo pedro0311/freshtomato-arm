@@ -3,14 +3,6 @@ include ../common.mak
 all:
 
 install:
-#	for F in $(wildcard *); do \
-#		if [ $$F = "Makefile" ]; then \
-#			continue; \
-#		fi; \
-#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
-#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
-#	done
-
 	install -d $(INSTALLDIR)/sbin
 	install -d $(INSTALLDIR)/usr/sbin
 	install -d $(INSTALLDIR)/lib
@@ -42,12 +34,27 @@ endif
 
 #TomatoAnon project
 	install -m 0700 tomatoanon $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/usr/sbin/tomatoanon -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/tomatoanon -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 
 #Adblock
 	install -m 0700 adblock $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 
 #TTB project
 	install -m 0700 ttb $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/usr/sbin/ttb -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/ttb -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 
 #Ethernet state report
 	install -m 0700 ethstate $(INSTALLDIR)/usr/sbin
@@ -68,8 +75,18 @@ endif
 ifeq ($(TCONFIG_USB),y)
 ifneq ($(TCONFIG_BCMARM),y)
 	install -m 0700 optware-install.sh $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 endif
 	install -m 0700 entware-install.sh $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_STUBBY),y)
+	sed -i $(INSTALLDIR)/usr/sbin/entware-install.sh -e "/STUBBY-BEGIN/,/STUBBY-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/entware-install.sh -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 endif
 
 ifeq ($(TCONFIG_OPENVPN),y)
@@ -92,5 +109,25 @@ endif
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin
 endif
+
+# clean up
+	cd $(INSTALLDIR)/usr/sbin && \
+	for F in tomatoanon adblock ttb optware-install.sh entware-install.sh; do \
+		[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
+		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
+		-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
+		|| true; \
+	done
+
+#	cd $(INSTALLDIR)/usr/sbin && \
+#	for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode; do \
+#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#	done
+#	cd $(INSTALLDIR)/usr/bin && \
+#	for F in mycheck btcheck; do \
+#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#	done
 
 clean:

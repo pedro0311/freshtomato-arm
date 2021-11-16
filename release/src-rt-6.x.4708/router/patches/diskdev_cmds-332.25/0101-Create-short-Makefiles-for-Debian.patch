@@ -23,7 +23,7 @@ index 0000000..687d1e7
 +++ diskdev_cmds-332.25/Makefile.lnx
 @@ -0,0 +1,8 @@
 +CC := $(CROSS_COMPILE)gcc
-+CFLAGS += -Wall -I$(PWD)/include -DDEBUG_BUILD=0 -D_FILE_OFFSET_BITS=64 -DLINUX=1 -DBSD=1
++CFLAGS += -Wall -I$(PWD)/include -DDEBUG_BUILD=0 -D_FILE_OFFSET_BITS=64 -DLINUX=1 -DBSD=1 -I$(TOP)/$(OPENSSLDIR)/include
 +SUBDIRS := newfs_hfs.tproj fsck_hfs.tproj
 +
 +all clean:
@@ -78,9 +78,10 @@ new file mode 100644
 index 0000000..58e6700
 --- /dev/null
 +++ diskdev_cmds-332.25/newfs_hfs.tproj/Makefile.lnx
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +CFILES = hfs_endian.c makehfs.c newfs_hfs.c
 +OFILES = $(CFILES:.c=.o)
++LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
 +
 +all: newfs_hfs
 +
