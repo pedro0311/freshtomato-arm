@@ -195,8 +195,10 @@ void start_dnsmasq()
 		           "rebind-localhost-ok\n");
 
 	/* instruct clients like Firefox to not auto-enable DoH */
-	if (nvram_get_int("dns_priv_override"))
-		fprintf(f, "address=/use-application-dns.net/\n");
+	if (nvram_get_int("dns_priv_override")) {
+		fprintf(f, "address=/use-application-dns.net/\n"
+		           "address=/_dns.resolver.arpa/\n");
+	}
 
 	/* forward local domain queries to upstream DNS */
 	if (nvram_get_int("dns_fwd_local") != 1)
