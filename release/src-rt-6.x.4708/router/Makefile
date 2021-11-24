@@ -2094,7 +2094,7 @@ php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 
 php: php/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 php-install:
 	install -d $(INSTALLDIR)/php/usr/sbin
@@ -2224,7 +2224,7 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 
 mysql: mysql/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/mysql/staged install
 
 mysql-install:
