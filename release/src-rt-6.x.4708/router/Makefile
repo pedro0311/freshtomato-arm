@@ -997,59 +997,62 @@ www-install:
 
 openssl/stamp-h1:
 	cd openssl && \
-	CC=$(CC:$(CROSS_COMPILE)%=%) \
-	AR=$(AR:$(CROSS_COMPILE)%=%) \
-	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-	./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc/ssl \
-	-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared enable-rc5 no-ssl2 no-ssl3 no-err
-	@$(MAKE) -C openssl depend clean
+		CC=$(CC:$(CROSS_COMPILE)%=%) \
+		AR=$(AR:$(CROSS_COMPILE)%=%) \
+		NM=$(NM:$(CROSS_COMPILE)%=%) \
+		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc/ssl \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+			shared enable-rc5 no-ssl2 no-ssl3 no-err
+	@$(MAKE) -C openssl depend
+	@$(MAKE) -C openssl clean
 	@touch $@
 
 openssl: openssl/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C openssl $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
+	$(MAKE) -C $@ install_sw DESTDIR=staged
+
+openssl-install:
+	if [ -f openssl/stamp-h1 ] ; then \
+		install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0 ; \
+		install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0 ; \
+		$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0 ; \
+		$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0 ; \
+		cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so ; \
+		cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so ; \
+		install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
+		$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
+		chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
+		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh ; \
+	fi
+	@true
 
 openssl-clean:
 	-@$(MAKE) -C openssl clean
 	@rm -f openssl/stamp-h1
-
-openssl-install:
-	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
-	install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
-	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
-	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
-	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so
-	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so
-	install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl
-	$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl
-	chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl
-	install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh
+	@rm -rf openssl/staged
 
 openssl-1.1/stamp-h1:
 	$(call patch_files,openssl-1.1)
 	cd openssl-1.1 && \
-	CC=$(CC:$(CROSS_COMPILE)%=%) \
-	AR=$(AR:$(CROSS_COMPILE)%=%) \
-	NM=$(NM:$(CROSS_COMPILE)%=%) \
-	RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-	./Configure $(HOSTCONFIG) $(EXTRACFLAGS) --prefix=/usr --openssldir=/etc/ssl \
-	-O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-	shared no-ssl3 no-err no-async --api=1.0.0 \
-	no-aria no-sm2 no-sm3 no-sm4 \
-	-DOPENSSL_PREFER_CHACHA_OVER_GCM
-	-@$(MAKE) -C openssl-1.1 depend clean
+		CC=$(CC:$(CROSS_COMPILE)%=%) \
+		AR=$(AR:$(CROSS_COMPILE)%=%) \
+		NM=$(NM:$(CROSS_COMPILE)%=%) \
+		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 --prefix=/usr --openssldir=/etc/ssl \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+			shared no-ssl3 no-err no-async --api=1.0.0 \
+			no-aria no-sm2 no-sm3 no-sm4 \
+			-DOPENSSL_PREFER_CHACHA_OVER_GCM
+	@$(MAKE) -C openssl-1.1 depend
+	@$(MAKE) -C openssl-1.1 clean
 	@touch $@
 
 openssl-1.1: openssl-1.1/stamp-h1
 	$(SEP)
-	$(MAKE) -C openssl-1.1 $(PARALLEL_BUILD)
-
-openssl-1.1-clean:
-	[ ! -f openssl-1.1/stamp-h1 ] || $(MAKE) -C openssl-1.1 clean
-	@rm -f openssl-1.1/stamp-h1
-	$(call unpatch_files,openssl-1.1)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
+	$(MAKE) -C $@ install_sw DESTDIR=staged
 
 openssl-1.1-install:
 	if [ -f openssl-1.1/stamp-h1 ] ; then \
@@ -1064,6 +1067,12 @@ openssl-1.1-install:
 		cd $(INSTALLDIR)/openssl-1.1/usr/sbin && ln -sf openssl11 openssl ; \
 	fi
 	@true
+
+openssl-1.1-clean:
+	-@$(MAKE) -C openssl-1.1 clean
+	@rm -f openssl-1.1/stamp-h1
+	@rm -rf openssl-1.1/staged
+	$(call unpatch_files,openssl-1.1)
 
 mssl: $(OPENSSLDIR)
 
@@ -1101,13 +1110,13 @@ dnsmasq: $(DNSSEC_BACKEND)
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_DUMPFILE -DNO_ID -DNO_GMP -DUSE_IPSET \
 		$(if $(TCONFIG_USB_EXTRAS),,-DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_INOTIFY) \
-		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/include -DHAVE_DNSSEC,) \
+		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -DHAVE_DNSSEC,) \
 		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,)" \
 	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections $(EXTRACFLAGS) -std=gnu99" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
-		$(if $(DNSSEC_OPENSSL),-pthread -L$(TOP)/$(OPENSSLDIR),) \
+		$(if $(DNSSEC_OPENSSL),-pthread -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib,) \
 		$(if $(DNSSEC_NETTLE),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
-	$(if $(DNSSEC_OPENSSL),PKG_CONFIG_PATH="$(TOP)/$(OPENSSLDIR)" CRYPTO=openssl,) \
+	$(if $(DNSSEC_OPENSSL),PKG_CONFIG_PATH="$(TOP)/$(OPENSSLDIR)/staged/usr/lib" CRYPTO=openssl,) \
 	$(if $(DNSSEC_NETTLE),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
 
 dnsmasq-install:
@@ -2139,83 +2148,78 @@ libpng-clean:
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
-		-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
-	LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
-		-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
-	CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
-	LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs \
-		-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl" \
-	PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
-	ac_cv_func_memcmp_working=yes \
-	cv_php_mbstring_stdarg=yes \
-	$(CONFIGURE) --prefix=/usr \
-	--enable-shared \
-	--disable-static \
-	--disable-rpath \
-	--disable-debug \
-	--without-pear \
-	--with-config-file-path=/etc \
-	--with-config-file-scan-dir=/etc/php5 \
-	--disable-short-tags \
-	--with-zlib \
-	--with-zlib-dir="$(TOP)/zlib/staged/usr" \
-	--disable-phar \
-	--enable-cli \
-	--enable-cgi \
-	--disable-calendar \
-	--enable-ctype \
-	--with-curl="$(TOP)/libcurl/staged/usr" \
-	--enable-fileinfo \
-	--without-gettext \
-	--enable-dom \
-	--enable-exif \
-	--disable-ftp \
-	--without-gmp \
-	--with-gd \
-	--with-png-dir="$(TOP)/libpng/staged/usr" \
-	--with-jpeg-dir="$(TOP)/jpeg/staged" \
-	--enable-hash \
-	--with-iconv="$(TOP)/libiconv/staged/usr" \
-	--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
-	--enable-json \
-	--without-ldap \
-	--enable-mbstring \
-	--without-openssl \
-	--disable-pcntl \
-	--with-mysqli \
-	--with-mysql-sock="/var/run/mysqld.sock" \
-	--with-pdo-mysql \
-	--without-pdo-pgsql \
-	--with-pdo-sqlite \
-	--enable-pdo \
-	--without-pgsql \
-	--enable-session \
-	--disable-shmop \
-	--enable-simplexml \
-	--disable-soap \
-	--disable-sockets \
-	--with-sqlite3 \
-	--disable-sysvmsg \
-	--disable-sysvsem \
-	--disable-sysvshm \
-	--disable-tokenizer \
-	--enable-xml \
-	--enable-xmlreader \
-	--enable-xmlwriter \
-	--enable-zip \
-	--without-valgrind \
-	--with-libxml-dir="$(TOP)/libxml2/staged/usr"
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
+			-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
+		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib \
+			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -lssl -lcrypto" \
+		PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
+		ac_cv_func_memcmp_working=yes \
+		cv_php_mbstring_stdarg=yes \
+		$(CONFIGURE) --prefix=/usr \
+			--enable-shared \
+			--disable-static \
+			--disable-rpath \
+			--disable-debug \
+			--without-pear \
+			--with-config-file-path=/etc \
+			--with-config-file-scan-dir=/etc/php5 \
+			--disable-short-tags \
+			--with-zlib \
+			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
+			--disable-phar \
+			--enable-cli \
+			--enable-cgi \
+			--disable-calendar \
+			--enable-ctype \
+			--with-curl="$(TOP)/libcurl/staged/usr" \
+			--enable-fileinfo \
+			--without-gettext \
+			--enable-dom \
+			--enable-exif \
+			--disable-ftp \
+			--without-gmp \
+			--with-gd \
+			--with-png-dir="$(TOP)/libpng/staged/usr" \
+			--with-jpeg-dir="$(TOP)/jpeg/staged" \
+			--enable-hash \
+			--with-iconv="$(TOP)/libiconv/staged/usr" \
+			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
+			--enable-json \
+			--without-ldap \
+			--enable-mbstring \
+			--without-openssl \
+			--disable-pcntl \
+			--with-mysqli \
+			--with-mysql-sock="/var/run/mysqld.sock" \
+			--with-pdo-mysql \
+			--without-pdo-pgsql \
+			--with-pdo-sqlite \
+			--enable-pdo \
+			--without-pgsql \
+			--enable-session \
+			--disable-shmop \
+			--enable-simplexml \
+			--disable-soap \
+			--disable-sockets \
+			--with-sqlite3 \
+			--disable-sysvmsg \
+			--disable-sysvsem \
+			--disable-sysvshm \
+			--disable-tokenizer \
+			--enable-xml \
+			--enable-xmlreader \
+			--enable-xmlwriter \
+			--enable-zip \
+			--without-valgrind \
+			--with-libxml-dir="$(TOP)/libxml2/staged/usr"
 	@touch $@
 
 php: php/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C php
-
-php-clean:
-	-@$(MAKE) -C php clean
-	-@rm php/stamp-h1
-	$(call unpatch_files,php)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 php-install:
 	install -d $(INSTALLDIR)/php/usr/sbin
@@ -2225,13 +2229,18 @@ php-install:
 	cd $(INSTALLDIR)/php/usr/sbin && ln -sf php-cgi php-fcgi
 	$(STRIP) $(INSTALLDIR)/php/usr/sbin/php-cgi
 
+php-clean:
+	-@$(MAKE) -C php clean
+	@rm -f php/stamp-h1
+	$(call unpatch_files,php)
+
 nginx/stamp-h1: $(OPENSSLDIR) zlib pcre
 	$(call patch_files,nginx)
 	cd nginx && \
 	./configure --crossbuild=Linux::$(ARCH) \
 		--with-cc="$(CC)" \
-		--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/pcre -I$(TOP)/zlib" \
-		--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR)" \
+		--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/pcre -I$(TOP)/zlib" \
+		--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 		--prefix=/usr \
 		--sbin-path=/usr/sbin \
 		--conf-path=/etc/nginx/nginx.conf \
@@ -2248,6 +2257,7 @@ nginx/stamp-h1: $(OPENSSLDIR) zlib pcre
 		--with-http_ssl_module \
 		--with-http_gzip_static_module \
 		--with-http_v2_module \
+		--with-http_realip_module \
 		$(ADDITIONAL_MODULES)
 	@touch $@
 
@@ -2255,14 +2265,14 @@ nginx: nginx/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C nginx
 
-nginx-clean:
-	-@$(MAKE) -C nginx clean
-	-@rm -f nginx/stamp-h1
-	$(call unpatch_files,nginx)
-
 nginx-install:
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 0755 $(INSTALLDIR)/nginx/usr/sbin/nginx
 	$(STRIP) $(INSTALLDIR)/nginx/usr/sbin/nginx
+
+nginx-clean:
+	-@$(MAKE) -C nginx clean
+	@rm -f nginx/stamp-h1
+	$(call unpatch_files,nginx)
 
 libncurses/stamp-h1:
 	cd libncurses && \
@@ -2314,40 +2324,33 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
 	$(call patch_files,mysql)
 	cd mysql && \
-	CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
-		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
-		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
-	CPPFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
-		--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
-		-I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/libncurses/include" \
-	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC -EL" \
-	LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
-	$(CONFIGURE) --prefix=/usr \
-		--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
-		--enable-shared --disable-static \
-		--without-mysqlmanager \
-		--with-pthread \
-		--with-ssl \
-		--without-docs \
-		--with-geometry \
-		--with-low-memory \
-		--enable-assembler \
-		--with-zlib-dir="$(TOP)/zlib/staged/usr" \
-		ac_cv_c_stack_direction=-1
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
+			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
+			-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/libncurses/include" \
+		CPPFLAGS="-O2 -Wall -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
+			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
+			-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/libncurses/include" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC" \
+		LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
+		$(CONFIGURE) --prefix=/usr \
+			--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
+			--enable-shared --disable-static \
+			--without-mysqlmanager \
+			--with-pthread \
+			--with-ssl \
+			--without-docs \
+			--with-geometry \
+			--with-low-memory \
+			--enable-assembler \
+			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
+			ac_cv_c_stack_direction=-1
 	cd mysql && tar xvfz .host.tgz
 	@touch $@
 
 mysql: mysql/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C mysql
-	@$(MAKE) -C mysql DESTDIR=$(TOP)/mysql/staged install
-
-mysql-clean:
-	-@$(MAKE) -C mysql clean
-	-@rm -f mysql/stamp-h1
-	-@rm -rf mysql/staged mysql/host
-	-@rm -f mysql/.host.tgz
-	$(call unpatch_files,mysql)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/mysql/staged install
 
 mysql-install:
 	install -d $(INSTALLDIR)/mysql/usr/bin
@@ -2391,6 +2394,12 @@ mysql-install:
 	cp -arfpu $(TOP)/mysql/staged/usr/share/mysql/mysql_system_tables.sql . && \
 	cp -arfpu $(TOP)/mysql/staged/usr/share/mysql/mysql_system_tables_data.sql .
 
+mysql-clean:
+	-@$(MAKE) -C mysql clean
+	@rm -f mysql/stamp-h1 mysql/.host.tgz
+	@rm -rf mysql/staged mysql/host
+	$(call unpatch_files,mysql)
+
 lzo/stamp-h1:
 	cd lzo && \
 	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
@@ -2417,30 +2426,30 @@ lzo-install:
 openvpn/Makefile:
 	$(call patch_files,openvpn)
 	cd openvpn && autoreconf -fsi && \
-	OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
-	OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
-	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-L$(TOP)/$(OPENSSLDIR) $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
-	PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
-	$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-		--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
-		--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+			--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn/.conf
 
 openvpn: $(OPENSSLDIR) lzo $(if $(INSTALL_ZLIB),zlib,) openvpn/Makefile
 	@$(SEP)
-	@$(MAKE) -C openvpn $(PARALLEL_BUILD)
-
-openvpn-clean:
-	[ ! -f openvpn/Makefile ] || $(MAKE) -C openvpn clean
-	@rm -f openvpn/Makefile
-	$(call unpatch_files,openvpn)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 openvpn-install:
 	install -D openvpn/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 	$(STRIP) -s $(INSTALLDIR)/openvpn/usr/sbin/openvpn
 	chmod 0500 $(INSTALLDIR)/openvpn/usr/sbin/openvpn
+
+openvpn-clean:
+	-@$(MAKE) -C openvpn clean
+	@rm -f openvpn/Makefile
+	$(call unpatch_files,openvpn)
 
 openvpn_plugin_auth_nvram: nvram$(BCMEX)
 
@@ -2489,14 +2498,14 @@ libcurl/stamp-h1: zlib $(OPENSSLDIR)
 	$(call patch_files,libcurl)
 	cd libcurl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall -pipe -fno-strict-aliasing -fno-delete-null-pointer-checks -marm -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
 			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
-			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)" --with-zlib="$(TOP)/zlib/staged/usr" \
+			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/staged/usr" --with-zlib="$(TOP)/zlib/staged/usr" \
 			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
 			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl \
@@ -2505,8 +2514,8 @@ libcurl/stamp-h1: zlib $(OPENSSLDIR)
 
 libcurl: libcurl/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C libcurl $(PARALLEL_BUILD)
-	@$(MAKE) -C libcurl DESTDIR=$(TOP)/libcurl/staged install
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/libcurl/staged install
 
 libcurl-install:
 	install -D libcurl/lib/.libs/libcurl.so.4.7.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.7.0
@@ -2587,9 +2596,9 @@ transmission/build/Makefile: $(OPENSSLDIR) libcurl libevent zlib
 		-DCURL_LIBRARY=$(TOP)/libcurl/lib/.libs/libcurl.so \
 		-DEVENT2_INCLUDE_DIR=$(TOP)/libevent/include \
 		-DEVENT2_LIBRARY=$(TOP)/libevent/.libs/libevent.so \
-		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/include \
-		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/libcrypto.so \
-		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/libssl.so \
+		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/staged/usr/include \
+		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so \
+		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so \
 		-DZLIB_INCLUDE_DIR=$(TOP)/zlib \
 		-DZLIB_LIBRARY=$(TOP)/zlib/staged/usr/lib/libz.so \
 		..
@@ -2597,11 +2606,6 @@ transmission/build/Makefile: $(OPENSSLDIR) libcurl libevent zlib
 transmission: transmission/build/Makefile
 	@$(SEP)
 	$(MAKE) -C transmission/build $(PARALLEL_BUILD)
-
-transmission-clean:
-	-@$(MAKE) -C transmission clean
-	@rm -rf transmission/build
-	$(call unpatch_files,transmission)
 
 transmission-install:
 	$(MAKE) -C transmission/build DESTDIR=$(INSTALLDIR)/transmission install
@@ -2614,6 +2618,11 @@ ifneq ($(TCONFIG_TR_EXTRAS),y)
 else
 	$(STRIP) -s $(INSTALLDIR)/transmission/usr/bin/transmission-remote
 endif
+
+transmission-clean:
+	-@$(MAKE) -C transmission clean
+	@rm -rf transmission/build
+	$(call unpatch_files,transmission)
 
 libnfsidmap/stamp-h1:
 	cd libnfsidmap && ./autogen.sh && \
@@ -2731,8 +2740,8 @@ nfs-utils-clean:
 tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 	$(call patch_files,tinc)
 	cd tinc && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR) -Wl,-rpath,$(TOP)/$(OPENSSLDIR)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 		LIBS="-lpthread" \
 		$(CONFIGURE) \
 			--prefix=/usr \
@@ -2742,20 +2751,15 @@ tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 			--with-zlib-lib="$(TOP)/zlib" \
 			--with-lzo-include="$(TOP)/lzo/include" \
 			--with-lzo-lib="$(TOP)/lzo/src/.libs" \
-			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/include" \
-			--with-openssl-lib="$(TOP)/$(OPENSSLDIR)" \
+			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			--with-openssl-lib="$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 			--disable-curses \
 			--disable-readline
 	@touch $@
 
 tinc: tinc/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C tinc LIBS="-lcrypto $(TOP)/zlib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
-
-tinc-clean:
-	-@$(MAKE) -C tinc clean
-	@rm -f tinc/stamp-h1
-	$(call unpatch_files,tinc)
+	@$(MAKE) -C $@ LIBS="-lcrypto $(TOP)/zlib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
 
 tinc-install:
 	install -D tinc/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
@@ -2763,15 +2767,25 @@ tinc-install:
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
 
+tinc-clean:
+	-@$(MAKE) -C tinc clean
+	@rm -f tinc/stamp-h1
+	$(call unpatch_files,tinc)
+
 util-linux/stamp-h1:
 	cd util-linux && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) \
-			--prefix=/ \
+			--prefix=/usr \
 			--disable-all-programs \
 			--enable-libuuid \
 			--enable-libblkid \
+			--without-btrfs \
+			--without-systemd \
+			--without-python \
+			--disable-hwclock \
+			--disable-hwclock-cmos \
 			--disable-shared
 	@touch $@
 
@@ -2790,19 +2804,18 @@ util-linux-clean:
 
 gettext-tiny/stamp-h1:
 	@$(MAKE) -C gettext-tiny \
-	prefix=/ \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
+		prefix=/usr \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 	@touch $@
 
 gettext-tiny: gettext-tiny/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C gettext-tiny \
-	prefix=/ \
-	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-	install \
-	DESTDIR=$(TOP)/gettext-tiny/staged
+		prefix=/usr \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		DESTDIR=$(TOP)/gettext-tiny/staged install
 
 gettext-tiny-clean:
 	-@$(MAKE) -C gettext-tiny clean
@@ -2813,8 +2826,8 @@ zfs/stamp-h1: zlib $(OPENSSLDIR) gettext-tiny util-linux
 	$(call patch_files,zfs)
 	cd zfs && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/zlib/staged/usr/include -I$(TOP)/util-linux/staged/include -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/gettext-tiny/staged/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/util-linux/staged/lib -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/gettext-tiny/staged/lib" \
+		CPPFLAGS="-I$(TOP)/zlib/staged/usr/include -I$(TOP)/util-linux/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/util-linux/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/gettext-tiny/staged/usr/lib" \
 		$(CONFIGURE) \
 			--prefix=/usr \
 			--sysconfdir=/etc \
@@ -2980,10 +2993,9 @@ getdns/build/Makefile:
 		-DBUILD_STUBBY=TRUE -DENABLE_STUB_ONLY=TRUE \
 		-DBUILD_LIBEV=FALSE -DBUILD_LIBEVENT2=FALSE -DBUILD_LIBUV=FALSE \
 		-DBUILD_TESTING=FALSE \
-		-DOPENSSL_ROOT_DIR=$(TOP)/$(OPENSSLDIR) \
-		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/include \
-		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/libcrypto.so \
-		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/libssl.so \
+		-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/staged/usr/include \
+		-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so \
+		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so \
 		-DLIBYAML_DIR=$(TOP)/libyaml \
 		-DLIBYAML_INCLUDE_DIR=$(TOP)/libyaml/include \
 		-DLIBYAML_LIBRARY=$(TOP)/libyaml/src/.libs/libyaml.a \
@@ -3006,8 +3018,8 @@ getdns-clean:
 
 tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 	cd tor && autoreconf -fsi && \
-		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/include -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
@@ -3018,7 +3030,7 @@ tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 
 tor: tor/stamp-h1
 	@$(SEP)
-	$(MAKE) -C tor $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 tor-install:
 	install -D tor/src/app/tor $(INSTALLDIR)/tor/usr/sbin/tor
@@ -3026,7 +3038,7 @@ tor-install:
 
 tor-clean:
 	-@$(MAKE) -C tor clean
-	@rm -rf tor/stamp-h1 tor/Makefile
+	@rm -f tor/stamp-h1 tor/Makefile
 
 udpxy/stamp-h1:
 	$(call patch_files,udpxy)

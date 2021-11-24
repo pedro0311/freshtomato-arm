@@ -195,8 +195,10 @@ void start_dnsmasq()
 		           "rebind-localhost-ok\n");
 
 	/* instruct clients like Firefox to not auto-enable DoH */
-	if (nvram_get_int("dns_priv_override"))
-		fprintf(f, "address=/use-application-dns.net/\n");
+	if (nvram_get_int("dns_priv_override")) {
+		fprintf(f, "address=/use-application-dns.net/\n"
+		           "address=/_dns.resolver.arpa/\n");
+	}
 
 	/* forward local domain queries to upstream DNS */
 	if (nvram_get_int("dns_fwd_local") != 1)
@@ -603,6 +605,7 @@ void start_dnsmasq()
 	}
 #endif /* TCONFIG_IPV6 */
 
+	fprintf(f, "edns-packet-max=1280\n");
 	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
 
 	fappend(f, "/etc/dnsmasq.custom");

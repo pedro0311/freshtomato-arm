@@ -576,7 +576,7 @@ function init() {
 <!-- IPV6-BEGIN -->
 		<li><b>Fast RA mode</b> - Forces dnsmasq to be always in frequent RA mode. (Recommendation: enable also "Mute RA logging" option)</li>
 <!-- IPV6-END -->
-		<li><b>Prevent client auto DoH</b> - Some clients like Firefox will automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
+		<li><b>Prevent client auto DoH</b> - Some clients like Firefox or Windows' Discovery of Designated Resolver support can automatically switch to DNS over HTTPS, bypassing your preferred DNS servers. This option may prevent that.</li>
 		<li><b>Enable DNS Rebind protection</b> - Enabling this will protect your LAN against DNS rebind attacks, however it will prevent upstream DNS servers from resolving queries to any non-routable IP (for example, 192.168.1.1).</li>
 <!-- MDNS-BEGIN -->
 		<li><b>Enable multicast DNS (Avahi mDNS)</b> - You will probably also like to add some <a href="advanced-access.asp">LAN access rules</a> (by default all communications between bridges is blocked) and/or use <a href="admin-scripts.asp">Firewall script</a> to add your own rules, ie. (br0 = private network, br1 = IOT): <i>iptables -I FORWARD -i br0 -o br+ -j ACCEPT</i> and <i>iptables -I INPUT -i br1 -p udp --dport 5353 -j ACCEPT</i>. Alternative config file is available (/etc/avahi/avahi-daemon_alt.conf).</li>

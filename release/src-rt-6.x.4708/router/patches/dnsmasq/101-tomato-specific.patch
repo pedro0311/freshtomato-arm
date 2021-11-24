@@ -1,16 +1,6 @@
 --- dnsmasq/src/config.h
 +++ dnsmasq/src/config.h
-@@ -19,7 +19,9 @@
- #define CHILD_LIFETIME 150 /* secs 'till terminated (RFC1035 suggests > 120s) */
- #define TCP_MAX_QUERIES 100 /* Maximum number of queries per incoming TCP connection */
- #define TCP_BACKLOG 32  /* kernel backlog limit for TCP connections */
-+#ifndef EDNS_PKTSZ
- #define EDNS_PKTSZ 4096 /* default max EDNS.0 UDP packet from RFC5625 */
-+#endif
- #define SAFE_PKTSZ 1280 /* "go anywhere" UDP packet size */
- #define KEYBLOCK_LEN 40 /* choose to minimise fragmentation when storing DNSSEC keys */
- #define DNSSEC_WORK 50 /* Max number of queries to validate one question */
-@@ -76,6 +78,10 @@
+@@ -76,6 +76,10 @@
     NOTE: when enabling or disabling this, be sure to delete any old
     leases file, otherwise dnsmasq may get very confused.
  
@@ -21,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -348,6 +354,10 @@
+@@ -348,6 +352,10 @@
  #undef HAVE_LOOP
  #endif
  
@@ -32,7 +22,7 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -420,6 +430,9 @@
+@@ -420,6 +428,9 @@
  "no-"
  #endif
  "ipset "
