@@ -112,22 +112,28 @@ endif
 
 # clean up
 	cd $(INSTALLDIR)/usr/sbin && \
-	for F in tomatoanon adblock ttb optware-install.sh entware-install.sh; do \
-		[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
-		-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
-		-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
-		|| true; \
-	done
+		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh; do \
+			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
+			-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
+			-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
+			|| true; \
+		done
 
 #	cd $(INSTALLDIR)/usr/sbin && \
-#	for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode; do \
-#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
-#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#		for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode; do \
+#			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && { \
+#				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+#				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#			} || true; \
 #	done
+# ifeq ($(or $(TCONFIG_BT),$(TCONFIG_NGINX)),y)
 #	cd $(INSTALLDIR)/usr/bin && \
-#	for F in mycheck btcheck; do \
-#		sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
-#		sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#		for F in mycheck btcheck; do \
+#			[ -f $(INSTALLDIR)/usr/bin/$$F ] && { \
+#				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+#				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+#			} || true; \
 #	done
+# endif
 
 clean:
