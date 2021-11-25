@@ -2881,7 +2881,7 @@ getdns/build/Makefile:
 		..
 
 getdns: $(OPENSSLDIR) libyaml getdns/build/Makefile
-	$(MAKE) -C getdns/build
+	$(MAKE) -C getdns/build $(PARALLEL_BUILD)
 
 getdns-install:
 	install -d $(INSTALLDIR)/getdns/usr/sbin
@@ -3130,7 +3130,7 @@ libjson-c/build/Makefile:
 
 libjson-c: libjson-c/build/Makefile
 	@$(SEP)
-	$(MAKE) -C libjson-c/build all
+	$(MAKE) -C libjson-c/build all $(PARALLEL_BUILD)
 	cd libjson-c && ln -sf build/json_config.h json_config.h
 
 libjson-c-clean:
