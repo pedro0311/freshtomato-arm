@@ -110,6 +110,11 @@ ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin
 endif
 
+# certificate generator
+ifneq ($(TCONFIG_HTTPS),)
+	install -m 0500 gencert.sh $(INSTALLDIR)/usr/sbin
+endif
+
 # clean up
 	cd $(INSTALLDIR)/usr/sbin && \
 		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh; do \
@@ -120,7 +125,7 @@ endif
 		done
 
 #	cd $(INSTALLDIR)/usr/sbin && \
-#		for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode; do \
+#		for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode gencert.sh; do \
 #			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && { \
 #				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
 #				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \

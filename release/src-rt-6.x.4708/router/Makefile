@@ -899,7 +899,6 @@ openssl-install:
 		install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
 		$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
 		chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
-		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh ; \
 	fi
 	@true
 
@@ -938,7 +937,6 @@ openssl-1.1-install:
 		install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
 		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
-		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl-1.1/usr/sbin/gencert.sh ; \
 		cd $(INSTALLDIR)/openssl-1.1/usr/sbin && ln -sf openssl11 openssl ; \
 	fi
 	@true
