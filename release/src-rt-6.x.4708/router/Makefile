@@ -1908,9 +1908,10 @@ glib/stamp-h1:
 glib: glib/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C glib $(PARALLEL_BUILD)
-
-glib-install: glib
 	@$(MAKE) -C glib DESTDIR=$(INSTALLDIR)/glib install
+
+glib-install:
+	@true
 
 glib-clean:
 	-@$(MAKE) -C glib clean
