@@ -1,8 +1,8 @@
 --- openssl-1.1/Configurations/10-main.conf
 +++ openssl-1.1/Configurations/10-main.conf
-@@ -753,6 +753,18 @@ my %targets = (
-         perlasm_scheme   => "64",
-         multilib         => "64",
+@@ -760,6 +760,18 @@ my %targets = (
+         inherit_from     => [ "linux-generic64"],
+         perlasm_scheme   => "linux64",
      },
 +    "linux-mipsel" => {
 +        inherit_from     => [ "linux-mips32" ],
