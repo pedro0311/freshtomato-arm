@@ -2248,8 +2248,28 @@ libncurses-install:
 		ln -sf libmenu.so.6 libmenu.so
 
 mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
-	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
+	cd mysql && \
+		CC=$(CC:$(CROSS_COMPILE)%=%) CXX=$(CXX:$(CROSS_COMPILE)%=%) AR=$(AR:$(CROSS_COMPILE)%=%) RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
+		NM=$(NM:$(CROSS_COMPILE)%=%) LD=$(LD:$(CROSS_COMPILE)%=%) OBJDUMP=$(OBJDUMP:$(CROSS_COMPILE)%=%) CFLAGS="" CPPFLAGS="" \
+		./configure
+	@cp mysql/include/config.h mysql/include/my_config.h
+
+	@$(MAKE) -C mysql/vio
+	@$(MAKE) -C mysql/mysys
+	@$(MAKE) -C mysql/strings
+	@$(MAKE) -C mysql/dbug
+	@$(MAKE) -C mysql/regex
+	@$(MAKE) -C mysql/sql gen_lex_hash
+	@$(MAKE) -C mysql/scripts comp_sql
+	@$(MAKE) -C mysql/extra comp_err
+
+	@mkdir -p mysql/host
+	@cp -vf mysql/sql/gen_lex_hash mysql/scripts/comp_sql mysql/extra/comp_err mysql/host
+	@$(MAKE) -C mysql clean
+	@rm -f mysql/configure
+
 	$(call patch_files,mysql)
+	@chmod 0755 mysql/configure
 	cd mysql && \
 		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
@@ -2258,7 +2278,7 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
 			-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/libncurses/include" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC" \
-		LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
+		LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses -lpthread" \
 		$(CONFIGURE) --prefix=/usr \
 			--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
 			--enable-shared --disable-static \
@@ -2271,7 +2291,6 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 			--enable-assembler \
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 			ac_cv_c_stack_direction=-1
-	cd mysql && tar xvfz .host.tgz
 	@touch $@
 
 mysql: mysql/stamp-h1
@@ -2323,7 +2342,7 @@ mysql-install:
 
 mysql-clean:
 	-@$(MAKE) -C mysql clean
-	@rm -f mysql/stamp-h1 mysql/.host.tgz
+	@rm -f mysql/stamp-h1
 	@rm -rf mysql/staged mysql/host
 	$(call unpatch_files,mysql)
 

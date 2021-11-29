@@ -1,5 +1,5 @@
---- mysql/configure	2013-11-04 19:55:16.000000000 +0100
-+++ mysql/configure	2017-09-28 17:27:10.000000000 +0200
+--- mysql/configure
++++ mysql/configure
 @@ -26300,13 +26300,14 @@ if test "${ac_cv_sys_restartable_syscall
    $as_echo_n "(cached) " >&6
  else
@@ -11,7 +11,7 @@
 -$as_echo "$as_me: error: cannot run test program while cross compiling
 -See \`config.log' for more details." >&2;}
 -   { (exit 1); exit 1; }; }; }
-+$as_echo "Skipping...! bwq518"
++$as_echo "Skipping...!"
 +#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 +#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 +#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
@@ -42,7 +42,7 @@
 -$as_echo "$as_me: error: cannot run test program while cross compiling
 -See \`config.log' for more details." >&2;}
 -   { (exit 1); exit 1; }; }; }
-+$as_echo "Skipping...! bwq518"
++$as_echo "Skipping...!"
 +#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 +#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 +#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
@@ -64,7 +64,7 @@
 -$as_echo "$as_me: error: cannot run test program while cross compiling
 -See \`config.log' for more details." >&2;}
 -   { (exit 1); exit 1; }; }; }
-+$as_echo "Skipping...! bwq518"
++$as_echo "Skipping...!"
 +#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 +#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 +#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
@@ -86,7 +86,7 @@
 -$as_echo "$as_me: error: cannot run test program while cross compiling
 -See \`config.log' for more details." >&2;}
 -   { (exit 1); exit 1; }; }; }
-+$as_echo "Skipping...! bwq518"
++$as_echo "Skipping...!"
 +#  { { $as_echo "$as_me:$LINENO: error: in \`$ac_pwd':" >&5
 +#$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 +#{ { $as_echo "$as_me:$LINENO: error: cannot run test program while cross compiling
