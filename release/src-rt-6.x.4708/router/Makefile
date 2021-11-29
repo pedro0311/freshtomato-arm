@@ -2843,6 +2843,8 @@ apcupsd-install:
 	@rm -rf $(INSTALLDIR)/apcupsd/www/apcupsd/ups*.cgi
 	$(STRIP) $(INSTALLDIR)/apcupsd/sbin/*
 	$(STRIP) $(INSTALLDIR)/apcupsd/www/apcupsd/*
+	@mkdir -p $(INSTALLDIR)/apcupsd/usr/bin
+	@cd $(INSTALLDIR)/apcupsd/usr/bin && ln -sf ../../bin/hostname hostname
 
 libsodium/stamp-h1:
 	cd libsodium && autoreconf -fsi && \
