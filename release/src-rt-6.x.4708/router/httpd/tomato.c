@@ -1102,7 +1102,6 @@ static const nvset_t nvset_list[] = {
 #ifndef TCONFIG_BCMARM
 	{ "trunk_vlan_so",		V_01				},
 #endif
-	{ "vlan0tag",			V_TEXT(0,5)			},
 	{ "vlan0vid",			V_TEXT(0,5)			},
 	{ "vlan1vid",			V_TEXT(0,5)			},
 	{ "vlan2vid",			V_TEXT(0,5)			},

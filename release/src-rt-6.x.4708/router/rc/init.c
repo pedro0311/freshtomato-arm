@@ -32,6 +32,7 @@
 #include <sys/sysinfo.h>
 #include <wlutils.h>
 #include <bcmdevs.h>
+#include <bcmparams.h>
 
 #define SHELL "/bin/sh"
 /* needed by logmsg() */
@@ -509,6 +510,34 @@ static int init_vlan_ports(void)
 {
 	int dirty = 0;
 	int model = get_model();
+
+	char vlanports[] = "vlanXXXXports";
+	char vlanhw[] = "vlanXXXXhwname";
+	char vlanvid[] = "vlanXXXXvid";
+	char nvvalue[8] = { 0 };
+	int num;
+	const char *ports, *hwname, *vid;
+
+	/* FreshTomato: check and prepare nvram VLAN values before we start (vlan mapping) */
+	for (num = 0; num < TOMATO_VLANNUM; num ++) {
+		/* get vlan infos from nvram */
+		snprintf(vlanports, sizeof(vlanports), "vlan%dports", num);
+		snprintf(vlanhw, sizeof(vlanhw), "vlan%dhwname", num);
+		snprintf(vlanvid, sizeof(vlanvid), "vlan%dvid", num);
+
+		hwname = nvram_get(vlanhw);
+		ports = nvram_get(vlanports);
+
+		/* check if we use vlanX */
+		if ((hwname && strlen(hwname)) || (ports && strlen(ports))) {
+			vid = nvram_get(vlanvid);
+			if ((vid == NULL) ||
+			    (vid && !strlen(vid))) { /* create nvram vlanXvid if missing, we need it! (default ex. Vlan 4 --> Vid 4) */
+				snprintf(nvvalue, sizeof(nvvalue), "%d", num);
+				nvram_set(vlanvid, nvvalue);
+			}
+		}
+	}
 
 	switch (model) {
 #ifdef CONFIG_BCMWL6A
