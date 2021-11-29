@@ -735,6 +735,17 @@ void do_wan_routes(char *ifname, int metric, int add, char *prefix)
 	}
 }
 
+void create_wanx_mac(char *prefix, int mac_plus)
+{
+	char buffer[32] = { 0 };
+	char nvtmp[16];
+
+	snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+	inc_mac(buffer, mac_plus);						/* MAC + value for wanX */
+	nvram_set(strcat_r(prefix, "_mac", nvtmp), buffer);			/* save it to nvram */
+	logmsg(LOG_INFO, "Create and save wanX mac address - WAN: %s - Address: %s", prefix, buffer);
+}
+
 void store_wan_if_to_nvram(char *prefix)
 {
 	char *p = NULL;
@@ -743,26 +754,32 @@ void store_wan_if_to_nvram(char *prefix)
 	int wan_unit;
 	int vid;
 	int vid_map;
-	int vlan0tag;
 	char tmp[64];
+	char *nvvar = NULL;
 
 	wan_unit = get_wan_unit(prefix);
 
 	if (strcmp(nvram_safe_get(strcat_r(prefix, "_sta", tmp)), "") == 0) {
+		/* vlan ID mapping */
 		p = nvram_safe_get(strcat_r(prefix, "_ifnameX", tmp));
 		if (sscanf(p, "vlan%d", &vid) == 1) {
-			vlan0tag = nvram_get_int("vlan0tag");
 			snprintf(buf, sizeof(buf), "vlan%dvid", vid);
 			vid_map = nvram_get_int(buf);
-			if ((vid_map < 1) || (vid_map > 4094)) vid_map = vlan0tag | vid;
+			if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
 			snprintf(buf, sizeof(buf), "vlan%d", vid_map);
 			p = buf;
 		}
 		/* Set wan mac on vlan (but not for wireless client) */
-		if (!strcmp(prefix, "wan"))
-			set_mac(p, "wan_mac", 1);
-		else
-			set_mac(p, strcat_r(prefix, "_mac", tmp), wan_unit + 15);
+		nvvar = nvram_get(strcat_r(prefix, "_mac", tmp));  /* ToDo: wanX_mac add it to the GUI ? */
+
+		/* check if we have a wanX mac? FT user could/can define one ... if not, create it (default);
+		 * Increase mac address and keep distance to et0 mac --> We need it for working VLAN setups! (PPPoE)
+		 */
+		if ((nvvar == NULL) ||
+		    (nvvar && !strlen(nvvar))) {
+			create_wanx_mac(prefix, (wan_unit + 15));
+		}
+		set_mac(p, tmp, (wan_unit + 15));
 	}
 	else { /* Wireless client as wan */
 		w = nvram_safe_get(strcat_r(prefix, "_sta", tmp));

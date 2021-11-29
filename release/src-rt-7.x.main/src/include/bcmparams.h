@@ -20,11 +20,15 @@
 #ifndef	_bcmparams_h_
 #define	_bcmparams_h_
 
-#define VLAN_MAXVID	15	/* Max. VLAN ID supported/allowed */
+#define VLAN_MAXVID	4094	/* Max. VLAN ID supported/allowed */
+
+#define VLAN_NUMVLANS	4095	/* # Max. Number of VLANs */
+
+#define TOMATO_VLANNUM	16	/* # FreshTomato VLAN base: vlan1 to vlan16 --> we do vlan mapping */
 
 #define VLAN_NUMPRIS	8	/* # of prio, start from 0 */
 
-#define DEV_NUMIFS	16	/* Max. # of devices/interfaces supported */
+#define DEV_NUMIFS	4095	/* Max. # of devices/interfaces supported */
 
 #define WL_MAXBSSCFG	16	/* maximum number of BSS Configs we can configure */
 

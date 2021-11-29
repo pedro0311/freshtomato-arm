@@ -49,6 +49,7 @@
 		        ((len) == 2) ? *((uint16 *)(var)) : \
 		        *((uint32 *)(var)))
 
+/* FreshTomato VLAN debug */
 //#define VID_MAP_DBG
 
 #if defined(RTAC87U) || defined(CONFIG_RTAC87U) || defined(RTAC88U) || defined(CONFIG_RTAC88U)
@@ -157,9 +158,6 @@ void robo_chk_regs(robo_info_t *robo);
 #define REG_VLAN_PTAG7	0x1e	/* VLAN Default Port Tag register - port 7 */
 #define REG_VLAN_PTAG8	0x20	/* 539x: VLAN Default Port Tag register - IMP port */
 #define REG_VLAN_PMAP	0x20	/* 5325: VLAN Priority Re-map register */
-
-#define VLAN_NUMVLANS	16	/* # of VLANs */
-
 
 /* ARL/VLAN Table Access page registers */
 #define REG_VTBL_CTRL		0x00	/* ARL Read/Write Control */
@@ -1564,17 +1562,35 @@ robo_cpu_port_upd(robo_info_t *robo, pdesc_t *pdesc, int pdescsz)
 
 	for (vid = 0; vid < VLAN_NUMVLANS; vid ++) {
 		char vlanports[] = "vlanXXXXports";
-		char port[] = "XXXX", *next;
-		const char *ports, *cur;
+		char vlanvid[] = "vlanXXXXvid";
+		char port[] = "XXXX", *next, *nvvid;
+		const char *ports = NULL, *cur;
 		int pid, len;
+		int tomatovlan_num, tomato_vid = 0;
 
 		/* no members if VLAN id is out of limitation */
 		if (vid > VLAN_MAXVID)
 			return;
 
-		/* get vlan member ports from nvram */
-		sprintf(vlanports, "vlan%dports", vid);
-		ports = getvar(robo->vars, vlanports);
+		/* FreshTomato vlan mapping */
+		for (tomatovlan_num = 0; tomatovlan_num < TOMATO_VLANNUM; tomatovlan_num ++) {
+			sprintf(vlanvid, "vlan%dvid", tomatovlan_num);
+			nvvid = getvar(robo->vars, vlanvid);
+
+			if (nvvid != NULL) {
+				tomato_vid = bcm_atoi(nvvid);
+				if ((tomato_vid < 1) || (tomato_vid > 4094)) continue;
+			}
+			else
+				continue;
+
+			if (vid == tomato_vid) { /* found! get FreshTomato vlan ports */
+				sprintf(vlanports, "vlan%dports", tomatovlan_num);
+				ports = getvar(robo->vars, vlanports);
+				break;
+			}
+		}
+
 		if (!ports)
 			continue;
 
@@ -1946,7 +1962,7 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 	uint32 val32;
 	pdesc_t *pdesc;
 	int pdescsz;
-	uint16 vid, vid0, vid_map;
+	uint16 vid;
 	uint8 arl_entry[8] = { 0 }, arl_entry1[8] = { 0 };
 
 	/* Enable management interface access */
@@ -2016,45 +2032,45 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 		}
 	}
 
-	vid0 = getintvar(robo->vars, "vlan0tag");
-#ifdef VID_MAP_DBG
-	printk(KERN_EMERG "bcmrobo: vlan0tag/vid0=%d\n", vid0 );
-#endif
-
 	/* setup each vlan. max. 16 vlans. */
 	/* force vlan id to be equal to vlan number */
 	for (vid = 0; vid < VLAN_NUMVLANS; vid ++) {
 		char vlanports[] = "vlanXXXXports";
 		char vlanvid[] = "vlanXXXXvid";
 		char port[] = "XXXX", *next, *nvvid;
-		const char *ports, *cur;
+		const char *ports = NULL, *cur;
 		uint32 untag = 0;
 		uint32 member = 0;
 		int pid, len;
 		int cpuport = 0;
+		int tomatovlan_num, tomato_vid = 0;
 
 		/* no members if VLAN id is out of limitation */
 		if (vid > VLAN_MAXVID)
 			goto vlan_setup;
 
-		/* vlan ID mapping */
-		vid_map = vid0 | vid;
-		sprintf(vlanvid, "vlan%dvid", vid);
-		nvvid = getvar(robo->vars, vlanvid);
+		/* FreshTomato vlan mapping */
+		for (tomatovlan_num = 0; tomatovlan_num < TOMATO_VLANNUM; tomatovlan_num ++) {
+			sprintf(vlanvid, "vlan%dvid", tomatovlan_num);
+			nvvid = getvar(robo->vars, vlanvid);
 
-		if (nvvid != NULL) {
-			vid_map = bcm_atoi(nvvid);
-			if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid0 | vid;
+			if (nvvid != NULL) {
+				tomato_vid = bcm_atoi(nvvid);
+				if ((tomato_vid < 1) || (tomato_vid > 4094)) continue;
+			}
+			else
+				continue;
+
+			if (vid == tomato_vid) { /* found! get FreshTomato vlan ports */
+				sprintf(vlanports, "vlan%dports", tomatovlan_num);
+				ports = getvar(robo->vars, vlanports);
+				break;
+			}
 		}
 
-		/* get vlan member ports from nvram */
-		sprintf(vlanports, "vlan%dports", vid);
-		ports = getvar(robo->vars, vlanports);
-
 #ifdef VID_MAP_DBG
-	printk(KERN_EMERG "bcmrobo: VLAN %d mapped to VID %d, ports='%s', %s='%s'\n",
-		vid, vid_map, (ports != NULL)? ports: "(unset)",
-		vlanvid, (nvvid != NULL)? nvvid: "(unset)" );
+		if (ports)
+			printk(KERN_EMERG "bcmrobo: VLAN %d mapped to VID %d, ports='%s'\n", vid, vid, ports);
 #endif
 
 		/* In 539x vid == 0 us invalid?? */
@@ -2112,12 +2128,12 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 #else
 #define	FL	FLAG_UNTAG
 #endif /* _CFE_ */
-			if ((!pdesc[pid].cpu && !strchr(port, FLAG_TAGGED)) ||
-			    strchr(port, FL)) {
+			if (!pdesc[pid].cpu || strchr(port, FL)) {
 				val16 = ((0 << 13) |		/* priority - always 0 */
-				         vid_map);			/* vlan id */
+				         vid);			/* vlan id */
 #ifdef VID_MAP_DBG
-				printk( KERN_EMERG "bcmrobo(map A) ->%d/%d\n", vid_map, pid);
+			if (ports)
+				printk(KERN_EMERG "bcmrobo(map A) ->%d/%d\n", vid, pid);
 #endif
 				robo->ops->write_reg(robo, PAGE_VLAN, pdesc[pid].ptagr,
 				                     &val16, sizeof(val16));
@@ -2152,11 +2168,11 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 			/* Set the MAC addr and VLAN Id in ARL Table MAC/VID Entry 0
 			 * Register.
 			 */
-			arl_entry[6] = (vid_map & 0xff);
-			arl_entry[7] = (vid_map >> 8);
+			arl_entry[6] = (vid & 0xff);
+			arl_entry[7] = (vid >> 8);
 #ifdef VID_MAP_DBG
-			printk( KERN_EMERG "bcmrobo(map B) ->%d (%d/%d)\n",
-				vid_map, arl_entry[6], arl_entry[7] );
+			if (ports)
+				printk(KERN_EMERG "bcmrobo(map B) ->%d (%d/%d)\n", vid, arl_entry[6], arl_entry[7]);
 #endif
 			robo->ops->write_reg(robo, PAGE_VTBL, REG_VTBL_ARL_E0,
 			                     arl_entry, sizeof(arl_entry));
@@ -2188,10 +2204,10 @@ vlan_setup:
 		if (robo->devid == DEVID5325) {
 			if (robo->corerev < 3) {
 				val32 |= ((1 << 20) |           /* valid write */
-					  ((vid0 >> 4) << 12)); /* vlan id bit[11:4] */
+					  ((vid >> 4) << 12)); /* vlan id bit[11:4] */
 			} else {
 				val32 |= ((1 << 24) |		/* valid write */
-					(vid_map << 12));	/* vlan id bit[11:4] */
+					(vid << 12));	/* vlan id bit[11:4] */
 			}
 			ET_MSG(("bcm_robo_config_vlan: programming REG_VLAN_WRITE %08x\n", val32));
 
@@ -2201,11 +2217,12 @@ vlan_setup:
 			/* VLAN Table Access Register (Page 0x34, Address 0x06-0x07) */
 			val16 = ((1 << 13) |	/* start command */
 			         (1 << 12) |	/* write state */
-			         vid_map);		/* vlan id */
+			         vid);		/* vlan id */
 			robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_ACCESS, &val16,
 			                     sizeof(val16));
 #ifdef VID_MAP_DBG
-			printk( KERN_EMERG "bcmrobo(map C/DEVID5365) ->%d\n", vid_map );
+			if (ports)
+				printk(KERN_EMERG "bcmrobo(map C/DEVID5325) ->%d\n", vid);
 #endif
 		} else {
 			uint8 vtble, vtbli, vtbla;
@@ -2227,9 +2244,10 @@ vlan_setup:
 			robo->ops->write_reg(robo, PAGE_VTBL, vtble, &val32,
 			                     sizeof(val32));
 			/* VLAN Table Address Index Reg (Page 0x05, Address 0x61-0x62/0x81-0x82) */
-			val16 = vid_map;        /* vlan id */
+			val16 = vid;        /* vlan id */
 #ifdef VID_MAP_DBG
-			printk( KERN_EMERG "bcmrobo(map C) ->%d\n", vid_map );
+			if (ports)
+				printk(KERN_EMERG "bcmrobo(map C) ->%d\n", vid);
 #endif
 			robo->ops->write_reg(robo, PAGE_VTBL, vtbli, &val16,
 			                     sizeof(val16));
@@ -2458,24 +2476,24 @@ bcm_robo_enable_switch(robo_info_t *robo)
 
 	if (boardnum != NULL && boardtype != NULL && boardrev != NULL){
 		if (!strcmp(boardnum, "32") && (!strcmp(boardtype, "0x0665") || !strcmp(boardtype, "0x072F"))){
-			/* WAN port LED fix*/
-			val16 = 0x3000 ;
+			/* WAN port LED fix */
+			val16 = 0x3000;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x10, &val16, sizeof(val16));
-			val8 = 0x78 ;
+			val8 = 0x78;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x12, &val8, sizeof(val8)); 
 			if(!strcmp(boardrev, "0x1301") || (!strcmp(boardrev, "0x1101") && !strcmp(boardtype, "0x072F")))
-			val8 = 0x01 ;
+			val8 = 0x01;
 			if(!strcmp(boardrev, "0x1101") && strcmp(boardtype, "0x072F"))
-			val8 = 0x10 ;
+			val8 = 0x10;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x14, &val8, sizeof(val8)); 
 		}
 		
 		if (et2phyaddr != NULL)
 		if (!strcmp(boardnum, "32") && !strcmp(boardtype, "0x0646") && !strcmp(boardrev, "0x1601") && !strcmp(et2phyaddr, "30")){
-			printk(KERN_EMERG "R7000P LED fix.\n");
-			val16 = 0x3000 ;
+			printk(KERN_EMERG "Netgear LED fix\n"); /* (only) for R6400v2 / R6700v3 (and R7000P) */
+			val16 = 0x3000;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x10, &val16, sizeof(val16));
-			val8 = 0x78 ;
+			val8 = 0x78;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x12, &val8, sizeof(val8)); 
 			val8 = 0x01;
 			robo->ops->write_reg(robo, PAGE_CTRL, 0x14, &val8, sizeof(val8));
