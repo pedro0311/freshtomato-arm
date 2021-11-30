@@ -995,15 +995,61 @@ httpd: shared nvram$(BCMEX) mssl
 www-install:
 	@$(MAKE) -C www install INSTALLDIR=$(INSTALLDIR)/www TOMATO_EXPERIMENTAL=$(TOMATO_EXPERIMENTAL)
 
+OPENSSL_CIPHERS := no-ssl2 no-ssl3 no-gost no-heartbeats no-err no-unit-test no-tests
+ifeq ($(TCONFIG_BCMARM),)
+ifeq ($(TCONFIG_KEYGEN),)
+ifeq ($(TCONFIG_OPENSSL11),y)
+OPENSSL_CIPHERS += no-camellia no-idea no-rc2 no-cast no-seed no-md4 no-mdc2 no-rmd160 no-cms no-engine no-ocsp no-srp no-ts no-afalgeng no-ocb \
+                   no-unit-test no-ui-console no-whirlpool no-blake2 no-cmac no-multiblock no-nextprotoneg no-comp no-ct no-scrypt no-sctp no-siphash no-ubsan \
+                   no-rc5 no-rdrand no-capieng no-rfc3779 no-hw no-zlib no-sse2 no-ssl-trace no-dtls1 no-psk no-md2 no-devcryptoeng no-dgram no-dtls
+else
+OPENSSL_CIPHERS += no-sha0 no-smime no-camellia no-krb5 no-rmd160 no-ripemd no-seed no-capieng no-gms no-gmp no-rfc3779 no-hw no-jpake no-zlib no-engines no-sse2 no-libunbound \
+                   no-ssl-trace no-dtls1 no-store no-psk no-md2 no-mdc2 no-ts enable-rc5
+endif # TCONFIG_OPENSSL11
+endif # !TCONFIG_KEYGEN
+ifeq ($(TCONFIG_BBT),)
+OPENSSL_CIPHERS += no-rc4
+endif
+endif # !TCONFIG_BCMARM
+
 openssl/stamp-h1:
+ifeq ($(TCONFIG_BCMARM),)
+ifeq ($(TCONFIG_KEYGEN),y)
+	@mv patches/openssl/102-tomato-mips-specific.patch patches/openssl/102-tomato-mips-specific.patch.tmp || true
+else
+	@mv patches/openssl/102-tomato-mips-specific.patch.tmp patches/openssl/102-tomato-mips-specific.patch || true
+endif
+	$(call patch_files,openssl)
+endif # !TCONFIG_BCMARM
+
 	cd openssl && \
 		CC=$(CC:$(CROSS_COMPILE)%=%) \
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 -DOPENSSL_NO_BUF_FREELISTS --openssldir=/etc/ssl \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,-Os) --prefix=/usr --openssldir=/etc/ssl -DOPENSSL_NO_BUF_FREELISTS \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-			shared enable-rc5 no-ssl2 no-ssl3 no-err
+			shared $(OPENSSL_CIPHERS)
+
+ifeq ($(TCONFIG_BCMARM),)
+	cd openssl && mkdir -p include/openssl && \
+	ln -sf ../../crypto/krb5/krb5_asn.h include/openssl/krb5_asn.h
+ifeq ($(TCONFIG_KEYGEN),)
+	cd openssl && \
+	ln -sf ../../crypto/camellia/camellia.h include/openssl/camellia.h && \
+	ln -sf ../../crypto/mdc2/mdc2.h include/openssl/mdc2.h && \
+	ln -sf ../../crypto/ripemd/ripemd.h include/openssl/ripemd.h && \
+	ln -sf ../../crypto/seed/seed.h include/openssl/seed.h && \
+	ln -sf ../../crypto/ts/ts.h include/openssl/ts.h && \
+	ln -sf ../../crypto/engine/engine.h include/openssl/engine.h && \
+	ln -sf ../../crypto/rsa/rsa.h include/openssl/rsa.h && \
+	ln -sf ../../crypto/dh/dh.h include/openssl/dh.h && \
+	ln -sf ../../crypto/idea/idea.h include/openssl/idea.h && \
+	ln -sf ../../crypto/rc2/rc2.h include/openssl/rc2.h && \
+	ln -sf ../../crypto/cast/cast.h include/openssl/cast.h
+endif
+endif # !TCONFIG_BCMARM
+
 	@$(MAKE) -C openssl depend
 	@$(MAKE) -C openssl clean
 	@touch $@
@@ -1011,62 +1057,67 @@ openssl/stamp-h1:
 openssl: openssl/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD)
-	$(MAKE) -C $@ install_sw DESTDIR=staged
+	$(MAKE) -C $@ INSTALL_PREFIX=$(TOP)/openssl/staged install_sw
 
 openssl-install:
-	if [ -f openssl/stamp-h1 ] ; then \
-		install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0 ; \
-		install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0 ; \
-		$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0 ; \
-		$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0 ; \
-		cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so ; \
-		cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so ; \
-		install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
-		$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
-		chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl ; \
-		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl/usr/sbin/gencert.sh ; \
-	fi
-	@true
+	install -D openssl/libcrypto.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
+	install -D openssl/libssl.so.1.0.0 $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
+	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libcrypto.so.1.0.0
+	$(STRIP) $(INSTALLDIR)/openssl/usr/lib/libssl.so.1.0.0
+	install -D openssl/apps/openssl $(INSTALLDIR)/openssl/usr/sbin/openssl
+	$(STRIP) $(INSTALLDIR)/openssl/usr/sbin/openssl
+	chmod 0500 $(INSTALLDIR)/openssl/usr/sbin/openssl
+	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libcrypto.so.1.0.0 libcrypto.so
+	cd $(INSTALLDIR)/openssl/usr/lib && ln -sf libssl.so.1.0.0 libssl.so
 
 openssl-clean:
 	-@$(MAKE) -C openssl clean
 	@rm -f openssl/stamp-h1
 	@rm -rf openssl/staged
+ifeq ($(TCONFIG_BCMARM),)
+	@rm -rf openssl/include
+	$(call unpatch_files,openssl)
+endif # !TCONFIG_BCMARM
 
 openssl-1.1/stamp-h1:
+ifeq ($(TCONFIG_BCMARM),)
+ifeq ($(TCONFIG_KEYGEN),y)
+	@mv patches/openssl-1.1/104-reduce-size-for-smaller-targets.patch patches/openssl-1.1/104-reduce-size-for-smaller-targets.patch.tmp || true
+else
+	@mv patches/openssl-1.1/104-reduce-size-for-smaller-targets.patch.tmp patches/openssl-1.1/104-reduce-size-for-smaller-targets.patch || true
+endif
+endif # !TCONFIG_BCMARM
+
 	$(call patch_files,openssl-1.1)
 	cd openssl-1.1 && \
 		CC=$(CC:$(CROSS_COMPILE)%=%) \
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) -O2 --prefix=/usr --openssldir=/etc/ssl \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,$(if $(TCONFIG_AIO),-O3,-Os)) --prefix=/usr --openssldir=/etc/ssl \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-			shared no-ssl3 no-err no-async --api=1.0.0 \
-			no-aria no-sm2 no-sm3 no-sm4 \
+			shared $(OPENSSL_CIPHERS) --api=1.0.0 \
+			no-async no-aria no-sm2 no-sm3 no-sm4 \
 			-DOPENSSL_PREFER_CHACHA_OVER_GCM
-	@$(MAKE) -C openssl-1.1 depend
 	@$(MAKE) -C openssl-1.1 clean
 	@touch $@
 
 openssl-1.1: openssl-1.1/stamp-h1
 	$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD)
-	$(MAKE) -C $@ install_sw DESTDIR=staged
+	$(MAKE) -C $@ DESTDIR=$(TOP)/openssl-1.1/staged install_sw
 
 openssl-1.1-install:
-	if [ -f openssl-1.1/stamp-h1 ] ; then \
-		install -D openssl-1.1/libcrypto.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1 ; \
-		install -D openssl-1.1/libssl.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1 ; \
-		install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
-		$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
-		chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11 ; \
-		install -D -m 0500 httpd/gencert.sh $(INSTALLDIR)/openssl-1.1/usr/sbin/gencert.sh ; \
-		cd $(INSTALLDIR)/openssl-1.1/usr/sbin && ln -sf openssl11 openssl ; \
-	fi
-	@true
+	install -D openssl-1.1/libcrypto.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1
+	install -D openssl-1.1/libssl.so.1.1 $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1
+	$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libssl.so.1.1
+	$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/lib/libcrypto.so.1.1
+	install -D openssl-1.1/apps/openssl $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11
+	$(STRIP) $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11
+	chmod 0500 $(INSTALLDIR)/openssl-1.1/usr/sbin/openssl11
+	cd $(INSTALLDIR)/openssl-1.1/usr/lib && ln -sf libcrypto.so.1.1 libcrypto.so
+	cd $(INSTALLDIR)/openssl-1.1/usr/lib && ln -sf libssl.so.1.1 libssl.so
+	cd $(INSTALLDIR)/openssl-1.1/usr/sbin && ln -sf openssl11 openssl
 
 openssl-1.1-clean:
 	-@$(MAKE) -C openssl-1.1 clean
@@ -2033,9 +2084,10 @@ glib/stamp-h1:
 glib: glib/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C glib $(PARALLEL_BUILD)
-
-glib-install: glib
 	@$(MAKE) -C glib DESTDIR=$(INSTALLDIR)/glib install
+
+glib-install:
+	@true
 
 glib-clean:
 	-@$(MAKE) -C glib clean
@@ -2321,8 +2373,28 @@ libncurses-install:
 		ln -sf libmenu.so.6 libmenu.so
 
 mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
-	@cp -f $(TOP)/patches/mysql/.host.tgz $(TOP)/mysql/ || true
+	cd mysql && \
+		CC=$(CC:$(CROSS_COMPILE)%=%) CXX=$(CXX:$(CROSS_COMPILE)%=%) AR=$(AR:$(CROSS_COMPILE)%=%) RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
+		NM=$(NM:$(CROSS_COMPILE)%=%) LD=$(LD:$(CROSS_COMPILE)%=%) OBJDUMP=$(OBJDUMP:$(CROSS_COMPILE)%=%) CFLAGS="" CPPFLAGS="" \
+		./configure
+	@cp mysql/include/config.h mysql/include/my_config.h
+
+	@$(MAKE) -C mysql/vio
+	@$(MAKE) -C mysql/mysys
+	@$(MAKE) -C mysql/strings
+	@$(MAKE) -C mysql/dbug
+	@$(MAKE) -C mysql/regex
+	@$(MAKE) -C mysql/sql gen_lex_hash
+	@$(MAKE) -C mysql/scripts comp_sql
+	@$(MAKE) -C mysql/extra comp_err
+
+	@mkdir -p mysql/host
+	@cp -vf mysql/sql/gen_lex_hash mysql/scripts/comp_sql mysql/extra/comp_err mysql/host
+	@$(MAKE) -C mysql clean
+	@rm -f mysql/configure
+
 	$(call patch_files,mysql)
+	@chmod 0755 mysql/configure
 	cd mysql && \
 		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time --param large-function-growth=800 \
 			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
@@ -2331,7 +2403,7 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 			--param max-inline-insns-single=3000 -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib \
 			-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/libncurses/include" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libncurses/lib -fPIC" \
-		LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses" \
+		LIBS="-lcrypt -lz -lstdc++ -lssl -lcrypto -lncurses -lpthread" \
 		$(CONFIGURE) --prefix=/usr \
 			--without-debug --without-docs --without-man --with-charset=utf8 --with-extra-charsets=ascii,latin1,gb2312,gbk \
 			--enable-shared --disable-static \
@@ -2344,7 +2416,6 @@ mysql/stamp-h1: $(OPENSSLDIR) zlib libncurses
 			--enable-assembler \
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 			ac_cv_c_stack_direction=-1
-	cd mysql && tar xvfz .host.tgz
 	@touch $@
 
 mysql: mysql/stamp-h1
@@ -2396,7 +2467,7 @@ mysql-install:
 
 mysql-clean:
 	-@$(MAKE) -C mysql clean
-	@rm -f mysql/stamp-h1 mysql/.host.tgz
+	@rm -f mysql/stamp-h1
 	@rm -rf mysql/staged mysql/host
 	$(call unpatch_files,mysql)
 
@@ -2916,6 +2987,8 @@ apcupsd-install:
 	@rm -rf $(INSTALLDIR)/apcupsd/www/apcupsd/ups*.cgi
 	$(STRIP) $(INSTALLDIR)/apcupsd/sbin/*
 	$(STRIP) $(INSTALLDIR)/apcupsd/www/apcupsd/*
+	@mkdir -p $(INSTALLDIR)/apcupsd/usr/bin
+	@cd $(INSTALLDIR)/apcupsd/usr/bin && ln -sf ../../bin/hostname hostname
 
 libsodium/stamp-h1:
 	cd libsodium && autoreconf -fsi && \
@@ -3005,7 +3078,7 @@ getdns/build/Makefile:
 		..
 
 getdns: $(OPENSSLDIR) libyaml getdns/build/Makefile
-	$(MAKE) -C getdns/build
+	$(MAKE) -C getdns/build $(PARALLEL_BUILD)
 
 getdns-install:
 	install -d $(INSTALLDIR)/getdns/usr/sbin
@@ -3254,7 +3327,7 @@ libjson-c/build/Makefile:
 
 libjson-c: libjson-c/build/Makefile
 	@$(SEP)
-	$(MAKE) -C libjson-c/build all
+	$(MAKE) -C libjson-c/build all $(PARALLEL_BUILD)
 	cd libjson-c && ln -sf build/json_config.h json_config.h
 
 libjson-c-clean:
