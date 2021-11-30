@@ -185,7 +185,7 @@ static void build_nginx_conf(void)
 	                         "include %s;\n"
 	                         "include %s;\n"
 	                         "default_type application/octet-stream;\n"
-	                         "log_format main '$remote_addr - $remote_user [$time_local] $status'\n"
+	                         "log_format main '$remote_addr - $remote_user [$time_local] $status '\n"
 	                         "'\"$request\" $body_bytes_sent \"$http_referer\" '\n"
 	                         "'\"$http_user_agent\" \"$http_x_forwarded_for\"';\n"
 	                         "sendfile %s;\n"
@@ -292,8 +292,9 @@ static void build_nginx_conf(void)
 		}
 		fprintf(phpini_file, "post_max_size = %sM\n"
 		                     "upload_max_filesize = %sM\n"
-		                     "mysql.default_port = 3309\n"
-		                     "mysql.default_socket = %s/mysqld.sock\n"
+		                     "mysqli.default_port = 3306\n"
+		                     "mysqli.default_socket = %s/mysqld.sock\n"
+		                     "mysqli.default_host = localhost\n"
 		                     "%s\n",
 		                     nvram_safe_get("nginx_upload"),
 		                     nvram_safe_get("nginx_upload"),
