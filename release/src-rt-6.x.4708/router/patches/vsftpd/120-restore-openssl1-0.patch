@@ -27,7 +27,17 @@
      {
 --- vsftpd/tunables.c
 +++ vsftpd/tunables.c
-@@ -215,7 +215,9 @@
+@@ -69,7 +69,9 @@
+ int tunable_tlsv1;
+ int tunable_tlsv1_1;
+ int tunable_tlsv1_2;
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+ int tunable_tlsv1_3;
++#endif
+ int tunable_tilde_user_enable;
+ int tunable_force_anon_logins_ssl;
+ int tunable_force_anon_data_ssl;
+@@ -215,7 +217,9 @@
    tunable_tlsv1 = 0;
    tunable_tlsv1_1 = 0;
    tunable_tlsv1_2 = 1;
