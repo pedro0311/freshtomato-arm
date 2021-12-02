@@ -987,9 +987,10 @@ static int sgi_create_disklabel(struct fdisk_context *cxt)
 			/* otherwise print error and use truncated version */
 			fdisk_warnx(cxt,
 				_("BLKGETSIZE ioctl failed on %s. "
-				  "Using geometry cylinder value of %llu. "
+				  "Using geometry cylinder value of %ju. "
 				  "This value may be truncated for devices "
-				  "> 33.8 GB."), cxt->dev_path, cxt->geom.cylinders);
+				  "> 33.8 GB."), cxt->dev_path,
+				(uintmax_t) cxt->geom.cylinders);
 		}
 	}
 
@@ -1204,5 +1205,6 @@ struct fdisk_label *fdisk_new_sgi_label(struct fdisk_context *cxt __attribute__ 
 
 	lb->flags |= FDISK_LABEL_FL_REQUIRE_GEOMETRY;
 
-	return lb;
+	/* return calloc() result to keep static anaylizers happy */
+	return (struct fdisk_label *) sgi;
 }

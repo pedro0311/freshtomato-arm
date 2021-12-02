@@ -37,6 +37,13 @@ static void *get_symbol(struct libmnt_context *cxt, void *dl, const char *name, 
 }
 #endif
 
+static void libcryptsetup_log(int level __attribute__((__unused__)), const char *msg, void *data)
+{
+	struct libmnt_context *cxt = (struct libmnt_context *)data;
+
+	DBG(VERITY, ul_debugobj(cxt, "cryptsetup: %s", msg));
+}
+
 /* Taken from https://gitlab.com/cryptsetup/cryptsetup/blob/master/lib/utils_crypt.c#L225 */
 static size_t crypt_hex_to_bytes(const char *hex, char **result)
 {
@@ -54,8 +61,9 @@ static size_t crypt_hex_to_bytes(const char *hex, char **result)
 
 	for (i = 0; i < len; i++) {
 		memcpy(buf, &hex[i * 2], 2);
+		errno = 0;
 		bytes[i] = strtoul(buf, &endp, 16);
-		if (endp != &buf[2]) {
+		if (errno || endp != &buf[2]) {
 			free(bytes);
 			return -EINVAL;
 		}
@@ -70,7 +78,8 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 	const char *backing_file, *optstr;
 	char *val = NULL, *key = NULL, *root_hash_binary = NULL, *mapper_device = NULL,
 		*mapper_device_full = NULL, *backing_file_basename = NULL, *root_hash = NULL,
-		*hash_device = NULL, *root_hash_file = NULL, *fec_device = NULL, *hash_sig = NULL;
+		*hash_device = NULL, *root_hash_file = NULL, *fec_device = NULL, *hash_sig = NULL,
+		*root_hash_sig_file = NULL;
 	size_t len, hash_size, hash_sig_size = 0, keysize = 0;
 	struct crypt_params_verity crypt_params = {};
 	struct crypt_device *crypt_dev = NULL;
@@ -81,6 +90,8 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 #ifdef CRYPTSETUP_VIA_DLOPEN
 	/* To avoid linking libmount to libcryptsetup, and keep the default dependencies list down, use dlopen */
 	void *dl = NULL;
+	void (*sym_crypt_set_debug_level)(int) = NULL;
+	void (*sym_crypt_set_log_callback)(struct crypt_device *, void (*log)(int, const char *, void *), void *) = NULL;
 	int (*sym_crypt_init_data_device)(struct crypt_device **, const char *, const char *) = NULL;
 	int (*sym_crypt_load)(struct crypt_device *, const char *, void *) = NULL;
 	int (*sym_crypt_get_volume_key_size)(struct crypt_device *) = NULL;
@@ -93,6 +104,8 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 	int (*sym_crypt_get_verity_info)(struct crypt_device *, struct crypt_params_verity *) = NULL;
 	int (*sym_crypt_volume_key_get)(struct crypt_device *, int, char *, size_t *, const char *, size_t) = NULL;
 #else
+	void (*sym_crypt_set_debug_level)(int) = &crypt_set_debug_level;
+	void (*sym_crypt_set_log_callback)(struct crypt_device *, void (*log)(int, const char *, void *), void *) = &crypt_set_log_callback;
 	int (*sym_crypt_init_data_device)(struct crypt_device **, const char *, const char *) = &crypt_init_data_device;
 	int (*sym_crypt_load)(struct crypt_device *, const char *, void *) = &crypt_load;
 	int (*sym_crypt_get_volume_key_size)(struct crypt_device *) = &crypt_get_volume_key_size;
@@ -206,7 +219,10 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 	 */
 	if (rc == 0 && (cxt->user_mountflags & MNT_MS_ROOT_HASH_SIG) &&
 	    mnt_optstr_get_option(optstr, "verity.roothashsig", &val, &len) == 0 && val) {
-		rc = ul_path_stat(NULL, &hash_sig_st, val);
+		root_hash_sig_file = strndup(val, len);
+		rc = root_hash_sig_file ? 0 : -ENOMEM;
+		if (rc == 0)
+			rc = ul_path_stat(NULL, &hash_sig_st, root_hash_sig_file);
 		if (rc == 0)
 			rc = !S_ISREG(hash_sig_st.st_mode) || !hash_sig_st.st_size ? -EINVAL : 0;
 		if (rc == 0) {
@@ -215,7 +231,7 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 			rc = hash_sig ? 0 : -ENOMEM;
 		}
 		if (rc == 0) {
-			rc = ul_path_read(NULL, hash_sig, hash_sig_size, val);
+			rc = ul_path_read(NULL, hash_sig, hash_sig_size, root_hash_sig_file);
 			rc = rc < (int)hash_sig_size ? -1 : 0;
 		}
 	}
@@ -255,6 +271,10 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 	dlerror();
 
 	if (rc == 0)
+		*(void **)(&sym_crypt_set_debug_level) = get_symbol(cxt, dl, "crypt_set_debug_level", &rc);
+	if (rc == 0)
+		*(void **)(&sym_crypt_set_log_callback) = get_symbol(cxt, dl, "crypt_set_log_callback", &rc);
+	if (rc == 0)
 		*(void **)(&sym_crypt_init_data_device) = get_symbol(cxt, dl, "crypt_init_data_device", &rc);
 	if (rc == 0)
 		*(void **)(&sym_crypt_load) = get_symbol(cxt, dl, "crypt_load", &rc);
@@ -277,6 +297,10 @@ int mnt_context_setup_veritydev(struct libmnt_context *cxt)
 #endif
 	if (rc)
 		goto done;
+
+	if (mnt_context_is_verbose(cxt))
+		(*sym_crypt_set_debug_level)(CRYPT_DEBUG_ALL);
+	(*sym_crypt_set_log_callback)(NULL, libcryptsetup_log, cxt);
 
 	rc = (*sym_crypt_init_data_device)(&crypt_dev, hash_device, backing_file);
 	if (rc)
@@ -391,6 +415,7 @@ done:
 	free(hash_device);
 	free(root_hash);
 	free(root_hash_file);
+	free(root_hash_sig_file);
 	free(fec_device);
 	free(hash_sig);
 	free(key);
@@ -400,7 +425,6 @@ done:
 int mnt_context_deferred_delete_veritydev(struct libmnt_context *cxt)
 {
 	const char *src;
-	struct crypt_device *crypt_dev = NULL;
 	/* If mounting failed delete immediately, otherwise setup auto cleanup for user umount */
 	uint32_t flags = mnt_context_get_status(cxt) ? CRYPT_DEACTIVATE_DEFERRED : 0;
 #ifdef CRYPTSETUP_VIA_DLOPEN
@@ -410,13 +434,13 @@ int mnt_context_deferred_delete_veritydev(struct libmnt_context *cxt)
 #ifdef RTLD_DEEPBIND
 	dl_flags |= RTLD_DEEPBIND;
 #endif
-	int (*sym_crypt_init_by_name)(struct crypt_device **, const char *) = NULL;
+	void (*sym_crypt_set_debug_level)(int) = NULL;
+	void (*sym_crypt_set_log_callback)(struct crypt_device *, void (*log)(int, const char *, void *), void *) = NULL;
 	int (*sym_crypt_deactivate_by_name)(struct crypt_device *, const char *, uint32_t) = NULL;
-	void (*sym_crypt_free)(struct crypt_device *) = NULL;
 #else
-	int (*sym_crypt_init_by_name)(struct crypt_device **, const char *) = &crypt_init_by_name;
+	void (*sym_crypt_set_debug_level)(int) = &crypt_set_debug_level;
+	void (*sym_crypt_set_log_callback)(struct crypt_device *, void (*log)(int, const char *, void *), void *) = &crypt_set_log_callback;
 	int (*sym_crypt_deactivate_by_name)(struct crypt_device *, const char *, uint32_t) = &crypt_deactivate_by_name;
-	void (*sym_crypt_free)(struct crypt_device *) = &crypt_free;
 #endif
 	int rc = 0;
 
@@ -441,21 +465,20 @@ int mnt_context_deferred_delete_veritydev(struct libmnt_context *cxt)
 	dlerror();
 
 	if (!rc)
-		*(void **)(&sym_crypt_init_by_name) = get_symbol(cxt, dl, "crypt_init_by_name", &rc);
+		*(void **)(&sym_crypt_set_debug_level) = get_symbol(cxt, dl, "crypt_set_debug_level", &rc);
+	if (!rc)
+		*(void **)(&sym_crypt_set_log_callback) = get_symbol(cxt, dl, "crypt_set_log_callback", &rc);
 	if (!rc)
 		*(void **)(&sym_crypt_deactivate_by_name) = get_symbol(cxt, dl, "crypt_deactivate_by_name", &rc);
-	if (!rc)
-		*(void **)(&sym_crypt_free) = get_symbol(cxt, dl, "crypt_free", &rc);
 #endif
 	if (!rc) {
-		rc = (*sym_crypt_init_by_name)(&crypt_dev, src);
-		if (!rc) {
-			rc = (*sym_crypt_deactivate_by_name)(crypt_dev, src, flags);
-			if (!rc)
-				cxt->flags &= ~MNT_FL_VERITYDEV_READY;
-		}
+		if (mnt_context_is_verbose(cxt))
+			(*sym_crypt_set_debug_level)(CRYPT_DEBUG_ALL);
+		(*sym_crypt_set_log_callback)(NULL, libcryptsetup_log, cxt);
 
-		(*sym_crypt_free)(crypt_dev);
+		rc = (*sym_crypt_deactivate_by_name)(NULL, src, flags);
+		if (!rc)
+			cxt->flags &= ~MNT_FL_VERITYDEV_READY;
 	}
 
 #ifdef CRYPTSETUP_VIA_DLOPEN

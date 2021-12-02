@@ -51,31 +51,32 @@
 
 /* column IDs */
 enum {
-	COL_SOURCE,
-	COL_TARGET,
+	COL_ACTION,
+	COL_AVAIL,
+	COL_FREQ,
+	COL_FSROOT,
 	COL_FSTYPE,
-	COL_OPTIONS,
-	COL_VFS_OPTIONS,
 	COL_FS_OPTIONS,
+	COL_ID,
 	COL_LABEL,
-	COL_UUID,
+	COL_MAJMIN,
+	COL_OLD_OPTIONS,
+	COL_OLD_TARGET,
+	COL_OPTIONS,
+	COL_OPT_FIELDS,
+	COL_PARENT,
 	COL_PARTLABEL,
 	COL_PARTUUID,
-	COL_MAJMIN,
-	COL_ACTION,
-	COL_OLD_TARGET,
-	COL_OLD_OPTIONS,
+	COL_PASSNO,
+	COL_PROPAGATION,
 	COL_SIZE,
-	COL_AVAIL,
+	COL_SOURCE,
+	COL_TARGET,
+	COL_TID,
 	COL_USED,
 	COL_USEPERC,
-	COL_FSROOT,
-	COL_TID,
-	COL_ID,
-	COL_OPT_FIELDS,
-	COL_PROPAGATION,
-	COL_FREQ,
-	COL_PASSNO
+	COL_UUID,
+	COL_VFS_OPTIONS
 };
 
 enum {
@@ -96,31 +97,32 @@ struct colinfo {
 
 /* columns descriptions (don't use const, this is writable) */
 static struct colinfo infos[] = {
-	[COL_SOURCE]       = { "SOURCE",       0.25, SCOLS_FL_NOEXTREMES, N_("source device") },
-	[COL_TARGET]       = { "TARGET",       0.30, SCOLS_FL_TREE| SCOLS_FL_NOEXTREMES, N_("mountpoint") },
-	[COL_FSTYPE]       = { "FSTYPE",       0.10, SCOLS_FL_TRUNC, N_("filesystem type") },
-	[COL_OPTIONS]      = { "OPTIONS",      0.10, SCOLS_FL_TRUNC, N_("all mount options") },
-	[COL_VFS_OPTIONS]  = { "VFS-OPTIONS",  0.20, SCOLS_FL_TRUNC, N_("VFS specific mount options") },
-	[COL_FS_OPTIONS]   = { "FS-OPTIONS",   0.10, SCOLS_FL_TRUNC, N_("FS specific mount options") },
-	[COL_LABEL]        = { "LABEL",        0.10, 0, N_("filesystem label") },
-	[COL_UUID]         = { "UUID",           36, 0, N_("filesystem UUID") },
-	[COL_PARTLABEL]    = { "PARTLABEL",    0.10, 0, N_("partition label") },
-	[COL_PARTUUID]     = { "PARTUUID",       36, 0, N_("partition UUID") },
-	[COL_MAJMIN]       = { "MAJ:MIN",         6, 0, N_("major:minor device number") },
 	[COL_ACTION]       = { "ACTION",         10, SCOLS_FL_STRICTWIDTH, N_("action detected by --poll") },
+	[COL_AVAIL]        = { "AVAIL",           5, SCOLS_FL_RIGHT, N_("filesystem size available") },
+	[COL_FREQ]         = { "FREQ",            1, SCOLS_FL_RIGHT, N_("dump(8) period in days [fstab only]") },
+	[COL_FSROOT]       = { "FSROOT",       0.25, SCOLS_FL_NOEXTREMES, N_("filesystem root") },
+	[COL_FSTYPE]       = { "FSTYPE",       0.10, SCOLS_FL_TRUNC, N_("filesystem type") },
+	[COL_FS_OPTIONS]   = { "FS-OPTIONS",   0.10, SCOLS_FL_TRUNC, N_("FS specific mount options") },
+	[COL_ID]           = { "ID",              2, SCOLS_FL_RIGHT, N_("mount ID") },
+	[COL_LABEL]        = { "LABEL",        0.10, 0, N_("filesystem label") },
+	[COL_MAJMIN]       = { "MAJ:MIN",         6, 0, N_("major:minor device number") },
 	[COL_OLD_OPTIONS]  = { "OLD-OPTIONS",  0.10, SCOLS_FL_TRUNC, N_("old mount options saved by --poll") },
 	[COL_OLD_TARGET]   = { "OLD-TARGET",   0.30, 0, N_("old mountpoint saved by --poll") },
+	[COL_OPTIONS]      = { "OPTIONS",      0.10, SCOLS_FL_TRUNC, N_("all mount options") },
+	[COL_OPT_FIELDS]   = { "OPT-FIELDS",   0.10, SCOLS_FL_TRUNC, N_("optional mount fields") },
+	[COL_PARENT]       = { "PARENT",          2, SCOLS_FL_RIGHT, N_("mount parent ID") },
+	[COL_PARTLABEL]    = { "PARTLABEL",    0.10, 0, N_("partition label") },
+	[COL_PARTUUID]     = { "PARTUUID",       36, 0, N_("partition UUID") },
+	[COL_PASSNO]       = { "PASSNO",          1, SCOLS_FL_RIGHT, N_("pass number on parallel fsck(8) [fstab only]") },
+	[COL_PROPAGATION]  = { "PROPAGATION",  0.10, 0, N_("VFS propagation flags") },
 	[COL_SIZE]         = { "SIZE",            5, SCOLS_FL_RIGHT, N_("filesystem size") },
-	[COL_AVAIL]        = { "AVAIL",           5, SCOLS_FL_RIGHT, N_("filesystem size available") },
+	[COL_SOURCE]       = { "SOURCE",       0.25, SCOLS_FL_NOEXTREMES, N_("source device") },
+	[COL_TARGET]       = { "TARGET",       0.30, SCOLS_FL_TREE| SCOLS_FL_NOEXTREMES, N_("mountpoint") },
+	[COL_TID]          = { "TID",             4, SCOLS_FL_RIGHT, N_("task ID") },
 	[COL_USED]         = { "USED",            5, SCOLS_FL_RIGHT, N_("filesystem size used") },
 	[COL_USEPERC]      = { "USE%",            3, SCOLS_FL_RIGHT, N_("filesystem use percentage") },
-	[COL_FSROOT]       = { "FSROOT",       0.25, SCOLS_FL_NOEXTREMES, N_("filesystem root") },
-	[COL_TID]          = { "TID",             4, SCOLS_FL_RIGHT, N_("task ID") },
-	[COL_ID]           = { "ID",              2, SCOLS_FL_RIGHT, N_("mount ID") },
-	[COL_OPT_FIELDS]   = { "OPT-FIELDS",   0.10, SCOLS_FL_TRUNC, N_("optional mount fields") },
-	[COL_PROPAGATION]  = { "PROPAGATION",  0.10, 0, N_("VFS propagation flags") },
-	[COL_FREQ]         = { "FREQ",            1, SCOLS_FL_RIGHT, N_("dump(8) period in days [fstab only]") },
-	[COL_PASSNO]       = { "PASSNO",          1, SCOLS_FL_RIGHT, N_("pass number on parallel fsck(8) [fstab only]") }
+	[COL_UUID]         = { "UUID",           36, 0, N_("filesystem UUID") },
+	[COL_VFS_OPTIONS]  = { "VFS-OPTIONS",  0.20, SCOLS_FL_TRUNC, N_("VFS specific mount options") }
 };
 
 /* columns[] array specifies all currently wanted output column. The columns
@@ -545,7 +547,9 @@ static char *get_data(struct libmnt_fs *fs, int num)
 			str = xstrdup(mnt_fs_get_options(fs));
 		break;
 	case COL_VFS_OPTIONS:
-		if (mnt_fs_get_vfs_options(fs))
+		if (flags & FL_VFS_ALL)
+			str = mnt_fs_get_vfs_options_all(fs);
+		else if (mnt_fs_get_vfs_options(fs))
 			str = xstrdup(mnt_fs_get_vfs_options(fs));
 		break;
 	case COL_FS_OPTIONS:
@@ -598,6 +602,10 @@ static char *get_data(struct libmnt_fs *fs, int num)
 	case COL_ID:
 		if (mnt_fs_get_id(fs))
 			xasprintf(&str, "%d", mnt_fs_get_id(fs));
+		break;
+	case COL_PARENT:
+		if (mnt_fs_get_parent_id(fs))
+			xasprintf(&str, "%d", mnt_fs_get_parent_id(fs));
 		break;
 	case COL_PROPAGATION:
 		if (mnt_fs_is_kernel(fs)) {
@@ -962,6 +970,14 @@ static int match_func(struct libmnt_fs *fs,
 	if ((flags & FL_PSEUDO) && !mnt_fs_is_pseudofs(fs))
 	    return rc;
 
+	if ((flags & FL_SHADOWED)) {
+		struct libmnt_table *tb = NULL;
+
+		mnt_fs_get_table(fs, &tb);
+		if (tb && mnt_table_over_fs(tb, fs, NULL) != 0)
+			return rc;
+	}
+
 	return !rc;
 }
 
@@ -1246,13 +1262,14 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_("     --output-all       output all available columns\n"), out);
 	fputs(_(" -P, --pairs            use key=\"value\" output format\n"), out);
 	fputs(_("     --pseudo           print only pseudo-filesystems\n"), out);
+	fputs(_("     --shadowed         print only filesystems over-mounted by another filesystem\n"), out);
 	fputs(_(" -R, --submounts        print all submounts for the matching filesystems\n"), out);
 	fputs(_(" -r, --raw              use raw output format\n"), out);
 	fputs(_("     --real             print only real filesystems\n"), out);
 	fputs(_(" -S, --source <string>  the device to mount (by name, maj:min, \n"
 	        "                          LABEL=, UUID=, PARTUUID=, PARTLABEL=)\n"), out);
 	fputs(_(" -T, --target <path>    the path to the filesystem to use\n"), out);
-	fputs(_("     --tree             enable tree format output is possible\n"), out);
+	fputs(_("     --tree             enable tree format output if possible\n"), out);
 	fputs(_(" -M, --mountpoint <dir> the mountpoint directory\n"), out);
 	fputs(_(" -t, --types <list>     limit the set of filesystems by FS types\n"), out);
 	fputs(_(" -U, --uniq             ignore filesystems with duplicate target\n"), out);
@@ -1262,6 +1279,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputc('\n', out);
 	fputs(_(" -x, --verify           verify mount table content (default is fstab)\n"), out);
 	fputs(_("     --verbose          print more details\n"), out);
+	fputs(_("     --vfs-all          print all VFS options\n"), out);
 
 	fputs(USAGE_SEPARATOR, out);
 	printf(USAGE_HELP_OPTIONS(24));
@@ -1294,7 +1312,9 @@ int main(int argc, char *argv[])
 		FINDMNT_OPT_TREE,
 		FINDMNT_OPT_OUTPUT_ALL,
 		FINDMNT_OPT_PSEUDO,
-		FINDMNT_OPT_REAL
+		FINDMNT_OPT_REAL,
+		FINDMNT_OPT_VFS_ALL,
+		FINDMNT_OPT_SHADOWED
 	};
 
 	static const struct option longopts[] = {
@@ -1338,6 +1358,8 @@ int main(int argc, char *argv[])
 		{ "tree",	    no_argument,       NULL, FINDMNT_OPT_TREE	 },
 		{ "real",	    no_argument,       NULL, FINDMNT_OPT_REAL	 },
 		{ "pseudo",	    no_argument,       NULL, FINDMNT_OPT_PSEUDO	 },
+		{ "vfs-all",	    no_argument,       NULL, FINDMNT_OPT_VFS_ALL },
+		{ "shadowed",       no_argument,       NULL, FINDMNT_OPT_SHADOWED },
 		{ NULL, 0, NULL, 0 }
 	};
 
@@ -1512,6 +1534,12 @@ int main(int argc, char *argv[])
 		case FINDMNT_OPT_REAL:
 			flags |= FL_REAL;
 			break;
+		case FINDMNT_OPT_VFS_ALL:
+			flags |= FL_VFS_ALL;
+			break;
+		case FINDMNT_OPT_SHADOWED:
+			flags |= FL_SHADOWED;
+			break;
 
 		case 'h':
 			usage();
@@ -1672,6 +1700,7 @@ int main(int argc, char *argv[])
 					break;
 				/* fallthrough */
 			case COL_ID:
+			case COL_PARENT:
 			case COL_FREQ:
 			case COL_PASSNO:
 			case COL_TID:

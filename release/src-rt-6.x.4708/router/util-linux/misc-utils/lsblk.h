@@ -12,6 +12,7 @@
 #include <sys/statvfs.h>
 
 #include <libsmartcols.h>
+#include <libmount.h>
 
 #include "c.h"
 #include "list.h"
@@ -33,13 +34,13 @@ UL_DEBUG_DECLARE_MASK(lsblk);
 
 struct lsblk {
 	struct libscols_table *table;	/* output table */
-
 	struct libscols_column *sort_col;/* sort output by this column */
 
 	int sort_id;			/* id of the sort column */
 	int tree_id;			/* od of column used for tree */
 
 	int dedup_id;
+
 
 	const char *sysroot;
 	int flags;			/* LSBLK_* */
@@ -116,7 +117,9 @@ struct lsblk_device {
 
 	struct path_cxt	*sysfs;
 
-	char *mountpoint;	/* device mountpoint */
+	struct libmnt_fs **fss;	/* filesystems attached to the device */
+	size_t nfss;		/* number of items in fss[] */
+
 	struct statvfs fsstat;	/* statvfs() result */
 
 	int npartitions;	/* # of partitions this device has */
@@ -140,6 +143,18 @@ struct lsblk_device {
 
 #define device_is_partition(_x)		((_x)->wholedisk != NULL)
 
+/* Unfortunately, pktcdvd dependence on block device is not defined by
+ * slave/holder symlinks. The struct lsblk_devnomap represents one line in
+ * /sys/class/pktcdvd/device_map
+ */
+struct lsblk_devnomap {
+	dev_t slave;		/* packet device devno */
+	dev_t holder;		/* block device devno */
+
+	struct list_head ls_devnomap;
+};
+
+
 /*
  * Note that lsblk tree uses bottom devices (devices without slaves) as root
  * of the tree, and partitions are interpreted as a dependence too; it means:
@@ -153,8 +168,10 @@ struct lsblk_devtree {
 
 	struct list_head	roots;		/* tree root devices */
 	struct list_head	devices;	/* all devices */
+	struct list_head	pktcdvd_map;	/* devnomap->ls_devnomap */
 
-	unsigned int	is_inverse : 1;		/* inverse tree */
+	unsigned int	is_inverse : 1,		/* inverse tree */
+			pktcdvd_read : 1;
 };
 
 
@@ -192,7 +209,9 @@ struct lsblk_iter {
 extern void lsblk_mnt_init(void);
 extern void lsblk_mnt_deinit(void);
 
-extern char *lsblk_device_get_mountpoint(struct lsblk_device *dev);
+extern void lsblk_device_free_filesystems(struct lsblk_device *dev);
+extern const char *lsblk_device_get_mountpoint(struct lsblk_device *dev);
+extern struct libmnt_fs **lsblk_device_get_filesystems(struct lsblk_device *dev, size_t *n);
 
 /* lsblk-properties.c */
 extern void lsblk_device_free_properties(struct lsblk_devprop *p);
@@ -212,6 +231,8 @@ int lsblk_device_next_child(struct lsblk_device *dev,
                           struct lsblk_iter *itr,
                           struct lsblk_device **child);
 
+dev_t lsblk_devtree_pktcdvd_get_mate(struct lsblk_devtree *tr, dev_t devno, int is_slave);
+
 int lsblk_device_is_last_parent(struct lsblk_device *dev, struct lsblk_device *parent);
 int lsblk_device_next_parent(
                         struct lsblk_device *dev,
@@ -222,6 +243,7 @@ struct lsblk_devtree *lsblk_new_devtree(void);
 void lsblk_ref_devtree(struct lsblk_devtree *tr);
 void lsblk_unref_devtree(struct lsblk_devtree *tr);
 int lsblk_devtree_add_root(struct lsblk_devtree *tr, struct lsblk_device *dev);
+int lsblk_devtree_remove_root(struct lsblk_devtree *tr, struct lsblk_device *dev);
 int lsblk_devtree_next_root(struct lsblk_devtree *tr,
                             struct lsblk_iter *itr,
                             struct lsblk_device **dev);

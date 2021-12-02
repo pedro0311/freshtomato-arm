@@ -34,83 +34,8 @@
 #include "closestream.h"
 #include "strutils.h"
 #include "procutils.h"
+#include "sched_attr.h"
 
-/* the SCHED_BATCH is supported since Linux 2.6.16
- *  -- temporary workaround for people with old glibc headers
- */
-#if defined (__linux__) && !defined(SCHED_BATCH)
-# define SCHED_BATCH 3
-#endif
-
-/* the SCHED_IDLE is supported since Linux 2.6.23
- * commit id 0e6aca43e08a62a48d6770e9a159dbec167bf4c6
- * -- temporary workaround for people with old glibc headers
- */
-#if defined (__linux__) && !defined(SCHED_IDLE)
-# define SCHED_IDLE 5
-#endif
-
-/* flag by sched_getscheduler() */
-#if defined(__linux__) && !defined(SCHED_RESET_ON_FORK)
-# define SCHED_RESET_ON_FORK 0x40000000
-#endif
-
-/* flag by sched_getattr() */
-#if defined(__linux__) && !defined(SCHED_FLAG_RESET_ON_FORK)
-# define SCHED_FLAG_RESET_ON_FORK 0x01
-#endif
-
-#if defined (__linux__)
-# include <sys/syscall.h>
-#endif
-
-/* usable kernel-headers, but old glibc-headers */
-#if defined (__linux__) && !defined(SYS_sched_setattr) && defined(__NR_sched_setattr)
-# define SYS_sched_setattr __NR_sched_setattr
-#endif
-
-#if defined (__linux__) && !defined(SYS_sched_getattr) && defined(__NR_sched_getattr)
-# define SYS_sched_getattr __NR_sched_getattr
-#endif
-
-#if defined (__linux__) && !defined(HAVE_SCHED_SETATTR) && defined(SYS_sched_setattr)
-# define HAVE_SCHED_SETATTR
-
-struct sched_attr {
-	uint32_t size;
-	uint32_t sched_policy;
-	uint64_t sched_flags;
-
-	/* SCHED_NORMAL, SCHED_BATCH */
-	int32_t sched_nice;
-
-	/* SCHED_FIFO, SCHED_RR */
-	uint32_t sched_priority;
-
-	/* SCHED_DEADLINE (nsec) */
-	uint64_t sched_runtime;
-	uint64_t sched_deadline;
-	uint64_t sched_period;
-};
-
-static int sched_setattr(pid_t pid, const struct sched_attr *attr, unsigned int flags)
-{
-	return syscall(SYS_sched_setattr, pid, attr, flags);
-}
-
-static int sched_getattr(pid_t pid, struct sched_attr *attr, unsigned int size, unsigned int flags)
-{
-	return syscall(SYS_sched_getattr, pid, attr, size, flags);
-}
-#endif
-
-/* the SCHED_DEADLINE is supported since Linux 3.14
- * commit id aab03e05e8f7e26f51dee792beddcb5cca9215a5
- * -- sched_setattr() is required for this policy!
- */
-#if defined (__linux__) && !defined(SCHED_DEADLINE) && defined(HAVE_SCHED_SETATTR)
-# define SCHED_DEADLINE 6
-#endif
 
 /* control struct */
 struct chrt_ctl {
@@ -152,7 +77,7 @@ static void __attribute__((__noreturn__)) usage(void)
 
 	fputs(USAGE_SEPARATOR, out);
 	fputs(_("Scheduling options:\n"), out);
-	fputs(_(" -R, --reset-on-fork       set SCHED_RESET_ON_FORK for FIFO or RR\n"), out);
+	fputs(_(" -R, --reset-on-fork       set reset-on-fork flag\n"), out);
 	fputs(_(" -T, --sched-runtime <ns>  runtime parameter for DEADLINE\n"), out);
 	fputs(_(" -P, --sched-period <ns>   period parameter for DEADLINE\n"), out);
 	fputs(_(" -D, --sched-deadline <ns> deadline parameter for DEADLINE\n"), out);
@@ -173,22 +98,19 @@ static void __attribute__((__noreturn__)) usage(void)
 
 static const char *get_policy_name(int policy)
 {
+#ifdef SCHED_RESET_ON_FORK
+	policy &= ~SCHED_RESET_ON_FORK;
+#endif
 	switch (policy) {
 	case SCHED_OTHER:
 		return "SCHED_OTHER";
 	case SCHED_FIFO:
-#ifdef SCHED_RESET_ON_FORK
-	case SCHED_FIFO | SCHED_RESET_ON_FORK:
-#endif
 		return "SCHED_FIFO";
 #ifdef SCHED_IDLE
 	case SCHED_IDLE:
 		return "SCHED_IDLE";
 #endif
 	case SCHED_RR:
-#ifdef SCHED_RESET_ON_FORK
-	case SCHED_RR | SCHED_RESET_ON_FORK:
-#endif
 		return "SCHED_RR";
 #ifdef SCHED_BATCH
 	case SCHED_BATCH:
@@ -257,7 +179,7 @@ fallback:
 		else
 			prio = sp.sched_priority;
 # ifdef SCHED_RESET_ON_FORK
-		if (policy == (SCHED_FIFO|SCHED_RESET_ON_FORK) || policy == (SCHED_BATCH|SCHED_RESET_ON_FORK))
+		if (policy & SCHED_RESET_ON_FORK)
 			reset_on_fork = 1;
 # endif
 	}
@@ -292,6 +214,7 @@ fallback:
 static void show_sched_info(struct chrt_ctl *ctl)
 {
 	if (ctl->all_tasks) {
+#ifdef __linux__
 		pid_t tid;
 		struct proc_tasks *ts = proc_open_tasks(ctl->pid);
 
@@ -302,6 +225,9 @@ static void show_sched_info(struct chrt_ctl *ctl)
 			show_sched_pid_info(ctl, tid);
 
 		proc_close_tasks(ts);
+#else
+		err(EXIT_FAILURE, _("cannot obtain the list of tasks"));
+#endif
 	} else
 		show_sched_pid_info(ctl, ctl->pid);
 }
@@ -398,6 +324,7 @@ static int set_sched_one(struct chrt_ctl *ctl, pid_t pid)
 static void set_sched(struct chrt_ctl *ctl)
 {
 	if (ctl->all_tasks) {
+#ifdef __linux__
 		pid_t tid;
 		struct proc_tasks *ts = proc_open_tasks(ctl->pid);
 
@@ -409,7 +336,9 @@ static void set_sched(struct chrt_ctl *ctl)
 				err(EXIT_FAILURE, _("failed to set tid %d's policy"), tid);
 
 		proc_close_tasks(ts);
-
+#else
+		err(EXIT_FAILURE, _("cannot obtain the list of tasks"));
+#endif
 	} else if (set_sched_one(ctl, ctl->pid) == -1)
 		err(EXIT_FAILURE, _("failed to set pid %d's policy"), ctl->pid);
 
@@ -524,11 +453,6 @@ int main(int argc, char **argv)
 	errno = 0;
 	ctl->priority = strtos32_or_err(argv[optind], _("invalid priority argument"));
 
-#ifdef SCHED_RESET_ON_FORK
-	if (ctl->reset_on_fork && ctl->policy != SCHED_FIFO && ctl->policy != SCHED_RR)
-		errx(EXIT_FAILURE, _("--reset-on-fork option is supported for "
-				     "SCHED_FIFO and SCHED_RR policies only"));
-#endif
 #ifdef SCHED_DEADLINE
 	if ((ctl->runtime || ctl->deadline || ctl->period) && ctl->policy != SCHED_DEADLINE)
 		errx(EXIT_FAILURE, _("--sched-{runtime,deadline,period} options "

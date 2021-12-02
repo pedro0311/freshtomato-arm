@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <getopt.h>
@@ -90,6 +91,10 @@ static const struct blkzone_command commands[] = {
 		.name = "report",
 		.handler = blkzone_report,
 		.help = N_("Report zone information about the given device")
+	},{
+		.name = "capacity",
+		.handler = blkzone_report,
+		.help = N_("Report sum of zone capacities for the given device")
 	},{
 		.name = "reset",
 		.handler = blkzone_action,
@@ -189,6 +194,14 @@ done:
 	return rc == 0 ? sz : 0;
 }
 
+#if HAVE_DECL_BLK_ZONE_REP_CAPACITY
+#define has_zone_capacity(zi)	((zi)->flags & BLK_ZONE_REP_CAPACITY)
+#define zone_capacity(z)	(z)->capacity
+#else
+#define has_zone_capacity(zi)	(false)
+#define zone_capacity(z)	(z)->len
+#endif
+
 /*
  * blkzone report
  */
@@ -215,6 +228,8 @@ static const char *condition_str[] = {
 
 static int blkzone_report(struct blkzone_control *ctl)
 {
+	bool only_capacity_sum = !strcmp(ctl->command->name, "capacity");
+	uint64_t capacity_sum = 0;
 	struct blk_zone_report *zi;
 	unsigned long zonesize;
 	uint32_t i, nr_zones;
@@ -269,25 +284,38 @@ static int blkzone_report(struct blkzone_control *ctl)
 			uint64_t wp = entry->wp;
 			uint8_t cond = entry->cond;
 			uint64_t len = entry->len;
+			uint64_t cap;
 
 			if (!len) {
 				nr_zones = 0;
 				break;
 			}
 
-			printf(_("  start: 0x%09"PRIx64", len 0x%06"PRIx64", wptr 0x%06"PRIx64
-				" reset:%u non-seq:%u, zcond:%2u(%s) [type: %u(%s)]\n"),
-				start, len, (type == 0x1) ? 0 : wp - start,
-				entry->reset, entry->non_seq,
-				cond, condition_str[cond & (ARRAY_SIZE(condition_str) - 1)],
-				type, type_text[type]);
+			if (has_zone_capacity(zi))
+				cap = zone_capacity(entry);
+			else
+				cap = entry->len;
+
+			if (only_capacity_sum) {
+				capacity_sum += cap;
+			} else {
+				printf(_("  start: 0x%09"PRIx64", len 0x%06"PRIx64
+					", cap 0x%06"PRIx64", wptr 0x%06"PRIx64
+					" reset:%u non-seq:%u, zcond:%2u(%s) [type: %u(%s)]\n"),
+					start, len, cap, (type == 0x1) ? 0 : wp - start,
+					entry->reset, entry->non_seq,
+					cond, condition_str[cond & (ARRAY_SIZE(condition_str) - 1)],
+					type, type_text[type]);
+			}
 
 			nr_zones--;
 			ctl->offset = start + len;
-
 		}
 
 	}
+
+	if (only_capacity_sum)
+		printf(_("0x%09"PRIx64"\n"), capacity_sum);
 
 	free(zi);
 	close(fd);

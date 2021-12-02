@@ -505,6 +505,7 @@ static struct fdisk_parttype *ask_partition_type(struct fdisk_context *cxt, int 
 			struct fdisk_parttype *t = fdisk_label_advparse_parttype(lb, buf,
 								FDISK_PARTTYPE_PARSE_DATA
 								| FDISK_PARTTYPE_PARSE_ALIAS
+								| FDISK_PARTTYPE_PARSE_NAME
 								| FDISK_PARTTYPE_PARSE_SEQNUM);
 			if (!t)
 				fdisk_info(cxt, _("Failed to parse '%s' partition type."), buf);
@@ -728,7 +729,7 @@ static size_t skip_empty(const unsigned char *buf, size_t i, size_t sz)
 	return next == i + 16 ? i : next;
 }
 
-static void dump_buffer(off_t base, unsigned char *buf, size_t sz, int all)
+static void dump_buffer(off_t base, unsigned char *buf, size_t sz)
 {
 	size_t i, l, next = 0;
 
@@ -736,7 +737,7 @@ static void dump_buffer(off_t base, unsigned char *buf, size_t sz, int all)
 		return;
 	for (i = 0, l = 0; i < sz; i++, l++) {
 		if (l == 0) {
-			if (all == 0 && !next)
+			if (!next)
 				next = skip_empty(buf, i, sz);
 			printf("%08jx ", (intmax_t)base + i);
 		}
@@ -758,7 +759,7 @@ static void dump_buffer(off_t base, unsigned char *buf, size_t sz, int all)
 }
 
 static void dump_blkdev(struct fdisk_context *cxt, const char *name,
-			uint64_t offset, size_t size, int all)
+			uint64_t offset, size_t size)
 {
 	int fd = fdisk_get_devfd(cxt);
 
@@ -775,23 +776,20 @@ static void dump_blkdev(struct fdisk_context *cxt, const char *name,
 		if (read_all(fd, (char *) buf, size) != (ssize_t) size)
 			fdisk_warn(cxt, _("cannot read"));
 		else
-			dump_buffer(offset, buf, size, all);
+			dump_buffer(offset, buf, size);
 		free(buf);
 	}
 }
 
 void dump_firstsector(struct fdisk_context *cxt)
 {
-	int all = !isatty(STDOUT_FILENO);
-
 	assert(cxt);
 
-	dump_blkdev(cxt, _("First sector"), 0, fdisk_get_sector_size(cxt), all);
+	dump_blkdev(cxt, _("First sector"), 0, fdisk_get_sector_size(cxt));
 }
 
 void dump_disklabel(struct fdisk_context *cxt)
 {
-	int all = !isatty(STDOUT_FILENO);
 	int i = 0;
 	const char *name = NULL;
 	uint64_t offset = 0;
@@ -800,7 +798,7 @@ void dump_disklabel(struct fdisk_context *cxt)
 	assert(cxt);
 
 	while (fdisk_locate_disklabel(cxt, i++, &name, &offset, &size) == 0 && size)
-		dump_blkdev(cxt, name, offset, size, all);
+		dump_blkdev(cxt, name, offset, size);
 }
 
 static fdisk_sector_t get_dev_blocks(char *dev)
@@ -1141,6 +1139,12 @@ int main(int argc, char **argv)
 		}
 		if (rc)
 			err(EXIT_FAILURE, _("cannot open %s"), devname);
+
+		if (fdisk_device_is_used(cxt))
+			fdisk_warnx(cxt, _(
+			"This disk is currently in use - repartitioning is probably a bad idea.\n"
+			"It's recommended to umount all file systems, and swapoff all swap\n"
+			"partitions on this disk.\n"));
 
 		fflush(stdout);
 

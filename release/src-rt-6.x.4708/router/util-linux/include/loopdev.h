@@ -66,6 +66,19 @@ struct loop_info64 {
 	uint64_t	lo_init[2];
 };
 
+#ifndef LOOP_CONFIGURE
+/*
+ * Since Linux v5.8-rc1 (commit 3448914e8cc550ba792d4ccc74471d1ca4293aae)
+ */
+# define LOOP_CONFIGURE		0x4C0A
+struct loop_config {
+  uint32_t fd;
+  uint32_t block_size;
+  struct loop_info64 info;
+  uint64_t __reserved[8];
+};
+#endif
+
 #define LOOPDEV_MAJOR		7	/* loop major number */
 #define LOOPDEV_DEFAULT_NNODES	8	/* default number of loop devices */
 
@@ -105,7 +118,7 @@ struct loopdev_cxt {
 	unsigned int    control_ok:1;	/* /dev/loop-control success */
 
 	struct path_cxt		*sysfs; /* pointer to /sys/dev/block/<maj:min>/ */
-	struct loop_info64	info;	/* for GET/SET ioctl */
+	struct loop_config 	config;	/* for GET/SET ioctl */
 	struct loopdev_iter	iter;	/* scans /sys or /dev for used/free devices */
 };
 
@@ -134,6 +147,7 @@ extern int is_loopdev(const char *device);
 extern int loopdev_is_autoclear(const char *device);
 
 extern char *loopdev_get_backing_file(const char *device);
+extern int loopdev_has_backing_file(const char *device);
 extern int loopdev_is_used(const char *device, const char *filename,
 			   uint64_t offset, uint64_t sizelimit, int flags);
 extern char *loopdev_find_by_backing_file(const char *filename,

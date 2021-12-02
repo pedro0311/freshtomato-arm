@@ -80,6 +80,8 @@ static struct sigaction saved_sigchld;
 static volatile sig_atomic_t alarm_rised;
 static volatile sig_atomic_t sigchild;
 
+#define SULOGIN_PASSWORD_BUFSIZ	128
+
 #ifndef IUCLC
 # define IUCLC		0
 #endif
@@ -602,13 +604,13 @@ static void setup(struct console *con)
  * Ask for the password. Note that there is no default timeout as we normally
  * skip this during boot.
  */
-static const char *getpasswd(struct console *con)
+static char *getpasswd(struct console *con)
 {
 	struct sigaction sa;
 	struct termios tty;
-	static char pass[128], *ptr;
+	static char pass[SULOGIN_PASSWORD_BUFSIZ], *ptr;
 	struct chardata *cp;
-	const char *ret = pass;
+	char *ret = NULL;
 	unsigned char tc;
 	char c, ascval;
 	int eightbit;
@@ -619,6 +621,7 @@ static const char *getpasswd(struct console *con)
 	cp = &con->cp;
 	tty = con->tio;
 
+	ret = pass;
 	tty.c_iflag &= ~(IUCLC|IXON|IXOFF|IXANY);
 	tty.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|TOSTOP|ISIG);
 	tc = (tcsetattr(fd, TCSAFLUSH, &tty) == 0);
@@ -711,6 +714,10 @@ quit:
 	tcfinal(con);
 	printf("\r\n");
 out:
+#ifdef HAVE_EXPLICIT_BZERO
+	if (ret == NULL)
+		explicit_bzero(pass, sizeof(pass));
+#endif
 	return ret;
 }
 
@@ -775,9 +782,10 @@ static void sushell(struct passwd *pwd)
 
 #ifdef HAVE_LIBSELINUX
 	if (is_selinux_enabled() > 0) {
-		security_context_t scon=NULL;
-		char *seuser=NULL;
-		char *level=NULL;
+		char *scon = NULL;
+		char *seuser = NULL;
+		char *level = NULL;
+
 		if (getseuserbyname("root", &seuser, &level) == 0) {
 			if (get_default_context_with_level(seuser, level, 0, &scon) == 0) {
 				if (setexeccon(scon) != 0)
@@ -846,7 +854,7 @@ int main(int argc, char **argv)
 	INIT_LIST_HEAD(&consoles);
 
 	/*
-	 * If we are init we need to set up a own session.
+	 * If we are init we need to set up an own session.
 	 */
 	if ((pid = getpid()) == 1) {
 		setsid();
@@ -976,7 +984,7 @@ int main(int argc, char **argv)
 			setup(con);
 			while (1) {
 				const char *passwd = pwd->pw_passwd;
-				const char *answer;
+				char *answer;
 				int doshell = 0;
 				int deny = !opt_e && locked_account_password(pwd->pw_passwd);
 
@@ -984,8 +992,12 @@ int main(int argc, char **argv)
 
 				if ((answer = getpasswd(con)) == NULL)
 					break;
-				if (deny)
+				if (deny) {
+#ifdef HAVE_EXPLICIT_BZERO
+					explicit_bzero(answer, SULOGIN_PASSWORD_BUFSIZ);
+#endif
 					exit(EXIT_FAILURE);
+				}
 
 				/* no password or locked account */
 				if (!passwd[0] || locked_account_password(passwd))
@@ -998,7 +1010,9 @@ int main(int argc, char **argv)
 					else if (strcmp(cryptbuf, pwd->pw_passwd) == 0)
 						doshell++;
 				}
-
+#ifdef HAVE_EXPLICIT_BZERO
+				explicit_bzero(answer, SULOGIN_PASSWORD_BUFSIZ);
+#endif
 				if (doshell) {
 					/* sushell() unmask signals */
 					sushell(pwd);

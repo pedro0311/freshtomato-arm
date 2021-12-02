@@ -22,6 +22,7 @@
 #include "nls.h"
 #include "closestream.h"
 #include "timeutils.h"
+#include "strutils.h"
 
 #include "ipcutils.h"
 
@@ -120,7 +121,7 @@ int main (int argc, char **argv)
 	while ((opt = getopt_long(argc, argv, options, longopts, NULL)) != -1) {
 		switch (opt) {
 		case 'i':
-			id = atoi (optarg);
+			id = strtos32_or_err(optarg, _("failed to parse id argument"));
 			specific = 1;
 			break;
 		case 'a':
@@ -216,13 +217,21 @@ static void do_shm (char format, int unit)
 		ipc_print_size(unit == IPC_UNIT_DEFAULT ? IPC_UNIT_KB : unit,
 			       _("max seg size"), lim.shmmax, "\n", 0);
 
-		tmp = (uint64_t) lim.shmall * pgsz;
-		/* overflow handling, at least we don't print ridiculous small values */
-		if (lim.shmall != 0 && tmp / lim.shmall != pgsz) {
-			tmp = UINT64_MAX - (UINT64_MAX % pgsz);
+		if (unit == IPC_UNIT_KB || unit == IPC_UNIT_DEFAULT) {
+			tmp = (uint64_t) lim.shmall * (pgsz / 1024);
+			if (lim.shmall != 0 && tmp / lim.shmall != pgsz / 1024)
+				tmp = UINT64_MAX - (UINT64_MAX % (pgsz / 1024));
+
+			ipc_print_size(IPC_UNIT_DEFAULT, _("max total shared memory (kbytes)"), tmp, "\n", 0);
 		}
-		ipc_print_size(unit == IPC_UNIT_DEFAULT ? IPC_UNIT_KB : unit,
-			       _("max total shared memory"), tmp, "\n", 0);
+		else {
+			tmp = (uint64_t) lim.shmall * pgsz;
+			/* overflow handling, at least we don't print ridiculous small values */
+			if (lim.shmall != 0 && tmp / lim.shmall != pgsz)
+			        tmp = UINT64_MAX - (UINT64_MAX % pgsz);
+
+			ipc_print_size(unit, _("max total shared memory"), tmp, "\n", 0);
+		}
 		ipc_print_size(unit == IPC_UNIT_DEFAULT ? IPC_UNIT_BYTES : unit,
 			       _("min seg size"), lim.shmmin, "\n", 0);
 		return;

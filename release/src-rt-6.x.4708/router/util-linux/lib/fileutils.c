@@ -6,12 +6,15 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <string.h>
 
 #include "c.h"
+#include "all-io.h"
 #include "fileutils.h"
 #include "pathnames.h"
 
@@ -107,7 +110,7 @@ unwind:
 /*
  * portable getdtablesize()
  */
-int get_fd_tabsize(void)
+unsigned int get_fd_tabsize(void)
 {
 	int m;
 
@@ -126,18 +129,7 @@ int get_fd_tabsize(void)
 	return m;
 }
 
-static inline int in_set(int x, const int set[], size_t setsz)
-{
-	size_t i;
-
-	for (i = 0; i < setsz; i++) {
-		if (set[i] == x)
-			return 1;
-	}
-	return 0;
-}
-
-void close_all_fds(const int exclude[], size_t exsz)
+void ul_close_all_fds(unsigned int first, unsigned int last)
 {
 	struct dirent *d;
 	DIR *dir;
@@ -146,25 +138,29 @@ void close_all_fds(const int exclude[], size_t exsz)
 	if (dir) {
 		while ((d = xreaddir(dir))) {
 			char *end;
-			int fd;
+			unsigned int fd;
+			int dfd;
 
 			errno = 0;
-			fd = strtol(d->d_name, &end, 10);
+			fd = strtoul(d->d_name, &end, 10);
 
 			if (errno || end == d->d_name || !end || *end)
 				continue;
-			if (dirfd(dir) == fd)
+			dfd = dirfd(dir);
+			if (dfd < 0)
 				continue;
-			if (in_set(fd, exclude, exsz))
+			if ((unsigned int)dfd == fd)
+				continue;
+			if (fd < first || last < fd)
 				continue;
 			close(fd);
 		}
 		closedir(dir);
 	} else {
-		int fd, tbsz = get_fd_tabsize();
+		unsigned fd, tbsz = get_fd_tabsize();
 
 		for (fd = 0; fd < tbsz; fd++) {
-			if (!in_set(fd, exclude, exsz))
+			if (first <= fd && fd <= last)
 				close(fd);
 		}
 	}
@@ -174,33 +170,40 @@ void close_all_fds(const int exclude[], size_t exsz)
 int main(int argc, char *argv[])
 {
 	if (argc < 2)
-		errx(EXIT_FAILURE, "Usage %s --{mkstemp,close-fds}", argv[0]);
+		errx(EXIT_FAILURE, "Usage %s --{mkstemp,close-fds,copy-file}", argv[0]);
 
 	if (strcmp(argv[1], "--mkstemp") == 0) {
 		FILE *f;
-		char *tmpname;
+		char *tmpname = NULL;
+
 		f = xfmkstemp(&tmpname, NULL, "test");
 		unlink(tmpname);
 		free(tmpname);
 		fclose(f);
 
 	} else if (strcmp(argv[1], "--close-fds") == 0) {
-		static const int wanted_fds[] = {
-			STDIN_FILENO, STDOUT_FILENO, STDERR_FILENO
-		};
-
 		ignore_result( dup(STDIN_FILENO) );
 		ignore_result( dup(STDIN_FILENO) );
 		ignore_result( dup(STDIN_FILENO) );
 
-		close_all_fds(wanted_fds, ARRAY_SIZE(wanted_fds));
+# ifdef HAVE_CLOSE_RANGE
+		if (close_range(STDERR_FILENO + 1, ~0U, 0) < 0)
+# endif
+			ul_close_all_fds(STDERR_FILENO + 1, ~0U);
+
+	} else if (strcmp(argv[1], "--copy-file") == 0) {
+		int ret = ul_copy_file(STDIN_FILENO, STDOUT_FILENO);
+		if (ret == UL_COPY_READ_ERROR)
+			err(EXIT_FAILURE, "read");
+		else if (ret == UL_COPY_WRITE_ERROR)
+			err(EXIT_FAILURE, "write");
 	}
 	return EXIT_SUCCESS;
 }
 #endif
 
 
-int mkdir_p(const char *path, mode_t mode)
+int ul_mkdir_p(const char *path, mode_t mode)
 {
 	char *p, *dir;
 	int rc = 0;
@@ -245,4 +248,43 @@ char *stripoff_last_component(char *path)
 		return NULL;
 	*p = '\0';
 	return p + 1;
+}
+
+static int copy_file_simple(int from, int to)
+{
+	ssize_t nr;
+	char buf[BUFSIZ];
+
+	while ((nr = read_all(from, buf, sizeof(buf))) > 0)
+		if (write_all(to, buf, nr) == -1)
+			return UL_COPY_WRITE_ERROR;
+	if (nr < 0)
+		return UL_COPY_READ_ERROR;
+#ifdef HAVE_EXPLICIT_BZERO
+	explicit_bzero(buf, sizeof(buf));
+#endif
+	return 0;
+}
+
+/* Copies the contents of a file. Returns -1 on read error, -2 on write error. */
+int ul_copy_file(int from, int to)
+{
+#ifdef HAVE_SENDFILE
+	struct stat st;
+	ssize_t nw;
+
+	if (fstat(from, &st) == -1)
+		return UL_COPY_READ_ERROR;
+	if (!S_ISREG(st.st_mode))
+		return copy_file_simple(from, to);
+	if (sendfile_all(to, from, NULL, st.st_size) < 0)
+		return copy_file_simple(from, to);
+	/* ensure we either get an EOF or an error */
+	while ((nw = sendfile_all(to, from, NULL, 16*1024*1024)) != 0)
+		if (nw < 0)
+			return copy_file_simple(from, to);
+	return 0;
+#else
+	return copy_file_simple(from, to);
+#endif
 }

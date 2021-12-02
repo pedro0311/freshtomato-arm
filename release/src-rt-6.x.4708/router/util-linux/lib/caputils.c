@@ -14,32 +14,105 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <sys/prctl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+#include <errno.h>
 
+#include "c.h"
 #include "caputils.h"
+#include "procutils.h"
 #include "pathnames.h"
+
+static int test_cap(unsigned int cap)
+{
+	/* prctl returns 0 or 1 for valid caps, -1 otherwise */
+	return prctl(PR_CAPBSET_READ, cap, 0, 0, 0) >= 0;
+}
+
+static int cap_last_by_bsearch(int *ret)
+{
+	/* starting with cap=INT_MAX means we always know
+	 * that cap1 is invalid after the first iteration */
+	int cap = INT_MAX;
+	unsigned int cap0 = 0, cap1 = INT_MAX;
+
+	while ((int)cap0 < cap) {
+		if (test_cap(cap))
+			cap0 = cap;
+		else
+			cap1 = cap;
+
+		cap = (cap0 + cap1) / 2U;
+	}
+
+	*ret = cap;
+	return 0;
+}
+
+static int cap_last_by_procfs(int *ret)
+{
+	FILE *f = fopen(_PATH_PROC_CAPLASTCAP, "r");
+	int rc = -EINVAL;
+
+	*ret = 0;
+
+	if (f && proc_is_procfs(fileno(f))) {
+		int cap;
+
+		/* we check if the cap after this one really isn't valid */
+		if (fscanf(f, "%d", &cap) == 1 &&
+		    cap < INT_MAX && !test_cap(cap + 1)) {
+
+			*ret = cap;
+			rc = 0;
+		}
+	}
+
+	if (f)
+		fclose(f);
+	return rc;
+}
 
 int cap_last_cap(void)
 {
-	/* CAP_LAST_CAP is untrustworthy. */
-	static int ret = -1;
-	int matched;
-	FILE *f;
+	static int cap = -1;
 
-	if (ret != -1)
-		return ret;
+	if (cap != -1)
+		return cap;
+	if (cap_last_by_procfs(&cap) < 0)
+		cap_last_by_bsearch(&cap);
 
-	f = fopen(_PATH_PROC_CAPLASTCAP, "r");
-	if (!f) {
-		ret = CAP_LAST_CAP;	/* guess */
-		return ret;
+	return cap;
+}
+
+#ifdef TEST_PROGRAM_CAPUTILS
+int main(int argc, char *argv[])
+{
+	int rc = 0, cap;
+
+	if (argc < 2) {
+		fprintf(stderr, "usage: %1$s --last-by-procfs\n"
+				"       %1$s --last-by-bsearch\n"
+				"       %1$s --last\n",
+				program_invocation_short_name);
+		return EXIT_FAILURE;
 	}
 
-	matched = fscanf(f, "%d", &ret);
-	fclose(f);
+	if (strcmp(argv[1], "--last-by-procfs") == 0) {
+		rc = cap_last_by_procfs(&cap);
+		if (rc == 0)
+			printf("last cap: %d\n", cap);
 
-	if (matched != 1)
-		ret = CAP_LAST_CAP;	/* guess */
+	} else if (strcmp(argv[1], "--last-by-bsearch") == 0) {
+		rc = cap_last_by_bsearch(&cap);
+		if (rc == 0)
+			printf("last cap: %d\n", cap);
 
-	return ret;
+	} else if (strcmp(argv[1], "--last") == 0)
+		printf("last cap: %d\n", cap_last_cap());
+
+	return rc == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
+#endif

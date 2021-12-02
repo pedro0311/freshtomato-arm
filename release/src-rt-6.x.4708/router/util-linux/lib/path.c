@@ -542,22 +542,27 @@ DIR *ul_path_opendirf(struct path_cxt *pc, const char *path, ...)
 ssize_t ul_path_readlink(struct path_cxt *pc, char *buf, size_t bufsiz, const char *path)
 {
 	int dirfd;
+	ssize_t ssz;
 
 	if (!path) {
 		const char *p = get_absdir(pc);
 		if (!p)
 			return -errno;
-		return readlink(p, buf, bufsiz);
+		ssz = readlink(p, buf, bufsiz - 1);
+	} else {
+		dirfd = ul_path_get_dirfd(pc);
+		if (dirfd < 0)
+			return dirfd;
+
+		if (*path == '/')
+			path++;
+
+		ssz = readlinkat(dirfd, path, buf, bufsiz - 1);
 	}
 
-	dirfd = ul_path_get_dirfd(pc);
-	if (dirfd < 0)
-		return dirfd;
-
-	if (*path == '/')
-		path++;
-
-	return readlinkat(dirfd, path, buf, bufsiz);
+	if (ssz >= 0)
+		buf[ssz] = '\0';
+	return ssz;
 }
 
 /*
@@ -617,7 +622,7 @@ int ul_path_readf(struct path_cxt *pc, char *buf, size_t len, const char *path, 
  * Returns newly allocated buffer with data from file. Maximal size is BUFSIZ
  * (send patch if you need something bigger;-)
  *
- * Returns size of the string!
+ * Returns size of the string without \0, nothing is allocated if returns <= 0.
  */
 int ul_path_read_string(struct path_cxt *pc, char **str, const char *path)
 {
@@ -635,6 +640,8 @@ int ul_path_read_string(struct path_cxt *pc, char **str, const char *path)
 	/* Remove tailing newline (usual in sysfs) */
 	if (rc > 0 && *(buf + rc - 1) == '\n')
 		--rc;
+	if (rc == 0)
+		return 0;
 
 	buf[rc] = '\0';
 	*str = strdup(buf);
@@ -1099,7 +1106,7 @@ int main(int argc, char *argv[])
 
 	ul_path_init_debug();
 
-	pc = ul_new_path(dir);
+	pc = ul_new_path("%s", dir);
 	if (!pc)
 		err(EXIT_FAILURE, "failed to initialize path context");
 	if (prefix)
@@ -1191,11 +1198,11 @@ int main(int argc, char *argv[])
 			errx(EXIT_FAILURE, "<file> not defined");
 		file = argv[optind++];
 
-		if (ul_path_read_string(pc, &res, file) < 0)
+		if (ul_path_read_string(pc, &res, file) <= 0)
 			err(EXIT_FAILURE, "read string failed");
 		printf("read:  %s: %s\n", file, res);
 
-		if (ul_path_readf_string(pc, &res, "%s", file) < 0)
+		if (ul_path_readf_string(pc, &res, "%s", file) <= 0)
 			err(EXIT_FAILURE, "readf string failed");
 		printf("readf: %s: %s\n", file, res);
 

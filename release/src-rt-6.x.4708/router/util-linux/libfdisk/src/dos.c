@@ -834,12 +834,6 @@ static int dos_probe_label(struct fdisk_context *cxt)
 	if (!mbr_is_valid_magic(cxt->firstsector))
 		return 0;
 
-	/* ignore disks with FAT */
-	if (cxt->collision &&
-	    (strcmp(cxt->collision, "vfat") == 0 ||
-	     strcmp(cxt->collision, "ntfs") == 0))
-		return 0;
-
 	dos_init(cxt);
 
 	get_partition_table_geometry(cxt, &h, &s);
@@ -1257,7 +1251,8 @@ static int add_partition(struct fdisk_context *cxt, size_t n,
 		if (start >= temp + fdisk_get_units_per_sector(cxt)
 		    && read) {
 			if (!pa || !pa->start_follow_default)
-				fdisk_info(cxt, _("Sector %llu is already allocated."), temp);
+				fdisk_info(cxt, _("Sector %ju is already allocated."),
+						(uintmax_t) temp);
 			temp = start;
 			read = 0;
 			if (pa && fdisk_partition_has_start(pa))
@@ -1513,12 +1508,13 @@ static void check(struct fdisk_context *cxt, size_t n,
 				   "maximum %d"), n, h + 1, cxt->geom.heads);
 	if (real_s >= cxt->geom.sectors)
 		fdisk_warnx(cxt, _("Partition %zu: sector %d greater than "
-				   "maximum %llu"), n, s, cxt->geom.sectors);
+				   "maximum %ju"), n, s,
+				(uintmax_t) cxt->geom.sectors);
 	if (real_c >= cxt->geom.cylinders)
 		fdisk_warnx(cxt, _("Partition %zu: cylinder %d greater than "
-				   "maximum %llu"),
+				   "maximum %ju"),
 				n, real_c + 1,
-				cxt->geom.cylinders);
+				(uintmax_t) cxt->geom.cylinders);
 
 	if (cxt->geom.cylinders <= 1024 && start != total)
 		fdisk_warnx(cxt, _("Partition %zu: previous sectors %u "
@@ -1704,11 +1700,11 @@ static int dos_verify_disklabel(struct fdisk_context *cxt)
 	if (!nerrors) {
 		fdisk_info(cxt, _("No errors detected."));
 		if (total > n_sectors)
-			fdisk_info(cxt, _("Total allocated sectors %llu greater "
-				"than the maximum %llu."), total, n_sectors);
+			fdisk_info(cxt, _("Total allocated sectors %ju greater "
+				"than the maximum %ju."), (uintmax_t) total, (uintmax_t) n_sectors);
 		else if (total < n_sectors)
-			fdisk_info(cxt, _("Remaining %lld unallocated %ld-byte "
-				"sectors."), n_sectors - total, cxt->sector_size);
+			fdisk_info(cxt, _("Remaining %ju unallocated %ld-byte "
+				"sectors."), (uintmax_t) n_sectors - total, cxt->sector_size);
 	} else
 		fdisk_warnx(cxt,
 			P_("%d error detected.", "%d errors detected.", nerrors),
@@ -1729,7 +1725,7 @@ static int dos_add_partition(struct fdisk_context *cxt,
 {
 	size_t i;
 	uint8_t free_primary = 0, free_sectors = 0;
-	fdisk_sector_t last = 0, grain;
+	fdisk_sector_t first = 0, grain;
 	int rc = 0;
 	struct fdisk_dos_label *l;
 	struct pte *ext_pe;
@@ -1827,32 +1823,41 @@ static int dos_add_partition(struct fdisk_context *cxt,
 
 	/* check if there is space for primary partition */
 	grain = cxt->grain > cxt->sector_size ? cxt->grain / cxt->sector_size : 1;
-	last = cxt->first_lba;
+	first = cxt->first_lba;
 
 	if (cxt->parent && fdisk_is_label(cxt->parent, GPT)) {
 		/* modifying a hybrid MBR, which throws out the rules */
 		grain = 1;
-		last = 1;
+		first = 1;
 	}
 
+	/* set @first after the last used partition, set @free_sectors if there
+	 * is gap in front if the first partition or between used parrtitions. */
 	for (i = 0; i < 4; i++) {
 		struct dos_partition *p = self_partition(cxt, i);
 
 		assert(p);
 		if (is_used_partition(p)) {
 			fdisk_sector_t start = dos_partition_get_start(p);
-			if (last + grain <= start)
+			if (first + grain <= start)
 				free_sectors = 1;
-			last = start + dos_partition_get_size(p);
+			first = start + dos_partition_get_size(p);
 		} else
 			free_primary++;
 	}
-	if (last + grain < cxt->total_sectors - 1)
+
+	/* set @free_sectors if there is a space after the first usable sector */
+	if (first + grain - 1 <= cxt->total_sectors - 1)
 		free_sectors = 1;
 
+	DBG(LABEL, ul_debug("DOS: primary: first free: %ju, last on disk: %ju, "
+			    "free_sectors=%d, free_primary=%d",
+				(uintmax_t) first,
+				(uintmax_t) cxt->total_sectors - 1,
+				free_sectors, free_primary));
 
 	if (!free_primary || !free_sectors) {
-		DBG(LABEL, ul_debug("DOS: primary impossible, add logical"));
+		DBG(LABEL, ul_debug("DOS: primary impossible"));
 		if (l->ext_offset) {
 			if (!pa || fdisk_partition_has_start(pa)) {
 				/* See above case A); here we have start, but
@@ -1864,11 +1869,12 @@ static int dos_add_partition(struct fdisk_context *cxt,
 					msg =  _("All space for primary partitions is in use.");
 
 				if (pa && fdisk_partition_has_start(pa)) {
-					fdisk_warnx(cxt, msg);
+					fdisk_warnx(cxt, "%s", msg);
 					return -EINVAL;
 				}
-				fdisk_info(cxt, msg);
+				fdisk_info(cxt, "%s", msg);
 			}
+			DBG(LABEL, ul_debug("DOS: trying logical"));
 			rc = add_logical(cxt, pa, &res);
 		} else {
 			if (free_primary)
@@ -2430,10 +2436,8 @@ static int dos_reorder(struct fdisk_context *cxt)
 	struct pte *pei, *pek;
 	size_t i,k;
 
-	if (!wrong_p_order(cxt, NULL)) {
-		fdisk_info(cxt, _("Nothing to do. Ordering is correct already."));
+	if (!wrong_p_order(cxt, NULL))
 		return 1;
-	}
 
 	while ((i = wrong_p_order(cxt, &k)) != 0 && i < 4) {
 		/* partition i should have come earlier, move it */
@@ -2490,10 +2494,11 @@ int fdisk_dos_move_begin(struct fdisk_context *cxt, size_t i)
 		return 0;
 	}
 
-	/* the default start is at the second sector of the disk or at the
-	 * second sector of the extended partition
+	/* The safe start is at the second sector, but some use-cases require
+	 * to have MBR within the first partition , so default to the first
+	 * sector of the disk or at the second sector of the extended partition
 	 */
-	free_start = pe->offset ? pe->offset + 1 : 1;
+	free_start = pe->offset ? pe->offset + 1 : 0;
 
 	curr_start = get_abs_partition_start(pe);
 
@@ -2533,6 +2538,11 @@ int fdisk_dos_move_begin(struct fdisk_context *cxt, size_t i)
 		dos_partition_set_start(p, new);
 
 		partition_set_changed(cxt, i, 1);
+
+		if (new == 0)
+			fdisk_info(cxt, _("The new beginning of the partition overlaps the disk "
+					  "label area. Be very careful when using the partition. "
+					  "You can lose all your partitions on the disk."));
 	}
 
 	return rc;
@@ -2670,7 +2680,8 @@ struct fdisk_label *fdisk_new_dos_label(struct fdisk_context *cxt __attribute__ 
 	lb->geom_max.heads = 255;
 	lb->geom_max.cylinders = 1048576;
 
-	return lb;
+	/* return calloc() result to keep static anaylizers happy */
+	return (struct fdisk_label *) dos;
 }
 
 /**

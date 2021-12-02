@@ -132,7 +132,7 @@ struct lslogins_user {
 	char *failed_tty;
 
 #ifdef HAVE_LIBSELINUX
-	security_context_t context;
+	char *context;
 #endif
 	char *homedir;
 	char *shell;
@@ -474,55 +474,52 @@ static struct utmpx *get_last_btmp(struct lslogins_control *ctl, const char *use
 
 }
 
-static int read_utmp(char const *file, size_t *nents, struct utmpx **res)
+static int parse_utmpx(const char *path, size_t *nrecords, struct utmpx **records)
 {
-	size_t n_read = 0, n_alloc = 0;
-	struct utmpx *utmp = NULL, *u;
+	size_t i, imax = 0;
+	struct utmpx *ary = NULL;
+	struct stat st;
 
-	if (utmpxname(file) < 0)
+	*nrecords = 0;
+	*records = NULL;
+
+	if (utmpxname(path) < 0)
 		return -errno;
 
-	setutxent();
-	errno = 0;
+	/* optimize allocation according to file size, the realloc() below is
+	 * just fallback only */
+	if (stat(path, &st) == 0 && (size_t) st.st_size > sizeof(struct utmpx)) {
+		imax = st.st_size / sizeof(struct utmpx);
+		ary = xmalloc(imax * sizeof(struct utmpx));
+	}
 
-	while ((u = getutxent()) != NULL) {
-		if (n_read == n_alloc) {
-			n_alloc += 32;
-			utmp = xrealloc(utmp, n_alloc * sizeof (struct utmpx));
+	for (i = 0; ; i++) {
+		struct utmpx *u;
+		errno = 0;
+		u = getutxent();
+		if (!u) {
+			if (errno)
+				goto fail;
+			break;
 		}
-		utmp[n_read++] = *u;
+		if (i == imax)
+			ary = xrealloc(ary, (imax *= 2) * sizeof(struct utmpx));
+		ary[i] = *u;
 	}
-	if (!u && errno) {
-		free(utmp);
+
+	*nrecords = i;
+	*records = ary;
+	endutxent();
+	return 0;
+fail:
+	endutxent();
+	free(ary);
+	if (errno) {
+		if (errno != EACCES)
+			err(EXIT_FAILURE, "%s", path);
 		return -errno;
 	}
-
-	endutxent();
-
-	*nents = n_read;
-	*res = utmp;
-
-	return 0;
-}
-
-static int parse_wtmp(struct lslogins_control *ctl, char *path)
-{
-	int rc = 0;
-
-	rc = read_utmp(path, &ctl->wtmp_size, &ctl->wtmp);
-	if (rc < 0 && errno != EACCES)
-		err(EXIT_FAILURE, "%s", path);
-	return rc;
-}
-
-static int parse_btmp(struct lslogins_control *ctl, char *path)
-{
-	int rc = 0;
-
-	rc = read_utmp(path, &ctl->btmp_size, &ctl->btmp);
-	if (rc < 0 && errno != EACCES)
-		err(EXIT_FAILURE, "%s", path);
-	return rc;
+	return -EINVAL;
 }
 
 static void get_lastlog(struct lslogins_control *ctl, uid_t uid, void *dst, int what)
@@ -565,6 +562,9 @@ static int get_sgroups(gid_t **list, size_t *len, struct passwd *pwd)
 
 	*list = xcalloc(1, ngroups * sizeof(gid_t));
 
+fprintf(stderr, "KZAK>>> alloc '%p' for %s\n", *list, pwd->pw_name);
+
+
 	/* now for the actual list of GIDs */
 	if (-1 == getgrouplist(pwd->pw_name, pwd->pw_gid, *list, &ngroups))
 		return -1;
@@ -584,6 +584,7 @@ static int get_sgroups(gid_t **list, size_t *len, struct passwd *pwd)
 	return 0;
 }
 
+#ifdef __linux__
 static int get_nprocs(const uid_t uid)
 {
 	int nprocs = 0;
@@ -598,6 +599,7 @@ static int get_nprocs(const uid_t uid)
 	proc_close_processes(proc);
 	return nprocs;
 }
+#endif
 
 static const char *get_pwd_method(const char *str, const char **next, unsigned int *sz)
 {
@@ -755,7 +757,8 @@ static struct lslogins_user *get_user_info(struct lslogins_control *ctl, const c
 			break;
 		case COL_SGROUPS:
 		case COL_SGIDS:
-			if (get_sgroups(&user->sgroups, &user->nsgroups, pwd))
+			if (!user->nsgroups &&
+			    get_sgroups(&user->sgroups, &user->nsgroups, pwd) < 0)
 				err(EXIT_FAILURE, _("failed to get supplementary groups"));
 			break;
 		case COL_HOME:
@@ -884,16 +887,15 @@ static struct lslogins_user *get_user_info(struct lslogins_control *ctl, const c
 			break;
 		case COL_SELINUX:
 #ifdef HAVE_LIBSELINUX
-			if (ctl->selinux_enabled) {
-				/* typedefs and pointers are pure evil */
-				security_context_t con = NULL;
-				if (getcon(&con) == 0)
-					user->context = con;
-			}
+			if (!ctl->selinux_enabled || getcon(&user->context) != 0)
+				user->context = NULL;
 #endif
 			break;
 		case COL_NPROCS:
+#ifdef __linux__
+
 			xasprintf(&user->nprocs, "%d", get_nprocs(pwd->pw_uid));
+#endif
 			break;
 		default:
 			/* something went very wrong here */
@@ -907,11 +909,14 @@ static struct lslogins_user *get_user_info(struct lslogins_control *ctl, const c
 
 static int str_to_uint(char *s, unsigned int *ul)
 {
-	char *end;
+	char *end = NULL;
+
 	if (!s || !*s)
 		return -1;
+
+	errno = 0;
 	*ul = strtoul(s, &end, 0);
-	if (!*end)
+	if (errno == 0 && end && !*end)
 		return 0;
 	return 1;
 }
@@ -1047,7 +1052,6 @@ static int create_usertree(struct lslogins_control *ctl)
 			}
 			if (rc || !user)
 				continue;
-
 			tsearch(user, &ctl->usertree, cmp_uid);
 		}
 	} else {
@@ -1214,7 +1218,10 @@ static void fill_table(const void *u, const VISIT which, const int depth __attri
 #endif
 			break;
 		case COL_NPROCS:
+#ifdef __linux__
+
 			rc = scols_line_set_data(ln, n, user->nprocs);
+#endif
 			break;
 		default:
 			/* something went very wrong here */
@@ -1227,14 +1234,28 @@ static void fill_table(const void *u, const VISIT which, const int depth __attri
 	}
 }
 #ifdef HAVE_LIBSYSTEMD
+static char *get_journal_data(sd_journal *j, const char *name)
+{
+	const char *data = NULL, *p;
+	size_t len = 0;
+
+	if (sd_journal_get_data(j, name, (const void **) &data, &len) < 0
+	    || !data || !len)
+		return NULL;
+
+	/* Get rid of journal entry field identifiers */
+	p = strnchr(data, len, '=');
+	if (!p || !*(p + 1))
+		return NULL;
+	p++;
+
+	return xstrndup(p, len - (p - data));
+}
+
 static void print_journal_tail(const char *journal_path, uid_t uid, size_t len, int time_mode)
 {
 	sd_journal *j;
-	char *match, *timestamp;
-	uint64_t x;
-	time_t t;
-	const char *identifier, *pid, *message;
-	size_t identifier_len, pid_len, message_len;
+	char *match;
 
 	if (journal_path)
 		sd_journal_open_directory(&j, journal_path, 0);
@@ -1248,30 +1269,27 @@ static void print_journal_tail(const char *journal_path, uid_t uid, size_t len, 
 	sd_journal_previous_skip(j, len);
 
 	do {
-		if (0 > sd_journal_get_data(j, "SYSLOG_IDENTIFIER",
-				(const void **) &identifier, &identifier_len))
-			goto done;
-		if (0 > sd_journal_get_data(j, "_PID",
-				(const void **) &pid, &pid_len))
-			goto done;
-		if (0 > sd_journal_get_data(j, "MESSAGE",
-				(const void **) &message, &message_len))
-			goto done;
+		char *id, *pid, *msg, *ts;
+		uint64_t x;
+		time_t t;
 
 		sd_journal_get_realtime_usec(j, &x);
 		t = x / 1000000;
-		timestamp = make_time(time_mode, t);
-		/* Get rid of journal entry field identifiers */
-		identifier = strchr(identifier, '=') + 1;
-		pid = strchr(pid, '=') + 1;
-		message = strchr(message, '=') + 1;
+		ts = make_time(time_mode, t);
 
-		fprintf(stdout, "%s %s[%s]: %s\n", timestamp, identifier, pid,
-			message);
-		free(timestamp);
+		id = get_journal_data(j, "SYSLOG_IDENTIFIER");
+		pid = get_journal_data(j, "_PID");
+		msg = get_journal_data(j, "MESSAGE");
+
+		if (ts && id && pid && msg)
+			fprintf(stdout, "%s %s[%s]: %s\n", ts, id, pid, msg);
+
+		free(ts);
+		free(id);
+		free(pid);
+		free(msg);
 	} while (sd_journal_next(j));
 
-done:
 	free(match);
 	sd_journal_flush_matches(j);
 	sd_journal_close(j);
@@ -1329,6 +1347,7 @@ static void free_user(void *f)
 	struct lslogins_user *u = f;
 	free(u->login);
 	free(u->group);
+	free(u->nprocs);
 	free(u->gecos);
 	free(u->sgroups);
 	free(u->pwd_ctime);
@@ -1626,7 +1645,9 @@ int main(int argc, char *argv[])
 
 	} else if (ncolumns == 2) {
 		/* default columns */
+#ifdef __linux__
 		add_column(columns, ncolumns++, COL_NPROCS);
+#endif
 		add_column(columns, ncolumns++, COL_PWDLOCK);
 		add_column(columns, ncolumns++, COL_PWDDENY);
 		add_column(columns, ncolumns++, COL_LAST_LOGIN);
@@ -1638,11 +1659,11 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 
 	if (require_wtmp()) {
-		parse_wtmp(ctl, path_wtmp);
+		parse_utmpx(path_wtmp, &ctl->wtmp_size, &ctl->wtmp);
 		ctl->lastlogin_fd = open(path_lastlog, O_RDONLY, 0);
 	}
 	if (require_btmp())
-		parse_btmp(ctl, path_btmp);
+		parse_utmpx(path_btmp, &ctl->btmp_size, &ctl->btmp);
 
 	if (logins || groups)
 		get_ulist(ctl, logins, groups);
@@ -1654,7 +1675,9 @@ int main(int argc, char *argv[])
 
 	scols_unref_table(tb);
 	tdestroy(ctl->usertree, free_user);
-	close(ctl->lastlogin_fd);
+
+	if (ctl->lastlogin_fd >= 0)
+		close(ctl->lastlogin_fd);
 	free_ctl(ctl);
 
 	return EXIT_SUCCESS;

@@ -20,14 +20,16 @@ enum {
 	FL_VERBOSE	= (1 << 16),
 	FL_PSEUDO	= (1 << 17),
 	FL_REAL		= (1 << 18),
+	FL_VFS_ALL	= (1 << 19),
+	FL_SHADOWED	= (1 << 20),
 
 	/* basic table settings */
-	FL_ASCII	= (1 << 20),
-	FL_RAW		= (1 << 21),
-	FL_NOHEADINGS	= (1 << 22),
-	FL_EXPORT	= (1 << 23),
-	FL_TREE		= (1 << 24),
-	FL_JSON		= (1 << 25),
+	FL_ASCII	= (1 << 21),
+	FL_RAW		= (1 << 22),
+	FL_NOHEADINGS	= (1 << 23),
+	FL_EXPORT	= (1 << 24),
+	FL_TREE		= (1 << 25),
+	FL_JSON		= (1 << 26),
 };
 
 extern struct libmnt_cache *cache;

@@ -10,6 +10,7 @@
 #include "mangle.h"
 #include "path.h"
 #include "nls.h"
+#include "strutils.h"
 
 #include "lsblk.h"
 
@@ -104,16 +105,26 @@ static struct lsblk_devprop *get_properties_by_udev(struct lsblk_device *ld)
 		if (data)
 			prop->wwn = xstrdup(data);
 
-		data = udev_device_get_property_value(dev, "ID_SCSI_SERIAL");
+		data = udev_device_get_property_value(dev, "SCSI_IDENT_SERIAL");	/* sg3_utils do not use I_D prefix */
+		if (!data)
+			data = udev_device_get_property_value(dev, "ID_SCSI_SERIAL");
 		if(!data)
 			data = udev_device_get_property_value(dev, "ID_SERIAL_SHORT");
 		if(!data)
 			data = udev_device_get_property_value(dev, "ID_SERIAL");
-		if (data)
+		if (data) {
 			prop->serial = xstrdup(data);
+			normalize_whitespace((unsigned char *) prop->serial);
+		}
 
-		if ((data = udev_device_get_property_value(dev, "ID_MODEL")))
+		if ((data = udev_device_get_property_value(dev, "ID_MODEL_ENC"))) {
 			prop->model = xstrdup(data);
+			unhexmangle_string(prop->model);
+			normalize_whitespace((unsigned char *) prop->model);
+		} else if ((data = udev_device_get_property_value(dev, "ID_MODEL"))) {
+			prop->model = xstrdup(data);
+			normalize_whitespace((unsigned char *) prop->model);
+		}
 
 		udev_device_unref(dev);
 		DBG(DEV, ul_debugobj(ld, "%s: found udev properties", ld->name));

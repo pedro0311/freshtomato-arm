@@ -3,6 +3,11 @@
 #include "strutils.h"
 #include "carefulputc.h"
 #include "mangle.h"
+#include "jsonwrt.h"
+
+#ifdef FUZZ_TARGET
+#include "fuzz.h"
+#endif
 
 /**
  * SECTION: script
@@ -540,39 +545,24 @@ int fdisk_script_enable_json(struct fdisk_script *dp, int json)
 	return 0;
 }
 
-static void fput_indent(int indent, FILE *f)
-{
-	int i;
-
-	for (i = 0; i <= indent; i++)
-		fputs("   ", f);
-}
-
-static void fput_var_separator(int *nvars, FILE *f)
-{
-	if (*nvars > 0)
-		fputs(", ", f);
-	++(*nvars);
-}
-
 static int write_file_json(struct fdisk_script *dp, FILE *f)
 {
 	struct list_head *h;
 	struct fdisk_partition *pa;
 	struct fdisk_iter itr;
 	const char *devname = NULL;
-	int ct = 0, indent = 0;
+	int ct = 0;
+	struct ul_jsonwrt json;
 
 	assert(dp);
 	assert(f);
 
 	DBG(SCRIPT, ul_debugobj(dp, "writing json dump to file"));
 
-	fputs("{\n", f);
+	ul_jsonwrt_init(&json, f, 0);
+	ul_jsonwrt_root_open(&json);
 
-	fput_indent(indent, f);
-	fputs("\"partitiontable\": {\n", f);
-	indent++;
+	ul_jsonwrt_object_open(&json, "partitiontable");
 
 	/* script headers */
 	list_for_each(h, &dp->headers) {
@@ -592,18 +582,10 @@ static int write_file_json(struct fdisk_script *dp, FILE *f)
 		} else if (strcmp(name, "label-id") == 0)
 			name = "id";
 
-		fput_indent(indent, f);
-		fputs_quoted_json_lower(name, f);
-		fputs(":", f);
-		if (!num)
-			fputs_quoted_json(fi->data, f);
+		if (num)
+			ul_jsonwrt_value_raw(&json, name, fi->data);
 		else
-			fputs(fi->data, f);
-
-		if ((fi == list_last_entry(&dp->headers, struct fdisk_scriptheader, headers)) && (!dp->table || fdisk_table_is_empty(dp->table)))
-			fputc('\n', f);
-		else
-			fputs(",\n", f);
+			ul_jsonwrt_value_s(&json, name, fi->data);
 
 		if (strcmp(name, "device") == 0)
 			devname = fi->data;
@@ -617,84 +599,59 @@ static int write_file_json(struct fdisk_script *dp, FILE *f)
 
 	DBG(SCRIPT, ul_debugobj(dp, "%zu entries", fdisk_table_get_nents(dp->table)));
 
-	fput_indent(indent, f);
-	fputs("\"partitions\": [\n", f);
-	indent++;
+	ul_jsonwrt_array_open(&json, "partitions");
 
 	fdisk_reset_iter(&itr, FDISK_ITER_FORWARD);
 	while (fdisk_table_next_partition(dp->table, &itr, &pa) == 0) {
 		char *p = NULL;
-		int nvars = 0;
 
 		ct++;
-		fput_indent(indent, f);
-		fputc('{', f);
+		ul_jsonwrt_object_open(&json, NULL);
 		if (devname)
 			p = fdisk_partname(devname, pa->partno + 1);
 		if (p) {
 			DBG(SCRIPT, ul_debugobj(dp, "write %s entry", p));
-			fputs("\"node\":", f);
-			fputs_quoted_json(p, f);
-			nvars++;
+			ul_jsonwrt_value_s(&json, "node", p);
 			free(p);
 		}
 
-		if (fdisk_partition_has_start(pa)) {
-			fput_var_separator(&nvars, f);
-			fprintf(f, "\"start\":%ju", (uintmax_t)pa->start);
-		}
-		if (fdisk_partition_has_size(pa)) {
-			fput_var_separator(&nvars, f);
-			fprintf(f, "\"size\":%ju", (uintmax_t)pa->size);
-		}
-		if (pa->type && fdisk_parttype_get_string(pa->type)) {
-			fput_var_separator(&nvars, f);
-			fputs("\"type\":", f);
-			fputs_quoted_json(fdisk_parttype_get_string(pa->type), f);
-		} else if (pa->type) {
-			fput_var_separator(&nvars, f);
-			fprintf(f, "\"type\":\"%x\"", fdisk_parttype_get_code(pa->type));
+		if (fdisk_partition_has_start(pa))
+			ul_jsonwrt_value_u64(&json, "start", (uintmax_t)pa->start);
+
+		if (fdisk_partition_has_size(pa))
+			ul_jsonwrt_value_u64(&json, "size", (uintmax_t)pa->size);
+
+		if (pa->type && fdisk_parttype_get_string(pa->type))
+			ul_jsonwrt_value_s(&json, "type", fdisk_parttype_get_string(pa->type));
+
+		else if (pa->type) {
+			ul_jsonwrt_value_open(&json, "type");
+			fprintf(f, "\"%x\"", fdisk_parttype_get_code(pa->type));
+			ul_jsonwrt_value_close(&json);
 		}
 
-		if (pa->uuid) {
-			fput_var_separator(&nvars, f);
-			fputs("\"uuid\":", f);
-			fputs_quoted_json(pa->uuid, f);
-		}
-		if (pa->name && *pa->name) {
-			fput_var_separator(&nvars, f);
-			fputs("\"name\":", f),
-			fputs_quoted_json(pa->name, f);
-		}
+		if (pa->uuid)
+			ul_jsonwrt_value_s(&json, "uuid", pa->uuid);
+		if (pa->name && *pa->name)
+			ul_jsonwrt_value_s(&json, "name", pa->name);
 
 		/* for MBR attr=80 means bootable */
 		if (pa->attrs) {
 			struct fdisk_label *lb = script_get_label(dp);
 
-			if (!lb || fdisk_label_get_type(lb) != FDISK_DISKLABEL_DOS) {
-				fput_var_separator(&nvars, f);
-				fputs("\"attrs\":", f);
-				fputs_quoted_json(pa->attrs, f);
-			}
-		}
-		if (fdisk_partition_is_bootable(pa)) {
-			fput_var_separator(&nvars, f);
-			fprintf(f, "\"bootable\":true");
+			if (!lb || fdisk_label_get_type(lb) != FDISK_DISKLABEL_DOS)
+				ul_jsonwrt_value_s(&json, "attrs", pa->attrs);
 		}
 
-		if ((size_t)ct < fdisk_table_get_nents(dp->table))
-			fputs("},\n", f);
-		else
-			fputs("}\n", f);
+		if (fdisk_partition_is_bootable(pa))
+			ul_jsonwrt_value_boolean(&json, "bootable", 1);
+		ul_jsonwrt_object_close(&json);
 	}
 
-	indent--;
-	fput_indent(indent, f);
-	fputs("]\n", f);
+	ul_jsonwrt_array_close(&json);
 done:
-	indent--;
-	fput_indent(indent, f);
-	fputs("}\n}\n", f);
+	ul_jsonwrt_object_close(&json);
+	ul_jsonwrt_root_close(&json);
 
 	DBG(SCRIPT, ul_debugobj(dp, "write script done"));
 	return 0;
@@ -985,6 +942,7 @@ static int partno_from_devname(char *s)
 #define FDISK_SCRIPT_PARTTYPE_PARSE_FLAGS \
 	(FDISK_PARTTYPE_PARSE_DATA | FDISK_PARTTYPE_PARSE_DATALAST | \
 	 FDISK_PARTTYPE_PARSE_SHORTCUT | FDISK_PARTTYPE_PARSE_ALIAS | \
+	 FDISK_PARTTYPE_PARSE_NAME | \
 	 FDISK_PARTTYPE_PARSE_DEPRECATED)
 
 /* dump format
@@ -1034,7 +992,11 @@ static int parse_line_nameval(struct fdisk_script *dp, char *s)
 
 		if (!strncasecmp(p, "start=", 6)) {
 			int pow = 0;
+
 			p += 6;
+			if (!*p)
+				continue;
+
 			rc = next_number(&p, &num, &pow);
 			if (!rc) {
 				if (pow) {	/* specified as <num><suffix> */
@@ -1051,6 +1013,9 @@ static int parse_line_nameval(struct fdisk_script *dp, char *s)
 			int pow = 0;
 
 			p += 5;
+			if (!*p)
+				continue;
+
 			rc = next_number(&p, &num, &pow);
 			if (!rc) {
 				if (pow) {	/* specified as <num><suffix> */
@@ -1557,6 +1522,43 @@ int fdisk_apply_script(struct fdisk_context *cxt, struct fdisk_script *dp)
 	DBG(CXT, ul_debugobj(cxt, "script done [rc=%d]", rc));
 	return rc;
 }
+
+#ifdef FUZZ_TARGET
+# include "all-io.h"
+
+int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
+{
+	char name[] = "/tmp/test-script-fuzz.XXXXXX";
+	int fd;
+	struct fdisk_script *dp;
+	struct fdisk_context *cxt;
+	FILE *f;
+
+	fd = mkostemp(name, O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC);
+	if (fd < 0)
+		err(EXIT_FAILURE, "mkostemp() failed");
+	if (write_all(fd, data, size) != 0)
+		err(EXIT_FAILURE, "write() failed");
+	f = fopen(name, "r");
+	if (!f)
+		err(EXIT_FAILURE, "cannot open %s", name);
+
+	cxt = fdisk_new_context();
+	dp = fdisk_new_script(cxt);
+
+	fdisk_script_read_file(dp, f);
+	fclose(f);
+
+	fdisk_script_write_file(dp, stdout);
+	fdisk_unref_script(dp);
+	fdisk_unref_context(cxt);
+
+	close(fd);
+	unlink(name);
+
+	return 0;
+}
+#endif
 
 #ifdef TEST_PROGRAM
 static int test_dump(struct fdisk_test *ts, int argc, char *argv[])

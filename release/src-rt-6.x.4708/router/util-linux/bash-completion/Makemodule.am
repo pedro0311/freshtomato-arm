@@ -189,7 +189,7 @@ endif
 if BUILD_UTMPDUMP
 dist_bashcompletion_DATA += bash-completion/utmpdump
 endif
-if BUILD_LIBUUID
+if BUILD_UUIDGEN
 dist_bashcompletion_DATA += bash-completion/uuidgen
 endif
 if BUILD_UUIDPARSE
@@ -209,6 +209,9 @@ dist_bashcompletion_DATA += bash-completion/rename
 endif
 if BUILD_CHRT
 dist_bashcompletion_DATA += bash-completion/chrt
+endif
+if BUILD_UCLAMPSET
+dist_bashcompletion_DATA += bash-completion/uclampset
 endif
 if BUILD_IONICE
 dist_bashcompletion_DATA += bash-completion/ionice
@@ -325,6 +328,9 @@ dist_bashcompletion_DATA += bash-completion/pg
 endif
 if BUILD_UL
 dist_bashcompletion_DATA += bash-completion/ul
+endif
+if BUILD_HARDLINK
+dist_bashcompletion_DATA += bash-completion/hardlink
 endif
 
 endif # BUILD_BASH_COMPLETION

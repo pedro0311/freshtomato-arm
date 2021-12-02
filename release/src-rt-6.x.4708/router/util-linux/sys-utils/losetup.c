@@ -144,8 +144,8 @@ static int printf_loopdev(struct loopdev_cxt *lc)
 		goto done;
 	}
 
-	printf("%s: [%04d]:%" PRIu64 " (%s)",
-		loopcxt_get_device(lc), (int) dev, ino, fname);
+	printf("%s: [%04jd]:%ju (%s)",
+		loopcxt_get_device(lc), (intmax_t) dev, (uintmax_t) ino, fname);
 
 	if (loopcxt_get_offset(lc, &x) == 0 && x)
 			printf(_(", offset %ju"), x);
@@ -508,7 +508,7 @@ static int create_loop(struct loopdev_cxt *lc,
 				errx(EXIT_FAILURE, _("%s: overlapping encrypted loop device exists"), file);
 			}
 
-			lc->info.lo_flags &= ~LO_FLAGS_AUTOCLEAR;
+			lc->config.info.lo_flags &= ~LO_FLAGS_AUTOCLEAR;
 			if (loopcxt_ioctl_status(lc)) {
 				loopcxt_deinit(lc);
 				errx(EXIT_FAILURE, _("%s: failed to re-use loop device"), file);
@@ -573,7 +573,7 @@ static int create_loop(struct loopdev_cxt *lc,
 		if (rc == 0)
 			break;			/* success */
 
-		if (errno == EBUSY && !hasdev && ntries < 64) {
+		if ((errno == EBUSY || errno == EAGAIN) && !hasdev && ntries < 64) {
 			xusleep(200000);
 			ntries++;
 			continue;

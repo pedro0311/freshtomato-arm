@@ -24,6 +24,7 @@ ts_init "$*"
 ts_check_test_command "$TS_CMD_MKCRAMFS"
 ts_check_test_command "$TS_CMD_MOUNT"
 ts_check_test_command "$TS_CMD_UMOUNT"
+ts_check_test_command "$TS_CMD_BLKID"
 ts_check_test_command "$TS_HELPER_MD5"
 ts_check_test_command "$TS_HELPER_SYSINFO"
 
@@ -41,7 +42,7 @@ PAGE_SIZE=$($TS_HELPER_SYSINFO pagesize)
 case "${BYTE_ORDER}:${PAGE_SIZE}" in
 	LE:4096)
 		MD5_EXP="a6667acb1cb0685d9eb5b9cd3724766c" ;;
-	LE:65536)
+	LE:16384 | LE:65536)
 		MD5_EXP="b60133682603b0118592b55f1dba017c" ;;
 	BE:4096)
 		MD5_EXP="eaf05031dc8ec97c91ba5c773635cc89" ;;
@@ -58,15 +59,20 @@ ts_log "create mountpoint dir"
 
 ts_log "generate data"
 rm -rf "$IMAGE_SRC"
-mkdir -p $IMAGE_SRC
+mkdir -m 755 -p $IMAGE_SRC
+
+umask 133
+
 for d in `seq 0 110`; do
 	DIRNAME="$IMAGE_SRC/$(printf "dir-%03d" $d)"
-	mkdir -p $DIRNAME
+	mkdir -m 755 $DIRNAME
 	for f in `seq 0 10`; do
 		FILENAME="$DIRNAME/$(printf "data.%03d" $f)"
 		printf "data in %03d-%03d" $d $f >> $FILENAME
 	done
 done
+
+chgrp -R 0 "$IMAGE_SRC"
 
 ts_cd "$IMAGE_SRC"
 

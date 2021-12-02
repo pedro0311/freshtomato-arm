@@ -415,6 +415,9 @@ static int generate_helper_optstr(struct libmnt_context *cxt, char **optstr)
 		 * string, because there is nothing like MS_EXEC (we only have
 		 * MS_NOEXEC in mount flags and we don't care about the original
 		 * mount string in libmount for VFS options).
+		 *
+		 * This use-case makes sense for MS_SECURE flags only (see
+		 * mnt_optstr_get_flags() and mnt_context_merge_mflags()).
 		 */
 		if (!(cxt->mountflags & MS_NOEXEC))
 			mnt_optstr_append_option(optstr, "exec", NULL);
@@ -422,10 +425,7 @@ static int generate_helper_optstr(struct libmnt_context *cxt, char **optstr)
 			mnt_optstr_append_option(optstr, "suid", NULL);
 		if (!(cxt->mountflags & MS_NODEV))
 			mnt_optstr_append_option(optstr, "dev", NULL);
-		if (!(cxt->mountflags & MS_NOSYMFOLLOW))
-			mnt_optstr_append_option(optstr, "symfollow", NULL);
 	}
-
 
 	if (cxt->flags & MNT_FL_SAVED_USER)
 		rc = mnt_optstr_set_option(optstr, "user", cxt->orig_user);
@@ -645,10 +645,7 @@ static int exec_helper(struct libmnt_context *cxt)
 		const char *args[14], *type;
 		int i = 0;
 
-		if (setgid(getgid()) < 0)
-			_exit(EXIT_FAILURE);
-
-		if (setuid(getuid()) < 0)
+		if (drop_permissions() != 0)
 			_exit(EXIT_FAILURE);
 
 		if (!mnt_context_switch_origin_ns(cxt))
@@ -715,6 +712,7 @@ static int exec_helper(struct libmnt_context *cxt)
 	}
 
 	free(o);
+	free(namespace);
 	return rc;
 }
 
@@ -773,7 +771,7 @@ static int do_mount(struct libmnt_context *cxt, const char *try_type)
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
-	if (try_type && !cxt->helper) {
+	if (try_type) {
 		rc = mnt_context_prepare_helper(cxt, "mount", try_type);
 		if (rc)
 			return rc;
@@ -860,6 +858,17 @@ static int do_mount(struct libmnt_context *cxt, const char *try_type)
 	return rc;
 }
 
+static int is_success_status(struct libmnt_context *cxt)
+{
+	if (mnt_context_helper_executed(cxt))
+		return mnt_context_get_helper_status(cxt) == 0;
+
+	if (mnt_context_syscall_called(cxt))
+		return mnt_context_get_status(cxt) == 1;
+
+	return 0;
+}
+
 /* try mount(2) for all items in comma separated list of the filesystem @types */
 static int do_mount_by_types(struct libmnt_context *cxt, const char *types)
 {
@@ -900,7 +909,7 @@ static int do_mount_by_types(struct libmnt_context *cxt, const char *types)
 			rc = do_mount(cxt, p);
 		p = end ? end + 1 : NULL;
 		free(autotype);
-	} while (!mnt_context_get_status(cxt) && p);
+	} while (!is_success_status(cxt) && p);
 
 	free(p0);
 	return rc;
@@ -943,8 +952,9 @@ static int do_mount_by_pattern(struct libmnt_context *cxt, const char *pattern)
 		return -MNT_ERR_NOFSTYPE;
 
 	for (fp = filesystems; *fp; fp++) {
+		DBG(CXT, ul_debugobj(cxt, " ##### trying '%s'", *fp));
 		rc = do_mount(cxt, *fp);
-		if (mnt_context_get_status(cxt))
+		if (is_success_status(cxt))
 			break;
 		if (mnt_context_get_syscall_errno(cxt) != EINVAL &&
 		    mnt_context_get_syscall_errno(cxt) != ENODEV)

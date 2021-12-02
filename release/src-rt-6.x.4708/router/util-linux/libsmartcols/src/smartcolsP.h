@@ -15,6 +15,7 @@
 #include "list.h"
 #include "strutils.h"
 #include "color-names.h"
+#include "jsonwrt.h"
 #include "debug.h"
 
 #include "libsmartcols.h"
@@ -123,7 +124,7 @@ struct libscols_column {
 
 
 	struct libscols_cell	header;
-	struct list_head	cl_columns;
+	struct list_head	cl_columns;	/* member of table->tb_columns */
 
 	struct libscols_table	*table;
 
@@ -211,8 +212,8 @@ struct libscols_table {
 	char	*colsep;	/* column separator */
 	char	*linesep;	/* line separator */
 
-	struct list_head	tb_columns;
-	struct list_head	tb_lines;
+	struct list_head	tb_columns;	/* list of columns, items: column->cl_columns */
+	struct list_head	tb_lines;	/* list of lines; items: line->ln_lines  */
 
 	struct list_head	tb_groups;	/* all defined groups */
 	struct libscols_group	**grpset;
@@ -221,15 +222,19 @@ struct libscols_table {
 	size_t			ngrpchlds_pending;	/* groups with not yet printed children */
 	struct libscols_line	*walk_last_tree_root;	/* last root, used by scols_walk_() */
 
+	struct libscols_column	*dflt_sort_column;	/* default sort column, set by scols_sort_table() */
+
 	struct libscols_symbols	*symbols;
 	struct libscols_cell	title;		/* optional table title (for humans) */
 
-	int	indent;		/* indentation counter */
-	int	indent_last_sep;/* last printed has been line separator */
+	struct ul_jsonwrt	json;		/* JSON formatting */
+
 	int	format;		/* SCOLS_FMT_* */
 
 	size_t	termlines_used;	/* printed line counter */
 	size_t	header_next;	/* where repeat header */
+
+	const char *cur_color;	/* current active color when printing */
 
 	/* flags */
 	unsigned int	ascii		:1,	/* don't use unicode */
@@ -356,17 +361,6 @@ int __scols_print_range(struct libscols_table *tb,
                         struct libscols_buffer *buf,
                         struct libscols_iter *itr,
                         struct libscols_line *end);
-
-/*
- * fput.c
- */
-extern void fput_indent(struct libscols_table *tb);
-extern void fput_table_open(struct libscols_table *tb);
-extern void fput_table_close(struct libscols_table *tb);
-extern void fput_children_open(struct libscols_table *tb);
-extern void fput_children_close(struct libscols_table *tb);
-extern void fput_line_open(struct libscols_table *tb);
-extern void fput_line_close(struct libscols_table *tb, int last, int last_in_table);
 
 static inline int is_tree_root(struct libscols_line *ln)
 {

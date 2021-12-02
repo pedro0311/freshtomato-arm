@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <sys/time.h>
+#include <termios.h>
 
 #include "c.h"
 #include "xalloc.h"
@@ -93,9 +94,8 @@ delay_for(struct timeval *delay)
 	ts.tv_sec = (time_t) delay->tv_sec;
 	ts.tv_nsec = delay->tv_usec * 1000;
 
-	DBG(TIMING, ul_debug("going to sleep for %ld.%06ld",
-				delay->tv_sec,
-				delay->tv_usec));
+	DBG(TIMING, ul_debug("going to sleep for %"PRId64".%06"PRId64,
+			(int64_t) delay->tv_sec, (int64_t) delay->tv_usec));
 
 	while (-1 == nanosleep(&ts, &remainder)) {
 		if (EINTR == errno)
@@ -108,7 +108,8 @@ delay_for(struct timeval *delay)
 #endif
 }
 
-static void appendchr(char *buf, size_t bufsz, int c)
+static void
+appendchr(char *buf, size_t bufsz, int c)
 {
 	size_t sz;
 
@@ -120,11 +121,31 @@ static void appendchr(char *buf, size_t bufsz, int c)
 		buf[sz] = c;
 }
 
+static int
+setterm(struct termios *backup)
+{
+	struct termios tattr;
+
+	if (tcgetattr(STDOUT_FILENO, backup) != 0) {
+		if (errno != ENOTTY) /* For debugger. */
+			err(EXIT_FAILURE, _("unexpected tcgetattr failure"));
+		return 0;
+	}
+	tattr = *backup;
+	cfmakeraw(&tattr);
+	tattr.c_lflag |= ISIG;
+	tcsetattr(STDOUT_FILENO, TCSANOW, &tattr);
+	return 1;
+}
+
 int
 main(int argc, char *argv[])
 {
 	static const struct timeval mindelay = { .tv_sec = 0, .tv_usec = 100 };
 	struct timeval maxdelay;
+
+	int isterm;
+	struct termios saved;
 
 	struct replay_setup *setup = NULL;
 	struct replay_step *step = NULL;
@@ -286,6 +307,8 @@ main(int argc, char *argv[])
 		replay_set_delay_max(setup, &maxdelay);
 	replay_set_delay_min(setup, &mindelay);
 
+	isterm = setterm(&saved);
+
 	do {
 		rc = replay_get_next_step(setup, streams, &step);
 		if (rc)
@@ -299,6 +322,9 @@ main(int argc, char *argv[])
 		}
 		rc = replay_emit_step_data(setup, step, STDOUT_FILENO);
 	} while (rc == 0);
+
+	if (isterm)
+		tcsetattr(STDOUT_FILENO, TCSADRAIN, &saved);
 
 	if (step && rc < 0)
 		err(EXIT_FAILURE, _("%s: log file error"), replay_step_get_filename(step));

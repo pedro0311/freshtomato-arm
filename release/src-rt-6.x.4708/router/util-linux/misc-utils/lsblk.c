@@ -50,6 +50,8 @@
 #include "closestream.h"
 #include "optutils.h"
 #include "fileutils.h"
+#include "loopdev.h"
+#include "buffer.h"
 
 #include "lsblk.h"
 
@@ -72,8 +74,10 @@ enum {
 	COL_FSTYPE,
 	COL_FSUSED,
 	COL_FSUSEPERC,
+	COL_FSROOTS,
 	COL_FSVERSION,
 	COL_TARGET,
+	COL_TARGETS,
 	COL_LABEL,
 	COL_UUID,
 	COL_PTUUID,
@@ -161,9 +165,12 @@ static struct colinfo infos[] = {
 	[COL_FSTYPE]    = { "FSTYPE", 0.1, SCOLS_FL_TRUNC, N_("filesystem type") },
 	[COL_FSUSED]    = { "FSUSED", 5, SCOLS_FL_RIGHT, N_("filesystem size used") },
 	[COL_FSUSEPERC] = { "FSUSE%", 3, SCOLS_FL_RIGHT, N_("filesystem use percentage") },
+	[COL_FSROOTS]   = { "FSROOTS", 0.1, SCOLS_FL_WRAP, N_("mounted filesystem roots") },
 	[COL_FSVERSION] = { "FSVER", 0.1, SCOLS_FL_TRUNC, N_("filesystem version") },
 
-	[COL_TARGET] = { "MOUNTPOINT", 0.10, SCOLS_FL_TRUNC, N_("where the device is mounted") },
+	[COL_TARGET]    = { "MOUNTPOINT",  0.10, SCOLS_FL_TRUNC, N_("where the device is mounted") },
+	[COL_TARGETS]   = { "MOUNTPOINTS", 0.10, SCOLS_FL_WRAP,  N_("all locations where device is mounted") },
+
 	[COL_LABEL]  = { "LABEL",   0.1, 0, N_("filesystem LABEL") },
 	[COL_UUID]   = { "UUID",    36,  0, N_("filesystem UUID") },
 
@@ -619,10 +626,9 @@ static char *get_vfs_attribute(struct lsblk_device *dev, int id)
 {
 	char *sizestr;
 	uint64_t vfs_attr = 0;
-	char *mnt;
 
 	if (!dev->fsstat.f_blocks) {
-		mnt = lsblk_device_get_mountpoint(dev);
+		const char *mnt = lsblk_device_get_mountpoint(dev);
 		if (!mnt || dev->is_swap)
 			return NULL;
 		if (statvfs(mnt, &dev->fsstat) != 0)
@@ -798,11 +804,45 @@ static char *device_get_data(
 		break;
 	case COL_TARGET:
 	{
-		char *s = lsblk_device_get_mountpoint(dev);
-		if (s)
-			str = xstrdup(s);
-		else
-			str = NULL;
+		const char *p = lsblk_device_get_mountpoint(dev);
+		if (p)
+			str = xstrdup(p);
+		break;
+	}
+	case COL_TARGETS:
+	{
+		size_t i, n = 0;
+		struct ul_buffer buf = UL_INIT_BUFFER;
+		struct libmnt_fs **fss = lsblk_device_get_filesystems(dev, &n);
+
+		for (i = 0; i < n; i++) {
+			struct libmnt_fs *fs = fss[i];
+			if (mnt_fs_is_swaparea(fs))
+				ul_buffer_append_string(&buf, "[SWAP]");
+			else
+				ul_buffer_append_string(&buf, mnt_fs_get_target(fs));
+			if (i + 1 < n)
+				ul_buffer_append_data(&buf, "\n", 1);
+		}
+		str = ul_buffer_get_data(&buf);
+		break;
+	}
+	case COL_FSROOTS:
+	{
+		size_t i, n = 0;
+		struct ul_buffer buf = UL_INIT_BUFFER;
+		struct libmnt_fs **fss = lsblk_device_get_filesystems(dev, &n);
+
+		for (i = 0; i < n; i++) {
+			struct libmnt_fs *fs = fss[i];
+			const char *root = mnt_fs_get_root(fs);
+			if (mnt_fs_is_swaparea(fs))
+				continue;
+			ul_buffer_append_string(&buf, root ? root : "/");
+			if (i + 1 < n)
+				ul_buffer_append_data(&buf, "\n", 1);
+		}
+		str = ul_buffer_get_data(&buf);
 		break;
 	}
 	case COL_LABEL:
@@ -1149,6 +1189,20 @@ static void devtree_to_scols(struct lsblk_devtree *tr, struct libscols_table *ta
 		device_to_scols(dev, NULL, tab, NULL);
 }
 
+static int ignore_empty(struct lsblk_device *dev)
+{
+	/* show all non-empty devices */
+	if (dev->size)
+		return 0;
+
+	/* ignore empty loop devices without backing file */
+	if (dev->maj == LOOPDEV_MAJOR &&
+	    !loopdev_has_backing_file(dev->filename))
+		return 1;
+
+	return 0;
+}
+
 /*
  * Reads very basic information about the device from sysfs into the device struct
  */
@@ -1200,7 +1254,7 @@ static int initialize_device(struct lsblk_device *dev,
 		dev->size <<= 9;					/* in bytes */
 
 	/* Ignore devices of zero size */
-	if (!lsblk->all_devices && dev->size == 0) {
+	if (!lsblk->all_devices && ignore_empty(dev)) {
 		DBG(DEV, ul_debugobj(dev, "zero size device -- ignore"));
 		return -1;
 	}
@@ -1250,6 +1304,26 @@ static struct lsblk_device *devtree_get_device_or_new(struct lsblk_devtree *tr,
 		DBG(DEV, ul_debugobj(dev, "%s: already processed", name));
 
 	return dev;
+}
+
+static struct lsblk_device *devtree_pktcdvd_get_dep(
+			struct lsblk_devtree *tr,
+			struct lsblk_device *dev,
+			int want_slave)
+{
+	char buf[PATH_MAX], *name;
+	dev_t devno;
+
+	devno = lsblk_devtree_pktcdvd_get_mate(tr,
+			makedev(dev->maj, dev->min), !want_slave);
+	if (!devno)
+		return NULL;
+
+	name = sysfs_devno_to_devname(devno, buf, sizeof(buf));
+	if (!name)
+		return NULL;
+
+	return devtree_get_device_or_new(tr, NULL, name);
 }
 
 static int process_dependencies(
@@ -1342,6 +1416,7 @@ static int process_dependencies(
 	DIR *dir;
 	struct dirent *d;
 	const char *depname;
+	struct lsblk_device *dep = NULL;
 
 	assert(dev);
 
@@ -1356,21 +1431,20 @@ static int process_dependencies(
 
 	if (!(lsblk->inverse ? dev->nslaves : dev->nholders)) {
 		DBG(DEV, ul_debugobj(dev, " ignore (no slaves/holders)"));
-		return 0;
+		goto done;
 	}
 
 	depname = lsblk->inverse ? "slaves" : "holders";
 	dir = ul_path_opendir(dev->sysfs, depname);
 	if (!dir) {
 		DBG(DEV, ul_debugobj(dev, " ignore (no slaves/holders directory)"));
-		return 0;
+		goto done;
 	}
 	ul_path_close_dirfd(dev->sysfs);
 
 	DBG(DEV, ul_debugobj(dev, " %s: checking for '%s' dependence", dev->name, depname));
 
 	while ((d = xreaddir(dir))) {
-		struct lsblk_device *dep = NULL;
 		struct lsblk_device *disk = NULL;
 
 		/* Is the dependency a partition? */
@@ -1421,8 +1495,14 @@ next:
 			ul_path_close_dirfd(disk->sysfs);
 	}
 	closedir(dir);
+done:
+	dep = devtree_pktcdvd_get_dep(tr, dev, lsblk->inverse);
 
-	DBG(DEV, ul_debugobj(dev, "%s: checking for '%s' -- done", dev->name, depname));
+	if (dep && lsblk_device_new_dependence(dev, dep) == 0) {
+		lsblk_devtree_remove_root(tr, dep);
+		process_dependencies(tr, dep, lsblk->inverse ? 0 : 1);
+	}
+
 	return 0;
 }
 
@@ -1789,8 +1869,9 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -r, --raw            use raw output format\n"), out);
 	fputs(_(" -s, --inverse        inverse dependencies\n"), out);
 	fputs(_(" -t, --topology       output info about topology\n"), out);
-	fputs(_(" -z, --zoned          print zone model\n"), out);
+	fputs(_(" -w, --width <num>    specifies output width as number of characters\n"), out);
 	fputs(_(" -x, --sort <column>  sort output by <column>\n"), out);
+	fputs(_(" -z, --zoned          print zone model\n"), out);
 	fputs(_("     --sysroot <dir>  use specified directory as system root\n"), out);
 	fputs(USAGE_SEPARATOR, out);
 	printf(USAGE_HELP_OPTIONS(22));
@@ -1798,7 +1879,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fprintf(out, USAGE_COLUMNS);
 
 	for (i = 0; i < ARRAY_SIZE(infos); i++)
-		fprintf(out, " %11s  %s\n", infos[i].name, _(infos[i].help));
+		fprintf(out, " %12s  %s\n", infos[i].name, _(infos[i].help));
 
 	printf(USAGE_MAN_TAIL("lsblk(8)"));
 
@@ -1824,6 +1905,7 @@ int main(int argc, char *argv[])
 	int c, status = EXIT_FAILURE;
 	char *outarg = NULL;
 	size_t i;
+	unsigned int width = 0;
 	int force_tree = 0, has_tree_col = 0;
 
 	enum {
@@ -1859,6 +1941,7 @@ int main(int argc, char *argv[])
 		{ "sysroot",    required_argument, NULL, OPT_SYSROOT },
 		{ "tree",       optional_argument, NULL, 'T' },
 		{ "version",    no_argument,       NULL, 'V' },
+		{ "width",	required_argument, NULL, 'w' },
 		{ NULL, 0, NULL, 0 },
 	};
 
@@ -1886,7 +1969,7 @@ int main(int argc, char *argv[])
 	lsblk_init_debug();
 
 	while((c = getopt_long(argc, argv,
-			       "abdDzE:e:fhJlnMmo:OpPiI:rstVST::x:", longopts, NULL)) != -1) {
+			       "abdDzE:e:fhJlnMmo:OpPiI:rstVST::w:x:", longopts, NULL)) != -1) {
 
 		err_exclusive_options(c, longopts, excl, excl_st);
 
@@ -1961,7 +2044,7 @@ int main(int argc, char *argv[])
 			add_uniq_column(COL_UUID);
 			add_uniq_column(COL_FSAVAIL);
 			add_uniq_column(COL_FSUSEPERC);
-			add_uniq_column(COL_TARGET);
+			add_uniq_column(COL_TARGETS);
 			break;
 		case 'm':
 			add_uniq_column(COL_NAME);
@@ -2012,6 +2095,9 @@ int main(int argc, char *argv[])
 				break;
 			errtryhelp(EXIT_FAILURE);
 			break;
+		case 'w':
+			width = strtou32_or_err(optarg, _("invalid output width number argument"));
+			break;
 		case 'x':
 			lsblk->flags &= ~LSBLK_TREE; /* disable the default */
 			lsblk->sort_id = column_name_to_id(optarg, strlen(optarg));
@@ -2041,7 +2127,7 @@ int main(int argc, char *argv[])
 		add_column(COL_SIZE);
 		add_column(COL_RO);
 		add_column(COL_TYPE);
-		add_column(COL_TARGET);
+		add_column(COL_TARGETS);
 	}
 
 	if (outarg && string_add_to_idarray(outarg, columns, ARRAY_SIZE(columns),
@@ -2090,6 +2176,10 @@ int main(int argc, char *argv[])
 
 	if (lsblk->flags & LSBLK_JSON)
 		scols_table_set_name(lsblk->table, "blockdevices");
+	if (width) {
+		scols_table_set_termwidth(lsblk->table, width);
+		scols_table_set_termforce(lsblk->table, SCOLS_TERMFORCE_ALWAYS);
+	}
 
 	for (i = 0; i < ncolumns; i++) {
 		struct colinfo *ci = get_column_info(i);
@@ -2131,6 +2221,15 @@ int main(int argc, char *argv[])
 			        ci->type == COLTYPE_SORTNUM ? cmp_u64_cells : scols_cmpstr_cells,
 				NULL);
 		}
+		/* multi-line cells (now used for MOUNTPOINTS) */
+		if (fl & SCOLS_FL_WRAP) {
+			scols_column_set_wrapfunc(cl,
+						scols_wrapnl_chunksize,
+						scols_wrapnl_nextchunk,
+						NULL);
+			scols_column_set_safechars(cl, "\n");
+		}
+
 		if (lsblk->flags & LSBLK_JSON) {
 			switch (ci->type) {
 			case COLTYPE_SIZE:
@@ -2138,13 +2237,16 @@ int main(int argc, char *argv[])
 					break;
 				/* fallthrough */
 			case COLTYPE_NUM:
-				 scols_column_set_json_type(cl, SCOLS_JSON_NUMBER);
+				scols_column_set_json_type(cl, SCOLS_JSON_NUMBER);
 				break;
 			case COLTYPE_BOOL:
 				scols_column_set_json_type(cl, SCOLS_JSON_BOOLEAN);
 				break;
 			default:
-				scols_column_set_json_type(cl, SCOLS_JSON_STRING);
+				if (fl & SCOLS_FL_WRAP)
+					scols_column_set_json_type(cl, SCOLS_JSON_ARRAY_STRING);
+				else
+					scols_column_set_json_type(cl, SCOLS_JSON_STRING);
 				break;
 			}
 		}

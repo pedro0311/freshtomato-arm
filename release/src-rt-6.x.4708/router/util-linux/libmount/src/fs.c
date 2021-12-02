@@ -153,8 +153,8 @@ static inline int update_str(char **dest, const char *src)
 	return 0;
 }
 
-/* This function do NOT overwrite (replace) the string in @new, the string in
- * the @new has to be NULL otherwise this is no-op */
+/* This function does NOT overwrite (replace) the string in @new, the string in
+ * @new has to be NULL otherwise this is no-op. */
 static inline int cpy_str_at_offset(void *new, const void *old, size_t offset)
 {
 	char **o = (char **) ((char *) old + offset);
@@ -949,6 +949,38 @@ const char *mnt_fs_get_fs_options(struct libmnt_fs *fs)
 const char *mnt_fs_get_vfs_options(struct libmnt_fs *fs)
 {
 	return fs ? fs->vfs_optstr : NULL;
+}
+
+/**
+ * mnt_fs_get_vfs_options_all:
+ * @fs: fstab/mtab entry pointer
+ *
+ * Returns: pointer to newlly allocated string (can be freed by free(3)) or
+ * NULL in case of error.  The string contains all (including defaults) mount
+ * options.
+ */
+char *mnt_fs_get_vfs_options_all(struct libmnt_fs *fs)
+{
+	const struct libmnt_optmap *map = mnt_get_builtin_optmap(MNT_LINUX_MAP);
+	const struct libmnt_optmap *ent;
+	const char *opts = mnt_fs_get_options(fs);
+	char *result = NULL;
+	unsigned long flags = 0;
+
+	if (!opts || mnt_optstr_get_flags(opts, &flags, map))
+		return NULL;
+
+	for (ent = map ; ent && ent->name ; ent++){
+		if (ent->id & flags) { /* non-default value */
+			if (!(ent->mask & MNT_INVERT))
+				mnt_optstr_append_option(&result, ent->name, NULL);
+			else
+				continue;
+		} else if (ent->mask & MNT_INVERT)
+			mnt_optstr_append_option(&result, ent->name, NULL);
+	}
+
+	return result;
 }
 
 /**

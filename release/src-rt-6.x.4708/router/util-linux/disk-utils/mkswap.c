@@ -16,12 +16,18 @@
 #include <limits.h>
 #include <sys/utsname.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <errno.h>
 #include <getopt.h>
 #include <assert.h>
 #ifdef HAVE_LIBSELINUX
-#include <selinux/selinux.h>
-#include <selinux/context.h>
+# include <selinux/selinux.h>
+# include <selinux/context.h>
+# include "selinux-utils.h"
+#endif
+#ifdef HAVE_LINUX_FIEMAP_H
+# include <linux/fs.h>
+# include <linux/fiemap.h>
 #endif
 
 #include "linux_version.h"
@@ -66,7 +72,10 @@ struct mkswap_control {
 	char			*opt_label;	/* LABEL as specified on command line */
 	unsigned char		*uuid;		/* UUID parsed by libbuuid */
 
+	size_t			nbad_extents;
+
 	unsigned int		check:1,	/* --check */
+				verbose:1,      /* --verbose */
 				force:1;	/* --force */
 };
 
@@ -145,23 +154,22 @@ static void set_uuid_and_label(const struct mkswap_control *ctl)
 static void __attribute__((__noreturn__)) usage(void)
 {
 	FILE *out = stdout;
-	fprintf(out,
-		_("\nUsage:\n"
-		  " %s [options] device [size]\n"),
-		program_invocation_short_name);
+
+	fputs(USAGE_HEADER, out);
+	fprintf(out, _(" %s [options] device [size]\n"), program_invocation_short_name);
 
 	fputs(USAGE_SEPARATOR, out);
 	fputs(_("Set up a Linux swap area.\n"), out);
 
-	fprintf(out, _(
-		"\nOptions:\n"
-		" -c, --check               check bad blocks before creating the swap area\n"
-		" -f, --force               allow swap size area be larger than device\n"
-		" -p, --pagesize SIZE       specify page size in bytes\n"
-		" -L, --label LABEL         specify label\n"
-		" -v, --swapversion NUM     specify swap-space version number\n"
-		" -U, --uuid UUID           specify the uuid to use\n"
-		));
+	fputs(USAGE_OPTIONS, out);
+	fputs(_(" -c, --check               check bad blocks before creating the swap area\n"), out);
+	fputs(_(" -f, --force               allow swap size area be larger than device\n"), out);
+	fputs(_(" -p, --pagesize SIZE       specify page size in bytes\n"), out);
+	fputs(_(" -L, --label LABEL         specify label\n"), out);
+	fputs(_(" -v, --swapversion NUM     specify swap-space version number\n"), out);
+	fputs(_(" -U, --uuid UUID           specify the uuid to use\n"), out);
+	fputs(_("     --verbose             verbose output\n"), out);
+
 	fprintf(out,
 	      _("     --lock[=<mode>]       use exclusive device lock (%s, %s or %s)\n"), "yes", "no", "nonblock");
 	printf(USAGE_HELP_OPTIONS(27));
@@ -208,6 +216,96 @@ static void check_blocks(struct mkswap_control *ctl)
 	printf(P_("%lu bad page\n", "%lu bad pages\n", ctl->nbadpages), ctl->nbadpages);
 	free(buffer);
 }
+
+
+#ifdef HAVE_LINUX_FIEMAP_H
+static void warn_extent(struct mkswap_control *ctl, const char *msg, uint64_t off)
+{
+	if (ctl->nbad_extents == 0) {
+		fputc('\n', stderr);
+		fprintf(stderr, _(
+
+	"mkswap: %s contains holes or other unsupported extents.\n"
+	"        This swap file can be rejected by kernel on swap activation!\n"),
+				ctl->devname);
+
+		if (ctl->verbose)
+			fputc('\n', stderr);
+		else
+			fprintf(stderr, _(
+	"        Use --verbose for more details.\n"));
+
+	}
+	if (ctl->verbose) {
+		fputs(" - ", stderr);
+		fprintf(stderr, msg, off);
+		fputc('\n', stderr);
+	}
+	ctl->nbad_extents++;
+}
+
+static void check_extents(struct mkswap_control *ctl)
+{
+	char buf[BUFSIZ] = { 0 };
+	struct fiemap *fiemap = (struct fiemap *) buf;
+	int last = 0;
+	uint64_t last_logical = 0;
+
+	memset(fiemap, 0, sizeof(struct fiemap));
+
+	do {
+		int rc;
+		size_t n, i;
+
+		fiemap->fm_length = ~0ULL;
+		fiemap->fm_flags = FIEMAP_FLAG_SYNC;
+		fiemap->fm_extent_count =
+			(sizeof(buf) - sizeof(*fiemap)) / sizeof(struct fiemap_extent);
+
+		rc = ioctl(ctl->fd, FS_IOC_FIEMAP, (unsigned long) fiemap);
+		if (rc < 0)
+			return;
+
+		n = fiemap->fm_mapped_extents;
+		if (n == 0)
+			break;
+
+		for (i = 0; i < n; i++) {
+			struct fiemap_extent *e = &fiemap->fm_extents[i];
+
+			if (e->fe_logical > last_logical)
+				warn_extent(ctl, _("hole detected at offset %ju"),
+						(uintmax_t) last_logical);
+
+			last_logical = (e->fe_logical + e->fe_length);
+
+			if (e->fe_flags & FIEMAP_EXTENT_LAST)
+				last = 1;
+			if (e->fe_flags & FIEMAP_EXTENT_DATA_INLINE)
+				warn_extent(ctl, _("data inline extent at offset %ju"),
+						(uintmax_t) e->fe_logical);
+			if (e->fe_flags & FIEMAP_EXTENT_SHARED)
+				 warn_extent(ctl, _("shared extent at offset %ju"),
+						(uintmax_t) e->fe_logical);
+			if (e->fe_flags & FIEMAP_EXTENT_DELALLOC)
+				warn_extent(ctl, _("unallocated extent at offset %ju"),
+						(uintmax_t) e->fe_logical);
+
+			if (!ctl->verbose && ctl->nbad_extents)
+				goto done;
+		}
+		fiemap->fm_start = fiemap->fm_extents[n - 1].fe_logical
+				 + fiemap->fm_extents[n - 1].fe_length;
+	} while (last == 0);
+
+	if (last_logical < (uint64_t) ctl->devstat.st_size)
+		warn_extent(ctl, _("hole detected at offset %ju"),
+				(uintmax_t) last_logical);
+done:
+	if (ctl->nbad_extents)
+		fputc('\n', stderr);
+}
+#endif /* HAVE_LINUX_FIEMAP_H */
 
 /* return size in pages */
 static unsigned long long get_size(const struct mkswap_control *ctl)
@@ -264,10 +362,9 @@ static void wipe_device(struct mkswap_control *ctl)
 	int zap = 1;
 #ifdef HAVE_LIBBLKID
 	blkid_probe pr = NULL;
+	const char *v = NULL;
 #endif
 	if (!ctl->force) {
-		const char *v = NULL;
-
 		if (lseek(ctl->fd, 0, SEEK_SET) != 0)
 			errx(EXIT_FAILURE, _("unable to rewind swap-device"));
 
@@ -363,6 +460,7 @@ int main(int argc, char **argv)
 #endif
 	enum {
 		OPT_LOCK = CHAR_MAX + 1,
+		OPT_VERBOSE
 	};
 	static const struct option longopts[] = {
 		{ "check",       no_argument,       NULL, 'c' },
@@ -374,6 +472,7 @@ int main(int argc, char **argv)
 		{ "version",     no_argument,       NULL, 'V' },
 		{ "help",        no_argument,       NULL, 'h' },
 		{ "lock",        optional_argument, NULL, OPT_LOCK },
+		{ "verbose",    no_argument,        NULL, OPT_VERBOSE },
 		{ NULL,          0, NULL, 0 }
 	};
 
@@ -420,6 +519,9 @@ int main(int argc, char **argv)
 					optarg++;
 				ctl.lockmode = optarg;
 			}
+			break;
+		case OPT_VERBOSE:
+			ctl.verbose = 1;
 			break;
 		case 'h':
 			usage();
@@ -487,16 +589,20 @@ int main(int argc, char **argv)
 	open_device(&ctl);
 	permMask = S_ISBLK(ctl.devstat.st_mode) ? 07007 : 07077;
 	if ((ctl.devstat.st_mode & permMask) != 0)
-		warnx(_("%s: insecure permissions %04o, %04o suggested."),
+		warnx(_("%s: insecure permissions %04o, fix with: chmod %04o %s"),
 			ctl.devname, ctl.devstat.st_mode & 07777,
-			~permMask & 0666);
+			~permMask & 0666, ctl.devname);
 	if (getuid() == 0 && S_ISREG(ctl.devstat.st_mode) && ctl.devstat.st_uid != 0)
-		warnx(_("%s: insecure file owner %d, 0 (root) suggested."),
-			ctl.devname, ctl.devstat.st_uid);
+		warnx(_("%s: insecure file owner %d, fix with: chown 0:0 %s"),
+			ctl.devname, ctl.devstat.st_uid, ctl.devname);
 
 
 	if (ctl.check)
 		check_blocks(&ctl);
+#ifdef HAVE_LINUX_FIEMAP_H
+	if (S_ISREG(ctl.devstat.st_mode))
+		check_extents(&ctl);
+#endif
 
 	wipe_device(&ctl);
 
@@ -524,8 +630,7 @@ int main(int argc, char **argv)
 
 #ifdef HAVE_LIBSELINUX
 	if (S_ISREG(ctl.devstat.st_mode) && is_selinux_enabled() > 0) {
-		security_context_t context_string;
-		security_context_t oldcontext;
+		char *context_string, *oldcontext;
 		context_t newcontext;
 
 		if (fgetfilecon(ctl.fd, &oldcontext) < 0) {
@@ -533,8 +638,11 @@ int main(int argc, char **argv)
 				err(EXIT_FAILURE,
 					_("%s: unable to obtain selinux file label"),
 					ctl.devname);
-			if (matchpathcon(ctl.devname, ctl.devstat.st_mode, &oldcontext))
-				errx(EXIT_FAILURE, _("unable to matchpathcon()"));
+			if (ul_selinux_get_default_context(ctl.devname,
+						ctl.devstat.st_mode, &oldcontext))
+				errx(EXIT_FAILURE,
+					_("%s: unable to obtain default selinux file label"),
+					ctl.devname);
 		}
 		if (!(newcontext = context_new(oldcontext)))
 			errx(EXIT_FAILURE, _("unable to create new selinux context"));

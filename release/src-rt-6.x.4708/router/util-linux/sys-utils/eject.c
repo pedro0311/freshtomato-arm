@@ -110,7 +110,8 @@ static void vinfo(const char *fmt, va_list va)
 	fputc('\n', stdout);
 }
 
-static inline void verbose(const struct eject_control *ctl, const char *fmt, ...)
+static inline void __attribute__ ((__format__ (__printf__, 2, 3)))
+	verbose(const struct eject_control *ctl, const char *fmt, ...)
 {
 	va_list va;
 
@@ -122,7 +123,8 @@ static inline void verbose(const struct eject_control *ctl, const char *fmt, ...
 	va_end(va);
 }
 
-static inline void info(const char *fmt, ...)
+static inline __attribute__ ((__format__ (__printf__, 1, 2)))
+	void info(const char *fmt, ...)
 {
 	va_list va;
 	va_start(va, fmt);
@@ -524,18 +526,18 @@ static int read_speed(const char *devname)
 		/* find line "drive speed" and read the correct speed */
 		} else {
 			if (strncmp(line, "drive speed:", 12) == 0) {
-				int i;
+				int n;
 
-				str = strtok(&line[12], "\t ");
-				for (i = 1; i < drive_number; i++)
-					str = strtok(NULL, "\t ");
-
-				if (!str)
-					errx(EXIT_FAILURE,
-						_("%s: failed to read speed"),
-						_PATH_PROC_CDROMINFO);
 				fclose(f);
-				return atoi(str);
+
+				str = line + 12;
+				normalize_whitespace((unsigned char *) str);
+
+				if (ul_strtos32(str, &n, 10) == 0)
+					return n;
+
+				errx(EXIT_FAILURE, _("%s: failed to read speed"),
+						_PATH_PROC_CDROMINFO);
 			}
 		}
 	}
@@ -656,12 +658,8 @@ static void umount_one(const struct eject_control *ctl, const char *name)
 
 	switch (fork()) {
 	case 0: /* child */
-		if (setgid(getgid()) < 0)
-			err(EXIT_FAILURE, _("cannot set group id"));
-
-		if (setuid(getuid()) < 0)
-			err(EXIT_FAILURE, _("cannot set user id"));
-
+		if (drop_permissions() != 0)
+			err(EXIT_FAILURE, _("drop permissions failed"));
 		if (ctl->p_option)
 			execl("/bin/umount", "/bin/umount", name, "-n", (char *)NULL);
 		else
@@ -850,7 +848,7 @@ int main(int argc, char **argv)
 	char *disk = NULL;
 	char *mountpoint = NULL;
 	int worked = 0;    /* set to 1 when successfully ejected */
-	struct eject_control ctl = { NULL };
+	struct eject_control ctl = { .fd = -1 };
 
 	setlocale(LC_ALL,"");
 	bindtextdomain(PACKAGE, LOCALEDIR);
@@ -920,14 +918,14 @@ int main(int argc, char **argv)
 	if (ctl.n_option) {
 		info(_("device is `%s'"), ctl.device);
 		verbose(&ctl, _("exiting due to -n/--noop option"));
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -i option */
 	if (ctl.i_option) {
 		open_device(&ctl);
 		manual_eject(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -a option */
@@ -938,7 +936,7 @@ int main(int argc, char **argv)
 			verbose(&ctl, _("%s: disabling auto-eject mode"), ctl.device);
 		open_device(&ctl);
 		auto_eject(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -t option */
@@ -947,7 +945,7 @@ int main(int argc, char **argv)
 		open_device(&ctl);
 		close_tray(ctl.fd);
 		set_device_speed(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -T option */
@@ -956,7 +954,7 @@ int main(int argc, char **argv)
 		open_device(&ctl);
 		toggle_tray(ctl.fd);
 		set_device_speed(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -X option */
@@ -964,7 +962,7 @@ int main(int argc, char **argv)
 		verbose(&ctl, _("%s: listing CD-ROM speed"), ctl.device);
 		open_device(&ctl);
 		list_speeds(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* handle -x option only */
@@ -1002,7 +1000,7 @@ int main(int argc, char **argv)
 		open_device(&ctl);
 		changer_select(&ctl);
 		set_device_speed(&ctl);
-		return EXIT_SUCCESS;
+		goto done;
 	}
 
 	/* if user did not specify type of eject, try all four methods */
@@ -1044,8 +1042,11 @@ int main(int argc, char **argv)
 	if (!worked)
 		errx(EXIT_FAILURE, _("unable to eject"));
 
+done:
 	/* cleanup */
-	close(ctl.fd);
+	if (ctl.fd >= 0)
+		close(ctl.fd);
+
 	free(ctl.device);
 	free(mountpoint);
 

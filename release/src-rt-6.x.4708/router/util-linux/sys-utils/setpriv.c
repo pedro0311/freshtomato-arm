@@ -190,10 +190,7 @@ static int print_caps(FILE *f, enum cap_type which)
 			if (name)
 				fputs(name, f);
 			else
-				/* cap-ng has very poor handling of
-				 * CAP_LAST_CAP changes.  This is the
-				 * best we can do. */
-				printf("cap_%d", i);
+				warnx(_("cap %d: libcap-ng is broken"), i);
 			n++;
 		}
 	}
@@ -321,13 +318,13 @@ static void dump_pdeathsig(void)
 		return;
 	}
 
-	printf("Parent death signal: ");
+	printf(_("Parent death signal: "));
 	if (pdeathsig && signum_to_signame(pdeathsig) != NULL)
 		printf("%s\n", signum_to_signame(pdeathsig));
 	else if (pdeathsig)
 		printf("%d\n", pdeathsig);
 	else
-		printf("[none]\n");
+		printf(_("[none]\n"));
 }
 
 static void dump(int dumplevel)
@@ -532,12 +529,9 @@ static void do_caps(enum cap_type type, const char *caps)
 
 		if (!strcmp(c + 1, "all")) {
 			int i;
-			/* It would be really bad if -all didn't drop all
-			 * caps.  It's better to just fail. */
-			if (cap_last_cap() > CAP_LAST_CAP)
-				errx(SETPRIV_EXIT_PRIVERR,
-				     _("libcap-ng is too old for \"all\" caps"));
-			for (i = 0; i <= CAP_LAST_CAP; i++)
+			/* We can trust the return value from cap_last_cap(),
+			 * so use that directly. */
+			for (i = 0; i <= cap_last_cap(); i++)
 				cap_update(action, type, i);
 		} else {
 			int cap = capng_name_to_capability(c + 1);

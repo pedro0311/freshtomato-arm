@@ -390,13 +390,17 @@ int main(int argc, char **argv)
 	sigaction(SIGINT, &sa, &sa_int);
 
 #ifdef DEBUGGING
-	dbf = fopen(DEBUG_OUTPUT, "w");
-	for (int i = 1; i < argc; i++) {
-		if (i > 1)
-			debug(" ");
-		debug(argv[i]);
+	{
+		int i;
+
+		dbf = fopen(DEBUG_OUTPUT, "w");
+		for (i = 1; i < argc; i++) {
+			if (i > 1)
+				debug(" ");
+			debug(argv[i]);
+		}
+		debug("\n");
 	}
-	debug("\n");
 #endif				/* DEBUGGING */
 
 	/* Parse command-line arguments. */
@@ -435,7 +439,7 @@ int main(int argc, char **argv)
 	termio_init(&options, &termios);
 
 	/* Write the modem init string and DO NOT flush the buffers. */
-	if (serial_tty_option(&options, F_INITSTRING) &&
+	if (options.flags & F_INITSTRING &&
 	    options.initstring && *options.initstring != '\0') {
 		debug("writing init string\n");
 		write_all(STDOUT_FILENO, options.initstring,
@@ -2420,7 +2424,14 @@ static int caps_lock(char *s)
 static speed_t bcode(char *s)
 {
 	const struct Speedtab *sp;
-	long speed = atol(s);
+	char *end = NULL;
+	long speed;
+
+	errno = 0;
+	speed = strtol(s, &end, 10);
+
+	if (errno || !end || end == s)
+		return 0;
 
 	for (sp = speedtab; sp->speed; sp++)
 		if (sp->speed == speed)
