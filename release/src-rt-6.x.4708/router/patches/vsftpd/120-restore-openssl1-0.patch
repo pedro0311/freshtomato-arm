@@ -49,7 +49,19 @@
    tunable_force_anon_data_ssl = 0;
 --- vsftpd/tunables.h
 +++ vsftpd/tunables.h
-@@ -70,7 +70,9 @@
+@@ -1,6 +1,11 @@
+ #ifndef VSF_TUNABLES_H
+ #define VSF_TUNABLES_H
+ 
++#include "builddefs.h"
++#ifdef VSF_BUILD_SSL
++#include <openssl/opensslv.h>
++#endif
++
+ /* tunables_load_defaults()
+  * PURPOSE
+  * Load the default values into the global settings variables.
+@@ -70,7 +75,9 @@
  extern int tunable_tlsv1;                     /* Allow TLSv1.0 */
  extern int tunable_tlsv1_1;                   /* Allow TLSv1.1 */
  extern int tunable_tlsv1_2;                   /* Allow TLSv1.2 */
