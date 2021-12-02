@@ -3399,7 +3399,7 @@ libffi/stamp-h1:
 libffi: libffi/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/libffi/staged install
+	@rm -f libffi/staged/usr/lib/libffi.la
 
 libffi-install:
 	install -D $(TOP)/libffi/.libs/libffi.so.6.0.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.6.0.4
@@ -3430,7 +3430,7 @@ glib2: glib2/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/glib2/staged install
-	@sed 's|\(\W\)/usr/lib|\1$(TOP)/glib2/staged/usr/lib|g' -i $(TOP)/glib2/staged/usr/lib/libglib-2.0.la
+	@rm -f glib2/staged/usr/lib/libglib-2.0.la
 
 glib2-install: glib2
 	install -D glib2/glib/.libs/libglib-2.0.so.0.3707.0 $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.3707.0
