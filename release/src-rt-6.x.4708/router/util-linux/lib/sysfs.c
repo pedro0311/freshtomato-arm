@@ -182,10 +182,9 @@ char *sysfs_blkdev_get_name(struct path_cxt *pc, char *buf, size_t bufsiz)
 	ssize_t	sz;
 
         /* read /sys/dev/block/<maj:min> link */
-	sz = ul_path_readlink(pc, link, sizeof(link) - 1, NULL);
+	sz = ul_path_readlink(pc, link, sizeof(link), NULL);
 	if (sz < 0)
 		return NULL;
-	link[sz] = '\0';
 
 	name = strrchr(link, '/');
 	if (!name)
@@ -393,7 +392,7 @@ char *sysfs_blkdev_get_devchain(struct path_cxt *pc, char *buf, size_t bufsz)
 	if (sz <= 0 || sz + sizeof(_PATH_SYS_DEVBLOCK "/") > bufsz)
 		return NULL;
 
-	buf[sz++] = '\0';
+	sz++;
 	prefix = ul_path_get_prefix(pc);
 	if (prefix)
 		psz = strlen(prefix);
@@ -567,10 +566,9 @@ int sysfs_blkdev_get_wholedisk(	struct path_cxt *pc,
         char *name;
 	ssize_t	linklen;
 
-	linklen = ul_path_readlink(pc, linkpath, sizeof(linkpath) - 1, NULL);
+	linklen = ul_path_readlink(pc, linkpath, sizeof(linkpath), NULL);
         if (linklen < 0)
             goto err;
-        linkpath[linklen] = '\0';
 
         stripoff_last_component(linkpath);      /* dirname */
         name = stripoff_last_component(linkpath);   /* basename */
@@ -678,11 +676,10 @@ int sysfs_blkdev_scsi_get_hctl(struct path_cxt *pc, int *h, int *c, int *t, int 
 		goto done;
 
 	blk->hctl_error = 1;
-	len = ul_path_readlink(pc, buf, sizeof(buf) - 1, "device");
+	len = ul_path_readlink(pc, buf, sizeof(buf), "device");
 	if (len < 0)
 		return len;
 
-	buf[len] = '\0';
 	hctl = strrchr(buf, '/');
 	if (!hctl)
 		return -1;
@@ -874,7 +871,7 @@ int sysfs_devname_is_hidden(const char *prefix, const char *name)
 dev_t __sysfs_devname_to_devno(const char *prefix, const char *name, const char *parent)
 {
 	char buf[PATH_MAX];
-	char *_name = NULL;	/* name as encoded in sysfs */
+	char *_name = NULL, *_parent = NULL;	/* name as encoded in sysfs */
 	dev_t dev = 0;
 	int len;
 
@@ -901,19 +898,20 @@ dev_t __sysfs_devname_to_devno(const char *prefix, const char *name, const char 
 		goto done;
 	sysfs_devname_dev_to_sys(_name);
 
+	if (parent) {
+		_parent = strdup(parent);
+		if (!_parent)
+			goto done;
+	}
+
 	if (parent && strncmp("dm-", name, 3) != 0) {
 		/*
 		 * Create path to /sys/block/<parent>/<name>/dev
 		 */
-		char *_parent = strdup(parent);
-
-		if (!_parent)
-			goto done;
 		sysfs_devname_dev_to_sys(_parent);
 		len = snprintf(buf, sizeof(buf),
 				"%s" _PATH_SYS_BLOCK "/%s/%s/dev",
 				prefix,	_parent, _name);
-		free(_parent);
 		if (len < 0 || (size_t) len >= sizeof(buf))
 			goto done;
 
@@ -932,10 +930,22 @@ dev_t __sysfs_devname_to_devno(const char *prefix, const char *name, const char 
 		goto done;
 	dev = read_devno(buf);
 
+	/*
+	 * Read from /sys/block/<parent>/<partition>/dev
+	 */
+	if (!dev && parent && startswith(name, parent)) {
+		len = snprintf(buf, sizeof(buf),
+				"%s" _PATH_SYS_BLOCK "/%s/%s/dev",
+				prefix, _parent, _name);
+		if (len < 0 || (size_t) len >= sizeof(buf))
+			goto done;
+		dev = read_devno(buf);
+	}
+
+	/*
+	 * Read from /sys/block/<sysname>/device/dev
+	 */
 	if (!dev) {
-		/*
-		 * Read from /sys/block/<sysname>/device/dev
-		 */
 		len = snprintf(buf, sizeof(buf),
 				"%s" _PATH_SYS_BLOCK "/%s/device/dev",
 				prefix, _name);
@@ -945,6 +955,7 @@ dev_t __sysfs_devname_to_devno(const char *prefix, const char *name, const char 
 	}
 done:
 	free(_name);
+	free(_parent);
 	return dev;
 }
 

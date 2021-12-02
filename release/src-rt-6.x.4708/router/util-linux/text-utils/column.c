@@ -91,11 +91,12 @@ struct column_control {
 	wchar_t	**ents;		/* input entries */
 	size_t	nents;		/* number of entries */
 	size_t	maxlength;	/* longest input record (line) */
+	size_t  maxncols;	/* maximal number of input columns */
 
 	unsigned int greedy :1,
 		     json :1,
 		     header_repeat :1,
-		     tab_empty_lines :1,	/* --table-empty-lines */
+		     keep_empty_lines :1,	/* --keep-empty-lines */
 		     tab_noheadings :1;
 };
 
@@ -277,13 +278,28 @@ static int column_set_flag(struct libscols_column *cl, int fl)
 static void apply_columnflag_from_list(struct column_control *ctl, const char *list,
 					 int flag, const char *errmsg)
 {
-	char **all = split_or_error(list, errmsg);
+	char **all;
 	char **one;
 	int unnamed = 0;
+	struct libscols_column *cl;
 
+	/* apply to all */
+	if (list && strcmp(list, "0") == 0) {
+		struct libscols_iter *itr;
+
+		itr = scols_new_iter(SCOLS_ITER_FORWARD);
+		if (!itr)
+			err_oom();
+
+		while (scols_table_next_column(ctl->tab, itr, &cl) == 0)
+			column_set_flag(cl, flag);
+		scols_free_iter(itr);
+	}
+
+	all = split_or_error(list, errmsg);
+
+	/* apply to columns specified by name */
 	STRV_FOREACH(one, all) {
-		struct libscols_column *cl;
-
 		if (flag == SCOLS_FL_HIDDEN && strcmp(*one, "-") == 0) {
 			unnamed = 1;
 			continue;
@@ -297,7 +313,6 @@ static void apply_columnflag_from_list(struct column_control *ctl, const char *l
 	/* apply flag to all columns without name */
 	if (unnamed) {
 		struct libscols_iter *itr;
-		struct libscols_column *cl;
 
 		itr = scols_new_iter(SCOLS_ITER_FORWARD);
 		if (!itr)
@@ -427,18 +442,24 @@ static void modify_table(struct column_control *ctl)
 }
 
 
-static int add_line_to_table(struct column_control *ctl, wchar_t *wcs)
+static int add_line_to_table(struct column_control *ctl, wchar_t *wcs0)
 {
-	wchar_t *wcdata, *sv = NULL;
-	size_t n = 0;
+	wchar_t *wcdata, *sv = NULL, *wcs = wcs0;
+	size_t n = 0, nchars = 0;
 	struct libscols_line *ln = NULL;
 
 	if (!ctl->tab)
 		init_table(ctl);
-
-	while ((wcdata = local_wcstok(ctl, wcs, &sv))) {
+	do {
 		char *data;
 
+		if (ctl->maxncols && n + 1 == ctl->maxncols)
+			wcdata = wcs0 + nchars;
+		else
+			wcdata = local_wcstok(ctl, wcs, &sv);
+
+		if (!wcdata)
+			break;
 		if (scols_table_get_ncols(ctl->tab) < n + 1) {
 			if (scols_table_is_json(ctl->tab))
 				errx(EXIT_FAILURE, _("line %zu: for JSON the name of the "
@@ -453,6 +474,8 @@ static int add_line_to_table(struct column_control *ctl, wchar_t *wcs)
 				err(EXIT_FAILURE, _("failed to allocate output line"));
 		}
 
+		nchars += wcslen(wcdata) + 1;
+
 		data = wcs_to_mbs(wcdata);
 		if (!data)
 			err(EXIT_FAILURE, _("failed to allocate output data"));
@@ -460,7 +483,9 @@ static int add_line_to_table(struct column_control *ctl, wchar_t *wcs)
 			err(EXIT_FAILURE, _("failed to add output data"));
 		n++;
 		wcs = NULL;
-	}
+		if (ctl->maxncols && n == ctl->maxncols)
+			break;
+	} while (1);
 
 	return 0;
 }
@@ -476,8 +501,19 @@ static int add_emptyline_to_table(struct column_control *ctl)
 	return 0;
 }
 
+static void add_entry(struct column_control *ctl, size_t *maxents, wchar_t *wcs)
+{
+	if (ctl->nents <= *maxents) {
+		*maxents += 1000;
+		ctl->ents = xrealloc(ctl->ents, *maxents * sizeof(wchar_t *));
+	}
+	ctl->ents[ctl->nents] = wcs;
+	ctl->nents++;
+}
+
 static int read_input(struct column_control *ctl, FILE *fp)
 {
+	wchar_t *empty = NULL;
 	char *buf = NULL;
 	size_t bufsz = 0;
 	size_t maxents = 0;
@@ -501,8 +537,15 @@ static int read_input(struct column_control *ctl, FILE *fp)
 				*p = '\0';
 		}
 		if (!str || !*str) {
-			if (ctl->mode == COLUMN_MODE_TABLE && ctl->tab_empty_lines)
-				add_emptyline_to_table(ctl);
+			if (ctl->keep_empty_lines) {
+				if (ctl->mode == COLUMN_MODE_TABLE) {
+					add_emptyline_to_table(ctl);
+				} else {
+					if (!empty)
+						empty = mbs_to_wcs("");
+					add_entry(ctl, &maxents, empty);
+				}
+			}
 			continue;
 		}
 
@@ -528,16 +571,10 @@ static int read_input(struct column_control *ctl, FILE *fp)
 
 		case COLUMN_MODE_FILLCOLS:
 		case COLUMN_MODE_FILLROWS:
-			if (ctl->nents <= maxents) {
-				maxents += 1000;
-				ctl->ents = xrealloc(ctl->ents,
-						maxents * sizeof(wchar_t *));
-			}
-			ctl->ents[ctl->nents] = wcs;
-			len = width(ctl->ents[ctl->nents]);
+			add_entry(ctl, &maxents, wcs);
+			len = width(wcs);
 			if (ctl->maxlength < len)
 				ctl->maxlength = len;
-			ctl->nents++;
 			break;
 		default:
 			free(wcs);
@@ -633,6 +670,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -n, --table-name <name>          table name for JSON output\n"), out);
 	fputs(_(" -O, --table-order <columns>      specify order of output columns\n"), out);
 	fputs(_(" -N, --table-columns <names>      comma separated columns names\n"), out);
+	fputs(_(" -l, --table-columns-limit <num>  maximal number of input columns\n"), out);
 	fputs(_(" -E, --table-noextreme <columns>  don't count long text from the columns to column width\n"), out);
 	fputs(_(" -d, --table-noheadings           don't print header\n"), out);
 	fputs(_(" -e, --table-header-repeat        repeat header for each page\n"), out);
@@ -640,7 +678,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -R, --table-right <columns>      right align text in these columns\n"), out);
 	fputs(_(" -T, --table-truncate <columns>   truncate text in the columns when necessary\n"), out);
 	fputs(_(" -W, --table-wrap <columns>       wrap text in the columns when necessary\n"), out);
-	fputs(_(" -L, --table-empty-lines          don't ignore empty lines\n"), out);
+	fputs(_(" -L, --keep-empty-lines           don't ignore empty lines\n"), out);
 	fputs(_(" -J, --json                       use JSON output format for table\n"), out);
 
 	fputs(USAGE_SEPARATOR, out);
@@ -679,11 +717,13 @@ int main(int argc, char **argv)
 		{ "fillrows",            no_argument,       NULL, 'x' },
 		{ "help",                no_argument,       NULL, 'h' },
 		{ "json",                no_argument,       NULL, 'J' },
+		{ "keep-empty-lines",    no_argument,       NULL, 'L' },
 		{ "output-separator",    required_argument, NULL, 'o' },
 		{ "output-width",        required_argument, NULL, 'c' },
 		{ "separator",           required_argument, NULL, 's' },
 		{ "table",               no_argument,       NULL, 't' },
 		{ "table-columns",       required_argument, NULL, 'N' },
+		{ "table-columns-limit", required_argument, NULL, 'l' },
 		{ "table-hide",          required_argument, NULL, 'H' },
 		{ "table-name",          required_argument, NULL, 'n' },
 		{ "table-noextreme",     required_argument, NULL, 'E' },
@@ -692,7 +732,7 @@ int main(int argc, char **argv)
 		{ "table-right",         required_argument, NULL, 'R' },
 		{ "table-truncate",      required_argument, NULL, 'T' },
 		{ "table-wrap",          required_argument, NULL, 'W' },
-		{ "table-empty-lines",   no_argument,       NULL, 'L' },
+		{ "table-empty-lines",   no_argument,       NULL, 'L' }, /* deprecated */
 		{ "table-header-repeat", no_argument,       NULL, 'e' },
 		{ "tree",                required_argument, NULL, 'r' },
 		{ "tree-id",             required_argument, NULL, 'i' },
@@ -715,7 +755,7 @@ int main(int argc, char **argv)
 	ctl.output_separator = "  ";
 	ctl.input_separator = mbs_to_wcs("\t ");
 
-	while ((c = getopt_long(argc, argv, "c:dE:eH:hi:JLN:n:O:o:p:R:r:s:T:tVW:x", longopts, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "c:dE:eH:hi:Jl:LN:n:O:o:p:R:r:s:T:tVW:x", longopts, NULL)) != -1) {
 
 		err_exclusive_options(c, longopts, excl, excl_st);
 
@@ -743,7 +783,12 @@ int main(int argc, char **argv)
 			ctl.mode = COLUMN_MODE_TABLE;
 			break;
 		case 'L':
-			ctl.tab_empty_lines = 1;
+			ctl.keep_empty_lines = 1;
+			break;
+		case 'l':
+			ctl.maxncols = strtou32_or_err(optarg, _("invalid columns limit argument"));
+			if (ctl.maxncols == 0)
+				errx(EXIT_FAILURE, _("columns limit must be greater than zero"));
 			break;
 		case 'N':
 			ctl.tab_colnames = split_or_error(optarg, _("failed to parse column names"));

@@ -45,6 +45,8 @@
 #define OPTUTILS_EXIT_CODE MNT_EX_USAGE
 #include "optutils.h"
 
+static struct ul_env_list *envs_removed;
+
 static int mk_exit_code(struct libmnt_context *cxt, int rc);
 
 static void suid_drop(struct libmnt_context *cxt)
@@ -52,19 +54,21 @@ static void suid_drop(struct libmnt_context *cxt)
 	const uid_t ruid = getuid();
 	const uid_t euid = geteuid();
 
-	if (ruid != 0 && euid == 0) {
-		if (setgid(getgid()) < 0)
-			err(MNT_EX_FAIL, _("setgid() failed"));
-
-		if (setuid(getuid()) < 0)
-			err(MNT_EX_FAIL, _("setuid() failed"));
-	}
+	if (ruid != 0 && euid == 0 && drop_permissions() != 0)
+		err(MNT_EX_FAIL, _("drop permissions failed"));
 
 	/* be paranoid and check it, setuid(0) has to fail */
 	if (ruid != 0 && setuid(0) == 0)
 		errx(MNT_EX_FAIL, _("drop permissions failed."));
 
 	mnt_context_force_unrestricted(cxt);
+
+	/* restore "bad" environment variables */
+	if (envs_removed) {
+		env_list_setenv(envs_removed);
+		env_list_free(envs_removed);
+		envs_removed = NULL;
+	}
 }
 
 static void __attribute__((__noreturn__)) mount_print_version(void)
@@ -303,14 +307,14 @@ static void success_message(struct libmnt_context *cxt)
 }
 
 #if defined(HAVE_LIBSELINUX) && defined(HAVE_SECURITY_GET_INITIAL_CONTEXT)
-#include <selinux/selinux.h>
-#include <selinux/context.h>
+# include <selinux/selinux.h>
+# include <selinux/context.h>
 
 static void selinux_warning(struct libmnt_context *cxt, const char *tgt)
 {
 
 	if (tgt && mnt_context_is_verbose(cxt) && is_selinux_enabled() > 0) {
-		security_context_t raw = NULL, def = NULL;
+		char *raw = NULL, *def = NULL;
 
 		if (getfilecon(tgt, &raw) > 0
 		    && security_get_initial_context("file", &def) == 0) {
@@ -318,7 +322,7 @@ static void selinux_warning(struct libmnt_context *cxt, const char *tgt)
 		if (!selinux_file_context_cmp(raw, def))
 			printf(_(
 	"mount: %s does not contain SELinux labels.\n"
-	"       You just mounted an file system that supports labels which does not\n"
+	"       You just mounted a file system that supports labels which does not\n"
 	"       contain labels, onto an SELinux box. It is likely that confined\n"
 	"       applications will generate AVC messages and not be allowed access to\n"
 	"       this file system.  For more details see restorecon(8) and mount(8).\n"),
@@ -382,7 +386,7 @@ static struct libmnt_table *append_fstab(struct libmnt_context *cxt,
 
 /*
  * Check source and target paths -- non-root user should not be able to
- * resolve paths which are unreadable for him.
+ * resolve paths which are unreadable for them.
  */
 static int sanitize_paths(struct libmnt_context *cxt)
 {
@@ -475,7 +479,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	"     --target <target>   explicitly specifies mountpoint\n"));
 	fprintf(out, _(
 	"     --target-prefix <path>\n"
-	"                         specifies path use for all mountpoints\n"));
+	"                         specifies path used for all mountpoints\n"));
 	fprintf(out, _(
 	" -v, --verbose           say what is being done\n"));
 	fprintf(out, _(
@@ -652,7 +656,7 @@ int main(int argc, char **argv)
 	};
 	int excl_st[ARRAY_SIZE(excl)] = UL_EXCL_STATUS_INIT;
 
-	sanitize_env();
+	__sanitize_env(&envs_removed);
 	setlocale(LC_ALL, "");
 	bindtextdomain(PACKAGE, LOCALEDIR);
 	textdomain(PACKAGE);
@@ -991,6 +995,6 @@ int main(int argc, char **argv)
 		success_message(cxt);
 done:
 	mnt_free_context(cxt);
+	env_list_free(envs_removed);
 	return rc;
 }
-

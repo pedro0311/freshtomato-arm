@@ -334,7 +334,10 @@ static struct wipe_desc *get_desc_for_probe(struct wipe_control *ctl,
 	} else
 		return NULL;
 
+	errno = 0;
 	*offset = strtoll(off, NULL, 10);
+	if (errno)
+		return NULL;
 
 	/* Filter out by -t <type> */
 	if (ctl->type_pattern && !match_fstype(type, ctl->type_pattern))
@@ -684,6 +687,7 @@ main(int argc, char **argv)
 {
 	struct wipe_control ctl = { .devname = NULL };
 	int c;
+	size_t i;
 	char *outarg = NULL;
 	enum {
 		OPT_LOCK = CHAR_MAX + 1,
@@ -835,7 +839,7 @@ main(int argc, char **argv)
 		/* Re-read partition tables on whole-disk devices. This is
 		 * postponed until all is done to avoid conflicts.
 		 */
-		for (size_t i = 0; i < ctl.nrereads; i++) {
+		for (i = 0; i < ctl.nrereads; i++) {
 			char *devname = ctl.reread[i];
 			int fd = open(devname, O_RDONLY);
 

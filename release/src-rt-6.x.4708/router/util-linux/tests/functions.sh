@@ -230,6 +230,7 @@ function ts_init_core_env {
 	TS_OUTPUT="$TS_OUTDIR/$TS_TESTNAME"
 	TS_ERRLOG="$TS_OUTDIR/$TS_TESTNAME.err"
 	TS_VGDUMP="$TS_OUTDIR/$TS_TESTNAME.vgdump"
+	TS_EXIT_CODE="$TS_OUTDIR/$TS_TESTNAME.exit_code"
 	TS_DIFF="$TS_DIFFDIR/$TS_TESTNAME"
 	TS_EXPECTED="$TS_TOPDIR/expected/$TS_NS"
 	TS_EXPECTED_ERR="$TS_TOPDIR/expected/$TS_NS.err"
@@ -241,15 +242,16 @@ function ts_init_core_subtest_env {
 	TS_OUTPUT="$TS_OUTDIR/$TS_TESTNAME-$TS_SUBNAME"
 	TS_ERRLOG="$TS_OUTDIR/$TS_TESTNAME-$TS_SUBNAME.err"
 	TS_VGDUMP="$TS_OUTDIR/$TS_TESTNAME-$TS_SUBNAME.vgdump"
+	TS_EXIT_CODE="$TS_OUTDIR/$TS_TESTNAME-$TS_SUBNAME.exit_code"
 	TS_DIFF="$TS_DIFFDIR/$TS_TESTNAME-$TS_SUBNAME"
 	TS_EXPECTED="$TS_TOPDIR/expected/$TS_NS"
 	TS_EXPECTED_ERR="$TS_TOPDIR/expected/$TS_NS.err"
 	TS_MOUNTPOINT="$TS_OUTDIR/${TS_TESTNAME}-${TS_SUBNAME}-mnt"
 
-	rm -f $TS_OUTPUT $TS_ERRLOG $TS_VGDUMP
+	rm -f $TS_OUTPUT $TS_ERRLOG $TS_VGDUMP $TS_EXIT_CODE
 	[ -d "$TS_OUTDIR" ]  || mkdir -p "$TS_OUTDIR"
 
-	touch $TS_OUTPUT $TS_ERRLOG
+	touch $TS_OUTPUT $TS_ERRLOG $TS_EXIT_CODE
 	[ -n "$TS_VALGRIND_CMD" ] && touch $TS_VGDUMP
 }
 
@@ -285,6 +287,10 @@ function ts_init_env {
 
 	top_srcdir=$(ts_abspath $top_srcdir)
 	top_builddir=$(ts_abspath $top_builddir)
+
+        if [ -e "$top_builddir/meson.conf" ]; then
+            . "$top_builddir/meson.conf"
+        fi
 
 	# We use helpser always from build tree
 	ts_helpersdir="${top_builddir}/"
@@ -359,10 +365,10 @@ function ts_init_env {
 
 	export BLKID_FILE
 
-	rm -f $TS_OUTPUT $TS_ERRLOG $TS_VGDUMP
+	rm -f $TS_OUTPUT $TS_ERRLOG $TS_VGDUMP $TS_EXIT_CODE
 	[ -d "$TS_OUTDIR" ]  || mkdir -p "$TS_OUTDIR"
 
-	touch $TS_OUTPUT $TS_ERRLOG
+	touch $TS_OUTPUT $TS_ERRLOG $TS_EXIT_CODE
 	[ -n "$TS_VALGRIND_CMD" ] && touch $TS_VGDUMP
 
 	if [ "$TS_VERBOSE" == "yes" ]; then
@@ -380,6 +386,7 @@ function ts_init_env {
 		echo "    verbose: $TS_VERBOSE"
 		echo "     output: $TS_OUTPUT"
 		echo "  error log: $TS_ERRLOG"
+		echo "  exit code: $TS_EXIT_CODE"
 		echo "   valgrind: $TS_VGDUMP"
 		echo "   expected: $TS_EXPECTED{.err}"
 		echo " mountpoint: $TS_MOUNTPOINT"
@@ -429,15 +436,23 @@ function ts_init_suid {
 function ts_init_py {
 	LIBNAME="$1"
 
-	[ -f "$top_builddir/py${LIBNAME}.la" ] || ts_skip "py${LIBNAME} not compiled"
+	if [ -f "$top_builddir/py${LIBNAME}.la" ]; then
+            # autotoolz build
+	    export LD_LIBRARY_PATH="$top_builddir/.libs:$LD_LIBRARY_PATH"
+	    export PYTHONPATH="$top_builddir/$LIBNAME/python:$top_builddir/.libs:$PYTHONPATH"
 
-	export LD_LIBRARY_PATH="$top_builddir/.libs:$LD_LIBRARY_PATH"
-	export PYTHONPATH="$top_builddir/$LIBNAME/python:$top_builddir/.libs:$PYTHONPATH"
+	    PYTHON_VERSION=$(awk '/^PYTHON_VERSION/ { print $3 }' $top_builddir/Makefile)
+	    PYTHON_MAJOR_VERSION=$(echo $PYTHON_VERSION | sed 's/\..*//')
 
-	export PYTHON_VERSION=$(awk '/^PYTHON_VERSION/ { print $3 }' $top_builddir/Makefile)
-	export PYTHON_MAJOR_VERSION=$(echo $PYTHON_VERSION | sed 's/\..*//')
+	    export PYTHON="python${PYTHON_MAJOR_VERSION}"
 
-	export PYTHON="python${PYTHON_MAJOR_VERSION}"
+        elif compgen -G "$top_builddir/$LIBNAME/python/py$LIBNAME*.so" >/dev/null; then
+            # mezon!
+            export PYTHONPATH="$top_builddir/$LIBNAME/python:$PYTHONPATH"
+
+        else
+            ts_skip "py${LIBNAME} not compiled"
+        fi
 }
 
 function ts_run {
@@ -470,6 +485,7 @@ function ts_run {
 	fi
 
 	"${args[@]}" "$@"
+	echo $? >$TS_EXIT_CODE
 }
 
 function ts_gen_diff_from {
@@ -499,6 +515,7 @@ function ts_gen_diff_from {
 function ts_gen_diff {
 	local status_out=0
 	local status_err=0
+	local exit_code=0
 
 	[ -f "$TS_OUTPUT" ] || return 1
 	[ -f "$TS_EXPECTED" ] || TS_EXPECTED=/dev/null
@@ -509,17 +526,31 @@ function ts_gen_diff {
 
 	[ -d "$TS_DIFFDIR" ] || mkdir -p "$TS_DIFFDIR"
 
-	ts_gen_diff_from $TS_EXPECTED $TS_OUTPUT $TS_DIFF
-	status_out=$?
-
 	# error log is fully optional
 	[ -f "$TS_EXPECTED_ERR" ] || TS_EXPECTED_ERR=/dev/null
 	[ -f "$TS_ERRLOG" ] || TS_ERRLOG=/dev/null
 
-	ts_gen_diff_from $TS_EXPECTED_ERR $TS_ERRLOG $TS_DIFF.err
-	status_err=$?
+	if [ "$TS_COMPONENT" != "fuzzers" ]; then
+		ts_gen_diff_from $TS_EXPECTED $TS_OUTPUT $TS_DIFF
+		status_out=$?
 
-	if [ $status_out -ne 0 -o $status_err -ne 0 ]; then
+		ts_gen_diff_from $TS_EXPECTED_ERR $TS_ERRLOG $TS_DIFF.err
+		status_err=$?
+	else
+		# TS_EXIT_CODE is empty when tests aren't run with ts_run: https://github.com/karelzak/util-linux/issues/1072
+		# or when ts_finalize is called right after ts_finalize_subtest.
+		exit_code="$(cat $TS_EXIT_CODE)"
+		if [ -z "$exit_code" ]; then
+			exit_code=0
+		fi
+
+		if [ $exit_code -ne 0 ]; then
+			ts_gen_diff_from $TS_EXPECTED $TS_OUTPUT $TS_DIFF
+			ts_gen_diff_from $TS_EXPECTED_ERR $TS_ERRLOG $TS_DIFF.err
+		fi
+	fi
+
+	if [ $status_out -ne 0 -o $status_err -ne 0 -o $exit_code -ne 0 ]; then
 		return 1
 	fi
 	return 0
@@ -672,15 +703,41 @@ function ts_fstype_by_devname {
 	return $?
 }
 
+function ts_vfs_dump {
+	if [ "$TS_SHOWDIFF" == "yes" -a "$TS_KNOWN_FAIL" != "yes" ]; then
+		echo
+		echo "{{{{ VFS dump:"
+		findmnt
+		echo "}}}}"
+	fi
+}
+
+function ts_blk_dump {
+	if [ "$TS_SHOWDIFF" == "yes" -a "$TS_KNOWN_FAIL" != "yes" ]; then
+		echo
+		echo "{{{{ blkdevs dump:"
+		lsblk -o+FSTYPE
+		echo "}}}}"
+	fi
+}
+
 function ts_device_has {
 	local TAG="$1"
 	local VAL="$2"
 	local DEV="$3"
 	local vl=""
+	local res=""
 
 	vl=$(ts_blkidtag_by_devname "$TAG" "$DEV")
 	test $? = 0 -a "$vl" = "$VAL"
-	return $?
+	res=$?
+
+	if [ "$res" != 0 ]; then
+		ts_vfs_dump
+		ts_blk_dump
+	fi
+
+	return $res
 }
 
 function ts_is_uuid()
@@ -909,9 +966,9 @@ function ts_scsi_debug_init {
 	# wait for device if udevadm settle does not work
 	for t in 0 0.02 0.05 0.1 1; do
 		sleep $t
-		devname=$(grep --with-filename scsi_debug /sys/block/*/device/model) && break
+		devname=$(grep --no-messages --with-filename scsi_debug /sys/block/*/device/model) && break
 	done
-	[ -n "${devname}" ] || ts_die "timeout waiting for scsi_debug device"
+	[ -n "${devname}" ] || ts_skip "timeout waiting for scsi_debug device"
 
 	devname=$(echo $devname | awk -F '/' '{print $4}')
 	TS_DEVICE="/dev/${devname}"
@@ -1031,5 +1088,19 @@ function ts_has_ncurses_support {
 		echo "yes"
 	else
 		echo "no"
+	fi
+}
+
+# Get path to the ASan runtime DSO the given binary was compiled with
+function ts_get_asan_rt_path {
+	local binary="${1?}"
+	local rt_path
+
+	ts_check_prog "ldd"
+	ts_check_prog "awk"
+
+	rt_path="$(ldd "$binary" | awk '/lib.+asan.*.so/ {print $3; exit}')"
+	if [ -n "$rt_path" -a -f "$rt_path" ]; then
+		echo "$rt_path"
 	fi
 }

@@ -1764,7 +1764,7 @@ int mnt_context_prepare_srcpath(struct libmnt_context *cxt)
 {
 	const char *path = NULL;
 	struct libmnt_cache *cache;
-	const char *t, *v, *src;
+	const char *t, *v, *src, *type;
 	int rc = 0;
 	struct libmnt_ns *ns_old;
 
@@ -1784,6 +1784,11 @@ int mnt_context_prepare_srcpath(struct libmnt_context *cxt)
 	 * where the source is a quasi-path (//foo/bar)
 	 */
 	if (!src || mnt_fs_is_netfs(cxt->fs))
+		return 0;
+
+	/* ZFS source is always "dataset", not a real path */
+	type = mnt_fs_get_fstype(cxt->fs);
+	if (type && strcmp(type, "zfs") == 0)
 		return 0;
 
 	DBG(CXT, ul_debugobj(cxt, "srcpath '%s'", src));
@@ -1951,7 +1956,7 @@ int mnt_context_prepare_target(struct libmnt_context *cxt)
 
 		/* supported only for root or non-suid mount(8) */
 		if (!mnt_context_is_restricted(cxt)) {
-			rc = mkdir_p(tgt, mode);
+			rc = ul_mkdir_p(tgt, mode);
 			if (rc)
 				DBG(CXT, ul_debug("mkdir %s failed: %m", tgt));
 		} else
@@ -2095,6 +2100,11 @@ int mnt_context_prepare_helper(struct libmnt_context *cxt, const char *name,
 	assert(cxt);
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
+
+	if (cxt->helper) {
+		free(cxt->helper);
+		cxt->helper = NULL;
+	}
 
 	if (!type)
 		type = mnt_fs_get_fstype(cxt->fs);
@@ -2314,9 +2324,12 @@ end:
 	return rc;
 }
 
-/* apply @fs to @cxt -- use mnt_context_apply_fstab() if not sure
+/* apply @fs to @cxt;
+ *
+ * @mflags are mount flags as specified on command-line -- used only to save
+ * MS_RDONLY which is allowed for non-root users.
  */
-int mnt_context_apply_fs(struct libmnt_context *cxt, struct libmnt_fs *fs)
+static int apply_fs(struct libmnt_context *cxt, struct libmnt_fs *fs, unsigned long mflags)
 {
 	int rc;
 
@@ -2328,6 +2341,7 @@ int mnt_context_apply_fs(struct libmnt_context *cxt, struct libmnt_fs *fs)
 			DBG(CXT, ul_debugobj(cxt, "use default optsmode"));
 			cxt->optsmode = MNT_OMODE_AUTO;
 		}
+
 	}
 
 	DBG(CXT, ul_debugobj(cxt, "apply entry:"));
@@ -2355,9 +2369,15 @@ int mnt_context_apply_fs(struct libmnt_context *cxt, struct libmnt_fs *fs)
 
 	if (cxt->optsmode & MNT_OMODE_IGNORE)
 		;
-	else if (cxt->optsmode & MNT_OMODE_REPLACE)
+	else if (cxt->optsmode & MNT_OMODE_REPLACE) {
 		rc = mnt_fs_set_options(cxt->fs, mnt_fs_get_options(fs));
 
+		/* mount --read-only for non-root users is allowed */
+		if (rc == 0 && (mflags & MS_RDONLY)
+		    && mnt_context_is_restricted(cxt)
+		    && cxt->optsmode == MNT_OMODE_USER)
+			rc = mnt_fs_append_options(cxt->fs, "ro");
+	}
 	else if (cxt->optsmode & MNT_OMODE_APPEND)
 		rc = mnt_fs_append_options(cxt->fs, mnt_fs_get_options(fs));
 
@@ -2375,7 +2395,7 @@ done:
 }
 
 static int apply_table(struct libmnt_context *cxt, struct libmnt_table *tb,
-		     int direction)
+		     int direction, unsigned long mflags)
 {
 	struct libmnt_fs *fs = NULL;
 	const char *src, *tgt;
@@ -2413,7 +2433,14 @@ static int apply_table(struct libmnt_context *cxt, struct libmnt_table *tb,
 	if (!fs)
 		return -MNT_ERR_NOFSTAB;	/* not found */
 
-	return mnt_context_apply_fs(cxt, fs);
+	return apply_fs(cxt, fs, mflags);
+}
+
+/* apply @fs to @cxt -- use mnt_context_apply_fstab() if not sure
+ */
+int mnt_context_apply_fs(struct libmnt_context *cxt, struct libmnt_fs *fs)
+{
+	return apply_fs(cxt, fs, 0);
 }
 
 /**
@@ -2493,7 +2520,7 @@ int mnt_context_apply_fstab(struct libmnt_context *cxt)
 		DBG(CXT, ul_debugobj(cxt, "trying to apply fstab (src=%s, target=%s)", src, tgt));
 		rc = mnt_context_get_fstab(cxt, &tab);
 		if (!rc)
-			rc = apply_table(cxt, tab, MNT_ITER_FORWARD);
+			rc = apply_table(cxt, tab, MNT_ITER_FORWARD, mflags);
 	}
 
 	/* try mtab */
@@ -2505,7 +2532,7 @@ int mnt_context_apply_fstab(struct libmnt_context *cxt)
 		else
 			rc = mnt_context_get_mtab(cxt, &tab);
 		if (!rc)
-			rc = apply_table(cxt, tab, MNT_ITER_BACKWARD);
+			rc = apply_table(cxt, tab, MNT_ITER_BACKWARD, mflags);
 	}
 
 	if (!mnt_context_switch_ns(cxt, ns_old))
@@ -2675,7 +2702,7 @@ int mnt_context_strerror(struct libmnt_context *cxt __attribute__((__unused__)),
 }
 
 
-int mnt_context_get_generic_excode(int rc, char *buf, size_t bufsz, char *fmt, ...)
+int mnt_context_get_generic_excode(int rc, char *buf, size_t bufsz, const char *fmt, ...)
 {
 	va_list va;
 
@@ -2722,6 +2749,9 @@ int mnt_context_get_generic_excode(int rc, char *buf, size_t bufsz, char *fmt, .
  * returns some crazy undocumented codes...  See mnt_context_helper_executed()
  * and mnt_context_get_helper_status(). Note that mount(8) and umount(8) utils
  * always return code from helper without extra care about it.
+ *
+ * The current implementation does not read error message from external
+ * helper into @buf.
  *
  * If the argument @buf is not NULL then error message is generated (if
  * anything failed).

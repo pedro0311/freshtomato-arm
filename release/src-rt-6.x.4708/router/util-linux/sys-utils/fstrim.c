@@ -280,6 +280,7 @@ static int fstrim_all_from_file(struct fstrim_control *ctl, const char *filename
 			mnt_unref_fs(fs);
 			fs = NULL;
 		}
+		free(rootdev);
 	}
 
 	itr = mnt_new_iter(MNT_ITER_BACKWARD);
@@ -329,7 +330,7 @@ static int fstrim_all_from_file(struct fstrim_control *ctl, const char *filename
 		/* Is it really accessible mountpoint? Not all mountpoints are
 		 * accessible (maybe over mounted by another filesystem) */
 		path = mnt_get_mountpoint(tgt);
-		if (path && strcmp(path, tgt) == 0)
+		if (path && streq_paths(path, tgt))
 			rc = 0;
 		free(path);
 		if (rc)
@@ -540,7 +541,9 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 
 	rc = fstrim_filesystem(&ctl, path, NULL);
-	if (rc == 1 && !ctl.quiet_unsupp)
+	if (rc == 1 && ctl.quiet_unsupp)
+		rc = 0;
+	if (rc == 1)
 		warnx(_("%s: the discard operation is not supported"), path);
 
 	return rc == 0 ? EXIT_SUCCESS : EXIT_FAILURE;

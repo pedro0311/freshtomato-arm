@@ -1,10 +1,31 @@
 
  Note that items with (!) have high priority.
 
+all
+---
+
+ - use gettext() for column names on output in libsmartcols based tools and
+   accept trantated as well as original names on command line (lsblk -o NAME,SIZE).
+   https://github.com/karelzak/util-linux/issues/1291
+
+tests
+-----
+  - add MacOS to GitHub Actions (.github/workflows/cibuild.yml). Note, we have used
+    Mac in Travis-CI (see .travis.yml).
+
+  - add Coverity to GitHub Actions (see for example .github/workflows/coverity.yml
+    in systemd repo).
+
+fstrim
+------
+  - "fstrim --fstab" uses root= from /proc/cmdline to get root FS when it's missing
+    in fstab file. This is fragile (due to missing root= or the root FS is not
+    accessible). The best seems to parse mountinfo and use mnt_table_get_root_fs()
+    as a fallback solution.  https://github.com/karelzak/util-linux/issues/1266.
+
 script (lib/pty-session.c)
 --------------------------
   - (!) add #ifdefs and optional code for non-signalfd() systems
-
 
 docs
 ----
@@ -35,13 +56,6 @@ lscpu
   - read cpuid and uname information from file if --sysroot is specified, then
     we can prepare regression tests completely independent on hw and architecture.
 
-lsblk
------
-  - currently it does not show mountpoint for all devices in btrfs RAID. It's because
-    /proc/#/mountinfo contains reference to the one device only. Maybe we can add some
-    btrfs specific code to provide a better output for FS based stacks. Not sure.
-    https://bugzilla.redhat.com/show_bug.cgi?id=1084453
-
 nsenter(1)
 ----------
  - read the default UID and GID from the target process.
@@ -53,6 +67,7 @@ hwclock
  - use /etc/adjtime as read-only for UTC/LOCAL information only
  - the /var/lib/hwclock/drift should be implemented backwardly compatible,
    it means use the file only if exists, otherwise follow /etc/adjtime
+ - see topic/hwclock-drift-file branch
 
 bash completion
 ---------------
@@ -64,21 +79,19 @@ bash completion
 libmount (mount/umount)
 -----------------------
 
+ - mnt_context_get_excode() does not return error messages from /sbin/[u]mount.<type>
+   external helpers. It is disadvantages in same cases (non-terminal progarms).
+   The solution is to use pipe(), keep output from helper in memory and return it later
+   by mnt_context_get_excode() (or mnt_context_get_helper_output(), etc.). This feature
+   should be optional and disabled by default.
+   see: https://github.com/karelzak/util-linux/issues/1208
+
  - add --onlyonce to force mount(8) to check if mountpoint is already used. Now
    "already mounted" detection is used for --all only. The problem is if you
    call "mount <mountpoint>" more than once for in fstab defined tmpfs (or network
    filesystem etc.). In this case kernel does not return EBUSY, but a new instance
    of the FS is created. https://github.com/karelzak/util-linux/issues/448
    (... just idea, maybe wrong idea)
-
- - support CAP_SYS_ADMIN; for mount(2) syscall the CAP_SYS_ADMIN is good
-   enough. Unfortunately, mount(8) does more things like check for filesystem
-   type (but it's usually done by udev, so root perms are unnecessary), create
-   loop devices, write to /run/mount/utab or /etc/mtab, etc.
-
-   It would be nice to improve libmount to check for CAP_SYS_ADMIN if suid not
-   set and allow using it for simple tasks where no another operation is
-   necessary.
 
 partx
 -----
@@ -97,11 +110,12 @@ getopt
 docs
 ----
 
- - (!) use something better than gtk-doc for libmount and libblkid (doxyden?)
+ - (!) use something better than gtk-doc for libmount and libblkid (doxygen?)
 
  - (!) add API documentation to libuuid
 
- - (!) rewrite man pages to AsciiDoc and generate final man pages by Asciidoctor & Docbook
+ - Improve line breaks in man pages and review markup
+
 
 login-utils:
 -----------
@@ -117,8 +131,19 @@ login-utils:
     * note that shadow-utils newgpr(1) provides support for syslog and audit log.
 
 
+libsmartcols / column -t
+------------------------
+  - add column --table-header-color
+  - add support for border of table
+    * extend 'struct libscols_symbols', use box-drawing chars UTF8/ASCII
+    * add scols_table_enable_border()
+
 libblkid
 --------
+
+ - extend ZFS proper to scan for more uberblocks if BLKID_SUBLKS_MAGIC flag is set.
+   This solution will make wipefs(8) more usable as ZFS is extremely variable with
+   additional root blocks locations. See  https://github.com/karelzak/util-linux/issues/1228
 
  - (!) add support for BitLocker Drive Encryption
    https://github.com/karelzak/util-linux/issues/617

@@ -50,11 +50,12 @@ static const char *next_s32(const char *s, int *num, int *rc)
 	if (!s || !*s)
 		return s;
 
+	errno = 0;
 	*rc = -EINVAL;
 	*num = strtol(s, &end, 10);
 	if (end == NULL || s == end)
 	       return s;
-	if (*end == ' ' || *end == '\t' || *end == '\0')
+	if (errno == 0 && (*end == ' ' || *end == '\t' || *end == '\0'))
 		*rc = 0;
 	return end;
 }
@@ -66,11 +67,12 @@ static const char *next_u64(const char *s, uint64_t *num, int *rc)
 	if (!s || !*s)
 		return s;
 
+	errno = 0;
 	*rc = -EINVAL;
 	*num = (uint64_t) strtoumax(s, &end, 10);
 	if (end == NULL || s == end)
 	       return s;
-	if (*end == ' ' || *end == '\t' || *end == '\0')
+	if (errno == 0 && (*end == ' ' || *end == '\t' || *end == '\0'))
 		*rc = 0;
 	return end;
 }
@@ -481,7 +483,7 @@ static int is_terminated_by_blank(const char *str)
 	if (p == str)
 		return 1;		/* only '\n' */
 	p--;
-	while (p >= str && (*p == ' ' || *p == '\t'))
+	while (p > str && (*p == ' ' || *p == '\t'))
 		p--;
 	return *p == '\n' ? 1 : 0;
 }
@@ -553,22 +555,16 @@ next_line:
 		pa->line++;
 		s = strchr(pa->buf, '\n');
 		if (!s) {
+			DBG(TAB, ul_debugobj(tb, "%s:%zu: no final newline",
+						pa->filename, pa->line));
+
 			/* Missing final newline?  Otherwise an extremely */
 			/* long line - assume file was corrupted */
-			if (feof(pa->f)) {
-				DBG(TAB, ul_debugobj(tb,
-					"%s: no final newline",	pa->filename));
-				s = strchr(pa->buf, '\0');
-			} else {
-				DBG(TAB, ul_debugobj(tb,
-					"%s:%zu: missing newline at line",
-					pa->filename, pa->line));
-				goto err;
-			}
-		}
+			if (feof(pa->f))
+				s = memchr(pa->buf, '\0', pa->bufsiz);
 
 		/* comments parser */
-		if (tb->comms
+		} else if (tb->comms
 		    && (tb->fmt == MNT_FMT_GUESS || tb->fmt == MNT_FMT_FSTAB)
 		    && is_comment_line(pa->buf)) {
 			do {
@@ -584,9 +580,11 @@ next_line:
 
 		}
 
+		if (!s)
+			goto err;
 		*s = '\0';
-		if (--s >= pa->buf && *s == '\r')
-			*s = '\0';
+		if (s > pa->buf && *(s - 1)  == '\r')
+			*(--s) = '\0';
 		s = (char *) skip_blank(pa->buf);
 	} while (*s == '\0' || *s == '#');
 
@@ -698,7 +696,15 @@ static int kernel_fs_postparse(struct libmnt_table *tb,
 	return rc;
 }
 
-static int __table_parse_stream(struct libmnt_table *tb, FILE *f, const char *filename)
+/**
+ * mnt_table_parse_stream:
+ * @tb: tab pointer
+ * @f: file stream
+ * @filename: filename used for debug and error messages
+ *
+ * Returns: 0 on success, negative number in case of error.
+ */
+int mnt_table_parse_stream(struct libmnt_table *tb, FILE *f, const char *filename)
 {
 	int rc = -1;
 	int flags = 0;
@@ -719,7 +725,9 @@ static int __table_parse_stream(struct libmnt_table *tb, FILE *f, const char *fi
 	/* necessary for /proc/mounts only, the /proc/self/mountinfo
 	 * parser sets the flag properly
 	 */
-	if (filename && strcmp(filename, _PATH_PROC_MOUNTS) == 0)
+	if (tb->fmt == MNT_FMT_SWAPS)
+		flags = MNT_FS_SWAP;
+	else if (filename && strcmp(filename, _PATH_PROC_MOUNTS) == 0)
 		flags = MNT_FS_KERNEL;
 
 	do {
@@ -778,40 +786,6 @@ err:
 }
 
 /**
- * mnt_table_parse_stream:
- * @tb: tab pointer
- * @f: file stream
- * @filename: filename used for debug and error messages
- *
- * Returns: 0 on success, negative number in case of error.
- */
-int mnt_table_parse_stream(struct libmnt_table *tb, FILE *f, const char *filename)
-{
-	int fd, rc;
-	FILE *memf = NULL;
-	char *membuf = NULL;
-
-	/*
-	 * For /proc/#/{mountinfo,mount} we read all file to memory and use it
-	 * as memory stream. For more details see mnt_read_procfs_file().
-	 */
-	if ((fd = fileno(f)) >= 0
-	    && (tb->fmt == MNT_FMT_GUESS ||
-		tb->fmt == MNT_FMT_MOUNTINFO ||
-		tb->fmt == MNT_FMT_MTAB)
-	    && is_procfs_fd(fd)
-	    && (memf = mnt_get_procfs_memstream(fd, &membuf))) {
-
-		rc = __table_parse_stream(tb, memf, filename);
-		fclose(memf);
-		free(membuf);
-	} else
-		rc = __table_parse_stream(tb, f, filename);
-
-	return rc;
-}
-
-/**
  * mnt_table_parse_file:
  * @tb: tab pointer
  * @filename: file
@@ -826,49 +800,18 @@ int mnt_table_parse_stream(struct libmnt_table *tb, FILE *f, const char *filenam
 int mnt_table_parse_file(struct libmnt_table *tb, const char *filename)
 {
 	FILE *f;
-	int rc, fd = -1;
+	int rc;
 
 	if (!filename || !tb)
 		return -EINVAL;
 
-	/*
-	 * Try to use read()+poll() to realiably read all
-	 * /proc/#/{mount,mountinfo} file to memory
-	 */
-	if (tb->fmt != MNT_FMT_SWAPS
-	    && strncmp(filename, "/proc/", 6) == 0) {
-
-		FILE *memf;
-		char *membuf = NULL;
-
-		fd = open(filename, O_RDONLY|O_CLOEXEC);
-		if (fd < 0) {
-			rc = -errno;
-			goto done;
-		}
-		memf = mnt_get_procfs_memstream(fd, &membuf);
-		if (memf) {
-			rc = __table_parse_stream(tb, memf, filename);
-
-			fclose(memf);
-			free(membuf);
-			close(fd);
-			goto done;
-		}
-		/* else fallback to fopen/fdopen() */
-	}
-
-	if (fd >= 0)
-		f = fdopen(fd, "r" UL_CLOEXECSTR);
-	else
-		f = fopen(filename, "r" UL_CLOEXECSTR);
-
+	f = fopen(filename, "r" UL_CLOEXECSTR);
 	if (f) {
-		rc = __table_parse_stream(tb, f, filename);
+		rc = mnt_table_parse_stream(tb, f, filename);
 		fclose(f);
 	} else
 		rc = -errno;
-done:
+
 	DBG(TAB, ul_debugobj(tb, "parsing done [filename=%s, rc=%d]", filename, rc));
 	return rc;
 }
@@ -925,7 +868,7 @@ static int __mnt_table_parse_dir(struct libmnt_table *tb, const char *dirname)
 
 		f = fopen_at(dd, d->d_name, O_RDONLY|O_CLOEXEC, "r" UL_CLOEXECSTR);
 		if (f) {
-			__table_parse_stream(tb, f, d->d_name);
+			mnt_table_parse_stream(tb, f, d->d_name);
 			fclose(f);
 		}
 	}
@@ -966,7 +909,7 @@ static int __mnt_table_parse_dir(struct libmnt_table *tb, const char *dirname)
 		f = fopen_at(dirfd(dir), d->d_name,
 				O_RDONLY|O_CLOEXEC, "r" UL_CLOEXECSTR);
 		if (f) {
-			__table_parse_stream(tb, f, d->d_name);
+			mnt_table_parse_stream(tb, f, d->d_name);
 			fclose(f);
 		}
 	}

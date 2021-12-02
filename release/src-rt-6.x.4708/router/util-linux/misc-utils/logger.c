@@ -63,6 +63,7 @@
 #include "xalloc.h"
 #include "strv.h"
 #include "list.h"
+#include "pwdutils.h"
 
 #define	SYSLOG_NAMES
 #include <syslog.h>
@@ -393,16 +394,6 @@ static int journald_entry(struct logger_ctl *ctl, FILE *fp)
 }
 #endif
 
-static char const *xgetlogin(void)
-{
-	char const *cp;
-	struct passwd *pw;
-
-	if (!(cp = getlogin()) || !*cp)
-		cp = (pw = getpwuid(geteuid()))? pw->pw_name : "<someone>";
-	return cp;
-}
-
 /* this creates a timestamp based on current time according to the
  * fine rules of RFC3164, most importantly it ensures in a portable
  * way that the month day is correctly written (with a SP instead
@@ -619,7 +610,8 @@ static void add_structured_data_param(struct list_head *ls, const char *param)
 		err_oom();
 }
 
-static void add_structured_data_paramf(struct list_head *ls, const char *fmt, ...)
+static void __attribute__ ((__format__ (__printf__, 2, 3)))
+	add_structured_data_paramf(struct list_head *ls, const char *fmt, ...)
 {
 	struct structured_data *sd;
 	va_list ap;
@@ -926,6 +918,8 @@ static void logger_open(struct logger_ctl *ctl)
 					      syslog_local_header;
 	if (!ctl->tag)
 		ctl->tag = xgetlogin();
+	if (!ctl->tag)
+		ctl->tag = "<someone>";
 
 	generate_syslog_header(ctl);
 }

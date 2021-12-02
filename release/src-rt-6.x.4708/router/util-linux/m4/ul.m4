@@ -67,28 +67,21 @@ AC_DEFUN([UL_SET_ARCH], [
 ])
 
 
-dnl UL_SET_FLAGS(CFLAGS, CPPFLAGS, LDFLAGS)
+dnl UL_SET_LIBS(LIBS)
 dnl
-dnl Sets new global CFLAGS, CPPFLAGS and LDFLAG, the original
-dnl setting could be restored by UL_RESTORE_FLAGS()
+dnl Sets new global LIBS, the original setting could be restored by UL_RESTORE_LIBS()
 dnl
-AC_DEFUN([UL_SET_FLAGS], [
-  old_CFLAGS="$CFLAGS"
-  old_CPPFLAGS="$CPPFLAGS"
-  old_LDFLAGS="$LDFLAGS"
-  CFLAGS="$CFLAGS $1"
-  CPPFLAGS="$CPPFLAGS $2"
-  LDFLAGS="$LDFLAGS $3"
+AC_DEFUN([UL_SET_LIBS], [
+  old_LIBS="$LIBS"
+  LIBS="$LIBS $1"
 ])
 
-dnl UL_RESTORE_FLAGS()
+dnl UL_RESTORE_LIBS()
 dnl
-dnl Restores CFLAGS, CPPFLAGS and LDFLAG previously saved by UL_SET_FLAGS()
+dnl Restores LIBS previously saved by UL_SET_LIBS()
 dnl
-AC_DEFUN([UL_RESTORE_FLAGS], [
-  CFLAGS="$old_CFLAGS"
-  CPPFLAGS="$old_CPPFLAGS"
-  LDFLAGS="$old_LDFLAGS"
+AC_DEFUN([UL_RESTORE_LIBS], [
+  LIBS="$old_LIBS"
 ])
 
 
@@ -321,6 +314,38 @@ AC_DEFUN([UL_REQUIRES_COMPILE], [
     check:*)
       AC_MSG_WARN([$4 not found; not building $1])
       [build_]suffix=no ;;
+    esac
+  fi
+])
+
+
+dnl UL_REQUIRES_PROGRAM(NAME, PROGVAR, PROGRAM, DESC, [VARSUFFIX=$1])
+dnl
+dnl Modifies $build_<name> variable according to $enable_<name> and
+dnl ability compile AC_PATH_PROG().
+dnl
+dnl The <desc> is description used for warning/error dnl message (e.g. "foo support").
+dnl
+dnl The default <name> for $build_ and $enable_ could be overwrited by option $5.
+AC_DEFUN([UL_REQUIRES_PROGRAM], [
+  m4_define([suffix], m4_default([$5],$1))
+
+  if test "x$[build_]suffix" != xno; then
+
+    AC_PATH_PROG([$2], [$3])
+
+    case $[enable_]suffix:x$$2 in #(
+    no:*)
+      [build_]suffix=no ;;
+    yes:x)
+      AC_MSG_ERROR([$1 selected, but required $3 not available]);;
+    yes:x*)
+      [build_]suffix=yes ;;
+    check:x)
+      AC_MSG_WARN([$3 not found; not building $4])
+      [build_]suffix=no ;;
+    check:x*)
+      [build_]suffix=yes ;;
     esac
   fi
 ])

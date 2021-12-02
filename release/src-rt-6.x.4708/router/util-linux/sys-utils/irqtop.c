@@ -79,6 +79,7 @@ struct irqtop_ctl {
 	struct irq_stat	*prev_stat;
 
 	unsigned int request_exit:1;
+	unsigned int softirq:1;
 };
 
 /* user's input parser */
@@ -97,26 +98,52 @@ static void parse_input(struct irqtop_ctl *ctl, struct irq_output *out, char c)
 
 static int update_screen(struct irqtop_ctl *ctl, struct irq_output *out)
 {
-	struct libscols_table *table;
+	struct libscols_table *table, *cpus;
 	struct irq_stat *stat;
 	time_t now = time(NULL);
-	char timestr[64], *data;
+	char timestr[64], *data, *data0, *p;
 
-	table = get_scols_table(out, ctl->prev_stat, &stat);
+	/* make irqs table */
+	table = get_scols_table(out, ctl->prev_stat, &stat, ctl->softirq);
 	if (!table) {
 		ctl->request_exit = 1;
 		return 1;
 	}
+	scols_table_enable_maxout(table, 1);
+	scols_table_enable_nowrap(table, 1);
+	scols_table_reduce_termwidth(table, 1);
 
-	/* header in interactive mode */
+	/* make cpus table */
+	cpus = get_scols_cpus_table(out, ctl->prev_stat, stat);
+	scols_table_reduce_termwidth(cpus, 1);
+
+	/* print header */
 	move(0, 0);
 	strtime_iso(&now, ISO_TIMESTAMP, timestr, sizeof(timestr));
 	wprintw(ctl->win, _("irqtop | total: %ld delta: %ld | %s | %s\n\n"),
 			   stat->total_irq, stat->delta_irq, ctl->hostname, timestr);
 
-	scols_print_table_to_string(table, &data);
-	wprintw(ctl->win, "%s", data);
+	/* print cpus table */
+	scols_print_table_to_string(cpus, &data);
+	wprintw(ctl->win, "%s\n\n", data);
 	free(data);
+
+	/* print irqs table */
+	scols_print_table_to_string(table, &data0);
+	data = data0;
+
+	p = strchr(data, '\n');
+	if (p) {
+		/* print header in reverse mode */
+		*p = '\0';
+		attron(A_REVERSE);
+		wprintw(ctl->win, "%s\n", data);
+		attroff(A_REVERSE);
+		data = p + 1;
+	}
+
+	wprintw(ctl->win, "%s", data);
+	free(data0);
 
 	/* clean up */
 	scols_unref_table(table);
@@ -223,6 +250,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -d, --delay <secs>   delay updates\n"), stdout);
 	fputs(_(" -o, --output <list>  define which output columns to use\n"), stdout);
 	fputs(_(" -s, --sort <column>  specify sort column\n"), stdout);
+	fputs(_(" -S, --softirq        show softirqs instead of interrupts\n"), stdout);
 	fputs(USAGE_SEPARATOR, stdout);
 	printf(USAGE_HELP_OPTIONS(22));
 
@@ -250,13 +278,14 @@ static void parse_args(	struct irqtop_ctl *ctl,
 		{"delay", required_argument, NULL, 'd'},
 		{"sort", required_argument, NULL, 's'},
 		{"output", required_argument, NULL, 'o'},
+		{"softirq", no_argument, NULL, 'S'},
 		{"help", no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 'V'},
 		{NULL, 0, NULL, 0}
 	};
 	int o;
 
-	while ((o = getopt_long(argc, argv, "d:o:s:hV", longopts, NULL)) != -1) {
+	while ((o = getopt_long(argc, argv, "d:o:s:ShV", longopts, NULL)) != -1) {
 		switch (o) {
 		case 'd':
 			{
@@ -273,6 +302,9 @@ static void parse_args(	struct irqtop_ctl *ctl,
 			break;
 		case 'o':
 			outarg = optarg;
+			break;
+		case 'S':
+			ctl->softirq = 1;
 			break;
 		case 'V':
 			print_version(EXIT_SUCCESS);

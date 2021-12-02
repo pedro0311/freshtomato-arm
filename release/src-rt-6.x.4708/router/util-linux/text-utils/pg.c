@@ -317,15 +317,14 @@ static void getwinsize(void)
 	struct winsize winsz;
 	int badioctl;
 #endif
-	char *p;
-
 	if (initialized == 0) {
-		if ((p = getenv("LINES")) != NULL && *p != '\0')
-			if ((envlines = atoi(p)) < 0)
-				envlines = 0;
-		if ((p = getenv("COLUMNS")) != NULL && *p != '\0')
-			if ((envcols = atoi(p)) < 0)
-				envcols = 0;
+		uint32_t tmp = 0;
+
+		if (ul_strtou32(getenv("LINES"), &tmp, 10) == 0)
+			envlines = tmp;
+		if (ul_strtou32(getenv("COLUMNS"), &tmp, 10) == 0)
+			envcols = tmp;
+
 		/* terminfo values. */
 		if (tinfostat != 1 || columns == 0)
 			defcols = 24;
@@ -598,11 +597,8 @@ static int getcount(char *cmdstr)
 	}
 	if (buf[0] == '-' && buf[1] == '\0') {
 		i = -1;
-	} else {
-		if (*buf == '+')
-			i = atoi(buf + 1);
-		else
-			i = atoi(buf);
+	} else if (ul_strtos32(*buf == '+' ? buf + 1 : buf, &i, 10) != 0) {
+		i = -1;
 	}
 	free(buf);
 	return i;

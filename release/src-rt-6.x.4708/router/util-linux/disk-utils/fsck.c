@@ -169,8 +169,9 @@ static int string_to_int(const char *s)
 	long l;
 	char *p;
 
+	errno = 0;
 	l = strtol(s, &p, 0);
-	if (*p || l == LONG_MIN || l == LONG_MAX || l < 0 || l > INT_MAX)
+	if (errno || *p || l == LONG_MIN || l == LONG_MAX || l < 0 || l > INT_MAX)
 		return -1;
 
 	return (int) l;
@@ -597,27 +598,31 @@ static void print_stats(struct fsck_instance *inst)
 	timersub(&inst->end_time, &inst->start_time, &delta);
 
 	if (report_stats_file)
-		fprintf(report_stats_file, "%s %d %ld "
-					   "%ld.%06ld %ld.%06ld %ld.%06ld\n",
+		fprintf(report_stats_file, "%s %d %ld"
+				   " %"PRId64".%06"PRId64
+				   " %"PRId64".%06"PRId64
+				   " %"PRId64".%06"PRId64"\n",
 			fs_get_device(inst->fs),
 			inst->exit_status,
 			inst->rusage.ru_maxrss,
-			(long)delta.tv_sec, (long)delta.tv_usec,
-			(long)inst->rusage.ru_utime.tv_sec,
-			(long)inst->rusage.ru_utime.tv_usec,
-			(long)inst->rusage.ru_stime.tv_sec,
-			(long)inst->rusage.ru_stime.tv_usec);
+			(int64_t)delta.tv_sec, (int64_t)delta.tv_usec,
+			(int64_t)inst->rusage.ru_utime.tv_sec,
+			(int64_t)inst->rusage.ru_utime.tv_usec,
+			(int64_t)inst->rusage.ru_stime.tv_sec,
+			(int64_t)inst->rusage.ru_stime.tv_usec);
 	else
 		fprintf(stdout, "%s: status %d, rss %ld, "
-				"real %ld.%06ld, user %ld.%06ld, sys %ld.%06ld\n",
+				"real %"PRId64".%06"PRId64", "
+				"user %"PRId64".%06"PRId64", "
+				"sys %"PRId64".%06"PRId64"\n",
 			fs_get_device(inst->fs),
 			inst->exit_status,
 			inst->rusage.ru_maxrss,
-			(long)delta.tv_sec, (long)delta.tv_usec,
-			(long)inst->rusage.ru_utime.tv_sec,
-			(long)inst->rusage.ru_utime.tv_usec,
-			(long)inst->rusage.ru_stime.tv_sec,
-			(long)inst->rusage.ru_stime.tv_usec);
+			(int64_t)delta.tv_sec, (int64_t)delta.tv_usec,
+			(int64_t)inst->rusage.ru_utime.tv_sec,
+			(int64_t)inst->rusage.ru_utime.tv_usec,
+			(int64_t)inst->rusage.ru_stime.tv_sec,
+			(int64_t)inst->rusage.ru_stime.tv_usec);
 }
 
 /*
@@ -931,8 +936,8 @@ static int fsck_device(struct libmnt_fs *fs, int interactive)
 	}
 	return 0;
 err:
-	warnx(_("error %d (%m) while executing fsck.%s for %s"),
-			retval, type, fs_get_device(fs));
+	warnx(_("error %d (%s) while executing fsck.%s for %s"),
+			retval, strerror(errno), type, fs_get_device(fs));
 	return FSCK_EX_ERROR;
 }
 
@@ -1599,8 +1604,8 @@ static void parse_argv(int argc, char *argv[])
 
 	if (getenv("FSCK_FORCE_ALL_PARALLEL"))
 		force_all_parallel++;
-	if ((tmp = getenv("FSCK_MAX_INST")))
-	    max_running = atoi(tmp);
+	if (ul_strtos32(getenv("FSCK_MAX_INST"), &max_running, 10) != 0)
+		max_running = 0;
 }
 
 int main(int argc, char *argv[])

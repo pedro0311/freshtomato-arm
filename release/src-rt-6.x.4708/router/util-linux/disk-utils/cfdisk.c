@@ -141,9 +141,14 @@ static void menu_refresh_size(struct cfdisk *cf);
 
 static int ui_end(void);
 static int ui_refresh(struct cfdisk *cf);
-static void ui_warnx(const char *fmt, ...);
-static void ui_warn(const char *fmt, ...);
-static void ui_info(const char *fmt, ...);
+
+static void ui_warnx(const char *fmt, ...)
+			__attribute__((__format__ (__printf__, 1, 2)));
+static void ui_warn(const char *fmt, ...)
+			__attribute__((__format__ (__printf__, 1, 2)));
+static void ui_info(const char *fmt, ...)
+			__attribute__((__format__ (__printf__, 1, 2)));
+
 static void ui_draw_menu(struct cfdisk *cf);
 static int ui_menu_move(struct cfdisk *cf, int key);
 static void ui_menu_resize(struct cfdisk *cf);
@@ -630,13 +635,13 @@ static int ask_callback(struct fdisk_context *cxt __attribute__((__unused__)),
 
 	switch(fdisk_ask_get_type(ask)) {
 	case FDISK_ASKTYPE_INFO:
-		ui_info(fdisk_ask_print_get_mesg(ask));
+		ui_info("%s", fdisk_ask_print_get_mesg(ask));
 		break;
 	case FDISK_ASKTYPE_WARNX:
-		ui_warnx(fdisk_ask_print_get_mesg(ask));
+		ui_warnx("%s", fdisk_ask_print_get_mesg(ask));
 		break;
 	case FDISK_ASKTYPE_WARN:
-		ui_warn(fdisk_ask_print_get_mesg(ask));
+		ui_warn("%s", fdisk_ask_print_get_mesg(ask));
 		break;
 	case FDISK_ASKTYPE_MENU:
 		ask_menu(ask, (struct cfdisk *) data);
@@ -668,7 +673,8 @@ static int ui_end(void)
 	return 0;
 }
 
-static void ui_vprint_center(size_t line, int attrs, const char *fmt, va_list ap)
+static void __attribute__((__format__ (__printf__, 3, 0)))
+	ui_vprint_center(size_t line, int attrs, const char *fmt, va_list ap)
 {
 	size_t width;
 	char *buf = NULL;
@@ -698,7 +704,8 @@ static void ui_vprint_center(size_t line, int attrs, const char *fmt, va_list ap
 	free(buf);
 }
 
-static void ui_center(size_t line, const char *fmt, ...)
+static void __attribute__((__format__ (__printf__, 2, 3)))
+	ui_center(size_t line, const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -706,7 +713,8 @@ static void ui_center(size_t line, const char *fmt, ...)
 	va_end(ap);
 }
 
-static void ui_warnx(const char *fmt, ...)
+static void __attribute__((__format__ (__printf__, 1, 2)))
+	ui_warnx(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -721,7 +729,8 @@ static void ui_warnx(const char *fmt, ...)
 	va_end(ap);
 }
 
-static void ui_warn(const char *fmt, ...)
+static void __attribute__((__format__ (__printf__, 1, 2)))
+	ui_warn(const char *fmt, ...)
 {
 	char *fmt_m;
 	va_list ap;
@@ -747,8 +756,10 @@ static void ui_clean_warn(void)
 	clrtoeol();
 }
 
-static int __attribute__((__noreturn__)) ui_err(int rc, const char *fmt, ...)
-		{
+static int __attribute__((__noreturn__))
+	   __attribute__((__format__ (__printf__, 2, 3)))
+	ui_err(int rc, const char *fmt, ...)
+{
 	va_list ap;
 	ui_end();
 
@@ -761,7 +772,9 @@ static int __attribute__((__noreturn__)) ui_err(int rc, const char *fmt, ...)
 	exit(rc);
 }
 
-static int __attribute__((__noreturn__)) ui_errx(int rc, const char *fmt, ...)
+static int __attribute__((__noreturn__))
+	   __attribute__((__format__ (__printf__, 2, 3)))
+	ui_errx(int rc, const char *fmt, ...)
 		{
 	va_list ap;
 	ui_end();
@@ -775,7 +788,8 @@ static int __attribute__((__noreturn__)) ui_errx(int rc, const char *fmt, ...)
 	exit(rc);
 }
 
-static void ui_info(const char *fmt, ...)
+static void __attribute__((__format__ (__printf__, 1, 2)))
+	ui_info(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -796,7 +810,8 @@ static void ui_clean_info(void)
 	clrtoeol();
 }
 
-static void ui_hint(const char *fmt, ...)
+static void __attribute__((__format__ (__printf__, 1, 2)))
+	ui_hint(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
@@ -1130,7 +1145,7 @@ static void ui_draw_menuitem(struct cfdisk *cf,
 	if (cf->menu->idx == idx) {
 		standend();
 		if (d->desc)
-			ui_hint(_(d->desc));
+			ui_hint("%s", _(d->desc));
 	}
 }
 
@@ -1307,6 +1322,34 @@ static char *get_mountpoint(struct cfdisk *cf, const char *tagname, const char *
 }
 #endif /* HAVE_LIBMOUNT */
 
+static inline int iszero(const char *str)
+{
+	const char *p;
+
+	for (p = str; p && *p == '0'; p++);
+
+	return !p || *p == '\0';
+}
+
+static int has_uuid(struct fdisk_table *tb, const char *uuid)
+{
+	struct fdisk_partition *pa;
+	struct fdisk_iter *itr;
+	int rc = 0;
+
+	if (!tb || !uuid || fdisk_table_is_empty(tb))
+		return 0;
+
+	itr = fdisk_new_iter(FDISK_ITER_FORWARD);
+	while (rc == 0 && fdisk_table_next_partition(tb, itr, &pa) == 0) {
+		const char *x = fdisk_partition_get_uuid(pa);
+		if (x)
+			rc = strcmp(x, uuid) == 0;
+	}
+	fdisk_free_iter(itr);
+	return rc;
+}
+
 static void extra_prepare_data(struct cfdisk *cf)
 {
 	struct fdisk_partition *pa = get_current_partition(cf);
@@ -1326,7 +1369,14 @@ static void extra_prepare_data(struct cfdisk *cf)
 
 	if (!fdisk_partition_to_string(pa, cf->cxt, FDISK_FIELD_UUID, &data) && data) {
 		extra_insert_pair(l, _("Partition UUID:"), data);
-		if (!mountpoint)
+
+		/* Search for mountpoint by PARTUUID= means that we need to
+		 * check fstab and convert PARTUUID to the device name. This is
+		 * unnecessary and overkill for newly created partitions. Let's
+		 * check if the UUID already exist in the old layout, otherwise
+		 * ignore it.
+		 */
+		if (!mountpoint && has_uuid(cf->original_layout, data))
 			mountpoint = get_mountpoint(cf, "PARTUUID", data);
 		free(data);
 	}
@@ -1350,19 +1400,19 @@ static void extra_prepare_data(struct cfdisk *cf)
 
 	/* for numeric data, only show non-zero rows */
 	if (!fdisk_partition_to_string(pa, cf->cxt, FDISK_FIELD_BSIZE, &data) && data) {
-		if (atoi(data))
+		if (!iszero(data))
 			extra_insert_pair(l, "BSIZE:", data);
 		free(data);
 	}
 
 	if (!fdisk_partition_to_string(pa, cf->cxt, FDISK_FIELD_CPG, &data) && data) {
-		if (atoi(data))
+		if (!iszero(data))
 			extra_insert_pair(l, "CPG:", data);
 		free(data);
 	}
 
 	if (!fdisk_partition_to_string(pa, cf->cxt, FDISK_FIELD_FSIZE, &data) && data) {
-		if (atoi(data))
+		if (!iszero(data))
 			extra_insert_pair(l, "FSIZE:", data);
 		free(data);
 	}
@@ -1778,7 +1828,7 @@ static ssize_t ui_get_string(const char *prompt,
 	mbs_edit_goto(edit, MBS_EDIT_END);
 
 	if (hint)
-		ui_hint(hint);
+		ui_hint("%s", hint);
 	else
 		ui_clean_hint();
 
@@ -2150,7 +2200,7 @@ static int ui_create_label(struct cfdisk *cf)
 
 		if (refresh_menu) {
 			ui_draw_menu(cf);
-			ui_hint(_("Select a type to create a new label or press 'L' to load script file."));
+			ui_hint(_("Select a type to create a new label, press 'L' to load script file, 'Q' quits."));
 			refresh();
 			refresh_menu = 0;
 		}
@@ -2209,6 +2259,7 @@ static int ui_help(void)
 		N_("  h          Print this screen"),
 		N_("  n          Create new partition from free space"),
 		N_("  q          Quit program without writing partition table"),
+		N_("  r          Reduce or enlarge the current partition"),
 		N_("  s          Fix partitions order (only when in disarray)"),
 		N_("  t          Change the partition type"),
 		N_("  u          Dump disk layout to sfdisk compatible script file"),
@@ -2568,7 +2619,9 @@ static int ui_run(struct cfdisk *cf)
 	ui_draw_extra(cf);
 
 	if (fdisk_is_readonly(cf->cxt))
-		ui_warnx(_("Device is open in read-only mode."));
+		ui_warnx(_("Device is open in read-only mode. Changes will remain in memory only."));
+	else if (cf->device_is_used)
+		ui_warnx(_("Device is currently in use, repartitioning is probably a bad idea."));
 	else if (cf->wrong_order)
 		ui_info(_("Note that partition table entries are not in disk order now."));
 
@@ -2667,6 +2720,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -z, --zero               start with zeroed partition table\n"), out);
 	fprintf(out,
 	      _("     --lock[=<mode>]      use exclusive device lock (%s, %s or %s)\n"), "yes", "no", "nonblock");
+	fputs(_(" -r, --read-only          forced open cfdisk in read-only mode\n"), out);
 
 	fputs(USAGE_SEPARATOR, out);
 	printf(USAGE_HELP_OPTIONS(26));
@@ -2679,6 +2733,7 @@ int main(int argc, char *argv[])
 {
 	const char *diskpath = NULL, *lockmode = NULL;
 	int rc, c, colormode = UL_COLORMODE_UNDEF;
+	int read_only = 0;
 	struct cfdisk _cf = { .lines_idx = 0 },
 		      *cf = &_cf;
 	enum {
@@ -2690,6 +2745,7 @@ int main(int argc, char *argv[])
 		{ "help",    no_argument,       NULL, 'h' },
 		{ "version", no_argument,       NULL, 'V' },
 		{ "zero",    no_argument,	NULL, 'z' },
+		{ "read-only", no_argument,     NULL, 'r' },
 		{ NULL, 0, NULL, 0 },
 	};
 
@@ -2698,7 +2754,7 @@ int main(int argc, char *argv[])
 	textdomain(PACKAGE);
 	close_stdout_atexit();
 
-	while((c = getopt_long(argc, argv, "L::hVz", longopts, NULL)) != -1) {
+	while((c = getopt_long(argc, argv, "L::hVzr", longopts, NULL)) != -1) {
 		switch(c) {
 		case 'h':
 			usage();
@@ -2709,6 +2765,9 @@ int main(int argc, char *argv[])
 				colormode = colormode_or_err(optarg,
 						_("unsupported color mode"));
 			break;
+                case 'r':
+                        read_only = 1;
+                        break;
 		case 'V':
 			print_version(EXIT_SUCCESS);
 		case 'z':
@@ -2752,8 +2811,8 @@ int main(int argc, char *argv[])
 	} else
 		diskpath = argv[optind];
 
-	rc = fdisk_assign_device(cf->cxt, diskpath, 0);
-	if (rc == -EACCES)
+	rc = fdisk_assign_device(cf->cxt, diskpath, read_only);
+	if (rc == -EACCES && read_only == 0)
 		rc = fdisk_assign_device(cf->cxt, diskpath, 1);
 	if (rc != 0)
 		err(EXIT_FAILURE, _("cannot open %s"), diskpath);

@@ -212,7 +212,7 @@ static int busywait_for_rtc_clock_tick(const struct hwclock_control *ctl,
 	/* The time when we were called (and started waiting) */
 	struct tm nowtime;
 	int rc;
-	struct timeval begin, now;
+	struct timeval begin = { 0 }, now = { 0 };
 
 	if (ctl->verbose) {
 		printf("ioctl(%d, RTC_UIE_ON, 0): %s\n",
@@ -294,12 +294,12 @@ static int synchronize_to_clock_tick_rtc(const struct hwclock_control *ctl)
 		if (rc == -1)
 			warn(_("ioctl() to %s to turn off update interrupts failed"),
 			     rtc_dev_name);
-		} else if (errno == ENOTTY || errno == EINVAL) {
-			/* rtc ioctl interrupts are unimplemented */
-			ret = busywait_for_rtc_clock_tick(ctl, rtc_fd);
-		} else
-			warn(_("ioctl(%d, RTC_UIE_ON, 0) to %s failed"),
-			     rtc_fd, rtc_dev_name);
+	} else if (errno == ENOTTY || errno == EINVAL) {
+		/* rtc ioctl interrupts are unimplemented */
+		ret = busywait_for_rtc_clock_tick(ctl, rtc_fd);
+	} else
+		warn(_("ioctl(%d, RTC_UIE_ON, 0) to %s failed"),
+		     rtc_fd, rtc_dev_name);
 	return ret;
 }
 
@@ -425,10 +425,11 @@ int set_epoch_rtc(const struct hwclock_control *ctl)
 	int rtc_fd;
 	unsigned long epoch;
 
+	errno = 0;
 	epoch = strtoul(ctl->epoch_option, NULL, 10);
 
 	/* There were no RTC clocks before 1900. */
-	if (epoch < 1900 || epoch == ULONG_MAX) {
+	if (errno || epoch < 1900 || epoch == ULONG_MAX) {
 		warnx(_("invalid epoch '%s'."), ctl->epoch_option);
 		return 1;
 	}

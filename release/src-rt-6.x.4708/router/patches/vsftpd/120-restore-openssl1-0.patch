@@ -1,0 +1,73 @@
+--- vsftpd/parseconf.c
++++ vsftpd/parseconf.c
+@@ -88,7 +88,9 @@
+   { "ssl_tlsv1", &tunable_tlsv1 },
+   { "ssl_tlsv11", &tunable_tlsv1_1 },
+   { "ssl_tlsv12", &tunable_tlsv1_2 },
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   { "ssl_tlsv13", &tunable_tlsv1_3 },
++#endif
+   { "tilde_user_enable", &tunable_tilde_user_enable },
+   { "force_anon_logins_ssl", &tunable_force_anon_logins_ssl },
+   { "force_anon_data_ssl", &tunable_force_anon_data_ssl },
+--- vsftpd/ssl.c
++++ vsftpd/ssl.c
+@@ -94,10 +94,12 @@
+     {
+       options |= SSL_OP_NO_TLSv1_2;
+     }
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+     if (!tunable_tlsv1_3)
+     {
+       options |= SSL_OP_NO_TLSv1_3;
+     }
++#endif
+     SSL_CTX_set_options(p_ctx, options);
+     if (tunable_rsa_cert_file)
+     {
+--- vsftpd/tunables.c
++++ vsftpd/tunables.c
+@@ -69,7 +69,9 @@
+ int tunable_tlsv1;
+ int tunable_tlsv1_1;
+ int tunable_tlsv1_2;
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+ int tunable_tlsv1_3;
++#endif
+ int tunable_tilde_user_enable;
+ int tunable_force_anon_logins_ssl;
+ int tunable_force_anon_data_ssl;
+@@ -215,7 +217,9 @@
+   tunable_tlsv1 = 0;
+   tunable_tlsv1_1 = 0;
+   tunable_tlsv1_2 = 1;
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   tunable_tlsv1_3 = 1;
++#endif
+   tunable_tilde_user_enable = 0;
+   tunable_force_anon_logins_ssl = 0;
+   tunable_force_anon_data_ssl = 0;
+--- vsftpd/tunables.h
++++ vsftpd/tunables.h
+@@ -1,6 +1,11 @@
+ #ifndef VSF_TUNABLES_H
+ #define VSF_TUNABLES_H
+ 
++#include "builddefs.h"
++#ifdef VSF_BUILD_SSL
++#include <openssl/opensslv.h>
++#endif
++
+ /* tunables_load_defaults()
+  * PURPOSE
+  * Load the default values into the global settings variables.
+@@ -70,7 +75,9 @@
+ extern int tunable_tlsv1;                     /* Allow TLSv1.0 */
+ extern int tunable_tlsv1_1;                   /* Allow TLSv1.1 */
+ extern int tunable_tlsv1_2;                   /* Allow TLSv1.2 */
++#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+ extern int tunable_tlsv1_3;                   /* Allow TLSv1.3 */
++#endif
+ extern int tunable_tilde_user_enable;         /* Support e.g. ~chris */
+ extern int tunable_force_anon_logins_ssl;     /* Require anon logins use SSL */
+ extern int tunable_force_anon_data_ssl;       /* Require anon data uses SSL */

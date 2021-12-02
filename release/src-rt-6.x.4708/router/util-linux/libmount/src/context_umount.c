@@ -253,6 +253,9 @@ static int lookup_umount_fs_by_statfs(struct libmnt_context *cxt, const char *tg
 	struct stat st;
 	const char *type;
 
+	assert(cxt);
+	assert(cxt->fs);
+
 	DBG(CXT, ul_debugobj(cxt, " lookup by statfs"));
 
 	/*
@@ -317,6 +320,9 @@ static int lookup_umount_fs_by_mountinfo(struct libmnt_context *cxt, const char 
 {
 	struct libmnt_fs *fs = NULL;
 	int rc;
+
+	assert(cxt);
+	assert(cxt->fs);
 
 	DBG(CXT, ul_debugobj(cxt, " lookup by mountinfo"));
 
@@ -690,10 +696,7 @@ static int exec_helper(struct libmnt_context *cxt)
 		const char *args[12], *type;
 		int i = 0;
 
-		if (setgid(getgid()) < 0)
-			_exit(EXIT_FAILURE);
-
-		if (setuid(getuid()) < 0)
+		if (drop_permissions() != 0)
 			_exit(EXIT_FAILURE);
 
 		if (!mnt_context_switch_origin_ns(cxt))
@@ -757,6 +760,7 @@ static int exec_helper(struct libmnt_context *cxt)
 		break;
 	}
 
+	free(namespace);
 	return rc;
 }
 

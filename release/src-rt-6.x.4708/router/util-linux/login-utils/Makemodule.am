@@ -1,9 +1,9 @@
 
 if BUILD_LAST
 usrbin_exec_PROGRAMS += last
-dist_man_MANS += \
-	login-utils/last.1 \
-	login-utils/lastb.1
+MANPAGES += login-utils/last.1
+dist_noinst_DATA += login-utils/last.1.adoc
+MANLINKS += login-utils/lastb.1
 last_SOURCES = login-utils/last.c lib/monotonic.c
 last_LDADD = $(LDADD) libcommon.la $(REALTIME_LIBS)
 
@@ -11,16 +11,32 @@ install-exec-hook-last:
 	cd $(DESTDIR)$(usrbin_execdir) && ln -sf last lastb
 
 INSTALL_EXEC_HOOKS += install-exec-hook-last
+
+if FUZZING_ENGINE
+check_PROGRAMS += test_last_fuzz
+
+# https://google.github.io/oss-fuzz/getting-started/new-project-guide/#Requirements
+nodist_EXTRA_test_last_fuzz_SOURCES = dummy.cxx
+
+test_last_fuzz_SOURCES = login-utils/last.c
+test_last_fuzz_CFLAGS = $(AM_CFLAGS) -DFUZZ_TARGET
+test_last_fuzz_LDFLAGS = -lpthread
+test_last_fuzz_LDADD = $(LDADD) libcommon.la $(LIB_FUZZING_ENGINE)
+endif
+
 endif
 
 if BUILD_SULOGIN
 sbin_PROGRAMS += sulogin
-dist_man_MANS += login-utils/sulogin.8
+MANPAGES += login-utils/sulogin.8
+dist_noinst_DATA += login-utils/sulogin.8.adoc
 sulogin_SOURCES = \
 	login-utils/sulogin.c \
 	login-utils/sulogin-consoles.c \
-	login-utils/sulogin-consoles.h \
-	lib/plymouth-ctrl.c
+	login-utils/sulogin-consoles.h
+if USE_PLYMOUTH_SUPPORT
+sulogin_SOURCES += lib/plymouth-ctrl.c
+endif
 sulogin_LDADD = $(LDADD) libcommon.la
 
 if HAVE_LIBCRYPT
@@ -39,7 +55,8 @@ endif # BUILD_SULOGIN
 
 if BUILD_LOGIN
 bin_PROGRAMS += login
-dist_man_MANS += login-utils/login.1
+MANPAGES += login-utils/login.1
+dist_noinst_DATA += login-utils/login.1.adoc
 login_SOURCES = \
 	login-utils/login.c \
 	login-utils/logindefs.c \
@@ -62,14 +79,17 @@ endif # BUILD_LOGIN
 
 if BUILD_NOLOGIN
 sbin_PROGRAMS += nologin
-dist_man_MANS += login-utils/nologin.8
+MANPAGES += login-utils/nologin.8
+dist_noinst_DATA += login-utils/nologin.8.adoc
 nologin_SOURCES = login-utils/nologin.c
+nologin_LDADD = $(LDADD) libcommon.la
 endif
 
 
 if BUILD_UTMPDUMP
 usrbin_exec_PROGRAMS += utmpdump
-dist_man_MANS += login-utils/utmpdump.1
+MANPAGES += login-utils/utmpdump.1
+dist_noinst_DATA += login-utils/utmpdump.1.adoc
 utmpdump_SOURCES = login-utils/utmpdump.c
 utmpdump_LDADD = $(LDADD) libcommon.la
 endif
@@ -77,9 +97,12 @@ endif
 
 if BUILD_CHFN_CHSH
 usrbin_exec_PROGRAMS += chfn chsh
-dist_man_MANS += \
+MANPAGES += \
 	login-utils/chfn.1 \
 	login-utils/chsh.1
+dist_noinst_DATA += \
+	login-utils/chfn.1.adoc \
+	login-utils/chsh.1.adoc
 
 chfn_chsh_sources = \
 	login-utils/ch-common.h \
@@ -114,8 +137,8 @@ endif
 
 if HAVE_SELINUX
 chfn_chsh_sources += \
-	login-utils/selinux_utils.c \
-	login-utils/selinux_utils.h
+	lib/selinux-utils.c \
+	include/selinux-utils.h
 chfn_chsh_ldadd += -lselinux
 endif
 
@@ -140,7 +163,8 @@ endif # BUILD_CHFN_CHSH
 
 if BUILD_SU
 bin_PROGRAMS += su
-dist_man_MANS += login-utils/su.1
+MANPAGES += login-utils/su.1
+dist_noinst_DATA += login-utils/su.1.adoc
 su_SOURCES = \
 	login-utils/su.c \
 	login-utils/su-common.c \
@@ -167,7 +191,8 @@ endif # BUILD_SU
 
 if BUILD_RUNUSER
 sbin_PROGRAMS += runuser
-dist_man_MANS += login-utils/runuser.1
+MANPAGES += login-utils/runuser.1
+dist_noinst_DATA += login-utils/runuser.1.adoc
 runuser_SOURCES = \
 	login-utils/runuser.c \
 	login-utils/su-common.c \
@@ -192,7 +217,8 @@ endif # BUILD_RUNUSER
 
 if BUILD_NEWGRP
 usrbin_exec_PROGRAMS += newgrp
-dist_man_MANS += login-utils/newgrp.1
+MANPAGES += login-utils/newgrp.1
+dist_noinst_DATA += login-utils/newgrp.1.adoc
 newgrp_SOURCES = login-utils/newgrp.c
 newgrp_CFLAGS = $(SUID_CFLAGS) $(AM_CFLAGS)
 newgrp_LDFLAGS = $(SUID_LDFLAGS) $(AM_LDFLAGS)
@@ -202,9 +228,11 @@ newgrp_LDADD += -lcrypt
 endif
 endif # BUILD_NEWGRP
 
+
 if BUILD_LSLOGINS
 usrbin_exec_PROGRAMS += lslogins
-dist_man_MANS += login-utils/lslogins.1
+MANPAGES += login-utils/lslogins.1
+dist_noinst_DATA += login-utils/lslogins.1.adoc
 lslogins_SOURCES = \
 	login-utils/lslogins.c \
 	login-utils/logindefs.c \
@@ -223,11 +251,12 @@ lslogins_LDADD += -leconf
 endif
 endif # BUILD_LSLOGINS
 
+
 if BUILD_VIPW
 usrsbin_exec_PROGRAMS += vipw
-dist_man_MANS += \
-	login-utils/vigr.8 \
-	login-utils/vipw.8
+MANPAGES += login-utils/vipw.8
+dist_noinst_DATA += login-utils/vipw.8.adoc
+MANLINKS += login-utils/vigr.8
 vipw_SOURCES = \
 	login-utils/vipw.c \
 	login-utils/setpwnam.h
@@ -267,7 +296,4 @@ endif
 if MAKEINSTALL_DO_SETUID
 	chmod 4755 $(DESTDIR)$(bindir)/su
 endif
-endif
-if BUILD_VIPW
-	cd $(DESTDIR)$(usrsbin_execdir) && ln -sf vipw vigr
 endif

@@ -46,7 +46,7 @@
 
 #ifdef HAVE_LIBSELINUX
 # include <selinux/selinux.h>
-# include "selinux_utils.h"
+# include "selinux-utils.h"
 #endif
 
 #ifdef HAVE_LIBUSER
@@ -438,21 +438,16 @@ int main(int argc, char **argv)
 
 #ifdef HAVE_LIBSELINUX
 	if (is_selinux_enabled() > 0) {
-		if (uid == 0) {
-			access_vector_t av = get_access_vector("passwd", "chfn");
+		char *user_cxt = NULL;
 
-			if (selinux_check_passwd_access(av) != 0) {
-				security_context_t user_context;
-				if (getprevcon(&user_context) < 0)
-					user_context = NULL;
-				errx(EXIT_FAILURE,
-				     _("%s is not authorized to change "
-				       "the finger info of %s"),
-				     user_context ? : _("Unknown user context"),
-				     ctl.username);
-			}
-		}
-		if (setupDefaultContext(_PATH_PASSWD))
+		if (uid == 0 && !ul_selinux_has_access("passwd", "chfn", &user_cxt))
+			errx(EXIT_FAILURE,
+			     _("%s is not authorized to change "
+			       "the finger info of %s"),
+			     user_cxt ? : _("Unknown user context"),
+			     ctl.username);
+
+		if (ul_setfscreatecon_from_file(_PATH_PASSWD) != 0)
 			errx(EXIT_FAILURE,
 			     _("can't set default context for %s"), _PATH_PASSWD);
 	}

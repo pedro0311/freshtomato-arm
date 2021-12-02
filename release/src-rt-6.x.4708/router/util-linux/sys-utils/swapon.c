@@ -246,14 +246,27 @@ static int display_summary(void)
 	if (!itr)
 		err(EXIT_FAILURE, _("failed to initialize libmount iterator"));
 
-	printf(_("%s\t\t\t\tType\t\tSize\tUsed\tPriority\n"), _("Filename"));
+	/* TRANSLATORS: The tabs make each field a multiple of 8 characters. Keep aligned with each entry below. */
+	printf(_("Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n"));
 
 	while (mnt_table_next_fs(st, itr, &fs) == 0) {
-		printf("%-39s\t%-8s\t%jd\t%jd\t%d\n",
-			mnt_fs_get_source(fs),
-			mnt_fs_get_swaptype(fs),
-			mnt_fs_get_size(fs),
-			mnt_fs_get_usedsize(fs),
+		const char *src = mnt_fs_get_source(fs);
+		const char *type = mnt_fs_get_swaptype(fs);
+		int srclen = strlen(src);
+		int typelen = strlen(type);
+		off_t size = mnt_fs_get_size(fs);
+		off_t used = mnt_fs_get_usedsize(fs);
+
+		/* TRANSLATORS: Keep each field a multiple of 8 characters and aligned with the header above. */
+		printf("%s%*s%s%s\t%jd%s\t%jd%s\t%d\n",
+			src,
+			srclen < 40 ? 40 - srclen : 1, " ",
+			type,
+			typelen < 8 ? "\t" : "",
+			size,
+			size < 10000000 ? "\t" : "",
+			used,
+			used < 10000000 ? "\t" : "",
 			mnt_fs_get_priority(fs));
 	}
 
@@ -320,13 +333,8 @@ static int swap_reinitialize(struct swap_device *dev)
 		return -1;
 
 	case 0:	/* child */
-		if (geteuid() != getuid()) {
-			/* in case someone uses swapon as setuid binary */
-			if (setgid(getgid()) < 0)
-				exit(EXIT_FAILURE);
-			if (setuid(getuid()) < 0)
-				exit(EXIT_FAILURE);
-		}
+		if (geteuid() != getuid() && drop_permissions() != 0)
+			exit(EXIT_FAILURE);
 
 		cmd[idx++] = "mkswap";
 		if (dev->label) {
@@ -714,9 +722,15 @@ static int parse_options(struct swap_prop *props, const char *options)
 	}
 
 	arg = NULL;
-	if (mnt_optstr_get_option(options, "pri", &arg, NULL) == 0 && arg)
-		props->priority = atoi(arg);
+	if (mnt_optstr_get_option(options, "pri", &arg, &argsz) == 0 && arg) {
+		char *end = NULL;
+		int n;
 
+		errno = 0;
+		n = (int) strtol(arg, &end, 10);
+		if (errno == 0 && end && end > arg)
+			props->priority = n;
+	}
 	return 0;
 }
 

@@ -82,7 +82,6 @@ UL_DEBUG_DEFINE_MASKNAMES(su) = UL_DEBUG_EMPTY_MASKNAMES;
 #define DBG(m, x)       __UL_DBG(su, SU_DEBUG_, m, x)
 #define ON_DBG(m, x)    __UL_DBG_CALL(su, SU_DEBUG_, m, x)
 
-
 /* name of the pam configuration files. separate configs for su and su -  */
 #define PAM_SRVNAME_SU "su"
 #define PAM_SRVNAME_SU_L "su-l"
@@ -128,6 +127,7 @@ struct su_context {
 	struct passwd	*pwd;			/* new user info */
 	char		*pwdbuf;		/* pwd strings */
 
+	const char	*tty_path;		/* tty device path */
 	const char	*tty_name;		/* tty_path without /dev prefix */
 	const char	*tty_number;		/* end of the tty_path */
 
@@ -178,7 +178,7 @@ static void init_tty(struct su_context *su)
 	su->isterm = isatty(STDIN_FILENO) ? 1 : 0;
 	DBG(TTY, ul_debug("initialize [is-term=%s]", su->isterm ? "true" : "false"));
 	if (su->isterm)
-		get_terminal_name(NULL, &su->tty_name, &su->tty_number);
+		get_terminal_name(&su->tty_path, &su->tty_name, &su->tty_number);
 }
 
 /*
@@ -253,6 +253,26 @@ static void wait_for_child_cb(
 			pid_t child __attribute__((__unused__)))
 {
 	wait_for_child((struct su_context *) data);
+}
+
+static void chownmod_pty(struct su_context *su)
+{
+	gid_t gid = su->pwd->pw_gid;
+	mode_t mode = (mode_t) getlogindefs_num("TTYPERM", TTY_MODE);
+	const char *grname = getlogindefs_str("TTYGROUP", TTYGRPNAME);
+
+	if (grname && *grname) {
+		struct group *gr = getgrnam(grname);
+		if (gr)	/* group by name */
+			gid = gr->gr_gid;
+		else	/* group by ID */
+			gid = (gid_t) getlogindefs_num("TTYGROUP", gid);
+	}
+
+	if (ul_pty_chownmod_slave(su->pty,
+				  su->pwd->pw_uid,
+				  gid, mode))
+		warn(_("change owner or mode for pseudo-terminal failed"));
 }
 #endif
 
@@ -366,8 +386,8 @@ static void supam_authenticate(struct su_context *su)
 	if (is_pam_failure(rc))
 		goto done;
 
-	if (su->tty_name) {
-		rc = pam_set_item(su->pamh, PAM_TTY, su->tty_name);
+	if (su->tty_path) {
+		rc = pam_set_item(su->pamh, PAM_TTY, su->tty_path);
 		if (is_pam_failure(rc))
 			goto done;
 	}
@@ -495,7 +515,6 @@ static void parent_setup_signals(struct su_context *su)
 	}
 }
 
-
 static void create_watching_parent(struct su_context *su)
 {
 	int status;
@@ -511,6 +530,8 @@ static void create_watching_parent(struct su_context *su)
 		cb = ul_pty_get_callbacks(su->pty);
 		cb->child_wait    = wait_for_child_cb;
 		cb->child_sigstop = wait_for_child_cb;
+
+		ul_pty_slave_echo(su->pty, 1);
 
 		/* create pty */
 		if (ul_pty_setup(su->pty))
@@ -550,8 +571,7 @@ static void create_watching_parent(struct su_context *su)
 	if (su->force_pty) {
 		ul_pty_set_child(su->pty, su->child);
 
-		if (ul_pty_proxy_master(su->pty) != 0)
-			caught_signal = true;
+		ul_pty_proxy_master(su->pty);
 
 		/* ul_pty_proxy_master() keeps classic signal handler are out of game */
 		caught_signal = ul_pty_get_delivered_signal(su->pty);
@@ -1189,6 +1209,10 @@ int su_main(int argc, char **argv, int mode)
 	create_watching_parent(su);
 	/* Now we're in the child.  */
 
+#ifdef USE_PTY
+	if (su->force_pty)
+		chownmod_pty(su);
+#endif
 	change_identity(su->pwd);
 	if (!su->same_session) {
 		/* note that on --pty we call setsid() in ul_pty_init_slave() */

@@ -34,10 +34,15 @@ static inline FILE *fopen_at(int dir, const char *filename,
                              int flags, const char *mode)
 {
 	int fd = openat(dir, filename, flags);
+	FILE *ret;
+
 	if (fd < 0)
 		return NULL;
 
-	return fdopen(fd, mode);
+	ret = fdopen(fd, mode);
+	if (!ret)
+		close(fd);
+	return ret;
 }
 #endif
 
@@ -53,9 +58,9 @@ static inline int is_same_inode(const int fd, const struct stat *st)
 }
 
 extern int dup_fd_cloexec(int oldfd, int lowfd);
-extern int get_fd_tabsize(void);
+extern unsigned int get_fd_tabsize(void);
 
-extern int mkdir_p(const char *path, mode_t mode);
+extern int ul_mkdir_p(const char *path, mode_t mode);
 extern char *stripoff_last_component(char *path);
 
 /* This is readdir()-like function, but skips "." and ".." directory entries */
@@ -72,6 +77,24 @@ static inline struct dirent *xreaddir(DIR *dp)
 	return d;
 }
 
-extern void close_all_fds(const int exclude[], size_t exsz);
+#if defined(__linux__)
+# include <sys/syscall.h>
+# if defined(SYS_close_range)
+#  include <sys/types.h>
+#  ifndef HAVE_CLOSE_RANGE
+static inline int close_range(unsigned int first, unsigned int last, int flags)
+{
+	return syscall(SYS_close_range, first, last, flags);
+}
+#  endif
+#  define HAVE_CLOSE_RANGE 1
+# endif	/* SYS_close_range */
+#endif	/* __linux__ */
+
+extern void ul_close_all_fds(unsigned int first, unsigned int last);
+
+#define UL_COPY_READ_ERROR (-1)
+#define UL_COPY_WRITE_ERROR (-2)
+int ul_copy_file(int from, int to);
 
 #endif /* UTIL_LINUX_FILEUTILS */

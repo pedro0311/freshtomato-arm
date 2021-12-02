@@ -230,7 +230,9 @@ static void sfdisk_init(struct sfdisk *sf)
 	if (!sf->cxt)
 		err(EXIT_FAILURE, _("failed to allocate libfdisk context"));
 	fdisk_set_ask(sf->cxt, ask_callback, (void *) sf);
-	fdisk_enable_bootbits_protection(sf->cxt, 1);
+
+	if (sf->wipemode != WIPEMODE_ALWAYS)
+		fdisk_enable_bootbits_protection(sf->cxt, 1);
 
 	if (sf->label_nested) {
 		struct fdisk_context *x = fdisk_new_nested_context(sf->cxt,
@@ -466,7 +468,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 		typescript = mk_backup_filename_tpl(sf->move_typescript, devname, ".move");
 
 	if (!sf->quiet) {
-		fdisk_info(sf->cxt,"");
+		fdisk_info(sf->cxt, "%s", "");
 		color_scheme_enable("header", UL_COLOR_BOLD);
 		fdisk_info(sf->cxt, sf->noact ? _("Data move: (--no-act)") : _("Data move:"));
 		color_disable();
@@ -487,6 +489,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 		fdisk_ask_yesno(sf->cxt, _("Do you want to move partition data?"), &yes);
 		if (!yes) {
 			fdisk_info(sf->cxt, _("Leaving."));
+			free(devname);
 			return 0;
 		}
 	}
@@ -1163,6 +1166,7 @@ static int command_parttype(struct sfdisk *sf, int argc, char **argv)
 	type = fdisk_label_advparse_parttype(lb, typestr,
 			FDISK_PARTTYPE_PARSE_DATA
 			| FDISK_PARTTYPE_PARSE_ALIAS
+			| FDISK_PARTTYPE_PARSE_NAME
 			| FDISK_PARTTYPE_PARSE_SHORTCUT);
 	if (!type)
 		errx(EXIT_FAILURE, _("failed to parse %s partition type '%s'"),
@@ -1635,7 +1639,7 @@ static void follow_wipe_mode(struct sfdisk *sf)
 	if (dowipe) {
 		if (!fdisk_is_ptcollision(sf->cxt)) {
 			fdisk_warnx(sf->cxt, _(
-				"The device contains '%s' signature and it will be removed by a write command. "
+				"The device contains '%s' signature and it may be removed by a write command. "
 				"See sfdisk(8) man page and --wipe option for more details."),
 				fdisk_get_collision(sf->cxt));
 			fputc('\n', stdout);
@@ -1922,7 +1926,7 @@ static int command_fdisk(struct sfdisk *sf, int argc, char **argv)
 				rc = fdisk_add_partition(sf->cxt, pa, &cur_partno);
 				if (rc) {
 					errno = -rc;
-					fdisk_warn(sf->cxt, _("Failed to add #%d partition"), next_partno + 1);
+					fdisk_warn(sf->cxt, _("Failed to add #%zu partition"), next_partno + 1);
 				}
 			}
 
