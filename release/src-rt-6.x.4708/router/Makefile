@@ -3401,6 +3401,7 @@ libffi/stamp-h1:
 libffi: libffi/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/libffi/staged install
 	@rm -f libffi/staged/usr/lib/libffi.la
 
 libffi-install:
