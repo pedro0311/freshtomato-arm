@@ -2719,7 +2719,8 @@ tinc-clean:
 	$(call unpatch_files,tinc)
 
 util-linux/stamp-h1:
-	cd util-linux && autoreconf -fsi && \
+	$(call patch_files,util-linux)
+	cd util-linux && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) \
@@ -2746,7 +2747,8 @@ util-linux-install:
 util-linux-clean:
 	-@$(MAKE) -C util-linux clean
 	@rm -f util-linux/stamp-h1
-	-@rm -rf util-linux/staged
+	@rm -rf util-linux/staged
+	$(call patch_files,util-linux)
 
 gettext-tiny/stamp-h1:
 	@$(MAKE) -C gettext-tiny \
