@@ -1,6 +1,7 @@
-/*
-   Copyright (c) 2000-2008 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+#ifndef SQL_ACL_INCLUDED
+#define SQL_ACL_INCLUDED
+
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,10 +14,11 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "slave.h" // for tables_ok(), rpl_filter
+#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "violite.h"                            /* SSL_type */
+#include "sql_class.h"                          /* LEX_COLUMN */
 
 #define SELECT_ACL	(1L << 0)
 #define INSERT_ACL	(1L << 1)
@@ -46,6 +48,7 @@
 #define CREATE_USER_ACL (1L << 25)
 #define EVENT_ACL       (1L << 26)
 #define TRIGGER_ACL     (1L << 27)
+#define CREATE_TABLESPACE_ACL (1L << 28)
 /*
   don't forget to update
   1. static struct show_privileges_st sys_privileges[]
@@ -54,7 +57,6 @@
   4. acl_init() or whatever - to define behaviour for old privilege tables
   5. sql_yacc.yy - for GRANT/REVOKE to work
 */
-#define EXTRA_ACL	(1L << 29)
 #define NO_ACCESS	(1L << 30)
 #define DB_ACLS \
 (UPDATE_ACL | SELECT_ACL | INSERT_ACL | DELETE_ACL | CREATE_ACL | DROP_ACL | \
@@ -82,10 +84,16 @@
  REFERENCES_ACL | INDEX_ACL | ALTER_ACL | SHOW_DB_ACL | SUPER_ACL | \
  CREATE_TMP_ACL | LOCK_TABLES_ACL | REPL_SLAVE_ACL | REPL_CLIENT_ACL | \
  EXECUTE_ACL | CREATE_VIEW_ACL | SHOW_VIEW_ACL | CREATE_PROC_ACL | \
- ALTER_PROC_ACL | CREATE_USER_ACL | EVENT_ACL | TRIGGER_ACL)
+ ALTER_PROC_ACL | CREATE_USER_ACL | EVENT_ACL | TRIGGER_ACL | \
+ CREATE_TABLESPACE_ACL)
 
 #define DEFAULT_CREATE_PROC_ACLS \
 (ALTER_PROC_ACL | EXECUTE_ACL)
+
+#define SHOW_CREATE_TABLE_ACLS \
+(SELECT_ACL | INSERT_ACL | UPDATE_ACL | DELETE_ACL | \
+ CREATE_ACL | DROP_ACL | ALTER_ACL | INDEX_ACL | \
+ TRIGGER_ACL | REFERENCES_ACL | GRANT_ACL | CREATE_VIEW_ACL | SHOW_VIEW_ACL)
 
 /*
   Defines to change the above bits to how things are stored in tables
@@ -135,6 +143,53 @@
 				     (((A) & ALTER_PROC_ACL) >> 23) | \
 				     (((A) & GRANT_ACL) >> 8))
 
+enum mysql_user_table_field
+{
+  MYSQL_USER_FIELD_HOST = 0,
+  MYSQL_USER_FIELD_USER,
+  MYSQL_USER_FIELD_PASSWORD,
+  MYSQL_USER_FIELD_SELECT_PRIV,
+  MYSQL_USER_FIELD_INSERT_PRIV,
+  MYSQL_USER_FIELD_UPDATE_PRIV,
+  MYSQL_USER_FIELD_DELETE_PRIV,
+  MYSQL_USER_FIELD_CREATE_PRIV,
+  MYSQL_USER_FIELD_DROP_PRIV,
+  MYSQL_USER_FIELD_RELOAD_PRIV,
+  MYSQL_USER_FIELD_SHUTDOWN_PRIV,
+  MYSQL_USER_FIELD_PROCESS_PRIV,
+  MYSQL_USER_FIELD_FILE_PRIV,
+  MYSQL_USER_FIELD_GRANT_PRIV,
+  MYSQL_USER_FIELD_REFERENCES_PRIV,
+  MYSQL_USER_FIELD_INDEX_PRIV,
+  MYSQL_USER_FIELD_ALTER_PRIV,
+  MYSQL_USER_FIELD_SHOW_DB_PRIV,
+  MYSQL_USER_FIELD_SUPER_PRIV,
+  MYSQL_USER_FIELD_CREATE_TMP_TABLE_PRIV,
+  MYSQL_USER_FIELD_LOCK_TABLES_PRIV,
+  MYSQL_USER_FIELD_EXECUTE_PRIV,
+  MYSQL_USER_FIELD_REPL_SLAVE_PRIV,
+  MYSQL_USER_FIELD_REPL_CLIENT_PRIV,
+  MYSQL_USER_FIELD_CREATE_VIEW_PRIV,
+  MYSQL_USER_FIELD_SHOW_VIEW_PRIV,
+  MYSQL_USER_FIELD_CREATE_ROUTINE_PRIV,
+  MYSQL_USER_FIELD_ALTER_ROUTINE_PRIV,
+  MYSQL_USER_FIELD_CREATE_USER_PRIV,
+  MYSQL_USER_FIELD_EVENT_PRIV,
+  MYSQL_USER_FIELD_TRIGGER_PRIV,
+  MYSQL_USER_FIELD_CREATE_TABLESPACE_PRIV,
+  MYSQL_USER_FIELD_SSL_TYPE,
+  MYSQL_USER_FIELD_SSL_CIPHER,
+  MYSQL_USER_FIELD_X509_ISSUER,
+  MYSQL_USER_FIELD_X509_SUBJECT,
+  MYSQL_USER_FIELD_MAX_QUESTIONS,
+  MYSQL_USER_FIELD_MAX_UPDATES,
+  MYSQL_USER_FIELD_MAX_CONNECTIONS,
+  MYSQL_USER_FIELD_MAX_USER_CONNECTIONS,
+  MYSQL_USER_FIELD_PLUGIN,
+  MYSQL_USER_FIELD_AUTHENTICATION_STRING,
+  MYSQL_USER_FIELD_COUNT
+};
+
 enum mysql_db_table_field
 {
   MYSQL_DB_FIELD_HOST = 0,
@@ -162,54 +217,58 @@ enum mysql_db_table_field
   MYSQL_DB_FIELD_COUNT
 };
 
+enum mysql_proxies_priv_table_feild
+{
+  MYSQL_PROXIES_PRIV_FIELD_HOST = 0,
+  MYSQL_PROXIES_PRIV_FIELD_USER,
+  MYSQL_PROXIES_PRIV_FIELD_PROXIED_HOST,
+  MYSQL_PROXIES_PRIV_FIELD_PROXIED_USER,
+  MYSQL_PROXIES_PRIV_FIELD_WITH_GRANT,
+  MYSQL_PROXIES_PRIV_FIELD_GRANTOR,
+  MYSQL_PROXIES_PRIV_FIELD_TIMESTAMP,
+  MYSQL_PROXIES_PRIV_FIELD_COUNT
+};
+
+enum mysql_procs_priv_table_field
+{
+  MYSQL_PROCS_PRIV_FIELD_HOST = 0,
+  MYSQL_PROCS_PRIV_FIELD_DB,
+  MYSQL_PROCS_PRIV_FIELD_USER,
+  MYSQL_PROCS_PRIV_FIELD_ROUTINE_NAME,
+  MYSQL_PROCS_PRIV_FIELD_ROUTINE_TYPE,
+  MYSQL_PROCS_PRIV_FIELD_GRANTOR,
+  MYSQL_PROCS_PRIV_FIELD_PROC_PRIV,
+  MYSQL_PROCS_PRIV_FIELD_TIMESTAMP,
+  MYSQL_PROCS_PRIV_FIELD_COUNT
+};
+
+enum mysql_columns_priv_table_field
+{
+  MYSQL_COLUMNS_PRIV_FIELD_HOST = 0,
+  MYSQL_COLUMNS_PRIV_FIELD_DB,
+  MYSQL_COLUMNS_PRIV_FIELD_USER,
+  MYSQL_COLUMNS_PRIV_FIELD_TABLE_NAME,
+  MYSQL_COLUMNS_PRIV_FIELD_COLUMN_NAME,
+  MYSQL_COLUMNS_PRIV_FIELD_TIMESTAMP,
+  MYSQL_COLUMNS_PRIV_FIELD_COLUMN_PRIV,
+  MYSQL_COLUMNS_PRIV_FIELD_COUNT
+};
+
+enum mysql_tables_priv_table_field
+{
+  MYSQL_TABLES_PRIV_FIELD_HOST = 0,
+  MYSQL_TABLES_PRIV_FIELD_DB,
+  MYSQL_TABLES_PRIV_FIELD_USER,
+  MYSQL_TABLES_PRIV_FIELD_TABLE_NAME,
+  MYSQL_TABLES_PRIV_FIELD_GRANTOR,
+  MYSQL_TABLES_PRIV_FIELD_TIMESTAMP,
+  MYSQL_TABLES_PRIV_FIELD_TABLE_PRIV,
+  MYSQL_TABLES_PRIV_FIELD_COLUMN_PRIV,
+  MYSQL_TABLES_PRIV_FIELD_COUNT
+};
+
 extern const TABLE_FIELD_DEF mysql_db_table_def;
-
-/* Classes */
-
-struct acl_host_and_ip
-{
-  char *hostname;
-  long ip,ip_mask;                      // Used with masked ip:s
-};
-
-
-class ACL_ACCESS {
-public:
-  ulong sort;
-  ulong access;
-};
-
-
-/* ACL_HOST is used if no host is specified */
-
-class ACL_HOST :public ACL_ACCESS
-{
-public:
-  acl_host_and_ip host;
-  char *db;
-};
-
-
-class ACL_USER :public ACL_ACCESS
-{
-public:
-  acl_host_and_ip host;
-  uint hostname_length;
-  USER_RESOURCES user_resource;
-  char *user;
-  uint8 salt[SCRAMBLE_LENGTH+1];       // scrambled password in binary form
-  uint8 salt_len;        // 0 - no password, 4 - 3.20, 8 - 3.23, 20 - 4.1.1 
-  enum SSL_type ssl_type;
-  const char *ssl_cipher, *x509_issuer, *x509_subject;
-};
-
-
-class ACL_DB :public ACL_ACCESS
-{
-public:
-  acl_host_and_ip host;
-  char *user,*db;
-};
+extern bool mysql_user_table_is_in_short_password_format;
 
 /* prototypes */
 
@@ -219,17 +278,16 @@ my_bool acl_reload(THD *thd);
 void acl_free(bool end=0);
 ulong acl_get(const char *host, const char *ip,
 	      const char *user, const char *db, my_bool db_is_pattern);
-int acl_getroot(THD *thd, USER_RESOURCES *mqh, const char *passwd,
-                uint passwd_len);
-bool acl_getroot_no_password(Security_context *sctx, char *user, char *host,
-                             char *ip, char *db);
+bool acl_authenticate(THD *thd, uint connect_errors, uint com_change_user_pkt_len);
+bool acl_getroot(Security_context *sctx, char *user, char *host,
+                 char *ip, char *db);
 bool acl_check_host(const char *host, const char *ip);
 int check_change_password(THD *thd, const char *host, const char *user,
                            char *password, uint password_len);
 bool change_password(THD *thd, const char *host, const char *user,
 		     char *password);
 bool mysql_grant(THD *thd, const char *db, List <LEX_USER> &user_list,
-                 ulong rights, bool revoke);
+                 ulong rights, bool revoke, bool is_proxy);
 int mysql_table_grant(THD *thd, TABLE_LIST *table, List <LEX_USER> &user_list,
                        List <LEX_COLUMN> &column_list, ulong rights,
                        bool revoke);
@@ -240,7 +298,7 @@ my_bool grant_init();
 void grant_free(void);
 my_bool grant_reload(THD *thd);
 bool check_grant(THD *thd, ulong want_access, TABLE_LIST *tables,
-		 uint show_command, uint number, bool dont_print_error);
+                 bool any_combination_will_do, uint number, bool no_errors);
 bool check_grant_column (THD *thd, GRANT_INFO *grant,
 			 const char *db_name, const char *table_name,
 			 const char *name, uint length, Security_context *sctx);
@@ -271,7 +329,146 @@ bool sp_grant_privileges(THD *thd, const char *sp_db, const char *sp_name,
 bool check_routine_level_acl(THD *thd, const char *db, const char *name,
                              bool is_proc);
 bool is_acl_user(const char *host, const char *user);
+int fill_schema_user_privileges(THD *thd, TABLE_LIST *tables, COND *cond);
+int fill_schema_schema_privileges(THD *thd, TABLE_LIST *tables, COND *cond);
+int fill_schema_table_privileges(THD *thd, TABLE_LIST *tables, COND *cond);
+int fill_schema_column_privileges(THD *thd, TABLE_LIST *tables, COND *cond);
+int wild_case_compare(CHARSET_INFO *cs, const char *str,const char *wildstr);
+
 #ifdef NO_EMBEDDED_ACCESS_CHECKS
 #define check_grant(A,B,C,D,E,F) 0
 #define check_grant_db(A,B) 0
 #endif
+
+/**
+  Result of an access check for an internal schema or table.
+  Internal ACL checks are always performed *before* using
+  the grant tables.
+  This mechanism enforces that the server implementation has full
+  control on its internal tables.
+  Depending on the internal check result, the server implementation
+  can choose to:
+  - always allow access,
+  - always deny access,
+  - delegate the decision to the database administrator,
+  by using the grant tables.
+*/
+enum ACL_internal_access_result
+{
+  /**
+    Access granted for all the requested privileges,
+    do not use the grant tables.
+    This flag is used only for the INFORMATION_SCHEMA privileges,
+    for compatibility reasons.
+  */
+  ACL_INTERNAL_ACCESS_GRANTED,
+  /** Access denied, do not use the grant tables. */
+  ACL_INTERNAL_ACCESS_DENIED,
+  /** No decision yet, use the grant tables. */
+  ACL_INTERNAL_ACCESS_CHECK_GRANT
+};
+
+/**
+  Per internal table ACL access rules.
+  This class is an interface.
+  Per table(s) specific access rule should be implemented in a subclass.
+  @sa ACL_internal_schema_access
+*/
+class ACL_internal_table_access
+{
+public:
+  ACL_internal_table_access()
+  {}
+
+  virtual ~ACL_internal_table_access()
+  {}
+
+  /**
+    Check access to an internal table.
+    When a privilege is granted, this method add the requested privilege
+    to save_priv.
+    @param want_access the privileges requested
+    @param [in, out] save_priv the privileges granted
+    @return
+      @retval ACL_INTERNAL_ACCESS_GRANTED All the requested privileges
+      are granted, and saved in save_priv.
+      @retval ACL_INTERNAL_ACCESS_DENIED At least one of the requested
+      privileges was denied.
+      @retval ACL_INTERNAL_ACCESS_CHECK_GRANT No requested privilege
+      was denied, and grant should be checked for at least one
+      privilege. Requested privileges that are granted, if any, are saved
+      in save_priv.
+  */
+  virtual ACL_internal_access_result check(ulong want_access,
+                                           ulong *save_priv) const= 0;
+};
+
+/**
+  Per internal schema ACL access rules.
+  This class is an interface.
+  Each per schema specific access rule should be implemented
+  in a different subclass, and registered.
+  Per schema access rules can control:
+  - every schema privileges on schema.*
+  - every table privileges on schema.table
+  @sa ACL_internal_schema_registry
+*/
+class ACL_internal_schema_access
+{
+public:
+  ACL_internal_schema_access()
+  {}
+
+  virtual ~ACL_internal_schema_access()
+  {}
+
+  /**
+    Check access to an internal schema.
+    @param want_access the privileges requested
+    @param [in, out] save_priv the privileges granted
+    @return
+      @retval ACL_INTERNAL_ACCESS_GRANTED All the requested privileges
+      are granted, and saved in save_priv.
+      @retval ACL_INTERNAL_ACCESS_DENIED At least one of the requested
+      privileges was denied.
+      @retval ACL_INTERNAL_ACCESS_CHECK_GRANT No requested privilege
+      was denied, and grant should be checked for at least one
+      privilege. Requested privileges that are granted, if any, are saved
+      in save_priv.
+  */
+  virtual ACL_internal_access_result check(ulong want_access,
+                                           ulong *save_priv) const= 0;
+
+  /**
+    Search for per table ACL access rules by table name.
+    @param name the table name
+    @return per table access rules, or NULL
+  */
+  virtual const ACL_internal_table_access *lookup(const char *name) const= 0;
+};
+
+/**
+  A registry for per internal schema ACL.
+  An 'internal schema' is a database schema maintained by the
+  server implementation, such as 'performance_schema' and 'INFORMATION_SCHEMA'.
+*/
+class ACL_internal_schema_registry
+{
+public:
+  static void register_schema(const LEX_STRING *name,
+                              const ACL_internal_schema_access *access);
+  static const ACL_internal_schema_access *lookup(const char *name);
+};
+
+const ACL_internal_schema_access *
+get_cached_schema_access(GRANT_INTERNAL_INFO *grant_internal_info,
+                         const char *schema_name);
+
+const ACL_internal_table_access *
+get_cached_table_access(GRANT_INTERNAL_INFO *grant_internal_info,
+                        const char *schema_name,
+                        const char *table_name);
+
+bool acl_check_proxy_grant_access (THD *thd, const char *host, const char *user,
+                                   bool with_grant);
+#endif /* SQL_ACL_INCLUDED */

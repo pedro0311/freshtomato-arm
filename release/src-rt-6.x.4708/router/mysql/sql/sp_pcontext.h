@@ -1,7 +1,5 @@
 /* -*- C++ -*- */
-/*
-   Copyright (c) 2002-2007 MySQL AB, 2008, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2002, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _SP_PCONTEXT_H_
 #define _SP_PCONTEXT_H_
@@ -23,6 +20,12 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+#include "sql_string.h"                         // LEX_STRING
+#include "mysql_com.h"                          // enum_field_types
+#include "field.h"                              // Create_field
+
+class sp_pcontext;
 
 typedef enum
 {
@@ -328,13 +331,6 @@ public:
 
   int
   push_cond(LEX_STRING *name, sp_cond_type_t *val);
-
-  inline void
-  pop_cond(uint num)
-  {
-    while (num--)
-      pop_dynamic(&m_conds);
-  }
 
   sp_cond_type_t *
   find_cond(LEX_STRING *name, my_bool scoped=0);

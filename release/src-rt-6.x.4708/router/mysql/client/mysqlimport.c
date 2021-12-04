@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -24,19 +24,15 @@
 
 #include "client_priv.h"
 #include "mysql_version.h"
-#ifdef HAVE_LIBPTHREAD
-#include <my_pthread.h>
-#endif
+
+#include <welcome_copyright_notice.h>   /* ORACLE_WELCOME_COPYRIGHT_NOTICE */
 
 
 /* Global Thread counter */
 uint counter;
-#ifdef HAVE_LIBPTHREAD
+pthread_mutex_t init_mutex;
 pthread_mutex_t counter_mutex;
 pthread_cond_t count_threshhold;
-#endif
-
-#include <welcome_copyright_notice.h>   /* ORACLE_WELCOME_COPYRIGHT_NOTICE */
 
 static void db_error_with_table(MYSQL *mysql, char *table);
 static void db_error(MYSQL *mysql);
@@ -53,11 +49,13 @@ static char	*opt_password=0, *current_user=0,
 		*current_host=0, *current_db=0, *fields_terminated=0,
 		*lines_terminated=0, *enclosed=0, *opt_enclosed=0,
 		*escaped=0, *opt_columns=0, 
-		*default_charset= (char*) MYSQL_DEFAULT_CHARSET_NAME;
+		*default_charset= (char*) MYSQL_AUTODETECT_CHARSET_NAME;
+static uint opt_enable_cleartext_plugin= 0;
+static my_bool using_opt_enable_cleartext_plugin= 0;
 static uint     opt_mysql_port= 0, opt_protocol= 0;
 static char * opt_mysql_unix_port=0;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
 static longlong opt_ignore_lines= -1;
-static CHARSET_INFO *charset_info= &my_charset_latin1;
 #include <sslopt-vars.h>
 
 #ifdef HAVE_SMEM
@@ -66,10 +64,6 @@ static char *shared_memory_base_name=0;
 
 static struct my_option my_long_options[] =
 {
-#ifdef __NETWARE__
-  {"autoclose", OPT_AUTO_CLOSE, "Automatically close the screen on exit for Netware.",
-   0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
-#endif
   {"character-sets-dir", OPT_CHARSETS_DIR,
    "Directory for character set files.", &charsets_dir,
    &charsets_dir, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -91,8 +85,16 @@ static struct my_option my_long_options[] =
   {"debug-info", OPT_DEBUG_INFO, "Print some debug info at exit.",
    &debug_info_flag, &debug_info_flag,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"default_auth", OPT_DEFAULT_AUTH,
+   "Default authentication client-side plugin to use.",
+   &opt_default_auth, &opt_default_auth, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"delete", 'd', "First delete all rows from table.", &opt_delete,
    &opt_delete, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"enable_cleartext_plugin", OPT_ENABLE_CLEARTEXT_PLUGIN,
+   "Enable/disable the clear text authentication plugin.",
+   &opt_enable_cleartext_plugin, &opt_enable_cleartext_plugin,
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"fields-terminated-by", OPT_FTB,
    "Fields in the input file are terminated by the given string.", 
    &fields_terminated, &fields_terminated, 0, 
@@ -140,6 +142,9 @@ static struct my_option my_long_options[] =
   {"pipe", 'W', "Use named pipes to connect to server.", 0, 0, 0, GET_NO_ARG,
    NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"plugin_dir", OPT_PLUGIN_DIR, "Directory for client-side plugins.",
+   &opt_plugin_dir, &opt_plugin_dir, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port", 'P', "Port number to use for connection or 0 for default to, in "
    "order of preference, my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
@@ -183,13 +188,11 @@ static struct my_option my_long_options[] =
 
 static const char *load_default_groups[]= { "mysqlimport","client",0 };
 
-#include <help_start.h>
 
 static void print_version(void)
 {
   printf("%s  Ver %s Distrib %s, for %s (%s)\n" ,my_progname,
 	  IMPORT_VERSION, MYSQL_SERVER_VERSION,SYSTEM_TYPE,MACHINE_TYPE);
-  NETWARE_SET_SCREEN_MODE(1);
 }
 
 
@@ -210,25 +213,19 @@ file. The SQL command 'LOAD DATA INFILE' is used to import the rows.\n");
   my_print_variables(my_long_options);
 }
 
-#include <help_end.h>
 
 static my_bool
 get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
 	       char *argument)
 {
   switch(optid) {
-#ifdef __NETWARE__
-  case OPT_AUTO_CLOSE:
-    setscreenmode(SCR_AUTOCLOSE_ON_EXIT);
-    break;
-#endif
   case 'p':
     if (argument == disabled_my_option)
       argument= (char*) "";			/* Don't require password */
     if (argument)
     {
       char *start=argument;
-      my_free(opt_password,MYF(MY_ALLOW_ZERO_PTR));
+      my_free(opt_password);
       opt_password=my_strdup(argument,MYF(MY_FAE));
       while (*argument) *argument++= 'x';		/* Destroy argument */
       if (*start)
@@ -244,6 +241,9 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
     opt_local_file=1;
     break;
 #endif
+  case OPT_ENABLE_CLEARTEXT_PLUGIN:
+    using_opt_enable_cleartext_plugin= TRUE;
+    break;
   case OPT_MYSQL_PROTOCOL:
     opt_protocol= find_type_or_exit(argument, &sql_protocol_typelib,
                                     opt->name);
@@ -284,10 +284,6 @@ static int get_options(int *argc, char ***argv)
     fprintf(stderr, "You can't use --ignore (-i) and --replace (-r) at the same time.\n");
     return(1);
   }
-  if (strcmp(default_charset, charset_info->csname) &&
-      !(charset_info= get_charset_by_csname(default_charset,
-  					    MY_CS_PRIMARY, MYF(MY_WME))))
-    exit(1);
   if (*argc < 2)
   {
     usage();
@@ -422,8 +418,19 @@ static MYSQL *db_connect(char *host, char *database,
   MYSQL *mysql;
   if (verbose)
     fprintf(stdout, "Connecting to %s\n", host ? host : "localhost");
-  if (!(mysql= mysql_init(NULL)))
-    return 0;
+  if (opt_use_threads && !lock_tables)
+  {
+    pthread_mutex_lock(&init_mutex);
+    if (!(mysql= mysql_init(NULL)))
+    {
+      pthread_mutex_unlock(&init_mutex);
+      return 0;
+    }
+    pthread_mutex_unlock(&init_mutex);
+  }
+  else
+    if (!(mysql= mysql_init(NULL)))
+      return 0;
   if (opt_compress)
     mysql_options(mysql,MYSQL_OPT_COMPRESS,NullS);
   if (opt_local_file)
@@ -442,9 +449,21 @@ static MYSQL *db_connect(char *host, char *database,
   if (shared_memory_base_name)
     mysql_options(mysql,MYSQL_SHARED_MEMORY_BASE_NAME,shared_memory_base_name);
 #endif
-  if (!(mysql_real_connect(mysql,host,user,passwd,
-                           database,opt_mysql_port,opt_mysql_unix_port,
-                           0)))
+
+  if (opt_plugin_dir && *opt_plugin_dir)
+    mysql_options(mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+  if (opt_default_auth && *opt_default_auth)
+    mysql_options(mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
+
+  if (using_opt_enable_cleartext_plugin)
+    mysql_options(mysql, MYSQL_ENABLE_CLEARTEXT_PLUGIN,
+                  (char*)&opt_enable_cleartext_plugin);
+
+  mysql_options(mysql, MYSQL_SET_CHARSET_NAME, default_charset);
+  if (!(mysql_connect_ssl_check(mysql, host, user, passwd, database,
+                                opt_mysql_port, opt_mysql_unix_port,
+                                0, opt_ssl_mode == SSL_MODE_REQUIRED)))
   {
     ignore_errors=0;	  /* NO RETURN FROM db_error */
     db_error(mysql);
@@ -549,7 +568,6 @@ static char *field_escape(char *to,const char *from,uint length)
 
 int exitcode= 0;
 
-#ifdef HAVE_LIBPTHREAD
 pthread_handler_t worker_thread(void *arg)
 {
   int error;
@@ -586,10 +604,9 @@ error:
   pthread_cond_signal(&count_threshhold);
   pthread_mutex_unlock(&counter_mutex);
   mysql_thread_end();
-
+  pthread_exit(0);
   return 0;
 }
-#endif
 
 
 int main(int argc, char **argv)
@@ -598,7 +615,8 @@ int main(int argc, char **argv)
   char **argv_to_free;
   MY_INIT(argv[0]);
 
-  load_defaults("my",load_default_groups,&argc,&argv);
+  if (load_defaults("my",load_default_groups,&argc,&argv))
+    return 1;
   /* argv is changed in the program */
   argv_to_free= argv;
   if (get_options(&argc, &argv))
@@ -607,17 +625,32 @@ int main(int argc, char **argv)
     return(1);
   }
 
-#ifdef HAVE_LIBPTHREAD
   if (opt_use_threads && !lock_tables)
   {
-    pthread_t mainthread;            /* Thread descriptor */
-    pthread_attr_t attr;          /* Thread attributes */
+    char **save_argv;
+    uint worker_thread_count= 0, table_count= 0, i= 0;
+    pthread_t *worker_threads;       /* Thread descriptor */
+    pthread_attr_t attr;             /* Thread attributes */
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr,
-                                PTHREAD_CREATE_DETACHED);
+                                PTHREAD_CREATE_JOINABLE);
 
-    VOID(pthread_mutex_init(&counter_mutex, NULL));
-    VOID(pthread_cond_init(&count_threshhold, NULL));
+    pthread_mutex_init(&init_mutex, NULL);
+    pthread_mutex_init(&counter_mutex, NULL);
+    pthread_cond_init(&count_threshhold, NULL);
+
+    /* Count the number of tables. This number denotes the total number
+       of threads spawn.
+    */
+    save_argv= argv;
+    for (table_count= 0; *argv != NULL; argv++)
+      table_count++;
+    argv= save_argv;
+
+    if (!(worker_threads= (pthread_t*) my_malloc(table_count *
+                                                 sizeof(*worker_threads),
+                                                 MYF(0))))
+      return -2;
 
     for (counter= 0; *argv != NULL; argv++) /* Loop through tables */
     {
@@ -633,15 +666,16 @@ int main(int argc, char **argv)
       counter++;
       pthread_mutex_unlock(&counter_mutex);
       /* now create the thread */
-      if (pthread_create(&mainthread, &attr, worker_thread, 
-                         (void *)*argv) != 0)
+      if (pthread_create(&worker_threads[worker_thread_count], &attr,
+                         worker_thread, (void *)*argv) != 0)
       {
         pthread_mutex_lock(&counter_mutex);
         counter--;
         pthread_mutex_unlock(&counter_mutex);
-        fprintf(stderr,"%s: Could not create thread\n",
-                my_progname);
+        fprintf(stderr,"%s: Could not create thread\n", my_progname);
+        continue;
       }
+      worker_thread_count++;
     }
 
     /*
@@ -656,12 +690,20 @@ int main(int argc, char **argv)
       pthread_cond_timedwait(&count_threshhold, &counter_mutex, &abstime);
     }
     pthread_mutex_unlock(&counter_mutex);
-    VOID(pthread_mutex_destroy(&counter_mutex));
-    VOID(pthread_cond_destroy(&count_threshhold));
+    pthread_mutex_destroy(&init_mutex);
+    pthread_mutex_destroy(&counter_mutex);
+    pthread_cond_destroy(&count_threshhold);
     pthread_attr_destroy(&attr);
+
+    for(i= 0; i < worker_thread_count; i++)
+    {
+      if (pthread_join(worker_threads[i], NULL))
+        fprintf(stderr,"%s: Could not join worker thread.\n", my_progname);
+    }
+
+    my_free(worker_threads);
   }
   else
-#endif
   {
     MYSQL *mysql= 0;
     if (!(mysql= db_connect(current_host,current_db,current_user,opt_password)))
@@ -684,9 +726,9 @@ int main(int argc, char **argv)
           exitcode= error;
     db_disconnect(current_host, mysql);
   }
-  my_free(opt_password,MYF(MY_ALLOW_ZERO_PTR));
+  my_free(opt_password);
 #ifdef HAVE_SMEM
-  my_free(shared_memory_base_name,MYF(MY_ALLOW_ZERO_PTR));
+  my_free(shared_memory_base_name);
 #endif
   free_defaults(argv_to_free);
   my_end(my_end_arg);

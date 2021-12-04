@@ -1,5 +1,7 @@
-/*
-   Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+#ifndef AUTHORS_INCLUDED
+#define AUTHORS_INCLUDED
+
+/* Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
 /* Structure of the name list */
 
@@ -38,6 +39,7 @@ struct show_table_authors_st {
 struct show_table_authors_st show_table_authors[]= {
   { "Brian (Krow) Aker", "Seattle, WA, USA",
     "Architecture, archive, federated, bunch of little stuff :)" },
+  { "Marc Alff", "Denver, CO, USA", "Signal, Resignal, Performance schema" },
   { "Venu Anuganti", "", "Client/server protocol (4.1)" },
   { "David Axmark", "Uppsala, Sweden",
     "Small stuff long time ago, Monty ripped it out!" },
@@ -91,6 +93,7 @@ struct show_table_authors_st show_table_authors[]= {
   { "Arjen Lentz", "Brisbane, Australia",
     "Documentation (2001-2004), Dutch error messages, LOG2()" },
   { "Marc Liyanage", "", "Created Mac OS X packages" },
+  { "Kelly Long", "Denver, CO, USA", "Pool Of Threads" },
   { "Zarko Mocnik", "", "Sorting for Slovenian language" },
   { "Per-Erik Martin", "Uppsala, Sweden", "Stored Procedures (5.0)" },
   { "Alexis Mikhailov", "", "User-defined functions" },
@@ -153,3 +156,5 @@ struct show_table_authors_st show_table_authors[]= {
     "SHA1(), AES_ENCRYPT(), AES_DECRYPT(), bug fixing" },
   {NULL, NULL, NULL}
 };
+
+#endif /* AUTHORS_INCLUDED */

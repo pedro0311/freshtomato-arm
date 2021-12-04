@@ -1,4 +1,4 @@
-/* Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2002, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
   @file
@@ -28,8 +28,17 @@
 #pragma implementation				// gcc: Class implementation
 #endif
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          // set_var.h: THD
+#include "set_var.h"
 #include "sql_select.h"
+#include "sql_parse.h"                          // check_stack_overrun
+#include "sql_test.h"
 
 inline Item * and_items(Item* cond, Item *item)
 {
@@ -249,30 +258,31 @@ bool Item_subselect::walk(Item_processor processor, bool walk_subquery,
 
 bool Item_subselect::exec()
 {
-  int res;
+  DBUG_ENTER("Item_subselect::exec");
 
   /*
     Do not execute subselect in case of a fatal error
     or if the query has been killed.
   */
   if (thd->is_error() || thd->killed)
-    return 1;
+    DBUG_RETURN(true);
 
   DBUG_ASSERT(!thd->lex->context_analysis_only);
   /*
     Simulate a failure in sub-query execution. Used to test e.g.
     out of memory or query being killed conditions.
   */
-  DBUG_EXECUTE_IF("subselect_exec_fail", return 1;);
+  DBUG_EXECUTE_IF("subselect_exec_fail", DBUG_RETURN(true););
 
-  res= engine->exec();
+  bool res= engine->exec();
 
   if (engine_changed)
   {
     engine_changed= 0;
-    return exec();
+    res= exec();
+    DBUG_RETURN(res);
   }
-  return (res);
+  DBUG_RETURN(res);
 }
 
 Item::Type Item_subselect::type() const
@@ -1032,7 +1042,8 @@ Item_in_subselect::single_value_transformer(JOIN *join,
       }
 
       save_allow_sum_func= thd->lex->allow_sum_func;
-      thd->lex->allow_sum_func|= 1 << thd->lex->current_select->nest_level;
+      thd->lex->allow_sum_func|=
+        (nesting_map)1 << thd->lex->current_select->nest_level;
       /*
 	Item_sum_(max|min) can't substitute other item => we can use 0 as
         reference, also Item_sum_(max|min) can't be fixed after creation, so
@@ -1061,6 +1072,27 @@ Item_in_subselect::single_value_transformer(JOIN *join,
       runtime created Ref item which is deleted at the end
       of the statement. Thus one of 'substitution' arguments
       can be broken in case of PS.
+
+      @todo
+      Why do we use real_item()/substitutional_item() instead of the plain
+      left_expr?
+      Because left_expr might be a rollbackable item, and we fail to properly
+      rollback all copies of left_expr at end of execution, so we want to
+      avoid creating copies of left_expr as much as possible, so we use
+      real_item() instead.
+      Doing a proper rollback is difficult: the change was registered for the
+      original item which was the left argument of IN. Then this item was
+      copied to left_expr, which is copied below to substitution->args[0]. To
+      do a proper rollback, we would have to restore the content
+      of both copies as well as the original item. There might be more copies,
+      if AND items have been constructed.
+      The same applies to the right expression.
+      However, using real_item()/substitutional_item() brings its own
+      problems: for example, we lose information that the item is an outer
+      reference; the item can thus wrongly be considered for a Keyuse (causing
+      bug#17766653).
+      When WL#6570 removes the "rolling back" system, all
+      real_item()/substitutional_item() in this file should be removed.
     */ 
     substitution= func->create(left_expr->real_item(), subs);
     DBUG_RETURN(RES_OK);
@@ -1133,6 +1165,7 @@ Item_in_subselect::single_value_transformer(JOIN *join,
     select_lex->having= join->having= and_items(join->having, item);
     if (join->having == item)
       item->name= (char*)in_having_cond;
+    select_lex->having->top_level_item();
     select_lex->having_fix_field= 1;
     /*
       we do not check join->having->fixed, because Item_and (from and_items)
@@ -1145,6 +1178,9 @@ Item_in_subselect::single_value_transformer(JOIN *join,
   }
   else
   {
+    /*
+      Grep for "WL#6570" to see the relevant comment about real_item.
+    */
     Item *item= (Item*) select_lex->item_list.head()->real_item();
 
     if (select_lex->table_list.elements)
@@ -1753,8 +1789,12 @@ bool subselect_union_engine::is_executed() const
 
 bool subselect_union_engine::no_rows()
 {
+  bool rows_present= false;
+
   /* Check if we got any rows when reading UNION result from temp. table: */
-  return test(!unit->fake_select_lex->join->send_records);
+  if (unit->fake_select_lex->join)
+    rows_present= test(!unit->fake_select_lex->join->send_records);
+  return rows_present;
 }
 
 void subselect_uniquesubquery_engine::cleanup()
@@ -1774,8 +1814,6 @@ subselect_union_engine::subselect_union_engine(st_select_lex_unit *u,
   :subselect_engine(item_arg, result_arg)
 {
   unit= u;
-  if (!result_arg)				//out of memory
-    current_thd->fatal_error();
   unit->item= item_arg;
 }
 
@@ -1787,10 +1825,7 @@ int subselect_single_select_engine::prepare()
   join= new JOIN(thd, select_lex->item_list,
 		 select_lex->options | SELECT_NO_UNLOCK, result);
   if (!join || !result)
-  {
-    thd->fatal_error();				//out of memory
-    return 1;
-  }
+    return 1; /* Fatal error is set already. */
   prepared= 1;
   SELECT_LEX *save_select= thd->lex->current_select;
   thd->lex->current_select= select_lex;
@@ -1903,7 +1938,8 @@ void subselect_uniquesubquery_engine::fix_length_and_dec(Item_cache **row)
   DBUG_ASSERT(0);
 }
 
-int  init_read_record_seq(JOIN_TAB *tab);
+int  read_first_record_seq(JOIN_TAB *tab);
+int rr_sequential(READ_RECORD *info);
 int join_read_always_key_or_null(JOIN_TAB *tab);
 int join_read_next_same_or_null(READ_RECORD *info);
 
@@ -2001,7 +2037,8 @@ int subselect_single_select_engine::exec()
               /* Change the access method to full table scan */
               tab->save_read_first_record= tab->read_first_record;
               tab->save_read_record= tab->read_record.read_record;
-              tab->read_first_record= init_read_record_seq;
+              tab->read_record.read_record= rr_sequential;
+              tab->read_first_record= read_first_record_seq;
               tab->read_record.record= tab->table->record[0];
               tab->read_record.thd= join->thd;
               tab->read_record.ref_length= tab->table->file->ref_length;
@@ -2068,10 +2105,14 @@ int subselect_uniquesubquery_engine::scan_table()
   TABLE *table= tab->table;
   DBUG_ENTER("subselect_uniquesubquery_engine::scan_table");
 
-  if (table->file->inited)
-    table->file->ha_index_end();
- 
-  table->file->ha_rnd_init(1);
+  if ((table->file->inited &&
+       (error= table->file->ha_index_end())) ||
+      (error= table->file->ha_rnd_init(1)))
+  {
+    (void) report_error(table, error);
+    DBUG_RETURN(true);
+  }
+
   table->file->extra_opt(HA_EXTRA_CACHE,
                          current_thd->variables.read_buff_size);
   table->null_row= 0;
@@ -2248,9 +2289,14 @@ int subselect_uniquesubquery_engine::exec()
 
   if (null_keypart)
     DBUG_RETURN(scan_table());
- 
-  if (!table->file->inited)
-    table->file->ha_index_init(tab->ref.key, 0);
+
+  if (!table->file->inited &&
+      (error= table->file->ha_index_init(tab->ref.key, 0)))
+  {
+    (void) report_error(table, error);
+    DBUG_RETURN(true);
+  }
+
   error= table->file->index_read_map(table->record[0],
                                      tab->ref.key_buff,
                                      make_prev_keypart_map(tab->ref.key_parts),
@@ -2370,8 +2416,12 @@ int subselect_indexsubquery_engine::exec()
   if (null_keypart)
     DBUG_RETURN(scan_table());
 
-  if (!table->file->inited)
-    table->file->ha_index_init(tab->ref.key, 1);
+  if (!table->file->inited &&
+      (error= table->file->ha_index_init(tab->ref.key, 1)))
+  {
+    (void) report_error(table, error);
+    DBUG_RETURN(true);
+  }
   error= table->file->index_read_map(table->record[0],
                                      tab->ref.key_buff,
                                      make_prev_keypart_map(tab->ref.key_parts),

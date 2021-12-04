@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 #ifndef _my_bitmap_h_
 #define _my_bitmap_h_
@@ -35,9 +34,7 @@ typedef struct st_bitmap
      thread_safe flag in bitmap_init was set.  Otherwise, we optimize by not
      acquiring the mutex
    */
-#ifdef THREAD
-  pthread_mutex_t *mutex;
-#endif
+  mysql_mutex_t *mutex;
 } MY_BITMAP;
 
 #ifdef	__cplusplus
@@ -71,28 +68,6 @@ extern void bitmap_copy(MY_BITMAP *map, const MY_BITMAP *map2);
 
 extern uint bitmap_lock_set_next(MY_BITMAP *map);
 extern void bitmap_lock_clear_bit(MY_BITMAP *map, uint bitmap_bit);
-#ifdef NOT_USED
-extern uint bitmap_lock_bits_set(const MY_BITMAP *map);
-extern my_bool bitmap_lock_is_set_all(const MY_BITMAP *map);
-extern uint bitmap_lock_get_first(const MY_BITMAP *map);
-extern uint bitmap_lock_get_first_set(const MY_BITMAP *map);
-extern my_bool bitmap_lock_is_subset(const MY_BITMAP *map1,
-                                     const MY_BITMAP *map2);
-extern my_bool bitmap_lock_is_prefix(const MY_BITMAP *map, uint prefix_size);
-extern my_bool bitmap_lock_is_set(const MY_BITMAP *map, uint bitmap_bit);
-extern my_bool bitmap_lock_is_clear_all(const MY_BITMAP *map);
-extern my_bool bitmap_lock_cmp(const MY_BITMAP *map1, const MY_BITMAP *map2);
-extern void bitmap_lock_set_all(MY_BITMAP *map);
-extern void bitmap_lock_clear_all(MY_BITMAP *map);
-extern void bitmap_lock_set_bit(MY_BITMAP *map, uint bitmap_bit);
-extern void bitmap_lock_flip_bit(MY_BITMAP *map, uint bitmap_bit);
-extern void bitmap_lock_set_prefix(MY_BITMAP *map, uint prefix_size);
-extern void bitmap_lock_intersect(MY_BITMAP *map, const MY_BITMAP *map2);
-extern void bitmap_lock_subtract(MY_BITMAP *map, const MY_BITMAP *map2);
-extern void bitmap_lock_union(MY_BITMAP *map, const MY_BITMAP *map2);
-extern void bitmap_lock_xor(MY_BITMAP *map, const MY_BITMAP *map2);
-extern void bitmap_lock_invert(MY_BITMAP *map);
-#endif
 /* Fast, not thread safe, bitmap functions */
 #define bitmap_buffer_size(bits) (((bits)+31)/32)*4
 #define no_bytes_in_map(map) (((map)->n_bits + 7)/8)

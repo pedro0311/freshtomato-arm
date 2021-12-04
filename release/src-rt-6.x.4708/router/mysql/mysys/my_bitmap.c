@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 /*
   Handling of uchar arrays as large bitmaps.
@@ -24,9 +23,6 @@
     * the internal size is a set of 32 bit words
     * the number of bits specified in creation can be any number > 0
     * there are THREAD safe versions of most calls called bitmap_lock_*
-      many of those are not used and not compiled normally but the code
-      already exist for them in an #ifdef:ed part. These can only be used
-      if THREAD was specified in bitmap_init
 
   TODO:
   Make assembler THREAD safe versions of these using test-and-set instructions
@@ -87,19 +83,15 @@ void create_last_word_mask(MY_BITMAP *map)
 
 static inline void bitmap_lock(MY_BITMAP *map __attribute__((unused)))
 {
-#ifdef THREAD
   if (map->mutex)
-    pthread_mutex_lock(map->mutex);
-#endif
+    mysql_mutex_lock(map->mutex);
 }
 
 
 static inline void bitmap_unlock(MY_BITMAP *map __attribute__((unused)))
 {
-#ifdef THREAD
   if (map->mutex)
-    pthread_mutex_unlock(map->mutex);
-#endif
+    mysql_mutex_unlock(map->mutex);
 }
 
 
@@ -151,30 +143,30 @@ my_bool bitmap_init(MY_BITMAP *map, my_bitmap_map *buf, uint n_bits,
   {
     uint size_in_bytes= bitmap_buffer_size(n_bits);
     uint extra= 0;
-#ifdef THREAD
+
     if (thread_safe)
     {
       size_in_bytes= ALIGN_SIZE(size_in_bytes);
-      extra= sizeof(pthread_mutex_t);
+      extra= sizeof(mysql_mutex_t);
     }
     map->mutex= 0;
-#endif
+
     if (!(buf= (my_bitmap_map*) my_malloc(size_in_bytes+extra, MYF(MY_WME))))
       DBUG_RETURN(1);
-#ifdef THREAD
+
     if (thread_safe)
     {
-      map->mutex= (pthread_mutex_t *) ((char*) buf + size_in_bytes);
-      pthread_mutex_init(map->mutex, MY_MUTEX_INIT_FAST);
+      map->mutex= (mysql_mutex_t *) ((char*) buf + size_in_bytes);
+      mysql_mutex_init(key_BITMAP_mutex, map->mutex, MY_MUTEX_INIT_FAST);
     }
-#endif
+
   }
-#ifdef THREAD
+
   else
   {
     DBUG_ASSERT(thread_safe == 0);
   }
-#endif
+
 
   map->bitmap= buf;
   map->n_bits= n_bits;
@@ -189,11 +181,10 @@ void bitmap_free(MY_BITMAP *map)
   DBUG_ENTER("bitmap_free");
   if (map->bitmap)
   {
-#ifdef THREAD
     if (map->mutex)
-      pthread_mutex_destroy(map->mutex);
-#endif
-    my_free((char*) map->bitmap, MYF(0));
+      mysql_mutex_destroy(map->mutex);
+
+    my_free(map->bitmap);
     map->bitmap=0;
   }
   DBUG_VOID_RETURN;
@@ -596,190 +587,3 @@ void bitmap_lock_clear_bit(MY_BITMAP *map, uint bitmap_bit)
   bitmap_clear_bit(map, bitmap_bit);
   bitmap_unlock(map);
 }
-
-
-#ifdef NOT_USED
-my_bool bitmap_lock_is_prefix(const MY_BITMAP *map, uint prefix_size)
-{
-  my_bool res;
-  bitmap_lock((MY_BITMAP *)map);
-  res= bitmap_is_prefix(map, prefix_size);
-  bitmap_unlock((MY_BITMAP *)map);
-  return res;
-}
-
-
-void bitmap_lock_set_all(MY_BITMAP *map)
-{
-  bitmap_lock(map);
-  bitmap_set_all(map);
-  bitmap_unlock(map);
-}
-
-
-void bitmap_lock_clear_all(MY_BITMAP *map)
-{
-  bitmap_lock(map);
-  bitmap_clear_all(map);
-  bitmap_unlock(map);
-}
-
-
-void bitmap_lock_set_prefix(MY_BITMAP *map, uint prefix_size)
-{
-  bitmap_lock(map);
-  bitmap_set_prefix(map, prefix_size);
-  bitmap_unlock(map);
-}
-
-
-my_bool bitmap_lock_is_clear_all(const MY_BITMAP *map)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP *)map);
-  res= bitmap_is_clear_all(map);
-  bitmap_unlock((MY_BITMAP *)map);
-  return res;
-}
-
-
-my_bool bitmap_lock_is_set_all(const MY_BITMAP *map)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP *)map);
-  res= bitmap_is_set_all(map);
-  bitmap_unlock((MY_BITMAP *)map);
-  return res;
-}
-
-
-my_bool bitmap_lock_is_set(const MY_BITMAP *map, uint bitmap_bit)
-{
-  my_bool res;
-  DBUG_ASSERT(map->bitmap && bitmap_bit < map->n_bits);
-  bitmap_lock((MY_BITMAP *)map);
-  res= bitmap_is_set(map, bitmap_bit);
-  bitmap_unlock((MY_BITMAP *)map);
-  return res;
-}
-
-
-my_bool bitmap_lock_is_subset(const MY_BITMAP *map1, const MY_BITMAP *map2)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP *)map1);
-  bitmap_lock((MY_BITMAP *)map2);
-  res= bitmap_is_subset(map1, map2);
-  bitmap_unlock((MY_BITMAP *)map2);
-  bitmap_unlock((MY_BITMAP *)map1);
-  return res;
-}
-
-
-my_bool bitmap_lock_cmp(const MY_BITMAP *map1, const MY_BITMAP *map2)
-{
-  uint res;
-
-  DBUG_ASSERT(map1->bitmap && map2->bitmap &&
-              map1->n_bits==map2->n_bits);
-  bitmap_lock((MY_BITMAP *)map1);
-  bitmap_lock((MY_BITMAP *)map2);
-  res= bitmap_cmp(map1, map2);
-  bitmap_unlock((MY_BITMAP *)map2);
-  bitmap_unlock((MY_BITMAP *)map1);
-  return res;
-}
-
-
-void bitmap_lock_intersect(MY_BITMAP *map, const MY_BITMAP *map2)
-{
-  bitmap_lock(map);
-  bitmap_lock((MY_BITMAP *)map2);
-  bitmap_intersect(map, map2);
-  bitmap_unlock((MY_BITMAP *)map2);
-  bitmap_unlock(map);
-}
-
-
-void bitmap_lock_subtract(MY_BITMAP *map, const MY_BITMAP *map2)
-{
-  bitmap_lock(map);
-  bitmap_lock((MY_BITMAP *)map2);
-  bitmap_subtract(map, map2);
-  bitmap_unlock((MY_BITMAP *)map2);
-  bitmap_unlock(map);
-}
-
-
-void bitmap_lock_union(MY_BITMAP *map, const MY_BITMAP *map2)
-{
-  bitmap_lock(map);
-  bitmap_lock((MY_BITMAP *)map2);
-  bitmap_union(map, map2);
-  bitmap_unlock((MY_BITMAP *)map2);
-  bitmap_unlock(map);
-}
-
-
-/*
-  SYNOPSIS
-    bitmap_bits_set()
-      map
-  RETURN
-    Number of set bits in the bitmap.
-*/
-uint bitmap_lock_bits_set(const MY_BITMAP *map)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP *)map);
-  DBUG_ASSERT(map->bitmap);
-  res= bitmap_bits_set(map);
-  bitmap_unlock((MY_BITMAP *)map);
-  return res;
-}
-
-
-/* 
-  SYNOPSIS
-    bitmap_get_first()
-      map
-  RETURN 
-    Number of first unset bit in the bitmap or MY_BIT_NONE if all bits are set.
-*/
-uint bitmap_lock_get_first(const MY_BITMAP *map)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP*)map);
-  res= bitmap_get_first(map);
-  bitmap_unlock((MY_BITMAP*)map);
-  return res;
-}
-
-
-uint bitmap_lock_get_first_set(const MY_BITMAP *map)
-{
-  uint res;
-  bitmap_lock((MY_BITMAP*)map);
-  res= bitmap_get_first_set(map);
-  bitmap_unlock((MY_BITMAP*)map);
-  return res;
-}
-
-
-void bitmap_lock_set_bit(MY_BITMAP *map, uint bitmap_bit)
-{
-  DBUG_ASSERT(map->bitmap && bitmap_bit < map->n_bits);
-  bitmap_lock(map);
-  bitmap_set_bit(map, bitmap_bit);
-  bitmap_unlock(map);
-}
-
-
-void bitmap_lock_flip_bit(MY_BITMAP *map, uint bitmap_bit)
-{
-  DBUG_ASSERT(map->bitmap && bitmap_bit < map->n_bits);
-  bitmap_lock(map);
-  bitmap_flip_bit(map, bitmap_bit);
-  bitmap_unlock(map);
-}
-#endif

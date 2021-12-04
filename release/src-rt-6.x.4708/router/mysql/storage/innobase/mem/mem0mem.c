@@ -1,20 +1,34 @@
-/************************************************************************
-The memory management
+/*****************************************************************************
 
-(c) 1994, 1995 Innobase Oy
+Copyright (c) 1994, 2010, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/********************************************************************//**
+@file mem/mem0mem.c
+The memory management
 
 Created 6/9/1994 Heikki Tuuri
 *************************************************************************/
-
 
 #include "mem0mem.h"
 #ifdef UNIV_NONINL
 #include "mem0mem.ic"
 #endif
 
-#include "mach0data.h"
 #include "buf0buf.h"
-#include "btr0sea.h"
 #include "srv0srv.h"
 #include "mem0dbg.c"
 #include <stdarg.h>
@@ -84,81 +98,43 @@ UT_LIST_BASE_NODE_T(mem_block_t)	mem_block_list;
 
 #endif
 
-/*******************************************************************
-NOTE: Use the corresponding macro instead of this function.
-Allocates a single buffer of memory from the dynamic memory of
-the C compiler. Is like malloc of C. The buffer must be freed
-with mem_free. */
-
-void*
-mem_alloc_func_noninline(
-/*=====================*/
-					/* out, own: free storage */
-	ulint		n,		/* in: desired number of bytes */
-	const char*	file_name,	/* in: file name where created */
-	ulint		line)		/* in: line where created */
-{
-	return(mem_alloc_func(n, file_name, line));
-}
-
-/**************************************************************************
-Duplicates a NUL-terminated string, allocated from a memory heap. */
-
+/**********************************************************************//**
+Duplicates a NUL-terminated string, allocated from a memory heap.
+@return	own: a copy of the string */
+UNIV_INTERN
 char*
 mem_heap_strdup(
 /*============*/
-				/* out, own: a copy of the string */
-	mem_heap_t*	heap,	/* in: memory heap where string is allocated */
-	const char*	str)	/* in: string to be copied */
+	mem_heap_t*	heap,	/*!< in: memory heap where string is allocated */
+	const char*	str)	/*!< in: string to be copied */
 {
 	return(mem_heap_dup(heap, str, strlen(str) + 1));
 }
 
-/**************************************************************************
-Duplicate a block of data, allocated from a memory heap. */
-
+/**********************************************************************//**
+Duplicate a block of data, allocated from a memory heap.
+@return	own: a copy of the data */
+UNIV_INTERN
 void*
 mem_heap_dup(
 /*=========*/
-				/* out, own: a copy of the data */
-	mem_heap_t*	heap,	/* in: memory heap where copy is allocated */
-	const void*	data,	/* in: data to be copied */
-	ulint		len)	/* in: length of data, in bytes */
+	mem_heap_t*	heap,	/*!< in: memory heap where copy is allocated */
+	const void*	data,	/*!< in: data to be copied */
+	ulint		len)	/*!< in: length of data, in bytes */
 {
 	return(memcpy(mem_heap_alloc(heap, len), data, len));
 }
 
-/**************************************************************************
-Concatenate two memory blocks and return the result, using a memory heap. */
-
-void*
-mem_heap_cat(
-/*=========*/
-				/* out, own: the result */
-	mem_heap_t*	heap,	/* in: memory heap where result is allocated */
-	const void*	b1,	/* in: block 1 */
-	ulint		len1,	/* in: length of b1, in bytes */
-	const void*	b2,	/* in: block 2 */
-	ulint		len2)	/* in: length of b2, in bytes */
-{
-	void*	res = mem_heap_alloc(heap, len1 + len2);
-
-	memcpy(res, b1, len1);
-	memcpy((char*)res + len1, b2, len2);
-
-	return(res);
-}
-
-/**************************************************************************
-Concatenate two strings and return the result, using a memory heap. */
-
+/**********************************************************************//**
+Concatenate two strings and return the result, using a memory heap.
+@return	own: the result */
+UNIV_INTERN
 char*
 mem_heap_strcat(
 /*============*/
-				/* out, own: the result */
-	mem_heap_t*	heap,	/* in: memory heap where string is allocated */
-	const char*	s1,	/* in: string 1 */
-	const char*	s2)	/* in: string 2 */
+	mem_heap_t*	heap,	/*!< in: memory heap where string is allocated */
+	const char*	s1,	/*!< in: string 1 */
+	const char*	s2)	/*!< in: string 2 */
 {
 	char*	s;
 	ulint	s1_len = strlen(s1);
@@ -175,18 +151,17 @@ mem_heap_strcat(
 }
 
 
-/********************************************************************
-Helper function for mem_heap_printf. */
+/****************************************************************//**
+Helper function for mem_heap_printf.
+@return	length of formatted string, including terminating NUL */
 static
 ulint
 mem_heap_printf_low(
 /*================*/
-				/* out: length of formatted string,
-				including terminating NUL */
-	char*		buf,	/* in/out: buffer to store formatted string
+	char*		buf,	/*!< in/out: buffer to store formatted string
 				in, or NULL to just calculate length */
-	const char*	format,	/* in: format string */
-	va_list		ap)	/* in: arguments */
+	const char*	format,	/*!< in: format string */
+	va_list		ap)	/*!< in: arguments */
 {
 	ulint 		len = 0;
 
@@ -285,18 +260,18 @@ mem_heap_printf_low(
 	return(len);
 }
 
-/********************************************************************
+/****************************************************************//**
 A simple (s)printf replacement that dynamically allocates the space for the
 formatted string from the given heap. This supports a very limited set of
 the printf syntax: types 's' and 'u' and length modifier 'l' (which is
-required for the 'u' type). */
-
+required for the 'u' type).
+@return	heap-allocated formatted string */
+UNIV_INTERN
 char*
 mem_heap_printf(
 /*============*/
-				/* out: heap-allocated formatted string */
-	mem_heap_t*	heap,	/* in: memory heap */
-	const char*	format,	/* in: format string */
+	mem_heap_t*	heap,	/*!< in: memory heap */
+	const char*	format,	/*!< in: format string */
 	...)
 {
 	va_list		ap;
@@ -318,26 +293,25 @@ mem_heap_printf(
 	return(str);
 }
 
-/*******************************************************************
-Creates a memory heap block where data can be allocated. */
-
+/***************************************************************//**
+Creates a memory heap block where data can be allocated.
+@return own: memory heap block, NULL if did not succeed (only possible
+for MEM_HEAP_BTR_SEARCH type heaps) */
+UNIV_INTERN
 mem_block_t*
 mem_heap_create_block(
 /*==================*/
-				/* out, own: memory heap block, NULL if
-				did not succeed (only possible for
-				MEM_HEAP_BTR_SEARCH type heaps) */
-	mem_heap_t*	heap,	/* in: memory heap or NULL if first block
+	mem_heap_t*	heap,	/*!< in: memory heap or NULL if first block
 				should be created */
-	ulint		n,	/* in: number of bytes needed for user data, or
-				if init_block is not NULL, its size in bytes */
-	void*		init_block, /* in: init block in fast create,
-				type must be MEM_HEAP_DYNAMIC */
-	ulint		type,	/* in: type of heap: MEM_HEAP_DYNAMIC or
+	ulint		n,	/*!< in: number of bytes needed for user data */
+	ulint		type,	/*!< in: type of heap: MEM_HEAP_DYNAMIC or
 				MEM_HEAP_BUFFER */
-	const char*	file_name,/* in: file name where created */
-	ulint		line)	/* in: line where created */
+	const char*	file_name,/*!< in: file name where created */
+	ulint		line)	/*!< in: line where created */
 {
+#ifndef UNIV_HOTBACKUP
+	buf_block_t*	buf_block = NULL;
+#endif /* !UNIV_HOTBACKUP */
 	mem_block_t*	block;
 	ulint		len;
 
@@ -349,54 +323,57 @@ mem_heap_create_block(
 	}
 
 	/* In dynamic allocation, calculate the size: block header + data. */
+	len = MEM_BLOCK_HEADER_SIZE + MEM_SPACE_NEEDED(n);
 
-	if (init_block != NULL) {
-		ut_ad(type == MEM_HEAP_DYNAMIC);
-		ut_ad(n > MEM_BLOCK_START_SIZE + MEM_BLOCK_HEADER_SIZE);
-		len = n;
-		block = init_block;
+#ifndef UNIV_HOTBACKUP
+	if (type == MEM_HEAP_DYNAMIC || len < UNIV_PAGE_SIZE / 2) {
 
-	} else if (type == MEM_HEAP_DYNAMIC) {
+		ut_ad(type == MEM_HEAP_DYNAMIC || n <= MEM_MAX_ALLOC_IN_BUF);
 
-		len = MEM_BLOCK_HEADER_SIZE + MEM_SPACE_NEEDED(n);
-		block = mem_area_alloc(len, mem_comm_pool);
+		block = mem_area_alloc(&len, mem_comm_pool);
 	} else {
-		ut_ad(n <= MEM_MAX_ALLOC_IN_BUF);
+		len = UNIV_PAGE_SIZE;
 
-		len = MEM_BLOCK_HEADER_SIZE + MEM_SPACE_NEEDED(n);
+		if ((type & MEM_HEAP_BTR_SEARCH) && heap) {
+			/* We cannot allocate the block from the
+			buffer pool, but must get the free block from
+			the heap header free block field */
 
-		if (len < UNIV_PAGE_SIZE / 2) {
+			buf_block = heap->free_block;
+			heap->free_block = NULL;
 
-			block = mem_area_alloc(len, mem_comm_pool);
-		} else {
-			len = UNIV_PAGE_SIZE;
+			if (UNIV_UNLIKELY(!buf_block)) {
 
-			if ((type & MEM_HEAP_BTR_SEARCH) && heap) {
-				/* We cannot allocate the block from the
-				buffer pool, but must get the free block from
-				the heap header free block field */
-
-				block = (mem_block_t*)heap->free_block;
-				heap->free_block = NULL;
-			} else {
-				block = (mem_block_t*)buf_frame_alloc();
+				return(NULL);
 			}
+		} else {
+			buf_block = buf_block_alloc(NULL);
 		}
+
+		block = (mem_block_t*) buf_block->frame;
 	}
 
-	if (block == NULL) {
-		/* Only MEM_HEAP_BTR_SEARCH allocation should ever fail. */
-		ut_a(type & MEM_HEAP_BTR_SEARCH);
-
-		return(NULL);
+	if(!block) {
+		ut_print_timestamp(stderr);
+		fprintf(stderr,
+			" InnoDB: Unable to allocate memory of size %lu.\n",
+			len);
+		ut_error;
 	}
+	block->buf_block = buf_block;
+	block->free_block = NULL;
+#else /* !UNIV_HOTBACKUP */
+	len = MEM_BLOCK_HEADER_SIZE + MEM_SPACE_NEEDED(n);
+	block = ut_malloc(len);
+	ut_ad(block);
+#endif /* !UNIV_HOTBACKUP */
 
 	block->magic_n = MEM_BLOCK_MAGIC_N;
 	ut_strlcpy_rev(block->file_name, file_name, sizeof(block->file_name));
 	block->line = line;
 
 #ifdef MEM_PERIODIC_CHECK
-	mem_pool_mutex_enter();
+	mutex_enter(&(mem_comm_pool->mutex));
 
 	if (!mem_block_list_inited) {
 		mem_block_list_inited = TRUE;
@@ -405,32 +382,42 @@ mem_heap_create_block(
 
 	UT_LIST_ADD_LAST(mem_block_list, mem_block_list, block);
 
-	mem_pool_mutex_exit();
+	mutex_exit(&(mem_comm_pool->mutex));
 #endif
 	mem_block_set_len(block, len);
 	mem_block_set_type(block, type);
 	mem_block_set_free(block, MEM_BLOCK_HEADER_SIZE);
 	mem_block_set_start(block, MEM_BLOCK_HEADER_SIZE);
 
-	block->free_block = NULL;
-	block->init_block = (init_block != NULL);
+	if (UNIV_UNLIKELY(heap == NULL)) {
+		/* This is the first block of the heap. The field
+		total_size should be initialized here */
+		block->total_size = len;
+	} else {
+		/* Not the first allocation for the heap. This block's
+		total_length field should be set to undefined. */
+		ut_d(block->total_size = ULINT_UNDEFINED);
+		UNIV_MEM_INVALID(&block->total_size,
+				 sizeof block->total_size);
+
+		heap->total_size += len;
+	}
 
 	ut_ad((ulint)MEM_BLOCK_HEADER_SIZE < len);
 
 	return(block);
 }
 
-/*******************************************************************
-Adds a new block to a memory heap. */
-
+/***************************************************************//**
+Adds a new block to a memory heap.
+@return created block, NULL if did not succeed (only possible for
+MEM_HEAP_BTR_SEARCH type heaps) */
+UNIV_INTERN
 mem_block_t*
 mem_heap_add_block(
 /*===============*/
-				/* out: created block, NULL if did not
-				succeed (only possible for
-				MEM_HEAP_BTR_SEARCH type heaps)*/
-	mem_heap_t*	heap,	/* in: memory heap */
-	ulint		n)	/* in: number of bytes user needs */
+	mem_heap_t*	heap,	/*!< in: memory heap */
+	ulint		n)	/*!< in: number of bytes user needs */
 {
 	mem_block_t*	block;
 	mem_block_t*	new_block;
@@ -462,7 +449,7 @@ mem_heap_add_block(
 		new_size = n;
 	}
 
-	new_block = mem_heap_create_block(heap, new_size, NULL, heap->type,
+	new_block = mem_heap_create_block(heap, new_size, heap->type,
 					  heap->file_name, heap->line);
 	if (new_block == NULL) {
 
@@ -476,18 +463,20 @@ mem_heap_add_block(
 	return(new_block);
 }
 
-/**********************************************************************
+/******************************************************************//**
 Frees a block from a memory heap. */
-
+UNIV_INTERN
 void
 mem_heap_block_free(
 /*================*/
-	mem_heap_t*	heap,	/* in: heap */
-	mem_block_t*	block)	/* in: block to free */
+	mem_heap_t*	heap,	/*!< in: heap */
+	mem_block_t*	block)	/*!< in: block to free */
 {
-	ulint	type;
-	ulint	len;
-	ibool	init_block;
+	ulint		type;
+	ulint		len;
+#ifndef UNIV_HOTBACKUP
+	buf_block_t*	buf_block	= block->buf_block;
+#endif /* !UNIV_HOTBACKUP */
 
 	if (block->magic_n != MEM_BLOCK_MAGIC_N) {
 		mem_analyze_corruption(block);
@@ -496,71 +485,84 @@ mem_heap_block_free(
 	UT_LIST_REMOVE(list, heap->base, block);
 
 #ifdef MEM_PERIODIC_CHECK
-	mem_pool_mutex_enter();
+	mutex_enter(&(mem_comm_pool->mutex));
 
 	UT_LIST_REMOVE(mem_block_list, mem_block_list, block);
 
-	mem_pool_mutex_exit();
+	mutex_exit(&(mem_comm_pool->mutex));
 #endif
+
+	ut_ad(heap->total_size >= block->len);
+	heap->total_size -= block->len;
+
 	type = heap->type;
 	len = block->len;
-	init_block = block->init_block;
 	block->magic_n = MEM_FREED_BLOCK_MAGIC_N;
 
+#ifndef UNIV_HOTBACKUP
+	if (!srv_use_sys_malloc) {
 #ifdef UNIV_MEM_DEBUG
-	/* In the debug version we set the memory to a random combination
-	of hex 0xDE and 0xAD. */
+		/* In the debug version we set the memory to a random
+		combination of hex 0xDE and 0xAD. */
+
+		mem_erase_buf((byte*)block, len);
+#else /* UNIV_MEM_DEBUG */
+		UNIV_MEM_ASSERT_AND_FREE(block, len);
+#endif /* UNIV_MEM_DEBUG */
+
+	}
+	if (type == MEM_HEAP_DYNAMIC || len < UNIV_PAGE_SIZE / 2) {
+
+		ut_ad(!buf_block);
+		mem_area_free(block, mem_comm_pool);
+	} else {
+		ut_ad(type & MEM_HEAP_BUFFER);
+
+		buf_block_free(buf_block);
+	}
+#else /* !UNIV_HOTBACKUP */
+#ifdef UNIV_MEM_DEBUG
+	/* In the debug version we set the memory to a random
+	combination of hex 0xDE and 0xAD. */
 
 	mem_erase_buf((byte*)block, len);
 #else /* UNIV_MEM_DEBUG */
 	UNIV_MEM_ASSERT_AND_FREE(block, len);
 #endif /* UNIV_MEM_DEBUG */
-
-	if (init_block) {
-		/* Do not have to free: do nothing */
-
-	} else if (type == MEM_HEAP_DYNAMIC) {
-
-		mem_area_free(block, mem_comm_pool);
-	} else {
-		ut_ad(type & MEM_HEAP_BUFFER);
-
-		if (len >= UNIV_PAGE_SIZE / 2) {
-			buf_frame_free((byte*)block);
-		} else {
-			mem_area_free(block, mem_comm_pool);
-		}
-	}
+	ut_free(block);
+#endif /* !UNIV_HOTBACKUP */
 }
 
-/**********************************************************************
+#ifndef UNIV_HOTBACKUP
+/******************************************************************//**
 Frees the free_block field from a memory heap. */
-
+UNIV_INTERN
 void
 mem_heap_free_block_free(
 /*=====================*/
-	mem_heap_t*	heap)	/* in: heap */
+	mem_heap_t*	heap)	/*!< in: heap */
 {
-	if (heap->free_block) {
+	if (UNIV_LIKELY_NULL(heap->free_block)) {
 
-		buf_frame_free(heap->free_block);
+		buf_block_free(heap->free_block);
 
 		heap->free_block = NULL;
 	}
 }
+#endif /* !UNIV_HOTBACKUP */
 
 #ifdef MEM_PERIODIC_CHECK
-/**********************************************************************
+/******************************************************************//**
 Goes through the list of all allocated mem blocks, checks their magic
 numbers, and reports possible corruption. */
-
+UNIV_INTERN
 void
 mem_validate_all_blocks(void)
 /*=========================*/
 {
 	mem_block_t*	block;
 
-	mem_pool_mutex_enter();
+	mutex_enter(&(mem_comm_pool->mutex));
 
 	block = UT_LIST_GET_FIRST(mem_block_list);
 
@@ -572,6 +574,6 @@ mem_validate_all_blocks(void)
 		block = UT_LIST_GET_NEXT(mem_block_list, block);
 	}
 
-	mem_pool_mutex_exit();
+	mutex_exit(&(mem_comm_pool->mutex));
 }
 #endif

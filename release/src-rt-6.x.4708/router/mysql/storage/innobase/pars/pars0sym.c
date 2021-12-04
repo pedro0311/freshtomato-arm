@@ -1,7 +1,24 @@
-/******************************************************
-SQL parser symbol table
+/*****************************************************************************
 
-(c) 1997 Innobase Oy
+Copyright (c) 1997, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file pars/pars0sym.c
+SQL parser symbol table
 
 Created 12/15/1997 Heikki Tuuri
 *******************************************************/
@@ -21,14 +38,14 @@ Created 12/15/1997 Heikki Tuuri
 #include "eval0eval.h"
 #include "row0sel.h"
 
-/**********************************************************************
-Creates a symbol table for a single stored procedure or query. */
-
+/******************************************************************//**
+Creates a symbol table for a single stored procedure or query.
+@return	own: symbol table */
+UNIV_INTERN
 sym_tab_t*
 sym_tab_create(
 /*===========*/
-				/* out, own: symbol table */
-	mem_heap_t*	heap)	/* in: memory heap where to create */
+	mem_heap_t*	heap)	/*!< in: memory heap where to create */
 {
 	sym_tab_t*	sym_tab;
 
@@ -42,15 +59,15 @@ sym_tab_create(
 	return(sym_tab);
 }
 
-/**********************************************************************
+/******************************************************************//**
 Frees the memory allocated dynamically AFTER parsing phase for variables
 etc. in the symbol table. Does not free the mem heap where the table was
 originally created. Frees also SQL explicit cursor definitions. */
-
+UNIV_INTERN
 void
 sym_tab_free_private(
 /*=================*/
-	sym_tab_t*	sym_tab)	/* in, own: symbol table */
+	sym_tab_t*	sym_tab)	/*!< in, own: symbol table */
 {
 	sym_node_t*	sym;
 	func_node_t*	func;
@@ -80,15 +97,15 @@ sym_tab_free_private(
 	}
 }
 
-/**********************************************************************
-Adds an integer literal to a symbol table. */
-
+/******************************************************************//**
+Adds an integer literal to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_int_lit(
 /*================*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab,	/* in: symbol table */
-	ulint		val)		/* in: integer value */
+	sym_tab_t*	sym_tab,	/*!< in: symbol table */
+	ulint		val)		/*!< in: integer value */
 {
 	sym_node_t*	node;
 	byte*		data;
@@ -102,7 +119,7 @@ sym_tab_add_int_lit(
 
 	node->indirection = NULL;
 
-	dtype_set(&(node->common.val.type), DATA_INT, 0, 4);
+	dtype_set(dfield_get_type(&node->common.val), DATA_INT, 0, 4);
 
 	data = mem_heap_alloc(sym_tab->heap, 4);
 	mach_write_to_4(data, val);
@@ -120,17 +137,17 @@ sym_tab_add_int_lit(
 	return(node);
 }
 
-/**********************************************************************
-Adds a string literal to a symbol table. */
-
+/******************************************************************//**
+Adds a string literal to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_str_lit(
 /*================*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab,	/* in: symbol table */
-	byte*		str,		/* in: string with no quotes around
+	sym_tab_t*	sym_tab,	/*!< in: symbol table */
+	byte*		str,		/*!< in: string with no quotes around
 					it */
-	ulint		len)		/* in: string length */
+	ulint		len)		/*!< in: string length */
 {
 	sym_node_t*	node;
 	byte*		data;
@@ -144,7 +161,8 @@ sym_tab_add_str_lit(
 
 	node->indirection = NULL;
 
-	dtype_set(&(node->common.val.type), DATA_VARCHAR, DATA_ENGLISH, 0);
+	dtype_set(dfield_get_type(&node->common.val),
+		  DATA_VARCHAR, DATA_ENGLISH, 0);
 
 	if (len) {
 		data = mem_heap_alloc(sym_tab->heap, len);
@@ -166,16 +184,16 @@ sym_tab_add_str_lit(
 	return(node);
 }
 
-/**********************************************************************
-Add a bound literal to a symbol table. */
-
+/******************************************************************//**
+Add a bound literal to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_bound_lit(
 /*==================*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab,	/* in: symbol table */
-	const char*	name,		/* in: name of bound literal */
-	ulint*		lit_type)	/* out: type of literal (PARS_*_LIT) */
+	sym_tab_t*	sym_tab,	/*!< in: symbol table */
+	const char*	name,		/*!< in: name of bound literal */
+	ulint*		lit_type)	/*!< out: type of literal (PARS_*_LIT) */
 {
 	sym_node_t*		node;
 	pars_bound_lit_t*	blit;
@@ -226,7 +244,8 @@ sym_tab_add_bound_lit(
 		ut_error;
 	}
 
-	dtype_set(&(node->common.val.type), blit->type, blit->prtype, len);
+	dtype_set(dfield_get_type(&node->common.val),
+		  blit->type, blit->prtype, len);
 
 	dfield_set_data(&(node->common.val), blit->address, blit->length);
 
@@ -241,14 +260,14 @@ sym_tab_add_bound_lit(
 	return(node);
 }
 
-/**********************************************************************
-Adds an SQL null literal to a symbol table. */
-
+/******************************************************************//**
+Adds an SQL null literal to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_null_lit(
 /*=================*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab)	/* in: symbol table */
+	sym_tab_t*	sym_tab)	/*!< in: symbol table */
 {
 	sym_node_t*	node;
 
@@ -261,9 +280,9 @@ sym_tab_add_null_lit(
 
 	node->indirection = NULL;
 
-	node->common.val.type.mtype = DATA_ERROR;
+	dfield_get_type(&node->common.val)->mtype = DATA_ERROR;
 
-	dfield_set_data(&(node->common.val), NULL, UNIV_SQL_NULL);
+	dfield_set_null(&node->common.val);
 
 	node->common.val_buf_size = 0;
 	node->prefetch_buf = NULL;
@@ -276,16 +295,16 @@ sym_tab_add_null_lit(
 	return(node);
 }
 
-/**********************************************************************
-Adds an identifier to a symbol table. */
-
+/******************************************************************//**
+Adds an identifier to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_id(
 /*===========*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab,	/* in: symbol table */
-	byte*		name,		/* in: identifier name */
-	ulint		len)		/* in: identifier length */
+	sym_tab_t*	sym_tab,	/*!< in: symbol table */
+	byte*		name,		/*!< in: identifier name */
+	ulint		len)		/*!< in: identifier length */
 {
 	sym_node_t*	node;
 
@@ -301,7 +320,7 @@ sym_tab_add_id(
 
 	UT_LIST_ADD_LAST(sym_list, sym_tab->sym_list, node);
 
-	dfield_set_data(&(node->common.val), NULL, UNIV_SQL_NULL);
+	dfield_set_null(&node->common.val);
 
 	node->common.val_buf_size = 0;
 	node->prefetch_buf = NULL;
@@ -312,15 +331,15 @@ sym_tab_add_id(
 	return(node);
 }
 
-/**********************************************************************
-Add a bound identifier to a symbol table. */
-
+/******************************************************************//**
+Add a bound identifier to a symbol table.
+@return	symbol table node */
+UNIV_INTERN
 sym_node_t*
 sym_tab_add_bound_id(
 /*===========*/
-					/* out: symbol table node */
-	sym_tab_t*	sym_tab,	/* in: symbol table */
-	const char*	name)		/* in: name of bound id */
+	sym_tab_t*	sym_tab,	/*!< in: symbol table */
+	const char*	name)		/*!< in: name of bound id */
 {
 	sym_node_t*		node;
 	pars_bound_id_t*	bid;
@@ -340,7 +359,7 @@ sym_tab_add_bound_id(
 
 	UT_LIST_ADD_LAST(sym_list, sym_tab->sym_list, node);
 
-	dfield_set_data(&(node->common.val), NULL, UNIV_SQL_NULL);
+	dfield_set_null(&node->common.val);
 
 	node->common.val_buf_size = 0;
 	node->prefetch_buf = NULL;

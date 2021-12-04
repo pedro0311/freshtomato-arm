@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2002, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2002, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,10 +12,22 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "sql_priv.h"
+#include "unireg.h"
+#include "sql_prepare.h"
+#include "sql_cache.h"                          // query_cache_*
+#include "probes_mysql.h"
+#include "sql_show.h"                           // append_identifier
+#include "sql_db.h"            // mysql_opt_change_db, mysql_change_db
+#include "sql_table.h"         // sp_prepare_create_field,
+                               // prepare_create_field
+#include "sql_acl.h"           // *_ACL
+#include "sql_array.h"         // Dynamic_array
+#include "log_event.h"         // append_query_string, Query_log_event
+
 #ifdef USE_PRAGMA_IMPLEMENTATION
 #pragma implementation
 #endif
@@ -24,6 +36,10 @@
 #include "sp_pcontext.h"
 #include "sp_rcontext.h"
 #include "sp_cache.h"
+#include "set_var.h"
+#include "sql_parse.h"                          // cleanup_items
+#include "sql_base.h"                           // close_thread_tables
+#include "transaction.h"       // trans_commit_stmt
 
 /*
   Sufficient max length of printed destinations and frame offsets (all uints).
@@ -46,10 +62,6 @@ extern "C" uchar *sp_table_key(const uchar *ptr, size_t *plen, my_bool first);
 
 static void reset_start_time_for_sp(THD *thd)
 {
-  /*
-    Do nothing if the context is a trigger or function because time should be
-    constant during the execution of those.
-  */
   if (!thd->in_sub_stmt)
   {
     /*
@@ -141,10 +153,10 @@ sp_get_item_value(THD *thd, Item *item, String *str)
   case STRING_RESULT:
     {
       String *result= item->val_str(str);
-      
+
       if (!result)
         return NULL;
-      
+
       {
         char buf_holder[STRING_BUFFER_USUAL_SIZE];
         String buf(buf_holder, sizeof(buf_holder), result->charset());
@@ -196,7 +208,6 @@ sp_get_flags_for_command(LEX *lex)
     }
     /* fallthrough */
   case SQLCOM_ANALYZE:
-  case SQLCOM_BACKUP_TABLE:
   case SQLCOM_OPTIMIZE:
   case SQLCOM_PRELOAD_KEYS:
   case SQLCOM_ASSIGN_TO_KEYCACHE:
@@ -206,9 +217,9 @@ sp_get_flags_for_command(LEX *lex)
   case SQLCOM_SHOW_AUTHORS:
   case SQLCOM_SHOW_BINLOGS:
   case SQLCOM_SHOW_BINLOG_EVENTS:
+  case SQLCOM_SHOW_RELAYLOG_EVENTS:
   case SQLCOM_SHOW_CHARSETS:
   case SQLCOM_SHOW_COLLATIONS:
-  case SQLCOM_SHOW_COLUMN_TYPES:
   case SQLCOM_SHOW_CONTRIBUTORS:
   case SQLCOM_SHOW_CREATE:
   case SQLCOM_SHOW_CREATE_DB:
@@ -227,7 +238,6 @@ sp_get_flags_for_command(LEX *lex)
   case SQLCOM_SHOW_EVENTS:
   case SQLCOM_SHOW_KEYS:
   case SQLCOM_SHOW_MASTER_STAT:
-  case SQLCOM_SHOW_NEW_MASTER:
   case SQLCOM_SHOW_OPEN_TABLES:
   case SQLCOM_SHOW_PRIVILEGES:
   case SQLCOM_SHOW_PROCESSLIST:
@@ -243,7 +253,6 @@ sp_get_flags_for_command(LEX *lex)
   case SQLCOM_SHOW_VARIABLES:
   case SQLCOM_SHOW_WARNS:
   case SQLCOM_REPAIR:
-  case SQLCOM_RESTORE_TABLE:
     flags= sp_head::MULTI_RESULTS;
     break;
   /*
@@ -298,7 +307,6 @@ sp_get_flags_for_command(LEX *lex)
   case SQLCOM_COMMIT:
   case SQLCOM_ROLLBACK:
   case SQLCOM_LOAD:
-  case SQLCOM_LOAD_MASTER_DATA:
   case SQLCOM_LOCK_TABLES:
   case SQLCOM_CREATE_PROCEDURE:
   case SQLCOM_CREATE_SPFUNCTION:
@@ -385,7 +393,7 @@ sp_eval_expr(THD *thd, Field *result_field, Item **expr_item_ptr)
 
     Save original values and restore them after save.
   */
-  
+
   thd->count_cuted_fields= CHECK_FIELD_ERROR_FOR_NULL;
   thd->abort_on_warning=
     thd->variables.sql_mode &
@@ -415,31 +423,34 @@ error:
 }
 
 
-/*
- *
- *  sp_name
- *
- */
+/**
+  Create temporary sp_name object from MDL key.
 
-sp_name::sp_name(THD *thd, char *key, uint key_len)
+  @note The lifetime of this object is bound to the lifetime of the MDL_key.
+        This should be fine as sp_name objects created by this constructor
+        are mainly used for SP-cache lookups.
+
+  @param key         MDL key containing database and routine name.
+  @param qname_buff  Buffer to be used for storing quoted routine name
+                     (should be at least 2*NAME_LEN+1+1 bytes).
+*/
+
+sp_name::sp_name(const MDL_key *key, char *qname_buff)
 {
-  m_sroutines_key.str= key;
-  m_sroutines_key.length= key_len;
-  m_qname.str= ++key;
-  m_qname.length= key_len - 1;
-  if ((m_name.str= strchr(m_qname.str, '.')))
+  m_db.str= (char*)key->db_name();
+  m_db.length= key->db_name_length();
+  m_name.str= (char*)key->name();
+  m_name.length= key->name_length();
+  m_qname.str= qname_buff;
+  if (m_db.length)
   {
-    m_db.length= m_name.str - key;
-    m_db.str= strmake_root(thd->mem_root, key, m_db.length);
-    m_name.str++;
-    m_name.length= m_qname.length - m_db.length - 1;
+    strxmov(qname_buff, m_db.str, ".", m_name.str, NullS);
+    m_qname.length= m_db.length + 1 + m_name.length;
   }
   else
   {
-    m_name.str= m_qname.str;
-    m_name.length= m_qname.length;
-    m_db.str= 0;
-    m_db.length= 0;
+    strmov(qname_buff, m_name.str);
+    m_qname.length= m_name.length;
   }
   m_explicit_name= false;
 }
@@ -452,12 +463,10 @@ void
 sp_name::init_qname(THD *thd)
 {
   const uint dot= !!m_db.length;
-  /* m_sroutines format: m_type + [database + dot] + name + nul */
-  m_sroutines_key.length= 1 + m_db.length + dot + m_name.length;
-  if (!(m_sroutines_key.str= (char*) thd->alloc(m_sroutines_key.length + 1)))
+  /* m_qname format: [database + dot] + name + '\0' */
+  m_qname.length= m_db.length + dot + m_name.length;
+  if (!(m_qname.str= (char*) thd->alloc(m_qname.length + 1)))
     return;
-  m_qname.length= m_sroutines_key.length - 1;
-  m_qname.str= m_sroutines_key.str + 1;
   sprintf(m_qname.str, "%.*s%.*s%.*s",
           (int) m_db.length, (m_db.length ? m_db.str : ""),
           dot, ".",
@@ -481,9 +490,10 @@ sp_name::init_qname(THD *thd)
 bool
 check_routine_name(LEX_STRING *ident)
 {
-  if (!ident || !ident->str || !ident->str[0] ||
-      ident->str[ident->length-1] == ' ')
-  { 
+  DBUG_ASSERT(ident != NULL && ident->str != NULL);
+
+  if (!ident->str[0] || ident->str[ident->length-1] == ' ')
+  {
     my_error(ER_SP_WRONG_NAME, MYF(0), ident->str);
     return TRUE;
   }
@@ -520,7 +530,7 @@ sp_head::operator new(size_t size) throw()
   DBUG_RETURN(sp);
 }
 
-void 
+void
 sp_head::operator delete(void *ptr, size_t size) throw()
 {
   DBUG_ENTER("sp_head::operator delete");
@@ -542,8 +552,12 @@ sp_head::operator delete(void *ptr, size_t size) throw()
 
 
 sp_head::sp_head()
-  :Query_arena(&main_mem_root, INITIALIZED_FOR_SP),
-   m_flags(0), m_recursion_level(0), m_next_cached_sp(0),
+  :Query_arena(&main_mem_root, STMT_INITIALIZED_FOR_SP),
+   m_flags(0),
+   m_sp_cache_version(0),
+   unsafe_flags(0),
+   m_recursion_level(0),
+   m_next_cached_sp(0),
    m_cont_level(0)
 {
   const LEX_STRING str_reset= { NULL, 0 };
@@ -565,8 +579,9 @@ sp_head::sp_head()
   m_backpatch.empty();
   m_cont_backpatch.empty();
   m_lex.empty();
-  hash_init(&m_sptabs, system_charset_info, 0, 0, 0, sp_table_key, 0, 0);
-  hash_init(&m_sroutines, system_charset_info, 0, 0, 0, sp_sroutine_key, 0, 0);
+  my_hash_init(&m_sptabs, system_charset_info, 0, 0, 0, sp_table_key, 0, 0);
+  my_hash_init(&m_sroutines, system_charset_info, 0, 0, 0, sp_sroutine_key,
+               0, 0);
 
   m_body_utf8.str= NULL;
   m_body_utf8.length= 0;
@@ -617,9 +632,6 @@ sp_head::init(LEX *lex)
   m_defstr.str= NULL;
   m_defstr.length= 0;
 
-  m_sroutines_key.str= NULL;
-  m_sroutines_key.length= 0;
-
   m_return_field_def.charset= NULL;
 
   DBUG_VOID_RETURN;
@@ -649,14 +661,10 @@ sp_head::init_sp_name(THD *thd, sp_name *spname)
   if (spname->m_qname.length == 0)
     spname->init_qname(thd);
 
-  m_sroutines_key.length= spname->m_sroutines_key.length;
-  m_sroutines_key.str= (char*) memdup_root(thd->mem_root,
-                                           spname->m_sroutines_key.str,
-                                           spname->m_sroutines_key.length + 1);
-  m_sroutines_key.str[0]= static_cast<char>(m_type);
-
-  m_qname.length= m_sroutines_key.length - 1;
-  m_qname.str= m_sroutines_key.str + 1;
+  m_qname.length= spname->m_qname.length;
+  m_qname.str= (char*) memdup_root(thd->mem_root,
+                                   spname->m_qname.str,
+                                   spname->m_qname.length + 1);
 
   DBUG_VOID_RETURN;
 }
@@ -738,7 +746,7 @@ create_typelib(MEM_ROOT *mem_root, Create_field *field_def, List<String> *src)
       String *tmp= it++;
 
       if (String::needs_conversion(tmp->length(), tmp->charset(),
-      				   cs, &dummy))
+                                   cs, &dummy))
       {
         uint cnv_errs;
         conv.copy(tmp->ptr(), tmp->length(), tmp->charset(), cs, &cnv_errs);
@@ -765,16 +773,6 @@ create_typelib(MEM_ROOT *mem_root, Create_field *field_def, List<String> *src)
 }
 
 
-int
-sp_head::create(THD *thd)
-{
-  DBUG_ENTER("sp_head::create");
-  DBUG_PRINT("info", ("type: %d name: %s params: %s body: %s",
-		      m_type, m_name.str, m_params.str, m_body.str));
-
-  DBUG_RETURN(sp_create_routine(thd, m_type, this));
-}
-
 sp_head::~sp_head()
 {
   LEX *lex;
@@ -799,13 +797,14 @@ sp_head::~sp_head()
   while ((lex= (LEX *)m_lex.pop()))
   {
     THD *thd= lex->thd;
+    thd->lex->sphead= NULL;
     lex_end(thd->lex);
     delete thd->lex;
     thd->lex= lex;
   }
 
-  hash_free(&m_sptabs);
-  hash_free(&m_sroutines);
+  my_hash_free(&m_sptabs);
+  my_hash_free(&m_sroutines);
 
   delete m_next_cached_sp;
 
@@ -845,7 +844,7 @@ sp_head::create_result_field(uint field_max_length, const char *field_name,
 
   if (field)
     field->init(table);
-  
+
   DBUG_RETURN(field);
 }
 
@@ -874,7 +873,7 @@ int cmp_splocal_locations(Item_splocal * const *a, Item_splocal * const *b)
   Statements that have is_update_query(stmt) == FALSE (e.g. SELECTs) are not
   written into binary log. Instead we catch function calls the statement
   makes and write it into binary log separately (see #3).
-  
+
   2. PROCEDURE calls
 
   CALL statements are not written into binary log. Instead
@@ -887,8 +886,8 @@ int cmp_splocal_locations(Item_splocal * const *a, Item_splocal * const *b)
     This substitution is done in subst_spvars().
 
   3. FUNCTION calls
-  
-  In sp_head::execute_function(), we check 
+
+  In sp_head::execute_function(), we check
    * If this function invocation is done from a statement that is written
      into the binary log.
    * If there were any attempts to write events to the binary log during
@@ -896,28 +895,28 @@ int cmp_splocal_locations(Item_splocal * const *a, Item_splocal * const *b)
 
    If the answers are No and Yes, we write the function call into the binary
    log as "SELECT spfunc(<param1value>, <param2value>, ...)"
-  
-  
+
+
   4. Miscellaneous issues.
-  
-  4.1 User variables. 
+
+  4.1 User variables.
 
   When we call mysql_bin_log.write() for an SP statement, thd->user_var_events
-  must hold set<{var_name, value}> pairs for all user variables used during 
+  must hold set<{var_name, value}> pairs for all user variables used during
   the statement execution.
   This set is produced by tracking user variable reads during statement
-  execution. 
+  execution.
 
   For SPs, this has the following implications:
-  1) thd->user_var_events may contain events from several SP statements and 
-     needs to be valid after exection of these statements was finished. In 
+  1) thd->user_var_events may contain events from several SP statements and
+     needs to be valid after exection of these statements was finished. In
      order to achieve that, we
      * Allocate user_var_events array elements on appropriate mem_root (grep
        for user_var_events_alloc).
      * Use is_query_in_union() to determine if user_var_event is created.
-     
+
   2) We need to empty thd->user_var_events after we have wrote a function
-     call. This is currently done by making 
+     call. This is currently done by making
      reset_dynamic(&thd->user_var_events);
      calls in several different places. (TODO cosider moving this into
      mysql_bin_log.write() function)
@@ -936,7 +935,7 @@ int cmp_splocal_locations(Item_splocal * const *a, Item_splocal * const *b)
   Replace thd->query{_length} with a string that one can write to
   the binlog.
 
-  The binlog-suitable string is produced by replacing references to SP local 
+  The binlog-suitable string is produced by replacing references to SP local
   variables with NAME_CONST('sp_var_name', value) calls.
 
   @param thd        Current thread.
@@ -973,11 +972,11 @@ subst_spvars(THD *thd, sp_instr *instr, LEX_STRING *query_str)
   }
   if (!sp_vars_uses.elements())
     DBUG_RETURN(FALSE);
-    
+
   /* Sort SP var refs by their occurences in the query */
   sp_vars_uses.sort(cmp_splocal_locations);
 
-  /* 
+  /*
     Construct a statement string where SP local var refs are replaced
     with "NAME_CONST(name, value)"
   */
@@ -985,7 +984,7 @@ subst_spvars(THD *thd, sp_instr *instr, LEX_STRING *query_str)
   cur= query_str->str;
   prev_pos= res= 0;
   thd->query_name_consts= 0;
-  
+
   for (Item_splocal **splocal= sp_vars_uses.front(); 
        splocal < sp_vars_uses.back(); splocal++)
   {
@@ -995,16 +994,27 @@ subst_spvars(THD *thd, sp_instr *instr, LEX_STRING *query_str)
     String str_value_holder(str_buffer, sizeof(str_buffer),
                             &my_charset_latin1);
     String *str_value;
-    
+
     /* append the text between sp ref occurences */
     res|= qbuf.append(cur + prev_pos, (*splocal)->pos_in_query - prev_pos);
     prev_pos= (*splocal)->pos_in_query + (*splocal)->len_in_query;
-    
+
+    res|= (*splocal)->fix_fields(thd, (Item **) splocal);
+    if (res)
+      break;
+
+    if ((*splocal)->limit_clause_param)
+    {
+      res|= qbuf.append_ulonglong((*splocal)->val_uint());
+      if (res)
+        break;
+      continue;
+    }
+
     /* append the spvar substitute */
     res|= qbuf.append(STRING_WITH_LEN(" NAME_CONST('"));
     res|= qbuf.append((*splocal)->m_name.str, (*splocal)->m_name.length);
     res|= qbuf.append(STRING_WITH_LEN("',"));
-    res|= (*splocal)->fix_fields(thd, (Item **) splocal);
 
     if (res)
       break;
@@ -1019,11 +1029,11 @@ subst_spvars(THD *thd, sp_instr *instr, LEX_STRING *query_str)
     res|= qbuf.append(')');
     if (res)
       break;
-      
+
     thd->query_name_consts++;
   }
-  res|= qbuf.append(cur + prev_pos, query_str->length - prev_pos);
-  if (res)
+  if (res ||
+      qbuf.append(cur + prev_pos, query_str->length - prev_pos))
     DBUG_RETURN(TRUE);
 
   /*
@@ -1055,16 +1065,14 @@ subst_spvars(THD *thd, sp_instr *instr, LEX_STRING *query_str)
 }
 
 
-/*
+/**
   Return appropriate error about recursion limit reaching
 
-  SYNOPSIS
-    sp_head::recursion_level_error()
-    thd		Thread handle
+  @param thd  Thread handle
 
-  NOTE
-    For functions and triggers we return error about prohibited recursion.
-    For stored procedures we return about reaching recursion limit.
+  @remark For functions and triggers we return error about
+          prohibited recursion. For stored procedures we
+          return about reaching recursion limit.
 */
 
 void sp_head::recursion_level_error(THD *thd)
@@ -1081,12 +1089,117 @@ void sp_head::recursion_level_error(THD *thd)
 
 
 /**
+  Find an SQL handler for any condition (warning or error) after execution
+  of a stored routine instruction. Basically, this function looks for an
+  appropriate SQL handler in RT-contexts. If an SQL handler is found, it is
+  remembered in the RT-context for future activation (the context can be
+  inactive at the moment).
+
+  If there is no pending condition, the function just returns.
+
+  If there was an error during the execution, an SQL handler for it will be
+  searched within the current and outer scopes.
+
+  There might be several errors in the Warning Info (that's possible by using
+  SIGNAL/RESIGNAL in nested scopes) -- the function is looking for an SQL
+  handler for the latest (current) error only.
+
+  If there was a warning during the execution, an SQL handler for it will be
+  searched within the current scope only.
+
+  If several warnings were thrown during the execution and there are different
+  SQL handlers for them, it is not determined which SQL handler will be chosen.
+  Only one SQL handler will be executed.
+
+  If warnings and errors were thrown during the execution, the error takes
+  precedence. I.e. error handler will be executed. If there is no handler
+  for that error, condition will remain unhandled.
+
+  Once a warning or an error has been handled it is not removed from
+  Warning Info.
+
+  According to The Standard (quoting PeterG):
+
+    An SQL procedure statement works like this ...
+    SQL/Foundation 13.5 <SQL procedure statement>
+    (General Rules) (greatly summarized) says:
+    (1) Empty diagnostics area, thus clearing the condition.
+    (2) Execute statement.
+        During execution, if Exception Condition occurs,
+        set Condition Area = Exception Condition and stop
+        statement.
+        During execution, if No Data occurs,
+        set Condition Area = No Data Condition and continue
+        statement.
+        During execution, if Warning occurs,
+        and Condition Area is not already full due to
+        an earlier No Data condition, set Condition Area
+        = Warning and continue statement.
+    (3) Finish statement.
+        At end of execution, if Condition Area is not
+        already full due to an earlier No Data or Warning,
+        set Condition Area = Successful Completion.
+        In effect, this system means there is a precedence:
+        Exception trumps No Data, No Data trumps Warning,
+        Warning trumps Successful Completion.
+
+    NB: "Procedure statements" include any DDL or DML or
+    control statements. So CREATE and DELETE and WHILE
+    and CALL and RETURN are procedure statements. But
+    DECLARE and END are not procedure statements.
+
+  @param thd thread handle
+  @param ctx runtime context of the stored routine
+*/
+
+static void
+find_handler_after_execution(THD *thd, sp_rcontext *ctx)
+{
+  if (thd->is_error())
+  {
+    ctx->find_handler(thd,
+                      thd->stmt_da->sql_errno(),
+                      thd->stmt_da->get_sqlstate(),
+                      MYSQL_ERROR::WARN_LEVEL_ERROR,
+                      thd->stmt_da->message());
+  }
+  else if (thd->warning_info->statement_warn_count())
+  {
+    List_iterator<MYSQL_ERROR> it(thd->warning_info->warn_list());
+    MYSQL_ERROR *err;
+    while ((err= it++))
+    {
+      if (err->get_level() != MYSQL_ERROR::WARN_LEVEL_WARN &&
+          err->get_level() != MYSQL_ERROR::WARN_LEVEL_NOTE)
+        continue;
+
+      if (ctx->find_handler(thd,
+                            err->get_sql_errno(),
+                            err->get_sqlstate(),
+                            err->get_level(),
+                            err->get_message_text()))
+      {
+        break;
+      }
+    }
+  }
+}
+
+
+/**
   Execute the routine. The main instruction jump loop is there.
   Assume the parameters already set.
+
+  @param thd                  Thread context.
+  @param merge_da_on_success  Flag specifying if Warning Info should be
+                              propagated to the caller on Completion
+                              Condition or not.
+
   @todo
-    - Will write this SP statement into binlog separately 
+    - Will write this SP statement into binlog separately
     (TODO: consider changing the condition to "not inside event union")
 
+  @return Error status.
   @retval
     FALSE  on success
   @retval
@@ -1094,14 +1207,14 @@ void sp_head::recursion_level_error(THD *thd)
 */
 
 bool
-sp_head::execute(THD *thd)
+sp_head::execute(THD *thd, bool merge_da_on_success)
 {
   DBUG_ENTER("sp_head::execute");
   char saved_cur_db_name_buf[NAME_LEN+1];
   LEX_STRING saved_cur_db_name=
     { saved_cur_db_name_buf, sizeof(saved_cur_db_name_buf) };
   bool cur_db_changed= FALSE;
-  sp_rcontext *ctx;
+  sp_rcontext *ctx= thd->spcont;
   bool err_status= FALSE;
   uint ip= 0;
   ulong save_sql_mode;
@@ -1109,7 +1222,7 @@ sp_head::execute(THD *thd)
   Query_arena *old_arena;
   /* per-instruction arena */
   MEM_ROOT execute_mem_root;
-  Query_arena execute_arena(&execute_mem_root, INITIALIZED_FOR_SP),
+  Query_arena execute_arena(&execute_mem_root, STMT_INITIALIZED_FOR_SP),
               backup_arena;
   query_id_t old_query_id;
   TABLE *old_derived_tables;
@@ -1117,10 +1230,34 @@ sp_head::execute(THD *thd)
   Item_change_list old_change_list;
   String old_packet;
   Reprepare_observer *save_reprepare_observer= thd->m_reprepare_observer;
-
   Object_creation_ctx *saved_creation_ctx;
+  Warning_info *saved_warning_info;
+  Warning_info warning_info(thd->warning_info->warn_id(), false);
 
-  /* Use some extra margin for possible SP recursion and functions */
+  /*
+    Just reporting a stack overrun error
+    (@sa check_stack_overrun()) requires stack memory for error
+    message buffer. Thus, we have to put the below check
+    relatively close to the beginning of the execution stack,
+    where available stack margin is still big. As long as the check
+    has to be fairly high up the call stack, the amount of memory
+    we "book" for has to stay fairly high as well, and hence
+    not very accurate. The number below has been calculated
+    by trial and error, and reflects the amount of memory necessary
+    to execute a single stored procedure instruction, be it either
+    an SQL statement, or, heaviest of all, a CALL, which involves
+    parsing and loading of another stored procedure into the cache
+    (@sa db_load_routine() and Bug#10100).
+    At the time of measuring, a recursive SP invocation required
+    3232 bytes of stack on 32 bit Linux, 6016 bytes on 64 bit Mac
+    and 11152 on 64 bit Solaris sparc.
+    The same with db_load_routine() required circa 7k bytes and
+    14k bytes accordingly. Hence, here we book the stack with some
+    reasonable margin.
+
+    Reverting back to 8 * STACK_MIN_SIZE until further fix.
+    8 * STACK_MIN_SIZE is required on some exotic platforms.
+  */
   if (check_stack_overrun(thd, 8 * STACK_MIN_SIZE, (uchar*)&old_packet))
     DBUG_RETURN(TRUE);
 
@@ -1162,10 +1299,13 @@ sp_head::execute(THD *thd)
     goto done;
   }
 
-  if ((ctx= thd->spcont))
-    ctx->clear_handler();
   thd->is_slave_error= 0;
   old_arena= thd->stmt_arena;
+
+  /* Push a new warning information area. */
+  warning_info.append_warning_info(thd, thd->warning_info);
+  saved_warning_info= thd->warning_info;
+  thd->warning_info= &warning_info;
 
   /*
     Switch query context. This has to be done early as this is sometimes
@@ -1213,8 +1353,7 @@ sp_head::execute(THD *thd)
     We should also save Item tree change list to avoid rollback something
     too early in the calling query.
   */
-  old_change_list= thd->change_list;
-  thd->change_list.empty();
+  thd->change_list.move_elements_to(&old_change_list);
   /*
     Cursors will use thd->packet, so they may corrupt data which was prepared
     for sending by upper level. OTOH cursors in the same routine can share this
@@ -1237,17 +1376,16 @@ sp_head::execute(THD *thd)
   */
   thd->spcont->callers_arena= &backup_arena;
 
-#if defined(ENABLED_PROFILING) && defined(COMMUNITY_SERVER)
+#if defined(ENABLED_PROFILING)
   /* Discard the initial part of executing routines. */
   thd->profiling.discard_current_query();
 #endif
   do
   {
     sp_instr *i;
-    uint hip;			// Handler ip
 
-#if defined(ENABLED_PROFILING) && defined(COMMUNITY_SERVER)
-    /* 
+#if defined(ENABLED_PROFILING)
+    /*
      Treat each "instr" of a routine as discrete unit that could be profiled.
      Profiling only records information for segments of code that set the
      source of the query, and almost all kinds of instructions in s-p do not.
@@ -1256,14 +1394,18 @@ sp_head::execute(THD *thd)
     thd->profiling.start_new_query("continuing inside routine");
 #endif
 
-    i = get_instr(ip);	// Returns NULL when we're done.
+    /* get_instr returns NULL when we're done. */
+    i = get_instr(ip);
     if (i == NULL)
     {
-#if defined(ENABLED_PROFILING) && defined(COMMUNITY_SERVER)
+#if defined(ENABLED_PROFILING)
       thd->profiling.discard_current_query();
 #endif
       break;
     }
+
+    /* Reset number of warnings for this query. */
+    thd->warning_info->reset_for_next_command();
 
     DBUG_PRINT("execute", ("Instruction %u", ip));
 
@@ -1281,67 +1423,60 @@ sp_head::execute(THD *thd)
       items made during other permanent subquery transformations).
     */
     thd->stmt_arena= i;
-    
-    /* 
-      Will write this SP statement into binlog separately 
-      (TODO: consider changing the condition to "not inside event union")
+
+    /*
+      Will write this SP statement into binlog separately.
+      TODO: consider changing the condition to "not inside event union".
     */
-    if (thd->prelocked_mode == NON_PRELOCKED)
+    MEM_ROOT *user_var_events_alloc_saved= thd->user_var_events_alloc;
+    if (thd->locked_tables_mode <= LTM_LOCK_TABLES)
       thd->user_var_events_alloc= thd->mem_root;
 
     err_status= i->execute(thd, &ip);
 
     if (i->free_list)
       cleanup_items(i->free_list);
-    
-    /* 
+
+    /*
       If we've set thd->user_var_events_alloc to mem_root of this SP
       statement, clean all the events allocated in it.
     */
-    if (thd->prelocked_mode == NON_PRELOCKED)
+    if (thd->locked_tables_mode <= LTM_LOCK_TABLES)
     {
       reset_dynamic(&thd->user_var_events);
-      thd->user_var_events_alloc= NULL;//DEBUG
+      thd->user_var_events_alloc= user_var_events_alloc_saved;
     }
 
     /* we should cleanup free_list and memroot, used by instruction */
     thd->cleanup_after_query();
-    free_root(&execute_mem_root, MYF(0));    
+    free_root(&execute_mem_root, MYF(0));
 
     /*
-      Check if an exception has occurred and a handler has been found
-      Note: We have to check even if err_status == FALSE, since warnings (and
-      some errors) don't return a non-zero value. We also have to check even
-      if thd->killed != 0, since some errors return with this even when a
-      handler has been found (e.g. "bad data").
+      Find and process SQL handlers unless it is a fatal error (fatal
+      errors are not catchable by SQL handlers) or the connection has been
+      killed during execution.
     */
-    if (ctx)
+    if (!thd->is_fatal_error && !thd->killed_errno())
     {
-      uint hf;
+      /*
+        Find SQL handler in the appropriate RT-contexts:
+          - warnings can be handled by SQL handlers within
+            the current scope only;
+          - errors can be handled by any SQL handler from outer scope.
+      */
+      find_handler_after_execution(thd, ctx);
 
-      switch (ctx->found_handler(&hip, &hf)) {
-      case SP_HANDLER_NONE:
-	break;
-      case SP_HANDLER_CONTINUE:
-        thd->restore_active_arena(&execute_arena, &backup_arena);
-        thd->set_n_backup_active_arena(&execute_arena, &backup_arena);
-        ctx->push_hstack(i->get_cont_dest());
-        // Fall through
-      default:
-	ip= hip;
-	err_status= FALSE;
-	ctx->clear_handler();
-	ctx->enter_handler(hip);
-        thd->clear_error();
-        thd->is_fatal_error= 0;
-	thd->killed= THD::NOT_KILLED;
-        thd->mysys_var->abort= 0;
-	continue;
-      }
+      /* If found, activate handler for the current scope. */
+      if (ctx->activate_handler(thd, &ip, i, &execute_arena, &backup_arena))
+        err_status= FALSE;
     }
-  } while (!err_status && !thd->killed);
 
-#if defined(ENABLED_PROFILING) && defined(COMMUNITY_SERVER)
+    /* Reset sp_rcontext::end_partial_result_set flag. */
+    ctx->end_partial_result_set= FALSE;
+
+  } while (!err_status && !thd->killed && !thd->is_fatal_error);
+
+#if defined(ENABLED_PROFILING)
   thd->profiling.finish_current_query();
   thd->profiling.start_new_query("tail end of routine");
 #endif
@@ -1359,11 +1494,9 @@ sp_head::execute(THD *thd)
   /* Restore all saved */
   old_packet.swap(thd->packet);
   DBUG_ASSERT(thd->change_list.is_empty());
-  thd->change_list= old_change_list;
-  /* To avoid wiping out thd->change_list on old_change_list destruction */
-  old_change_list.empty();
+  old_change_list.move_elements_to(&thd->change_list);
   thd->lex= old_lex;
-  thd->query_id= old_query_id;
+  thd->set_query_id(old_query_id);
   DBUG_ASSERT(!thd->derived_tables);
   thd->derived_tables= old_derived_tables;
   thd->variables.sql_mode= save_sql_mode;
@@ -1371,11 +1504,22 @@ sp_head::execute(THD *thd)
   thd->m_reprepare_observer= save_reprepare_observer;
 
   thd->stmt_arena= old_arena;
-  state= EXECUTED;
+  state= STMT_EXECUTED;
+
+  /*
+    Restore the caller's original warning information area:
+      - warnings generated during trigger execution should not be
+        propagated to the caller on success;
+      - if there was an exception during execution, warning info should be
+        propagated to the caller in any case.
+  */
+  if (err_status || merge_da_on_success)
+    saved_warning_info->merge_with_routine_info(thd, thd->warning_info);
+  thd->warning_info= saved_warning_info;
 
  done:
   DBUG_PRINT("info", ("err_status: %d  killed: %d  is_slave_error: %d  report_error: %d",
-		      err_status, thd->killed, thd->is_slave_error,
+                      err_status, thd->killed, thd->is_slave_error,
                       thd->is_error()));
 
   if (thd->killed)
@@ -1518,7 +1662,7 @@ sp_head::execute_trigger(THD *thd,
   sp_rcontext *nctx = NULL;
   bool err_status= FALSE;
   MEM_ROOT call_mem_root;
-  Query_arena call_arena(&call_mem_root, Query_arena::INITIALIZED_FOR_SP);
+  Query_arena call_arena(&call_mem_root, Query_arena::STMT_INITIALIZED_FOR_SP);
   Query_arena backup_arena;
 
   DBUG_ENTER("sp_head::execute_trigger");
@@ -1592,7 +1736,7 @@ sp_head::execute_trigger(THD *thd,
 
   thd->spcont= nctx;
 
-  err_status= execute(thd);
+  err_status= execute(thd, FALSE);
 
 err_with_cleanup:
   thd->restore_active_arena(&call_arena, &backup_arena);
@@ -1651,7 +1795,7 @@ sp_head::execute_function(THD *thd, Item **argp, uint argcount,
                           Field *return_value_fld)
 {
   ulonglong binlog_save_options;
-  bool need_binlog_call;
+  bool need_binlog_call= FALSE;
   uint arg_no;
   sp_rcontext *octx = thd->spcont;
   sp_rcontext *nctx = NULL;
@@ -1659,7 +1803,7 @@ sp_head::execute_function(THD *thd, Item **argp, uint argcount,
   String binlog_buf(buf, sizeof(buf), &my_charset_bin);
   bool err_status= FALSE;
   MEM_ROOT call_mem_root;
-  Query_arena call_arena(&call_mem_root, Query_arena::INITIALIZED_FOR_SP);
+  Query_arena call_arena(&call_mem_root, Query_arena::STMT_INITIALIZED_FOR_SP);
   Query_arena backup_arena;
   DBUG_ENTER("sp_head::execute_function");
   DBUG_PRINT("info", ("function %s", m_name.str));
@@ -1731,7 +1875,8 @@ sp_head::execute_function(THD *thd, Item **argp, uint argcount,
     each substatement be binlogged its way.
   */
   need_binlog_call= mysql_bin_log.is_open() &&
-    (thd->options & OPTION_BIN_LOG) && !thd->current_stmt_binlog_row_based;
+                    (thd->variables.option_bits & OPTION_BIN_LOG) &&
+                    !thd->is_current_stmt_binlog_format_row();
 
   /*
     Remember the original arguments for unrolled replication of functions
@@ -1790,12 +1935,12 @@ sp_head::execute_function(THD *thd, Item **argp, uint argcount,
       as one select and not resetting THD::user_var_events before
       each invocation.
     */
-    VOID(pthread_mutex_lock(&LOCK_thread_count));
+    mysql_mutex_lock(&LOCK_thread_count);
     q= global_query_id;
-    VOID(pthread_mutex_unlock(&LOCK_thread_count));
+    mysql_mutex_unlock(&LOCK_thread_count);
     mysql_bin_log.start_union_events(thd, q + 1);
-    binlog_save_options= thd->options;
-    thd->options&= ~OPTION_BIN_LOG;
+    binlog_save_options= thd->variables.option_bits;
+    thd->variables.option_bits&= ~OPTION_BIN_LOG;
   }
 
   /*
@@ -1808,19 +1953,19 @@ sp_head::execute_function(THD *thd, Item **argp, uint argcount,
   */
   thd->set_n_backup_active_arena(&call_arena, &backup_arena);
 
-  err_status= execute(thd);
+  err_status= execute(thd, TRUE);
 
   thd->restore_active_arena(&call_arena, &backup_arena);
 
   if (need_binlog_call)
   {
     mysql_bin_log.stop_union_events(thd);
-    thd->options= binlog_save_options;
+    thd->variables.option_bits= binlog_save_options;
     if (thd->binlog_evt_union.unioned_events)
     {
       int errcode = query_error_code(thd, thd->killed == THD::NOT_KILLED);
       Query_log_event qinfo(thd, binlog_buf.ptr(), binlog_buf.length(),
-                            thd->binlog_evt_union.unioned_events_trans, FALSE, errcode);
+                            thd->binlog_evt_union.unioned_events_trans, FALSE, FALSE, errcode);
       if (mysql_bin_log.write(&qinfo) &&
           thd->binlog_evt_union.unioned_events_trans)
       {
@@ -1857,15 +2002,23 @@ err_with_cleanup:
   free_root(&call_mem_root, MYF(0));
   thd->spcont= octx;
 
+  /*
+    If not insided a procedure and a function printing warning
+    messsages.
+  */
+  if (need_binlog_call && 
+      thd->spcont == NULL && !thd->binlog_evt_union.do_union)
+    thd->issue_unsafe_warnings();
+
   DBUG_RETURN(err_status);
 }
 
 
 /**
-  Execute a procedure. 
+  Execute a procedure.
 
   The function does the following steps:
-   - Set all parameters 
+   - Set all parameters
    - changes security context for SUID routines
    - call sp_head::execute
    - copy back values of INOUT and OUT parameters
@@ -1885,6 +2038,8 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
 {
   bool err_status= FALSE;
   uint params = m_pcont->context_var_count();
+  /* Query start time may be reset in a multi-stmt SP; keep this for later. */
+  ulonglong utime_before_sp_exec= thd->utime_after_lock;
   sp_rcontext *save_spcont, *octx;
   sp_rcontext *nctx = NULL;
   bool save_enable_slow_log= false;
@@ -1901,14 +2056,14 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
 
   save_spcont= octx= thd->spcont;
   if (! octx)
-  {				// Create a temporary old context
-    if (!(octx= new sp_rcontext(m_pcont, NULL, octx)) ||
-        octx->init(thd))
+  {
+    /* Create a temporary old context. */
+    if (!(octx= new sp_rcontext(m_pcont, NULL, octx)) || octx->init(thd))
     {
       delete octx; /* Delete octx if it was init() that failed. */
       DBUG_RETURN(TRUE);
     }
-    
+
 #ifndef DBUG_OFF
     octx->sp= 0;
 #endif
@@ -1983,17 +2138,38 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
       }
     }
 
-    /* 
-      Okay, got values for all arguments. Close tables that might be used by 
-      arguments evaluation. If arguments evaluation required prelocking mode, 
+    /*
+      Okay, got values for all arguments. Close tables that might be used by
+      arguments evaluation. If arguments evaluation required prelocking mode,
       we'll leave it here.
     */
+    thd->lex->unit.cleanup();
+
     if (!thd->in_sub_stmt)
     {
-      thd->lex->unit.cleanup();
-      close_thread_tables(thd);            
-      thd->rollback_item_tree_changes();
+      thd->stmt_da->can_overwrite_status= TRUE;
+      thd->is_error() ? trans_rollback_stmt(thd) : trans_commit_stmt(thd);
+      thd->stmt_da->can_overwrite_status= FALSE;
     }
+
+    thd_proc_info(thd, "closing tables");
+    close_thread_tables(thd);
+    thd_proc_info(thd, 0);
+
+    if (! thd->in_sub_stmt)
+    {
+      if (thd->transaction_rollback_request)
+      {
+        trans_rollback_implicit(thd);
+        thd->mdl_context.release_transactional_locks();
+      }
+      else if (! thd->in_multi_stmt_transaction_mode())
+        thd->mdl_context.release_transactional_locks();
+      else
+        thd->mdl_context.release_statement_locks();
+    }
+
+    thd->rollback_item_tree_changes();
 
     DBUG_PRINT("info",(" %.*s: eval args done", (int) m_name.length, 
                        m_name.str));
@@ -2004,12 +2180,12 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
     save_enable_slow_log= true;
     thd->enable_slow_log= FALSE;
   }
-  if (!(m_flags & LOG_GENERAL_LOG) && !(thd->options & OPTION_LOG_OFF))
+  if (!(m_flags & LOG_GENERAL_LOG) && !(thd->variables.option_bits & OPTION_LOG_OFF))
   {
     DBUG_PRINT("info", ("Disabling general log for the execution"));
     save_log_general= true;
     /* disable this bit */
-    thd->options |= OPTION_LOG_OFF;
+    thd->variables.option_bits |= OPTION_LOG_OFF;
   }
   thd->spcont= nctx;
 
@@ -2020,10 +2196,10 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
 #endif
 
   if (!err_status)
-    err_status= execute(thd);
+    err_status= execute(thd, TRUE);
 
   if (save_log_general)
-    thd->options &= ~OPTION_LOG_OFF;
+    thd->variables.option_bits &= ~OPTION_LOG_OFF;
   if (save_enable_slow_log)
     thd->enable_slow_log= true;
   /*
@@ -2064,6 +2240,16 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
         err_status= TRUE;
         break;
       }
+
+      Send_field *out_param_info= new (thd->mem_root) Send_field();
+      nctx->get_item(i)->make_field(out_param_info);
+      out_param_info->db_name= m_db.str;
+      out_param_info->table_name= m_name.str;
+      out_param_info->org_table_name= m_name.str;
+      out_param_info->col_name= spvar->name.str;
+      out_param_info->org_col_name= spvar->name.str;
+
+      srp->set_out_param_info(out_param_info);
     }
   }
 
@@ -2077,6 +2263,19 @@ sp_head::execute_procedure(THD *thd, List<Item> *args)
 
   delete nctx;
   thd->spcont= save_spcont;
+  thd->utime_after_lock= utime_before_sp_exec;
+
+  /*
+    If not insided a procedure and a function printing warning
+    messsages.
+  */ 
+  bool need_binlog_call= mysql_bin_log.is_open() &&
+                         (thd->variables.option_bits & OPTION_BIN_LOG) &&
+                         !thd->is_current_stmt_binlog_format_row();
+  if (need_binlog_call && thd->spcont == NULL &&
+      !thd->binlog_evt_union.do_union)
+    thd->issue_unsafe_warnings();
+
   DBUG_RETURN(err_status);
 }
 
@@ -2124,6 +2323,9 @@ sp_head::reset_lex(THD *thd)
   sublex->interval_list.empty();
   sublex->type= 0;
 
+  /* Reset part of parser state which needs this. */
+  thd->m_parser_state->m_yacc.reset_before_substatement();
+
   DBUG_RETURN(FALSE);
 }
 
@@ -2149,17 +2351,14 @@ sp_head::restore_lex(THD *thd)
 
   oldlex= (LEX *)m_lex.pop();
   if (! oldlex)
-    DBUG_RETURN(FALSE);			// Nothing to restore
+    DBUG_RETURN(FALSE); // Nothing to restore
 
   oldlex->trg_table_fields.push_back(&sublex->trg_table_fields);
 
-  /*
-    If this substatement needs row-based, the entire routine does too (we
-    cannot switch from statement-based to row-based only for this
-    substatement).
-  */
-  if (sublex->is_stmt_unsafe())
-    m_flags|= BINLOG_ROW_BASED_IF_MIXED;
+  /* If this substatement is unsafe, the entire routine is too. */
+  DBUG_PRINT("info", ("lex->get_stmt_unsafe_flags: 0x%x",
+                      thd->lex->get_stmt_unsafe_flags()));
+  unsafe_flags|= sublex->get_stmt_unsafe_flags();
 
   /*
     Add routines which are used by statement to respective set for
@@ -2174,6 +2373,7 @@ sp_head::restore_lex(THD *thd)
   merge_table_list(thd, sublex->query_tables, sublex);
   if (! sublex->sp_lex_in_use)
   {
+    sublex->sphead= NULL;
     lex_end(sublex);
     delete sublex;
   }
@@ -2305,7 +2505,7 @@ sp_head::do_cont_backpatch()
 
 void
 sp_head::set_info(longlong created, longlong modified,
-		  st_sp_chistics *chistics, ulong sql_mode)
+                  st_sp_chistics *chistics, ulong sql_mode)
 {
   m_created= created;
   m_modified= modified;
@@ -2315,8 +2515,8 @@ sp_head::set_info(longlong created, longlong modified,
     m_chistics->comment.str= 0;
   else
     m_chistics->comment.str= strmake_root(mem_root,
-					  m_chistics->comment.str,
-					  m_chistics->comment.length);
+                                          m_chistics->comment.str,
+                                          m_chistics->comment.length);
   m_sql_mode= sql_mode;
 }
 
@@ -2357,7 +2557,7 @@ sp_head::reset_thd_mem_root(THD *thd)
   DBUG_PRINT("info", ("mem_root 0x%lx moved to thd mem root 0x%lx",
                       (ulong) &mem_root, (ulong) &thd->mem_root));
   free_list= thd->free_list; // Keep the old list
-  thd->free_list= NULL;	// Start a new one
+  thd->free_list= NULL; // Start a new one
   m_thd= thd;
   DBUG_VOID_RETURN;
 }
@@ -2383,11 +2583,11 @@ sp_head::restore_thd_mem_root(THD *thd)
 
   Item *flist= free_list;	// The old list
   set_query_arena(thd);         // Get new free_list and mem_root
-  state= INITIALIZED_FOR_SP;
+  state= STMT_INITIALIZED_FOR_SP;
 
   DBUG_PRINT("info", ("mem_root 0x%lx returned from thd mem root 0x%lx",
                       (ulong) &mem_root, (ulong) &thd->mem_root));
-  thd->free_list= flist;	// Restore the old one
+  thd->free_list= flist;        // Restore the old one
   thd->mem_root= m_thd_root;
   m_thd= NULL;
   DBUG_VOID_RETURN;
@@ -2397,10 +2597,10 @@ sp_head::restore_thd_mem_root(THD *thd)
 /**
   Check if a user has access right to a routine.
 
-  @param thd		    Thread handler
-  @param sp		    SP
-  @param full_access       Set to 1 if the user has SELECT right to the
-                           'mysql.proc' able or is the owner of the routine
+  @param thd          Thread handler
+  @param sp           SP
+  @param full_access  Set to 1 if the user has SELECT right to the
+                      'mysql.proc' able or is the owner of the routine
   @retval
     false ok
   @retval
@@ -2413,7 +2613,8 @@ bool check_show_routine_access(THD *thd, sp_head *sp, bool *full_access)
   bzero((char*) &tables,sizeof(tables));
   tables.db= (char*) "mysql";
   tables.table_name= tables.alias= (char*) "proc";
-  *full_access= ((!check_table_access(thd, SELECT_ACL, &tables, 1, TRUE) &&
+  *full_access= ((!check_table_access(thd, SELECT_ACL, &tables, FALSE,
+                                     1, TRUE) &&
                   (tables.grant.privilege & SELECT_ACL) != 0) ||
                  (!strcmp(sp->m_definer_user.str,
                           thd->security_ctx->priv_user) &&
@@ -2465,8 +2666,7 @@ sp_head::show_create_routine(THD *thd, int type)
   if (check_show_routine_access(thd, this, &full_access))
     DBUG_RETURN(TRUE);
 
-  sys_var_thd_sql_mode::symbolic_mode_representation(
-      thd, m_sql_mode, &sql_mode);
+  sql_mode_string_representation(thd, m_sql_mode, &sql_mode);
 
   /* Send header. */
 
@@ -2497,7 +2697,7 @@ sp_head::show_create_routine(THD *thd, int type)
   fields.push_back(new Item_empty_string("Database Collation",
                                          MY_CS_NAME_SIZE));
 
-  if (protocol->send_fields(&fields,
+  if (protocol->send_result_set_metadata(&fields,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
   {
     DBUG_RETURN(TRUE);
@@ -2528,8 +2728,6 @@ sp_head::show_create_routine(THD *thd, int type)
 
   DBUG_RETURN(err_status);
 }
-
-
 
 
 /**
@@ -2589,12 +2787,13 @@ void sp_head::optimize()
     else
     {
       if (src != dst)
-      {                         // Move the instruction and update prev. jumps
-	sp_instr *ibp;
-	List_iterator_fast<sp_instr> li(bp);
+      {
+        /* Move the instruction and update prev. jumps */
+        sp_instr *ibp;
+        List_iterator_fast<sp_instr> li(bp);
 
-	set_dynamic(&m_instr, (uchar*)&i, dst);
-	while ((ibp= li++))
+        set_dynamic(&m_instr, (uchar*)&i, dst);
+        while ((ibp= li++))
         {
           sp_instr_opt_meta *im= static_cast<sp_instr_opt_meta *>(ibp);
           im->set_destination(src, dst);
@@ -2682,14 +2881,14 @@ sp_head::show_routine_code(THD *thd)
   field_list.push_back(new Item_uint("Pos", 9));
   // 1024 is for not to confuse old clients
   field_list.push_back(new Item_empty_string("Instruction",
-					     max(buffer.length(), 1024)));
-  if (protocol->send_fields(&field_list, Protocol::SEND_NUM_ROWS |
+                                             max(buffer.length(), 1024)));
+  if (protocol->send_result_set_metadata(&field_list, Protocol::SEND_NUM_ROWS |
                                          Protocol::SEND_EOF))
     DBUG_RETURN(1);
 
   for (ip= 0; (i = get_instr(ip)) ; ip++)
   {
-    /* 
+    /*
       Consistency check. If these are different something went wrong
       during optimization.
     */
@@ -2752,7 +2951,7 @@ sp_lex_keeper::reset_lex_and_exec_core(THD *thd, uint *nextp,
   int res= 0;
   DBUG_ENTER("reset_lex_and_exec_core");
 
-  /* 
+  /*
     The flag is saved at the entry to the following substatement.
     It's reset further in the common code part.
     It's merged with the saved parent's value at the exit of this func.
@@ -2768,11 +2967,9 @@ sp_lex_keeper::reset_lex_and_exec_core(THD *thd, uint *nextp,
   */
   thd->lex= m_lex;
 
-  VOID(pthread_mutex_lock(&LOCK_thread_count));
-  thd->query_id= next_query_id();
-  VOID(pthread_mutex_unlock(&LOCK_thread_count));
+  thd->set_query_id(next_query_id());
 
-  if (thd->prelocked_mode == NON_PRELOCKED)
+  if (thd->locked_tables_mode <= LTM_LOCK_TABLES)
   {
     /*
       This statement will enter/leave prelocked mode on its own.
@@ -2802,12 +2999,37 @@ sp_lex_keeper::reset_lex_and_exec_core(THD *thd, uint *nextp,
     DBUG_PRINT("info",("exec_core returned: %d", res));
   }
 
-  m_lex->unit.cleanup();
+  /*
+    Call after unit->cleanup() to close open table
+    key read.
+  */
+  if (open_tables)
+  {
+    m_lex->unit.cleanup();
+    /* Here we also commit or rollback the current statement. */
+    if (! thd->in_sub_stmt)
+    {
+      thd->stmt_da->can_overwrite_status= TRUE;
+      thd->is_error() ? trans_rollback_stmt(thd) : trans_commit_stmt(thd);
+      thd->stmt_da->can_overwrite_status= FALSE;
+    }
+    thd_proc_info(thd, "closing tables");
+    close_thread_tables(thd);
+    thd_proc_info(thd, 0);
 
-  thd_proc_info(thd, "closing tables");
-  /* Here we also commit or rollback the current statement. */
-  close_thread_tables(thd);
-  thd_proc_info(thd, 0);
+    if (! thd->in_sub_stmt)
+    {
+      if (thd->transaction_rollback_request)
+      {
+        trans_rollback_implicit(thd);
+        thd->mdl_context.release_transactional_locks();
+      }
+      else if (! thd->in_multi_stmt_transaction_mode())
+        thd->mdl_context.release_transactional_locks();
+      else
+        thd->mdl_context.release_statement_locks();
+    }
+  }
 
   if (m_lex->query_tables_own_last)
   {
@@ -2831,10 +3053,10 @@ sp_lex_keeper::reset_lex_and_exec_core(THD *thd, uint *nextp,
     open_tables stage.
   */
   if (!res || !thd->is_error() ||
-      (thd->main_da.sql_errno() != ER_CANT_REOPEN_TABLE &&
-       thd->main_da.sql_errno() != ER_NO_SUCH_TABLE &&
-       thd->main_da.sql_errno() != ER_UPDATE_TABLE_USED))
-    thd->stmt_arena->state= Query_arena::EXECUTED;
+      (thd->stmt_da->sql_errno() != ER_CANT_REOPEN_TABLE &&
+       thd->stmt_da->sql_errno() != ER_NO_SUCH_TABLE &&
+       thd->stmt_da->sql_errno() != ER_UPDATE_TABLE_USED))
+    thd->stmt_arena->state= Query_arena::STMT_EXECUTED;
 
   /*
     Merge here with the saved parent's values
@@ -2866,8 +3088,8 @@ int sp_instr::exec_open_and_lock_tables(THD *thd, TABLE_LIST *tables)
     Check whenever we have access to tables for this statement
     and open and lock them before executing instructions core function.
   */
-  if (check_table_access(thd, SELECT_ACL, tables, UINT_MAX, FALSE)
-      || open_and_lock_tables(thd, tables))
+  if (check_table_access(thd, SELECT_ACL, tables, FALSE, UINT_MAX, FALSE)
+      || open_and_lock_tables(thd, tables, TRUE, 0))
     result= -1;
   else
     result= 0;
@@ -2894,15 +3116,12 @@ int sp_instr::exec_core(THD *thd, uint *nextp)
 int
 sp_instr_stmt::execute(THD *thd, uint *nextp)
 {
-  char *query;
-  uint32 query_length;
   int res;
   DBUG_ENTER("sp_instr_stmt::execute");
   DBUG_PRINT("info", ("command: %d", m_lex_keeper.sql_command()));
 
-  query= thd->query();
-  query_length= thd->query_length();
-#if defined(ENABLED_PROFILING) && defined(COMMUNITY_SERVER)
+  const CSET_STRING query_backup= thd->query_string;
+#if defined(ENABLED_PROFILING)
   /* This s-p instr is profilable and will be captured. */
   thd->profiling.set_query_source(m_query.str, m_query.length);
 #endif
@@ -2913,17 +3132,21 @@ sp_instr_stmt::execute(THD *thd, uint *nextp)
       (the order of query cache and subst_spvars calls is irrelevant because
       queries with SP vars can't be cached)
     */
-    if (unlikely((thd->options & OPTION_LOG_OFF)==0))
+    if (unlikely((thd->variables.option_bits & OPTION_LOG_OFF)==0))
       general_log_write(thd, COM_QUERY, thd->query(), thd->query_length());
 
-    if (query_cache_send_result_to_client(thd,
-          thd->query(), 
-          thd->query_length()) <= 0)
+    if (query_cache_send_result_to_client(thd, thd->query(),
+                                          thd->query_length()) <= 0)
     {
       res= m_lex_keeper.reset_lex_and_exec_core(thd, nextp, FALSE, this);
 
-      if (thd->main_da.is_eof())
-        net_end_statement(thd);
+      if (thd->stmt_da->is_eof())
+      {
+        /* Finalize server status flags after executing a statement. */
+        thd->update_server_status();
+
+        thd->protocol->end_statement();
+      }
 
       query_cache_end_of_result(thd);
 
@@ -2932,11 +3155,11 @@ sp_instr_stmt::execute(THD *thd, uint *nextp)
     }
     else
       *nextp= m_ip+1;
-    thd->set_query(query, query_length);
+    thd->set_query(query_backup);
     thd->query_name_consts= 0;
 
     if (!thd->is_error())
-      thd->main_da.reset_diagnostics_area();
+      thd->stmt_da->reset_diagnostics_area();
   }
   DBUG_RETURN(res || thd->is_error());
 }
@@ -2977,7 +3200,14 @@ sp_instr_stmt::print(String *str)
 int
 sp_instr_stmt::exec_core(THD *thd, uint *nextp)
 {
+  MYSQL_QUERY_EXEC_START(thd->query(),
+                         thd->thread_id,
+                         (char *) (thd->db ? thd->db : ""),
+                         &thd->security_ctx->priv_user[0],
+                         (char *)thd->security_ctx->host_or_ip,
+                         3);
   int res= mysql_execute_command(thd);
+  MYSQL_QUERY_EXEC_DONE(res);
   *nextp= m_ip+1;
   return res;
 }
@@ -3002,23 +3232,14 @@ sp_instr_set::exec_core(THD *thd, uint *nextp)
 {
   int res= thd->spcont->set_variable(thd, m_offset, &m_value);
 
-  if (res && thd->spcont->found_handler_here())
+  if (res)
   {
-    /*
-      Failed to evaluate the value, and a handler has been found. Reset the
-      variable to NULL.
-    */
+    /* Failed to evaluate the value. Reset the variable to NULL. */
 
     if (thd->spcont->set_variable(thd, m_offset, 0))
     {
       /* If this also failed, let's abort. */
-
-      sp_rcontext *spcont= thd->spcont;
-    
-      thd->spcont= NULL;           /* Avoid handlers */
-      my_error(ER_OUT_OF_RESOURCES, MYF(0));
-      spcont->clear_handler();
-      thd->spcont= spcont;
+      my_error(ER_OUT_OF_RESOURCES, MYF(ME_FATALERROR));
     }
   }
 
@@ -3118,7 +3339,7 @@ uint
 sp_instr_jump::opt_mark(sp_head *sp, List<sp_instr> *leads)
 {
   m_dest= opt_shortcut_jump(sp, this);
-  if (m_dest != m_ip+1)		/* Jumping to following instruction? */
+  if (m_dest != m_ip+1)   /* Jumping to following instruction? */
     marked= 1;
   m_optdest= sp->get_instr(m_dest);
   return m_dest;
@@ -3148,9 +3369,9 @@ void
 sp_instr_jump::opt_move(uint dst, List<sp_instr> *bp)
 {
   if (m_dest > m_ip)
-    bp->push_back(this);	// Forward
+    bp->push_back(this);      // Forward
   else if (m_optdest)
-    m_dest= m_optdest->m_ip;	// Backward
+    m_dest= m_optdest->m_ip;  // Backward
   m_ip= dst;
 }
 
@@ -3306,7 +3527,7 @@ sp_instr_hpush_jump::execute(THD *thd, uint *nextp)
   sp_cond_type_t *p;
 
   while ((p= li++))
-    thd->spcont->push_handler(p, m_ip+1, m_type, m_frame);
+    thd->spcont->push_handler(p, m_ip+1, m_type);
 
   *nextp= m_dest;
   DBUG_RETURN(0);
@@ -3440,7 +3661,7 @@ uint
 sp_instr_hreturn::opt_mark(sp_head *sp, List<sp_instr> *leads)
 {
   marked= 1;
-  
+
   if (m_dest)
   {
     /*
@@ -3448,7 +3669,7 @@ sp_instr_hreturn::opt_mark(sp_head *sp, List<sp_instr> *leads)
      */
     return m_dest;
   }
-  
+
   /*
     This is a CONTINUE handler; next instruction step will come from
     the handler stack and not from opt_mark.
@@ -3568,18 +3789,6 @@ sp_instr_copen::execute(THD *thd, uint *nextp)
     if (thd->stmt_arena->free_list)
       cleanup_items(thd->stmt_arena->free_list);
     thd->stmt_arena= old_arena;
-    /*
-      Work around the fact that errors in selects are not returned properly
-      (but instead converted into a warning), so if a condition handler
-      caught, we have lost the result code.
-    */
-    if (!res)
-    {
-      uint dummy1, dummy2;
-
-      if (thd->spcont->found_handler(&dummy1, &dummy2))
-        res= -1;
-    }
     /* TODO: Assert here that we either have an error or a cursor */
   }
   DBUG_RETURN(res);
@@ -3755,28 +3964,20 @@ sp_instr_set_case_expr::exec_core(THD *thd, uint *nextp)
 {
   int res= thd->spcont->set_case_expr(thd, m_case_expr_id, &m_case_expr);
 
-  if (res &&
-      !thd->spcont->get_case_expr(m_case_expr_id) &&
-      thd->spcont->found_handler_here())
+  if (res && !thd->spcont->get_case_expr(m_case_expr_id))
   {
     /*
       Failed to evaluate the value, the case expression is still not
-      initialized, and a handler has been found. Set to NULL so we can continue.
+      initialized. Set to NULL so we can continue.
     */
 
     Item *null_item= new Item_null();
-    
+
     if (!null_item ||
         thd->spcont->set_case_expr(thd, m_case_expr_id, &null_item))
     {
       /* If this also failed, we have to abort. */
-
-      sp_rcontext *spcont= thd->spcont;
-    
-      thd->spcont= NULL;           /* Avoid handlers */
-      my_error(ER_OUT_OF_RESOURCES, MYF(0));
-      spcont->clear_handler();
-      thd->spcont= spcont;
+      my_error(ER_OUT_OF_RESOURCES, MYF(ME_FATALERROR));
     }
   }
   else
@@ -3888,7 +4089,7 @@ sp_head::merge_table_list(THD *thd, TABLE_LIST *table, LEX *lex_for_tmp_check)
 
   for (uint i= 0 ; i < m_sptabs.records ; i++)
   {
-    tab= (SP_TABLE *)hash_element(&m_sptabs, i);
+    tab= (SP_TABLE*) my_hash_element(&m_sptabs, i);
     tab->query_lock_count= 0;
   }
 
@@ -3929,10 +4130,10 @@ sp_head::merge_table_list(THD *thd, TABLE_LIST *table, LEX *lex_for_tmp_check)
         (and therefore should not be prelocked). Otherwise we will erroneously
         treat table with same name but with different alias as non-temporary.
       */
-      if ((tab= (SP_TABLE *)hash_search(&m_sptabs, (uchar *)tname.ptr(),
-                                        tname.length())) ||
-          ((tab= (SP_TABLE *)hash_search(&m_sptabs, (uchar *)tname.ptr(),
-                                         temp_table_key_length)) &&
+      if ((tab= (SP_TABLE*) my_hash_search(&m_sptabs, (uchar *)tname.ptr(),
+                                           tname.length())) ||
+          ((tab= (SP_TABLE*) my_hash_search(&m_sptabs, (uchar *)tname.ptr(),
+                                            temp_table_key_length)) &&
            tab->temp))
       {
         if (tab->lock_type < table->lock_type)
@@ -3944,13 +4145,13 @@ sp_head::merge_table_list(THD *thd, TABLE_LIST *table, LEX *lex_for_tmp_check)
       }
       else
       {
-	if (!(tab= (SP_TABLE *)thd->calloc(sizeof(SP_TABLE))))
-	  return FALSE;
-	if (lex_for_tmp_check->sql_command == SQLCOM_CREATE_TABLE &&
-	    lex_for_tmp_check->query_tables == table &&
-	    lex_for_tmp_check->create_info.options & HA_LEX_CREATE_TMP_TABLE)
+        if (!(tab= (SP_TABLE *)thd->calloc(sizeof(SP_TABLE))))
+          return FALSE;
+        if (lex_for_tmp_check->sql_command == SQLCOM_CREATE_TABLE &&
+            lex_for_tmp_check->query_tables == table &&
+            lex_for_tmp_check->create_info.options & HA_LEX_CREATE_TMP_TABLE)
         {
-	  tab->temp= TRUE;
+          tab->temp= TRUE;
           tab->qname.length= temp_table_key_length;
         }
         else
@@ -3963,7 +4164,7 @@ sp_head::merge_table_list(THD *thd, TABLE_LIST *table, LEX *lex_for_tmp_check)
         tab->lock_type= table->lock_type;
         tab->lock_count= tab->query_lock_count= 1;
         tab->trg_event_map= table->trg_event_map;
-	if (my_hash_insert(&m_sptabs, (uchar *)tab))
+        if (my_hash_insert(&m_sptabs, (uchar *)tab))
           return FALSE;
       }
     }
@@ -4017,7 +4218,7 @@ sp_head::add_used_tables_to_table_list(THD *thd,
   {
     char *tab_buff, *key_buff;
     TABLE_LIST *table;
-    SP_TABLE *stab= (SP_TABLE *)hash_element(&m_sptabs, i);
+    SP_TABLE *stab= (SP_TABLE*) my_hash_element(&m_sptabs, i);
     if (stab->temp)
       continue;
 
@@ -4041,6 +4242,15 @@ sp_head::add_used_tables_to_table_list(THD *thd,
       table->prelocking_placeholder= 1;
       table->belong_to_view= belong_to_view;
       table->trg_event_map= stab->trg_event_map;
+      /*
+        Since we don't allow DDL on base tables in prelocked mode it
+        is safe to infer the type of metadata lock from the type of
+        table lock.
+      */
+      table->mdl_request.init(MDL_key::TABLE, table->db, table->table_name,
+                              table->lock_type >= TL_WRITE_ALLOW_WRITE ?
+                              MDL_SHARED_WRITE : MDL_SHARED_READ,
+                              MDL_TRANSACTION);
 
       /* Everyting else should be zeroed */
 
@@ -4061,22 +4271,20 @@ sp_head::add_used_tables_to_table_list(THD *thd,
 
 
 /**
-  Simple function for adding an explicetly named (systems) table to
+  Simple function for adding an explicitly named (systems) table to
   the global table list, e.g. "mysql", "proc".
 */
 
 TABLE_LIST *
 sp_add_to_query_tables(THD *thd, LEX *lex,
 		       const char *db, const char *name,
-		       thr_lock_type locktype)
+                       thr_lock_type locktype,
+                       enum_mdl_type mdl_type)
 {
   TABLE_LIST *table;
 
   if (!(table= (TABLE_LIST *)thd->calloc(sizeof(TABLE_LIST))))
-  {
-    thd->fatal_error();
     return NULL;
-  }
   table->db_length= strlen(db);
   table->db= thd->strmake(db, table->db_length);
   table->table_name_length= strlen(name);
@@ -4085,7 +4293,9 @@ sp_add_to_query_tables(THD *thd, LEX *lex,
   table->lock_type= locktype;
   table->select_lex= lex->current_select;
   table->cacheable_table= 1;
-  
+  table->mdl_request.init(MDL_key::TABLE, table->db, table->table_name,
+                          mdl_type, MDL_TRANSACTION);
+
   lex->add_to_query_tables(table);
   return table;
 }

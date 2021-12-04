@@ -44,13 +44,10 @@ START SLAVE UNTIL RELAY_LOG_FILE='slave-relay-bin.000009';
 ERROR HY000: Incorrect parameter or combination of parameters for START SLAVE UNTIL
 START SLAVE UNTIL RELAY_LOG_FILE='slave-relay-bin.000002', MASTER_LOG_POS=MASTER_LOG_POS;
 ERROR HY000: Incorrect parameter or combination of parameters for START SLAVE UNTIL
-START SLAVE;
 START SLAVE UNTIL MASTER_LOG_FILE='master-bin.000001', MASTER_LOG_POS=MASTER_LOG_POS;
-Warnings:
-Note	1254	Slave is already running
+include/stop_slave.inc
+RESET SLAVE;
 include/start_slave.inc
-Warnings:
-Note	1254	Slave is already running
 include/rpl_reset.inc
 CREATE TABLE t1 (a INT);
 INSERT INTO t1 VALUES (1);

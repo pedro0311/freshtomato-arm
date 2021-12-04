@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2007 MySQL AB
+# Copyright (C) 2004-2005 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -42,8 +43,5 @@ include $(top_srcdir)/storage/ndb/config/type_ndbapitest.mk.am
 
 ndb_cpcc_LDADD = $(LDADD)
 ndb_cpcc_LDFLAGS = -static
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp:

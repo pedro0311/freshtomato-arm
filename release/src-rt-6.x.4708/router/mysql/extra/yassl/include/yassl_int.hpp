@@ -107,6 +107,25 @@ enum AcceptState {
 };
 
 
+// track received messages to explicitly disallow duplicate messages
+struct RecvdMessages {
+    uint8 gotClientHello_;
+    uint8 gotServerHello_;
+    uint8 gotCert_;
+    uint8 gotServerKeyExchange_;
+    uint8 gotCertRequest_;
+    uint8 gotServerHelloDone_;
+    uint8 gotCertVerify_;
+    uint8 gotClientKeyExchange_;
+    uint8 gotFinished_;
+    RecvdMessages() : gotClientHello_(0), gotServerHello_(0), gotCert_(0),
+                      gotServerKeyExchange_(0), gotCertRequest_(0),
+                      gotServerHelloDone_(0), gotCertVerify_(0),
+                      gotClientKeyExchange_(0), gotFinished_(0)
+                    {} 
+};
+
+
 // combines all states
 class States {
     RecordLayerState recordLayer_;
@@ -115,6 +134,7 @@ class States {
     ServerState      serverState_;
     ConnectState     connectState_;
     AcceptState      acceptState_;
+    RecvdMessages    recvdMessages_;
     char             errorString_[MAX_ERROR_SZ];
     YasslError       what_;
 public:
@@ -137,6 +157,7 @@ public:
     AcceptState&      UseAccept();
     char*             useString();
     void              SetError(YasslError);
+    int               SetMessageRecvd(HandShakeType);
 private:
     States(const States&);              // hide copy
     States& operator=(const States&);   // and assign
@@ -170,14 +191,18 @@ private:
 class X509_NAME {
     char*       name_;
     size_t      sz_;
+    int         cnPosition_;   // start of common name, -1 is none
+    int         cnLen_;        // length of above
     ASN1_STRING entry_;
 public:
-    X509_NAME(const char*, size_t sz);
+    X509_NAME(const char*, size_t sz, int pos, int len);
     ~X509_NAME();
 
     const char*  GetName() const;
     ASN1_STRING* GetEntry(int i);
     size_t       GetLength() const;
+    int          GetCnPosition() const { return cnPosition_; }
+    int          GetCnLength()   const { return cnLen_; }
 private:
     X509_NAME(const X509_NAME&);                // hide copy
     X509_NAME& operator=(const X509_NAME&);     // and assign
@@ -205,7 +230,7 @@ class X509 {
     StringHolder afterDate_;    // not valid after
 public:
     X509(const char* i, size_t, const char* s, size_t,
-         const char* b, int, const char* a, int);
+         const char* b, int, const char* a, int, int, int, int, int);
     ~X509() {}
 
     X509_NAME* GetIssuer();

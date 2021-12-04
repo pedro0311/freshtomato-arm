@@ -1,5 +1,8 @@
+#ifndef HANDLER_INCLUDED
+#define HANDLER_INCLUDED
+
 /*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -22,14 +25,16 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
+#include "sql_const.h"
+#include "mysqld.h"                             /* server_id */
+#include "sql_plugin.h"        /* plugin_ref, st_plugin_int, plugin */
+#include "thr_lock.h"          /* thr_lock_type, THR_LOCK_DATA */
+#include "sql_cache.h"
+#include "structs.h"                            /* SHOW_COMP_OPTION */
+
+#include <my_compare.h>
 #include <ft_global.h>
 #include <keycache.h>
-
-#ifndef NO_HASH
-#define NO_HASH				/* Not yet implemented */
-#endif
-
-#define USING_TRANSACTIONS
 
 // the following is for checking tables
 
@@ -128,6 +133,35 @@
 */
 #define HA_BINLOG_ROW_CAPABLE  (LL(1) << 34)
 #define HA_BINLOG_STMT_CAPABLE (LL(1) << 35)
+/*
+    When a multiple key conflict happens in a REPLACE command mysql
+    expects the conflicts to be reported in the ascending order of
+    key names.
+
+    For e.g.
+
+    CREATE TABLE t1 (a INT, UNIQUE (a), b INT NOT NULL, UNIQUE (b), c INT NOT
+                     NULL, INDEX(c));
+
+    REPLACE INTO t1 VALUES (1,1,1),(2,2,2),(2,1,3);
+
+    MySQL expects the conflict with 'a' to be reported before the conflict with
+    'b'.
+
+    If the underlying storage engine does not report the conflicting keys in
+    ascending order, it causes unexpected errors when the REPLACE command is
+    executed.
+
+    This flag helps the underlying SE to inform the server that the keys are not
+    ordered.
+*/
+#define HA_DUPLICATE_KEY_NOT_IN_ORDER    (LL(1) << 36)
+/*
+  Engine supports REPAIR TABLE. Used by CHECK TABLE FOR UPGRADE if an
+  incompatible table is detected. If this flag is set, CHECK TABLE FOR UPGRADE
+  will report ER_TABLE_NEEDS_UPGRADE, otherwise ER_TABLE_NEED_REBUILD.
+*/
+#define HA_CAN_REPAIR                    (LL(1) << 37)
 
 /*
   Set of all binlog flags. Currently only contain the capabilities
@@ -147,26 +181,31 @@
   bits in alter_table_flags:
 */
 /*
-  These bits are set if different kinds of indexes can be created
-  off-line without re-create of the table (but with a table lock).
+  These bits are set if different kinds of indexes can be created or dropped
+  in-place without re-creating the table using a temporary table.
+  NO_READ_WRITE indicates that the handler needs concurrent reads and writes
+  of table data to be blocked.
+  Partitioning needs both ADD and DROP to be supported by its underlying
+  handlers, due to error handling, see bug#57778.
 */
-#define HA_ONLINE_ADD_INDEX_NO_WRITES           (1L << 0) /*add index w/lock*/
-#define HA_ONLINE_DROP_INDEX_NO_WRITES          (1L << 1) /*drop index w/lock*/
-#define HA_ONLINE_ADD_UNIQUE_INDEX_NO_WRITES    (1L << 2) /*add unique w/lock*/
-#define HA_ONLINE_DROP_UNIQUE_INDEX_NO_WRITES   (1L << 3) /*drop uniq. w/lock*/
-#define HA_ONLINE_ADD_PK_INDEX_NO_WRITES        (1L << 4) /*add prim. w/lock*/
-#define HA_ONLINE_DROP_PK_INDEX_NO_WRITES       (1L << 5) /*drop prim. w/lock*/
+#define HA_INPLACE_ADD_INDEX_NO_READ_WRITE         (1L << 0)
+#define HA_INPLACE_DROP_INDEX_NO_READ_WRITE        (1L << 1)
+#define HA_INPLACE_ADD_UNIQUE_INDEX_NO_READ_WRITE  (1L << 2)
+#define HA_INPLACE_DROP_UNIQUE_INDEX_NO_READ_WRITE (1L << 3)
+#define HA_INPLACE_ADD_PK_INDEX_NO_READ_WRITE      (1L << 4)
+#define HA_INPLACE_DROP_PK_INDEX_NO_READ_WRITE     (1L << 5)
 /*
-  These are set if different kinds of indexes can be created on-line
-  (without a table lock). If a handler is capable of one or more of
-  these, it should also set the corresponding *_NO_WRITES bit(s).
+  These are set if different kinds of indexes can be created or dropped
+  in-place while still allowing concurrent reads (but not writes) of table
+  data. If a handler is capable of one or more of these, it should also set
+  the corresponding *_NO_READ_WRITE bit(s).
 */
-#define HA_ONLINE_ADD_INDEX                     (1L << 6) /*add index online*/
-#define HA_ONLINE_DROP_INDEX                    (1L << 7) /*drop index online*/
-#define HA_ONLINE_ADD_UNIQUE_INDEX              (1L << 8) /*add unique online*/
-#define HA_ONLINE_DROP_UNIQUE_INDEX             (1L << 9) /*drop uniq. online*/
-#define HA_ONLINE_ADD_PK_INDEX                  (1L << 10)/*add prim. online*/
-#define HA_ONLINE_DROP_PK_INDEX                 (1L << 11)/*drop prim. online*/
+#define HA_INPLACE_ADD_INDEX_NO_WRITE              (1L << 6)
+#define HA_INPLACE_DROP_INDEX_NO_WRITE             (1L << 7)
+#define HA_INPLACE_ADD_UNIQUE_INDEX_NO_WRITE       (1L << 8)
+#define HA_INPLACE_DROP_UNIQUE_INDEX_NO_WRITE      (1L << 9)
+#define HA_INPLACE_ADD_PK_INDEX_NO_WRITE           (1L << 10)
+#define HA_INPLACE_DROP_PK_INDEX_NO_WRITE          (1L << 11)
 /*
   HA_PARTITION_FUNCTION_SUPPORTED indicates that the function is
   supported at all.
@@ -218,6 +257,13 @@
 #define MAX_HA 15
 
 /*
+  Use this instead of 0 as the initial value for the slot number of
+  handlerton, so that we can distinguish uninitialized slot number
+  from slot 0.
+*/
+#define HA_SLOT_UNDEF ((uint)-1)
+
+/*
   Parameters for open() (in register form->filestat)
   HA_GET_INFO does an implicit HA_ABORT_IF_LOCKED
 */
@@ -257,6 +303,7 @@
 /* Flags for method is_fatal_error */
 #define HA_CHECK_DUP_KEY 1
 #define HA_CHECK_DUP_UNIQUE 2
+#define HA_CHECK_FK_ERROR 4
 #define HA_CHECK_DUP (HA_CHECK_DUP_KEY + HA_CHECK_DUP_UNIQUE)
 
 enum legacy_db_type
@@ -278,6 +325,8 @@ enum legacy_db_type
   DB_TYPE_MEMCACHE,
   DB_TYPE_FALCON,
   DB_TYPE_MARIA,
+  /** Performance schema engine. */
+  DB_TYPE_PERFORMANCE_SCHEMA,
   DB_TYPE_FIRST_DYNAMIC=42,
   DB_TYPE_DEFAULT=127 // Must be last
 };
@@ -333,6 +382,25 @@ enum enum_binlog_command {
 #define HA_CREATE_USED_TRANSACTIONAL    (1L << 20)
 /** Unused. Reserved for future versions. */
 #define HA_CREATE_USED_PAGE_CHECKSUM    (1L << 21)
+
+
+/*
+  This is master database for most of system tables. However there
+  can be other databases which can hold system tables. Respective
+  storage engines define their own system database names.
+*/
+extern const char *mysqld_system_database;
+
+/*
+  Structure to hold list of system_database.system_table.
+  This is used at both mysqld and storage engine layer.
+*/
+struct st_system_tablename
+{
+  const char *db;
+  const char *tablename;
+};
+
 
 typedef ulonglong my_xid; // this line is the same as in log_event.h
 #define MYSQL_XID_PREFIX "MySQLXid"
@@ -423,11 +491,7 @@ typedef struct xid_t XID;
 
 /* for recover() handlerton call */
 #define MIN_XID_LIST_SIZE  128
-#ifdef SAFEMALLOC
-#define MAX_XID_LIST_SIZE  256
-#else
 #define MAX_XID_LIST_SIZE  (1024*128)
-#endif
 
 /*
   These structures are used to pass information from a set of SQL commands
@@ -508,9 +572,50 @@ class st_alter_tablespace : public Sql_alloc
 
 /* The handler for a table type.  Will be included in the TABLE structure */
 
-struct st_table;
-typedef struct st_table TABLE;
-typedef struct st_table_share TABLE_SHARE;
+struct TABLE;
+
+/*
+  Make sure that the order of schema_tables and enum_schema_tables are the same.
+*/
+enum enum_schema_tables
+{
+  SCH_CHARSETS= 0,
+  SCH_COLLATIONS,
+  SCH_COLLATION_CHARACTER_SET_APPLICABILITY,
+  SCH_COLUMNS,
+  SCH_COLUMN_PRIVILEGES,
+  SCH_ENGINES,
+  SCH_EVENTS,
+  SCH_FILES,
+  SCH_GLOBAL_STATUS,
+  SCH_GLOBAL_VARIABLES,
+  SCH_KEY_COLUMN_USAGE,
+  SCH_OPEN_TABLES,
+  SCH_PARAMETERS,
+  SCH_PARTITIONS,
+  SCH_PLUGINS,
+  SCH_PROCESSLIST,
+  SCH_PROFILES,
+  SCH_REFERENTIAL_CONSTRAINTS,
+  SCH_PROCEDURES,
+  SCH_SCHEMATA,
+  SCH_SCHEMA_PRIVILEGES,
+  SCH_SESSION_STATUS,
+  SCH_SESSION_VARIABLES,
+  SCH_STATISTICS,
+  SCH_STATUS,
+  SCH_TABLES,
+  SCH_TABLESPACES,
+  SCH_TABLE_CONSTRAINTS,
+  SCH_TABLE_NAMES,
+  SCH_TABLE_PRIVILEGES,
+  SCH_TRIGGERS,
+  SCH_USER_PRIVILEGES,
+  SCH_VARIABLES,
+  SCH_VIEWS
+};
+
+struct TABLE_SHARE;
 struct st_foreign_key_info;
 typedef struct st_foreign_key_info FOREIGN_KEY_INFO;
 typedef bool (stat_print_fn)(THD *thd, const char *type, uint type_len,
@@ -585,6 +690,7 @@ struct handler_iterator {
   void *buffer;
 };
 
+class handler;
 /*
   handlerton is a singleton structure - one instance per storage engine -
   to provide access to storage engine functionality that works on the
@@ -673,9 +779,9 @@ struct handlerton
    uint (*partition_flags)();
    uint (*alter_table_flags)(uint flags);
    int (*alter_tablespace)(handlerton *hton, THD *thd, st_alter_tablespace *ts_info);
-   int (*fill_files_table)(handlerton *hton, THD *thd,
-                           TABLE_LIST *tables,
-                           class Item *cond);
+   int (*fill_is_table)(handlerton *hton, THD *thd, TABLE_LIST *tables, 
+                        class Item *cond, 
+                        enum enum_schema_tables);
    uint32 flags;                                /* global handler flags */
    /*
       Those handlerton functions below are properly initialized at handler
@@ -714,6 +820,39 @@ struct handlerton
                      const char *wild, bool dir, List<LEX_STRING> *files);
    int (*table_exists_in_engine)(handlerton *hton, THD* thd, const char *db,
                                  const char *name);
+
+  /**
+    List of all system tables specific to the SE.
+    Array element would look like below,
+     { "<database_name>", "<system table name>" },
+    The last element MUST be,
+     { (const char*)NULL, (const char*)NULL }
+
+    @see ha_example_system_tables in ha_example.cc
+
+    This interface is optional, so every SE need not implement it.
+  */
+  const char* (*system_database)();
+
+  /**
+    Check if the given db.tablename is a system table for this SE.
+
+    @param db                         Database name to check.
+    @param table_name                 table name to check.
+    @param is_sql_layer_system_table  if the supplied db.table_name is a SQL
+                                      layer system table.
+
+    @see example_is_supported_system_table in ha_example.cc
+
+    is_sql_layer_system_table is supplied to make more efficient
+    checks possible for SEs that support all SQL layer tables.
+
+    This interface is optional, so every SE need not implement it.
+  */
+  bool (*is_supported_system_table)(const char *db,
+                                    const char *table_name,
+                                    bool is_sql_layer_system_table);
+
    uint32 license; /* Flag for Engine License */
    void *data; /* Location for engines to keep personal structures */
 };
@@ -730,6 +869,7 @@ struct handlerton
 #define HTON_TEMPORARY_NOT_SUPPORTED (1 << 6) //Having temporary tables not supported
 #define HTON_SUPPORT_LOG_TABLES      (1 << 7) //Engine supports log tables
 #define HTON_NO_PARTITION            (1 << 8) //You can not partition these tables
+#define HTON_SUPPORTS_FOREIGN_KEYS   (1 << 9) //Foreign key constraint supported.
 
 class Ha_trx_info;
 
@@ -770,6 +910,7 @@ struct THD_TRANS
   bool modified_non_trans_table;
 
   void reset() { no_2pc= FALSE; modified_non_trans_table= FALSE; }
+  bool is_empty() const { return ha_list == NULL; }
 };
 
 
@@ -873,9 +1014,6 @@ enum enum_tx_isolation { ISO_READ_UNCOMMITTED, ISO_READ_COMMITTED,
 			 ISO_REPEATABLE_READ, ISO_SERIALIZABLE};
 
 
-enum ndb_distribution { ND_KEYHASH= 0, ND_LINHASH= 1 };
-
-
 typedef struct {
   ulonglong data_file_length;
   ulonglong max_data_file_length;
@@ -887,7 +1025,7 @@ typedef struct {
   ulong check_time;
   ulong update_time;
   ulonglong check_sum;
-} PARTITION_INFO;
+} PARTITION_STATS;
 
 #define UNDEF_NODEGROUP 65535
 class Item;
@@ -931,7 +1069,6 @@ typedef struct st_ha_create_information
   uint merge_insert_method;
   uint extra_size;                      /* length of extra data segment */
   enum enum_ha_unused unused1;
-  bool table_existed;			/* 1 in create if table existed */
   bool frm_only;                        /* 1 if no ha_create_table() */
   bool varchar;                         /* 1 if table has a VARCHAR */
   enum ha_storage_media storage_media;  /* DEFAULT, DISK or MEMORY */
@@ -944,6 +1081,7 @@ typedef struct st_key_create_information
   enum ha_key_alg algorithm;
   ulong block_size;
   LEX_STRING parser_name;
+  LEX_STRING comment;
 } KEY_CREATE_INFO;
 
 
@@ -1007,7 +1145,6 @@ typedef class Item COND;
 typedef struct st_ha_check_opt
 {
   st_ha_check_opt() {}                        /* Remove gcc warning */
-  ulong sort_buffer_size;
   uint flags;       /* isam layer flags (e.g. for myisamchk) */
   uint sql_flags;   /* sql layer flags - for something myisamchk cannot do */
   KEY_CACHE *key_cache;	/* new key cache when changing key cache */
@@ -1077,6 +1214,29 @@ uint calculate_key_len(TABLE *, uint, const uchar *, key_part_map);
 */
 #define make_prev_keypart_map(N) (((key_part_map)1 << (N)) - 1)
 
+
+/**
+  Index creation context.
+  Created by handler::add_index() and destroyed by handler::final_add_index().
+  And finally freed at the end of the statement.
+  (Sql_alloc does not free in delete).
+*/
+
+class handler_add_index : public Sql_alloc
+{
+public:
+  /* Table where the indexes are added */
+  TABLE* const table;
+  /* Indexes being created */
+  KEY* const key_info;
+  /* Size of key_info[] */
+  const uint num_of_keys;
+  handler_add_index(TABLE *table_arg, KEY *key_info_arg, uint num_of_keys_arg)
+    : table (table_arg), key_info (key_info_arg), num_of_keys (num_of_keys_arg)
+  {}
+  virtual ~handler_add_index() {}
+};
+
 /**
   The handler class is the interface for dynamically loadable
   storage engines. Do not add ifdefs and take care when adding or
@@ -1088,8 +1248,8 @@ class handler :public Sql_alloc
 public:
   typedef ulonglong Table_flags;
 protected:
-  struct st_table_share *table_share;   /* The table definition */
-  struct st_table *table;               /* The current open table */
+  TABLE_SHARE *table_share;   /* The table definition */
+  TABLE *table;               /* The current open table */
   Table_flags cached_table_flags;       /* Set on init() and open() */
 
   ha_rows estimation_rows_to_insert;
@@ -1152,6 +1312,20 @@ public:
   */
   uint auto_inc_intervals_count;
 
+  /**
+    Instrumented table associated with this handler.
+    This member should be set to NULL when no instrumentation is in place,
+    so that linking an instrumented/non instrumented server/plugin works.
+    For example:
+    - the server is compiled with the instrumentation.
+    The server expects either NULL or valid pointers in m_psi.
+    - an engine plugin is compiled without instrumentation.
+    The plugin can not leave this pointer uninitialized,
+    or can not leave a trash value on purpose in this pointer,
+    as this would crash the server.
+  */
+  PSI_table *m_psi;
+
   handler(handlerton *ht_arg, TABLE_SHARE *share_arg)
     :table_share(share_arg), table(0),
     estimation_rows_to_insert(0), ht(ht_arg),
@@ -1160,12 +1334,13 @@ public:
     ft_handler(0), inited(NONE),
     locked(FALSE), implicit_emptied(0),
     pushed_cond(0), next_insert_id(0), insert_id_for_cur_row(0),
-    auto_inc_intervals_count(0)
+    auto_inc_intervals_count(0),
+    m_psi(NULL)
     {}
   virtual ~handler(void)
   {
     DBUG_ASSERT(locked == FALSE);
-    /* TODO: DBUG_ASSERT(inited == NONE); */
+    DBUG_ASSERT(inited == NONE);
   }
   virtual handler *clone(const char *name, MEM_ROOT *mem_root);
   /** This is called after create to allow us to set up cached variables */
@@ -1178,6 +1353,7 @@ public:
   int ha_open(TABLE *table, const char *name, int mode, int test_if_locked);
   int ha_index_init(uint idx, bool sorted)
   {
+    DBUG_EXECUTE_IF("ha_index_init_fail", return HA_ERR_TABLE_DEF_CHANGED;);
     int result;
     DBUG_ENTER("ha_index_init");
     DBUG_ASSERT(inited==NONE);
@@ -1194,6 +1370,7 @@ public:
   }
   int ha_rnd_init(bool scan)
   {
+    DBUG_EXECUTE_IF("ha_rnd_init_fail", return HA_ERR_TABLE_DEF_CHANGED;);
     int result;
     DBUG_ENTER("ha_rnd_init");
     DBUG_ASSERT(inited==NONE || (inited==RND && scan));
@@ -1247,9 +1424,8 @@ public:
   int ha_bulk_update_row(const uchar *old_data, uchar *new_data,
                          uint *dup_key_found);
   int ha_delete_all_rows();
+  int ha_truncate();
   int ha_reset_auto_increment(ulonglong value);
-  int ha_backup(THD* thd, HA_CHECK_OPT* check_opt);
-  int ha_restore(THD* thd, HA_CHECK_OPT* check_opt);
   int ha_optimize(THD* thd, HA_CHECK_OPT* check_opt);
   int ha_analyze(THD* thd, HA_CHECK_OPT* check_opt);
   bool ha_check_and_repair(THD *thd);
@@ -1310,7 +1486,10 @@ public:
     if (!error ||
         ((flags & HA_CHECK_DUP_KEY) &&
          (error == HA_ERR_FOUND_DUPP_KEY ||
-          error == HA_ERR_FOUND_DUPP_UNIQUE)))
+          error == HA_ERR_FOUND_DUPP_UNIQUE)) ||
+        ((flags & HA_CHECK_FK_ERROR) &&
+         (error == HA_ERR_ROW_IS_REFERENCED ||
+          error == HA_ERR_NO_REFERENCED_ROW)))
       return FALSE;
     return TRUE;
   }
@@ -1478,7 +1657,7 @@ public:
   */
   virtual void position(const uchar *record)=0;
   virtual int info(uint)=0; // see my_base.h for full description
-  virtual void get_dynamic_partition_info(PARTITION_INFO *stat_info,
+  virtual void get_dynamic_partition_info(PARTITION_STATS *stat_info,
                                           uint part_id);
   virtual int extra(enum ha_extra_function operation)
   { return 0; }
@@ -1540,9 +1719,7 @@ public:
   { return HA_ADMIN_NOT_IMPLEMENTED; }
   /* end of the list of admin commands */
 
-  virtual int dump(THD* thd, int fd = -1) { return HA_ERR_WRONG_COMMAND; }
   virtual int indexes_are_disabled(void) {return 0;}
-  virtual int net_read_dump(NET* net) { return HA_ERR_WRONG_COMMAND; }
   virtual char *update_table_comment(const char * comment)
   { return (char*) comment;}
   virtual void append_create_info(String *packet) {}
@@ -1564,8 +1741,33 @@ public:
   { return(NULL);}  /* gets tablespace name from handler */
   /** used in ALTER TABLE; 1 if changing storage engine is allowed */
   virtual bool can_switch_engines() { return 1; }
-  /** used in REPLACE; is > 0 if table is referred by a FOREIGN KEY */
-  virtual int get_foreign_key_list(THD *thd, List<FOREIGN_KEY_INFO> *f_key_list)
+  /**
+    Get the list of foreign keys in this table.
+
+    @remark Returns the set of foreign keys where this table is the
+            dependent or child table.
+
+    @param thd  The thread handle.
+    @param f_key_list[out]  The list of foreign keys.
+
+    @return The handler error code or zero for success.
+  */
+  virtual int
+  get_foreign_key_list(THD *thd, List<FOREIGN_KEY_INFO> *f_key_list)
+  { return 0; }
+  /**
+    Get the list of foreign keys referencing this table.
+
+    @remark Returns the set of foreign keys where this table is the
+            referenced or parent table.
+
+    @param thd  The thread handle.
+    @param f_key_list[out]  The list of foreign keys.
+
+    @return The handler error code or zero for success.
+  */
+  virtual int
+  get_parent_foreign_key_list(THD *thd, List<FOREIGN_KEY_INFO> *f_key_list)
   { return 0; }
   virtual uint referenced_by_foreign_key() { return 0;}
   virtual void init_table_handle_for_HANDLER()
@@ -1598,8 +1800,36 @@ public:
 
   virtual ulong index_flags(uint idx, uint part, bool all_parts) const =0;
 
-  virtual int add_index(TABLE *table_arg, KEY *key_info, uint num_of_keys)
+/**
+   First phase of in-place add index.
+   Handlers are supposed to create new indexes here but not make them
+   visible.
+
+   @param table_arg   Table to add index to
+   @param key_info    Information about new indexes
+   @param num_of_key  Number of new indexes
+   @param add[out]    Context of handler specific information needed
+                      for final_add_index().
+
+   @note This function can be called with less than exclusive metadata
+   lock depending on which flags are listed in alter_table_flags.
+*/
+  virtual int add_index(TABLE *table_arg, KEY *key_info, uint num_of_keys,
+                        handler_add_index **add)
   { return (HA_ERR_WRONG_COMMAND); }
+
+/**
+   Second and last phase of in-place add index.
+   Commit or rollback pending new indexes.
+
+   @param add     Context of handler specific information from add_index().
+   @param commit  If true, commit. If false, rollback index changes.
+
+   @note This function is called with exclusive metadata lock.
+*/
+  virtual int final_add_index(handler_add_index *add, bool commit)
+  { return (HA_ERR_WRONG_COMMAND); }
+
   virtual int prepare_drop_index(TABLE *table_arg, uint *key_num,
                                  uint num_of_keys)
   { return (HA_ERR_WRONG_COMMAND); }
@@ -1770,6 +2000,39 @@ protected:
   THD *ha_thd(void) const;
 
   /**
+    Acquire the instrumented table information from a table share.
+    @param share a table share
+    @return an instrumented table share, or NULL.
+  */
+  PSI_table_share *ha_table_share_psi(const TABLE_SHARE *share) const;
+
+  inline void psi_open()
+  {
+    DBUG_ASSERT(m_psi == NULL);
+    DBUG_ASSERT(table_share != NULL);
+#ifdef HAVE_PSI_INTERFACE
+    if (PSI_server)
+    {
+      PSI_table_share *share_psi= ha_table_share_psi(table_share);
+      if (share_psi)
+        m_psi= PSI_server->open_table(share_psi, this);
+    }
+#endif
+  }
+
+  inline void psi_close()
+  {
+#ifdef HAVE_PSI_INTERFACE
+    if (PSI_server && m_psi)
+    {
+      PSI_server->close_table(m_psi);
+      m_psi= NULL; /* instrumentation handle, invalid after close_table() */
+    }
+#endif
+    DBUG_ASSERT(m_psi == NULL);
+  }
+
+  /**
     Default rename_table() and delete_table() rename/delete files with a
     given name and extensions from bas_ext().
 
@@ -1866,7 +2129,10 @@ private:
      upon the table.
   */
   virtual int repair(THD* thd, HA_CHECK_OPT* check_opt)
-  { return HA_ADMIN_NOT_IMPLEMENTED; }
+  {
+    DBUG_ASSERT(!(ha_table_flags() & HA_CAN_REPAIR));
+    return HA_ADMIN_NOT_IMPLEMENTED;
+  }
   virtual void start_bulk_insert(ha_rows rows) {}
   virtual int end_bulk_insert() { return 0; }
   virtual int index_read(uchar * buf, const uchar * key, uint key_len,
@@ -1897,27 +2163,37 @@ private:
     This is called to delete all rows in a table
     If the handler don't support this, then this function will
     return HA_ERR_WRONG_COMMAND and MySQL will delete the rows one
-    by one. It should reset auto_increment if
-    thd->lex->sql_command == SQLCOM_TRUNCATE.
+    by one.
   */
   virtual int delete_all_rows()
   { return (my_errno=HA_ERR_WRONG_COMMAND); }
   /**
+    Quickly remove all rows from a table.
+
+    @remark This method is responsible for implementing MySQL's TRUNCATE
+            TABLE statement, which is a DDL operation. As such, a engine
+            can bypass certain integrity checks and in some cases avoid
+            fine-grained locking (e.g. row locks) which would normally be
+            required for a DELETE statement.
+
+    @remark Typically, truncate is not used if it can result in integrity
+            violation. For example, truncate is not used when a foreign
+            key references the table, but it might be used if foreign key
+            checks are disabled.
+
+    @remark Engine is responsible for resetting the auto-increment counter.
+
+    @remark The table is locked in exclusive mode.
+  */
+  virtual int truncate()
+  { return HA_ERR_WRONG_COMMAND; }
+  /**
     Reset the auto-increment counter to the given value, i.e. the next row
-    inserted will get the given value. This is called e.g. after TRUNCATE
-    is emulated by doing a 'DELETE FROM t'. HA_ERR_WRONG_COMMAND is
-    returned by storage engines that don't support this operation.
+    inserted will get the given value. HA_ERR_WRONG_COMMAND is returned by
+    storage engines that don't support this operation.
   */
   virtual int reset_auto_increment(ulonglong value)
   { return HA_ERR_WRONG_COMMAND; }
-  virtual int backup(THD* thd, HA_CHECK_OPT* check_opt)
-  { return HA_ADMIN_NOT_IMPLEMENTED; }
-  /**
-    Restore assumes .frm file must exist, and that generate_table() has been
-    called; It will just copy the data file and run repair.
-  */
-  virtual int restore(THD* thd, HA_CHECK_OPT* check_opt)
-  { return HA_ADMIN_NOT_IMPLEMENTED; }
   virtual int optimize(THD* thd, HA_CHECK_OPT* check_opt)
   { return HA_ADMIN_NOT_IMPLEMENTED; }
   virtual int analyze(THD* thd, HA_CHECK_OPT* check_opt)
@@ -1955,12 +2231,8 @@ extern const char *ha_row_type[];
 extern MYSQL_PLUGIN_IMPORT const char *tx_isolation_names[];
 extern MYSQL_PLUGIN_IMPORT const char *binlog_format_names[];
 extern TYPELIB tx_isolation_typelib;
-extern TYPELIB myisam_stats_method_typelib;
+extern const char *myisam_stats_method_names[];
 extern ulong total_ha, total_ha_2pc;
-
-       /* Wrapper functions */
-#define ha_commit(thd) (ha_commit_trans((thd), TRUE))
-#define ha_rollback(thd) (ha_rollback_trans((thd), TRUE))
 
 /* lookups */
 handlerton *ha_default_handlerton(THD *thd);
@@ -2018,18 +2290,21 @@ bool ha_show_status(THD *thd, handlerton *db_type, enum ha_stat_type stat);
 
 /* discovery */
 int ha_create_table_from_engine(THD* thd, const char *db, const char *name);
+bool ha_check_if_table_exists(THD* thd, const char *db, const char *name,
+                             bool *exists);
 int ha_discover(THD* thd, const char* dbname, const char* name,
                 uchar** frmblob, size_t* frmlen);
 int ha_find_files(THD *thd,const char *db,const char *path,
                   const char *wild, bool dir, List<LEX_STRING>* files);
 int ha_table_exists_in_engine(THD* thd, const char* db, const char* name);
+bool ha_check_if_supported_system_table(handlerton *hton, const char* db, 
+                                        const char* table_name);
 
 /* key cache */
 extern "C" int ha_init_key_cache(const char *name, KEY_CACHE *key_cache);
 int ha_resize_key_cache(KEY_CACHE *key_cache);
 int ha_change_key_cache_param(KEY_CACHE *key_cache);
 int ha_change_key_cache(KEY_CACHE *old_key_cache, KEY_CACHE *new_key_cache);
-int ha_end_key_cache(KEY_CACHE *key_cache);
 
 /* report to InnoDB that control passes to the client */
 int ha_release_temporary_latches(THD *thd);
@@ -2038,13 +2313,12 @@ int ha_release_temporary_latches(THD *thd);
 int ha_start_consistent_snapshot(THD *thd);
 int ha_commit_or_rollback_by_xid(XID *xid, bool commit);
 int ha_commit_one_phase(THD *thd, bool all);
+int ha_commit_trans(THD *thd, bool all);
 int ha_rollback_trans(THD *thd, bool all);
 int ha_prepare(THD *thd);
 int ha_recover(HASH *commit_list);
 
 /* transactions: these functions never call handlerton functions directly */
-int ha_commit_trans(THD *thd, bool all);
-int ha_autocommit_or_rollback(THD *thd, int error);
 int ha_enable_transaction(THD *thd, bool on);
 
 /* savepoints */
@@ -2081,3 +2355,17 @@ int ha_binlog_end(THD *thd);
 #define ha_binlog_wait(a) do {} while (0)
 #define ha_binlog_end(a)  do {} while (0)
 #endif
+
+const char *get_canonical_filename(handler *file, const char *path,
+                                   char *tmp_path);
+bool mysql_xa_recover(THD *thd);
+
+
+inline const char *table_case_name(HA_CREATE_INFO *info, const char *name)
+{
+  return ((lower_case_table_names == 2 && info->alias) ? info->alias : name);
+}
+
+void warn_fk_constraint_violation(THD *thd, TABLE *table, int error);
+
+#endif /* HANDLER_INCLUDED */

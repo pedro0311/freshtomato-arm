@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,15 +11,26 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #define MYSQL_LEX 1
-#include "mysql_priv.h"
+#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "sql_priv.h"
+#include "unireg.h"
+#include "sql_parse.h"                          // parse_sql
+#include "strfunc.h"                           // find_string_in_array
+#include "sql_db.h"                        // get_default_db_collation
+#include "sql_time.h"                      // interval_type_to_name,
+                                           // date_add_interval,
+                                           // calc_time_diff
+#include "tztime.h"     // my_tz_find, my_tz_OFFSET0, struct Time_zone
+#include "sql_acl.h"    // EVENT_ACL, SUPER_ACL
+#include "sp.h"         // load_charset, load_collation
 #include "events.h"
 #include "event_data_objects.h"
 #include "event_db_repository.h"
 #include "sp_head.h"
+#include "sql_show.h"                // append_definer, append_identifier
 
 /**
   @addtogroup Event_Scheduler
@@ -166,7 +176,7 @@ Event_queue_element_for_exec::init(LEX_STRING db, LEX_STRING n)
     return TRUE;
   if (!(name.str= my_strndup(n.str, name.length= n.length, MYF(MY_WME))))
   {
-    my_free((uchar*) dbname.str, MYF(0));
+    my_free(dbname.str);
     return TRUE;
   }
   return FALSE;
@@ -182,8 +192,8 @@ Event_queue_element_for_exec::init(LEX_STRING db, LEX_STRING n)
 
 Event_queue_element_for_exec::~Event_queue_element_for_exec()
 {
-  my_free((uchar*) dbname.str, MYF(0));
-  my_free((uchar*) name.str, MYF(0));
+  my_free(dbname.str);
+  my_free(name.str);
 }
 
 
@@ -198,7 +208,7 @@ Event_basic::Event_basic()
 {
   DBUG_ENTER("Event_basic::Event_basic");
   /* init memory root */
-  init_alloc_root(&mem_root, 256, 512);
+  init_sql_alloc(&mem_root, 256, 512);
   dbname.str= name.str= NULL;
   dbname.length= name.length= 0;
   time_zone= NULL;
@@ -280,7 +290,6 @@ Event_basic::load_time_zone(THD *thd, const LEX_STRING tz_name)
 */
 
 Event_queue_element::Event_queue_element():
-  status_changed(FALSE), last_executed_changed(FALSE),
   on_completion(Event_parse_data::ON_COMPLETION_DROP),
   status(Event_parse_data::ENABLED), expression(0), dropped(FALSE),
   execution_count(0)
@@ -529,7 +538,6 @@ Event_queue_element::load_from_row(THD *thd, TABLE *table)
                                                    TIME_NO_ZERO_DATE);
     last_executed= my_tz_OFFSET0->TIME_to_gmt_sec(&time,&not_used);
   }
-  last_executed_changed= FALSE;
 
   if ((ptr= get_field(&mem_root, table->field[ET_FIELD_STATUS])) == NullS)
     DBUG_RETURN(TRUE);
@@ -925,7 +933,6 @@ Event_queue_element::compute_next_execution_time()
       DBUG_PRINT("info",("One-time event will be dropped: %d.", dropped));
 
       status= Event_parse_data::DISABLED;
-      status_changed= TRUE;
     }
     goto ret;
   }
@@ -945,7 +952,6 @@ Event_queue_element::compute_next_execution_time()
       dropped= TRUE;
     DBUG_PRINT("info", ("Dropped: %d", dropped));
     status= Event_parse_data::DISABLED;
-    status_changed= TRUE;
 
     goto ret;
   }
@@ -1008,7 +1014,6 @@ Event_queue_element::compute_next_execution_time()
         if (on_completion == Event_parse_data::ON_COMPLETION_DROP)
           dropped= TRUE;
         status= Event_parse_data::DISABLED;
-        status_changed= TRUE;
       }
       else
       {
@@ -1098,7 +1103,6 @@ Event_queue_element::compute_next_execution_time()
           execute_at= 0;
           execute_at_null= TRUE;
           status= Event_parse_data::DISABLED;
-          status_changed= TRUE;
           if (on_completion == Event_parse_data::ON_COMPLETION_DROP)
             dropped= TRUE;
         }
@@ -1134,47 +1138,8 @@ void
 Event_queue_element::mark_last_executed(THD *thd)
 {
   last_executed= (my_time_t) thd->query_start();
-  last_executed_changed= TRUE;
 
   execution_count++;
-}
-
-
-/*
-  Saves status and last_executed_at to the disk if changed.
-
-  SYNOPSIS
-    Event_queue_element::update_timing_fields()
-      thd - thread context
-
-  RETURN VALUE
-    FALSE   OK
-    TRUE    Error while opening mysql.event for writing or during
-            write on disk
-*/
-
-bool
-Event_queue_element::update_timing_fields(THD *thd)
-{
-  Event_db_repository *db_repository= Events::get_db_repository();
-  int ret;
-
-  DBUG_ENTER("Event_queue_element::update_timing_fields");
-
-  DBUG_PRINT("enter", ("name: %*s", (int) name.length, name.str));
-
-  /* No need to update if nothing has changed */
-  if (!(status_changed || last_executed_changed))
-    DBUG_RETURN(0);
-
-  ret= db_repository->update_timing_fields_for_event(thd,
-                                                     dbname, name,
-                                                     last_executed_changed,
-                                                     last_executed,
-                                                     status_changed,
-                                                     (ulonglong) status);
-  last_executed_changed= status_changed= FALSE;
-  DBUG_RETURN(ret);
 }
 
 
@@ -1228,7 +1193,9 @@ Event_timed::get_create_event(THD *thd, String *buf)
                                                             expression))
     DBUG_RETURN(EVEX_MICROSECOND_UNSUP);
 
-  buf->append(STRING_WITH_LEN("CREATE EVENT "));
+  buf->append(STRING_WITH_LEN("CREATE "));
+  append_definer(thd, buf, &definer_user, &definer_host);
+  buf->append(STRING_WITH_LEN("EVENT "));
   append_identifier(thd, buf, name.str, name.length);
 
   if (expression)
@@ -1390,6 +1357,8 @@ Event_job_data::execute(THD *thd, bool drop)
   */
   thd->set_db(dbname.str, dbname.length);
 
+  lex_start(thd);
+
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   if (event_sctx.change_security_context(thd,
                                          &definer_user, &definer_host,
@@ -1399,12 +1368,11 @@ Event_job_data::execute(THD *thd, bool drop)
                     "[%s].[%s.%s] execution failed, "
                     "failed to authenticate the user.",
                     definer.str, dbname.str, name.str);
-    goto end_no_lex_start;
+    goto end;
   }
 #endif
 
-  if (check_access(thd, EVENT_ACL, dbname.str,
-                   0, 0, 0, is_schema_db(dbname.str, dbname.length)))
+  if (check_access(thd, EVENT_ACL, dbname.str, NULL, NULL, 0, 0))
   {
     /*
       This aspect of behavior is defined in the worklog,
@@ -1416,11 +1384,11 @@ Event_job_data::execute(THD *thd, bool drop)
                     "[%s].[%s.%s] execution failed, "
                     "user no longer has EVENT privilege.",
                     definer.str, dbname.str, name.str);
-    goto end_no_lex_start;
+    goto end;
   }
 
   if (construct_sp_sql(thd, &sp_sql))
-    goto end_no_lex_start;
+    goto end;
 
   /*
     Set up global thread attributes to reflect the properties of
@@ -1439,8 +1407,6 @@ Event_job_data::execute(THD *thd, bool drop)
     Parser_state parser_state;
     if (parser_state.init(thd, thd->query(), thd->query_length()))
       goto end;
-
-    lex_start(thd);
 
     if (parse_sql(thd, & parser_state, creation_ctx))
     {
@@ -1473,13 +1439,6 @@ Event_job_data::execute(THD *thd, bool drop)
   }
 
 end:
-  if (thd->lex->sphead)                        /* NULL only if a parse error */
-  {
-    delete thd->lex->sphead;
-    thd->lex->sphead= NULL;
-  }
-
-end_no_lex_start:
   if (drop && !thd->is_fatal_error)
   {
     /*
@@ -1518,12 +1477,11 @@ end_no_lex_start:
   if (save_sctx)
     event_sctx.restore_security_context(thd, save_sctx);
 #endif
-  lex_end(thd->lex);
   thd->lex->unit.cleanup();
   thd->end_statement();
   thd->cleanup_after_query();
   /* Avoid races with SHOW PROCESSLIST */
-  thd->set_query(NULL, 0);
+  thd->reset_query();
 
   DBUG_PRINT("info", ("EXECUTED %s.%s  ret: %d", dbname.str, name.str, ret));
 

@@ -1,4 +1,7 @@
-/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+#ifndef SQL_SELECT_INCLUDED
+#define SQL_SELECT_INCLUDED
+
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /**
@@ -27,6 +30,10 @@
 
 #include "procedure.h"
 #include <myisam.h>
+#include "sql_array.h"                        /* Array */
+#include "records.h"                          /* READ_RECORD */
+#include "opt_range.h"                /* SQL_SELECT, QUICK_SELECT_I */
+
 
 typedef struct keyuse_t {
   TABLE *table;
@@ -145,7 +152,6 @@ enum enum_nested_loop_state
 
 typedef enum_nested_loop_state
 (*Next_select_func)(JOIN *, struct st_join_table *, bool);
-typedef int (*Read_record_func)(struct st_join_table *tab);
 Next_select_func setup_end_select_func(JOIN *join);
 
 
@@ -154,6 +160,20 @@ typedef struct st_join_table {
   TABLE		*table;
   KEYUSE	*keyuse;			/**< pointer to first used key */
   SQL_SELECT	*select;
+  /**
+    When doing filesort, the select object is used for building the
+    sort index. After the sort index is built, the pointer to the
+    select object is set to NULL to avoid that it is used when reading
+    the result records (@see create_sort_index()). For subqueries that
+    do filesort and that are executed multiple times, the pointer to
+    the select object must be restored before the next execution both
+    to ensure that the select object is used and to be able to cleanup
+    the select object after the final execution of the subquery. In
+    order to be able to restore the pointer to the select object, it
+    is saved in saved_select in create_sort_index() and restored in
+    JOIN::exec() after the main select is done.
+  */
+  SQL_SELECT    *saved_select;
   COND		*select_cond;
   QUICK_SELECT_I *quick;
   Item	       **on_expr_ref;   /**< pointer to the associated on expression   */
@@ -173,7 +193,7 @@ typedef struct st_join_table {
   */
   uint          packed_info;
 
-  Read_record_func read_first_record;
+  READ_RECORD::Setup_func read_first_record;
   Next_select_func next_select;
   READ_RECORD	read_record;
   /* 
@@ -181,8 +201,8 @@ typedef struct st_join_table {
     if it is executed by an alternative full table scan when the left operand of
     the subquery predicate is evaluated to NULL.
   */  
-  Read_record_func save_read_first_record;/* to save read_first_record */ 
-  int (*save_read_record) (READ_RECORD *);/* to save read_record.read_record */
+  READ_RECORD::Setup_func save_read_first_record;/* to save read_first_record */
+  READ_RECORD::Read_func save_read_record;/* to save read_record.read_record */
   double	worst_seeks;
   key_map	const_keys;			/**< Keys with constant part */
   key_map	checked_keys;			/**< Keys checked in find_best */
@@ -223,11 +243,40 @@ typedef struct st_join_table {
   nested_join_map embedding_map;
 
   void cleanup();
+  /*
+    In cases where filesort reads rows from a table using Loose Index
+    Scan, the fact that LIS was used is lost because
+    create_sort_index() deletes join_tab->select->quick. MySQL needs
+    this information during JOIN::exec().
+
+    This variable is a hack for MySQL 5.5 only. A value of true means
+    that filesort used LIS to read from the table. In MySQL 5.6 and
+    later, join_tab->filesort is a separate structure with it's own
+    select that can be inquired to get the same information. There is
+    no need for this variable in MySQL 5.6 and later.
+  */
+  bool		filesort_used_loose_index_scan;
+  /*
+    Similar hack as for filesort_used_loose_index_scan. Not needed for
+    MySQL 5.6 and later.
+  */
+  bool		filesort_used_loose_index_scan_agg_distinct;
   inline bool is_using_loose_index_scan()
   {
-    return (select && select->quick &&
-            (select->quick->get_type() ==
-             QUICK_SELECT_I::QS_TYPE_GROUP_MIN_MAX));
+    return (filesort_used_loose_index_scan || 
+            (select && select->quick &&
+             (select->quick->get_type() ==
+              QUICK_SELECT_I::QS_TYPE_GROUP_MIN_MAX))
+            );
+  }
+  bool is_using_agg_loose_index_scan ()
+  {
+    return (filesort_used_loose_index_scan_agg_distinct ||
+            (select && select->quick &&
+             (select->quick->get_type() ==
+              QUICK_SELECT_I::QS_TYPE_GROUP_MIN_MAX) &&
+             ((QUICK_GROUP_MIN_MAX_SELECT *)select->quick)->is_agg_distinct())
+            );
   }
 } JOIN_TAB;
 
@@ -286,7 +335,7 @@ public:
   JOIN_TAB *join_tab,**best_ref;
   JOIN_TAB **map2table;    ///< mapping between table indexes and JOIN_TABs
   JOIN_TAB *join_tab_save; ///< saved join_tab for subquery reexecution
-  TABLE    **table,**all_tables,*sort_by_table;
+  TABLE    **all_tables,*sort_by_table;
   uint	   tables,const_tables;
   uint	   send_group_parts;
   /**
@@ -298,11 +347,6 @@ public:
   bool     sort_and_group; 
   bool     first_record,full_join,group, no_field_update;
   bool	   do_send_rows;
-  /**
-    TRUE when we want to resume nested loop iterations when
-    fetching data from a cursor
-  */
-  bool     resume_nested_loop;
   table_map const_table_map,found_const_table_map;
   /*
      Bitmap of all inner tables from outer joins
@@ -460,7 +504,7 @@ public:
        select_result *result_arg)
   {
     join_tab= join_tab_save= 0;
-    table= 0;
+    all_tables= 0;
     tables= 0;
     const_tables= 0;
     join_list= 0;
@@ -468,7 +512,6 @@ public:
     sort_and_group= 0;
     first_record= 0;
     do_send_rows= 1;
-    resume_nested_loop= FALSE;
     send_records= 0;
     found_records= 0;
     fetch_limit= HA_POS_ERROR;
@@ -570,6 +613,7 @@ public:
     return (unit == &thd->lex->unit && (unit->fake_select_lex == 0 ||
                                         select_lex == unit->fake_select_lex));
   }
+  void cache_const_exprs();
 private:
   /**
     TRUE if the query contains an aggregate function but has no GROUP
@@ -586,14 +630,13 @@ typedef struct st_select_check {
 } SELECT_CHECK;
 
 extern const char *join_type_str[];
-void TEST_join(JOIN *join);
 
 /* Extern functions in sql_select.cc */
 bool store_val_in_field(Field *field, Item *val, enum_check_fields check_flag);
 TABLE *create_tmp_table(THD *thd,TMP_TABLE_PARAM *param,List<Item> &fields,
 			ORDER *group, bool distinct, bool save_sum_fields,
 			ulonglong select_options, ha_rows rows_limit,
-			char* alias);
+			const char* alias);
 void free_tmp_table(THD *thd, TABLE *entry);
 void count_field_types(SELECT_LEX *select_lex, TMP_TABLE_PARAM *param, 
                        List<Item> &fields, bool reset_with_sum_func);
@@ -610,6 +653,8 @@ Field* create_tmp_field_from_field(THD *thd, Field* org_field,
                                    const char *name, TABLE *table,
                                    Item_field *item, uint convert_blob_length);
                                                                       
+bool is_indexed_agg_distinct(JOIN *join, List<Item_field> *out_args);
+
 /* functions from opt_sum.cc */
 bool simple_pred(Item_func *func_item, Item **args, bool *inv_order);
 int opt_sum_query(THD* thd,
@@ -658,7 +703,7 @@ public:
     enum store_key_result result;
     THD *thd= to_field->table->in_use;
     enum_check_fields saved_count_cuted_fields= thd->count_cuted_fields;
-    ulong sql_mode= thd->variables.sql_mode;
+    ulonglong sql_mode= thd->variables.sql_mode;
     thd->variables.sql_mode&= ~(MODE_NO_ZERO_IN_DATE | MODE_NO_ZERO_DATE);
 
     thd->count_cuted_fields= CHECK_FIELD_IGNORE;
@@ -790,9 +835,58 @@ bool error_if_full_join(JOIN *join);
 int report_error(TABLE *table, int error);
 int safe_index_read(JOIN_TAB *tab);
 COND *remove_eq_conds(THD *thd, COND *cond, Item::cond_result *cond_value);
+int get_quick_record(SQL_SELECT *select);
+SORT_FIELD * make_unireg_sortorder(ORDER *order, uint *length,
+                                  SORT_FIELD *sortorder);
+int setup_order(THD *thd, Item **ref_pointer_array, TABLE_LIST *tables,
+		List<Item> &fields, List <Item> &all_fields, ORDER *order);
+int setup_group(THD *thd, Item **ref_pointer_array, TABLE_LIST *tables,
+		List<Item> &fields, List<Item> &all_fields, ORDER *order,
+		bool *hidden_group_fields);
+bool fix_inner_refs(THD *thd, List<Item> &all_fields, SELECT_LEX *select,
+                   Item **ref_pointer_array, ORDER *group_list= NULL);
+
+bool handle_select(THD *thd, LEX *lex, select_result *result,
+                   ulong setup_tables_done_option);
+bool mysql_select(THD *thd, Item ***rref_pointer_array,
+                  TABLE_LIST *tables, uint wild_num,  List<Item> &list,
+                  COND *conds, uint og_num, ORDER *order, ORDER *group,
+                  Item *having, ORDER *proc_param, ulonglong select_type, 
+                  select_result *result, SELECT_LEX_UNIT *unit, 
+                  SELECT_LEX *select_lex);
+void free_underlaid_joins(THD *thd, SELECT_LEX *select);
+bool mysql_explain_union(THD *thd, SELECT_LEX_UNIT *unit,
+                         select_result *result);
+Field *create_tmp_field(THD *thd, TABLE *table,Item *item, Item::Type type,
+			Item ***copy_func, Field **from_field,
+                        Field **def_field,
+			bool group, bool modify_item,
+			bool table_cant_handle_bit_fields,
+                        bool make_copy_field,
+                        uint convert_blob_length);
+
+/*
+  General routine to change field->ptr of a NULL-terminated array of Field
+  objects. Useful when needed to call val_int, val_str or similar and the
+  field data is not in table->record[0] but in some other structure.
+  set_key_field_ptr changes all fields of an index using a key_info object.
+  All methods presume that there is at least one field to change.
+*/
+
+TABLE *create_virtual_tmp_table(THD *thd, List<Create_field> &field_list);
+
 
 inline bool optimizer_flag(THD *thd, uint flag)
 { 
   return (thd->variables.optimizer_switch & flag);
 }
 
+uint get_index_for_order(ORDER *order, TABLE *table, SQL_SELECT *select,
+                         ha_rows limit, bool *need_sort, bool *reverse);
+ORDER *simple_remove_const(ORDER *order, COND *where);
+bool const_expression_in_where(COND *cond, Item *comp_item,
+                               Field *comp_field= NULL,
+                               Item **const_item= NULL);
+
+
+#endif /* SQL_SELECT_INCLUDED */

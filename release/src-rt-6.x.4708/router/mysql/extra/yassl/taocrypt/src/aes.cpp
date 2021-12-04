@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ void AES::Process(byte* out, const byte* in, word32 sz)
             in  += BLOCK_SIZE;
         }
     else if (mode_ == CBC) {
-        if (dir_ == ENCRYPTION)
+        if (dir_ == ENCRYPTION) {
             while (blocks--) {
                 r_[0] ^= *(word32*)in;
                 r_[1] ^= *(word32*)(in +  4);
@@ -65,7 +65,8 @@ void AES::Process(byte* out, const byte* in, word32 sz)
                 out += BLOCK_SIZE;
                 in  += BLOCK_SIZE;
             }
-        else
+        }
+        else {
             while (blocks--) {
                 AsmDecrypt(in, out, (void*)Td0);
                 
@@ -78,7 +79,8 @@ void AES::Process(byte* out, const byte* in, word32 sz)
                 out += BLOCK_SIZE;
                 in  += BLOCK_SIZE;
             }
-   }
+        }
+    }
 }
 
 #endif // DO_AES_ASM
@@ -107,10 +109,10 @@ void AES::SetKey(const byte* userKey, word32 keylen, CipherDir /*dummy*/)
         {
             temp  = rk[3];
             rk[4] = rk[0] ^
-                (Te4[GETBYTE(temp, 2)] & 0xff000000) ^
-                (Te4[GETBYTE(temp, 1)] & 0x00ff0000) ^
-                (Te4[GETBYTE(temp, 0)] & 0x0000ff00) ^
-                (Te4[GETBYTE(temp, 3)] & 0x000000ff) ^
+                (Te2[GETBYTE(temp, 2)] & 0xff000000) ^
+                (Te3[GETBYTE(temp, 1)] & 0x00ff0000) ^
+                (Te0[GETBYTE(temp, 0)] & 0x0000ff00) ^
+                (Te1[GETBYTE(temp, 3)] & 0x000000ff) ^
                 rcon_[i];
             rk[5] = rk[1] ^ rk[4];
             rk[6] = rk[2] ^ rk[5];
@@ -126,10 +128,10 @@ void AES::SetKey(const byte* userKey, word32 keylen, CipherDir /*dummy*/)
         {
             temp = rk[ 5];
             rk[ 6] = rk[ 0] ^
-                (Te4[GETBYTE(temp, 2)] & 0xff000000) ^
-                (Te4[GETBYTE(temp, 1)] & 0x00ff0000) ^
-                (Te4[GETBYTE(temp, 0)] & 0x0000ff00) ^
-                (Te4[GETBYTE(temp, 3)] & 0x000000ff) ^
+                (Te2[GETBYTE(temp, 2)] & 0xff000000) ^
+                (Te3[GETBYTE(temp, 1)] & 0x00ff0000) ^
+                (Te0[GETBYTE(temp, 0)] & 0x0000ff00) ^
+                (Te1[GETBYTE(temp, 3)] & 0x000000ff) ^
                 rcon_[i];
             rk[ 7] = rk[ 1] ^ rk[ 6];
             rk[ 8] = rk[ 2] ^ rk[ 7];
@@ -147,10 +149,10 @@ void AES::SetKey(const byte* userKey, word32 keylen, CipherDir /*dummy*/)
         {
             temp = rk[ 7];
             rk[ 8] = rk[ 0] ^
-                (Te4[GETBYTE(temp, 2)] & 0xff000000) ^
-                (Te4[GETBYTE(temp, 1)] & 0x00ff0000) ^
-                (Te4[GETBYTE(temp, 0)] & 0x0000ff00) ^
-                (Te4[GETBYTE(temp, 3)] & 0x000000ff) ^
+                (Te2[GETBYTE(temp, 2)] & 0xff000000) ^
+                (Te3[GETBYTE(temp, 1)] & 0x00ff0000) ^
+                (Te0[GETBYTE(temp, 0)] & 0x0000ff00) ^
+                (Te1[GETBYTE(temp, 3)] & 0x000000ff) ^
                 rcon_[i];
             rk[ 9] = rk[ 1] ^ rk[ 8];
             rk[10] = rk[ 2] ^ rk[ 9];
@@ -159,10 +161,10 @@ void AES::SetKey(const byte* userKey, word32 keylen, CipherDir /*dummy*/)
                 break;
             temp = rk[11];
             rk[12] = rk[ 4] ^
-                (Te4[GETBYTE(temp, 3)] & 0xff000000) ^
-                (Te4[GETBYTE(temp, 2)] & 0x00ff0000) ^
-                (Te4[GETBYTE(temp, 1)] & 0x0000ff00) ^
-                (Te4[GETBYTE(temp, 0)] & 0x000000ff);
+                (Te2[GETBYTE(temp, 3)] & 0xff000000) ^
+                (Te3[GETBYTE(temp, 2)] & 0x00ff0000) ^
+                (Te0[GETBYTE(temp, 1)] & 0x0000ff00) ^
+                (Te1[GETBYTE(temp, 0)] & 0x000000ff);
             rk[13] = rk[ 5] ^ rk[12];
             rk[14] = rk[ 6] ^ rk[13];
             rk[15] = rk[ 7] ^ rk[14];
@@ -189,25 +191,25 @@ void AES::SetKey(const byte* userKey, word32 keylen, CipherDir /*dummy*/)
         for (i = 1; i < rounds_; i++) {
             rk += 4;
             rk[0] =
-                Td0[Te4[GETBYTE(rk[0], 3)] & 0xff] ^
-                Td1[Te4[GETBYTE(rk[0], 2)] & 0xff] ^
-                Td2[Te4[GETBYTE(rk[0], 1)] & 0xff] ^
-                Td3[Te4[GETBYTE(rk[0], 0)] & 0xff];
+                Td0[Te1[GETBYTE(rk[0], 3)] & 0xff] ^
+                Td1[Te1[GETBYTE(rk[0], 2)] & 0xff] ^
+                Td2[Te1[GETBYTE(rk[0], 1)] & 0xff] ^
+                Td3[Te1[GETBYTE(rk[0], 0)] & 0xff];
             rk[1] =
-                Td0[Te4[GETBYTE(rk[1], 3)] & 0xff] ^
-                Td1[Te4[GETBYTE(rk[1], 2)] & 0xff] ^
-                Td2[Te4[GETBYTE(rk[1], 1)] & 0xff] ^
-                Td3[Te4[GETBYTE(rk[1], 0)] & 0xff];
+                Td0[Te1[GETBYTE(rk[1], 3)] & 0xff] ^
+                Td1[Te1[GETBYTE(rk[1], 2)] & 0xff] ^
+                Td2[Te1[GETBYTE(rk[1], 1)] & 0xff] ^
+                Td3[Te1[GETBYTE(rk[1], 0)] & 0xff];
             rk[2] =
-                Td0[Te4[GETBYTE(rk[2], 3)] & 0xff] ^
-                Td1[Te4[GETBYTE(rk[2], 2)] & 0xff] ^
-                Td2[Te4[GETBYTE(rk[2], 1)] & 0xff] ^
-                Td3[Te4[GETBYTE(rk[2], 0)] & 0xff];
+                Td0[Te1[GETBYTE(rk[2], 3)] & 0xff] ^
+                Td1[Te1[GETBYTE(rk[2], 2)] & 0xff] ^
+                Td2[Te1[GETBYTE(rk[2], 1)] & 0xff] ^
+                Td3[Te1[GETBYTE(rk[2], 0)] & 0xff];
             rk[3] =
-                Td0[Te4[GETBYTE(rk[3], 3)] & 0xff] ^
-                Td1[Te4[GETBYTE(rk[3], 2)] & 0xff] ^
-                Td2[Te4[GETBYTE(rk[3], 1)] & 0xff] ^
-                Td3[Te4[GETBYTE(rk[3], 0)] & 0xff];
+                Td0[Te1[GETBYTE(rk[3], 3)] & 0xff] ^
+                Td1[Te1[GETBYTE(rk[3], 2)] & 0xff] ^
+                Td2[Te1[GETBYTE(rk[3], 1)] & 0xff] ^
+                Td3[Te1[GETBYTE(rk[3], 0)] & 0xff];
         }
     }
 }
@@ -242,6 +244,7 @@ void AES::encrypt(const byte* inBlock, const byte* xorBlock,
     s2 ^= rk[2];
     s3 ^= rk[3];
    
+    s0 |= PreFetchTe();
     /*
      * Nr - 1 full rounds:
      */
@@ -310,28 +313,28 @@ void AES::encrypt(const byte* inBlock, const byte* xorBlock,
      */
 
     s0 =
-        (Te4[GETBYTE(t0, 3)] & 0xff000000) ^
-        (Te4[GETBYTE(t1, 2)] & 0x00ff0000) ^
-        (Te4[GETBYTE(t2, 1)] & 0x0000ff00) ^
-        (Te4[GETBYTE(t3, 0)] & 0x000000ff) ^
+        (Te2[GETBYTE(t0, 3)] & 0xff000000) ^
+        (Te3[GETBYTE(t1, 2)] & 0x00ff0000) ^
+        (Te0[GETBYTE(t2, 1)] & 0x0000ff00) ^
+        (Te1[GETBYTE(t3, 0)] & 0x000000ff) ^
         rk[0];
     s1 =
-        (Te4[GETBYTE(t1, 3)] & 0xff000000) ^
-        (Te4[GETBYTE(t2, 2)] & 0x00ff0000) ^
-        (Te4[GETBYTE(t3, 1)] & 0x0000ff00) ^
-        (Te4[GETBYTE(t0, 0)] & 0x000000ff) ^
+        (Te2[GETBYTE(t1, 3)] & 0xff000000) ^
+        (Te3[GETBYTE(t2, 2)] & 0x00ff0000) ^
+        (Te0[GETBYTE(t3, 1)] & 0x0000ff00) ^
+        (Te1[GETBYTE(t0, 0)] & 0x000000ff) ^
         rk[1];
     s2 =
-        (Te4[GETBYTE(t2, 3)] & 0xff000000) ^
-        (Te4[GETBYTE(t3, 2)] & 0x00ff0000) ^
-        (Te4[GETBYTE(t0, 1)] & 0x0000ff00) ^
-        (Te4[GETBYTE(t1, 0)] & 0x000000ff) ^
+        (Te2[GETBYTE(t2, 3)] & 0xff000000) ^
+        (Te3[GETBYTE(t3, 2)] & 0x00ff0000) ^
+        (Te0[GETBYTE(t0, 1)] & 0x0000ff00) ^
+        (Te1[GETBYTE(t1, 0)] & 0x000000ff) ^
         rk[2];
     s3 =
-        (Te4[GETBYTE(t3, 3)] & 0xff000000) ^
-        (Te4[GETBYTE(t0, 2)] & 0x00ff0000) ^
-        (Te4[GETBYTE(t1, 1)] & 0x0000ff00) ^
-        (Te4[GETBYTE(t2, 0)] & 0x000000ff) ^
+        (Te2[GETBYTE(t3, 3)] & 0xff000000) ^
+        (Te3[GETBYTE(t0, 2)] & 0x00ff0000) ^
+        (Te0[GETBYTE(t1, 1)] & 0x0000ff00) ^
+        (Te1[GETBYTE(t2, 0)] & 0x000000ff) ^
         rk[3];
 
 
@@ -355,6 +358,8 @@ void AES::decrypt(const byte* inBlock, const byte* xorBlock,
     s1 ^= rk[1];
     s2 ^= rk[2];
     s3 ^= rk[3];
+
+    s0 |= PreFetchTd();
 
     /*
      * Nr - 1 full rounds:
@@ -421,29 +426,32 @@ void AES::decrypt(const byte* inBlock, const byte* xorBlock,
      * apply last round and
      * map cipher state to byte array block:
      */
+
+    t0 |= PreFetchCTd4();
+
     s0 =
-        (Td4[GETBYTE(t0, 3)] & 0xff000000) ^
-        (Td4[GETBYTE(t3, 2)] & 0x00ff0000) ^
-        (Td4[GETBYTE(t2, 1)] & 0x0000ff00) ^
-        (Td4[GETBYTE(t1, 0)] & 0x000000ff) ^
+        ((word32)CTd4[GETBYTE(t0, 3)] << 24) ^
+        ((word32)CTd4[GETBYTE(t3, 2)] << 16) ^
+        ((word32)CTd4[GETBYTE(t2, 1)] <<  8) ^
+        ((word32)CTd4[GETBYTE(t1, 0)]) ^
         rk[0];
     s1 =
-        (Td4[GETBYTE(t1, 3)] & 0xff000000) ^
-        (Td4[GETBYTE(t0, 2)] & 0x00ff0000) ^
-        (Td4[GETBYTE(t3, 1)] & 0x0000ff00) ^
-        (Td4[GETBYTE(t2, 0)] & 0x000000ff) ^
+        ((word32)CTd4[GETBYTE(t1, 3)]  << 24) ^
+        ((word32)CTd4[GETBYTE(t0, 2)]  << 16) ^
+        ((word32)CTd4[GETBYTE(t3, 1)]  <<  8) ^
+        ((word32)CTd4[GETBYTE(t2, 0)]) ^
         rk[1];
     s2 =
-        (Td4[GETBYTE(t2, 3)] & 0xff000000) ^
-        (Td4[GETBYTE(t1, 2)] & 0x00ff0000) ^
-        (Td4[GETBYTE(t0, 1)] & 0x0000ff00) ^
-        (Td4[GETBYTE(t3, 0)] & 0x000000ff) ^
+        ((word32)CTd4[GETBYTE(t2, 3)] << 24  ) ^
+        ((word32)CTd4[GETBYTE(t1, 2)] << 16 ) ^
+        ((word32)CTd4[GETBYTE(t0, 1)] <<  8 ) ^
+        ((word32)CTd4[GETBYTE(t3, 0)]) ^
         rk[2];
     s3 =
-        (Td4[GETBYTE(t3, 3)] & 0xff000000) ^
-        (Td4[GETBYTE(t2, 2)] & 0x00ff0000) ^
-        (Td4[GETBYTE(t1, 1)] & 0x0000ff00) ^
-        (Td4[GETBYTE(t0, 0)] & 0x000000ff) ^
+        ((word32)CTd4[GETBYTE(t3, 3)] << 24) ^
+        ((word32)CTd4[GETBYTE(t2, 2)] << 16) ^
+        ((word32)CTd4[GETBYTE(t1, 1)] <<  8) ^
+        ((word32)CTd4[GETBYTE(t0, 0)]) ^
         rk[3];
 
     gpBlock::Put(xorBlock, outBlock)(s0)(s1)(s2)(s3);
@@ -452,27 +460,30 @@ void AES::decrypt(const byte* inBlock, const byte* xorBlock,
 
 #if defined(DO_AES_ASM)
     #ifdef __GNUC__
-        #define AS1(x)    asm(#x);
-        #define AS2(x, y) asm(#x ", " #y);
+        #define AS1(x)    #x ";"
+        #define AS2(x, y) #x ", " #y ";"
 
         #define PROLOG()  \
-            asm(".intel_syntax noprefix"); \
-            AS2(    movd  mm3, edi                      )   \
-            AS2(    movd  mm4, ebx                      )   \
-            AS2(    sub   esp, 4                        )   \
-            AS2(    movd  mm7, ebp                      )   \
-            AS2(    mov   [ebp - 4], esi                )   \
-            AS2(    mov   ecx, DWORD PTR [ebp +  8]     )   \
-            AS2(    mov   esi, DWORD PTR [ebp + 12]     )   \
-            AS2(    mov   ebp, DWORD PTR [ebp + 20]     )
-
+        __asm__ __volatile__ \
+        ( \
+            ".intel_syntax noprefix;" \
+            "push ebx;" \
+            "push ebp;" \
+            "movd mm7, ebp;" \
+            "movd mm4, eax;" \
+            "mov  ebp, edx;"  \
+            "sub  esp, 4;" 
         #define EPILOG()  \
-            AS2(    mov  esi, [ebp - 4]             )   \
-            AS2(    mov  esp, ebp                   )   \
-            AS2(    movd ebx, mm4                   )   \
-            AS2(    movd edi, mm3                   )   \
-            AS1(    emms                            )   \
-            asm(".att_syntax");
+            "add esp, 4;" \
+            "pop ebp;" \
+            "pop ebx;" \
+       	    "emms;" \
+       	    ".att_syntax;" \
+                : \
+                : "c" (this), "S" (inBlock), "d" (boxes), "a" (outBlock) \
+                : "%edi", "memory", "cc" \
+        );
+
     #else
         #define AS1(x)    __asm x
         #define AS2(x, y) __asm x, y
@@ -504,6 +515,8 @@ void AES::decrypt(const byte* inBlock, const byte* xorBlock,
 
 #ifdef _MSC_VER
     __declspec(naked) 
+#else
+    __attribute__ ((noinline))
 #endif
 void AES::AsmEncrypt(const byte* inBlock, byte* outBlock, void* boxes) const
 {
@@ -537,7 +550,11 @@ void AES::AsmEncrypt(const byte* inBlock, byte* outBlock, void* boxes) const
     AS2(    xor   ecx, DWORD PTR [edi +  8]          )   // s2
     AS2(    xor   edx, DWORD PTR [edi + 12]          )   // s3
 
-    AS1(loop1:                                                          )
+#ifdef _MSC_VER
+    AS1( loop1: )  // loop1
+#else
+    AS1(1:  )      // loop1
+#endif
             /* Put0 (mm0) =  
                 Te0[get0,rs 24] ^
                 Te1[get1,rs 16] ^
@@ -652,7 +669,11 @@ void AES::AsmEncrypt(const byte* inBlock, byte* outBlock, void* boxes) const
     AS1(    dec   edi                                                   )
     AS2(    movd  mm5, edi                                              )
 
-    AS1(    jnz   loop1                                                 )
+#ifdef _MSC_VER
+    AS1(    jnz   loop1)  // loop1
+#else
+    AS1(    jnz   1b )    // loop1
+#endif
 
             // last round
             /*
@@ -799,9 +820,9 @@ void AES::AsmEncrypt(const byte* inBlock, byte* outBlock, void* boxes) const
 
             // store
     #ifdef __GNUC__
-        AS2(    mov esi, DWORD PTR [ebp + 16]       )   //  outBlock
+        AS2(    movd esi, mm4                       )   //  outBlock
     #else
-        AS2(    mov esi, DWORD PTR [ebp + 12]       )   //  outBlock
+        AS2(    mov  esi, DWORD PTR [ebp + 12]      )   //  outBlock
     #endif
 
     AS1(    bswap ecx                                                   )
@@ -819,6 +840,8 @@ void AES::AsmEncrypt(const byte* inBlock, byte* outBlock, void* boxes) const
 
 #ifdef _MSC_VER
     __declspec(naked) 
+#else
+    __attribute__ ((noinline))
 #endif
 void AES::AsmDecrypt(const byte* inBlock, byte* outBlock, void* boxes) const
 {
@@ -853,7 +876,11 @@ void AES::AsmDecrypt(const byte* inBlock, byte* outBlock, void* boxes) const
     AS2(    xor   edx, DWORD PTR [edi + 12]          )   // s3
 
 
-    AS1(loop2:                                                          )
+#ifdef _MSC_VER
+    AS1( loop2: )  // loop2
+#else
+    AS1(2:  )      // loop2
+#endif
        /*   Put0 (mm0) =
             Td0[GETBYTE(get0, rs24)] ^
             Td1[GETBYTE(get3, rs16)] ^
@@ -964,7 +991,11 @@ void AES::AsmDecrypt(const byte* inBlock, byte* outBlock, void* boxes) const
     AS1(    dec   edi                                                   )
     AS2(    movd  mm5, edi                                              )
 
-    AS1(    jnz   loop2                                                 )
+#ifdef _MSC_VER
+    AS1(    jnz   loop2)  // loop2
+#else
+    AS1(    jnz   2b )    // loop2
+#endif
 
             // last round
             /*
@@ -1114,9 +1145,9 @@ void AES::AsmDecrypt(const byte* inBlock, byte* outBlock, void* boxes) const
 
             // store
     #ifdef __GNUC__
-        AS2(    mov esi, DWORD PTR [ebp + 16]       )   //  outBlock
+        AS2(    movd esi, mm4                        )   //  outBlock
     #else
-        AS2(    mov esi, DWORD PTR [ebp + 12]       )   //  outBlock
+        AS2(    mov esi,  DWORD PTR [ebp + 12]       )   //  outBlock
     #endif
     AS2(    mov DWORD PTR [esi],      eax                               )
     AS2(    mov DWORD PTR [esi +  4], ebx                               )
@@ -1801,18 +1832,52 @@ const word32 AES::Td[5][256] = {
 }
 };
 
+const byte AES::CTd4[256] =
+{
+    0x52U, 0x09U, 0x6aU, 0xd5U, 0x30U, 0x36U, 0xa5U, 0x38U,
+    0xbfU, 0x40U, 0xa3U, 0x9eU, 0x81U, 0xf3U, 0xd7U, 0xfbU,
+    0x7cU, 0xe3U, 0x39U, 0x82U, 0x9bU, 0x2fU, 0xffU, 0x87U,
+    0x34U, 0x8eU, 0x43U, 0x44U, 0xc4U, 0xdeU, 0xe9U, 0xcbU,
+    0x54U, 0x7bU, 0x94U, 0x32U, 0xa6U, 0xc2U, 0x23U, 0x3dU,
+    0xeeU, 0x4cU, 0x95U, 0x0bU, 0x42U, 0xfaU, 0xc3U, 0x4eU,
+    0x08U, 0x2eU, 0xa1U, 0x66U, 0x28U, 0xd9U, 0x24U, 0xb2U,
+    0x76U, 0x5bU, 0xa2U, 0x49U, 0x6dU, 0x8bU, 0xd1U, 0x25U,
+    0x72U, 0xf8U, 0xf6U, 0x64U, 0x86U, 0x68U, 0x98U, 0x16U,
+    0xd4U, 0xa4U, 0x5cU, 0xccU, 0x5dU, 0x65U, 0xb6U, 0x92U,
+    0x6cU, 0x70U, 0x48U, 0x50U, 0xfdU, 0xedU, 0xb9U, 0xdaU,
+    0x5eU, 0x15U, 0x46U, 0x57U, 0xa7U, 0x8dU, 0x9dU, 0x84U,
+    0x90U, 0xd8U, 0xabU, 0x00U, 0x8cU, 0xbcU, 0xd3U, 0x0aU,
+    0xf7U, 0xe4U, 0x58U, 0x05U, 0xb8U, 0xb3U, 0x45U, 0x06U,
+    0xd0U, 0x2cU, 0x1eU, 0x8fU, 0xcaU, 0x3fU, 0x0fU, 0x02U,
+    0xc1U, 0xafU, 0xbdU, 0x03U, 0x01U, 0x13U, 0x8aU, 0x6bU,
+    0x3aU, 0x91U, 0x11U, 0x41U, 0x4fU, 0x67U, 0xdcU, 0xeaU,
+    0x97U, 0xf2U, 0xcfU, 0xceU, 0xf0U, 0xb4U, 0xe6U, 0x73U,
+    0x96U, 0xacU, 0x74U, 0x22U, 0xe7U, 0xadU, 0x35U, 0x85U,
+    0xe2U, 0xf9U, 0x37U, 0xe8U, 0x1cU, 0x75U, 0xdfU, 0x6eU,
+    0x47U, 0xf1U, 0x1aU, 0x71U, 0x1dU, 0x29U, 0xc5U, 0x89U,
+    0x6fU, 0xb7U, 0x62U, 0x0eU, 0xaaU, 0x18U, 0xbeU, 0x1bU,
+    0xfcU, 0x56U, 0x3eU, 0x4bU, 0xc6U, 0xd2U, 0x79U, 0x20U,
+    0x9aU, 0xdbU, 0xc0U, 0xfeU, 0x78U, 0xcdU, 0x5aU, 0xf4U,
+    0x1fU, 0xddU, 0xa8U, 0x33U, 0x88U, 0x07U, 0xc7U, 0x31U,
+    0xb1U, 0x12U, 0x10U, 0x59U, 0x27U, 0x80U, 0xecU, 0x5fU,
+    0x60U, 0x51U, 0x7fU, 0xa9U, 0x19U, 0xb5U, 0x4aU, 0x0dU,
+    0x2dU, 0xe5U, 0x7aU, 0x9fU, 0x93U, 0xc9U, 0x9cU, 0xefU,
+    0xa0U, 0xe0U, 0x3bU, 0x4dU, 0xaeU, 0x2aU, 0xf5U, 0xb0U,
+    0xc8U, 0xebU, 0xbbU, 0x3cU, 0x83U, 0x53U, 0x99U, 0x61U,
+    0x17U, 0x2bU, 0x04U, 0x7eU, 0xbaU, 0x77U, 0xd6U, 0x26U,
+    0xe1U, 0x69U, 0x14U, 0x63U, 0x55U, 0x21U, 0x0cU, 0x7dU,
+};
+
 
 const word32* AES::Te0 = AES::Te[0];
 const word32* AES::Te1 = AES::Te[1];
 const word32* AES::Te2 = AES::Te[2];
 const word32* AES::Te3 = AES::Te[3];
-const word32* AES::Te4 = AES::Te[4];
 
 const word32* AES::Td0 = AES::Td[0];
 const word32* AES::Td1 = AES::Td[1];
 const word32* AES::Td2 = AES::Td[2];
 const word32* AES::Td3 = AES::Td[3];
-const word32* AES::Td4 = AES::Td[4];
 
 
 

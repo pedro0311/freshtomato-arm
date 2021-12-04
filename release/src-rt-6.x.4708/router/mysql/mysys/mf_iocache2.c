@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2018, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,14 +11,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   More functions to be used with IO_CACHE files
 */
 
-#define MAP_TO_USE_RAID
 #include "mysys_priv.h"
 #include <m_string.h>
 #include <stdarg.h>
@@ -75,6 +72,16 @@ my_b_copy_to_file(IO_CACHE *cache, FILE *file)
 my_off_t my_b_append_tell(IO_CACHE* info)
 {
   /*
+    Sometimes we want to make sure that the variable is not put into
+    a register in debugging mode so we can see its value in the core
+  */
+#ifndef DBUG_OFF
+# define dbug_volatile volatile
+#else
+# define dbug_volatile
+#endif
+
+  /*
     Prevent optimizer from putting res in a register when debugging
     we need this to be able to see the value of res when the assert fails
   */
@@ -85,9 +92,8 @@ my_off_t my_b_append_tell(IO_CACHE* info)
     from messing with the variables that we need in order to provide the
     answer to the question.
   */
-#ifdef THREAD
-  pthread_mutex_lock(&info->append_buffer_lock);
-#endif
+  mysql_mutex_lock(&info->append_buffer_lock);
+
 #ifndef DBUG_OFF
   /*
     Make sure EOF is where we think it is. Note that we cannot just use
@@ -96,20 +102,18 @@ my_off_t my_b_append_tell(IO_CACHE* info)
   */
   {
     volatile my_off_t save_pos;
-    save_pos = my_tell(info->file,MYF(0));
-    my_seek(info->file,(my_off_t)0,MY_SEEK_END,MYF(0));
+    save_pos = mysql_file_tell(info->file,MYF(0));
+    mysql_file_seek(info->file,(my_off_t)0,MY_SEEK_END,MYF(0));
     /*
       Save the value of my_tell in res so we can see it when studying coredump
     */
     DBUG_ASSERT(info->end_of_file - (info->append_read_pos-info->write_buffer)
-		== (res=my_tell(info->file,MYF(0))));
-    my_seek(info->file,save_pos,MY_SEEK_SET,MYF(0));
+		== (res=mysql_file_tell(info->file,MYF(0))));
+    mysql_file_seek(info->file,save_pos,MY_SEEK_SET,MYF(0));
   }
 #endif  
   res = info->end_of_file + (info->write_pos-info->append_read_pos);
-#ifdef THREAD
-  pthread_mutex_unlock(&info->append_buffer_lock);
-#endif
+  mysql_mutex_unlock(&info->append_buffer_lock);
   return res;
 }
 
@@ -139,7 +143,7 @@ void my_b_seek(IO_CACHE *info,my_off_t pos)
      b) see if there is a better way to make it work
   */
   if (info->type == SEQ_READ_APPEND)
-    VOID(flush_io_cache(info));
+    (void) flush_io_cache(info);
 
   offset=(pos - info->pos_in_file);
 
@@ -167,7 +171,7 @@ void my_b_seek(IO_CACHE *info,my_off_t pos)
       info->write_pos = info->write_buffer + offset;
       DBUG_VOID_RETURN;
     }
-    VOID(flush_io_cache(info));
+    (void) flush_io_cache(info);
     /* Correct buffer end so that we write in increments of IO_SIZE */
     info->write_end=(info->write_buffer+info->buffer_length-
 		     (pos & (IO_SIZE-1)));
@@ -199,7 +203,7 @@ size_t my_b_fill(IO_CACHE *info)
 
   if (info->seek_not_done)
   {					/* File touched, do seek */
-    if (my_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) ==
+    if (mysql_file_seek(info->file,pos_in_file,MY_SEEK_SET,MYF(0)) ==
 	MY_FILEPOS_ERROR)
     {
       info->error= 0;
@@ -219,7 +223,7 @@ size_t my_b_fill(IO_CACHE *info)
   }
   DBUG_EXECUTE_IF ("simulate_my_b_fill_error",
                    {DBUG_SET("+d,simulate_file_read_error");});
-  if ((length= my_read(info->file,info->buffer,max_length,
+  if ((length= mysql_file_read(info->file,info->buffer,max_length,
                        info->myflags)) == (size_t) -1)
   {
     info->error= -1;
@@ -283,7 +287,7 @@ my_off_t my_b_filelength(IO_CACHE *info)
     return my_b_tell(info);
 
   info->seek_not_done= 1;
-  return my_seek(info->file, 0L, MY_SEEK_END, MYF(0));
+  return mysql_file_seek(info->file, 0L, MY_SEEK_END, MYF(0));
 }
 
 
@@ -403,6 +407,13 @@ process_flags:
       out_length+= length2;
       if (my_b_write(info, (uchar*) par, length2))
 	goto err;
+    }
+    else if (*fmt == 'c')                     /* char type parameter */
+    {
+      char par[2];
+      par[0] = va_arg(args, int);
+      if (my_b_write(info, (uchar*) par, 1))
+        goto err;
     }
     else if (*fmt == 'b')                       /* Sized buffer parameter, only precision makes sense */
     {

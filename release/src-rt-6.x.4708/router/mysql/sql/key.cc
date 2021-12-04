@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2000-2008 MySQL AB, 2008 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,13 +11,15 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* Functions to handle keys and fields in forms */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"                     // REQUIRED: by includes later
+#include "key.h"                                // key_rec_cmp
+#include "field.h"                              // Field
 
 /*
   Search after a key that starts with 'field'
@@ -312,6 +312,70 @@ bool key_cmp_if_same(TABLE *table,const uchar *key,uint idx,uint key_length)
   return 0;
 }
 
+
+/**
+  Unpack a field and append it.
+
+  @param[inout] to           String to append the field contents to.
+  @param        field        Field to unpack.
+  @param        rec          Record which contains the field data.
+  @param        max_length   Maximum length of field to unpack
+                             or 0 for unlimited.
+  @param        prefix_key   The field is used as a prefix key.
+*/
+
+void field_unpack(String *to, Field *field, const uchar *rec, uint max_length,
+                  bool prefix_key)
+{
+  String tmp;
+  DBUG_ENTER("field_unpack");
+  if (!max_length)
+    max_length= field->pack_length();
+  if (field)
+  {
+    if (field->is_null())
+    {
+      to->append(STRING_WITH_LEN("NULL"));
+      DBUG_VOID_RETURN;
+    }
+    CHARSET_INFO *cs= field->charset();
+    field->val_str(&tmp);
+    /*
+      For BINARY(N) strip trailing zeroes to make
+      the error message nice-looking
+    */
+    if (field->binary() &&  field->type() == MYSQL_TYPE_STRING && tmp.length())
+    {
+      const char *tmp_end= tmp.ptr() + tmp.length();
+      while (tmp_end > tmp.ptr() && !*--tmp_end) ;
+      tmp.length(tmp_end - tmp.ptr() + 1);
+    }
+    if (cs->mbmaxlen > 1 && prefix_key)
+    {
+      /*
+        Prefix key, multi-byte charset.
+        For the columns of type CHAR(N), the above val_str()
+        call will return exactly "key_part->length" bytes,
+        which can break a multi-byte characters in the middle.
+        Align, returning not more than "char_length" characters.
+      */
+      uint charpos, char_length= max_length / cs->mbmaxlen;
+      if ((charpos= my_charpos(cs, tmp.ptr(),
+                               tmp.ptr() + tmp.length(),
+                               char_length)) < tmp.length())
+        tmp.length(charpos);
+    }
+    if (max_length < field->pack_length())
+      tmp.length(min(tmp.length(),max_length));
+    ErrConvString err(&tmp);
+    to->append(err.ptr());
+  }
+  else
+    to->append(STRING_WITH_LEN("???"));
+  DBUG_VOID_RETURN;
+}
+
+
 /*
   unpack key-fields from record to some buffer.
 
@@ -329,8 +393,6 @@ bool key_cmp_if_same(TABLE *table,const uchar *key,uint idx,uint key_length)
 void key_unpack(String *to,TABLE *table,uint idx)
 {
   KEY_PART_INFO *key_part,*key_part_end;
-  Field *field;
-  String tmp;
   my_bitmap_map *old_map= dbug_tmp_use_all_columns(table, table->read_set);
   DBUG_ENTER("key_unpack");
 
@@ -346,20 +408,13 @@ void key_unpack(String *to,TABLE *table,uint idx)
     {
       if (table->record[0][key_part->null_offset] & key_part->null_bit)
       {
-	to->append(STRING_WITH_LEN("NULL"));
-	continue;
+        to->append(STRING_WITH_LEN("NULL"));
+        continue;
       }
     }
-    if ((field=key_part->field))
-    {
-      field->val_str(&tmp);
-      if (key_part->length < field->pack_length())
-	tmp.length(min(tmp.length(),key_part->length));
-      to->append(tmp);
-    }
-    else
-      to->append(STRING_WITH_LEN("???"));
-  }
+    field_unpack(to, key_part->field, table->record[0], key_part->length,
+                 test(key_part->key_part_flag & HA_PART_KEY_SEG));
+ }
   dbug_tmp_restore_column_map(table->read_set, old_map);
   DBUG_VOID_RETURN;
 }

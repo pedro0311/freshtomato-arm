@@ -1,4 +1,4 @@
-#!/bin/sh
+#!@SHELL_PATH@
 # Copyright Abandoned 1996 TCX DataKonsult AB & Monty Program KB & Detron HB
 # This file is public domain and comes with NO WARRANTY of any kind
 #
@@ -11,16 +11,22 @@
 # mysql.server works by first doing a cd to the base directory and from there
 # executing mysqld_safe
 
+# Initialize script globals
 KILL_MYSQLD=1;
 MYSQLD=
 niceness=0
+mysqld_ld_preload=
+mysqld_ld_library_path=
+
 # Initial logging status: error log is not open, and not using syslog
 logging=init
 want_syslog=0
 syslog_tag=
 user='@MYSQLD_USER@'
 pid_file=
+pid_file_append=
 err_log=
+err_log_append=
 
 syslog_tag_mysqld=mysqld
 syslog_tag_mysqld_safe=mysqld_safe
@@ -60,16 +66,22 @@ esac
 usage () {
         cat <<EOF
 Usage: $0 [OPTIONS]
+ The following options may be given as the first argument:
   --no-defaults              Don't read the system defaults file
   --defaults-file=FILE       Use the specified defaults file
   --defaults-extra-file=FILE Also use defaults from the specified file
+
+ Other options:
   --ledir=DIRECTORY          Look for mysqld in the specified directory
   --open-files-limit=LIMIT   Limit the number of open files
   --core-file-size=LIMIT     Limit core files to the specified size
   --timezone=TZ              Set the system timezone
+  --malloc-lib=LIB           Preload shared library LIB if available
   --mysqld=FILE              Use the specified file as mysqld
   --mysqld-version=VERSION   Use "mysqld-VERSION" as mysqld
   --nice=NICE                Set the scheduling priority of mysqld
+  --plugin-dir=DIR           Plugins are under DIR or DIR/VERSION, if
+                             VERSION is given
   --skip-kill-mysqld         Don't try to kill stray mysqld processes
   --syslog                   Log messages to syslog with 'logger'
   --skip-syslog              Log messages to error log (default)
@@ -118,7 +130,13 @@ log_generic () {
   echo "$msg"
   case $logging in
     init) ;;  # Just echo the message, don't save it anywhere
-    file) echo "$msg" >> "$err_log" ;;
+    file)
+      if [ -w / -o "$USER" = "root" ]; then
+        true
+      else
+        echo "$msg" >> "$err_log"
+      fi
+      ;;
     syslog) logger -t "$syslog_tag_mysqld_safe" -p "$priority" "$*" ;;
     *)
       echo "Internal program error (non-fatal):" \
@@ -138,7 +156,13 @@ log_notice () {
 eval_log_error () {
   cmd="$1"
   case $logging in
-    file) cmd="$cmd >> "`shell_quote_string "$err_log"`" 2>&1" ;;
+    file)
+      if [ -w / -o "$USER" = "root" ]; then
+        cmd="$cmd > /dev/null 2>&1"
+      else
+        cmd="$cmd >> "`shell_quote_string "$err_log"`" 2>&1"
+      fi
+      ;;
     syslog)
       # mysqld often prefixes its messages with a timestamp, which is
       # redundant when logging to syslog (which adds its own timestamp)
@@ -176,12 +200,24 @@ parse_arguments() {
   fi
 
   for arg do
-    val=`echo "$arg" | sed -e "s;--[^=]*=;;"`
+    # the parameter after "=", or the whole $arg if no match
+    val=`echo "$arg" | sed -e 's;^--[^=]*=;;'`
+    # what's before "=", or the whole $arg if no match
+    optname=`echo "$arg" | sed -e 's/^\(--[^=]*\)=.*$/\1/'`
+    # replace "_" by "-" ; mysqld_safe must accept "_" like mysqld does.
+    optname_subst=`echo "$optname" | sed 's/_/-/g'`
+    arg=`echo $arg | sed "s/^$optname/$optname_subst/"`
     case "$arg" in
       # these get passed explicitly to mysqld
       --basedir=*) MY_BASEDIR_VERSION="$val" ;;
-      --datadir=*) DATADIR="$val" ;;
+      --datadir=*)
+        case $val in
+          /) DATADIR=$val ;;
+          *) DATADIR="`echo $val | sed 's;/*$;;'`" ;;
+        esac
+        ;;
       --pid-file=*) pid_file="$val" ;;
+      --plugin-dir=*) PLUGIN_DIR="$val" ;;
       --user=*) user="$val"; SET_USER=1 ;;
 
       # these might have been set in a [mysqld_safe] section of my.cnf
@@ -192,12 +228,29 @@ parse_arguments() {
 
       # mysqld_safe-specific options - must be set in my.cnf ([mysqld_safe])!
       --core-file-size=*) core_file_size="$val" ;;
-      --ledir=*) ledir="$val" ;;
-      --mysqld=*) MYSQLD="$val" ;;
+      --ledir=*)
+        if [ -z "$pick_args" ]; then
+          log_error "--ledir option can only be used as command line option, found in config file"
+          exit 1
+        fi
+        ledir="$val"
+        ;;
+      --malloc-lib=*) set_malloc_lib "$val" ;;
+      --mysqld=*)
+        if [ -z "$pick_args" ]; then
+          log_error "--mysqld option can only be used as command line option, found in config file"
+          exit 1
+        fi
+        MYSQLD="$val" ;;
       --mysqld-version=*)
+        if [ -z "$pick_args" ]; then
+          log_error "--mysqld-version option can only be used as command line option, found in config file"
+          exit 1
+        fi
         if test -n "$val"
         then
           MYSQLD="mysqld-$val"
+          PLUGIN_VARIANT="/$val"
         else
           MYSQLD="mysqld"
         fi
@@ -224,46 +277,189 @@ parse_arguments() {
 }
 
 
+# Add a single shared library to the list of libraries which will be added to
+# LD_PRELOAD for mysqld
+#
+# Since LD_PRELOAD is a space-separated value (for historical reasons), if a
+# shared lib's path contains spaces, that path will be prepended to
+# LD_LIBRARY_PATH and stripped from the lib value.
+add_mysqld_ld_preload() {
+  lib_to_add="$1"
+  log_notice "Adding '$lib_to_add' to LD_PRELOAD for mysqld"
+
+  case "$lib_to_add" in
+    *' '*)
+      # Must strip path from lib, and add it to LD_LIBRARY_PATH
+      lib_file=`basename "$lib_to_add"`
+      case "$lib_file" in
+        *' '*)
+          # The lib file itself has a space in its name, and can't
+          # be used in LD_PRELOAD
+          log_error "library name '$lib_to_add' contains spaces and can not be used with LD_PRELOAD"
+          exit 1
+          ;;
+      esac
+      lib_path=`dirname "$lib_to_add"`
+      lib_to_add="$lib_file"
+      [ -n "$mysqld_ld_library_path" ] && mysqld_ld_library_path="$mysqld_ld_library_path:"
+      mysqld_ld_library_path="$mysqld_ld_library_path$lib_path"
+      ;;
+  esac
+
+  # LD_PRELOAD is a space-separated
+  [ -n "$mysqld_ld_preload" ] && mysqld_ld_preload="$mysqld_ld_preload "
+  mysqld_ld_preload="${mysqld_ld_preload}$lib_to_add"
+}
+
+
+# Returns LD_PRELOAD (and LD_LIBRARY_PATH, if needed) text, quoted to be
+# suitable for use in the eval that calls mysqld.
+#
+# All values in mysqld_ld_preload are prepended to LD_PRELOAD.
+mysqld_ld_preload_text() {
+  text=
+
+  if [ -n "$mysqld_ld_preload" ]; then
+    new_text="$mysqld_ld_preload"
+    [ -n "$LD_PRELOAD" ] && new_text="$new_text $LD_PRELOAD"
+    text="${text}LD_PRELOAD="`shell_quote_string "$new_text"`' '
+  fi
+
+  if [ -n "$mysqld_ld_library_path" ]; then
+    new_text="$mysqld_ld_library_path"
+    [ -n "$LD_LIBRARY_PATH" ] && new_text="$new_text:$LD_LIBRARY_PATH"
+    text="${text}LD_LIBRARY_PATH="`shell_quote_string "$new_text"`' '
+  fi
+
+  echo "$text"
+}
+
+# set_malloc_lib LIB
+# - If LIB is empty, do nothing and return
+# - If LIB is 'tcmalloc', look for tcmalloc shared library in $malloc_dirs.
+#   tcmalloc is part of the Google perftools project.
+# - If LIB is an absolute path, assume it is a malloc shared library
+#
+# Put LIB in mysqld_ld_preload, which will be added to LD_PRELOAD when
+# running mysqld.  See ld.so for details.
+set_malloc_lib() {
+  # This list is kept intentionally simple.
+  malloc_dirs="/usr/lib /usr/lib64 /usr/lib/i386-linux-gnu /usr/lib/x86_64-linux-gnu"
+  malloc_lib="$1"
+
+  if [ "$malloc_lib" = tcmalloc ]; then
+    malloc_lib=
+    for libdir in `echo $malloc_dirs`; do
+      for flavor in _minimal '' _and_profiler _debug; do
+        tmp="$libdir/libtcmalloc$flavor.so"
+        #log_notice "DEBUG: Checking for malloc lib '$tmp'"
+        [ -r "$tmp" ] || continue
+        malloc_lib="$tmp"
+        break 2
+      done
+    done
+
+    if [ -z "$malloc_lib" ]; then
+      log_error "no shared library for --malloc-lib=tcmalloc found in $malloc_dirs"
+      exit 1
+    fi
+  fi
+
+  # Allow --malloc-lib='' to override other settings
+  [ -z  "$malloc_lib" ] && return
+
+  case "$malloc_lib" in
+    /*)
+      if [ ! -r "$malloc_lib" ]; then
+        log_error "--malloc-lib can not be read and will not be used"
+        exit 1
+      fi
+
+      # Restrict to a the list in $malloc_dirs above
+      case "`dirname "$malloc_lib"`" in
+        /usr/lib) ;;
+        /usr/lib64) ;;
+        /usr/lib/i386-linux-gnu) ;;
+        /usr/lib/x86_64-linux-gnu) ;;
+        *)
+          log_error "--malloc-lib must be located in one of the directories: $malloc_dirs"
+          exit 1
+          ;;
+      esac
+      ;;
+    *)
+      log_error "--malloc-lib must be an absolute path or 'tcmalloc'; " \
+        "ignoring value '$malloc_lib'"
+      exit 1
+      ;;
+  esac
+
+  add_mysqld_ld_preload "$malloc_lib"
+}
+
+find_basedir_from_cmdline () {
+  for arg in "$@"; do
+    case $arg in
+      --basedir=*)
+        MY_BASEDIR_VERSION="`echo "$arg" | sed -e 's;^--[^=]*=;;'`"
+        # Convert to full path
+        cd "$MY_BASEDIR_VERSION"
+        if [ $? -ne 0 ] ; then
+          log_error "--basedir set to '$MY_BASEDIR_VERSION', however could not access directory"
+          exit 1
+        fi
+        MY_BASEDIR_VERSION="`pwd`"
+        ;;
+    esac
+  done
+}
+
 #
 # First, try to find BASEDIR and ledir (where mysqld is)
 #
 
-if echo '@pkgdatadir@' | grep '^@prefix@' > /dev/null
-then
-  relpkgdata=`echo '@pkgdatadir@' | sed -e 's,^@prefix@,,' -e 's,^/,,' -e 's,^,./,'`
+oldpwd="`pwd`"
+
+# Args not parsed yet, check if --basedir was given on command line
+find_basedir_from_cmdline "$@"
+
+# --basedir is already overridden on command line
+if test -n "$MY_BASEDIR_VERSION" -a -d "$MY_BASEDIR_VERSION" ; then
+  # Search for mysqld and set ledir
+  for dir in @INSTALL_SBINDIR@ libexec sbin bin ; do
+    if test -x "$MY_BASEDIR_VERSION/$dir/mysqld" ; then
+      ledir="$MY_BASEDIR_VERSION/$dir"
+      break
+    fi
+  done
+
 else
-  # pkgdatadir is not relative to prefix
-  relpkgdata='@pkgdatadir@'
-fi
+  # Basedir should be parent dir of bindir, unless some non-standard
+  # layout is used
 
-MY_PWD=`pwd`
-# Check for the directories we would expect from a binary release install
-if test -n "$MY_BASEDIR_VERSION" -a -d "$MY_BASEDIR_VERSION"
-then
-  # BASEDIR is already overridden on command line.  Do not re-set.
-
-  # Use BASEDIR to discover le.
-  if test -x "$MY_BASEDIR_VERSION/libexec/mysqld"
-  then
-    ledir="$MY_BASEDIR_VERSION/libexec"
-  else
-    ledir="$MY_BASEDIR_VERSION/bin"
+  cd "`dirname $0`"
+  if [ -h "$0" ] ; then
+    realpath="`ls -l  "$0" | awk '{print $NF}'`"
+    cd "`dirname "$realpath"`"
   fi
-elif test -f "$relpkgdata"/english/errmsg.sys -a -x "$MY_PWD/bin/mysqld"
-then
-  MY_BASEDIR_VERSION="$MY_PWD"		# Where bin, share and data are
-  ledir="$MY_PWD/bin"			# Where mysqld is
-# Check for the directories we would expect from a source install
-elif test -f "$relpkgdata"/english/errmsg.sys -a -x "$MY_PWD/libexec/mysqld"
-then
-  MY_BASEDIR_VERSION="$MY_PWD"		# Where libexec, share and var are
-  ledir="$MY_PWD/libexec"		# Where mysqld is
-# Since we didn't find anything, used the compiled-in defaults
-else
-  MY_BASEDIR_VERSION='@prefix@'
-  ledir='@libexecdir@'
-fi
+  cd ..
+  MY_PWD="`pwd`"
 
+  # Search for mysqld and set ledir and BASEDIR
+  for dir in @INSTALL_SBINDIR@ libexec sbin bin ; do
+    if test -x "$MY_PWD/$dir/mysqld" ; then
+      MY_BASEDIR_VERSION="$MY_PWD"
+      ledir="$MY_BASEDIR_VERSION/$dir"
+      break
+    fi
+  done
+
+  # If we still didn't find anything, use the compiled-in defaults
+  if test -z "$MY_BASEDIR_VERSION" ; then
+    MY_BASEDIR_VERSION='@prefix@'
+    ledir='@libexecdir@'
+  fi
+fi
 
 #
 # Second, try to find the data directory
@@ -277,10 +473,6 @@ then
   then
     defaults="--defaults-extra-file=$DATADIR/my.cnf"
   fi
-# Next try where the source installs put it
-elif test -d $MY_BASEDIR_VERSION/var/mysql
-then
-  DATADIR=$MY_BASEDIR_VERSION/var
 # Or just give up and use our compiled-in default
 else
   DATADIR=@localstatedir@
@@ -311,18 +503,10 @@ export MYSQL_HOME
 
 # Get first arguments from the my.cnf file, groups [mysqld] and [mysqld_safe]
 # and then merge with the command line arguments
-if test -x "$MY_BASEDIR_VERSION/bin/my_print_defaults"
-then
+if test -x "$MY_BASEDIR_VERSION/bin/my_print_defaults" ; then
   print_defaults="$MY_BASEDIR_VERSION/bin/my_print_defaults"
-elif test -x ./bin/my_print_defaults
-then
-  print_defaults="./bin/my_print_defaults"
-elif test -x @bindir@/my_print_defaults
-then
+elif test -x "@bindir@/my_print_defaults" ; then
   print_defaults="@bindir@/my_print_defaults"
-elif test -x @bindir@/mysql_print_defaults
-then
-  print_defaults="@bindir@/mysql_print_defaults"
 else
   print_defaults="my_print_defaults"
 fi
@@ -333,6 +517,8 @@ append_arg_to_args () {
 
 args=
 
+cd "$oldpwd"
+
 SET_USER=2
 parse_arguments `$print_defaults $defaults --loose-verbose mysqld server`
 if test $SET_USER -eq 2
@@ -342,6 +528,30 @@ fi
 
 parse_arguments `$print_defaults $defaults --loose-verbose mysqld_safe safe_mysqld`
 parse_arguments PICK-ARGS-FROM-ARGV "$@"
+
+
+#
+# Try to find the plugin directory
+#
+
+# Use user-supplied argument
+if [ -n "${PLUGIN_DIR}" ]; then
+  plugin_dir="${PLUGIN_DIR}"
+else
+  # Try to find plugin dir relative to basedir
+  for dir in lib64/mysql/plugin lib64/plugin lib/mysql/plugin lib/plugin
+  do
+    if [ -d "${MY_BASEDIR_VERSION}/${dir}" ]; then
+      plugin_dir="${MY_BASEDIR_VERSION}/${dir}"
+      break
+    fi
+  done
+  # Give up and use compiled-in default
+  if [ -z "${plugin_dir}" ]; then
+    plugin_dir='@pkgplugindir@'
+  fi
+fi
+plugin_dir="${plugin_dir}${PLUGIN_VARIANT}"
 
 # Determine what logging facility to use
 
@@ -366,6 +576,7 @@ then
 
     # mysqld does not add ".err" to "--log-error=foo."; it considers a
     # trailing "." as an extension
+    
     if expr "$err_log" : '.*\.[^/]*$' > /dev/null
     then
         :
@@ -373,15 +584,17 @@ then
       err_log="$err_log".err
     fi
 
+    err_log_append="$err_log"
     case "$err_log" in
       /* ) ;;
       * ) err_log="$DATADIR/$err_log" ;;
     esac
   else
     err_log=$DATADIR/`@HOSTNAME@`.err
+    err_log_append=`@HOSTNAME@`.err
   fi
 
-  append_arg_to_args "--log-error=$err_log"
+  append_arg_to_args "--log-error=$err_log_append"
 
   if [ $want_syslog -eq 1 ]
   then
@@ -390,14 +603,7 @@ then
   fi
 
   # Log to err_log file
-  log_notice "Logging to '$err_log'."
   logging=file
-
-  if [ ! -f "$err_log" ]; then                  # if error log already exists,
-    touch "$err_log"                            # we just append. otherwise,
-    chmod "$fmode" "$err_log"                   # fix the permissions here!
-  fi
-
 else
   if [ -n "$syslog_tag" ]
   then
@@ -410,17 +616,54 @@ else
   logging=syslog
 fi
 
+logdir=`dirname "$err_log"`
+# Change the err log to the right user, if possible and it is in use
+if [ $logging = "file" -o $logging = "both" ]; then
+  if [ ! -e "$err_log" -a ! -h "$err_log" ]; then
+    if test -w / -o "$USER" = "root"; then
+      case $logdir in
+        /var/log)
+          (
+            umask 0137
+            set -o noclobber
+            > "$err_log" && chown $user "$err_log"
+          ) ;;
+        *) ;;
+      esac
+    else
+      (
+        umask 0137
+        set -o noclobber
+        > "$err_log"
+      )
+    fi
+  fi
+
+  if [ -f "$err_log" -o -p "$err_log" ]; then        # Log to err_log file
+    log_notice "Logging to '$err_log'."
+  elif [ "x$user" = "xroot" ]; then # running as root, mysqld can create log file; continue
+    echo "Logging to '$err_log'." >&2
+  else
+    case $logdir in
+      # We can't create $err_log, however mysqld can; continue
+      /tmp|/var/tmp|/var/log/mysql|$DATADIR)
+        echo "Logging to '$err_log'." >&2
+        ;;
+      # We can't create $err_log and don't know if mysqld can; error out
+      *)
+        log_error "error: log-error set to '$err_log', however file don't exists. Create writable for user '$user'."
+        exit 1
+        ;;
+    esac
+  fi
+fi
+
 USER_OPTION=""
 if test -w / -o "$USER" = "root"
 then
   if test "$user" != "root" -o $SET_USER = 1
   then
     USER_OPTION="--user=$user"
-  fi
-  # Change the err log to the right user, if it is in use
-  if [ $want_syslog -eq 0 ]; then
-    touch "$err_log"
-    chown $user "$err_log"
   fi
   if test -n "$open_files"
   then
@@ -434,13 +677,12 @@ then
 fi
 
 safe_mysql_unix_port=${mysql_unix_port:-${MYSQL_UNIX_PORT:-@MYSQL_UNIX_ADDR@}}
-# Make sure that directory for $safe_mysql_unix_port exists
+# Check that directory for $safe_mysql_unix_port exists
 mysql_unix_port_dir=`dirname $safe_mysql_unix_port`
 if [ ! -d $mysql_unix_port_dir ]
 then
-  mkdir $mysql_unix_port_dir
-  chown $user $mysql_unix_port_dir
-  chmod 755 $mysql_unix_port_dir
+  log_error "Directory '$mysql_unix_port_dir' for UNIX socket file don't exists."
+  exit 1
 fi
 
 # If the user doesn't specify a binary, we assume name "mysqld"
@@ -462,13 +704,15 @@ fi
 if test -z "$pid_file"
 then
   pid_file="$DATADIR/`@HOSTNAME@`.pid"
+  pid_file_append="`@HOSTNAME@`.pid"
 else
+  pid_file_append="$pid_file"
   case "$pid_file" in
     /* ) ;;
     * )  pid_file="$DATADIR/$pid_file" ;;
   esac
 fi
-append_arg_to_args "--pid-file=$pid_file"
+append_arg_to_args "--pid-file=$pid_file_append"
 
 if test -n "$mysql_unix_port"
 then
@@ -552,14 +796,25 @@ then
       exit 1
     fi
   fi
-  rm -f "$pid_file"
-  if test -f "$pid_file"
-  then
-    log_error "Fatal error: Can't remove the pid file:
-$pid_file
-Please remove it manually and start $0 again;
+  if [ ! -h "$pid_file" ]; then
+      rm -f "$pid_file"
+      if test -f "$pid_file"; then
+        log_error "Fatal error: Can't remove the pid file:
+$pid_file.
+Please remove the file manually and start $0 again;
 mysqld daemon not started"
-    exit 1
+        exit 1
+      fi
+  fi
+  if [ ! -h "$safe_mysql_unix_port" ]; then
+      rm -f "$safe_mysql_unix_port"
+      if test -f "$safe_mysql_unix_port"; then
+        log_error "Fatal error: Can't remove the socket file:
+$safe_mysql_unix_port.
+Please remove the file manually and start $0 again;
+mysqld daemon not started"
+        exit 1
+      fi
   fi
 fi
 
@@ -581,10 +836,10 @@ fi
 #  ulimit -n 256 > /dev/null 2>&1		# Fix for BSD and FreeBSD systems
 #fi
 
-cmd="$NOHUP_NICENESS"
+cmd="`mysqld_ld_preload_text`$NOHUP_NICENESS"
 
 for i in  "$ledir/$MYSQLD" "$defaults" "--basedir=$MY_BASEDIR_VERSION" \
-  "--datadir=$DATADIR" "$USER_OPTION"
+  "--datadir=$DATADIR" "--plugin-dir=$plugin_dir" "$USER_OPTION"
 do
   cmd="$cmd "`shell_quote_string "$i"`
 done
@@ -593,21 +848,84 @@ cmd="$cmd $args"
 test -n "$NOHUP_NICENESS" && cmd="$cmd < /dev/null"
 
 log_notice "Starting $MYSQLD daemon with databases from $DATADIR"
+
+# variable to track the current number of "fast" (a.k.a. subsecond) restarts
+fast_restart=0
+# maximum number of restarts before trottling kicks in
+max_fast_restarts=5
+# flag whether a usable sleep command exists
+have_sleep=1
+
 while true
 do
-  rm -f $safe_mysql_unix_port "$pid_file"	# Some extra safety
+  start_time=`date +%M%S`
 
   eval_log_error "$cmd"
 
-  if [ $want_syslog -eq 0 -a ! -f "$err_log" ]; then
-    touch "$err_log"                    # hypothetical: log was renamed but not
-    chown $user "$err_log"              # flushed yet. we'd recreate it with
-    chmod "$fmode" "$err_log"           # wrong owner next time we log, so set
-  fi                                    # it up correctly while we can!
+  # hypothetical: log was renamed but not
+  # flushed yet. we'd recreate it with
+  # wrong owner next time we log, so set
+  # it up correctly while we can!
+
+  if [ $want_syslog -eq 0 -a ! -f "$err_log" -a ! -h "$err_log" ]; then
+    if test -w / -o "$USER" = "root"; then
+      logdir=`dirname "$err_log"`
+      case $logdir in
+        /var/log)
+          (
+            umask 0137
+            set -o noclobber
+            > "$err_log" && chown $user "$err_log"
+          ) ;;
+        *) ;;
+      esac
+    else
+      (
+        umask 0137
+        set -o noclobber
+        > "$err_log"
+      )
+    fi
+  fi
+
+  end_time=`date +%M%S`
 
   if test ! -f "$pid_file"		# This is removed if normal shutdown
   then
     break
+  else                                  # self's mysqld crashed or other's mysqld running
+    PID=`cat "$pid_file"`
+    if @CHECK_PID@
+    then                                # true when above pid belongs to a running mysqld process
+      log_error "A mysqld process with pid=$PID is already running. Aborting!!"
+      exit 1
+    fi
+  fi
+
+
+  # sanity check if time reading is sane and there's sleep
+  if test $end_time -gt 0 -a $have_sleep -gt 0
+  then
+    # throttle down the fast restarts
+    if test $end_time -eq $start_time
+    then
+      fast_restart=`expr $fast_restart + 1`
+      if test $fast_restart -ge $max_fast_restarts
+      then
+        log_notice "The server is respawning too fast. Sleeping for 1 second."
+        sleep 1
+        sleep_state=$?
+        if test $sleep_state -gt 0
+        then
+          log_notice "The server is respawning too fast and no working sleep command. Turning off trottling."
+          have_sleep=0
+        fi
+
+        fast_restart=0
+      fi
+    else
+      fast_restart=0
+    fi
   fi
 
   if @TARGET_LINUX@ && test $KILL_MYSQLD -eq 1
@@ -638,6 +956,12 @@ do
       fi
       I=`expr $I + 1`
     done
+  fi
+  if [ ! -h "$pid_file" ]; then
+    rm -f "$pid_file"
+  fi
+  if [ ! -h "$safe_mysql_unix_port" ]; then
+   rm -f "$safe_mysql_unix_port"
   fi
   log_notice "mysqld restarted"
 done

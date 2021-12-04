@@ -1,8 +1,25 @@
-/**********************************************************************
+/*****************************************************************************
+
+Copyright (c) 1995, 2016, Oracle and/or its affiliates. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/******************************************************************//**
+@file mach/mach0data.c
 Utilities for converting data from the database file
 to the machine format.
-
-(c) 1995 Innobase Oy
 
 Created 11/28/1995 Heikki Tuuri
 ***********************************************************************/
@@ -13,17 +30,16 @@ Created 11/28/1995 Heikki Tuuri
 #include "mach0data.ic"
 #endif
 
-/*************************************************************
-Reads a ulint in a compressed form if the log record fully contains it. */
-
+/*********************************************************//**
+Reads a ulint in a compressed form if the log record fully contains it.
+@return	pointer to end of the stored field, NULL if not complete */
+UNIV_INTERN
 byte*
 mach_parse_compressed(
 /*==================*/
-			/* out: pointer to end of the stored field, NULL if
-			not complete */
-	byte*	ptr,	/* in: pointer to buffer from where to read */
-	byte*	end_ptr,/* in: pointer to end of the buffer */
-	ulint*	val)	/* out: read value (< 2^32) */
+	byte*	ptr,	/*!< in: pointer to buffer from where to read */
+	byte*	end_ptr,/*!< in: pointer to end of the buffer */
+	ulint*	val)	/*!< out: read value (< 2^32) */
 {
 	ulint	flag;
 
@@ -39,8 +55,22 @@ mach_parse_compressed(
 	if (flag < 0x80UL) {
 		*val = flag;
 		return(ptr + 1);
+	}
 
-	} else if (flag < 0xC0UL) {
+	/* Workaround GCC bug
+	https://gcc.gnu.org/bugzilla/show_bug.cgi?id=77673:
+	the compiler moves mach_read_from_4 right to the beginning of the
+	function, causing and out-of-bounds read if we are reading a short
+	integer close to the end of buffer. */
+#if defined(__GNUC__) && (__GNUC__ >= 5) && !defined(__clang__)
+#define DEPLOY_FENCE
+#endif
+
+#ifdef DEPLOY_FENCE
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+#endif
+
+	if (flag < 0xC0UL) {
 		if (end_ptr < ptr + 2) {
 			return(NULL);
 		}
@@ -48,8 +78,13 @@ mach_parse_compressed(
 		*val = mach_read_from_2(ptr) & 0x7FFFUL;
 
 		return(ptr + 2);
+	}
 
-	} else if (flag < 0xE0UL) {
+#ifdef DEPLOY_FENCE
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+#endif
+
+	if (flag < 0xE0UL) {
 		if (end_ptr < ptr + 3) {
 			return(NULL);
 		}
@@ -57,7 +92,13 @@ mach_parse_compressed(
 		*val = mach_read_from_3(ptr) & 0x3FFFFFUL;
 
 		return(ptr + 3);
-	} else if (flag < 0xF0UL) {
+	}
+
+#ifdef DEPLOY_FENCE
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+#endif
+
+	if (flag < 0xF0UL) {
 		if (end_ptr < ptr + 4) {
 			return(NULL);
 		}
@@ -65,55 +106,20 @@ mach_parse_compressed(
 		*val = mach_read_from_4(ptr) & 0x1FFFFFFFUL;
 
 		return(ptr + 4);
-	} else {
-		ut_ad(flag == 0xF0UL);
-
-		if (end_ptr < ptr + 5) {
-			return(NULL);
-		}
-
-		*val = mach_read_from_4(ptr + 1);
-		return(ptr + 5);
 	}
-}
 
-/*************************************************************
-Reads a dulint in a compressed form if the log record fully contains it. */
+#ifdef DEPLOY_FENCE
+	__atomic_thread_fence(__ATOMIC_ACQUIRE);
+#endif
 
-byte*
-mach_dulint_parse_compressed(
-/*=========================*/
-			/* out: pointer to end of the stored field, NULL if
-			not complete */
-	byte*	ptr,	/* in: pointer to buffer from where to read */
-	byte*	end_ptr,/* in: pointer to end of the buffer */
-	dulint*	val)	/* out: read value */
-{
-	ulint	high;
-	ulint	low;
-	ulint	size;
+#undef DEPLOY_FENCE
 
-	ut_ad(ptr && end_ptr && val);
+	ut_ad(flag == 0xF0UL);
 
 	if (end_ptr < ptr + 5) {
-
 		return(NULL);
 	}
 
-	high = mach_read_compressed(ptr);
-
-	size = mach_get_compressed_size(high);
-
-	ptr += size;
-
-	if (end_ptr < ptr + 4) {
-
-		return(NULL);
-	}
-
-	low = mach_read_from_4(ptr);
-
-	*val = ut_dulint_create(high, low);
-
-	return(ptr + 4);
+	*val = mach_read_from_4(ptr + 1);
+	return(ptr + 5);
 }

@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef SLAVE_H
 #define SLAVE_H
@@ -24,6 +22,17 @@
 
   @file
 */
+
+/** 
+   Some of defines are need in parser even though replication is not 
+   compiled in (embedded).
+*/
+
+/**
+   The maximum is defined as (ULONG_MAX/1000) with 4 bytes ulong
+*/
+#define SLAVE_MAX_HEARTBEAT_PERIOD 4294967
+
 #ifdef HAVE_REPLICATION
 
 #include "log.h"
@@ -34,7 +43,6 @@
 #define SLAVE_NET_TIMEOUT  3600
 
 #define MAX_SLAVE_ERROR    2000
-
 
 // Forward declarations
 class Relay_log_info;
@@ -107,6 +115,7 @@ extern char *master_info_file, *relay_log_info_file;
 extern char *opt_relay_logname, *opt_relaylog_index_name;
 extern my_bool opt_skip_slave_start, opt_reckless_slave;
 extern my_bool opt_log_slave_updates;
+extern char *opt_slave_skip_errors;
 extern ulonglong relay_log_space_limit;
 
 /*
@@ -136,6 +145,7 @@ extern ulonglong relay_log_space_limit;
 #define SLAVE_FORCE_ALL 4
 
 int init_slave();
+int init_recovery(Master_info* mi, const char** errmsg);
 void init_slave_skip_errors(const char* arg);
 bool flush_relay_log_info(Relay_log_info* rli);
 int register_slave_on_master(MYSQL* mysql);
@@ -148,15 +158,19 @@ int start_slave_threads(bool need_slave_mutex, bool wait_for_start,
   cond_lock is usually same as start_lock. It is needed for the case when
   start_lock is 0 which happens if start_slave_thread() is called already
   inside the start_lock section, but at the same time we want a
-  pthread_cond_wait() on start_cond,start_lock
+  mysql_cond_wait() on start_cond, start_lock
 */
-int start_slave_thread(pthread_handler h_func, pthread_mutex_t* start_lock,
-		       pthread_mutex_t *cond_lock,
-		       pthread_cond_t* start_cond,
-		       volatile uint *slave_running,
-		       volatile ulong *slave_run_id,
-		       Master_info* mi,
-                       bool high_priority);
+int start_slave_thread(
+#ifdef HAVE_PSI_INTERFACE
+                       PSI_thread_key thread_key,
+#endif
+                       pthread_handler h_func,
+                       mysql_mutex_t *start_lock,
+                       mysql_mutex_t *cond_lock,
+                       mysql_cond_t *start_cond,
+                       volatile uint *slave_running,
+                       volatile ulong *slave_run_id,
+                       Master_info *mi);
 
 /* If fd is -1, dump to NET */
 int mysql_table_dump(THD* thd, const char* db,
@@ -196,6 +210,8 @@ int apply_event_and_update_pos(Log_event* ev, THD* thd, Relay_log_info* rli);
 
 pthread_handler_t handle_slave_io(void *arg);
 pthread_handler_t handle_slave_sql(void *arg);
+bool net_request_file(NET* net, const char* fname);
+
 extern bool volatile abort_loop;
 extern Master_info main_mi, *active_mi; /* active_mi for multi-master */
 extern LIST master_list;

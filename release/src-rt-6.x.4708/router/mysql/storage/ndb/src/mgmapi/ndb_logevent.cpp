@@ -1,4 +1,4 @@
-/* Copyright (c) 2003, 2005-2007 MySQL AB
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ void ndb_mgm_destroy_logevent_handle(NdbLogEventHandle * h)
   if ( *h )
     close((*h)->socket);
 
-  my_free((char*)* h,MYF(MY_ALLOW_ZERO_PTR));
+  my_free(* h);
   * h = 0;
 }
 

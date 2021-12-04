@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2000-2008 MySQL AB, 2009, 2010 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,15 +11,19 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* Write some debug info */
 
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
+#include "sql_test.h"
+#include "sql_base.h" // table_def_cache, table_cache_count, unused_tables
+#include "sql_show.h" // calc_sum_of_all_status
 #include "sql_select.h"
+#include "keycaches.h"
 #include <hash.h>
 #include <thr_alarm.h>
 #if defined(HAVE_MALLINFO) && defined(HAVE_MALLOC_H)
@@ -43,7 +45,6 @@ static const char *lock_descriptions[] =
   /* TL_READ_HIGH_PRIORITY      */  "High priority read lock",
   /* TL_READ_NO_INSERT          */  "Read lock without concurrent inserts",
   /* TL_WRITE_ALLOW_WRITE       */  "Write lock that allows other writers",
-  /* TL_WRITE_ALLOW_READ        */  "Write lock, but allow reading",
   /* TL_WRITE_CONCURRENT_INSERT */  "Concurrent insert lock",
   /* TL_WRITE_DELAYED           */  "Lock used by delayed insert",
   /* TL_WRITE_DEFAULT           */  NULL,
@@ -58,44 +59,54 @@ static const char *lock_descriptions[] =
 void
 print_where(COND *cond,const char *info, enum_query_type query_type)
 {
+  char buff[256];
+  String str(buff,(uint32) sizeof(buff), system_charset_info);
+  str.length(0);
   if (cond)
-  {
-    char buff[256];
-    String str(buff,(uint32) sizeof(buff), system_charset_info);
-    str.length(0);
     cond->print(&str, query_type);
-    str.append('\0');
-    DBUG_LOCK_FILE;
-    (void) fprintf(DBUG_FILE,"\nWHERE:(%s) ",info);
-    (void) fputs(str.ptr(),DBUG_FILE);
-    (void) fputc('\n',DBUG_FILE);
-    DBUG_UNLOCK_FILE;
-  }
+  str.append('\0');
+
+  DBUG_LOCK_FILE;
+  (void) fprintf(DBUG_FILE,"\nWHERE:(%s) %p ", info, cond);
+  (void) fputs(str.ptr(),DBUG_FILE);
+  (void) fputc('\n',DBUG_FILE);
+  DBUG_UNLOCK_FILE;
 }
 	/* This is for debugging purposes */
 
 
-void print_cached_tables(void)
+static void print_cached_tables(void)
 {
   uint idx,count,unused;
-  TABLE *start_link,*lnk;
+  TABLE_SHARE *share;
+  TABLE *start_link, *lnk, *entry;
 
   compile_time_assert(TL_WRITE_ONLY+1 == array_elements(lock_descriptions));
 
   /* purecov: begin tested */
-  VOID(pthread_mutex_lock(&LOCK_open));
+  mysql_mutex_lock(&LOCK_open);
   puts("DB             Table                            Version  Thread  Open  Lock");
 
-  for (idx=unused=0 ; idx < open_cache.records ; idx++)
+  for (idx=unused=0 ; idx < table_def_cache.records ; idx++)
   {
-    TABLE *entry=(TABLE*) hash_element(&open_cache,idx);
-    printf("%-14.14s %-32s%6ld%8ld%6d  %s\n",
-           entry->s->db.str, entry->s->table_name.str, entry->s->version,
-	   entry->in_use ? entry->in_use->thread_id : 0L,
-	   entry->db_stat ? 1 : 0,
-           entry->in_use ? lock_descriptions[(int)entry->reginfo.lock_type] : "Not in use");
-    if (!entry->in_use)
+    share= (TABLE_SHARE*) my_hash_element(&table_def_cache, idx);
+
+    I_P_List_iterator<TABLE, TABLE_share> it(share->used_tables);
+    while ((entry= it++))
+    {
+      printf("%-14.14s %-32s%6ld%8ld%6d  %s\n",
+             entry->s->db.str, entry->s->table_name.str, entry->s->version,
+             entry->in_use->thread_id, entry->db_stat ? 1 : 0,
+             lock_descriptions[(int)entry->reginfo.lock_type]);
+    }
+    it.init(share->free_tables);
+    while ((entry= it++))
+    {
       unused++;
+      printf("%-14.14s %-32s%6ld%8ld%6d  %s\n",
+             entry->s->db.str, entry->s->table_name.str, entry->s->version,
+             0L, entry->db_stat ? 1 : 0, "Not in use");
+    }
   }
   count=0;
   if ((start_link=lnk=unused_tables))
@@ -107,19 +118,20 @@ void print_cached_tables(void)
 	printf("unused_links isn't linked properly\n");
 	return;
       }
-    } while (count++ < open_cache.records && (lnk=lnk->next) != start_link);
+    } while (count++ < cached_open_tables() && (lnk=lnk->next) != start_link);
     if (lnk != start_link)
     {
       printf("Unused_links aren't connected\n");
     }
   }
   if (count != unused)
-    printf("Unused_links (%d) doesn't match open_cache: %d\n", count,unused);
+    printf("Unused_links (%d) doesn't match table_def_cache: %d\n", count,
+           unused);
   printf("\nCurrent refresh version: %ld\n",refresh_version);
-  if (hash_check(&open_cache))
-    printf("Error: File hash table is corrupted\n");
+  if (my_hash_check(&table_def_cache))
+    printf("Error: Table definition hash table is corrupted\n");
   fflush(stdout);
-  VOID(pthread_mutex_unlock(&LOCK_open));
+  mysql_mutex_unlock(&LOCK_open);
   /* purecov: end */
   return;
 }
@@ -158,7 +170,7 @@ void TEST_filesort(SORT_FIELD *sortorder,uint s_length)
   }
   out.append('\0');				// Purify doesn't like c_ptr()
   DBUG_LOCK_FILE;
-  VOID(fputs("\nInfo about FILESORT\n",DBUG_FILE));
+  (void) fputs("\nInfo about FILESORT\n",DBUG_FILE);
   fprintf(DBUG_FILE,"Sortorder: %s\n",out.ptr());
   DBUG_UNLOCK_FILE;
   DBUG_VOID_RETURN;
@@ -187,7 +199,7 @@ TEST_join(JOIN *join)
   }
 
   DBUG_LOCK_FILE;
-  VOID(fputs("\nInfo about JOIN\n",DBUG_FILE));
+  (void) fputs("\nInfo about JOIN\n",DBUG_FILE);
   for (i=0 ; i < join->tables ; i++)
   {
     JOIN_TAB *tab=join->join_tab+i;
@@ -213,7 +225,7 @@ TEST_join(JOIN *join)
         tab->select->quick->dbug_dump(18, FALSE);
       }
       else
-	VOID(fputs("                  select used\n",DBUG_FILE));
+	(void) fputs("                  select used\n",DBUG_FILE);
     }
     if (tab->ref.key_parts)
     {
@@ -328,6 +340,11 @@ print_plan(JOIN* join, uint idx, double record_count, double read_time,
 
 #endif
 
+C_MODE_START
+static int dl_compare(const void *p1, const void *p2);
+static int print_key_cache_status(const char *name, KEY_CACHE *key_cache);
+C_MODE_END
+
 typedef struct st_debug_lock
 {
   ulong thread_id;
@@ -337,8 +354,13 @@ typedef struct st_debug_lock
   enum thr_lock_type type;
 } TABLE_LOCK_INFO;
 
-static int dl_compare(TABLE_LOCK_INFO *a,TABLE_LOCK_INFO *b)
+static int dl_compare(const void *p1, const void *p2)
 {
+  TABLE_LOCK_INFO *a, *b;
+
+  a= (TABLE_LOCK_INFO *) p1;
+  b= (TABLE_LOCK_INFO *) p2;
+
   if (a->thread_id > b->thread_id)
     return 1;
   if (a->thread_id < b->thread_id)
@@ -368,7 +390,7 @@ static void push_locks_into_array(DYNAMIC_ARRAY *ar, THR_LOCK_DATA *data,
       table_lock_info.lock_text=text;
       // lock_type is also obtainable from THR_LOCK_DATA
       table_lock_info.type=table->reginfo.lock_type;
-      VOID(push_dynamic(ar,(uchar*) &table_lock_info));
+      (void) push_dynamic(ar,(uchar*) &table_lock_info);
     }
   }
 }
@@ -388,18 +410,19 @@ static void push_locks_into_array(DYNAMIC_ARRAY *ar, THR_LOCK_DATA *data,
   function so that we can easily add this if we ever need this.
 */
 
-static void display_table_locks(void) 
+static void display_table_locks(void)
 {
   LIST *list;
+  void *saved_base;
   DYNAMIC_ARRAY saved_table_locks;
 
-  VOID(my_init_dynamic_array(&saved_table_locks,sizeof(TABLE_LOCK_INFO),open_cache.records + 20,50));
-  VOID(pthread_mutex_lock(&THR_LOCK_lock));
+  (void) my_init_dynamic_array(&saved_table_locks,sizeof(TABLE_LOCK_INFO), cached_open_tables() + 20,50);
+  mysql_mutex_lock(&THR_LOCK_lock);
   for (list= thr_lock_thread_list; list; list= list_rest(list))
   {
     THR_LOCK *lock=(THR_LOCK*) list->data;
 
-    VOID(pthread_mutex_lock(&lock->mutex));
+    mysql_mutex_lock(&lock->mutex);
     push_locks_into_array(&saved_table_locks, lock->write.data, FALSE,
 			  "Locked - write");
     push_locks_into_array(&saved_table_locks, lock->write_wait.data, TRUE,
@@ -408,16 +431,20 @@ static void display_table_locks(void)
 			  "Locked - read");
     push_locks_into_array(&saved_table_locks, lock->read_wait.data, TRUE,
 			  "Waiting - read");
-    VOID(pthread_mutex_unlock(&lock->mutex));
+    mysql_mutex_unlock(&lock->mutex);
   }
-  VOID(pthread_mutex_unlock(&THR_LOCK_lock));
-  if (!saved_table_locks.elements) goto end;
-  
-  qsort((uchar*) dynamic_element(&saved_table_locks,0,TABLE_LOCK_INFO *),saved_table_locks.elements,sizeof(TABLE_LOCK_INFO),(qsort_cmp) dl_compare);
+  mysql_mutex_unlock(&THR_LOCK_lock);
+
+  if (!saved_table_locks.elements)
+    goto end;
+
+  saved_base= dynamic_element(&saved_table_locks, 0, TABLE_LOCK_INFO *);
+  my_qsort(saved_base, saved_table_locks.elements, sizeof(TABLE_LOCK_INFO),
+           dl_compare);
   freeze_size(&saved_table_locks);
 
   puts("\nThread database.table_name          Locked/Waiting        Lock_type\n");
-  
+
   unsigned int i;
   for (i=0 ; i < saved_table_locks.elements ; i++)
   {
@@ -456,8 +483,10 @@ writes:         %10s\n\
 r_requests:     %10s\n\
 reads:          %10s\n\n",
 	   name,
-	   (ulong) key_cache->param_buff_size, key_cache->param_block_size,
-	   key_cache->param_division_limit, key_cache->param_age_threshold,
+	   (ulong) key_cache->param_buff_size,
+           (ulong)key_cache->param_block_size,
+	   (ulong)key_cache->param_division_limit,
+           (ulong)key_cache->param_age_threshold,
 	   key_cache->blocks_used,key_cache->global_blocks_changed,
 	   llstr(key_cache->global_cache_w_requests,llbuff1),
            llstr(key_cache->global_cache_write,llbuff2),
@@ -475,7 +504,7 @@ void mysql_print_status()
 
   calc_sum_of_all_status(&tmp);
   printf("\nStatus information:\n\n");
-  VOID(my_getwd(current_dir, sizeof(current_dir),MYF(0)));
+  (void) my_getwd(current_dir, sizeof(current_dir),MYF(0));
   printf("Current dir: %s\n", current_dir);
   printf("Running threads: %d  Stack size: %ld\n", thread_count,
 	 (long) my_thread_stack_size);
@@ -486,7 +515,7 @@ void mysql_print_status()
   /* Print key cache status */
   puts("\nKey caches:");
   process_key_caches(print_key_cache_status);
-  pthread_mutex_lock(&LOCK_status);
+  mysql_mutex_lock(&LOCK_status);
   printf("\nhandler status:\n\
 read_key:   %10lu\n\
 read_next:  %10lu\n\
@@ -502,7 +531,7 @@ update:     %10lu\n",
 	 tmp.ha_write_count,
 	 tmp.ha_delete_count,
 	 tmp.ha_update_count);
-  pthread_mutex_unlock(&LOCK_status);
+  mysql_mutex_unlock(&LOCK_status);
   printf("\nTable status:\n\
 Opened tables: %10lu\n\
 Open tables:   %10lu\n\
@@ -525,11 +554,6 @@ Next alarm time: %lu\n",
 	 alarm_info.next_alarm_time);
 #endif
   display_table_locks();
-  fflush(stdout);
-  my_checkmalloc();
-  fprintf(stdout,"\nBegin safemalloc memory dump:\n"); // tag needed for test suite
-  TERMINATE(stdout, 1);				// Write malloc information
-  fprintf(stdout,"\nEnd safemalloc memory dump.\n");  
   fflush(stdout);
 #ifdef HAVE_MALLINFO
   struct mallinfo info= mallinfo();

@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2006, 2008 MySQL AB
+/* Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   Implementation of a bitmap type.
@@ -19,6 +19,10 @@
   also be able to use 32 or 64 bits bitmaps very efficiently
 */
 
+#ifndef SQL_BITMAP_INCLUDED
+#define SQL_BITMAP_INCLUDED
+
+#include <my_sys.h>
 #include <my_bitmap.h>
 
 template <uint default_width> class Bitmap
@@ -67,6 +71,7 @@ public:
   my_bool is_subset(const Bitmap& map2) const { return bitmap_is_subset(&map, &map2.map); }
   my_bool is_overlapping(const Bitmap& map2) const { return bitmap_is_overlapping(&map, &map2.map); }
   my_bool operator==(const Bitmap& map2) const { return bitmap_cmp(&map, &map2.map); }
+  my_bool operator!=(const Bitmap& map2) const { return !(*this == map2); }
   char *print(char *buf) const
   {
     char *s=buf;
@@ -98,16 +103,7 @@ template <> class Bitmap<64>
   ulonglong map;
 public:
   Bitmap<64>() { }
-#if defined(__NETWARE__) || defined(__MWERKS__)
-  /*
-    Metwork compiler gives error on Bitmap<64>
-    Changed to Bitmap, since in this case also it will proper construct
-    this class
-  */
-  explicit Bitmap(uint prefix_to_set) { set_prefix(prefix_to_set); }
-#else
   explicit Bitmap<64>(uint prefix_to_set) { set_prefix(prefix_to_set); }
-#endif
   void init() { }
   void init(uint prefix_to_set) { set_prefix(prefix_to_set); }
   uint length() const { return 64; }
@@ -138,3 +134,5 @@ public:
   ulonglong to_ulonglong() const { return map; }
 };
 
+
+#endif /* SQL_BITMAP_INCLUDED */

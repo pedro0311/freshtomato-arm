@@ -1,4 +1,5 @@
 # Copyright (C) 2004-2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -70,6 +71,3 @@ storage/ndbd.dsp: Makefile \
 	@$(top_srcdir)/storage/ndb/config/win-includes $@ $(INCLUDES)
 	@$(top_srcdir)/storage/ndb/config/win-sources $@ $(ndbd_SOURCES)
 	@$(top_srcdir)/storage/ndb/config/win-libraries $@ LINK $(LDADD)
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%

@@ -1,6 +1,6 @@
 
 /*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -91,9 +91,6 @@ static struct my_option my_long_options[] =
 };
 
 
-
-#include <help_start.h>
-
 static void usage(my_bool version)
 {
   printf("%s  Ver 1.6 for %s at %s\n",my_progname,SYSTEM_TYPE,
@@ -108,8 +105,6 @@ static void usage(my_bool version)
   my_print_variables(my_long_options);
   printf("\nExample usage:\n%s --defaults-file=example.cnf client mysql\n", my_progname);
 }
-
-#include <help_end.h>
 
 
 static my_bool
@@ -196,12 +191,14 @@ int main(int argc, char **argv)
 		config_file);
     }
     error= 2;
+    exit(error);
   }
 
   for (argument= arguments+1 ; *argument ; argument++)
-    puts(*argument);
-  my_free((char*) load_default_groups,MYF(0));
+    if (!my_getopt_is_args_separator(*argument))           /* skip arguments separator */
+      puts(*argument);
+  my_free(load_default_groups);
   free_defaults(arguments);
 
-  exit(error);
+  exit(0);
 }

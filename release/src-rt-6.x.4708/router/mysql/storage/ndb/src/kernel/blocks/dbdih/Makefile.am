@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2006 MySQL AB
+# Copyright (C) 2004-2005 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,6 +25,3 @@ ndb_print_sys_file_LDFLAGS = @ndb_bin_am_ldflags@ \
 
 include $(top_srcdir)/storage/ndb/config/common.mk.am
 include $(top_srcdir)/storage/ndb/config/type_kernel.mk.am
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%

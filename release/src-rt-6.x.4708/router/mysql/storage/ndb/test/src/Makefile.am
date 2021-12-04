@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2008 MySQL AB
+# Copyright (C) 2004 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -30,9 +31,6 @@ INCLUDES_LOC = -I$(top_srcdir)/storage/ndb/src/common/mgmcommon -I$(top_srcdir)/
 
 include $(top_srcdir)/storage/ndb/config/common.mk.am
 include $(top_srcdir)/storage/ndb/config/type_ndbapitest.mk.am
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp: libNDBT.dsp
 

@@ -1,5 +1,6 @@
 /*
    Copyright (C) 2000-2007 MySQL AB
+   Use is subject to license terms
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -377,6 +378,7 @@ public:
 
     uint        get_agreedKeyLength() const;
     const byte* get_agreedKey()       const;
+    uint        get_publicKeyLength() const;
     const byte* get_publicKey()       const;
     void        makeAgreement(const byte*, unsigned int);
 

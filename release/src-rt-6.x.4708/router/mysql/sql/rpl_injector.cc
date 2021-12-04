@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2006, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2006, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,11 +11,15 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-#include "mysql_priv.h" 
+#include "sql_priv.h" 
+#include "unireg.h"                             // REQUIRED by later includes
 #include "rpl_injector.h"
+#include "transaction.h"
+#include "sql_parse.h"                          // begin_trans, end_trans, COMMIT
+#include "sql_base.h"                           // close_thread_tables
+#include "log_event.h"                          // Incident_log_event
 
 /*
   injector::transaction - member definitions
@@ -37,9 +40,7 @@ injector::transaction::transaction(MYSQL_BIN_LOG *log, THD *thd)
   m_start_pos.m_file_name= my_strdup(log_info.log_file_name, MYF(0));
   m_start_pos.m_file_pos= log_info.pos;
 
-  begin_trans(m_thd);
-
-  thd->set_current_stmt_binlog_row_based();
+  trans_begin(m_thd);
 }
 
 injector::transaction::~transaction()
@@ -57,7 +58,7 @@ injector::transaction::~transaction()
   */
   *the_memory= '\0';
 
-  my_free(the_memory, MYF(0));
+  my_free(the_memory);
 }
 
 /**
@@ -87,10 +88,15 @@ int injector::transaction::commit()
      is committed by committing the statement transaction
      explicitly.
    */
-   error |= ha_autocommit_or_rollback(m_thd, error);
-   end_trans(m_thd, error ? ROLLBACK : COMMIT);
+   trans_commit_stmt(m_thd);
+   if (!trans_commit(m_thd))
+   {
+     close_thread_tables(m_thd);
+     m_thd->mdl_context.release_transactional_locks();
+   }
    DBUG_RETURN(error);
 }
+
 
 int injector::transaction::use_table(server_id_type sid, table tbl)
 {
@@ -115,7 +121,7 @@ int injector::transaction::write_row (server_id_type sid, table tbl,
 				      record_type record)
 {
    DBUG_ENTER("injector::transaction::write_row(...)");
- 
+
    int error= check_state(ROW_STATE);
    if (error)
      DBUG_RETURN(error);
@@ -231,7 +237,7 @@ int injector::record_incident(THD *thd, Incident incident)
   Incident_log_event ev(thd, incident);
   if (int error= mysql_bin_log.write(&ev))
     return error;
-  return mysql_bin_log.rotate_and_purge(RP_FORCE_ROTATE);
+  return mysql_bin_log.rotate_and_purge(true);
 }
 
 int injector::record_incident(THD *thd, Incident incident, LEX_STRING const message)
@@ -239,5 +245,5 @@ int injector::record_incident(THD *thd, Incident incident, LEX_STRING const mess
   Incident_log_event ev(thd, incident, message);
   if (int error= mysql_bin_log.write(&ev))
     return error;
-  return mysql_bin_log.rotate_and_purge(RP_FORCE_ROTATE);
+  return mysql_bin_log.rotate_and_purge(true);
 }

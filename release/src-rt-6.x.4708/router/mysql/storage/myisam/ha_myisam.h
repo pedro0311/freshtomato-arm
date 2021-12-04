@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 #ifdef USE_PRAGMA_INTERFACE
@@ -24,16 +23,21 @@
 
 #include <myisam.h>
 #include <ft_global.h>
+#include "handler.h"                            /* handler */
+#include "table.h"                              /* TABLE_SHARE */
 
-#define HA_RECOVER_NONE		0	/* No automatic recover */
+struct TABLE_SHARE;
+typedef struct st_ha_create_information HA_CREATE_INFO;
+
 #define HA_RECOVER_DEFAULT	1	/* Automatic recover active */
 #define HA_RECOVER_BACKUP	2	/* Make a backupfile on recover */
 #define HA_RECOVER_FORCE	4	/* Recover even if we loose rows */
 #define HA_RECOVER_QUICK	8	/* Don't check rows in data file */
+#define HA_RECOVER_OFF         16	/* No automatic recover */
 
-extern ulong myisam_sort_buffer_size;
 extern TYPELIB myisam_recover_typelib;
-extern ulong myisam_recover_options;
+extern const char *myisam_recover_names[];
+extern ulonglong myisam_recover_options;
 
 class ha_myisam: public handler
 {
@@ -103,6 +107,7 @@ class ha_myisam: public handler
   int reset(void);
   int external_lock(THD *thd, int lock_type);
   int delete_all_rows(void);
+  int truncate();
   int reset_auto_increment(ulonglong value);
   int disable_indexes(uint mode);
   int enable_indexes(uint mode);
@@ -125,17 +130,11 @@ class ha_myisam: public handler
   int repair(THD* thd, HA_CHECK_OPT* check_opt);
   bool check_and_repair(THD *thd);
   bool is_crashed() const;
-  bool auto_repair() const { return myisam_recover_options != 0; }
+  bool auto_repair() const { return myisam_recover_options != HA_RECOVER_OFF; }
   int optimize(THD* thd, HA_CHECK_OPT* check_opt);
-  int restore(THD* thd, HA_CHECK_OPT* check_opt);
-  int backup(THD* thd, HA_CHECK_OPT* check_opt);
   int assign_to_keycache(THD* thd, HA_CHECK_OPT* check_opt);
   int preload_keys(THD* thd, HA_CHECK_OPT* check_opt);
   bool check_if_incompatible_data(HA_CREATE_INFO *info, uint table_changes);
-#ifdef HAVE_REPLICATION
-  int dump(THD* thd, int fd);
-  int net_read_dump(NET* net);
-#endif
 #ifdef HAVE_QUERY_CACHE
   my_bool register_query_cache_table(THD *thd, char *table_key,
                                      uint key_length,

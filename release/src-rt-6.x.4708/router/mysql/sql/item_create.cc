@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
   @file
@@ -22,8 +21,14 @@
   Functions to create an item. Used by sql_yac.yy
 */
 
-#include "mysql_priv.h"
-#include "item_create.h"
+#include "sql_priv.h"
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          // set_var.h: THD
+#include "set_var.h"
 #include "sp_head.h"
 #include "sp.h"
 
@@ -929,10 +934,10 @@ protected:
 };
 
 
-class Create_func_format : public Create_func_arg2
+class Create_func_format : public Create_native_func
 {
 public:
-  virtual Item *create(THD *thd, Item *arg1, Item *arg2);
+  virtual Item *create_native(THD *thd, LEX_STRING name, List<Item> *item_list);
 
   static Create_func_format s_singleton;
 
@@ -1324,6 +1329,34 @@ protected:
   Create_func_length() {}
   virtual ~Create_func_length() {}
 };
+
+
+#ifndef DBUG_OFF
+class Create_func_like_range_min : public Create_func_arg2
+{
+public:
+  virtual Item *create(THD *thd, Item *arg1, Item *arg2);
+
+  static Create_func_like_range_min s_singleton;
+
+protected:
+  Create_func_like_range_min() {}
+  virtual ~Create_func_like_range_min() {}
+};
+
+
+class Create_func_like_range_max : public Create_func_arg2
+{
+public:
+  virtual Item *create(THD *thd, Item *arg1, Item *arg2);
+
+  static Create_func_like_range_max s_singleton;
+
+protected:
+  Create_func_like_range_max() {}
+  virtual ~Create_func_like_range_max() {}
+};
+#endif
 
 
 class Create_func_ln : public Create_func_arg1
@@ -1830,6 +1863,19 @@ protected:
 };
 
 
+class Create_func_sha2 : public Create_func_arg2
+{
+public:
+  virtual Item* create(THD *thd, Item *arg1, Item *arg2);
+
+  static Create_func_sha2 s_singleton;
+
+protected:
+  Create_func_sha2() {}
+  virtual ~Create_func_sha2() {}
+};
+
+
 class Create_func_sign : public Create_func_arg1
 {
 public:
@@ -2052,6 +2098,18 @@ public:
 protected:
   Create_func_to_days() {}
   virtual ~Create_func_to_days() {}
+};
+
+class Create_func_to_seconds : public Create_func_arg1
+{
+public:
+  virtual Item* create(THD *thd, Item *arg1);
+
+  static Create_func_to_seconds s_singleton;
+
+protected:
+  Create_func_to_seconds() {}
+  virtual ~Create_func_to_seconds() {}
 };
 
 
@@ -2377,10 +2435,11 @@ Create_udf_func::create(THD *thd, udf_func *udf, List<Item> *item_list)
   Item *func= NULL;
   int arg_count= 0;
 
+  DBUG_ENTER("Create_udf_func::create");
   if (item_list != NULL)
     arg_count= item_list->elements;
 
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_UDF);
 
   DBUG_ASSERT(   (udf->type == UDFTYPE_FUNCTION)
               || (udf->type == UDFTYPE_AGGREGATE));
@@ -2464,7 +2523,7 @@ Create_udf_func::create(THD *thd, udf_func *udf, List<Item> *item_list)
   }
   }
   thd->lex->safe_to_cache_query= 0;
-  return func;
+  DBUG_RETURN(func);
 }
 #endif
 
@@ -2935,9 +2994,7 @@ Create_func_cot Create_func_cot::s_singleton;
 Item*
 Create_func_cot::create(THD *thd, Item *arg1)
 {
-  Item *i1= new (thd->mem_root) Item_int((char*) "1", 1, 1);
-  Item *i2= new (thd->mem_root) Item_func_tan(arg1);
-  return new (thd->mem_root) Item_func_div(i1, i2);
+  return new (thd->mem_root) Item_func_cot(arg1);
 }
 
 
@@ -3354,9 +3411,34 @@ Create_func_floor::create(THD *thd, Item *arg1)
 Create_func_format Create_func_format::s_singleton;
 
 Item*
-Create_func_format::create(THD *thd, Item *arg1, Item *arg2)
+Create_func_format::create_native(THD *thd, LEX_STRING name,
+                                  List<Item> *item_list)
 {
-  return new (thd->mem_root) Item_func_format(arg1, arg2);
+  Item *func= NULL;
+  int arg_count= item_list ? item_list->elements : 0;
+
+  switch (arg_count) {
+  case 2:
+  {
+    Item *param_1= item_list->pop();
+    Item *param_2= item_list->pop();
+    func= new (thd->mem_root) Item_func_format(param_1, param_2);
+    break;
+  }
+  case 3:
+  {
+    Item *param_1= item_list->pop();
+    Item *param_2= item_list->pop();
+    Item *param_3= item_list->pop();
+    func= new (thd->mem_root) Item_func_format(param_1, param_2, param_3);
+    break;
+  }
+  default:
+    my_error(ER_WRONG_PARAMCOUNT_TO_NATIVE_FCT, MYF(0), name.str);
+    break;
+  }
+
+  return func;
 }
 
 
@@ -3365,9 +3447,10 @@ Create_func_found_rows Create_func_found_rows::s_singleton;
 Item*
 Create_func_found_rows::create(THD *thd)
 {
-  thd->lex->set_stmt_unsafe();
+  DBUG_ENTER("Create_func_found_rows::create");
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->safe_to_cache_query= 0;
-  return new (thd->mem_root) Item_func_found_rows();
+  DBUG_RETURN(new (thd->mem_root) Item_func_found_rows());
 }
 
 
@@ -3526,7 +3609,7 @@ Create_func_get_lock Create_func_get_lock::s_singleton;
 Item*
 Create_func_get_lock::create(THD *thd, Item *arg1, Item *arg2)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
   return new (thd->mem_root) Item_func_get_lock(arg1, arg2);
 }
@@ -3638,7 +3721,7 @@ Create_func_is_free_lock Create_func_is_free_lock::s_singleton;
 Item*
 Create_func_is_free_lock::create(THD *thd, Item *arg1)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
   return new (thd->mem_root) Item_func_is_free_lock(arg1);
 }
@@ -3649,7 +3732,7 @@ Create_func_is_used_lock Create_func_is_used_lock::s_singleton;
 Item*
 Create_func_is_used_lock::create(THD *thd, Item *arg1)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
   return new (thd->mem_root) Item_func_is_used_lock(arg1);
 }
@@ -3782,6 +3865,26 @@ Create_func_length::create(THD *thd, Item *arg1)
 }
 
 
+#ifndef DBUG_OFF
+Create_func_like_range_min Create_func_like_range_min::s_singleton;
+
+Item*
+Create_func_like_range_min::create(THD *thd, Item *arg1, Item *arg2)
+{
+  return new (thd->mem_root) Item_func_like_range_min(arg1, arg2);
+}
+
+
+Create_func_like_range_max Create_func_like_range_max::s_singleton;
+
+Item*
+Create_func_like_range_max::create(THD *thd, Item *arg1, Item *arg2)
+{
+  return new (thd->mem_root) Item_func_like_range_max(arg1, arg2);
+}
+#endif
+
+
 Create_func_ln Create_func_ln::s_singleton;
 
 Item*
@@ -3796,9 +3899,10 @@ Create_func_load_file Create_func_load_file::s_singleton;
 Item*
 Create_func_load_file::create(THD *thd, Item *arg1)
 {
-  thd->lex->set_stmt_unsafe();
+  DBUG_ENTER("Create_func_load_file::create");
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
-  return new (thd->mem_root) Item_load_file(arg1);
+  DBUG_RETURN(new (thd->mem_root) Item_load_file(arg1));
 }
 
 
@@ -3966,7 +4070,7 @@ Create_func_master_pos_wait::create_native(THD *thd, LEX_STRING name,
   Item *func= NULL;
   int arg_count= 0;
 
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
 
   if (item_list != NULL)
     arg_count= item_list->elements;
@@ -4188,7 +4292,7 @@ Create_func_rand::create_native(THD *thd, LEX_STRING name,
     between master and slave, because the order is undefined.  Hence,
     the statement is unsafe to log in statement format.
   */
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
 
   switch (arg_count) {
   case 0:
@@ -4220,7 +4324,7 @@ Create_func_release_lock Create_func_release_lock::s_singleton;
 Item*
 Create_func_release_lock::create(THD *thd, Item *arg1)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
   return new (thd->mem_root) Item_func_release_lock(arg1);
 }
@@ -4278,9 +4382,10 @@ Create_func_row_count Create_func_row_count::s_singleton;
 Item*
 Create_func_row_count::create(THD *thd)
 {
-  thd->lex->set_stmt_unsafe();
+  DBUG_ENTER("Create_func_row_count::create");
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->safe_to_cache_query= 0;
-  return new (thd->mem_root) Item_func_row_count();
+  DBUG_RETURN(new (thd->mem_root) Item_func_row_count());
 }
 
 
@@ -4320,6 +4425,15 @@ Create_func_sha::create(THD *thd, Item *arg1)
 }
 
 
+Create_func_sha2 Create_func_sha2::s_singleton;
+
+Item*
+Create_func_sha2::create(THD *thd, Item *arg1, Item *arg2)
+{
+  return new (thd->mem_root) Item_func_sha2(arg1, arg2);
+}
+
+
 Create_func_sign Create_func_sign::s_singleton;
 
 Item*
@@ -4343,7 +4457,7 @@ Create_func_sleep Create_func_sleep::s_singleton;
 Item*
 Create_func_sleep::create(THD *thd, Item *arg1)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->uncacheable(UNCACHEABLE_SIDEEFFECT);
   return new (thd->mem_root) Item_func_sleep(arg1);
 }
@@ -4499,6 +4613,15 @@ Create_func_to_days::create(THD *thd, Item *arg1)
 }
 
 
+Create_func_to_seconds Create_func_to_seconds::s_singleton;
+
+Item*
+Create_func_to_seconds::create(THD *thd, Item *arg1)
+{
+  return new (thd->mem_root) Item_func_to_seconds(arg1);
+}
+
+
 #ifdef HAVE_SPATIAL
 Create_func_touches Create_func_touches::s_singleton;
 
@@ -4588,9 +4711,10 @@ Create_func_uuid Create_func_uuid::s_singleton;
 Item*
 Create_func_uuid::create(THD *thd)
 {
-  thd->lex->set_stmt_unsafe();
+  DBUG_ENTER("Create_func_uuid::create");
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->safe_to_cache_query= 0;
-  return new (thd->mem_root) Item_func_uuid();
+  DBUG_RETURN(new (thd->mem_root) Item_func_uuid());
 }
 
 
@@ -4599,9 +4723,10 @@ Create_func_uuid_short Create_func_uuid_short::s_singleton;
 Item*
 Create_func_uuid_short::create(THD *thd)
 {
-  thd->lex->set_stmt_unsafe();
+  DBUG_ENTER("Create_func_uuid_short::create");
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   thd->lex->safe_to_cache_query= 0;
-  return new (thd->mem_root) Item_func_uuid_short();
+  DBUG_RETURN(new (thd->mem_root) Item_func_uuid_short());
 }
 
 
@@ -4610,7 +4735,7 @@ Create_func_version Create_func_version::s_singleton;
 Item*
 Create_func_version::create(THD *thd)
 {
-  thd->lex->set_stmt_unsafe();
+  thd->lex->set_stmt_unsafe(LEX::BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION);
   return new (thd->mem_root) Item_static_string_func("version()",
                                                      server_version,
                                                      (uint) strlen(server_version),
@@ -4848,6 +4973,10 @@ static Native_func_registry func_array[] =
   { { C_STRING_WITH_LEN("LCASE") }, BUILDER(Create_func_lcase)},
   { { C_STRING_WITH_LEN("LEAST") }, BUILDER(Create_func_least)},
   { { C_STRING_WITH_LEN("LENGTH") }, BUILDER(Create_func_length)},
+#ifndef DBUG_OFF
+  { { C_STRING_WITH_LEN("LIKE_RANGE_MIN") }, BUILDER(Create_func_like_range_min)},
+  { { C_STRING_WITH_LEN("LIKE_RANGE_MAX") }, BUILDER(Create_func_like_range_max)},
+#endif
   { { C_STRING_WITH_LEN("LINEFROMTEXT") }, GEOM_BUILDER(Create_func_geometry_from_text)},
   { { C_STRING_WITH_LEN("LINEFROMWKB") }, GEOM_BUILDER(Create_func_geometry_from_wkb)},
   { { C_STRING_WITH_LEN("LINESTRINGFROMTEXT") }, GEOM_BUILDER(Create_func_geometry_from_text)},
@@ -4919,6 +5048,7 @@ static Native_func_registry func_array[] =
   { { C_STRING_WITH_LEN("SEC_TO_TIME") }, BUILDER(Create_func_sec_to_time)},
   { { C_STRING_WITH_LEN("SHA") }, BUILDER(Create_func_sha)},
   { { C_STRING_WITH_LEN("SHA1") }, BUILDER(Create_func_sha)},
+  { { C_STRING_WITH_LEN("SHA2") }, BUILDER(Create_func_sha2)},
   { { C_STRING_WITH_LEN("SIGN") }, BUILDER(Create_func_sign)},
   { { C_STRING_WITH_LEN("SIN") }, BUILDER(Create_func_sin)},
   { { C_STRING_WITH_LEN("SLEEP") }, BUILDER(Create_func_sleep)},
@@ -4937,6 +5067,7 @@ static Native_func_registry func_array[] =
   { { C_STRING_WITH_LEN("TIME_TO_SEC") }, BUILDER(Create_func_time_to_sec)},
   { { C_STRING_WITH_LEN("TOUCHES") }, GEOM_BUILDER(Create_func_touches)},
   { { C_STRING_WITH_LEN("TO_DAYS") }, BUILDER(Create_func_to_days)},
+  { { C_STRING_WITH_LEN("TO_SECONDS") }, BUILDER(Create_func_to_seconds)},
   { { C_STRING_WITH_LEN("UCASE") }, BUILDER(Create_func_ucase)},
   { { C_STRING_WITH_LEN("UNCOMPRESS") }, BUILDER(Create_func_uncompress)},
   { { C_STRING_WITH_LEN("UNCOMPRESSED_LENGTH") }, BUILDER(Create_func_uncompressed_length)},
@@ -4980,14 +5111,14 @@ int item_create_init()
 
   DBUG_ENTER("item_create_init");
 
-  if (hash_init(& native_functions_hash,
-                system_charset_info,
-                array_elements(func_array),
-                0,
-                0,
-                (hash_get_key) get_native_fct_hash_key,
-                NULL,                          /* Nothing to free */
-                MYF(0)))
+  if (my_hash_init(& native_functions_hash,
+                   system_charset_info,
+                   array_elements(func_array),
+                   0,
+                   0,
+                   (my_hash_get_key) get_native_fct_hash_key,
+                   NULL,                          /* Nothing to free */
+                   MYF(0)))
     DBUG_RETURN(1);
 
   for (func= func_array; func->builder != NULL; func++)
@@ -4999,7 +5130,7 @@ int item_create_init()
 #ifndef DBUG_OFF
   for (uint i=0 ; i < native_functions_hash.records ; i++)
   {
-    func= (Native_func_registry*) hash_element(& native_functions_hash, i);
+    func= (Native_func_registry*) my_hash_element(& native_functions_hash, i);
     DBUG_PRINT("info", ("native function: %s  length: %u",
                         func->name.str, (uint) func->name.length));
   }
@@ -5017,7 +5148,7 @@ int item_create_init()
 void item_create_cleanup()
 {
   DBUG_ENTER("item_create_cleanup");
-  hash_free(& native_functions_hash);
+  my_hash_free(& native_functions_hash);
   DBUG_VOID_RETURN;
 }
 
@@ -5028,9 +5159,9 @@ find_native_function_builder(THD *thd, LEX_STRING name)
   Create_func *builder= NULL;
 
   /* Thread safe */
-  func= (Native_func_registry*) hash_search(& native_functions_hash,
-                                            (uchar*) name.str,
-                                             name.length);
+  func= (Native_func_registry*) my_hash_search(& native_functions_hash,
+                                               (uchar*) name.str,
+                                               name.length);
 
   if (func)
   {

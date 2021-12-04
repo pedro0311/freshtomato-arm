@@ -1,7 +1,24 @@
-/******************************************************
-Transaction undo log record
+/*****************************************************************************
 
-(c) 1996 Innobase Oy
+Copyright (c) 1996, 2012, Oracle and/or its affiliates. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Suite 500, Boston, MA 02110-1335 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file trx/trx0rec.c
+Transaction undo log record
 
 Created 3/26/1996 Heikki Tuuri
 *******************************************************/
@@ -14,30 +31,32 @@ Created 3/26/1996 Heikki Tuuri
 
 #include "fsp0fsp.h"
 #include "mach0data.h"
-#include "trx0rseg.h"
-#include "trx0trx.h"
 #include "trx0undo.h"
+#include "mtr0log.h"
+#ifndef UNIV_HOTBACKUP
 #include "dict0dict.h"
 #include "ut0mem.h"
+#include "read0read.h"
+#include "row0ext.h"
 #include "row0upd.h"
 #include "que0que.h"
 #include "trx0purge.h"
+#include "trx0rseg.h"
 #include "row0row.h"
-#include "mtr0log.h"
 
 /*=========== UNDO LOG RECORD CREATION AND DECODING ====================*/
 
-/**************************************************************************
+/**********************************************************************//**
 Writes the mtr log entry of the inserted undo log record on the undo log
 page. */
 UNIV_INLINE
 void
 trx_undof_page_add_undo_rec_log(
 /*============================*/
-	page_t* undo_page,	/* in: undo log page */
-	ulint	old_free,	/* in: start offset of the inserted entry */
-	ulint	new_free,	/* in: end offset of the entry */
-	mtr_t*	mtr)		/* in: mtr */
+	page_t* undo_page,	/*!< in: undo log page */
+	ulint	old_free,	/*!< in: start offset of the inserted entry */
+	ulint	new_free,	/*!< in: end offset of the entry */
+	mtr_t*	mtr)		/*!< in: mtr */
 {
 	byte*		log_ptr;
 	const byte*	log_end;
@@ -66,17 +85,18 @@ trx_undof_page_add_undo_rec_log(
 		mlog_catenate_string(mtr, undo_page + old_free + 2, len);
 	}
 }
+#endif /* !UNIV_HOTBACKUP */
 
-/***************************************************************
-Parses a redo log record of adding an undo log record. */
-
+/***********************************************************//**
+Parses a redo log record of adding an undo log record.
+@return	end of log record or NULL */
+UNIV_INTERN
 byte*
 trx_undo_parse_add_undo_rec(
 /*========================*/
-			/* out: end of log record or NULL */
-	byte*	ptr,	/* in: buffer */
-	byte*	end_ptr,/* in: buffer end */
-	page_t*	page)	/* in: page or NULL */
+	byte*	ptr,	/*!< in: buffer */
+	byte*	end_ptr,/*!< in: buffer end */
+	page_t*	page)	/*!< in: page or NULL */
 {
 	ulint	len;
 	byte*	rec;
@@ -114,15 +134,16 @@ trx_undo_parse_add_undo_rec(
 	return(ptr + len);
 }
 
-/**************************************************************************
-Calculates the free space left for extending an undo log record. */
+#ifndef UNIV_HOTBACKUP
+/**********************************************************************//**
+Calculates the free space left for extending an undo log record.
+@return	bytes left */
 UNIV_INLINE
 ulint
 trx_undo_left(
 /*==========*/
-			/* out: bytes left */
-	page_t* page,	/* in: undo log page */
-	byte*	ptr)	/* in: pointer to page */
+	const page_t*	page,	/*!< in: undo log page */
+	const byte*	ptr)	/*!< in: pointer to page */
 {
 	/* The '- 10' is a safety margin, in case we have some small
 	calculation error below */
@@ -130,28 +151,77 @@ trx_undo_left(
 	return(UNIV_PAGE_SIZE - (ptr - page) - 10 - FIL_PAGE_DATA_END);
 }
 
-/**************************************************************************
-Reports in the undo log of an insert of a clustered index record. */
+/**********************************************************************//**
+Set the next and previous pointers in the undo page for the undo record
+that was written to ptr. Update the first free value by the number of bytes
+written for this undo record.
+@return	offset of the inserted entry on the page if succeeded, 0 if fail */
+static
+ulint
+trx_undo_page_set_next_prev_and_add(
+/*================================*/
+	page_t*		undo_page,	/*!< in/out: undo log page */
+	byte*		ptr,		/*!< in: ptr up to where data has been
+					written on this undo page. */
+	mtr_t*		mtr)		/*!< in: mtr */
+{
+	ulint		first_free;	/*!< offset within undo_page */
+	ulint		end_of_rec;	/*!< offset within undo_page */
+	byte*		ptr_to_first_free;
+					/* pointer within undo_page
+					that points to the next free
+					offset value within undo_page.*/
+
+	ut_ad(ptr > undo_page);
+	ut_ad(ptr < undo_page + UNIV_PAGE_SIZE);
+
+	if (UNIV_UNLIKELY(trx_undo_left(undo_page, ptr) < 2)) {
+
+		return(0);
+	}
+
+	ptr_to_first_free = undo_page + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_FREE;
+
+	first_free = mach_read_from_2(ptr_to_first_free);
+
+	/* Write offset of the previous undo log record */
+	mach_write_to_2(ptr, first_free);
+	ptr += 2;
+
+	end_of_rec = ptr - undo_page;
+
+	/* Write offset of the next undo log record */
+	mach_write_to_2(undo_page + first_free, end_of_rec);
+
+	/* Update the offset to first free undo record */
+	mach_write_to_2(ptr_to_first_free, end_of_rec);
+
+	/* Write this log entry to the UNDO log */
+	trx_undof_page_add_undo_rec_log(undo_page, first_free,
+					end_of_rec, mtr);
+
+	return(first_free);
+}
+
+/**********************************************************************//**
+Reports in the undo log of an insert of a clustered index record.
+@return	offset of the inserted entry on the page if succeed, 0 if fail */
 static
 ulint
 trx_undo_page_report_insert(
 /*========================*/
-					/* out: offset of the inserted entry
-					on the page if succeed, 0 if fail */
-	page_t*		undo_page,	/* in: undo log page */
-	trx_t*		trx,		/* in: transaction */
-	dict_index_t*	index,		/* in: clustered index */
-	dtuple_t*	clust_entry,	/* in: index entry which will be
+	page_t*		undo_page,	/*!< in: undo log page */
+	trx_t*		trx,		/*!< in: transaction */
+	dict_index_t*	index,		/*!< in: clustered index */
+	const dtuple_t*	clust_entry,	/*!< in: index entry which will be
 					inserted to the clustered index */
-	mtr_t*		mtr)		/* in: mtr */
+	mtr_t*		mtr)		/*!< in: mtr */
 {
 	ulint		first_free;
 	byte*		ptr;
-	ulint		len;
-	dfield_t*	field;
-	ulint		flen;
 	ulint		i;
 
+	ut_ad(dict_index_is_clust(index));
 	ut_ad(mach_read_from_2(undo_page + TRX_UNDO_PAGE_HDR
 			       + TRX_UNDO_PAGE_TYPE) == TRX_UNDO_INSERT);
 
@@ -161,10 +231,9 @@ trx_undo_page_report_insert(
 
 	ut_ad(first_free <= UNIV_PAGE_SIZE);
 
-	if (trx_undo_left(undo_page, ptr) < 30) {
+	if (trx_undo_left(undo_page, ptr) < 2 + 1 + 11 + 11) {
 
-		/* NOTE: the value 30 must be big enough such that the general
-		fields written below fit on the undo log page */
+		/* Not enough space for writing the general parameters */
 
 		return(0);
 	}
@@ -173,31 +242,24 @@ trx_undo_page_report_insert(
 	ptr += 2;
 
 	/* Store first some general parameters to the undo log */
-	mach_write_to_1(ptr, TRX_UNDO_INSERT_REC);
-	ptr++;
-
-	len = mach_dulint_write_much_compressed(ptr, trx->undo_no);
-	ptr += len;
-
-	len = mach_dulint_write_much_compressed(ptr, (index->table)->id);
-	ptr += len;
+	*ptr++ = TRX_UNDO_INSERT_REC;
+	ptr += mach_ull_write_much_compressed(ptr, trx->undo_no);
+	ptr += mach_ull_write_much_compressed(ptr, index->table->id);
 	/*----------------------------------------*/
 	/* Store then the fields required to uniquely determine the record
 	to be inserted in the clustered index */
 
 	for (i = 0; i < dict_index_get_n_unique(index); i++) {
 
-		field = dtuple_get_nth_field(clust_entry, i);
-
-		flen = dfield_get_len(field);
+		const dfield_t*	field	= dtuple_get_nth_field(clust_entry, i);
+		ulint		flen	= dfield_get_len(field);
 
 		if (trx_undo_left(undo_page, ptr) < 5) {
 
 			return(0);
 		}
 
-		len = mach_write_compressed(ptr, flen);
-		ptr += len;
+		ptr += mach_write_compressed(ptr, flen);
 
 		if (flen != UNIV_SQL_NULL) {
 			if (trx_undo_left(undo_page, ptr) < flen) {
@@ -210,54 +272,27 @@ trx_undo_page_report_insert(
 		}
 	}
 
-	if (trx_undo_left(undo_page, ptr) < 2) {
-
-		return(0);
-	}
-
-	/*----------------------------------------*/
-	/* Write pointers to the previous and the next undo log records */
-
-	if (trx_undo_left(undo_page, ptr) < 2) {
-
-		return(0);
-	}
-
-	mach_write_to_2(ptr, first_free);
-	ptr += 2;
-
-	mach_write_to_2(undo_page + first_free, ptr - undo_page);
-
-	mach_write_to_2(undo_page + TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_FREE,
-			ptr - undo_page);
-
-	/* Write the log entry to the REDO log of this change in the UNDO
-	log */
-	trx_undof_page_add_undo_rec_log(undo_page, first_free,
-					ptr - undo_page, mtr);
-	return(first_free);
+	return(trx_undo_page_set_next_prev_and_add(undo_page, ptr, mtr));
 }
 
-/**************************************************************************
-Reads from an undo log record the general parameters. */
-
+/**********************************************************************//**
+Reads from an undo log record the general parameters.
+@return	remaining part of undo log record after reading these values */
+UNIV_INTERN
 byte*
 trx_undo_rec_get_pars(
 /*==================*/
-					/* out: remaining part of undo log
-					record after reading these values */
-	trx_undo_rec_t*	undo_rec,	/* in: undo log record */
-	ulint*		type,		/* out: undo record type:
+	trx_undo_rec_t*	undo_rec,	/*!< in: undo log record */
+	ulint*		type,		/*!< out: undo record type:
 					TRX_UNDO_INSERT_REC, ... */
-	ulint*		cmpl_info,	/* out: compiler info, relevant only
+	ulint*		cmpl_info,	/*!< out: compiler info, relevant only
 					for update type records */
-	ibool*		updated_extern,	/* out: TRUE if we updated an
+	ibool*		updated_extern,	/*!< out: TRUE if we updated an
 					externally stored fild */
-	dulint*		undo_no,	/* out: undo log record number */
-	dulint*		table_id)	/* out: table id */
+	undo_no_t*	undo_no,	/*!< out: undo log record number */
+	table_id_t*	table_id)	/*!< out: table id */
 {
 	byte*		ptr;
-	ulint		len;
 	ulint		type_cmpl;
 
 	ptr = undo_rec + 2;
@@ -275,37 +310,61 @@ trx_undo_rec_get_pars(
 	*type = type_cmpl & (TRX_UNDO_CMPL_INFO_MULT - 1);
 	*cmpl_info = type_cmpl / TRX_UNDO_CMPL_INFO_MULT;
 
-	*undo_no = mach_dulint_read_much_compressed(ptr);
-	len = mach_dulint_get_much_compressed_size(*undo_no);
-	ptr += len;
+	*undo_no = mach_ull_read_much_compressed(ptr);
+	ptr += mach_ull_get_much_compressed_size(*undo_no);
 
-	*table_id = mach_dulint_read_much_compressed(ptr);
-	len = mach_dulint_get_much_compressed_size(*table_id);
-	ptr += len;
+	*table_id = mach_ull_read_much_compressed(ptr);
+	ptr += mach_ull_get_much_compressed_size(*table_id);
 
 	return(ptr);
 }
 
-/**************************************************************************
-Reads from an undo log record a stored column value. */
+/**********************************************************************//**
+Reads from an undo log record a stored column value.
+@return	remaining part of undo log record after reading these values */
 static
 byte*
 trx_undo_rec_get_col_val(
 /*=====================*/
-			/* out: remaining part of undo log record after
-			reading these values */
-	byte*	ptr,	/* in: pointer to remaining part of undo log record */
-	byte**	field,	/* out: pointer to stored field */
-	ulint*	len)	/* out: length of the field, or UNIV_SQL_NULL */
+	byte*	ptr,	/*!< in: pointer to remaining part of undo log record */
+	byte**	field,	/*!< out: pointer to stored field */
+	ulint*	len,	/*!< out: length of the field, or UNIV_SQL_NULL */
+	ulint*	orig_len)/*!< out: original length of the locally
+			stored part of an externally stored column, or 0 */
 {
 	*len = mach_read_compressed(ptr);
 	ptr += mach_get_compressed_size(*len);
 
-	*field = ptr;
+	*orig_len = 0;
 
-	if (*len != UNIV_SQL_NULL) {
+	switch (*len) {
+	case UNIV_SQL_NULL:
+		*field = NULL;
+		break;
+	case UNIV_EXTERN_STORAGE_FIELD:
+		*orig_len = mach_read_compressed(ptr);
+		ptr += mach_get_compressed_size(*orig_len);
+		*len = mach_read_compressed(ptr);
+		ptr += mach_get_compressed_size(*len);
+		*field = ptr;
+		ptr += *len;
+
+		ut_ad(*orig_len >= BTR_EXTERN_FIELD_REF_SIZE);
+		ut_ad(*len > *orig_len);
+		/* @see dtuple_convert_big_rec() */
+		ut_ad(*len >= BTR_EXTERN_FIELD_REF_SIZE);
+		/* we do not have access to index->table here
+		ut_ad(dict_table_get_format(index->table) >= DICT_TF_FORMAT_ZIP
+		      || *len >= col->max_prefix
+		      + BTR_EXTERN_FIELD_REF_SIZE);
+		*/
+
+		*len += UNIV_EXTERN_STORAGE_FIELD;
+		break;
+	default:
+		*field = ptr;
 		if (*len >= UNIV_EXTERN_STORAGE_FIELD) {
-			ptr += (*len - UNIV_EXTERN_STORAGE_FIELD);
+			ptr += *len - UNIV_EXTERN_STORAGE_FIELD;
 		} else {
 			ptr += *len;
 		}
@@ -314,33 +373,29 @@ trx_undo_rec_get_col_val(
 	return(ptr);
 }
 
-/***********************************************************************
-Builds a row reference from an undo log record. */
-
+/*******************************************************************//**
+Builds a row reference from an undo log record.
+@return	pointer to remaining part of undo record */
+UNIV_INTERN
 byte*
 trx_undo_rec_get_row_ref(
 /*=====================*/
-				/* out: pointer to remaining part of undo
-				record */
-	byte*		ptr,	/* in: remaining part of a copy of an undo log
+	byte*		ptr,	/*!< in: remaining part of a copy of an undo log
 				record, at the start of the row reference;
 				NOTE that this copy of the undo log record must
 				be preserved as long as the row reference is
 				used, as we do NOT copy the data in the
 				record! */
-	dict_index_t*	index,	/* in: clustered index */
-	dtuple_t**	ref,	/* out, own: row reference */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory
+	dict_index_t*	index,	/*!< in: clustered index */
+	dtuple_t**	ref,	/*!< out, own: row reference */
+	mem_heap_t*	heap)	/*!< in: memory heap from which the memory
 				needed is allocated */
 {
-	dfield_t*	dfield;
-	byte*		field;
-	ulint		len;
 	ulint		ref_len;
 	ulint		i;
 
 	ut_ad(index && ptr && ref && heap);
-	ut_a(index->type & DICT_CLUSTERED);
+	ut_a(dict_index_is_clust(index));
 
 	ref_len = dict_index_get_n_unique(index);
 
@@ -349,9 +404,14 @@ trx_undo_rec_get_row_ref(
 	dict_index_copy_types(*ref, index, ref_len);
 
 	for (i = 0; i < ref_len; i++) {
+		dfield_t*	dfield;
+		byte*		field;
+		ulint		len;
+		ulint		orig_len;
+
 		dfield = dtuple_get_nth_field(*ref, i);
 
-		ptr = trx_undo_rec_get_col_val(ptr, &field, &len);
+		ptr = trx_undo_rec_get_col_val(ptr, &field, &len, &orig_len);
 
 		dfield_set_data(dfield, field, len);
 	}
@@ -359,77 +419,149 @@ trx_undo_rec_get_row_ref(
 	return(ptr);
 }
 
-/***********************************************************************
-Skips a row reference from an undo log record. */
-
+/*******************************************************************//**
+Skips a row reference from an undo log record.
+@return	pointer to remaining part of undo record */
+UNIV_INTERN
 byte*
 trx_undo_rec_skip_row_ref(
 /*======================*/
-				/* out: pointer to remaining part of undo
-				record */
-	byte*		ptr,	/* in: remaining part in update undo log
+	byte*		ptr,	/*!< in: remaining part in update undo log
 				record, at the start of the row reference */
-	dict_index_t*	index)	/* in: clustered index */
+	dict_index_t*	index)	/*!< in: clustered index */
 {
-	byte*	field;
-	ulint	len;
 	ulint	ref_len;
 	ulint	i;
 
 	ut_ad(index && ptr);
-	ut_a(index->type & DICT_CLUSTERED);
+	ut_a(dict_index_is_clust(index));
 
 	ref_len = dict_index_get_n_unique(index);
 
 	for (i = 0; i < ref_len; i++) {
-		ptr = trx_undo_rec_get_col_val(ptr, &field, &len);
+		byte*	field;
+		ulint	len;
+		ulint	orig_len;
+
+		ptr = trx_undo_rec_get_col_val(ptr, &field, &len, &orig_len);
 	}
 
 	return(ptr);
 }
 
-/**************************************************************************
+/**********************************************************************//**
+Fetch a prefix of an externally stored column, for writing to the undo log
+of an update or delete marking of a clustered index record.
+@return	ext_buf */
+static
+byte*
+trx_undo_page_fetch_ext(
+/*====================*/
+	byte*		ext_buf,	/*!< in: buffer to hold the prefix
+					data and BLOB pointer */
+	ulint		prefix_len,	/*!< in: prefix size to store
+					in the undo log */
+	ulint		zip_size,	/*!< compressed page size in bytes,
+					or 0 for uncompressed BLOB  */
+	const byte*	field,		/*!< in: an externally stored column */
+	ulint*		len)		/*!< in: length of field;
+					out: used length of ext_buf */
+{
+	/* Fetch the BLOB. */
+	ulint	ext_len = btr_copy_externally_stored_field_prefix(
+		ext_buf, prefix_len, zip_size, field, *len);
+	/* BLOBs should always be nonempty. */
+	ut_a(ext_len);
+	/* Append the BLOB pointer to the prefix. */
+	memcpy(ext_buf + ext_len,
+	       field + *len - BTR_EXTERN_FIELD_REF_SIZE,
+	       BTR_EXTERN_FIELD_REF_SIZE);
+	*len = ext_len + BTR_EXTERN_FIELD_REF_SIZE;
+	return(ext_buf);
+}
+
+/**********************************************************************//**
+Writes to the undo log a prefix of an externally stored column.
+@return	undo log position */
+static
+byte*
+trx_undo_page_report_modify_ext(
+/*============================*/
+	byte*		ptr,		/*!< in: undo log position,
+					at least 15 bytes must be available */
+	byte*		ext_buf,	/*!< in: a buffer of
+					DICT_MAX_FIELD_LEN_BY_FORMAT() size,
+					or NULL when should not fetch
+					a longer prefix */
+	ulint		prefix_len,	/*!< prefix size to store in the
+					undo log */
+	ulint		zip_size,	/*!< compressed page size in bytes,
+					or 0 for uncompressed BLOB  */
+	const byte**	field,		/*!< in/out: the locally stored part of
+					the externally stored column */
+	ulint*		len)		/*!< in/out: length of field, in bytes */
+{
+	if (ext_buf) {
+		ut_a(prefix_len > 0);
+
+		/* If an ordering column is externally stored, we will
+		have to store a longer prefix of the field.  In this
+		case, write to the log a marker followed by the
+		original length and the real length of the field. */
+		ptr += mach_write_compressed(ptr, UNIV_EXTERN_STORAGE_FIELD);
+
+		ptr += mach_write_compressed(ptr, *len);
+
+		*field = trx_undo_page_fetch_ext(ext_buf, prefix_len, zip_size,
+						 *field, len);
+
+		ptr += mach_write_compressed(ptr, *len);
+	} else {
+		ptr += mach_write_compressed(ptr, UNIV_EXTERN_STORAGE_FIELD
+					     + *len);
+	}
+
+	return(ptr);
+}
+
+/**********************************************************************//**
 Reports in the undo log of an update or delete marking of a clustered index
-record. */
+record.
+@return byte offset of the inserted undo log entry on the page if
+succeed, 0 if fail */
 static
 ulint
 trx_undo_page_report_modify(
 /*========================*/
-					/* out: byte offset of the inserted
-					undo log entry on the page if succeed,
-					0 if fail */
-	page_t*		undo_page,	/* in: undo log page */
-	trx_t*		trx,		/* in: transaction */
-	dict_index_t*	index,		/* in: clustered index where update or
+	page_t*		undo_page,	/*!< in: undo log page */
+	trx_t*		trx,		/*!< in: transaction */
+	dict_index_t*	index,		/*!< in: clustered index where update or
 					delete marking is done */
-	rec_t*		rec,		/* in: clustered index record which
+	const rec_t*	rec,		/*!< in: clustered index record which
 					has NOT yet been modified */
-	const ulint*	offsets,	/* in: rec_get_offsets(rec, index) */
-	upd_t*		update,		/* in: update vector which tells the
+	const ulint*	offsets,	/*!< in: rec_get_offsets(rec, index) */
+	const upd_t*	update,		/*!< in: update vector which tells the
 					columns to be updated; in the case of
 					a delete, this should be set to NULL */
-	ulint		cmpl_info,	/* in: compiler info on secondary
+	ulint		cmpl_info,	/*!< in: compiler info on secondary
 					index updates */
-	mtr_t*		mtr)		/* in: mtr */
+	mtr_t*		mtr)		/*!< in: mtr */
 {
 	dict_table_t*	table;
-	upd_field_t*	upd_field;
 	ulint		first_free;
 	byte*		ptr;
-	ulint		len;
-	byte*		field;
+	const byte*	field;
 	ulint		flen;
-	ulint		pos;
-	dulint		roll_ptr;
-	dulint		trx_id;
-	ulint		bits;
 	ulint		col_no;
-	byte*		old_ptr;
 	ulint		type_cmpl;
 	byte*		type_cmpl_ptr;
 	ulint		i;
+	trx_id_t	trx_id;
+	ibool		ignore_prefix = FALSE;
+	byte		ext_buf[REC_VERSION_56_MAX_INDEX_COL_LEN
+				+ BTR_EXTERN_FIELD_REF_SIZE];
 
-	ut_a(index->type & DICT_CLUSTERED);
+	ut_a(dict_index_is_clust(index));
 	ut_ad(rec_offs_validate(rec, index, offsets));
 	ut_ad(mach_read_from_2(undo_page + TRX_UNDO_PAGE_HDR
 			       + TRX_UNDO_PAGE_TYPE) == TRX_UNDO_UPDATE);
@@ -454,53 +586,55 @@ trx_undo_page_report_modify(
 
 	/* Store first some general parameters to the undo log */
 
-	if (update) {
-		if (rec_get_deleted_flag(rec, dict_table_is_comp(table))) {
-			type_cmpl = TRX_UNDO_UPD_DEL_REC;
-		} else {
-			type_cmpl = TRX_UNDO_UPD_EXIST_REC;
-		}
-	} else {
+	if (!update) {
 		type_cmpl = TRX_UNDO_DEL_MARK_REC;
+	} else if (rec_get_deleted_flag(rec, dict_table_is_comp(table))) {
+		type_cmpl = TRX_UNDO_UPD_DEL_REC;
+		/* We are about to update a delete marked record.
+		We don't typically need the prefix in this case unless
+		the delete marking is done by the same transaction
+		(which we check below). */
+		ignore_prefix = TRUE;
+	} else {
+		type_cmpl = TRX_UNDO_UPD_EXIST_REC;
 	}
 
-	type_cmpl = type_cmpl | (cmpl_info * TRX_UNDO_CMPL_INFO_MULT);
-
-	mach_write_to_1(ptr, type_cmpl);
-
+	type_cmpl |= cmpl_info * TRX_UNDO_CMPL_INFO_MULT;
 	type_cmpl_ptr = ptr;
 
-	ptr++;
-	len = mach_dulint_write_much_compressed(ptr, trx->undo_no);
-	ptr += len;
+	*ptr++ = (byte) type_cmpl;
+	ptr += mach_ull_write_much_compressed(ptr, trx->undo_no);
 
-	len = mach_dulint_write_much_compressed(ptr, table->id);
-	ptr += len;
+	ptr += mach_ull_write_much_compressed(ptr, table->id);
 
 	/*----------------------------------------*/
 	/* Store the state of the info bits */
 
-	bits = rec_get_info_bits(rec, dict_table_is_comp(table));
-	mach_write_to_1(ptr, bits);
-	ptr += 1;
+	*ptr++ = (byte) rec_get_info_bits(rec, dict_table_is_comp(table));
 
 	/* Store the values of the system columns */
 	field = rec_get_nth_field(rec, offsets,
 				  dict_index_get_sys_col_pos(
-					  index, DATA_TRX_ID), &len);
-	ut_ad(len == DATA_TRX_ID_LEN);
+					  index, DATA_TRX_ID), &flen);
+	ut_ad(flen == DATA_TRX_ID_LEN);
+
 	trx_id = trx_read_trx_id(field);
+
+	/* If it is an update of a delete marked record, then we are
+	allowed to ignore blob prefixes if the delete marking was done
+	by some other trx as it must have committed by now for us to
+	allow an over-write. */
+	if (ignore_prefix) {
+		ignore_prefix = (trx_id != trx->id);
+	}
+	ptr += mach_ull_write_compressed(ptr, trx_id);
+
 	field = rec_get_nth_field(rec, offsets,
 				  dict_index_get_sys_col_pos(
-					  index, DATA_ROLL_PTR), &len);
-	ut_ad(len == DATA_ROLL_PTR_LEN);
-	roll_ptr = trx_read_roll_ptr(field);
+					  index, DATA_ROLL_PTR), &flen);
+	ut_ad(flen == DATA_ROLL_PTR_LEN);
 
-	len = mach_dulint_write_compressed(ptr, trx_id);
-	ptr += len;
-
-	len = mach_dulint_write_compressed(ptr, roll_ptr);
-	ptr += len;
+	ptr += mach_ull_write_compressed(ptr, trx_read_roll_ptr(field));
 
 	/*----------------------------------------*/
 	/* Store then the fields required to uniquely determine the
@@ -510,13 +644,16 @@ trx_undo_page_report_modify(
 
 		field = rec_get_nth_field(rec, offsets, i, &flen);
 
-		if (trx_undo_left(undo_page, ptr) < 4) {
+		/* The ordering columns must not be stored externally. */
+		ut_ad(!rec_offs_nth_extern(offsets, i));
+		ut_ad(dict_index_get_nth_col(index, i)->ord_part);
+
+		if (trx_undo_left(undo_page, ptr) < 5) {
 
 			return(0);
 		}
 
-		len = mach_write_compressed(ptr, flen);
-		ptr += len;
+		ptr += mach_write_compressed(ptr, flen);
 
 		if (flen != UNIV_SQL_NULL) {
 			if (trx_undo_left(undo_page, ptr) < flen) {
@@ -538,13 +675,11 @@ trx_undo_page_report_modify(
 			return(0);
 		}
 
-		len = mach_write_compressed(ptr, upd_get_n_fields(update));
-		ptr += len;
+		ptr += mach_write_compressed(ptr, upd_get_n_fields(update));
 
 		for (i = 0; i < upd_get_n_fields(update); i++) {
 
-			upd_field = upd_get_nth_field(update, i);
-			pos = upd_field->field_no;
+			ulint	pos = upd_get_nth_field(update, i)->field_no;
 
 			/* Write field number to undo log */
 			if (trx_undo_left(undo_page, ptr) < 5) {
@@ -552,37 +687,44 @@ trx_undo_page_report_modify(
 				return(0);
 			}
 
-			len = mach_write_compressed(ptr, pos);
-			ptr += len;
+			ptr += mach_write_compressed(ptr, pos);
 
 			/* Save the old value of field */
 			field = rec_get_nth_field(rec, offsets, pos, &flen);
 
-			if (trx_undo_left(undo_page, ptr) < 5) {
+			if (trx_undo_left(undo_page, ptr) < 15) {
 
 				return(0);
 			}
 
 			if (rec_offs_nth_extern(offsets, pos)) {
-				/* If a field has external storage, we add
-				to flen the flag */
+				const dict_col_t*	col
+					= dict_index_get_nth_col(index, pos);
+				ulint			prefix_len
+					= dict_max_field_len_store_undo(
+						table, col);
 
-				len = mach_write_compressed(
+				ut_ad(prefix_len + BTR_EXTERN_FIELD_REF_SIZE
+				      <= sizeof ext_buf);
+
+				ptr = trx_undo_page_report_modify_ext(
 					ptr,
-					UNIV_EXTERN_STORAGE_FIELD + flen);
+					col->ord_part
+					&& !ignore_prefix
+					&& flen < REC_ANTELOPE_MAX_INDEX_COL_LEN
+					? ext_buf : NULL, prefix_len,
+					dict_table_zip_size(table),
+					&field, &flen);
 
 				/* Notify purge that it eventually has to
 				free the old externally stored field */
 
 				trx->update_undo->del_marks = TRUE;
 
-				*type_cmpl_ptr = *type_cmpl_ptr
-					| TRX_UNDO_UPD_EXTERN;
+				*type_cmpl_ptr |= TRX_UNDO_UPD_EXTERN;
 			} else {
-				len = mach_write_compressed(ptr, flen);
+				ptr += mach_write_compressed(ptr, flen);
 			}
-
-			ptr += len;
 
 			if (flen != UNIV_SQL_NULL) {
 				if (trx_undo_left(undo_page, ptr) < flen) {
@@ -603,12 +745,15 @@ trx_undo_page_report_modify(
 	in the purge of old versions where we use it to build and search the
 	delete marked index records, to look if we can remove them from the
 	index tree. Note that starting from 4.0.14 also externally stored
-	fields can be ordering in some index. But we always store at least
-	384 first bytes locally to the clustered index record, which means
-	we can construct the column prefix fields in the index from the
-	stored data. */
+	fields can be ordering in some index. Starting from 5.2, we no longer
+	store REC_MAX_INDEX_COL_LEN first bytes to the undo log record,
+	but we can construct the column prefix fields in the index by
+	fetching the first page of the BLOB that is pointed to by the
+	clustered index. This works also in crash recovery, because all pages
+	(including BLOBs) are recovered before anything is rolled back. */
 
 	if (!update || !(cmpl_info & UPD_NODE_NO_ORD_CHANGE)) {
+		byte*	old_ptr = ptr;
 
 		trx->update_undo->del_marks = TRUE;
 
@@ -616,8 +761,6 @@ trx_undo_page_report_modify(
 
 			return(0);
 		}
-
-		old_ptr = ptr;
 
 		/* Reserve 2 bytes to write the number of bytes the stored
 		fields take in this undo record */
@@ -630,31 +773,44 @@ trx_undo_page_report_modify(
 			const dict_col_t*	col
 				= dict_table_get_nth_col(table, col_no);
 
-			if (col->ord_part > 0) {
-
-				pos = dict_index_get_nth_col_pos(index,
-								 col_no);
+			if (col->ord_part) {
+				ulint	pos;
 
 				/* Write field number to undo log */
-				if (trx_undo_left(undo_page, ptr) < 5) {
+				if (trx_undo_left(undo_page, ptr) < 5 + 15) {
 
 					return(0);
 				}
 
-				len = mach_write_compressed(ptr, pos);
-				ptr += len;
+				pos = dict_index_get_nth_col_pos(index,
+								 col_no);
+				ptr += mach_write_compressed(ptr, pos);
 
 				/* Save the old value of field */
 				field = rec_get_nth_field(rec, offsets, pos,
 							  &flen);
 
-				if (trx_undo_left(undo_page, ptr) < 5) {
+				if (rec_offs_nth_extern(offsets, pos)) {
+					const dict_col_t*	col =
+						dict_index_get_nth_col(
+							index, pos);
+					ulint			prefix_len =
+						dict_max_field_len_store_undo(
+							table, col);
 
-					return(0);
+					ut_a(prefix_len < sizeof ext_buf);
+
+					ptr = trx_undo_page_report_modify_ext(
+						ptr,
+						flen < REC_ANTELOPE_MAX_INDEX_COL_LEN
+						&& !ignore_prefix
+						? ext_buf : NULL, prefix_len,
+						dict_table_zip_size(table),
+						&field, &flen);
+				} else {
+					ptr += mach_write_compressed(
+						ptr, flen);
 				}
-
-				len = mach_write_compressed(ptr, flen);
-				ptr += len;
 
 				if (flen != UNIV_SQL_NULL) {
 					if (trx_undo_left(undo_page, ptr)
@@ -693,51 +849,45 @@ trx_undo_page_report_modify(
 	return(first_free);
 }
 
-/**************************************************************************
+/**********************************************************************//**
 Reads from an undo log update record the system field values of the old
-version. */
-
+version.
+@return	remaining part of undo log record after reading these values */
+UNIV_INTERN
 byte*
 trx_undo_update_rec_get_sys_cols(
 /*=============================*/
-				/* out: remaining part of undo log
-				record after reading these values */
-	byte*	ptr,		/* in: remaining part of undo log
-				record after reading general
-				parameters */
-	dulint*	trx_id,		/* out: trx id */
-	dulint*	roll_ptr,	/* out: roll ptr */
-	ulint*	info_bits)	/* out: info bits state */
+	byte*		ptr,		/*!< in: remaining part of undo
+					log record after reading
+					general parameters */
+	trx_id_t*	trx_id,		/*!< out: trx id */
+	roll_ptr_t*	roll_ptr,	/*!< out: roll ptr */
+	ulint*		info_bits)	/*!< out: info bits state */
 {
-	ulint	len;
-
 	/* Read the state of the info bits */
 	*info_bits = mach_read_from_1(ptr);
 	ptr += 1;
 
 	/* Read the values of the system columns */
 
-	*trx_id = mach_dulint_read_compressed(ptr);
-	len = mach_dulint_get_compressed_size(*trx_id);
-	ptr += len;
+	*trx_id = mach_ull_read_compressed(ptr);
+	ptr += mach_ull_get_compressed_size(*trx_id);
 
-	*roll_ptr = mach_dulint_read_compressed(ptr);
-	len = mach_dulint_get_compressed_size(*roll_ptr);
-	ptr += len;
+	*roll_ptr = mach_ull_read_compressed(ptr);
+	ptr += mach_ull_get_compressed_size(*roll_ptr);
 
 	return(ptr);
 }
 
-/**************************************************************************
-Reads from an update undo log record the number of updated fields. */
+/**********************************************************************//**
+Reads from an update undo log record the number of updated fields.
+@return	remaining part of undo log record after reading this value */
 UNIV_INLINE
 byte*
 trx_undo_update_rec_get_n_upd_fields(
 /*=================================*/
-			/* out: remaining part of undo log record after
-			reading this value */
-	byte*	ptr,	/* in: pointer to remaining part of undo log record */
-	ulint*	n)	/* out: number of fields */
+	byte*	ptr,	/*!< in: pointer to remaining part of undo log record */
+	ulint*	n)	/*!< out: number of fields */
 {
 	*n = mach_read_compressed(ptr);
 	ptr += mach_get_compressed_size(*n);
@@ -745,16 +895,15 @@ trx_undo_update_rec_get_n_upd_fields(
 	return(ptr);
 }
 
-/**************************************************************************
-Reads from an update undo log record a stored field number. */
+/**********************************************************************//**
+Reads from an update undo log record a stored field number.
+@return	remaining part of undo log record after reading this value */
 UNIV_INLINE
 byte*
 trx_undo_update_rec_get_field_no(
 /*=============================*/
-			/* out: remaining part of undo log record after
-			reading this value */
-	byte*	ptr,	/* in: pointer to remaining part of undo log record */
-	ulint*	field_no)/* out: field number */
+	byte*	ptr,	/*!< in: pointer to remaining part of undo log record */
+	ulint*	field_no)/*!< out: field number */
 {
 	*field_no = mach_read_compressed(ptr);
 	ptr += mach_get_compressed_size(*field_no);
@@ -762,45 +911,41 @@ trx_undo_update_rec_get_field_no(
 	return(ptr);
 }
 
-/***********************************************************************
-Builds an update vector based on a remaining part of an undo log record. */
-
+/*******************************************************************//**
+Builds an update vector based on a remaining part of an undo log record.
+@return remaining part of the record, NULL if an error detected, which
+means that the record is corrupted */
+UNIV_INTERN
 byte*
 trx_undo_update_rec_get_update(
 /*===========================*/
-				/* out: remaining part of the record,
-				NULL if an error detected, which means that
-				the record is corrupted */
-	byte*		ptr,	/* in: remaining part in update undo log
+	byte*		ptr,	/*!< in: remaining part in update undo log
 				record, after reading the row reference
 				NOTE that this copy of the undo log record must
 				be preserved as long as the update vector is
 				used, as we do NOT copy the data in the
 				record! */
-	dict_index_t*	index,	/* in: clustered index */
-	ulint		type,	/* in: TRX_UNDO_UPD_EXIST_REC,
+	dict_index_t*	index,	/*!< in: clustered index */
+	ulint		type,	/*!< in: TRX_UNDO_UPD_EXIST_REC,
 				TRX_UNDO_UPD_DEL_REC, or
 				TRX_UNDO_DEL_MARK_REC; in the last case,
 				only trx id and roll ptr fields are added to
 				the update vector */
-	dulint		trx_id,	/* in: transaction id from this undo record */
-	dulint		roll_ptr,/* in: roll pointer from this undo record */
-	ulint		info_bits,/* in: info bits from this undo record */
-	trx_t*		trx,	/* in: transaction */
-	mem_heap_t*	heap,	/* in: memory heap from which the memory
+	trx_id_t	trx_id,	/*!< in: transaction id from this undo record */
+	roll_ptr_t	roll_ptr,/*!< in: roll pointer from this undo record */
+	ulint		info_bits,/*!< in: info bits from this undo record */
+	trx_t*		trx,	/*!< in: transaction */
+	mem_heap_t*	heap,	/*!< in: memory heap from which the memory
 				needed is allocated */
-	upd_t**		upd)	/* out, own: update vector */
+	upd_t**		upd)	/*!< out, own: update vector */
 {
 	upd_field_t*	upd_field;
 	upd_t*		update;
 	ulint		n_fields;
 	byte*		buf;
-	byte*		field;
-	ulint		len;
-	ulint		field_no;
 	ulint		i;
 
-	ut_a(index->type & DICT_CLUSTERED);
+	ut_a(dict_index_is_clust(index));
 
 	if (type != TRX_UNDO_DEL_MARK_REC) {
 		ptr = trx_undo_update_rec_get_n_upd_fields(ptr, &n_fields);
@@ -836,6 +981,11 @@ trx_undo_update_rec_get_update(
 
 	for (i = 0; i < n_fields; i++) {
 
+		byte*	field;
+		ulint	len;
+		ulint	field_no;
+		ulint	orig_len;
+
 		ptr = trx_undo_update_rec_get_field_no(ptr, &field_no);
 
 		if (field_no >= dict_index_get_n_fields(index)) {
@@ -854,23 +1004,29 @@ trx_undo_update_rec_get_update(
 			fprintf(stderr, "\n"
 				"InnoDB: n_fields = %lu, i = %lu, ptr %p\n",
 				(ulong) n_fields, (ulong) i, ptr);
+			ut_ad(0);
+			*upd = NULL;
 			return(NULL);
 		}
-
-		ptr = trx_undo_rec_get_col_val(ptr, &field, &len);
 
 		upd_field = upd_get_nth_field(update, i);
 
 		upd_field_set_field_no(upd_field, field_no, index, trx);
 
-		if (len != UNIV_SQL_NULL && len >= UNIV_EXTERN_STORAGE_FIELD) {
+		ptr = trx_undo_rec_get_col_val(ptr, &field, &len, &orig_len);
 
-			upd_field->extern_storage = TRUE;
+		upd_field->orig_len = orig_len;
 
+		if (len == UNIV_SQL_NULL) {
+			dfield_set_null(&upd_field->new_val);
+		} else if (len < UNIV_EXTERN_STORAGE_FIELD) {
+			dfield_set_data(&upd_field->new_val, field, len);
+		} else {
 			len -= UNIV_EXTERN_STORAGE_FIELD;
-		}
 
-		dfield_set_data(&(upd_field->new_val), field, len);
+			dfield_set_data(&upd_field->new_val, field, len);
+			dfield_set_ext(&upd_field->new_val);
+		}
 	}
 
 	*upd = update;
@@ -878,38 +1034,37 @@ trx_undo_update_rec_get_update(
 	return(ptr);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Builds a partial row from an update undo log record. It contains the
-columns which occur as ordering in any index of the table. */
-
+columns which occur as ordering in any index of the table.
+@return	pointer to remaining part of undo record */
+UNIV_INTERN
 byte*
 trx_undo_rec_get_partial_row(
 /*=========================*/
-				/* out: pointer to remaining part of undo
-				record */
-	byte*		ptr,	/* in: remaining part in update undo log
+	byte*		ptr,	/*!< in: remaining part in update undo log
 				record of a suitable type, at the start of
 				the stored index columns;
 				NOTE that this copy of the undo log record must
 				be preserved as long as the partial row is
 				used, as we do NOT copy the data in the
 				record! */
-	dict_index_t*	index,	/* in: clustered index */
-	dtuple_t**	row,	/* out, own: partial row */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory
+	dict_index_t*	index,	/*!< in: clustered index */
+	dtuple_t**	row,	/*!< out, own: partial row */
+	ibool		ignore_prefix, /*!< in: flag to indicate if we
+				expect blob prefixes in undo. Used
+				only in the assertion. */
+	mem_heap_t*	heap)	/*!< in: memory heap from which the memory
 				needed is allocated */
 {
-	dfield_t*	dfield;
-	byte*		field;
-	ulint		len;
-	ulint		field_no;
-	ulint		col_no;
+	const byte*	end_ptr;
 	ulint		row_len;
-	ulint		total_len;
-	byte*		start_ptr;
-	ulint		i;
 
-	ut_ad(index && ptr && row && heap);
+	ut_ad(index);
+	ut_ad(ptr);
+	ut_ad(row);
+	ut_ad(heap);
+	ut_ad(dict_index_is_clust(index));
 
 	row_len = dict_table_get_n_cols(index->table);
 
@@ -917,40 +1072,62 @@ trx_undo_rec_get_partial_row(
 
 	dict_table_copy_types(*row, index->table);
 
-	start_ptr = ptr;
-
-	total_len = mach_read_from_2(ptr);
+	end_ptr = ptr + mach_read_from_2(ptr);
 	ptr += 2;
 
-	for (i = 0;; i++) {
-
-		if (ptr == start_ptr + total_len) {
-
-			break;
-		}
+	while (ptr != end_ptr) {
+		dfield_t*		dfield;
+		byte*			field;
+		ulint			field_no;
+		const dict_col_t*	col;
+		ulint			col_no;
+		ulint			len;
+		ulint			orig_len;
 
 		ptr = trx_undo_update_rec_get_field_no(ptr, &field_no);
 
-		col_no = dict_index_get_nth_col_no(index, field_no);
+		col = dict_index_get_nth_col(index, field_no);
+		col_no = dict_col_get_no(col);
 
-		ptr = trx_undo_rec_get_col_val(ptr, &field, &len);
+		ptr = trx_undo_rec_get_col_val(ptr, &field, &len, &orig_len);
 
 		dfield = dtuple_get_nth_field(*row, col_no);
 
 		dfield_set_data(dfield, field, len);
+
+		if (len != UNIV_SQL_NULL
+		    && len >= UNIV_EXTERN_STORAGE_FIELD) {
+			dfield_set_len(dfield,
+				       len - UNIV_EXTERN_STORAGE_FIELD);
+			dfield_set_ext(dfield);
+			/* If the prefix of this column is indexed,
+			ensure that enough prefix is stored in the
+			undo log record. */
+			if (!ignore_prefix && col->ord_part) {
+				ut_a(dfield_get_len(dfield)
+				     >= BTR_EXTERN_FIELD_REF_SIZE);
+				ut_a(dict_table_get_format(index->table)
+				     >= DICT_TF_FORMAT_ZIP
+				     || dfield_get_len(dfield)
+				     >= REC_ANTELOPE_MAX_INDEX_COL_LEN 
+				     + BTR_EXTERN_FIELD_REF_SIZE);
+			}
+		}
 	}
 
 	return(ptr);
 }
+#endif /* !UNIV_HOTBACKUP */
 
-/***************************************************************************
-Erases the unused undo log page end. */
-static
-void
+/***********************************************************************//**
+Erases the unused undo log page end.
+@return TRUE if the page contained something, FALSE if it was empty */
+static __attribute__((nonnull))
+ibool
 trx_undo_erase_page_end(
 /*====================*/
-	page_t*	undo_page,	/* in: undo page whose end to erase */
-	mtr_t*	mtr)		/* in: mtr */
+	page_t*	undo_page,	/*!< in/out: undo page whose end to erase */
+	mtr_t*	mtr)		/*!< in/out: mini-transaction */
 {
 	ulint	first_free;
 
@@ -960,19 +1137,20 @@ trx_undo_erase_page_end(
 	       (UNIV_PAGE_SIZE - FIL_PAGE_DATA_END) - first_free);
 
 	mlog_write_initial_log_record(undo_page, MLOG_UNDO_ERASE_END, mtr);
+	return(first_free != TRX_UNDO_PAGE_HDR + TRX_UNDO_PAGE_HDR_SIZE);
 }
 
-/***************************************************************
-Parses a redo log record of erasing of an undo page end. */
-
+/***********************************************************//**
+Parses a redo log record of erasing of an undo page end.
+@return	end of log record or NULL */
+UNIV_INTERN
 byte*
 trx_undo_parse_erase_page_end(
 /*==========================*/
-			/* out: end of log record or NULL */
-	byte*	ptr,	/* in: buffer */
-	byte*	end_ptr __attribute__((unused)), /* in: buffer end */
-	page_t*	page,	/* in: page or NULL */
-	mtr_t*	mtr)	/* in: mtr or NULL */
+	byte*	ptr,	/*!< in: buffer */
+	byte*	end_ptr __attribute__((unused)), /*!< in: buffer end */
+	page_t*	page,	/*!< in: page or NULL */
+	mtr_t*	mtr)	/*!< in: mtr or NULL */
 {
 	ut_ad(ptr && end_ptr);
 
@@ -986,58 +1164,60 @@ trx_undo_parse_erase_page_end(
 	return(ptr);
 }
 
-/***************************************************************************
+#ifndef UNIV_HOTBACKUP
+/***********************************************************************//**
 Writes information to an undo log about an insert, update, or a delete marking
 of a clustered index record. This information is used in a rollback of the
 transaction and in consistent reads that must look to the history of this
-transaction. */
-
+transaction.
+@return	DB_SUCCESS or error code */
+UNIV_INTERN
 ulint
 trx_undo_report_row_operation(
 /*==========================*/
-					/* out: DB_SUCCESS or error code */
-	ulint		flags,		/* in: if BTR_NO_UNDO_LOG_FLAG bit is
+	ulint		flags,		/*!< in: if BTR_NO_UNDO_LOG_FLAG bit is
 					set, does nothing */
-	ulint		op_type,	/* in: TRX_UNDO_INSERT_OP or
+	ulint		op_type,	/*!< in: TRX_UNDO_INSERT_OP or
 					TRX_UNDO_MODIFY_OP */
-	que_thr_t*	thr,		/* in: query thread */
-	dict_index_t*	index,		/* in: clustered index */
-	dtuple_t*	clust_entry,	/* in: in the case of an insert,
+	que_thr_t*	thr,		/*!< in: query thread */
+	dict_index_t*	index,		/*!< in: clustered index */
+	const dtuple_t*	clust_entry,	/*!< in: in the case of an insert,
 					index entry to insert into the
 					clustered index, otherwise NULL */
-	upd_t*		update,		/* in: in the case of an update,
+	const upd_t*	update,		/*!< in: in the case of an update,
 					the update vector, otherwise NULL */
-	ulint		cmpl_info,	/* in: compiler info on secondary
+	ulint		cmpl_info,	/*!< in: compiler info on secondary
 					index updates */
-	rec_t*		rec,		/* in: in case of an update or delete
+	const rec_t*	rec,		/*!< in: in case of an update or delete
 					marking, the record in the clustered
 					index, otherwise NULL */
-	dulint*		roll_ptr)	/* out: rollback pointer to the
+	roll_ptr_t*	roll_ptr)	/*!< out: rollback pointer to the
 					inserted undo log record,
-					ut_dulint_zero if BTR_NO_UNDO_LOG
+					0 if BTR_NO_UNDO_LOG
 					flag was specified */
 {
 	trx_t*		trx;
 	trx_undo_t*	undo;
-	page_t*		undo_page;
-	ulint		offset;
 	ulint		page_no;
-	ibool		is_insert;
+	buf_block_t*	undo_block;
 	trx_rseg_t*	rseg;
 	mtr_t		mtr;
 	ulint		err		= DB_SUCCESS;
 	mem_heap_t*	heap		= NULL;
 	ulint		offsets_[REC_OFFS_NORMAL_SIZE];
 	ulint*		offsets		= offsets_;
-	*offsets_ = (sizeof offsets_) / sizeof *offsets_;
+#ifdef UNIV_DEBUG
+	int		loop_count	= 0;
+#endif /* UNIV_DEBUG */
+	rec_offs_init(offsets_);
 
-	ut_a(index->type & DICT_CLUSTERED);
+	ut_a(dict_index_is_clust(index));
 
 	if (flags & BTR_NO_UNDO_LOG_FLAG) {
 
-		*roll_ptr = ut_dulint_zero;
+		*roll_ptr = 0;
 
-		return(err);
+		return(DB_SUCCESS);
 	}
 
 	ut_ad(thr);
@@ -1059,7 +1239,16 @@ trx_undo_report_row_operation(
 		}
 
 		undo = trx->insert_undo;
-		is_insert = TRUE;
+
+		if (UNIV_UNLIKELY(!undo)) {
+			/* Did not succeed */
+			ut_ad(err != DB_SUCCESS);
+			mutex_exit(&(trx->undo_mutex));
+
+			return(err);
+		}
+
+		ut_ad(err == DB_SUCCESS);
 	} else {
 		ut_ad(op_type == TRX_UNDO_MODIFY_OP);
 
@@ -1070,100 +1259,122 @@ trx_undo_report_row_operation(
 		}
 
 		undo = trx->update_undo;
-		is_insert = FALSE;
+
+		if (UNIV_UNLIKELY(!undo)) {
+			/* Did not succeed */
+			ut_ad(err != DB_SUCCESS);
+			mutex_exit(&(trx->undo_mutex));
+			return(err);
+		}
+
+		ut_ad(err == DB_SUCCESS);
+		offsets = rec_get_offsets(rec, index, offsets,
+					  ULINT_UNDEFINED, &heap);
 	}
-
-	if (err != DB_SUCCESS) {
-		/* Did not succeed: return the error encountered */
-		mutex_exit(&(trx->undo_mutex));
-
-		return(err);
-	}
-
-	page_no = undo->last_page_no;
 
 	mtr_start(&mtr);
 
-	for (;;) {
-		undo_page = buf_page_get_gen(undo->space, page_no,
-					     RW_X_LATCH, undo->guess_page,
-					     BUF_GET,
-					     __FILE__, __LINE__,
-					     &mtr);
+	page_no = undo->last_page_no;
+	undo_block = buf_page_get_gen(
+		undo->space, undo->zip_size, page_no, RW_X_LATCH,
+		undo->guess_block, BUF_GET, __FILE__, __LINE__, &mtr);
+	buf_block_dbg_add_level(undo_block, SYNC_TRX_UNDO_PAGE);
 
-#ifdef UNIV_SYNC_DEBUG
-		buf_page_dbg_add_level(undo_page, SYNC_TRX_UNDO_PAGE);
-#endif /* UNIV_SYNC_DEBUG */
+	do {
+		page_t*		undo_page;
+		ulint		offset;
+
+		undo_page = buf_block_get_frame(undo_block);
+		ut_ad(page_no == buf_block_get_page_no(undo_block));
 
 		if (op_type == TRX_UNDO_INSERT_OP) {
 			offset = trx_undo_page_report_insert(
 				undo_page, trx, index, clust_entry, &mtr);
 		} else {
-			offsets = rec_get_offsets(rec, index, offsets,
-						  ULINT_UNDEFINED, &heap);
 			offset = trx_undo_page_report_modify(
 				undo_page, trx, index, rec, offsets, update,
 				cmpl_info, &mtr);
 		}
 
-		if (offset == 0) {
+		if (UNIV_UNLIKELY(offset == 0)) {
 			/* The record did not fit on the page. We erase the
 			end segment of the undo log page and write a log
 			record of it: this is to ensure that in the debug
 			version the replicate page constructed using the log
 			records stays identical to the original page */
 
-			trx_undo_erase_page_end(undo_page, &mtr);
-		}
+			if (!trx_undo_erase_page_end(undo_page, &mtr)) {
+				/* The record did not fit on an empty
+				undo page. Discard the freshly allocated
+				page and return an error. */
 
-		mtr_commit(&mtr);
+				/* When we remove a page from an undo
+				log, this is analogous to a
+				pessimistic insert in a B-tree, and we
+				must reserve the counterpart of the
+				tree latch, which is the rseg
+				mutex. We must commit the mini-transaction
+				first, because it may be holding lower-level
+				latches, such as SYNC_FSP and SYNC_FSP_PAGE. */
 
-		if (offset != 0) {
+				mtr_commit(&mtr);
+				mtr_start(&mtr);
+
+				mutex_enter(&rseg->mutex);
+				trx_undo_free_last_page(trx, undo, &mtr);
+				mutex_exit(&rseg->mutex);
+
+				err = DB_UNDO_RECORD_TOO_BIG;
+				goto err_exit;
+			}
+
+			mtr_commit(&mtr);
+		} else {
 			/* Success */
 
-			break;
+			mtr_commit(&mtr);
+
+			undo->empty = FALSE;
+			undo->top_page_no = page_no;
+			undo->top_offset  = offset;
+			undo->top_undo_no = trx->undo_no;
+			undo->guess_block = undo_block;
+
+			trx->undo_no++;
+
+			mutex_exit(&trx->undo_mutex);
+
+			*roll_ptr = trx_undo_build_roll_ptr(
+				op_type == TRX_UNDO_INSERT_OP,
+				rseg->id, page_no, offset);
+			err = DB_SUCCESS;
+			goto func_exit;
 		}
 
 		ut_ad(page_no == undo->last_page_no);
 
 		/* We have to extend the undo log by one page */
 
+		ut_ad(++loop_count < 2);
 		mtr_start(&mtr);
 
 		/* When we add a page to an undo log, this is analogous to
 		a pessimistic insert in a B-tree, and we must reserve the
 		counterpart of the tree latch, which is the rseg mutex. */
 
-		mutex_enter(&(rseg->mutex));
+		mutex_enter(&rseg->mutex);
+		undo_block = trx_undo_add_page(trx, undo, &mtr);
+		mutex_exit(&rseg->mutex);
+		page_no = undo->last_page_no;
+	} while (undo_block != NULL);
 
-		page_no = trx_undo_add_page(trx, undo, &mtr);
+	/* Did not succeed: out of space */
+	err = DB_OUT_OF_FILE_SPACE;
 
-		mutex_exit(&(rseg->mutex));
-
-		if (page_no == FIL_NULL) {
-			/* Did not succeed: out of space */
-
-			mutex_exit(&(trx->undo_mutex));
-			mtr_commit(&mtr);
-			if (UNIV_LIKELY_NULL(heap)) {
-				mem_heap_free(heap);
-			}
-			return(DB_OUT_OF_FILE_SPACE);
-		}
-	}
-
-	undo->empty = FALSE;
-	undo->top_page_no = page_no;
-	undo->top_offset  = offset;
-	undo->top_undo_no = trx->undo_no;
-	undo->guess_page = undo_page;
-
-	UT_DULINT_INC(trx->undo_no);
-
-	mutex_exit(&(trx->undo_mutex));
-
-	*roll_ptr = trx_undo_build_roll_ptr(is_insert, rseg->id, page_no,
-					    offset);
+err_exit:
+	mutex_exit(&trx->undo_mutex);
+	mtr_commit(&mtr);
+func_exit:
 	if (UNIV_LIKELY_NULL(heap)) {
 		mem_heap_free(heap);
 	}
@@ -1172,22 +1383,22 @@ trx_undo_report_row_operation(
 
 /*============== BUILDING PREVIOUS VERSION OF A RECORD ===============*/
 
-/**********************************************************************
+/******************************************************************//**
 Copies an undo record to heap. This function can be called if we know that
-the undo log record exists. */
-
+the undo log record exists.
+@return	own: copy of the record */
+UNIV_INTERN
 trx_undo_rec_t*
 trx_undo_get_undo_rec_low(
 /*======================*/
-					/* out, own: copy of the record */
-	dulint		roll_ptr,	/* in: roll pointer to record */
-	mem_heap_t*	heap)		/* in: memory heap where copied */
+	roll_ptr_t	roll_ptr,	/*!< in: roll pointer to record */
+	mem_heap_t*	heap)		/*!< in: memory heap where copied */
 {
 	trx_undo_rec_t*	undo_rec;
 	ulint		rseg_id;
 	ulint		page_no;
 	ulint		offset;
-	page_t*		undo_page;
+	const page_t*	undo_page;
 	trx_rseg_t*	rseg;
 	ibool		is_insert;
 	mtr_t		mtr;
@@ -1198,7 +1409,8 @@ trx_undo_get_undo_rec_low(
 
 	mtr_start(&mtr);
 
-	undo_page = trx_undo_page_get_s_latched(rseg->space, page_no, &mtr);
+	undo_page = trx_undo_page_get_s_latched(rseg->space, rseg->zip_size,
+						page_no, &mtr);
 
 	undo_rec = trx_undo_rec_copy(undo_page + offset, heap);
 
@@ -1207,24 +1419,24 @@ trx_undo_get_undo_rec_low(
 	return(undo_rec);
 }
 
-/**********************************************************************
-Copies an undo record to heap. */
+/******************************************************************//**
+Copies an undo record to heap.
 
+NOTE: the caller must have latches on the clustered index page and
+purge_view.
+
+@return DB_SUCCESS, or DB_MISSING_HISTORY if the undo log has been
+truncated and we cannot fetch the old version */
+UNIV_INTERN
 ulint
 trx_undo_get_undo_rec(
 /*==================*/
-					/* out: DB_SUCCESS, or
-					DB_MISSING_HISTORY if the undo log
-					has been truncated and we cannot
-					fetch the old version; NOTE: the
-					caller must have latches on the
-					clustered index page and purge_view */
-	dulint		roll_ptr,	/* in: roll pointer to record */
-	dulint		trx_id,		/* in: id of the trx that generated
+	roll_ptr_t	roll_ptr,	/*!< in: roll pointer to record */
+	trx_id_t	trx_id,		/*!< in: id of the trx that generated
 					the roll pointer: it points to an
 					undo log of this transaction */
-	trx_undo_rec_t** undo_rec,	/* out, own: copy of the record */
-	mem_heap_t*	heap)		/* in: memory heap where copied */
+	trx_undo_rec_t** undo_rec,	/*!< out, own: copy of the record */
+	mem_heap_t*	heap)		/*!< in: memory heap where copied */
 {
 #ifdef UNIV_SYNC_DEBUG
 	ut_ad(rw_lock_own(&(purge_sys->latch), RW_LOCK_SHARED));
@@ -1243,42 +1455,43 @@ trx_undo_get_undo_rec(
 	return(DB_SUCCESS);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Build a previous version of a clustered index record. This function checks
 that the caller has a latch on the index page of the clustered index record
 and an s-latch on the purge_view. This guarantees that the stack of versions
-is locked. */
-
+is locked all the way down to the purge_view.
+@return DB_SUCCESS, or DB_MISSING_HISTORY if the previous version is
+earlier than purge_view, which means that it may have been removed,
+DB_ERROR if corrupted record */
+UNIV_INTERN
 ulint
 trx_undo_prev_version_build(
 /*========================*/
-				/* out: DB_SUCCESS, or DB_MISSING_HISTORY if
-				the previous version is not >= purge_view,
-				which means that it may have been removed,
-				DB_ERROR if corrupted record */
-	rec_t*		index_rec,/* in: clustered index record in the
+	const rec_t*	index_rec,/*!< in: clustered index record in the
 				index tree */
 	mtr_t*		index_mtr __attribute__((unused)),
-				/* in: mtr which contains the latch to
+				/*!< in: mtr which contains the latch to
 				index_rec page and purge_view */
-	rec_t*		rec,	/* in: version of a clustered index record */
-	dict_index_t*	index,	/* in: clustered index */
-	ulint*		offsets,/* in: rec_get_offsets(rec, index) */
-	mem_heap_t*	heap,	/* in: memory heap from which the memory
+	const rec_t*	rec,	/*!< in: version of a clustered index record */
+	dict_index_t*	index,	/*!< in: clustered index */
+	ulint*		offsets,/*!< in: rec_get_offsets(rec, index) */
+	mem_heap_t*	heap,	/*!< in: memory heap from which the memory
 				needed is allocated */
-	rec_t**		old_vers)/* out, own: previous version, or NULL if
+	rec_t**		old_vers)/*!< out, own: previous version, or NULL if
 				rec is the first inserted version, or if
-				history data has been deleted */
+				history data has been deleted (an error),
+				or if the purge COULD have removed the version
+				though it has not yet done so */
 {
-	trx_undo_rec_t*	undo_rec;
+	trx_undo_rec_t*	undo_rec	= NULL;
 	dtuple_t*	entry;
-	dulint		rec_trx_id;
+	trx_id_t	rec_trx_id;
 	ulint		type;
-	dulint		undo_no;
-	dulint		table_id;
-	dulint		trx_id;
-	dulint		roll_ptr;
-	dulint		old_roll_ptr;
+	undo_no_t	undo_no;
+	table_id_t	table_id;
+	trx_id_t	trx_id;
+	roll_ptr_t	roll_ptr;
+	roll_ptr_t	old_roll_ptr;
 	upd_t*		update;
 	byte*		ptr;
 	ulint		info_bits;
@@ -1289,13 +1502,12 @@ trx_undo_prev_version_build(
 #ifdef UNIV_SYNC_DEBUG
 	ut_ad(rw_lock_own(&(purge_sys->latch), RW_LOCK_SHARED));
 #endif /* UNIV_SYNC_DEBUG */
-	ut_ad(mtr_memo_contains(index_mtr, buf_block_align(index_rec),
-				MTR_MEMO_PAGE_S_FIX)
-	      || mtr_memo_contains(index_mtr, buf_block_align(index_rec),
-				   MTR_MEMO_PAGE_X_FIX));
+	ut_ad(mtr_memo_contains_page(index_mtr, index_rec, MTR_MEMO_PAGE_S_FIX)
+	      || mtr_memo_contains_page(index_mtr, index_rec,
+					MTR_MEMO_PAGE_X_FIX));
 	ut_ad(rec_offs_validate(rec, index, offsets));
 
-	if (!(index->type & DICT_CLUSTERED)) {
+	if (!dict_index_is_clust(index)) {
 		fprintf(stderr, "InnoDB: Error: trying to access"
 			" update undo rec for non-clustered index %s\n"
 			"InnoDB: Submit a detailed bug report to"
@@ -1306,6 +1518,7 @@ trx_undo_prev_version_build(
 		      "InnoDB: record version ", stderr);
 		rec_print_new(stderr, rec, offsets);
 		putc('\n', stderr);
+		ut_ad(0);
 		return(DB_ERROR);
 	}
 
@@ -1325,7 +1538,9 @@ trx_undo_prev_version_build(
 
 	err = trx_undo_get_undo_rec(roll_ptr, rec_trx_id, &undo_rec, heap);
 
-	if (err != DB_SUCCESS) {
+	if (UNIV_UNLIKELY(err != DB_SUCCESS)) {
+		/* The undo record may already have been purged.
+		This should never happen in InnoDB. */
 
 		return(err);
 	}
@@ -1335,13 +1550,36 @@ trx_undo_prev_version_build(
 
 	ptr = trx_undo_update_rec_get_sys_cols(ptr, &trx_id, &roll_ptr,
 					       &info_bits);
+
+	/* (a) If a clustered index record version is such that the
+	trx id stamp in it is bigger than purge_sys->view, then the
+	BLOBs in that version are known to exist (the purge has not
+	progressed that far);
+
+	(b) if the version is the first version such that trx id in it
+	is less than purge_sys->view, and it is not delete-marked,
+	then the BLOBs in that version are known to exist (the purge
+	cannot have purged the BLOBs referenced by that version
+	yet).
+
+	This function does not fetch any BLOBs.  The callers might, by
+	possibly invoking row_ext_create() via row_build().  However,
+	they should have all needed information in the *old_vers
+	returned by this function.  This is because *old_vers is based
+	on the transaction undo log records.  The function
+	trx_undo_page_fetch_ext() will write BLOB prefixes to the
+	transaction undo log that are at least as long as the longest
+	possible column prefix in a secondary index.  Thus, secondary
+	index entries for *old_vers can be constructed without
+	dereferencing any BLOB pointers. */
+
 	ptr = trx_undo_rec_skip_row_ref(ptr, index);
 
 	ptr = trx_undo_update_rec_get_update(ptr, index, type, trx_id,
 					     roll_ptr, info_bits,
 					     NULL, heap, &update);
 
-	if (ut_dulint_cmp(table_id, index->table->id) != 0) {
+	if (UNIV_UNLIKELY(table_id != index->table->id)) {
 		ptr = NULL;
 
 		fprintf(stderr,
@@ -1362,16 +1600,14 @@ trx_undo_prev_version_build(
 		fprintf(stderr,
 			"InnoDB: table %s, index %s, n_uniq %lu\n"
 			"InnoDB: undo rec address %p, type %lu cmpl_info %lu\n"
-			"InnoDB: undo rec table id %lu %lu,"
-			" index table id %lu %lu\n"
+			"InnoDB: undo rec table id %llu,"
+			" index table id %llu\n"
 			"InnoDB: dump of 150 bytes in undo rec: ",
 			index->table_name, index->name,
 			(ulong) dict_index_get_n_unique(index),
 			undo_rec, (ulong) type, (ulong) cmpl_info,
-			(ulong) ut_dulint_get_high(table_id),
-			(ulong) ut_dulint_get_low(table_id),
-			(ulong) ut_dulint_get_high(index->table->id),
-			(ulong) ut_dulint_get_low(index->table->id));
+			(ullint) table_id,
+			(ullint) index->table->id);
 		ut_print_buf(stderr, undo_rec, 150);
 		fputs("\n"
 		      "InnoDB: index record ", stderr);
@@ -1380,60 +1616,70 @@ trx_undo_prev_version_build(
 		      "InnoDB: record version ", stderr);
 		rec_print_new(stderr, rec, offsets);
 		fprintf(stderr, "\n"
-			"InnoDB: Record trx id %lu %lu, update rec"
-			" trx id %lu %lu\n"
-			"InnoDB: Roll ptr in rec %lu %lu, in update rec"
-			" %lu %lu\n",
-			(ulong) ut_dulint_get_high(rec_trx_id),
-			(ulong) ut_dulint_get_low(rec_trx_id),
-			(ulong) ut_dulint_get_high(trx_id),
-			(ulong) ut_dulint_get_low(trx_id),
-			(ulong) ut_dulint_get_high(old_roll_ptr),
-			(ulong) ut_dulint_get_low(old_roll_ptr),
-			(ulong) ut_dulint_get_high(roll_ptr),
-			(ulong) ut_dulint_get_low(roll_ptr));
+			"InnoDB: Record trx id " TRX_ID_FMT
+			", update rec trx id " TRX_ID_FMT "\n"
+			"InnoDB: Roll ptr in rec " TRX_ID_FMT
+			", in update rec" TRX_ID_FMT "\n",
+			(ullint) rec_trx_id, (ullint) trx_id,
+			(ullint) old_roll_ptr, (ullint) roll_ptr);
 
 		trx_purge_sys_print();
+		ut_ad(0);
 		return(DB_ERROR);
 	}
 
-# if defined UNIV_DEBUG || defined UNIV_BLOB_LIGHT_DEBUG
+# ifdef UNIV_BLOB_NULL_DEBUG
 	ut_a(!rec_offs_any_null_extern(rec, offsets));
-# endif /* UNIV_DEBUG || UNIV_BLOB_LIGHT_DEBUG */
+# endif /* UNIV_BLOB_NULL_DEBUG */
 
 	if (row_upd_changes_field_size_or_external(index, offsets, update)) {
-		ulint*	ext_vect;
-		ulint	n_ext_vect;
+		ulint	n_ext;
+
+		/* We should confirm the existence of disowned external data,
+		if the previous version record is delete marked. If the trx_id
+		of the previous record is seen by purge view, we should treat
+		it as missing history, because the disowned external data
+		might be purged already.
+
+		The inherited external data (BLOBs) can be freed (purged)
+		after trx_id was committed, provided that no view was started
+		before trx_id. If the purge view can see the committed
+		delete-marked record by trx_id, no transactions need to access
+		the BLOB. */
+
+		if ((update->info_bits & REC_INFO_DELETED_FLAG)
+		    && read_view_sees_trx_id(purge_sys->view, trx_id)) {
+			/* treat as a fresh insert, not to
+			cause assertion error at the caller. */
+			return(DB_SUCCESS);
+		}
 
 		/* We have to set the appropriate extern storage bits in the
 		old version of the record: the extern bits in rec for those
-		fields that update does NOT update, as well as the the bits for
+		fields that update does NOT update, as well as the bits for
 		those fields that update updates to become externally stored
-		fields. Store the info to ext_vect: */
+		fields. Store the info: */
 
-		ext_vect = mem_alloc(sizeof(ulint)
-				     * rec_offs_n_fields(offsets));
-		n_ext_vect = btr_push_update_extern_fields(ext_vect, offsets,
-							   update);
-		entry = row_rec_to_index_entry(ROW_COPY_DATA, index, rec,
-					       heap);
+		entry = row_rec_to_index_entry(ROW_COPY_DATA, rec, index,
+					       offsets, &n_ext, heap);
+		n_ext += btr_push_update_extern_fields(entry, update, heap);
+		/* The page containing the clustered index record
+		corresponding to entry is latched in mtr.  Thus the
+		following call is safe. */
 		row_upd_index_replace_new_col_vals(entry, index, update, heap);
 
-		buf = mem_heap_alloc(heap,
-				     rec_get_converted_size(index, entry));
+		buf = mem_heap_alloc(heap, rec_get_converted_size(index, entry,
+								  n_ext));
 
-		*old_vers = rec_convert_dtuple_to_rec(buf, index, entry);
-
-		/* Now set the extern bits in the old version of the record */
-		rec_set_field_extern_bits(*old_vers, index,
-					  ext_vect, n_ext_vect, NULL);
-		mem_free(ext_vect);
+		*old_vers = rec_convert_dtuple_to_rec(buf, index,
+						      entry, n_ext);
 	} else {
 		buf = mem_heap_alloc(heap, rec_offs_size(offsets));
 		*old_vers = rec_copy(buf, rec, offsets);
 		rec_offs_make_valid(*old_vers, index, offsets);
-		row_upd_rec_in_place(*old_vers, offsets, update);
+		row_upd_rec_in_place(*old_vers, index, offsets, update, NULL);
 	}
 
 	return(DB_SUCCESS);
 }
+#endif /* !UNIV_HOTBACKUP */

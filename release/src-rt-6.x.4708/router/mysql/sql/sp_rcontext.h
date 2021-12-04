@@ -1,5 +1,5 @@
 /* -*- C++ -*- */
-/* Copyright (c) 2002-2008 MySQL AB
+/* Copyright (c) 2002, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _SP_RCONTEXT_H_
 #define _SP_RCONTEXT_H_
@@ -21,11 +21,19 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
+#include "sql_class.h"                    // select_result_interceptor
+
 struct sp_cond_type;
 class sp_cursor;
 struct sp_variable;
 class sp_lex_keeper;
 class sp_instr_cpush;
+class Query_arena;
+class sp_head;
+class sp_pcontext;
+class Item_cache;
+typedef class st_select_lex_unit SELECT_LEX_UNIT;
+class Server_side_cursor;
 
 #define SP_HANDLER_NONE      0
 #define SP_HANDLER_EXIT      1
@@ -34,11 +42,60 @@ class sp_instr_cpush;
 
 typedef struct
 {
+  /** Condition caught by this HANDLER. */
   struct sp_cond_type *cond;
-  uint handler;			// Location of handler
+  /** Location (instruction pointer) of the handler code. */
+  uint handler;
+  /** Handler type (EXIT, CONTINUE). */
   int type;
-  uint foffset;			// Frame offset for the handlers declare level
 } sp_handler_t;
+
+typedef struct
+{
+  /** Instruction pointer of the active handler. */
+  uint ip;
+  /** Handler index of the active handler. */
+  uint index;
+} sp_active_handler_t;
+
+
+class Sql_condition_info : public Sql_alloc
+{
+public:
+  /** SQL error code. */
+  uint m_sql_errno;
+
+  /** Error level. */
+  MYSQL_ERROR::enum_warning_level m_level;
+
+  /** SQLSTATE. */
+  char m_sql_state[SQLSTATE_LENGTH + 1];
+
+  /** Text message. */
+  char m_message[MYSQL_ERRMSG_SIZE];
+
+  void set(uint sql_errno, const char* sqlstate,
+           MYSQL_ERROR::enum_warning_level level,
+           const char* msg)
+  {
+    m_sql_errno= sql_errno;
+    m_level= level;
+
+    memcpy(m_sql_state, sqlstate, SQLSTATE_LENGTH);
+    m_sql_state[SQLSTATE_LENGTH]= '\0';
+
+    strncpy(m_message, msg, MYSQL_ERRMSG_SIZE);
+  }
+
+  void clear()
+  {
+    m_sql_errno= 0;
+    m_level= MYSQL_ERROR::WARN_LEVEL_ERROR;
+
+    m_sql_state[0]= '\0';
+    m_message[0]= '\0';
+  }
+};
 
 
 /*
@@ -75,6 +132,13 @@ class sp_rcontext : public Sql_alloc
   */
   Query_arena *callers_arena;
 
+  /*
+    End a open result set before start executing a continue/exit
+    handler if one is found as otherwise the client will hang
+    due to a violation of the client/server protocol.
+  */
+  bool end_partial_result_set;
+
 #ifndef DBUG_OFF
   /*
     The routine for which this runtime context is created. Used for checking
@@ -107,52 +171,39 @@ class sp_rcontext : public Sql_alloc
     return m_return_value_set;
   }
 
-  void push_handler(struct sp_cond_type *cond, uint h, int type, uint f);
+  /*
+    SQL handlers support.
+  */
+
+  void push_handler(struct sp_cond_type *cond, uint h, int type);
 
   void pop_handlers(uint count);
 
-  // Returns 1 if a handler was found, 0 otherwise.
   bool
-  find_handler(THD *thd, uint sql_errno,MYSQL_ERROR::enum_warning_level level);
-
-  // If there is an error handler for this error, handle it and return TRUE.
-  bool
-  handle_error(uint sql_errno,
+  find_handler(THD *thd,
+               uint sql_errno,
+               const char *sqlstate,
                MYSQL_ERROR::enum_warning_level level,
-               THD *thd);
+               const char *msg);
 
-  // Returns handler type and sets *ip to location if one was found
-  inline int
-  found_handler(uint *ip, uint *fp)
-  {
-    if (m_hfound < 0)
-      return SP_HANDLER_NONE;
-    *ip= m_handler[m_hfound].handler;
-    *fp= m_handler[m_hfound].foffset;
-    return m_handler[m_hfound].type;
-  }
+  Sql_condition_info *raised_condition() const;
 
-  // Returns true if we found a handler in this context
-  inline bool
-  found_handler_here()
-  {
-    return (m_hfound >= 0);
-  }
+  void
+  push_hstack(uint h);
 
-  // Clears the handler find state
-  inline void
-  clear_handler()
-  {
-    m_hfound= -1;
-  }
+  uint
+  pop_hstack();
 
-  void push_hstack(uint h);
+  bool
+  activate_handler(THD *thd,
+                   uint *ip,
+                   sp_instr *instr,
+                   Query_arena *execute_arena,
+                   Query_arena *backup_arena);
 
-  uint pop_hstack();
 
-  void enter_handler(int hid);
-
-  void exit_handler();
+  void
+  exit_handler();
 
   void
   push_cursor(sp_lex_keeper *lex_keeper, sp_instr_cpush *i);
@@ -160,7 +211,7 @@ class sp_rcontext : public Sql_alloc
   void
   pop_cursors(uint count);
 
-  void
+  inline void
   pop_all_cursors()
   {
     pop_cursors(m_ccount);
@@ -208,16 +259,25 @@ private:
     during execution.
   */
   bool m_return_value_set;
+
   /**
     TRUE if the context is created for a sub-statement.
   */
   bool in_sub_stmt;
 
   sp_handler_t *m_handler;      // Visible handlers
+
+  /**
+    SQL conditions caught by each handler.
+    This is an array indexed by handler index.
+  */
+  Sql_condition_info *m_raised_conditions;
+
   uint m_hcount;                // Stack pointer for m_handler
   uint *m_hstack;               // Return stack for continue handlers
   uint m_hsp;                   // Stack pointer for m_hstack
-  uint *m_in_handler;           // Active handler, for recursion check
+  /** Active handler stack. */
+  sp_active_handler_t *m_in_handler;
   uint m_ihsp;                  // Stack pointer for m_in_handler
   int m_hfound;                 // Set by find_handler; -1 if not found
 

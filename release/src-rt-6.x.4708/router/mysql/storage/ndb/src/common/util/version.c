@@ -1,4 +1,5 @@
-/* Copyright (c) 2003-2005, 2007 MySQL AB
+/* Copyright (c) 2003-2005, 2007 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -98,7 +99,7 @@ void ndbSetOwnVersion() {}
 
 #ifndef TEST_VERSION
 struct NdbUpGradeCompatible ndbCompatibleTable_full[] = {
-  { MAKE_VERSION(5,1,NDB_VERSION_BUILD), MAKE_VERSION(5,1,18), UG_Range},
+  { MAKE_VERSION(5,4,NDB_VERSION_BUILD), MAKE_VERSION(5,1,18), UG_Range},
   { MAKE_VERSION(5,1,17), MAKE_VERSION(5,1,0), UG_Range},
   { MAKE_VERSION(5,0,NDB_VERSION_BUILD), MAKE_VERSION(5,0,12), UG_Range},
   { MAKE_VERSION(5,0,11), MAKE_VERSION(5,0,2), UG_Range},

@@ -1,3 +1,11 @@
+/* Copyright 1992, 1993, 1994 Henry Spencer.  All rights reserved.
+   See file COPYRIGHT for details.
+
+   This file was modified by Oracle on 2015-05-18 for 32-bit compatibility.
+
+   Modifications copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights
+   reserved. */
+
 #include <my_global.h>
 #include <m_string.h>
 #include <m_ctype.h>
@@ -133,12 +141,26 @@ CHARSET_INFO *charset;
 	} else
 		len = strlen((char *)pattern);
 
+	/*
+	 Find the maximum len we can safely process
+	 without a rollover and a mis-malloc.
+	 p->ssize is a sopno is a long (32+ bit signed);
+	 size_t is 16+ bit unsigned.
+	*/
+	{
+	  size_t new_ssize = len / (size_t)2 * (size_t)3 + (size_t)1; /* ugh */
+	  if ((new_ssize < len) ||	/* size_t rolled over */
+	      ((SIZE_T_MAX / sizeof(sop)) < new_ssize) ||	/* malloc arg */
+	      (new_ssize > LONG_MAX))	/* won't fit in ssize */
+		return(REG_ESPACE);	/* MY_REG_ESPACE or MY_REG_INVARG */
+	  p->ssize = new_ssize;
+	}
+
 	/* do the mallocs early so failure handling is easy */
 	g = (struct re_guts *)malloc(sizeof(struct re_guts) +
 							(NC-1)*sizeof(cat_t));
 	if (g == NULL)
 		return(REG_ESPACE);
-	p->ssize = (long) (len/(size_t)2*(size_t)3 + (size_t)1); /* ugh */
 	p->strip = (sop *)malloc(p->ssize * sizeof(sop));
 	p->slen = 0;
 	if (p->strip == NULL) {
@@ -296,18 +318,6 @@ register struct parse *p;
 		EMIT(ORPAREN, subno);
 		if(MUSTEAT(')', REG_EPAREN)) {}
 		break;
-#ifndef POSIX_MISTAKE
-	case ')':		/* happens only if no current unmatched ( */
-		/*
-		 * You may ask, why the ifndef?  Because I didn't notice
-		 * this until slightly too late for 1003.2, and none of the
-		 * other 1003.2 regular-expression reviewers noticed it at
-		 * all.  So an unmatched ) is legal POSIX, at least until
-		 * we can get it fixed.
-		 */
-		SETERROR(REG_EPAREN);
-		break;
-#endif
 	case '^':
 		EMIT(OBOL, 0);
 		p->g->iflags |= USEBOL;
@@ -541,6 +551,8 @@ int starordinary;		/* is a leading * an ordinary character? */
 			assert(OP(p->strip[p->pbegin[i]]) == OLPAREN);
 			assert(OP(p->strip[p->pend[i]]) == ORPAREN);
 			(void) dupl(p, p->pbegin[i]+1, p->pend[i]);
+                        if (p->error != 0)
+                          break;        /* purecov: inspected */
 			EMIT(O_BACK, i);
 		} else
 			SETERROR(REG_ESUBREG);
@@ -1021,6 +1033,8 @@ int to;				/* to this number of times (maybe RE_INFINITY) */
 		AHEAD(THERE());			/* ...so fix it */
 		ASTERN(O_CH, THERETHERE());
 		copy = dupl(p, start+1, finish+1);
+                if (p->error != 0)
+                  return;        /* purecov: inspected */
 		assert(copy == finish+4);
 		repeat(p, copy, 1, to-1);
 		break;
@@ -1030,10 +1044,14 @@ int to;				/* to this number of times (maybe RE_INFINITY) */
 		break;
 	case REP(N, N):			/* as xx{m-1,n-1} */
 		copy = dupl(p, start, finish);
+                if (p->error != 0)
+                  return;
 		repeat(p, copy, from-1, to-1);
 		break;
 	case REP(N, INF):		/* as xx{n-1,INF} */
 		copy = dupl(p, start, finish);
+                if (p->error != 0)
+                  return;        /* purecov: inspected */
 		repeat(p, copy, from-1, to);
 		break;
 	default:			/* "can't happen" */
@@ -1239,66 +1257,6 @@ register char *cp;
 }
 #endif
 
-#ifdef NOT_USED
-/*
- - mcsub - subtract a collating element from a cset
- == static void mcsub(register cset *cs, register char *cp);
- */
-static void
-mcsub(cs, cp)
-register cset *cs;
-register char *cp;
-{
-	register char *fp = mcfind(cs, cp);
-	register size_t len = strlen(fp);
-
-	assert(fp != NULL);
-	(void) memmove(fp, fp + len + 1,
-				cs->smultis - (fp + len + 1 - cs->multis));
-	cs->smultis -= len;
-
-	if (cs->smultis == 0) {
-		free(cs->multis);
-		cs->multis = NULL;
-		return;
-	}
-
-	cs->multis = realloc(cs->multis, cs->smultis);
-	assert(cs->multis != NULL);
-}
-
-/*
- - mcin - is a collating element in a cset?
- == static int mcin(register cset *cs, register char *cp);
- */
-static int
-mcin(cs, cp)
-register cset *cs;
-register char *cp;
-{
-	return(mcfind(cs, cp) != NULL);
-}
-
-/*
- - mcfind - find a collating element in a cset
- == static char *mcfind(register cset *cs, register char *cp);
- */
-static char *
-mcfind(cs, cp)
-register cset *cs;
-register char *cp;
-{
-	register char *p;
-
-	if (cs->multis == NULL)
-		return(NULL);
-	for (p = cs->multis; *p != '\0'; p += strlen(p) + 1)
-		if (strcmp(cp, p) == 0)
-			return(p);
-	return(NULL);
-}
-#endif
-
 /*
  - mcinvert - invert the list of collating elements in a cset
  == static void mcinvert(register struct parse *p, register cset *cs);
@@ -1416,6 +1374,9 @@ sopno finish;			/* to this less one */
 	if (len == 0)
 		return(ret);
 	enlarge(p, p->ssize + len);	/* this many unexpected additions */
+        if (p->error != 0)
+          return(p->error);
+
 	assert(p->ssize >= p->slen + len);
 	(void) memcpy((char *)(p->strip + p->slen),
 		(char *)(p->strip + start), (size_t)len*sizeof(sop));
@@ -1488,7 +1449,7 @@ sopno pos;
 		}
 	}
 	{
-          int length=(HERE()-pos-1)*sizeof(sop);
+          size_t length=(HERE()-pos-1)*sizeof(sop);
           bmove_upp((uchar *) &p->strip[pos+1]+length,
                     (uchar *) &p->strip[pos]+length,
                     length);
@@ -1531,6 +1492,15 @@ register sopno size;
 
 	if (p->ssize >= size)
 		return;
+
+        DBUG_EXECUTE_IF("bug24449090_simulate_oom",
+                        {
+                          free(p->strip);
+                          p->strip= NULL;
+                          p->ssize= 0;
+                          SETERROR(REG_ESPACE);
+                          return;
+                        });
 
 	sp = (sop *)realloc(p->strip, size*sizeof(sop));
 	if (sp == NULL) {

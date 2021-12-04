@@ -1557,7 +1557,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "mysql_query_cache_size",	"16"				, 0 },	// MB
 	{ "mysql_read_rnd_buffer_size",	"256"				, 0 },	// KB
 	{ "mysql_net_buffer_length",	"2"				, 0 },	// K
-	{ "mysql_max_connections",	"1000"				, 0 },
+	{ "mysql_max_connections",	"100"				, 0 },
 #endif
 
 #ifdef TCONFIG_TOR

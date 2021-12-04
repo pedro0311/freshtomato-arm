@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndb_desc\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDB_DESC\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDB_DESC\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,7 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndb_desc
 .SH "NAME"
 ndb_desc \- describe NDB tables
 .SH "SYNOPSIS"
@@ -39,32 +38,34 @@ ndb_desc \- describe NDB tables
 provides a detailed description of one or more
 NDB
 tables\&.
-        Usage
+Usage
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-ndb_desc \-c \fIconnect_string\fR \fItbl_name\fR \-d \fIdb_name\fR [\-p]
+ndb_desc \-c \fIconnection_string\fR \fItbl_name\fR \-d \fIdb_name\fR [\fIoptions\fR]
 .fi
 .if n \{\
 .RE
 .\}
 .PP
-(\fIMySQL Cluster NDB 7\&.0\&.36 and later; MySQL Cluster NDB 7\&.1\&.25 and later:\fR)
+(\fINDB 7\&.2\&.9 and later:\fR)
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-ndb_desc \-c \fIconnect_string\fR \fIindex_name\fR \-d \fIdb_name\fR \-t \fItbl_name\fR
+ndb_desc \-c \fIconnection_string\fR \fIindex_name\fR \-d \fIdb_name\fR \-t \fItbl_name\fR
 .fi
 .if n \{\
 .RE
 .\}
-.sp
-        Sample Output
 .PP
+Additional options that can be used with
+\fBndb_desc\fR
+are listed later in this section\&.
+Sample Output.PP
 MySQL table creation and population statements:
 .sp
 .if n \{\
@@ -140,10 +141,10 @@ Information about multiple tables can be obtained in a single invocation of
 \fBndb_desc\fR
 by using their names, separated by spaces\&. All of the tables must be in the same database\&.
 .PP
-Beginning with MySQL Cluster NDB 7\&.0\&.36 and MySQL Cluster NDB 7\&.1\&.25, it is possible to obtain additional information about a specific index using the
+Beginning with NDB 7\&.2\&.9, it is possible to obtain additional information about a specific index using the
 \fB\-\-table\fR
 (short form:
-\fB\-t\fR) option introduced in these versions and supplying the name of the index as the first argument to
+\fB\-t\fR) option introduced in this version and supplying the name of the index as the first argument to
 \fBndb_desc\fR, as shown here:
 .sp
 .if n \{\
@@ -181,7 +182,7 @@ TableStatus: Retrieved
 \-\- Attributes \-\-
 name Varchar(20;latin1_swedish_ci) NOT NULL AT=SHORT_VAR ST=MEMORY
 NDB$TNODE Unsigned [64] PRIMARY KEY DISTRIBUTION KEY AT=FIXED ST=MEMORY
-\-\- Indexes \-\- 
+\-\- Indexes \-\-
 PRIMARY KEY(NDB$TNODE) \- UniqueHashIndex
 NDBT_ProgramExit: 0 \- OK
 .fi
@@ -204,7 +205,7 @@ The
 Extent_space
 and
 Free extent_space
-columns were added in MySQL Cluster NDB 6\&.3\&.27 and MySQL Cluster NDB 7\&.0\&.8\&. They are applicable only to
+columns are applicable only to
 NDB
 tables having columns on disk; for tables having only in\-memory columns, these columns always contain the value
 0\&.
@@ -239,7 +240,7 @@ ALTER TABLESPACE ts_1
 .\}
 .PP
 (For more information on the statements just shown and the objects created by them, see
-Section\ \&17.5.12.1, \(lqMySQL Cluster Disk Data Objects\(rq, as well as
+Section\ \&18.5.12.1, \(lqNDB Cluster Disk Data Objects\(rq, as well as
 Section\ \&13.1.14, \(lqCREATE LOGFILE GROUP Syntax\(rq, and
 Section\ \&13.1.18, \(lqCREATE TABLESPACE Syntax\(rq\&.)
 .PP
@@ -258,7 +259,7 @@ CREATE TABLE fish (
     weight_gm INT(11) NOT NULL,
     PRIMARY KEY pk (id),
     UNIQUE KEY uk (name)
-) TABLESPACE ts_1 STORAGE DISK 
+) TABLESPACE ts_1 STORAGE DISK
 ENGINE=NDB;
 INSERT INTO fish VALUES
     (\*(Aq\*(Aq,\*(Aqguppy\*(Aq, 35, 2), (\*(Aq\*(Aq,\*(Aqtuna\*(Aq, 2500, 150000),
@@ -326,15 +327,15 @@ INFORMATION_SCHEMA\&.FILES
 table\&.
 .PP
 The following table includes options that are specific to
-\fBndb_desc\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+\fBndb_desc\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndb_desc\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.17.\ \&ndb_desc Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.291.\ \&Command\-line options for the ndb_desc program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -343,7 +344,7 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
 l l l
@@ -359,11 +360,11 @@ T{
 .PP
 -b
 T}:T{
-Include partition information for BLOB tables in output\&. Requires that
-            the \-p option also be used
+Include partition information for BLOB tables in output. Requires that
+              the -p option also be used
 T}:T{
 .PP
-ADDED: NDB 6\&.3\&.32, NDB 7\&.0\&.13, NDB 7\&.1\&.2
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -374,7 +375,7 @@ T}:T{
 Name of database containing table
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -382,11 +383,11 @@ T{
 .PP
 -n
 T}:T{
-Include partition\-to\-data\-node mappings in output\&. Requires that the \-p
-            option also be used
+Include partition-to-data-node mappings in output. Requires that the -p
+              option also be used
 T}:T{
 .PP
-ADDED: NDB 6\&.2\&.19, NDB 6\&.3\&.33, NDB 7\&.0\&.14, NDB 7\&.1\&.2
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -397,7 +398,7 @@ T}:T{
 Display information about partitions
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -408,7 +409,7 @@ T}:T{
 Number of times to retry the connection (once per second)
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -416,11 +417,11 @@ T{
 .PP
 -t
 T}:T{
-Specify the table in which to find an index\&. When this option is used,
-            \-p and \-n have no effect and are ignored\&.
+Specify the table in which to find an index. When this option is used,
+              -p and -n have no effect and are ignored.
 T}:T{
 .PP
-ADDED: NDB 7\&.0\&.36, NDB 7\&.1\&.25
+ADDED: NDB 7.2.9
 T}
 T{
 .PP
@@ -431,7 +432,7 @@ T}:T{
 Use unqualified table names
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
@@ -444,8 +445,6 @@ T}
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: blob-info option
-.\" blob-info option: ndb_desc
 \fB\-\-blob\-info\fR,
 \fB\-b\fR
 .sp
@@ -458,8 +457,6 @@ columns\&.
 Use of this option also requires the use of the
 \fB\-\-extra\-partition\-info\fR
 (\fB\-p\fR) option\&.
-.sp
-This option was added in MySQL Cluster NDB 6\&.3\&.32, MySQL Cluster NDB 7\&.0\&.13, and MySQL Cluster NDB 7\&.1\&.2\&.
 .RE
 .sp
 .RS 4
@@ -470,8 +467,6 @@ This option was added in MySQL Cluster NDB 6\&.3\&.32, MySQL Cluster NDB 7\&.0\&
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: database option
-.\" database option: ndb_desc
 \fB\-\-database=\fR\fB\fIdb_name\fR\fR,
 \fB\-d\fR
 .sp
@@ -486,18 +481,14 @@ Specify the database in which the table should be found\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: extra-node-info option
-.\" extra-node-info option: ndb_desc
 \fB\-\-extra\-node\-info\fR,
 \fB\-n\fR
 .sp
-Include information about the mappings between table partitions and the data nodes upon which they reside\&. This information can be useful for verifying distribution awareness mechanisms and supporting more efficient application access to the data stored in MySQL Cluster\&.
+Include information about the mappings between table partitions and the data nodes upon which they reside\&. This information can be useful for verifying distribution awareness mechanisms and supporting more efficient application access to the data stored in NDB Cluster\&.
 .sp
 Use of this option also requires the use of the
 \fB\-\-extra\-partition\-info\fR
 (\fB\-p\fR) option\&.
-.sp
-This option was added in MySQL Cluster NDB 6\&.2\&.19, MySQL Cluster NDB 6\&.3\&.33, MySQL Cluster NDB 7\&.0\&.14, and MySQL Cluster NDB 7\&.1\&.2\&.
 .RE
 .sp
 .RS 4
@@ -508,8 +499,6 @@ This option was added in MySQL Cluster NDB 6\&.2\&.19, MySQL Cluster NDB 6\&.3\&
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: extra-partition-info option
-.\" extra-partition-info option: ndb_desc
 \fB\-\-extra\-partition\-info\fR,
 \fB\-p\fR
 .sp
@@ -524,8 +513,6 @@ Print additional information about the table\*(Aqs partitions\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: retries option
-.\" retries option: ndb_desc
 \fB\-\-retries=\fR\fB\fI#\fR\fR,
 \fB\-r\fR
 .sp
@@ -540,14 +527,12 @@ Try to connect this many times before giving up\&. One connect attempt is made p
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: table option
-.\" table option: ndb_desc
 \fB\-\-table=\fR\fB\fItbl_name\fR\fR,
 \fB\-t\fR
 .sp
 Specify the table in which to look for an index\&.
 .sp
-This option was added in MySQL Cluster NDB 7\&.0\&.36 and MySQL Cluster NDB 7\&.1\&.25\&.
+This option was added in NDB 7\&.2\&.9\&.
 .RE
 .sp
 .RS 4
@@ -558,8 +543,6 @@ This option was added in MySQL Cluster NDB 7\&.0\&.36 and MySQL Cluster NDB 7\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_desc: unqualified option
-.\" unqualified option: ndb_desc
 \fB\-\-unqualified\fR,
 \fB\-u\fR
 .sp
@@ -568,7 +551,7 @@ Use unqualified table names\&.
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP
@@ -580,7 +563,7 @@ You should have received a copy of the GNU General Public License along with the
 .IP " 1." 4
 NDB Schema Object Versions
 .RS 4
-\%http://dev.mysql.com/doc/ndbapi/en/ndb-internals-schema-object-versions.html
+\%http://dev.mysql.com/doc/ndb-internals/en/ndb-internals-schema-object-versions.html
 .RE
 .SH "SEE ALSO"
 For more information, please refer to the MySQL Reference Manual,

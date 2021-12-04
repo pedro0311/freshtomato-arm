@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2005, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -91,7 +91,7 @@ opaque* x509::use_buffer()
 //CertManager
 CertManager::CertManager()
     : peerX509_(0), verifyPeer_(false), verifyNone_(false), failNoCert_(false),
-      sendVerify_(false), verifyCallback_(0)
+      sendVerify_(false), sendBlankCert_(false), verifyCallback_(0)
 {}
 
 
@@ -142,6 +142,11 @@ void CertManager::setVerifyNone()
     verifyNone_ = true;
 }
 
+bool CertManager::sendBlankCert() const
+{
+  return sendBlankCert_;
+}
+
 
 void CertManager::setFailNoCert()
 {
@@ -152,6 +157,11 @@ void CertManager::setFailNoCert()
 void CertManager::setSendVerify()
 {
     sendVerify_ = true;
+}
+
+void CertManager::setSendBlankCert()
+{
+  sendBlankCert_ = true;
 }
 
 
@@ -283,7 +293,10 @@ int CertManager::Validate()
         int aSz = (int)strlen(cert.GetAfterDate()) + 1;
         peerX509_ = NEW_YS X509(cert.GetIssuer(), iSz, cert.GetCommonName(),
                                 sSz, cert.GetBeforeDate(), bSz,
-                                cert.GetAfterDate(), aSz);
+                             cert.GetAfterDate(), aSz,
+                             cert.GetIssuerCnStart(), cert.GetIssuerCnLength(),
+                             cert.GetSubjectCnStart(), cert.GetSubjectCnLength()
+                            );
 
         if (err == TaoCrypt::SIG_OTHER_E && verifyCallback_) {
             X509_STORE_CTX store;
@@ -335,7 +348,9 @@ void CertManager::setPeerX509(X509* x)
 
     peerX509_ = NEW_YS X509(issuer->GetName(), issuer->GetLength(),
         subject->GetName(), subject->GetLength(), (const char*) before->data,
-        before->length, (const char*) after->data, after->length);
+        before->length, (const char*) after->data, after->length,
+        issuer->GetCnPosition(), issuer->GetCnLength(),
+        subject->GetCnPosition(), subject->GetCnLength());
 }
 
 

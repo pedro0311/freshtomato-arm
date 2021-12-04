@@ -1,4 +1,8 @@
-/* Copyright (C) 2006 MySQL AB
+#ifndef CONTRIBUTORS_INCLUDED
+#define CONTRIBUTORS_INCLUDED
+
+/* Copyright (c) 2006 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -37,3 +41,5 @@ struct show_table_contributors_st show_table_contributors[]= {
   {"Mark Shuttleworth", "London, UK.", "EFF contribution for UC2006 Auction"},
   {NULL, NULL, NULL}
 };
+
+#endif /* CONTRIBUTORS_INCLUDED */

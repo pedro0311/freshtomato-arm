@@ -1,4 +1,4 @@
-/* Copyright (c) 2004-2008 MySQL AB
+/* Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,11 +11,18 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
 #include "event_queue.h"
 #include "event_data_objects.h"
+#include "event_db_repository.h"
+#include "events.h"
+#include "sql_audit.h"
+#include "tztime.h"     // my_tz_find, my_tz_OFFSET0, struct Time_zone
+#include "log.h"        // sql_print_error
+#include "sql_class.h"  // struct THD
 
 /**
   @addtogroup Event_Scheduler
@@ -94,16 +101,16 @@ Event_queue::Event_queue()
    mutex_queue_data_attempting_lock(FALSE),
    waiting_on_cond(FALSE)
 {
-  pthread_mutex_init(&LOCK_event_queue, MY_MUTEX_INIT_FAST);
-  pthread_cond_init(&COND_queue_state, NULL);
+  mysql_mutex_init(key_LOCK_event_queue, &LOCK_event_queue, MY_MUTEX_INIT_FAST);
+  mysql_cond_init(key_COND_queue_state, &COND_queue_state, NULL);
 }
 
 
 Event_queue::~Event_queue()
 {
   deinit_queue();
-  pthread_mutex_destroy(&LOCK_event_queue);
-  pthread_cond_destroy(&COND_queue_state);
+  mysql_mutex_destroy(&LOCK_event_queue);
+  mysql_cond_destroy(&COND_queue_state);
 }
 
 
@@ -210,7 +217,7 @@ Event_queue::create_event(THD *thd, Event_queue_element *new_element,
   LOCK_QUEUE_DATA();
   *created= (queue_insert_safe(&queue, (uchar *) new_element) == FALSE);
   dbug_dump_queue(thd->query_start());
-  pthread_cond_broadcast(&COND_queue_state);
+  mysql_cond_broadcast(&COND_queue_state);
   UNLOCK_QUEUE_DATA();
 
   DBUG_RETURN(!*created);
@@ -258,7 +265,7 @@ Event_queue::update_event(THD *thd, LEX_STRING dbname, LEX_STRING name,
   {
     DBUG_PRINT("info", ("new event in the queue: 0x%lx", (long) new_element));
     queue_insert_safe(&queue, (uchar *) new_element);
-    pthread_cond_broadcast(&COND_queue_state);
+    mysql_cond_broadcast(&COND_queue_state);
   }
 
   dbug_dump_queue(thd->query_start());
@@ -343,7 +350,7 @@ Event_queue::drop_matching_events(THD *thd, LEX_STRING pattern,
       i++;
   }
   /*
-    We don't call pthread_cond_broadcast(&COND_queue_state);
+    We don't call mysql_cond_broadcast(&COND_queue_state);
     If we remove the top event:
     1. The queue is empty. The scheduler will wake up at some time and
        realize that the queue is empty. If create_event() comes inbetween
@@ -439,7 +446,6 @@ Event_queue::recalculate_activation_times(THD *thd)
   for (i= 0; i < queue.elements; i++)
   {
     ((Event_queue_element*)queue_element(&queue, i))->compute_next_execution_time();
-    ((Event_queue_element*)queue_element(&queue, i))->update_timing_fields(thd);
   }
   queue_fix(&queue);
   /*
@@ -562,6 +568,8 @@ Event_queue::get_top_for_execution_if_time(THD *thd,
 {
   bool ret= FALSE;
   *event_name= NULL;
+  my_time_t UNINIT_VAR(last_executed);
+  int UNINIT_VAR(status);
   DBUG_ENTER("Event_queue::get_top_for_execution_if_time");
 
   LOCK_QUEUE_DATA();
@@ -580,6 +588,9 @@ Event_queue::get_top_for_execution_if_time(THD *thd,
     {
       /* There are no events in the queue */
       next_activation_at= 0;
+
+      /* Release any held audit resources before waiting */
+      mysql_audit_release(thd);
 
       /* Wait on condition until signaled. Release LOCK_queue while waiting. */
       cond_wait(thd, NULL, queue_empty_msg, SCHED_FUNC, __LINE__);
@@ -600,6 +611,10 @@ Event_queue::get_top_for_execution_if_time(THD *thd,
       */
       struct timespec top_time;
       set_timespec(top_time, next_activation_at - thd->query_start());
+
+      /* Release any held audit resources before waiting */
+      mysql_audit_release(thd);
+
       cond_wait(thd, &top_time, queue_wait_msg, SCHED_FUNC, __LINE__);
 
       continue;
@@ -620,8 +635,14 @@ Event_queue::get_top_for_execution_if_time(THD *thd,
 
     top->execution_count++;
     (*event_name)->dropped= top->dropped;
+    /*
+      Save new values of last_executed timestamp and event status on stack
+      in order to be able to update event description in system table once
+      QUEUE_DATA lock is released.
+    */
+    last_executed= top->last_executed;
+    status= top->status;
 
-    top->update_timing_fields(thd);
     if (top->status == Event_parse_data::DISABLED)
     {
       DBUG_PRINT("info", ("removing from the queue"));
@@ -644,8 +665,15 @@ end:
                       ret, (long) *event_name));
 
   if (*event_name)
+  {
     DBUG_PRINT("info", ("db: %s  name: %s",
                         (*event_name)->dbname.str, (*event_name)->name.str));
+
+    Event_db_repository *db_repository= Events::get_db_repository();
+    (void) db_repository->update_timing_fields_for_event(thd,
+                            (*event_name)->dbname, (*event_name)->name,
+                            last_executed, (ulonglong) status);
+  }
 
   DBUG_RETURN(ret);
 }
@@ -669,7 +697,7 @@ Event_queue::lock_data(const char *func, uint line)
   mutex_last_attempted_lock_in_func= func;
   mutex_last_attempted_lock_at_line= line;
   mutex_queue_data_attempting_lock= TRUE;
-  pthread_mutex_lock(&LOCK_event_queue);
+  mysql_mutex_lock(&LOCK_event_queue);
   mutex_last_attempted_lock_in_func= "";
   mutex_last_attempted_lock_at_line= 0;
   mutex_queue_data_attempting_lock= FALSE;
@@ -700,19 +728,19 @@ Event_queue::unlock_data(const char *func, uint line)
   mutex_last_unlocked_at_line= line;
   mutex_queue_data_locked= FALSE;
   mutex_last_unlocked_in_func= func;
-  pthread_mutex_unlock(&LOCK_event_queue);
+  mysql_mutex_unlock(&LOCK_event_queue);
   DBUG_VOID_RETURN;
 }
 
 
 /*
-  Wrapper for pthread_cond_wait/timedwait
+  Wrapper for mysql_cond_wait/timedwait
 
   SYNOPSIS
     Event_queue::cond_wait()
       thd     Thread (Could be NULL during shutdown procedure)
       msg     Message for thd->proc_info
-      abstime If not null then call pthread_cond_timedwait()
+      abstime If not null then call mysql_cond_timedwait()
       func    Which function is requesting cond_wait
       line    On which line cond_wait is requested
 */
@@ -729,11 +757,13 @@ Event_queue::cond_wait(THD *thd, struct timespec *abstime, const char* msg,
 
   thd->enter_cond(&COND_queue_state, &LOCK_event_queue, msg);
 
-  DBUG_PRINT("info", ("pthread_cond_%swait", abstime? "timed":""));
-  if (!abstime)
-    pthread_cond_wait(&COND_queue_state, &LOCK_event_queue);
-  else
-    pthread_cond_timedwait(&COND_queue_state, &LOCK_event_queue, abstime);
+  if (!thd->killed)
+  {
+    if (!abstime)
+      mysql_cond_wait(&COND_queue_state, &LOCK_event_queue);
+    else
+      mysql_cond_timedwait(&COND_queue_state, &LOCK_event_queue, abstime);
+  }
 
   mutex_last_locked_in_func= func;
   mutex_last_locked_at_line= line;

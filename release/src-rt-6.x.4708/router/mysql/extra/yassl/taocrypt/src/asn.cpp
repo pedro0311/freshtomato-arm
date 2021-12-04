@@ -1,6 +1,5 @@
 /*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
-   Use is subject to license terms.
+   Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -40,7 +39,7 @@ namespace TaoCrypt {
 namespace { // locals
 
 
-// to the minute
+// to the second
 bool operator>(tm& a, tm& b)
 {
     if (a.tm_year > b.tm_year)
@@ -61,13 +60,18 @@ bool operator>(tm& a, tm& b)
         a.tm_min > b.tm_min)
         return true;
 
+    if (a.tm_year == b.tm_year && a.tm_mon == b.tm_mon &&
+        a.tm_mday == b.tm_mday && a.tm_hour == b.tm_hour &&
+        a.tm_min  == b.tm_min  && a.tm_sec > b.tm_sec)
+        return true;
+
     return false;
 }
 
 
 bool operator<(tm& a, tm&b)
 {
-    return !(a>b);
+    return (b>a);
 }
 
 
@@ -470,8 +474,9 @@ void DH_Decoder::Decode(DH& key)
 
 CertDecoder::CertDecoder(Source& s, bool decode, SignerList* signers,
                          bool noVerify, CertType ct)
-    : BER_Decoder(s), certBegin_(0), sigIndex_(0), sigLength_(0),
-      signature_(0), verify_(!noVerify)
+    : BER_Decoder(s), certBegin_(0), sigIndex_(0), sigLength_(0), subCnPos_(-1),
+      subCnLen_(0), issCnPos_(-1), issCnLen_(0), signature_(0),
+      verify_(!noVerify)
 {
     issuer_[0] = 0;
     subject_[0] = 0;
@@ -673,7 +678,7 @@ word32 CertDecoder::GetSignature()
     }
 
     sigLength_ = GetLength(source_);
-    if (sigLength_ == 0 || source_.IsLeft(sigLength_) == false) {
+    if (sigLength_ <= 1 || source_.IsLeft(sigLength_) == false) {
         source_.SetError(CONTENT_E);
         return 0;
     }
@@ -761,7 +766,7 @@ void CertDecoder::GetName(NameType nt)
     while (source_.get_index() < length) {
         GetSet();
         if (source_.GetError().What() == SET_E) {
-            source_.SetError(NO_ERROR_E);  // extensions may only have sequence
+            source_.SetError(NO_ERROR_E);  // extensions may only have sequence 
             source_.prev();
         }
         GetSequence();
@@ -792,6 +797,13 @@ void CertDecoder::GetName(NameType nt)
             case COMMON_NAME:
                 if (!(ptr = AddTag(ptr, buf_end, "/CN=", 4, strLen)))
                     return;
+                if (nt == ISSUER) {
+                    issCnPos_ = (int)(ptr - strLen - issuer_);
+                    issCnLen_ = (int)strLen;
+                } else {
+                    subCnPos_ = (int)(ptr - strLen - subject_);
+                    subCnLen_ = (int)strLen;
+                }
                 break;
             case SUR_NAME:
                 if (!(ptr = AddTag(ptr, buf_end, "/SN=", 4, strLen)))
@@ -832,10 +844,8 @@ void CertDecoder::GetName(NameType nt)
             if (source_.IsLeft(length) == false) return;
 
             if (email) {
-                if (!(ptr = AddTag(ptr, buf_end, "/emailAddress=", 14, length))) {
-                    source_.SetError(CONTENT_E);
-                    return;
-                }
+                if (!(ptr = AddTag(ptr, buf_end, "/emailAddress=", 14, length)))
+                    return; 
             }
 
             source_.advance(length);
@@ -972,12 +982,26 @@ bool CertDecoder::ConfirmSignature(Source& pub)
         hasher.reset(NEW_TC SHA);
         ht = SHAh;
     }
+    else if (signatureOID_ == SHA256wRSA || signatureOID_ == SHA256wDSA) {
+        hasher.reset(NEW_TC SHA256);
+        ht = SHA256h;
+    }
+#ifdef WORD64_AVAILABLE
+    else if (signatureOID_ == SHA384wRSA) {
+        hasher.reset(NEW_TC SHA384);
+        ht = SHA384h;
+    }
+    else if (signatureOID_ == SHA512wRSA) {
+        hasher.reset(NEW_TC SHA512);
+        ht = SHA512h;
+    }
+#endif
     else {
         source_.SetError(UNKOWN_SIG_E);
         return false;
     }
 
-    byte digest[SHA::DIGEST_SIZE];      // largest size
+    byte digest[MAX_SHA2_DIGEST_SIZE];      // largest size
 
     hasher->Update(source_.get_buffer() + certBegin_, sigIndex_ - certBegin_);
     hasher->Final(digest);
@@ -990,11 +1014,17 @@ bool CertDecoder::ConfirmSignature(Source& pub)
         RSA_PublicKey pubKey(pub);
         RSAES_Encryptor enc(pubKey);
 
+        if (pubKey.FixedCiphertextLength() != sigLength_) {
+            source_.SetError(SIG_LEN_E);
+            return false;
+        }
+
         return enc.SSL_Verify(build.get_buffer(), build.size(), signature_);
     }
     else  { // DSA
         // extract r and s from sequence
         byte seqDecoded[DSA_SIG_SZ];
+        memset(seqDecoded, 0, sizeof(seqDecoded));
         DecodeDSA_Signature(seqDecoded, signature_, sigLength_);
 
         DSA_PublicKey pubKey(pub);
@@ -1050,6 +1080,12 @@ word32 DER_Encoder::SetAlgoID(HashType aOID, byte* output)
                                       0x02, 0x05, 0x05, 0x00  };
     static const byte md2AlgoID[] = { 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d,
                                       0x02, 0x02, 0x05, 0x00};
+    static const byte sha256AlgoID[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+                                         0x04, 0x02, 0x01, 0x05, 0x00 };
+    static const byte sha384AlgoID[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+                                         0x04, 0x02, 0x02, 0x05, 0x00 };
+    static const byte sha512AlgoID[] = { 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
+                                         0x04, 0x02, 0x03, 0x05, 0x00 };
 
     int algoSz = 0;
     const byte* algoName = 0;
@@ -1058,6 +1094,21 @@ word32 DER_Encoder::SetAlgoID(HashType aOID, byte* output)
     case SHAh:
         algoSz = sizeof(shaAlgoID);
         algoName = shaAlgoID;
+        break;
+
+    case SHA256h:
+        algoSz = sizeof(sha256AlgoID);
+        algoName = sha256AlgoID;
+        break;
+
+    case SHA384h:
+        algoSz = sizeof(sha384AlgoID);
+        algoName = sha384AlgoID;
+        break;
+
+    case SHA512h:
+        algoSz = sizeof(sha512AlgoID);
+        algoName = sha512AlgoID;
         break;
 
     case MD2h:
@@ -1158,17 +1209,17 @@ word32 DecodeDSA_Signature(byte* decoded, const byte* encoded, word32 sz)
     }
     word32 rLen = GetLength(source);
     if (rLen != 20) {
-        if (rLen == 21) {       // zero at front, eat
+        while (rLen > 20 && source.remaining() > 0) {  // zero's at front, eat
             source.next();
             --rLen;
         }
-        else if (rLen == 19) {  // add zero to front so 20 bytes
+        if (rLen < 20) { // add zero's to front so 20 bytes
+            word32 tmpLen = rLen;
+            while (tmpLen < 20) {
             decoded[0] = 0;
             decoded++;
+                tmpLen++;
         }
-        else {
-            source.SetError(DSA_SZ_E);
-            return 0;
         }
     }
     memcpy(decoded, source.get_buffer() + source.get_index(), rLen);
@@ -1181,17 +1232,17 @@ word32 DecodeDSA_Signature(byte* decoded, const byte* encoded, word32 sz)
     }
     word32 sLen = GetLength(source);
     if (sLen != 20) {
-        if (sLen == 21) {
-            source.next();          // zero at front, eat
+        while (sLen > 20 && source.remaining() > 0) {
+            source.next();          // zero's at front, eat
             --sLen;
         }
-        else if (sLen == 19) {
-            decoded[rLen] = 0;      // add zero to front so 20 bytes
+        if (sLen < 20) { // add zero's to front so 20 bytes
+            word32 tmpLen = sLen;
+            while (tmpLen < 20) {
+                decoded[rLen] = 0;
             decoded++;
+                tmpLen++;
         }
-        else {
-            source.SetError(DSA_SZ_E);
-            return 0;
         }
     }
     memcpy(decoded + rLen, source.get_buffer() + source.get_index(), sLen);

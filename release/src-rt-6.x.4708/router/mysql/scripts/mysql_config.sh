@@ -1,6 +1,5 @@
 #!/bin/sh
-# Copyright (c) 2000-2008 MySQL AB, 2008 Sun Microsystems, Inc.
-# Use is subject to license terms.
+# Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -77,7 +76,8 @@ get_full_path ()
 
 me=`get_full_path $0`
 
-basedir=`echo $me | sed -e 's;/bin/mysql_config;;'`
+# Script might have been renamed but assume mysql_<something>config<something>
+basedir=`echo $me | sed -e 's;/bin/mysql_.*config.*;;'`
 
 ldata='@localstatedir@'
 execdir='@libexecdir@'
@@ -86,12 +86,18 @@ bindir='@bindir@'
 # If installed, search for the compiled in directory first (might be "lib64")
 pkglibdir='@pkglibdir@'
 pkglibdir_rel=`echo $pkglibdir | sed -e "s;^$basedir/;;"`
-fix_path pkglibdir $pkglibdir_rel lib/mysql lib
+fix_path pkglibdir $pkglibdir_rel @libsubdir@/mysql @libsubdir@
 
 plugindir='@pkgplugindir@'
+plugindir_rel=`echo $plugindir | sed -e "s;^$basedir/;;"`
+fix_path plugindir $plugindir_rel @libsubdir@/mysql/plugin @libsubdir@/plugin
 
 pkgincludedir='@pkgincludedir@'
-fix_path pkgincludedir include/mysql include
+if [ -f "$basedir/include/mysql/mysql.h" ]; then
+  pkgincludedir="$basedir/include/mysql"
+elif [ -f "$basedir/include/mysql.h" ]; then
+  pkgincludedir="$basedir/include"
+fi
 
 version='@VERSION@'
 socket='@MYSQL_UNIX_ADDR@'
@@ -105,10 +111,10 @@ fi
 
 # Create options 
 # We intentionally add a space to the beginning and end of lib strings, simplifies replace later
-libs=" $ldflags -L$pkglibdir -lmysqlclient @ZLIB_DEPS@ @NON_THREADED_LIBS@"
+libs=" $ldflags -L$pkglibdir @RPATH_OPTION@ -lmysqlclient @ZLIB_DEPS@ @NON_THREADED_LIBS@"
 libs="$libs @openssl_libs@ @STATIC_NSS_FLAGS@ "
-libs_r=" $ldflags -L$pkglibdir -lmysqlclient_r @ZLIB_DEPS@ @LIBS@ @openssl_libs@ "
-embedded_libs=" $ldflags -L$pkglibdir -lmysqld @LIBDL@ @ZLIB_DEPS@ @LIBS@ @WRAPLIBS@ @innodb_system_libs@ @openssl_libs@ "
+libs_r=" $ldflags -L$pkglibdir  @RPATH_OPTION@ -lmysqlclient_r @ZLIB_DEPS@ @CLIENT_LIBS@ @openssl_libs@ "
+embedded_libs=" $ldflags -L$pkglibdir @RPATH_OPTION@ -lmysqld @LIBDL@ @ZLIB_DEPS@ @LIBS@ @WRAPLIBS@ @openssl_libs@ "
 
 if [ -r "$pkglibdir/libmygcc.a" ]; then
   # When linking against the static library with a different version of GCC
@@ -128,8 +134,7 @@ include="-I$pkgincludedir"
 #       and -xstrconst to make --cflags usable for Sun Forte C++
 # FIXME until we have a --cxxflags, we need to remove -AC99
 #       to make --cflags usable for HP C++ (aCC)
-for remove in DDBUG_OFF DSAFEMALLOC USAFEMALLOC DSAFE_MUTEX \
-              DPEDANTIC_SAFEMALLOC DUNIV_MUST_NOT_INLINE DFORCE_INIT_OF_VARS \
+for remove in DDBUG_OFF DSAFE_MUTEX DUNIV_MUST_NOT_INLINE DFORCE_INIT_OF_VARS \
               DEXTRA_DEBUG DHAVE_purify O 'O[0-9]' 'xO[0-9]' 'W[-A-Za-z]*' \
               'mtune=[-A-Za-z0-9]*' 'mcpu=[-A-Za-z0-9]*' 'march=[-A-Za-z0-9]*' \
               Xa xstrconst "xc99=none" AC99 \
@@ -168,6 +173,10 @@ Options:
         --port           [$port]
         --version        [$version]
         --libmysqld-libs [$embedded_libs]
+        --variable=VAR   VAR is one of:
+                pkgincludedir [$pkgincludedir]
+                pkglibdir     [$pkglibdir]
+                plugindir     [$plugindir]
 EOF
         exit 1
 }
@@ -185,6 +194,15 @@ while test $# -gt 0; do
         --port)    echo "$port" ;;
         --version) echo "$version" ;;
         --embedded-libs | --embedded | --libmysqld-libs) echo "$embedded_libs" ;;
+        --variable=*)
+          var=`echo "$1" | sed 's,^[^=]*=,,'`
+          case "$var" in
+            pkgincludedir) echo "$pkgincludedir" ;;
+            pkglibdir) echo "$pkglibdir" ;;
+            plugindir) echo "$plugindir" ;;
+            *) usage ;;
+          esac
+          ;;
         *)         usage ;;
         esac
 

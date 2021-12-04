@@ -1,4 +1,7 @@
-/* Copyright (c) 2000-2003, 2006, 2007 MySQL AB
+#ifndef HA_NDBCLUSTER_BINLOG_INCLUDED
+#define HA_NDBCLUSTER_BINLOG_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -11,8 +14,10 @@
 
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 */
+
+#include "sql_class.h"                      /* THD */
 
 // Typedefs for long names
 typedef NdbDictionary::Object NDBOBJ;
@@ -23,8 +28,6 @@ typedef NdbDictionary::Dictionary  NDBDICT;
 typedef NdbDictionary::Event  NDBEVENT;
 
 #define IS_TMP_PREFIX(A) (is_prefix(A, tmp_file_prefix))
-
-extern ulong ndb_extra_logging;
 
 #define INJECTOR_EVENT_LEN 200
 
@@ -103,16 +106,24 @@ private:
 };
 
 #ifdef HAVE_NDB_BINLOG
+
+#ifdef HAVE_PSI_INTERFACE
+extern PSI_mutex_key key_injector_mutex, key_ndb_schema_share_mutex,
+                     key_ndb_schema_object_mutex;
+extern PSI_cond_key key_injector_cond;
+extern PSI_thread_key key_thread_ndb_binlog;
+#endif /* HAVE_PSI_INTERFACE */
+
 extern pthread_t ndb_binlog_thread;
-extern pthread_mutex_t injector_mutex;
-extern pthread_cond_t  injector_cond;
+extern mysql_mutex_t injector_mutex;
+extern mysql_cond_t  injector_cond;
 
 extern unsigned char g_node_id_map[max_ndb_nodes];
 extern pthread_t ndb_util_thread;
-extern pthread_mutex_t LOCK_ndb_util_thread;
-extern pthread_cond_t COND_ndb_util_thread;
+extern mysql_mutex_t LOCK_ndb_util_thread;
+extern mysql_cond_t COND_ndb_util_thread;
 extern int ndbcluster_util_inited;
-extern pthread_mutex_t ndbcluster_mutex;
+extern mysql_mutex_t ndbcluster_mutex;
 extern HASH ndbcluster_open_tables;
 extern Ndb_cluster_connection* g_ndb_cluster_connection;
 extern long ndb_number_of_storage_nodes;
@@ -147,8 +158,7 @@ int ndbcluster_log_schema_op(THD *thd, NDB_SHARE *share,
                              uint32 ndb_table_version,
                              enum SCHEMA_OP_TYPE type,
                              const char *new_db,
-                             const char *new_table_name,
-                             int have_lock_open);
+                             const char *new_table_name);
 int ndbcluster_handle_drop_table(Ndb *ndb, const char *event_name,
                                  NDB_SHARE *share,
                                  const char *type_str);
@@ -225,3 +235,5 @@ set_thd_ndb(THD *thd, Thd_ndb *thd_ndb)
 { thd_set_ha_data(thd, ndbcluster_hton, thd_ndb); }
 
 Ndb* check_ndb_in_thd(THD* thd);
+
+#endif /* HA_NDBCLUSTER_BINLOG_INCLUDED */

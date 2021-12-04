@@ -1,8 +1,7 @@
 # Microsoft Developer Studio Project File - Name="@name@" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 
-# Copyright (c) 2004, 2005 MySQL AB
-# Use is subject to license terms.
+# Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,7 +84,7 @@ LIB32=xilink6.exe -lib
 # PROP Intermediate_Dir "debug"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /Z7 /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /G6 /MTd /W3 /Z7 /Od /Gf /D "WIN32" /D "_DEBUG" /D "SAFEMALLOC" /D "SAFE_MUTEX" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /G6 /MTd /W3 /Z7 /Od /Gf /D "WIN32" /D "_DEBUG" /D "SAFE_MUTEX" /D "_WINDOWS" /FD /c
 # ADD BASE CPP @includes@
 # ADD CPP @includes@
 # SUBTRACT CPP /YX

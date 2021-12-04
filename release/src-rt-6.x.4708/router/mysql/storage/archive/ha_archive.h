@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2007 MySQL AB
+/* Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights reserved.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
@@ -36,7 +36,7 @@ typedef struct st_archive_share {
   char *table_name;
   char data_file_name[FN_REFLEN];
   uint table_name_length,use_count;
-  pthread_mutex_t mutex;
+  mysql_mutex_t mutex;
   THR_LOCK lock;
   azio_stream archive_write;     /* Archive file we are working with */
   bool archive_write_open;
@@ -75,6 +75,7 @@ class ha_archive: public handler
 
   archive_record_buffer *create_record_buffer(unsigned int length);
   void destroy_record_buffer(archive_record_buffer *r);
+  int frm_copy(azio_stream *src, azio_stream *dst);
 
 public:
   ha_archive(handlerton *hton, TABLE_SHARE *table_arg);
@@ -89,7 +90,7 @@ public:
     return (HA_NO_TRANSACTIONS | HA_REC_NOT_IN_SEQ | HA_CAN_BIT_FIELD |
             HA_BINLOG_ROW_CAPABLE | HA_BINLOG_STMT_CAPABLE |
             HA_STATS_RECORDS_IS_EXACT |
-            HA_HAS_RECORDS |
+            HA_HAS_RECORDS | HA_CAN_REPAIR |
             HA_FILE_BASED | HA_CAN_INSERT_DELAYED | HA_CAN_GEOMETRY);
   }
   ulong index_flags(uint idx, uint part, bool all_parts) const
@@ -114,7 +115,7 @@ public:
   int close(void);
   int write_row(uchar * buf);
   int real_write_row(uchar *buf, azio_stream *writer);
-  int delete_all_rows();
+  int truncate();
   int rnd_init(bool scan=1);
   int rnd_next(uchar *buf);
   int rnd_pos(uchar * buf, uchar *pos);

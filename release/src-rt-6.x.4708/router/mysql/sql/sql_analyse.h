@@ -1,4 +1,7 @@
-/* Copyright (c) 2000-2003, 2005-2008 MySQL AB
+#ifndef SQL_ANALYSE_INCLUDED
+#define SQL_ANALYSE_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* Analyse database */
@@ -19,6 +22,8 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface				/* gcc class implementation */
 #endif
+
+#include "procedure.h"                          /* Procedure */
 
 #define my_thd_charset	default_charset_info
 
@@ -355,3 +360,7 @@ public:
 				      select_result *result,
 				      List<Item> &field_list);
 };
+
+bool append_escaped(String *to_str, String *from_str);
+
+#endif /* SQL_ANALYSE_INCLUDED */

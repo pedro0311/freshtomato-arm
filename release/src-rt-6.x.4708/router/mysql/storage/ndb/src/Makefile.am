@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2007 MySQL AB
+# Copyright (C) 2004-2005 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -48,6 +49,3 @@ libndbclient.dsp: Makefile \
 	@$(top_srcdir)/storage/ndb/config/win-sources $@ dummy.cpp
 	@$(top_srcdir)/storage/ndb/config/win-libraries $@ LIB $(libndbclient_la_LIBADD)
 	@touch dummy.cpp
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%

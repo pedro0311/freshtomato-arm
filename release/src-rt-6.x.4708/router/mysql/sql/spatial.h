@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,13 +11,17 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _spatial_h
 #define _spatial_h
 
+#include "sql_string.h"                         /* String, LEX_STRING */
+#include <my_compiler.h>
+
 #ifdef HAVE_SPATIAL
+
+class Gis_read_stream;
 
 const uint SRID_SIZE= 4;
 const uint SIZEOF_STORED_DOUBLE= 8;
@@ -269,6 +272,7 @@ public:
 
 public:
   static Geometry *create_by_typeid(Geometry_buffer *buffer, int type_id);
+
   static Geometry *construct(Geometry_buffer *buffer,
                              const char *data, uint32 data_len);
   static Geometry *create_from_wkt(Geometry_buffer *buffer,

@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2006, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2006, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,16 +11,23 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
-
+#include "sql_priv.h"
+#include "unireg.h"                             // HAVE_*
 #include "rpl_mi.h"
 #include "rpl_rli.h"
+#include "sql_base.h"                        // close_thread_tables
 #include <my_dir.h>    // For MY_STAT
 #include "sql_repl.h"  // For check_binlog_magic
+#include "log_event.h" // Format_description_log_event, Log_event,
+                       // FORMAT_DESCRIPTION_LOG_EVENT, ROTATE_EVENT,
+                       // PREFIX_SQL_LOAD
 #include "rpl_utility.h"
+#include "transaction.h"
+#include "sql_parse.h"                          // end_trans, ROLLBACK
+#include <mysql/plugin.h>
+#include <mysql/service_thd_wait.h>
 
 static int count_relay_log_space(Relay_log_info* rli);
 
@@ -30,12 +36,14 @@ int init_intvar_from_file(int* var, IO_CACHE* f, int default_val);
 int init_strvar_from_file(char *var, int max_size, IO_CACHE *f,
 			  const char *default_val);
 
-
-Relay_log_info::Relay_log_info()
+Relay_log_info::Relay_log_info(bool is_slave_recovery)
   :Slave_reporting_capability("SQL"),
    no_storage(FALSE), replicate_same_server_id(::replicate_same_server_id),
-   info_fd(-1), cur_log_fd(-1), save_temporary_tables(0),
-   cur_log_old_open_count(0), group_relay_log_pos(0), event_relay_log_pos(0),
+   info_fd(-1), cur_log_fd(-1), relay_log(&sync_relaylog_period),
+   sync_counter(0), is_relay_log_recovery(is_slave_recovery),
+   save_temporary_tables(0), cur_log_old_open_count(0),
+   error_on_rli_init_info(false), group_relay_log_pos(0),
+   event_relay_log_pos(0),
 #if HAVE_purify
    is_fake(FALSE),
 #endif
@@ -45,11 +53,17 @@ Relay_log_info::Relay_log_info()
    inited(0), abort_slave(0), slave_running(0), until_condition(UNTIL_NONE),
    until_log_pos(0), retried_trans(0),
    tables_to_lock(0), tables_to_lock_count(0),
-   last_event_start_time(0),
-   deferred_events(NULL),
-   m_flags(0)
+   last_event_start_time(0), deferred_events(NULL),m_flags(0),
+   row_stmt_start_timestamp(0), long_find_row_note_printed(false)
 {
   DBUG_ENTER("Relay_log_info::Relay_log_info");
+
+#ifdef HAVE_PSI_INTERFACE
+  relay_log.set_psi_keys(key_RELAYLOG_LOCK_index,
+                         key_RELAYLOG_update_cond,
+                         key_file_relaylog,
+                         key_file_relaylog_index);
+#endif
 
   group_relay_log_name[0]= event_relay_log_name[0]=
     group_master_log_name[0]= 0;
@@ -57,13 +71,17 @@ Relay_log_info::Relay_log_info()
   bzero((char*) &info_file, sizeof(info_file));
   bzero((char*) &cache_buf, sizeof(cache_buf));
   cached_charset_invalidate();
-  pthread_mutex_init(&run_lock, MY_MUTEX_INIT_FAST);
-  pthread_mutex_init(&data_lock, MY_MUTEX_INIT_FAST);
-  pthread_mutex_init(&log_space_lock, MY_MUTEX_INIT_FAST);
-  pthread_cond_init(&data_cond, NULL);
-  pthread_cond_init(&start_cond, NULL);
-  pthread_cond_init(&stop_cond, NULL);
-  pthread_cond_init(&log_space_cond, NULL);
+  mysql_mutex_init(key_relay_log_info_run_lock, &run_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_relay_log_info_data_lock,
+                   &data_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_relay_log_info_log_space_lock,
+                   &log_space_lock, MY_MUTEX_INIT_FAST);
+  mysql_mutex_init(key_relay_log_info_sleep_lock, &sleep_lock, MY_MUTEX_INIT_FAST);
+  mysql_cond_init(key_relay_log_info_data_cond, &data_cond, NULL);
+  mysql_cond_init(key_relay_log_info_start_cond, &start_cond, NULL);
+  mysql_cond_init(key_relay_log_info_stop_cond, &stop_cond, NULL);
+  mysql_cond_init(key_relay_log_info_log_space_cond, &log_space_cond, NULL);
+  mysql_cond_init(key_relay_log_info_sleep_cond, &sleep_cond, NULL);
   relay_log.init_pthread_objects();
   DBUG_VOID_RETURN;
 }
@@ -73,13 +91,15 @@ Relay_log_info::~Relay_log_info()
 {
   DBUG_ENTER("Relay_log_info::~Relay_log_info");
 
-  pthread_mutex_destroy(&run_lock);
-  pthread_mutex_destroy(&data_lock);
-  pthread_mutex_destroy(&log_space_lock);
-  pthread_cond_destroy(&data_cond);
-  pthread_cond_destroy(&start_cond);
-  pthread_cond_destroy(&stop_cond);
-  pthread_cond_destroy(&log_space_cond);
+  mysql_mutex_destroy(&run_lock);
+  mysql_mutex_destroy(&data_lock);
+  mysql_mutex_destroy(&log_space_lock);
+  mysql_mutex_destroy(&sleep_lock);
+  mysql_cond_destroy(&data_cond);
+  mysql_cond_destroy(&start_cond);
+  mysql_cond_destroy(&stop_cond);
+  mysql_cond_destroy(&log_space_cond);
+  mysql_cond_destroy(&sleep_cond);
   relay_log.cleanup();
   DBUG_VOID_RETURN;
 }
@@ -89,7 +109,7 @@ int init_relay_log_info(Relay_log_info* rli,
 			const char* info_fname)
 {
   char fname[FN_REFLEN+128];
-  int info_fd;
+  int info_fd= -1;
   const char* msg = 0;
   int error = 0;
   DBUG_ENTER("init_relay_log_info");
@@ -98,7 +118,9 @@ int init_relay_log_info(Relay_log_info* rli,
   if (rli->inited)                       // Set if this function called
     DBUG_RETURN(0);
   fn_format(fname, info_fname, mysql_data_home, "", 4+32);
-  pthread_mutex_lock(&rli->data_lock);
+  mysql_mutex_lock(&rli->data_lock);
+  if (rli->error_on_rli_init_info)
+    goto err;
   info_fd = rli->info_fd;
   rli->cur_log_fd = -1;
   rli->slave_skip_counter=0;
@@ -113,7 +135,7 @@ int init_relay_log_info(Relay_log_info* rli,
   if (fn_format(pattern, PREFIX_SQL_LOAD, pattern, "",
             MY_SAFE_PATH | MY_RETURN_REAL_PATH) == NullS)
   {
-    pthread_mutex_unlock(&rli->data_lock);
+    mysql_mutex_unlock(&rli->data_lock);
     sql_print_error("Unable to use slave's temporary directory %s",
                     slave_load_tmpdir);
     DBUG_RETURN(1);
@@ -142,7 +164,7 @@ int init_relay_log_info(Relay_log_info* rli,
     if (opt_relay_logname && 
         opt_relay_logname[strlen(opt_relay_logname) - 1] == FN_LIBCHAR)
     {
-      pthread_mutex_unlock(&rli->data_lock);
+      mysql_mutex_unlock(&rli->data_lock);
       sql_print_error("Path '%s' is a directory name, please specify \
 a file name for --relay-log option", opt_relay_logname);
       DBUG_RETURN(1);
@@ -154,7 +176,7 @@ a file name for --relay-log option", opt_relay_logname);
         opt_relaylog_index_name[strlen(opt_relaylog_index_name) - 1] 
         == FN_LIBCHAR)
     {
-      pthread_mutex_unlock(&rli->data_lock);
+      mysql_mutex_unlock(&rli->data_lock);
       sql_print_error("Path '%s' is a directory name, please specify \
 a file name for --relay-log-index option", opt_relaylog_index_name);
       DBUG_RETURN(1);
@@ -191,7 +213,7 @@ a file name for --relay-log-index option", opt_relaylog_index_name);
                             (max_relay_log_size ? max_relay_log_size :
                             max_binlog_size), 1, TRUE))
     {
-      pthread_mutex_unlock(&rli->data_lock);
+      mysql_mutex_unlock(&rli->data_lock);
       sql_print_error("Failed in open_log() called from init_relay_log_info()");
       DBUG_RETURN(1);
     }
@@ -206,12 +228,13 @@ a file name for --relay-log-index option", opt_relaylog_index_name);
       the old descriptor and re-create the old file
     */
     if (info_fd >= 0)
-      my_close(info_fd, MYF(MY_WME));
-    if ((info_fd = my_open(fname, O_CREAT|O_RDWR|O_BINARY, MYF(MY_WME))) < 0)
+      mysql_file_close(info_fd, MYF(MY_WME));
+    if ((info_fd= mysql_file_open(key_file_relay_log_info,
+                                  fname, O_CREAT|O_RDWR|O_BINARY, MYF(MY_WME))) < 0)
     {
       sql_print_error("Failed to create a new relay log info file (\
 file '%s', errno %d)", fname, my_errno);
-      msg= current_thd->main_da.message();
+      msg= current_thd->stmt_da->message();
       goto err;
     }
     if (init_io_cache(&rli->info_file, info_fd, IO_SIZE*2, READ_CACHE, 0L,0,
@@ -219,7 +242,7 @@ file '%s', errno %d)", fname, my_errno);
     {
       sql_print_error("Failed to create a cache on relay log info file '%s'",
                       fname);
-      msg= current_thd->main_da.message();
+      msg= current_thd->stmt_da->message();
       goto err;
     }
 
@@ -241,7 +264,8 @@ file '%s', errno %d)", fname, my_errno);
     else
     {
       int error=0;
-      if ((info_fd = my_open(fname, O_RDWR|O_BINARY, MYF(MY_WME))) < 0)
+      if ((info_fd= mysql_file_open(key_file_relay_log_info,
+                                    fname, O_RDWR|O_BINARY, MYF(MY_WME))) < 0)
       {
         sql_print_error("\
 Failed to open the existing relay log info file '%s' (errno %d)",
@@ -258,10 +282,10 @@ Failed to open the existing relay log info file '%s' (errno %d)",
       if (error)
       {
         if (info_fd >= 0)
-          my_close(info_fd, MYF(0));
+          mysql_file_close(info_fd, MYF(0));
         rli->info_fd= -1;
         rli->relay_log.close(LOG_CLOSE_INDEX | LOG_CLOSE_STOP_EVENT);
-        pthread_mutex_unlock(&rli->data_lock);
+        mysql_mutex_unlock(&rli->data_lock);
         DBUG_RETURN(1);
       }
     }
@@ -285,6 +309,9 @@ Failed to open the existing relay log info file '%s' (errno %d)",
             sizeof(rli->event_relay_log_name)-1);
     rli->group_relay_log_pos= rli->event_relay_log_pos= relay_log_pos;
     rli->group_master_log_pos= master_log_pos;
+
+    if (rli->is_relay_log_recovery && init_recovery(rli->mi, &msg))
+      goto err;
 
     if (init_relay_log_pos(rli,
                            rli->group_relay_log_name,
@@ -317,24 +344,30 @@ Failed to open the existing relay log info file '%s' (errno %d)",
   */
   reinit_io_cache(&rli->info_file, WRITE_CACHE,0L,0,1);
   if ((error= flush_relay_log_info(rli)))
-    sql_print_error("Failed to flush relay log info file");
+  {
+    msg= "Failed to flush relay log info file";
+    goto err;
+  }
   if (count_relay_log_space(rli))
   {
     msg="Error counting relay log space";
     goto err;
   }
   rli->inited= 1;
-  pthread_mutex_unlock(&rli->data_lock);
+  rli->error_on_rli_init_info= false;
+  mysql_mutex_unlock(&rli->data_lock);
   DBUG_RETURN(error);
 
 err:
-  sql_print_error("%s", msg);
+  rli->error_on_rli_init_info= true;
+  if (msg)
+    sql_print_error("%s", msg);
   end_io_cache(&rli->info_file);
   if (info_fd >= 0)
-    my_close(info_fd, MYF(0));
+    mysql_file_close(info_fd, MYF(0));
   rli->info_fd= -1;
   rli->relay_log.close(LOG_CLOSE_INDEX | LOG_CLOSE_STOP_EVENT);
-  pthread_mutex_unlock(&rli->data_lock);
+  mysql_mutex_unlock(&rli->data_lock);
   DBUG_RETURN(1);
 }
 
@@ -343,7 +376,8 @@ static inline int add_relay_log(Relay_log_info* rli,LOG_INFO* linfo)
 {
   MY_STAT s;
   DBUG_ENTER("add_relay_log");
-  if (!my_stat(linfo->log_file_name,&s,MYF(0)))
+  if (!mysql_file_stat(key_file_relaylog,
+                       linfo->log_file_name, &s, MYF(0)))
   {
     sql_print_error("log %s listed in the index, but failed to stat",
                     linfo->log_file_name);
@@ -443,10 +477,10 @@ int init_relay_log_pos(Relay_log_info* rli,const char* log,
   DBUG_PRINT("info", ("pos: %lu", (ulong) pos));
 
   *errmsg=0;
-  pthread_mutex_t *log_lock=rli->relay_log.get_log_lock();
+  mysql_mutex_t *log_lock= rli->relay_log.get_log_lock();
 
   if (need_data_lock)
-    pthread_mutex_lock(&rli->data_lock);
+    mysql_mutex_lock(&rli->data_lock);
 
   /*
     Slave threads are not the only users of init_relay_log_pos(). CHANGE MASTER
@@ -466,13 +500,13 @@ int init_relay_log_pos(Relay_log_info* rli,const char* log,
   rli->relay_log.description_event_for_exec= new
     Format_description_log_event(3);
 
-  pthread_mutex_lock(log_lock);
+  mysql_mutex_lock(log_lock);
 
   /* Close log file and free buffers if it's already open */
   if (rli->cur_log_fd >= 0)
   {
     end_io_cache(&rli->cache_buf);
-    my_close(rli->cur_log_fd, MYF(MY_WME));
+    mysql_file_close(rli->cur_log_fd, MYF(MY_WME));
     rli->cur_log_fd = -1;
   }
 
@@ -606,12 +640,12 @@ err:
   */
   if (!relay_log_purge)
     rli->log_space_limit= 0;
-  pthread_cond_broadcast(&rli->data_cond);
+  mysql_cond_broadcast(&rli->data_cond);
 
-  pthread_mutex_unlock(log_lock);
+  mysql_mutex_unlock(log_lock);
 
   if (need_data_lock)
-    pthread_mutex_unlock(&rli->data_lock);
+    mysql_mutex_unlock(&rli->data_lock);
   if (!rli->relay_log.description_event_for_exec->is_valid() && !*errmsg)
     *errmsg= "Invalid Format_description log event; could be out of memory";
 
@@ -662,7 +696,7 @@ int Relay_log_info::wait_for_pos(THD* thd, String* log_name,
                       log_name->c_ptr(), (ulong) log_pos, (ulong) timeout));
 
   set_timespec(abstime,timeout);
-  pthread_mutex_lock(&data_lock);
+  mysql_mutex_lock(&data_lock);
   msg= thd->enter_cond(&data_cond, &data_lock,
                        "Waiting for the slave SQL thread to "
                        "advance position");
@@ -775,26 +809,28 @@ int Relay_log_info::wait_for_pos(THD* thd, String* log_name,
 
     DBUG_PRINT("info",("Waiting for master update"));
     /*
-      We are going to pthread_cond_(timed)wait(); if the SQL thread stops it
+      We are going to mysql_cond_(timed)wait(); if the SQL thread stops it
       will wake us up.
     */
+    thd_wait_begin(thd, THD_WAIT_BINLOG);
     if (timeout > 0)
     {
       /*
-        Note that pthread_cond_timedwait checks for the timeout
+        Note that mysql_cond_timedwait checks for the timeout
         before for the condition ; i.e. it returns ETIMEDOUT
         if the system time equals or exceeds the time specified by abstime
         before the condition variable is signaled or broadcast, _or_ if
         the absolute time specified by abstime has already passed at the time
         of the call.
-        For that reason, pthread_cond_timedwait will do the "timeoutting" job
+        For that reason, mysql_cond_timedwait will do the "timeoutting" job
         even if its condition is always immediately signaled (case of a loaded
         master).
       */
-      error=pthread_cond_timedwait(&data_cond, &data_lock, &abstime);
+      error= mysql_cond_timedwait(&data_cond, &data_lock, &abstime);
     }
     else
-      pthread_cond_wait(&data_cond, &data_lock);
+      mysql_cond_wait(&data_cond, &data_lock);
+    thd_wait_end(thd);
     DBUG_PRINT("info",("Got signal of master update or timed out"));
     if (error == ETIMEDOUT || error == ETIME)
     {
@@ -830,7 +866,7 @@ void Relay_log_info::inc_group_relay_log_pos(ulonglong log_pos,
   DBUG_ENTER("Relay_log_info::inc_group_relay_log_pos");
 
   if (!skip_lock)
-    pthread_mutex_lock(&data_lock);
+    mysql_mutex_lock(&data_lock);
   inc_event_relay_log_pos();
   group_relay_log_pos= event_relay_log_pos;
   strmake(group_relay_log_name,event_relay_log_name,
@@ -874,9 +910,9 @@ void Relay_log_info::inc_group_relay_log_pos(ulonglong log_pos,
   {
     group_master_log_pos= log_pos;
   }
-  pthread_cond_broadcast(&data_cond);
+  mysql_cond_broadcast(&data_cond);
   if (!skip_lock)
-    pthread_mutex_unlock(&data_lock);
+    mysql_mutex_unlock(&data_lock);
   DBUG_VOID_RETURN;
 }
 
@@ -912,6 +948,8 @@ int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
                      const char** errmsg)
 {
   int error=0;
+  const char *ln;
+  char name_buf[FN_REFLEN];
   DBUG_ENTER("purge_relay_logs");
 
   /*
@@ -938,14 +976,36 @@ int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
   if (!rli->inited)
   {
     DBUG_PRINT("info", ("rli->inited == 0"));
-    DBUG_RETURN(0);
+    if (rli->error_on_rli_init_info)
+    {
+      ln= rli->relay_log.generate_name(opt_relay_logname, "-relay-bin",
+                                       1, name_buf);
+
+      if (rli->relay_log.open_index_file(opt_relaylog_index_name, ln, TRUE))
+      {
+        sql_print_error("Unable to purge relay log files. Failed to open relay "
+                        "log index file:%s.", rli->relay_log.get_index_fname());
+        DBUG_RETURN(1);
+      }
+      if (rli->relay_log.open(ln, LOG_BIN, 0, SEQ_READ_APPEND, 0,
+                             (max_relay_log_size ? max_relay_log_size :
+                              max_binlog_size), 1, TRUE))
+      {
+        sql_print_error("Unable to purge relay log files. Failed to open relay "
+                        "log file:%s.", rli->relay_log.get_log_fname());
+        DBUG_RETURN(1);
+      }
+    }
+    else
+      DBUG_RETURN(0);
   }
-
-  DBUG_ASSERT(rli->slave_running == 0);
-  DBUG_ASSERT(rli->mi->slave_running == 0);
-
+  else
+  {
+    DBUG_ASSERT(rli->slave_running == 0);
+    DBUG_ASSERT(rli->mi->slave_running == 0);
+  }
   rli->slave_skip_counter=0;
-  pthread_mutex_lock(&rli->data_lock);
+  mysql_mutex_lock(&rli->data_lock);
 
   /*
     we close the relay log fd possibly left open by the slave SQL thread,
@@ -956,7 +1016,7 @@ int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
   if (rli->cur_log_fd >= 0)
   {
     end_io_cache(&rli->cache_buf);
-    my_close(rli->cur_log_fd, MYF(MY_WME));
+    mysql_file_close(rli->cur_log_fd, MYF(MY_WME));
     rli->cur_log_fd= -1;
   }
 
@@ -983,12 +1043,14 @@ int purge_relay_logs(Relay_log_info* rli, THD *thd, bool just_reset,
                               rli->group_relay_log_pos,
                               0 /* do not need data lock */, errmsg, 0);
 
+  if (!rli->inited && rli->error_on_rli_init_info)
+    rli->relay_log.close(LOG_CLOSE_INDEX | LOG_CLOSE_STOP_EVENT);
 err:
 #ifndef DBUG_OFF
   char buf[22];
 #endif
   DBUG_PRINT("info",("log_space_total: %s",llstr(rli->log_space_total,buf)));
-  pthread_mutex_unlock(&rli->data_lock);
+  mysql_mutex_unlock(&rli->data_lock);
   DBUG_RETURN(error);
 }
 
@@ -1040,7 +1102,7 @@ bool Relay_log_info::is_until_satisfied(THD *thd, Log_event *ev)
       DBUG_RETURN(FALSE);
     log_name= group_master_log_name;
     log_pos= (!ev)? group_master_log_pos :
-      ((thd->options & OPTION_BEGIN || !ev->log_pos) ?
+      ((thd->variables.option_bits & OPTION_BEGIN || !ev->log_pos) ?
        group_master_log_pos : ev->log_pos - ev->data_written);
   }
   else
@@ -1164,7 +1226,7 @@ void Relay_log_info::stmt_done(my_off_t event_master_log_pos,
     middle of the "transaction". START SLAVE will resume at BEGIN
     while the MyISAM table has already been updated.
   */
-  if ((sql_thd->options & OPTION_BEGIN) && opt_using_transactions)
+  if ((sql_thd->variables.option_bits & OPTION_BEGIN) && opt_using_transactions)
     inc_event_relay_log_pos();
   else
   {
@@ -1207,24 +1269,50 @@ void Relay_log_info::cleanup_context(THD *thd, bool error)
   */
   if (error)
   {
-    ha_autocommit_or_rollback(thd, 1); // if a "statement transaction"
-    end_trans(thd, ROLLBACK); // if a "real transaction"
+    trans_rollback_stmt(thd); // if a "statement transaction"
+    trans_rollback(thd);      // if a "real transaction"
   }
   m_table_map.clear_tables();
-  close_thread_tables(thd);
-  clear_tables_to_lock();
+  slave_close_thread_tables(thd);
+  if (error)
+    thd->mdl_context.release_transactional_locks();
   clear_flag(IN_STMT);
   /*
     Cleanup for the flags that have been set at do_apply_event.
   */
-  thd->options&= ~OPTION_NO_FOREIGN_KEY_CHECKS;
-  thd->options&= ~OPTION_RELAXED_UNIQUE_CHECKS;
-  last_event_start_time= 0;
+  thd->variables.option_bits&= ~OPTION_NO_FOREIGN_KEY_CHECKS;
+  thd->variables.option_bits&= ~OPTION_RELAXED_UNIQUE_CHECKS;
+
+  /*
+    Reset state related to long_find_row notes in the error log:
+    - timestamp
+    - flag that decides whether the slave prints or not
+  */
+  reset_row_stmt_start_timestamp();
+  unset_long_find_row_note_printed();
+
   DBUG_VOID_RETURN;
 }
 
 void Relay_log_info::clear_tables_to_lock()
 {
+  DBUG_ENTER("Relay_log_info::clear_tables_to_lock()");
+#ifndef DBUG_OFF
+  /**
+    When replicating in RBR and MyISAM Merge tables are involved
+    open_and_lock_tables (called in do_apply_event) appends the 
+    base tables to the list of tables_to_lock. Then these are 
+    removed from the list in close_thread_tables (which is called 
+    before we reach this point).
+
+    This assertion just confirms that we get no surprises at this
+    point.
+   */
+  uint i=0;
+  for (TABLE_LIST *ptr= tables_to_lock ; ptr ; ptr= ptr->next_global, i++) ;
+  DBUG_ASSERT(i == tables_to_lock_count);
+#endif  
+
   while (tables_to_lock)
   {
     uchar* to_free= reinterpret_cast<uchar*>(tables_to_lock);
@@ -1233,12 +1321,56 @@ void Relay_log_info::clear_tables_to_lock()
       tables_to_lock->m_tabledef.table_def::~table_def();
       tables_to_lock->m_tabledef_valid= FALSE;
     }
+
+    /*
+      If blob fields were used during conversion of field values 
+      from the master table into the slave table, then we need to 
+      free the memory used temporarily to store their values before
+      copying into the slave's table.
+    */
+    if (tables_to_lock->m_conv_table)
+      free_blobs(tables_to_lock->m_conv_table);
+
     tables_to_lock=
       static_cast<RPL_TABLE_LIST*>(tables_to_lock->next_global);
     tables_to_lock_count--;
-    my_free(to_free, MYF(MY_WME));
+    my_free(to_free);
   }
   DBUG_ASSERT(tables_to_lock == NULL && tables_to_lock_count == 0);
+  DBUG_VOID_RETURN;
 }
 
+void Relay_log_info::slave_close_thread_tables(THD *thd)
+{
+  DBUG_ENTER("Relay_log_info::slave_close_thread_tables(THD *thd)");
+  thd->stmt_da->can_overwrite_status= TRUE;
+  thd->is_error() ? trans_rollback_stmt(thd) : trans_commit_stmt(thd);
+  thd->stmt_da->can_overwrite_status= FALSE;
+
+  close_thread_tables(thd);
+  /*
+    - If transaction rollback was requested due to deadlock
+    perform it and release metadata locks.
+    - If inside a multi-statement transaction,
+    defer the release of metadata locks until the current
+    transaction is either committed or rolled back. This prevents
+    other statements from modifying the table for the entire
+    duration of this transaction.  This provides commit ordering
+    and guarantees serializability across multiple transactions.
+    - If in autocommit mode, or outside a transactional context,
+    automatically release metadata locks of the current statement.
+  */
+  if (thd->transaction_rollback_request)
+  {
+    trans_rollback_implicit(thd);
+    thd->mdl_context.release_transactional_locks();
+  }
+  else if (! thd->in_multi_stmt_transaction_mode())
+    thd->mdl_context.release_transactional_locks();
+  else
+    thd->mdl_context.release_statement_locks();
+
+  clear_tables_to_lock();
+  DBUG_VOID_RETURN;
+}
 #endif

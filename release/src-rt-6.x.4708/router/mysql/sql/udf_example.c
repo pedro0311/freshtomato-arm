@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
 ** example file of UDF (user definable functions) that are dynamicly loaded
@@ -109,7 +107,7 @@
 ** option.
 **
 ** If you can't get AGGREGATES to work, check that you have the column
-** 'type' in the mysql.func table.  If not, run 'mysql_fix_privilege_tables'.
+** 'type' in the mysql.func table.  If not, run 'mysql_upgrade'.
 **
 */
 
@@ -135,11 +133,15 @@ typedef long long longlong;
 #include <string.h>
 #define strmov(a,b) stpcpy(a,b)
 #define bzero(a,b) memset(a,0,b)
-#define memcpy_fixed(a,b,c) memcpy(a,b,c)
 #endif
 #endif
 #include <mysql.h>
 #include <ctype.h>
+
+#ifdef _WIN32
+/* inet_aton needs winsock library */
+#pragma comment(lib, "ws2_32")
+#endif
 
 #ifdef HAVE_DLOPEN
 
@@ -293,9 +295,12 @@ char *metaphon(UDF_INIT *initid __attribute__((unused)),
 
   if (!word)					/* Null argument */
   {
+    /* The length is expected to be zero when the argument is NULL. */
+    assert(args->lengths[0] == 0);
     *is_null=1;
     return 0;
   }
+
   w_end=word+args->lengths[0];
   org_result=result;
 
@@ -766,16 +771,16 @@ char *lookup(UDF_INIT *initid __attribute__((unused)), UDF_ARGS *args,
     return 0;
   }
 #else
-  VOID(pthread_mutex_lock(&LOCK_hostname));
+  pthread_mutex_lock(&LOCK_hostname);
   if (!(hostent= gethostbyname((char*) name_buff)))
   {
-    VOID(pthread_mutex_unlock(&LOCK_hostname));
+    pthread_mutex_unlock(&LOCK_hostname);
     *null_value= 1;
     return 0;
   }
-  VOID(pthread_mutex_unlock(&LOCK_hostname));
+  pthread_mutex_unlock(&LOCK_hostname);
 #endif
-  memcpy_fixed((char*) &in,(char*) *hostent->h_addr_list, sizeof(in.s_addr));
+  memcpy(&in, *hostent->h_addr_list, sizeof(in.s_addr));
   *res_length= (ulong) (strmov(result, inet_ntoa(in)) - result);
   return result;
 }
@@ -870,14 +875,14 @@ char *reverse_lookup(UDF_INIT *initid __attribute__((unused)), UDF_ARGS *args,
     return 0;
   }
 #else
-  VOID(pthread_mutex_lock(&LOCK_hostname));
+  pthread_mutex_lock(&LOCK_hostname);
   if (!(hp= gethostbyaddr((char*) &taddr, sizeof(taddr), AF_INET)))
   {
-    VOID(pthread_mutex_unlock(&LOCK_hostname));
+    pthread_mutex_unlock(&LOCK_hostname);
     *null_value= 1;
     return 0;
   }
-  VOID(pthread_mutex_unlock(&LOCK_hostname));
+  pthread_mutex_unlock(&LOCK_hostname);
 #endif
   *res_length=(ulong) (strmov(result,hp->h_name) - result);
   return result;

@@ -1,4 +1,7 @@
-/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+#ifndef ITEM_INCLUDED
+#define ITEM_INCLUDED
+
+/* Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -18,10 +21,27 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
+#include "sql_priv.h"                /* STRING_BUFFER_USUAL_SIZE */
+#include "unireg.h"
+#include "sql_const.h"                 /* RAND_TABLE_BIT, MAX_FIELD_NAME */
+#include "unireg.h"                    // REQUIRED: for other includes
+#include "thr_malloc.h"                         /* sql_calloc */
+#include "field.h"                              /* Derivation */
+
 class Protocol;
 struct TABLE_LIST;
 void item_init(void);			/* Init item functions */
 class Item_field;
+class user_var_entry;
+
+
+static inline uint32
+char_to_byte_length_safe(uint32 char_length_arg, uint32 mbmaxlen_arg)
+{
+   ulonglong tmp= ((ulonglong) char_length_arg) * mbmaxlen_arg;
+   return (tmp > UINT_MAX32) ? (uint32) UINT_MAX32 : (uint32) tmp;
+}
+
 
 /*
    "Declared Type Collation"
@@ -33,6 +53,8 @@ class Item_field;
                                  (i.e. constant).
   MY_COLL_ALLOW_CONV           - allow any kind of conversion
                                  (combination of the above two)
+  MY_COLL_ALLOW_NUMERIC_CONV   - if all items were numbers, convert to
+                                 @@character_set_connection
   MY_COLL_DISALLOW_NONE        - don't allow return DERIVATION_NONE
                                  (e.g. when aggregating for comparison)
   MY_COLL_CMP_CONV             - combination of MY_COLL_ALLOW_CONV
@@ -41,9 +63,11 @@ class Item_field;
 
 #define MY_COLL_ALLOW_SUPERSET_CONV   1
 #define MY_COLL_ALLOW_COERCIBLE_CONV  2
-#define MY_COLL_ALLOW_CONV            3
 #define MY_COLL_DISALLOW_NONE         4
-#define MY_COLL_CMP_CONV              7
+#define MY_COLL_ALLOW_NUMERIC_CONV    8
+
+#define MY_COLL_ALLOW_CONV (MY_COLL_ALLOW_SUPERSET_CONV | MY_COLL_ALLOW_COERCIBLE_CONV)
+#define MY_COLL_CMP_CONV   (MY_COLL_ALLOW_CONV | MY_COLL_DISALLOW_NONE)
 
 class DTCollation {
 public:
@@ -88,6 +112,12 @@ public:
     derivation= derivation_arg;
     repertoire= repertoire_arg;
   }
+  void set_numeric()
+  {
+    collation= &my_charset_numeric;
+    derivation= DERIVATION_NUMERIC;
+    repertoire= MY_REPERTOIRE_NUMERIC;
+  }
   void set(CHARSET_INFO *collation_arg)
   {
     collation= collation_arg;
@@ -102,6 +132,7 @@ public:
   {
     switch(derivation)
     {
+      case DERIVATION_NUMERIC:   return "NUMERIC";
       case DERIVATION_IGNORABLE: return "IGNORABLE";
       case DERIVATION_COERCIBLE: return "COERCIBLE";
       case DERIVATION_IMPLICIT:  return "IMPLICIT";
@@ -450,6 +481,11 @@ public:
       TRUE if error has occured.
   */
   virtual bool set_value(THD *thd, sp_rcontext *ctx, Item **it)= 0;
+
+  virtual void set_out_param_info(Send_field *info) {}
+
+  virtual const Send_field *get_out_param_info() const
+  { return NULL; }
 };
 
 
@@ -514,7 +550,7 @@ public:
      @see Query_arena::free_list
    */
   Item *next;
-  uint32 max_length;
+  uint32 max_length;                    /* Maximum length, in bytes */
   /*
     TODO: convert name and name_length fields into String to keep them in sync
     (see bug #11829681/60295 etc).
@@ -556,7 +592,7 @@ public:
   void init_make_field(Send_field *tmp_field,enum enum_field_types type);
   virtual void cleanup();
   virtual void make_field(Send_field *field);
-  Field *make_string_field(TABLE *table);
+  virtual Field *make_string_field(TABLE *table);
   virtual bool fix_fields(THD *, Item **);
   /*
     should be used in case where we are sure that we do not need
@@ -686,6 +722,77 @@ public:
       If value is not null null_value flag will be reset to FALSE.
   */
   virtual String *val_str(String *str)=0;
+
+  /*
+    Returns string representation of this item in ASCII format.
+
+    SYNOPSIS
+      val_str_ascii()
+      str - similar to val_str();
+
+    NOTE
+      This method is introduced for performance optimization purposes.
+
+      1. val_str() result of some Items in string context
+      depends on @@character_set_results.
+      @@character_set_results can be set to a "real multibyte" character
+      set like UCS2, UTF16, UTF32. (We'll use only UTF32 in the examples
+      below for convenience.)
+
+      So the default string result of such functions
+      in these circumstances is real multi-byte character set, like UTF32.
+
+      For example, all numbers in string context
+      return result in @@character_set_results:
+
+      SELECT CONCAT(20010101); -> UTF32
+
+      We do sprintf() first (to get ASCII representation)
+      and then convert to UTF32;
+      
+      So these kind "data sources" can use ASCII representation
+      internally, but return multi-byte data only because
+      @@character_set_results wants so.
+      Therefore, conversion from ASCII to UTF32 is applied internally.
+
+
+      2. Some other functions need in fact ASCII input.
+
+      For example,
+        inet_aton(), GeometryFromText(), Convert_TZ(), GET_FORMAT().
+
+      Similar, fields of certain type, like DATE, TIME,
+      when you insert string data into them, expect in fact ASCII input.
+      If they get non-ASCII input, for example UTF32, they
+      convert input from UTF32 to ASCII, and then use ASCII
+      representation to do further processing.
+
+
+      3. Now imagine we pass result of a data source of the first type
+         to a data destination of the second type.
+
+      What happens:
+        a. data source converts data from ASCII to UTF32, because
+           @@character_set_results wants so and passes the result to
+           data destination.
+        b. data destination gets UTF32 string.
+        c. data destination converts UTF32 string to ASCII,
+           because it needs ASCII representation to be able to handle data
+           correctly.
+
+      As a result we get two steps of unnecessary conversion:
+      From ASCII to UTF32, then from UTF32 to ASCII.
+
+      A better way to handle these situations is to pass ASCII
+      representation directly from the source to the destination.
+
+      This is why val_str_ascii() introduced.
+
+    RETURN
+      Similar to val_str()
+  */
+  virtual String *val_str_ascii(String *str);
+  
   /*
     Return decimal representation of item with fixed point.
 
@@ -853,12 +960,28 @@ public:
   */
   virtual void no_rows_in_result() {}
   virtual Item *copy_or_same(THD *thd) { return this; }
-  virtual Item *copy_andor_structure(THD *thd) { return this; }
+  /**
+     @param real_items  True <=> in the copy, replace any Item_ref with its
+     real_item()
+     @todo this argument should be always false and removed in WL#7082.
+  */
+  virtual Item *copy_andor_structure(THD *thd, bool real_items= false)
+  { return real_items ? real_item() : this; }
   virtual Item *real_item() { return this; }
   virtual Item *get_tmp_table_item(THD *thd) { return copy_or_same(thd); }
 
   static CHARSET_INFO *default_charset();
   virtual CHARSET_INFO *compare_collation() { return NULL; }
+
+  /*
+    For backward compatibility, to make numeric
+    data types return "binary" charset in client-side metadata.
+  */
+  virtual CHARSET_INFO *charset_for_protocol(void) const
+  {
+    return result_type() == STRING_RESULT ? collation.collation :
+                                            &my_charset_bin;
+  };
 
   virtual bool walk(Item_processor processor, bool walk_subquery, uchar *arg)
   {
@@ -897,6 +1020,15 @@ public:
      (*traverser)(this, arg);
    }
 
+  /*
+    This is used to get the most recent version of any function in
+    an item tree. The version is the version where a MySQL function
+    was introduced in. So any function which is added should use
+    this function and set the int_arg to maximum of the input data
+    and their own version info.
+  */
+  virtual bool intro_version(uchar *int_arg) { return 0; }
+
   virtual bool remove_dependence_processor(uchar * arg) { return 0; }
   virtual bool remove_fixed(uchar * arg) { fixed= 0; return 0; }
   virtual bool cleanup_processor(uchar *arg);
@@ -907,6 +1039,9 @@ public:
   virtual bool is_expensive_processor(uchar *arg) { return 0; }
   virtual bool find_item_processor(uchar *arg) { return this == (void *) arg; }
   virtual bool register_field_in_read_map(uchar *arg) { return 0; }
+
+  virtual bool cache_const_expr_analyzer(uchar **arg);
+  virtual Item* cache_const_expr_transformer(uchar *arg);
   /*
     Check if a partition function is allowed
     SYNOPSIS
@@ -1049,11 +1184,79 @@ public:
     representation is more precise than the string one).
   */
   virtual bool result_as_longlong() { return FALSE; }
-  bool is_datetime();
+  inline bool is_datetime() const
+  {
+    switch (field_type())
+    {
+      case MYSQL_TYPE_DATE:
+      case MYSQL_TYPE_DATETIME:
+      case MYSQL_TYPE_TIMESTAMP:
+        return TRUE;
+      default:
+        break;
+    }
+    return FALSE;
+  }
+  /**
+    Check whether this and the given item has compatible comparison context.
+    Used by the equality propagation. See Item_field::equal_fields_propagator.
+
+    @return
+      TRUE  if the context is the same or if fields could be
+            compared as DATETIME values by the Arg_comparator.
+      FALSE otherwise.
+  */
+  inline bool has_compatible_context(Item *item) const
+  {
+    /* Same context. */
+    if (cmp_context == (Item_result)-1 || item->cmp_context == cmp_context)
+      return TRUE;
+    /* DATETIME comparison context. */
+    if (is_datetime())
+      return item->is_datetime() || item->cmp_context == STRING_RESULT;
+    if (item->is_datetime())
+      return is_datetime() || cmp_context == STRING_RESULT;
+    return FALSE;
+  }
   virtual Field::geometry_type get_geometry_type() const
     { return Field::GEOM_GEOMETRY; };
-  String *check_well_formed_result(String *str, bool send_error= 0);
+  String *check_well_formed_result(String *str,
+                                   bool send_error,
+                                   bool truncate);
   bool eq_by_collation(Item *item, bool binary_cmp, CHARSET_INFO *cs); 
+  uint32 max_char_length() const
+  { return max_length / collation.collation->mbmaxlen; }
+  void fix_length_and_charset(uint32 max_char_length_arg, CHARSET_INFO *cs)
+  {
+    max_length= char_to_byte_length_safe(max_char_length_arg, cs->mbmaxlen);
+    collation.collation= cs;
+  }
+  void fix_char_length(uint32 max_char_length_arg)
+  {
+    max_length= char_to_byte_length_safe(max_char_length_arg,
+                                         collation.collation->mbmaxlen);
+  }
+  void fix_char_length_ulonglong(ulonglong max_char_length_arg)
+  {
+    ulonglong max_result_length= max_char_length_arg *
+                                 collation.collation->mbmaxlen;
+    if (max_result_length >= MAX_BLOB_WIDTH)
+    {
+      max_length= MAX_BLOB_WIDTH;
+      maybe_null= 1;
+    }
+    else
+      max_length= (uint32) max_result_length;
+  }
+  void fix_length_and_charset_datetime(uint32 max_char_length_arg)
+  {
+    collation.set(&my_charset_numeric, DERIVATION_NUMERIC, MY_REPERTOIRE_ASCII);
+    fix_char_length(max_char_length_arg);
+  }
+  /*
+    Return TRUE if the item points to a column of an outer-joined table.
+  */
+  virtual bool is_outer_field() const { DBUG_ASSERT(fixed); return FALSE; }
 
   /**
     Checks if this item or any of its decendents contains a subquery.
@@ -1180,6 +1383,13 @@ class Item_splocal :public Item_sp_variable,
   Item_result m_result_type;
   enum_field_types m_field_type;
 public:
+  /*
+    If this variable is a parameter in LIMIT clause.
+    Used only during NAME_CONST substitution, to not append
+    NAME_CONST to the resulting query and thus not break
+    the slave.
+  */
+  bool limit_clause_param;
   /* 
     Position of this reference to SP variable in the statement (the
     statement itself is in sp_instr_stmt::m_query).
@@ -1342,6 +1552,12 @@ public:
     return TRUE;
   }
 
+  virtual bool cache_const_expr_analyzer(uchar **arg)
+  {
+    // Item_name_const always wraps a literal, so there is no need to cache it.
+    return false;
+  }
+
   int save_in_field(Field *field, bool no_conversions)
   {
     return  value_item->save_in_field(field, no_conversions);
@@ -1361,12 +1577,44 @@ bool agg_item_set_converter(DTCollation &coll, const char *fname,
                             Item **args, uint nargs, uint flags, int item_sep);
 bool agg_item_charsets(DTCollation &c, const char *name,
                        Item **items, uint nitems, uint flags, int item_sep);
+inline bool
+agg_item_charsets_for_string_result(DTCollation &c, const char *name,
+                                    Item **items, uint nitems,
+                                    int item_sep= 1)
+{
+  uint flags= MY_COLL_ALLOW_SUPERSET_CONV |
+              MY_COLL_ALLOW_COERCIBLE_CONV |
+              MY_COLL_ALLOW_NUMERIC_CONV;
+  return agg_item_charsets(c, name, items, nitems, flags, item_sep);
+}
+inline bool
+agg_item_charsets_for_comparison(DTCollation &c, const char *name,
+                                 Item **items, uint nitems,
+                                 int item_sep= 1)
+{
+  uint flags= MY_COLL_ALLOW_SUPERSET_CONV |
+              MY_COLL_ALLOW_COERCIBLE_CONV |
+              MY_COLL_DISALLOW_NONE;
+  return agg_item_charsets(c, name, items, nitems, flags, item_sep);
+}
+inline bool
+agg_item_charsets_for_string_result_with_comparison(DTCollation &c,
+                                                    const char *name,
+                                                    Item **items, uint nitems,
+                                                    int item_sep= 1)
+{
+  uint flags= MY_COLL_ALLOW_SUPERSET_CONV |
+              MY_COLL_ALLOW_COERCIBLE_CONV |
+              MY_COLL_ALLOW_NUMERIC_CONV |
+              MY_COLL_DISALLOW_NONE;
+  return agg_item_charsets(c, name, items, nitems, flags, item_sep);
+}
 
 
 class Item_num: public Item_basic_constant
 {
 public:
-  Item_num() {}                               /* Remove gcc warning */
+  Item_num() { collation.set_numeric(); } /* Remove gcc warning */
   virtual Item_num *neg()= 0;
   Item *safe_charset_converter(CHARSET_INFO *tocs);
   bool check_partition_func_processor(uchar *int_arg) { return FALSE;}
@@ -1443,6 +1691,8 @@ public:
   String *val_str(String *str) { return field->val_str(str); }
   my_decimal *val_decimal(my_decimal *dec) { return field->val_decimal(dec); }
   void make_field(Send_field *tmp_field);
+  CHARSET_INFO *charset_for_protocol(void) const
+  { return field->charset_for_protocol(); }
 };
 
 
@@ -1547,11 +1797,18 @@ public:
   int fix_outer_field(THD *thd, Field **field, Item **reference);
   virtual Item *update_value_transformer(uchar *select_arg);
   virtual void print(String *str, enum_query_type query_type);
+  bool is_outer_field() const
+  {
+    DBUG_ASSERT(fixed);
+    return field->table->pos_in_table_list->outer_join;
+  }
   Field::geometry_type get_geometry_type() const
   {
     DBUG_ASSERT(field_type() == MYSQL_TYPE_GEOMETRY);
     return field->get_geometry_type();
   }
+  CHARSET_INFO *charset_for_protocol(void) const
+  { return field->charset_for_protocol(); }
   friend class Item_default_value;
   friend class Item_insert_value;
   friend class st_select_lex_unit;
@@ -1607,12 +1864,9 @@ public:
 
 /* Item represents one placeholder ('?') of prepared statement */
 
-class Item_param :public Item
+class Item_param :public Item,
+                  private Settable_routine_parameter
 {
-  char cnvbuf[MAX_FIELD_WIDTH];
-  String cnvstr;
-  Item *cnvitem;
-
 public:
   enum enum_item_param_state
   {
@@ -1695,6 +1949,7 @@ public:
   void set_int(longlong i, uint32 max_length_arg);
   void set_double(double i);
   void set_decimal(const char *str, ulong length);
+  void set_decimal(const my_decimal *dv);
   bool set_str(const char *str, ulong length);
   bool set_longdata(const char *str, ulong length);
   void set_time(MYSQL_TIME *tm, timestamp_type type, uint32 max_length_arg);
@@ -1744,6 +1999,25 @@ public:
   /** Item is a argument to a limit clause. */
   bool limit_clause_param;
   void set_param_type_and_swap_value(Item_param *from);
+
+private:
+  virtual inline Settable_routine_parameter *
+    get_settable_routine_parameter()
+  {
+    return this;
+  }
+
+  virtual bool set_value(THD *thd, sp_rcontext *ctx, Item **it);
+
+  virtual void set_out_param_info(Send_field *info);
+
+public:
+  virtual const Send_field *get_out_param_info() const;
+
+  virtual void make_field(Send_field *field);
+
+private:
+  Send_field *m_out_param_info;
 };
 
 
@@ -1929,6 +2203,11 @@ public:
     decimals=NOT_FIXED_DEC;
     // it is constant => can be used without fix_fields (and frequently used)
     fixed= 1;
+    /*
+      Check if the string has any character that can't be
+      interpreted using the relevant charset.
+    */
+    check_well_formed_result(&str_value, false, false);
   }
   /* Just create an item and do not fill string representation */
   Item_string(CHARSET_INFO *cs, Derivation dv= DERIVATION_COERCIBLE)
@@ -2101,7 +2380,7 @@ public:
 
 /**
   Item_empty_string -- is a utility class to put an item into List<Item>
-  which is then used in protocol.send_fields() when sending SHOW output to
+  which is then used in protocol.send_result_set_metadata() when sending SHOW output to
   the client.
 */
 
@@ -2340,6 +2619,13 @@ public:
     DBUG_ASSERT(fixed);
     return (*ref)->get_time(ltime);
   }
+  virtual bool basic_const_item() const { return ref && (*ref)->basic_const_item(); }
+  bool is_outer_field() const
+  {
+    DBUG_ASSERT(fixed);
+    DBUG_ASSERT(ref);
+    return (*ref)->is_outer_field();
+  }
 
   /**
     Checks if the item tree that ref points to contains a subquery.
@@ -2421,6 +2707,7 @@ public:
   resolved is a grouping one. After it has been fixed the ref field will point
   to either an Item_ref or an Item_direct_ref object which will be used to
   access the field.
+  The ref field may also point to an Item_field instance.
   See also comments for the fix_inner_refs() and the
   Item_field::fix_outer_field() functions.
 */
@@ -2548,6 +2835,7 @@ public:
 #include "item_timefunc.h"
 #include "item_subselect.h"
 #include "item_xmlfunc.h"
+#include "item_create.h"
 #endif
 
 /**
@@ -2605,6 +2893,8 @@ protected:
     cached_field_type= item->field_type();
     cached_result_type= item->result_type();
     unsigned_flag= item->unsigned_flag;
+    fixed= item->fixed;
+    collation.set(item->collation);
   }
 
 public:
@@ -2860,6 +3150,8 @@ public:
     :Item_field(context_arg, (const char *)NULL, (const char *)NULL,
                (const char *)NULL),
      arg(a) {}
+
+  enum Type type() const { return INSERT_VALUE_ITEM; }
   bool eq(const Item *item, bool binary_cmp) const;
   bool fix_fields(THD *, Item **);
   virtual void print(String *str, enum_query_type query_type);
@@ -2880,18 +3172,6 @@ public:
   }
 };
 
-
-/*
-  We need this two enums here instead of sql_lex.h because
-  at least one of them is used by Item_trigger_field interface.
-
-  Time when trigger is invoked (i.e. before or after row actually
-  inserted/updated/deleted).
-*/
-enum trg_action_time_type
-{
-  TRG_ACTION_BEFORE= 0, TRG_ACTION_AFTER= 1, TRG_ACTION_MAX
-};
 
 class Table_triggers_list;
 
@@ -2999,14 +3279,16 @@ protected:
   bool value_cached;
 public:
   Item_cache():
-    example(0), used_table_map(0), cached_field(0), cached_field_type(MYSQL_TYPE_STRING),
+    example(0), used_table_map(0), cached_field(0),
+    cached_field_type(MYSQL_TYPE_STRING),
     value_cached(0)
   {
     fixed= 1; 
     null_value= 1;
   }
   Item_cache(enum_field_types field_type_arg):
-    example(0), used_table_map(0), cached_field(0), cached_field_type(field_type_arg),
+    example(0), used_table_map(0), cached_field(0),
+    cached_field_type(field_type_arg),
     value_cached(0)
   {
     fixed= 1;
@@ -3024,7 +3306,11 @@ public:
     collation.set(item->collation);
     unsigned_flag= item->unsigned_flag;
     if (item->type() == FIELD_ITEM)
+    {
       cached_field= ((Item_field *)item)->field;
+      if (cached_field->table)
+        used_table_map= cached_field->table->map;
+    }
     return 0;
   };
   enum Type type() const { return CACHE_ITEM; }
@@ -3042,6 +3328,15 @@ public:
   {
     return this == item;
   }
+  /**
+     Check if saved item has a non-NULL value.
+     Will cache value of saved item if not already done. 
+     @return TRUE if cached value is non-NULL.
+   */
+  bool has_value()
+  {
+    return (value_cached || cache_value()) && !null_value;
+  }
 
   /** 
     If this item caches a field value, return pointer to underlying field.
@@ -3052,6 +3347,15 @@ public:
 
   virtual void store(Item *item);
   virtual bool cache_value()= 0;
+  bool basic_const_item() const
+  { return test(example && example->basic_const_item());}
+  virtual void clear() { null_value= TRUE; value_cached= FALSE; }
+  Item_result result_type() const
+  {
+    if (!example)
+      return INT_RESULT;
+    return Field::result_merge_type(example->field_type());
+  }
 };
 
 
@@ -3117,12 +3421,13 @@ class Item_cache_str: public Item_cache
   
 public:
   Item_cache_str(const Item *item) :
-    Item_cache(), value(0),
+    Item_cache(item->field_type()), value(0),
     is_varbinary(item->type() == FIELD_ITEM &&
-                 ((const Item_field *) item)->field->type() ==
-                   MYSQL_TYPE_VARCHAR &&
+                 cached_field_type == MYSQL_TYPE_VARCHAR &&
                  !((const Item_field *) item)->field->has_charset())
-  {}
+  {
+    collation.set(const_cast<DTCollation&>(item->collation));
+  }
   double val_real();
   longlong val_int();
   String* val_str(String *);
@@ -3203,6 +3508,40 @@ public:
 };
 
 
+class Item_cache_datetime: public Item_cache
+{
+protected:
+  String str_value;
+  longlong int_value;
+  bool str_value_cached;
+public:
+  Item_cache_datetime(enum_field_types field_type_arg):
+    Item_cache(field_type_arg), int_value(0), str_value_cached(0)
+  {
+    cmp_context= STRING_RESULT;
+  }
+
+  void store(Item *item, longlong val_arg);
+  void store(Item *item);
+  double val_real();
+  longlong val_int();
+  String* val_str(String *str);
+  my_decimal *val_decimal(my_decimal *);
+  enum Item_result result_type() const { return STRING_RESULT; }
+  bool result_as_longlong() { return TRUE; }
+  /*
+    In order to avoid INT <-> STRING conversion of a DATETIME value
+    two cache_value functions are introduced. One (cache_value) caches STRING
+    value, another (cache_value_int) - INT value. Thus this cache item
+    completely relies on the ability of the underlying item to do the
+    correct conversion.
+  */
+  bool cache_value_int();
+  bool cache_value();
+  void clear() { Item_cache::clear(); str_value_cached= FALSE; }
+};
+
+
 /*
   Item_type_holder used to store type. name, length of Item for UNIONS &
   derived tables.
@@ -3250,3 +3589,7 @@ extern Cached_item *new_Cached_item(THD *thd, Item *item);
 extern Item_result item_cmp_type(Item_result a,Item_result b);
 extern void resolve_const_item(THD *thd, Item **ref, Item *cmp_item);
 extern int stored_field_cmp_to_item(THD *thd, Field *field, Item *item);
+
+extern const String my_null_string;
+
+#endif /* ITEM_INCLUDED */

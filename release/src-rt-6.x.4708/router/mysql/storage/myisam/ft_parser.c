@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2000-2007 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,12 +11,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Written by Sergei A. Golubchik, who has a shared copyright to this code */
 
 #include "ftdefs.h"
+#include "ctype.h"
 
 typedef struct st_ft_docstat {
   FT_WORD *list;
@@ -42,7 +40,7 @@ static int walk_and_copy(FT_WORD *word,uint32 count,FT_DOCSTAT *docstat)
 {
     word->weight=LWS_IN_USE;
     docstat->sum+=word->weight;
-    memcpy_fixed((docstat->list)++,word,sizeof(FT_WORD));
+    memcpy((docstat->list)++, word, sizeof(FT_WORD));
     return 0;
 }
 
@@ -86,13 +84,13 @@ my_bool ft_boolean_check_syntax_string(const uchar *str)
   uint i, j;
 
   if (!str ||
-      (strlen((char*) str)+1 != sizeof(ft_boolean_syntax)) ||
+      (strlen((char*) str)+1 != sizeof(DEFAULT_FTB_SYNTAX)) ||
       (str[0] != ' ' && str[1] != ' '))
     return 1;
-  for (i=0; i<sizeof(ft_boolean_syntax); i++)
+  for (i=0; i<sizeof(DEFAULT_FTB_SYNTAX); i++)
   {
     /* limiting to 7-bit ascii only */
-    if ((unsigned char)(str[i]) > 127 || my_isalnum(default_charset_info, str[i]))
+    if ((unsigned char)(str[i]) > 127 || isalnum(str[i]))
       return 1;
     for (j=0; j<i; j++)
       if (str[i] == str[j] && (i != 11 || j != 10))
@@ -130,7 +128,6 @@ uchar ft_get_word(CHARSET_INFO *cs, uchar **start, uchar *end,
         break;
       if (*doc == FTB_RQUOT && param->quot)
       {
-        param->quot= (char*) doc;
         *start=doc+1;
         param->type= FT_TOKEN_RIGHT_PAREN;
         goto ret;
@@ -142,7 +139,7 @@ uchar ft_get_word(CHARSET_INFO *cs, uchar **start, uchar *end,
           /* param->prev=' '; */
           *start=doc+1;
           if (*doc == FTB_LQUOT)
-            param->quot= (char*) *start;
+            param->quot= (char*) 1;
           param->type= (*doc == FTB_RBR ? FT_TOKEN_RIGHT_PAREN : FT_TOKEN_LEFT_PAREN);
           goto ret;
         }
@@ -196,7 +193,6 @@ uchar ft_get_word(CHARSET_INFO *cs, uchar **start, uchar *end,
   if (param->quot)
   {
     *start= doc;
-    param->quot= (char*) doc;
     param->type= 3; /* FT_RBR */
     goto ret;
   }

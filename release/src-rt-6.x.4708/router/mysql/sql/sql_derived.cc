@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2002, 2011, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2002, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /*
@@ -22,9 +20,13 @@
 */
 
 
-#include "mysql_priv.h"
+#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "sql_priv.h"
+#include "unireg.h"
+#include "sql_derived.h"
 #include "sql_select.h"
-
+#include "sql_view.h"                         // check_duplicate_names
+#include "sql_acl.h"                          // SELECT_ACL
 
 
 /*
@@ -157,7 +159,7 @@ bool mysql_derived_prepare(THD *thd, LEX *lex, TABLE_LIST *orig_table_list)
     if ((res= check_duplicate_names(unit->types, 0)))
       goto exit;
 
-    create_options= (first_select->options | thd->options |
+    create_options= (first_select->options | thd->variables.option_bits |
                      TMP_TABLE_ALL_COLUMNS);
     /*
       Temp table is created so that it hounours if UNION without ALL is to be 
@@ -181,9 +183,9 @@ exit:
     if (orig_table_list->view)
     {
       if (thd->is_error() &&
-          (thd->main_da.sql_errno() == ER_BAD_FIELD_ERROR ||
-          thd->main_da.sql_errno() == ER_FUNC_INEXISTENT_NAME_COLLISION ||
-          thd->main_da.sql_errno() == ER_SP_DOES_NOT_EXIST))
+          (thd->stmt_da->sql_errno() == ER_BAD_FIELD_ERROR ||
+          thd->stmt_da->sql_errno() == ER_FUNC_INEXISTENT_NAME_COLLISION ||
+          thd->stmt_da->sql_errno() == ER_SP_DOES_NOT_EXIST))
       {
         thd->clear_error();
         my_error(ER_VIEW_INVALID, MYF(0), orig_table_list->db,
@@ -292,7 +294,7 @@ bool mysql_derived_filling(THD *thd, LEX *lex, TABLE_LIST *orig_table_list)
 			first_select->order_list.first,
 			first_select->group_list.first,
 			first_select->having, (ORDER*) NULL,
-			(first_select->options | thd->options |
+			(first_select->options | thd->variables.option_bits |
 			 SELECT_NO_UNLOCK),
 			derived_result, unit, first_select);
     }
@@ -305,13 +307,21 @@ bool mysql_derived_filling(THD *thd, LEX *lex, TABLE_LIST *orig_table_list)
       */
       if (derived_result->flush())
         res= TRUE;
-
-      if (!lex->describe)
-        unit->cleanup();
     }
-    else
-      unit->cleanup();
     lex->current_select= save_current_select;
   }
   return res;
+}
+
+
+/**
+   Cleans up the SELECT_LEX_UNIT for the derived table (if any).
+*/
+
+bool mysql_derived_cleanup(THD *thd, LEX *lex, TABLE_LIST *derived)
+{
+  SELECT_LEX_UNIT *unit= derived->derived;
+  if (unit)
+    unit->cleanup();
+  return false;
 }

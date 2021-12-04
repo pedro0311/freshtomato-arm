@@ -1,4 +1,7 @@
-/* Copyright (c) 2000, 2002-2008 MySQL AB
+#ifndef PROCEDURE_INCLUDED
+#define PROCEDURE_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* When using sql procedures */
@@ -20,10 +23,18 @@
 #pragma interface				/* gcc class implementation */
 #endif
 
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          /* select_result, set_var.h: THD */
+#include "set_var.h"                            /* Item */
+
 #define PROC_NO_SORT 1				/**< Bits in flags */
 #define PROC_GROUP   2				/**< proc must have group */
 
-/* Procedure items used by procedures to store values for send_fields */
+/* Procedure items used by procedures to store values for send_result_set_metadata */
 
 class Item_proc :public Item
 {
@@ -149,3 +160,5 @@ public:
 
 Procedure *setup_procedure(THD *thd,ORDER *proc_param,select_result *result,
 			   List<Item> &field_list,int *error);
+
+#endif /* PROCEDURE_INCLUDED */

@@ -1,5 +1,4 @@
-/* Copyright (c) 2004-2007 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 #include <NDBT_ReturnCodes.h>
 #include "consumer_restore.hpp"
@@ -450,13 +449,13 @@ bool BackupRestore::translate_frm(NdbDictionary::Table *table)
   }
   if (map_in_frm(new_data, (const char*)data, data_len, &new_data_len))
   {
-    my_free(new_data, MYF(0));
+    my_free(new_data);
     DBUG_RETURN(TRUE);
   }
   if (packfrm((uchar*) new_data, new_data_len,
               &new_pack_data, &new_pack_len))
   {
-    my_free(new_data, MYF(0));
+    my_free(new_data);
     DBUG_RETURN(TRUE);
   }
   table->setFrm(new_pack_data, new_pack_len);

@@ -1,4 +1,7 @@
-/* Copyright (c) 2000, 2001, 2003, 2007 MySQL AB
+#ifndef SQL_SORT_INCLUDED
+#define SQL_SORT_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +14,19 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+#include "my_global.h"                          /* uchar */
+#include "my_base.h"                            /* ha_rows */
+#include "my_sys.h"                             /* qsort2_cmp */
+
+typedef struct st_buffpek BUFFPEK;
+typedef struct st_queue QUEUE;
+typedef struct st_sort_field SORT_FIELD;
+
+class Field;
+struct TABLE;
+
 
 /* Defines used by filesort and uniques */
 
@@ -87,3 +102,5 @@ int merge_buffers(SORTPARAM *param,IO_CACHE *from_file,
 		  BUFFPEK *lastbuff,BUFFPEK *Fb,
 		  BUFFPEK *Tb,int flag);
 void reuse_freed_buff(QUEUE *queue, BUFFPEK *reuse, uint key_length);
+
+#endif /* SQL_SORT_INCLUDED */

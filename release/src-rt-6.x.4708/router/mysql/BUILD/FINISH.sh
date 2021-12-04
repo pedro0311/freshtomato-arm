@@ -1,5 +1,4 @@
-# Copyright (c) 2000-2007 MySQL AB, 2008 Sun Microsystems, Inc.
-# Use is subject to license terms.
+# Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -22,8 +21,8 @@ extra_configs="$extra_configs $local_infile_configs"
 configure="./configure $base_configs $extra_configs"
 
 commands="\
-$make -k maintainer-clean || true 
-/bin/rm -rf */.deps/*.P configure config.cache storage/*/configure storage/*/config.cache autom4te.cache storage/*/autom4te.cache;
+/bin/rm -rf configure;
+/bin/rm -rf CMakeCache.txt CMakeFiles/
 
 path=`dirname $0`
 . \"$path/autorun.sh\""

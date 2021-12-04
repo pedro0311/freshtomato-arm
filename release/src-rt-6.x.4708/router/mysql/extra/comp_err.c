@@ -42,7 +42,7 @@ static char *OUTFILE= (char*) "errmsg.sys";
 static char *HEADERFILE= (char*) "mysqld_error.h";
 static char *NAMEFILE= (char*) "mysqld_ername.h";
 static char *STATEFILE= (char*) "sql_state.h";
-static char *TXTFILE= (char*) "../sql/share/errmsg.txt";
+static char *TXTFILE= (char*) "../sql/share/errmsg-utf8.txt";
 static char *DATADIRECTORY= (char*) "../sql/share/";
 #ifndef DBUG_OFF
 static char *default_dbug_option= (char*) "d:t:O,/tmp/comp_err.trace";
@@ -217,13 +217,35 @@ int main(int argc, char *argv[])
 }
 
 
+static void print_escaped_string(FILE *f, const char *str)
+{
+  const char *tmp = str;
+
+  while (tmp[0] != 0)
+  {
+    switch (tmp[0])
+    {
+      case '\\': fprintf(f, "\\\\"); break;
+      case '\'': fprintf(f, "\\\'"); break;
+      case '\"': fprintf(f, "\\\""); break;
+      case '\n': fprintf(f, "\\n"); break;
+      case '\r': fprintf(f, "\\r"); break;
+      default: fprintf(f, "%c", tmp[0]);
+    }
+    tmp++;
+  }
+}
+
+
 static int create_header_files(struct errors *error_head)
 {
-  uint er_last;
+  uint er_last= 0;
   FILE *er_definef, *sql_statef, *er_namef;
   struct errors *tmp_error;
+  struct message *er_msg;
+  const char *er_text;
+
   DBUG_ENTER("create_header_files");
-  LINT_INIT(er_last);
 
   if (!(er_definef= my_fopen(HEADERFILE, O_WRONLY, MYF(MY_WME))))
   {
@@ -263,9 +285,12 @@ static int create_header_files(struct errors *error_head)
 	      "{ %-40s,\"%s\", \"%s\" },\n", tmp_error->er_name,
 	      tmp_error->sql_code1, tmp_error->sql_code2);
     /*generating er_name file */
-    fprintf(er_namef, "{ \"%s\", %d },\n", tmp_error->er_name,
-	    tmp_error->d_code);
-
+    er_msg= find_message(tmp_error, default_language, 0);
+    er_text = (er_msg ? er_msg->text : "");
+    fprintf(er_namef, "{ \"%s\", %d, \"", tmp_error->er_name,
+            tmp_error->d_code);
+    print_escaped_string(er_namef, er_text);
+    fprintf(er_namef, "\" },\n");
   }
   /* finishing off with mysqld_error.h */
   fprintf(er_definef, "#define ER_ERROR_LAST %d\n", er_last);
@@ -381,15 +406,15 @@ static void clean_up(struct languages *lang_head, struct errors *error_head)
   struct errors *tmp_error, *next_error;
   uint count, i;
 
-  my_free((uchar*) default_language, MYF(0));
+  my_free((void*) default_language);
 
   for (tmp_lang= lang_head; tmp_lang; tmp_lang= next_language)
   {
     next_language= tmp_lang->next_lang;
-    my_free(tmp_lang->lang_short_name, MYF(0));
-    my_free(tmp_lang->lang_long_name, MYF(0));
-    my_free(tmp_lang->charset, MYF(0));
-    my_free((uchar*) tmp_lang, MYF(0));
+    my_free(tmp_lang->lang_short_name);
+    my_free(tmp_lang->lang_long_name);
+    my_free(tmp_lang->charset);
+    my_free(tmp_lang);
   }
 
   for (tmp_error= error_head; tmp_error; tmp_error= next_error)
@@ -400,17 +425,17 @@ static void clean_up(struct languages *lang_head, struct errors *error_head)
     {
       struct message *tmp;
       tmp= dynamic_element(&tmp_error->msg, i, struct message*);
-      my_free((uchar*) tmp->lang_short_name, MYF(0));
-      my_free((uchar*) tmp->text, MYF(0));
+      my_free(tmp->lang_short_name);
+      my_free(tmp->text);
     }
 
     delete_dynamic(&tmp_error->msg);
     if (tmp_error->sql_code1[0])
-      my_free((uchar*) tmp_error->sql_code1, MYF(0));
+      my_free((void*) tmp_error->sql_code1);
     if (tmp_error->sql_code2[0])
-      my_free((uchar*) tmp_error->sql_code2, MYF(0));
-    my_free((uchar*) tmp_error->er_name, MYF(0));
-    my_free((uchar*) tmp_error, MYF(0));
+      my_free((void*) tmp_error->sql_code2);
+    my_free((void*) tmp_error->er_name);
+    my_free(tmp_error);
   }
 }
 
@@ -553,7 +578,7 @@ static uint parse_error_offset(char *str)
 
   end= 0;
   ioffset= (uint) my_strtoll10(soffset, &end, &error);
-  my_free((uchar*) soffset, MYF(0));
+  my_free(soffset);
   DBUG_RETURN(ioffset);
 }
 
@@ -678,7 +703,7 @@ static ha_checksum checksum_format_specifier(const char* msg)
       case 'u':
       case 'x':
       case 's':
-        chksum= my_checksum(chksum, start, (uint) (p + 1 - start));
+        chksum= my_checksum(chksum, (uchar*) start, (uint) (p + 1 - start));
         start= 0; /* Not in format specifier anymore */
         break;
 
@@ -1057,11 +1082,11 @@ static char *parse_text_line(char *pos)
       switch (*++pos) {
       case '\\':
       case '"':
-	VOID(memmove (pos - 1, pos, len - (row - pos)));
+	(void) memmove (pos - 1, pos, len - (row - pos));
 	break;
       case 'n':
 	pos[-1]= '\n';
-	VOID(memmove (pos, pos + 1, len - (row - pos)));
+	(void) memmove (pos, pos + 1, len - (row - pos));
 	break;
       default:
 	if (*pos >= '0' && *pos < '8')
@@ -1071,10 +1096,10 @@ static char *parse_text_line(char *pos)
 	    nr= nr * 8 + (*(pos++) - '0');
 	  pos -= i;
 	  pos[-1]= nr;
-	  VOID(memmove (pos, pos + i, len - (row - pos)));
+	  (void) memmove (pos, pos + i, len - (row - pos));
 	}
 	else if (*pos)
-	  VOID(memmove (pos - 1, pos, len - (row - pos)));		/* Remove '\' */
+          (void) memmove (pos - 1, pos, len - (row - pos));             /* Remove '\' */
       }
     }
     else

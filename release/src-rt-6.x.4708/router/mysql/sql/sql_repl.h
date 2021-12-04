@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2008 MySQL AB
+/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,10 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+#ifndef SQL_REPL_INCLUDED
+#define SQL_REPL_INCLUDED
 
 #include "rpl_filter.h"
 
@@ -40,8 +43,6 @@ int start_slave(THD* thd, Master_info* mi, bool net_report);
 int stop_slave(THD* thd, Master_info* mi, bool net_report);
 bool change_master(THD* thd, Master_info* mi);
 bool mysql_show_binlog_events(THD* thd);
-int cmp_master_pos(const char* log_file_name1, ulonglong log_pos1,
-		   const char* log_file_name2, ulonglong log_pos2);
 int reset_slave(THD *thd, Master_info* mi);
 int reset_master(THD* thd);
 bool purge_master_logs(THD* thd, const char* to_log);
@@ -62,6 +63,8 @@ typedef struct st_load_file_info
 
 int log_loaded_block(IO_CACHE* file);
 int init_replication_sys_vars();
+void mysql_binlog_send(THD* thd, char* log_ident, my_off_t pos, ushort flags);
 
 #endif /* HAVE_REPLICATION */
 
+#endif /* SQL_REPL_INCLUDED */

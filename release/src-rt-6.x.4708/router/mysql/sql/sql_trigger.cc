@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2004, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2004, 2018, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,15 +12,26 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA */
 
 
 #define MYSQL_LEX 1
-#include "mysql_priv.h"
+#include "my_global.h"                          /* NO_EMBEDDED_ACCESS_CHECKS */
+#include "sql_priv.h"
+#include "unireg.h"
 #include "sp_head.h"
 #include "sql_trigger.h"
+#include "sql_parse.h"                          // parse_sql
 #include "parse_file.h"
+#include "sp.h"
+#include "sql_base.h"                          // find_temporary_table
+#include "sql_show.h"                // append_definer, append_identifier
+#include "sql_table.h"                        // build_table_filename,
+                                              // check_n_cut_mysql50_prefix
+#include "sql_db.h"                        // get_default_db_collation
+#include "sql_acl.h"                       // *_ACL, is_acl_user
+#include "sql_handler.h"                        // mysql_ha_rm_tables
+#include "sp_cache.h"                     // sp_invalidate_cache
 #include <mysys_err.h>
 
 /*************************************************************************/
@@ -315,8 +326,12 @@ public:
 
   Deprecated_trigger_syntax_handler() : m_trigger_name(NULL) {}
 
-  virtual bool handle_error(uint sql_errno, const char *message,
-                            MYSQL_ERROR::enum_warning_level level, THD *thd)
+  virtual bool handle_condition(THD *thd,
+                                uint sql_errno,
+                                const char* sqlstate,
+                                MYSQL_ERROR::enum_warning_level level,
+                                const char* message,
+                                MYSQL_ERROR ** cond_hdl)
   {
     if (sql_errno != EE_OUTOFMEMORY &&
         sql_errno != ER_OUT_OF_RESOURCES)
@@ -325,12 +340,11 @@ public:
         m_trigger_name= &thd->lex->spname->m_name;
       if (m_trigger_name)
         my_snprintf(m_message, sizeof(m_message),
-                    "Trigger '%s' has an error in its body: '%s'",
+                    ER(ER_ERROR_IN_TRIGGER_BODY),
                     m_trigger_name->str, message);
       else
         my_snprintf(m_message, sizeof(m_message),
-                    "Unknown trigger has an error in its body: '%s'",
-                    message);
+                    ER(ER_ERROR_IN_UNKNOWN_TRIGGER_BODY), message);
       return true;
     }
     return false;
@@ -376,8 +390,9 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
   TABLE *table;
   bool result= TRUE;
   String stmt_query;
+  bool lock_upgrade_done= FALSE;
+  MDL_ticket *mdl_ticket= NULL;
   Query_tables_list backup;
-  bool need_start_waiting= FALSE;
 
   DBUG_ENTER("mysql_create_or_drop_trigger");
 
@@ -426,19 +441,6 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
     DBUG_RETURN(TRUE);
   }
 
-  /*
-    We don't want perform our operations while global read lock is held
-    so we have to wait until its end and then prevent it from occurring
-    again until we are done, unless we are under lock tables. (Acquiring
-    LOCK_open is not enough because global read lock is held without holding
-    LOCK_open).
-  */
-  if (!thd->locked_tables &&
-      !(need_start_waiting= !wait_if_global_read_lock(thd, 0, 1)))
-    DBUG_RETURN(TRUE);
-
-  VOID(pthread_mutex_lock(&LOCK_open));
-
   if (!create)
   {
     bool if_exists= thd->lex->drop_if_exists;
@@ -448,6 +450,20 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
       destructive changes necessary to open the trigger's table.
     */
     thd->lex->reset_n_backup_query_tables_list(&backup);
+    /*
+      Restore Query_tables_list::sql_command, which was
+      reset above, as the code that writes the query to the
+      binary log assumes that this value corresponds to the
+      statement that is being executed.
+    */
+    thd->lex->sql_command= backup.sql_command;
+
+    if (opt_readonly && !(thd->security_ctx->master_access & SUPER_ACL) &&
+        !thd->slave_thread)
+    {
+      my_error(ER_OPTION_PREVENTS_STATEMENT, MYF(0), "--read-only");
+      goto end;
+    }
 
     if (add_table_for_trigger(thd, thd->lex->spname, if_exists, & tables))
       goto end;
@@ -478,7 +494,7 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
     TABLE_LIST **save_query_tables_own_last= thd->lex->query_tables_own_last;
     thd->lex->query_tables_own_last= 0;
 
-    err_status= check_table_access(thd, TRIGGER_ACL, tables, 1, FALSE);
+    err_status= check_table_access(thd, TRIGGER_ACL, tables, FALSE, 1, FALSE);
 
     thd->lex->query_tables_own_last= save_query_tables_own_last;
 
@@ -490,7 +506,7 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
   DBUG_ASSERT(tables->next_global == 0);
 
   /* We do not allow creation of triggers on temporary tables. */
-  if (create && find_temporary_table(thd, tables->db, tables->table_name))
+  if (create && find_temporary_table(thd, tables))
   {
     my_error(ER_TRG_ON_VIEW_OR_TEMP_TABLE, MYF(0), tables->alias);
     goto end;
@@ -498,30 +514,40 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
 
   /* We also don't allow creation of triggers on views. */
   tables->required_type= FRMTYPE_TABLE;
+  /*
+    Also prevent DROP TRIGGER from opening temporary table which might
+    shadow base table on which trigger to be dropped is defined.
+  */
+  tables->open_type= OT_BASE_ONLY;
 
   /* Keep consistent with respect to other DDL statements */
-  mysql_ha_rm_tables(thd, tables, TRUE);
+  mysql_ha_rm_tables(thd, tables);
 
-  if (thd->locked_tables)
+  if (thd->locked_tables_mode)
   {
-    /* Table must be write locked */
-    if (name_lock_locked_table(thd, tables))
+    /* Under LOCK TABLES we must only accept write locked tables. */
+    if (!(tables->table= find_table_for_mdl_upgrade(thd, tables->db,
+                                                    tables->table_name,
+                                                    FALSE)))
       goto end;
   }
   else
   {
-    /* Grab the name lock and insert the placeholder*/
-    if (lock_table_names(thd, tables))
+    tables->table= open_n_lock_single_table(thd, tables,
+                                            TL_READ_NO_INSERT, 0);
+    if (! tables->table)
       goto end;
-
-    /* Convert the placeholder to a real table */
-    if (reopen_name_locked_table(thd, tables, TRUE))
-    {
-      unlock_table_name(thd, tables);
-      goto end;
-    }
+    tables->table->use_all_columns();
   }
   table= tables->table;
+
+  /* Later on we will need it to downgrade the lock */
+  mdl_ticket= table->mdl_ticket;
+
+  if (wait_while_table_is_used(thd, table, HA_EXTRA_FORCE_REOPEN))
+    goto end;
+
+  lock_upgrade_done= TRUE;
 
   if (!table->triggers)
   {
@@ -539,41 +565,40 @@ bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create)
            table->triggers->create_trigger(thd, tables, &stmt_query):
            table->triggers->drop_trigger(thd, tables, &stmt_query));
 
-  /* Under LOCK TABLES we must reopen the table to activate the trigger. */
-  if (!result && thd->locked_tables)
-  {
-    /* Make table suitable for reopening */
-    close_data_files_and_morph_locks(thd, tables->db, tables->table_name);
-    thd->in_lock_tables= 1;
-    if (reopen_tables(thd, 1, 1))
-    {
-      /* To be safe remove this table from the set of LOCKED TABLES */
-      unlink_open_table(thd, tables->table, FALSE);
+  if (result)
+    goto end;
 
-      /*
-        Ignore reopen_tables errors for now. It's better not leave master/slave
-        in a inconsistent state.
-      */
-      thd->clear_error();
-    }
-    thd->in_lock_tables= 0;
-  }
+  close_all_tables_for_name(thd, table->s, FALSE, NULL);
+  /*
+    Reopen the table if we were under LOCK TABLES.
+    Ignore the return value for now. It's better to
+    keep master/slave in consistent state.
+  */
+  thd->locked_tables_list.reopen_tables(thd);
+
+  /*
+    Invalidate SP-cache. That's needed because triggers may change list of
+    pre-locking tables.
+  */
+  sp_cache_invalidate();
 
 end:
-
   if (!result)
   {
     result= write_bin_log(thd, TRUE, stmt_query.ptr(), stmt_query.length());
   }
 
-  VOID(pthread_mutex_unlock(&LOCK_open));
+  /*
+    If we are under LOCK TABLES we should restore original state of
+    meta-data locks. Otherwise all locks will be released along
+    with the implicit commit.
+  */
+  if (thd->locked_tables_mode && tables && lock_upgrade_done)
+    mdl_ticket->downgrade_exclusive_lock(MDL_SHARED_NO_READ_WRITE);
 
   /* Restore the query table list. Used only for drop trigger. */
   if (!create)
     thd->lex->restore_backup_query_tables_list(&backup);
-
-  if (need_start_waiting)
-    start_waiting_global_read_lock(thd);
 
   if (!result)
     my_ok(thd);
@@ -866,7 +891,7 @@ bool Table_triggers_list::create_trigger(THD *thd, TABLE_LIST *tables,
     return 0;
 
 err_with_cleanup:
-  my_delete(trigname_buff, MYF(MY_WME));
+  mysql_file_delete(key_file_trn, trigname_buff, MYF(MY_WME));
   return 1;
 }
 
@@ -889,7 +914,7 @@ static bool rm_trigger_file(char *path, const char *db,
                             const char *table_name)
 {
   build_table_filename(path, FN_REFLEN-1, db, table_name, TRG_EXT, 0);
-  return my_delete(path, MYF(MY_WME));
+  return mysql_file_delete(key_file_trg, path, MYF(MY_WME));
 }
 
 
@@ -911,7 +936,7 @@ static bool rm_trigname_file(char *path, const char *db,
                              const char *trigger_name)
 {
   build_table_filename(path, FN_REFLEN - 1, db, trigger_name, TRN_EXT, 0);
-  return my_delete(path, MYF(MY_WME));
+  return mysql_file_delete(key_file_trn, path, MYF(MY_WME));
 }
 
 
@@ -1343,6 +1368,7 @@ bool Table_triggers_list::check_n_load(THD *thd, const char *db,
       thd->reset_db((char*) db, strlen(db));
       while ((trg_create_str= it++))
       {
+        sp_head *sp;
         trg_sql_mode= itm++;
         LEX_STRING *trg_definer= it_definer++;
 
@@ -1429,8 +1455,11 @@ bool Table_triggers_list::check_n_load(THD *thd, const char *db,
         int event= lex.trg_chistics.event;
         int action_time= lex.trg_chistics.action_time;
 
-        lex.sphead->set_creation_ctx(creation_ctx);
-        triggers->bodies[event][action_time]= lex.sphead;
+        sp= triggers->bodies[event][action_time]= lex.sphead;
+        lex.sphead= NULL; /* Prevent double cleanup. */
+
+        sp->set_info(0, 0, &lex.sp_chistics, (ulong) *trg_sql_mode);
+        sp->set_creation_ctx(creation_ctx);
 
         if (!trg_definer->length)
         {
@@ -1443,29 +1472,28 @@ bool Table_triggers_list::check_n_load(THD *thd, const char *db,
           push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
                               ER_TRG_NO_DEFINER, ER(ER_TRG_NO_DEFINER),
                               (const char*) db,
-                              (const char*) lex.sphead->m_name.str);
+                              (const char*) sp->m_name.str);
 
           /*
             Set definer to the '' to correct displaying in the information
             schema.
           */
 
-          lex.sphead->set_definer((char*) "", 0);
+          sp->set_definer((char*) "", 0);
 
           /*
             Triggers without definer information are executed under the
             authorization of the invoker.
           */
 
-          lex.sphead->m_chistics->suid= SP_IS_NOT_SUID;
+          sp->m_chistics->suid= SP_IS_NOT_SUID;
         }
         else
-          lex.sphead->set_definer(trg_definer->str, trg_definer->length);
+          sp->set_definer(trg_definer->str, trg_definer->length);
 
-        if (triggers->names_list.push_back(&lex.sphead->m_name,
-                                           &table->mem_root))
-          goto err_with_lex_cleanup;
-        
+        if (triggers->names_list.push_back(&sp->m_name, &table->mem_root))
+            goto err_with_lex_cleanup;
+
         if (!(on_table_name= alloc_lex_string(&table->mem_root)))
           goto err_with_lex_cleanup;
 
@@ -1731,7 +1759,8 @@ bool add_table_for_trigger(THD *thd,
     DBUG_RETURN(TRUE);
 
   *table= sp_add_to_query_tables(thd, lex, trg_name->m_db.str,
-                                 tbl_name.str, TL_IGNORE);
+                                 tbl_name.str, TL_IGNORE,
+                                 MDL_SHARED_NO_WRITE);
 
   DBUG_RETURN(*table ? FALSE : TRUE);
 }
@@ -1743,9 +1772,6 @@ bool add_table_for_trigger(THD *thd,
   @param thd      current thread context
   @param db       schema for table
   @param name     name for table
-
-  @note
-    The calling thread should hold the LOCK_open mutex;
 
   @retval
     False   success
@@ -1761,7 +1787,7 @@ bool Table_triggers_list::drop_all_triggers(THD *thd, char *db, char *name)
   DBUG_ENTER("drop_all_triggers");
 
   bzero(&table, sizeof(table));
-  init_alloc_root(&table.mem_root, 8192, 0);
+  init_sql_alloc(&table.mem_root, 8192, 0);
 
   if (Table_triggers_list::check_n_load(thd, db, name, &table, 1))
   {
@@ -1952,6 +1978,7 @@ Table_triggers_list::change_table_name_in_trignames(const char *old_db_name,
 
   @param[in,out] thd Thread context
   @param[in] db Old database of subject table
+  @param[in] old_alias Old alias of subject table
   @param[in] old_table Old name of subject table
   @param[in] new_db New database for subject table
   @param[in] new_table New name of subject table
@@ -1961,13 +1988,14 @@ Table_triggers_list::change_table_name_in_trignames(const char *old_db_name,
     i.e. it either will complete successfully, or will fail leaving files
     in their initial state.
     Also this method assumes that subject table is not renamed to itself.
-    This method needs to be called under an exclusive table name lock.
+    This method needs to be called under an exclusive table metadata lock.
 
   @retval FALSE Success
   @retval TRUE  Error
 */
 
 bool Table_triggers_list::change_table_name(THD *thd, const char *db,
+                                            const char *old_alias,
                                             const char *old_table,
                                             const char *new_db,
                                             const char *new_table)
@@ -1979,22 +2007,17 @@ bool Table_triggers_list::change_table_name(THD *thd, const char *db,
   DBUG_ENTER("change_table_name");
 
   bzero(&table, sizeof(table));
-  init_alloc_root(&table.mem_root, 8192, 0);
+  init_sql_alloc(&table.mem_root, 8192, 0);
 
   /*
     This method interfaces the mysql server code protected by
-    either LOCK_open mutex or with an exclusive table name lock.
-    In the future, only an exclusive table name lock will be enough.
+    an exclusive metadata lock.
   */
-#ifndef DBUG_OFF
-  uchar key[MAX_DBKEY_LENGTH];
-  uint key_length= create_table_def_key((char *)key, db, old_table);
-  if (!is_table_name_exclusively_locked_by_this_thread(thd, key, key_length))
-    safe_mutex_assert_owner(&LOCK_open);
-#endif
+  DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::TABLE, db, old_table,
+                                             MDL_EXCLUSIVE));
 
   DBUG_ASSERT(my_strcasecmp(table_alias_charset, db, new_db) ||
-              my_strcasecmp(table_alias_charset, old_table, new_table));
+              my_strcasecmp(table_alias_charset, old_alias, new_table));
 
   if (Table_triggers_list::check_n_load(thd, db, old_table, &table, TRUE))
   {
@@ -2008,7 +2031,7 @@ bool Table_triggers_list::change_table_name(THD *thd, const char *db,
       result= 1;
       goto end;
     }
-    LEX_STRING old_table_name= { (char *) old_table, strlen(old_table) };
+    LEX_STRING old_table_name= { (char *) old_alias, strlen(old_alias) };
     LEX_STRING new_table_name= { (char *) new_table, strlen(new_table) };
     /*
       Since triggers should be in the same schema as their subject tables
@@ -2138,6 +2161,61 @@ bool Table_triggers_list::process_triggers(THD *thd,
   thd->restore_sub_statement_state(&statement_state);
 
   return err_status;
+}
+
+
+/**
+  Add triggers for table to the set of routines used by statement.
+  Add tables used by them to statement table list. Do the same for
+  routines used by triggers.
+
+  @param thd             Thread context.
+  @param prelocking_ctx  Prelocking context of the statement.
+  @param table_list      Table list element for table with trigger.
+
+  @retval FALSE  Success.
+  @retval TRUE   Failure.
+*/
+
+bool
+Table_triggers_list::
+add_tables_and_routines_for_triggers(THD *thd,
+                                     Query_tables_list *prelocking_ctx,
+                                     TABLE_LIST *table_list)
+{
+  DBUG_ASSERT(static_cast<int>(table_list->lock_type) >=
+              static_cast<int>(TL_WRITE_ALLOW_WRITE));
+
+  for (int i= 0; i < (int)TRG_EVENT_MAX; i++)
+  {
+    if (table_list->trg_event_map &
+        static_cast<uint8>(1 << static_cast<int>(i)))
+    {
+      for (int j= 0; j < (int)TRG_ACTION_MAX; j++)
+      {
+        /* We can have only one trigger per action type currently */
+        sp_head *trigger= table_list->table->triggers->bodies[i][j];
+
+        if (trigger)
+        {
+          MDL_key key(MDL_key::TRIGGER, trigger->m_db.str, trigger->m_name.str);
+
+          if (sp_add_used_routine(prelocking_ctx, thd->stmt_arena,
+                                  &key, table_list->belong_to_view))
+          {
+            trigger->add_used_tables_to_table_list(thd,
+                       &prelocking_ctx->query_tables_last,
+                       table_list->belong_to_view);
+            sp_update_stmt_used_routines(thd, prelocking_ctx,
+                                         &trigger->m_sroutines,
+                                         table_list->belong_to_view);
+            trigger->propagate_attributes(prelocking_ctx);
+          }
+        }
+      }
+    }
+  }
+  return FALSE;
 }
 
 

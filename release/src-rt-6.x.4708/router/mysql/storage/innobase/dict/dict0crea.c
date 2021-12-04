@@ -1,7 +1,24 @@
-/******************************************************
-Database object creation
+/*****************************************************************************
 
-(c) 1996 Innobase Oy
+Copyright (c) 1996, 2016, Oracle and/or its affiliates. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file dict/dict0crea.c
+Database object creation
 
 Created 1/8/1996 Heikki Tuuri
 *******************************************************/
@@ -42,42 +59,46 @@ row_is_mysql_tmp_table_name(
 }
 
 
-/*********************************************************************
+/*****************************************************************//**
 Based on a table object, this function builds the entry to be inserted
-in the SYS_TABLES system table. */
+in the SYS_TABLES system table.
+@return	the tuple which should be inserted */
 static
 dtuple_t*
 dict_create_sys_tables_tuple(
 /*=========================*/
-				/* out: the tuple which should be inserted */
-	dict_table_t*	table,	/* in: table */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory for
-				the built tuple is allocated */
+	const dict_table_t*	table,	/*!< in: table */
+	mem_heap_t*		heap)	/*!< in: memory heap from
+					which the memory for the built
+					tuple is allocated */
 {
 	dict_table_t*	sys_tables;
 	dtuple_t*	entry;
 	dfield_t*	dfield;
 	byte*		ptr;
 
-	ut_ad(table && heap);
+	ut_ad(table);
+	ut_ad(heap);
 
 	sys_tables = dict_sys->sys_tables;
 
 	entry = dtuple_create(heap, 8 + DATA_N_SYS_COLS);
 
+	dict_table_copy_types(entry, sys_tables);
+
 	/* 0: NAME -----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 0);
+	dfield = dtuple_get_nth_field(entry, 0/*NAME*/);
 
 	dfield_set_data(dfield, table->name, ut_strlen(table->name));
 	/* 3: ID -------------------------------*/
-	dfield = dtuple_get_nth_field(entry, 1);
+	dfield = dtuple_get_nth_field(entry, 1/*ID*/);
 
 	ptr = mem_heap_alloc(heap, 8);
 	mach_write_to_8(ptr, table->id);
 
 	dfield_set_data(dfield, ptr, 8);
 	/* 4: N_COLS ---------------------------*/
-	dfield = dtuple_get_nth_field(entry, 2);
+	dfield = dtuple_get_nth_field(entry, 2/*N_COLS*/);
 
 #if DICT_TF_COMPACT != 1
 #error
@@ -88,33 +109,41 @@ dict_create_sys_tables_tuple(
 			| ((table->flags & DICT_TF_COMPACT) << 31));
 	dfield_set_data(dfield, ptr, 4);
 	/* 5: TYPE -----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 3);
+	dfield = dtuple_get_nth_field(entry, 3/*TYPE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
-	mach_write_to_4(ptr, DICT_TABLE_ORDINARY);
+	if (table->flags & (~DICT_TF_COMPACT & ~(~0 << DICT_TF_BITS))) {
+		ut_a(table->flags & DICT_TF_COMPACT);
+		ut_a(dict_table_get_format(table) >= DICT_TF_FORMAT_ZIP);
+		ut_a((table->flags & DICT_TF_ZSSIZE_MASK)
+		     <= (DICT_TF_ZSSIZE_MAX << DICT_TF_ZSSIZE_SHIFT));
+		ut_a(!(table->flags & (~0 << DICT_TF2_BITS)));
+		mach_write_to_4(ptr, table->flags & ~(~0 << DICT_TF_BITS));
+	} else {
+		mach_write_to_4(ptr, DICT_TABLE_ORDINARY);
+	}
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 6: MIX_ID (obsolete) ---------------------------*/
-	dfield = dtuple_get_nth_field(entry, 4);
+	dfield = dtuple_get_nth_field(entry, 4/*MIX_ID*/);
 
-	ptr = mem_heap_alloc(heap, 8);
-	memset(ptr, 0, 8);
+	ptr = mem_heap_zalloc(heap, 8);
 
 	dfield_set_data(dfield, ptr, 8);
-	/* 7: MIX_LEN (obsolete) --------------------------*/
+	/* 7: MIX_LEN (additional flags) --------------------------*/
 
-	dfield = dtuple_get_nth_field(entry, 5);
+	dfield = dtuple_get_nth_field(entry, 5/*MIX_LEN*/);
 
 	ptr = mem_heap_alloc(heap, 4);
-	memset(ptr, 0, 4);
+	mach_write_to_4(ptr, table->flags >> DICT_TF2_SHIFT);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 8: CLUSTER_NAME ---------------------*/
-	dfield = dtuple_get_nth_field(entry, 6);
-	dfield_set_data(dfield, NULL, UNIV_SQL_NULL); /* not supported */
+	dfield = dtuple_get_nth_field(entry, 6/*CLUSTER_NAME*/);
+	dfield_set_null(dfield); /* not supported */
 
 	/* 9: SPACE ----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 7);
+	dfield = dtuple_get_nth_field(entry, 7/*SPACE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, table->space);
@@ -122,32 +151,32 @@ dict_create_sys_tables_tuple(
 	dfield_set_data(dfield, ptr, 4);
 	/*----------------------------------*/
 
-	dict_table_copy_types(entry, sys_tables);
-
 	return(entry);
 }
 
-/*********************************************************************
+/*****************************************************************//**
 Based on a table object, this function builds the entry to be inserted
-in the SYS_COLUMNS system table. */
+in the SYS_COLUMNS system table.
+@return	the tuple which should be inserted */
 static
 dtuple_t*
 dict_create_sys_columns_tuple(
 /*==========================*/
-				/* out: the tuple which should be inserted */
-	dict_table_t*	table,	/* in: table */
-	ulint		i,	/* in: column number */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory for
-				the built tuple is allocated */
+	const dict_table_t*	table,	/*!< in: table */
+	ulint			i,	/*!< in: column number */
+	mem_heap_t*		heap)	/*!< in: memory heap from
+					which the memory for the built
+					tuple is allocated */
 {
 	dict_table_t*		sys_columns;
 	dtuple_t*		entry;
 	const dict_col_t*	column;
 	dfield_t*		dfield;
 	byte*			ptr;
-	const char*	col_name;
+	const char*		col_name;
 
-	ut_ad(table && heap);
+	ut_ad(table);
+	ut_ad(heap);
 
 	column = dict_table_get_nth_col(table, i);
 
@@ -155,48 +184,50 @@ dict_create_sys_columns_tuple(
 
 	entry = dtuple_create(heap, 7 + DATA_N_SYS_COLS);
 
+	dict_table_copy_types(entry, sys_columns);
+
 	/* 0: TABLE_ID -----------------------*/
-	dfield = dtuple_get_nth_field(entry, 0);
+	dfield = dtuple_get_nth_field(entry, 0/*TABLE_ID*/);
 
 	ptr = mem_heap_alloc(heap, 8);
 	mach_write_to_8(ptr, table->id);
 
 	dfield_set_data(dfield, ptr, 8);
 	/* 1: POS ----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 1);
+	dfield = dtuple_get_nth_field(entry, 1/*POS*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, i);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 4: NAME ---------------------------*/
-	dfield = dtuple_get_nth_field(entry, 2);
+	dfield = dtuple_get_nth_field(entry, 2/*NAME*/);
 
 	col_name = dict_table_get_col_name(table, i);
 	dfield_set_data(dfield, col_name, ut_strlen(col_name));
 	/* 5: MTYPE --------------------------*/
-	dfield = dtuple_get_nth_field(entry, 3);
+	dfield = dtuple_get_nth_field(entry, 3/*MTYPE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, column->mtype);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 6: PRTYPE -------------------------*/
-	dfield = dtuple_get_nth_field(entry, 4);
+	dfield = dtuple_get_nth_field(entry, 4/*PRTYPE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, column->prtype);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 7: LEN ----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 5);
+	dfield = dtuple_get_nth_field(entry, 5/*LEN*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, column->len);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 8: PREC ---------------------------*/
-	dfield = dtuple_get_nth_field(entry, 6);
+	dfield = dtuple_get_nth_field(entry, 6/*PREC*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, 0/* unused */);
@@ -204,47 +235,54 @@ dict_create_sys_columns_tuple(
 	dfield_set_data(dfield, ptr, 4);
 	/*---------------------------------*/
 
-	dict_table_copy_types(entry, sys_columns);
-
 	return(entry);
 }
 
-/*******************************************************************
-Builds a table definition to insert. */
+/***************************************************************//**
+Builds a table definition to insert.
+@return	DB_SUCCESS or error code */
 static
 ulint
 dict_build_table_def_step(
 /*======================*/
-				/* out: DB_SUCCESS or error code */
-	que_thr_t*	thr,	/* in: query thread */
-	tab_node_t*	node)	/* in: table create node */
+	que_thr_t*	thr,	/*!< in: query thread */
+	tab_node_t*	node)	/*!< in: table create node */
 {
 	dict_table_t*	table;
 	dtuple_t*	row;
 	ulint		error;
+	ulint		flags;
 	const char*	path_or_name;
 	ibool		is_path;
 	mtr_t		mtr;
-	ulint		i;
-	ulint		row_len;
+	ulint		space = 0;
+	ibool		file_per_table;
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
 
 	table = node->table;
 
-	table->id = dict_hdr_get_new_id(DICT_HDR_TABLE_ID);
+	/* Cache the global variable "srv_file_per_table" to
+	a local variable before using it. Please note
+	"srv_file_per_table" is not under dict_sys mutex
+	protection, and could be changed while executing
+	this function. So better to cache the current value
+	to a local variable, and all future reference to
+	"srv_file_per_table" should use this local variable. */
+	file_per_table = srv_file_per_table;
+
+	dict_hdr_get_new_id(&table->id, NULL, NULL);
 
 	thr_get_trx(thr)->table_id = table->id;
 
-	row_len = 0;
-	for (i = 0; i < table->n_def; i++) {
-		row_len += dict_col_get_min_size(&table->cols[i]);
-	}
-	if (row_len > BTR_PAGE_MAX_REC_SIZE) {
-		return(DB_TOO_BIG_RECORD);
-	}
+	if (file_per_table) {
+		/* Get a new space id if srv_file_per_table is set */
+		dict_hdr_get_new_id(NULL, NULL, &space);
 
-	if (srv_file_per_table) {
+		if (UNIV_UNLIKELY(space == ULINT_UNDEFINED)) {
+			return(DB_ERROR);
+		}
+
 		/* We create a new single-table tablespace for the table.
 		We initially let it be 4 pages:
 		- page 0 is the fsp header and an extent descriptor page,
@@ -252,8 +290,6 @@ dict_build_table_def_step(
 		- page 2 is the first inode page,
 		- page 3 will contain the root of the clustered index of the
 		table we create here. */
-
-		ulint	space = 0;	/* reset to zero for the call below */
 
 		if (table->dir_path_of_temp_table) {
 			/* We place tables created with CREATE TEMPORARY
@@ -266,8 +302,14 @@ dict_build_table_def_step(
 			is_path = FALSE;
 		}
 
+		ut_ad(dict_table_get_format(table) <= DICT_TF_FORMAT_MAX);
+		ut_ad(!dict_table_zip_size(table)
+		      || dict_table_get_format(table) >= DICT_TF_FORMAT_ZIP);
+
+		flags = table->flags & ~(~0 << DICT_TF_BITS);
 		error = fil_create_new_single_table_tablespace(
-			&space, path_or_name, is_path,
+			space, path_or_name, is_path,
+			flags == DICT_TF_COMPACT ? 0 : flags,
 			FIL_IBD_FILE_INITIAL_SIZE);
 		table->space = (unsigned int) space;
 
@@ -281,6 +323,9 @@ dict_build_table_def_step(
 		fsp_header_init(table->space, FIL_IBD_FILE_INITIAL_SIZE, &mtr);
 
 		mtr_commit(&mtr);
+	} else {
+		/* Create in the system tablespace: disallow new features */
+		table->flags &= (~0 << DICT_TF_BITS) | DICT_TF_COMPACT;
 	}
 
 	row = dict_create_sys_tables_tuple(table, node->heap);
@@ -290,14 +335,14 @@ dict_build_table_def_step(
 	return(DB_SUCCESS);
 }
 
-/*******************************************************************
-Builds a column definition to insert. */
+/***************************************************************//**
+Builds a column definition to insert.
+@return	DB_SUCCESS */
 static
 ulint
 dict_build_col_def_step(
 /*====================*/
-				/* out: DB_SUCCESS */
-	tab_node_t*	node)	/* in: table create node */
+	tab_node_t*	node)	/*!< in: table create node */
 {
 	dtuple_t*	row;
 
@@ -308,17 +353,18 @@ dict_build_col_def_step(
 	return(DB_SUCCESS);
 }
 
-/*********************************************************************
+/*****************************************************************//**
 Based on an index object, this function builds the entry to be inserted
-in the SYS_INDEXES system table. */
+in the SYS_INDEXES system table.
+@return	the tuple which should be inserted */
 static
 dtuple_t*
 dict_create_sys_indexes_tuple(
 /*==========================*/
-				/* out: the tuple which should be inserted */
-	dict_index_t*	index,	/* in: index */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory for
-				the built tuple is allocated */
+	const dict_index_t*	index,	/*!< in: index */
+	mem_heap_t*		heap)	/*!< in: memory heap from
+					which the memory for the built
+					tuple is allocated */
 {
 	dict_table_t*	sys_indexes;
 	dict_table_t*	table;
@@ -327,41 +373,44 @@ dict_create_sys_indexes_tuple(
 	byte*		ptr;
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
-	ut_ad(index && heap);
+	ut_ad(index);
+	ut_ad(heap);
 
 	sys_indexes = dict_sys->sys_indexes;
 
-	table = dict_table_get_low(index->table_name);
+	table = dict_table_get_low(index->table_name, DICT_ERR_IGNORE_NONE);
 
 	entry = dtuple_create(heap, 7 + DATA_N_SYS_COLS);
 
+	dict_table_copy_types(entry, sys_indexes);
+
 	/* 0: TABLE_ID -----------------------*/
-	dfield = dtuple_get_nth_field(entry, 0);
+	dfield = dtuple_get_nth_field(entry, 0/*TABLE_ID*/);
 
 	ptr = mem_heap_alloc(heap, 8);
 	mach_write_to_8(ptr, table->id);
 
 	dfield_set_data(dfield, ptr, 8);
 	/* 1: ID ----------------------------*/
-	dfield = dtuple_get_nth_field(entry, 1);
+	dfield = dtuple_get_nth_field(entry, 1/*ID*/);
 
 	ptr = mem_heap_alloc(heap, 8);
 	mach_write_to_8(ptr, index->id);
 
 	dfield_set_data(dfield, ptr, 8);
 	/* 4: NAME --------------------------*/
-	dfield = dtuple_get_nth_field(entry, 2);
+	dfield = dtuple_get_nth_field(entry, 2/*NAME*/);
 
 	dfield_set_data(dfield, index->name, ut_strlen(index->name));
 	/* 5: N_FIELDS ----------------------*/
-	dfield = dtuple_get_nth_field(entry, 3);
+	dfield = dtuple_get_nth_field(entry, 3/*N_FIELDS*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, index->n_fields);
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 6: TYPE --------------------------*/
-	dfield = dtuple_get_nth_field(entry, 4);
+	dfield = dtuple_get_nth_field(entry, 4/*TYPE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, index->type);
@@ -373,7 +422,7 @@ dict_create_sys_indexes_tuple(
 #error "DICT_SYS_INDEXES_SPACE_NO_FIELD != 7"
 #endif
 
-	dfield = dtuple_get_nth_field(entry, 5);
+	dfield = dtuple_get_nth_field(entry, 5/*SPACE*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, index->space);
@@ -385,7 +434,7 @@ dict_create_sys_indexes_tuple(
 #error "DICT_SYS_INDEXES_PAGE_NO_FIELD != 8"
 #endif
 
-	dfield = dtuple_get_nth_field(entry, 6);
+	dfield = dtuple_get_nth_field(entry, 6/*PAGE_NO*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 	mach_write_to_4(ptr, FIL_NULL);
@@ -393,23 +442,22 @@ dict_create_sys_indexes_tuple(
 	dfield_set_data(dfield, ptr, 4);
 	/*--------------------------------*/
 
-	dict_table_copy_types(entry, sys_indexes);
-
 	return(entry);
 }
 
-/*********************************************************************
+/*****************************************************************//**
 Based on an index object, this function builds the entry to be inserted
-in the SYS_FIELDS system table. */
+in the SYS_FIELDS system table.
+@return	the tuple which should be inserted */
 static
 dtuple_t*
 dict_create_sys_fields_tuple(
 /*=========================*/
-				/* out: the tuple which should be inserted */
-	dict_index_t*	index,	/* in: index */
-	ulint		i,	/* in: field number */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory for
-				the built tuple is allocated */
+	const dict_index_t*	index,	/*!< in: index */
+	ulint			i,	/*!< in: field number */
+	mem_heap_t*		heap)	/*!< in: memory heap from
+					which the memory for the built
+					tuple is allocated */
 {
 	dict_table_t*	sys_fields;
 	dtuple_t*	entry;
@@ -419,11 +467,13 @@ dict_create_sys_fields_tuple(
 	ibool		index_contains_column_prefix_field	= FALSE;
 	ulint		j;
 
-	ut_ad(index && heap);
+	ut_ad(index);
+	ut_ad(heap);
 
 	for (j = 0; j < index->n_fields; j++) {
 		if (dict_index_get_nth_field(index, j)->prefix_len > 0) {
 			index_contains_column_prefix_field = TRUE;
+			break;
 		}
 	}
 
@@ -433,8 +483,10 @@ dict_create_sys_fields_tuple(
 
 	entry = dtuple_create(heap, 3 + DATA_N_SYS_COLS);
 
+	dict_table_copy_types(entry, sys_fields);
+
 	/* 0: INDEX_ID -----------------------*/
-	dfield = dtuple_get_nth_field(entry, 0);
+	dfield = dtuple_get_nth_field(entry, 0/*INDEX_ID*/);
 
 	ptr = mem_heap_alloc(heap, 8);
 	mach_write_to_8(ptr, index->id);
@@ -442,7 +494,7 @@ dict_create_sys_fields_tuple(
 	dfield_set_data(dfield, ptr, 8);
 	/* 1: POS + PREFIX LENGTH ----------------------------*/
 
-	dfield = dtuple_get_nth_field(entry, 1);
+	dfield = dtuple_get_nth_field(entry, 1/*POS*/);
 
 	ptr = mem_heap_alloc(heap, 4);
 
@@ -462,32 +514,30 @@ dict_create_sys_fields_tuple(
 
 	dfield_set_data(dfield, ptr, 4);
 	/* 4: COL_NAME -------------------------*/
-	dfield = dtuple_get_nth_field(entry, 2);
+	dfield = dtuple_get_nth_field(entry, 2/*COL_NAME*/);
 
 	dfield_set_data(dfield, field->name,
 			ut_strlen(field->name));
 	/*---------------------------------*/
 
-	dict_table_copy_types(entry, sys_fields);
-
 	return(entry);
 }
 
-/*********************************************************************
+/*****************************************************************//**
 Creates the tuple with which the index entry is searched for writing the index
-tree root page number, if such a tree is created. */
+tree root page number, if such a tree is created.
+@return	the tuple for search */
 static
 dtuple_t*
 dict_create_search_tuple(
 /*=====================*/
-				/* out: the tuple for search */
-	dtuple_t*	tuple,	/* in: the tuple inserted in the SYS_INDEXES
+	const dtuple_t*	tuple,	/*!< in: the tuple inserted in the SYS_INDEXES
 				table */
-	mem_heap_t*	heap)	/* in: memory heap from which the memory for
+	mem_heap_t*	heap)	/*!< in: memory heap from which the memory for
 				the built tuple is allocated */
 {
 	dtuple_t*	search_tuple;
-	dfield_t*	field1;
+	const dfield_t*	field1;
 	dfield_t*	field2;
 
 	ut_ad(tuple && heap);
@@ -509,15 +559,15 @@ dict_create_search_tuple(
 	return(search_tuple);
 }
 
-/*******************************************************************
-Builds an index definition row to insert. */
+/***************************************************************//**
+Builds an index definition row to insert.
+@return	DB_SUCCESS or error code */
 static
 ulint
 dict_build_index_def_step(
 /*======================*/
-				/* out: DB_SUCCESS or error code */
-	que_thr_t*	thr,	/* in: query thread */
-	ind_node_t*	node)	/* in: index create node */
+	que_thr_t*	thr,	/*!< in: query thread */
+	ind_node_t*	node)	/*!< in: index create node */
 {
 	dict_table_t*	table;
 	dict_index_t*	index;
@@ -530,7 +580,7 @@ dict_build_index_def_step(
 
 	index = node->index;
 
-	table = dict_table_get_low(index->table_name);
+	table = dict_table_get_low(index->table_name, DICT_ERR_IGNORE_NONE);
 
 	if (table == NULL) {
 		return(DB_TABLE_NOT_FOUND);
@@ -541,9 +591,9 @@ dict_build_index_def_step(
 	node->table = table;
 
 	ut_ad((UT_LIST_GET_LEN(table->indexes) > 0)
-	      || (index->type & DICT_CLUSTERED));
+	      || dict_index_is_clust(index));
 
-	index->id = dict_hdr_get_new_id(DICT_HDR_INDEX_ID);
+	dict_hdr_get_new_id(NULL, &index->id, NULL);
 
 	/* Inherit the space id from the table; we store all indexes of a
 	table in the same tablespace */
@@ -555,17 +605,20 @@ dict_build_index_def_step(
 
 	ins_node_set_new_row(node->ind_def, row);
 
+	/* Note that the index was created by this transaction. */
+	index->trx_id = trx->id;
+
 	return(DB_SUCCESS);
 }
 
-/*******************************************************************
-Builds a field definition row to insert. */
+/***************************************************************//**
+Builds a field definition row to insert.
+@return	DB_SUCCESS */
 static
 ulint
 dict_build_field_def_step(
 /*======================*/
-				/* out: DB_SUCCESS */
-	ind_node_t*	node)	/* in: index create node */
+	ind_node_t*	node)	/*!< in: index create node */
 {
 	dict_index_t*	index;
 	dtuple_t*	row;
@@ -579,26 +632,25 @@ dict_build_field_def_step(
 	return(DB_SUCCESS);
 }
 
-/*******************************************************************
-Creates an index tree for the index if it is not a member of a cluster. */
+/***************************************************************//**
+Creates an index tree for the index if it is not a member of a cluster.
+@return	DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
 static
 ulint
 dict_create_index_tree_step(
 /*========================*/
-				/* out: DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
-	ind_node_t*	node)	/* in: index create node */
+	ind_node_t*	node)	/*!< in: index create node */
 {
 	dict_index_t*	index;
 	dict_table_t*	sys_indexes;
-	dict_table_t*	table;
 	dtuple_t*	search_tuple;
+	ulint		zip_size;
 	btr_pcur_t	pcur;
 	mtr_t		mtr;
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
 
 	index = node->index;
-	table = node->table;
 
 	sys_indexes = dict_sys->sys_indexes;
 
@@ -616,14 +668,16 @@ dict_create_index_tree_step(
 
 	btr_pcur_move_to_next_user_rec(&pcur, &mtr);
 
-	node->page_no = btr_create(index->type, index->space, index->id,
-				   dict_table_is_comp(table), &mtr);
+	zip_size = dict_table_zip_size(index->table);
+
+	node->page_no = btr_create(index->type, index->space, zip_size,
+				   index->id, index, &mtr);
 	/* printf("Created a new index tree in space %lu root page %lu\n",
 	index->space, index->page_no); */
 
-	page_rec_write_index_page_no(btr_pcur_get_rec(&pcur),
-				     DICT_SYS_INDEXES_PAGE_NO_FIELD,
-				     node->page_no, &mtr);
+	page_rec_write_field(btr_pcur_get_rec(&pcur),
+			     DICT_SYS_INDEXES_PAGE_NO_FIELD,
+			     node->page_no, &mtr);
 	btr_pcur_close(&pcur);
 	mtr_commit(&mtr);
 
@@ -635,20 +689,21 @@ dict_create_index_tree_step(
 	return(DB_SUCCESS);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Drops the index tree associated with a row in SYS_INDEXES table. */
-
+UNIV_INTERN
 void
 dict_drop_index_tree(
 /*=================*/
-	rec_t*	rec,	/* in: record in the clustered index of SYS_INDEXES
-			table */
-	mtr_t*	mtr)	/* in: mtr having the latch on the record page */
+	rec_t*	rec,	/*!< in/out: record in the clustered index
+			of SYS_INDEXES table */
+	mtr_t*	mtr)	/*!< in: mtr having the latch on the record page */
 {
-	ulint	root_page_no;
-	ulint	space;
-	byte*	ptr;
-	ulint	len;
+	ulint		root_page_no;
+	ulint		space;
+	ulint		zip_size;
+	const byte*	ptr;
+	ulint		len;
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
 	ut_a(!dict_table_is_comp(dict_sys->sys_indexes));
@@ -670,8 +725,9 @@ dict_drop_index_tree(
 	ut_ad(len == 4);
 
 	space = mtr_read_ulint(ptr, MLOG_4BYTES, mtr);
+	zip_size = fil_space_get_zip_size(space);
 
-	if (!fil_tablespace_exists_in_mem(space)) {
+	if (UNIV_UNLIKELY(zip_size == ULINT_UNDEFINED)) {
 		/* It is a single table tablespace and the .ibd file is
 		missing: do nothing */
 
@@ -681,7 +737,7 @@ dict_drop_index_tree(
 	/* We free all the pages but the root page first; this operation
 	may span several mini-transactions */
 
-	btr_free_but_not_root(space, root_page_no);
+	btr_free_but_not_root(space, zip_size, root_page_no);
 
 	/* Then we free the root page in the same mini-transaction where
 	we write FIL_NULL to the appropriate field in the SYS_INDEXES
@@ -689,38 +745,39 @@ dict_drop_index_tree(
 
 	/* printf("Dropping index tree in space %lu root page %lu\n", space,
 	root_page_no); */
-	btr_free_root(space, root_page_no, mtr);
+	btr_free_root(space, zip_size, root_page_no, mtr);
 
-	page_rec_write_index_page_no(rec,
-				     DICT_SYS_INDEXES_PAGE_NO_FIELD,
-				     FIL_NULL, mtr);
+	page_rec_write_field(rec, DICT_SYS_INDEXES_PAGE_NO_FIELD,
+			     FIL_NULL, mtr);
 }
 
-/***********************************************************************
-Truncates the index tree associated with a row in SYS_INDEXES table. */
-
+/*******************************************************************//**
+Truncates the index tree associated with a row in SYS_INDEXES table.
+@return	new root page number, or FIL_NULL on failure */
+UNIV_INTERN
 ulint
 dict_truncate_index_tree(
 /*=====================*/
-				/* out: new root page number, or
-				FIL_NULL on failure */
-	dict_table_t*	table,	/* in: the table the index belongs to */
-	btr_pcur_t*	pcur,	/* in/out: persistent cursor pointing to
+	dict_table_t*	table,	/*!< in: the table the index belongs to */
+	ulint		space,	/*!< in: 0=truncate,
+				nonzero=create the index tree in the
+				given tablespace */
+	btr_pcur_t*	pcur,	/*!< in/out: persistent cursor pointing to
 				record in the clustered index of
 				SYS_INDEXES table. The cursor may be
 				repositioned in this call. */
-	mtr_t*		mtr)	/* in: mtr having the latch
+	mtr_t*		mtr)	/*!< in: mtr having the latch
 				on the record page. The mtr may be
 				committed and restarted in this call. */
 {
 	ulint		root_page_no;
-	ulint		space;
+	ibool		drop = !space;
+	ulint		zip_size;
 	ulint		type;
-	dulint		index_id;
+	index_id_t	index_id;
 	rec_t*		rec;
-	byte*		ptr;
+	const byte*	ptr;
 	ulint		len;
-	ulint		comp;
 	dict_index_t*	index;
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
@@ -732,13 +789,13 @@ dict_truncate_index_tree(
 
 	root_page_no = mtr_read_ulint(ptr, MLOG_4BYTES, mtr);
 
-	if (root_page_no == FIL_NULL) {
+	if (drop && root_page_no == FIL_NULL) {
 		/* The tree has been freed. */
 
 		ut_print_timestamp(stderr);
 		fprintf(stderr, "  InnoDB: Trying to TRUNCATE"
 			" a missing index of table %s!\n", table->name);
-		return(FIL_NULL);
+		drop = FALSE;
 	}
 
 	ptr = rec_get_nth_field_old(rec,
@@ -746,9 +803,13 @@ dict_truncate_index_tree(
 
 	ut_ad(len == 4);
 
-	space = mtr_read_ulint(ptr, MLOG_4BYTES, mtr);
+	if (drop) {
+		space = mtr_read_ulint(ptr, MLOG_4BYTES, mtr);
+	}
 
-	if (!fil_tablespace_exists_in_mem(space)) {
+	zip_size = fil_space_get_zip_size(space);
+
+	if (UNIV_UNLIKELY(zip_size == ULINT_UNDEFINED)) {
 		/* It is a single table tablespace and the .ibd file is
 		missing: do nothing */
 
@@ -767,26 +828,31 @@ dict_truncate_index_tree(
 	ut_ad(len == 8);
 	index_id = mach_read_from_8(ptr);
 
+	if (!drop) {
+
+		goto create;
+	}
+
 	/* We free all the pages but the root page first; this operation
 	may span several mini-transactions */
 
-	btr_free_but_not_root(space, root_page_no);
+	btr_free_but_not_root(space, zip_size, root_page_no);
 
 	/* Then we free the root page in the same mini-transaction where
 	we create the b-tree and write its new root page number to the
 	appropriate field in the SYS_INDEXES record: this mini-transaction
 	marks the B-tree totally truncated */
 
-	comp = page_is_comp(btr_page_get(space, root_page_no, RW_X_LATCH,
-					 mtr));
+	btr_block_get(space, zip_size, root_page_no, RW_X_LATCH, NULL, mtr);
 
-	btr_free_root(space, root_page_no, mtr);
+	btr_free_root(space, zip_size, root_page_no, mtr);
+create:
 	/* We will temporarily write FIL_NULL to the PAGE_NO field
 	in SYS_INDEXES, so that the database will not get into an
 	inconsistent state in case it crashes between the mtr_commit()
 	below and the following mtr_commit() call. */
-	page_rec_write_index_page_no(rec, DICT_SYS_INDEXES_PAGE_NO_FIELD,
-				     FIL_NULL, mtr);
+	page_rec_write_field(rec, DICT_SYS_INDEXES_PAGE_NO_FIELD,
+			     FIL_NULL, mtr);
 
 	/* We will need to commit the mini-transaction in order to avoid
 	deadlocks in the btr_create() call, because otherwise we would
@@ -801,37 +867,34 @@ dict_truncate_index_tree(
 	for (index = UT_LIST_GET_FIRST(table->indexes);
 	     index;
 	     index = UT_LIST_GET_NEXT(indexes, index)) {
-		if (!ut_dulint_cmp(index->id, index_id)) {
-			break;
+		if (index->id == index_id) {
+			root_page_no = btr_create(type, space, zip_size,
+						  index_id, index, mtr);
+			index->page = (unsigned int) root_page_no;
+			return(root_page_no);
 		}
 	}
 
-	root_page_no = btr_create(type, space, index_id, comp, mtr);
-	if (index) {
-		index->page = (unsigned int) root_page_no;
-	} else {
-		ut_print_timestamp(stderr);
-		fprintf(stderr,
-			"  InnoDB: Index %lu %lu of table %s is missing\n"
-			"InnoDB: from the data dictionary during TRUNCATE!\n",
-			ut_dulint_get_high(index_id),
-			ut_dulint_get_low(index_id),
-			table->name);
-	}
+	ut_print_timestamp(stderr);
+	fprintf(stderr,
+		"  InnoDB: Index %llu of table %s is missing\n"
+		"InnoDB: from the data dictionary during TRUNCATE!\n",
+		(ullint) index_id,
+		table->name);
 
-	return(root_page_no);
+	return(FIL_NULL);
 }
 
-/*************************************************************************
-Creates a table create graph. */
-
+/*********************************************************************//**
+Creates a table create graph.
+@return	own: table create node */
+UNIV_INTERN
 tab_node_t*
 tab_create_graph_create(
 /*====================*/
-				/* out, own: table create node */
-	dict_table_t*	table,	/* in: table to create, built as a memory data
+	dict_table_t*	table,	/*!< in: table to create, built as a memory data
 				structure */
-	mem_heap_t*	heap)	/* in: heap where created */
+	mem_heap_t*	heap)	/*!< in: heap where created */
 {
 	tab_node_t*	node;
 
@@ -858,16 +921,16 @@ tab_create_graph_create(
 	return(node);
 }
 
-/*************************************************************************
-Creates an index create graph. */
-
+/*********************************************************************//**
+Creates an index create graph.
+@return	own: index create node */
+UNIV_INTERN
 ind_node_t*
 ind_create_graph_create(
 /*====================*/
-				/* out, own: index create node */
-	dict_index_t*	index,	/* in: index to create, built as a memory data
+	dict_index_t*	index,	/*!< in: index to create, built as a memory data
 				structure */
-	mem_heap_t*	heap)	/* in: heap where created */
+	mem_heap_t*	heap)	/*!< in: heap where created */
 {
 	ind_node_t*	node;
 
@@ -895,14 +958,14 @@ ind_create_graph_create(
 	return(node);
 }
 
-/***************************************************************
-Creates a table. This is a high-level function used in SQL execution graphs. */
-
+/***********************************************************//**
+Creates a table. This is a high-level function used in SQL execution graphs.
+@return	query thread to run next or NULL */
+UNIV_INTERN
 que_thr_t*
 dict_create_table_step(
 /*===================*/
-				/* out: query thread to run next or NULL */
-	que_thr_t*	thr)	/* in: query thread */
+	que_thr_t*	thr)	/*!< in: query thread */
 {
 	tab_node_t*	node;
 	ulint		err	= DB_ERROR;
@@ -1001,15 +1064,15 @@ function_exit:
 	return(thr);
 }
 
-/***************************************************************
+/***********************************************************//**
 Creates an index. This is a high-level function used in SQL execution
-graphs. */
-
+graphs.
+@return	query thread to run next or NULL */
+UNIV_INTERN
 que_thr_t*
 dict_create_index_step(
 /*===================*/
-				/* out: query thread to run next or NULL */
-	que_thr_t*	thr)	/* in: query thread */
+	que_thr_t*	thr)	/*!< in: query thread */
 {
 	ind_node_t*	node;
 	ulint		err	= DB_ERROR;
@@ -1062,8 +1125,29 @@ dict_create_index_step(
 
 			return(thr);
 		} else {
-			node->state = INDEX_CREATE_INDEX_TREE;
+			node->state = INDEX_ADD_TO_CACHE;
 		}
+	}
+
+	if (node->state == INDEX_ADD_TO_CACHE) {
+
+		index_id_t	index_id = node->index->id;
+
+		err = dict_index_add_to_cache(
+			node->table, node->index, FIL_NULL,
+			trx_is_strict(trx)
+			|| dict_table_get_format(node->table)
+			>= DICT_TF_FORMAT_ZIP);
+
+		node->index = dict_index_get_if_in_cache_low(index_id);
+		ut_a((node->index == NULL) == (err != DB_SUCCESS));
+
+		if (err != DB_SUCCESS) {
+
+			goto function_exit;
+		}
+
+		node->state = INDEX_CREATE_INDEX_TREE;
 	}
 
 	if (node->state == INDEX_CREATE_INDEX_TREE) {
@@ -1071,10 +1155,13 @@ dict_create_index_step(
 		err = dict_create_index_tree_step(node);
 
 		if (err != DB_SUCCESS) {
+			dict_index_remove_from_cache(node->table, node->index);
+			node->index = NULL;
 
 			goto function_exit;
 		}
 
+		node->index->page = node->page_no;
 		node->state = INDEX_COMMIT_WORK;
 	}
 
@@ -1084,19 +1171,11 @@ dict_create_index_step(
 		(CREATE INDEX does NOT currently do an implicit commit of
 		the current transaction) */
 
-		node->state = INDEX_ADD_TO_CACHE;
+		node->state = INDEX_CREATE_INDEX_TREE;
 
 		/* thr->run_node = node->commit_node;
 
 		return(thr); */
-	}
-
-	if (node->state == INDEX_ADD_TO_CACHE) {
-
-		dict_index_add_to_cache(node->table, node->index,
-					node->page_no);
-
-		err = DB_SUCCESS;
 	}
 
 function_exit:
@@ -1119,15 +1198,15 @@ function_exit:
 	return(thr);
 }
 
-/********************************************************************
+/****************************************************************//**
 Creates the foreign key constraints system tables inside InnoDB
 at database creation or database start if they are not found or are
-not of the right form. */
-
+not of the right form.
+@return	DB_SUCCESS or error code */
+UNIV_INTERN
 ulint
 dict_create_or_check_foreign_constraint_tables(void)
 /*================================================*/
-				/* out: DB_SUCCESS or error code */
 {
 	dict_table_t*	table1;
 	dict_table_t*	table2;
@@ -1136,8 +1215,8 @@ dict_create_or_check_foreign_constraint_tables(void)
 
 	mutex_enter(&(dict_sys->mutex));
 
-	table1 = dict_table_get_low("SYS_FOREIGN");
-	table2 = dict_table_get_low("SYS_FOREIGN_COLS");
+	table1 = dict_table_get_low("SYS_FOREIGN", DICT_ERR_IGNORE_NONE);
+	table2 = dict_table_get_low("SYS_FOREIGN_COLS", DICT_ERR_IGNORE_NONE);
 
 	if (table1 && table2
 	    && UT_LIST_GET_LEN(table1->indexes) == 3
@@ -1203,7 +1282,6 @@ dict_create_or_check_foreign_constraint_tables(void)
 			     " FOR_COL_NAME CHAR, REF_COL_NAME CHAR);\n"
 			     "CREATE UNIQUE CLUSTERED INDEX ID_IND"
 			     " ON SYS_FOREIGN_COLS (ID, POS);\n"
-			     "COMMIT WORK;\n"
 			     "END;\n"
 			     , FALSE, trx);
 
@@ -1226,7 +1304,7 @@ dict_create_or_check_foreign_constraint_tables(void)
 		error = DB_MUST_GET_MORE_FILE_SPACE;
 	}
 
-	trx->op_info = "";
+	trx_commit_for_mysql(trx);
 
 	row_mysql_unlock_data_dictionary(trx);
 
@@ -1241,18 +1319,18 @@ dict_create_or_check_foreign_constraint_tables(void)
 	return(error);
 }
 
-/********************************************************************
-Evaluate the given foreign key SQL statement. */
-
+/****************************************************************//**
+Evaluate the given foreign key SQL statement.
+@return	error code or DB_SUCCESS */
+static
 ulint
 dict_foreign_eval_sql(
 /*==================*/
-				/* out: error code or DB_SUCCESS */
-	pars_info_t*	info,	/* in: info struct, or NULL */
-	const char*	sql,	/* in: SQL string to evaluate */
-	dict_table_t*	table,	/* in: table */
-	dict_foreign_t*	foreign,/* in: foreign */
-	trx_t*		trx)	/* in: transaction */
+	pars_info_t*	info,	/*!< in: info struct, or NULL */
+	const char*	sql,	/*!< in: SQL string to evaluate */
+	dict_table_t*	table,	/*!< in: table */
+	dict_foreign_t*	foreign,/*!< in: foreign */
+	trx_t*		trx)	/*!< in: transaction */
 {
 	ulint		error;
 	FILE*		ef	= dict_foreign_err_file;
@@ -1267,12 +1345,11 @@ dict_foreign_eval_sql(
 		      ef);
 		ut_print_name(ef, trx, TRUE, table->name);
 		fputs(".\nA foreign key constraint of name ", ef);
-		ut_print_name(ef, trx, FALSE, foreign->id);
+		ut_print_name(ef, trx, TRUE, foreign->id);
 		fputs("\nalready exists."
-		      " (Note that internally InnoDB adds 'databasename/'\n"
-		      "in front of the user-defined constraint name).\n",
-		      ef);
-		fputs("Note that InnoDB's FOREIGN KEY system tables store\n"
+		      " (Note that internally InnoDB adds 'databasename'\n"
+		      "in front of the user-defined constraint name.)\n"
+		      "Note that InnoDB's FOREIGN KEY system tables store\n"
 		      "constraint names as case-insensitive, with the\n"
 		      "MySQL standard latin1_swedish_ci collation. If you\n"
 		      "create tables or databases whose names differ only in\n"
@@ -1307,18 +1384,18 @@ dict_foreign_eval_sql(
 	return(DB_SUCCESS);
 }
 
-/************************************************************************
+/********************************************************************//**
 Add a single foreign key field definition to the data dictionary tables in
-the database.  */
+the database.
+@return	error code or DB_SUCCESS */
 static
 ulint
 dict_create_add_foreign_field_to_dictionary(
 /*========================================*/
-					/* out: error code or DB_SUCCESS */
-	ulint		field_nr,	/* in: foreign field number */
-	dict_table_t*	table,		/* in: table */
-	dict_foreign_t*	foreign,	/* in: foreign */
-	trx_t*		trx)		/* in: transaction */
+	ulint		field_nr,	/*!< in: foreign field number */
+	dict_table_t*	table,		/*!< in: table */
+	dict_foreign_t*	foreign,	/*!< in: foreign */
+	trx_t*		trx)		/*!< in: transaction */
 {
 	pars_info_t*	info = pars_info_create();
 
@@ -1342,40 +1419,41 @@ dict_create_add_foreign_field_to_dictionary(
 		       table, foreign, trx));
 }
 
-/************************************************************************
+/********************************************************************//**
 Add a single foreign key definition to the data dictionary tables in the
 database. We also generate names to constraints that were not named by the
 user. A generated constraint has a name of the format
-databasename/tablename_ibfk_<number>, where the numbers start from 1, and
+databasename/tablename_ibfk_NUMBER, where the numbers start from 1, and
 are given locally for this table, that is, the number is not global, as in
-the old format constraints < 4.0.18 it used to be. */
+the old format constraints < 4.0.18 it used to be.
+@return	error code or DB_SUCCESS */
 static
 ulint
 dict_create_add_foreign_to_dictionary(
 /*==================================*/
-				/* out: error code or DB_SUCCESS */
-	ulint*		id_nr,	/* in/out: number to use in id generation;
+	ulint*		id_nr,	/*!< in/out: number to use in id generation;
 				incremented if used */
-	dict_table_t*	table,	/* in: table */
-	dict_foreign_t*	foreign,/* in: foreign */
-	trx_t*		trx)	/* in: transaction */
+	dict_table_t*	table,	/*!< in: table */
+	dict_foreign_t*	foreign,/*!< in: foreign */
+	trx_t*		trx)	/*!< in: transaction */
 {
 	ulint		error;
 	ulint		i;
 	pars_info_t*	info;
 
+	ut_ad(mutex_own(&(dict_sys->mutex)));
+
 	if (foreign->id == NULL) {
 		/* Generate a new constraint id */
 		ulint	namelen	= strlen(table->name);
 		char*	id	= mem_heap_alloc(foreign->heap, namelen + 20);
-		/* no overflow if number < 1e13 */
 
 		if (row_is_mysql_tmp_table_name(table->name)) {
 			sprintf(id, "%s_ibfk_%lu", table->name,
 				(ulong) (*id_nr)++);
 		} else {
-			char table_name[MAX_TABLE_NAME_LEN + 20] = "";
-			uint errors = 0;
+			char	table_name[MAX_TABLE_NAME_LEN + 20] = "";
+			uint	errors = 0;
 
 			strncpy(table_name, table->name,
 				MAX_TABLE_NAME_LEN + 20);
@@ -1443,17 +1521,48 @@ dict_create_add_foreign_to_dictionary(
 				      "END;\n"
 				      , table, foreign, trx);
 
+	if (error == DB_SUCCESS) {
+
+
+		if (foreign->foreign_table != NULL) {
+			ib_rbt_t*	rbt
+				= foreign->foreign_table->foreign_rbt;
+
+			if (rbt == NULL) {
+				rbt = dict_table_init_foreign_rbt(
+					foreign->foreign_table);
+			} else {
+				rbt_delete(rbt, foreign->id);
+			}
+
+			rbt_insert(rbt, foreign->id, &foreign);
+		}
+
+		if (foreign->referenced_table != NULL) {
+			ib_rbt_t* rbt
+				= foreign->referenced_table->referenced_rbt;
+
+			if (rbt == NULL) {
+				rbt = dict_table_init_referenced_rbt(
+					foreign->referenced_table);
+			} else {
+				rbt_delete(rbt, foreign->id);
+			}
+			rbt_insert(rbt, foreign->id, &foreign);
+		}
+	}
+
 	return(error);
 }
 
-/************************************************************************
-Adds foreign key definitions to data dictionary tables in the database. */
-
+/********************************************************************//**
+Adds foreign key definitions to data dictionary tables in the database.
+@return	error code or DB_SUCCESS */
+UNIV_INTERN
 ulint
 dict_create_add_foreigns_to_dictionary(
 /*===================================*/
-				/* out: error code or DB_SUCCESS */
-	ulint		start_id,/* in: if we are actually doing ALTER TABLE
+	ulint		start_id,/*!< in: if we are actually doing ALTER TABLE
 				ADD CONSTRAINT, we want to generate constraint
 				numbers which are bigger than in the table so
 				far; we number the constraints from
@@ -1461,21 +1570,22 @@ dict_create_add_foreigns_to_dictionary(
 				we are creating a new table, or if the table
 				so far has no constraints for which the name
 				was generated here */
-	dict_table_t*	table,	/* in: table */
-	trx_t*		trx)	/* in: transaction */
+	dict_table_t*	table,	/*!< in: table */
+	trx_t*		trx)	/*!< in: transaction */
 {
 	dict_foreign_t*	foreign;
 	ulint		number	= start_id + 1;
 	ulint		error;
+	DBUG_ENTER("dict_create_add_foreigns_to_dictionary");
 
 	ut_ad(mutex_own(&(dict_sys->mutex)));
 
-	if (NULL == dict_table_get_low("SYS_FOREIGN")) {
+	if (NULL == dict_table_get_low("SYS_FOREIGN", DICT_ERR_IGNORE_NONE)) {
 		fprintf(stderr,
 			"InnoDB: table SYS_FOREIGN not found"
 			" in internal data dictionary\n");
 
-		return(DB_ERROR);
+		DBUG_RETURN(DB_ERROR);
 	}
 
 	for (foreign = UT_LIST_GET_FIRST(table->foreign_list);
@@ -1487,9 +1597,9 @@ dict_create_add_foreigns_to_dictionary(
 
 		if (error != DB_SUCCESS) {
 
-			return(error);
+			DBUG_RETURN(error);
 		}
 	}
 
-	return(DB_SUCCESS);
+	DBUG_RETURN(DB_SUCCESS);
 }

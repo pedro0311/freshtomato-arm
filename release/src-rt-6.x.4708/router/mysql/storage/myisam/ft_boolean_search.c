@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2001, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2001, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Written by Sergei A. Golubchik, who has a shared copyright to this code */
 
@@ -93,6 +91,8 @@ static double *nwghts=_nwghts+5; /* nwghts[i] = -0.5*1.5**i */
 #define FTB_FLAG_YES   2
 #define FTB_FLAG_NO    4
 #define FTB_FLAG_WONLY 8
+
+#define CMP_NUM(a,b)    (((a) < (b)) ? -1 : ((a) == (b)) ? 0 : 1)
 
 typedef struct st_ftb_expr FTB_EXPR;
 struct st_ftb_expr
@@ -199,7 +199,8 @@ static int ftb_query_add_word(MYSQL_FTPARSER_PARAM *param,
       ftbw= (FTB_WORD *)alloc_root(&ftb_param->ftb->mem_root,
                                    sizeof(FTB_WORD) +
                                    (info->trunc ? MI_MAX_KEY_BUFF :
-                                    word_len * ftb_param->ftb->charset->mbmaxlen +
+                                    (word_len + 1) *
+                                    ftb_param->ftb->charset->mbmaxlen +
                                     HA_FT_WLEN +
                                     ftb_param->ftb->info->s->rec_reflength));
       ftbw->len= word_len + 1;
@@ -362,6 +363,8 @@ static int _ft2_search_no_lock(FTB *ftb, FTB_WORD *ftbw, my_bool init_search)
   MI_INFO *info=ftb->info;
   uint UNINIT_VAR(off), extra= HA_FT_WLEN + info->s->rec_reflength;
   uchar *lastkey_buf=ftbw->word+ftbw->off;
+  uint max_word_length= (ftbw->flags & FTB_FLAG_TRUNC) ? MI_MAX_KEY_BUFF :
+                        ((ftbw->len) * ftb->charset->mbmaxlen) + extra;
 
   if (ftbw->flags & FTB_FLAG_TRUNC)
     lastkey_buf+=ftbw->len;
@@ -421,7 +424,7 @@ static int _ft2_search_no_lock(FTB *ftb, FTB_WORD *ftbw, my_bool init_search)
              (my_bool) (ftbw->flags & FTB_FLAG_TRUNC),0);
   }
 
-  if (r) /* not found */
+  if (r || info->lastkey_length > max_word_length) /* not found */
   {
     if (!ftbw->off || !(ftbw->flags & FTB_FLAG_TRUNC))
     {
@@ -487,10 +490,10 @@ static int _ft2_search(FTB *ftb, FTB_WORD *ftbw, my_bool init_search)
   int r;
   MYISAM_SHARE *share= ftb->info->s;
   if (share->concurrent_insert)
-    rw_rdlock(&share->key_root_lock[ftb->keynr]);
+    mysql_rwlock_rdlock(&share->key_root_lock[ftb->keynr]);
   r= _ft2_search_no_lock(ftb, ftbw, init_search);
   if (share->concurrent_insert)
-    rw_unlock(&share->key_root_lock[ftb->keynr]);
+    mysql_rwlock_unlock(&share->key_root_lock[ftb->keynr]);
   return r;
 }
 
@@ -622,7 +625,7 @@ FT_INFO * ft_init_boolean_search(MI_INFO *info, uint keynr, uchar *query,
   return ftb;
 err:
   free_root(& ftb->mem_root, MYF(0));
-  my_free((uchar*)ftb,MYF(0));
+  my_free(ftb);
   return 0;
 }
 
@@ -1046,7 +1049,7 @@ void ft_boolean_close_search(FT_INFO *ftb)
     delete_tree(& ftb->no_dupes);
   }
   free_root(& ftb->mem_root, MYF(0));
-  my_free((uchar*)ftb,MYF(0));
+  my_free(ftb);
 }
 
 

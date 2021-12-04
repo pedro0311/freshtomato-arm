@@ -1,4 +1,7 @@
-/* Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+#ifndef ITEM_CMPFUNC_INCLUDED
+#define ITEM_CMPFUNC_INCLUDED
+
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -19,6 +22,10 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+#include "thr_malloc.h"                         /* sql_calloc */
+#include "item_func.h"             /* Item_int_func, Item_bool_func */
+#include "my_regex.h"
 
 extern Item_result item_cmp_type(Item_result a,Item_result b);
 class Item_bool_func2;
@@ -117,7 +124,17 @@ public:
     delete [] comparators;
     comparators= 0;
   }
-
+  /*
+    Set correct cmp_context if items would be compared as INTs.
+  */
+  inline void set_cmp_context_for_datetime()
+  {
+    DBUG_ASSERT(func == &Arg_comparator::compare_datetime);
+    if ((*a)->result_as_longlong())
+      (*a)->cmp_context= INT_RESULT;
+    if ((*b)->result_as_longlong())
+      (*b)->cmp_context= INT_RESULT;
+  }
   friend class Item_func;
 };
 
@@ -252,7 +269,7 @@ protected:
   my_bool result_for_null_param;
 public:
   Item_in_optimizer(Item *a, Item_in_subselect *b):
-    Item_bool_func(a, my_reinterpret_cast(Item *)(b)), cache(0),
+    Item_bool_func(a, reinterpret_cast<Item *>(b)), cache(0),
     save_cache(0), result_for_null_param(UNKNOWN)
   { with_subselect= true; }
   bool fix_fields(THD *, Item **);
@@ -644,6 +661,11 @@ public:
   {
     Item_func::print(str, query_type);
   }
+  void fix_length_and_dec()
+  {
+    Item_bool_func2::fix_length_and_dec();
+    fix_char_length(2); // returns "1" or "0" or "-1"
+  }
 };
 
 
@@ -728,6 +750,8 @@ public:
   void fix_length_and_dec();
   uint decimal_precision() const;
   const char *func_name() const { return "if"; }
+private:
+  void cache_type_info(Item *source);
 };
 
 
@@ -1264,7 +1288,7 @@ public:
   cmp_item_row(): comparators(0), n(0) {}
   ~cmp_item_row();
   void store_value(Item *item);
-  inline void alloc_comparators();
+  inline void alloc_comparators(Item *item);
   int cmp(Item *arg);
   int compare(cmp_item *arg);
   cmp_item *make_same();
@@ -1413,9 +1437,6 @@ public:
   void cleanup();
 };
 
-#ifdef USE_REGEX
-
-#include "my_regex.h"
 
 class Item_func_regex :public Item_bool_func
 {
@@ -1443,23 +1464,6 @@ public:
 
   CHARSET_INFO *compare_collation() { return cmp_collation.collation; }
 };
-
-#else
-
-class Item_func_regex :public Item_bool_func
-{
-public:
-  Item_func_regex(Item *a,Item *b) :Item_bool_func(a,b) {}
-  longlong val_int() { return 0;}
-  const char *func_name() const { return "regex"; }
-
-  virtual inline void print(String *str, enum_query_type query_type)
-  {
-    print_op(str, query_type);
-  }
-};
-
-#endif /* USE_REGEX */
 
 
 typedef class Item COND;
@@ -1510,7 +1514,7 @@ public:
   friend int setup_conds(THD *thd, TABLE_LIST *tables, TABLE_LIST *leaves,
                          COND **conds);
   void top_level_item() { abort_on_null=1; }
-  void copy_andor_arguments(THD *thd, Item_cond *item);
+  void copy_andor_arguments(THD *thd, Item_cond *item, bool real_items= false);
   bool walk(Item_processor processor, bool walk_subquery, uchar *arg);
   Item *transform(Item_transformer transformer, uchar *arg);
   void traverse_cond(Cond_traverser, void *arg, traverse_order order);
@@ -1685,11 +1689,11 @@ public:
   const char *func_name() const { return "and"; }
   table_map not_null_tables() const
   { return abort_on_null ? not_null_tables_cache: and_tables_cache; }
-  Item* copy_andor_structure(THD *thd)
+  Item* copy_andor_structure(THD *thd, bool real_items)
   {
     Item_cond_and *item;
     if ((item= new Item_cond_and(thd, this)))
-       item->copy_andor_arguments(thd, this);
+       item->copy_andor_arguments(thd, this, real_items);
     return item;
   }
   Item *neg_transformer(THD *thd);
@@ -1715,11 +1719,11 @@ public:
   longlong val_int();
   const char *func_name() const { return "or"; }
   table_map not_null_tables() const { return and_tables_cache; }
-  Item* copy_andor_structure(THD *thd)
+  Item* copy_andor_structure(THD *thd, bool real_items)
   {
     Item_cond_or *item;
     if ((item= new Item_cond_or(thd, this)))
-      item->copy_andor_arguments(thd, this);
+      item->copy_andor_arguments(thd, this, real_items);
     return item;
   }
   Item *neg_transformer(THD *thd);
@@ -1762,7 +1766,26 @@ inline Item *and_conds(Item *a, Item *b)
   return new Item_cond_and(a, b);
 }
 
+
 Item *and_expressions(Item *a, Item *b, Item **org_item);
 
-bool get_mysql_time_from_str(THD *thd, String *str, timestamp_type warn_type, 
+longlong get_datetime_value(THD *thd, Item ***item_arg, Item **cache_arg,
+                            Item *warn_item, bool *is_null);
+
+
+bool get_mysql_time_from_str(THD *thd, String *str, timestamp_type warn_type,
                              const char *warn_name, MYSQL_TIME *l_time);
+
+/*
+  These need definitions from this file but the variables are defined
+  in mysqld.h. The variables really belong in this component, but for
+  the time being we leave them in mysqld.cc to avoid merge problems.
+*/
+extern Eq_creator eq_creator;
+extern Ne_creator ne_creator;
+extern Gt_creator gt_creator;
+extern Lt_creator lt_creator;
+extern Ge_creator ge_creator;
+extern Le_creator le_creator;
+
+#endif /* ITEM_CMPFUNC_INCLUDED */

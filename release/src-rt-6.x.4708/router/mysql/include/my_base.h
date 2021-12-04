@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,9 +10,9 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Suite 500, Boston, MA 02110-1335 USA */
+
 
 /* This file includes constants used with all databases */
 
@@ -32,9 +31,6 @@
 #define EOVERFLOW 84
 #endif
 
-#if !defined(USE_MY_FUNC) && !defined(THREAD)
-#include <my_nosys.h>			/* For faster code, after test */
-#endif	/* USE_MY_FUNC */
 #endif	/* stdin */
 #include <my_list.h>
 
@@ -193,10 +189,11 @@ enum ha_extra_function {
   /* Inform handler that we will do a rename */
   HA_EXTRA_PREPARE_FOR_RENAME,
   /*
-    Orders MERGE handler to attach or detach its child tables. Used at
-    begin and end of a statement.
+    Special actions for MERGE tables.
   */
+  HA_EXTRA_ADD_CHILDREN_LIST,
   HA_EXTRA_ATTACH_CHILDREN,
+  HA_EXTRA_IS_ATTACHED_CHILDREN,
   HA_EXTRA_DETACH_CHILDREN
 };
 
@@ -257,27 +254,27 @@ enum ha_base_keytype {
                          HA_BINARY_PACK_KEY | HA_FULLTEXT | HA_UNIQUE_CHECK | \
                          HA_SPATIAL | HA_NULL_ARE_EQUAL | HA_GENERATED_KEY)
 
-#define HA_KEY_HAS_PART_KEY_SEG 65536   /* Key contains partial segments */
+/*
+  Key contains partial segments.
+
+  This flag is internal to the MySQL server by design. It is not supposed
+  neither to be saved in FRM-files, nor to be passed to storage engines.
+  It is intended to pass information into internal static sort_keys(KEY *,
+  KEY *) function.
+
+  This flag can be calculated -- it's based on key lengths comparison.
+*/
+#define HA_KEY_HAS_PART_KEY_SEG 65536
 
 	/* Automatic bits in key-flag */
 
 #define HA_SPACE_PACK_USED	 4	/* Test for if SPACE_PACK used */
 #define HA_VAR_LENGTH_KEY	 8
 #define HA_NULL_PART_KEY	 64
+#define HA_USES_COMMENT          4096
 #define HA_USES_PARSER           16384  /* Fulltext index uses [pre]parser */
 #define HA_USES_BLOCK_SIZE	 ((uint) 32768)
 #define HA_SORT_ALLOWS_SAME      512    /* Intern bit when sorting records */
-#if MYSQL_VERSION_ID < 0x50200
-/*
-  Key has a part that can have end space.  If this is an unique key
-  we have to handle it differently from other unique keys as we can find
-  many matching rows for one key (because end space are not compared)
-*/
-#define HA_END_SPACE_KEY      0 /* was: 4096 */
-#else
-#error HA_END_SPACE_KEY is obsolete, please remove it
-#endif
-
 
 	/* These flags can be added to key-seg-flag */
 
@@ -352,7 +349,7 @@ enum ha_base_keytype {
 /*
   update the 'variable' part of the info:
   handler::records, deleted, data_file_length, index_file_length,
-  delete_length, check_time, mean_rec_length
+  check_time, mean_rec_length
 */
 #define HA_STATUS_VARIABLE      16
 /*
@@ -365,6 +362,11 @@ enum ha_base_keytype {
   update handler::auto_increment_value
 */
 #define HA_STATUS_AUTO          64
+/*
+  Get also delete_length when HA_STATUS_VARIABLE is called. It's ok to set it also
+  when only HA_STATUS_VARIABLE but it won't be used.
+*/
+#define HA_STATUS_VARIABLE_EXTRA 128
 
 /*
   Errorcodes given by handler functions
@@ -444,11 +446,10 @@ enum ha_base_keytype {
 #define HA_ERR_FILE_TOO_SHORT	  175	 /* File too short */
 #define HA_ERR_WRONG_CRC	  176	 /* Wrong CRC on page */
 #define HA_ERR_TOO_MANY_CONCURRENT_TRXS 177 /*Too many active concurrent transactions */
-
-/* The error codes from 178 to 180 is not used, because we need to
-maintain forward compatibility with higher versions. */
-
-#define HA_ERR_TABLE_IN_FK_CHECK  181	 /* Table being used in foreign key check */
+#define HA_ERR_INDEX_COL_TOO_LONG 178	 /* Index column length exceeds limit */
+#define HA_ERR_INDEX_CORRUPT      179	 /* Index corrupted */
+#define HA_ERR_UNDO_REC_TOO_BIG   180    /* Undo log record too big */
+#define HA_ERR_TABLE_IN_FK_CHECK  181    /* Table being used in foreign key check */
 #define HA_ERR_LAST               181    /* Copy of last error nr */
 
 /* Number of different errors */
@@ -568,6 +569,8 @@ typedef ulong		ha_rows;
 #define HA_VARCHAR_PACKLENGTH(field_length) ((field_length) < 256 ? 1 :2)
 
 /* invalidator function reference for Query Cache */
+C_MODE_START
 typedef void (* invalidator_by_filename)(const char * filename);
+C_MODE_END
 
 #endif /* _my_base_h */

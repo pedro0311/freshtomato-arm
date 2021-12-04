@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBcomp_err\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBCOMP_ERR\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBCOMP_ERR\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,7 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" comp_err
 .SH "NAME"
 comp_err \- compile MySQL error message file
 .SH "SYNOPSIS"
@@ -44,8 +43,8 @@ to determine the error messages to display for different error codes\&.
 \fBcomp_err\fR
 normally is run automatically when MySQL is built\&. It compiles the
 errmsg\&.sys
-file from the plaintext file located at
-sql/share/errmsg\&.txt
+file from the text file located at
+sql/share/errmsg\-utf8\&.txt
 in MySQL source distributions\&.
 .PP
 \fBcomp_err\fR
@@ -83,8 +82,6 @@ supports the following options\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: help option
-.\" help option: comp_err
 \fB\-\-help\fR,
 \fB\-?\fR
 .sp
@@ -99,10 +96,8 @@ Display a help message and exit\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: charset option
-.\" charset option: comp_err
-\fB\-\-charset=\fR\fB\fIpath\fR\fR,
-\fB\-C \fR\fB\fIpath\fR\fR
+\fB\-\-charset=\fR\fB\fIdir_name\fR\fR,
+\fB\-C \fR\fB\fIdir_name\fR\fR
 .sp
 The character set directory\&. The default is
 \&.\&./sql/share/charsets\&.
@@ -116,16 +111,14 @@ The character set directory\&. The default is
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: debug option
-.\" debug option: comp_err
 \fB\-\-debug=\fR\fB\fIdebug_options\fR\fR,
 \fB\-# \fR\fB\fIdebug_options\fR\fR
 .sp
 Write a debugging log\&. A typical
 \fIdebug_options\fR
 string is
-\*(Aqd:t:O,\fIfile_name\fR\*(Aq\&. The default is
-\*(Aqd:t:O,/tmp/comp_err\&.trace\*(Aq\&.
+d:t:O,\fIfile_name\fR\&. The default is
+d:t:O,/tmp/comp_err\&.trace\&.
 .RE
 .sp
 .RS 4
@@ -136,8 +129,6 @@ string is
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: debug-info option
-.\" debug-info option: comp_err
 \fB\-\-debug\-info\fR,
 \fB\-T\fR
 .sp
@@ -152,8 +143,6 @@ Print some debugging information when the program exits\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: header_file option
-.\" header_file option: comp_err
 \fB\-\-header_file=\fR\fB\fIfile_name\fR\fR,
 \fB\-H \fR\fB\fIfile_name\fR\fR
 .sp
@@ -169,13 +158,11 @@ mysqld_error\&.h\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: in_file option
-.\" in_file option: comp_err
 \fB\-\-in_file=\fR\fB\fIfile_name\fR\fR,
 \fB\-F \fR\fB\fIfile_name\fR\fR
 .sp
 The name of the input file\&. The default is
-\&.\&./sql/share/errmsg\&.txt\&.
+\&.\&./sql/share/errmsg\-utf8\&.txt\&.
 .RE
 .sp
 .RS 4
@@ -186,8 +173,6 @@ The name of the input file\&. The default is
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: name_file option
-.\" name_file option: comp_err
 \fB\-\-name_file=\fR\fB\fIfile_name\fR\fR,
 \fB\-N \fR\fB\fIfile_name\fR\fR
 .sp
@@ -203,10 +188,8 @@ mysqld_ername\&.h\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: out_dir option
-.\" out_dir option: comp_err
-\fB\-\-out_dir=\fR\fB\fIpath\fR\fR,
-\fB\-D \fR\fB\fIpath\fR\fR
+\fB\-\-out_dir=\fR\fB\fIdir_name\fR\fR,
+\fB\-D \fR\fB\fIdir_name\fR\fR
 .sp
 The name of the output base directory\&. The default is
 \&.\&./sql/share/\&.
@@ -220,8 +203,6 @@ The name of the output base directory\&. The default is
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: out_file option
-.\" out_file option: comp_err
 \fB\-\-out_file=\fR\fB\fIfile_name\fR\fR,
 \fB\-O \fR\fB\fIfile_name\fR\fR
 .sp
@@ -237,8 +218,6 @@ errmsg\&.sys\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: statefile option
-.\" statefile option: comp_err
 \fB\-\-statefile=\fR\fB\fIfile_name\fR\fR,
 \fB\-S \fR\fB\fIfile_name\fR\fR
 .sp
@@ -254,8 +233,6 @@ sql_state\&.h\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" comp_err: version option
-.\" version option: comp_err
 \fB\-\-version\fR,
 \fB\-V\fR
 .sp
@@ -264,7 +241,7 @@ Display version information and exit\&.
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

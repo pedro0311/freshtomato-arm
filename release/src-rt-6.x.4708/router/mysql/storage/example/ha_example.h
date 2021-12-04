@@ -1,5 +1,4 @@
-/*
-  Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /** @file ha_example.h
 
@@ -37,6 +35,11 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
+#include "my_global.h"                   /* ulonglong */
+#include "thr_lock.h"                    /* THR_LOCK, THR_LOCK_DATA */
+#include "handler.h"                     /* handler */
+#include "my_base.h"                     /* ha_rows */
+
 /** @brief
   EXAMPLE_SHARE is a structure that will be shared among all open handlers.
   This example implements the minimum of what you will probably need.
@@ -44,7 +47,7 @@
 typedef struct st_example_share {
   char *table_name;
   uint table_name_length,use_count;
-  pthread_mutex_t mutex;
+  mysql_mutex_t mutex;
   THR_LOCK lock;
 } EXAMPLE_SHARE;
 
@@ -85,11 +88,11 @@ public:
   ulonglong table_flags() const
   {
     /*
-      We are saying that this engine is just row capable to have an
-      engine that can only handle row-based logging. This is used in
-      testing.
+      We are saying that this engine is just statement capable to have
+      an engine that can only handle statement-based logging. This is
+      used in testing.
     */
-    return HA_BINLOG_ROW_CAPABLE;
+    return HA_BINLOG_STMT_CAPABLE;
   }
 
   /** @brief
@@ -242,6 +245,7 @@ public:
   int extra(enum ha_extra_function operation);
   int external_lock(THD *thd, int lock_type);                   ///< required
   int delete_all_rows(void);
+  int truncate();
   ha_rows records_in_range(uint inx, key_range *min_key,
                            key_range *max_key);
   int delete_table(const char *from);

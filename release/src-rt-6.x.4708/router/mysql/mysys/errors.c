@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,15 +11,14 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "mysys_priv.h"
 #include "mysys_err.h"
 
 #ifndef SHARED_LIBRARY
 
-const char * NEAR globerrs[GLOBERRS]=
+const char *globerrs[GLOBERRS]=
 {
   "Can't create/write to file '%s' (Errcode: %d)",
   "Error reading file '%s' (Errcode: %d)",
@@ -119,10 +117,15 @@ void wait_for_free_space(const char *filename, int errors)
                     MY_WAIT_FOR_USER_TO_FIX_PANIC,
                     MY_WAIT_GIVE_USER_A_MESSAGE * MY_WAIT_FOR_USER_TO_FIX_PANIC );
   }
-  DBUG_EXECUTE_IF("simulate_file_write_error_once",
+  DBUG_EXECUTE_IF("simulate_no_free_space_error",
                  {
-                   VOID(sleep(1));
+                   (void) sleep(1);
                    return;
                  });
-  VOID(sleep(MY_WAIT_FOR_USER_TO_FIX_PANIC));
+  (void) sleep(MY_WAIT_FOR_USER_TO_FIX_PANIC);
+}
+
+const char **get_global_errmsgs()
+{
+  return globerrs;
 }

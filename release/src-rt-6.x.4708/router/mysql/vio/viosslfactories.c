@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "vio_priv.h"
 
@@ -22,27 +20,56 @@
 static my_bool     ssl_algorithms_added    = FALSE;
 static my_bool     ssl_error_strings_loaded= FALSE;
 
-static unsigned char dh512_p[]=
+/*
+  Diffie-Hellman key.
+  Generated using: >openssl dhparam -5 -C 2048
+
+  -----BEGIN DH PARAMETERS-----
+  MIIBCAKCAQEAil36wGZ2TmH6ysA3V1xtP4MKofXx5n88xq/aiybmGnReZMviCPEJ
+  46+7VCktl/RZ5iaDH1XNG1dVQmznt9pu2G3usU+k1/VB4bQL4ZgW4u0Wzxh9PyXD
+  glm99I9Xyj4Z5PVE4MyAsxCRGA1kWQpD9/zKAegUBPLNqSo886Uqg9hmn8ksyU9E
+  BV5eAEciCuawh6V0O+Sj/C3cSfLhgA0GcXp3OqlmcDu6jS5gWjn3LdP1U0duVxMB
+  h/neTSCSvtce4CAMYMjKNVh9P1nu+2d9ZH2Od2xhRIqMTfAS1KTqF3VmSWzPFCjG
+  mjxx/bg6bOOjpgZapvB6ABWlWmRmAAWFtwIBBQ==
+  -----END DH PARAMETERS-----
+ */
+static unsigned char dh2048_p[]=
 {
-  0xDA,0x58,0x3C,0x16,0xD9,0x85,0x22,0x89,0xD0,0xE4,0xAF,0x75,
-  0x6F,0x4C,0xCA,0x92,0xDD,0x4B,0xE5,0x33,0xB8,0x04,0xFB,0x0F,
-  0xED,0x94,0xEF,0x9C,0x8A,0x44,0x03,0xED,0x57,0x46,0x50,0xD3,
-  0x69,0x99,0xDB,0x29,0xD7,0x76,0x27,0x6B,0xA2,0xD3,0xD4,0x12,
-  0xE2,0x18,0xF4,0xDD,0x1E,0x08,0x4C,0xF6,0xD8,0x00,0x3E,0x7C,
-  0x47,0x74,0xE8,0x33,
+  0x8A, 0x5D, 0xFA, 0xC0, 0x66, 0x76, 0x4E, 0x61, 0xFA, 0xCA, 0xC0, 0x37,
+  0x57, 0x5C, 0x6D, 0x3F, 0x83, 0x0A, 0xA1, 0xF5, 0xF1, 0xE6, 0x7F, 0x3C,
+  0xC6, 0xAF, 0xDA, 0x8B, 0x26, 0xE6, 0x1A, 0x74, 0x5E, 0x64, 0xCB, 0xE2,
+  0x08, 0xF1, 0x09, 0xE3, 0xAF, 0xBB, 0x54, 0x29, 0x2D, 0x97, 0xF4, 0x59,
+  0xE6, 0x26, 0x83, 0x1F, 0x55, 0xCD, 0x1B, 0x57, 0x55, 0x42, 0x6C, 0xE7,
+  0xB7, 0xDA, 0x6E, 0xD8, 0x6D, 0xEE, 0xB1, 0x4F, 0xA4, 0xD7, 0xF5, 0x41,
+  0xE1, 0xB4, 0x0B, 0xE1, 0x98, 0x16, 0xE2, 0xED, 0x16, 0xCF, 0x18, 0x7D,
+  0x3F, 0x25, 0xC3, 0x82, 0x59, 0xBD, 0xF4, 0x8F, 0x57, 0xCA, 0x3E, 0x19,
+  0xE4, 0xF5, 0x44, 0xE0, 0xCC, 0x80, 0xB3, 0x10, 0x91, 0x18, 0x0D, 0x64,
+  0x59, 0x0A, 0x43, 0xF7, 0xFC, 0xCA, 0x01, 0xE8, 0x14, 0x04, 0xF2, 0xCD,
+  0xA9, 0x2A, 0x3C, 0xF3, 0xA5, 0x2A, 0x83, 0xD8, 0x66, 0x9F, 0xC9, 0x2C,
+  0xC9, 0x4F, 0x44, 0x05, 0x5E, 0x5E, 0x00, 0x47, 0x22, 0x0A, 0xE6, 0xB0,
+  0x87, 0xA5, 0x74, 0x3B, 0xE4, 0xA3, 0xFC, 0x2D, 0xDC, 0x49, 0xF2, 0xE1,
+  0x80, 0x0D, 0x06, 0x71, 0x7A, 0x77, 0x3A, 0xA9, 0x66, 0x70, 0x3B, 0xBA,
+  0x8D, 0x2E, 0x60, 0x5A, 0x39, 0xF7, 0x2D, 0xD3, 0xF5, 0x53, 0x47, 0x6E,
+  0x57, 0x13, 0x01, 0x87, 0xF9, 0xDE, 0x4D, 0x20, 0x92, 0xBE, 0xD7, 0x1E,
+  0xE0, 0x20, 0x0C, 0x60, 0xC8, 0xCA, 0x35, 0x58, 0x7D, 0x3F, 0x59, 0xEE,
+  0xFB, 0x67, 0x7D, 0x64, 0x7D, 0x8E, 0x77, 0x6C, 0x61, 0x44, 0x8A, 0x8C,
+  0x4D, 0xF0, 0x12, 0xD4, 0xA4, 0xEA, 0x17, 0x75, 0x66, 0x49, 0x6C, 0xCF,
+  0x14, 0x28, 0xC6, 0x9A, 0x3C, 0x71, 0xFD, 0xB8, 0x3A, 0x6C, 0xE3, 0xA3,
+  0xA6, 0x06, 0x5A, 0xA6, 0xF0, 0x7A, 0x00, 0x15, 0xA5, 0x5A, 0x64, 0x66,
+  0x00, 0x05, 0x85, 0xB7,
 };
 
-static unsigned char dh512_g[]={
-  0x02,
+static unsigned char dh2048_g[]={
+  0x05,
 };
 
-static DH *get_dh512(void)
+static DH *get_dh2048(void)
 {
   DH *dh;
   if ((dh=DH_new()))
   {
-    dh->p=BN_bin2bn(dh512_p,sizeof(dh512_p),NULL);
-    dh->g=BN_bin2bn(dh512_g,sizeof(dh512_g),NULL);
+    dh->p=BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
+    dh->g=BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
     if (! dh->p || ! dh->g)
     {
       DH_free(dh);
@@ -83,7 +110,8 @@ ssl_error_string[] =
   "Private key does not match the certificate public key",
   "SSL_CTX_set_default_verify_paths failed",
   "Failed to set ciphers to use",
-  "SSL_CTX_new failed"
+  "SSL_CTX_new failed",
+  "SSL_CTX_set_tmp_dh failed"
 };
 
 const char*
@@ -149,36 +177,6 @@ vio_set_cert_stuff(SSL_CTX *ctx, const char *cert_file, const char *key_file,
 }
 
 
-#ifdef __NETWARE__
-
-/* NetWare SSL cleanup */
-void netware_ssl_cleanup()
-{
-  /* free memory from SSL_library_init() */
-  EVP_cleanup();
-
-/* OpenSSL NetWare port specific functions */
-#ifndef HAVE_YASSL
-
-  /* free global X509 method */
-  X509_STORE_method_cleanup();
-
-  /* free the thread_hash error table */
-  ERR_free_state_table();
-#endif
-}
-
-
-/* NetWare SSL initialization */
-static void netware_ssl_init()
-{
-  /* cleanup OpenSSL library */
-  NXVmRegisterExitHandler(netware_ssl_cleanup, NULL);
-}
-
-#endif /* __NETWARE__ */
-
-
 static void check_ssl_init()
 {
   if (!ssl_algorithms_added)
@@ -188,10 +186,6 @@ static void check_ssl_init()
     OpenSSL_add_all_algorithms();
 
   }
-
-#ifdef __NETWARE__
-  netware_ssl_init();
-#endif
 
   if (!ssl_error_strings_loaded)
   {
@@ -204,11 +198,12 @@ static void check_ssl_init()
 static struct st_VioSSLFd *
 new_VioSSLFd(const char *key_file, const char *cert_file,
              const char *ca_file, const char *ca_path,
-             const char *cipher, my_bool is_client_method, 
+             const char *cipher, my_bool is_client_method,
              enum enum_ssl_init_error* error)
 {
   DH *dh;
   struct st_VioSSLFd *ssl_fd;
+  long ssl_ctx_options= SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3;
   DBUG_ENTER("new_VioSSLFd");
   DBUG_PRINT("enter",
              ("key_file: '%s'  cert_file: '%s'  ca_file: '%s'  ca_path: '%s'  "
@@ -232,9 +227,11 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
     *error= SSL_INITERR_MEMFAIL;
     DBUG_PRINT("error", ("%s", sslGetErrString(*error)));
     report_errors();
-    my_free((void*)ssl_fd,MYF(0));
+    my_free(ssl_fd);
     DBUG_RETURN(0);
   }
+
+  SSL_CTX_set_options(ssl_fd->ssl_context, ssl_ctx_options);
 
   /*
     Set the ciphers that can be used
@@ -248,12 +245,12 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
     DBUG_PRINT("error", ("%s", sslGetErrString(*error)));
     report_errors();
     SSL_CTX_free(ssl_fd->ssl_context);
-    my_free((void*)ssl_fd,MYF(0));
+    my_free(ssl_fd);
     DBUG_RETURN(0);
   }
 
   /* Load certs from the trusted ca */
-  if (SSL_CTX_load_verify_locations(ssl_fd->ssl_context, ca_file, ca_path) == 0)
+  if (SSL_CTX_load_verify_locations(ssl_fd->ssl_context, ca_file, ca_path) <= 0)
   {
     DBUG_PRINT("warning", ("SSL_CTX_load_verify_locations failed"));
     if (ca_file || ca_path)
@@ -265,7 +262,7 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
                  sslGetErrString(*error)));
       report_errors();
       SSL_CTX_free(ssl_fd->ssl_context);
-      my_free((void*)ssl_fd,MYF(0));
+      my_free(ssl_fd);
       DBUG_RETURN(0);
     }
 
@@ -276,7 +273,7 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
       DBUG_PRINT("error", ("%s", sslGetErrString(*error)));
       report_errors();
       SSL_CTX_free(ssl_fd->ssl_context);
-      my_free((void*)ssl_fd,MYF(0));
+      my_free(ssl_fd);
       DBUG_RETURN(0);
     }
   }
@@ -286,13 +283,22 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
     DBUG_PRINT("error", ("vio_set_cert_stuff failed"));
     report_errors();
     SSL_CTX_free(ssl_fd->ssl_context);
-    my_free((void*)ssl_fd,MYF(0));
+    my_free(ssl_fd);
     DBUG_RETURN(0);
   }
 
   /* DH stuff */
-  dh=get_dh512();
-  SSL_CTX_set_tmp_dh(ssl_fd->ssl_context, dh);
+  dh= get_dh2048();
+  if (SSL_CTX_set_tmp_dh(ssl_fd->ssl_context, dh) == 0)
+  {
+    *error= SSL_INITERR_DHFAIL;
+    DBUG_PRINT("error", ("%s", sslGetErrString(*error)));
+    report_errors();
+    DH_free(dh);
+    SSL_CTX_free(ssl_fd->ssl_context);
+    my_free(ssl_fd);
+    DBUG_RETURN(0);
+  }
   DH_free(dh);
 
   DBUG_PRINT("exit", ("OK 1"));
@@ -305,11 +311,10 @@ new_VioSSLFd(const char *key_file, const char *cert_file,
 struct st_VioSSLFd *
 new_VioSSLConnectorFd(const char *key_file, const char *cert_file,
                       const char *ca_file, const char *ca_path,
-                      const char *cipher)
+                      const char *cipher, enum enum_ssl_init_error* error)
 {
   struct st_VioSSLFd *ssl_fd;
   int verify= SSL_VERIFY_PEER;
-  enum enum_ssl_init_error dummy;
 
   /*
     Turn off verification of servers certificate if both
@@ -319,7 +324,7 @@ new_VioSSLConnectorFd(const char *key_file, const char *cert_file,
     verify= SSL_VERIFY_NONE;
 
   if (!(ssl_fd= new_VioSSLFd(key_file, cert_file, ca_file,
-                             ca_path, cipher, TRUE, &dummy)))
+                             ca_path, cipher, TRUE, error)))
   {
     return 0;
   }
@@ -366,6 +371,6 @@ new_VioSSLAcceptorFd(const char *key_file, const char *cert_file,
 void free_vio_ssl_acceptor_fd(struct st_VioSSLFd *fd)
 {
   SSL_CTX_free(fd->ssl_context);
-  my_free((uchar*) fd, MYF(0));
+  my_free(fd);
 }
 #endif /* HAVE_OPENSSL */

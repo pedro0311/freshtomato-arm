@@ -15,21 +15,17 @@ show grants for mysqltest_1@localhost;
 connect (plain,localhost,mysqltest_1,,test);
 connect (root,localhost,root,,test);
 
-# Testing setting both session and global SQL_LOG_BIN variable both as
+# Testing setting session SQL_LOG_BIN variable both as
 # root and as plain user.
 
 --echo **** Variable SQL_LOG_BIN ****
 
 connection root;
 --echo [root]
---error ER_LOCAL_VARIABLE
-set global sql_log_bin = 1;
 set session sql_log_bin = 1;
 
 connection plain;
 --echo [plain]
---error ER_LOCAL_VARIABLE
-set global sql_log_bin = 1;
 --error ER_SPECIFIC_ACCESS_DENIED_ERROR
 set session sql_log_bin = 1;
 

@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2000-2008 MySQL AB, 2008, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Remove a row from a MyISAM table */
 
@@ -104,8 +101,8 @@ int mi_delete(MI_INFO *info,const uchar *record)
 
   mi_sizestore(lastpos,info->lastpos);
   myisam_log_command(MI_LOG_DELETE,info,(uchar*) lastpos,sizeof(lastpos),0);
-  VOID(_mi_writeinfo(info,WRITEINFO_UPDATE_KEYFILE));
-  allow_break();			/* Allow SIGHUP & SIGINT */
+  (void) _mi_writeinfo(info,WRITEINFO_UPDATE_KEYFILE);
+
   if (info->invalidator != 0)
   {
     DBUG_PRINT("info", ("invalidator... '%s' (delete)", info->filename));
@@ -123,9 +120,8 @@ err:
     mi_print_error(info->s, HA_ERR_CRASHED);
     mi_mark_crashed(info);		/* mark table crashed */
   }
-  VOID(_mi_writeinfo(info,WRITEINFO_UPDATE_KEYFILE));
+  (void) _mi_writeinfo(info,WRITEINFO_UPDATE_KEYFILE);
   info->update|=HA_STATE_WRITTEN;	/* Buffer changed */
-  allow_break();			/* Allow SIGHUP & SIGINT */
   my_errno=save_errno;
   if (save_errno == HA_ERR_KEY_NOT_FOUND)
   {

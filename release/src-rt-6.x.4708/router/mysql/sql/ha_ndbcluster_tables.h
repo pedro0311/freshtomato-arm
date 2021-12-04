@@ -1,4 +1,8 @@
-/* Copyright (c) 2000-2003, 2006, 2007 MySQL AB
+#ifndef HA_NDBCLUSTER_TABLES_INCLUDED
+#define HA_NDBCLUSTER_TABLES_INCLUDED
+
+/* Copyright (c) 2000-2003, 2006, 2007 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,3 +25,5 @@
 #define OLD_NDB_APPLY_TABLE "apply_status"
 #define NDB_SCHEMA_TABLE "ndb_schema"
 #define OLD_NDB_SCHEMA_TABLE "schema"
+
+#endif /* HA_NDBCLUSTER_TABLES_INCLUDED */

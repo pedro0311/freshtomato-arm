@@ -1,4 +1,4 @@
-/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /*
@@ -21,9 +20,13 @@
 */
 
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
+#include "sql_union.h"
 #include "sql_select.h"
 #include "sql_cursor.h"
+#include "sql_base.h"                           // fill_record
+#include "filesort.h"                           // filesort_free_buffers
 
 bool mysql_union(THD *thd, LEX *lex, select_result *result,
                  SELECT_LEX_UNIT *unit, ulong setup_tables_done_option)
@@ -33,8 +36,7 @@ bool mysql_union(THD *thd, LEX *lex, select_result *result,
   if (!(res= unit->prepare(thd, result, SELECT_NO_UNLOCK |
                            setup_tables_done_option)))
     res= unit->exec();
-  if (res || !thd->cursor || !thd->cursor->is_open())
-    res|= unit->cleanup();
+  res|= unit->cleanup();
   DBUG_RETURN(res);
 }
 
@@ -122,7 +124,7 @@ select_union::create_result_table(THD *thd_arg, List<Item> *column_types,
 
   if (! (table= create_tmp_table(thd_arg, &tmp_table_param, *column_types,
                                  (ORDER*) 0, is_union_distinct, 1,
-                                 options, HA_POS_ERROR, (char*) alias)))
+                                 options, HA_POS_ERROR, alias)))
     return TRUE;
   table->file->extra(HA_EXTRA_WRITE_CACHE);
   table->file->extra(HA_EXTRA_IGNORE_DUP_KEY);
@@ -231,7 +233,7 @@ bool st_select_lex_unit::prepare(THD *thd_arg, select_result *sel_result,
     bool can_skip_order_by;
     sl->options|=  SELECT_NO_UNLOCK;
     JOIN *join= new JOIN(thd_arg, sl->item_list, 
-			 sl->options | thd_arg->options | additional_options,
+			 sl->options | thd_arg->variables.option_bits | additional_options,
 			 tmp_result);
     /*
       setup_tables_done_option should be set only for very first SELECT,
@@ -280,6 +282,19 @@ bool st_select_lex_unit::prepare(THD *thd_arg, select_result *sel_result,
       Item *item_tmp;
       while ((item_tmp= it++))
       {
+        /*
+          If the outer query has a GROUP BY clause, an outer reference to this
+          query block may have been wrapped in a Item_outer_ref, which has not
+          been fixed yet. An Item_type_holder must be created based on a fixed
+          Item, so use the inner Item instead.
+        */
+        DBUG_ASSERT(item_tmp->fixed ||
+                    (item_tmp->type() == Item::REF_ITEM &&
+                     ((Item_ref *)(item_tmp))->ref_type() ==
+                     Item_ref::OUTER_REF));
+        if (!item_tmp->fixed)
+          item_tmp= item_tmp->real_item();
+
 	/* Error's in 'new' will be detected after loop */
 	types.push_back(new Item_type_holder(thd_arg, item_tmp));
       }
@@ -355,7 +370,7 @@ bool st_select_lex_unit::prepare(THD *thd_arg, select_result *sel_result,
     }
 
 
-    create_options= (first_sl->options | thd_arg->options |
+    create_options= (first_sl->options | thd_arg->variables.option_bits |
                      TMP_TABLE_ALL_COLUMNS);
     /*
       Force the temporary table to be a MyISAM table if we're going to use
@@ -396,7 +411,7 @@ bool st_select_lex_unit::prepare(THD *thd_arg, select_result *sel_result,
 	init_prepare_fake_select_lex(thd);
         /* Should be done only once (the only item_list per statement) */
         DBUG_ASSERT(fake_select_lex->join == 0);
-	if (!(fake_select_lex->join= new JOIN(thd, item_list, thd->options,
+	if (!(fake_select_lex->join= new JOIN(thd, item_list, thd->variables.option_bits,
 					      result)))
 	{
 	  fake_select_lex->table_list.empty();
@@ -444,6 +459,7 @@ bool st_select_lex_unit::prepare(THD *thd_arg, select_result *sel_result,
 
 err:
   thd_arg->lex->current_select= lex_select_save;
+  (void) cleanup();
   DBUG_RETURN(TRUE);
 }
 
@@ -508,6 +524,35 @@ bool st_select_lex_unit::exec()
           (select_limit_cnt == HA_POS_ERROR || sl->braces) ?
           sl->options & ~OPTION_FOUND_ROWS : sl->options | found_rows_for_union;
 	saved_error= sl->join->optimize();
+
+        /*
+          If called by explain statement then we may need to save the original
+          JOIN LAYOUT so that we can display the plan. Otherwise original plan
+          will be replaced by a simple scan on temp table if subquery uses temp
+          table.
+          We check for following conditions to force join_tmp creation
+          1. This is an EXPLAIN statement, and
+          2. JOIN not yet saved in JOIN::optimize(), and
+          3. Not called directly from select_describe(), and
+          4. Belongs to a subquery that is const, and
+          5. Need a temp table.
+        */
+        if (thd->lex->describe && // 1
+            !sl->uncacheable &&   // 2
+            !(sl->join->select_options & SELECT_DESCRIBE) && // 3
+            item && item->const_item()) // 4
+        {
+          /*
+            Force join->join_tmp creation, because this subquery will be
+            replaced by a simple select from the materialization temp table
+            by optimize() called by EXPLAIN and we need to preserve the
+            initial query structure so we can display it.
+          */
+          sl->uncacheable|= UNCACHEABLE_EXPLAIN;
+          sl->master_unit()->uncacheable|= UNCACHEABLE_EXPLAIN;
+          if (sl->join->need_tmp && sl->join->init_save_join_tab()) // 5
+            DBUG_RETURN(1);
+        }
       }
       if (!saved_error)
       {
@@ -525,7 +570,13 @@ bool st_select_lex_unit::exec()
                                     0);
 	if (!saved_error)
 	{
+          /*
+            Save the current examined row count locally and clear the global
+            counter, so that we can accumulate the number of evaluated rows for
+            the current query block.
+          */
 	  examined_rows+= thd->examined_row_count;
+          thd->examined_row_count= 0;
 	  if (union_result->flush())
 	  {
 	    thd->lex->current_select= lex_select_save;

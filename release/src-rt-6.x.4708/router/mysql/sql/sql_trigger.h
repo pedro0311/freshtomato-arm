@@ -1,3 +1,6 @@
+#ifndef SQL_TRIGGER_INCLUDED
+#define SQL_TRIGGER_INCLUDED
+
 /*
    Copyright (c) 2004, 2011, Oracle and/or its affiliates. All rights reserved.
 
@@ -12,8 +15,39 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+/* Forward declarations */
+
+class Item_trigger_field;
+class sp_head;
+class sp_name;
+class Query_tables_list;
+struct TABLE_LIST;
+class Query_tables_list;
+
+/** Event on which trigger is invoked. */
+enum trg_event_type
+{
+  TRG_EVENT_INSERT= 0,
+  TRG_EVENT_UPDATE= 1,
+  TRG_EVENT_DELETE= 2,
+  TRG_EVENT_MAX
+};
+
+#include "table.h"                              /* GRANT_INFO */
+
+/*
+  We need this two enums here instead of sql_lex.h because
+  at least one of them is used by Item_trigger_field interface.
+
+  Time when trigger is invoked (i.e. before or after row actually
+  inserted/updated/deleted).
 */
+enum trg_action_time_type
+{
+  TRG_ACTION_BEFORE= 0, TRG_ACTION_AFTER= 1, TRG_ACTION_MAX
+};
 
 
 /**
@@ -106,8 +140,9 @@ public:
 
   /* End of character ser context. */
 
-  Table_triggers_list(TABLE *table_arg):
-  record1_field(0), trigger_table(table_arg), m_has_unparseable_trigger(false)
+  Table_triggers_list(TABLE *table_arg)
+    :record1_field(0), trigger_table(table_arg),
+    m_has_unparseable_trigger(false)
   {
     bzero((char *)bodies, sizeof(bodies));
     bzero((char *)trigger_fields, sizeof(trigger_fields));
@@ -145,6 +180,7 @@ public:
                            TABLE *table, bool names_only);
   static bool drop_all_triggers(THD *thd, char *db, char *table_name);
   static bool change_table_name(THD *thd, const char *db,
+                                const char *old_alias,
                                 const char *old_table,
                                 const char *new_db,
                                 const char *new_table);
@@ -166,8 +202,10 @@ public:
   void set_parse_error_message(char *error_message);
 
   friend class Item_trigger_field;
-  friend int sp_cache_routines_and_add_tables_for_triggers(THD *thd, LEX *lex,
-                                                            TABLE_LIST *table);
+
+  bool add_tables_and_routines_for_triggers(THD *thd,
+                                            Query_tables_list *prelocking_ctx,
+                                            TABLE_LIST *table_list);
 
 private:
   bool prepare_record1_accessors(TABLE *table);
@@ -208,4 +246,9 @@ bool load_table_name_for_trigger(THD *thd,
                                  const sp_name *trg_name,
                                  const LEX_STRING *trn_path,
                                  LEX_STRING *tbl_name);
+bool mysql_create_or_drop_trigger(THD *thd, TABLE_LIST *tables, bool create);
 
+extern const char * const TRG_EXT;
+extern const char * const TRN_EXT;
+
+#endif /* SQL_TRIGGER_INCLUDED */

@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2003-2007 MySQL AB, 2009, 2010 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2003, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /**
@@ -28,7 +25,14 @@
 #pragma implementation				// gcc: Class implementation
 #endif
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          // THD, set_var.h: THD
+#include "set_var.h"
 #ifdef HAVE_SPATIAL
 #include <m_ctype.h>
 
@@ -45,7 +49,7 @@ void Item_geometry_func::fix_length_and_dec()
 {
   collation.set(&my_charset_bin);
   decimals=0;
-  max_length= max_field_size;
+  max_length= (uint32) 4294967295U;
   maybe_null= 1;
 }
 
@@ -55,7 +59,7 @@ String *Item_func_geometry_from_text::val_str(String *str)
   DBUG_ASSERT(fixed == 1);
   Geometry_buffer buffer;
   String arg_val;
-  String *wkt= args[0]->val_str(&arg_val);
+  String *wkt= args[0]->val_str_ascii(&arg_val);
 
   if ((null_value= args[0]->null_value))
     return 0;
@@ -113,7 +117,7 @@ String *Item_func_geometry_from_wkb::val_str(String *str)
 }
 
 
-String *Item_func_as_wkt::val_str(String *str)
+String *Item_func_as_wkt::val_str_ascii(String *str)
 {
   DBUG_ASSERT(fixed == 1);
   String arg_val;
@@ -137,6 +141,7 @@ String *Item_func_as_wkt::val_str(String *str)
 
 void Item_func_as_wkt::fix_length_and_dec()
 {
+  collation.set(default_charset(), DERIVATION_COERCIBLE, MY_REPERTOIRE_ASCII);
   max_length=MAX_BLOB_WIDTH;
   maybe_null= 1;
 }
@@ -160,7 +165,7 @@ String *Item_func_as_wkb::val_str(String *str)
 }
 
 
-String *Item_func_geometry_type::val_str(String *str)
+String *Item_func_geometry_type::val_str_ascii(String *str)
 {
   DBUG_ASSERT(fixed == 1);
   String *swkb= args[0]->val_str(str);
@@ -174,7 +179,7 @@ String *Item_func_geometry_type::val_str(String *str)
   /* String will not move */
   str->copy(geom->get_class_info()->m_name.str,
 	    geom->get_class_info()->m_name.length,
-	    default_charset());
+	    &my_charset_latin1);
   return str;
 }
 

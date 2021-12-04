@@ -1,5 +1,7 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+#ifndef CLIENT_SQL_STRING_INCLUDED
+#define CLIENT_SQL_STRING_INCLUDED
+
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,17 +14,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* This file is originally from the mysql distribution. Coded by monty */
 
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
-#endif
-
-#ifndef NOT_FIXED_DEC
-#define NOT_FIXED_DEC			31
 #endif
 
 class String;
@@ -182,7 +179,7 @@ public:
     {
       alloced=0;
       Alloced_length=0;
-      my_free(Ptr,MYF(0));
+      my_free(Ptr);
       Ptr=0;
       str_length=0;				/* Safety */
     }
@@ -364,3 +361,5 @@ public:
     return (s->alloced && Ptr >= s->Ptr && Ptr < s->Ptr + s->str_length);
   }
 };
+
+#endif /* CLIENT_SQL_STRING_INCLUDED */

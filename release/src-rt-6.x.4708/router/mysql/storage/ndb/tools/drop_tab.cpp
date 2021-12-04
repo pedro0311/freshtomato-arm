@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2007 MySQL AB
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ static struct my_option my_long_options[] =
 {
   NDB_STD_OPTS("ndb_desc"),
   { "database", 'd', "Name of database table is in",
-    (uchar**) &_dbname, (uchar**) &_dbname, 0,
+    &_dbname, &_dbname, 0,
     GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0 },
   { 0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };

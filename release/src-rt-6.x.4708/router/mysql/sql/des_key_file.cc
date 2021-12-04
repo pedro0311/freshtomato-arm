@@ -1,4 +1,4 @@
-/* Copyright (c) 2001-2003, 2005-2007 MySQL AB
+/* Copyright (c) 2001, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,9 +11,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "my_global.h"          // HAVE_*
+#include "sql_priv.h"
+#include "des_key_file.h"       // st_des_keyschedule, st_des_keyblock
+#include "log.h"                // sql_print_error
 #include <m_ctype.h>
 
 #ifdef HAVE_OPENSSL
@@ -43,8 +46,9 @@ load_des_key_file(const char *file_name)
   DBUG_ENTER("load_des_key_file");
   DBUG_PRINT("enter",("name: %s",file_name));
 
-  VOID(pthread_mutex_lock(&LOCK_des_key_file));
-  if ((file=my_open(file_name,O_RDONLY | O_BINARY ,MYF(MY_WME))) < 0 ||
+  mysql_mutex_lock(&LOCK_des_key_file);
+  if ((file= mysql_file_open(key_file_des_key_file, file_name,
+                             O_RDONLY | O_BINARY, MYF(MY_WME))) < 0 ||
       init_io_cache(&io, file, IO_SIZE*2, READ_CACHE, 0, 0, MYF(MY_WME)))
     goto error;
 
@@ -93,10 +97,10 @@ load_des_key_file(const char *file_name)
 error:
   if (file >= 0)
   {
-    my_close(file,MYF(0));
+    mysql_file_close(file, MYF(0));
     end_io_cache(&io);
   }
-  VOID(pthread_mutex_unlock(&LOCK_des_key_file));
+  mysql_mutex_unlock(&LOCK_des_key_file);
   DBUG_RETURN(result);
 }
 #endif /* HAVE_OPENSSL */

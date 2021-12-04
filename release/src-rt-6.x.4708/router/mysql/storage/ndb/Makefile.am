@@ -1,4 +1,5 @@
 # Copyright (C) 2004-2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -44,6 +45,3 @@ all-windoze-dsp: windoze
 	find . -name '*.dsp' | grep -v SCCS | xargs unix2dos
 	$(top_srcdir)/storage/ndb/config/make-win-dsw.sh | unix2dos > ndb.dsw
 	tar cvfz ndb-win-dsp.tar.gz ndb.dsw `find . -name '*.dsp' | grep -v SCCS`
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%

@@ -1,7 +1,24 @@
-/*******************************************************************
-Random numbers and hashing
+/*****************************************************************************
 
-(c) 1994, 1995 Innobase Oy
+Copyright (c) 1994, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/***************************************************************//**
+@file ut/ut0rnd.c
+Random numbers and hashing
 
 Created 5/11/1994 Heikki Tuuri
 ********************************************************************/
@@ -12,23 +29,25 @@ Created 5/11/1994 Heikki Tuuri
 #include "ut0rnd.ic"
 #endif
 
-/* These random numbers are used in ut_find_prime */
+/** These random numbers are used in ut_find_prime */
+/*@{*/
 #define	UT_RANDOM_1	1.0412321
 #define	UT_RANDOM_2	1.1131347
 #define UT_RANDOM_3	1.0132677
+/*@}*/
 
+/** Seed value of ut_rnd_gen_ulint(). */
+UNIV_INTERN ulint	ut_rnd_ulint_counter = 65654363;
 
-ulint	ut_rnd_ulint_counter = 65654363;
-
-/***************************************************************
+/***********************************************************//**
 Looks for a prime number slightly greater than the given argument.
-The prime is chosen so that it is not near any power of 2. */
-
+The prime is chosen so that it is not near any power of 2.
+@return	prime */
+UNIV_INTERN
 ulint
 ut_find_prime(
 /*==========*/
-			/* out: prime */
-	ulint	n)	/* in: positive number > 100 */
+	ulint	n)	/*!< in: positive number > 100 */
 {
 	ulint	pow2;
 	ulint	i;

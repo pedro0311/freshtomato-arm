@@ -11,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /**
@@ -48,7 +47,8 @@
   (assuming a index for column d of table t2 is defined)
 */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "key.h"                                // key_cmp_if_same
 #include "sql_select.h"
 
 static bool find_key_for_maxmin(bool max_fl, TABLE_REF *ref, Field* field,
@@ -302,8 +302,7 @@ int opt_sum_query(THD *thd,
       error= tl->table->file->info(HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
       if(error)
       {
-        tl->table->file->print_error(error, MYF(0));
-        tl->table->in_use->fatal_error();
+        tl->table->file->print_error(error, MYF(ME_FATALERROR));
         DBUG_RETURN(error);
       }
       count*= tl->table->file->stats.records;
@@ -381,9 +380,14 @@ int opt_sum_query(THD *thd,
             const_result= 0;
             break;
           }
-          table->file->ha_index_init((uint) ref.key, 1);
+          if ((error= table->file->ha_index_init((uint) ref.key, 1)))
+          {
+            table->file->print_error(error, MYF(0));
+            table->set_keyread(FALSE);
+            DBUG_RETURN(error);
+          }
 
-          error= is_max ? 
+          error= is_max ?
                  get_index_max_value(table, &ref, range_fl) :
                  get_index_min_value(table, &ref, item_field, range_fl,
                                      prefix_len);
@@ -418,15 +422,20 @@ int opt_sum_query(THD *thd,
           const_result= 0;
           break;
         }
+        item_sum->set_aggregator(item_sum->has_with_distinct() ? 
+                                 Aggregator::DISTINCT_AGGREGATOR :
+                                 Aggregator::SIMPLE_AGGREGATOR);
         /*
           If count == 0 (so is_exact_count == TRUE) and
           there're no outer joins, set to NULL,
           otherwise set to the constant value.
         */
         if (!count && !outer_tables)
-          item_sum->clear();
+        {
+          item_sum->aggregator_clear();
+        }
         else
-          item_sum->reset();
+          item_sum->reset_and_add();
         item_sum->make_const();
         recalc_const_item= 1;
         break;
@@ -446,7 +455,7 @@ int opt_sum_query(THD *thd,
   }
 
   if (thd->is_error())
-    DBUG_RETURN(thd->main_da.sql_errno());
+    DBUG_RETURN(thd->stmt_da->sql_errno());
 
   /*
     If we have a where clause, we can only ignore searching in the

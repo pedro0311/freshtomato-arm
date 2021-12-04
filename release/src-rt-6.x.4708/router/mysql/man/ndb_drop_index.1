@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndb_drop_index\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDB_DROP_INDEX\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDB_DROP_INDEX\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,7 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndb_drop_index
 .SH "NAME"
 ndb_drop_index \- drop index from an NDB table
 .SH "SYNOPSIS"
@@ -40,13 +39,13 @@ drops the specified index from an
 NDB
 table\&.
 \fIIt is recommended that you use this utility only as an example for writing NDB API applications\fR\(emsee the Warning later in this section for details\&.
-        Usage
+Usage
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-ndb_drop_index \-c \fIconnect_string\fR \fItable_name\fR \fIindex\fR \-d \fIdb_name\fR
+ndb_drop_index \-c \fIconnection_string\fR \fItable_name\fR \fIindex\fR \-d \fIdb_name\fR
 .fi
 .if n \{\
 .RE
@@ -60,15 +59,15 @@ in the
 \fIdatabase\fR\&.
 .PP
 The following table includes options that are specific to
-\fBndb_drop_index\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+\fBndb_drop_index\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndb_drop_index\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.18.\ \&ndb_drop_index Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.292.\ \&Command\-line options for the ndb_drop_index program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -77,20 +76,20 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
 l l l.
 T{
 .PP
-\-\-database=dbname,
+--database=dbname,
 .PP
-\-d
+-d
 T}:T{
 Name of the database in which the table is found
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
@@ -123,7 +122,7 @@ Enter password: *******
 Reading table information for completion of table and column names
 You can turn off this feature to get a quicker startup with \-A
 Welcome to the MySQL monitor\&.  Commands end with ; or \eg\&.
-Your MySQL connection id is 7 to server version: 5\&.1\&.72\-ndb\-7\&.1\&.30
+Your MySQL connection id is 7 to server version: 5\&.5\&.61\-ndb\-7\&.2\&.35
 Type \*(Aqhelp;\*(Aq or \*(Aq\eh\*(Aq for help\&. Type \*(Aq\ec\*(Aq to clear the buffer\&.
 mysql> \fBSHOW TABLES;\fR
 +\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-+
@@ -154,7 +153,7 @@ utility (see
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

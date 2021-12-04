@@ -1,7 +1,24 @@
-/************************************************************************
-The lowest-level memory management
+/*****************************************************************************
 
-(c) 1997 Innobase Oy
+Copyright (c) 1997, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/********************************************************************//**
+@file mem/mem0pool.c
+The lowest-level memory management
 
 Created 5/12/1997 Heikki Tuuri
 *************************************************************************/
@@ -11,11 +28,13 @@ Created 5/12/1997 Heikki Tuuri
 #include "mem0pool.ic"
 #endif
 
+#include "srv0srv.h"
 #include "sync0sync.h"
 #include "ut0mem.h"
 #include "ut0lst.h"
 #include "ut0byte.h"
 #include "mem0mem.h"
+#include "srv0start.h"
 
 /* We would like to use also the buffer frames to allocate memory. This
 would be desirable, because then the memory consumption of the database
@@ -72,89 +91,104 @@ and for the adaptive index. Thus, for each individual transaction, its locks
 can occupy at most about the size of the buffer frame of memory in the common
 pool, and after that its locks will grow into the buffer pool. */
 
-/* Mask used to extract the free bit from area->size */
+/** Mask used to extract the free bit from area->size */
 #define MEM_AREA_FREE	1
 
-/* The smallest memory area total size */
+/** The smallest memory area total size */
 #define MEM_AREA_MIN_SIZE	(2 * MEM_AREA_EXTRA_SIZE)
 
 
-/* Data structure for a memory pool. The space is allocated using the buddy
+/** Data structure for a memory pool. The space is allocated using the buddy
 algorithm, where free list i contains areas of size 2 to power i. */
 struct mem_pool_struct{
-	byte*		buf;		/* memory pool */
-	ulint		size;		/* memory common pool size */
-	ulint		reserved;	/* amount of currently allocated
+	byte*		buf;		/*!< memory pool */
+	ulint		size;		/*!< memory common pool size */
+	ulint		reserved;	/*!< amount of currently allocated
 					memory */
-	mutex_t		mutex;		/* mutex protecting this struct */
+	mutex_t		mutex;		/*!< mutex protecting this struct */
 	UT_LIST_BASE_NODE_T(mem_area_t)
-			free_list[64];	/* lists of free memory areas: an
+			free_list[64];	/*!< lists of free memory areas: an
 					area is put to the list whose number
 					is the 2-logarithm of the area size */
 };
 
-/* The common memory pool */
-mem_pool_t*	mem_comm_pool	= NULL;
+/** The common memory pool */
+UNIV_INTERN mem_pool_t*	mem_comm_pool	= NULL;
+
+#ifdef UNIV_PFS_MUTEX
+/* Key to register mutex in mem_pool_struct with performance schema */
+UNIV_INTERN mysql_pfs_key_t	mem_pool_mutex_key;
+#endif /* UNIV_PFS_MUTEX */
 
 /* We use this counter to check that the mem pool mutex does not leak;
 this is to track a strange assertion failure reported at
 mysql@lists.mysql.com */
 
-ulint		mem_n_threads_inside		= 0;
+UNIV_INTERN ulint	mem_n_threads_inside		= 0;
 
-/************************************************************************
-Reserves the mem pool mutex. */
-
+/********************************************************************//**
+Reserves the mem pool mutex if we are not in server shutdown. Use
+this function only in memory free functions, since only memory
+free functions are used during server shutdown. */
+UNIV_INLINE
 void
-mem_pool_mutex_enter(void)
-/*======================*/
+mem_pool_mutex_enter(
+/*=================*/
+	mem_pool_t*	pool)		/*!< in: memory pool */
 {
-	mutex_enter(&(mem_comm_pool->mutex));
+	if (srv_shutdown_state < SRV_SHUTDOWN_EXIT_THREADS) {
+		mutex_enter(&(pool->mutex));
+	}
 }
 
-/************************************************************************
-Releases the mem pool mutex. */
-
+/********************************************************************//**
+Releases the mem pool mutex if we are not in server shutdown. As
+its corresponding mem_pool_mutex_enter() function, use it only
+in memory free functions */
+UNIV_INLINE
 void
-mem_pool_mutex_exit(void)
-/*=====================*/
+mem_pool_mutex_exit(
+/*================*/
+	mem_pool_t*	pool)		/*!< in: memory pool */
 {
-	mutex_exit(&(mem_comm_pool->mutex));
+	if (srv_shutdown_state < SRV_SHUTDOWN_EXIT_THREADS) {
+		mutex_exit(&(pool->mutex));
+	}
 }
 
-/************************************************************************
-Returns memory area size. */
+/********************************************************************//**
+Returns memory area size.
+@return	size */
 UNIV_INLINE
 ulint
 mem_area_get_size(
 /*==============*/
-				/* out: size */
-	mem_area_t*	area)	/* in: area */
+	mem_area_t*	area)	/*!< in: area */
 {
 	return(area->size_and_free & ~MEM_AREA_FREE);
 }
 
-/************************************************************************
+/********************************************************************//**
 Sets memory area size. */
 UNIV_INLINE
 void
 mem_area_set_size(
 /*==============*/
-	mem_area_t*	area,	/* in: area */
-	ulint		size)	/* in: size */
+	mem_area_t*	area,	/*!< in: area */
+	ulint		size)	/*!< in: size */
 {
 	area->size_and_free = (area->size_and_free & MEM_AREA_FREE)
 		| size;
 }
 
-/************************************************************************
-Returns memory area free bit. */
+/********************************************************************//**
+Returns memory area free bit.
+@return	TRUE if free */
 UNIV_INLINE
 ibool
 mem_area_get_free(
 /*==============*/
-				/* out: TRUE if free */
-	mem_area_t*	area)	/* in: area */
+	mem_area_t*	area)	/*!< in: area */
 {
 #if TRUE != MEM_AREA_FREE
 # error "TRUE != MEM_AREA_FREE"
@@ -162,14 +196,14 @@ mem_area_get_free(
 	return(area->size_and_free & MEM_AREA_FREE);
 }
 
-/************************************************************************
+/********************************************************************//**
 Sets memory area free bit. */
 UNIV_INLINE
 void
 mem_area_set_free(
 /*==============*/
-	mem_area_t*	area,	/* in: area */
-	ibool		free)	/* in: free bit value */
+	mem_area_t*	area,	/*!< in: area */
+	ibool		free)	/*!< in: free bit value */
 {
 #if TRUE != MEM_AREA_FREE
 # error "TRUE != MEM_AREA_FREE"
@@ -178,28 +212,26 @@ mem_area_set_free(
 		| free;
 }
 
-/************************************************************************
-Creates a memory pool. */
-
+/********************************************************************//**
+Creates a memory pool.
+@return	memory pool */
+UNIV_INTERN
 mem_pool_t*
 mem_pool_create(
 /*============*/
-			/* out: memory pool */
-	ulint	size)	/* in: pool size in bytes */
+	ulint	size)	/*!< in: pool size in bytes */
 {
 	mem_pool_t*	pool;
 	mem_area_t*	area;
 	ulint		i;
 	ulint		used;
 
-	ut_a(size > 10000);
-
 	pool = ut_malloc(sizeof(mem_pool_t));
 
 	pool->buf = ut_malloc_low(size, TRUE);
 	pool->size = size;
 
-	mutex_create(&pool->mutex, SYNC_MEM_POOL);
+	mutex_create(mem_pool_mutex_key, &pool->mutex, SYNC_MEM_POOL);
 
 	/* Initialize the free lists */
 
@@ -240,16 +272,27 @@ mem_pool_create(
 	return(pool);
 }
 
-/************************************************************************
-Fills the specified free list. */
+/********************************************************************//**
+Frees a memory pool. */
+UNIV_INTERN
+void
+mem_pool_free(
+/*==========*/
+	mem_pool_t*	pool)	/*!< in, own: memory pool */
+{
+	ut_free(pool->buf);
+	ut_free(pool);
+}
+
+/********************************************************************//**
+Fills the specified free list.
+@return	TRUE if we were able to insert a block to the free list */
 static
 ibool
 mem_pool_fill_free_list(
 /*====================*/
-				/* out: TRUE if we were able to insert a
-				block to the free list */
-	ulint		i,	/* in: free list index */
-	mem_pool_t*	pool)	/* in: memory pool */
+	ulint		i,	/*!< in: free list index */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	mem_area_t*	area;
 	mem_area_t*	area2;
@@ -257,7 +300,7 @@ mem_pool_fill_free_list(
 
 	ut_ad(mutex_own(&(pool->mutex)));
 
-	if (i >= 63) {
+	if (UNIV_UNLIKELY(i >= 63)) {
 		/* We come here when we have run out of space in the
 		memory pool: */
 
@@ -289,7 +332,7 @@ mem_pool_fill_free_list(
 		area = UT_LIST_GET_FIRST(pool->free_list[i + 1]);
 	}
 
-	if (UT_LIST_GET_LEN(pool->free_list[i + 1]) == 0) {
+	if (UNIV_UNLIKELY(UT_LIST_GET_LEN(pool->free_list[i + 1]) == 0)) {
 		mem_analyze_corruption(area);
 
 		ut_error;
@@ -312,23 +355,33 @@ mem_pool_fill_free_list(
 	return(TRUE);
 }
 
-/************************************************************************
+/********************************************************************//**
 Allocates memory from a pool. NOTE: This low-level function should only be
-used in mem0mem.*! */
-
+used in mem0mem.*!
+@return	own: allocated memory buffer */
+UNIV_INTERN
 void*
 mem_area_alloc(
 /*===========*/
-				/* out, own: allocated memory buffer */
-	ulint		size,	/* in: allocated size in bytes; for optimum
+	ulint*		psize,	/*!< in: requested size in bytes; for optimum
 				space usage, the size should be a power of 2
-				minus MEM_AREA_EXTRA_SIZE */
-	mem_pool_t*	pool)	/* in: memory pool */
+				minus MEM_AREA_EXTRA_SIZE;
+				out: allocated size in bytes (greater than
+				or equal to the requested size) */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	mem_area_t*	area;
+	ulint		size;
 	ulint		n;
 	ibool		ret;
 
+	/* If we are using os allocator just make a simple call
+	to malloc */
+	if (UNIV_LIKELY(srv_use_sys_malloc)) {
+		return(malloc(*psize));
+	}
+
+	size = *psize;
 	n = ut_2_log(ut_max(size + MEM_AREA_EXTRA_SIZE, MEM_AREA_MIN_SIZE));
 
 	mutex_enter(&(pool->mutex));
@@ -399,22 +452,23 @@ mem_area_alloc(
 	mutex_exit(&(pool->mutex));
 
 	ut_ad(mem_pool_validate(pool));
-	UNIV_MEM_ALLOC(MEM_AREA_EXTRA_SIZE + (byte*)area,
-		       ut_2_exp(n) - MEM_AREA_EXTRA_SIZE);
+
+	*psize = ut_2_exp(n) - MEM_AREA_EXTRA_SIZE;
+	UNIV_MEM_ALLOC(MEM_AREA_EXTRA_SIZE + (byte*)area, *psize);
 
 	return((void*)(MEM_AREA_EXTRA_SIZE + ((byte*)area)));
 }
 
-/************************************************************************
-Gets the buddy of an area, if it exists in pool. */
+/********************************************************************//**
+Gets the buddy of an area, if it exists in pool.
+@return	the buddy, NULL if no buddy in pool */
 UNIV_INLINE
 mem_area_t*
 mem_area_get_buddy(
 /*===============*/
-				/* out: the buddy, NULL if no buddy in pool */
-	mem_area_t*	area,	/* in: memory area */
-	ulint		size,	/* in: memory area size */
-	mem_pool_t*	pool)	/* in: memory pool */
+	mem_area_t*	area,	/*!< in: memory area */
+	ulint		size,	/*!< in: memory area size */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	mem_area_t*	buddy;
 
@@ -445,21 +499,27 @@ mem_area_get_buddy(
 	return(buddy);
 }
 
-/************************************************************************
+/********************************************************************//**
 Frees memory to a pool. */
-
+UNIV_INTERN
 void
 mem_area_free(
 /*==========*/
-	void*		ptr,	/* in, own: pointer to allocated memory
+	void*		ptr,	/*!< in, own: pointer to allocated memory
 				buffer */
-	mem_pool_t*	pool)	/* in: memory pool */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	mem_area_t*	area;
 	mem_area_t*	buddy;
 	void*		new_ptr;
 	ulint		size;
 	ulint		n;
+
+	if (UNIV_LIKELY(srv_use_sys_malloc)) {
+		free(ptr);
+
+		return;
+	}
 
 	/* It may be that the area was really allocated from the OS with
 	regular malloc: check if ptr points within our memory pool */
@@ -502,7 +562,7 @@ mem_area_free(
 
 		next_size = mem_area_get_size(
 			(mem_area_t*)(((byte*)area) + size));
-		if (ut_2_power_up(next_size) != next_size) {
+		if (UNIV_UNLIKELY(!next_size || !ut_is_2pow(next_size))) {
 			fprintf(stderr,
 				"InnoDB: Error: Memory area size %lu,"
 				" next area size %lu not a power of 2!\n"
@@ -519,7 +579,7 @@ mem_area_free(
 
 	n = ut_2_log(size);
 
-	mutex_enter(&(pool->mutex));
+	mem_pool_mutex_enter(pool);
 	mem_n_threads_inside++;
 
 	ut_a(mem_n_threads_inside == 1);
@@ -547,7 +607,7 @@ mem_area_free(
 		pool->reserved += ut_2_exp(n);
 
 		mem_n_threads_inside--;
-		mutex_exit(&(pool->mutex));
+		mem_pool_mutex_exit(pool);
 
 		mem_area_free(new_ptr, pool);
 
@@ -563,32 +623,33 @@ mem_area_free(
 	}
 
 	mem_n_threads_inside--;
-	mutex_exit(&(pool->mutex));
+	mem_pool_mutex_exit(pool);
 
 	ut_ad(mem_pool_validate(pool));
 }
 
-/************************************************************************
-Validates a memory pool. */
-
+/********************************************************************//**
+Validates a memory pool.
+@return	TRUE if ok */
+UNIV_INTERN
 ibool
 mem_pool_validate(
 /*==============*/
-				/* out: TRUE if ok */
-	mem_pool_t*	pool)	/* in: memory pool */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	mem_area_t*	area;
 	mem_area_t*	buddy;
 	ulint		free;
 	ulint		i;
 
-	mutex_enter(&(pool->mutex));
+	mem_pool_mutex_enter(pool);
 
 	free = 0;
 
 	for (i = 0; i < 64; i++) {
 
-		UT_LIST_VALIDATE(free_list, mem_area_t, pool->free_list[i]);
+		UT_LIST_VALIDATE(free_list, mem_area_t, pool->free_list[i],
+				 (void) 0);
 
 		area = UT_LIST_GET_FIRST(pool->free_list[i]);
 
@@ -609,19 +670,19 @@ mem_pool_validate(
 
 	ut_a(free + pool->reserved == pool->size);
 
-	mutex_exit(&(pool->mutex));
+	mem_pool_mutex_exit(pool);
 
 	return(TRUE);
 }
 
-/************************************************************************
+/********************************************************************//**
 Prints info of a memory pool. */
-
+UNIV_INTERN
 void
 mem_pool_print_info(
 /*================*/
-	FILE*		outfile,/* in: output file to write to */
-	mem_pool_t*	pool)	/* in: memory pool */
+	FILE*		outfile,/*!< in: output file to write to */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	ulint		i;
 
@@ -647,14 +708,14 @@ mem_pool_print_info(
 	mutex_exit(&(pool->mutex));
 }
 
-/************************************************************************
-Returns the amount of reserved memory. */
-
+/********************************************************************//**
+Returns the amount of reserved memory.
+@return	reserved memory in bytes */
+UNIV_INTERN
 ulint
 mem_pool_get_reserved(
 /*==================*/
-				/* out: reserved memory in bytes */
-	mem_pool_t*	pool)	/* in: memory pool */
+	mem_pool_t*	pool)	/*!< in: memory pool */
 {
 	ulint	reserved;
 

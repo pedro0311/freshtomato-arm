@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,9 +10,8 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   along with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street, Suite 500, Boston, MA 02110-1335 USA */
 
 /*
  * Vio Lite.
@@ -30,6 +28,10 @@
 
 #ifdef	__cplusplus
 extern "C" {
+#endif /* __cplusplus */
+
+#ifdef __cplusplus
+typedef struct st_vio Vio;
 #endif /* __cplusplus */
 
 enum enum_vio_type
@@ -53,9 +55,6 @@ Vio* vio_new_win32shared_memory(HANDLE handle_file_map,
                                 HANDLE event_client_wrote,
                                 HANDLE event_client_read,
                                 HANDLE event_conn_closed);
-size_t vio_read_pipe(Vio *vio, uchar * buf, size_t size);
-size_t vio_write_pipe(Vio *vio, const uchar * buf, size_t size);
-int vio_close_pipe(Vio * vio);
 #else
 #define HANDLE void *
 #endif /* __WIN__ */
@@ -89,10 +88,20 @@ int	vio_errno(Vio*vio);
 /* Get socket number */
 my_socket vio_fd(Vio*vio);
 /* Remote peer's address and name in text form */
-my_bool	vio_peer_addr(Vio* vio, char *buf, uint16 *port);
-/* Remotes in_addr */
-void	vio_in_addr(Vio *vio, struct in_addr *in);
-my_bool	vio_poll_read(Vio *vio,uint timeout);
+my_bool vio_peer_addr(Vio *vio, char *buf, uint16 *port, size_t buflen);
+my_bool vio_poll_read(Vio *vio, uint timeout);
+my_bool vio_is_connected(Vio *vio);
+ssize_t vio_pending(Vio *vio);
+
+my_bool vio_get_normalized_ip_string(const struct sockaddr *addr, int addr_length,
+                                     char *ip_string, size_t ip_string_size);
+
+my_bool vio_is_no_name_error(int err_code);
+
+int vio_getnameinfo(const struct sockaddr *sa,
+                    char *hostname, size_t hostname_size,
+                    char *port, size_t port_size,
+                    int flags);
 
 #ifdef HAVE_OPENSSL
 #include <openssl/opensslv.h>
@@ -114,11 +123,12 @@ typedef my_socket YASSL_SOCKET_T;
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+#ifndef EMBEDDED_LIBRARY
 enum enum_ssl_init_error
 {
   SSL_INITERR_NOERROR= 0, SSL_INITERR_CERT, SSL_INITERR_KEY, 
   SSL_INITERR_NOMATCH, SSL_INITERR_BAD_PATHS, SSL_INITERR_CIPHERS, 
-  SSL_INITERR_MEMFAIL, SSL_INITERR_LASTERR
+  SSL_INITERR_MEMFAIL, SSL_INITERR_DHFAIL, SSL_INITERR_LASTERR
 };
 const char* sslGetErrString(enum enum_ssl_init_error err);
 
@@ -127,25 +137,20 @@ struct st_VioSSLFd
   SSL_CTX *ssl_context;
 };
 
-int sslaccept(struct st_VioSSLFd*, Vio *, long timeout);
-int sslconnect(struct st_VioSSLFd*, Vio *, long timeout);
+int sslaccept(struct st_VioSSLFd*, Vio *, long timeout, unsigned long *errptr);
+int sslconnect(struct st_VioSSLFd*, Vio *, long timeout, unsigned long *errptr);
 
 struct st_VioSSLFd
 *new_VioSSLConnectorFd(const char *key_file, const char *cert_file,
 		       const char *ca_file,  const char *ca_path,
-		       const char *cipher);
+		       const char *cipher, enum enum_ssl_init_error* error);
 struct st_VioSSLFd
 *new_VioSSLAcceptorFd(const char *key_file, const char *cert_file,
 		      const char *ca_file,const char *ca_path,
 		      const char *cipher, enum enum_ssl_init_error* error);
 void free_vio_ssl_acceptor_fd(struct st_VioSSLFd *fd);
+#endif /* ! EMBEDDED_LIBRARY */
 #endif /* HAVE_OPENSSL */
-
-#ifdef HAVE_SMEM
-size_t vio_read_shared_memory(Vio *vio, uchar * buf, size_t size);
-size_t vio_write_shared_memory(Vio *vio, const uchar * buf, size_t size);
-int vio_close_shared_memory(Vio * vio);
-#endif
 
 void vio_end(void);
 
@@ -166,9 +171,10 @@ void vio_end(void);
 #define vio_should_retry(vio) 			(vio)->should_retry(vio)
 #define vio_was_interrupted(vio) 		(vio)->was_interrupted(vio)
 #define vio_close(vio)				((vio)->vioclose)(vio)
-#define vio_peer_addr(vio, buf, prt)		(vio)->peer_addr(vio, buf, prt)
-#define vio_in_addr(vio, in)			(vio)->in_addr(vio, in)
+#define vio_peer_addr(vio, buf, prt, buflen)	(vio)->peer_addr(vio, buf, prt, buflen)
 #define vio_timeout(vio, which, seconds)	(vio)->timeout(vio, which, seconds)
+#define vio_poll_read(vio, timeout)             (vio)->poll_read(vio, timeout)
+#define vio_is_connected(vio)                   (vio)->is_connected(vio)
 #endif /* !defined(DONT_MAP_VIO) */
 
 /* This enumerator is used in parser - should be always visible */
@@ -190,8 +196,9 @@ struct st_vio
   HANDLE hPipe;
   my_bool		localhost;	/* Are we from localhost? */
   int			fcntl_mode;	/* Buffered fcntl(sd,F_GETFL) */
-  struct sockaddr_in	local;		/* Local internet address */
-  struct sockaddr_in	remote;		/* Remote internet address */
+  struct sockaddr_storage	local;		/* Local internet address */
+  struct sockaddr_storage	remote;		/* Remote internet address */
+  int addrLen;                          /* Length of remote address */
   enum enum_vio_type	type;		/* Type of connection */
   char			desc[30];	/* String description */
   char                  *read_buffer;   /* buffer for vio_read_buff */
@@ -207,12 +214,15 @@ struct st_vio
   my_bool (*is_blocking)(Vio*);
   int     (*viokeepalive)(Vio*, my_bool);
   int     (*fastsend)(Vio*);
-  my_bool (*peer_addr)(Vio*, char *, uint16*);
-  void    (*in_addr)(Vio*, struct in_addr*);
+  my_bool (*peer_addr)(Vio*, char *, uint16*, size_t);
+  void    (*in_addr)(Vio*, struct sockaddr_storage*);
   my_bool (*should_retry)(Vio*);
   my_bool (*was_interrupted)(Vio*);
   int     (*vioclose)(Vio*);
   void	  (*timeout)(Vio*, unsigned int which, unsigned int timeout);
+  my_bool (*poll_read)(Vio *vio, uint timeout);
+  my_bool (*is_connected)(Vio*);
+  my_bool (*has_data) (Vio*);
 #ifdef HAVE_OPENSSL
   void	  *ssl_arg;
 #endif

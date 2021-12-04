@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# Copyright (c) 2001, 2005-2007 MySQL AB
+# Copyright (c) 2001, 2010, Oracle and/or its affiliates. All rights reserved.
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 # 
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 gmake -k maintainer-clean || true 
 /bin/rm -f */.deps/*.P config.cache storage/innobase/config.cache
@@ -21,5 +21,5 @@ gmake -k maintainer-clean || true
 path=`dirname $0`
 . "$path/autorun.sh"
 
-CC=ecc CFLAGS="-w1 -DEXTRA_DEBUG -DSAFEMALLOC -DSAFE_MUTEX -O2" CXX=ecc CXXFLAGS="-w1 -DEXTRA_DEBUG -DSAFEMALLOC -DSAFE_MUTEX -O2" ./configure --prefix=/usr/local/mysql --with-extra-charsets=complex --enable-thread-safe-client --with-mysqld-ldflags=-all-static  --with-client-ldflags=-all-static  --with-debug --with-innodb --with-embedded-server --with-archive-storage-engine
+CC=ecc CFLAGS="-w1 -DEXTRA_DEBUG -DSAFE_MUTEX -O2" CXX=ecc CXXFLAGS="-w1 -DEXTRA_DEBUG -DSAFE_MUTEX -O2" ./configure --prefix=/usr/local/mysql --with-extra-charsets=complex --enable-thread-safe-client --with-mysqld-ldflags=-all-static  --with-client-ldflags=-all-static  --with-debug --with-innodb --with-embedded-server --with-archive-storage-engine
 gmake

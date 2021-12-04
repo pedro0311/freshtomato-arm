@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 #ifdef USE_PRAGMA_INTERFACE
@@ -23,6 +22,7 @@
 /* class for the the heap handler */
 
 #include <heap.h>
+#include "sql_class.h"                          /* THD */
 
 class ha_heap: public handler
 {
@@ -100,6 +100,7 @@ public:
   int reset();
   int external_lock(THD *thd, int lock_type);
   int delete_all_rows(void);
+  int truncate();
   int reset_auto_increment(ulonglong value);
   int disable_indexes(uint mode);
   int enable_indexes(uint mode);

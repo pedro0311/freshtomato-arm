@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2005-2007 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
    
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,11 +11,13 @@
    
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"                      // REQUIRED by other includes
 #include "rpl_filter.h"
+#include "hash.h"                               // my_hash_free
+#include "table.h"                              // TABLE_LIST
 
 #define TABLE_RULE_HASH_SIZE   16
 #define TABLE_RULE_ARR_SIZE   16
@@ -35,9 +35,9 @@ Rpl_filter::Rpl_filter() :
 Rpl_filter::~Rpl_filter() 
 {
   if (do_table_inited) 
-    hash_free(&do_table);
+    my_hash_free(&do_table);
   if (ignore_table_inited)
-    hash_free(&ignore_table);
+    my_hash_free(&ignore_table);
   if (wild_do_table_inited)
     free_string_array(&wild_do_table);
   if (wild_ignore_table_inited)
@@ -106,12 +106,12 @@ Rpl_filter::tables_ok(const char* db, TABLE_LIST* tables)
     len= (uint) (strmov(end, tables->table_name) - hash_key);
     if (do_table_inited) // if there are any do's
     {
-      if (hash_search(&do_table, (uchar*) hash_key, len))
+      if (my_hash_search(&do_table, (uchar*) hash_key, len))
 	DBUG_RETURN(1);
     }
     if (ignore_table_inited) // if there are any ignores
     {
-      if (hash_search(&ignore_table, (uchar*) hash_key, len))
+      if (my_hash_search(&ignore_table, (uchar*) hash_key, len))
 	DBUG_RETURN(0); 
     }
     if (wild_do_table_inited && 
@@ -386,14 +386,14 @@ void free_table_ent(void* a)
 {
   TABLE_RULE_ENT *e= (TABLE_RULE_ENT *) a;
   
-  my_free((uchar*) e, MYF(0));
+  my_free(e);
 }
 
 
 void 
 Rpl_filter::init_table_rule_hash(HASH* h, bool* h_inited)
 {
-  hash_init(h, system_charset_info,TABLE_RULE_HASH_SIZE,0,0,
+  my_hash_init(h, system_charset_info,TABLE_RULE_HASH_SIZE,0,0,
 	    get_table_key, free_table_ent, 0);
   *h_inited = 1;
 }
@@ -437,7 +437,7 @@ Rpl_filter::free_string_array(DYNAMIC_ARRAY *a)
   {
     char* p;
     get_dynamic(a, (uchar*) &p, i);
-    my_free(p, MYF(MY_WME));
+    my_free(p);
   }
   delete_dynamic(a);
 }
@@ -464,7 +464,7 @@ Rpl_filter::table_rule_ent_hash_to_str(String* s, HASH* h, bool inited)
   {
     for (uint i= 0; i < h->records; i++)
     {
-      TABLE_RULE_ENT* e= (TABLE_RULE_ENT*) hash_element(h, i);
+      TABLE_RULE_ENT* e= (TABLE_RULE_ENT*) my_hash_element(h, i);
       if (s->length())
         s->append(',');
       s->append(e->db,e->key_len);

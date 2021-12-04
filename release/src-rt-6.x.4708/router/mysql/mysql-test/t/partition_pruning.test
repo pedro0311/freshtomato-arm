@@ -235,6 +235,26 @@ INSERT INTO t1 VALUES ('0000-00-00'), ('0000-01-02'), ('0001-01-01'),
 ALTER TABLE t1 DROP KEY a;
 --source include/partition_date_range.inc
 DROP TABLE t1;
+--echo # TO_SECONDS, test of LIST and index
+CREATE TABLE t1 (a DATE, KEY(a))
+PARTITION BY LIST (TO_SECONDS(a))
+(PARTITION `p0001-01-01` VALUES IN (TO_SECONDS('0001-01-01')),
+ PARTITION `p2001-01-01` VALUES IN (TO_SECONDS('2001-01-01')),
+ PARTITION `pNULL` VALUES IN (NULL),
+ PARTITION `p0000-01-02` VALUES IN (TO_SECONDS('0000-01-02')),
+ PARTITION `p1001-01-01` VALUES IN (TO_SECONDS('1001-01-01')));
+if ($verify_without_partitions)
+{
+ALTER TABLE t1 REMOVE PARTITIONING;
+}
+INSERT INTO t1 VALUES ('0000-00-00'), ('0000-01-02'), ('0001-01-01'),
+      ('1001-00-00'), ('1001-01-01'), ('1002-00-00'), ('2001-01-01');
+--source include/partition_date_range.inc
+--echo # test without index
+ALTER TABLE t1 DROP KEY a;
+--source include/partition_date_range.inc
+DROP TABLE t1;
+
 
 #
 # Bug#46362: Endpoint should be set to false for TO_DAYS(DATE)
@@ -1371,3 +1391,70 @@ INSERT INTO t1 VALUES ('2006-03-01 12:00:00');
 -- echo must use p0 only:
 explain partitions select * from t1 where recdate < '2006-01-01 00:00:00';
 drop table t1;
+
+-- echo # 
+-- echo # BUG#33730 Full table scan instead selected partitions for query more than 10 partitions
+-- echo # 
+create table t0 (a int);
+insert into t0 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);
+create table t1 (a int)
+  partition by range(a+0) (
+  partition p0 values less than (64),
+  partition p1 values less than (128),
+  partition p2 values less than (255)
+);
+insert into t1 select A.a + 10*B.a from t0 A, t0 B;
+
+# this will use interval_via_walking
+explain partitions select * from t1 where a between 10 and 13;
+explain partitions select * from t1 where a between 10 and 10+33;
+
+drop table t0, t1;
+
+--echo #
+--echo # Bug#71095: Wrong results with PARTITION BY LIST COLUMNS()
+--echo #
+CREATE TABLE t1
+(c1 int,
+ c2 int,
+ c3 int,
+ c4 int,
+ PRIMARY KEY (c1,c2))
+PARTITION BY LIST COLUMNS (c2)
+(PARTITION p1 VALUES IN (1,2),
+ PARTITION p2 VALUES IN (3,4));
+INSERT INTO t1 VALUES (1, 1, 1, 1), (2, 3, 1, 1);
+INSERT INTO t1 VALUES (1, 2, 1, 1), (2, 4, 1, 1);
+SELECT * FROM t1 WHERE c1 = 1 AND c2 < 1;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 <= 1;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 = 1;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 >= 1;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 > 1;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 < 3;
+SELECT * FROM t1 WHERE c1 = 1 AND c2 <= 3;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 <= 3;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 = 3;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 >= 3;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 > 3;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 < 4;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 <= 4;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 = 4;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 >= 4;
+SELECT * FROM t1 WHERE c1 = 2 AND c2 > 4;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 < 1;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 <= 1;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 = 1;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 >= 1;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 > 1;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 < 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 1 AND c2 <= 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 <= 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 = 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 >= 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 > 3;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 < 4;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 <= 4;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 = 4;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 >= 4;
+EXPLAIN PARTITIONS SELECT * FROM t1 WHERE c1 = 2 AND c2 > 4;
+DROP TABLE t1;

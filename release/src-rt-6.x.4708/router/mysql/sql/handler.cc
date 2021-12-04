@@ -1,4 +1,4 @@
-/* Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -10,8 +10,8 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   along with this program; if not, write to the Free Software Foundation,
+   Inc., 51 Franklin Street, Suite 500, Boston, MA 02110-1335 USA */
 
 /** @file handler.cc
 
@@ -23,14 +23,28 @@
 #pragma implementation				// gcc: Class implementation
 #endif
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
+#include "rpl_handler.h"
+#include "sql_cache.h"                   // query_cache, query_cache_*
+#include "key.h"     // key_copy, key_unpack, key_cmp_if_same, key_cmp
+#include "sql_table.h"                   // build_table_filename
+#include "sql_parse.h"                          // check_stack_overrun
+#include "sql_acl.h"            // SUPER_ACL
+#include "sql_base.h"           // free_io_cache
+#include "discover.h"           // writefrm
+#include "log_event.h"          // *_rows_log_event
 #include "rpl_filter.h"
 #include <myisampack.h>
+#include "transaction.h"
 #include <errno.h>
+#include "probes_mysql.h"
+#include "debug_sync.h"         // DEBUG_SYNC
 
 #ifdef WITH_PARTITION_STORAGE_ENGINE
 #include "ha_partition.h"
 #endif
+
 
 /*
   While we have legacy_db_type, we have this array to
@@ -43,7 +57,8 @@ static handlerton *installed_htons[128];
 
 #define BITMAP_STACKBUF_SIZE (128/8)
 
-KEY_CREATE_INFO default_key_create_info= { HA_KEY_ALG_UNDEF, 0, {NullS,0} };
+KEY_CREATE_INFO default_key_create_info=
+  { HA_KEY_ALG_UNDEF, 0, {NullS, 0}, {NullS, 0} };
 
 /* number of entries in handlertons[] */
 ulong total_ha= 0;
@@ -76,6 +91,83 @@ TYPELIB tx_isolation_typelib= {array_elements(tx_isolation_names)-1,"",
 static TYPELIB known_extensions= {0,"known_exts", NULL, NULL};
 uint known_extensions_id= 0;
 
+/**
+  Database name that hold most of mysqld system tables.
+  Current code assumes that, there exists only some
+  specific "database name" designated as system database.
+*/
+const char* mysqld_system_database= "mysql";
+
+// System tables that belong to mysqld_system_database.
+st_system_tablename mysqld_system_tables[]= {
+  {mysqld_system_database, "db"},
+  {mysqld_system_database, "user"},
+  {mysqld_system_database, "host"},
+  {mysqld_system_database, "func"},
+  {mysqld_system_database, "proc"},
+  {mysqld_system_database, "event"},
+  {mysqld_system_database, "plugin"},
+  {mysqld_system_database, "servers"},
+  {mysqld_system_database, "procs_priv"},
+  {mysqld_system_database, "tables_priv"},
+  {mysqld_system_database, "proxies_priv"},
+  {mysqld_system_database, "columns_priv"},
+  {mysqld_system_database, "time_zone"},
+  {mysqld_system_database, "time_zone_name"},
+  {mysqld_system_database, "time_zone_leap_second"},
+  {mysqld_system_database, "time_zone_transition"},
+  {mysqld_system_database, "time_zone_transition_type"},
+  {mysqld_system_database, "help_category"},
+  {mysqld_system_database, "help_keyword"},
+  {mysqld_system_database, "help_relation"},
+  {mysqld_system_database, "help_topic"},
+  {(const char *)NULL, (const char *)NULL} /* This must be at the end */
+};
+
+/**
+  This static pointer holds list of system databases from SQL layer and
+  various SE's. The required memory is allocated once, and never freed.
+*/
+static const char **known_system_databases= NULL;
+static const char **ha_known_system_databases();
+
+// Called for each SE to get SE specific system database.
+static my_bool system_databases_handlerton(THD *unused, plugin_ref plugin,
+                                           void *arg);
+
+// Called for each SE to check if given db.table_name is a system table.
+static my_bool check_engine_system_table_handlerton(THD *unused,
+                                                    plugin_ref plugin,
+                                                    void *arg);
+
+/**
+  Structure used by SE during check for system table.
+  This structure is passed to each SE handlerton and the status (OUT param)
+  is collected.
+*/
+struct st_sys_tbl_chk_params
+{
+  const char *db;                             // IN param
+  const char *table_name;                     // IN param
+  bool is_sql_layer_system_table;             // IN param
+  legacy_db_type db_type;                     // IN param
+
+  enum enum_sys_tbl_chk_status
+  {
+    // db.table_name is not a supported system table.
+    NOT_KNOWN_SYSTEM_TABLE,
+    /*
+      db.table_name is a system table,
+      but may not be supported by SE.
+    */
+    KNOWN_SYSTEM_TABLE,
+    /*
+      db.table_name is a system table,
+      and is supported by SE.
+    */
+    SUPPORTED_SYSTEM_TABLE
+  }status;                                    // OUT param
+};
 
 
 static plugin_ref ha_default_plugin(THD *thd)
@@ -175,15 +267,6 @@ plugin_ref ha_lock_engine(THD *thd, const handlerton *hton)
 }
 
 
-#ifdef NOT_USED
-static handler *create_default(TABLE_SHARE *table, MEM_ROOT *mem_root)
-{
-  handlerton *hton= ha_default_handlerton(current_thd);
-  return (hton && hton->create) ? hton->create(hton, table, mem_root) : NULL;
-}
-#endif
-
-
 handlerton *ha_resolve_by_legacy_type(THD *thd, enum legacy_db_type db_type)
 {
   plugin_ref plugin;
@@ -221,11 +304,9 @@ handlerton *ha_checktype(THD *thd, enum legacy_db_type database_type,
     return NULL;
   }
 
+  RUN_HOOK(transaction, after_rollback, (thd, FALSE));
+
   switch (database_type) {
-#ifndef NO_HASH
-  case DB_TYPE_HASH:
-    return ha_resolve_by_legacy_type(thd, DB_TYPE_HASH);
-#endif
   case DB_TYPE_MRG_ISAM:
     return ha_resolve_by_legacy_type(thd, DB_TYPE_MRG_MYISAM);
   default:
@@ -275,11 +356,22 @@ handler *get_ha_partition(partition_info *part_info)
   }
   else
   {
-    my_error(ER_OUTOFMEMORY, MYF(0), static_cast<int>(sizeof(ha_partition)));
+    my_error(ER_OUTOFMEMORY, MYF(ME_FATALERROR), 
+             static_cast<int>(sizeof(ha_partition)));
   }
   DBUG_RETURN(((handler*) partition));
 }
 #endif
+
+
+static const char **handler_errmsgs;
+
+C_MODE_START
+static const char **get_handler_errmsgs()
+{
+  return handler_errmsgs;
+}
+C_MODE_END
 
 
 /**
@@ -293,62 +385,63 @@ handler *get_ha_partition(partition_info *part_info)
 
 int ha_init_errors(void)
 {
-#define SETMSG(nr, msg) errmsgs[(nr) - HA_ERR_FIRST]= (msg)
-  const char    **errmsgs;
+#define SETMSG(nr, msg) handler_errmsgs[(nr) - HA_ERR_FIRST]= (msg)
 
   /* Allocate a pointer array for the error message strings. */
   /* Zerofill it to avoid uninitialized gaps. */
-  if (! (errmsgs= (const char**) my_malloc(HA_ERR_ERRORS * sizeof(char*),
-                                           MYF(MY_WME | MY_ZEROFILL))))
+  if (! (handler_errmsgs= (const char**) my_malloc(HA_ERR_ERRORS * sizeof(char*),
+                                                   MYF(MY_WME | MY_ZEROFILL))))
     return 1;
 
   /* Set the dedicated error messages. */
-  SETMSG(HA_ERR_KEY_NOT_FOUND,          ER(ER_KEY_NOT_FOUND));
-  SETMSG(HA_ERR_FOUND_DUPP_KEY,         ER(ER_DUP_KEY));
+  SETMSG(HA_ERR_KEY_NOT_FOUND,          ER_DEFAULT(ER_KEY_NOT_FOUND));
+  SETMSG(HA_ERR_FOUND_DUPP_KEY,         ER_DEFAULT(ER_DUP_KEY));
   SETMSG(HA_ERR_RECORD_CHANGED,         "Update wich is recoverable");
   SETMSG(HA_ERR_WRONG_INDEX,            "Wrong index given to function");
-  SETMSG(HA_ERR_CRASHED,                ER(ER_NOT_KEYFILE));
-  SETMSG(HA_ERR_WRONG_IN_RECORD,        ER(ER_CRASHED_ON_USAGE));
+  SETMSG(HA_ERR_CRASHED,                ER_DEFAULT(ER_NOT_KEYFILE));
+  SETMSG(HA_ERR_WRONG_IN_RECORD,        ER_DEFAULT(ER_CRASHED_ON_USAGE));
   SETMSG(HA_ERR_OUT_OF_MEM,             "Table handler out of memory");
   SETMSG(HA_ERR_NOT_A_TABLE,            "Incorrect file format '%.64s'");
   SETMSG(HA_ERR_WRONG_COMMAND,          "Command not supported");
-  SETMSG(HA_ERR_OLD_FILE,               ER(ER_OLD_KEYFILE));
+  SETMSG(HA_ERR_OLD_FILE,               ER_DEFAULT(ER_OLD_KEYFILE));
   SETMSG(HA_ERR_NO_ACTIVE_RECORD,       "No record read in update");
   SETMSG(HA_ERR_RECORD_DELETED,         "Intern record deleted");
-  SETMSG(HA_ERR_RECORD_FILE_FULL,       ER(ER_RECORD_FILE_FULL));
+  SETMSG(HA_ERR_RECORD_FILE_FULL,       ER_DEFAULT(ER_RECORD_FILE_FULL));
   SETMSG(HA_ERR_INDEX_FILE_FULL,        "No more room in index file '%.64s'");
   SETMSG(HA_ERR_END_OF_FILE,            "End in next/prev/first/last");
-  SETMSG(HA_ERR_UNSUPPORTED,            ER(ER_ILLEGAL_HA));
+  SETMSG(HA_ERR_UNSUPPORTED,            ER_DEFAULT(ER_ILLEGAL_HA));
   SETMSG(HA_ERR_TO_BIG_ROW,             "Too big row");
   SETMSG(HA_WRONG_CREATE_OPTION,        "Wrong create option");
-  SETMSG(HA_ERR_FOUND_DUPP_UNIQUE,      ER(ER_DUP_UNIQUE));
+  SETMSG(HA_ERR_FOUND_DUPP_UNIQUE,      ER_DEFAULT(ER_DUP_UNIQUE));
   SETMSG(HA_ERR_UNKNOWN_CHARSET,        "Can't open charset");
-  SETMSG(HA_ERR_WRONG_MRG_TABLE_DEF,    ER(ER_WRONG_MRG_TABLE));
-  SETMSG(HA_ERR_CRASHED_ON_REPAIR,      ER(ER_CRASHED_ON_REPAIR));
-  SETMSG(HA_ERR_CRASHED_ON_USAGE,       ER(ER_CRASHED_ON_USAGE));
-  SETMSG(HA_ERR_LOCK_WAIT_TIMEOUT,      ER(ER_LOCK_WAIT_TIMEOUT));
-  SETMSG(HA_ERR_LOCK_TABLE_FULL,        ER(ER_LOCK_TABLE_FULL));
-  SETMSG(HA_ERR_READ_ONLY_TRANSACTION,  ER(ER_READ_ONLY_TRANSACTION));
-  SETMSG(HA_ERR_LOCK_DEADLOCK,          ER(ER_LOCK_DEADLOCK));
-  SETMSG(HA_ERR_CANNOT_ADD_FOREIGN,     ER(ER_CANNOT_ADD_FOREIGN));
-  SETMSG(HA_ERR_NO_REFERENCED_ROW,      ER(ER_NO_REFERENCED_ROW_2));
-  SETMSG(HA_ERR_ROW_IS_REFERENCED,      ER(ER_ROW_IS_REFERENCED_2));
+  SETMSG(HA_ERR_WRONG_MRG_TABLE_DEF,    ER_DEFAULT(ER_WRONG_MRG_TABLE));
+  SETMSG(HA_ERR_CRASHED_ON_REPAIR,      ER_DEFAULT(ER_CRASHED_ON_REPAIR));
+  SETMSG(HA_ERR_CRASHED_ON_USAGE,       ER_DEFAULT(ER_CRASHED_ON_USAGE));
+  SETMSG(HA_ERR_LOCK_WAIT_TIMEOUT,      ER_DEFAULT(ER_LOCK_WAIT_TIMEOUT));
+  SETMSG(HA_ERR_LOCK_TABLE_FULL,        ER_DEFAULT(ER_LOCK_TABLE_FULL));
+  SETMSG(HA_ERR_READ_ONLY_TRANSACTION,  ER_DEFAULT(ER_READ_ONLY_TRANSACTION));
+  SETMSG(HA_ERR_LOCK_DEADLOCK,          ER_DEFAULT(ER_LOCK_DEADLOCK));
+  SETMSG(HA_ERR_CANNOT_ADD_FOREIGN,     ER_DEFAULT(ER_CANNOT_ADD_FOREIGN));
+  SETMSG(HA_ERR_NO_REFERENCED_ROW,      ER_DEFAULT(ER_NO_REFERENCED_ROW_2));
+  SETMSG(HA_ERR_ROW_IS_REFERENCED,      ER_DEFAULT(ER_ROW_IS_REFERENCED_2));
   SETMSG(HA_ERR_NO_SAVEPOINT,           "No savepoint with that name");
   SETMSG(HA_ERR_NON_UNIQUE_BLOCK_SIZE,  "Non unique key block size");
   SETMSG(HA_ERR_NO_SUCH_TABLE,          "No such table: '%.64s'");
-  SETMSG(HA_ERR_TABLE_EXIST,            ER(ER_TABLE_EXISTS_ERROR));
+  SETMSG(HA_ERR_TABLE_EXIST,            ER_DEFAULT(ER_TABLE_EXISTS_ERROR));
   SETMSG(HA_ERR_NO_CONNECTION,          "Could not connect to storage engine");
-  SETMSG(HA_ERR_TABLE_DEF_CHANGED,      ER(ER_TABLE_DEF_CHANGED));
+  SETMSG(HA_ERR_TABLE_DEF_CHANGED,      ER_DEFAULT(ER_TABLE_DEF_CHANGED));
   SETMSG(HA_ERR_FOREIGN_DUPLICATE_KEY,  "FK constraint would lead to duplicate key");
-  SETMSG(HA_ERR_TABLE_NEEDS_UPGRADE,    ER(ER_TABLE_NEEDS_UPGRADE));
-  SETMSG(HA_ERR_TABLE_READONLY,         ER(ER_OPEN_AS_READONLY));
-  SETMSG(HA_ERR_AUTOINC_READ_FAILED,    ER(ER_AUTOINC_READ_FAILED));
-  SETMSG(HA_ERR_AUTOINC_ERANGE,         ER(ER_WARN_DATA_OUT_OF_RANGE));
-  SETMSG(HA_ERR_TOO_MANY_CONCURRENT_TRXS, ER(ER_TOO_MANY_CONCURRENT_TRXS));
-  SETMSG(HA_ERR_TABLE_IN_FK_CHECK,      "Table being used in foreign key check");
+  SETMSG(HA_ERR_TABLE_NEEDS_UPGRADE,    ER_DEFAULT(ER_TABLE_NEEDS_UPGRADE));
+  SETMSG(HA_ERR_TABLE_READONLY,         ER_DEFAULT(ER_OPEN_AS_READONLY));
+  SETMSG(HA_ERR_AUTOINC_READ_FAILED,    ER_DEFAULT(ER_AUTOINC_READ_FAILED));
+  SETMSG(HA_ERR_AUTOINC_ERANGE,         ER_DEFAULT(ER_WARN_DATA_OUT_OF_RANGE));
+  SETMSG(HA_ERR_TOO_MANY_CONCURRENT_TRXS, ER_DEFAULT(ER_TOO_MANY_CONCURRENT_TRXS));
+  SETMSG(HA_ERR_INDEX_COL_TOO_LONG,	ER_DEFAULT(ER_INDEX_COLUMN_TOO_LONG));
+  SETMSG(HA_ERR_INDEX_CORRUPT,		ER_DEFAULT(ER_INDEX_CORRUPT));
+  SETMSG(HA_ERR_TABLE_IN_FK_CHECK,	ER_DEFAULT(ER_TABLE_IN_FK_CHECK));
 
   /* Register the error messages for use with my_error(). */
-  return my_error_register(errmsgs, HA_ERR_FIRST, HA_ERR_LAST);
+  return my_error_register(get_handler_errmsgs, HA_ERR_FIRST, HA_ERR_LAST);
 }
 
 
@@ -367,7 +460,7 @@ static int ha_finish_errors(void)
   /* Allocate a pointer array for the error message strings. */
   if (! (errmsgs= my_error_unregister(HA_ERR_FIRST, HA_ERR_LAST)))
     return 1;
-  my_free((uchar*) errmsgs, MYF(0));
+  my_free(errmsgs);
   return 0;
 }
 
@@ -414,9 +507,15 @@ int ha_finalize_handlerton(st_plugin_int *plugin)
     reuse an array slot. Otherwise the number of uninstall/install
     cycles would be limited.
   */
-  hton2plugin[hton->slot]= NULL;
+  if (hton->slot != HA_SLOT_UNDEF)
+  {
+    /* Make sure we are not unpluging another plugin */
+    DBUG_ASSERT(hton2plugin[hton->slot] == plugin);
+    DBUG_ASSERT(hton->slot < MAX_HA);
+    hton2plugin[hton->slot]= NULL;
+  }
 
-  my_free((uchar*)hton, MYF(0));
+  my_free(hton);
 
  end:
   DBUG_RETURN(0);
@@ -431,6 +530,15 @@ int ha_initialize_handlerton(st_plugin_int *plugin)
 
   hton= (handlerton *)my_malloc(sizeof(handlerton),
                                 MYF(MY_WME | MY_ZEROFILL));
+
+  if (hton == NULL)
+  {
+    sql_print_error("Unable to allocate memory for plugin '%s' handlerton.",
+                    plugin->name.str);
+    goto err_no_hton_memory;
+  }
+
+  hton->slot= HA_SLOT_UNDEF;
   /* Historical Requirement */
   plugin->data= hton; // shortcut for the future
   if (plugin->plugin->init && plugin->plugin->init(hton))
@@ -540,7 +648,8 @@ err_deinit:
     (void) plugin->plugin->deinit(NULL);
           
 err:
-  my_free((uchar*) hton, MYF(0));
+  my_free(hton);
+err_no_hton_memory:
   plugin->data= NULL;
   DBUG_RETURN(1);
 }
@@ -558,6 +667,14 @@ int ha_init()
   */
   opt_using_transactions= total_ha>(ulong)opt_bin_log;
   savepoint_alloc_size+= sizeof(SAVEPOINT);
+
+  /*
+    Initialize system database name cache.
+    This cache is used to do a quick check if a given
+    db.tablename is a system table.
+  */
+  known_system_databases= ha_known_system_databases();
+
   DBUG_RETURN(error);
 }
 
@@ -864,16 +981,16 @@ void ha_close_connection(THD* thd)
   a transaction in a given engine is read-write and will not
   involve the two-phase commit protocol!
 
-  At the end of a statement, server call
-  ha_autocommit_or_rollback() is invoked. This call in turn
-  invokes handlerton::prepare() for every involved engine.
-  Prepare is followed by a call to handlerton::commit_one_phase()
-  If a one-phase commit will suffice, handlerton::prepare() is not
-  invoked and the server only calls handlerton::commit_one_phase().
-  At statement commit, the statement-related read-write engine
-  flag is propagated to the corresponding flag in the normal
-  transaction.  When the commit is complete, the list of registered
-  engines is cleared.
+  At the end of a statement, server call trans_commit_stmt is
+  invoked. This call in turn invokes handlerton::prepare()
+  for every involved engine. Prepare is followed by a call
+  to handlerton::commit_one_phase() If a one-phase commit
+  will suffice, handlerton::prepare() is not invoked and
+  the server only calls handlerton::commit_one_phase().
+  At statement commit, the statement-related read-write
+  engine flag is propagated to the corresponding flag in the
+  normal transaction.  When the commit is complete, the list
+  of registered engines is cleared.
 
   Rollback is handled in a similar fashion.
 
@@ -884,7 +1001,7 @@ void ha_close_connection(THD* thd)
   do not "register" in thd->transaction lists, and thus do not
   modify the transaction state. Besides, each DDL in
   MySQL is prefixed with an implicit normal transaction commit
-  (a call to end_active_trans()), and thus leaves nothing
+  (a call to trans_commit_implicit()), and thus leaves nothing
   to modify.
   However, as it has been pointed out with CREATE TABLE .. SELECT,
   some DDL statements can start a *new* transaction.
@@ -968,7 +1085,7 @@ int ha_prepare(THD *thd)
   THD_TRANS *trans=all ? &thd->transaction.all : &thd->transaction.stmt;
   Ha_trx_info *ha_info= trans->ha_list;
   DBUG_ENTER("ha_prepare");
-#ifdef USING_TRANSACTIONS
+
   if (ha_info)
   {
     for (; ha_info; ha_info= ha_info->next())
@@ -994,7 +1111,7 @@ int ha_prepare(THD *thd)
       }
     }
   }
-#endif /* USING_TRANSACTIONS */
+
   DBUG_RETURN(error);
 }
 
@@ -1104,6 +1221,7 @@ int ha_commit_trans(THD *thd, bool all)
 
   if (thd->in_sub_stmt)
   {
+    DBUG_ASSERT(0);
     /*
       Since we don't support nested statement transactions in 5.0,
       we can't commit or rollback stmt transactions while we are inside
@@ -1118,15 +1236,15 @@ int ha_commit_trans(THD *thd, bool all)
       bail out with error even before ha_commit_trans() call. To be 100% safe
       let us throw error in non-debug builds.
     */
-    DBUG_ASSERT(0);
     my_error(ER_COMMIT_NOT_ALLOWED_IN_SF_OR_TRG, MYF(0));
     DBUG_RETURN(2);
   }
-#ifdef USING_TRANSACTIONS
+
   if (ha_info)
   {
     uint rw_ha_count;
     bool rw_trans;
+    MDL_request mdl_request;
 
     DBUG_EXECUTE_IF("crash_commit_before", DBUG_SUICIDE(););
 
@@ -1138,14 +1256,30 @@ int ha_commit_trans(THD *thd, bool all)
     /* rw_trans is TRUE when we in a transaction changing data */
     rw_trans= is_real_trans && (rw_ha_count > 0);
 
-    if (rw_trans &&
-        wait_if_global_read_lock(thd, 0, 0))
+    if (rw_trans)
     {
-      ha_rollback_trans(thd, all);
-      DBUG_RETURN(1);
+      /*
+        Acquire a metadata lock which will ensure that COMMIT is blocked
+        by an active FLUSH TABLES WITH READ LOCK (and vice versa:
+        COMMIT in progress blocks FTWRL).
+
+        We allow the owner of FTWRL to COMMIT; we assume that it knows
+        what it does.
+      */
+      mdl_request.init(MDL_key::COMMIT, "", "", MDL_INTENTION_EXCLUSIVE,
+                       MDL_EXPLICIT);
+
+      if (thd->mdl_context.acquire_lock(&mdl_request,
+                                        thd->variables.lock_wait_timeout))
+      {
+        ha_rollback_trans(thd, all);
+        DBUG_RETURN(1);
+      }
+
+      DEBUG_SYNC(thd, "ha_commit_trans_after_acquire_commit_lock");
     }
 
-    if (rw_trans &&
+    if (rw_trans && stmt_has_updated_trans_table(ha_info) &&
         opt_readonly &&
         !(thd->security_ctx->master_access & SUPER_ACL) &&
         !thd->slave_thread)
@@ -1199,21 +1333,36 @@ int ha_commit_trans(THD *thd, bool all)
         goto end;
       }
     DBUG_EXECUTE_IF("crash_commit_after", DBUG_SUICIDE(););
+    RUN_HOOK(transaction, after_commit, (thd, FALSE));
 end:
-    if (rw_trans)
-      start_waiting_global_read_lock(thd);
+    if (rw_trans && mdl_request.ticket)
+    {
+      /*
+        We do not always immediately release transactional locks
+        after ha_commit_trans() (see uses of ha_enable_transaction()),
+        thus we release the commit blocker lock as soon as it's
+        not needed.
+      */
+      thd->mdl_context.release_lock(mdl_request.ticket);
+    }
   }
   /* Free resources and perform other cleanup even for 'empty' transactions. */
   else if (is_real_trans)
     thd->transaction.cleanup();
-#endif /* USING_TRANSACTIONS */
   DBUG_RETURN(error);
 }
 
 /**
   @note
   This function does not care about global read lock. A caller should.
+
+  @param[in]  all  Is set in case of explicit commit
+                   (COMMIT statement), or implicit commit
+                   issued by DDL. Is not set when called
+                   at the end of statement, even if
+                   autocommit=1.
 */
+
 int ha_commit_one_phase(THD *thd, bool all)
 {
   int error=0;
@@ -1221,14 +1370,20 @@ int ha_commit_one_phase(THD *thd, bool all)
   /*
     "real" is a nick name for a transaction for which a commit will
     make persistent changes. E.g. a 'stmt' transaction inside a 'all'
-    transation is not 'real': even though it's possible to commit it,
+    transaction is not 'real': even though it's possible to commit it,
     the changes are not durable as they might be rolled back if the
     enclosing 'all' transaction is rolled back.
+    We establish the value of 'is_real_trans' by checking
+    if it's an explicit COMMIT/BEGIN statement, or implicit
+    commit issued by DDL (all == TRUE), or if we're running
+    in autocommit mode (it's only in the autocommit mode
+    ha_commit_one_phase() can be called with an empty
+    transaction.all.ha_list, see why in trans_register_ha()).
   */
   bool is_real_trans=all || thd->transaction.all.ha_list == 0;
   Ha_trx_info *ha_info= trans->ha_list, *ha_info_next;
   DBUG_ENTER("ha_commit_one_phase");
-#ifdef USING_TRANSACTIONS
+
   if (ha_info)
   {
     for (; ha_info; ha_info= ha_info_next)
@@ -1252,13 +1407,12 @@ int ha_commit_one_phase(THD *thd, bool all)
       if (thd->transaction.changed_tables)
         query_cache.invalidate(thd->transaction.changed_tables);
 #endif
-      thd->variables.tx_isolation=thd->session_tx_isolation;
     }
   }
   /* Free resources and perform other cleanup even for 'empty' transactions. */
   if (is_real_trans)
     thd->transaction.cleanup();
-#endif /* USING_TRANSACTIONS */
+
   DBUG_RETURN(error);
 }
 
@@ -1271,9 +1425,15 @@ int ha_rollback_trans(THD *thd, bool all)
   /*
     "real" is a nick name for a transaction for which a commit will
     make persistent changes. E.g. a 'stmt' transaction inside a 'all'
-    transation is not 'real': even though it's possible to commit it,
+    transaction is not 'real': even though it's possible to commit it,
     the changes are not durable as they might be rolled back if the
     enclosing 'all' transaction is rolled back.
+    We establish the value of 'is_real_trans' by checking
+    if it's an explicit COMMIT or BEGIN statement, or implicit
+    commit issued by DDL (in these cases all == TRUE),
+    or if we're running in autocommit mode (it's only in the autocommit mode
+    ha_commit_one_phase() is called with an empty
+    transaction.all.ha_list, see why in trans_register_ha()).
   */
   bool is_real_trans=all || thd->transaction.all.ha_list == 0;
   DBUG_ENTER("ha_rollback_trans");
@@ -1287,6 +1447,7 @@ int ha_rollback_trans(THD *thd, bool all)
 
   if (thd->in_sub_stmt)
   {
+    DBUG_ASSERT(0);
     /*
       If we are inside stored function or trigger we should not commit or
       rollback current statement transaction. See comment in ha_commit_trans()
@@ -1294,11 +1455,10 @@ int ha_rollback_trans(THD *thd, bool all)
     */
     if (!all)
       DBUG_RETURN(0);
-    DBUG_ASSERT(0);
     my_error(ER_COMMIT_NOT_ALLOWED_IN_SF_OR_TRG, MYF(0));
     DBUG_RETURN(1);
   }
-#ifdef USING_TRANSACTIONS
+
   if (ha_info)
   {
     /* Close all cursors that can not survive ROLLBACK */
@@ -1320,16 +1480,19 @@ int ha_rollback_trans(THD *thd, bool all)
     }
     trans->ha_list= 0;
     trans->no_2pc=0;
-    if (is_real_trans && thd->transaction_rollback_request &&
-        thd->transaction.xid_state.xa_state != XA_NOTR)
-      thd->transaction.xid_state.rm_error= thd->main_da.sql_errno();
-    if (all)
-      thd->variables.tx_isolation=thd->session_tx_isolation;
   }
-  /* Always cleanup. Even if there nht==0. There may be savepoints. */
+
+  /*
+    Thanks to possibility of MDL deadlock rollback request can come even if
+    transaction hasn't been started in any transactional storage engine.
+  */
+  if (is_real_trans && thd->transaction_rollback_request &&
+      thd->transaction.xid_state.xa_state != XA_NOTR)
+    thd->transaction.xid_state.rm_error= thd->stmt_da->sql_errno();
+
+  /* Always cleanup. Even if nht==0. There may be savepoints. */
   if (is_real_trans)
     thd->transaction.cleanup();
-#endif /* USING_TRANSACTIONS */
   if (all)
     thd->transaction_rollback_request= FALSE;
 
@@ -1347,41 +1510,7 @@ int ha_rollback_trans(THD *thd, bool all)
     push_warning(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
                  ER_WARNING_NOT_COMPLETE_ROLLBACK,
                  ER(ER_WARNING_NOT_COMPLETE_ROLLBACK));
-  DBUG_RETURN(error);
-}
-
-/**
-  This is used to commit or rollback a single statement depending on
-  the value of error.
-
-  @note
-    Note that if the autocommit is on, then the following call inside
-    InnoDB will commit or rollback the whole transaction (= the statement). The
-    autocommit mechanism built into InnoDB is based on counting locks, but if
-    the user has used LOCK TABLES then that mechanism does not know to do the
-    commit.
-*/
-int ha_autocommit_or_rollback(THD *thd, int error)
-{
-  DBUG_ENTER("ha_autocommit_or_rollback");
-#ifdef USING_TRANSACTIONS
-  if (thd->transaction.stmt.ha_list)
-  {
-    if (!error)
-    {
-      if (ha_commit_trans(thd, 0))
-	error=1;
-    }
-    else 
-    {
-      (void) ha_rollback_trans(thd, 0);
-      if (thd->transaction_rollback_request && !thd->in_sub_stmt)
-        (void) ha_rollback(thd);
-    }
-
-    thd->variables.tx_isolation=thd->session_tx_isolation;
-  }
-#endif
+  RUN_HOOK(transaction, after_rollback, (thd, FALSE));
   DBUG_RETURN(error);
 }
 
@@ -1542,7 +1671,7 @@ static my_bool xarecover_handlerton(THD *unused, plugin_ref plugin,
         }
         // recovery mode
         if (info->commit_list ?
-            hash_search(info->commit_list, (uchar *)&x, sizeof(x)) != 0 :
+            my_hash_search(info->commit_list, (uchar *)&x, sizeof(x)) != 0 :
             tc_heuristic_recover == TC_HEURISTIC_RECOVER_COMMIT)
         {
 #ifndef DBUG_OFF
@@ -1613,7 +1742,7 @@ int ha_recover(HASH *commit_list)
   plugin_foreach(NULL, xarecover_handlerton, 
                  MYSQL_STORAGE_ENGINE_PLUGIN, &info);
 
-  my_free((uchar*)info.list, MYF(0));
+  my_free(info.list);
   if (info.found_foreign_xids)
     sql_print_warning("Found %d prepared XA transactions", 
                       info.found_foreign_xids);
@@ -1654,12 +1783,12 @@ bool mysql_xa_recover(THD *thd)
   field_list.push_back(new Item_int("bqual_length", 0, MY_INT32_NUM_DECIMAL_DIGITS));
   field_list.push_back(new Item_empty_string("data",XIDDATASIZE));
 
-  if (protocol->send_fields(&field_list,
+  if (protocol->send_result_set_metadata(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
     DBUG_RETURN(1);
 
-  pthread_mutex_lock(&LOCK_xid_cache);
-  while ((xs= (XID_STATE*)hash_element(&xid_cache, i++)))
+  mysql_mutex_lock(&LOCK_xid_cache);
+  while ((xs= (XID_STATE*) my_hash_element(&xid_cache, i++)))
   {
     if (xs->xa_state==XA_PREPARED)
     {
@@ -1671,13 +1800,13 @@ bool mysql_xa_recover(THD *thd)
                       &my_charset_bin);
       if (protocol->write())
       {
-        pthread_mutex_unlock(&LOCK_xid_cache);
+        mysql_mutex_unlock(&LOCK_xid_cache);
         DBUG_RETURN(1);
       }
     }
   }
 
-  pthread_mutex_unlock(&LOCK_xid_cache);
+  mysql_mutex_unlock(&LOCK_xid_cache);
   my_eof(thd);
   DBUG_RETURN(0);
 }
@@ -1784,7 +1913,7 @@ int ha_savepoint(THD *thd, SAVEPOINT *sv)
                                         &thd->transaction.all);
   Ha_trx_info *ha_info= trans->ha_list;
   DBUG_ENTER("ha_savepoint");
-#ifdef USING_TRANSACTIONS
+
   for (; ha_info; ha_info= ha_info->next())
   {
     int err;
@@ -1808,7 +1937,7 @@ int ha_savepoint(THD *thd, SAVEPOINT *sv)
     engines are prepended to the beginning of the list.
   */
   sv->ha_list= trans->ha_list;
-#endif /* USING_TRANSACTIONS */
+
   DBUG_RETURN(error);
 }
 
@@ -1954,23 +2083,28 @@ const char *get_canonical_filename(handler *file, const char *path,
 struct Ha_delete_table_error_handler: public Internal_error_handler
 {
 public:
-  virtual bool handle_error(uint sql_errno,
-                            const char *message,
-                            MYSQL_ERROR::enum_warning_level level,
-                            THD *thd);
+  virtual bool handle_condition(THD *thd,
+                                uint sql_errno,
+                                const char* sqlstate,
+                                MYSQL_ERROR::enum_warning_level level,
+                                const char* msg,
+                                MYSQL_ERROR ** cond_hdl);
   char buff[MYSQL_ERRMSG_SIZE];
 };
 
 
 bool
 Ha_delete_table_error_handler::
-handle_error(uint sql_errno,
-             const char *message,
-             MYSQL_ERROR::enum_warning_level level,
-             THD *thd)
+handle_condition(THD *,
+                 uint,
+                 const char*,
+                 MYSQL_ERROR::enum_warning_level,
+                 const char* msg,
+                 MYSQL_ERROR ** cond_hdl)
 {
+  *cond_hdl= NULL;
   /* Grab the error message */
-  strmake(buff, message, sizeof(buff)-1);
+  strmake(buff, msg, sizeof(buff)-1);
   return TRUE;
 }
 
@@ -2029,7 +2163,7 @@ int ha_delete_table(THD *thd, handlerton *table_type, const char *path,
       XXX: should we convert *all* errors to warnings here?
       What if the error is fatal?
     */
-    push_warning(thd, MYSQL_ERROR::WARN_LEVEL_ERROR, error,
+    push_warning(thd, MYSQL_ERROR::WARN_LEVEL_WARN, error,
                 ha_delete_table_error_handler.buff);
   }
   delete file;
@@ -2082,6 +2216,10 @@ THD *handler::ha_thd(void) const
   return (table && table->in_use) ? table->in_use : current_thd;
 }
 
+PSI_table_share *handler::ha_table_share_psi(const TABLE_SHARE *share) const
+{
+  return share->m_psi;
+}
 
 /** @brief
   Open database-handler.
@@ -2160,16 +2298,25 @@ int handler::read_first_row(uchar * buf, uint primary_key)
   if (stats.deleted < 10 || primary_key >= MAX_KEY ||
       !(index_flags(primary_key, 0, 0) & HA_READ_ORDER))
   {
-    (void) ha_rnd_init(1);
-    while ((error= rnd_next(buf)) == HA_ERR_RECORD_DELETED) ;
-    (void) ha_rnd_end();
+    if (!(error= ha_rnd_init(1)))
+    {
+      while ((error= rnd_next(buf)) == HA_ERR_RECORD_DELETED)
+        /* skip deleted row */;
+      const int end_error= ha_rnd_end();
+      if (!error)
+        error= end_error;
+    }
   }
   else
   {
     /* Find the first row through the primary key */
-    (void) ha_index_init(primary_key, 0);
-    error=index_first(buf);
-    (void) ha_index_end();
+    if (!(error= ha_index_init(primary_key, 0)))
+    {
+      error= index_first(buf);
+      const int end_error= ha_index_end();
+      if (!error)
+        error= end_error;
+    }
   }
   DBUG_RETURN(error);
 }
@@ -2489,7 +2636,7 @@ int handler::update_auto_increment()
                                           variables->auto_increment_increment);
     auto_inc_intervals_count++;
     /* Row-based replication does not need to store intervals in binlog */
-    if (mysql_bin_log.is_open() && !thd->current_stmt_binlog_row_based)
+    if (mysql_bin_log.is_open() && !thd->is_current_stmt_binlog_format_row())
         thd->auto_inc_intervals_in_cur_stmt_for_binlog.append(auto_inc_interval_for_cur_row.minimum(),
                                                               auto_inc_interval_for_cur_row.values(),
                                                               variables->auto_increment_increment);
@@ -2564,7 +2711,15 @@ void handler::get_auto_increment(ulonglong offset, ulonglong increment,
   table->mark_columns_used_by_index_no_reset(table->s->next_number_index,
                                         table->read_set);
   column_bitmaps_signal();
-  index_init(table->s->next_number_index, 1);
+
+  if (ha_index_init(table->s->next_number_index, 1))
+  {
+    /* This should never happen, assert in debug, and fail in release build */
+    DBUG_ASSERT(0);
+    *first_value= ULONGLONG_MAX;
+    return;
+  }
+
   if (table->s->next_number_keypart == 0)
   {						// Autoincrement at key-start
     error=index_last(table->record[1]);
@@ -2594,13 +2749,25 @@ void handler::get_auto_increment(ulonglong offset, ulonglong increment,
   }
 
   if (error)
-    nr=1;
+  {
+    if (error == HA_ERR_END_OF_FILE || error == HA_ERR_KEY_NOT_FOUND)
+    {
+      /* No entry found, start with 1. */
+      nr= 1;
+    }
+    else
+    {
+      DBUG_ASSERT(0);
+      nr= ULONGLONG_MAX;
+    }
+  }
   else
     nr= ((ulonglong) table->next_number_field->
          val_int_offset(table->s->rec_buff_length)+1);
-  index_end();
+  ha_index_end();
   (void) extra(HA_EXTRA_NO_KEYREAD);
   *first_value= nr;
+  return;
 }
 
 
@@ -2677,6 +2844,7 @@ void handler::print_error(int error, myf errflag)
     break;
   case HA_ERR_KEY_NOT_FOUND:
   case HA_ERR_NO_ACTIVE_RECORD:
+  case HA_ERR_RECORD_DELETED:
   case HA_ERR_END_OF_FILE:
     textno=ER_KEY_NOT_FOUND;
     break;
@@ -2820,6 +2988,9 @@ void handler::print_error(int error, myf errflag)
   case HA_ERR_TABLE_NEEDS_UPGRADE:
     textno=ER_TABLE_NEEDS_UPGRADE;
     break;
+  case HA_ERR_NO_PARTITION_FOUND:
+    textno=ER_WRONG_PARTITION_NAME;
+    break;
   case HA_ERR_TABLE_READONLY:
     textno= ER_OPEN_AS_READONLY;
     break;
@@ -2832,7 +3003,18 @@ void handler::print_error(int error, myf errflag)
   case HA_ERR_TOO_MANY_CONCURRENT_TRXS:
     textno= ER_TOO_MANY_CONCURRENT_TRXS;
     break;
+  case HA_ERR_INDEX_COL_TOO_LONG:
+    textno= ER_INDEX_COLUMN_TOO_LONG;
+    break;
+  case HA_ERR_INDEX_CORRUPT:
+    textno= ER_INDEX_CORRUPT;
+    break;
+  case HA_ERR_UNDO_REC_TOO_BIG:
+    textno= ER_UNDO_RECORD_TOO_BIG;
+    break;
   case HA_ERR_TABLE_IN_FK_CHECK:
+    textno= ER_TABLE_IN_FK_CHECK;
+    break;
   default:
     {
       /* The error was "unknown" to this function.
@@ -3000,27 +3182,21 @@ static bool update_frm_version(TABLE *table)
 
   strxmov(path, table->s->normalized_path.str, reg_ext, NullS);
 
-  if ((file= my_open(path, O_RDWR|O_BINARY, MYF(MY_WME))) >= 0)
+  if ((file= mysql_file_open(key_file_frm,
+                             path, O_RDWR|O_BINARY, MYF(MY_WME))) >= 0)
   {
     uchar version[4];
-    char *key= table->s->table_cache_key.str;
-    uint key_length= table->s->table_cache_key.length;
-    TABLE *entry;
-    HASH_SEARCH_STATE state;
 
     int4store(version, MYSQL_VERSION_ID);
 
-    if ((result= my_pwrite(file,(uchar*) version,4,51L,MYF_RW)))
+    if ((result= mysql_file_pwrite(file, (uchar*) version, 4, 51L, MYF_RW)))
       goto err;
 
-    for (entry=(TABLE*) hash_first(&open_cache,(uchar*) key,key_length, &state);
-         entry;
-         entry= (TABLE*) hash_next(&open_cache,(uchar*) key,key_length, &state))
-      entry->s->mysql_version= MYSQL_VERSION_ID;
+    table->s->mysql_version= MYSQL_VERSION_ID;
   }
 err:
   if (file >= 0)
-    VOID(my_close(file,MYF(MY_WME)));
+    (void) mysql_file_close(file, MYF(MY_WME));
   DBUG_RETURN(result);
 }
 
@@ -3067,7 +3243,7 @@ int handler::delete_table(const char *name)
   for (const char **ext=bas_ext(); *ext ; ext++)
   {
     fn_format(buff, name, "", *ext, MY_UNPACK_FILENAME|MY_APPEND_EXT);
-    if (my_delete_with_symlink(buff, MYF(0)))
+    if (mysql_file_delete_with_symlink(key_file_misc, buff, MYF(0)))
     {
       if (my_errno != ENOENT)
       {
@@ -3154,6 +3330,9 @@ int handler::ha_check(THD *thd, HA_CHECK_OPT *check_opt)
   }
   if ((error= check(thd, check_opt)))
     return error;
+  /* Skip updating frm version if not main handler. */
+  if (table->file != this)
+    return error;
   return update_frm_version(table);
 }
 
@@ -3200,9 +3379,13 @@ int handler::ha_repair(THD* thd, HA_CHECK_OPT* check_opt)
 
   mark_trx_read_write();
 
-  if ((result= repair(thd, check_opt)))
-    return result;
-  return update_frm_version(table);
+  result= repair(thd, check_opt);
+  DBUG_ASSERT(result == HA_ADMIN_NOT_IMPLEMENTED ||
+              ha_table_flags() & HA_CAN_REPAIR);
+
+  if (result == HA_ADMIN_OK)
+    result= update_frm_version(table);
+  return result;
 }
 
 
@@ -3238,6 +3421,21 @@ handler::ha_delete_all_rows()
 
 
 /**
+  Truncate table: public interface.
+
+  @sa handler::truncate()
+*/
+
+int
+handler::ha_truncate()
+{
+  mark_trx_read_write();
+
+  return truncate();
+}
+
+
+/**
   Reset auto increment: public interface.
 
   @sa handler::reset_auto_increment()
@@ -3249,36 +3447,6 @@ handler::ha_reset_auto_increment(ulonglong value)
   mark_trx_read_write();
 
   return reset_auto_increment(value);
-}
-
-
-/**
-  Backup table: public interface.
-
-  @sa handler::backup()
-*/
-
-int
-handler::ha_backup(THD* thd, HA_CHECK_OPT* check_opt)
-{
-  mark_trx_read_write();
-
-  return backup(thd, check_opt);
-}
-
-
-/**
-  Restore table: public interface.
-
-  @sa handler::restore()
-*/
-
-int
-handler::ha_restore(THD* thd, HA_CHECK_OPT* check_opt)
-{
-  mark_trx_read_write();
-
-  return restore(thd, check_opt);
 }
 
 
@@ -3539,7 +3707,7 @@ int ha_enable_transaction(THD *thd, bool on)
       So, let's commit an open transaction (if any) now.
     */
     if (!(error= ha_commit_trans(thd, 0)))
-      error= end_trans(thd, COMMIT);
+      error= trans_commit_implicit(thd);
   }
   DBUG_RETURN(error);
 }
@@ -3596,7 +3764,7 @@ int handler::index_next_same(uchar *buf, const uchar *key, uint keylen)
 }
 
 
-void handler::get_dynamic_partition_info(PARTITION_INFO *stat_info,
+void handler::get_dynamic_partition_info(PARTITION_STATS *stat_info,
                                          uint part_id)
 {
   info(HA_STATUS_CONST | HA_STATUS_TIME | HA_STATUS_VARIABLE |
@@ -3653,7 +3821,7 @@ int ha_create_table(THD *thd, const char *path,
   name= get_canonical_filename(table.file, share.path.str, name_buff);
 
   error= table.file->ha_create(name, &table, create_info);
-  VOID(closefrm(&table, 0));
+  (void) closefrm(&table, 0);
   if (error)
   {
     strxmov(name_buff, db, ".", table_name, NullS);
@@ -3704,7 +3872,7 @@ int ha_create_table_from_engine(THD* thd, const char *db, const char *name)
   build_table_filename(path, sizeof(path) - 1, db, name, "", 0);
   // Save the frm file
   error= writefrm(path, frmblob, frmlen);
-  my_free(frmblob, MYF(0));
+  my_free(frmblob);
   if (error)
     DBUG_RETURN(2);
 
@@ -3724,15 +3892,263 @@ int ha_create_table_from_engine(THD* thd, const char *db, const char *name)
 
   get_canonical_filename(table.file, path, path);
   error=table.file->ha_create(path, &table, &create_info);
-  VOID(closefrm(&table, 1));
+  (void) closefrm(&table, 1);
 
   DBUG_RETURN(error != 0);
 }
 
+
+/**
+  Try to find a table in a storage engine. 
+
+  @param db   Normalized table schema name
+  @param name Normalized table name.
+  @param[out] exists Only valid if the function succeeded.
+
+  @retval TRUE   An error is found
+  @retval FALSE  Success, check *exists
+*/
+
+bool
+ha_check_if_table_exists(THD* thd, const char *db, const char *name,
+                         bool *exists)
+{
+  uchar *frmblob= NULL;
+  size_t frmlen;
+  DBUG_ENTER("ha_check_if_table_exists");
+
+  *exists= ! ha_discover(thd, db, name, &frmblob, &frmlen);
+  if (*exists)
+    my_free(frmblob);
+
+  DBUG_RETURN(FALSE);
+}
+
+/**
+  @brief Check if a given table is a system table.
+
+  @details The primary purpose of introducing this function is to stop system
+  tables to be created or being moved to undesired storage engines.
+
+  @todo There is another function called is_system_table_name() used by
+        get_table_category(), which is used to set TABLE_SHARE table_category.
+        It checks only a subset of table name like proc, event and time*.
+        We cannot use below function in get_table_category(),
+        as that affects locking mechanism. If we need to
+        unify these functions, we need to fix locking issues generated.
+
+  @param   hton                  Handlerton of new engine.
+  @param   db                    Database name.
+  @param   table_name            Table name to be checked.
+
+  @return Operation status
+    @retval  true                If the table name is a valid system table
+                                 or if its a valid user table.
+
+    @retval  false               If the table name is a system table name
+                                 and does not belong to engine specified
+                                 in the command.
+*/
+bool ha_check_if_supported_system_table(handlerton *hton, const char *db,
+                                        const char *table_name)
+{
+  DBUG_ENTER("ha_check_if_supported_system_table");
+  st_sys_tbl_chk_params check_params;
+  bool is_system_database= false;
+  const char **names;
+  st_system_tablename *systab;
+
+  // Check if we have a system database name in the command.
+  DBUG_ASSERT(known_system_databases != NULL);
+  names= known_system_databases;
+  while (names && *names)
+  {
+    if (strcmp(*names, db) == 0)
+    {
+      /* Used to compare later, will be faster */
+      check_params.db= *names;
+      is_system_database= true;
+      break;
+    }
+    names++;
+  }
+  if (!is_system_database)
+    DBUG_RETURN(true); // It's a user table name.
+
+  // Check if this is SQL layer system tables.
+  systab= mysqld_system_tables;
+  check_params.is_sql_layer_system_table= false;
+  while (systab && systab->db)
+  {
+    if (systab->db == check_params.db &&
+        strcmp(systab->tablename, table_name) == 0)
+    {
+      check_params.is_sql_layer_system_table= true;
+      break;
+    }
+    systab++;
+  }
+
+  // Check if this is a system table and if some engine supports it.
+  check_params.status= check_params.is_sql_layer_system_table ?
+    st_sys_tbl_chk_params::KNOWN_SYSTEM_TABLE :
+    st_sys_tbl_chk_params::NOT_KNOWN_SYSTEM_TABLE;
+  check_params.db_type= hton->db_type;
+  check_params.table_name= table_name;
+  plugin_foreach(NULL, check_engine_system_table_handlerton,
+                 MYSQL_STORAGE_ENGINE_PLUGIN, &check_params);
+
+  // SE does not support this system table.
+  if (check_params.status == st_sys_tbl_chk_params::KNOWN_SYSTEM_TABLE)
+    DBUG_RETURN(false);
+
+  // It's a system table or a valid user table.
+  DBUG_RETURN(true);
+}
+
+/**
+  @brief Called for each SE to check if given db, tablename is a system table.
+
+  @details The primary purpose of introducing this function is to stop system
+  tables to be created or being moved to undesired storage engines.
+
+  @param   unused  unused THD*
+  @param   plugin  Points to specific SE.
+  @param   arg     Is of type struct st_sys_tbl_chk_params.
+
+  @note
+    args->status   Indicates OUT param,
+                   see struct st_sys_tbl_chk_params definition for more info.
+
+  @return Operation status
+    @retval  true  There was a match found.
+                   This will stop doing checks with other SE's.
+
+    @retval  false There was no match found.
+                   Other SE's will be checked to find a match.
+*/
+static my_bool check_engine_system_table_handlerton(THD *unused,
+                                                    plugin_ref plugin,
+                                                    void *arg)
+{
+  st_sys_tbl_chk_params *check_params= (st_sys_tbl_chk_params*) arg;
+  handlerton *hton= plugin_data(plugin, handlerton *);
+
+  // Do we already know that the table is a system table?
+  if (check_params->status == st_sys_tbl_chk_params::KNOWN_SYSTEM_TABLE)
+  {
+    /*
+      If this is the same SE specified in the command, we can
+      simply ask the SE if it supports it stop the search regardless.
+    */
+    if (hton->db_type == check_params->db_type)
+    {
+      if (hton->is_supported_system_table &&
+          hton->is_supported_system_table(check_params->db,
+                                       check_params->table_name,
+                                       check_params->is_sql_layer_system_table))
+        check_params->status= st_sys_tbl_chk_params::SUPPORTED_SYSTEM_TABLE;
+      return TRUE;
+    }
+    /*
+      If this is a different SE, there is no point in asking the SE
+      since we already know it's a system table and we don't care
+      if it is supported or not.
+    */
+    return FALSE;
+  }
+
+  /*
+    We don't yet know if the table is a system table or not.
+    We therefore must always ask the SE.
+  */
+  if (hton->is_supported_system_table &&
+      hton->is_supported_system_table(check_params->db,
+                                      check_params->table_name,
+                                      check_params->is_sql_layer_system_table))
+  {
+    /*
+      If this is the same SE specified in the command, we know it's a
+      supported system table and can stop the search.
+    */
+    if (hton->db_type == check_params->db_type)
+    {
+      check_params->status= st_sys_tbl_chk_params::SUPPORTED_SYSTEM_TABLE;
+      return TRUE;
+    }
+    else
+      check_params->status= st_sys_tbl_chk_params::KNOWN_SYSTEM_TABLE;
+  }
+
+  return FALSE;
+}
+
+/*
+  Prepare list of all known system database names
+  current we just have 'mysql' as system database name.
+
+  Later ndbcluster, innodb SE's can define some new database
+  name which can store system tables specific to SE.
+*/
+const char** ha_known_system_databases(void)
+{
+  I_List<i_string> found_databases;
+  const char **databases, **database;
+
+  // Get mysqld system database name.
+  found_databases.push_back(new i_string(mysqld_system_database));
+
+  // Get system database names from every specific storage engine.
+  plugin_foreach(NULL, system_databases_handlerton,
+                 MYSQL_STORAGE_ENGINE_PLUGIN, &found_databases);
+
+  int element_count= 0;
+  I_List_iterator<i_string> iter(found_databases);
+  while (iter++) element_count++;
+  databases= (const char **) my_once_alloc(sizeof(char *)*
+                                           (element_count+1),
+                                           MYF(MY_WME | MY_FAE));
+  DBUG_ASSERT(databases != NULL);
+
+  database= databases;
+  i_string *tmp;
+  while ((tmp= found_databases.get()))
+  {
+    *database++= tmp->ptr;
+    delete tmp;
+  }
+  *database= NULL; // Last element.
+
+  return databases;
+}
+
+/**
+  @brief Fetch system database name specific to SE.
+
+  @details This function is invoked by plugin_foreach() from
+           ha_known_system_databases(), for each storage engine.
+*/
+static my_bool system_databases_handlerton(THD *unused, plugin_ref plugin,
+                                           void *arg)
+{
+  I_List<i_string> *found_databases= (I_List<i_string> *) arg;
+  const char *db;
+
+  handlerton *hton= plugin_data(plugin, handlerton *);
+  if (hton->system_database)
+  {
+    db= hton->system_database();
+    if (db)
+      found_databases->push_back(new i_string(db));
+  }
+
+  return FALSE;
+}
+
+
 void st_ha_check_opt::init()
 {
   flags= sql_flags= 0;
-  sort_buffer_size = current_thd->variables.myisam_sort_buff_size;
 }
 
 
@@ -3755,12 +4171,12 @@ int ha_init_key_cache(const char *name, KEY_CACHE *key_cache)
 
   if (!key_cache->key_cache_inited)
   {
-    pthread_mutex_lock(&LOCK_global_system_variables);
+    mysql_mutex_lock(&LOCK_global_system_variables);
     size_t tmp_buff_size= (size_t) key_cache->param_buff_size;
     uint tmp_block_size= (uint) key_cache->param_block_size;
     uint division_limit= key_cache->param_division_limit;
     uint age_threshold=  key_cache->param_age_threshold;
-    pthread_mutex_unlock(&LOCK_global_system_variables);
+    mysql_mutex_unlock(&LOCK_global_system_variables);
     DBUG_RETURN(!init_key_cache(key_cache,
 				tmp_block_size,
 				tmp_buff_size,
@@ -3779,12 +4195,12 @@ int ha_resize_key_cache(KEY_CACHE *key_cache)
 
   if (key_cache->key_cache_inited)
   {
-    pthread_mutex_lock(&LOCK_global_system_variables);
+    mysql_mutex_lock(&LOCK_global_system_variables);
     size_t tmp_buff_size= (size_t) key_cache->param_buff_size;
     long tmp_block_size= (long) key_cache->param_block_size;
     uint division_limit= key_cache->param_division_limit;
     uint age_threshold=  key_cache->param_age_threshold;
-    pthread_mutex_unlock(&LOCK_global_system_variables);
+    mysql_mutex_unlock(&LOCK_global_system_variables);
     DBUG_RETURN(!resize_key_cache(key_cache, tmp_block_size,
 				  tmp_buff_size,
 				  division_limit, age_threshold));
@@ -3800,21 +4216,12 @@ int ha_change_key_cache_param(KEY_CACHE *key_cache)
 {
   if (key_cache->key_cache_inited)
   {
-    pthread_mutex_lock(&LOCK_global_system_variables);
+    mysql_mutex_lock(&LOCK_global_system_variables);
     uint division_limit= key_cache->param_division_limit;
     uint age_threshold=  key_cache->param_age_threshold;
-    pthread_mutex_unlock(&LOCK_global_system_variables);
+    mysql_mutex_unlock(&LOCK_global_system_variables);
     change_key_cache_param(key_cache, division_limit, age_threshold);
   }
-  return 0;
-}
-
-/**
-  Free memory allocated by a key cache.
-*/
-int ha_end_key_cache(KEY_CACHE *key_cache)
-{
-  end_key_cache(key_cache, 1);		// Can never fail
   return 0;
 }
 
@@ -4496,7 +4903,7 @@ bool ha_show_status(THD *thd, handlerton *db_type, enum ha_stat_type stat)
   field_list.push_back(new Item_empty_string("Name",FN_REFLEN));
   field_list.push_back(new Item_empty_string("Status",10));
 
-  if (protocol->send_fields(&field_list,
+  if (protocol->send_result_set_metadata(&field_list,
                             Protocol::SEND_NUM_ROWS | Protocol::SEND_EOF))
     return TRUE;
 
@@ -4514,8 +4921,14 @@ bool ha_show_status(THD *thd, handlerton *db_type, enum ha_stat_type stat)
                          "", 0, "DISABLED", 8) ? 1 : 0;
     }
     else
+    {
+      DBUG_EXECUTE_IF("simulate_show_status_failure",
+                      DBUG_SET("+d,simulate_net_write_failure"););
       result= db_type->show_status &&
               db_type->show_status(db_type, thd, stat_print, stat) ? 1 : 0;
+      DBUG_EXECUTE_IF("simulate_show_status_failure",
+                      DBUG_SET("-d,simulate_net_write_failure"););
+    }
   }
 
   if (!result)
@@ -4548,9 +4961,9 @@ static bool check_table_binlog_row_based(THD *thd, TABLE *table)
   DBUG_ASSERT(table->s->cached_row_logging_check == 0 ||
               table->s->cached_row_logging_check == 1);
 
-  return (thd->current_stmt_binlog_row_based &&
+  return (thd->is_current_stmt_binlog_format_row() &&
           table->s->cached_row_logging_check &&
-          (thd->options & OPTION_BIN_LOG) &&
+          (thd->variables.option_bits & OPTION_BIN_LOG) &&
           mysql_bin_log.is_open());
 }
 
@@ -4565,9 +4978,7 @@ static bool check_table_binlog_row_based(THD *thd, TABLE *table)
 
    DESCRIPTION
        This function will generate and write table maps for all tables
-       that are locked by the thread 'thd'.  Either manually locked
-       (stored in THD::locked_tables) and automatically locked (stored
-       in THD::lock) are considered.
+       that are locked by the thread 'thd'.
 
    RETURN VALUE
        0   All OK
@@ -4575,25 +4986,22 @@ static bool check_table_binlog_row_based(THD *thd, TABLE *table)
 
    SEE ALSO
        THD::lock
-       THD::locked_tables
 */
 
 static int write_locked_table_maps(THD *thd)
 {
   DBUG_ENTER("write_locked_table_maps");
-  DBUG_PRINT("enter", ("thd: 0x%lx  thd->lock: 0x%lx  thd->locked_tables: 0x%lx  "
+  DBUG_PRINT("enter", ("thd: 0x%lx  thd->lock: 0x%lx "
                        "thd->extra_lock: 0x%lx",
-                       (long) thd, (long) thd->lock,
-                       (long) thd->locked_tables, (long) thd->extra_lock));
+                       (long) thd, (long) thd->lock, (long) thd->extra_lock));
 
   DBUG_PRINT("debug", ("get_binlog_table_maps(): %d", thd->get_binlog_table_maps()));
 
   if (thd->get_binlog_table_maps() == 0)
   {
-    MYSQL_LOCK *locks[3];
+    MYSQL_LOCK *locks[2];
     locks[0]= thd->extra_lock;
     locks[1]= thd->lock;
-    locks[2]= thd->locked_tables;
     for (uint i= 0 ; i < sizeof(locks)/sizeof(*locks) ; ++i )
     {
       MYSQL_LOCK const *const lock= locks[i];
@@ -4610,7 +5018,21 @@ static int write_locked_table_maps(THD *thd)
         if (table->current_lock == F_WRLCK &&
             check_table_binlog_row_based(thd, table))
         {
-          int const has_trans= table->file->has_transactions();
+          /*
+            We need to have a transactional behavior for SQLCOM_CREATE_TABLE
+            (e.g. CREATE TABLE... SELECT * FROM TABLE) in order to keep a
+            compatible behavior with the STMT based replication even when
+            the table is not transactional. In other words, if the operation
+            fails while executing the insert phase nothing is written to the
+            binlog.
+
+            Note that at this point, we check the type of a set of tables to
+            create the table map events. In the function binlog_log_row(),
+            which calls the current function, we check the type of the table
+            of the current row.
+          */
+          bool const has_trans= thd->lex->sql_command == SQLCOM_CREATE_TABLE ||
+                                table->file->has_transactions();
           int const error= thd->binlog_write_table_map(table, has_trans);
           /*
             If an error occurs, it is the responsibility of the caller to
@@ -4659,10 +5081,20 @@ static int binlog_log_row(TABLE* table,
     {
       bitmap_set_all(&cols);
       if (likely(!(error= write_locked_table_maps(thd))))
-        error= (*log_func)(thd, table, table->file->has_transactions(),
-                           &cols, table->s->fields,
+      {
+        /*
+          We need to have a transactional behavior for SQLCOM_CREATE_TABLE
+          (i.e. CREATE TABLE... SELECT * FROM TABLE) in order to keep a
+          compatible behavior with the STMT based replication even when
+          the table is not transactional. In other words, if the operation
+          fails while executing the insert phase nothing is written to the
+          binlog.
+        */
+        bool const has_trans= thd->lex->sql_command == SQLCOM_CREATE_TABLE ||
+                             table->file->has_transactions();
+        error= (*log_func)(thd, table, has_trans, &cols, table->s->fields,
                            before_record, after_record);
-
+      }
       if (!use_bitbuf)
         bitmap_free(&cols);
     }
@@ -4680,13 +5112,53 @@ int handler::ha_external_lock(THD *thd, int lock_type)
   */
   DBUG_ASSERT(next_insert_id == 0);
 
+  if (MYSQL_HANDLER_RDLOCK_START_ENABLED() ||
+      MYSQL_HANDLER_WRLOCK_START_ENABLED() ||
+      MYSQL_HANDLER_UNLOCK_START_ENABLED())
+  {
+    if (lock_type == F_RDLCK)
+    {
+      MYSQL_HANDLER_RDLOCK_START(table_share->db.str,
+                                 table_share->table_name.str);
+    }
+    else if (lock_type == F_WRLCK)
+    {
+      MYSQL_HANDLER_WRLOCK_START(table_share->db.str,
+                                 table_share->table_name.str);
+    }
+    else if (lock_type == F_UNLCK)
+    {
+      MYSQL_HANDLER_UNLOCK_START(table_share->db.str,
+                                 table_share->table_name.str);
+    }
+  }
+
   /*
     We cache the table flags if the locking succeeded. Otherwise, we
     keep them as they were when they were fetched in ha_open().
   */
   int error= external_lock(thd, lock_type);
+
   if (error == 0)
     cached_table_flags= table_flags();
+
+  if (MYSQL_HANDLER_RDLOCK_DONE_ENABLED() ||
+      MYSQL_HANDLER_WRLOCK_DONE_ENABLED() ||
+      MYSQL_HANDLER_UNLOCK_DONE_ENABLED())
+  {
+    if (lock_type == F_RDLCK)
+    {
+      MYSQL_HANDLER_RDLOCK_DONE(error);
+    }
+    else if (lock_type == F_WRLCK)
+    {
+      MYSQL_HANDLER_WRLOCK_DONE(error);
+    }
+    else if (lock_type == F_UNLCK)
+    {
+      MYSQL_HANDLER_UNLOCK_DONE(error);
+    }
+  }
   DBUG_RETURN(error);
 }
 
@@ -4719,11 +5191,17 @@ int handler::ha_write_row(uchar *buf)
   int error;
   Log_func *log_func= Write_rows_log_event::binlog_row_logging_function;
   DBUG_ENTER("handler::ha_write_row");
+  DBUG_EXECUTE_IF("inject_error_ha_write_row",
+                  DBUG_RETURN(HA_ERR_INTERNAL_ERROR); );
 
+  MYSQL_INSERT_ROW_START(table_share->db.str, table_share->table_name.str);
   mark_trx_read_write();
 
-  if (unlikely(error= write_row(buf)))
+  error= write_row(buf);
+  MYSQL_INSERT_ROW_DONE(error);
+  if (unlikely(error))
     DBUG_RETURN(error);
+
   if (unlikely(error= binlog_log_row(table, 0, buf, log_func)))
     DBUG_RETURN(error); /* purecov: inspected */
 
@@ -4742,10 +5220,14 @@ int handler::ha_update_row(const uchar *old_data, uchar *new_data)
     (and the old record is in record[1]).
    */
   DBUG_ASSERT(new_data == table->record[0]);
+  DBUG_ASSERT(old_data == table->record[1]);
 
+  MYSQL_UPDATE_ROW_START(table_share->db.str, table_share->table_name.str);
   mark_trx_read_write();
 
-  if (unlikely(error= update_row(old_data, new_data)))
+  error= update_row(old_data, new_data);
+  MYSQL_UPDATE_ROW_DONE(error);
+  if (unlikely(error))
     return error;
   if (unlikely(error= binlog_log_row(table, old_data, new_data, log_func)))
     return error;
@@ -4756,10 +5238,20 @@ int handler::ha_delete_row(const uchar *buf)
 {
   int error;
   Log_func *log_func= Delete_rows_log_event::binlog_row_logging_function;
+  /*
+    Normally table->record[0] is used, but sometimes table->record[1] is used.
+  */
+  DBUG_ASSERT(buf == table->record[0] ||
+              buf == table->record[1]);
+  DBUG_EXECUTE_IF("inject_error_ha_delete_row",
+                  return HA_ERR_INTERNAL_ERROR; );
 
+  MYSQL_DELETE_ROW_START(table_share->db.str, table_share->table_name.str);
   mark_trx_read_write();
 
-  if (unlikely(error= delete_row(buf)))
+  error= delete_row(buf);
+  MYSQL_DELETE_ROW_DONE(error);
+  if (unlikely(error))
     return error;
   if (unlikely(error= binlog_log_row(table, buf, 0, log_func)))
     return error;
@@ -4819,7 +5311,8 @@ int example_of_iterator_using_for_logs_cleanup(handlerton *hton)
   {
     printf("%s\n", data.filename.str);
     if (data.status == HA_LOG_STATUS_FREE &&
-        my_delete(data.filename.str, MYF(MY_WME)))
+        mysql_file_delete(INSTRUMENT_ME,
+                          data.filename.str, MYF(MY_WME)))
       goto err;
   }
   res= 0;
@@ -4847,7 +5340,7 @@ err:
 enum log_status fl_get_log_status(char *log)
 {
   MY_STAT stat_buff;
-  if (my_stat(log, &stat_buff, MYF(0)))
+  if (mysql_file_stat(INSTRUMENT_ME, log, &stat_buff, MYF(0)))
     return HA_LOG_STATUS_INUSE;
   return HA_LOG_STATUS_NOSUCHLOG;
 }
@@ -4879,7 +5372,7 @@ int fl_log_iterator_next(struct handler_iterator *iterator,
 
 void fl_log_iterator_destroy(struct handler_iterator *iterator)
 {
-  my_free((uchar*)iterator->buffer, MYF(MY_ALLOW_ZERO_PTR));
+  my_free(iterator->buffer);
 }
 
 
@@ -4959,3 +5452,28 @@ fl_create_iterator(enum handler_iterator_type type,
   }
 }
 #endif /*TRANS_LOG_MGM_EXAMPLE_CODE*/
+
+
+/**
+   Report a warning for FK constraint violation.
+
+   @param  thd     Thread handle.
+   @param  table   table on which the operation is performed.
+   @param  error   handler error number.
+*/
+void warn_fk_constraint_violation(THD *thd,TABLE *table, int error)
+{
+  String str;
+  switch(error) {
+  case HA_ERR_ROW_IS_REFERENCED:
+    table->file->get_error_message(error, &str);
+    push_warning(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                 ER_ROW_IS_REFERENCED_2, str.c_ptr_safe());
+    break;
+  case HA_ERR_NO_REFERENCED_ROW:
+    table->file->get_error_message(error, &str);
+    push_warning(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                 ER_NO_REFERENCED_ROW_2, str.c_ptr_safe());
+    break;
+  }
+}

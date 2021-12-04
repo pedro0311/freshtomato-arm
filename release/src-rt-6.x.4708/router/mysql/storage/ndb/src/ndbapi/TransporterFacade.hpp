@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2007 MySQL AB
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -366,8 +366,8 @@ bool
 TransporterFacade::get_node_stopping(NodeId n) const {
   const ClusterMgr::Node & node = theClusterMgr->getNodeInfo(n);
   return (!node.m_state.getSingleUserMode() &&
-          (node.m_state.startLevel == NodeState::SL_STOPPING_1) ||
-          (node.m_state.startLevel == NodeState::SL_STOPPING_2));
+          ((node.m_state.startLevel == NodeState::SL_STOPPING_1) ||
+           (node.m_state.startLevel == NodeState::SL_STOPPING_2)));
 }
 
 inline

@@ -273,6 +273,7 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	1
 Handler_read_key	0
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -284,6 +285,7 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	1
 Handler_read_key	0
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	2
@@ -294,6 +296,7 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	1
 Handler_read_key	0
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -304,10 +307,11 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	0
+Handler_read_last	1
 Handler_read_next	0
 Handler_read_prev	0
-Handler_read_rnd	1
-Handler_read_rnd_next	9
+Handler_read_rnd	0
+Handler_read_rnd_next	0
 alter table t1 disable keys;
 flush status;
 delete from t1 order by a limit 1;
@@ -315,6 +319,7 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	0
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	1
@@ -368,6 +373,7 @@ show status like 'handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	1
+Handler_read_last	0
 Handler_read_next	1
 Handler_read_prev	0
 Handler_read_rnd	1
@@ -405,6 +411,7 @@ show status like '%Handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	1
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -415,6 +422,7 @@ show status like '%Handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	2
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -424,6 +432,7 @@ show status like '%Handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	3
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -433,6 +442,7 @@ show status like '%Handler_read%';
 Variable_name	Value
 Handler_read_first	0
 Handler_read_key	3
+Handler_read_last	0
 Handler_read_next	0
 Handler_read_prev	0
 Handler_read_rnd	0
@@ -540,4 +550,17 @@ UPDATE v1 SET pk = 7 WHERE pk > 0;
 ERROR HY000: View 'test.v1' references invalid table(s) or column(s) or function(s) or definer/invoker of view lack rights to use them
 DROP VIEW v1;
 DROP FUNCTION f1;
+DROP TABLE t1;
+# Bug #21143080: UPDATE ON VARCHAR AND TEXT COLUMNS PRODUCE INCORRECT
+#                RESULTS
+CREATE TABLE t1 (a VARCHAR(50), b TEXT, c CHAR(50)) ENGINE=INNODB;
+INSERT INTO t1 (a, b, c) VALUES ('start trail', '', 'even longer string');
+UPDATE t1 SET b = a, a = 'inject';
+SELECT a, b FROM t1;
+a	b
+inject	start trail
+UPDATE t1 SET b = c, c = 'inject';
+SELECT c, b FROM t1;
+c	b
+inject	even longer string
 DROP TABLE t1;

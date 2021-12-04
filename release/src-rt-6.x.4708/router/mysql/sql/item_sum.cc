@@ -1,4 +1,4 @@
-/* Copyright (c) 2000, 2013  Oracle and/or its affiliates. All
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
    rights reserved.
 
    This program is free software; you can redistribute it and/or modify
@@ -12,7 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /**
@@ -26,8 +26,20 @@
 #pragma implementation				// gcc: Class implementation
 #endif
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
 #include "sql_select.h"
+
+/**
+  Calculate the affordable RAM limit for structures like TREE or Unique
+  used in Item_sum_*
+*/
+
+ulonglong Item_sum::ram_limitation(THD *thd)
+{
+  return min(thd->variables.tmp_table_size,
+      thd->variables.max_heap_table_size);
+}
+
 
 /**
   Prepare an aggregate function item for checking context conditions.
@@ -140,9 +152,10 @@ bool Item_sum::check_sum_func(THD *thd, Item **ref)
       If it is there under a construct where it is not allowed 
       we report an error. 
     */ 
-    invalid= !(allow_sum_func & (1 << max_arg_level));
+    invalid= !(allow_sum_func & ((nesting_map)1 << max_arg_level));
   }
-  else if (max_arg_level >= 0 || !(allow_sum_func & (1 << nest_level)))
+  else if (max_arg_level >= 0 ||
+           !(allow_sum_func & ((nesting_map)1 << nest_level)))
   {
     /*
       The set function can be aggregated only in outer subqueries.
@@ -151,7 +164,8 @@ bool Item_sum::check_sum_func(THD *thd, Item **ref)
     */
     if (register_sum_func(thd, ref))
       return TRUE;
-    invalid= aggr_level < 0 && !(allow_sum_func & (1 << nest_level));
+    invalid= aggr_level < 0 &&
+             !(allow_sum_func & ((nesting_map)1 << nest_level));
     if (!invalid && thd->variables.sql_mode & MODE_ANSI)
       invalid= aggr_level < 0 && max_arg_level < nest_level;
   }
@@ -299,14 +313,15 @@ bool Item_sum::register_sum_func(THD *thd, Item **ref)
        sl && sl->nest_level > max_arg_level;
        sl= sl->master_unit()->outer_select() )
   {
-    if (aggr_level < 0 && (allow_sum_func & (1 << sl->nest_level)))
+    if (aggr_level < 0 &&
+        (allow_sum_func & ((nesting_map)1 << sl->nest_level)))
     {
       /* Found the most nested subquery where the function can be aggregated */
       aggr_level= sl->nest_level;
       aggr_sel= sl;
     }
   }
-  if (sl && (allow_sum_func & (1 << sl->nest_level)))
+  if (sl && (allow_sum_func & ((nesting_map)1 << sl->nest_level)))
   {
     /* 
       We reached the subquery of level max_arg_level and checked
@@ -375,6 +390,7 @@ Item_sum::Item_sum(List<Item> &list) :arg_count(list.elements),
     args= NULL;
   }
   mark_as_sum_func();
+  init_aggregator();
   list.empty();					// Fields are used
 }
 
@@ -406,6 +422,10 @@ Item_sum::Item_sum(THD *thd, Item_sum *item):
   }
   memcpy(args, item->args, sizeof(Item*)*arg_count);
   memcpy(orig_args, item->orig_args, sizeof(Item*)*arg_count);
+  init_aggregator();
+  with_distinct= item->with_distinct;
+  if (item->aggr)
+    set_aggregator(item->aggr->Aggrtype());
 }
 
 
@@ -526,15 +546,532 @@ void Item_sum::update_used_tables ()
     used_tables_cache&= PSEUDO_TABLE_BITS;
 
     /* the aggregate function is aggregated into its local context */
-    used_tables_cache |=  (1 << aggr_sel->join->tables) - 1;
+    used_tables_cache|= ((table_map)1 << aggr_sel->join->tables) - 1;
   }
 }
 
 
-Item *Item_sum::set_arg(int i, THD *thd, Item *new_val) 
+Item *Item_sum::set_arg(uint i, THD *thd, Item *new_val) 
 {
   thd->change_item_tree(args + i, new_val);
   return new_val;
+}
+
+
+int Item_sum::set_aggregator(Aggregator::Aggregator_type aggregator)
+{
+  /*
+    Dependent subselects may be executed multiple times, making
+    set_aggregator to be called multiple times. The aggregator type
+    will be the same, but it needs to be reset so that it is
+    reevaluated with the new dependent data.
+    This function may also be called multiple times during query optimization.
+    In this case, the type may change, so we delete the old aggregator,
+    and create a new one.
+  */
+  if (aggr && aggregator == aggr->Aggrtype())
+  {
+    aggr->clear();
+    return FALSE;
+  }
+
+  delete aggr;
+  switch (aggregator)
+  {
+  case Aggregator::DISTINCT_AGGREGATOR:
+    aggr= new Aggregator_distinct(this);
+    break;
+  case Aggregator::SIMPLE_AGGREGATOR:
+    aggr= new Aggregator_simple(this);
+    break;
+  };
+  return aggr ? FALSE : TRUE;
+}
+
+
+void Item_sum::cleanup()
+{
+  if (aggr)
+  {
+    delete aggr;
+    aggr= NULL;
+  }
+  Item_result_field::cleanup();
+  forced_const= FALSE; 
+}
+
+
+/**
+  Compare keys consisting of single field that cannot be compared as binary.
+ 
+  Used by the Unique class to compare keys. Will do correct comparisons
+  for all field types.
+
+  @param    arg     Pointer to the relevant Field class instance
+  @param    key1    left key image
+  @param    key2    right key image
+  @return   comparison result
+    @retval < 0       if key1 < key2
+    @retval = 0       if key1 = key2
+    @retval > 0       if key1 > key2
+*/
+
+static int simple_str_key_cmp(void* arg, uchar* key1, uchar* key2)
+{
+  Field *f= (Field*) arg;
+  return f->cmp(key1, key2);
+}
+
+
+/**
+  Correctly compare composite keys.
+ 
+  Used by the Unique class to compare keys. Will do correct comparisons
+  for composite keys with various field types.
+
+  @param arg     Pointer to the relevant Aggregator_distinct instance
+  @param key1    left key image
+  @param key2    right key image
+  @return        comparison result
+    @retval <0       if key1 < key2
+    @retval =0       if key1 = key2
+    @retval >0       if key1 > key2
+*/
+
+int Aggregator_distinct::composite_key_cmp(void* arg, uchar* key1, uchar* key2)
+{
+  Aggregator_distinct *aggr= (Aggregator_distinct *) arg;
+  Field **field    = aggr->table->field;
+  Field **field_end= field + aggr->table->s->fields;
+  uint32 *lengths=aggr->field_lengths;
+  for (; field < field_end; ++field)
+  {
+    Field* f = *field;
+    int len = *lengths++;
+    int res = f->cmp(key1, key2);
+    if (res)
+      return res;
+    key1 += len;
+    key2 += len;
+  }
+  return 0;
+}
+
+
+static enum enum_field_types 
+calc_tmp_field_type(enum enum_field_types table_field_type, 
+                    Item_result result_type)
+{
+  /* Adjust tmp table type according to the chosen aggregation type */
+  switch (result_type) {
+  case STRING_RESULT:
+  case REAL_RESULT:
+    if (table_field_type != MYSQL_TYPE_FLOAT)
+      table_field_type= MYSQL_TYPE_DOUBLE;
+    break;
+  case INT_RESULT:
+    table_field_type= MYSQL_TYPE_LONGLONG;
+    /* fallthrough */
+  case DECIMAL_RESULT:
+    if (table_field_type != MYSQL_TYPE_LONGLONG)
+      table_field_type= MYSQL_TYPE_NEWDECIMAL;
+    break;
+  case ROW_RESULT:
+  default:
+    DBUG_ASSERT(0);
+  }
+  return table_field_type;
+}
+
+
+/***************************************************************************/
+
+C_MODE_START
+
+/* Declarations for auxilary C-callbacks */
+
+static int simple_raw_key_cmp(void* arg, const void* key1, const void* key2)
+{
+    return memcmp(key1, key2, *(uint *) arg);
+}
+
+
+static int item_sum_distinct_walk(void *element, element_count num_of_dups,
+                                  void *item)
+{
+  return ((Aggregator_distinct*) (item))->unique_walk_function(element);
+}
+
+C_MODE_END
+
+/***************************************************************************/
+/**
+  Called before feeding the first row. Used to allocate/setup
+  the internal structures used for aggregation.
+ 
+  @param thd Thread descriptor
+  @return status
+    @retval FALSE success
+    @retval TRUE  faliure  
+
+    Prepares Aggregator_distinct to process the incoming stream.
+    Creates the temporary table and the Unique class if needed.
+    Called by Item_sum::aggregator_setup()
+*/
+
+bool Aggregator_distinct::setup(THD *thd)
+{
+  endup_done= FALSE;
+  /*
+    Setup can be called twice for ROLLUP items. This is a bug.
+    Please add DBUG_ASSERT(tree == 0) here when it's fixed.
+  */
+  if (tree || table || tmp_table_param)
+    return FALSE;
+
+  if (item_sum->setup(thd))
+    return TRUE;
+  if (item_sum->sum_func() == Item_sum::COUNT_FUNC || 
+      item_sum->sum_func() == Item_sum::COUNT_DISTINCT_FUNC)
+  {
+    List<Item> list;
+    SELECT_LEX *select_lex= thd->lex->current_select;
+
+    if (!(tmp_table_param= new TMP_TABLE_PARAM))
+      return TRUE;
+
+    /* Create a table with an unique key over all parameters */
+    for (uint i=0; i < item_sum->get_arg_count() ; i++)
+    {
+      Item *item=item_sum->get_arg(i);
+      if (list.push_back(item))
+        return TRUE;                              // End of memory
+      if (item->const_item() && item->is_null())
+        always_null= true;
+    }
+    if (always_null)
+      return FALSE;
+    count_field_types(select_lex, tmp_table_param, list, 0);
+    tmp_table_param->force_copy_fields= item_sum->has_force_copy_fields();
+    DBUG_ASSERT(table == 0);
+    /*
+      Make create_tmp_table() convert BIT columns to BIGINT.
+      This is needed because BIT fields store parts of their data in table's
+      null bits, and we don't have methods to compare two table records, which
+      is needed by Unique which is used when HEAP table is used.
+    */
+    {
+      List_iterator_fast<Item> li(list);
+      Item *item;
+      while ((item= li++))
+      {    
+        if (item->type() == Item::FIELD_ITEM &&
+            ((Item_field*)item)->field->type() == FIELD_TYPE_BIT)
+          item->marker=4;
+      }    
+    }    
+    if (!(table= create_tmp_table(thd, tmp_table_param, list, (ORDER*) 0, 1,
+                                  0,
+                                  (select_lex->options | thd->variables.option_bits),
+                                  HA_POS_ERROR, "")))
+      return TRUE;
+    table->file->extra(HA_EXTRA_NO_ROWS);		// Don't update rows
+    table->no_rows=1;
+
+    if (table->s->db_type() == heap_hton)
+    {
+      /*
+        No blobs, otherwise it would have been MyISAM: set up a compare
+        function and its arguments to use with Unique.
+      */
+      qsort_cmp2 compare_key;
+      void* cmp_arg;
+      Field **field= table->field;
+      Field **field_end= field + table->s->fields;
+      bool all_binary= TRUE;
+
+      for (tree_key_length= 0; field < field_end; ++field)
+      {
+        Field *f= *field;
+        enum enum_field_types type= f->type();
+        tree_key_length+= f->pack_length();
+        if ((type == MYSQL_TYPE_VARCHAR) ||
+            (!f->binary() && (type == MYSQL_TYPE_STRING ||
+                             type == MYSQL_TYPE_VAR_STRING)))
+        {
+          all_binary= FALSE;
+          break;
+        }
+      }
+      if (all_binary)
+      {
+        cmp_arg= (void*) &tree_key_length;
+        compare_key= (qsort_cmp2) simple_raw_key_cmp;
+      }
+      else
+      {
+        if (table->s->fields == 1)
+        {
+          /*
+            If we have only one field, which is the most common use of
+            count(distinct), it is much faster to use a simpler key
+            compare method that can take advantage of not having to worry
+            about other fields.
+          */
+          compare_key= (qsort_cmp2) simple_str_key_cmp;
+          cmp_arg= (void*) table->field[0];
+          /* tree_key_length has been set already */
+        }
+        else
+        {
+          uint32 *length;
+          compare_key= (qsort_cmp2) composite_key_cmp;
+          cmp_arg= (void*) this;
+          field_lengths= (uint32*) thd->alloc(table->s->fields * sizeof(uint32));
+          for (tree_key_length= 0, length= field_lengths, field= table->field;
+               field < field_end; ++field, ++length)
+          {
+            *length= (*field)->pack_length();
+            tree_key_length+= *length;
+          }
+        }
+      }
+      DBUG_ASSERT(tree == 0);
+      tree= new Unique(compare_key, cmp_arg, tree_key_length,
+                       item_sum->ram_limitation(thd));
+      /*
+        The only time tree_key_length could be 0 is if someone does
+        count(distinct) on a char(0) field - stupid thing to do,
+        but this has to be handled - otherwise someone can crash
+        the server with a DoS attack
+      */
+      if (! tree)
+        return TRUE;
+    }
+    return FALSE;
+  }
+  else
+  {
+    List<Create_field> field_list;
+    Create_field field_def;                              /* field definition */
+    Item *arg;
+    DBUG_ENTER("Aggregator_distinct::setup");
+    /* It's legal to call setup() more than once when in a subquery */
+    if (tree)
+      DBUG_RETURN(FALSE);
+
+    /*
+      Virtual table and the tree are created anew on each re-execution of
+      PS/SP. Hence all further allocations are performed in the runtime
+      mem_root.
+    */
+    if (field_list.push_back(&field_def))
+      DBUG_RETURN(TRUE);
+
+    item_sum->null_value= item_sum->maybe_null= 1;
+    item_sum->quick_group= 0;
+
+    DBUG_ASSERT(item_sum->get_arg(0)->fixed);
+
+    arg= item_sum->get_arg(0);
+    if (arg->const_item())
+    {
+      (void) arg->val_int();
+      if (arg->null_value)
+        always_null= true;
+    }
+
+    if (always_null)
+      DBUG_RETURN(FALSE);
+
+    enum enum_field_types field_type;
+
+    field_type= calc_tmp_field_type(arg->field_type(),
+                              arg->result_type());
+    field_def.init_for_tmp_table(field_type, 
+                                 arg->max_length,
+                                 arg->decimals, 
+                                 arg->maybe_null,
+                                 arg->unsigned_flag);
+
+    if (! (table= create_virtual_tmp_table(thd, field_list)))
+      DBUG_RETURN(TRUE);
+
+    /* XXX: check that the case of CHAR(0) works OK */
+    tree_key_length= table->s->reclength - table->s->null_bytes;
+
+    /*
+      Unique handles all unique elements in a tree until they can't fit
+      in.  Then the tree is dumped to the temporary file. We can use
+      simple_raw_key_cmp because the table contains numbers only; decimals
+      are converted to binary representation as well.
+    */
+    tree= new Unique(simple_raw_key_cmp, &tree_key_length, tree_key_length,
+                     item_sum->ram_limitation(thd));
+
+    DBUG_RETURN(tree == 0);
+  }
+}
+
+
+/**
+  Invalidate calculated value and clear the distinct rows.
+ 
+  Frees space used by the internal data structures.
+  Removes the accumulated distinct rows. Invalidates the calculated result.
+*/
+
+void Aggregator_distinct::clear()
+{
+  endup_done= FALSE;
+  item_sum->clear();
+  if (tree)
+    tree->reset();
+  /* tree and table can be both null only if always_null */
+  if (item_sum->sum_func() == Item_sum::COUNT_FUNC || 
+      item_sum->sum_func() == Item_sum::COUNT_DISTINCT_FUNC)
+  {
+    if (!tree && table)
+    {
+      table->file->extra(HA_EXTRA_NO_CACHE);
+      table->file->ha_delete_all_rows();
+      table->file->extra(HA_EXTRA_WRITE_CACHE);
+    }
+  }
+  else
+  {
+    item_sum->null_value= 1;
+  }
+}
+
+
+/**
+  Process incoming row. 
+  
+  Add it to Unique/temp hash table if it's unique. Skip the row if 
+  not unique.
+  Prepare Aggregator_distinct to process the incoming stream.
+  Create the temporary table and the Unique class if needed.
+  Called by Item_sum::aggregator_add().
+  To actually get the result value in item_sum's buffers 
+  Aggregator_distinct::endup() must be called.
+
+  @return status
+    @retval FALSE     success
+    @retval TRUE      failure
+*/
+
+bool Aggregator_distinct::add()
+{
+  if (always_null)
+    return 0;
+
+  if (item_sum->sum_func() == Item_sum::COUNT_FUNC || 
+      item_sum->sum_func() == Item_sum::COUNT_DISTINCT_FUNC)
+  {
+    int error;
+    copy_fields(tmp_table_param);
+    if (copy_funcs(tmp_table_param->items_to_copy, table->in_use))
+      return TRUE;
+
+    for (Field **field=table->field ; *field ; field++)
+      if ((*field)->is_real_null(0))
+        return 0;					// Don't count NULL
+
+    if (tree)
+    {
+      /*
+        The first few bytes of record (at least one) are just markers
+        for deleted and NULLs. We want to skip them since they will
+        bloat the tree without providing any valuable info. Besides,
+        key_length used to initialize the tree didn't include space for them.
+      */
+      return tree->unique_add(table->record[0] + table->s->null_bytes);
+    }
+    if ((error= table->file->ha_write_row(table->record[0])) &&
+        table->file->is_fatal_error(error, HA_CHECK_DUP))
+      return TRUE;
+    return FALSE;
+  }
+  else
+  {
+    item_sum->get_arg(0)->save_in_field(table->field[0], FALSE);
+    if (table->field[0]->is_null())
+      return 0;
+    DBUG_ASSERT(tree);
+    item_sum->null_value= 0;
+    /*
+      '0' values are also stored in the tree. This doesn't matter
+      for SUM(DISTINCT), but is important for AVG(DISTINCT)
+    */
+    return tree->unique_add(table->field[0]->ptr);
+  }
+}
+
+
+/**
+  Calculate the aggregate function value.
+ 
+  Since Distinct_aggregator::add() just collects the distinct rows,
+  we must go over the distinct rows and feed them to the aggregation
+  function before returning its value.
+  This is what endup () does. It also sets the result validity flag
+  endup_done to TRUE so it will not recalculate the aggregate value
+  again if the Item_sum hasn't been reset.
+*/
+
+void Aggregator_distinct::endup()
+{
+  /* prevent consecutive recalculations */
+  if (endup_done)
+    return;
+
+  /* we are going to calculate the aggregate value afresh */
+  item_sum->clear();
+
+  /* The result will definitely be null : no more calculations needed */
+  if (always_null)
+    return;
+
+  if (item_sum->sum_func() == Item_sum::COUNT_FUNC || 
+      item_sum->sum_func() == Item_sum::COUNT_DISTINCT_FUNC)
+  {
+    DBUG_ASSERT(item_sum->fixed == 1);
+    Item_sum_count *sum= (Item_sum_count *)item_sum;
+    if (tree && tree->elements == 0)
+    {
+      /* everything fits in memory */
+      sum->count= (longlong) tree->elements_in_tree();
+      endup_done= TRUE;
+    }
+    if (!tree)
+    {
+      /* there were blobs */
+      table->file->info(HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
+      sum->count= table->file->stats.records;
+      endup_done= TRUE;
+    }
+  }
+
+ /*
+   We don't have a tree only if 'setup()' hasn't been called;
+   this is the case of sql_executor.cc:return_zero_rows.
+ */
+  if (tree && !endup_done)
+  {
+   /*
+     All tree's values are not NULL.
+     Note that value of field is changed as we walk the tree, in
+     Aggregator_distinct::unique_walk_function, but it's always not NULL.
+   */
+   table->field[0]->set_notnull();
+    /* go over the tree of distinct keys and calculate the aggregate value */
+    use_distinct_values= TRUE;
+    tree->walk(item_sum_distinct_walk, (void*) this);
+    use_distinct_values= FALSE;
+  }
+  /* prevent consecutive recalculations */
+  endup_done= TRUE;
 }
 
 
@@ -796,8 +1333,9 @@ bool Item_sum_sum::add()
   DBUG_ENTER("Item_sum_sum::add");
   if (hybrid_type == DECIMAL_RESULT)
   {
-    my_decimal value, *val= args[0]->val_decimal(&value);
-    if (!args[0]->null_value)
+    my_decimal value;
+    const my_decimal *val= aggr->arg_val_decimal(&value);
+    if (!aggr->arg_is_null(true))
     {
       my_decimal_add(E_DEC_FATAL_ERROR, dec_buffs + (curr_dec_buff^1),
                      val, dec_buffs + curr_dec_buff);
@@ -807,8 +1345,8 @@ bool Item_sum_sum::add()
   }
   else
   {
-    sum+= args[0]->val_real();
-    if (!args[0]->null_value)
+    sum+= aggr->arg_val_real();
+    if (!aggr->arg_is_null(true))
       null_value= 0;
   }
   DBUG_RETURN(0);
@@ -818,6 +1356,8 @@ bool Item_sum_sum::add()
 longlong Item_sum_sum::val_int()
 {
   DBUG_ASSERT(fixed == 1);
+  if (aggr)
+    aggr->endup();
   if (hybrid_type == DECIMAL_RESULT)
   {
     longlong result;
@@ -832,6 +1372,8 @@ longlong Item_sum_sum::val_int()
 double Item_sum_sum::val_real()
 {
   DBUG_ASSERT(fixed == 1);
+  if (aggr)
+    aggr->endup();
   if (hybrid_type == DECIMAL_RESULT)
     my_decimal2double(E_DEC_FATAL_ERROR, dec_buffs + curr_dec_buff, &sum);
   return sum;
@@ -840,6 +1382,8 @@ double Item_sum_sum::val_real()
 
 String *Item_sum_sum::val_str(String *str)
 {
+  if (aggr)
+    aggr->endup();
   if (hybrid_type == DECIMAL_RESULT)
     return val_string_from_decimal(str);
   return val_string_from_real(str);
@@ -848,312 +1392,119 @@ String *Item_sum_sum::val_str(String *str)
 
 my_decimal *Item_sum_sum::val_decimal(my_decimal *val)
 {
+  if (aggr)
+    aggr->endup();
   if (hybrid_type == DECIMAL_RESULT)
     return (dec_buffs + curr_dec_buff);
   return val_decimal_from_real(val);
 }
 
-/***************************************************************************/
-
-C_MODE_START
-
-/* Declarations for auxilary C-callbacks */
-
-static int simple_raw_key_cmp(void* arg, const void* key1, const void* key2)
-{
-    return memcmp(key1, key2, *(uint *) arg);
-}
-
-
-static int item_sum_distinct_walk(void *element, element_count num_of_dups,
-                                  void *item)
-{
-  return ((Item_sum_distinct*) (item))->unique_walk_function(element);
-}
-
-C_MODE_END
-
-/* Item_sum_distinct */
-
-Item_sum_distinct::Item_sum_distinct(Item *item_arg)
-  :Item_sum_num(item_arg), tree(0)
-{
-  /*
-    quick_group is an optimizer hint, which means that GROUP BY can be
-    handled with help of index on grouped columns.
-    By setting quick_group to zero we force creation of temporary table
-    to perform GROUP BY.
-  */
-  quick_group= 0;
-}
-
-
-Item_sum_distinct::Item_sum_distinct(THD *thd, Item_sum_distinct *original)
-  :Item_sum_num(thd, original), val(original->val), tree(0),
-  table_field_type(original->table_field_type)
-{
-  quick_group= 0;
-}
-
-
 /**
-  Behaves like an Integer except to fix_length_and_dec().
-  Additionally div() converts val with this traits to a val with true
-  decimal traits along with conversion of integer value to decimal value.
-  This is to speedup SUM/AVG(DISTINCT) evaluation for 8-32 bit integer
-  values.
+  Aggregate a distinct row from the distinct hash table.
+ 
+  Called for each row into the hash table 'Aggregator_distinct::table'.
+  Includes the current distinct row into the calculation of the 
+  aggregate value. Uses the Field classes to get the value from the row.
+  This function is used for AVG/SUM(DISTINCT). For COUNT(DISTINCT) 
+  it's called only when there are no blob arguments and the data don't
+  fit into memory (so Unique makes persisted trees on disk). 
+
+  @param element     pointer to the row data.
+  
+  @return status
+    @retval FALSE     success
+    @retval TRUE      failure
 */
-struct Hybrid_type_traits_fast_decimal: public
-       Hybrid_type_traits_integer
-{
-  virtual Item_result type() const { return DECIMAL_RESULT; }
-  virtual void fix_length_and_dec(Item *item, Item *arg) const
-  { Hybrid_type_traits_decimal::instance()->fix_length_and_dec(item, arg); }
-
-  virtual void div(Hybrid_type *val, ulonglong u) const
-  {
-    int2my_decimal(E_DEC_FATAL_ERROR, val->integer, 0, val->dec_buf);
-    val->used_dec_buf_no= 0;
-    val->traits= Hybrid_type_traits_decimal::instance();
-    val->traits->div(val, u);
-  }
-  static const Hybrid_type_traits_fast_decimal *instance();
-  Hybrid_type_traits_fast_decimal() {};
-};
-
-static const Hybrid_type_traits_fast_decimal fast_decimal_traits_instance;
-
-const Hybrid_type_traits_fast_decimal
-  *Hybrid_type_traits_fast_decimal::instance()
-{
-  return &fast_decimal_traits_instance;
-}
-
-void Item_sum_distinct::fix_length_and_dec()
-{
-  DBUG_ASSERT(args[0]->fixed);
-
-  table_field_type= args[0]->field_type();
-
-  /* Adjust tmp table type according to the chosen aggregation type */
-  switch (args[0]->result_type()) {
-  case STRING_RESULT:
-  case REAL_RESULT:
-    val.traits= Hybrid_type_traits::instance();
-    if (table_field_type != MYSQL_TYPE_FLOAT)
-      table_field_type= MYSQL_TYPE_DOUBLE;
-    break;
-  case INT_RESULT:
-  /*
-    Preserving int8, int16, int32 field types gives ~10% performance boost
-    as the size of result tree becomes significantly smaller.
-    Another speed up we gain by using longlong for intermediate
-    calculations. The range of int64 is enough to hold sum 2^32 distinct
-    integers each <= 2^32.
-  */
-  if (table_field_type == MYSQL_TYPE_INT24 ||
-      (table_field_type >= MYSQL_TYPE_TINY &&
-       table_field_type <= MYSQL_TYPE_LONG))
-  {
-    val.traits= Hybrid_type_traits_fast_decimal::instance();
-    break;
-  }
-  table_field_type= MYSQL_TYPE_LONGLONG;
-  /* fallthrough */
-  case DECIMAL_RESULT:
-    val.traits= Hybrid_type_traits_decimal::instance();
-    if (table_field_type != MYSQL_TYPE_LONGLONG)
-      table_field_type= MYSQL_TYPE_NEWDECIMAL;
-    break;
-  case ROW_RESULT:
-  default:
-    DBUG_ASSERT(0);
-  }
-  val.traits->fix_length_and_dec(this, args[0]);
-}
-
-
-/**
-  @todo
-  check that the case of CHAR(0) works OK
-*/
-bool Item_sum_distinct::setup(THD *thd)
-{
-  List<Create_field> field_list;
-  Create_field field_def;                              /* field definition */
-  DBUG_ENTER("Item_sum_distinct::setup");
-  /* It's legal to call setup() more than once when in a subquery */
-  if (tree)
-    DBUG_RETURN(FALSE);
-
-  /*
-    Virtual table and the tree are created anew on each re-execution of
-    PS/SP. Hence all further allocations are performed in the runtime
-    mem_root.
-  */
-  if (field_list.push_back(&field_def))
-    DBUG_RETURN(TRUE);
-
-  null_value= maybe_null= 1;
-  quick_group= 0;
-
-  DBUG_ASSERT(args[0]->fixed);
-
-  field_def.init_for_tmp_table(table_field_type, args[0]->max_length,
-                               args[0]->decimals, args[0]->maybe_null,
-                               args[0]->unsigned_flag);
-
-  if (! (table= create_virtual_tmp_table(thd, field_list)))
-    DBUG_RETURN(TRUE);
-
-  /* XXX: check that the case of CHAR(0) works OK */
-  tree_key_length= table->s->reclength - table->s->null_bytes;
-
-  /*
-    Unique handles all unique elements in a tree until they can't fit
-    in.  Then the tree is dumped to the temporary file. We can use
-    simple_raw_key_cmp because the table contains numbers only; decimals
-    are converted to binary representation as well.
-  */
-  tree= new Unique(simple_raw_key_cmp, &tree_key_length, tree_key_length,
-                   thd->variables.max_heap_table_size);
-
-  is_evaluated= FALSE;
-  DBUG_RETURN(tree == 0);
-}
-
-
-bool Item_sum_distinct::add()
-{
-  args[0]->save_in_field(table->field[0], FALSE);
-  is_evaluated= FALSE;
-  if (!table->field[0]->is_null())
-  {
-    DBUG_ASSERT(tree);
-    null_value= 0;
-    /*
-      '0' values are also stored in the tree. This doesn't matter
-      for SUM(DISTINCT), but is important for AVG(DISTINCT)
-    */
-    return tree->unique_add(table->field[0]->ptr);
-  }
-  return 0;
-}
-
-
-bool Item_sum_distinct::unique_walk_function(void *element)
+  
+bool Aggregator_distinct::unique_walk_function(void *element)
 {
   memcpy(table->field[0]->ptr, element, tree_key_length);
-  ++count;
-  val.traits->add(&val, table->field[0]);
+  item_sum->add();
   return 0;
 }
 
 
-void Item_sum_distinct::clear()
+Aggregator_distinct::~Aggregator_distinct()
 {
-  DBUG_ENTER("Item_sum_distinct::clear");
-  DBUG_ASSERT(tree != 0);                        /* we always have a tree */
-  null_value= 1;
-  tree->reset();
-  is_evaluated= FALSE;
-  DBUG_VOID_RETURN;
-}
-
-void Item_sum_distinct::cleanup()
-{
-  Item_sum_num::cleanup();
-  delete tree;
-  tree= 0;
-  table= 0;
-  is_evaluated= FALSE;
-}
-
-Item_sum_distinct::~Item_sum_distinct()
-{
-  delete tree;
-  /* no need to free the table */
-}
-
-
-void Item_sum_distinct::calculate_val_and_count()
-{
-  if (!is_evaluated)
+  if (tree)
   {
-    count= 0;
-    val.traits->set_zero(&val);
-    /*
-      We don't have a tree only if 'setup()' hasn't been called;
-      this is the case of sql_select.cc:return_zero_rows.
-     */
-    if (tree)
+    delete tree;
+    tree= NULL;
+  }
+  if (table)
+  {
+    free_tmp_table(table->in_use, table);
+    table=NULL;
+  }
+  if (tmp_table_param)
+  {
+    delete tmp_table_param;
+    tmp_table_param= NULL;
+  }
+}
+
+
+my_decimal *Aggregator_simple::arg_val_decimal(my_decimal *value)
+{
+  return item_sum->args[0]->val_decimal(value);
+}
+
+
+double Aggregator_simple::arg_val_real()
+{
+  return item_sum->args[0]->val_real();
+}
+
+
+bool Aggregator_simple::arg_is_null(bool use_null_value)
+{
+  Item **item= item_sum->args;
+  const uint item_count= item_sum->arg_count;
+  if (use_null_value)
+  {
+    for (uint i= 0; i < item_count; i++)
     {
-      table->field[0]->set_notnull();
-      tree->walk(item_sum_distinct_walk, (void*) this);
+      if (item[i]->null_value)
+        return true;
     }
-    is_evaluated= TRUE;
   }
-}
-
-
-double Item_sum_distinct::val_real()
-{
-  calculate_val_and_count();
-  return val.traits->val_real(&val);
-}
-
-
-my_decimal *Item_sum_distinct::val_decimal(my_decimal *to)
-{
-  calculate_val_and_count();
-  if (null_value)
-    return 0;
-  return val.traits->val_decimal(&val, to);
-}
-
-
-longlong Item_sum_distinct::val_int()
-{
-  calculate_val_and_count();
-  return val.traits->val_int(&val, unsigned_flag);
-}
-
-
-String *Item_sum_distinct::val_str(String *str)
-{
-  calculate_val_and_count();
-  if (null_value)
-    return 0;
-  return val.traits->val_str(&val, str, decimals);
-}
-
-/* end of Item_sum_distinct */
-
-/* Item_sum_avg_distinct */
-
-void
-Item_sum_avg_distinct::fix_length_and_dec()
-{
-  Item_sum_distinct::fix_length_and_dec();
-  prec_increment= current_thd->variables.div_precincrement;
-  /*
-    AVG() will divide val by count. We need to reserve digits
-    after decimal point as the result can be fractional.
-  */
-  decimals= min(decimals + prec_increment, NOT_FIXED_DEC);
-}
-
-
-void
-Item_sum_avg_distinct::calculate_val_and_count()
-{
-  if (!is_evaluated)
+  else
   {
-    Item_sum_distinct::calculate_val_and_count();
-    if (count)
-      val.traits->div(&val, count);
-    is_evaluated= TRUE;
+    for (uint i= 0; i < item_count; i++)
+    {
+      if (item[i]->maybe_null && item[i]->is_null())
+        return true;
+    }
   }
+  return false;
+}
+
+
+my_decimal *Aggregator_distinct::arg_val_decimal(my_decimal * value)
+{
+  return use_distinct_values ? table->field[0]->val_decimal(value) :
+    item_sum->args[0]->val_decimal(value);
+}
+
+
+double Aggregator_distinct::arg_val_real()
+{
+  return use_distinct_values ? table->field[0]->val_real() :
+    item_sum->args[0]->val_real();
+}
+
+
+bool Aggregator_distinct::arg_is_null(bool use_null_value)
+{
+  if (use_distinct_values)
+  {
+    const bool rc= table->field[0]->is_null();
+    DBUG_ASSERT(!rc); // NULLs are never stored in 'tree'
+    return rc;
+  }
+  return use_null_value ?
+    item_sum->args[0]->null_value :
+    (item_sum->args[0]->maybe_null && item_sum->args[0]->is_null());
 }
 
 
@@ -1171,14 +1522,17 @@ void Item_sum_count::clear()
 
 bool Item_sum_count::add()
 {
-  if (!args[0]->maybe_null || !args[0]->is_null())
-    count++;
+  if (aggr->arg_is_null(false))
+    return 0;
+  count++;
   return 0;
 }
 
 longlong Item_sum_count::val_int()
 {
   DBUG_ASSERT(fixed == 1);
+  if (aggr)
+    aggr->endup();
   return (longlong) count;
 }
 
@@ -1260,7 +1614,7 @@ bool Item_sum_avg::add()
 {
   if (Item_sum_sum::add())
     return TRUE;
-  if (!args[0]->null_value)
+  if (!aggr->arg_is_null(true))
     count++;
   return FALSE;
 }
@@ -1268,6 +1622,8 @@ bool Item_sum_avg::add()
 double Item_sum_avg::val_real()
 {
   DBUG_ASSERT(fixed == 1);
+  if (aggr)
+    aggr->endup();
   if (!count)
   {
     null_value=1;
@@ -1282,6 +1638,8 @@ my_decimal *Item_sum_avg::val_decimal(my_decimal *val)
   my_decimal sum_buff, cnt;
   const my_decimal *sum_dec;
   DBUG_ASSERT(fixed == 1);
+  if (aggr)
+    aggr->endup();
   if (!count)
   {
     null_value=1;
@@ -1304,6 +1662,8 @@ my_decimal *Item_sum_avg::val_decimal(my_decimal *val)
 
 String *Item_sum_avg::val_str(String *str)
 {
+  if (aggr)
+    aggr->endup();
   if (hybrid_type == DECIMAL_RESULT)
     return val_string_from_decimal(str);
   return val_string_from_real(str);
@@ -1561,7 +1921,7 @@ void Item_sum_variance::update_field()
 
 void Item_sum_hybrid::clear()
 {
-  value->null_value= 1;
+  value->clear();
   null_value= 1;
 }
 
@@ -1570,7 +1930,10 @@ double Item_sum_hybrid::val_real()
   DBUG_ASSERT(fixed == 1);
   if (null_value)
     return 0.0;
-  return value->val_real();
+  double retval= value->val_real();
+  if ((null_value= value->null_value))
+    DBUG_ASSERT(retval == 0.0);
+  return retval;
 }
 
 longlong Item_sum_hybrid::val_int()
@@ -1578,7 +1941,10 @@ longlong Item_sum_hybrid::val_int()
   DBUG_ASSERT(fixed == 1);
   if (null_value)
     return 0;
-  return value->val_int();
+  longlong retval= value->val_int();
+  if ((null_value= value->null_value))
+    DBUG_ASSERT(retval == 0);
+  return retval;
 }
 
 
@@ -1587,7 +1953,10 @@ my_decimal *Item_sum_hybrid::val_decimal(my_decimal *val)
   DBUG_ASSERT(fixed == 1);
   if (null_value)
     return 0;
-  return value->val_decimal(val);
+  my_decimal *retval= value->val_decimal(val);
+  if ((null_value= value->null_value))
+    DBUG_ASSERT(retval == NULL);
+  return retval;
 }
 
 
@@ -1597,7 +1966,10 @@ Item_sum_hybrid::val_str(String *str)
   DBUG_ASSERT(fixed == 1);
   if (null_value)
     return 0;
-  return value->val_str(str);
+  String *retval= value->val_str(str);
+  if ((null_value= value->null_value))
+    DBUG_ASSERT(retval == NULL);
+  return retval;
 }
 
 
@@ -1836,6 +2208,7 @@ void Item_sum_hybrid::reset_field()
 
 void Item_sum_sum::reset_field()
 {
+  DBUG_ASSERT (aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
   if (hybrid_type == DECIMAL_RESULT)
   {
     my_decimal value, *arg_val= args[0]->val_decimal(&value);
@@ -1860,6 +2233,7 @@ void Item_sum_count::reset_field()
 {
   uchar *res=result_field->ptr;
   longlong nr=0;
+  DBUG_ASSERT (aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
 
   if (!args[0]->maybe_null || !args[0]->is_null())
     nr=1;
@@ -1870,6 +2244,7 @@ void Item_sum_count::reset_field()
 void Item_sum_avg::reset_field()
 {
   uchar *res=result_field->ptr;
+  DBUG_ASSERT (aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
   if (hybrid_type == DECIMAL_RESULT)
   {
     longlong tmp;
@@ -1904,7 +2279,7 @@ void Item_sum_avg::reset_field()
 
 void Item_sum_bit::reset_field()
 {
-  reset();
+  reset_and_add();
   int8store(result_field->ptr, bits);
 }
 
@@ -1923,6 +2298,7 @@ void Item_sum_bit::update_field()
 
 void Item_sum_sum::update_field()
 {
+  DBUG_ASSERT (aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
   if (hybrid_type == DECIMAL_RESULT)
   {
     my_decimal value, *arg_val= args[0]->val_decimal(&value);
@@ -1975,6 +2351,9 @@ void Item_sum_avg::update_field()
 {
   longlong field_count;
   uchar *res=result_field->ptr;
+
+  DBUG_ASSERT (aggr->Aggrtype() != Aggregator::DISTINCT_AGGREGATOR);
+
   if (hybrid_type == DECIMAL_RESULT)
   {
     my_decimal value, *arg_val= args[0]->val_decimal(&value);
@@ -2278,319 +2657,6 @@ double Item_variance_field::val_real()
 
 
 /****************************************************************************
-** COUNT(DISTINCT ...)
-****************************************************************************/
-
-int simple_str_key_cmp(void* arg, uchar* key1, uchar* key2)
-{
-  Field *f= (Field*) arg;
-  return f->cmp(key1, key2);
-}
-
-/**
-  Did not make this one static - at least gcc gets confused when
-  I try to declare a static function as a friend. If you can figure
-  out the syntax to make a static function a friend, make this one
-  static
-*/
-
-int composite_key_cmp(void* arg, uchar* key1, uchar* key2)
-{
-  Item_sum_count_distinct* item = (Item_sum_count_distinct*)arg;
-  Field **field    = item->table->field;
-  Field **field_end= field + item->table->s->fields;
-  uint32 *lengths=item->field_lengths;
-  for (; field < field_end; ++field)
-  {
-    Field* f = *field;
-    int len = *lengths++;
-    int res = f->cmp(key1, key2);
-    if (res)
-      return res;
-    key1 += len;
-    key2 += len;
-  }
-  return 0;
-}
-
-
-C_MODE_START
-
-static int count_distinct_walk(void *elem, element_count count, void *arg)
-{
-  (*((ulonglong*)arg))++;
-  return 0;
-}
-
-C_MODE_END
-
-
-void Item_sum_count_distinct::cleanup()
-{
-  DBUG_ENTER("Item_sum_count_distinct::cleanup");
-  Item_sum_int::cleanup();
-
-  /* Free objects only if we own them. */
-  if (!original)
-  {
-    /*
-      We need to delete the table and the tree in cleanup() as
-      they were allocated in the runtime memroot. Using the runtime
-      memroot reduces memory footprint for PS/SP and simplifies setup().
-    */
-    delete tree;
-    tree= 0;
-    is_evaluated= FALSE;
-    if (table)
-    {
-      free_tmp_table(table->in_use, table);
-      table= 0;
-    }
-    delete tmp_table_param;
-    tmp_table_param= 0;
-  }
-  always_null= FALSE;
-  DBUG_VOID_RETURN;
-}
-
-
-/**
-  This is used by rollup to create a separate usable copy of
-  the function.
-*/
-
-void Item_sum_count_distinct::make_unique()
-{
-  table=0;
-  original= 0;
-  force_copy_fields= 1;
-  tree= 0;
-  is_evaluated= FALSE;
-  tmp_table_param= 0;
-  always_null= FALSE;
-}
-
-
-Item_sum_count_distinct::~Item_sum_count_distinct()
-{
-  cleanup();
-}
-
-
-bool Item_sum_count_distinct::setup(THD *thd)
-{
-  List<Item> list;
-  SELECT_LEX *select_lex= thd->lex->current_select;
-
-  /*
-    Setup can be called twice for ROLLUP items. This is a bug.
-    Please add DBUG_ASSERT(tree == 0) here when it's fixed.
-    It's legal to call setup() more than once when in a subquery
-  */
-  if (tree || table || tmp_table_param)
-    return FALSE;
-
-  if (!(tmp_table_param= new TMP_TABLE_PARAM))
-    return TRUE;
-
-  /* Create a table with an unique key over all parameters */
-  for (uint i=0; i < arg_count ; i++)
-  {
-    Item *item=args[i];
-    if (list.push_back(item))
-      return TRUE;                              // End of memory
-    if (item->const_item() && item->is_null())
-      always_null= 1;
-  }
-  if (always_null)
-    return FALSE;
-  count_field_types(select_lex, tmp_table_param, list, 0);
-  tmp_table_param->force_copy_fields= force_copy_fields;
-  DBUG_ASSERT(table == 0);
-  /*
-    Make create_tmp_table() convert BIT columns to BIGINT.
-    This is needed because BIT fields store parts of their data in table's
-    null bits, and we don't have methods to compare two table records, which
-    is needed by Unique which is used when HEAP table is used.
-  */
-  {
-    List_iterator_fast<Item> li(list);
-    Item *item;
-    while ((item= li++))
-    {
-      if (item->type() == Item::FIELD_ITEM &&
-          ((Item_field*)item)->field->type() == FIELD_TYPE_BIT)
-        item->marker=4;
-    }
-  }
-
-  if (!(table= create_tmp_table(thd, tmp_table_param, list, (ORDER*) 0, 1,
-				0,
-				(select_lex->options | thd->options),
-				HA_POS_ERROR, (char*)"")))
-    return TRUE;
-  table->file->extra(HA_EXTRA_NO_ROWS);		// Don't update rows
-  table->no_rows=1;
-
-  if (table->s->db_type() == heap_hton)
-  {
-    /*
-      No blobs, otherwise it would have been MyISAM: set up a compare
-      function and its arguments to use with Unique.
-    */
-    qsort_cmp2 compare_key;
-    void* cmp_arg;
-    Field **field= table->field;
-    Field **field_end= field + table->s->fields;
-    bool all_binary= TRUE;
-
-    for (tree_key_length= 0; field < field_end; ++field)
-    {
-      Field *f= *field;
-      enum enum_field_types f_type= f->type();
-      tree_key_length+= f->pack_length();
-      if ((f_type == MYSQL_TYPE_VARCHAR) ||
-          (!f->binary() && (f_type == MYSQL_TYPE_STRING ||
-                           f_type == MYSQL_TYPE_VAR_STRING)))
-      {
-        all_binary= FALSE;
-        break;
-      }
-    }
-    if (all_binary)
-    {
-      cmp_arg= (void*) &tree_key_length;
-      compare_key= (qsort_cmp2) simple_raw_key_cmp;
-    }
-    else
-    {
-      if (table->s->fields == 1)
-      {
-        /*
-          If we have only one field, which is the most common use of
-          count(distinct), it is much faster to use a simpler key
-          compare method that can take advantage of not having to worry
-          about other fields.
-        */
-        compare_key= (qsort_cmp2) simple_str_key_cmp;
-        cmp_arg= (void*) table->field[0];
-        /* tree_key_length has been set already */
-      }
-      else
-      {
-        uint32 *length;
-        compare_key= (qsort_cmp2) composite_key_cmp;
-        cmp_arg= (void*) this;
-        field_lengths= (uint32*) thd->alloc(table->s->fields * sizeof(uint32));
-        for (tree_key_length= 0, length= field_lengths, field= table->field;
-             field < field_end; ++field, ++length)
-        {
-          *length= (*field)->pack_length();
-          tree_key_length+= *length;
-        }
-      }
-    }
-    DBUG_ASSERT(tree == 0);
-    tree= new Unique(compare_key, cmp_arg, tree_key_length,
-                     thd->variables.max_heap_table_size);
-    /*
-      The only time tree_key_length could be 0 is if someone does
-      count(distinct) on a char(0) field - stupid thing to do,
-      but this has to be handled - otherwise someone can crash
-      the server with a DoS attack
-    */
-    is_evaluated= FALSE;
-    if (! tree)
-      return TRUE;
-  }
-  return FALSE;
-}
-
-
-Item *Item_sum_count_distinct::copy_or_same(THD* thd) 
-{
-  return new (thd->mem_root) Item_sum_count_distinct(thd, this);
-}
-
-
-void Item_sum_count_distinct::clear()
-{
-  /* tree and table can be both null only if always_null */
-  is_evaluated= FALSE;
-  if (tree)
-  {
-    tree->reset();
-  }
-  else if (table)
-  {
-    table->file->extra(HA_EXTRA_NO_CACHE);
-    table->file->ha_delete_all_rows();
-    table->file->extra(HA_EXTRA_WRITE_CACHE);
-  }
-}
-
-bool Item_sum_count_distinct::add()
-{
-  int error;
-  if (always_null)
-    return 0;
-  copy_fields(tmp_table_param);
-  if (copy_funcs(tmp_table_param->items_to_copy, table->in_use))
-    return TRUE;
-
-  for (Field **field=table->field ; *field ; field++)
-    if ((*field)->is_real_null(0))
-      return 0;					// Don't count NULL
-
-  is_evaluated= FALSE;
-  if (tree)
-  {
-    /*
-      The first few bytes of record (at least one) are just markers
-      for deleted and NULLs. We want to skip them since they will
-      bloat the tree without providing any valuable info. Besides,
-      key_length used to initialize the tree didn't include space for them.
-    */
-    return tree->unique_add(table->record[0] + table->s->null_bytes);
-  }
-  if ((error= table->file->ha_write_row(table->record[0])) &&
-      table->file->is_fatal_error(error, HA_CHECK_DUP))
-    return TRUE;
-  return FALSE;
-}
-
-
-longlong Item_sum_count_distinct::val_int()
-{
-  int error;
-  DBUG_ASSERT(fixed == 1);
-  if (!table)					// Empty query
-    return LL(0);
-  if (tree)
-  {
-    if (is_evaluated)
-      return count;
-
-    if (tree->elements == 0)
-      return (longlong) tree->elements_in_tree(); // everything fits in memory
-    count= 0;
-    tree->walk(count_distinct_walk, (void*) &count);
-    is_evaluated= TRUE;
-    return (longlong) count;
-  }
-
-  error= table->file->info(HA_STATUS_VARIABLE | HA_STATUS_NO_LOCK);
-
-  if(error)
-  {
-    table->file->print_error(error, MYF(0));
-  }
-
-  return table->file->stats.records;
-}
-
-
-/****************************************************************************
 ** Functions to handle dynamic loadable aggregates
 ** Original source by: Alexis Mikhailov <root@medinf.chuvashia.su>
 ** Adapted for UDAs by: Andreas F. Bobak <bobak@relog.ch>.
@@ -2791,6 +2857,7 @@ String *Item_sum_udf_str::val_str(String *str)
   @retval  1 : key1 > key2 
 */
 
+extern "C"
 int group_concat_key_cmp_with_distinct(void* arg, const void* key1, 
                                        const void* key2)
 {
@@ -2829,6 +2896,7 @@ int group_concat_key_cmp_with_distinct(void* arg, const void* key1,
   function of sort for syntax: GROUP_CONCAT(expr,... ORDER BY col,... )
 */
 
+extern "C"
 int group_concat_key_cmp_with_order(void* arg, const void* key1, 
                                     const void* key2)
 {
@@ -2875,13 +2943,16 @@ int group_concat_key_cmp_with_order(void* arg, const void* key1,
   Append data from current leaf to item->result.
 */
 
-int dump_leaf_key(uchar* key, element_count count __attribute__((unused)),
-                  Item_func_group_concat *item)
+extern "C"
+int dump_leaf_key(void* key_arg, element_count count __attribute__((unused)),
+                  void* item_arg)
 {
+  Item_func_group_concat *item= (Item_func_group_concat *) item_arg;
   TABLE *table= item->table;
   String tmp((char *)table->record[1], table->s->reclength,
              default_charset_info);
   String tmp2;
+  uchar *key= (uchar *) key_arg;
   String *result= &item->result;
   Item **arg= item->args, **arg_end= item->args + item->arg_count_field;
   uint old_length= result->length();
@@ -2922,6 +2993,8 @@ int dump_leaf_key(uchar* key, element_count count __attribute__((unused)),
       result->append(*res);
   }
 
+  item->row_count++;
+
   /* stop if length of result more than max_length */
   if (result->length() > item->max_length)
   {
@@ -2940,8 +3013,11 @@ int dump_leaf_key(uchar* key, element_count count __attribute__((unused)),
                                           result->length(),
                                           &well_formed_error);
     result->length(old_length + add_length);
-    item->count_cut_values++;
     item->warning_for_row= TRUE;
+    push_warning_printf(current_thd, MYSQL_ERROR::WARN_LEVEL_WARN,
+                        ER_CUT_VALUE_GROUP_CONCAT, ER(ER_CUT_VALUE_GROUP_CONCAT),
+                        item->row_count);
+
     return 1;
   }
   return 0;
@@ -2962,12 +3038,12 @@ Item_func_group_concat(Name_resolution_context *context_arg,
                        bool distinct_arg, List<Item> *select_list,
                        const SQL_I_List<ORDER> &order_list,
                        String *separator_arg)
-  :tmp_table_param(0), warning(0),
-   separator(separator_arg), tree(0), unique_filter(NULL), table(0),
+  :tmp_table_param(0), separator(separator_arg), tree(0),
+   unique_filter(NULL), table(0),
    order(0), context(context_arg),
    arg_count_order(order_list.elements),
    arg_count_field(select_list->elements),
-   count_cut_values(0),
+   row_count(0),
    distinct(distinct_arg),
    warning_for_row(FALSE),
    force_copy_fields(0), original(0)
@@ -3022,7 +3098,6 @@ Item_func_group_concat::Item_func_group_concat(THD *thd,
                                                Item_func_group_concat *item)
   :Item_sum(thd, item),
   tmp_table_param(item->tmp_table_param),
-  warning(item->warning),
   separator(item->separator),
   tree(item->tree),
   unique_filter(item->unique_filter),
@@ -3030,7 +3105,7 @@ Item_func_group_concat::Item_func_group_concat(THD *thd,
   context(item->context),
   arg_count_order(item->arg_count_order),
   arg_count_field(item->arg_count_field),
-  count_cut_values(item->count_cut_values),
+  row_count(item->row_count),
   distinct(item->distinct),
   warning_for_row(item->warning_for_row),
   always_null(item->always_null),
@@ -3073,15 +3148,6 @@ void Item_func_group_concat::cleanup()
   DBUG_ENTER("Item_func_group_concat::cleanup");
   Item_sum::cleanup();
 
-  /* Adjust warning message to include total number of cut values */
-  if (warning)
-  {
-    char warn_buff[MYSQL_ERRMSG_SIZE];
-    sprintf(warn_buff, ER(ER_CUT_VALUE_GROUP_CONCAT), count_cut_values);
-    warning->set_msg(current_thd, warn_buff);
-    warning= 0;
-  }
-
   /*
     Free table and tree if they belong to this item (if item have not pointer
     to original item from which was made copy => it own its objects )
@@ -3105,17 +3171,50 @@ void Item_func_group_concat::cleanup()
         delete unique_filter;
         unique_filter= NULL;
       }
-      if (warning)
-      {
-        char warn_buff[MYSQL_ERRMSG_SIZE];
-        sprintf(warn_buff, ER(ER_CUT_VALUE_GROUP_CONCAT), count_cut_values);
-        warning->set_msg(thd, warn_buff);
-        warning= 0;
-      }
     }
-    DBUG_ASSERT(tree == 0 && warning == 0);
+    DBUG_ASSERT(tree == 0);
+  }
+  /*
+    As the ORDER structures pointed to by the elements of the
+    'order' array may be modified in find_order_in_list() called
+    from Item_func_group_concat::setup() to point to runtime
+    created objects, we need to reset them back to the original
+    arguments of the function.
+  */
+  ORDER **order_ptr= order;
+  for (uint i= 0; i < arg_count_order; i++)
+  {
+
+    if ((*order_ptr)->counter_used)
+      args[arg_count_field + i]= (*order_ptr)->item_ptr;
+    order_ptr++;
   }
   DBUG_VOID_RETURN;
+}
+
+
+Field *Item_func_group_concat::make_string_field(TABLE *table)
+{
+  Field *field;
+  DBUG_ASSERT(collation.collation);
+  /*
+    max_characters is maximum number of characters
+    what can fit into max_length size. It's necessary
+    to use field size what allows to store group_concat
+    result without truncation. For this purpose we use
+    max_characters * CS->mbmaxlen.
+  */
+  const uint32 max_characters= max_length / collation.collation->mbminlen;
+  if (max_characters > CONVERT_IF_BIGGER_TO_BLOB)
+    field= new Field_blob(max_characters * collation.collation->mbmaxlen,
+                          maybe_null, name, collation.collation, TRUE);
+  else
+    field= new Field_varstring(max_characters * collation.collation->mbmaxlen,
+                               maybe_null, name, table->s, collation.collation);
+
+  if (field)
+    field->init(table);
+  return field;
 }
 
 
@@ -3174,8 +3273,12 @@ bool Item_func_group_concat::add()
   TREE_ELEMENT *el= 0;                          // Only for safety
   if (row_eligible && tree)
   {
+    DBUG_EXECUTE_IF("trigger_OOM_in_gconcat_add",
+                     DBUG_SET("+d,simulate_persistent_out_of_memory"););
     el= tree_insert(tree, table->record[0] + table->s->null_bytes, 0,
                     tree->custom_arg);
+    DBUG_EXECUTE_IF("trigger_OOM_in_gconcat_add",
+                    DBUG_SET("-d,simulate_persistent_out_of_memory"););
     /* check if there was enough memory to insert the row */
     if (!el)
       return 1;
@@ -3216,11 +3319,9 @@ Item_func_group_concat::fix_fields(THD *thd, Item **ref)
       return TRUE;
   }
 
-  if (agg_item_charsets(collation, func_name(),
-                        args,
-			/* skip charset aggregation for order columns */
-			arg_count - arg_count_order,
-			MY_COLL_ALLOW_CONV, 1))
+  /* skip charset aggregation for order columns */
+  if (agg_item_charsets_for_string_result(collation, func_name(),
+                                          args, arg_count - arg_count_order))
     return 1;
 
   result.set_charset(collation.collation);
@@ -3344,7 +3445,7 @@ bool Item_func_group_concat::setup(THD *thd)
   */
   if (!(table= create_tmp_table(thd, tmp_table_param, all_fields,
                                 (ORDER*) 0, 0, TRUE,
-                                (select_lex->options | thd->options),
+                                (select_lex->options | thd->variables.option_bits),
                                 HA_POS_ERROR, (char*) "")))
     DBUG_RETURN(TRUE);
   table->file->extra(HA_EXTRA_NO_ROWS);
@@ -3375,7 +3476,7 @@ bool Item_func_group_concat::setup(THD *thd)
     unique_filter= new Unique(group_concat_key_cmp_with_distinct,
                               (void*)this,
                               tree_key_length,
-                              thd->variables.max_heap_table_size);
+                              ram_limitation(thd));
   
   DBUG_RETURN(FALSE);
 }
@@ -3400,19 +3501,7 @@ String* Item_func_group_concat::val_str(String* str)
     return 0;
   if (no_appended && tree)
     /* Tree is used for sorting as in ORDER BY */
-    tree_walk(tree, (tree_walk_action)&dump_leaf_key, (void*)this,
-              left_root_right);
-  if (count_cut_values && !warning)
-  {
-    /*
-      ER_CUT_VALUE_GROUP_CONCAT needs an argument, but this gets set in
-      Item_func_group_concat::cleanup().
-    */
-    DBUG_ASSERT(table);
-    warning= push_warning(table->in_use, MYSQL_ERROR::WARN_LEVEL_WARN,
-                          ER_CUT_VALUE_GROUP_CONCAT,
-                          ER(ER_CUT_VALUE_GROUP_CONCAT));
-  }
+    tree_walk(tree, &dump_leaf_key, this, left_root_right);
   return &result;
 }
 

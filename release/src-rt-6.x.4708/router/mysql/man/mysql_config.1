@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBmysql_config\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBMYSQL_CONFIG\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBMYSQL_CONFIG\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,7 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" mysql_config
 .SH "NAME"
 mysql_config \- display options for compiling clients
 .SH "SYNOPSIS"
@@ -49,8 +48,6 @@ supports the following options\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: cflags option
-.\" cflags option: mysql_config
 \fB\-\-cflags\fR
 .sp
 Compiler flags to find include files and critical compiler flags and defines used when compiling the
@@ -68,8 +65,6 @@ for more portable options that contain only include paths\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: include option
-.\" include option: mysql_config
 \fB\-\-include\fR
 .sp
 Compiler options to find MySQL include files\&.
@@ -83,14 +78,12 @@ Compiler options to find MySQL include files\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: libmysqld-libs option
-.\" libmysqld-libs option: mysql_config
-.\" mysql_config: embedded option
-.\" embedded option: mysql_config
 \fB\-\-libmysqld\-libs\fR,
+\fB\-\-embedded\-libs\fR,
 \fB\-\-embedded\fR
 .sp
-Libraries and options required to link with the MySQL embedded server\&.
+Libraries and options required to link with
+libmysqld, the MySQL embedded server\&.
 .RE
 .sp
 .RS 4
@@ -101,8 +94,6 @@ Libraries and options required to link with the MySQL embedded server\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: libs option
-.\" libs option: mysql_config
 \fB\-\-libs\fR
 .sp
 Libraries and options required to link with the MySQL client library\&.
@@ -116,11 +107,11 @@ Libraries and options required to link with the MySQL client library\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: libs_r option
-.\" libs_r option: mysql_config
 \fB\-\-libs_r\fR
 .sp
-Libraries and options required to link with the thread\-safe MySQL client library\&.
+Libraries and options required to link with the thread\-safe MySQL client library\&. In MySQL 5\&.5, all client libraries are thread\-safe, so this option need not be used\&. The
+\fB\-\-libs\fR
+option can be used in all cases\&.
 .RE
 .sp
 .RS 4
@@ -131,11 +122,9 @@ Libraries and options required to link with the thread\-safe MySQL client librar
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: plugindir option
-.\" plugindir option: mysql_config
 \fB\-\-plugindir\fR
 .sp
-The default plugin directory path name, defined when configuring MySQL\&. This option was added in MySQL 5\&.1\&.24\&.
+The default plugin directory path name, defined when configuring MySQL\&.
 .RE
 .sp
 .RS 4
@@ -146,8 +135,6 @@ The default plugin directory path name, defined when configuring MySQL\&. This o
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: port option
-.\" port option: mysql_config
 \fB\-\-port\fR
 .sp
 The default TCP/IP port number, defined when configuring MySQL\&.
@@ -161,8 +148,6 @@ The default TCP/IP port number, defined when configuring MySQL\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: socket option
-.\" socket option: mysql_config
 \fB\-\-socket\fR
 .sp
 The default Unix socket file, defined when configuring MySQL\&.
@@ -176,8 +161,27 @@ The default Unix socket file, defined when configuring MySQL\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" mysql_config: version option
-.\" version option: mysql_config
+\fB\-\-variable=\fR\fB\fIvar_name\fR\fR
+.sp
+Display the value of the named configuration variable\&. Permitted
+\fIvar_name\fR
+values are
+pkgincludedir
+(the header file directory),
+pkglibdir
+(the library directory), and
+plugindir
+(the plugin directory)\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
 \fB\-\-version\fR
 .sp
 Version number for the MySQL distribution\&.
@@ -196,15 +200,20 @@ Usage: /usr/local/mysql/bin/mysql_config [options]
 Options:
   \-\-cflags         [\-I/usr/local/mysql/include/mysql \-mcpu=pentiumpro]
   \-\-include        [\-I/usr/local/mysql/include/mysql]
-  \-\-libs           [\-L/usr/local/mysql/lib/mysql \-lmysqlclient \-lz
-                    \-lz \-lcrypt \-lnsl \-lm]
+  \-\-libs           [\-L/usr/local/mysql/lib/mysql \-lmysqlclient
+                    \-lpthread \-lm \-lrt \-lssl \-lcrypto \-ldl]
   \-\-libs_r         [\-L/usr/local/mysql/lib/mysql \-lmysqlclient_r
-                    \-lz \-lpthread \-lcrypt \-lnsl \-lm \-lpthread]
+                    \-lpthread \-lm \-lrt \-lssl \-lcrypto \-ldl]
+  \-\-plugindir      [/usr/local/mysql/lib/plugin]
   \-\-socket         [/tmp/mysql\&.sock]
   \-\-port           [3306]
-  \-\-version        [5\&.1\&.69]
-  \-\-libmysqld\-libs [\-L/usr/local/mysql/lib/mysql \-lmysqld \-ldl
-                    \-lz \-lpthread \-lcrypt \-lnsl \-lm \-lpthread \-lrt]
+  \-\-version        [5\&.5\&.31]
+  \-\-libmysqld\-libs [\-L/usr/local/mysql/lib/mysql \-lmysqld
+                    \-lpthread \-lm \-lrt \-lssl \-lcrypto \-ldl \-lcrypt]
+  \-\-variable=VAR   VAR is one of:
+          pkgincludedir [/usr/local/mysql/include]
+          pkglibdir     [/usr/local/mysql/lib]
+          plugindir     [/usr/local/mysql/lib/plugin]
 .fi
 .if n \{\
 .RE
@@ -212,7 +221,7 @@ Options:
 .PP
 You can use
 \fBmysql_config\fR
-within a command line using backticks to include the output that it produces for a particular option\&. For example, to compile and link a MySQL client program, use
+within a command line using backticks to include the output that it produces for particular options\&. For example, to compile and link a MySQL client program, use
 \fBmysql_config\fR
 as follows:
 .sp
@@ -220,8 +229,8 @@ as follows:
 .RS 4
 .\}
 .nf
-shell> \fBgcc \-c `mysql_config \-\-cflags` progname\&.c\fR
-shell> \fBgcc \-o progname progname\&.o `mysql_config \-\-libs`\fR
+gcc \-c `mysql_config \-\-cflags` progname\&.c
+gcc \-o progname progname\&.o `mysql_config \-\-libs`
 .fi
 .if n \{\
 .RE
@@ -229,7 +238,7 @@ shell> \fBgcc \-o progname progname\&.o `mysql_config \-\-libs`\fR
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2005, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -252,6 +252,77 @@ char* States::useString()
 void States::SetError(YasslError ye)
 {
     what_ = ye;
+}
+
+
+// mark message recvd, check for duplicates, return 0 on success
+int States::SetMessageRecvd(HandShakeType hst)
+{
+    switch (hst) {
+        case hello_request:
+            break;  // could send more than one
+
+        case client_hello:
+            if (recvdMessages_.gotClientHello_)
+                return -1;
+            recvdMessages_.gotClientHello_ = 1;
+            break;
+
+        case server_hello:
+            if (recvdMessages_.gotServerHello_)
+                return -1;
+            recvdMessages_.gotServerHello_ = 1;
+            break;
+
+        case certificate:
+            if (recvdMessages_.gotCert_)
+                return -1;
+            recvdMessages_.gotCert_ = 1;
+            break;
+
+        case server_key_exchange:
+            if (recvdMessages_.gotServerKeyExchange_)
+                return -1;
+            recvdMessages_.gotServerKeyExchange_ = 1;
+            break;
+
+        case certificate_request:
+            if (recvdMessages_.gotCertRequest_)
+                return -1;
+            recvdMessages_.gotCertRequest_ = 1;
+            break;
+
+        case server_hello_done:
+            if (recvdMessages_.gotServerHelloDone_)
+                return -1;
+            recvdMessages_.gotServerHelloDone_ = 1;
+            break;
+
+        case certificate_verify:
+            if (recvdMessages_.gotCertVerify_)
+                return -1;
+            recvdMessages_.gotCertVerify_ = 1;
+            break;
+
+        case client_key_exchange:
+            if (recvdMessages_.gotClientKeyExchange_)
+                return -1;
+            recvdMessages_.gotClientKeyExchange_ = 1;
+            break;
+
+        case finished:
+            if (recvdMessages_.gotFinished_)
+                return -1;
+            recvdMessages_.gotFinished_ = 1;
+            break;
+
+
+        default:
+            return -1;
+
+    }
+
+    return 0;
 }
 
 
@@ -736,6 +807,19 @@ void SSL::set_random(const opaque* random, ConnectionEnd sender)
 // store client pre master secret
 void SSL::set_preMaster(const opaque* pre, uint sz)
 {
+    uint i(0);  // trim leading zeros
+    uint fullSz(sz);
+
+    while (i++ < fullSz && *pre == 0) {
+        sz--;
+        pre++;
+    }
+
+    if (sz == 0) {
+        SetError(bad_input);
+        return;
+    }
+
     secure_.use_connection().AllocPreSecret(sz);
     memcpy(secure_.use_connection().pre_master_secret_, pre, sz);
 }
@@ -853,6 +937,8 @@ void SSL::order_error()
 // Create and store the master secret see page 32, 6.1
 void SSL::makeMasterSecret()
 {
+    if (GetError()) return;
+
     if (isTLS())
         makeTLSMasterSecret();
     else {
@@ -1199,6 +1285,11 @@ void SSL::verifyState(const HandShakeHeader& hsHeader)
         return;
     }
 
+    if (states_.SetMessageRecvd(hsHeader.get_handshakeType()) != 0) {
+        order_error();
+        return;
+    }
+
     if (secure_.get_parms().entity_ == client_end)
         verifyClientState(hsHeader.get_handshakeType());
     else
@@ -1308,12 +1399,17 @@ void SSL::matchSuite(const opaque* peer, uint length)
     // start with best, if a match we are good, Ciphers are at odd index
     // since all SSL and TLS ciphers have 0x00 first byte
     for (uint i = 1; i < secure_.get_parms().suites_size_; i += 2)
-        for (uint j = 1; j < length; j+= 2)
-            if (secure_.use_parms().suites_[i] == peer[j]) {
+        for (uint j = 0; (j + 1) < length; j+= 2) {
+            if (peer[j] != 0x00) {
+                continue; // only 0x00 first byte supported
+            }
+
+            if (secure_.use_parms().suites_[i] == peer[j + 1]) {
                 secure_.use_parms().suite_[0] = 0x00;
-                secure_.use_parms().suite_[1] = peer[j];
+                secure_.use_parms().suite_[1] = peer[j + 1];
                 return;
             }
+        }
 
     SetError(match_error);
 }
@@ -1464,7 +1560,9 @@ void SSL_SESSION::CopyX509(X509* x)
 
     peerX509_ = NEW_YS X509(issuer->GetName(), issuer->GetLength(),
         subject->GetName(), subject->GetLength(), (const char*) before->data,
-        before->length, (const char*) after->data, after->length);
+        before->length, (const char*) after->data, after->length,
+        issuer->GetCnPosition(), issuer->GetCnLength(),
+        subject->GetCnPosition(), subject->GetCnLength());
 }
 
 
@@ -2381,8 +2479,8 @@ void Security::set_resuming(bool b)
 }
 
 
-X509_NAME::X509_NAME(const char* n, size_t sz)
-    : name_(0), sz_(sz)
+X509_NAME::X509_NAME(const char* n, size_t sz, int pos, int len)
+    : name_(0), sz_(sz), cnPosition_(pos), cnLen_(len)
 {
     if (sz) {
         name_ = NEW_YS char[sz];
@@ -2412,8 +2510,9 @@ size_t X509_NAME::GetLength() const
 
 
 X509::X509(const char* i, size_t iSz, const char* s, size_t sSz,
-           const char* b, int bSz, const char* a, int aSz)
-    : issuer_(i, iSz), subject_(s, sSz),
+           const char* b, int bSz, const char* a, int aSz, int issPos,
+           int issLen, int subPos, int subLen)
+    : issuer_(i, iSz, issPos, issLen), subject_(s, sSz, subPos, subLen),
       beforeDate_(b, bSz), afterDate_(a, aSz)
 {}
 
@@ -2447,17 +2546,19 @@ ASN1_STRING* X509_NAME::GetEntry(int i)
     if (i < 0 || i >= int(sz_))
         return 0;
 
+    if (i != cnPosition_ || cnLen_ <= 0)   // only entry currently supported
+        return 0;
+
+    if (cnLen_ > int(sz_-i))   // make sure there's room in read buffer
+        return 0;
+
     if (entry_.data)
         ysArrayDelete(entry_.data);
-    entry_.data = NEW_YS byte[sz_];       // max size;
+    entry_.data = NEW_YS byte[cnLen_+1];       // max size;
 
-    memcpy(entry_.data, &name_[i], sz_ - i);
-    if (entry_.data[sz_ -i - 1]) {
-        entry_.data[sz_ - i] = 0;
-        entry_.length = int(sz_) - i;
-    }
-    else
-        entry_.length = int(sz_) - i - 1;
+    memcpy(entry_.data, &name_[i], cnLen_);
+    entry_.data[cnLen_] = 0;
+    entry_.length = cnLen_;
     entry_.type = 0;
 
     return &entry_;
@@ -2534,8 +2635,9 @@ ASN1_STRING* StringHolder::GetString()
     int DeCompress(input_buffer& in, int sz, input_buffer& out)
     {
         byte tmp[LENGTH_SZ];
-    
-        in.read(tmp, sizeof(tmp));
+   
+        tmp[0] = in[AUTO]; 
+        tmp[1] = in[AUTO]; 
 
         uint16 len;
         ato16(tmp, len);

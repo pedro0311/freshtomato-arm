@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,12 +11,20 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
   @defgroup Semantic_Analysis Semantic Analysis
 */
+
+#ifndef SQL_LEX_INCLUDED
+#define SQL_LEX_INCLUDED
+
+#include "violite.h"                            /* SSL_type */
+#include "sql_trigger.h"
+#include "item.h"               /* From item_subselect.h: subselect_union_engine */
+#include "thr_lock.h"                  /* thr_lock_type, TL_UNLOCK */
+#include "mem_root_array.h"
 
 /* YACC and LEX Definitions */
 
@@ -32,26 +39,83 @@ class sp_pcontext;
 class st_alter_tablespace;
 class partition_info;
 class Event_parse_data;
+class set_var_base;
+class sys_var;
+class Item_func_match;
+class Alter_drop;
+class Alter_column;
+class Key;
+class File_parser;
+class Key_part_spec;
+
+#ifdef MYSQL_SERVER
+/*
+  There are 8 different type of table access so there is no more than
+  combinations 2^8 = 256:
+
+  . STMT_READS_TRANS_TABLE
+
+  . STMT_READS_NON_TRANS_TABLE
+
+  . STMT_READS_TEMP_TRANS_TABLE
+
+  . STMT_READS_TEMP_NON_TRANS_TABLE
+
+  . STMT_WRITES_TRANS_TABLE
+
+  . STMT_WRITES_NON_TRANS_TABLE
+
+  . STMT_WRITES_TEMP_TRANS_TABLE
+
+  . STMT_WRITES_TEMP_NON_TRANS_TABLE
+
+  The unsafe conditions for each combination is represented within a byte
+  and stores the status of the option --binlog-direct-non-trans-updates,
+  whether the trx-cache is empty or not, and whether the isolation level
+  is lower than ISO_REPEATABLE_READ:
+
+  . option (OFF/ON)
+  . trx-cache (empty/not empty)
+  . isolation (>= ISO_REPEATABLE_READ / < ISO_REPEATABLE_READ)
+
+  bits 0 : . OFF, . empty, . >= ISO_REPEATABLE_READ
+  bits 1 : . OFF, . empty, . < ISO_REPEATABLE_READ
+  bits 2 : . OFF, . not empty, . >= ISO_REPEATABLE_READ
+  bits 3 : . OFF, . not empty, . < ISO_REPEATABLE_READ
+  bits 4 : . ON, . empty, . >= ISO_REPEATABLE_READ
+  bits 5 : . ON, . empty, . < ISO_REPEATABLE_READ
+  bits 6 : . ON, . not empty, . >= ISO_REPEATABLE_READ
+  bits 7 : . ON, . not empty, . < ISO_REPEATABLE_READ
+*/
+extern uint binlog_unsafe_map[256];
+/*
+  Initializes the array with unsafe combinations and its respective
+  conditions.
+*/
+void binlog_unsafe_map_init();
+#endif
+
+/**
+  used by the parser to store internal variable name
+*/
+struct sys_var_with_base
+{
+  sys_var *var;
+  LEX_STRING base_name;
+};
 
 #ifdef MYSQL_SERVER
 /*
   The following hack is needed because mysql_yacc.cc does not define
   YYSTYPE before including this file
 */
-
-#include "set_var.h"
-#include "mem_root_array.h"
-
 #ifdef MYSQL_YACC
 #define LEX_YYSTYPE void *
 #else
 #include "lex_symbol.h"
 #if MYSQL_LEX
-#  if YACC_HEXT_HH
-#    include "sql_yacc.hh"
-#  else
-#    include "sql_yacc.h"
-#  endif
+#include "item_func.h"            /* Cast_target used in sql_yacc.h */
+#include "sql_yacc.h"
 #define LEX_YYSTYPE YYSTYPE *
 #else
 #define LEX_YYSTYPE void *
@@ -93,15 +157,15 @@ enum enum_sql_command {
   SQLCOM_ROLLBACK, SQLCOM_ROLLBACK_TO_SAVEPOINT,
   SQLCOM_COMMIT, SQLCOM_SAVEPOINT, SQLCOM_RELEASE_SAVEPOINT,
   SQLCOM_SLAVE_START, SQLCOM_SLAVE_STOP,
-  SQLCOM_BEGIN, SQLCOM_LOAD_MASTER_TABLE, SQLCOM_CHANGE_MASTER,
-  SQLCOM_RENAME_TABLE, SQLCOM_BACKUP_TABLE, SQLCOM_RESTORE_TABLE,
+  SQLCOM_BEGIN, SQLCOM_CHANGE_MASTER,
+  SQLCOM_RENAME_TABLE,
   SQLCOM_RESET, SQLCOM_PURGE, SQLCOM_PURGE_BEFORE, SQLCOM_SHOW_BINLOGS,
-  SQLCOM_SHOW_OPEN_TABLES, SQLCOM_LOAD_MASTER_DATA,
+  SQLCOM_SHOW_OPEN_TABLES,
   SQLCOM_HA_OPEN, SQLCOM_HA_CLOSE, SQLCOM_HA_READ,
   SQLCOM_SHOW_SLAVE_HOSTS, SQLCOM_DELETE_MULTI, SQLCOM_UPDATE_MULTI,
-  SQLCOM_SHOW_BINLOG_EVENTS, SQLCOM_SHOW_NEW_MASTER, SQLCOM_DO,
+  SQLCOM_SHOW_BINLOG_EVENTS, SQLCOM_DO,
   SQLCOM_SHOW_WARNS, SQLCOM_EMPTY_QUERY, SQLCOM_SHOW_ERRORS,
-  SQLCOM_SHOW_COLUMN_TYPES, SQLCOM_SHOW_STORAGE_ENGINES, SQLCOM_SHOW_PRIVILEGES,
+  SQLCOM_SHOW_STORAGE_ENGINES, SQLCOM_SHOW_PRIVILEGES,
   SQLCOM_HELP, SQLCOM_CREATE_USER, SQLCOM_DROP_USER, SQLCOM_RENAME_USER,
   SQLCOM_REVOKE_ALL, SQLCOM_CHECKSUM,
   SQLCOM_CREATE_PROCEDURE, SQLCOM_CREATE_SPFUNCTION, SQLCOM_CALL,
@@ -125,7 +189,8 @@ enum enum_sql_command {
   SQLCOM_SHOW_CREATE_TRIGGER,
   SQLCOM_ALTER_DB_UPGRADE,
   SQLCOM_SHOW_PROFILE, SQLCOM_SHOW_PROFILES,
-
+  SQLCOM_SIGNAL, SQLCOM_RESIGNAL,
+  SQLCOM_SHOW_RELAYLOG_EVENTS, 
   /*
     When a command is added here, be sure it's also added in mysqld.cc
     in "struct show_var_st status_vars[]= {" ...
@@ -187,6 +252,12 @@ enum enum_drop_mode
   DROP_RESTRICT // RESTRICT option
 };
 
+/* Options to add_table_to_list() */
+#define TL_OPTION_UPDATING	1
+#define TL_OPTION_FORCE_INDEX	2
+#define TL_OPTION_IGNORE_LEAVES 4
+#define TL_OPTION_ALIAS         8
+
 typedef List<Item> List_item;
 typedef Mem_root_array<ORDER*, true> Group_list_ptrs;
 
@@ -200,8 +271,7 @@ typedef struct st_lex_server_options
 
 
 /**
-  Structure to hold parameters for CHANGE MASTER or START/STOP SLAVE
-  or SHOW NEW MASTER.
+  Structure to hold parameters for CHANGE MASTER, START SLAVE, and STOP SLAVE.
 
   Remark: this should not be confused with Master_info (and perhaps
   would better be renamed to st_lex_replication_info).  Some fields,
@@ -211,19 +281,26 @@ typedef struct st_lex_master_info
 {
   char *host, *user, *password, *log_file_name;
   uint port, connect_retry;
+  float heartbeat_period;
   ulonglong pos;
   ulong server_id;
   /*
     Enum is used for making it possible to detect if the user
     changed variable or if it should be left at old value
    */
-  enum {SSL_UNCHANGED, SSL_DISABLE, SSL_ENABLE}
-    ssl, ssl_verify_server_cert;
+  enum {LEX_MI_UNCHANGED, LEX_MI_DISABLE, LEX_MI_ENABLE}
+    ssl, ssl_verify_server_cert, heartbeat_opt, repl_ignore_server_ids_opt;
   char *ssl_key, *ssl_cert, *ssl_ca, *ssl_capath, *ssl_cipher;
   char *relay_log_name;
   ulong relay_log_pos;
+  DYNAMIC_ARRAY repl_ignore_server_ids;
+  ulong server_ids_buffer[2];
 } LEX_MASTER_INFO;
 
+typedef struct st_lex_reset_slave
+{
+  bool all;
+} LEX_RESET_SLAVE;
 
 enum sub_select_type
 {
@@ -402,9 +479,11 @@ public:
     Base class for st_select_lex (SELECT_LEX) & 
     st_select_lex_unit (SELECT_LEX_UNIT)
 */
-struct st_lex;
+struct LEX;
 class st_select_lex;
 class st_select_lex_unit;
+
+
 class st_select_lex_node {
 protected:
   st_select_lex_node *next, **prev,   /* neighbor list */
@@ -442,8 +521,17 @@ public:
   { return (void*) alloc_root(mem_root, (uint) size); }
   static void operator delete(void *ptr,size_t size) { TRASH(ptr, size); }
   static void operator delete(void *ptr, MEM_ROOT *mem_root) {}
-  st_select_lex_node(): linkage(UNSPECIFIED_TYPE) {}
+
+  // Ensures that at least all members used during cleanup() are initialized.
+  st_select_lex_node()
+    : next(NULL), prev(NULL),
+      master(NULL), slave(NULL),
+      link_next(NULL), link_prev(NULL),
+      linkage(UNSPECIFIED_TYPE)
+  {
+  }
   virtual ~st_select_lex_node() {}
+
   inline st_select_lex_node* get_master() { return master; }
   virtual void init_query();
   virtual void init_select();
@@ -467,12 +555,13 @@ public:
 					LEX_STRING *alias,
 					ulong table_options,
 					thr_lock_type flags= TL_UNLOCK,
+                                        enum_mdl_type mdl_type= MDL_SHARED_READ,
 					List<Index_hint> *hints= 0,
                                         LEX_STRING *option= 0);
   virtual void set_lock_for_tables(thr_lock_type lock_type) {}
 
   friend class st_select_lex_unit;
-  friend bool mysql_new_select(struct st_lex *lex, bool move_down);
+  friend bool mysql_new_select(LEX *lex, bool move_down);
   friend bool mysql_make_view(THD *thd, File_parser *parser,
                               TABLE_LIST *table, uint flags);
 private:
@@ -489,6 +578,8 @@ class select_result;
 class JOIN;
 class select_union;
 class Procedure;
+
+
 class st_select_lex_unit: public st_select_lex_node {
 protected:
   TABLE_LIST result_table_list;
@@ -500,6 +591,14 @@ protected:
   bool saved_error;
 
 public:
+  // Ensures that at least all members used during cleanup() are initialized.
+  st_select_lex_unit()
+    : union_result(NULL), table(NULL), result(NULL),
+      cleaned(false),
+      fake_select_lex(NULL)
+  {
+  }
+
   bool  prepared, // prepare phase already performed for UNION (unit)
     optimized, // optimize phase already performed for UNION (unit)
     executed, // already executed
@@ -543,11 +642,11 @@ public:
   st_select_lex* outer_select();
   st_select_lex* first_select()
   {
-    return my_reinterpret_cast(st_select_lex*)(slave);
+    return reinterpret_cast<st_select_lex*>(slave);
   }
   st_select_lex_unit* next_unit()
   {
-    return my_reinterpret_cast(st_select_lex_unit*)(next);
+    return reinterpret_cast<st_select_lex_unit*>(next);
   }
   st_select_lex* return_after_parsing() { return return_to; }
   void exclude_level();
@@ -592,7 +691,7 @@ public:
   /* Saved values of the WHERE and HAVING clauses*/
   Item::cond_result cond_value, having_value;
   /* point on lex in which it was created, used in view subquery detection */
-  st_lex *parent_lex;
+  LEX *parent_lex;
   enum olap_type olap;
   /* FROM clause - points to the beginning of the TABLE_LIST::next_local list. */
   SQL_I_List<TABLE_LIST>  table_list;
@@ -632,6 +731,7 @@ public:
   Item *select_limit, *offset_limit;  /* LIMIT clause parameters */
   // Arrays of pointers to top elements of all_fields list
   Item **ref_pointer_array;
+  size_t ref_pointer_array_size; // Number of elements in array.
 
   /*
     number of items in select_list and HAVING clause used to get number
@@ -649,11 +749,6 @@ public:
   uint select_n_where_fields;
   enum_parsing_place parsing_place; /* where we are parsing expression */
   bool with_sum_func;   /* sum function indicator */
-  /* 
-    PS or SP cond natural joins was alredy processed with permanent
-    arena and all additional items which we need alredy stored in it
-  */
-  bool conds_processed_with_permanent_arena;
 
   ulong table_join_options;
   uint in_sum_expr;
@@ -708,14 +803,6 @@ public:
 
   List<udf_func>     udf_list;                  /* udf function calls stack */
 
-  /**
-    Per sub-query locking strategy.
-    Note: This variable might interfer with the corresponding statement-level
-    variable Lex::lock_option because on how different parser rules depend
-    on eachother.
-  */
-  thr_lock_type lock_option;
-
   /* 
     This is a copy of the original JOIN USING list that comes from
     the parser. The parser :
@@ -768,6 +855,7 @@ public:
 				LEX_STRING *alias,
 				ulong table_options,
 				thr_lock_type flags= TL_UNLOCK,
+                                enum_mdl_type mdl_type= MDL_SHARED_READ,
 				List<Index_hint> *hints= 0,
                                 LEX_STRING *option= 0);
   TABLE_LIST* get_table_list();
@@ -881,19 +969,19 @@ inline bool st_select_lex_unit::is_union ()
 #define ALTER_CHANGE_COLUMN_DEFAULT (1L << 8)
 #define ALTER_KEYS_ONOFF        (1L << 9)
 #define ALTER_CONVERT           (1L << 10)
-#define ALTER_FORCE		(1L << 11)
-#define ALTER_RECREATE          (1L << 12)
-#define ALTER_ADD_PARTITION     (1L << 13)
-#define ALTER_DROP_PARTITION    (1L << 14)
-#define ALTER_COALESCE_PARTITION (1L << 15)
-#define ALTER_REORGANIZE_PARTITION (1L << 16) 
-#define ALTER_PARTITION          (1L << 17)
-#define ALTER_ADMIN_PARTITION    (1L << 18)
-#define ALTER_TABLE_REORG        (1L << 19)
-#define ALTER_REBUILD_PARTITION  (1L << 20)
-#define ALTER_ALL_PARTITION      (1L << 21)
-#define ALTER_REMOVE_PARTITIONING (1L << 22)
-#define ALTER_FOREIGN_KEY        (1L << 23)
+#define ALTER_RECREATE          (1L << 11)
+#define ALTER_ADD_PARTITION     (1L << 12)
+#define ALTER_DROP_PARTITION    (1L << 13)
+#define ALTER_COALESCE_PARTITION (1L << 14)
+#define ALTER_REORGANIZE_PARTITION (1L << 15)
+#define ALTER_PARTITION          (1L << 16)
+#define ALTER_ADMIN_PARTITION    (1L << 17)
+#define ALTER_TABLE_REORG        (1L << 18)
+#define ALTER_REBUILD_PARTITION  (1L << 19)
+#define ALTER_ALL_PARTITION      (1L << 20)
+#define ALTER_REMOVE_PARTITIONING (1L << 21)
+#define ALTER_FOREIGN_KEY        (1L << 22)
+#define ALTER_TRUNCATE_PARTITION (1L << 23)
 
 enum enum_alter_table_change_level
 {
@@ -901,6 +989,24 @@ enum enum_alter_table_change_level
   ALTER_TABLE_DATA_CHANGED= 1,
   ALTER_TABLE_INDEX_CHANGED= 2
 };
+
+
+/**
+  Temporary hack to enable a class bound forward declaration
+  of the enum_alter_table_change_level enumeration. To be
+  removed once Alter_info is moved to the sql_alter.h
+  header.
+*/
+class Alter_table_change_level
+{
+private:
+  typedef enum enum_alter_table_change_level enum_type;
+  enum_type value;
+public:
+  void operator = (enum_type v) { value = v; }
+  operator enum_type () { return value; }
+};
+
 
 /**
   @brief Parsing data for CREATE or ALTER TABLE.
@@ -920,7 +1026,7 @@ public:
   enum enum_enable_or_disable   keys_onoff;
   enum tablespace_op_type       tablespace_op;
   List<char>                    partition_names;
-  uint                          no_parts;
+  uint                          num_parts;
   enum_alter_table_change_level change_level;
   Create_field                 *datetime_field;
   bool                          error_if_not_empty;
@@ -930,7 +1036,7 @@ public:
     flags(0),
     keys_onoff(LEAVE_AS_IS),
     tablespace_op(NO_TABLESPACE_OP),
-    no_parts(0),
+    num_parts(0),
     change_level(ALTER_TABLE_METADATA_ONLY),
     datetime_field(NULL),
     error_if_not_empty(FALSE)
@@ -945,7 +1051,7 @@ public:
     flags= 0;
     keys_onoff= LEAVE_AS_IS;
     tablespace_op= NO_TABLESPACE_OP;
-    no_parts= 0;
+    num_parts= 0;
     partition_names.empty();
     change_level= ALTER_TABLE_METADATA_ONLY;
     datetime_field= 0;
@@ -965,6 +1071,8 @@ struct st_sp_chistics
   enum enum_sp_data_access daccess;
 };
 
+extern const LEX_STRING null_lex_str;
+extern const LEX_STRING empty_lex_str;
 
 struct st_trg_chistics
 {
@@ -977,23 +1085,34 @@ extern sys_var *trg_new_row_fake_var;
 enum xa_option_words {XA_NONE, XA_JOIN, XA_RESUME, XA_ONE_PHASE,
                       XA_SUSPEND, XA_FOR_MIGRATE};
 
+extern const LEX_STRING null_lex_str;
 
-struct Sroutine_hash_entry;
+class Sroutine_hash_entry;
 
 /*
-  Class representing list of all tables used by statement.
-  It also contains information about stored functions used by statement
+  Class representing list of all tables used by statement and other
+  information which is necessary for opening and locking its tables,
+  like SQL command for this statement.
+
+  Also contains information about stored functions used by statement
   since during its execution we may have to add all tables used by its
   stored functions/triggers to this list in order to pre-open and lock
   them.
 
-  Also used by st_lex::reset_n_backup/restore_backup_query_tables_list()
+  Also used by LEX::reset_n_backup/restore_backup_query_tables_list()
   methods to save and restore this information.
 */
 
 class Query_tables_list
 {
 public:
+  /**
+    SQL command for this statement. Part of this class since the
+    process of opening and locking tables for the statement needs
+    this information to determine correct type of lock for some of
+    the tables.
+  */
+  enum_sql_command sql_command;
   /* Global list of all tables used by this statement */
   TABLE_LIST *query_tables;
   /* Pointer to next_global member of last element in the previous list. */
@@ -1072,25 +1191,467 @@ public:
     }
   }
 
+  /** Return a pointer to the last element in query table list. */
+  TABLE_LIST *last_table()
+  {
+    /* Don't use offsetof() macro in order to avoid warnings. */
+    return query_tables ?
+           (TABLE_LIST*) ((char*) query_tables_last -
+                          ((char*) &(query_tables->next_global) -
+                           (char*) query_tables)) :
+           0;
+  }
+
   /**
-     Has the parser/scanner detected that this statement is unsafe?
-   */
+    Enumeration listing of all types of unsafe statement.
+
+    @note The order of elements of this enumeration type must
+    correspond to the order of the elements of the @c explanations
+    array defined in the body of @c THD::issue_unsafe_warnings.
+  */
+  enum enum_binlog_stmt_unsafe {
+    /**
+      SELECT..LIMIT is unsafe because the set of rows returned cannot
+      be predicted.
+    */
+    BINLOG_STMT_UNSAFE_LIMIT= 0,
+    /**
+      INSERT DELAYED is unsafe because the time when rows are inserted
+      cannot be predicted.
+    */
+    BINLOG_STMT_UNSAFE_INSERT_DELAYED,
+    /**
+      Access to log tables is unsafe because slave and master probably
+      log different things.
+    */
+    BINLOG_STMT_UNSAFE_SYSTEM_TABLE,
+    /**
+      Inserting into an autoincrement column in a stored routine is unsafe.
+      Even with just one autoincrement column, if the routine is invoked more than 
+      once slave is not guaranteed to execute the statement graph same way as 
+      the master.
+      And since it's impossible to estimate how many times a routine can be invoked at 
+      the query pre-execution phase (see lock_tables), the statement is marked
+      pessimistically unsafe. 
+    */
+    BINLOG_STMT_UNSAFE_AUTOINC_COLUMNS,
+    /**
+      Using a UDF (user-defined function) is unsafe.
+    */
+    BINLOG_STMT_UNSAFE_UDF,
+    /**
+      Using most system variables is unsafe, because slave may run
+      with different options than master.
+    */
+    BINLOG_STMT_UNSAFE_SYSTEM_VARIABLE,
+    /**
+      Using some functions is unsafe (e.g., UUID).
+    */
+    BINLOG_STMT_UNSAFE_SYSTEM_FUNCTION,
+
+    /**
+      Mixing transactional and non-transactional statements are unsafe if
+      non-transactional reads or writes are occur after transactional
+      reads or writes inside a transaction.
+    */
+    BINLOG_STMT_UNSAFE_NONTRANS_AFTER_TRANS,
+
+    /**
+      Mixing self-logging and non-self-logging engines in a statement
+      is unsafe.
+    */
+    BINLOG_STMT_UNSAFE_MULTIPLE_ENGINES_AND_SELF_LOGGING_ENGINE,
+
+    /**
+      Statements that read from both transactional and non-transactional
+      tables and write to any of them are unsafe.
+    */
+    BINLOG_STMT_UNSAFE_MIXED_STATEMENT,
+
+    /**
+      INSERT...IGNORE SELECT is unsafe because which rows are ignored depends
+      on the order that rows are retrieved by SELECT. This order cannot be
+      predicted and may differ on master and the slave.
+    */
+    BINLOG_STMT_UNSAFE_INSERT_IGNORE_SELECT,
+
+    /**
+      INSERT...SELECT...UPDATE is unsafe because which rows are updated depends
+      on the order that rows are retrieved by SELECT. This order cannot be
+      predicted and may differ on master and the slave.
+    */
+    BINLOG_STMT_UNSAFE_INSERT_SELECT_UPDATE,
+
+    /**
+     Query that writes to a table with auto_inc column after selecting from 
+     other tables are unsafe as the order in which the rows are retrieved by
+     select may differ on master and slave.
+    */
+    BINLOG_STMT_UNSAFE_WRITE_AUTOINC_SELECT,
+
+    /**
+      INSERT...REPLACE SELECT is unsafe because which rows are replaced depends
+      on the order that rows are retrieved by SELECT. This order cannot be
+      predicted and may differ on master and the slave.
+    */
+    BINLOG_STMT_UNSAFE_REPLACE_SELECT,
+
+    /**
+      CREATE TABLE... IGNORE... SELECT is unsafe because which rows are ignored
+      depends on the order that rows are retrieved by SELECT. This order cannot
+      be predicted and may differ on master and the slave.
+    */
+    BINLOG_STMT_UNSAFE_CREATE_IGNORE_SELECT,
+
+    /**
+      CREATE TABLE...REPLACE... SELECT is unsafe because which rows are replaced
+      depends on the order that rows are retrieved from SELECT. This order
+      cannot be predicted and may differ on master and the slave
+    */
+    BINLOG_STMT_UNSAFE_CREATE_REPLACE_SELECT,
+
+    /**
+      CREATE TABLE...SELECT on a table with auto-increment column is unsafe
+      because which rows are replaced depends on the order that rows are
+      retrieved from SELECT. This order cannot be predicted and may differ on
+      master and the slave
+    */
+    BINLOG_STMT_UNSAFE_CREATE_SELECT_AUTOINC,
+
+    /**
+      UPDATE...IGNORE is unsafe because which rows are ignored depends on the
+      order that rows are updated. This order cannot be predicted and may differ
+      on master and the slave.
+    */
+    BINLOG_STMT_UNSAFE_UPDATE_IGNORE,
+
+    /**
+      INSERT... ON DUPLICATE KEY UPDATE on a table with more than one
+      UNIQUE KEYS  is unsafe.
+    */
+    BINLOG_STMT_UNSAFE_INSERT_TWO_KEYS,
+
+    /**
+       INSERT into auto-inc field which is not the first part of composed
+       primary key.
+    */
+    BINLOG_STMT_UNSAFE_AUTOINC_NOT_FIRST,
+
+    /* The last element of this enumeration type. */
+    BINLOG_STMT_UNSAFE_COUNT
+  };
+  /**
+    This has all flags from 0 (inclusive) to BINLOG_STMT_FLAG_COUNT
+    (exclusive) set.
+  */
+  static const int BINLOG_STMT_UNSAFE_ALL_FLAGS=
+    ((1 << BINLOG_STMT_UNSAFE_COUNT) - 1);
+
+  /**
+    Maps elements of enum_binlog_stmt_unsafe to error codes.
+  */
+  static const int binlog_stmt_unsafe_errcode[BINLOG_STMT_UNSAFE_COUNT];
+
+  /**
+    Determine if this statement is marked as unsafe.
+
+    @retval 0 if the statement is not marked as unsafe.
+    @retval nonzero if the statement is marked as unsafe.
+  */
   inline bool is_stmt_unsafe() const {
-    return binlog_stmt_flags & (1U << BINLOG_STMT_FLAG_UNSAFE);
+    return get_stmt_unsafe_flags() != 0;
+  }
+
+  inline bool is_stmt_unsafe(enum_binlog_stmt_unsafe unsafe)
+  {
+    return binlog_stmt_flags & (1 << unsafe);
   }
 
   /**
-     Flag the current (top-level) statement as unsafe.
+    Flag the current (top-level) statement as unsafe.
+    The flag will be reset after the statement has finished.
 
-     The flag will be reset after the statement has finished.
-
-   */
-  inline void set_stmt_unsafe() {
-    binlog_stmt_flags|= (1U << BINLOG_STMT_FLAG_UNSAFE);
+    @param unsafe_type The type of unsafety: one of the @c
+    BINLOG_STMT_FLAG_UNSAFE_* flags in @c enum_binlog_stmt_flag.
+  */
+  inline void set_stmt_unsafe(enum_binlog_stmt_unsafe unsafe_type) {
+    DBUG_ENTER("set_stmt_unsafe");
+    DBUG_ASSERT(unsafe_type >= 0 && unsafe_type < BINLOG_STMT_UNSAFE_COUNT);
+    binlog_stmt_flags|= (1U << unsafe_type);
+    DBUG_VOID_RETURN;
   }
 
+  /**
+    Set the bits of binlog_stmt_flags determining the type of
+    unsafeness of the current statement.  No existing bits will be
+    cleared, but new bits may be set.
+
+    @param flags A binary combination of zero or more bits, (1<<flag)
+    where flag is a member of enum_binlog_stmt_unsafe.
+  */
+  inline void set_stmt_unsafe_flags(uint32 flags) {
+    DBUG_ENTER("set_stmt_unsafe_flags");
+    DBUG_ASSERT((flags & ~BINLOG_STMT_UNSAFE_ALL_FLAGS) == 0);
+    binlog_stmt_flags|= flags;
+    DBUG_VOID_RETURN;
+  }
+
+  /**
+    Return a binary combination of all unsafe warnings for the
+    statement.  If the statement has been marked as unsafe by the
+    'flag' member of enum_binlog_stmt_unsafe, then the return value
+    from this function has bit (1<<flag) set to 1.
+  */
+  inline uint32 get_stmt_unsafe_flags() const {
+    DBUG_ENTER("get_stmt_unsafe_flags");
+    DBUG_RETURN(binlog_stmt_flags & BINLOG_STMT_UNSAFE_ALL_FLAGS);
+  }
+
+  /**
+    Mark the current statement as safe; i.e., clear all bits in
+    binlog_stmt_flags that correspond to elements of
+    enum_binlog_stmt_unsafe.
+  */
   inline void clear_stmt_unsafe() {
-    binlog_stmt_flags&= ~(1U << BINLOG_STMT_FLAG_UNSAFE);
+    DBUG_ENTER("clear_stmt_unsafe");
+    binlog_stmt_flags&= ~BINLOG_STMT_UNSAFE_ALL_FLAGS;
+    DBUG_VOID_RETURN;
+  }
+
+  /**
+    Determine if this statement is a row injection.
+
+    @retval 0 if the statement is not a row injection
+    @retval nonzero if the statement is a row injection
+  */
+  inline bool is_stmt_row_injection() const {
+    return binlog_stmt_flags &
+      (1U << (BINLOG_STMT_UNSAFE_COUNT + BINLOG_STMT_TYPE_ROW_INJECTION));
+  }
+
+  /**
+    Flag the statement as a row injection.  A row injection is either
+    a BINLOG statement, or a row event in the relay log executed by
+    the slave SQL thread.
+  */
+  inline void set_stmt_row_injection() {
+    DBUG_ENTER("set_stmt_row_injection");
+    binlog_stmt_flags|=
+      (1U << (BINLOG_STMT_UNSAFE_COUNT + BINLOG_STMT_TYPE_ROW_INJECTION));
+    DBUG_VOID_RETURN;
+  }
+
+  enum enum_stmt_accessed_table
+  {
+    /*
+       If a transactional table is about to be read. Note that
+       a write implies a read.
+    */
+    STMT_READS_TRANS_TABLE= 0,
+    /*
+       If a non-transactional table is about to be read. Note that
+       a write implies a read.
+    */
+    STMT_READS_NON_TRANS_TABLE,
+    /*
+       If a temporary transactional table is about to be read. Note
+       that a write implies a read.
+    */
+    STMT_READS_TEMP_TRANS_TABLE,
+    /*
+       If a temporary non-transactional table is about to be read. Note
+      that a write implies a read.
+    */
+    STMT_READS_TEMP_NON_TRANS_TABLE,
+    /*
+       If a transactional table is about to be updated.
+    */
+    STMT_WRITES_TRANS_TABLE,
+    /*
+       If a non-transactional table is about to be updated.
+    */
+    STMT_WRITES_NON_TRANS_TABLE,
+    /*
+       If a temporary transactional table is about to be updated.
+    */
+    STMT_WRITES_TEMP_TRANS_TABLE,
+    /*
+       If a temporary non-transactional table is about to be updated.
+    */
+    STMT_WRITES_TEMP_NON_TRANS_TABLE,
+    /*
+      The last element of the enumeration. Please, if necessary add
+      anything before this.
+    */
+    STMT_ACCESS_TABLE_COUNT
+  };
+
+#ifndef DBUG_OFF
+  static inline const char *stmt_accessed_table_string(enum_stmt_accessed_table accessed_table)
+  {
+    switch (accessed_table)
+    {
+      case STMT_READS_TRANS_TABLE:
+         return "STMT_READS_TRANS_TABLE";
+      break;
+      case STMT_READS_NON_TRANS_TABLE:
+        return "STMT_READS_NON_TRANS_TABLE";
+      break;
+      case STMT_READS_TEMP_TRANS_TABLE:
+        return "STMT_READS_TEMP_TRANS_TABLE";
+      break;
+      case STMT_READS_TEMP_NON_TRANS_TABLE:
+        return "STMT_READS_TEMP_NON_TRANS_TABLE";
+      break;  
+      case STMT_WRITES_TRANS_TABLE:
+        return "STMT_WRITES_TRANS_TABLE";
+      break;
+      case STMT_WRITES_NON_TRANS_TABLE:
+        return "STMT_WRITES_NON_TRANS_TABLE";
+      break;
+      case STMT_WRITES_TEMP_TRANS_TABLE:
+        return "STMT_WRITES_TEMP_TRANS_TABLE";
+      break;
+      case STMT_WRITES_TEMP_NON_TRANS_TABLE:
+        return "STMT_WRITES_TEMP_NON_TRANS_TABLE";
+      break;
+      case STMT_ACCESS_TABLE_COUNT:
+      default:
+        DBUG_ASSERT(0);
+      break;
+    }
+    MY_ASSERT_UNREACHABLE();
+    return "";
+  }
+#endif  /* DBUG */
+               
+  #define BINLOG_DIRECT_ON 0xF0    /* unsafe when
+                                      --binlog-direct-non-trans-updates
+                                      is ON */
+
+  #define BINLOG_DIRECT_OFF 0xF    /* unsafe when
+                                      --binlog-direct-non-trans-updates
+                                      is OFF */
+
+  #define TRX_CACHE_EMPTY 0x33     /* unsafe when trx-cache is empty */
+
+  #define TRX_CACHE_NOT_EMPTY 0xCC /* unsafe when trx-cache is not empty */
+
+  #define IL_LT_REPEATABLE 0xAA    /* unsafe when < ISO_REPEATABLE_READ */
+
+  #define IL_GTE_REPEATABLE 0x55   /* unsafe when >= ISO_REPEATABLE_READ */
+  
+  /**
+    Sets the type of table that is about to be accessed while executing a
+    statement.
+
+    @param accessed_table Enumeration type that defines the type of table,
+                           e.g. temporary, transactional, non-transactional.
+  */
+  inline void set_stmt_accessed_table(enum_stmt_accessed_table accessed_table)
+  {
+    DBUG_ENTER("LEX::set_stmt_accessed_table");
+
+    DBUG_ASSERT(accessed_table >= 0 && accessed_table < STMT_ACCESS_TABLE_COUNT);
+    stmt_accessed_table_flag |= (1U << accessed_table);
+
+    DBUG_VOID_RETURN;
+  }
+
+  /**
+    Checks if a type of table is about to be accessed while executing a
+    statement.
+
+    @param accessed_table Enumeration type that defines the type of table,
+           e.g. temporary, transactional, non-transactional.
+
+    @return
+      @retval TRUE  if the type of the table is about to be accessed
+      @retval FALSE otherwise
+  */
+  inline bool stmt_accessed_table(enum_stmt_accessed_table accessed_table)
+  {
+    DBUG_ENTER("LEX::stmt_accessed_table");
+
+    DBUG_ASSERT(accessed_table >= 0 && accessed_table < STMT_ACCESS_TABLE_COUNT);
+
+    DBUG_RETURN((stmt_accessed_table_flag & (1U << accessed_table)) != 0);
+  }
+
+  /**
+    Checks if a temporary non-transactional table is about to be accessed
+    while executing a statement.
+
+    @return
+      @retval TRUE  if a temporary non-transactional table is about to be
+                    accessed
+      @retval FALSE otherwise
+  */
+  inline bool stmt_accessed_non_trans_temp_table()
+  {
+    DBUG_ENTER("THD::stmt_accessed_non_trans_temp_table");
+
+    DBUG_RETURN((stmt_accessed_table_flag &
+                ((1U << STMT_READS_TEMP_NON_TRANS_TABLE) |
+                 (1U << STMT_WRITES_TEMP_NON_TRANS_TABLE))) != 0);
+  }
+
+  /*
+    Checks if a mixed statement is unsafe.
+
+    
+    @param in_multi_stmt_transaction_mode defines if there is an on-going
+           multi-transactional statement.
+    @param binlog_direct defines if --binlog-direct-non-trans-updates is
+           active.
+    @param trx_cache_is_not_empty defines if the trx-cache is empty or not.
+    @param trx_isolation defines the isolation level.
+ 
+    @return
+      @retval TRUE if the mixed statement is unsafe
+      @retval FALSE otherwise
+  */
+  inline bool is_mixed_stmt_unsafe(bool in_multi_stmt_transaction_mode,
+                                   bool binlog_direct,
+                                   bool trx_cache_is_not_empty,
+                                   uint tx_isolation)
+  {
+    bool unsafe= FALSE;
+
+    if (in_multi_stmt_transaction_mode)
+    {
+       uint condition=
+         (binlog_direct ? BINLOG_DIRECT_ON : BINLOG_DIRECT_OFF) &
+         (trx_cache_is_not_empty ? TRX_CACHE_NOT_EMPTY : TRX_CACHE_EMPTY) &
+         (tx_isolation >= ISO_REPEATABLE_READ ? IL_GTE_REPEATABLE : IL_LT_REPEATABLE);
+
+      unsafe= (binlog_unsafe_map[stmt_accessed_table_flag] & condition);
+
+#if !defined(DBUG_OFF)
+      DBUG_PRINT("LEX::is_mixed_stmt_unsafe", ("RESULT %02X %02X %02X\n", condition,
+              binlog_unsafe_map[stmt_accessed_table_flag],
+              (binlog_unsafe_map[stmt_accessed_table_flag] & condition)));
+ 
+      int type_in= 0;
+      for (; type_in < STMT_ACCESS_TABLE_COUNT; type_in++)
+      {
+        if (stmt_accessed_table((enum_stmt_accessed_table) type_in))
+          DBUG_PRINT("LEX::is_mixed_stmt_unsafe", ("ACCESSED %s ",
+                  stmt_accessed_table_string((enum_stmt_accessed_table) type_in)));
+      }
+#endif
+    }
+
+    if (stmt_accessed_table(STMT_WRITES_NON_TRANS_TABLE) &&
+      stmt_accessed_table(STMT_READS_TRANS_TABLE) &&
+      tx_isolation < ISO_REPEATABLE_READ)
+      unsafe= TRUE;
+    else if (stmt_accessed_table(STMT_WRITES_TEMP_NON_TRANS_TABLE) &&
+      stmt_accessed_table(STMT_READS_TRANS_TABLE) &&
+      tx_isolation < ISO_REPEATABLE_READ)
+      unsafe= TRUE;
+
+    return(unsafe);
   }
 
   /**
@@ -1101,18 +1662,45 @@ public:
   { return sroutines_list.elements != 0; }
 
 private:
-  enum enum_binlog_stmt_flag {
-    BINLOG_STMT_FLAG_UNSAFE,
-    BINLOG_STMT_FLAG_COUNT
+
+  /**
+    Enumeration listing special types of statements.
+
+    Currently, the only possible type is ROW_INJECTION.
+  */
+  enum enum_binlog_stmt_type {
+    /**
+      The statement is a row injection (i.e., either a BINLOG
+      statement or a row event executed by the slave SQL thread).
+    */
+    BINLOG_STMT_TYPE_ROW_INJECTION = 0,
+
+    /** The last element of this enumeration type. */
+    BINLOG_STMT_TYPE_COUNT
   };
 
-  /*
-    Tells if the parsing stage detected properties of the statement,
-    for example: that some items require row-based binlogging to give
-    a reliable binlog/replication, or if we will use stored functions
-    or triggers which themselves need require row-based binlogging.
+  /**
+    Bit field indicating the type of statement.
+
+    There are two groups of bits:
+
+    - The low BINLOG_STMT_UNSAFE_COUNT bits indicate the types of
+      unsafeness that the current statement has.
+
+    - The next BINLOG_STMT_TYPE_COUNT bits indicate if the statement
+      is of some special type.
+
+    This must be a member of LEX, not of THD: each stored procedure
+    needs to remember its unsafeness state between calls and each
+    stored procedure has its own LEX object (but no own THD object).
   */
   uint32 binlog_stmt_flags;
+
+  /**
+    Bit field that determines the type of tables that are about to be
+    be accessed while executing a statement.
+  */
+  uint32 stmt_accessed_table_flag;
 };
 
 
@@ -1174,24 +1762,7 @@ enum enum_comment_state
 class Lex_input_stream
 {
 public:
-  Lex_input_stream() :
-    yylineno(1),
-    yytoklen(0),
-    yylval(NULL),
-    m_tok_start(NULL),
-    m_tok_end(NULL),
-    m_tok_start_prev(NULL),
-    m_echo(TRUE),
-    m_cpp_tok_start(NULL),
-    m_cpp_tok_start_prev(NULL),
-    m_cpp_tok_end(NULL),
-    m_body_utf8(NULL),
-    m_cpp_utf8_processed_ptr(NULL),
-    next_state(MY_LEX_START),
-    found_semicolon(NULL),
-    stmt_prepare_mode(FALSE),
-    in_comment(NO_COMMENT),
-    m_underscore_cs(NULL)
+  Lex_input_stream()
   {
   }
 
@@ -1206,6 +1777,9 @@ public:
      @retval TRUE  Error
   */
   bool init(THD *thd, char *buff, unsigned int length);
+
+  void reset(char *buff, unsigned int length);
+
   /**
     Set the echo mode.
 
@@ -1477,6 +2051,17 @@ public:
   /** Interface with bison, value of the last token parsed. */
   LEX_YYSTYPE yylval;
 
+  /**
+    LALR(2) resolution, look ahead token.
+    Value of the next token to return, if any,
+    or -1, if no token was parsed in advance.
+    Note: 0 is a legal token, and represents YYEOF.
+  */
+  int lookahead_token;
+
+  /** LALR(2) resolution, value of the look ahead token.*/
+  LEX_YYSTYPE lookahead_yylval;
+
 private:
   /** Pointer to the current position in the raw input stream. */
   char *m_ptr;
@@ -1558,9 +2143,13 @@ public:
 
   /**
     TRUE if we're parsing a prepared statement: in this mode
-    we should allow placeholders and disallow multi-statements.
+    we should allow placeholders.
   */
   bool stmt_prepare_mode;
+  /**
+    TRUE if we should allow multi-statements.
+  */
+  bool multi_statements;
 
   /** State of the lexical analyser for comments. */
   enum_comment_state in_comment;
@@ -1590,10 +2179,66 @@ public:
   CHARSET_INFO *m_underscore_cs;
 };
 
+/**
+  Abstract representation of a statement.
+  This class is an interface between the parser and the runtime.
+  The parser builds the appropriate sub classes of Sql_statement
+  to represent a SQL statement in the parsed tree.
+  The execute() method in the sub classes contain the runtime implementation.
+  Note that this interface is used for SQL statement recently implemented,
+  the code for older statements tend to load the LEX structure with more
+  attributes instead.
+  The recommended way to implement new statements is to sub-class
+  Sql_statement, as this improves code modularity (see the 'big switch' in
+  dispatch_command()), and decrease the total size of the LEX structure
+  (therefore saving memory in stored programs).
+*/
+class Sql_statement : public Sql_alloc
+{
+public:
+  /**
+    Execute this SQL statement.
+    @param thd the current thread.
+    @return 0 on success.
+  */
+  virtual bool execute(THD *thd) = 0;
+
+protected:
+  /**
+    Constructor.
+    @param lex the LEX structure that represents parts of this statement.
+  */
+  Sql_statement(LEX *lex)
+    : m_lex(lex)
+  {}
+
+  /** Destructor. */
+  virtual ~Sql_statement()
+  {
+    /*
+      Sql_statement objects are allocated in thd->mem_root.
+      In MySQL, the C++ destructor is never called, the underlying MEM_ROOT is
+      simply destroyed instead.
+      Do not rely on the destructor for any cleanup.
+    */
+    DBUG_ASSERT(FALSE);
+  }
+
+protected:
+  /**
+    The legacy LEX structure for this statement.
+    The LEX structure contains the existing properties of the parsed tree.
+    TODO: with time, attributes from LEX should move to sub classes of
+    Sql_statement, so that the parser only builds Sql_statement objects
+    with the minimum set of attributes, instead of a LEX structure that
+    contains the collection of every possible attribute.
+  */
+  LEX *m_lex;
+};
 
 /* The state of the lex parsing. This is saved in the THD struct */
 
-typedef struct st_lex : public Query_tables_list
+struct LEX: public Query_tables_list
 {
   SELECT_LEX_UNIT unit;                         /* most upper unit */
   SELECT_LEX select_lex;                        /* first SELECT_LEX */
@@ -1645,6 +2290,13 @@ typedef struct st_lex : public Query_tables_list
 
   List<Key_part_spec> col_list;
   List<Key_part_spec> ref_list;
+  /*
+    A list of strings is maintained to store the SET clause command user strings
+    which are specified in load data operation.  This list will be used
+    during the reconstruction of "load data" statement at the time of writing
+    to binary log.
+   */
+  List<String>        load_set_str_list;
   List<String>	      interval_list;
   List<LEX_USER>      users_list;
   List<LEX_COLUMN>    columns;
@@ -1680,6 +2332,7 @@ typedef struct st_lex : public Query_tables_list
   LEX_MASTER_INFO mi;				// used by CHANGE MASTER
   LEX_SERVER_OPTIONS server_options;
   USER_RESOURCES mqh;
+  LEX_RESET_SLAVE reset_slave_info;
   ulong type;
   /*
     This variable is used in post-parse stage to declare that sum-functions,
@@ -1691,7 +2344,9 @@ typedef struct st_lex : public Query_tables_list
     the variable can contain 0 or 1 for each nest level.
   */
   nesting_map allow_sum_func;
-  enum_sql_command sql_command;
+
+  Sql_statement *m_stmt;
+
   /*
     Usually `expr` rule of yacc is quite reused but some commands better
     not support subqueries which comes standard with this rule, like
@@ -1700,7 +2355,6 @@ typedef struct st_lex : public Query_tables_list
   */
   bool expr_allows_subselect;
 
-  thr_lock_type lock_option;
   enum SSL_type ssl_type;			/* defined in violite.h */
   enum enum_duplicates duplicates;
   enum enum_tx_isolation tx_isolation;
@@ -1717,7 +2371,9 @@ typedef struct st_lex : public Query_tables_list
   uint profile_options;
   uint uint_geom_type;
   uint grant, grant_tot_col, which_columns;
-  uint fk_delete_opt, fk_update_opt, fk_match_option;
+  enum Foreign_key::fk_match_opt fk_match_option;
+  enum Foreign_key::fk_option fk_update_opt;
+  enum Foreign_key::fk_option fk_delete_opt;
   uint slave_thd_opt, start_transaction_opt;
   int nest_level;
   /*
@@ -1735,17 +2391,22 @@ typedef struct st_lex : public Query_tables_list
   uint8 derived_tables;
   uint8 create_view_algorithm;
   uint8 create_view_check;
+  uint8 context_analysis_only;
   bool drop_if_exists, drop_temporary, local_file, one_shot_set;
   bool autocommit;
   bool verbose, no_write_to_binlog;
 
-  bool tx_chain, tx_release;
-
-  uint8 context_analysis_only;
+  enum enum_yes_no_unknown tx_chain, tx_release;
   bool safe_to_cache_query;
   bool subqueries, ignore;
   st_parsing_options parsing_options;
   Alter_info alter_info;
+  /*
+    For CREATE TABLE statement last element of table list which is not
+    part of SELECT or LIKE part (i.e. either element for table we are
+    creating or last of tables referenced by foreign keys).
+  */
+  TABLE_LIST *create_last_non_select_table;
   /* Prepared statements SQL syntax:*/
   LEX_STRING prepared_stmt_name; /* Statement name (in all queries) */
   /*
@@ -1761,6 +2422,7 @@ typedef struct st_lex : public Query_tables_list
   sp_name *spname;
   bool sp_lex_in_use;	/* Keep track on lex usage in SPs for error handling */
   bool all_privileges;
+  bool proxy_priv;
   sp_pcontext *spcont;
 
   st_sp_chistics sp_chistics;
@@ -1798,10 +2460,20 @@ typedef struct st_lex : public Query_tables_list
 
     This pointer is required to add possibly omitted DEFINER-clause to the
     DDL-statement before dumping it to the binlog.
-  */
-  const char *stmt_definition_begin;
 
-  const char *stmt_definition_end;
+    keyword_delayed_begin_offset is the offset to the beginning of the DELAYED
+    keyword in INSERT DELAYED statement. keyword_delayed_end_offset is the
+    offset to the character right after the DELAYED keyword.
+  */
+  union {
+    const char *stmt_definition_begin;
+    uint keyword_delayed_begin_offset;
+  };
+
+  union {
+    const char *stmt_definition_end;
+    uint keyword_delayed_end_offset;
+  };
 
   /**
     During name resolution search only in the table list given by 
@@ -1819,39 +2491,8 @@ typedef struct st_lex : public Query_tables_list
   
   bool escape_used;
   bool is_lex_started; /* If lex_start() did run. For debugging. */
-
-  /*
-    Special case for SELECT .. FOR UPDATE and LOCK TABLES .. WRITE.
-
-    Protect from a impending GRL as otherwise the thread might deadlock
-    if it starts waiting for the GRL in mysql_lock_tables.
-
-    The protection is needed because there is a race between setting
-    the global read lock and waiting for all open tables to be closed.
-    The problem is a circular wait where a thread holding "old" open
-    tables will wait for the global read lock to be released while the
-    thread holding the global read lock will wait for all "old" open
-    tables to be closed -- the flush part of flush tables with read
-    lock.
-  */
-  bool protect_against_global_read_lock;
-
-  /*
-    The following three variables are used in 'CREATE TABLE IF NOT EXISTS ...
-    SELECT' statement. They are used to binlog the statement.
-
-    create_select_start_with_brace will be set if there is a '(' before
-    the first SELECT clause
-
-    create_select_pos records the relative position of the SELECT clause
-    in the whole statement.
-
-    create_select_in_comment will be set if SELECT keyword is in conditional
-    comment.
-   */
-  bool create_select_start_with_brace;
-  uint create_select_pos;
-  bool create_select_in_comment;
+  /// Set to true while resolving values in ON DUPLICATE KEY UPDATE clause
+  bool in_update_value_clause;
 
   /*
     The set of those tables whose fields are referenced in all subqueries
@@ -1863,9 +2504,9 @@ typedef struct st_lex : public Query_tables_list
   */
   table_map  used_tables;
 
-  st_lex();
+  LEX();
 
-  virtual ~st_lex()
+  virtual ~LEX()
   {
     destroy_query_tables_list();
     plugin_unlock_list(NULL, (plugin_ref *)plugins.buffer, plugins.elements);
@@ -1914,7 +2555,7 @@ typedef struct st_lex : public Query_tables_list
     Is this update command where 'WHITH CHECK OPTION' clause is important
 
     SYNOPSIS
-      st_lex::which_check_option_applicable()
+      LEX::which_check_option_applicable()
 
     RETURN
       TRUE   have to take 'WHITH CHECK OPTION' clause into account
@@ -1986,7 +2627,37 @@ typedef struct st_lex : public Query_tables_list
     }
     return FALSE;
   }
-} LEX;
+};
+
+
+/**
+  Set_signal_information is a container used in the parsed tree to represent
+  the collection of assignments to condition items in the SIGNAL and RESIGNAL
+  statements.
+*/
+class Set_signal_information
+{
+public:
+  /** Empty default constructor, use clear() */
+ Set_signal_information() {} 
+
+  /** Copy constructor. */
+  Set_signal_information(const Set_signal_information& set);
+
+  /** Destructor. */
+  ~Set_signal_information()
+  {}
+
+  /** Clear all items. */
+  void clear();
+
+  /**
+    For each condition item assignment, m_item[] contains the parsed tree
+    that represents the expression assigned, if any.
+    m_item[] is an array indexed by Diag_condition_item_name.
+  */
+  Item *m_item[LAST_DIAG_SET_PROPERTY+1];
+};
 
 
 /**
@@ -1998,10 +2669,30 @@ class Yacc_state
 {
 public:
   Yacc_state()
-    : yacc_yyss(NULL), yacc_yyvs(NULL)
-  {}
+  {
+    reset();
+  }
+
+  void reset()
+  {
+    yacc_yyss= NULL;
+    yacc_yyvs= NULL;
+    m_set_signal_info.clear();
+    m_lock_type= TL_READ_DEFAULT;
+    m_mdl_type= MDL_SHARED_READ;
+  }
 
   ~Yacc_state();
+
+  /**
+    Reset part of the state which needs resetting before parsing
+    substatement.
+  */
+  void reset_before_substatement()
+  {
+    m_lock_type= TL_READ_DEFAULT;
+    m_mdl_type= MDL_SHARED_READ;
+  }
 
   /**
     Bison internal state stack, yyss, when dynamically allocated using
@@ -2014,6 +2705,37 @@ public:
     my_yyoverflow().
   */
   uchar *yacc_yyvs;
+
+  /**
+    Fragments of parsed tree,
+    used during the parsing of SIGNAL and RESIGNAL.
+  */
+  Set_signal_information m_set_signal_info;
+
+  /**
+    Type of lock to be used for tables being added to the statement's
+    table list in table_factor, table_alias_ref, single_multi and
+    table_wild_one rules.
+    Statements which use these rules but require lock type different
+    from one specified by this member have to override it by using
+    st_select_lex::set_lock_for_tables() method.
+
+    The default value of this member is TL_READ_DEFAULT. The only two
+    cases in which we change it are:
+    - When parsing SELECT HIGH_PRIORITY.
+    - Rule for DELETE. In which we use this member to pass information
+      about type of lock from delete to single_multi part of rule.
+
+    We should try to avoid introducing new use cases as we would like
+    to get rid of this member eventually.
+  */
+  thr_lock_type m_lock_type;
+
+  /**
+    The type of requested metadata lock for tables added to
+    the statement table list.
+  */
+  enum_mdl_type m_mdl_type;
 
   /*
     TODO: move more attributes from the LEX structure here.
@@ -2049,10 +2771,16 @@ public:
 
   Lex_input_stream m_lip;
   Yacc_state m_yacc;
+
+  void reset(char *found_semicolon, unsigned int length)
+  {
+    m_lip.reset(found_semicolon, length);
+    m_yacc.reset();
+  }
 };
 
 
-struct st_lex_local: public st_lex
+struct st_lex_local: public LEX
 {
   static void *operator new(size_t size) throw()
   {
@@ -2072,7 +2800,7 @@ extern void lex_init(void);
 extern void lex_free(void);
 extern void lex_start(THD *thd);
 extern void lex_end(LEX *lex);
-extern int MYSQLlex(void *arg, void *yythd);
+extern int MYSQLlex(union YYSTYPE *yylval, class THD *thd);
 
 extern void trim_whitespace(CHARSET_INFO *cs, LEX_STRING *str);
 
@@ -2082,6 +2810,8 @@ extern bool is_lex_native_function(const LEX_STRING *name);
   @} (End of group Semantic_Analysis)
 */
 
-int my_missing_function_error(const LEX_STRING &token, const char *name);
+void my_missing_function_error(const LEX_STRING &token, const char *name);
+bool is_keyword(const char *name, uint len);
 
 #endif /* MYSQL_SERVER */
+#endif /* SQL_LEX_INCLUDED */

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2005, 2011, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2005, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,13 +12,22 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "sql_binlog.h"
+#include "sql_parse.h"                          // check_global_access
+#include "sql_acl.h"                            // *_ACL
 #include "rpl_rli.h"
 #include "base64.h"
-
+#include "slave.h"                              // apply_event_and_update_pos
+#include "log_event.h"                          // Format_description_log_event,
+                                                // EVENT_LEN_OFFSET,
+                                                // EVENT_TYPE_OFFSET,
+                                                // FORMAT_DESCRIPTION_LOG_EVENT,
+                                                // START_EVENT_V3,
+                                                // Log_event_type,
+                                                // Log_event
 /**
   Execute a BINLOG statement.
 
@@ -53,11 +62,11 @@ void mysql_client_binlog_statement(THD* thd)
   size_t decoded_len= base64_needed_decoded_length(coded_len);
 
   /*
-    thd->options will be changed when applying the event. But we don't expect
+    option_bits will be changed when applying the event. But we don't expect
     it be changed permanently after BINLOG statement, so backup it first.
     It will be restored at the end of this function.
   */
-  ulonglong thd_options= thd->options;
+  ulonglong thd_options= thd->variables.option_bits;
 
   /*
     Allocation
@@ -74,7 +83,7 @@ void mysql_client_binlog_statement(THD* thd)
   rli= thd->rli_fake;
   if (!rli)
   {
-    rli= thd->rli_fake= new Relay_log_info;
+    rli= thd->rli_fake= new Relay_log_info(FALSE);
 #ifdef HAVE_purify
     rli->is_fake= TRUE;
 #endif
@@ -98,7 +107,7 @@ void mysql_client_binlog_statement(THD* thd)
         rli->relay_log.description_event_for_exec &&
         buf))
   {
-    my_error(ER_OUTOFMEMORY, MYF(0), 1);  /* needed 1 bytes */
+    my_error(ER_OUTOFMEMORY, MYF(ME_FATALERROR), 1);  /* needed 1 bytes */
     goto end;
   }
 
@@ -245,8 +254,8 @@ void mysql_client_binlog_statement(THD* thd)
   my_ok(thd);
 
 end:
-  thd->options= thd_options;
-  rli->clear_tables_to_lock();
-  my_free(buf, MYF(MY_ALLOW_ZERO_PTR));
+  thd->variables.option_bits= thd_options;
+  rli->slave_close_thread_tables(thd);
+  my_free(buf);
   DBUG_VOID_RETURN;
 }

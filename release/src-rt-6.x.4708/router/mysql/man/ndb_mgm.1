@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndb_mgm\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDB_MGM\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDB_MGM\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,15 +27,8 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndb_mgm
-.\" MySQL Cluster: ndb_mgm
-.\" MySQL Cluster: management client (ndb_mgm)
-.\" management client (MySQL Cluster)
-.\" ndb_mgm
-.\" MySQL Cluster: administration
-.\" administration of MySQL Cluster
 .SH "NAME"
-ndb_mgm \- the MySQL Cluster management client
+ndb_mgm \- the NDB Cluster management client
 .SH "SYNOPSIS"
 .HP \w'\fBndb_mgm\ \fR\fB\fIoptions\fR\fR\ 'u
 \fBndb_mgm \fR\fB\fIoptions\fR\fR
@@ -73,21 +66,17 @@ shell> \fBndb_mgm ndb_mgmd\&.mysql\&.com 1186\fR
 The default host name and port number are
 localhost
 and 1186, respectively\&.
-.\" MySQL Cluster: administration
-.\" MySQL Cluster: commands
-.\" command options (MySQL Cluster): ndb_mgm
-.\" MySQL Cluster: mgm process
 .PP
-The following table includes options that are specific to the MySQL Cluster management client program
-\fBndb_mgm\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+The following table includes options that are specific to the NDB Cluster management client program
+\fBndb_mgm\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndb_mgm\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.13.\ \&ndb_mgm Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.287.\ \&Command\-line options for the ndb_mgm program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -96,7 +85,7 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
 l l l
@@ -107,10 +96,11 @@ T{
 .PP
 -t
 T}:T{
-Specify number of tries for connecting to ndb_mgmd (0 = infinite)
+Set the number of times to retry a connection before giving up; synonym
+              for --connect-retries
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -121,7 +111,7 @@ T}:T{
 Execute command and exit
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
@@ -134,27 +124,26 @@ T}
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" execute option (ndb_mgm)
-.\" -e option (ndb_mgm)
 \fB\-\-execute=\fR\fBcommand\fR,
 \fB\-e \fR\fBcommand\fR
 .TS
 allbox tab(:);
-l l s s
-l l s s.
+lB lB.
 T{
-\fBCommand\-Line Format\fR
+Property
 T}:T{
-\-\-execute=name
+Value
 T}
+.T&
+l l.
 T{
-\ \&
+\fBCommand-Line Format\fR
 T}:T{
-\-e
+--execute=name
 T}
 .TE
 .sp 1
-This option can be used to send a command to the MySQL Cluster management client from the system shell\&. For example, either of the following is equivalent to executing
+This option can be used to send a command to the NDB Cluster management client from the system shell\&. For example, either of the following is equivalent to executing
 SHOW
 in the management client:
 .sp
@@ -176,7 +165,7 @@ or
 option works with the
 \fBmysql\fR
 command\-line client\&. See
-Section\ \&4.2.3.1, \(lqUsing Options on the Command Line\(rq\&.
+Section\ \&4.2.4, \(lqUsing Options on the Command Line\(rq\&.
 .if n \{\
 .sp
 .\}
@@ -207,35 +196,42 @@ be enclosed in quotation marks\&. Either single or double quotation marks may be
 \fB\-\-try\-reconnect=\fR\fB\fInumber\fR\fR
 .TS
 allbox tab(:);
-l l s s
-l l s s
-l l s s
-^ l l s
-^ l l s.
+lB lB.
 T{
-\fBCommand\-Line Format\fR
+Property
 T}:T{
-\-\-try\-reconnect=#
+Value
+T}
+.T&
+l l
+l l
+l l
+l l
+l l.
+T{
+\fBCommand-Line Format\fR
+T}:T{
+--try-reconnect=#
 T}
 T{
-\ \&
-T}:T{
-\-t
-T}
-T{
-\ \&
-T}:T{
-\fBPermitted Values\fR
-T}
-:T{
 \fBType\fR
 T}:T{
-boolean
+integer
 T}
-:T{
-\fBDefault\fR
+T{
+\fBDefault Value\fR
 T}:T{
-TRUE
+3
+T}
+T{
+\fBMinimum Value\fR
+T}:T{
+0
+T}
+T{
+\fBMaximum Value\fR
+T}:T{
+4294967295
 T}
 .TE
 .sp 1
@@ -247,11 +243,11 @@ before giving up and reporting an error instead\&.
 Additional information about using
 \fBndb_mgm\fR
 can be found in
-Section\ \&17.5.2, \(lqCommands in the MySQL Cluster Management Client\(rq\&.
+Section\ \&18.5.2, \(lqCommands in the NDB Cluster Management Client\(rq\&.
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "mysys_priv.h"
 #include <my_dir.h>
@@ -37,6 +35,9 @@ struct utimbuf {
 
 	  if MY_REDEL_MAKE_COPY is given, then the orginal file
 	  is renamed to org_name-'current_time'.BAK
+
+          if MY_REDEL_NO_COPY_STAT is given, stats are not copied
+          from org_name to tmp_name.
 	*/
 
 #define REDEL_EXT ".BAK"
@@ -48,8 +49,11 @@ int my_redel(const char *org_name, const char *tmp_name, myf MyFlags)
   DBUG_PRINT("my",("org_name: '%s' tmp_name: '%s'  MyFlags: %d",
 		   org_name,tmp_name,MyFlags));
 
-  if (my_copystat(org_name,tmp_name,MyFlags) < 0)
-    goto end;
+  if (!(MyFlags & MY_REDEL_NO_COPY_STAT))
+  {
+    if (my_copystat(org_name,tmp_name,MyFlags) < 0)
+      goto end;
+  }
   if (MyFlags & MY_REDEL_MAKE_BACKUP)
   {
     char name_buff[FN_REFLEN+20];    
@@ -98,7 +102,7 @@ int my_copystat(const char *from, const char *to, int MyFlags)
     return -1;
   }
 
-#if !defined(__WIN__) && !defined(__NETWARE__)
+#if !defined(__WIN__)
   if (statbuf.st_nlink > 1 && MyFlags & MY_LINK_WARNING)
   {
     if (MyFlags & MY_LINK_WARNING)
@@ -112,26 +116,15 @@ int my_copystat(const char *from, const char *to, int MyFlags)
       my_error(EE_CHANGE_OWNERSHIP, MYF(ME_BELL+ME_WAITTANG), from, errno);
     return -1;
   }
-#endif /* !__WIN__ && !__NETWARE__ */
+#endif /* !__WIN__ */
 
-#ifndef VMS
-#ifndef __ZTC__
   if (MyFlags & MY_COPYTIME)
   {
     struct utimbuf timep;
     timep.actime  = statbuf.st_atime;
     timep.modtime = statbuf.st_mtime;
-    VOID(utime((char*) to, &timep));/* Update last accessed and modified times */
+    (void) utime((char*) to, &timep);/* Update last accessed and modified times */
   }
-#else
-  if (MyFlags & MY_COPYTIME)
-  {
-    time_t time[2];
-    time[0]= statbuf.st_atime;
-    time[1]= statbuf.st_mtime;
-    VOID(utime((char*) to, time));/* Update last accessed and modified times */
-  }
-#endif
-#endif
+
   return 0;
 } /* my_copystat */

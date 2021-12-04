@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBmyisampack\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBMYISAMPACK\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBMYISAMPACK\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,10 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" myisampack
-.\" compressed tables
-.\" tables: compressed
-.\" MyISAM: compressed tables
 .SH "NAME"
 myisampack \- generate compressed, read\-only MyISAM tables
 .SH "SYNOPSIS"
@@ -83,6 +79,18 @@ if the table might be updated by the server during the packing process\&. It is 
 .\}
 After packing a table, it becomes read only\&. This is generally intended (such as when accessing packed tables on a CD)\&.
 .RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
+\fBmyisampack\fR
+does not support partitioned tables\&.
+.RE
 .PP
 Invoke
 \fBmyisampack\fR
@@ -103,14 +111,14 @@ Each file name argument should be the name of an index (\&.MYI) file\&. If you a
 extension\&.
 .PP
 After you compress a table with
-\fBmyisampack\fR, you should use
+\fBmyisampack\fR, use
 \fBmyisamchk \-rq\fR
 to rebuild its indexes\&.
 \fBmyisamchk\fR(1)\&.
 .PP
 \fBmyisampack\fR
 supports the following options\&. It also reads option files and supports the options for processing them described at
-Section\ \&4.2.3.4, \(lqCommand-Line Options that Affect Option-File Handling\(rq\&.
+Section\ \&4.2.7, \(lqCommand-Line Options that Affect Option-File Handling\(rq\&.
 .sp
 .RS 4
 .ie n \{\
@@ -120,8 +128,6 @@ Section\ \&4.2.3.4, \(lqCommand-Line Options that Affect Option-File Handling\(r
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: help option
-.\" help option: myisampack
 \fB\-\-help\fR,
 \fB\-?\fR
 .sp
@@ -136,8 +142,6 @@ Display a help message and exit\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: backup option
-.\" backup option: myisampack
 \fB\-\-backup\fR,
 \fB\-b\fR
 .sp
@@ -153,12 +157,10 @@ Make a backup of each table\*(Aqs data file using the name
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: character-sets-dir option
-.\" character-sets-dir option: myisampack
-\fB\-\-character\-sets\-dir=\fR\fB\fIpath\fR\fR
+\fB\-\-character\-sets\-dir=\fR\fB\fIdir_name\fR\fR
 .sp
 The directory where character sets are installed\&. See
-Section\ \&10.5, \(lqCharacter Set Configuration\(rq\&.
+Section\ \&10.14, \(lqCharacter Set Configuration\(rq\&.
 .RE
 .sp
 .RS 4
@@ -169,16 +171,14 @@ Section\ \&10.5, \(lqCharacter Set Configuration\(rq\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: debug option
-.\" debug option: myisampack
 \fB\-\-debug[=\fR\fB\fIdebug_options\fR\fR\fB]\fR,
 \fB\-# [\fR\fB\fIdebug_options\fR\fR\fB]\fR
 .sp
 Write a debugging log\&. A typical
 \fIdebug_options\fR
 string is
-\*(Aqd:t:o,\fIfile_name\fR\*(Aq\&. The default is
-\*(Aqd:t:o\*(Aq\&.
+d:t:o,\fIfile_name\fR\&. The default is
+d:t:o\&.
 .RE
 .sp
 .RS 4
@@ -189,8 +189,6 @@ string is
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: force option
-.\" force option: myisampack
 \fB\-\-force\fR,
 \fB\-f\fR
 .sp
@@ -220,8 +218,6 @@ packs the table anyway\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: join option
-.\" join option: myisampack
 \fB\-\-join=\fR\fB\fIbig_tbl_name\fR\fR,
 \fB\-j \fR\fB\fIbig_tbl_name\fR\fR
 .sp
@@ -233,13 +229,7 @@ have identical structure (same column names and types, same indexes, and so fort
 \fIbig_tbl_name\fR
 must not exist prior to the join operation\&. All source tables named on the command line to be merged into
 \fIbig_tbl_name\fR
-must exist\&. The source tables are read for the join operation but not modified\&. The join operation does not create a
-\&.frm
-file for
-\fIbig_tbl_name\fR, so after the join operation finishes, copy the
-\&.frm
-file from one of the source tables and name it
-\fIbig_tbl_name\fR\&.frm\&.
+must exist\&. The source tables are read for the join operation but not modified\&.
 .RE
 .sp
 .RS 4
@@ -250,8 +240,6 @@ file from one of the source tables and name it
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: silent option
-.\" silent option: myisampack
 \fB\-\-silent\fR,
 \fB\-s\fR
 .sp
@@ -266,8 +254,6 @@ Silent mode\&. Write output only when errors occur\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: test option
-.\" test option: myisampack
 \fB\-\-test\fR,
 \fB\-t\fR
 .sp
@@ -282,10 +268,8 @@ Do not actually pack the table, just test packing it\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: tmpdir option
-.\" tmpdir option: myisampack
-\fB\-\-tmpdir=\fR\fB\fIpath\fR\fR,
-\fB\-T \fR\fB\fIpath\fR\fR
+\fB\-\-tmpdir=\fR\fB\fIdir_name\fR\fR,
+\fB\-T \fR\fB\fIdir_name\fR\fR
 .sp
 Use the named directory as the location where
 \fBmyisampack\fR
@@ -300,8 +284,6 @@ creates temporary files\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: verbose option
-.\" verbose option: myisampack
 \fB\-\-verbose\fR,
 \fB\-v\fR
 .sp
@@ -316,8 +298,6 @@ Verbose mode\&. Write information about the progress of the packing operation an
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: version option
-.\" version option: myisampack
 \fB\-\-version\fR,
 \fB\-V\fR
 .sp
@@ -332,8 +312,6 @@ Display version information and exit\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" myisampack: wait option
-.\" wait option: myisampack
 \fB\-\-wait\fR,
 \fB\-w\fR
 .sp
@@ -343,7 +321,6 @@ server was invoked with external locking disabled, it is not a good idea to invo
 \fBmyisampack\fR
 if the table might be updated by the server during the packing process\&.
 .RE
-.\" examples: compressed tables
 .PP
 The following sequence of commands illustrates a typical table compression session:
 .sp
@@ -437,6 +414,13 @@ Original trees:  57  After join: 17
 \- Compressing file
 87\&.14%
 Remember to run myisamchk \-rq on compressed tables
+shell> \fBmyisamchk \-rq station\fR
+\- check record delete\-chain
+\- recovering (with sort) MyISAM\-table \*(Aqstation\*(Aq
+Data records: 1192
+\- Fixing index 1
+\- Fixing index 2
+shell> \fBmysqladmin \-uroot flush\-tables\fR
 shell> \fBls \-l station\&.*\fR
 \-rw\-rw\-r\-\-   1 monty    my         127874 Apr 17 19:00 station\&.MYD
 \-rw\-rw\-r\-\-   1 monty    my          55296 Apr 17 19:04 station\&.MYI
@@ -814,7 +798,7 @@ The number of bits used in the Huffman tree\&.
 .RE
 .PP
 After you run
-\fBmyisampack\fR, you must run
+\fBmyisampack\fR, use
 \fBmyisamchk\fR
 to re\-create any indexes\&. At this time, you can also sort the index blocks and create statistics needed for the MySQL optimizer to work more efficiently:
 .sp
@@ -841,7 +825,7 @@ option to
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

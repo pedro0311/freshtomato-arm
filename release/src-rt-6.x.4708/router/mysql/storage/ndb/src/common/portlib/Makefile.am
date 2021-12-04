@@ -1,4 +1,5 @@
 # Copyright (C) 2004, 2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -29,7 +30,6 @@ EXTRA_PROGRAMS = memtest PortLibTest munmaptest
 PortLibTest_SOURCES = NdbPortLibTest.cpp
 munmaptest_SOURCES = munmaptest.cpp
 
-# Don't update the files from bitkeeper
 WIN_src = win32/NdbCondition.c \
               win32/NdbDaemon.c \
               win32/NdbEnv.c \
@@ -54,6 +54,3 @@ libportlib.dsp: Makefile \
 	@$(top_srcdir)/storage/ndb/config/win-includes $@ $(INCLUDES)
 	@$(top_srcdir)/storage/ndb/config/win-sources $@ $(WIN_src)
 	@$(top_srcdir)/storage/ndb/config/win-libraries $@ LIB $(LDADD)
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
