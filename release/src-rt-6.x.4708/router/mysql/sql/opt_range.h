@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* classes to use when handling where clause */
@@ -24,6 +22,20 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+#include "thr_malloc.h"                         /* sql_memdup */
+#include "records.h"                            /* READ_RECORD */
+#include "queues.h"                             /* QUEUE */
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          // set_var.h: THD
+#include "set_var.h"                            /* Item */
+
+class JOIN;
+class Item_sum;
 
 typedef struct st_key_part {
   uint16           key,part;
@@ -324,6 +336,13 @@ public:
   */
   virtual bool is_keys_used(const MY_BITMAP *fields);
 
+  /**
+    Simple sanity check that the quick select has been set up
+    correctly. Function is overridden by quick selects that merge
+    indices.
+   */
+  virtual bool is_valid() { return index != MAX_KEY; };
+
   /*
     rowid of last row retrieved by this quick select. This is used only when
     doing ROR-index_merge selects
@@ -341,6 +360,11 @@ public:
   */
   virtual void dbug_dump(int indent, bool verbose)= 0;
 #endif
+
+  /*
+    Returns a QUICK_SELECT with reverse order of to the index.
+  */
+  virtual QUICK_SELECT_I *make_reverse(uint used_key_parts_arg) { return NULL; }
 };
 
 
@@ -426,6 +450,7 @@ public:
 #ifndef DBUG_OFF
   void dbug_dump(int indent, bool verbose);
 #endif
+  QUICK_SELECT_I *make_reverse(uint used_key_parts_arg);
 private:
   /* Default copy ctor used by QUICK_SELECT_DESC */
 };
@@ -538,6 +563,22 @@ public:
 
   bool clustered_pk_range() { return test(pk_quick_select); }
 
+  virtual bool is_valid()
+  {
+    List_iterator_fast<QUICK_RANGE_SELECT> it(quick_selects);
+    QUICK_RANGE_SELECT *quick;
+    bool valid= true;
+    while ((quick= it++))
+    {
+      if (!quick->is_valid())
+      {
+        valid= false;
+        break;
+      }
+    }
+    return valid;
+  }
+
   /* used to get rows collected in Unique */
   READ_RECORD read_record;
 };
@@ -590,6 +631,22 @@ public:
   */
   List<QUICK_RANGE_SELECT> quick_selects;
 
+  virtual bool is_valid()
+  {
+    List_iterator_fast<QUICK_RANGE_SELECT> it(quick_selects);
+    QUICK_RANGE_SELECT *quick;
+    bool valid= true;
+    while ((quick= it++))
+    {
+      if (!quick->is_valid())
+      {
+        valid= false;
+        break;
+      }
+    }
+    return valid;
+  }
+
   /*
     Merged quick select that uses Clustered PK, if there is one. This quick
     select is not used for row retrieval, it is used for row retrieval.
@@ -640,6 +697,22 @@ public:
 
   List<QUICK_SELECT_I> quick_selects; /* Merged quick selects */
 
+  virtual bool is_valid()
+  {
+    List_iterator_fast<QUICK_SELECT_I> it(quick_selects);
+    QUICK_SELECT_I *quick;
+    bool valid= true;
+    while ((quick= it++))
+    {
+      if (!quick->is_valid())
+      {
+        valid= false;
+        break;
+      }
+    }
+    return valid;
+  }
+
   QUEUE queue;    /* Priority queue for merge operation */
   MEM_ROOT alloc; /* Memory pool for this and merged quick selects data. */
 
@@ -649,7 +722,6 @@ public:
   bool have_prev_rowid; /* true if prev_rowid has valid data */
   uint rowid_length;    /* table rowid length */
 private:
-  static int queue_cmp(void *arg, uchar *val1, uchar *val2);
   bool scans_inited; 
 };
 
@@ -701,6 +773,7 @@ private:
   uchar *last_prefix;     /* Prefix of the last group for detecting EOF. */
   bool have_min;         /* Specify whether we are computing */
   bool have_max;         /*   a MIN, a MAX, or both.         */
+  bool have_agg_distinct;/*   aggregate_function(DISTINCT ...).  */
   bool seen_first_key;   /* Denotes whether the first key was retrieved.*/
   KEY_PART_INFO *min_max_arg_part; /* The keypart of the only argument field */
                                    /* of all MIN/MAX functions.              */
@@ -714,6 +787,11 @@ private:
   List<Item_sum> *max_functions;
   List_iterator<Item_sum> *min_functions_it;
   List_iterator<Item_sum> *max_functions_it;
+  /* 
+    Use index scan to get the next different key instead of jumping into it 
+    through index read 
+  */
+  bool is_index_scan; 
 public:
   /*
     The following two members are public to allow easy access from
@@ -731,12 +809,13 @@ private:
   void update_max_result();
 public:
   QUICK_GROUP_MIN_MAX_SELECT(TABLE *table, JOIN *join, bool have_min,
-                             bool have_max, KEY_PART_INFO *min_max_arg_part,
+                             bool have_max, bool have_agg_distinct,
+                             KEY_PART_INFO *min_max_arg_part,
                              uint group_prefix_len, uint group_key_parts,
                              uint used_key_parts, KEY *index_info, uint
                              use_index, double read_cost, ha_rows records, uint
                              key_infix_len, uchar *key_infix, MEM_ROOT
-                             *parent_alloc);
+                             *parent_alloc, bool is_index_scan);
   ~QUICK_GROUP_MIN_MAX_SELECT();
   bool add_range(SEL_ARG *sel_range);
   void update_key_stat();
@@ -752,6 +831,12 @@ public:
 #ifndef DBUG_OFF
   void dbug_dump(int indent, bool verbose);
 #endif
+  bool is_agg_distinct() { return have_agg_distinct; }
+  virtual void append_loose_scan_type(String *str) 
+  {
+    if (is_index_scan)
+      str->append(STRING_WITH_LEN(" (scanning)"));
+  }
 };
 
 
@@ -762,6 +847,10 @@ public:
   int get_next();
   bool reverse_sorted() { return 1; }
   int get_type() { return QS_TYPE_RANGE_DESC; }
+  QUICK_SELECT_I *make_reverse(uint used_key_parts_arg)
+  {
+    return this; // is already reverse sorted
+  }
 private:
   bool range_reads_after_key(QUICK_RANGE *range);
   int reset(void) { rev_it.rewind(); return QUICK_RANGE_SELECT::reset(); }
@@ -787,6 +876,7 @@ class SQL_SELECT :public Sql_alloc {
   SQL_SELECT();
   ~SQL_SELECT();
   void cleanup();
+  void set_quick(QUICK_SELECT_I *new_quick) { delete quick; quick= new_quick; }
   bool check_quick(THD *thd, bool force_quick_range, ha_rows limit)
   {
     key_map tmp;
@@ -806,7 +896,7 @@ class SQL_SELECT :public Sql_alloc {
 class FT_SELECT: public QUICK_RANGE_SELECT {
 public:
   FT_SELECT(THD *thd, TABLE *table, uint key) :
-      QUICK_RANGE_SELECT (thd, table, key, 1) { VOID(init()); }
+      QUICK_RANGE_SELECT (thd, table, key, 1) { (void) init(); }
   ~FT_SELECT() { file->ft_end(); }
   int init() { return error=file->ft_init(); }
   int reset() { return 0; }
@@ -817,11 +907,15 @@ public:
 QUICK_RANGE_SELECT *get_quick_select_for_ref(THD *thd, TABLE *table,
                                              struct st_table_ref *ref,
                                              ha_rows records);
-uint get_index_for_order(TABLE *table, ORDER *order, ha_rows limit);
+SQL_SELECT *make_select(TABLE *head, table_map const_tables,
+			table_map read_tables, COND *conds,
+                        bool allow_null_cond,  int *error);
 
 #ifdef WITH_PARTITION_STORAGE_ENGINE
 bool prune_partitions(THD *thd, TABLE *table, Item *pprune_cond);
 void store_key_image_to_rec(Field *field, uchar *ptr, uint len);
 #endif
+
+extern String null_string;
 
 #endif

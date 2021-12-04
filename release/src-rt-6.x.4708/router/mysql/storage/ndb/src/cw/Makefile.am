@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2006 MySQL AB
+# Copyright (C) 2004 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,6 +17,3 @@
 SUBDIRS = cpcd
 
 windoze-dsp:
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%

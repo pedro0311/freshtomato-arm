@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2014, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License
@@ -13,8 +13,8 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+   02110-1301  USA */
 
 /*
   Replace strings in textfile
@@ -42,7 +42,6 @@
   fill_buffer_retaining() is taken from gnu-grep and modified.
 */
 
-#define DONT_USE_RAID
 #include <my_global.h>
 #include <m_ctype.h>
 #include <my_sys.h>
@@ -55,7 +54,7 @@
 typedef struct st_pointer_array {		/* when using array-strings */
   TYPELIB typelib;				/* Pointer to strings */
   uchar *str;					/* Strings is here */
-  int7	*flag;					/* Flag about each var. */
+  uint8	*flag;					/* Flag about each var. */
   uint  array_allocs,max_count,length,max_length;
 } POINTER_ARRAY;
 
@@ -265,12 +264,12 @@ static int insert_pointer_name(reg1 POINTER_ARRAY *pa,char * name)
     if (!(pa->str= (uchar*) my_malloc((uint) (PS_MALLOC-MALLOC_OVERHEAD),
 				     MYF(MY_WME))))
     {
-      my_free((uchar*) pa->typelib.type_names,MYF(0));
+      my_free(pa->typelib.type_names);
       DBUG_RETURN (-1);
     }
     pa->max_count=(PC_MALLOC-MALLOC_OVERHEAD)/(sizeof(uchar*)+
 					       sizeof(*pa->flag));
-    pa->flag= (int7*) (pa->typelib.type_names+pa->max_count);
+    pa->flag= (uint8*) (pa->typelib.type_names+pa->max_count);
     pa->length=0;
     pa->max_length=PS_MALLOC-MALLOC_OVERHEAD;
     pa->array_allocs=1;
@@ -307,14 +306,14 @@ static int insert_pointer_name(reg1 POINTER_ARRAY *pa,char * name)
     pa->typelib.type_names=new_array;
     old_count=pa->max_count;
     pa->max_count=len/(sizeof(uchar*) + sizeof(*pa->flag));
-    pa->flag= (int7*) (pa->typelib.type_names+pa->max_count);
+    pa->flag= (uint8*) (pa->typelib.type_names+pa->max_count);
     memcpy((uchar*) pa->flag,(char *) (pa->typelib.type_names+old_count),
 	   old_count*sizeof(*pa->flag));
   }
   pa->flag[pa->typelib.count]=0;			/* Reset flag */
   pa->typelib.type_names[pa->typelib.count++]= (char*) (pa->str+pa->length);
   pa->typelib.type_names[pa->typelib.count]= NullS;	/* Put end-mark */
-  VOID(strmov((char*) pa->str + pa->length, name));
+  (void) strmov((char*) pa->str + pa->length, name);
   pa->length+=length;
   DBUG_RETURN(0);
 } /* insert_pointer_name */
@@ -327,9 +326,9 @@ static void free_pointer_array(reg1 POINTER_ARRAY *pa)
   if (pa->typelib.count)
   {
     pa->typelib.count=0;
-    my_free((uchar*) pa->typelib.type_names,MYF(0));
+    my_free(pa->typelib.type_names);
     pa->typelib.type_names=0;
-    my_free((uchar*) pa->str,MYF(0));
+    my_free(pa->str);
   }
   return;
 } /* free_pointer_array */
@@ -436,7 +435,7 @@ static REPLACE *init_replace(char * *from, char * *to,uint count,
     free_sets(&sets);
     DBUG_RETURN(0);
   }
-  VOID(make_new_set(&sets));			/* Set starting set */
+  (void) make_new_set(&sets);			/* Set starting set */
   make_sets_invisible(&sets);			/* Hide previus sets */
   used_sets=-1;
   word_states=make_new_set(&sets);		/* Start of new word */
@@ -444,7 +443,7 @@ static REPLACE *init_replace(char * *from, char * *to,uint count,
   if (!(follow=(FOLLOWS*) my_malloc((states+2)*sizeof(FOLLOWS),MYF(MY_WME))))
   {
     free_sets(&sets);
-    my_free((uchar*) found_set,MYF(0));
+    my_free(found_set);
     DBUG_RETURN(0);
   }
 
@@ -666,9 +665,9 @@ static REPLACE *init_replace(char * *from, char * *to,uint count,
 	  replace[i].next[j]=(REPLACE*) (rep_str+(-sets.set[i].next[j]-1));
     }
   }
-  my_free((uchar*) follow,MYF(0));
+  my_free(follow);
   free_sets(&sets);
-  my_free((uchar*) found_set,MYF(0));
+  my_free(found_set);
   DBUG_PRINT("exit",("Replace table has %d states",sets.count));
   DBUG_RETURN(replace);
 }
@@ -684,7 +683,7 @@ static int init_sets(REP_SETS *sets,uint states)
   if (!(sets->bit_buffer=(uint*) my_malloc(sizeof(uint)*sets->size_of_bits*
 					   SET_MALLOC_HUNC,MYF(MY_WME))))
   {
-    my_free((uchar*) sets->set,MYF(0));
+    my_free(sets->set);
     return 1;
   }
   return 0;
@@ -745,8 +744,8 @@ static void free_last_set(REP_SETS *sets)
 
 static void free_sets(REP_SETS *sets)
 {
-  my_free((uchar*)sets->set_buffer,MYF(0));
-  my_free((uchar*)sets->bit_buffer,MYF(0));
+  my_free(sets->set_buffer);
+  my_free(sets->bit_buffer);
   return;
 }
 
@@ -953,8 +952,8 @@ static void reset_buffer()
 
 static void free_buffer()
 {
-  my_free(buffer,MYF(MY_WME));
-  my_free(out_buff,MYF(MY_WME));
+  my_free(buffer);
+  my_free(out_buff);
 }
 
 
@@ -1021,7 +1020,7 @@ FILE *in,*out;
   updated=retain=0;
   reset_buffer();
 
-  while ((error=fill_buffer_retaining(fileno(in),retain)) > 0)
+  while ((error=fill_buffer_retaining(my_fileno(in),retain)) > 0)
   {
     end_of_line=buffer ;
     buffer[bufbytes]=0;			/* Sentinel  */

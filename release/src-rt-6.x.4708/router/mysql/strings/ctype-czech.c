@@ -1,5 +1,4 @@
-/* Copyright (c) 2000-2007 MySQL AB
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* File strings/ctype-czech.c for MySQL.
 
@@ -432,7 +430,7 @@ static my_bool my_like_range_czech(CHARSET_INFO *cs __attribute__((unused)),
 #include <my_global.h>
 #include "m_string.h"
 
-static uchar NEAR ctype_czech[257] = {
+static uchar ctype_czech[257] = {
 0,
  32, 32, 32, 32, 32, 32, 32, 32, 32, 40, 40, 40, 40, 40, 32, 32,
  32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
@@ -452,7 +450,7 @@ static uchar NEAR ctype_czech[257] = {
   2,  2,  2,  2,  2,  2,  2, 16,  2,  2,  2,  2,  2,  2,  2, 16,
 };
 
-static uchar NEAR to_lower_czech[] = {
+static uchar to_lower_czech[] = {
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
  32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
@@ -471,7 +469,7 @@ static uchar NEAR to_lower_czech[] = {
 240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255,
 };
 
-static uchar NEAR to_upper_czech[] = {
+static uchar to_upper_czech[] = {
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
  32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
@@ -490,7 +488,7 @@ static uchar NEAR to_upper_czech[] = {
 240,209,210,211,212,213,214,247,216,217,218,219,220,221,222,255,
 };
 
-static uchar NEAR sort_order_czech[] = {
+static uchar sort_order_czech[] = {
   0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15,
  16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
  32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,

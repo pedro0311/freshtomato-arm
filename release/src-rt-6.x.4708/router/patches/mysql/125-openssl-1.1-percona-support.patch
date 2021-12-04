@@ -1,0 +1,157 @@
+--- mysql/sql/mysqld.cc
++++ mysql/sql/mysqld.cc
+@@ -942,7 +942,7 @@
+ 
+ #ifdef HAVE_OPENSSL
+ #include <openssl/crypto.h>
+-#ifndef HAVE_YASSL
++#if !defined(HAVE_YASSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
+ typedef struct CRYPTO_dynlock_value
+ {
+   mysql_rwlock_t lock;
+@@ -1589,7 +1589,7 @@
+   mysql_mutex_destroy(&LOCK_connection_count);
+ #ifdef HAVE_OPENSSL
+   mysql_mutex_destroy(&LOCK_des_key_file);
+-#ifndef HAVE_YASSL
++#if !defined(HAVE_YASSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
+   for (int i= 0; i < CRYPTO_num_locks(); ++i)
+     mysql_rwlock_destroy(&openssl_stdlocks[i].lock);
+   OPENSSL_free(openssl_stdlocks);
+@@ -2097,6 +2097,10 @@
+ 
+   thd->disconnect();
+ 
++#if defined(HAVE_OPENSSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
++  ERR_remove_state(0);
++#endif
++
+   MYSQL_CONNECTION_DONE((int) sql_errno, thd->thread_id);
+ 
+   if (MYSQL_CONNECTION_DONE_ENABLED())
+@@ -3658,7 +3662,7 @@
+ #ifdef HAVE_OPENSSL
+   mysql_mutex_init(key_LOCK_des_key_file,
+                    &LOCK_des_key_file, MY_MUTEX_INIT_FAST);
+-#ifndef HAVE_YASSL
++#if !defined(HAVE_YASSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
+   openssl_stdlocks= (openssl_lock_t*) OPENSSL_malloc(CRYPTO_num_locks() *
+                                                      sizeof(openssl_lock_t));
+   for (int i= 0; i < CRYPTO_num_locks(); ++i)
+@@ -3704,7 +3708,8 @@
+ }
+ 
+ 
+-#if defined(HAVE_OPENSSL) && !defined(HAVE_YASSL)
++#if defined(HAVE_OPENSSL) && !defined(HAVE_YASSL) && \
++    (OPENSSL_VERSION_NUMBER < 0x10100000L)
+ static unsigned long openssl_id_function()
+ { 
+   return (unsigned long) pthread_self();
+@@ -3785,6 +3790,9 @@
+     ssl_acceptor_fd= new_VioSSLAcceptorFd(opt_ssl_key, opt_ssl_cert,
+ 					  opt_ssl_ca, opt_ssl_capath,
+ 					  opt_ssl_cipher, &error);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
++    ERR_remove_state(0);
++#endif
+     DBUG_PRINT("info",("ssl_acceptor_fd: 0x%lx", (long) ssl_acceptor_fd));
+     if (!ssl_acceptor_fd)
+     {
+--- mysql/sql/slave.cc
++++ mysql/sql/slave.cc
+@@ -3139,6 +3139,9 @@
+ 
+   DBUG_LEAVE;                                   // Must match DBUG_ENTER()
+   my_thread_end();
++#if defined(HAVE_OPENSSL) && (OPENSSL_VERSION_NUMBER < 0x10100000L)
++  ERR_remove_state(0);
++#endif
+   pthread_exit(0);
+   return 0;                                     // Avoid compiler warnings
+ }
+--- mysql/sql-common/client.c
++++ mysql/sql-common/client.c
+@@ -1923,7 +1923,7 @@
+ {
+   SSL *ssl;
+   X509 *server_cert= NULL;
+-  char *cn= NULL;
++  const char *cn= NULL;
+   int cn_loc= -1;
+   ASN1_STRING *cn_asn1= NULL;
+   X509_NAME_ENTRY *cn_entry= NULL;
+@@ -1995,7 +1995,11 @@
+     goto error;
+   }
+ 
+-  cn= (char *) ASN1_STRING_data(cn_asn1);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
++  cn= (const char *) ASN1_STRING_data(cn_asn1);
++#else
++  cn= (const char *) ASN1_STRING_get0_data(cn_asn1);
++#endif
+ 
+   // There should not be any NULL embedded in the CN
+   if ((size_t)ASN1_STRING_length(cn_asn1) != strlen(cn))
+--- mysql/vio/vio.c
++++ mysql/vio/vio.c
+@@ -287,5 +287,12 @@
+ {
+ #ifdef HAVE_YASSL
+   yaSSL_CleanUp();
++#elif defined(HAVE_OPENSSL)
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
++  ERR_remove_state(0);
++#endif
++  ERR_free_strings();
++  EVP_cleanup();
++  CRYPTO_cleanup_all_ex_data();
+ #endif
+ }
+--- mysql/vio/viossl.c
++++ mysql/vio/viossl.c
+@@ -154,7 +154,8 @@
+   my_bool unused;
+   my_bool was_blocking;
+   /* Declared here to make compiler happy */
+-#if !defined(HAVE_YASSL) && !defined(DBUG_OFF)
++#if !defined(HAVE_YASSL) && !defined(DBUG_OFF) && \
++    (OPENSSL_VERSION_NUMBER < 0x10100000L)
+   int j, n;
+ #endif
+ 
+@@ -186,7 +187,8 @@
+   sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
+ #endif
+ 
+-#if !defined(HAVE_YASSL) && !defined(DBUG_OFF)
++#if !defined(HAVE_YASSL) && !defined(DBUG_OFF) && \
++    (OPENSSL_VERSION_NUMBER < 0x10100000L)
+   {
+     STACK_OF(SSL_COMP) *ssl_comp_methods = NULL;
+     ssl_comp_methods = SSL_COMP_get_compression_methods();
+--- mysql/vio/viosslfactories.c
++++ mysql/vio/viosslfactories.c
+@@ -68,12 +68,18 @@
+   DH *dh;
+   if ((dh=DH_new()))
+   {
+-    dh->p=BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
+-    dh->g=BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
++    BIGNUM* p= BN_bin2bn(dh2048_p,sizeof(dh2048_p),NULL);
++    BIGNUM* g= BN_bin2bn(dh2048_g,sizeof(dh2048_g),NULL);
++#if OPENSSL_VERSION_NUMBER < 0x10100000L
++    dh->p= p;
++    dh->g= g;
+     if (! dh->p || ! dh->g)
++#else
++    if (!DH_set0_pqg(dh, p, NULL, g))
++#endif
+     {
+       DH_free(dh);
+-      dh=0;
++      dh= NULL;
+     }
+   }
+   return(dh);

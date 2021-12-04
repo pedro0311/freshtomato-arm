@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2003, 2005-2007 MySQL AB
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /*
@@ -26,6 +26,10 @@
 #pragma interface			/* gcc class interface */
 #endif
 
+#include "hash.h"        /* my_hash_get_key, my_hash_free_key, HASH */
+#include "m_string.h"    /* bzero */
+#include "mysqld.h"      /* key_hash_filo_lock */
+
 class hash_filo_element
 {
   hash_filo_element *next_used,*prev_used;
@@ -38,18 +42,18 @@ class hash_filo_element
 class hash_filo
 {
   const uint size, key_offset, key_length;
-  const hash_get_key get_key;
-  hash_free_key free_element;
+  const my_hash_get_key get_key;
+  my_hash_free_key free_element;
   bool init;
   CHARSET_INFO *hash_charset;
 
   hash_filo_element *first_link,*last_link;
 public:
-  pthread_mutex_t lock;
+  mysql_mutex_t lock;
   HASH cache;
 
   hash_filo(uint size_arg, uint key_offset_arg , uint key_length_arg,
-	    hash_get_key get_key_arg, hash_free_key free_element_arg,
+	    my_hash_get_key get_key_arg, my_hash_free_key free_element_arg,
 	    CHARSET_INFO *hash_charset_arg)
     :size(size_arg), key_offset(key_offset_arg), key_length(key_length_arg),
     get_key(get_key_arg), free_element(free_element_arg),init(0),
@@ -63,8 +67,8 @@ public:
     if (init)
     {
       if (cache.array.buffer)	/* Avoid problems with thread library */
-	(void) hash_free(&cache);
-      pthread_mutex_destroy(&lock);
+	(void) my_hash_free(&cache);
+      mysql_mutex_destroy(&lock);
     }
   }
   void clear(bool locked=0)
@@ -72,22 +76,22 @@ public:
     if (!init)
     {
       init=1;
-      (void) pthread_mutex_init(&lock,MY_MUTEX_INIT_FAST);
+      mysql_mutex_init(key_hash_filo_lock, &lock, MY_MUTEX_INIT_FAST);
     }
     if (!locked)
-      (void) pthread_mutex_lock(&lock);
-    (void) hash_free(&cache);
-    (void) hash_init(&cache,hash_charset,size,key_offset, 
+      mysql_mutex_lock(&lock);
+    (void) my_hash_free(&cache);
+    (void) my_hash_init(&cache,hash_charset,size,key_offset, 
     		     key_length, get_key, free_element,0);
     if (!locked)
-      (void) pthread_mutex_unlock(&lock);
+      mysql_mutex_unlock(&lock);
     first_link=last_link=0;
   }
 
   hash_filo_element *search(uchar* key, size_t length)
   {
     hash_filo_element *entry=(hash_filo_element*)
-      hash_search(&cache,(uchar*) key,length);
+      my_hash_search(&cache,(uchar*) key,length);
     if (entry)
     {						// Found; link it first
       if (entry != first_link)
@@ -113,7 +117,7 @@ public:
     {
       hash_filo_element *tmp=last_link;
       last_link=last_link->prev_used;
-      hash_delete(&cache,(uchar*) tmp);
+      my_hash_delete(&cache,(uchar*) tmp);
     }
     if (my_hash_insert(&cache,(uchar*) entry))
     {

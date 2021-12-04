@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2007 MySQL AB
+/* Copyright (c) 2000, 2003-2007 MySQL AB, 2009 Sun Microsystems, Inc.
    Use is subject to license terms.
 
    This program is free software; you can redistribute it and/or modify
@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include <my_global.h>
 #include "m_string.h"
@@ -680,13 +679,12 @@ void my_hash_sort_latin1_de(CHARSET_INFO *cs __attribute__((unused)),
 			    const uchar *key, size_t len,
 			    ulong *nr1, ulong *nr2)
 {
-  const uchar *end= key+len;
+  const uchar *end;
   /*
     Remove end space. We have to do this to be able to compare
     'AE' and 'Ä' as identical
   */
-  while (end > key && end[-1] == ' ')
-    end--;
+  end= skip_trailing_space(key, len);
 
   for (; key < end ; key++)
   {

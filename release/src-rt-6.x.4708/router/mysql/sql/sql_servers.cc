@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2006-2008 MySQL AB, 2009, 2010 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /*
@@ -36,12 +33,18 @@
   currently running transactions etc will not be disrupted.
 */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "sql_servers.h"
+#include "unireg.h"
+#include "sql_base.h"                           // close_mysql_tables
+#include "records.h"          // init_read_record, end_read_record
 #include "hash_filo.h"
 #include <m_ctype.h>
 #include <stdarg.h>
 #include "sp_head.h"
 #include "sp.h"
+#include "transaction.h"
+#include "lock.h"                               // MYSQL_LOCK_IGNORE_TIMEOUT
 
 /*
   We only use 1 mutex to guard the data structures - THR_LOCK_servers.
@@ -50,7 +53,7 @@
 
 static HASH servers_cache;
 static MEM_ROOT mem;
-static rw_lock_t THR_LOCK_servers;
+static mysql_rwlock_t THR_LOCK_servers;
 
 static bool get_server_from_table_to_cache(TABLE *table);
 
@@ -92,6 +95,26 @@ static uchar *servers_cache_get_key(FOREIGN_SERVER *server, size_t *length,
   DBUG_RETURN((uchar*) server->server_name);
 }
 
+#ifdef HAVE_PSI_INTERFACE
+static PSI_rwlock_key key_rwlock_THR_LOCK_servers;
+
+static PSI_rwlock_info all_servers_cache_rwlocks[]=
+{
+  { &key_rwlock_THR_LOCK_servers, "THR_LOCK_servers", PSI_FLAG_GLOBAL}
+};
+
+static void init_servers_cache_psi_keys(void)
+{
+  const char* category= "sql";
+  int count;
+
+  if (PSI_server == NULL)
+    return;
+
+  count= array_elements(all_servers_cache_rwlocks);
+  PSI_server->register_rwlock(category, all_servers_cache_rwlocks, count);
+}
+#endif /* HAVE_PSI_INTERFACE */
 
 /*
   Initialize structures responsible for servers used in federated
@@ -118,20 +141,24 @@ bool servers_init(bool dont_read_servers_table)
   bool return_val= FALSE;
   DBUG_ENTER("servers_init");
 
+#ifdef HAVE_PSI_INTERFACE
+  init_servers_cache_psi_keys();
+#endif
+
   /* init the mutex */
-  if (my_rwlock_init(&THR_LOCK_servers, NULL))
+  if (mysql_rwlock_init(key_rwlock_THR_LOCK_servers, &THR_LOCK_servers))
     DBUG_RETURN(TRUE);
 
   /* initialise our servers cache */
-  if (hash_init(&servers_cache, system_charset_info, 32, 0, 0,
-                (hash_get_key) servers_cache_get_key, 0, 0))
+  if (my_hash_init(&servers_cache, system_charset_info, 32, 0, 0,
+                   (my_hash_get_key) servers_cache_get_key, 0, 0))
   {
     return_val= TRUE; /* we failed, out of memory? */
     goto end;
   }
 
   /* Initialize the mem root for data */
-  init_alloc_root(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
+  init_sql_alloc(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
 
   if (dont_read_servers_table)
     goto end;
@@ -143,7 +170,6 @@ bool servers_init(bool dont_read_servers_table)
     DBUG_RETURN(TRUE);
   thd->thread_stack= (char*) &thd;
   thd->store_globals();
-  lex_start(thd);
   /*
     It is safe to call servers_reload() since servers_* arrays and hashes which
     will be freed there are global static objects and thus are initialized
@@ -183,7 +209,7 @@ static bool servers_load(THD *thd, TABLE_LIST *tables)
 
   my_hash_reset(&servers_cache);
   free_root(&mem, MYF(0));
-  init_alloc_root(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
+  init_sql_alloc(&mem, ACL_ALLOC_BLOCK_SIZE, 0);
 
   init_read_record(&read_record_info,thd,table=tables[0].table,NULL,1,0, 
                    FALSE);
@@ -227,30 +253,20 @@ bool servers_reload(THD *thd)
   bool return_val= TRUE;
   DBUG_ENTER("servers_reload");
 
-  if (thd->locked_tables)
-  {					// Can't have locked tables here
-    thd->lock=thd->locked_tables;
-    thd->locked_tables=0;
-    close_thread_tables(thd);
-  }
-
   DBUG_PRINT("info", ("locking servers_cache"));
-  rw_wrlock(&THR_LOCK_servers);
+  mysql_rwlock_wrlock(&THR_LOCK_servers);
 
-  bzero((char*) tables, sizeof(tables));
-  tables[0].alias= tables[0].table_name= (char*) "servers";
-  tables[0].db= (char*) "mysql";
-  tables[0].lock_type= TL_READ;
+  tables[0].init_one_table("mysql", 5, "servers", 7, "servers", TL_READ);
 
-  if (simple_open_n_lock_tables(thd, tables))
+  if (open_and_lock_tables(thd, tables, FALSE, MYSQL_LOCK_IGNORE_TIMEOUT))
   {
     /*
       Execution might have been interrupted; only print the error message
       if an error condition has been raised.
     */
-    if (thd->main_da.is_error())
+    if (thd->stmt_da->is_error())
       sql_print_error("Can't open and lock privilege tables: %s",
-                      thd->main_da.message());
+                      thd->stmt_da->message());
     return_val= FALSE;
     goto end;
   }
@@ -264,9 +280,9 @@ bool servers_reload(THD *thd)
   }
 
 end:
-  close_thread_tables(thd);
+  close_mysql_tables(thd);
   DBUG_PRINT("info", ("unlocking servers_cache"));
-  rw_unlock(&THR_LOCK_servers);
+  mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(return_val);
 }
 
@@ -374,12 +390,10 @@ insert_server(THD *thd, FOREIGN_SERVER *server)
 
   DBUG_ENTER("insert_server");
 
-  bzero((char*) &tables, sizeof(tables));
-  tables.db= (char*) "mysql";
-  tables.alias= tables.table_name= (char*) "servers";
+  tables.init_one_table("mysql", 5, "servers", 7, "servers", TL_WRITE);
 
   /* need to open before acquiring THR_LOCK_plugin or it will deadlock */
-  if (! (table= open_ltable(thd, &tables, TL_WRITE, 0)))
+  if (! (table= open_ltable(thd, &tables, TL_WRITE, MYSQL_LOCK_IGNORE_TIMEOUT)))
     goto end;
 
   /* insert the server into the table */
@@ -519,6 +533,7 @@ int insert_server_record(TABLE *table, FOREIGN_SERVER *server)
 {
   int error;
   DBUG_ENTER("insert_server_record");
+  tmp_disable_binlog(table->in_use);
   table->use_all_columns();
 
   empty_record(table);
@@ -555,6 +570,8 @@ int insert_server_record(TABLE *table, FOREIGN_SERVER *server)
   }
   else
     error= ER_FOREIGN_SERVER_EXISTS;
+
+  reenable_binlog(table->in_use);
   DBUG_RETURN(error);
 }
 
@@ -592,17 +609,15 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   DBUG_PRINT("info", ("server name server->server_name %s",
                       server_options->server_name));
 
-  bzero((char*) &tables, sizeof(tables));
-  tables.db= (char*) "mysql";
-  tables.alias= tables.table_name= (char*) "servers";
+  tables.init_one_table("mysql", 5, "servers", 7, "servers", TL_WRITE);
 
-  rw_wrlock(&THR_LOCK_servers);
+  mysql_rwlock_wrlock(&THR_LOCK_servers);
 
   /* hit the memory hit first */
   if ((error= delete_server_record_in_cache(server_options)))
     goto end;
 
-  if (! (table= open_ltable(thd, &tables, TL_WRITE, 0)))
+  if (! (table= open_ltable(thd, &tables, TL_WRITE, MYSQL_LOCK_IGNORE_TIMEOUT)))
   {
     error= my_errno;
     goto end;
@@ -611,16 +626,16 @@ int drop_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   error= delete_server_record(table, name.str, name.length);
 
   /* close the servers table before we call closed_cached_connection_tables */
-  close_thread_tables(thd);
+  close_mysql_tables(thd);
 
-  if (close_cached_connection_tables(thd, TRUE, &name))
+  if (close_cached_connection_tables(thd, &name))
   {
     push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
                         ER_UNKNOWN_ERROR, "Server connection in use");
   }
 
 end:
-  rw_unlock(&THR_LOCK_servers);
+  mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(error);
 }
 
@@ -655,9 +670,10 @@ delete_server_record_in_cache(LEX_SERVER_OPTIONS *server_options)
                      server_options->server_name_length));
 
 
-  if (!(server= (FOREIGN_SERVER *) hash_search(&servers_cache,
-                                     (uchar*) server_options->server_name,
-                                     server_options->server_name_length)))
+  if (!(server= (FOREIGN_SERVER *)
+        my_hash_search(&servers_cache,
+                       (uchar*) server_options->server_name,
+                       server_options->server_name_length)))
   {
     DBUG_PRINT("info", ("server_name %s length %d not found!",
                         server_options->server_name,
@@ -672,8 +688,8 @@ delete_server_record_in_cache(LEX_SERVER_OPTIONS *server_options)
                      server->server_name,
                      server->server_name_length));
 
-  VOID(hash_delete(&servers_cache, (uchar*) server));
-  
+  my_hash_delete(&servers_cache, (uchar*) server);
+
   error= 0;
 
 end:
@@ -715,11 +731,10 @@ int update_server(THD *thd, FOREIGN_SERVER *existing, FOREIGN_SERVER *altered)
   TABLE_LIST tables;
   DBUG_ENTER("update_server");
 
-  bzero((char*) &tables, sizeof(tables));
-  tables.db= (char*)"mysql";
-  tables.alias= tables.table_name= (char*)"servers";
+  tables.init_one_table("mysql", 5, "servers", 7, "servers",
+                         TL_WRITE);
 
-  if (!(table= open_ltable(thd, &tables, TL_WRITE, 0)))
+  if (!(table= open_ltable(thd, &tables, TL_WRITE, MYSQL_LOCK_IGNORE_TIMEOUT)))
   {
     error= my_errno;
     goto end;
@@ -779,7 +794,7 @@ int update_server_record_in_cache(FOREIGN_SERVER *existing,
   /*
     delete the existing server struct from the server cache
   */
-  VOID(hash_delete(&servers_cache, (uchar*)existing));
+  my_hash_delete(&servers_cache, (uchar*)existing);
 
   /*
     Insert the altered server struct into the server cache
@@ -866,6 +881,7 @@ update_server_record(TABLE *table, FOREIGN_SERVER *server)
 {
   int error=0;
   DBUG_ENTER("update_server_record");
+  tmp_disable_binlog(table->in_use);
   table->use_all_columns();
   /* set the field that's the PK to the value we're looking for */
   table->field[0]->store(server->server_name,
@@ -899,6 +915,7 @@ update_server_record(TABLE *table, FOREIGN_SERVER *server)
   }
 
 end:
+  reenable_binlog(table->in_use);
   DBUG_RETURN(error);
 }
 
@@ -924,6 +941,7 @@ delete_server_record(TABLE *table,
 {
   int error;
   DBUG_ENTER("delete_server_record");
+  tmp_disable_binlog(table->in_use);
   table->use_all_columns();
 
   /* set the field that's the PK to the value we're looking for */
@@ -945,6 +963,7 @@ delete_server_record(TABLE *table,
       table->file->print_error(error, MYF(0));
   }
 
+  reenable_binlog(table->in_use);
   DBUG_RETURN(error);
 }
 
@@ -971,11 +990,11 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   DBUG_PRINT("info", ("server_options->server_name %s",
                       server_options->server_name));
 
-  rw_wrlock(&THR_LOCK_servers);
+  mysql_rwlock_wrlock(&THR_LOCK_servers);
 
   /* hit the memory first */
-  if (hash_search(&servers_cache, (uchar*) server_options->server_name,
-				   server_options->server_name_length))
+  if (my_hash_search(&servers_cache, (uchar*) server_options->server_name,
+                     server_options->server_name_length))
     goto end;
 
 
@@ -992,7 +1011,7 @@ int create_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   DBUG_PRINT("info", ("error returned %d", error));
 
 end:
-  rw_unlock(&THR_LOCK_servers);
+  mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(error);
 }
 
@@ -1021,11 +1040,11 @@ int alter_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   DBUG_PRINT("info", ("server_options->server_name %s",
                       server_options->server_name));
 
-  rw_wrlock(&THR_LOCK_servers);
+  mysql_rwlock_wrlock(&THR_LOCK_servers);
 
-  if (!(existing= (FOREIGN_SERVER *) hash_search(&servers_cache,
-                                                 (uchar*) name.str,
-                                                 name.length)))
+  if (!(existing= (FOREIGN_SERVER *) my_hash_search(&servers_cache,
+                                                    (uchar*) name.str,
+                                                    name.length)))
     goto end;
 
   altered= (FOREIGN_SERVER *)alloc_root(&mem,
@@ -1036,9 +1055,9 @@ int alter_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
   error= update_server(thd, existing, altered);
 
   /* close the servers table before we call closed_cached_connection_tables */
-  close_thread_tables(thd);
+  close_mysql_tables(thd);
 
-  if (close_cached_connection_tables(thd, FALSE, &name))
+  if (close_cached_connection_tables(thd, &name))
   {
     push_warning_printf(thd, MYSQL_ERROR::WARN_LEVEL_WARN,
                         ER_UNKNOWN_ERROR, "Server connection in use");
@@ -1046,7 +1065,7 @@ int alter_server(THD *thd, LEX_SERVER_OPTIONS *server_options)
 
 end:
   DBUG_PRINT("info", ("error returned %d", error));
-  rw_unlock(&THR_LOCK_servers);
+  mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(error);
 }
 
@@ -1204,7 +1223,7 @@ prepare_server_struct_for_update(LEX_SERVER_OPTIONS *server_options,
 void servers_free(bool end)
 {
   DBUG_ENTER("servers_free");
-  if (!hash_inited(&servers_cache))
+  if (!my_hash_inited(&servers_cache))
     DBUG_VOID_RETURN;
   if (!end)
   {
@@ -1212,9 +1231,9 @@ void servers_free(bool end)
 	my_hash_reset(&servers_cache);
     DBUG_VOID_RETURN;
   }
-  rwlock_destroy(&THR_LOCK_servers);
+  mysql_rwlock_destroy(&THR_LOCK_servers);
   free_root(&mem,MYF(0));
-  hash_free(&servers_cache);
+  my_hash_free(&servers_cache);
   DBUG_VOID_RETURN;
 }
 
@@ -1294,10 +1313,10 @@ FOREIGN_SERVER *get_server_by_name(MEM_ROOT *mem, const char *server_name,
   }
 
   DBUG_PRINT("info", ("locking servers_cache"));
-  rw_rdlock(&THR_LOCK_servers);
-  if (!(server= (FOREIGN_SERVER *) hash_search(&servers_cache,
-                                               (uchar*) server_name,
-                                               server_name_length)))
+  mysql_rwlock_rdlock(&THR_LOCK_servers);
+  if (!(server= (FOREIGN_SERVER *) my_hash_search(&servers_cache,
+                                                  (uchar*) server_name,
+                                                  server_name_length)))
   {
     DBUG_PRINT("info", ("server_name %s length %u not found!",
                         server_name, (unsigned) server_name_length));
@@ -1308,7 +1327,7 @@ FOREIGN_SERVER *get_server_by_name(MEM_ROOT *mem, const char *server_name,
     server= clone_server(mem, server, buff);
 
   DBUG_PRINT("info", ("unlocking servers_cache"));
-  rw_unlock(&THR_LOCK_servers);
+  mysql_rwlock_unlock(&THR_LOCK_servers);
   DBUG_RETURN(server);
 
 }

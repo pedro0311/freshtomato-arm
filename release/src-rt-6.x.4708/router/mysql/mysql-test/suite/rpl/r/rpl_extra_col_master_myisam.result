@@ -456,11 +456,11 @@ INSERT INTO t10 () VALUES(1,@b1,DEFAULT,'Kyle',DEFAULT),
 (3,@b1,DEFAULT,'QA',DEFAULT);
 
 ********************************************
-*** Expect slave to fail with Error 1535 ***
+*** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1535]
-Last_SQL_Error = 'Table definition on master and slave does not match: Column 2 type mismatch - received type 5, test.t10 has type 254'
+include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
+Last_SQL_Error = 'Column 2 of table 'test.t10' cannot be converted from type 'double' to type 'char(5)''
 
 *** Drop t10  ***
 DROP TABLE t10;
@@ -492,11 +492,11 @@ INSERT INTO t11 () VALUES(1,@b1,'Testing is fun','Kyle',DEFAULT),
 (3,@b1,DEFAULT,'QA',DEFAULT);
 
 ********************************************
-*** Expect slave to fail with Error 1535 ***
+*** Expect slave to fail with Error 1677 ***
 ********************************************
 
-include/wait_for_slave_sql_error_and_skip.inc [errno=1535]
-Last_SQL_Error = 'Table definition on master and slave does not match: Column 2 type mismatch - received type 252, test.t11 has type 15'
+include/wait_for_slave_sql_error_and_skip.inc [errno=1677]
+Last_SQL_Error = 'Column 2 of table 'test.t11' cannot be converted from type 'tinyblob' to type 'varchar(254)''
 
 *** Drop t11  ***
 DROP TABLE t11;

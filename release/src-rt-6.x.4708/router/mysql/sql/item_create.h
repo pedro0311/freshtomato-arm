@@ -11,13 +11,14 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Functions to create an item. Used by sql/sql_yacc.yy */
 
 #ifndef ITEM_CREATE_H
 #define ITEM_CREATE_H
+
+typedef struct st_udf_func udf_func;
 
 /**
   Public function builder interface.
@@ -164,5 +165,9 @@ Item *
 create_func_cast(THD *thd, Item *a, Cast_target cast_type,
                  const char *len, const char *dec,
                  CHARSET_INFO *cs);
+
+int item_create_init();
+void item_create_cleanup();
+
 #endif
 

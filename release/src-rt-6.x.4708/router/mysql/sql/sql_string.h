@@ -1,5 +1,7 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+#ifndef SQL_STRING_INCLUDED
+#define SQL_STRING_INCLUDED
+
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* This file is originally from the mysql distribution. Coded by monty */
 
@@ -21,11 +22,15 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
-#ifndef NOT_FIXED_DEC
-#define NOT_FIXED_DEC			31
-#endif
+#include "m_ctype.h"                            /* my_charset_bin */
+#include "my_sys.h"              /* alloc_root, my_free, my_realloc */
+#include "m_string.h"                           /* TRASH */
 
 class String;
+typedef struct charset_info_st CHARSET_INFO;
+typedef struct st_io_cache IO_CACHE;
+typedef struct st_mem_root MEM_ROOT;
+
 int sortcmp(const String *a,const String *b, CHARSET_INFO *cs);
 String *copy_if_not_alloced(String *a,String *b,uint32 arg_length);
 uint32 copy_and_convert(char *to, uint32 to_length, CHARSET_INFO *to_cs,
@@ -129,6 +134,11 @@ public:
       (void) realloc(str_length);
     return Ptr;
   }
+  LEX_STRING lex_string() const
+  {
+    LEX_STRING lex_string = { (char*) ptr(), length() };
+    return lex_string;
+  }
 
   void set(String &str,uint32 offset,uint32 arg_length)
   {
@@ -212,7 +222,7 @@ public:
     {
       alloced=0;
       Alloced_length=0;
-      my_free(Ptr,MYF(0));
+      my_free(Ptr);
       Ptr=0;
       str_length=0;				/* Safety */
     }
@@ -270,6 +280,9 @@ public:
   static bool needs_conversion(uint32 arg_length,
   			       CHARSET_INFO *cs_from, CHARSET_INFO *cs_to,
 			       uint32 *offset);
+  static bool needs_conversion_on_storage(uint32 arg_length,
+                                          CHARSET_INFO *cs_from,
+                                          CHARSET_INFO *cs_to);
   bool copy_aligned(const char *s, uint32 arg_length, uint32 offset,
 		    CHARSET_INFO *cs);
   bool set_or_copy_aligned(const char *s, uint32 arg_length, CHARSET_INFO *cs);
@@ -277,8 +290,13 @@ public:
 	    CHARSET_INFO *csto, uint *errors);
   bool append(const String &s);
   bool append(const char *s);
-  bool append(const char *s,uint32 arg_length);
-  bool append(const char *s,uint32 arg_length, CHARSET_INFO *cs);
+  bool append(LEX_STRING *ls)
+  {
+    return append(ls->str, ls->length);
+  }
+  bool append(const char *s, uint32 arg_length);
+  bool append(const char *s, uint32 arg_length, CHARSET_INFO *cs);
+  bool append_ulonglong(ulonglong val);
   bool append(IO_CACHE* file, uint32 arg_length);
   bool append_with_prefill(const char *s, uint32 arg_length, 
 			   uint32 full_length, char fill_char);
@@ -413,3 +431,8 @@ static inline bool check_if_only_end_space(CHARSET_INFO *cs, char *str,
 {
   return str+ cs->cset->scan(cs, str, end, MY_SEQ_SPACES) == end;
 }
+
+bool
+validate_string(CHARSET_INFO *cs, const char *str, uint32 length,
+                size_t *valid_length, bool *length_error);
+#endif /* SQL_STRING_INCLUDED */

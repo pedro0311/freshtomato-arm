@@ -1,7 +1,7 @@
-#!/usr/bin/perl
+#!@PERL_PATH@
 # -*- cperl -*-
 #
-# Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -65,8 +65,8 @@ Usage: $0 [OPTIONS]
                        Read this file after the global files are read.
   --defaults-file=name Only read default options from the given file name.
   --force              Causes mysql_install_db to run even if DNS does not
-                       work.  In that case, grant table entries that normally
-                       use hostnames will use IP addresses.
+                       work.  In that case, grant table entries that
+                       normally use hostnames will use IP addresses.
   --help               Display this help and exit.                     
   --ldata=path         The path to the MySQL data directory. Same as --datadir.
   --no-defaults        Don't read default options from any option file.
@@ -365,7 +365,7 @@ my $hostname = hostname();
 my $resolved;
 if ( !$opt->{'cross-bootstrap'} and !$opt->{rpm} and !$opt->{force} )
 {
-  my $resolveip;
+  my $resolveip = "$extra_bindir/resolveip";
 
   $resolved = `$resolveip $hostname 2>&1`;
   if ( $? != 0 )
@@ -375,14 +375,14 @@ if ( !$opt->{'cross-bootstrap'} and !$opt->{rpm} and !$opt->{force} )
     {
       error($opt,
             "Neither host '$hostname' nor 'localhost' could be looked up with",
-            "$bindir/resolveip",
+            "$resolveip",
             "Please configure the 'hostname' command to return a correct",
             "hostname.",
             "If you want to solve this at a later stage, restart this script",
             "with the --force option");
     }
     warning($opt,
-            "The host '$hostname' could not be looked up with resolveip.",
+            "The host '$hostname' could not be looked up with $resolveip.",
             "This probably means that your libc libraries are not 100 % compatible",
             "with this binary MySQL version. The MySQL daemon, mysqld, should work",
             "normally with the exception that host name resolving will not work.",
@@ -537,7 +537,7 @@ if ( open(PIPE, "| $mysqld_install_cmd_line") )
              "  cd mysql-test ; perl mysql-test-run.pl");
     }
     report($opt,
-           "Please report any problems with the " . '@scriptdir@' . "/mysqlbug script!",
+           "Please report any problems at http://bugs.mysql.com/",
            "",
            "The latest information about MySQL is available on the web at",
            "",
@@ -570,8 +570,9 @@ else
         "Please consult the MySQL manual section: 'Problems running mysql_install_db',",
         "and the manual section that describes problems on your OS.",
         "Another information source is the MySQL email archive.",
-        "Please check all of the above before mailing us!",
-        "And if you do mail us, you MUST use the " . '@scriptdir@' . "/mysqlbug script!")
+        "",
+        "Please check all of the above before submitting a bug report",
+        "at http://bugs.mysql.com/")
 }
 
 ##############################################################################

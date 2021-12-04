@@ -1,6 +1,5 @@
 /*
-   Copyright (c) 2007 MySQL AB
-   Use is subject to license terms.
+   Copyright (c) 2007, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -123,6 +122,8 @@ setup_config(atrt_config& config)
      */
     for (j = 0; j<(size_t)argc; j++)
     {
+      if (my_getopt_is_args_separator(tmp[j])) /* skip arguments separator */
+        continue;
       for (k = 0; proc_args[k].name; k++)
       {
 	if (!strncmp(tmp[j], proc_args[k].name, strlen(proc_args[k].name)))
@@ -387,6 +388,12 @@ load_options(int argc, char** argv, int type, atrt_options& opts)
 {
   for (size_t i = 0; i<(size_t)argc; i++)
   {
+    /**
+     *  Skip the separator for arguments from config file and command
+     *  line
+     */
+    if (my_getopt_is_args_separator(argv[i]))
+      continue;
     for (size_t j = 0; f_options[j].name; j++)
     {
       const char * name = f_options[j].name;

@@ -1,4 +1,7 @@
-/* Copyright (c) 2003, 2011, Oracle and/or its affiliates. All rights reserved.
+#ifndef ITEM_GEOFUNC_INCLUDED
+#define ITEM_GEOFUNC_INCLUDED
+
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -54,12 +57,12 @@ public:
   String *val_str(String *);
 };
 
-class Item_func_as_wkt: public Item_str_func
+class Item_func_as_wkt: public Item_str_ascii_func
 {
 public:
-  Item_func_as_wkt(Item *a): Item_str_func(a) {}
+  Item_func_as_wkt(Item *a): Item_str_ascii_func(a) {}
   const char *func_name() const { return "astext"; }
-  String *val_str(String *);
+  String *val_str_ascii(String *);
   void fix_length_and_dec();
 };
 
@@ -72,16 +75,17 @@ public:
   enum_field_types field_type() const  { return MYSQL_TYPE_BLOB; }
 };
 
-class Item_func_geometry_type: public Item_str_func
+class Item_func_geometry_type: public Item_str_ascii_func
 {
 public:
-  Item_func_geometry_type(Item *a): Item_str_func(a) {}
-  String *val_str(String *);
+  Item_func_geometry_type(Item *a): Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *);
   const char *func_name() const { return "geometrytype"; }
   void fix_length_and_dec() 
   {
-     max_length=20; // "GeometryCollection" is the most long
-     maybe_null= 1;
+    // "GeometryCollection" is the longest
+    fix_length_and_charset(20, default_charset());
+    maybe_null= 1;
   };
 };
 
@@ -183,7 +187,7 @@ public:
       if (args[i]->fixed && args[i]->field_type() != MYSQL_TYPE_GEOMETRY)
       {
         String str;
-        args[i]->print(&str, QT_ORDINARY);
+        args[i]->print(&str, QT_NO_DATA_EXPANSION);
         str.append('\0');
         my_error(ER_ILLEGAL_VALUE_FOR_TYPE, MYF(0), "non geometric",
                  str.ptr());
@@ -402,3 +406,4 @@ public:
 
 #endif
 
+#endif /* ITEM_GEOFUNC_INCLUDED */

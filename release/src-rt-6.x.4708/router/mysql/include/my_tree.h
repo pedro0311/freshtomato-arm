@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2002, 2004, 2006, 2007 MySQL AB
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _tree_h
 #define _tree_h
@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #include "my_base.h"		/* get 'enum ha_rkey_function' */
+#include "my_alloc.h"           /* MEM_ROOT */
 
 /* Worst case tree is half full. This gives use 2^(MAX_TREE_HEIGHT/2) leafs */
 #define MAX_TREE_HEIGHT	64
@@ -61,7 +62,7 @@ typedef struct st_tree {
 } TREE;
 
 	/* Functions on whole tree */
-void init_tree(TREE *tree, ulong default_alloc_size, ulong memory_limit,
+void init_tree(TREE *tree, size_t default_alloc_size, ulong memory_limit,
                int size, qsort_cmp2 compare, my_bool with_delete,
 	       tree_element_free free_element, void *custom_arg);
 void delete_tree(TREE*);

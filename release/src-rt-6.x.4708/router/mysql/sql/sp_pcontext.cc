@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2002-2008 MySQL AB, 2008 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2002, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,16 +11,12 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
 #ifdef USE_PRAGMA_IMPLEMENTATION
 #pragma implementation
-#endif
-
-#if defined(WIN32) || defined(__WIN__)
-#undef SAFEMALLOC				/* Problems with threads */
 #endif
 
 #include "sp_pcontext.h"
@@ -54,7 +48,8 @@ sp_cond_check(LEX_STRING *sqlstate)
 	(c < 'A' || 'Z' < c))
       return FALSE;
   }
-  if (strcmp(sqlstate->str, "00000") == 0)
+  /* SQLSTATE class '00' : completion condition */
+  if (strncmp(sqlstate->str, "00", 2) == 0)
     return FALSE;
   return TRUE;
 }
@@ -65,21 +60,21 @@ sp_pcontext::sp_pcontext()
   m_context_handlers(0), m_parent(NULL), m_pboundary(0),
   m_label_scope(LABEL_DEFAULT_SCOPE)
 {
-  VOID(my_init_dynamic_array(&m_vars, sizeof(sp_variable_t *),
+  (void) my_init_dynamic_array(&m_vars, sizeof(sp_variable_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_case_expr_id_lst, sizeof(int),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_case_expr_id_lst, sizeof(int),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_conds, sizeof(sp_cond_type_t *),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_conds, sizeof(sp_cond_type_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_cursors, sizeof(LEX_STRING),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_cursors, sizeof(LEX_STRING),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_handlers, sizeof(sp_cond_type_t *),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_handlers, sizeof(sp_cond_type_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
   m_label.empty();
   m_children.empty();
 
@@ -93,21 +88,21 @@ sp_pcontext::sp_pcontext(sp_pcontext *prev, label_scope_type label_scope)
   m_context_handlers(0), m_parent(prev), m_pboundary(0),
   m_label_scope(label_scope)
 {
-  VOID(my_init_dynamic_array(&m_vars, sizeof(sp_variable_t *),
+  (void) my_init_dynamic_array(&m_vars, sizeof(sp_variable_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_case_expr_id_lst, sizeof(int),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_case_expr_id_lst, sizeof(int),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_conds, sizeof(sp_cond_type_t *),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_conds, sizeof(sp_cond_type_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_cursors, sizeof(LEX_STRING),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_cursors, sizeof(LEX_STRING),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
-  VOID(my_init_dynamic_array(&m_handlers, sizeof(sp_cond_type_t *),
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
+  (void) my_init_dynamic_array(&m_handlers, sizeof(sp_cond_type_t *),
                              PCONTEXT_ARRAY_INIT_ALLOC,
-                             PCONTEXT_ARRAY_INCREMENT_ALLOC));
+                             PCONTEXT_ARRAY_INCREMENT_ALLOC);
   m_label.empty();
   m_children.empty();
 

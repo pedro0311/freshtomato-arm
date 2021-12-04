@@ -1,6 +1,6 @@
 #ifndef _EVENT_QUEUE_H_
 #define _EVENT_QUEUE_H_
-/* Copyright (c) 2004-2007 MySQL AB
+/* Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,7 +13,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
 
@@ -24,6 +24,15 @@
 
   Queue of events awaiting execution.
 */
+
+#ifdef HAVE_PSI_INTERFACE
+extern PSI_mutex_key key_LOCK_event_queue;
+extern PSI_cond_key key_COND_queue_state;
+#endif /* HAVE_PSI_INTERFACE */
+
+#include "queues.h"                             // QUEUE
+#include "sql_string.h"                         /* LEX_STRING */
+#include "my_time.h"                    /* my_time_t, interval_type */
 
 class Event_basic;
 class Event_queue_element;
@@ -101,8 +110,8 @@ private:
   dbug_dump_queue(time_t now);
 
   /* LOCK_event_queue is the mutex which protects the access to the queue. */
-  pthread_mutex_t LOCK_event_queue;
-  pthread_cond_t COND_queue_state;
+  mysql_mutex_t LOCK_event_queue;
+  mysql_cond_t COND_queue_state;
 
   /* The sorted queue with the Event_queue_element objects */
   QUEUE queue;

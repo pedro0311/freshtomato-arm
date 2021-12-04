@@ -1,7 +1,5 @@
 /* -*- C++ -*- */
-/*
-   Copyright (c) 2004-2007 MySQL AB, 2008, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,11 +12,18 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _PARSE_FILE_H_
 #define _PARSE_FILE_H_
+
+#include "my_global.h"                          // uchar
+#include "sql_string.h"                         // LEX_STRING
+#include "sql_list.h"                           // Sql_alloc
+
+class THD;
+
+typedef struct st_mem_root MEM_ROOT;
 
 #define PARSE_FILE_TIMESTAMPLENGTH 19
 

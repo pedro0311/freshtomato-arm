@@ -1,5 +1,5 @@
-/* Copyright (c) 2007 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+
+/* Copyright (c) 2007, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -14,8 +14,17 @@
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
 #include "rpl_reporting.h"
+#include "log.h" // sql_print_error, sql_print_warning,
+                 // sql_print_information
+
+Slave_reporting_capability::Slave_reporting_capability(char const *thread_name)
+  : m_thread_name(thread_name)
+{
+  mysql_mutex_init(key_mutex_slave_reporting_capability_err_lock,
+                   &err_lock, MY_MUTEX_INIT_FAST);
+}
 
 void
 Slave_reporting_capability::report(loglevel level, int err_code,
@@ -28,7 +37,7 @@ Slave_reporting_capability::report(loglevel level, int err_code,
   va_list args;
   va_start(args, msg);
 
-  pthread_mutex_lock(&err_lock);
+  mysql_mutex_lock(&err_lock);
   switch (level)
   {
   case ERROR_LEVEL:
@@ -54,7 +63,7 @@ Slave_reporting_capability::report(loglevel level, int err_code,
 
   my_vsnprintf(pbuff, pbuffsize, msg, args);
 
-  pthread_mutex_unlock(&err_lock);
+  mysql_mutex_unlock(&err_lock);
   va_end(args);
 
   /* If the msg string ends with '.', do not add a ',' it would be ugly */
@@ -66,5 +75,5 @@ Slave_reporting_capability::report(loglevel level, int err_code,
 
 Slave_reporting_capability::~Slave_reporting_capability()
 {
-  pthread_mutex_destroy(&err_lock);
+  mysql_mutex_destroy(&err_lock);
 }

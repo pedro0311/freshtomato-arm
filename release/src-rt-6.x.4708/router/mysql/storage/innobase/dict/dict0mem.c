@@ -1,7 +1,24 @@
-/**********************************************************************
-Data dictionary memory object creation
+/*****************************************************************************
 
-(c) 1996 Innobase Oy
+Copyright (c) 1996, 2010, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/******************************************************************//**
+@file dict/dict0mem.c
+Data dictionary memory object creation
 
 Created 1/8/1996 Heikki Tuuri
 ***********************************************************************/
@@ -16,120 +33,119 @@ Created 1/8/1996 Heikki Tuuri
 #include "data0type.h"
 #include "mach0data.h"
 #include "dict0dict.h"
-#include "que0que.h"
-#include "pars0pars.h"
-#include "lock0lock.h"
+#ifndef UNIV_HOTBACKUP
+# include "ha_prototypes.h" /* innobase_casedn_str()*/
+# include "lock0lock.h"
+#endif /* !UNIV_HOTBACKUP */
+#ifdef UNIV_BLOB_DEBUG
+# include "ut0rbt.h"
+#endif /* UNIV_BLOB_DEBUG */
 
-#define	DICT_HEAP_SIZE		100	/* initial memory heap size when
+#define	DICT_HEAP_SIZE		100	/*!< initial memory heap size when
 					creating a table or index object */
 
-/**************************************************************************
-Creates a table memory object. */
+#ifdef UNIV_PFS_MUTEX
+/* Key to register autoinc_mutex with performance schema */
+UNIV_INTERN mysql_pfs_key_t	autoinc_mutex_key;
+#endif /* UNIV_PFS_MUTEX */
 
+/**********************************************************************//**
+Creates a table memory object.
+@return	own: table object */
+UNIV_INTERN
 dict_table_t*
 dict_mem_table_create(
 /*==================*/
-				/* out, own: table object */
-	const char*	name,	/* in: table name */
-	ulint		space,	/* in: space where the clustered index of
+	const char*	name,	/*!< in: table name */
+	ulint		space,	/*!< in: space where the clustered index of
 				the table is placed; this parameter is
 				ignored if the table is made a member of
 				a cluster */
-	ulint		n_cols,	/* in: number of columns */
-	ulint		flags)	/* in: table flags */
+	ulint		n_cols,	/*!< in: number of columns */
+	ulint		flags)	/*!< in: table flags */
 {
 	dict_table_t*	table;
 	mem_heap_t*	heap;
+	DBUG_ENTER("dict_mem_table_create");
 
 	ut_ad(name);
-	ut_ad(!(flags & ~DICT_TF_COMPACT));
+	ut_a(!(flags & (~0 << DICT_TF2_BITS)));
 
 	heap = mem_heap_create(DICT_HEAP_SIZE);
 
-	table = mem_heap_alloc(heap, sizeof(dict_table_t));
+	table = mem_heap_zalloc(heap, sizeof(dict_table_t));
 
 	table->heap = heap;
 
 	table->flags = (unsigned int) flags;
-	table->name = mem_heap_strdup(heap, name);
-	table->dir_path_of_temp_table = NULL;
+	table->name = ut_malloc(strlen(name) + 1);
+	memcpy(table->name, name, strlen(name) + 1);
 	table->space = (unsigned int) space;
-	table->ibd_file_missing = FALSE;
-	table->tablespace_discarded = FALSE;
-	table->n_def = 0;
 	table->n_cols = (unsigned int) (n_cols + DATA_N_SYS_COLS);
-
-	table->n_mysql_handles_opened = 0;
-	table->n_foreign_key_checks_running = 0;
-
-	table->cached = FALSE;
 
 	table->cols = mem_heap_alloc(heap, (n_cols + DATA_N_SYS_COLS)
 				     * sizeof(dict_col_t));
-	table->col_names = NULL;
-	UT_LIST_INIT(table->indexes);
 
-	table->auto_inc_lock = mem_heap_alloc(heap, lock_get_size());
+#ifndef UNIV_HOTBACKUP
+	table->autoinc_lock = mem_heap_alloc(heap, lock_get_size());
 
-	table->query_cache_inv_trx_id = ut_dulint_zero;
-
-	UT_LIST_INIT(table->locks);
-	UT_LIST_INIT(table->foreign_list);
-	UT_LIST_INIT(table->referenced_list);
-
-#ifdef UNIV_DEBUG
-	table->does_not_fit_in_memory = FALSE;
-#endif /* UNIV_DEBUG */
-
-	table->stat_initialized = FALSE;
-
-	table->stat_modified_counter = 0;
-
-	table->big_rows = 0;
-
-	table->fk_max_recusive_level = 0;
-
-	mutex_create(&table->autoinc_mutex, SYNC_DICT_AUTOINC_MUTEX);
+	mutex_create(autoinc_mutex_key,
+		     &table->autoinc_mutex, SYNC_DICT_AUTOINC_MUTEX);
 
 	table->autoinc = 0;
 
 	/* The number of transactions that are either waiting on the
 	AUTOINC lock or have been granted the lock. */
 	table->n_waiting_or_granted_auto_inc_locks = 0;
+#endif /* !UNIV_HOTBACKUP */
 
-#ifdef UNIV_DEBUG
-	table->magic_n = DICT_TABLE_MAGIC_N;
-#endif /* UNIV_DEBUG */
-	return(table);
+	table->foreign_rbt = NULL;
+	table->referenced_rbt = NULL;
+
+	ut_d(table->magic_n = DICT_TABLE_MAGIC_N);
+	DBUG_RETURN(table);
 }
 
-/********************************************************************
+/****************************************************************//**
 Free a table memory object. */
-
+UNIV_INTERN
 void
 dict_mem_table_free(
 /*================*/
-	dict_table_t*	table)		/* in: table */
+	dict_table_t*	table)		/*!< in: table */
 {
 	ut_ad(table);
 	ut_ad(table->magic_n == DICT_TABLE_MAGIC_N);
+	ut_d(table->cached = FALSE);
 
+#ifndef UNIV_HOTBACKUP
 	mutex_free(&(table->autoinc_mutex));
+#endif /* UNIV_HOTBACKUP */
+
+	if (table->foreign_rbt != NULL) {
+		rbt_free(table->foreign_rbt);
+	}
+
+	if (table->referenced_rbt != NULL) {
+		rbt_free(table->referenced_rbt);
+	}
+
+	ut_free(table->name);
 	mem_heap_free(table->heap);
 }
 
-/********************************************************************
-Append 'name' to 'col_names' (@see dict_table_t::col_names). */
+/****************************************************************//**
+Append 'name' to 'col_names'.  @see dict_table_t::col_names
+@return	new column names array */
 static
 const char*
 dict_add_col_name(
 /*==============*/
-					/* out: new column names array */
-	const char*	col_names,	/* in: existing column names, or
+	const char*	col_names,	/*!< in: existing column names, or
 					NULL */
-	ulint		cols,		/* in: number of existing columns */
-	const char*	name,		/* in: new column name */
-	mem_heap_t*	heap)		/* in: heap */
+	ulint		cols,		/*!< in: number of existing columns */
+	const char*	name,		/*!< in: new column name */
+	mem_heap_t*	heap)		/*!< in: heap */
 {
 	ulint	old_len;
 	ulint	new_len;
@@ -166,22 +182,20 @@ dict_add_col_name(
 	return(res);
 }
 
-/**************************************************************************
+/**********************************************************************//**
 Adds a column definition to a table. */
-
+UNIV_INTERN
 void
 dict_mem_table_add_col(
 /*===================*/
-	dict_table_t*	table,	/* in: table */
-	mem_heap_t*	heap,	/* in: temporary memory heap, or NULL */
-	const char*	name,	/* in: column name, or NULL */
-	ulint		mtype,	/* in: main datatype */
-	ulint		prtype,	/* in: precise type */
-	ulint		len)	/* in: precision */
+	dict_table_t*	table,	/*!< in: table */
+	mem_heap_t*	heap,	/*!< in: temporary memory heap, or NULL */
+	const char*	name,	/*!< in: column name, or NULL */
+	ulint		mtype,	/*!< in: main datatype */
+	ulint		prtype,	/*!< in: precise type */
+	ulint		len)	/*!< in: precision */
 {
 	dict_col_t*	col;
-	ulint		mbminlen;
-	ulint		mbmaxlen;
 	ulint		i;
 
 	ut_ad(table);
@@ -196,8 +210,7 @@ dict_mem_table_add_col(
 		}
 		if (UNIV_LIKELY(i) && UNIV_UNLIKELY(!table->col_names)) {
 			/* All preceding column names are empty. */
-			char* s = mem_heap_alloc(heap, table->n_def);
-			memset(s, 0, table->n_def);
+			char* s = mem_heap_zalloc(heap, table->n_def);
 			table->col_names = s;
 		}
 
@@ -205,36 +218,58 @@ dict_mem_table_add_col(
 						     i, name, heap);
 	}
 
-	col = (dict_col_t*) dict_table_get_nth_col(table, i);
+	col = dict_table_get_nth_col(table, i);
 
-	col->ind = (unsigned int) i;
-	col->ord_part = 0;
-
-	col->mtype = (unsigned int) mtype;
-	col->prtype = (unsigned int) prtype;
-	col->len = (unsigned int) len;
-
-	dtype_get_mblen(mtype, prtype, &mbminlen, &mbmaxlen);
-
-	col->mbminlen = (unsigned int) mbminlen;
-	col->mbmaxlen = (unsigned int) mbmaxlen;
+	dict_mem_fill_column_struct(col, i, mtype, prtype, len);
 }
 
-/**************************************************************************
-Creates an index memory object. */
 
+/**********************************************************************//**
+This function populates a dict_col_t memory structure with
+supplied information. */
+UNIV_INTERN
+void
+dict_mem_fill_column_struct(
+/*========================*/
+	dict_col_t*	column,		/*!< out: column struct to be
+					filled */
+	ulint		col_pos,	/*!< in: column position */
+	ulint		mtype,		/*!< in: main data type */
+	ulint		prtype,		/*!< in: precise type */
+	ulint		col_len)	/*!< in: column length */
+{
+#ifndef UNIV_HOTBACKUP
+	ulint	mbminlen;
+	ulint	mbmaxlen;
+#endif /* !UNIV_HOTBACKUP */
+
+	column->ind = (unsigned int) col_pos;
+	column->ord_part = 0;
+	column->max_prefix = 0;
+	column->mtype = (unsigned int) mtype;
+	column->prtype = (unsigned int) prtype;
+	column->len = (unsigned int) col_len;
+#ifndef UNIV_HOTBACKUP
+        dtype_get_mblen(mtype, prtype, &mbminlen, &mbmaxlen);
+	dict_col_set_mbminmaxlen(column, mbminlen, mbmaxlen);
+#endif /* !UNIV_HOTBACKUP */
+}
+
+/**********************************************************************//**
+Creates an index memory object.
+@return	own: index object */
+UNIV_INTERN
 dict_index_t*
 dict_mem_index_create(
 /*==================*/
-					/* out, own: index object */
-	const char*	table_name,	/* in: table name */
-	const char*	index_name,	/* in: index name */
-	ulint		space,		/* in: space where the index tree is
+	const char*	table_name,	/*!< in: table name */
+	const char*	index_name,	/*!< in: index name */
+	ulint		space,		/*!< in: space where the index tree is
 					placed, ignored if the index is of
 					the clustered type */
-	ulint		type,		/* in: DICT_UNIQUE,
+	ulint		type,		/*!< in: DICT_UNIQUE,
 					DICT_CLUSTERED, ... ORed */
-	ulint		n_fields)	/* in: number of fields */
+	ulint		n_fields)	/*!< in: number of fields */
 {
 	dict_index_t*	index;
 	mem_heap_t*	heap;
@@ -242,79 +277,101 @@ dict_mem_index_create(
 	ut_ad(table_name && index_name);
 
 	heap = mem_heap_create(DICT_HEAP_SIZE);
-	index = mem_heap_alloc(heap, sizeof(dict_index_t));
+	index = mem_heap_zalloc(heap, sizeof(dict_index_t));
 
-	index->heap = heap;
+	dict_mem_fill_index_struct(index, heap, table_name, index_name,
+				   space, type, n_fields);
 
-	index->type = type;
-	index->space = (unsigned int) space;
-	index->page = 0;
-	index->name = mem_heap_strdup(heap, index_name);
-	index->table_name = table_name;
-	index->table = NULL;
-	index->n_def = index->n_nullable = 0;
-	index->n_fields = (unsigned int) n_fields;
-	index->fields = mem_heap_alloc(heap, 1 + n_fields
-				       * sizeof(dict_field_t));
-	/* The '1 +' above prevents allocation
-	of an empty mem block */
-	index->stat_n_diff_key_vals = NULL;
-
-	index->cached = FALSE;
-	memset(&index->lock, 0, sizeof index->lock);
-#ifdef UNIV_DEBUG
-	index->magic_n = DICT_INDEX_MAGIC_N;
-#endif /* UNIV_DEBUG */
 	return(index);
 }
 
-/**************************************************************************
-Creates and initializes a foreign constraint memory object. */
-
+#ifndef UNIV_HOTBACKUP
+/**********************************************************************//**
+Creates and initializes a foreign constraint memory object.
+@return	own: foreign constraint struct */
+UNIV_INTERN
 dict_foreign_t*
 dict_mem_foreign_create(void)
 /*=========================*/
-				/* out, own: foreign constraint struct */
 {
 	dict_foreign_t*	foreign;
 	mem_heap_t*	heap;
 
 	heap = mem_heap_create(100);
 
-	foreign = mem_heap_alloc(heap, sizeof(dict_foreign_t));
+	foreign = mem_heap_zalloc(heap, sizeof(dict_foreign_t));
 
 	foreign->heap = heap;
-
-	foreign->id = NULL;
-
-	foreign->type = 0;
-	foreign->foreign_table_name = NULL;
-	foreign->foreign_table = NULL;
-	foreign->foreign_col_names = NULL;
-
-	foreign->referenced_table_name = NULL;
-	foreign->referenced_table = NULL;
-	foreign->referenced_col_names = NULL;
-
-	foreign->n_fields = 0;
-
-	foreign->foreign_index = NULL;
-	foreign->referenced_index = NULL;
 
 	return(foreign);
 }
 
-/**************************************************************************
+/**********************************************************************//**
+Sets the foreign_table_name_lookup pointer based on the value of
+lower_case_table_names.  If that is 0 or 1, foreign_table_name_lookup
+will point to foreign_table_name.  If 2, then another string is
+allocated from foreign->heap and set to lower case. */
+UNIV_INTERN
+void
+dict_mem_foreign_table_name_lookup_set(
+/*===================================*/
+	dict_foreign_t*	foreign,	/*!< in/out: foreign struct */
+	ibool		do_alloc)	/*!< in: is an alloc needed */
+{
+	if (innobase_get_lower_case_table_names() == 2) {
+		if (do_alloc) {
+			foreign->foreign_table_name_lookup = mem_heap_alloc(
+				foreign->heap,
+				strlen(foreign->foreign_table_name) + 1);
+		}
+		strcpy(foreign->foreign_table_name_lookup,
+		       foreign->foreign_table_name);
+		innobase_casedn_str(foreign->foreign_table_name_lookup);
+	} else {
+		foreign->foreign_table_name_lookup
+			= foreign->foreign_table_name;
+	}
+}
+
+/**********************************************************************//**
+Sets the referenced_table_name_lookup pointer based on the value of
+lower_case_table_names.  If that is 0 or 1, referenced_table_name_lookup
+will point to referenced_table_name.  If 2, then another string is
+allocated from foreign->heap and set to lower case. */
+UNIV_INTERN
+void
+dict_mem_referenced_table_name_lookup_set(
+/*======================================*/
+	dict_foreign_t*	foreign,	/*!< in/out: foreign struct */
+	ibool		do_alloc)	/*!< in: is an alloc needed */
+{
+	if (innobase_get_lower_case_table_names() == 2) {
+		if (do_alloc) {
+			foreign->referenced_table_name_lookup = mem_heap_alloc(
+				foreign->heap,
+				strlen(foreign->referenced_table_name) + 1);
+		}
+		strcpy(foreign->referenced_table_name_lookup,
+		       foreign->referenced_table_name);
+		innobase_casedn_str(foreign->referenced_table_name_lookup);
+	} else {
+		foreign->referenced_table_name_lookup
+			= foreign->referenced_table_name;
+	}
+}
+
+#endif /* !UNIV_HOTBACKUP */
+/**********************************************************************//**
 Adds a field definition to an index. NOTE: does not take a copy
 of the column name if the field is a column. The memory occupied
 by the column name may be released only after publishing the index. */
-
+UNIV_INTERN
 void
 dict_mem_index_add_field(
 /*=====================*/
-	dict_index_t*	index,		/* in: index */
-	const char*	name,		/* in: column name */
-	ulint		prefix_len)	/* in: 0 or the column prefix length
+	dict_index_t*	index,		/*!< in: index */
+	const char*	name,		/*!< in: column name */
+	ulint		prefix_len)	/*!< in: 0 or the column prefix length
 					in a MySQL index like
 					INDEX (textcol(25)) */
 {
@@ -331,16 +388,22 @@ dict_mem_index_add_field(
 	field->prefix_len = (unsigned int) prefix_len;
 }
 
-/**************************************************************************
+/**********************************************************************//**
 Frees an index memory object. */
-
+UNIV_INTERN
 void
 dict_mem_index_free(
 /*================*/
-	dict_index_t*	index)	/* in: index */
+	dict_index_t*	index)	/*!< in: index */
 {
 	ut_ad(index);
 	ut_ad(index->magic_n == DICT_INDEX_MAGIC_N);
+#ifdef UNIV_BLOB_DEBUG
+	if (index->blobs) {
+		mutex_free(&index->blobs_mutex);
+		rbt_free(index->blobs);
+	}
+#endif /* UNIV_BLOB_DEBUG */
 
 	mem_heap_free(index->heap);
 }

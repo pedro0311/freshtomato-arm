@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2004-2007 MySQL AB, 2008, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /**
   @file
@@ -23,7 +20,10 @@
   Text .frm files management routines
 */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "parse_file.h"
+#include "unireg.h"                            // CREATE_MODE
+#include "sql_table.h"                        // build_table_filename
 #include <errno.h>
 #include <m_ctype.h>
 #include <my_sys.h>
@@ -240,8 +240,9 @@ sql_create_definition_file(const LEX_STRING *dir, const LEX_STRING *file_name,
   // temporary file name
   path[path_end]='~';
   path[path_end+1]= '\0';
-  if ((handler= my_create(path, CREATE_MODE, O_RDWR | O_TRUNC,
-			  MYF(MY_WME))) <= 0)
+  if ((handler= mysql_file_create(key_file_fileparser,
+                                  path, CREATE_MODE, O_RDWR | O_TRUNC,
+                                  MYF(MY_WME))) <= 0)
   {
     DBUG_RETURN(TRUE);
   }
@@ -270,11 +271,11 @@ sql_create_definition_file(const LEX_STRING *dir, const LEX_STRING *file_name,
     goto err_w_file;
 
   if (opt_sync_frm) {
-    if (my_sync(handler, MYF(MY_WME)))
+    if (mysql_file_sync(handler, MYF(MY_WME)))
       goto err_w_file;
   }
 
-  if (my_close(handler, MYF(MY_WME)))
+  if (mysql_file_close(handler, MYF(MY_WME)))
   {
     DBUG_RETURN(TRUE);
   }
@@ -286,7 +287,7 @@ sql_create_definition_file(const LEX_STRING *dir, const LEX_STRING *file_name,
     char path_to[FN_REFLEN];
     memcpy(path_to, path, path_end+1);
     path[path_end]='~';
-    if (my_rename(path, path_to, MYF(MY_WME)))
+    if (mysql_file_rename(key_file_fileparser, path, path_to, MYF(MY_WME)))
     {
       DBUG_RETURN(TRUE);
     }
@@ -295,7 +296,7 @@ sql_create_definition_file(const LEX_STRING *dir, const LEX_STRING *file_name,
 err_w_cache:
   end_io_cache(&file);
 err_w_file:
-  my_close(handler, MYF(MY_WME));
+  mysql_file_close(handler, MYF(MY_WME));
   DBUG_RETURN(TRUE);
 }
 
@@ -324,7 +325,7 @@ my_bool rename_in_schema_file(THD *thd,
   build_table_filename(new_path, sizeof(new_path) - 1,
                        new_db, new_name, reg_ext, 0);
 
-  if (my_rename(old_path, new_path, MYF(MY_WME)))
+  if (mysql_file_rename(key_file_frm, old_path, new_path, MYF(MY_WME)))
     return 1;
 
   /* check if arc_dir exists: disabled unused feature (see bug #17823). */
@@ -368,7 +369,8 @@ sql_parse_prepare(const LEX_STRING *file_name, MEM_ROOT *mem_root,
   File file;
   DBUG_ENTER("sql_parse_prepare");
 
-  if (!my_stat(file_name->str, &stat_info, MYF(MY_WME)))
+  if (!mysql_file_stat(key_file_fileparser,
+                       file_name->str, &stat_info, MYF(MY_WME)))
   {
     DBUG_RETURN(0);
   }
@@ -389,20 +391,21 @@ sql_parse_prepare(const LEX_STRING *file_name, MEM_ROOT *mem_root,
     DBUG_RETURN(0);
   }
 
-  if ((file= my_open(file_name->str, O_RDONLY | O_SHARE, MYF(MY_WME))) < 0)
+  if ((file= mysql_file_open(key_file_fileparser, file_name->str,
+                             O_RDONLY | O_SHARE, MYF(MY_WME))) < 0)
   {
     DBUG_RETURN(0);
   }
   
-  if ((len= my_read(file, (uchar *)parser->buff,
-                    stat_info.st_size, MYF(MY_WME))) ==
+  if ((len= mysql_file_read(file, (uchar *)parser->buff,
+                            stat_info.st_size, MYF(MY_WME))) ==
       MY_FILE_ERROR)
   {
-    my_close(file, MYF(MY_WME));
+    mysql_file_close(file, MYF(MY_WME));
     DBUG_RETURN(0);
   }
 
-  if (my_close(file, MYF(MY_WME)))
+  if (mysql_file_close(file, MYF(MY_WME)))
   {
     DBUG_RETURN(0);
   }

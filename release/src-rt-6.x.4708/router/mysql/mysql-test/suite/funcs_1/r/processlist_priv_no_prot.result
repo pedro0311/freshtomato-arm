@@ -65,6 +65,7 @@ ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_
 SHOW GRANTS;
 Grants for root@localhost
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'localhost' WITH GRANT OPTION
+GRANT PROXY ON ''@'' TO 'root'@'localhost' WITH GRANT OPTION
 CREATE INDEX i_processlist ON processlist (user);
 ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 DROP TABLE processlist;
@@ -74,11 +75,11 @@ ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_
 ALTER TABLE processlist ADD COLUMN (my_column INT);
 ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 RENAME TABLE processlist TO new_processlist;
-ERROR 42S02: Unknown table 'new_processlist' in information_schema
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 RENAME TABLE processlist TO files;
 ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 CREATE TABLE new_processlist AS SELECT * FROM processlist;
-ERROR 42S02: Unknown table 'new_processlist' in information_schema
+ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 DROP DATABASE information_schema;
 ERROR 42000: Access denied for user 'root'@'localhost' to database 'information_schema'
 RENAME DATABASE information_schema TO info_schema;
@@ -131,7 +132,7 @@ GRANT INSERT,UPDATE ON processlist TO current_user;
 ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 SHOW GRANTS;
 Grants for ddicttestuser1@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 CREATE INDEX i_processlist ON processlist (user);
 ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 DROP TABLE processlist;
@@ -141,11 +142,11 @@ ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'in
 ALTER TABLE processlist ADD COLUMN (my_column INT);
 ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 RENAME TABLE processlist TO new_processlist;
-ERROR 42S02: Unknown table 'new_processlist' in information_schema
+ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 RENAME TABLE processlist TO files;
 ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 CREATE TABLE new_processlist AS SELECT * FROM processlist;
-ERROR 42S02: Unknown table 'new_processlist' in information_schema
+ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 DROP DATABASE information_schema;
 ERROR 42000: Access denied for user 'ddicttestuser1'@'localhost' to database 'information_schema'
 RENAME DATABASE information_schema TO info_schema;
@@ -165,7 +166,7 @@ SHOW/SELECT shows only the processes (1) of the user.
 ####################################################################################
 SHOW GRANTS;
 Grants for ddicttestuser1@localhost
-GRANT PROCESS ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT PROCESS ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	ddicttestuser1	HOST_NAME	information_schema	Query	TIME	NULL	SHOW processlist
@@ -178,7 +179,7 @@ SHOW/SELECT shows all processes/threads.
 ####################################################################################
 SHOW GRANTS;
 Grants for ddicttestuser1@localhost
-GRANT PROCESS ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT PROCESS ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	root	HOST_NAME	information_schema	Sleep	TIME		NULL
@@ -226,7 +227,7 @@ ddicttestuser1 are visible.
 ####################################################################################
 SHOW GRANTS;
 Grants for ddicttestuser1@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	ddicttestuser1	HOST_NAME	information_schema	Sleep	TIME		NULL
@@ -290,7 +291,7 @@ Only the processes of ddicttestuser1 are visible.
 ####################################################################################
 SHOW GRANTS FOR 'ddicttestuser1'@'localhost';
 Grants for ddicttestuser1@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	ddicttestuser1	HOST_NAME	information_schema	Sleep	TIME		NULL
@@ -338,7 +339,7 @@ ddicttestuser2 has now the PROCESS privilege and sees all connections
 ####################################################################################
 SHOW GRANTS FOR 'ddicttestuser2'@'localhost';
 Grants for ddicttestuser2@localhost
-GRANT PROCESS ON *.* TO 'ddicttestuser2'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT PROCESS ON *.* TO 'ddicttestuser2'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	root	HOST_NAME	information_schema	Sleep	TIME		NULL
@@ -376,7 +377,7 @@ ddicttestuser2 has no more the PROCESS privilege and can only see own connects
 ####################################################################################
 SHOW GRANTS;
 Grants for ddicttestuser2@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser2'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser2'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	ddicttestuser2	HOST_NAME	information_schema	Sleep	TIME		NULL
@@ -397,7 +398,7 @@ He is also unable to GRANT the PROCESS privilege to ddicttestuser2
 ####################################################################################
 SHOW GRANTS FOR 'ddicttestuser1'@'localhost';
 Grants for ddicttestuser1@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 GRANT PROCESS ON *.* TO 'ddicttestuser2'@'localhost';
 ERROR 28000: Access denied for user 'ddicttestuser1'@'localhost' (using password: YES)
 SHOW processlist;
@@ -434,7 +435,7 @@ Therefore the missing SELECT privilege does not affect SELECTs on PROCESSLIST.
 ####################################################################################
 SHOW GRANTS FOR 'ddicttestuser1'@'localhost';
 Grants for ddicttestuser1@localhost
-GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD '*22DA61451703738F203CDB9DB041ACBA1F4760B1'
+GRANT USAGE ON *.* TO 'ddicttestuser1'@'localhost' IDENTIFIED BY PASSWORD <secret>
 SHOW processlist;
 Id	User	Host	db	Command	Time	State	Info
 ID	ddicttestuser1	HOST_NAME	information_schema	Sleep	TIME		NULL

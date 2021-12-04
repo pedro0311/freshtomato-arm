@@ -1,5 +1,4 @@
-/* Copyright (c) 2000-2007 MySQL AB
-   Use is subject to license terms.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
    Copyright (C) 2003  by Sathit Jittanupat
@@ -325,7 +323,7 @@ static int t_ctype[][TOT_LEVELS] = {
     /*0xFF*/ { 255 /*IGNORE*/, IGNORE, IGNORE, IGNORE, X },
 };
 
-static uchar NEAR ctype_tis620[257] =
+static uchar ctype_tis620[257] =
 {
   0,				/* For standard library */
   32,32,32,32,32,32,32,32,32,40,40,40,40,40,32,32,
@@ -346,7 +344,7 @@ static uchar NEAR ctype_tis620[257] =
   0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
 };
 
-static uchar NEAR to_lower_tis620[]=
+static uchar to_lower_tis620[]=
 {
   '\000','\001','\002','\003','\004','\005','\006','\007',
   '\010','\011','\012','\013','\014','\015','\016','\017',
@@ -382,7 +380,7 @@ static uchar NEAR to_lower_tis620[]=
   (uchar) '\370',(uchar) '\371',(uchar) '\372',(uchar) '\373',(uchar) '\374',(uchar) '\375',(uchar) '\376',(uchar) '\377',
 };
 
-static uchar NEAR to_upper_tis620[]=
+static uchar to_upper_tis620[]=
 {
   '\000','\001','\002','\003','\004','\005','\006','\007',
   '\010','\011','\012','\013','\014','\015','\016','\017',
@@ -418,7 +416,7 @@ static uchar NEAR to_upper_tis620[]=
   (uchar) '\370',(uchar) '\371',(uchar) '\372',(uchar) '\373',(uchar) '\374',(uchar) '\375',(uchar) '\376',(uchar) '\377',
 };
 
-static uchar NEAR sort_order_tis620[]=
+static uchar sort_order_tis620[]=
 {
   '\000','\001','\002','\003','\004','\005','\006','\007',
   '\010','\011','\012','\013','\014','\015','\016','\017',

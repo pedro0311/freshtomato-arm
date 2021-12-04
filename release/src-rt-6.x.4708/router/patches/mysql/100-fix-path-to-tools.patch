@@ -1,0 +1,33 @@
+--- mysql/extra/CMakeLists.txt
++++ mysql/extra/CMakeLists.txt
+@@ -32,7 +32,7 @@
+ 
+ ADD_CUSTOM_COMMAND(OUTPUT ${PROJECT_BINARY_DIR}/include/mysqld_error.h 
+                    ${PROJECT_BINARY_DIR}/sql/share/english/errmsg.sys
+-                   COMMAND comp_err
++                   COMMAND ${PROJECT_SOURCE_DIR}/host/comp_err
+                     --charset=${PROJECT_SOURCE_DIR}/sql/share/charsets 
+                     --out-dir=${PROJECT_BINARY_DIR}/sql/share/
+                     --header_file=${PROJECT_BINARY_DIR}/include/mysqld_error.h 
+--- mysql/scripts/CMakeLists.txt
++++ mysql/scripts/CMakeLists.txt
+@@ -47,7 +47,7 @@
+ ADD_CUSTOM_COMMAND(
+   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/mysql_fix_privilege_tables_sql.c
+   ${CAT_COMMAND}
+-  COMMAND comp_sql
++  COMMAND ${PROJECT_SOURCE_DIR}/host/comp_sql
+   mysql_fix_privilege_tables
+   mysql_fix_privilege_tables.sql
+   mysql_fix_privilege_tables_sql.c
+--- mysql/sql/CMakeLists.txt
++++ mysql/sql/CMakeLists.txt
+@@ -215,7 +215,7 @@
+ 
+ ADD_CUSTOM_COMMAND(
+   OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lex_hash.h
+-  COMMAND gen_lex_hash > lex_hash.h
++  COMMAND ${PROJECT_SOURCE_DIR}/host/gen_lex_hash > lex_hash.h
+   DEPENDS gen_lex_hash
+ )
+ 

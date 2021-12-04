@@ -1,7 +1,6 @@
-#!/usr/bin/perl
+#!@PERL_PATH@
 
-# Copyright (c) 2000, 2007 MySQL AB, 2009 Sun Microsystems, Inc.
-# Use is subject to license terms.
+# Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -478,15 +477,22 @@ MySQLaccess::Report::Print_Header();
 # *****************************
 # Read configuration-file
   MySQLaccess::Debug::Print(1, "Reading configuration file...");
-  if (-f "./$script_conf") {
-     require "./$script_conf";
-  }
-  elsif (-f "@sysconfdir@/$script_conf") {
+  if (-f "@sysconfdir@/$script_conf") {
+     print "Configuration file '$script_conf' is found in '@sysconfdir@/'\n";
      require "@sysconfdir@/$script_conf";
   }
   elsif (-f "/etc/$script_conf") {
+     print "Configuration file '$script_conf' is found in '/etc/'\n";
      require "/etc/$script_conf";
   }
+  elsif (-f "./$script_conf") {
+     print "\nERROR! Configuration file '$script_conf' is found in the current ";
+     print "directory.\nThe permissible locations for this file are either ";
+     print "@sysconfdir@/ or /etc/\n";
+     print "Please move it to one of these locations and retry.\n\n";
+     exit 0;
+  }
+
 
 # ****************************
 # Read in all parameters
@@ -2423,7 +2429,7 @@ sub Print_Header {
 sub Print_Footer {
     if ($MySQLaccess::CMD) { #command-line mode
     print "\n"
-         ."BUGs can be reported by email to bugs\@mysql.com\n";
+         ."BUGs can be reported at http://bugs.mysql.com/\n";
     }
     if ($MySQLaccess::CGI) { #CGI-BIN mode
     if ($MySQLaccess::Param{'brief'}) {
@@ -2431,7 +2437,7 @@ sub Print_Footer {
     }
     print "<HR>\n"
          ."<ADDRESS>\n"
-         ."BUGs can be reported by email to <a href=mailto:bugs\@mysql.com>bugs\@mysql.com</a><BR>\n"
+         ."BUGs can be reported at <a href=\"http://bugs.mysql.com/\">http://bugs.mysql.com/</a><BR>\n"
 #         ."Don't forget to mention the version $VERSION!<BR>\n"
          ."</ADDRESS>\n"
          ."</BODY>\n"

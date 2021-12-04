@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2005, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,16 +11,23 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
 #ifdef __GNUC__
 #pragma implementation
 #endif
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "sql_class.h"                          // set_var.h: THD
+#include "set_var.h"
 #include "my_xml.h"
 #include "sp_pcontext.h"
+#include "sql_class.h"                          // THD
 
 /*
   TODO: future development directions:
@@ -220,6 +226,9 @@ public:
   {
     max_length= MAX_BLOB_WIDTH;
     collation.collation= pxml->charset();
+    // To avoid premature evaluation, mark all nodeset functions as non-const.
+    used_tables_cache= RAND_TABLE_BIT;
+    const_item_cache= false;
   }
   const char *func_name() const { return "nodeset"; }
 };
@@ -1967,6 +1976,9 @@ static int my_xpath_parse_UnionExpr(MY_XPATH *xpath)
 static int
 my_xpath_parse_FilterExpr_opt_slashes_RelativeLocationPath(MY_XPATH *xpath)
 {
+  Item *context= xpath->context;
+  int rc;
+
   if (!my_xpath_parse_FilterExpr(xpath))
     return 0;
 
@@ -1980,8 +1992,22 @@ my_xpath_parse_FilterExpr_opt_slashes_RelativeLocationPath(MY_XPATH *xpath)
     return 0;
   }
 
-  my_xpath_parse_term(xpath, MY_XPATH_LEX_SLASH);
-  return my_xpath_parse_RelativeLocationPath(xpath);
+  /*
+    The context for the next relative path is the nodeset
+    returned by FilterExpr
+  */
+  xpath->context= xpath->item;
+
+  /* treat double slash (//) as /descendant-or-self::node()/ */
+  if (my_xpath_parse_term(xpath, MY_XPATH_LEX_SLASH))
+    xpath->context= new Item_nodeset_func_descendantbyname(xpath->context,
+                                                           "*", 1, xpath->pxml, 1);
+  rc= my_xpath_parse_RelativeLocationPath(xpath);
+
+  /* push back the context and restore the item */
+  xpath->item= xpath->context;
+  xpath->context= context;
+  return rc;
 }
 static int my_xpath_parse_PathExpr(MY_XPATH *xpath)
 {
@@ -2571,7 +2597,7 @@ void Item_xml_str_func::fix_length_and_dec()
 
   nodeset_func= 0;
 
-  if (agg_arg_charsets(collation, args, arg_count, MY_COLL_CMP_CONV, 1))
+  if (agg_arg_charsets_for_comparison(collation, args, arg_count))
     return;
 
   if (collation.collation->mbminlen > 1)
@@ -2669,9 +2695,9 @@ int xml_enter(MY_XML_PARSER *st,const char *attr, size_t len)
 
   node.parent= data->parent; // Set parent for the new node to old parent
   data->parent= numnodes;    // Remember current node as new parent
-  DBUG_ASSERT(data->level <= MAX_LEVEL);
+  DBUG_ASSERT(data->level < MAX_LEVEL);
   data->pos[data->level]= numnodes;
-  if (data->level < MAX_LEVEL)
+  if (data->level < MAX_LEVEL - 1)
     node.level= data->level++;
   else
     return MY_XML_ERROR;

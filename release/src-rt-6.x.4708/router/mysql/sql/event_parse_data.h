@@ -12,11 +12,16 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _EVENT_PARSE_DATA_H_
 #define _EVENT_PARSE_DATA_H_
+
+#include "sql_list.h"                           /* Sql_alloc */
+
+class Item;
+class THD;
+class sp_name;
 
 #define EVEX_GET_FIELD_FAILED   -2
 #define EVEX_BAD_PARAMS         -5

@@ -7,6 +7,9 @@
 # Save the initial number of concurrent sessions
 --source include/count_sessions.inc
 
+disable_query_log;
+call mtr.add_suppression("Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT");
+enable_query_log;
 
 --echo # Bug#37938 Test "mysqldump" lacks various insert statements
 --echo # Turn off concurrent inserts to avoid random errors
@@ -27,7 +30,7 @@ drop view if exists v1, v2, v3;
 
 CREATE TABLE t1(a INT, KEY (a)) KEY_BLOCK_SIZE=1024;
 INSERT INTO t1 VALUES (1), (2);
---exec $MYSQL_DUMP --skip-create --skip-comments -X test t1
+--exec $MYSQL_DUMP --skip-create-options --skip-comments -X test t1
 DROP TABLE t1;
 
 --echo #
@@ -46,9 +49,6 @@ DROP TABLE t1;
 
 CREATE TABLE t1 (a double);
 INSERT INTO t1 VALUES ('-9e999999');
-# The following replaces is here because some systems replaces the above
-# double with '-inf' and others with MAX_DOUBLE
---replace_result (-1.79769313486232e+308) (RES) (NULL) (RES)
 --exec $MYSQL_DUMP --compact test t1
 DROP TABLE t1;
 
@@ -73,14 +73,14 @@ SET SQL_MODE=@OLD_SQL_MODE;
 
 # check how mysqldump make quoting
 --exec $MYSQL_DUMP --compact test t1
---exec $MYSQL_DUMP --compact --skip-create test t1
---exec $MYSQL_DUMP --skip-create --skip-comments test t1
+--exec $MYSQL_DUMP --compact --skip-create-options test t1
+--exec $MYSQL_DUMP --skip-create-options --skip-comments test t1
 --exec $MYSQL_DUMP --skip-opt --extended-insert --skip-comments test t1
 DROP TABLE t1;
 
 CREATE TABLE t1(a int, b text, c varchar(3));
 INSERT INTO t1 VALUES (1, "test", "tes"), (2, "TEST", "TES");
---exec $MYSQL_DUMP --skip-create --compact -X test t1
+--exec $MYSQL_DUMP --skip-create-options --compact -X test t1
 DROP TABLE t1;
 
 --echo #
@@ -89,7 +89,7 @@ DROP TABLE t1;
 
 CREATE TABLE t1 (`a"b"` char(2));
 INSERT INTO t1 VALUES ("1\""), ("\"2");
---exec $MYSQL_DUMP --compact --skip-create -X test t1
+--exec $MYSQL_DUMP --compact --skip-create-options -X test t1
 DROP TABLE t1;
 
 --echo #
@@ -168,7 +168,7 @@ drop database mysqldump_test_db;
 
 CREATE TABLE t1 (a  CHAR(10));
 INSERT INTO t1  VALUES (_latin1 '����');
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments test t1
 
 --echo #
 --echo # Bug#8063 make test mysqldump [ fail ]
@@ -178,10 +178,10 @@ INSERT INTO t1  VALUES (_latin1 '����');
 --echo # checking that "mysqldump" is compiled with "latin1"
 --echo #
 
-#--exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --compatible=mysql323 test t1
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --compatible=mysql323 --default-character-set=cp850 test t1
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=cp850 --compatible=mysql323 test t1
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=utf8 --compatible=mysql323 test t1
+#--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --compatible=mysql323 test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --compatible=mysql323 --default-character-set=cp850 test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=cp850 --compatible=mysql323 test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=utf8 --compatible=mysql323 test t1
 DROP TABLE t1;
 
 --echo #
@@ -576,8 +576,8 @@ INSERT INTO t1 VALUES (1), (2);
 INSERT INTO t2 VALUES (1), (2);
 --exec $MYSQL_DUMP --skip-comments --no-data mysqldump_test_db
 --exec $MYSQL_DUMP --skip-comments --no-data mysqldump_test_db t1 t2
---exec $MYSQL_DUMP --skip-comments --skip-create --xml --no-data mysqldump_test_db
---exec $MYSQL_DUMP --skip-comments --skip-create --xml --no-data mysqldump_test_db t1 t2
+--exec $MYSQL_DUMP --skip-comments --skip-create-options --xml --no-data mysqldump_test_db
+--exec $MYSQL_DUMP --skip-comments --skip-create-options --xml --no-data mysqldump_test_db t1 t2
 DROP TABLE t1, t2;
 DROP DATABASE mysqldump_test_db;
 
@@ -1594,7 +1594,7 @@ drop database mysqldump_test_db;
 
 CREATE TABLE t1 (c1 INT, c2 LONGBLOB);
 INSERT INTO t1 SET c1=11, c2=REPEAT('q',509);
---exec $MYSQL_DUMP --skip-create --compact --hex-blob test t1
+--exec $MYSQL_DUMP --skip-create-options --compact --hex-blob test t1
 DROP TABLE t1;
 
 --echo #
@@ -1673,14 +1673,14 @@ drop database db42635;
 
 SET NAMES utf8;
 CREATE TABLE `straße` ( f1 INT );
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=utf8 --compatible=mysql323 test
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=latin1 --compatible=mysql323 test
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=utf8 --compatible=mysql323 test
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=latin1 --compatible=mysql323 test
 DROP TABLE `straße`;
 
 CREATE TABLE `כדשגכחךלדגכחשךדגחכךלדגכ` ( f1 INT );
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=utf8 --compatible=mysql323 test
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=utf8 --compatible=mysql323 test
 --error 2
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --skip-comments --default-character-set=latin1 --compatible=mysql323 test
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --skip-comments --default-character-set=latin1 --compatible=mysql323 test
 DROP TABLE `כדשגכחךלדגכחשךדגחכךלדגכ`;
 SET NAMES latin1;
 
@@ -1837,7 +1837,7 @@ set names latin1;
 --echo
 --echo # Dump mysqldump_test_db to bug30027.sql.
 
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --default-character-set=latin1 --databases mysqldump_test_db > $MYSQLTEST_VARDIR/tmp/bug30027.sql
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --default-character-set=latin1 --databases mysqldump_test_db > $MYSQLTEST_VARDIR/tmp/bug30027.sql
 
 --echo
 --echo # Drop mysqldump_test_db.
@@ -1923,7 +1923,7 @@ WHERE table_schema = 'mysqldump_test_db' AND table_name = 'v1';
 --echo
 
 --echo ---> Dumping mysqldump_test_db to bug30217.sql
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --databases mysqldump_test_db > $MYSQLTEST_VARDIR/tmp/bug30217.sql
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --databases mysqldump_test_db > $MYSQLTEST_VARDIR/tmp/bug30217.sql
 
 --echo
 
@@ -2080,7 +2080,7 @@ INSERT INTO t1 VALUES (1, 'ABC-АБВ', 'DEF-ÂÃÄ'), (2, NULL, NULL);
 
 --echo # default '--default-charset' (binary):
 
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --tab=$MYSQLTEST_VARDIR/tmp/ test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --tab=$MYSQLTEST_VARDIR/tmp/ test t1
 --echo ##################################################
 --cat_file $file
 --echo ##################################################
@@ -2093,7 +2093,7 @@ SELECT * FROM t1 UNION SELECT * FROM t2 ORDER BY a, b, c;
 
 --echo # utf8:
 
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --default-character-set=utf8 --tab=$MYSQLTEST_VARDIR/tmp/ test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --default-character-set=utf8 --tab=$MYSQLTEST_VARDIR/tmp/ test t1
 --echo ##################################################
 --cat_file $file
 --echo ##################################################
@@ -2106,7 +2106,7 @@ SELECT * FROM t1 UNION SELECT * FROM t2 ORDER BY a, b, c;
 
 --echo # latin1 (data corruption is expected):
 
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --default-character-set=latin1 --tab=$MYSQLTEST_VARDIR/tmp/ test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --default-character-set=latin1 --tab=$MYSQLTEST_VARDIR/tmp/ test t1
 --echo ##################################################
 --cat_file $file
 --echo ##################################################
@@ -2119,7 +2119,7 @@ SELECT * FROM t1 UNION SELECT * FROM t2 ORDER BY a, b, c;
 
 --echo # koi8r (data corruption is expected):
 
---exec $MYSQL_DUMP --character-sets-dir=$CHARSETSDIR --default-character-set=koi8r --tab=$MYSQLTEST_VARDIR/tmp/ test t1
+--exec $MYSQL_DUMP --character-sets-dir=$MYSQL_SHAREDIR/charsets --default-character-set=koi8r --tab=$MYSQLTEST_VARDIR/tmp/ test t1
 --echo ##################################################
 --cat_file $file
 --echo ##################################################
@@ -2170,7 +2170,7 @@ DROP TABLE t1, t2;
 --echo #
 
 CREATE TABLE `comment_table` (i INT COMMENT 'FIELD COMMENT') COMMENT = 'TABLE COMMENT';
---exec $MYSQL_DUMP --compact --skip-create --xml test
+--exec $MYSQL_DUMP --compact --skip-create-options --xml test
 DROP TABLE `comment_table`;
 
 --echo #
@@ -2194,7 +2194,7 @@ ALTER DATABASE `test-database` CHARACTER SET utf8 COLLATE utf8_unicode_ci ;
 
 DROP DATABASE `test-database`;
 # Switching back to test database.
-USE `test`;
+USE test;
 
 --echo #
 --echo # BUG#11760384 : 52792: mysqldump in XML mode does not dump routines.
@@ -2308,6 +2308,65 @@ DROP DATABASE BUG52792;
 
 USE test;
 
+--echo #
+--echo # End of 5.1 tests
+--echo #
+
+--echo #
+--echo # Verify that two modes can be given in --compatible;
+--echo # and are reflected in SET SQL_MODE in the mysqldump output.
+--echo # Also verify that a prefix of the mode's name is enough.
+--echo #
+CREATE TABLE t1 (a INT);
+# no_t = no_table_options; no_f = no_field_options
+--exec $MYSQL_DUMP --compatible=no_t,no_f --skip-comments test
+DROP TABLE t1;
+
+--echo #
+--echo # Bug#12809202 61854: MYSQLDUMP --SINGLE-TRANSACTION --FLUSH-LOG BREAKS
+--echo #                     CONSISTENCY
+--echo #
+
+--disable_warnings
+DROP DATABASE IF EXISTS b12809202_db;
+--enable_warnings
+
+CREATE DATABASE b12809202_db;
+CREATE TABLE b12809202_db.t1 (c1 INT);
+CREATE TABLE b12809202_db.t2 (c1 INT);
+
+INSERT INTO b12809202_db.t1 VALUES (1), (2), (3);
+INSERT INTO b12809202_db.t2 VALUES (1), (2), (3);
+
+--echo # Starting mysqldump with --single-transaction & --flush-logs options..
+--echo # Note : In the following dump the transaction
+--echo #        should start only after the logs are
+--echo #        flushed, as 'flush logs' causes implicit
+--echo #        commit starting 5.5.Also, as stderr is
+--echo #        unbuffered, it is redirected to a different
+--echo #        file to avoid diffs due to bad stdout/stderr
+--echo #        order in the output.
+--echo
+--echo #### Dump starts here ####
+--replace_regex /-- Server version.*// /-- MySQL dump .*// /-- Dump completed on .*/-- Dump completed/
+--exec $MYSQL_DUMP --verbose --single-transaction --flush-logs b12809202_db 2>$MYSQLTEST_VARDIR/tmp/b12809202_stderr.sql
+--echo
+--echo ## stderr ##
+--cat_file $MYSQLTEST_VARDIR/tmp/b12809202_stderr.sql
+--echo
+--echo #### Dump ends here ####
+
+# Cleanup
+DROP TABLE b12809202_db.t1;
+DROP TABLE b12809202_db.t2;
+DROP DATABASE b12809202_db;
+--remove_file $MYSQLTEST_VARDIR/tmp/b12809202_stderr.sql
+
+--echo #
+--echo # Delete all existing binary logs.
+--echo #
+RESET MASTER;
+
 # Wait till we reached the initial number of concurrent sessions
 --source include/wait_until_count_sessions.inc
 
@@ -2320,10 +2379,10 @@ SET @old_slow_query_log_state=   @@global.slow_query_log;
 
 call mtr.add_suppression("Failed to write to mysql.general_log");
 --exec $MYSQL_DUMP -uroot --all-databases > $MYSQLTEST_VARDIR/tmp/bug45740.sql
-# Make log_output as table and enable general_log and slow_log
+# Make log_output as table and disabling general_log and slow_log
 SET @@global.log_output="TABLE";
-SET @@global.general_log='ON';
-SET @@global.slow_query_log='ON';
+SET @@global.general_log='OFF';
+SET @@global.slow_query_log='OFF';
 DROP DATABASE mysql; 
 --exec $MYSQL < $MYSQLTEST_VARDIR/tmp/bug45740.sql
 SHOW CREATE TABLE mysql.general_log;
@@ -2337,3 +2396,82 @@ SET @@global.general_log=      @old_general_log_state;
 --echo #
 --echo # End of 5.1 tests
 --echo #
+
+--echo #
+--echo # Bug #20772273 : MYSQLIMPORT --USE-THREADS DOESN'T USE MULTIPLE THREADS
+--echo #
+
+CREATE DATABASE db_20772273;
+USE db_20772273;
+CREATE TABLE t1(a INT);
+INSERT INTO t1 VALUES (1), (2);
+CREATE TABLE t2(a INT);
+INSERT INTO t2 VALUES (3), (4);
+
+SELECT * FROM t1;
+SELECT * FROM t2;
+
+--exec $MYSQL_DUMP --tab=$MYSQLTEST_VARDIR/tmp/ db_20772273
+--exec $MYSQL db_20772273 < $MYSQLTEST_VARDIR/tmp/t1.sql
+--exec $MYSQL db_20772273 < $MYSQLTEST_VARDIR/tmp/t2.sql
+
+# Test mysqlimport with multiple threads
+--exec $MYSQL_IMPORT --silent --use-threads=2 db_20772273 $MYSQLTEST_VARDIR/tmp/t1.txt $MYSQLTEST_VARDIR/tmp/t2.txt
+
+SELECT * FROM t1;
+SELECT * FROM t2;
+
+#Cleanup
+DROP TABLE t1;
+DROP TABLE t2;
+DROP DATABASE db_20772273;
+
+--echo #
+--echo # Bug #25717383: MYSQLDUMP MAY EXECUTE ANY ARBITRARY QUERY
+--echo #
+
+
+CREATE DATABASE bug25717383;
+use bug25717383;
+
+CREATE TABLE `tab
+one` (a int);
+CREATE VIEW `view
+one` as SELECT * FROM `tab
+one`;
+
+CREATE PROCEDURE `proc
+one`() SELECT * from `tab
+one`;
+
+CREATE TEMPORARY TABLE `temp
+one` (id INT);
+
+CREATE TRIGGER `trig
+one` BEFORE INSERT ON `tab
+one` FOR EACH ROW SET NEW.a = 1;
+
+CREATE EVENT `event
+one` ON SCHEDULE AT '2030-01-01 00:00:00' DO SET @a=5;
+
+SHOW TABLES FROM bug25717383;
+SHOW TRIGGERS FROM bug25717383;
+--replace_column 6 #
+SHOW EVENTS FROM bug25717383;
+
+SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES
+       WHERE ROUTINE_SCHEMA='bug25717383' AND ROUTINE_TYPE= 'PROCEDURE'
+       ORDER BY ROUTINE_NAME;
+
+--exec $MYSQL_DUMP --triggers --events --routines --add-drop-database --databases bug25717383 > $MYSQLTEST_VARDIR/tmp/bug25717383.sql
+
+SHOW TABLES FROM bug25717383;
+SHOW TRIGGERS FROM bug25717383;
+--replace_column 6 #
+SHOW EVENTS FROM bug25717383;
+
+SELECT ROUTINE_NAME FROM INFORMATION_SCHEMA.ROUTINES
+       WHERE ROUTINE_SCHEMA='bug25717383' AND ROUTINE_TYPE= 'PROCEDURE'
+       ORDER BY ROUTINE_NAME;
+
+DROP DATABASE bug25717383;

@@ -165,6 +165,12 @@ explain select c from mysqltest.v4;
 show create view mysqltest.v4;
 --error ER_TABLEACCESS_DENIED_ERROR
 explain select c from mysqltest.v5;
+# new in 5.5: SHOW CREATE VIEW needs SELECT now (MySQL Bug#27145)
+--error ER_TABLEACCESS_DENIED_ERROR
+show create view mysqltest.v5;
+connection root;
+grant select on mysqltest.v5 to mysqltest_1@localhost;
+connection user1;
 show create view mysqltest.v5;
 
 # missing SELECT on underlying t1, no SHOW VIEW on v1 either.
@@ -177,6 +183,7 @@ show create view mysqltest.v1;
 connection root;
 grant show view on mysqltest.v1 to mysqltest_1@localhost;
 grant select on mysqltest.t1 to mysqltest_1@localhost;
+revoke select on mysqltest.v5 from mysqltest_1@localhost;
 connection user1;
 # EXPLAIN works
 explain select c from mysqltest.v1;
@@ -198,8 +205,6 @@ show create view mysqltest.v4;
 # we have SHOW VIEW on v5, and  SELECT on t1 -- not enough
 --error ER_TABLEACCESS_DENIED_ERROR
 explain select c from mysqltest.v5;
-# we can SHOW CREATE VIEW though
-show create view mysqltest.v5;
 
 # allow to see any view in mysqltest database
 connection root;
@@ -1072,9 +1077,9 @@ GRANT SELECT ON db26813.t1 TO u26813@localhost;
 
 connect (u1,localhost,u26813,,db26813);
 connection u1;
---error ER_SPECIFIC_ACCESS_DENIED_ERROR
+--error ER_TABLEACCESS_DENIED_ERROR 
 ALTER VIEW v1 AS SELECT f2 FROM t1;
---error ER_SPECIFIC_ACCESS_DENIED_ERROR
+--error ER_TABLEACCESS_DENIED_ERROR
 ALTER VIEW v2 AS SELECT f2 FROM t1;
 --error ER_SPECIFIC_ACCESS_DENIED_ERROR
 ALTER VIEW v3 AS SELECT f2 FROM t1;
@@ -1097,12 +1102,12 @@ CREATE USER u29908_1@localhost;
 CREATE DEFINER = u29908_1@localhost VIEW v1 AS SELECT f1 FROM t1;
 CREATE DEFINER = u29908_1@localhost SQL SECURITY INVOKER VIEW v2 AS
   SELECT f1 FROM t1;
-GRANT DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v1 TO u29908_1@localhost;
-GRANT DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v2 TO u29908_1@localhost;
+GRANT SELECT, DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v1 TO u29908_1@localhost;
+GRANT SELECT, DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v2 TO u29908_1@localhost;
 GRANT SELECT ON mysqltest_29908.t1 TO u29908_1@localhost;
 CREATE USER u29908_2@localhost;
-GRANT DROP, CREATE VIEW ON mysqltest_29908.v1 TO u29908_2@localhost;
-GRANT DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v2 TO u29908_2@localhost;
+GRANT SELECT, DROP, CREATE VIEW ON mysqltest_29908.v1 TO u29908_2@localhost;
+GRANT SELECT, DROP, CREATE VIEW, SHOW VIEW ON mysqltest_29908.v2 TO u29908_2@localhost;
 GRANT SELECT ON mysqltest_29908.t1 TO u29908_2@localhost;
 
 connect (u2,localhost,u29908_2,,mysqltest_29908);

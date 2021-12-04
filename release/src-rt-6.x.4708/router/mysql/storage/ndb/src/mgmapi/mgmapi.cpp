@@ -1,4 +1,4 @@
- /* Copyright (c) 2003-2007 MySQL AB
+ /* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -212,7 +212,7 @@ extern "C"
 void
 ndb_mgm_set_name(NdbMgmHandle handle, const char *name)
 {
-  my_free(handle->m_name, MYF(MY_ALLOW_ZERO_PTR));
+  my_free(handle->m_name);
   handle->m_name= my_strdup(name, MYF(MY_WME));
 }
 
@@ -278,10 +278,10 @@ ndb_mgm_destroy_handle(NdbMgmHandle * handle)
   }
 #endif
   (*handle)->cfg.~LocalConfig();
-  my_free((*handle)->m_name, MYF(MY_ALLOW_ZERO_PTR));
+  my_free((*handle)->m_name);
   if ((*handle)->m_bindaddress)
     free((*handle)->m_bindaddress);
-  my_free((char*)* handle,MYF(MY_ALLOW_ZERO_PTR));
+  my_free(* handle);
   * handle = 0;
   DBUG_VOID_RETURN;
 }

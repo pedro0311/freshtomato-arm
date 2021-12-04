@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2005, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef RPL_RLI_H
 #define RPL_RLI_H
@@ -21,9 +19,12 @@
 #include "rpl_tblmap.h"
 #include "rpl_reporting.h"
 #include "rpl_utility.h"
+#include "log.h"                         /* LOG_INFO, MYSQL_BIN_LOG */
+#include "sql_class.h"                   /* THD */
 
 struct RPL_TABLE_LIST;
 class Master_info;
+extern uint sql_slave_skip_counter;
 
 /****************************************************************************
 
@@ -108,6 +109,19 @@ public:
    */
   IO_CACHE cache_buf,*cur_log;
 
+  /*
+    Keeps track of the number of transactions that commits
+    before fsyncing. The option --sync-relay-log-info determines 
+    how many transactions should commit before fsyncing.
+  */ 
+  uint sync_counter;
+
+  /*
+    Identifies when the recovery process is going on.
+    See sql/slave.cc:init_recovery for further details.
+  */ 
+  bool is_relay_log_recovery;
+
   /* The following variables are safe to read any time */
 
   /* IO_CACHE of the info file - set only during init or end */
@@ -121,18 +135,16 @@ public:
   TABLE *save_temporary_tables;
 
   /*
-    standard lock acquistion order to avoid deadlocks:
+    standard lock acquisition order to avoid deadlocks:
     run_lock, data_lock, relay_log.LOCK_log, relay_log.LOCK_index
   */
-  pthread_mutex_t data_lock,run_lock;
-
+  mysql_mutex_t data_lock, run_lock, sleep_lock;
   /*
     start_cond is broadcast when SQL thread is started
     stop_cond - when stopped
     data_cond - when data protected by data_lock changes
   */
-  pthread_cond_t start_cond, stop_cond, data_cond;
-
+  mysql_cond_t start_cond, stop_cond, data_cond, sleep_cond;
   /* parent Master_info structure */
   Master_info *mi;
 
@@ -141,7 +153,14 @@ public:
     a different log under our feet
   */
   uint32 cur_log_old_open_count;
-  
+
+  /*
+    If on init_info() call error_on_rli_init_info is true that means
+    that previous call to init_info() terminated with an error, RESET
+    SLAVE must be executed and the problem fixed manually.
+   */
+  bool error_on_rli_init_info;
+
   /*
     Let's call a group (of events) :
       - a transaction
@@ -220,19 +239,19 @@ public:
   volatile uint32 slave_skip_counter;
   volatile ulong abort_pos_wait;	/* Incremented on change master */
   volatile ulong slave_run_id;		/* Incremented on slave start */
-  pthread_mutex_t log_space_lock;
-  pthread_cond_t log_space_cond;
+  mysql_mutex_t log_space_lock;
+  mysql_cond_t log_space_cond;
   THD * sql_thd;
 #ifndef DBUG_OFF
   int events_till_abort;
 #endif  
 
-  /* if not set, the value of other members of the structure are undefined */
   /*
     inited changes its value within LOCK_active_mi-guarded critical
     sections  at times of start_slave_threads() (0->1) and end_slave() (1->0).
     Readers may not acquire the mutex while they realize potential concurrency
     issue.
+    If not set, the value of other members of the structure are undefined.
   */
   volatile bool inited;
   volatile bool abort_slave;
@@ -292,7 +311,7 @@ public:
   char slave_patternload_file[FN_REFLEN]; 
   size_t slave_patternload_file_size;  
 
-  Relay_log_info();
+  Relay_log_info(bool is_slave_recovery);
   ~Relay_log_info();
 
   /*
@@ -339,13 +358,21 @@ public:
   uint tables_to_lock_count;        /* RBR: Count of tables to lock */
   table_mapping m_table_map;      /* RBR: Mapping table-id to table */
 
-  inline table_def *get_tabledef(TABLE *tbl)
+  bool get_table_data(TABLE *table_arg, table_def **tabledef_var, TABLE **conv_table_var) const
   {
-    table_def *td= 0;
-    for (TABLE_LIST *ptr= tables_to_lock; ptr && !td; ptr= ptr->next_global)
-      if (ptr->table == tbl)
-        td= &((RPL_TABLE_LIST *)ptr)->m_tabledef;
-    return (td);
+    DBUG_ASSERT(tabledef_var && conv_table_var);
+    for (TABLE_LIST *ptr= tables_to_lock ; ptr != NULL ; ptr= ptr->next_global)
+      if (ptr->table == table_arg)
+      {
+        *tabledef_var= &static_cast<RPL_TABLE_LIST*>(ptr)->m_tabledef;
+        *conv_table_var= static_cast<RPL_TABLE_LIST*>(ptr)->m_conv_table;
+        DBUG_PRINT("debug", ("Fetching table data for table %s.%s:"
+                             " tabledef: %p, conv_table: %p",
+                             table_arg->s->db.str, table_arg->s->table_name.str,
+                             *tabledef_var, *conv_table_var));
+        return true;
+      }
+    return false;
   }
 
   /*
@@ -358,15 +385,14 @@ public:
   bool cached_charset_compare(char *charset) const;
 
   void cleanup_context(THD *, bool);
+  void slave_close_thread_tables(THD *);
   void clear_tables_to_lock();
 
   /*
-    Used by row-based replication to detect that it should not stop at
-    this event, but give it a chance to send more events. The time
-    where the last event inside a group started is stored here. If the
-    variable is zero, we are not in a group (but may be in a
-    transaction).
-   */
+    Used to defer stopping the SQL thread to give it a chance
+    to finish up the current group of events.
+    The timestamp is set and reset in @c sql_slave_killed().
+  */
   time_t last_event_start_time;
 
   /*
@@ -469,12 +495,53 @@ public:
      @retval false Replication thread is currently not inside a group
    */
   bool is_in_group() const {
-    return (sql_thd->options & OPTION_BEGIN) ||
+    return (sql_thd->variables.option_bits & OPTION_BEGIN) ||
       (m_flags & (1UL << IN_STMT));
   }
 
+  time_t get_row_stmt_start_timestamp()
+  {
+    return row_stmt_start_timestamp;
+  }
+
+  time_t set_row_stmt_start_timestamp()
+  {
+    if (row_stmt_start_timestamp == 0)
+      row_stmt_start_timestamp= my_time(0);
+
+    return row_stmt_start_timestamp;
+  }
+
+  void reset_row_stmt_start_timestamp()
+  {
+    row_stmt_start_timestamp= 0;
+  }
+
+  void set_long_find_row_note_printed()
+  {
+    long_find_row_note_printed= true;
+  }
+
+  void unset_long_find_row_note_printed()
+  {
+    long_find_row_note_printed= false;
+  }
+
+  bool is_long_find_row_note_printed()
+  {
+    return long_find_row_note_printed;
+  }
+
 private:
+
   uint32 m_flags;
+
+  /*
+    Runtime state for printing a note when slave is taking
+    too long while processing a row event.
+   */
+  time_t row_stmt_start_timestamp;
+  bool long_find_row_note_printed;
 };
 
 

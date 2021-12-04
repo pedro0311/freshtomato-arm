@@ -1,4 +1,4 @@
-/* Copyright (c) 2000, 2001, 2003-2007 MySQL AB
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,8 +33,7 @@ ha_checksum mi_checksum(MI_INFO *info, const uchar *buf)
       length=_mi_calc_blob_length(rec->length-
 					portable_sizeof_char_ptr,
 					buf);
-      memcpy((char*) &pos, buf+rec->length- portable_sizeof_char_ptr,
-	     sizeof(char*));
+      memcpy(&pos, buf+rec->length- portable_sizeof_char_ptr, sizeof(char*));
       break;
     }
     case FIELD_VARCHAR:

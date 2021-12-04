@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2002, 2012, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 #include <my_getopt.h>
 #include <m_string.h>
 #include <mysqld_error.h>
+#include <sql_common.h>
+#include <mysql/client_plugin.h>
 
 #define VER "2.1"
 #define MAX_TEST_QUERY_LENGTH 300 /* MAX QUERY BUFFER LENGTH */
@@ -45,6 +47,8 @@ static unsigned int test_count= 0;
 static unsigned int opt_count= 0;
 static unsigned int iter_count= 0;
 static my_bool have_innodb= FALSE;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
+static unsigned int opt_drop_db= 1;
 
 static const char *opt_basedir= "./";
 static const char *opt_vardir= "mysql-test/var";
@@ -93,7 +97,7 @@ DBUG_PRINT("test", ("name: %s", str));					\
 
 static void print_error(const char *msg);
 static void print_st_error(MYSQL_STMT *stmt, const char *msg);
-static void client_disconnect(MYSQL* mysql, my_bool drop_db);
+static void client_disconnect(MYSQL* mysql);
 
 
 /*
@@ -231,6 +235,11 @@ static MYSQL *mysql_client_init(MYSQL* con)
  if (res && shared_memory_base_name)
  mysql_options(res, MYSQL_SHARED_MEMORY_BASE_NAME, shared_memory_base_name);
  #endif
+ if (opt_plugin_dir && *opt_plugin_dir)
+ mysql_options(res, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+ if (opt_default_auth && *opt_default_auth)
+ mysql_options(res, MYSQL_DEFAULT_AUTH, opt_default_auth);
  return res;
 }
 
@@ -312,6 +321,11 @@ static MYSQL* client_connect(ulong flag, uint protocol, my_bool auto_reconnect)
  /* enable local infile, in non-binary builds often disabled by default */
  mysql_options(mysql, MYSQL_OPT_LOCAL_INFILE, 0);
  mysql_options(mysql, MYSQL_OPT_PROTOCOL, &protocol);
+ if (opt_plugin_dir && *opt_plugin_dir)
+ mysql_options(mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+ if (opt_default_auth && *opt_default_auth)
+ mysql_options(mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
 
  if (!(mysql_real_connect(mysql, opt_host, opt_user,
  opt_password, opt_db ? opt_db:"test", opt_port,
@@ -357,7 +371,7 @@ static MYSQL* client_connect(ulong flag, uint protocol, my_bool auto_reconnect)
 
 /* Close the connection */
 
-static void client_disconnect(MYSQL* mysql, my_bool drop_db)
+static void client_disconnect(MYSQL* mysql)
 {
  static char query[MAX_TEST_QUERY_LENGTH];
 
@@ -365,7 +379,7 @@ static void client_disconnect(MYSQL* mysql, my_bool drop_db)
 
  if (mysql)
  {
-   if (drop_db)
+   if (opt_drop_db)
    {
      if (!opt_silent)
      fprintf(stdout, "\n dropping the test database '%s' ...", current_db);
@@ -643,6 +657,29 @@ int my_stmt_result(const char *buff)
  mysql_stmt_close(stmt);
 
  return row_count;
+}
+
+/* Print the total number of warnings and the warnings themselves.  */
+
+void my_process_warnings(MYSQL *conn, unsigned expected_warning_count)
+{
+ MYSQL_RES *result;
+ int rc;
+
+ if (!opt_silent)
+ fprintf(stdout, "\n total warnings: %u (expected: %u)\n",
+ mysql_warning_count(conn), expected_warning_count);
+
+ DIE_UNLESS(mysql_warning_count(mysql) == expected_warning_count);
+
+ rc= mysql_query(conn, "SHOW WARNINGS");
+ DIE_UNLESS(rc == 0);
+
+ result= mysql_store_result(conn);
+ mytest(result);
+
+ rc= my_process_result_set(result);
+ mysql_free_result(result);
 }
 
 
@@ -1126,6 +1163,8 @@ static struct my_option client_test_long_options[] =
  &opt_count, 0, GET_UINT, REQUIRED_ARG, 1, 0, 0, 0, 0, 0},
 {"database", 'D', "Database to use", &opt_db, &opt_db,
  0, GET_STR_ALLOC, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+{"do-not-drop-database", 'd', "Do not drop database while disconnecting",
+  0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
 {"debug", '#', "Output debug log", &default_dbug_option,
  &default_dbug_option, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
 {"help", '?', "Display this help and exit", 0, 0, 0, GET_NO_ARG, NO_ARG, 0,
@@ -1168,6 +1207,12 @@ static struct my_option client_test_long_options[] =
 {"getopt-ll-test", 'g', "Option for testing bug in getopt library",
  &opt_getopt_ll_test, &opt_getopt_ll_test, 0,
  GET_LL, REQUIRED_ARG, 0, 0, LONGLONG_MAX, 0, 0, 0},
+{"plugin_dir", 0, "Directory for client-side plugins.",
+ &opt_plugin_dir, &opt_plugin_dir, 0,
+ GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+{"default_auth", 0, "Default authentication client-side plugin to use.",
+ &opt_default_auth, &opt_default_auth, 0,
+ GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
 { 0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
@@ -1189,7 +1234,6 @@ and you are welcome to modify and redistribute it under the GPL license\n");
  my_print_variables(client_test_long_options);
 }
 
-
 static struct my_tests_st *get_my_tests();  /* To be defined in main .c file */
 
 static struct my_tests_st *my_testlist= 0;
@@ -1209,7 +1253,7 @@ char *argument)
  if (argument)
  {
    char *start=argument;
-   my_free(opt_password, MYF(MY_ALLOW_ZERO_PTR));
+   my_free(opt_password);
    opt_password= my_strdup(argument, MYF(MY_FAE));
    while (*argument) *argument++= 'x';               /* Destroy argument */
    if (*start)
@@ -1223,6 +1267,9 @@ char *argument)
  opt_silent= 0;
  else
  opt_silent++;
+ break;
+ case 'd':
+ opt_drop_db= 0;
  break;
  case 'A':
  /*
@@ -1306,7 +1353,9 @@ int main(int argc, char **argv)
 
  MY_INIT(argv[0]);
 
- load_defaults("my", client_test_load_default_groups, &argc, &argv);
+ if (load_defaults("my", client_test_load_default_groups, &argc, &argv))
+ exit(1);
+
  defaults_argv= argv;
  get_options(&argc, &argv);
 
@@ -1346,7 +1395,7 @@ int main(int argc, char **argv)
 	 fprintf(stderr, "\n\nGiven test not found: '%s'\n", *argv);
 	 fprintf(stderr, "See legal test names with %s -T\n\nAborting!\n",
 	 my_progname);
-	 client_disconnect(mysql, 1);
+	 client_disconnect(mysql);
 	 free_defaults(defaults_argv);
 	 exit(1);
        }
@@ -1359,13 +1408,13 @@ int main(int argc, char **argv)
    /* End of tests */
  }
 
- client_disconnect(mysql, 1);    /* disconnect from server */
+ client_disconnect(mysql);    /* disconnect from server */
 
  free_defaults(defaults_argv);
  print_test_output();
 
  while (embedded_server_arg_count > 1)
- my_free(embedded_server_args[--embedded_server_arg_count],MYF(0));
+ my_free(embedded_server_args[--embedded_server_arg_count]);
 
  mysql_server_end();
 

@@ -1,5 +1,5 @@
-# Copyright (c) 2004-2007 MySQL AB, 2009 Sun Microsystems, Inc.
-# Use is subject to license terms.
+# Copyright (C) 2004-2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,8 +51,5 @@ wrappersdir=$(prefix)/bin
 wrappers_SCRIPTS=atrt-testBackup atrt-mysql-test-run
 
 EXTRA_DIST = $(test_DATA) $(test_SCRIPTS) $(wrappers_SCRIPTS) README.ATRT atrt.hpp
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp:

@@ -1,7 +1,24 @@
-/******************************************************
-Row undo
+/*****************************************************************************
 
-(c) 1997 Innobase Oy
+Copyright (c) 1997, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file row/row0undo.c
+Row undo
 
 Created 1/8/1997 Heikki Tuuri
 *******************************************************/
@@ -24,6 +41,7 @@ Created 1/8/1997 Heikki Tuuri
 #include "row0row.h"
 #include "row0uins.h"
 #include "row0umod.h"
+#include "row0upd.h"
 #include "row0mysql.h"
 #include "srv0srv.h"
 
@@ -102,16 +120,16 @@ doing the purge. Similarly, during a rollback, a record can be removed
 if the stored roll ptr in the undo log points to a trx already (being) purged,
 or if the roll ptr is NULL, i.e., it was a fresh insert. */
 
-/************************************************************************
-Creates a row undo node to a query graph. */
-
+/********************************************************************//**
+Creates a row undo node to a query graph.
+@return	own: undo node */
+UNIV_INTERN
 undo_node_t*
 row_undo_node_create(
 /*=================*/
-				/* out, own: undo node */
-	trx_t*		trx,	/* in: transaction */
-	que_thr_t*	parent,	/* in: parent node, i.e., a thr node */
-	mem_heap_t*	heap)	/* in: memory heap where created */
+	trx_t*		trx,	/*!< in: transaction */
+	que_thr_t*	parent,	/*!< in: parent node, i.e., a thr node */
+	mem_heap_t*	heap)	/*!< in: memory heap where created */
 {
 	undo_node_t*	undo;
 
@@ -132,19 +150,18 @@ row_undo_node_create(
 	return(undo);
 }
 
-/***************************************************************
+/***********************************************************//**
 Looks for the clustered index record when node has the row reference.
 The pcur in node is used in the search. If found, stores the row to node,
 and stores the position of pcur, and detaches it. The pcur must be closed
-by the caller in any case. */
-
+by the caller in any case.
+@return TRUE if found; NOTE the node->pcur must be closed by the
+caller, regardless of the return value */
+UNIV_INTERN
 ibool
 row_undo_search_clust_to_pcur(
 /*==========================*/
-				/* out: TRUE if found; NOTE the node->pcur
-				must be closed by the caller, regardless of
-				the return value */
-	undo_node_t*	node)	/* in: row undo node */
+	undo_node_t*	node)	/*!< in: row undo node */
 {
 	dict_index_t*	clust_index;
 	ibool		found;
@@ -154,7 +171,7 @@ row_undo_search_clust_to_pcur(
 	mem_heap_t*	heap		= NULL;
 	ulint		offsets_[REC_OFFS_NORMAL_SIZE];
 	ulint*		offsets		= offsets_;
-	*offsets_ = (sizeof offsets_) / sizeof *offsets_;
+	rec_offs_init(offsets_);
 
 	mtr_start(&mtr);
 
@@ -168,9 +185,8 @@ row_undo_search_clust_to_pcur(
 	offsets = rec_get_offsets(rec, clust_index, offsets,
 				  ULINT_UNDEFINED, &heap);
 
-	if (!found || 0 != ut_dulint_cmp(node->roll_ptr,
-					 row_get_rec_roll_ptr(rec, clust_index,
-							      offsets))) {
+	if (!found || node->roll_ptr
+	    != row_get_rec_roll_ptr(rec, clust_index, offsets)) {
 
 		/* We must remove the reservation on the undo log record
 		BEFORE releasing the latch on the clustered index page: this
@@ -182,8 +198,33 @@ row_undo_search_clust_to_pcur(
 
 		ret = FALSE;
 	} else {
+		row_ext_t**	ext;
+
+		if (dict_table_get_format(node->table) >= DICT_TF_FORMAT_ZIP) {
+			/* In DYNAMIC or COMPRESSED format, there is
+			no prefix of externally stored columns in the
+			clustered index record. Build a cache of
+			column prefixes. */
+			ext = &node->ext;
+		} else {
+			/* REDUNDANT and COMPACT formats store a local
+			768-byte prefix of each externally stored
+			column. No cache is needed. */
+			ext = NULL;
+			node->ext = NULL;
+		}
+
 		node->row = row_build(ROW_COPY_DATA, clust_index, rec,
-				      offsets, node->heap);
+				      offsets, NULL, ext, node->heap);
+		if (node->rec_type == TRX_UNDO_UPD_EXIST_REC) {
+			node->undo_row = dtuple_copy(node->row, node->heap);
+			row_upd_replace(node->undo_row, &node->undo_ext,
+					clust_index, node->update, node->heap);
+		} else {
+			node->undo_row = NULL;
+			node->undo_ext = NULL;
+		}
+
 		btr_pcur_store_position(&(node->pcur), &mtr);
 
 		ret = TRUE;
@@ -197,23 +238,22 @@ row_undo_search_clust_to_pcur(
 	return(ret);
 }
 
-/***************************************************************
+/***********************************************************//**
 Fetches an undo log record and does the undo for the recorded operation.
 If none left, or a partial rollback completed, returns control to the
-parent node, which is always a query thread node. */
+parent node, which is always a query thread node.
+@return	DB_SUCCESS if operation successfully completed, else error code */
 static
 ulint
 row_undo(
 /*=====*/
-				/* out: DB_SUCCESS if operation successfully
-				completed, else error code */
-	undo_node_t*	node,	/* in: row undo node */
-	que_thr_t*	thr)	/* in: query thread */
+	undo_node_t*	node,	/*!< in: row undo node */
+	que_thr_t*	thr)	/*!< in: query thread */
 {
-	ulint	err;
-	trx_t*	trx;
-	dulint	roll_ptr;
-	ibool	locked_data_dict;
+	ulint		err;
+	trx_t*		trx;
+	roll_ptr_t	roll_ptr;
+	ibool		locked_data_dict;
 
 	ut_ad(node && thr);
 
@@ -281,15 +321,15 @@ row_undo(
 	return(err);
 }
 
-/***************************************************************
+/***********************************************************//**
 Undoes a row operation in a table. This is a high-level function used
-in SQL execution graphs. */
-
+in SQL execution graphs.
+@return	query thread to run next or NULL */
+UNIV_INTERN
 que_thr_t*
 row_undo_step(
 /*==========*/
-				/* out: query thread to run next or NULL */
-	que_thr_t*	thr)	/* in: query thread */
+	que_thr_t*	thr)	/*!< in: query thread */
 {
 	ulint		err;
 	undo_node_t*	node;

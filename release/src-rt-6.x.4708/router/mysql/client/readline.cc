@@ -45,9 +45,9 @@ LINE_BUFFER *batch_readline_init(ulong max_size,FILE *file)
   if (!(line_buff=(LINE_BUFFER*)
         my_malloc(sizeof(*line_buff),MYF(MY_WME | MY_ZEROFILL))))
     return 0;
-  if (init_line_buffer(line_buff,fileno(file),IO_SIZE,max_size))
+  if (init_line_buffer(line_buff,my_fileno(file),IO_SIZE,max_size))
   {
-    my_free(line_buff,MYF(0));
+    my_free(line_buff);
     return 0;
   }
   return line_buff;
@@ -57,7 +57,7 @@ LINE_BUFFER *batch_readline_init(ulong max_size,FILE *file)
 char *batch_readline(LINE_BUFFER *line_buff)
 {
   char *pos;
-  ulong out_length= 0;
+  ulong out_length;
 
   if (!(pos=intern_read_line(line_buff, &out_length)))
     return 0;
@@ -74,8 +74,8 @@ void batch_readline_end(LINE_BUFFER *line_buff)
 {
   if (line_buff)
   {
-    my_free(line_buff->buffer,MYF(MY_ALLOW_ZERO_PTR));
-    my_free(line_buff,MYF(0));
+    my_free(line_buff->buffer);
+    my_free(line_buff);
   }
 }
 
@@ -88,7 +88,7 @@ LINE_BUFFER *batch_readline_command(LINE_BUFFER *line_buff, char * str)
       return 0;
   if (init_line_buffer_from_string(line_buff,str))
   {
-    my_free(line_buff,MYF(0));
+    my_free(line_buff);
     return 0;
   }
   return line_buff;

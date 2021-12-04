@@ -13,13 +13,23 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
+#include "my_global.h"
+#include "my_sys.h"
+#include "m_string.h" /* for TRASH */
 
 
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+void *sql_alloc(size_t);
+
+#include "my_sys.h"                    /* alloc_root, TRASH, MY_WME,
+                                          MY_FAE, MY_ALLOW_ZERO_PTR */
+#include "m_string.h"                           /* bfill */
+#include "thr_malloc.h"                         /* sql_alloc */
 
 /* mysql standard class memory allocator */
 
@@ -528,11 +538,11 @@ struct ilink
   struct ilink **prev,*next;
   static void *operator new(size_t size) throw ()
   {
-    return (void*)my_malloc((uint)size, MYF(MY_WME | MY_FAE));
+    return (void*)my_malloc((uint)size, MYF(MY_WME | MY_FAE | ME_FATALERROR));
   }
   static void operator delete(void* ptr_arg, size_t size)
   {
-     my_free((uchar*)ptr_arg, MYF(MY_WME|MY_ALLOW_ZERO_PTR));
+     my_free(ptr_arg);
   }
 
   inline ilink()
@@ -574,18 +584,18 @@ public:
 
 template <class T> class I_List_iterator;
 
-/*
-  WARNING: copy constructor of this class does not create a usable
-  copy, as its members may point at each other.
-*/
 
 class base_ilist
 {
+  struct ilink *first;
+  struct ilink last;
 public:
-  struct ilink *first,last;
   inline void empty() { first= &last; last.prev= &first; }
   base_ilist() { empty(); }
   inline bool is_empty() {  return first == &last; }
+  // Returns true if p is the last "real" object in the list,
+  // i.e. p->next points to the sentinel.
+  inline bool is_last(ilink *p) { return p->next == NULL || p->next == &last; }
   inline void append(ilink *a)
   {
     first->prev= &a->next;
@@ -610,7 +620,31 @@ public:
   {
     return (first != &last) ? first : 0;
   }
-  friend class base_list_iterator;
+
+  /**
+    Moves list elements to new owner, and empties current owner (i.e. this).
+
+    @param[in,out]  new_owner  The new owner of the list elements.
+                               Should be empty in input.
+  */
+
+  void move_elements_to(base_ilist *new_owner)
+  {
+    DBUG_ASSERT(new_owner->is_empty());
+    new_owner->first= first;
+    new_owner->last= last;
+    empty();
+  }
+
+  friend class base_ilist_iterator;
+ private:
+  /*
+    We don't want to allow copying of this class, as that would give us
+    two list heads containing the same elements.
+    So we declare, but don't define copy CTOR and assignment operator.
+  */
+  base_ilist(const base_ilist&);
+  void operator=(const base_ilist&);
 };
 
 
@@ -637,12 +671,16 @@ class I_List :private base_ilist
 {
 public:
   I_List() :base_ilist()	{}
+  inline bool is_last(T *p)     { return base_ilist::is_last(p); }
   inline void empty()		{ base_ilist::empty(); }
   inline bool is_empty()        { return base_ilist::is_empty(); } 
   inline void append(T* a)	{ base_ilist::append(a); }
   inline void push_back(T* a)	{ base_ilist::push_back(a); }
   inline T* get()		{ return (T*) base_ilist::get(); }
   inline T* head()		{ return (T*) base_ilist::head(); }
+  inline void move_elements_to(I_List<T>* new_owner) {
+    base_ilist::move_elements_to(new_owner);
+  }
 #ifndef _lint
   friend class I_List_iterator<T>;
 #endif
@@ -682,5 +720,8 @@ list_copy_and_replace_each_value(List<T> &list, MEM_ROOT *mem_root)
   while ((el= it++))
     it.replace(el->clone(mem_root));
 }
+
+void free_list(I_List <i_string_pair> *list);
+void free_list(I_List <i_string> *list);
 
 #endif // INCLUDES_MYSQL_SQL_LIST_H

@@ -1,5 +1,5 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+   reserved
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,20 +12,9 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Test av isam-databas: stor test */
-
-#ifndef USE_MY_FUNC		/* We want to be able to dbug this !! */
-#define USE_MY_FUNC
-#endif
-#ifdef DBUG_OFF
-#undef DBUG_OFF
-#endif
-#ifndef SAFEMALLOC
-#define SAFEMALLOC
-#endif
 
 #include "heapdef.h"		/* Because of hp_find_block */
 #include <signal.h>
@@ -67,15 +56,21 @@ int main(int argc, char *argv[])
   HEAP_PTR UNINIT_VAR(position);
   HP_CREATE_INFO hp_create_info;
   CHARSET_INFO *cs= &my_charset_latin1;
+  my_bool unused;
   MY_INIT(argv[0]);		/* init my_sys library & pthreads */
 
   filename= "test2";
   filename2= "test2_2";
   file=file2=0;
   get_options(argc,argv);
-  
+
   bzero(&hp_create_info, sizeof(hp_create_info));
   hp_create_info.max_table_size= 1024L*1024L;
+  hp_create_info.keys= keys;
+  hp_create_info.keydef= keyinfo;
+  hp_create_info.reclength= reclength;
+  hp_create_info.max_records= (ulong) flag*100000L;
+  hp_create_info.min_records= (ulong) recant/2;
 
   write_count=update=opt_delete=0;
   key_check=0;
@@ -127,8 +122,7 @@ int main(int argc, char *argv[])
   bzero((char*) key3,sizeof(key3));
 
   printf("- Creating heap-file\n");
-  if (heap_create(filename,keys,keyinfo,reclength,(ulong) flag*100000L, 
-                  (ulong) recant/2, &hp_create_info, &tmp_share) ||
+  if (heap_create(filename, &hp_create_info, &tmp_share, &unused) ||
       !(file= heap_open(filename, 2)))
     goto err;
   signal(SIGINT,endprog);
@@ -186,11 +180,6 @@ int main(int argc, char *argv[])
 	printf("can't find key1: \"%s\"\n",(char*) key);
 	goto err;
       }
-#ifdef NOT_USED
-      if (file->current_ptr == hp_find_block(&file->s->block,0) ||
-	  file->current_ptr == hp_find_block(&file->s->block,1))
-	continue;			/* Don't remove 2 first records */
-#endif
       if (heap_delete(file,record))
       {
 	printf("error: %d; can't delete record: \"%s\"\n", my_errno,(char*) record);
@@ -565,8 +554,10 @@ int main(int argc, char *argv[])
   heap_close(file2);
 
   printf("- Creating output heap-file 2\n");
-  if (heap_create(filename2, 1, keyinfo, reclength, 0L, 0L, &hp_create_info,
-                  &tmp_share) ||
+  hp_create_info.keys= 1;
+  hp_create_info.max_records= 0;
+  hp_create_info.min_records= 0;
+  if (heap_create(filename2, &hp_create_info, &tmp_share, &unused) ||
       !(file2= heap_open_from_share_and_register(tmp_share, 2)))
     goto err;
 
@@ -611,7 +602,7 @@ end:
   return(0);
 err:
   printf("Got error: %d when using heap-database\n",my_errno);
-  VOID(heap_close(file));
+  (void) heap_close(file);
   return(1);
 } /* main */
 
@@ -666,11 +657,6 @@ static int rnd(int max_value)
 
 static sig_handler endprog(int sig_number __attribute__((unused)))
 {
-#ifndef THREAD
-  if (my_dont_interrupt)
-    my_remember_signal(sig_number,endprog);
-  else
-#endif
   {
     hp_panic(HA_PANIC_CLOSE);
     my_end(1);

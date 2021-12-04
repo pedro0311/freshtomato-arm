@@ -1,4 +1,7 @@
-/* Copyright (c) 2000-2008 MySQL AB
+#ifndef HA_NDBCLUSTER_COND_INCLUDED
+#define HA_NDBCLUSTER_COND_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,6 +24,13 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface                       /* gcc class implementation */
 #endif
+
+/*
+  It is necessary to include set_var.h instead of item.h because there
+  are dependencies on include order for set_var.h and item.h. This
+  will be resolved later.
+*/
+#include "set_var.h"                            /* Item, Item_field */
 
 typedef enum ndb_item_type {
   NDB_VALUE = 0,   // Qualified more with Item::Type
@@ -486,3 +496,5 @@ private:
 
   Ndb_cond_stack *m_cond_stack;
 };
+
+#endif /* HA_NDBCLUSTER_COND_INCLUDED */

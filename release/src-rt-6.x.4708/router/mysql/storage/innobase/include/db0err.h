@@ -1,7 +1,24 @@
-/******************************************************
-Global error codes for the database
+/*****************************************************************************
 
-(c) 1996 Innobase Oy
+Copyright (c) 1996, 2012, Oracle and/or its affiliates. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Suite 500, Boston, MA 02110-1335 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file include/db0err.h
+Global error codes for the database
 
 Created 5/24/1996 Heikki Tuuri
 *******************************************************/
@@ -10,88 +27,103 @@ Created 5/24/1996 Heikki Tuuri
 #define db0err_h
 
 
-#define DB_SUCCESS_LOCKED_REC	9	/* like DB_SUCCESS, but a new
+enum db_err {
+	DB_SUCCESS_LOCKED_REC = 9,	/*!< like DB_SUCCESS, but a new
 					explicit record lock was created */
-#define DB_SUCCESS		10
+	DB_SUCCESS = 10,
 
-/* The following are error codes */
-#define	DB_ERROR		11
-#define DB_OUT_OF_MEMORY	12
-#define DB_OUT_OF_FILE_SPACE	13
-#define DB_LOCK_WAIT		14
-#define DB_DEADLOCK		15
-#define DB_ROLLBACK		16
-#define DB_DUPLICATE_KEY	17
-#define DB_QUE_THR_SUSPENDED	18
-#define DB_MISSING_HISTORY	19	/* required history data has been
+	/* The following are error codes */
+	DB_ERROR,
+	DB_INTERRUPTED,
+	DB_OUT_OF_MEMORY,
+	DB_OUT_OF_FILE_SPACE,
+	DB_LOCK_WAIT,
+	DB_DEADLOCK,
+	DB_ROLLBACK,
+	DB_DUPLICATE_KEY,
+	DB_QUE_THR_SUSPENDED,
+	DB_MISSING_HISTORY,		/* required history data has been
 					deleted due to lack of space in
 					rollback segment */
-#define DB_CLUSTER_NOT_FOUND	30
-#define DB_TABLE_NOT_FOUND	31
-#define DB_MUST_GET_MORE_FILE_SPACE 32	/* the database has to be stopped
+	DB_CLUSTER_NOT_FOUND = 30,
+	DB_TABLE_NOT_FOUND,
+	DB_MUST_GET_MORE_FILE_SPACE,	/* the database has to be stopped
 					and restarted with more file space */
-#define DB_TABLE_IS_BEING_USED	33
-#define DB_TOO_BIG_RECORD	34	/* a record in an index would become
-					bigger than 1/2 free space in a page
-					frame */
-#define DB_LOCK_WAIT_TIMEOUT	35	/* lock wait lasted too long */
-#define DB_NO_REFERENCED_ROW	36	/* referenced key value not found
+	DB_TABLE_IS_BEING_USED,
+	DB_TOO_BIG_RECORD,		/* a record in an index would not fit
+					on a compressed page, or it would
+					become bigger than 1/2 free space in
+					an uncompressed page frame */
+	DB_LOCK_WAIT_TIMEOUT,		/* lock wait lasted too long */
+	DB_NO_REFERENCED_ROW,		/* referenced key value not found
 					for a foreign key in an insert or
 					update of a row */
-#define DB_ROW_IS_REFERENCED	37	/* cannot delete or update a row
+	DB_ROW_IS_REFERENCED,		/* cannot delete or update a row
 					because it contains a key value
 					which is referenced */
-#define DB_CANNOT_ADD_CONSTRAINT 38	/* adding a foreign key constraint
+	DB_CANNOT_ADD_CONSTRAINT,	/* adding a foreign key constraint
 					to a table failed */
-#define DB_CORRUPTION		39	/* data structure corruption noticed */
-#define DB_COL_APPEARS_TWICE_IN_INDEX 40/* InnoDB cannot handle an index
-					where same column appears twice */
-#define DB_CANNOT_DROP_CONSTRAINT 41	/* dropping a foreign key constraint
+	DB_CORRUPTION,			/* data structure corruption noticed */
+	DB_CANNOT_DROP_CONSTRAINT,	/* dropping a foreign key constraint
 					from a table failed */
-#define DB_NO_SAVEPOINT		42	/* no savepoint exists with the given
+	DB_NO_SAVEPOINT,		/* no savepoint exists with the given
 					name */
-#define	DB_TABLESPACE_ALREADY_EXISTS 43 /* we cannot create a new single-table
+	DB_TABLESPACE_ALREADY_EXISTS,	/* we cannot create a new single-table
 					tablespace because a file of the same
 					name already exists */
-#define DB_TABLESPACE_DELETED	44	/* tablespace does not exist or is
+	DB_TABLESPACE_DELETED,		/* tablespace does not exist or is
 					being dropped right now */
-#define	DB_LOCK_TABLE_FULL	45	/* lock structs have exhausted the
+	DB_LOCK_TABLE_FULL,		/* lock structs have exhausted the
 					buffer pool (for big transactions,
 					InnoDB stores the lock structs in the
 					buffer pool) */
-#define DB_FOREIGN_DUPLICATE_KEY 46	/* foreign key constraints
+	DB_FOREIGN_DUPLICATE_KEY,	/* foreign key constraints
 					activated by the operation would
 					lead to a duplicate key in some
 					table */
-#define DB_TOO_MANY_CONCURRENT_TRXS 47	/* when InnoDB runs out of the
+	DB_TOO_MANY_CONCURRENT_TRXS,	/* when InnoDB runs out of the
 					preconfigured undo slots, this can
 					only happen when there are too many
 					concurrent transactions */
-#define DB_UNSUPPORTED		48	/* when InnoDB sees any artefact or
+	DB_UNSUPPORTED,			/* when InnoDB sees any artefact or
 					a feature that it can't recoginize or
 					work with e.g., FT indexes created by
 					a later version of the engine. */
-#define DB_INTERRUPTED		49	/* the query has been interrupted with
-					"KILL QUERY N;" */
-#define DB_FOREIGN_EXCEED_MAX_CASCADE 50/* Foreign key constraint related
+
+	DB_PRIMARY_KEY_IS_NULL,		/* a column in the PRIMARY KEY
+					was found to be NULL */
+
+	DB_STATS_DO_NOT_EXIST,		/* an operation that requires the
+					persistent storage, used for recording
+					table and index statistics, was
+					requested but this storage does not
+					exist itself or the stats for a given
+					table do not exist */
+	DB_FOREIGN_EXCEED_MAX_CASCADE,	/* Foreign key constraint related
 					cascading delete/update exceeds
 					maximum allowed depth */
-#define DB_FOREIGN_NO_INDEX	51	/* the child (foreign) table does not
+	DB_CHILD_NO_INDEX,		/* the child (foreign) table does not
 					have an index that contains the
 					foreign keys as its prefix columns */
-#define DB_REFERENCING_NO_INDEX	52	/* the parent (referencing) table does
-					not have an index that contains the
+	DB_PARENT_NO_INDEX,		/* the parent table does not
+					have an index that contains the
 					foreign keys as its prefix columns */
-#define DB_TABLE_IN_FK_CHECK    53	/* table is being used in foreign
+	DB_TOO_BIG_INDEX_COL,		/* index column size exceeds maximum
+					limit */
+	DB_INDEX_CORRUPT,		/* we have corrupted index */
+	DB_UNDO_RECORD_TOO_BIG,		/* the undo log record is too big */
+	DB_TABLE_IN_FK_CHECK,		/* table is being used in foreign
 					key check */
-#define DB_IDENTIFIER_TOO_LONG	54	/* Identifier name too long */
+	DB_IDENTIFIER_TOO_LONG,		/* Identifier name too long */
 
-/* The following are partial failure codes */
-#define DB_FAIL			1000
-#define DB_OVERFLOW		1001
-#define DB_UNDERFLOW		1002
-#define DB_STRONG_FAIL		1003
-#define DB_RECORD_NOT_FOUND	1500
-#define DB_END_OF_INDEX		1501
+	/* The following are partial failure codes */
+	DB_FAIL = 1000,
+	DB_OVERFLOW,
+	DB_UNDERFLOW,
+	DB_STRONG_FAIL,
+	DB_ZIP_OVERFLOW,
+	DB_RECORD_NOT_FOUND = 1500,
+	DB_END_OF_INDEX
+};
 
 #endif

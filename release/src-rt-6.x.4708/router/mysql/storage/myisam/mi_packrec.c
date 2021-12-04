@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 	/* Functions to compressed records */
 
@@ -152,7 +150,7 @@ my_bool _mi_read_pack_info(MI_INFO *info, pbool fix_keys)
 
   file=info->dfile;
   my_errno=0;
-  if (my_read(file,(uchar*) header,sizeof(header),MYF(MY_NABP)))
+  if (mysql_file_read(file, (uchar*) header, sizeof(header), MYF(MY_NABP)))
   {
     if (!my_errno)
       my_errno=HA_ERR_END_OF_FILE;
@@ -226,9 +224,9 @@ my_bool _mi_read_pack_info(MI_INFO *info, pbool fix_keys)
   tmp_buff=share->decode_tables+length;
   disk_cache= (uchar*) (tmp_buff+OFFSET_TABLE_SIZE);
 
-  if (my_read(file,disk_cache,
-	      (uint) (share->pack.header_length-sizeof(header)),
-	      MYF(MY_NABP)))
+  if (mysql_file_read(file, disk_cache,
+                      (uint) (share->pack.header_length-sizeof(header)),
+                      MYF(MY_NABP)))
     goto err2;
 
   huff_tree_bits=max_bit(trees ? trees-1 : 0);
@@ -300,9 +298,9 @@ my_bool _mi_read_pack_info(MI_INFO *info, pbool fix_keys)
 err3:
   my_errno=HA_ERR_WRONG_IN_RECORD;
 err2:
-  my_free((uchar*) share->decode_tables,MYF(0));
+  my_free(share->decode_tables);
 err1:
-  my_free((uchar*) share->decode_trees,MYF(0));
+  my_free(share->decode_trees);
 err0:
   DBUG_RETURN(1);
 }
@@ -719,8 +717,8 @@ int _mi_read_pack_record(MI_INFO *info, my_off_t filepos, uchar *buf)
   if (_mi_pack_get_block_info(info, &info->bit_buff, &block_info,
                               &info->rec_buff, file, filepos))
     goto err;
-  if (my_read(file,(uchar*) info->rec_buff + block_info.offset ,
-	      block_info.rec_len - block_info.offset, MYF(MY_NABP)))
+  if (mysql_file_read(file, (uchar*) info->rec_buff + block_info.offset,
+                      block_info.rec_len - block_info.offset, MYF(MY_NABP)))
     goto panic;
   info->update|= HA_STATE_AKTIV;
   DBUG_RETURN(_mi_pack_rec_unpack(info, &info->bit_buff, buf,
@@ -1053,8 +1051,7 @@ static void uf_blob(MI_COLUMNDEF *rec, MI_BIT_BUFF *bit_buff,
     }
     decode_bytes(rec,bit_buff,bit_buff->blob_pos,bit_buff->blob_pos+length);
     _my_store_blob_length((uchar*) to,pack_length,length);
-    memcpy_fixed((char*) to+pack_length,(char*) &bit_buff->blob_pos,
-		 sizeof(char*));
+    memcpy(to+pack_length, &bit_buff->blob_pos, sizeof(char*));
     bit_buff->blob_pos+=length;
   }
 }
@@ -1341,9 +1338,9 @@ int _mi_read_rnd_pack_record(MI_INFO *info, uchar *buf,
   }
   else
   {
-    if (my_read(info->dfile,(uchar*) info->rec_buff + block_info.offset,
-		block_info.rec_len-block_info.offset,
-		MYF(MY_NABP)))
+    if (mysql_file_read(info->dfile,
+                        (uchar*) info->rec_buff + block_info.offset,
+                        block_info.rec_len-block_info.offset, MYF(MY_NABP)))
       goto err;
   }
   info->packed_length=block_info.rec_len;
@@ -1372,11 +1369,11 @@ uint _mi_pack_get_block_info(MI_INFO *myisam, MI_BIT_BUFF *bit_buff,
   {
     ref_length=myisam->s->pack.ref_length;
     /*
-      We can't use my_pread() here because mi_read_rnd_pack_record assumes
+      We can't use mysql_file_pread() here because mi_read_rnd_pack_record assumes
       position is ok
     */
-    VOID(my_seek(file,filepos,MY_SEEK_SET,MYF(0)));
-    if (my_read(file, header,ref_length,MYF(MY_NABP)))
+    mysql_file_seek(file, filepos, MY_SEEK_SET, MYF(0));
+    if (mysql_file_read(file, header, ref_length, MYF(MY_NABP)))
       return BLOCK_FATAL_ERROR;
     DBUG_DUMP("header",(uchar*) header,ref_length);
   }
@@ -1504,11 +1501,11 @@ my_bool _mi_memmap_file(MI_INFO *info)
 
     if (myisam_mmap_size != SIZE_T_MAX)
     {
-      pthread_mutex_lock(&THR_LOCK_myisam_mmap);
+      mysql_mutex_lock(&THR_LOCK_myisam_mmap);
       eom= data_file_length > myisam_mmap_size - myisam_mmap_used - MEMMAP_EXTRA_MARGIN;
       if (!eom)
         myisam_mmap_used+= data_file_length + MEMMAP_EXTRA_MARGIN;
-      pthread_mutex_unlock(&THR_LOCK_myisam_mmap);
+      mysql_mutex_unlock(&THR_LOCK_myisam_mmap);
     }
     else
       eom= data_file_length > myisam_mmap_size - MEMMAP_EXTRA_MARGIN;
@@ -1518,15 +1515,15 @@ my_bool _mi_memmap_file(MI_INFO *info)
       DBUG_PRINT("warning", ("File is too large for mmap"));
       DBUG_RETURN(0);
     }
-    if (my_seek(info->dfile,0L,MY_SEEK_END,MYF(0)) <
+    if (mysql_file_seek(info->dfile, 0L, MY_SEEK_END, MYF(0)) <
         share->state.state.data_file_length+MEMMAP_EXTRA_MARGIN)
     {
       DBUG_PRINT("warning",("File isn't extended for memmap"));
       if (myisam_mmap_size != SIZE_T_MAX)
       {
-        pthread_mutex_lock(&THR_LOCK_myisam_mmap);
+        mysql_mutex_lock(&THR_LOCK_myisam_mmap);
         myisam_mmap_used-= data_file_length + MEMMAP_EXTRA_MARGIN;
-        pthread_mutex_unlock(&THR_LOCK_myisam_mmap);
+        mysql_mutex_unlock(&THR_LOCK_myisam_mmap);
       }
       DBUG_RETURN(0);
     }
@@ -1536,9 +1533,9 @@ my_bool _mi_memmap_file(MI_INFO *info)
     {
       if (myisam_mmap_size != SIZE_T_MAX)
       {
-        pthread_mutex_lock(&THR_LOCK_myisam_mmap);
+        mysql_mutex_lock(&THR_LOCK_myisam_mmap);
         myisam_mmap_used-= data_file_length + MEMMAP_EXTRA_MARGIN;
-        pthread_mutex_unlock(&THR_LOCK_myisam_mmap);
+        mysql_mutex_unlock(&THR_LOCK_myisam_mmap);
       }
       DBUG_RETURN(0);
     }
@@ -1554,13 +1551,13 @@ void _mi_unmap_file(MI_INFO *info)
 {
   DBUG_ASSERT(info->s->options & HA_OPTION_COMPRESS_RECORD);
 
-  VOID(my_munmap((char*) info->s->file_map, (size_t) info->s->mmaped_length));
+  (void) my_munmap((char*) info->s->file_map, (size_t) info->s->mmaped_length);
 
   if (myisam_mmap_size != SIZE_T_MAX)
   {
-    pthread_mutex_lock(&THR_LOCK_myisam_mmap);
+    mysql_mutex_lock(&THR_LOCK_myisam_mmap);
     myisam_mmap_used-= info->s->mmaped_length;
-    pthread_mutex_unlock(&THR_LOCK_myisam_mmap);
+    mysql_mutex_unlock(&THR_LOCK_myisam_mmap);
   }
 }
 

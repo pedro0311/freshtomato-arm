@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2008 MySQL AB
+# Copyright (C) 2004-2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -124,11 +125,6 @@ NdbRepStress_INCLUDES = $(INCLUDES) -I$(top_srcdir)/ndb/test/include -I$(top_src
 testBackup_LDADD = $(LDADD) bank/libbank.a
 testSRBank_LDADD = bank/libbank.a $(LDADD) 
 NdbRepStress_LDADD = $(LDADD) $(top_builddir)/libmysql_r/libmysqlclient_r.la
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
-
-
 
 windoze-dsp: flexBench.dsp testBasic.dsp testBlobs.dsp \
              testScan.dsp

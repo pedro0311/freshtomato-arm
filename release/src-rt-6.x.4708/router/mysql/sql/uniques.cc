@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2001-2003, 2005-2007 MySQL AB, 2009 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2001, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   Function to handle quick removal of duplicates
@@ -33,9 +30,12 @@
   deletes in disk order.
 */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
 #include "sql_sort.h"
-
+#include "queues.h"                             // QUEUE
+#include "my_tree.h"                            // element_count
+#include "sql_class.h"                          // Unique
 
 int unique_write_to_file(uchar* key, element_count count, Unique *unique)
 {
@@ -57,7 +57,10 @@ int unique_write_to_ptrs(uchar* key, element_count count, Unique *unique)
 
 Unique::Unique(qsort_cmp2 comp_func, void * comp_func_fixed_arg,
 	       uint size_arg, ulonglong max_in_memory_size_arg)
-  :max_in_memory_size(max_in_memory_size_arg), size(size_arg), elements(0)
+  :max_in_memory_size(max_in_memory_size_arg),
+   record_pointers(NULL),
+   size(size_arg),
+   elements(0)
 {
   my_b_clear(&file);
   init_tree(&tree, (ulong) (max_in_memory_size / 16), 0, size, comp_func, 0,
@@ -69,8 +72,8 @@ Unique::Unique(qsort_cmp2 comp_func, void * comp_func_fixed_arg,
   */
   max_elements= (ulong) (max_in_memory_size /
                          ALIGN_SIZE(sizeof(TREE_ELEMENT)+size));
-  VOID(open_cached_file(&file, mysql_tmpdir,TEMP_PREFIX, DISK_BUFFER_SIZE,
-		   MYF(MY_WME)));
+  (void) open_cached_file(&file, mysql_tmpdir,TEMP_PREFIX, DISK_BUFFER_SIZE,
+		   MYF(MY_WME));
 }
 
 
@@ -566,7 +569,7 @@ bool Unique::walk(tree_walk_action action, void *walk_action_arg)
                   (BUFFPEK *) file_ptrs.buffer + file_ptrs.elements,
                   action, walk_action_arg,
                   tree.compare, tree.custom_arg, &file);
-  my_free((char*) merge_buffer, MYF(0));
+  my_free(merge_buffer);
   return res;
 }
 
@@ -583,6 +586,7 @@ bool Unique::get(TABLE *table)
   if (my_b_tell(&file) == 0)
   {
     /* Whole tree is in memory;  Don't use disk if you don't need to */
+    DBUG_ASSERT(table->sort.record_pointers == NULL);
     if ((record_pointers=table->sort.record_pointers= (uchar*)
 	 my_malloc(size * tree.elements_in_tree, MYF(0))))
     {
@@ -603,6 +607,7 @@ bool Unique::get(TABLE *table)
   bool error=1;
 
       /* Open cached file if it isn't open */
+  DBUG_ASSERT(table->sort.io_cache == NULL);
   outfile=table->sort.io_cache=(IO_CACHE*) my_malloc(sizeof(IO_CACHE),
                                 MYF(MY_ZEROFILL));
 
@@ -642,7 +647,7 @@ bool Unique::get(TABLE *table)
     goto err;
   error=0;
 err:
-  x_free(sort_buffer);
+  my_free(sort_buffer);
   if (flush_io_cache(outfile))
     error=1;
 

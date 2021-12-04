@@ -1,5 +1,5 @@
-/* Copyright (c) 2002-2007 MySQL AB & tommy@valley.ne.jp
-   Use is subject to license terms.
+/* Copyright (c) 2002 MySQL AB & tommy@valley.ne.jp
+   Copyright (c) 2002, 2014, Oracle and/or its affiliates. All rights reserved.
    
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -13,9 +13,8 @@
    
    You should have received a copy of the GNU Library General Public
    License along with this library; if not, write to the Free
-   Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston,
-   MA 02110-1301, USA
-*/
+   Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+   MA 02110-1301, USA */
 
 /* This file is for binary pseudo charset, created by bar@mysql.com */
 
@@ -280,14 +279,11 @@ void my_hash_sort_8bit_bin(CHARSET_INFO *cs __attribute__((unused)),
 {
   const uchar *pos = key;
   
-  key+= len;
-  
   /*
      Remove trailing spaces. We have to do this to be able to compare
     'A ' and 'A' as identical
   */
-  while (key > pos && key[-1] == ' ')
-    key--;
+  key= skip_trailing_space(key, len);
 
   for (; pos < (uchar*) key ; pos++)
   {

@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2006, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2006, 2012, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef RPL_MI_H
 #define RPL_MI_H
@@ -22,10 +20,11 @@
 
 #include "rpl_rli.h"
 #include "rpl_reporting.h"
+#include "my_sys.h"
 
+typedef struct st_mysql MYSQL;
 
 /*****************************************************************************
-
   Replication IO Thread
 
   Master_info contains:
@@ -60,8 +59,10 @@
 class Master_info : public Slave_reporting_capability
 {
  public:
-  Master_info();
+  Master_info(bool is_slave_recovery);
   ~Master_info();
+  bool shall_ignore_server_id(ulong s_id);
+  void clear_in_memory_info(bool all);
 
   /* the variables below are needed because we can change masters on the fly */
   char master_log_name[FN_REFLEN];
@@ -77,8 +78,8 @@ class Master_info : public Slave_reporting_capability
   File fd; // we keep the file open, so we need to remember the file pointer
   IO_CACHE file;
 
-  pthread_mutex_t data_lock,run_lock;
-  pthread_cond_t data_cond,start_cond,stop_cond;
+  mysql_mutex_t data_lock, run_lock, sleep_lock;
+  mysql_cond_t data_cond, start_cond, stop_cond, sleep_cond;
   THD *io_thd;
   MYSQL* mysql;
   uint32 file_id;				/* for 3.23 load data infile */
@@ -102,9 +103,17 @@ class Master_info : public Slave_reporting_capability
 
   */
   long clock_diff_with_master;
+  /*
+    Keeps track of the number of events before fsyncing.
+    The option --sync-master-info determines how many
+    events should happen before fsyncing.
+  */
+  uint sync_counter;
+  float heartbeat_period;         // interface with CHANGE MASTER or master.info
+  ulonglong received_heartbeats;  // counter of received heartbeat events
+  DYNAMIC_ARRAY ignore_server_ids;
+  ulong master_id;
 };
-
-void init_master_info_with_options(Master_info* mi);
 int init_master_info(Master_info* mi, const char* master_info_fname,
 		     const char* slave_info_fname,
 		     bool abort_if_no_master_info_file,
@@ -113,5 +122,7 @@ void end_master_info(Master_info* mi);
 int flush_master_info(Master_info* mi, 
                       bool flush_relay_log_cache, 
                       bool need_lock_relay_log);
+int change_master_server_id_cmp(ulong *id1, ulong *id2);
+
 #endif /* HAVE_REPLICATION */
 #endif /* RPL_MI_H */

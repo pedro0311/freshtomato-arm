@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* This file is originally from the mysql distribution. Coded by monty */
 
@@ -25,17 +23,7 @@
 #include <my_sys.h>
 #include <m_string.h>
 #include <m_ctype.h>
-#ifdef HAVE_FCONVERT
-#include <floatingpoint.h>
-#endif
-
-/*
-  The following extern declarations are ok as these are interface functions
-  required by the string function
-*/
-
-extern uchar* sql_alloc(unsigned size);
-extern void sql_element_free(void *ptr);
+#include <mysql_com.h>
 
 #include "sql_string.h"
 
@@ -43,9 +31,12 @@ extern void sql_element_free(void *ptr);
 ** String functions
 *****************************************************************************/
 
-bool String::real_alloc(uint32 arg_length)
+bool String::real_alloc(uint32 length)
 {
-  arg_length=ALIGN_SIZE(arg_length+1);
+  uint32 arg_length= ALIGN_SIZE(length + 1);
+  DBUG_ASSERT(arg_length > length);
+  if (arg_length <= length)
+    return TRUE;                                 /* Overflow */
   str_length=0;
   if (Alloced_length < arg_length)
   {
@@ -90,6 +81,9 @@ bool String::real_alloc(uint32 arg_length)
 bool String::realloc(uint32 alloc_length)
 {
   uint32 len=ALIGN_SIZE(alloc_length+1);
+  DBUG_ASSERT(len > alloc_length);
+  if (len <= alloc_length)
+    return TRUE;                                 /* Overflow */
   if (Alloced_length < len)
   {
     char *new_ptr;
@@ -132,84 +126,17 @@ bool String::set_real(double num,uint decimals, CHARSET_INFO *cs)
 {
   char buff[FLOATING_POINT_BUFFER];
   uint dummy_errors;
+  size_t len;
 
   str_charset=cs;
   if (decimals >= NOT_FIXED_DEC)
   {
-    // Enough for a DATETIME
-    uint32 len= sprintf(buff, "%.15g", num);
+    len= my_gcvt(num, MY_GCVT_ARG_DOUBLE, sizeof(buff) - 1, buff, NULL);
     return copy(buff, len, &my_charset_latin1, cs, &dummy_errors);
   }
-#ifdef HAVE_FCONVERT
-  int decpt,sign;
-  char *pos,*to;
-
-  VOID(fconvert(num,(int) decimals,&decpt,&sign,buff+1));
-  if (!my_isdigit(&my_charset_latin1, buff[1]))
-  {						// Nan or Inf
-    pos=buff+1;
-    if (sign)
-    {
-      buff[0]='-';
-      pos=buff;
-    }
-    uint dummy_errors;
-    return copy(pos,(uint32) strlen(pos), &my_charset_latin1, cs, &dummy_errors);
-  }
-  if (alloc((uint32) ((uint32) decpt+3+decimals)))
-    return TRUE;
-  to=Ptr;
-  if (sign)
-    *to++='-';
-
-  pos=buff+1;
-  if (decpt < 0)
-  {					/* value is < 0 */
-    *to++='0';
-    if (!decimals)
-      goto end;
-    *to++='.';
-    if ((uint32) -decpt > decimals)
-      decpt= - (int) decimals;
-    decimals=(uint32) ((int) decimals+decpt);
-    while (decpt++ < 0)
-      *to++='0';
-  }
-  else if (decpt == 0)
-  {
-    *to++= '0';
-    if (!decimals)
-      goto end;
-    *to++='.';
-  }
-  else
-  {
-    while (decpt-- > 0)
-      *to++= *pos++;
-    if (!decimals)
-      goto end;
-    *to++='.';
-  }
-  while (decimals--)
-    *to++= *pos++;
-
-end:
-  *to=0;
-  str_length=(uint32) (to-Ptr);
-  return FALSE;
-#else
-#ifdef HAVE_SNPRINTF
-  buff[sizeof(buff)-1]=0;			// Safety
-  IF_DBUG(int num_chars= )
-    snprintf(buff, sizeof(buff)-1, "%.*f",(int) decimals, num);
-  DBUG_ASSERT(num_chars > 0);
-  DBUG_ASSERT(num_chars < (int) sizeof(buff));
-#else
-  sprintf(buff,"%.*f",(int) decimals,num);
-#endif
-  return copy(buff,(uint32) strlen(buff), &my_charset_latin1, cs,
+  len= my_fcvt(num, decimals, buff, NULL);
+  return copy(buff, (uint32) len, &my_charset_latin1, cs,
               &dummy_errors);
-#endif
 }
 
 
@@ -297,6 +224,42 @@ bool String::needs_conversion(uint32 arg_length,
 
 
 /*
+  Checks that the source string can just be copied to the destination string
+  without conversion.
+  Unlike needs_conversion it will require conversion on incoming binary data
+  to ensure the data are verified for vailidity first.
+
+  @param arg_length   Length of string to copy.
+  @param from_cs      Character set to copy from
+  @param to_cs        Character set to copy to
+
+  @return conversion needed
+*/
+bool String::needs_conversion_on_storage(uint32 arg_length,
+                                         CHARSET_INFO *cs_from,
+                                         CHARSET_INFO *cs_to)
+{
+  uint32 offset;
+  return (needs_conversion(arg_length, cs_from, cs_to, &offset) ||
+          /* force conversion when storing a binary string */
+          (cs_from == &my_charset_bin &&
+          /* into a non-binary destination */
+           cs_to != &my_charset_bin &&
+           /* and any of the following is true :*/
+           (
+            /* it's a variable length encoding */
+            cs_to->mbminlen != cs_to->mbmaxlen ||
+            /* longer than 2 bytes : neither 1 byte nor ucs2 */
+            cs_to->mbminlen > 2 ||
+            /* and is not a multiple of the char byte size */
+            0 != (arg_length % cs_to->mbmaxlen)
+           )
+          )
+         );
+}
+
+
+/*
   Copy a multi-byte character sets with adding leading zeros.
 
   SYNOPSIS
@@ -325,8 +288,8 @@ bool String::copy_aligned(const char *str,uint32 arg_length, uint32 offset,
 			  CHARSET_INFO *cs)
 {
   /* How many bytes are in incomplete character */
-  offset= cs->mbmaxlen - offset; /* How many zeros we should prepend */
-  DBUG_ASSERT(offset && offset != cs->mbmaxlen);
+  offset= cs->mbminlen - offset; /* How many zeros we should prepend */
+  DBUG_ASSERT(offset && offset != cs->mbminlen);
 
   uint32 aligned_length= arg_length + offset;
   if (alloc(aligned_length))
@@ -510,6 +473,16 @@ bool String::append(const char *s)
 }
 
 
+
+bool String::append_ulonglong(ulonglong val)
+{
+  if (realloc(str_length+MAX_BIGINT_WIDTH+2))
+    return TRUE;
+  char *end= (char*) longlong10_to_str(val, (char*) Ptr + str_length, 10);
+  str_length= end - Ptr;
+  return FALSE;
+}
+
 /*
   Append a string in the given charset to the string
   with character set recoding
@@ -517,11 +490,25 @@ bool String::append(const char *s)
 
 bool String::append(const char *s,uint32 arg_length, CHARSET_INFO *cs)
 {
-  uint32 dummy_offset;
+  uint32 offset;
   
-  if (needs_conversion(arg_length, cs, str_charset, &dummy_offset))
+  if (needs_conversion(arg_length, cs, str_charset, &offset))
   {
-    uint32 add_length= arg_length / cs->mbminlen * str_charset->mbmaxlen;
+    uint32 add_length;
+    if ((cs == &my_charset_bin) && offset)
+    {
+      DBUG_ASSERT(str_charset->mbminlen > offset);
+      offset= str_charset->mbminlen - offset; // How many characters to pad
+      add_length= arg_length + offset;
+      if (realloc(str_length + add_length))
+        return TRUE;
+      bzero((char*) Ptr + str_length, offset);
+      memcpy(Ptr + str_length + offset, s, arg_length);
+      str_length+= add_length;
+      return FALSE;
+    }
+
+    add_length= arg_length / cs->mbminlen * str_charset->mbmaxlen;
     uint dummy_errors;
     if (realloc(str_length + add_length)) 
       return TRUE;
@@ -537,22 +524,6 @@ bool String::append(const char *s,uint32 arg_length, CHARSET_INFO *cs)
   }
   return FALSE;
 }
-
-
-#ifdef TO_BE_REMOVED
-bool String::append(FILE* file, uint32 arg_length, myf my_flags)
-{
-  if (realloc(str_length+arg_length))
-    return TRUE;
-  if (my_fread(file, (uchar*) Ptr + str_length, arg_length, my_flags))
-  {
-    shrink(str_length);
-    return TRUE;
-  }
-  str_length+=arg_length;
-  return FALSE;
-}
-#endif
 
 bool String::append(IO_CACHE* file, uint32 arg_length)
 {
@@ -715,7 +686,8 @@ void String::qs_append(const char *str, uint32 len)
 void String::qs_append(double d)
 {
   char *buff = Ptr + str_length;
-  str_length+= sprintf(buff, "%.15g", d);
+  str_length+= my_gcvt(d, MY_GCVT_ARG_DOUBLE, FLOATING_POINT_BUFFER - 1, buff,
+                       NULL);
 }
 
 void String::qs_append(double *d)
@@ -833,10 +805,11 @@ String *copy_if_not_alloced(String *to,String *from,uint32 from_length)
 */
 
 
-uint32
-copy_and_convert(char *to, uint32 to_length, CHARSET_INFO *to_cs, 
-                 const char *from, uint32 from_length, CHARSET_INFO *from_cs,
-                 uint *errors)
+static uint32
+copy_and_convert_extended(char *to, uint32 to_length, CHARSET_INFO *to_cs, 
+                          const char *from, uint32 from_length,
+                          CHARSET_INFO *from_cs,
+                          uint *errors)
 {
   int         cnvres;
   my_wc_t     wc;
@@ -885,6 +858,65 @@ outp:
   }
   *errors= error_count;
   return (uint32) (to - to_start);
+}
+
+
+/*
+  Optimized for quick copying of ASCII characters in the range 0x00..0x7F.
+*/
+uint32
+copy_and_convert(char *to, uint32 to_length, CHARSET_INFO *to_cs, 
+                 const char *from, uint32 from_length, CHARSET_INFO *from_cs,
+                 uint *errors)
+{
+  /*
+    If any of the character sets is not ASCII compatible,
+    immediately switch to slow mb_wc->wc_mb method.
+  */
+  if ((to_cs->state | from_cs->state) & MY_CS_NONASCII)
+    return copy_and_convert_extended(to, to_length, to_cs,
+                                     from, from_length, from_cs, errors);
+
+  uint32 length= min(to_length, from_length), length2= length;
+
+#if defined(__i386__)
+  /*
+    Special loop for i386, it allows to refer to a
+    non-aligned memory block as UINT32, which makes
+    it possible to copy four bytes at once. This
+    gives about 10% performance improvement comparing
+    to byte-by-byte loop.
+  */
+  for ( ; length >= 4; length-= 4, from+= 4, to+= 4)
+  {
+    if ((*(uint32*)from) & 0x80808080)
+      break;
+    *((uint32*) to)= *((const uint32*) from);
+  }
+#endif
+
+  for (; ; *to++= *from++, length--)
+  {
+    if (!length)
+    {
+      *errors= 0;
+      return length2;
+    }
+    if (*((unsigned char*) from) > 0x7F) /* A non-ASCII character */
+    {
+      uint32 copied_length= length2 - length;
+      to_length-= copied_length;
+      from_length-= copied_length;
+      return copied_length + copy_and_convert_extended(to, to_length,
+                                                       to_cs,
+                                                       from, from_length,
+                                                       from_cs,
+                                                       errors);
+    }
+  }
+
+  DBUG_ASSERT(FALSE); // Should never get to here
+  return 0;           // Make compiler happy
 }
 
 
@@ -1026,6 +1058,24 @@ well_formed_copy_nchars(CHARSET_INFO *to_cs,
         uint pad_length= to_cs->mbminlen - from_offset;
         bzero(to, pad_length);
         memmove(to + pad_length, from, from_offset);
+        /*
+          In some cases left zero-padding can create an incorrect character.
+          For example:
+            INSERT INTO t1 (utf32_column) VALUES (0x110000);
+          We'll pad the value to 0x00110000, which is a wrong UTF32 sequence!
+          The valid characters range is limited to 0x00000000..0x0010FFFF.
+          
+          Make sure we didn't pad to an incorrect character.
+        */
+        if (to_cs->cset->well_formed_len(to_cs,
+                                         to, to + to_cs->mbminlen, 1,
+                                         &well_formed_error) !=
+                                         to_cs->mbminlen)
+        {
+          *from_end_pos= *well_formed_error_pos= from;
+          *cannot_convert_error_pos= NULL;
+          return 0;
+        }
         nchars--;
         from+= from_offset;
         from_length-= from_offset;
@@ -1230,4 +1280,70 @@ uint convert_to_printable(char *to, size_t to_len,
   else
     *t= '\0';
   return t - to;
+}
+
+/**
+  Check if an input byte sequence is a valid character string of a given charset
+
+  @param cs                     The input character set.
+  @param str                    The input byte sequence to validate.
+  @param length                 A byte length of the str.
+  @param [out] valid_length     A byte length of a valid prefix of the str.
+  @param [out] length_error     True in the case of a character length error:
+                                some byte[s] in the input is not a valid
+                                prefix for a character, i.e. the byte length
+                                of that invalid character is undefined.
+
+  @retval true if the whole input byte sequence is a valid character string.
+               The length_error output parameter is undefined.
+
+  @return
+    if the whole input byte sequence is a valid character string
+    then
+        return false
+    else
+        if the length of some character in the input is undefined (MY_CS_ILSEQ)
+           or the last character is truncated (MY_CS_TOOSMALL)
+        then
+            *length_error= true; // fatal error!
+        else
+            *length_error= false; // non-fatal error: there is no wide character
+                                  // encoding for some input character
+        return true
+*/
+bool validate_string(CHARSET_INFO *cs, const char *str, uint32 length,
+                     size_t *valid_length, bool *length_error)
+{
+  if (cs->mbmaxlen > 1)
+  {
+    int well_formed_error;
+    *valid_length= cs->cset->well_formed_len(cs, str, str + length,
+                                             length, &well_formed_error);
+    *length_error= well_formed_error;
+    return well_formed_error;
+  }
+
+  /*
+    well_formed_len() is not functional on single-byte character sets,
+    so use mb_wc() instead:
+  */
+  *length_error= false;
+
+  const uchar *from= reinterpret_cast<const uchar *>(str);
+  const uchar *from_end= from + length;
+  my_charset_conv_mb_wc mb_wc= cs->cset->mb_wc;
+
+  while (from < from_end)
+  {
+    my_wc_t wc;
+    int cnvres= (*mb_wc)(cs, &wc, (uchar*) from, from_end);
+    if (cnvres <= 0)
+    {
+      *valid_length= from - reinterpret_cast<const uchar *>(str);
+      return true;
+    }
+    from+= cnvres;
+  }
+  *valid_length= length;
+  return false;
 }

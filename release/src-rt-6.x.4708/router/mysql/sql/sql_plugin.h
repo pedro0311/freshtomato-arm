@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,13 +11,44 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifndef _sql_plugin_h
 #define _sql_plugin_h
 
+#include <my_global.h>
+
+/*
+  the following #define adds server-only members to enum_mysql_show_type,
+  that is defined in plugin.h
+*/
+#define SHOW_always_last SHOW_KEY_CACHE_LONG, \
+            SHOW_KEY_CACHE_LONGLONG, SHOW_LONG_STATUS, SHOW_DOUBLE_STATUS, \
+            SHOW_HAVE, SHOW_MY_BOOL, SHOW_HA_ROWS, SHOW_SYS, \
+            SHOW_LONG_NOFLUSH, SHOW_LONGLONG_STATUS, SHOW_LEX_STRING
+#include <mysql/plugin.h>
+#undef SHOW_always_last
+
+#include "m_string.h"                       /* LEX_STRING */
+#include "my_alloc.h"                       /* MEM_ROOT */
+
 class sys_var;
+enum SHOW_COMP_OPTION { SHOW_OPTION_YES, SHOW_OPTION_NO, SHOW_OPTION_DISABLED};
+enum enum_plugin_load_option { PLUGIN_OFF, PLUGIN_ON, PLUGIN_FORCE,
+  PLUGIN_FORCE_PLUS_PERMANENT };
+extern const char *global_plugin_typelib_names[];
+
+#include <my_sys.h>
+
+extern mysql_mutex_t LOCK_plugin_delete;
+
+#ifdef DBUG_OFF
+#define plugin_ref_to_int(A) A
+#define plugin_int_to_ref(A) A
+#else
+#define plugin_ref_to_int(A) (A ? A[0] : NULL)
+#define plugin_int_to_ref(A) &(A)
+#endif
 
 /*
   the following flags are valid for plugin_init()
@@ -29,18 +59,9 @@ class sys_var;
 
 #define INITIAL_LEX_PLUGIN_LIST_SIZE    16
 
-/*
-  the following #define adds server-only members to enum_mysql_show_type,
-  that is defined in plugin.h
-*/
-#define SHOW_FUNC    SHOW_FUNC, SHOW_KEY_CACHE_LONG, SHOW_KEY_CACHE_LONGLONG, \
-                     SHOW_LONG_STATUS, SHOW_DOUBLE_STATUS, SHOW_HAVE,   \
-                     SHOW_MY_BOOL, SHOW_HA_ROWS, SHOW_SYS, SHOW_LONG_NOFLUSH, \
-                     SHOW_LONGLONG_STATUS
-#include <mysql/plugin.h>
-#undef SHOW_FUNC
 typedef enum enum_mysql_show_type SHOW_TYPE;
 typedef struct st_mysql_show_var SHOW_VAR;
+typedef struct st_mysql_lex_string LEX_STRING;
 
 #define MYSQL_ANY_PLUGIN         -1
 
@@ -81,7 +102,7 @@ struct st_plugin_int
   void *data;                   /* plugin type specific, e.g. handlerton */
   MEM_ROOT mem_root;            /* memory for dynamic plugin structures */
   sys_var *system_vars;         /* server variables for this plugin */
-  bool is_mandatory;            /* If true then plugin must not fail to load */
+  enum enum_plugin_load_option load_option; /* OFF, ON, FORCE, F+PERMANENT */
 };
 
 
@@ -96,6 +117,7 @@ typedef struct st_plugin_int *plugin_ref;
 #define plugin_data(pi,cast) ((cast)((pi)->data))
 #define plugin_name(pi) (&((pi)->name))
 #define plugin_state(pi) ((pi)->state)
+#define plugin_load_option(pi) ((pi)->load_option)
 #define plugin_equals(p1,p2) ((p1) == (p2))
 #else
 typedef struct st_plugin_int **plugin_ref;
@@ -104,6 +126,7 @@ typedef struct st_plugin_int **plugin_ref;
 #define plugin_data(pi,cast) ((cast)((pi)[0]->data))
 #define plugin_name(pi) (&((pi)[0]->name))
 #define plugin_state(pi) ((pi)[0]->state)
+#define plugin_load_option(pi) ((pi)[0]->load_option)
 #define plugin_equals(p1,p2) ((p1) && (p2) && (p1)[0] == (p2)[0])
 #endif
 
@@ -116,15 +139,15 @@ extern const LEX_STRING plugin_type_names[];
 
 extern int plugin_init(int *argc, char **argv, int init_flags);
 extern void plugin_shutdown(void);
-extern void my_print_help_inc_plugins(struct my_option *options, uint size);
+void add_plugin_options(DYNAMIC_ARRAY *options, MEM_ROOT *mem_root);
 extern bool plugin_is_ready(const LEX_STRING *name, int type);
-#define my_plugin_lock_by_name(A,B,C) plugin_lock_by_name(A,B,C CALLER_INFO)
-#define my_plugin_lock_by_name_ci(A,B,C) plugin_lock_by_name(A,B,C ORIG_CALLER_INFO)
-#define my_plugin_lock(A,B) plugin_lock(A,B CALLER_INFO)
-#define my_plugin_lock_ci(A,B) plugin_lock(A,B ORIG_CALLER_INFO)
-extern plugin_ref plugin_lock(THD *thd, plugin_ref *ptr CALLER_INFO_PROTO);
+#define my_plugin_lock_by_name(A,B,C) plugin_lock_by_name(A,B,C)
+#define my_plugin_lock_by_name_ci(A,B,C) plugin_lock_by_name(A,B,C)
+#define my_plugin_lock(A,B) plugin_lock(A,B)
+#define my_plugin_lock_ci(A,B) plugin_lock(A,B)
+extern plugin_ref plugin_lock(THD *thd, plugin_ref *ptr);
 extern plugin_ref plugin_lock_by_name(THD *thd, const LEX_STRING *name,
-                                      int type CALLER_INFO_PROTO);
+                                      int type);
 extern void plugin_unlock(THD *thd, plugin_ref plugin);
 extern void plugin_unlock_list(THD *thd, plugin_ref *list, uint count);
 extern bool mysql_install_plugin(THD *thd, const LEX_STRING *name,
@@ -133,6 +156,7 @@ extern bool mysql_uninstall_plugin(THD *thd, const LEX_STRING *name);
 extern bool plugin_register_builtin(struct st_mysql_plugin *plugin);
 extern void plugin_thdvar_init(THD *thd);
 extern void plugin_thdvar_cleanup(THD *thd);
+extern SHOW_COMP_OPTION plugin_status(const char *name, size_t len, int type);
 extern bool check_valid_path(const char *path, size_t length);
 
 typedef my_bool (plugin_foreach_func)(THD *thd,

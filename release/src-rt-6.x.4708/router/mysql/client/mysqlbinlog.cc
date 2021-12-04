@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@
 #include "client_priv.h"
 #include <my_time.h>
 /* That one is necessary for defines of OPTION_NO_FOREIGN_KEY_CHECKS etc */
-#include "mysql_priv.h" 
+#include "sql_priv.h"
 #include "log_event.h"
 #include "sql_common.h"
 #include "my_dir.h"
@@ -44,7 +44,6 @@
 
 
 #define CLIENT_CAPABILITIES	(CLIENT_LONG_PASSWORD | CLIENT_LONG_FLAG | CLIENT_LOCAL_FILES)
-
 
 char server_version[SERVER_VERSION_LENGTH];
 ulong server_id = 0;
@@ -73,20 +72,22 @@ TYPELIB base64_output_mode_typelib=
   { array_elements(base64_output_mode_names) - 1, "",
     base64_output_mode_names, NULL };
 static enum_base64_output_mode opt_base64_output_mode= BASE64_OUTPUT_UNSPEC;
-static const char *opt_base64_output_mode_str= NullS;
-static const char* database= 0;
+static char *opt_base64_output_mode_str= NullS;
+static char* database= 0;
 static my_bool force_opt= 0, short_form= 0, remote_opt= 0;
 static my_bool debug_info_flag, debug_check_flag;
 static my_bool force_if_open_opt= 1;
 static ulonglong offset = 0;
-static const char* host = 0;
+static char* host = 0;
 static int port= 0;
 static uint my_end_arg;
 static const char* sock= 0;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
+
 #ifdef HAVE_SMEM
 static char *shared_memory_base_name= 0;
 #endif
-static const char* user = 0;
+static char* user = 0;
 static char* pass = 0;
 static char *charset= 0;
 
@@ -101,7 +102,7 @@ static my_time_t start_datetime= 0, stop_datetime= MY_TIME_T_MAX;
 static ulonglong rec_count= 0;
 static short binlog_flags = 0; 
 static MYSQL* mysql = NULL;
-static const char* dirname_for_local_load= 0;
+static char* dirname_for_local_load= 0;
 
 /**
   Pointer to the Format_description_log_event of the currently active binlog.
@@ -196,7 +197,7 @@ public:
   int init()
   {
     return init_dynamic_array(&file_names, sizeof(File_name_record),
-			      100,100 CALLER_INFO);
+			      100, 100);
   }
 
   void init_by_dir_name(const char *dir)
@@ -218,7 +219,7 @@ public:
     {
       if (ptr->fname)
       {
-        my_free(ptr->fname, MYF(MY_WME));
+        my_free(ptr->fname);
         delete ptr->event;
         bzero((char *)ptr, sizeof(File_name_record));
       }
@@ -447,6 +448,7 @@ Exit_status Load_log_processor::process_first_event(const char *bname,
   {
     error("Could not construct local filename %s%s.",
           target_dir_name,bname);
+    my_free(fname);
     delete ce;
     DBUG_RETURN(ERROR_STOP);
   }
@@ -454,9 +456,15 @@ Exit_status Load_log_processor::process_first_event(const char *bname,
   rec.fname= fname;
   rec.event= ce;
 
+  /*
+     fname is freed in process_event()
+     after Execute_load_query_log_event or Execute_load_log_event
+     will have been processed, otherwise in Load_log_processor::destroy()
+  */
   if (set_dynamic(&file_names, (uchar*)&rec, file_id))
   {
     error("Out of memory.");
+    my_free(fname);
     delete ce;
     DBUG_RETURN(ERROR_STOP);
   }
@@ -838,7 +846,7 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
         */
         convert_path_to_forward_slashes((char*) ce->fname);
 	ce->print(result_file, print_event_info, TRUE);
-	my_free((char*)ce->fname,MYF(MY_WME));
+	my_free((void*)ce->fname);
 	delete ce;
         if (head->error == -1)
           goto err;
@@ -857,10 +865,16 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
       if (head->error == -1)
         goto err;
       if (!remote_opt)
+      {
         ev->free_temp_buf(); // free memory allocated in dump_local_log_entries
+      }
       else
-        // disassociate but not free dump_remote_log_entries time memory
+      {
+        /*
+          disassociate but not free dump_remote_log_entries time memory
+        */
         ev->temp_buf= 0;
+      }
       /*
         We don't want this event to be deleted now, so let's hide it (I
         (Guilhem) should later see if this triggers a non-serious Valgrind
@@ -899,7 +913,7 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
           if (head->error == -1)
           {
             if (fname)
-              my_free(fname, MYF(MY_WME));
+              my_free(fname);
             goto err;
           }
         }
@@ -909,7 +923,7 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
       }
 
       if (fname)
-	my_free(fname, MYF(MY_WME));
+	my_free(fname);
       break;
     }
     case TABLE_MAP_EVENT:
@@ -955,7 +969,11 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
       /*
         end of statement check:
         i) destroy/free ignored maps
-        ii) if skip event, flush cache now
+        ii) if skip event
+              a) since we are skipping the last event,
+                 append END-MARKER(') to body cache (if required)
+
+              b) flush cache now
        */
       if (stmt_end)
       {
@@ -977,6 +995,12 @@ Exit_status process_event(PRINT_EVENT_INFO *print_event_info, Log_event *ev,
           */
           if (skip_event)
           {
+            // append END-MARKER(') with delimiter
+            IO_CACHE *const body_cache= &print_event_info->body_cache;
+            if (my_b_tell(body_cache))
+              my_b_printf(body_cache, "'%s\n", print_event_info->delimiter);
+
+            // flush cache
             if ((copy_event_cache_to_file_and_reinit(&print_event_info->head_cache, result_file) ||
                 copy_event_cache_to_file_and_reinit(&print_event_info->body_cache, result_file)))
               goto err;
@@ -1043,10 +1067,6 @@ static struct my_option my_long_options[] =
 {
   {"help", '?', "Display this help and exit.",
    0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
-#ifdef __NETWARE__
-  {"autoclose", OPT_AUTO_CLOSE, "Automatically close the screen on exit for Netware.",
-   0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
-#endif
   {"base64-output", OPT_BASE64_OUTPUT_MODE,
     /* 'unspec' is not mentioned because it is just a placeholder. */
    "Determine when the output statements should be base64-encoded BINLOG "
@@ -1054,10 +1074,11 @@ static struct my_option my_long_options[] =
    "row-based events; 'decode-rows' decodes row events into commented SQL "
    "statements if the --verbose option is also given; 'auto' prints base64 "
    "only when necessary (i.e., for row-based events and format description "
-   "events); 'always' prints base64 whenever possible. 'always' is for "
-   "debugging only and should not be used in a production system. If this "
-   "argument is not given, the default is 'auto'; if it is given with no "
-   "argument, 'always' is used.",
+   "events); 'always' prints base64 whenever possible. 'always' is "
+   "deprecated, will be removed in a future version, and should not be used "
+   "in a production system.  --base64-output with no 'name' argument is "
+   "equivalent to --base64-output=always and is also deprecated.  If no "
+   "--base64-output[=name] option is given at all, the default is 'auto'.",
    &opt_base64_output_mode_str, &opt_base64_output_mode_str,
    0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
   /*
@@ -1082,6 +1103,10 @@ static struct my_option my_long_options[] =
   {"debug-info", OPT_DEBUG_INFO, "Print some debug info at exit.",
    &debug_info_flag, &debug_info_flag,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"default_auth", OPT_DEFAULT_AUTH,
+   "Default authentication client-side plugin to use.",
+   &opt_default_auth, &opt_default_auth, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"disable-log-bin", 'D', "Disable binary log. This is useful, if you "
     "enabled --to-last-log and are sending the output to the same MySQL server. "
     "This way you could avoid an endless loop. You would also like to use it "
@@ -1107,6 +1132,9 @@ static struct my_option my_long_options[] =
    0, GET_ULL, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"password", 'p', "Password to connect to remote server.",
    0, 0, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"plugin_dir", OPT_PLUGIN_DIR, "Directory for client-side plugins.",
+    &opt_plugin_dir, &opt_plugin_dir, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port", 'P', "Port number to use for connection or 0 for default to, in "
    "order of preference, my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
@@ -1115,11 +1143,6 @@ static struct my_option my_long_options[] =
    "built-in default (" STRINGIFY_ARG(MYSQL_PORT) ").",
    &port, &port, 0, GET_INT, REQUIRED_ARG,
    0, 0, 0, 0, 0, 0},
-  {"position", OPT_POSITION, "Deprecated. Use --start-position instead.",
-   &start_position, &start_position, 0, GET_ULL,
-   REQUIRED_ARG, BIN_LOG_HEADER_SIZE, BIN_LOG_HEADER_SIZE,
-   /* COM_BINLOG_DUMP accepts only 4 bytes for the position */
-   (ulonglong)(~(uint32)0), 0, 0, 0},
   {"protocol", OPT_MYSQL_PROTOCOL,
    "The protocol to use for connection (tcp, socket, pipe, memory).",
    0, 0, 0, GET_STR,  REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -1148,7 +1171,7 @@ static struct my_option my_long_options[] =
    &short_form, &short_form, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0,
    0, 0},
   {"socket", 'S', "The socket file to use for connection.",
-   &sock, &sock, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 
+   &sock, &sock, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0,
    0, 0},
   {"start-datetime", OPT_START_DATETIME,
    "Start reading the binlog at first event having a datetime equal or "
@@ -1268,23 +1291,21 @@ static void warning(const char *format,...)
 */
 static void cleanup()
 {
-  my_free(pass,MYF(MY_ALLOW_ZERO_PTR));
-  my_free((char*) database, MYF(MY_ALLOW_ZERO_PTR));
-  my_free((char*) host, MYF(MY_ALLOW_ZERO_PTR));
-  my_free((char*) user, MYF(MY_ALLOW_ZERO_PTR));
-  my_free((char*) dirname_for_local_load, MYF(MY_ALLOW_ZERO_PTR));
+  my_free(pass);
+  my_free(database);
+  my_free(host);
+  my_free(user);
+  my_free(dirname_for_local_load);
 
   delete glob_description_event;
   if (mysql)
     mysql_close(mysql);
 }
 
-#include <help_start.h>
 
 static void print_version()
 {
   printf("%s Ver 3.3 for %s at %s\n", my_progname, SYSTEM_TYPE, MACHINE_TYPE);
-  NETWARE_SET_SCREEN_MODE(1);
 }
 
 
@@ -1323,7 +1344,6 @@ static my_time_t convert_str_to_timestamp(const char* str)
     my_system_gmt_sec(&l_time, &dummy_my_timezone, &dummy_in_dst_time_gap);
 }
 
-#include <help_end.h>
 
 extern "C" my_bool
 get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
@@ -1331,11 +1351,6 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
 {
   bool tty_password=0;
   switch (optid) {
-#ifdef __NETWARE__
-  case OPT_AUTO_CLOSE:
-    setscreenmode(SCR_AUTOCLOSE_ON_EXIT);
-    break;
-#endif
 #ifndef DBUG_OFF
   case '#':
     DBUG_PUSH(argument ? argument : default_dbug_option);
@@ -1349,7 +1364,7 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
       argument= (char*) "";                     // Don't require password
     if (argument)
     {
-      my_free(pass,MYF(MY_ALLOW_ZERO_PTR));
+      my_free(pass);
       char *start=argument;
       pass= my_strdup(argument,MYF(MY_FAE));
       while (*argument) *argument++= 'x';		/* Destroy argument */
@@ -1365,9 +1380,6 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
     break;
   case 'R':
     remote_opt= 1;
-    break;
-  case OPT_POSITION:
-    WARN_DEPRECATED(VER_CELOSIA, "--position", "--start-position");
     break;
   case OPT_MYSQL_PROTOCOL:
     opt_protocol= find_type_or_exit(argument, &sql_protocol_typelib,
@@ -1432,6 +1444,12 @@ static int parse_args(int *argc, char*** argv)
 */
 static Exit_status safe_connect()
 {
+  /*
+    A possible old connection's resources are reclaimed now
+    at new connect attempt. The final safe_connect resources
+    are mysql_closed at the end of program, explicitly.
+  */
+  mysql_close(mysql);
   mysql= mysql_init(NULL);
 
   if (!mysql)
@@ -1439,6 +1457,12 @@ static Exit_status safe_connect()
     error("Failed on mysql_init.");
     return ERROR_STOP;
   }
+
+  if (opt_plugin_dir && *opt_plugin_dir)
+    mysql_options(mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+  if (opt_default_auth && *opt_default_auth)
+    mysql_options(mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
 
   if (opt_protocol)
     mysql_options(mysql, MYSQL_OPT_PROTOCOL, (char*) &opt_protocol);
@@ -1990,7 +2014,7 @@ static Exit_status dump_local_log_entries(PRINT_EVENT_INFO *print_event_info,
       return ERROR_STOP;
     }
 #endif 
-    if (init_io_cache(file, fileno(stdin), 0, READ_CACHE, (my_off_t) 0,
+    if (init_io_cache(file, my_fileno(stdin), 0, READ_CACHE, (my_off_t) 0,
 		      0, MYF(MY_WME | MY_NABP | MY_DONT_CHECK_FILESIZE)))
     {
       error("Failed to init IO cache.");
@@ -2084,6 +2108,7 @@ int main(int argc, char** argv)
   DBUG_PROCESS(argv[0]);
 
   my_init_time(); // for time functions
+  tzset(); // set tzname
 
   if (load_defaults("my", load_default_groups, &argc, &argv))
     exit(1);
@@ -2094,11 +2119,19 @@ int main(int argc, char** argv)
   {
     usage();
     free_defaults(defaults_argv);
+    my_end(my_end_arg);
     exit(1);
   }
 
   if (opt_base64_output_mode == BASE64_OUTPUT_UNSPEC)
     opt_base64_output_mode= BASE64_OUTPUT_AUTO;
+  if (opt_base64_output_mode == BASE64_OUTPUT_ALWAYS)
+    warning("The --base64-output=always flag and the --base64-output flag "
+            "(with '=MODE' omitted), are deprecated. "
+            "The output generated when these flags are used cannot be "
+            "parsed by mysql 5.6.0 and later. "
+            "The flags will be removed in a future version. "
+            "Please use --base64-output=auto instead.");
 
   my_set_max_open_files(open_files_limit);
 
@@ -2117,6 +2150,8 @@ int main(int argc, char** argv)
     load_processor.init_by_dir_name(dirname_for_local_load);
   else
     load_processor.init_by_cur_dir();
+
+  fprintf(result_file, "/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=1*/;\n");
 
   fprintf(result_file,
 	  "/*!40019 SET @@session.max_insert_delayed_threads=0*/;\n");
@@ -2168,6 +2203,8 @@ int main(int argc, char** argv)
             "/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;\n"
             "/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;\n");
 
+  fprintf(result_file, "/*!50530 SET @@SESSION.PSEUDO_SLAVE_MODE=0*/;\n");
+
   if (tmpdir.list)
     free_tmpdir(&tmpdir);
   if (result_file != stdout)
@@ -2194,4 +2231,5 @@ int main(int argc, char** argv)
 #include "my_decimal.cc"
 #include "log_event.cc"
 #include "log_event_old.cc"
-
+#include "rpl_utility.cc"
+#include "rpl_tblmap.cc"

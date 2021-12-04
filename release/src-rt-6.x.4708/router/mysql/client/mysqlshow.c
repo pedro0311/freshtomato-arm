@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,7 +35,10 @@ static my_bool tty_password= 0, opt_table_type= 0;
 static my_bool debug_info_flag= 0, debug_check_flag= 0;
 static uint my_end_arg= 0;
 static uint opt_verbose=0;
-static char *default_charset= (char*) MYSQL_DEFAULT_CHARSET_NAME;
+static char *default_charset= (char*) MYSQL_AUTODETECT_CHARSET_NAME;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
+static uint opt_enable_cleartext_plugin= 0;
+static my_bool using_opt_enable_cleartext_plugin= 0;
 
 #ifdef HAVE_SMEM 
 static char *shared_memory_base_name=0;
@@ -49,9 +52,9 @@ static int list_tables(MYSQL *mysql,const char *db,const char *table);
 static int list_table_status(MYSQL *mysql,const char *db,const char *table);
 static int list_fields(MYSQL *mysql,const char *db,const char *table,
 		       const char *field);
-static void print_header(const char *header,uint head_length,...);
-static void print_row(const char *header,uint head_length,...);
-static void print_trailer(uint length,...);
+static void print_header(const char *header,size_t head_length,...);
+static void print_row(const char *header,size_t head_length,...);
+static void print_trailer(size_t length,...);
 static void print_res_header(MYSQL_RES *result);
 static void print_res_top(MYSQL_RES *result);
 static void print_res_row(MYSQL_RES *result,MYSQL_ROW cur);
@@ -66,7 +69,9 @@ int main(int argc, char **argv)
   char *wild;
   MYSQL mysql;
   MY_INIT(argv[0]);
-  load_defaults("my",load_default_groups,&argc,&argv);
+  if (load_defaults("my",load_default_groups,&argc,&argv))
+    exit(1);
+
   get_options(&argc,&argv);
 
   wild=0;
@@ -124,10 +129,20 @@ int main(int argc, char **argv)
 #endif
   mysql_options(&mysql, MYSQL_SET_CHARSET_NAME, default_charset);
 
-  if (!(mysql_real_connect(&mysql,host,user,opt_password,
-			   (first_argument_uses_wildcards) ? "" :
-                           argv[0],opt_mysql_port,opt_mysql_unix_port,
-			   0)))
+  if (opt_plugin_dir && *opt_plugin_dir)
+    mysql_options(&mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+  if (opt_default_auth && *opt_default_auth)
+    mysql_options(&mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
+
+  if (using_opt_enable_cleartext_plugin)
+    mysql_options(&mysql, MYSQL_ENABLE_CLEARTEXT_PLUGIN,
+                  (char*)&opt_enable_cleartext_plugin);
+
+  if (!(mysql_connect_ssl_check(&mysql, host, user, opt_password,
+			        (first_argument_uses_wildcards) ? "" :
+                                argv[0], opt_mysql_port, opt_mysql_unix_port,
+			        0, opt_ssl_mode == SSL_MODE_REQUIRED)))
   {
     fprintf(stderr,"%s: %s\n",my_progname,mysql_error(&mysql));
     exit(1);
@@ -150,10 +165,9 @@ int main(int argc, char **argv)
     break;
   }
   mysql_close(&mysql);			/* Close & free connection */
-  if (opt_password)
-    my_free(opt_password,MYF(0));
+  my_free(opt_password);
 #ifdef HAVE_SMEM
-  my_free(shared_memory_base_name,MYF(MY_ALLOW_ZERO_PTR));
+  my_free(shared_memory_base_name);
 #endif
   my_end(my_end_arg);
   exit(error ? 1 : 0);
@@ -162,10 +176,6 @@ int main(int argc, char **argv)
 
 static struct my_option my_long_options[] =
 {
-#ifdef __NETWARE__
-  {"autoclose", OPT_AUTO_CLOSE, "Automatically close the screen on exit for Netware.",
-   0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
-#endif
   {"character-sets-dir", 'c', "Directory for character set files.",
    &charsets_dir, &charsets_dir, 0, GET_STR, REQUIRED_ARG, 0,
    0, 0, 0, 0, 0},
@@ -187,6 +197,14 @@ static struct my_option my_long_options[] =
   {"debug-info", OPT_DEBUG_INFO, "Print some debug info at exit.",
    &debug_info_flag, &debug_info_flag,
    0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"default_auth", OPT_DEFAULT_AUTH,
+   "Default authentication client-side plugin to use.",
+   &opt_default_auth, &opt_default_auth, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"enable_cleartext_plugin", OPT_ENABLE_CLEARTEXT_PLUGIN,
+   "Enable/disable the clear text authentication plugin.",
+   &opt_enable_cleartext_plugin, &opt_enable_cleartext_plugin,
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"help", '?', "Display this help and exit.", 0, 0, 0, GET_NO_ARG, NO_ARG,
    0, 0, 0, 0, 0, 0},
   {"host", 'h', "Connect to host.", &host, &host, 0, GET_STR,
@@ -200,6 +218,9 @@ static struct my_option my_long_options[] =
    "Password to use when connecting to server. If password is not given, it's "
    "solicited on the tty.",
    0, 0, 0, GET_STR, OPT_ARG, 0, 0, 0, 0, 0, 0},
+  {"plugin_dir", OPT_PLUGIN_DIR, "Directory for client-side plugins.",
+   &opt_plugin_dir, &opt_plugin_dir, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port", 'P', "Port number to use for connection or 0 for default to, in "
    "order of preference, my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
@@ -242,14 +263,11 @@ static struct my_option my_long_options[] =
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
 
-  
-#include <help_start.h>
 
 static void print_version(void)
 {
   printf("%s  Ver %s Distrib %s, for %s (%s)\n",my_progname,SHOW_VERSION,
 	 MYSQL_SERVER_VERSION,SYSTEM_TYPE,MACHINE_TYPE);
-  NETWARE_SET_SCREEN_MODE(1);
 }
 
 
@@ -271,18 +289,12 @@ are shown.");
   my_print_variables(my_long_options);
 }
 
-#include <help_end.h>
 
 static my_bool
 get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
 	       char *argument)
 {
   switch(optid) {
-#ifdef __NETWARE__
-  case OPT_AUTO_CLOSE:
-    setscreenmode(SCR_AUTOCLOSE_ON_EXIT);
-    break;
-#endif
   case 'v':
     opt_verbose++;
     break;
@@ -292,7 +304,7 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
     if (argument)
     {
       char *start=argument;
-      my_free(opt_password,MYF(MY_ALLOW_ZERO_PTR));
+      my_free(opt_password);
       opt_password=my_strdup(argument,MYF(MY_FAE));
       while (*argument) *argument++= 'x';		/* Destroy argument */
       if (*start)
@@ -306,6 +318,9 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
 #ifdef __WIN__
     opt_protocol = MYSQL_PROTOCOL_PIPE;
 #endif
+    break;
+  case (int) OPT_ENABLE_CLEARTEXT_PLUGIN:
+    using_opt_enable_cleartext_plugin= TRUE;
     break;
   case OPT_MYSQL_PROTOCOL:
     opt_protocol= find_type_or_exit(argument, &sql_protocol_typelib,
@@ -359,10 +374,11 @@ static int
 list_dbs(MYSQL *mysql,const char *wild)
 {
   const char *header;
-  uint length, counter = 0;
+  size_t length = 0;
+  uint counter = 0;
   ulong rowcount = 0L;
   char tables[NAME_LEN+1], rows[NAME_LEN+1];
-  char query[255];
+  char query[NAME_LEN + 100];
   MYSQL_FIELD *field;
   MYSQL_RES *result;
   MYSQL_ROW row= NULL, rrow;
@@ -397,7 +413,7 @@ list_dbs(MYSQL *mysql,const char *wild)
     printf("Wildcard: %s\n",wild);
 
   header="Databases";
-  length=(uint) strlen(header);
+  length= strlen(header);
   field=mysql_fetch_field(result);
   if (length < field->max_length)
     length=field->max_length;
@@ -429,7 +445,8 @@ list_dbs(MYSQL *mysql,const char *wild)
             MYSQL_ROW trow;
 	    while ((trow = mysql_fetch_row(tresult)))
 	    {
-	      sprintf(query,"SELECT COUNT(*) FROM `%s`",trow[0]);
+              my_snprintf(query, sizeof(query),
+                          "SELECT COUNT(*) FROM `%s`", trow[0]);
 	      if (!(mysql_query(mysql,query)))
 	      {
 		MYSQL_RES *rresult;
@@ -484,8 +501,9 @@ static int
 list_tables(MYSQL *mysql,const char *db,const char *table)
 {
   const char *header;
-  uint head_length, counter = 0;
-  char query[255], rows[NAME_LEN], fields[16];
+  size_t head_length;
+  uint counter = 0;
+  char query[NAME_LEN + 100], rows[NAME_LEN], fields[16];
   MYSQL_FIELD *field;
   MYSQL_RES *result;
   MYSQL_ROW row, rrow;
@@ -521,7 +539,7 @@ list_tables(MYSQL *mysql,const char *db,const char *table)
   putchar('\n');
 
   header="Tables";
-  head_length=(uint) strlen(header);
+  head_length= strlen(header);
   field=mysql_fetch_field(result);
   if (head_length < field->max_length)
     head_length=field->max_length;
@@ -570,7 +588,8 @@ list_tables(MYSQL *mysql,const char *db,const char *table)
 	  if (opt_verbose > 1)
 	  {
             /* Print the count of rows for each table */
-	    sprintf(query,"SELECT COUNT(*) FROM `%s`",row[0]);
+            my_snprintf(query, sizeof(query), "SELECT COUNT(*) FROM `%s`",
+                        row[0]);
 	    if (!(mysql_query(mysql,query)))
 	    {
 	      if ((rresult = mysql_store_result(mysql)))
@@ -630,13 +649,15 @@ list_tables(MYSQL *mysql,const char *db,const char *table)
 static int
 list_table_status(MYSQL *mysql,const char *db,const char *wild)
 {
-  char query[1024],*end;
+  char query[NAME_LEN + 100];
+  int len;
   MYSQL_RES *result;
   MYSQL_ROW row;
 
-  end=strxmov(query,"show table status from `",db,"`",NullS);
-  if (wild && wild[0])
-    strxmov(end," like '",wild,"'",NullS);
+  len= sizeof(query);
+  len-= my_snprintf(query, len, "show table status from `%s`", db);
+  if (wild && wild[0] && len)
+    strxnmov(query + strlen(query), len - 1, " like '", wild, "'", NullS);
   if (mysql_query(mysql,query) || !(result=mysql_store_result(mysql)))
   {
     fprintf(stderr,"%s: Cannot get status for db: %s, table: %s: %s\n",
@@ -668,7 +689,8 @@ static int
 list_fields(MYSQL *mysql,const char *db,const char *table,
 	    const char *wild)
 {
-  char query[1024],*end;
+  char query[NAME_LEN + 100];
+  size_t len;
   MYSQL_RES *result;
   MYSQL_ROW row;
   ulong UNINIT_VAR(rows);
@@ -682,7 +704,7 @@ list_fields(MYSQL *mysql,const char *db,const char *table,
 
   if (opt_count)
   {
-    sprintf(query,"select count(*) from `%s`", table);
+    my_snprintf(query, sizeof(query), "select count(*) from `%s`", table);
     if (mysql_query(mysql,query) || !(result=mysql_store_result(mysql)))
     {
       fprintf(stderr,"%s: Cannot get record count for db: %s, table: %s: %s\n",
@@ -694,9 +716,11 @@ list_fields(MYSQL *mysql,const char *db,const char *table,
     mysql_free_result(result);
   }
 
-  end=strmov(strmov(strmov(query,"show /*!32332 FULL */ columns from `"),table),"`");
-  if (wild && wild[0])
-    strxmov(end," like '",wild,"'",NullS);
+  len= sizeof(query);
+  len-= my_snprintf(query, len, "show /*!32332 FULL */ columns from `%s`",
+                    table);
+  if (wild && wild[0] && len)
+    strxnmov(query + strlen(query), len - 1, " like '", wild, "'", NullS);
   if (mysql_query(mysql,query) || !(result=mysql_store_result(mysql)))
   {
     fprintf(stderr,"%s: Cannot list columns in db: %s, table: %s: %s\n",
@@ -717,7 +741,7 @@ list_fields(MYSQL *mysql,const char *db,const char *table,
   print_res_top(result);
   if (opt_show_keys)
   {
-    end=strmov(strmov(strmov(query,"show keys from `"),table),"`");
+    my_snprintf(query, sizeof(query), "show keys from `%s`", table);
     if (mysql_query(mysql,query) || !(result=mysql_store_result(mysql)))
     {
       fprintf(stderr,"%s: Cannot list keys in db: %s, table: %s: %s\n",
@@ -744,10 +768,10 @@ list_fields(MYSQL *mysql,const char *db,const char *table,
 *****************************************************************************/
 
 static void
-print_header(const char *header,uint head_length,...)
+print_header(const char *header,size_t head_length,...)
 {
   va_list args;
-  uint length,i,str_length,pre_space;
+  size_t length,i,str_length,pre_space;
   const char *field;
 
   va_start(args,head_length);
@@ -770,10 +794,10 @@ print_header(const char *header,uint head_length,...)
   putchar('|');
   for (;;)
   {
-    str_length=(uint) strlen(field);
+    str_length= strlen(field);
     if (str_length > length)
       str_length=length+1;
-    pre_space=(uint) (((int) length-(int) str_length)/2)+1;
+    pre_space= ((length- str_length)/2)+1;
     for (i=0 ; i < pre_space ; i++)
       putchar(' ');
     for (i = 0 ; i < str_length ; i++)
@@ -807,11 +831,11 @@ print_header(const char *header,uint head_length,...)
 
 
 static void
-print_row(const char *header,uint head_length,...)
+print_row(const char *header,size_t head_length,...)
 {
   va_list args;
   const char *field;
-  uint i,length,field_length;
+  size_t i,length,field_length;
 
   va_start(args,head_length);
   field=header; length=head_length;
@@ -820,7 +844,7 @@ print_row(const char *header,uint head_length,...)
     putchar('|');
     putchar(' ');
     fputs(field,stdout);
-    field_length=(uint) strlen(field);
+    field_length= strlen(field);
     for (i=field_length ; i <= length ; i++)
       putchar(' ');
     if (!(field=va_arg(args,char *)))
@@ -834,10 +858,10 @@ print_row(const char *header,uint head_length,...)
 
 
 static void
-print_trailer(uint head_length,...)
+print_trailer(size_t head_length,...)
 {
   va_list args;
-  uint length,i;
+  size_t length,i;
 
   va_start(args,head_length);
   length=head_length;
@@ -880,7 +904,7 @@ static void print_res_top(MYSQL_RES *result)
   mysql_field_seek(result,0);
   while((field = mysql_fetch_field(result)))
   {
-    if ((length=(uint) strlen(field->name)) > field->max_length)
+    if ((length= strlen(field->name)) > field->max_length)
       field->max_length=length;
     else
       length=field->max_length;

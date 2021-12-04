@@ -1,4 +1,5 @@
-/* Copyright (c) 2000-2007 MySQL AB
+/* Copyright (c) 2000-2007 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #include "myisamdef.h"
 #include "rt_index.h"
@@ -38,7 +39,7 @@ int mi_rnext_same(MI_INFO *info, uchar *buf)
     DBUG_RETURN(my_errno);
 
   if (info->s->concurrent_insert)
-    rw_rdlock(&info->s->key_root_lock[inx]);
+    mysql_rwlock_rdlock(&info->s->key_root_lock[inx]);
 
   switch (keyinfo->key_alg)
   {
@@ -81,7 +82,7 @@ int mi_rnext_same(MI_INFO *info, uchar *buf)
       }
   }
   if (info->s->concurrent_insert)
-    rw_unlock(&info->s->key_root_lock[inx]);
+    mysql_rwlock_unlock(&info->s->key_root_lock[inx]);
 	/* Don't clear if database-changed */
   info->update&= (HA_STATE_CHANGED | HA_STATE_ROW_CHANGED);
   info->update|= HA_STATE_NEXT_FOUND | HA_STATE_RNEXT_SAME;

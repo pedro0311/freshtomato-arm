@@ -130,6 +130,10 @@ void start_mysql(void)
 	else
 		fprintf(fp, "bind-address         = 127.0.0.1\n");
 
+	/* disable innodb engine */
+	fprintf(fp, "default-storage-engine=MYISAM\n"
+	            "innodb=OFF\n");
+
 	fprintf(fp, "key_buffer_size      = %sM\n"
 	            "max_allowed_packet   = %sM\n"
 	            "thread_stack         = %sK\n"

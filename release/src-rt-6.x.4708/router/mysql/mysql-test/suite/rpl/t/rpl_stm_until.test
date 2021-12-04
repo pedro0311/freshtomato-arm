@@ -22,6 +22,11 @@
 
 # Test is dependent on binlog positions
 
+call mtr.add_suppression("Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT");
+
+# prepare version for substitutions
+let $VERSION=`select version()`;
+
 # Stop slave before it starts replication.  Also sync with master
 # to avoid nondeterministic behaviour.
 --echo [on slave]

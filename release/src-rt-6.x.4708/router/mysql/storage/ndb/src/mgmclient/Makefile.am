@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2007 MySQL AB
+# Copyright (C) 2004 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,9 +44,6 @@ LDADD_LOC = $(noinst_LTLIBRARIES) \
             @TERMCAP_LIB@ @NDB_SCI_LIBS@
 
 ndb_mgm_LDFLAGS = @ndb_bin_am_ldflags@
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp: ndb_mgm.dsp libndbmgmclient.dsp
 

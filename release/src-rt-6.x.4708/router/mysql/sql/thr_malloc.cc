@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,13 +11,15 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* Mallocs for used in threads */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
+#include "thr_malloc.h"
+#include "sql_class.h"
 
 extern "C" {
   void sql_alloc_error_handler(void)
@@ -44,9 +45,10 @@ extern "C" {
           returned in the error packet.
           - SHOW ERROR/SHOW WARNINGS may be empty.
         */
-        thd->main_da.set_error_status(thd,
-                                      ER_OUT_OF_RESOURCES,
-                                      ER(ER_OUT_OF_RESOURCES));
+        thd->stmt_da->set_error_status(thd,
+                                       ER_OUT_OF_RESOURCES,
+                                       ER(ER_OUT_OF_RESOURCES),
+                                       NULL);
       }
     }
 
@@ -110,10 +112,6 @@ void* sql_memdup(const void *ptr, size_t len)
     memcpy(pos,ptr,len);
   return pos;
 }
-
-void sql_element_free(void *ptr __attribute__((unused)))
-{} /* purecov: deadcode */
-
 
 
 char *sql_strmake_with_convert(const char *str, size_t arg_length,

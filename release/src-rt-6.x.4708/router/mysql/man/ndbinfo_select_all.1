@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndbinfo_select_all\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDBINFO_SELECT_AL" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDBINFO_SELECT_ALL\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,8 +27,6 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndbinfo_select_all
-.\" MySQL Cluster: ndbinfo_select_all
 .SH "NAME"
 ndbinfo_select_all \- select from ndbinfo tables
 .SH "SYNOPSIS"
@@ -39,24 +37,21 @@ ndbinfo_select_all \- select from ndbinfo tables
 \fBndbinfo_select_all\fR
 is a client program that selects all rows and columns from one or more tables in the
 ndbinfo
-database\&. It is included with the MySQL Cluster distribution beginning with MySQL Cluster NDB 7\&.1\&.17\&.
+database\&. It is included with the NDB Cluster distribution beginning with NDB 7\&.2\&.2\&.
 .PP
 Not all
 ndbinfo
-tables can be accessed by this program\&.
-ndbinfo_select_all
-can access the
-counters,
-diskpagebuffer,
-logbuffers,
-logspaces,
-nodes,
-resources,
-threadblocks,
-threadstat,
+tables available in the
+\fBmysql\fR
+client can be read by this program\&. In addition,
+\fBndbinfo_select_all\fR
+can show information about some tables internal to
+ndbinfo
+which cannot be accessed using SQL, including the
+tables
 and
-transporters
-tables\&.
+columns
+metadata tables\&.
 .PP
 To select from one or more
 ndbinfo
@@ -104,24 +99,22 @@ node_id log_type        log_id  log_part        total   used    high
 8       0       0       1       268435456       0       0
 8       0       0       2       268435456       0       0
 8       0       0       3       268435456       0       0
-shell>                       
+shell>                     
 .fi
 .if n \{\
 .RE
 .\}
-.sp
-.\" command options (MySQL Cluster): ndbinfo_select_all
 .PP
 The following table includes options that are specific to
-\fBndbinfo_select_all\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+\fBndbinfo_select_all\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndbinfo_select_all\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.11.\ \&ndbinfo_select_all Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.285.\ \&Command\-line options for the ndbinfo_select_all program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -130,7 +123,7 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
 l l l
@@ -141,10 +134,10 @@ T{
 .PP
 --delay=#
 T}:T{
-Set the delay in seconds between loops\&. Default is 5\&.
+Set the delay in seconds between loops. Default is 5.
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -152,10 +145,10 @@ T{
 .PP
 -l
 T}:T{
-Set the number of times to perform the select\&. Default is 1\&.
+Set the number of times to perform the select. Default is 1.
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -163,10 +156,10 @@ T{
 .PP
 -d
 T}:T{
-Name of the database where the table located\&.
+Name of the database where the table located.
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -174,10 +167,10 @@ T{
 .PP
 -p
 T}:T{
-Set the degree of parallelism\&.
+Set the degree of parallelism.
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
@@ -190,39 +183,45 @@ T}
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" delay option (ndbinfo_select_all)
 \fB\-\-delay=\fR\fBseconds\fR
 .TS
 allbox tab(:);
-l l s s
-l l s s
-^ l l s
-^ l l s
-^ l l s.
+lB lB.
 T{
-\fBCommand\-Line Format\fR
+Property
 T}:T{
-\-\-delay=#
+Value
+T}
+.T&
+l l
+l l
+l l
+l l
+l l.
+T{
+\fBCommand-Line Format\fR
+T}:T{
+--delay=#
 T}
 T{
-\ \&
-T}:T{
-\fBPermitted Values\fR
-T}
-:T{
 \fBType\fR
 T}:T{
 numeric
 T}
-:T{
-\fBDefault\fR
+T{
+\fBDefault Value\fR
 T}:T{
 5
 T}
-:T{
-\fBRange\fR
+T{
+\fBMinimum Value\fR
 T}:T{
-0 \&.\&. MAX_INT
+0
+T}
+T{
+\fBMaximum Value\fR
+T}:T{
+MAX_INT
 T}
 .TE
 .sp 1
@@ -239,47 +238,46 @@ is set to 0 or 1\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" loops option (ndbinfo_select_all)
-.\" -l option (ndbinfo_select_all)
 \fB\-\-loops=\fR\fBnumber\fR,
 \fB\-l \fR\fB\fInumber\fR\fR
 .TS
 allbox tab(:);
-l l s s
-l l s s
-l l s s
-^ l l s
-^ l l s
-^ l l s.
+lB lB.
 T{
-\fBCommand\-Line Format\fR
+Property
 T}:T{
-\-\-loops=#
+Value
+T}
+.T&
+l l
+l l
+l l
+l l
+l l.
+T{
+\fBCommand-Line Format\fR
+T}:T{
+--loops=#
 T}
 T{
-\ \&
-T}:T{
-\-l
-T}
-T{
-\ \&
-T}:T{
-\fBPermitted Values\fR
-T}
-:T{
 \fBType\fR
 T}:T{
 numeric
 T}
-:T{
-\fBDefault\fR
+T{
+\fBDefault Value\fR
 T}:T{
 1
 T}
-:T{
-\fBRange\fR
+T{
+\fBMinimum Value\fR
 T}:T{
-0 \&.\&. MAX_INT
+0
+T}
+T{
+\fBMaximum Value\fR
+T}:T{
+MAX_INT
 T}
 .TE
 .sp 1
@@ -290,7 +288,7 @@ to set the time between loops\&.
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

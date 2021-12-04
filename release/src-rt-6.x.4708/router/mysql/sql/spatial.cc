@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2002, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,35 +12,17 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "my_global.h"                          // REQUIRED for HAVE_* below
+#include "spatial.h"
+#include "gstream.h"                            // Gis_read_stream
+#include "sql_string.h"                         // String
 
 #ifdef HAVE_SPATIAL
 
-/* 
-  exponential notation :
-  1   sign
-  1   number before the decimal point
-  1   decimal point
-  14  number of significant digits (see String::qs_append(double))
-  1   'e' sign
-  1   exponent sign
-  3   exponent digits
-  ==
-  22
-
-  "f" notation :
-  1   optional 0
-  1   sign
-  14  number significant digits (see String::qs_append(double) )
-  1   decimal point
-  ==
-  17
-*/
-
-#define MAX_DIGITS_IN_DOUBLE 22
+#define MAX_DIGITS_IN_DOUBLE MY_GCVT_MAX_FIELD_WIDTH
 
 /***************************** Gis_class_info *******************************/
 
@@ -867,6 +849,8 @@ int Gis_polygon::area(double *ar, const char **end_of_data) const
     if (no_data(data, 4))
       return 1;
     n_points= uint4korr(data);
+    if (n_points == 0)
+      return 1;
     if (not_enough_points(data, n_points))
       return 1;
     get_point(&prev_x, &prev_y, data+4);
@@ -1687,9 +1671,8 @@ int Gis_multi_polygon::area(double *ar,  const char **end_of_data) const
 int Gis_multi_polygon::centroid(String *result) const
 {
   uint32 n_polygons;
-  bool first_loop= 1;
   Gis_polygon p;
-  double UNINIT_VAR(res_area), UNINIT_VAR(res_cx), UNINIT_VAR(res_cy);
+  double res_area= 0.0, res_cx= 0.0, res_cy= 0.0;
   double cur_area, cur_cx, cur_cy;
   const char *data= m_data;
 
@@ -1706,20 +1689,13 @@ int Gis_multi_polygon::centroid(String *result) const
 	p.centroid_xy(&cur_cx, &cur_cy))
       return 1;
 
-    if (!first_loop)
-    {
-      double sum_area= res_area + cur_area;
-      res_cx= (res_area * res_cx + cur_area * cur_cx) / sum_area;
-      res_cy= (res_area * res_cy + cur_area * cur_cy) / sum_area;
-    }
-    else
-    {
-      first_loop= 0;
-      res_area= cur_area;
-      res_cx= cur_cx;
-      res_cy= cur_cy;
-    }
+    res_area+= cur_area;
+    res_cx+= cur_area * cur_cx;
+    res_cy+= cur_area * cur_cy;
   }
+   
+  res_cx/= res_area;
+  res_cy/= res_area;
 
   return create_point(result, res_cx, res_cy);
 }

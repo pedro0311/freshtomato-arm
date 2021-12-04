@@ -1,4 +1,4 @@
-/* Copyright (c) 2006, 2007 MySQL AB
+/* Copyright (c) 2006, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -21,13 +21,13 @@
 #include <my_bitmap.h>
 
 #include "rpl_constants.h"
+#include "table.h"                              /* TABLE */
 
 /* Forward declarations */
 class handler;
 class MYSQL_BIN_LOG;
-struct st_table;
+struct TABLE;
 
-typedef st_table TABLE;
 
 /*
   Injector to inject rows into the MySQL server.

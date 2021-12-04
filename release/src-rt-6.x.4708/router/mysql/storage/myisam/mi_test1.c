@@ -12,13 +12,11 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Testing of the basic functions of a MyISAM table */
 
 #include "myisam.h"
-#include "myisamdef.h"
 #include <my_getopt.h>
 #include <m_string.h>
 
@@ -164,7 +162,7 @@ static int run_test(const char *filename)
   row_count=deleted=0;
   for (i=49 ; i>=1 ; i-=2 )
   {
-    if (insert_count-- == 0) { VOID(mi_close(file)) ; exit(0) ; }
+    if (insert_count-- == 0) { (void) mi_close(file); exit(0) ; }
     j=i%25 +1;
     create_record(record,j);
     error=mi_write(file,record);
@@ -228,7 +226,7 @@ static int run_test(const char *filename)
     found=0;
     while ((error=mi_rrnd(file,read_record,pos)) == 0)
     {
-      if (update_count-- == 0) { VOID(mi_close(file)) ; exit(0) ; }
+      if (update_count-- == 0) { (void) mi_close(file); exit(0) ; }
       memcpy(record,read_record,rec_length);
       update_record(record);
       if (mi_update(file,read_record,record))
@@ -255,7 +253,7 @@ static int run_test(const char *filename)
     for (i=0 ; i <= 10 ; i++)
     {
       /* testing */
-      if (remove_count-- == 0) { VOID(mi_close(file)) ; exit(0) ; }
+      if (remove_count-- == 0) { (void) mi_close(file); exit(0) ; }
       j=i*2;
       if (!flags[j])
 	continue;
@@ -414,7 +412,7 @@ static void create_record(uchar *record,uint rownr)
     tmp=strlen((char*) blob_key);
     int4store(pos,tmp);
     ptr=blob_key;
-    memcpy_fixed(pos+4,&ptr,sizeof(char*));
+    memcpy(pos+4, &ptr, sizeof(char*));
     pos+=recinfo[1].length;
   }
   else if (recinfo[1].type == FIELD_VARCHAR)
@@ -442,7 +440,7 @@ static void create_record(uchar *record,uint rownr)
     tmp=strlen((char*) blob_record);
     int4store(pos,tmp);
     ptr=blob_record;
-    memcpy_fixed(pos+4,&ptr,sizeof(char*));
+    memcpy(pos+4, &ptr, sizeof(char*));
   }
   else if (recinfo[2].type == FIELD_VARCHAR)
   {
@@ -471,10 +469,10 @@ static void update_record(uchar *record)
     uchar *column,*ptr;
     int length;
     length=uint4korr(pos);			/* Long blob */
-    memcpy_fixed(&column,pos+4,sizeof(char*));
+    memcpy(&column, pos+4, sizeof(char*));
     memcpy(blob_key,column,length);		/* Move old key */
     ptr=blob_key;
-    memcpy_fixed(pos+4,&ptr,sizeof(char*));	/* Store pointer to new key */
+    memcpy(pos+4, &ptr, sizeof(char*));	/* Store pointer to new key */
     if (keyinfo[0].seg[0].type != HA_KEYTYPE_NUM)
       default_charset_info->cset->casedn(default_charset_info,
                                          (char*) blob_key, length,
@@ -504,13 +502,13 @@ static void update_record(uchar *record)
     uchar *column;
     int length;
     length=uint4korr(pos);
-    memcpy_fixed(&column,pos+4,sizeof(char*));
+    memcpy(&column, pos+4, sizeof(char*));
     memcpy(blob_record,column,length);
     bfill(blob_record+length,20,'.');	/* Make it larger */
     length+=20;
     int4store(pos,length);
     column= blob_record;
-    memcpy_fixed(pos+4,&column,sizeof(char*));
+    memcpy(pos+4, &column, sizeof(char*));
   }
   else if (recinfo[2].type == FIELD_VARCHAR)
   {
@@ -682,3 +680,5 @@ static void usage()
   my_print_help(my_long_options);
   my_print_variables(my_long_options);
 }
+
+#include "mi_extrafunc.h"

@@ -90,6 +90,7 @@ Database: information_schema
 | GLOBAL_STATUS                         |
 | GLOBAL_VARIABLES                      |
 | KEY_COLUMN_USAGE                      |
+| PARAMETERS                            |
 | PARTITIONS                            |
 | PLUGINS                               |
 | PROCESSLIST                           |
@@ -102,11 +103,22 @@ Database: information_schema
 | SESSION_VARIABLES                     |
 | STATISTICS                            |
 | TABLES                                |
+| TABLESPACES                           |
 | TABLE_CONSTRAINTS                     |
 | TABLE_PRIVILEGES                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
 | VIEWS                                 |
+| INNODB_BUFFER_PAGE                    |
+| INNODB_TRX                            |
+| INNODB_BUFFER_POOL_STATS              |
+| INNODB_LOCK_WAITS                     |
+| INNODB_CMPMEM                         |
+| INNODB_CMP                            |
+| INNODB_LOCKS                          |
+| INNODB_CMPMEM_RESET                   |
+| INNODB_CMP_RESET                      |
+| INNODB_BUFFER_PAGE_LRU                |
 +---------------------------------------+
 Database: INFORMATION_SCHEMA
 +---------------------------------------+
@@ -123,6 +135,7 @@ Database: INFORMATION_SCHEMA
 | GLOBAL_STATUS                         |
 | GLOBAL_VARIABLES                      |
 | KEY_COLUMN_USAGE                      |
+| PARAMETERS                            |
 | PARTITIONS                            |
 | PLUGINS                               |
 | PROCESSLIST                           |
@@ -135,11 +148,22 @@ Database: INFORMATION_SCHEMA
 | SESSION_VARIABLES                     |
 | STATISTICS                            |
 | TABLES                                |
+| TABLESPACES                           |
 | TABLE_CONSTRAINTS                     |
 | TABLE_PRIVILEGES                      |
 | TRIGGERS                              |
 | USER_PRIVILEGES                       |
 | VIEWS                                 |
+| INNODB_BUFFER_PAGE                    |
+| INNODB_TRX                            |
+| INNODB_BUFFER_POOL_STATS              |
+| INNODB_LOCK_WAITS                     |
+| INNODB_CMPMEM                         |
+| INNODB_CMP                            |
+| INNODB_LOCKS                          |
+| INNODB_CMPMEM_RESET                   |
+| INNODB_CMP_RESET                      |
+| INNODB_BUFFER_PAGE_LRU                |
 +---------------------------------------+
 Wildcard: inf_rmation_schema
 +--------------------+

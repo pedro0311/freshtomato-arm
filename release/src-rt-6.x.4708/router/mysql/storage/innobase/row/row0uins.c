@@ -1,7 +1,24 @@
-/******************************************************
-Fresh insert undo
+/*****************************************************************************
 
-(c) 1996 Innobase Oy
+Copyright (c) 1997, 2010, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file row/row0uins.c
+Fresh insert undo
 
 Created 2/25/1997 Heikki Tuuri
 *******************************************************/
@@ -29,15 +46,25 @@ Created 2/25/1997 Heikki Tuuri
 #include "ibuf0ibuf.h"
 #include "log0log.h"
 
-/*******************************************************************
+/*************************************************************************
+IMPORTANT NOTE: Any operation that generates redo MUST check that there
+is enough space in the redo log before for that operation. This is
+done by calling log_free_check(). The reason for checking the
+availability of the redo log space before the start of the operation is
+that we MUST not hold any synchonization objects when performing the
+check.
+If you make a change in this module make sure that no codepath is
+introduced where a call to log_free_check() is bypassed. */
+
+/***************************************************************//**
 Removes a clustered index record. The pcur in node was positioned on the
-record, now it is detached. */
+record, now it is detached.
+@return	DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
 static
 ulint
 row_undo_ins_remove_clust_rec(
 /*==========================*/
-				/* out: DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
-	undo_node_t*	node)	/* in: undo node */
+	undo_node_t*	node)	/*!< in: undo node */
 {
 	btr_cur_t*	btr_cur;
 	ibool		success;
@@ -51,7 +78,8 @@ row_undo_ins_remove_clust_rec(
 					    &mtr);
 	ut_a(success);
 
-	if (ut_dulint_cmp(node->table->id, DICT_INDEXES_ID) == 0) {
+	if (node->table->id == DICT_INDEXES_ID) {
+		ut_ad(node->trx->dict_operation_lock_mode == RW_X_LATCH);
 
 		/* Drop the index tree associated with the row in
 		SYS_INDEXES table: */
@@ -86,7 +114,10 @@ retry:
 					    &(node->pcur), &mtr);
 	ut_a(success);
 
-	btr_cur_pessimistic_delete(&err, FALSE, btr_cur, TRUE, &mtr);
+	btr_cur_pessimistic_delete(&err, FALSE, btr_cur,
+				   trx_is_recv(node->trx)
+				   ? RB_RECOVERY
+				   : RB_NORMAL, &mtr);
 
 	/* The delete operation may fail if we have little
 	file space left: TODO: easiest to crash the database
@@ -111,73 +142,80 @@ retry:
 	return(err);
 }
 
-/*******************************************************************
-Removes a secondary index entry if found. */
+/***************************************************************//**
+Removes a secondary index entry if found.
+@return	DB_SUCCESS, DB_FAIL, or DB_OUT_OF_FILE_SPACE */
 static
 ulint
 row_undo_ins_remove_sec_low(
 /*========================*/
-				/* out: DB_SUCCESS, DB_FAIL, or
-				DB_OUT_OF_FILE_SPACE */
-	ulint		mode,	/* in: BTR_MODIFY_LEAF or BTR_MODIFY_TREE,
+	ulint		mode,	/*!< in: BTR_MODIFY_LEAF or BTR_MODIFY_TREE,
 				depending on whether we wish optimistic or
 				pessimistic descent down the index tree */
-	dict_index_t*	index,	/* in: index */
-	dtuple_t*	entry)	/* in: index entry to remove */
+	dict_index_t*	index,	/*!< in: index */
+	dtuple_t*	entry)	/*!< in: index entry to remove */
 {
-	btr_pcur_t	pcur;
-	btr_cur_t*	btr_cur;
-	ibool		found;
-	ibool		success;
-	ulint		err;
-	mtr_t		mtr;
+	btr_pcur_t		pcur;
+	btr_cur_t*		btr_cur;
+	ulint			err;
+	mtr_t			mtr;
+	enum row_search_result	search_result;
 
-	log_free_check();
 	mtr_start(&mtr);
-
-	found = row_search_index_entry(index, entry, mode, &pcur, &mtr);
 
 	btr_cur = btr_pcur_get_btr_cur(&pcur);
 
-	if (!found) {
-		/* Not found */
+	ut_ad(mode == BTR_MODIFY_TREE || mode == BTR_MODIFY_LEAF);
 
-		btr_pcur_close(&pcur);
-		mtr_commit(&mtr);
+	search_result = row_search_index_entry(index, entry, mode,
+					       &pcur, &mtr);
 
-		return(DB_SUCCESS);
+	switch (search_result) {
+	case ROW_NOT_FOUND:
+		err = DB_SUCCESS;
+		goto func_exit;
+	case ROW_FOUND:
+		break;
+	case ROW_BUFFERED:
+	case ROW_NOT_DELETED_REF:
+		/* These are invalid outcomes, because the mode passed
+		to row_search_index_entry() did not include any of the
+		flags BTR_INSERT, BTR_DELETE, or BTR_DELETE_MARK. */
+		ut_error;
 	}
 
 	if (mode == BTR_MODIFY_LEAF) {
-		success = btr_cur_optimistic_delete(btr_cur, &mtr);
-
-		if (success) {
-			err = DB_SUCCESS;
-		} else {
-			err = DB_FAIL;
-		}
+		err = btr_cur_optimistic_delete(btr_cur, &mtr)
+			? DB_SUCCESS : DB_FAIL;
 	} else {
 		ut_ad(mode == BTR_MODIFY_TREE);
 
-		btr_cur_pessimistic_delete(&err, FALSE, btr_cur, TRUE, &mtr);
+		/* No need to distinguish RB_RECOVERY here, because we
+		are deleting a secondary index record: the distinction
+		between RB_NORMAL and RB_RECOVERY only matters when
+		deleting a record that contains externally stored
+		columns. */
+		ut_ad(!dict_index_is_clust(index));
+		btr_cur_pessimistic_delete(&err, FALSE, btr_cur,
+					   RB_NORMAL, &mtr);
 	}
-
+func_exit:
 	btr_pcur_close(&pcur);
 	mtr_commit(&mtr);
 
 	return(err);
 }
 
-/*******************************************************************
+/***************************************************************//**
 Removes a secondary index entry from the index if found. Tries first
-optimistic, then pessimistic descent down the tree. */
+optimistic, then pessimistic descent down the tree.
+@return	DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
 static
 ulint
 row_undo_ins_remove_sec(
 /*====================*/
-				/* out: DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
-	dict_index_t*	index,	/* in: index */
-	dtuple_t*	entry)	/* in: index entry to insert */
+	dict_index_t*	index,	/*!< in: index */
+	dtuple_t*	entry)	/*!< in: index entry to insert */
 {
 	ulint	err;
 	ulint	n_tries	= 0;
@@ -211,18 +249,18 @@ retry:
 	return(err);
 }
 
-/***************************************************************
+/***********************************************************//**
 Parses the row reference and other info in a fresh insert undo record. */
 static
 void
 row_undo_ins_parse_undo_rec(
 /*========================*/
-	undo_node_t*	node)	/* in: row undo node */
+	undo_node_t*	node)	/*!< in/out: row undo node */
 {
 	dict_index_t*	clust_index;
 	byte*		ptr;
-	dulint		undo_no;
-	dulint		table_id;
+	undo_no_t	undo_no;
+	table_id_t	table_id;
 	ulint		type;
 	ulint		dummy;
 	ibool		dummy_extern;
@@ -234,75 +272,95 @@ row_undo_ins_parse_undo_rec(
 	ut_ad(type == TRX_UNDO_INSERT_REC);
 	node->rec_type = type;
 
+	node->update = NULL;
 	node->table = dict_table_get_on_id(table_id, node->trx);
 
-	if (node->table == NULL) {
-
-		return;
-	}
-
-	if (node->table->ibd_file_missing) {
-		/* We skip undo operations to missing .ibd files */
+	/* Skip the UNDO if we can't find the table or the .ibd file. */
+	if (UNIV_UNLIKELY(node->table == NULL)) {
+	} else if (UNIV_UNLIKELY(node->table->ibd_file_missing)) {
 		node->table = NULL;
+	} else {
+		clust_index = dict_table_get_first_index(node->table);
 
-		return;
+		if (clust_index != NULL) {
+			ptr = trx_undo_rec_get_row_ref(
+				ptr, clust_index, &node->ref, node->heap);
+		} else {
+			ut_print_timestamp(stderr);
+			fprintf(stderr, "  InnoDB: table ");
+			ut_print_name(stderr, node->trx, TRUE,
+				      node->table->name);
+			fprintf(stderr, " has no indexes, "
+				"ignoring the table\n");
+
+			node->table = NULL;
+		}
 	}
-
-	clust_index = dict_table_get_first_index(node->table);
-
-	ptr = trx_undo_rec_get_row_ref(ptr, clust_index, &(node->ref),
-				       node->heap);
 }
 
-/***************************************************************
+/***********************************************************//**
 Undoes a fresh insert of a row to a table. A fresh insert means that
 the same clustered index unique key did not have any record, even delete
-marked, at the time of the insert. */
-
+marked, at the time of the insert.  InnoDB is eager in a rollback:
+if it figures out that an index record will be removed in the purge
+anyway, it will remove it in the rollback.
+@return	DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
+UNIV_INTERN
 ulint
 row_undo_ins(
 /*=========*/
-				/* out: DB_SUCCESS or DB_OUT_OF_FILE_SPACE */
-	undo_node_t*	node)	/* in: row undo node */
+	undo_node_t*	node)	/*!< in: row undo node */
 {
-	dtuple_t*	entry;
-	ibool		found;
-	ulint		err;
-
 	ut_ad(node);
 	ut_ad(node->state == UNDO_NODE_INSERT);
 
 	row_undo_ins_parse_undo_rec(node);
 
-	if (node->table == NULL) {
-		found = FALSE;
-	} else {
-		found = row_undo_search_clust_to_pcur(node);
-	}
-
-	if (!found) {
+	if (!node->table || !row_undo_search_clust_to_pcur(node)) {
 		trx_undo_rec_release(node->trx, node->undo_no);
 
 		return(DB_SUCCESS);
 	}
 
+	/* Iterate over all the indexes and undo the insert.*/
+
+	/* Skip the clustered index (the first index) */
 	node->index = dict_table_get_next_index(
 		dict_table_get_first_index(node->table));
 
+	dict_table_skip_corrupt_index(node->index);
+
 	while (node->index != NULL) {
-		entry = row_build_index_entry(node->row, node->index,
-					      node->heap);
-		err = row_undo_ins_remove_sec(node->index, entry);
+		dtuple_t*	entry;
+		ulint		err;
 
-		if (err != DB_SUCCESS) {
+		entry = row_build_index_entry(node->row, node->ext,
+					      node->index, node->heap);
+		if (UNIV_UNLIKELY(!entry)) {
+			/* The database must have crashed after
+			inserting a clustered index record but before
+			writing all the externally stored columns of
+			that record, or a statement is being rolled
+			back because an error occurred while storing
+			off-page columns.
 
-			return(err);
+			Because secondary index entries are inserted
+			after the clustered index record, we may
+			assume that the secondary index record does
+			not exist. */
+		} else {
+			log_free_check();
+			err = row_undo_ins_remove_sec(node->index, entry);
+
+			if (err != DB_SUCCESS) {
+
+				return(err);
+			}
 		}
 
-		node->index = dict_table_get_next_index(node->index);
+		dict_table_next_uncorrupted_index(node->index);
 	}
 
-	err = row_undo_ins_remove_clust_rec(node);
-
-	return(err);
+	log_free_check();
+	return(row_undo_ins_remove_clust_rec(node));
 }

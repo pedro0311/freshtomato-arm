@@ -1,5 +1,7 @@
-/*
-   Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+#ifndef ITEM_STRFUNC_INCLUDED
+#define ITEM_STRFUNC_INCLUDED
+
+/* Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +14,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 
 /* This file defines all string functions */
@@ -21,6 +22,8 @@
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+class MY_LOCALE;
 
 class Item_str_func :public Item_func
 {
@@ -48,32 +51,57 @@ public:
   enum Item_result result_type () const { return STRING_RESULT; }
   void left_right_max_length();
   bool fix_fields(THD *thd, Item **ref);
+  String *val_str_from_val_str_ascii(String *str, String *str2);
 };
 
-class Item_func_md5 :public Item_str_func
+
+
+/*
+  Functions that return values with ASCII repertoire
+*/
+class Item_str_ascii_func :public Item_str_func
+{
+  String ascii_buf;
+public:
+  Item_str_ascii_func() :Item_str_func() {}
+  Item_str_ascii_func(Item *a) :Item_str_func(a) {}
+  Item_str_ascii_func(Item *a,Item *b) :Item_str_func(a,b) {}
+  Item_str_ascii_func(Item *a,Item *b,Item *c) :Item_str_func(a,b,c) {}
+  String *val_str(String *str)
+  {
+    return val_str_from_val_str_ascii(str, &ascii_buf);
+  }
+  virtual String *val_str_ascii(String *)= 0;
+};
+
+
+class Item_func_md5 :public Item_str_ascii_func
 {
   String tmp_value;
 public:
-  Item_func_md5(Item *a) :Item_str_func(a)
-  {
-    collation.set(&my_charset_bin);
-  }
-  String *val_str(String *);
+  Item_func_md5(Item *a) :Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *);
   void fix_length_and_dec();
   const char *func_name() const { return "md5"; }
 };
 
 
-class Item_func_sha :public Item_str_func
+class Item_func_sha :public Item_str_ascii_func
 {
 public:
-  Item_func_sha(Item *a) :Item_str_func(a)
-  {
-    collation.set(&my_charset_bin);
-  }
-  String *val_str(String *);    
+  Item_func_sha(Item *a) :Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *);    
   void fix_length_and_dec();      
   const char *func_name() const { return "sha"; }	
+};
+
+class Item_func_sha2 :public Item_str_ascii_func
+{
+public:
+  Item_func_sha2(Item *a, Item *b) :Item_str_ascii_func(a, b) {}
+  String *val_str_ascii(String *);
+  void fix_length_and_dec();
+  const char *func_name() const { return "sha2"; }
 };
 
 class Item_func_aes_encrypt :public Item_str_func
@@ -272,13 +300,16 @@ public:
   authentication procedure works, see comments in password.c.
 */
 
-class Item_func_password :public Item_str_func
+class Item_func_password :public Item_str_ascii_func
 {
   char tmp_value[SCRAMBLED_PASSWORD_CHAR_LENGTH+1]; 
 public:
-  Item_func_password(Item *a) :Item_str_func(a) {}
-  String *val_str(String *str);
-  void fix_length_and_dec() { max_length= SCRAMBLED_PASSWORD_CHAR_LENGTH; }
+  Item_func_password(Item *a) :Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *str);
+  void fix_length_and_dec()
+  {
+    fix_length_and_charset(SCRAMBLED_PASSWORD_CHAR_LENGTH, default_charset());
+  }
   const char *func_name() const { return "password"; }
   static char *alloc(THD *thd, const char *password, size_t pass_len);
 };
@@ -291,13 +322,16 @@ public:
   function.
 */
 
-class Item_func_old_password :public Item_str_func
+class Item_func_old_password :public Item_str_ascii_func
 {
   char tmp_value[SCRAMBLED_PASSWORD_CHAR_LENGTH_323+1];
 public:
-  Item_func_old_password(Item *a) :Item_str_func(a) {}
-  String *val_str(String *str);
-  void fix_length_and_dec() { max_length= SCRAMBLED_PASSWORD_CHAR_LENGTH_323; } 
+  Item_func_old_password(Item *a) :Item_str_ascii_func(a) {}
+  String *val_str_ascii(String *str);
+  void fix_length_and_dec()
+  {
+    fix_length_and_charset(SCRAMBLED_PASSWORD_CHAR_LENGTH_323, default_charset());
+  } 
   const char *func_name() const { return "old_password"; }
   static char *alloc(THD *thd, const char *password, size_t pass_len);
 };
@@ -330,7 +364,9 @@ public:
   {
     maybe_null=1;
     /* 9 = MAX ((8- (arg_len % 8)) + 1) */
-    max_length = args[0]->max_length - 9;
+    max_length= args[0]->max_length;
+    if (max_length >= 9U)
+      max_length-= 9U;
   }
   const char *func_name() const { return "des_decrypt"; }
 };
@@ -518,12 +554,17 @@ public:
 };
 
 
-class Item_func_format :public Item_str_func
+class Item_func_format :public Item_str_ascii_func
 {
   String tmp_str;
+  MY_LOCALE *locale;
 public:
-  Item_func_format(Item *org, Item *dec);
-  String *val_str(String *);
+  Item_func_format(Item *org, Item *dec): Item_str_ascii_func(org, dec) {}
+  Item_func_format(Item *org, Item *dec, Item *lang):
+  Item_str_ascii_func(org, dec, lang) {}
+  
+  MY_LOCALE *get_locale(Item *item);
+  String *val_str_ascii(String *);
   void fix_length_and_dec();
   const char *func_name() const { return "format"; }
   virtual void print(String *str, enum_query_type query_type);
@@ -596,18 +637,18 @@ public:
 };
 
 
-class Item_func_hex :public Item_str_func
+class Item_func_hex :public Item_str_ascii_func
 {
   String tmp_value;
 public:
-  Item_func_hex(Item *a) :Item_str_func(a) {}
+  Item_func_hex(Item *a) :Item_str_ascii_func(a) {}
   const char *func_name() const { return "hex"; }
-  String *val_str(String *);
+  String *val_str_ascii(String *);
   void fix_length_and_dec()
   {
     collation.set(default_charset());
     decimals=0;
-    max_length=args[0]->max_length*2*collation.collation->mbmaxlen;
+    fix_char_length(args[0]->max_length * 2);
   }
 };
 
@@ -629,6 +670,46 @@ public:
     max_length=(1+args[0]->max_length)/2;
   }
 };
+
+
+#ifndef DBUG_OFF
+class Item_func_like_range :public Item_str_func
+{
+protected:
+  String min_str;
+  String max_str;
+  const bool is_min;
+public:
+  Item_func_like_range(Item *a, Item *b, bool is_min_arg)
+    :Item_str_func(a, b), is_min(is_min_arg)
+  { maybe_null= 1; }
+  String *val_str(String *);
+  void fix_length_and_dec()
+  {
+    collation.set(args[0]->collation);
+    decimals=0;
+    max_length= MAX_BLOB_WIDTH;
+  }
+};
+
+
+class Item_func_like_range_min :public Item_func_like_range
+{
+public:
+  Item_func_like_range_min(Item *a, Item *b) 
+    :Item_func_like_range(a, b, true) { }
+  const char *func_name() const { return "like_range_min"; }
+};
+
+
+class Item_func_like_range_max :public Item_func_like_range
+{
+public:
+  Item_func_like_range_max(Item *a, Item *b)
+    :Item_func_like_range(a, b, false) { }
+  const char *func_name() const { return "like_range_max"; }
+};
+#endif
 
 
 class Item_func_binary :public Item_str_func
@@ -692,7 +773,7 @@ public:
   void fix_length_and_dec() 
   { 
     decimals= 0; 
-    max_length= 3 * 8 + 7; 
+    fix_length_and_charset(3 * 8 + 7, default_charset()); 
     maybe_null= 1;
   }
 };
@@ -855,16 +936,16 @@ class Item_func_uuid: public Item_str_func
 {
 public:
   Item_func_uuid(): Item_str_func() {}
-  void fix_length_and_dec() {
-    collation.set(system_charset_info);
-    /*
-       NOTE! uuid() should be changed to use 'ascii'
-       charset when hex(), format(), md5(), etc, and implicit
-       number-to-string conversion will use 'ascii'
-    */
-    max_length= UUID_LENGTH * system_charset_info->mbmaxlen;
+  void fix_length_and_dec()
+  {
+    collation.set(system_charset_info,
+                  DERIVATION_COERCIBLE, MY_REPERTOIRE_ASCII);
+    fix_char_length(UUID_LENGTH);
   }
   const char *func_name() const{ return "uuid"; }
   String *val_str(String *);
 };
 
+extern String my_empty_string;
+
+#endif /* ITEM_STRFUNC_INCLUDED */

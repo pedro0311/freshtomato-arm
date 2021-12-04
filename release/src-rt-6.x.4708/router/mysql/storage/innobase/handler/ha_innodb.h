@@ -1,17 +1,21 @@
-/* Copyright (C) 2000-2005 MySQL AB && Innobase Oy
+/*****************************************************************************
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; version 2 of the License.
+Copyright (c) 2000, 2010, MySQL AB & Innobase Oy. All Rights Reserved.
+   Use is subject to license terms
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
-   GNU General Public License for more details.
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
 
 /*
   This file is based on ha_berkeley.h of MySQL distribution
@@ -24,60 +28,88 @@
 #pragma interface			/* gcc class implementation */
 #endif
 
+/* Structure defines translation table between mysql index and innodb
+index structures */
+typedef struct innodb_idx_translate_struct {
+	ulint		index_count;	/*!< number of valid index entries
+					in the index_mapping array */
+	ulint		array_size;	/*!< array size of index_mapping */
+	dict_index_t**	index_mapping;	/*!< index pointer array directly
+					maps to index in Innodb from MySQL
+					array index */
+} innodb_idx_translate_t;
+
+
+/** InnoDB table share */
 typedef struct st_innobase_share {
-  THR_LOCK lock;
-  pthread_mutex_t mutex;
-  char *table_name;
-  uint table_name_length,use_count;
+	THR_LOCK		lock;		/*!< MySQL lock protecting
+						this structure */
+	const char*		table_name;	/*!< InnoDB table name */
+	uint			use_count;	/*!< reference count,
+						incremented in get_share()
+						and decremented in
+						free_share() */
+	void*			table_name_hash;/*!< hash table chain node */
+	innodb_idx_translate_t	idx_trans_tbl;	/*!< index translation
+						table between MySQL and
+						Innodb */
 } INNOBASE_SHARE;
 
 
+/** InnoDB B-tree index */
 struct dict_index_struct;
+/** Prebuilt structures in an Innobase table handle used within MySQL */
 struct row_prebuilt_struct;
 
+/** InnoDB B-tree index */
 typedef struct dict_index_struct dict_index_t;
+/** Prebuilt structures in an Innobase table handle used within MySQL */
 typedef struct row_prebuilt_struct row_prebuilt_t;
 
-/* The class defining a handle to an Innodb table */
+/** The class defining a handle to an Innodb table */
 class ha_innobase: public handler
 {
-	row_prebuilt_t*	prebuilt;	/* prebuilt struct in InnoDB, used
+	row_prebuilt_t*	prebuilt;	/*!< prebuilt struct in InnoDB, used
 					to save CPU time with prebuilt data
 					structures*/
-	THD*		user_thd;	/* the thread handle of the user
+	THD*		user_thd;	/*!< the thread handle of the user
 					currently using the handle; this is
 					set in external_lock function */
 	THR_LOCK_DATA	lock;
-	INNOBASE_SHARE	*share;
+	INNOBASE_SHARE*	share;		/*!< information for MySQL
+					table locking */
 
-	uchar*		upd_buff;	/* buffer used in updates */
-	uchar*		key_val_buff;	/* buffer used in converting
+	uchar*		upd_buf;	/*!< buffer used in updates */
+	ulint		upd_buf_size;	/*!< the size of upd_buf in bytes */
+	uchar		srch_key_val1[MAX_KEY_LENGTH + MAX_REF_PARTS*2];
+	uchar		srch_key_val2[MAX_KEY_LENGTH + MAX_REF_PARTS*2];
+					/*!< buffers used in converting
 					search key values from MySQL format
-					to Innodb format */
-	ulong		upd_and_key_val_buff_len;
-					/* the length of each of the previous
-					two buffers */
+					to InnoDB format. For each column
+					2 bytes are used to store length,
+					hence MAX_REF_PARTS*2. */
 	Table_flags	int_table_flags;
 	uint		primary_key;
-	ulong		start_of_scan;	/* this is set to 1 when we are
+	ulong		start_of_scan;	/*!< this is set to 1 when we are
 					starting a table scan but have not
 					yet fetched any row, else 0 */
 	uint		last_match_mode;/* match mode of the latest search:
 					ROW_SEL_EXACT, ROW_SEL_EXACT_PREFIX,
 					or undefined */
-	uint		num_write_row;	/* number of write_row() calls */
+	uint		num_write_row;	/*!< number of write_row() calls */
 
 	uint store_key_val_for_row(uint keynr, char* buff, uint buff_len,
                                    const uchar* record);
-	int update_thd(THD* thd);
+	inline void update_thd(THD* thd);
+	void update_thd();
 	int change_active_index(uint keynr);
 	int general_fetch(uchar* buf, uint direction, uint match_mode);
-	ulong innobase_lock_autoinc();
+	ulint innobase_lock_autoinc();
 	ulonglong innobase_peek_autoinc();
-	ulong innobase_set_max_autoinc(ulonglong auto_inc);
-	ulong innobase_reset_autoinc(ulonglong auto_inc);
-	ulong innobase_get_autoinc(ulonglong* value);
-	ulong innobase_update_autoinc(ulonglong	auto_inc);
+	ulint innobase_set_max_autoinc(ulonglong auto_inc);
+	ulint innobase_reset_autoinc(ulonglong auto_inc);
+	ulint innobase_get_autoinc(ulonglong* value);
+	ulint innobase_update_autoinc(ulonglong	auto_inc);
 	void innobase_initialize_autoinc();
 	dict_index_t* innobase_get_index(uint keynr);
 	int info_low(uint flag, bool called_from_analyze);
@@ -85,36 +117,22 @@ class ha_innobase: public handler
 	/* Init values for the class: */
  public:
 	ha_innobase(handlerton *hton, TABLE_SHARE *table_arg);
-	~ha_innobase() {}
+	~ha_innobase();
 	/*
 	  Get the row type from the storage engine.  If this method returns
 	  ROW_TYPE_NOT_USED, the information in HA_CREATE_INFO should be used.
 	*/
 	enum row_type get_row_type() const;
 
-	const char* table_type() const { return("InnoDB");}
-	const char *index_type(uint key_number) { return "BTREE"; }
+	const char* table_type() const;
+	const char* index_type(uint key_number);
 	const char** bas_ext() const;
 	Table_flags table_flags() const;
-	ulong index_flags(uint idx, uint part, bool all_parts) const
-	{
-	  return (HA_READ_NEXT |
-		  HA_READ_PREV |
-		  HA_READ_ORDER |
-		  HA_READ_RANGE |
-		  HA_KEYREAD_ONLY);
-	}
-	uint max_supported_keys()	   const { return MAX_KEY; }
-				/* An InnoDB page must store >= 2 keys;
-				a secondary key record must also contain the
-				primary key value:
-				max key length is therefore set to slightly
-				less than 1 / 4 of page size which is 16 kB;
-				but currently MySQL does not work with keys
-				whose size is > MAX_KEY_LENGTH */
-	uint max_supported_key_length() const { return 3500; }
+	ulong index_flags(uint idx, uint part, bool all_parts) const;
+	uint max_supported_keys() const;
+	uint max_supported_key_length() const;
 	uint max_supported_key_part_length() const;
-	const key_map *keys_to_use_for_scanning() { return &key_map_full; }
+	const key_map* keys_to_use_for_scanning();
 
 	int open(const char *name, int mode, uint test_if_locked);
 	handler* clone(const char *name, MEM_ROOT *mem_root);
@@ -165,13 +183,15 @@ class ha_innobase: public handler
 	void update_create_info(HA_CREATE_INFO* create_info);
 	int create(const char *name, register TABLE *form,
 					HA_CREATE_INFO *create_info);
-	int delete_all_rows();
+	int truncate();
 	int delete_table(const char *name);
 	int rename_table(const char* from, const char* to);
 	int check(THD* thd, HA_CHECK_OPT* check_opt);
 	char* update_table_comment(const char* comment);
 	char* get_foreign_key_create_info();
 	int get_foreign_key_list(THD *thd, List<FOREIGN_KEY_INFO> *f_key_list);
+	int get_parent_foreign_key_list(THD *thd,
+					List<FOREIGN_KEY_INFO> *f_key_list);
 	bool can_switch_engines();
 	uint referenced_by_foreign_key();
 	void free_foreign_key_create_info(char* str);
@@ -186,7 +206,7 @@ class ha_innobase: public handler
 
 	virtual bool get_error_message(int error, String *buf);
 
-	uint8 table_cache_type() { return HA_CACHE_TBL_ASKTRANSACT; }
+	uint8 table_cache_type();
 	/*
 	  ask handler about permission to cache table during query registration
 	*/
@@ -196,8 +216,16 @@ class ha_innobase: public handler
 					   ulonglong *engine_data);
 	static char *get_mysql_bin_log_name();
 	static ulonglong get_mysql_bin_log_pos();
-	bool primary_key_is_clustered() { return true; }
+	bool primary_key_is_clustered();
 	int cmp_ref(const uchar *ref1, const uchar *ref2);
+	/** Fast index creation (smart ALTER TABLE) @see handler0alter.cc @{ */
+	int add_index(TABLE *table_arg, KEY *key_info, uint num_of_keys,
+		      handler_add_index **add);
+	int final_add_index(handler_add_index *add, bool commit);
+	int prepare_drop_index(TABLE *table_arg, uint *key_num,
+			       uint num_of_keys);
+	int final_drop_index(TABLE *table_arg);
+	/** @} */
 	bool check_if_incompatible_data(HA_CREATE_INFO *info,
 					uint table_changes);
 };
@@ -260,4 +288,53 @@ void thd_mark_transaction_to_rollback(MYSQL_THD thd, bool all);
   @retval 1 the query is not filtered, 0 otherwise.
 */
 bool thd_binlog_filter_ok(const MYSQL_THD thd);
+
+/**
+  Check if the query may generate row changes which
+  may end up in the binary.
+  @param  thd   Thread handle
+  @return 1 the query may generate row changes, 0 otherwise.
+*/
+bool thd_sqlcom_can_generate_row_events(const MYSQL_THD thd);
 }
+
+typedef struct trx_struct trx_t;
+/********************************************************************//**
+@file handler/ha_innodb.h
+Converts an InnoDB error code to a MySQL error code and also tells to MySQL
+about a possible transaction rollback inside InnoDB caused by a lock wait
+timeout or a deadlock.
+@return	MySQL error code */
+extern "C"
+int
+convert_error_code_to_mysql(
+/*========================*/
+	int		error,	/*!< in: InnoDB error code */
+	ulint		flags,	/*!< in: InnoDB table flags, or 0 */
+	MYSQL_THD	thd);	/*!< in: user thread handle or NULL */
+
+/*********************************************************************//**
+Allocates an InnoDB transaction for a MySQL handler object.
+@return	InnoDB transaction handle */
+extern "C"
+trx_t*
+innobase_trx_allocate(
+/*==================*/
+	MYSQL_THD	thd);	/*!< in: user thread handle */
+
+
+/*********************************************************************//**
+This function checks each index name for a table against reserved
+system default primary index name 'GEN_CLUST_INDEX'. If a name
+matches, this function pushes an warning message to the client,
+and returns true.
+@return true if the index name matches the reserved name */
+extern "C"
+bool
+innobase_index_name_is_reserved(
+/*============================*/
+	THD*		thd,		/*!< in/out: MySQL connection */
+	const KEY*	key_info,	/*!< in: Indexes to be created */
+	ulint		num_of_keys);	/*!< in: Number of indexes to
+					be created. */
+

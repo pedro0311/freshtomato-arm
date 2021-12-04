@@ -1,4 +1,8 @@
-/* Copyright (C) 2002, 2006 MySQL AB
+#ifndef SHA1_INCLUDED
+#define SHA1_INCLUDED
+
+/* Copyright (c) 2002, 2006 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms.
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -97,3 +101,5 @@ int mysql_sha1_input(SHA1_CONTEXT*, const uint8 *, unsigned int);
 int mysql_sha1_result(SHA1_CONTEXT* , uint8 Message_Digest[SHA1_HASH_SIZE]);
 
 C_MODE_END
+
+#endif /* SHA__INCLUDED */

@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2008 MySQL AB
+/* Copyright (c) 2000, 2015, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   Note that we can't have assertion on file descriptors;  The reason for
@@ -24,35 +24,7 @@
 
 #ifdef HAVE_OPENSSL
 
-#ifdef __NETWARE__
-
-/* yaSSL already uses BSD sockets */
-#ifndef HAVE_YASSL
-
-/*
-  The default OpenSSL implementation on NetWare uses WinSock.
-  This code allows us to use the BSD sockets.
-*/
-
-static int SSL_set_fd_bsd(SSL *s, int fd)
-{
-  int result= -1;
-  BIO_METHOD *BIO_s_bsdsocket();
-  BIO *bio;
-
-  if ((bio= BIO_new(BIO_s_bsdsocket())))
-  {
-    result= BIO_set_fd(bio, fd, BIO_NOCLOSE);
-    SSL_set_bio(s, bio, bio);
-  }
-  return result;
-}
-
-#define SSL_set_fd(A, B)  SSL_set_fd_bsd((A), (B))
-
-#endif /* HAVE_YASSL */
-#endif /* __NETWARE__ */
-
+#ifndef DBUG_OFF
 
 static void
 report_errors(SSL* ssl)
@@ -61,9 +33,7 @@ report_errors(SSL* ssl)
   const char *file;
   const char *data;
   int line, flags;
-#ifndef DBUG_OFF
   char buf[512];
-#endif
 
   DBUG_ENTER("report_errors");
 
@@ -80,6 +50,8 @@ report_errors(SSL* ssl)
   DBUG_PRINT("info", ("socket_errno: %d", socket_errno));
   DBUG_VOID_RETURN;
 }
+
+#endif
 
 
 size_t vio_ssl_read(Vio *vio, uchar* buf, size_t size)
@@ -174,11 +146,16 @@ void vio_ssl_delete(Vio *vio)
 
 
 static int ssl_do(struct st_VioSSLFd *ptr, Vio *vio, long timeout,
-                  int (*connect_accept_func)(SSL*))
+                  int (*connect_accept_func)(SSL*), unsigned long *errptr)
 {
+  int r;
   SSL *ssl;
   my_bool unused;
   my_bool was_blocking;
+  /* Declared here to make compiler happy */
+#if !defined(HAVE_YASSL) && !defined(DBUG_OFF)
+  int j, n;
+#endif
 
   DBUG_ENTER("ssl_do");
   DBUG_PRINT("enter", ("ptr: 0x%lx, sd: %d  ctx: 0x%lx",
@@ -190,7 +167,7 @@ static int ssl_do(struct st_VioSSLFd *ptr, Vio *vio, long timeout,
   if (!(ssl= SSL_new(ptr->ssl_context)))
   {
     DBUG_PRINT("error", ("SSL_new failure"));
-    report_errors(ssl);
+    *errptr= ERR_get_error();
     vio_blocking(vio, was_blocking, &unused);
     DBUG_RETURN(1);
   }
@@ -198,14 +175,33 @@ static int ssl_do(struct st_VioSSLFd *ptr, Vio *vio, long timeout,
   SSL_clear(ssl);
   SSL_SESSION_set_timeout(SSL_get_session(ssl), timeout);
   SSL_set_fd(ssl, vio->sd);
-#ifndef HAVE_YASSL
-  SSL_set_options(ssl, SSL_OP_NO_COMPRESSION);
+#if !defined(HAVE_YASSL) && defined(SSL_OP_NO_COMPRESSION)
+  SSL_set_options(ssl, SSL_OP_NO_COMPRESSION); /* OpenSSL >= 1.0 only */
+#elif OPENSSL_VERSION_NUMBER >= 0x00908000L /* workaround for OpenSSL 0.9.8 */
+  sk_SSL_COMP_zero(SSL_COMP_get_compression_methods());
 #endif
 
-  if (connect_accept_func(ssl) < 1)
+#if !defined(HAVE_YASSL) && !defined(DBUG_OFF)
+  {
+    STACK_OF(SSL_COMP) *ssl_comp_methods = NULL;
+    ssl_comp_methods = SSL_COMP_get_compression_methods();
+    n= sk_SSL_COMP_num(ssl_comp_methods);
+    DBUG_PRINT("info", ("Available compression methods:\n"));
+    if (n == 0)
+      DBUG_PRINT("info", ("NONE\n"));
+    else
+      for (j = 0; j < n; j++)
+      {
+        SSL_COMP *c = sk_SSL_COMP_value(ssl_comp_methods, j);
+        DBUG_PRINT("info", ("  %d: %s\n", c->id, c->name));
+      }
+  }
+#endif
+
+  if ((r= connect_accept_func(ssl)) < 1)
   {
     DBUG_PRINT("error", ("SSL_connect/accept failure"));
-    report_errors(ssl);
+    *errptr= SSL_get_error(ssl, r);
     SSL_free(ssl);
     vio_blocking(vio, was_blocking, &unused);
     DBUG_RETURN(1);
@@ -253,17 +249,17 @@ static int ssl_do(struct st_VioSSLFd *ptr, Vio *vio, long timeout,
 }
 
 
-int sslaccept(struct st_VioSSLFd *ptr, Vio *vio, long timeout)
+int sslaccept(struct st_VioSSLFd *ptr, Vio *vio, long timeout, unsigned long *errptr)
 {
   DBUG_ENTER("sslaccept");
-  DBUG_RETURN(ssl_do(ptr, vio, timeout, SSL_accept));
+  DBUG_RETURN(ssl_do(ptr, vio, timeout, SSL_accept, errptr));
 }
 
 
-int sslconnect(struct st_VioSSLFd *ptr, Vio *vio, long timeout)
+int sslconnect(struct st_VioSSLFd *ptr, Vio *vio, long timeout, unsigned long *errptr)
 {
   DBUG_ENTER("sslconnect");
-  DBUG_RETURN(ssl_do(ptr, vio, timeout, SSL_connect));
+  DBUG_RETURN(ssl_do(ptr, vio, timeout, SSL_connect, errptr));
 }
 
 
@@ -277,6 +273,9 @@ int vio_ssl_blocking(Vio *vio __attribute__((unused)),
   return (set_blocking_mode ? 0 : 1);
 }
 
-
+my_bool vio_ssl_has_data(Vio *vio)
+{
+  return SSL_pending(vio->ssl_arg) > 0 ? TRUE : FALSE;
+}
 
 #endif /* HAVE_OPENSSL */

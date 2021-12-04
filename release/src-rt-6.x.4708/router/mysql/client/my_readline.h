@@ -1,3 +1,6 @@
+#ifndef CLIENT_MY_READLINE_INCLUDED
+#define CLIENT_MY_READLINE_INCLUDED
+
 /*
    Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
 
@@ -35,3 +38,5 @@ extern LINE_BUFFER *batch_readline_init(ulong max_size,FILE *file);
 extern LINE_BUFFER *batch_readline_command(LINE_BUFFER *buffer, char * str);
 extern char *batch_readline(LINE_BUFFER *buffer);
 extern void batch_readline_end(LINE_BUFFER *buffer);
+
+#endif /* CLIENT_MY_READLINE_INCLUDED */

@@ -238,6 +238,9 @@ int check_if_legal_filename(const char *path)
   const char **reserved_name;
   DBUG_ENTER("check_if_legal_filename");
 
+  if(!is_filename_allowed(path, strlen(path)))
+    DBUG_RETURN(1);
+
   path+= dirname_length(path);                  /* To start of filename */
   if (!(end= strchr(path, FN_EXTCHAR)))
     end= strend(path);

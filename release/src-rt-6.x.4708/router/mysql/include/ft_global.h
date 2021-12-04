@@ -1,4 +1,5 @@
-/* Copyright (c) 2000-2005, 2007 MySQL AB
+/* Copyright (c) 2000-2005, 2007 MySQL AB, 2009 Sun Microsystems, Inc.
+   Use is subject to license terms.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Written by Sergei A. Golubchik, who has a shared copyright to this code */
 
@@ -27,6 +28,8 @@ extern "C" {
 
 #define HA_FT_MAXBYTELEN 254
 #define HA_FT_MAXCHARLEN (HA_FT_MAXBYTELEN/3)
+
+#define DEFAULT_FTB_SYNTAX "+ -><()~*:\"\"&|"
 
 typedef struct st_ft_info FT_INFO;
 struct _ft_vft
@@ -51,7 +54,7 @@ extern const char *ft_precompiled_stopwords[];
 extern ulong ft_min_word_len;
 extern ulong ft_max_word_len;
 extern ulong ft_query_expansion_limit;
-extern char  ft_boolean_syntax[15];
+extern const char *ft_boolean_syntax;
 extern struct st_mysql_ftparser ft_default_parser;
 
 int ft_init_stopwords(void);

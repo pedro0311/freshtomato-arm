@@ -1,0 +1,12 @@
+--- mysql/scripts/mysql_install_db.sh
++++ mysql/scripts/mysql_install_db.sh
+@@ -234,6 +234,9 @@
+     cannot_find_file my_print_defaults $basedir/bin $basedir/extra
+     exit 1
+   fi
++elif test -x `dirname $0`/my_print_defaults
++then
++  print_defaults="`dirname $0`/my_print_defaults"
+ else
+   print_defaults="@bindir@/my_print_defaults"
+ fi

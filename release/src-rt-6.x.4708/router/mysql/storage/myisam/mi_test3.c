@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2008 MySQL AB
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,11 +11,9 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Test av locking */
-
-#ifndef __NETWARE__
 
 #include "myisam.h"
 #include <sys/types.h>
@@ -109,7 +107,7 @@ int main(int argc,char **argv)
       sleep(1);
       return 0;
     }
-    VOID(rnd(1));
+    (void) rnd(1);
   }
 
   for (i=0 ; i < forks ; i++)
@@ -460,7 +458,7 @@ int test_update(MI_INFO *file,int id,int lock_type)
 	}
       }
     }
-    memcpy_fixed(new_record.id,record.id,sizeof(record.id));
+    memcpy(new_record.id, record.id, sizeof(record.id));
     tmp=rnd(20000)+40000;
     int4store(new_record.nr,tmp);
     if (!mi_update(file,record.id,new_record.id))
@@ -488,14 +486,4 @@ int test_update(MI_INFO *file,int id,int lock_type)
   return 0;
 }
 
-#else /* __NETWARE__ */
-
-#include <stdio.h>
-
-main()
-{
-	fprintf(stderr,"this test has not been ported to NetWare\n");
-	return 0;
-}
-
-#endif /* __NETWARE__ */
+#include "mi_extrafunc.h"

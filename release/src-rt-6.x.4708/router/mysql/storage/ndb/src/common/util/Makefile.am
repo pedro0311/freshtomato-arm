@@ -1,4 +1,5 @@
-# Copyright (c) 2004, 2010, Oracle and/or its affiliates. All rights reserved.
+# Copyright (C) 2004-2005 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,9 +46,6 @@ testBitmask.o:	$(testBitmask_SOURCES)
 
 include $(top_srcdir)/storage/ndb/config/common.mk.am
 include $(top_srcdir)/storage/ndb/config/type_util.mk.am
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp: libgeneral.dsp
 

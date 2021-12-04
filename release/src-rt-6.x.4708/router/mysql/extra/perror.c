@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Return error-text for system error messages and handler messages */
 
@@ -35,6 +34,7 @@ static my_bool verbose, print_all_codes;
 
 #include "../include/my_base.h"
 #include "../mysys/my_handler_errors.h"
+// #include "../include/my_compare.h"
 
 #ifdef WITH_NDBCLUSTER_STORAGE_ENGINE
 static my_bool ndb_code;
@@ -66,7 +66,8 @@ static struct my_option my_long_options[] =
    &ndb_code, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
 #ifdef HAVE_SYS_ERRLIST
-  {"all", 'a', "Print all the error messages and the number.",
+  {"all", 'a', "Print all the error messages and the number. Deprecated,"
+   " will be removed in a future release.",
    &print_all_codes, &print_all_codes, 0, GET_BOOL, NO_ARG,
    0, 0, 0, 0, 0, 0},
 #endif
@@ -104,8 +105,6 @@ static HA_ERRORS ha_errlist[]=
 };
 
 
-#include <help_start.h>
-
 static void print_version(void)
 {
   printf("%s Ver %s, for %s (%s)\n",my_progname,PERROR_VERSION,
@@ -123,8 +122,6 @@ static void usage(void)
   my_print_help(my_long_options);
   my_print_variables(my_long_options);
 }
-
-#include <help_end.h>
 
 
 static my_bool
@@ -186,36 +183,45 @@ static const char *get_ha_error_msg(int code)
   return NullS;
 }
 
+typedef struct
+{
+  const char *name;
+  uint        code;
+  const char *text;
+} st_error;
 
-/*
-  Register handler error messages for usage with my_error()
+static st_error global_error_names[] =
+{
+#include <mysqld_ername.h>
+  { 0, 0, 0 }
+};
 
-  NOTES
-    This is safe to call multiple times as my_error_register()
-    will ignore calls to register already registered error numbers.
+/**
+  Lookup an error by code in the global_error_names array.
+  @param code the code to lookup
+  @param [out] name_ptr the error name, when found
+  @param [out] msg_ptr the error text, when found
+  @return 1 when found, otherwise 0
 */
-void my_handler_error_register(void)
+int get_ER_error_msg(uint code, const char **name_ptr, const char **msg_ptr)
 {
-  /*
-    If you got compilation error here about compile_time_assert array, check
-    that every HA_ERR_xxx constant has a corresponding error message in
-    handler_error_messages[] list (check mysys/ma_handler_errors.h and
-    include/my_base.h).
-  */
-  compile_time_assert(HA_ERR_FIRST + array_elements(handler_error_messages) ==
-                      HA_ERR_LAST + 1);
-  my_error_register(handler_error_messages, HA_ERR_FIRST,
-                    HA_ERR_FIRST+ array_elements(handler_error_messages)-1);
+  st_error *tmp_error;
+
+  tmp_error= & global_error_names[0];
+
+  while (tmp_error->name != NULL)
+  {
+    if (tmp_error->code == code)
+    {
+      *name_ptr= tmp_error->name;
+      *msg_ptr= tmp_error->text;
+      return 1;
+    }
+    tmp_error++;
+  }
+
+  return 0;
 }
-
-
-void my_handler_error_unregister(void)
-{
-  my_error_unregister(HA_ERR_FIRST,
-                      HA_ERR_FIRST+ array_elements(handler_error_messages)-1);
-}
-
-
 
 #if defined(__WIN__)
 static my_bool print_win_error_msg(DWORD error, my_bool verbose)
@@ -237,12 +243,45 @@ static my_bool print_win_error_msg(DWORD error, my_bool verbose)
 }
 #endif
 
+/*
+  Register handler error messages for usage with my_error()
 
+  NOTES
+    This is safe to call multiple times as my_error_register()
+    will ignore calls to register already registered error numbers.
+*/
+
+static const char **get_handler_error_messages()
+{
+  return handler_error_messages;
+}
+
+void my_handler_error_register(void)
+{
+  /*
+    If you got compilation error here about compile_time_assert array, check
+    that every HA_ERR_xxx constant has a corresponding error message in
+    handler_error_messages[] list (check mysys/ma_handler_errors.h and
+    include/my_base.h).
+  */
+  compile_time_assert(HA_ERR_FIRST + array_elements(handler_error_messages) ==
+                      HA_ERR_LAST + 1);
+  my_error_register(get_handler_error_messages, HA_ERR_FIRST,
+                    HA_ERR_FIRST+ array_elements(handler_error_messages)-1);
+}
+
+
+void my_handler_error_unregister(void)
+{
+  my_error_unregister(HA_ERR_FIRST,
+                      HA_ERR_FIRST+ array_elements(handler_error_messages)-1);
+}
 
 int main(int argc,char *argv[])
 {
   int error,code,found;
   const char *msg;
+  const char *name;
   char *unknown_error = 0;
 #if defined(__WIN__)
   my_bool skip_win_message= 0;
@@ -259,9 +298,11 @@ int main(int argc,char *argv[])
   if (print_all_codes)
   {
     HA_ERRORS *ha_err_ptr;
+    printf("WARNING: option '-a/--all' is deprecated and will be removed in a"
+           " future release.\n");
     for (code=1 ; code < sys_nerr ; code++)
     {
-      if (sys_errlist[code][0])
+      if (sys_errlist[code] && sys_errlist[code][0])
       {						/* Skip if no error-text */
 	printf("%3d = %s\n",code,sys_errlist[code]);
       }
@@ -273,7 +314,7 @@ int main(int argc,char *argv[])
 #endif
   {
     /*
-      On some system, like NETWARE, strerror(unknown_error) returns a
+      On some system, like Linux, strerror(unknown_error) returns a
       string 'Unknown Error'.  To avoid printing it we try to find the
       error string by asking for an impossible big error message.
 
@@ -345,6 +386,14 @@ int main(int argc,char *argv[])
         found= 1;
         if (verbose)
           printf("MySQL error code %3d: %s\n", code, msg);
+        else
+          puts(msg);
+      }
+      if (get_ER_error_msg(code, & name, & msg))
+      {
+        found= 1;
+        if (verbose)
+          printf("MySQL error code %3d (%s): %s\n", code, name, msg);
         else
           puts(msg);
       }

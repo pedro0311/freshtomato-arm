@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2002, 2011, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2002, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,14 +12,23 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"
 #include "sp.h"
+#include "sql_base.h"                           // close_thread_tables
+#include "sql_parse.h"                          // parse_sql
+#include "key.h"                                // key_copy
+#include "sql_show.h"             // append_definer, append_identifier
+#include "sql_db.h" // get_default_db_collation, mysql_opt_change_db,
+                    // mysql_change_db, check_db_dir_existence,
+                    // load_db_opt_by_name
+#include "sql_table.h"                          // write_bin_log
+#include "sql_acl.h"                       // SUPER_ACL
 #include "sp_head.h"
 #include "sp_cache.h"
-#include "sql_trigger.h"
+#include "lock.h"                               // lock_object_name
 
 #include <my_user.h>
 
@@ -33,44 +42,15 @@ create_string(THD *thd, String *buf,
 	      const char *body, ulong bodylen,
 	      st_sp_chistics *chistics,
               const LEX_STRING *definer_user,
-              const LEX_STRING *definer_host);
+              const LEX_STRING *definer_host,
+              ulong sql_mode);
+
 static int
 db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
                 ulong sql_mode, const char *params, const char *returns,
                 const char *body, st_sp_chistics &chistics,
                 const char *definer, longlong created, longlong modified,
                 Stored_program_creation_ctx *creation_ctx);
-
-/*
- *
- * DB storage of Stored PROCEDUREs and FUNCTIONs
- *
- */
-
-enum
-{
-  MYSQL_PROC_FIELD_DB = 0,
-  MYSQL_PROC_FIELD_NAME,
-  MYSQL_PROC_MYSQL_TYPE,
-  MYSQL_PROC_FIELD_SPECIFIC_NAME,
-  MYSQL_PROC_FIELD_LANGUAGE,
-  MYSQL_PROC_FIELD_ACCESS,
-  MYSQL_PROC_FIELD_DETERMINISTIC,
-  MYSQL_PROC_FIELD_SECURITY_TYPE,
-  MYSQL_PROC_FIELD_PARAM_LIST,
-  MYSQL_PROC_FIELD_RETURNS,
-  MYSQL_PROC_FIELD_BODY,
-  MYSQL_PROC_FIELD_DEFINER,
-  MYSQL_PROC_FIELD_CREATED,
-  MYSQL_PROC_FIELD_MODIFIED,
-  MYSQL_PROC_FIELD_SQL_MODE,
-  MYSQL_PROC_FIELD_COMMENT,
-  MYSQL_PROC_FIELD_CHARACTER_SET_CLIENT,
-  MYSQL_PROC_FIELD_COLLATION_CONNECTION,
-  MYSQL_PROC_FIELD_DB_COLLATION,
-  MYSQL_PROC_FIELD_BODY_UTF8,
-  MYSQL_PROC_FIELD_COUNT
-};
 
 static const
 TABLE_FIELD_TYPE proc_table_fields[MYSQL_PROC_FIELD_COUNT] =
@@ -160,7 +140,7 @@ TABLE_FIELD_TYPE proc_table_fields[MYSQL_PROC_FIELD_COUNT] =
   },
   {
     { C_STRING_WITH_LEN("comment") },
-    { C_STRING_WITH_LEN("char(64)") },
+    { C_STRING_WITH_LEN("text") },
     { C_STRING_WITH_LEN("utf8") }
   },
   {
@@ -371,7 +351,7 @@ private:
   bool m_print_once;
 
 public:
-  Proc_table_intact() : m_print_once(TRUE) {}
+  Proc_table_intact() : m_print_once(TRUE) { has_keys= TRUE; }
 
 protected:
   void report_error(uint code, const char *fmt, ...);
@@ -392,7 +372,7 @@ void Proc_table_intact::report_error(uint code, const char *fmt, ...)
   my_vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
 
-  if (code)
+  if (code == ER_COL_COUNT_DOESNT_MATCH_CORRUPTED)
     my_message(code, buf, MYF(0));
   else
     my_error(ER_CANNOT_LOAD_FROM_TABLE, MYF(0), "proc");
@@ -423,12 +403,13 @@ static Proc_table_intact proc_table_intact;
     \#	Pointer to TABLE object of mysql.proc
 */
 
-TABLE *open_proc_table_for_read(THD *thd, Open_tables_state *backup)
+TABLE *open_proc_table_for_read(THD *thd, Open_tables_backup *backup)
 {
+  TABLE_LIST table;
+
   DBUG_ENTER("open_proc_table_for_read");
 
-  TABLE_LIST table;
-  table.init_one_table("mysql", "proc", TL_READ);
+  table.init_one_table("mysql", 5, "proc", 4, "proc", TL_READ);
 
   if (open_system_tables_for_read(thd, &table, backup))
     DBUG_RETURN(NULL);
@@ -458,11 +439,12 @@ TABLE *open_proc_table_for_read(THD *thd, Open_tables_state *backup)
 
 static TABLE *open_proc_table_for_update(THD *thd)
 {
+  TABLE_LIST table_list;
+  TABLE *table;
+  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
   DBUG_ENTER("open_proc_table_for_update");
 
-  TABLE *table;
-  TABLE_LIST table_list;
-  table_list.init_one_table("mysql", "proc", TL_WRITE);
+  table_list.init_one_table("mysql", 5, "proc", 4, "proc", TL_WRITE);
 
   if (!(table= open_system_table_for_update(thd, &table_list)))
     DBUG_RETURN(NULL);
@@ -471,6 +453,7 @@ static TABLE *open_proc_table_for_update(THD *thd)
     DBUG_RETURN(table);
 
   close_thread_tables(thd);
+  thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
   DBUG_RETURN(NULL);
 }
@@ -558,7 +541,7 @@ db_find_routine(THD *thd, int type, sp_name *name, sp_head **sphp)
   String str(buff, sizeof(buff), &my_charset_bin);
   bool saved_time_zone_used= thd->time_zone_used;
   ulong sql_mode, saved_mode= thd->variables.sql_mode;
-  Open_tables_state open_tables_state_backup;
+  Open_tables_backup open_tables_state_backup;
   Stored_program_creation_ctx *creation_ctx;
 
   DBUG_ENTER("db_find_routine");
@@ -692,21 +675,85 @@ db_find_routine(THD *thd, int type, sp_name *name, sp_head **sphp)
 struct Silence_deprecated_warning : public Internal_error_handler
 {
 public:
-  virtual bool handle_error(uint sql_errno, const char *message,
-                            MYSQL_ERROR::enum_warning_level level,
-                            THD *thd);
+  virtual bool handle_condition(THD *thd,
+                                uint sql_errno,
+                                const char* sqlstate,
+                                MYSQL_ERROR::enum_warning_level level,
+                                const char* msg,
+                                MYSQL_ERROR ** cond_hdl);
 };
 
 bool
-Silence_deprecated_warning::handle_error(uint sql_errno, const char *message,
-                                         MYSQL_ERROR::enum_warning_level level,
-                                         THD *thd)
+Silence_deprecated_warning::handle_condition(
+  THD *,
+  uint sql_errno,
+  const char*,
+  MYSQL_ERROR::enum_warning_level level,
+  const char*,
+  MYSQL_ERROR ** cond_hdl)
 {
+  *cond_hdl= NULL;
   if (sql_errno == ER_WARN_DEPRECATED_SYNTAX &&
       level == MYSQL_ERROR::WARN_LEVEL_WARN)
     return TRUE;
 
   return FALSE;
+}
+
+
+/**
+  @brief    The function parses input strings and returns SP stucture.
+
+  @param[in]      thd               Thread handler
+  @param[in]      defstr            CREATE... string
+  @param[in]      sql_mode          SQL mode
+  @param[in]      creation_ctx      Creation context of stored routines
+                                    
+  @return     Pointer on sp_head struct
+    @retval   #                     Pointer on sp_head struct
+    @retval   0                     error
+*/
+
+static sp_head *sp_compile(THD *thd, String *defstr, ulong sql_mode,
+                           Stored_program_creation_ctx *creation_ctx)
+{
+  sp_head *sp;
+  ulong old_sql_mode= thd->variables.sql_mode;
+  ha_rows old_select_limit= thd->variables.select_limit;
+  sp_rcontext *old_spcont= thd->spcont;
+  Silence_deprecated_warning warning_handler;
+  Parser_state parser_state;
+
+  thd->variables.sql_mode= sql_mode;
+  thd->variables.select_limit= HA_POS_ERROR;
+
+  if (parser_state.init(thd, defstr->c_ptr(), defstr->length()))
+  {
+    thd->variables.sql_mode= old_sql_mode;
+    thd->variables.select_limit= old_select_limit;
+    return NULL;
+  }
+
+  lex_start(thd);
+  thd->push_internal_handler(&warning_handler);
+  thd->spcont= 0;
+
+  if (parse_sql(thd, & parser_state, creation_ctx) || thd->lex == NULL)
+  {
+    sp= thd->lex->sphead;
+    delete sp;
+    sp= 0;
+  }
+  else
+  {
+    sp= thd->lex->sphead;
+  }
+
+  thd->pop_internal_handler();
+  thd->spcont= old_spcont;
+  thd->variables.sql_mode= old_sql_mode;
+  thd->variables.select_limit= old_select_limit;
+  return sp;
 }
 
 
@@ -717,9 +764,12 @@ public:
     :m_error_caught(false)
   {}
 
-  virtual bool handle_error(uint sql_errno, const char *message,
-                            MYSQL_ERROR::enum_warning_level level,
-                            THD *thd);
+  virtual bool handle_condition(THD *thd,
+                                uint sql_errno,
+                                const char* sqlstate,
+                                MYSQL_ERROR::enum_warning_level level,
+                                const char* message,
+                                MYSQL_ERROR ** cond_hdl);
 
   bool error_caught() const { return m_error_caught; }
 
@@ -728,9 +778,12 @@ private:
 };
 
 bool
-Bad_db_error_handler::handle_error(uint sql_errno, const char *message,
-                                   MYSQL_ERROR::enum_warning_level level,
-                                   THD *thd)
+Bad_db_error_handler::handle_condition(THD *thd,
+                                       uint sql_errno,
+                                       const char* sqlstate,
+                                       MYSQL_ERROR::enum_warning_level level,
+                                       const char* message,
+                                       MYSQL_ERROR ** cond_hdl)
 {
   if (sql_errno == ER_BAD_DB_ERROR)
   {
@@ -754,10 +807,6 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
   LEX_STRING saved_cur_db_name=
     { saved_cur_db_name_buf, sizeof(saved_cur_db_name_buf) };
   bool cur_db_changed;
-  ulong old_sql_mode= thd->variables.sql_mode;
-  ha_rows old_select_limit= thd->variables.select_limit;
-  sp_rcontext *old_spcont= thd->spcont;
-  Silence_deprecated_warning warning_handler;
   Bad_db_error_handler db_not_exists_handler;
   char definer_user_name_holder[USERNAME_LENGTH + 1];
   LEX_STRING definer_user_name= { definer_user_name_holder,
@@ -766,10 +815,7 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
   char definer_host_name_holder[HOSTNAME_LENGTH + 1];
   LEX_STRING definer_host_name= { definer_host_name_holder, HOSTNAME_LENGTH };
 
-  int ret;
-
-  thd->variables.sql_mode= sql_mode;
-  thd->variables.select_limit= HA_POS_ERROR;
+  int ret= 0;
 
   thd->lex= &newlex;
   newlex.current_select= NULL;
@@ -793,7 +839,8 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
                      params, strlen(params),
                      returns, strlen(returns),
                      body, strlen(body),
-                     &chistics, &definer_user_name, &definer_host_name))
+                     &chistics, &definer_user_name, &definer_host_name,
+                     sql_mode))
   {
     ret= SP_INTERNAL_ERROR;
     goto end;
@@ -821,22 +868,9 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
 
     goto end;
   }
-  thd->spcont= NULL;
 
   {
-    Parser_state parser_state;
-    if (parser_state.init(thd, defstr.c_ptr(), defstr.length()))
-    {
-      ret= SP_INTERNAL_ERROR;
-      goto end;
-    }
-
-    lex_start(thd);
-
-    thd->push_internal_handler(&warning_handler);
-    ret= parse_sql(thd, & parser_state, creation_ctx) || newlex.sphead == NULL;
-    thd->pop_internal_handler();
-
+    *sphp= sp_compile(thd, &defstr, sql_mode, creation_ctx);
     /*
       Force switching back to the saved current database (if changed),
       because it may be NULL. In this case, mysql_change_db() would
@@ -845,19 +879,16 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
 
     if (cur_db_changed && mysql_change_db(thd, &saved_cur_db_name, TRUE))
     {
-      delete newlex.sphead;
       ret= SP_INTERNAL_ERROR;
       goto end;
     }
 
-    if (ret)
+    if (!*sphp)
     {
-      delete newlex.sphead;
       ret= SP_PARSE_ERROR;
       goto end;
     }
 
-    *sphp= newlex.sphead;
     (*sphp)->set_definer(&definer_user_name, &definer_host_name);
     (*sphp)->set_info(created, modified, &chistics, sql_mode);
     (*sphp)->set_creation_ctx(creation_ctx);
@@ -874,10 +905,8 @@ db_load_routine(THD *thd, int type, sp_name *name, sp_head **sphp,
   }
 
 end:
+  thd->lex->sphead= NULL;
   lex_end(thd->lex);
-  thd->spcont= old_spcont;
-  thd->variables.sql_mode= old_sql_mode;
-  thd->variables.select_limit= old_select_limit;
   thd->lex= old_lex;
   return ret;
 }
@@ -900,6 +929,11 @@ sp_returns_type(THD *thd, String &result, sp_head *sp)
   {
     result.append(STRING_WITH_LEN(" CHARSET "));
     result.append(field->charset()->csname);
+    if (!(field->charset()->state & MY_CS_PRIMARY))
+    {
+      result.append(STRING_WITH_LEN(" COLLATE "));
+      result.append(field->charset()->name);
+    }
   }
 
   delete field;
@@ -936,6 +970,8 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
   TABLE *table;
   char definer[USER_HOST_BUFF_SIZE];
   ulong saved_mode= thd->variables.sql_mode;
+  MDL_key::enum_mdl_namespace mdl_type= type == TYPE_ENUM_FUNCTION ?
+                                        MDL_key::FUNCTION : MDL_key::PROCEDURE;
 
   CHARSET_INFO *db_cs= get_default_db_collation(thd, sp->m_db.str);
 
@@ -954,6 +990,10 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
   DBUG_ASSERT(type == TYPE_ENUM_PROCEDURE ||
               type == TYPE_ENUM_FUNCTION);
 
+  /* Grab an exclusive MDL lock. */
+  if (lock_object_name(thd, mdl_type, sp->m_db.str, sp->m_name.str))
+    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+
   /* Reset sql_mode during data dictionary operations. */
   thd->variables.sql_mode= 0;
 
@@ -962,8 +1002,8 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
     row-based replication.  The flag will be reset at the end of the
     statement.
   */
-  save_binlog_row_based= thd->current_stmt_binlog_row_based;
-  thd->clear_current_stmt_binlog_row_based();
+  if ((save_binlog_row_based= thd->is_current_stmt_binlog_format_row()))
+    thd->clear_current_stmt_binlog_format_row();
 
   saved_count_cuted_fields= thd->count_cuted_fields;
   thd->count_cuted_fields= CHECK_FIELD_WARN;
@@ -1131,7 +1171,10 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
     ret= SP_OK;
     if (table->file->ha_write_row(table->record[0]))
       ret= SP_WRITE_ROW_FAILED;
-    else if (mysql_bin_log.is_open())
+    if (ret == SP_OK)
+      sp_cache_invalidate();
+
+    if (ret == SP_OK && mysql_bin_log.is_open())
     {
       thd->clear_error();
 
@@ -1147,7 +1190,8 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
                          retstr.c_ptr(), retstr.length(),
                          sp->m_body.str, sp->m_body.length,
                          sp->m_chistics, &(thd->lex->definer->user),
-                         &(thd->lex->definer->host)))
+                         &(thd->lex->definer->host),
+                         saved_mode))
       {
         ret= SP_INTERNAL_ERROR;
         goto done;
@@ -1155,22 +1199,21 @@ sp_create_routine(THD *thd, int type, sp_head *sp)
       /* restore sql_mode when binloging */
       thd->variables.sql_mode= saved_mode;
       /* Such a statement can always go directly to binlog, no trans cache */
-      if (thd->binlog_query(THD::MYSQL_QUERY_TYPE,
+      if (thd->binlog_query(THD::STMT_QUERY_TYPE,
                             log_query.c_ptr(), log_query.length(),
-                            FALSE, FALSE, 0))
+                            FALSE, FALSE, FALSE, 0))
         ret= SP_INTERNAL_ERROR;
       thd->variables.sql_mode= 0;
     }
-
   }
 
 done:
   thd->count_cuted_fields= saved_count_cuted_fields;
   thd->variables.sql_mode= saved_mode;
-
-  close_thread_tables(thd);
   /* Restore the state of binlog format */
-  thd->current_stmt_binlog_row_based= save_binlog_row_based;
+  DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
+  if (save_binlog_row_based)
+    thd->set_current_stmt_binlog_format_row();
   DBUG_RETURN(ret);
 }
 
@@ -1196,6 +1239,8 @@ sp_drop_routine(THD *thd, int type, sp_name *name)
   TABLE *table;
   int ret;
   bool save_binlog_row_based;
+  MDL_key::enum_mdl_namespace mdl_type= type == TYPE_ENUM_FUNCTION ?
+                                        MDL_key::FUNCTION : MDL_key::PROCEDURE;
   DBUG_ENTER("sp_drop_routine");
   DBUG_PRINT("enter", ("type: %d  name: %.*s",
 		       type, (int) name->m_name.length, name->m_name.str));
@@ -1203,16 +1248,21 @@ sp_drop_routine(THD *thd, int type, sp_name *name)
   DBUG_ASSERT(type == TYPE_ENUM_PROCEDURE ||
               type == TYPE_ENUM_FUNCTION);
 
+  /* Grab an exclusive MDL lock. */
+  if (lock_object_name(thd, mdl_type, name->m_db.str, name->m_name.str))
+    DBUG_RETURN(SP_DELETE_ROW_FAILED);
+
+  if (!(table= open_proc_table_for_update(thd)))
+    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+
   /*
     This statement will be replicated as a statement, even when using
     row-based replication.  The flag will be reset at the end of the
     statement.
   */
-  save_binlog_row_based= thd->current_stmt_binlog_row_based;
-  thd->clear_current_stmt_binlog_row_based();
+  if ((save_binlog_row_based= thd->is_current_stmt_binlog_format_row()))
+    thd->clear_current_stmt_binlog_format_row();
 
-  if (!(table= open_proc_table_for_update(thd)))
-    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
   if ((ret= db_find_routine_aux(thd, type, name, table)) == SP_OK)
   {
     if (table->file->ha_delete_row(table->record[0]))
@@ -1224,11 +1274,25 @@ sp_drop_routine(THD *thd, int type, sp_name *name)
     if (write_bin_log(thd, TRUE, thd->query(), thd->query_length()))
       ret= SP_INTERNAL_ERROR;
     sp_cache_invalidate();
-  }
 
-  close_thread_tables(thd);
+    /*
+      A lame workaround for lack of cache flush:
+      make sure the routine is at least gone from the
+      local cache.
+    */
+    {
+      sp_head *sp;
+      sp_cache **spc= (type  == TYPE_ENUM_FUNCTION ?
+                       &thd->sp_func_cache : &thd->sp_proc_cache);
+      sp= sp_cache_lookup(spc, name);
+      if (sp)
+        sp_cache_flush_obsolete(spc, &sp);
+    }
+  }
   /* Restore the state of binlog format */
-  thd->current_stmt_binlog_row_based= save_binlog_row_based;
+  DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
+  if (save_binlog_row_based)
+    thd->set_current_stmt_binlog_format_row();
   DBUG_RETURN(ret);
 }
 
@@ -1256,24 +1320,56 @@ sp_update_routine(THD *thd, int type, sp_name *name, st_sp_chistics *chistics)
   TABLE *table;
   int ret;
   bool save_binlog_row_based;
+  MDL_key::enum_mdl_namespace mdl_type= type == TYPE_ENUM_FUNCTION ?
+                                        MDL_key::FUNCTION : MDL_key::PROCEDURE;
   DBUG_ENTER("sp_update_routine");
   DBUG_PRINT("enter", ("type: %d  name: %.*s",
 		       type, (int) name->m_name.length, name->m_name.str));
 
   DBUG_ASSERT(type == TYPE_ENUM_PROCEDURE ||
               type == TYPE_ENUM_FUNCTION);
+
+  /* Grab an exclusive MDL lock. */
+  if (lock_object_name(thd, mdl_type, name->m_db.str, name->m_name.str))
+    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+
+  if (!(table= open_proc_table_for_update(thd)))
+    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
+
   /*
     This statement will be replicated as a statement, even when using
     row-based replication. The flag will be reset at the end of the
     statement.
   */
-  save_binlog_row_based= thd->current_stmt_binlog_row_based;
-  thd->clear_current_stmt_binlog_row_based();
+  if ((save_binlog_row_based= thd->is_current_stmt_binlog_format_row()))
+    thd->clear_current_stmt_binlog_format_row();
 
-  if (!(table= open_proc_table_for_update(thd)))
-    DBUG_RETURN(SP_OPEN_TABLE_FAILED);
   if ((ret= db_find_routine_aux(thd, type, name, table)) == SP_OK)
   {
+    if (type == TYPE_ENUM_FUNCTION && ! trust_function_creators &&
+        mysql_bin_log.is_open() &&
+        (chistics->daccess == SP_CONTAINS_SQL ||
+         chistics->daccess == SP_MODIFIES_SQL_DATA))
+    {
+      char *ptr;
+      bool is_deterministic;
+      ptr= get_field(thd->mem_root,
+                     table->field[MYSQL_PROC_FIELD_DETERMINISTIC]);
+      if (ptr == NULL)
+      {
+        ret= SP_INTERNAL_ERROR;
+        goto err;
+      }
+      is_deterministic= ptr[0] == 'N' ? FALSE : TRUE;
+      if (!is_deterministic)
+      {
+        my_message(ER_BINLOG_UNSAFE_ROUTINE,
+                   ER(ER_BINLOG_UNSAFE_ROUTINE), MYF(0));
+        ret= SP_INTERNAL_ERROR;
+        goto err;
+      }
+    }
+
     store_record(table,record[1]);
     table->timestamp_field_type= TIMESTAMP_NO_AUTO_SET;
     ((Field_timestamp *)table->field[MYSQL_PROC_FIELD_MODIFIED])->set_time();
@@ -1300,11 +1396,127 @@ sp_update_routine(THD *thd, int type, sp_name *name, st_sp_chistics *chistics)
       ret= SP_INTERNAL_ERROR;
     sp_cache_invalidate();
   }
-
-  close_thread_tables(thd);
+err:
   /* Restore the state of binlog format */
-  thd->current_stmt_binlog_row_based= save_binlog_row_based;
+  DBUG_ASSERT(!thd->is_current_stmt_binlog_format_row());
+  if (save_binlog_row_based)
+    thd->set_current_stmt_binlog_format_row();
   DBUG_RETURN(ret);
+}
+
+
+/**
+  This internal handler is used to trap errors from opening mysql.proc.
+*/
+
+class Lock_db_routines_error_handler : public Internal_error_handler
+{
+public:
+  bool handle_condition(THD *thd,
+                        uint sql_errno,
+                        const char* sqlstate,
+                        MYSQL_ERROR::enum_warning_level level,
+                        const char* msg,
+                        MYSQL_ERROR ** cond_hdl)
+  {
+    if (sql_errno == ER_NO_SUCH_TABLE ||
+        sql_errno == ER_CANNOT_LOAD_FROM_TABLE ||
+        sql_errno == ER_COL_COUNT_DOESNT_MATCH_PLEASE_UPDATE ||
+        sql_errno == ER_COL_COUNT_DOESNT_MATCH_CORRUPTED)
+      return true;
+    return false;
+  }
+};
+
+
+/**
+   Acquires exclusive metadata lock on all stored routines in the
+   given database.
+
+   @note Will also return false (=success) if mysql.proc can't be opened
+         or is outdated. This allows DROP DATABASE to continue in these
+         cases.
+ */
+
+bool lock_db_routines(THD *thd, char *db)
+{
+  TABLE *table;
+  uint key_len;
+  Open_tables_backup open_tables_state_backup;
+  MDL_request_list mdl_requests;
+  Lock_db_routines_error_handler err_handler;
+  DBUG_ENTER("lock_db_routines");
+
+  /*
+    mysql.proc will be re-opened during deletion, so we can ignore
+    errors when opening the table here. The error handler is
+    used to avoid getting the same warning twice.
+  */
+  thd->push_internal_handler(&err_handler);
+  table= open_proc_table_for_read(thd, &open_tables_state_backup);
+  thd->pop_internal_handler();
+  if (!table)
+  {
+    /*
+      DROP DATABASE should not fail even if mysql.proc does not exist
+      or is outdated. We therefore only abort mysql_rm_db() if we
+      have errors not handled by the error handler.
+    */
+    DBUG_RETURN(thd->is_error() || thd->killed);
+  }
+
+  table->field[MYSQL_PROC_FIELD_DB]->store(db, strlen(db), system_charset_info);
+  key_len= table->key_info->key_part[0].store_length;
+  int nxtres= table->file->ha_index_init(0, 1);
+  if (nxtres)
+  {
+    table->file->print_error(nxtres, MYF(0));
+    close_system_tables(thd, &open_tables_state_backup);
+    DBUG_RETURN(true);
+  }
+
+  if (! table->file->index_read_map(table->record[0],
+                                    table->field[MYSQL_PROC_FIELD_DB]->ptr,
+                                    (key_part_map)1, HA_READ_KEY_EXACT))
+  {
+    do
+    {
+      char *sp_name= get_field(thd->mem_root,
+                               table->field[MYSQL_PROC_FIELD_NAME]);
+      if (sp_name == NULL)
+      {
+        table->file->ha_index_end();
+        my_error(ER_SP_WRONG_NAME, MYF(0), "");
+        close_system_tables(thd, &open_tables_state_backup);
+        DBUG_RETURN(true);
+      }
+
+      longlong sp_type= table->field[MYSQL_PROC_MYSQL_TYPE]->val_int();
+      MDL_request *mdl_request= new (thd->mem_root) MDL_request;
+      mdl_request->init(sp_type == TYPE_ENUM_FUNCTION ?
+                        MDL_key::FUNCTION : MDL_key::PROCEDURE,
+                        db, sp_name, MDL_EXCLUSIVE, MDL_TRANSACTION);
+      mdl_requests.push_front(mdl_request);
+    } while (! (nxtres= table->file->index_next_same(table->record[0],
+                                         table->field[MYSQL_PROC_FIELD_DB]->ptr,
+						     key_len)));
+  }
+  table->file->ha_index_end();
+  if (nxtres != 0 && nxtres != HA_ERR_END_OF_FILE)
+  {
+    table->file->print_error(nxtres, MYF(0));
+    close_system_tables(thd, &open_tables_state_backup);
+    DBUG_RETURN(true);
+  }
+  close_system_tables(thd, &open_tables_state_backup);
+
+  /* We should already hold a global IX lock and a schema X lock. */
+  DBUG_ASSERT(thd->mdl_context.is_lock_owner(MDL_key::GLOBAL, "", "",
+                                             MDL_INTENTION_EXCLUSIVE) &&
+              thd->mdl_context.is_lock_owner(MDL_key::SCHEMA, db, "",
+                                             MDL_EXCLUSIVE));
+  DBUG_RETURN(thd->mdl_context.acquire_locks(&mdl_requests,
+                                             thd->variables.lock_wait_timeout));
 }
 
 
@@ -1321,6 +1533,7 @@ sp_drop_db_routines(THD *thd, char *db)
   TABLE *table;
   int ret;
   uint key_len;
+  MDL_savepoint mdl_savepoint= thd->mdl_context.mdl_savepoint();
   DBUG_ENTER("sp_drop_db_routines");
   DBUG_PRINT("enter", ("db: %s", db));
 
@@ -1332,7 +1545,12 @@ sp_drop_db_routines(THD *thd, char *db)
   key_len= table->key_info->key_part[0].store_length;
 
   ret= SP_OK;
-  table->file->ha_index_init(0, 1);
+  if (table->file->ha_index_init(0, 1))
+  {
+    ret= SP_KEY_NOT_FOUND;
+    goto err_idx_init;
+  }
+
   if (! table->file->index_read_map(table->record[0],
                                     (uchar *)table->field[MYSQL_PROC_FIELD_DB]->ptr,
                                     (key_part_map)1, HA_READ_KEY_EXACT))
@@ -1360,7 +1578,13 @@ sp_drop_db_routines(THD *thd, char *db)
   }
   table->file->ha_index_end();
 
+err_idx_init:
   close_thread_tables(thd);
+  /*
+    Make sure to only release the MDL lock on mysql.proc, not other
+    metadata locks DROP DATABASE might have acquired.
+  */
+  thd->mdl_context.rollback_to_savepoint(mdl_savepoint);
 
 err:
   DBUG_RETURN(ret);
@@ -1386,10 +1610,7 @@ err:
 bool
 sp_show_create_routine(THD *thd, int type, sp_name *name)
 {
-  bool err_status= TRUE;
   sp_head *sp;
-  sp_cache **cache = type == TYPE_ENUM_PROCEDURE ?
-                     &thd->sp_proc_cache : &thd->sp_func_cache;
 
   DBUG_ENTER("sp_show_create_routine");
   DBUG_PRINT("enter", ("name: %.*s",
@@ -1399,28 +1620,29 @@ sp_show_create_routine(THD *thd, int type, sp_name *name)
   DBUG_ASSERT(type == TYPE_ENUM_PROCEDURE ||
               type == TYPE_ENUM_FUNCTION);
 
-  if (type == TYPE_ENUM_PROCEDURE)
+  /*
+    @todo: Consider using prelocking for this code as well. Currently
+    SHOW CREATE PROCEDURE/FUNCTION is a dirty read of the data
+    dictionary, i.e. takes no metadata locks.
+    It is "safe" to do as long as it doesn't affect the results
+    of the binary log or the query cache, which currently it does not.
+  */
+  if (sp_cache_routine(thd, type, name, FALSE, &sp))
+    DBUG_RETURN(TRUE);
+
+  if (sp == NULL || sp->show_create_routine(thd, type))
   {
     /*
-       SHOW CREATE PROCEDURE may require two instances of one sp_head
-       object when SHOW CREATE PROCEDURE is called for the procedure that
-       is being executed. Basically, there is no actual recursion, so we
-       increase the recursion limit for this statement (kind of hack).
-
-       SHOW CREATE FUNCTION does not require this because SHOW CREATE
-       statements are prohibitted within stored functions.
-     */
-
-    thd->variables.max_sp_recursion_depth++;
+      If we have insufficient privileges, pretend the routine
+      does not exist.
+    */
+    my_error(ER_SP_DOES_NOT_EXIST, MYF(0),
+             type == TYPE_ENUM_FUNCTION ? "FUNCTION" : "PROCEDURE",
+             name->m_name.str);
+    DBUG_RETURN(TRUE);
   }
 
-  if ((sp= sp_find_routine(thd, type, name, cache, FALSE)))
-    err_status= sp->show_create_routine(thd, type);
-
-  if (type == TYPE_ENUM_PROCEDURE)
-    thd->variables.max_sp_recursion_depth--;
-
-  DBUG_RETURN(err_status);
+  DBUG_RETURN(FALSE);
 }
 
 
@@ -1569,7 +1791,7 @@ sp_exist_routines(THD *thd, TABLE_LIST *routines, bool any)
                                      &thd->sp_proc_cache, FALSE) != NULL ||
                      sp_find_routine(thd, TYPE_ENUM_FUNCTION, name,
                                      &thd->sp_func_cache, FALSE) != NULL;
-    mysql_reset_errors(thd, TRUE);
+    thd->warning_info->clear_warning_info(thd->query_id);
     if (sp_object_found)
     {
       if (any)
@@ -1586,104 +1808,12 @@ sp_exist_routines(THD *thd, TABLE_LIST *routines, bool any)
 }
 
 
-/**
-  Check if a routine exists in the mysql.proc table, without actually
-  parsing the definition. (Used for dropping).
-
-  @param thd          thread context
-  @param name         name of procedure
-
-  @retval
-    0       Success
-  @retval
-    non-0   Error;  SP_OPEN_TABLE_FAILED or SP_KEY_NOT_FOUND
-*/
-
-int
-sp_routine_exists_in_table(THD *thd, int type, sp_name *name)
-{
-  TABLE *table;
-  int ret;
-  Open_tables_state open_tables_state_backup;
-
-  if (!(table= open_proc_table_for_read(thd, &open_tables_state_backup)))
-    ret= SP_OPEN_TABLE_FAILED;
-  else
-  {
-    if ((ret= db_find_routine_aux(thd, type, name, table)) != SP_OK)
-      ret= SP_KEY_NOT_FOUND;
-    close_system_tables(thd, &open_tables_state_backup);
-  }
-  return ret;
-}
-
-
-/**
-  Structure that represents element in the set of stored routines
-  used by statement or routine.
-*/
-struct Sroutine_hash_entry;
-
-struct Sroutine_hash_entry
-{
-  /**
-    Set key consisting of one-byte routine type and quoted routine name.
-  */
-  LEX_STRING key;
-  /**
-    Next element in list linking all routines in set. See also comments
-    for LEX::sroutine/sroutine_list and sp_head::m_sroutines.
-  */
-  Sroutine_hash_entry *next;
-  /**
-    Uppermost view which directly or indirectly uses this routine.
-    0 if routine is not used in view. Note that it also can be 0 if
-    statement uses routine both via view and directly.
-  */
-  TABLE_LIST *belong_to_view;
-};
-
-
 extern "C" uchar* sp_sroutine_key(const uchar *ptr, size_t *plen,
                                   my_bool first)
 {
   Sroutine_hash_entry *rn= (Sroutine_hash_entry *)ptr;
-  *plen= rn->key.length;
-  return (uchar *)rn->key.str;
-}
-
-
-/**
-  Check if
-   - current statement (the one in thd->lex) needs table prelocking
-   - first routine in thd->lex->sroutines_list needs to execute its body in
-     prelocked mode.
-
-  @param thd                  Current thread, thd->lex is the statement to be
-                              checked.
-  @param[out] need_prelocking    TRUE  - prelocked mode should be activated
-                                 before executing the statement; 
-                                 FALSE - Don't activate prelocking
-  @param[out] first_no_prelocking  TRUE  - Tables used by first routine in
-                                   thd->lex->sroutines_list should be
-                                   prelocked. FALSE - Otherwise.
-
-  @note
-    This function assumes that for any "CALL proc(...)" statement routines_list 
-    will have 'proc' as first element (it may have several, consider e.g.
-    "proc(sp_func(...)))". This property is currently guaranted by the parser.
-*/
-
-void sp_get_prelocking_info(THD *thd, bool *need_prelocking, 
-                            bool *first_no_prelocking)
-{
-  Sroutine_hash_entry *routine= thd->lex->sroutines_list.first;
-
-  DBUG_ASSERT(routine);
-  bool first_is_procedure= (routine->key.str[0] == TYPE_ENUM_PROCEDURE);
-
-  *first_no_prelocking= first_is_procedure;
-  *need_prelocking= !first_is_procedure || test(routine->next);
+  *plen= rn->mdl_request.key.length();
+  return (uchar *)rn->mdl_request.key.ptr();
 }
 
 
@@ -1693,11 +1823,11 @@ void sp_get_prelocking_info(THD *thd, bool *need_prelocking,
 
   In case when statement uses stored routines but does not need
   prelocking (i.e. it does not use any tables) we will access the
-  elements of LEX::sroutines set on prepared statement re-execution.
-  Because of this we have to allocate memory for both hash element
-  and copy of its key in persistent arena.
+  elements of Query_tables_list::sroutines set on prepared statement
+  re-execution. Because of this we have to allocate memory for both
+  hash element and copy of its key in persistent arena.
 
-  @param lex             LEX representing statement
+  @param prelocking_ctx  Prelocking context of the statement
   @param arena           Arena in which memory for new element will be
                          allocated
   @param key             Key for the hash representing set
@@ -1705,7 +1835,7 @@ void sp_get_prelocking_info(THD *thd, bool *need_prelocking,
                          (0 if routine is not used by view)
 
   @note
-    Will also add element to end of 'LEX::sroutines_list' list.
+    Will also add element to end of 'Query_tables_list::sroutines_list' list.
 
   @todo
     When we will got rid of these accesses on re-executions we will be
@@ -1720,28 +1850,25 @@ void sp_get_prelocking_info(THD *thd, bool *need_prelocking,
     the set).
 */
 
-static bool add_used_routine(LEX *lex, Query_arena *arena,
-                             const LEX_STRING *key,
-                             TABLE_LIST *belong_to_view)
+bool sp_add_used_routine(Query_tables_list *prelocking_ctx, Query_arena *arena,
+                         const MDL_key *key, TABLE_LIST *belong_to_view)
 {
-  hash_init_opt(&lex->sroutines, system_charset_info,
-                Query_tables_list::START_SROUTINES_HASH_SIZE,
-                0, 0, sp_sroutine_key, 0, 0);
+  my_hash_init_opt(&prelocking_ctx->sroutines, system_charset_info,
+                   Query_tables_list::START_SROUTINES_HASH_SIZE,
+                   0, 0, sp_sroutine_key, 0, 0);
 
-  if (!hash_search(&lex->sroutines, (uchar *)key->str, key->length))
+  if (!my_hash_search(&prelocking_ctx->sroutines, key->ptr(), key->length()))
   {
     Sroutine_hash_entry *rn=
-      (Sroutine_hash_entry *)arena->alloc(sizeof(Sroutine_hash_entry) +
-                                          key->length + 1);
+      (Sroutine_hash_entry *)arena->alloc(sizeof(Sroutine_hash_entry));
     if (!rn)              // OOM. Error will be reported using fatal_error().
       return FALSE;
-    rn->key.length= key->length;
-    rn->key.str= (char *)rn + sizeof(Sroutine_hash_entry);
-    memcpy(rn->key.str, key->str, key->length + 1);
-    if (my_hash_insert(&lex->sroutines, (uchar *)rn))
+    rn->mdl_request.init(key, MDL_SHARED, MDL_TRANSACTION);
+    if (my_hash_insert(&prelocking_ctx->sroutines, (uchar *)rn))
       return FALSE;
-    lex->sroutines_list.link_in_list(rn, &rn->next);
+    prelocking_ctx->sroutines_list.link_in_list(rn, &rn->next);
     rn->belong_to_view= belong_to_view;
+    rn->m_sp_cache_version= 0;
     return TRUE;
   }
   return FALSE;
@@ -1755,24 +1882,27 @@ static bool add_used_routine(LEX *lex, Query_arena *arena,
   To be friendly towards prepared statements one should pass
   persistent arena as second argument.
 
-  @param lex       LEX representing statement
-  @param arena     arena in which memory for new element of the set
-                   will be allocated
-  @param rt        routine name
-  @param rt_type   routine type (one of TYPE_ENUM_PROCEDURE/...)
+  @param prelocking_ctx  Prelocking context of the statement
+  @param arena           Arena in which memory for new element of the set
+                         will be allocated
+  @param rt              Routine name
+  @param rt_type         Routine type (one of TYPE_ENUM_PROCEDURE/...)
 
   @note
-    Will also add element to end of 'LEX::sroutines_list' list (and will
-    take into account that this is explicitly used routine).
+    Will also add element to end of 'Query_tables_list::sroutines_list' list
+    (and will take into account that this is an explicitly used routine).
 */
 
-void sp_add_used_routine(LEX *lex, Query_arena *arena,
+void sp_add_used_routine(Query_tables_list *prelocking_ctx, Query_arena *arena,
                          sp_name *rt, char rt_type)
 {
-  rt->set_routine_type(rt_type);
-  (void)add_used_routine(lex, arena, &rt->m_sroutines_key, 0);
-  lex->sroutines_list_own_last= lex->sroutines_list.next;
-  lex->sroutines_list_own_elements= lex->sroutines_list.elements;
+  MDL_key key((rt_type == TYPE_ENUM_FUNCTION) ? MDL_key::FUNCTION :
+                                                MDL_key::PROCEDURE,
+              rt->m_db.str, rt->m_name.str);
+  (void)sp_add_used_routine(prelocking_ctx, arena, &key, 0);
+  prelocking_ctx->sroutines_list_own_last= prelocking_ctx->sroutines_list.next;
+  prelocking_ctx->sroutines_list_own_elements=
+                    prelocking_ctx->sroutines_list.elements;
 }
 
 
@@ -1780,13 +1910,13 @@ void sp_add_used_routine(LEX *lex, Query_arena *arena,
   Remove routines which are only indirectly used by statement from
   the set of routines used by this statement.
 
-  @param lex  LEX representing statement
+  @param prelocking_ctx  Prelocking context of the statement
 */
 
-void sp_remove_not_own_routines(LEX *lex)
+void sp_remove_not_own_routines(Query_tables_list *prelocking_ctx)
 {
   Sroutine_hash_entry *not_own_rt, *next_rt;
-  for (not_own_rt= *lex->sroutines_list_own_last;
+  for (not_own_rt= *prelocking_ctx->sroutines_list_own_last;
        not_own_rt; not_own_rt= next_rt)
   {
     /*
@@ -1794,12 +1924,13 @@ void sp_remove_not_own_routines(LEX *lex)
       but we want to be more future-proof.
     */
     next_rt= not_own_rt->next;
-    hash_delete(&lex->sroutines, (uchar *)not_own_rt);
+    my_hash_delete(&prelocking_ctx->sroutines, (uchar *)not_own_rt);
   }
 
-  *lex->sroutines_list_own_last= NULL;
-  lex->sroutines_list.next= lex->sroutines_list_own_last;
-  lex->sroutines_list.elements= lex->sroutines_list_own_elements;
+  *prelocking_ctx->sroutines_list_own_last= NULL;
+  prelocking_ctx->sroutines_list.next= prelocking_ctx->sroutines_list_own_last;
+  prelocking_ctx->sroutines_list.elements= 
+                    prelocking_ctx->sroutines_list_own_elements;
 }
 
 
@@ -1827,8 +1958,9 @@ bool sp_update_sp_used_routines(HASH *dst, HASH *src)
 {
   for (uint i=0 ; i < src->records ; i++)
   {
-    Sroutine_hash_entry *rt= (Sroutine_hash_entry *)hash_element(src, i);
-    if (!hash_search(dst, (uchar *)rt->key.str, rt->key.length))
+    Sroutine_hash_entry *rt= (Sroutine_hash_entry *)my_hash_element(src, i);
+    if (!my_hash_search(dst, (uchar *)rt->mdl_request.key.ptr(),
+                        rt->mdl_request.key.length()))
     {
       if (my_hash_insert(dst, (uchar *)rt))
         return TRUE;
@@ -1843,23 +1975,24 @@ bool sp_update_sp_used_routines(HASH *dst, HASH *src)
   routines used by statement.
 
   @param thd             Thread context
-  @param lex             LEX representing statement
+  @param prelocking_ctx  Prelocking context of the statement
   @param src             Hash representing set from which routines will
                          be added
   @param belong_to_view  Uppermost view which uses these routines, 0 if none
 
-  @note
-    It will also add elements to end of 'LEX::sroutines_list' list.
+  @note It will also add elements to end of
+        'Query_tables_list::sroutines_list' list.
 */
 
-static void
-sp_update_stmt_used_routines(THD *thd, LEX *lex, HASH *src,
-                             TABLE_LIST *belong_to_view)
+void
+sp_update_stmt_used_routines(THD *thd, Query_tables_list *prelocking_ctx,
+                             HASH *src, TABLE_LIST *belong_to_view)
 {
   for (uint i=0 ; i < src->records ; i++)
   {
-    Sroutine_hash_entry *rt= (Sroutine_hash_entry *)hash_element(src, i);
-    (void)add_used_routine(lex, thd->stmt_arena, &rt->key, belong_to_view);
+    Sroutine_hash_entry *rt= (Sroutine_hash_entry *)my_hash_element(src, i);
+    (void)sp_add_used_routine(prelocking_ctx, thd->stmt_arena,
+                              &rt->mdl_request.key, belong_to_view);
   }
 }
 
@@ -1869,240 +2002,139 @@ sp_update_stmt_used_routines(THD *thd, LEX *lex, HASH *src,
   routines used by statement.
 
   @param thd             Thread context
-  @param lex             LEX representing statement
+  @param prelocking_ctx  Prelocking context of the statement
   @param src             List representing set from which routines will
                          be added
   @param belong_to_view  Uppermost view which uses these routines, 0 if none
 
-  @note
-    It will also add elements to end of 'LEX::sroutines_list' list.
+  @note It will also add elements to end of
+        'Query_tables_list::sroutines_list' list.
 */
 
-static void sp_update_stmt_used_routines(THD *thd, LEX *lex,
-                                         SQL_I_List<Sroutine_hash_entry> *src,
-                                         TABLE_LIST *belong_to_view)
+void sp_update_stmt_used_routines(THD *thd, Query_tables_list *prelocking_ctx,
+                                  SQL_I_List<Sroutine_hash_entry> *src,
+                                  TABLE_LIST *belong_to_view)
 {
   for (Sroutine_hash_entry *rt= src->first; rt; rt= rt->next)
-    (void)add_used_routine(lex, thd->stmt_arena, &rt->key, belong_to_view);
+    (void)sp_add_used_routine(prelocking_ctx, thd->stmt_arena,
+                              &rt->mdl_request.key, belong_to_view);
 }
 
 
 /**
-  Cache sub-set of routines used by statement, add tables used by these
-  routines to statement table list. Do the same for all routines used
-  by these routines.
-
-  @param thd               thread context
-  @param lex               LEX representing statement
-  @param start             first routine from the list of routines to be cached
-                           (this list defines mentioned sub-set).
-  @param first_no_prelock  If true, don't add tables or cache routines used by
-                           the body of the first routine (i.e. *start)
-                           will be executed in non-prelocked mode.
-  @param tabs_changed      Set to TRUE some tables were added, FALSE otherwise
-
-  @note
-    If some function is missing this won't be reported here.
-    Instead this fact will be discovered during query execution.
-
-  @retval
-    0       success
-  @retval
-    non-0   failure
+  A helper wrapper around sp_cache_routine() to use from
+  prelocking until 'sp_name' is eradicated as a class.
 */
 
-static int
-sp_cache_routines_and_add_tables_aux(THD *thd, LEX *lex,
-                                     Sroutine_hash_entry *start, 
-                                     bool first_no_prelock)
+int sp_cache_routine(THD *thd, Sroutine_hash_entry *rt,
+                     bool lookup_only, sp_head **sp)
+{
+  char qname_buff[NAME_LEN*2+1+1];
+  sp_name name(&rt->mdl_request.key, qname_buff);
+  MDL_key::enum_mdl_namespace mdl_type= rt->mdl_request.key.mdl_namespace();
+  int type= ((mdl_type == MDL_key::FUNCTION) ?
+             TYPE_ENUM_FUNCTION : TYPE_ENUM_PROCEDURE);
+
+  /*
+    Check that we have an MDL lock on this routine, unless it's a top-level
+    CALL. The assert below should be unambiguous: the first element
+    in sroutines_list has an MDL lock unless it's a top-level call, or a
+    trigger, but triggers can't occur here (see the preceding assert).
+  */
+  DBUG_ASSERT(rt->mdl_request.ticket || rt == thd->lex->sroutines_list.first);
+
+  return sp_cache_routine(thd, type, &name, lookup_only, sp);
+}
+
+
+/**
+  Ensure that routine is present in cache by loading it from the mysql.proc
+  table if needed. If the routine is present but old, reload it.
+  Emit an appropriate error if there was a problem during
+  loading.
+
+  @param[in]  thd   Thread context.
+  @param[in]  type  Type of object (TYPE_ENUM_FUNCTION or TYPE_ENUM_PROCEDURE).
+  @param[in]  name  Name of routine.
+  @param[in]  lookup_only Only check that the routine is in the cache.
+                    If it's not, don't try to load. If it is present,
+                    but old, don't try to reload.
+  @param[out] sp    Pointer to sp_head object for routine, NULL if routine was
+                    not found.
+
+  @retval 0      Either routine is found and was succesfully loaded into cache
+                 or it does not exist.
+  @retval non-0  Error while loading routine from mysql,proc table.
+*/
+
+int sp_cache_routine(THD *thd, int type, sp_name *name,
+                     bool lookup_only, sp_head **sp)
 {
   int ret= 0;
-  bool first= TRUE;
-  DBUG_ENTER("sp_cache_routines_and_add_tables_aux");
+  sp_cache **spc= (type == TYPE_ENUM_FUNCTION ?
+                   &thd->sp_func_cache : &thd->sp_proc_cache);
 
-  for (Sroutine_hash_entry *rt= start; rt; rt= rt->next)
+  DBUG_ENTER("sp_cache_routine");
+
+  DBUG_ASSERT(type == TYPE_ENUM_FUNCTION || type == TYPE_ENUM_PROCEDURE);
+
+
+  *sp= sp_cache_lookup(spc, name);
+
+  if (lookup_only)
+    DBUG_RETURN(SP_OK);
+
+  if (*sp)
   {
-    sp_name name(thd, rt->key.str, rt->key.length);
-    int type= rt->key.str[0];
-    sp_head *sp;
+    sp_cache_flush_obsolete(spc, sp);
+    if (*sp)
+      DBUG_RETURN(SP_OK);
+  }
 
-    if (!(sp= sp_cache_lookup((type == TYPE_ENUM_FUNCTION ?
-                              &thd->sp_func_cache : &thd->sp_proc_cache),
-                              &name)))
-    {
-      switch ((ret= db_find_routine(thd, type, &name, &sp)))
+  switch ((ret= db_find_routine(thd, type, name, sp)))
+  {
+    case SP_OK:
+      sp_cache_insert(spc, *sp);
+      break;
+    case SP_KEY_NOT_FOUND:
+      ret= SP_OK;
+      break;
+    default:
+      /* Query might have been killed, don't set error. */
+      if (thd->killed)
+        break;
+      /*
+        Any error when loading an existing routine is either some problem
+        with the mysql.proc table, or a parse error because the contents
+        has been tampered with (in which case we clear that error).
+      */
+      if (ret == SP_PARSE_ERROR)
+        thd->clear_error();
+      /*
+        If we cleared the parse error, or when db_find_routine() flagged
+        an error with it's return value without calling my_error(), we
+        set the generic "mysql.proc table corrupt" error here.
+      */
+      if (! thd->is_error())
       {
-      case SP_OK:
-        {
-          if (type == TYPE_ENUM_FUNCTION)
-            sp_cache_insert(&thd->sp_func_cache, sp);
-          else
-            sp_cache_insert(&thd->sp_proc_cache, sp);
-        }
-        break;
-      case SP_KEY_NOT_FOUND:
-        ret= SP_OK;
-        break;
-      default:
-        /* Query might have been killed, don't set error. */
-        if (thd->killed)
-          break;
-
         /*
-          Any error when loading an existing routine is either some problem
-          with the mysql.proc table, or a parse error because the contents
-          has been tampered with (in which case we clear that error).
+          SP allows full NAME_LEN chars thus he have to allocate enough
+          size in bytes. Otherwise there is stack overrun could happen
+          if multibyte sequence is `name`. `db` is still safe because the
+          rest of the server checks agains NAME_LEN bytes and not chars.
+          Hence, the overrun happens only if the name is in length > 32 and
+          uses multibyte (cyrillic, greek, etc.)
         */
-        if (ret == SP_PARSE_ERROR)
-          thd->clear_error();
-        /*
-          If we cleared the parse error, or when db_find_routine() flagged
-          an error with it's return value without calling my_error(), we
-          set the generic "mysql.proc table corrupt" error here.
-         */
-        if (! thd->is_error())
-        {
-          /*
-            SP allows full NAME_LEN chars thus he have to allocate enough
-            size in bytes. Otherwise there is stack overrun could happen
-            if multibyte sequence is `name`. `db` is still safe because the
-            rest of the server checks agains NAME_LEN bytes and not chars.
-            Hence, the overrun happens only if the name is in length > 32 and
-            uses multibyte (cyrillic, greek, etc.)
-          */
-          char n[NAME_LEN*2+2];
+        char n[NAME_LEN*2+2];
 
-          /* m_qname.str is not always \0 terminated */
-          memcpy(n, name.m_qname.str, name.m_qname.length);
-          n[name.m_qname.length]= '\0';
-          my_error(ER_SP_PROC_TABLE_CORRUPT, MYF(0), n, ret);
-        }
-        break;
+        /* m_qname.str is not always \0 terminated */
+        memcpy(n, name->m_qname.str, name->m_qname.length);
+        n[name->m_qname.length]= '\0';
+        my_error(ER_SP_PROC_TABLE_CORRUPT, MYF(0), n, ret);
       }
-    }
-    if (sp)
-    {
-      if (!(first && first_no_prelock))
-      {
-        sp_update_stmt_used_routines(thd, lex, &sp->m_sroutines,
-                                     rt->belong_to_view);
-        (void)sp->add_used_tables_to_table_list(thd, &lex->query_tables_last,
-                                                rt->belong_to_view);
-      }
-      sp->propagate_attributes(lex);
-    }
-    first= FALSE;
+      break;
   }
   DBUG_RETURN(ret);
-}
-
-
-/**
-  Cache all routines from the set of used by statement, add tables used
-  by those routines to statement table list. Do the same for all routines
-  used by those routines.
-
-  @param thd               thread context
-  @param lex               LEX representing statement
-  @param first_no_prelock  If true, don't add tables or cache routines used by
-                           the body of the first routine (i.e. *start)
-
-  @retval
-    0       success
-  @retval
-    non-0   failure
-*/
-
-int
-sp_cache_routines_and_add_tables(THD *thd, LEX *lex, bool first_no_prelock)
-{
-  return sp_cache_routines_and_add_tables_aux(thd, lex,
-           lex->sroutines_list.first, first_no_prelock);
-}
-
-
-/**
-  Add all routines used by view to the set of routines used by
-  statement.
-
-  Add tables used by those routines to statement table list. Do the same
-  for all routines used by these routines.
-
-  @param thd   Thread context
-  @param lex   LEX representing statement
-  @param view  Table list element representing view
-
-  @retval
-    0       success
-  @retval
-    non-0   failure
-*/
-
-int
-sp_cache_routines_and_add_tables_for_view(THD *thd, LEX *lex, TABLE_LIST *view)
-{
-  Sroutine_hash_entry **last_cached_routine_ptr= lex->sroutines_list.next;
-  sp_update_stmt_used_routines(thd, lex, &view->view->sroutines_list,
-                               view->top_table());
-  return sp_cache_routines_and_add_tables_aux(thd, lex,
-                                              *last_cached_routine_ptr, FALSE);
-}
-
-
-/**
-  Add triggers for table to the set of routines used by statement.
-  Add tables used by them to statement table list. Do the same for
-  all implicitly used routines.
-
-  @param thd    thread context
-  @param lex    LEX respresenting statement
-  @param table  Table list element for table with trigger
-
-  @retval
-    0       success
-  @retval
-    non-0   failure
-*/
-
-int
-sp_cache_routines_and_add_tables_for_triggers(THD *thd, LEX *lex,
-                                              TABLE_LIST *table)
-{
-  int ret= 0;
-
-  Sroutine_hash_entry **last_cached_routine_ptr= lex->sroutines_list.next;
-
-  if (static_cast<int>(table->lock_type) >=
-      static_cast<int>(TL_WRITE_ALLOW_WRITE))
-  {
-    for (int i= 0; i < (int)TRG_EVENT_MAX; i++)
-    {
-      if (table->trg_event_map &
-          static_cast<uint8>(1 << static_cast<int>(i)))
-      {
-        for (int j= 0; j < (int)TRG_ACTION_MAX; j++)
-        {
-          /* We can have only one trigger per action type currently */
-          sp_head *trigger= table->table->triggers->bodies[i][j];
-          if (trigger &&
-              add_used_routine(lex, thd->stmt_arena, &trigger->m_sroutines_key,
-                               table->belong_to_view))
-          {
-            trigger->add_used_tables_to_table_list(thd, &lex->query_tables_last,
-                                                   table->belong_to_view);
-            trigger->propagate_attributes(lex);
-            sp_update_stmt_used_routines(thd, lex,
-                                         &trigger->m_sroutines,
-                                         table->belong_to_view);
-          }
-        }
-      }
-    }
-  }
-  ret= sp_cache_routines_and_add_tables_aux(thd, lex,
-                                            *last_cached_routine_ptr,
-                                            FALSE);
-  return ret;
 }
 
 
@@ -2113,6 +2145,7 @@ sp_cache_routines_and_add_tables_for_triggers(THD *thd, LEX *lex,
     Returns TRUE on success, FALSE on (alloc) failure.
 */
 static bool
+
 create_string(THD *thd, String *buf,
               int type,
               const char *db, ulong dblen,
@@ -2122,14 +2155,17 @@ create_string(THD *thd, String *buf,
               const char *body, ulong bodylen,
               st_sp_chistics *chistics,
               const LEX_STRING *definer_user,
-              const LEX_STRING *definer_host)
+              const LEX_STRING *definer_host,
+              ulong sql_mode)
 {
+  ulong old_sql_mode= thd->variables.sql_mode;
   /* Make some room to begin with */
   if (buf->alloc(100 + dblen + 1 + namelen + paramslen + returnslen + bodylen +
 		 chistics->comment.length + 10 /* length of " DEFINER= "*/ +
                  USER_HOST_BUFF_SIZE))
     return FALSE;
 
+  thd->variables.sql_mode= sql_mode;
   buf->append(STRING_WITH_LEN("CREATE "));
   append_definer(thd, buf, definer_user, definer_host);
   if (type == TYPE_ENUM_FUNCTION)
@@ -2177,5 +2213,80 @@ create_string(THD *thd, String *buf,
     buf->append('\n');
   }
   buf->append(body, bodylen);
+  thd->variables.sql_mode= old_sql_mode;
   return TRUE;
+}
+
+
+/**
+  @brief    The function loads sp_head struct for information schema purposes
+            (used for I_S ROUTINES & PARAMETERS tables).
+
+  @param[in]      thd               thread handler
+  @param[in]      proc_table        mysql.proc table structurte
+  @param[in]      db                database name
+  @param[in]      name              sp name
+  @param[in]      sql_mode          SQL mode
+  @param[in]      type              Routine type
+  @param[in]      returns           'returns' string
+  @param[in]      params            parameters definition string
+  @param[out]     free_sp_head      returns 1 if we need to free sp_head struct
+                                    otherwise returns 0
+                                    
+  @return     Pointer on sp_head struct
+    @retval   #                     Pointer on sp_head struct
+    @retval   0                     error
+*/
+
+sp_head *
+sp_load_for_information_schema(THD *thd, TABLE *proc_table, String *db,
+                               String *name, ulong sql_mode, int type,
+                               const char *returns, const char *params,
+                               bool *free_sp_head)
+{
+  const char *sp_body;
+  String defstr;
+  struct st_sp_chistics sp_chistics;
+  const LEX_STRING definer_user= {(char*)STRING_WITH_LEN("")};
+  const LEX_STRING definer_host= {(char*)STRING_WITH_LEN("")}; 
+  LEX_STRING sp_db_str;
+  LEX_STRING sp_name_str;
+  sp_head *sp;
+  sp_cache **spc= ((type == TYPE_ENUM_PROCEDURE) ?
+                  &thd->sp_proc_cache : &thd->sp_func_cache);
+  sp_db_str.str= db->c_ptr();
+  sp_db_str.length= db->length();
+  sp_name_str.str= name->c_ptr();
+  sp_name_str.length= name->length();
+  sp_name sp_name_obj(sp_db_str, sp_name_str, true);
+  sp_name_obj.init_qname(thd);
+  *free_sp_head= 0;
+  if ((sp= sp_cache_lookup(spc, &sp_name_obj)))
+  {
+    return sp;
+  }
+
+  LEX *old_lex= thd->lex, newlex;
+  Stored_program_creation_ctx *creation_ctx= 
+    Stored_routine_creation_ctx::load_from_db(thd, &sp_name_obj, proc_table);
+  sp_body= (type == TYPE_ENUM_FUNCTION ? "RETURN NULL" : "BEGIN END");
+  bzero((char*) &sp_chistics, sizeof(sp_chistics));
+  defstr.set_charset(creation_ctx->get_client_cs());
+  if (!create_string(thd, &defstr, type, 
+                     sp_db_str.str, sp_db_str.length, 
+                     sp_name_obj.m_name.str, sp_name_obj.m_name.length, 
+                     params, strlen(params),
+                     returns, strlen(returns), 
+                     sp_body, strlen(sp_body),
+                     &sp_chistics, &definer_user, &definer_host, sql_mode))
+    return 0;
+
+  thd->lex= &newlex;
+  newlex.current_select= NULL; 
+  sp= sp_compile(thd, &defstr, sql_mode, creation_ctx);
+  *free_sp_head= 1;
+  thd->lex->sphead= NULL;
+  lex_end(thd->lex);
+  thd->lex= old_lex;
+  return sp;
 }

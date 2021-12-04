@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2007 MySQL AB
+/* Copyright (c) 2000, 2016, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   Code for handling red-black (balanced) binary trees.
@@ -83,7 +83,7 @@ static void rb_delete_fixup(TREE *tree,TREE_ELEMENT ***parent);
 static int test_rb_tree(TREE_ELEMENT *element);
 #endif
 
-void init_tree(TREE *tree, ulong default_alloc_size, ulong memory_limit,
+void init_tree(TREE *tree, size_t default_alloc_size, ulong memory_limit,
                int size, qsort_cmp2 compare, my_bool with_delete,
 	       tree_element_free free_element, void *custom_arg)
 {
@@ -127,7 +127,7 @@ void init_tree(TREE *tree, ulong default_alloc_size, ulong memory_limit,
   }
   if (!(tree->with_delete=with_delete))
   {
-    init_alloc_root(&tree->mem_root, (uint) default_alloc_size, 0);
+    init_alloc_root(&tree->mem_root, default_alloc_size, 0);
     tree->mem_root.min_malloc=(sizeof(TREE_ELEMENT)+tree->size_of_element);
   }
   DBUG_VOID_RETURN;
@@ -183,7 +183,7 @@ static void delete_tree_element(TREE *tree, TREE_ELEMENT *element)
       (*tree->free)(ELEMENT_KEY(tree,element), free_free, tree->custom_arg);
     delete_tree_element(tree,element->right);
     if (tree->with_delete)
-      my_free((char*) element,MYF(0));
+      my_free(element);
   }
 }
 
@@ -326,7 +326,7 @@ int tree_delete(TREE *tree, void *key, uint key_size, void *custom_arg)
   if (tree->free)
     (*tree->free)(ELEMENT_KEY(tree,element), free_free, tree->custom_arg);
   tree->allocated-= sizeof(TREE_ELEMENT) + tree->size_of_element + key_size;
-  my_free((uchar*) element,MYF(0));
+  my_free(element);
   tree->elements_in_tree--;
   return 0;
 }

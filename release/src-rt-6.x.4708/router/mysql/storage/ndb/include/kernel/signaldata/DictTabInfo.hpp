@@ -1,4 +1,5 @@
-/* Copyright (c) 2003-2007 MySQL AB
+/* Copyright (c) 2003-2008 MySQL AB
+   Use is subject to license terms
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -29,10 +30,6 @@
 // for now, copy the bit we need  TODO proper fix
 
 #define DECIMAL_MAX_LENGTH ((8 * 9) - 8)
-
-#ifndef NOT_FIXED_DEC
-#define NOT_FIXED_DEC                   31
-#endif
 
 C_MODE_START
 extern int decimal_bin_size(int, int);

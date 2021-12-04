@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Test av isam-databas: stor test */
 
@@ -23,9 +21,6 @@
 #ifdef DBUG_OFF
 #undef DBUG_OFF
 #endif
-#ifndef SAFEMALLOC
-#define SAFEMALLOC
-#endif
 #include "myisamdef.h"
 #include <m_ctype.h>
 #include <my_bit.h>
@@ -33,7 +28,7 @@
 #define STANDARD_LENGTH 37
 #define MYISAM_KEYS 6
 #define MAX_PARTS 4
-#if !defined(MSDOS) && !defined(labs)
+#if !defined(labs)
 #define labs(a) abs(a)
 #endif
 
@@ -858,13 +853,13 @@ reads:      %10lu\n",
   }
   end_key_cache(dflt_key_cache,1);
   if (blob_buffer)
-    my_free(blob_buffer,MYF(0));
+    my_free(blob_buffer);
   my_end(silent ? MY_CHECK_ERROR : MY_CHECK_ERROR | MY_GIVE_INFO);
   return(0);
 err:
   printf("got error: %d when using MyISAM-database\n",my_errno);
   if (file)
-    VOID(mi_close(file));
+    (void) mi_close(file);
   return(1);
 } /* main */
 
@@ -1035,7 +1030,7 @@ static void put_blob_in_record(uchar *blob_pos, char **blob_buffer)
       for (i=0 ; i < length ; i++)
 	(*blob_buffer)[i]=(char) (length+i);
       int4store(blob_pos,length);
-      memcpy_fixed(blob_pos+4,(char*) blob_buffer,sizeof(char*));
+      memcpy(blob_pos+4, blob_buffer, sizeof(char*));
     }
     else
     {
@@ -1057,3 +1052,5 @@ static void copy_key(MI_INFO *info,uint inx,uchar *rec,uchar *key_buff)
   }
   return;
 }
+
+#include "mi_extrafunc.h"

@@ -1,8 +1,25 @@
-/******************************************************
+/*****************************************************************************
+
+Copyright (c) 2007, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file lock/lock0iter.c
 Lock queue iterator. Can iterate over table and record
 lock queues.
-
-(c) 2007 Innobase Oy
 
 Created July 16, 2007 Vasil Dimov
 *******************************************************/
@@ -15,8 +32,11 @@ Created July 16, 2007 Vasil Dimov
 #include "lock0priv.h"
 #include "ut0dbg.h"
 #include "ut0lst.h"
+#ifdef UNIV_DEBUG
+# include "srv0srv.h" /* kernel_mutex */
+#endif /* UNIV_DEBUG */
 
-/***********************************************************************
+/*******************************************************************//**
 Initialize lock queue iterator so that it starts to iterate from
 "lock". bit_no specifies the record number within the heap where the
 record is stored. It can be undefined (ULINT_UNDEFINED) in two cases:
@@ -25,15 +45,17 @@ record is stored. It can be undefined (ULINT_UNDEFINED) in two cases:
    bit_no is calculated in this function by using
    lock_rec_find_set_bit(). There is exactly one bit set in the bitmap
    of a wait lock. */
-
+UNIV_INTERN
 void
 lock_queue_iterator_reset(
 /*======================*/
-	lock_queue_iterator_t*	iter,	/* out: iterator */
-	lock_t*			lock,	/* in: lock to start from */
-	ulint			bit_no)	/* in: record number in the
+	lock_queue_iterator_t*	iter,	/*!< out: iterator */
+	const lock_t*		lock,	/*!< in: lock to start from */
+	ulint			bit_no)	/*!< in: record number in the
 					heap */
 {
+	ut_ad(mutex_own(&kernel_mutex));
+
 	iter->current_lock = lock;
 
 	if (bit_no != ULINT_UNDEFINED) {
@@ -41,7 +63,7 @@ lock_queue_iterator_reset(
 		iter->bit_no = bit_no;
 	} else {
 
-		switch (lock_get_type(lock)) {
+		switch (lock_get_type_low(lock)) {
 		case LOCK_TABLE:
 			iter->bit_no = ULINT_UNDEFINED;
 			break;
@@ -55,20 +77,22 @@ lock_queue_iterator_reset(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Gets the previous lock in the lock queue, returns NULL if there are no
 more locks (i.e. the current lock is the first one). The iterator is
-receded (if not-NULL is returned). */
-
-lock_t*
+receded (if not-NULL is returned).
+@return	previous lock or NULL */
+UNIV_INTERN
+const lock_t*
 lock_queue_iterator_get_prev(
 /*=========================*/
-					/* out: previous lock or NULL */
-	lock_queue_iterator_t*	iter)	/* in/out: iterator */
+	lock_queue_iterator_t*	iter)	/*!< in/out: iterator */
 {
-	lock_t*	prev_lock;
+	const lock_t*	prev_lock;
 
-	switch (lock_get_type(iter->current_lock)) {
+	ut_ad(mutex_own(&kernel_mutex));
+
+	switch (lock_get_type_low(iter->current_lock)) {
 	case LOCK_REC:
 		prev_lock = lock_rec_get_prev(
 			iter->current_lock, iter->bit_no);

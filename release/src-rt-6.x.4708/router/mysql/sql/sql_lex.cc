@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2000, 2013 Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,19 +12,24 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 
 /* A lexical scanner on a temporary buffer with a yacc interface */
 
 #define MYSQL_LEX 1
-#include "mysql_priv.h"
+#include "sql_priv.h"
+#include "unireg.h"                    // REQUIRED: for other includes
+#include "sql_class.h"                          // sql_lex.h: SQLCOM_END
+#include "sql_lex.h"
+#include "sql_parse.h"                          // add_to_list
 #include "item_create.h"
 #include <m_ctype.h>
 #include <hash.h>
 #include "sp.h"
 #include "sp_head.h"
+
+static int lex_one_token(YYSTYPE *yylval, THD *thd);
 
 /*
   We are using pointer to this variable for distinguishing between assignment
@@ -33,7 +38,43 @@
 
 sys_var *trg_new_row_fake_var= (sys_var*) 0x01;
 
+/**
+  LEX_STRING constant for null-string to be used in parser and other places.
+*/
+const LEX_STRING null_lex_str= {NULL, 0};
+const LEX_STRING empty_lex_str= {(char *) "", 0};
+/**
+  @note The order of the elements of this array must correspond to
+  the order of elements in enum_binlog_stmt_unsafe.
+*/
+const int
+Query_tables_list::binlog_stmt_unsafe_errcode[BINLOG_STMT_UNSAFE_COUNT] =
+{
+  ER_BINLOG_UNSAFE_LIMIT,
+  ER_BINLOG_UNSAFE_INSERT_DELAYED,
+  ER_BINLOG_UNSAFE_SYSTEM_TABLE,
+  ER_BINLOG_UNSAFE_AUTOINC_COLUMNS,
+  ER_BINLOG_UNSAFE_UDF,
+  ER_BINLOG_UNSAFE_SYSTEM_VARIABLE,
+  ER_BINLOG_UNSAFE_SYSTEM_FUNCTION,
+  ER_BINLOG_UNSAFE_NONTRANS_AFTER_TRANS,
+  ER_BINLOG_UNSAFE_MULTIPLE_ENGINES_AND_SELF_LOGGING_ENGINE,
+  ER_BINLOG_UNSAFE_MIXED_STATEMENT,
+  ER_BINLOG_UNSAFE_INSERT_IGNORE_SELECT,
+  ER_BINLOG_UNSAFE_INSERT_SELECT_UPDATE,
+  ER_BINLOG_UNSAFE_WRITE_AUTOINC_SELECT,
+  ER_BINLOG_UNSAFE_REPLACE_SELECT,
+  ER_BINLOG_UNSAFE_CREATE_IGNORE_SELECT,
+  ER_BINLOG_UNSAFE_CREATE_REPLACE_SELECT,
+  ER_BINLOG_UNSAFE_CREATE_SELECT_AUTOINC,
+  ER_BINLOG_UNSAFE_UPDATE_IGNORE,
+  ER_BINLOG_UNSAFE_INSERT_TWO_KEYS,
+  ER_BINLOG_UNSAFE_AUTOINC_NOT_FIRST
+};
+
+
 /* Longest standard keyword name */
+
 #define TOCK_NAME_LENGTH 24
 
 /*
@@ -113,7 +154,18 @@ st_parsing_options::reset()
 }
 
 
-bool Lex_input_stream::init(THD *thd, char *buff, unsigned int length)
+/**
+  Perform initialization of Lex_input_stream instance.
+
+  Basically, a buffer for pre-processed query. This buffer should be large
+  enough to keep multi-statement query. The allocation is done once in
+  Lex_input_stream::init() in order to prevent memory pollution when
+  the server is processing large multi-statement queries.
+*/
+
+bool Lex_input_stream::init(THD *thd,
+			    char* buff,
+			    unsigned int length)
 {
   DBUG_EXECUTE_IF("bug42064_simulate_oom",
                   DBUG_SET("+d,simulate_out_of_memory"););
@@ -126,15 +178,50 @@ bool Lex_input_stream::init(THD *thd, char *buff, unsigned int length)
   if (m_cpp_buf == NULL)
     return TRUE;
 
-  m_cpp_ptr= m_cpp_buf;
   m_thd= thd;
-  m_ptr= buff;
-  m_end_of_query= buff + length;
-  m_buf= buff;
-  m_buf_length= length;
-  ignore_space= test(thd->variables.sql_mode & MODE_IGNORE_SPACE);
+  reset(buff, length);
 
   return FALSE;
+}
+
+
+/**
+  Prepare Lex_input_stream instance state for use for handling next SQL statement.
+
+  It should be called between two statements in a multi-statement query.
+  The operation resets the input stream to the beginning-of-parse state,
+  but does not reallocate m_cpp_buf.
+*/
+
+void
+Lex_input_stream::reset(char *buffer, unsigned int length)
+{
+  yylineno= 1;
+  yytoklen= 0;
+  yylval= NULL;
+  lookahead_token= -1;
+  lookahead_yylval= NULL;
+  m_ptr= buffer;
+  m_tok_start= NULL;
+  m_tok_end= NULL;
+  m_end_of_query= buffer + length;
+  m_tok_start_prev= NULL;
+  m_buf= buffer;
+  m_buf_length= length;
+  m_echo= TRUE;
+  m_cpp_tok_start= NULL;
+  m_cpp_tok_start_prev= NULL;
+  m_cpp_tok_end= NULL;
+  m_body_utf8= NULL;
+  m_cpp_utf8_processed_ptr= NULL;
+  next_state= MY_LEX_START;
+  found_semicolon= NULL;
+  ignore_space= test(m_thd->variables.sql_mode & MODE_IGNORE_SPACE);
+  stmt_prepare_mode= FALSE;
+  multi_statements= TRUE;
+  in_comment=NO_COMMENT;
+  m_underscore_cs= NULL;
+  m_cpp_ptr= m_cpp_buf;
 }
 
 
@@ -285,6 +372,7 @@ void lex_start(THD *thd)
   /* 'parent_lex' is used in init_query() so it must be before it. */
   lex->select_lex.parent_lex= lex;
   lex->select_lex.init_query();
+  lex->load_set_str_list.empty();
   lex->value_list.empty();
   lex->update_list.empty();
   lex->set_var_list.empty();
@@ -311,7 +399,6 @@ void lex_start(THD *thd)
   lex->subqueries= FALSE;
   lex->context_analysis_only= 0;
   lex->derived_tables= 0;
-  lex->lock_option= TL_READ;
   lex->safe_to_cache_query= 1;
   lex->leaf_tables_insert= 0;
   lex->parsing_options.reset();
@@ -324,12 +411,13 @@ void lex_start(THD *thd)
   lex->select_lex.ftfunc_list= &lex->select_lex.ftfunc_list_alloc;
   lex->select_lex.group_list.empty();
   lex->select_lex.order_list.empty();
-  lex->sql_command= SQLCOM_END;
+  lex->select_lex.gorder_list.empty();
   lex->duplicates= DUP_ERROR;
   lex->ignore= 0;
   lex->spname= NULL;
   lex->sphead= NULL;
   lex->spcont= NULL;
+  lex->m_stmt= NULL;
   lex->proc_list.first= 0;
   lex->escape_used= FALSE;
   lex->query_tables= 0;
@@ -344,7 +432,6 @@ void lex_start(THD *thd)
   lex->nest_level=0 ;
   lex->allow_sum_func= 0;
   lex->in_sum_func= NULL;
-  lex->protect_against_global_read_lock= FALSE;
   /*
     ok, there must be a better solution for this, long-term
     I tried "bzero" in the sql_yacc.yy code, but that for
@@ -363,6 +450,7 @@ void lex_start(THD *thd)
 
   lex->is_lex_started= TRUE;
   lex->used_tables= 0;
+  lex->reset_slave_info.all= false;
   DBUG_VOID_RETURN;
 }
 
@@ -372,9 +460,15 @@ void lex_end(LEX *lex)
   DBUG_PRINT("enter", ("lex: 0x%lx", (long) lex));
 
   /* release used plugins */
-  plugin_unlock_list(0, (plugin_ref*)lex->plugins.buffer, 
-                     lex->plugins.elements);
+  if (lex->plugins.elements) /* No function call and no mutex if no plugins. */
+  {
+    plugin_unlock_list(0, (plugin_ref*)lex->plugins.buffer, 
+                       lex->plugins.elements);
+  }
   reset_dynamic(&lex->plugins);
+
+  delete lex->sphead;
+  lex->sphead= NULL;
 
   DBUG_VOID_RETURN;
 }
@@ -383,8 +477,8 @@ Yacc_state::~Yacc_state()
 {
   if (yacc_yyss)
   {
-    my_free(yacc_yyss, MYF(0));
-    my_free(yacc_yyvs, MYF(0));
+    my_free(yacc_yyss);
+    my_free(yacc_yyvs);
   }
 }
 
@@ -770,22 +864,75 @@ bool consume_comment(Lex_input_stream *lip, int remaining_recursions_permitted)
 /*
   MYSQLlex remember the following states from the following MYSQLlex()
 
+  @param yylval         [out]  semantic value of the token being parsed (yylval)
+  @param thd            THD
+
   - MY_LEX_EOQ			Found end of query
   - MY_LEX_OPERATOR_OR_IDENT	Last state was an ident, text or number
 				(which can't be followed by a signed number)
 */
 
-int MYSQLlex(void *arg, void *yythd)
+int MYSQLlex(YYSTYPE *yylval, THD *thd)
+{
+  Lex_input_stream *lip= & thd->m_parser_state->m_lip;
+  int token;
+
+  if (lip->lookahead_token >= 0)
+  {
+    /*
+      The next token was already parsed in advance,
+      return it.
+    */
+    token= lip->lookahead_token;
+    lip->lookahead_token= -1;
+    *yylval= *(lip->lookahead_yylval);
+    lip->lookahead_yylval= NULL;
+    return token;
+  }
+
+  token= lex_one_token(yylval, thd);
+
+  switch(token) {
+  case WITH:
+    /*
+      Parsing 'WITH' 'ROLLUP' or 'WITH' 'CUBE' requires 2 look ups,
+      which makes the grammar LALR(2).
+      Replace by a single 'WITH_ROLLUP' or 'WITH_CUBE' token,
+      to transform the grammar into a LALR(1) grammar,
+      which sql_yacc.yy can process.
+    */
+    token= lex_one_token(yylval, thd);
+    switch(token) {
+    case CUBE_SYM:
+      return WITH_CUBE_SYM;
+    case ROLLUP_SYM:
+      return WITH_ROLLUP_SYM;
+    default:
+      /*
+        Save the token following 'WITH'
+      */
+      lip->lookahead_yylval= lip->yylval;
+      lip->yylval= NULL;
+      lip->lookahead_token= token;
+      return WITH;
+    }
+    break;
+  default:
+    break;
+  }
+
+  return token;
+}
+
+static int lex_one_token(YYSTYPE *yylval, THD *thd)
 {
   reg1	uchar c= 0;
   bool comment_closed;
   int	tokval, result_state;
   uint length;
   enum my_lex_states state;
-  THD *thd= (THD *)yythd;
   Lex_input_stream *lip= & thd->m_parser_state->m_lip;
   LEX *lex= thd->lex;
-  YYSTYPE *yylval=(YYSTYPE*) arg;
   CHARSET_INFO *cs= thd->charset();
   uchar *state_map= cs->state_map;
   uchar *ident_map= cs->ident_map;
@@ -1502,7 +1649,7 @@ Alter_info::Alter_info(const Alter_info &rhs, MEM_ROOT *mem_root)
   keys_onoff(rhs.keys_onoff),
   tablespace_op(rhs.tablespace_op),
   partition_names(rhs.partition_names, mem_root),
-  no_parts(rhs.no_parts),
+  num_parts(rhs.num_parts),
   change_level(rhs.change_level),
   datetime_field(rhs.datetime_field),
   error_if_not_empty(rhs.error_if_not_empty)
@@ -1612,10 +1759,11 @@ void st_select_lex::init_query()
   parent_lex->push_context(&context);
   cond_count= between_count= with_wild= 0;
   max_equal_elems= 0;
-  conds_processed_with_permanent_arena= 0;
   ref_pointer_array= 0;
+  ref_pointer_array_size= 0;
   select_n_where_fields= 0;
   select_n_having_items= 0;
+  n_sum_items= 0;
   n_child_sum_items= 0;
   subquery_in_having= explicit_limit= 0;
   is_item_list_lookup= 0;
@@ -1626,7 +1774,6 @@ void st_select_lex::init_query()
   exclude_from_table_unique_test= no_wrap_view_item= FALSE;
   nest_level= 0;
   link_next= 0;
-  lock_option= TL_READ_DEFAULT;
   m_non_agg_field_used= false;
   m_agg_func_used= false;
 }
@@ -1877,6 +2024,7 @@ TABLE_LIST *st_select_lex_node::add_table_to_list (THD *thd, Table_ident *table,
 						  LEX_STRING *alias,
 						  ulong table_join_options,
 						  thr_lock_type flags,
+                                                  enum_mdl_type mdl_type,
 						  List<Index_hint> *hints,
                                                   LEX_STRING *option)
 {
@@ -1995,9 +2143,6 @@ ulong st_select_lex::get_table_join_options()
 
 bool st_select_lex::setup_ref_array(THD *thd, uint order_group_num)
 {
-  if (ref_pointer_array)
-    return 0;
-
   // find_order_in_list() may need some extra space, so multiply by two.
   order_group_num*= 2;
 
@@ -2006,12 +2151,29 @@ bool st_select_lex::setup_ref_array(THD *thd, uint order_group_num)
     prepared statement
   */
   Query_arena *arena= thd->stmt_arena;
-  return (ref_pointer_array=
-          (Item **)arena->alloc(sizeof(Item*) * (n_child_sum_items +
-                                                 item_list.elements +
-                                                 select_n_having_items +
-                                                 select_n_where_fields +
-                                                 order_group_num)*5)) == 0;
+  const uint n_elems= (n_sum_items +
+                       n_child_sum_items +
+                       item_list.elements +
+                       select_n_having_items +
+                       select_n_where_fields +
+                       order_group_num) * 5;
+  if (ref_pointer_array != NULL)
+  {
+    /*
+      We need to take 'n_sum_items' into account when allocating the array,
+      and this may actually increase during the optimization phase due to
+      MIN/MAX rewrite in Item_in_subselect::single_value_transformer.
+      In the usual case we can reuse the array from the prepare phase.
+      If we need a bigger array, we must allocate a new one.
+    */
+    if (ref_pointer_array_size >= n_elems)
+      return false;
+  }
+  ref_pointer_array= static_cast<Item**>(arena->alloc(sizeof(Item*) * n_elems));
+  if (ref_pointer_array != NULL)
+    ref_pointer_array_size= n_elems;
+
+  return ref_pointer_array == NULL;
 }
 
 
@@ -2110,7 +2272,7 @@ void st_select_lex::print_limit(THD *thd,
   to implement the clean up.
 */
 
-void st_lex::cleanup_lex_after_parse_error(THD *thd)
+void LEX::cleanup_lex_after_parse_error(THD *thd)
 {
   /*
     Delete sphead for the side effect of restoring of the original
@@ -2150,6 +2312,7 @@ void st_lex::cleanup_lex_after_parse_error(THD *thd)
 
 void Query_tables_list::reset_query_tables_list(bool init)
 {
+  sql_command= SQLCOM_END;
   if (!init && query_tables)
   {
     TABLE_LIST *table= query_tables;
@@ -2170,7 +2333,7 @@ void Query_tables_list::reset_query_tables_list(bool init)
       We delay real initialization of hash (and therefore related
       memory allocation) until first insertion into this hash.
     */
-    hash_clear(&sroutines);
+    my_hash_clear(&sroutines);
   }
   else if (sroutines.records)
   {
@@ -2181,6 +2344,7 @@ void Query_tables_list::reset_query_tables_list(bool init)
   sroutines_list_own_last= sroutines_list.next;
   sroutines_list_own_elements= 0;
   binlog_stmt_flags= 0;
+  stmt_accessed_table_flag= 0;
 }
 
 
@@ -2193,7 +2357,7 @@ void Query_tables_list::reset_query_tables_list(bool init)
 
 void Query_tables_list::destroy_query_tables_list()
 {
-  hash_free(&sroutines);
+  my_hash_free(&sroutines);
 }
 
 
@@ -2201,7 +2365,7 @@ void Query_tables_list::destroy_query_tables_list()
   Initialize LEX object.
 
   SYNOPSIS
-    st_lex::st_lex()
+    LEX::LEX()
 
   NOTE
     LEX object initialized with this constructor can be used as part of
@@ -2211,15 +2375,16 @@ void Query_tables_list::destroy_query_tables_list()
     for this.
 */
 
-st_lex::st_lex()
-  :result(0),
-   sql_command(SQLCOM_END), option_type(OPT_DEFAULT), is_lex_started(0)
+LEX::LEX()
+  :result(0), option_type(OPT_DEFAULT), is_lex_started(0),
+  in_update_value_clause(false)
 {
 
   my_init_dynamic_array2(&plugins, sizeof(plugin_ref),
                          plugins_static_buffer,
                          INITIAL_LEX_PLUGIN_LIST_SIZE, 
                          INITIAL_LEX_PLUGIN_LIST_SIZE);
+  memset(&mi, 0, sizeof(LEX_MASTER_INFO));
   reset_query_tables_list(TRUE);
 }
 
@@ -2228,7 +2393,7 @@ st_lex::st_lex()
   Check whether the merging algorithm can be used on this VIEW
 
   SYNOPSIS
-    st_lex::can_be_merged()
+    LEX::can_be_merged()
 
   DESCRIPTION
     We can apply merge algorithm if it is single SELECT view  with
@@ -2242,7 +2407,7 @@ st_lex::st_lex()
     TRUE  - merge algorithm can be used
 */
 
-bool st_lex::can_be_merged()
+bool LEX::can_be_merged()
 {
   // TODO: do not forget implement case when select_lex.table_list.elements==0
 
@@ -2279,19 +2444,19 @@ bool st_lex::can_be_merged()
   check if command can use VIEW with MERGE algorithm (for top VIEWs)
 
   SYNOPSIS
-    st_lex::can_use_merged()
+    LEX::can_use_merged()
 
   DESCRIPTION
     Only listed here commands can use merge algorithm in top level
     SELECT_LEX (for subqueries will be used merge algorithm if
-    st_lex::can_not_use_merged() is not TRUE).
+    LEX::can_not_use_merged() is not TRUE).
 
   RETURN
     FALSE - command can't use merged VIEWs
     TRUE  - VIEWs with MERGE algorithms can be used
 */
 
-bool st_lex::can_use_merged()
+bool LEX::can_use_merged()
 {
   switch (sql_command)
   {
@@ -2316,18 +2481,18 @@ bool st_lex::can_use_merged()
   Check if command can't use merged views in any part of command
 
   SYNOPSIS
-    st_lex::can_not_use_merged()
+    LEX::can_not_use_merged()
 
   DESCRIPTION
     Temporary table algorithm will be used on all SELECT levels for queries
-    listed here (see also st_lex::can_use_merged()).
+    listed here (see also LEX::can_use_merged()).
 
   RETURN
     FALSE - command can't use merged VIEWs
     TRUE  - VIEWs with MERGE algorithms can be used
 */
 
-bool st_lex::can_not_use_merged()
+bool LEX::can_not_use_merged()
 {
   switch (sql_command)
   {
@@ -2356,7 +2521,7 @@ bool st_lex::can_not_use_merged()
     FALSE no, we need data
 */
 
-bool st_lex::only_view_structure()
+bool LEX::only_view_structure()
 {
   switch (sql_command) {
   case SQLCOM_SHOW_CREATE:
@@ -2385,7 +2550,7 @@ bool st_lex::only_view_structure()
 */
 
 
-bool st_lex::need_correct_ident()
+bool LEX::need_correct_ident()
 {
   switch(sql_command)
   {
@@ -2415,7 +2580,7 @@ bool st_lex::need_correct_ident()
     VIEW_CHECK_CASCADED  CHECK OPTION CASCADED
 */
 
-uint8 st_lex::get_effective_with_check(TABLE_LIST *view)
+uint8 LEX::get_effective_with_check(TABLE_LIST *view)
 {
   if (view->select_lex->master_unit() == &unit &&
       which_check_option_applicable())
@@ -2444,7 +2609,7 @@ uint8 st_lex::get_effective_with_check(TABLE_LIST *view)
 */
 
 bool
-st_lex::copy_db_to(char **p_db, size_t *p_db_length) const
+LEX::copy_db_to(char **p_db, size_t *p_db_length) const
 {
   if (sphead)
   {
@@ -2475,7 +2640,47 @@ void st_select_lex_unit::set_limit(st_select_lex *sl)
   ulonglong val;
 
   DBUG_ASSERT(! thd->stmt_arena->is_stmt_prepare());
-  val= sl->select_limit ? sl->select_limit->val_uint() : HA_POS_ERROR;
+  if (sl->select_limit)
+  {
+    Item *item = sl->select_limit;
+    /*
+      fix_fields() has not been called for sl->select_limit. That's due to the
+      historical reasons -- this item could be only of type Item_int, and
+      Item_int does not require fix_fields(). Thus, fix_fields() was never
+      called for sl->select_limit.
+
+      Some time ago, Item_splocal was also allowed for LIMIT / OFFSET clauses.
+      However, the fix_fields() behavior was not updated, which led to a crash
+      in some cases.
+
+      There is no single place where to call fix_fields() for LIMIT / OFFSET
+      items during the fix-fields-phase. Thus, for the sake of readability,
+      it was decided to do it here, on the evaluation phase (which is a
+      violation of design, but we chose the lesser of two evils).
+
+      We can call fix_fields() here, because sl->select_limit can be of two
+      types only: Item_int and Item_splocal. Item_int::fix_fields() is trivial,
+      and Item_splocal::fix_fields() (or rather Item_sp_variable::fix_fields())
+      has the following specific:
+        1) it does not affect other items;
+        2) it does not fail.
+
+      Nevertheless DBUG_ASSERT was added to catch future changes in
+      fix_fields() implementation. Also added runtime check against a result
+      of fix_fields() in order to handle error condition in non-debug build.
+    */
+    bool fix_fields_successful= true;
+    if (!item->fixed)
+    {
+      fix_fields_successful= !item->fix_fields(thd, NULL);
+
+      DBUG_ASSERT(fix_fields_successful);
+    }
+    val= fix_fields_successful ? item->val_uint() : HA_POS_ERROR;
+  }
+  else
+    val= HA_POS_ERROR;
+
   select_limit_val= (ha_rows)val;
 #ifndef BIG_TABLES
   /*
@@ -2485,7 +2690,22 @@ void st_select_lex_unit::set_limit(st_select_lex *sl)
   if (val != (ulonglong)select_limit_val)
     select_limit_val= HA_POS_ERROR;
 #endif
-  val= sl->offset_limit ? sl->offset_limit->val_uint() : ULL(0);
+  if (sl->offset_limit)
+  {
+    Item *item = sl->offset_limit;
+    // see comment for sl->select_limit branch.
+    bool fix_fields_successful= true;
+    if (!item->fixed)
+    {
+      fix_fields_successful= !item->fix_fields(thd, NULL);
+
+      DBUG_ASSERT(fix_fields_successful);
+    }
+    val= fix_fields_successful ? item->val_uint() : HA_POS_ERROR;
+  }
+  else
+    val= ULL(0);
+
   offset_limit_cnt= (ha_rows)val;
 #ifndef BIG_TABLES
   /* Check for truncation. */
@@ -2521,7 +2741,7 @@ void st_select_lex_unit::set_limit(st_select_lex *sl)
   clause.
 */
 
-void st_lex::set_trg_event_type_for_tables()
+void LEX::set_trg_event_type_for_tables()
 {
   uint8 new_trg_event_map= 0;
 
@@ -2664,7 +2884,7 @@ void st_lex::set_trg_event_type_for_tables()
       In this case link_to_local is set.
 
 */
-TABLE_LIST *st_lex::unlink_first_table(bool *link_to_local)
+TABLE_LIST *LEX::unlink_first_table(bool *link_to_local)
 {
   TABLE_LIST *first;
   if ((first= query_tables))
@@ -2704,7 +2924,7 @@ TABLE_LIST *st_lex::unlink_first_table(bool *link_to_local)
   table list
 
   SYNOPSYS
-     st_lex::first_lists_tables_same()
+     LEX::first_lists_tables_same()
 
   NOTES
     In many cases (for example, usual INSERT/DELETE/...) the first table of
@@ -2715,7 +2935,7 @@ TABLE_LIST *st_lex::unlink_first_table(bool *link_to_local)
     the global list first.
 */
 
-void st_lex::first_lists_tables_same()
+void LEX::first_lists_tables_same()
 {
   TABLE_LIST *first_table= select_lex.table_list.first;
   if (query_tables != first_table && first_table != 0)
@@ -2751,7 +2971,7 @@ void st_lex::first_lists_tables_same()
     global list
 */
 
-void st_lex::link_first_table_back(TABLE_LIST *first,
+void LEX::link_first_table_back(TABLE_LIST *first,
 				   bool link_to_local)
 {
   if (first)
@@ -2778,7 +2998,7 @@ void st_lex::link_first_table_back(TABLE_LIST *first,
   cleanup lex for case when we open table by table for processing
 
   SYNOPSIS
-    st_lex::cleanup_after_one_table_open()
+    LEX::cleanup_after_one_table_open()
 
   NOTE
     This method is mostly responsible for cleaning up of selects lists and
@@ -2786,7 +3006,7 @@ void st_lex::link_first_table_back(TABLE_LIST *first,
     to call Query_tables_list::reset_query_tables_list(FALSE).
 */
 
-void st_lex::cleanup_after_one_table_open()
+void LEX::cleanup_after_one_table_open()
 {
   /*
     thd->lex->derived_tables & additional units may be set if we open
@@ -2821,7 +3041,7 @@ void st_lex::cleanup_after_one_table_open()
       backup  Pointer to Query_tables_list instance to be used for backup
 */
 
-void st_lex::reset_n_backup_query_tables_list(Query_tables_list *backup)
+void LEX::reset_n_backup_query_tables_list(Query_tables_list *backup)
 {
   backup->set_query_tables_list(this);
   /*
@@ -2840,7 +3060,7 @@ void st_lex::reset_n_backup_query_tables_list(Query_tables_list *backup)
       backup  Pointer to Query_tables_list instance used for backup
 */
 
-void st_lex::restore_backup_query_tables_list(Query_tables_list *backup)
+void LEX::restore_backup_query_tables_list(Query_tables_list *backup)
 {
   this->destroy_query_tables_list();
   this->set_query_tables_list(backup);
@@ -2851,14 +3071,14 @@ void st_lex::restore_backup_query_tables_list(Query_tables_list *backup)
   Checks for usage of routines and/or tables in a parsed statement
 
   SYNOPSIS
-    st_lex:table_or_sp_used()
+    LEX:table_or_sp_used()
 
   RETURN
     FALSE  No routines and tables used
     TRUE   Either or both routines and tables are used.
 */
 
-bool st_lex::table_or_sp_used()
+bool LEX::table_or_sp_used()
 {
   DBUG_ENTER("table_or_sp_used");
 
@@ -2939,7 +3159,26 @@ void st_select_lex::fix_prepare_information(THD *thd, Item **conds,
     }
     if (*conds)
     {
-      prep_where= *conds;
+      /*
+        In "WHERE outer_field", *conds may be an Item_outer_ref allocated in
+        the execution memroot.
+        @todo change this line in WL#7082. Currently, when we execute a SP,
+        containing "SELECT (SELECT ... WHERE t1.col) FROM t1",
+        resolution may make *conds equal to an Item_outer_ref, then below
+        *conds becomes Item_field, which then goes straight on to execution,
+        undoing the effects of putting Item_outer_ref in the first place...
+        With a PS the problem is not as severe, as after the code below we
+        don't go to execution: a next execution will do a new name resolution
+        which will create Item_outer_ref again.
+
+        To reviewers: in WL#7082,
+        prep_where= (*conds)->real_item();
+        becomes:
+        prep_where= *conds;
+        thd->change_item_tree_place(conds, &prep_where);
+        and same for HAVING.
+      */
+      prep_where= (*conds)->real_item();
       *conds= where= prep_where->copy_andor_structure(thd);
     }
     if (*having_conds)
@@ -3034,12 +3273,160 @@ bool st_select_lex::add_index_hint (THD *thd, char *str, uint length)
   @retval  FALSE          No, not a management partition command
 */
 
-bool st_lex::is_partition_management() const
+bool LEX::is_partition_management() const
 {
   return (sql_command == SQLCOM_ALTER_TABLE &&
           (alter_info.flags == ALTER_ADD_PARTITION ||
            alter_info.flags == ALTER_REORGANIZE_PARTITION));
 }
+
+
+#ifdef MYSQL_SERVER
+uint binlog_unsafe_map[256];
+
+#define UNSAFE(a, b, c) \
+  { \
+  DBUG_PRINT("unsafe_mixed_statement", ("SETTING BASE VALUES: %s, %s, %02X\n", \
+    LEX::stmt_accessed_table_string(a), \
+    LEX::stmt_accessed_table_string(b), \
+    c)); \
+  unsafe_mixed_statement(a, b, c); \
+  }
+
+/*
+  Sets the combination given by "a" and "b" and automatically combinations
+  given by other types of access, i.e. 2^(8 - 2), as unsafe.
+
+  It may happen a colision when automatically defining a combination as unsafe.
+  For that reason, a combination has its unsafe condition redefined only when
+  the new_condition is greater then the old. For instance,
+  
+     . (BINLOG_DIRECT_ON & TRX_CACHE_NOT_EMPTY) is never overwritten by 
+     . (BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF).
+*/
+void unsafe_mixed_statement(LEX::enum_stmt_accessed_table a,
+                            LEX::enum_stmt_accessed_table b, uint condition)
+{
+  int type= 0;
+  int index= (1U << a) | (1U << b);
+  
+  
+  for (type= 0; type < 256; type++)
+  {
+    if ((type & index) == index)
+    {
+      binlog_unsafe_map[type] |= condition;
+    }
+  }
+}
+/*
+  The BINLOG_* AND TRX_CACHE_* values can be combined by using '&' or '|',
+  which means that both conditions need to be satisfied or any of them is
+  enough. For example, 
+    
+    . BINLOG_DIRECT_ON & TRX_CACHE_NOT_EMPTY means that the statment is
+    unsafe when the option is on and trx-cache is not empty;
+
+    . BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF means the statement is unsafe
+    in all cases.
+
+    . TRX_CACHE_EMPTY | TRX_CACHE_NOT_EMPTY means the statement is unsafe
+    in all cases. Similar as above.
+*/
+void binlog_unsafe_map_init()
+{
+  memset((void*) binlog_unsafe_map, 0, sizeof(uint) * 256);
+
+  /*
+    Classify a statement as unsafe when there is a mixed statement and an
+    on-going transaction at any point of the execution if:
+
+      1. The mixed statement is about to update a transactional table and
+      a non-transactional table.
+
+      2. The mixed statement is about to update a transactional table and
+      read from a non-transactional table.
+
+      3. The mixed statement is about to update a non-transactional table
+      and temporary transactional table.
+
+      4. The mixed statement is about to update a temporary transactional
+      table and read from a non-transactional table.
+
+      5. The mixed statement is about to update a transactional table and
+      a temporary non-transactional table.
+     
+      6. The mixed statement is about to update a transactional table and
+      read from a temporary non-transactional table.
+
+      7. The mixed statement is about to update a temporary transactional
+      table and temporary non-transactional table.
+
+      8. The mixed statement is about to update a temporary transactional
+      table and read from a temporary non-transactional table.
+
+    After updating a transactional table if:
+
+      9. The mixed statement is about to update a non-transactional table
+      and read from a transactional table.
+
+      10. The mixed statement is about to update a non-transactional table
+      and read from a temporary transactional table.
+
+      11. The mixed statement is about to update a temporary non-transactional
+      table and read from a transactional table.
+      
+      12. The mixed statement is about to update a temporary non-transactional
+      table and read from a temporary transactional table.
+
+      13. The mixed statement is about to update a temporary non-transactional
+      table and read from a non-transactional table.
+
+    The reason for this is that locks acquired may not protected a concurrent
+    transaction of interfering in the current execution and by consequence in
+    the result.
+  */
+  /* Case 1. */
+  UNSAFE(LEX::STMT_WRITES_TRANS_TABLE, LEX::STMT_WRITES_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF);
+  /* Case 2. */
+  UNSAFE(LEX::STMT_WRITES_TRANS_TABLE, LEX::STMT_READS_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF);
+  /* Case 3. */
+  UNSAFE(LEX::STMT_WRITES_NON_TRANS_TABLE, LEX::STMT_WRITES_TEMP_TRANS_TABLE,
+    BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF);
+  /* Case 4. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_TRANS_TABLE, LEX::STMT_READS_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF);
+  /* Case 5. */
+  UNSAFE(LEX::STMT_WRITES_TRANS_TABLE, LEX::STMT_WRITES_TEMP_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON);
+  /* Case 6. */
+  UNSAFE(LEX::STMT_WRITES_TRANS_TABLE, LEX::STMT_READS_TEMP_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON);
+  /* Case 7. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_TRANS_TABLE, LEX::STMT_WRITES_TEMP_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON);
+  /* Case 8. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_TRANS_TABLE, LEX::STMT_READS_TEMP_NON_TRANS_TABLE,
+    BINLOG_DIRECT_ON);
+  /* Case 9. */
+  UNSAFE(LEX::STMT_WRITES_NON_TRANS_TABLE, LEX::STMT_READS_TRANS_TABLE,
+    (BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF) & TRX_CACHE_NOT_EMPTY);
+  /* Case 10 */
+  UNSAFE(LEX::STMT_WRITES_NON_TRANS_TABLE, LEX::STMT_READS_TEMP_TRANS_TABLE,
+    (BINLOG_DIRECT_ON | BINLOG_DIRECT_OFF) & TRX_CACHE_NOT_EMPTY);
+  /* Case 11. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_NON_TRANS_TABLE, LEX::STMT_READS_TRANS_TABLE,
+    BINLOG_DIRECT_ON & TRX_CACHE_NOT_EMPTY);
+  /* Case 12. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_NON_TRANS_TABLE, LEX::STMT_READS_TEMP_TRANS_TABLE,
+    BINLOG_DIRECT_ON & TRX_CACHE_NOT_EMPTY);
+  /* Case 13. */
+  UNSAFE(LEX::STMT_WRITES_TEMP_NON_TRANS_TABLE, LEX::STMT_READS_NON_TRANS_TABLE,
+     BINLOG_DIRECT_OFF & TRX_CACHE_NOT_EMPTY);
+}
+#endif
 
 #ifdef HAVE_EXPLICIT_TEMPLATE_INSTANTIATION
 template class Mem_root_array<ORDER*, true>;

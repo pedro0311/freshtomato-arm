@@ -1,8 +1,7 @@
-#!/usr/bin/perl
+#!@PERL_PATH@
 # -*- cperl -*-
 #
-# Copyright (c) 2007 MySQL AB, 2008 Sun Microsystems, Inc.
-# Use is subject to license terms.
+# Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -43,8 +42,7 @@ use Cwd;
 use strict;
 
 my @exclude_cflags =
-  qw/DDBUG_OFF DSAFEMALLOC USAFEMALLOC DSAFE_MUTEX
-     DPEDANTIC_SAFEMALLOC DUNIV_MUST_NOT_INLINE DFORCE_INIT_OF_VARS
+  qw/DDBUG_OFF DSAFE_MUTEX DUNIV_MUST_NOT_INLINE DFORCE_INIT_OF_VARS
      DEXTRA_DEBUG DHAVE_purify O O[0-9] xO[0-9] W[-A-Za-z]*
      Xa xstrconst xc99=none
      unroll2 ip mp restrict/;
@@ -191,7 +189,7 @@ if ( $^O eq "MSWin32" )
 }
 else
 {
-  my $linkpath   = "-L$pkglibdir";
+  my $linkpath   = "-L$pkglibdir @RPATH_OPTION@";
   @lib_opts   = ($linkpath,"-lmysqlclient");
   @lib_r_opts = ($linkpath,"-lmysqlclient_r");
   @lib_e_opts = ($linkpath,"-lmysqld");
@@ -203,7 +201,7 @@ $flags->{libs} =
 $flags->{libs_r} =
   [@ldflags,@lib_r_opts,'@ZLIB_DEPS@','@LIBS@','@openssl_libs@'];
 $flags->{embedded_libs} =
-  [@ldflags,@lib_e_opts,'@LIBDL@','@ZLIB_DEPS@','@LIBS@','@WRAPLIBS@','@innodb_system_libs@','@openssl_libs@'];
+  [@ldflags,@lib_e_opts,'@LIBDL@','@ZLIB_DEPS@','@LIBS@','@WRAPLIBS@','@openssl_libs@'];
 
 $flags->{include} = ["-I$pkgincludedir"];
 $flags->{cflags}  = [@{$flags->{include}},split(" ",'@CFLAGS@')];

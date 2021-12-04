@@ -1,17 +1,17 @@
-# Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
-# 
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; version 2 of the License.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
+-- Copyright (c) 2003, 2013, Oracle and/or its affiliates. All rights reserved.
+--
+-- This program is free software; you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation; version 2 of the License.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program; if not, write to the Free Software
+-- Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
 
 # This part converts any old privilege tables to privilege tables suitable
 # for current version of MySQL
@@ -19,10 +19,6 @@
 # You can safely ignore all 'Duplicate column' and 'Unknown column' errors
 # because these just mean that your tables are already up to date.
 # This script is safe to run even if your tables are already up to date!
-
-# On unix, you should use the mysql_fix_privilege_tables script to execute
-# this sql script.
-# On windows you should do 'mysql --force mysql < mysql_fix_privilege_tables.sql'
 
 set sql_mode='';
 set storage_engine=MyISAM;
@@ -261,6 +257,11 @@ ALTER TABLE slow_log
   MODIFY sql_text MEDIUMTEXT NOT NULL;
 SET GLOBAL slow_query_log = @old_log_state;
 
+ALTER TABLE plugin
+  MODIFY name varchar(64) COLLATE utf8_general_ci NOT NULL DEFAULT '',
+  MODIFY dl varchar(128) COLLATE utf8_general_ci NOT NULL DEFAULT '',
+  CONVERT TO CHARACTER SET utf8 COLLATE utf8_general_ci;
+
 #
 # Detect whether we had Create_view_priv
 #
@@ -378,7 +379,7 @@ ALTER TABLE procs_priv
     COLLATE utf8_general_ci NOT NULL AFTER Routine_name;
 
 ALTER TABLE procs_priv
-  MODIFY Timestamp timestamp(14) AFTER Proc_priv;
+  MODIFY Timestamp timestamp AFTER Proc_priv;
 
 #
 # proc
@@ -493,6 +494,9 @@ ALTER TABLE proc ADD body_utf8 longblob DEFAULT NULL
                      AFTER db_collation;
 ALTER TABLE proc MODIFY body_utf8 longblob DEFAULT NULL;
 
+# Change comment from char(64) to text
+ALTER TABLE proc MODIFY comment
+                        text collate utf8_bin NOT NULL;
 
 #
 # EVENT privilege
@@ -600,6 +604,70 @@ ALTER TABLE db ADD Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N
 ALTER TABLE db MODIFY Trigger_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL;
 
 UPDATE user SET Trigger_priv=Super_priv WHERE @hadTriggerPriv = 0;
+
+#
+# user.Create_tablespace_priv
+#
+
+SET @hadCreateTablespacePriv := 0;
+SELECT @hadCreateTablespacePriv :=1 FROM user WHERE Create_tablespace_priv LIKE '%';
+
+ALTER TABLE user ADD Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
+ALTER TABLE user MODIFY Create_tablespace_priv enum('N','Y') COLLATE utf8_general_ci DEFAULT 'N' NOT NULL AFTER Trigger_priv;
+
+UPDATE user SET Create_tablespace_priv = Super_priv WHERE @hadCreateTablespacePriv = 0;
+
+--
+-- Unlike 'performance_schema', the 'mysql' database is reserved already,
+-- so no user procedure is supposed to be there.
+--
+-- NOTE: until upgrade is finished, stored routines are not available,
+-- because system tables (e.g. mysql.proc) might be not usable.
+--
+drop procedure if exists mysql.die;
+create procedure mysql.die() signal sqlstate 'HY000' set message_text='Unexpected content found in the performance_schema database.';
+
+--
+-- For broken upgrades, SIGNAL the error
+--
+
+SET @cmd="call mysql.die()";
+
+SET @str = IF(@broken_pfs > 0, @cmd, 'SET @dummy = 0');
+PREPARE stmt FROM @str;
+EXECUTE stmt;
+DROP PREPARE stmt;
+
+drop procedure mysql.die;
+
+ALTER TABLE user ADD plugin char(64) DEFAULT '',  ADD authentication_string TEXT;
+ALTER TABLE user MODIFY plugin char(64) DEFAULT '';
+ALTER TABLE user MODIFY authentication_string TEXT;
+
+-- Need to pre-fill mysql.proxies_priv with access for root even when upgrading from
+-- older versions
+
+CREATE TEMPORARY TABLE tmp_proxies_priv LIKE proxies_priv;
+INSERT INTO tmp_proxies_priv VALUES ('localhost', 'root', '', '', TRUE, '', now());
+INSERT INTO proxies_priv SELECT * FROM tmp_proxies_priv WHERE @had_proxies_priv_table=0;
+DROP TABLE tmp_proxies_priv;
+
+-- Checking for any duplicate hostname and username combination are exists.
+-- If exits we will throw error.
+DROP PROCEDURE IF EXISTS mysql.count_duplicate_host_names;
+DELIMITER //
+CREATE PROCEDURE mysql.count_duplicate_host_names()
+BEGIN
+  SET @duplicate_hosts=(SELECT count(*) FROM mysql.user GROUP BY user, lower(host) HAVING count(*) > 1 LIMIT 1);
+  IF @duplicate_hosts > 1 THEN
+    SIGNAL SQLSTATE '45000'  SET MESSAGE_TEXT = 'Multiple accounts exist for @user_name, @host_name that differ only in Host lettercase; remove all except one of them';
+  END IF;
+END //
+DELIMITER ;
+CALL mysql.count_duplicate_host_names();
+-- Get warnings (if any)
+SHOW WARNINGS;
+DROP PROCEDURE mysql.count_duplicate_host_names;
 
 # Convering the host name to lower case for existing users
 UPDATE user SET host=LOWER( host ) WHERE LOWER( host ) <> host;

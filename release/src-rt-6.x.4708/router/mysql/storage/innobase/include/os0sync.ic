@@ -1,7 +1,24 @@
-/******************************************************
-The interface to the operating system synchronization primitives.
+/*****************************************************************************
 
-(c) 1995 Innobase Oy
+Copyright (c) 1995, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file include/os0sync.ic
+The interface to the operating system synchronization primitives.
 
 Created 9/6/1995 Heikki Tuuri
 *******************************************************/
@@ -10,29 +27,23 @@ Created 9/6/1995 Heikki Tuuri
 #include <winbase.h>
 #endif
 
-/**************************************************************
-Acquires ownership of a fast mutex. Currently in Windows this is the same
-as os_fast_mutex_lock! */
+/**********************************************************//**
+Acquires ownership of a fast mutex.
+@return	0 if success, != 0 if was reserved by another thread */
 UNIV_INLINE
 ulint
 os_fast_mutex_trylock(
 /*==================*/
-						/* out: 0 if success, != 0 if
-						was reserved by another
-						thread */
-	os_fast_mutex_t*	fast_mutex)	/* in: mutex to acquire */
+	os_fast_mutex_t*	fast_mutex)	/*!< in: mutex to acquire */
 {
 #ifdef __WIN__
-	EnterCriticalSection(fast_mutex);
+	if (TryEnterCriticalSection(fast_mutex)) {
 
-	return(0);
-#else
-#if defined(UNIV_HOTBACKUP) && defined(UNIV_HPUX10)
-	/* Since the hot backup version is standalone, MySQL does not redefine
-	pthread_mutex_trylock for HP-UX-10.20, and consequently we must invert
-	the return value here */
+		return(0);
+	} else {
 
-	return((ulint) (1 - pthread_mutex_trylock(fast_mutex)));
+		return(1);
+	}
 #else
 	/* NOTE that the MySQL my_pthread.h redefines pthread_mutex_trylock
 	so that it returns 0 on success. In the operating system
@@ -41,6 +52,5 @@ os_fast_mutex_trylock(
 	FreeBSD, Solaris, AIX, Tru64 Unix, HP-UX-11.0 return 0 on success. */
 
 	return((ulint) pthread_mutex_trylock(fast_mutex));
-#endif
 #endif
 }

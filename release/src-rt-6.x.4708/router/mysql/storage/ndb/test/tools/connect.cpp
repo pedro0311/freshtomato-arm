@@ -1,5 +1,4 @@
-/* Copyright (c) 2007 MySQL AB, 2008 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
 
 #include <ndb_global.h>
 #include <ndb_opts.h>
@@ -32,14 +31,14 @@ static struct my_option my_long_options[] =
 {
   NDB_STD_OPTS("ndb_desc"),
   { "loop", 'l', "loops",
-    (gptr*) &_loop, (gptr*) &_loop, 0,
+     &_loop,  &_loop, 0,
     GET_INT, REQUIRED_ARG, _loop, 0, 0, 0, 0, 0 }, 
   { "sleep", 's', "Sleep (ms) between connection attempt",
-    (gptr*) &_sleep, (gptr*) &_sleep, 0,
+     &_sleep,  &_sleep, 0,
     GET_INT, REQUIRED_ARG, _sleep, 0, 0, 0, 0, 0 }, 
   { "drop", 'd', 
     "Drop event operations before disconnect (0 = no, 1 = yes, else rand",
-    (gptr*) &_drop, (gptr*) &_drop, 0,
+     &_drop,  &_drop, 0,
     GET_INT, REQUIRED_ARG, _drop, 0, 0, 0, 0, 0 }, 
   { 0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };

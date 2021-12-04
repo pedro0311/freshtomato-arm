@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndb_select_all\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDB_SELECT_ALL\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDB_SELECT_ALL\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,12 +27,11 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndb_select_all
 .SH "NAME"
 ndb_select_all \- print rows from an NDB table
 .SH "SYNOPSIS"
-.HP \w'\fBndb_select_all\ \-c\ \fR\fB\fIconnect_string\fR\fR\fB\ \fR\fB\fItbl_name\fR\fR\fB\ \-d\ \fR\fB\fIdb_name\fR\fR\fB\ [>\ \fR\fB\fIfile_name\fR\fR\fB]\fR\ 'u
-\fBndb_select_all \-c \fR\fB\fIconnect_string\fR\fR\fB \fR\fB\fItbl_name\fR\fR\fB \-d \fR\fB\fIdb_name\fR\fR\fB [> \fR\fB\fIfile_name\fR\fR\fB]\fR
+.HP \w'\fBndb_select_all\ \-c\ \fR\fB\fIconnection_string\fR\fR\fB\ \fR\fB\fItbl_name\fR\fR\fB\ \-d\ \fR\fB\fIdb_name\fR\fR\fB\ [>\ \fR\fB\fIfile_name\fR\fR\fB]\fR\ 'u
+\fBndb_select_all \-c \fR\fB\fIconnection_string\fR\fR\fB \fR\fB\fItbl_name\fR\fR\fB \-d \fR\fB\fIdb_name\fR\fR\fB [> \fR\fB\fIfile_name\fR\fR\fB]\fR
 .SH "DESCRIPTION"
 .PP
 \fBndb_select_all\fR
@@ -40,28 +39,28 @@ prints all rows from an
 NDB
 table to
 stdout\&.
-        Usage
+Usage
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-ndb_select_all \-c \fIconnect_string\fR \fItbl_name\fR \-d \fIdb_name\fR [> \fIfile_name\fR]
+ndb_select_all \-c \fIconnection_string\fR \fItbl_name\fR \-d \fIdb_name\fR [> \fIfile_name\fR]
 .fi
 .if n \{\
 .RE
 .\}
 .PP
-The following table includes options that are specific to the MySQL Cluster native backup restoration program
-\fBndb_select_all\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+The following table includes options that are specific to the NDB Cluster native backup restoration program
+\fBndb_select_all\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndb_select_all\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.24.\ \&ndb_select_all Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.301.\ \&Command\-line options for the ndb_select_all program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -70,9 +69,10 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
+l l l
 l l l
 l l l
 l l l
@@ -95,7 +95,7 @@ T}:T{
 Name of the database in which the table is found
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -106,7 +106,7 @@ T}:T{
 Degree of parallelism
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -117,7 +117,7 @@ T}:T{
 Lock type
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -128,7 +128,7 @@ T}:T{
 Sort resultset according to index whose name is supplied
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -139,7 +139,7 @@ T}:T{
 Sort resultset in descending order (requires order flag)
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -150,7 +150,7 @@ T}:T{
 Print header (set to 0|FALSE to disable headers in output)
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -161,7 +161,7 @@ T}:T{
 Output numbers in hexadecimal format
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -172,17 +172,17 @@ T}:T{
 Set a column delimiter
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
 --disk
 T}:T{
 Print disk references (useful only for Disk Data tables having
-            nonindexed columns)
+              nonindexed columns)
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -191,7 +191,7 @@ T}:T{
 Print rowid
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -200,18 +200,27 @@ T}:T{
 Include GCI in output
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
---tup,
+--gci64
+T}:T{
+Include GCI and row epoch in output
+T}:T{
+.PP
+All MySQL 5.5 based releases
+T}
+T{
+.PP
+--tupscan,
 .PP
 -t
 T}:T{
 Scan in tup order
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -220,7 +229,7 @@ T}:T{
 Do not print table column data
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
@@ -233,7 +242,6 @@ T}
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: database option
 \fB\-\-database=\fR\fB\fIdbname\fR\fR,
 \fB\-d\fR
 \fIdbname\fR
@@ -250,7 +258,6 @@ TEST_DB\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: parallelism option
 \fBparallelism=\fR\fB\fI#\fR\fR,
 \fB\-p\fR
 \fI#\fR
@@ -266,8 +273,6 @@ Specifies the degree of parallelism\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: lock option
-.\" lock option: ndb_select_all
 \fB\-\-lock=\fR\fB\fIlock_type\fR\fR,
 \fB\-l \fR\fB\fIlock_type\fR\fR
 .sp
@@ -319,8 +324,6 @@ There is no default value for this option\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: order option
-.\" order option: ndb_select_all
 \fB\-\-order=\fR\fB\fIindex_name\fR\fR,
 \fB\-o \fR\fB\fIindex_name\fR\fR
 .sp
@@ -336,8 +339,6 @@ Orders the output according to the index named
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: descending option
-.\" descending option: ndb_select_all
 \fB\-\-descending\fR,
 \fB\-z\fR
 .sp
@@ -354,8 +355,6 @@ Sorts the output in descending order\&. This option can be used only in conjunct
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: header option
-.\" header option: ndb_select_all
 \fB\-\-header=FALSE\fR
 .sp
 Excludes column headers from the output\&.
@@ -369,8 +368,6 @@ Excludes column headers from the output\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: useHexFormat option
-.\" useHexFormat option: ndb_select_all
 \fB\-\-useHexFormat\fR
 \fB\-x\fR
 .sp
@@ -385,8 +382,6 @@ Causes all numeric values to be displayed in hexadecimal format\&. This does not
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: delimiter option
-.\" delimiter option: ndb_select_all
 \fB\-\-delimiter=\fR\fB\fIcharacter\fR\fR,
 \fB\-D \fR\fB\fIcharacter\fR\fR
 .sp
@@ -405,8 +400,6 @@ The default delimiter is the tab character\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: disk option
-.\" disk option: ndb_select_all
 \fB\-\-disk\fR
 .sp
 Adds a disk reference column to the output\&. The column is nonempty only for Disk Data tables having nonindexed columns\&.
@@ -420,8 +413,6 @@ Adds a disk reference column to the output\&. The column is nonempty only for Di
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: rowid option
-.\" rowid option: ndb_select_all
 \fB\-\-rowid\fR
 .sp
 Adds a
@@ -437,13 +428,13 @@ column providing information about the fragments in which rows are stored\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: gci option
-.\" gci option: ndb_select_all
 \fB\-\-gci\fR
 .sp
-Adds a column to the output showing the global checkpoint at which each row was last updated\&. See
-Section\ \&17.1, \(lqMySQL Cluster Overview\(rq, and
-Section\ \&17.5.6.2, \(lqMySQL Cluster Log Events\(rq, for more information about checkpoints\&.
+Adds a
+GCI
+column to the output showing the global checkpoint at which each row was last updated\&. See
+Section\ \&18.1, \(lqNDB Cluster Overview\(rq, and
+Section\ \&18.5.6.2, \(lqNDB Cluster Log Events\(rq, for more information about checkpoints\&.
 .RE
 .sp
 .RS 4
@@ -454,8 +445,21 @@ Section\ \&17.5.6.2, \(lqMySQL Cluster Log Events\(rq, for more information abou
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: tupscan option
-.\" tupscan option: ndb_select_all
+\fB\-\-gci64\fR
+.sp
+Adds a
+ROW$GCI64
+column to the output showing the global checkpoint at which each row was last updated, as well as the number of the epoch in which this update occurred\&.
+.RE
+.sp
+.RS 4
+.ie n \{\
+\h'-04'\(bu\h'+03'\c
+.\}
+.el \{\
+.sp -1
+.IP \(bu 2.3
+.\}
 \fB\-\-tupscan\fR,
 \fB\-t\fR
 .sp
@@ -470,14 +474,11 @@ Scan the table in the order of the tuples\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_select_all: nodata option
-.\" nodata option: ndb_select_all
 \fB\-\-nodata\fR
 .sp
 Causes any table data to be omitted\&.
 .RE
-        Sample Output
-.PP
+Sample Output.PP
 Output from a MySQL
 SELECT
 statement:
@@ -525,8 +526,8 @@ NDBT_ProgramExit: 0 \- OK
 .RE
 .\}
 .PP
-Note that all string values are enclosed by square brackets (\(lq[\&.\&.\&.]\(rq) in the output of
-\fBndb_select_all\fR\&. For a further example, consider the table created and populated as shown here:
+All string values are enclosed by square brackets ([\&.\&.\&.]) in the output of
+\fBndb_select_all\fR\&. Now consider the table created and populated as shown here:
 .sp
 .if n \{\
 .RS 4
@@ -571,30 +572,10 @@ NDBT_ProgramExit: 0 \- OK
 .if n \{\
 .RE
 .\}
-.if n \{\
-.sp
-.\}
-.RS 4
-.it 1 an-trap
-.nr an-no-space-flag 1
-.nr an-break-flag 1
-.br
-.ps +1
-\fBNote\fR
-.ps -1
-.br
-.PP
-In earlier MySQL Cluster NDB 7\&.0 and 7\&.1 releases,
-\fBndb_select_all\fR
-did not print any output for
-NULL
-values as it did in MySQL Cluster NDB 6\&.3 and earlier release series\&. This issue was fixed in MySQL Cluster NDB 7\&.0\&.22 and MySQL Cluster NDB 7\&.1\&.11\&. (Bug #60045)
-.sp .5v
-.RE
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

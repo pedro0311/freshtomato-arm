@@ -1,4 +1,4 @@
-/* Copyright (c) 2003-2006 MySQL AB
+/* Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -840,13 +840,13 @@ Dbtux::TreeEnt::cmp(const TreeEnt ent) const
    */
   const unsigned version_wrap_limit = (1 << (ZTUP_VERSION_BITS - 1));
   if (m_tupVersion < ent.m_tupVersion) {
-    if (ent.m_tupVersion - m_tupVersion < version_wrap_limit)
+    if (unsigned(ent.m_tupVersion - m_tupVersion) < version_wrap_limit)
       return -1;
     else
       return +1;
   }
   if (m_tupVersion > ent.m_tupVersion) {
-    if (m_tupVersion - ent.m_tupVersion < version_wrap_limit)
+    if (unsigned(m_tupVersion - ent.m_tupVersion) < version_wrap_limit)
       return +1;
     else
       return -1;

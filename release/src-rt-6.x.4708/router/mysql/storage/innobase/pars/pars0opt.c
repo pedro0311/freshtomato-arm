@@ -1,7 +1,24 @@
-/******************************************************
-Simple SQL optimizer
+/*****************************************************************************
 
-(c) 1997 Innobase Oy
+Copyright (c) 1997, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
+/**************************************************//**
+@file pars/pars0opt.c
+Simple SQL optimizer
 
 Created 12/21/1997 Heikki Tuuri
 *******************************************************/
@@ -31,15 +48,14 @@ Created 12/21/1997 Heikki Tuuri
 #define OPT_SCROLL_COND	4
 
 
-/***********************************************************************
-Inverts a comparison operator. */
+/*******************************************************************//**
+Inverts a comparison operator.
+@return	the equivalent operator when the order of the arguments is switched */
 static
 int
 opt_invert_cmp_op(
 /*==============*/
-			/* out: the equivalent operator when the order of
-			the arguments is switched */
-	int	op)	/* in: operator */
+	int	op)	/*!< in: operator */
 {
 	if (op == '<') {
 		return('>');
@@ -58,18 +74,18 @@ opt_invert_cmp_op(
 	return(0);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Checks if the value of an expression can be calculated BEFORE the nth table
 in a join is accessed. If this is the case, it can possibly be used in an
-index search for the nth table. */
+index search for the nth table.
+@return	TRUE if already determined */
 static
 ibool
 opt_check_exp_determined_before(
 /*============================*/
-					/* out: TRUE if already determined */
-	que_node_t*	exp,		/* in: expression */
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		nth_table)	/* in: nth table will be accessed */
+	que_node_t*	exp,		/*!< in: expression */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		nth_table)	/*!< in: nth table will be accessed */
 {
 	func_node_t*	func_node;
 	sym_node_t*	sym_node;
@@ -118,24 +134,22 @@ opt_check_exp_determined_before(
 	return(FALSE);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Looks in a comparison condition if a column value is already restricted by
-it BEFORE the nth table is accessed. */
+it BEFORE the nth table is accessed.
+@return	expression restricting the value of the column, or NULL if not known */
 static
 que_node_t*
 opt_look_for_col_in_comparison_before(
 /*==================================*/
-					/* out: expression restricting the
-					value of the column, or NULL if not
-					known */
-	ulint		cmp_type,	/* in: OPT_EQUAL, OPT_COMPARISON */
-	ulint		col_no,		/* in: column number */
-	func_node_t*	search_cond,	/* in: comparison condition */
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		nth_table,	/* in: nth table in a join (a query
+	ulint		cmp_type,	/*!< in: OPT_EQUAL, OPT_COMPARISON */
+	ulint		col_no,		/*!< in: column number */
+	func_node_t*	search_cond,	/*!< in: comparison condition */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		nth_table,	/*!< in: nth table in a join (a query
 					from a single table is considered a
 					join of 1 table) */
-	ulint*		op)		/* out: comparison operator ('=',
+	ulint*		op)		/*!< out: comparison operator ('=',
 					PARS_GE_TOKEN, ... ); this is inverted
 					if the column appears on the right
 					side */
@@ -215,26 +229,24 @@ opt_look_for_col_in_comparison_before(
 	return(NULL);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Looks in a search condition if a column value is already restricted by the
 search condition BEFORE the nth table is accessed. Takes into account that
 if we will fetch in an ascending order, we cannot utilize an upper limit for
-a column value; in a descending order, respectively, a lower limit. */
+a column value; in a descending order, respectively, a lower limit.
+@return	expression restricting the value of the column, or NULL if not known */
 static
 que_node_t*
 opt_look_for_col_in_cond_before(
 /*============================*/
-					/* out: expression restricting the
-					value of the column, or NULL if not
-					known */
-	ulint		cmp_type,	/* in: OPT_EQUAL, OPT_COMPARISON */
-	ulint		col_no,		/* in: column number */
-	func_node_t*	search_cond,	/* in: search condition or NULL */
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		nth_table,	/* in: nth table in a join (a query
+	ulint		cmp_type,	/*!< in: OPT_EQUAL, OPT_COMPARISON */
+	ulint		col_no,		/*!< in: column number */
+	func_node_t*	search_cond,	/*!< in: search condition or NULL */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		nth_table,	/*!< in: nth table in a join (a query
 					from a single table is considered a
 					join of 1 table) */
-	ulint*		op)		/* out: comparison operator ('=',
+	ulint*		op)		/*!< out: comparison operator ('=',
 					PARS_GE_TOKEN, ... ) */
 {
 	func_node_t*	new_cond;
@@ -293,24 +305,24 @@ opt_look_for_col_in_cond_before(
 	return(exp);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Calculates the goodness for an index according to a select node. The
 goodness is 4 times the number of first fields in index whose values we
 already know exactly in the query. If we have a comparison condition for
 an additional field, 2 point are added. If the index is unique, and we know
 all the unique fields for the index we add 1024 points. For a clustered index
-we add 1 point. */
+we add 1 point.
+@return	goodness */
 static
 ulint
 opt_calc_index_goodness(
 /*====================*/
-					/* out: goodness */
-	dict_index_t*	index,		/* in: index */
-	sel_node_t*	sel_node,	/* in: parsed select node */
-	ulint		nth_table,	/* in: nth table in a join */
-	que_node_t**	index_plan,	/* in/out: comparison expressions for
+	dict_index_t*	index,		/*!< in: index */
+	sel_node_t*	sel_node,	/*!< in: parsed select node */
+	ulint		nth_table,	/*!< in: nth table in a join */
+	que_node_t**	index_plan,	/*!< in/out: comparison expressions for
 					this index */
-	ulint*		last_op)	/* out: last comparison operator, if
+	ulint*		last_op)	/*!< out: last comparison operator, if
 					goodness > 1 */
 {
 	que_node_t*	exp;
@@ -362,14 +374,14 @@ opt_calc_index_goodness(
 	if (goodness >= 4 * dict_index_get_n_unique(index)) {
 		goodness += 1024;
 
-		if (index->type & DICT_CLUSTERED) {
+		if (dict_index_is_clust(index)) {
 
 			goodness += 1024;
 		}
 	}
 
 	/* We have to test for goodness here, as last_op may note be set */
-	if (goodness && index->type & DICT_CLUSTERED) {
+	if (goodness && dict_index_is_clust(index)) {
 
 		goodness++;
 	}
@@ -377,30 +389,29 @@ opt_calc_index_goodness(
 	return(goodness);
 }
 
-/***********************************************************************
-Calculates the number of matched fields based on an index goodness. */
+/*******************************************************************//**
+Calculates the number of matched fields based on an index goodness.
+@return	number of excatly or partially matched fields */
 UNIV_INLINE
 ulint
 opt_calc_n_fields_from_goodness(
 /*============================*/
-				/* out: number of excatly or partially matched
-				fields */
-	ulint	goodness)	/* in: goodness */
+	ulint	goodness)	/*!< in: goodness */
 {
 	return(((goodness % 1024) + 2) / 4);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Converts a comparison operator to the corresponding search mode PAGE_CUR_GE,
-... */
+...
+@return	search mode */
 UNIV_INLINE
 ulint
 opt_op_to_search_mode(
 /*==================*/
-			/* out: search mode */
-	ibool	asc,	/* in: TRUE if the rows should be fetched in an
+	ibool	asc,	/*!< in: TRUE if the rows should be fetched in an
 			ascending order */
-	ulint	op)	/* in: operator '=', PARS_GE_TOKEN, ... */
+	ulint	op)	/*!< in: operator '=', PARS_GE_TOKEN, ... */
 {
 	if (op == '=') {
 		if (asc) {
@@ -427,15 +438,15 @@ opt_op_to_search_mode(
 	return(0);
 }
 
-/***********************************************************************
-Determines if a node is an argument node of a function node. */
+/*******************************************************************//**
+Determines if a node is an argument node of a function node.
+@return	TRUE if is an argument */
 static
 ibool
 opt_is_arg(
 /*=======*/
-					/* out: TRUE if is an argument */
-	que_node_t*	arg_node,	/* in: possible argument node */
-	func_node_t*	func_node)	/* in: function node */
+	que_node_t*	arg_node,	/*!< in: possible argument node */
+	func_node_t*	func_node)	/*!< in: function node */
 {
 	que_node_t*	arg;
 
@@ -453,7 +464,7 @@ opt_is_arg(
 	return(FALSE);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Decides if the fetching of rows should be made in a descending order, and
 also checks that the chosen query plan produces a result which satisfies
 the order-by. */
@@ -461,7 +472,7 @@ static
 void
 opt_check_order_by(
 /*===============*/
-	sel_node_t*	sel_node)	/* in: select node; asserts an error
+	sel_node_t*	sel_node)	/*!< in: select node; asserts an error
 					if the plan does not agree with the
 					order-by */
 {
@@ -505,7 +516,7 @@ opt_check_order_by(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Optimizes a select. Decides which indexes to tables to use. The tables
 are accessed in the order that they were written to the FROM part in the
 select statement. */
@@ -513,9 +524,9 @@ static
 void
 opt_search_plan_for_table(
 /*======================*/
-	sel_node_t*	sel_node,	/* in: parsed select node */
-	ulint		i,		/* in: this is the ith table */
-	dict_table_t*	table)		/* in: table */
+	sel_node_t*	sel_node,	/*!< in: parsed select node */
+	ulint		i,		/*!< in: this is the ith table */
+	dict_table_t*	table)		/*!< in: table */
 {
 	plan_t*		plan;
 	dict_index_t*	index;
@@ -557,7 +568,7 @@ opt_search_plan_for_table(
 			best_last_op = last_op;
 		}
 
-		index = dict_table_get_next_index(index);
+		dict_table_next_uncorrupted_index(index);
 	}
 
 	plan->index = best_index;
@@ -587,7 +598,7 @@ opt_search_plan_for_table(
 						   best_last_op);
 	}
 
-	if ((best_index->type & DICT_CLUSTERED)
+	if (dict_index_is_clust(best_index)
 	    && (plan->n_exact_match >= dict_index_get_n_unique(best_index))) {
 
 		plan->unique_search = TRUE;
@@ -601,22 +612,19 @@ opt_search_plan_for_table(
 	btr_pcur_init(&(plan->clust_pcur));
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Looks at a comparison condition and decides if it can, and need, be tested for
-a table AFTER the table has been accessed. */
+a table AFTER the table has been accessed.
+@return OPT_NOT_COND if not for this table, else OPT_END_COND,
+OPT_TEST_COND, or OPT_SCROLL_COND, where the last means that the
+condition need not be tested, except when scroll cursors are used */
 static
 ulint
 opt_classify_comparison(
 /*====================*/
-					/* out: OPT_NOT_COND if not for this
-					table, else OPT_END_COND,
-					OPT_TEST_COND, or OPT_SCROLL_COND,
-					where the last means that the
-					condition need not be tested, except
-					when scroll cursors are used */
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		i,		/* in: ith table in the join */
-	func_node_t*	cond)		/* in: comparison condition */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		i,		/*!< in: ith table in the join */
+	func_node_t*	cond)		/*!< in: comparison condition */
 {
 	plan_t*	plan;
 	ulint	n_fields;
@@ -697,15 +705,15 @@ opt_classify_comparison(
 	return(OPT_TEST_COND);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Recursively looks for test conditions for a table in a join. */
 static
 void
 opt_find_test_conds(
 /*================*/
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		i,		/* in: ith table in the join */
-	func_node_t*	cond)		/* in: conjunction of search
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		i,		/*!< in: ith table in the join */
+	func_node_t*	cond)		/*!< in: conjunction of search
 					conditions or NULL */
 {
 	func_node_t*	new_cond;
@@ -742,7 +750,7 @@ opt_find_test_conds(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Normalizes a list of comparison conditions so that a column of the table
 appears on the left side of the comparison if possible. This is accomplished
 by switching the arguments of the operator. */
@@ -750,9 +758,9 @@ static
 void
 opt_normalize_cmp_conds(
 /*====================*/
-	func_node_t*	cond,	/* in: first in a list of comparison
+	func_node_t*	cond,	/*!< in: first in a list of comparison
 				conditions, or NULL */
-	dict_table_t*	table)	/* in: table */
+	dict_table_t*	table)	/*!< in: table */
 {
 	que_node_t*	arg1;
 	que_node_t*	arg2;
@@ -784,7 +792,7 @@ opt_normalize_cmp_conds(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Finds out the search condition conjuncts we can, and need, to test as the ith
 table in a join is accessed. The search tuple can eliminate the need to test
 some conjuncts. */
@@ -792,8 +800,8 @@ static
 void
 opt_determine_and_normalize_test_conds(
 /*===================================*/
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		i)		/* in: ith table in the join */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		i)		/*!< in: ith table in the join */
 {
 	plan_t*	plan;
 
@@ -812,24 +820,24 @@ opt_determine_and_normalize_test_conds(
 	ut_a(UT_LIST_GET_LEN(plan->end_conds) >= plan->n_exact_match);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Looks for occurrences of the columns of the table in the query subgraph and
 adds them to the list of columns if an occurrence of the same column does not
 already exist in the list. If the column is already in the list, puts a value
 indirection to point to the occurrence in the column list, except if the
 column occurrence we are looking at is in the column list, in which case
 nothing is done. */
-
+UNIV_INTERN
 void
 opt_find_all_cols(
 /*==============*/
-	ibool		copy_val,	/* in: if TRUE, new found columns are
+	ibool		copy_val,	/*!< in: if TRUE, new found columns are
 					added as columns to copy */
-	dict_index_t*	index,		/* in: index of the table to use */
-	sym_node_list_t* col_list,	/* in: base node of a list where
+	dict_index_t*	index,		/*!< in: index of the table to use */
+	sym_node_list_t* col_list,	/*!< in: base node of a list where
 					to add new found columns */
-	plan_t*		plan,		/* in: plan or NULL */
-	que_node_t*	exp)		/* in: expression or condition or
+	plan_t*		plan,		/*!< in: plan or NULL */
+	que_node_t*	exp)		/*!< in: expression or condition or
 					NULL */
 {
 	func_node_t*	func_node;
@@ -906,7 +914,7 @@ opt_find_all_cols(
 
 	sym_node->field_nos[SYM_CLUST_FIELD_NO] = dict_index_get_nth_col_pos(
 		dict_table_get_first_index(index->table), sym_node->col_no);
-	if (!(index->type & DICT_CLUSTERED)) {
+	if (!dict_index_is_clust(index)) {
 
 		ut_a(plan);
 
@@ -921,7 +929,7 @@ opt_find_all_cols(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Looks for occurrences of the columns of the table in conditions which are
 not yet determined AFTER the join operation has fetched a row in the ith
 table. The values for these column must be copied to dynamic memory for
@@ -930,9 +938,9 @@ static
 void
 opt_find_copy_cols(
 /*===============*/
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		i,		/* in: ith table in the join */
-	func_node_t*	search_cond)	/* in: search condition or NULL */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		i,		/*!< in: ith table in the join */
+	func_node_t*	search_cond)	/*!< in: search condition or NULL */
 {
 	func_node_t*	new_cond;
 	plan_t*		plan;
@@ -969,7 +977,7 @@ opt_find_copy_cols(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Classifies the table columns according to whether we use the column only while
 holding the latch on the page, or whether we have to copy the column value to
 dynamic memory. Puts the first occurrence of a column to either list in the
@@ -978,8 +986,8 @@ static
 void
 opt_classify_cols(
 /*==============*/
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		i)		/* in: ith table in the join */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		i)		/*!< in: ith table in the join */
 {
 	plan_t*		plan;
 	que_node_t*	exp;
@@ -1013,15 +1021,15 @@ opt_classify_cols(
 			  sel_node->search_cond);
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Fills in the info in plan which is used in accessing a clustered index
 record. The columns must already be classified for the plan node. */
 static
 void
 opt_clust_access(
 /*=============*/
-	sel_node_t*	sel_node,	/* in: select node */
-	ulint		n)		/* in: nth table in select */
+	sel_node_t*	sel_node,	/*!< in: select node */
+	ulint		n)		/*!< in: nth table in select */
 {
 	plan_t*		plan;
 	dict_table_t*	table;
@@ -1041,7 +1049,7 @@ opt_clust_access(
 
 	plan->no_prefetch = FALSE;
 
-	if (index->type & DICT_CLUSTERED) {
+	if (dict_index_is_clust(index)) {
 		plan->clust_map = NULL;
 		plan->clust_ref = NULL;
 
@@ -1085,15 +1093,15 @@ opt_clust_access(
 	}
 }
 
-/***********************************************************************
+/*******************************************************************//**
 Optimizes a select. Decides which indexes to tables to use. The tables
 are accessed in the order that they were written to the FROM part in the
 select statement. */
-
+UNIV_INTERN
 void
 opt_search_plan(
 /*============*/
-	sel_node_t*	sel_node)	/* in: parsed select node */
+	sel_node_t*	sel_node)	/*!< in: parsed select node */
 {
 	sym_node_t*	table_node;
 	dict_table_t*	table;
@@ -1160,13 +1168,13 @@ opt_search_plan(
 #endif
 }
 
-/************************************************************************
+/********************************************************************//**
 Prints info of a query plan. */
-
+UNIV_INTERN
 void
 opt_print_query_plan(
 /*=================*/
-	sel_node_t*	sel_node)	/* in: select node */
+	sel_node_t*	sel_node)	/*!< in: select node */
 {
 	plan_t*	plan;
 	ulint	n_fields;

@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2006, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2006, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -38,7 +38,8 @@
 static char mysql_path[FN_REFLEN];
 static char mysqlcheck_path[FN_REFLEN];
 
-static my_bool opt_force, opt_verbose, debug_info_flag, debug_check_flag;
+static my_bool opt_force, opt_verbose, debug_info_flag, debug_check_flag,
+               opt_systables_only, opt_version_check;
 static uint my_end_arg= 0;
 static char *opt_user= (char*)"root";
 
@@ -46,6 +47,8 @@ static DYNAMIC_STRING ds_args;
 static DYNAMIC_STRING conn_args;
 
 static char *opt_password= 0;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
+
 static my_bool tty_password= 0;
 
 static char opt_tmpdir[FN_REFLEN] = "";
@@ -59,8 +62,6 @@ static char **defaults_argv;
 static my_bool not_used; /* Can't use GET_BOOL without a value pointer */
 
 static my_bool opt_write_binlog;
-
-#include <help_start.h>
 
 static struct my_option my_long_options[]=
 {
@@ -91,6 +92,10 @@ static struct my_option my_long_options[]=
   {"default-character-set", OPT_DEFAULT_CHARSET,
    "Set the default character set.", 0,
    0, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"default_auth", OPT_DEFAULT_AUTH,
+   "Default authentication client-side plugin to use.",
+   &opt_default_auth, &opt_default_auth, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"force", 'f', "Force execution of mysqlcheck even if mysql_upgrade "
    "has already been executed for the current version of MySQL.",
    &opt_force, &opt_force, 0,
@@ -105,6 +110,9 @@ static struct my_option my_long_options[]=
   {"pipe", 'W', "Use named pipes to connect to server.", 0, 0, 0,
    GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"plugin_dir", OPT_PLUGIN_DIR, "Directory for client-side plugins.",
+   &opt_plugin_dir, &opt_plugin_dir, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port", 'P', "Port number to use for connection or 0 for default to, in "
    "order of preference, my.cnf, $MYSQL_TCP_PORT, "
 #if MYSQL_PORT_DEFAULT == 0
@@ -120,11 +128,21 @@ static struct my_option my_long_options[]=
    "Base name of shared memory.", 0,
    0, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"version-check", 'k', "Run this program only if its \'server version\' "
+   "matches the version of the server to which it's connecting, (enabled by "
+   "default); use --skip-version-check to avoid this check. Note: the \'server "
+   "version\' of the program is the version of the MySQL server with which it "
+   "was built/distributed.", &opt_version_check, &opt_version_check, 0,
+   GET_BOOL, NO_ARG, 1, 0, 0, 0, 0, 0},
   {"socket", 'S', "The socket file to use for connection.",
    0, 0, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
 #include <sslopt-longopts.h>
   {"tmpdir", 't', "Directory for temporary files.",
    0, 0, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
+  {"upgrade-system-tables", 's', "Only upgrade the system tables "
+   "do not try to upgrade the data.",
+   &opt_systables_only, &opt_systables_only, 0,
+   GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"user", 'u', "User for login if not current user.", &opt_user,
    &opt_user, 0, GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"verbose", 'v', "Display more output about the process.",
@@ -137,8 +155,6 @@ static struct my_option my_long_options[]=
    1, 0, 0, 0, 0, 0},
   {0, 0, 0, 0, 0, 0, GET_NO_ARG, NO_ARG, 0, 0, 0, 0, 0, 0}
 };
-
-#include <help_end.h>
 
 
 static void free_used_memory(void)
@@ -212,6 +228,9 @@ static void add_one_option(DYNAMIC_STRING* ds,
     case GET_STR:
       arg= argument;
       break;
+    case GET_BOOL:
+      arg= (*(my_bool *)opt->value) ? "1" : "0";
+      break;
     default:
       die("internal error at %s: %d",__FILE__, __LINE__);
     }
@@ -230,9 +249,9 @@ get_one_option(int optid, const struct my_option *opt,
   switch (optid) {
 
   case '?':
-    puts(ORACLE_WELCOME_COPYRIGHT_NOTICE("2000"));
     printf("%s  Ver %s Distrib %s, for %s (%s)\n",
            my_progname, VER, MYSQL_SERVER_VERSION, SYSTEM_TYPE, MACHINE_TYPE);
+    puts(ORACLE_WELCOME_COPYRIGHT_NOTICE("2000"));
     puts("MySQL utility for upgrading databases to new MySQL versions.\n");
     my_print_help(my_long_options);
     exit(0);
@@ -270,8 +289,11 @@ get_one_option(int optid, const struct my_option *opt,
             my_progname, optid == 'b' ? "basedir" : "datadir");
     /* FALLTHROUGH */
 
+  case 'k':                                     /* --version-check */
   case 'v': /* --verbose   */
   case 'f': /* --force     */
+  case 's':                                     /* --upgrade-system-tables */
+  case OPT_WRITE_BINLOG:                        /* --write-binlog */
     add_option= FALSE;
     break;
 
@@ -281,8 +303,11 @@ get_one_option(int optid, const struct my_option *opt,
   case 'S': /* --socket */
   case OPT_MYSQL_PROTOCOL: /* --protocol */
   case OPT_SHARED_MEMORY_BASE_NAME: /* --shared-memory-base-name */
+  case OPT_PLUGIN_DIR:                          /* --plugin-dir */
+  case OPT_DEFAULT_AUTH:                        /* --default-auth */
     add_one_option(&conn_args, opt, argument);
     break;
+#include <sslopt-case.h>
   }
 
   if (add_option)
@@ -362,6 +387,12 @@ static int run_tool(char *tool_path, DYNAMIC_STRING *ds_res, ...)
 
   va_end(args);
 
+#if defined(HAVE_OPENSSL) && !defined(EMBEDDED_LIBRARY)
+  /* If given --ssl-mode=REQUIRED propagate it to the tool. */
+  if (opt_ssl_mode == SSL_MODE_REQUIRED)
+    dynstr_append(&ds_cmdline, "--ssl-mode=REQUIRED");
+#endif
+
 #ifdef __WIN__
   dynstr_append(&ds_cmdline, "\"");
 #endif
@@ -438,6 +469,7 @@ static void find_tool(char *tool_executable_name, const char *tool_name,
   */
   if (run_tool(tool_executable_name,
                &ds_tmp, /* Get output from command, discard*/
+               "--no-defaults",
                "--help",
                "2>&1",
                IF_WIN("> NUL", "> /dev/null"),
@@ -521,6 +553,8 @@ static int run_query(const char *query, DYNAMIC_STRING *ds_res,
 static int extract_variable_from_show(DYNAMIC_STRING* ds, char* value)
 {
   char *value_start, *value_end;
+  size_t len;
+
   /*
     The query returns "datadir\t<datadir>\n", skip past
     the tab
@@ -533,7 +567,9 @@ static int extract_variable_from_show(DYNAMIC_STRING* ds, char* value)
   if ((value_end= strchr(value_start, '\n')) == NULL)
     return 1; /* Unexpected result */
 
-  strncpy(value, value_start, min(FN_REFLEN, value_end-value_start));
+  len= (size_t) min(FN_REFLEN, value_end-value_start);
+  strncpy(value, value_start, len);
+  value[len]= '\0';
   return 0;
 }
 
@@ -807,14 +843,67 @@ static const char *load_default_groups[]=
 };
 
 
+/* Convert the specified version string into the numeric format. */
+static ulong STDCALL calc_server_version(char *some_version)
+{
+  uint major, minor, version;
+  char *point= some_version, *end_point;
+  major=   (uint) strtoul(point, &end_point, 10);   point=end_point+1;
+  minor=   (uint) strtoul(point, &end_point, 10);   point=end_point+1;
+  version= (uint) strtoul(point, &end_point, 10);
+  return (ulong) major * 10000L + (ulong)(minor * 100 + version);
+}
+
+/**
+  Check if the server version matches with the server version mysql_upgrade
+  was compiled with.
+
+  @return 0 match successful
+          1 failed
+*/
+static int check_version_match(void)
+{
+  DYNAMIC_STRING ds_version;
+  char version_str[NAME_CHAR_LEN + 1];
+
+  if (init_dynamic_string(&ds_version, NULL, NAME_CHAR_LEN, NAME_CHAR_LEN))
+    die("Out of memory");
+
+
+  if (run_query("show variables like 'version'", &ds_version, FALSE))
+  {
+    fprintf(stderr, "Error: Failed while fetching Server version! Could be"
+            " due to unauthorized access.\n");
+    dynstr_free(&ds_version);
+    return 1;                                   /* Query failed */
+  }
+  if (extract_variable_from_show(&ds_version, version_str))
+  {
+    fprintf(stderr, "Error: Failed while extracting Server version!\n");
+    dynstr_free(&ds_version);
+    return 1;                                   /* Query failed */
+  }
+
+  dynstr_free(&ds_version);
+
+  if (calc_server_version((char *) version_str) != MYSQL_VERSION_ID)
+  {
+    fprintf(stderr, "Error: Server version (%s) does not match with the "
+            "version of\nthe server (%s) with which this program was built/"
+            "distributed. You can\nuse --skip-version-check to skip this "
+            "check.\n", version_str, MYSQL_SERVER_VERSION);
+    return 1;
+  }
+  else
+    return 0;
+}
+
+
 int main(int argc, char **argv)
 {
   char self_name[FN_REFLEN];
 
   MY_INIT(argv[0]);
-#ifdef __NETWARE__
-  setscreenmode(SCR_AUTOCLOSE_ON_EXIT);
-#endif
 
 #if __WIN__
   if (GetModuleFileName(NULL, self_name, FN_REFLEN) == 0)
@@ -827,7 +916,8 @@ int main(int argc, char **argv)
       init_dynamic_string(&conn_args, "", 512, 256))
     die("Out of memory");
 
-  load_defaults("my", load_default_groups, &argc, &argv);
+  if (load_defaults("my", load_default_groups, &argc, &argv))
+    die(NULL);
   defaults_argv= argv; /* Must be freed by 'free_defaults' */
 
   if (handle_options(&argc, &argv, my_long_options, get_one_option))
@@ -851,8 +941,15 @@ int main(int argc, char **argv)
   /* Find mysql */
   find_tool(mysql_path, IF_WIN("mysql.exe", "mysql"), self_name);
 
-  /* Find mysqlcheck */
-  find_tool(mysqlcheck_path, IF_WIN("mysqlcheck.exe", "mysqlcheck"), self_name);
+  if (!opt_systables_only)
+  {
+    /* Find mysqlcheck */
+    find_tool(mysqlcheck_path, IF_WIN("mysqlcheck.exe", "mysqlcheck"), self_name);
+  }
+  else
+  {
+    printf("The --upgrade-system-tables option was used, databases won't be touched.\n");
+  }
 
   /*
     Read the mysql_upgrade_info file to check if mysql_upgrade
@@ -866,18 +963,26 @@ int main(int argc, char **argv)
     die(NULL);
   }
 
+  if (opt_version_check && check_version_match())
+    die("Upgrade failed");
+
   /*
     Run "mysqlcheck" and "mysql_fix_privilege_tables.sql"
   */
-  if (run_mysqlcheck_fixnames() ||
-      run_mysqlcheck_upgrade() ||
-      run_sql_fix_privilege_tables())
+  if (!opt_systables_only)
   {
-    /*
-      The upgrade failed to complete in some way or another,
-      significant error message should have been printed to the screen
-    */
-    die("Upgrade failed" );
+    if (run_mysqlcheck_fixnames())
+      die("Error during call to mysql_check for fixing the db/tables names.");
+
+    if (run_mysqlcheck_upgrade())
+      die("Error during call to mysql_check for upgrading the tables names.");
+  }
+
+  if (run_sql_fix_privilege_tables())
+  {
+    /* Specific error msg (if present) would be printed in the function call
+     * above */
+    die("Upgrade failed");
   }
   verbose("OK");
 

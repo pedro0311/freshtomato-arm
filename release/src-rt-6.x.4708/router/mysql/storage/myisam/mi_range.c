@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
   Gives a approximated number of how many records there is between two keys.
@@ -59,7 +58,7 @@ ha_rows mi_records_in_range(MI_INFO *info, int inx,
     DBUG_RETURN(HA_POS_ERROR);
   info->update&= (HA_STATE_CHANGED+HA_STATE_ROW_CHANGED);
   if (info->s->concurrent_insert)
-    rw_rdlock(&info->s->key_root_lock[inx]);
+    mysql_rwlock_rdlock(&info->s->key_root_lock[inx]);
 
   switch(info->s->keyinfo[inx].key_alg){
 #ifdef HAVE_RTREE_KEYS
@@ -108,7 +107,7 @@ ha_rows mi_records_in_range(MI_INFO *info, int inx,
   }
 
   if (info->s->concurrent_insert)
-    rw_unlock(&info->s->key_root_lock[inx]);
+    mysql_rwlock_unlock(&info->s->key_root_lock[inx]);
   fast_mi_writeinfo(info);
 
   DBUG_PRINT("info",("records: %ld",(ulong) (res)));

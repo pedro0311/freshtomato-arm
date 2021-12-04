@@ -1,5 +1,4 @@
-/* Copyright (c) 2002-2007 MySQL AB
-   Use is subject to license terms.
+/* Copyright (c) 2002, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,8 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /*
    Shared, independent copyright: (C) 2001 Jan Pazdziora.
@@ -154,7 +152,7 @@ static MY_UNI_IDX idx_uni_cp1250[]={
 };
 
 
-static uchar NEAR ctype_win1250ch[] = {
+static uchar ctype_win1250ch[] = {
 0x00,
 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
 0x20, 0x28, 0x28, 0x28, 0x28, 0x28, 0x20, 0x20,
@@ -190,7 +188,7 @@ static uchar NEAR ctype_win1250ch[] = {
 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x10
 };
 
-static uchar NEAR to_lower_win1250ch[] = {
+static uchar to_lower_win1250ch[] = {
 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
@@ -225,7 +223,7 @@ static uchar NEAR to_lower_win1250ch[] = {
 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
 };
 
-static uchar NEAR to_upper_win1250ch[] = {
+static uchar to_upper_win1250ch[] = {
 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
@@ -262,7 +260,7 @@ static uchar NEAR to_upper_win1250ch[] = {
 
 
 
-static uchar NEAR sort_order_win1250ch[] = {
+static uchar sort_order_win1250ch[] = {
 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47,
@@ -281,7 +279,7 @@ static uchar NEAR sort_order_win1250ch[] = {
 240, 241, 242, 243, 244, 245, 246, 247, 248, 249, 250, 251, 252, 253, 254, 255
 };
 
-static uchar NEAR _sort_order_win1250ch1[] = {
+static uchar _sort_order_win1250ch1[] = {
 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81,
 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81,
 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81, 0x81,
@@ -341,7 +339,7 @@ static uchar NEAR _sort_order_win1250ch1[] = {
 0xb8, 0xbd, 0xbd, 0xbd, 0xbd, 0xc1, 0xbc, 0xf5
 };
 
-static uchar NEAR _sort_order_win1250ch2[] = {
+static uchar _sort_order_win1250ch2[] = {
 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11,
 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
@@ -502,7 +500,7 @@ static size_t my_strnxfrm_win1250ch(CHARSET_INFO * cs  __attribute__((unused)),
 
   do {
     NEXT_CMP_VALUE(src, p, pass, value, (int)srclen);
-    if (totlen <= len)
+    if (totlen < len)
       dest[totlen] = value;
     totlen++;
   } while (value) ;
@@ -515,7 +513,7 @@ static size_t my_strnxfrm_win1250ch(CHARSET_INFO * cs  __attribute__((unused)),
 
 #ifdef REAL_MYSQL
 
-static uchar NEAR like_range_prefix_min_win1250ch[]=
+static uchar like_range_prefix_min_win1250ch[]=
 {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
   0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
@@ -559,7 +557,7 @@ static uchar NEAR like_range_prefix_min_win1250ch[]=
   For all other characters:   prefix_max[i]    == i
 */
 
-static uchar NEAR like_range_prefix_max_win1250ch[]=
+static uchar like_range_prefix_max_win1250ch[]=
 {
   0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
   0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,

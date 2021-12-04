@@ -1,10 +1,23 @@
+/*****************************************************************************
+
+Copyright (c) 1997, 2009, Innobase Oy. All Rights Reserved.
+
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; version 2 of the License.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, write to the Free Software Foundation, Inc., 
+51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+*****************************************************************************/
+
 /******************************************************
 SQL parser lexical analyzer: input file for the GNU Flex lexer generator
-
-(c) 1997 Innobase Oy
-
-Created 12/14/1997 Heikki Tuuri
-Published under the GPL version 2
 
 The InnoDB parser is frozen because MySQL takes care of SQL parsing.
 Therefore we normally keep the InnoDB parser C files as they are, and do
@@ -18,6 +31,8 @@ How to make the InnoDB parser and lexer C files:
 
 These instructions seem to work at least with bison-1.875d and flex-2.5.31 on
 Linux.
+
+Created 12/14/1997 Heikki Tuuri
 *******************************************************/
 
 %option nostdinit
@@ -55,13 +70,13 @@ Linux.
 static ulint	stringbuf_len_alloc = 0; /* Allocated length */
 static ulint	stringbuf_len = 0; /* Current length */
 static char*	stringbuf; /* Start of buffer */
-/* Appends a string to the buffer. */
+/** Appends a string to the buffer. */
 static
 void
 string_append(
 /*==========*/
-	const char*	str,	/* in: string to be appended */
-	ulint		len)	/* in: length of the string */
+	const char*	str,	/*!< in: string to be appended */
+	ulint		len)	/*!< in: length of the string */
 {
 	if (stringbuf == NULL) {
 		stringbuf = malloc(1);
@@ -646,3 +661,16 @@ In the state 'id', only two actions are possible (defined below). */
 }
 
 %%
+
+/**********************************************************************
+Release any resources used by the lexer. */
+UNIV_INTERN
+void
+pars_lexer_close(void)
+/*==================*/
+{
+	yylex_destroy();
+	free(stringbuf);
+	stringbuf = NULL;
+	stringbuf_len_alloc = stringbuf_len = 0;
+}

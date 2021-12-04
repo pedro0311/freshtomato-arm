@@ -12,8 +12,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* password checking routines */
 /*****************************************************************************
@@ -60,6 +59,7 @@
 
 *****************************************************************************/
 
+#include <password.h>
 #include <my_global.h>
 #include <my_sys.h>
 #include <m_string.h>
@@ -219,15 +219,15 @@ void scramble_323(char *to, const char *message, const char *password)
 */
 
 my_bool
-check_scramble_323(const char *scrambled, const char *message,
+check_scramble_323(const unsigned char *scrambled, const char *message,
                    ulong *hash_pass)
 {
   struct rand_struct rand_st;
   ulong hash_message[2];
   /* Big enough for checks. */
-  char buff[16], scrambled_buff[SCRAMBLE_LENGTH_323 + 1];
-  char *to, extra;
-  const char *pos;
+  uchar buff[16], scrambled_buff[SCRAMBLE_LENGTH_323 + 1];
+  uchar *to, extra;
+  const uchar *pos;
 
   /* Ensure that the scrambled message is null-terminated. */
   memcpy(scrambled_buff, scrambled, SCRAMBLE_LENGTH_323);
@@ -247,7 +247,7 @@ check_scramble_323(const char *scrambled, const char *message,
   to=buff;
   while (*scrambled)
   {
-    if (*scrambled++ != (char) (*to++ ^ extra))
+    if (*scrambled++ != (uchar) (*to++ ^ extra))
       return 1;                                 /* Wrong password */
   }
   return 0;
@@ -513,7 +513,7 @@ scramble(char *to, const char *message, const char *password)
 */
 
 my_bool
-check_scramble(const char *scramble_arg, const char *message,
+check_scramble(const uchar *scramble_arg, const char *message,
                const uint8 *hash_stage2)
 {
   SHA1_CONTEXT sha1_context;
@@ -526,7 +526,7 @@ check_scramble(const char *scramble_arg, const char *message,
   mysql_sha1_input(&sha1_context, hash_stage2, SHA1_HASH_SIZE);
   mysql_sha1_result(&sha1_context, buf);
   /* encrypt scramble */
-    my_crypt((char *) buf, buf, (const uchar *) scramble_arg, SCRAMBLE_LENGTH);
+    my_crypt((char *) buf, buf, scramble_arg, SCRAMBLE_LENGTH);
   /* now buf supposedly contains hash_stage1: so we can get hash_stage2 */
   mysql_sha1_reset(&sha1_context);
   mysql_sha1_input(&sha1_context, buf, SHA1_HASH_SIZE);

@@ -1,6 +1,4 @@
-/*
-   Copyright (c) 2005-2007 MySQL AB, 2008 Sun Microsystems, Inc.
-   Use is subject to license terms.
+/* Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
 
   This program is free software; you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -13,12 +11,15 @@
 
   You should have received a copy of the GNU General Public License
   along with this program; if not, write to the Free Software
-  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 #ifdef USE_PRAGMA_INTERFACE
 #pragma interface			/* gcc class implementation */
 #endif
+
+#include "thr_lock.h"                           /* THR_LOCK */
+#include "handler.h"                            /* handler */
+#include "table.h"                              /* TABLE_SHARE */
 
 /*
   Shared structure for correct LOCK operation
@@ -75,6 +76,7 @@ public:
   uint max_supported_key_part_length() const { return BLACKHOLE_MAX_KEY_LENGTH; }
   int open(const char *name, int mode, uint test_if_locked);
   int close(void);
+  int truncate();
   int rnd_init(bool scan);
   int rnd_next(uchar *buf);
   int rnd_pos(uchar * buf, uchar *pos);

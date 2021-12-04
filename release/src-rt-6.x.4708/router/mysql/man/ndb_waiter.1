@@ -1,13 +1,13 @@
 '\" t
 .\"     Title: \fBndb_waiter\fR
 .\"    Author: [FIXME: author] [see http://docbook.sf.net/el/author]
-.\" Generator: DocBook XSL Stylesheets v1.77.1 <http://docbook.sf.net/>
-.\"      Date: 11/04/2013
+.\" Generator: DocBook XSL Stylesheets v1.79.1 <http://docbook.sf.net/>
+.\"      Date: 08/28/2018
 .\"    Manual: MySQL Database System
-.\"    Source: MySQL 5.1
+.\"    Source: MySQL 5.5
 .\"  Language: English
 .\"
-.TH "\FBNDB_WAITER\FR" "1" "11/04/2013" "MySQL 5\&.1" "MySQL Database System"
+.TH "\FBNDB_WAITER\FR" "1" "08/28/2018" "MySQL 5\&.5" "MySQL Database System"
 .\" -----------------------------------------------------------------
 .\" * Define some portability stuff
 .\" -----------------------------------------------------------------
@@ -27,9 +27,8 @@
 .\" -----------------------------------------------------------------
 .\" * MAIN CONTENT STARTS HERE *
 .\" -----------------------------------------------------------------
-.\" ndb_waiter
 .SH "NAME"
-ndb_waiter \- wait for MySQL Cluster to reach a given status
+ndb_waiter \- wait for NDB Cluster to reach a given status
 .SH "SYNOPSIS"
 .HP \w'\fBndb_waiter\ \fR\fB\fIoptions\fR\fR\ 'u
 \fBndb_waiter \fR\fB\fIoptions\fR\fR
@@ -133,16 +132,16 @@ SHUTTING_DOWN: The node is shutting down\&.
 SINGLE USER MODE: This is shown for all cluster data nodes when the cluster is in single user mode\&.
 .RE
 .PP
-The following table includes options that are specific to the MySQL Cluster native backup restoration program
-\fBndb_waiter\fR\&. Additional descriptions follow the table\&. For options common to most MySQL Cluster programs (including
+The following table includes options that are specific to the NDB Cluster native backup restoration program
+\fBndb_waiter\fR\&. Additional descriptions follow the table\&. For options common to most NDB Cluster programs (including
 \fBndb_waiter\fR), see
-Options Common to MySQL Cluster Programs(1)\&.
+Options Common to NDB Cluster Programs(1)\&.
 .sp
 .it 1 an-trap
 .nr an-no-space-flag 1
 .nr an-break-flag 1
 .br
-.B Table\ \&17.28.\ \&ndb_waiter Options and Variables: MySQL 5.1, MySQL Cluster NDB 6.3-7.1
+.B Table\ \&18.305.\ \&Command\-line options for the ndb_waiter program
 .TS
 allbox tab(:);
 lB lB lB.
@@ -151,7 +150,7 @@ Format
 T}:T{
 Description
 T}:T{
-Added / Removed
+Added, Deprecated, or Removed
 T}
 .T&
 l l l
@@ -169,7 +168,7 @@ T}:T{
 Wait for cluster to reach NO CONTACT state
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -178,7 +177,7 @@ T}:T{
 Wait for cluster to reach NOT STARTED state
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -187,7 +186,7 @@ T}:T{
 Wait for cluster to enter single user mode
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -196,19 +195,19 @@ T{
 -t
 T}:T{
 Wait this many seconds, then exit whether or not cluster has reached
-            desired state; default is 2 minutes (120 seconds)
+              desired state; default is 2 minutes (120 seconds)
 T}:T{
 .PP
-All MySQL 5\&.1 based releases
+All MySQL 5.5 based releases
 T}
 T{
 .PP
 --nowait-nodes=list
 T}:T{
-List of nodes not to be waited for\&.
+List of nodes not to be waited for.
 T}:T{
 .PP
-ADDED: NDB 6\&.2\&.1
+All MySQL 5.5 based releases
 T}
 T{
 .PP
@@ -216,25 +215,25 @@ T{
 .PP
 -w
 T}:T{
-List of nodes to be waited for\&.
+List of nodes to be waited for.
 T}:T{
 .PP
-ADDED: NDB 6\&.3\&.34, NDB 7\&.0\&.15, NDB 7\&.1\&.4
+All MySQL 5.5 based releases
 T}
 .TE
 .sp 1
-        Usage
+Usage
 .sp
 .if n \{\
 .RS 4
 .\}
 .nf
-ndb_waiter [\-c \fIconnect_string\fR]
+ndb_waiter [\-c \fIconnection_string\fR]
 .fi
 .if n \{\
 .RE
 .\}
-        Additional Options
+Additional Options
 .sp
 .RS 4
 .ie n \{\
@@ -244,8 +243,6 @@ ndb_waiter [\-c \fIconnect_string\fR]
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: no-contact option
-.\" no-contact option: ndb_waiter
 \fB\-\-no\-contact\fR,
 \fB\-n\fR
 .sp
@@ -266,8 +263,6 @@ status before exiting\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: not-started option
-.\" not-started option: ndb_waiter
 \fB\-\-not\-started\fR
 .sp
 Instead of waiting for the
@@ -287,8 +282,6 @@ status before exiting\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: timeout option
-.\" timeout option: ndb_waiter
 \fB\-\-timeout=\fR\fB\fIseconds\fR\fR,
 \fB\-t \fR\fB\fIseconds\fR\fR
 .sp
@@ -303,8 +296,6 @@ Time to wait\&. The program exits if the desired state is not achieved within th
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: single-user option
-.\" single-user option: ndb_waiter
 \fB\-\-single\-user\fR
 .sp
 The program waits for the cluster to enter single user mode\&.
@@ -318,8 +309,6 @@ The program waits for the cluster to enter single user mode\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: nowait-nodes option
-.\" nowait-nodes option: ndb_waiter
 \fB\-\-nowait\-nodes=\fR\fB\fIlist\fR\fR
 .sp
 When this option is used, ndb_waiter does not wait for the nodes whose IDs are listed\&. The list is comma\-delimited; ranges can be indicated by dashes, as shown here:
@@ -333,7 +322,6 @@ shell> \fBndb_waiter \-\-nowait\-nodes=1,3,7\-9\fR
 .if n \{\
 .RE
 .\}
-.sp
 .if n \{\
 .sp
 .\}
@@ -353,7 +341,6 @@ use this option together with the
 option\&.
 .sp .5v
 .RE
-This option was added in MySQL Cluster NDB 6\&.2\&.1\&.
 .RE
 .sp
 .RS 4
@@ -364,8 +351,6 @@ This option was added in MySQL Cluster NDB 6\&.2\&.1\&.
 .sp -1
 .IP \(bu 2.3
 .\}
-.\" ndb_waiter: wait-nodes option
-.\" wait-nodes option: ndb_waiter
 \fB\-\-wait\-nodes=\fR\fB\fIlist\fR\fR,
 \fB\-w \fR\fB\fIlist\fR\fR
 .sp
@@ -382,7 +367,6 @@ shell> \fBndb_waiter \-\-wait\-nodes=2,4\-6,10\fR
 .if n \{\
 .RE
 .\}
-.sp
 .if n \{\
 .sp
 .\}
@@ -402,13 +386,12 @@ use this option together with the
 option\&.
 .sp .5v
 .RE
-This option was added in MySQL Cluster NDB 6\&.3\&.34, 7\&.0\&.15, and 7\&.1\&.4\&.
 .RE
 .PP
 \fBSample Output\fR. Shown here is the output from
 \fBndb_waiter\fR
 when run against a 4\-node cluster in which two nodes have been shut down and then started again manually\&. Duplicate reports (indicated by
-\(lq\&.\&.\&.\(rq) are omitted\&.
+\&.\&.\&.) are omitted\&.
 .sp
 .if n \{\
 .RS 4
@@ -485,7 +468,7 @@ Connecting to mgmsrv at (null)\&.
 .SH "COPYRIGHT"
 .br
 .PP
-Copyright \(co 1997, 2013, Oracle and/or its affiliates. All rights reserved.
+Copyright \(co 1997, 2018, Oracle and/or its affiliates. All rights reserved.
 .PP
 This documentation is free software; you can redistribute it and/or modify it only under the terms of the GNU General Public License as published by the Free Software Foundation; version 2 of the License.
 .PP

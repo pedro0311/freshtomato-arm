@@ -1,5 +1,4 @@
-/*
-   Copyright (c) 2000, 2012, Oracle and/or its affiliates. All rights reserved.
+/* Copyright (c) 2000, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -12,9 +11,11 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
+#ifdef USE_PRAGMA_INTERFACE
+#pragma implementation /* gcc class implementation */
+#endif
 
 /**
   @file
@@ -23,7 +24,13 @@
   Functions for easy reading of records, possible through a cache
 */
 
-#include "mysql_priv.h"
+#include "records.h"
+#include "sql_priv.h"
+#include "records.h"
+#include "filesort.h"            // filesort_free_buffers
+#include "opt_range.h"                          // SQL_SELECT
+#include "sql_class.h"                          // THD
+
 
 static int rr_quick(READ_RECORD *info);
 int rr_sequential(READ_RECORD *info);
@@ -35,12 +42,14 @@ static int rr_from_cache(READ_RECORD *info);
 static int init_rr_cache(THD *thd, READ_RECORD *info);
 static int rr_cmp(uchar *a,uchar *b);
 static int rr_index_first(READ_RECORD *info);
+static int rr_index_last(READ_RECORD *info);
 static int rr_index(READ_RECORD *info);
+static int rr_index_desc(READ_RECORD *info);
 
 
 /**
-  Initialize READ_RECORD structure to perform full index scan (in forward
-  direction) using read_record.read_record() interface.
+  Initialize READ_RECORD structure to perform full index scan in desired 
+  direction using read_record.read_record() interface
 
     This function has been added at late stage and is used only by
     UPDATE/DELETE. Other statements perform index scans using
@@ -52,11 +61,13 @@ static int rr_index(READ_RECORD *info);
   @param print_error  If true, call table->file->print_error() if an error
                       occurs (except for end-of-records error)
   @param idx          index to scan
+  @param reverse      Scan in the reverse direction
 */
 
 void init_read_record_idx(READ_RECORD *info, THD *thd, TABLE *table,
-                          bool print_error, uint idx)
+                          bool print_error, uint idx, bool reverse)
 {
+  int error;
   empty_record(table);
   bzero((char*) info,sizeof(*info));
   info->thd= thd;
@@ -67,10 +78,15 @@ void init_read_record_idx(READ_RECORD *info, THD *thd, TABLE *table,
   info->unlock_row= rr_unlock_row;
 
   table->status=0;			/* And it's always found */
-  if (!table->file->inited)
-    table->file->ha_index_init(idx, 1);
+  if (!table->file->inited &&
+      (error= table->file->ha_index_init(idx, 1)))
+  {
+    if (print_error)
+      table->file->print_error(error, MYF(0));
+  }
+
   /* read_record will be changed to rr_index in rr_index_first */
-  info->read_record= rr_index_first;
+  info->read_record= reverse ? rr_index_last : rr_index_first;
 }
 
 
@@ -175,7 +191,7 @@ void init_read_record(READ_RECORD *info,THD *thd, TABLE *table,
   
   if (table->s->tmp_table == NON_TRANSACTIONAL_TMP_TABLE &&
       !table->sort.addon_field)
-    VOID(table->file->extra(HA_EXTRA_MMAP));
+    (void) table->file->extra(HA_EXTRA_MMAP);
   
   if (table->sort.addon_field)
   {
@@ -272,11 +288,12 @@ void init_read_record(READ_RECORD *info,THD *thd, TABLE *table,
 	 !(table->s->db_options_in_use & HA_OPTION_PACK_RECORD) ||
 	 (use_record_cache < 0 &&
 	  !(table->file->ha_table_flags() & HA_NOT_DELETE_WITH_CACHE))))
-      VOID(table->file->extra_opt(HA_EXTRA_CACHE,
-				  thd->variables.read_buff_size));
+      (void) table->file->extra_opt(HA_EXTRA_CACHE,
+				  thd->variables.read_buff_size);
   }
   /* Condition pushdown to storage engine */
-  if (thd->variables.engine_condition_pushdown && 
+  if ((thd->variables.optimizer_switch &
+       OPTIMIZER_SWITCH_ENGINE_CONDITION_PUSHDOWN) && 
       select && select->cond && 
       (select->cond->used_tables() & table->map) &&
       !table->file->pushed_cond)
@@ -291,7 +308,7 @@ void end_read_record(READ_RECORD *info)
 {                   /* free cache if used */
   if (info->cache)
   {
-    my_free_lock((char*) info->cache,MYF(0));
+    my_free_lock(info->cache);
     info->cache=0;
   }
   if (info->table)
@@ -366,6 +383,29 @@ static int rr_index_first(READ_RECORD *info)
 
 
 /**
+  Reads last row in an index scan.
+
+  @param info  	Scan info
+
+  @retval
+    0   Ok
+  @retval
+    -1   End of records
+  @retval
+    1   Error
+*/
+
+static int rr_index_last(READ_RECORD *info)
+{
+  int tmp= info->file->index_last(info->record);
+  info->read_record= rr_index_desc;
+  if (tmp)
+    tmp= rr_handle_error(info, tmp);
+  return tmp;
+}
+
+
+/**
   Reads index sequentially after first row.
 
   Read the next index record (in forward direction) and translate return
@@ -384,6 +424,31 @@ static int rr_index_first(READ_RECORD *info)
 static int rr_index(READ_RECORD *info)
 {
   int tmp= info->file->index_next(info->record);
+  if (tmp)
+    tmp= rr_handle_error(info, tmp);
+  return tmp;
+}
+
+
+/**
+  Reads index sequentially from the last row to the first.
+
+  Read the prev index record (in backward direction) and translate return
+  value.
+
+  @param info  Scan info
+
+  @retval
+    0   Ok
+  @retval
+    -1   End of records
+  @retval
+    1   Error
+*/
+
+static int rr_index_desc(READ_RECORD *info)
+{
+  int tmp= info->file->index_prev(info->record);
   if (tmp)
     tmp= rr_handle_error(info, tmp);
   return tmp;
@@ -524,15 +589,14 @@ static int init_rr_cache(THD *thd, READ_RECORD *info)
   rec_cache_size= info->cache_records*info->reclength;
   info->rec_cache_size= info->cache_records*info->ref_length;
 
-  // We have to allocate one more byte to use uint3korr (see comments for it)
   if (info->cache_records <= 2 ||
       !(info->cache=(uchar*) my_malloc_lock(rec_cache_size+info->cache_records*
-					   info->struct_length+1,
+					   info->struct_length,
 					   MYF(0))))
     DBUG_RETURN(1);
 #ifdef HAVE_purify
   // Avoid warnings in qsort
-  bzero(info->cache,rec_cache_size+info->cache_records* info->struct_length+1);
+  bzero(info->cache,rec_cache_size+info->cache_records* info->struct_length);
 #endif
   DBUG_PRINT("info",("Allocated buffert for %d records",info->cache_records));
   info->read_positions=info->cache+rec_cache_size;

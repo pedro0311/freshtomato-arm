@@ -1,6 +1,7 @@
-/*
-   Copyright (c) 2000-2008 MySQL AB, 2008-2010 Sun Microsystems, Inc.
-   Use is subject to license terms.
+#ifndef STRUCTS_INCLUDED
+#define STRUCTS_INCLUDED
+
+/* Copyright (c) 2000, 2010, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,14 +14,22 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-*/
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
+
 
 
 /* The old structures from unireg */
 
-struct st_table;
+#include "sql_plugin.h"                         /* plugin_ref */
+#include "sql_const.h"                          /* MAX_REFLENGTH */
+#include "my_time.h"                   /* enum_mysql_timestamp_type */
+#include "thr_lock.h"                  /* thr_lock_type */
+#include "my_base.h"                   /* ha_rows, ha_key_alg */
+
+struct TABLE;
 class Field;
+
+class THD;
 
 typedef struct st_date_time_format {
   uchar positions[8];
@@ -100,7 +109,8 @@ typedef struct st_key {
   union {
     int  bdb_return_if_eq;
   } handler;
-  struct st_table *table;
+  TABLE *table;
+  LEX_STRING comment;
 } KEY;
 
 
@@ -116,36 +126,6 @@ typedef struct st_reginfo {		/* Extra info about reg */
   */
   bool impossible_range;
 } REGINFO;
-
-
-class SQL_SELECT;
-class THD;
-class handler;
-struct st_join_table;
-
-void rr_unlock_row(st_join_table *tab);
-
-struct READ_RECORD {			/* Parameter to read_record */
-  typedef int (*Read_func)(READ_RECORD*);
-  typedef void (*Unlock_row_func)(st_join_table *);
-  struct st_table *table;			/* Head-form */
-  handler *file;
-  struct st_table **forms;			/* head and ref forms */
-
-  Read_func read_record;
-  Unlock_row_func unlock_row;
-  THD *thd;
-  SQL_SELECT *select;
-  uint cache_records;
-  uint ref_length,struct_length,reclength,rec_cache_size,error_offset;
-  uint index;
-  uchar *ref_pos;				/* pointer to form->refpos */
-  uchar *record;
-  uchar *rec_buf;                /* to read field values  after filesort */
-  uchar	*cache,*cache_pos,*cache_end,*read_positions;
-  IO_CACHE *io_cache;
-  bool print_error, ignore_not_found_rows;
-};
 
 
 /*
@@ -171,14 +151,12 @@ typedef struct st_known_date_time_format {
   const char *time_format;
 } KNOWN_DATE_TIME_FORMAT;
 
-enum SHOW_COMP_OPTION { SHOW_OPTION_YES, SHOW_OPTION_NO, SHOW_OPTION_DISABLED};
-
 extern const char *show_comp_option_name[];
 
 typedef int *(*update_var)(THD *, struct st_mysql_show_var *);
 
 typedef struct	st_lex_user {
-  LEX_STRING user, host, password;
+  LEX_STRING user, host, password, plugin, auth;
 } LEX_USER;
 
 /*
@@ -389,3 +367,5 @@ public:
   Discrete_interval* get_tail() const { return tail; };
   Discrete_interval* get_current() const { return current; };
 };
+
+#endif /* STRUCTS_INCLUDED */

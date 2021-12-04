@@ -1,5 +1,5 @@
 /*
-   Copyright (c) 2005, 2012, Oracle and/or its affiliates. All rights reserved.
+   Copyright (c) 2005, 2017, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -13,11 +13,7 @@
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA
-
-   original idea: Brian Aker via playing with ab for too many years
-   coded by: Patrick Galbraith
 */
-
 
 /*
   MySQL Slap
@@ -128,6 +124,9 @@ static char *host= NULL, *opt_password= NULL, *user= NULL,
             *pre_system= NULL,
             *post_system= NULL,
             *opt_mysql_unix_port= NULL;
+static char *opt_plugin_dir= 0, *opt_default_auth= 0;
+static uint opt_enable_cleartext_plugin= 0;
+static my_bool using_opt_enable_cleartext_plugin= 0;
 
 const char *delimiter= "\n";
 
@@ -245,7 +244,7 @@ void print_conclusions_csv(conclusions *con);
 void generate_stats(conclusions *con, option_string *eng, stats *sptr);
 uint parse_comma(const char *string, uint **range);
 uint parse_delimiter(const char *script, statement **stmt, char delm);
-uint parse_option(const char *origin, option_string **stmt, char delm);
+int parse_option(const char *origin, option_string **stmt, char delm);
 static int drop_schema(MYSQL *mysql, const char *db);
 uint get_random_string(char *buf);
 static statement *build_table_string(void);
@@ -302,7 +301,11 @@ int main(int argc, char **argv)
 
   MY_INIT(argv[0]);
 
-  load_defaults("my",load_default_groups,&argc,&argv);
+  if (load_defaults("my",load_default_groups,&argc,&argv))
+  {
+    my_end(0);
+    exit(1);
+  }
   defaults_argv=argv;
   if (get_options(&argc,&argv))
   {
@@ -341,11 +344,21 @@ int main(int argc, char **argv)
 #endif
   mysql_options(&mysql, MYSQL_SET_CHARSET_NAME, default_charset);
 
+  if (opt_plugin_dir && *opt_plugin_dir)
+    mysql_options(&mysql, MYSQL_PLUGIN_DIR, opt_plugin_dir);
+
+  if (opt_default_auth && *opt_default_auth)
+    mysql_options(&mysql, MYSQL_DEFAULT_AUTH, opt_default_auth);
+
+  if (using_opt_enable_cleartext_plugin)
+    mysql_options(&mysql, MYSQL_ENABLE_CLEARTEXT_PLUGIN, 
+                  (char*) &opt_enable_cleartext_plugin);
   if (!opt_only_print) 
   {
-    if (!(mysql_real_connect(&mysql, host, user, opt_password,
-                             NULL, opt_mysql_port,
-                             opt_mysql_unix_port, connect_flags)))
+    if (!(mysql_connect_ssl_check(&mysql, host, user, opt_password,
+                                  NULL, opt_mysql_port, opt_mysql_unix_port,
+                                  connect_flags,
+                                  opt_ssl_mode == SSL_MODE_REQUIRED)))
     {
       fprintf(stderr,"%s: Error when connecting to server: %s\n",
               my_progname,mysql_error(&mysql));
@@ -355,10 +368,10 @@ int main(int argc, char **argv)
     }
   }
 
-  VOID(pthread_mutex_init(&counter_mutex, NULL));
-  VOID(pthread_cond_init(&count_threshhold, NULL));
-  VOID(pthread_mutex_init(&sleeper_mutex, NULL));
-  VOID(pthread_cond_init(&sleep_threshhold, NULL));
+  pthread_mutex_init(&counter_mutex, NULL);
+  pthread_cond_init(&count_threshhold, NULL);
+  pthread_mutex_init(&sleeper_mutex, NULL);
+  pthread_cond_init(&sleep_threshhold, NULL);
 
   /* Main iterations loop */
   eptr= engine_options;
@@ -389,19 +402,17 @@ int main(int argc, char **argv)
 
   } while (eptr ? (eptr= eptr->next) : 0);
 
-  VOID(pthread_mutex_destroy(&counter_mutex));
-  VOID(pthread_cond_destroy(&count_threshhold));
-  VOID(pthread_mutex_destroy(&sleeper_mutex));
-  VOID(pthread_cond_destroy(&sleep_threshhold));
+  pthread_mutex_destroy(&counter_mutex);
+  pthread_cond_destroy(&count_threshhold);
+  pthread_mutex_destroy(&sleeper_mutex);
+  pthread_cond_destroy(&sleep_threshhold);
 
   if (!opt_only_print) 
     mysql_close(&mysql); /* Close & free connection */
 
   /* now free all the strings we created */
-  if (opt_password)
-    my_free(opt_password, MYF(0));
-
-  my_free(concurrency, MYF(0));
+  my_free(opt_password);
+  my_free(concurrency);
 
   statement_cleanup(create_statements);
   statement_cleanup(query_statements);
@@ -410,8 +421,7 @@ int main(int argc, char **argv)
   option_cleanup(engine_options);
 
 #ifdef HAVE_SMEM
-  if (shared_memory_base_name)
-    my_free(shared_memory_base_name, MYF(MY_ALLOW_ZERO_PTR));
+  my_free(shared_memory_base_name);
 #endif
   free_defaults(defaults_argv);
   my_end(my_end_arg);
@@ -503,7 +513,7 @@ void concurrency_loop(MYSQL *mysql, uint current, option_string *eptr)
   if (opt_csv_str)
     print_conclusions_csv(&conclusion);
 
-  my_free(head_sptr, MYF(0));
+  my_free(head_sptr);
 
 }
 
@@ -587,6 +597,10 @@ static struct my_option my_long_options[] =
    GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
   {"debug-info", 'T', "Print some debug info at exit.", &debug_info_flag,
    &debug_info_flag, 0, GET_BOOL, NO_ARG, 0, 0, 0, 0, 0, 0},
+  {"default_auth", OPT_DEFAULT_AUTH,
+   "Default authentication client-side plugin to use.",
+   &opt_default_auth, &opt_default_auth, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"delimiter", 'F',
     "Delimiter to use in SQL statements supplied in file or command line.",
     &delimiter, &delimiter, 0, GET_STR, REQUIRED_ARG,
@@ -595,6 +609,10 @@ static struct my_option my_long_options[] =
     "Detach (close and reopen) connections after X number of requests.",
     &detach_rate, &detach_rate, 0, GET_UINT, REQUIRED_ARG, 
     0, 0, 0, 0, 0, 0},
+  {"enable_cleartext_plugin", OPT_ENABLE_CLEARTEXT_PLUGIN, 
+    "Enable/disable the clear text authentication plugin.",
+   &opt_enable_cleartext_plugin, &opt_enable_cleartext_plugin, 
+   0, GET_BOOL, OPT_ARG, 0, 0, 0, 0, 0, 0},
   {"engine", 'e', "Storage engine to use for creating the table.",
     &default_engine, &default_engine, 0,
     GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
@@ -628,6 +646,9 @@ static struct my_option my_long_options[] =
   {"pipe", 'W', "Use named pipes to connect to server.", 0, 0, 0, GET_NO_ARG,
     NO_ARG, 0, 0, 0, 0, 0, 0},
 #endif
+  {"plugin_dir", OPT_PLUGIN_DIR, "Directory for client-side plugins.",
+   &opt_plugin_dir, &opt_plugin_dir, 0,
+   GET_STR, REQUIRED_ARG, 0, 0, 0, 0, 0, 0},
   {"port", 'P', "Port number to use for connection.", &opt_mysql_port,
     &opt_mysql_port, 0, GET_UINT, REQUIRED_ARG, MYSQL_PORT, 0, 0, 0, 0,
     0},
@@ -680,8 +701,6 @@ static struct my_option my_long_options[] =
 };
 
 
-#include <help_start.h>
-
 static void print_version(void)
 {
   printf("%s  Ver %s Distrib %s, for %s (%s)\n",my_progname, SLAP_VERSION,
@@ -699,7 +718,6 @@ static void usage(void)
   my_print_help(my_long_options);
 }
 
-#include <help_end.h>
 
 static my_bool
 get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
@@ -707,11 +725,6 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
 {
   DBUG_ENTER("get_one_option");
   switch(optid) {
-#ifdef __NETWARE__
-  case OPT_AUTO_CLOSE:
-    setscreenmode(SCR_AUTOCLOSE_ON_EXIT);
-    break;
-#endif
   case 'v':
     verbose++;
     break;
@@ -721,7 +734,7 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
     if (argument)
     {
       char *start= argument;
-      my_free(opt_password, MYF(MY_ALLOW_ZERO_PTR));
+      my_free(opt_password);
       opt_password= my_strdup(argument,MYF(MY_FAE));
       while (*argument) *argument++= 'x';		/* Destroy argument */
       if (*start)
@@ -758,6 +771,9 @@ get_one_option(int optid, const struct my_option *opt __attribute__((unused)),
   case 'I':					/* Info */
     usage();
     exit(0);
+  case OPT_ENABLE_CLEARTEXT_PLUGIN:
+    using_opt_enable_cleartext_plugin= TRUE;
+    break;
   }
   DBUG_RETURN(0);
 }
@@ -1207,7 +1223,7 @@ get_options(int *argc,char ***argv)
     
     if (opt_csv_str[0] == '-')
     {
-      csv_file= fileno(stdout);
+      csv_file= my_fileno(stdout);
     }
     else
     {
@@ -1227,7 +1243,13 @@ get_options(int *argc,char ***argv)
   if (num_int_cols_opt)
   {
     option_string *str;
-    parse_option(num_int_cols_opt, &str, ',');
+    if(parse_option(num_int_cols_opt, &str, ',') == -1)
+    {
+      fprintf(stderr, "Invalid value specified for the option "
+              "'number-int-cols'\n");
+      option_cleanup(str);
+      return 1;
+    }
     num_int_cols= atoi(str->string);
     if (str->option)
       num_int_cols_index= atoi(str->option);
@@ -1237,7 +1259,13 @@ get_options(int *argc,char ***argv)
   if (num_char_cols_opt)
   {
     option_string *str;
-    parse_option(num_char_cols_opt, &str, ',');
+    if(parse_option(num_char_cols_opt, &str, ',') == -1)
+    {
+      fprintf(stderr, "Invalid value specified for the option "
+              "'number-char-cols'\n");
+      option_cleanup(str);
+      return 1;
+    }
     num_char_cols= atoi(str->string);
     if (str->option)
       num_char_cols_index= atoi(str->option);
@@ -1370,7 +1398,7 @@ get_options(int *argc,char ***argv)
       tmp_string[sbuf.st_size]= '\0';
       my_close(data_file,MYF(0));
       parse_delimiter(tmp_string, &create_statements, delimiter[0]);
-      my_free(tmp_string, MYF(0));
+      my_free(tmp_string);
     }
     else if (create_string)
     {
@@ -1399,7 +1427,7 @@ get_options(int *argc,char ***argv)
       if (user_supplied_query)
         actual_queries= parse_delimiter(tmp_string, &query_statements,
                                         delimiter[0]);
-      my_free(tmp_string, MYF(0));
+      my_free(tmp_string);
     } 
     else if (user_supplied_query)
     {
@@ -1430,7 +1458,7 @@ get_options(int *argc,char ***argv)
     if (user_supplied_pre_statements)
       (void)parse_delimiter(tmp_string, &pre_statements,
                             delimiter[0]);
-    my_free(tmp_string, MYF(0));
+    my_free(tmp_string);
   } 
   else if (user_supplied_pre_statements)
   {
@@ -1461,7 +1489,7 @@ get_options(int *argc,char ***argv)
     if (user_supplied_post_statements)
       (void)parse_delimiter(tmp_string, &post_statements,
                             delimiter[0]);
-    my_free(tmp_string, MYF(0));
+    my_free(tmp_string);
   } 
   else if (user_supplied_post_statements)
   {
@@ -1473,7 +1501,13 @@ get_options(int *argc,char ***argv)
     printf("Parsing engines to use.\n");
 
   if (default_engine)
-    parse_option(default_engine, &engine_options, ',');
+  {
+    if(parse_option(default_engine, &engine_options, ',') == -1)
+    {
+      fprintf(stderr, "Invalid value specified for the option 'engine'\n");
+      return 1;
+    }
+  }
 
   if (tty_password)
     opt_password= get_tty_password(NullS);
@@ -1563,9 +1597,9 @@ drop_primary_key_list(void)
   if (primary_keys_number_of)
   {
     for (counter= 0; counter < primary_keys_number_of; counter++)
-      my_free(primary_keys[counter], MYF(0));
+      my_free(primary_keys[counter]);
 
-    my_free(primary_keys, MYF(0));
+    my_free(primary_keys);
   }
 
   return 0;
@@ -1946,7 +1980,7 @@ end:
   DBUG_RETURN(0);
 }
 
-uint
+int
 parse_option(const char *origin, option_string **stmt, char delm)
 {
   char *retstr;
@@ -1965,6 +1999,13 @@ parse_option(const char *origin, option_string **stmt, char delm)
   {
     char buffer[HUGE_STRING_LENGTH];
     char *buffer_ptr;
+
+    /*
+      Return an error if the length of the any of the comma seprated value
+      exceeds HUGE_STRING_LENGTH.
+    */
+    if ((size_t)(retstr - ptr) > HUGE_STRING_LENGTH)
+      return -1;
 
     count++;
     strncpy(buffer, ptr, (size_t)(retstr - ptr));
@@ -1998,6 +2039,13 @@ parse_option(const char *origin, option_string **stmt, char delm)
   {
     char *origin_ptr;
 
+    /*
+      Return an error if the length of the any of the comma seprated value
+      exceeds HUGE_STRING_LENGTH.
+    */
+    if (strlen(ptr) > HUGE_STRING_LENGTH)
+      return -1;
+
     if ((origin_ptr= strchr(ptr, ':')))
     {
       char *option_ptr;
@@ -2008,13 +2056,13 @@ parse_option(const char *origin, option_string **stmt, char delm)
       option_ptr= (char *)ptr + 1 + tmp->length;
 
       /* Move past the : and the first string */
-      tmp->option_length= (size_t)((ptr + length) - option_ptr);
+      tmp->option_length= strlen(option_ptr);
       tmp->option= my_strndup(option_ptr, tmp->option_length,
                               MYF(MY_FAE));
     }
     else
     {
-      tmp->length= (size_t)((ptr + length) - ptr);
+      tmp->length= strlen(ptr);
       tmp->string= my_strndup(ptr, tmp->length, MYF(MY_FAE));
     }
 
@@ -2167,11 +2215,9 @@ option_cleanup(option_string *stmt)
   for (ptr= stmt; ptr; ptr= nptr)
   {
     nptr= ptr->next;
-    if (ptr->string)
-      my_free(ptr->string, MYF(0)); 
-    if (ptr->option)
-      my_free(ptr->option, MYF(0)); 
-    my_free(ptr, MYF(0));
+    my_free(ptr->string);
+    my_free(ptr->option);
+    my_free(ptr);
   }
 }
 
@@ -2185,9 +2231,8 @@ statement_cleanup(statement *stmt)
   for (ptr= stmt; ptr; ptr= nptr)
   {
     nptr= ptr->next;
-    if (ptr->string)
-      my_free(ptr->string, MYF(0)); 
-    my_free(ptr, MYF(0));
+    my_free(ptr->string);
+    my_free(ptr);
   }
 }
 

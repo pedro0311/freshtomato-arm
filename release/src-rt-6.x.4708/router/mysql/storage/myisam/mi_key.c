@@ -1,4 +1,4 @@
-/* Copyright (c) 2000-2008 MySQL AB
+/* Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -11,7 +11,7 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA */
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
 /* Functions to handle keys */
 
@@ -139,7 +139,7 @@ uint _mi_make_key(register MI_INFO *info, uint keynr, uchar *key,
     else if (keyseg->flag & HA_BLOB_PART)
     {
       uint tmp_length=_mi_calc_blob_length(keyseg->bit_start,pos);
-      memcpy_fixed((uchar*) &pos,pos+keyseg->bit_start,sizeof(char*));
+      memcpy(&pos,pos+keyseg->bit_start,sizeof(char*));
       set_if_smaller(length,tmp_length);
       FIX_LENGTH(cs, pos, length, char_length);
       store_key_length_inc(key,char_length);
@@ -253,18 +253,17 @@ uint _mi_pack_key(register MI_INFO *info, uint keynr, uchar *key, uchar *old,
     pos=old;
     if (keyseg->flag & HA_SPACE_PACK)
     {
-      uchar *end=pos+length;
       if (type == HA_KEYTYPE_NUM)
       {
-	while (pos < end && pos[0] == ' ')
-	  pos++;
+        uchar *end= pos + length;
+        while (pos < end && pos[0] == ' ')
+          pos++;
+        length= (uint) (end - pos);
       }
       else if (type != HA_KEYTYPE_BINARY)
       {
-	while (end > pos && end[-1] == ' ')
-	  end--;
+        length= cs->cset->lengthsp(cs, (char*) pos, length);
       }
-      length=(uint) (end-pos);
       FIX_LENGTH(cs, pos, length, char_length);
       store_key_length_inc(key,char_length);
       memcpy((uchar*) key,pos,(size_t) char_length);
@@ -419,7 +418,7 @@ static int _mi_put_key_in_record(register MI_INFO *info, uint keynr,
 	goto err;
 #endif
       memcpy(record+keyseg->start+keyseg->bit_start,
-	     (char*) &blob_ptr,sizeof(char*));
+	     &blob_ptr,sizeof(char*));
       memcpy(blob_ptr,key,length);
       blob_ptr+=length;
 

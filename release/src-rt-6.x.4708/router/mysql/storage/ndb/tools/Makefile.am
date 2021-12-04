@@ -1,4 +1,5 @@
-# Copyright (c) 2004-2007 MySQL AB
+# Copyright (C) 2004-2006 MySQL AB
+# Use is subject to license terms
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -74,9 +75,6 @@ ndb_select_all_LDFLAGS = @ndb_bin_am_ldflags@
 ndb_select_count_LDFLAGS = @ndb_bin_am_ldflags@
 ndb_restore_LDFLAGS = @ndb_bin_am_ldflags@
 ndb_config_LDFLAGS = @ndb_bin_am_ldflags@
-
-# Don't update the files from bitkeeper
-%::SCCS/s.%
 
 windoze-dsp: \
   ndb_waiter.dsp \
