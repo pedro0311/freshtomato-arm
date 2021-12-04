@@ -2547,6 +2547,8 @@ transmission/build/Makefile: $(OPENSSLDIR) libcurl libevent zlib
 		-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so \
 		-DZLIB_INCLUDE_DIR=$(TOP)/zlib \
 		-DZLIB_LIBRARY=$(TOP)/zlib/staged/usr/lib/libz.so \
+		-DICONV_INCLUDE_DIR="" \
+		-DICONV_LIBRARY="" \
 		..
 
 transmission: transmission/build/Makefile
