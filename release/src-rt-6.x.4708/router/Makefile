@@ -91,6 +91,7 @@ endif
 #
 # standard packages
 #
+
 ifeq ($(TCONFIG_BCMARM),y)
 obj-y += libbcm
 else
@@ -240,8 +241,6 @@ TCONFIG_RAID :=
 endif
 
 obj-y += taskset
-obj-$(TCONFIG_SAMBASRV) += samba3
-obj-$(TCONFIG_SAMBASRV) += wsdd2
 
 ifeq ($(CONFIG_BCMWL6),y)
 ifeq ($(TCONFIG_TUXERA),y)
@@ -255,6 +254,9 @@ endif
 obj-$(TCONFIG_NTFS) += ntfs-3g
 obj-$(TCONFIG_EBTABLES) += ebtables
 obj-$(TCONFIG_IPV6) += dhcpv6
+
+obj-$(TCONFIG_SAMBASRV) += samba3
+obj-$(TCONFIG_SAMBASRV) += wsdd2
 
 obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 obj-$(TCONFIG_MEDIA_SERVER) += libiconv
@@ -481,7 +483,7 @@ else	# TCONFIG_BCMARM
 	$(call STRIP_DEBUG_SYMBOLS,$(LINUXDIR)/drivers/net/bcm57xx/bcm57xx.ko)
 	$(call STRIP_DEBUG_SYMBOLS,$(LINUXDIR)/drivers/net/emf/emf.ko)
 	$(call STRIP_DEBUG_SYMBOLS,$(LINUXDIR)/drivers/net/igs/igs.ko)
-endif   # TCONFIG_BCMARM
+endif   # !TCONFIG_BCMARM
 
 ifneq ($(TCONFIG_BCMARM),y)
 lzma-loader:
@@ -489,7 +491,7 @@ lzma-loader:
 	$(MAKE) -C $(SRCBASE)/lzma-loader CROSS_COMPILE=$(CROSS_COMPILE) TCONFIG_MIPSR2=$(TCONFIG_MIPSR2) $(PARALLEL_BUILD)
 
 lzma-loader-install:
-endif
+endif # !TCONFIG_BCMARM
 
 kmod: dummy
 	@$(SEP)
@@ -988,7 +990,7 @@ busybox-clean:
 	-@$(MAKE) -C busybox distclean
 	$(call unpatch_files,busybox)
 
-httpd: shared nvram$(BCMEX) mssl
+httpd: shared nvram$(BCMEX) $(if $(TCONFIG_HTTPS),mssl,)
 	@$(SEP)
 	@$(MAKE) -C httpd
 
@@ -1125,7 +1127,7 @@ openssl-1.1-clean:
 	@rm -rf openssl-1.1/staged
 	$(call unpatch_files,openssl-1.1)
 
-mssl: $(OPENSSLDIR)
+mssl: $(if $(TCONFIG_HTTPS),$(OPENSSLDIR),)
 
 ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
 mdu: shared
@@ -1216,7 +1218,7 @@ gmp-clean:
 iptables:
 	@$(SEP)
 	cp -f iptables/extensions/libipt_ipp2p_K26.c iptables/extensions/libipt_ipp2p.c
-	$(MAKE) -C iptables BINDIR=/usr/sbin LIBDIR=/usr/lib KERNEL_DIR=$(LINUXDIR) COPT_FLAGS="-Os $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE"
+	$(MAKE) -C $@ BINDIR=/usr/sbin LIBDIR=/usr/lib KERNEL_DIR=$(LINUXDIR) COPT_FLAGS="-Os $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE"
 
 iptables-install:
 	install -D iptables/iptables $(INSTALLDIR)/iptables/usr/sbin/iptables
@@ -1351,9 +1353,9 @@ miniupnpd/stamp-h1:
 
 miniupnpd: $(IPTABLES_TARGET) miniupnpd/stamp-h1
 	@$(SEP)
-	$(MAKE) -C miniupnpd $(PARALLEL_BUILD) \
+	$(MAKE) -C $@ $(PARALLEL_BUILD) \
 		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed -L$(TOP)/shared"
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed $(if $(TCONFIG_HTTPS),-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -pthread) -L$(TOP)/shared"
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
@@ -1546,7 +1548,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 
 pppd: pppd/Makefile
 	@$(SEP)
-	@$(MAKE) -C pppd MFLAGS='$(if $(TCONFIG_IPV6),HAVE_INET6=y,) EXTRACFLAGS="$(EXTRACFLAGS)"'
+	@$(MAKE) -C $@ MFLAGS='$(if $(TCONFIG_IPV6),HAVE_INET6=y,) EXTRACFLAGS="$(EXTRACFLAGS)"'
 
 pppd-install:
 	install -D pppd/pppd/pppd $(INSTALLDIR)/pppd/usr/sbin/pppd
@@ -1588,14 +1590,21 @@ libbcm-install:
 
 iproute2:
 	@$(SEP)
+	$(call patch_files,iproute2)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS)"
+		EXTRACFLAGS="$(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/iptables/iptables" \
+		$(PARALLEL_BUILD)
 
 iproute2-install:
 	install -D iproute2/tc/tc $(INSTALLDIR)/iproute2/usr/sbin/tc
 	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/tc
 	install -D iproute2/ip/ip $(INSTALLDIR)/iproute2/usr/sbin/ip
 	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/ip
+
+iproute2-clean:
+	-@$(MAKE) -C iproute2 clean
+	$(call unpatch_files,iproute2)
 
 iproute2-3.x: kernel_header iptables-1.8.x
 	@$(SEP)
@@ -1704,9 +1713,9 @@ ffmpeg/stamp-h1: zlib
 		--disable-decoders $(FFMPEG_CONFIGURE_DECODERS) \
 		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
 		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
-		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib" \
+		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
 		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		--extra-libs="-L$(TOP)/zlib -lz" \
+		--extra-libs="-L$(TOP)/zlib/staged/usr/lib -lz" \
 		--enable-zlib --disable-debug
 	@touch $@
 
@@ -1868,8 +1877,8 @@ libid3tag/stamp-h1: zlib
 	$(call patch_files,libid3tag)
 	cd libid3tag && \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-	CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib" \
-	LDFLAGS="-L$(TOP)/zlib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
+	LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	$(CONFIGURE) --enable-shared --enable-static --prefix='' \
 		--disable-debugging --disable-profiling --disable-dependency-tracking
 	@touch $@
@@ -1920,9 +1929,9 @@ minidlna/stamp-h1: zlib sqlite ffmpeg libogg flac jpeg libexif libid3tag libvorb
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg/libswscale -I$(TOP)/ffmpeg -I$(TOP)/flac/include \
-			-I$(TOP)/sqlite -I$(TOP)/jpeg -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib -I$(TOP)/shared" \
+			-I$(TOP)/sqlite -I$(TOP)/jpeg -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs \
-			-L$(TOP)/jpeg -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
+			-L$(TOP)/jpeg -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		ac_cv_lib_id3tag__lz___id3_file_open=yes \
 		ac_cv_lib_avformat__lavcodec__lavutil__lz_avformat_open_input=no \
@@ -2172,9 +2181,11 @@ libxml2-clean:
 	@rm -f libxml2/stamp-h1
 	@rm -rf libxml2/staged
 
-libpng/stamp-h1:
+libpng/stamp-h1: zlib
 	cd libpng && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+		CPPFLAGS="-I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib" \
 		$(CONFIGURE) --prefix=/usr --enable-static --enable-shared
 	@touch $@
 
@@ -2200,12 +2211,12 @@ libpng-clean:
 php/stamp-h1: pcre zlib libiconv sqlite libxml2 libpng jpeg libcurl
 	$(call patch_files,php)
 	cd php && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
-		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
+		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs \
 			-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
-		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib \
+		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs" \
+		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib \
 			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -lssl -lcrypto" \
 		PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
 		ac_cv_func_memcmp_working=yes \
@@ -2291,8 +2302,8 @@ nginx/stamp-h1: $(OPENSSLDIR) zlib pcre
 	cd nginx && \
 	./configure --crossbuild=Linux::$(ARCH) \
 		--with-cc="$(CC)" \
-		--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/pcre -I$(TOP)/zlib" \
-		--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+		--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/pcre -I$(TOP)/zlib/staged/usr/include" \
+		--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 		--prefix=/usr \
 		--sbin-path=/usr/sbin \
 		--conf-path=/etc/nginx/nginx.conf \
@@ -2502,7 +2513,7 @@ openvpn/Makefile:
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
 		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(INSTALL_ZLIB),-L$(TOP)/zlib/staged/usr/lib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
@@ -2606,8 +2617,8 @@ libcurl-clean:
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC $(if $(TCONFIG_HTTPS),-I$(TOP)/$(OPENSSLDIR)/staged/usr/include,) -I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC $(if $(TCONFIG_HTTPS),-pthread -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib,) -L$(TOP)/zlib/staged/usr/lib" \
 		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
 			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
@@ -2822,8 +2833,8 @@ tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 			--prefix=/usr \
 			--sysconfdir=/etc \
 			--localstatedir=/var \
-			--with-zlib-include="$(TOP)/zlib" \
-			--with-zlib-lib="$(TOP)/zlib" \
+			--with-zlib-include="$(TOP)/zlib/staged/usr/include" \
+			--with-zlib-lib="$(TOP)/zlib/staged/usr/lib" \
 			--with-lzo-include="$(TOP)/lzo/include" \
 			--with-lzo-lib="$(TOP)/lzo/src/.libs" \
 			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
@@ -2834,7 +2845,7 @@ tinc/stamp-h1: $(OPENSSLDIR) zlib lzo
 
 tinc: tinc/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ LIBS="-lcrypto $(TOP)/zlib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ LIBS="-lcrypto $(TOP)/zlib/staged/usr/lib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
 
 tinc-install:
 	install -D tinc/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
@@ -3097,11 +3108,11 @@ getdns-clean:
 
 tor/stamp-h1: $(OPENSSLDIR) zlib libevent
 	cd tor && autoreconf -fsi && \
-		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections" \
+		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
 		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
-			--with-openssl-dir=$(TOP)/$(OPENSSLDIR) --with-zlib-dir=$(TOP)/zlib \
+			--with-openssl-dir=$(TOP)/$(OPENSSLDIR)/staged/usr --with-zlib-dir=$(TOP)/zlib/staged/usr \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
 			--disable-manpage --disable-html-manual --disable-dependency-tracking --disable-zstd --disable-systemd
@@ -3300,7 +3311,7 @@ ipset/stamp-h1: libmnl
 
 ipset: ipset/stamp-h1
 	@$(SEP)
-	$(MAKE) -C ipset
+	$(MAKE) -C $@
 
 ipset-install:
 	install -D ipset/src/ipset $(INSTALLDIR)/ipset/usr/sbin/ipset
@@ -3314,7 +3325,7 @@ ipset-install:
 
 ipset-clean:
 	-@$(MAKE) -C ipset clean
-	-@rm -rf ipset/Makefile ipset/stamp-h1
+	@rm -rf ipset/Makefile ipset/stamp-h1
 	$(call unpatch_files,ipset)
 
 libjson-c/build/Makefile:
@@ -3547,9 +3558,9 @@ libffi-clean:
 glib2/stamp-h1:
 	$(call patch_files,glib2)
 	cd glib2 && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/include -I$(TOP)/glib2" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/include -I$(TOP)/glib2" \
-		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libffi/staged/usr/lib -ldl -lpthread -lz -liconv -lffi" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/glib2" \
+		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/lib/.libs -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -ldl -lpthread -lz -liconv -lffi" \
 		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include" \
 		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
 		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/lib/.libs/libiconv.so" \
