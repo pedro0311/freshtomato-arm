@@ -1748,6 +1748,7 @@ static const nvset_t nvset_list[] = {
 	{"nginx_user",			V_LENGTH(0, 255)		},	// user used to start nginx and spawn-fcgi
 	{"nginx_override",		V_01				},
 	{"nginx_overridefile",		V_TEXT(0, 4096)			},
+	{"nginx_h5aisupport",		V_01				},	/* enable h5ai support */
 
 // bwq518 - MySQL
 	{ "mysql_enable",		V_01				},

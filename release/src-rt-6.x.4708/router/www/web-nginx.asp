@@ -23,7 +23,7 @@
 
 <script>
 
-//	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile"); %>
+//	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile,nginx_h5aisupport"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -88,6 +88,7 @@ function verifyFields(focused, quiet) {
 	E('_nginx_servercustom').disabled = !a || b;
 	E('_nginx_user').disabled = !a;
 	E('_nginx_phpconf').disabled = !a || b;
+	E('_f_nginx_h5aisupport').disabled = !a || b;
 	E('_f_nginx_override').disabled = !a;
 	E('_nginx_overridefile').disabled = !a || !b;
 
@@ -106,6 +107,7 @@ function save() {
 		fom.nginx_keepconf.value = fom.f_nginx_keepconf.checked ? 1 : 0;
 		fom.nginx_remote.value = fom.f_nginx_remote.checked ? 1 : 0;
 		fom.nginx_override.value = fom.f_nginx_override.checked ? 1 : 0;
+		fom.nginx_h5aisupport.value = fom.f_nginx_h5aisupport.checked ? 1 : 0;
 		fom._service.value = 'nginxfp-restart';
 	}
 	else
@@ -155,6 +157,7 @@ function init() {
 <input type="hidden" name="nginx_keepconf">
 <input type="hidden" name="nginx_remote">
 <input type="hidden" name="nginx_override">
+<input type="hidden" name="nginx_h5aisupport">
 
 <!-- / / / -->
 
@@ -180,8 +183,9 @@ function init() {
 			{ title: 'Upload file size limit', name: 'nginx_upload', type: 'text', maxlen: 5, size: 7, value: nvram.nginx_upload, suffix: '<small> MB<\/small>'},
 			{ title: 'Allow Remote Access', name: 'f_nginx_remote', type: 'checkbox', value: nvram.nginx_remote == '1' },
 			{ title: 'Web Server Name', name: 'nginx_fqdn', type: 'text', maxlen: 255, size: 20, value: nvram.nginx_fqdn },
-			{ title: 'Document Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php / /_h5ai/public/index.php<\/small>' },
-			{ title: 'Server Priority', name: 'nginx_priority', type: 'text', maxlen: 8, size:3, value: nvram.nginx_priority, suffix:'<small> Max. Perfor: -20, Min.Perfor: 19, default: 10<\/small>' }
+			{ title: 'Document Root Path', name: 'nginx_docroot', type: 'text', maxlen: 255, size: 40, value: nvram.nginx_docroot, suffix: '<small>&nbsp;/index.html / index.htm / index.php<\/small>' },
+			{ title: 'Server Priority', name: 'nginx_priority', type: 'text', maxlen: 8, size:3, value: nvram.nginx_priority, suffix:'<small> Max. Perfor: -20, Min.Perfor: 19, default: 10<\/small>' },
+			{ title: 'Enable <a href="https://larsjung.de/h5ai/" class="new_window">h5ai<\/a> support', name: 'f_nginx_h5aisupport', type: 'checkbox', value: nvram.nginx_h5aisupport == '1' }
 		]);
 	</script>
 </div>
@@ -225,6 +229,7 @@ function init() {
 			The operating system kernel has priority -5.<br>
 			Never select a lower value than the kernel uses. Do not use the service test page to adjust the server performance, 
 			its performance is lower than the definitive media where files will be located, i.e; USB Stick, Hard Drive or SSD.</li>
+		<li><b> Enable <a href="https://larsjung.de/h5ai/" class="new_window">h5ai</a> support:</b> Files should be copied to the '/_h5ai' folder as described on dev page</li>
 	</ul>
 </div>
 

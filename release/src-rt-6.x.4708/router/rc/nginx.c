@@ -238,7 +238,7 @@ static void build_nginx_conf(void)
 		buf = nginxdocrootdir;
 
 	fprintf(nginx_conf_file, "root %s;\n"
-	                         "index index.html index.htm index.php /_h5ai/public/index.php;\n"
+	                         "index index.html index.htm index.php %s;\n"
 	                         /* error pages section */
 	                         "error_page 404 /404.html;\n"
 	                         "error_page 500 502 503 504 /50x.html;\n"
@@ -246,6 +246,7 @@ static void build_nginx_conf(void)
 	                         "root %s;\n"
 	                         "}\n",
 	                         buf,
+	                         nvram_get_int("nginx_h5aisupport") ? "/_h5ai/public/index.php" : "",
 	                         buf);
 
 	/* PHP to FastCGI Server */
