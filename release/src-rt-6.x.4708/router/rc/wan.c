@@ -754,6 +754,9 @@ void store_wan_if_to_nvram(char *prefix)
 	int wan_unit;
 	int vid;
 	int vid_map;
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
+	int vlan0tag = nvram_get_int("vlan0tag");
+#endif
 	char tmp[64];
 	char *nvvar = NULL;
 
@@ -765,7 +768,13 @@ void store_wan_if_to_nvram(char *prefix)
 		if (sscanf(p, "vlan%d", &vid) == 1) {
 			snprintf(buf, sizeof(buf), "vlan%dvid", vid);
 			vid_map = nvram_get_int(buf);
-			if ((vid_map < 1) || (vid_map > 4094)) vid_map = vid;
+			if ((vid_map < 1) || (vid_map > 4094)) {
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
+				vid_map = vlan0tag | vid;
+#else
+				vid_map = vid;
+#endif
+			}
 			snprintf(buf, sizeof(buf), "vlan%d", vid_map);
 			p = buf;
 		}
