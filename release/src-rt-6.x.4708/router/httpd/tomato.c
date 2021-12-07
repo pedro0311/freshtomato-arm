@@ -1102,6 +1102,9 @@ static const nvset_t nvset_list[] = {
 #ifndef TCONFIG_BCMARM
 	{ "trunk_vlan_so",		V_01				},
 #endif
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
+	{ "vlan0tag",			V_TEXT(0,5)			},
+#endif
 	{ "vlan0vid",			V_TEXT(0,5)			},
 	{ "vlan1vid",			V_TEXT(0,5)			},
 	{ "vlan2vid",			V_TEXT(0,5)			},
@@ -1745,6 +1748,7 @@ static const nvset_t nvset_list[] = {
 	{"nginx_user",			V_LENGTH(0, 255)		},	// user used to start nginx and spawn-fcgi
 	{"nginx_override",		V_01				},
 	{"nginx_overridefile",		V_TEXT(0, 4096)			},
+	{"nginx_h5aisupport",		V_01				},	/* enable h5ai support */
 
 // bwq518 - MySQL
 	{ "mysql_enable",		V_01				},

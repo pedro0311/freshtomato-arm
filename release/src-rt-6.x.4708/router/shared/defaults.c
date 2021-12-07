@@ -1558,6 +1558,7 @@ struct nvram_tuple router_defaults[] = {
 	{"nginx_user",			"root"				, 0 },	// user/group
 	{"nginx_override",		"0"				, 0 },	// additional lines for php.ini
 	{"nginx_overridefile",		"/path/to/nginx.conf"		, 0 },	// user/group
+	{"nginx_h5aisupport",		"0"				, 0 },	/* enable h5ai support */
 
 /* bwq518 - MySQL */
 	{ "mysql_enable",		"0"				, 0 },
