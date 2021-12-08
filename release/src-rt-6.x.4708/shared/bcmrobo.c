@@ -2128,7 +2128,8 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 #else
 #define	FL	FLAG_UNTAG
 #endif /* _CFE_ */
-			if (!pdesc[pid].cpu || strchr(port, FL)) {
+			if ((!pdesc[pid].cpu && !strchr(port, FLAG_TAGGED)) ||
+			    strchr(port, FL)) {
 				val16 = ((0 << 13) |		/* priority - always 0 */
 				         vid);			/* vlan id */
 #ifdef VID_MAP_DBG
