@@ -486,12 +486,14 @@ void start_dnsmasq()
 #ifdef TCONFIG_STUBBY
 		if ((!nvram_get_int("stubby_proxy")) || (nvram_match("dnssec_method", "0"))) {
 #endif
+#ifdef TCONFIG_DNSSEC
 			fprintf(f, "conf-file=/etc/trust-anchors.conf\n"
 			           "dnssec\n");
 
 			/* if NTP isn't set yet, wait until rc's ntp signals us to start validating time */
 			if (!nvram_get_int("ntp_ready"))
 				fprintf(f, "dnssec-no-timecheck\n");
+#endif
 #ifdef TCONFIG_STUBBY
 		}
 		else /* use stubby dnssec or server only */
