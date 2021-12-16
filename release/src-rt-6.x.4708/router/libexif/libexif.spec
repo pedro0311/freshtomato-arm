@@ -1,6 +1,6 @@
 Name: libexif
 Summary: EXIF tag library
-Version: 0.6.23
+Version: 0.6.24
 Release: 1
 Source: https://prdownloads.sourceforge.net/libexif/%{name}-%{version}.tar.bz2
 Url: https://libexif.github.io/

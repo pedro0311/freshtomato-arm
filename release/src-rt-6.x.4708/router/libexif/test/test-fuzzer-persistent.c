@@ -1,7 +1,7 @@
-/**file test-fuzzer.c
+/**file test-fuzzer-persistent.c
  * from test-parse.c and test-mnote.c
  *
- * \brief Completely parse all files given on the command line.
+ * \brief Persistent AFL fuzzing binary (reaches 4 digits execs / second)
  *
  * Copyright (C) 2007 Hans Ulrich Niedermann <gp@n-dimensional.de>
  * Copyright 2002 Lutz Mueller <lutz@users.sourceforge.net>
@@ -24,6 +24,7 @@
  */
 
 #include <string.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -31,6 +32,8 @@
 #include "libexif/exif-data.h"
 #include "libexif/exif-loader.h"
 #include "libexif/exif-system.h"
+
+__AFL_FUZZ_INIT();
 
 #undef USE_LOG
 
@@ -99,15 +102,14 @@ test_exif_data (ExifData *d)
 	return 0;
 }
 
-
-
-/** Run EXIF parsing test on the given file. */
-static void test_parse(const char *filename, void *callback_data)
+/** Main program. */
+int main(const int argc, const char *argv[])
 {
+	int		i;
 	ExifData	*d;
 	ExifLoader	*loader = exif_loader_new();
-	unsigned int	buf_size;
-	unsigned char	*buf;
+	unsigned int	xbuf_size;
+	unsigned char	*xbuf;
 	FILE		*f;
 	struct		stat stbuf;
 #ifdef USE_LOG
@@ -116,54 +118,49 @@ static void test_parse(const char *filename, void *callback_data)
 	exif_log_set_func(log, logfunc, NULL);
 #endif
 
-	/* try the exif loader */
-	d = exif_data_new_from_file(filename);
-#ifdef USE_LOG
-	exif_data_log (d, log);
+#ifdef __AFL_HAVE_MANUAL_CONTROL
+	__AFL_INIT();
 #endif
-	exif_data_foreach_content(d, data_foreach_func, callback_data);
-	test_exif_data (d);
 
-	buf = NULL;
-	exif_data_save_data (d, &buf, &buf_size);
-	free (buf);
+	unsigned char *buf = __AFL_FUZZ_TESTCASE_BUF;  // must be after __AFL_INIT
+                                                 // and before __AFL_LOOP!
 
-	exif_data_set_byte_order(d, EXIF_BYTE_ORDER_INTEL);
+	while (__AFL_LOOP(10000)) {
 
-	buf = NULL;
-	exif_data_save_data (d, &buf, &buf_size);
-	free (buf);
+		int len = __AFL_FUZZ_TESTCASE_LEN;  // don't use the macro directly in a call!
 
-	exif_data_unref(d);
+		d = exif_data_new_from_data(buf, len);
 
-	/* try the exif data writer ... different than the loader */
-	if (-1 == stat(filename,&stbuf))
-		perror("stat");
-	f = fopen(filename,"r");
-	if (!f) return;
+		/* try the exif loader */
+	#ifdef USE_LOG
+		exif_data_log (d, log);
+	#endif
+		exif_data_foreach_content(d, data_foreach_func, NULL);
+		test_exif_data (d);
 
-	buf = malloc(stbuf.st_size);
-	fread (buf, stbuf.st_size, 1, f);
-	fclose(f);
+		xbuf = NULL;
+		exif_data_save_data (d, &xbuf, &xbuf_size);
+		free (xbuf);
 
-	exif_loader_write(loader, buf, stbuf.st_size);
-	free (buf);
+		exif_data_set_byte_order(d, EXIF_BYTE_ORDER_INTEL);
 
-	d = exif_loader_get_data(loader);
-	exif_data_foreach_content(d, data_foreach_func, callback_data);
-	test_exif_data (d);
-	exif_loader_unref(loader);
-	exif_data_unref(d);
-}
+		xbuf = NULL;
+		exif_data_save_data (d, &xbuf, &xbuf_size);
+		free (xbuf);
 
+		exif_data_unref(d);
 
-/** Main program. */
-int main(const int argc, const char *argv[])
-{
-	int	i;
-	void	*callback_data = NULL;
-	for (i=1; i<argc; i++) {
-		test_parse(argv[i], callback_data);
+#if 0
+		/* try the exif data writer ... different than the loader */
+
+		exif_loader_write(loader, buf, len);
+
+		d = exif_loader_get_data(loader);
+		exif_data_foreach_content(d, data_foreach_func, NULL);
+		test_exif_data (d);
+		exif_loader_unref(loader);
+		exif_data_unref(d);
+#endif
 	}
 	return 0;
 }

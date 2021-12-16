@@ -18,8 +18,8 @@
  * Boston, MA  02110-1301  USA.
  */
 
-#ifndef __MNOTE_APPLE_CONTENT_H__
-#define __MNOTE_APPLE_CONTENT_H__
+#ifndef LIBEXIF_EXIF_MNOTE_DATA_APPLE_H
+#define LIBEXIF_EXIF_MNOTE_DATA_APPLE_H
 
 #include <libexif/exif-byte-order.h>
 #include <libexif/exif-data.h>
@@ -41,4 +41,4 @@ int exif_mnote_data_apple_identify(const ExifData *, const ExifEntry *);
 
 ExifMnoteData *exif_mnote_data_apple_new(ExifMem *);
 
-#endif /* __MNOTE_APPLE_CONTENT_H__ */
+#endif /* !defined(LIBEXIF_EXIF_MNOTE_DATA_APPLE_H) */

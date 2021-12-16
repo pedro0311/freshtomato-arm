@@ -1,6 +1,6 @@
 AC_PREREQ(2.69)
 AC_INIT([EXIF library],
-        [0.6.23],
+        [0.6.24],
         [libexif-devel@lists.sourceforge.net],
         [libexif],
         [https://libexif.github.io/])
@@ -147,6 +147,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 	  ],[
 	    double s = sqrt(0);
 	    double p = pow(s,s);
+	    (void) p;
 	  ])],
 	[AC_MSG_RESULT([yes])], [
 	AC_MSG_RESULT([no])
@@ -157,6 +158,7 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([
 		],[
 		  double s = sqrt(0);
 		  double p = pow(s,s);
+		  (void) p;
 		])],
 	[
 		AC_MSG_RESULT([yes])
@@ -231,12 +233,14 @@ AM_CPPFLAGS="$AM_CPPFLAGS -I\$(top_srcdir)"
 AM_CPPFLAGS="$AM_CPPFLAGS -I\$(top_builddir)"
 AM_LDFLAGS="$LDFLAGS"
 AS_VAR_IF([GCC], [yes], [dnl
-    AM_CFLAGS="$AM_CFLAGS -ansi -pedantic-error"
-    AM_CXXFLAGS="$AM_CXXFLAGS -ansi -pedantic-error"
+    AM_CFLAGS="$AM_CFLAGS -ansi -pedantic-errors"
+    AM_CXXFLAGS="$AM_CXXFLAGS -ansi -pedantic-errors"
     AM_CPPFLAGS="$AM_CPPFLAGS -g -Wall -Wmissing-declarations -Wmissing-prototypes"
     AM_LDFLAGS="$AM_LDFLAGS -g -Wall"
 ])
 
+dnl AC_SUBST([AM_CFLAGS])
+dnl AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_CPPFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
