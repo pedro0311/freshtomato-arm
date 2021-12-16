@@ -18,8 +18,8 @@
  * Boston, MA  02110-1301  USA.
  */
 
-#ifndef __MNOTE_OLYMPUS_CONTENT_H__
-#define __MNOTE_OLYMPUS_CONTENT_H__
+#ifndef LIBEXIF_EXIF_MNOTE_DATA_OLYMPUS_H
+#define LIBEXIF_EXIF_MNOTE_DATA_OLYMPUS_H
 
 #include <libexif/exif-mnote-data-priv.h>
 #include <libexif/olympus/mnote-olympus-entry.h>
@@ -64,4 +64,4 @@ int exif_mnote_data_olympus_identify (const ExifData *ed, const ExifEntry *e);
 
 ExifMnoteData *exif_mnote_data_olympus_new (ExifMem *);
 
-#endif /* __MNOTE_OLYMPUS_CONTENT_H__ */
+#endif /* !defined(LIBEXIF_EXIF_MNOTE_DATA_OLYMPUS_H) */

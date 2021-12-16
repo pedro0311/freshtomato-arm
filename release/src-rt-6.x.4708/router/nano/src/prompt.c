@@ -304,8 +304,8 @@ int do_statusbar_input(bool *finished)
 		if (shortcut->func == do_tab || shortcut->func == do_enter)
 			;
 #ifdef ENABLE_HISTORIES
-		else if (shortcut->func == get_history_older_void ||
-					shortcut->func == get_history_newer_void)
+		else if (shortcut->func == get_older_item ||
+					shortcut->func == get_newer_item)
 			;
 #endif
 		else if (shortcut->func == do_left)
@@ -446,10 +446,8 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 	bool finished;
 	functionptrtype func;
 #ifdef ENABLE_HISTORIES
-	char *history = NULL;
-		/* The current history string. */
-	char *magichistory = NULL;
-		/* The (partial) answer that was typed at the prompt, if any. */
+	char *stored_string = NULL;
+		/* Whatever the answer was before the user foraged into history. */
 #ifdef ENABLE_TABCOMP
 	bool previous_was_tab = FALSE;
 		/* Whether the previous keystroke was an attempt at tab completion. */
@@ -472,7 +470,7 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 			refresh_func();
 			*actual = KEY_WINCH;
 #ifdef ENABLE_HISTORIES
-			free(magichistory);
+			free(stored_string);
 #endif
 			return NULL;
 		}
@@ -503,36 +501,33 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 		} else
 #endif /* ENABLE_TABCOMP */
 #ifdef ENABLE_HISTORIES
-		if (func == get_history_older_void) {
-			if (history_list != NULL) {
-				/* If we're scrolling up at the bottom of the history list
-				 * and answer isn't blank, save answer in magichistory. */
-				if ((*history_list)->next == NULL && *answer != '\0')
-					magichistory = mallocstrcpy(magichistory, answer);
+		if (func == get_older_item && history_list != NULL) {
+			/* If this is the first step into history, start at the bottom. */
+			if (stored_string == NULL)
+				reset_history_pointer_for(*history_list);
 
-				/* Get the older search from the history list and save it in
-				 * answer.  If there is no older search, don't do anything. */
-				if ((history = get_history_older(history_list)) != NULL) {
-					answer = mallocstrcpy(answer, history);
-					typing_x = strlen(answer);
-				}
+			/* When moving up from the bottom, remember the current answer. */
+			if ((*history_list)->next == NULL)
+				stored_string = mallocstrcpy(stored_string, answer);
+
+			/* If there is an older item, move to it and copy its string. */
+			if ((*history_list)->prev != NULL) {
+				*history_list = (*history_list)->prev;
+				answer = mallocstrcpy(answer, (*history_list)->data);
+				typing_x = strlen(answer);
 			}
-		} else if (func == get_history_newer_void) {
-			if (history_list != NULL) {
-				/* Get the newer search from the history list and save it in
-				 * answer.  If there is no newer search, don't do anything. */
-				if ((history = get_history_newer(history_list)) != NULL) {
-					answer = mallocstrcpy(answer, history);
-					typing_x = strlen(answer);
-				}
+		} else if (func == get_newer_item && history_list != NULL) {
+			/* If there is a newer item, move to it and copy its string. */
+			if ((*history_list)->next != NULL) {
+				*history_list = (*history_list)->next;
+				answer = mallocstrcpy(answer, (*history_list)->data);
+				typing_x = strlen(answer);
+			}
 
-				/* If we've reached the bottom of the history list, and answer
-				 * is blank, and magichistory is set, restore the old answer. */
-				if ((*history_list)->next == NULL &&
-						*answer == '\0' && magichistory != NULL) {
-					answer = mallocstrcpy(answer, magichistory);
-					typing_x = strlen(answer);
-				}
+			/* When at the bottom of the history list, restore the old answer. */
+			if ((*history_list)->next == NULL && stored_string && *answer == '\0') {
+				answer = mallocstrcpy(answer, stored_string);
+				typing_x = strlen(answer);
 			}
 		} else
 #endif /* ENABLE_HISTORIES */
@@ -542,7 +537,7 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 #ifndef NANO_TINY
 		else if (func == do_nothing)
 			finished = FALSE;
-		else if (func == do_toggle_void) {
+		else if (func == do_toggle) {
 			TOGGLE(NO_HELP);
 			window_init();
 			focusing = FALSE;
@@ -563,10 +558,10 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 	}
 
 #ifdef ENABLE_HISTORIES
-	/* Set the current position in the history list to the bottom. */
-	if (history_list != NULL) {
-		history_reset(*history_list);
-		free(magichistory);
+	/* If the history pointer was moved, point it at the bottom again. */
+	if (stored_string != NULL) {
+		reset_history_pointer_for(*history_list);
+		free(stored_string);
 	}
 #endif
 
@@ -770,12 +765,13 @@ int do_yesno_prompt(bool all, const char *msg)
 		else if (func_from_key(&kbinput) == full_refresh)
 			full_refresh();
 #ifndef NANO_TINY
-		else if (func_from_key(&kbinput) == do_toggle_void) {
+		else if (func_from_key(&kbinput) == do_toggle) {
 			TOGGLE(NO_HELP);
 			window_init();
 			titlebar(NULL);
 			focusing = FALSE;
 			edit_refresh();
+			focusing = TRUE;
 		}
 #endif
 		else

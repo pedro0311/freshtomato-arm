@@ -88,15 +88,16 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 TESTS = test-mem$(EXEEXT) test-value$(EXEEXT) test-integers$(EXEEXT) \
-	test-parse$(EXEEXT) test-tagtable$(EXEEXT) \
-	test-sorted$(EXEEXT) test-fuzzer$(EXEEXT) test-null$(EXEEXT) \
-	parse-regression.sh swap-byte-order.sh extract-parse.sh \
-	test-gps$(EXEEXT) check-failmalloc.sh
+	test-parse$(EXEEXT) test-parse-from-data$(EXEEXT) \
+	test-tagtable$(EXEEXT) test-sorted$(EXEEXT) \
+	test-fuzzer$(EXEEXT) test-null$(EXEEXT) parse-regression.sh \
+	swap-byte-order.sh extract-parse.sh test-gps$(EXEEXT) \
+	check-failmalloc.sh
 check_PROGRAMS = test-mem$(EXEEXT) test-mnote$(EXEEXT) \
 	test-value$(EXEEXT) test-integers$(EXEEXT) test-parse$(EXEEXT) \
-	test-tagtable$(EXEEXT) test-sorted$(EXEEXT) \
-	test-fuzzer$(EXEEXT) test-extract$(EXEEXT) test-null$(EXEEXT) \
-	test-gps$(EXEEXT)
+	test-parse-from-data$(EXEEXT) test-tagtable$(EXEEXT) \
+	test-sorted$(EXEEXT) test-fuzzer$(EXEEXT) \
+	test-extract$(EXEEXT) test-null$(EXEEXT) test-gps$(EXEEXT)
 subdir = test
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4m/failmalloc.m4 \
@@ -169,6 +170,11 @@ test_parse_OBJECTS = test-parse.$(OBJEXT)
 test_parse_LDADD = $(LDADD)
 test_parse_DEPENDENCIES = $(top_builddir)/libexif/libexif.la \
 	$(am__DEPENDENCIES_1)
+test_parse_from_data_SOURCES = test-parse-from-data.c
+test_parse_from_data_OBJECTS = test-parse-from-data.$(OBJEXT)
+test_parse_from_data_LDADD = $(LDADD)
+test_parse_from_data_DEPENDENCIES =  \
+	$(top_builddir)/libexif/libexif.la $(am__DEPENDENCIES_1)
 test_sorted_SOURCES = test-sorted.c
 test_sorted_OBJECTS = test-sorted.$(OBJEXT)
 test_sorted_LDADD = $(LDADD)
@@ -203,8 +209,9 @@ am__depfiles_remade = ./$(DEPDIR)/test-extract.Po \
 	./$(DEPDIR)/test-fuzzer.Po ./$(DEPDIR)/test-gps.Po \
 	./$(DEPDIR)/test-integers.Po ./$(DEPDIR)/test-mem.Po \
 	./$(DEPDIR)/test-mnote.Po ./$(DEPDIR)/test-null.Po \
-	./$(DEPDIR)/test-parse.Po ./$(DEPDIR)/test-sorted.Po \
-	./$(DEPDIR)/test-tagtable.Po ./$(DEPDIR)/test-value.Po
+	./$(DEPDIR)/test-parse-from-data.Po ./$(DEPDIR)/test-parse.Po \
+	./$(DEPDIR)/test-sorted.Po ./$(DEPDIR)/test-tagtable.Po \
+	./$(DEPDIR)/test-value.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -225,11 +232,13 @@ am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = test-extract.c test-fuzzer.c test-gps.c test-integers.c \
-	test-mem.c test-mnote.c test-null.c test-parse.c test-sorted.c \
-	test-tagtable.c test-value.c
+	test-mem.c test-mnote.c test-null.c test-parse.c \
+	test-parse-from-data.c test-sorted.c test-tagtable.c \
+	test-value.c
 DIST_SOURCES = test-extract.c test-fuzzer.c test-gps.c test-integers.c \
-	test-mem.c test-mnote.c test-null.c test-parse.c test-sorted.c \
-	test-tagtable.c test-value.c
+	test-mem.c test-mnote.c test-null.c test-parse.c \
+	test-parse-from-data.c test-sorted.c test-tagtable.c \
+	test-value.c
 RECURSIVE_TARGETS = all-recursive check-recursive cscopelist-recursive \
 	ctags-recursive dvi-recursive html-recursive info-recursive \
 	install-data-recursive install-dvi-recursive \
@@ -666,8 +675,9 @@ AM_TESTS_ENVIRONMENT = LC_ALL='C'; export LC_ALL; DIFF='$(DIFF)'; \
 	EXEEXT='$(EXEEXT)'; export EXEEXT; \
 	FAILMALLOC_PATH='$(FAILMALLOC_PATH)'; export FAILMALLOC_PATH;
 LDADD = $(top_builddir)/libexif/libexif.la $(LTLIBINTL)
-EXTRA_DIST = parse-regression.sh swap-byte-order.sh extract-parse.sh \
-	check-failmalloc.sh testdata/canon_makernote_variant_1.jpg \
+EXTRA_DIST = test-fuzzer-persistent.c parse-regression.sh \
+	swap-byte-order.sh extract-parse.sh check-failmalloc.sh \
+	testdata/canon_makernote_variant_1.jpg \
 	testdata/canon_makernote_variant_1.jpg.parsed \
 	testdata/fuji_makernote_variant_1.jpg \
 	testdata/fuji_makernote_variant_1.jpg.parsed \
@@ -761,6 +771,10 @@ test-parse$(EXEEXT): $(test_parse_OBJECTS) $(test_parse_DEPENDENCIES) $(EXTRA_te
 	@rm -f test-parse$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_parse_OBJECTS) $(test_parse_LDADD) $(LIBS)
 
+test-parse-from-data$(EXEEXT): $(test_parse_from_data_OBJECTS) $(test_parse_from_data_DEPENDENCIES) $(EXTRA_test_parse_from_data_DEPENDENCIES) 
+	@rm -f test-parse-from-data$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_from_data_OBJECTS) $(test_parse_from_data_LDADD) $(LIBS)
+
 test-sorted$(EXEEXT): $(test_sorted_OBJECTS) $(test_sorted_DEPENDENCIES) $(EXTRA_test_sorted_DEPENDENCIES) 
 	@rm -f test-sorted$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_sorted_OBJECTS) $(test_sorted_LDADD) $(LIBS)
@@ -786,6 +800,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-mem.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-mnote.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-null.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-parse-from-data.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-parse.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-sorted.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-tagtable.Po@am__quote@ # am--include-marker
@@ -1095,6 +1110,13 @@ test-parse.log: test-parse$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test-parse-from-data.log: test-parse-from-data$(EXEEXT)
+	@p='test-parse-from-data$(EXEEXT)'; \
+	b='test-parse-from-data'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test-tagtable.log: test-tagtable$(EXEEXT)
 	@p='test-tagtable$(EXEEXT)'; \
 	b='test-tagtable'; \
@@ -1284,6 +1306,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test-mem.Po
 	-rm -f ./$(DEPDIR)/test-mnote.Po
 	-rm -f ./$(DEPDIR)/test-null.Po
+	-rm -f ./$(DEPDIR)/test-parse-from-data.Po
 	-rm -f ./$(DEPDIR)/test-parse.Po
 	-rm -f ./$(DEPDIR)/test-sorted.Po
 	-rm -f ./$(DEPDIR)/test-tagtable.Po
@@ -1340,6 +1363,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test-mem.Po
 	-rm -f ./$(DEPDIR)/test-mnote.Po
 	-rm -f ./$(DEPDIR)/test-null.Po
+	-rm -f ./$(DEPDIR)/test-parse-from-data.Po
 	-rm -f ./$(DEPDIR)/test-parse.Po
 	-rm -f ./$(DEPDIR)/test-sorted.Po
 	-rm -f ./$(DEPDIR)/test-tagtable.Po

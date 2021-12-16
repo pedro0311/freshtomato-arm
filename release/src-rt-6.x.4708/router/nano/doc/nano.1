@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANO 1 "version 5.9" "October 2021"
+.TH NANO 1 "version 6.0" "December 2021"
 
 .SH NAME
 nano \- Nano's ANOther editor, inspired by Pico
@@ -140,10 +140,12 @@ text.  (The color of the stripe can be changed with \fBset stripecolor\fR
 in your \fInanorc\fR file.)
 .TP
 .BR \-K ", " \-\-rawsequences
-Interpret escape sequences directly (instead of asking \fBncurses\fR to
-translate them).  If you need this option to get your keyboard to work
-properly, please report a bug.  Using this option disables \fBnano\fR's
-mouse support.
+Interpret escape sequences directly, instead of asking \fBncurses\fR
+to translate them.  (If you need this option to get some keys to work
+properly, it means that the terminfo terminal description that is used
+does not fully match the actual behavior of your terminal.  This can
+happen when you ssh into a BSD machine, for example.)
+Using this option disables \fBnano\fR's mouse support.
 .TP
 .BR \-L ", " \-\-nonewlines
 Don't automatically add a newline when a text does not end with one.
@@ -192,8 +194,11 @@ Set the size (width) of a tab to \fInumber\fP columns.  The value of
 .TP
 .BR \-U ", " \-\-quickblank
 Make status-bar messages disappear after 1 keystroke instead of after 20.
-Note that options \fB\-c\fR (\fB\-\-constantshow\fR)
-and \fB\-_\fR (\fB\-\-minibar\fR) override this.
+Note that option \fB\-c\fR (\fB\-\-constantshow\fR) overrides this.
+When option \fB\-\-minibar\fR or \fB\-\-zero\fR is in effect,
+\fB\-\-quickblank\fR makes a message disappear after
+0.8 seconds instead of after the default 1.5 seconds.
+.
 .TP
 .BR \-V ", " \-\-version
 Show the current version number and exit.
@@ -328,7 +333,9 @@ Don't show the two help lines at the bottom of the screen.
 Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.
 .TP
 .BR \-z ", " \-\-suspendable
-Allow the user to suspend the editor (with \fB^Z\fR by default).
+Obsolete option; ignored.  Suspension is enabled by default,
+reachable via \fB^T^Z\fR.  (If you want a plain \fB^Z\fR to
+suspend nano, add \fBbind ^Z suspend main\fR to your nanorc.)
 .TP
 .BR \-% ", " \-\-stateflags
 Use the top-right corner of the screen for showing some state flags:
@@ -354,6 +361,14 @@ This number is cleared upon the next keystroke, or replaced with an
 The line plus column numbers and the character code are displayed only when
 \fB\-\-constantshow\fR is used, and can be toggled on and off with \fBM-C\fR.
 The state flags are displayed only when \fB\-\-stateflags\fR is used.
+.TP
+.BR \-0 ", " \-\-zero
+Hide all elements of the interface (title bar, status bar, and help lines)
+and use all rows of the terminal for showing the contents of the buffer.
+The status bar appears only when there is a significant message,
+and disappears after 1.5 seconds or upon the next keystroke.
+With \fBM-Z\fR the title bar plus status bar can be toggled.
+With \fBM-X\fR the help lines.
 .TP
 .BR \-! ", " \-\-magic
 When neither the file's name nor its first line give a clue,

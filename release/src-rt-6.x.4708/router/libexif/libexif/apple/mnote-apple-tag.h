@@ -18,8 +18,8 @@
  * Boston, MA  02110-1301  USA.
  */
 
-#ifndef __MNOTE_APPLE_TAG_H__
-#define __MNOTE_APPLE_TAG_H__
+#ifndef LIBEXIF_MNOTE_APPLE_TAG_H
+#define LIBEXIF_MNOTE_APPLE_TAG_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,7 +31,7 @@ enum _MnoteAppleTag {
     MNOTE_APPLE_TAG_HDR			= 0xA,
     MNOTE_APPLE_TAG_BURST_UUID 		= 0xB,
     MNOTE_APPLE_TAG_MEDIA_GROUP_UUID	= 0x11,
-    MNOTE_APPLE_TAG_IMAGE_UNIQUE_ID	= 0x15,
+    MNOTE_APPLE_TAG_IMAGE_UNIQUE_ID	= 0x15
 };
 typedef enum _MnoteAppleTag MnoteAppleTag;
 
@@ -43,4 +43,4 @@ const char *mnote_apple_tag_get_description(MnoteAppleTag);
 }
 #endif /* __cplusplus */
 
-#endif /* __MNOTE_APPLE_TAG_H__ */
+#endif /* !defined(LIBEXIF_MNOTE_APPLE_TAG_H) */

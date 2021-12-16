@@ -234,8 +234,8 @@ void help_init(void)
 		size_t onoff_len = strlen(_("enable/disable"));
 
 		for (s = sclist; s != NULL; s = s->next)
-			if (s->func == do_toggle_void)
-				allocsize += strlen(_(flagtostr(s->toggle))) + onoff_len + 9;
+			if (s->func == do_toggle)
+				allocsize += strlen(_(epithet_of_flag(s->toggle))) + onoff_len + 9;
 	}
 #endif
 
@@ -303,8 +303,9 @@ void help_init(void)
 			for (s = sclist; s != NULL; s = s->next)
 				if (s->toggle && s->ordinal == counter) {
 					ptr += sprintf(ptr, "%s\t\t %s %s\n", (s->menus & MMAIN ? s->keystr : ""),
-								_(flagtostr(s->toggle)), _("enable/disable"));
-					if (s->toggle == NO_SYNTAX || s->toggle == TABS_TO_SPACES)
+								_(epithet_of_flag(s->toggle)), _("enable/disable"));
+					/* Add a blank like between two groups. */
+					if (s->toggle == NO_SYNTAX)
 						ptr += sprintf(ptr, "\n");
 					break;
 				}
@@ -322,6 +323,13 @@ void wrap_help_text_into_buffer(void)
 	const char *ptr = start_of_body;
 
 	make_new_buffer();
+
+	/* Ensure there is a blank line at the top of the text, for esthetics. */
+	if ((ISSET(MINIBAR) || !ISSET(EMPTY_LINE)) && LINES > 6) {
+		openfile->current->data = mallocstrcpy(openfile->current->data, " ");
+		openfile->current->next = make_new_node(openfile->current);
+		openfile->current = openfile->current->next;
+	}
 
 	/* Copy the help text into the just-created new buffer. */
 	while (*ptr != '\0') {
@@ -403,8 +411,9 @@ void show_help(void)
 	memcpy(stash, flags, sizeof(flags));
 
 	/* Ensure that the help screen's shortcut list can be displayed. */
-	if (ISSET(NO_HELP) && LINES > 4) {
+	if (ISSET(NO_HELP) || ISSET(ZERO)) {
 		UNSET(NO_HELP);
+		UNSET(ZERO);
 		window_init();
 	} else
 		blank_statusbar();
@@ -415,10 +424,8 @@ void show_help(void)
 	UNSET(USE_REGEXP);
 
 	UNSET(WHITESPACE_DISPLAY);
-	UNSET(NOREAD_MODE);
 
 #ifdef ENABLE_LINENUMBERS
-	UNSET(LINE_NUMBERS);
 	editwincols = COLS - thebar;
 	margin = 0;
 #endif
@@ -462,7 +469,6 @@ void show_help(void)
 
 #ifndef NANO_TINY
 		spotlighted = FALSE;
-		hide_cursor = FALSE;
 
 		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
 			beep();
@@ -543,13 +549,12 @@ void show_help(void)
 
 	curs_set(0);
 
-	if (ISSET(NO_HELP)) {
-		currmenu = oldmenu;
+	if (ISSET(NO_HELP) || ISSET(ZERO))
 		window_init();
-	} else {
+	else
 		blank_statusbar();
-		bottombars(oldmenu);
-	}
+
+	bottombars(oldmenu);
 
 #ifdef ENABLE_BROWSER
 	if (oldmenu & (MBROWSER|MWHEREISFILE|MGOTODIR))

@@ -1212,9 +1212,9 @@ void update_undo(undo_type action)
 
 #ifdef ENABLE_WRAPPING
 /* When the current line is overlong, hard-wrap it at the furthest possible
- * whitespace character, and (if possible) prepend the remainder of the line
- * to the next line.  Return TRUE if wrapping occurred, and FALSE otherwise. */
-bool do_wrap(void)
+ * whitespace character, and prepend the excess part to an "overflow" line
+ * (when it already exists, otherwise create one). */
+void do_wrap(void)
 {
 	linestruct *line = openfile->current;
 		/* The line to be wrapped, if needed and possible. */
@@ -1243,7 +1243,7 @@ bool do_wrap(void)
 
 	/* If no wrapping point was found before end-of-line, we don't wrap. */
 	if (wrap_loc < 0 || lead_len + wrap_loc == line_len)
-		return FALSE;
+		return;
 
 	/* Adjust the wrap location to its position in the full line,
 	 * and step forward to the character just after the blank. */
@@ -1251,7 +1251,7 @@ bool do_wrap(void)
 
 	/* When now at end-of-line, no need to wrap. */
 	if (line->data[wrap_loc] == '\0')
-		return FALSE;
+		return;
 
 #ifndef NANO_TINY
 	add_undo(SPLIT_BEGIN, NULL);
@@ -1360,7 +1360,7 @@ bool do_wrap(void)
 	add_undo(SPLIT_END, NULL);
 #endif
 
-	return TRUE;
+	refresh_needed = TRUE;
 }
 #endif /* ENABLE_WRAPPING */
 
@@ -1465,9 +1465,8 @@ bool begpar(const linestruct *const line, int depth)
 {
 	size_t quot_len, indent_len, prev_dent_len;
 
-	/* If this is the very first line of the buffer, it counts as a BOP
-	 * even when it contains no text. */
-	if (line == openfile->filetop)
+	/* The very first line counts as a BOP, even when it contains no text. */
+	if (line->prev == NULL)
 		return TRUE;
 
 	/* If recursion is going too deep, just say it's not a BOP. */
@@ -2564,7 +2563,7 @@ void do_linter(void)
 		if (choice == -1) {
 			statusbar(_("Cancelled"));
 			return;
-		} else if (choice == 1 && (do_writeout(FALSE, FALSE) != 1))
+		} else if (choice == 1 && (write_it_out(FALSE, FALSE) != 1))
 			return;
 	}
 
@@ -2718,7 +2717,7 @@ void do_linter(void)
 		return;
 	}
 
-	if (helpless && LINES > 4) {
+	if (helpless && LINES > 5) {
 		UNSET(NO_HELP);
 		window_init();
 	}
@@ -2919,9 +2918,9 @@ void do_formatter(void)
 #endif /* ENABLE_COLOR */
 
 #ifndef NANO_TINY
-/* Our own version of "wc".  Note that its character counts are in
+/* Our own version of "wc".  Note that the character count is in
  * multibyte characters instead of single-byte characters. */
-void do_wordlinechar_count(void)
+void count_lines_words_and_characters(void)
 {
 	linestruct *was_current = openfile->current;
 	size_t was_x = openfile->current_x;
@@ -2960,7 +2959,7 @@ void do_wordlinechar_count(void)
 	 * incrementing the word count for each successful step. */
 	while (openfile->current->lineno < botline->lineno ||
 				(openfile->current == botline && openfile->current_x < bot_x)) {
-		if (do_next_word(FALSE, TRUE))
+		if (do_next_word(FALSE))
 			words++;
 	}
 

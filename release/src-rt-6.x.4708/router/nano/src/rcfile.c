@@ -91,7 +91,7 @@ static const rcoption rcopts[] = {
 	{"speller", 0},
 #endif
 	{"suspend", SUSPENDABLE},  /* Deprecated; remove in 2022. */
-	{"suspendable", SUSPENDABLE},
+	{"suspendable", SUSPENDABLE},  /* Obsolete; remove in 2022. */
 	{"tempfile", SAVE_ON_EXIT},  /* Deprecated; remove in 2022. */
 #ifndef NANO_TINY
 	{"afterends", AFTER_ENDS},
@@ -122,6 +122,7 @@ static const rcoption rcopts[] = {
 	{"wordbounds", WORD_BOUNDS},
 	{"wordchars", 0},
 	{"zap", LET_THEM_ZAP},
+	{"zero", ZERO},
 #endif
 #ifdef ENABLE_COLOR
 	{"titlecolor", 0},
@@ -242,11 +243,11 @@ keystruct *strtosc(const char *input)
 	else if (!strcmp(input, "discardbuffer"))
 		s->func = discard_buffer;
 	else if (!strcmp(input, "writeout"))
-		s->func = do_writeout_void;
+		s->func = do_writeout;
 	else if (!strcmp(input, "savefile"))
 		s->func = do_savefile;
 	else if (!strcmp(input, "insert"))
-		s->func = do_insertfile_void;
+		s->func = do_insertfile;
 	else if (!strcmp(input, "whereis"))
 		s->func = do_search_forward;
 	else if (!strcmp(input, "wherewas"))
@@ -288,7 +289,7 @@ keystruct *strtosc(const char *input)
 	         !strcmp(input, "curpos"))  /* Deprecated; remove in 2022. */
 		s->func = report_cursor_position;
 	else if (!strcmp(input, "gotoline"))
-		s->func = do_gotolinecolumn_void;
+		s->func = do_gotolinecolumn;
 #ifdef ENABLE_JUSTIFY
 	else if (!strcmp(input, "justify"))
 		s->func = do_justify;
@@ -312,16 +313,14 @@ keystruct *strtosc(const char *input)
 		s->func = do_indent;
 	else if (!strcmp(input, "unindent"))
 		s->func = do_unindent;
-	else if (!strcmp(input, "chopwordleft") ||
-	         !strcmp(input, "cutwordleft"))  /* Deprecated; remove in 2021. */
+	else if (!strcmp(input, "chopwordleft"))
 		s->func = chop_previous_word;
-	else if (!strcmp(input, "chopwordright") ||
-	         !strcmp(input, "cutwordright"))  /* Deprecated; remove in 2021. */
+	else if (!strcmp(input, "chopwordright"))
 		s->func = chop_next_word;
 	else if (!strcmp(input, "findbracket"))
 		s->func = do_find_bracket;
 	else if (!strcmp(input, "wordcount"))
-		s->func = do_wordlinechar_count;
+		s->func = count_lines_words_and_characters;
 	else if (!strcmp(input, "recordmacro"))
 		s->func = record_macro;
 	else if (!strcmp(input, "runmacro"))
@@ -397,8 +396,10 @@ keystruct *strtosc(const char *input)
 		s->func = do_backspace;
 	else if (!strcmp(input, "refresh"))
 		s->func = full_refresh;
+#ifndef NANO_TINY
 	else if (!strcmp(input, "suspend"))
-		s->func = do_suspend_void;
+		s->func = do_suspend;
+#endif
 	else if (!strcmp(input, "casesens"))
 		s->func = case_sens_void;
 	else if (!strcmp(input, "regexp"))
@@ -411,21 +412,21 @@ keystruct *strtosc(const char *input)
 		s->func = flip_goto;
 #ifdef ENABLE_HISTORIES
 	else if (!strcmp(input, "older"))
-		s->func = get_history_older_void;
+		s->func = get_older_item;
 	else if (!strcmp(input, "newer"))
-		s->func = get_history_newer_void;
+		s->func = get_newer_item;
 #endif
 #ifndef NANO_TINY
 	else if (!strcmp(input, "dosformat"))
-		s->func = dos_format_void;
+		s->func = dos_format;
 	else if (!strcmp(input, "macformat"))
-		s->func = mac_format_void;
+		s->func = mac_format;
 	else if (!strcmp(input, "append"))
-		s->func = append_void;
+		s->func = append_it;
 	else if (!strcmp(input, "prepend"))
-		s->func = prepend_void;
+		s->func = prepend_it;
 	else if (!strcmp(input, "backup"))
-		s->func = backup_file_void;
+		s->func = back_it_up;
 	else if (!strcmp(input, "flipexecute"))
 		s->func = flip_execute;
 	else if (!strcmp(input, "flippipe"))
@@ -450,9 +451,11 @@ keystruct *strtosc(const char *input)
 #endif
 	else {
 #ifndef NANO_TINY
-		s->func = do_toggle_void;
+		s->func = do_toggle;
 		if (!strcmp(input, "nohelp"))
 			s->toggle = NO_HELP;
+		else if (!strcmp(input, "zero"))
+			s->toggle = ZERO;
 		else if (!strcmp(input, "constantshow"))
 			s->toggle = CONSTANT_SHOW;
 		else if (!strcmp(input, "softwrap"))
@@ -484,9 +487,6 @@ keystruct *strtosc(const char *input)
 		else if (!strcmp(input, "mouse"))
 			s->toggle = USE_MOUSE;
 #endif
-		else if (!strcmp(input, "suspendable") ||
-		         !strcmp(input, "suspendenable"))  /* Deprecated; remove in 2022. */
-			s->toggle = SUSPENDABLE;
 		else
 #endif /* !NANO_TINY */
 		{
@@ -828,9 +828,9 @@ void parse_binding(char *ptr, bool dobind)
 	if (is_universal(newsc->func))
 		menu &= MMOST|MBROWSER;
 #ifndef NANO_TINY
-	else if (newsc->func == do_toggle_void && newsc->toggle == NO_HELP)
+	else if (newsc->func == do_toggle && newsc->toggle == NO_HELP)
 		menu &= (MMOST|MBROWSER|MYESNO) & ~MFINDINHELP;
-	else if (newsc->func == do_toggle_void)
+	else if (newsc->func == do_toggle)
 		menu &= MMAIN;
 #endif
 	else if (newsc->func == full_refresh)
@@ -868,9 +868,9 @@ void parse_binding(char *ptr, bool dobind)
 
 #ifndef NANO_TINY
 	/* If this is a toggle, find and copy its sequence number. */
-	if (newsc->func == do_toggle_void) {
+	if (newsc->func == do_toggle) {
 		for (keystruct *s = sclist; s != NULL; s = s->next)
-			if (s->func == do_toggle_void && s->toggle == newsc->toggle)
+			if (s->func == do_toggle && s->toggle == newsc->toggle)
 				newsc->ordinal = s->ordinal;
 	} else
 		newsc->ordinal = 0;
@@ -992,7 +992,20 @@ void parse_includes(char *ptr)
 	free(expanded);
 }
 
-#define COLORCOUNT  20
+/* Return the index of the color that is closest to the given RGB levels,
+ * assuming that the terminal uses the 6x6x6 color cube of xterm-256color. */
+short closest_index_color(short red, short green, short blue)
+{
+	/* Translation table, from 16 intended levels to 6 available levels. */
+	static const short level[] = { 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 };
+
+	if (COLORS == 256)
+		return (36 * level[red] + 6 * level[green] + level[blue] + 16);
+	else
+		return THE_DEFAULT;
+}
+
+#define COLORCOUNT  34
 
 const char hues[COLORCOUNT][8] = { "red", "green", "blue",
 								   "yellow", "cyan", "magenta",
@@ -1000,12 +1013,19 @@ const char hues[COLORCOUNT][8] = { "red", "green", "blue",
 								   "pink", "purple", "mauve",
 								   "lagoon", "mint", "lime",
 								   "peach", "orange", "latte",
+								   "rosy", "beet", "plum",
+								   "sea", "sky", "slate",
+								   "teal", "sage", "brown",
+								   "ocher", "sand", "tawny",
+								   "brick", "crimson",
 								   "grey", "gray" };
 
 short indices[COLORCOUNT] = { COLOR_RED, COLOR_GREEN, COLOR_BLUE,
 							  COLOR_YELLOW, COLOR_CYAN, COLOR_MAGENTA,
 							  COLOR_WHITE, COLOR_BLACK, THE_DEFAULT,
 							  204, 163, 134, 38, 48, 148, 215, 208, 137,
+							  175, 127, 98, 32, 111, 66, 35, 107, 100,
+							  142, 186, 136, 166, 161,
 							  COLOR_BLACK + 8, COLOR_BLACK + 8 };
 
 /* Return the short value corresponding to the given color name, and set
@@ -1024,6 +1044,18 @@ short color_to_short(const char *colorname, bool *vivid, bool *thick)
 	} else {
 		*vivid = FALSE;
 		*thick = FALSE;
+	}
+
+	if (colorname[0] == '#' && strlen(colorname) == 4) {
+		unsigned short r, g, b;
+
+		if (*vivid) {
+			jot_error(N_("Color '%s' takes no prefix"), colorname);
+			return BAD_COLOR;
+		}
+
+		if (sscanf(colorname, "#%1hX%1hX%1hX", &r, &g, &b) == 3)
+			return closest_index_color(r, g, b);
 	}
 
 	for (int index = 0; index < COLORCOUNT; index++)
@@ -1567,7 +1599,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 #endif
 #ifdef ENABLE_OPERATINGDIR
 		if (strcmp(option, "operatingdir") == 0)
-			operating_dir = copy_of(argument);
+			operating_dir = mallocstrcpy(operating_dir, argument);
 		else
 #endif
 #ifdef ENABLED_WRAPORJUSTIFY
@@ -1585,12 +1617,12 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			else if (mbstrlen(argument) % 2 != 0)
 				jot_error(N_("Even number of characters required"));
 			else
-				matchbrackets = copy_of(argument);
+				matchbrackets = mallocstrcpy(matchbrackets, argument);
 		} else if (strcmp(option, "whitespace") == 0) {
 			if (mbstrlen(argument) != 2 || breadth(argument) != 2)
 				jot_error(N_("Two single-column characters required"));
 			else {
-				whitespace = copy_of(argument);
+				whitespace = mallocstrcpy(whitespace, argument);
 				whitelen[0] = char_length(whitespace);
 				whitelen[1] = char_length(whitespace + whitelen[0]);
 			}
@@ -1601,26 +1633,26 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 			if (has_blank_char(argument))
 				jot_error(N_("Non-blank characters required"));
 			else
-				punct = copy_of(argument);
+				punct = mallocstrcpy(punct, argument);
 		} else if (strcmp(option, "brackets") == 0) {
 			if (has_blank_char(argument))
 				jot_error(N_("Non-blank characters required"));
 			else
-				brackets = copy_of(argument);
+				brackets = mallocstrcpy(brackets, argument);
 		} else if (strcmp(option, "quotestr") == 0)
-			quotestr = copy_of(argument);
+			quotestr = mallocstrcpy(quotestr, argument);
 		else
 #endif
 #ifdef ENABLE_SPELLER
 		if (strcmp(option, "speller") == 0)
-			alt_speller = copy_of(argument);
+			alt_speller = mallocstrcpy(alt_speller, argument);
 		else
 #endif
 #ifndef NANO_TINY
 		if (strcmp(option, "backupdir") == 0)
-			backup_dir = copy_of(argument);
+			backup_dir = mallocstrcpy(backup_dir, argument);
 		else if (strcmp(option, "wordchars") == 0)
-			word_chars = copy_of(argument);
+			word_chars = mallocstrcpy(word_chars, argument);
 		else if (strcmp(option, "guidestripe") == 0) {
 			if (!parse_num(argument, &stripe_column) || stripe_column <= 0) {
 				jot_error(N_("Guide column \"%s\" is invalid"), argument);

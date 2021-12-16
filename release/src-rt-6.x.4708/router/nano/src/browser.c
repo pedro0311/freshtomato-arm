@@ -32,7 +32,9 @@ static char **filelist = NULL;
 		/* The list of files to display in the file browser. */
 static size_t list_length = 0;
 		/* The number of files in the list. */
-static size_t width = 0;
+static size_t usable_rows = 0;
+		/* The number of screen rows we can use to display the list. */
+static size_t piles = 0;
 		/* The number of files that we can display per screen row. */
 static size_t longest = 0;
 		/* The number of columns in the longest filename in the list. */
@@ -42,7 +44,7 @@ static size_t selected = 0;
 /* Set filelist to the list of files contained in the directory path,
  * set list_length to the number of files in that list, set longest to
  * the width in columns of the longest filename in that list (between 15
- * and COLS), and set width to the number of files that we can display
+ * and COLS), and set piles to the number of files that we can display
  * per screen row.  And sort the list too. */
 void read_the_list(const char *path, DIR *dir)
 {
@@ -103,7 +105,9 @@ void read_the_list(const char *path, DIR *dir)
 	/* Calculate how many files fit on a line -- feigning room for two
 	 * spaces beyond the right edge, and adding two spaces of padding
 	 * between columns. */
-	width = (COLS + 2) / (longest + 2);
+	piles = (COLS + 2) / (longest + 2);
+
+	usable_rows = editwinrows - (ISSET(ZERO) && LINES > 1 ? 1 : 0);
 }
 
 /* Look for needle.  If we find it, set selected to its location.
@@ -143,8 +147,8 @@ void browser_refresh(void)
 	titlebar(present_path);
 	blank_edit();
 
-	for (size_t index = selected - selected % (editwinrows * width);
-					index < list_length && row < editwinrows; index++) {
+	for (size_t index = selected - selected % (usable_rows * piles);
+					index < list_length && row < usable_rows; index++) {
 		const char *thename = tail(filelist[index]);
 				/* The filename we display, minus the path. */
 		size_t namelen = breadth(thename);
@@ -355,7 +359,7 @@ void search_filename(bool forwards)
 	if (*answer != '\0') {
 		last_search = mallocstrcpy(last_search, answer);
 #ifdef ENABLE_HISTORIES
-		update_history(&search_history, answer);
+		update_history(&search_history, answer, PRUNE_DUPLICATE);
 #endif
 	}
 
@@ -430,7 +434,7 @@ char *browse(char *path)
 
 	if (path == NULL || dir == NULL) {
 		statusline(ALERT, _("Cannot open directory: %s"), strerror(errno));
-		/* If we don't have a file list yet, there is nothing to show. */
+		/* If we don't have a file list, there is nothing to show. */
 		if (filelist == NULL) {
 			lastmessage = VACUUM;
 			free(present_name);
@@ -443,7 +447,7 @@ char *browse(char *path)
 	}
 
 	if (dir != NULL) {
-		/* Get the file list, and set longest and width in the process. */
+		/* Get the file list, and set longest and piles in the process. */
 		read_the_list(path, dir);
 		closedir(dir);
 		dir = NULL;
@@ -486,25 +490,21 @@ char *browse(char *path)
 		if (kbinput == KEY_MOUSE) {
 			int mouse_x, mouse_y;
 
-			/* We can click on the edit window to select a filename. */
+			/* When the user clicked in the file list, select a filename. */
 			if (get_mouseinput(&mouse_y, &mouse_x, TRUE) == 0 &&
 						wmouse_trafo(edit, &mouse_y, &mouse_x, FALSE)) {
-				/* longest is the width of each column.  There
-				 * are two spaces between each column. */
-				selected = selected - selected % (editwinrows * width) +
-								(mouse_y * width) + (mouse_x / (longest + 2));
+				selected = selected - selected % (usable_rows * piles) +
+								(mouse_y * piles) + (mouse_x / (longest + 2));
 
-				/* If they clicked beyond the end of a row,
-				 * select the last filename in that row. */
-				if (mouse_x > width * (longest + 2))
+				/* When beyond end-of-row, select the preceding filename. */
+				if (mouse_x > piles * (longest + 2))
 					selected--;
 
-				/* If we're beyond the list, select the last filename. */
+				/* When beyond end-of-list, select the last filename. */
 				if (selected > list_length - 1)
 					selected = list_length - 1;
 
-				/* If we selected the same filename as last time, fake a
-				 * press of the Enter key so that the file is read in. */
+				/* When a filename is clicked a second time, choose it. */
 				if (old_selected == selected)
 					kbinput = KEY_ENTER;
 			}
@@ -524,17 +524,15 @@ char *browse(char *path)
 		if (func == full_refresh) {
 			full_refresh();
 #ifndef NANO_TINY
-			/* Simulate a window resize to force a directory reread. */
+			/* Simulate a terminal resize to force a directory reread. */
 			kbinput = KEY_WINCH;
 #endif
 		} else if (func == do_help) {
 			do_help();
 #ifndef NANO_TINY
-			/* The window dimensions might have changed, so act as if. */
+			/* The terminal dimensions might have changed, so act as if. */
 			kbinput = KEY_WINCH;
-#endif
-#ifndef NANO_TINY
-		} else if (func == do_toggle_void) {
+		} else if (func == do_toggle) {
 			TOGGLE(NO_HELP);
 			window_init();
 			kbinput = KEY_WINCH;
@@ -554,43 +552,42 @@ char *browse(char *path)
 			if (selected < list_length - 1)
 				selected++;
 		} else if (func == to_prev_word) {
-			selected -= (selected % width);
+			selected -= (selected % piles);
 		} else if (func == to_next_word) {
-			selected += width - 1 - (selected % width);
+			selected += piles - 1 - (selected % piles);
 			if (selected >= list_length)
 				selected = list_length - 1;
 		} else if (func == do_up) {
-			if (selected >= width)
-				selected -= width;
+			if (selected >= piles)
+				selected -= piles;
 		} else if (func == do_down) {
-			if (selected + width <= list_length - 1)
-				selected += width;
+			if (selected + piles <= list_length - 1)
+				selected += piles;
 		} else if (func == to_prev_block) {
-			selected = ((selected / (editwinrows * width)) *
-								editwinrows * width) + selected % width;
+			selected = ((selected / (usable_rows * piles)) * usable_rows * piles) +
+								 selected % piles;
 		} else if (func == to_next_block) {
-			selected = ((selected / (editwinrows * width)) *
-								editwinrows * width) + selected % width +
-								editwinrows * width - width;
+			selected = ((selected / (usable_rows * piles)) * usable_rows * piles) +
+								selected % piles + usable_rows * piles - piles;
 			if (selected >= list_length)
-				selected = (list_length / width) * width + selected % width;
+				selected = (list_length / piles) * piles + selected % piles;
 			if (selected >= list_length)
-				selected -= width;
+				selected -= piles;
 		} else if (func == do_page_up) {
-			if (selected < width)
+			if (selected < piles)
 				selected = 0;
-			else if (selected < editwinrows * width)
-				selected = selected % width;
+			else if (selected < usable_rows * piles)
+				selected = selected % piles;
 			else
-				selected -= editwinrows * width;
+				selected -= usable_rows * piles;
 		} else if (func == do_page_down) {
-			if (selected + width >= list_length - 1)
+			if (selected + piles >= list_length - 1)
 				selected = list_length - 1;
-			else if (selected + editwinrows * width >= list_length)
-				selected = (selected + editwinrows * width - list_length) %
-								width + list_length - width;
+			else if (selected + usable_rows * piles >= list_length)
+				selected = (selected + usable_rows * piles - list_length) % piles +
+								list_length - piles;
 			else
-				selected += editwinrows * width;
+				selected += usable_rows * piles;
 		} else if (func == to_first_file) {
 			selected = 0;
 		} else if (func == to_last_file) {
@@ -615,8 +612,8 @@ char *browse(char *path)
 
 #ifdef ENABLE_OPERATINGDIR
 			if (outside_of_confinement(path, FALSE)) {
-				/* TRANSLATORS: This refers to the confining effect of the
-				 * option --operatingdir, not of --restricted. */
+				/* TRANSLATORS: This refers to the confining effect of
+				 * the option --operatingdir, not of --restricted. */
 				statusline(ALERT, _("Can't go outside of %s"), operating_dir);
 				path = mallocstrcpy(path, present_path);
 				continue;
@@ -679,7 +676,7 @@ char *browse(char *path)
 #endif
 #ifndef NANO_TINY
 		} else if (kbinput == KEY_WINCH) {
-			;  /* Nothing to do. */
+			;  /* Gets handled below. */
 #endif
 		} else if (func == do_exit) {
 			break;
@@ -687,11 +684,10 @@ char *browse(char *path)
 			unbound_key(kbinput);
 
 #ifndef NANO_TINY
-		/* If the window resized, refresh the file list. */
+		/* If the terminal resized (or might have), refresh the file list. */
 		if (kbinput == KEY_WINCH) {
 			/* Remember the selected file, to be able to reselect it. */
 			present_name = copy_of(filelist[selected]);
-			/* Reread the contents of the current directory. */
 			goto read_directory_contents;
 		}
 #endif
