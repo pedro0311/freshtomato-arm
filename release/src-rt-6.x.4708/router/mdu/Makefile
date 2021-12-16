@@ -10,12 +10,10 @@ LIBS += -lgcc_s
 endif
 
 ifneq ($(TCONFIG_HTTPS),)
+CFLAGS += -I$(TOP)/$(OPENSSLDIR)/staged/usr/include
+LIBS += -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto
 ifeq ($(TCONFIG_OPENSSL11),y)
-CFLAGS += -I$(TOP)/openssl-1.1/include
-LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto $(if $(TCONFIG_BCMARM),-lpthread,)
-else
-CFLAGS += -I$(TOP)/openssl/include
-LIBS += -L$(TOP)/openssl -lssl -lcrypto
+LIBS += $(if $(TCONFIG_BCMARM),-lpthread,)
 endif
 endif
 

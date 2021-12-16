@@ -1,4 +1,5 @@
 ifeq ($(SRCBASE),)
+ifeq ($(TCONFIG_BCMARM),y)
 	# ..../src/router/
 	# (directory of the last (this) makefile)
 	export TOP := $(shell cd $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))) && pwd)
@@ -6,9 +7,24 @@ ifeq ($(SRCBASE),)
 	# ..../src/
 	export SRCBASE := $(shell (cd $(TOP)/.. && pwd))
 	export SRCBASEDIR := $(shell (cd $(TOP)/.. && pwd | sed 's/.*release\///g'))
+else ifneq ($(CONFIG_BCMWL6)$(TCONFIG_BLINK),)
+	# ..../src/router/
+	# (directory of the last (this) makefile)
+	# src or src-rt, regardless of symlink for router directory.
+	export TOP := $(shell cd $(dir $(lastword $(MAKEFILE_LIST))) && pwd -P)
+	export TOP := $(PWD)/$(notdir $(TOP))
+	# ..../src/
+	export SRCBASE := $(shell (cd $(TOP)/.. && pwd -P))
+else
+	# ..../src/router/
+	# (directory of the last (this) makefile)
+	export TOP := $(shell cd $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))) && pwd -P)
+	# ..../src/
+	export SRCBASE := $(shell (cd $(TOP)/.. && pwd -P))
+endif # TCONFIG_BCMARM/CONFIG_BCMWL6 or TCONFIG_BLINK
 else
 	export TOP := $(SRCBASE)/router
-endif
+endif # !SRCBASE
 
 include $(SRCBASE)/tomato_profile.mak
 include $(TOP)/.config
@@ -62,6 +78,7 @@ export SIZE := $(CROSS_COMPILE)size
 include $(SRCBASE)/target.mak
 
 # Determine kernel version
+ifeq ($(TCONFIG_BCMARM),y)
 SCMD=sed -e 's,[^=]*=[        ]*\([^  ]*\).*,\1,'
 KVERSION:=	$(shell grep '^VERSION[ 	]*=' $(LINUXDIR)/Makefile|$(SCMD))
 KPATCHLEVEL:=	$(shell grep '^PATCHLEVEL[ 	]*=' $(LINUXDIR)/Makefile|$(SCMD))
@@ -72,7 +89,13 @@ LINUX_KERNEL_VERSION=$(shell expr $(KVERSION) \* 65536 + $(KPATCHLEVEL) \* 256 +
 ifeq ($(LINUX_KERNEL),)
 $(error Empty LINUX_KERNEL variable)
 endif
-
+else # TCONFIG_BCMARM
+kver=$(subst ",,$(word 3, $(shell grep "UTS_RELEASE" $(LINUXDIR)/include/linux/$(1))))
+LINUX_KERNEL=$(call kver,version.h)
+ifeq ($(LINUX_KERNEL),)
+LINUX_KERNEL=$(call kver,utsrelease.h)
+endif
+endif # TCONFIG_BCMARM
 
 export LIBDIR := $(TOOLCHAIN)/lib
 export USRLIBDIR := $(TOOLCHAIN)/usr/lib
@@ -86,10 +109,12 @@ ifeq ($(EXTRACFLAGS),)
 ifeq ($(TCONFIG_BCMARM),y)
 export EXTRACFLAGS := -DBCMWPA2 -DBCMARM -fno-delete-null-pointer-checks -marm
 else
-export EXTRACFLAGS := -DBCMWPA2 -fno-delete-null-pointer-checks -mips32 -mtune=mips32
+export EXTRACFLAGS := -DBCMWPA2 -fno-delete-null-pointer-checks $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)
 endif
 endif
+ifeq ($(TCONFIG_BCMARM),y)
 export EXTRACFLAGS += -DLINUX_KERNEL_VERSION=$(LINUX_KERNEL_VERSION)
+endif
 
 CPTMP = @[ -d $(TOP)/dbgshare ] && cp $@ $(TOP)/dbgshare/ || true
 

@@ -5,8 +5,8 @@ srcdir=source3
 
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
-SMBCFLAGS = $(EXTRACFLAGS) -O3 -ffunction-sections -fdata-sections -I$(TOP)/libiconv/include
-SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/lib/.libs
+SMBCFLAGS = $(EXTRACFLAGS) $(CFLAG_OPTIMIZE) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include $(OPTSIZE_FLAG)
+SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib
 
 SMB_USE_MULTICALL=1
 
@@ -21,7 +21,7 @@ ifneq ($(CONFIG_LINUX26),y)
 SMBCFLAGS += -DMAX_DEBUG_LEVEL="-1"
 endif
 
-ifeq ($(TCONFIG_BCMARM), y)
+ifeq ($(TCONFIG_BCMARM),y)
 HOST = arm
 else
 HOST = mips
@@ -52,7 +52,7 @@ apps: .conf
 	samba_cv_HAVE_FTRUNCATE_EXTEND=yes \
 	samba_cv_REPLACE_READDIR=no \
 	samba_cv_HAVE_BROKEN_LINUX_SENDFILE=no \
-	samba_cv_HAVE_SENDFILE=yes \
+	$(if $(TCONFIG_BCMARM),samba_cv_HAVE_SENDFILE=yes,samba_cv_HAVE_SENDFILE=no) \
 	samba_cv_HAVE_WRFILE_KEYTAB=yes \
 	samba_cv_HAVE_KERNEL_OPLOCKS_LINUX=yes \
 	samba_cv_HAVE_IFACE_IFCONF=yes \
@@ -94,7 +94,7 @@ apps: .conf
 		--libdir=/etc \
 		--localstatedir=/var \
 		--host=$(HOST)-linux \
-		--with-libiconv=$(TOP)/libiconv \
+		--with-libiconv=$(TOP)/libiconv/staged/usr/ \
 		--with-configdir=/etc \
 		--with-rootsbindir=/usr/sbin \
 		--with-piddir=/var/run/samba \
@@ -107,7 +107,7 @@ apps: .conf
 		--with-included-iniparser \
 		--with-logfilebase=/var/log \
 		--with-nmbdsocketdir=/var/nmbd \
-		--with-sendfile-support \
+		$(if $(TCONFIG_BCMARM),--with-sendfile-support,) \
 		--disable-avahi \
 		--disable-swat \
 		--disable-shared-libs \
@@ -121,7 +121,7 @@ apps: .conf
 		--disable-developer \
 		--disable-debug \
 		--enable-largefile \
-		--with-codepagedir=/usr/share/samba/codepages \
+		$(if $(TCONFIG_BCMARM),--with-codepagedir=/usr/share/samba/codepages,) \
 		--without-ads \
 		--without-krb5 \
 		--without-pam \
@@ -166,8 +166,10 @@ else
 	@install -D $(srcdir)/bin/nmbd $(INSTALLDIR)/usr/sbin/nmbd
 	@install -D $(srcdir)/bin/smbpasswd $(INSTALLDIR)/usr/bin/smbpasswd
 endif
+ifeq ($(TCONFIG_BCMARM),y)
 	install -D codepages/lowcase.dat $(INSTALLDIR)/usr/share/samba/codepages/lowcase.dat
 	install -D codepages/upcase.dat $(INSTALLDIR)/usr/share/samba/codepages/upcase.dat
+endif
 
 #	@install -D $(srcdir)/bin/libsmbclient.so.0 $(INSTALLDIR)/usr/lib/libsmbclient.so.0
 #	@ln -sf libsmbclient.so.0 $(INSTALLDIR)/usr/lib/libsmbclient.so

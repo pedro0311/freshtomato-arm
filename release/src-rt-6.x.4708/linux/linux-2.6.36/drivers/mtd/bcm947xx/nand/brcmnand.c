@@ -779,8 +779,8 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 	struct brcmnand_mtd *brcmnand = chip->priv;
 
 	knldev = soc_knl_dev((void *)brcmnand->sih);
-	if (knldev == SOC_KNLDEV_NANDFLASH)
 #ifdef CONFIG_NVRAM_128K
+	if (knldev == SOC_KNLDEV_NANDFLASH)
 //      offset = nfl_boot_os_size(brcmnand->nfl);
 //		offset = 0x3400000;	    /*foxconn modified*/
 		offset = 0x3200000; /* lower by 2 MEG to allow 64Meg JFFS */
@@ -809,7 +809,6 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 #endif
 
-#ifdef CONFIG_CRASHLOG
 #ifdef CONFIG_NVRAM_128K
 	nand_parts = kzalloc(sizeof(brcmnand_parts) + sizeof(brcmnand_parts[0]), GFP_KERNEL);
 	memcpy(nand_parts, brcmnand_parts, sizeof(brcmnand_parts));
@@ -820,6 +819,7 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 	nand_parts[1].offset = 0x7fe0000;
 
 #else
+#ifdef CONFIG_CRASHLOG
 	nand_parts = kzalloc(sizeof(brcmnand_parts) + sizeof(brcmnand_parts[0]), GFP_KERNEL);
 	memcpy(nand_parts, brcmnand_parts, sizeof(brcmnand_parts));
 
