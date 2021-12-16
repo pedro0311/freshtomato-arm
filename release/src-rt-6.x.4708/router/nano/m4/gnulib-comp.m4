@@ -193,6 +193,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module utime:
   # Code from module utime-h:
   # Code from module utimens:
+  # Code from module vararrays:
   # Code from module vasnprintf:
   # Code from module verify:
   # Code from module vsnprintf:
@@ -723,6 +724,7 @@ AC_DEFUN([gl_INIT],
   gl_UTIME_H
   gl_UTIME_H_REQUIRE_DEFAULTS
   gl_UTIMENS
+  AC_C_VARARRAYS
   AC_REQUIRE([AC_C_RESTRICT])
   gl_FUNC_VASNPRINTF
   gl_FUNC_VSNPRINTF
@@ -1305,6 +1307,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/utime_h.m4
   m4/utimens.m4
   m4/utimes.m4
+  m4/vararrays.m4
   m4/vasnprintf.m4
   m4/visibility.m4
   m4/vsnprintf-posix.m4

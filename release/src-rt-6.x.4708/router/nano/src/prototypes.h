@@ -53,7 +53,6 @@ extern message_type lastmessage;
 extern linestruct *pletion_line;
 
 extern bool also_the_last;
-extern bool hide_cursor;
 
 extern char *answer;
 
@@ -282,7 +281,7 @@ void close_buffer(void);
 void read_file(FILE *f, int fd, const char *filename, bool undoable);
 int open_file(const char *filename, bool new_one, FILE **f);
 char *get_next_filename(const char *name, const char *suffix);
-void do_insertfile_void(void);
+void do_insertfile(void);
 #ifndef NANO_TINY
 void do_execute(void);
 #endif
@@ -302,8 +301,8 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 bool write_region_to_file(const char *name, FILE *stream, bool normal,
 				kind_of_writing_type method);
 #endif
-int do_writeout(bool exiting, bool withprompt);
-void do_writeout_void(void);
+int write_it_out(bool exiting, bool withprompt);
+void do_writeout(void);
 void do_savefile(void);
 char *real_dir_from_tilde(const char *path);
 #if defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
@@ -323,7 +322,7 @@ functionptrtype interpret(int *keycode);
 #endif
 int keycode_from_string(const char *keystring);
 void shortcut_init(void);
-const char *flagtostr(int flag);
+const char *epithet_of_flag(int flag);
 
 /* Some functions in help.c. */
 #ifdef ENABLE_HELP
@@ -334,12 +333,8 @@ void do_help(void);
 /* Most functions in history.c. */
 #ifdef ENABLE_HISTORIES
 void history_init(void);
-void history_reset(const linestruct *list);
-void update_history(linestruct **item, const char *text);
-char *get_history_older(linestruct **h);
-char *get_history_newer(linestruct **h);
-void get_history_older_void(void);
-void get_history_newer_void(void);
+void reset_history_pointer_for(const linestruct *list);
+void update_history(linestruct **item, const char *text, bool avoid_duplicates);
 #ifdef ENABLE_TABCOMP
 char *get_history_completion(linestruct **h, char *s, size_t len);
 #endif
@@ -364,8 +359,8 @@ void to_para_end(void);
 #endif
 void to_prev_block(void);
 void to_next_block(void);
-void do_prev_word(bool allow_punct);
-bool do_next_word(bool after_ends, bool allow_punct);
+void do_prev_word(void);
+bool do_next_word(bool after_ends);
 void to_prev_word(void);
 void to_next_word(void);
 void do_home(void);
@@ -390,6 +385,9 @@ void free_lines(linestruct *src);
 void renumber_from(linestruct *line);
 void print_view_warning(void);
 bool in_restricted_mode(void);
+#ifndef NANO_TINY
+void suggest_ctrlT_ctrlZ(void);
+#endif
 void finish(void);
 void close_and_go(void);
 void do_exit(void);
@@ -404,15 +402,15 @@ void handle_hupterm(int signal);
 #ifndef DEBUG
 void handle_crash(int signal);
 #endif
-void do_suspend(int signal);
-void do_continue(int signal);
+void suspend_nano(int signal);
+void do_suspend(void);
+void continue_nano(int signal);
 #if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)
 void block_sigwinch(bool blockit);
 #endif
 #ifndef NANO_TINY
 void handle_sigwinch(int signal);
 void regenerate_screen(void);
-void do_toggle(int flag);
 #endif
 void disable_kb_interrupt(void);
 void enable_kb_interrupt(void);
@@ -465,9 +463,9 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 void do_replace(void);
 void ask_for_and_do_replacements(void);
 void goto_line_posx(ssize_t line, size_t pos_x);
-void do_gotolinecolumn(ssize_t line, ssize_t column, bool retain_answer,
+void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
 		bool interactive);
-void do_gotolinecolumn_void(void);
+void do_gotolinecolumn(void);
 #ifndef NANO_TINY
 void do_find_bracket(void);
 void put_or_lift_anchor(void);
@@ -497,7 +495,7 @@ void update_multiline_undo(ssize_t lineno, char *indentation);
 void update_undo(undo_type action);
 #endif /* !NANO_TINY */
 #ifdef ENABLE_WRAPPING
-bool do_wrap(void);
+void do_wrap(void);
 #endif
 #if defined(ENABLE_HELP) || defined(ENABLED_WRAPORJUSTIFY)
 ssize_t break_line(const char *textstart, ssize_t goal, bool snap_at_nl);
@@ -520,7 +518,7 @@ void do_linter(void);
 void do_formatter(void);
 #endif
 #ifndef NANO_TINY
-void do_wordlinechar_count(void);
+void count_lines_words_and_characters(void);
 #endif
 void do_verbatim_input(void);
 void complete_a_word(void);
@@ -625,7 +623,6 @@ void spotlight(size_t from_col, size_t to_col);
 #ifndef NANO_TINY
 void spotlight_softwrapped(size_t from_col, size_t to_col);
 #endif
-void do_suspend_void(void);
 #ifdef ENABLE_EXTRA
 void do_credits(void);
 #endif
@@ -634,6 +631,10 @@ void do_credits(void);
 void case_sens_void(void);
 void regexp_void(void);
 void backwards_void(void);
+#ifdef ENABLE_HISTORIES
+void get_older_item(void);
+void get_newer_item(void);
+#endif
 void flip_replace(void);
 void flip_goto(void);
 #ifdef ENABLE_BROWSER
@@ -642,12 +643,12 @@ void goto_dir(void);
 #endif
 #ifndef NANO_TINY
 void do_nothing(void);
-void do_toggle_void(void);
-void dos_format_void(void);
-void mac_format_void(void);
-void append_void(void);
-void prepend_void(void);
-void backup_file_void(void);
+void do_toggle(void);
+void dos_format(void);
+void mac_format(void);
+void append_it(void);
+void prepend_it(void);
+void back_it_up(void);
 void flip_execute(void);
 void flip_pipe(void);
 void flip_convert(void);

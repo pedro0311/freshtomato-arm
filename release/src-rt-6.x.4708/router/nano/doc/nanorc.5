@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 5.9" "October 2021"
+.TH NANORC 5 "version 6.0" "December 2021"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -258,7 +258,10 @@ specfified closing punctuation, optionally followed by closing brackets
 .TP
 .B set quickblank
 Make status-bar messages disappear after 1 keystroke instead of after 20.
-Note that options \fBconstantshow\fR and \fBminibar\fR override this.
+Note that option \fBconstantshow\fR overrides this.
+When option \fBminibar\fR or \fBzero\fR is in effect,
+\fBquickblank\fR makes a message disappear after
+0.8 seconds instead of after the default 1.5 seconds.
 .TP
 .BI "set quotestr """ regex """
 Set the regular expression for matching the quoting part of a line.
@@ -268,10 +271,12 @@ This makes it possible to rejustify blocks of quoted text when composing
 email, and to rewrap blocks of line comments when writing source code.
 .TP
 .B set rawsequences
-Interpret escape sequences directly (instead of asking \fBncurses\fR to
-translate them).  If you need this option to get your keyboard to work
-properly, please report a bug.  Using this option disables \fBnano\fR's
-mouse support.
+Interpret escape sequences directly, instead of asking \fBncurses\fR
+to translate them.  (If you need this option to get some keys to work
+properly, it means that the terminfo terminal description that is used
+does not fully match the actual behavior of your terminal.  This can
+happen when you ssh into a BSD machine, for example.)
+Using this option disables \fBnano\fR's mouse support.
 .TP
 .B set rebinddelete
 Interpret the Delete and Backspace keys differently so that both Backspace
@@ -339,7 +344,9 @@ Use this color combination for the vertical guiding stripe.
 See \fBset titlecolor\fR for more details.
 .TP
 .B set suspendable
-Allow \fBnano\fP to be suspended (with \fB^Z\fR by default).
+Obsolete option; ignored.  Suspension is enabled by default,
+reachable via \fB^T^Z\fR.  (If you want a plain \fB^Z\fR to
+suspend nano, add \fBbind ^Z suspend main\fR to your nanorc.)
 .TP
 .B set tabsize \fInumber\fR
 Use a tab size of \fInumber\fR columns.  The value of \fInumber\fP must be
@@ -361,8 +368,16 @@ as a synonym for \fBlightblack\fR.
 On terminal emulators that can do at least 256 colors,
 other valid (but unprefixable) color names are:
 .BR pink ", " purple ", " mauve ", " lagoon ", " mint ", "
-.BR lime ", " peach ", " orange ", " latte ", and " normal
+.BR lime ", " peach ", " orange ", " latte ", "
+.BR rosy ", " beet ", " plum ", " sea ", " sky ", " slate ", "
+.BR teal ", " sage ", " brown ", " ocher ", " sand ", " tawny ", "
+.BR brick ", " crimson ", and " normal
 -- where \fBnormal\fR means the default foreground or background color.
+On such emulators, the color may also be specified as a three-digit hexadecimal
+number prefixed with \fB#\fR, with the digits representing the amounts of red,
+green, and blue, respectively.  This tells \fBnano\fR to select from the
+available palette the color that approximates the given values.
+
 Either "\fIfgcolor\fR" or "\fB,\fIbgcolor\fR" may be left out,
 and the pair may be preceded by \fBbold\fR and/or \fBitalic\fR
 (separated by commas) to get a bold and/or slanting typeface,
@@ -394,6 +409,14 @@ probably want to unset \fBwordbounds\fR.
 .B set zap
 Let an unmodified Backspace or Delete erase the marked region
 (instead of a single character, and without affecting the cutbuffer).
+.TP
+.B set zero
+Hide all elements of the interface (title bar, status bar, and help lines)
+and use all rows of the terminal for showing the contents of the buffer.
+The status bar appears only when there is a significant message,
+and disappears after 1.5 seconds or upon the next keystroke.
+With \fBM-Z\fR the title bar plus status bar can be toggled.
+With \fBM-X\fR the help lines.
 
 .SH SYNTAX HIGHLIGHTING
 Coloring the different syntactic elements of a file
@@ -483,11 +506,21 @@ one of which must be specified.  Valid color names are:
 .BR white ", and " black .
 Each of these eight names may be prefixed with the word \fBlight\fR
 to get a brighter version of that color.
+The word \fBgrey\fR or \fBgray\fR may be used
+as a synonym for \fBlightblack\fR.
 On terminal emulators that can do at least 256 colors,
 other valid (but unprefixable) color names are:
 .BR pink ", " purple ", " mauve ", " lagoon ", " mint ", "
-.BR lime ", " peach ", " orange ", " latte ", and " normal
+.BR lime ", " peach ", " orange ", " latte ", "
+.BR rosy ", " beet ", " plum ", " sea ", " sky ", " slate ", "
+.BR teal ", " sage ", " brown ", " ocher ", " sand ", " tawny ", "
+.BR brick ", " crimson ", and " normal
 -- where \fBnormal\fR means the default foreground or background color.
+On such emulators, the color may also be specified as a three-digit hexadecimal
+number prefixed with \fB#\fR, with the digits representing the amounts of red,
+green, and blue, respectively.  This tells \fBnano\fR to select from the
+available palette the color that approximates the given values.
+
 The color pair may be preceded by \fBbold\fR and/or \fBitalic\fR
 (separated by commas) to get a bold and/or slanting typeface,
 if your terminal can do those.
@@ -819,8 +852,8 @@ Redoes the last undone action (i.e., it undoes an undo).
 Refreshes the screen.
 .TP
 .B suspend
-Suspends the editor (if the suspending function is enabled, see the
-\fBsuspendable\fR toggle item below).
+Suspends the editor and returns control to the shell
+(until you tell the process to resume execution with \fBfg\fR).
 .TP
 .B casesens
 Toggles whether searching/replacing ignores or respects the case of
@@ -934,11 +967,6 @@ Toggles whether typed tabs will be converted to spaces.
 .TP
 .B mouse
 Toggles mouse support.
-.TP
-.B suspendable
-Toggles whether the suspend keystroke (\fB^Z\fR by default)
-will actually suspend the editor.
-(The old name of this function, 'suspendenable', is deprecated.)
 .RE
 
 .TP

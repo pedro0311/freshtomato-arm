@@ -122,6 +122,9 @@
 #define ANNOTATE  TRUE
 #define NONOTES  FALSE
 
+#define PRUNE_DUPLICATE  TRUE
+#define IGNORE_DUPLICATES  FALSE
+
 #ifdef ENABLE_UTF8
 /* In UTF-8 a valid character is at most four bytes long. */
 #define MAXCHARLEN  4
@@ -215,7 +218,7 @@
 #define FOREIGN_SEQUENCE  0x4FC
 
 /* A special keycode for plugging into the input stream after a suspension. */
-#define KEY_FLUSH  KEY_F0
+#define KEY_FRESH  0x4FE
 
 #ifndef NANO_TINY
 /* A special keycode for when we get a SIGWINCH (a window resize). */
@@ -354,7 +357,8 @@ enum {
 	BOOKSTYLE,
 	STATEFLAGS,
 	USE_MAGIC,
-	MINIBAR
+	MINIBAR,
+	ZERO
 };
 
 /* Structure types. */

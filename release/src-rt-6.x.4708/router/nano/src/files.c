@@ -811,17 +811,19 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 #ifndef NANO_TINY
 	else if (format == MAC_FILE)
 		/* TRANSLATORS: Keep the next three messages at most 78 characters. */
-		statusline(HUSH, P_("Read %zu line (Converted from Mac format)",
+		statusline(REMARK, P_("Read %zu line (Converted from Mac format)",
 						"Read %zu lines (Converted from Mac format)",
 						num_lines), num_lines);
 	else if (format == DOS_FILE)
-		statusline(HUSH, P_("Read %zu line (Converted from DOS format)",
+		statusline(REMARK, P_("Read %zu line (Converted from DOS format)",
 						"Read %zu lines (Converted from DOS format)",
 						num_lines), num_lines);
 #endif
-	else
-		statusline(HUSH, P_("Read %zu line", "Read %zu lines",
+	else if ((!ISSET(MINIBAR) && !ISSET(ZERO)) || (we_are_running && undoable))
+		statusline(REMARK, P_("Read %zu line", "Read %zu lines",
 						num_lines), num_lines);
+
+	report_size = TRUE;
 
 	/* If we inserted less than a screenful, don't center the cursor. */
 	if (undoable && less_than_a_screenful(was_lineno, was_leftedge))
@@ -898,7 +900,7 @@ int open_file(const char *filename, bool new_one, FILE **f)
 			statusline(ALERT, _("Error reading %s: %s"), filename, strerror(errno));
 			close(fd);
 			fd = -1;
-		} else
+		} else if (!ISSET(ZERO) || we_are_running)
 			statusbar(_("Reading..."));
 	}
 
@@ -1107,9 +1109,10 @@ bool execute_command(const char *command)
 }
 #endif /* NANO_TINY */
 
-/* Insert a file into the current buffer, or into a new buffer when
- * the MULTIBUFFER flag is set. */
-void do_insertfile(bool execute)
+/* Insert a file into the current buffer (or into a new buffer).  But when
+ * execute is TRUE, run a command in the shell and insert its output into
+ * the buffer, or just run one of the tools listed in the help lines. */
+void insert_a_file_or(bool execute)
 {
 	int response;
 	const char *msg;
@@ -1158,15 +1161,9 @@ void do_insertfile(bool execute)
 
 		present_path = mallocstrcpy(present_path, "./");
 
-		response = do_prompt(
-#ifndef NANO_TINY
-							execute ? MEXECUTE :
-#endif
-							MINSERTFILE, given,
-#ifndef NANO_TINY
-							execute ? &execute_history :
-#endif
-							NULL, edit_refresh, msg,
+		response = do_prompt(execute ? MEXECUTE : MINSERTFILE, given,
+							execute ? &execute_history : NULL,
+							edit_refresh, msg,
 #ifdef ENABLE_OPERATINGDIR
 							operating_dir != NULL ? operating_dir :
 #endif
@@ -1242,7 +1239,7 @@ void do_insertfile(bool execute)
 				if (*answer != '\0') {
 					execute_command(answer);
 #ifdef ENABLE_HISTORIES
-					update_history(&execute_history, answer);
+					update_history(&execute_history, answer, PRUNE_DUPLICATE);
 #endif
 				}
 
@@ -1275,7 +1272,7 @@ void do_insertfile(bool execute)
 					if (!execute)
 #endif
 					if (has_old_position(answer, &priorline, &priorcol))
-						do_gotolinecolumn(priorline, priorcol, FALSE, FALSE);
+						goto_line_and_column(priorline, priorcol, FALSE, FALSE);
 				}
 #endif
 				/* Update title bar and color info for this new buffer. */
@@ -1306,10 +1303,10 @@ void do_insertfile(bool execute)
 }
 
 /* If the current mode of operation allows it, go insert a file. */
-void do_insertfile_void(void)
+void do_insertfile(void)
 {
 	if (!in_restricted_mode())
-		do_insertfile(FALSE);
+		insert_a_file_or(FALSE);
 }
 
 #ifndef NANO_TINY
@@ -1317,7 +1314,7 @@ void do_insertfile_void(void)
 void do_execute(void)
 {
 	if (!in_restricted_mode())
-		do_insertfile(TRUE);
+		insert_a_file_or(TRUE);
 }
 #endif
 
@@ -2030,7 +2027,7 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 	}
 
 #ifndef NANO_TINY
-	if (ISSET(MINIBAR) && LINES > 1 && annotate)
+	if (ISSET(MINIBAR) && !ISSET(ZERO) && LINES > 1 && annotate)
 		report_size = TRUE;
 	else
 #endif
@@ -2089,13 +2086,12 @@ bool write_region_to_file(const char *name, FILE *stream, bool normal,
 }
 #endif /* !NANO_TINY */
 
-/* Write the current buffer to disk.  If the mark is on, write the current
- * marked selection to disk.  If exiting is TRUE, write the entire buffer
- * to disk regardless of whether the mark is on.  Do not ask for a name
- * when withprompt is FALSE nor when the SAVE_ON_EXIT flag is set and the
- * buffer already has a name.  Return 0 on error, 1 on success, and 2 when
+/* Write the current buffer (or marked region) to disk.  If exiting is TRUE,
+ * write the entire buffer regardless of whether the mark is on.  Do not ask
+ * for a name when withprompt is FALSE (nor when doing save-on-exit and the
+ * buffer already has a name).  Return 0 on error, 1 on success, and 2 when
  * the buffer is to be discarded. */
-int do_writeout(bool exiting, bool withprompt)
+int write_it_out(bool exiting, bool withprompt)
 {
 	char *given;
 		/* The filename we offer, or what the user typed so far. */
@@ -2116,9 +2112,10 @@ int do_writeout(bool exiting, bool withprompt)
 #endif
 
 	while (TRUE) {
-		int response = 0, choice = 0;
 		functionptrtype func;
 		const char *msg;
+		int response = 0;
+		int choice = 0;
 #ifndef NANO_TINY
 		const char *formatstr = (openfile->fmt == DOS_FILE) ? _(" [DOS Format]") :
 						(openfile->fmt == MAC_FILE) ? _(" [Mac Format]") : "";
@@ -2184,22 +2181,24 @@ int do_writeout(bool exiting, bool withprompt)
 		} else
 #endif
 #ifndef NANO_TINY
-		if (func == dos_format_void) {
+		if (func == dos_format) {
 			openfile->fmt = (openfile->fmt == DOS_FILE) ? NIX_FILE : DOS_FILE;
 			continue;
-		} else if (func == mac_format_void) {
+		} else if (func == mac_format) {
 			openfile->fmt = (openfile->fmt == MAC_FILE) ? NIX_FILE : MAC_FILE;
 			continue;
-		} else if (func == backup_file_void) {
+		} else if (func == back_it_up) {
 			TOGGLE(MAKE_BACKUP);
 			continue;
-		} else if (func == prepend_void) {
-			method = (method == PREPEND) ? OVERWRITE : PREPEND;
+		} else if (func == prepend_it || func == append_it) {
+			if (func == prepend_it)
+				method = (method == PREPEND) ? OVERWRITE : PREPEND;
+			else
+				method = (method == APPEND) ? OVERWRITE : APPEND;
+			if (strcmp(answer, openfile->filename) == 0)
+				given[0] = '\0';
 			continue;
-		} else if (func == append_void) {
-			method = (method == APPEND) ? OVERWRITE : APPEND;
-			continue;
-		}
+		} else
 #endif
 		if (func == do_help)
 			continue;
@@ -2331,17 +2330,17 @@ int do_writeout(bool exiting, bool withprompt)
 }
 
 /* Write the current buffer to disk, or discard it. */
-void do_writeout_void(void)
+void do_writeout(void)
 {
 	/* If the user chose to discard the buffer, close it. */
-	if (do_writeout(FALSE, TRUE) == 2)
+	if (write_it_out(FALSE, TRUE) == 2)
 		close_and_go();
 }
 
 /* If it has a name, write the current buffer to disk without prompting. */
 void do_savefile(void)
 {
-	if (do_writeout(FALSE, FALSE) == 2)
+	if (write_it_out(FALSE, FALSE) == 2)
 		close_and_go();
 }
 
@@ -2629,6 +2628,7 @@ char *input_tab(char *morsel, size_t *place, void (*refresh_func)(void), bool *l
 
 	/* If there is more than one possible completion, show a sorted list. */
 	if (num_matches > 1) {
+		int lastrow = editwinrows - 1 - (ISSET(ZERO) && LINES > 1 ? 1 : 0);
 		size_t longest_name = 0;
 		size_t nrows, ncols;
 		int row;
@@ -2654,7 +2654,7 @@ char *input_tab(char *morsel, size_t *place, void (*refresh_func)(void), bool *l
 		ncols = (COLS + 1) / (longest_name + 2);
 		nrows = (num_matches + ncols - 1) / ncols;
 
-		row = (nrows < editwinrows - 1) ? editwinrows - nrows - 1 : 0;
+		row = (nrows < lastrow) ? lastrow - nrows : 0;
 
 		/* Blank the edit window and hide the cursor. */
 		blank_edit();
@@ -2666,7 +2666,7 @@ char *input_tab(char *morsel, size_t *place, void (*refresh_func)(void), bool *l
 
 			wmove(edit, row, (longest_name + 2) * (match % ncols));
 
-			if (row == editwinrows - 1 && (match + 1) % ncols == 0 &&
+			if (row == lastrow && (match + 1) % ncols == 0 &&
 											match + 1 < num_matches) {
 				waddstr(edit, _("(more)"));
 				break;

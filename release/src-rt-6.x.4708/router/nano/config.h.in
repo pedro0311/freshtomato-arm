@@ -443,6 +443,9 @@
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
 
+/* Define to 1 if C supports variable-length arrays. */
+#undef HAVE_C_VARARRAYS
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
 #undef HAVE_DCGETTEXT
@@ -1507,6 +1510,10 @@
 
 /* Define to 1 if the system <stdint.h> predates C++11. */
 #undef __STDC_LIMIT_MACROS
+
+/* Define to 1 if C does not support variable-length arrays, and if the
+   compiler does not already define this. */
+#undef __STDC_NO_VLA__
 
 /* The _GL_ASYNC_SAFE marker should be attached to functions that are
    signal handlers (for signals other than SIGABRT, SIGPIPE) or can be

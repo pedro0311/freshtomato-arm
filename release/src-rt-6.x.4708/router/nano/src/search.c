@@ -118,7 +118,7 @@ void search_init(bool replacing, bool retain_answer)
 			if (*answer != '\0') {
 				last_search = mallocstrcpy(last_search, answer);
 #ifdef ENABLE_HISTORIES
-				update_history(&search_history, answer);
+				update_history(&search_history, answer, PRUNE_DUPLICATE);
 #endif
 			}
 
@@ -152,7 +152,7 @@ void search_init(bool replacing, bool retain_answer)
 			} else
 				replacing = !replacing;
 		} else if (func == flip_goto) {
-			do_gotolinecolumn(openfile->current->lineno,
+			goto_line_and_column(openfile->current->lineno,
 								openfile->placewewant + 1, TRUE, TRUE);
 			break;
 		} else
@@ -327,9 +327,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 		spotlighted = TRUE;
 		light_from_col = xplustabs();
 		light_to_col = wideness(line->data, found_x + found_len);
-		if (!ISSET(SHOW_CURSOR))
-			hide_cursor = TRUE;
-		edit_refresh();
+		refresh_needed = TRUE;
 	}
 #endif
 
@@ -706,7 +704,7 @@ void ask_for_and_do_replacements(void)
 #ifdef ENABLE_HISTORIES
 	/* When not "", add the replace string to the replace history list. */
 	if (response == 0)
-		update_history(&replace_history, answer);
+		update_history(&replace_history, answer, PRUNE_DUPLICATE);
 #endif
 
 	/* When cancelled, or when a function was run, get out. */
@@ -724,7 +722,7 @@ void ask_for_and_do_replacements(void)
 	openfile->current = beginline;
 	openfile->current_x = begin_x;
 
-	edit_refresh();
+	refresh_needed = TRUE;
 
 	if (numreplaced >= 0)
 		statusline(REMARK, P_("Replaced %zd occurrence",
@@ -747,8 +745,8 @@ void goto_line_posx(ssize_t line, size_t pos_x)
 /* Go to the specified line and column, or ask for them if interactive
  * is TRUE.  In the latter case also update the screen afterwards.
  * Note that both the line and column number should be one-based. */
-void do_gotolinecolumn(ssize_t line, ssize_t column, bool retain_answer,
-		bool interactive)
+void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
+							bool interactive)
 {
 	if (interactive) {
 		/* Ask for the line and column. */
@@ -844,9 +842,9 @@ void do_gotolinecolumn(ssize_t line, ssize_t column, bool retain_answer,
 }
 
 /* Go to the specified line and column, asking for them beforehand. */
-void do_gotolinecolumn_void(void)
+void do_gotolinecolumn(void)
 {
-	do_gotolinecolumn(openfile->current->lineno,
+	goto_line_and_column(openfile->current->lineno,
 						openfile->placewewant + 1, FALSE, TRUE);
 }
 

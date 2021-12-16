@@ -182,20 +182,17 @@ void read_keys_from(WINDOW *win)
 	bool timed = FALSE;
 #endif
 
-	/* On a one-row terminal, overwrite an unimportant message. */
-	if (LINES == 1 && currmenu == MMAIN && lastmessage == HUSH)
-		edit_refresh();
-
 	/* Before reading the first keycode, display any pending screen updates. */
 	doupdate();
 
-	if (reveal_cursor && !hide_cursor && (LINES > 1 || lastmessage <= HUSH))
+	if (reveal_cursor && (!spotlighted || ISSET(SHOW_CURSOR) || currmenu == MSPELL) &&
+						(LINES > 1 || lastmessage <= HUSH))
 		curs_set(1);
 
 #ifndef NANO_TINY
-	if (currmenu == MMAIN && (spotlighted || ((ISSET(MINIBAR) || LINES == 1) &&
-						lastmessage > HUSH &&
-						lastmessage != INFO && lastmessage < ALERT))) {
+	if (currmenu == MMAIN && (((ISSET(MINIBAR) || ISSET(ZERO) || LINES == 1) &&
+						lastmessage > HUSH && lastmessage < ALERT &&
+						lastmessage != INFO) || spotlighted)) {
 		timed = TRUE;
 		halfdelay(ISSET(QUICK_BLANK) ? 8 : 15);
 		disable_kb_interrupt();
@@ -217,14 +214,16 @@ void read_keys_from(WINDOW *win)
 			raw();
 
 			if (input == ERR) {
-				if (spotlighted || LINES == 1) {
+				if (spotlighted || ISSET(ZERO) || LINES == 1) {
+					if (ISSET(ZERO) && lastmessage > VACUUM)
+						wredrawln(edit, editwinrows - 1 , 1);
 					lastmessage = VACUUM;
 					spotlighted = FALSE;
 					update_line(openfile->current, openfile->current_x);
 					wnoutrefresh(edit);
 					curs_set(1);
 				}
-				if (ISSET(MINIBAR) && LINES > 1)
+				if (ISSET(MINIBAR) && !ISSET(ZERO) && LINES > 1)
 					minibar();
 				as_an_at = TRUE;
 				place_the_cursor();
@@ -250,8 +249,10 @@ void read_keys_from(WINDOW *win)
 
 #ifndef NANO_TINY
 	/* Cancel the highlighting of a search match, if there still is one. */
-	refresh_needed |= spotlighted;
-	spotlighted = FALSE;
+	if (currmenu == MMAIN) {
+		refresh_needed |= spotlighted;
+		spotlighted = FALSE;
+	}
 
 	/* If we got a SIGWINCH, get out as the win argument is no longer valid. */
 	if (input == KEY_WINCH)
@@ -506,8 +507,9 @@ int convert_SS3_sequence(const int *seq, size_t length, int *consumed)
 /* Translate a sequence that began with "Esc [" to its corresponding key code. */
 int convert_CSI_sequence(const int *seq, size_t length, int *consumed)
 {
-	if (seq[0] < '9')
+	if (seq[0] < '9' && length > 1)
 		*consumed = 2;
+
 	switch (seq[0]) {
 		case '1':
 			if (length > 1 && seq[1] == '~')
@@ -840,10 +842,6 @@ int parse_escape_sequence(int starter)
 		keycode = convert_SS3_sequence(key_buffer, key_buffer_len, &consumed);
 	else if (starter == '[')
 		keycode = convert_CSI_sequence(key_buffer, key_buffer_len, &consumed);
-#ifndef NANO_TINY
-	else
-		die("Bad sequence starter -- please report a bug\n");
-#endif
 
 	/* Remove the consumed sequence bytes from the keystroke buffer. */
 	key_buffer_len -= consumed;
@@ -1110,7 +1108,8 @@ int parse_kbinput(WINDOW *win)
 	} else if (keycode == shiftaltdown) {
 		shift_held = TRUE;
 		return KEY_NPAGE;
-	}
+	} else if ((KEY_F0 + 24) < keycode && keycode < (KEY_F0 + 64))
+		return FOREIGN_SEQUENCE;
 #endif
 
 #ifdef __linux__
@@ -1247,7 +1246,8 @@ int parse_kbinput(WINDOW *win)
 		case KEY_SCANCEL:
 			return KEY_CANCEL;
 		case KEY_SSUSPEND:
-			return KEY_SUSPEND;
+		case KEY_SUSPEND:
+			return 0x1A;    /* The ASCII code for Ctrl+Z. */
 		case KEY_BTAB:
 			return SHIFT_TAB;
 
@@ -1265,7 +1265,9 @@ int parse_kbinput(WINDOW *win)
 #ifdef KEY_RESIZE  /* SunOS 5.7-5.9 doesn't know KEY_RESIZE. */
 		case KEY_RESIZE:
 #endif
-		case KEY_FLUSH:
+#ifndef NANO_TINY
+		case KEY_FRESH:
+#endif
 			return ERR;    /* Ignore this keystroke. */
 	}
 
@@ -1495,6 +1497,9 @@ char *get_verbatim_kbinput(WINDOW *win, size_t *count)
 	/* Turn bracketed-paste mode back on. */
 	printf("\x1B[?2004h");
 	fflush(stdout);
+
+	if (ISSET(ZERO) && currmenu == MMAIN)
+		wredrawln(edit, editwinrows - 1, 1);
 #endif
 
 	/* Turn flow control characters back on if necessary and turn the
@@ -1676,40 +1681,38 @@ void blank_statusbar(void)
 /* Wipe the status bar clean and include this in the next screen update. */
 void wipe_statusbar(void)
 {
+	lastmessage = VACUUM;
+
+	if (ISSET(ZERO) || ISSET(MINIBAR) || LINES == 1)
+		return;
+
 	blank_row(bottomwin, 0);
 	wnoutrefresh(bottomwin);
-	lastmessage = VACUUM;
 }
 
 /* Blank out the two help lines (when they are present). */
 void blank_bottombars(void)
 {
-	if (!ISSET(NO_HELP) && LINES > 4) {
+	if (!ISSET(NO_HELP) && LINES > 5) {
 		blank_row(bottomwin, 1);
 		blank_row(bottomwin, 2);
 	}
 }
 
-/* Check if the number of keystrokes needed to blank the status bar has
- * been pressed.  If so, blank the status bar, unless constant cursor
- * position display is on and we are in the editing screen. */
+/* When some number of keystrokes has been reached, wipe the status bar. */
 void check_statusblank(void)
 {
 	if (statusblank == 0)
 		return;
 
-	statusblank--;
-
-	/* When editing and 'constantshow' is active, skip the blanking. */
-	if (currmenu == MMAIN && ISSET(CONSTANT_SHOW) && LINES > 1)
-		return;
-
-	if (statusblank == 0)
+	if (--statusblank == 0)
 		wipe_statusbar();
 
-	/* If the subwindows overlap, make sure to show the edit window now. */
-	if (LINES == 1)
-		edit_refresh();
+	/* When windows overlap, make sure to show the edit window now. */
+	if (currmenu == MMAIN && (ISSET(ZERO) || LINES == 1)) {
+		wredrawln(edit, editwinrows - 1, 1);
+		wnoutrefresh(edit);
+	}
 }
 
 /* Ensure that the status bar will be wiped upon the next keystroke. */
@@ -2139,9 +2142,11 @@ void minibar(void)
 	 * plus a star when the file has been modified. */
 	if (COLS > 4) {
 		if (namewidth > COLS - 2) {
-			thename = display_string(thename, namewidth - COLS + 5, COLS - 5, FALSE, FALSE);
+			char *shortname = display_string(thename, namewidth - COLS + 5,
+												COLS - 5, FALSE, FALSE);
 			mvwaddstr(bottomwin, 0, 0, "...");
-			waddstr(bottomwin, thename);
+			waddstr(bottomwin, shortname);
+			free(shortname);
 		} else
 			mvwaddstr(bottomwin, 0, padding, thename);
 
@@ -2245,16 +2250,12 @@ void minibar(void)
  * is higher than that of a message that is already there. */
 void statusline(message_type importance, const char *msg, ...)
 {
-	va_list ap;
-	int colorpair;
-	char *compound, *message;
+	bool showed_whitespace = ISSET(WHITESPACE_DISPLAY);
 	static size_t start_col = 0;
+	char *compound, *message;
 	bool bracketed;
-#ifndef NANO_TINY
-	bool old_whitespace = ISSET(WHITESPACE_DISPLAY);
-
-	UNSET(WHITESPACE_DISPLAY);
-#endif
+	int colorpair;
+	va_list ap;
 
 	/* Ignore a message with an importance that is lower than the last one. */
 	if (importance < lastmessage && lastmessage > NOTICE)
@@ -2313,8 +2314,12 @@ void statusline(message_type importance, const char *msg, ...)
 
 	blank_statusbar();
 
+	UNSET(WHITESPACE_DISPLAY);
+
 	message = display_string(compound, 0, COLS, FALSE, FALSE);
-	free(compound);
+
+	if (showed_whitespace)
+		SET(WHITESPACE_DISPLAY);
 
 	start_col = (COLS - breadth(message)) / 2;
 	bracketed = (start_col > 1);
@@ -2336,12 +2341,9 @@ void statusline(message_type importance, const char *msg, ...)
 
 	/* Push the message to the screen straightaway. */
 	wrefresh(bottomwin);
-	free(message);
 
-#ifndef NANO_TINY
-	if (old_whitespace)
-		SET(WHITESPACE_DISPLAY);
-#endif
+	free(compound);
+	free(message);
 
 	/* When requested, wipe the status bar after just one keystroke. */
 	statusblank = (ISSET(QUICK_BLANK) ? 1 : 20);
@@ -2394,7 +2396,7 @@ void bottombars(int menu)
 	/* Set the global variable to the given menu. */
 	currmenu = menu;
 
-	if (ISSET(NO_HELP) || LINES < 5)
+	if (ISSET(NO_HELP) || LINES < 6)
 		return;
 
 	/* Determine how many shortcuts must be shown. */
@@ -3328,6 +3330,8 @@ bool current_is_above_screen(void)
 		return (openfile->current->lineno < openfile->edittop->lineno);
 }
 
+#define SHIM  (ISSET(ZERO) && (currmenu == MREPLACEWITH || currmenu == MYESNO) ? 1 : 0)
+
 /* Return TRUE if current[current_x] is beyond the viewport. */
 bool current_is_below_screen(void)
 {
@@ -3338,14 +3342,14 @@ bool current_is_below_screen(void)
 
 		/* If current[current_x] is more than a screen's worth of lines after
 		 * edittop at column firstcolumn, it's below the screen. */
-		return (go_forward_chunks(editwinrows - 1, &line, &leftedge) == 0 &&
+		return (go_forward_chunks(editwinrows - 1 - SHIM, &line, &leftedge) == 0 &&
 						(line->lineno < openfile->current->lineno ||
 						(line->lineno == openfile->current->lineno &&
 						leftedge < leftedge_for(xplustabs(), openfile->current))));
 	} else
 #endif
 		return (openfile->current->lineno >=
-						openfile->edittop->lineno + editwinrows);
+						openfile->edittop->lineno + editwinrows - SHIM);
 }
 
 /* Return TRUE if current[current_x] is outside the viewport. */
@@ -3466,7 +3470,7 @@ void adjust_viewport(update_type manner)
 	else if (manner == CENTERING)
 		goal = editwinrows / 2;
 	else if (!current_is_above_screen())
-		goal = editwinrows - 1;
+		goal = editwinrows - 1 - SHIM;
 
 	openfile->edittop = openfile->current;
 #ifndef NANO_TINY
