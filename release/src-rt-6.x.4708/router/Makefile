@@ -716,11 +716,9 @@ endif
 	install $(LIBDIR)/libdl.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libm.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libnsl.so.0 $(TARGETDIR)/lib/
-ifneq ($(TCONFIG_BCMARM),y)
-ifeq ($(TCONFIG_SSH),y)
+ifneq ($(TCONFIG_BCMARM)$(TCONFIG_SSH),)
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
 endif
-endif # !TCONFIG_BCMARM
 ifeq ($(TCONFIG_USB),y)
 ifneq ($(TCONFIG_BCMARM),y)
 	install $(LIBDIR)/librt-0.9.30.1.so $(TARGETDIR)/lib/librt.so.0
