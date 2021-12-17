@@ -703,7 +703,7 @@ endif
 	done
 
 ifneq ($(TCONFIG_L7),y)
-	rm -f $(TARGETDIR)/usr/lib/$(IPTABLES_TARGET)/libipt_layer7.so
+	rm -f $(TARGETDIR)/usr/lib/*tables/libipt_layer7.so
 endif
 
 # uClibc
@@ -771,7 +771,7 @@ endif
 	@mkdir $(PLATFORMDIR)/extras/ipsec
 	@mkdir $(PLATFORMDIR)/extras/raid
 	@mv $(TARGETDIR)/lib/modules/*/kernel/net/ipv4/ip_gre.*o $(PLATFORMDIR)/extras/ || true
-#	$(if $(TCONFIG_IPSEC),@cp -f,@mv) $(TARGETDIR)/usr/lib/$(IPTABLES_TARGET)/libipt_policy.*o $(PLATFORMDIR)/extras/ipsec/ || true
+#	$(if $(TCONFIG_IPSEC),@cp -f,@mv) $(TARGETDIR)/usr/lib/*tables/libipt_policy.*o $(PLATFORMDIR)/extras/ipsec/ || true
 
 	$(if $(TCONFIG_OPENVPN),@cp -f,$(if $(TCONFIG_USB_EXTRAS),@cp -f,$(if $(TCONFIG_IPV6),@cp -f,@mv))) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/tun.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(TCONFIG_EBTABLES),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/net/bridge/netfilter/ebt*.*o $(PLATFORMDIR)/extras/ || true
