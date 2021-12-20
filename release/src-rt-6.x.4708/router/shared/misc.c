@@ -79,7 +79,7 @@ int get_wan_unit_with_value(const char *suffix, const char *value)
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, tmp);
-		strcat(tmp, suffix);
+		strlcat(tmp, suffix, sizeof(tmp));
 
 		if (nvram_match(tmp, value))
 			return wan_unit;
@@ -109,10 +109,12 @@ int get_wanx_proto(char *prefix)
 	int i;
 	const char *p;
 
-	p = nvram_safe_get(strcat_r(prefix, "_proto", tmp));
+	p = nvram_safe_get(strlcat_r(prefix, "_proto", tmp, sizeof(tmp)));
 	for (i = 0; names[i] != NULL; ++i) {
-		if (strcmp(p, names[i]) == 0) return i + 1;
+		if (strcmp(p, names[i]) == 0)
+			return i + 1;
 	}
+
 	return WP_DISABLED;
 }
 
@@ -134,8 +136,10 @@ int get_ipv6_service(void)
 
 	p = nvram_safe_get("ipv6_service");
 	for (i = 0; names[i] != NULL; ++i) {
-		if (strcmp(p, names[i]) == 0) return i + 1;
+		if (strcmp(p, names[i]) == 0)
+			return i + 1;
 	}
+
 	return IPV6_DISABLED;
 }
 
@@ -185,14 +189,14 @@ int calc_6rd_local_prefix(const struct in6_addr *prefix,
 
 	local_ip_bits = ntohl(local_ip->s_addr) << relay_prefix_len;
 
-	for (i=0; i<4; i++) {
+	for (i = 0; i < 4; i++) {
 		local_prefix->s6_addr32[i] = prefix->s6_addr32[i];
 	}
 
-	for (j = 0x80000000, i = prefix_len; i < *local_prefix_len; i++, j>>=1)
+	for (j = 0x80000000, i = prefix_len; i < *local_prefix_len; i++, j >>= 1)
 	{
 		if (local_ip_bits & j)
-			local_prefix->s6_addr[i>>3] |= (0x80 >> (i & 0x7));
+			local_prefix->s6_addr[i >> 3] |= (0x80 >> (i & 0x7));
 	}
 
 	return 1;
@@ -203,14 +207,15 @@ int using_dhcpc(char *prefix)
 {
 	char tmp[100];
 	switch (get_wanx_proto(prefix)) {
-	case WP_DHCP:
-	case WP_LTE:
-		return 1;
-	case WP_L2TP:
-	case WP_PPTP:
-	case WP_PPPOE:	/* PPPoE with MAN */
-		return nvram_get_int(strcat_r(prefix, "_pptp_dhcp", tmp));
+		case WP_DHCP:
+		case WP_LTE:
+			return 1;
+		case WP_L2TP:
+		case WP_PPTP:
+		case WP_PPPOE: /* PPPoE with MAN */
+			return nvram_get_int(strlcat_r(prefix, "_pptp_dhcp", tmp, sizeof(tmp)));
 	}
+
 	return 0;
 }
 
@@ -224,7 +229,7 @@ int is_psta_client(int unit, int subunit)
 		return ret;
 
 	mode = nvram_safe_get(wl_nvname("mode", unit, subunit));
-	
+
 	if (strcmp(mode, "psta") == 0)
 		ret = 1;
 
@@ -325,6 +330,7 @@ void notice_set(const char *path, const char *format, ...)
 	mkdir("/var/notice", 0755);
 	snprintf(p, sizeof(p), "/var/notice/%s", path);
 	f_write_string(p, buf, 0, 0);
+
 	if (buf[0])
 		logmsg(LOG_INFO, "notice[%s]: %s", path, buf);
 }
@@ -374,11 +380,11 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	return mode;
 }
 
-int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
+int wan_led_off(char *prefix) /* off WAN LED only if no other WAN active */
 {
 	char tmp[100];
 	char ppplink_file[32];
-	char *names[] = {	/* FIXME: hardcoded to 4 WANs */
+	char *names[] = { /* FIXME: hardcoded to 4 WANs */
 		"wan",
 		"wan2",
 #ifdef TCONFIG_MULTIWAN
@@ -391,7 +397,7 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 	int f;
 	struct ifreq ifr;
 	int up;
-	int count = 0;	/* initialize with zero */
+	int count = 0; /* initialize with zero */
 	int proto;
 	int mwan_num = atoi(nvram_safe_get("mwan_num"));
 	if (mwan_num < 1 || mwan_num > MWAN_MAX) {
@@ -399,96 +405,102 @@ int wan_led_off(char *prefix)	/* off WAN LED only if no other WAN active */
 	}
 
 	for (i = 0; (names[i] != NULL) && (i <= mwan_num-1); ++i) {
-		up = 0;	/* default is 0 (LED_OFF) */
-		if (!strcmp(prefix, names[i])) continue;	/* only check others */
+		up = 0; /* default is 0 (LED_OFF) */
+		if (!strcmp(prefix, names[i]))
+			continue; /* only check others */
+
 		logmsg(LOG_DEBUG, "*** %s: check %s aliveness...", __FUNCTION__, names[i]);
+
 		switch (proto = get_wanx_proto(names[i])) {
-		case WP_DISABLED:
-			break;	/* WAN is disabled - skip */
-		case WP_STATIC:
-		case WP_DHCP:
-		case WP_LTE:
-			if (!nvram_match(strcat_r(names[i], "_ipaddr", tmp), "0.0.0.0")) {	/* have IP, assume ON */
-				up = 1;
-				if (((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {	/* check interface */
-					strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(names[i], "_iface", tmp)), sizeof(ifr.ifr_name));
-					if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0)
-						up = 0;
-					close(f);
-					if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0)
-						up = 0;
-					if (proto == WP_STATIC) {	/* check port state for static */
+			case WP_DISABLED:
+				break; /* WAN is disabled - skip */
+			case WP_STATIC:
+			case WP_DHCP:
+			case WP_LTE:
+				if (!nvram_match(strlcat_r(names[i], "_ipaddr", tmp, sizeof(tmp)), "0.0.0.0")) { /* have IP, assume ON */
+					up = 1;
+					if (((f = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) { /* check interface */
+						strlcpy(ifr.ifr_name, nvram_safe_get(strlcat_r(names[i], "_iface", tmp, sizeof(tmp))), sizeof(ifr.ifr_name));
+						if (ioctl(f, SIOCGIFFLAGS, &ifr) < 0)
+							up = 0;
+						close(f);
+						if ((ifr.ifr_flags & IFF_UP) == 0 || (ifr.ifr_flags & IFF_RUNNING) == 0)
+							up = 0;
+						if (proto == WP_STATIC) { /* check port state for static */
 
-						int a;		/* port number: 0/1/2/3/4 */
-						char b[16];	/* port state: DOWN/SPEED */
-						int c;		/* port vlan: 1/2/3/4/etc */
-						char d[4];
-						FILE *f = NULL;
+							int a;		/* port number: 0/1/2/3/4 */
+							char b[16];	/* port state: DOWN/SPEED */
+							int c;		/* port vlan: 1/2/3/4/etc */
+							char d[4];
+							FILE *f = NULL;
 
-						strcpy(d,&ifr.ifr_name[4]);	/* trim vlan */
-						int vlannum = atoi(d);
-						if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
-							while (fgets(tmp, sizeof(tmp), f)) {
-								if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
-									if ((strncmp(b, "DOWN", 4) == 0) && ( c == vlannum )) {
-										logmsg(LOG_DEBUG, "*** %s: state = DOWN for vlan%d", __FUNCTION__, vlannum);
-										up = 0;
+							strcpy(d, &ifr.ifr_name[4]); /* trim vlan */
+							int vlannum = atoi(d);
+							if ((f = popen("/usr/sbin/robocfg showports", "r")) != NULL) {
+								while (fgets(tmp, sizeof(tmp), f)) {
+									if (sscanf(tmp, "Port %d: %s %*s %*s %*s vlan: %d %*s", &a, b, &c) == 3) {
+										if ((strncmp(b, "DOWN", 4) == 0) && (c == vlannum)) {
+											logmsg(LOG_DEBUG, "*** %s: state = DOWN for vlan%d", __FUNCTION__, vlannum);
+											up = 0;
+										}
 									}
 								}
+								pclose(f);
 							}
-							pclose(f);
 						}
 					}
 				}
-			}
-			if (up) ++count;
-			break;
-		case WP_L2TP:
-		case WP_PPTP:
-		case WP_PPPOE:
-		case WP_PPP3G:
-			memset(ppplink_file , 0, 32);
-			FILE *f_tmp = NULL;
-			sprintf(ppplink_file, "/tmp/ppp/%s_link", names[i]);
-			if ((f_tmp = fopen(ppplink_file, "r")) != NULL) {	/* have PPP link, assume ON */
-				up = 1;
-				fclose(f_tmp);
-			}
-			if (up) ++count;
-			break;
-		default:
-			break;
+				if (up)
+					++count;
+				break;
+			case WP_L2TP:
+			case WP_PPTP:
+			case WP_PPPOE:
+			case WP_PPP3G:
+				memset(ppplink_file , 0, sizeof(ppplink_file));
+				FILE *f_tmp = NULL;
+				snprintf(ppplink_file, sizeof(ppplink_file), "/tmp/ppp/%s_link", names[i]);
+				if ((f_tmp = fopen(ppplink_file, "r")) != NULL) { /* have PPP link, assume ON */
+					up = 1;
+					fclose(f_tmp);
+				}
+				if (up)
+					++count;
+				break;
+			default:
+				break;
 		}
 	}
 
 	if (count > 0) {
 		logmsg(LOG_DEBUG, "*** %s: OUT - %s, active WANs count:%d, stay on", __FUNCTION__, prefix, count);
-		return count;	/* do not LED OFF */
+		return count; /* do not LED OFF */
 	}
 	else {
 		logmsg(LOG_DEBUG, "*** %s: OUT - %s, no other active WANs, turn off led", __FUNCTION__, prefix);
-		return wan_led(LED_OFF);	/* LED OFF */
+		return wan_led(LED_OFF); /* LED OFF */
 	}
 }
 
 /* function for rstats, cstats, httpd */
 long check_wanup_time(char *prefix)
 {
-	long wanuptime = 0;	/* wanX uptime in seconds */
+	long wanuptime = 0; /* wanX uptime in seconds */
 	struct sysinfo si;
 	long uptime;
 	char wanuptime_file[128];
 
-	sysinfo(&si);	/* get time */
-	memset(wanuptime_file, 0, sizeof(wanuptime_file));	/* reset */
+	sysinfo(&si); /* get time */
+	memset(wanuptime_file, 0, sizeof(wanuptime_file)); /* reset */
 	snprintf(wanuptime_file, sizeof(wanuptime_file), "/var/lib/misc/%s_time", prefix);
 
-	if(f_read(wanuptime_file, &uptime, sizeof(uptime)) == sizeof(uptime)) {
-		wanuptime = si.uptime - uptime;		/* calculate the difference */
-		if(wanuptime < 0) wanuptime = 0;	/* something wrong? */
+	if (f_read(wanuptime_file, &uptime, sizeof(uptime)) == sizeof(uptime)) {
+		wanuptime = si.uptime - uptime; /* calculate the difference */
+		if (wanuptime < 0) /* something wrong? */
+			wanuptime = 0;
 	}
 	else {
-		wanuptime = 0;	/* something wrong? f_read()? */
+		wanuptime = 0; /* something wrong? f_read()? */
 	}
 
 	return wanuptime;
@@ -515,8 +527,8 @@ int check_wanup(char *prefix)
 	}
 
 	if ((proto == WP_PPTP) || (proto == WP_L2TP) || (proto == WP_PPPOE) || (proto == WP_PPP3G)) {
-		memset(ppplink_file , 0, 256);
-		sprintf(ppplink_file, "/tmp/ppp/%s_link", prefix);
+		memset(ppplink_file, 0, sizeof(ppplink_file));
+		snprintf(ppplink_file, sizeof(ppplink_file), "/tmp/ppp/%s_link", prefix);
 
 		if (f_read_string(ppplink_file, buf1, sizeof(buf1)) > 0) {
 			/* contains the base name of a file in /var/run/ containing pid of a daemon */
@@ -525,15 +537,15 @@ int check_wanup(char *prefix)
 			if (f_read_string(buf2, buf1, sizeof(buf1)) > 0) {
 				name = psname(atoi(buf1), buf2, sizeof(buf2));
 
-				memset(pppd_name, 0, 256);
-				sprintf(pppd_name, "pppd%s", prefix);
+				memset(pppd_name, 0, sizeof(pppd_name));
+				snprintf(pppd_name, sizeof(pppd_name), "pppd%s", prefix);
 				logmsg(LOG_DEBUG, "*** %s: pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
 
 				if (strcmp(name, pppd_name) == 0)
 					up = 1;
 
 				if (proto == WP_L2TP) {
-					sprintf(pppd_name, "pppd");
+					snprintf(pppd_name, sizeof(pppd_name), "pppd");
 					logmsg(LOG_DEBUG, "*** %s: L2TP pppd name=%s, psname=%s", __FUNCTION__, pppd_name, name);
 
 					if (strcmp(name, pppd_name) == 0)
@@ -544,7 +556,7 @@ int check_wanup(char *prefix)
 				logmsg(LOG_DEBUG, "*** %s: error reading %s", __FUNCTION__, buf2);
 			}
 			if (!up) {
-				unlink(ppplink_file);	/* stale PPP connection fix, also used in wan_led_off */
+				unlink(ppplink_file); /* stale PPP connection fix, also used in wan_led_off */
 				logmsg(LOG_DEBUG, "*** %s: required daemon not found, assuming link is dead", __FUNCTION__);
 			}
 		}
@@ -552,17 +564,17 @@ int check_wanup(char *prefix)
 			logmsg(LOG_DEBUG, "*** %s: error reading %s", __FUNCTION__, ppplink_file);
 		}
 	}
-	else if (!nvram_match(strcat_r(prefix, "_ipaddr", tmp), "0.0.0.0")) {
+	else if (!nvram_match(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)), "0.0.0.0")) {
 		logmsg(LOG_DEBUG, "*** %s: %s have IP, assume ON", __FUNCTION__, prefix);
 		up = 1;
 	}
 	else {
 		logmsg(LOG_DEBUG, "*** %s: default !up", __FUNCTION__);
-		goto state;	/* don't turn off WAN LED */
+		goto state; /* don't turn off WAN LED */
 	}
 
 	if ((up) && ((s = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)) {
-		strlcpy(ifr.ifr_name, nvram_safe_get(strcat_r(prefix, "_iface", tmp)), sizeof(ifr.ifr_name));
+		strlcpy(ifr.ifr_name, nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp))), sizeof(ifr.ifr_name));
 
 		if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
 			up = 0;
@@ -598,7 +610,7 @@ int check_wanup(char *prefix)
 			char d[4];
 			FILE *f;
 
-			strcpy(d,&ifr.ifr_name[4]);	// trim vlan
+			strcpy(d, &ifr.ifr_name[4]); /* trim vlan */
 			int vlannum = atoi(d);
 			logmsg(LOG_DEBUG, "*** %s: %s vlan num: %d", __FUNCTION__, prefix, vlannum);
 
@@ -650,11 +662,11 @@ const dns_list_t *get_dns(char *prefix)
 
 	dns.count = 0;
 
-	if (nvram_get_int(strcat_r(prefix, "_dns_auto", tmp))) {
-		snprintf(s, sizeof(s), " %s", nvram_safe_get(strcat_r(prefix, "_get_dns", tmp)));
+	if (nvram_get_int(strlcat_r(prefix, "_dns_auto", tmp, sizeof(tmp)))) {
+		snprintf(s, sizeof(s), " %s", nvram_safe_get(strlcat_r(prefix, "_get_dns", tmp, sizeof(tmp))));
 	}
 	else {
-		strlcpy(s, nvram_safe_get(strcat_r(prefix, "_dns", tmp)), sizeof(s));
+		strlcpy(s, nvram_safe_get(strlcat_r(prefix, "_dns", tmp, sizeof(tmp))), sizeof(s));
 	}
 
 	n = sscanf(s, "%21s %21s %21s %21s %21s %21s %21s", d[0], d[1], d[2], d[3], d[4], d[5], d[6]);
@@ -686,16 +698,16 @@ const dns_list_t *get_dns(char *prefix)
 	return &dns;
 }
 
-// -----------------------------------------------------------------------------
-
 void set_action(int a)
 {
 	int r = 3;
 	while (f_write("/var/lock/action", &a, sizeof(a), 0, 0) != sizeof(a)) {
 		sleep(1);
-		if (--r == 0) return;
+		if (--r == 0)
+			return;
 	}
-	if (a != ACT_IDLE) sleep(2);
+	if (a != ACT_IDLE)
+		sleep(2);
 }
 
 int check_action(void)
@@ -705,21 +717,23 @@ int check_action(void)
 
 	while (f_read("/var/lock/action", &a, sizeof(a)) != sizeof(a)) {
 		sleep(1);
-		if (--r == 0) return ACT_UNKNOWN;
+		if (--r == 0)
+			return ACT_UNKNOWN;
 	}
+
 	return a;
 }
 
 int wait_action_idle(int n)
 {
 	while (n-- > 0) {
-		if (check_action() == ACT_IDLE) return 1;
+		if (check_action() == ACT_IDLE)
+			return 1;
 		sleep(1);
 	}
+
 	return 0;
 }
-
-// -----------------------------------------------------------------------------
 
 const wanface_list_t *get_wanfaces(char *prefix)
 {
@@ -735,16 +749,17 @@ const wanface_list_t *get_wanfaces(char *prefix)
 		case WP_L2TP:
 			while (wanfaces.count < 2) {
 				if (wanfaces.count == 0) {
-					ip = nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp));
-					iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
-					if (!(*iface)) iface = "ppp+";
+					ip = nvram_safe_get(strlcat_r(prefix, "_ppp_get_ip", tmp, sizeof(tmp)));
+					iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+					if (!(*iface))
+						iface = "ppp+";
 				}
 				else /* if (wanfaces.count == 1) */ {
-					ip = nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
+					ip = nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
 					if ((!(*ip) || strcmp(ip, "0.0.0.0") == 0) && (wanfaces.count > 0))
 						iface = "";
 					else
-						iface = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+						iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
 				}
 				strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 				strlcpy(wanfaces.iface[wanfaces.count].name, iface, IFNAMSIZ);
@@ -752,43 +767,47 @@ const wanface_list_t *get_wanfaces(char *prefix)
 			}
 			break;
 		case WP_PPPOE:
-			if (using_dhcpc(prefix)) {	/* PPPoE with MAN */
+			if (using_dhcpc(prefix)) { /* PPPoE with MAN */
 				while (wanfaces.count < 2) {
 					if (wanfaces.count == 0) {
-						ip = nvram_safe_get(strcat_r(prefix, "_ppp_get_ip", tmp));
-						iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
+						ip = nvram_safe_get(strlcat_r(prefix, "_ppp_get_ip", tmp, sizeof(tmp)));
+						iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
 						if (!(*iface)) iface = "ppp+";
 					}
 					else /* if (wanfaces.count == 1) */ {
-						ip = nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
+						ip = nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
 						if ((!(*ip) || strcmp(ip, "0.0.0.0") == 0) && (wanfaces.count > 0))
 							iface = "";
 						else
-							iface = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+							iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
 					}
 					strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 					strlcpy(wanfaces.iface[wanfaces.count].name, iface, IFNAMSIZ);
 					++wanfaces.count;
 				}
-			} else {	/* PPPoE */
-				ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
-				iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
-				if (!(*iface)) iface = "ppp+";
+			}
+			else { /* PPPoE */
+				ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
+				iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+				if (!(*iface))
+					iface = "ppp+";
 				strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 				strlcpy(wanfaces.iface[wanfaces.count++].name, iface, IFNAMSIZ);
 			}
 			break;
 		default:
-			ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strcat_r(prefix, "_ipaddr", tmp));
+			ip = (proto == WP_DISABLED) ? "0.0.0.0" : nvram_safe_get(strlcat_r(prefix, "_ipaddr", tmp, sizeof(tmp)));
 			if (proto == WP_PPP3G) {
-				iface = nvram_safe_get(strcat_r(prefix, "_iface", tmp));
-				if (!(*iface)) iface = "ppp+";
+				iface = nvram_safe_get(strlcat_r(prefix, "_iface", tmp, sizeof(tmp)));
+				if (!(*iface))
+					iface = "ppp+";
 			}
 			else if (proto == WP_LTE) {
-				iface = nvram_safe_get(strcat_r(prefix, "_modem_if", tmp));
-				nvram_set(strcat_r(prefix, "_ifname", tmp), iface);
-			} else {
-				iface = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+				iface = nvram_safe_get(strlcat_r(prefix, "_modem_if", tmp, sizeof(tmp)));
+				nvram_set(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)), iface);
+			}
+			else {
+				iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
 			}
 			strlcpy(wanfaces.iface[wanfaces.count].ip, ip, sizeof(wanfaces.iface[0].ip));
 			strlcpy(wanfaces.iface[wanfaces.count++].name, iface, IFNAMSIZ);
@@ -807,25 +826,27 @@ const char *get_wanface(char *prefix)
 const char *get_wan6face(void)
 {
 	switch (get_ipv6_service()) {
-	case IPV6_NATIVE:
-	case IPV6_NATIVE_DHCP:
-		return get_wanface("wan");
-	case IPV6_ANYCAST_6TO4:
-		return "v6to4";
-	case IPV6_6IN4:
-		return "v6in4";
-	case IPV6_6RD:
-		return "6rd";
-	case IPV6_6RD_DHCP:
-		return "6rd-pd";
+		case IPV6_NATIVE:
+		case IPV6_NATIVE_DHCP:
+			return get_wanface("wan");
+		case IPV6_ANYCAST_6TO4:
+			return "v6to4";
+		case IPV6_6IN4:
+			return "v6in4";
+		case IPV6_6RD:
+			return "6rd";
+		case IPV6_6RD_DHCP:
+			return "6rd-pd";
 	}
+
 	return nvram_safe_get("ipv6_ifname");
 }
 #endif
 
 const char *get_wanip(char *prefix)
 {
-	if (!check_wanup(prefix)) return "0.0.0.0";
+	if (!check_wanup(prefix))
+		return "0.0.0.0";
 
 	return (*get_wanfaces(prefix)).iface[0].ip;
 }
@@ -868,6 +889,7 @@ const char *getifaddr(char *ifname, int family, int linklocal)
 	}
 
 	freeifaddrs(ifap);
+
 	return NULL;
 }
 
@@ -877,9 +899,8 @@ int is_intf_up(const char* ifname)
 	int sfd;
 	int ret = 0;
 
-	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
-	{
-		strcpy(ifr.ifr_name, ifname);
+	if (!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)) {
+		strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
 		if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP))
 			ret = 1;
 
@@ -889,12 +910,11 @@ int is_intf_up(const char* ifname)
 	return ret;
 }
 
-// -----------------------------------------------------------------------------
-
 long get_uptime(void)
 {
 	struct sysinfo si;
 	sysinfo(&si);
+
 	return si.uptime;
 }
 
@@ -904,12 +924,13 @@ char *wl_nvname(const char *nv, int unit, int subunit)
 	char prefix[] = "wlXXXXXXXXXX_";
 
 	if (unit < 0)
-		strcpy(prefix, "wl_");
+		strlcpy(prefix, "wl_", sizeof(prefix));
 	else if (subunit > 0)
 		snprintf(prefix, sizeof(prefix), "wl%d.%d_", unit, subunit);
 	else
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-	return strcat_r(prefix, nv, tmp);
+
+	return strlcat_r(prefix, nv, tmp, sizeof(tmp));
 }
 
 int get_radio(int unit)
@@ -932,26 +953,32 @@ void set_radio(int on, int unit)
 	n = on ? (WL_RADIO_SW_DISABLE << 16) : ((WL_RADIO_SW_DISABLE << 16) | 1);
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
 	if (!on) {
-		if (unit == 0) led(LED_WLAN, LED_OFF);
-		if (unit == 1) led(LED_5G, LED_OFF);
-		if (unit == 2) led(LED_52G, LED_OFF);
-	} else {
-		if (unit == 0) led(LED_WLAN, LED_ON);
-		if (unit == 1) led(LED_5G, LED_ON);
-		if (unit == 2) led(LED_52G, LED_ON);
+		if (unit == 0)
+			led(LED_WLAN, LED_OFF);
+		if (unit == 1)
+			led(LED_5G, LED_OFF);
+		if (unit == 2)
+			led(LED_52G, LED_OFF);
+	}
+	else {
+		if (unit == 0)
+			led(LED_WLAN, LED_ON);
+		if (unit == 1)
+			led(LED_5G, LED_ON);
+		if (unit == 2)
+			led(LED_52G, LED_ON);
 	}
 #else
 	n = on ? 0 : WL_RADIO_SW_DISABLE;
 	wl_ioctl(nvram_safe_get(wl_nvname("ifname", unit, 0)), WLC_SET_RADIO, &n, sizeof(n));
 	if (!on) {
 		led(LED_WLAN, LED_OFF);
-	} else {
+	}
+	else {
 		led(LED_WLAN, LED_ON);
 	}
 #endif
 }
-
-// -----------------------------------------------------------------------------
 
 int mtd_getinfo(const char *mtdname, int *part, int *size)
 {
@@ -962,12 +989,13 @@ int mtd_getinfo(const char *mtdname, int *part, int *size)
 
 	r = 0;
 	if ((strlen(mtdname) < 128) && (strcmp(mtdname, "pmon") != 0)) {
-		sprintf(t, "\"%s\"", mtdname);
+		snprintf(t, sizeof(t), "\"%s\"", mtdname);
 		if ((f = fopen("/proc/mtd", "r")) != NULL) {
 			while (fgets(s, sizeof(s), f) != NULL) {
 				if ((sscanf(s, "mtd%d: %x", part, size) == 2) && (strstr(s, t) != NULL)) {
 					/* don't accidentally mess with bl (0) */
-					if (*part > 0) r = 1;
+					if (*part > 0)
+						r = 1;
 					break;
 				}
 			}
@@ -981,8 +1009,6 @@ int mtd_getinfo(const char *mtdname, int *part, int *size)
 	return r;
 }
 
-// -----------------------------------------------------------------------------
-
 int nvram_get_int(const char *key)
 {
 	return atoi(nvram_safe_get(key));
@@ -993,6 +1019,7 @@ int nvram_set_int(const char *key, int value)
 	char nvramstr[16];
 
 	snprintf(nvramstr, sizeof(nvramstr), "%d", value);
+
 	return nvram_set(key, nvramstr);
 }
 
@@ -1027,7 +1054,8 @@ int nvram_get_file(const char *key, const char *fname, int max)
 	if (n <= max) {
 		if ((b = malloc(base64_decoded_len(n) + 128)) != NULL) {
 			n = base64_decode(p, b, n);
-			if (n > 0) r = (f_write(fname, b, n, 0, 0644) == n);
+			if (n > 0)
+				r = (f_write(fname, b, n, 0, 0644) == n);
 			free(b);
 		}
 	}
@@ -1055,7 +1083,9 @@ int nvram_set_file(const char *key, const char *fname, int max)
 	int n;
 	int r;
 
-	if ((len = f_size(fname)) > max) return 0;
+	if ((len = f_size(fname)) > max)
+		return 0;
+
 	max = (int)len;
 	r = 0;
 	if (f_read_alloc(fname, &in, max) == max) {
@@ -1092,19 +1122,21 @@ int nvram_contains_word(const char *key, const char *word)
 int nvram_is_empty(const char *key)
 {
 	char *p;
+
 	return (((p = nvram_get(key)) == NULL) || (*p == 0));
 }
 
 void nvram_commit_x(void)
 {
-	if (!nvram_get_int("debug_nocommit")) nvram_commit();
+	if (!nvram_get_int("debug_nocommit"))
+		nvram_commit();
 }
 
 char *getNVRAMVar(const char *text, const int unit)
 {
 	char buffer[32];
-	memset(buffer, 0, 32);
-	sprintf(buffer, text, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), text, unit);
 
 	return nvram_safe_get(buffer);
 }
@@ -1166,6 +1198,7 @@ int connect_timeout(int fd, const struct sockaddr *addr, socklen_t len, int time
 	}
 
 	logmsg(LOG_DEBUG, "*** %s: OK %d", __FUNCTION__, fd);
+
 	return 0;
 }
 
@@ -1173,10 +1206,3 @@ void chld_reap(int sig)
 {
 	while (waitpid(-1, NULL, WNOHANG) > 0) {}
 }
-
-/*
-int time_ok(void)
-{
-	return time(0) > Y2K;
-}
-*/
