@@ -754,7 +754,7 @@ brcmnand_dummy_func(struct mtd_info * mtd)
 #ifdef CONFIG_MTD_PARTITIONS
 struct mtd_partition brcmnand_parts[] = {
 	{
-		.name = "brcmnand", /* jffs looking for this name */
+		.name = "brcmnand", /* /router/rc/jffs2.c and rc.c use this name */
 		.size = 0,
 		.offset = 0
 	},
@@ -804,7 +804,6 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 
 #ifdef CONFIG_NVRAM_128K
-	nand_parts[0].name = "jffs2";
 	brcmnand_parts[0].size =0x4000000; /* allocate 64 Meg for JFFS */
 
 #else

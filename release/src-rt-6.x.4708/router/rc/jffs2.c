@@ -26,7 +26,7 @@
 #ifdef TCONFIG_BRCM_NAND_JFFS2
 #define JFFS2_PARTITION	"brcmnand"
 #else
-#define JFFS2_PARTITION	"jffs2"
+#define JFFS2_PARTITION	"brcmnand"
 #endif
 
 //#define TEST_INTEGRITY
