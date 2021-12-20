@@ -93,7 +93,7 @@ void get_wan_info(char *sPrefix)
 	wan_info.wan_weight = atoi(nvram_safe_get(strcat_r(sPrefix, "_weight", tmp)));
 }
 
-void get_cidr(char *ipaddr, char *netmask, char *cidr)
+void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz)
 {
 	struct in_addr in_ipaddr, in_netmask, in_network;
 	int netmask_bit = 0;
@@ -110,7 +110,7 @@ void get_cidr(char *ipaddr, char *netmask, char *cidr)
 	}
 
 	in_network.s_addr = in_ipaddr.s_addr & in_netmask.s_addr;
-	snprintf(cidr, sizeof(cidr), "%s/%d", inet_ntoa(in_network), netmask_bit);
+	snprintf(cidr, buf_sz, "%s/%d", inet_ntoa(in_network), netmask_bit);
 }
 
 void mwan_table_del(char *sPrefix)
@@ -196,7 +196,7 @@ void mwan_table_add(char *sPrefix)
 			/* ip route add 10.0.10.1 dev ppp3 proto kernel scope link table route_id */
 			memset(cmd, 0, 256);
 			if ((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC)) {
-				get_cidr(wan_info.wan_ipaddr, wan_info.wan_netmask, ip_cidr);
+				get_cidr(wan_info.wan_ipaddr, wan_info.wan_netmask, ip_cidr, sizeof(ip_cidr));
 				snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
 			}
 			else
@@ -226,7 +226,7 @@ void mwan_table_add(char *sPrefix)
 			if ((lan_ifname[0] == '\0') || (lan_ipaddr[0] == '\0') || (lan_netmask[0] == '\0'))
 				continue;
 
-			get_cidr(lan_ipaddr, lan_netmask, ip_cidr);
+			get_cidr(lan_ipaddr, lan_netmask, ip_cidr, sizeof(ip_cidr));
 			memset(cmd, 0, 256);
 			snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, lan_ifname, lan_ipaddr, table);
 			logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);

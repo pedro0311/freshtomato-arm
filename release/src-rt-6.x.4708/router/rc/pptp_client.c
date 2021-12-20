@@ -423,7 +423,7 @@ void pptp_client_table_add(void)
 			memset(buffer, 0, BUF_SIZE);
 			if (proto == WP_DHCP || proto == WP_LTE || proto == WP_STATIC) {
 				/* wan ip/netmask, wan_iface, wan_ipaddr */
-				get_cidr(nvram_safe_get(strcat_r(sPrefix, "_ipaddr", tmp)), nvram_safe_get(strcat_r(sPrefix, "_netmask", tmp)), ip_cidr);
+				get_cidr(nvram_safe_get(strcat_r(sPrefix, "_ipaddr", tmp)), nvram_safe_get(strcat_r(sPrefix, "_netmask", tmp)), ip_cidr, sizeof(ip_cidr));
 				sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s",
 					ip_cidr,	/* wan ip / netmask */
 					nvram_safe_get(strcat_r(sPrefix, "_iface", tmp)),
@@ -476,7 +476,7 @@ void pptp_client_table_add(void)
 	sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s", pptp_client_gateway, pptp_client_iface, pptp_client_ipaddr, PPTP_CLIENT_TABLE_NAME);
 	system(buffer);
 	/* ip route add 192.168.1.0/24 dev br0 proto kernel scope link src 192.168.1.1 table PPTP (LAN) */
-	get_cidr(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), ip_cidr);
+	get_cidr(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), ip_cidr, sizeof(ip_cidr));
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "ip route append %s dev %s proto kernel scope link src %s table %s", ip_cidr, nvram_safe_get("lan_ifname"), nvram_safe_get("lan_ipaddr"), PPTP_CLIENT_TABLE_NAME);
 	system(buffer);
@@ -492,7 +492,7 @@ void pptp_client_table_add(void)
 	/* PPTP network */
 	if (!nvram_match("pptp_client_srvsub", "0.0.0.0") && !nvram_match("pptp_client_srvsubmsk", "0.0.0.0")) {
 		/* add PPTP network to main table */
-		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr);
+		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr, sizeof(remote_cidr));
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route append %s via %s dev %s scope link table %s", remote_cidr, pptp_client_ipaddr, pptp_client_iface, "main");
 		system(buffer);
@@ -506,7 +506,7 @@ void pptp_client_table_add(void)
 			}
 		}
 		/* add PPTP network to table PPTP */
-		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr);
+		get_cidr(nvram_safe_get("pptp_client_srvsub"), nvram_safe_get("pptp_client_srvsubmsk"), remote_cidr, sizeof(remote_cidr));
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "ip route append %s via %s dev %s scope link table %s", remote_cidr, pptp_client_ipaddr, pptp_client_iface, PPTP_CLIENT_TABLE_NAME);
 		system(buffer);

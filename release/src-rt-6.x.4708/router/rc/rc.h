@@ -489,7 +489,7 @@ extern void clear_pptp_route(void);
 extern int pptpc_ipup_main(int argc, char **argv);
 extern int pptpc_ipdown_main(int argc, char **argv);
 extern void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write table_writer);
-extern void get_cidr(char *ipaddr, char *netmask, char *cidr);
+extern void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz);
 #else
 static inline void start_pptp_client_eas(void) {};
 static inline void stop_pptp_client_eas(void) {};
