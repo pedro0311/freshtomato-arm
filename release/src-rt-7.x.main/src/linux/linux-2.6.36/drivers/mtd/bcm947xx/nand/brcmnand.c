@@ -757,10 +757,17 @@ brcmnand_dummy_func(struct mtd_info * mtd)
 #ifdef CONFIG_MTD_PARTITIONS
 struct mtd_partition brcmnand_parts[] = {
 	{
-		.name = "brcmnand",
+		.name = "brcmnand", /* /router/rc/jffs2.c and rc.c use this name */
 		.size = 0,
 		.offset = 0
 	},
+#ifdef CONFIG_CRASHLOG
+	{
+		.name = "crash",
+		.size = 0,
+		.offset = 0
+	},
+#endif
 	{
 		.name = 0,
 		.size = 0,
@@ -790,6 +797,16 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 	brcmnand_parts[0].offset = offset;
 	brcmnand_parts[0].size = size - offset;
+
+#ifdef CONFIG_CRASHLOG
+
+/* Calculate crash size and reduce JFFS2 space accordingly */
+	uint32_t crash_size = ROUNDUP(0x4000, mtd->erasesize);
+	brcmnand_parts[0].size -= crash_size;
+
+	brcmnand_parts[1].size = crash_size;
+	brcmnand_parts[1].offset = brcmnand_parts[0].offset + brcmnand_parts[0].size;
+#endif
 
 	return brcmnand_parts;
 }

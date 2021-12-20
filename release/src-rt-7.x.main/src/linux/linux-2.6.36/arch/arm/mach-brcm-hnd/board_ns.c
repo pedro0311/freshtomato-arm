@@ -682,7 +682,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 		offset = bcm947xx_flash_parts[nparts].offset + bcm947xx_flash_parts[nparts].size;
 		nparts++;
 
-#if defined(CONFIG_CRASHLOG) && defined(BCMDBG)
+#if defined(CONFIG_CRASHLOG)
 		if (create_crash_partition) {
 			/* Setup crash MTD partition */
 			bcm947xx_flash_parts[nparts].name = "crash";
