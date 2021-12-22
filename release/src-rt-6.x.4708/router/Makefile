@@ -1638,14 +1638,14 @@ dhcpv6-clean:
 wsdd2:
 	$(call patch_files,wsdd2)
 	@$(SEP)
-	@$(MAKE) CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DTOMATO -I$(TOP)/shared" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" -C $@
+	@$(MAKE) -C $@ CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections -DTOMATO -I$(TOP)/shared" LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 wsdd2-install:
 	install -D wsdd2/wsdd2 $(INSTALLDIR)/wsdd2/usr/sbin/wsdd2
 	$(STRIP) $(INSTALLDIR)/wsdd2/usr/sbin/wsdd2
 
 wsdd2-clean:
-	@$(MAKE) -C wsdd2 clean
+	-@$(MAKE) -C wsdd2 clean
 	$(call unpatch_files,wsdd2)
 
 accel-pptp/Makefile: accel-pptp/Makefile.in $(LINUXDIR)/include/linux/version.h
@@ -2961,7 +2961,7 @@ e2fsprogs/stamp-h1:
 
 e2fsprogs: e2fsprogs/stamp-h1
 	@$(SEP)
-	$(MAKE) -C e2fsprogs $(PARALLEL_BUILD)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 e2fsprogs-install:
 	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/e2fsck
@@ -3156,7 +3156,7 @@ libsodium-install:
 	@true
 
 libsodium-clean:
-	-$(MAKE) -C libsodium clean
+	-@$(MAKE) -C libsodium clean
 	@rm -f libsodium/stamp-h1
 
 dnscrypt/stamp-h1:
@@ -3197,7 +3197,7 @@ libyaml-install:
 	@true
 
 libyaml-clean:
-	-$(MAKE) -C libyaml clean
+	-@$(MAKE) -C libyaml clean
 	@rm -f libyaml/stamp-h1
 	@rm -rf libyaml/src/.deps libyaml/src/tests/.deps
 
@@ -3527,7 +3527,7 @@ wireguard-tools-install:
 	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
 
 wireguard-tools-clean:
-	$(MAKE) -C wireguard-tools/src clean
+	-@$(MAKE) -C wireguard-tools/src clean
 	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
 
 gettext-tiny/stamp-h1:
@@ -3778,10 +3778,9 @@ diskdev_cmds-332.25-install:
 		ln -s fsck.hfsplus fsck.hfs
 
 diskdev_cmds-332.25-clean:
-	cd diskdev_cmds-332.25 && \
-		make -f Makefile.lnx clean
-	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfs
-	rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfs
+	-@cd diskdev_cmds-332.25 && make -f Makefile.lnx clean
+	@rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/mkfs.hfs
+	@rm -f $(INSTALLDIR)/diskdev_cmds-332.25/usr/sbin/fsck.hfs
 	$(call unpatch_files,diskdev_cmds-332.25)
 
 libffi/stamp-h1:
