@@ -5,8 +5,8 @@ srcdir=source3
 
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
-SMBCFLAGS = $(EXTRACFLAGS) $(CFLAG_OPTIMIZE) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include $(OPTSIZE_FLAG)
-SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib
+SMBCFLAGS = $(EXTRACFLAGS) $(CFLAG_OPTIMIZE) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG) $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-I$(TOP)/libiconv/staged/usr/include,)
+SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-L$(TOP)/libiconv/staged/usr/lib,)
 
 SMB_USE_MULTICALL=1
 
@@ -94,7 +94,7 @@ apps: .conf
 		--libdir=/etc \
 		--localstatedir=/var \
 		--host=$(HOST)-linux \
-		--with-libiconv=$(TOP)/libiconv/staged/usr/ \
+		$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),--with-libiconv=$(TOP)/libiconv/staged/usr/,) \
 		--with-configdir=/etc \
 		--with-rootsbindir=/usr/sbin \
 		--with-piddir=/var/run/samba \

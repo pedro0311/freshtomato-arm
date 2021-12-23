@@ -754,15 +754,17 @@ brcmnand_dummy_func(struct mtd_info * mtd)
 #ifdef CONFIG_MTD_PARTITIONS
 struct mtd_partition brcmnand_parts[] = {
 	{
-		.name = "brcmnand",
-		.size = (64 * 0x100000UL),
+		.name = "brcmnand", /* /router/rc/jffs2.c and rc.c use this name */
+		.size = 0,
 		.offset = 0
 	},
+#ifdef CONFIG_CRASHLOG
 	{
-		.name = "jffs2",
-		.size = (64 * 0x100000UL),
-		.offset = (64 * 0x100000UL),
+		.name = "crash",
+		.size = 0,
+		.offset = 0
 	},
+#endif
 	{
 		.name = 0,
 		.size = 0,
@@ -779,14 +781,17 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 	struct brcmnand_mtd *brcmnand = chip->priv;
 
 	knldev = soc_knl_dev((void *)brcmnand->sih);
-#ifdef CONFIG_NVRAM_128K
 	if (knldev == SOC_KNLDEV_NANDFLASH)
+
+#ifdef CONFIG_NVRAM_128K
 //      offset = nfl_boot_os_size(brcmnand->nfl);
 //		offset = 0x3400000;	    /*foxconn modified*/
 		offset = 0x3200000; /* lower by 2 MEG to allow 64Meg JFFS */
 #else
 		offset = nfl_boot_os_size(brcmnand->nfl);
 #endif
+
+	brcmnand_parts[0].offset = offset;
 
 #ifdef CONFIG_DUAL_TRX
 		offset = offset*2; //Dual Trx
@@ -797,41 +802,35 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 	ASSERT(size > offset);
 
-	struct mtd_partition* nand_parts = brcmnand_parts;
-	nand_parts[0].offset = offset;
+
 #ifdef CONFIG_NVRAM_128K
-	nand_parts[0].name = "jffs2";
-	nand_parts[0].size =0x4000000;  /* allocate 64 Meg for JFFS */
+	brcmnand_parts[0].size =0x4000000; /* allocate 64 Meg for JFFS */
 
 #else
 
-	nand_parts[0].size = size - offset;
+	brcmnand_parts[0].size = size - offset;
 
 #endif
 
-#ifdef CONFIG_NVRAM_128K
-	nand_parts = kzalloc(sizeof(brcmnand_parts) + sizeof(brcmnand_parts[0]), GFP_KERNEL);
-	memcpy(nand_parts, brcmnand_parts, sizeof(brcmnand_parts));
-
-	uint32_t crash_size = ROUNDUP(0x4000, mtd->erasesize);
-	nand_parts[1].name = "crash";
-	nand_parts[1].size = crash_size;
-	nand_parts[1].offset = 0x7fe0000;
-
-#else
 #ifdef CONFIG_CRASHLOG
-	nand_parts = kzalloc(sizeof(brcmnand_parts) + sizeof(brcmnand_parts[0]), GFP_KERNEL);
-	memcpy(nand_parts, brcmnand_parts, sizeof(brcmnand_parts));
+#ifdef CONFIG_NVRAM_128K
 
+	uint32_t crash_size = ROUNDUP(0x4000, mtd->erasesize); /* calculate crash size */
+	brcmnand_parts[1].name = "crash";
+	brcmnand_parts[1].size = crash_size;
+	brcmnand_parts[1].offset = 0x7fe0000;
+
+#else
+	/* calculate crash size and reduce JFFS2 space accordingly */
 	uint32_t crash_size = ROUNDUP(0x4000, mtd->erasesize);
-	nand_parts[1].size -= crash_size;
-	nand_parts[2].name = "crash";
-	nand_parts[2].size = crash_size;
-	nand_parts[2].offset = nand_parts[1].offset + nand_parts[1].size;
+	brcmnand_parts[0].size -= crash_size;
+	brcmnand_parts[1].name = "crash";
+	brcmnand_parts[1].size = crash_size;
+	brcmnand_parts[1].offset = brcmnand_parts[0].offset + brcmnand_parts[0].size;
 #endif
 #endif
 
-	return nand_parts;
+	return brcmnand_parts;
 }
 #endif /* CONFIG_MTD_PARTITIONS */
 

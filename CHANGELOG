@@ -5,6 +5,70 @@ FreshTomato-ARM Changelog
 
 
 
+2021.8          2021.12.25
+---------------------------
+
+- kernel: [SCSI] sd: Fix overflow with big physical blocks
+- tor: update to 0.4.6.8
+- nano: update to 6.0
+- libncurses: update to 6.3
+- libsodium: update to latest version of 1.0.18-stable
+- nginx: update to 1.21.4
+- util-linux: update to 2.37.2
+- mysql: update to 5.5.62
+- libexif: update to 0.6.24
+- libcurl: update to 7.80.0
+- sqlite: update to 3.37.0
+- openssl-1.1: update to 1.1.1m
+- openvpn: update to 2.5.5
+- libcurl: update CA certificate bundle as of 2021-10-26
+- build: Makefile: rp-pppoe: remove debugging information, add -Wall instead
+- build: Makefile: libsodium: add CFLAGS/LDFLAGS to recipe
+- build: Makefile: pass EXTRACFLAGS also to openssl/mysql/php, ensure that optimization is complete
+- build: fix program memory size too small for STOCK NETGEAR firmware
+- build: fix cryptic BAD TRX HEADER with actual error message that means something
+- build: libsodium: build as static library
+- build: add irqbalance tool with needed libraries for multi-core routers; add irqbalance to all multi-core targets
+- build: busybox: compile with CONFIG_FEATURE_WGET_LONG_OPTIONS enabled
+- build: patches: diskdev_cmds-332.25: add path to libcrypto.so.1.1 library, so mkfs.hfs can be linked to it instead of the old one from toolchain
+- build: use --no-check-certificate for wget in scripts only when CA cert is not installed
+- build: router: Makefile: transmission: do not try to built with libiconv
+- build: router: Makefile: add appropriate flags when building packages to prevent use of incorrect or old headers/libraries (fixes #174)
+- build: correct 128K crash partition creation
+- build: correct Memory mapping for 512M DRAM
+- GUI / httpd: misc.c - speed up status-overview (part 2)
+- GUI: fix the display of SMS and signal level (RSSI) in some cases
+- GUI: Status: Logs: escape HTML characters in log entries
+- GUI: Basic: DHCP Reservation: do not allow duplicate IP - causes dnsmasq fail to start
+- GUI: Basic: DHCP Reservation: allow 'dot' to be used in DHCP reservation hostname - useful for setting static records for external hosts
+- GUI: Advanced: DHCP/DNS: dnscrypt-proxy: add dynamically to the page drop-down list of resolvers, so it's now possible to use alternative/downloaded file (/etc/dnscrypt-resolvers-alt.csv); also add DNSSEC and NOLOGS info to the list
+- GUI: status-overview - improve ethstate if WAN port is moved to primary LAN
+- GUI: status-overview - repair/show correct wireless infos (only for some Router like R6400, DIR868L ...)
+- GUI: basic-network - add more options for wireless mode (AC-Only, N/AC Mixed)
+- GUI: Status: Device List: change name and title of the button for 'DHCP Reservation'
+- dhcpv6: remove debug info - save some space; remove unneeded file
+- httpd: misc.c: fix condition for recognition when the JFFS2 partition is mounted (only for RT-AC branch)
+- mdu: use 'PUT' instead of 'POST' for cloudfare to update DNS record (closes #141)
+- nginx: compile with ngx_http_realip_module enabled
+- patches: getnds/stubby: also add tls_ca_file to yml quote check (broken in 0.4.0)
+- pdureader: avoid SIGSEGV caused by improper gcom (comgt) response
+- rc: pbr.c: replace depreciated gethostbyname() with getaddrinfo()
+- rc: pptp_client.c: replace depreciated gethostbyname() with getaddrinfo()
+- rc: do not stop ntpd on WAN stop - only stop it on stop_services()
+- rc: mwan.c: fix multiWAN routing
+- rc: network.c - repair/improve function for wireless restart/start (only)
+- rc: nginx.c: fix php config file
+- rc: nginx: make h5ai support optional - it breaks autoindex if enabled but not used
+- rc: services.c: dnsmasq: replace Asus patched max EDNS packet size with proper config file setting
+- rc: services.c: also prevent Windows' DDR (Designated Discovery of Resolver) when blocking auto DoH promotion
+- rc: services.c: do not add 'trust-anchors.conf' to dnsmasq config file when built without DNSSEC
+- toolchain: remove unneeded libraries
+- VLAN: repair vlan setup/config and adjust to FT logic (ID mapping)
+- VLAN: extend/fix vlan setups
+- vsftpd: remove legacy capability warning (added as a patch)
+- vsftpd: restore OpenSSL-1.0 support (added as a patch)
+
+
 2021.7          2021.10.15
 ---------------------------
 
