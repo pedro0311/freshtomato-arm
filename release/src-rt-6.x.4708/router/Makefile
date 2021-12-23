@@ -316,7 +316,9 @@ obj-$(TCONFIG_USB) += uqmi
 obj-$(TCONFIG_USB) += pdureader
 obj-$(TCONFIG_USB) += sd-idle
 obj-$(TCONFIG_UPS) += apcupsd
-obj-$(TCONFIG_SAMBASRV) += libiconv
+ifneq ($(TCONFIG_BCMARM)$(TCONFIG_NGINX),)
+ obj-$(TCONFIG_SAMBASRV) += libiconv
+endif
 obj-$(TCONFIG_SAMBASRV) += samba3
 obj-$(TCONFIG_SAMBASRV) += wsdd2
 
