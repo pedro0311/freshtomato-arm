@@ -66,9 +66,9 @@ export PARALLEL_BUILD := -j$(shell grep -c '^processor' /proc/cpuinfo)
 export HAVE_TOMATO := y
 comma := ,
 
-MEDIA_SERVER_STATIC=
-INSTALL_ZLIB := $(if $(or $(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_NGINX),$(if $(MEDIA_SERVER_STATIC),,y)),y,)
-INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(if $(MEDIA_SERVER_STATIC),,y)),y,)
+MEDIA_SERVER_STATIC =
+export INSTALL_ZLIB := $(if $(or $(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_NGINX),$(if $(TCONFIG_MEDIA_SERVER),$(if $(MEDIA_SERVER_STATIC),,y),)),y,)
+export INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(if $(TCONFIG_MEDIA_SERVER),$(if $(MEDIA_SERVER_STATIC),,y),)),y,)
 
 ifeq ($(TCONFIG_BCMWL6),y)
  export CFLAGS += -DTRAFFIC_MGMT
