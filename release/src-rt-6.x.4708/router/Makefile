@@ -378,7 +378,6 @@ obj-$(TCONFIG_SSH) += dropbear
 obj-$(TCONFIG_ZEBRA) += zebra
 
 ifeq ($(TCONFIG_OPENVPN),y)
- obj-$(INSTALL_ZLIB) += zlib
  obj-y += lzo
  obj-y += $(OPENSSLDIR)
  ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
@@ -2710,7 +2709,7 @@ openvpn-2.4/Makefile:
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR) $(if $(INSTALL_ZLIB),-L$(TOP)/zlib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
@@ -2738,7 +2737,7 @@ openvpn/Makefile:
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(INSTALL_ZLIB),-L$(TOP)/zlib/staged/usr/lib -lz,) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
