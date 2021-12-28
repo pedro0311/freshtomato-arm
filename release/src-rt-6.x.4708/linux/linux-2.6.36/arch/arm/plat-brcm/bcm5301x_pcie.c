@@ -793,7 +793,11 @@ static void __init soc_pcie_map_init(struct soc_pcie_port *port)
 	}
 	
 #ifdef CONFIG_SPARSEMEM
+#ifdef CONFIG_NVRAM_128K
 	addr = PHYS_OFFSET2 + SZ_128M;
+#else
+	addr = PHYS_OFFSET2;
+#endif  /* CONFIG_NVRAM_128K */
 
 	if (pcie_coreid == NS_PCIEG2_CORE_ID && pcie_corerev == NS_PCIEG2_CORE_REV_B0) {
 		/* Means 1GB for NS-B0 IARR_2 */

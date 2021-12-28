@@ -29,7 +29,11 @@
 #define CONSISTENT_DMA_SIZE     SZ_128M
 
 /* 2nd physical memory window */
+#ifdef CONFIG_NVRAM_128K
 #define PHYS_OFFSET2		0x80000000
+#else
+#define PHYS_OFFSET2		0x98000000
+#endif  /* CONFIG_NVRAM_128K */
 
 #if !defined(__ASSEMBLY__) && defined(CONFIG_ZONE_DMA)
 extern void bcm47xx_adjust_zones(unsigned long *size, unsigned long *hole);
@@ -48,6 +52,7 @@ extern void bcm47xx_adjust_zones(unsigned long *size, unsigned long *hole);
 /* bank page offsets */
 #define PAGE_OFFSET1	(PAGE_OFFSET + SZ_128M)
 
+#ifdef CONFIG_NVRAM_128K
 #define __phys_to_virt(phys)						\
 	((phys) >= PHYS_OFFSET2 ? (phys) - PHYS_OFFSET2 + PAGE_OFFSET1 :	\
 	 (phys) + PAGE_OFFSET)
@@ -55,6 +60,15 @@ extern void bcm47xx_adjust_zones(unsigned long *size, unsigned long *hole);
 #define __virt_to_phys(virt)						\
 	 ((virt) >= PAGE_OFFSET1 ? (virt) - PAGE_OFFSET1 + PHYS_OFFSET2 :	\
 	  (virt) - PAGE_OFFSET)
+#else
+#define __phys_to_virt(phys)						\
+	((phys) >= PHYS_OFFSET2 ? (phys) - PHYS_OFFSET2 + PAGE_OFFSET1 :	\
+	 (phys) - PHYS_OFFSET + PAGE_OFFSET)
+
+#define __virt_to_phys(virt)						\
+	 ((virt) >= PAGE_OFFSET1 ? (virt) - PAGE_OFFSET1 + PHYS_OFFSET2 :	\
+	  (virt) - PAGE_OFFSET + PHYS_OFFSET)
+#endif /* CONFIG_NVRAM_128K */
 
 #else
 #define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
