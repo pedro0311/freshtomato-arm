@@ -221,6 +221,16 @@ ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
 endif
 
+# Only include the Broadcom FastNAT configuration if BCMNAT is configured in and not in RT-AC branch.
+ifneq ($(TCONFIG_BCMNAT),y)
+	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+endif
+ifneq ($(TCONFIG_BCMARM),y)
+ifeq ($(CONFIG_BCMWL6),y)
+	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+endif
+endif
+
 ifneq ($(TCONFIG_BCMWL6),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-wlanvifs.asp -e "/BCMWL6-BEGIN/,/BCMWL6-END/d"
@@ -380,6 +390,7 @@ endif
 		-e "/VPN-BEGIN/,/VPN-END/d" \
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
+		-e "/BCMNAT-BEGIN/d"	-e "/BCMNAT-END/d" \
 		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
 		-e "/BSD-BEGIN/d"	-e "/BSD-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
@@ -414,5 +425,25 @@ endif
 	for F in $(wildcard *.js *.jsx *.asp *.css); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && $(TOP)/www/remcoms2.sh $(INSTALLDIR)/www/$$F c; \
 	done
+
+ifneq ($(TCONFIG_BCMARM),y)
+# use HTML compressor to compress HTML as much as possible
+#	cd $(INSTALLDIR)/www && \
+#	for F in $(wildcard *.asp); do \
+#		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/html-minifier $$F --minify-css -o $$F; } || true; \
+#	done
+
+# compress JAVASCRIPT files
+	cd $(INSTALLDIR)/www && \
+	for F in $(wildcard *.js); do \
+		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/uglifyjs $$F -c -o $$F; } || true; \
+	done
+
+# compress CSS files
+	cd $(INSTALLDIR)/www && \
+	for F in $(wildcard *.css); do \
+		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/uglifycss $$F --output $$F; } || true; \
+	done
+endif
 
 	chmod 0644 $(INSTALLDIR)/www/*
