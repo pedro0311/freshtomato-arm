@@ -219,15 +219,23 @@ endif
 # Only include the CTF configuration if CTF is configured in.
 ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/CTF-BEGIN/,/CTF-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/CTF-BEGIN/,/CTF-END/d"
 endif
 
 # Only include the Broadcom FastNAT configuration if BCMNAT is configured in and not in RT-AC branch.
 ifneq ($(TCONFIG_BCMNAT),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/restrict.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
 endif
 ifneq ($(TCONFIG_BCMARM),y)
 ifeq ($(CONFIG_BCMWL6),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/restrict.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
 endif
 endif
 

@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram(''); %>	// http_id
+//	<% nvram('bcmnat_disable'); %>
 
 //	<% nvramseq("rrules", "rrule%d", 0, 99); %>
 
@@ -89,6 +89,13 @@ og.addEntry = function() {
 }
 
 function init() {
+/* BCMNAT-BEGIN */
+	if (nvram.bcmnat_disable == 0)
+		E('bcmnatnotice').style.display = 'block';
+	else
+		E('bcmnatnotice').style.display = 'none';
+/* BCMNAT-END */
+
 	og.populate();
 }
 </script>
@@ -115,6 +122,9 @@ function init() {
 
 <div class="section-title">Access Restriction Overview</div>
 <div class="section">
+<!-- BCMNAT-BEGIN -->
+	<div class="fields" id="bcmnatnotice" style="display:none"><div class="about"><b><a href="advanced-misc.asp">Broadcom FastNAT is enabled</a> but it won't work if you turn on even one rule here.</b></div></div>
+<!-- BCMNAT-END -->
 	<div class="tomato-grid" id="res-over-grid"></div>
 </div>
 

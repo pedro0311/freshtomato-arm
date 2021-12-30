@@ -5399,7 +5399,8 @@ static int init_nvram(void)
 #ifdef TCONFIG_MEDIA_SERVER
 	nvram_unset("ms_rescan");
 #endif
-	if (nvram_get_int("http_id_gen") == 1) nvram_unset("http_id");
+	if (nvram_get_int("http_id_gen") == 1)
+		nvram_unset("http_id");
 
 	nvram_unset("sch_rboot_last");
 	nvram_unset("sch_rcon_last");
@@ -5408,10 +5409,13 @@ static int init_nvram(void)
 	nvram_unset("sch_c3_last");
 
 	nvram_set("brau_state", "");
-	if ((features & SUP_BRAU) == 0) nvram_set("script_brau", "");
-	if ((features & SUP_SES) == 0) nvram_set("sesx_script", "");
+	if ((features & SUP_BRAU) == 0)
+		nvram_set("script_brau", "");
+	if ((features & SUP_SES) == 0)
+		nvram_set("sesx_script", "");
 
-	if ((features & SUP_1000ET) == 0) nvram_set("jumbo_frame_enable", "0");
+	if ((features & SUP_1000ET) == 0)
+		nvram_set("jumbo_frame_enable", "0");
 
 	/* compatibility with old versions */
 	if (nvram_match("wl_net_mode", "disabled")) {
@@ -5690,10 +5694,10 @@ static void sysinit(void)
 
 	/* check samba enabled ? */
 	if (mode) {
-	  nvram_set("txworkq", "1");	/* set txworkq to 1, see et/sys/et_linux.c */
+		nvram_set("txworkq", "1");	/* set txworkq to 1, see et/sys/et_linux.c */
 	}
 	else {
-	  nvram_unset("txworkq");
+		nvram_unset("txworkq");
 	}
 #endif
 
@@ -5740,8 +5744,8 @@ static void sysinit(void)
 
 	/* stealth mode */
 	if (nvram_match("stealth_mode", "0")) { /* start blink_br only if stealth mode is off */
-	  /* enable LED for LAN / Bridge */
-	  eval("blink_br");
+		/* enable LED for LAN / Bridge */
+		eval("blink_br");
 	}
 
 	if (!noconsole) xstart("console");
@@ -5777,6 +5781,24 @@ int init_main(int argc, char *argv[])
 	nvram_set("debug_cprintf", "1");
 	nvram_set("debug_cprintf_file", "1");
 	nvram_set("debug_ddns", "1");
+#endif
+
+#ifdef CONFIG_BCMWL5
+	/* disable QoS and BWL when CTF is ON */
+	if (nvram_invmatch("ctf_disable", "1")) {
+		if (nvram_get_int("qos_enable"))
+			nvram_set("qos_enable", "0");
+		if (nvram_get_int("bwl_enable"))
+			nvram_set("bwl_enable", "0");
+	}
+#endif
+
+#ifdef TCONFIG_BCMNAT
+	/* disable BWL when bcm_nat is ON */
+	if (nvram_invmatch("bcmnat_disable", "1")) {
+		if (nvram_get_int("bwl_enable"))
+			nvram_set("bwl_enable", "0");
+	}
 #endif
 
 	/* reset ntp status */
