@@ -115,30 +115,43 @@ ifneq ($(TCONFIG_HTTPS),)
 	install -m 0500 gencert.sh $(INSTALLDIR)/usr/sbin
 endif
 
+# distinguish version if ARM or MIPS
+ifeq ($(TCONFIG_OPENVPN),y)
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/usr/sbin/vpnrouting.sh -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/vpnrouting.sh -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
+endif
+endif
+
 # clean up
 	cd $(INSTALLDIR)/usr/sbin && \
-		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh; do \
+		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh vpnrouting.sh; do \
 			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
 			-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
 			-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
+			-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
+			-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 			|| true; \
 		done
 
-#	cd $(INSTALLDIR)/usr/sbin && \
-#		for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode gencert.sh; do \
-#			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && { \
-#				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
-#				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
-#			} || true; \
-#	done
-# ifeq ($(or $(TCONFIG_BT),$(TCONFIG_NGINX)),y)
-#	cd $(INSTALLDIR)/usr/bin && \
-#		for F in mycheck btcheck; do \
-#			[ -f $(INSTALLDIR)/usr/bin/$$F ] && { \
-#				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
-#				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
-#			} || true; \
-#	done
-# endif
+ifneq ($(TCONFIG_BCMARM),y)
+	cd $(INSTALLDIR)/usr/sbin && \
+		for F in switch3g switch4g wwansignal watchdog ntp2ip tomatoanon adblock ttb ethstate mymotd sysinfo-helper linkagg webmon_bkp optware-install.sh entware-install.sh updown-client.sh vpnrouting.sh cru sysinfo stealthMode gencert.sh; do \
+			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && { \
+				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+			} || true; \
+	done
+ifeq ($(or $(TCONFIG_BT),$(TCONFIG_NGINX)),y)
+	cd $(INSTALLDIR)/usr/bin && \
+		for F in mycheck btcheck; do \
+			[ -f $(INSTALLDIR)/usr/bin/$$F ] && { \
+				sed -i $$F -e "/^#!/p" -e "/^\s*#/d"; \
+				sed -i $$F -e '/^\/\*\s*$$/,/\*\//! { s/^\s\+//; s/\s\+$$//; /^$$/d }'; \
+			} || true; \
+	done
+endif
+endif
 
 clean:
