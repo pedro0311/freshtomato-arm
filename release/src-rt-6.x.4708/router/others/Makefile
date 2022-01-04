@@ -12,27 +12,32 @@ ifeq ($(TCONFIG_USB),y)
 	install -d $(INSTALLDIR)/usr/bin
 	ln -sf /opt/bin/perl $(INSTALLDIR)/usr/bin/perl
 
-#3G modem switch script
+# 3G modem switch script
 	install -m 0700 switch3g $(INSTALLDIR)/usr/sbin
-#4G modem switch script
+# 4G modem switch script
 	install -m 0700 switch4g $(INSTALLDIR)/usr/sbin
-#modem status script
-	install -m 0700 wwansignal $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/usr/sbin/switch4g -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/switch4g -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
 endif
+# modem status script
+	install -m 0700 wwansignal $(INSTALLDIR)/usr/sbin
+endif # TCONFIG_USB
 
 ifeq ($(TCONFIG_NGINX),y)
-#MySQL
+# MySQL
 	install -D -m 755 mycheck $(INSTALLDIR)/usr/bin
 endif
 
-#MultiWAN watchdog script
+# MultiWAN watchdog script
 	install -m 0700 watchdog $(INSTALLDIR)/usr/sbin
 
 ifeq ($(TCONFIG_DNSCRYPT),y)
 	install -m 0700 ntp2ip $(INSTALLDIR)/usr/sbin
 endif
 
-#TomatoAnon project
+# TomatoAnon project
 	install -m 0700 tomatoanon $(INSTALLDIR)/usr/sbin
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/tomatoanon -e "/STUBBY-BEGIN/,/STUBBY-END/d"
@@ -40,7 +45,7 @@ else
 	sed -i $(INSTALLDIR)/usr/sbin/tomatoanon -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
 endif
 
-#Adblock
+# Adblock
 	install -m 0700 adblock $(INSTALLDIR)/usr/sbin
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBY-BEGIN/,/STUBBY-END/d"
@@ -48,47 +53,80 @@ else
 	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
 endif
 
-#TTB project
-	install -m 0700 ttb $(INSTALLDIR)/usr/sbin
+# TTB project
+ifeq ($(TCONFIG_USB),y)
+	install -m 0700 ttb $(INSTALLDIR)/usr/sbin/ttb
+else
+	install -m 0700 ttb-simple $(INSTALLDIR)/usr/sbin/ttb
+endif
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/ttb -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 else
 	sed -i $(INSTALLDIR)/usr/sbin/ttb -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
 endif
 
-#Ethernet state report
+# Ethernet state report
 	install -m 0700 ethstate $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/usr/sbin/ethstate -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+endif
 
-#MOTD
+# stealthMode
+ifneq ($(TCONFIG_BCMARM),y)
+ifneq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
+	install -m 0700 stealthMode $(INSTALLDIR)/usr/sbin
+endif
+endif
+
+# MOTD
 	install -m 0700 mymotd $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/usr/sbin/mymotd -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/mymotd -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
+endif
 
-#sysinfo-helper
+# sysinfo-helper
+ifeq ($(TCONFIG_BCMARM),y)
 	install -m 0700 sysinfo-helper $(INSTALLDIR)/usr/sbin
+endif
 
-#Link Aggregation
+# Link Aggregation
+ifeq ($(TCONFIG_BONDING),y)
 	install -m 0700 linkagg $(INSTALLDIR)/usr/sbin
+endif
 
-#Web Monitor Backup Script
+# Web Monitor Backup Script
 	install -m 0700 webmon_bkp $(INSTALLDIR)/usr/sbin
 
-#optware/entware install script
+# optware/entware install script
 ifeq ($(TCONFIG_USB),y)
 ifneq ($(TCONFIG_BCMARM),y)
 	install -m 0700 optware-install.sh $(INSTALLDIR)/usr/sbin
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
+endif
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 else
 	sed -i $(INSTALLDIR)/usr/sbin/optware-install.sh -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
 endif
 endif
-	install -m 0700 entware-install.sh $(INSTALLDIR)/usr/sbin
+ifeq ($(TCONFIG_BCMARM),y)
+	install -m 0700 entware-install-ARM.sh $(INSTALLDIR)/usr/sbin/entware-install.sh
+else
+	install -m 0700 entware-install-MIPS.sh $(INSTALLDIR)/usr/sbin/entware-install.sh
+endif
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/entware-install.sh -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 else
 	sed -i $(INSTALLDIR)/usr/sbin/entware-install.sh -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
 endif
-endif
+endif # TCONFIG_USB
 
+# ovpn up/down/etc scripts
 ifeq ($(TCONFIG_OPENVPN),y)
 	install -m 0700 updown-client.sh $(INSTALLDIR)/usr/sbin
 	install -m 0700 vpnrouting.sh $(INSTALLDIR)/usr/sbin
@@ -126,7 +164,7 @@ endif
 
 # clean up
 	cd $(INSTALLDIR)/usr/sbin && \
-		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh vpnrouting.sh; do \
+		for F in tomatoanon adblock ttb optware-install.sh entware-install.sh vpnrouting.sh ethstate mymotd switch4g; do \
 			[ -f $(INSTALLDIR)/usr/sbin/$$F ] && sed -i $$F \
 			-e "/STUBBY-BEGIN/d"	-e "/STUBBY-END/d" \
 			-e "/STUBBYNO-BEGIN/d"	-e "/STUBBYNO-END/d" \
@@ -152,6 +190,6 @@ ifeq ($(or $(TCONFIG_BT),$(TCONFIG_NGINX)),y)
 			} || true; \
 	done
 endif
-endif
+endif # TCONFIG_BCMARM
 
 clean:

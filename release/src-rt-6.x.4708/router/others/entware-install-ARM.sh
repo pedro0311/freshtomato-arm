@@ -11,22 +11,19 @@ WGET="/usr/bin/wget"
 
 echo "Info: Checking for prerequisites and creating folders..."
 
-if [ -d /opt ]
-then
-    echo "Warning: Folder /opt exists!"
-else
-    mkdir /opt
-fi
+[ -d /opt ] && {
+	echo "Warning: Folder /opt exists!"
+} || {
+	mkdir /opt
+}
 # no need to create many folders. entware-opt package creates most
-for folder in bin etc lib/opkg tmp var/lock
-do
-  if [ -d "/opt/$folder" ]
-  then
-    echo "Warning: Folder /opt/$folder exists!"
-    echo "Warning: If something goes wrong please clean /opt folder and try again."
-  else
-    mkdir -p /opt/$folder
-  fi
+for folder in bin etc lib/opkg tmp var/lock; do
+	[ -d "/opt/$folder" ] && {
+		echo "Warning: Folder /opt/$folder exists!"
+		echo "Warning: If something goes wrong please clean /opt folder and try again."
+	} || {
+		mkdir -p /opt/$folder
+	}
 done
 
 echo "Info: Opkg package manager deployment..."
@@ -53,41 +50,27 @@ echo "Info: Basic packages installation..."
 chmod 777 /opt/tmp
 
 # now try create symlinks - it is a std installation
-if [ -f /etc/passwd ]
-then
-    ln -sf /etc/passwd /opt/etc/passwd
-else
-    cp /opt/etc/passwd.1 /opt/etc/passwd
-fi
+[ -f /etc/passwd ] && {
+	ln -sf /etc/passwd /opt/etc/passwd
+} || {
+	cp /opt/etc/passwd.1 /opt/etc/passwd
+}
 
-if [ -f /etc/group ]
-then
-    ln -sf /etc/group /opt/etc/group
-else
-    cp /opt/etc/group.1 /opt/etc/group
-fi
+[ -f /etc/group ] && {
+	ln -sf /etc/group /opt/etc/group
+} || {
+	cp /opt/etc/group.1 /opt/etc/group
+}
 
-if [ -f /etc/shells ]
-then
-    ln -sf /etc/shells /opt/etc/shells
-else
-    cp /opt/etc/shells.1 /opt/etc/shells
-fi
+[ -f /etc/shells ] && {
+	ln -sf /etc/shells /opt/etc/shells
+} || {
+	cp /opt/etc/shells.1 /opt/etc/shells
+}
 
-if [ -f /etc/shadow ]
-then
-    ln -sf /etc/shadow /opt/etc/shadow
-fi
-
-if [ -f /etc/gshadow ]
-then
-    ln -sf /etc/gshadow /opt/etc/gshadow
-fi
-
-if [ -f /etc/localtime ]
-then
-    ln -sf /etc/localtime /opt/etc/localtime
-fi
+[ -f /etc/shadow ] && ln -sf /etc/shadow /opt/etc/shadow
+[ -f /etc/gshadow ] && ln -sf /etc/gshadow /opt/etc/gshadow
+[ -f /etc/localtime ] && ln -sf /etc/localtime /opt/etc/localtime
 
 echo "Info: Congratulations!"
 echo "Info: If there are no errors above then Entware was successfully initialized."

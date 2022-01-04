@@ -5,7 +5,7 @@
 #
 # - changes/fixes
 # - add support for rndis protocol
-# Copyright (C) 2018 - 2019 by pedro
+# Copyright (C) 2018 - 2021 by pedro
 #
 
 
@@ -46,14 +46,14 @@ connect() {
 	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
-	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "qmi_wwan" -o "$MTYPE" == "huawei-non-hilink" ] && {
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
 		[ -e "$DEVNR" ] || wayOut "4G MODEM - DIAG interface not found - connection terminated!"
 	}
 
 	$LOGS "4G MODEM - connecting ..."
 
 	# non-hilink/1st type
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
 		case "$SPEED" in
 		     "00")   SPEEDTXT="Auto" ;;
 		     "03")   SPEEDTXT="4G only" ;;
@@ -362,7 +362,7 @@ disconnect() {
 	watchdog del
 	dhcpc-release $PREFIX
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
 		DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
 		for j in $DEVALL; do	# on every interface
@@ -387,7 +387,12 @@ disconnect() {
 
 switchMode() {
 	VENDOR="" PRODUCT="" MTYPE="" MODULE="" DEVICENAME=""	# global
+# BCMARM-BEGIN
 	MODULES="qmi_wwan cdc_ether huawei_cdc_ncm cdc_ncm rndis_host"
+# BCMARM-END
+# BCMARMNO-BEGIN
+	MODULES="qmi_wwan cdc_ether huawei_ether cdc_ncm rndis_host"
+# BCMARMNO-END
 	local COUNT=1 SWITCHED=0 DVDP=0 PATHDEV SWITCH DEVICES IFN_BEFORE DV DP DB DG
 
 	for MODULE in $MODULES; do	# remove modules
@@ -521,7 +526,7 @@ searchDiag() {
 	[ -z "$VENDOR" ] && VENDOR=$(cat "$PATHDIAG"/"$DEVICENAME"/idVendor)
 	[ -z "$PRODUCT" ] && PRODUCT=$(cat "$PATHDIAG"/"$DEVICENAME"/idProduct)
 
-	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" ]; then
+	if [ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ]; then
 		isDiag # --> TTYS
 
 		[ -z "$TTYS" ] && {
@@ -601,6 +606,8 @@ findType() {
 		MTYPE="non-hilink"
 	elif [ "$MODULE" == "huawei_cdc_ncm" ]; then
 		MTYPE="huawei-non-hilink"
+	elif [ "$MODULE" == "huawei_ether" ]; then
+		MTYPE="hw-ether"
 	elif [ "$MODULE" == "qmi_wwan" ]; then
 		MTYPE="qmi_wwan"
 	elif [ "$MODULE" == "rndis_host" ]; then
@@ -628,7 +635,7 @@ setPIN() {
 	local IS_PIN=$(NV "$PREFIX"_modem_pin | wc -w)
 	local IS_DONE=0 COUNT=1 TIMEOUT=30 PINVAL DEVALL i
 
-	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink"  ] && {
+	[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" ] && {
 		[ "$IS_PIN" -eq 1 ] && {
 			DEVALL="$DEVNR $(cat "$DIAGSFILE" | sed "s~"$DEVNR"~~")"
 
@@ -772,7 +779,7 @@ else
 		searchWAN
 
 		# only for non-hilink
-		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "qmi_wwan" -o "$MTYPE" == "huawei-non-hilink" ] && {
+		[ "$MTYPE" == "non-hilink" -o "$MTYPE" == "huawei-non-hilink" -o "$MTYPE" == "hw-ether" -o "$MTYPE" == "qmi_wwan" ] && {
 			searchDiag
 			setPIN
 		}
