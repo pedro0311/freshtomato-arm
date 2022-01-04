@@ -576,10 +576,12 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	}
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
 
-	/* limit size for R7000 R6300V2 */
-	if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0665")
-	            && nvram_match("boardrev", "0x1101")) {
-	        maxsize = 0x200000;
+	/*  BOOT and NVRAM size NETGEAR*/
+	/* R8000 */
+	if (nvram_match("boardnum", "32") &&
+	    nvram_match("boardtype", "0x0665") &&
+	    nvram_match("boardrev", "0x1101")) {
+	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
 
@@ -949,9 +951,12 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 				nfl_boot_os_size(nfl);
 		}
 
-		/* fix linux offset for the R8000 */
-		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0665") && nvram_match("boardrev", "0x1101")) {
-			bcm947xx_nflash_parts[nparts].size += 0x200000;
+		/* Change linux size from default 0x2000000 for NETGEAR models*/
+		/* R8000 */
+		if (nvram_match("boardnum", "32") &&
+		    nvram_match("boardtype", "0x0665") &&
+		    nvram_match("boardrev", "0x1101")) {
+			bcm947xx_nflash_parts[nparts].size += 0x600000;
 		}
 
 		bcm947xx_nflash_parts[nparts].offset = offset;
@@ -996,7 +1001,28 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		bcm947xx_nflash_parts[nparts].mask_flags = MTD_WRITEABLE;
 		offset = nfl_boot_os_size(nfl);
 
+		/* Adjust rootfs size from default 0x2000000 for NETGEAR models*/
+		/* R8000 */
+		if (nvram_match("boardnum", "32") &&
+		    nvram_match("boardtype", "0x0665") &&
+		    nvram_match("boardrev", "0x1101")) {
+			bcm947xx_nflash_parts[nparts].size += 0x600000;
+		}
+
+		/* Adjustments for JFFS are here: /linux-2.6.36/drivers/mtd/bcm947xx/nand/brcmnand.c */
+
 		nparts++;
+
+		/* Set NETGEAR board_data partition */
+		/* R8000 */
+		if (nvram_match("boardnum", "32") &&
+		    nvram_match("boardtype", "0x0665") &&
+		    nvram_match("boardrev", "0x1101")) {
+			bcm947xx_nflash_parts[nparts].name = "board_data";
+			bcm947xx_nflash_parts[nparts].size = 0x40000;
+			bcm947xx_nflash_parts[nparts].offset = 0x2600000;
+			nparts++;
+		}
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
 		/* Setup 2nd kernel MTD partition */
@@ -1021,14 +1047,6 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			nparts++;
 		}
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
-
-		/* again, to fix R6300V2 and R8000 */
-		if (nvram_match("boardnum", "32") && nvram_match("boardtype", "0x0665") && nvram_match("boardrev", "0x1101")) {
-			bcm947xx_nflash_parts[nparts].name = "board_data";
-			bcm947xx_nflash_parts[nparts].size = 0x40000;
-			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
-			nparts++;
-		}
 
 	}
 

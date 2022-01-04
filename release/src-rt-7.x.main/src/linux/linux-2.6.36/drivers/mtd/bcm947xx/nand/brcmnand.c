@@ -55,6 +55,7 @@
 #include <siutils.h>
 #include <hndnand.h>
 #include <nand_core.h>
+#include <bcmnvram.h> /* add to check board types */
 
 /*
  * Because the bcm_nflash doesn't consider second chip case,
@@ -786,6 +787,16 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 	knldev = soc_knl_dev((void *)brcmnand->sih);
 	if (knldev == SOC_KNLDEV_NANDFLASH)
 		offset = nfl_boot_os_size(brcmnand->nfl);
+
+	/* Continuation of NETGEAR adjustments from /linux-2.6.36/arch/arm/mach-brcm-hnd/board_ns.c */
+
+	/* Set Adjusted JFFS OFFSET for NETGEAR Model */
+	/* R8000 */
+	if (nvram_match("boardnum", "32") &&
+	    nvram_match("boardtype", "0x0665") &&
+	    nvram_match("boardrev", "0x1101")) {
+		offset = 0x2640000;
+	}
 
 #ifndef CONFIG_YAFFS_FS
 	/* Since JFFS2 still uses uint32 for size, hence we have to force the size < 4GB */
