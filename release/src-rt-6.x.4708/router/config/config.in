@@ -297,16 +297,32 @@ config TCONFIG_ADVTHEMES
 	bool "Advanced Themes similar to AdvancedTomato"
 	default y
 
+config TCONFIG_BLINK
+	bool "wireless lan LED blink & bridge LED status (on or off) - for RT-N and RT-AC branch"
+	default n
+
 config TCONFIG_NVRAM_32K
 	bool "NVRAM_32K"
 	default n
 
-config TCONFIG_CONNTRACK_TOOL
-	bool "Conntrack Userspace Tool"
+config TCONFIG_OPTIMIZE_SIZE
+	bool "Flag to detect small targets used for size optimization"
 	default n
+
+config TCONFIG_OPTIMIZE_SIZE_MORE
+	bool "Flag to optimize code even more"
+	default n
+
+config TCONFIG_BONDING
+	bool "Include bonding module and link aggregation script"
+	default y
 
 config TCONFIG_MDNS
 	bool "MDNS Support"
+	default n
+
+config TCONFIG_CONNTRACK_TOOL
+	bool "Conntrack Userspace Tool"
 	default n
 
 config TCONFIG_IRQBALANCE
