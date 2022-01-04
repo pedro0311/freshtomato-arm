@@ -515,27 +515,28 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	}
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
 
-	/* limit size for R6300V2 / R6250 */
-	 if (nvram_match("boardnum", "679") &&
-	     nvram_match("boardtype", "0x0646") &&
-	     nvram_match("boardrev", "0x1110")) {
-	        maxsize = 0x200000;
-	        size = maxsize;
-	 }
+    	/*  BOOT and NVRAM size NETGEAR*/
 	/* R6900, R7000 and R6700v1 */
-	else if (nvram_match("boardnum", "32") &&
+	if (nvram_match("boardnum", "32") &&
 		 nvram_match("boardtype", "0x0665") &&
 		 nvram_match("boardrev", "0x1301")) {
-	        maxsize = 0x200000;
+	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
 	/* R6400, R6400v2, R6700v3 and XR300 */
 	else if (nvram_match("boardnum", "32") &&
 		 nvram_match("boardtype", "0x0646") &&
 		 nvram_match("boardrev", "0x1601")) {
-	        maxsize = 0x3200000;
+	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
+	/* R6300V2 / R6250 */
+	else if (nvram_match("boardnum", "679") &&
+	     nvram_match("boardtype", "0x0646") &&
+	     nvram_match("boardrev", "0x1110")) {
+	        maxsize = 0x200000; /* 2 MB */
+	        size = maxsize;
+	 }
 	
 	bootdev = soc_boot_dev((void *)sih);
 	knldev = soc_knl_dev((void *)sih);
@@ -929,24 +930,28 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 				nfl_boot_os_size(nfl);
 		}
 		
-		/* fix linux offset for the R6300V2 / R6250 units */
-		if (nvram_match("boardnum","679") &&
-		    nvram_match("boardtype", "0x0646") &&
-		    nvram_match("boardrev", "0x1110")) {
-			offset += 0x180000;
-			bcm947xx_nflash_parts[nparts].size -= 0x180000;
-		}
+		/* Change linux size from default 0x2000000 for NETGEAR models*/
 		/* R6900, R7000 and R6700v1 */
-		else if (nvram_match("boardnum", "32") &&
+		/* Stock R7000 is 0x2200000 */
+		if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0665") &&
 			 nvram_match("boardrev", "0x1301")) {
 			bcm947xx_nflash_parts[nparts].size += 0x200000;
 		}
 		/* R6400, R6400v2, R6700v3 and XR300 */
+		/* Stock R6400 is 0x6d00000 */
 		else if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1601")) {
-			bcm947xx_nflash_parts[nparts].size += 0x3200000;
+			bcm947xx_nflash_parts[nparts].size += 0x1200000;
+		}
+        /* R6300V2 / R6250 */
+		/* Stock R6250 is 0x2180000 */
+		else if (nvram_match("boardnum","679") &&
+		    nvram_match("boardtype", "0x0646") &&
+		    nvram_match("boardrev", "0x1110")) {
+            offset += 0x180000; /* Leave NETGEAR partitions alone */
+			bcm947xx_nflash_parts[nparts].size += 0x0000;
 		}
 		
 		bcm947xx_nflash_parts[nparts].offset = offset;
@@ -969,10 +974,34 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].size = image_second_offset - shift;
 		else
 #endif
-			bcm947xx_nflash_parts[nparts].size = bootossz - shift;
+		bcm947xx_nflash_parts[nparts].size = bootossz - shift;
 		bcm947xx_nflash_parts[nparts].offset = shift;
 		bcm947xx_nflash_parts[nparts].mask_flags = MTD_WRITEABLE;
 		offset = nfl_boot_os_size(nfl);
+
+		/* Adjust rootfs size from default 0x2000000 for NETGEAR models*/
+		/* R6900, R7000 and R6700v1 */
+		if (nvram_match("boardnum", "32") &&
+		    nvram_match("boardtype", "0x0665") &&
+		    nvram_match("boardrev", "0x1301")) {
+			bcm947xx_nflash_parts[nparts].size += 0x200000;
+		}
+		/* R6400, R6400v2, R6700v3 and XR300 */
+		/* Stock R6400 is 0x6d00000 */
+		else if (nvram_match("boardnum", "32") &&
+			 nvram_match("boardtype", "0x0646") &&
+			 nvram_match("boardrev", "0x1601")) {
+			bcm947xx_nflash_parts[nparts].size += 0x1200000;
+		}
+		/* R6300V2 and R6250 
+        	/* Stock R6250 is 0x2180000 */
+		else if (nvram_match("boardnum","679") &&
+			 nvram_match("boardtype", "0x0646") &&
+			 nvram_match("boardrev", "0x1110")) {
+			bcm947xx_nflash_parts[nparts].size += 0x180000;
+		}
+    
+    /* Adjustments for JFFS are here: /linux-2.6.36/drivers/mtd/bcm947xx/nand/brcmnand.c */
 
 		nparts++;
 
@@ -989,7 +1018,8 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
                 nparts++;
 #endif /* End of ASUS 2nd FW partition*/
 
-		/* again, to fix R6900, R7000 and R6700v1 */
+		/* Set NETGEAR board_data partition */
+    		/* R6900, R7000 and R6700v1 */
 		if (nvram_match("boardnum", "32") &&
 		    nvram_match("boardtype", "0x0665") &&
 		    nvram_match("boardrev", "0x1301")) {
@@ -998,7 +1028,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x2200000;
 			nparts++;
 		}
-		/* again, to fix R6400, R6400v2, R6700v3 and XR300 */
+		/* R6400, R6400v2, R6700v3 and XR300 */
 		else if (nvram_match("boardnum", "32") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1601")) {
@@ -1007,7 +1037,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x7200000;
 			nparts++;
 		}
-		/* again, to fix R6300V2 and R6250 */
+		/* R6300V2 and R6250 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1110")) {
