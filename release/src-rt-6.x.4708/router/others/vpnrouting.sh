@@ -29,8 +29,10 @@ find_iface() {
 		ID="2304" # 0x900
 	elif [ "$SERVICE" == "client2" ]; then
 		ID="2560" # 0xA00
+# BCMARM-BEGIN
 	elif [ "$SERVICE" == "client3" ]; then
 		ID="2816" # 0xB00
+# BCMARM-END
 	else
 		$LOGS "Interface not found!"
 		exit 0
@@ -57,7 +59,12 @@ cleanupRouting() {
 	deleteRules $FIREWALL_ROUTING
 	rm -f $FIREWALL_ROUTING > /dev/null 2>&1
 
+# BCMARM-BEGIN
 	ipset destroy vpnrouting$ID
+# BCMARM-END
+# BCMARMNO-BEGIN
+	ipset --destroy vpnrouting$ID
+# BCMARMNO-END
 	sed -i $DNSMASQ_IPSET -e "/vpnrouting$ID/d"
 }
 
@@ -94,11 +101,20 @@ startRouting() {
 	ip rule add fwmark $ID/0xf00 table $ID priority 90
 
 	initTable
-
+# BCMARM-BEGIN
 	ipset create vpnrouting$ID hash:ip
+# BCMARM-END
+# BCMARMNO-BEGIN
+	ipset --create vpnrouting$ID iphash
+# BCMARMNO-END
 
 	echo "#!/bin/sh" > $FIREWALL_ROUTING
+# BCMARM-BEGIN
 	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
+# BCMARM-END
+# BCMARMNO-BEGIN
+	echo "iptables -t mangle -A PREROUTING -m set --set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
+# BCMARMNO-END
 
 	# example of routing_val: 1<2<8.8.8.8<1>1<1<1.2.3.4<0>1<3<domain.com<0> (enabled<type<domain_or_IP<kill_switch>)
 	for i in $(echo "$(NV vpn_"$SERVICE"_routing_val)" | tr ">" "\n"); do

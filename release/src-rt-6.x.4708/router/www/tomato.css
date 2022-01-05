@@ -93,7 +93,10 @@ input[type="submit"]:hover {
 }
 
 input[type="button"][disabled],
-input[type="submit"][disabled] {
+input[type="text"][disabled],
+input[type="submit"][disabled],
+textarea[disabled],
+select[disabled]{
 	color: #aaa;
 	cursor: not-allowed;
 }

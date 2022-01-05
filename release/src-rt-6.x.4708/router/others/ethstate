@@ -20,6 +20,7 @@ SWAN=$(cat /tmp/ethernet.state.tmp | grep "Port $VPORT" | awk '{print $3}')
 echo "Port 0: $SWAN" > /tmp/ethernet.state
 sed -n -e "/Port $VPORT:/!p" /tmp/ethernet.state.tmp > /tmp/ethernet.state1
 
+# BCMARM-BEGIN
 ROUTERNAME=$(nvram get t_fix1)
 #Xiaomi MiWiFi X-R1D (only 3 Ports; Port 0,2 for LAN and Port 4 for WAN)
 [ "$ROUTERNAME" == "MiWiFi" ] && {
@@ -30,6 +31,7 @@ ROUTERNAME=$(nvram get t_fix1)
 [ "$ROUTERNAME" == "AC15" ] && {
 	sed -i '/Port 1/d' /tmp/ethernet.state1
 }
+# BCMARM-END
 
 sed -i '/Port 5/d' /tmp/ethernet.state1
 sed -i '/Port 7/d' /tmp/ethernet.state1

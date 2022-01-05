@@ -740,6 +740,9 @@ struct nvram_tuple router_defaults[] = {
 #ifdef TCONFIG_BCMFA
 	{ "ctf_fa_mode",		"0"				, 0 },
 #endif
+#ifdef TCONFIG_BCMNAT
+	{ "bcmnat_disable",		"1"				, 0 },
+#endif
 
 /* advanced-dhcpdns */
 	{ "dhcpd_dmdns",		"1"				, 0 },

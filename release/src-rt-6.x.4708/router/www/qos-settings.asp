@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("qos_classnames,qos_enable,qos_mode,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,qos_cake_prio_mode,qos_cake_wash,wan_qos_obw,wan_qos_ibw,wan_qos_encap,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_encap,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_encap,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_encap,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num"); %>
+//	<% nvram("qos_classnames,qos_enable,qos_mode,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,qos_cake_prio_mode,qos_cake_wash,wan_qos_obw,wan_qos_ibw,wan_qos_encap,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_encap,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_encap,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_encap,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num,ctf_disable,bcmnat_disable"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -218,6 +218,21 @@ function init() {
 	if (((c = cookie.get(cprefix+'_classnames_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, "classnames");
 
+/* CTF-BEGIN */
+	if (nvram.ctf_disable == 0) {
+		E('_f_qos_enable').disabled = 1;
+		E('ctfnotice').style.display = 'block';
+	}
+	else
+		E('ctfnotice').style.display = 'none';
+/* CTF-END */
+/* BCMNAT-BEGIN */
+	if (nvram.bcmnat_disable == 0 && nvram.qos_enable == 1)
+		E('bcmnatnotice').style.display = 'block';
+	else
+		E('bcmnatnotice').style.display = 'none';
+/* BCMNAT-END */
+
 	up.initPage(250, 5);
 }
 </script>
@@ -257,6 +272,12 @@ function init() {
 
 <div class="section-title">Basic Settings</div>
 <div class="section">
+<!-- CTF-BEGIN -->
+	<div class="fields" id="ctfnotice" style="display:none"><div class="about"><b><a href="advanced-misc.asp">CTF is enabled</a> so QoS doesn't work.</b></div></div>
+<!-- CTF-END -->
+<!-- BCMNAT-BEGIN -->
+	<div class="fields" id="bcmnatnotice" style="display:none"><div class="about"><b>QoS as well as <a href="advanced-misc.asp">Broadcom FastNAT</a> is enabled so the latter doesn't work.</b></div></div>
+<!-- BCMNAT-END -->
 	<div class="fields" id="qosnotice" style="display:none"><div class="about"><b>Upload Limit rules for host IP addresses will not be applied, and Outbound QoS rules will govern upload rates.</b></div></div>
 	<script>
 		classList = [];

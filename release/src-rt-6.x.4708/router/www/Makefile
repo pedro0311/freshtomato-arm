@@ -219,6 +219,24 @@ endif
 # Only include the CTF configuration if CTF is configured in.
 ifneq ($(TCONFIG_CTF),y)
 	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/CTF-BEGIN/,/CTF-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/CTF-BEGIN/,/CTF-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/CTF-BEGIN/,/CTF-END/d"
+endif
+
+# Only include the Broadcom FastNAT configuration if BCMNAT is configured in and not in RT-AC branch.
+ifneq ($(TCONFIG_BCMNAT),y)
+	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/restrict.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+endif
+ifneq ($(TCONFIG_BCMARM),y)
+ifeq ($(CONFIG_BCMWL6),y)
+	sed -i $(INSTALLDIR)/www/advanced-misc.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/bwlimit.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/qos-settings.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+	sed -i $(INSTALLDIR)/www/restrict.asp -e "/BCMNAT-BEGIN/,/BCMNAT-END/d"
+endif
 endif
 
 ifneq ($(TCONFIG_BCMWL6),y)
@@ -359,6 +377,15 @@ ifneq ($(TCONFIG_QRCODE),y)
 	sed -i $(INSTALLDIR)/www/status-overview.asp -e "/QRCODE-BEGIN/,/QRCODE-END/d"
 endif
 
+# distinguish version if ARM or MIPS
+ifeq ($(TCONFIG_OPENVPN),y)
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/www/isup.jsx -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
+endif
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \
@@ -380,6 +407,7 @@ endif
 		-e "/VPN-BEGIN/,/VPN-END/d" \
 		-e "/IPV6-BEGIN/d"	-e "/IPV6-END/d" \
 		-e "/CTF-BEGIN/d"	-e "/CTF-END/d" \
+		-e "/BCMNAT-BEGIN/d"	-e "/BCMNAT-END/d" \
 		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
 		-e "/BSD-BEGIN/d"	-e "/BSD-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
@@ -407,6 +435,8 @@ endif
 		-e "/MDNS-BEGIN/d"	-e "/MDNS-END/d" \
 		-e "/ZFS-BEGIN/d"	-e "/ZFS-END/d" \
 		-e "/QRCODE-BEGIN/d"	-e "/QRCODE-END/d" \
+		-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
+		-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 		|| true; \
 	done
 
@@ -414,5 +444,25 @@ endif
 	for F in $(wildcard *.js *.jsx *.asp *.css); do \
 		[ -f $(INSTALLDIR)/www/$$F ] && $(TOP)/www/remcoms2.sh $(INSTALLDIR)/www/$$F c; \
 	done
+
+ifneq ($(TCONFIG_BCMARM),y)
+# use HTML compressor to compress HTML as much as possible
+#	cd $(INSTALLDIR)/www && \
+#	for F in $(wildcard *.asp); do \
+#		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/html-minifier $$F --minify-css -o $$F; } || true; \
+#	done
+
+# compress JAVASCRIPT files
+	cd $(INSTALLDIR)/www && \
+	for F in $(wildcard *.js); do \
+		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/uglifyjs $$F -c -o $$F; } || true; \
+	done
+
+# compress CSS files
+	cd $(INSTALLDIR)/www && \
+	for F in $(wildcard *.css); do \
+		[ -s $(INSTALLDIR)/www/$$F ] && { echo $$F; $(TOP)/www/tools/bin/uglifycss $$F --output $$F; } || true; \
+	done
+endif
 
 	chmod 0644 $(INSTALLDIR)/www/*

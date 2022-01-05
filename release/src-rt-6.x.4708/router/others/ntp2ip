@@ -3,8 +3,7 @@
 #cleaning
 sed -i /tmp/etc/hosts  -e "/ntp2ip/d"
 
-for server in $(nvram get ntp_server)
-do
+for server in $(nvram get ntp_server); do
 	addresses=$(hostip $server)
 	for address in $addresses; do
 		echo "$address $server #ntp2ip" >> /tmp/etc/hosts

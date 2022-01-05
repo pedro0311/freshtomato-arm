@@ -3268,7 +3268,7 @@ void start_services(void)
 #ifdef TCONFIG_FANCTRL
 	start_phy_tempsense();
 #endif
-#ifdef CONFIG_BCM7
+#ifdef TCONFIG_BCM7
 	if (!nvram_get_int("debug_wireless")) { /* suppress dhd debug messages (default 0x01) */
 		system("/usr/sbin/dhd -i eth1 msglevel 0x00");
 		system("/usr/sbin/dhd -i eth2 msglevel 0x00");

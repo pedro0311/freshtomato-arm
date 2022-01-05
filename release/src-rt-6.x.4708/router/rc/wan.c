@@ -779,10 +779,16 @@ void store_wan_if_to_nvram(char *prefix)
 			p = buf;
 		}
 		/* Set wan mac on vlan (but not for wireless client) */
-		nvvar = nvram_get(strcat_r(prefix, "_mac", tmp));  /* ToDo: wanX_mac add it to the GUI ? */
+		nvvar = nvram_get(strcat_r(prefix, "_mac", tmp));
 
 		/* check if we have a wanX mac? FT user could/can define one ... if not, create it (default);
-		 * Increase mac address and keep distance to et0 mac --> We need it for working VLAN setups! (PPPoE)
+		 * Increase mac address and keep distance to et0 mac --> We need it for working VLAN setups! (PPPoE);
+		 * Set wanX macs after wl VIFs
+		 * wan  --> et0 mac +16
+		 * wan2 --> et0 mac +17
+		 * wan3 --> et0 mac +18
+		 * wan4 --> et0 mac +19
+		 * Info: sync GUI def-mac - see www/advanced-mac.asp
 		 */
 		if ((nvvar == NULL) ||
 		    (nvvar && !strlen(nvvar))) {

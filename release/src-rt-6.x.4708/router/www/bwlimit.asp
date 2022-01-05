@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("bwl_enable,wan_qos_ibw,wan_qos_obw,bwl_rules,lan_ipaddr,lan_netmask,bwl_br0_enable,bwl_br0_dlr,bwl_br0_dlc,bwl_br0_ulr,bwl_br0_ulc,bwl_br0_udp,bwl_br0_tcp,bwl_br0_prio,bwl_br1_enable,bwl_br1_dlc,bwl_br1_dlr,bwl_br1_ulc,bwl_br1_ulr,bwl_br1_prio,bwl_br2_enable,bwl_br2_dlc,bwl_br2_dlr,bwl_br2_ulc,bwl_br2_ulr,bwl_br2_prio,bwl_br3_enable,bwl_br3_dlc,bwl_br3_dlr,bwl_br3_ulc,bwl_br3_ulr,bwl_br3_prio"); %>
+//	<% nvram("bwl_enable,wan_qos_ibw,wan_qos_obw,bwl_rules,lan_ipaddr,lan_netmask,bwl_br0_enable,bwl_br0_dlr,bwl_br0_dlc,bwl_br0_ulr,bwl_br0_ulc,bwl_br0_udp,bwl_br0_tcp,bwl_br0_prio,bwl_br1_enable,bwl_br1_dlc,bwl_br1_dlr,bwl_br1_ulc,bwl_br1_ulr,bwl_br1_prio,bwl_br2_enable,bwl_br2_dlc,bwl_br2_dlr,bwl_br2_ulc,bwl_br2_ulr,bwl_br2_prio,bwl_br3_enable,bwl_br3_dlc,bwl_br3_dlr,bwl_br3_ulc,bwl_br3_ulr,bwl_br3_prio,ctf_disable,bcmnat_disable"); %>
 
 var class_prio = [['0','Highest'],['1','High'],['2','Normal'],['3','Low'],['4','Lowest']];
 var class_tcp = [['0','nolimit']];
@@ -214,8 +214,6 @@ function verifyFields(focused, quiet) {
 	E('_bwl_br0_tcp').disabled = b || a;
 	E('_bwl_br0_udp').disabled = b || a;
 	E('_bwl_br0_prio').disabled = b || a;
-
-	elem.display(PR('_wan_qos_ibw'), PR('_wan_qos_obw'), !a);
 	elem.display(PR('_bwl_br0_dlr'), PR('_bwl_br0_dlc'), PR('_bwl_br0_ulr'), PR('_bwl_br0_ulc'), PR('_bwl_br0_tcp'), PR('_bwl_br0_udp'), PR('_bwl_br0_prio'), !a && !b);
 
 	E('_bwl_br1_dlr').disabled = b1 || a;
@@ -273,6 +271,23 @@ function earlyInit() {
 }
 
 function init() {
+/* CTF-BEGIN */
+	if (nvram.ctf_disable == 0) {
+		E('_f_bwl_enable').disabled = 1;
+		E('ctfnotice').style.display = 'block';
+	}
+	else
+		E('ctfnotice').style.display = 'none';
+/* CTF-END */
+/* BCMNAT-BEGIN */
+	if (nvram.bcmnat_disable == 0) {
+		E('_f_bwl_enable').disabled = 1;
+		E('bcmnatnotice').style.display = 'block';
+	}
+	else
+		E('bcmnatnotice').style.display = 'none';
+/* BCMNAT-END */
+
 	bwlg.recolor();
 }
 </script>
@@ -305,6 +320,12 @@ function init() {
 
 <div class="section-title">Bandwidth Limiter for LAN0 (br0)</div>
 <div class="section">
+<!-- CTF-BEGIN -->
+	<div class="fields" id="ctfnotice" style="display:none"><div class="about"><b><a href="advanced-misc.asp">CTF is enabled</a> so BW Limiter doesn't work.</b></div></div>
+<!-- CTF-END -->
+<!-- BCMNAT-BEGIN -->
+	<div class="fields" id="bcmnatnotice" style="display:none"><div class="about"><b><a href="advanced-misc.asp">Broadcom FastNAT is enabled</a> so BW Limiter doesn't work.</b></div></div>
+<!-- BCMNAT-END -->
 	<script>
 		createFieldTable('', [
 		{ title: 'Enable Limiter', name: 'f_bwl_enable', type: 'checkbox', value: nvram.bwl_enable != '0' },

@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("t_features,wait_time,wan_speed,jumbo_frame_enable,jumbo_frame_size,ctf_disable"); %>
+//	<% nvram("t_features,wait_time,wan_speed,jumbo_frame_enable,jumbo_frame_size,ctf_disable,bcmnat_disable"); %>
 
 et1000 = features('1000et');
 
@@ -34,17 +34,26 @@ function save() {
 /* CTF-BEGIN */
 	fom.ctf_disable.value = E('_f_ctf_disable').checked ? 0 : 1;
 /* CTF-END */
+/* BCMNAT-BEGIN */
+	fom.bcmnat_disable.value = E('_f_bcmnat_disable').checked ? 0 : 1;
+/* BCMNAT-END */
 
 	if ((fom.wan_speed.value != nvram.wan_speed) ||
 /* CTF-BEGIN */
 	    (fom.ctf_disable.value != nvram.ctf_disable) ||
 /* CTF-END */
+/* BCMNAT-BEGIN */
+	    (fom.bcmnat_disable.value != nvram.bcmnat_disable) ||
+/* BCMNAT-END */
 	    (fom.jumbo_frame_enable.value != nvram.jumbo_frame_enable) ||
 	    (fom.jumbo_frame_size.value != nvram.jumbo_frame_size)) {
-		fom._reboot.value = '1';
+		if (!confirm("Router must be rebooted to apply changes. Reboot now?"))
+			return;
+
+		fom._reboot.value = 1;
 		form.submit(fom, 0);
 	}
-	else {
+	else { /* continue without reboot */
 		form.submit(fom, 1);
 	}
 }
@@ -70,6 +79,9 @@ function save() {
 <!-- CTF-BEGIN -->
 <input type="hidden" name="ctf_disable">
 <!-- CTF-END -->
+<!-- BCMNAT-BEGIN -->
+<input type="hidden" name="bcmnat_disable">
+<!-- BCMNAT-END -->
 
 <!-- / / / -->
 
@@ -86,6 +98,9 @@ function save() {
 			{ title: 'CTF (Cut-Through Forwarding)<br>and HW acceleration', name: 'f_ctf_disable', type: 'checkbox', value: nvram.ctf_disable != '1', suffix: ' <small>disables QoS and BW Limiter!<\/small>' },
 			null,
 /* CTF-END */
+/* BCMNAT-BEGIN */
+			{ title: 'Broadcom FastNAT (bcm_nat)', name: 'f_bcmnat_disable', type: 'checkbox', value: nvram.bcmnat_disable != '1', suffix: ' <small>disables BW Limiter; using QoS or Access Restriction disables this module!<\/small>' },
+/* BCMNAT-END */
 			{ title: 'Enable Jumbo Frames *', name: 'f_jumbo_frame_enable', type: 'checkbox', value: nvram.jumbo_frame_enable != '0', hidden: !et1000 },
 			{ title: 'Jumbo Frame Size *', name: 'jumbo_frame_size', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.jumbo_frame_size, 1, 9720, 2000),
 				suffix: ' <small>Bytes (range: 1 - 9720; default: 2000)<\/small>', hidden: !et1000 }
