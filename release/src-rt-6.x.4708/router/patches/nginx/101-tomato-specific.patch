@@ -73,7 +73,7 @@
  
 --- nginx/auto/lib/pcre/make
 +++ nginx/auto/lib/pcre/make
-@@ -53,7 +53,7 @@
+@@ -155,7 +155,7 @@
  	cd $PCRE \\
  	&& if [ -f Makefile ]; then \$(MAKE) distclean; fi \\
  	&& CC="\$(CC)" CFLAGS="$PCRE_OPT" \\
