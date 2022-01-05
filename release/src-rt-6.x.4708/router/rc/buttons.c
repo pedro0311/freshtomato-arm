@@ -12,7 +12,11 @@
 #include <wlutils.h>
 #include <wlioctl.h>
 
-//	#define DEBUG_TEST
+// #define DEBUG_TEST
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"buttons_debug"
 
 static int gf;
 
@@ -147,8 +151,8 @@ int buttons_main(int argc, char *argv[])
 		break;
 	case MODEL_R1D:
 		reset_mask = 1 << 17;
- 		ses_led = LED_AOSS;
- 		break;
+		ses_led = LED_AOSS;
+		break;
 	case MODEL_R6250:
 	case MODEL_R6300v2:
 		reset_mask = 1 << 6; /* reset button (active LOW) */
@@ -179,11 +183,25 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. */
 		break;
 #endif /* CONFIG_BCMWL6A */
+#ifdef TCONFIG_BCM7
+	case MODEL_RTAC3200:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 7; /* wps button (active LOW) */
+		wlan_mask = 1 << 4;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+	case MODEL_R8000:
+		reset_mask = 1 << 6; /* reset button (active LOW) */
+		ses_mask = 1 << 5; /* wps button (active LOW) */
+		wlan_mask = 1 << 4; /* wifi button (active LOW) */
+		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
+		break;
+#endif /* TCONFIG_BCM7 */
 	default:
 		get_btn("btn_ses", &ses_mask, &ses_pushed);
-		if (!get_btn("btn_reset", &reset_mask, &reset_pushed)) {
+		if (!get_btn("btn_reset", &reset_mask, &reset_pushed))
 			return 1;
-		}
+
 		break;
 	}
 	mask = reset_mask | ses_mask | wlan_mask;
@@ -194,13 +212,16 @@ int buttons_main(int argc, char *argv[])
 	cprintf("ses_mask=0x%X\n", ses_mask);
 	cprintf("ses_led=%d\n", ses_led);
 #else
-	if (fork() != 0) return 0;
+	if (fork() != 0)
+		return 0;
+
 	setsid();
 #endif
 
 	signal(SIGCHLD, chld_reap);
 
-	if ((gf = gpio_open(mask)) < 0) return 1;
+	if ((gf = gpio_open(mask)) < 0)
+		return 1;
 
 	while (1) {
 		if (((gpio = _gpio_read(gf)) == ~0) || (last == (gpio &= mask)) || (check_action() != ACT_IDLE)) {
@@ -221,7 +242,8 @@ int buttons_main(int argc, char *argv[])
 			count = 0;
 			do {
 				sleep(1);
-				if (++count == 3) led(LED_DIAG, LED_ON);
+				if (++count == 3)
+					led(LED_DIAG, LED_ON);
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & reset_mask) == reset_pushed));
 
 #ifdef DEBUG_TEST
@@ -244,7 +266,7 @@ int buttons_main(int argc, char *argv[])
 		if ((ses_mask) && ((gpio & ses_mask) == ses_pushed)) {
 			count = 0;
 			do {
-				//	syslog(LOG_DEBUG, "ses-pushed: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
+				logmsg(LOG_DEBUG, "*** %s: ses-pushed: gpio=x%X, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, ses_pushed, ses_mask, count);
 
 				led(ses_led, LED_ON);
 				usleep(500000);
@@ -258,18 +280,24 @@ int buttons_main(int argc, char *argv[])
 
 			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15/AC18) back on if used for feedback (WPS Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
-			    ((model == MODEL_AC15) ||
-			     (model == MODEL_AC18) ||
-			     (model == MODEL_RTN18U) ||
-			     (model == MODEL_RTAC56U) ||
-			     (model == MODEL_RTAC66U_B1) ||
-			     (model == MODEL_RTAC1900P) ||
-			     (model == MODEL_RTAC67U) ||
-			     (model == MODEL_RTAC68U) ||
-			     (model == MODEL_RTAC68UV3))) led(ses_led, LED_ON);
+			    ((model == MODEL_AC15)
+			     || (model == MODEL_AC18)
+			     || (model == MODEL_RTN18U)
+			     || (model == MODEL_RTAC56U)
+			     || (model == MODEL_RTAC66U_B1)
+			     || (model == MODEL_RTAC1900P)
+			     || (model == MODEL_RTAC67U)
+			     || (model == MODEL_RTAC68U)
+			     || (model == MODEL_RTAC68UV3)
+#ifdef TCONFIG_BCM7
+			     || (model == MODEL_RTAC3200)
+#endif
+			)) {
+				led(ses_led, LED_ON);
+			}
 
-			//	syslog(LOG_DEBUG, "ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, ses_pushed, ses_mask, count);
-			syslog(LOG_INFO, "SES pushed. Count was %d.", count);
+			logmsg(LOG_DEBUG, "*** %s: ses-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, ses_pushed, ses_mask, count);
+			logmsg(LOG_INFO, "SES pushed. Count was %d.", count);
 
 			if ((count != 3) && (count != 7) && (count != 11)) {
 				n = count >> 2;
@@ -284,26 +312,26 @@ int buttons_main(int argc, char *argv[])
 #ifdef DEBUG_TEST
 				cprintf("ses func=%d\n", n);
 #else
-				sprintf(s, "sesx_b%d", n);
-				//	syslog(LOG_DEBUG, "ses-func: count=%d %s='%s'", count, s, nvram_safe_get(s));
+				snprintf(s, sizeof(s), "sesx_b%d", n);
+				logmsg(LOG_DEBUG, "*** %s: ses-func: count=%d %s='%s'", __FUNCTION__, count, s, nvram_safe_get(s));
 				if ((p = nvram_get(s)) != NULL) {
 					switch (*p) {
-					case '1':	/* toggle wl */
+					case '1': /* toggle wl */
 						nvram_set("rrules_radio", "-1");
 						eval("radio", "toggle");
 						break;
-					case '2':	/* reboot */
+					case '2': /* reboot */
 						kill(1, SIGTERM);
 						break;
-					case '3':	/* shutdown */
+					case '3': /* shutdown */
 						kill(1, SIGQUIT);
 						break;
-					case '4':	/* run a script */
-						sprintf(s, "%d", count);
+					case '4': /* run a script */
+						snprintf(s, sizeof(s), "%d", count);
 						run_nvscript("sesx_script", s, 2);
 						break;
 #ifdef TCONFIG_USB
-					case '5':	/* !!TB: unmount all USB drives */
+					case '5': /* unmount all USB drives */
 						add_remove_usbhost("-2", 0);
 						break;
 #endif
@@ -317,7 +345,7 @@ int buttons_main(int argc, char *argv[])
 		if ((wlan_mask) && ((gpio & wlan_mask) == wlan_pushed)) {
 			count = 0;
 			do {
-				//	syslog(LOG_DEBUG, "wlan-pushed: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);
+				logmsg(LOG_DEBUG, "*** %s: wlan-pushed: gpio=x%X, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, wlan_pushed, wlan_mask, count);
 
 				led(ses_led, LED_ON);
 				usleep(500000);
@@ -329,15 +357,21 @@ int buttons_main(int argc, char *argv[])
 
 			/* turn LED_AOSS (Power LED for Asus Router; WPS LED for Tenda Router AC15/AC18) back on if used for feedback (WLAN Button); Check Startup LED setting (bit 2 used for LED_AOSS) */
 			if ((ses_led == LED_AOSS) && (nvram_get_int("sesx_led") & 0x04) &&
-			    ((model == MODEL_AC15) ||
-			     (model == MODEL_AC18) ||
-			     (model == MODEL_RTAC56U) ||
-			     (model == MODEL_RTAC1900P) ||
-			     (model == MODEL_RTAC68U) ||
-			     (model == MODEL_RTAC68UV3))) led(ses_led, LED_ON);
+			    ((model == MODEL_AC15)
+			     || (model == MODEL_AC18)
+			     || (model == MODEL_RTAC56U)
+			     || (model == MODEL_RTAC1900P)
+			     || (model == MODEL_RTAC68U)
+			     || (model == MODEL_RTAC68UV3)
+#ifdef TCONFIG_BCM7
+			     || (model == MODEL_RTAC3200)
+#endif
+			)) {
+				led(ses_led, LED_ON);
+			}
 
-			//	syslog(LOG_DEBUG, "wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", gpio, wlan_pushed, wlan_mask, count);
-			syslog(LOG_INFO, "WLAN pushed. Count was %d.", count);
+			logmsg(LOG_DEBUG, "*** %s: wlan-released: gpio=x%X, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, wlan_pushed, wlan_mask, count);
+			logmsg(LOG_INFO, "WLAN pushed. Count was %d.", count);
 			nvram_set("rrules_radio", "-1");
 			eval("radio", "toggle");
 		}

@@ -505,15 +505,42 @@ void set_et_qos_mode(void)
 
 void unload_wl(void)
 {
+#ifdef TCONFIG_DHDAP
+	modprobe_r("dhd");
+#else
 	/* do not unload the wifi driver by default, it can cause problems for some router */
 	if (nvram_match("wl_unload_enable", "1")) {
 		modprobe_r("wl");
 	}
+#endif
 }
 
 void load_wl(void)
 {
+#ifdef TCONFIG_DHDAP
+	int i = 0, maxwl_eth = 0, maxunit = -1;
+	int unit = -1;
+	char ifname[16] = {0};
+	char instance_base[128];
+
+	/* Search for existing wl devices and the max unit number used */
+	for (i = 1; i <= DEV_NUMIFS; i++) {
+		snprintf(ifname, sizeof(ifname), "eth%d", i);
+		if (!wl_probe(ifname)) {
+			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+				maxwl_eth = i;
+				maxunit = (unit > maxunit) ? unit : maxunit;
+			}
+		}
+	}
+	snprintf(instance_base, sizeof(instance_base), "instance_base=%d", maxunit + 1);
+#ifdef TCONFIG_BCM7
+	snprintf(instance_base, sizeof(instance_base), "%s", instance_base);
+#endif
+	eval("insmod", "dhd", instance_base);
+#else
 	modprobe("wl");
+#endif
 }
 
 #ifdef CONFIG_BCMWL5
@@ -574,11 +601,15 @@ void restart_wl(void)
 	int wlan_5g_cnt = 0;
 	char blink_wlan_ifname[32];
 	char blink_wlan_5g_ifname[32];
+#ifdef TCONFIG_DHDAP
+	int wlan_52g_cnt = 0;
+	char blink_wlan_52g_ifname[32];
+#endif
 
 	/* get router model */
 	model = get_model();
 
-	for(br=0 ; br<4 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
@@ -629,10 +660,17 @@ void restart_wl(void)
 
 					/* Enable WLAN LEDs if wireless interface is enabled */
 					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
-						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)) {	/* kill all blink at first start up */
+						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0) && (wlan_52g_cnt == 0)
+#ifdef TCONFIG_DHDAP
+						    && (wlan_52g_cnt == 0)
+#endif
+						) { /* kill all blink at first start up */
 							killall("blink", SIGKILL);
 							memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
 							memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
+#ifdef TCONFIG_DHDAP
+							memset(blink_wlan_52g_ifname, 0, sizeof(blink_wlan_52g_ifname));
+#endif
 						}
 						if (unit == 0) {
 							led(LED_WLAN, LED_ON);	/* enable WLAN LED for 2.4 GHz */
@@ -644,6 +682,13 @@ void restart_wl(void)
 							wlan_5g_cnt++; /* count all 5g units / subunits */
 							if (wlan_5g_cnt < 2) strcpy(blink_wlan_5g_ifname, ifname);
 						}
+#ifdef TCONFIG_DHDAP
+						else if (unit == 2) {
+							led(LED_52G, LED_ON); /* enable WLAN LED for 2nd 5 GHz */
+							wlan_52g_cnt++; /* count all 5g units / subunits */
+							if (wlan_52g_cnt < 2) strcpy(blink_wlan_52g_ifname, ifname);
+						}
+#endif
 					}
 #endif	/* CONFIG_BCMWL5 */
 				}
@@ -662,15 +707,23 @@ void restart_wl(void)
 	eval("wldist");
 
 	/* do some LED setup */
-	if ((model == MODEL_WS880) ||
-	    (model == MODEL_R6400) ||
-	    (model == MODEL_R6400v2) ||
-	    (model == MODEL_R6700v1) ||
-	    (model == MODEL_R6700v3) ||
-	    (model == MODEL_R6900) ||
-	    (model == MODEL_R7000) ||
-	    (model == MODEL_XR300)) {
-		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+	if ((model == MODEL_WS880)
+	    || (model == MODEL_R6400)
+	    || (model == MODEL_R6400v2)
+	    || (model == MODEL_R6700v1)
+	    || (model == MODEL_R6700v3)
+	    || (model == MODEL_R6900)
+	    || (model == MODEL_R7000)
+	    || (model == MODEL_XR300)
+#ifdef TCONFIG_BCM7
+	    || (model == MODEL_R8000)
+#endif
+	) {
+		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1")
+#ifdef TCONFIG_BCM7
+		    || nvram_match("wl2_radio", "1")
+#endif
+		)
 			led(LED_AOSS, LED_ON);
 		else
 			led(LED_AOSS, LED_OFF);
@@ -680,6 +733,9 @@ void restart_wl(void)
 	if (nvram_get_int("blink_wl") && nvram_match("stealth_mode", "0")) {
 		if (wlan_cnt == 1) eval("blink", blink_wlan_ifname, "wlan", "10", "8192");
 		if (wlan_5g_cnt == 1) eval("blink", blink_wlan_5g_ifname, "5g", "10", "8192");
+#ifdef TCONFIG_DHDAP
+		if (wlan_52g_cnt == 1) eval("blink", blink_wlan_52g_ifname, "52g", "10", "8192");
+#endif
 	}
 }
 
@@ -696,7 +752,7 @@ void stop_lan_wl(void)
 
 	eval("ebtables", "-F");
 
-	for(br=0 ; br<4 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
@@ -769,7 +825,7 @@ void start_lan_wl(void)
 	foreach_wif(1, NULL, set_wlmac);
 #endif
 
-	for(br=0 ; br<4 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
@@ -1254,7 +1310,9 @@ void start_lan(void)
 	int is_dhd;
 #endif /* TCONFIG_DHDAP */
 
+#ifndef TCONFIG_DHDAP /* load driver at init.c for sdk7 */
 	load_wl(); /* lets go! */
+#endif
 
 #ifdef TCONFIG_BCMWL6
 	wlconf_pre(); /* prepare a few wifi things */
@@ -1275,7 +1333,7 @@ void start_lan(void)
 	enable_ipv6(ipv6_enabled());  /* tell Kernel to disable/enable IPv6 for most interfaces */
 #endif
 
-	for(br=0 ; br<4 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
@@ -1529,7 +1587,7 @@ void stop_lan(void)
 	stop_ipv6(); /* stop IPv6 first! */
 #endif
 
-	for(br=0 ; br<4 ; br++) {
+	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br!=0)
 			bridge[0]+=br;
@@ -1584,7 +1642,9 @@ void stop_lan(void)
 	}
 	logmsg(LOG_DEBUG, "*** %s: %d", __FUNCTION__, __LINE__);
 
+#ifndef TCONFIG_DHDAP /* do not unload driver for sdk7 */
 	unload_wl(); /* stop! */
+#endif
 }
 
 static int is_sta(int idx, int unit, int subunit, void *param)

@@ -632,7 +632,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
 #endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
+#ifdef TCONFIG_BCM7
 	case MODEL_R8000:
 		nvram_unset("et1macaddr");
 		dirty |= check_nv("wl0_ifname", "eth2");
