@@ -216,6 +216,9 @@ enum {
 	MODEL_RTAC68U,
 	MODEL_RTAC68UV3,
 	MODEL_RTAC1900P,
+#ifdef TCONFIG_BCM7
+	MODEL_RTAC3200,
+#endif
 	MODEL_R6250,
 	MODEL_R6300v2,
 	MODEL_R6400,
@@ -225,6 +228,9 @@ enum {
 	MODEL_R6900,
 	MODEL_R7000,
 	MODEL_XR300,
+#ifdef TCONFIG_BCM7
+	MODEL_R8000,
+#endif
 	MODEL_DIR868L,
 	MODEL_WS880,
 	MODEL_EA6350v1,
@@ -297,7 +303,12 @@ extern int f_wait_notexists(const char *name, int max);
 #define LED_MYSTERY		LED_USB /* (unmarked LED between wireless and bridge on WHR-G54S) */
 #define LED_USB3		8
 #define LED_5G			9
+#ifdef TCONFIG_BCM7
+#define LED_52G			10
+#define LED_COUNT		11
+#else
 #define LED_COUNT		10
+#endif /* TCONFIG_BCM7 */
 #define	LED_OFF			0
 #define	LED_ON			1
 #define LED_PROBE		2
@@ -379,6 +390,15 @@ extern int splitport(char *in_ports, char out_port[MAX_PORTS][PORT_SIZE]);
 extern int is_number(char *a);
 extern int isspacex(char c);
 extern char *shrink_space(char *dest, const char *src, int n);
+
+/* wl.c */
+#if defined(__CONFIG_DHDAP__) || defined(TCONFIG_DHDAP)
+extern int dhd_probe(char *name);
+extern int dhd_ioctl(char *name, int cmd, void *buf, int len);
+extern int dhd_iovar_setbuf(char *ifname, char *iovar, void *param, int paramlen, void *bufptr, unsigned int buflen);
+extern int dhd_iovar_setint(char *ifname, char *iovar, int val);
+extern int dhd_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
+#endif
 
 /* shutils.c */
 extern pid_t get_pid_by_name(char *name); /* Returns the process ID */

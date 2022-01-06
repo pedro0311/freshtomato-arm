@@ -20,6 +20,14 @@ ifeq ($(TCONFIG_BCMSMP),y)
 CFLAGS += -DSMP
 endif
 
+ifeq ($(TCONFIG_DHDAP),y)
+export CFLAGS += -D__CONFIG_DHDAP__
+endif
+
+ifeq ($(TCONFIG_BCMBSD),y)
+export CFLAGS += -DBCM_BSD
+endif
+
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 export CFLAGS += -DDEBUG_LOGMSG
 endif
@@ -48,6 +56,10 @@ endif
 ifeq ($(CONFIG_BCMWL5),y)
 OBJS += wlif_utils.o UdpLib.o bcmutils.o
 OBJS += bcmwifi_channels.o
+endif
+
+ifeq ($(TCONFIG_BCM7),y)
+OBJS += et_linux.o bcmwifi_channels.o
 endif
 
 vpath %.c $(SRCBASE)/shared/ $(SRCBASE)/shared/bcmwifi/src $(WLAN_ComponentSrcDirs)

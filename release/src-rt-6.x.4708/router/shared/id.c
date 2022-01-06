@@ -44,6 +44,9 @@ RT-AC1750_B1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 //
 RT-N66U_C1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // odmpid=RT-N66U_C1
 RT-AC1900P			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC1900P
 RT-AC68U B2			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC68U
+RT-AC3200			BCM4709               0x072f       <MAC>     0x1101
+
+R8000				BCM4709               0x0665       32        0x1101
 R6900				BCM4709               0x0665       32        0x1301    0x1000
 R7000				BCM4709               0x0665       32        0x1301    0x1000
 R6250				BCM4708               0x0646       679       0x1110 // same as R6300v2 well we use the same MODEL definition
@@ -78,7 +81,7 @@ int check_hw_type(void)
 	case 0xf646:	/* EA6700, WZR-1750 */
 	case 0xd646:	/* EA6900 */
 	case 0xe646:	/* EA6200, EA6350v1 */
-	case 0x072f:	/* RT-AC1900P, RT-AC68U B2 */
+	case 0x072f:	/* AC3200, RT-AC1900P, RT-AC68U B2 */
 		return HW_BCM4708; /* and also for 4709 right now!  */
 #endif /* CONFIG_BCMWL6A */
 	}
@@ -96,10 +99,14 @@ int get_model(void)
 
 #ifdef CONFIG_BCMWL6A
 	if (hw == HW_BCM4708) {
+#ifdef TCONFIG_BCM7
+		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "32"))) return MODEL_R8000;
+		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("model", "RT-AC3200"))) return MODEL_RTAC3200;
+#endif
 		if ((nvram_match("boardrev", "0x1301")) && (nvram_match("model", "R1D"))) return MODEL_R1D;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-N18U"))) return MODEL_RTN18U;
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC56U"))) return MODEL_RTAC56U;
-	    	if (nvram_match("odmpid", "RT-AC1900P")) return MODEL_RTAC1900P;
+		if (nvram_match("odmpid", "RT-AC1900P")) return MODEL_RTAC1900P;
 		if ((nvram_match("boardrev", "0x1500")) && (nvram_match("odmpid", "RT-AC68U"))) return MODEL_RTAC1900P; /* RT-AC68U B2 --> (almost) the same like RT-AC1900P */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68R/U */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-N66U_C1"))) return MODEL_RTAC66U_B1; /* RT-N66U_C1 --> (almost) the same like RT-AC66U_B1 */
