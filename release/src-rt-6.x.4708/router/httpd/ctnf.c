@@ -233,7 +233,7 @@ void asp_ctdump(int argc, char **argv)
 	rip = inet_addr(nvram_safe_get("lan_ipaddr"));
 	lan = rip & mask;
 	
-#if defined(TCONFIG_IPV6) && defined(LINUX26)
+#ifdef TCONFIG_IPV6
 	struct in6_addr rip6;
 	struct in6_addr lan6;
 	struct in6_addr in6;
@@ -370,7 +370,7 @@ void asp_ctrate(int argc, char **argv)
 	int x;
 	int len;
 
-#if defined(TCONFIG_IPV6) && defined(LINUX26)
+#ifdef TCONFIG_IPV6
 	unsigned int a_fam, b_fam;
 	char a_src[INET6_ADDRSTRLEN];
 	char a_dst[INET6_ADDRSTRLEN];

@@ -231,9 +231,8 @@ void asp_usbdevices(int argc, char **argv)
 						}
 					}
 					fclose(fp);
-#ifdef LINUX26
+
 					attached = (strlen(g_usb_product) > 0) || (strlen(g_usb_vendor) > 0);
-#endif
 					if (attached) {
 						/* Host no. assigned by scsi driver for this UFD */
 						host_no = atoi(dp->d_name);
