@@ -29,12 +29,8 @@
 #include <sys/ioctl.h>
 #include <sys/sysinfo.h>
 #include <sys/mman.h>
-#ifdef LINUX26
 #include <linux/compiler.h>
 #include <mtd/mtd-user.h>
-#else
-#include <linux/mtd/mtd.h>
-#endif
 #include <stdint.h>
 
 #include <trxhdr.h>
@@ -461,11 +457,7 @@ mtd_open(const char *mtd, int flags)
         if ((fp = fopen("/proc/mtd", "r"))) {
                 while (fgets(dev, sizeof(dev), fp)) {
                         if (sscanf(dev, "mtd%d:", &i) && strstr(dev, mtd)) {
-#ifdef LINUX26
                                 snprintf(dev, sizeof(dev), "/dev/mtd%d", i);
-#else
-                                snprintf(dev, sizeof(dev), "/dev/mtd/%d", i);
-#endif
                                 fclose(fp);
                                 return open(dev, flags);
                         }

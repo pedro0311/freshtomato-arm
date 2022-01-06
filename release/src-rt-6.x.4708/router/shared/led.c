@@ -27,7 +27,11 @@
 #define LOGMSG_NVDEBUG	"led_debug"
 
 
+#ifdef TCONFIG_BCM7
 const char *led_names[] = {"wlan", "diag", "white", "amber", "dmz", "aoss", "bridge", "usb", "usb3", "5g", "52g"};
+#else
+const char *led_names[] = {"wlan", "diag", "white", "amber", "dmz", "aoss", "bridge", "usb", "usb3", "5g"};
+#endif
 
 static int _gpio_ioctl(int f, int gpioreg, unsigned int mask, unsigned int val)
 {
@@ -40,6 +44,7 @@ static int _gpio_ioctl(int f, int gpioreg, unsigned int mask, unsigned int val)
 		logmsg(LOG_DEBUG, "*** %s: invalid gpioreg %d", __FUNCTION__, gpioreg);
 		return -1;
 	}
+
 	return (gpio.val);
 }
 
@@ -48,6 +53,7 @@ static int _gpio_open()
 	int f = open("/dev/gpio", O_RDWR);
 	if (f < 0)
 		logmsg(LOG_DEBUG, "*** %s: failed to open /dev/gpio", __FUNCTION__);
+
 	return f;
 }
 
@@ -68,6 +74,7 @@ int gpio_open(uint32_t mask)
 		close(f);
 		f = _gpio_open();
 	}
+
 	return f;
 }
 
@@ -75,7 +82,8 @@ void gpio_write(uint32_t bit, int en)
 {
 	int f;
 
-	if ((f = gpio_open(0)) < 0) return;
+	if ((f = gpio_open(0)) < 0)
+		return;
 
 	_gpio_ioctl(f, GPIO_IOC_RESERVE, bit, bit);
 	_gpio_ioctl(f, GPIO_IOC_OUTEN, bit, bit);
@@ -87,7 +95,9 @@ uint32_t _gpio_read(int f)
 {
 	uint32_t r;
 	r = _gpio_ioctl(f, GPIO_IOC_IN, 0x07FF, 0);
-	if (r < 0) r = ~0;
+	if (r < 0)
+		r = ~0;
+
 	return r;
 }
 
@@ -96,9 +106,12 @@ uint32_t gpio_read(void)
 	int f;
 	uint32_t r;
 
-	if ((f = gpio_open(0)) < 0) return ~0;
+	if ((f = gpio_open(0)) < 0)
+		return ~0;
+
 	r = _gpio_read(f);
 	close(f);
+
 	return r;
 }
 
@@ -134,50 +147,49 @@ int nvget_gpio(const char *name, int *gpio, int *inv)
 
 int do_led(int which, int mode)
 {
-  /*
-   * valid GPIO values: 0 to 31 (default active LOW, inverted or active HIGH with -[value])
-   * value 255: not known / disabled / not possible
-   * value -99: special case for -0 substitute (active HIGH for GPIO 0)
-   * value 254: non GPIO LED (special case, to show there is something!)
-   */
+/*
+ * valid GPIO values: 0 to 31 (default active LOW, inverted or active HIGH with -[value])
+ * value 255: not known / disabled / not possible
+ * value -99: special case for -0 substitute (active HIGH for GPIO 0)
+ * value 254: non GPIO LED (special case, to show there is something!)
+ */
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
-#ifdef CONFIG_BCMWL6A
-	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254,  255 };
-	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254,  255 };
-	static int ac68u_v3[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254,  255 };
-	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254,  255 };
-	static int ac66u_b1[]   = { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254,  255 };
-	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6,  255 };
-	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255,  255 };
-	static int r6250[]	= {  11,    3,    15,  255,  255,   -1,  255,    8,  255,  255,  255 };
-	static int r6300v2[]	= {  11,    3,    10,  255,  255,   -1,  255,    8,  255,  255,  255 };
-	static int r6400v2[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
-	static int r6700v1[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
-	static int r6700v3[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
-	static int r6900[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
-	static int xr300[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
-	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8,  255 };
-	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12,  255 };
-	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
-	static int ac18[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2,  255 };
-	static int f9k1113v2[]	= { 255,   14,    12,  255,  255,   15,  255,   0,     1,  255,  255 };
-	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255,  255 };
-	static int ea6350v1[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
-	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
-	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  254,  255,  255,  255,  255 };
-	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
-	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255,  255 };
-	static int ws880[]	= { 255,    6,   -12,  255,  255,    0,    1,   14,  255,  255,  255 };
-	static int r1d[]	= { 255,    1,   255,    2,  255,    3,   -8,  255,  255,  255,  255 };
-#if 0 /* tbd. 8-Bit Shift Registers at arm branch M_ars */
-	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* 8 bit shift register (SPI GPIO 0 to 7), active HIGH */
-#endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
-#endif
-#ifdef CONFIG_BCM7
+#ifdef TCONFIG_BCM7
 	static int ac3200[]	= { 254,  -15,     5,  255,   14,    3,  254,  255,  255,  254,  254 };
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
+#elif defined(CONFIG_BCMWL6A)
+	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
+	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac68u_v3[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac66u_b1[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
+	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6};
+	static int n18u[]	= { 254,  255,     6,  255,  255,    0,    9,    3,   14,  255};
+	static int r6250[]	= {  11,    3,    15,  255,  255,   -1,  255,    8,  255,  255};
+	static int r6300v2[]	= {  11,    3,    10,  255,  255,   -1,  255,    8,  255,  255};
+	static int r6400[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8};
+	static int r6400v2[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8};
+	static int r6700v1[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12};
+	static int r6700v3[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8};
+	static int r6900[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12};
+	static int xr300[]	= {   9,    2,     7,  255,  -10,  -11,  254,   12,   13,    8};
+	static int r7000[]	= {  13,    3,     9,  255,  -14,  -15,  254,   18,   17,   12};
+	static int ac15[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2};
+	static int ac18[]	= { 254,  -99,   255,  255,  255,   -6,  254,  -14,  255,   -2};
+	static int f9k1113v2[]	= { 255,   14,    12,  255,  255,   15,  255,   0,     1,  255};
+	static int dir868[]	= { 255,    0,     3,  255,  255,  255,  255,  255,  255,  255};
+	static int ea6350v1[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
+	static int ea6400[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
+	static int ea6500v2[]	= { 255,  255,     6,  255,  255,  255,  254,  255,  255,  255};
+	static int ea6700[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
+	static int ea6900[]	= { 255,  255,    -8,  255,  255,  255,  254,  255,  255,  255};
+	static int ws880[]	= { 255,    6,   -12,  255,  255,    0,    1,   14,  255,  255};
+	static int r1d[]	= { 255,    1,   255,  255,  255,  255,   -8,  255,  255,  255};
+#if 0
+	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* tbd. 8 bit shift register (SPI GPIO 0 to 7), active HIGH M_ars*/
 #endif
+#endif /* TCONFIG_BCM7 */
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 
@@ -187,7 +199,8 @@ int do_led(int which, int mode)
 	int ret = 255;
 	static int model = 0; /* initialize with 0 / MODEL_UNKNOWN */
 
-	if ((which < 0) || (which >= LED_COUNT)) return ret;
+	if ((which < 0) || (which >= LED_COUNT))
+		return ret;
 
 	if (model == 0) { /* router model unknown OR detect router model for the first time at function do_led(). */
 		/* get router model */
@@ -198,7 +211,9 @@ int do_led(int which, int mode)
 	if (nvram_match("stealth_mode", "1")) {
 		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200 */
 		switch (model) {
-#ifdef CONFIG_BCMWL6A
+#ifdef TCONFIG_BCM7
+			case MODEL_RTAC3200:
+#elif defined(CONFIG_BCMWL6A)
 			case MODEL_AC15:
 			case MODEL_AC18:
 			case MODEL_RTN18U:
@@ -208,14 +223,12 @@ int do_led(int which, int mode)
 			case MODEL_RTAC68U:
 			case MODEL_RTAC68UV3:
 			case MODEL_RTAC1900P:
-#endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
-			case MODEL_RTAC3200:
-#endif /* CONFIG_BCM7 */
-#if defined(CONFIG_BCMWL6A) || defined(CONFIG_BCM7)
+#endif /* TCONFIG_BCM7 */
+
+#if defined(CONFIG_BCMWL6A) || defined(TCONFIG_BCM7)
 				do_led_nongpio(model, which, LED_OFF);
 				break;
-#endif /* CONFIG_BCMWL6A OR CONFIG_BCM7 */
+#endif /* CONFIG_BCMWL6A OR TCONFIG_BCM7 */
 			default:
 				/* nothing to do right now */
 				break;
@@ -230,7 +243,43 @@ int do_led(int which, int mode)
 	}
 
 	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
-#ifdef CONFIG_BCMWL6A
+#ifdef TCONFIG_BCM7
+	case MODEL_RTAC3200:
+		b = ac3200[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G) ||
+		    (which == LED_52G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With WiFi bridge ON on any module, disable second WAN LED */
+			if (nvram_match("wl0_mode", "wet") ||
+			    nvram_match("wl1_mode", "wet") ||
+			    nvram_match("wl2_mode", "wet")) {
+				b = 255; /* disabled */
+			}
+		}
+		break;
+	case MODEL_R8000:
+		if (which == LED_DIAG) {
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color white gpio 2 (active LOW) */
+		}
+		else if (which == LED_WHITE) {
+			b = -8; /* color white gpio 8 (active LOW) */
+			c = 9; /* color amber gpio 9 (active HIGH) */
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+			b = r8000[which];
+		}
+		else {
+			b = r8000[which];
+		}
+		break;
+#elif defined(CONFIG_BCMWL6A)
 	case MODEL_RTAC67U:
 		b = ac67u[which];
 		if ((which == LED_WLAN) ||
@@ -533,44 +582,7 @@ int do_led(int which, int mode)
 		}
 #endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		break;
-#endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
-	case MODEL_RTAC3200:
-		b = ac3200[which];
-		if ((which == LED_WLAN) ||
-		    (which == LED_5G) ||
-		    (which == LED_52G)) { /* non GPIO LED */
-			do_led_nongpio(model, which, mode);
-		}
-		else if (which == LED_BRIDGE) { /* non GPIO LED */
-			do_led_bridge(mode);
-		}
-		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With WiFi bridge ON on any module, disable second WAN LED */
-			if (nvram_match("wl0_mode", "wet") ||
-			    nvram_match("wl1_mode", "wet") ||
-			    nvram_match("wl2_mode", "wet")) {
-				b = 255; /* disabled */
-			}
-		}
-		break;
-	case MODEL_R8000:
-		if (which == LED_DIAG) {
-			b = 3; /* color amber gpio 3 (active LOW) */
-			c = 2; /* color white gpio 2 (active LOW) */
-		}
-		else if (which == LED_WHITE) {
-			b = -8; /* color white gpio 8 (active LOW) */
-			c = 9; /* color amber gpio 9 (active HIGH) */
-		}
-		else if (which == LED_BRIDGE) { /* non GPIO LED */
-			do_led_bridge(mode);
-			b = r8000[which];
-		}
-		else {
-			b = r8000[which];
-		}
-		break;
-#endif /* CONFIG_BCM7 */
+#endif /* TCONFIG_BCM7 */
 	default:
 		sprintf(s, "led_%s", led_names[which]);
 		if (nvget_gpio(s, &b, &n)) {
@@ -584,7 +596,7 @@ int do_led(int which, int mode)
 	ret = b;
 	if (b < TOMATO_GPIO_MIN) {
 		if (b == -99)
-			b = TOMATO_GPIO_MIN;	/* -0 substitute */
+			b = TOMATO_GPIO_MIN; /* -0 substitute */
 		else
 			b = -b;
 	}
@@ -606,24 +618,28 @@ SET:
 			else
 				mode = !mode;
 
-			if (c <= TOMATO_GPIO_MAX) gpio_write(1 << c, mode);
+			if (c <= TOMATO_GPIO_MAX)
+				gpio_write(1 << c, mode);
 		}
 	}
 
 	return ret;
 }
 
-void disable_led_wanlan(void) {
-	system("/usr/sbin/et robowr 0x0 0x18 0x0100");	/* turn off all LAN and WAN LEDs Part 1/2 */
-	system("/usr/sbin/et robowr 0x0 0x1a 0x0100");	/* turn off all LAN and WAN LEDs Part 2/2 */
+void disable_led_wanlan(void)
+{
+	system("/usr/sbin/et robowr 0x0 0x18 0x0100"); /* turn off all LAN and WAN LEDs Part 1/2 */
+	system("/usr/sbin/et robowr 0x0 0x1a 0x0100"); /* turn off all LAN and WAN LEDs Part 2/2 */
 }
 
-void enable_led_wanlan(void) {
-	system("/usr/sbin/et robowr 0x0 0x18 0x01ff");	/* turn on all LAN and WAN LEDs Part 1/2 */
-	system("/usr/sbin/et robowr 0x0 0x1a 0x01ff");	/* turn on all LAN and WAN LEDs Part 2/2 */
+void enable_led_wanlan(void)
+{
+	system("/usr/sbin/et robowr 0x0 0x18 0x01ff"); /* turn on all LAN and WAN LEDs Part 1/2 */
+	system("/usr/sbin/et robowr 0x0 0x1a 0x01ff"); /* turn on all LAN and WAN LEDs Part 2/2 */
 }
 
-void do_led_bridge(int mode) {
+void do_led_bridge(int mode)
+{
 	if (mode == LED_ON) {
 		enable_led_wanlan();
 	}
@@ -635,8 +651,8 @@ void do_led_bridge(int mode) {
 	}
 }
 
-void led_setup(void) {
-
+void led_setup(void)
+{
 	int model;
 
 	/* get router model */
@@ -648,7 +664,17 @@ void led_setup(void) {
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
 		switch (model) {
-#ifdef CONFIG_BCMWL6A
+#ifdef TCONFIG_BCM7
+		case MODEL_R8000:
+			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
+			disable_led_wanlan();
+			break;
+		case MODEL_RTAC3200:
+			set_gpio(GPIO_03, T_HIGH); /* disable power led */
+			set_gpio(GPIO_15, T_LOW); /* disable button led */
+			disable_led_wanlan();
+			break;
+#elif defined(CONFIG_BCMWL6A)
 		case MODEL_DIR868L:
 			set_gpio(GPIO_00, T_HIGH); /* disable power led color amber */
 			break;
@@ -696,7 +722,7 @@ void led_setup(void) {
 			break;
 		case MODEL_RTAC68U:
 		case MODEL_RTAC68UV3:
-        	case MODEL_RTAC1900P:
+		case MODEL_RTAC1900P:
 			set_gpio(GPIO_03, T_HIGH); /* disable power led */
 			set_gpio(GPIO_04, T_HIGH); /* disable asus logo led */
 			disable_led_wanlan();
@@ -725,18 +751,7 @@ void led_setup(void) {
 			set_gpio(GPIO_01, T_LOW); /* disable power led color red */
 #endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
-#endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
-		case MODEL_R8000:
-			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
-			disable_led_wanlan();
-			break;
-		case MODEL_RTAC3200:
-			set_gpio(GPIO_03, T_HIGH); /* disable power led */
-			set_gpio(GPIO_15, T_LOW); /* disable button led */
-			disable_led_wanlan();
-			break;
-#endif /* CONFIG_BCM7 */
+#endif /* TCONFIG_BCM7 */
 		default:
 			/* nothing to do right now */
 			break;
@@ -745,7 +760,13 @@ void led_setup(void) {
 	else {
 		/* LED setup/config/preparation for some router models */
 		switch (model) {
-#ifdef CONFIG_BCMWL6A
+#ifdef TCONFIG_BCM7
+		case MODEL_R8000:
+			/* activate WAN port led */
+			set_gpio(GPIO_08, T_HIGH);
+			set_gpio(GPIO_09, T_LOW); /* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active LOW) if ethernet cable is connected; switch to color white (GPIO 8, active HIGH) with WAN up */
+			break;
+#elif defined(CONFIG_BCMWL6A)
 		case MODEL_DIR868L:
 			/* activate WAN port led */
 			set_gpio(GPIO_01, T_LOW); /* DIR868L: enable LED_WHITE / WAN LED with color amber (1); switch to color green (3) with WAN up */
@@ -766,14 +787,7 @@ void led_setup(void) {
 			/* activate WAN port led */
 			set_gpio(GPIO_08, T_LOW); /* R6700v1, R6900 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			break;
-#endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
-		case MODEL_R8000:
-			/* activate WAN port led */
-			set_gpio(GPIO_08, T_HIGH);
-			set_gpio(GPIO_09, T_LOW); /* R8000: enable LED_WHITE / WAN LED with color amber (GPIO 9, active LOW) if ethernet cable is connected; switch to color white (GPIO 8, active HIGH) with WAN up */
-			break;
-#endif /* CONFIG_BCM7 */
+#endif /* TCONFIG_BCM7 */
 		default:
 			/* nothing to do right now */
 			break;
@@ -782,10 +796,28 @@ void led_setup(void) {
 }
 
 /* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200 */
-void do_led_nongpio(int model, int which, int mode) {
-
+void do_led_nongpio(int model, int which, int mode)
+{
 	switch (model) {
-#ifdef CONFIG_BCMWL6A
+#ifdef TCONFIG_BCM7
+	case MODEL_RTAC3200:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1"); /* 2.4 GHz - eth2, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1"); /* 5 GHz - eth1, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_52G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth3 ledbh 10 1"); /* second 5 GHz - eth3, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth3 ledbh 10 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+#elif defined(CONFIG_BCMWL6A)
 	case MODEL_AC15:
 	case MODEL_AC18:
 	case MODEL_RTN18U:
@@ -818,26 +850,7 @@ void do_led_nongpio(int model, int which, int mode) {
 			else if (mode == LED_PROBE) return;
 		}
 		break;
-#endif /* CONFIG_BCMWL6A */
-#ifdef CONFIG_BCM7
-	case MODEL_RTAC3200:
-		if (which == LED_WLAN) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1"); /* 2.4 GHz - eth2, see Asus SRC */
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		else if (which == LED_5G) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 10 1"); /* 5 GHz - eth1, see Asus SRC */
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		else if (which == LED_52G) {
-			if (mode == LED_ON) system("/usr/sbin/wl -i eth3 ledbh 10 1"); /* second 5 GHz - eth3, see Asus SRC */
-			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth3 ledbh 10 0");
-			else if (mode == LED_PROBE) return;
-		}
-		break;
-#endif /* CONFIG_BCM7 */
+#endif /* TCONFIG_BCM7 */
 	default:
 		/* nothing to do right now */
 		break;
