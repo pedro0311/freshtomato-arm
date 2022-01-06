@@ -660,7 +660,7 @@ void restart_wl(void)
 
 					/* Enable WLAN LEDs if wireless interface is enabled */
 					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
-						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0) && (wlan_52g_cnt == 0)
+						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)
 #ifdef TCONFIG_DHDAP
 						    && (wlan_52g_cnt == 0)
 #endif
