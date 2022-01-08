@@ -2870,31 +2870,37 @@ libiconv-install:
 		ln -sf libiconv.so.2.6.1 libiconv.so.2 && \
 		ln -sf libiconv.so.2.6.1 libiconv.so
 
-transmission/stamp-h1:
-	cd transmission && ./autogen.sh && \
-		CFLAGS="-O3 -Wall $(if $(TCONFIG_BCMARM),-marm,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -pipe -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		CPPFLAGS="-O3 -Wall $(if $(TCONFIG_BCMARM),-marm,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -pipe -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		CXXFLAGS="-O3 -Wall $(if $(TCONFIG_BCMARM),-marm,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -pipe -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libcurl/lib/.libs -L$(TOP)/libevent/staged/usr/local/lib -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr --enable-lightweight --enable-largefile --enable-utp \
-			--disable-nls --disable-cli --without-gtk --disable-dependency-tracking \
-			LIBCURL_CFLAGS="-I$(TOP)/libcurl/include" \
-			LIBCURL_LIBS="-lcurl" \
-			LIBEVENT_CFLAGS="-I$(TOP)/libevent/staged/usr/local/include" \
-			LIBEVENT_LIBS="-levent" \
-			OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-			OPENSSL_LIBS="-lcrypto -lssl" \
-			ZLIB_CFLAGS="-I$(TOP)/zlib/staged/usr/include" \
-			ZLIB_LIBS="-lz"
-	@touch $@
+transmission/build/Makefile:
+	@rm -rf transmission/build && mkdir -p transmission/build
+	$(call patch_files,transmission)
+	cd transmission/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+			-DCMAKE_CXX_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600 -fno-exceptions -fno-rtti" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			-DENABLE_LIGHTWEIGHT=TRUE -DENABLE_UTP=TRUE -DENABLE_NLS=FALSE -DENABLE_CLI=FALSE -DENABLE_GTK=FALSE -DENABLE_TESTS=FALSE \
+			-DENABLE_NLS=FALSE -DINSTALL_DOC=FALSE -DUSE_SYSTEM_UTP=FALSE -DUSE_SYSTEM_DHT=FALSE -DUSE_SYSTEM_B64=FALSE -DWITH_SYSTEMD=FALSE \
+			-DCURL_INCLUDE_DIR=$(TOP)/libcurl/include \
+			-DCURL_LIBRARY=$(TOP)/libcurl/lib/.libs/libcurl.so \
+			-DEVENT2_INCLUDE_DIR=$(TOP)/libevent/staged/usr/local/include \
+			-DEVENT2_LIBRARY=$(TOP)/libevent/staged/usr/local/lib/libevent.so \
+			-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/staged/usr/include \
+			-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so \
+			-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so \
+			-DZLIB_INCLUDE_DIR=$(TOP)/zlib/staged/usr/include \
+			-DZLIB_LIBRARY=$(TOP)/zlib/staged/usr/lib/libz.so \
+			-DICONV_INCLUDE_DIR="" \
+			-DICONV_LIBRARY="" \
+			..
 
-transmission: transmission/stamp-h1
+transmission: transmission/build/Makefile
 	@$(SEP)
-	$(MAKE) -C transmission $(PARALLEL_BUILD)
+	$(MAKE) -C transmission/build $(PARALLEL_BUILD)
 
 transmission-install:
-	$(MAKE) -C transmission DESTDIR=$(INSTALLDIR)/transmission install-strip
-	@rm -rf $(INSTALLDIR)/transmission/usr/share/man
+	$(MAKE) -C transmission/build DESTDIR=$(INSTALLDIR)/transmission install
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-show
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-edit
 	@rm -rf $(INSTALLDIR)/transmission/usr/bin/transmission-create
@@ -2907,7 +2913,8 @@ endif
 
 transmission-clean:
 	-@$(MAKE) -C transmission clean
-	@rm -f transmission/stamp-h1 transmission/Makefile
+	@rm -rf transmission/build
+	$(call unpatch_files,transmission)
 
 libnfsidmap/stamp-h1:
 	cd libnfsidmap && ./autogen.sh && \
