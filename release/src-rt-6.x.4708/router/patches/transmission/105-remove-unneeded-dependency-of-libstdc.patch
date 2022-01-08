@@ -1,0 +1,11 @@
+--- transmission/CMakeLists.txt
++++ transmission/CMakeLists.txt
+@@ -341,7 +341,7 @@
+         # TODO: switch to imported targets for all the dependencies
+         add_library(UTP::UTP STATIC IMPORTED)
+         set_property(TARGET UTP::UTP PROPERTY IMPORTED_LOCATION "${UTP_LIBRARIES}")
+-        set_property(TARGET UTP::UTP PROPERTY IMPORTED_LINK_INTERFACE_LANGUAGES "CXX")
++        #set_property(TARGET UTP::UTP PROPERTY IMPORTED_LINK_INTERFACE_LANGUAGES "CXX")
+         set(UTP_LIBRARIES UTP::UTP)
+     endif()
+ endif()
