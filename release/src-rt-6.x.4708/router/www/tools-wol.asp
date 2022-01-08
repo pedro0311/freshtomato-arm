@@ -90,7 +90,7 @@ wg.populate = function() {
 
 	/* show anything else in ARP that is awake */
 	for (i = 0; i < arplist.length; ++i) {
-		if ((lan_ifnames.indexOf(arplist[j][2]) == -1) || (arplist[i][1].length != 17))
+		if ((lan_ifnames.indexOf(arplist[i][2]) == -1) || (arplist[i][1].length != 17))
 			continue;
 
 		r = this.insertData(-1, [arplist[i][1], arplist[i][0], 'Active (in ARP)', '']);

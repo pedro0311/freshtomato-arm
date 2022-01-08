@@ -102,7 +102,7 @@ aftg.setup = function() {
 	this.init('aft-grid', 'sort', 50, [
 		{ type: 'text', maxlen: 50 },
 		{ type: 'password', maxlen: 50, peekaboo: 1 },
-		{ type: 'select', options: [['Read/Write', 'Read/Write'],['Read Only', 'Read Only'],['View Only', 'View Only'],['Private', 'Private']] },
+		{ type: 'select', options: [['Read/Write', 'Read/Write'],['Read Only', 'Read Only'],['View Only', 'Browse Only'],['Private', 'Private']] },
 		{ type: 'text', maxlen: 128 }
 	]);
 	this.headerSet(['User Name', 'Password', 'Access', 'Root Directory*']);
