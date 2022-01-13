@@ -46,15 +46,18 @@ function defmac(which) {
 /* MULTIWAN-END */
 	else {
 /* REMOVE-BEGIN
-// trying to mimic the behaviour of static int set_wlmac(int idx, int unit, int subunit, void *param) in router/rc/network.c when we have wlX or wlX.X
+// align to wlconf setup AND FreshTomato initial mac setup
 REMOVE-END */
-		/* wlX */
-		var u, s, t, v;
-		u = which.substr(2, which.length) * 1;
-		s = parseInt(u.toString().substr(u.toString().indexOf(".") + 1, u.toString().length) * 1);
-		u = parseInt(u.toString().substr(0, u.toString().indexOf(".") - 1) * 1);
-		t = et0plus(2 + u + ((s > 0) ? (u * 0x10 + s) : 0)).split(':');
-		v = (parseInt(t[0], 16) + ((s > 0) ? (u * 0x10 + 2) : 0) ) & 0xFF;
+		var unit, subunit, t, v;
+		unit = which.substr(2, 1) * 1;
+		if (which.indexOf('.') < 0) { /* wlX */
+			subunit = 0;
+		}
+		else { /* wlX.Y */
+			subunit = which.substr(which.indexOf('.')+1, 1) * 1;
+		}
+		t = et0plus(2 + unit * 4 + subunit).split(':'); /* do not overlap with VIFs (4x VIFs for each wl radio unit) */
+		v = (parseInt(t[0], 16) | ((subunit > 0) ? 2 : 0)) & 0xFF; /* set local bit for our VIF base addr */
 		t[0] = v.hex(2);
 		return t.join(':');
 	}
@@ -140,7 +143,7 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	var u, uidx, v;
+	var u, uidx;
 
 	if (!verifyFields(null, false)) return;
 	if (!confirm("Warning: Changing the MAC address may require that you reboot all devices, computers or modem connected to this router. Continue anyway?")) return;
@@ -148,14 +151,12 @@ function save() {
 	var fom = E('t_fom');
 	for (uidx = 1; uidx <= nvram.mwan_num; ++uidx){
 		u = (uidx > 1) ? uidx : '';
-		v = E('_f_wan'+u+'_hwaddr').value;
-		fom['wan'+u+'_mac'].value= (v == defmac('wan'+u)) ? '' : v;
+		fom['wan'+u+'_mac'].value = E('_f_wan'+u+'_hwaddr').value; /* save always (not matter if default/random or not!) */
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		u = wl_fface(uidx);
-		v = E('_f_wl'+u+'_hwaddr').value;
-		E('_wl'+u+'_hwaddr').value = (v == defmac('wl' + u)) ? '' : v;
+		E('_wl'+u+'_hwaddr').value = E('_f_wl'+u+'_hwaddr').value; /* save always (not matter if default/random or not!) */
 	}
 
 	form.submit(fom, 1);
