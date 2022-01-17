@@ -271,6 +271,7 @@ void wo_ovpn_genclientconfig(char *url)
 	char *u, *nv, *nvp, *b;
 	int server, hmac, tls = 0;
 	int userauth, useronly, userid, i = 0;
+	struct in_addr lanip, lannetmask, lannet;
 	FILE *fp;
 	FILE *fa;
 
@@ -456,6 +457,11 @@ void wo_ovpn_genclientconfig(char *url)
 		else {
 			fprintf(fp, "ifconfig %s ", getNVRAMVar("vpn_server%d_remote", server));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_server%d_local", server));
+		}
+		if (inet_aton(nvram_safe_get("lan_ipaddr"),&lanip) && inet_aton(nvram_safe_get("lan_netmask"),&lannetmask))
+		{
+			lannet.s_addr = lanip.s_addr & lannetmask.s_addr;
+			fprintf(fp, "route %s %s\n", inet_ntoa(lannet), nvram_safe_get("lan_netmask"));
 		}
 		fprintf(fp, "; secret static.key\n<secret>\n%s\n</secret>\n\n", getNVRAMVar("vpn_server%d_static", server));
 		put_to_file(OVPN_CLIENT_DIR"/static.key", getNVRAMVar("vpn_server%d_static", server));
