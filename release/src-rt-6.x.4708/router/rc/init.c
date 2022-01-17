@@ -43,16 +43,6 @@
 extern struct nvram_tuple router_defaults[];
 int restore_defaults_fb = 0;
 
-void
-restore_defaults_module(char *prefix)
-{
-	struct nvram_tuple *t;
-
-	for (t = router_defaults; t->name; t++) {
-		if(strncmp(t->name, prefix, sizeof(prefix))!=0) continue;
-		nvram_set(t->name, t->value);
-	}
-}
 #ifdef TCONFIG_BCM7
 extern struct nvram_tuple bcm4360ac_defaults[];
 extern struct nvram_tuple r8000_params[];
