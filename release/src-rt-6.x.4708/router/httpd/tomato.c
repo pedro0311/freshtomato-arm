@@ -925,6 +925,9 @@ static const nvset_t nvset_list[] = {
 #ifdef CONFIG_BCMWL6
 	{ "wl_bss_opmode_cap_reqd",	V_RANGE(0, 3)			},	/* 0 - all possible, 1 - 11g cap., 2 - 11n cap., 3 - 11ac cap. */
 #endif
+#ifdef TCONFIG_ROAM
+	{ "wl_user_rssi",		V_RANGE(-90, 0)			},	/* roaming assistant: disabled by default == 0 , GUI setting range: -90 ~ -45 */
+#endif
 	{ "wl_nbw",			V_NONE				},
 	{ "wl_mimo_preamble",		V_WORD				},	// 802.11n Preamble: mm/gf/auto/gfbcm
 	{ "wl_nctrlsb",			V_NONE				},	// none, lower, upper

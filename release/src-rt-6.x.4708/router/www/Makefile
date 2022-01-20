@@ -250,6 +250,11 @@ ifneq ($(TCONFIG_BCMBSD),y)
 	sed -i $(INSTALLDIR)/www/basic-network.asp -e "/BSD-BEGIN/,/BSD-END/d"
 endif
 
+# Only include the roaming assistant option if is compiled in
+ifneq ($(TCONFIG_ROAM),y)
+	sed -i $(INSTALLDIR)/www/advanced-wireless.asp -e "/ROAM-BEGIN/,/ROAM-END/d"
+endif
+
 # Only include SSH stuff when needed
 ifneq ($(TCONFIG_SSH),y)
 	sed -i $(INSTALLDIR)/www/isup.jsx -e "/SSH-BEGIN/,/SSH-END/d"
@@ -410,6 +415,7 @@ endif
 		-e "/BCMNAT-BEGIN/d"	-e "/BCMNAT-END/d" \
 		-e "/BCMWL6-BEGIN/d"	-e "/BCMWL6-END/d" \
 		-e "/BSD-BEGIN/d"	-e "/BSD-END/d" \
+		-e "/ROAM-BEGIN/d"	-e "/ROAM-END/d" \
 		-e "/BBT-BEGIN/d"	-e "/BBT-END/d" \
 		-e "/BT-BEGIN/d"	-e "/BT-END/d" \
 		-e "/NFS-BEGIN/d"	-e "/NFS-END/d" \

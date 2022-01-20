@@ -66,6 +66,7 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_GROCTRL is not set
 # TCONFIG_BCMFA is not set
 # TCONFIG_BCMBSD is not set
+# TCONFIG_ROAM is not set
 # TCONFIG_FANCTRL is not set
 # TCONFIG_IPERF is not set
 # TCONFIG_QRCODE is not set

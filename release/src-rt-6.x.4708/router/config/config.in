@@ -261,6 +261,10 @@ config TCONFIG_BCMBSD
 	bool "Brcm Band Steer Selection"
 	default n
 
+config TCONFIG_ROAM
+	bool "WL roaming assistant (RSSI)"
+	default n
+
 config TCONFIG_DNSSEC
 	bool "DNSSEC"
 	default n

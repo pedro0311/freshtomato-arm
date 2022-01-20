@@ -1537,7 +1537,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 #ifdef TCONFIG_BLINK /* RTN/RTAC */
@@ -1555,7 +1557,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_RTN16:
@@ -1568,7 +1572,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 			nvram_set("vlan_enable", "1");
 		}
 		break;
@@ -1580,7 +1586,9 @@ static int init_nvram(void)
 			nvram_set("sromrev", "3");
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_WNR2000v2:
@@ -1590,7 +1598,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_F7D3301:
@@ -1652,7 +1662,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_WRT320N:
@@ -1665,7 +1677,9 @@ static int init_nvram(void)
 			}
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_WRT610Nv2:
@@ -1678,7 +1692,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 		break;
 	case MODEL_E4200:
@@ -1691,7 +1708,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 
 #ifdef TCONFIG_BLINK /* RTN/RTAC */
 			/* fix MAC addresses */
@@ -2061,7 +2081,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 			nvram_set("sb/1/ledbh5", "2"); /* WL_LED_ACTIVITY; WiFi LED - active HIGH */
 		}
 		break;
@@ -2072,7 +2094,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 
 			nvram_set("sb/1/ledbh4", "2");  /* WL_LED_ACTIVITY; WiFi LED - active HIGH */
 			nvram_set("sb/1/ledbh5", "11"); /* WL_LED_INACTIVE, not used ... */
@@ -2088,7 +2112,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 
 			struct nvram_tuple rtn12_sb_1_params[] = {
 				/* WL_LED_ACTIVITY; WiFi LED - active HIGH */
@@ -2121,7 +2147,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan0 eth1");
 			nvram_set("wan_ifnameX", "vlan1");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 			nvram_set("sb/1/ledbh5", "2"); /* WL_LED_ACTIVITY; WiFi LED - active HIGH */
 		}
 		break;
@@ -2138,7 +2166,9 @@ static int init_nvram(void)
 			nvram_set("wan_ifname", "vlan2");
 			nvram_set("wan_ifnameX", "vlan2");
 			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 			nvram_set("blink_wl", "1"); /* Enable WLAN LED if wireless interface is enabled, and turn on blink */
 		break;
@@ -3448,7 +3478,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_F9K1102:
@@ -3530,6 +3562,8 @@ static int init_nvram(void)
 			nvram_set("qtdc1_sz", "10");
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
 #else
@@ -3561,6 +3595,8 @@ static int init_nvram(void)
 			nvram_set("qtdc1_sz", "10");
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
 #else

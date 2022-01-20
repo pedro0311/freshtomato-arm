@@ -47,6 +47,10 @@ OBJS += blink.o
 OBJS += blink_br.o
 endif
 
+ifeq ($(TCONFIG_ROAM),y)
+OBJS += roamast.o
+endif
+
 ifeq ($(TCONFIG_BCMARM),y)
 OBJS += bcmutils.o
 endif
@@ -199,6 +203,10 @@ endif
 
 ifeq ($(TCONFIG_CIFS),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mount-cifs
+endif
+
+ifeq ($(TCONFIG_ROAM),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc roamast
 endif
 
 clean:

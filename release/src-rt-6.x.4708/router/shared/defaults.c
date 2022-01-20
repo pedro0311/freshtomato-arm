@@ -512,6 +512,12 @@ struct nvram_tuple router_defaults[] = {
 										/* 2 = client must advertise HT / 11n cap. to be able to join */
 										/* 3 = client must advertise VHT / 11ac cap. to be able to join */
 #endif
+#ifdef TCONFIG_ROAM
+	{ "wl_user_rssi",		"0"				, 0 },	/* roaming assistant: disabled by default, GUI setting range: -90 ~ -45 */
+#ifdef TCONFIG_BCMARM
+	{ "rast_idlrt",			"2"				, 0 },	/* roaming assistant: idle rate (Kbps) - default: 2 */
+#endif
+#endif
 	{ "wl_rxchain_pwrsave_enable",	"0"				, 0 },	/* Rxchain powersave enable */
 	{ "wl_rxchain_pwrsave_quiet_time","1800"			, 0 },	/* Quiet time for power save */
 	{ "wl_rxchain_pwrsave_pps",	"10"				, 0 },	/* Packets per second threshold for power save */
