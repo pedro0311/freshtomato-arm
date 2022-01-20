@@ -39,6 +39,7 @@
 
 /* ref: http://wiki.openwrt.org/OpenWrtDocs/nas */
 // #define DEBUG_TIMING
+
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
 #define LOGMSG_NVDEBUG	"wnas_debug"

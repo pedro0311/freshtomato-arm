@@ -1,3 +1,11 @@
+/*
+
+	Tomato Firmware
+	Copyright (C) 2006-2009 Jonathan Zarate
+
+*/
+
+
 #include "rc.h"
 
 
@@ -18,7 +26,6 @@ void start_arpbind(void)
 		/*
 		 * macaddr<ip.ad.dr.ess<hostname<arpbind>anotherhwaddr<other.ip.addr.ess<othername<arpbind
 		*/
-
 		if ((vstrsep(b, "<", &macaddr, &ipaddr, &name, &bind)) < 4)
 			continue;
 		if (strchr(macaddr, ',') != NULL)

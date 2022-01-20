@@ -337,7 +337,6 @@ static int renew(char *ifname, char *prefix)
 	return 0;
 }
 
-
 int dhcpc_event_main(int argc, char **argv)
 {
 	char *ifname;

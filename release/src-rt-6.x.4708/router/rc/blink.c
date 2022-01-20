@@ -1,4 +1,13 @@
+/*
+
+	Tomato Firmware
+	Copyright (C) 2006-2009 Jonathan Zarate
+
+*/
+
+
 #include "rc.h"
+
 #include <shared.h>
 #include <string.h>
 #include <wlutils.h>
@@ -34,21 +43,29 @@ static unsigned long get_wl_count(char *interface)
 	char *ifname, *p;
 	unsigned long counter1, counter2;
 
-	if((f = fopen("/proc/net/dev", "r"))==NULL) return -1;
+	if ((f = fopen("/proc/net/dev", "r")) == NULL)
+		return -1;
 
 	fgets(buf, sizeof(buf), f);
 	fgets(buf, sizeof(buf), f);
 
-	counter1=counter2=0;
+	counter1 = counter2 = 0;
 
 	while (fgets(buf, sizeof(buf), f)) {
-		if((p=strchr(buf, ':'))==NULL) continue;
-		*p = 0;
-		if((ifname = strrchr(buf, ' '))==NULL) ifname = buf;
-		else ++ifname;
+		if ((p = strchr(buf, ':')) == NULL)
+			continue;
 
-		if(strcmp(ifname, interface)) continue;
-		if(sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2) continue;
+		*p = 0;
+		if ((ifname = strrchr(buf, ' ')) == NULL)
+			ifname = buf;
+		else
+			++ifname;
+
+		if (strcmp(ifname, interface))
+			continue;
+		if (sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2)
+			continue;
+
 		break;
 	}
 	fclose(f);
@@ -71,7 +88,7 @@ int blink_main(int argc, char *argv[])
 	/* Check for correct number of arguments */
 	if (argc != 5) {
 		fprintf(stderr, "usage: blink interface led rate threshold\n");
-		return(1);
+		return 1;
 	}
 	
 	/* Check and get the LED Index for the targeted LED */
@@ -81,31 +98,32 @@ int blink_main(int argc, char *argv[])
 	i = do_led(ledindex, LED_PROBE);
 	if ((i == 255) || (i == 254)) {
 		fprintf(stderr, "blink led NOT valid or useable!d\n");
-		return(1);
+		return 1;
 	}
 
 	/* Check blink parameter rate */
 	maxspeed = atof(argv[3]);
 	if ((maxspeed > BLINK_MAXSPEED_MAX) || (maxspeed < BLINK_MAXSPEED_MIN)) {
 		fprintf(stderr, "blink rate not valid! (Range: %d up to %d)\n", BLINK_MAXSPEED_MIN, BLINK_MAXSPEED_MAX);
-		return(1);
+		return 1;
 	}
 
 	/* Check blink parameter threshold */
 	threshold = atol(argv[4]);
 	if ((threshold > BLINK_THRESHOLD_MAX) || (threshold < BLINK_THRESHOLD_MIN)) {
 		fprintf(stderr, "blink threshold not valid! (Range: %d up to %d [Bytes])\n", BLINK_THRESHOLD_MIN, BLINK_THRESHOLD_MAX);
-		return(1);
+		return 1;
 	}
 
 	/* Fork new process, run in the background (daemon) */
-	if (fork() != 0) return 0;
+	if (fork() != 0)
+		return 0;
+
 	setsid();
 	signal(SIGCHLD, chld_reap);
 
-		
 	/* Loop Through, checking for new data (and blink accordingly ... max speed at max or higher data rate) */
-	while(1){
+	while(1) {
 		/* Get Data Count, check if sufficient data received for blink */
 		count = get_wl_count(argv[1]);
 		if (count >= (oldcount + threshold)) {
@@ -134,7 +152,7 @@ int blink_main(int argc, char *argv[])
 		else {
 			/* Get Radio Status ... only blink if Radio is Enabled (otherwise, just turn the LED off) */
 			wl_ioctl(argv[1], WLC_GET_RADIO, &radioStatus, sizeof(radioStatus));
-			
+
 			/* radioStatus != 0 for Disabled, using a bit mask defined in wlioctl.h (i.e. 0 = enabled) */
 			if (radioStatus != 0) {
 				/* Radio is disabled (in one of multiple ways), so disable LED ... and wait 10 seconds to check again */
@@ -149,4 +167,3 @@ int blink_main(int argc, char *argv[])
 		}
 	}
 }
-
