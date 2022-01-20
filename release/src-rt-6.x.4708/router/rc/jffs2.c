@@ -26,8 +26,12 @@
 #ifdef TCONFIG_BRCM_NAND_JFFS2
 #define JFFS2_PARTITION	"brcmnand"
 #else
+#ifdef TCONFIG_BCMARM
 #define JFFS2_PARTITION	"brcmnand"
-#endif
+#else
+#define JFFS2_PARTITION	"jffs2"
+#endif /* TCONFIG_BCMARM */
+#endif /* TCONFIG_BRCM_NAND_JFFS2 */
 
 //#define TEST_INTEGRITY
 
@@ -83,7 +87,7 @@ void start_jffs2(void)
 	}
 
 	memset(s, 0, 256);
-	sprintf(s, "%d", size);
+	snprintf(s, sizeof(s), "%d", size);
 	p = nvram_safe_get("jffs2_size");
 	if ((!*p) || (strcmp(p, s) != 0)) {
 		if (format) {
@@ -114,7 +118,7 @@ void start_jffs2(void)
 	modprobe(JFFS_NAME);
 
 	memset(s, 0, 256);
-	sprintf(s, MTD_BLKDEV(%d), part);
+	snprintf(s, sizeof(s), MTD_BLKDEV(%d), part);
 
 	if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
 		if (mtd_erase(JFFS2_PARTITION)) {

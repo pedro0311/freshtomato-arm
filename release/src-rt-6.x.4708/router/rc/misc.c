@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 
 #define MAX_XSTART_ARGC 16
+
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
 #define LOGMSG_NVDEBUG	"misc_debug"
@@ -356,7 +357,8 @@ void setup_conntrack(void)
 	if (i >= 127)
 		f_write_string("/sys/module/nf_conntrack/parameters/hashsize", p, 0, 0);
 	else if (f_read_string("/sys/module/nf_conntrack/parameters/hashsize", buf, sizeof(buf)) > 0)
-		if (atoi(buf) > 0) nvram_set("ct_hashsize", buf);
+		if (atoi(buf) > 0)
+			nvram_set("ct_hashsize", buf);
 
 	p = nvram_safe_get("ct_max");
 	i = atoi(p);

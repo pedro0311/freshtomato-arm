@@ -44,31 +44,31 @@ static void update(int num, int *dirty, int force)
 	    || nvram_match("ddnsx_ip", "wan3") || nvram_match("ddnsx_ip", "wan4")
 #endif
 	)
-		strcpy(prefix, nvram_safe_get("ddnsx_ip"));
+		strlcpy(prefix, nvram_safe_get("ddnsx_ip"), sizeof(prefix));
 	else
-		strcpy(prefix, "wan");
+		strlcpy(prefix, "wan", sizeof(prefix));
 
 	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
 
-	memset(s, 0, 128);
-	sprintf(s, "ddns%d", num);
+	memset(s, 0, sizeof(s));
+	snprintf(s, sizeof(s), "ddns%d", num);
 	eval("cru", "d", s);
 	logmsg(LOG_DEBUG, "*** %s: cru d %s", __FUNCTION__, s);
 
-	memset(s, 0, 128);
-	sprintf(s, "ddnsf%d", num);
+	memset(s, 0, sizeof(s));
+	snprintf(s, sizeof(s), "ddnsf%d", num);
 	eval("cru", "d", s);
 	logmsg(LOG_DEBUG, "*** %s: cru d %s", __FUNCTION__, s);
 
-	memset(ddnsx, 0, 16);
-	sprintf(ddnsx, "ddnsx%d", num);
-	memset(ddnsx_path, 0, 32);
-	sprintf(ddnsx_path, "/var/lib/mdu/%s", ddnsx);
+	memset(ddnsx, 0, sizeof(ddnsx));
+	snprintf(ddnsx, sizeof(ddnsx), "ddnsx%d", num);
+	memset(ddnsx_path, 0, sizeof(ddnsx_path));
+	snprintf(ddnsx_path, sizeof(ddnsx_path), "/var/lib/mdu/%s", ddnsx);
 	strlcpy(config, nvram_safe_get(ddnsx), sizeof(config));
 
 	mkdir("/var/lib/mdu", 0700);
-	memset(msg_fn, 0, 32);
-	sprintf(msg_fn, "%s.msg", ddnsx_path);
+	memset(msg_fn, 0, sizeof(msg_fn));
+	snprintf(msg_fn, sizeof(msg_fn), "%s.msg", ddnsx_path);
 
 	if ((vstrsep(config, "<", &serv, &user, &host, &wild, &mx, &bmx, &cust) < 7) || (*serv == 0)) {
 		logmsg(LOG_DEBUG, "*** %s: msg=''", __FUNCTION__);
@@ -86,8 +86,8 @@ static void update(int num, int *dirty, int force)
 		return;
 	}
 
-	memset(cache_nv, 0, 32);
-	sprintf(cache_nv, "%s_cache", ddnsx);
+	memset(cache_nv, 0, sizeof(cache_nv));
+	snprintf(cache_nv, sizeof(cache_nv), "%s_cache", ddnsx);
 	if (force) {
 		logmsg(LOG_DEBUG, "*** %s: force=1", __FUNCTION__);
 		nvram_set(cache_nv, "");
@@ -113,8 +113,8 @@ static void update(int num, int *dirty, int force)
 	else if (inet_addr(ip) == (in_addr_t) -1)
 		strcpy(ip, get_wanip(prefix));
 
-	memset(cache_fn, 0, 32);
-	sprintf(cache_fn, "%s.cache", ddnsx_path);
+	memset(cache_fn, 0, sizeof(cache_nv));
+	snprintf(cache_fn, sizeof(cache_nv), "%s.cache", ddnsx_path);
 	f_write_string(cache_fn, nvram_safe_get(cache_nv), 0, 0);
 
 	if (!f_exists(msg_fn)) {
@@ -122,8 +122,8 @@ static void update(int num, int *dirty, int force)
 		f_write(msg_fn, NULL, 0, 0, 0);
 	}
 
-	memset(conf_fn, 0, 32);
-	sprintf(conf_fn, "%s.conf", ddnsx_path);
+	memset(conf_fn, 0, sizeof(conf_fn));
+	snprintf(conf_fn, sizeof(conf_fn), "%s.conf", ddnsx_path);
 	if ((f = fopen(conf_fn, "w")) == NULL)
 		goto CLEANUP;
 
@@ -161,8 +161,8 @@ static void update(int num, int *dirty, int force)
 	exitcode = eval("mdu", "--service", serv, "--conf", conf_fn);
 	logmsg(LOG_DEBUG, "*** %s: mdu exitcode=%d", __FUNCTION__, exitcode);
 
-	memset(s, 0, 128);
-	sprintf(s, "%s_errors", ddnsx);
+	memset(s, 0, sizeof(s));
+	snprintf(s, sizeof(s), "%s_errors", ddnsx);
 	if ((exitcode == 1) || (exitcode == 2)) {
 		if (nvram_match("ddnsx_retry", "0"))
 			goto CLEANUP;
@@ -179,8 +179,8 @@ static void update(int num, int *dirty, int force)
 				goto CLEANUP;
 			}
 		}
-		memset(v, 0, 128);
-		sprintf(v, "%d", errors);
+		memset(v, 0, sizeof(v));
+		snprintf(v, sizeof(v), "%d", errors);
 		nvram_set(s, v);
 		goto SCHED;
 	}
@@ -211,7 +211,7 @@ static void update(int num, int *dirty, int force)
 		if ((n < 0) || (n > 90))
 			n = 28;
 
-		t += (n * 86400);	/* refresh every n days */
+		t += (n * 86400); /* refresh every n days */
 		
 		/* fix: if time is in the past, make it current */
 		time_t now = time(0) + (60 * 5);
@@ -219,10 +219,10 @@ static void update(int num, int *dirty, int force)
 			t = now;
 
 		tm = localtime(&t);
-		memset(s, 0, 128);
-		sprintf(s, "ddnsf%d", num);
-		memset(v, 0, 128);
-		sprintf(v, "%d %d %d %d * ddns-update %d force", tm->tm_min, tm->tm_hour, tm->tm_mday, tm->tm_mon + 1, num);
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), "ddnsf%d", num);
+		memset(v, 0, sizeof(v));
+		snprintf(v, sizeof(v), "%d %d %d %d * ddns-update %d force", tm->tm_min, tm->tm_hour, tm->tm_mday, tm->tm_mon + 1, num);
 		logmsg(LOG_DEBUG, "*** %s: cru a %s %s", __FUNCTION__, s, v);
 
 		eval("cru", "a", s, v);
@@ -241,8 +241,8 @@ SCHED:
 			if (exitcode == 2)
 				n = 30;
 
-			memset(s, 0, 128);
-			sprintf(s, "\n#RETRY %d %d\n", n, errors);	/* should be localized in basic-ddns.asp */
+			memset(s, 0, sizeof(s));
+			snprintf(s, sizeof(s), "\n#RETRY %d %d\n", n, errors); /* should be localized in basic-ddns.asp */
 			f_write_string(msg_fn, s, FW_APPEND, 0);
 			logmsg(LOG_DEBUG, "*** %s: msg='retry n=%d errors=%d'", __FUNCTION__, n, errors);
 		}
@@ -251,10 +251,10 @@ SCHED:
 		tm = localtime(&t);
 		logmsg(LOG_DEBUG, "*** %s: sch: %d:%d", __FUNCTION__, tm->tm_hour, tm->tm_min);
 
-		memset(s, 0, 128);
-		sprintf(s, "ddns%d", num);
-		memset(v, 0, 128);
-		sprintf(v, "%d * * * * ddns-update %d", tm->tm_min, num);
+		memset(s, 0, sizeof(s));
+		snprintf(s, sizeof(s), "ddns%d", num);
+		memset(v, 0, sizeof(v));
+		snprintf(v, sizeof(v), "%d * * * * ddns-update %d", tm->tm_min, num);
 		logmsg(LOG_DEBUG, "*** %s: cru a %s %s", __FUNCTION__, s, v);
 
 		eval("cru", "a", s, v);
