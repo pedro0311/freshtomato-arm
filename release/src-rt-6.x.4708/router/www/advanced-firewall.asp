@@ -54,16 +54,19 @@ function verifyFields(focused, quiet) {
 	var mcast_lan3 = E('_f_multicast_lan3').checked;
 	var mcast_custom_enable = 0;
 /* disable multicast_custom textarea if lanX is checked / selected */
-	E('_multicast_custom').disabled = ((!enable_mcast) ||  (mcast_lan) || (mcast_lan1) || (mcast_lan2) || (mcast_lan3));
+	E('_multicast_custom').disabled = ((!enable_mcast) || (mcast_lan) || (mcast_lan1) || (mcast_lan2) || (mcast_lan3));
 /* check if more than 50 charactars are in the textarea (no plausibility test) */
-	if (!E('_multicast_custom').disabled && v_length('_multicast_custom', 1, 50, 2048))
-		mcast_custom_enable = 1;
+	if (!E('_multicast_custom').disabled) {
+		if (v_length('_multicast_custom', 1, 50, 2048))
+			mcast_custom_enable = 1;
+		else
+			mcast_custom_enable = 0;
+	}
 	else
-		mcast_custom_enable = 0;
-
+		ferror.clear('_multicast_custom');
 /* IGMP proxy enable checked but no lanX checked and no custom config */
 	if ((enable_mcast) && (!mcast_lan) && (!mcast_lan1) && (!mcast_lan2) && (!mcast_lan3) && (!mcast_custom_enable)) {
-		ferror.set('_f_multicast', 'IGMP proxy must be enabled in least one LAN bridge OR you have to use custom configuration', quiet);
+		ferror.set('_f_multicast', 'IGMP proxy must be enabled in at least one LAN bridge OR you have to use custom configuration', quiet);
 		return 0;
 	}
 /* IGMP proxy enable checked but custom config / textarea length not OK */
