@@ -544,4 +544,8 @@
 #define USB_VENDOR_ID_ZYDACRON	0x13EC
 #define USB_DEVICE_ID_ZYDACRON_REMOTE_CONTROL	0x0006
 
+#define USB_VENDOR_ID_NOVATEL 0x1410 /* blacklist Novatel Wireless USB730L */
+#define USB_DEVICE_ID_NOVATEL_USB730L_USER_MODE 0x9030 /* blacklist Novatel Wireless USB730L */
+#define USB_DEVICE_ID_NOVATEL_USB730L_ENTERPRISE_MODE 0x9032 /* blacklist Novatel Wireless USB730L */
+
 #endif

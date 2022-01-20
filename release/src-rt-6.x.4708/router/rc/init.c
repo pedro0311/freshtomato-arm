@@ -43,16 +43,6 @@
 extern struct nvram_tuple router_defaults[];
 int restore_defaults_fb = 0;
 
-void
-restore_defaults_module(char *prefix)
-{
-	struct nvram_tuple *t;
-
-	for (t = router_defaults; t->name; t++) {
-		if(strncmp(t->name, prefix, sizeof(prefix))!=0) continue;
-		nvram_set(t->name, t->value);
-	}
-}
 #ifdef TCONFIG_BCM7
 extern struct nvram_tuple bcm4360ac_defaults[];
 extern struct nvram_tuple r8000_params[];
@@ -373,7 +363,7 @@ static void shutdn(int rb)
 	int act;
 	sigset_t ss;
 
-	logmsg(LOG_DEBUG, "*** %s: shutdn rb=%d", __FUNCTION__, rb);
+	_dprintf("shutdn rb=%d\n", rb);
 
 	sigemptyset(&ss);
 	for (i = 0; i < sizeof(fatalsigs) / sizeof(fatalsigs[0]); i++)
@@ -383,8 +373,10 @@ static void shutdn(int rb)
 	sigprocmask(SIG_BLOCK, &ss, NULL);
 
 	for (i = 30; i > 0; --i) {
-		if (((act = check_action()) == ACT_IDLE) || (act == ACT_REBOOT)) break;
-		logmsg(LOG_DEBUG, "*** %s: busy with %d. Waiting before shutdown... %d", __FUNCTION__, act, i);
+		if (((act = check_action()) == ACT_IDLE) || (act == ACT_REBOOT))
+			break;
+
+		_dprintf("Busy with %d. Waiting before shutdown... %d\n", act, i);
 		sleep(1);
 	}
 	set_action(ACT_REBOOT);
@@ -393,12 +385,12 @@ static void shutdn(int rb)
 	killall("xl2tpd", SIGTERM);
 	killall("pppd", SIGTERM);
 
-	logmsg(LOG_DEBUG, "*** %s: TERM", __FUNCTION__);
+	_dprintf("TERM\n");
 	kill(-1, SIGTERM);
 	sleep(3);
 	sync();
 
-	logmsg(LOG_DEBUG, "*** %s: KILL", __FUNCTION__);
+	_dprintf("KILL\n");
 	kill(-1, SIGKILL);
 	sleep(1);
 	sync();
@@ -5408,9 +5400,11 @@ static int init_nvram(void)
 	nvram_unset("sch_c2_last");
 	nvram_unset("sch_c3_last");
 
+#ifndef TCONFIG_BCMARM
 	nvram_set("brau_state", "");
 	if ((features & SUP_BRAU) == 0)
 		nvram_set("script_brau", "");
+#endif
 	if ((features & SUP_SES) == 0)
 		nvram_set("sesx_script", "");
 
