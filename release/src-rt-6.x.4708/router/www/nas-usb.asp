@@ -236,11 +236,11 @@ function verifyFields(focused, quiet) {
 /* UPS-END */
 /* NTFS-BEGIN */
 	E('_f_ntfs').disabled = b || a;
-	E('_usb_ntfs_driver').disabled = b || a;
+	E('_usb_ntfs_driver').disabled = b || a || !E('_f_ntfs').checked;
 /* NTFS-END */
 /* HFS-BEGIN */
 	E('_f_hfs').disabled = b || a;
-	E('_usb_hfs_driver').disabled = b || a;
+	E('_usb_hfs_driver').disabled = b || a || !E('_f_hfs').checked;
 /* HFS-END */
 /* ZFS-BEGIN */
 	E('_f_zfs').disabled = b || a;
