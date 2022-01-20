@@ -968,6 +968,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "sesx_script",
 		"[ $1 -ge 20 ] && telnetd -p 233 -l /bin/sh\n"
 	, 0 },
+#ifndef TCONFIG_BCMARM
 	{ "script_brau",
 		"if [ ! -e /tmp/switch-start ]; then\n"
 		"  # do something at startup\n"
@@ -982,6 +983,7 @@ struct nvram_tuple router_defaults[] = {
 		"  led bridge off\n"
 		"fi\n"
 	, 0 },
+#endif
 
 /* admin-log */
 	{ "log_remote",			"0"				, 0 },

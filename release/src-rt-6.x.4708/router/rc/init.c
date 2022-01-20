@@ -5400,9 +5400,11 @@ static int init_nvram(void)
 	nvram_unset("sch_c2_last");
 	nvram_unset("sch_c3_last");
 
+#ifndef TCONFIG_BCMARM
 	nvram_set("brau_state", "");
 	if ((features & SUP_BRAU) == 0)
 		nvram_set("script_brau", "");
+#endif
 	if ((features & SUP_SES) == 0)
 		nvram_set("sesx_script", "");
 

@@ -1357,7 +1357,9 @@ static const nvset_t nvset_list[] = {
 	{ "sesx_b2",			V_RANGE(0, 5)			},	// "
 	{ "sesx_b3",			V_RANGE(0, 5)			},	// "
 	{ "sesx_script",		V_TEXT(0, 1024)			},	//
+#ifndef TCONFIG_BCMARM
 	{ "script_brau",		V_TEXT(0, 1024)			},	//
+#endif
 
 // admin-debug
 	{ "debug_nocommit",		V_01				},
