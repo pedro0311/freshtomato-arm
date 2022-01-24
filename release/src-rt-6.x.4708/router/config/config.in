@@ -174,10 +174,6 @@ config TCONFIG_STUBBY
 	bool "  Stubby - DNS-over-TLS resolver"
 	default n
 
-config TCONFIG_NV128
-	bool "NVRAM size 128k"
-	default n
-
 config TCONFIG_NVRAM_64K
 	bool "NVRAM_64K"
 	default n
