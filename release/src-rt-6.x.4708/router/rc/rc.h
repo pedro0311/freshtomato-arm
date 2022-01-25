@@ -593,4 +593,11 @@ extern void stop_mysql();
 extern void start_tomatoanon();
 extern void stop_tomatoanon();
 
+/* roamast.c */
+#ifdef TCONFIG_ROAM
+extern void start_roamast(void);
+extern void stop_roamast(void);
+extern int roam_assistant_main(int argc, char *argv[]);
+#endif
+
 #endif /* __RC_H__ */
