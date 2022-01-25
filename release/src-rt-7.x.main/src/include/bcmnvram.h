@@ -204,18 +204,23 @@ extern int nvram_space;
 #define NVRAM_INVALID_MAGIC	0xFFFFFFFF
 #define NVRAM_VERSION		1
 #define NVRAM_HEADER_SIZE	20
-#if defined(CONFIG_NVSIZE_128) || defined(RTCONFIG_NV128)
-#define NVSIZE			0x20000
-#else	
-#define NVSIZE			0x10000
-#endif
+#if (defined(TCONFIG_NVRAM_128K) || defined(CONFIG_NVRAM_128K))
+    /* This definition is for precommit staging, and will be removed */
+    #define NVRAM_SPACE			0x20000
+    /* For CFE builds this gets passed in thru the makefile */
+    #ifndef MAX_NVRAM_SPACE
+    #define MAX_NVRAM_SPACE		0x20000
+    #endif
+    #define DEF_NVRAM_SPACE		0x20000
+#else
 /* This definition is for precommit staging, and will be removed */
-#define NVRAM_SPACE		NVSIZE
+#define NVRAM_SPACE		0x10000
 /* For CFE builds this gets passed in thru the makefile */
 #ifndef MAX_NVRAM_SPACE
-#define MAX_NVRAM_SPACE		NVSIZE
+#define MAX_NVRAM_SPACE		0x10000
+    #endif
+    #define DEF_NVRAM_SPACE		0x10000
 #endif
-#define DEF_NVRAM_SPACE		NVSIZE
 #define ROM_ENVRAM_SPACE	0x1000
 #define NVRAM_LZMA_MAGIC	0x4c5a4d41	/* 'LZMA' */
 
