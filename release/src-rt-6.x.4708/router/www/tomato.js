@@ -2941,6 +2941,19 @@ function displayOUI(i) {
 	cmdresult = '';
 }
 
+function wikiLink() {
+	const url = "https://wiki.freshtomato.org/doku.php"
+	var path = window.location.pathname;
+	var page = path.split("/").pop();
+	if (page)
+		page = page.replace(/\.asp$/, "");
+	else
+		page = 'status-overview';
+
+	var res = '<a href=\"'+url+'/'+page+'\" target=\"_blank\" rel=\"noopener noreferrer\">Wiki</a>';
+	document.write(res);
+}
+
 // -----------------------------------------------------------------------------
 
 // ---- debug
