@@ -9394,9 +9394,9 @@ int init_main(int argc, char *argv[])
 
 			if ((state == SIGTERM /* REBOOT */) ||
 			    (state == SIGQUIT /* HALT */)) {
+				stop_syslog();
 				remove_storage_main(1);
 				stop_usb();
-				stop_syslog();
 
 				shutdn(state == SIGTERM /* REBOOT */);
 				sync(); sync(); sync();
