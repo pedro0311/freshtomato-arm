@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: configure,v 1.116 2021/05/21 22:04:34 nanard Exp $
+# $Id: configure,v 1.117 2021/11/09 18:02:06 nanard Exp $
 # vim: tabstop=4 shiftwidth=4 noexpandtab
 #
 # miniupnp daemon
@@ -80,7 +80,7 @@ CONFIGFILE=`mktemp tmp.config.h.XXXXXXXXXX`
 CONFIGFILE_FINAL="config.h"
 CONFIGMACRO="CONFIG_H_INCLUDED"
 if [ -z "$PKG_CONFIG" ] ; then
-	PKG_CONFIG=`which pkg-config`
+	PKG_CONFIG=`command -v pkg-config`
 fi
 
 MINIUPNPD_DATE=`date +"%Y%m%d"`
@@ -106,9 +106,9 @@ if [ -f /etc/platform ]; then
 	fi
 fi
 
-# OpenWRT special case
+# OpenWrt special case
 if [ -f ./os.openwrt ]; then
-	OS_NAME=OpenWRT
+	OS_NAME=OpenWrt
 	OS_VERSION=$(cat ./os.openwrt)
 fi
 
@@ -350,7 +350,7 @@ case $OS_NAME in
 			OS_URL=https://www.clearos.com/
 		fi
 		# use lsb_release (Linux Standard Base) when available
-		LSB_RELEASE=`which lsb_release`
+		LSB_RELEASE=`command -v lsb_release`
 		if [ 0 -eq $? ]; then
 			OS_NAME=`${LSB_RELEASE} -i -s`
 			OS_VERSION=`${LSB_RELEASE} -r -s`
@@ -384,10 +384,9 @@ case $OS_NAME in
 		fi
 		V6SOCKETS_ARE_V6ONLY=`$(find /sbin /bin /usr/sbin /usr/bin -name sysctl) -n net.ipv6.bindv6only`
 		;;
-	OpenWRT)
+	OpenWrt)
 		OS_URL=http://www.openwrt.org/
 		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
-		FW=iptables
 		;;
 	OpenEmbedded)
 		OS_URL=http://www.openembedded.org/
@@ -469,6 +468,8 @@ case $FW in
 				echo "CFLAGS += `${PKG_CONFIG} --cflags libiptc`" >> config.mk
 				echo "LDLIBS += `${PKG_CONFIG} --static --libs-only-l libiptc`" >> config.mk
 				echo "LDFLAGS += `${PKG_CONFIG} --libs-only-L --libs-only-other libiptc`" >> config.mk
+			else
+				echo "Warning: no libiptc pkg-config found"
 			fi
 			if ${PKG_CONFIG} --atleast-version=1.0.2 libnetfilter_conntrack \
 			   && ${PKG_CONFIG} --atleast-version=1.0.3 libmnl ; then
@@ -479,7 +480,7 @@ case $FW in
 		if [ "$IPTABLESPATH" ] ; then
 			echo "CPPFLAGS += -I${IPTABLESPATH}/include/" >> config.mk
 			echo "LDFLAGS += -L${IPTABLESPATH}/libiptc/" >> config.mk
-			# to test : change the following test to [ "$OS_NAME" != "OpenWRT" ]
+			# to test : change the following test to [ "$OS_NAME" != "OpenWrt" ]
 			if [ -z "$TARGET_OPENWRT" ] ; then
 				IPTABLESVERSION=`grep "\#define VERSION" ${IPTABLESPATH}/config.h | tr -d \" |cut -d" " -f3`
 				echo "detected libiptc version $IPTABLESVERSION"
@@ -492,13 +493,13 @@ case $FW in
 				     -o \( \( $IPTVER2 -eq 4 \) -a \( $IPTVER3 -ge 3 \) \) \) ] ; then
 					IPTABLES_143=1
 				fi
-				if [ "$IPTABLES_143" -eq 1 ] ; then
+				if [ "$IPTABLES_143" = "1" ] ; then
 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
 				else
 					echo "LDLIBS += ${IPTABLESPATH}/libiptc/libiptc.a" >> config.mk
 				fi
 			else
-				# OpenWRT
+				# OpenWrt
 				# check for system-wide iptables files. Test if iptables version >= 1.4.3
 				# the following test has to be verified :
 				if test -f /usr/include/iptables/internal.h && \
@@ -527,7 +528,7 @@ case $FW in
 		fi
 		echo "/* when IPTABLES_143 is defined, miniupnpd uses the new API" >> ${CONFIGFILE}
 		echo " * from libiptc 1.4.3+ */ " >> ${CONFIGFILE}
-		if [ "$IPTABLES_143" -eq 1 ] ; then
+		if [ "$IPTABLES_143" = "1" ] ; then
 			echo "#define IPTABLES_143" >> ${CONFIGFILE}
 		else
 			echo "#undef IPTABLES_143" >> ${CONFIGFILE}
@@ -578,7 +579,7 @@ fi
 
 # UUID API
 case $OS_NAME in
-	OpenWRT)
+	OpenWrt)
 		echo "#define LIB_UUID" >> ${CONFIGFILE}
 		;;
 	*)

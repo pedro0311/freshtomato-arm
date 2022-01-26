@@ -1,4 +1,4 @@
-/* $Id: options.c,v 1.40 2021/08/21 08:22:46 nanard Exp $ */
+/* $Id: options.c,v 1.42 2022/01/22 18:39:51 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -68,6 +68,8 @@ static const struct {
 	{ UPNPCLEANTHRESHOLD, "clean_ruleset_threshold"},
 	{ UPNPCLEANINTERVAL, "clean_ruleset_interval"},
 #ifdef USE_NETFILTER
+	{ UPNPTABLENAME, "upnp_table_name"},
+	{ UPNPNATTABLENAME, "upnp_nat_table_name"},
 	{ UPNPFORWARDCHAIN, "upnp_forward_chain"},
 	{ UPNPNATCHAIN, "upnp_nat_chain"},
 	{ UPNPNATPOSTCHAIN, "upnp_nat_postrouting_chain"},

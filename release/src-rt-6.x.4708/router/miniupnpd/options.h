@@ -1,4 +1,4 @@
-/* $Id: options.h,v 1.33 2021/08/21 08:22:46 nanard Exp $ */
+/* $Id: options.h,v 1.34 2021/12/01 22:50:08 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -57,6 +57,8 @@ enum upnpconfigoptions {
 	UPNPPCPMAXLIFETIME,		/* maximum lifetime for PCP mapping */
 	UPNPPCPALLOWTHIRDPARTY,		/* allow third-party requests */
 #ifdef USE_NETFILTER
+	UPNPTABLENAME,
+	UPNPNATTABLENAME,
 	UPNPFORWARDCHAIN,
 	UPNPNATCHAIN,
 	UPNPNATPOSTCHAIN,
