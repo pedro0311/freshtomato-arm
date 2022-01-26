@@ -84,7 +84,7 @@ function earlyInit() {
 </td></tr>
 <tr id="body"><td id="navi"><script>navi()</script></td>
 <td id="content">
-<div id="ident"><% ident(); %></div>
+<div id="ident"><% ident(); %> | <script>wikiLink();</script></div>
 
 <!-- / / / -->
 

@@ -373,11 +373,11 @@ void wo_ovpn_genclientconfig(char *url)
 			else {
 				fprintf(fp, "; tls-auth static.key");
 				if (hmac == 0) {
-					fprintf(fp, " 1");
+					fprintf(fp, " 1\n");
 					fprintf(fp, "key-direction 1\n");
 				}
 				else if (hmac == 1) {
-					fprintf(fp, " 0");
+					fprintf(fp, " 0\n");
 					fprintf(fp, "key-direction 0\n");
 				}
 				else if (hmac == 2)

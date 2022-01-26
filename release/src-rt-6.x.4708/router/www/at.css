@@ -605,7 +605,6 @@ div#tab-area {
 	margin-bottom: 10px;
 }
 
-div#ident,
 span#dtime {
 	display: none;
 }
@@ -1340,10 +1339,6 @@ td#navi a.indent1:hover::before {
 }
 
 @media only screen and (max-width: 900px) {
-	div#ident {
-		opacity: 0;
-		transition: opacity .5s;
-	}
 	td#navi:not(:hover) {
 		width: 50px !important;
 		transition: width .5s;
@@ -2133,16 +2128,15 @@ div.section-title[id^="wl"]::before {
 }
 
 div#ident {
-	position: absolute;
 	display: block;
-	top: 0;
-	left: 250px;
-	padding-left: 80px;
-	height: 60px;
-	line-height: 93px;
-	vertical-align: middle;
-	color: #ccc;
-	text-align: left;
+	margin-top: -11px;
+	height: 22px;
+}
+
+div#ident > a {
+	background-color: var(--tomato-container-background);
+	color: var(--tomato-color);
+	font-size: 11px;
 }
 
 div.tomato-grid {

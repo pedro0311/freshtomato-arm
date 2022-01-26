@@ -157,7 +157,7 @@ static void set_defaults(struct nvram_tuple *t, char *strprefix)
 	char buf[256];
 
 	/* Restore defaults */
-	logmsg(LOG_DEBUG, "*** %s: Restoring default NVRAM vars ...", __FUNCTION__);
+	dbg("*** Restoring default NVRAM vars ...\n");
 
 	while (t->name) {
 		if ((!strprefix) || (!(*strprefix)))
@@ -186,7 +186,7 @@ void wl_defaults(void)
 	memset(wl_vifnames, 0, sizeof(wl_vifnames));
 	memset(lan_ifnames, 0, sizeof(lan_ifnames));
 
-	logmsg(LOG_DEBUG, "*** %s: Restoring wireless vars ...", __FUNCTION__);
+	dbg("*** Restoring wireless vars ...\n");
 
 	if (!nvram_get("wl_country_code"))
 		nvram_set("wl_country_code", "");
@@ -195,7 +195,7 @@ void wl_defaults(void)
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 
-		logmsg(LOG_DEBUG, "*** %s: Restoring wireless vars - in progress ...", __FUNCTION__);
+		dbg("*** Restoring wireless vars - in progress ...\n");
 
 		for (t = router_defaults; t->name; t++) {
 			if (!strncmp(t->name, "wl", 2) && strncmp(t->name, "wl_", 3) && strncmp(t->name, "wlc", 3) && !strcmp(&t->name[4], "nband"))
@@ -223,7 +223,7 @@ void wl_defaults(void)
 
 		unit++;
 	}
-	logmsg(LOG_DEBUG, "*** %s: Restoring wireless vars - done", __FUNCTION__);
+	dbg("*** Restoring wireless vars - done\n");
 }
 #endif /* CONFIG_BCMWL6A */
 
@@ -424,7 +424,7 @@ static void shutdn(int rb)
 
 static void handle_fatalsigs(int sig)
 {
-	logmsg(LOG_DEBUG, "*** %s: fatal sig=%d", __FUNCTION__, sig);
+	dbg("*** Fatal sig=%d\n", sig);
 	shutdn(-1);
 }
 
@@ -447,7 +447,7 @@ static int check_nv(const char *name, const char *value)
 	const char *p;
 	if (!nvram_match("manual_boot_nv", "1")) {
 		if (((p = nvram_get(name)) == NULL) || (strcmp(p, value) != 0)) {
-			logmsg(LOG_DEBUG, "*** %s: error: critical variable %s is invalid. Resetting", __FUNCTION__, name);
+			dbg("*** Error: critical variable %s is invalid. Resetting\n", name);
 			nvram_set(name, value);
 			return 1;
 		}
@@ -1027,7 +1027,7 @@ static void check_bootnv(void)
 		    !nvram_get("scratch") ||
 		    !nvram_get("et0macaddr") ||
 		    ((hardware != HW_BCM4704_BCM5325F) && (!nvram_get("vlan0ports") || !nvram_get("vlan0hwname")))) {
-			logmsg(LOG_DEBUG, "*** %s: unable to find critical settings, erasing NVRAM", __FUNCTION__);
+			dbg("*** Unable to find critical settings, erasing NVRAM\n");
 			mtd_erase("nvram");
 			goto REBOOT;
 		}
@@ -1233,7 +1233,7 @@ static void check_bootnv(void)
 REBOOT: /* do a simple reboot */
 #endif
 		sync();
-		logmsg(LOG_DEBUG, "*** %s: Reboot after check NV params / set VLANS...", __FUNCTION__);
+		dbg("*** Reboot after check NV params / set VLANS...\n");
 		reboot(RB_AUTOBOOT);
 		exit(0);
 	}
@@ -1374,7 +1374,7 @@ static int init_nvram(void)
 			}
 			break;
 		default:
-			logmsg(LOG_WARNING, "unexpected: boardflag=%lX", bf);
+			dbg("*** Unexpected: boardflag=%lX\n", bf);
 			break;
 		}
 		break;
@@ -2193,6 +2193,9 @@ static int init_nvram(void)
 			nvram_set("qtdc1_sz", "10");
 			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
 			nvram_set("landevs", "vlan2 wl0 wl1");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 			nvram_set("wl1_ifname", "eth2");
 #else
 			nvram_set("lan_ifnames", "vlan2 eth1");
@@ -3525,7 +3528,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_E1550:
@@ -3539,7 +3544,9 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
 		}
 		break;
 	case MODEL_E2500:
@@ -3621,7 +3628,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -3707,7 +3717,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -3793,7 +3806,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 
 		/* Set Key Parameters for Wireless Interfaces: SB (Southbridge) and PCI, to configure HW (as Netgear intends)
@@ -3952,7 +3968,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 		xstart("gpio", "disable", "16"); /* turn on Power LED (active LOW); GPIO 16 controls state (on/off) and GPIO 14 controls color, see led.c */
 		xstart("gpio", "enable", "21"); /* turn on USB supply (active HIGH) */
@@ -3971,7 +3990,10 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
 			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
 			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
 		}
 
 		nvram_set("boardflags", "0x80001710");
@@ -8992,7 +9014,7 @@ static void load_files_from_nvram(void)
 				continue;
 
 			*cp = 0;
-			logmsg(LOG_INFO, "loading file '%s' from nvram", name + 5);
+			logmsg(LOG_INFO, "Loading file '%s' from nvram", name + 5);
 			nvram_nvram2file(name, name + 5);
 
 			if (memcmp(".autorun", cp - 8, 9) == 0) 
@@ -9372,9 +9394,9 @@ int init_main(int argc, char *argv[])
 
 			if ((state == SIGTERM /* REBOOT */) ||
 			    (state == SIGQUIT /* HALT */)) {
+				stop_syslog();
 				remove_storage_main(1);
 				stop_usb();
-				stop_syslog();
 
 				shutdn(state == SIGTERM /* REBOOT */);
 				sync(); sync(); sync();

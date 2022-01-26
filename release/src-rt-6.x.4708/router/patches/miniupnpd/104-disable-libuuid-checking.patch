@@ -1,11 +1,11 @@
 --- miniupnpd/configure
 +++ miniupnpd/configure
-@@ -584,19 +584,19 @@
+@@ -585,19 +585,19 @@
  fi
  
  # UUID API
 -case $OS_NAME in
--	OpenWRT)
+-	OpenWrt)
 -		echo "#define LIB_UUID" >> ${CONFIGFILE}
 -		;;
 -	*)
@@ -18,7 +18,7 @@
 -		;;
 -esac
 +#case $OS_NAME in
-+#	OpenWRT)
++#	OpenWrt)
 +#		echo "#define LIB_UUID" >> ${CONFIGFILE}
 +#		;;
 +#	*)

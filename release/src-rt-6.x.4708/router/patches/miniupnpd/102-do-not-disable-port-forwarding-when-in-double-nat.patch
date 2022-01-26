@@ -25,7 +25,7 @@
  	} else {
  		syslog(LOG_INFO, "STUN: ... done");
  	}
-@@ -2253,11 +2253,11 @@ 
+@@ -2259,11 +2259,11 @@ 
  			syslog(LOG_WARNING, "Cannot get IP address for ext interface %s. Network is down", ext_if_name);
  			disable_port_forwarding = 1;
  		} else if (addr_is_reserved(&addr)) {
@@ -42,21 +42,20 @@
  		}
  	}
  
-@@ -2538,12 +2538,12 @@ 
- 					if (disable_port_forwarding && !reserved) {
- 						syslog(LOG_INFO, "Public IP address %s on ext interface %s: Port forwarding is enabled", if_addr, ext_if_name);
- 					} else if (!disable_port_forwarding && reserved) {
+@@ -2551,11 +2551,11 @@ 
+ 				} else {
+ 					int reserved = addr_is_reserved(&addr);
+ 					if (!disable_port_forwarding && reserved) {
 -						syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding is impossible", if_addr, ext_if_name);
 -						syslog(LOG_INFO, "You are probably behind NAT, enable option ext_perform_stun=yes to detect public IP address");
 -						syslog(LOG_INFO, "Or use ext_ip= / -o option to declare public IP address");
 -						syslog(LOG_INFO, "Public IP address is required by UPnP/PCP/PMP protocols and clients do not work without it");
+-						disable_port_forwarding = 1;
 +						syslog(LOG_INFO, "Reserved / private IP address %s on ext interface %s: Port forwarding might not work properly", if_addr, ext_if_name);
 +//						syslog(LOG_INFO, "You are probably behind NAT, enable option ext_perform_stun=yes to detect public IP address");
 +//						syslog(LOG_INFO, "Or use ext_ip= / -o option to declare public IP address");
 +//						syslog(LOG_INFO, "Public IP address is required by UPnP/PCP/PMP protocols and clients do not work without it");
- 					}
--					disable_port_forwarding = reserved;
-+//					disable_port_forwarding = reserved;
- 				}
- 			}
- #ifdef ENABLE_NATPMP
++//						disable_port_forwarding = 1;
+ 					} else if (disable_port_forwarding && !reserved) {
+ 						syslog(LOG_INFO, "Public IP address %s on ext interface %s: Port forwarding is enabled", if_addr, ext_if_name);
+ 						disable_port_forwarding = 0;

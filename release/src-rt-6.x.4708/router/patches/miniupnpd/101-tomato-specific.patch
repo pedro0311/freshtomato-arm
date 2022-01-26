@@ -15,7 +15,7 @@
  fi
  
  # OpenEmbedded special case
-@@ -400,8 +400,8 @@
+@@ -399,8 +399,8 @@
  		FW=iptables
  		;;
  	Tomato)
@@ -26,7 +26,7 @@
  		echo "" >> ${CONFIGFILE}
  		echo "#ifndef TOMATO" >> ${CONFIGFILE}
  		echo "#define TOMATO" >> ${CONFIGFILE}
-@@ -413,6 +413,7 @@
+@@ -412,6 +412,7 @@
  		echo "#ifdef TCONFIG_IPV6" >> ${CONFIGFILE}
  		echo "#define ENABLE_IPV6" >> ${CONFIGFILE}
  		echo "#endif" >> ${CONFIGFILE}
@@ -34,9 +34,9 @@
  		FW=iptables
  		;;
  	Darwin)
-@@ -494,8 +495,14 @@
+@@ -495,8 +496,14 @@
  				fi
- 				if [ "$IPTABLES_143" -eq 1 ] ; then
+ 				if [ "$IPTABLES_143" = "1" ] ; then
  					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk
 +					if [ "$TCONFIG_IPV6" = "y" ]; then
 +						echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip6tc.o" >> config.mk
@@ -48,7 +48,7 @@
 +					fi
  				fi
  			else
- 				# OpenWRT
+ 				# OpenWrt
 --- miniupnpd/Makefile.linux
 +++ miniupnpd/Makefile.linux
 @@ -29,11 +29,13 @@
