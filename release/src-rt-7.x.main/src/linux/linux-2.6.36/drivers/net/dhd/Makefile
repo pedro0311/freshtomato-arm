@@ -22,7 +22,7 @@ obj-$(CONFIG_DHDAP) := $(TARGET).o
 
 ifeq ($(DHDAP_USE_SEPARATE_CHECKOUTS),1)
 SRCBASE_DHD    := dhd
-SRCBASE_OFFSET := ../../../../../../..
+SRCBASE_OFFSET := ../../../../../router/
 DHDMAKEFILE    := $(SRCBASE)/../$(SRCBASE_DHD)/dhd/config/dhd_router.mk
 else
 SRCBASE_OFFSET := ../../../../../../src
