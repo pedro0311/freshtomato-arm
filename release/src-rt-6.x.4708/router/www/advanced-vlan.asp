@@ -89,6 +89,7 @@ if (nvram['boardflags'] & 0x0100) /* BFL_ENETVLAN = this board has vlan capabili
 switch (nvram['t_model_name']) {
 	case 'vlan-testid0':
 	case 'Asus RT-AC56U':
+	case 'Asus RT-AC56S':
 	case 'D-Link DIR868L':
 	case 'Linksys EA6200':
 	case 'Linksys EA6350v1':
