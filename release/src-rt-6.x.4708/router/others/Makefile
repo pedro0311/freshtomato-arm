@@ -69,6 +69,8 @@ endif
 	install -m 0700 ethstate $(INSTALLDIR)/usr/sbin
 ifneq ($(TCONFIG_BCMARM),y)
 	sed -i $(INSTALLDIR)/usr/sbin/ethstate -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+else
+	sed -i $(INSTALLDIR)/usr/sbin/ethstate -e "/BCMARMNO-BEGIN/,/BCMARMNO-END/d"
 endif
 
 # stealthMode

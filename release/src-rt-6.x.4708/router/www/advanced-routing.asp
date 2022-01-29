@@ -22,6 +22,12 @@
 
 //	<% activeroutes(); %>
 
+var static_options = [['LAN','LAN0'],['LAN1','LAN1'],['LAN2','LAN2'],['LAN3','LAN3'],['WAN','WAN0'],['MAN','MAN0'],['WAN2','WAN1'],['MAN2','MAN1']
+/* MULTIWAN-BEGIN */
+                      ,['WAN3','WAN2'],['MAN3','MAN2'],['WAN4','WAN3'],['MAN4','MAN3']
+/* MULTIWAN-END */
+		     ];
+
 var ara = new TomatoGrid();
 
 ara.setup = function() {
@@ -66,18 +72,14 @@ var ars = new TomatoGrid();
 ars.setup = function() {
 	this.init('ars-grid', '', 20, [
 		{ type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 },{ type: 'text', maxlen: 3 },
-		{ type: 'select', options: [['LAN','LAN0'],['LAN1','LAN1'],['LAN2','LAN2'],['LAN3','LAN3'],['WAN','WAN0'],['MAN','MAN0'],['WAN2','WAN1'],['MAN2','MAN1']
-/* MULTIWAN-BEGIN */
-					   ,['WAN3','WAN2'],['MAN3','MAN2'],['WAN4','WAN3'],['MAN4','MAN3']
-/* MULTIWAN-END */
-		] }, { type: 'text', maxlen: 32 }]);
+		{ type: 'select', options: static_options }, { type: 'text', maxlen: 32 }]);
 
 	this.headerSet(['Destination', 'Gateway', 'Subnet Mask', 'Metric', 'Interface', 'Description']);
 	var routes = nvram.routes_static.split('>');
 	for (var i = 0; i < routes.length; ++i) {
 		var r;
 		if (r = routes[i].match(/^(.+)<(.+)<(.+)<(\d+)<(LAN|LAN1|LAN2|LAN3|WAN|MAN|WAN2|MAN2|WAN3|MAN3|WAN4|MAN4)<(.*)$/)) {
-			this.insertData(-1, [r[1], r[2], r[3], r[4], r[5],r[6]]);
+			this.insertData(-1, [r[1],r[2],r[3],r[4],fix_iface(r[5]),r[6]]);
 		}
 	}
 	this.showNewEditor();
@@ -124,11 +126,23 @@ ars.resetNewEditor = function() {
 	catch (er) { }
 }
 
+ars.dataToView = function(data) {
+	return [data[0],data[1],data[2],data[3],fix_iface(data[4]),escapeHTML(''+data[5])];
+}
+
 ars.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 	f[5].value = f[5].value.replace('>', '_');
 
 	return v_ip(f[0], quiet) && v_ip(f[1], quiet) && v_netmask(f[2], quiet) && v_range(f[3], quiet, 0, 10) && v_nodelim(f[5], quiet, 'Description');
+}
+
+function fix_iface(in_if) {
+	for (var i = 0; i < static_options.length; ++i) {
+		if (static_options[i][0] == in_if)
+			return static_options[i][1];
+	}
+	return in_if;
 }
 
 function submit_complete() {

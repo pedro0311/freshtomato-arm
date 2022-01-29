@@ -28,7 +28,7 @@
 	--icon-captive: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill-rule='evenodd' clip-rule='evenodd'><path d='M7.945 23h-2.016c-.439-3.064-2.865-5.49-5.929-5.929v-2.016c4.169.462 7.483 3.776 7.945 7.945zm4.017 0h-2.007c-.476-5.274-4.681-9.479-9.955-9.955v-2.007c6.378.486 11.476 5.584 11.962 11.962zm-8.062 0h-3.9v-3.9c1.958.398 3.502 1.942 3.9 3.9zm20.1 0h-10v-2h8v-15h-20v3h-2v-8h24v22z'/></svg>");
 	--icon-about: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm-.001 5.75c.69 0 1.251.56 1.251 1.25s-.561 1.25-1.251 1.25-1.249-.56-1.249-1.25.559-1.25 1.249-1.25zm2.001 12.25h-4v-1c.484-.179 1-.201 1-.735v-4.467c0-.534-.516-.618-1-.797v-1h3v6.265c0 .535.517.558 1 .735v.999z'/></svg>");
 	--icon-reboot: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M13.5 2c-5.288 0-9.649 3.914-10.377 9h-3.123l4 5.917 4-5.917h-2.847c.711-3.972 4.174-7 8.347-7 4.687 0 8.5 3.813 8.5 8.5s-3.813 8.5-8.5 8.5c-3.015 0-5.662-1.583-7.171-3.957l-1.2 1.775c1.916 2.536 4.948 4.182 8.371 4.182 5.797 0 10.5-4.702 10.5-10.5s-4.703-10.5-10.5-10.5z'/></svg>");
-	--icon-shutdown: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='-1 -1 26 26'><path d='M14 12h-4v-12h4v12zm4.213-10.246l-1.213 1.599c2.984 1.732 5 4.955 5 8.647 0 5.514-4.486 10-10 10s-10-4.486-10-10c0-3.692 2.016-6.915 5-8.647l-1.213-1.599c-3.465 2.103-5.787 5.897-5.787 10.246 0 6.627 5.373 12 12 12s12-5.373 12-12c0-4.349-2.322-8.143-5.787-10.246z'/></svg>");
+	--icon-halt: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='-1 -1 26 26'><path d='M14 12h-4v-12h4v12zm4.213-10.246l-1.213 1.599c2.984 1.732 5 4.955 5 8.647 0 5.514-4.486 10-10 10s-10-4.486-10-10c0-3.692 2.016-6.915 5-8.647l-1.213-1.599c-3.465 2.103-5.787 5.897-5.787 10.246 0 6.627 5.373 12 12 12s12-5.373 12-12c0-4.349-2.322-8.143-5.787-10.246z'/></svg>");
 	--icon-logout: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M8 9v-4l8 7-8 7v-4h-8v-6h8zm2-7v2h12v16h-12v2h14v-20h-14z'/></svg>");
 	--icon-pin: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M6.166 16.943l1.4 1.4-4.622 4.657h-2.944l6.166-6.057zm11.768-6.012c2.322-2.322 4.482-.457 6.066-1.931l-8-8c-1.474 1.584.142 3.494-2.18 5.817-3.016 3.016-4.861-.625-10.228 4.742l9.6 9.6c5.367-5.367 1.725-7.211 4.742-10.228z'/></svg>");
 	--icon-key: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><path d='M12.451 17.337l-2.451 2.663h-2v2h-2v2h-6v-5l6.865-6.949c1.08 2.424 3.095 4.336 5.586 5.286zm11.549-9.337c0 4.418-3.582 8-8 8s-8-3.582-8-8 3.582-8 8-8 8 3.582 8 8zm-3-3c0-1.104-.896-2-2-2s-2 .896-2 2 .896 2 2 2 2-.896 2-2z'/></svg>");
@@ -1130,10 +1130,10 @@ td#navi a.indent1.active[href^="splashd"]::after {
 }
 
 td#navi a.indent1[href*=":reboot"] {
-	right: 225px;
+	right: 185px;
 }
 
-td#navi a.indent1[href*=":shutdown"] {
+td#navi a.indent1[href*=":halt"] {
 	right: 105px;
 }
 
@@ -1143,7 +1143,7 @@ td#navi a.indent1[href*=":logout"] {
 
 td#navi a.indent1[href^="about"],
 td#navi a.indent1[href*=":reboot"],
-td#navi a.indent1[href*=":shutdown"],
+td#navi a.indent1[href*=":halt"],
 td#navi a.indent1[href*=":logout"] {
 	position: absolute;
 	top: 0px;
@@ -1158,14 +1158,14 @@ td#navi a.indent1[href*=":logout"] {
 
 td#navi a.indent1[href^="about"]:hover,
 td#navi a.indent1[href*=":reboot"]:hover,
-td#navi a.indent1[href*=":shutdown"]:hover,
+td#navi a.indent1[href*=":halt"]:hover,
 td#navi a.indent1[href*=":logout"]:hover {
 	color: #fff;
 	background-color: var(--tomato-accent-color);
 }
 
 td#navi a.indent1[href^="about"] {
-	right: 325px;
+	right: 285px;
 	z-index: 3;
 	overflow: visible;
 }
@@ -1187,10 +1187,10 @@ td#navi a.indent1[href^="about"]::before {
 	background-color: #fff;
 }
 
-td#navi a.indent1[href*=":shutdown"]::before {
+td#navi a.indent1[href*=":halt"]::before {
 	content: "\23FB";
-	mask-image: var(--icon-shutdown);
-	-webkit-mask-image: var(--icon-shutdown);
+	mask-image: var(--icon-halt);
+	-webkit-mask-image: var(--icon-halt);
 	background-color: #fff;
 }
 
@@ -1364,7 +1364,7 @@ td#navi a.indent1:hover::before {
 	td#navi:not(:hover) a.indent2 {
 		display: none;
 	}
-	td#navi a.indent1[href*=":shutdown"],
+	td#navi a.indent1[href*=":halt"],
 	td#navi a.indent1[href^="about"],
 	td#navi a.indent1[href*=":reboot"],
 	td#navi a.indent1[href*=":logout"] {

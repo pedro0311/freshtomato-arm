@@ -792,8 +792,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "ne_syncookies",		"0"				, 0 },	/* tcp_syncookies */
 	{ "DSCP_fix_enable",		"1"				, 0 },	/* Comacst DSCP fix */
 	{ "ne_snat",			"0"				, 0 },	/* use SNAT instead of MASQUERADE */
-	{ "dhcp_pass",			"1"				, 0 },	/* allow DHCP responses */
-	{ "ne_shlimit",			"1,3,60"			, 0 },	/* enable limit connection attempts for sshd */
+	{ "wan_dhcp_pass",		"0"				, 0 },	/* allow DHCP responses */
+	{ "fw_blackhole",		"1"				, 0 },	/* MTU black hole detection */
 
 /* advanced-routing */
 	{ "routes_static",		""				, 0 },
@@ -935,6 +935,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "sshd_ecdsakey",		""				, 0 },
 	{ "sshd_forwarding",		"1"				, 0 },
 	{ "rmgt_sip",			""				, 0 },	/* remote management: source ip address */
+	{ "ne_shlimit",			"1,3,60"			, 0 },	/* enable limit connection attempts for sshd */
 
 	{ "http_id",			""				, 0 },
 	{ "web_mx",			"status,bwm"			, 0 },

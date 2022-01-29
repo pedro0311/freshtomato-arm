@@ -20,7 +20,7 @@
 
 //	<% nvram("script_init,script_shut,script_fire,script_wanup,script_mwanup"); %>
 
-tabs = [['as-init', 'Init'],['as-shut', 'Shutdown'],['as-fire','Firewall'],['as-wanup', 'WAN Up (main)'],['as-mwanup', 'MultiWAN Up']];
+tabs = [['as-init', 'Init'],['as-shut', 'Halt'],['as-fire','Firewall'],['as-wanup', 'WAN Up (main)'],['as-mwanup', 'MultiWAN Up']];
 
 function tabSelect(name) {
 	tabHigh(name);
