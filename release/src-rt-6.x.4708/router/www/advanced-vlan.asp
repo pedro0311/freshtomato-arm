@@ -93,6 +93,7 @@ switch (nvram['t_model_name']) {
 	case 'D-Link DIR868L':
 	case 'Linksys EA6200':
 	case 'Linksys EA6350v1':
+	case 'Linksys EA6350v2':
 	case 'Cisco Linksys EA6400':
 	case 'Cisco Linksys EA6500v2':
 	case 'Cisco Linksys EA6700':

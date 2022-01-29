@@ -848,6 +848,7 @@ static int init_vlan_ports(void)
 		break;
 #endif
 	case MODEL_EA6350v1:
+	case MODEL_EA6350v2:
 	case MODEL_EA6400:
 	case MODEL_EA6700:
 	case MODEL_WZR1750:
@@ -7783,8 +7784,15 @@ static int init_nvram(void)
 		}
 		break;
 	case MODEL_EA6350v1:
+	case MODEL_EA6350v2:
 		mfr = "Linksys";
-		name = nvram_match("boardnum", "20140309") ? "EA6350v1" : "EA6200";
+		if (nvram_match("boardnum", "20140309"))
+			name = "EA6350v1";
+		else if (nvram_match("boardnum", "20150309"))
+			name = "EA6350v2";
+		else /* default to EA6200 */
+			name = "EA6200";
+		
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
@@ -7830,7 +7838,8 @@ static int init_nvram(void)
 			nvram_set("0:ccode", "SG");
 			nvram_set("1:ccode", "SG");
 			
-			if (nvram_match("boardnum", "20140309")) { /* case EA6350v1 */
+			if (nvram_match("boardnum", "20140309") ||
+			    nvram_match("boardnum", "20150309")) { /* case EA6350v1 OR EA6350v2 */
 				/* 2G settings */
 				nvram_set("wl0_bw_cap","3");
 				nvram_set("wl0_chanspec","6u");
