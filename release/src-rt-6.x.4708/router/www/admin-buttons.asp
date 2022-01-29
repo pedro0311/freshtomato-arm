@@ -87,7 +87,7 @@ function earlyInit() {
 	<div class="section-title">SES/WPS/AOSS Button</div>
 	<div class="section">
 		<script>
-			a = [[0,'Do Nothing'],[1,'Toggle Wireless'],[2,'Reboot'],[3,'Shutdown'],
+			a = [[0,'Do Nothing'],[1,'Toggle Wireless'],[2,'Reboot'],[3,'Halt'],
 /* USB-BEGIN */
 				[5,'Unmount all USB Drives'],
 /* USB-END */

@@ -149,7 +149,7 @@ function init() {
 	&raquo; <a href="javascript:flushDNS()">Flush DNS (dnsmasq) cache</a><br>
 	&raquo; <a href="javascript:nvramCommit()">Commit NVRAM now</a><br>
 	&raquo; <a href="javascript:reboot()">Reboot</a><br>
-	&raquo; <a href="javascript:shutdown()">Shutdown</a><br>
+	&raquo; <a href="javascript:halt()">Halt</a><br>
 
 	<br><br>
 
