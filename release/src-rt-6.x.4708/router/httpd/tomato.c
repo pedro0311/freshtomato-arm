@@ -1035,6 +1035,7 @@ static const nvset_t nvset_list[] = {
 	{ "DSCP_fix_enable",		V_01				},
 	{ "ne_snat",			V_01				},
 	{ "wan_dhcp_pass",		V_01				},
+	{ "fw_blackhole",		V_01				},	/* MTU black hole detection */
 #ifdef TCONFIG_EMF
 	{ "emf_entry",			V_NONE				},
 	{ "emf_uffp_entry",		V_NONE				},

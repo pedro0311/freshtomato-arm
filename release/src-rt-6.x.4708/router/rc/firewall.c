@@ -152,6 +152,15 @@ void enable_ip_forward(void)
 	f_write_procsysnet("ipv4/ip_forward", "1");
 }
 
+void enable_blackhole_detection(void)
+{
+	int enabled;
+
+	enabled = nvram_get_int("fw_blackhole");
+	f_write_procsysnet("ipv4/tcp_mtu_probing", (enabled ? "1" : "0"));
+	f_write_procsysnet("ipv4/tcp_base_mss", (enabled ? "1024" : "512"));
+}
+
 void log_segfault(void)
 {
 	f_write_string("/proc/sys/kernel/print-fatal-signals", (nvram_get_int("debug_logsegfault") ? "1" : "0"), 0, 0);
@@ -1941,6 +1950,8 @@ int start_firewall(void)
 		f_write_procsysnet("ipv4/route/secret_interval", "600");
 #endif
 	}
+
+	enable_blackhole_detection();
 
 	n = nvram_get_int("log_in");
 	chain_in_drop = (n & 1) ? "logdrop" : "DROP";

@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2,wan_dhcp_pass"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2,wan_dhcp_pass,fw_blackhole"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -115,11 +115,10 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	var fom;
+	if (!verifyFields(null, 0))
+		return;
 
-	if (!verifyFields(null, 0)) return;
-
-	fom = E('t_fom');
+	var fom = E('t_fom');
 	fom.block_wan.value = fom._f_icmp.checked ? 0 : 1;
 	fom.block_wan_limit.value = fom._f_icmp_limit.checked? 1 : 0;
 	fom.block_wan_limit_icmp.value = fom._f_icmp_limit_icmp.value;
@@ -150,6 +149,7 @@ function save() {
 /* EMF-END */
 	fom.force_igmpv2.value = fom._f_force_igmpv2.checked ? 1 : 0;
 	fom.wan_dhcp_pass.value = fom._f_wan_dhcp_pass.checked ? 1 : 0;
+	fom.fw_blackhole.value = fom._f_fw_blackhole.checked ? 1 : 0;
 
 	form.submit(fom, 1);
 }
@@ -202,6 +202,7 @@ function init() {
 <input type="hidden" name="emf_enable">
 <input type="hidden" name="force_igmpv2">
 <input type="hidden" name="wan_dhcp_pass">
+<input type="hidden" name="fw_blackhole">
 
 <!-- / / / -->
 
@@ -218,7 +219,8 @@ function init() {
 			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' &nbsp;<small>fixes Comcast incorrect DSCP<\/small>' },
 			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' },
 			null,
-			{ title: 'Allow DHCP responses', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass != '0' }
+			{ title: 'Allow DHCP responses', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass == 1 },
+			{ title: 'Smart MTU black hole detection', name: 'f_fw_blackhole', type: 'checkbox', value: nvram.fw_blackhole == 1 }
 		]);
 	</script>
 </div>
@@ -250,7 +252,7 @@ function init() {
 			{ title: '<a href="https://github.com/pali/igmpproxy" class="new_window">IGMP proxy<\/a><br>Custom configuration', name: 'multicast_custom', type: 'textarea', value: nvram.multicast_custom },
 			null,
 			{ title: 'Enable Udpxy', name: 'f_udpxy_enable', type: 'checkbox', value: (nvram.udpxy_enable == '1') },
-			{ title: 'Upstream interface', indent: 2, name: 'f_udpxy_wanface', type: 'text', maxlen: 8, size: 8, value: nvram.udpxy_wanface, suffix: ' &nbsp;<small>leave empty for default</small>' },
+			{ title: 'Upstream interface', indent: 2, name: 'f_udpxy_wanface', type: 'text', maxlen: 8, size: 8, value: nvram.udpxy_wanface, suffix: ' &nbsp;<small>leave empty for default<\/small>' },
 			{ title: 'LAN0', indent: 2, name: 'f_udpxy_lan', type: 'checkbox', value: (nvram.udpxy_lan == '1') },
 			{ title: 'LAN1', indent: 2, name: 'f_udpxy_lan1', type: 'checkbox', value: (nvram.udpxy_lan1 == '1') },
 			{ title: 'LAN2', indent: 2, name: 'f_udpxy_lan2', type: 'checkbox', value: (nvram.udpxy_lan2 == '1') },
@@ -274,6 +276,7 @@ function init() {
 	<i>Firewall:</i><br>
 	<ul>
 		<li><b>Allow DHCP responses</b> - Accept incoming packets from broken dhcp servers, which are sending replies from addresses other than used for query. This could lead to a lower level of security.</li>
+		<li><b>Smart MTU black hole detection</b> - Read more <a href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/" class="new_window">HERE</a>.</li>
 	</ul>
 	<i>IGMP proxy:</i><br>
 	<ul>
@@ -283,7 +286,6 @@ function init() {
 		<li><b>Other hints</b> - For error messages please check the <a href="status-log.asp">log file</a>.</li>
 		<li><b>Hidden settings (only optional)</b> - To define sources for multicasting and IGMP data you can use NVRAM variable <b>multicast_altnet_1</b>, <b>multicast_altnet_2</b> and <b>multicast_altnet_3</b> without using a (complete) custom configuration. Format: a.b.c.d/n (Example: 10.0.0.0/16).</li>
 	</ul>
-
 	<i>Udpxy:</i><br>
 	<ul>
 		<li><b>Upstream interface</b> - As one use case for it is to access IPTV which is often delivered via multicast by the ISP but outside of the (PPPoE,etc) session.</li>
