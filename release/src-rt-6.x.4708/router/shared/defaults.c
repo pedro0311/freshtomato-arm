@@ -792,7 +792,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "ne_syncookies",		"0"				, 0 },	/* tcp_syncookies */
 	{ "DSCP_fix_enable",		"1"				, 0 },	/* Comacst DSCP fix */
 	{ "ne_snat",			"0"				, 0 },	/* use SNAT instead of MASQUERADE */
-	{ "dhcp_pass",			"1"				, 0 },	/* allow DHCP responses */
+	{ "wan_dhcp_pass",		"0"				, 0 },	/* allow DHCP responses */
 	{ "ne_shlimit",			"1,3,60"			, 0 },	/* enable limit connection attempts for sshd */
 
 /* advanced-routing */

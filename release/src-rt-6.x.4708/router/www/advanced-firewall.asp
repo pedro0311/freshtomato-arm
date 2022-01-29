@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2,wan_dhcp_pass"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -149,6 +149,7 @@ function save() {
 		fom._service.value = '*';
 /* EMF-END */
 	fom.force_igmpv2.value = fom._f_force_igmpv2.checked ? 1 : 0;
+	fom.wan_dhcp_pass.value = fom._f_wan_dhcp_pass.checked ? 1 : 0;
 
 	form.submit(fom, 1);
 }
@@ -200,6 +201,7 @@ function init() {
 <input type="hidden" name="udpxy_wanface">
 <input type="hidden" name="emf_enable">
 <input type="hidden" name="force_igmpv2">
+<input type="hidden" name="wan_dhcp_pass">
 
 <!-- / / / -->
 
@@ -214,7 +216,9 @@ function init() {
 			null,
 			{ title: 'Enable TCP SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
 			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' &nbsp;<small>fixes Comcast incorrect DSCP<\/small>' },
-			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' }
+			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' },
+			null,
+			{ title: 'Allow DHCP responses', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass != '0' }
 		]);
 	</script>
 </div>
@@ -267,6 +271,10 @@ function init() {
 
 <div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
+	<i>Firewall:</i><br>
+	<ul>
+		<li><b>Allow DHCP responses</b> - Accept incoming packets from broken dhcp servers, which are sending replies from addresses other than used for query. This could lead to a lower level of security.</li>
+	</ul>
 	<i>IGMP proxy:</i><br>
 	<ul>
 		<li><b>LAN0 / LAN1 / LAN2 / LAN3</b> - Add interface br0 / br1 / br2 / br3 to igmp.conf (Ex.: phyint br0 downstream ratelimit 0 threshold 1).</li>
