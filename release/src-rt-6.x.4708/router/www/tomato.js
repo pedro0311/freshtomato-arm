@@ -2893,7 +2893,7 @@ function reboot() {
 
 function halt() {
 	if (!confirm("Halt?")) return;
-	if (confirm("Are you really sure you want to Halt??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
+	if (confirm("Are you really sure you want to halt the router??\nThis will require a manual power cycle to boot again.")) form.submitHidden('shutdown.cgi', { });
 }
 
 function logout() {
