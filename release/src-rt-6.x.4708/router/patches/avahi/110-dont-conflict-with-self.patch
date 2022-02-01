@@ -27,7 +27,7 @@
              }
  
              avahi_record_unref(record);
-@@ -920,8 +920,7 @@
+@@ -961,8 +961,7 @@
          return;
  
      /* We don't want to reflect local traffic, so we check if this packet is generated locally. */

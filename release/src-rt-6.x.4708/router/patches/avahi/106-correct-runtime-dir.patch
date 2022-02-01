@@ -1,6 +1,6 @@
 --- avahi/configure.ac
 +++ avahi/configure.ac
-@@ -958,7 +958,7 @@
+@@ -1004,7 +1004,7 @@
  #
  # Avahi runtime dir
  #

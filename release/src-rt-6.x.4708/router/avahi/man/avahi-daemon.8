@@ -13,11 +13,11 @@ avahi-daemon --check\fB
 .SH DESCRIPTION
 The Avahi mDNS/DNS-SD daemon implements Apple's Zeroconf architecture (also known as "Rendezvous" or "Bonjour"). The daemon registers local IP addresses and static services using mDNS/DNS-SD and provides two IPC APIs for local programs to make use of the mDNS record cache the avahi-daemon maintains. First there is the so called "simple protocol" which is used exclusively by avahi-dnsconfd (a daemon which configures unicast DNS servers using server info published via mDNS) and nss-mdns (a libc NSS plugin, providing name resolution via mDNS). Finally there is the D-Bus interface which provides a rich object oriented interface to D-Bus enabled applications.
 
-Upon startup avahi-daemon interprets its configuration file \fI/usr/local/etc/avahi/avahi-daemon.conf\f1 and reads XML fragments from \fI/usr/local/etc/avahi/services/*.service\f1 which may define static DNS-SD services. If you enable \fBpublish-resolv-conf-dns-servers\f1 in \fIavahi-daemon.conf\f1 the file \fI/etc/resolv.conf\f1 will be read, too.
+Upon startup avahi-daemon interprets its configuration file \fI/etc/avahi/avahi-daemon.conf\f1 and reads XML fragments from \fI/etc/avahi/services/*.service\f1 which may define static DNS-SD services. If you enable \fBpublish-resolv-conf-dns-servers\f1 in \fIavahi-daemon.conf\f1 the file \fI/etc/resolv.conf\f1 will be read, too.
 .SH OPTIONS
 .TP
 \fB-f | --file=\f1 \fIFILE\f1
-Specify the configuration file to read. (default: /usr/local/etc/avahi/avahi-daemon.conf)
+Specify the configuration file to read. (default: /etc/avahi/avahi-daemon.conf)
 .TP
 \fB-D | --daemonize\f1
 Daemonize after startup. Implies \fB--syslog\f1.
@@ -44,7 +44,7 @@ Don't change the process name while running. Unless this option is specified ava
 Kill an already running avahi-daemon. (equivalent to sending a SIGTERM)
 .TP
 \fB-r | --reload\f1
-Tell an already running avahi-daemon to reread \fI/etc/resolv.conf\f1 (in case you enabled \fBpublish-resolv-conf-dns-servers\f1 in \fIavahi-daemon.conf\f1) the files from \fI/usr/local/etc/avahi/services/\f1. Please note that this will not reload the \fI/usr/local/etc/avahi/avahi-daemon.conf\f1. (equivalent to sending a SIGHUP)
+Tell an already running avahi-daemon to reread \fI/etc/resolv.conf\f1 (in case you enabled \fBpublish-resolv-conf-dns-servers\f1 in \fIavahi-daemon.conf\f1) the files from \fI/etc/avahi/services/\f1. Please note that this will not reload the \fI/etc/avahi/avahi-daemon.conf\f1. (equivalent to sending a SIGHUP)
 .TP
 \fB-c | --check\f1
 Return 0 as return code when avahi-daemon is already running.
@@ -55,15 +55,15 @@ Show help
 \fB-v | --version\f1
 Show version information 
 .SH FILES
-\fI/usr/local/etc/avahi/avahi-daemon.conf\f1: the default configuration file for avahi-daemon, \fBavahi-daemon.conf(5)\f1 for more information.
+\fI/etc/avahi/avahi-daemon.conf\f1: the default configuration file for avahi-daemon, \fBavahi-daemon.conf(5)\f1 for more information.
 
-\fI/usr/local/etc/avahi/hosts\f1: additional static hostname mappings to publish in mDNS, see \fBavahi.hosts(5)\f1 for more information.
+\fI/etc/avahi/hosts\f1: additional static hostname mappings to publish in mDNS, see \fBavahi.hosts(5)\f1 for more information.
 
-\fI/usr/local/etc/avahi/services/*.service\f1: static service definitions, see \fBavahi.service(5)\f1 for more information.
+\fI/etc/avahi/services/*.service\f1: static service definitions, see \fBavahi.service(5)\f1 for more information.
 .SH SIGNALS
 \fISIGINT, SIGTERM\f1: avahi-daemon will shutdown. (Same as \fB--kill\f1).
 
-\fISIGHUP\f1: avahi-daemon will reload unicast DNS server data from \fI/etc/resolv.conf\f1 and static service definitions from \fI/usr/local/etc/avahi/services/\f1. (Same as \fB--reload\f1)
+\fISIGHUP\f1: avahi-daemon will reload unicast DNS server data from \fI/etc/resolv.conf\f1 and static service definitions from \fI/etc/avahi/services/\f1. (Same as \fB--reload\f1)
 
 \fISIGUSR1\f1: avahi-daemon will dump local and remote cached resource record data to syslog.
 .SH AUTHORS

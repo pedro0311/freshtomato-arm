@@ -1,4 +1,4 @@
-2017-07-10  gettextize  <bug-gnu-gettext@gnu.org>
+2020-02-18  gettextize  <bug-gnu-gettext@gnu.org>
 
 	* Makefile.in.in: New file, from gettext-0.19.8.1.
 	* Rules-quot: New file, from gettext-0.19.8.1.
