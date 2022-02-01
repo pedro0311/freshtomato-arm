@@ -983,11 +983,15 @@ static void check_bootnv(void)
 	case MODEL_F5D8235v3:
 		if (nvram_match("sb/1/macaddr", nvram_safe_get("et0macaddr"))) {
 			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, 2);
+			inc_mac(mac, +2);
 			dirty |= check_nv("sb/1/macaddr", mac);
-			inc_mac(mac, 1);
-			dirty |= check_nv("pci/1/1/macaddr", mac);
+			if ((model == MODEL_F7D4301) || /* N600 Dual Band */
+			    (model == MODEL_F7D4302)) {
+				inc_mac(mac, +4);
+				dirty |= check_nv("pci/1/1/macaddr", mac);
+			}
 		}
+		break;
 	case MODEL_E4200:
 		dirty |= check_nv("vlan2hwname", "et0");
 		if (strncasecmp(nvram_safe_get("pci/1/1/macaddr"), "00:90:4c", 8) == 0 ||
@@ -1608,33 +1612,134 @@ static int init_nvram(void)
 	case MODEL_F7D4301:
 	case MODEL_F7D4302:
 	case MODEL_F5D8235v3:
-		mfr = "Belkin";
-		features = SUP_SES | SUP_80211N;
-		switch (model) {
-		case MODEL_F7D3301:
-			name = "Share Max N300 (F7D3301/F7D7301) v1";
-			break;
-		case MODEL_F7D3302:
-			name = "Share N300 (F7D3302/F7D7302) v1";
-			break;
-		case MODEL_F7D4301:
-			name = "Play Max / N600 HD (F7D4301/F7D8301) v1";
-			break;
-		case MODEL_F7D4302:
-			name = "Play N600 (F7D4302/F7D8302) v1";
-			break;
-		case MODEL_F5D8235v3:
-			name = "N F5D8235-4 v3";
-			break;
-		}
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");
 #endif
+		mfr = "Belkin";
+		switch (model) {
+		case MODEL_F7D3301: /* N300 and Gigabit BCM53115 */
+			name = "Share Max N300 (F7D3301/F7D7301) v1";
+			features = SUP_SES | SUP_80211N | SUP_1000ET;
+			if (!nvram_match("t_fix1", (char *)name)) {
+				nvram_set("vlan1hwname", "et0");
+				nvram_set("vlan2hwname", "et0");
+				nvram_set("lan_ifname", "br0");
+				nvram_set("landevs", "vlan1 wl0");
+				nvram_set("lan_ifnames", "vlan1 eth1");
+				nvram_set("wan_ifnames", "vlan2");
+				nvram_set("wan_ifnameX", "vlan2");
+				nvram_set("wandevs", "vlan2");
+				nvram_set("wl_ifnames", "eth1");
+				nvram_set("wl_ifname", "eth1");
+				nvram_set("wl0_ifname", "eth1");
+			}
+			break;
+		case MODEL_F7D3302: /* N300 and Fast Ethernet BCM5325E */
+			name = "Share N300 (F7D3302/F7D7302) v1";
+			features = SUP_SES | SUP_80211N;
+			if (!nvram_match("t_fix1", (char *)name)) {
+				nvram_set("vlan1hwname", "et0");
+				nvram_set("vlan2hwname", "et0");
+				nvram_set("lan_ifname", "br0");
+				nvram_set("landevs", "vlan1 wl0");
+				nvram_set("lan_ifnames", "vlan1 eth1");
+				nvram_set("wan_ifnames", "vlan2");
+				nvram_set("wan_ifnameX", "vlan2");
+				nvram_set("wandevs", "vlan2");
+				nvram_set("wl_ifnames", "eth1");
+				nvram_set("wl_ifname", "eth1");
+				nvram_set("wl0_ifname", "eth1");
+			}
+			break;
+		case MODEL_F7D4301: /* N600 Dual Band and Gigabit BCM53115 */
+			name = "Play Max / N600 HD (F7D4301/F7D8301) v1";
+			features = SUP_SES | SUP_80211N | SUP_1000ET;
+			if (!nvram_match("t_fix1", (char *)name)) {
+				nvram_set("vlan1hwname", "et0");
+				nvram_set("vlan2hwname", "et0");
+				nvram_set("lan_ifname", "br0");
+				nvram_set("landevs", "vlan1 wl0 wl1");
+				nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+				nvram_set("wan_ifnames", "vlan2");
+				nvram_set("wan_ifnameX", "vlan2");
+				nvram_set("wandevs", "vlan2");
+				nvram_set("wl_ifnames", "eth1 eth2");
+				nvram_set("wl_ifname", "eth1");
+				nvram_set("wl0_ifname", "eth1");
+				nvram_set("wl1_ifname", "eth2");
+			}
+			break;
+		case MODEL_F7D4302: /* N600 Dual Band and Fast Ethernet BCM5325E */
+			name = "Play N600 (F7D4302/F7D8302) v1";
+			features = SUP_SES | SUP_80211N;
+			if (!nvram_match("t_fix1", (char *)name)) {
+				nvram_set("vlan1hwname", "et0");
+				nvram_set("vlan2hwname", "et0");
+				nvram_set("lan_ifname", "br0");
+				nvram_set("landevs", "vlan1 wl0 wl1");
+				nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+				nvram_set("wan_ifnames", "vlan2");
+				nvram_set("wan_ifnameX", "vlan2");
+				nvram_set("wandevs", "vlan2");
+				nvram_set("wl_ifnames", "eth1 eth2");
+				nvram_set("wl_ifname", "eth1");
+				nvram_set("wl0_ifname", "eth1");
+				nvram_set("wl1_ifname", "eth2");
+			}
+			break;
+		case MODEL_F5D8235v3: /* N300 and Gigabit BCM53115 */
+			name = "N F5D8235-4 v3";
+			features = SUP_SES | SUP_80211N | SUP_1000ET;
+			if (!nvram_match("t_fix1", (char *)name)) {
+				nvram_set("vlan1hwname", "et0");
+				nvram_set("vlan2hwname", "et0");
+				nvram_set("lan_ifname", "br0");
+				nvram_set("landevs", "vlan1 wl0");
+				nvram_set("lan_ifnames", "vlan1 eth1");
+				nvram_set("wan_ifnames", "vlan2");
+				nvram_set("wan_ifnameX", "vlan2");
+				nvram_set("wandevs", "vlan2");
+				nvram_set("wl_ifnames", "eth1");
+				nvram_set("wl_ifname", "eth1");
+				nvram_set("wl0_ifname", "eth1");
+			}
+			break;
+		}
+
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
-			nvram_set("wan_ifnameX", "vlan2");
-			nvram_set("landevs", "vlan1 wl0 wl1");
-			nvram_set("wandevs", "vlan2");
+			/* fix MAC addresses */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);
+			nvram_set("sb/1/macaddr", s);				/* fix WL mac for 2,4G */
+			if ((model == MODEL_F7D4301) ||				/* N600 Dual Band */
+			    (model == MODEL_F7D4302)) {
+				inc_mac(s, +4);					/* do not overlap with VIFs */
+				nvram_set("pci/1/1/macaddr", s);		/* fix WL mac for 5G */
+			}
+
+			/* adjust cfe wifi country settings */
+			nvram_set("sb/1/ccode", "ALL");
+			nvram_set("sb/1/regrev", "0");
+			if ((model == MODEL_F7D4301) ||				/* N600 Dual Band */
+			    (model == MODEL_F7D4302)) {
+				nvram_set("pci/1/1/ccode", "ALL");
+				nvram_set("pci/1/1/regrev", "0");
+			}
+
+			/* default wifi settings/channels */
+			nvram_set("wl0_country_code", "SG");
+			nvram_set("wl0_channel", "6");
+			nvram_set("wl0_nbw", "40");
+			nvram_set("wl0_nbw_cap", "1");
+			nvram_set("wl0_nctrlsb", "upper");
+			if ((model == MODEL_F7D4301) ||				/* N600 Dual Band */
+			    (model == MODEL_F7D4302)) {
+				nvram_set("wl1_country_code", "SG");
+				nvram_set("wl1_channel", "36");
+				nvram_set("wl1_nbw", "40");
+				nvram_set("wl1_nbw_cap", "1");
+				nvram_set("wl1_nctrlsb", "lower");
+			}
 		}
 		break;
 #ifdef TCONFIG_BLINK /* RTN/RTAC */
