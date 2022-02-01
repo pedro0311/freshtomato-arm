@@ -2,7 +2,7 @@
 .SH NAME
 avahi-daemon.conf \- avahi-daemon configuration file
 .SH SYNOPSIS
-\fB/usr/local/etc/avahi/avahi-daemon.conf
+\fB/etc/avahi/avahi-daemon.conf
 \f1
 .SH DESCRIPTION
 \fIavahi-daemon.conf\f1 is the configuration file for avahi-daemon.
@@ -76,6 +76,8 @@ avahi-daemon.conf \- avahi-daemon configuration file
 \fBenable-reflector=\f1 Takes a boolean value ("yes" or "no"). If set to "yes" avahi-daemon will reflect incoming mDNS requests to all local network interfaces, effectively allowing clients to browse mDNS/DNS-SD services on all networks connected to the gateway. The gateway is somewhat intelligent and should work with all kinds of mDNS traffic, though some functionality is lost (specifically the unicast reply bit, which is used rarely anyway). Make sure to not run multiple reflectors between the same networks, this might cause them to play Ping Pong with mDNS packets. Defaults to "no".
 .TP
 \fBreflect-ipv=\f1 Takes a boolean value ("yes" or "no"). If set to "yes" and \fBenable-reflector\f1 is enabled, avahi-daemon will forward mDNS traffic between IPv4 and IPv6, which is usually not recommended. Defaults to "no".
+.TP
+\fBreflect-filters=\f1 Set a comma separated list of allowed service names to be reflected. Each service that is seen must match an entry in this list to be reflected to other networks. This list can match the type of service or the name of the machine providing the service. Defaults to allowing all services.
 .SH SECTION [RLIMITS]
 This section is used to define system resource limits for the daemon. See \fBsetrlimit(2)\f1 for more information. If any of the options is not specified in the configuration file, avahi-daemon does not change it from the system defaults.
 .TP

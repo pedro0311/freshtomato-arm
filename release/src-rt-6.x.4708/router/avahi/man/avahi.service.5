@@ -2,10 +2,10 @@
 .SH NAME
 avahi.service \- avahi-daemon static service file
 .SH SYNOPSIS
-\fB/usr/local/etc/avahi/services/*.service
+\fB/etc/avahi/services/*.service
 \f1
 .SH DESCRIPTION
-\fI/usr/local/etc/avahi/services/*.service\f1 are XML fragments containing static DNS-SD service data. Every service file can contain multiple service definitions which share the same name. This is useful for publishing service data for services which implement multiple protocols. (i.e. a printer implementing _ipp._tcp and _printer._tcp)
+\fI/etc/avahi/services/*.service\f1 are XML fragments containing static DNS-SD service data. Every service file can contain multiple service definitions which share the same name. This is useful for publishing service data for services which implement multiple protocols. (i.e. a printer implementing _ipp._tcp and _printer._tcp)
 .SH XML TAGS
 .TP
 \fB<service-group>\f1 The document tag of avahi service files. Should contain one \fB<name>\f1 and one or more \fB<service>\f1 elements.

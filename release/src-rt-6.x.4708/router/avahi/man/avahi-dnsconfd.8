@@ -11,7 +11,7 @@ avahi-dnsconfd --refresh\fB
 avahi-dnsconfd --check\fB
 \f1
 .SH DESCRIPTION
-avahi-dnsconfd connects to a running avahi-daemon and runs the script \fI/usr/local/etc/avahi/avahi-dnsconfd.action\f1 for each unicast DNS server that is announced on the local LAN. This is useful for configuring unicast DNS servers in a DHCP-like fashion with mDNS.
+avahi-dnsconfd connects to a running avahi-daemon and runs the script \fI/etc/avahi/avahi-dnsconfd.action\f1 for each unicast DNS server that is announced on the local LAN. This is useful for configuring unicast DNS servers in a DHCP-like fashion with mDNS.
 .SH OPTIONS
 .TP
 \fB-D | --daemonize\f1
@@ -35,7 +35,7 @@ Show help
 \fB-v | --version\f1
 Show version information 
 .SH FILES
-\fI/usr/local/etc/avahi/avahi-dnsconfd.action\f1: the script to run when a DNS server is found or removed.
+\fI/etc/avahi/avahi-dnsconfd.action\f1: the script to run when a DNS server is found or removed.
 .SH SIGNALS
 \fISIGINT, SIGTERM\f1: avahi-dnsconfd will shutdown. This is issued by passing --kill to avahi-daemon.
 
