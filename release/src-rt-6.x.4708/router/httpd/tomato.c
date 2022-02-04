@@ -1043,11 +1043,13 @@ static const nvset_t nvset_list[] = {
 	{ "emf_enable",			V_01				},
 #endif
 
-// advanced-adblock
+/* advanced-adblock */
 	{ "adblock_enable",		V_01				},
 	{ "adblock_blacklist",		V_LENGTH(0, 4096)		},
 	{ "adblock_blacklist_custom",	V_LENGTH(0, 4096)		},
 	{ "adblock_whitelist",		V_LENGTH(0, 4096)		},
+	{ "adblock_limit",		V_LENGTH(0, 32)			},
+	{ "adblock_path",		V_LENGTH(0, 64)			},
 
 // advanced-misc
 #ifdef TCONFIG_BCMARM
