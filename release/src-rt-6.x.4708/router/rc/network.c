@@ -554,7 +554,7 @@ void load_wl(void)
 	}
 	snprintf(instance_base, sizeof(instance_base), "instance_base=%d", maxunit + 1);
 #ifdef TCONFIG_BCM7
-	snprintf(instance_base, sizeof(instance_base), "%s", instance_base);
+	snprintf(instance_base, sizeof(instance_base), "%s dhd_msg_level=%d", instance_base, nvram_get_int("dhd_msg_level"));
 #endif
 	eval("insmod", "dhd", instance_base);
 #else /* TCONFIG_DHDAP */
