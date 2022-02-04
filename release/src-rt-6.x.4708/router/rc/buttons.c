@@ -414,6 +414,7 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_AMBER; /* Use LED Amber (only Dummy) for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 	case MODEL_EA6350v1:
+	case MODEL_EA6350v2:
 		ses_mask = 1 << 7;
 		reset_mask = 1 << 11;
 		ses_led = LED_AOSS;

@@ -239,6 +239,10 @@ ifeq ($(ASUS_TRX),LINKSYS2)
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6350v1,3.0.0.4,image/freshtomato-EA6350v1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6200,3.0.0.4,image/freshtomato-EA6200-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
+# for EA6350v2
+ifeq ($(ASUS_TRX),LINKSYS3)
+	ctools/trx_asus -i image/linux-lzma.trx -r EA6350v2,3.0.0.4,image/freshtomato-EA6350v2-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 #for linksys EA series -- EA6400 EA6700 EA6500v2 EA6900
 ifeq ($(ASUS_TRX),LINKSYS)
 	ctools/trx_asus -i image/linux-lzma.trx -r EA6900,3.0.0.4,image/freshtomato-EA6900-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1297,6 +1301,12 @@ ea6350v1e:
 ea6350v1z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="LINKSYS2" FAILSAFE_UPGRADE=n DPSTA=n BSD=y
 
+ea6350v2e:
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS3" FAILSAFE_UPGRADE=n DPSTA=y BSD=y IRQBALANCE=y
+
+ea6350v2z:
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS3" FAILSAFE_UPGRADE=n DPSTA=y BSD=y IRQBALANCE=y
+
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y TUXERA=y TUXERA_HFS=y BSD=y IRQBALANCE=y
 
@@ -1416,6 +1426,8 @@ help:
 	@echo "ea6700z         EA6700/EA6400/EA6500v2/EA6900 build AIO"
 	@echo "ea6350v1e       EA6200/EA6350v1 build VPN"
 	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
+	@echo "ea6350v2e       EA6350v2 build VPN (WIP!)"
+	@echo "ea6350v2z       EA6350v2 build AIO (WIP!)"
 ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e         RT-AC3200 build VPN"

@@ -109,6 +109,7 @@ void start_usb(void)
 		set_gpio(GPIO_00, T_HIGH);
 	}
 	else if ((model == MODEL_EA6350v1) ||
+		 (model == MODEL_EA6350v2) ||
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||
@@ -553,6 +554,7 @@ void stop_usb(void)
 		 (model == MODEL_XR300) )
 		set_gpio(GPIO_00, T_LOW);
 	else if ((model == MODEL_EA6350v1) ||
+		 (model == MODEL_EA6350v2) ||
 		 (model == MODEL_EA6400) ||
 		 (model == MODEL_EA6700) ||
 		 (model == MODEL_EA6900) ||

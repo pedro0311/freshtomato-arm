@@ -258,17 +258,17 @@ int foreach_wif(int include_vifs, void *param,
 	int ret = 0;
 
 #ifdef TCONFIG_MULTIWAN
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s %s %s",
 #else
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 #else
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s %s %s",
 #else
 	snprintf(ifnames, sizeof(ifnames), "%s %s %s %s %s %s %s %s %s %s %s",
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 #endif /* TCONFIG_MULTIWAN */
 		nvram_safe_get("lan_ifnames"),
 		nvram_safe_get("lan1_ifnames"),
@@ -280,10 +280,10 @@ int foreach_wif(int include_vifs, void *param,
 		nvram_safe_get("wan3_ifnames"),
 		nvram_safe_get("wan4_ifnames"),
 #endif /* TCONFIG_MULTIWAN */
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 		nvram_safe_get("wl2_ifname"),
 		nvram_safe_get("wl2_vifs"),
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 		nvram_safe_get("wl_ifname"),
 		nvram_safe_get("wl0_ifname"),
 		nvram_safe_get("wl0_vifs"),
@@ -366,6 +366,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    || (model == MODEL_R6250)
 	    || (model == MODEL_R6300v2)
 	    || (model == MODEL_EA6350v1)
+	    || (model == MODEL_EA6350v2)
 	    || (model == MODEL_EA6400)
 	    || (model == MODEL_EA6700)
 	    || (model == MODEL_EA6900)
@@ -959,7 +960,7 @@ void set_radio(int on, int unit)
 			led(LED_WLAN, LED_OFF);
 		if (unit == 1)
 			led(LED_5G, LED_OFF);
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 		if (unit == 2)
 			led(LED_52G, LED_OFF);
 #endif
@@ -969,7 +970,7 @@ void set_radio(int on, int unit)
 			led(LED_WLAN, LED_ON);
 		if (unit == 1)
 			led(LED_5G, LED_ON);
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 		if (unit == 2)
 			led(LED_52G, LED_ON);
 #endif

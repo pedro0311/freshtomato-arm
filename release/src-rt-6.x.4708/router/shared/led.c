@@ -533,6 +533,7 @@ int do_led(int which, int mode)
 		}
 		break;
 	case MODEL_EA6350v1:
+	case MODEL_EA6350v2:
 		b = ea6350v1[which];
 		if (which == LED_BRIDGE) { /* non GPIO LED */
 			do_led_bridge(mode);

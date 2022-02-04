@@ -554,7 +554,7 @@ void load_wl(void)
 	}
 	snprintf(instance_base, sizeof(instance_base), "instance_base=%d", maxunit + 1);
 #ifdef TCONFIG_BCM7
-	snprintf(instance_base, sizeof(instance_base), "%s", instance_base);
+	snprintf(instance_base, sizeof(instance_base), "%s dhd_msg_level=%d", instance_base, nvram_get_int("dhd_msg_level"));
 #endif
 	eval("insmod", "dhd", instance_base);
 #else /* TCONFIG_DHDAP */
@@ -616,10 +616,10 @@ void restart_wl(void)
 	int wlan_5g_cnt = 0;
 	char blink_wlan_ifname[32];
 	char blink_wlan_5g_ifname[32];
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 	int wlan_52g_cnt = 0;
 	char blink_wlan_52g_ifname[32];
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 #endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
 #ifdef TCONFIG_BCMARM
 	/* get router model */
@@ -679,14 +679,14 @@ void restart_wl(void)
 					/* Enable WLAN LEDs if wireless interface is enabled */
 					if (nvram_get_int(wl_nvname("radio", unit, 0))) {
 						if ((wlan_cnt == 0) && (wlan_5g_cnt == 0)
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 						    && (wlan_52g_cnt == 0)
 #endif
 						) { /* kill all blink at first start up */
 							killall("blink", SIGKILL);
 							memset(blink_wlan_ifname, 0, sizeof(blink_wlan_ifname)); /* reset */
 							memset(blink_wlan_5g_ifname, 0, sizeof(blink_wlan_5g_ifname));
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 							memset(blink_wlan_52g_ifname, 0, sizeof(blink_wlan_52g_ifname));
 #endif
 						}
@@ -700,13 +700,13 @@ void restart_wl(void)
 							wlan_5g_cnt++; /* count all 5g units / subunits */
 							if (wlan_5g_cnt < 2) strlcpy(blink_wlan_5g_ifname, ifname, sizeof(blink_wlan_5g_ifname));
 						}
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 						else if (unit == 2) {
 							led(LED_52G, LED_ON); /* enable WLAN LED for 2nd 5 GHz */
 							wlan_52g_cnt++; /* count all 5g units / subunits */
 							if (wlan_52g_cnt < 2) strlcpy(blink_wlan_52g_ifname, ifname, sizeof(blink_wlan_52g_ifname));
 						}
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 					}
 #endif /* TCONFIG_BLINK || TCONFIG_BCMARM */
 				}
@@ -758,7 +758,7 @@ void restart_wl(void)
 			eval("blink", blink_wlan_ifname, "wlan", "10", "8192");
 		if (wlan_5g_cnt == 1)
 			eval("blink", blink_wlan_5g_ifname, "5g", "10", "8192");
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 		if (wlan_52g_cnt == 1)
 			eval("blink", blink_wlan_52g_ifname, "52g", "10", "8192");
 #endif
@@ -1041,11 +1041,11 @@ void wl_sta_start(void)
 			else if (unit == 1) {
 				led(LED_5G, LED_ON); /* enable WLAN LED for 5 GHz */
 			}
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 			else if (unit == 2) {
 				led(LED_52G, LED_ON); /* enable WLAN LED for 2nd 5 GHz */
 			}
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 		}
 
 		xstart("radio", "join"); /* try connecting ... */
@@ -1085,11 +1085,11 @@ void wl_sta_stop(void)
 		else if (unit == 1) {
 			led(LED_5G, LED_OFF); /* disable WLAN LED for 5 GHz */
 		}
-#ifdef TCONFIG_DHDAP
+#ifdef TCONFIG_AC3200
 		else if (unit == 2) {
 			led(LED_52G, LED_OFF); /* disable WLAN LED for 2nd 5 GHz */
 		}
-#endif /* TCONFIG_DHDAP */
+#endif /* TCONFIG_AC3200 */
 	}
 }
 

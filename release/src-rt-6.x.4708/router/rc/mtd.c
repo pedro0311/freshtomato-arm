@@ -1207,7 +1207,9 @@ int mtd_write(const char *path, const char *mtd)
 	unsigned long crc;
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
-	if (get_model() == MODEL_EA6700 || get_model() == MODEL_EA6400 || get_model() == MODEL_EA6350v1) {
+	int model = get_model();
+
+	if (model == MODEL_EA6700 || model == MODEL_EA6400 || model == MODEL_EA6350v1 || model == MODEL_EA6350v2) {
 		if (nvram_match("bootpartition", "1")) {
 			mtd = "linux";
 			nvram_set("bootpartition", "0");
