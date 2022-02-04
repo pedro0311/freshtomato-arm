@@ -315,11 +315,18 @@ function init() {
 	<script>
 		const encap_options = [['0','None'],['1','ATM (ADSL)'],['2','PTM (most VDSL2)']];
 
-		const overhead_options = [['0','None'],['32','32-PPPoE VC-Mux'],['40','40-PPPoE LLC/Snap'],['48','48-PPPoE LLC/Snap + VLAN'],
-										['10','10-PPPoA VC-Mux'],['14','14-PPPoA LLC/Snap'],
-										['8','8-RFC2684/RFC1483 Routed VC-Mux'],['16','16-RFC2684/RFC1483 Routed LLC/Snap'],
+		const overhead_options = [['0','None'],
+										['8','8-RFC2684/RFC1483 Routed VC-Mux'],
+										['10','10-PPPoA VC-Mux'],
+										['14','14-PPPoA LLC/Snap'],
+										['16','16-RFC2684/RFC1483 Routed LLC/Snap'],
 										['24','24-RFC2684/RFC1483 Bridged VC-Mux'],
-										['32','32-RFC2684/RFC1483 Bridged LLC/Snap']];
+										['30','30-PPPoE PTM (VDSL2)'],
+										['32','32-PPPoE VC-Mux'],
+										['32','32-RFC2684/RFC1483 Bridged LLC/Snap'],
+										['34','34-PPPoE PTM (VDSL2) + VLAN'],
+										['40','40-PPPoE LLC/Snap'],
+										['48','48-PPPoE LLC/Snap + VLAN']];
 
 		const encap_fields = [];
 		for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
