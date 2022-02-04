@@ -1336,8 +1336,7 @@ static void update_afraid(int ssl)
 	---
 
 PUT https://api.cloudflare.com/client/v4/zones/zone_id/dns_records/record_id
-Headers: X-Auth-Email: user_email
-         X-Auth-Key: user_api_key
+Headers: Authorization: Bearer API-token
          Content-Type: application/json
 Data:    {"type":"A","name":"e.example.com","content":"198.51.100.4","proxied":false}
 
@@ -1450,7 +1449,7 @@ static void update_cloudflare(int ssl)
 	char data[QUARTER_BLOB];
 
 	/* +opt +opt */
-	snprintf(header, HALF_BLOB, "X-Auth-Email: %s\r\nX-Auth-Key: %s\r\nContent-Type: application/json\r\n", get_option_required("user"), get_option_required("pass"));
+	snprintf(header, HALF_BLOB, "Authorization: Bearer %s\r\nContent-Type: application/json\r\n", get_option_required("pass"));
 
 	zone = get_option_required("url");
 	host = get_option_required("host");

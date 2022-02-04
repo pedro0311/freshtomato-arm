@@ -42,7 +42,7 @@ REMOVE-END */
 var services = [
 	['', 'None', '', ''],
 	['changeip', 'ChangeIP (https)', 'https://www.changeip.com/', 'uh', 'Email Address'],
-	['cloudflare', 'Cloudflare (https)', 'https://www.cloudflare.com/', 'uhbnws', 'Email Address', 'API Key', null, 'Proxied', 'Create record if needed', 'Zone ID'],
+	['cloudflare', 'Cloudflare (https)', 'https://www.cloudflare.com/', 'phbnws', null, 'API token', null, 'Proxied', 'Create record if needed', 'Zone ID'],
 	['dnsexit', 'DNS Exit (https)', 'https://www.dnsexit.com/', 'uh'],
 	['dnshenet', 'dns.he.net (https)', 'https://dns.he.net/', 'u', 'Host name', 'DDNS key'],
 	['dnsomatic', 'DNS-O-Matic (https)', 'https://www.dnsomatic.com/', 'uj', null, null, 'Domain <small>(optional)<\/small>'],
@@ -208,11 +208,7 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	var fom;
-	var i, j, s;
-	var data, a, b;
-	var setopendns;
-	var op;
+	var fom, i, j, s, data, a, b, setopendns, op;
 
 	if (!verifyFields(null, 0))
 		return;
