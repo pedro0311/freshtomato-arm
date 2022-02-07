@@ -783,7 +783,6 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 	knldev = soc_knl_dev((void *)brcmnand->sih);
 	if (knldev == SOC_KNLDEV_NANDFLASH)
-
 		offset = nfl_boot_os_size(brcmnand->nfl);
  
        /* Continuation of NETGEAR adjustments from /linux-2.6.36/arch/arm/mach-brcm-hnd/board_ns.c */
@@ -807,6 +806,13 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 			 nvram_match("boardrev", "0x1110")) {
 		     offset = 0x2180000;
 		}
+		/* Linksys EA6350v2 */
+		/* 0x000003c00000-0x000008000000 : "brcmnand" */
+		else if (nvram_match("boardnum","20150309") &&
+			 nvram_match("boardtype", "0xE646") &&
+			 nvram_match("boardrev", "0x1200")) {
+		     offset = 0x3c00000;
+		}
 
 	brcmnand_parts[0].offset = offset;
 
@@ -822,11 +828,8 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 
 #ifdef CONFIG_NVRAM_128K
 	brcmnand_parts[0].size =0x4000000; /* allocate 64 Meg for JFFS */
-
 #else
-
 	brcmnand_parts[0].size = size - offset;
-
 #endif
 
 #ifdef CONFIG_CRASHLOG
