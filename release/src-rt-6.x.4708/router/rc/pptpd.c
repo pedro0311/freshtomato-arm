@@ -234,7 +234,7 @@ void start_pptpd(void)
 	            nvram_safe_get("pptpd_ipup_script"));
 #ifdef TCONFIG_BCMARM
 	if (!ctf_disable) /* bypass CTF if enabled */
-		fprintf(fp, "iptables -t mangle -I PREROUTING -i $1 -j MARK --set-mark 0x01/0x7\n");
+		fprintf(fp, "iptables -t mangle -A FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
 #endif /* TCONFIG_BCMARM */
 
 	fclose(fp);
@@ -252,7 +252,7 @@ void start_pptpd(void)
 	            nvram_safe_get("pptpd_ipdown_script"));
 #ifdef TCONFIG_BCMARM
 	if (!ctf_disable) /* bypass CTF if enabled */
-		fprintf(fp, "iptables -t mangle -D PREROUTING -i $1 -j MARK --set-mark 0x01/0x7\n");
+		fprintf(fp, "iptables -t mangle -D FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
 #endif /* TCONFIG_BCMARM */
 
 	fclose(fp);
