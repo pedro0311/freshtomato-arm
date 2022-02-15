@@ -1531,7 +1531,7 @@ struct nvram_tuple router_defaults[] = {
 	{"nginx_docroot",		"/www"				, 0 },	/* path for server files */
 	{"nginx_port",			"85"				, 0 },	/* port to listen */
 	{"nginx_remote",		"0"				, 0 },	/* open port from WAN site */
-	{"nginx_fqdn",			"Tomato"			, 0 },	/* server name */
+	{"nginx_fqdn",			"FreshTomato"			, 0 },	/* server name */
 	{"nginx_upload",		"100"				, 0 },	/* upload file size limit */
 	{"nginx_priority",		"10"				, 0 },	/* server priority = worker_priority */
 	{"nginx_custom",		""				, 0 },	/* additional lines for nginx.conf */
