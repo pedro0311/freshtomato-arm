@@ -3392,18 +3392,35 @@ libubox-clean:
 	@rm -rf libubox/build
 	$(call unpatch_files,libubox)
 
-uqmi:
+uqmi/build/Makefile:
+	$(call patch_files,uqmi)
+	@rm -rf uqmi/build && mkdir -p uqmi/build
+	cd uqmi/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -lm" \
+			-DBUILD_STATIC=TRUE \
+			-Djson_include_dir="$(TOP)/libjson-c" \
+			-Djson_library="$(TOP)/libjson-c/build/libjson-c.a" \
+			-Dblobmsg_json_include_dir="$(TOP)" \
+			-Dblobmsg_json_library="$(TOP)/libubox/build/libblobmsg_json.a" \
+			-Dubox_include_dir="$(TOP)" \
+			-Dubox_library="$(TOP)/libubox/build/libubox.a" \
+			..
+
+uqmi: uqmi/build/Makefile
 	@$(SEP)
-	$(MAKE) -C uqmi SHARED=0 CC='$(CC) -static' \
-		CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -std=gnu99 -I.." \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libubox/build -lubox -lblobmsg_json"
+	$(MAKE) -C uqmi/build $(PARALLEL_BUILD)
 
 uqmi-install:
-	install -D uqmi/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
+	install -D uqmi/build/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 	$(STRIP) $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 
 uqmi-clean:
-	-@$(MAKE) -C uqmi clean
+	@rm -rf uqmi/build
+	$(call unpatch_files,uqmi)
 
 comgt:
 	@$(SEP)
