@@ -312,6 +312,8 @@ obj-$(TCONFIG_NOCAT) += nocat
 obj-$(TCONFIG_USB) += e2fsprogs
 obj-$(TCONFIG_USB) += p910nd
 obj-$(TCONFIG_USB) += comgt
+obj-$(TCONFIG_USB) += libjson-c
+obj-$(TCONFIG_USB) += libubox
 obj-$(TCONFIG_USB) += uqmi
 obj-$(TCONFIG_USB) += pdureader
 obj-$(TCONFIG_USB) += sd-idle
@@ -3205,7 +3207,7 @@ getdns/build/Makefile:
 	$(call patch_files,getdns)
 	cd getdns/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
-			-DCMAKE_INSTALL_PREFIX:PATH=/usr \
+			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=c99 $(EXTRACFLAGS)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
@@ -3344,12 +3346,13 @@ libjson-c/build/Makefile:
 	@rm -rf libjson-c/build && mkdir -p libjson-c/build
 	cd libjson-c/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
-			-DCMAKE_INSTALL_PREFIX:PATH=/usr \
+			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 			-DBUILD_TESTING=FALSE \
-			-DBUILD_STATIC_LIBS=FALSE \
+			-DBUILD_SHARED_LIBS=FALSE \
+			$(if $(TCONFIG_BCMARM),,-DDISABLE_THREAD_LOCAL_STORAGE=TRUE) \
 			$(if $(TCONFIG_BCMARM),,-DDISABLE_WERROR=TRUE) \
 			..
 
@@ -3358,23 +3361,48 @@ libjson-c: libjson-c/build/Makefile
 	$(MAKE) -C libjson-c/build all $(PARALLEL_BUILD)
 	cd libjson-c && ln -sf build/json_config.h json_config.h
 
+libjson-c-install:
+	@true
+
 libjson-c-clean:
 	@rm -rf libjson-c/build
 	$(call unpatch_files,libjson-c)
 
-uqmi: libjson-c
-	@$(SEP)
+libubox/build/Makefile:
 	$(call patch_files,libubox)
-	$(MAKE) -C uqmi/libubox
-	$(MAKE) -C uqmi SHARED=0 CC='$(CC) -static'
+	@rm -rf libubox/build && mkdir -p libubox/build
+	cd libubox/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libjson-c $(if $(TCONFIG_BCMARM),-DTCONFIG_BCMARM,)" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
+			-DBUILD_LUA=FALSE \
+			-Djson="$(TOP)/libjson-c/build/libjson-c.a" \
+			..
+
+libubox: libubox/build/Makefile
+	@$(SEP)
+	$(MAKE) -C libubox/build ubox-static blobmsg_json-static $(PARALLEL_BUILD)
+
+libubox-install:
+	@true
+	
+libubox-clean:
+	@rm -rf libubox/build
+	$(call unpatch_files,libubox)
+
+uqmi:
+	@$(SEP)
+	$(MAKE) -C uqmi SHARED=0 CC='$(CC) -static' \
+		CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -std=gnu99 -I.." \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libubox/build -lubox -lblobmsg_json"
 
 uqmi-install:
 	install -D uqmi/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 	$(STRIP) $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 
-uqmi-clean: libjson-c-clean
-	-@$(MAKE) -C uqmi/libubox clean
-	$(call unpatch_files,libubox)
+uqmi-clean:
 	-@$(MAKE) -C uqmi clean
 
 comgt:
