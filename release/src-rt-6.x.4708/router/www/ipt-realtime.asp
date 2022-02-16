@@ -39,14 +39,9 @@ var cstats_busy = 0;
 
 var ipt_addr_shown = [];
 var ipt_addr_hidden = [];
-
-hostnamecache = [];
+var hostnamecache = [];
 
 var ref = new TomatoRefresh('update.cgi', 'exec=iptmon', updateInt);
-
-ref.stop = function() {
-	this.timer.start(1000);
-}
 
 ref.refresh = function(text) {
 	var c, i, h, n, j, k, l;
@@ -61,13 +56,13 @@ ref.refresh = function(text) {
 		n = (new Date()).getTime();
 		if (this.timeExpect) {
 			if (debugTime)
-				E('dtime').innerHTML = (this.timeExpect - n) + ' ' + ((this.timeExpect + 1000*updateInt) - n);
+				E('dtime').innerHTML = (this.timeExpect - n)+' '+((this.timeExpect + 1000 * updateInt) - n);
 
-			this.timeExpect += 1000*updateInt;
+			this.timeExpect += 1000 * updateInt;
 			this.refreshTime = MAX(this.timeExpect - n, 500);
 		}
 		else {
-			this.timeExpect = n + 1000*updateInt;
+			this.timeExpect = n + 1000 * updateInt;
 		}
 
 		for (i in iptmon) {
@@ -97,35 +92,36 @@ ref.refresh = function(text) {
 
 			if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i.trim() != '')) {
 				ipt_addr_shown.push(i);
-				var option=document.createElement("option");
-				option.value=i;
-				if (hostnamecache[i] != null) {
-					option.text = hostnamecache[i] + ' (' + i + ')';
-				}
-				else {
+				var option = document.createElement('option');
+				option.value = i;
+				if (hostnamecache[i] != null)
+					option.text = hostnamecache[i]+' ('+i+')';
+				else
 					option.text=i;
-				}
-				E('_f_ipt_addr_shown').add(option,null);
+
+				E('_f_ipt_addr_shown').add(option, null);
 			}
 
-			if (ipt_addr_hidden.find(i) != -1) {
+			if (ipt_addr_hidden.find(i) != -1)
 				speed_history[i].hide = 1;
-			}
-			else {
+			else
 				speed_history[i].hide = 0;
-			}
 
-			verifyFields(null,1);
+			verifyFields(null, 1);
 		}
 
 		loadData();
 	}
 	catch (ex) {
 /* REMOVE-BEGIN
-	alert('ex=' + ex);
+	alert('ex='+ex);
 REMOVE-END */
 	}
 	--updating;
+}
+
+ref.stop = function() {
+	this.timer.start(1000);
 }
 
 function watchdog() {
@@ -136,12 +132,56 @@ function watchdog() {
 
 function watchdogReset() {
 	if (wdog) clearTimeout(wdog)
-	wdog = setTimeout(watchdog, 5000*updateInt);
+	wdog = setTimeout(watchdog, 5000 * updateInt);
 	wdogWarn.style.display = 'none';
 }
 
+function verifyFields(focused, quiet) {
+	var changed_addr_hidden = 0;
+	if (focused != null) {
+		if (focused.id == '_f_ipt_addr_shown') {
+			ipt_addr_shown.remove(focused.options[focused.selectedIndex].value);
+			ipt_addr_hidden.push(focused.options[focused.selectedIndex].value);
+			var option = document.createElement('option');
+			option.text = focused.options[focused.selectedIndex].text;
+			option.value = focused.options[focused.selectedIndex].value;
+			E('_f_ipt_addr_shown').remove(focused.selectedIndex);
+			E('_f_ipt_addr_shown').selectedIndex = 0;
+			E('_f_ipt_addr_hidden').add(option, null);
+			changed_addr_hidden = 1;
+		}
+
+		if (focused.id == '_f_ipt_addr_hidden') {
+			ipt_addr_hidden.remove(focused.options[focused.selectedIndex].value);
+			ipt_addr_shown.push(focused.options[focused.selectedIndex].value);
+			var option = document.createElement('option');
+			option.text = focused.options[focused.selectedIndex].text;
+			option.value = focused.options[focused.selectedIndex].value;
+			E('_f_ipt_addr_hidden').remove(focused.selectedIndex);
+			E('_f_ipt_addr_hidden').selectedIndex = 0;
+			E('_f_ipt_addr_shown').add(option, null);
+			changed_addr_hidden = 1;
+		}
+		if (changed_addr_hidden == 1)
+			cookie.set('ipt_addr_hidden', ipt_addr_hidden.join(','), 1);
+	}
+
+	if (E('_f_ipt_addr_hidden').length < 2)
+		E('_f_ipt_addr_hidden').setAttribute('disabled', 'disabled');
+	else
+		E('_f_ipt_addr_hidden').removeAttribute('disabled');
+
+	if (E('_f_ipt_addr_shown').length < 2)
+		E('_f_ipt_addr_shown').setAttribute('disabled', 'disabled');
+	else
+		E('_f_ipt_addr_shown').removeAttribute('disabled');
+
+	return 1;
+}
+
 function init() {
-	if (nvram.cstats_enable != '1') return;
+	if (nvram.cstats_enable != '1')
+		return;
 
 	populateCache();
 
@@ -158,70 +198,21 @@ function init() {
 		for (var i = 0; i < c.length; ++i) {
 			if (c[i].trim() != '') {
 				ipt_addr_hidden.push(c[i]);
-				var option=document.createElement("option");
-				option.value=c[i];
-				if (hostnamecache[c[i]] != null) {
-					option.text = hostnamecache[c[i]] + ' (' + c[i] + ')';
-				}
-				else {
+				var option = document.createElement('option');
+				option.value = c[i];
+				if (hostnamecache[c[i]] != null)
+					option.text = hostnamecache[c[i]]+' ('+c[i]+')';
+				else
 					option.text = c[i];
-				}
-				E('_f_ipt_addr_hidden').add(option,null);
+
+				E('_f_ipt_addr_hidden').add(option, null);
 			}
 		}
 	}
 
-	verifyFields(null,1);
+	verifyFields(null, 1);
 
 	ref.start();
-}
-
-function verifyFields(focused, quiet) {
-	var changed_addr_hidden = 0;
-	if (focused != null) {
-		if (focused.id == '_f_ipt_addr_shown') {
-			ipt_addr_shown.remove(focused.options[focused.selectedIndex].value);
-			ipt_addr_hidden.push(focused.options[focused.selectedIndex].value);
-			var option=document.createElement("option");
-			option.text=focused.options[focused.selectedIndex].text;
-			option.value=focused.options[focused.selectedIndex].value;
-			E('_f_ipt_addr_shown').remove(focused.selectedIndex);
-			E('_f_ipt_addr_shown').selectedIndex = 0;
-			E('_f_ipt_addr_hidden').add(option, null);
-			changed_addr_hidden = 1;
-		}
-
-		if (focused.id == '_f_ipt_addr_hidden') {
-			ipt_addr_hidden.remove(focused.options[focused.selectedIndex].value);
-			ipt_addr_shown.push(focused.options[focused.selectedIndex].value);
-			var option=document.createElement("option");
-			option.text=focused.options[focused.selectedIndex].text;
-			option.value=focused.options[focused.selectedIndex].value;
-			E('_f_ipt_addr_hidden').remove(focused.selectedIndex);
-			E('_f_ipt_addr_hidden').selectedIndex = 0;
-			E('_f_ipt_addr_shown').add(option, null);
-			changed_addr_hidden = 1;
-		}
-		if (changed_addr_hidden == 1) {
-			cookie.set('ipt_addr_hidden', ipt_addr_hidden.join(','), 1);
-		}
-	}
-
-	if (E('_f_ipt_addr_hidden').length < 2) {
-		E('_f_ipt_addr_hidden').setAttribute("disabled", "disabled");
-	}
-	else {
-		E('_f_ipt_addr_hidden').removeAttribute("disabled");
-	}
-
-	if (E('_f_ipt_addr_shown').length < 2) {
-		E('_f_ipt_addr_shown').setAttribute("disabled", "disabled");
-	}
-	else {
-		E('_f_ipt_addr_shown').removeAttribute("disabled");
-	}
-
-	return 1;
 }
 </script>
 </head>

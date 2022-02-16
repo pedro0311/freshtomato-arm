@@ -46,8 +46,7 @@ var filteripe = [];
 var filteripe_before = [];
 var dateFormat = -1;
 var scale = -1;
-
-hostnamecache = [];
+var hostnamecache = [];
 
 function genData() {
 	var w, i, h, t;

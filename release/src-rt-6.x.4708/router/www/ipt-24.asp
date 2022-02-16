@@ -40,27 +40,7 @@ var cstats_busy = 0;
 
 var ipt_addr_shown = [];
 var ipt_addr_hidden = [];
-
-hostnamecache = [];
-
-function showHours() {
-	if (hours == lastHours)
-		return;
-
-	showSelectedOption('hr', lastHours, hours);
-	lastHours = hours;
-}
-
-function switchHours(h) {
-	if ((!svgReady) || (updating))
-		return;
-
-	hours = h;
-	updateMaxL = (1440 / 24) * hours;
-	showHours();
-	loadData();
-	cookie.set(cprefix+'hrs', hours);
-}
+var hostnamecache = [];
 
 var ref = new TomatoRefresh('update.cgi', 'exec=bandwidth&arg0=speed&arg1=ipt');
 
@@ -74,14 +54,14 @@ ref.refresh = function(text) {
 
 			var i;
 			for (i in speed_history) {
-				if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i != '_next')) {
+				if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i != '_next') && (i.trim() != '')) {
 					ipt_addr_shown.push(i);
 					var option = document.createElement('option');
 					option.value = i;
 					if (hostnamecache[i] != null)
 						option.text = hostnamecache[i]+' ('+i+')';
 					else
-						option.text=i;
+						option.text = i;
 
 					E('_f_ipt_addr_shown').add(option, null);
 					speed_history[i].hide = 0;
@@ -115,16 +95,6 @@ REMOVE-END */
 	--updating;
 }
 
-ref.showState = function() {
-	E('refresh-button').value = this.running ? 'Stop' : 'Start';
-}
-
-ref.toggleX = function() {
-	this.toggle();
-	this.showState();
-	cookie.set(cprefix+'refresh', this.running ? 1 : 0);
-}
-
 ref.initX = function() {
 	var a;
 
@@ -135,74 +105,33 @@ ref.initX = function() {
 	}
 }
 
-function init() {
-	if (nvram.cstats_enable != '1') {
-		E('refresh-button').setAttribute('disabled', 'disabled');
+ref.toggleX = function() {
+	this.toggle();
+	this.showState();
+	cookie.set(cprefix+'refresh', this.running ? 1 : 0);
+}
+
+ref.showState = function() {
+	E('refresh-button').value = this.running ? 'Stop' : 'Start';
+}
+
+function showHours() {
+	if (hours == lastHours)
 		return;
-	}
 
-	populateCache();
+	showSelectedOption('hr', lastHours, hours);
+	lastHours = hours;
+}
 
-	var c, i;
-	if ((c = cookie.get('ipt_addr_hidden')) != null) {
-		c = c.split(',');
-		for (var i = 0; i < c.length; ++i) {
-			if (c[i].trim() != '') {
-				ipt_addr_hidden.push(c[i]);
-				var option = document.createElement('option');
-				option.value = c[i];
-				if (hostnamecache[c[i]] != null)
-					option.text = hostnamecache[c[i]]+' ('+c[i]+')';
-				else
-					option.text = c[i];
+function switchHours(h) {
+	if ((!svgReady) || (updating))
+		return;
 
-				E('_f_ipt_addr_hidden').add(option, null);
-			}
-		}
-	}
-
-	try {
-	//	<% ipt_bandwidth("speed"); %>
-
-		for (i in speed_history) {
-			if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && ( i != '_next') && (i.trim() != '')) {
-				ipt_addr_shown.push(i);
-				var option = document.createElement('option');
-				var ii = i;
-				if (hostnamecache[i] != null)
-					ii = hostnamecache[i]+' ('+i+')';
-
-				option.text = ii;
-				option.value = i;
-				E('_f_ipt_addr_shown').add(option, null);
-				speed_history[i].hide = 0;
-			}
-			if (ipt_addr_hidden.find(i) != -1)
-				speed_history[i].hide = 1;
-			else
-				speed_history[i].hide = 0;
-		}
-	}
-	catch (ex) {
-/* REMOVE-BEGIN
-		speed_history = {};
-REMOVE-END */
-	}
-	cstats_busy = 0;
-	if (typeof(speed_history) == 'undefined') {
-		speed_history = {};
-		cstats_busy = 1;
-	}
-
-	hours = fixInt(cookie.get(cprefix+'hrs'), 1, 24, 24);
+	hours = h;
 	updateMaxL = (1440 / 24) * hours;
 	showHours();
-
-	initCommon(1, 0, 0, 1);
-
-	verifyFields(null, 1);
-
-	ref.initX();
+	loadData();
+	cookie.set(cprefix+'hrs', hours);
 }
 
 function verifyFields(focused, quiet) {
@@ -255,6 +184,78 @@ function verifyFields(focused, quiet) {
 		E('_f_ipt_addr_shown').removeAttribute('disabled');
 
 	return 1;
+}
+
+function init() {
+	if (nvram.cstats_enable != '1') {
+		E('refresh-button').setAttribute('disabled', 'disabled');
+		return;
+	}
+
+	populateCache();
+
+	var c, i;
+	if ((c = cookie.get('ipt_addr_hidden')) != null) {
+		c = c.split(',');
+		for (var i = 0; i < c.length; ++i) {
+			if (c[i].trim() != '') {
+				ipt_addr_hidden.push(c[i]);
+				var option = document.createElement('option');
+				option.value = c[i];
+				if (hostnamecache[c[i]] != null)
+					option.text = hostnamecache[c[i]]+' ('+c[i]+')';
+				else
+					option.text = c[i];
+
+				E('_f_ipt_addr_hidden').add(option, null);
+			}
+		}
+	}
+
+	try {
+	//	<% bandwidth("speed","ipt"); %>
+
+		for (i in speed_history) {
+			if ((ipt_addr_hidden.find(i) == -1) && (ipt_addr_shown.find(i) == -1) && (i != '_next') && (i.trim() != '')) {
+				ipt_addr_shown.push(i);
+				var option = document.createElement('option');
+				option.value = i;
+				if (hostnamecache[i] != null)
+					option.text = hostnamecache[i]+' ('+i+')';
+				else
+					option.text = i;
+
+				E('_f_ipt_addr_shown').add(option, null);
+				speed_history[i].hide = 0;
+			}
+
+			if (ipt_addr_hidden.find(i) != -1)
+				speed_history[i].hide = 1;
+			else
+				speed_history[i].hide = 0;
+		}
+	}
+	catch (ex) {
+/* REMOVE-BEGIN
+		speed_history = {};
+REMOVE-END */
+	}
+
+	cstats_busy = 0;
+	if (typeof(speed_history) == 'undefined') {
+		speed_history = {};
+		cstats_busy = 1;
+	}
+
+	hours = fixInt(cookie.get(cprefix+'hrs'), 1, 24, 24);
+	updateMaxL = (1440 / 24) * hours;
+	showHours();
+
+	initCommon(1, 0, 0, 1);
+
+	verifyFields(null, 1);
+
+	ref.initX();
 }
 </script>
 </head>
