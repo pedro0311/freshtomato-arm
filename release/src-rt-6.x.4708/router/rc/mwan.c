@@ -35,7 +35,7 @@ int get_sta_wan_prefix(char *sPrefix)
 {
 	int mwan_num;
 	int wan_unit;
-	char wan_prefix[] = "wanXX";
+	char wan_prefix[16];
 	char tmp[32];
 	int found = 0;
 
@@ -44,6 +44,7 @@ int get_sta_wan_prefix(char *sPrefix)
 		mwan_num = 1;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		memset(wan_prefix, 0, sizeof(wan_prefix));
 		get_wan_prefix(wan_unit, wan_prefix);
 
 		if (strcmp(nvram_safe_get(strlcat_r(wan_prefix, "_sta", tmp, sizeof(tmp))), "")) {
@@ -167,7 +168,7 @@ void mwan_table_add(char *sPrefix)
 		return;
 
 	wan_unit = table = get_wan_unit(sPrefix);
-	get_wan_info(sPrefix);
+	get_wan_info(sPrefix); /* get the current wan infos to work with */
 	proto = get_wanx_proto(sPrefix);
 
 	if (check_wanup(sPrefix)) {
@@ -252,7 +253,7 @@ void mwan_table_add(char *sPrefix)
 void mwan_state_files(void)
 {
 	int mwan_num, wan_unit;
-	char prefix[] = "wanXX";
+	char prefix[16];
 	char tmp[64];
 	FILE *f;
 
@@ -261,8 +262,8 @@ void mwan_state_files(void)
 		return;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		memset(prefix, 0, sizeof(prefix));
 		get_wan_prefix(wan_unit, prefix);
-		get_wan_info(prefix);
 
 		memset(tmp, 0, sizeof(tmp));
 		snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_state", prefix);
@@ -281,7 +282,7 @@ void mwan_state_files(void)
 void mwan_status_update(void)
 {
 	int mwan_num, wan_unit;
-	char prefix[32];
+	char prefix[16];
 
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
@@ -290,6 +291,7 @@ void mwan_status_update(void)
 	logmsg(LOG_DEBUG, "*** IN %s: mwan_curr=%s", __FUNCTION__, mwan_curr);
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		memset(prefix, 0, sizeof(prefix));
 		get_wan_prefix(wan_unit, prefix);
 		get_wan_info(prefix);
 		if (check_wanup(prefix)) {
@@ -310,11 +312,12 @@ void mwan_status_update(void)
 		/* all connections down, searching failover interfaces */
 		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 			if (mwan_curr[wan_unit - 1] == '1') {
+				memset(prefix, 0, sizeof(prefix));
 				get_wan_prefix(wan_unit, prefix);
 				strlcat(prefix, "_weight", sizeof(prefix));
 				if (nvram_match(prefix, "0")) {
 					if (mwan_last[wan_unit - 1] != '2')
-						logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN%d", wan_unit);
+						logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN%d", (wan_unit - 1));
 
 					mwan_curr[wan_unit - 1] = '2';
 				}
@@ -328,7 +331,7 @@ void mwan_status_update(void)
 void mwan_load_balance(void)
 {
 	int mwan_num, wan_unit, proto;
-	char prefix[] = "wanXX";
+	char prefix[16];
 	char cmd[256];
 	char lb_cmd[2048];
 
@@ -344,6 +347,7 @@ void mwan_load_balance(void)
 	strlcpy(lb_cmd, "ip route replace default scope global", sizeof(lb_cmd));
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+		memset(prefix, 0, sizeof(prefix));
 		get_wan_prefix(wan_unit, prefix);
 		get_wan_info(prefix);
 		proto = get_wanx_proto(prefix);
