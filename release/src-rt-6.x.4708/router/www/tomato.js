@@ -2528,16 +2528,16 @@ function navi() {
 			] ],
 		['Tools', 			'tools', 0, [
 			['Ping',			'ping.asp'],
-			['Trace',			'trace.asp'],
+			['Traceroute',			'trace.asp'],
 			['System Commands',		'shell.asp'],
 			['Wireless Survey',		'survey.asp'],
 /* QRCODE-BEGIN */
 			['WiFi QR Codes',		'qr.asp'],
 /* QRCODE-END */
 /* IPERF-BEGIN */
-			['IPerf',			'iperf.asp'],
+			['iPerf',			'iperf.asp'],
 /* IPERF-END */
-			['WOL',				'wol.asp'] ] ],
+			['WoL',				'wol.asp'] ] ],
 		null,
 		['Basic', 			'basic', 0, [
 			['Network',			'network.asp'],

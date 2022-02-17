@@ -100,8 +100,8 @@ download() {
 	}
 
 	# change format for dnsmasq
-	# example: address=/badurl.com/0.0.0.0
-	cat $WORK1 | awk {'printf "address=/"$2"/0.0.0.0\n"'} > $FINAL
+	# example: address=/badurl.com/#
+	cat $WORK1 | awk {'printf "address=/"$2"/#\n"'} > $FINAL
 
 	# clean-up
 	rm -rf $PREFIX/*

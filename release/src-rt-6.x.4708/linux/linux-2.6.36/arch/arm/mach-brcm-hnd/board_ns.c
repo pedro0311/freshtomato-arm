@@ -945,13 +945,20 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
-        /* R6300V2 / R6250 */
+		/* R6300V2 / R6250 */
 		/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
-		    nvram_match("boardtype", "0x0646") &&
-		    nvram_match("boardrev", "0x1110")) {
-            offset += 0x180000; /* Leave NETGEAR partitions alone */
+			 nvram_match("boardtype", "0x0646") &&
+			 nvram_match("boardrev", "0x1110")) {
+			offset += 0x180000; /* Leave NETGEAR partitions alone */
 			bcm947xx_nflash_parts[nparts].size += 0x0000;
+		}
+		/* Linksys EA6350v2 */
+		/* 0x000000200000-0x000001f00000 : "linux" */
+		else if (nvram_match("boardnum","20150309") &&
+			 nvram_match("boardtype", "0xE646") &&
+			 nvram_match("boardrev", "0x1200")) {
+			bcm947xx_nflash_parts[nparts].size -= 0x100000;
 		}
 		
 		bcm947xx_nflash_parts[nparts].offset = offset;
@@ -999,6 +1006,13 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1110")) {
 			bcm947xx_nflash_parts[nparts].size += 0x180000;
+		}
+		/* Linksys EA6350v2 */
+		/* 0x0000003e6098-0x000001f00000 : "rootfs" */
+		else if (nvram_match("boardnum","20150309") &&
+			 nvram_match("boardtype", "0xE646") &&
+			 nvram_match("boardrev", "0x1200")) {
+			bcm947xx_nflash_parts[nparts].size -= 0x100000;
 		}
     
     /* Adjustments for JFFS are here: /linux-2.6.36/drivers/mtd/bcm947xx/nand/brcmnand.c */

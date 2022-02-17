@@ -18,6 +18,8 @@
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
 #define LOGMSG_NVDEBUG	"buttons_debug"
 
+#define BUTTON_SAMPLE_RATE 500000 /* 500 ms */
+
 static int gf;
 
 
@@ -525,7 +527,7 @@ int buttons_main(int argc, char *argv[])
 #ifdef DEBUG_TEST
 			cprintf("gpio = %X\n", gpio);
 #endif
-			sleep(1);
+			usleep(BUTTON_SAMPLE_RATE); /* wait 500 ms */
 			continue;
 		}
 
@@ -538,15 +540,16 @@ int buttons_main(int argc, char *argv[])
 
 			count = 0;
 			do {
-				sleep(1);
-				if (++count == 3)
+				usleep(BUTTON_SAMPLE_RATE); /* wait 500 ms */
+				if (++count == 6)
 					led(LED_DIAG, LED_ON);
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & reset_mask) == reset_pushed));
+			gpio &= mask;
 
 #ifdef DEBUG_TEST
 			cprintf("reset count = %d\n", count);
 #else
-			if (count >= 3) {
+			if (count >= 6) { /* after 3 sec */
 #ifndef CONFIG_BCMWL6A
 				eval("mtd-erase", "-d", "nvram");
 #else
@@ -554,13 +557,18 @@ int buttons_main(int argc, char *argv[])
 #endif
 				sync();
 				reboot(RB_AUTOBOOT);
+				exit(0);
 			}
-			else {
+			else if (count >= 2) {  /* after 1 sec */
 				led(LED_DIAG, LED_ON);
 				set_action(ACT_REBOOT);
 				kill(1, SIGTERM);
+				exit(0);
 			}
-			exit(0);
+			else {
+				logmsg(LOG_INFO, "reset button pushed for %d ms", count * 500);
+				/* nothing to do right now! */
+			}
 #endif /* DEBUG_TEST */
 		}
 
@@ -568,14 +576,12 @@ int buttons_main(int argc, char *argv[])
 			count = 0;
 			do {
 				logmsg(LOG_DEBUG, "*** %s: ses-pushed: gpio=x%ld, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, ses_pushed, ses_mask, count);
-
 				led(ses_led, LED_ON);
-				usleep(500000);
+				usleep(BUTTON_SAMPLE_RATE/2);
 				led(ses_led, LED_OFF);
-				usleep(500000);
+				usleep(BUTTON_SAMPLE_RATE/2);
 				++count;
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & ses_mask) == ses_pushed));
-
 			gpio &= mask;
 
 #ifdef TCONFIG_BLINK /* RT-N/RTAC */
@@ -612,18 +618,25 @@ int buttons_main(int argc, char *argv[])
 #endif /* CONFIG_BCMWL6A */
 
 			logmsg(LOG_DEBUG, "*** %s: ses-released: gpio=x%ld, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, ses_pushed, ses_mask, count);
-			logmsg(LOG_INFO, "SES pushed. Count was %d", count);
+			logmsg(LOG_INFO, "SES button pushed for %d ms", count * 500);
 
-			if ((count != 3) && (count != 7) && (count != 11)) {
-				n = count >> 2;
-				if (n > 3) n = 3;
-				/*
-					0-2  = func0
-					4-6  = func1
-					8-10 = func2
-					12+  = func3
-				*/
+			n = -1;
+			/*
+			count 2-4   = func0 (1-2 sec)
+			count 8-12  = func1 (4-6 sec)
+			count 16-20 = func2 (8-10 sec)
+			count 24+   = func3 (12+ sec)
+			*/
+			if (count > 1 && count < 5)
+				n = 0;
+			else if (count > 7 && count < 13)
+				n = 1;
+			else if (count > 15 && count < 21)
+				n = 2;
+			else if (count > 23)
+				n = 3;
 
+			if (n != -1) {
 #ifdef DEBUG_TEST
 				cprintf("ses func=%d\n", n);
 #else
@@ -642,7 +655,7 @@ int buttons_main(int argc, char *argv[])
 						kill(1, SIGQUIT);
 						break;
 					case '4': /* run a script */
-						snprintf(s, sizeof(s), "%d", count);
+						snprintf(s, sizeof(s), "%d", count/2);
 						run_nvscript("sesx_script", s, 2);
 						break;
 #ifdef TCONFIG_USB
@@ -660,7 +673,7 @@ int buttons_main(int argc, char *argv[])
 #ifndef CONFIG_BCMWL6A
 		if (brau_mask) {
 			if (last == gpio)
-				sleep(1);
+				usleep(BUTTON_SAMPLE_RATE); /* wait 500 ms */
 
 			last = (gpio & brau_mask);
 			if (brau_state != last) {
@@ -668,7 +681,7 @@ int buttons_main(int argc, char *argv[])
 				brau_state = last;
 				brau_count_stable = 0;
 			}
-			else if (brau_flag && ++brau_count_stable > 2) { /* stable for 2+ seconds */
+			else if (brau_flag && ++brau_count_stable > 4) { /* stable for 2+ seconds */
 				brau_flag = 0;
 
 				switch (nvram_get_int("btn_override") ? MODEL_UNKNOWN : model) {
@@ -697,11 +710,10 @@ int buttons_main(int argc, char *argv[])
 			count = 0;
 			do {
 				logmsg(LOG_DEBUG, "*** %s: wlan-pushed: gpio=x%ld, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, wlan_pushed, wlan_mask, count);
-
 				led(ses_led, LED_ON);
-				usleep(500000);
+				usleep(BUTTON_SAMPLE_RATE/2);
 				led(ses_led, LED_OFF);
-				usleep(500000);
+				usleep(BUTTON_SAMPLE_RATE/2);
 				++count;
 			} while (((gpio = _gpio_read(gf)) != ~0) && ((gpio & wlan_mask) == wlan_pushed));
 			gpio &= mask;
@@ -722,9 +734,16 @@ int buttons_main(int argc, char *argv[])
 			}
 
 			logmsg(LOG_DEBUG, "*** %s: wlan-released: gpio=x%ld, pushed=x%X, mask=x%X, count=%d", __FUNCTION__, gpio, wlan_pushed, wlan_mask, count);
-			logmsg(LOG_INFO, "WLAN pushed. Count was %d.", count);
-			nvram_set("rrules_radio", "-1");
-			eval("radio", "toggle");
+
+			if (count >= 2) {  /* after 1 sec */
+				logmsg(LOG_INFO, "WLAN button pushed for %d ms - toggle radio", count * 500);
+				nvram_set("rrules_radio", "-1");
+				eval("radio", "toggle");
+			}
+			else {
+				logmsg(LOG_INFO, "WLAN button pushed for %d ms", count * 500);
+				/* nothing to do right now! */
+			}
 		}
 #endif /* !CONFIG_BCMWL6A */
 

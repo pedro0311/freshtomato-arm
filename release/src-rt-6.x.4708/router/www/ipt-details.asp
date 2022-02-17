@@ -57,8 +57,7 @@ var thistimestamp;
 var difftimestamp;
 var avgiptraffic = [];
 var lastiptraffic = iptraffic;
-
-hostnamecache = [];
+var hostnamecache = [];
 
 var ref = new TomatoRefresh('update.cgi', '', 0, 'ipt_details');
 ref.refresh = function(text) {

@@ -764,7 +764,7 @@ function earlyInit() {
 		sectSelect(i, cookie.get('vpn_server'+i+'_section') || sections[0][0]);
 		var t = tabs[i][0];
 
-		ccdTables[i].init('table_'+t+'_ccd','sort',0,[{ type: 'text', maxlen: 2, attrib: 'hidden' },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },{ type: 'text', maxlen: 15 },{ type: 'text', maxlen: 15 },{ type: 'text', maxlen: 15 },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' }]);
+		ccdTables[i].init('table_'+t+'_ccd','sort',0,[{ type: 'text', maxlen: 2, attrib: 'hidden' },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },{ type: 'text', maxlen: 30 },{ type: 'text', maxlen: 15 },{ type: 'text', maxlen: 15 },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' }]);
 		ccdTables[i].headerSet(['#','Enable','Common Name','Subnet','Netmask','Push']);
 		var ccdVal = eval('nvram.vpn_'+t+'_ccd_val');
 		if (ccdVal.length) {

@@ -1,0 +1,22 @@
+--- libubox/blobmsg_json.c
++++ libubox/blobmsg_json.c
+@@ -17,6 +17,8 @@
+ #include "blobmsg.h"
+ #include "blobmsg_json.h"
+ 
++#define JSONC
++
+ #ifdef JSONC
+ 	#include <json.h>
+ #else
+--- libubox/jshn.c
++++ libubox/jshn.c
+@@ -13,6 +13,8 @@
+  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
++#define JSONC
++
+ #ifdef JSONC
+         #include <json.h>
+ #else
