@@ -288,9 +288,8 @@ static void ssl_info_cb(const SSL *ssl, int where, int ret)
 #endif
 #endif
 
-int mssl_init(char *cert, char *priv)
+int mssl_init_ex(char *cert, char *priv, char *ciphers)
 {
-	char *ciphers;
 	int server;
 
 	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
@@ -401,4 +400,142 @@ int mssl_init(char *cert, char *priv)
 	logmsg(LOG_DEBUG, "[mssl] %s success", __FUNCTION__);
 
 	return 1;
+}
+
+int mssl_init(char *cert, char *priv)
+{
+	return mssl_init_ex(cert, priv, NULL);
+}
+
+static int mssl_f_exists(const char *path)
+{
+	struct stat st;
+	return (stat(path, &st) == 0) && (!S_ISDIR(st.st_mode));
+}
+
+/*
+ * compare the modulus of public key and private key
+ */
+int mssl_cert_key_match(const char *cert_path, const char *key_path)
+{
+	FILE *fp;
+	X509 *x509data = NULL;
+	EVP_PKEY *pkey = NULL;
+	RSA *rsa_pub = NULL;
+	RSA *rsa_pri = NULL;
+	DSA *dsa_pub = NULL;
+	DSA *dsa_pri = NULL;
+	int pem = 1;
+	int ret = 0;
+
+	if (!mssl_f_exists(cert_path) || !mssl_f_exists(key_path))
+		return 0;
+
+	/* get x509 from cert file */
+	fp = fopen(cert_path, "r");
+	if (!fp)
+		return 0;
+
+	if (!PEM_read_X509(fp, &x509data, NULL, NULL)) {
+		logmsg(LOG_DEBUG, "[mssl] Try to read DER format certificate");
+		pem = 0;
+		fseek(fp, 0, SEEK_SET);
+		d2i_X509_fp(fp, &x509data);
+	}
+	else {
+		logmsg(LOG_DEBUG, "[mssl] PEM format certificate");
+	}
+
+	fclose(fp);
+	if (x509data == NULL) {
+		logmsg(LOG_DEBUG, "[mssl] Load certificate failed");
+		ret = 0;
+		goto end;
+	}
+
+	/* get pubic key from x509 */
+	pkey = X509_get_pubkey(x509data);
+	if (pkey == NULL) {
+		ret = 0;
+		goto end;
+	}
+	X509_free(x509data);
+	x509data = NULL;
+
+	if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA)
+		rsa_pub = EVP_PKEY_get1_RSA(pkey);
+	else if (EVP_PKEY_id(pkey) == EVP_PKEY_DSA)
+		dsa_pub = EVP_PKEY_get1_DSA(pkey);
+
+	EVP_PKEY_free(pkey);
+	pkey = NULL;
+
+	/* get private key from key file */
+	fp = fopen(key_path, "r");
+	if (!fp) {
+		ret = 0;
+		goto end;
+	}
+
+	if (pem)
+		pkey = PEM_read_PrivateKey(fp, NULL, NULL, NULL);
+	else
+		pkey = d2i_PrivateKey_fp(fp, NULL);
+
+	fclose(fp);
+
+	if (pkey == NULL) {
+		logmsg(LOG_DEBUG, "[mssl] Load private key failed");
+		ret = 0;
+		goto end;
+	}
+
+	if (EVP_PKEY_id(pkey) == EVP_PKEY_RSA)
+		rsa_pri = EVP_PKEY_get1_RSA(pkey);
+	else if (EVP_PKEY_id(pkey) == EVP_PKEY_DSA)
+		dsa_pri = EVP_PKEY_get1_DSA(pkey);
+
+	EVP_PKEY_free(pkey);
+	pkey = NULL;
+
+	/* compare modulus */
+	if (rsa_pub && rsa_pri) {
+		if (BN_cmp(RSA_get0_n(rsa_pub), RSA_get0_n(rsa_pri))) {
+			logmsg(LOG_DEBUG, "[mssl] rsa n not match");
+			ret = 0;
+		}
+		else {
+			logmsg(LOG_DEBUG, "[mssl] rsa n match");
+			ret = 1;
+		}
+	}
+	else if (dsa_pub && dsa_pri) {
+		if (BN_cmp(DSA_get0_pub_key(dsa_pub), DSA_get0_pub_key(dsa_pri))) {
+			logmsg(LOG_DEBUG, "[mssl] dsa modulus not match");
+			ret = 0;
+		}
+		else {
+			logmsg(LOG_DEBUG, "[mssl] dsa modulus match");
+			ret = 1;
+		}
+	}
+	else {
+		logmsg(LOG_DEBUG, "[mssl] compare failed");
+	}
+
+end:
+	if (x509data)
+		X509_free(x509data);
+	if (pkey)
+		EVP_PKEY_free(pkey);
+	if (rsa_pub)
+		RSA_free(rsa_pub);
+	if (dsa_pub)
+		DSA_free(dsa_pub);
+	if (rsa_pri)
+		RSA_free(rsa_pri);
+	if (dsa_pri)
+		DSA_free(dsa_pri);
+
+	return ret;
 }
