@@ -806,6 +806,13 @@ static void mangle_table(void)
 		}
 #endif
 	}
+#ifdef TCONFIG_PPTPD
+	/* pptp server: bypass CTF if enabled */
+	if (nvram_match("pptpd_enable", "1") && !nvram_get_int("ctf_disable")) {
+		ipt_write("-A PREROUTING -p tcp --dport 1723 -j MARK --set-mark 0x01/0x7\n"
+			  "-A PREROUTING -p 47 -j MARK --set-mark 0x01/0x7\n");
+	}
+#endif
 #endif	/* TCONFIG_BCMARM */
 
 	ipt_routerpolicy();
