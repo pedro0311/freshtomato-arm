@@ -8,7 +8,7 @@
 
 */
 
-//#define MSSL_DEBUG
+
 #define _GNU_SOURCE
 
 #include <stdio.h>
@@ -37,17 +37,9 @@
 #include <cyassl_error.h>
 #endif
 
-#ifdef MSSL_DEBUG
-/* Line number as text string */
-#define __LINE_T__ __LINE_T_(__LINE__)
-#define __LINE_T_(x) __LINE_T(x)
-#define __LINE_T(x) # x
-#define mssllog(level, x...) syslog(level, __LINE_T__ ": " x)
-#else
-#define mssllog(level, x...) do { } while(0)
-#endif
+#include "shared.h"
 
-/* refer https://mozilla.github.io/server-side-tls/ssl-config-generator/ w/o DES ciphers */
+/* refer https://ssl-config.mozilla.org/ w/o DES ciphers */
 #ifdef USE_OPENSSL
 #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
 #else
@@ -61,6 +53,11 @@
 #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
 #endif
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"mssl_debug"
+
+
 typedef struct {
 	SSL* ssl;
 	int sd;
@@ -73,7 +70,7 @@ static inline void mssl_print_err(SSL* ssl)
 #ifdef USE_OPENSSL
 	ERR_print_errors_fp(stderr);
 #else
-	mssllog(LOG_DEBUG, "CyaSSL error %d\n", ssl ? SSL_get_error(ssl, 0) : -1);
+	logmsg(LOG_DEBUG, "[mssl] error %d", ssl ? SSL_get_error(ssl, 0) : -1);
 #endif
 }
 
@@ -86,7 +83,7 @@ static inline void mssl_cleanup(int err)
 
 static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 
 	mssl_cookie_t *kuki = cookie;
 	int total = 0;
@@ -94,7 +91,7 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 
 	do {
 		n = SSL_read(kuki->ssl, &(buf[total]), len - total);
-		mssllog(LOG_DEBUG, "SSL_read(max=%d) returned %d\n", len - total, n);
+		logmsg(LOG_DEBUG, "[mssl] SSL_read(max=%d) returned %d", len - total, n);
 
 		err = SSL_get_error(kuki->ssl, n);
 		switch (err) {
@@ -108,7 +105,7 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 		case SSL_ERROR_WANT_READ:
 			break;
 		default:
-			mssllog(LOG_DEBUG, "%s(): SSL error %d\n", __FUNCTION__, err);
+			logmsg(LOG_DEBUG, "[mssl] %s: SSL error %d", __FUNCTION__, err);
 			mssl_print_err(kuki->ssl);
 			if (total == 0) total = -1;
 			goto OUT;
@@ -116,13 +113,13 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 	} while ((len - total > 0) && SSL_pending(kuki->ssl));
 
 OUT:
-	mssllog(LOG_DEBUG, "%s() returns %d\n", __FUNCTION__, total);
+	logmsg(LOG_DEBUG, "[mssl] %s: returns %d", __FUNCTION__, total);
 	return total;
 }
 
 static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 
 	mssl_cookie_t *kuki = cookie;
 	unsigned int total = 0;
@@ -130,7 +127,7 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 
 	while (total < len) {
 		n = SSL_write(kuki->ssl, &(buf[total]), len - total);
-		mssllog(LOG_DEBUG, "SSL_write(max=%d) returned %d\n", len - total, n);
+		logmsg(LOG_DEBUG, "[mssl] SSL_write(max=%d) returned %d", len - total, n);
 		err = SSL_get_error(kuki->ssl, n);
 		switch (err) {
 		case SSL_ERROR_NONE:
@@ -143,7 +140,7 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 		case SSL_ERROR_WANT_READ:
 			break;
 		default:
-			mssllog(LOG_DEBUG, "%s(): SSL error %d\n", __FUNCTION__, err);
+			logmsg(LOG_DEBUG, "[mssl] %s: SSL error %d", __FUNCTION__, err);
 			mssl_print_err(kuki->ssl);
 			if (total == 0) total = -1;
 			goto OUT;
@@ -151,20 +148,20 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 	}
 
 OUT:
-	mssllog(LOG_DEBUG, "%s() returns %d\n", __FUNCTION__, total);
+	logmsg(LOG_DEBUG, "[mssl] %s returns %d", __FUNCTION__, total);
 	return total;
 }
 
 static int mssl_seek(void *cookie, off64_t *pos, int whence)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 	errno = EIO;
 	return -1;
 }
 
 static int mssl_close(void *cookie)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 
 	mssl_cookie_t *kuki = cookie;
 	if (!kuki) return 0;
@@ -188,7 +185,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 	mssl_cookie_t *kuki;
 	FILE *f;
 
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 
 	if ((kuki = calloc(1, sizeof(*kuki))) == NULL) {
 		errno = ENOMEM;
@@ -198,7 +195,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 
 	/* Create new SSL object */
 	if ((kuki->ssl = SSL_new(ctx)) == NULL) {
-		mssllog(LOG_DEBUG, "%s: SSL_new failed\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "[mssl] %s: SSL_new failed", __FUNCTION__);
 		goto ERROR;
 	}
 
@@ -215,7 +212,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 			if (getaddrinfo(name, NULL, &hint, &res) == 0)
 				freeaddrinfo(res);
 			else if (SSL_set_tlsext_host_name(kuki->ssl, name) != 1) {
-				mssllog(LOG_DEBUG, "%s: SSL_set_tlsext_host_name failed\n", __FUNCTION__);
+				logmsg(LOG_DEBUG, "[mssl] %s: SSL_set_tlsext_host_name failed", __FUNCTION__);
 				mssl_print_err(kuki->ssl);
 				goto ERROR;
 			}
@@ -239,21 +236,21 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 	/* r = 0 show unknown CA, but we don't have any CA, so ignore */
 	if (r < 0) {
 		/* Check error in connect or accept */
-		mssllog(LOG_DEBUG, "%s: SSL_%s failed\n", __FUNCTION__, (client ? "connect" : "accept"));
+		logmsg(LOG_DEBUG, "[mssl] %s: SSL_%s failed", __FUNCTION__, (client ? "connect" : "accept"));
 		mssl_print_err(kuki->ssl);
 		goto ERROR;
 	}
 
 #ifdef USE_OPENSSL
-	mssllog(LOG_DEBUG, "SSL connection using %s cipher\n", SSL_get_cipher(kuki->ssl));
+	logmsg(LOG_DEBUG, "[mssl] SSL connection using %s cipher", SSL_get_cipher(kuki->ssl));
 #endif
 
 	if ((f = fopencookie(kuki, "r+", mssl)) == NULL) {
-		mssllog(LOG_DEBUG, "%s: fopencookie failed\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "[mssl] %s: fopencookie failed", __FUNCTION__);
 		goto ERROR;
 	}
 
-	mssllog(LOG_DEBUG, "%s() success\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s success", __FUNCTION__);
 	return f;
 
 ERROR:
@@ -263,19 +260,19 @@ ERROR:
 
 FILE *ssl_server_fopen(int sd)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 0, NULL);
 }
 
 FILE *ssl_client_fopen(int sd)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 1, NULL);
 }
 
 FILE *ssl_client_fopen_name(int sd, const char *name)
 {
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 1, name);
 }
 
@@ -296,7 +293,7 @@ int mssl_init(char *cert, char *priv)
 	char *ciphers;
 	int server;
 
-	mssllog(LOG_DEBUG, "%s()\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s IN", __FUNCTION__);
 
 	server = (cert != NULL);
 
@@ -316,7 +313,7 @@ int mssl_init(char *cert, char *priv)
 	ctx = SSL_CTX_new(server ? SSLv23_server_method() : SSLv23_client_method());
 #endif
 	if (!ctx) {
-		mssllog(LOG_DEBUG, "SSL_CTX_new() failed\n");
+		logmsg(LOG_DEBUG, "[mssl] SSL_CTX_new() failed");
 		mssl_print_err(NULL);
 		return 0;
 	}
@@ -358,7 +355,7 @@ int mssl_init(char *cert, char *priv)
 	/* Setup available ciphers */
 	ciphers = server ? SERVER_CIPHERS : CLIENT_CIPHERS;
 	if (ciphers && SSL_CTX_set_cipher_list(ctx, ciphers) != 1) {
-		mssllog(LOG_DEBUG, "%s: SSL_CTX_set_cipher_list failed\n", __FUNCTION__);
+		logmsg(LOG_DEBUG, "[mssl] %s: SSL_CTX_set_cipher_list failed", __FUNCTION__);
 		mssl_cleanup(1);
 		return 0;
 	}
@@ -369,23 +366,23 @@ int mssl_init(char *cert, char *priv)
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
 #endif
 		/* Set the certificate to be used */
-		mssllog(LOG_DEBUG, "SSL_CTX_use_certificate_chain_file(%s)\n", cert);
+		logmsg(LOG_DEBUG, "[mssl] SSL_CTX_use_certificate_chain_file(%s)", cert);
 		if (SSL_CTX_use_certificate_chain_file(ctx, cert) <= 0) {
-			mssllog(LOG_DEBUG, "SSL_CTX_use_certificate_chain_file() failed\n");
+			logmsg(LOG_DEBUG, "[mssl] SSL_CTX_use_certificate_chain_file() failed");
 			mssl_cleanup(1);
 			return 0;
 		}
 		/* Indicate the key file to be used */
-		mssllog(LOG_DEBUG, "SSL_CTX_use_PrivateKey_file(%s)\n", priv);
+		logmsg(LOG_DEBUG, "[mssl] SSL_CTX_use_PrivateKey_file(%s)", priv);
 		if (SSL_CTX_use_PrivateKey_file(ctx, priv, SSL_FILETYPE_PEM) <= 0) {
-			mssllog(LOG_DEBUG, "SSL_CTX_use_PrivateKey_file() failed\n");
+			logmsg(LOG_DEBUG, "[mssl] SSL_CTX_use_PrivateKey_file() failed");
 			mssl_cleanup(1);
 			return 0;
 		}
 #ifdef USE_OPENSSL
 		/* Make sure the key and certificate file match */
 		if (!SSL_CTX_check_private_key(ctx)) {
-			mssllog(LOG_DEBUG, "Private key does not match the certificate public key\n");
+			logmsg(LOG_DEBUG, "[mssl] Private key does not match the certificate public key");
 			mssl_cleanup(0);
 			return 0;
 		}
@@ -401,6 +398,7 @@ int mssl_init(char *cert, char *priv)
 
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 
-	mssllog(LOG_DEBUG, "%s() success\n", __FUNCTION__);
+	logmsg(LOG_DEBUG, "[mssl] %s success", __FUNCTION__);
+
 	return 1;
 }
