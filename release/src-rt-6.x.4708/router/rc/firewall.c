@@ -1190,7 +1190,7 @@ static void filter_input(void)
 	}
 
 	/* Protect against brute force on port defined for remote GUI access */
-	if (remotemanage) {
+	if (remotemanage && nvram_get_int("http_wanport_bfm")) {
 		ipt_write("-N wwwlimit\n"
 		          "-A wwwlimit -m recent --set --name www\n"
 		          "-A wwwlimit -m recent --update --hitcount 15 --seconds 5 --name www -j %s\n",
@@ -1700,7 +1700,7 @@ static void filter6_input(void)
 	}
 
 	/* Protect against brute force on port defined for remote GUI access */
-	if (remotemanage) {
+	if (remotemanage && nvram_get_int("http_wanport_bfm")) {
 		ip6t_write("-N wwwlimit\n"
 		           "-A wwwlimit -m recent --set --name www\n"
 		           "-A wwwlimit -m recent --update --hitcount 15 --seconds 5 --name www -j %s\n",

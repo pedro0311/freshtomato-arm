@@ -1301,6 +1301,7 @@ static const nvset_t nvset_list[] = {
 #endif
 	{ "remote_management",		V_01				},
 	{ "remote_upgrade",		V_01				},
+	{ "http_wanport_bfm",		V_01				},
 	{ "http_lanport",		V_PORT				},
 	{ "web_wl_filter",		V_01				},
 	{ "web_css",			V_LENGTH(1, 32)			},

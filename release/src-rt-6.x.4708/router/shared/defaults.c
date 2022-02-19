@@ -906,6 +906,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "remote_management",		"0"				, 0 },	/* Remote Management [1|0] */
 	{ "remote_mgt_https",		"0"				, 0 },	/* Remote Management use https [1|0] */
 	{ "remote_upgrade",		"1"				, 0 },	/* allow remote upgrade [1|0] - for brave guys */
+	{ "http_wanport_bfm",		"0"				, 0 },	/* enable/disable brute force mitigation rule for WAN port */
 	{ "http_wanport",		"8080"				, 0 },	/* WAN port to listen on */
 	{ "http_lanport",		"80"				, 0 },	/* LAN port to listen on */
 	{ "https_lanport",		"443"				, 0 },	/* LAN port to listen on */
