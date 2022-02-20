@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,remote_upgrade,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
+//	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,remote_upgrade,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,http_wanport_bfm,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -151,6 +151,9 @@ function verifyFields(focused, quiet) {
 	elem.display(PR(a), b);
 	if ((b) && (!v_port(a, quiet || !ok))) ok = 0;
 
+	a = E('_f_http_wanport_bfm');
+	elem.display(PR(a), b);
+
 	if (!v_port('_telnetd_port', quiet || !ok)) ok = 0;
 
 	a = E('_f_sshd_remote').checked;
@@ -269,6 +272,7 @@ function save() {
 
 	fom.web_wl_filter.value = fom._f_http_wireless.checked ? 0 : 1;
 	fom.remote_upgrade.value = fom._f_remote_upgrade.checked ? 1 : 0;
+	fom.http_wanport_bfm.value = fom._f_http_wanport_bfm.checked ? 1 : 0;
 
 	a = (fom._web_css.value.match(/at-/g));
 	fom.web_adv_scripts.value = (fom._f_web_adv_scripts.checked && a) ? 1 : 0;
@@ -349,6 +353,7 @@ function init() {
 <input type="hidden" name="remote_management">
 <input type="hidden" name="web_wl_filter">
 <input type="hidden" name="remote_upgrade">
+<input type="hidden" name="http_wanport_bfm">
 <input type="hidden" name="web_adv_scripts">
 <input type="hidden" name="telnetd_eas">
 <input type="hidden" name="sshd_eas">
@@ -394,6 +399,7 @@ function init() {
 				        1) : 0 },
 			{ title: 'Allow Remote Upgrade', name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
 				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
+				{ title: 'Port Protection', indent: 2, name: 'f_http_wanport_bfm', type: 'checkbox', suffix: '&nbsp;<small>(enable brute force mitigation rule)<\/small>', value: nvram.http_wanport_bfm == 1 },
 /* HTTPS-BEGIN */
 			null,
 			{ title: 'SSL Certificate', rid: 'row_sslcert' },
