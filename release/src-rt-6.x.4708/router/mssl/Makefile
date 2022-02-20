@@ -22,6 +22,10 @@ LIBS += -lpthread
 endif
 OBJ = mssl.o
 
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+export CFLAGS += -DDEBUG_LOGMSG
+endif
+
 all: libmssl.so libmssl.a
 
 libmssl.so: $(OBJ)
