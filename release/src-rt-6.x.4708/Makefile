@@ -73,7 +73,11 @@ EXTRA_64KDESC = ' -64K'
 EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_64K'
 else
 ifeq ($(NVRAM_128K),y)
-EXTRA_64KDESC = '-128K'
+ifeq ($(DRAM_512M),y)
+EXTRA_64KDESC = '-128K-512M'
+else
+EXTRA_64KDESC = '-128K-256M'
+endif
 EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_128K'
 else
 EXTRA_64KDESC = ''
@@ -201,10 +205,14 @@ endif
 # for R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(NVRAM_128K),y)
+ifeq ($(DRAM_512M),y)
+	ctools/trx_asus -i image/linux-lzma.trx -r XR300,3.0.0.4,image/freshtomato-XR300-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r R6700v3,3.0.0.4,image/freshtomato-R6700v3-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+else
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400,3.0.0.4,image/freshtomato-R6400-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6400v2,3.0.0.4,image/freshtomato-R6400v2-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v3,3.0.0.4,image/freshtomato-R6700v3-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
-	ctools/trx_asus -i image/linux-lzma.trx -r XR300,3.0.0.4,image/freshtomato-XR300-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 else
 	ctools/trx_asus -i image/linux-lzma.trx -r R7000,3.0.0.4,image/freshtomato-R7000-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6900,3.0.0.4,image/freshtomato-R6900-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -538,6 +546,10 @@ define RouterOptions
 	if [ "$(NVRAM_128K)" = "y" ]; then \
 		sed -i "/TCONFIG_NVRAM_128K/d" $(1); \
 	 	echo "TCONFIG_NVRAM_128K=y" >>$(1); \
+	fi; \
+	if [ "$(DRAM_512M)" = "y" ]; then \
+		sed -i "/TCONFIG_DRAM_512M/d" $(1); \
+	 	echo "TCONFIG_DRAM_512M=y" >>$(1); \
 	fi; \
 	if [ "$(TOR)" = "y" ]; then \
 		sed -i "/TCONFIG_TOR/d" $(1); \
@@ -953,6 +965,12 @@ define KernelConfig
 	else \
 		echo "# CONFIG_NVRAM_128K is not set" >>$(1); \
 	fi; \
+	sed -i "/CONFIG_DRAM_512M/d" $(1); \
+	if [ "$(DRAM_512M)" = "y" ]; then \
+		echo "CONFIG_DRAM_512M=y" >>$(1); \
+	else \
+		echo "# CONFIG_DRAM_512M is not set" >>$(1); \
+	fi; \
 	if [ "$(SATA)" = "y" ]; then \
 		sed -i "/CONFIG_CMDLINE/d" $(1); \
 		echo "CONFIG_CMDLINE=\"root=\/dev\/mtdblock2 console=ttyS0,115200 init=\/sbin\/preinit earlyprintk debug libata.force=3.0Gbps\"" >>$(1); \
@@ -1123,6 +1141,12 @@ r6400e:
 r6400z:
 	@$(MAKE) z ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
+xr300e:
+	@$(MAKE) e ARM=y NVRAM_128K=y DRAM_512M=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
+
+xr300z:
+	@$(MAKE) z ARM=y NVRAM_128K=y DRAM_512M=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
+
 r7000init:
 	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="R7000" BOARDID_FILE="compatible_r7000.txt" FW_CFG_FILE="tomato_cfg.h"
 
@@ -1151,7 +1175,7 @@ r6700v3init:
 	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="R6700v3" BOARDID_FILE="compatible_r6700v3.txt" FW_CFG_FILE="tomato_cfg.h"
 
 xr300init:
-	@$(MAKE) bin ARM=y NVRAM_128K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="XR300" BOARDID_FILE="compatible_xr300.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y NVRAM_128K=y DRAM_512M=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="XR300" BOARDID_FILE="compatible_xr300.txt" FW_CFG_FILE="tomato_cfg.h"
 
 ws880e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="HUAWEI" DPSTA=y BSD=y IRQBALANCE=y
@@ -1255,8 +1279,10 @@ help:
 	@echo "NETGEAR ARM Builds"
 	@echo "r7000e          R7000/R6900/R6700v1/R6300v2/R6250 build VPN"
 	@echo "r7000z          R7000/R6900/R6700v1/R6300v2/R6250 build AIO"
-	@echo "r6400e          R6400/R6400v2/R6700v3/XR300 build VPN - 128K NVRAM"
-	@echo "r6400z          R6400/R6400v2/R6700v3/XR300 build AIO - 128K NVRAM"
+	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
+	@echo "r6400z          R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
+	@echo "xr300e          XR300/R6700v3 build VPN - 128K NVRAM 512M DRAM"
+	@echo "xr300z          XR300/R6700v3 build AIO - 128K NVRAM 512M DRAM"
 	@echo "r7000init       R7000 init build"
 	@echo "r6900init       R6900 init build"
 	@echo "r6250init       R6250 init build"

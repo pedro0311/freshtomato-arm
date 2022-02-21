@@ -182,6 +182,10 @@ config TCONFIG_NVRAM_128K
 	bool "NVRAM_128K"
 	default n
 
+config TCONFIG_DRAM_512M
+	bool "DRAM_512M"
+	default n
+
 config TCONFIG_TOR
 	bool "  TOR Project"
 	default n
