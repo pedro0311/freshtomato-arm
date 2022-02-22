@@ -347,7 +347,7 @@ function init() {
 /* BBT-BEGIN */
 					['internal','Internal (/usr/bin)'],
 /* BBT-END */
-					['optware','Optware (/opt/bin)'],
+					['optware','Optware/Entware (/opt/bin)'],
 					['custom','Custom'] ], value: nvram.bt_binary },
 				{ name: 'bt_binary_custom', type: 'text', maxlen: 40, size: 40, value: nvram.bt_binary_custom } ] },
 			{ title: 'Keep alive', name: 'f_bt_check', type: 'checkbox', value: nvram.bt_check == '1' },
