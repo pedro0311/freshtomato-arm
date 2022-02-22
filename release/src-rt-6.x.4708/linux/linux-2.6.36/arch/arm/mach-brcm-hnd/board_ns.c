@@ -858,6 +858,13 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		bootossz = 0x4000000;	
 		nvsz = 0x100000;
 	}
+	/* Linksys EA6350v2 */
+	/* 0x000000080000-0x000000180000 : "nvram" */
+	else if (nvram_match("boardnum","20150309") &&
+		 nvram_match("boardtype", "0xE646") &&
+		 nvram_match("boardrev", "0x1200")) {
+		nvsz = 0x100000; /* nflash0.nvram        Toshiba NAND flash offset 80000 size 1024KB */
+	}
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
 	char *img_boot = nvram_get(BOOTPARTITION);
