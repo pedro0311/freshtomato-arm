@@ -1,7 +1,7 @@
 /**************************************************************************
  *   definitions.h  --  This file is part of GNU nano.                    *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -107,6 +107,14 @@
 
 #define BACKWARD  FALSE
 #define FORWARD  TRUE
+
+#define YESORNO  FALSE
+#define YESORALLORNO  TRUE
+
+#define YES      1
+#define ALL      2
+#define NO       0
+#define CANCEL  -1
 
 #define BLIND  FALSE
 #define VISIBLE  TRUE

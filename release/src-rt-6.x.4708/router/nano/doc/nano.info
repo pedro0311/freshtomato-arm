@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 The GNU nano text editor
 ************************
 
-This manual documents GNU ‘nano’, version 6.0.
+This manual documents GNU ‘nano’, version 6.2.
 
 * Menu:
 
@@ -1642,6 +1642,9 @@ that of the Backspace key.
      all menus except the help viewer and the linter.  All further
      toggles are available in the main menu only.)
 
+‘zero’
+     Toggles the presence of title bar and status bar.
+
 ‘constantshow’
      Toggles the constant display of the current line, column, and
      character positions.
@@ -1988,8 +1991,8 @@ Ref: set matchbrackets35664
 Ref: Whitespace44331
 Node: Syntax Highlighting45509
 Node: Rebinding Keys52868
-Node: Pico Compatibility67548
-Node: Building and its Options72107
+Node: Pico Compatibility67615
+Node: Building and its Options72174
 
 End Tag Table
 

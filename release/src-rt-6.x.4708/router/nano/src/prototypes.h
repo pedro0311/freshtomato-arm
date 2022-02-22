@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prototypes.h  --  This file is part of GNU nano.                     *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -87,8 +87,8 @@ extern size_t wrap_at;
 #endif
 
 extern WINDOW *topwin;
-extern WINDOW *edit;
-extern WINDOW *bottomwin;
+extern WINDOW *midwin;
+extern WINDOW *footwin;
 extern int editwinrows;
 extern int editwincols;
 extern int margin;
@@ -430,7 +430,7 @@ void put_cursor_at_end_of_answer(void);
 void add_or_remove_pipe_symbol_from_answer(void);
 int do_prompt(int menu, const char *provided, linestruct **history_list,
 		void (*refresh_func)(void), const char *msg, ...);
-int do_yesno_prompt(bool all, const char *msg);
+int ask_user(bool withall, const char *question);
 
 /* Most functions in rcfile.c. */
 #if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
@@ -568,11 +568,11 @@ linestruct *line_from_number(ssize_t number);
 /* Most functions in winio.c. */
 void record_macro(void);
 void run_macro(void);
-size_t get_key_buffer_len(void);
+size_t waiting_keycodes(void);
 #ifdef ENABLE_NANORC
 void implant(const char *string);
 #endif
-int parse_kbinput(WINDOW *win);
+int get_input(WINDOW *win);
 int get_kbinput(WINDOW *win, bool showcursor);
 char *get_verbatim_kbinput(WINDOW *win, size_t *count);
 #ifdef ENABLE_MOUSE

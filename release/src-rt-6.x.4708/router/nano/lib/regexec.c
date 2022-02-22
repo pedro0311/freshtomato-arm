@@ -1,5 +1,5 @@
 /* Extended regular expression matching and search library.
-   Copyright (C) 2002-2021 Free Software Foundation, Inc.
+   Copyright (C) 2002-2022 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Contributed by Isamu Hasegawa <isamu@yamato.ibm.com>.
 
@@ -1670,6 +1670,7 @@ clean_state_log_if_needed (re_match_context_t *mctx, Idx next_state_log_idx)
 
   if (top < next_state_log_idx)
     {
+      DEBUG_ASSERT (mctx->state_log != NULL);
       memset (mctx->state_log + top + 1, '\0',
 	      sizeof (re_dfastate_t *) * (next_state_log_idx - top));
       mctx->state_log_top = next_state_log_idx;

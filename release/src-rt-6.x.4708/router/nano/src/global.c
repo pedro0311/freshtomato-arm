@@ -1,8 +1,8 @@
 /**************************************************************************
  *   global.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2020 Benno Schulenberg                            *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2014-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -118,12 +118,12 @@ size_t wrap_at = 0;
 WINDOW *topwin = NULL;
 		/* The top portion of the screen, showing the version number of nano,
 		 * the name of the file, and whether the buffer was modified. */
-WINDOW *edit = NULL;
+WINDOW *midwin = NULL;
 		/* The middle portion of the screen: the edit window, showing the
 		 * contents of the current buffer, the file we are editing. */
-WINDOW *bottomwin = NULL;
-		/* The bottom portion of the screen, where we display statusbar
-		 * messages, the status-bar prompt, and a list of shortcuts. */
+WINDOW *footwin = NULL;
+		/* The bottom portion of the screen, where status-bar messages,
+		 * the status-bar prompt, and a list of shortcuts are shown. */
 int editwinrows = 0;
 		/* How many rows does the edit window take up? */
 int editwincols = -1;
@@ -602,7 +602,7 @@ void shortcut_init(void)
 	const char *nextfile_gist = N_("Switch to the next file buffer");
 #endif
 	const char *verbatim_gist = N_("Insert the next keystroke verbatim");
-	const char *tab_gist = N_("Insert a tab at the cursor position");
+	const char *tab_gist = N_("Insert a tab at the cursor position (or indent marked lines)");
 	const char *enter_gist = N_("Insert a newline at the cursor position");
 	const char *delete_gist = N_("Delete the character under the cursor");
 	const char *backspace_gist =
@@ -621,7 +621,7 @@ void shortcut_init(void)
 #endif
 #ifndef NANO_TINY
 	const char *wordcount_gist =
-		N_("Count the number of words, lines, and characters");
+		N_("Count the number of lines, words, and characters");
 	const char *suspend_gist = N_("Suspend the editor (return to the shell)");
 #endif
 	const char *refresh_gist = N_("Refresh (redraw) the current screen");
@@ -835,7 +835,7 @@ void shortcut_init(void)
 
 #ifdef ENABLE_BROWSER
 	add_to_funcs(goto_dir, MBROWSER,
-		/* TRANSLATORS: Try to keep the next seven strings at most 10 characters. */
+		/* TRANSLATORS: Try to keep the next four strings at most 10 characters. */
 		N_("Go To Dir"), WITHORSANS(gotodir_gist), TOGETHER, VIEW);
 #ifdef ENABLE_HELP
 	add_to_funcs(full_refresh, MBROWSER,
@@ -1021,7 +1021,7 @@ void shortcut_init(void)
 		N_("Down to anchor"), WITHORSANS(nextanchor_gist), BLANKAFTER, VIEW);
 
 	add_to_funcs(zap_text, MMAIN,
-		/* TRANSLATORS: This *deletes* a line or marked region. */
+		/* TRANSLATORS: This refers to deleting a line or marked region. */
 		N_("Zap"), WITHORSANS(zap_gist), BLANKAFTER, NOVIEW);
 
 	if (!ISSET(RESTRICTED)) {
@@ -1187,8 +1187,10 @@ void shortcut_init(void)
 	add_to_sclist(MMAIN, "^\\", 0, do_replace, 0);
 	add_to_sclist(MMAIN, "M-R", 0, do_replace, 0);
 	add_to_sclist(MMOST, "^K", 0, cut_text, 0);
+#ifdef NANO_TINY
+	add_to_sclist(MMAIN, "^U", 0, paste_text, 0);
+#else
 	add_to_sclist(MMOST, "^U", 0, paste_text, 0);
-#ifndef NANO_TINY
 	add_to_sclist(MMAIN, "^T", 0, do_execute, 0);
 #endif
 #ifdef ENABLE_JUSTIFY
@@ -1240,10 +1242,10 @@ void shortcut_init(void)
 	add_to_sclist(MMAIN, "M-A", 0, do_mark, 0);
 	add_to_sclist(MMAIN, "^6", 0, do_mark, 0);
 	add_to_sclist(MMAIN, "^^", 0, do_mark, 0);
-	add_to_sclist(MMAIN, "M-6", 0, copy_text, 0);
-	add_to_sclist(MMAIN, "M-^", 0, copy_text, 0);
+	add_to_sclist(MMOST, "M-6", 0, copy_text, 0);
+	add_to_sclist(MMOST, "M-^", 0, copy_text, 0);
 	add_to_sclist(MMAIN, "M-}", 0, do_indent, 0);
-	add_to_sclist(MMAIN, "Tab", INDENT_KEY, do_indent, 0);
+	add_to_sclist(MMAIN, "", INDENT_KEY, do_indent, 0);
 	add_to_sclist(MMAIN, "M-{", 0, do_unindent, 0);
 	add_to_sclist(MMAIN, "Sh-Tab", SHIFT_TAB, do_unindent, 0);
 	add_to_sclist(MMAIN, "M-:", 0, record_macro, 0);
