@@ -44,6 +44,7 @@ TCONFIG_SAMBASRV=y
 # TCONFIG_STUBBY is not set
 # TCONFIG_NVRAM_64K is not set
 # TCONFIG_NVRAM_128K is not set
+# TCONFIG_DRAM_512M is not set
 # TCONFIG_TOR is not set
 # TCONFIG_USBAP is not set
 # TCONFIG_REMOVE_USBAPP is not set
