@@ -1009,7 +1009,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
-		/* R6300V2 and R6250 
+		/* R6300V2 and R6250 */
         	/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
