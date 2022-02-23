@@ -69,20 +69,23 @@ XIAOMI_TRX = 0
 endif
 
 ifeq ($(NVRAM_64K),y)
-EXTRA_64KDESC = ' -64K'
-EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_64K'
+ EXTRA_64KDESC = ' -64K'
+ EXTRA_64KCFLAG = -DTCONFIG_NVRAM_64K
 else
-ifeq ($(NVRAM_128K),y)
-ifeq ($(DRAM_512M),y)
-EXTRA_64KDESC = '-128K-512M'
-else
-EXTRA_64KDESC = '-128K-256M'
-endif
-EXTRA_64KCFLAG = '-DTCONFIG_NVRAM_128K'
-else
-EXTRA_64KDESC = ''
-EXTRA_64KCFLAG = ''
-endif
+ ifeq ($(NVRAM_128K),y)
+  EXTRA_64KCFLAG = -DTCONFIG_NVRAM_128K
+  ifeq ($(DRAM_512M),y)
+   EXTRA_64KDESC = '-128K-512M'
+  else
+   EXTRA_64KDESC = '-128K'
+   ifneq ($(NVSIZE),)
+    EXTRA_64KCFLAG += -DCONFIG_NVSIZE_128
+   endif
+  endif
+ else
+  EXTRA_64KDESC =
+  EXTRA_64KCFLAG =
+ endif
 endif
 
 KERNEL_BINARY=$(LINUXDIR)/arch/arm/boot/zImage
@@ -163,6 +166,9 @@ ifneq ($(ASUS_TRX),0)
 	ctools/trx -o image/linux-lzma.trx ctools/vmlinuz-lzma ctools/target.squashfs
 # for asus RT-N18U, RT-AC56U, RT-AC67U, RT-AC68U (V3), RT-AC68R, RT-AC68P, RT-N66U_C1, RT-AC66U_B1, RT-AC1750_B1, RT-AC1900P/U
 ifeq ($(ASUS_TRX),ASUS)
+ifeq ($(CONFIG_BCM7),y)
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,image/freshtomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+else
 ifeq ($(BCMSMP),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-N66U_C1,3.0.0.4,image/freshtomato-RT-N66U_C1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -176,6 +182,7 @@ ifeq ($(BCMSMP),y)
 else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-N18U,3.0.0.4,image/freshtomato-RT-N18U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,image/freshtomato-RT-AC56S-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 endif
 endif
 # for Tenda AC15
@@ -204,6 +211,9 @@ ifeq ($(ASUS_TRX),DLINK)
 endif
 # for R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
 ifeq ($(ASUS_TRX),NETGEAR)
+ifeq ($(CONFIG_BCM7),y)
+	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,image/freshtomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+else
 ifeq ($(NVRAM_128K),y)
 ifeq ($(DRAM_512M),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r XR300,3.0.0.4,image/freshtomato-XR300-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -219,6 +229,7 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v1,3.0.0.4,image/freshtomato-R6700v1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6300v2,3.0.0.4,image/freshtomato-R6300v2-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6250,3.0.0.4,image/freshtomato-R6250-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 endif
 endif
 # for WS880
@@ -355,10 +366,10 @@ what:
 # KERN_SIZE_OPT
 # USB ("USB"|"")
 # JFFSv1 | NO_JFFS
-# NO_CIFS, NO_SSH, NO_SAMBA, NO_HTTPS, NO_XXTP, NO_LIBOPT
-# SAMBA3, OPENVPN, WIREGUARD, IPV6SUPP, EBTABLES, NTFS, UFSD, MEDIASRV, BBEXTRAS, USBEXTRAS, BCM57, SLIM, NOCAT, NGINX, CTF
-# NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN BRCM_NAND_JFFS2
-# CONNTRACK_TOOL CRASH_LOG NAMESPACES MDNS IRQBALANCE ROAM
+# NO_CIFS NO_SSH NO_SAMBA NO_HTTPS NO_XXTP NO_LIBOPT NO_ZEBRA NOWL
+# ARM DHDAP SAMBA3 OPENVPN WIREGUARD IPV6SUPP EBTABLES NTFS UFSD MEDIASRV BBEXTRAS USBEXTRAS BCM57 SLIM NOCAT NGINX TINC CTF FANCTRL
+# GMAC3 DNSSEC NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID USBAP NO_USBAPP NANO MULTIWAN OPENSSL11
+# IPERF AC3200 BSD BCMSMP PROXYSTA DPSTA GRO BCMFA NAND BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES MDNS IRQBALANCE ROAM
 
 define RouterOptions
 	@( \
@@ -589,6 +600,32 @@ define RouterOptions
 		sed -i "/TCONFIG_BCMWL6/d" $(1); \
 		echo "TCONFIG_BCMWL6=y" >>$(1); \
 		echo "TCONFIG_BCMWL6A=y" >>$(1); \
+		if [ "$(BCM7)" = "y" ]; then \
+			sed -i "/TCONFIG_BCM7/d" $(1); \
+			echo "TCONFIG_BCM7=y" >>$(1); \
+			sed -i "/TCONFIG_TOAD/d" $(1); \
+			echo "TCONFIG_TOAD=y" >>$(1); \
+			sed -i "/TCONFIG_BCMDCS/d" $(1); \
+			echo "TCONFIG_BCMDCS=y" >>$(1); \
+			sed -i "/TCONFIG_TRAFFIC_MGMT_RSSI_POLICY/d" $(1); \
+			echo "TCONFIG_TRAFFIC_MGMT_RSSI_POLICY=y" >>$(1); \
+			sed -i "/TCONFIG_GMAC3/d" $(1); \
+			if [ "$(GMAC3)" = "y" ]; then \
+				echo "TCONFIG_GMAC3=y" >>$(1); \
+			else \
+				echo "# TCONFIG_GMAC3 is not set" >>$(1); \
+			fi; \
+			sed -i "/TCONFIG_5301X/d" $(1); \
+			echo "TCONFIG_5301X=y" >>$(1); \
+		fi; \
+	fi; \
+	if [ "$(DHDAP)" = "y" ]; then \
+		sed -i "/TCONFIG_DHDAP/d" $(1); \
+		echo "TCONFIG_DHDAP=y" >>$(1); \
+	fi; \
+	if [ "$(AC3200)" = "y" ]; then \
+		sed -i "/TCONFIG_AC3200/d" $(1); \
+		echo "TCONFIG_AC3200=y" >>$(1); \
 	fi; \
 	if [ "$(BSD)" = "y" ]; then \
 		sed -i "/TCONFIG_BCMBSD/d" $(1); \
@@ -850,9 +887,70 @@ define KernelConfig
 			sed -i "s/# CONFIG_HFSPLUS_FS is not set/CONFIG_HFSPLUS_FS=m/g" $(1); \
 		fi; \
 	fi; \
+	if [ "$(AC3200)" = "y" ]; then \
+		sed -i "/CONFIG_RTAC3200/d" $(1); \
+		echo "CONFIG_RTAC3200=y" >>$(1); \
+	fi; \
+	if [ "$(GMAC3)" = "y" ]; then \
+		sed -i "/CONFIG_BCM_GMAC3/d" $(1); \
+		echo "CONFIG_BCM_GMAC3=y" >>$(1); \
+	else \
+		sed -i "/CONFIG_BCM_GMAC3/d" $(1); \
+		echo "# CONFIG_BCM_GMAC3 is not set" >>$(1); \
+	fi; \
+	if [ "$(BCM_RECVFILE)" = "y" ]; then \
+		sed -i "/CONFIG_BCM_RECVFILE/d" $(1); \
+		echo "CONFIG_BCM_RECVFILE=y" >>$(1); \
+	fi; \
+	if [ "$(DEBUGFS)" = "y" ]; then \
+		sed -i "/CONFIG_DEBUG_FS/d" $(1); \
+		echo "CONFIG_DEBUG_FS=y" >>$(1); \
+		sed -i "/CONFIG_USB_MON/d" $(1); \
+		echo "CONFIG_USB_MON=m" >>$(1); \
+		if [ "$(ARM)" = "y" ]; then \
+			sed -i "/CONFIG_GCOV_KERNEL/d" $(1); \
+			echo "# CONFIG_GCOV_KERNEL is not set" >>$(1); \
+			sed -i "/CONFIG_L2TP_DEBUGFS/d" $(1); \
+			echo "# CONFIG_L2TP_DEBUGFS is not set" >>$(1); \
+			sed -i "/CONFIG_JBD_DEBUG/d" $(1); \
+			echo "# CONFIG_JBD_DEBUG is not set" >>$(1); \
+			sed -i "/CONFIG_JBD2_DEBUG/d" $(1); \
+			echo "# CONFIG_JBD2_DEBUG is not set" >>$(1); \
+			sed -i "/CONFIG_LKDTM/d" $(1); \
+			echo "# CONFIG_LKDTM is not set" >>$(1); \
+			sed -i "/CONFIG_DYNAMIC_DEBUG/d" $(1); \
+			echo "# CONFIG_DYNAMIC_DEBUG is not set" >>$(1); \
+		fi; \
+	fi; \
+	if [ "$(NOWL)" = "y" ]; then \
+		sed -i "/CONFIG_WL=m/d" $(1); \
+		echo "# CONFIG_WL is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_APSTA/d" $(1); \
+		echo "# CONFIG_WL_USE_APSTA is not set" >>$(1); \
+		sed -i "/CONFIG_WL_ALL_PASSIVE_RUNTIME/d" $(1); \
+		sed -i "/CONFIG_WAPI/d" $(1); \
+		echo "# CONFIG_WAPI is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_AP/d" $(1); \
+		echo "# CONFIG_WL_USE_AP is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_AP_SDSTD/d" $(1); \
+		echo "# CONFIG_WL_USE_AP_SDSTD is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_STA/d" $(1); \
+		echo "# CONFIG_WL_USE_STA is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_AP_ONCHIP_G/d" $(1); \
+		echo "# CONFIG_WL_USE_AP_ONCHIP_G is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_STA_ONCHIP_G/d" $(1); \
+		echo "# CONFIG_WL_USE_STA_ONCHIP_G is not set" >>$(1); \
+		sed -i "/CONFIG_WL_USE_APSTA_ONCHIP_G/d" $(1); \
+		echo "# CONFIG_WL_USE_APSTA_ONCHIP_G is not set" >>$(1); \
+		sed -i "/CONFIG_WL_ALL_PASSIVE_ON/d" $(1); \
+		echo "# CONFIG_WL_ALL_PASSIVE_ON is not set" >>$(1); \
+		sed -i "/CONFIG_DPSTA/d" $(1); \
+		echo "# CONFIG_DPSTA is not set" >>$(1); \
+		sed -i "/CONFIG_PLC/d" $(1); \
+		echo "# CONFIG_PLC is not set" >>$(1); \
+	fi; \
 	if [ "$(IPV6SUPP)" = "y" ]; then \
-		sed -i "/CONFIG_IPV6 is not set/d" $(1); \
-		echo "CONFIG_IPV6=y" >>$(1); \
+		sed -i "s/# CONFIG_IPV6 is not set/CONFIG_IPV6=y/g" $(1); \
 		sed -i "/CONFIG_IP6_NF_IPTABLES/d" $(1); \
 		echo "CONFIG_IP6_NF_IPTABLES=y" >>$(1); \
 		sed -i "/CONFIG_IP6_NF_MATCH_RT/d" $(1); \
@@ -877,29 +975,69 @@ define KernelConfig
 		echo "CONFIG_IPV6_SIT_6RD=y" >>$(1); \
 		sed -i "/CONFIG_IPV6_MULTIPLE_TABLES/d" $(1); \
 		echo "CONFIG_IPV6_MULTIPLE_TABLES=y" >>$(1); \
-		sed -i "/CONFIG_IP6_NF_RAW/d" $(1); \
-		echo "CONFIG_IP6_NF_RAW=m" >>$(1); \
-		sed -i "/CONFIG_IPV6_OPTIMISTIC_DAD/d" $(1); \
-		echo "CONFIG_IPV6_OPTIMISTIC_DAD=y" >>$(1); \
+		sed -i "/CONFIG_IP6_NF_TARGET_ROUTE/d" $(1); \
+		echo "CONFIG_IP6_NF_TARGET_ROUTE=m" >>$(1); \
 		sed -i "/CONFIG_IPV6_MROUTE/d" $(1); \
 		echo "CONFIG_IPV6_MROUTE=y" >>$(1); \
 		echo "# CONFIG_IPV6_MROUTE_MULTIPLE_TABLES is not set" >>$(1); \
-		sed -i "/CONFIG_IP6_NF_TARGET_ROUTE/d" $(1); \
-		echo "CONFIG_IP6_NF_TARGET_ROUTE=m" >>$(1); \
-		sed -i "/CONFIG_INET6_XFRM_TUNNEL/d" $(1); \
-		echo "CONFIG_INET6_XFRM_TUNNEL=m" >>$(1); \
-		sed -i "/CONFIG_INET6_AH/d" $(1); \
-		echo "CONFIG_INET6_AH=m" >>$(1); \
-		sed -i "/CONFIG_INET6_ESP/d" $(1); \
-		echo "CONFIG_INET6_ESP=m" >>$(1); \
-		sed -i "/CONFIG_INET6_IPCOMP/d" $(1); \
-		echo "CONFIG_INET6_IPCOMP=m" >>$(1); \
-		sed -i "/CONFIG_INET6_XFRM_MODE_TRANSPORT/d" $(1); \
-		echo "CONFIG_INET6_XFRM_MODE_TRANSPORT=m" >>$(1); \
-		sed -i "/CONFIG_INET6_XFRM_MODE_TUNNEL/d" $(1); \
-		echo "CONFIG_INET6_XFRM_MODE_TUNNEL=m" >>$(1); \
-		sed -i "/CONFIG_INET6_XFRM_MODE_BEET/d" $(1); \
-		echo "CONFIG_INET6_XFRM_MODE_BEET=m" >>$(1); \
+		if [ "$(CONFIG_BCM7)" = "" ]; then \
+			sed -i "/CONFIG_IP6_NF_RAW/d" $(1); \
+			echo "CONFIG_IP6_NF_RAW=m" >>$(1); \
+			sed -i "/CONFIG_IPV6_OPTIMISTIC_DAD/d" $(1); \
+			echo "CONFIG_IPV6_OPTIMISTIC_DAD=y" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_TUNNEL/d" $(1); \
+			echo "CONFIG_INET6_XFRM_TUNNEL=m" >>$(1); \
+			sed -i "/CONFIG_INET6_AH/d" $(1); \
+			echo "CONFIG_INET6_AH=m" >>$(1); \
+			sed -i "/CONFIG_INET6_ESP/d" $(1); \
+			echo "CONFIG_INET6_ESP=m" >>$(1); \
+			sed -i "/CONFIG_INET6_IPCOMP/d" $(1); \
+			echo "CONFIG_INET6_IPCOMP=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_TRANSPORT/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_TRANSPORT=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_TUNNEL/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_TUNNEL=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_BEET/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_BEET=m" >>$(1); \
+		fi; \
+	fi; \
+	if [ "$(IPSEC)" = "y" ] && [ "$(CONFIG_BCM7)" = "y" ]; then \
+		sed -i "/CONFIG_XFRM_USER/d" $(1); \
+		echo "CONFIG_XFRM_USER=m" >>$(1); \
+		echo "# CONFIG_XFRM_SUB_POLICY is not set" >>$(1); \
+		echo "# CONFIG_XFRM_MIGRATE is not set" >>$(1); \
+		echo "# CONFIG_XFRM_STATISTICS is not set" >>$(1); \
+		sed -i "/CONFIG_NET_KEY/d" $(1); \
+		echo "CONFIG_NET_KEY=m" >>$(1); \
+		echo "# CONFIG_NET_KEY_MIGRATE is not set" >>$(1); \
+		sed -i "/CONFIG_INET_AH/d" $(1); \
+		echo "CONFIG_INET_AH=m" >>$(1); \
+		sed -i "/CONFIG_INET_ESP/d" $(1); \
+		echo "CONFIG_INET_ESP=m" >>$(1); \
+		sed -i "/CONFIG_INET_IPCOMP/d" $(1); \
+		echo "CONFIG_INET_IPCOMP=m" >>$(1); \
+		sed -i "/CONFIG_INET_XFRM_MODE_TRANSPORT/d" $(1); \
+		echo "CONFIG_INET_XFRM_MODE_TRANSPORT=m" >>$(1); \
+		sed -i "/CONFIG_INET_XFRM_MODE_TUNNEL/d" $(1); \
+		echo "CONFIG_INET_XFRM_MODE_TUNNEL=m" >>$(1); \
+		sed -i "/CONFIG_INET_XFRM_MODE_BEET/d" $(1); \
+		echo "CONFIG_INET_XFRM_MODE_BEET=m" >>$(1); \
+		sed -i "/CONFIG_NETFILTER_XT_MATCH_POLICY/d" $(1); \
+		echo "CONFIG_NETFILTER_XT_MATCH_POLICY=m" >>$(1); \
+		if [ "$(IPV6SUPP)" = "y" ]; then \
+			sed -i "/CONFIG_INET6_AH/d" $(1); \
+			echo "CONFIG_INET6_AH=m" >>$(1); \
+			sed -i "/CONFIG_INET6_ESP/d" $(1); \
+			echo "CONFIG_INET6_ESP=m" >>$(1); \
+			sed -i "/CONFIG_INET6_IPCOMP/d" $(1); \
+			echo "CONFIG_INET6_IPCOMP=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_TRANSPORT/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_TRANSPORT=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_TUNNEL/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_TUNNEL=m" >>$(1); \
+			sed -i "/CONFIG_INET6_XFRM_MODE_BEET/d" $(1); \
+			echo "CONFIG_INET6_XFRM_MODE_BEET=m" >>$(1); \
+		fi; \
 	fi; \
 	sed -i "/CONFIG_BCM57XX/d" $(1); \
 	if [ "$(BCM57)" = "y" ]; then \
@@ -939,11 +1077,11 @@ define KernelConfig
 		sed -i "/CONFIG_RPS=y/d" $(1); \
 	fi; \
 	if [ "$(USBAP)" = "y" ]; then \
-		echo "CONFIG_WL_USBAP=y" >>$(1); \
-		echo 'CONFIG_WL_APSTA="wlconfig_lx_router_high"' >>$(1); \
+		sed -i "s/# CONFIG_WL_USBAP is not set/CONFIG_WL_USBAP=y/g" $(1); \
+		sed -i "s/CONFIG_WL_APSTA="wlconfig_lx_router_apsta"/CONFIG_WL_APSTA="wlconfig_lx_router_high"/g" $(1); \
 	else \
-		echo "# CONFIG_WL_USBAP is not set" >>$(1); \
-		echo 'CONFIG_WL_APSTA="wlconfig_lx_router_apsta"' >>$(1); \
+		sed -i "s/CONFIG_WL_USBAP=y/# CONFIG_WL_USBAP is not set/g" $(1); \
+		sed -i "s/CONFIG_WL_APSTA="wlconfig_lx_router_high"/CONFIG_WL_APSTA="wlconfig_lx_router_apsta"/g" $(1); \
 	fi; \
 	if [ "$(EBTABLES)" = "y" ]; then \
 		sed -i "/CONFIG_BRIDGE_NF_EBTABLES/d" $(1); \
@@ -1210,6 +1348,28 @@ ea6350v2z:
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y TUXERA=y TUXERA_HFS=y BSD=y IRQBALANCE=y
 
+ifeq ($(CONFIG_BCM7),y)
+r8000init:
+	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R8000" BOARDID_FILE="compatible_r8000.txt" FW_CFG_FILE="tomato_cfg.h"
+
+r8000e:
+	@$(MAKE) e ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+r8000z:
+	@$(MAKE) z ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3200e:
+	@$(MAKE) e ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3200z:
+	@$(MAKE) z ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3200-128e:
+	@$(MAKE) e ARM=y BCM7=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3200-128z:
+	@$(MAKE) z ARM=y BCM7=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+endif
 
 setprofile:
 	echo '#ifndef TOMATO_PROFILE' > router/shared/tomato_profile.h
@@ -1308,6 +1468,15 @@ help:
 	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
 	@echo "ea6350v2e       EA6350v2 build VPN (WIP!)"
 	@echo "ea6350v2z       EA6350v2 build AIO (WIP!)"
+ifeq ($(CONFIG_BCM7),y)
+	@echo "ASUS ARM7 Builds"
+	@echo "ac3200e         RT-AC3200 build VPN"
+	@echo "ac3200z         RT-AC3200 build AIO"
+	@echo "ac3200-128e     RT-AC3200 build VPN - 128K NVRAM"
+	@echo "ac3200-128z     RT-AC3200 build AIO - 128K NVRAM"
+	@echo "r8000e          R8000 build VPN"
+	@echo "r8000z          R8000 build AIO"
+endif
 	@echo ""
 	@echo "..etc..      other build configs"
 	@echo "clean        -C router clean"
