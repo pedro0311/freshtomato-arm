@@ -808,9 +808,10 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 		}
 		/* Linksys EA6350v2 */
 		/* 0x000003c00000-0x000008000000 : "brcmnand" */
-		else if (nvram_match("boardnum","20150309") &&
-			 nvram_match("boardtype", "0xE646") &&
-			 nvram_match("boardrev", "0x1200")) {
+		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
+			 (nvram_match("boardnum","20150309") &&
+			  nvram_match("boardtype", "0xE646") &&
+			  nvram_match("boardrev", "0x1200"))) {
 		     offset = 0x3c00000;
 		}
 
