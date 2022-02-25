@@ -1466,8 +1466,8 @@ help:
 	@echo "ea6700z         EA6700/EA6400/EA6500v2/EA6900 build AIO"
 	@echo "ea6350v1e       EA6200/EA6350v1 build VPN"
 	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
-	@echo "ea6350v2e       EA6350v2 build VPN (WIP!)"
-	@echo "ea6350v2z       EA6350v2 build AIO (WIP!)"
+	@echo "ea6350v2e       EA6350v2 build VPN"
+	@echo "ea6350v2z       EA6350v2 build AIO"
 ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e         RT-AC3200 build VPN"
