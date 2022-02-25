@@ -416,6 +416,7 @@ static int mssl_f_exists(const char *path)
 /*
  * compare the modulus of public key and private key
  */
+#ifdef USE_OPENSSL11
 int mssl_cert_key_match(const char *cert_path, const char *key_path)
 {
 	FILE *fp;
@@ -539,3 +540,4 @@ end:
 
 	return ret;
 }
+#endif /* USE_OPENSSL11 */

@@ -38,7 +38,7 @@ LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 ifneq ($(TCONFIG_HTTPS),)
 LIBS += -L$(TOP)/mssl -lmssl
 ifeq ($(TCONFIG_OPENSSL11),y)
-CFLAGS += -I$(TOP)/openssl-1.1/include
+CFLAGS += -I$(TOP)/openssl-1.1/include -DUSE_OPENSSL11
 LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto
 ifeq ($(TCONFIG_BCMARM),y)
 LIBS += -lpthread

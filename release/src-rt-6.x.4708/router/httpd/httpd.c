@@ -625,18 +625,26 @@ static void start_ssl(void)
 	while (1) {
 		save = nvram_get_int("https_crt_save");
 
-		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem")) || !mssl_cert_key_match("/etc/cert.pem", "/etc/key.pem") || ((!nvram_get_int("https_crt_timeset")) && (time(NULL) > Y2K))) {
+		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem"))
+#ifdef USE_OPENSSL11
+		    || !mssl_cert_key_match("/etc/cert.pem", "/etc/key.pem")
+#endif
+		    || ((!nvram_get_int("https_crt_timeset")) && (time(NULL) > Y2K))) {
 			ok = 0;
 			if (save && nvram_match("crt_ver", HTTPS_CRT_VER)) {
 				if (nvram_get_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
 					if (eval("tar", "-xzf", "/tmp/cert.tgz", "-C", "/", "etc/cert.pem", "etc/key.pem") == 0) {
 						system("cat /etc/key.pem /etc/cert.pem > /etc/server.pem");
 
+#ifdef USE_OPENSSL11
 						/* check key and cert pair, if they are mismatched, regenerate key and cert */
 						if (mssl_cert_key_match("/etc/cert.pem", "/etc/key.pem")) {
 							logmsg(LOG_INFO, "mssl_cert_key_match : PASS");
+#endif
 							ok = 1;
+#ifdef USE_OPENSSL11
 						}
+#endif
 					}
 					unlink("/tmp/cert.tgz");
 				}
