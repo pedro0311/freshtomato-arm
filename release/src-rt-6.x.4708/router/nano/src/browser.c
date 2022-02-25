@@ -1,7 +1,7 @@
 /**************************************************************************
  *   browser.c  --  This file is part of GNU nano.                        *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2016, 2020 Benno Schulenberg                      *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -34,45 +34,42 @@ static size_t list_length = 0;
 		/* The number of files in the list. */
 static size_t usable_rows = 0;
 		/* The number of screen rows we can use to display the list. */
-static size_t piles = 0;
+static int piles = 0;
 		/* The number of files that we can display per screen row. */
-static size_t longest = 0;
-		/* The number of columns in the longest filename in the list. */
+static int gauge = 0;
+		/* The width of a 'pile' -- the widest filename plus ten. */
 static size_t selected = 0;
 		/* The currently selected filename in the list; zero-based. */
 
-/* Set filelist to the list of files contained in the directory path,
- * set list_length to the number of files in that list, set longest to
- * the width in columns of the longest filename in that list (between 15
- * and COLS), and set piles to the number of files that we can display
- * per screen row.  And sort the list too. */
+/* Fill 'filelist' with the names of the files in the given directory, set
+ * 'list_length' to the number of names in that list, set 'gauge' to the
+ * width of the widest filename plus ten, and set 'piles' to the number of
+ * files that can be displayed per screen row.  And sort the list too. */
 void read_the_list(const char *path, DIR *dir)
 {
 	size_t path_len = strlen(path), index = 0;
-	const struct dirent *nextdir;
+	const struct dirent *entry;
+	size_t widest = 0;
 
-	longest = 0;
+	/* Find the width of the widest filename in the current folder. */
+	while ((entry = readdir(dir)) != NULL) {
+		size_t span = breadth(entry->d_name);
 
-	/* Find the length of the longest filename in the current folder. */
-	while ((nextdir = readdir(dir)) != NULL) {
-		size_t name_len = breadth(nextdir->d_name);
-
-		if (name_len > longest)
-			longest = name_len;
+		if (span > widest)
+			widest = span;
 
 		index++;
 	}
 
-	/* Put 10 characters' worth of blank space between columns of filenames
-	 * in the list whenever possible, as Pico does. */
-	longest += 10;
+	/* Reserve ten columns for blanks plus file size. */
+	gauge = widest + 10;
 
 	/* If needed, make room for ".. (parent dir)". */
-	if (longest < 15)
-		longest = 15;
+	if (gauge < 15)
+		gauge = 15;
 	/* Make sure we're not wider than the window. */
-	if (longest > COLS)
-		longest = COLS;
+	if (gauge > COLS)
+		gauge = COLS;
 
 	rewinddir(dir);
 
@@ -83,13 +80,13 @@ void read_the_list(const char *path, DIR *dir)
 
 	filelist = nmalloc(list_length * sizeof(char *));
 
-	while ((nextdir = readdir(dir)) != NULL && index < list_length) {
-		/* Don't show the "." entry. */
-		if (strcmp(nextdir->d_name, ".") == 0)
+	while ((entry = readdir(dir)) != NULL && index < list_length) {
+		/* Don't show the useless dot item. */
+		if (strcmp(entry->d_name, ".") == 0)
 			continue;
 
-		filelist[index] = nmalloc(path_len + strlen(nextdir->d_name) + 1);
-		sprintf(filelist[index], "%s%s", path, nextdir->d_name);
+		filelist[index] = nmalloc(path_len + strlen(entry->d_name) + 1);
+		sprintf(filelist[index], "%s%s", path, entry->d_name);
 
 		index++;
 	}
@@ -105,7 +102,7 @@ void read_the_list(const char *path, DIR *dir)
 	/* Calculate how many files fit on a line -- feigning room for two
 	 * spaces beyond the right edge, and adding two spaces of padding
 	 * between columns. */
-	piles = (COLS + 2) / (longest + 2);
+	piles = (COLS + 2) / (gauge + 2);
 
 	usable_rows = editwinrows - (ISSET(ZERO) && LINES > 1 ? 1 : 0);
 }
@@ -158,11 +155,11 @@ void browser_refresh(void)
 		size_t infomaxlen = 7;
 				/* The maximum length of the file information in columns:
 				 * normally seven, but will be twelve for "(parent dir)". */
-		bool dots = (COLS >= 15 && namelen >= longest - infomaxlen);
+		bool dots = (COLS >= 15 && namelen >= gauge - infomaxlen);
 				/* Whether to put an ellipsis before the filename?  We don't
 				 * waste space on dots when there are fewer than 15 columns. */
 		char *disp = display_string(thename, dots ?
-				namelen + infomaxlen + 4 - longest : 0, longest, FALSE, FALSE);
+				namelen + infomaxlen + 4 - gauge : 0, gauge, FALSE, FALSE);
 				/* The filename (or a fragment of it) in displayable format.
 				 * When a fragment, account for dots plus one space padding. */
 		struct stat state;
@@ -170,18 +167,18 @@ void browser_refresh(void)
 		/* If this is the selected item, draw its highlighted bar upfront, and
 		 * remember its location to be able to place the cursor on it. */
 		if (index == selected) {
-			wattron(edit, interface_color_pair[SELECTED_TEXT]);
-			mvwprintw(edit, row, col, "%*s", longest, " ");
+			wattron(midwin, interface_color_pair[SELECTED_TEXT]);
+			mvwprintw(midwin, row, col, "%*s", gauge, " ");
 			the_row = row;
 			the_column = col;
 		}
 
 		/* If the name is too long, we display something like "...ename". */
 		if (dots)
-			mvwaddstr(edit, row, col, "...");
-		mvwaddstr(edit, row, dots ? col + 3 : col, disp);
+			mvwaddstr(midwin, row, col, "...");
+		mvwaddstr(midwin, row, dots ? col + 3 : col, disp);
 
-		col += longest;
+		col += gauge;
 
 		/* Show information about the file: "--" for symlinks (except when
 		 * they point to a directory) and for files that have disappeared,
@@ -235,11 +232,11 @@ void browser_refresh(void)
 			infolen = infomaxlen;
 		}
 
-		mvwaddstr(edit, row, col - infolen, info);
+		mvwaddstr(midwin, row, col - infolen, info);
 
 		/* If this is the selected item, finish its highlighting. */
 		if (index == selected)
-			wattroff(edit, interface_color_pair[SELECTED_TEXT]);
+			wattroff(midwin, interface_color_pair[SELECTED_TEXT]);
 
 		free(disp);
 		free(info);
@@ -247,8 +244,8 @@ void browser_refresh(void)
 		/* Add some space between the columns. */
 		col += 2;
 
-		/* If the next entry will not fit on this row, move to next row. */
-		if (col > COLS - longest) {
+		/* If the next item will not fit on this row, move to next row. */
+		if (col > COLS - gauge) {
 			row++;
 			col = 0;
 		}
@@ -256,11 +253,11 @@ void browser_refresh(void)
 
 	/* If requested, put the cursor on the selected item and switch it on. */
 	if (ISSET(SHOW_CURSOR)) {
-		wmove(edit, the_row, the_column);
+		wmove(midwin, the_row, the_column);
 		curs_set(1);
 	}
 
-	wnoutrefresh(edit);
+	wnoutrefresh(midwin);
 }
 
 /* Look for the given needle in the list of files.  If forwards is TRUE,
@@ -447,7 +444,7 @@ char *browse(char *path)
 	}
 
 	if (dir != NULL) {
-		/* Get the file list, and set longest and piles in the process. */
+		/* Get the file list, and set gauge and piles in the process. */
 		read_the_list(path, dir);
 		closedir(dir);
 		dir = NULL;
@@ -484,7 +481,7 @@ char *browse(char *path)
 
 		old_selected = selected;
 
-		kbinput = get_kbinput(edit, ISSET(SHOW_CURSOR));
+		kbinput = get_kbinput(midwin, ISSET(SHOW_CURSOR));
 
 #ifdef ENABLE_MOUSE
 		if (kbinput == KEY_MOUSE) {
@@ -492,12 +489,12 @@ char *browse(char *path)
 
 			/* When the user clicked in the file list, select a filename. */
 			if (get_mouseinput(&mouse_y, &mouse_x, TRUE) == 0 &&
-						wmouse_trafo(edit, &mouse_y, &mouse_x, FALSE)) {
+						wmouse_trafo(midwin, &mouse_y, &mouse_x, FALSE)) {
 				selected = selected - selected % (usable_rows * piles) +
-								(mouse_y * piles) + (mouse_x / (longest + 2));
+								(mouse_y * piles) + (mouse_x / (gauge + 2));
 
 				/* When beyond end-of-row, select the preceding filename. */
-				if (mouse_x > piles * (longest + 2))
+				if (mouse_x > piles * (gauge + 2))
 					selected--;
 
 				/* When beyond end-of-list, select the last filename. */

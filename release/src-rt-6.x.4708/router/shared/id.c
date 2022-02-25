@@ -133,7 +133,8 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "1234"))) return MODEL_WS880;
 		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20140309"))) return MODEL_EA6350v1;
 		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20130125"))) return MODEL_EA6350v1; /* EA6200 --> same like EA6350v1, AC1200 class router */
-		if ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20150309"))) return MODEL_EA6350v2; /* EA6350v2 */
+		if (nvram_match("t_fix1", "EA6350v2") ||
+		    ((nvram_match("boardtype","0xE646")) && (nvram_match("boardnum", "20150309")))) return MODEL_EA6350v2; /* EA6350v2 */
 		if ((nvram_match("boardtype","0x0646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6400;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "01"))) return MODEL_EA6700;
 		if ((nvram_match("boardtype","0xF646")) && (nvram_match("boardnum", "00"))) return MODEL_WZR1750;

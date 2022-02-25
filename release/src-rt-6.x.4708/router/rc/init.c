@@ -1193,6 +1193,42 @@ static void check_bootnv(void)
 
 #else /* !CONFIG_BCMWL6A */
 
+	case MODEL_EA6350v2:
+		if (!nvram_match("boardnum","20150309")) { /* cfe changes/deletes nv variables after changing country setup! */
+			const char *wlmac;
+			char buf[32] = {0};
+
+			nvram_set("boardnum","20150309");
+
+			/* check wl0 mac address */
+			wlmac = nvram_get("0:macaddr");
+			if ((wlmac == NULL) || (wlmac && !strlen(wlmac))) {
+				strlcpy(buf, nvram_safe_get("wl0_hwaddr"), sizeof(buf));
+				if (strlen(buf)) {
+					nvram_set("0:macaddr", buf);
+				}
+				else { /* bring back FT default mac setup */
+					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
+					inc_mac(buf, +2);
+					nvram_set("0:macaddr", buf);
+				}
+			}
+
+			/* check wl1 mac address */
+			wlmac = nvram_get("1:macaddr");
+			if ((wlmac == NULL) || (wlmac && !strlen(wlmac))) {
+				strlcpy(buf, nvram_safe_get("wl1_hwaddr"), sizeof(buf));
+				if (strlen(buf)) {
+					nvram_set("1:macaddr", buf);
+				}
+				else { /* bring back FT default mac setup */
+					strlcpy(buf, nvram_safe_get("et0macaddr"), sizeof(buf));
+					inc_mac(buf, +6);
+					nvram_set("1:macaddr", buf);
+				}
+			}
+		}
+		break;
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
 	case MODEL_XR300:

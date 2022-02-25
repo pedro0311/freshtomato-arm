@@ -1,7 +1,7 @@
 /**************************************************************************
  *   text.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2015 Mark Majeres                                 *
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
@@ -2558,12 +2558,12 @@ void do_linter(void)
 	edit_refresh();
 
 	if (openfile->modified) {
-		int choice = do_yesno_prompt(FALSE, _("Save modified buffer before linting?"));
+		int choice = ask_user(YESORNO, _("Save modified buffer before linting?"));
 
-		if (choice == -1) {
+		if (choice == CANCEL) {
 			statusbar(_("Cancelled"));
 			return;
-		} else if (choice == 1 && (write_it_out(FALSE, FALSE) != 1))
+		} else if (choice == YES && (write_it_out(FALSE, FALSE) != 1))
 			return;
 	}
 
@@ -2647,36 +2647,31 @@ void do_linter(void)
 		if ((*pointer == '\r') || (*pointer == '\n')) {
 			*pointer = '\0';
 			if (onelint != pointer) {
-				char *filename = NULL, *linestr = NULL, *maybecol = NULL;
-				char *message = copy_of(onelint);
+				char *filename, *linestring, *colstring;
+				char *complaint = copy_of(onelint);
+				char *spacer = strstr(complaint, " ");
 
 				/* The recognized format is "filename:line:column: message",
 				 * where ":column" may be absent or be ",column" instead. */
-				if (strstr(message, ": ") != NULL) {
-					filename = strtok(onelint, ":");
-					if ((linestr = strtok(NULL, ":")) != NULL) {
-						if ((maybecol = strtok(NULL, ":")) != NULL) {
-							ssize_t tmplineno = 0, tmpcolno = 0;
-							char *tmplinecol;
+				if ((filename = strtok(onelint, ":")) && spacer) {
+					if ((linestring = strtok(NULL, ":"))) {
+						if ((colstring = strtok(NULL, " "))) {
+							ssize_t linenumber = strtol(linestring, NULL, 10);
+							ssize_t colnumber = strtol(colstring, NULL, 10);
 
-							tmplineno = strtol(linestr, NULL, 10);
-							if (tmplineno <= 0) {
+							if (linenumber <= 0) {
+								free(complaint);
 								pointer++;
-								free(message);
 								continue;
 							}
 
-							tmpcolno = strtol(maybecol, NULL, 10);
-							/* Check if the middle field is in comma format. */
-							if (tmpcolno <= 0) {
-								strtok(linestr, ",");
-								if ((tmplinecol = strtok(NULL, ",")) != NULL)
-									tmpcolno = strtol(tmplinecol, NULL, 10);
-								else
-									tmpcolno = 1;
+							if (colnumber <= 0) {
+								colnumber = 1;
+								strtok(linestring, ",");
+								if ((colstring = strtok(NULL, ",")))
+									colnumber = strtol(colstring, NULL, 10);
 							}
 
-							/* Nice.  We have a lint message we can use. */
 							parsesuccess = TRUE;
 							tmplint = curlint;
 							curlint = nmalloc(sizeof(lintstruct));
@@ -2684,17 +2679,17 @@ void do_linter(void)
 							curlint->prev = tmplint;
 							if (curlint->prev != NULL)
 								curlint->prev->next = curlint;
-							curlint->msg = copy_of(strstr(message, ": ") + 2);
-							curlint->lineno = tmplineno;
-							curlint->colno = tmpcolno;
 							curlint->filename = copy_of(filename);
+							curlint->lineno = linenumber;
+							curlint->colno = colnumber;
+							curlint->msg = copy_of(spacer + 1);
 
 							if (lints == NULL)
 								lints = curlint;
 						}
 					}
 				}
-				free(message);
+				free(complaint);
 			}
 			onelint = pointer + 1;
 		}
@@ -2752,14 +2747,14 @@ void do_linter(void)
 
 				sprintf(msg, _("This message is for unopened file %s,"
 							" open it in a new buffer?"), curlint->filename);
-				choice = do_yesno_prompt(FALSE, msg);
+				choice = ask_user(YESORNO, msg);
 				currmenu = MLINTER;
 				free(msg);
 
-				if (choice == -1) {
+				if (choice == CANCEL) {
 					statusbar(_("Cancelled"));
 					break;
-				} else if (choice == 1) {
+				} else if (choice == YES) {
 					open_buffer(curlint->filename, TRUE);
 				} else {
 #endif
@@ -2818,9 +2813,9 @@ void do_linter(void)
 
 		/* Place the cursor to indicate the affected line. */
 		place_the_cursor();
-		wnoutrefresh(edit);
+		wnoutrefresh(midwin);
 
-		kbinput = get_kbinput(bottomwin, VISIBLE);
+		kbinput = get_kbinput(footwin, VISIBLE);
 
 #ifndef NANO_TINY
 		if (kbinput == KEY_WINCH)
@@ -2987,7 +2982,7 @@ void do_verbatim_input(void)
 	place_the_cursor();
 
 	/* Read in the first one or two bytes of the next keystroke. */
-	bytes = get_verbatim_kbinput(edit, &count);
+	bytes = get_verbatim_kbinput(midwin, &count);
 
 	/* When something valid was obtained, unsuppress cursor-position display,
 	 * insert the bytes into the edit buffer, and blank the status bar. */

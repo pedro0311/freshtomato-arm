@@ -1,7 +1,7 @@
 /**************************************************************************
  *   search.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2020 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -186,7 +186,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 		/* The time we last looked at the keyboard. */
 
 	/* Set non-blocking input so that we can just peek for a Cancel. */
-	nodelay(edit, TRUE);
+	nodelay(midwin, TRUE);
 
 	if (begin == NULL)
 		came_full_circle = FALSE;
@@ -226,14 +226,14 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 #ifndef NANO_TINY
 		if (the_window_resized) {
 			regenerate_screen();
-			nodelay(edit, TRUE);
+			nodelay(midwin, TRUE);
 			statusbar(_("Searching..."));
 			feedback = 1;
 		}
 #endif
 		/* If we're back at the beginning, then there is no needle. */
 		if (came_full_circle) {
-			nodelay(edit, FALSE);
+			nodelay(midwin, FALSE);
 			return 0;
 		}
 
@@ -244,7 +244,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 		 * but stop when spell-checking or replacing in a region. */
 		if (line == NULL) {
 			if (whole_word_only || modus == INREGION) {
-				nodelay(edit, FALSE);
+				nodelay(midwin, FALSE);
 				return 0;
 			}
 
@@ -268,7 +268,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 
 		/* Glance at the keyboard once every second, to check for a Cancel. */
 		if (time(NULL) - lastkbcheck > 0) {
-			int input = wgetch(edit);
+			int input = wgetch(midwin);
 
 			lastkbcheck = time(NULL);
 
@@ -276,7 +276,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 			while (input != ERR) {
 				if (input == ESC_CODE) {
 					napms(20);
-					input = wgetch(edit);
+					input = wgetch(midwin);
 					meta_key = TRUE;
 				} else
 					meta_key = FALSE;
@@ -289,12 +289,12 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 					statusbar(_("Cancelled"));
 					/* Clear out the key buffer (in case a macro is running). */
 					while (input != ERR)
-						input = parse_kbinput(NULL);
-					nodelay(edit, FALSE);
+						input = get_input(NULL);
+					nodelay(midwin, FALSE);
 					return -2;
 				}
 
-				input = wgetch(edit);
+				input = wgetch(midwin);
 			}
 
 			if (++feedback > 0)
@@ -306,7 +306,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 
 	found_x = found - line->data;
 
-	nodelay(edit, FALSE);
+	nodelay(midwin, FALSE);
 
 	/* Ensure that the found occurrence is not beyond the starting x. */
 	if (came_full_circle && ((!ISSET(BACKWARDS_SEARCH) && (found_x > begin_x ||
@@ -553,7 +553,7 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 	came_full_circle = FALSE;
 
 	while (TRUE) {
-		int choice = 0;
+		int choice = NO;
 		int result = findnextstr(needle, whole_word_only, modus,
 						&match_len, skipone, real_current, *real_current_x);
 
@@ -589,21 +589,21 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 			edit_refresh();
 
 			/* TRANSLATORS: This is a prompt. */
-			choice = do_yesno_prompt(TRUE, _("Replace this instance?"));
+			choice = ask_user(YESORALLORNO, _("Replace this instance?"));
 
 			spotlighted = FALSE;
 
-			if (choice == -1)  /* The replacing was cancelled. */
+			if (choice == CANCEL)
 				break;
-			else if (choice == 2)
-				replaceall = TRUE;
+
+			replaceall = (choice == ALL);
 
 			/* When "No" or moving backwards, the search routine should
 			 * first move one character further before continuing. */
 			skipone = (choice == 0 || ISSET(BACKWARDS_SEARCH));
 		}
 
-		if (choice == 1 || replaceall) {  /* Yes, replace it. */
+		if (choice == YES || replaceall) {
 			size_t length_change;
 			char *altered;
 

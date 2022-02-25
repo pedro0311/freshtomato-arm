@@ -1,5 +1,5 @@
 /* Convenience header for conditional use of GNU <libintl.h>.
-   Copyright (C) 1995-1998, 2000-2002, 2004-2006, 2009-2021 Free Software
+   Copyright (C) 1995-1998, 2000-2002, 2004-2006, 2009-2022 Free Software
    Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
@@ -138,7 +138,7 @@
 #define dcnpgettext(Domainname, Msgctxt, Msgid, MsgidPlural, N, Category) \
   npgettext_aux (Domainname, Msgctxt GETTEXT_CONTEXT_GLUE Msgid, Msgid, MsgidPlural, N, Category)
 
-#ifdef __GNUC__
+#if defined __GNUC__ || defined __clang__
 __inline
 #else
 #ifdef __cplusplus
@@ -157,7 +157,7 @@ pgettext_aux (const char *domain,
     return translation;
 }
 
-#ifdef __GNUC__
+#if defined __GNUC__ || defined __clang__
 __inline
 #else
 #ifdef __cplusplus
@@ -207,7 +207,7 @@ npgettext_aux (const char *domain,
 #define dpgettext_expr(Domainname, Msgctxt, Msgid) \
   dcpgettext_expr (Domainname, Msgctxt, Msgid, LC_MESSAGES)
 
-#ifdef __GNUC__
+#if defined __GNUC__ || defined __clang__
 __inline
 #else
 #ifdef __cplusplus
@@ -254,7 +254,7 @@ dcpgettext_expr (const char *domain,
 #define dnpgettext_expr(Domainname, Msgctxt, Msgid, MsgidPlural, N) \
   dcnpgettext_expr (Domainname, Msgctxt, Msgid, MsgidPlural, N, LC_MESSAGES)
 
-#ifdef __GNUC__
+#if defined __GNUC__ || defined __clang__
 __inline
 #else
 #ifdef __cplusplus

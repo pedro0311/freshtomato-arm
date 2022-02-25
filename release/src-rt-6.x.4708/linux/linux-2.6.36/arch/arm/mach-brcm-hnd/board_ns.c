@@ -251,11 +251,11 @@ static void __init board_fixup(
 	if (lo_size == mem_size)
 		return;
 
-#ifdef CONFIG_NVRAM_128K
+#ifdef CONFIG_DRAM_512M
 	mi->bank[1].start = DRAM_LARGE_REGION_BASE + lo_size;
 #else
 	mi->bank[1].start = PHYS_OFFSET2;
-#endif  /* CONFIG_NVRAM_128K */
+#endif  /* CONFIG_DRAM_512M */
 	mi->bank[1].size = mem_size - lo_size;
 	mi->nr_banks++;
 }
@@ -858,6 +858,14 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		bootossz = 0x4000000;	
 		nvsz = 0x100000;
 	}
+	/* Linksys EA6350v2 */
+	/* 0x000000080000-0x000000180000 : "nvram" */
+	else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
+		 (nvram_match("boardnum","20150309") &&
+		  nvram_match("boardtype", "0xE646") &&
+		  nvram_match("boardrev", "0x1200"))) {
+		nvsz = 0x100000; /* nflash0.nvram        Toshiba NAND flash offset 80000 size 1024KB */
+	}
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
 	char *img_boot = nvram_get(BOOTPARTITION);
@@ -955,9 +963,10 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		}
 		/* Linksys EA6350v2 */
 		/* 0x000000200000-0x000001f00000 : "linux" */
-		else if (nvram_match("boardnum","20150309") &&
-			 nvram_match("boardtype", "0xE646") &&
-			 nvram_match("boardrev", "0x1200")) {
+		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
+			 (nvram_match("boardnum","20150309") &&
+			  nvram_match("boardtype", "0xE646") &&
+			  nvram_match("boardrev", "0x1200"))) {
 			bcm947xx_nflash_parts[nparts].size -= 0x100000;
 		}
 		
@@ -1000,7 +1009,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
-		/* R6300V2 and R6250 
+		/* R6300V2 and R6250 */
         	/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
@@ -1009,9 +1018,10 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		}
 		/* Linksys EA6350v2 */
 		/* 0x0000003e6098-0x000001f00000 : "rootfs" */
-		else if (nvram_match("boardnum","20150309") &&
-			 nvram_match("boardtype", "0xE646") &&
-			 nvram_match("boardrev", "0x1200")) {
+		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
+			 (nvram_match("boardnum","20150309") &&
+			  nvram_match("boardtype", "0xE646") &&
+			  nvram_match("boardrev", "0x1200"))) {
 			bcm947xx_nflash_parts[nparts].size -= 0x100000;
 		}
     

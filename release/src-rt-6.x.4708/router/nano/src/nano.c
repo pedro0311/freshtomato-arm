@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -243,14 +243,14 @@ void finish(void)
 	/* Blank the status bar and (if applicable) the shortcut list. */
 	blank_statusbar();
 	blank_bottombars();
-	wrefresh(bottomwin);
+	wrefresh(footwin);
 
 #ifndef NANO_TINY
 	/* Deallocate the two or three subwindows. */
 	if (topwin != NULL)
 		delwin(topwin);
-	delwin(edit);
-	delwin(bottomwin);
+	delwin(midwin);
+	delwin(footwin);
 #endif
 	/* Switch the cursor on, exit from curses, and restore terminal settings. */
 	restore_terminal();
@@ -304,20 +304,20 @@ void do_exit(void)
 	/* When unmodified, simply close.  Else, when doing automatic saving
 	 * and the file has a name, simply save.  Otherwise, ask the user. */
 	if (!openfile->modified)
-		choice = 0;
+		choice = NO;
 	else if (ISSET(SAVE_ON_EXIT) && openfile->filename[0] != '\0')
-		choice = 1;
+		choice = YES;
 	else {
 		if (ISSET(SAVE_ON_EXIT))
 			warn_and_briefly_pause(_("No file name"));
 
-		choice = do_yesno_prompt(FALSE, _("Save modified buffer? "));
+		choice = ask_user(YESORNO, _("Save modified buffer? "));
 	}
 
 	/* When not saving, or the save succeeds, close the buffer. */
-	if (choice == 0 || (choice == 1 && write_it_out(TRUE, TRUE) > 0))
+	if (choice == NO || (choice == YES && write_it_out(TRUE, TRUE) > 0))
 		close_and_go();
-	else if (choice != 1)
+	else if (choice != YES)
 		statusbar(_("Cancelled"));
 }
 
@@ -403,11 +403,11 @@ void die(const char *msg, ...)
 void window_init(void)
 {
 	/* When resizing, first delete the existing windows. */
-	if (edit != NULL) {
+	if (midwin != NULL) {
 		if (topwin != NULL)
 			delwin(topwin);
-		delwin(edit);
-		delwin(bottomwin);
+		delwin(midwin);
+		delwin(footwin);
 	}
 
 	topwin = NULL;
@@ -417,8 +417,8 @@ void window_init(void)
 		editwinrows = (ISSET(ZERO) ? LINES : 1);
 		/* Set up two subwindows.  If the terminal is just one line,
 		 * edit window and status-bar window will cover each other. */
-		edit = newwin(editwinrows, COLS, 0, 0);
-		bottomwin = newwin(1, COLS, LINES - 1, 0);
+		midwin = newwin(editwinrows, COLS, 0, 0);
+		footwin = newwin(1, COLS, LINES - 1, 0);
 	} else {
 		int toprows = ((ISSET(EMPTY_LINE) && LINES > 6) ? 2 : 1);
 		int bottomrows = ((ISSET(NO_HELP) || LINES < 6) ? 1 : 3);
@@ -432,17 +432,17 @@ void window_init(void)
 		/* Set up the normal three subwindows. */
 		if (toprows > 0)
 			topwin = newwin(toprows, COLS, 0, 0);
-		edit = newwin(editwinrows, COLS, toprows, 0);
-		bottomwin = newwin(bottomrows, COLS, LINES - bottomrows, 0);
+		midwin = newwin(editwinrows, COLS, toprows, 0);
+		footwin = newwin(bottomrows, COLS, LINES - bottomrows, 0);
 	}
 
 	/* In case the terminal shrunk, make sure the status line is clear. */
-	wnoutrefresh(bottomwin);
+	wnoutrefresh(footwin);
 
 	/* When not disabled, turn escape-sequence translation on. */
 	if (!ISSET(RAW_SEQUENCES)) {
-		keypad(edit, TRUE);
-		keypad(bottomwin, TRUE);
+		keypad(midwin, TRUE);
+		keypad(footwin, TRUE);
 	}
 
 #ifdef ENABLED_WRAPORJUSTIFY
@@ -670,8 +670,8 @@ void version(void)
 	printf(_(" GNU nano, version %s\n"), VERSION);
 #endif
 #ifndef NANO_TINY
-	printf(" (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.\n");
-	printf(_(" (C) 2014-%s the contributors to nano\n"), "2021");
+	printf(" (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.\n");
+	printf(_(" (C) 2014-%s the contributors to nano\n"), "2022");
 #endif
 	printf(_(" Compiled options:"));
 
@@ -1022,37 +1022,18 @@ void handle_sigwinch(int signal)
 /* Reinitialize and redraw the screen completely. */
 void regenerate_screen(void)
 {
-	const char *tty = ttyname(0);
-	int fd, result = 0;
-	struct winsize win;
-
 	/* Reset the trigger. */
 	the_window_resized = FALSE;
 
-	if (tty == NULL)
-		return;
-	fd = open(tty, O_RDWR);
-	if (fd == -1)
-		return;
-	result = ioctl(fd, TIOCGWINSZ, &win);
-	close(fd);
-	if (result == -1)
-		return;
+	/* Leave and immediately reenter curses mode, so that ncurses notices
+	 * the new screen dimensions and sets LINES and COLS accordingly. */
+	endwin();
+	refresh();
 
-	/* We could check whether COLS or LINES changed, and return otherwise,
-	 * but it seems curses does not always update these global variables. */
-#ifdef REDEFINING_MACROS_OK
-	COLS = win.ws_col;
-	LINES = win.ws_row;
-#endif
 	thebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
 	bardata = nrealloc(bardata, LINES * sizeof(int));
 
 	editwincols = COLS - margin - thebar;
-
-	/* Do as the website suggests: leave and immediately reenter curses mode. */
-	endwin();
-	doupdate();
 
 	/* Put the terminal in the desired state again, and
 	 * recreate the subwindows with their (new) sizes. */
@@ -1325,7 +1306,7 @@ int do_mouse(void)
 		return retval;
 
 	/* If the click was in the edit window, put the cursor in that spot. */
-	if (wmouse_trafo(edit, &click_row, &click_col, FALSE)) {
+	if (wmouse_trafo(midwin, &click_row, &click_col, FALSE)) {
 		linestruct *current_save = openfile->current;
 		ssize_t row_count = click_row - openfile->current_y;
 		size_t leftedge;
@@ -1408,7 +1389,7 @@ void suck_up_input_and_paste_it(void)
 	cutbuffer = line;
 
 	while (bracketed_paste) {
-		int input = get_kbinput(edit, BLIND);
+		int input = get_kbinput(midwin, BLIND);
 
 		if (input == '\r' || input == '\n') {
 			line->next = make_new_node(line);
@@ -1540,7 +1521,7 @@ void process_a_keystroke(void)
 	const keystruct *shortcut;
 
 	/* Read in a keystroke, and show the cursor while waiting. */
-	input = get_kbinput(edit, VISIBLE);
+	input = get_kbinput(midwin, VISIBLE);
 
 	lastmessage = VACUUM;
 
@@ -1553,7 +1534,7 @@ void process_a_keystroke(void)
 		/* If the user clicked on a shortcut, read in the key code that it was
 		 * converted into.  Else the click has been handled or was invalid. */
 		if (do_mouse() == 1)
-			input = get_kbinput(edit, BLIND);
+			input = get_kbinput(midwin, BLIND);
 		else
 			return;
 	}
@@ -1583,7 +1564,7 @@ void process_a_keystroke(void)
 
 	/* If we have a command, or if there aren't any other key codes waiting,
 	 * it's time to insert the gathered bytes into the edit buffer. */
-	if ((shortcut || get_key_buffer_len() == 0) && puddle != NULL) {
+	if ((shortcut || waiting_keycodes() == 0) && puddle != NULL) {
 		puddle[depth] = '\0';
 
 		inject(puddle, depth);
@@ -2545,7 +2526,7 @@ int main(int argc, char **argv)
 		confirm_margin();
 #endif
 #ifdef __linux__
-		if (on_a_vt && get_key_buffer_len() == 0)
+		if (on_a_vt && waiting_keycodes() == 0)
 			mute_modifiers = FALSE;
 #endif
 		if (currmenu != MMAIN)
@@ -2559,7 +2540,7 @@ int main(int argc, char **argv)
 		/* Update the displayed current cursor position only when there
 		 * is no message and no keys are waiting in the input buffer. */
 		if (ISSET(CONSTANT_SHOW) && lastmessage == VACUUM && LINES > 1 &&
-								!ISSET(ZERO) && get_key_buffer_len() == 0)
+								!ISSET(ZERO) && waiting_keycodes() == 0)
 			report_cursor_position();
 
 		as_an_at = TRUE;
@@ -2575,13 +2556,13 @@ int main(int argc, char **argv)
 		if (ISSET(ZERO) && lastmessage > HUSH) {
 			if (openfile->current_y == editwinrows - 1 && LINES > 1) {
 				edit_scroll(FORWARD);
-				wnoutrefresh(edit);
+				wnoutrefresh(midwin);
 			}
-			wredrawln(bottomwin, 0 ,1);
-			wnoutrefresh(bottomwin);
+			wredrawln(footwin, 0 ,1);
+			wnoutrefresh(footwin);
 			place_the_cursor();
 		} else if (ISSET(ZERO) && lastmessage > VACUUM)
-			wredrawln(edit, editwinrows - 1, 1);
+			wredrawln(midwin, editwinrows - 1, 1);
 #endif
 
 		errno = 0;

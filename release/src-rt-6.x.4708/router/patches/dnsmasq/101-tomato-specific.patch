@@ -11,7 +11,7 @@
  HAVE_TFTP
     define this to get dnsmasq's built-in TFTP server.
  
-@@ -348,6 +352,10 @@
+@@ -352,6 +356,10 @@
  #undef HAVE_LOOP
  #endif
  
@@ -22,10 +22,10 @@
  #ifdef NO_DUMPFILE
  #undef HAVE_DUMPFILE
  #endif
-@@ -420,6 +428,9 @@
+@@ -428,6 +436,9 @@
  "no-"
  #endif
- "ipset "
+ "nftset "
 +#ifdef HAVE_TOMATO
 +"Tomato-helper "
 +#endif
@@ -79,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1538,8 +1576,22 @@
+@@ -1558,8 +1596,22 @@
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -102,7 +102,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1582,6 +1634,12 @@
+@@ -1602,6 +1654,12 @@
  	    close(daemon->helperfd);
  	  }
  #endif
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1532,6 +1532,12 @@
+@@ -1561,6 +1561,12 @@
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif

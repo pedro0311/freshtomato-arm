@@ -1,7 +1,7 @@
 /**************************************************************************
  *   files.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2021 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -303,14 +303,14 @@ char *do_lockfile(const char *filename, bool ask_the_user)
 		free(postedname);
 		free(pidstring);
 
-		choice = do_yesno_prompt(FALSE, promptstr);
+		choice = ask_user(YESORNO, promptstr);
 		free(promptstr);
 
 		/* When the user cancelled while we're still starting up, quit. */
-		if (choice < 0 && !we_are_running)
+		if (choice == CANCEL && !we_are_running)
 			finish();
 
-		if (choice < 1) {
+		if (choice != YES) {
 			free(lockfilename);
 			wipe_statusbar();
 			return SKIPTHISFILE;
@@ -1732,8 +1732,8 @@ bool make_backup_of(char *realname)
 	 * ask the user what to do, because if something goes wrong during the
 	 * save of the file itself, its contents may be lost. */
 	/* TRANSLATORS: Try to keep this message at most 76 characters. */
-	if (errno != ENOSPC && do_yesno_prompt(FALSE, _("Cannot make backup; "
-								"continue and save actual file? ")) == 1)
+	if (errno != ENOSPC && ask_user(YESORNO, _("Cannot make backup; "
+							"continue and save actual file? ")) == YES)
 		return TRUE;
 
 	/* TRANSLATORS: The %s is the reason of failure. */
@@ -2115,7 +2115,7 @@ int write_it_out(bool exiting, bool withprompt)
 		functionptrtype func;
 		const char *msg;
 		int response = 0;
-		int choice = 0;
+		int choice = NO;
 #ifndef NANO_TINY
 		const char *formatstr = (openfile->fmt == DOS_FILE) ? _(" [DOS Format]") :
 						(openfile->fmt == MAC_FILE) ? _(" [Mac Format]") : "";
@@ -2256,8 +2256,8 @@ int write_it_out(bool exiting, bool withprompt)
 					if (exiting || !openfile->mark)
 #endif
 					{
-						if (do_yesno_prompt(FALSE, _("Save file under "
-												"DIFFERENT NAME? ")) < 1)
+						if (ask_user(YESORNO, _("Save file under "
+												"DIFFERENT NAME? ")) != YES)
 							continue;
 						maychange = TRUE;
 					}
@@ -2270,12 +2270,12 @@ int write_it_out(bool exiting, bool withprompt)
 
 					sprintf(message, question, name);
 
-					choice = do_yesno_prompt(FALSE, message);
+					choice = ask_user(YESORNO, message);
 
 					free(message);
 					free(name);
 
-					if (choice < 1)
+					if (choice != YES)
 						continue;
 				}
 			}
@@ -2291,7 +2291,7 @@ int write_it_out(bool exiting, bool withprompt)
 				warn_and_briefly_pause(_("File on disk has changed"));
 
 				/* TRANSLATORS: Try to keep this at most 76 characters. */
-				choice = do_yesno_prompt(FALSE, _("File was modified "
+				choice = ask_user(YESORNO, _("File was modified "
 								"since you opened it; continue saving? "));
 				wipe_statusbar();
 
@@ -2299,14 +2299,16 @@ int write_it_out(bool exiting, bool withprompt)
 				 * overwrite the file right here when requested. */
 				if (ISSET(SAVE_ON_EXIT) && withprompt) {
 					free(given);
-					if (choice == 1)
+					if (choice == YES)
 						return write_file(openfile->filename, NULL,
 											NORMAL, OVERWRITE, NONOTES);
-					else if (choice == 0)
+					else if (choice == NO)  /* Discard buffer */
 						return 2;
 					else
 						return 0;
-				} else if (choice != 1) {
+				} else if (choice == CANCEL && exiting) {
+					continue;
+				} else if (choice != YES) {
 					free(given);
 					return 1;
 				}
@@ -2664,23 +2666,23 @@ char *input_tab(char *morsel, size_t *place, void (*refresh_func)(void), bool *l
 		for (match = 0; match < num_matches; match++) {
 			char *disp;
 
-			wmove(edit, row, (longest_name + 2) * (match % ncols));
+			wmove(midwin, row, (longest_name + 2) * (match % ncols));
 
 			if (row == lastrow && (match + 1) % ncols == 0 &&
 											match + 1 < num_matches) {
-				waddstr(edit, _("(more)"));
+				waddstr(midwin, _("(more)"));
 				break;
 			}
 
 			disp = display_string(matches[match], 0, longest_name, FALSE, FALSE);
-			waddstr(edit, disp);
+			waddstr(midwin, disp);
 			free(disp);
 
 			if ((match + 1) % ncols == 0)
 				row++;
 		}
 
-		wnoutrefresh(edit);
+		wnoutrefresh(midwin);
 		*listed = TRUE;
 	}
 

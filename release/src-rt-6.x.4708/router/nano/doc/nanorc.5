@@ -1,4 +1,4 @@
-.\" Copyright (C) 2003-2011, 2013-2021 Free Software Foundation, Inc.
+.\" Copyright (C) 2003-2011, 2013-2022 Free Software Foundation, Inc.
 .\"
 .\" This document is dual-licensed.  You may distribute and/or modify it
 .\" under the terms of either of the following licenses:
@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 6.0" "December 2021"
+.TH NANORC 5 "version 6.2" "February 2022"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -196,7 +196,7 @@ the number of lines in the buffer is displayed after the filename.
 This number is cleared upon the next keystroke, or replaced with an
 [i/n] counter when multiple buffers are open.
 The line plus column numbers and the character code are displayed only when
-\fBset constantshow\fR is used, and can be toggled on and off with \fBM-C\fR.
+\fBset constantshow\fR is used, and can be toggled on and off with \fBM\-C\fR.
 The state flags are displayed only when \fBset stateflags\fR is used.
 .TP
 .B set minicolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
@@ -415,8 +415,8 @@ Hide all elements of the interface (title bar, status bar, and help lines)
 and use all rows of the terminal for showing the contents of the buffer.
 The status bar appears only when there is a significant message,
 and disappears after 1.5 seconds or upon the next keystroke.
-With \fBM-Z\fR the title bar plus status bar can be toggled.
-With \fBM-X\fR the help lines.
+With \fBM\-Z\fR the title bar plus status bar can be toggled.
+With \fBM\-X\fR the help lines.
 
 .SH SYNTAX HIGHLIGHTING
 Coloring the different syntactic elements of a file
@@ -695,7 +695,7 @@ and characters in the current buffer (or in the marked region).
 .TP
 .B execute
 Prompts for a program to execute.  The program's output will be inserted
-into the current buffer (or into a new buffer when \fBM-F\fR is toggled).
+into the current buffer (or into a new buffer when \fBM\-F\fR is toggled).
 .TP
 .B speller
 Invokes a spell-checking program, either the default \fBhunspell\fR(1) or GNU
@@ -930,6 +930,9 @@ Goes to the last file in the list when using the file browser.
 Toggles the presence of the two-line list of key bindings at the bottom of the screen.
 (This toggle is special: it is available in all menus except the help viewer
 and the linter.  All further toggles are available in the main menu only.)
+.TP
+.B zero
+Toggles the presence of title bar and status bar.
 .TP
 .B constantshow
 Toggles the constant display of the current line, column, and character positions.
