@@ -2620,7 +2620,7 @@ mysql/target/Makefile:
 			-DWITH_FEDERATED_STORAGE_ENGINE=FALSE \
 			-DWITH_NDBCLUSTER_STORAGE_ENGINE=FALSE \
 			-DCURSES_INCLUDE_PATH="$(TOP)/libncurses/staged/usr/include" \
-			-DCURSES_NCURSES_LIBRARY="$(TOP)/libncurses/staged/usr/lib/libncurses.so" \
+			-DCURSES_LIBRARY="$(TOP)/libncurses/staged/usr/lib/libncurses.so" \
 			-DWITH_ZLIB=system \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
