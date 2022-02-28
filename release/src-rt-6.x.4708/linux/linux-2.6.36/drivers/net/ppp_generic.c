@@ -3012,6 +3012,10 @@ ppp_get_conn_pkt_info(void *pppif, struct ctf_ppp *ctfppp){
 		return (BCME_ERROR);
 	}
 
+	if (pch->chan == NULL) {
+		return (BCME_ERROR);
+	}
+
 	po = pppox_sk((struct sock *)pch->chan->private);
 
 	if (po == NULL){
