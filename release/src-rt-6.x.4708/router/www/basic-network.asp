@@ -1276,7 +1276,9 @@ REMOVE-END */
 			wmode.options[2].disabled = 1;
 			wmode.options[3].disabled = 0;
 			wmode.options[4].disabled = 0;
+/* BCMWL6-BEGIN */
 			wmode.options[5].disabled = 0;
+/* BCMWL6-END */
 		}
 	}
 
@@ -1304,7 +1306,9 @@ REMOVE-END */
 			wmode.options[2].disabled = 0;
 			wmode.options[3].disabled = 1;
 			wmode.options[4].disabled = 1;
+/* BCMWL6-BEGIN */
 			wmode.options[5].disabled = 1;
+/* BCMWL6-END */
 		}
 	}
 
