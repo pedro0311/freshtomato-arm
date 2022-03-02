@@ -6,7 +6,7 @@ LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 ifneq ($(TCONFIG_HTTPS),)
 ifeq ($(TCONFIG_OPENSSL11),y)
-CFLAGS	+= -I$(TOP)/openssl-1.1/include -DUSE_OPENSSL
+CFLAGS	+= -I$(TOP)/openssl-1.1/include -DUSE_OPENSSL -DUSE_OPENSSL11
 LIBS += -L$(TOP)/openssl-1.1 -lssl -lcrypto
 else
 CFLAGS	+= -I$(TOP)/openssl/include -DUSE_OPENSSL
