@@ -488,7 +488,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	uint rfs_off = 0;
 	uint vmlz_off, knl_size;
 	uint32 top = 0;
-	uint32 bootsz;
+	uint32 bootsz = 0;
 	uint32 trx_size;
 #ifdef CONFIG_CRASHLOG
 	char create_crash_partition = 0;
@@ -536,7 +536,15 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	     nvram_match("boardrev", "0x1110")) {
 	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
-	 }
+	}
+	/* Buffalo WZR-1750DHP */
+	else if (nvram_match("boardnum", "00") &&
+	     nvram_match("boardtype","0xF646") &&
+	     nvram_match("boardrev", "0x1100")) {
+		size = 0x100000;	/* flash0 ST Compatible Serial flash size 1024KB */
+		bootsz = 0x40000;	/* flash0.boot ST Compatible Serial flash offset 00000000 size 256KB */
+					/* flash0.nvram ST Compatible Serial flash offset 000F0000 size 64KB */
+	}
 	
 	bootdev = soc_boot_dev((void *)sih);
 	knldev = soc_knl_dev((void *)sih);
@@ -678,8 +686,11 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
 
 	} else {
-		bootsz = boot_partition_size(sfl_info->base);
+		if (!bootsz)
+			bootsz = boot_partition_size(sfl_info->base);
+
 		printk("Boot partition size = %d(0x%x)\n", bootsz, bootsz);
+
 		/* Size pmon */
 		if (maxsize)
 			bootsz = maxsize;
