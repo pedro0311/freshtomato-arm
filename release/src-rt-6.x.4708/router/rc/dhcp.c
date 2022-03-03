@@ -343,7 +343,11 @@ int dhcpc_event_main(int argc, char **argv)
 	ifname = getenv("interface");
 	char prefix[] = "wanXX";
 
-	if (nvram_match("wan2_ifname", ifname))
+	if (nvram_match("wan_ifname", ifname))
+		strcpy(prefix, "wan");
+	else if (nvram_match("wan_iface", ifname))
+		strcpy(prefix, "wan");
+	else if (nvram_match("wan2_ifname", ifname))
 		strcpy(prefix, "wan2");
 	else if (nvram_match("wan2_iface", ifname))
 		strcpy(prefix, "wan2");
@@ -361,26 +365,26 @@ int dhcpc_event_main(int argc, char **argv)
 		strcpy(prefix, "wan");
 
 	if (!wait_action_idle(10))
-		return 1;
+		return 0;
 
 	logmsg(LOG_DEBUG, "*** %s: interface=%s wan_prefix=%s event=%s", __FUNCTION__, ifname, prefix, argv[1]);
 
-	if ((argc == 2) && (ifname = getenv("interface")) != NULL) {
-		if (strcmp(argv[1], "deconfig") == 0)
-			return deconfig(ifname, prefix);
-		if (strcmp(argv[1], "bound") == 0)
-			return bound(ifname, 0, prefix);
-		if ((strcmp(argv[1], "renew") == 0) || (strcmp(argv[1], "update") == 0))
-			return renew(ifname,prefix);
-	}
+	if ((!argv[1]) || (ifname == NULL))
+		return EINVAL;
+	else if (strstr(argv[1], "deconfig"))
+		return deconfig(ifname, prefix);
+	else if (strstr(argv[1], "bound"))
+		return bound(ifname, 0, prefix);
+	else if ((strstr(argv[1], "renew")) || (strstr(argv[1], "update")))
+		return renew(ifname, prefix);
 
-	return 1;
+	return 0;
 }
 
 int dhcpc_release_main(int argc, char **argv)
 {
 	char prefix[] = "wanXX";
-	char dhcpc_file[64];
+	char pid_file[64];
 
 	if (argc > 1)
 		strcpy(prefix, argv[1]);
@@ -394,9 +398,9 @@ int dhcpc_release_main(int argc, char **argv)
 	if (!using_dhcpc(prefix))
 		return 1;
 
-	memset(dhcpc_file, 0, sizeof(dhcpc_file));
-	snprintf(dhcpc_file, sizeof(dhcpc_file), "/var/run/udhcpc-%s.pid", prefix);
-	if (kill_pidfile_s(dhcpc_file, SIGUSR2) == 0)
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-%s.pid", prefix);
+	if (kill_pidfile_s(pid_file, SIGUSR2) == 0)
 		sleep(2);
 
 	do_renew_file(0, prefix);
@@ -473,12 +477,11 @@ void start_dhcpc(char *prefix)
 	}
 
 	memset(cmd, 0, sizeof(cmd));
-	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s %s",
+	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s",
 	                           ifname,
 	                           pid_file,
 	                           tmp,
 	                           nvram_get_int("dhcp_routes") ? "-O33 -O121 -O249" : "", /* routes/staticroutes/msstaticroutes */
-	                           nvram_get_int("dhcpc_minpkt") ? "-m" : "",
 	                           nvram_contains_word("log_events", "dhcpc") ? "-S" : "",
 #ifdef TCONFIG_IPV6
 	                           (get_ipv6_service() == IPV6_6RD_DHCP) ? "-O212 -O150" : "", /* ip6rd rfc/ip6rd comcast */
