@@ -397,7 +397,7 @@ function verifyFields(focused, quiet) {
 	var ok = 1;
 	var a, b, c, d, e;
 	var u, n, uidx, wan_uidx;
-	var wmode, sm2;
+	var wmode, sm2, sta_wl;
 	var curr_mwan_num = E('_mwan_num').value;
 	var wanproto = [];
 
@@ -783,6 +783,7 @@ function verifyFields(focused, quiet) {
 			vis['_wan'+u+'_modem_band'] = 0;
 			vis['_wan'+u+'_modem_roam'] = 0;
 			vis['_f_wan'+u+'_ppp_mlppp'] = 0;
+			E('_wan'+u+'_sta').value = '';
 			vis['_wan'+u+'_sta'] = 0;
 		break;
 		case 'lte':
@@ -802,6 +803,7 @@ function verifyFields(focused, quiet) {
 			vis['_wan'+u+'_modem_dev'] = 0;
 			vis['_wan'+u+'_modem_init'] = 0;
 			vis['_f_wan'+u+'_ppp_mlppp'] = 0;
+			E('_wan'+u+'_sta').value = '';
 			vis['_wan'+u+'_sta'] = 0;
 		break;
 /* USB-END */
@@ -911,13 +913,37 @@ function verifyFields(focused, quiet) {
 			u = wl_unit(uidx);
 			wmode = E('_f_wl'+u+'_mode').value;
 
-			if (!E('_f_wl'+u+'_radio').checked) {
+			if (!E('_f_wl'+u+'_radio').checked) { /* WL is disabled */
 				for (a in wl_vis[uidx]) {
 					wl_vis[uidx][a] = 2;
 				}
 				wl_vis[uidx]._f_wl_radio = 1;
 				wl_vis[uidx]._wl_nbw_cap = nphy || acphy ? 2 : 0;
 				wl_vis[uidx]._f_wl_nband = (bands[uidx].length > 1) ? 2 : 0;
+
+				for (c = 1; c <= curr_mwan_num; ++c) { /* on every WAN */
+					d = (c > 1) ? c : '';
+					sta_wl = E('_wan'+d+'_sta');
+
+					if (sta_wl.value == 'wl'+u) /* 'sta' is set, so change to 'disabled' */
+						sta_wl.value = '';
+
+					for (e = 0; e < sta_wl.options.length; ++e) {
+						if (sta_wl.options[e].value == 'wl'+u)
+							sta_wl.options[e].disabled = 1; /* and disable 'sta' option */
+					}
+				}
+			}
+			else { /* WL is enabled */
+				for (c = 1; c <= curr_mwan_num; ++c) {
+					d = (c > 1) ? c : '';
+					var sta_wl = E('_wan'+d+'_sta');
+
+					for (e = 0; e < sta_wl.options.length; ++e) {
+						if (sta_wl.options[e].value == 'wl'+u)
+							sta_wl.options[e].disabled = 0; /* so enable 'sta' option */
+					}
+				}
 			}
 
 			switch (wmode) {
@@ -1287,15 +1313,19 @@ REMOVE-END */
 		if (wl_sunit(uidx) < 0) {
 			u = wl_unit(uidx);
 
-			if (E('_f_wl'+u+'_mode').value == 'sta')
-				E('_f_wl'+u+'_mode').value = wl_mode_last[u];
+			if (E('_f_wl'+u+'_mode').value == 'sta') {
+				if (wl_mode_last[u] != 'sta') /* only if last mode (on loading the page) is not 'sta'! */
+					E('_f_wl'+u+'_mode').value = wl_mode_last[u];
+				else /* reset to the most popular 'ap' mode */
+					E('_f_wl'+u+'_mode').value = 'ap';
+			}
 		}
 	}
 
 	/* then apply new ones (if any) */
 	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
-		var sta_wl = E('_wan'+u+'_sta').value;
+		sta_wl = E('_wan'+u+'_sta').value;
 
 		/* sta_wl: wl0, wl1, wl2 */
 		if (sta_wl != '') {
