@@ -728,6 +728,7 @@ function verifyFields(focused, quiet) {
 			vis['_f_wan'+u+'_dns_2'] = 0;
 			vis['_wan'+u+'_dns_auto'] = 0;
 			E('_wan'+u+'_sta').value = '';
+			vis['_wan'+u+'_sta'] = 0;
 		break;
 		case 'dhcp':
 			vis['_wan'+u+'_l2tp_server_ip'] = 0;
