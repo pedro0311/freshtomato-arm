@@ -387,6 +387,7 @@ function init() {
 /* HTTPS-END */
 				{ title: 'Allow Wireless Access', indent: 2, name: 'f_http_wireless', type: 'checkbox', value: nvram.web_wl_filter == 0 },
 			null,
+			{ title: 'Allow Remote Upgrade', name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
 			{ title: 'Remote Access', name: 'f_http_remote', type: 'select', options: [[0,'Disabled'],[1,'HTTP']
 /* HTTPS-BEGIN */
 			          ,[2,'HTTPS']
@@ -397,7 +398,6 @@ function init() {
 				        (nvram.remote_mgt_https == 1) ? 2 :
 /* HTTPS-END */
 				        1) : 0 },
-			{ title: 'Allow Remote Upgrade', name: 'f_remote_upgrade', type: 'checkbox', suffix: '&nbsp;<small>keep disabled for smaller memory footprint during upgrade<\/small>', value: nvram.remote_upgrade == 1 },
 				{ title: 'Port', indent: 2, name: 'http_wanport', type: 'text', maxlen: 5, size: 7, value:  fixPort(nvram.http_wanport, 8080) },
 				{ title: 'Port Protection', indent: 2, name: 'f_http_wanport_bfm', type: 'checkbox', suffix: '&nbsp;<small>(enable brute force mitigation rule)<\/small>', value: nvram.http_wanport_bfm == 1 },
 /* HTTPS-BEGIN */
