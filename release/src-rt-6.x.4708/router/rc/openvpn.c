@@ -1008,8 +1008,6 @@ void start_ovpn_server(int unit)
 			}
 			logmsg(LOG_DEBUG, "*** %s: CCD processing complete", __FUNCTION__);
 		}
-		else
-			fprintf(fp, "duplicate-cn\n");
 
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_userpass", unit);
