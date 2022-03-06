@@ -1040,6 +1040,7 @@ struct nvram_tuple router_defaults[] = {
 /* admin-jffs2 */
 	{ "jffs2_on",			"0"				, 0 },
 	{ "jffs2_exec",			""				, 0 },
+	{ "jffs2_auto_unmount",		"0"				, 0 },	/* automatically unmount JFFS2 during FW upgrade */
 
 /* admin-tomatoanon */
 	{ "tomatoanon_enable",		"-1"				, 0 },

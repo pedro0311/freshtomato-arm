@@ -61,6 +61,7 @@ ifneq ($(TCONFIG_JFFS2),y)
 	sed -i $(INSTALLDIR)/www/admin-bwm.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-iptraffic.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/admin-upgrade.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
+	sed -i $(INSTALLDIR)/www/admin-access.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 	sed -i $(INSTALLDIR)/www/nas-media.asp -e "/JFFS2-BEGIN/,/JFFS2-END/d"
 else
 ifeq ($(TCONFIG_BRCM_NAND_JFFS2),y)
