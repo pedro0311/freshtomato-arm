@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("jffs2_on,remote_upgrade"); %>
+//	<% nvram("jffs2_on,jffs2_auto_unmount,remote_upgrade"); %>
 
 //	<% sysinfo(); %>
 
@@ -67,7 +67,7 @@ function earlyInit() {
 
 	E('afu-size').innerHTML = '&nbsp; '+scaleSize(sysinfo.totalfreeram)+'&nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>';
 /* JFFS2-BEGIN */
-	if (nvram.jffs2_on != 0) {
+	if (nvram.jffs2_on != 0 && nvram.jffs2_auto_unmount == 0) {
 		E('afu-warn').style.display = 'block';
 		E('afu-input').style.display = 'none';
 	}
@@ -122,9 +122,10 @@ function earlyInit() {
 
 <!--JFFS2-BEGIN -->
 <div class="note-warning" id="afu-warn" style="display:none">
-	<b>Cannot upgrade if JFFS is enabled.</b><br><br>
-	An upgrade may overwrite the JFFS partition currently in use. Before upgrading, please backup the contents of the JFFS partition, disable it, then reboot the router.
-	<div class="note-spacer"><a href="admin-jffs2.asp">Disable &raquo;</a></div>
+	<b>Upgrading firmware with JFFS enabled is not possible. You might now:</b><br><br>
+	- <a href="admin-jffs2.asp">Manually unmount the JFFS partition</a> first before re-attempting the upgrade<br><br>
+	- <a href="admin-access.asp">Enable the Unmount JFFS during upgrade</a> option<br><br>
+	In either cases make sure you have a backup of the content as, due to the operation performed, it is not guaranteed the content of JFFS will be preserved. 
 </div>
 <!--JFFS2-END -->
 
