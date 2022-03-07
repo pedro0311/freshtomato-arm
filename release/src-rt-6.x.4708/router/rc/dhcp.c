@@ -427,6 +427,8 @@ int dhcpc_renew_main(int argc, char **argv)
 
 	logmsg(LOG_DEBUG, "*** %s: argc=%d wan_prefix=%s", __FUNCTION__, argc, prefix);
 
+	mwan_table_add(prefix); /* for dual WAN and multi WAN */
+
 	if (!using_dhcpc(prefix))
 		return 1;
 
@@ -438,6 +440,8 @@ int dhcpc_renew_main(int argc, char **argv)
 		stop_dhcpc(prefix);
 		start_dhcpc(prefix);
 	}
+
+	mwan_load_balance(); /* for dual WAN and multi WAN */
 
 	return 0;
 }
