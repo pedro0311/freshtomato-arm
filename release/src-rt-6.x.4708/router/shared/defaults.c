@@ -209,7 +209,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_modem_speed",		"00"				, 0 },
 	{ "wan_modem_band",		"7FFFFFFFFFFFFFFF"		, 0 },
 	{ "wan_modem_roam",		"2"				, 0 },
-	{ "wan_modem_if",		""				, 0 },
 	{ "wan_modem_type",		""				, 0 },
 
 	{ "wan2_modem_pin",		""				, 0 },
@@ -219,7 +218,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_modem_speed",		"00"				, 0 },
 	{ "wan2_modem_band",		"7FFFFFFFFFFFFFFF"		, 0 },
 	{ "wan2_modem_roam",		"2"				, 0 },
-	{ "wan2_modem_if",		""				, 0 },
 	{ "wan2_modem_type",		""				, 0 },
 
 #ifdef TCONFIG_MULTIWAN
@@ -230,7 +228,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_modem_speed",		"00"				, 0 },
 	{ "wan3_modem_band",		"7FFFFFFFFFFFFFFF"		, 0 },
 	{ "wan3_modem_roam",		"2"				, 0 },
-	{ "wan3_modem_if",		""				, 0 },
 	{ "wan3_modem_type",		""				, 0 },
 
 	{ "wan4_modem_pin",		""				, 0 },
@@ -240,7 +237,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan4_modem_speed",		"00"				, 0 },
 	{ "wan4_modem_band",		"7FFFFFFFFFFFFFFF"		, 0 },
 	{ "wan4_modem_roam",		"2"				, 0 },
-	{ "wan4_modem_if",		""				, 0 },
 	{ "wan4_modem_type",		""				, 0 },
 #endif /* TCONFIG_MULTIWAN */
 #endif /* TCONFIG_USB */

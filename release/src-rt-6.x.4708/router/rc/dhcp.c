@@ -462,11 +462,7 @@ void start_dhcpc(char *prefix)
 	do_renew_file(1, prefix);
 
 	proto = get_wanx_proto(prefix);
-
-	if (proto == WP_LTE)
-		ifname = nvram_safe_get(strcat_r(prefix, "_modem_if", tmp));
-	else
-		ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+	ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
 
 	if ((proto == WP_DHCP) || (proto == WP_LTE))
 		nvram_set(strcat_r(prefix, "_iface", tmp), ifname);

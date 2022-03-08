@@ -805,10 +805,6 @@ const wanface_list_t *get_wanfaces(char *prefix)
 				if (!(*iface))
 					iface = "ppp+";
 			}
-			else if (proto == WP_LTE) {
-				iface = nvram_safe_get(strlcat_r(prefix, "_modem_if", tmp, sizeof(tmp)));
-				nvram_set(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)), iface);
-			}
 			else {
 				iface = nvram_safe_get(strlcat_r(prefix, "_ifname", tmp, sizeof(tmp)));
 			}

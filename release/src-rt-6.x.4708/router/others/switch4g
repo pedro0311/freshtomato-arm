@@ -42,7 +42,7 @@ connect() {
 	SPEED=$(NV "$PREFIX"_modem_speed)
 	BAND=$(NV "$PREFIX"_modem_band)
 	ROAMING=$(NV "$PREFIX"_modem_roam)
-	IFA=$(NV "$PREFIX"_modem_if)
+	IFA=$(NV "$PREFIX"_ifname)
 	local TTY DEVALL SYSCFGEX CGPADDR TXTLOG MODESPEED MODEROAM MODEBAND CONNECTED=0 COUNT=1 DONE=0 i
 	local SPEEDTXT ROAMTXT BANDTXT RESSPEED RSPEEDTXT RESROAM RROAMTXT RESBAND RBANDTXT
 
@@ -498,10 +498,9 @@ searchWAN() {
 	[ "$FOUND" -eq 1 ] && {
 		findType	# MODULE --> MTYPE
 
-		nvram set "$PREFIX"_modem_if="$WAN"
+		nvram set "$PREFIX"_ifname="$WAN"
 		nvram set "$PREFIX"_modem_type="$MTYPE"
 		$LOGS "4G MODEM WAN ($MTYPE) found - using $MODULE module and $WAN as WAN"
-		nvram set "$PREFIX"_iface="$WAN"
 	} || {
 		[ "$(NV mwan_cktime)" -gt 0 ] && {
 			watchdog add
