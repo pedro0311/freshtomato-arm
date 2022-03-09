@@ -604,6 +604,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan_ipaddr",			V_IP				},
 	{ "wan_netmask",		V_IP				},
 	{ "wan_gateway",		V_IP				},
+	{ "wan_hwaddr",			V_TEXT(0, 17)			},	/* WAN interface MAC address */
+	{ "wan_iface",			V_TEXT(0, 8)			},
+	{ "wan_ifname",			V_TEXT(0, 8)			},
 	{ "hb_server_ip",		V_LENGTH(0, 32)			},
 	{ "wan_l2tp_server_ip",		V_LENGTH(0, 128)		},
 	{ "wan_pptp_server_ip",		V_LENGTH(0, 128)		},
@@ -651,6 +654,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_ipaddr",		V_IP				},
 	{ "wan2_netmask",		V_IP				},
 	{ "wan2_gateway",		V_IP				},
+	{ "wan2_hwaddr",		V_TEXT(0, 17)			},	/* WAN interface MAC address */
+	{ "wan2_iface",			V_TEXT(0, 8)			},
+	{ "wan2_ifname",		V_TEXT(0, 8)			},
 	{ "wan2_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan2_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan2_pptp_dhcp",		V_01				},
@@ -684,6 +690,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_ipaddr",		V_IP				},
 	{ "wan3_netmask",		V_IP				},
 	{ "wan3_gateway",		V_IP				},
+	{ "wan3_hwaddr",		V_TEXT(0, 17)			},	/* WAN interface MAC address */
+	{ "wan3_iface",			V_TEXT(0, 8)			},
+	{ "wan3_ifname",		V_TEXT(0, 8)			},
 	{ "wan3_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan3_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan3_pptp_dhcp",		V_01				},
@@ -716,6 +725,9 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_ipaddr",		V_IP				},
 	{ "wan4_netmask",		V_IP				},
 	{ "wan4_gateway",		V_IP				},
+	{ "wan4_hwaddr",		V_TEXT(0, 17)			},	/* WAN interface MAC address */
+	{ "wan4_iface",			V_TEXT(0, 8)			},
+	{ "wan4_ifname",		V_TEXT(0, 8)			},
 	{ "wan4_l2tp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan4_pptp_server_ip",	V_LENGTH(0, 128)		},
 	{ "wan4_pptp_dhcp",		V_01				},
