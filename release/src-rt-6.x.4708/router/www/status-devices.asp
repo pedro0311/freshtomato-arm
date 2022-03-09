@@ -132,7 +132,7 @@ dg.populate = function() {
 		e.unit = a[6] * 1;
 		e.rssi = a[2];
 
-		for (j = 0; j < wl_info.length; ++j) {
+		for (j = wl_info.length -1 ; j >= 0; --j) {
 			is_wds = (e.ip == '-' && ((nvram['wl'+wl_info[j][5]+'_mode'] == 'wds') || (nvram['wl'+wl_info[j][5]+'_mode'] == 'ap' && nvram['wl'+wl_info[j][5]+'_wds_enable'] == 1)));
 			if ((wl_info[j][0] == e.ifname) || (is_wds)) {
 				e.freq = wl_info[j][1];
@@ -150,7 +150,7 @@ dg.populate = function() {
 	}
 
 	/* special case: pppoe/pptp/l2tp WAN */
-	for (i = 1; i <= MAX_PORT_ID; i++) {
+	for (i = MAX_PORT_ID; i >= 1; --i) {
 		k = (i == 1) ? '' : i.toString();
 		var proto = nvram['wan'+k+'_proto'];
 		if ((proto == 'pppoe' || proto == 'pptp' || proto == 'l2tp') && nvram['wan'+k+'_hwaddr']) {
@@ -344,9 +344,10 @@ dg.populate = function() {
 		/* find WANx, proto */
 		for (j = 1; j <= MAX_PORT_ID; j++) {
 			k = (j == 1) ? '' : j.toString();
-			if (((nvram['wan'+k+'_ifname'] == e.ifname) || (nvram['wan'+k+'_ifnameX'] == e.ifname) || (nvram['wan'+k+'_iface'] == e.ifname)) && e.ifname != '') {
+			if (((nvram['wan'+k+'_ifname'] == e.ifname) || (nvram['wan'+k+'_ifnameX'] == e.ifname) || (nvram['wan'+k+'_iface'] == e.ifname)) && e.ifname != '' && nvram['wan'+k+'_hwaddr'] != '') {
 				e.wan = 'WAN'+(j ? (j - 1) : '0')+' ';
 				e.proto = nvram['wan'+k+'_proto'];
+				break;
 			}
 		}
 	}
@@ -443,7 +444,7 @@ dg.populate = function() {
 
 		f = '';
 		if (e.freq != '') {
-			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && nvram.wan_proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
+			f = '<img src="wl'+(e.freq == '5 GHz' ? '50' : '24')+'.gif"'+((e.mode == 'wet' || e.mode == 'sta' || e.mode == 'psta' || (e.mode == 'wds' && e.proto == 'disabled')) ? 'style="filter:invert(1)"' : '')+' alt="" title="'+e.freq+'">';
 			e.media = (e.freq == '5 GHz' ? 1 : 2);
 		}
 		else if (e.ifname != '' && mode != 'wet') {

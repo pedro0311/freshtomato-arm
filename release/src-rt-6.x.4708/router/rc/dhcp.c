@@ -427,6 +427,8 @@ int dhcpc_renew_main(int argc, char **argv)
 
 	logmsg(LOG_DEBUG, "*** %s: argc=%d wan_prefix=%s", __FUNCTION__, argc, prefix);
 
+	mwan_table_add(prefix); /* for dual WAN and multi WAN */
+
 	if (!using_dhcpc(prefix))
 		return 1;
 
@@ -438,6 +440,8 @@ int dhcpc_renew_main(int argc, char **argv)
 		stop_dhcpc(prefix);
 		start_dhcpc(prefix);
 	}
+
+	mwan_load_balance(); /* for dual WAN and multi WAN */
 
 	return 0;
 }
@@ -458,11 +462,7 @@ void start_dhcpc(char *prefix)
 	do_renew_file(1, prefix);
 
 	proto = get_wanx_proto(prefix);
-
-	if (proto == WP_LTE)
-		ifname = nvram_safe_get(strcat_r(prefix, "_modem_if", tmp));
-	else
-		ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
+	ifname = nvram_safe_get(strcat_r(prefix, "_ifname", tmp));
 
 	if ((proto == WP_DHCP) || (proto == WP_LTE))
 		nvram_set(strcat_r(prefix, "_iface", tmp), ifname);

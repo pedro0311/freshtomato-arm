@@ -373,7 +373,6 @@ var bands = [];
 var nm_loaded = [], ch_loaded = [], max_channel = [];
 
 for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-/*	if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 	if (wl_sunit(uidx) < 0) {
 		var b;
 		b = [];
@@ -425,7 +424,6 @@ function verifyFields(focused, quiet) {
 	}
 
 	for (uidx = 0; uidx < wl_ifaces.length; ++uidx) {
-/*		if (wl_ifaces[uidx][0].indexOf('.') < 0) { */
 		if (wl_sunit(uidx)<0) {
 			u = wl_unit(uidx);
 			if (focused == E('_f_wl'+u+'_nband')) {
@@ -1371,8 +1369,8 @@ function save() {
 		return;
 	lg.resetNewEditor();
 
-	var a, b, c;
-	var i;
+	var a, b, c, d, e;
+	var i, j;
 	var u, uidx, wan_uidx, wmode, sm2, wradio;
 	var curr_mwan_num = E('_mwan_num').value;
 
@@ -1401,9 +1399,9 @@ function save() {
 /* BCMWL6-END */
 			    0) {
 				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
-					var v = (wan_uidx > 1) ? wan_uidx : '';
-					E('_wan'+v+'_proto').disabled = 0;
-					E('_wan'+v+'_proto').value = 'disabled';
+					d = (wan_uidx > 1) ? wan_uidx : '';
+					E('_wan'+d+'_proto').disabled = 0;
+					E('_wan'+d+'_proto').value = 'disabled';
 				}
 			}
 
@@ -1531,8 +1529,8 @@ function save() {
 /* BSD-END */
 
 /* initialize/wipe out relevant fields */
-	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
-		var j = ((i == 0) ? '' : i.toString());
+	for (i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
+		j = ((i == 0) ? '' : i.toString());
 		fom['lan'+j+'_ifname'].value = '';
 		fom['lan'+j+'_ipaddr'].value = '';
 		fom['lan'+j+'_netmask'].value = '';
@@ -1545,13 +1543,13 @@ function save() {
 		fom['dhcpd'+j+'_endip'].value = '';
 	}
 
-	var d = lg.getAllData();
-	for (var i = 0; i < d.length; ++i) {
+	d = lg.getAllData();
+	for (i = 0; i < d.length; ++i) {
 		if (lg.countOverlappingNetworks(d[i][2]) > 1) {
-			var s = 'Cannot proceed: two or more LAN bridges have conflicting IP addresses or overlapping subnets';
-			alert(s);
-			var e = E('footer-msg');
-			e.innerHTML = s;
+			c = 'Cannot proceed: two or more LAN bridges have conflicting IP addresses or overlapping subnets';
+			alert(c);
+			e = E('footer-msg');
+			e.innerHTML = c;
 			e.style.display = 'inline-block';
 			setTimeout(
 				function() {
@@ -1561,7 +1559,7 @@ function save() {
 			return;
 		}
 
-		var j = (parseInt(d[i][0]) == 0) ? '' : d[i][0].toString();
+		j = (parseInt(d[i][0]) == 0) ? '' : d[i][0].toString();
 		fom['lan'+j+'_ifname'].value = 'br'+d[i][0];
 		fom['lan'+j+'_stp'].value = d[i][1];
 		fom['lan'+j+'_ipaddr'].value = d[i][2];
@@ -1587,10 +1585,10 @@ alert('lan'+j+'_ifname=' + fom['lan'+j+'_ifname'].value + '\n' +
 REMOVE-END */
 	}
 
-	var e = E('footer-msg');
-	var t = fixIP(fom['lan_ipaddr'].value);
-	if ((fom['lan_ifname'].value != 'br0') || (!t)) {
-		e.innerHTML = 'Bridge br0 must be always defined.';
+	e = E('footer-msg');
+	d = fixIP(fom['lan_ipaddr'].value);
+	if ((fom['lan_ifname'].value != 'br0') || (!d)) {
+		e.innerHTML = 'Bridge br0 must be always defined';
 		e.style.display = 'inline-block';
 		setTimeout(
 			function() {
@@ -1614,15 +1612,32 @@ REMOVE-END */
 		if (fom['wan'+u+'_proto'].value == 'disabled') /* if wanX is disabled (for ex. wireless bridge / AP only) */
 			fom['wan'+u+'_dns_auto'].value = '0'; /* make sure to use static dns! */
 
+		if ((fom['wan'+u+'_proto'].value == 'disabled') || (uidx > curr_mwan_num)) { /* wipe out relevant fields (needed when switching, i.e. from 2 WANs to 1) */
+			fom['wan'+u+'_iface'].value = '';
+			fom['wan'+u+'_ifname'].value = '';
+			fom['wan'+u+'_hwaddr'].value = '';
+		}
+
 		if (fom['wan'+u+'_dns_auto'].value == '1')
 			fom['wan'+u+'_dns'].value = '';
 		else
 			fom['wan'+u+'_dns'].value = joinAddr([fom['f_wan'+u+'_dns_1'].value, fom['f_wan'+u+'_dns_2'].value]);
 	}
 
+	/* set 'sta' to off when drop down list is disabled or hidden */
+	e = E('sta_reset');
+	e.innerHTML = ''; /* first wipe all possible contents */
+	c = '';
+	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
+		if ((E('_wan'+u+'_sta').disabled == 1) || (E(PR('_wan'+u+'_sta')).style.display == 'none'))
+			c += '<input type="hidden" name="wan'+u+'_sta" value="">';
+	}
+	e.innerHTML = c;
+
 	fom.wan_dns.value = joinAddr([fom.f_dns_1.value, fom.f_dns_2.value]); /* get static dns */
-	for (var uidx = 1; uidx <= curr_mwan_num; ++uidx) {
-		var u = (uidx > 1) ? uidx : '';
+	for (uidx = 1; uidx <= curr_mwan_num; ++uidx) {
+		u = (uidx > 1) ? uidx : '';
 		if (fom['wan'+u+'_proto'].value != 'disabled') {
 			fom.wan_dns.value = joinAddr([fom.f_wan_dns_1.value, fom.f_wan_dns_2.value]);
 			break;
@@ -1699,9 +1714,8 @@ function init() {
 <input type="hidden" name="smart_connect_x">
 <!-- BSD-END -->
 <input type="hidden" name="mwan_tune_gc" value="0">
-<!-- REMOVE-BEGIN
-<input type="hidden" name="mwan_init" value="0">
-REMOVE-END -->
+<div id="sta_reset" style="display:none"></div>
+
 <script>
 	for (var i = 0 ; i <= MAX_BRIDGE_ID ; i++) {
 		var j = (i == 0) ? '' : i.toString();
@@ -1727,7 +1741,7 @@ REMOVE-END -->
 	function refreshWanSection() {
 		var curr_mwan_num = E('_mwan_num').value;
 		for (uidx = maxwan_num; uidx > 1; --uidx) {
-			var u = (uidx>1) ? uidx : '';
+			var u = (uidx > 1) ? uidx : '';
 			elem.display('wan'+u+'-title', 'sesdiv_wan'+u, curr_mwan_num >= uidx);
 		}
 	}
@@ -1735,16 +1749,16 @@ REMOVE-END -->
 	createFieldTable('', [
 		{ title: 'Number of WAN Ports', name: 'mwan_num', type: 'select', options: [['1','1 WAN'],['2','2 WAN']
 /* MULTIWAN-BEGIN */
-										    ,['3','3 WAN'],['4','4 WAN']
+											   ,['3','3 WAN'],['4','4 WAN']
 /* MULTIWAN-END */
 			], value: nvram.mwan_num, suffix: '&nbsp; <small>Please configure <a href="advanced-vlan.asp">VLAN<\/a> first<\/small>' },
 		{ title: 'Tune route cache', name: 'f_mwan_tune_gc', type: 'checkbox', suffix: '&nbsp; <small>for multiwan in load balancing mode<\/small>', value: (nvram['mwan_tune_gc'] == 1) },
 		{ title: 'Check connections every', name: 'mwan_cktime', type: 'select', options: [
-			['0','Disabled'],['60','1 minute'],['120','2 minutes*'],['180','3 minutes'],['300','5 minutes'],
-			['600','10 minutes'],['900','15 minutes'],['1800','30 minutes'],['3600','1 hour']],
+			['0','Disabled'],['30','30 seconds'],['60','1 minute*'],['120','2 minutes'],['180','3 minutes'],
+			['300','5 minutes'],['600','10 minutes'],['900','15 minutes'],['1800','30 minutes']],
 			suffix: '&nbsp; <small>*recommended<\/small>',
 			value: nvram.mwan_cktime },
-		{ title: 'Target 1', indent: 2, name: 'f_mwan_ckdst_1', type: 'text', maxlen: 30, size: 30, value: ckdst[0] || ''},
+		{ title: 'Target 1', indent: 2, name: 'f_mwan_ckdst_1', type: 'text', maxlen: 30, size: 30, value: ckdst[0] || '', suffix: '&nbsp; <small>IP/domain<\/small>'},
 		{ title: 'Target 2', indent: 2, name: 'f_mwan_ckdst_2', type: 'text', maxlen: 30, size: 30, value: ckdst[1] || ''}
 	]);
 	E('_mwan_num').onchange = function () {
@@ -1759,7 +1773,7 @@ REMOVE-END -->
 <script>
 	refresh_sta_list();
 	for (var uidx = 1; uidx <= maxwan_num; ++uidx) {
-		var u = (uidx>1) ? uidx : '';
+		var u = (uidx > 1) ? uidx : '';
 		dns = nvram['wan'+u+'_dns'].split(/\s+/);
 		W('<input type="hidden" name="wan'+u+'_mtu">');
 		W('<input type="hidden" name="wan'+u+'_pptp_dhcp">');
@@ -1769,6 +1783,10 @@ REMOVE-END -->
 		W('<input type="hidden" name="wan'+u+'_status_script">');
 /* USB-END */
 		W('<input type="hidden" name="wan'+u+'_ck_pause">');
+		W('<input type="hidden" name="wan'+u+'_iface">');
+		W('<input type="hidden" name="wan'+u+'_ifname">');
+		W('<input type="hidden" name="wan'+u+'_hwaddr">');
+
 		W('<div class="section-title" id="wan'+u+'-title">WAN'+(uidx - 1)+' Settings<\/div>');
 		W('<div class="section" id="sesdiv_wan'+u+'">');
 		createFieldTable('', [
@@ -1914,7 +1932,7 @@ REMOVE-END -->
 			W('<\/div>');
 			W('<div class="section">');
 
-			f = [
+			var f = [
 				{ title: 'Enable Wireless', name: 'f_wl'+u+'_radio', type: 'checkbox',
 					value: (eval('nvram.wl'+u+'_radio') == '1') && (eval('nvram.wl'+u+'_net_mode') != 'disabled') },
 				{ title: 'MAC Address', text: '<a href="advanced-mac.asp">'+eval('nvram.wl'+u+'_hwaddr')+'<\/a>' },
@@ -1962,7 +1980,7 @@ REMOVE-END -->
 					value: eval('nvram.wl'+u+'_passphrase') }
 			];
 
-			for (i = 1; i <= 4; ++i) {
+			for (var i = 1; i <= 4; ++i) {
 				f.push(
 					{ title: ('Key '+i), indent: 2, name: ('wl'+u+'_key'+i), type: 'text', maxlen: 26, size: 34,
 						suffix: '<input type="radio" onchange="verifyFields(this,1)" onclick="verifyFields(this,1)" name="f_wl'+u+'_wepidx" id="_f_wl'+u+'_wepidx_'+i+'" value="'+i+'"'+((eval('nvram.wl'+u+'_key') == i) ? ' checked="checked">' : '>'),
@@ -1971,11 +1989,12 @@ REMOVE-END -->
 
 			f.push(null, { title: 'WDS', name: 'f_wl'+u+'_lazywds', type: 'select', options: [['0','Link With...'],['1','Automatic']], value: nvram['wl'+u+'_lazywds'] } );
 
-			wds = eval('nvram.wl'+u+'_wds').split(/\s+/);
+			var wds = eval('nvram.wl'+u+'_wds').split(/\s+/);
 			for (i = 0; i < 10; i += 2) {
-				f.push({ title: (i ? '' : 'MAC Address'), indent: 2, multi: [
-					{ name: 'f_wl'+u+'_wds_'+i, type: 'text', maxlen: 17, size: 20, value: wds[i] || mac_null },
-					{ name: 'f_wl'+u+'_wds_'+(i + 1), type: 'text', maxlen: 17, size: 20, value: wds[i + 1] || mac_null } ] } );
+				f.push(
+					{ title: (i ? '' : 'MAC Address'), indent: 2, multi: [
+						{ name: 'f_wl'+u+'_wds_'+i, type: 'text', maxlen: 17, size: 20, value: wds[i] || mac_null },
+						{ name: 'f_wl'+u+'_wds_'+(i + 1), type: 'text', maxlen: 17, size: 20, value: wds[i + 1] || mac_null } ] } );
 			}
 			createFieldTable('', f);
 			W('<\/div>');

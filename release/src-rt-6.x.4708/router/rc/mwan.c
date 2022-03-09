@@ -35,26 +35,26 @@ int get_sta_wan_prefix(char *sPrefix)
 {
 	int mwan_num;
 	int wan_unit;
-	char wan_prefix[16];
+	char prefix[16];
 	char tmp[32];
 	int found = 0;
 
 	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
-		memset(wan_prefix, 0, sizeof(wan_prefix));
-		get_wan_prefix(wan_unit, wan_prefix);
+		memset(prefix, 0, sizeof(prefix));
+		get_wan_prefix(wan_unit, prefix);
 
-		if (strcmp(nvram_safe_get(strlcat_r(wan_prefix, "_sta", tmp, sizeof(tmp))), "")) {
+		if (strcmp(nvram_safe_get(strlcat_r(prefix, "_sta", tmp, sizeof(tmp))), "")) {
 			found = 1;
 			break;
 		}
 	}
 
 	if (found)
-		strcpy(sPrefix, wan_prefix);
+		strcpy(sPrefix, prefix);
 	else
 		strcpy(sPrefix, "wan");
 
@@ -94,6 +94,14 @@ void get_wan_info(char *sPrefix)
 	wan_info.wan_weight = atoi(nvram_safe_get(strlcat_r(sPrefix, "_weight", tmp, sizeof(tmp))));
 }
 
+void get_wan_ip(int proto, char *name, const size_t buf_sz)
+{
+	if ((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC))
+		snprintf(name, buf_sz, "%s", wan_info.wan_gateway);
+	else
+		snprintf(name, buf_sz, "%s", wan_info.wan_ipaddr);
+}
+
 void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz)
 {
 	struct in_addr in_ipaddr, in_netmask, in_network;
@@ -116,18 +124,18 @@ void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz)
 
 void mwan_table_del(char *sPrefix)
 {
-	int wan_unit,table;
+	int wan_unit;
 	int i;
 	char cmd[256];
 
 	logmsg(LOG_DEBUG, "*** IN %s", __FUNCTION__);
 
-	wan_unit = table = get_wan_unit(sPrefix);
+	wan_unit = get_wan_unit(sPrefix);
 	get_wan_info(sPrefix); /* get the current wan infos to work with */
 
 	/* ip rule del table WAN1 pref 101 (gateway); table: 1 to 4; pref: 101 to 104 */
 	memset(cmd, 0, sizeof(cmd));
-	snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 10%d", table, wan_unit);
+	snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 10%d", wan_unit, wan_unit);
 	logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 	system(cmd);
 	
@@ -135,14 +143,14 @@ void mwan_table_del(char *sPrefix)
 	/* delete only active & valid DNS; two options right now: only AUTO DNS server (1x DNS) or Manual DNS server (2x DNS) (see GUI network-basic.asp) */
 	for (i = 0 ; i < wan_info.dns->count; ++i) {
 		memset(cmd, 0, sizeof(cmd));
-		snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 11%d", table, wan_unit);
+		snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 11%d", wan_unit, wan_unit);
 		logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 		system(cmd);
 	}
 
 	/* ip rule del fwmark 0x100/0xf00 table 1 pref 121 (mark); table: 1 to 4; pref: 121 to 124 */
 	memset(cmd, 0, sizeof(cmd));
-	snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 12%d", table, wan_unit);
+	snprintf(cmd, sizeof(cmd), "ip rule del table %d pref 12%d", wan_unit, wan_unit);
 	logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 	system(cmd);
 
@@ -152,11 +160,11 @@ void mwan_table_del(char *sPrefix)
 /* set multiwan ip route table & ip rule table */
 void mwan_table_add(char *sPrefix)
 {
-	int mwan_num, wan_unit, proto, table;
+	int mwan_num, wan_unit, proto;
 	int wanid;
 	int i;
 	char cmd[256];
-	char ip_cidr[32];
+	char buf[32];
 
 	logmsg(LOG_DEBUG, "*** IN %s", __FUNCTION__);
 
@@ -167,38 +175,38 @@ void mwan_table_add(char *sPrefix)
 	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
 		return;
 
-	wan_unit = table = get_wan_unit(sPrefix);
+	wan_unit = get_wan_unit(sPrefix);
 	get_wan_info(sPrefix); /* get the current wan infos to work with */
 	proto = get_wanx_proto(sPrefix);
 
 	if (check_wanup(sPrefix)) {
 		/* ip rule add from WAN_IP table route_id pref 10X */
 		memset(cmd, 0, sizeof(cmd));
-		snprintf(cmd, sizeof(cmd), "ip rule add from %s table %d pref 10%d", wan_info.wan_ipaddr, table, wan_unit);
+		snprintf(cmd, sizeof(cmd), "ip rule add from %s table %d pref 10%d", wan_info.wan_ipaddr, wan_unit, wan_unit);
 		logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 		system(cmd);
 		
 		/* set the routing rules of DNS */
 		for (i = 0; i < wan_info.dns->count; ++i) {
 			memset(cmd, 0, sizeof(cmd));
-			snprintf(cmd, sizeof(cmd), "ip rule add to %s table %d pref 11%d", inet_ntoa(wan_info.dns->dns[i].addr), table, wan_unit);
+			snprintf(cmd, sizeof(cmd), "ip rule add to %s table %d pref 11%d", inet_ntoa(wan_info.dns->dns[i].addr), wan_unit, wan_unit);
 			logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 			system(cmd);
 		}
 
 		/* ip rule add fwmark 0x100/0xf00 table 1 pref 121 */
 		memset(cmd, 0, sizeof(cmd));
-		snprintf(cmd, sizeof(cmd), "ip rule add fwmark 0x%d00/0xf00 table %d pref 12%d", wan_unit, table, wan_unit);
+		snprintf(cmd, sizeof(cmd), "ip rule add fwmark 0x%d00/0xf00 table %d pref 12%d", wan_unit, wan_unit, wan_unit);
 		logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 		system(cmd);
 
-		memset(ip_cidr, 0, sizeof(ip_cidr));
 		for (wanid = 1; wanid <= mwan_num; ++wanid) {
 			/* ip route add 10.0.10.1 dev ppp3 proto kernel scope link table route_id */
 			memset(cmd, 0, sizeof(cmd));
 			if ((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC)) {
-				get_cidr(wan_info.wan_ipaddr, wan_info.wan_netmask, ip_cidr, sizeof(ip_cidr));
-				snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
+				memset(buf, 0, sizeof(buf));
+				get_cidr(wan_info.wan_ipaddr, wan_info.wan_netmask, buf, sizeof(buf));
+				snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", buf, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
 			}
 			else
 				snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", wan_info.wan_gateway, wan_info.wan_iface, wan_info.wan_ipaddr, wanid);
@@ -227,22 +235,25 @@ void mwan_table_add(char *sPrefix)
 			if ((lan_ifname[0] == '\0') || (lan_ipaddr[0] == '\0') || (lan_netmask[0] == '\0'))
 				continue;
 
-			get_cidr(lan_ipaddr, lan_netmask, ip_cidr, sizeof(ip_cidr));
+			memset(buf, 0, sizeof(buf));
+			get_cidr(lan_ipaddr, lan_netmask, buf, sizeof(buf));
 			memset(cmd, 0, sizeof(cmd));
-			snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", ip_cidr, lan_ifname, lan_ipaddr, table);
+			snprintf(cmd, sizeof(cmd), "ip route append %s dev %s proto kernel scope link src %s table %d", buf, lan_ifname, lan_ipaddr, wan_unit);
 			logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 			system(cmd);
 		}
 
 		/* ip route add 127.0.0.0/8 dev lo scope link table 1 */
 		memset(cmd, 0, sizeof(cmd));
-		snprintf(cmd, sizeof(cmd), "ip route append 127.0.0.0/8 dev lo scope link table %d", table);
+		snprintf(cmd, sizeof(cmd), "ip route append 127.0.0.0/8 dev lo scope link table %d", wan_unit);
 		logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 		system(cmd);
 
 		/* ip route add default via 10.0.10.1 dev ppp3 table route_id */
 		memset(cmd, 0, sizeof(cmd));
-		snprintf(cmd, sizeof(cmd), "ip route append default via %s dev %s table %d", (((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC)) ? wan_info.wan_gateway : wan_info.wan_ipaddr), wan_info.wan_iface, table);
+		memset(buf, 0, sizeof(buf));
+		get_wan_ip(proto, buf, sizeof(buf));
+		snprintf(cmd, sizeof(cmd), "ip route append default via %s dev %s table %d", buf, wan_info.wan_iface, wan_unit);
 		logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, sPrefix, cmd);
 		system(cmd);
 	}
@@ -314,10 +325,10 @@ void mwan_status_update(void)
 			if (mwan_curr[wan_unit - 1] == '1') {
 				memset(prefix, 0, sizeof(prefix));
 				get_wan_prefix(wan_unit, prefix);
-				strlcat(prefix, "_weight", sizeof(prefix));
-				if (nvram_match(prefix, "0")) {
+				get_wan_info(prefix);
+				if (wan_info.wan_weight == 0) {
 					if (mwan_last[wan_unit - 1] != '2')
-						logmsg(LOG_INFO, "mwan_status_update, failover in action - WAN%d", (wan_unit - 1));
+						logmsg(LOG_INFO, "Failover in action - WAN%d", (wan_unit - 1));
 
 					mwan_curr[wan_unit - 1] = '2';
 				}
@@ -330,10 +341,11 @@ void mwan_status_update(void)
 
 void mwan_load_balance(void)
 {
-	int mwan_num, wan_unit, proto;
+	int mwan_num, wan_unit, proto, wan_default, wan_weight = 0;
 	char prefix[16];
 	char cmd[256];
 	char lb_cmd[2048];
+	char buf[32];
 
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
@@ -343,7 +355,7 @@ void mwan_load_balance(void)
 
 	mwan_status_update();
 
-	memset(lb_cmd, 0, sizeof(lb_cmd));
+	memset(lb_cmd, 0, sizeof(lb_cmd)); /* loadbalancing cmd */
 	strlcpy(lb_cmd, "ip route replace default scope global", sizeof(lb_cmd));
 
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
@@ -352,41 +364,72 @@ void mwan_load_balance(void)
 		get_wan_info(prefix);
 		proto = get_wanx_proto(prefix);
 
-		if (check_wanup(prefix) && (mwan_curr[wan_unit - 1] == '2')) {
+		if (check_wanup(prefix) && (mwan_curr[wan_unit - 1] == '2')) { /* up and actively routing WAN */
 			if (wan_info.wan_weight == 0) /* override weight for failover interface */
 				wan_info.wan_weight = 1;
 
-			if (wan_info.wan_weight > 0) {
-				memset(cmd, 0, sizeof(cmd));
-				snprintf(cmd, sizeof(cmd), " nexthop via %s dev %s weight %d", (((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC)) ? wan_info.wan_gateway : wan_info.wan_ipaddr), wan_info.wan_iface, wan_info.wan_weight);
-				strlcat(lb_cmd, cmd, sizeof(lb_cmd));
-			}
+			memset(cmd, 0, sizeof(cmd));
+			memset(buf, 0, sizeof(buf));
+			get_wan_ip(proto, buf, sizeof(buf));
+			snprintf(cmd, sizeof(cmd), " nexthop via %s dev %s weight %d", buf, wan_info.wan_iface, wan_info.wan_weight);
+			strlcat(lb_cmd, cmd, sizeof(lb_cmd));
 		}
 		/* ip route del default via 10.0.10.1 dev ppp3 (from main route table) */
-		if (strcmp(wan_info.wan_iface, "none")) { /* skip disabled / disconnected ppp wans */
+		if (strcmp(wan_info.wan_iface, "none")) { /* skip disabled / disconnected ppp WAN */
 			memset(cmd, 0, sizeof(cmd));
-			snprintf(cmd, sizeof(cmd), "ip route del default via %s dev %s", (((proto == WP_DHCP) || (proto == WP_LTE) || (proto == WP_STATIC)) ? wan_info.wan_gateway : wan_info.wan_ipaddr), wan_info.wan_iface);
+			memset(buf, 0, sizeof(buf));
+			get_wan_ip(proto, buf, sizeof(buf));
+			snprintf(cmd, sizeof(cmd), "ip route del default via %s dev %s", buf, wan_info.wan_iface);
 			logmsg(LOG_DEBUG, "*** %s: %s, cmd=%s", __FUNCTION__, prefix, cmd);
 			system(cmd);
 		}
 	}
-	/* don't execute incomplete lb_cmd if all wans down */
 #ifdef TCONFIG_MULTIWAN
 	if (strcmp(mwan_curr, "0000")) {
 #else
 	if (strcmp(mwan_curr, "00")) {
 #endif
-		logmsg(LOG_DEBUG, "*** %s: load_balance, cmd=%s", __FUNCTION__, lb_cmd);
-		system(lb_cmd);
+		logmsg(LOG_DEBUG, "*** %s: cmd=%s", __FUNCTION__, lb_cmd);
 	}
+	else {
+		wan_default = 1; /* first assume that main wan is WAN0 */
+		for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+			memset(prefix, 0, sizeof(prefix));
+			get_wan_prefix(wan_unit, prefix);
+			get_wan_info(prefix);
+
+			if (wan_unit == 1) {
+				wan_weight = wan_info.wan_weight;
+			}
+			else if (wan_info.wan_weight > wan_weight) { /* but later choose WAN with highest weight */
+				wan_default = wan_unit;
+				wan_weight = wan_info.wan_weight;
+			}
+		}
+
+		memset(prefix, 0, sizeof(prefix));
+		get_wan_prefix(wan_default, prefix);
+		get_wan_info(prefix);
+		proto = get_wanx_proto(prefix);
+
+		memset(cmd, 0, sizeof(cmd));
+		memset(buf, 0, sizeof(buf));
+		get_wan_ip(proto, buf, sizeof(buf));
+		snprintf(cmd, sizeof(cmd), " nexthop via %s dev %s weight %d", buf, wan_info.wan_iface, wan_info.wan_weight);
+		strlcat(lb_cmd, cmd, sizeof(lb_cmd));
+
+		logmsg(LOG_DEBUG, "*** %s: EMERGENCY ROUTE: cmd=%s", __FUNCTION__, lb_cmd);
+	}
+	/* always execute lb_cmd: if all wans are down - add default route via WAN with highest weight */
+	system(lb_cmd);
+
 	logmsg(LOG_DEBUG, "*** OUT %s: mwan_curr=%s", __FUNCTION__, mwan_curr);
 }
 
 int mwan_route_main(int argc, char **argv)
 {
-	int check_time;
+	int check_time = 15;
 	int mwan_num;
-
 	FILE *fp;
 
 	logmsg(LOG_DEBUG, "*** MWAN: mwanroute launched");
@@ -411,11 +454,10 @@ int mwan_route_main(int argc, char **argv)
 		return 0;
 
 	while(1) {
-		check_time = 15;
 		mwan_status_update();
-		
+
 		if (strcmp(mwan_last, mwan_curr)) {
-			logmsg(LOG_WARNING, "Multiwan status is changed, last_status=%s, now_status=%s, Update multiwan policy", mwan_last, mwan_curr);
+			logmsg(LOG_WARNING, "Multiwan status has changed, last_status=%s, now_status=%s, Update multiwan policy", mwan_last, mwan_curr);
 			mwan_load_balance();
 
 			stop_dnsmasq();
