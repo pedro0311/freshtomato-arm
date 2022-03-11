@@ -5,6 +5,107 @@ FreshTomato-ARM Changelog
 
 
 
+2022.1          2022.03.13
+---------------------------
+
+Note: DDNS Cloudflare now is using only the new method for auth - please update your settings.
+
+- kernel: USB: serial: option: add support for Novatel USB730L enterprise mode
+- kernel: HID: ignore Novatel USB730L modem
+- kernel: drivers: net: usb: update ipheth module
+- kernel: drivers: net: usb: ipheth: fix iOS14 tethering issues
+- kernel: netfilter: xt_hashlimit: fix namespace destroy path
+- kernel: netfilter: x_table: speedup compat operations
+- Revert "kernel: make xt_recent built-in instead of module"
+- SDK6: update wireless driver (dual core)
+- kernel: ppp_generic.c - add one more check for CTF
+- SDK6/SDK7: implement newer Asus TRX header
+- nginx: update to 1.21.6
+- tor: update to 0.4.6.10
+- e2fsprogs: update to 1.46.5
+- sqlite: update to 3.38.0
+- miniupnpd: update to 2.3.0
+- avahi: update to 0.8
+- libubox: update to f2d6752 (2022-02-11) snapshot
+- uqmi: update to 2022.02.02 (f254fc5) snapshot
+- libcurl: update to 7.82.0
+- libsodium: update to latest 1.0.18-stable
+- libxml2: update to 2.9.13
+- nano: update to 6.2
+- xl2tpd: update to 1.3.17
+- dnsmasq: update to 2022.02.25 (4732aa6) snapshot
+- libcurl: update CA certificate bundle as of 2022-02-01
+- build: add Linksys EA6350v2 support
+- build: always add libutil to the image
+- build: router: Makefile: correct when installation of zlib and sqlite is needed
+- build: router: Makefile: openvpn doesn't use zlib at all...
+- build: router: Makefile: explicitly specify when zlib should be added to the image
+- build: Makefile: build dnsmasq with DUMPFILE option for ARM routers
+- build: correct build size to 32M for R8000, correct partition offsets and size
+- build: RT-AC3200: improve/change LED table if router is in Media Bridge Mode
+- build: Buffalo WZR-1750DHP: add flag for 512M DRAM support
+- build: Buffalo WZR-1750DHP: adjust partitions
+- build: Buffalo WZR-1750DHP: rely on cfe default / init parameter (for each router)
+- GUI: link wiki documentation to each relevant page - resolves #172
+- GUI: advanced-mac.asp - fix saving default WAN mac addr (starting with FT 2021-8 / latest VLAN-fixes)
+- GUI: (css): fix grayed out elements that cannot be modified
+- GUI: advanced-misc.asp: add confirmation before rebooting the router
+- GUI: add notes on pages where functionality is disabled when CTF/Broadcom FastNAT is turned on; also disable automagically QoS and BWL when CTF is enabled or BWL when Broadcom FastNAT is enabled; add notes that using QoS or Access Restriction disables Broadcom FastNAT module
+- GUI: tools-wol.asp: fix typo
+- GUI: advanced-mac.asp - align default wireless mac addr to wlconf setup AND FreshTomato initial mac setup (note: repair GUI wl mac setup --> GUI default and initial mac are the same now)
+- GUI: Advanced: Firewall: fix IGMP proxy custom configuration textarea bahaviour
+- GUI: Advanced: Routing: correct display of interfaces in Static Routing Table
+- GUI: Admin: Debugging: improvements to the Debugging page (resolves #184)
+- GUI: status-overview - improve ethstate if WAN port is moved to primary LAN (part 2)
+- GUI: Advanced: Firewall: add 'Allow DHCP responses' option; also correct name of nvram variable/value
+- GUI: Advanced: Firewall: add smart MTU black hole detection and enable it by default
+- GUI: VPN Tunneling: OpenVPN Server Configuration: enlarge 'Common Name' text area to 30 chars
+- GUI: change the menu labels: WOL -> WoL, Trace -> Traceroute, IPerf -> iPerf
+- GUI: IP Traffic: Last 24 Hours: fix initialization of 'IPs currently on graphic' dropdown list when loading the page
+- GUI: admin-access.asp: add option to enable/disable the brute force mitigation rule on port defined for GUI remote access
+- GUI: USB and NAS: BitTorrent Client: correct drop down list description
+- GUI: Basic: Network: fix problems with Wireless Client mode (again)
+- GUI: Basic: Network: hide 'Wireless Client Mode' drop down list when given WAN is disabled
+- GUI: Advanced: DHCP / DNS Client: remove 'Reduce packet size' option - no more available in udhcpc from busybox
+- GUI: Administration: Admin Access: correct display order of 'Allow Remote Upgrade'
+- GUI: Administration: Admin Access: change regex for 'Authorized Keys' to allow also pasting keys that start, for example, with some command
+- GUI: add as an Admin option: unmount JFFS automatically as part of the upgrade process
+- GUI: Overview: Device List: fix some potential problems
+- GUI: Basic: Network: fix more issues when switching i.e. from 2 WANs to 1 WAN
+- GUI: USB and NAS: USB Support: disable drop-down lists of NTFS and HFS/HFS+ Drivers, when support for these file systems is not checked
+- GUI: advanced-vlan.asp - add Asus RT-AC56S (single-core (NOSMP) clone of RT-AC56U)
+- Add ability to run custom script with start and stop of QoS: /etc/wan_qos.custom start|stop wannum
+- Add more QoS overhead options for PPPoE in PTM mode and with VLAN (VDSL2)
+- Add flagspec for 512M DRAM, seperate build for xr300/r6700v3 with 512M DRAM
+- Correct Memory mapping for 512M DRAM (part 2) (resolves #180)
+- Correct Partition and JFFS space NETGEAR routers
+- IPv6: rc: services.c - add check for SLAAC and/or DHCPv6 before using global address and not link-local address for IPv6 DNS
+- OpenVPN: do not add 'duplicate-cn' to server config automatically
+- PPTP Server: bypass CTF (if enabled)
+- WL: add roaming assistant (see GUI advanced-wireless.asp) as an option - fixes #77 (note: disabled by default; disabled for wireless client, wireless ehternet bridge and media bridge mode; recommendation: do not use bandsteering and roaming assistant features at the same time)
+- adblock: filter also ipv6 addresses (resolves #200)
+- avahi: cleanup: ensure entries are dead for at least 1s (fix from the upstream)
+- avahi: fixed dns_sd segfaults, initialization issues, and added NDEBUGs (fix from the upstream)
+- avahi: use monotonic timer when possible (fix from the upstream)
+- avahi: use internal type for timers (fix from the upstream)
+- avahi: do not disable timeout cleanup on watch cleanup (fix from the upstream)
+- e2fsprogs: modify mke2fs.conf - default ^metadata_csum for ext4 (resolves #182)
+- getdns/stubby: rdata not correctly written for validation for certain RR types (fix from the upstream)
+- httpd: openvpn.c: add "route <netaddr> <netmask>" directive to downloaded OpenVPN config file when static keys are in use (because the route cannot be pushed from the "server" when using static keys)
+- httpd: check key and cert pair, if they are mismatched, regenerate key and cert
+- mdu: cloudflare: use new API token instead of email/globalAPIkey for auth
+- multiwan/watchdog: fix even more issues including lack of default route when all WANs are down - now in such cases, default route is added to the WAN with the heighest weight
+- nginx: change default server name to 'FreshTomato'
+- rc: buttons.c - increase button sample time (now 500 ms) and improve robustness
+- rc: dhcpc-event: fix selection of the correct prefix for two consecutive WANs
+- rc: firewall.c: check more variables before applying FW rules (in some cases, there was no firewall at all)
+- rc: cifs.c: fix condition for recognition when the cifs is mounted
+- rc: init.c: on halt/reboot, stop syslog before removing storage/usb to avoid problems
+- snmp: add patch to change snmp interface cache timeout to 1 second for realtime monitoring
+- usbmodeswitch: fix for Novatel USB730L modem
+- www: tomato.js: add placeholder support for <textarea> and <input>
+
+
 2021.8          2021.12.25
 ---------------------------
 
