@@ -30,8 +30,7 @@ case "$1" in
 		[ "$BTON" == "1" ] && {
 			BTCH=$(nvram get mysql_check)
 			[ "$BTCH" == "1" ] && {
-				ON=$(ps w | grep mysqld | grep -v grep | wc -l)
-				[ "$ON" == "0" ] && {
+				ps | grep -q '[m]ysqld' || {
 					logger MySQL stopped? Starting...
 					service mysql restart
 				}
