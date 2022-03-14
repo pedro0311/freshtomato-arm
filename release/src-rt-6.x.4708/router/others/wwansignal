@@ -315,7 +315,7 @@ uqmiCall() {
 
 	# wait for another uqmi process to exit...
 	while [ "$COUNT" -lt 5 ]; do
-		[ "$(ps | grep uqmi | grep "$DEVNR" | grep -v "grep" | wc -l)" -eq 0 ] && {
+		[ "$(ps | grep [u]qmi | grep "$DEVNR" | wc -l)" -eq 0 ] && {
 			[ "$IS_ITCONN" -eq 1 ] && {
 				uqmi -s -d "$DEVNR" $COMMAND \
 					${APN:+--apn "$APN"} \
