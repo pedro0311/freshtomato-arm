@@ -139,7 +139,7 @@ watchdogRun() {
 
 						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
 							$LOGS "Killing orphaned connect-on-demand listen process ..."
-							LISTEN_PID=$(ps | grep listen | grep $PREFIX | awk '{print $1}' | head -n1)
+							LISTEN_PID=$(ps | grep [l]isten | grep $PREFIX | awk '{print $1}' | head -n1)
 							[ -n $LISTEN_PID ] && {
 								kill -9 $LISTEN_PID
 								$LOGS "Killed $LISTEN_PID"
