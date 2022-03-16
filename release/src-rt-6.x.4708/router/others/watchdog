@@ -139,7 +139,7 @@ watchdogRun() {
 
 						if [ "$PROTO" == "pppoe" -o "$PROTO" == "pptp" -o "$PROTO" == "l2tp" -o "$PROTO" == "ppp3g" ] && [ "$DEMAND" -eq 1 -a "$ISPPPD" -eq 0 ]; then
 							$LOGS "Killing orphaned connect-on-demand listen process ..."
-							LISTEN_PID=$(ps | grep listen | grep $PREFIX | awk '{print $1}' | head -n1)
+							LISTEN_PID=$(ps | grep [l]isten | grep $PREFIX | awk '{print $1}' | head -n1)
 							[ -n $LISTEN_PID ] && {
 								kill -9 $LISTEN_PID
 								$LOGS "Killed $LISTEN_PID"
@@ -235,9 +235,9 @@ mwanJob() {
 
 mwanAlive() {
 	[ "$MWAN" -gt 1 ] && {
-		[ "$(ps | grep [m]wanroute | wc -l)" -eq 0 ] && {
-			$LOGS "mwanroute not found, launch process"
-			mwanroute
+		ps | grep -q [m]wanroute && $DEBUG "mwanroute is running" || {
+			$LOGS "mwanroute not found, I'll try to recover it"
+			nohup mwanroute &
 		}
 	}
 }

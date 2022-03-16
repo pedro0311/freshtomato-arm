@@ -29,8 +29,7 @@ case "$1" in
 	;;
 	check)
 		[ "$BTON" -eq 1 -a "$BTCH" -eq 1 ] && {
-			ON=$(ps w | grep transmission | grep daemon | wc -l)
-			[ "$ON" -eq 0 ] && {
+			ps | grep -q '[t]ransmission-daemon' || {
 				logger Transmission stopped? Starting...
 				service bittorrent restart
 			}
