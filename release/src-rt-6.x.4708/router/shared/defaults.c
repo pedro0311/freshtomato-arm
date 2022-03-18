@@ -88,7 +88,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_ckmtd",			"2"				, 0 },
 	{ "wan_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
-	{ "wan2_proto",			"dhcp"				, 0 },	/* [static|dhcp|pppoe|disabled] */
+	{ "wan2_proto",			"disabled"			, 0 },	/* [static|dhcp|pppoe|disabled] */
 	{ "wan2_ipaddr",		"0.0.0.0"			, 0 },	/* WAN IP address */
 	{ "wan2_netmask",		"0.0.0.0"			, 0 },	/* WAN netmask */
 	{ "wan2_gateway",		"0.0.0.0"			, 0 },	/* WAN gateway */
@@ -106,7 +106,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan2_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_proto",			"dhcp"				, 0 },	/* [static|dhcp|pppoe|disabled] */
+	{ "wan3_proto",			"disabled"			, 0 },	/* [static|dhcp|pppoe|disabled] */
 	{ "wan3_ipaddr",		"0.0.0.0"			, 0 },	/* WAN IP address */
 	{ "wan3_netmask",		"0.0.0.0"			, 0 },	/* WAN netmask */
 	{ "wan3_gateway",		"0.0.0.0"			, 0 },	/* WAN gateway */
@@ -123,7 +123,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan3_ckmtd",			"2"				, 0 },
 	{ "wan3_ck_pause",		"0"				, 0 },	/* skip watchdog for this wan 0|1 */
 
-	{ "wan4_proto",			"dhcp"				, 0 },	/* [static|dhcp|pppoe|disabled] */
+	{ "wan4_proto",			"disabled"			, 0 },	/* [static|dhcp|pppoe|disabled] */
 	{ "wan4_ipaddr",		"0.0.0.0"			, 0 },	/* WAN IP address */
 	{ "wan4_netmask",		"0.0.0.0"			, 0 },	/* WAN netmask */
 	{ "wan4_gateway",		"0.0.0.0"			, 0 },	/* WAN gateway */
