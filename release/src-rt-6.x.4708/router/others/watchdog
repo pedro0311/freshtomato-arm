@@ -12,7 +12,6 @@ PIDFILE="/var/run/watchdog.pid"
 IPLISTFILE="/tmp/watchdog.iplist"
 MWAN=$(nvram get mwan_num)
 IPLIST=""
-TMP_ROUTE_TABLE_ID=555
 MWANTABLE="wan"
 
 i=1
