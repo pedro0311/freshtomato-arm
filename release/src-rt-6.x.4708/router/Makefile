@@ -1511,6 +1511,7 @@ libnfnetlink-clean:
 miniupnpd/stamp-h1:
 	$(call patch_files,miniupnpd)
 	cd miniupnpd && \
+		PKG_CONFIG_LIBDIR="" \
 		./configure --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,) --iptablespath=$(TOP)/$(IPTABLES_TARGET)
 	@touch $@
 
@@ -2392,6 +2393,7 @@ libpng-clean:
 $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
 	cd $(PHP_TARGET) && \
+		PKG_CONFIG_LIBDIR="" \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
 		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib \
