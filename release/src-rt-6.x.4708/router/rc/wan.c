@@ -996,8 +996,8 @@ void start_wan(void)
 	int wan_unit;
 	char prefix[] = "wanXX";
 
-	mwan_num = atoi(nvram_safe_get("mwan_num"));
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
 	logmsg(LOG_INFO, "MultiWAN: MWAN is %d (max %d)", mwan_num, MWAN_MAX);
@@ -1005,16 +1005,22 @@ void start_wan(void)
 	for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
 		get_wan_prefix(wan_unit, prefix);
 		start_wan_if(prefix);
+		logmsg(LOG_DEBUG, "*** MultiWAN: %s: (unit: %d), prefix = %s", __FUNCTION__, wan_unit, prefix);
 	}
 
 	start_firewall();
 	set_host_domain_name();
 
-	killall_tk_period_wait("mwanroute", 50);
-	xstart("mwanroute");
+	/* only start mwanroute if it's not already up! */
+	if (pidof("mwanroute") < 0) {
+		logmsg(LOG_DEBUG, "*** %s: mwanroute not found, launch process", __FUNCTION__);
+		xstart("mwanroute");
+	}
 
-	if (nvram_get_int("mwan_cktime") > 0)
+	if (nvram_get_int("mwan_cktime") > 0) {
+		logmsg(LOG_DEBUG, "*** %s: adding watchdog job", __FUNCTION__);
 		xstart("watchdog", "add");
+	}
 
 	led(LED_DIAG, LED_OFF);
 	led(LED_DMZ, nvram_match("dmz_enable", "1"));
@@ -1116,7 +1122,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	sysinfo(&si);
 
 	mwan_num = nvram_get_int("mwan_num");
-	if (mwan_num < 1 || mwan_num > MWAN_MAX)
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
 	memset(wantime_file, 0, 64);
@@ -1375,6 +1381,11 @@ void stop_wan_if(char *prefix)
 
 void stop_wan(void)
 {
+	logmsg(LOG_DEBUG, "*** IN: %s", __FUNCTION__);
+
+	logmsg(LOG_DEBUG, "*** %s: removing watchdog job", __FUNCTION__);
+	xstart("watchdog", "del");
+
 #ifdef TCONFIG_TINC
 	stop_tinc();
 #endif
@@ -1401,5 +1412,5 @@ void stop_wan(void)
 	stop_wan_if("wan4");
 #endif
 
-	xstart("watchdog", "del");
+	logmsg(LOG_DEBUG, "*** OUT: %s", __FUNCTION__);
 }
