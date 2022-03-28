@@ -9503,6 +9503,10 @@ int init_main(int argc, char *argv[])
 	/* reset ntp status */
 	nvram_set("ntp_ready", "0");
 
+	/* reset upgrade/reboot status */
+	nvram_set("g_upgrade", "0");
+	nvram_set("g_reboot", "0");
+
 	start_jffs2();
 
 	/* set unique system id */
@@ -9523,9 +9527,10 @@ int init_main(int argc, char *argv[])
 		case SIGTERM: /* REBOOT */
 			led(LED_DIAG, LED_ON);
 			unlink("/var/notice/sysup");
+			nvram_set("g_reboot", "1");
 
-			if (nvram_match( "webmon_bkp", "1" )) {
-				xstart( "/usr/sbin/webmon_bkp", "hourly" ); /* make a copy before halt/reboot router */
+			if (nvram_match("webmon_bkp", "1")) {
+				xstart("/usr/sbin/webmon_bkp", "hourly"); /* make a copy before halt/reboot router */
 			}
 
 			run_nvscript("script_shut", NULL, 10);
@@ -9610,6 +9615,9 @@ int init_main(int argc, char *argv[])
 			 */
 			start_wan();
 
+			/* enable watchdog */
+			nvram_set("g_reboot", "0");
+
 			if (wds_enable()) {
 				/* Restart NAS one more time - for some reason without
 				 * this the new driver doesn't always bring WDS up.
@@ -9650,7 +9658,7 @@ int init_main(int argc, char *argv[])
 			break;
 		}
 
-		if (!g_upgrade) {
+		if (!nvram_get_int("g_upgrade")) {
 			chld_reap(0); /* periodically reap zombies. */
 			check_services();
 		}

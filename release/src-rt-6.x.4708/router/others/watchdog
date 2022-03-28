@@ -217,22 +217,16 @@ watchdogAdd() {
 	local MINS=$((CKTIME/60))
 
 	[ "$MINS" -gt 0 ] && {
-		[ "$(cru l | grep watchdogJob | wc -l)" -eq 0 ] && cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
+		cru l | grep watchdogJob >/dev/null || cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
 	}
 }
 
 watchdogDel() {
-	[ "$(cru l | grep watchdogJob | wc -l)" -eq 1 ] && cru d watchdogJob
+	cru l | grep watchdogJob >/dev/null && cru d watchdogJob
 }
 
 mwanJob() {
-	local ISSET=$(cru l | grep mwanJob | wc -l)
-
-	[ "$MWAN" -gt 0 ] && {
-		[ "$ISSET" -eq 0 ] && cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
-	} || {
-		[ "$ISSET" -eq 1 ] && cru d mwanJob
-	}
+	cru l | grep mwanJob >/dev/null && cru d mwanJob || cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
 }
 
 mwanAlive() {
@@ -310,7 +304,7 @@ elif [ "$1" == "del" ]; then
 	watchdogDel
 elif [ "$1" == "alive" ]; then
 	mwanAlive
-else
+elif [ "$(nvram get g_upgrade)" != "1" -a "$(nvram get g_reboot)" != "1" ]; then
 	checkPid
 
 	checkPidSwitch
