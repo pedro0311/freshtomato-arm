@@ -432,8 +432,6 @@ int mwan_route_main(int argc, char **argv)
 	int mwan_num;
 	FILE *fp;
 
-	logmsg(LOG_DEBUG, "*** MWAN: mwanroute launched");
-
 	mkdir("/etc/iproute2", 0744);
 	if ((fp = fopen("/etc/iproute2/rt_tables", "w")) != NULL) {
 		fprintf(fp, "1 WAN1\n"
@@ -452,6 +450,8 @@ int mwan_route_main(int argc, char **argv)
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num == 1) || (mwan_num > MWAN_MAX))
 		return 0;
+
+	logmsg(LOG_DEBUG, "*** %s: MWAN: mwanroute launched", __FUNCTION__);
 
 	while(1) {
 		mwan_status_update();
