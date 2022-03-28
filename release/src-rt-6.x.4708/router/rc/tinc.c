@@ -9,6 +9,7 @@
 #include "rc.h"
 
 #define BUF_SIZE 256
+#define TINC_DIR		"/etc/tinc"
 #define TINC_RSA_KEY		"/etc/tinc/rsa_key.priv"
 #define TINC_PRIV_KEY		"/etc/tinc/ed25519_key.priv"
 #define TINC_CONF		"/etc/tinc/tinc.conf"
@@ -22,21 +23,44 @@
 #define TINC_SUBNETDOWN_SCRIPT	"/etc/tinc/subnet-down"
 
 
+void tinc_setup_watchdog(void)
+{
+	FILE *fp;
+	char buffer[64], buffer2[64];
+	int nvi;
+
+	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
+		memset(buffer, 0, sizeof(buffer));
+		sprintf(buffer, TINC_DIR"/watchdog.sh");
+
+		if ((fp = fopen(buffer, "w"))) {
+			fprintf(fp, "#!/bin/sh\n"
+			            "[ -z $(pidof tincd) ] && {\n"
+			            " service tinc restart\n"
+			            "}\n");
+			fclose(fp);
+			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+			memset(buffer2, 0, sizeof(buffer2));
+			sprintf(buffer2, "*/%d * * * * %s", nvi, buffer);
+			eval("cru", "a", "CheckTincDaemon", buffer2);
+		}
+	}
+}
+
 void start_tinc(void)
 {
 	char *nv, *nvp, *b;
 	const char *connecto, *name, *address, *port, *compression, *subnet, *rsa, *ed25519, *custom, *tinc_tmp_value;
 	char buffer[BUF_SIZE];
-	char cru[128];
 	FILE *fp, *hp;
-	int nvi;
 
 	/* Don't try to start tinc if it is already running */
 	if (pidof("tincd") >= 0)
 		return;
 
 	/* create tinc directories */
-	mkdir("/etc/tinc", 0700);
+	mkdir(TINC_DIR, 0700);
 	mkdir(TINC_HOSTS, 0700);
 
 	/* write private rsa key */
@@ -263,11 +287,7 @@ void start_tinc(void)
 	xstart("/usr/sbin/tinc", "start");
 	run_tinc_firewall_script();
 
-	if ((nvi = nvram_get_int("tinc_poll")) > 0) {
-		memset(cru, 0, 128);
-		sprintf(cru, "*/%d * * * * service tinc start", nvi);
-		eval("cru", "a", "CheckTincDaemon", cru);
-	}
+	tinc_setup_watchdog();
 }
 
 void stop_tinc(void)
@@ -275,7 +295,7 @@ void stop_tinc(void)
 	killall("tincd", SIGTERM);
 	system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
 	run_tinc_firewall_script();
-	system("/bin/rm -rf /etc/tinc");
+	system("/bin/rm -rf "TINC_DIR);
 	eval("cru", "d", "CheckTincDaemon");
 }
 
