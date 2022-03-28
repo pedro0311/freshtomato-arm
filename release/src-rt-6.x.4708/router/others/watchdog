@@ -12,7 +12,6 @@ PIDFILE="/var/run/watchdog.pid"
 IPLISTFILE="/tmp/watchdog.iplist"
 MWAN=$(nvram get mwan_num)
 IPLIST=""
-TMP_ROUTE_TABLE_ID=555
 MWANTABLE="wan"
 
 i=1
@@ -43,7 +42,7 @@ findHost() {
 
 	for host in $hostlist; do
 		echo $host | grep -Eo '((([a-zA-Z]{1,2})|([0-9]{1,2})|([a-zA-Z0-9]{1,2})|([a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]))\.)+[a-zA-Z]{2,6}' && {
-			ip=$(nslookup $host 127.0.0.1 2>/dev/null | grep Address | grep -v :: | grep -v localhost | cut -d':' -f2 | cut -d' ' -f2 | head -n1)
+			ip=$(nslookup $host 127.0.0.1 2>/dev/null | tail +5 | grep -v :: | awk '{print $3}' | tail -1)
 			IPLIST="${IPLIST} $ip"
 		} || IPLIST="${IPLIST} $host"
 	done
@@ -82,11 +81,14 @@ watchdogRun() {
 				$DEBUG "prefix=$PREFIX_LOG, iface=$IFACE, uptime=$ISUP, ISGW=$ISGW, WEIGHT=$WEIGHT"
 			}
 
-			[ "$PROTO" == "dhcp" -a $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l ) -eq 0 ] && { dhcpFix $PREFIX; sleep 3; }
-			[ $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l ) -eq 0 ] && {
-				$DEBUG "$PREFIX doesn't have an IP address. Skipping..."
-				echo "0" > $STATE_FILE
-				continue;
+			[ "$PROTO" == "dhcp" -a $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l) -eq 0 ] && { dhcpFix $PREFIX; sleep 3; }
+
+			[ "$PROTO" != "lte" ] && {
+				[ $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l) -eq 0 ] && {
+					$DEBUG "$PREFIX doesn't have an IP address. Skipping..."
+					echo "0" > $STATE_FILE
+					continue
+				}
 			}
 
 			DEFAULT_ROUTE_FRAGMENT=$(ip route | grep default | cut -d' ' -f2-)
@@ -215,22 +217,16 @@ watchdogAdd() {
 	local MINS=$((CKTIME/60))
 
 	[ "$MINS" -gt 0 ] && {
-		[ "$(cru l | grep watchdogJob | wc -l)" -eq 0 ] && cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
+		cru l | grep watchdogJob >/dev/null || cru a watchdogJob "*/$MINS * * * * /usr/sbin/watchdog"
 	}
 }
 
 watchdogDel() {
-	[ "$(cru l | grep watchdogJob | wc -l)" -eq 1 ] && cru d watchdogJob
+	cru l | grep watchdogJob >/dev/null && cru d watchdogJob
 }
 
 mwanJob() {
-	local ISSET=$(cru l | grep mwanJob | wc -l)
-
-	[ "$MWAN" -gt 0 ] && {
-		[ "$ISSET" -eq 0 ] && cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
-	} || {
-		[ "$ISSET" -eq 1 ] && cru d mwanJob
-	}
+	cru l | grep mwanJob >/dev/null && cru d mwanJob || cru a mwanJob "*/1 * * * * /usr/sbin/watchdog alive"
 }
 
 mwanAlive() {
@@ -308,7 +304,7 @@ elif [ "$1" == "del" ]; then
 	watchdogDel
 elif [ "$1" == "alive" ]; then
 	mwanAlive
-else
+elif [ "$(nvram get g_upgrade)" != "1" -a "$(nvram get g_reboot)" != "1" ]; then
 	checkPid
 
 	checkPidSwitch

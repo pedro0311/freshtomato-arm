@@ -1457,6 +1457,10 @@ function init() {
 		<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 		<div class="section" id="sesdiv_notes" style="display:none">
 			<ul>
+				<li><b>Warning!</b> Avoid using 'virtual interfaces' on interface in Wireless Ethernet Bridge or Media Bridge mode due to possible problems.</li>
+			</ul>
+			<br>
+			<ul>
 				<li><b>Interface</b> - Wireless VIF name.</li>
 				<li><b>Enabled</b> - If this VIF should be active and brought online.</li>
 				<li><b>SSID</b> - Wireless Service Set Identifier.</li>

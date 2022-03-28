@@ -11,7 +11,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Tools: WoL</title>
+<title>[<% ident(); %>] Tools: Wake on LAN</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
 <script src="tomato.js"></script>
@@ -175,7 +175,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Wake On LAN</div>
+<div class="section-title">Wake on LAN</div>
 <div class="section">
 	<div class="tomato-grid" id="wol-grid"></div>
 

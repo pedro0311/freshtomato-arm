@@ -2537,7 +2537,7 @@ function navi() {
 /* IPERF-BEGIN */
 			['iPerf',			'iperf.asp'],
 /* IPERF-END */
-			['WoL',				'wol.asp'] ] ],
+			['Wake on LAN',			'wol.asp'] ] ],
 		null,
 		['Basic', 			'basic', 0, [
 			['Network',			'network.asp'],

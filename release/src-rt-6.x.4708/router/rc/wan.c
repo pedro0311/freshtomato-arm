@@ -50,8 +50,6 @@
 #define LOGMSG_NVDEBUG	"wan_debug"
 
 
-extern int g_upgrade;
-
 static int config_pppd(int wan_proto, int num, char *prefix)
 {
 	FILE *fp;
@@ -220,7 +218,8 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 			nvram_set(strcat_r(prefix, "_gateway", tmp), "");
 
 		/* Detect 3G Modem */
-		xstart("switch3g", prefix);
+		if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot"))
+			xstart("switch3g", prefix);
 		break;
 #endif
 	case WP_L2TP:
@@ -930,11 +929,11 @@ void start_wan_if(char *prefix)
 			stop_dhcpc(prefix);
 			start_dhcpc(prefix);
 		}
-		else if (!strcmp(prefix,"wan"))  start_pppoe(PPPOEWAN, prefix);
-		else if (!strcmp(prefix,"wan2")) start_pppoe(PPPOEWAN2, prefix);
+		else if (!strcmp(prefix, "wan"))  start_pppoe(PPPOEWAN, prefix);
+		else if (!strcmp(prefix, "wan2")) start_pppoe(PPPOEWAN2, prefix);
 #ifdef TCONFIG_MULTIWAN
-		else if (!strcmp(prefix,"wan3")) start_pppoe(PPPOEWAN3, prefix);
-		else if (!strcmp(prefix,"wan4")) start_pppoe(PPPOEWAN4, prefix);
+		else if (!strcmp(prefix, "wan3")) start_pppoe(PPPOEWAN3, prefix);
+		else if (!strcmp(prefix, "wan4")) start_pppoe(PPPOEWAN4, prefix);
 #endif
 		break;
 	case WP_DHCP:
@@ -943,7 +942,7 @@ void start_wan_if(char *prefix)
 	case WP_PPTP:
 		if (wan_proto == WP_LTE) {
 			/* Prepare LTE modem */
-			if (!g_upgrade)
+			if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot"))
 				xstart("switch4g", prefix);
 		}
 		else if (using_dhcpc(prefix)) {
@@ -1331,10 +1330,13 @@ void stop_wan_if(char *prefix)
 
 	wan_proto = get_wanx_proto(prefix);
 
+	if (wan_proto == WP_PPP3G)
+		killall_tk_period_wait("switch3g", 50); /* Kill switch3g script if running */
+
 	if (wan_proto == WP_LTE) {
 		killall_tk_period_wait("switch4g", 50); /* Kill switch4g script if running */
 		xstart("switch4g", prefix, "disconnect");
-		if (!g_upgrade)
+		if (!nvram_get_int("g_upgrade"))
 			sleep(3); /* Wait a litle for disconnect */
 	}
 

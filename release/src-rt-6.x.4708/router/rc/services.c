@@ -74,10 +74,6 @@
 #define ONEMONTH_LIFETIME	(30 * 24 * 60 * 60)
 #define IPV6_MIN_LIFETIME	120
 
-/* The g_upgrade global variable is used to skip several unnecessary delay
- * and redundant steps during upgrade procedure.
- */
-int g_upgrade = 0;
 
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
@@ -948,7 +944,7 @@ void generate_mdns_config(void)
 
 void start_mdns(void)
 {
-	if (g_upgrade)
+	if (nvram_get_int("g_upgrade"))
 		return;
 
 	if (!nvram_get_int("mdns_enable"))
@@ -3124,7 +3120,7 @@ static void stop_media_server(void)
 #ifdef TCONFIG_USB
 static void start_nas_services(void)
 {
-	if (g_upgrade)
+	if (nvram_get_int("g_upgrade"))
 		return;
 
 	if (getpid() != 1) {
@@ -3167,7 +3163,7 @@ void restart_nas_services(int stop, int start)
 	/* restart all NAS applications */
 	if (stop)
 		stop_nas_services();
-	if (start && !g_upgrade)
+	if (start && !nvram_get_int("g_upgrade"))
 		start_nas_services();
 
 	file_unlock(fd);
@@ -3202,7 +3198,7 @@ void check_services(void)
 	setitimer(ITIMER_REAL, &zombie_tv, NULL);
 
 	/* do not restart if upgrading */
-	if (!g_upgrade) {
+	if (!nvram_get_int("g_upgrade")) {
 		_check(pid_hotplug2, "hotplug2", start_hotplug2);
 		_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
 		_check(pid_crond, "crond", start_cron);
@@ -3424,7 +3420,7 @@ TOP:
 
 	if (strcmp(service, "dnsmasq") == 0) {
 		if (act_stop) stop_dnsmasq();
-		if (act_start && !g_upgrade) {
+		if (act_start && !nvram_get_int("g_upgrade")) {
 			dns_to_resolv();
 			start_dnsmasq();
 		}
@@ -3653,7 +3649,7 @@ TOP:
 
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
-			g_upgrade = 1;
+			nvram_set("g_upgrade", "1");
 			stop_sched();
 			stop_cron();
 #ifdef TCONFIG_USB

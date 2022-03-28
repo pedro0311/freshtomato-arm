@@ -150,7 +150,7 @@ connect() {
 
 				$LOGS "4G MODEM - $TXTLOG (device $i)"
 
-				[ "$SPEED" != "$RESSPEED" ] ||  [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
+				[ "$SPEED" != "$RESSPEED" ] || [ "$ROAMING" != "$RESROAM" ] || ([ "$SPEED" == "03" ] && [ "$BAND" != "$RESBAND" ]) && {
 					MODE="AT^SYSCFGEX=\"$MODESPEED\",3fffffff,$MODEROAM,4,$MODEBAND,," gcom -d "$i" -s /etc/gcom/setverbose.gcom
 					sleep 3
 				}
@@ -164,8 +164,10 @@ connect() {
 				[ "$(echo "$CGPADDR" | grep "+CGPADDR:" | wc -l)" -eq 1 ] && {
 					$LOGS "4G MODEM - connected (device $i) ..."
 					CONNECTED=1
-					nvram set "$PREFIX"_modem_dev="$i"
-					nvram commit
+					[ "$(NV "$PREFIX"_modem_dev)" != "$i" ] && {
+						nvram set "$PREFIX"_modem_dev="$i"
+						nvram commit
+					}
 					break
 				} || {
 					$LOGS "4G MODEM - connection failed (device $i) [$COUNT] ..."
