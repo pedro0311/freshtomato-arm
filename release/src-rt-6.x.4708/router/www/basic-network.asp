@@ -364,6 +364,7 @@ W('}\n');
 W('<\/style>\n');
 
 var xob = null;
+var cmd = null;
 var refresher = [];
 var nphy = features('11n');
 var acphy = features('11ac');
@@ -1364,6 +1365,23 @@ REMOVE-END */
 	return ok;
 }
 
+function pre_submit(s) {
+	if (cmd)
+		return;
+
+	cmd = new XmlHttp();
+	cmd.onCompleted = function(text, xml) {
+		eval(text);
+		cmd = null;
+	}
+	cmd.onError = function(x) {
+		alert('ERROR: '+x);
+		cmd = null;
+	}
+
+	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(s.replace(/\r/g, '')));
+}
+
 function save() {
 	if (lg.isEditing())
 		return;
@@ -1373,6 +1391,7 @@ function save() {
 	var i, j;
 	var u, uidx, wan_uidx, wmode, sm2, wradio;
 	var curr_mwan_num = E('_mwan_num').value;
+	var s = '';
 
 	if (!verifyFields(null, 0))
 		return;
@@ -1616,6 +1635,9 @@ REMOVE-END */
 			fom['wan'+u+'_iface'].value = '';
 			fom['wan'+u+'_ifname'].value = '';
 			fom['wan'+u+'_hwaddr'].value = '';
+
+			if (uidx > curr_mwan_num)
+				s += 'nvram set wan'+u+'_proto="disabled"\n';
 		}
 
 		if (fom['wan'+u+'_dns_auto'].value == '1')
@@ -1650,6 +1672,9 @@ REMOVE-END */
 		fom.mwan_ckdst.value = '';
 
 	fom.mwan_tune_gc.value = ((fom['_f_mwan_tune_gc'].checked && curr_mwan_num > 1) ? 1 : 0);
+
+	if (s != '') /* workaround to set wanX_proto to disabled on every inactive WAN */
+		pre_submit(s);
 
 	if (nvram.lan_ipaddr != fom.lan_ipaddr.value) {
 		fom._moveip.value = 1;
