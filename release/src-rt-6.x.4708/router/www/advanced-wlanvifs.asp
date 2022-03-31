@@ -479,6 +479,7 @@ REMOVE-END */
 	var lan3_ifnames = nvram['lan3_ifnames'];
 	var wl0_vifs = nvram['wl0_vifs'];
 	var wl1_vifs = nvram['wl1_vifs'];
+	var wl2_vifs = nvram['wl2_vifs'];
 
 	for (var vidx = 0; vidx < vifs_deleted.length; ++vidx) {
 		var u = vifs_deleted[vidx];
@@ -495,6 +496,8 @@ REMOVE-END */
 			wl0_vifs = wl0_vifs.replace('wl'+u, '');
 		if (typeof(wl1_vifs) != 'undefined')
 			wl1_vifs = wl1_vifs.replace('wl'+u, '');
+		if (typeof(wl2_vifs) != 'undefined')
+			wl2_vifs = wl2_vifs.replace('wl'+u, '');
 
 		s += 'nvram unset wl'+u+'_wme\n';
 		s += 'nvram unset wl'+u+'_bss_maxassoc\n';
@@ -511,6 +514,8 @@ REMOVE-END */
 			s += 'nvram set wl0_vifs="'+wl0_vifs+'"\n';
 		if (typeof(wl1_vifs) != 'undefined')
 			s += 'nvram set wl1_vifs="'+wl1_vifs+'"\n';
+		if (typeof(wl2_vifs) != 'undefined')
+			s += 'nvram set wl2_vifs="'+wl2_vifs+'"\n';
 	}
 	post_pre_submit_form(s);
 }
