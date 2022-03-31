@@ -2904,8 +2904,17 @@ function toggleVisibility(where, whichone) {
 	}
 }
 
+function spinOUI(x, which) {
+	E(which).style.display = (x ? 'inline-block' : 'none');
+	if (!x)
+		cmd = null;
+}
+
 function searchOUI(n, i) {
-	spin(1, 'gW_'+i);
+	if (cmd)
+		return;
+
+	spinOUI(1, 'gW_'+i);
 
 	cmd = new XmlHttp();
 	cmd.onCompleted = function(text, xml) {
@@ -2922,8 +2931,10 @@ function searchOUI(n, i) {
 }
 
 function displayOUI(i) {
-	spin(0, 'gW_'+i);
-	if (cmdresult.indexOf('Not Found') == -1)
+	spinOUI(0, 'gW_'+i);
+	if (cmdresult.indexOf('bad address') != -1)
+		cmdresult = 'No Internet! Check your Network/DNS settings!';
+	else if (cmdresult.indexOf('Not Found') == -1)
 		cmdresult = 'Manufacturer: \n'+cmdresult;
 	else
 		cmdresult = 'Manufacturer not found!';

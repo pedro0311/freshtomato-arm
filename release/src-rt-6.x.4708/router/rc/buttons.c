@@ -289,12 +289,9 @@ int buttons_main(int argc, char *argv[])
 		reset_mask = 1 << 5;
 		break;
 	case MODEL_F9K1102:
-#if 0 /* FIX me: gpio 3 signal not stable / not use-able (can cause reboots), something is missing (pull-up enable for ex. ??) */
 		reset_mask = 1 << 3;
 		ses_mask = 1 << 7;
-#else
-		reset_mask = 1 << 7; /* use wps button at tomato level for router reset */
-#endif /* 0 */
+		ses_led = LED_AOSS;
 		break;
 	case MODEL_E900:
 	case MODEL_E1000v2:

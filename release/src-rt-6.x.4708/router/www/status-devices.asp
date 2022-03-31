@@ -606,12 +606,6 @@ function addRestrict(n) {
 	form.submitHidden('tomato.cgi', { _redirect: 'restrict-edit.asp', rruleN: -1 });
 }
 
-function spin(x, which) {
-	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x)
-		cmd = null;
-}
-
 function onRefToggle() {
 	ref.toggle();
 

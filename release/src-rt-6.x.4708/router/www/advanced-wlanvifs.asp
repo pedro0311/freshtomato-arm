@@ -236,19 +236,19 @@ wlg.onAdd = function() {
 	E('_f_wl'+u+'_macmode').value = data[5];
 
 	vifs_defined.push([
-		u.toString(),					/* fface == wl_ifaces[uidx][1] */
-		(nvram['wl'+u+'_ifname']) || ('wl'+u),		/* ifname =~ wl_ifaces[uidx][0] */
-		u.substr(0, u.indexOf('.')),			/* unit */
-		u.substr(u.indexOf('.')+1) || '-1',		/* subunit */
-		data[1] || '1',					/* radio */
-		'0',						/* iface up? */
-		data[1] || '1',					/* bss_enabled */
-		data[3],					/* WL net mode */
-		data[2], 					/* nvram['wl'+u+'_ssid'] */
-		(eval('nvram["wl'+u+'_hwaddr"]')) || mac_null,	/* MAC addr */
-		'0',						/* VIFs supported */
+		u.toString(),				/* fface == wl_ifaces[uidx][1] */
+		(nvram['wl'+u+'_ifname']) || ('wl'+u),	/* ifname =~ wl_ifaces[uidx][0] */
+		u.substr(0, u.indexOf('.')),		/* unit */
+		u.substr(u.indexOf('.')+1) || '-1',	/* subunit */
+		data[1] || '1',				/* radio */
+		'0',					/* iface up? */
+		data[1] || '1',				/* bss_enabled */
+		data[3],				/* WL net mode */
+		data[2],				/* nvram['wl'+u+'_ssid'] */
+		(eval('nvram["wl'+u+'_hwaddr"]')) || mac_null, /* MAC addr */
+		'0',					/* VIFs supported */
 		data[4],
-		data[5]						/* Wireless Filter */
+		data[5]					/* Wireless Filter */
 	]);
 
 	this.resort();
@@ -272,8 +272,8 @@ wlg.onAdd = function() {
 /* REMOVE-BEGIN
 	setTimeout(
 		function() {
-		e.innerHTML = '';
-		e.style.display = 'none';
+			e.innerHTML = '';
+			e.style.display = 'none';
 		}, 5000);
 REMOVE-END */
 }
@@ -479,6 +479,7 @@ REMOVE-END */
 	var lan3_ifnames = nvram['lan3_ifnames'];
 	var wl0_vifs = nvram['wl0_vifs'];
 	var wl1_vifs = nvram['wl1_vifs'];
+	var wl2_vifs = nvram['wl2_vifs'];
 
 	for (var vidx = 0; vidx < vifs_deleted.length; ++vidx) {
 		var u = vifs_deleted[vidx];
@@ -495,6 +496,8 @@ REMOVE-END */
 			wl0_vifs = wl0_vifs.replace('wl'+u, '');
 		if (typeof(wl1_vifs) != 'undefined')
 			wl1_vifs = wl1_vifs.replace('wl'+u, '');
+		if (typeof(wl2_vifs) != 'undefined')
+			wl2_vifs = wl2_vifs.replace('wl'+u, '');
 
 		s += 'nvram unset wl'+u+'_wme\n';
 		s += 'nvram unset wl'+u+'_bss_maxassoc\n';
@@ -511,6 +514,8 @@ REMOVE-END */
 			s += 'nvram set wl0_vifs="'+wl0_vifs+'"\n';
 		if (typeof(wl1_vifs) != 'undefined')
 			s += 'nvram set wl1_vifs="'+wl1_vifs+'"\n';
+		if (typeof(wl2_vifs) != 'undefined')
+			s += 'nvram set wl2_vifs="'+wl2_vifs+'"\n';
 	}
 	post_pre_submit_form(s);
 }
@@ -770,9 +775,6 @@ REMOVE-END */
 					wl_vis[vidx]._wl_nbw_cap = 2;
 					if (E('_wl'+u+'_nbw_cap').value != '0') {
 						E('_wl'+u+'_nbw_cap').value = 0;
-/* REMOVE-BEGIN
-						refreshChannels(uidx);
-REMOVE-END */
 						refreshChannels(wl_ifidxx(u));
 					}
 				}
@@ -788,9 +790,6 @@ REMOVE-END */
 	and includes all channels available with 20MHz channel width.
 REMOVE-END */
 
-/* REMOVE-BEGIN
-			b = selectedBand(uidx);
-REMOVE-END */
 			b = selectedBand(wl_ifidxx(u));
 
 			if (wl_vis[vidx]._wl_channel == 1 && wl_vis[vidx]._f_wl_nctrlsb != 0 && ((b == '2') || (wl_vis[vidx]._f_wl_nband == 0 && b == '0'))) {
@@ -803,9 +802,6 @@ REMOVE-END */
 							E('_f_wl'+u+'_nctrlsb').value = 'lower';
 							wl_vis[vidx]._f_wl_nctrlsb = 2;
 						}
-/* REMOVE-BEGIN
-						else if (i > max_channel[uidx] - 4) {
-REMOVE-END */
 						else if (i > max_channel[wl_ifidxx(u)] - 4) {
 							E('_f_wl'+u+'_nctrlsb').value = 'upper';
 							wl_vis[vidx]._f_wl_nctrlsb = 2;
@@ -818,9 +814,6 @@ REMOVE-END */
 		else {
 			e = E('_f_wl'+u+'_mode');
 			for (var i = 0; i < e.options.length ; i++) {
-/* REMOVE-BEGIN
-				e.options[i].disabled = ((e.options[i].value != 'ap') && (e.options[i].value != 'wet'));
-REMOVE-END */
 				e.options[i].disabled = (e.options[i].value != 'ap');
 			}
 		}
@@ -1065,17 +1058,17 @@ function save() {
 	}
 
 	for (vidx = 0; vidx < vifs_possible.length; ++vidx) {
-		u = vifs_possible[vidx][0].toString();					/* WL unit (primary) or unit.subunit (virtual) */
+		u = vifs_possible[vidx][0].toString(); /* WL unit (primary) or unit.subunit (virtual) */
 		vif = definedVIFidx(u);
 
 		if (u == 0)
-			fom.wl_macmode.value = E('_f_wl'+u+'_macmode').value;		/* rewrite for backward compatibility */
+			fom.wl_macmode.value = E('_f_wl'+u+'_macmode').value; /* rewrite for backward compatibility */
 
 		if (vif < 0)
-			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_';		/* use fake input name to delete */
+			E('_wl'+u+'_macmode').name = '_f_wl'+u+'_macmode_'; /* use fake input name to delete */
 		else {
 			E('_wl'+u+'_macmode').value = E('_f_wl'+u+'_macmode').value;
-			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString();	/* copy base maclist to 'u' interface */
+			E('_wl'+u+'_maclist').value = nvram['wl_maclist'].toString(); /* copy base maclist to 'u' interface */
 		}
 /* REMOVE-BEGIN
 // AB TODO: try to play this safer - save some vital info on primary BSS (just in case?)
@@ -1277,7 +1270,7 @@ REMOVE-END */
 	do_pre_submit_form(fom);
 
 /* REMOVE-BEGIN
-	form.submit(fom,1);
+	form.submit(fom, 1);
 REMOVE-END */
 }
 
@@ -1286,17 +1279,6 @@ function earlyInit() {
 	for (var mode in wmo) {
 		wl_modes_available.push([mode, wmo[mode]]);
 	}
-/* REMOVE-BEGIN
-	for (var mode in auth) {
-		wl_sec_modes_available.push([mode, auth[mode]]);
-	}
-	for (var mode in enc) {
-		wl_enc_modes_available.push([mode, enc[mode]]);
-	}
-
-	wl_ifaces = [ ['eth1','0',0,-1,'bott','00:1C:10:9E:8C:8E',1,4],['wl0.1','0.1',0,1,'ghetto','02:1C:10:9E:8C:8F',1,0],['eth2','1',1,-1,'lixo','04:1C:10:9E:8C:8E',1,4]];
-	wl_bands = [ ['2'],['2'],['2'] ];
-REMOVE-END */
 
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var u = wl_fface(uidx).toString();
@@ -1315,21 +1297,19 @@ REMOVE-END */
 
 			var wlvifs = ((wl_ifaces[uidx][7] > 4) ? '4' : wl_ifaces[uidx][7].toString());
 			vifs_defined.push([
-				u.toString(),					/* fface == wl_ifaces[uidx][1] */
+				u.toString(),			/* fface == wl_ifaces[uidx][1] */
 				wl_ifaces[uidx][0],
-				// (nvram['wl'+u+'_ifname']) || ('wl'u),	/* ifname =~ wl_ifaces[uidx][0] */
-				wl_ifaces[uidx][2] || '0',			/* unit */
-				wl_ifaces[uidx][3] || '0',			/* subunit */
-				nvram['wl'+u+'_radio'] || '0',			/* radio */
-				wl_ifaces[uidx][6] || '0',			/* iface up/operational status */
-				nvram['wl'+u+'_bss_enabled'] || '1',		/* bss_enabled */
-				wmode || 'disabled',				/* WL net mode */
-				wl_ifaces[uidx][4] || '',			/* nvram['wl'+u+'_ssid'] */
-				nvram['wl'+u+'_hwaddr'],			/* MAC addr */
-				// (wl_ifaces[uidx][7] * 1).toString(), 	/* VIFs supported */
-				wlvifs,						/* VIFs supported */
+				wl_ifaces[uidx][2] || '0',	/* unit */
+				wl_ifaces[uidx][3] || '0',	/* subunit */
+				nvram['wl'+u+'_radio'] || '0',	/* radio */
+				wl_ifaces[uidx][6] || '0',	/* iface up/operational status */
+				nvram['wl'+u+'_bss_enabled'] || '1', /* bss_enabled */
+				wmode || 'disabled',		/* WL net mode */
+				wl_ifaces[uidx][4] || '',	/* nvram['wl'+u+'_ssid'] */
+				nvram['wl'+u+'_hwaddr'],	/* MAC addr */
+				wlvifs,				/* VIFs supported */
 				bridged,
-				nvram['wl'+u+'_macmode'] || 'disabled'		/* Wireless Filter */
+				nvram['wl'+u+'_macmode'] || 'disabled' /* Wireless Filter */
 			]);
 			/* max_no_vifs = max_no_vifs+((wl_ifaces[uidx][7] > 4) ? 4 : wl_ifaces[uidx][7]); */
 			max_no_vifs = max_no_vifs + parseInt(wlvifs);
@@ -1354,23 +1334,19 @@ REMOVE-END */
 			var s = (i == 0) ? '' : '.'+i.toString();
 			var t = u+s;
 			var v = wl_ifidxx(t);
-			var w = (v < 0 ? 'wl'+t : (wl_sunit(v) < 0 ? wl_display_ifname(v) : 'wl'+t));
-			vifs_possible.push([ t, w ]);
-			tabs.push([ t, w ]);
+			var w = (v < 0 ? 'wl'+t : wl_display_ifname(v));
+			vifs_possible.push([t, w]);
+			tabs.push([t, w]);
 		}
 	}
 
-	W('#spin {\n');
-	W('display:none;\n');
-	W('vertical-align:middle;\n');
-	W('}\n');
-	W('<\/style>\n');
+	W('#spin {\ndisplay:none;\nvertical-align:middle;\n}\n<\/style>\n');
 }
 
 function init() {
 	var uninit = wl_ifaces.length - 1;
 	while (uninit > 0) {
-		if (((nvram['wl'+wl_unit(uninit)+'_corerev']) *1) >= 9)
+		if (((nvram['wl'+wl_unit(uninit)+'_corerev']) * 1) >= 9)
 			break;
 
 		uninit--;

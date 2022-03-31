@@ -174,12 +174,6 @@ Date.prototype.toWHMS = function() {
 	return dayOfWeek[this.getDay()]+' '+this.getHours()+':'+this.getMinutes().pad(2)+ ':'+this.getSeconds().pad(2);
 }
 
-function spin(x, which) {
-	E(which).style.display = (x ? 'inline-block' : 'none');
-	if (!x)
-		cmd = null;
-}
-
 function setMsg(msg) {
 	elem.setInnerHTML(E('survey-msg'), msg);
 }
