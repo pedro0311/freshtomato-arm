@@ -19,7 +19,7 @@
 --- dropbear/sysoptions.h
 +++ dropbear/sysoptions.h
 @@ -7,7 +7,9 @@
- #define DROPBEAR_VERSION "2020.81"
+ #define DROPBEAR_VERSION "2022.82"
  #endif
  
 +#ifndef LOCAL_IDENT
@@ -28,7 +28,7 @@
  #define PROGNAME "dropbear"
  
  /* Spec recommends after one hour or 1 gigabyte of data. One hour
-@@ -333,7 +335,7 @@
+@@ -338,7 +340,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__

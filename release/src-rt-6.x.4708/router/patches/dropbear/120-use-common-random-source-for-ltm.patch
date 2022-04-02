@@ -1,6 +1,6 @@
 --- dropbear/dbrandom.c
 +++ dropbear/dbrandom.c
-@@ -343,6 +343,11 @@
+@@ -342,6 +342,11 @@
  	m_burn(hash, sizeof(hash));
  }
  
