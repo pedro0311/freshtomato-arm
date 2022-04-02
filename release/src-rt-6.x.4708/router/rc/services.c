@@ -3233,7 +3233,7 @@ void start_services(void)
 	start_httpd();
 #ifdef TCONFIG_NGINX
 	start_nginx();
-	start_mysql();
+	start_mysql(0);
 #endif
 	start_cron();
 	start_rstats(0);
@@ -4097,11 +4097,16 @@ TOP:
 		if (act_start) start_nginxfp();
 		goto CLEAR;
 	}
-	if (strcmp(service, "mysql") == 0) {
+	if (strncmp(service, "mysql", 5) == 0) {
 		if (act_stop) stop_mysql();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_mysql();
+		if (act_start) {
+			if (!(strcmp(service, "mysqlgui") == 0)) /* force (re)start */
+				start_mysql(1);
+			else
+				start_mysql(0);
+		}
 		goto CLEAR;
 	}
 #endif

@@ -21,9 +21,49 @@
 
 //	<% usbdevices(); %>
 
-var ams_link = '&nbsp;&nbsp;<a href="http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php" class="new_window"><i>[Click here to manage MySQL]<\/i><\/a>';
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
 
+<script>
+
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+}
+
+var changed = 0;
+
+function show() {
+	E('_mysql_notice').innerHTML = 'MySQL is currently '+(!isup.mysqld ? 'stopped' : 'running')+' ';
+	E('_mysql_button').value = (isup.mysqld ? 'Stop' : 'Start')+' Now';
+	E('_mysql_button').setAttribute('onclick', 'javascript:toggle(\'mysql\', '+isup.mysqld+');');
+	E('_mysql_button').disabled = 0;
+}
+
+function toggle(service, isup) {
+	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
+		return;
+
+	E('_'+service+'_button').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
+
+	form.submit(fom, 1, 'service.cgi');
+}
+
+var ams_link = '&nbsp;&nbsp;<a href="http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php" class="new_window"><i>[Click here to manage MySQL]<\/i><\/a>';
 var usb_disk_list = new Array();
+
 function refresh_usb_disk() {
 	var i, j, k, a, b, c, e, s, desc, d, parts, p;
 	var partcount;
@@ -73,6 +113,9 @@ function refresh_usb_disk() {
 }
 
 function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
+
 	var ok = 1;
 
 	var a = E('_f_mysql_enable').checked;
@@ -120,10 +163,8 @@ function verifyFields(focused, quiet) {
 	PR(E('_mysql_username')).style.display = x;
 	PR(E('_mysql_passwd')).style.display = x;
 
-	var e;
-	e = E('_mysql_passwd');
-	s = e.value.trim();
-	if (s == '') {
+	var e = E('_mysql_passwd');
+	if (e.value.trim() == '') {
 		ferror.set(e, 'Password can not be NULL value', quiet);
 		ok = 0;
 	}
@@ -136,22 +177,32 @@ function save() {
 		return;
 
 	var fom = E('t_fom');
-	fom.mysql_enable.value		= fom._f_mysql_enable.checked ? 1 : 0;
-	fom.mysql_check.value		= fom._f_mysql_check.checked ? 1 : 0;
-	fom.mysql_usb_enable.value	= fom._f_mysql_usb_enable.checked ? 1 : 0;
-	fom.mysql_init_priv.value	= fom._f_mysql_init_priv.checked ? 1 : 0;
-	fom.mysql_init_rootpass.value	= fom._f_mysql_init_rootpass.checked ? 1 : 0;
-	fom.mysql_allow_anyhost.value	= fom._f_mysql_allow_anyhost.checked ? 1 : 0;
+	fom.mysql_enable.value = fom._f_mysql_enable.checked ? 1 : 0;
+	fom.mysql_check.value = fom._f_mysql_check.checked ? 1 : 0;
+	fom.mysql_usb_enable.value = fom._f_mysql_usb_enable.checked ? 1 : 0;
+	fom.mysql_init_priv.value = fom._f_mysql_init_priv.checked ? 1 : 0;
+	fom.mysql_init_rootpass.value = fom._f_mysql_init_rootpass.checked ? 1 : 0;
+	fom.mysql_allow_anyhost.value = fom._f_mysql_allow_anyhost.checked ? 1 : 0;
 
-	if (fom.mysql_enable.value == 0)
-		fom._service.value = 'mysql-stop';
+	if (fom.mysql_enable.value)
+		fom._service.value = 'mysqlgui-restart';
 	else
-		fom._service.value = 'mysql-restart'; 
+		fom._service.value = 'mysql-stop';
 
-	form.submit('t_fom', 1);
+	fom._nofootermsg.value = 0;
+
+	form.submit(fom, 1);
+
+	changed = 0;
+}
+
+function earlyInit() {
+	show();
+	verifyFields(null, 1);
 }
 
 function init() {
+	up.initPage(250, 5);
 	eventHandler();
 }
 </script>
@@ -170,8 +221,9 @@ function init() {
 
 <!-- / / / -->
 
-<input type="hidden" name="_nextpage" value="mysql.asp">
-<input type="hidden" name="_service" value="mysql-restart">
+<input type="hidden" name="_nextpage" value="web-mysql.asp">
+<input type="hidden" name="_service" value="">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="mysql_enable">
 <input type="hidden" name="mysql_check">
 <input type="hidden" name="mysql_usb_enable">
@@ -181,13 +233,23 @@ function init() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<span id="_mysql_notice"></span>
+		<input type="button" id="_mysql_button">
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">Basic Settings<script>W(ams_link);</script></div>
 <div class="section" id="config-section1">
 	<script>
 		refresh_usb_disk();
 
 		createFieldTable('', [
-			{ title: 'Enable MySQL server', name: 'f_mysql_enable', type: 'checkbox', value: nvram.mysql_enable == 1 },
+			{ title: 'Enable Server on Start', name: 'f_mysql_enable', type: 'checkbox', value: nvram.mysql_enable == 1 },
 			{ title: 'MySQL binary path', multi: [
 				{ name: 'mysql_binary', type: 'select', options: [
 					['internal','Internal (/usr/bin)'],
@@ -254,6 +316,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>earlyInit();</script>
 </body>
 </html>
