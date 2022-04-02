@@ -1,13 +1,16 @@
 /*
-	 * nginx.c
-	 *
-	 * Copyright (C) 2013 NGinX for Tomato RAF
-	 *  ***** Ofer Chen, roadkill AT tomatoraf DOT com
-	 *  ***** Vicente Soriano, victek AT tomatoraf DOT com
-	 *
-	 * No part of this program can be used out of Tomato Firmware without owners permission.
-	 * This code generates the configurations files for NGINX. You can see these files in /etc/nginx/
-*/
+ * nginx.c
+ *
+ * Copyright (C) 2013 NGinX for Tomato RAF
+ *  ***** Ofer Chen, roadkill AT tomatoraf DOT com
+ *  ***** Vicente Soriano, victek AT tomatoraf DOT com
+ *
+ * No part of this program can be used out of Tomato Firmware without owners permission.
+ * This code generates the configurations files for NGINX. You can see these files in /etc/nginx/
+ *
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -250,7 +253,7 @@ static void build_nginx_conf(void)
 	                         buf);
 
 	/* PHP to FastCGI Server */
-	if (nvram_match("nginx_php", "1"))
+	if (nvram_get_int("nginx_php"))
 		fprintf(nginx_conf_file, "location ~ ^(?<script_name>.+?\\.php)(?<path_info>/.*)?$ {\n"
 		                         "try_files $script_name = 404;\n"
 		                         "include %s;\n"
@@ -286,7 +289,7 @@ static void build_nginx_conf(void)
 
 	syslog(LOG_INFO, "nginx - config file built succesfully");
 
-	if (nvram_match("nginx_php", "1")) {
+	if (nvram_get_int("nginx_php")) {
 		if (!(phpini_file = fopen("/etc/php.ini", "w"))) {
 			perror("/etc/php.ini");
 			return;
@@ -307,21 +310,16 @@ static void build_nginx_conf(void)
 }
 
 /* start the nginx module according environment directives */
-void start_nginx(void)
+void start_nginx(int force)
 {
 	int ret;
 
-	if (fastpath != 1) {
-		if (!nvram_match("nginx_enable", "1"))
-			return;
-	}
-	else
-		syslog(LOG_INFO, "nginx - fastpath forced generation of config file");
+	/* make sure it's really stopped */
+	stop_nginx();
 
-	if (fastpath != 1)
-		stop_nginx();
-	else
-		stop_nginxfp();
+	/* only if enabled or forced */
+	if (!nvram_get_int("nginx_enable") && force == 0)
+		return;
 
 	if (!f_exists(fastcgiconf))
 		build_fastcgi_conf();
@@ -329,7 +327,7 @@ void start_nginx(void)
 	if (!f_exists(mimetypes))
 		build_mime_types();
 
-	if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
+	if (!nvram_get_int("nginx_keepconf"))
 		build_nginx_conf();
 	else {
 		if (!f_exists(nginxconf))
@@ -343,13 +341,13 @@ void start_nginx(void)
 	mkdir_if_none(uwsgi_temp_path);
 	mkdir_if_none(scgi_temp_path);
 
-	if (nvram_match("nginx_php", "1"))
+	if (nvram_get_int("nginx_php"))
 		/* run spawn-fcgi */
 		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "/usr/sbin/php-cgi");
 	else
 		killall_tk_period_wait("php-cgi", 50);
 
-	if (nvram_match("nginx_override", "1"))
+	if (nvram_get_int("nginx_override"))
 		ret = eval(nginxbin, "-c", nvram_safe_get("nginx_overridefile"));
 	else
 		ret = eval(nginxbin, "-c", nginxconf);
@@ -360,14 +358,6 @@ void start_nginx(void)
 		syslog(LOG_INFO, "nginx is started");
 }
 
-/* start nginx using fastpath method no checks */
-void start_nginxfp(void)
-{
-	fastpath = 1;
-	start_nginx();
-	fastpath = 0;
-}
-
 /* stop nginx and remove traces of the process */
 void stop_nginx(void)
 {
@@ -375,30 +365,21 @@ void stop_nginx(void)
 		killall_tk_period_wait(nginxbin, 50);
 		killall_tk_period_wait("php-cgi", 50);
 
-		if (f_exists(nginxpid))
-			unlink(nginxpid);
-
-		if (f_exists(fastcgiconf)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
-				unlink(fastcgiconf);
-		}
-		if (f_exists(mimetypes)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
-				unlink(mimetypes);
-		}
-		if (f_exists(nginxconf)) {
-			if ((fastpath != 1) && (!nvram_match("nginx_keepconf", "1")))
-				unlink(nginxconf);
-		}
-
 		syslog(LOG_INFO, "nginx is stopped");
 	}
-}
+	if (f_exists(nginxpid))
+		unlink(nginxpid);
 
-/* stop nginx using fastpath method no checks */
-void stop_nginxfp(void)
-{
-	fastpath = 1;
-	stop_nginx();
-	fastpath = 0;
+	if (f_exists(fastcgiconf)) {
+		if (!nvram_get_int("nginx_keepconf"))
+			unlink(fastcgiconf);
+	}
+	if (f_exists(mimetypes)) {
+		if (!nvram_get_int("nginx_keepconf"))
+			unlink(mimetypes);
+	}
+	if (f_exists(nginxconf)) {
+		if (!nvram_get_int("nginx_keepconf"))
+			unlink(nginxconf);
+	}
 }

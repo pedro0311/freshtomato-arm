@@ -47,10 +47,10 @@ up.refresh = function(text) {
 var changed = 0;
 
 function show() {
-	E('_nginxfp_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
-	E('_nginxfp_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
-	E('_nginxfp_button').setAttribute('onclick', 'javascript:toggle(\'nginxfp\', '+isup.nginx+');');
-	E('_nginxfp_button').disabled = 0;
+	E('_nginx_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
+	E('_nginx_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
+	E('_nginx_button').setAttribute('onclick', 'javascript:toggle(\'nginxgui\', '+isup.nginx+');');
+	E('_nginx_button').disabled = 0;
 }
 
 function toggle(service, isup) {
@@ -108,10 +108,10 @@ function save() {
 		fom.nginx_remote.value = fom.f_nginx_remote.checked ? 1 : 0;
 		fom.nginx_override.value = fom.f_nginx_override.checked ? 1 : 0;
 		fom.nginx_h5aisupport.value = fom.f_nginx_h5aisupport.checked ? 1 : 0;
-		fom._service.value = 'nginxfp-restart';
+		fom._service.value = 'nginxgui-start';
 	}
 	else
-		fom._service.value = 'nginxfp-stop';
+		fom._service.value = 'nginx-stop';
 
 	fom._nofootermsg.value = 0;
 
@@ -164,8 +164,8 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_nginxfp_notice"></span>
-		<input type="button" id="_nginxfp_button">
+		<span id="_nginx_notice"></span>
+		<input type="button" id="_nginx_button">
 	</div>
 </div>
 
@@ -216,7 +216,7 @@ function init() {
 		<li><b> Enable Server on Start:</b> Check to activate the Web Server.</li>
 		<li><b> Enable PHP support:</b> Check to enable PHP support (php-cgi).</li>
 		<li><b> Run As:</b> Select user used to start nginx and php-cgi daemon.</li>
-		<li><b> Keep Config Files:</b> Have you modified the configuration file manually? Tick this box and changes will be maintained.</li> 
+		<li><b> Keep Config Files:</b> Do you want to modify the configuration file manually? Tick this box and after restart changes will be maintained.</li> 
 		<li><b> Web Server Port:</b> The Port used by the Web Server to be accessed. Check conflict when the port is used by other services.</li>
 		<li><b> Allow remote access:</b> This option will open the Web Server GUI port from the WAN side. Service will be accessed from the internet.</li>
 		<li><b> Web Server Name:</b> Name that will appear on top of your Internet Browser.</li>

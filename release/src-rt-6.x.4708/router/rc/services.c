@@ -3232,7 +3232,7 @@ void start_services(void)
 	start_cifs();
 	start_httpd();
 #ifdef TCONFIG_NGINX
-	start_nginx();
+	start_nginx(0);
 	start_mysql(0);
 #endif
 	start_cron();
@@ -4088,18 +4088,16 @@ TOP:
 #endif
 
 #ifdef TCONFIG_NGINX
-	if (strcmp(service, "enginex") == 0) {
+	if (strncmp(service, "nginx", 5) == 0) {
 		if (act_stop) stop_nginx();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_nginx();
-		goto CLEAR;
-	}
-	if (strcmp(service, "nginxfp") == 0) {
-		if (act_stop) stop_nginxfp();
-		stop_firewall();
-		start_firewall(); /* always restarted */
-		if (act_start) start_nginxfp();
+		if (act_start) {
+			if (!(strcmp(service, "nginxgui") == 0)) /* force (re)start */
+				start_nginx(1);
+			else
+				start_nginx(0);
+		}
 		goto CLEAR;
 	}
 	if (strncmp(service, "mysql", 5) == 0) {
