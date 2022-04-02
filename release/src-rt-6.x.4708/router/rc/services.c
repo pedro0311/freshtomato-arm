@@ -4059,9 +4059,14 @@ TOP:
 #endif
 
 #ifdef TCONFIG_TINC
-	if (strcmp(service, "tinc") == 0) {
+	if (strncmp(service, "tinc", 4) == 0) {
 		if (act_stop) stop_tinc();
-		if (act_start) start_tinc();
+		if (act_start) {
+			if (!(strcmp(service, "tincgui") == 0)) /* force (re)start */
+				start_tinc(1);
+			else
+				start_tinc(0);
+		}
 		goto CLEAR;
 	}
 #endif

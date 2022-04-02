@@ -56,7 +56,7 @@ function show() {
 	for (var i = 1; i <= 4; i++) {
 		var e = E('_tinc_button'+i);
 		e.value = (d ? 'Stop' : 'Start')+' Now';
-		e.setAttribute('onclick', 'javascript:toggle(\'tinc\', '+d+');');
+		e.setAttribute('onclick', 'javascript:toggle(\'tincgui\', '+d+');');
 		e.disabled = 0;
 	}
 
@@ -67,7 +67,7 @@ function show() {
 	E('nodes').disabled = !d;
 	E('info').disabled = !d;
 	E('hostselect').disabled = !d;
-	E('t_fom')._service.value = (d ? 'tinc-restart' : '');
+	E('t_fom')._service.value = (d ? 'tincgui-restart' : '');
 }
 
 function toggle(service, isup) {
