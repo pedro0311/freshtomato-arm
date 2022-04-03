@@ -2797,13 +2797,13 @@ libcurl/stamp-h1:
 		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-crypto-auth \
-			--enable-nonblocking --enable-file --enable-ftp --enable-http --enable-tftp \
+			--enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
 			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/staged/usr" --with-zlib="$(TOP)/zlib/staged/usr" \
-			--disable-nls --disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
+			--disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose \
-			--without-gnutls --without-krb4 --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) \
-			--with-linux-headers=$(LINUXDIR)/include $(CACERT)
+			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) \
+			$(CACERT)
 	@touch $@
 
 libcurl: libcurl/stamp-h1
