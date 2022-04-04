@@ -35,6 +35,7 @@ isup.pptpd = parseInt('<% psup("pptpd"); %>');
 
 /* NGINX-BEGIN */
 isup.nginx = parseInt('<% psup("nginx"); %>');
+isup.mysqld = parseInt('<% psup("mysqld"); %>');
 /* NGINX-END */
 
 /* SSH-BEGIN */

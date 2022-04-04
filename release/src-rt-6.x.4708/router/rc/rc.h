@@ -550,8 +550,7 @@ extern int write_ovpn_resolv(FILE*);
 
 /* tinc.c */
 #ifdef TCONFIG_TINC
-extern void start_tinc();
-extern void start_tinc_wanup();
+extern void start_tinc(int force);
 extern void stop_tinc();
 extern void run_tinc_firewall_script();
 #endif
@@ -580,11 +579,9 @@ extern void stop_nocat();
 /* nginx.c */
 #ifdef TCONFIG_NGINX
 extern void nginx_write(const char *format, ...);
-extern void start_nginx();
+extern void start_nginx(int force);
 extern void stop_nginx();
-extern void start_nginxfp();
-extern void stop_nginxfp();
-extern void start_mysql();
+extern void start_mysql(int force);
 extern void stop_mysql();
 #endif
 

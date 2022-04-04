@@ -2,6 +2,7 @@
  * mysql.c
  *
  * Copyright (C) 2014 bwq518, Hyzoom
+ * Fixes/updates (C) 2018 - 2022 pedro
  *
  */
 
@@ -22,7 +23,7 @@
 #define MYSQL_ANYHOST		"/tmp/setanyhost.sql"
 
 
-void start_mysql(void)
+void start_mysql(int force)
 {
 	FILE *fp;
 	char pbi[128];
@@ -34,11 +35,11 @@ void start_mysql(void)
 	/* make sure its really stop */
 	stop_mysql();
 
-	/* only if enabled... */
-	if (!nvram_match("mysql_enable", "1"))
+	/* only if enabled or forced */
+	if (!nvram_get_int("mysql_enable") && force == 0)
 		return;
 
-	if (nvram_match( "mysql_binary", "internal"))
+	if (nvram_match("mysql_binary", "internal"))
 		strcpy(pbi, "/usr/bin");
 	else if (nvram_match("mysql_binary", "optware"))
 		strcpy(pbi, "/opt/bin");
@@ -47,6 +48,7 @@ void start_mysql(void)
 
 	if (pbi[strlen(pbi)-1] == '/')
 		pbi[strlen(pbi) - 1] = '\0';
+
 	splitpath(pbi, basedir, tmp1);
 
 	/* Generate download saved path based on USB partition (mysql_dlroot) and directory name (mysql_datadir) */

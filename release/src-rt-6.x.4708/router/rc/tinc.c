@@ -1,8 +1,9 @@
 /*
-
-	Copyright (C) 2014-2021 Lance Fredrickson
-	lancethepants@gmail.com
-
+ *
+ * Copyright (C) 2014-2021 Lance Fredrickson
+ * lancethepants@gmail.com
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
 */
 
 
@@ -48,12 +49,16 @@ void tinc_setup_watchdog(void)
 	}
 }
 
-void start_tinc(void)
+void start_tinc(int force)
 {
 	char *nv, *nvp, *b;
 	const char *connecto, *name, *address, *port, *compression, *subnet, *rsa, *ed25519, *custom, *tinc_tmp_value;
 	char buffer[BUF_SIZE];
 	FILE *fp, *hp;
+
+	/* only if enabled on wanup or forced */
+	if (!nvram_get_int("tinc_wanup") && force == 0)
+		return;
 
 	/* Don't try to start tinc if it is already running */
 	if (pidof("tincd") >= 0)
@@ -307,10 +312,4 @@ void run_tinc_firewall_script(void)
 		fclose(fp);
 		system(TINC_FW_SCRIPT);
 	}
-}
-
-void start_tinc_wanup(void)
-{
-	if (nvram_match("tinc_wanup", "1"))
-		start_tinc();
 }

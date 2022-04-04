@@ -3232,8 +3232,8 @@ void start_services(void)
 	start_cifs();
 	start_httpd();
 #ifdef TCONFIG_NGINX
-	start_nginx();
-	start_mysql();
+	start_nginx(0);
+	start_mysql(0);
 #endif
 	start_cron();
 	start_rstats(0);
@@ -4059,9 +4059,14 @@ TOP:
 #endif
 
 #ifdef TCONFIG_TINC
-	if (strcmp(service, "tinc") == 0) {
+	if (strncmp(service, "tinc", 4) == 0) {
 		if (act_stop) stop_tinc();
-		if (act_start) start_tinc();
+		if (act_start) {
+			if (!(strcmp(service, "tincgui") == 0)) /* force (re)start */
+				start_tinc(1);
+			else
+				start_tinc(0);
+		}
 		goto CLEAR;
 	}
 #endif
@@ -4083,25 +4088,28 @@ TOP:
 #endif
 
 #ifdef TCONFIG_NGINX
-	if (strcmp(service, "enginex") == 0) {
+	if (strncmp(service, "nginx", 5) == 0) {
 		if (act_stop) stop_nginx();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_nginx();
+		if (act_start) {
+			if (!(strcmp(service, "nginxgui") == 0)) /* force (re)start */
+				start_nginx(1);
+			else
+				start_nginx(0);
+		}
 		goto CLEAR;
 	}
-	if (strcmp(service, "nginxfp") == 0) {
-		if (act_stop) stop_nginxfp();
-		stop_firewall();
-		start_firewall(); /* always restarted */
-		if (act_start) start_nginxfp();
-		goto CLEAR;
-	}
-	if (strcmp(service, "mysql") == 0) {
+	if (strncmp(service, "mysql", 5) == 0) {
 		if (act_stop) stop_mysql();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_mysql();
+		if (act_start) {
+			if (!(strcmp(service, "mysqlgui") == 0)) /* force (re)start */
+				start_mysql(1);
+			else
+				start_mysql(0);
+		}
 		goto CLEAR;
 	}
 #endif

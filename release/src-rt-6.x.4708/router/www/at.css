@@ -2002,8 +2002,9 @@ table.fields tr td.wwan-parser-view {
 	margin-bottom: 20px;
 }
 
-#_nginxfp_button {
-	margin-left: 45px;
+#_nginx_button,
+#_mysql_button {
+	margin-left: 54px;
 }
 
 textarea.as-script {
