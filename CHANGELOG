@@ -5,6 +5,44 @@ FreshTomato-ARM Changelog
 
 
 
+2022.2          2022.04.07
+---------------------------
+
+Note: mainly bugfixes release.
+
+- SDK6: update wireless driver (dual core)
+- SDK7: fix 128K nvram support for RT-AC3200
+- openvpn: update to 2.5.6
+- openssl: update to 1.1.1n
+- sqlite: update to 3.38.2
+- dropbear: update to 2022.82
+- uqmi: update to 2022.03.12 (44dd095) snapshot
+- libcurl: update CA certificate bundle as of 2022-03-29
+- build: fix 512M DRAM flagspec
+- build: prevent php and miniupnpd from picking up build system libraries
+- GUI: Advanced: Routing: fix adding new entries in Static Routing Table
+- GUI: Advanced: Virtual Wireless: add a warning in the Notes section to not use 'virtual interfaces' on interface in Wireless Ethernet Bridge or Media Bridge modes due to possible problems
+- GUI: Advanced: Virtual Wireless: add missing code for tri-band router (SDK7)
+- GUI: Advanced: Virtual Wireless: also add frequency to interface drop down list when editing
+- GUI: Basic: Network: also set wanX_proto to 'disabled' if given WAN is (set to) inactive
+- GUI: Wake on LAN/Menu: use one notation for consistency
+- GUI: Web Server: MySQL Server: add daemon status, add start/stop button (unify to nginx page)s
+- others: btcheck: fix regex for checking if transmission-daemon is up (it never worked...)
+- others: mycheck: simplify regex for checking if mysqld is up
+- others: switch4g: simplify regex for checking if uqmi is up
+- others: switch4g: only use nvram commit if it's needed
+- others: watchdog: simplify regex and fix how mwanroute is called (detach)
+- others: watchdog: fix regex for checking if orphaned connect-on-demand listen process is up (it never worked...)
+- others: watchdog: fix for LTE proto
+- others: wwansignal: simplify regex for checking if uqmi is up
+- rc: nginx: align the way how it's called to other services (note: name of the service has changed from 'enginex'/'nginxfp' to 'nginx'/'nginxgui')
+- rc: use nvram variables instead of globals to skip some steps during upgrade/reboot procedure; also include watchdog in that process
+- rc: some fixes regarding MultiWAN + add more debug log
+- rc: tinc.c: add/fix watchdog
+- shared: defaults.c: initialize wanX_proto (except the 1st one) as 'disabled'
+- www: tomato.js: improve error handling in displayOUI()
+
+
 2022.1          2022.03.13
 ---------------------------
 
