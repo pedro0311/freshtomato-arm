@@ -530,7 +530,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
-	/* R6300V2 / R6250 */
+	/* AC1450, R6300V2 / R6250 */
 	else if (nvram_match("boardnum", "679") &&
 	     nvram_match("boardtype", "0x0646") &&
 	     nvram_match("boardrev", "0x1110")) {
@@ -964,7 +964,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
-		/* R6300V2 / R6250 */
+		/* AC1450, R6300V2 / R6250 */
 		/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
@@ -1020,7 +1020,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
-		/* R6300V2 and R6250 */
+		/* AC1450, R6300V2 and R6250 */
         	/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
@@ -1072,7 +1072,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x7200000;
 			nparts++;
 		}
-		/* R6300V2 and R6250 */
+		/* AC1450, R6300V2 and R6250 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1110")) {
