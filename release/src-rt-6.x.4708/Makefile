@@ -212,7 +212,7 @@ endif
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-DIR868L-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
-# for R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
+# for AC1450, R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(CONFIG_BCM7),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -227,6 +227,7 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v3,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6700v3-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 else
+	ctools/trx_asus -i image/linux-lzma.trx -r AC1450,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-AC1450-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R7000,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R7000-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6900,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6900-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v1,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6700v1-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1288,6 +1289,9 @@ xr300e:
 xr300z:
 	@$(MAKE) z ARM=y NVRAM_128K=y DRAM_512M=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
+ac1450init:
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="AC1450" BOARDID_FILE="compatible_ac1450.txt" FW_CFG_FILE="tomato_cfg.h"
+
 r7000init:
 	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="R7000" BOARDID_FILE="compatible_r7000.txt" FW_CFG_FILE="tomato_cfg.h"
 
@@ -1440,12 +1444,13 @@ help:
 	@echo "DLINK ARM Builds"
 	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
-	@echo "r7000e          R7000/R6900/R6700v1/R6300v2/R6250 build VPN"
-	@echo "r7000z          R7000/R6900/R6700v1/R6300v2/R6250 build AIO"
+	@echo "r7000e          AC1450, R7000/R6900/R6700v1/R6300v2/R6250 build VPN"
+	@echo "r7000z          AC1450, R7000/R6900/R6700v1/R6300v2/R6250 build AIO"
 	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
 	@echo "r6400z          R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
 	@echo "xr300e          XR300/R6700v3 build VPN - 128K NVRAM 512M DRAM"
 	@echo "xr300z          XR300/R6700v3 build AIO - 128K NVRAM 512M DRAM"
+	@echo "ac1450init      AC1450 init build"
 	@echo "r7000init       R7000 init build"
 	@echo "r6900init       R6900 init build"
 	@echo "r6250init       R6250 init build"

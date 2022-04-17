@@ -162,6 +162,7 @@ int do_led(int which, int mode)
 	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac68u_v3[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
+	static int ac1450[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
 	static int ac1900p[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac66u_b1[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int ac56u[]	= { 254,  255,     1,  255,  255,    3,    2,   14,    0,    6};
@@ -349,6 +350,15 @@ int do_led(int which, int mode)
 		}
 		else {
 			b = r6250[which];
+		}
+		break;
+	case MODEL_AC1450:
+		if (which == LED_DIAG) {
+			b = 3; /* color amber gpio 3 (active LOW) */
+			c = 2; /* color green gpio 2 (active LOW) */
+		}
+		else {
+			b = ac1450[which];
 		}
 		break;
 	case MODEL_R6300v2:
@@ -692,6 +702,7 @@ void led_setup(void)
 			set_gpio(GPIO_12, T_HIGH); /* disable sys led */
 			set_gpio(GPIO_15, T_HIGH); /* disable wps led */
 			break;
+    		case MODEL_AC1450:
 		case MODEL_R6250:
 		case MODEL_R6300v2:
 			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
