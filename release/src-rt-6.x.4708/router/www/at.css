@@ -2213,7 +2213,7 @@ input[type="button"][value="Print"],
 input[type="button"][value="Connect"],
 input[type="button"][value="Disconnect"],
 input[type="button"][value="Force Check"],
-input[type="button"][value^="Open interface"] {
+input[type="button"][value^="Open "] {
 	background-position: 12px;
 	background-repeat: no-repeat;
 	background-size: 18px 18px;
@@ -2342,7 +2342,7 @@ input[type="button"][value="Force Check"] {
 	background-image: var(--icon-button-forcewatchdog);
 }
 
-input[type="button"][value^="Open interface"] {
+input[type="button"][value^="Open "] {
 	background-image: var(--icon-button-open-new);
 }
 

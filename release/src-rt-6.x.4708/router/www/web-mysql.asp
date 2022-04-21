@@ -239,7 +239,7 @@ function init() {
 	<div class="fields">
 		<span id="_mysql_notice"></span>
 		<input type="button" id="_mysql_button">
-		<input type="button" id="_mysql_interface" value="Open interface in new tab" class="new_window" onclick="window.open('http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php')">
+		<input type="button" id="_mysql_interface" value="Open admin interface in new tab" class="new_window" onclick="window.open('http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php')">
 	</div>
 </div>
 
