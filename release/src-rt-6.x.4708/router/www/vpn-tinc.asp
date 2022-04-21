@@ -340,7 +340,7 @@ function updateNodes() {
 }
 
 function displayVersion() {
-	elem.setInnerHTML(E('version'), '<small>'+escapeText(cmdresult)+'<\/small>');
+	elem.setInnerHTML(E('version'), escapeText(cmdresult.substring(0, cmdresult.length - 1)));
 	cmdresult = '';
 }
 
@@ -355,7 +355,7 @@ function getVersion() {
 		displayVersion();
 	}
 
-	var commands = '/usr/sbin/tinc --version | /bin/busybox awk \'NR==1 {print $1 " " $3}\'';
+	var commands = '/usr/sbin/tinc --version | /bin/busybox awk \'NR==1 {print $3}\'';
 	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(commands.replace(/\r/g, '')));
 }
 
@@ -480,6 +480,7 @@ function save() {
 }
 
 function earlyInit() {
+	getVersion();
 	show();
 	tabSelect(cookie.get(cprefix+'_tab') || 'config');
 	verifyFields(null, 1);
@@ -492,7 +493,6 @@ function init() {
 	if (((c = cookie.get(cprefix+'_hosts_vis')) != null) && (c == '1'))
 		toggleVisibility(cprefix, 'hosts');
 
-	getVersion();
 	updateNodes();
 	up.initPage(250, 5);
 	eventHandler();
@@ -519,8 +519,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title" style="float:right" id="version"></div>
-<div class="section-title" id="tinc-title">Tinc Configuration</div>
+<div class="section-title" id="tinc-title">Tinc <span id="version"></span> Configuration</div>
 <script>
 	tabCreate.apply(this, tabs);
 
