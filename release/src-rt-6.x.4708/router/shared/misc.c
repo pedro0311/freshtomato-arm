@@ -364,6 +364,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    || (model == MODEL_F9K1113v2)
 	    || (model == MODEL_WS880)
 	    || (model == MODEL_R6250)
+	    || (model == MODEL_AC1450)
 	    || (model == MODEL_R6300v2)
 	    || (model == MODEL_EA6350v1)
 	    || (model == MODEL_EA6350v2)

@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnsmasq_edns_size,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -124,6 +124,8 @@ function verifyFields(focused, quiet) {
 	v = (E('_f_dhcpd_sltsel').value == 1);
 	elem.display('_dhcpd_sltman', v);
 
+	if (!v_range('_f_dnsmasq_edns_size', quiet, 512, 4096))
+		return 0;
 	if ((v) && (!v_range('_f_dhcpd_slt', quiet, 1, 43200)))
 		return 0;
 	if (!v_length('_dnsmasq_custom', quiet, 0, 4096))
@@ -216,6 +218,7 @@ function save() {
 	fom.dns_intcpt.value = fom._f_dns_intcpt.checked ? 1 : 0;
 	fom.dns_priv_override.value = fom._f_dns_priv_override.checked ? 1 : 0;
 	fom.dnsmasq_debug.value = fom._f_dnsmasq_debug.checked ? 1 : 0;
+	fom.dnsmasq_edns_size.value = fom._f_dnsmasq_edns_size.value;
 /* TOR-BEGIN */
 	fom.dnsmasq_onion_support.value = fom._f_dnsmasq_onion_support.checked ? 1 : 0;
 /* TOR-END */
@@ -379,6 +382,7 @@ function init() {
 <!-- IPV6-END -->
 <input type="hidden" name="dnsmasq_q">
 <input type="hidden" name="dnsmasq_debug">
+<input type="hidden" name="dnsmasq_edns_size">
 <input type="hidden" name="dnsmasq_gen_names">
 <!-- TOR-BEGIN -->
 <input type="hidden" name="dnsmasq_onion_support">
@@ -491,6 +495,7 @@ function init() {
 /* STUBBY-END */
 		createFieldTable('noopen', [
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
+			{ title: '<a href="https://dnsflagday.net/2020/#dns-flag-day-2020" class="new_window">EDNS packet size<\/a>', name: 'f_dnsmasq_edns_size', type: 'text', maxlen: 4, size: 8, suffix: ' <small>(default: 1280)<\/small>', value: nvram.dnsmasq_edns_size },
 			null,
 			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 256, size: 70, value: nvram.dhcpc_custom }
 		]);
@@ -521,7 +526,7 @@ function init() {
 			{ title: 'Announce IPv6 on LAN (SLAAC)', name: 'f_ipv6_radvd', type: 'checkbox', value: nvram.ipv6_radvd == 1 },
 			{ title: 'Announce IPv6 on LAN (DHCP)', name: 'f_ipv6_dhcpd', type: 'checkbox', value: nvram.ipv6_dhcpd == 1 },
 			{ title: 'Fast RA mode', name: 'f_ipv6_fast_ra', type: 'checkbox', value: nvram.ipv6_fast_ra == 1 },
-			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small> (in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: nvram.ipv6_service == 'native-pd' },
+			{ title: 'DHCP IPv6 lease time', name: 'f_ipv6_lease_time', type: 'text', maxlen: 3, size: 8, suffix: ' <small>(in hours)<\/small>', value: nvram.ipv6_lease_time || 12, hidden: nvram.ipv6_service == 'native-pd' },
 /* IPV6-END */
 			{ title: 'Mute dhcpv4 logging', name: 'f_dnsmasq_q4', type: 'checkbox', value: (nvram.dnsmasq_q & 1) },
 /* IPV6-BEGIN */

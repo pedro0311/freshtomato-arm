@@ -606,7 +606,7 @@ void start_dnsmasq()
 	}
 #endif /* TCONFIG_IPV6 */
 
-	fprintf(f, "edns-packet-max=1280\n");
+	fprintf(f, "edns-packet-max=%d\n", nvram_get_int("dnsmasq_edns_size"));
 	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
 
 	fappend(f, "/etc/dnsmasq.custom");

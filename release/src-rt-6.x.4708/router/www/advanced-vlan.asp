@@ -135,6 +135,7 @@ switch (nvram['t_model_name']) {
 		COL_P4N = '4';
 		break;
 	case 'vlan-testid2':
+	case 'Netgear AC1450':
 	case 'Netgear R6250':
 	case 'Netgear R6300v2':
 		COL_P0N = '4';

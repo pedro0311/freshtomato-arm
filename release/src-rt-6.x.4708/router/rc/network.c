@@ -1336,7 +1336,7 @@ void start_lan(void)
 	int vlan0tag = nvram_get_int("vlan0tag");
 #endif
 
-	for (br = 0; br < BRIDGE_COUNT; br++) {
+	for (br = 0; br <= BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br != 0)
 			bridge[0] += br;

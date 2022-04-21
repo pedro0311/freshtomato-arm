@@ -807,6 +807,7 @@ static int init_vlan_ports(void)
 
 #else /* !CONFIG_BCMWL6A */
 
+	case MODEL_AC1450:
 	case MODEL_R6250:
 	case MODEL_R6300v2:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 5*");
@@ -1411,6 +1412,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl0_ifname", "eth1");
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
+	case MODEL_AC1450:
 	case MODEL_R6900:
 	case MODEL_R7000:
 	case MODEL_R6700v1:
@@ -5866,6 +5868,259 @@ static int init_nvram(void)
 
 			set_defaults(r6250_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r6250_pci_2_1_params, "pci/2/1/%s");
+		}
+		break;
+	case MODEL_AC1450:
+		mfr = "Netgear";
+		name = "AC1450";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("lan_invert", "1");
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+
+			/* disable second *fake* LAN interface */
+			nvram_unset("et1macaddr");
+
+			/* fix MAC addresses */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			nvram_set("pci/1/1/macaddr", s);			/* fix WL mac for 2,4G */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);						/* do not overlap with VIFs */
+			nvram_set("pci/2/1/macaddr", s);			/* fix WL mac for 5G */
+			nvram_set("wl1_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			nvram_set("wl0_bw_cap", "3");
+			nvram_set("wl0_chanspec", "6u");
+			nvram_set("wl0_channel", "6");
+			nvram_set("wl0_nbw", "40");
+			nvram_set("wl0_nctrlsb", "upper");
+			nvram_set("wl1_bw_cap", "7");
+			nvram_set("wl1_chanspec", "36/80");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw", "80");
+			nvram_set("wl1_nbw_cap", "3");
+			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("pci/1/1/regrev", "12");
+			nvram_set("pci/2/1/regrev", "12");
+			nvram_set("pci/1/1/ccode", "SG");
+			nvram_set("pci/2/1/ccode", "SG");
+
+			/* misc wifi settings */
+			nvram_set("wl0_vreqd", "0"); /* do not enable vhtmode and vht_features for 2G NON-AC PHY */
+
+			struct nvram_tuple ac1450_pci_1_1_params[] = {
+				/* 2.4 GHz defaults */
+				{ "ag0", "0", 0 },
+				{ "ag1", "0", 0 },
+				{ "ag2", "0", 0 },
+				{ "aa2g", "7", 0 },
+				{ "antswitch", "0", 0 },
+				{ "antswctl2g", "0", 0 },
+				{ "boardflags", "0x80003200", 0 },
+				{ "boardflags2", "0x4100000", 0 },
+				{ "boardvendor", "0x14e4", 0 },
+				//{ "ccode", "Q2", 0 },
+				{ "cckbw202gpo", "0", 0 },
+				{ "cckbw20ul2gpo", "0", 0 },
+				{ "devid", "0x4332", 0 },
+				{ "elna2g", "2", 0 },
+				{ "extpagain2g", "1", 0 },
+				{ "maxp2ga0", "0x66", 0 },
+				{ "maxp2ga1", "0x66", 0 },
+				{ "maxp2ga2", "0x66", 0 },
+				{ "mcs32po", "0x8", 0 },
+				{ "mcsbw20ul2gpo", "0xCA862222", 0 },
+				{ "mcsbw202gpo", "0xCA862222", 0 },
+				{ "mcsbw402gpo", "0xECA86222", 0 },
+				{ "pa2gw0a0", "0xFE9D", 0 },
+				{ "pa2gw0a1", "0xFE93", 0 },
+				{ "pa2gw0a2", "0xFE77", 0 },
+				{ "pa2gw2a0", "0xF9FA", 0 },
+				{ "pa2gw2a1", "0xFA15", 0 },
+				{ "pa2gw2a2", "0xF9DD", 0 },
+				{ "pa2gw1a0", "0x191B", 0 },
+				{ "pa2gw1a1", "0x18BC", 0 },
+				{ "pa2gw1a2", "0x18B9", 0 },
+				{ "pdetrange2g", "3", 0 },
+				//{ "regrev", "12", 0 },
+				{ "rxchain", "7", 0 },
+				{ "ledbh12", "11", 0 },
+				{ "ledbh0", "11", 0 },
+				{ "ledbh2", "14", 0 },
+				{ "ledbh3", "1", 0 }, /* DD-WRT 11 */
+				{ "leddc", "0xFFFF", 0 },
+				{ "legofdmbw202gpo", "0xCA862222", 0 },
+				{ "legofdmbw20ul2gpo", "0xCA862222", 0 },
+				{ "legofdm40duppo", "0x0", 0 },
+				{ "sromrev", "9", 0 },
+				{ "triso2g", "3", 0 },
+				{ "tempthresh", "120", 0 },
+				{ "tempoffset", "0", 0 },
+				{ "tssipos2g", "1", 0 },
+				{ "txchain", "7", 0 },
+				{ "venid", "0x14e4", 0 },
+				{ "xtalfreq", "20000", 0 },
+				{ 0, 0, 0 }
+			};
+
+			struct nvram_tuple ac1450_pci_2_1_params[] = {
+				/* 5 GHz module defaults */
+				{ "aa5g", "7", 0 },
+				{ "aga0", "71", 0 },
+				{ "aga1", "133", 0 },
+				{ "aga2", "133", 0 },
+				{ "agbg0", "71", 0 },
+				{ "agbg1", "71", 0 },
+				{ "agbg2", "133", 0 },
+				{ "antswitch", "0", 0 },
+				{ "boardflags", "0x30000000", 0 },
+				{ "boardflags2", "0x300002", 0 },
+				{ "boardflags3", "0x0", 0 },
+				{ "boardnum", "20771", 0 },
+				{ "boardrev", "0x1402", 0 },
+				{ "boardvendor", "0x14e4", 0 },
+				{ "boardtype", "0x621", 0 },
+				//{ "ccode", "Q2", 0 },
+				{ "devid", "0x43a2", 0 },
+				{ "dot11agduphrpo", "0", 0 },
+				{ "dot11agduplrpo", "0", 0 },
+				{ "epagain5g", "0", 0 },
+				{ "femctrl", "3", 0 },
+				{ "gainctrlsph", "0", 0 },
+				{ "maxp5ga0", "102,102,102,102", 0 },
+				{ "maxp5ga1", "102,102,102,102", 0 },
+				{ "maxp5ga2", "102,102,102,102", 0 },
+				{ "mcsbw1605ghpo", "0", 0 },
+				{ "mcsbw1605glpo", "0", 0 },
+				{ "mcsbw1605gmpo", "0", 0 },
+				{ "mcsbw205ghpo", "0xECA86400", 0 },
+				{ "mcsbw205glpo", "0xECA86400", 0 },
+				{ "mcsbw205gmpo", "0xECA86400", 0 },
+				{ "mcsbw405ghpo", "0xECA86400", 0 },
+				{ "mcsbw405glpo", "0xECA86400", 0 },
+				{ "mcsbw405gmpo", "0xECA86400", 0 },
+				{ "mcsbw805ghpo", "0xFEA86400", 0 },
+				{ "mcsbw805glpo", "0xFEA86400", 0 },
+				{ "mcsbw805gmpo", "0xFEA86400", 0 },
+				{ "mcslr5ghpo", "0", 0 },
+				{ "mcslr5glpo", "0", 0 },
+				{ "mcslr5gmpo", "0", 0 },
+				{ "measpower", "0x7f", 0 },
+				{ "measpower1", "0x7f", 0 },
+				{ "measpower2", "0x7f", 0 },
+				{ "noiselvl5ga0", "31,31,31,31", 0 },
+				{ "noiselvl5ga1", "31,31,31,31", 0 },
+				{ "noiselvl5ga2", "31,31,31,31", 0 },
+				{ "pa5ga0", "0xFF28,0x19CC,0xFCB0,0xFF50,0x1AD0,0xFCE0,0xFF50,0x1B6F,0xFCD0,0xFF58,0x1BB9,0xFCD0", 0 },
+				{ "pa5ga1", "0xFF36,0x1AAD,0xFCBD,0xFF50,0x1AF7,0xFCE0,0xFF50,0x1B5B,0xFCD8,0xFF58,0x1B8F,0xFCD0", 0 },
+				{ "pa5ga2", "0xFF40,0x1A1F,0xFCDA,0xFF48,0x1A5D,0xFCE8,0xFF35,0x1A2D,0xFCCA,0xFF3E,0x1A2B,0xFCD0", 0 },
+				{ "papdcap5g", "0", 0 },
+				{ "pcieingress_war", "15", 0 },
+				{ "pdgain5g", "4", 0 },
+				{ "pdoffset40ma0", "4369", 0 },
+				{ "pdoffset40ma1", "4369", 0 },
+				{ "pdoffset40ma2", "4369", 0 },
+				{ "pdoffset80ma0", "0", 0 },
+				{ "pdoffset80ma1", "0", 0 },
+				{ "pdoffset80ma2", "0", 0 },
+				{ "phycal_tempdelta", "255", 0 },
+				{ "rawtempsense", "0x1ff", 0 },
+				//{ "regrev", "12", 0 },
+				{ "rxchain", "7", 0 },
+				{ "rxgainerr5ga0", "63,63,63,63", 0 },
+				{ "rxgainerr5ga1", "31,31,31,31", 0 },
+				{ "rxgainerr5ga2", "31,31,31,31", 0 },
+				{ "rxgains5gelnagaina0", "1", 0 },
+				{ "rxgains5gelnagaina1", "1", 0 },
+				{ "rxgains5gelnagaina2", "1", 0 },
+				{ "rxgains5ghelnagaina0", "2", 0 },
+				{ "rxgains5ghelnagaina1", "2", 0 },
+				{ "rxgains5ghelnagaina2", "3", 0 },
+				{ "rxgains5ghtrelnabypa0", "1", 0 },
+				{ "rxgains5ghtrelnabypa1", "1", 0 },
+				{ "rxgains5ghtrelnabypa2", "1", 0 },
+				{ "rxgains5ghtrisoa0", "5", 0 },
+				{ "rxgains5ghtrisoa1", "4", 0 },
+				{ "rxgains5ghtrisoa2", "4", 0 },
+				{ "rxgains5gmelnagaina0", "2", 0 },
+				{ "rxgains5gmelnagaina1", "2", 0 },
+				{ "rxgains5gmelnagaina2", "3", 0 },
+				{ "rxgains5gmtrelnabypa0", "1", 0 },
+				{ "rxgains5gmtrelnabypa1", "1", 0 },
+				{ "rxgains5gmtrelnabypa2", "1", 0 },
+				{ "rxgains5gmtrisoa0", "5", 0 },
+				{ "rxgains5gmtrisoa1", "4", 0 },
+				{ "rxgains5gmtrisoa2", "4", 0 },
+				{ "rxgains5gtrelnabypa0", "1", 0 },
+				{ "rxgains5gtrelnabypa1", "1", 0 },
+				{ "rxgains5gtrelnabypa2", "1", 0 },
+				{ "rxgains5gtrisoa0", "7", 0 },
+				{ "rxgains5gtrisoa1", "6", 0 },
+				{ "rxgains5gtrisoa2", "5", 0 },
+				{ "sar5g", "15", 0 },
+				{ "sb20in40hrpo", "0", 0 },
+				{ "sb20in40lrpo", "0", 0 },
+				{ "sb20in80and160hr5ghpo", "0", 0 },
+				{ "sb20in80and160hr5glpo", "0", 0 },
+				{ "sb20in80and160hr5gmpo", "0", 0 },
+				{ "sb20in80and160lr5ghpo", "0", 0 },
+				{ "sb20in80and160lr5glpo", "0", 0 },
+				{ "sb20in80and160lr5gmpo", "0", 0 },
+				{ "sb40and80hr5ghpo", "0", 0 },
+				{ "sb40and80hr5glpo", "0", 0 },
+				{ "sb40and80hr5gmpo", "0", 0 },
+				{ "sb40and80lr5ghpo", "0", 0 },
+				{ "sb40and80lr5glpo", "0", 0 },
+				{ "sb40and80lr5gmpo", "0", 0 },
+				{ "sromrev", "11", 0 },
+				{ "subband5gver", "0x4", 0 },
+				{ "tempcorrx", "0x3f", 0 },
+				{ "tempoffset", "255", 0 },
+				{ "tempsense_option", "0x3", 0 },
+				{ "tempsense_slope", "0xff", 0 },
+				{ "temps_hysteresis", "15", 0 },
+				{ "temps_period", "15", 0 },
+				{ "tempthresh", "120", 0 },
+				{ "tssiposslope5g", "1", 0 },
+				{ "tworangetssi5g", "0", 0 },
+				{ "txchain", "7", 0 },
+				{ "venid", "0x14e4", 0 },
+				{ "xtalfreq", "40000", 0 },
+				{ 0, 0, 0 }
+			};
+
+			set_defaults(ac1450_pci_1_1_params, "pci/1/1/%s");
+			set_defaults(ac1450_pci_2_1_params, "pci/2/1/%s");
 		}
 		break;
 	case MODEL_R6300v2:

@@ -304,7 +304,8 @@ Return answers to DNS queries from /etc/hosts and \fB--interface-name\fP and \fB
 received. If a name has more than one address associated with
 it, and at least one of those addresses is on the same subnet as the
 interface to which the query was sent, then return only the
-address(es) on that subnet. This allows for a server  to have multiple
+address(es) on that subnet and return all the available addresses otherwise.
+This allows for a server  to have multiple
 addresses in /etc/hosts corresponding to each of its interfaces, and
 hosts will get the correct address based on which network they are
 attached to. Currently this facility is limited to IPv4.
@@ -1711,7 +1712,13 @@ If dnsmasq was compiled with HAVE_BROKEN_RTC, then
 the length of the lease (in seconds) is stored in
 DNSMASQ_LEASE_LENGTH, otherwise the time of lease expiry is stored in
 DNSMASQ_LEASE_EXPIRES. The number of seconds until lease expiry is
-always stored in DNSMASQ_TIME_REMAINING. 
+always stored in DNSMASQ_TIME_REMAINING.
+
+DNSMASQ_DATA_MISSING is set to "1" during "old" events for existing
+leases generated at startup to indicate that data not stored in the
+persistent lease database will not be present. This comprises everything
+other than IP address, hostname, MAC address, DUID, IAID and lease length
+or expiry time.
 
 If a lease used to have a hostname, which is
 removed, an "old" event is generated with the new state of the lease, 
@@ -1935,7 +1942,7 @@ is the address of the relay and the second, as before, specifies an extra subnet
 addresses may be allocated from.
 
 .TP
-.B \-s, --domain=<domain>[,<address range>[,local]]
+.B \-s, --domain=<domain>[[,<address range>[,local]]|<interface>]
 Specifies DNS domains for the DHCP server. Domains may be be given 
 unconditionally (without the IP range) or for limited IP ranges. This has two effects;
 firstly it causes the DHCP server to return the domain to any hosts
@@ -1969,6 +1976,11 @@ additional flag "local" may be supplied which has the effect of adding
 is identical to
 .B --domain=thekelleys.org.uk,192.168.0.0/24
 .B --local=/thekelleys.org.uk/ --local=/0.168.192.in-addr.arpa/
+
+The address range can also be given as a network interface name, in which case
+all of the subnets currently assigned to the interface are used in matching the
+address. This allows hosts on different physical subnets to be given different
+domains in a way which updates automatically as the interface addresses change.
 .TP
 .B --dhcp-fqdn
 In the default mode, dnsmasq inserts the unqualified names of

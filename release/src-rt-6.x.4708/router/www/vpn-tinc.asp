@@ -82,10 +82,10 @@ function toggle(service, isup) {
 	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
 		return;
 
-	E('_'+service+'_button1').disabled = 1;
-	E('_'+service+'_button2').disabled = 1;
-	E('_'+service+'_button3').disabled = 1;
-	E('_'+service+'_button4').disabled = 1;
+	E('_tinc_button1').disabled = 1;
+	E('_tinc_button2').disabled = 1;
+	E('_tinc_button3').disabled = 1;
+	E('_tinc_button4').disabled = 1;
 	elem.display(E('result'), !isup);
 	if (!isup)
 		elem.setInnerHTML(E('result'), '');

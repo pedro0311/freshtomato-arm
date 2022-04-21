@@ -407,6 +407,7 @@ int mssl_init(char *cert, char *priv)
 	return mssl_init_ex(cert, priv, NULL);
 }
 
+#ifdef USE_OPENSSL11
 static int mssl_f_exists(const char *path)
 {
 	struct stat st;
@@ -416,7 +417,6 @@ static int mssl_f_exists(const char *path)
 /*
  * compare the modulus of public key and private key
  */
-#ifdef USE_OPENSSL11
 int mssl_cert_key_match(const char *cert_path, const char *key_path)
 {
 	FILE *fp;

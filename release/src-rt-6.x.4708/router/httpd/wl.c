@@ -1123,6 +1123,18 @@ static int print_wlbands(int idx, int unit, int subunit, void *param)
 			if (list[0] > 2)
 				list[0] = 2;
 
+#if !defined(TCONFIG_BCMWL6) && defined(TCONFIG_BLINK) /* only RT-N */
+			if (list[0] == 2) { /* two bands for wl interface ethX possible (2,4 GHz & 5 GHz) */
+				/* get router model */
+				int model = get_model();
+
+				if ((model == MODEL_E4200) ||
+				    (model == MODEL_F9K1102)) {
+					list[0] = 1; /* allow (or use) only the first band from the list! (see GUI: basic-network) */
+				}
+			}
+#endif
+
 			for (i = 1; i <= (unsigned int) list[0]; i++) {
 				web_printf("%c'%d'", comma, list[i]);
 				comma = ',';
