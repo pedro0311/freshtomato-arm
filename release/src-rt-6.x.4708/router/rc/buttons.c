@@ -365,6 +365,7 @@ int buttons_main(int argc, char *argv[])
 		ses_mask = 1 << 7; /* wps button (active LOW) */
 		ses_led = LED_AOSS;
 		break;
+	case MODEL_DSLAC68U:
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
@@ -605,6 +606,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC66U_B1)
 			     || (model == MODEL_RTAC1900P)
 			     || (model == MODEL_RTAC67U)
+			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM7
@@ -722,6 +724,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_AC18)
 			     || (model == MODEL_RTAC56U)
 			     || (model == MODEL_RTAC1900P)
+			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM7

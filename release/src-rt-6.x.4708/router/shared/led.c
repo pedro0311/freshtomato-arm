@@ -160,6 +160,7 @@ int do_led(int which, int mode)
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #elif defined(CONFIG_BCMWL6A)
 	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
+	static int dslac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac68u_v3[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac1450[]	= {  11,    3,    10,  255,  255,    1,  255,    8,  255,  255};
@@ -221,6 +222,7 @@ int do_led(int which, int mode)
 			case MODEL_RTAC56U:
 			case MODEL_RTAC66U_B1:
 			case MODEL_RTAC67U:
+			case MODEL_DSLAC68U:
 			case MODEL_RTAC68U:
 			case MODEL_RTAC68UV3:
 			case MODEL_RTAC1900P:
@@ -283,6 +285,16 @@ int do_led(int which, int mode)
 #elif defined(CONFIG_BCMWL6A)
 	case MODEL_RTAC67U:
 		b = ac67u[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		break;
+	case MODEL_DSLAC68U:
+		b = dslac68u[which];
 		if ((which == LED_WLAN) ||
 		    (which == LED_5G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
@@ -732,6 +744,7 @@ void led_setup(void)
 			set_gpio(GPIO_00, T_HIGH); /* disable power led */
 			disable_led_wanlan();
 			break;
+		case MODEL_DSLAC68U:
 		case MODEL_RTAC68U:
 		case MODEL_RTAC68UV3:
 		case MODEL_RTAC1900P:
@@ -807,7 +820,7 @@ void led_setup(void)
 	}
 }
 
-/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200 */
+/* control non GPIO LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), DSL-AC68U, RT-AC1900P, RT-AC3200 */
 void do_led_nongpio(int model, int which, int mode)
 {
 	switch (model) {
@@ -848,6 +861,7 @@ void do_led_nongpio(int model, int which, int mode)
 		break;
 	case MODEL_RTAC66U_B1:
 	case MODEL_RTAC67U:
+	case MODEL_DSLAC68U:
 	case MODEL_RTAC68U:
 	case MODEL_RTAC68UV3:
 	case MODEL_RTAC1900P:
