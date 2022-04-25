@@ -2385,6 +2385,12 @@ div#sptime {
 	padding: 5px 0 0 0;
 }
 
+.betaver {
+	position: inherit;
+	top: 1px;
+	left: 180px;
+}
+
 /* SVG */
 #svg text {
 	font: 13px monospace;
