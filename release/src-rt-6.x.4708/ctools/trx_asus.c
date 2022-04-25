@@ -132,7 +132,8 @@ typedef struct {
 #ifdef BCMWL6A
 	uint16_t  sn;
 	uint16_t  en;
-	char	  pad[28];
+	uint8_t   key;
+	char	  pad[27];
 #else
 	char	  pad[32];
 #endif
@@ -152,6 +153,8 @@ int create_asus(const char *optarg)
 #ifdef BCMWL6A
 	char *sn, *en;
 	char tmp[10];
+	uint8_t rand;
+	uint32_t offset;
 #endif
 
 	memset(&asus_tail, 0, sizeof(TAIL));
@@ -187,6 +190,32 @@ int create_asus(const char *optarg)
 	sscanf(en, "%d-%s", &v1, tmp);
 	asus_tail.en = (uint16_t)v1;
 	printf("Asus TRX-Header EXTENDNO = %d\n", asus_tail.en);
+
+	/* length > 16 + 2357 * 4 = 9444 */
+	if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357 * sizeof(trx->offsets[0]))
+		offset = 2357;
+	else
+		offset = 0;
+
+	rand = trx->offsets[offset];
+
+	if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357000 * sizeof(trx->offsets[0]))
+		/* length > 16 + 2357000 * 4 = 9428020 */
+		offset = 2357000;
+	else if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357 * sizeof(trx->offsets[0]))
+		/* length > 16 + 2357 * 4 = 9444 */
+		offset = (trx->length - (sizeof(*trx) - sizeof(trx->offsets))) / 4 - 2357 ;
+	else
+		offset = 0;
+
+	asus_tail.key = trx->offsets[offset];
+
+	if (asus_tail.key == 0x0)
+		asus_tail.key = 0xfd + rand % 3;
+	else
+		asus_tail.key = 0xff - asus_tail.key + rand;
+
+	printf("Asus TRX-Header KEY = 0x%02x\n", asus_tail.key);
 #endif
 
 	fname = strsep(&next, ",");
