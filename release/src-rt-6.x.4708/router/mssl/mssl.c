@@ -360,6 +360,10 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 	}
 
 	if (server) {
+#ifdef USE_OPENSSL11
+		/* Disable TLS 1.0 & 1.1 */
+		SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+#endif
 #ifdef USE_OPENSSL
 		/* Enforce server cipher order */
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
