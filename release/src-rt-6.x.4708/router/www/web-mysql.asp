@@ -46,13 +46,15 @@ function show() {
 	E('_mysql_button').value = (isup.mysqld ? 'Stop' : 'Start')+' Now';
 	E('_mysql_button').setAttribute('onclick', 'javascript:toggle(\'mysql\', '+isup.mysqld+');');
 	E('_mysql_button').disabled = 0;
+	E('_mysql_interface').disabled = isup.mysqld ? 0 : 1;
 }
 
 function toggle(service, isup) {
 	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
 		return;
 
-	E('_'+service+'_button').disabled = 1;
+	E('_mysql_button').disabled = 1;
+	E('_mysql_interface').disabled = 1;
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
@@ -61,7 +63,6 @@ function toggle(service, isup) {
 	form.submit(fom, 1, 'service.cgi');
 }
 
-var ams_link = '&nbsp;&nbsp;<a href="http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php" class="new_window"><i>[Click here to manage MySQL]<\/i><\/a>';
 var usb_disk_list = new Array();
 
 function refresh_usb_disk() {
@@ -238,12 +239,13 @@ function init() {
 	<div class="fields">
 		<span id="_mysql_notice"></span>
 		<input type="button" id="_mysql_button">
+		<input type="button" id="_mysql_interface" value="Open admin interface in new tab" class="new_window" onclick="window.open('http://'+location.hostname+':'+nvram.nginx_port+'/adminer.php')">
 	</div>
 </div>
 
 <!-- / / / -->
 
-<div class="section-title">Basic Settings<script>W(ams_link);</script></div>
+<div class="section-title">Basic Settings</div>
 <div class="section" id="config-section1">
 	<script>
 		refresh_usb_disk();

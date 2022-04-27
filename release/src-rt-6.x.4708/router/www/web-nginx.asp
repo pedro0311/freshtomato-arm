@@ -23,7 +23,7 @@
 
 <script>
 
-//	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile,nginx_h5aisupport"); %>
+//	<% nvram("nginx_enable,nginx_php,nginx_keepconf,nginx_port,nginx_upload,nginx_remote,nginx_fqdn,nginx_docroot,nginx_priority,nginx_custom,nginx_httpcustom,nginx_servercustom,nginx_user,nginx_phpconf,nginx_override,nginx_overridefile,nginx_h5aisupport,lan_ipaddr"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -51,13 +51,15 @@ function show() {
 	E('_nginx_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
 	E('_nginx_button').setAttribute('onclick', 'javascript:toggle(\'nginxgui\', '+isup.nginx+');');
 	E('_nginx_button').disabled = 0;
+	E('_nginx_interface').disabled = isup.nginx ? 0 : 1;
 }
 
 function toggle(service, isup) {
 	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
 		return;
 
-	E('_'+service+'_button').disabled = 1;
+	E('_nginx_button').disabled = 1;
+	E('_nginx_interface').disabled = 1;
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
@@ -166,6 +168,7 @@ function init() {
 	<div class="fields">
 		<span id="_nginx_notice"></span>
 		<input type="button" id="_nginx_button">
+		<input type="button" id="_nginx_interface" value="Open content in new tab" class="new_window" onclick="window.open('http://'+nvram.lan_ipaddr+':'+nvram.nginx_port)">
 	</div>
 </div>
 
