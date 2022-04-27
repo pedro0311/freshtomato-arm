@@ -19,6 +19,10 @@
 #endif
 #include <search.h>
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"cgi_debug"
+
 
 /* CGI hash table */
 static struct hsearch_data htab = { .table = NULL };
@@ -49,7 +53,7 @@ int str_replace(char* str, char* str_src, char* str_des)
 		strcpy(buff2, str);
 	}
 	else {
-		//cprintf("str_replace err!\n");
+		logmsg(LOG_DEBUG, "*** [cgi] %s: error - NULL string!", __FUNCTION__);
 		return -1;
 	}
 
@@ -79,7 +83,7 @@ char *webcgi_get(const char *name)
 	e.key = (char *)name;
 	hsearch_r(e, FIND, &ep, &htab);
 
-	//cprintf("%s=%s\n", name, ep ? ep->data : "(null)");
+	logmsg(LOG_DEBUG, "*** [cgi] %s: %s=%s", __FUNCTION__, name, ep ? (char*)ep->data : "(null)");
 
 	return ep ? ep->data : NULL;
 }
@@ -112,7 +116,7 @@ void webcgi_init(char *query)
 	if (query == NULL)
 		return;
 
-	//cprintf("query = %s\n", query);
+	logmsg(LOG_DEBUG, "*** [cgi] %s: query = %s", __FUNCTION__, query);
 
 	end = query + strlen(query);
 	q = query;
