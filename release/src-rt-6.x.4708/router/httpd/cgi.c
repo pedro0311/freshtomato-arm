@@ -33,9 +33,16 @@ static void unescape(char *s)
 
 	while ((s = strpbrk(s, "%+"))) {
 		if (*s == '%') {
-			sscanf(s + 1, "%02x", &c);
-			*s++ = (char)c;
-			strcpy(s, s + 2);
+			if ((strlen(s + 1)) >= 2) {
+				sscanf(s + 1, "%02x", &c);
+				*s++ = (char)c;
+				strlcpy(s, s + 2, strlen(s) + 1);
+			}
+			else {
+				/* something's wrong - skip... */
+				strlcpy(s, "", strlen(s) + 1);
+				logmsg(LOG_DEBUG, "*** [cgi] %s: malformed substring (skipped)!", __FUNCTION__);
+			}
 		}
 		else if (*s == '+')
 			*s++ = ' ';
