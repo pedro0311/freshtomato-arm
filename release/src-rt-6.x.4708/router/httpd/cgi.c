@@ -50,7 +50,7 @@ int str_replace(char* str, char* str_src, char* str_des)
 	int i = 0;
 
 	if (str != NULL) {
-		strcpy(buff2, str);
+		strlcpy(buff2, str, sizeof(buff2));
 	}
 	else {
 		logmsg(LOG_DEBUG, "*** [cgi] %s: error - NULL string!", __FUNCTION__);
@@ -59,16 +59,16 @@ int str_replace(char* str, char* str_src, char* str_des)
 
 	memset(buff, 0x00, sizeof(buff));
 	while ((ptr = strstr(buff2, str_src)) != 0) {
-		if (ptr-buff2 != 0)
+		if (ptr - buff2 != 0)
 			memcpy(&buff[i], buff2, ptr - buff2);
 
 		memcpy(&buff[i + ptr - buff2], str_des, strlen(str_des));
 		i += ptr - buff2 + strlen(str_des);
-		strcpy(buff2, ptr + strlen(str_src));
+		strlcpy(buff2, ptr + strlen(str_src), sizeof(buff2));
 	}
 
-	strcat(buff,buff2);
-	strcpy(str,buff);
+	strlcat(buff, buff2, sizeof(buff));
+	strlcpy(str, buff, strlen(str) + 1);
 
 	return 0;
 }
