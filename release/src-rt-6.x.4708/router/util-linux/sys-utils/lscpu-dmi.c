@@ -67,6 +67,18 @@ int parse_dmi_table(uint16_t len, uint16_t num,
 			di->product = dmi_string(&h, data[0x05]);
 			break;
 		case 4:
+			/* Get the first processor information */
+			if (di->sockets == 0) {
+				di->processor_manufacturer = dmi_string(&h, data[0x7]);
+				di->processor_version = dmi_string(&h, data[0x10]);
+				di->current_speed = *((uint16_t *)(&data[0x16]));
+				di->part_num = dmi_string(&h, data[0x22]);
+
+				if (data[0x6] == 0xfe)
+					di->processor_family = *((uint16_t *)(&data[0x28]));
+				else
+					di->processor_family = data[0x6];
+			}
 			di->sockets++;
 			break;
 		default:
@@ -79,6 +91,45 @@ int parse_dmi_table(uint16_t len, uint16_t num,
 	rc = 0;
 done:
 	return rc;
+}
+
+int dmi_decode_cputype(struct lscpu_cputype *ct)
+{
+	static char const sys_fw_dmi_tables[] = _PATH_SYS_DMI;
+	struct dmi_info di = { };
+	struct stat st;
+	uint8_t *data;
+	int rc = 0;
+	char buf[100] = { };
+
+	if (stat(sys_fw_dmi_tables, &st))
+		return rc;
+
+	data = get_mem_chunk(0, st.st_size, sys_fw_dmi_tables);
+	if (!data)
+		return rc;
+
+	rc = parse_dmi_table(st.st_size, st.st_size/4, data, &di);
+	if (rc < 0) {
+		free(data);
+		return rc;
+	}
+
+	if (di.processor_manufacturer)
+		ct->bios_vendor = xstrdup(di.processor_manufacturer);
+
+	snprintf(buf, sizeof(buf), "%s %s CPU @ %d.%dGHz",
+			(di.processor_version ?: ""), (di.part_num ?: ""),
+			di.current_speed/1000, (di.current_speed % 1000) / 100);
+	ct->bios_modelname = xstrdup(buf);
+
+	/* Get CPU family */
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "%d", di.processor_family);
+	ct->bios_family = xstrdup(buf);
+
+	free(data);
+	return 0;
 }
 
 size_t get_number_of_physical_sockets_from_dmi(void)

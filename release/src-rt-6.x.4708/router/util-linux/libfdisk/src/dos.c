@@ -2,6 +2,7 @@
  *
  * Copyright (C) 2007-2013 Karel Zak <kzak@redhat.com>
  *                    2012 Davidlohr Bueso <dave@gnu.org>
+ *                    2021 Pali Rohár <pali.rohar@gmail.com>
  *
  * This is re-written version for libfdisk, the original was fdiskdoslabel.c
  * from util-linux fdisk.
@@ -81,15 +82,6 @@ static const struct fdisk_shortcut dos_parttype_cuts[] =
 	{ .shortcut = "V", .alias = "lvm",      .data = "8E" }, /* LVM */
 	{ .shortcut = "X", .alias = "linuxex",  .data = "85" }  /* Linux extended */
 };
-
-#define set_hsc(h,s,c,sector) { \
-		s = sector % cxt->geom.sectors + 1;			\
-		sector /= cxt->geom.sectors;				\
-		h = sector % cxt->geom.heads;				\
-		sector /= cxt->geom.heads;				\
-		c = sector & 0xff;					\
-		s |= (sector >> 2) & 0xc0;				\
-	}
 
 
 #define sector(s)	((s) & 0x3f)
@@ -337,7 +329,7 @@ static void dos_init(struct fdisk_context *cxt)
 		pe->changed = 0;
 
 		DBG(LABEL, ul_debug("DOS: initialize: #%zu start=%u size=%u sysid=%02x",
-					i + 1,
+					i,
 					dos_partition_get_start(pe->pt_entry),
 					dos_partition_get_size(pe->pt_entry),
 					pe->pt_entry->sys_ind));
@@ -470,6 +462,7 @@ static int delete_partition(struct fdisk_context *cxt, size_t partnum)
 			*p = *q;
 			dos_partition_set_start(p, dos_partition_get_start(q));
 			dos_partition_set_size(p, dos_partition_get_size(q));
+			dos_partition_sync_chs(p, pe->offset, cxt->geom.sectors, cxt->geom.heads);
 			partition_set_changed(cxt, partnum - 1, 1);
 
 		} else if (cxt->label->nparts_max > 5) {
@@ -481,6 +474,7 @@ static int delete_partition(struct fdisk_context *cxt, size_t partnum)
 					       get_abs_partition_start(pe) -
 					       l->ext_offset);
 			pe->offset = l->ext_offset;
+			dos_partition_sync_chs(p, pe->offset, cxt->geom.sectors, cxt->geom.heads);
 			partition_set_changed(cxt, 5, 1);
 		}
 
@@ -764,31 +758,129 @@ static int dos_set_disklabel_id(struct fdisk_context *cxt, const char *str)
 	return 0;
 }
 
+static unsigned int chs_div_minus(unsigned int a1, unsigned int a2, unsigned int b1, unsigned int b2)
+{
+	if (a1 > a2 && b1 > b2) {
+		a1 = a1 - a2;
+		b1 = b1 - b2;
+	} else if (a2 > a1 && b2 > b1) {
+		a1 = a2 - a1;
+		b1 = b2 - b1;
+	} else {
+		return 0;
+	}
+	if (a1 % b1)
+		return 0;
+	return a1 / b1;
+}
+
+static inline int chs_overflowed(unsigned int c, unsigned int h, unsigned int s)
+{
+	/* 1023/254/63 or 1023/255/63 indicates overflowed/invalid C/H/S values */
+	return (c == 1023 && (h == 254 || h == 255) && s == 63);
+}
+
+static inline int lba_overflowed(fdisk_sector_t start, fdisk_sector_t sects)
+{
+	/* Check if the last LBA sector can be represented by unsigned 32bit int */
+	return (start + (sects-1) > UINT32_MAX);
+}
+
 static void get_partition_table_geometry(struct fdisk_context *cxt,
 			unsigned int *ph, unsigned int *ps)
 {
 	unsigned char *bufp = cxt->firstsector;
+	struct { unsigned int c, h, o, v; } t[8];
+	unsigned int n1, n2, n3, n4, n5, n6;
 	struct dos_partition *p;
-	int i, h, s, hh, ss;
-	int first = 1;
-	int bad = 0;
+	unsigned int c, h, s, l;
+	unsigned int hh, ss;
+	unsigned int sects;
+	int i, j, dif;
+
+#define chs_set_t(c, h, s, l, t, i) do { \
+	t[i].c = c; \
+	t[i].h = h; \
+	t[i].o = l - (s-1); \
+	t[i].v = (!chs_overflowed(c, h, s) && s && s-1 <= l); \
+} while (0)
+
+	/*
+	 * Conversion from C/H/S to LBA is defined by formula:
+	 *   LBA = (c * N_heads + h) * N_sectors + (s - 1)
+	 * Let o to be:
+	 *   o = LBA - (s - 1)
+	 * Then formula can be expressed as:
+	 *   o = (c * N_heads + h) * N_sectors
+	 * In general from two tuples (LBA1, c1, h1, s1), (LBA2, c2, h2, s2)
+	 * we can derive formulas for N_heads and N_sectors:
+	 *   N_heads = (o1 * h2 - o2 * h1) / (o2 * c1 - o1 * c2)
+	 *   N_sectors = (o2 * c1 - o1 * c2) / (c1 * h2 - c2 * h1)
+	 * MBR table contains for very partition start and end tuple.
+	 * So we have up to 8 tuples which leads to up to 28 equations
+	 * for calculating N_heads and N_sectors. Try to calculate
+	 * N_heads and N_sectors from the first possible partition and
+	 * if it fails then try also mixed tuples (beginning from first
+	 * partition and end from second). Calculation may fail if both
+	 * first and last sectors are on cylinder or head boundary
+	 * (dividend or divisor is zero). It is possible that different
+	 * partitions would have different C/H/S geometry. In this case
+	 * we want geometry from the first partition as in most cases
+	 * this partition is or was used by BIOS for booting.
+	 */
 
 	hh = ss = 0;
 	for (i = 0; i < 4; i++) {
 		p = mbr_get_partition(bufp, i);
-		if (p->sys_ind != 0) {
-			h = p->eh + 1;
-			s = (p->es & 077);
-			if (first) {
-				hh = h;
-				ss = s;
-				first = 0;
-			} else if (hh != h || ss != s)
-				bad = 1;
-		}
+		if (!p->sys_ind)
+			continue;
+
+		c = cylinder(p->bs, p->bc);
+		h = p->bh;
+		s = sector(p->bs);
+		l = dos_partition_get_start(p);
+		chs_set_t(c, h, s, l, t, 2*i);
+
+		sects = dos_partition_get_size(p);
+		if (!sects || lba_overflowed(l, sects))
+			continue;
+
+		c = cylinder(p->es, p->ec);
+		h = p->eh;
+		s = sector(p->es);
+		l += sects-1;
+		chs_set_t(c, h, s, l, t, 2*i+1);
 	}
 
-	if (!first && !bad) {
+	for (dif = 1; dif < 8; dif++) {
+		for (i = 0; i + dif < 8; i++) {
+			j = i + dif;
+			if (!t[i].v || !t[j].v)
+				continue;
+			n1 = t[i].o * t[j].h;
+			n2 = t[j].o * t[i].h;
+			n3 = t[j].o * t[i].c;
+			n4 = t[i].o * t[j].c;
+			n5 = t[i].c * t[j].h;
+			n6 = t[j].c * t[i].h;
+			if (!hh && n1 != n2 && n3 != n4) {
+				h = chs_div_minus(n1, n2, n3, n4);
+				if (h > 0 && h <= 256)
+					hh = h;
+			}
+			if (!ss && n3 != n4 && n5 != n6) {
+				s = chs_div_minus(n3, n4, n5, n6);
+				if (s > 0 && s <= 63)
+					ss = s;
+			}
+			if (hh && ss)
+				break;
+		}
+		if (hh && ss)
+			break;
+	}
+
+	if (hh && ss) {
 		*ph = hh;
 		*ps = ss;
 	}
@@ -840,6 +932,8 @@ static int dos_probe_label(struct fdisk_context *cxt)
 	if (h && s) {
 		cxt->geom.heads = h;
 	        cxt->geom.sectors = s;
+		cxt->geom.cylinders = cxt->total_sectors /
+					(cxt->geom.heads * cxt->geom.sectors);
 
 		if (fdisk_has_user_device_geometry(cxt))
 			fdisk_apply_user_device_properties(cxt);
@@ -917,13 +1011,7 @@ static void set_partition(struct fdisk_context *cxt,
 	p->sys_ind = sysid;
 	dos_partition_set_start(p, start - offset);
 	dos_partition_set_size(p, stop - start + 1);
-
-	if (is_dos_compatible(cxt) && (start/(cxt->geom.sectors*cxt->geom.heads) > 1023))
-		start = cxt->geom.heads*cxt->geom.sectors*1024 - 1;
-	set_hsc(p->bh, p->bs, p->bc, start);
-	if (is_dos_compatible(cxt) && (stop/(cxt->geom.sectors*cxt->geom.heads) > 1023))
-		stop = cxt->geom.heads*cxt->geom.sectors*1024 - 1;
-	set_hsc(p->eh, p->es, p->ec, stop);
+	dos_partition_sync_chs(p, offset, cxt->geom.sectors, cxt->geom.heads);
 	partition_set_changed(cxt, i, 1);
 }
 
@@ -1488,37 +1576,50 @@ static int add_logical(struct fdisk_context *cxt,
 	return rc;
 }
 
-static void check(struct fdisk_context *cxt, size_t n,
+static int check(struct fdisk_context *cxt, size_t n,
 	   unsigned int h, unsigned int s, unsigned int c,
-	   unsigned int start)
+	   unsigned int lba_sector)
 {
-	unsigned int total, real_s, real_c;
+	unsigned int chs_sector, real_s, real_c;
+	int nerrors = 0;
 
 	if (!is_dos_compatible(cxt))
-		return;
+		return 0;
 
 	real_s = sector(s) - 1;
 	real_c = cylinder(s, c);
-	total = (real_c * cxt->geom.heads + h) * cxt->geom.sectors + real_s;
+	chs_sector = (real_c * cxt->geom.heads + h) * cxt->geom.sectors + real_s;
 
-	if (!total)
+	if (!chs_sector) {
 		fdisk_warnx(cxt, _("Partition %zu: contains sector 0"), n);
-	if (h >= cxt->geom.heads)
+		nerrors++;
+	}
+	if (h >= cxt->geom.heads) {
 		fdisk_warnx(cxt, _("Partition %zu: head %d greater than "
 				   "maximum %d"), n, h + 1, cxt->geom.heads);
-	if (real_s >= cxt->geom.sectors)
+		nerrors++;
+	}
+	if (real_s >= cxt->geom.sectors) {
 		fdisk_warnx(cxt, _("Partition %zu: sector %d greater than "
-				   "maximum %ju"), n, s,
+				   "maximum %ju"), n, real_s + 1,
 				(uintmax_t) cxt->geom.sectors);
-	if (real_c >= cxt->geom.cylinders)
+		nerrors++;
+	}
+	if (real_c >= cxt->geom.cylinders) {
 		fdisk_warnx(cxt, _("Partition %zu: cylinder %d greater than "
 				   "maximum %ju"),
 				n, real_c + 1,
 				(uintmax_t) cxt->geom.cylinders);
+		nerrors++;
+	}
+	if (lba_sector / (cxt->geom.heads * cxt->geom.sectors) < 1024 && lba_sector != chs_sector) {
+		fdisk_warnx(cxt, _("Partition %zu: LBA sector %u "
+				   "disagrees with C/H/S calculated sector %u"),
+				n, lba_sector, chs_sector);
+		nerrors++;
+	}
 
-	if (cxt->geom.cylinders <= 1024 && start != total)
-		fdisk_warnx(cxt, _("Partition %zu: previous sectors %u "
-				   "disagrees with total %u"), n, start, total);
+	return nerrors;
 }
 
 /* check_consistency() and long2chs() added Sat Mar 6 12:28:16 1993,
@@ -1537,29 +1638,30 @@ long2chs(struct fdisk_context *cxt, unsigned long ls,
 	*s = ls % cxt->geom.sectors + 1;	/* sectors count from 1 */
 }
 
-static void check_consistency(struct fdisk_context *cxt, struct dos_partition *p,
+static int check_consistency(struct fdisk_context *cxt, struct dos_partition *p,
 			      size_t partition)
 {
 	unsigned int pbc, pbh, pbs;	/* physical beginning c, h, s */
 	unsigned int pec, peh, pes;	/* physical ending c, h, s */
 	unsigned int lbc, lbh, lbs;	/* logical beginning c, h, s */
 	unsigned int lec, leh, les;	/* logical ending c, h, s */
+	int nerrors = 0;
 
 	if (!is_dos_compatible(cxt))
-		return;
+		return 0;
 
 	if (!cxt->geom.heads || !cxt->geom.sectors || (partition >= 4))
-		return;		/* do not check extended partitions */
+		return 0;		/* do not check extended partitions */
 
 	/* physical beginning c, h, s */
-	pbc = (p->bc & 0xff) | ((p->bs << 2) & 0x300);
+	pbc = cylinder(p->bs, p->bc);
 	pbh = p->bh;
-	pbs = p->bs & 0x3f;
+	pbs = sector(p->bs);
 
 	/* physical ending c, h, s */
-	pec = (p->ec & 0xff) | ((p->es << 2) & 0x300);
+	pec = cylinder(p->es, p->ec);
 	peh = p->eh;
-	pes = p->es & 0x3f;
+	pes = sector(p->es);
 
 	/* compute logical beginning (c, h, s) */
 	long2chs(cxt, dos_partition_get_start(p), &lbc, &lbh, &lbs);
@@ -1568,7 +1670,7 @@ static void check_consistency(struct fdisk_context *cxt, struct dos_partition *p
 	long2chs(cxt, dos_partition_get_start(p) + dos_partition_get_size(p) - 1, &lec, &leh, &les);
 
 	/* Same physical / logical beginning? */
-	if (cxt->geom.cylinders <= 1024
+	if (lbc < 1024
 	    && (pbc != lbc || pbh != lbh || pbs != lbs)) {
 		fdisk_warnx(cxt, _("Partition %zu: different physical/logical "
 			"beginnings (non-Linux?): "
@@ -1576,16 +1678,18 @@ static void check_consistency(struct fdisk_context *cxt, struct dos_partition *p
 			partition + 1,
 			pbc, pbh, pbs,
 			lbc, lbh, lbs);
+		nerrors++;
 	}
 
 	/* Same physical / logical ending? */
-	if (cxt->geom.cylinders <= 1024
+	if (lec < 1024
 	    && (pec != lec || peh != leh || pes != les)) {
 		fdisk_warnx(cxt, _("Partition %zu: different physical/logical "
 			"endings: phys=(%d, %d, %d), logical=(%d, %d, %d)"),
 			partition + 1,
 			pec, peh, pes,
 			lec, leh, les);
+		nerrors++;
 	}
 
 	/* Ending on cylinder boundary? */
@@ -1593,7 +1697,10 @@ static void check_consistency(struct fdisk_context *cxt, struct dos_partition *p
 		fdisk_warnx(cxt, _("Partition %zu: does not end on "
 				   "cylinder boundary."),
 			partition + 1);
+		nerrors++;
 	}
+
+	return nerrors;
 }
 
 static void fill_bounds(struct fdisk_context *cxt,
@@ -1634,7 +1741,7 @@ static int dos_verify_disklabel(struct fdisk_context *cxt)
 
 		p = self_partition(cxt, i);
 		if (p && is_used_partition(p) && !IS_EXTENDED(p->sys_ind)) {
-			check_consistency(cxt, p, i);
+			nerrors += check_consistency(cxt, p, i);
 			assert(pe);
 			if (get_abs_partition_start(pe) < first[i]) {
 				fdisk_warnx(cxt, _(
@@ -1643,7 +1750,8 @@ static int dos_verify_disklabel(struct fdisk_context *cxt)
 				nerrors++;
 			}
 
-			check(cxt, i + 1, p->eh, p->es, p->ec, last[i]);
+			nerrors += check(cxt, i + 1, p->bh, p->bs, p->bc, first[i]);
+			nerrors += check(cxt, i + 1, p->eh, p->es, p->ec, last[i]);
 			total += last[i] + 1 - first[i];
 
 			if (i == 0)
@@ -1836,8 +1944,7 @@ static int dos_add_partition(struct fdisk_context *cxt,
 	for (i = 0; i < 4; i++) {
 		struct dos_partition *p = self_partition(cxt, i);
 
-		assert(p);
-		if (is_used_partition(p)) {
+		if (p && is_used_partition(p)) {
 			fdisk_sector_t start = dos_partition_get_start(p);
 			if (first + grain <= start)
 				free_sectors = 1;
@@ -2232,6 +2339,7 @@ static int dos_set_partition(struct fdisk_context *cxt, size_t n,
 
 	l = self_label(cxt);
 	p = self_partition(cxt, n);
+	assert(p);
 
 	pe = self_pte(cxt, n);
 	if (!pe)
@@ -2390,7 +2498,9 @@ again:
 			/* Recount starts according to EBR offsets, the absolute
 			 * address still has to be the same! */
 			dos_partition_set_start(cur->pt_entry, nxt_start - cur->offset);
+			dos_partition_sync_chs(cur->pt_entry, cur->offset, cxt->geom.sectors, cxt->geom.heads);
 			dos_partition_set_start(nxt->pt_entry, cur_start - nxt->offset);
+			dos_partition_sync_chs(nxt->pt_entry, nxt->offset, cxt->geom.sectors, cxt->geom.heads);
 
 			partition_set_changed(cxt, i, 1);
 			partition_set_changed(cxt, i + 1, 1);
@@ -2470,6 +2580,87 @@ static int dos_reorder(struct fdisk_context *cxt)
 	return 0;
 }
 
+/**
+ * fdisk_dos_fix_chs:
+ * @cxt: fdisk context
+ *
+ * Fix beginning and ending C/H/S values for every partition
+ * according to LBA relative offset, relative beginning and
+ * size and fdisk idea of disk geometry (sectors per track
+ * and number of heads).
+ *
+ * Returns: number of fixed (changed) partitions.
+ */
+int fdisk_dos_fix_chs(struct fdisk_context *cxt)
+{
+	unsigned int obc, obh, obs;	/* old beginning c, h, s */
+	unsigned int oec, oeh, oes;	/* old ending c, h, s */
+	unsigned int nbc, nbh, nbs;	/* new beginning c, h, s */
+	unsigned int nec, neh, nes;	/* new ending c, h, s */
+	fdisk_sector_t l, sects;	/* lba beginning and size */
+	struct dos_partition *p;
+	struct pte *pe;
+	int changed = 0;
+	size_t i;
+
+	assert(fdisk_is_label(cxt, DOS));
+
+	for (i = 0; i < cxt->label->nparts_max; i++) {
+		p = self_partition(cxt, i);
+		if (!p || !is_used_partition(p))
+			continue;
+
+		pe = self_pte(cxt, i);
+
+		/* old beginning c, h, s */
+		obc = cylinder(p->bs, p->bc);
+		obh = p->bh;
+		obs = sector(p->bs);
+
+		/* old ending c, h, s */
+		oec = cylinder(p->es, p->ec);
+		oeh = p->eh;
+		oes = sector(p->es);
+
+		/* new beginning c, h, s */
+		l = get_abs_partition_start(pe);
+		long2chs(cxt, l, &nbc, &nbh, &nbs);
+		if (l > UINT32_MAX || nbc >= 1024) {
+			nbc = 1023;
+			nbh = cxt->geom.heads-1;
+			nbs = cxt->geom.sectors;
+		}
+
+		/* new ending c, h, s */
+		sects = dos_partition_get_size(p);
+		long2chs(cxt, l + sects - 1, &nec, &neh, &nes);
+		if (lba_overflowed(l, sects) || nec >= 1024) {
+			nec = 1023;
+			neh = cxt->geom.heads-1;
+			nes = cxt->geom.sectors;
+		}
+
+		if (obc != nbc || obh != nbh || obs != nbs ||
+		    oec != nec || oeh != neh || oes != nes) {
+			DBG(LABEL, ul_debug("DOS: changing %zu partition CHS "
+				"from (%d, %d, %d)-(%d, %d, %d) "
+				"to (%d, %d, %d)-(%d, %d, %d)",
+				i, obc, obh, obs, oec, oeh, oes,
+				nbc, nbh, nbs, nec, neh, nes));
+			p->bc = nbc & 0xff;
+			p->bh = nbh;
+			p->bs = nbs | ((nbc >> 2) & 0xc0);
+			p->ec = nec & 0xff;
+			p->eh = neh;
+			p->es = nes | ((nec >> 2) & 0xc0);
+			partition_set_changed(cxt, i, 1);
+			changed++;
+		}
+	}
+
+	return changed;
+}
+
 /* TODO: use fdisk_set_partition() API */
 int fdisk_dos_move_begin(struct fdisk_context *cxt, size_t i)
 {
@@ -2536,6 +2727,7 @@ int fdisk_dos_move_begin(struct fdisk_context *cxt, size_t i)
 
 		dos_partition_set_size(p, sects);
 		dos_partition_set_start(p, new);
+		dos_partition_sync_chs(p, pe->offset, cxt->geom.sectors, cxt->geom.heads);
 
 		partition_set_changed(cxt, i, 1);
 
@@ -2581,6 +2773,7 @@ static int dos_toggle_partition_flag(
 		return -EINVAL;
 
 	p = self_partition(cxt, i);
+	assert(p);
 
 	switch (flag) {
 	case DOS_FLAG_ACTIVE:

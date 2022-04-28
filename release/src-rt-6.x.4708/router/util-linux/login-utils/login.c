@@ -513,6 +513,7 @@ static void init_tty(struct login_context *cxt)
 {
 	struct stat st;
 	struct termios tt, ttt;
+	struct winsize ws;
 
 	cxt->tty_mode = (mode_t) getlogindefs_num("TTYPERM", TTY_MODE);
 
@@ -542,6 +543,12 @@ static void init_tty(struct login_context *cxt)
 		snprintf(cxt->vcsan, sizeof(cxt->vcsan), "/dev/vcsa%s", cxt->tty_number);
 	}
 #endif
+
+	/* The TTY size might be reset to 0x0 by the kernel when we close the stdin/stdout/stderr file
+	 * descriptors so let's save the size now so we can reapply it later */
+	memset(&ws, 0, sizeof(struct winsize));
+	if (ioctl(STDIN_FILENO, TIOCGWINSZ, &ws) < 0)
+		syslog(LOG_WARNING, _("TIOCGWINSZ ioctl failed: %m"));
 
 	tcgetattr(0, &tt);
 	ttt = tt;
@@ -574,6 +581,11 @@ static void init_tty(struct login_context *cxt)
 
 	/* restore tty modes */
 	tcsetattr(0, TCSAFLUSH, &tt);
+
+	/* Restore tty size */
+	if ((ws.ws_row > 0 || ws.ws_col > 0)
+	    && ioctl(STDIN_FILENO, TIOCSWINSZ, &ws) < 0)
+		syslog(LOG_WARNING, _("TIOCSWINSZ ioctl failed: %m"));
 }
 
 /*
@@ -1520,6 +1532,9 @@ int main(int argc, char **argv)
 	}
 
 	child_argv[child_argc++] = NULL;
+
+	/* http://www.linux-pam.org/Linux-PAM-html/adg-interface-by-app-expected.html#adg-pam_end */
+	(void) pam_end(cxt.pamh, PAM_SUCCESS|PAM_DATA_SILENT);
 
 	execvp(child_argv[0], child_argv + 1);
 

@@ -200,3 +200,12 @@ SMARTCOLS_2.35 {
 	scols_table_is_minout;
 	scols_table_set_columns_iter;
 } SMARTCOLS_2.34;
+
+SMARTCOLS_2.38 {
+	scols_line_get_column_data;
+	scols_column_set_name;
+	scols_column_get_name;
+	scols_column_get_name_as_shellvar;
+	scols_table_is_shellvar;
+	scols_table_enable_shellvar;
+} SMARTCOLS_2.35;

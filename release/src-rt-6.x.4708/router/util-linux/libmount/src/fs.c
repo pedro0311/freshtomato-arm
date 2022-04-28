@@ -600,7 +600,7 @@ int mnt_fs_get_propagation(struct libmnt_fs *fs, unsigned long *flags)
  */
 int mnt_fs_is_kernel(struct libmnt_fs *fs)
 {
-	return mnt_fs_get_flags(fs) & MNT_FS_KERNEL;
+	return mnt_fs_get_flags(fs) & MNT_FS_KERNEL ? 1 : 0;
 }
 
 /**
@@ -611,7 +611,7 @@ int mnt_fs_is_kernel(struct libmnt_fs *fs)
  */
 int mnt_fs_is_swaparea(struct libmnt_fs *fs)
 {
-	return mnt_fs_get_flags(fs) & MNT_FS_SWAP;
+	return mnt_fs_get_flags(fs) & MNT_FS_SWAP ? 1 : 0;
 }
 
 /**
@@ -622,7 +622,7 @@ int mnt_fs_is_swaparea(struct libmnt_fs *fs)
  */
 int mnt_fs_is_pseudofs(struct libmnt_fs *fs)
 {
-	return mnt_fs_get_flags(fs) & MNT_FS_PSEUDO;
+	return mnt_fs_get_flags(fs) & MNT_FS_PSEUDO ? 1 : 0;
 }
 
 /**
@@ -633,7 +633,22 @@ int mnt_fs_is_pseudofs(struct libmnt_fs *fs)
  */
 int mnt_fs_is_netfs(struct libmnt_fs *fs)
 {
-	return mnt_fs_get_flags(fs) & MNT_FS_NET;
+	return mnt_fs_get_flags(fs) & MNT_FS_NET ? 1 : 0;
+}
+
+/**
+ * mnt_fs_is_regularfs:
+ * @fs: filesystem
+ *
+ * Returns: 1 if the filesystem is a regular filesystem (not network or pseudo filesystem).
+ *
+ * Since: 2.38
+ */
+int mnt_fs_is_regularfs(struct libmnt_fs *fs)
+{
+	return !(mnt_fs_is_pseudofs(fs)
+		 || mnt_fs_is_netfs(fs)
+		 || mnt_fs_is_swaparea(fs));
 }
 
 /**
@@ -1354,7 +1369,7 @@ int mnt_fs_append_comment(struct libmnt_fs *fs, const char *comm)
 	if (!fs)
 		return -EINVAL;
 
-	return append_string(&fs->comment, comm);
+	return strappend(&fs->comment, comm);
 }
 
 /**

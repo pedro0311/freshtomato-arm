@@ -388,7 +388,7 @@ int ul_strtou32(const char *str, uint32_t *num, int base)
 }
 
 /*
- * Covert strings to numbers in defined range and print message on error.
+ * Convert strings to numbers in defined range and print message on error.
  *
  * These functions are used when we read input from users (getopt() etc.). It's
  * better to consolidate the code and keep it all based on 64-bit numbers then
@@ -936,7 +936,8 @@ int streq_paths(const char *a, const char *b)
 	return 0;
 }
 
-char *strnappend(const char *s, const char *suffix, size_t b)
+/* concatenate two strings to a new string, the size of the second string is limited by @b */
+char *strnconcat(const char *s, const char *suffix, size_t b)
 {
         size_t a;
         char *r;
@@ -966,12 +967,14 @@ char *strnappend(const char *s, const char *suffix, size_t b)
         return r;
 }
 
-char *strappend(const char *s, const char *suffix)
+/* concatenate two strings to a new string */
+char *strconcat(const char *s, const char *suffix)
 {
-        return strnappend(s, suffix, suffix ? strlen(suffix) : 0);
+        return strnconcat(s, suffix, suffix ? strlen(suffix) : 0);
 }
 
-char *strfappend(const char *s, const char *format, ...)
+/* concatenate @s and string defined by @format to a new string */
+char *strfconcat(const char *s, const char *format, ...)
 {
 	va_list ap;
 	char *val, *res;
@@ -984,9 +987,34 @@ char *strfappend(const char *s, const char *format, ...)
 	if (sz < 0)
 		return NULL;
 
-	res = strnappend(s, val, sz);
+	res = strnconcat(s, val, sz);
 	free(val);
 	return res;
+}
+
+int strappend(char **a, const char *b)
+{
+	size_t al, bl;
+	char *tmp;
+
+	if (!a)
+		return -EINVAL;
+	if (!b || !*b)
+		return 0;
+	if (!*a) {
+		*a = strdup(b);
+		return !*a ? -ENOMEM : 0;
+	}
+
+	al = strlen(*a);
+	bl = strlen(b);
+
+	tmp = realloc(*a, al + bl + 1);
+	if (!tmp)
+		return -ENOMEM;
+	*a = tmp;
+	memcpy((*a) + al, b, bl + 1);
+	return 0;
 }
 
 static size_t strcspn_escaped(const char *s, const char *reject)
@@ -1166,17 +1194,32 @@ static int test_strutils_cmp_paths(int argc, char *argv[])
 
 static int test_strutils_normalize(int argc, char *argv[])
 {
-	unsigned char *str;
-	size_t sz;
+	unsigned char *src, *dst, *org;
+	size_t sz, len;
 
 	if (argc < 2)
 		return EXIT_FAILURE;
 
-	str = (unsigned char *) strdup(argv[1]);
-	sz = normalize_whitespace(str);
+	org = (unsigned char *) strdup(argv[1]);
+	src = (unsigned char *) strdup((char *) org);
+	len = strlen((char *) src);
+	dst = malloc(len + 1);
 
-	printf("'%s' --> '%s' [sz=%zu]\n", argv[1], str, sz);
-	free(str);
+	if (!org || !src || !dst)
+		goto done;
+
+	/* two buffers */
+	sz = __normalize_whitespace(src, len, dst, len + 1);
+	printf("1: '%s' --> '%s' [sz=%zu]\n", src, dst, sz);
+
+	/* one buffer */
+	sz = normalize_whitespace(src);
+	printf("2: '%s' --> '%s' [sz=%zu]\n", org, src, sz);
+
+done:
+	free(src);
+	free(dst);
+	free(org);
 
 	return EXIT_SUCCESS;
 }

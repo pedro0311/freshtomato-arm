@@ -9,6 +9,7 @@
 #include "lscpu.h"
 
 #include "fileutils.h"
+#include "c_strtod.h"
 
 /* Lookup a pattern and get the value for format  "<pattern> : <key>"
  */
@@ -84,6 +85,7 @@ void lscpu_unref_cputype(struct lscpu_cputype *ct)
 		free(ct->model);
 		free(ct->modelname);
 		free(ct->bios_modelname);
+		free(ct->bios_family);
 		free(ct->revision);	/* alternative for model (ppc) */
 		free(ct->stepping);
 		free(ct->bogomips);
@@ -285,7 +287,7 @@ static int is_different_cputype(struct lscpu_cputype *ct, size_t offset, const c
 	return 0;
 }
 
-/* cannonicalize @str -- remove number at the end return the
+/* canonicalize @str -- remove number at the end return the
  * number by @keynum. This is usable for example for "processor 5" or "cache1"
  * cpuinfo lines */
 static char *key_cleanup(char *str, int *keynum)
@@ -319,7 +321,7 @@ static char *key_cleanup(char *str, int *keynum)
 
 static const struct cpuinfo_pattern *cpuinfo_parse_line(char *str, char **value, int *keynum)
 {
-	struct cpuinfo_pattern key, *pat;
+	struct cpuinfo_pattern key = { .id = 0 }, *pat;
 	char *p, *v;
 	char buf[CPUTYPE_PATTERN_BUFSZ] = { 0 };
 
@@ -530,6 +532,12 @@ int lscpu_read_cpuinfo(struct lscpu_cxt *cxt)
 				pr->curr_type->static_mhz = xstrdup(value);
 			if (pattern->id == PAT_BOGOMIPS_CPU && pr->curr_type && !pr->curr_type->bogomips)
 				pr->curr_type->bogomips = xstrdup(value);
+			if (pattern->id == PAT_MHZ && pr->curr_cpu && value) {
+				errno = 0;
+				pr->curr_cpu->mhz_cur_freq = (float) c_strtod(value, NULL);
+				if (errno)
+					pr->curr_cpu->mhz_cur_freq = 0;
+			}
 			break;
 		case CPUINFO_LINE_CPUTYPE:
 			if (pr->curr_type && is_different_cputype(pr->curr_type, pattern->offset, value)) {

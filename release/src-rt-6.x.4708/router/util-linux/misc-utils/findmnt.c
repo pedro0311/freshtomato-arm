@@ -35,6 +35,7 @@
 #ifdef HAVE_LIBUDEV
 # include <libudev.h>
 #endif
+#include <blkid.h>
 #include <libmount.h>
 #include <libsmartcols.h>
 
@@ -46,6 +47,7 @@
 #include "xalloc.h"
 #include "optutils.h"
 #include "mangle.h"
+#include "buffer.h"
 
 #include "findmnt.h"
 
@@ -71,6 +73,7 @@ enum {
 	COL_PROPAGATION,
 	COL_SIZE,
 	COL_SOURCE,
+	COL_SOURCES,
 	COL_TARGET,
 	COL_TID,
 	COL_USED,
@@ -116,6 +119,7 @@ static struct colinfo infos[] = {
 	[COL_PASSNO]       = { "PASSNO",          1, SCOLS_FL_RIGHT, N_("pass number on parallel fsck(8) [fstab only]") },
 	[COL_PROPAGATION]  = { "PROPAGATION",  0.10, 0, N_("VFS propagation flags") },
 	[COL_SIZE]         = { "SIZE",            5, SCOLS_FL_RIGHT, N_("filesystem size") },
+	[COL_SOURCES]      = { "SOURCES",      0.25, SCOLS_FL_WRAP, N_("all possible source devices") },
 	[COL_SOURCE]       = { "SOURCE",       0.25, SCOLS_FL_NOEXTREMES, N_("source device") },
 	[COL_TARGET]       = { "TARGET",       0.30, SCOLS_FL_TREE| SCOLS_FL_NOEXTREMES, N_("mountpoint") },
 	[COL_TID]          = { "TID",             4, SCOLS_FL_RIGHT, N_("task ID") },
@@ -150,10 +154,11 @@ static int actions[FINDMNT_NACTIONS];
 static int nactions;
 
 /* global (accessed from findmnt-verify.c too) */
-int flags;
+unsigned int flags;
 int parse_nerrors;
 struct libmnt_cache *cache;
 
+static blkid_cache blk_cache;
 
 #ifdef HAVE_LIBUDEV
 static struct udev *udev;
@@ -504,6 +509,76 @@ static char *get_vfs_attr(struct libmnt_fs *fs, int sizetype)
 	return sizestr;
 }
 
+/* reads sources from libmount/libblkid
+ */
+static char *get_data_col_sources(struct libmnt_fs *fs, int evaluate)
+{
+	const char *tag = NULL, *p = NULL;
+	int i = 0;
+	const char *device = NULL;
+	char *val = NULL;
+	blkid_dev_iterate iter;
+	blkid_dev dev;
+	struct ul_buffer buf = UL_INIT_BUFFER;
+
+	/* get TAG from libmount if avalable (e.g. fstab) */
+	if (mnt_fs_get_tag(fs, &tag, &p) == 0) {
+
+		/* if device is in the form 'UUID=..' or 'LABEL=..' and evaluate==0
+		 * then it is ok to do not search for multiple devices
+		 */
+		if (!evaluate)
+			goto nothing;
+		val = xstrdup(p);
+	}
+
+	/* or get device name */
+	else if (!(device = mnt_fs_get_srcpath(fs))
+		 || strncmp(device, "/dev/", 5) != 0)
+		goto nothing;
+
+	if (!blk_cache) {
+		if (blkid_get_cache(&blk_cache, NULL) != 0)
+			goto nothing;
+		blkid_probe_all(blk_cache);
+	}
+
+	/* ask libblkid for the UUID */
+	if (!val) {
+		assert(device);
+
+		tag = "UUID";
+		val = blkid_get_tag_value(blk_cache, "UUID", device);	/* returns allocated string */
+		if (!val)
+			goto nothing;
+	}
+
+	assert(val);
+	assert(tag);
+
+	/* scan all devices for the TAG */
+	iter = blkid_dev_iterate_begin(blk_cache);
+	blkid_dev_set_search(iter, tag, val);
+
+	while (blkid_dev_next(iter, &dev) == 0) {
+		dev = blkid_verify(blk_cache, dev);
+		if (!dev)
+			continue;
+		if (i != 0)
+			ul_buffer_append_data(&buf, "\n", 1);
+		ul_buffer_append_string(&buf, blkid_dev_devname(dev));
+		i++;
+	}
+	blkid_dev_iterate_end(iter);
+	free(val);
+
+	return ul_buffer_get_data(&buf, NULL, NULL);
+
+nothing:
+	free(val);
+	return NULL;
+}
+
 /* reads FS data from libmount
  */
 static char *get_data(struct libmnt_fs *fs, int num)
@@ -512,6 +587,13 @@ static char *get_data(struct libmnt_fs *fs, int num)
 	int col_id = get_column_id(num);
 
 	switch (col_id) {
+	case COL_SOURCES:
+		/* print all devices with the same tag (LABEL, UUID) */
+		str = get_data_col_sources(fs, flags & FL_EVALUATE);
+		if (str)
+			break;
+
+		/* fallthrough */
 	case COL_SOURCE:
 	{
 		const char *root = mnt_fs_get_root(fs);
@@ -534,6 +616,7 @@ static char *get_data(struct libmnt_fs *fs, int num)
 			free(cn);
 		break;
 	}
+
 	case COL_TARGET:
 		if (mnt_fs_get_target(fs))
 			str = xstrdup(mnt_fs_get_target(fs));
@@ -759,13 +842,14 @@ static int create_treenode(struct libscols_table *table, struct libmnt_table *tb
 	struct libmnt_fs *chld = NULL;
 	struct libmnt_iter *itr = NULL;
 	struct libscols_line *line;
-	int rc = -1;
+	int rc = -1, first = 0;
 
 	if (!fs) {
 		/* first call, get root FS */
 		if (mnt_table_get_root_fs(tb, &fs))
 			goto leave;
 		parent_line = NULL;
+		first = 1;
 
 	} else if ((flags & FL_SUBMOUNTS) && has_line(table, fs))
 		return 0;
@@ -784,11 +868,23 @@ static int create_treenode(struct libscols_table *table, struct libmnt_table *tb
 	/*
 	 * add all children to the output table
 	 */
-	while(mnt_table_next_child_fs(tb, itr, fs, &chld) == 0) {
+	while (mnt_table_next_child_fs(tb, itr, fs, &chld) == 0) {
 		if (create_treenode(table, tb, chld, line))
 			goto leave;
 	}
 	rc = 0;
+
+	/* make sure all entries are in the tree */
+	if (first && (size_t) mnt_table_get_nents(tb) >
+		     (size_t) scols_table_get_nlines(table)) {
+		mnt_reset_iter(itr, MNT_ITER_FORWARD);
+		fs = NULL;
+
+		while (mnt_table_next_fs(tb, itr, &fs) == 0) {
+			if (!has_line(table, fs) && match_func(fs, NULL))
+				create_treenode(table, tb, fs, NULL);
+		}
+	}
 leave:
 	mnt_free_iter(itr);
 	return rc;
@@ -1275,6 +1371,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -U, --uniq             ignore filesystems with duplicate target\n"), out);
 	fputs(_(" -u, --notruncate       don't truncate text in columns\n"), out);
 	fputs(_(" -v, --nofsroot         don't print [/dir] for bind or btrfs mounts\n"), out);
+	fputs(_(" -y, --shell            use column names to be usable as shell variable identifiers\n"), out);
 
 	fputc('\n', out);
 	fputs(_(" -x, --verify           verify mount table content (default is fstab)\n"), out);
@@ -1354,6 +1451,7 @@ int main(int argc, char *argv[])
 		{ "uniq",	    no_argument,       NULL, 'U'		 },
 		{ "verify",	    no_argument,       NULL, 'x'		 },
 		{ "version",	    no_argument,       NULL, 'V'		 },
+		{ "shell",          no_argument,       NULL, 'y'                 },
 		{ "verbose",	    no_argument,       NULL, FINDMNT_OPT_VERBOSE },
 		{ "tree",	    no_argument,       NULL, FINDMNT_OPT_TREE	 },
 		{ "real",	    no_argument,       NULL, FINDMNT_OPT_REAL	 },
@@ -1386,7 +1484,7 @@ int main(int argc, char *argv[])
 	flags |= FL_TREE;
 
 	while ((c = getopt_long(argc, argv,
-				"AabCcDd:ehiJfF:o:O:p::PklmM:nN:rst:uvRS:T:Uw:Vx",
+				"AabCcDd:ehiJfF:o:O:p::PklmM:nN:rst:uvRS:T:Uw:Vxy",
 				longopts, NULL)) != -1) {
 
 		err_exclusive_options(c, longopts, excl, excl_st);
@@ -1442,10 +1540,11 @@ int main(int argc, char *argv[])
 			outarg = optarg;
 			break;
 		case FINDMNT_OPT_OUTPUT_ALL:
-			for (ncolumns = 0; ncolumns < ARRAY_SIZE(infos); ncolumns++) {
-				if (is_tabdiff_column(ncolumns))
+			ncolumns = 0;
+			for (i = 0; i < ARRAY_SIZE(infos); i++) {
+				if (is_tabdiff_column(i))
 					continue;
-				columns[ncolumns] = ncolumns;
+				columns[ncolumns++] = i;
 			}
 			break;
 		case 'O':
@@ -1522,6 +1621,9 @@ int main(int argc, char *argv[])
 		case 'x':
 			verify = 1;
 			break;
+		case 'y':
+			flags |= FL_SHELLVAR;
+			break;
 		case FINDMNT_OPT_VERBOSE:
 			flags |= FL_VERBOSE;
 			break;
@@ -1540,7 +1642,6 @@ int main(int argc, char *argv[])
 		case FINDMNT_OPT_SHADOWED:
 			flags |= FL_SHADOWED;
 			break;
-
 		case 'h':
 			usage();
 		case 'V':
@@ -1664,6 +1765,7 @@ int main(int argc, char *argv[])
 	}
 	scols_table_enable_raw(table,        !!(flags & FL_RAW));
 	scols_table_enable_export(table,     !!(flags & FL_EXPORT));
+	scols_table_enable_shellvar(table,   !!(flags & FL_SHELLVAR));
 	scols_table_enable_json(table,       !!(flags & FL_JSON));
 	scols_table_enable_ascii(table,      !!(flags & FL_ASCII));
 	scols_table_enable_noheadings(table, !!(flags & FL_NOHEADINGS));
@@ -1690,7 +1792,14 @@ int main(int argc, char *argv[])
 			warn(_("failed to allocate output column"));
 			goto leave;
 		}
-
+		/* multi-line cells (now used for SOURCES) */
+		if (fl & SCOLS_FL_WRAP) {
+			scols_column_set_wrapfunc(cl,
+						scols_wrapnl_chunksize,
+						scols_wrapnl_nextchunk,
+						NULL);
+			scols_column_set_safechars(cl, "\n");
+		}
 		if (flags & FL_JSON) {
 			switch (id) {
 			case COL_SIZE:
@@ -1707,7 +1816,10 @@ int main(int argc, char *argv[])
 				scols_column_set_json_type(cl, SCOLS_JSON_NUMBER);
 				break;
 			default:
-				scols_column_set_json_type(cl, SCOLS_JSON_STRING);
+				if (fl & SCOLS_FL_WRAP)
+					scols_column_set_json_type(cl, SCOLS_JSON_ARRAY_STRING);
+				else
+					scols_column_set_json_type(cl, SCOLS_JSON_STRING);
 				break;
 			}
 		}

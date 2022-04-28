@@ -17,6 +17,7 @@
 #include "color-names.h"
 #include "jsonwrt.h"
 #include "debug.h"
+#include "buffer.h"
 
 #include "libsmartcols.h"
 
@@ -40,6 +41,8 @@ UL_DEBUG_DECLARE_MASK(libsmartcols);
 
 #define UL_DEBUG_CURRENT_MASK	UL_DEBUG_MASK(libsmartcols)
 #include "debugobj.h"
+
+#define SCOLS_BUFPTR_TREEEND	0
 
 /*
  * Generic iterator
@@ -123,7 +126,9 @@ struct libscols_column {
 	void *wrapfunc_data;
 
 
-	struct libscols_cell	header;
+	struct libscols_cell	header;		/* column name with color etc. */
+	char	*shellvar;			/* raw colum name in shell compatible format */
+
 	struct list_head	cl_columns;	/* member of table->tb_columns */
 
 	struct libscols_table	*table;
@@ -242,6 +247,7 @@ struct libscols_table {
 			is_term		:1,	/* isatty() */
 			padding_debug	:1,	/* output visible padding chars */
 			is_dummy_print	:1,	/* printing used for width calculation only */
+			is_shellvar	:1,	/* shell compatible column names */
 			maxout		:1,	/* maximize output */
 			minout		:1,	/* minimize output (mutually exclusive to maxout) */
 			header_repeat   :1,     /* print header after libscols_table->termheight */
@@ -296,25 +302,6 @@ int scols_table_next_group(struct libscols_table *tb,
                           struct libscols_group **gr);
 
 /*
- * buffer.c
- */
-struct libscols_buffer;
-extern struct libscols_buffer *new_buffer(size_t sz);
-extern void free_buffer(struct libscols_buffer *buf);
-extern int buffer_reset_data(struct libscols_buffer *buf);
-extern int buffer_append_data(struct libscols_buffer *buf, const char *str);
-extern int buffer_append_ntimes(struct libscols_buffer *buf, size_t n, const char *str);
-extern int buffer_set_data(struct libscols_buffer *buf, const char *str);
-extern void buffer_set_art_index(struct libscols_buffer *buf);
-extern char *buffer_get_data(struct libscols_buffer *buf);
-extern size_t buffer_get_size(struct libscols_buffer *buf);
-extern char *buffer_get_safe_data(struct libscols_table *tb,
-				  struct libscols_buffer *buf,
-				  size_t *cells,
-				  const char *safechars);
-extern size_t buffer_get_safe_art_size(struct libscols_buffer *buf);
-
-/*
  * grouping.c
  */
 void scols_ref_group(struct libscols_group *gr);
@@ -341,7 +328,7 @@ extern int scols_walk_is_last(struct libscols_table *tb, struct libscols_line *l
 /*
  * calculate.c
  */
-extern int __scols_calculate(struct libscols_table *tb, struct libscols_buffer *buf);
+extern int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf);
 
 /*
  * print.c
@@ -349,16 +336,16 @@ extern int __scols_calculate(struct libscols_table *tb, struct libscols_buffer *
 extern int __cell_to_buffer(struct libscols_table *tb,
                           struct libscols_line *ln,
                           struct libscols_column *cl,
-                          struct libscols_buffer *buf);
+                          struct ul_buffer *buf);
 
-void __scols_cleanup_printing(struct libscols_table *tb, struct libscols_buffer *buf);
-int __scols_initialize_printing(struct libscols_table *tb, struct libscols_buffer **buf);
-int __scols_print_tree(struct libscols_table *tb, struct libscols_buffer *buf);
-int __scols_print_table(struct libscols_table *tb, struct libscols_buffer *buf);
-int __scols_print_header(struct libscols_table *tb, struct libscols_buffer *buf);
+void __scols_cleanup_printing(struct libscols_table *tb, struct ul_buffer *buf);
+int __scols_initialize_printing(struct libscols_table *tb, struct ul_buffer *buf);
+int __scols_print_tree(struct libscols_table *tb, struct ul_buffer *buf);
+int __scols_print_table(struct libscols_table *tb, struct ul_buffer *buf);
+int __scols_print_header(struct libscols_table *tb, struct ul_buffer *buf);
 int __scols_print_title(struct libscols_table *tb);
 int __scols_print_range(struct libscols_table *tb,
-                        struct libscols_buffer *buf,
+                        struct ul_buffer *buf,
                         struct libscols_iter *itr,
                         struct libscols_line *end);
 

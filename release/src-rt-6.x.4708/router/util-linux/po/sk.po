@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: util-linux 2.37-rc2\n"
 "Report-Msgid-Bugs-To: util-linux@vger.kernel.org\n"
 "POT-Creation-Date: 2021-05-10 13:20+0200\n"
-"PO-Revision-Date: 2021-08-10 22:13+0200\n"
+"PO-Revision-Date: 2021-09-13 10:00+0200\n"
 "Last-Translator: Jose Riha <jose1711@gmail.com>\n"
 "Language-Team: Slovak <sk-i18n@lists.linux.sk>\n"
 "Language: sk\n"
@@ -2062,7 +2062,7 @@ msgstr "dĺžka súboru je príliš krátka"
 #: login-utils/last.c:209 login-utils/last.c:243 sys-utils/fallocate.c:206
 #, c-format
 msgid "seek on %s failed"
-msgstr "chyba pri skoku na pozíciu v %s"
+msgstr "chyba pri skoku (seek) na pozíciu v %s"
 
 #: disk-utils/fsck.cramfs.c:191 disk-utils/fsck.cramfs.c:193
 msgid "superblock magic not found"
@@ -2117,7 +2117,7 @@ msgstr "chyba CRC"
 
 #: disk-utils/fsck.cramfs.c:313 disk-utils/fsck.minix.c:558
 msgid "seek failed"
-msgstr "chyba pri operácií seek"
+msgstr "chyba pri volaní seek"
 
 #: disk-utils/fsck.cramfs.c:317
 msgid "read romfs failed"
@@ -2187,190 +2187,190 @@ msgstr "volanie utimes skončilo s chybou: %s"
 #: disk-utils/fsck.cramfs.c:455
 #, c-format
 msgid "directory inode has zero offset and non-zero size: %s"
-msgstr ""
+msgstr "i-uzol adresára má nulovú pozíciu a nenulovú veľkosť: %s"
 
 #: disk-utils/fsck.cramfs.c:470
 #, c-format
 msgid "mkdir failed: %s"
-msgstr ""
+msgstr "volanie mkdir skončilo s chybou: %s"
 
 #: disk-utils/fsck.cramfs.c:486
 msgid "filename length is zero"
-msgstr ""
+msgstr "dĺžka názvu súboru je nulová"
 
 #: disk-utils/fsck.cramfs.c:488
 msgid "bad filename length"
-msgstr ""
+msgstr "chybná dĺžka mena súboru"
 
 #: disk-utils/fsck.cramfs.c:494
 msgid "bad inode offset"
-msgstr ""
+msgstr "chybný posun i-uzla"
 
 #: disk-utils/fsck.cramfs.c:509
 msgid "file inode has zero offset and non-zero size"
-msgstr ""
+msgstr "i-uzol súboru má nulovú pozíciu a nenulovú veľkosť"
 
 #: disk-utils/fsck.cramfs.c:512
 msgid "file inode has zero size and non-zero offset"
-msgstr ""
+msgstr "i-uzol súboru má nulovú veľkost a nenulový posun"
 
 #: disk-utils/fsck.cramfs.c:541
 msgid "symbolic link has zero offset"
-msgstr ""
+msgstr "symbolický odkaz má nulový posun"
 
 #: disk-utils/fsck.cramfs.c:543
 msgid "symbolic link has zero size"
-msgstr ""
+msgstr "symbolický odkaz má nulovú veľkosť"
 
 #: disk-utils/fsck.cramfs.c:552
 #, c-format
 msgid "size error in symlink: %s"
-msgstr ""
+msgstr "chyba v symbolickom odkaze: %s"
 
 #: disk-utils/fsck.cramfs.c:566
 #, c-format
 msgid "symlink failed: %s"
-msgstr ""
+msgstr "volanie symlink skončilo s chybou: %s"
 
 #: disk-utils/fsck.cramfs.c:579
 #, c-format
 msgid "special file has non-zero offset: %s"
-msgstr ""
+msgstr "špeciálny súbor má nenulový posun: %s"
 
 #: disk-utils/fsck.cramfs.c:589
 #, c-format
 msgid "fifo has non-zero size: %s"
-msgstr ""
+msgstr "FIFO má nenulovú veľkosť: %s"
 
 #: disk-utils/fsck.cramfs.c:595
 #, c-format
 msgid "socket has non-zero size: %s"
-msgstr ""
+msgstr "socket má nenulovú veľkosť: %s"
 
 #: disk-utils/fsck.cramfs.c:598
 #, c-format
 msgid "bogus mode: %s (%o)"
-msgstr ""
+msgstr "nepravý mód/práva: %s (%o)"
 
 #: disk-utils/fsck.cramfs.c:607
 #, c-format
 msgid "mknod failed: %s"
-msgstr ""
+msgstr "volanie mknod skončilo s chybou: %s"
 
 #: disk-utils/fsck.cramfs.c:639
 #, c-format
 msgid "directory data start (%lu) < sizeof(struct cramfs_super) + start (%zu)"
-msgstr ""
+msgstr "začiatok dát adresára (%lu) < sizeof(struct cramfs_super) + začiatok (%zu)"
 
 #: disk-utils/fsck.cramfs.c:643
 #, c-format
 msgid "directory data end (%lu) != file data start (%lu)"
-msgstr ""
+msgstr "koniec dát adresára (%lu) != začiatok dát súboru (%lu)"
 
 #: disk-utils/fsck.cramfs.c:647
 msgid "invalid file data offset"
-msgstr ""
+msgstr "neplatný posun dát súboru"
 
 #: disk-utils/fsck.cramfs.c:695 disk-utils/mkfs.cramfs.c:736
 msgid "invalid blocksize argument"
-msgstr ""
+msgstr "neplatný argument veľkosti bloku"
 
 #: disk-utils/fsck.cramfs.c:729
 #, c-format
 msgid "%s: OK\n"
-msgstr ""
+msgstr "%s: OK\n"
 
 #: disk-utils/fsck.minix.c:185
 msgid "Check the consistency of a Minix filesystem.\n"
-msgstr ""
+msgstr "Skontroluje konzistenciu súborového systému Minix.\n"
 
 #: disk-utils/fsck.minix.c:187
 msgid " -l, --list       list all filenames\n"
-msgstr ""
+msgstr " -l, --list       zobraziť všetky názvy súborov\n"
 
 #: disk-utils/fsck.minix.c:188
 msgid " -a, --auto       automatic repair\n"
-msgstr ""
+msgstr " -a, --auto       automatická oprava\n"
 
 #: disk-utils/fsck.minix.c:189
 msgid " -r, --repair     interactive repair\n"
-msgstr ""
+msgstr " -r, --repair     interaktívna oprava\n"
 
 #: disk-utils/fsck.minix.c:190
 msgid " -v, --verbose    be verbose\n"
-msgstr ""
+msgstr " -v, --verbose    podrobný režim\n"
 
 #: disk-utils/fsck.minix.c:191
 msgid " -s, --super      output super-block information\n"
-msgstr ""
+msgstr " -s, --super      vypísať údaje zo superbloku\n"
 
 #: disk-utils/fsck.minix.c:192
 msgid " -m, --uncleared  activate mode not cleared warnings\n"
-msgstr ""
+msgstr " -m, --uncleared  upozorniť na nevymazané prístupové práva\n"
 
 #: disk-utils/fsck.minix.c:193
 msgid " -f, --force      force check\n"
-msgstr ""
+msgstr " -f, --force      vynútiť kontrolu\n"
 
 #. TRANSLATORS: these yes no questions uses rpmatch(), and should be
 #. * translated.
 #: disk-utils/fsck.minix.c:252
 #, c-format
 msgid "%s (y/n)? "
-msgstr ""
+msgstr "%s (a/n)? "
 
 #: disk-utils/fsck.minix.c:252
 #, c-format
 msgid "%s (n/y)? "
-msgstr ""
+msgstr "%s (n/a)? "
 
 #: disk-utils/fsck.minix.c:269
 #, c-format
 msgid "y\n"
-msgstr ""
+msgstr "a\n"
 
 #: disk-utils/fsck.minix.c:271
 #, c-format
 msgid "n\n"
-msgstr ""
+msgstr "n\n"
 
 #: disk-utils/fsck.minix.c:287
 #, c-format
 msgid "%s is mounted.\t "
-msgstr ""
+msgstr "%s je už pripojené.\t"
 
 #: disk-utils/fsck.minix.c:289
 msgid "Do you really want to continue"
-msgstr ""
+msgstr "Chcete naozaj pokračovať"
 
 #: disk-utils/fsck.minix.c:293
 #, c-format
 msgid "check aborted.\n"
-msgstr ""
+msgstr "kontrola bol zrušená.\n"
 
 #: disk-utils/fsck.minix.c:318 disk-utils/fsck.minix.c:339
 #, c-format
 msgid "Zone nr < FIRSTZONE in file `%s'."
-msgstr ""
+msgstr "Číslo zóny < PRVÁ_ZÓNA v súbore „%s“."
 
 #: disk-utils/fsck.minix.c:321 disk-utils/fsck.minix.c:342
 #, c-format
 msgid "Zone nr >= ZONES in file `%s'."
-msgstr ""
+msgstr "Číslo zóny >= počet ZÓN v súbore „%s“."
 
 #: disk-utils/fsck.minix.c:325 disk-utils/fsck.minix.c:346
 msgid "Remove block"
-msgstr ""
+msgstr "Odstrániť blok"
 
 #: disk-utils/fsck.minix.c:362
 #, c-format
 msgid "Read error: unable to seek to block in file '%s'\n"
-msgstr ""
+msgstr "Chyba čítania: nefunguje volanie seek na blok v súbore „%s“\n"
 
 #: disk-utils/fsck.minix.c:368
 #, c-format
 msgid "Read error: bad block in file '%s'\n"
-msgstr ""
+msgstr "Chyba čítania: chybný blok v súbore „%s“\n"
 
 #: disk-utils/fsck.minix.c:380
 #, c-format
@@ -2378,139 +2378,141 @@ msgid ""
 "Internal error: trying to write bad block\n"
 "Write request ignored\n"
 msgstr ""
+"Vnútorná chyba: pokus o zápis chybného bloku.\n"
+"Žiadosť o zápis bola ignorovaná.\n"
 
 #: disk-utils/fsck.minix.c:386
 msgid "seek failed in write_block"
-msgstr ""
+msgstr "chyba pri volaní seek vo write_block"
 
 #: disk-utils/fsck.minix.c:389
 #, c-format
 msgid "Write error: bad block in file '%s'\n"
-msgstr ""
+msgstr "Chyba pri zápise: chybný blok v súbore „%s“\n"
 
 #: disk-utils/fsck.minix.c:423
 #, c-format
 msgid "Warning: block out of range\n"
-msgstr ""
+msgstr "Pozor: blok je mimo rozsahu\n"
 
 #: disk-utils/fsck.minix.c:510
 msgid "seek failed in write_super_block"
-msgstr ""
+msgstr "chyba pri volaní seek vo write_super_block"
 
 #: disk-utils/fsck.minix.c:512
 msgid "unable to write super-block"
-msgstr ""
+msgstr "superblok sa nedá zapísať"
 
 #: disk-utils/fsck.minix.c:524
 msgid "Unable to write inode map"
-msgstr ""
+msgstr "Mapa i-uzlov sa nedá zapísať"
 
 #: disk-utils/fsck.minix.c:527
 msgid "Unable to write zone map"
-msgstr ""
+msgstr "Mapa zón sa nedá zapísať"
 
 #: disk-utils/fsck.minix.c:530
 msgid "Unable to write inodes"
-msgstr ""
+msgstr "I-uzly sa nedajú zapísať"
 
 #: disk-utils/fsck.minix.c:562
 msgid "unable to alloc buffer for superblock"
-msgstr ""
+msgstr "buffer pre superblok nie je možné alokovať"
 
 #: disk-utils/fsck.minix.c:565
 msgid "unable to read super block"
-msgstr ""
+msgstr "superblok sa nedá prečítať"
 
 #: disk-utils/fsck.minix.c:587
 msgid "bad magic number in super-block"
-msgstr ""
+msgstr "superblok obsahuje chybné magické číslo"
 
 #: disk-utils/fsck.minix.c:589
 msgid "Only 1k blocks/zones supported"
-msgstr ""
+msgstr "Podporované sú iba 1kilobajtové bloky/zóny"
 
 #: disk-utils/fsck.minix.c:591
 msgid "bad s_ninodes field in super-block"
-msgstr ""
+msgstr "superblok obsahuje chybnú položku s_ninodes"
 
 #: disk-utils/fsck.minix.c:593
 msgid "bad s_imap_blocks field in super-block"
-msgstr ""
+msgstr "superblok obsahuje chybnú položku s_imap_blocks"
 
 #: disk-utils/fsck.minix.c:595
 msgid "bad s_firstdatazone field in super-block"
-msgstr ""
+msgstr "superblok obsahuje chybnú položku s_firstdatazone"
 
 #: disk-utils/fsck.minix.c:598
 msgid "bad s_zmap_blocks field in super-block"
-msgstr ""
+msgstr "superblok obsahuje chybnú položku s_zmap_blocks"
 
 #: disk-utils/fsck.minix.c:614
 msgid "Unable to allocate buffer for inode map"
-msgstr ""
+msgstr "Buffer pre mapu i-uzlov sa nedá alokovať"
 
 #: disk-utils/fsck.minix.c:617
 msgid "Unable to allocate buffer for zone map"
-msgstr ""
+msgstr "Buffer pre mapu zón sa nedá alokovať"
 
 #: disk-utils/fsck.minix.c:620
 msgid "Unable to allocate buffer for inodes"
-msgstr ""
+msgstr "Buffer pre i-uzly sa nedá alokovať"
 
 #: disk-utils/fsck.minix.c:623
 msgid "Unable to allocate buffer for inode count"
-msgstr ""
+msgstr "Buffer pre počítadlo i-uzlov sa nedá alokovať"
 
 #: disk-utils/fsck.minix.c:626
 msgid "Unable to allocate buffer for zone count"
-msgstr ""
+msgstr "Buffer pre počítadlo zón sa nedá alokovať"
 
 #: disk-utils/fsck.minix.c:630
 msgid "Unable to read inode map"
-msgstr ""
+msgstr "Mapa i-uzlov sa nedá prečítať"
 
 #: disk-utils/fsck.minix.c:634
 msgid "Unable to read zone map"
-msgstr ""
+msgstr "Mapa zón sa nedá prečítať"
 
 #: disk-utils/fsck.minix.c:638
 msgid "Unable to read inodes"
-msgstr ""
+msgstr "Nie je možné prečítať i-uzly"
 
 #: disk-utils/fsck.minix.c:640
 #, c-format
 msgid "Warning: Firstzone != Norm_firstzone\n"
-msgstr ""
+msgstr "Varovanie: Firstzone != Norm_firstzone\n"
 
 #: disk-utils/fsck.minix.c:645
 #, c-format
 msgid "%ld inodes\n"
-msgstr ""
+msgstr "i-uzlov: %ld\n"
 
 #: disk-utils/fsck.minix.c:646
 #, c-format
 msgid "%ld blocks\n"
-msgstr ""
+msgstr "blokov: %ld\n"
 
 #: disk-utils/fsck.minix.c:647 disk-utils/mkfs.minix.c:571
 #, c-format
 msgid "Firstdatazone=%jd (%jd)\n"
-msgstr ""
+msgstr "Prvá_zóna_dát=%jd (%jd)\n"
 
 #: disk-utils/fsck.minix.c:649
 #, c-format
 msgid "Zonesize=%d\n"
-msgstr ""
+msgstr "Veľkosť_zóny=%d\n"
 
 #: disk-utils/fsck.minix.c:650
 #, c-format
 msgid "Maxsize=%zu\n"
-msgstr ""
+msgstr "Maxveľkosť=%zu\n"
 
 #: disk-utils/fsck.minix.c:652
 #, c-format
 msgid "Filesystem state=%d\n"
-msgstr ""
+msgstr "Stav systému súborov=%d\n"
 
 #: disk-utils/fsck.minix.c:653
 #, c-format
@@ -2518,165 +2520,167 @@ msgid ""
 "namelen=%zd\n"
 "\n"
 msgstr ""
+"namelen=%zd\n"
+"\n"
 
 #: disk-utils/fsck.minix.c:668 disk-utils/fsck.minix.c:718
 #, c-format
 msgid "Inode %d marked unused, but used for file '%s'\n"
-msgstr ""
+msgstr "I-uzol %d je označený ako nepoužívaný, ale je použitý pre súbor „%s“\n"
 
 #: disk-utils/fsck.minix.c:671 disk-utils/fsck.minix.c:721
 msgid "Mark in use"
-msgstr ""
+msgstr "Označený ako používaný"
 
 #: disk-utils/fsck.minix.c:693 disk-utils/fsck.minix.c:741
 #, c-format
 msgid "The file `%s' has mode %05o\n"
-msgstr ""
+msgstr "Mód súboru „%s“ je %05o\n"
 
 #: disk-utils/fsck.minix.c:700 disk-utils/fsck.minix.c:747
 #, c-format
 msgid "Warning: inode count too big.\n"
-msgstr ""
+msgstr "Varovanie: počet i-uzlov je príliš veľký.\n"
 
 #: disk-utils/fsck.minix.c:759 disk-utils/fsck.minix.c:767
 msgid "root inode isn't a directory"
-msgstr ""
+msgstr "koreňový (root) i-uzol nie je adresárom"
 
 #: disk-utils/fsck.minix.c:779 disk-utils/fsck.minix.c:810
 #, c-format
 msgid "Block has been used before. Now in file `%s'."
-msgstr ""
+msgstr "Blok bol použitý už predtým. Teraz v súbore „%s“."
 
 #: disk-utils/fsck.minix.c:781 disk-utils/fsck.minix.c:812
 #: disk-utils/fsck.minix.c:1145 disk-utils/fsck.minix.c:1154
 #: disk-utils/fsck.minix.c:1201 disk-utils/fsck.minix.c:1210
 msgid "Clear"
-msgstr ""
+msgstr "Vyčistiť"
 
 #: disk-utils/fsck.minix.c:791 disk-utils/fsck.minix.c:822
 #, c-format
 msgid "Block %d in file `%s' is marked not in use."
-msgstr ""
+msgstr "Blok %d v súbore „%s“ je označený ako nepoužívaný."
 
 #: disk-utils/fsck.minix.c:793 disk-utils/fsck.minix.c:824
 msgid "Correct"
-msgstr ""
+msgstr "Opraviť"
 
 #: disk-utils/fsck.minix.c:963 disk-utils/fsck.minix.c:1036
 #, c-format
 msgid "The directory '%s' contains a bad inode number for file '%.*s'."
-msgstr ""
+msgstr "Adresár „%s“ obsahuje pre súbor „%.*s“ chybné číslo i-uzla."
 
 #: disk-utils/fsck.minix.c:965 disk-utils/fsck.minix.c:1038
 msgid " Remove"
-msgstr ""
+msgstr " Odstrániť"
 
 #: disk-utils/fsck.minix.c:981 disk-utils/fsck.minix.c:1054
 #, c-format
 msgid "%s: bad directory: '.' isn't first\n"
-msgstr ""
+msgstr "%s: chybný adresár: „.“ nie je prvý\n"
 
 #: disk-utils/fsck.minix.c:990 disk-utils/fsck.minix.c:1063
 #, c-format
 msgid "%s: bad directory: '..' isn't second\n"
-msgstr ""
+msgstr "%s: chybný adresář: „..“ nie je druhý\n"
 
 #: disk-utils/fsck.minix.c:1096 disk-utils/fsck.minix.c:1119
 msgid "internal error"
-msgstr ""
+msgstr "interná chyba"
 
 #: disk-utils/fsck.minix.c:1099 disk-utils/fsck.minix.c:1122
 #, c-format
 msgid "%s: bad directory: size < 32"
-msgstr ""
+msgstr "%s: chybný adresár: veľkosť < 32"
 
 #: disk-utils/fsck.minix.c:1105
 #, c-format
 msgid "%s: bad directory: invalid i_zone, use --repair to fix\n"
-msgstr ""
+msgstr "%s: chybný adresár: chybná i_zone, na opravu použite --repair\n"
 
 #: disk-utils/fsck.minix.c:1134
 msgid "seek failed in bad_zone"
-msgstr ""
+msgstr "chyba pri volaní seek v bad_zone"
 
 #: disk-utils/fsck.minix.c:1144 disk-utils/fsck.minix.c:1200
 #, c-format
 msgid "Inode %lu mode not cleared."
-msgstr ""
+msgstr "Mód i-uzla %lu nie je vyčistený."
 
 #: disk-utils/fsck.minix.c:1153 disk-utils/fsck.minix.c:1209
 #, c-format
 msgid "Inode %lu not used, marked used in the bitmap."
-msgstr ""
+msgstr "I-uzol %lu nie je používaný a v bitmape je označený ako používaný."
 
 #: disk-utils/fsck.minix.c:1159 disk-utils/fsck.minix.c:1215
 #, c-format
 msgid "Inode %lu used, marked unused in the bitmap."
-msgstr ""
+msgstr "I-uzol %lu je používaný a v bitmape je označený ako nepoužívaný."
 
 #: disk-utils/fsck.minix.c:1160 disk-utils/fsck.minix.c:1216
 msgid "Set"
-msgstr ""
+msgstr "Nastaviť"
 
 #: disk-utils/fsck.minix.c:1164 disk-utils/fsck.minix.c:1220
 #, c-format
 msgid "Inode %lu (mode = %07o), i_nlinks=%d, counted=%d."
-msgstr ""
+msgstr "I-uzol %lu (mód = %07o), i_nlinks=%d, spočítané=%d."
 
 #: disk-utils/fsck.minix.c:1167 disk-utils/fsck.minix.c:1223
 msgid "Set i_nlinks to count"
-msgstr ""
+msgstr "Nastaviť i_nlinks na počet"
 
 #: disk-utils/fsck.minix.c:1179 disk-utils/fsck.minix.c:1235
 #, c-format
 msgid "Zone %lu: marked in use, no file uses it."
-msgstr ""
+msgstr "Zóna %lu: je označená ako používaná a žiaden súbor ju nepoužíva."
 
 #: disk-utils/fsck.minix.c:1181 disk-utils/fsck.minix.c:1237
 msgid "Unmark"
-msgstr ""
+msgstr "Odznačiť"
 
 #: disk-utils/fsck.minix.c:1186 disk-utils/fsck.minix.c:1242
 #, c-format
 msgid "Zone %lu: in use, counted=%d\n"
-msgstr ""
+msgstr "Zóna %lu: je používaná, spočítané=%d\n"
 
 #: disk-utils/fsck.minix.c:1189 disk-utils/fsck.minix.c:1245
 #, c-format
 msgid "Zone %lu: not in use, counted=%d\n"
-msgstr ""
+msgstr "Zóna %lu: nie je používaná, spočítané=%d\n"
 
 #: disk-utils/fsck.minix.c:1295
 msgid "bad inode size"
-msgstr ""
+msgstr "chybná veľkosť i-uzla"
 
 #: disk-utils/fsck.minix.c:1297
 msgid "bad v2 inode size"
-msgstr ""
+msgstr "chybná veľkosť v2 i-uzla"
 
 #: disk-utils/fsck.minix.c:1341
 msgid "need terminal for interactive repairs"
-msgstr ""
+msgstr "interaktívna oprava vyžaduje terminál"
 
 #: disk-utils/fsck.minix.c:1345
 #, c-format
 msgid "cannot open %s: %s"
-msgstr ""
+msgstr "%s sa nedá otvoriť: %s"
 
 #: disk-utils/fsck.minix.c:1356
 #, c-format
 msgid "%s is clean, no check.\n"
-msgstr ""
+msgstr "%s je čisté, bez overovania.\n"
 
 #: disk-utils/fsck.minix.c:1361
 #, c-format
 msgid "Forcing filesystem check on %s.\n"
-msgstr ""
+msgstr "Kontrola systému súborov na %s vynútená.\n"
 
 #: disk-utils/fsck.minix.c:1363
 #, c-format
 msgid "Filesystem on %s is dirty, needs checking.\n"
-msgstr ""
+msgstr "Systém súborov na %s je špinavý (dirty), je potrebné ho skontrolovať.\n"
 
 #: disk-utils/fsck.minix.c:1395
 #, c-format
@@ -2684,11 +2688,13 @@ msgid ""
 "\n"
 "%6ld inodes used (%ld%%)\n"
 msgstr ""
+"\n"
+"používaných i-uzlov: %6ld (%ld%%)\n"
 
 #: disk-utils/fsck.minix.c:1401
 #, c-format
 msgid "%6ld zones used (%ld%%)\n"
-msgstr ""
+msgstr "používaných zón: %6ld (%ld%%)\n"
 
 #: disk-utils/fsck.minix.c:1403
 #, c-format
@@ -2703,6 +2709,15 @@ msgid ""
 "------\n"
 "%6d files\n"
 msgstr ""
+"\n"
+" obyčajných súborov:   %6d\n"
+" adresárov:            %6d\n"
+" znakových zariadení:  %6d\n"
+" blokových zariadení:  %6d\n"
+" odkazov:              %6d\n"
+" symbolických odkazov: %6d\n"
+"------\n"
+"súborov:               %6d\n"
 
 #: disk-utils/fsck.minix.c:1417
 #, c-format
@@ -2711,6 +2726,9 @@ msgid ""
 "FILE SYSTEM HAS BEEN CHANGED\n"
 "----------------------------\n"
 msgstr ""
+"-------------------------\n"
+"SYSTÉM SÚBOROV BOL ZMENENÝ\n"
+"-------------------------\n"
 
 #: disk-utils/fsck.minix.c:1429 disk-utils/mkfs.minix.c:854
 #: disk-utils/mkswap.c:667 disk-utils/partx.c:1068 disk-utils/resizepart.c:115
@@ -2718,52 +2736,52 @@ msgstr ""
 #: sys-utils/wdctl.c:446 term-utils/setterm.c:908 text-utils/col.c:195
 #: text-utils/pg.c:1259
 msgid "write failed"
-msgstr ""
+msgstr "zápis skončil s chybou"
 
 #: disk-utils/isosize.c:57
 #, c-format
 msgid "%s: might not be an ISO filesystem"
-msgstr ""
+msgstr "%s: možno sa nejedná o súborový systém ISO9660"
 
 #: disk-utils/isosize.c:62 disk-utils/isosize.c:64
 #, c-format
 msgid "read error on %s"
-msgstr ""
+msgstr "chyba čítania z %s"
 
 #: disk-utils/isosize.c:75
 #, c-format
 msgid "sector count: %d, sector size: %d\n"
-msgstr ""
+msgstr "počet sektorov: %d, veľkosť sektora: %d\n"
 
 #: disk-utils/isosize.c:99
 #, c-format
 msgid " %s [options] <iso9660_image_file> ...\n"
-msgstr ""
+msgstr " %s [prepínače] <obraz_iso9660>…\n"
 
 #: disk-utils/isosize.c:103
 msgid "Show the length of an ISO-9660 filesystem.\n"
-msgstr ""
+msgstr "Zobraziť dĺžku súborového systému ISO-9660.\n"
 
 #: disk-utils/isosize.c:106
 msgid " -d, --divisor=<number>  divide the amount of bytes by <number>\n"
-msgstr ""
+msgstr " -d, --divisor=<číslo>   vydeliť počet bajtov <číslom>\n"
 
 #: disk-utils/isosize.c:107
 msgid " -x, --sectors           show sector count and size\n"
-msgstr ""
+msgstr " -x, --sectors           zobraziť počet a veľkosť sektorov\n"
 
 #: disk-utils/isosize.c:138
 msgid "invalid divisor argument"
-msgstr ""
+msgstr "neplatný argument deliteľa"
 
 #: disk-utils/mkfs.bfs.c:74
 #, c-format
 msgid "Usage: %s [options] device [block-count]\n"
-msgstr ""
+msgstr "Použitie: %s [prepínače] zariadenie [počet-blokov]\n"
 
 #: disk-utils/mkfs.bfs.c:78
 msgid "Make an SCO bfs filesystem.\n"
-msgstr ""
+msgstr "Vytvoriť súborový systém SCO bfs.\n"
 
 #: disk-utils/mkfs.bfs.c:80
 #, c-format
@@ -2777,41 +2795,49 @@ msgid ""
 " -c                  this option is silently ignored\n"
 " -l                  this option is silently ignored\n"
 msgstr ""
+"\n"
+"Prepínače:\n"
+" -N, --inodes=POČET  určiť požadovaný počet i-uzlov\n"
+" -V, --vname=NÁZOV   určiť názov zväzku\n"
+" -F, --fname=NÁZOV   určiť názov súborového systému\n"
+" -v, --verbose       vysvetliť, čo sa práve deje\n"
+" -c                  tento prepínač je potichu ignorovaný\n"
+" -l                  tento prepínač je potichu ignorovaný\n"
 
 #: disk-utils/mkfs.bfs.c:139
 msgid "invalid number of inodes"
-msgstr ""
+msgstr "neplatný počet i-uzlov"
 
 #: disk-utils/mkfs.bfs.c:145
 msgid "volume name too long"
-msgstr ""
+msgstr "názov zväžku je príliš dlhý"
 
 #: disk-utils/mkfs.bfs.c:152
 msgid "fsname name too long"
-msgstr ""
+msgstr "názov ss je príliš dlhý"
 
 #: disk-utils/mkfs.bfs.c:190
 msgid "invalid block-count"
-msgstr ""
+msgstr "neplatný počet blokov"
 
 #: disk-utils/mkfs.bfs.c:198
 #, c-format
 msgid "cannot get size of %s"
-msgstr ""
+msgstr "nedá sa zistiť veľkosť %s"
 
 #: disk-utils/mkfs.bfs.c:203
 #, c-format
 msgid "blocks argument too large, max is %llu"
-msgstr ""
+msgstr "argument počtu blokov je príliš veľký, maximum je %llu"
 
 #: disk-utils/mkfs.bfs.c:218
 msgid "too many inodes - max is 512"
-msgstr ""
+msgstr "príliš mnoho i-uzlov – maximum je 512"
 
 #: disk-utils/mkfs.bfs.c:228
 #, c-format
 msgid "not enough space, need at least %llu blocks"
-msgstr ""
+msgstr "nedostatok miesta, je potrebných aspoň %llu blokov"
 
 #: disk-utils/mkfs.bfs.c:240
 #, c-format
@@ -2821,95 +2847,95 @@ msgstr "Zariadenie: %s\n"
 #: disk-utils/mkfs.bfs.c:241
 #, c-format
 msgid "Volume: <%-6s>\n"
-msgstr ""
+msgstr "Zväzok: <%-6s>\n"
 
 #: disk-utils/mkfs.bfs.c:242
 #, c-format
 msgid "FSname: <%-6s>\n"
-msgstr ""
+msgstr "NázovSS: <%-6s>\n"
 
 #: disk-utils/mkfs.bfs.c:243
 #, c-format
 msgid "BlockSize: %d\n"
-msgstr ""
+msgstr "VeľkosťBloku: %d\n"
 
 #: disk-utils/mkfs.bfs.c:245
 #, c-format
 msgid "Inodes: %ld (in 1 block)\n"
-msgstr ""
+msgstr "I-uzlov: %ld (v 1 bloku)\n"
 
 #: disk-utils/mkfs.bfs.c:248
 #, c-format
 msgid "Inodes: %ld (in %llu blocks)\n"
-msgstr ""
+msgstr "I-uzlov: %ld (v %llu blokoch)\n"
 
 #: disk-utils/mkfs.bfs.c:250
 #, c-format
 msgid "Blocks: %llu\n"
-msgstr ""
+msgstr "Blokov: %llu\n"
 
 #: disk-utils/mkfs.bfs.c:251
 #, c-format
 msgid "Inode end: %d, Data end: %d\n"
-msgstr ""
+msgstr "Konec i-uzlov: %d, Koniec dát: %d\n"
 
 #: disk-utils/mkfs.bfs.c:256
 msgid "error writing superblock"
-msgstr ""
+msgstr "chyba pri zápise superbloku"
 
 #: disk-utils/mkfs.bfs.c:277
 msgid "error writing root inode"
-msgstr ""
+msgstr "chyba pri zápise koreňového i-uzla"
 
 #: disk-utils/mkfs.bfs.c:282
 msgid "error writing inode"
-msgstr ""
+msgstr "chyba pri zápise i-uzla"
 
 #: disk-utils/mkfs.bfs.c:285
 msgid "seek error"
-msgstr ""
+msgstr "volanie seek skončilo s chybou"
 
 #: disk-utils/mkfs.bfs.c:291
 msgid "error writing . entry"
-msgstr ""
+msgstr "chyba pri zápise položky ."
 
 #: disk-utils/mkfs.bfs.c:295
 msgid "error writing .. entry"
-msgstr ""
+msgstr "chyba pri zápise položky .."
 
 #: disk-utils/mkfs.bfs.c:298
 #, c-format
 msgid "error closing %s"
-msgstr ""
+msgstr "chyba pri zatváraní %s"
 
 #: disk-utils/mkfs.c:45
 #, c-format
 msgid " %s [options] [-t <type>] [fs-options] <device> [<size>]\n"
-msgstr ""
+msgstr " %s [prepínače] [-t <typ>] [prepínače_ss] <zariadenie> [<veľkosť>]\n"
 
 #: disk-utils/mkfs.c:49
 msgid "Make a Linux filesystem.\n"
-msgstr ""
+msgstr "Vytvorí linuxový súborový systém.\n"
 
 #: disk-utils/mkfs.c:52
 #, c-format
 msgid " -t, --type=<type>  filesystem type; when unspecified, ext2 is used\n"
-msgstr ""
+msgstr " -t, --type=<typ>   typ súborového systému; predvolený je ext2\n"
 
 #: disk-utils/mkfs.c:53
 #, c-format
 msgid "     fs-options     parameters for the real filesystem builder\n"
-msgstr ""
+msgstr "     prepínače_ss   parametre skutočného konštruktora súborového systému\n"
 
 #: disk-utils/mkfs.c:54
 #, c-format
 msgid "     <device>       path to the device to be used\n"
-msgstr ""
+msgstr "     <zariadenie>   cesta k zariadenie, ktoré sa má použiť\n"
 
 #: disk-utils/mkfs.c:55
 #, c-format
 msgid "     <size>         number of blocks to be used on the device\n"
-msgstr ""
+msgstr "     <veľkosť>     počet blokov, ktoré sa majú zo zariadenia použiť\n"
 
 #: disk-utils/mkfs.c:56
 #, c-format
@@ -2917,181 +2943,187 @@ msgid ""
 " -V, --verbose      explain what is being done;\n"
 "                      specifying -V more than once will cause a dry-run\n"
 msgstr ""
+" -V, --verbose      vysvetliť, čo sa práve deje\n"
+"                    ak použijete -V viac ako jedenkrát, aktivuje sa režim bez zápisu zmien\n"
 
 #: disk-utils/mkfs.c:133 include/c.h:269 login-utils/su-common.c:1238
 #: login-utils/sulogin.c:794 login-utils/sulogin.c:798 sys-utils/flock.c:123
 #: sys-utils/rtcwake.c:623
 #, c-format
 msgid "failed to execute %s"
-msgstr ""
+msgstr "spustenie %s skončilo s chybou"
 
 #: disk-utils/mkfs.cramfs.c:128
 #, c-format
 msgid " %s [-h] [-v] [-b blksize] [-e edition] [-N endian] [-i file] [-n name] dirname outfile\n"
 msgstr ""
+" %s [-h] [-v] [-b veľkosť_bloku] [-e verzia] [-N endianita]\n"
+"       [-i súbor] [-n názov] názov_adresára výstupný_súbor\n"
 
 #: disk-utils/mkfs.cramfs.c:131
 msgid "Make compressed ROM file system."
-msgstr ""
+msgstr "Vyrobí komprimovaný súborový systém ROM."
 
 #: disk-utils/mkfs.cramfs.c:133
 msgid " -v             be verbose"
-msgstr ""
+msgstr " -v             podrobný výstup"
 
 #: disk-utils/mkfs.cramfs.c:134
 msgid " -E             make all warnings errors (non-zero exit status)"
-msgstr ""
+msgstr " -E             všetky varovania budú brané ako chyby (nenulový návratový kód)"
 
 #: disk-utils/mkfs.cramfs.c:135
 msgid " -b blksize     use this blocksize, must equal page size"
-msgstr ""
+msgstr " -b veľkosť_bloku   použiť túto veľkosť_bloku, musí sa rovnať veľkosti stránky"
 
 #: disk-utils/mkfs.cramfs.c:136
 msgid " -e edition     set edition number (part of fsid)"
-msgstr ""
+msgstr " -e verzia      nastaviť číslo verzie [edície] (súčasť fsid)"
 
 #: disk-utils/mkfs.cramfs.c:137
 #, c-format
 msgid " -N endian      set cramfs endianness (%s|%s|%s), default %s\n"
 msgstr ""
+" -N endianita   vybrať endianitu cramfs (%s|%s|%s),\n"
+"                predvolená je %s\n"
 
 #: disk-utils/mkfs.cramfs.c:138
 msgid " -i file        insert a file image into the filesystem"
-msgstr ""
+msgstr " -i súbor       vložiť obraz zo súbodu do súborového systému"
 
 #: disk-utils/mkfs.cramfs.c:139
 msgid " -n name        set name of cramfs filesystem"
-msgstr ""
+msgstr " -n názov       nastaviť názov súborového systému cramfs"
 
 #: disk-utils/mkfs.cramfs.c:140
 #, c-format
 msgid " -p             pad by %d bytes for boot code\n"
-msgstr ""
+msgstr " -p             odsadiť o %d bajtov kvôli kódu zavádzača\n"
 
 #: disk-utils/mkfs.cramfs.c:141
 msgid " -s             sort directory entries (old option, ignored)"
-msgstr ""
+msgstr " -s             zoradiť položky v adresároch (stará možnosť, ignorované)"
 
 #: disk-utils/mkfs.cramfs.c:142
 msgid " -z             make explicit holes"
-msgstr ""
+msgstr " -z             vytvoriť explicitné diery"
 
 #: disk-utils/mkfs.cramfs.c:143
 msgid " dirname        root of the filesystem to be compressed"
-msgstr ""
+msgstr " názov_adresára  koreň súborového systému, ktorý sa má skomprimovať"
 
 #: disk-utils/mkfs.cramfs.c:144
 msgid " outfile        output file"
-msgstr ""
+msgstr " výstupný_súbor  výstupný súbor"
 
 #: disk-utils/mkfs.cramfs.c:162
 #, c-format
 msgid "readlink failed: %s"
-msgstr ""
+msgstr "volanie readlink skončilo s chybou: %s"
 
 #: disk-utils/mkfs.cramfs.c:307
 #, c-format
 msgid "could not read directory %s"
-msgstr ""
+msgstr "z adresára %s sa nedá čítať"
 
 #: disk-utils/mkfs.cramfs.c:442
 msgid "filesystem too big.  Exiting."
-msgstr ""
+msgstr "Súborový systém je príliš veľký. Končím."
 
 #: disk-utils/mkfs.cramfs.c:601
 #, c-format
 msgid "AIEEE: block \"compressed\" to > 2*blocklength (%ld)\n"
-msgstr ""
+msgstr "AJAJ: blok „skomprimovaný“ > 2*blocklength (%ld)\n"
 
 #: disk-utils/mkfs.cramfs.c:620
 #, c-format
 msgid "%6.2f%% (%+ld bytes)\t%s\n"
-msgstr ""
+msgstr "%6.2f%% (%+ld bajtov)\t%s\n"
 
 #: disk-utils/mkfs.cramfs.c:665
 #, c-format
 msgid "cannot close file %s"
-msgstr ""
+msgstr "súbor %s sa nedá otvoriť"
 
 #: disk-utils/mkfs.cramfs.c:742
 msgid "invalid edition number argument"
-msgstr ""
+msgstr "neplatný argument čísla verzie"
 
 #: disk-utils/mkfs.cramfs.c:752
 msgid "invalid endianness given; must be 'big', 'little', or 'host'"
-msgstr ""
+msgstr "zadaná neplatná endianita; musí byť „big“, „little“ alebo „host“"
 
 #: disk-utils/mkfs.cramfs.c:817
 #, c-format
 msgid "warning: guestimate of required size (upper bound) is %lldMB, but maximum image size is %uMB.  We might die prematurely."
-msgstr ""
+msgstr "varovanie: požadovaná veľkosť (horná hranica) je odhadovaná na %lld MB, ale najväčšia veľkosť obrazu je %u MB. Môžeme zomrieť predčasne."
 
 #: disk-utils/mkfs.cramfs.c:841
 msgid "ROM image map"
-msgstr ""
+msgstr "Mapa obrazu ROM"
 
 #: disk-utils/mkfs.cramfs.c:853
 #, c-format
 msgid "Including: %s\n"
-msgstr ""
+msgstr "Zahŕňam: %s\n"
 
 #: disk-utils/mkfs.cramfs.c:859
 #, c-format
 msgid "Directory data: %zd bytes\n"
-msgstr ""
+msgstr "Adresárové dáta: %zd bajtov\n"
 
 #: disk-utils/mkfs.cramfs.c:867
 #, c-format
 msgid "Everything: %zd kilobytes\n"
-msgstr ""
+msgstr "Celkom: %zd kilobajtov\n"
 
 #: disk-utils/mkfs.cramfs.c:872
 #, c-format
 msgid "Super block: %zd bytes\n"
-msgstr ""
+msgstr "Superblok: %zd bajtov\n"
 
 #: disk-utils/mkfs.cramfs.c:879
 #, c-format
 msgid "CRC: %x\n"
-msgstr ""
+msgstr "CRC: %x\n"
 
 #: disk-utils/mkfs.cramfs.c:884
 #, c-format
 msgid "not enough space allocated for ROM image (%lld allocated, %zu used)"
-msgstr ""
+msgstr "pre obraz ROM nebol pridelený dostatok priestoru (%lld pridelené, %zu použité)"
 
 #: disk-utils/mkfs.cramfs.c:890
 #, c-format
 msgid "ROM image write failed (%zd %zd)"
-msgstr ""
+msgstr "Zápis obrazu ROM skončil s chybou (%zd %zd)"
 
 #: disk-utils/mkfs.cramfs.c:893
 msgid "ROM image"
-msgstr ""
+msgstr "Obraz ROM"
 
 #: disk-utils/mkfs.cramfs.c:902
 #, c-format
 msgid "warning: filenames truncated to %u bytes."
-msgstr ""
+msgstr "varovanie: mená súborov skrátené na %u bajtov."
 
 #: disk-utils/mkfs.cramfs.c:904
 msgid "warning: files were skipped due to errors."
-msgstr ""
+msgstr "varovanie: súbory boli preskočené kvôli chybám."
 
 #: disk-utils/mkfs.cramfs.c:906
 #, c-format
 msgid "warning: file sizes truncated to %luMB (minus 1 byte)."
-msgstr ""
+msgstr "varovanie: veľkosti súborov skrátené na %'lu MB (mínus 1 bajt)."
 
 #: disk-utils/mkfs.cramfs.c:910
 #, c-format
 msgid "warning: uids truncated to %u bits.  (This may be a security concern.)"
-msgstr ""
+msgstr "varovanie: UID skrátené na %u bitov. (Môže mať dopad na bezpečnosť.)"
 
 #: disk-utils/mkfs.cramfs.c:913
 #, c-format
 msgid "warning: gids truncated to %u bits.  (This may be a security concern.)"
-msgstr ""
+msgstr "varovanie: GID skrátené na %u bitov. (Môže mať dopad na bezpečnosť.)"
 
 #: disk-utils/mkfs.cramfs.c:916
 #, c-format
@@ -3099,100 +3131,106 @@ msgid ""
 "WARNING: device numbers truncated to %u bits.  This almost certainly means\n"
 "that some device files will be wrong."
 msgstr ""
+"VAROVANIE: čísla zariadení skrátené na %u bitov. Toto takmer s istotou znamená, že niektoré\n"
+"súbory zariadení budú nesprávne."
 
 #: disk-utils/mkfs.minix.c:139
 #, c-format
 msgid " %s [options] /dev/name [blocks]\n"
-msgstr ""
+msgstr " %s [prepínače] /dev/názov [bloky]\n"
 
 #: disk-utils/mkfs.minix.c:141
 msgid " -1                      use Minix version 1\n"
-msgstr ""
+msgstr " -1                      použiť verziu Minixu 1\n"
 
 #: disk-utils/mkfs.minix.c:142
 msgid " -2, -v                  use Minix version 2\n"
-msgstr ""
+msgstr " -2, -v                  použiť verziu Minixu 2\n"
 
 #: disk-utils/mkfs.minix.c:143
 msgid " -3                      use Minix version 3\n"
-msgstr ""
+msgstr " -3                      použiť verziu Minixu 3\n"
 
 #: disk-utils/mkfs.minix.c:144
 msgid " -n, --namelength <num>  maximum length of filenames\n"
 msgstr ""
+" -n, --namelength <číslo>\n"
+"                         maximálna dĺžka názvov súborov\n"
 
 #: disk-utils/mkfs.minix.c:145
 msgid " -i, --inodes <num>      number of inodes for the filesystem\n"
-msgstr ""
+msgstr " -i, --inodes <počet>    počet i-uzlov v súborovom systéme\n"
 
 #: disk-utils/mkfs.minix.c:146
 msgid " -c, --check             check the device for bad blocks\n"
-msgstr ""
+msgstr " -c, --check             skontrolovať, či zariadenie neobsahuje chybné bloky\n"
 
 #: disk-utils/mkfs.minix.c:147
 msgid " -l, --badblocks <file>  list of bad blocks from file\n"
 msgstr ""
+" -l, --badblocks <súbor>\n"
+"                         súbor so zoznamom chybných blokov\n"
 
 #: disk-utils/mkfs.minix.c:149
 #, c-format
 msgid "     --lock[=<mode>]     use exclusive device lock (%s, %s or %s)\n"
-msgstr ""
+msgstr "     --lock[=<režim>]    použiť výlučný zámok zariadenia (%s, %s alebo %s)\n"
 
 #: disk-utils/mkfs.minix.c:192
 #, c-format
 msgid "%s: seek to boot block failed  in write_tables"
-msgstr ""
+msgstr "%s: chyba pri volaní seek na bootovací blok vo write_tables"
 
 #: disk-utils/mkfs.minix.c:195
 #, c-format
 msgid "%s: unable to clear boot sector"
-msgstr ""
+msgstr "%s: bootovací blok nie je možné vyčistiť"
 
 #: disk-utils/mkfs.minix.c:197
 #, c-format
 msgid "%s: seek failed in write_tables"
-msgstr ""
+msgstr "%s: chyba pri volaní seek vo write_tables"
 
 #: disk-utils/mkfs.minix.c:200
 #, c-format
 msgid "%s: unable to write super-block"
-msgstr ""
+msgstr "%s: superblok sa nedá zapísať"
 
 #: disk-utils/mkfs.minix.c:203
 #, c-format
 msgid "%s: unable to write inode map"
-msgstr ""
+msgstr "%s: mapa i-uzlov sa nedá zapísať"
 
 #: disk-utils/mkfs.minix.c:206
 #, c-format
 msgid "%s: unable to write zone map"
-msgstr ""
+msgstr "%s: mapa zón sa nedá zapísať"
 
 #: disk-utils/mkfs.minix.c:209
 #, c-format
 msgid "%s: unable to write inodes"
-msgstr ""
+msgstr "%s: i-uzly sa nedajú zapísať"
 
 #: disk-utils/mkfs.minix.c:214
 #, c-format
 msgid "%s: seek failed in write_block"
-msgstr ""
+msgstr "%s: chyba pri volaní seek vo write_block"
 
 #: disk-utils/mkfs.minix.c:217
 #, c-format
 msgid "%s: write failed in write_block"
-msgstr ""
+msgstr "%s: chyba pri zápise vo write_block"
 
 #: disk-utils/mkfs.minix.c:226 disk-utils/mkfs.minix.c:301
 #: disk-utils/mkfs.minix.c:350
 #, c-format
 msgid "%s: too many bad blocks"
-msgstr ""
+msgstr "%s: príliš veľa chybných blokov"
 
 #: disk-utils/mkfs.minix.c:234
 #, c-format
 msgid "%s: not enough good blocks"
-msgstr ""
+msgstr "%s: nedostatok dobrých blokov"
 
 #: disk-utils/mkfs.minix.c:549
 #, c-format
@@ -3200,27 +3238,29 @@ msgid ""
 "First data block at %jd, which is too far (max %d).\n"
 "Try specifying fewer inodes by passing --inodes <num>"
 msgstr ""
+"Prvý dátový blok je na %jd, čo je príliš ďaleko (maximum %d).\n"
+"Skúste zadať menej i-uzlov pomocou --inodes <počet>"
 
 #: disk-utils/mkfs.minix.c:569
 #, c-format
 msgid "%lu inode\n"
 msgid_plural "%lu inodes\n"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%lu i-uzol\n"
+msgstr[1] "%lu i-uzly\n"
+msgstr[2] "%lu i-uzlov\n"
 
 #: disk-utils/mkfs.minix.c:570
 #, c-format
 msgid "%lu block\n"
 msgid_plural "%lu blocks\n"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%lu blok\n"
+msgstr[1] "%lu bloky\n"
+msgstr[2] "%lu blokov\n"
 
 #: disk-utils/mkfs.minix.c:573
 #, c-format
 msgid "Zonesize=%zu\n"
-msgstr ""
+msgstr "Veľkosť_zóny=%zu\n"
 
 #: disk-utils/mkfs.minix.c:574
 #, c-format
@@ -3228,175 +3268,179 @@ msgid ""
 "Maxsize=%zu\n"
 "\n"
 msgstr ""
+"Maximálna_veľkosť=%zu\n"
+"\n"
 
 #: disk-utils/mkfs.minix.c:587
 #, c-format
 msgid "%s: seek failed during testing of blocks"
-msgstr ""
+msgstr "%s: chyba pri volaní seek počas testovania blokov"
 
 #: disk-utils/mkfs.minix.c:594
 #, c-format
 msgid "Weird values in do_check: probably bugs\n"
-msgstr ""
+msgstr "Divné hodnoty v do_check: pravdepodobne sa jedná o chyby\n"
 
 #: disk-utils/mkfs.minix.c:627
 #, c-format
 msgid "%s: seek failed in check_blocks"
-msgstr ""
+msgstr "%s: chyba pri volaní seek v check_blocks"
 
 #: disk-utils/mkfs.minix.c:637
 #, c-format
 msgid "%s: bad blocks before data-area: cannot make fs"
-msgstr ""
+msgstr "%s: chybné bloky pred dátovou oblasťou: systém súborov sa nedá vytvoriť"
 
 #: disk-utils/mkfs.minix.c:644 disk-utils/mkfs.minix.c:668
 #, c-format
 msgid "%d bad block\n"
 msgid_plural "%d bad blocks\n"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "%d chybný blok\n"
+msgstr[1] "%d chybné bloky\n"
+msgstr[2] "%d chybných blokov\n"
 
 #: disk-utils/mkfs.minix.c:653
 #, c-format
 msgid "%s: can't open file of bad blocks"
-msgstr ""
+msgstr "%s: súbor s chybnými blokmi sa nedá otvoriť"
 
 #: disk-utils/mkfs.minix.c:658
 #, c-format
 msgid "badblock number input error on line %d\n"
-msgstr ""
+msgstr "chyba vstupu pri čísle chybného bloku na riadku %d\n"
 
 #: disk-utils/mkfs.minix.c:659
 #, c-format
 msgid "%s: cannot read badblocks file"
-msgstr ""
+msgstr "%s: soubor s chybnými blokmi sa nedá prečítať"
 
 #: disk-utils/mkfs.minix.c:699
 #, c-format
 msgid "block size smaller than physical sector size of %s"
-msgstr ""
+msgstr "veľkosť bloku je menšia ako veľkosť fyzického sektora %s"
 
 #: disk-utils/mkfs.minix.c:702
 #, c-format
 msgid "cannot determine size of %s"
-msgstr ""
+msgstr "nedá sa určiť veľkosť %s"
 
 #: disk-utils/mkfs.minix.c:710
 #, c-format
 msgid "%s: requested blocks (%llu) exceeds available (%llu) blocks\n"
-msgstr ""
+msgstr "%s: požadovaných blokov (%'llu) je viac ako dostupných (%'llu)\n"
 
 #: disk-utils/mkfs.minix.c:713
 #, c-format
 msgid "%s: number of blocks too small"
-msgstr ""
+msgstr "%s: počet blokov je príliš malý"
 
 #: disk-utils/mkfs.minix.c:728 disk-utils/mkfs.minix.c:734
 #, c-format
 msgid "unsupported name length: %d"
-msgstr ""
+msgstr "nepodporovaná dĺžka názvu: %d"
 
 #: disk-utils/mkfs.minix.c:737
 #, c-format
 msgid "unsupported minix file system version: %d"
-msgstr ""
+msgstr "nepodporovaná verzia minixového súborového systému: %d"
 
 #: disk-utils/mkfs.minix.c:778
 msgid "-v is ambiguous, use '-2' instead"
-msgstr ""
+msgstr "prepínač -v je nejednoznačný, miesto nej použite „-2“"
 
 #: disk-utils/mkfs.minix.c:789
 msgid "failed to parse maximum length of filenames"
-msgstr ""
+msgstr "nepodarilo sa prečítať maximálnu dĺžku názvov súborov"
 
 #: disk-utils/mkfs.minix.c:793
 msgid "failed to parse number of inodes"
-msgstr ""
+msgstr "nepodarilo sa prečítať počet i-uzlov"
 
 #: disk-utils/mkfs.minix.c:824
 msgid "failed to parse number of blocks"
-msgstr ""
+msgstr "nepodarilo sa prečítať počet blokov"
 
 #: disk-utils/mkfs.minix.c:832
 #, c-format
 msgid "%s is mounted; will not make a filesystem here!"
-msgstr ""
+msgstr "%s je pripojené; systém súborov tu vytvárať nebudem!"
 
 #: disk-utils/mkswap.c:90
 #, c-format
 msgid "Bad user-specified page size %u"
-msgstr ""
+msgstr "Používateľom zadané veľkosť stránky %u je chybná"
 
 #: disk-utils/mkswap.c:93
 #, c-format
 msgid "Using user-specified page size %d, instead of the system value %d"
-msgstr ""
+msgstr "Použijem zadanú veľkosť stránky %d miesto systémovej hodnoty %d"
 
 #: disk-utils/mkswap.c:134
 msgid "Label was truncated."
-msgstr ""
+msgstr "Menovka bola skrátená."
 
 #: disk-utils/mkswap.c:142
 #, c-format
 msgid "no label, "
-msgstr ""
+msgstr "bez menovky, "
 
 #: disk-utils/mkswap.c:150
 #, c-format
 msgid "no uuid\n"
-msgstr ""
+msgstr "žiadne UUID\n"
 
 #: disk-utils/mkswap.c:159
 #, c-format
 msgid " %s [options] device [size]\n"
-msgstr ""
+msgstr " %s [prepínače] zariadenia [veľkosť]\n"
 
 #: disk-utils/mkswap.c:162
 msgid "Set up a Linux swap area.\n"
-msgstr ""
+msgstr "Vytvorí linuxovú odkladaciu (swap) oblasť.\n"
 
 #: disk-utils/mkswap.c:165
 msgid " -c, --check               check bad blocks before creating the swap area\n"
 msgstr ""
+" -c, --check               pred vytvorením odkladacej oblasti skontrolovať\n"
+"                           chybné bloky\n"
 
 #: disk-utils/mkswap.c:166
 msgid " -f, --force               allow swap size area be larger than device\n"
-msgstr ""
+msgstr " -f, --force               umožniť to, aby odkladacia oblasť mohla byť väčšia ako zariadenie\n"
 
 #: disk-utils/mkswap.c:167
 msgid " -p, --pagesize SIZE       specify page size in bytes\n"
-msgstr ""
+msgstr " -p, --pagesize VEĽKOSŤ    určiť veľkosť stránky v bajtoch\n"
 
 #: disk-utils/mkswap.c:168
 msgid " -L, --label LABEL         specify label\n"
-msgstr ""
+msgstr " -L, --label MENOVKA       zadať menovku\n"
 
 #: disk-utils/mkswap.c:169
 msgid " -v, --swapversion NUM     specify swap-space version number\n"
-msgstr ""
+msgstr " -v, --swapversion ČÍSLO   určiť číslo verzie odkladacej oblasti\n"
 
 #: disk-utils/mkswap.c:170
 msgid " -U, --uuid UUID           specify the uuid to use\n"
-msgstr ""
+msgstr " -U, --uuid UUID           určiť, aké UUID sa má použiť\n"
 
 #: disk-utils/mkswap.c:171
 msgid "     --verbose             verbose output\n"
-msgstr ""
+msgstr "     --verbose             podrobný výstup\n"
 
 #: disk-utils/mkswap.c:174 disk-utils/sfdisk.c:2061
 #, c-format
 msgid "     --lock[=<mode>]       use exclusive device lock (%s, %s or %s)\n"
-msgstr ""
+msgstr "     --lock[=<režim>]      použiť výlučný zámok zariadenia (%s, %s alebo %s)\n"
 
 #: disk-utils/mkswap.c:187
 #, c-format
 msgid "too many bad pages: %lu"
-msgstr ""
+msgstr "príliš veľa chybných stránok: %lu"
 
 #: disk-utils/mkswap.c:208
 msgid "seek failed in check_blocks"
-msgstr ""
+msgstr "chyba pri volaní seek v check_blocks"
 
 #: disk-utils/mkswap.c:216
 #, c-format
@@ -3412,227 +3456,229 @@ msgid ""
 "mkswap: %s contains holes or other unsupported extents.\n"
 "        This swap file can be rejected by kernel on swap activation!\n"
 msgstr ""
+"mkswap: %s obsahuje diery alebo iné nepodporované rozsahy.\n"
+"        Tento odkladací (swap) súbor môže byť jadrom odmeitnutý pri aktivovaní odkladania!\n"
 
 #: disk-utils/mkswap.c:236
 #, c-format
 msgid "        Use --verbose for more details.\n"
-msgstr ""
+msgstr "        Podrobnosti zobrazíte prepínačom --verbose.\n"
 
 #: disk-utils/mkswap.c:275 disk-utils/mkswap.c:300
 #, c-format
 msgid "hole detected at offset %ju"
-msgstr ""
+msgstr "na pozícií %ju nájdená diera"
 
 #: disk-utils/mkswap.c:283
 #, c-format
 msgid "data inline extent at offset %ju"
-msgstr ""
+msgstr "na pozícií %ju včlenený rozsah dát"
 
 #: disk-utils/mkswap.c:286
 #, c-format
 msgid "shared extent at offset %ju"
-msgstr ""
+msgstr "na pozící %ju zdieľaný rozsah"
 
 #: disk-utils/mkswap.c:289
 #, c-format
 msgid "unallocated extent at offset %ju"
-msgstr ""
+msgstr "na pozícií %ju nealokovaný rozsah"
 
 #: disk-utils/mkswap.c:329
 msgid "unable to alloc new libblkid probe"
-msgstr ""
+msgstr "nedá sa alokovať nový test libblkid"
 
 #: disk-utils/mkswap.c:331
 msgid "unable to assign device to libblkid probe"
-msgstr ""
+msgstr "nedá sa pridať do testu libblkid"
 
 #: disk-utils/mkswap.c:352
 #, c-format
 msgid "warning: checking bad blocks from swap file is not supported: %s"
-msgstr ""
+msgstr "pozor: kontrola chybných blokov v odkladacom (swap) súbore nie je podporovaná: %s"
 
 #: disk-utils/mkswap.c:367 disk-utils/mkswap.c:392 disk-utils/mkswap.c:439
 msgid "unable to rewind swap-device"
-msgstr ""
+msgstr "odkladací priestor sa nedá pretočiť"
 
 #: disk-utils/mkswap.c:395
 msgid "unable to erase bootbits sectors"
-msgstr ""
+msgstr "bloky zavádzača sa nedajú vymazať"
 
 #: disk-utils/mkswap.c:411
 #, c-format
 msgid "%s: warning: wiping old %s signature."
-msgstr ""
+msgstr "%s: pozor: odstraňuje sa starý vzorec %s."
 
 #: disk-utils/mkswap.c:416
 #, c-format
 msgid "%s: warning: don't erase bootbits sectors"
-msgstr ""
+msgstr "%s: varovanie: nemažte zavádzacie (boot) sektory"
 
 #: disk-utils/mkswap.c:419
 #, c-format
 msgid "        (%s partition table detected). "
-msgstr ""
+msgstr "        (nájdená tabuľka rozdelenia disku typu %s). "
 
 #: disk-utils/mkswap.c:421
 #, c-format
 msgid "        (compiled without libblkid). "
-msgstr ""
+msgstr "        (preložené bez libblkid). "
 
 #: disk-utils/mkswap.c:422
 #, c-format
 msgid "Use -f to force.\n"
-msgstr ""
+msgstr "Použite -f na vynútenie.\n"
 
 #: disk-utils/mkswap.c:444
 #, c-format
 msgid "%s: unable to write signature page"
-msgstr ""
+msgstr "%s: stránku so vzorcom sa nepodarilo zapísať"
 
 #: disk-utils/mkswap.c:491
 msgid "parsing page size failed"
-msgstr ""
+msgstr "nepodarilo sa prečítať veľkosť stránky"
 
 #: disk-utils/mkswap.c:497
 msgid "parsing version number failed"
-msgstr ""
+msgstr "nepodarilo sa rozobrať číslo verzie"
 
 #: disk-utils/mkswap.c:500
 #, c-format
 msgid "swapspace version %d is not supported"
-msgstr ""
+msgstr "odkladací (swap) priestor verzie %d nie je podporovaný"
 
 #: disk-utils/mkswap.c:506
 #, c-format
 msgid "warning: ignoring -U (UUIDs are unsupported by %s)"
-msgstr ""
+msgstr "pozor: -U sa ignoruje (%s nepodporuje UUID)"
 
 #: disk-utils/mkswap.c:536
 msgid "only one device argument is currently supported"
-msgstr ""
+msgstr "v súčasnosti je podporovaný iba jeden argument so zariadením"
 
 #: disk-utils/mkswap.c:543
 msgid "error: parsing UUID failed"
-msgstr ""
+msgstr "chyba: nepodarilo sa prečítať UUID"
 
 #: disk-utils/mkswap.c:552
 msgid "error: Nowhere to set up swap on?"
-msgstr ""
+msgstr "chyba: Kde sa má vytvoriť odkladací (swap) priestor?"
 
 #: disk-utils/mkswap.c:558
 msgid "invalid block count argument"
-msgstr ""
+msgstr "neplatný argument počtu blokov"
 
 #: disk-utils/mkswap.c:567
 #, c-format
 msgid "error: size %llu KiB is larger than device size %<PRIu64> KiB"
-msgstr ""
+msgstr "chyba: veľkosť %llu KiB je väčšia než veľkosť zariadenia %<PRIu64> KiB"
 
 #: disk-utils/mkswap.c:573
 #, c-format
 msgid "error: swap area needs to be at least %ld KiB"
-msgstr ""
+msgstr "chyba: odkladací (swap) priestor potrebuje aspoň %ld KiB"
 
 #: disk-utils/mkswap.c:578
 #, c-format
 msgid "warning: truncating swap area to %llu KiB"
-msgstr ""
+msgstr "varovanie: odkladací (swap) priestor skrátený na %llu KiB"
 
 #: disk-utils/mkswap.c:583
 #, c-format
 msgid "error: %s is mounted; will not make swapspace"
-msgstr ""
+msgstr "chyba: %s je pripojený; odkladací (swap) priestor nebude vytvorený"
 
 #: disk-utils/mkswap.c:590
 #, c-format
 msgid "%s: insecure permissions %04o, fix with: chmod %04o %s"
-msgstr ""
+msgstr "%s: prístupové práva %04o nie sú bezpečné, opravte pomocou: chmod %04o %s"
 
 #: disk-utils/mkswap.c:594
 #, c-format
 msgid "%s: insecure file owner %d, fix with: chown 0:0 %s"
-msgstr ""
+msgstr "%s: vlastník súboru %d nie je bezpečný, opravte pomocou: chown 0:0 %s"
 
 #: disk-utils/mkswap.c:613
 msgid "Unable to set up swap-space: unreadable"
-msgstr ""
+msgstr "Odkladací (swap) priestor sa nedá nastaviť: nečitateľné"
 
 #: disk-utils/mkswap.c:618
 #, c-format
 msgid "Setting up swapspace version %d, size = %s (%<PRIu64> bytes)\n"
-msgstr ""
+msgstr "Vytvára sa odkladací (swap) priestor verzie %d, veľkosť = %s (%<PRIu64> bajtov)\n"
 
 #: disk-utils/mkswap.c:637
 #, c-format
 msgid "%s: unable to obtain selinux file label"
-msgstr ""
+msgstr "%s: nepodarilo sa získať selinuxovú značku súboru"
 
 #: disk-utils/mkswap.c:642
 #, c-format
 msgid "%s: unable to obtain default selinux file label"
-msgstr ""
+msgstr "%s: nepodarilo sa získať predvolenú selinuxovú značku súboru"
 
 #: disk-utils/mkswap.c:646
 msgid "unable to create new selinux context"
-msgstr ""
+msgstr "nový kontext selinuxu sa nedá vytvoriť"
 
 #: disk-utils/mkswap.c:648
 msgid "couldn't compute selinux context"
-msgstr ""
+msgstr "nedokážem vypočítať kontext selinuxu"
 
 #: disk-utils/mkswap.c:654
 #, c-format
 msgid "unable to relabel %s to %s"
-msgstr ""
+msgstr "nie je možné zmeniť menovku z %s na %s"
 
 #: disk-utils/partx.c:86
 msgid "partition number"
-msgstr ""
+msgstr "číslo oddielu"
 
 #: disk-utils/partx.c:87
 msgid "start of the partition in sectors"
-msgstr ""
+msgstr "začiatok oddielu v sektoroch"
 
 #: disk-utils/partx.c:88
 msgid "end of the partition in sectors"
-msgstr ""
+msgstr "koniec oddielu v sektoroch"
 
 #: disk-utils/partx.c:89
 msgid "number of sectors"
-msgstr ""
+msgstr "počet sektorov"
 
 #: disk-utils/partx.c:90
 msgid "human readable size"
-msgstr ""
+msgstr "veľkosť v čitateľnom tvare"
 
 #: disk-utils/partx.c:91
 msgid "partition name"
-msgstr ""
+msgstr "názov oddielu"
 
 #: disk-utils/partx.c:92 misc-utils/findmnt.c:115 misc-utils/lsblk.c:183
 msgid "partition UUID"
-msgstr ""
+msgstr "UUID oddielu"
 
 #: disk-utils/partx.c:93
 msgid "partition table type (dos, gpt, ...)"
-msgstr ""
+msgstr "druh tabuľky rozdelenia disku (DOS, GPT, …)"
 
 #: disk-utils/partx.c:94 misc-utils/lsblk.c:184
 msgid "partition flags"
-msgstr ""
+msgstr "príznaky oddielu"
 
 #: disk-utils/partx.c:95
 msgid "partition type (a string, a UUID, or hex)"
-msgstr ""
+msgstr "typ oddielu (reťazec, UUID alebo hexadecimálny kód)"
 
 #: disk-utils/partx.c:114 sys-utils/losetup.c:534 sys-utils/losetup.c:652
 msgid "failed to initialize loopcxt"
-msgstr ""
+msgstr "loopctx sa nepodařilo inicializovať"
 
 #: disk-utils/partx.c:118
 #, c-format
 msgid "%s: failed to find unused loop device"
-msgstr ""
+msgstr "%s: nepodarilo sa nájsť nepoužité loop zariadenie"
 
 #: disk-utils/partx.c:122
 #, c-format
@@ -20460,6 +20506,9 @@ msgid ""
 "*** %s: directory ***\n"
 "\n"
 msgstr ""
+"\n"
+"*** %s: adresár ***\n"
+"\n"
 
 #: text-utils/more.c:727
 #, c-format
@@ -20481,6 +20530,8 @@ msgid ""
 "\n"
 "...Skipping "
 msgstr ""
+"\n"
+"...Preskakujem"
 
 #: text-utils/more.c:942
 msgid "...Skipping to file "

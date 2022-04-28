@@ -3601,7 +3601,6 @@ gettext-tiny-clean:
 	@rm -rf gettext-tiny/staged
 
 util-linux/stamp-h1:
-	$(call patch_files,util-linux)
 	cd util-linux && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
@@ -3630,7 +3629,6 @@ util-linux-clean:
 	-@$(MAKE) -C util-linux clean
 	@rm -f util-linux/stamp-h1
 	@rm -rf util-linux/staged
-	$(call patch_files,util-linux)
 
 zfs/stamp-h1:
 	$(call patch_files,zfs)

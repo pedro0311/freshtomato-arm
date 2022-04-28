@@ -48,8 +48,7 @@ Don't erase the beginning of the first disk sector when creating a new disk labe
 *-c*, *--compatibility*[=_mode_]::
 Specify the compatibility mode, 'dos' or 'nondos'. The default is non-DOS mode. For backward compatibility, it is possible to use the option without the _mode_ argument -- then the default is used. Note that the optional _mode_ argument cannot be separated from the *-c* option by a space, the correct form is for example *-c*=_dos_.
 
-*-h*, *--help*::
-Display a help text and exit.
+include::man-common/help-version.adoc[]
 
 *-L*, *--color*[=_when_]::
 Colorize the output. The optional argument _when_ can be *auto*, *never* or *always*. If the _when_ argument is omitted, it defaults to *auto*. The colors can be disabled; for the current built-in default see the *--help* output. See also the *COLORS* section.
@@ -63,7 +62,7 @@ If no devices are given, the devices mentioned in _/proc/partitions_ (if this fi
 Like *--list*, but provides more details.
 
 *--lock*[=_mode_]::
-Use exclusive BSD lock for device or file it operates. The optional argument _mode_ can be *yes*, *no* (or 1 and 0) or *nonblock*. If the _mode_ argument is omitted, it defaults to *"yes"*. This option overwrites environment variable *$LOCK_BLOCK_DEVICE*. The default is not to use any lock at all, but it's recommended to avoid collisions with udevd or other tools.
+Use exclusive BSD lock for device or file it operates. The optional argument _mode_ can be *yes*, *no* (or 1 and 0) or *nonblock*. If the _mode_ argument is omitted, it defaults to *yes*. This option overwrites environment variable *$LOCK_BLOCK_DEVICE*. The default is not to use any lock at all, but it's recommended to avoid collisions with *systemd-udevd*(8) or other tools.
 
 *-n*, *--noauto-pt*::
 Don't automatically create a default partition table on empty device. The partition table has to be explicitly created by user (by command like 'o', 'g', etc.).
@@ -81,10 +80,10 @@ Print the size in 512-byte sectors of each given block device. This option is DE
 Enable support only for disklabels of the specified _type_, and disable support for all other types.
 
 *-u*, *--units*[=_unit_]::
-When listing partition tables, show sizes in 'sectors' or in 'cylinders'. The default is to show sizes in sectors. For backward compatibility, it is possible to use the option without the _unit_ argument -- then the default is used. Note that the optional _unit_ argument cannot be separated from the *-u* option by a space, the correct form is for example '*-u=*_cylinders_'.
+When listing partition tables, show sizes in 'sectors' or in 'cylinders'. The default is to show sizes in sectors. For backward compatibility, it is possible to use the option without the _unit_ argument -- then the default is used. Note that the optional _unit_ argument cannot be separated from the *-u* option by a space, the correct form is for example '**-u=**__cylinders__'.
 
 *-C*, *--cylinders* _number_::
-Specify the number of cylinders of the disk. I have no idea why anybody would want to do so.
+Specify the _number_ of cylinders of the disk. I have no idea why anybody would want to do so.
 
 *-H*, *--heads* _number_::
 Specify the number of heads of the disk. (Not the physical number, of course, but the number used for partition tables.) Reasonable values are 255 and 16.
@@ -123,7 +122,7 @@ In the case the size is specified in bytes than the number may be followed by th
 //TRANSLATORS: Keep {plus} untranslated.
 The relative sizes are always aligned according to device I/O limits. The {plus}/-<size>{K,B,M,G,...} notation is recommended.
 
-For backward compatibility fdisk also accepts the suffixes KB=1000, MB=1000*1000, and so on for GB, TB, PB, EB, ZB and YB. These 10^N suffixes are deprecated.
+For backward compatibility *fdisk* also accepts the suffixes KB=1000, MB=1000*1000, and so on for GB, TB, PB, EB, ZB and YB. These 10^N suffixes are deprecated.
 
 == SCRIPT FILES
 
@@ -156,7 +155,7 @@ A BSD/Sun disklabel can describe 8 partitions, the third of which should be a `w
 *IRIX/SGI-type*::
 An IRIX/SGI disklabel can describe 16 partitions, the eleventh of which should be an entire `volume' partition, while the ninth should be labeled `volume header'. The volume header will also cover the partition table, i.e., it starts at block zero and extends by default over five cylinders. The remaining space in the volume header may be used by header directory entries. No partitions may overlap with the volume header. Also do not change its type or make some filesystem on it, since you will lose the partition table. Use this type of label only when working with Linux on IRIX/SGI machines or IRIX/SGI disks under Linux.
 +
-A sync() and an ioctl(BLKRRPART) (rereading the partition table from disk) are performed before exiting when the partition table has been updated.
+A *sync*(2) and an ioctl(BLKRRPART) (rereading the partition table from disk) are performed before exiting when the partition table has been updated.
 
 == DOS mode and DOS 6.x WARNING
 
@@ -164,7 +163,7 @@ A sync() and an ioctl(BLKRRPART) (rereading the partition table from disk) are p
 
 The DOS 6.x FORMAT command looks for some information in the first sector of the data area of the partition, and treats this information as more reliable than the information in the partition table. DOS FORMAT expects DOS FDISK to clear the first 512 bytes of the data area of a partition whenever a size change occurs. DOS FORMAT will look at this extra information even if the /U flag is given -- we consider this a bug in DOS FORMAT and DOS FDISK.
 
-The bottom line is that if you use *fdisk* or *cfdisk* to change the size of a DOS partition table entry, then you must also use *dd*(1) to *zero the first 512 bytes* of that partition before using DOS FORMAT to format the partition. For example, if you were using *fdisk* to make a DOS partition table entry for _/dev/sda1_, then (after exiting *fdisk* and rebooting Linux so that the partition table information is valid) you would use the command *dd if=/dev/zero of=/dev/sda1 bs=512 count=1* to zero the first 512 bytes of the partition.
+The bottom line is that if you use *fdisk* or *cfdisk*(8) to change the size of a DOS partition table entry, then you must also use *dd*(1) to *zero the first 512 bytes* of that partition before using DOS FORMAT to format the partition. For example, if you were using *fdisk* to make a DOS partition table entry for _/dev/sda1_, then (after exiting *fdisk* and rebooting Linux so that the partition table information is valid) you would use the command *dd if=/dev/zero of=/dev/sda1 bs=512 count=1* to zero the first 512 bytes of the partition.
 
 *fdisk* usually obtains the disk geometry automatically. This is not necessarily the physical disk geometry (indeed, modern disks do not really have anything like a physical geometry, certainly not something that can be described in the simplistic Cylinders/Heads/Sectors form), but it is the disk geometry that MS-DOS uses for the partition table.
 
@@ -176,11 +175,8 @@ Some versions of MS-DOS create a first partition which does not begin on a cylin
 
 For best results, you should always use an OS-specific partition table program. For example, you should make DOS partitions with the DOS FDISK program and Linux partitions with the Linux *fdisk* or Linux *cfdisk*(8) programs.
 
-== COLORS
-
-Implicit coloring can be disabled by an empty file _/etc/terminal-colors.d/fdisk.disable_.
-
-See *terminal-colors.d*(5) for more details about colorization configuration. The logical color names supported by *fdisk* are:
+include::man-common/colors.adoc[]
+The logical color names supported by *fdisk* are:
 
 *header*::
 The header of the output tables.

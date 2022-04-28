@@ -43,6 +43,9 @@
 #include "debug.h"
 #include "fileutils.h"
 
+
+#define LOOPDEV_MAX_TRIES	10
+
 /*
  * Debug stuff (based on include/debug.h)
  */
@@ -739,7 +742,8 @@ int loopcxt_get_offset(struct loopdev_cxt *lc, uint64_t *offset)
 	int rc = -EINVAL;
 
 	if (sysfs)
-		rc = ul_path_read_u64(sysfs, offset, "loop/offset");
+		if (ul_path_read_u64(sysfs, offset, "loop/offset") == 0)
+			rc = 0;
 
 	if (rc && loopcxt_ioctl_enabled(lc)) {
 		struct loop_info64 *lo = loopcxt_get_info(lc);
@@ -767,7 +771,8 @@ int loopcxt_get_blocksize(struct loopdev_cxt *lc, uint64_t *blocksize)
 	int rc = -EINVAL;
 
 	if (sysfs)
-		rc = ul_path_read_u64(sysfs, blocksize, "queue/logical_block_size");
+		if (ul_path_read_u64(sysfs, blocksize, "queue/logical_block_size") == 0)
+			rc = 0;
 
 	/* Fallback based on BLKSSZGET ioctl */
 	if (rc) {
@@ -799,7 +804,8 @@ int loopcxt_get_sizelimit(struct loopdev_cxt *lc, uint64_t *size)
 	int rc = -EINVAL;
 
 	if (sysfs)
-		rc = ul_path_read_u64(sysfs, size, "loop/sizelimit");
+		if (ul_path_read_u64(sysfs, size, "loop/sizelimit") == 0)
+			rc = 0;
 
 	if (rc && loopcxt_ioctl_enabled(lc)) {
 		struct loop_info64 *lo = loopcxt_get_info(lc);
@@ -1290,7 +1296,8 @@ static int loopcxt_check_size(struct loopdev_cxt *lc, int file_fd)
  */
 int loopcxt_setup_device(struct loopdev_cxt *lc)
 {
-	int file_fd, dev_fd, mode = O_RDWR, rc = -1, cnt = 0, err, again;
+	int file_fd, dev_fd, mode = O_RDWR, flags = O_CLOEXEC;
+	int rc = -1, cnt = 0, err, again;
 	int errsv = 0;
 	int fallback = 0;
 
@@ -1305,9 +1312,12 @@ int loopcxt_setup_device(struct loopdev_cxt *lc)
 	if (lc->config.info.lo_flags & LO_FLAGS_READ_ONLY)
 		mode = O_RDONLY;
 
-	if ((file_fd = open(lc->filename, mode | O_CLOEXEC)) < 0) {
+	if (lc->config.info.lo_flags & LO_FLAGS_DIRECT_IO)
+		flags |= O_DIRECT;
+
+	if ((file_fd = open(lc->filename, mode | flags)) < 0) {
 		if (mode != O_RDONLY && (errno == EROFS || errno == EACCES))
-			file_fd = open(lc->filename, mode = O_RDONLY);
+			file_fd = open(lc->filename, (mode = O_RDONLY) | flags);
 
 		if (file_fd < 0) {
 			DBG(SETUP, ul_debugobj(lc, "open backing file failed: %m"));
@@ -1360,7 +1370,7 @@ int loopcxt_setup_device(struct loopdev_cxt *lc)
 	if (ioctl(dev_fd, LOOP_CONFIGURE, &lc->config) < 0) {
 		rc = -errno;
 		errsv = errno;
-		if (errno != EINVAL && errno != ENOTTY) {
+		if (errno != EINVAL && errno != ENOTTY && errno != ENOSYS) {
 			DBG(SETUP, ul_debugobj(lc, "LOOP_CONFIGURE failed: %m"));
 			goto err;
 		}
@@ -1447,7 +1457,7 @@ err:
  */
 int loopcxt_ioctl_status(struct loopdev_cxt *lc)
 {
-	int dev_fd, rc = -1, err, again;
+	int dev_fd, rc = -1, err, again, tries = 0;
 
 	errno = 0;
 	dev_fd = loopcxt_get_fd(lc);
@@ -1461,9 +1471,12 @@ int loopcxt_ioctl_status(struct loopdev_cxt *lc)
 	do {
 		err = ioctl(dev_fd, LOOP_SET_STATUS64, &lc->config.info);
 		again = err && errno == EAGAIN;
-		if (again)
+		if (again) {
 			xusleep(250000);
-	} while (again);
+			tries++;
+		}
+	} while (again && tries <= LOOPDEV_MAX_TRIES);
+
 	if (err) {
 		rc = -errno;
 		DBG(SETUP, ul_debugobj(lc, "LOOP_SET_STATUS64 failed: %m"));
@@ -1517,16 +1530,24 @@ int loopcxt_ioctl_dio(struct loopdev_cxt *lc, unsigned long use_dio)
 int loopcxt_ioctl_blocksize(struct loopdev_cxt *lc, uint64_t blocksize)
 {
 	int fd = loopcxt_get_fd(lc);
+	int err, again, tries = 0;
 
 	if (fd < 0)
 		return -EINVAL;
 
-	/* Kernels prior to v4.14 don't support this ioctl */
-	if (ioctl(fd, LOOP_SET_BLOCK_SIZE, (unsigned long) blocksize) < 0) {
-		int rc = -errno;
-		DBG(CXT, ul_debugobj(lc, "LOOP_SET_BLOCK_SIZE failed: %m"));
-		return rc;
-	}
+	do {
+		/* Kernels prior to v4.14 don't support this ioctl */
+		err = ioctl(fd, LOOP_SET_BLOCK_SIZE, (unsigned long) blocksize);
+		again = err && errno == EAGAIN;
+		if (again) {
+			xusleep(250000);
+			tries++;
+		} else if (err) {
+			int rc = -errno;
+			DBG(CXT, ul_debugobj(lc, "LOOP_SET_BLOCK_SIZE failed: %m"));
+			return rc;
+		}
+	} while (again && tries <= LOOPDEV_MAX_TRIES);
 
 	DBG(CXT, ul_debugobj(lc, "logical block size set"));
 	return 0;
@@ -1770,10 +1791,13 @@ int loopcxt_find_overlap(struct loopdev_cxt *lc, const char *filename,
 
 		rc = loopcxt_is_used(lc, hasst ? &st : NULL,
 				     filename, offset, sizelimit, 0);
-		if (!rc)
-			continue;	/* unused */
-		if (rc < 0)
-			break;		/* error */
+		/*
+		 * Either the loopdev is unused or we've got an error which can
+		 * happen when we are racing with device autoclear. Just ignore
+		 * this loopdev...
+		 */
+		if (rc <= 0)
+			continue;
 
 		DBG(CXT, ul_debugobj(lc, "found %s backed by %s",
 			loopcxt_get_device(lc), filename));
@@ -1782,13 +1806,13 @@ int loopcxt_find_overlap(struct loopdev_cxt *lc, const char *filename,
 		if (rc) {
 			DBG(CXT, ul_debugobj(lc, "failed to get offset for device %s",
 				loopcxt_get_device(lc)));
-			break;
+			continue;
 		}
 		rc = loopcxt_get_sizelimit(lc, &lc_sizelimit);
 		if (rc) {
 			DBG(CXT, ul_debugobj(lc, "failed to get sizelimit for device %s",
 				loopcxt_get_device(lc)));
-			break;
+			continue;
 		}
 
 		/* full match */

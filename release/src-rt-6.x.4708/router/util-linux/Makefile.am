@@ -114,6 +114,29 @@ include man-common/Makemodule.am
 
 include tests/Makemodule.am
 
+# Meson files
+EXTRA_DIST += \
+	meson.build \
+	meson_options.txt \
+	tools/meson-make-manpage-stub.sh \
+	tools/meson-make-symlink.sh \
+	\
+	include/meson.build \
+	libblkid/meson.build \
+	libmount/meson.build \
+	libmount/python/meson.build \
+	misc-utils/meson.build \
+	libsmartcols/meson.build \
+	text-utils/meson.build \
+	po/meson.build \
+	lib/meson.build \
+	libuuid/meson.build \
+	sys-utils/meson.build \
+	libfdisk/meson.build \
+	term-utils/meson.build \
+	disk-utils/meson.build \
+	login-utils/meson.build
+
 # pylibmountexec module must be installed after usrlib_exec libraries,
 # otherwise the libtool relink step will fail to find libmount.la and
 # will try -lmount which is possibly not available.
@@ -218,6 +241,18 @@ SUFFIXES = .1.adoc .3.adoc .5.adoc .8.adoc .1 .3 .5 .8
 $(MANLINKS): $(MANPAGES)
 gen-man: $(man_MANS)
 
+# Standard "make" follows BUILD_* macros from ./configure, and in this case, it
+# ignores man pages for disabled tools, but for distribution tarball, we need
+# to generate all man-pages (to avoid dependence on asciidoc). [kzak Jan-2022]
+gen-man-dist:
+	@list=`find -name *.adoc -not -path "*/man-common/*" -not -path "*/po-man/*" | sed -e 's/\.adoc//g'`; \
+	missing=`for p in $$list; do test -f $$p || echo $$p; done`; \
+	if test -n "$$missing"; then \
+		$(MAKE) $(AM_MAKEFLAGS) $$missing; \
+	fi;
+
+
+# !ENABLE_ASCIIDOC
 else
 
 if HAVE_MANPAGES
@@ -226,12 +261,13 @@ man_MANS += $(MANPAGES) $(MANLINKS)
 endif
 
 gen-man:
+gen-man-dist:
 endif
 
 
 # Arrange so that .tarball-version appears only in the distribution
 # tarball, and never in a checked-out repository.
-dist-hook:
+dist-hook: gen-man-dist
 	echo $(VERSION) > $(distdir)/.tarball-version
 # Set ChangeLog tag reference.
 	sed -i "s!log!log?h=v$(VERSION)!" $(distdir)/ChangeLog

@@ -30,7 +30,7 @@ When _command_ is given, *prlimit* will run this command with the given argument
 
 The _limits_ parameter is composed of a soft and a hard value, separated by a colon (:), in order to modify the existing values. If no _limits_ are given, *prlimit* will display the current values. If one of the values is not given, then the existing one will be used. To specify the unlimited or infinity limit (*RLIM_INFINITY*), the -1 or 'unlimited' string can be passed.
 
-Because of the nature of limits, the soft limit must be lower or equal to the high limit (also called the ceiling). To see all available resource limits, refer to the RESOURCE OPTIONS section.
+Because of the nature of limits, the soft limit must be lower or equal to the high limit (also called the ceiling). To see all available resource limits, refer to the *RESOURCE OPTIONS* section.
 
 //TRANSLATORS: Keep {colon} untranslated.
 * _soft_{colon}_hard_ Specify both limits.
@@ -39,9 +39,6 @@ Because of the nature of limits, the soft limit must be lower or equal to the hi
 * _value_ Specify both limits to the same value.
 
 == GENERAL OPTIONS
-
-*-h, --help*::
-Display help text and exit.
 
 *--noheadings*::
 Do not print a header line.
@@ -58,8 +55,7 @@ Use the raw output format.
 *--verbose*::
 Verbose mode.
 
-*-V, --version*::
-Display version information and exit.
+include::man-common/help-version.adoc[]
 
 == RESOURCE OPTIONS
 
@@ -113,7 +109,7 @@ Timeout for real-time tasks.
 
 == NOTES
 
-The *prlimit* system call is supported since Linux 2.6.36, older kernels will break this program.
+The *prlimit*(2) system call is supported since Linux 2.6.36, older kernels will break this program.
 
 == EXAMPLES
 
@@ -130,7 +126,7 @@ Modify only the soft limit for the number of processes.
 Set for the current process both the soft and ceiling values for the number of processes to unlimited.
 
 *prlimit --cpu=10 sort -u hugefile*::
-Set both the soft and hard CPU time limit to ten seconds and run 'sort'.
+Set both the soft and hard CPU time limit to ten seconds and run *sort*(1).
 
 == AUTHORS
 

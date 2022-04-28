@@ -50,7 +50,7 @@ look - display lines beginning with a given string
 
 == DESCRIPTION
 
-The *look* utility displays any lines in _file_ which contain _string_. As *look* performs a binary search, the lines in _file_ must be sorted (where *sort*(1) was given the same options *-d* and/or *-f* that *look* is invoked with).
+The *look* utility displays any lines in _file_ which contain _string_ as a prefix. As *look* performs a binary search, the lines in _file_ must be sorted (where *sort*(1) was given the same options *-d* and/or *-f* that *look* is invoked with).
 
 If _file_ is not specified, the file _/usr/share/dict/words_ is used, only alphanumeric characters are compared and the case of alphabetic characters is ignored.
 
@@ -70,18 +70,14 @@ Ignore the case of alphabetic characters. This is on by default if no file is sp
 *-t*, *--terminate* _character_::
 Specify a string termination character, i.e., only the characters in _string_ up to and including the first occurrence of _character_ are compared.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 The *look* utility exits 0 if one or more lines were found and displayed, 1 if no lines were found, and >1 if an error occurred.
 
 == ENVIRONMENT
 
 *WORDLIST*::
-Path to a dictionary file. The environment variable has greater priority than the dictionary path defined in FILES segment.
+Path to a dictionary file. The environment variable has greater priority than the dictionary path defined in the *FILES* segment.
 
 == FILES
 

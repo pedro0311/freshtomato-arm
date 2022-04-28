@@ -82,12 +82,15 @@
 #define _PATH_NUMLOCK_ON	_PATH_RUNSTATEDIR "/numlock-on"
 #define _PATH_LOGINDEFS		"/etc/login.defs"
 
+#define _PATH_SD_UNITSLOAD	_PATH_RUNSTATEDIR "/systemd/systemd-units-load"
+
 /* misc paths */
 #define _PATH_WORDS             "/usr/share/dict/words"
 #define _PATH_WORDS_ALT         "/usr/share/dict/web2"
 
 /* mount paths */
 #define _PATH_FILESYSTEMS	"/etc/filesystems"
+#define _PATH_PROC		"/proc"
 #define _PATH_PROC_SWAPS	"/proc/swaps"
 #define _PATH_PROC_FILESYSTEMS	"/proc/filesystems"
 #define _PATH_PROC_MOUNTS	"/proc/mounts"
@@ -97,6 +100,9 @@
 #define _PATH_PROC_LOCKS        "/proc/locks"
 #define _PATH_PROC_CDROMINFO	"/proc/sys/dev/cdrom/info"
 
+/* unshare paths */
+#define _PATH_SUBUID		"/etc/subuid"
+#define _PATH_SUBGID		"/etc/subgid"
 #define _PATH_PROC_UIDMAP	"/proc/self/uid_map"
 #define _PATH_PROC_GIDMAP	"/proc/self/gid_map"
 #define _PATH_PROC_SETGROUPS	"/proc/self/setgroups"

@@ -1283,6 +1283,7 @@ static int gpt_get_disklabel_item(struct fdisk_context *cxt, struct fdisk_labeli
 {
 	struct gpt_header *h;
 	int rc = 0;
+	uint64_t x = 0;
 
 	assert(cxt);
 	assert(cxt->label);
@@ -1299,12 +1300,12 @@ static int gpt_get_disklabel_item(struct fdisk_context *cxt, struct fdisk_labeli
 			rc = -ENOMEM;
 		break;
 	case GPT_LABELITEM_FIRSTLBA:
-		item->name = _("First LBA");
+		item->name = _("First usable LBA");
 		item->type = 'j';
 		item->data.num64 = le64_to_cpu(h->first_usable_lba);
 		break;
 	case GPT_LABELITEM_LASTLBA:
-		item->name = _("Last LBA");
+		item->name = _("Last usable LBA");
 		item->type = 'j';
 		item->data.num64 = le64_to_cpu(h->last_usable_lba);
 		break;
@@ -1316,9 +1317,17 @@ static int gpt_get_disklabel_item(struct fdisk_context *cxt, struct fdisk_labeli
 		break;
 	case GPT_LABELITEM_ENTRIESLBA:
 		/* TRANSLATORS: The start of the array of partition entries. */
-		item->name = _("Partition entries LBA");
+		item->name = _("Partition entries starting LBA");
 		item->type = 'j';
 		item->data.num64 = le64_to_cpu(h->partition_entry_lba);
+		break;
+	case GPT_LABELITEM_ENTRIESLASTLBA:
+		/* TRANSLATORS: The end of the array of partition entries. */
+		item->name = _("Partition entries ending LBA");
+		item->type = 'j';
+		gpt_calculate_sectorsof_entries(h,
+				le32_to_cpu(h->npartition_entries), &x, cxt);
+		item->data.num64 = le64_to_cpu(h->partition_entry_lba) + x - 1;
 		break;
 	case GPT_LABELITEM_ENTRIESALLOC:
 		item->name = _("Allocated partition entries");
@@ -2288,7 +2297,7 @@ static int gpt_verify_disklabel(struct fdisk_context *cxt)
 			   P_("A total of %ju free sectors is available in %u segment.",
 			      "A total of %ju free sectors is available in %u segments "
 			      "(the largest is %s).", nsegments),
-			   free_sectors, nsegments, strsz);
+			   free_sectors, nsegments, strsz ? : "0 B");
 		free(strsz);
 
 	} else
@@ -2337,7 +2346,7 @@ static int gpt_add_partition(
 {
 	uint64_t user_f, user_l;	/* user input ranges for first and last sectors */
 	uint64_t disk_f, disk_l;	/* first and last available sector ranges on device*/
-	uint64_t dflt_f, dflt_l;	/* largest segment (default) */
+	uint64_t dflt_f, dflt_l, max_l;	/* largest segment (default) */
 	struct gpt_guid typeid;
 	struct fdisk_gpt_label *gpt;
 	struct gpt_header *pheader;
@@ -2419,6 +2428,14 @@ static int gpt_add_partition(
 	dflt_f = find_first_in_largest(gpt);
 	dflt_l = find_last_free(gpt, dflt_f);
 
+	/* don't offer too small free space by default, this is possible to
+	 * bypass by sfdisk script */
+	if ((!pa || !fdisk_partition_has_start(pa))
+	    && dflt_l - dflt_f + 1 < cxt->grain / cxt->sector_size) {
+		fdisk_warnx(cxt, _("No enough free sectors available."));
+		return -ENOSPC;
+	}
+
 	/* align the default in range <dflt_f,dflt_l>*/
 	dflt_f = fdisk_align_lba_in_range(cxt, dflt_f, dflt_f, dflt_l);
 
@@ -2465,15 +2482,23 @@ static int gpt_add_partition(
 
 
 	/* Last sector */
-	dflt_l = find_last_free(gpt, user_f);
+	dflt_l = max_l = find_last_free(gpt, user_f);
+
+	/* Make sure the last partition has aligned size by default because
+	 * range specified by LastUsableLBA may be unaligned on disks where
+	 * logical sector != physical (512/4K) because backup header size is
+	 * calculated from logical sectors. */
+	if (max_l == le64_to_cpu(gpt->pheader->last_usable_lba))
+		dflt_l = fdisk_align_lba_in_range(cxt, max_l, user_f, max_l) - 1;
 
 	if (pa && pa->end_follow_default) {
 		user_l = dflt_l;
 
 	} else if (pa && fdisk_partition_has_size(pa)) {
 		user_l = user_f + pa->size - 1;
-		DBG(GPT, ul_debug("size defined: %ju, end: %"PRIu64" (last possible: %"PRIu64")",
-					 (uintmax_t)pa->size, user_l, dflt_l));
+		DBG(GPT, ul_debug("size defined: %ju, end: %"PRIu64
+				  "(last possible: %"PRIu64", optimal: %"PRIu64")",
+				(uintmax_t)pa->size, user_l, max_l, dflt_l));
 
 		if (user_l != dflt_l
 		    && !pa->size_explicit
@@ -2497,7 +2522,7 @@ static int gpt_add_partition(
 			fdisk_ask_set_type(ask, FDISK_ASKTYPE_OFFSET);
 			fdisk_ask_number_set_low(ask,     user_f);	/* minimal */
 			fdisk_ask_number_set_default(ask, dflt_l);	/* default */
-			fdisk_ask_number_set_high(ask,    dflt_l);	/* maximal */
+			fdisk_ask_number_set_high(ask,    max_l);	/* maximal */
 			fdisk_ask_number_set_base(ask,    user_f);	/* base for relative input */
 			fdisk_ask_number_set_unit(ask,    cxt->sector_size);
 			fdisk_ask_number_set_wrap_negative(ask, 1);	/* wrap negative around high */

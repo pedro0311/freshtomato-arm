@@ -153,6 +153,7 @@ int mnt_reset_context(struct libmnt_context *cxt)
 
 	free(cxt->helper);
 	free(cxt->orig_user);
+	free(cxt->subdir);
 
 	cxt->fs = NULL;
 	cxt->mtab = NULL;
@@ -162,6 +163,7 @@ int mnt_reset_context(struct libmnt_context *cxt)
 	cxt->mountflags = 0;
 	cxt->user_mountflags = 0;
 	cxt->mountdata = NULL;
+	cxt->subdir = NULL;
 	cxt->flags = MNT_FL_DEFAULT;
 
 	/* free additional mounts list */
@@ -291,6 +293,8 @@ struct libmnt_context *mnt_copy_context(struct libmnt_context *o)
 	if (strdup_between_structs(n, o, helper))
 		goto failed;
 	if (strdup_between_structs(n, o, orig_user))
+		goto failed;
+	if (strdup_between_structs(n, o, subdir))
 		goto failed;
 
 	n->mountflags = o->mountflags;
@@ -1298,6 +1302,16 @@ int mnt_context_get_mtab(struct libmnt_context *cxt, struct libmnt_table **tb)
 					cxt->table_fltrcb_data);
 
 		mnt_table_set_cache(cxt->mtab, mnt_context_get_cache(cxt));
+	}
+
+	/* Read the table; it's empty, because this first mnt_context_get_mtab()
+	 * call, or because /proc was not accessible in previous calls */
+	if (mnt_table_is_empty(cxt->mtab)) {
+		if (!ns_old) {
+			ns_old = mnt_context_switch_target_ns(cxt);
+			if (!ns_old)
+				return -MNT_ERR_NAMESPACE;
+		}
 
 		/*
 		 * Note that mtab_path is NULL if mtab is useless or unsupported
@@ -1772,7 +1786,7 @@ int mnt_context_prepare_srcpath(struct libmnt_context *cxt)
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
-	DBG(CXT, ul_debugobj(cxt, "preparing source path"));
+	DBG(CXT, ul_debugobj(cxt, "--> preparing source path"));
 
 	src = mnt_fs_get_source(cxt->fs);
 
@@ -1860,6 +1874,39 @@ end:
 	return rc;
 }
 
+static int is_subdir_required(struct libmnt_context *cxt, int *rc)
+{
+	char *dir;
+	size_t sz;
+
+	assert(cxt);
+	assert(rc);
+
+	*rc = 0;
+
+	if (!cxt->fs
+	    || !cxt->fs->user_optstr
+	    || mnt_optstr_get_option(cxt->fs->user_optstr,
+				  "X-mount.subdir", &dir, &sz) != 0)
+		return 0;
+
+	if (dir && *dir == '"')
+		dir++, sz-=2;
+
+	if (!dir || sz < 1) {
+		DBG(CXT, ul_debug("failed to parse X-mount.subdir '%s'", dir));
+		*rc = -MNT_ERR_MOUNTOPT;
+	} else {
+		cxt->subdir = strndup(dir, sz);
+		if (!cxt->subdir)
+			*rc = -ENOMEM;
+
+		DBG(CXT, ul_debug("subdir %s wanted", dir));
+	}
+
+	return *rc == 0;
+}
+
 static int is_mkdir_required(const char *tgt, struct libmnt_fs *fs, mode_t *mode, int *rc)
 {
 	char *mstr = NULL;
@@ -1885,6 +1932,9 @@ static int is_mkdir_required(const char *tgt, struct libmnt_fs *fs, mode_t *mode
 
 	if (mstr && mstr_sz) {
 		char *end = NULL;
+
+		if (*mstr == '"')
+			mstr++, mstr_sz-=2;
 
 		errno = 0;
 		*mode = strtol(mstr, &end, 8);
@@ -1915,7 +1965,7 @@ int mnt_context_prepare_target(struct libmnt_context *cxt)
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
-	DBG(CXT, ul_debugobj(cxt, "preparing target path"));
+	DBG(CXT, ul_debugobj(cxt, "--> preparing target path"));
 
 	tgt = mnt_fs_get_target(cxt->fs);
 	if (!tgt)
@@ -1973,6 +2023,16 @@ int mnt_context_prepare_target(struct libmnt_context *cxt)
 				rc = mnt_fs_set_target(cxt->fs, path);
 		}
 	}
+
+	/* X-mount.subdir= target */
+	if (rc == 0
+	    && cxt->action == MNT_ACT_MOUNT
+	    && (cxt->user_mountflags & MNT_MS_XFSTABCOMM)
+	    && is_subdir_required(cxt, &rc)) {
+
+		DBG(CXT, ul_debugobj(cxt, "subdir %s required", cxt->subdir));
+	}
+
 
 	if (!mnt_context_switch_ns(cxt, ns_old))
 		return -MNT_ERR_NAMESPACE;
@@ -2050,7 +2110,7 @@ int mnt_context_guess_fstype(struct libmnt_context *cxt)
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
-	DBG(CXT, ul_debugobj(cxt, "preparing fstype"));
+	DBG(CXT, ul_debugobj(cxt, "--> preparing fstype"));
 
 	if ((cxt->mountflags & (MS_BIND | MS_MOVE))
 	    || mnt_context_propagation_only(cxt))
@@ -2209,7 +2269,7 @@ int mnt_context_prepare_update(struct libmnt_context *cxt)
 	assert(cxt->action);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
-	DBG(CXT, ul_debugobj(cxt, "prepare update"));
+	DBG(CXT, ul_debugobj(cxt, "--> prepare update"));
 
 	if (mnt_context_propagation_only(cxt)) {
 		DBG(CXT, ul_debugobj(cxt, "skip update: only MS_PROPAGATION"));
@@ -2874,7 +2934,7 @@ int mnt_context_is_fs_mounted(struct libmnt_context *cxt,
 			      struct libmnt_fs *fs, int *mounted)
 {
 	struct libmnt_table *mtab, *orig;
-	int rc;
+	int rc = 0;
 	struct libmnt_ns *ns_old;
 
 	if (!cxt || !fs || !mounted)
@@ -2893,18 +2953,17 @@ int mnt_context_is_fs_mounted(struct libmnt_context *cxt,
 			cxt->mtab = NULL;
 		}
 		*mounted = 0;
-		return 0;	/* /proc not mounted */
-	}
+		rc = 0;			/* /proc not mounted */
 
-	if (rc)
-		return rc;
-
-	*mounted = __mnt_table_is_fs_mounted(mtab, fs,
+	} else if (rc == 0) {
+		*mounted = __mnt_table_is_fs_mounted(mtab, fs,
 				mnt_context_get_target_prefix(cxt));
+
+	}
 
 	if (!mnt_context_switch_ns(cxt, ns_old))
 		return -MNT_ERR_NAMESPACE;
-	return 0;
+	return rc;
 }
 
 static int mnt_context_add_child(struct libmnt_context *cxt, pid_t pid)

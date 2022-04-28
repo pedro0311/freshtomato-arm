@@ -31,6 +31,10 @@ Sending Patches
 	* don't include generated (autotools) files in your patches.
 	  Hint: use 'git clean -Xd'.
 
+        * don't include po/ (translations) changes to the upstream patches.
+          The po/ stuff is maintained on http://translationproject.org/domain/util-linux.html
+          and updated always before the next release.
+
 	* neutrality: the files in util-linux should be distribution-neutral.
 	  Packages like RPMs, DEBs, and the rest, are not provided. They should
 	  be available from the distribution.
@@ -43,7 +47,7 @@ Repositories & Branches
 	  We use this repository for master and stable branches only.
 
 	* Backup repository at github.com:
-	  git clone git://github.com/karelzak/util-linux.git
+	  git clone git://github.com/util-linux/util-linux.git
 
 	  We use this repository to backup kernel.org and for pull requests,
 	  issues tracking and topic branches. The master and stable branches are

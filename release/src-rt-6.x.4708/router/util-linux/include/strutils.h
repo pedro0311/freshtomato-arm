@@ -90,7 +90,8 @@ static inline void xstrncpy(char *dest, const char *src, size_t n)
  * Use this function to copy string to logs with fixed sizes (wtmp/utmp. ...)
  * where string terminator is optional.
  */
-static inline void *str2memcpy(void *dest, const char *src, size_t n)
+static inline void * __attribute__((nonnull (1)))
+str2memcpy(void *dest, const char *src, size_t n)
 {
 	size_t bytes = strlen(src) + 1;
 
@@ -101,13 +102,14 @@ static inline void *str2memcpy(void *dest, const char *src, size_t n)
 	return dest;
 }
 
-static inline char *mem2strcpy(char *dest, const void *src, size_t n, size_t nmax)
+static inline char * __attribute__((nonnull (1)))
+mem2strcpy(char *dest, const void *src, size_t n, size_t nmax)
 {
 	if (n + 1 > nmax)
 		n = nmax - 1;
 
+	memset(dest, '\0', nmax);
 	memcpy(dest, src, n);
-	dest[nmax-1] = '\0';
 	return dest;
 }
 
@@ -323,16 +325,20 @@ static inline size_t ltrim_whitespace(unsigned char *str)
 
 /* Removes left-hand, right-hand and repeating whitespaces.
  */
-static inline size_t normalize_whitespace(unsigned char *str)
+static inline size_t __normalize_whitespace(
+				const unsigned char *src,
+				size_t sz,
+				unsigned char *dst,
+				size_t len)
 {
-	size_t i, x, sz = strlen((char *) str);
+	size_t i, x = 0;
 	int nsp = 0, intext = 0;
 
 	if (!sz)
-		return 0;
+		goto done;
 
-	for (i = 0, x = 0; i < sz; ) {
-		if (isspace(str[i]))
+	for (i = 0, x = 0; i < sz && x < len - 1;  ) {
+		if (isspace(src[i]))
 			nsp++;
 		else
 			nsp = 0, intext = 1;
@@ -340,12 +346,19 @@ static inline size_t normalize_whitespace(unsigned char *str)
 		if (nsp > 1 || (nsp && !intext))
 			i++;
 		else
-			str[x++] = str[i++];
+			dst[x++] = src[i++];
 	}
-	if (nsp && x > 0)	/* tailing space */
+	if (nsp && x > 0)		/* tailing space */
 		x--;
-	str[x] = '\0';
+done:
+	dst[x] = '\0';
 	return x;
+}
+
+static inline size_t normalize_whitespace(unsigned char *str)
+{
+	size_t sz = strlen((char *) str);
+	return __normalize_whitespace(str, sz, str, sz + 1);
 }
 
 static inline void strrep(char *s, int find, int replace)
@@ -367,10 +380,13 @@ static inline void strrem(char *s, int rem)
 	*p = '\0';
 }
 
-extern char *strnappend(const char *s, const char *suffix, size_t b);
-extern char *strappend(const char *s, const char *suffix);
-extern char *strfappend(const char *s, const char *format, ...)
+extern char *strnconcat(const char *s, const char *suffix, size_t b);
+extern char *strconcat(const char *s, const char *suffix);
+extern char *strfconcat(const char *s, const char *format, ...)
 		 __attribute__ ((__format__ (__printf__, 2, 3)));
+
+extern int strappend(char **a, const char *b);
+
 extern const char *split(const char **state, size_t *l, const char *separator, int quoted);
 
 extern int skip_fline(FILE *fp);

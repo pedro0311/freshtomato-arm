@@ -73,7 +73,7 @@ Causes everything to be done except for the actual system call or umount helper 
 *-f*, *--force*::
 Force an unmount (in case of an unreachable NFS system).
 +
-Note that this option does not guarantee that umount command does not hang. It's strongly recommended to use absolute paths without symlinks to avoid unwanted readlink and stat system calls on unreachable NFS in *umount*.
+Note that this option does not guarantee that umount command does not hang. It's strongly recommended to use absolute paths without symlinks to avoid unwanted *readlink*(2) and *stat*(2) system calls on unreachable NFS in *umount*.
 
 *-i*, *--internal-only*::
 Do not call the **/sbin/umount.**__filesystem__ helper even if it exists. By default such a helper program is called if it exists.
@@ -81,10 +81,10 @@ Do not call the **/sbin/umount.**__filesystem__ helper even if it exists. By def
 *-l*, *--lazy*::
 Lazy unmount. Detach the filesystem from the file hierarchy now, and clean up all references to this filesystem as soon as it is not busy anymore.
 +
-A system reboot would be expected in near future if you're going to use this option for network filesystem or local filesystem with submounts. The recommended use-case for *umount -l* is to prevent hangs on shutdown due to an unreachable network share where a normal umount will hang due to a downed server or a network partition. Remounts of the share will not be possible.
+A system reboot would be expected in near future if you're going to use this option for network filesystem or local filesystem with submounts. The recommended use-case for *umount -l* is to prevent hangs on shutdown due to an unreachable network share where a normal *umount* will hang due to a downed server or a network partition. Remounts of the share will not be possible.
 
 *-N*, *--namespace* _ns_::
-Perform umount in the mount namespace specified by _ns_. _ns_ is either PID of process running in that namespace or special file representing that namespace.
+Perform *umount* in the mount namespace specified by _ns_. _ns_ is either PID of process running in that namespace or special file representing that namespace.
 +
 *umount* switches to the namespace when it reads _/etc/fstab_, writes _/etc/mtab_ (or writes to _/run/mount_) and calls *umount*(2) system call, otherwise it runs in the original namespace. It means that the target mount namespace does not have to contain any libraries or other requirements necessary to execute *umount*(2) command.
 +
@@ -111,25 +111,21 @@ Indicate that the actions should only be taken on filesystems of the specified _
 *-v*, *--verbose*::
 Verbose mode.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == NON-SUPERUSER UMOUNTS
 
 Normally, only the superuser can umount filesystems. However, when _fstab_ contains the *user* option on a line, anybody can umount the corresponding filesystem. For more details see *mount*(8) man page.
 
-Since version 2.34 the *umount* command can be used to perform umount operation also for fuse filesystems if kernel mount table contains user's ID. In this case fstab *user=* mount option is not required.
+Since version 2.34 the *umount* command can be used to perform umount operation also for fuse filesystems if kernel mount table contains user's ID. In this case _fstab_ *user=* mount option is not required.
 
-Since version 2.35 *umount* command does not exit when user permissions are inadequate by internal libmount security rules. It drops suid permissions and continue as regular non-root user. This can be used to support use-cases where root permissions are not necessary (e.g., fuse filesystems, user namespaces, etc).
+Since version 2.35 *umount* command does not exit when user permissions are inadequate by internal *libmount* security rules. It drops suid permissions and continue as regular non-root user. This can be used to support use-cases where root permissions are not necessary (e.g., fuse filesystems, user namespaces, etc).
 
 == LOOP DEVICE
 
 The *umount* command will automatically detach loop device previously initialized by *mount*(8) command independently of _/etc/mtab_.
 
-In this case the device is initialized with "autoclear" flag (see *losetup*(8) output for more details), otherwise it's necessary to use the option *--detach-loop* or call *losetup -d <device>*. The autoclear feature is supported since Linux 2.6.25.
+In this case the device is initialized with "autoclear" flag (see *losetup*(8) output for more details), otherwise it's necessary to use the option *--detach-loop* or call *losetup -d* _device_. The autoclear feature is supported since Linux 2.6.25.
 
 == EXTERNAL HELPERS
 
@@ -147,19 +143,19 @@ ____
 
 A **uhelper=**__something__ marker (unprivileged helper) can appear in the _/etc/mtab_ file when ordinary users need to be able to unmount a mountpoint that is not defined in _/etc/fstab_ (for example for a device that was mounted by *udisks*(1)).
 
-A **helper=**__type__ marker in the mtab file will redirect all unmount requests to the **/sbin/umount.**__type__ helper independently of UID.
+A **helper=**__type__ marker in the _mtab_ file will redirect all unmount requests to the **/sbin/umount.**__type__ helper independently of UID.
 
-Note that _/etc/mtab_ is currently deprecated and *helper=* and other userspace mount options are maintained by libmount.
+Note that _/etc/mtab_ is currently deprecated and *helper=* and other userspace mount options are maintained by *libmount*.
 
 == ENVIRONMENT
 
-LIBMOUNT_FSTAB=<path>::
-overrides the default location of the fstab file (ignored for suid)
+*LIBMOUNT_FSTAB*=<path>::
+overrides the default location of the _fstab_ file (ignored for *suid*)
 
-LIBMOUNT_MTAB=<path>::
-overrides the default location of the mtab file (ignored for suid)
+*LIBMOUNT_MTAB*=<path>::
+overrides the default location of the _mtab_ file (ignored for *suid*)
 
-LIBMOUNT_DEBUG=all::
+*LIBMOUNT_DEBUG*=all::
 enables *libmount* debug output
 
 == FILES

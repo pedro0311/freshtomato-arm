@@ -75,10 +75,10 @@ UL_DEBUG_DECLARE_MASK(libmount);
 
 /* library private paths */
 #define MNT_RUNTIME_TOPDIR	"/run"
-#define MNT_RUNTIME_TOPDIR_OLD	"/dev"
-
+/* private userspace mount table */
 #define MNT_PATH_UTAB		MNT_RUNTIME_TOPDIR "/mount/utab"
-#define MNT_PATH_UTAB_OLD	MNT_RUNTIME_TOPDIR_OLD "/.mount/utab"
+/* temporary mount target */
+#define MNT_PATH_TMPTGT		MNT_RUNTIME_TOPDIR "/mount/tmptgt"
 
 #define MNT_UTAB_HEADER	"# libmount utab file\n"
 
@@ -95,7 +95,6 @@ extern int mnt_run_test(struct libmnt_test *tests, int argc, char *argv[]);
 
 /* utils.c */
 extern int mnt_valid_tagname(const char *tagname);
-extern int append_string(char **a, const char *b);
 
 extern const char *mnt_statfs_get_fstype(struct statfs *vfs);
 extern int is_file_empty(const char *name);
@@ -123,6 +122,9 @@ extern void mnt_free_filesystems(char **filesystems);
 extern char *mnt_get_kernel_cmdline_option(const char *name);
 extern int mnt_stat_mountpoint(const char *target, struct stat *st);
 extern int mnt_lstat_mountpoint(const char *target, struct stat *st);
+
+extern int mnt_tmptgt_unshare(int *old_ns_fd);
+extern int mnt_tmptgt_cleanup(int old_ns_fd);
 
 /* tab.c */
 extern int is_mountinfo(struct libmnt_table *tb);
@@ -227,10 +229,6 @@ struct libmnt_fs {
 #define MNT_FS_KERNEL	(1 << 4) /* data from /proc/{mounts,self/mountinfo} */
 #define MNT_FS_MERGED	(1 << 5) /* already merged data from /run/mount/utab */
 
-#define mnt_fs_is_regular(_f)	(!(mnt_fs_is_pseudofs(_f) \
-				   || mnt_fs_is_netfs(_f) \
-				   || mnt_fs_is_swaparea(_f)))
-
 /*
  * mtab/fstab/mountinfo file
  */
@@ -293,6 +291,8 @@ struct libmnt_context
 
 	char	*fstype_pattern;	/* for mnt_match_fstype() */
 	char	*optstr_pattern;	/* for mnt_match_options() */
+
+	char	*subdir;		/* X-mount.subdir= */
 
 	struct libmnt_fs *fs;		/* filesystem description (type, mountpoint, device, ...) */
 	struct libmnt_fs *fs_template;	/* used for @fs on mnt_reset_context() */
@@ -385,7 +385,7 @@ struct libmnt_context
 #define MNT_FL_DEFAULT		0
 
 /* Flags usable with MS_BIND|MS_REMOUNT */
-#define MNT_BIND_SETTABLE	(MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_NOATIME|MS_NODIRATIME|MS_RELATIME|MS_RDONLY)
+#define MNT_BIND_SETTABLE	(MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_NOATIME|MS_NODIRATIME|MS_RELATIME|MS_RDONLY|MS_NOSYMFOLLOW)
 
 /* lock.c */
 extern int mnt_lock_use_simplelock(struct libmnt_lock *ml, int enable);
@@ -399,6 +399,7 @@ extern const struct libmnt_optmap *mnt_optmap_get_entry(
 			     const struct libmnt_optmap **mapent);
 
 /* optstr.c */
+extern int mnt_optstr_get_uid(const char *optstr, const char *name, uid_t *uid);
 extern int mnt_optstr_remove_option_at(char **optstr, char *begin, char *end);
 extern int mnt_optstr_fix_gid(char **optstr, char *value, size_t valsz, char **next);
 extern int mnt_optstr_fix_uid(char **optstr, char *value, size_t valsz, char **next);

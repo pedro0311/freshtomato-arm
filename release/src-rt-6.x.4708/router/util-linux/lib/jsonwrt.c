@@ -109,6 +109,11 @@ void ul_jsonwrt_init(struct ul_jsonwrt *fmt, FILE *out, int indent)
 	fmt->after_close = 0;
 }
 
+int ul_jsonwrt_is_ready(struct ul_jsonwrt *fmt)
+{
+	return fmt->out == NULL ? 0 : 1;
+}
+
 void ul_jsonwrt_indent(struct ul_jsonwrt *fmt)
 {
 	int i;
@@ -212,5 +217,13 @@ void ul_jsonwrt_value_boolean(struct ul_jsonwrt *fmt,
 {
 	ul_jsonwrt_value_open(fmt, name);
 	fputs(data ? "true" : "false", fmt->out);
+	ul_jsonwrt_value_close(fmt);
+}
+
+void ul_jsonwrt_value_null(struct ul_jsonwrt *fmt,
+			const char *name)
+{
+	ul_jsonwrt_value_open(fmt, name);
+	fputs("null", fmt->out);
 	ul_jsonwrt_value_close(fmt);
 }

@@ -56,6 +56,10 @@
 # include <sys/param.h>
 #endif
 
+#ifdef HAVE_GETTTYNAM
+# include <ttyent.h>
+#endif
+
 #if defined(__FreeBSD_kernel__)
 # include <pty.h>
 # ifdef HAVE_UTMP_H
@@ -186,8 +190,8 @@ struct options {
 	char *chroot;			/* Chroot before the login */
 	char *login;			/* login program */
 	char *logopt;			/* options for login program */
-	char *tty;			/* name of tty */
-	char *vcline;			/* line of virtual console */
+	const char *tty;		/* name of tty */
+	const char *vcline;		/* line of virtual console */
 	char *term;			/* terminal type */
 	char *initstring;		/* modem init string */
 	char *issue;			/* alternative issue file or directory */
@@ -199,6 +203,7 @@ struct options {
 	int numspeed;			/* number of baud rates to try */
 	int clocal;			/* CLOCAL_MODE_* */
 	int kbmode;			/* Keyboard mode if virtual console */
+	int tty_is_stdin;		/* is the tty the standard input stream */
 	speed_t speeds[MAX_SPEED];	/* baud rates to be tried */
 };
 
@@ -315,7 +320,7 @@ static void init_special_char(char* arg, struct options *op);
 static void parse_args(int argc, char **argv, struct options *op);
 static void parse_speeds(struct options *op, char *arg);
 static void update_utmp(struct options *op);
-static void open_tty(char *tty, struct termios *tp, struct options *op);
+static void open_tty(const char *tty, struct termios *tp, struct options *op);
 static void termio_init(struct options *op, struct termios *tp);
 static void reset_vc(const struct options *op, struct termios *tp, int canon);
 static void auto_baud(struct termios *tp);
@@ -918,6 +923,15 @@ static void parse_args(int argc, char **argv, struct options *op)
 		}
 	}
 
+	/* resolve the tty path in case it was provided as stdin */
+	if (strcmp(op->tty, "-") == 0) {
+		op->tty_is_stdin = 1;
+		int fd = get_terminal_name(NULL, &op->tty, NULL);
+		if (fd < 0) {
+			log_warn(_("could not get terminal name: %d"), fd);
+		}
+	}
+
 	/* On virtual console remember the line which is used for */
 	if (strncmp(op->tty, "tty", 3) == 0 &&
 	    strspn(op->tty + 3, "0123456789") == strlen(op->tty+3))
@@ -958,8 +972,8 @@ static void update_utmp(struct options *op)
 	time_t t;
 	pid_t pid = getpid();
 	pid_t sid = getsid(0);
-	char *vcline = op->vcline;
-	char *line   = op->tty;
+	const char *vcline = op->vcline;
+	const char *line = op->tty;
 	struct utmpx *utp;
 
 	/*
@@ -998,7 +1012,7 @@ static void update_utmp(struct options *op)
 			str2memcpy(ut.ut_id, vcline, sizeof(ut.ut_id));
 		else {
 			size_t len = strlen(line);
-			char * ptr;
+			const char * ptr;
 			if (len >= sizeof(ut.ut_id))
 				ptr = line + len - sizeof(ut.ut_id);
 			else
@@ -1026,7 +1040,7 @@ static void update_utmp(struct options *op)
 #endif				/* SYSV_STYLE */
 
 /* Set up tty as stdin, stdout & stderr. */
-static void open_tty(char *tty, struct termios *tp, struct options *op)
+static void open_tty(const char *tty, struct termios *tp, struct options *op)
 {
 	const pid_t pid = getpid();
 	int closed = 0;
@@ -1036,7 +1050,7 @@ static void open_tty(char *tty, struct termios *tp, struct options *op)
 
 	/* Set up new standard input, unless we are given an already opened port. */
 
-	if (strcmp(tty, "-") != 0) {
+	if (!op->tty_is_stdin) {
 		char buf[PATH_MAX+1];
 		struct group *gr = NULL;
 		struct stat st;
@@ -1159,6 +1173,18 @@ static void open_tty(char *tty, struct termios *tp, struct options *op)
 	memset(tp, 0, sizeof(struct termios));
 	if (tcgetattr(STDIN_FILENO, tp) < 0)
 		log_err(_("%s: failed to get terminal attributes: %m"), tty);
+
+#ifdef HAVE_GETTTYNAM
+	if (!op->term) {
+		struct ttyent *ent = getttynam(tty);
+		/* a bit nasty as it's never freed */
+		if (ent && ent->ty_type) {
+			op->term = strdup(ent->ty_type);
+			if (!op->term)
+				log_err(_("failed to allocate memory: %m"));
+		}
+	}
+#endif
 
 #if defined (__s390__) || defined (__s390x__)
 	if (!op->term) {
@@ -2267,6 +2293,11 @@ static char *get_logname(struct issue *ie, struct options *op, struct termios *t
 				break;
 			case CTL('U'):
 				cp->kill = ascval;		/* set kill character */
+				/* fallthrough */
+			case CTL('C'):
+				if (key == CTL('C') && !(op->flags & F_VCONSOLE))
+					/* Ignore CTRL+C on serial line */
+					break;
 				while (bp > logname) {
 					if ((tp->c_lflag & ECHO) == 0)
 						write_all(1, erase[cp->parity], 3);
@@ -2275,9 +2306,6 @@ static char *get_logname(struct issue *ie, struct options *op, struct termios *t
 				break;
 			case CTL('D'):
 				exit(EXIT_SUCCESS);
-			case CTL('C'):
-				/* Ignore */
-				break;
 			default:
 				if ((size_t)(bp - logname) >= sizeof(logname) - 1)
 					log_err(_("%s: input overrun"), op->tty);
