@@ -3361,7 +3361,8 @@ libjson-c/build/Makefile:
 libjson-c: libjson-c/build/Makefile
 	@$(SEP)
 	$(MAKE) -C libjson-c/build all $(PARALLEL_BUILD)
-	cd libjson-c && ln -sf build/json_config.h json_config.h
+	cd libjson-c && \
+	ln -sf build/json_config.h json_config.h && ln -sf build/json.h json.h
 
 libjson-c-install:
 	@true
