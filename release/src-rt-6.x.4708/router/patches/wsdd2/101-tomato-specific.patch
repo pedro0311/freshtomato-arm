@@ -1,6 +1,6 @@
 --- wsdd2/wsd.c
 +++ wsdd2/wsd.c
-@@ -136,6 +136,7 @@
+@@ -162,6 +162,7 @@
  	}
  }
  
@@ -8,7 +8,7 @@
  static struct {
  	const char *key, *_default;
  	char *value;
-@@ -149,6 +150,21 @@
+@@ -175,6 +176,21 @@
  	{ .key	= "presentationurl:",	._default = NULL},
  	{}
  };
@@ -30,7 +30,7 @@
  
  int set_getresp(const char *str, const char **next)
  {
-@@ -722,7 +738,11 @@
+@@ -748,7 +764,11 @@
  {
  	const char resp_hdr_fmt[] =
  		"HTTP/1.1 %s\r\n"
