@@ -263,8 +263,8 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 
 int main(void)
 {
+	char buf[MNL_SOCKET_DUMP_SIZE];
 	struct mnl_socket *nl;
-	char buf[MNL_SOCKET_BUFFER_SIZE];
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfh;
 	uint32_t seq, portid;

@@ -3664,7 +3664,7 @@ zfs-clean:
 	$(call unpatch_files,zfs)
 
 libmnl/stamp-h1:
-	cd libmnl && ./autogen.sh && \
+	cd libmnl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr
