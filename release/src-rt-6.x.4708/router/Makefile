@@ -2813,9 +2813,9 @@ libcurl: libcurl/stamp-h1
 	@rm -f libcurl/staged/usr/lib/libcurl.la
 
 libcurl-install:
-	install -D libcurl/lib/.libs/libcurl.so.4.7.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.7.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.7.0
-	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.7.0 libcurl.so && ln -sf libcurl.so.4.7.0 libcurl.so.4
+	install -D libcurl/lib/.libs/libcurl.so.4.8.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.8.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.8.0
+	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.8.0 libcurl.so && ln -sf libcurl.so.4.8.0 libcurl.so.4
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 
