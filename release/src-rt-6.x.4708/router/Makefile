@@ -1486,7 +1486,7 @@ rp-pppoe-clean:
 	$(call unpatch_files,rp-pppoe)
 
 libnfnetlink/stamp-h1:
-	cd libnfnetlink $(if $(TCONFIG_BCMARM),&& ./autogen.sh,) && \
+	cd libnfnetlink $(if $(TCONFIG_BCMARM),&& autoreconf -fsi,) && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static

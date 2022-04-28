@@ -52,6 +52,29 @@
 
 #include <libnfnetlink/libnfnetlink.h>
 
+/**
+ * \mainpage
+ *
+ * Deprecated
+ * ---
+ * New applications should use
+ * [libmnl](https://netfilter.org/projects/libmnl/doxygen/html/).
+ *
+ * [libnetfilter_queue]
+ * (https://netfilter.org/projects/libnetfilter_queue/doxygen/html/)
+ * now provides a set of helpers for libmnl, in addition to those it provides
+ * for libnfnetlink (which are now deprecated).
+ */
+
+/**
+ * \defgroup libnfnetlink Functions in libnfnetlink.c [DEPRECATED]
+ * This documentation is provided for the benefit of maintainers of legacy code.
+ *
+ * New applications should use
+ * [libmnl](https://netfilter.org/projects/libmnl/doxygen/html/).
+ * @{
+ */
+
 #ifndef NETLINK_ADD_MEMBERSHIP
 #define NETLINK_ADD_MEMBERSHIP 1
 #endif
@@ -59,7 +82,6 @@
 #ifndef SOL_NETLINK
 #define SOL_NETLINK 270
 #endif
-
 
 #define nfnl_error(format, args...) \
 	fprintf(stderr, "%s: " format "\n", __FUNCTION__, ## args)
@@ -188,7 +210,8 @@ struct nfnl_handle *nfnl_open(void)
 	nfnlh->peer.nl_family = AF_NETLINK;
 
 	addr_len = sizeof(nfnlh->local);
-	getsockname(nfnlh->fd, (struct sockaddr *)&nfnlh->local, &addr_len);
+	if (getsockname(nfnlh->fd, (struct sockaddr *)&nfnlh->local, &addr_len))
+		goto err_close;
 	if (addr_len != sizeof(nfnlh->local)) {
 		errno = EINVAL;
 		goto err_close;
@@ -209,7 +232,8 @@ struct nfnl_handle *nfnl_open(void)
 
 	/* use getsockname to get the netlink pid that the kernel assigned us */
 	addr_len = sizeof(nfnlh->local);
-	getsockname(nfnlh->fd, (struct sockaddr *)&nfnlh->local, &addr_len);
+	if (getsockname(nfnlh->fd, (struct sockaddr *)&nfnlh->local, &addr_len))
+		goto err_close;
 	if (addr_len != sizeof(nfnlh->local)) {
 		errno = EINVAL;
 		goto err_close;
@@ -1572,3 +1596,7 @@ int nfnl_query(struct nfnl_handle *h, struct nlmsghdr *nlh)
 
 	return nfnl_catch(h);
 }
+
+/**
+ * @}
+ */
