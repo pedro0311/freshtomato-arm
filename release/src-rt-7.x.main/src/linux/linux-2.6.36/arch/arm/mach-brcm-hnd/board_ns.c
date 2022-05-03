@@ -285,6 +285,7 @@ static void __init board_fixup(
 	if (desc->nr == MACH_TYPE_BRCM_NS_QT )
 		clk_ref.rate = 17594;	/* Emulator ref clock rate */
 
+#if 0 /* FreshTomato - remove and align to Netgear SRC */
 #if defined(BCM_GMAC3)
 	/* In ATLAS builds, cap the total memory to 256M (for both Ax and Bx). */
 	if (_memsize > SZ_256M) {
@@ -292,6 +293,7 @@ static void __init board_fixup(
 		early_printk("ATLAS board_fixup: cap memory to 256M\n");
 	}
 #endif /* BCM_GMAC3 */
+#endif
 	mem_size = _memsize;
 
 	early_printk("board_fixup: mem=%uMiB\n", mem_size >> 20);
