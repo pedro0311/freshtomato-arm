@@ -81,10 +81,10 @@ watchdogRun() {
 				$DEBUG "prefix=$PREFIX_LOG, iface=$IFACE, uptime=$ISUP, ISGW=$ISGW, WEIGHT=$WEIGHT"
 			}
 
-			[ "$PROTO" == "dhcp" -a $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l) -eq 0 ] && { dhcpFix $PREFIX; sleep 3; }
+			[ "$PROTO" == "dhcp" -a $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | grep -v '0.0.0.0' | wc -l) -eq 0 ] && { dhcpFix $PREFIX; sleep 3; }
 
 			[ "$PROTO" != "lte" ] && {
-				[ $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | wc -l) -eq 0 ] && {
+				[ $(ifconfig $IFACE | grep inet | grep -Eo '((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)' | grep -v '0.0.0.0' | wc -l) -eq 0 ] && { 
 					$DEBUG "$PREFIX doesn't have an IP address. Skipping..."
 					echo "0" > $STATE_FILE
 					continue
