@@ -14,13 +14,17 @@ newgrp - log in to a new group
 
 == SYNOPSIS
 
-newgrp [_group_]
+*newgrp* [_group_]
 
 == DESCRIPTION
 
 *newgrp* changes the group identification of its caller, analogously to *login*(1). The same person remains logged in, and the current directory is unchanged, but calculations of access permissions to files are performed with respect to the new group ID.
 
 If no group is specified, the GID is changed to the login GID.
+
+== OPTIONS
+
+include::man-common/help-version.adoc[]
 
 == FILES
 

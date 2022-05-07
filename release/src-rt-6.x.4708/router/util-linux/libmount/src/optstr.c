@@ -224,7 +224,7 @@ int mnt_optstr_append_option(char **optstr, const char *name, const char *value)
 
 	rc = __buffer_append_option(&buf, name, nsz, value, vsz);
 
-	*optstr = ul_buffer_get_data(&buf);
+	*optstr = ul_buffer_get_data(&buf, NULL, NULL);
 	return rc;
 }
 /**
@@ -261,7 +261,7 @@ int mnt_optstr_prepend_option(char **optstr, const char *name, const char *value
 		free(*optstr);
 	}
 
-	*optstr = ul_buffer_get_data(&buf);
+	*optstr = ul_buffer_get_data(&buf, NULL, NULL);
 	return rc;
 }
 
@@ -558,11 +558,11 @@ int mnt_split_optstr(const char *optstr, char **user, char **vfs,
 	}
 
 	if (vfs)
-		*vfs  = rc ? NULL : ul_buffer_get_data(&xvfs);
+		*vfs  = rc ? NULL : ul_buffer_get_data(&xvfs, NULL, NULL);
 	if (fs)
-		*fs   = rc ? NULL : ul_buffer_get_data(&xfs);
+		*fs   = rc ? NULL : ul_buffer_get_data(&xfs, NULL, NULL);
 	if (user)
-		*user = rc ? NULL : ul_buffer_get_data(&xuser);
+		*user = rc ? NULL : ul_buffer_get_data(&xuser, NULL, NULL);
 	if (rc) {
 		ul_buffer_free_data(&xvfs);
 		ul_buffer_free_data(&xfs);
@@ -626,7 +626,7 @@ int mnt_optstr_get_options(const char *optstr, char **subset,
 			break;
 	}
 
-	*subset  = rc ? NULL : ul_buffer_get_data(&buf);
+	*subset  = rc ? NULL : ul_buffer_get_data(&buf, NULL, NULL);
 	if (rc)
 		ul_buffer_free_data(&buf);
 	return rc;
@@ -724,7 +724,7 @@ int mnt_optstr_apply_flags(char **optstr, unsigned long flags,
 {
 	struct libmnt_optmap const *maps[1];
 	char *name, *next, *val;
-	size_t namesz = 0, valsz = 0;
+	size_t namesz = 0, valsz = 0, multi = 0;
 	unsigned long fl;
 	int rc = 0;
 
@@ -794,13 +794,20 @@ int mnt_optstr_apply_flags(char **optstr, unsigned long flags,
 						goto err;
 				}
 				if (!(ent->mask & MNT_INVERT)) {
-					fl &= ~ent->id;
+					/* allow options with prefix (X-mount.foo,X-mount.bar) more than once */
+					if (ent->mask & MNT_PREFIX)
+						multi |= ent->id;
+					else
+						fl &= ~ent->id;
 					if (ent->id & MS_REC)
 						fl |= MS_REC;
 				}
 			}
 		}
 	}
+
+	/* remove from flags options which are allowed more than once */
+	fl &= ~multi;
 
 	/* add missing options (but ignore fl if contains MS_REC only) */
 	if (fl && fl != MS_REC) {
@@ -834,7 +841,7 @@ int mnt_optstr_apply_flags(char **optstr, unsigned long flags,
 				goto err;
 		}
 
-		*optstr = ul_buffer_get_data(&buf);
+		*optstr = ul_buffer_get_data(&buf, NULL, NULL);
 	}
 
 	DBG(CXT, ul_debug("new optstr '%s'", *optstr));
@@ -908,12 +915,16 @@ int mnt_optstr_fix_secontext(char **optstr,
 
 	/* create a quoted string from the raw context */
 	sz = strlen((char *) raw);
-	if (!sz)
+	if (!sz) {
+		freecon(raw);
 		return -EINVAL;
+	}
 
 	p = val = malloc(valsz + 3);
-	if (!val)
+	if (!val) {
+		freecon(raw);
 		return -ENOMEM;
+	}
 
 	*p++ = '"';
 	memcpy(p, raw, sz);
@@ -1076,6 +1087,48 @@ int mnt_optstr_fix_user(char **optstr)
 	return rc;
 }
 
+/*
+ * Converts value from @optstr addressed by @name to uid.
+ *
+ * Returns: 0 on success, 1 if not found, <0 on error
+ */
+int mnt_optstr_get_uid(const char *optstr, const char *name, uid_t *uid)
+{
+	char *value = NULL;
+	size_t valsz = 0;
+	char buf[sizeof(stringify_value(UINT64_MAX))];
+	int rc;
+	uint64_t num;
+
+	assert(optstr);
+	assert(name);
+	assert(uid);
+
+	rc = mnt_optstr_get_option(optstr, name, &value, &valsz);
+	if (rc != 0)
+		goto fail;
+
+	if (valsz > sizeof(buf) - 1) {
+		rc = -ERANGE;
+		goto fail;
+	}
+	mem2strcpy(buf, value, valsz, sizeof(buf));
+
+	rc = ul_strtou64(buf, &num, 10);
+	if (rc != 0)
+		goto fail;
+	if (num > ULONG_MAX || (uid_t) num != num) {
+		rc = -ERANGE;
+		goto fail;
+	}
+	*uid = (uid_t) num;
+
+	return 0;
+fail:
+	DBG(UTILS, ul_debug("failed to convert '%s'= to number [rc=%d]", name, rc));
+	return rc;
+}
+
 /**
  * mnt_match_options:
  * @optstr: options string
@@ -1163,6 +1216,7 @@ int mnt_match_options(const char *optstr, const char *pattern)
 }
 
 #ifdef TEST_PROGRAM
+#include "xalloc.h"
 
 static int test_append(struct libmnt_test *ts, int argc, char *argv[])
 {
@@ -1172,7 +1226,7 @@ static int test_append(struct libmnt_test *ts, int argc, char *argv[])
 
 	if (argc < 3)
 		return -EINVAL;
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 	name = argv[2];
 
 	if (argc == 4)
@@ -1193,7 +1247,7 @@ static int test_prepend(struct libmnt_test *ts, int argc, char *argv[])
 
 	if (argc < 3)
 		return -EINVAL;
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 	name = argv[2];
 
 	if (argc == 4)
@@ -1214,7 +1268,7 @@ static int test_split(struct libmnt_test *ts, int argc, char *argv[])
 	if (argc < 2)
 		return -EINVAL;
 
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 
 	rc = mnt_split_optstr(optstr, &user, &vfs, &fs, 0, 0);
 	if (!rc) {
@@ -1239,7 +1293,7 @@ static int test_flags(struct libmnt_test *ts, int argc, char *argv[])
 	if (argc < 2)
 		return -EINVAL;
 
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 
 	rc = mnt_optstr_get_flags(optstr, &fl, mnt_get_builtin_optmap(MNT_LINUX_MAP));
 	if (rc)
@@ -1274,7 +1328,7 @@ static int test_apply(struct libmnt_test *ts, int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	optstr = strdup(argv[2]);
+	optstr = xstrdup(argv[2]);
 	flags = strtoul(argv[3], NULL, 16);
 
 	printf("flags:  0x%08lx\n", flags);
@@ -1294,7 +1348,7 @@ static int test_set(struct libmnt_test *ts, int argc, char *argv[])
 
 	if (argc < 3)
 		return -EINVAL;
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 	name = argv[2];
 
 	if (argc == 4)
@@ -1344,7 +1398,7 @@ static int test_remove(struct libmnt_test *ts, int argc, char *argv[])
 
 	if (argc < 3)
 		return -EINVAL;
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 	name = argv[2];
 
 	rc = mnt_optstr_remove_option(&optstr, name);
@@ -1362,7 +1416,7 @@ static int test_dedup(struct libmnt_test *ts, int argc, char *argv[])
 
 	if (argc < 3)
 		return -EINVAL;
-	optstr = strdup(argv[1]);
+	optstr = xstrdup(argv[1]);
 	name = argv[2];
 
 	rc = mnt_optstr_deduplicate_option(&optstr, name);
@@ -1382,7 +1436,7 @@ static int test_fix(struct libmnt_test *ts, int argc, char *argv[])
 	if (argc < 2)
 		return -EINVAL;
 
-	next = optstr = strdup(argv[1]);
+	next = optstr = xstrdup(argv[1]);
 
 	printf("optstr: %s\n", optstr);
 

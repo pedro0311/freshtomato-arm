@@ -77,7 +77,7 @@ static inline struct dirent *xreaddir(DIR *dp)
 	return d;
 }
 
-#if defined(__linux__)
+#ifdef HAVE_SYS_SYSCALL_H
 # include <sys/syscall.h>
 # if defined(SYS_close_range)
 #  include <sys/types.h>
@@ -89,12 +89,15 @@ static inline int close_range(unsigned int first, unsigned int last, int flags)
 #  endif
 #  define HAVE_CLOSE_RANGE 1
 # endif	/* SYS_close_range */
-#endif	/* __linux__ */
+#endif	/* HAVE_SYS_SYSCALL_H */
 
 extern void ul_close_all_fds(unsigned int first, unsigned int last);
 
 #define UL_COPY_READ_ERROR (-1)
 #define UL_COPY_WRITE_ERROR (-2)
 int ul_copy_file(int from, int to);
+
+
+extern int ul_reopen(int fd, int flags);
 
 #endif /* UTIL_LINUX_FILEUTILS */

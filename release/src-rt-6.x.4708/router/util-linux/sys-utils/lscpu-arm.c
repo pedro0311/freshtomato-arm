@@ -79,8 +79,14 @@ static const struct id_part arm_part[] = {
     { 0xd13, "Cortex-R52" },
     { 0xd20, "Cortex-M23" },
     { 0xd21, "Cortex-M33" },
+    { 0xd40, "Neoverse-V1" },
     { 0xd41, "Cortex-A78" },
     { 0xd42, "Cortex-A78AE" },
+    { 0xd44, "Cortex-X1" },
+    { 0xd46, "Cortex-510" },
+    { 0xd47, "Cortex-710" },
+    { 0xd48, "Cortex-X2" },
+    { 0xd49, "Neoverse-N2" },
     { 0xd4a, "Neoverse-E1" },
     { 0xd4b, "Cortex-A78C" },
     { -1, "unknown" },
@@ -147,6 +153,12 @@ static const struct id_part marvell_part[] = {
     { -1, "unknown" },
 };
 
+static const struct id_part apple_part[] = {
+    { 0x022, "Icestorm" },
+    { 0x023, "Firestorm" },
+    { -1, "unknown" },
+};
+
 static const struct id_part faraday_part[] = {
     { 0x526, "FA526" },
     { 0x626, "FA626" },
@@ -189,8 +201,10 @@ static const struct id_part hisi_part[] = {
 };
 
 static const struct id_part ft_part[] = {
-    { 0x662, "FT-2000+" },
-    { 0x663, "S2500" },
+    { 0x660, "FTC660" },
+    { 0x661, "FTC661" },
+    { 0x662, "FTC662" },
+    { 0x663, "FTC663" },
     { -1, "unknown" },
 };
 
@@ -218,7 +232,7 @@ static const struct hw_impl hw_implementer[] = {
     { 0x51, qcom_part,    "Qualcomm" },
     { 0x53, samsung_part, "Samsung" },
     { 0x56, marvell_part, "Marvell" },
-    { 0x61, unknown_part, "Apple" },
+    { 0x61, apple_part,   "Apple" },
     { 0x66, faraday_part, "Faraday" },
     { 0x69, intel_part,   "Intel" },
     { 0x70, ft_part,      "Phytium" },
@@ -322,52 +336,10 @@ static int arm_rXpY_decode(struct lscpu_cputype *ct)
 	return 0;
 }
 
-#define PROC_MFR_OFFSET		0x07
-#define PROC_VERSION_OFFSET	0x10
-
-/*
- * Use firmware to get human readable names
- */
-static int arm_smbios_decode(struct lscpu_cputype *ct)
-{
-	uint8_t data[8192];
-	char buf[128], *str;
-	struct lscpu_dmi_header h;
-	int fd;
-	ssize_t rs;
-
-	fd = open(_PATH_SYS_DMI_TYPE4, O_RDONLY);
-	if (fd < 0)
-		return fd;
-
-	rs = read_all(fd, (char *) data, 8192);
-	close(fd);
-
-	if (rs == -1)
-		return -1;
-
-	to_dmi_header(&h, data);
-
-	str = dmi_string(&h, data[PROC_MFR_OFFSET]);
-	if (str) {
-		xstrncpy(buf, str, 127);
-		ct->bios_vendor = xstrdup(buf);
-	}
-
-	str = dmi_string(&h, data[PROC_VERSION_OFFSET]);
-	if (str) {
-		xstrncpy(buf, str, 127);
-		ct->bios_modelname = xstrdup(buf);
-	}
-
-	return 0;
-}
-
 static void arm_decode(struct lscpu_cxt *cxt, struct lscpu_cputype *ct)
 {
-	/* use SMBIOS Type 4 data if available */
-	if (!cxt->noalive && access(_PATH_SYS_DMI_TYPE4, R_OK) == 0)
-		arm_smbios_decode(ct);
+	if (!cxt->noalive && access(_PATH_SYS_DMI, R_OK) == 0)
+		dmi_decode_cputype(ct);
 
 	arm_ids_decode(ct);
 	arm_rXpY_decode(ct);

@@ -38,7 +38,7 @@ Note that _zramdev_ node specified on command line has to already exist. The com
 
 == OPTIONS
 
-*-a*, **--algorithm lzo**|**lz4**|**lz4hc**|**deflate**|*842*::
+*-a*, **--algorithm lzo**|**lz4**|**lz4hc**|**deflate**|**842**|**zstd**::
 Set the compression algorithm to be used for compressing data in the zram device.
 
 *-f*, *--find*::
@@ -67,11 +67,7 @@ The _size_ argument may be followed by the multiplicative suffixes KiB (=1024), 
 *-t*, *--streams* _number_::
 Set the maximum number of compression streams that can be used for the device. The default is use all CPUs and one stream for kernels older than 4.6.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == EXIT STATUS
 

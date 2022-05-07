@@ -41,6 +41,7 @@
 #include "closestream.h"
 #include "namespace.h"
 #include "exec_shell.h"
+#include "optutils.h"
 
 static struct namespace_file {
 	int nstype;
@@ -93,6 +94,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_("     --preserve-credentials do not touch uids or gids\n"), out);
 	fputs(_(" -r, --root[=<dir>]     set the root directory\n"), out);
 	fputs(_(" -w, --wd[=<dir>]       set the working directory\n"), out);
+	fputs(_(" -W. --wdns <dir>       set the working directory in namespace\n"), out);
 	fputs(_(" -F, --no-fork          do not fork before exec'ing <program>\n"), out);
 #ifdef HAVE_LIBSELINUX
 	fputs(_(" -Z, --follow-context   set SELinux context according to --target PID\n"), out);
@@ -156,28 +158,45 @@ static int get_ns_ino(const char *path, ino_t *ino)
 	return 0;
 }
 
-static int is_same_namespace(pid_t a, pid_t b, const char *type)
+static int is_usable_namespace(pid_t target, const struct namespace_file *nsfile)
 {
 	char path[PATH_MAX];
-	ino_t a_ino = 0, b_ino = 0;
+	ino_t my_ino = 0;
+	int rc;
 
-	snprintf(path, sizeof(path), "/proc/%u/%s", a, type);
-	if (get_ns_ino(path, &a_ino) != 0)
-		err(EXIT_FAILURE, _("stat of %s failed"), path);
+	/* Check NS accessibility */
+	snprintf(path, sizeof(path), "/proc/%u/%s", getpid(), nsfile->name);
+	rc = get_ns_ino(path, &my_ino);
+	if (rc == -ENOENT)
+		return false; /* Unsupported NS */
 
-	snprintf(path, sizeof(path), "/proc/%u/%s", b, type);
-	if (get_ns_ino(path, &b_ino) != 0)
-		err(EXIT_FAILURE, _("stat of %s failed"), path);
+	/* It is not permitted to use setns(2) to reenter the caller's
+	 * current user namespace; see setns(2) man page for more details.
+	 */
+	if (nsfile->nstype & CLONE_NEWUSER) {
+		ino_t target_ino = 0;
 
-	return a_ino == b_ino;
+		snprintf(path, sizeof(path), "/proc/%u/%s", target, nsfile->name);
+		if (get_ns_ino(path, &target_ino) != 0)
+			err(EXIT_FAILURE, _("stat of %s failed"), path);
+
+		if (my_ino == target_ino)
+			return false;
+	}
+
+	return true; /* All pass */
 }
 
 static void continue_as_child(void)
 {
-	pid_t child = fork();
+	pid_t child;
 	int status;
 	pid_t ret;
 
+	/* Clear any inherited settings */
+	signal(SIGCHLD, SIG_DFL);
+
+	child = fork();
 	if (child < 0)
 		err(EXIT_FAILURE, _("fork failed"));
 
@@ -226,6 +245,7 @@ int main(int argc, char *argv[])
 		{ "setgid", required_argument, NULL, 'G' },
 		{ "root", optional_argument, NULL, 'r' },
 		{ "wd", optional_argument, NULL, 'w' },
+		{ "wdns", optional_argument, NULL, 'W' },
 		{ "no-fork", no_argument, NULL, 'F' },
 		{ "preserve-credentials", no_argument, NULL, OPT_PRESERVE_CRED },
 #ifdef HAVE_LIBSELINUX
@@ -233,12 +253,18 @@ int main(int argc, char *argv[])
 #endif
 		{ NULL, 0, NULL, 0 }
 	};
+	static const ul_excl_t excl[] = {       /* rows and cols in ASCII order */
+		{ 'W', 'w' },
+		{ 0 }
+	};
+	int excl_st[ARRAY_SIZE(excl)] = UL_EXCL_STATUS_INIT;
 
 	struct namespace_file *nsfile;
 	int c, pass, namespaces = 0, setgroups_nerrs = 0, preserve_cred = 0;
 	bool do_rd = false, do_wd = false, force_uid = false, force_gid = false;
 	bool do_all = false;
 	int do_fork = -1; /* unknown yet */
+	char *wdns = NULL;
 	uid_t uid = 0;
 	gid_t gid = 0;
 #ifdef HAVE_LIBSELINUX
@@ -251,8 +277,11 @@ int main(int argc, char *argv[])
 	close_stdout_atexit();
 
 	while ((c =
-		getopt_long(argc, argv, "+ahVt:m::u::i::n::p::C::U::T::S:G:r::w::FZ",
+		getopt_long(argc, argv, "+ahVt:m::u::i::n::p::C::U::T::S:G:r::w::W:FZ",
 			    longopts, NULL)) != -1) {
+
+		err_exclusive_options(c, longopts, excl, excl_st);
+
 		switch (c) {
 		case 'a':
 			do_all = true;
@@ -332,6 +361,9 @@ int main(int argc, char *argv[])
 			else
 				do_wd = true;
 			break;
+		case 'W':
+			wdns = optarg;
+			break;
 		case OPT_PRESERVE_CRED:
 			preserve_cred = 1;
 			break;
@@ -371,11 +403,7 @@ int main(int argc, char *argv[])
 			if (nsfile->fd >= 0)
 				continue;	/* namespace already specified */
 
-			/* It is not permitted to use setns(2) to reenter the caller's
-			 * current user namespace; see setns(2) man page for more details.
-			 */
-			if (nsfile->nstype & CLONE_NEWUSER
-			    && is_same_namespace(getpid(), namespace_target_pid, nsfile->name))
+			if (!is_usable_namespace(namespace_target_pid, nsfile))
 				continue;
 
 			namespaces |= nsfile->nstype;
@@ -442,7 +470,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* Remember the current working directory if I'm not changing it */
-	if (root_fd >= 0 && wd_fd < 0) {
+	if (root_fd >= 0 && wd_fd < 0 && wdns == NULL) {
 		wd_fd = open(".", O_RDONLY);
 		if (wd_fd < 0)
 			err(EXIT_FAILURE,
@@ -462,6 +490,14 @@ int main(int argc, char *argv[])
 
 		close(root_fd);
 		root_fd = -1;
+	}
+
+	/* working directory specified as in-namespace path */
+	if (wdns) {
+		wd_fd = open(wdns, O_RDONLY);
+		if (wd_fd < 0)
+			err(EXIT_FAILURE,
+			    _("cannot open current working directory"));
 	}
 
 	/* Change the working directory */

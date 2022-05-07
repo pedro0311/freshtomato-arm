@@ -17,6 +17,8 @@ PACKAGES=(
 	ntp
 	socat
 	asciidoctor
+	meson
+	lcov
 )
 
 PACKAGES_OPTIONAL=(
@@ -24,14 +26,19 @@ PACKAGES_OPTIONAL=(
 	libsystemd-journal-dev
 )
 
+# scsi_debug
+PACKAGES+=(linux-modules-extra-$(uname -r))
 
 COMPILER="${COMPILER:?}"
-COMPILER_VERSION="${COMPILER_VERSION:?}"
 RELEASE="$(lsb_release -cs)"
 
 bash -c "echo 'deb-src http://archive.ubuntu.com/ubuntu/ $RELEASE main restricted universe multiverse' >>/etc/apt/sources.list"
 
-if [[ "$COMPILER" == clang ]]; then
+# cov-build fails to compile util-linux when CC is set to gcc-*
+# so let's just install and use the default compiler
+if [[ "$COMPILER_VERSION" == "" ]]; then
+    PACKAGES+=("$COMPILER")
+elif [[ "$COMPILER" == clang ]]; then
     # Latest LLVM stack deb packages provided by https://apt.llvm.org/
     # Following snippet was borrowed from https://apt.llvm.org/llvm.sh
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -

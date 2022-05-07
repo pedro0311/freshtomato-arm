@@ -94,11 +94,17 @@
 #ifdef HAVE_LINUX_CDROM_H
 #include <linux/cdrom.h>
 #endif
+#ifdef HAVE_LINUX_BLKZONED_H
+#include <linux/blkzoned.h>
+#endif
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
+#endif
+#ifdef HAVE_LINUX_FD_H
+#include <linux/fd.h>
 #endif
 #include <inttypes.h>
 #include <stdint.h>
@@ -110,6 +116,7 @@
 #include "sysfs.h"
 #include "strutils.h"
 #include "list.h"
+#include "fileutils.h"
 
 /*
  * All supported chains
@@ -177,6 +184,7 @@ blkid_probe blkid_clone_probe(blkid_probe parent)
 	pr->disk_devno = parent->disk_devno;
 	pr->blkssz = parent->blkssz;
 	pr->flags = parent->flags;
+	pr->zone_size = parent->zone_size;
 	pr->parent = parent;
 
 	pr->flags &= ~BLKID_FL_PRIVATE_FD;
@@ -243,6 +251,7 @@ void blkid_free_probe(blkid_probe pr)
 		if (ch->driver->free_data)
 			ch->driver->free_data(pr, ch->data);
 		free(ch->fltr);
+		ch->fltr = NULL;
 	}
 
 	if ((pr->flags & BLKID_FL_PRIVATE_FD) && pr->fd >= 0)
@@ -872,9 +881,7 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 	struct stat sb;
 	uint64_t devsiz = 0;
 	char *dm_uuid = NULL;
-#ifdef CDROM_GET_CAPABILITY
-	long last_written = 0;
-#endif
+	int is_floppy = 0;
 
 	blkid_reset_probe(pr);
 	blkid_probe_reset_buffers(pr);
@@ -901,9 +908,11 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 	pr->wipe_off = 0;
 	pr->wipe_size = 0;
 	pr->wipe_chain = NULL;
+	pr->zone_size = 0;
 
 	if (fd < 0)
 		return 1;
+
 
 #if defined(POSIX_FADV_RANDOM) && defined(HAVE_POSIX_FADVISE)
 	/* Disable read-ahead */
@@ -926,9 +935,17 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 			DBG(LOWPROBE, ul_debug("failed to get device size"));
 			goto err;
 		}
-	} else if (S_ISCHR(sb.st_mode))
+	} else if (S_ISCHR(sb.st_mode)) {
+		char buf[PATH_MAX];
+
+		if (!sysfs_chrdev_devno_to_devname(sb.st_rdev, buf, sizeof(buf))
+		    || strncmp(buf, "ubi", 3) != 0) {
+			DBG(LOWPROBE, ul_debug("no UBI char device"));
+			errno = EINVAL;
+			goto err;
+		}
 		devsiz = 1;		/* UBI devices are char... */
-	else if (S_ISREG(sb.st_mode))
+	} else if (S_ISREG(sb.st_mode))
 		devsiz = sb.st_size;	/* regular file */
 
 	pr->size = size ? (uint64_t)size : devsiz;
@@ -946,7 +963,38 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 	if (pr->size <= 1440 * 1024 && !S_ISCHR(sb.st_mode))
 		pr->flags |= BLKID_FL_TINY_DEV;
 
+#ifdef FDGETFDCSTAT
+	if (S_ISBLK(sb.st_mode)) {
+		/*
+		 * Re-open without O_NONBLOCK for floppy device.
+		 *
+		 * Since kernel commit c7e9d0020361f4308a70cdfd6d5335e273eb8717
+		 * floppy drive works bad when opened with O_NONBLOCK.
+		 */
+		struct floppy_fdc_state flst;
+
+		if (ioctl(fd, FDGETFDCSTAT, &flst) >= 0) {
+			int flags = fcntl(fd, F_GETFL, 0);
+
+			if (flags < 0)
+				goto err;
+			if (flags & O_NONBLOCK) {
+				flags &= ~O_NONBLOCK;
+
+				fd = ul_reopen(fd, flags | O_CLOEXEC);
+				if (fd < 0)
+					goto err;
+
+				pr->flags |= BLKID_FL_PRIVATE_FD;
+				pr->fd = fd;
+			}
+			is_floppy = 1;
+		}
+		errno = 0;
+	}
+#endif
 	if (S_ISBLK(sb.st_mode) &&
+	    !is_floppy &&
 	    sysfs_devno_is_dm_private(sb.st_rdev, &dm_uuid)) {
 		DBG(LOWPROBE, ul_debug("ignore private device mapper device"));
 		pr->flags |= BLKID_FL_NOSCAN_DEV;
@@ -956,7 +1004,10 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 	else if (S_ISBLK(sb.st_mode) &&
 	    !blkid_probe_is_tiny(pr) &&
 	    !dm_uuid &&
+	    !is_floppy &&
 	    blkid_probe_is_wholedisk(pr)) {
+
+		long last_written = 0;
 
 		/*
 		 * pktcdvd.ko accepts only these ioctls:
@@ -981,8 +1032,12 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 		}
 
 # ifdef CDROM_LAST_WRITTEN
-		if (ioctl(fd, CDROM_LAST_WRITTEN, &last_written) == 0)
+		if (ioctl(fd, CDROM_LAST_WRITTEN, &last_written) == 0) {
 			pr->flags |= BLKID_FL_CDROM_DEV;
+		} else {
+			if (errno == ENOMEDIUM)
+				goto err;
+		}
 # endif
 
 		if (pr->flags & BLKID_FL_CDROM_DEV) {
@@ -1000,8 +1055,17 @@ int blkid_probe_set_device(blkid_probe pr, int fd,
 #endif
 	free(dm_uuid);
 
-	DBG(LOWPROBE, ul_debug("ready for low-probing, offset=%"PRIu64", size=%"PRIu64"",
-				pr->off, pr->size));
+# ifdef BLKGETZONESZ
+	if (S_ISBLK(sb.st_mode) && !is_floppy) {
+		uint32_t zone_size_sector;
+
+		if (!ioctl(pr->fd, BLKGETZONESZ, &zone_size_sector))
+			pr->zone_size = zone_size_sector << 9;
+	}
+# endif
+
+	DBG(LOWPROBE, ul_debug("ready for low-probing, offset=%"PRIu64", size=%"PRIu64", zonesize=%"PRIu64,
+				pr->off, pr->size, pr->zone_size));
 	DBG(LOWPROBE, ul_debug("whole-disk: %s, regfile: %s",
 		blkid_probe_is_wholedisk(pr) ?"YES" : "NO",
 		S_ISREG(pr->mode) ? "YES" : "NO"));
@@ -1068,12 +1132,24 @@ int blkid_probe_get_idmag(blkid_probe pr, const struct blkid_idinfo *id,
 	/* try to detect by magic string */
 	while(mag && mag->magic) {
 		unsigned char *buf;
+		uint64_t kboff;
 		uint64_t hint_offset;
 
 		if (!mag->hoff || blkid_probe_get_hint(pr, mag->hoff, &hint_offset) < 0)
 			hint_offset = 0;
 
-		off = hint_offset + ((mag->kboff + (mag->sboff >> 10)) << 10);
+		/* If the magic is for zoned device, skip non-zoned device */
+		if (mag->is_zoned && !pr->zone_size) {
+			mag++;
+			continue;
+		}
+
+		if (!mag->is_zoned)
+			kboff = mag->kboff;
+		else
+			kboff = ((mag->zonenum * pr->zone_size) >> 10) + mag->kboff_inzone;
+
+		off = hint_offset + ((kboff + (mag->sboff >> 10)) << 10);
 		buf = blkid_probe_get_buffer(pr, off, 1024);
 
 		if (!buf && errno)
@@ -1083,7 +1159,7 @@ int blkid_probe_get_idmag(blkid_probe pr, const struct blkid_idinfo *id,
 				buf + (mag->sboff & 0x3ff), mag->len)) {
 
 			DBG(LOWPROBE, ul_debug("\tmagic sboff=%u, kboff=%ld",
-				mag->sboff, mag->kboff));
+				mag->sboff, kboff));
 			if (offset)
 				*offset = off + (mag->sboff & 0x3ff);
 			if (res)
@@ -1207,6 +1283,39 @@ int blkid_do_probe(blkid_probe pr)
 	return rc;
 }
 
+#ifdef HAVE_LINUX_BLKZONED_H
+static int is_conventional(blkid_probe pr, uint64_t offset)
+{
+	struct blk_zone_report *rep = NULL;
+	int ret;
+	uint64_t zone_mask;
+
+	if (!pr->zone_size)
+		return 1;
+
+	zone_mask = ~(pr->zone_size - 1);
+	rep = blkdev_get_zonereport(blkid_probe_get_fd(pr),
+				    (offset & zone_mask) >> 9, 1);
+	if (!rep)
+		return -1;
+
+	if (rep->zones[0].type == BLK_ZONE_TYPE_CONVENTIONAL)
+		ret = 1;
+	else
+		ret = 0;
+
+	free(rep);
+
+	return ret;
+}
+#else
+static inline int is_conventional(blkid_probe pr __attribute__((__unused__)),
+				  uint64_t offset __attribute__((__unused__)))
+{
+	return 1;
+}
+#endif
+
 /**
  * blkid_do_wipe:
  * @pr: prober
@@ -1246,6 +1355,7 @@ int blkid_do_wipe(blkid_probe pr, int dryrun)
 	const char *off = NULL;
 	size_t len = 0;
 	uint64_t offset, magoff;
+	int conventional;
 	char buf[BUFSIZ];
 	int fd, rc = 0;
 	struct blkid_chain *chn;
@@ -1285,6 +1395,11 @@ int blkid_do_wipe(blkid_probe pr, int dryrun)
 	if (len > sizeof(buf))
 		len = sizeof(buf);
 
+	rc = is_conventional(pr, offset);
+	if (rc < 0)
+		return rc;
+	conventional = rc == 1;
+
 	DBG(LOWPROBE, ul_debug(
 	    "do_wipe [offset=0x%"PRIx64" (%"PRIu64"), len=%zu, chain=%s, idx=%d, dryrun=%s]\n",
 	    offset, offset, len, chn->driver->name, chn->idx, dryrun ? "yes" : "not"));
@@ -1292,13 +1407,31 @@ int blkid_do_wipe(blkid_probe pr, int dryrun)
 	if (lseek(fd, offset, SEEK_SET) == (off_t) -1)
 		return -1;
 
-	memset(buf, 0, len);
-
 	if (!dryrun && len) {
-		/* wipen on device */
-		if (write_all(fd, buf, len))
-			return -1;
-		fsync(fd);
+		if (conventional) {
+			memset(buf, 0, len);
+
+			/* wipen on device */
+			if (write_all(fd, buf, len))
+				return -1;
+			fsync(fd);
+		} else {
+#ifdef HAVE_LINUX_BLKZONED_H
+			uint64_t zone_mask = ~(pr->zone_size - 1);
+			struct blk_zone_range range = {
+				.sector = (offset & zone_mask) >> 9,
+				.nr_sectors = pr->zone_size >> 9,
+			};
+
+			rc = ioctl(fd, BLKRESETZONE, &range);
+			if (rc < 0)
+				return -1;
+#else
+			/* Should not reach here */
+			assert(0);
+#endif
+		}
+
 		pr->flags &= ~BLKID_FL_MODIF_BUFF;	/* be paranoid */
 
 		return blkid_probe_step_back(pr);

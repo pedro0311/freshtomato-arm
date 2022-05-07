@@ -25,6 +25,8 @@
 #include <ctype.h>
 #include <assert.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <sys/resource.h>
 
 #include <libsmartcols.h>
@@ -141,15 +143,19 @@ static int ncolumns;
 static pid_t pid; /* calling process (default) */
 static int verbose;
 
-#ifndef HAVE_PRLIMIT
+#ifdef HAVE_SYS_SYSCALL_H
 # include <sys/syscall.h>
+# if defined(SYS_prlimit64)
+#  ifndef HAVE_PRLIMIT
 static int prlimit(pid_t p, int resource,
 		   const struct rlimit *new_limit,
 		   struct rlimit *old_limit)
 {
 	return syscall(SYS_prlimit64, p, resource, new_limit, old_limit);
 }
-#endif
+#  endif /* !HAVE_PRLIMIT */
+# endif /* SYS_prlimit64 */
+#endif /* HAVE_SYS_SYSCALL_H */
 
 static void __attribute__((__noreturn__)) usage(void)
 {
@@ -159,14 +165,14 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(USAGE_HEADER, out);
 
 	fprintf(out,
-		_(" %s [options] [-p PID]\n"), program_invocation_short_name);
+		_(" %s [options] [--<resource>=<limit>] [-p PID]\n"), program_invocation_short_name);
 	fprintf(out,
-		_(" %s [options] COMMAND\n"), program_invocation_short_name);
+		_(" %s [options] [--<resource>=<limit>] COMMAND\n"), program_invocation_short_name);
 
 	fputs(USAGE_SEPARATOR, out);
 	fputs(_("Show or change the resource limits of a process.\n"), out);
 
-	fputs(_("\nGeneral Options:\n"), out);
+	fputs(USAGE_OPTIONS, out);
 	fputs(_(" -p, --pid <pid>        process id\n"
 		" -o, --output <list>    define which output columns to use\n"
 		"     --noheadings       don't print headings\n"
@@ -175,7 +181,7 @@ static void __attribute__((__noreturn__)) usage(void)
 		), out);
 	printf(USAGE_HELP_OPTIONS(24));
 
-	fputs(_("\nResources Options:\n"), out);
+	fputs(_("\nResources:\n"), out);
 	fputs(_(" -c, --core             maximum size of core files created\n"
 		" -d, --data             maximum size of a process's data segment\n"
 		" -e, --nice             maximum nice priority allowed to raise\n"
@@ -193,6 +199,11 @@ static void __attribute__((__noreturn__)) usage(void)
 		" -x, --locks            maximum number of file locks\n"
 		" -y, --rttime           CPU time in microseconds a process scheduled\n"
 		"                        under real-time scheduling\n"), out);
+
+	fputs(USAGE_ARGUMENTS, out);
+	fputs(_(
+		" <limit> is defined as a range soft:hard, soft:, :hard or a value to\n"
+		"         define both limits (e.g. -e=0:10 -r=:10).\n"), out);
 
 	fputs(USAGE_COLUMNS, out);
 	for (i = 0; i < ARRAY_SIZE(infos); i++)

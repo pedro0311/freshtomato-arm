@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="16-Aug-2021"
+LIBBLKID_DATE="28-Mar-2022"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -301,12 +301,14 @@ AC_CHECK_HEADERS([ \
 	inttypes.h \
 	lastlog.h \
 	libutil.h \
+	linux/blkzoned.h \
 	linux/btrfs.h \
 	linux/capability.h \
 	linux/cdrom.h \
 	linux/falloc.h \
 	linux/fd.h \
 	linux/fiemap.h \
+	linux/kcmp.h \
 	linux/net_namespace.h \
 	linux/nsfs.h \
 	linux/raw.h \
@@ -314,6 +316,7 @@ AC_CHECK_HEADERS([ \
 	linux/tiocl.h \
 	linux/version.h \
 	linux/watchdog.h \
+	linux/if_alg.h \
 	locale.h \
 	mntent.h \
 	net/if_dl.h \
@@ -381,8 +384,6 @@ AC_CHECK_HEADERS([security/pam_misc.h],
 #include <security/pam_appl.h>
 #endif
 ])
-
-AC_CHECK_HEADERS([linux/blkzoned.h])
 
 AC_CHECK_DECLS([BLK_ZONE_REP_CAPACITY], [], [], [
 	#include <linux/blkzoned.h>
@@ -455,6 +456,7 @@ dnl
 have_linux_blkzoned_h=$ac_cv_header_linux_blkzoned_h
 have_linux_btrfs_h=$ac_cv_header_linux_btrfs_h
 have_linux_capability_h=$ac_cv_header_linux_capability_h
+have_linux_kcmp_h=$ac_cv_header_linux_kcmp_h
 have_linux_raw_h=$ac_cv_header_linux_raw_h
 have_linux_securebits_h=$ac_cv_header_linux_securebits_h
 have_linux_version_h=$ac_cv_header_linux_version_h
@@ -466,6 +468,7 @@ have_security_pam_misc_h=$ac_cv_header_security_pam_misc_h
 have_shadow_h=$ac_cv_header_shadow_h
 have_sys_signalfd_h=$ac_cv_header_sys_signalfd_h
 have_utmpx_h=$ac_cv_header_utmpx_h
+have_mntent_h=$ac_cv_header_mntent_h
 
 AS_CASE([$linux_os:$have_linux_version_h],
   [yes:no],
@@ -536,10 +539,14 @@ AC_CHECK_FUNCS([ \
 	getrandom \
 	getrlimit \
 	getsgnam \
+	getttynam \
 	inotify_init \
 	jrand48 \
 	lchown \
+	lgetxattr \
+	llistxattr \
 	llseek \
+	newlocale \
 	mempcpy \
 	mkostemp \
 	nanosleep \
@@ -565,10 +572,12 @@ AC_CHECK_FUNCS([ \
 	strnchr \
 	strndup \
 	strnlen \
+	strtod_l \
 	sysconf \
 	sysinfo \
 	timegm \
 	usleep \
+	uselocale \
 	utimensat \
 	vwarnx \
 	warn \
@@ -1133,6 +1142,7 @@ AC_ARG_ENABLE([libmount],
 UL_BUILD_INIT([libmount])
 UL_REQUIRES_BUILD([libmount], [libblkid])
 UL_REQUIRES_HAVE([libmount], [dirfd,ddfd], [dirfd or ddfd function])
+UL_REQUIRES_HAVE([libmount], [mntent_h], [mntent.h header file])
 AM_CONDITIONAL([BUILD_LIBMOUNT], [test "x$build_libmount" = xyes])
 AM_CONDITIONAL([BUILD_LIBMOUNT_TESTS], [test "x$build_libmount" = xyes && test "x$enable_static" = xyes])
 AS_IF([test "x$build_libmount" = xyes], [
@@ -1423,7 +1433,23 @@ UL_REQUIRES_LINUX([unshare])
 UL_REQUIRES_SYSCALL_CHECK([unshare], [UL_CHECK_SYSCALL([unshare])])
 UL_REQUIRES_HAVE([unshare], [linux_capability_h], [linux/capability.h header file])
 AM_CONDITIONAL([BUILD_UNSHARE], [test "x$build_unshare" = xyes])
-AC_CHECK_FUNCS([unshare])
+
+AC_MSG_CHECKING([for valid unshare() function])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <sched.h>
+]],[[
+   int ret;
+   ret = unshare(0);
+   if (ret != 0) {
+      return 1;
+   }
+   ]])],[
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_UNSHARE], [1], [Have valid unshare() function])],
+[
+  AC_MSG_RESULT([no])
+])
+
 
 AC_ARG_ENABLE([nsenter],
   AS_HELP_STRING([--disable-nsenter], [do not build nsenter]),
@@ -1433,7 +1459,23 @@ UL_BUILD_INIT([nsenter])
 UL_REQUIRES_LINUX([nsenter])
 UL_REQUIRES_HAVE([nsenter], [setns_syscall], [setns syscall])
 AM_CONDITIONAL([BUILD_NSENTER], [test "x$build_nsenter" = xyes])
-AC_CHECK_FUNCS([setns])
+
+AC_MSG_CHECKING([for valid setns() function])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <sched.h>
+#include <errno.h>
+]],[[
+   int ret;
+   ret = setns(0, 0);
+   if (ret != EINVAL && ret != EBADF && ret != EPERM) {
+      return 1;
+   }
+   ]])],[
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_SETNS], [1], [Have valid setns() function])],
+[
+  AC_MSG_RESULT([no])
+])
 
 
 AC_ARG_WITH([cap_ng],
@@ -1649,6 +1691,15 @@ UL_REQUIRES_BUILD([lscpu], [libsmartcols])
 UL_REQUIRES_HAVE([lscpu], [cpu_set_t], [cpu_set_t type])
 AM_CONDITIONAL([BUILD_LSCPU], [test "x$build_lscpu" = xyes])
 
+AC_ARG_ENABLE([lsfd],
+  AS_HELP_STRING([--disable-lsfd], [do not build lsfd]),
+  [], [UL_DEFAULT_ENABLE([lsfd], [check])]
+)
+UL_BUILD_INIT([lsfd])
+UL_REQUIRES_LINUX([lsfd])
+UL_REQUIRES_BUILD([lsfd], [libsmartcols])
+UL_REQUIRES_HAVE([lsfd], [linux_kcmp_h], [linux/kcmp.h header file])
+AM_CONDITIONAL([BUILD_LSFD], [test "x$build_lsfd" = xyes])
 
 AC_ARG_ENABLE([lslogins],
   AS_HELP_STRING([--disable-lslogins], [do not build lslogins]),
@@ -1741,8 +1792,25 @@ UL_REQUIRES_BUILD([prlimit], [libsmartcols])
 UL_REQUIRES_SYSCALL_CHECK([prlimit], [UL_CHECK_SYSCALL([prlimit64])], [prlimit64])
 AM_CONDITIONAL([BUILD_PRLIMIT], [test "x$build_prlimit" = xyes])
 AS_IF([test "x$build_prlimit" = xyes], [
-  AC_CHECK_FUNCS([prlimit])
+  dnl check for valid prlimit() function
+  AC_MSG_CHECKING([for valid prlimit() function])
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <stddef.h>
+]],[[
+   int ret;
+   ret = prlimit(0, RLIMIT_AS, NULL, NULL);
+   if (ret != 0) {
+      return 1;
+   }
+   ]])],[
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([HAVE_PRLIMIT], [1], [Have valid prlimit() function])],[
+  AC_MSG_RESULT([no])])
 ])
+
 
 
 UL_BUILD_INIT([lslocks], [check])
@@ -1796,22 +1864,29 @@ UL_BUILD_INIT([chmem])
 UL_REQUIRES_LINUX([chmem])
 AM_CONDITIONAL([BUILD_CHMEM], [test "x$build_chmem" = xyes])
 
-UL_BUILD_INIT([ipcmk], [yes])
-AM_CONDITIONAL([BUILD_IPCMK], [test "x$build_ipcmk" = xyes])
 
+AC_ARG_ENABLE([ipcmk],
+  AS_HELP_STRING([--disable-ipcmk], [do not build ipcmk]),
+  [], [UL_DEFAULT_ENABLE([ipcmk], [check])]
+)
+UL_BUILD_INIT([ipcmk])
+UL_EXCLUDE_ARCH([ipcmk], [*darwin*])
+AM_CONDITIONAL([BUILD_IPCMK], [test "x$build_ipcmk" = xyes])
 
 AC_ARG_ENABLE([ipcrm],
   AS_HELP_STRING([--disable-ipcrm], [do not build ipcrm]),
-  [], [UL_DEFAULT_ENABLE([ipcrm], [yes])]
+  [], [UL_DEFAULT_ENABLE([ipcrm], [check])]
 )
 UL_BUILD_INIT([ipcrm])
+UL_EXCLUDE_ARCH([ipcrm], [*darwin*])
 AM_CONDITIONAL([BUILD_IPCRM], [test "x$build_ipcrm" = xyes])
 
 AC_ARG_ENABLE([ipcs],
   AS_HELP_STRING([--disable-ipcs], [do not build ipcs]),
-  [], [UL_DEFAULT_ENABLE([ipcs], [yes])]
+  [], [UL_DEFAULT_ENABLE([ipcs], [check])]
 )
 UL_BUILD_INIT([ipcs])
+UL_EXCLUDE_ARCH([ipcs], [*darwin*])
 AM_CONDITIONAL([BUILD_IPCS], [test "x$build_ipcs" = xyes])
 
 
@@ -2332,6 +2407,7 @@ AS_IF([test "x$with_systemd" != xno], [
       [AC_MSG_ERROR([systemd expected but libsystemd not found])],
     [*:yes],
        AC_DEFINE([HAVE_LIBSYSTEMD], [1], [Define if libsystemd is available])
+       AC_DEFINE([USE_SYSTEMD], [1], [Define if systemd support is wanted ])
   )
 ])
 AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$have_systemd" = xyes])
@@ -2685,7 +2761,7 @@ AC_MSG_RESULT([
         Manual pages:              ${build_asciidoc}
         Manual pages translated:   ${build_poman}
 
-        compiler:                  ${CC}
+        compiler:                  ${CC} / ${CXX}
         suid cflags:               ${SUID_CFLAGS}
         ldflags:                   ${LDFLAGS}
         suid ldflags:              ${SUID_LDFLAGS}

@@ -77,7 +77,7 @@ The command *blkzone close* is used to close one or more zones. Unlike *sg_zone*
 
 The command *blkzone finish* is used to finish (transition to full condition) one or more zones. Unlike *sg_zone*(8), finish action, this command operates from the block layer and can finish a range of zones.
 
-By default, the reset, open, close and finish commands will operate from the zone at device sector 0 and operate on all zones. Options may be used to modify this behavior as explained below.
+By default, the *reset*, *open*, *close* and *finish* commands will operate from the zone at device sector 0 and operate on all zones. Options may be used to modify this behavior as explained below.
 
 == OPTIONS
 
@@ -98,11 +98,7 @@ Enforce commands to change zone status on block devices used by the system.
 *-v*, *--verbose*::
 Display the number of zones returned in the report or the range of sectors reset.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == AUTHORS
 

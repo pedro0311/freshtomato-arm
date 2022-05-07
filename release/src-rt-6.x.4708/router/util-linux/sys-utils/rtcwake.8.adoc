@@ -26,7 +26,7 @@ On some systems, this can also be used like *nvram-wakeup*, waking from states l
 
 Note that alarm functionality depends on hardware; not every RTC is able to setup an alarm up to 24 hours in the future.
 
-The suspend setup may be interrupted by active hardware; for example wireless USB input devices that continue to send events for some fraction of a second after the return key is pressed. *rtcwake* tries to avoid this problem and it waits to terminal to settle down before entering a system sleep.
+The suspend setup may be interrupted by active hardware; for example wireless USB input devices that continue to send events for some fraction of a second after the return key is pressed. *rtcwake* tries to avoid this problem and it waits to the terminal to settle down before entering a system sleep.
 
 == OPTIONS
 
@@ -105,11 +105,7 @@ Assume that the hardware clock is set to UTC (Universal Time Coordinated), regar
 *-v*, *--verbose*::
 Be verbose.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == NOTES
 
@@ -133,6 +129,7 @@ This is free software. You may redistribute copies of it under the terms of the 
 
 == SEE ALSO
 
+*adjtime_config*(5),
 *hwclock*(8),
 *date*(1)
 

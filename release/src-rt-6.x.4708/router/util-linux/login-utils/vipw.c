@@ -114,6 +114,9 @@ static void pw_init(void)
 	(void)signal(SIGTSTP, SIG_IGN);
 	(void)signal(SIGTTOU, SIG_IGN);
 
+	/* Set SIGCHLD to default for waitpid. */
+	(void)signal(SIGCHLD, SIG_DFL);
+
 	/* Create with exact permissions. */
 	(void)umask(0);
 }
@@ -142,7 +145,7 @@ static void pw_write(void)
 {
 	char tmp[FILENAMELEN + 4];
 
-	sprintf(tmp, "%s%s", orig_file, ".OLD");
+	snprintf(tmp, sizeof(tmp), "%s%s", orig_file, ".OLD");
 	unlink(tmp);
 
 	if (link(orig_file, tmp))
@@ -202,7 +205,7 @@ static void pw_edit(void)
 	}
 	for (;;) {
 		pid = waitpid(pid, &pstat, WUNTRACED);
-		if (WIFSTOPPED(pstat)) {
+		if (pid != -1 && WIFSTOPPED(pstat)) {
 			/* the editor suspended, so suspend us as well */
 			kill(getpid(), SIGSTOP);
 			kill(pid, SIGCONT);
@@ -210,8 +213,12 @@ static void pw_edit(void)
 			break;
 		}
 	}
-	if (pid == -1 || !WIFEXITED(pstat) || WEXITSTATUS(pstat) != 0)
+	if (pid == -1)
 		pw_error(editor, 1, 1);
+	else if (!WIFEXITED(pstat) || WEXITSTATUS(pstat) != 0) {
+		warnx("%s: unsuccessful execution", editor);
+		pw_error(editor, 0, 1);
+	}
 
 	free(editor);
 }
@@ -221,7 +228,7 @@ pw_error(char *name, int err, int eval)
 {
 	if (err) {
 		if (name)
-			warn("%s: ", name);
+			warn("%s", name);
 		else
 			warn(NULL);
 	}
@@ -353,6 +360,7 @@ int main(int argc, char *argv[])
 		 * which means they can be translated. */
 		printf(_("Would you like to edit %s now [y/n]? "), orig_file);
 
+		fflush(stdout);
 		if (fgets(response, sizeof(response), stdin) &&
 		    rpmatch(response) == RPMATCH_YES)
 			edit_file(1);

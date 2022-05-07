@@ -242,7 +242,7 @@ static int check_getmntinfo(const char *file, int *mount_flags,
 		}
                 ++mp;
 	}
-	if (mtpt)
+	if (mtpt && n >= 0)
 		xstrncpy(mtpt, mp->f_mntonname, mtlen);
 	return 0;
 }
@@ -305,7 +305,7 @@ leave:
 
 
 /*
- * check_mount_point() fills determines if the device is mounted or otherwise
+ * check_mount_point() determines if the device is mounted or otherwise
  * busy, and fills in mount_flags with one or more of the following flags:
  * MF_MOUNTED, MF_ISROOT, MF_READONLY, MF_SWAP, and MF_BUSY.  If mtpt is
  * non-NULL, the directory where the device is mounted is copied to where mtpt
@@ -347,7 +347,7 @@ int check_mount_point(const char *device, int *mount_flags,
 		if ((stat(device, &st_buf) != 0) ||
 		    !S_ISBLK(st_buf.st_mode))
 			return 0;
-		fd = open(device, O_RDONLY|O_EXCL|O_CLOEXEC);
+		fd = open(device, O_RDONLY|O_EXCL|O_CLOEXEC|O_NONBLOCK);
 		if (fd < 0) {
 			if (errno == EBUSY)
 				*mount_flags |= MF_BUSY;

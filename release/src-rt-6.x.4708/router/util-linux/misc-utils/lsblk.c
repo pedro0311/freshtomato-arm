@@ -65,63 +65,70 @@ static int column_id_to_number(int id);
 
 /* column IDs */
 enum {
-	COL_NAME = 0,
-	COL_KNAME,
-	COL_PATH,
-	COL_MAJMIN,
+	COL_ALIOFF = 0,
+	COL_DALIGN,
+	COL_DAX,
+	COL_DGRAN,
+	COL_DMAX,
+	COL_DZERO,
 	COL_FSAVAIL,
+	COL_FSROOTS,
 	COL_FSSIZE,
 	COL_FSTYPE,
 	COL_FSUSED,
 	COL_FSUSEPERC,
-	COL_FSROOTS,
 	COL_FSVERSION,
-	COL_TARGET,
-	COL_TARGETS,
+	COL_GROUP,
+	COL_HCTL,
+	COL_HOTPLUG,
+	COL_KNAME,
 	COL_LABEL,
-	COL_UUID,
-	COL_PTUUID,
-	COL_PTTYPE,
+	COL_LOGSEC,
+	COL_MAJMIN,
+	COL_MINIO,
+	COL_MODE,
+	COL_MODEL,
+	COL_NAME,
+	COL_OPTIO,
+	COL_OWNER,
+	COL_PARTFLAGS,
+	COL_PARTLABEL,
 	COL_PARTTYPE,
 	COL_PARTTYPENAME,
-	COL_PARTLABEL,
 	COL_PARTUUID,
-	COL_PARTFLAGS,
+	COL_PATH,
+	COL_PHYSEC,
+	COL_PKNAME,
+	COL_PTTYPE,
+	COL_PTUUID,
 	COL_RA,
-	COL_RO,
+	COL_RAND,
+	COL_REV,
 	COL_RM,
-	COL_HOTPLUG,
-	COL_MODEL,
+	COL_RO,
+	COL_ROTA,
+	COL_RQ_SIZE,
+	COL_SCHED,
 	COL_SERIAL,
 	COL_SIZE,
+	COL_START,
 	COL_STATE,
-	COL_OWNER,
-	COL_GROUP,
-	COL_MODE,
-	COL_ALIOFF,
-	COL_MINIO,
-	COL_OPTIO,
-	COL_PHYSEC,
-	COL_LOGSEC,
-	COL_ROTA,
-	COL_SCHED,
-	COL_RQ_SIZE,
+	COL_SUBSYS,
+	COL_TARGET,
+	COL_TARGETS,
+	COL_TRANSPORT,
 	COL_TYPE,
-	COL_DALIGN,
-	COL_DGRAN,
-	COL_DMAX,
-	COL_DZERO,
+	COL_UUID,
+	COL_VENDOR,
 	COL_WSAME,
 	COL_WWN,
-	COL_RAND,
-	COL_PKNAME,
-	COL_HCTL,
-	COL_TRANSPORT,
-	COL_SUBSYS,
-	COL_REV,
-	COL_VENDOR,
 	COL_ZONED,
-	COL_DAX
+	COL_ZONE_SZ,
+	COL_ZONE_WGRAN,
+	COL_ZONE_APP,
+	COL_ZONE_NR,
+	COL_ZONE_OMAX,
+	COL_ZONE_AMAX,
 };
 
 /* basic table settings */
@@ -132,6 +139,7 @@ enum {
 	LSBLK_EXPORT =		(1 << 3),
 	LSBLK_TREE =		(1 << 4),
 	LSBLK_JSON =		(1 << 5),
+	LSBLK_SHELLVAR =	(1 << 6)
 };
 
 /* Types used for qsort() and JSON */
@@ -148,75 +156,76 @@ struct colinfo {
 	const char	*name;		/* header */
 	double		whint;		/* width hint (N < 1 is in percent of termwidth) */
 	int		flags;		/* SCOLS_FL_* */
-	const char      *help;
+	const char	*help;
 	int		type;		/* COLTYPE_* */
 };
 
 /* columns descriptions */
 static struct colinfo infos[] = {
-	[COL_NAME]   = { "NAME",    0.25, SCOLS_FL_NOEXTREMES, N_("device name") },
-	[COL_KNAME]  = { "KNAME",   0.3, 0, N_("internal kernel device name") },
-	[COL_PKNAME] = { "PKNAME",  0.3, 0, N_("internal parent kernel device name") },
-	[COL_PATH]   = { "PATH",    0.3,  0, N_("path to the device node") },
-	[COL_MAJMIN] = { "MAJ:MIN", 6, 0, N_("major:minor device number"), COLTYPE_SORTNUM },
-
-	[COL_FSAVAIL]   = { "FSAVAIL", 5, SCOLS_FL_RIGHT, N_("filesystem size available") },
-	[COL_FSSIZE]    = { "FSSIZE", 5, SCOLS_FL_RIGHT, N_("filesystem size") },
-	[COL_FSTYPE]    = { "FSTYPE", 0.1, SCOLS_FL_TRUNC, N_("filesystem type") },
-	[COL_FSUSED]    = { "FSUSED", 5, SCOLS_FL_RIGHT, N_("filesystem size used") },
-	[COL_FSUSEPERC] = { "FSUSE%", 3, SCOLS_FL_RIGHT, N_("filesystem use percentage") },
-	[COL_FSROOTS]   = { "FSROOTS", 0.1, SCOLS_FL_WRAP, N_("mounted filesystem roots") },
-	[COL_FSVERSION] = { "FSVER", 0.1, SCOLS_FL_TRUNC, N_("filesystem version") },
-
-	[COL_TARGET]    = { "MOUNTPOINT",  0.10, SCOLS_FL_TRUNC, N_("where the device is mounted") },
-	[COL_TARGETS]   = { "MOUNTPOINTS", 0.10, SCOLS_FL_WRAP,  N_("all locations where device is mounted") },
-
-	[COL_LABEL]  = { "LABEL",   0.1, 0, N_("filesystem LABEL") },
-	[COL_UUID]   = { "UUID",    36,  0, N_("filesystem UUID") },
-
-	[COL_PTUUID] = { "PTUUID",  36,  0, N_("partition table identifier (usually UUID)") },
-	[COL_PTTYPE] = { "PTTYPE",  0.1, 0, N_("partition table type") },
-
-	[COL_PARTTYPE]  = { "PARTTYPE",  36,  0, N_("partition type code or UUID") },
-	[COL_PARTTYPENAME]  = { "PARTTYPENAME",  0.1,  0, N_("partition type name") },
-	[COL_PARTLABEL] = { "PARTLABEL", 0.1, 0, N_("partition LABEL") },
-	[COL_PARTUUID]  = { "PARTUUID",  36,  0, N_("partition UUID") },
-	[COL_PARTFLAGS] = { "PARTFLAGS",  36,  0, N_("partition flags") },
-
-	[COL_RA]     = { "RA",      3, SCOLS_FL_RIGHT, N_("read-ahead of the device"), COLTYPE_NUM },
-	[COL_RO]     = { "RO",      1, SCOLS_FL_RIGHT, N_("read-only device"), COLTYPE_BOOL },
-	[COL_RM]     = { "RM",      1, SCOLS_FL_RIGHT, N_("removable device"), COLTYPE_BOOL },
-	[COL_HOTPLUG]= { "HOTPLUG", 1, SCOLS_FL_RIGHT, N_("removable or hotplug device (usb, pcmcia, ...)"), COLTYPE_BOOL },
-	[COL_ROTA]   = { "ROTA",    1, SCOLS_FL_RIGHT, N_("rotational device"), COLTYPE_BOOL },
-	[COL_RAND]   = { "RAND",    1, SCOLS_FL_RIGHT, N_("adds randomness"), COLTYPE_BOOL },
-	[COL_MODEL]  = { "MODEL",   0.1, SCOLS_FL_TRUNC, N_("device identifier") },
-	[COL_SERIAL] = { "SERIAL",  0.1, SCOLS_FL_TRUNC, N_("disk serial number") },
-	[COL_SIZE]   = { "SIZE",    5, SCOLS_FL_RIGHT, N_("size of the device"), COLTYPE_SIZE },
-	[COL_STATE]  = { "STATE",   7, SCOLS_FL_TRUNC, N_("state of the device") },
-	[COL_OWNER]  = { "OWNER",   0.1, SCOLS_FL_TRUNC, N_("user name"), },
-	[COL_GROUP]  = { "GROUP",   0.1, SCOLS_FL_TRUNC, N_("group name") },
-	[COL_MODE]   = { "MODE",    10,   0, N_("device node permissions") },
 	[COL_ALIOFF] = { "ALIGNMENT", 6, SCOLS_FL_RIGHT, N_("alignment offset"), COLTYPE_NUM },
-	[COL_MINIO]  = { "MIN-IO",  6, SCOLS_FL_RIGHT, N_("minimum I/O size"), COLTYPE_NUM },
-	[COL_OPTIO]  = { "OPT-IO",  6, SCOLS_FL_RIGHT, N_("optimal I/O size"), COLTYPE_NUM },
-	[COL_PHYSEC] = { "PHY-SEC", 7, SCOLS_FL_RIGHT, N_("physical sector size"), COLTYPE_NUM },
-	[COL_LOGSEC] = { "LOG-SEC", 7, SCOLS_FL_RIGHT, N_("logical sector size"), COLTYPE_NUM },
-	[COL_SCHED]  = { "SCHED",   0.1, 0, N_("I/O scheduler name") },
-	[COL_RQ_SIZE]= { "RQ-SIZE", 5, SCOLS_FL_RIGHT, N_("request queue size"), COLTYPE_NUM },
-	[COL_TYPE]   = { "TYPE",    4, 0, N_("device type") },
 	[COL_DALIGN] = { "DISC-ALN", 6, SCOLS_FL_RIGHT, N_("discard alignment offset"), COLTYPE_NUM },
-	[COL_DGRAN]  = { "DISC-GRAN", 6, SCOLS_FL_RIGHT, N_("discard granularity"), COLTYPE_SIZE },
-	[COL_DMAX]   = { "DISC-MAX", 6, SCOLS_FL_RIGHT, N_("discard max bytes"), COLTYPE_SIZE },
-	[COL_DZERO]  = { "DISC-ZERO", 1, SCOLS_FL_RIGHT, N_("discard zeroes data"), COLTYPE_BOOL },
-	[COL_WSAME]  = { "WSAME",   6, SCOLS_FL_RIGHT, N_("write same max bytes"), COLTYPE_SIZE },
-	[COL_WWN]    = { "WWN",     18, 0, N_("unique storage identifier") },
-	[COL_HCTL]   = { "HCTL", 10, 0, N_("Host:Channel:Target:Lun for SCSI") },
-	[COL_TRANSPORT] = { "TRAN", 6, 0, N_("device transport type") },
+	[COL_DAX] = { "DAX", 1, SCOLS_FL_RIGHT, N_("dax-capable device"), COLTYPE_BOOL },
+	[COL_DGRAN] = { "DISC-GRAN", 6, SCOLS_FL_RIGHT, N_("discard granularity"), COLTYPE_SIZE },
+	[COL_DMAX] = { "DISC-MAX", 6, SCOLS_FL_RIGHT, N_("discard max bytes"), COLTYPE_SIZE },
+	[COL_DZERO] = { "DISC-ZERO", 1, SCOLS_FL_RIGHT, N_("discard zeroes data"), COLTYPE_BOOL },
+	[COL_FSAVAIL] = { "FSAVAIL", 5, SCOLS_FL_RIGHT, N_("filesystem size available") },
+	[COL_FSROOTS] = { "FSROOTS", 0.1, SCOLS_FL_WRAP, N_("mounted filesystem roots") },
+	[COL_FSSIZE] = { "FSSIZE", 5, SCOLS_FL_RIGHT, N_("filesystem size") },
+	[COL_FSTYPE] = { "FSTYPE", 0.1, SCOLS_FL_TRUNC, N_("filesystem type") },
+	[COL_FSUSED] = { "FSUSED", 5, SCOLS_FL_RIGHT, N_("filesystem size used") },
+	[COL_FSUSEPERC] = { "FSUSE%", 3, SCOLS_FL_RIGHT, N_("filesystem use percentage") },
+	[COL_FSVERSION] = { "FSVER", 0.1, SCOLS_FL_TRUNC, N_("filesystem version") },
+	[COL_GROUP] = { "GROUP", 0.1, SCOLS_FL_TRUNC, N_("group name") },
+	[COL_HCTL] = { "HCTL", 10, 0, N_("Host:Channel:Target:Lun for SCSI") },
+	[COL_HOTPLUG] = { "HOTPLUG", 1, SCOLS_FL_RIGHT, N_("removable or hotplug device (usb, pcmcia, ...)"), COLTYPE_BOOL },
+	[COL_KNAME] = { "KNAME", 0.3, 0, N_("internal kernel device name") },
+	[COL_LABEL] = { "LABEL", 0.1, 0, N_("filesystem LABEL") },
+	[COL_LOGSEC] = { "LOG-SEC", 7, SCOLS_FL_RIGHT, N_("logical sector size"), COLTYPE_NUM },
+	[COL_MAJMIN] = { "MAJ:MIN", 6, 0, N_("major:minor device number"), COLTYPE_SORTNUM },
+	[COL_MINIO] = { "MIN-IO", 6, SCOLS_FL_RIGHT, N_("minimum I/O size"), COLTYPE_NUM },
+	[COL_MODEL] = { "MODEL", 0.1, SCOLS_FL_TRUNC, N_("device identifier") },
+	[COL_MODE] = { "MODE", 10, 0, N_("device node permissions") },
+	[COL_NAME] = { "NAME", 0.25, SCOLS_FL_NOEXTREMES, N_("device name") },
+	[COL_OPTIO] = { "OPT-IO", 6, SCOLS_FL_RIGHT, N_("optimal I/O size"), COLTYPE_NUM },
+	[COL_OWNER] = { "OWNER", 0.1, SCOLS_FL_TRUNC, N_("user name"), },
+	[COL_PARTFLAGS] = { "PARTFLAGS", 36,  0, N_("partition flags") },
+	[COL_PARTLABEL] = { "PARTLABEL", 0.1, 0, N_("partition LABEL") },
+	[COL_PARTTYPENAME]  = { "PARTTYPENAME",  0.1,  0, N_("partition type name") },
+	[COL_PARTTYPE] = { "PARTTYPE", 36,  0, N_("partition type code or UUID") },
+	[COL_PARTUUID] = { "PARTUUID", 36,  0, N_("partition UUID") },
+	[COL_PATH] = { "PATH", 0.3, 0, N_("path to the device node") },
+	[COL_PHYSEC] = { "PHY-SEC", 7, SCOLS_FL_RIGHT, N_("physical sector size"), COLTYPE_NUM },
+	[COL_PKNAME] = { "PKNAME", 0.3, 0, N_("internal parent kernel device name") },
+	[COL_PTTYPE] = { "PTTYPE", 0.1, 0, N_("partition table type") },
+	[COL_PTUUID] = { "PTUUID", 36,  0, N_("partition table identifier (usually UUID)") },
+	[COL_RAND] = { "RAND", 1, SCOLS_FL_RIGHT, N_("adds randomness"), COLTYPE_BOOL },
+	[COL_RA] = { "RA", 3, SCOLS_FL_RIGHT, N_("read-ahead of the device"), COLTYPE_NUM },
+	[COL_REV] = { "REV", 4, SCOLS_FL_RIGHT, N_("device revision") },
+	[COL_RM] = { "RM", 1, SCOLS_FL_RIGHT, N_("removable device"), COLTYPE_BOOL },
+	[COL_ROTA] = { "ROTA", 1, SCOLS_FL_RIGHT, N_("rotational device"), COLTYPE_BOOL },
+	[COL_RO] = { "RO", 1, SCOLS_FL_RIGHT, N_("read-only device"), COLTYPE_BOOL },
+	[COL_RQ_SIZE]= { "RQ-SIZE", 5, SCOLS_FL_RIGHT, N_("request queue size"), COLTYPE_NUM },
+	[COL_SCHED] = { "SCHED", 0.1, 0, N_("I/O scheduler name") },
+	[COL_SERIAL] = { "SERIAL", 0.1, SCOLS_FL_TRUNC, N_("disk serial number") },
+	[COL_SIZE] = { "SIZE", 5, SCOLS_FL_RIGHT, N_("size of the device"), COLTYPE_SIZE },
+	[COL_START] = { "START", 5, SCOLS_FL_RIGHT, N_("partition start offset"), COLTYPE_NUM },
+	[COL_STATE] = { "STATE", 7, SCOLS_FL_TRUNC, N_("state of the device") },
 	[COL_SUBSYS] = { "SUBSYSTEMS", 0.1, SCOLS_FL_NOEXTREMES, N_("de-duplicated chain of subsystems") },
-	[COL_REV]    = { "REV",   4, SCOLS_FL_RIGHT, N_("device revision") },
+	[COL_TARGETS] = { "MOUNTPOINTS", 0.10, SCOLS_FL_WRAP,  N_("all locations where device is mounted") },
+	[COL_TARGET] = { "MOUNTPOINT", 0.10, SCOLS_FL_TRUNC, N_("where the device is mounted") },
+	[COL_TRANSPORT] = { "TRAN", 6, 0, N_("device transport type") },
+	[COL_TYPE] = { "TYPE", 4, 0, N_("device type") },
+	[COL_UUID] = { "UUID", 36,  0, N_("filesystem UUID") },
 	[COL_VENDOR] = { "VENDOR", 0.1, SCOLS_FL_TRUNC, N_("device vendor") },
-	[COL_ZONED]  = { "ZONED", 0.3, 0, N_("zone model") },
-	[COL_DAX]    = { "DAX", 1, SCOLS_FL_RIGHT, N_("dax-capable device"), COLTYPE_BOOL },
+	[COL_WSAME] = { "WSAME", 6, SCOLS_FL_RIGHT, N_("write same max bytes"), COLTYPE_SIZE },
+	[COL_WWN] = { "WWN", 18, 0, N_("unique storage identifier") },
+	[COL_ZONED] = { "ZONED", 0.3, 0, N_("zone model") },
+	[COL_ZONE_SZ] = { "ZONE-SZ", 9, SCOLS_FL_RIGHT, N_("zone size"), COLTYPE_NUM },
+	[COL_ZONE_WGRAN] = { "ZONE-WGRAN", 10, SCOLS_FL_RIGHT, N_("zone write granularity"), COLTYPE_NUM },
+	[COL_ZONE_APP] = { "ZONE-APP", 11, SCOLS_FL_RIGHT, N_("zone append max bytes"), COLTYPE_NUM },
+	[COL_ZONE_NR] = { "ZONE-NR", 8, SCOLS_FL_RIGHT, N_("number of zones"), COLTYPE_NUM },
+	[COL_ZONE_OMAX] = { "ZONE-OMAX", 10, SCOLS_FL_RIGHT, N_("maximum number of open zones"), COLTYPE_NUM },
+	[COL_ZONE_AMAX] = { "ZONE-AMAX", 10, SCOLS_FL_RIGHT, N_("maximum number of active zones"), COLTYPE_NUM },
 };
 
 struct lsblk *lsblk;	/* global handler */
@@ -712,6 +721,25 @@ static uint64_t device_get_discard_granularity(struct lsblk_device *dev)
 	return dev->discard_granularity;
 }
 
+static void device_read_bytes(struct lsblk_device *dev, char *path, char **str,
+			      uint64_t *sortdata)
+{
+	uint64_t x;
+
+	if (lsblk->bytes) {
+		ul_path_read_string(dev->sysfs, str, path);
+		if (sortdata)
+			str2u64(*str, sortdata);
+		return;
+	}
+
+	if (ul_path_read_u64(dev->sysfs, &x, path) == 0) {
+		*str = size_to_human_string(SIZE_SUFFIX_1LETTER, x);
+		if (sortdata)
+			*sortdata = x;
+	}
+}
+
 /*
  * Generates data (string) for column specified by column ID for specified device. If sortdata
  * is not NULL then returns number usable to sort the column if the data are available for the
@@ -824,7 +852,7 @@ static char *device_get_data(
 			if (i + 1 < n)
 				ul_buffer_append_data(&buf, "\n", 1);
 		}
-		str = ul_buffer_get_data(&buf);
+		str = ul_buffer_get_data(&buf, NULL, NULL);
 		break;
 	}
 	case COL_FSROOTS:
@@ -842,7 +870,7 @@ static char *device_get_data(
 			if (i + 1 < n)
 				ul_buffer_append_data(&buf, "\n", 1);
 		}
-		str = ul_buffer_get_data(&buf);
+		str = ul_buffer_get_data(&buf, NULL, NULL);
 		break;
 	}
 	case COL_LABEL:
@@ -953,6 +981,11 @@ static char *device_get_data(
 		if (sortdata)
 			*sortdata = dev->size;
 		break;
+	case COL_START:
+		ul_path_read_string(dev->sysfs, &str, "start");
+		if (sortdata)
+			str2u64(str, sortdata);
+		break;
 	case COL_STATE:
 		if (!device_is_partition(dev) && !dev->dm_name)
 			ul_path_read_string(dev->sysfs, &str, "device/state");
@@ -1032,18 +1065,7 @@ static char *device_get_data(
 		}
 		break;
 	case COL_DMAX:
-		if (lsblk->bytes) {
-			ul_path_read_string(dev->sysfs, &str, "queue/discard_max_bytes");
-			if (sortdata)
-				str2u64(str, sortdata);
-		} else {
-			uint64_t x;
-			if (ul_path_read_u64(dev->sysfs, &x, "queue/discard_max_bytes") == 0) {
-				str = size_to_human_string(SIZE_SUFFIX_1LETTER, x);
-				if (sortdata)
-					*sortdata = x;
-			}
-		}
+		device_read_bytes(dev, "queue/discard_max_bytes", &str, sortdata);
 		break;
 	case COL_DZERO:
 		if (device_get_discard_granularity(dev) > 0)
@@ -1052,24 +1074,52 @@ static char *device_get_data(
 			str = xstrdup("0");
 		break;
 	case COL_WSAME:
-		if (lsblk->bytes) {
-			ul_path_read_string(dev->sysfs, &str, "queue/write_same_max_bytes");
-			if (sortdata)
-				str2u64(str, sortdata);
-		} else {
-			uint64_t x;
-
-			if (ul_path_read_u64(dev->sysfs, &x, "queue/write_same_max_bytes") == 0) {
-				str = size_to_human_string(SIZE_SUFFIX_1LETTER, x);
-				if (sortdata)
-					*sortdata = x;
-			}
-		}
+		device_read_bytes(dev, "queue/write_same_max_bytes", &str, sortdata);
 		if (!str)
 			str = xstrdup("0");
 		break;
 	case COL_ZONED:
 		ul_path_read_string(dev->sysfs, &str, "queue/zoned");
+		break;
+	case COL_ZONE_SZ:
+	{
+		uint64_t x;
+
+		if (ul_path_read_u64(dev->sysfs, &x, "queue/chunk_sectors") == 0) {
+			x <<= 9;
+			if (lsblk->bytes)
+				xasprintf(&str, "%ju", x);
+			else
+				str = size_to_human_string(SIZE_SUFFIX_1LETTER, x);
+			if (sortdata)
+				*sortdata = x;
+		}
+		break;
+	}
+	case COL_ZONE_WGRAN:
+		device_read_bytes(dev, "queue/zone_write_granularity", &str, sortdata);
+		break;
+	case COL_ZONE_APP:
+		device_read_bytes(dev, "queue/zone_append_max_bytes", &str, sortdata);
+		break;
+	case COL_ZONE_NR:
+		ul_path_read_string(dev->sysfs, &str, "queue/nr_zones");
+		if (sortdata)
+			str2u64(str, sortdata);
+		break;
+	case COL_ZONE_OMAX:
+		ul_path_read_string(dev->sysfs, &str, "queue/max_open_zones");
+		if (!str)
+			str = xstrdup("0");
+		if (sortdata)
+			str2u64(str, sortdata);
+		break;
+	case COL_ZONE_AMAX:
+		ul_path_read_string(dev->sysfs, &str, "queue/max_active_zones");
+		if (!str)
+			str = xstrdup("0");
+		if (sortdata)
+			str2u64(str, sortdata);
 		break;
 	case COL_DAX:
 		ul_path_read_string(dev->sysfs, &str, "queue/dax");
@@ -1194,6 +1244,9 @@ static int ignore_empty(struct lsblk_device *dev)
 	/* show all non-empty devices */
 	if (dev->size)
 		return 0;
+
+	if (lsblk->noempty && dev->size == 0)
+		return 1;
 
 	/* ignore empty loop devices without backing file */
 	if (dev->maj == LOOPDEV_MAJOR &&
@@ -1846,10 +1899,12 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_("List information about block devices.\n"), out);
 
 	fputs(USAGE_OPTIONS, out);
+	fputs(_(" -A, --noempty        don't print empty devices\n"), out);
 	fputs(_(" -D, --discard        print discard capabilities\n"), out);
 	fputs(_(" -E, --dedup <column> de-duplicate output by <column>\n"), out);
 	fputs(_(" -I, --include <list> show only devices with specified major numbers\n"), out);
 	fputs(_(" -J, --json           use JSON output format\n"), out);
+	fputs(_(" -M, --merge          group parents of sub-trees (usable for RAIDs, Multi-path)\n"), out);
 	fputs(_(" -O, --output-all     output all columns\n"), out);
 	fputs(_(" -P, --pairs          use key=\"value\" output format\n"), out);
 	fputs(_(" -S, --scsi           output info about SCSI devices\n"), out);
@@ -1861,7 +1916,6 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -f, --fs             output info about filesystems\n"), out);
 	fputs(_(" -i, --ascii          use ascii characters only\n"), out);
 	fputs(_(" -l, --list           use list format output\n"), out);
-	fputs(_(" -M, --merge          group parents of sub-trees (usable for RAIDs, Multi-path)\n"), out);
 	fputs(_(" -m, --perms          output info about permissions\n"), out);
 	fputs(_(" -n, --noheadings     don't print headings\n"), out);
 	fputs(_(" -o, --output <list>  output columns\n"), out);
@@ -1871,7 +1925,8 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -t, --topology       output info about topology\n"), out);
 	fputs(_(" -w, --width <num>    specifies output width as number of characters\n"), out);
 	fputs(_(" -x, --sort <column>  sort output by <column>\n"), out);
-	fputs(_(" -z, --zoned          print zone model\n"), out);
+	fputs(_(" -y, --shell          use column names to be usable as shell variable identifiers\n"), out);
+	fputs(_(" -z, --zoned          print zone related information\n"), out);
 	fputs(_("     --sysroot <dir>  use specified directory as system root\n"), out);
 	fputs(USAGE_SEPARATOR, out);
 	printf(USAGE_HELP_OPTIONS(22));
@@ -1916,6 +1971,7 @@ int main(int argc, char *argv[])
 		{ "all",	no_argument,       NULL, 'a' },
 		{ "bytes",      no_argument,       NULL, 'b' },
 		{ "nodeps",     no_argument,       NULL, 'd' },
+		{ "noempty",    no_argument,       NULL, 'A' },
 		{ "discard",    no_argument,       NULL, 'D' },
 		{ "dedup",      required_argument, NULL, 'E' },
 		{ "zoned",      no_argument,       NULL, 'z' },
@@ -1939,6 +1995,7 @@ int main(int argc, char *argv[])
 		{ "scsi",       no_argument,       NULL, 'S' },
 		{ "sort",	required_argument, NULL, 'x' },
 		{ "sysroot",    required_argument, NULL, OPT_SYSROOT },
+		{ "shell",      no_argument,       NULL, 'y' },
 		{ "tree",       optional_argument, NULL, 'T' },
 		{ "version",    no_argument,       NULL, 'V' },
 		{ "width",	required_argument, NULL, 'w' },
@@ -1969,11 +2026,15 @@ int main(int argc, char *argv[])
 	lsblk_init_debug();
 
 	while((c = getopt_long(argc, argv,
-			       "abdDzE:e:fhJlnMmo:OpPiI:rstVST::w:x:", longopts, NULL)) != -1) {
+				"AabdDzE:e:fhJlnMmo:OpPiI:rstVST::w:x:y",
+				longopts, NULL)) != -1) {
 
 		err_exclusive_options(c, longopts, excl, excl_st);
 
 		switch(c) {
+		case 'A':
+			lsblk->noempty = 1;
+			break;
 		case 'a':
 			lsblk->all_devices = 1;
 			break;
@@ -1993,6 +2054,12 @@ int main(int argc, char *argv[])
 		case 'z':
 			add_uniq_column(COL_NAME);
 			add_uniq_column(COL_ZONED);
+			add_uniq_column(COL_ZONE_SZ);
+			add_uniq_column(COL_ZONE_NR);
+			add_uniq_column(COL_ZONE_AMAX);
+			add_uniq_column(COL_ZONE_OMAX);
+			add_uniq_column(COL_ZONE_APP);
+			add_uniq_column(COL_ZONE_WGRAN);
 			break;
 		case 'e':
 			parse_excludes(optarg);
@@ -2022,6 +2089,9 @@ int main(int argc, char *argv[])
 		case 'P':
 			lsblk->flags |= LSBLK_EXPORT;
 			lsblk->flags &= ~LSBLK_TREE;	/* disable the default */
+			break;
+		case 'y':
+			lsblk->flags |= LSBLK_SHELLVAR;
 			break;
 		case 'i':
 			lsblk->flags |= LSBLK_ASCII;
@@ -2170,6 +2240,7 @@ int main(int argc, char *argv[])
 		errx(EXIT_FAILURE, _("failed to allocate output table"));
 	scols_table_enable_raw(lsblk->table, !!(lsblk->flags & LSBLK_RAW));
 	scols_table_enable_export(lsblk->table, !!(lsblk->flags & LSBLK_EXPORT));
+	scols_table_enable_shellvar(lsblk->table, !!(lsblk->flags & LSBLK_SHELLVAR));
 	scols_table_enable_ascii(lsblk->table, !!(lsblk->flags & LSBLK_ASCII));
 	scols_table_enable_json(lsblk->table, !!(lsblk->flags & LSBLK_JSON));
 	scols_table_enable_noheadings(lsblk->table, !!(lsblk->flags & LSBLK_NOHEADINGS));

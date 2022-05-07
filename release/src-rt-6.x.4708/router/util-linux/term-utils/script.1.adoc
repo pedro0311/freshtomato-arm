@@ -53,7 +53,7 @@ script - make typescript of terminal session
 
 *script* makes a typescript of everything on your terminal session. The terminal data are stored in raw form to the log file and information about timing to another (optional) structured log file. The timing log file is necessary to replay the session later by *scriptreplay*(1) and to store additional information about the session.
 
-Since version 2.35, *script* supports multiple streams and allows the logging of input and output to separate files or all the one file. This version also supports new timing file which records additional information. The command *scriptreplay --summary* then provides all the information.
+Since version 2.35, *script* supports multiple streams and allows the logging of input and output to separate files or all the one file. This version also supports a new timing file which records additional information. The command *scriptreplay --summary* then provides all the information.
 
 If the argument _file_ or option *--log-out* _file_ is given, *script* saves the dialogue in this _file_. If no filename is given, the dialogue is saved in the file _typescript_.
 
@@ -81,7 +81,7 @@ Return the exit status of the child process. Uses the same format as bash termin
 //TRANSLATORS: Keep {plus} untranslated.
 
 *-f*, *--flush*::
-Flush output after each write. This is nice for telecooperation: one person does *mkfifo foo; script -f foo*, and another can supervise in real-time what is being done using *cat foo*. Note that flush has an impact on performance; it's possible to use *SIGUSR1* to flush logs on demand.
+Flush output after each write. This is nice for telecooperation: one person does *mkfifo* _foo_; *script -f* _foo_, and another can supervise in real-time what is being done using *cat* _foo_. Note that flush has an impact on performance; it's possible to use *SIGUSR1* to flush logs on demand.
 
 *--force*::
 Allow the default output file _typescript_ to be a hard or symbolic link. The command will follow a symbolic link.
@@ -102,12 +102,12 @@ Log timing information to the _file_. Two timing file formats are supported now.
 
 *-m*, *--logging-format* _format_::
 Force use of _advanced_ or _classic_ format. The default is the classic format to log only output and the advanced format when input as well as output logging is requested.
-
-*Classic format*:::
++
+*Classic format*;;
 The log contains two fields, separated by a space. The first field indicates how much time elapsed since the previous output. The second field indicates how many characters were output this time.
-
-*Advanced (multi-stream) format*:::
-The first field is an entry type identifier ('I'nput, 'O'utput, 'H'eader, 'S'ignal). The socond field is how much time elapsed since the previous entry, and the rest of the entry is type-specific data.
++
+*Advanced (multi-stream) format*;;
+The first field is an entry type identifier ('I'nput, 'O'utput, 'H'eader, 'S'ignal). The second field is how much time elapsed since the previous entry, and the rest of the entry is type-specific data.
 
 *-o*, *--output-limit* _size_::
 Limit the size of the typescript and timing files to _size_ and stop the child process after this size is exceeded. The calculated file size does not include the start and done messages that the *script* command prepends and appends to the child process output. Due to buffering, the resulting output file might be larger than the specified value.
@@ -118,11 +118,7 @@ Be quiet (do not write start and done messages to standard output).
 *-t*[_file_], *--timing*[=_file_]::
 Output timing data to standard error, or to _file_ when given. This option is deprecated in favour of *--log-timing* where the _file_ argument is not optional.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == SIGNALS
 

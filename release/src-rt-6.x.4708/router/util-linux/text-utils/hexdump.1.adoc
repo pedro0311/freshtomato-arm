@@ -65,7 +65,7 @@ _One-byte octal display_. Display the input offset in hexadecimal, followed by s
 _One-byte character display_. Display the input offset in hexadecimal, followed by sixteen space-separated, three-column, space-filled characters of input data per line.
 
 *-C*, *--canonical*::
-_Canonical hex{plus}ASCII display_. Display the input offset in hexadecimal, followed by sixteen space-separated, two-column, hexadecimal bytes, followed by the same sixteen bytes in *%{underscore}p* format enclosed in '*|*' characters. Invoking the program as *hd* implies this option.
+_Canonical hex{plus}ASCII display_. Display the input offset in hexadecimal, followed by sixteen space-separated, two-column, hexadecimal bytes, followed by the same sixteen bytes in *%{underscore}p* format enclosed in *|* characters. Invoking the program as *hd* implies this option.
 //TRANSLATORS: Keep {plus} and {underscore} untranslated.
 
 *-d*, *--two-bytes-decimal*::
@@ -95,11 +95,7 @@ The *-v* option causes *hexdump* to display all input data. Without the *-v* opt
 *-x*, *--two-bytes-hex*::
 _Two-byte hexadecimal display_. Display the input offset in hexadecimal, followed by eight space-separated, four-column, zero-filled, two-byte quantities of input data, in hexadecimal, per line.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 For each input file, *hexdump* sequentially copies the input to standard output, transforming the data according to the format strings specified by the *-e* and *-f* options, in the order that they were specified.
 
@@ -113,13 +109,13 @@ The byte count is an optional positive integer. If specified it defines the numb
 
 If an iteration count and/or a byte count is specified, a single slash must be placed after the iteration count and/or before the byte count to disambiguate them. Any whitespace before or after the slash is ignored.
 
-The format is required and must be surrounded by double quote (" ") marks. It is interpreted as a fprintf-style format string (see *fprintf*(3), with the following exceptions:
+The format is required and must be surrounded by double quote (" ") marks. It is interpreted as a fprintf-style format string (see *fprintf*(3)), with the following exceptions:
 
 1.::
 An asterisk (*) may not be used as a field width or precision.
 
 2.::
-A byte count or field precision _is_ required for each *s* conversion character (unlike the fprintf3 default which prints the entire string if the precision is unspecified).
+A byte count or field precision _is_ required for each *s* conversion character (unlike the *fprintf*(3) default which prints the entire string if the precision is unspecified).
 
 3.::
 The conversion characters *h*, *l*, *n*, *p*, and *q* are not supported.
@@ -148,7 +144,7 @@ The *hexdump* utility also supports the following additional conversion strings.
 Display the input offset, cumulative across input files, of the next byte to be displayed. The appended characters *d*, *o*, and *x* specify the display base as decimal, octal or hexadecimal respectively.
 
 *_A[dox]*::
-Identical to the *_a* conversion string except that it is only performed once, when all of the input data has been processed.
+Almost identical to the *_a* conversion string except that it is only performed once, when all of the input data has been processed.
 
 *_c*::
 Output characters in the default character set. Non-printing characters are displayed in three-character, zero-padded octal, except for those representable by standard escape notation (see above), which are displayed as two-character strings.
@@ -172,7 +168,7 @@ ____
 
 === Colors
 
-When put at the end of a format specifier, hexdump highlights the respective string with the color specified. Conditions, if present, are evaluated prior to highlighting.
+When put at the end of a format specifier, *hexdump* highlights the respective string with the color specified. Conditions, if present, are evaluated prior to highlighting.
 
 *_L[color_unit_1,color_unit_2,...,color_unit_n]*
 
@@ -187,7 +183,7 @@ Negate the condition. Please note that it only makes sense to negate a unit if b
 One of the 8 basic shell colors.
 
 *VALUE*::
-A value to be matched specified in hexadecimal, or octal base, or as a string. Please note that the usual C escape sequences are not interpreted by hexdump inside the color_units.
+A value to be matched specified in hexadecimal, or octal base, or as a string. Please note that the usual C escape sequences are not interpreted by *hexdump* inside the color_units.
 
 *OFFSET*::
 An offset or an offset range at which to check for a match. Please note that lone OFFSET_START uses the same value as END offset.
@@ -252,11 +248,7 @@ MBR Boot Signature example: Highlight the addresses cyan and the bytes at offset
    "%07.7_ax_L[cyan]  " 8/2 "   %04x_L[green:0xAA55@510-511,!red:0xAA55@510-511] " "\n"
 ....
 
-== COLORS
-
-Implicit coloring can be disabled by an empty file _/etc/terminal-colors.d/hexdump.disable_.
-
-See *terminal-colors.d*(5) for more details about colorization configuration.
+include::man-common/colors.adoc[]
 
 include::man-common/bugreports.adoc[]
 

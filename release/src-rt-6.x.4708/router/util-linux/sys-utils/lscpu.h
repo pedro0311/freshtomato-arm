@@ -32,7 +32,6 @@ UL_DEBUG_DECLARE_MASK(lscpu);
 #define _PATH_SYS_CPU		_PATH_SYS_SYSTEM "/cpu"
 #define _PATH_SYS_NODE		_PATH_SYS_SYSTEM "/node"
 #define _PATH_SYS_DMI		"/sys/firmware/dmi/tables/DMI"
-#define _PATH_SYS_DMI_TYPE4	"/sys/firmware/dmi/entries/4-0/raw"
 #define _PATH_ACPI_PPTT		"/sys/firmware/acpi/tables/PPTT"
 
 struct lscpu_cache {
@@ -65,6 +64,7 @@ struct lscpu_cputype {
 	char	*model;
 	char	*modelname;
 	char	*bios_modelname; /* aarch64 */
+	char	*bios_family; /* aarch64 */
 	char	*revision;	/* alternative for model (ppc) */
 	char	*stepping;
 	char    *bogomips;
@@ -127,11 +127,12 @@ struct lscpu_cpu {
 	int logical_id;
 
 	char	*bogomips;	/* per-CPU bogomips */
-	char	*mhz;		/* max freq from cpuinfo */
+	char	*mhz;		/* freq from cpuinfo */
 	char	*dynamic_mhz;   /* from cpuinf for s390 */
 	char	*static_mhz;	/* from cpuinf for s390 */
 	float	mhz_max_freq;	/* realtime freq from /sys/.../cpuinfo_max_freq */
 	float	mhz_min_freq;	/* realtime freq from /sys/.../cpuinfo_min_freq */
+	float   mhz_cur_freq;
 
 	int	coreid;
 	int	socketid;
@@ -280,6 +281,7 @@ void lscpu_cputype_free_topology(struct lscpu_cputype *ct);
 
 float lsblk_cputype_get_maxmhz(struct lscpu_cxt *cxt, struct lscpu_cputype *ct);
 float lsblk_cputype_get_minmhz(struct lscpu_cxt *cxt, struct lscpu_cputype *ct);
+float lsblk_cputype_get_scalmhz(struct lscpu_cxt *cxt, struct lscpu_cputype *ct);
 
 struct lscpu_arch *lscpu_read_architecture(struct lscpu_cxt *cxt);
 void lscpu_free_architecture(struct lscpu_arch *ar);
@@ -314,6 +316,13 @@ struct dmi_info {
 	char *product;
 	char *manufacturer;
 	int sockets;
+
+	/* Processor Information */
+	uint16_t processor_family;
+	char *processor_manufacturer;
+	char *processor_version;
+	uint16_t current_speed;
+	char *part_num;
 };
 
 
@@ -321,4 +330,5 @@ void to_dmi_header(struct lscpu_dmi_header *h, uint8_t *data);
 char *dmi_string(const struct lscpu_dmi_header *dm, uint8_t s);
 int parse_dmi_table(uint16_t len, uint16_t num, uint8_t *data, struct dmi_info *di);
 size_t get_number_of_physical_sockets_from_dmi(void);
+int dmi_decode_cputype(struct lscpu_cputype *);
 #endif /* LSCPU_H */

@@ -43,7 +43,7 @@ This will see sda3 as a whole-disk rather than as a partition.
 Add the specified partitions, or read the disk and add all partitions.
 
 *-b*, *--bytes*::
-Print the SIZE column in bytes rather than in human-readable format.
+include::man-common/in-bytes.adoc[]
 
 *-d*, *--delete*::
 Delete the specified partitions or all partitions. It is not error to remove non-existing partitions, so this option is possible to use together with large *--nr* ranges without care about the current partitions set on the device.
@@ -96,11 +96,7 @@ Overwrite default sector size.
 *-v*, *--verbose*::
 Verbose mode.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == ENVIRONMENT
 
@@ -112,7 +108,7 @@ enables libblkid debug output.
 partx --show /dev/sdb3::
 partx --show --nr 3 /dev/sdb::
 partx --show /dev/sdb3 /dev/sdb::
-All three commands list partition 3 of /dev/sdb.
+All three commands list partition 3 of _/dev/sdb_.
 
 partx --show - /dev/sdb3::
 Lists all subpartitions on _/dev/sdb3_ (the device is used as whole-disk).

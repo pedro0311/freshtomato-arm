@@ -15,12 +15,14 @@ dist_noinst_HEADERS += \
 	include/cpuset.h \
 	include/crc32.h \
 	include/crc32c.h \
+	include/c_strtod.h \
 	include/debug.h \
 	include/debugobj.h \
 	include/encode.h \
 	include/env.h \
 	include/exec_shell.h \
 	include/exitcodes.h \
+	include/fileeq.h \
 	include/fileutils.h \
 	include/fuzz.h \
 	include/idcache.h \
@@ -47,7 +49,7 @@ dist_noinst_HEADERS += \
 	include/pathnames.h \
 	include/pidfd-utils.h \
 	include/plymouth-ctrl.h \
-	include/procutils.h \
+	include/procfs.h \
 	include/pt-bsd.h \
 	include/pt-mbr.h \
 	include/pt-mbr-partnames.h \

@@ -49,14 +49,11 @@ Silently skip devices that do not exist. The _/etc/fstab_ mount option *nofail* 
 *-f*, *--fixpgsz*::
 Reinitialize (exec mkswap) the swap space if its page size does not match that of the current running kernel. *mkswap*(8) initializes the whole device and does not check for bad blocks.
 
-*-h*, *--help*::
-Display help text and exit.
-
 *-L* _label_::
 Use the partition that has the specified _label_. (For this, access to _/proc/partitions_ is needed.)
 
 *-o*, *--options* _opts_::
-Specify swap options by an fstab-compatible comma-separated string. For example:
+Specify swap options by an __fstab__-compatible comma-separated string. For example:
 +
 *swapon -o pri=1,discard=pages,nofail /dev/sda2*
 +
@@ -89,8 +86,7 @@ Use the partition that has the specified _uuid_.
 *-v*, *--verbose*::
 Be verbose.
 
-*-V*, *--version*::
-Display version information and exit.
+include::man-common/help-version.adoc[]
 
 == EXIT STATUS
 
@@ -103,10 +99,10 @@ success
 system has insufficient memory to stop swapping (OOM)
 
 *4*::
-swapoff syscall failed for another reason
+*swapoff*(2) syscall failed for another reason
 
 *8*::
-non-swapoff syscall system error (out of memory, ...)
+non-*swapoff*(2) syscall system error (out of memory, ...)
 
 *16*::
 usage or syntax error
@@ -123,10 +119,10 @@ The old versions before v2.36 has no documented exit status, 0 means success in 
 
 == ENVIRONMENT
 
-LIBMOUNT_DEBUG=all::
+*LIBMOUNT_DEBUG*=all::
 enables *libmount* debug output.
 
-LIBBLKID_DEBUG=all::
+*LIBBLKID_DEBUG*=all::
 enables *libblkid* debug output.
 
 == FILES
@@ -151,7 +147,7 @@ The most portable solution to create a swap file is to use *dd*(1) and _/dev/zer
 
 === Btrfs
 
-Swap files on Btrfs are supported since Linux 5.0 on files with nocow attribute. See the *btrfs*(5) manual page for more details.
+Swap files on Btrfs are supported since Linux 5.0 on files with *nocow* attribute. See the *btrfs*(5) manual page for more details.
 
 === NFS
 
@@ -159,7 +155,7 @@ Swap over *NFS* may not work.
 
 === Suspend
 
-*swapon* automatically detects and rewrites a swap space signature with old software suspend data (e.g., S1SUSPEND, S2SUSPEND, ...). The problem is that if we don't do it, then we get data corruption the next time an attempt at unsuspending is made.
+*swapon* automatically detects and rewrites a swap space signature with old software suspend data (e.g., *S1SUSPEND*, *S2SUSPEND*, ...). The problem is that if we don't do it, then we get data corruption the next time an attempt at unsuspending is made.
 
 == HISTORY
 

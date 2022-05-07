@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to create configure.
 
-AC_INIT(libnfnetlink, 1.0.1)
+AC_INIT(libnfnetlink, 1.0.2)
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_HOST
@@ -28,6 +28,6 @@ dnl--------------------------------
 
 
 dnl Output the makefile
-AC_CONFIG_FILES([Makefile src/Makefile include/Makefile
+AC_CONFIG_FILES([Makefile src/Makefile include/Makefile doxygen.cfg
 	include/libnfnetlink/Makefile utils/Makefile libnfnetlink.pc])
 AC_OUTPUT

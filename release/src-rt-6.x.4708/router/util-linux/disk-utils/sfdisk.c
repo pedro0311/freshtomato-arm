@@ -88,7 +88,8 @@ enum {
 	ACT_PARTLABEL,
 	ACT_PARTATTRS,
 	ACT_DISKID,
-	ACT_DELETE
+	ACT_DELETE,
+	ACT_BACKUP_SECTORS,
 };
 
 struct sfdisk {
@@ -418,7 +419,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 		warnx(_("failed to get start of the old partition; ignoring --move-data"));
 	else if (fdisk_partition_get_start(pa) == fdisk_partition_get_start(orig_pa))
 		warnx(_("start of the partition has not been moved; ignoring --move-data"));
-	else if (fdisk_partition_get_size(orig_pa) < fdisk_partition_get_size(pa))
+	else if (fdisk_partition_get_size(orig_pa) > fdisk_partition_get_size(pa))
 		warnx(_("new partition is smaller than original; ignoring --move-data"));
 	else
 		ok = 1;
@@ -1075,6 +1076,29 @@ static int command_dump(struct sfdisk *sf, int argc, char **argv)
 	return 0;
 }
 
+/*
+ * sfdisk --backup-pt-sectors <device>
+ */
+static int command_backup_sectors(struct sfdisk *sf, int argc, char **argv)
+{
+	const char *devname = NULL;
+
+	if (argc)
+		devname = argv[0];
+	if (!devname)
+		errx(EXIT_FAILURE, _("no disk device specified"));
+
+	assign_device(sf, devname, 1);	/* read-only */
+
+	if (!fdisk_has_label(sf->cxt))
+		errx(EXIT_FAILURE, _("%s: does not contain a recognized partition table"), devname);
+
+	backup_partition_table(sf, devname);
+
+	fdisk_deassign_device(sf->cxt, 1);		/* no-sync() */
+	return 0;
+}
+
 static void assign_device_partition(struct sfdisk *sf,
 				const char *devname,
 				size_t partno,
@@ -1714,7 +1738,7 @@ static void refresh_prompt_buffer(struct sfdisk *sf, const char *devname,
  */
 static int command_fdisk(struct sfdisk *sf, int argc, char **argv)
 {
-	int rc = 0, partno = sf->partno, created = 0, unused = 0;
+	int rc = 0, partno = sf->partno, created = 0, unused = 0, ignored = 0;
 	struct fdisk_script *dp;
 	struct fdisk_table *tb = NULL;
 	const char *devname = NULL, *label;
@@ -1897,6 +1921,7 @@ static int command_fdisk(struct sfdisk *sf, int argc, char **argv)
 			if (ignore_partition(pa)) {
 				fdisk_info(sf->cxt, _("Ignoring partition."));
 				next_partno++;
+				ignored++;
 				continue;
 			}
 			if (!created) {		/* create a new disklabel */
@@ -1960,7 +1985,7 @@ static int command_fdisk(struct sfdisk *sf, int argc, char **argv)
 	/* create empty disk label if label, but no partition specified */
 	if ((rc == SFDISK_DONE_EOF || rc == SFDISK_DONE_WRITE) && created == 0
 	    && fdisk_script_has_force_label(dp) == 1
-	    && fdisk_table_get_nents(tb) == 0
+	    && fdisk_table_get_nents(tb) == (size_t) ignored
 	    && fdisk_script_get_header(dp, "label")) {
 
 		int xrc = fdisk_apply_script_headers(sf->cxt, dp);
@@ -2021,6 +2046,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -A, --activate <dev> [<part> ...] list or set bootable (P)MBR partitions\n"), out);
 	fputs(_(" -d, --dump <dev>                  dump partition table (usable for later input)\n"), out);
 	fputs(_(" -J, --json <dev>                  dump partition table in JSON format\n"), out);
+	fputs(_(" -B, --backup-pt-sectors <dev>     binary partition table backup (see -b and -O)\n"), out);
 	fputs(_(" -g, --show-geometry [<dev> ...]   list geometry of all or specified devices\n"), out);
 	fputs(_(" -l, --list [<dev> ...]            list partitions of each device\n"), out);
 	fputs(_(" -F, --list-free [<dev> ...]       list unpartitioned free areas of each device\n"), out);
@@ -2123,6 +2149,7 @@ int main(int argc, char *argv[])
 	static const struct option longopts[] = {
 		{ "activate",no_argument,	NULL, 'A' },
 		{ "append",  no_argument,       NULL, 'a' },
+		{ "backup-pt-sectors", no_argument,   NULL, 'B' },
 		{ "backup",  no_argument,       NULL, 'b' },
 		{ "backup-file", required_argument, NULL, 'O' },
 		{ "bytes",   no_argument,	NULL, OPT_BYTES },
@@ -2187,7 +2214,7 @@ int main(int argc, char *argv[])
 	textdomain(PACKAGE);
 	close_stdout_atexit();
 
-	while ((c = getopt_long(argc, argv, "aAbcdfFgGhJlLo:O:nN:qrsTu:vVX:Y:w:W:",
+	while ((c = getopt_long(argc, argv, "aAbBcdfFgGhJlLo:O:nN:qrsTu:vVX:Y:w:W:",
 					longopts, &longidx)) != -1) {
 
 		err_exclusive_options(c, longopts, excl, excl_st);
@@ -2201,6 +2228,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'b':
 			sf->backup = 1;
+			break;
+		case 'B':
+			sf->act = ACT_BACKUP_SECTORS;
 			break;
 		case OPT_CHANGE_ID:
 		case OPT_PRINT_ID:
@@ -2367,6 +2397,10 @@ int main(int argc, char *argv[])
 	switch (sf->act) {
 	case ACT_ACTIVATE:
 		rc = command_activate(sf, argc - optind, argv + optind);
+		break;
+
+	case ACT_BACKUP_SECTORS:
+		rc = command_backup_sectors(sf, argc - optind, argv + optind);
 		break;
 
 	case ACT_DELETE:

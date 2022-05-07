@@ -25,7 +25,7 @@ The *uuidd* daemon is used by the UUID library to generate universally unique id
 == OPTIONS
 
 *-d*, *--debug*::
-Run uuidd in debugging mode. This prevents uuidd from running as a daemon.
+Run *uuidd* in debugging mode. This prevents *uuidd* from running as a daemon.
 
 *-F*, *--no-fork*::
 Do not daemonize using a double-fork.
@@ -62,11 +62,7 @@ Make *uuidd* exit after _number_ seconds of inactivity.
 *-t*, *--time*::
 Test *uuidd* by trying to connect to a running uuidd daemon and request it to return a time-based UUID.
 
-*-V*, *--version*::
-Output version information and exit.
-
-*-h*, *--help*::
-Display help screen and exit.
+include::man-common/help-version.adoc[]
 
 == EXAMPLE
 

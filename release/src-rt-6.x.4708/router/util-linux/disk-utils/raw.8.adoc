@@ -42,15 +42,11 @@ Set query mode. *raw* will query an existing binding instead of setting a new on
 *-a*, *--all*::
 With *-q*, specify that all bound raw devices should be queried.
 
-*-h*, *--help*::
-Display help text and exit.
-
-*-V*, *--version*::
-Display version information and exit.
+include::man-common/help-version.adoc[]
 
 == NOTES
 
-Rather than using raw devices applications should prefer open2 devices, such as _/dev/sda1_, with the *O_DIRECT* flag.
+Rather than using raw devices applications should prefer *open*(2) devices, such as _/dev/sda1_, with the *O_DIRECT* flag.
 
 == BUGS
 

@@ -207,16 +207,19 @@ struct more_control {
 		eat_newline:1,		/* is newline ignored after 80 cols */
 		erase_input_ok:1,	/* is erase input supported */
 		erase_previous_ok:1,	/* is erase previous supported */
+		exit_on_eof:1,		/* exit on EOF */
 		first_file:1,		/* is the input file the first in list */
 		fold_long_lines:1,	/* fold long lines */
 		hard_tabs:1,		/* print spaces instead of '\t' */
 		hard_tty:1,		/* is this hard copy terminal (a printer or such) */
 		leading_colon:1,	/* key command has leading ':' character */
+		is_eof:1,               /* EOF detected */
 		is_paused:1,		/* is output paused */
 		no_quit_dialog:1,	/* suppress quit dialog */
 		no_scroll:1,		/* do not scroll, clear the screen and then display text */
 		no_tty_in:1,		/* is input in interactive mode */
 		no_tty_out:1,		/* is output in interactive mode */
+		no_tty_err:1,           /* is stderr terminal */
 		print_banner:1,		/* print file name banner */
 		reading_num:1,		/* are we reading leading_number */
 		report_errors:1,	/* is an error reported */
@@ -243,6 +246,7 @@ static void __attribute__((__noreturn__)) usage(void)
 	printf("%s\n", _(" -l, --no-pause        suppress pause after form feed"));
 	printf("%s\n", _(" -c, --print-over      do not scroll, display text and clean line ends"));
 	printf("%s\n", _(" -p, --clean-print     do not scroll, clean screen and display text"));
+	printf("%s\n", _(" -e, --exit-on-eof     exit on end-of-file"));
 	printf("%s\n", _(" -s, --squeeze         squeeze multiple blank lines into one"));
 	printf("%s\n", _(" -u, --plain           suppress underlining and bold"));
 	printf("%s\n", _(" -n, --lines <number>  the number of lines per screenful"));
@@ -264,6 +268,7 @@ static void argscan(struct more_control *ctl, int as_argc, char **as_argv)
 		{ "no-pause",    no_argument,       NULL, 'l' },
 		{ "print-over",  no_argument,       NULL, 'c' },
 		{ "clean-print", no_argument,       NULL, 'p' },
+		{ "exit-on-eof", no_argument,       NULL, 'e' },
 		{ "squeeze",     no_argument,       NULL, 's' },
 		{ "plain",       no_argument,       NULL, 'u' },
 		{ "lines",       required_argument, NULL, 'n' },
@@ -324,7 +329,8 @@ static void argscan(struct more_control *ctl, int as_argc, char **as_argv)
 		case 'n':
 			ctl->lines_per_screen = strtou16_or_err(optarg, _("argument error"));
 			break;
-		case 'e':	/* ignored silently to be posix compliant */
+		case 'e':
+			ctl->exit_on_eof = 1;
 			break;
 		case 'V':
 			print_version(EXIT_SUCCESS);
@@ -444,6 +450,7 @@ static void checkf(struct more_control *ctl, char *fs)
 
 	ctl->current_line = 0;
 	ctl->file_position = 0;
+	ctl->file_size = 0;
 	fflush(NULL);
 
 	ctl->current_file = fopen(fs, "r");
@@ -454,7 +461,7 @@ static void checkf(struct more_control *ctl, char *fs)
 		return;
 	}
 	if (fstat(fileno(ctl->current_file), &st) != 0) {
-		warn(_("cannot stat %s"), fs);
+		warn(_("stat of %s failed"), fs);
 		return;
 	}
 	if ((st.st_mode & S_IFMT) == S_IFDIR) {
@@ -462,10 +469,8 @@ static void checkf(struct more_control *ctl, char *fs)
 		ctl->current_file = NULL;
 		return;
 	}
-	if (st.st_size == 0) {
-		return;
-	}
-	if (check_magic(ctl, fs)) {
+	ctl->file_size = st.st_size;
+	if (0 < ctl->file_size && check_magic(ctl, fs)) {
 		fclose(ctl->current_file);
 		ctl->current_file = NULL;
 		return;
@@ -474,8 +479,6 @@ static void checkf(struct more_control *ctl, char *fs)
 	c = more_getc(ctl);
 	ctl->clear_first = (c == '\f');
 	more_ungetc(ctl, c);
-	if ((ctl->file_size = st.st_size) == 0)
-		ctl->file_size = ~((off_t)0);
 }
 
 static void prepare_line_buffer(struct more_control *ctl)
@@ -728,10 +731,18 @@ static void output_prompt(struct more_control *ctl, char *filename)
 		if (filename != NULL) {
 			ctl->prompt_len += printf(_("(Next file: %s)"), filename);
 		} else if (!ctl->no_tty_in && 0 < ctl->file_size) {
-			ctl->prompt_len +=
-			    printf("(%d%%)",
-				   (int)((ctl->file_position * 100) / ctl->file_size));
+		    int position = ((ctl->file_position * 100) / ctl->file_size);
+		    if (position == 100) {
+			erase_to_col(ctl, 0);
+			ctl->prompt_len += printf(_("(END)"));
+		    } else {
+			ctl->prompt_len += printf("(%d%%)", position);
+		    }
+		} else if (ctl->is_eof) {
+			erase_to_col(ctl, 0);
+			ctl->prompt_len += printf(_("(END)"));
 		}
+
 		if (ctl->suppress_bell) {
 			ctl->prompt_len +=
 			    printf(_("[Press space to continue, 'q' to quit.]"));
@@ -880,6 +891,7 @@ static struct number_command read_command(struct more_control *ctl)
 		case 'q':
 		case 'Q':
 			cmd.key = more_kc_quit;
+			return cmd;
 			break;
 		case 'f':
 		case CTRL('F'):
@@ -1229,7 +1241,7 @@ static void __attribute__((__format__ (__printf__, 3, 4)))
 		int errsv;
 		if (!isatty(STDIN_FILENO)) {
 			close(STDIN_FILENO);
-			open("/dev/tty", 0);
+			ignore_result( open("/dev/tty", 0) );
 		}
 		reset_tty(ctl);
 
@@ -1285,7 +1297,7 @@ static void run_shell(struct more_control *ctl, char *filename)
 	putchar('!');
 	fflush(NULL);
 	if (ctl->previous_command.key == more_kc_run_shell && ctl->shell_line)
-		fputs(ctl->shell_line, stdout);
+		fputs(ctl->shell_line, stderr);
 	else {
 		ttyin(ctl, cmdbuf, sizeof(cmdbuf) - 2, '!');
 		if (strpbrk(cmdbuf, "%!\\"))
@@ -1515,7 +1527,7 @@ static void runtime_usage(void)
 	print_separator('-', 79);
 }
 
-static void execute_editor(struct more_control *ctl, char *cmdbuf, char *filename)
+static void execute_editor(struct more_control *ctl, char *cmdbuf, size_t buflen, char *filename)
 {
 	char *editor, *p;
 	int split = 0;
@@ -1536,10 +1548,10 @@ static void execute_editor(struct more_control *ctl, char *cmdbuf, char *filenam
 	 * POSIX: call vi -c n file (when editor is vi or ex).
 	 */
 	if (!strcmp(p, "vi") || !strcmp(p, "ex")) {
-		sprintf(cmdbuf, "-c %d", n);
+		snprintf(cmdbuf, buflen, "-c %d", n);
 		split = 1;
 	} else
-		sprintf(cmdbuf, "+%d", n);
+		snprintf(cmdbuf, buflen, "+%d", n);
 
 	erase_to_col(ctl, 0);
 	printf("%s %s %s", editor, cmdbuf, ctl->file_names[ctl->argv_position]);
@@ -1769,7 +1781,7 @@ static int more_key_command(struct more_control *ctl, char *filename)
 			break;
 		case more_kc_run_editor:	/* This case should go right before default */
 			if (!ctl->no_tty_in) {
-				execute_editor(ctl, cmdbuf, filename);
+				execute_editor(ctl, cmdbuf, sizeof(cmdbuf), filename);
 				break;
 			}
 			/* fallthrough */
@@ -1809,7 +1821,9 @@ static void screen(struct more_control *ctl, int num_lines)
 
 	for (;;) {
 		while (num_lines > 0 && !ctl->is_paused) {
-			if ((nchars = get_line(ctl, &length)) == EOF) {
+			nchars = get_line(ctl, &length);
+			ctl->is_eof = nchars == EOF;
+			if (ctl->is_eof && ctl->exit_on_eof) {
 				if (ctl->clear_line_ends)
 					putp(ctl->clear_rest);
 				return;
@@ -1834,7 +1848,11 @@ static void screen(struct more_control *ctl, int num_lines)
 			num_lines--;
 		}
 		fflush(NULL);
-		if ((c = more_getc(ctl)) == EOF) {
+
+		c = more_getc(ctl);
+		ctl->is_eof = c == EOF;
+
+		if (ctl->is_eof && ctl->exit_on_eof) {
 			if (ctl->clear_line_ends)
 				putp(ctl->clear_rest);
 			return;
@@ -1891,7 +1909,7 @@ static void display_file(struct more_control *ctl, int left)
 		    more_key_command(ctl, ctl->file_names[ctl->argv_position]);
 	if (left != 0) {
 		if ((ctl->no_scroll || ctl->clear_first)
-		    && ctl->file_size != ~((off_t)0)) {
+		    && 0 < ctl->file_size) {
 			if (ctl->clear_line_ends)
 				putp(ctl->go_home);
 			else
@@ -1907,6 +1925,8 @@ static void display_file(struct more_control *ctl, int left)
 			if (ctl->clear_line_ends)
 				putp(ctl->erase_line);
 			print_separator(':', 14);
+			if (ctl->clear_line_ends)
+				putp(ctl->erase_line);
 			puts(ctl->file_names[ctl->argv_position]);
 			if (ctl->clear_line_ends)
 				putp(ctl->erase_line);
@@ -1937,8 +1957,9 @@ static void initterm(struct more_control *ctl)
 	ctl->no_tty_out = tcgetattr(STDOUT_FILENO, &ctl->output_tty);
 #endif
 	ctl->no_tty_in = tcgetattr(STDIN_FILENO, &ctl->output_tty);
-	tcgetattr(STDERR_FILENO, &ctl->output_tty);
+	ctl->no_tty_err = tcgetattr(STDERR_FILENO, &ctl->output_tty);
 	ctl->original_tty = ctl->output_tty;
+
 	ctl->hard_tabs = (ctl->output_tty.c_oflag & TABDLY) != TAB3;
 	if (ctl->no_tty_out)
 		return;
@@ -2035,7 +2056,14 @@ int main(int argc, char **argv)
 		env_argscan(&ctl, s);
 	argscan(&ctl, argc, argv);
 
+	/* clear any inherited settings */
+	signal(SIGCHLD, SIG_DFL);
+
 	initterm(&ctl);
+
+	if (ctl.no_tty_err)
+		/* exit when we cannot read user's input */
+		ctl.exit_on_eof = 1;
 
 #ifdef HAVE_MAGIC
 	ctl.magic = magic_open(MAGIC_MIME_ENCODING | MAGIC_SYMLINK);

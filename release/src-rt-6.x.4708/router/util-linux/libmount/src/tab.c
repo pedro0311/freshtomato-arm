@@ -309,7 +309,7 @@ int mnt_table_append_intro_comment(struct libmnt_table *tb, const char *comm)
 {
 	if (!tb)
 		return -EINVAL;
-	return append_string(&tb->comm_intro, comm);
+	return strappend(&tb->comm_intro, comm);
 }
 
 /**
@@ -350,7 +350,7 @@ int mnt_table_append_trailing_comment(struct libmnt_table *tb, const char *comm)
 {
 	if (!tb)
 		return -EINVAL;
-	return append_string(&tb->comm_tail, comm);
+	return strappend(&tb->comm_tail, comm);
 }
 
 /**
@@ -1665,7 +1665,7 @@ struct libmnt_fs *mnt_table_get_fs_root(struct libmnt_table *tb,
 
 		DBG(FS, ul_debugobj(fs, "source root: %s, source FS root: %s", root, src_root));
 
-		if (src_root && !startswith(root, src_root)) {
+		if (src_root && root && !startswith(root, src_root)) {
 			if (strcmp(root, "/") == 0) {
 				free(root);
 				root = strdup(src_root);
@@ -1747,7 +1747,7 @@ int __mnt_table_is_fs_mounted(struct libmnt_table *tb, struct libmnt_fs *fstab_f
 			src = mnt_fs_get_srcpath(rootfs);
 			if (fstype && strncmp(fstype, "nfs", 3) == 0 && root) {
 				/* NFS stores the root at the end of the source */
-				src = src2 = strappend(src, root);
+				src = src2 = strconcat(src, root);
 				free(root);
 				root = NULL;
 			}

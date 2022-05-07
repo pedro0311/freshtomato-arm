@@ -298,12 +298,12 @@ static int data_cb(const struct nlmsghdr *nlh, void *data)
 
 int main(int argc, char *argv[])
 {
+	char buf[MNL_SOCKET_DUMP_SIZE];
+	unsigned int seq, portid;
 	struct mnl_socket *nl;
-	char buf[MNL_SOCKET_BUFFER_SIZE];
 	struct nlmsghdr *nlh;
 	struct rtmsg *rtm;
 	int ret;
-	unsigned int seq, portid;
 
 	if (argc != 2) {
 		fprintf(stderr, "Usage: %s <inet|inet6>\n", argv[0]);

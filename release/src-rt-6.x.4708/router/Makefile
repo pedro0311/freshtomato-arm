@@ -1486,7 +1486,7 @@ rp-pppoe-clean:
 	$(call unpatch_files,rp-pppoe)
 
 libnfnetlink/stamp-h1:
-	cd libnfnetlink $(if $(TCONFIG_BCMARM),&& ./autogen.sh,) && \
+	cd libnfnetlink $(if $(TCONFIG_BCMARM),&& autoreconf -fsi,) && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
@@ -2813,9 +2813,9 @@ libcurl: libcurl/stamp-h1
 	@rm -f libcurl/staged/usr/lib/libcurl.la
 
 libcurl-install:
-	install -D libcurl/lib/.libs/libcurl.so.4.7.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.7.0
-	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.7.0
-	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.7.0 libcurl.so && ln -sf libcurl.so.4.7.0 libcurl.so.4
+	install -D libcurl/lib/.libs/libcurl.so.4.8.0 $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.8.0
+	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/lib/libcurl.so.4.8.0
+	cd $(INSTALLDIR)/libcurl/usr/lib/ && ln -sf libcurl.so.4.8.0 libcurl.so && ln -sf libcurl.so.4.8.0 libcurl.so.4
 	install -D libcurl/src/.libs/curl $(INSTALLDIR)/libcurl/usr/sbin/curl
 	$(STRIP) -s $(INSTALLDIR)/libcurl/usr/sbin/curl
 
@@ -3361,7 +3361,8 @@ libjson-c/build/Makefile:
 libjson-c: libjson-c/build/Makefile
 	@$(SEP)
 	$(MAKE) -C libjson-c/build all $(PARALLEL_BUILD)
-	cd libjson-c && ln -sf build/json_config.h json_config.h
+	cd libjson-c && \
+	ln -sf build/json_config.h json_config.h && ln -sf build/json.h json.h
 
 libjson-c-install:
 	@true
@@ -3601,7 +3602,6 @@ gettext-tiny-clean:
 	@rm -rf gettext-tiny/staged
 
 util-linux/stamp-h1:
-	$(call patch_files,util-linux)
 	cd util-linux && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
@@ -3630,7 +3630,6 @@ util-linux-clean:
 	-@$(MAKE) -C util-linux clean
 	@rm -f util-linux/stamp-h1
 	@rm -rf util-linux/staged
-	$(call patch_files,util-linux)
 
 zfs/stamp-h1:
 	$(call patch_files,zfs)
@@ -3664,7 +3663,7 @@ zfs-clean:
 	$(call unpatch_files,zfs)
 
 libmnl/stamp-h1:
-	cd libmnl && ./autogen.sh && \
+	cd libmnl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr

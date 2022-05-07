@@ -57,9 +57,9 @@
 
 #include <stdbool.h> // bool
 #include <stdio.h> // FILE, fopen(), fscanf(), snprintf(), asprintf()
-#include <stdlib.h> // srand48()
+#include <stdlib.h> // srand48(), strtoul()
 #include <unistd.h> // usleep()
-#include <string.h> // strcmp(), strdup()
+#include <string.h> // strcmp(), strdup(), strncpy()
 #include <ctype.h> // isdigit(), isspace()
 #include <time.h> // time_t, time()
 #include <errno.h> // errno
@@ -71,20 +71,37 @@
 static time_t wsd_instance;
 static char wsd_sequence[UUIDLEN], wsd_endpoint[UUIDLEN];
 
+static void uuid_endpoint(char uuid[UUIDLEN]);
+
+static int uuid_parse(char uuid[UUIDLEN], unsigned short UUID[8])
+{
+	size_t pos[] = {0,4,9,14,19,24,28,32};
+	for(size_t i = 0; i < 8; ++i) {
+		char str[5];
+		strncpy(str, uuid+pos[i], 4);
+		str[4] = '\0';
+		unsigned long s = strtoul(str, NULL, 16);
+		UUID[i] = s;
+	}
+	return 0;
+}
+
 static void set_seed(void)
 {
-	FILE *fp = fopen("/etc/machine-id", "r");
+	char uuid[UUIDLEN];
+	unsigned short UUID[8];
 	unsigned long seed;
 
+	uuid_endpoint(uuid);
+	uuid_parse(uuid, UUID);
+
 	time((time_t *)&seed);
-
-	if (fp) {
-		unsigned long s;
-
-		while (fscanf(fp, "%8lx", &s) > 0)
-			seed ^= s;
-		fclose(fp);
+	
+	for(size_t i = 0; i < 4; ++i) {
+		unsigned long s = UUID[2*i+1] | UUID[2*i+0] << 16;
+		seed ^= s;
 	}
+
 	srand48(seed);
 }
 
@@ -113,10 +130,19 @@ static void uuid_endpoint(char uuid[UUIDLEN])
 
 	if (!fp) {
 		fp = fopen("/proc/sys/kernel/random/boot_id", "r");
+	} else {
+		fseek(fp, 0, SEEK_END);
+		long size = ftell(fp);
+		if (33 != size) {
+			fclose(fp);
+			fp = fopen("/proc/sys/kernel/random/boot_id", "r");
+		} else {
+			rewind(fp);
+		}
 	}
 
 	if (!fp) {
-		DEBUG(0, W, "Can't open required '/etc/machine-id' or '/proc/sys/kernel/random/boot_id'");
+		DEBUG(0, W, "Can't open or file empty, required '/etc/machine-id' or '/proc/sys/kernel/random/boot_id'");
 		return;
 	}
 
@@ -283,17 +309,17 @@ void init_getresp(void)
  * macros
  */
 #define RESET_BUFFER(buf, buflen) \
-	if (buflen > 0) do { memset(buf, 0, buflen); buflen=0; } while(0)
+	if ((buflen) > 0) do { memset(buf, 0, buflen); (buflen)=0; } while(0)
 
 #define COPY_STRING_TO_BUFFER(dst, dstlen, start, src, srclen) \
 	do { \
-		srclen = strlen(src); \
-		if (((start + srclen) - dst) > dstlen) { \
-			srclen = -1; \
+		(srclen) = strlen(src); \
+		if ((((start) + (srclen)) - (dst)) > (dstlen)) { \
+			(srclen) = -1; \
 			break; \
 		} \
 		strncpy(start, src, srclen); \
-		start += srclen; \
+		(start) += (srclen); \
 	} while(0)
 
 #define RESOLVE_TAG_AND_SAVE \
@@ -362,7 +388,7 @@ static struct wsd_req_info *wsd_req_parse(const char *xml)
 	if (!msgid)
 		return NULL;
 
-	struct wsd_req_info *info = calloc(sizeof *info, 1);
+	struct wsd_req_info *info = (struct wsd_req_info *) calloc(sizeof *info, 1);
 	if (!info)
 		return NULL;
 
@@ -532,7 +558,7 @@ static int wsd_send_soap_msg(int fd, struct endpoint *ep,
 	"<wsa:To>%s</wsa:To>"
 	"<wsa:Action>%s</wsa:Action>"
 	"<wsa:MessageID>urn:uuid:%s</wsa:MessageID>"
-	"<wsd:AppSequence InstanceId=\"%lu\" SequenceId=\"urn:uuid:%s\" "
+	"<wsd:AppSequence InstanceId=\"%lld\" SequenceId=\"urn:uuid:%s\" "
 	"MessageNumber=\"%u\" />"
 	"%s"
 	"</soap:Header>"
@@ -559,7 +585,7 @@ static int wsd_send_soap_msg(int fd, struct endpoint *ep,
 	}
 
 	ssize_t msglen = asprintf(&msg, soap_msg_templ, to, action, msg_id,
-				wsd_instance, wsd_sequence,
+				(long long)wsd_instance, wsd_sequence,
 				++msg_no, soap_relates,
 				body);
 	free(soap_relates);
@@ -876,15 +902,15 @@ static int wsd_parse_http_header(int fd, struct endpoint *ep,
 		endpointlen = strlen(wsd_endpoint);
 
 	*eol = '\0';
-	if (strncmp(p, "POST /", 6)) {
+	if (strncmp(p, "POST /", 6) != 0) {
 		ep->errstr = __FUNCTION__ ": Only POST method supported";
 		return 405;
 	}
-	if (strncmp(p + 6, wsd_endpoint, endpointlen)) {
+	if (strncmp(p + 6, wsd_endpoint, endpointlen) != 0) {
 		ep->errstr = __FUNCTION__ ": Invalid endpoint UUID";
 		return 404;
 	}
-	if (strncmp(p + 6 + endpointlen, " HTTP/", 6)) {
+	if (strncmp(p + 6 + endpointlen, " HTTP/", 6) != 0) {
 		ep->errstr = __FUNCTION__ ": Must be HTTP/1.0 and up";
 		return 405;
 	}
@@ -902,7 +928,7 @@ again:
 		if ((val = HEADER_IS(p, "Content-Type:"))) {
 			while (*val == ' ' || *val == '\t' || *val == '\r' || *val == '\n')
 				val++; // skip LWS
-			if (strcmp(val, "application/soap+xml")) {
+			if (strcmp(val, "application/soap+xml") != 0) {
 				ep->errstr = __FUNCTION__ ": Unsupported Content-Type";
 				return 400;
 			}

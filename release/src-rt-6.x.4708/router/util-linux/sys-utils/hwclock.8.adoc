@@ -48,6 +48,11 @@ The RTC driver attempts to guess the correct epoch value, so setting it may not 
 +
 This epoch value is used whenever *hwclock* reads or sets the Hardware Clock on an Alpha machine. For ISA machines the kernel uses the fixed Hardware Clock epoch of 1900.
 
+**--param-get=**__parameter__; **--param-set=**__parameter__=__value__::
+Read and set the RTC's parameter. This is useful, for example, to retrieve the RTC's feature or set the RTC's Backup Switchover Mode.
++
+_parameter_ is either a numeric RTC parameter value (see the Kernel's _include/uapi/linux/rtc.h_) or an alias. See *--help* for a list of valid aliases. _parameter_ and _value_, if prefixed with 0x, are interpreted as hexadecimal, otherwise decimal values.
+
 *--predict*::
 Predict what the Hardware Clock will read in the future based upon the time given by the *--date* option and the information in _{ADJTIME_PATH}_. This is useful, for example, to account for drift when setting a Hardware Clock wakeup (aka alarm). See *rtcwake*(8).
 +
@@ -65,7 +70,7 @@ Set the System Clock from the Hardware Clock. The time read from the Hardware Cl
 +
 The System Clock must be kept in the UTC timescale for date-time applications to work correctly in conjunction with the timezone configured for the system. If the Hardware Clock is kept in local time then the time read from it must be shifted to the UTC timescale before using it to set the System Clock. The *--hctosys* function does this based upon the information in the _{ADJTIME_PATH}_ file or the command line arguments *--localtime* and *--utc*. Note: no daylight saving adjustment is made. See the discussion below, under *LOCAL vs UTC*.
 +
-The kernel also keeps a timezone value, the *--hctosys* function sets it to the timezone configured for the system. The system timezone is configured by the TZ environment variable or the _/etc/localtime_ file, as *tzset*(3) would interpret them. The obsolete _tz_dsttime_ field of the kernel's timezone value is set to zero. (For details on what this field used to mean, see *settimeofday*(2).)
+The kernel also keeps a timezone value, the *--hctosys* function sets it to the timezone configured for the system. The system timezone is configured by the *TZ* environment variable or the _/etc/localtime_ file, as *tzset*(3) would interpret them. The obsolete _tz_dsttime_ field of the kernel's timezone value is set to zero. (For details on what this field used to mean, see *settimeofday*(2).)
 +
 When used in a startup script, making the *--hctosys* function the first caller of *settimeofday*(2) from boot, it will set the NTP '11 minute mode' timescale via the _persistent_clock_is_local_ kernel variable. If the Hardware Clock's timescale configuration is changed then a reboot is required to inform the kernel. See the discussion below, under *Automatic Hardware Clock Synchronization by the Kernel*.
 +
@@ -96,11 +101,7 @@ The first two are only available on the first call of *settimeofday*(2) after bo
 *-w*, *--systohc*::
 Set the Hardware Clock from the System Clock, and update the timestamps in _{ADJTIME_PATH}_. With the *--update-drift* option also (re)calculate the drift factor. Try it without the option if *--systohc* fails. See *--update-drift* below.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == OPTIONS
 
@@ -359,7 +360,7 @@ If this variable is set its value takes precedence over the system configured ti
 == FILES
 
 _{ADJTIME_PATH}_::
-The configuration and state file for hwclock.
+The configuration and state file for *hwclock*. See also *adjtime_config*(5).
 
 _/etc/localtime_::
 The system timezone file.
@@ -372,6 +373,7 @@ Device files *hwclock* may try for Hardware Clock access: _/dev/rtc0_ _/dev/rtc_
 == SEE ALSO
 
 *date*(1),
+*adjtime_config*(5),
 *adjtimex*(8),
 *gettimeofday*(2),
 *settimeofday*(2),

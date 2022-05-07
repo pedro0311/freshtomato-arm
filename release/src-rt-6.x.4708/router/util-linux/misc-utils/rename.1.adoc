@@ -31,17 +31,19 @@ Show which files were renamed, if any.
 *-n*, *--no-act*::
 Do not make any changes; add *--verbose* to see what would be made.
 
+*-a*, *--all*::
+Replace all occurrences of _expression_ rather than only the first one.
+
+*-l*, *--last*::
+Replace the last occurrence of _expression_ rather than the first one.
+
 *-o*, *--no-overwrite*::
 Do not overwrite existing files. When *--symlink* is active, do not overwrite symlinks pointing to existing targets.
 
 *-i*, *--interactive*::
 Ask before overwriting existing files.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == WARNING
 

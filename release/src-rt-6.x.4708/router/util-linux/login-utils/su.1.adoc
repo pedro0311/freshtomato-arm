@@ -5,6 +5,7 @@
 :man source: util-linux {release-version}
 :page-layout: base
 :command: su
+:colon: :
 
 == NAME
 
@@ -27,6 +28,8 @@ This version of *su* uses PAM for authentication, account and session management
 *su* is mostly designed for unprivileged users, the recommended solution for privileged users (e.g., scripts executed by root) is to use non-set-user-ID command *runuser*(1) that does not require authentication and provides separate PAM configuration. If the PAM session is not required at all then the recommended solution is to use command *setpriv*(1).
 
 Note that *su* in all cases uses PAM (*pam_getenvlist*(3)) to do the final environment modification. Command-line options such as *--login* and *--preserve-environment* affect the environment before it is modified by PAM.
+
+Since version 2.38 *su* resets process resource limits RLIMIT_NICE, RLIMIT_RTPRIO, RLIMIT_FSIZE, RLIMIT_AS and RLIMIT_NOFILE.
 
 == OPTIONS
 
@@ -54,9 +57,9 @@ Start the shell as a login shell with an environment similar to a real login:
 Preserve the entire environment, i.e., do not set *HOME*, *SHELL*, *USER* or *LOGNAME*. This option is ignored if the option *--login* is specified.
 
 *-P*, *--pty*::
-Create a pseudo-terminal for the session. The independent terminal provides better security as the user does not share a terminal with the original session. This can be used to avoid TIOCSTI ioctl terminal injection and other security attacks against terminal file descriptors. The entire session can also be moved to the background (e.g., "su --pty - username -c application &"). If the pseudo-terminal is enabled, then *su* works as a proxy between the sessions (copy stdin and stdout).
+Create a pseudo-terminal for the session. The independent terminal provides better security as the user does not share a terminal with the original session. This can be used to avoid *TIOCSTI* ioctl terminal injection and other security attacks against terminal file descriptors. The entire session can also be moved to the background (e.g., *su --pty* **-** __username__ *-c* _application_ *&*). If the pseudo-terminal is enabled, then *su* works as a proxy between the sessions (sync stdin and stdout).
 +
-This feature is mostly designed for interactive sessions. If the standard input is not a terminal, but for example a pipe (e.g., echo "date" | su --pty), then the ECHO flag for the pseudo-terminal is disabled to avoid messy output.
+This feature is mostly designed for interactive sessions. If the standard input is not a terminal, but for example a pipe (e.g., *echo "date" | su --pty*), then the *ECHO* flag for the pseudo-terminal is disabled to avoid messy output.
 
 *-s*, **--shell**=__shell__::
 Run the specified _shell_ instead of the default. The shell to run is selected according to the following rules, in order:
@@ -66,7 +69,7 @@ Run the specified _shell_ instead of the default. The shell to run is selected a
 * the shell listed in the passwd entry of the target user
 * /bin/sh
 
-If the target user has a restricted shell (i.e., not listed in /etc/shells), the *--shell* option and the *SHELL* environment variables are ignored unless the calling user is root.
+If the target user has a restricted shell (i.e., not listed in _/etc/shells_), the *--shell* option and the *SHELL* environment variables are ignored unless the calling user is root.
 
 **--session-command=**__command__::
 Same as *-c*, but do not create a new session. (Discouraged.)
@@ -74,11 +77,7 @@ Same as *-c*, but do not create a new session. (Discouraged.)
 *-w*, **--whitelist-environment**=__list__::
 Don't reset the environment variables specified in the comma-separated _list_ when clearing the environment for *--login*. The whitelist is ignored for the environment variables *HOME*, *SHELL*, *USER*, *LOGNAME*, and *PATH*.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
+include::man-common/help-version.adoc[]
 
 == SIGNALS
 
@@ -86,7 +85,8 @@ Upon receiving either *SIGINT*, *SIGQUIT* or *SIGTERM*, *su* terminates its chil
 
 == CONFIG FILES
 
-*su* reads the _/etc/default/su_ and _/etc/login.defs_ configuration files. The following configuration items are relevant for *su:*
+//TRANSLATORS: Keep {colon} untranslated
+*su* reads the _/etc/default/su_ and _/etc/login.defs_ configuration files. The following configuration items are relevant for *su*{colon}
 
 *FAIL_DELAY* (number)::
 Delay in seconds in case of an authentication failure. The number must be a non-negative integer.
@@ -132,7 +132,7 @@ global logindef config file
 
 == NOTES
 
-For security reasons, *su* always logs failed log-in attempts to the btmp file, but it does not write to the _lastlog_ file at all. This solution can be used to control *su* behavior by PAM configuration. If you want to use the *pam_lastlog*(8) module to print warning message about failed log-in attempts then *pam_lastlog*(8) has to be configured to update the _lastlog_ file as well. For example by:
+For security reasons, *su* always logs failed log-in attempts to the _btmp_ file, but it does not write to the _lastlog_ file at all. This solution can be used to control *su* behavior by PAM configuration. If you want to use the *pam_lastlog*(8) module to print warning message about failed log-in attempts then *pam_lastlog*(8) has to be configured to update the _lastlog_ file as well. For example by:
 
 ____
 session required pam_lastlog.so nowtmp

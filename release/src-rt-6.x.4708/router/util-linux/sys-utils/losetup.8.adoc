@@ -30,7 +30,7 @@ Detach all associated loop devices:
 
 Set up a loop device:
 
-*losetup* [*-o* _offset_] [*--sizelimit* _size_] [*--sector-size* _size_] [*-Pr*] [*--show*] *-f* _loopdev file_
+*losetup* [*-o* _offset_] [*--sizelimit* _size_] [*--sector-size* _size_] [*-Pr*] [*--show*] *-f*|_loopdev file_
 
 Resize a loop device:
 
@@ -44,14 +44,14 @@ Note that the old output format (i.e., *losetup -a*) with comma-delimited string
 
 It's possible to create more independent loop devices for the same backing file. *This setup may be dangerous, can cause data loss, corruption and overwrites.* Use *--nooverlap* with *--find* during setup to avoid this problem.
 
-The loop device setup is not an atomic operation when used with *--find*, and *losetup* does not protect this operation by any lock. The number of attempts is internally restricted to a maximum of 16. It is recommended to use for example flock1 to avoid a collision in heavily parallel use cases.
+The loop device setup is not an atomic operation when used with *--find*, and *losetup* does not protect this operation by any lock. The number of attempts is internally restricted to a maximum of 16. It is recommended to use for example *flock*(1) to avoid a collision in heavily parallel use cases.
 
 == OPTIONS
 
 The _size_ and _offset_ arguments may be followed by the multiplicative suffixes KiB (=1024), MiB (=1024*1024), and so on for GiB, TiB, PiB, EiB, ZiB and YiB (the "iB" is optional, e.g., "K" has the same meaning as "KiB") or the suffixes KB (=1000), MB (=1000*1000), and so on for GB, TB, PB, EB, ZB and YB.
 
 *-a*, *--all*::
-Show the status of all loop devices. Note that not all information is accessible for non-root users. See also *--list*. The old output format (as printed without *--list)* is deprecated.
+Show the status of all loop devices. Note that not all information is accessible for non-root users. See also *--list*. The old output format (as printed without *--list*) is deprecated.
 
 *-d*, *--detach* _loopdev_...::
 Detach the file or device associated with the specified loop device(s). Note that since Linux v3.7 kernel uses "lazy device destruction". The detach operation does not return *EBUSY* error anymore if device is actively used by system, but it is marked by autoclear flag and destroyed later.
@@ -90,7 +90,7 @@ Force the kernel to scan the partition table on a newly created loop device. Not
 Set up a read-only loop device.
 
 *--direct-io*[**=on**|*off*]::
-Enable or disable direct I/O for the backing file. The optional argument can be either *on* or *off*. If the argument is omitted, it defaults to *off*.
+Enable or disable direct I/O for the backing file. The optional argument can be either *on* or *off*. If the optional argument is omitted, it defaults to *on*.
 
 *-v*, *--verbose*::
 Verbose mode.
@@ -113,12 +113,6 @@ Use the raw *--list* output format.
 *-J*, *--json*::
 Use JSON format for *--list* output.
 
-*-V*, *--version*::
-Display version information and exit.
-
-*-h*, *--help*::
-Display help text and exit.
-
 == ENCRYPTION
 
 *Cryptoloop is no longer supported in favor of dm-crypt.* For more details see *cryptsetup*(8).
@@ -133,7 +127,7 @@ Since version 2.37 *losetup* uses *LOOP_CONFIGURE* ioctl to setup a new loop dev
 
 == ENVIRONMENT
 
-LOOPDEV_DEBUG=all::
+*LOOPDEV_DEBUG*=all::
 enables debug output.
 
 == FILES

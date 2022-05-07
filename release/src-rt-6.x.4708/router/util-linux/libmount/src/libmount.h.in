@@ -515,6 +515,7 @@ extern int mnt_fs_is_kernel(struct libmnt_fs *fs);
 extern int mnt_fs_is_swaparea(struct libmnt_fs *fs);
 extern int mnt_fs_is_netfs(struct libmnt_fs *fs);
 extern int mnt_fs_is_pseudofs(struct libmnt_fs *fs);
+extern int mnt_fs_is_regularfs(struct libmnt_fs *fs);
 
 extern void mnt_free_mntent(struct mntent *mnt);
 extern int mnt_fs_to_mntent(struct libmnt_fs *fs, struct mntent **mnt);
@@ -916,6 +917,7 @@ extern int mnt_context_set_syscall_status(struct libmnt_context *cxt, int status
 #define MNT_MS_FEC_OFFSET (1 << 23)
 #define MNT_MS_FEC_ROOTS (1 << 24)
 #define MNT_MS_ROOT_HASH_SIG (1 << 25)
+#define MNT_MS_VERITY_ON_CORRUPTION (1 << 26)
 
 /*
  * mount(2) MS_* masks (MNT_MAP_LINUX map)

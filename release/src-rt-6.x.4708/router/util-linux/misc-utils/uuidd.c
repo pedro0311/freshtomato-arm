@@ -395,7 +395,7 @@ static void server_loop(const char *socket_path, const char *pidfile_path,
 			create_daemon();
 
 		if (pidfile_path) {
-			sprintf(reply_buf, "%8d\n", getpid());
+			snprintf(reply_buf, sizeof(reply_buf), "%8d\n", getpid());
 			if (ftruncate(fd_pidfile, 0))
 				err(EXIT_FAILURE, _("could not truncate file: %s"), pidfile_path);
 			write_all(fd_pidfile, reply_buf, strlen(reply_buf));
@@ -485,16 +485,17 @@ static void server_loop(const char *socket_path, const char *pidfile_path,
 
 		switch (op) {
 		case UUIDD_OP_GETPID:
-			sprintf(reply_buf, "%d", getpid());
+			snprintf(reply_buf, sizeof(reply_buf), "%d", getpid());
 			reply_len = strlen(reply_buf) + 1;
 			break;
 		case UUIDD_OP_GET_MAXOP:
-			sprintf(reply_buf, "%d", UUIDD_MAX_OP);
+			snprintf(reply_buf, sizeof(reply_buf), "%d", UUIDD_MAX_OP);
 			reply_len = strlen(reply_buf) + 1;
 			break;
 		case UUIDD_OP_TIME_UUID:
 			num = 1;
-			__uuid_generate_time(uu, &num);
+			if (__uuid_generate_time(uu, &num) < 0 && !uuidd_cxt->quiet)
+				warnx(_("failed to open/lock clock counter"));
 			if (uuidd_cxt->debug) {
 				uuid_unparse(uu, str);
 				fprintf(stderr, _("Generated time UUID: %s\n"), str);
@@ -504,7 +505,8 @@ static void server_loop(const char *socket_path, const char *pidfile_path,
 			break;
 		case UUIDD_OP_RANDOM_UUID:
 			num = 1;
-			__uuid_generate_random(uu, &num);
+			if (__uuid_generate_time(uu, &num) < 0 && !uuidd_cxt->quiet)
+				warnx(_("failed to open/lock clock counter"));
 			if (uuidd_cxt->debug) {
 				uuid_unparse(uu, str);
 				fprintf(stderr, _("Generated random UUID: %s\n"), str);
@@ -513,7 +515,8 @@ static void server_loop(const char *socket_path, const char *pidfile_path,
 			reply_len = sizeof(uu);
 			break;
 		case UUIDD_OP_BULK_TIME_UUID:
-			__uuid_generate_time(uu, &num);
+			if (__uuid_generate_time(uu, &num) < 0 && !uuidd_cxt->quiet)
+				warnx(_("failed to open/lock clock counter"));
 			if (uuidd_cxt->debug) {
 				uuid_unparse(uu, str);
 				fprintf(stderr, P_("Generated time UUID %s "

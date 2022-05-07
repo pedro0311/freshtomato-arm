@@ -28,11 +28,14 @@ The relationship between block devices and filesystems is not always one-to-one.
 
 == OPTIONS
 
+*-A*, *--noempty*::
+Don't print empty devices.
+
 *-a*, *--all*::
-Also list empty devices and RAM disk devices.
+Disable all built-in filters and list all empty devices and RAM disk devices too.
 
 *-b*, *--bytes*::
-Print the SIZE column in bytes rather than in a human-readable format.
+include::man-common/in-bytes.adoc[]
 
 *-D*, *--discard*::
 Print information about the discarding capabilities (TRIM, UNMAP) for each device.
@@ -50,9 +53,6 @@ Exclude the devices specified by the comma-separated _list_ of major device numb
 
 *-f*, *--fs*::
 Output info about filesystems. This option is equivalent to *-o NAME,FSTYPE,FSVER,LABEL,UUID,FSAVAIL,FSUSE%,MOUNTPOINTS*. The authoritative information about filesystems and raids is provided by the *blkid*(8) command.
-
-*-h*, *--help*::
-Display help text and exit.
 
 *-I*, *--include* _list_::
 Include devices specified by the comma-separated _list_ of major device numbers. The filter is applied to the top-level devices only. This may be confusing for *--list* output format where hierarchy of the devices is not obvious.
@@ -84,7 +84,7 @@ The default list of columns may be extended if _list_ is specified in the format
 Output all available columns.
 
 *-P*, *--pairs*::
-Produce output in the form of key="value" pairs. The output lines are still ordered by dependencies. All potentially unsafe value characters are hex-escaped (\x<code>). The key (variable name) will be modified to contain only characters allowed for a shell variable identifiers, for example, MIN_IO and FSUSE_PCT instead of MIN-IO and FSUSE%.
+Produce output in the form of key="value" pairs. The output lines are still ordered by dependencies. All potentially unsafe value characters are hex-escaped (\x<code>). See also option *--shell*.
 
 *-p*, *--paths*::
 Print full device paths.
@@ -106,8 +106,7 @@ Output info about block-device topology. This option is equivalent to
 +
 *-o NAME,ALIGNMENT,MIN-IO,OPT-IO,PHY-SEC,LOG-SEC,ROTA,SCHED,RQ-SIZE,RA,WSAME*.
 
-*-V*, *--version*::
-Display version information and exit.
+include::man-common/help-version.adoc[]
 
 *-w*, *--width* _number_::
 Specifies output width as a number of characters. The default is the number of the terminal columns, and if not executed on a terminal, then output width is not restricted at all by default. This option also forces *lsblk* to assume that terminal control characters and unsafe characters are not allowed. The expected use-case is for example when *lsblk* is used by the *watch*(1) command.
@@ -115,8 +114,11 @@ Specifies output width as a number of characters. The default is the number of t
 *-x*, *--sort* _column_::
 Sort output lines by _column_. This option enables *--list* output format by default. It is possible to use the option *--tree* to force tree-like output and than the tree branches are sorted by the _column_.
 
+*-y*, *--shell*::
+The column name will be modified to contain only characters allowed for shell variable identifiers, for example, MIN_IO and FSUSE_PCT instead of MIN-IO and FSUSE%. This is usable, for example, with *--pairs*. Note that this feature has been automatically enabled for *--pairs* in version 2.37, but due to compatibility issues, now it's necessary to request this behavior by *--shell*.
+
 *-z*, *--zoned*::
-Print the zone model for each device.
+Print the zone related information for each device.
 
 *--sysroot* _directory_::
 Gather data for a Linux instance other than the instance from which the *lsblk* command is issued. The specified directory is the system root of the Linux instance to be inspected. The real device nodes in the target directory can be replaced by text files with udev attributes.
@@ -137,26 +139,26 @@ some specified devices found, some not found
 
 == ENVIRONMENT
 
-LSBLK_DEBUG=all::
+*LSBLK_DEBUG*=all::
 enables *lsblk* debug output.
 
-LIBBLKID_DEBUG=all::
+*LIBBLKID_DEBUG*=all::
 enables *libblkid* debug output.
 
-LIBMOUNT_DEBUG=all::
+*LIBMOUNT_DEBUG*=all::
 enables *libmount* debug output.
 
-LIBSMARTCOLS_DEBUG=all::
+*LIBSMARTCOLS_DEBUG*=all::
 enables *libsmartcols* debug output.
 
-LIBSMARTCOLS_DEBUG_PADDING=on::
+*LIBSMARTCOLS_DEBUG_PADDING*=on::
 use visible padding characters.
 
 == NOTES
 
 For partitions, some information (e.g., queue attributes) is inherited from the parent device.
 
-The *lsblk* command needs to be able to look up each block device by major:minor numbers, which is done by using _/sys/dev/block_. This sysfs block directory appeared in kernel 2.6.27 (October 2008). In case of problems with a new enough kernel, check that CONFIG_SYSFS was enabled at the time of the kernel build.
+The *lsblk* command needs to be able to look up each block device by major:minor numbers, which is done by using _/sys/dev/block_. This sysfs block directory appeared in kernel 2.6.27 (October 2008). In case of problems with a new enough kernel, check that *CONFIG_SYSFS* was enabled at the time of the kernel build.
 
 == AUTHORS
 

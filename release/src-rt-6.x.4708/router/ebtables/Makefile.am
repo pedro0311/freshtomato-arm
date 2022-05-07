@@ -50,9 +50,8 @@ ebtables_legacy_LDADD = libebtc.la
 ebtablesd_LDADD = libebtc.la
 ebtables_legacy_restore_SOURCES = ebtables-restore.c
 ebtables_legacy_restore_LDADD = libebtc.la
-static_SOURCES = ebtables.c
+static_SOURCES = ebtables-standalone.c $(libebtc_la_SOURCES)
 static_LDFLAGS = -static
-static_LDADD = libebtc.la
 examples_ulog_test_ulog_SOURCES = examples/ulog/test_ulog.c getethertype.c
 
 daemon: ebtablesd ebtablesu
