@@ -818,6 +818,10 @@ static int init_vlan_ports(void)
 		dirty |= check_nv("vlan1ports", "0 1 2 3 5*");
 		dirty |= check_nv("vlan2ports", "4 5");
 		break;
+	case MODEL_DSLAC68U:
+		dirty |= check_nv("vlan1ports", "2 3 4 5*");
+		dirty |= check_nv("vlan2ports", "1 5");
+		break;
 	case MODEL_R6400:
 	case MODEL_R6400v2:
 	case MODEL_R6700v1:
@@ -4662,6 +4666,68 @@ static int init_nvram(void)
 	case MODEL_RTAC67U: /* also for RT-AC1900U */
 		mfr = "Asus";
 		name = nvram_match("odmpid", "RT-AC67U") ? "RT-AC67U" : "RT-AC1900U";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("vlan1hwname", "et0");
+			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+
+			/* fix MAC addresses */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s));	/* get et0 MAC address for LAN */
+			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			nvram_set("0:macaddr", s);				/* fix WL mac for 2,4G (do not use the same MAC address like for LAN) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);						/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);				/* fix WL mac for 5G */
+			nvram_set("wl1_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			nvram_set("wl0_bw_cap", "3");
+			nvram_set("wl0_chanspec", "6u");
+			nvram_set("wl0_channel", "6");
+			nvram_set("wl0_nbw", "40");
+			nvram_set("wl0_nctrlsb", "upper");
+			nvram_set("wl1_bw_cap", "7");
+			nvram_set("wl1_chanspec", "36/80");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw", "80");
+			nvram_set("wl1_nbw_cap", "3");
+			nvram_set("wl1_nctrlsb", "lower");
+
+			/* wifi country settings */
+			nvram_set("0:regrev", "12");
+			nvram_set("1:regrev", "12");
+			nvram_set("0:ccode", "SG");
+			nvram_set("1:ccode", "SG");
+		}
+		break;
+	case MODEL_DSLAC68U:
+		mfr = "Asus";
+        name = "DSL-AC68U";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");

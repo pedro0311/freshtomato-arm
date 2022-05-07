@@ -32,6 +32,7 @@ Tenda AC18			BCM4708               0x0646       30        0x1100 //1:boardnum=AC
 
 TrendNET			BCM4708               0x0646       1234      0x1100    0x80001200
 
+DSL-AC68U			BCM4708A0             0x0646       <MAC>     0x1100    0x00000110
 RT-N18U				BCM47081A0            0x0646       00        0x1100    0x00000110
 RT-AC56U			BCM4708               0x0646	   00	     0x1100    0x00000110
 RT-AC68U			BCM4708               0x0646       <MAC>     0x1100    0x00001000
@@ -110,6 +111,7 @@ int get_model(void)
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC56U"))) return MODEL_RTAC56U;
 		if (nvram_match("odmpid", "RT-AC1900P")) return MODEL_RTAC1900P;
 		if ((nvram_match("boardrev", "0x1500")) && (nvram_match("odmpid", "RT-AC68U"))) return MODEL_RTAC1900P; /* RT-AC68U B2 --> (almost) the same like RT-AC1900P */
+		if (nvram_match("model", "DSL-AC68U")) return MODEL_DSLAC68U; /* DSL-AC68U */
 		if ((nvram_match("boardrev", "0x1100")) && (nvram_match("model", "RT-AC68U"))) return MODEL_RTAC68U; /* RT-AC68R/U */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-N66U_C1"))) return MODEL_RTAC66U_B1; /* RT-N66U_C1 --> (almost) the same like RT-AC66U_B1 */
 		if ((nvram_match("boardrev", "0x1103")) && (nvram_match("model", "RT-AC68U")) && (nvram_match("odmpid", "RT-AC1750_B1"))) return MODEL_RTAC66U_B1; /* RT-AC1750_B1 --> (almost) the same like RT-AC66U_B1 */

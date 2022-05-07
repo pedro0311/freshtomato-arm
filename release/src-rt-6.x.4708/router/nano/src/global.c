@@ -201,6 +201,12 @@ char *syntaxstr = NULL;
 		/* The color syntax name specified on the command line. */
 bool have_palette = FALSE;
 		/* Whether the colors for the current syntax have been initialized. */
+bool rescind_colors = FALSE;
+		/* Becomes TRUE when NO_COLOR is set in the environment. */
+bool perturbed = FALSE;
+		/* Whether the multiline-coloring situation has changed. */
+bool recook = FALSE;
+		/* Whether the multidata should be recalculated. */
 #endif
 
 int currmenu = MMOST;

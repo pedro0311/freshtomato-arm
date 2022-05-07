@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see https://www.gnu.org/licenses/.
 
-AC_INIT([GNU nano], [6.2], [nano-devel@gnu.org], [nano])
+AC_INIT([GNU nano], [6.3], [nano-devel@gnu.org], [nano])
 AC_CONFIG_SRCDIR([src/nano.c])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([1.14])
+AM_MAINTAINER_MODE([enable])
 AC_CONFIG_HEADERS([config.h])
 
 dnl Make sure the ONCE macros are available.
@@ -353,6 +354,9 @@ if test "x$enable_utf8" != xno; then
 	AC_CHECK_FUNCS(iswalpha iswalnum iswpunct mbstowcs wctomb)
 fi
 
+AC_CHECK_FUNCS_ONCE(chmod chown fchmod fchown flockfile funlockfile
+                    fork fsync geteuid pipe wait waitpid)
+
 dnl Checks for available flags.
 
 AX_CHECK_COMPILE_FLAG([-Wall], [CFLAGS="$CFLAGS -Wall"], [], [])
@@ -509,21 +513,6 @@ int main(void)
 	AC_MSG_WARN([
   *** Can't check need for _XOPEN_SOURCE_EXTENDED when cross-compiling.]))
 fi
-
-AC_MSG_CHECKING([whether LINES and COLS can be redefined])
-AC_RUN_IFELSE([AC_LANG_SOURCE([[
-#include <curses.h>
-int main(void)
-{
-	LINES = 80;
-	COLS = 25;
-	return 0;
-}]])],
-AC_DEFINE(REDEFINING_MACROS_OK, 1, [Define this if you know your curses library allows LINES and COLS to be redefined to deal with a resizing bug.])
-AC_MSG_RESULT(yes),
-AC_MSG_RESULT(no),
-AC_MSG_WARN([
-  *** Can't check for macro redefinability when cross-compiling.]))
 
 AS_IF([test "x$enable_libmagic" != "xno"], [
 	AC_CHECK_HEADERS([magic.h])

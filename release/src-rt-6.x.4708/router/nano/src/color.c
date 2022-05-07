@@ -53,6 +53,7 @@ void set_interface_colorpairs(void)
 			}
 			init_pair(index + 1, combo->fg, combo->bg);
 			interface_color_pair[index] = COLOR_PAIR(index + 1) | combo->attributes;
+			rescind_colors = FALSE;
 		} else {
 			if (index == FUNCTION_TAG || index == SCROLL_BAR)
 				interface_color_pair[index] = A_NORMAL;
@@ -71,6 +72,11 @@ void set_interface_colorpairs(void)
 		}
 
 		free(color_combo[index]);
+	}
+
+	if (rescind_colors) {
+		interface_color_pair[SPOTLIGHTED] = A_REVERSE;
+		interface_color_pair[ERROR_MESSAGE] = A_REVERSE;
 	}
 }
 
@@ -255,12 +261,14 @@ void check_the_multis(linestruct *line)
 		if (line->multidata[ink->id] == NOTHING) {
 			if (!astart)
 				continue;
-		} else if (line->multidata[ink->id] & (WHOLELINE|WOULDBE)) {
-			if (!astart && !anend)
+		} else if (line->multidata[ink->id] == WHOLELINE) {
+			/* Ensure that a detected start match is not actually an end match. */
+			if (!anend && (!astart || regexec(ink->end, line->data, 1,
+												&endmatch, 0) != 0))
 				continue;
 		} else if (line->multidata[ink->id] == JUSTONTHIS) {
-			if (astart && anend && regexec(ink->start, line->data + endmatch.rm_eo,
-														1, &startmatch, 0) != 0)
+			if (astart && anend && regexec(ink->start, line->data + startmatch.rm_eo +
+											endmatch.rm_eo, 1, &startmatch, 0) != 0)
 				continue;
 		} else if (line->multidata[ink->id] == STARTSHERE) {
 			if (astart && !anend)
@@ -272,6 +280,7 @@ void check_the_multis(linestruct *line)
 
 		/* There is a mismatch, so something changed: repaint. */
 		refresh_needed = TRUE;
+		perturbed = TRUE;
 		return;
 	}
 }
@@ -342,20 +351,16 @@ void precalc_multicolorinfo(void)
 											1, &endmatch, 0) != 0)
 					tailline = tailline->next;
 
-				/* When there is no end match, mark relevant lines as such. */
-				if (tailline == NULL) {
-					for (; line->next != NULL; line = line->next)
-						line->multidata[ink->id] = WOULDBE;
-					line->multidata[ink->id] = WOULDBE;
-					break;
-				}
-
-				/* We found it, we found it, la lala lala.  Mark the lines. */
 				line->multidata[ink->id] = STARTSHERE;
 
 				// Note that this also advances the line in the main loop.
 				for (line = line->next; line != tailline; line = line->next)
 					line->multidata[ink->id] = WHOLELINE;
+
+				if (tailline == NULL) {
+					line = openfile->filebot;
+					break;
+				}
 
 				tailline->multidata[ink->id] = ENDSHERE;
 

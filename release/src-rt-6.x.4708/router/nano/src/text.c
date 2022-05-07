@@ -558,7 +558,8 @@ void do_undo(void)
 		 * and the nonewlines flag isn't set, do not re-add a newline that
 		 * wasn't actually deleted; just position the cursor. */
 		if ((u->xflags & WAS_BACKSPACE_AT_EOF) && !ISSET(NO_NEWLINES)) {
-			goto_line_posx(openfile->filebot->lineno, 0);
+			openfile->current = openfile->filebot;
+			openfile->current_x = 0;
 			break;
 		}
 		line->data[u->tail_x] = '\0';
@@ -664,6 +665,13 @@ void do_undo(void)
 	openfile->placewewant = xplustabs();
 
 	openfile->totsize = u->wassize;
+
+#ifdef ENABLE_COLOR
+	if (u->type <= REPLACE)
+		check_the_multis(openfile->current);
+	else if (u->type == INSERT)
+		perturbed = TRUE;
+#endif
 
 	/* When at the point where the buffer was last saved, unset "Modified". */
 	if (openfile->current_undo == openfile->last_saved) {
@@ -824,6 +832,13 @@ void do_redo(void)
 	openfile->placewewant = xplustabs();
 
 	openfile->totsize = u->newsize;
+
+#ifdef ENABLE_COLOR
+	if (u->type <= REPLACE)
+		check_the_multis(openfile->current);
+	else if (u->type == INSERT)
+		recook = TRUE;
+#endif
 
 	/* When at the point where the buffer was last saved, unset "Modified". */
 	if (openfile->current_undo == openfile->last_saved) {
@@ -1177,7 +1192,8 @@ void update_undo(undo_type action)
 		else if (cutbuffer != NULL) {
 			free_lines(u->cutbuffer);
 			u->cutbuffer = copy_buffer(cutbuffer);
-		}
+		} else
+			break;
 		if (!(u->xflags & MARK_WAS_SET)) {
 			linestruct *bottomline = u->cutbuffer;
 			size_t count = 0;
@@ -1745,6 +1761,8 @@ void justify_text(bool whole_buffer)
 		/* The leading part for lines after the first one. */
 	size_t secondary_len = 0;
 		/* The length of that later lead. */
+	ssize_t was_the_linenumber = openfile->current->lineno;
+		/* The line to return to after a full justification. */
 
 	/* TRANSLATORS: This one goes with Undid/Redid messages. */
 	add_undo(COUPLE_BEGIN, N_("justification"));
@@ -1961,7 +1979,8 @@ void justify_text(bool whole_buffer)
 		openfile->current_x = openfile->mark_x;
 		openfile->mark = bottom;
 		openfile->mark_x = bottom_x;
-	}
+	} else if (whole_buffer && !openfile->mark)
+		goto_line_posx(was_the_linenumber, 0);
 
 	add_undo(COUPLE_END, N_("justification"));
 
@@ -2031,11 +2050,19 @@ bool replace_buffer(const char *filename, undo_type action, const char *operatio
 	if (descriptor < 0)
 		return FALSE;
 
+#ifndef NANO_TINY
+	add_undo(COUPLE_BEGIN, operation);
+#endif
+
+	/* When replacing the whole buffer, start cutting at the top. */
+	if (action == CUT_TO_EOF) {
+		openfile->current = openfile->filetop;
+		openfile->current_x = 0;
+	}
+
 	cutbuffer = NULL;
 
 #ifndef NANO_TINY
-	add_undo(COUPLE_BEGIN, operation);
-
 	/* Cut either the marked region or the whole buffer. */
 	add_undo(action, NULL);
 	do_snip(openfile->mark != NULL, openfile->mark == NULL, FALSE);
@@ -2060,6 +2087,7 @@ bool replace_buffer(const char *filename, undo_type action, const char *operatio
 /* Execute the given program, with the given temp file as last argument. */
 void treat(char *tempfile_name, char *theprogram, bool spelling)
 {
+#if defined(HAVE_FORK) && defined(HAVE_WAIT)
 	ssize_t was_lineno = openfile->current->lineno;
 	size_t was_pww = openfile->placewewant;
 	size_t was_x = openfile->current_x;
@@ -2154,14 +2182,9 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		openfile->mark = line_from_number(was_mark_lineno);
 	} else
 #endif
-	{
-		openfile->current = openfile->filetop;
-		openfile->current_x = 0;
-
 		replaced = replace_buffer(tempfile_name, CUT_TO_EOF,
 					/* TRANSLATORS: The next two go with Undid/Redid messages. */
 					(spelling ? N_("spelling correction") : N_("formatting")));
-	}
 
 	/* Go back to the old position. */
 	goto_line_posx(was_lineno, was_x);
@@ -2182,6 +2205,7 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		statusline(REMARK, _("Finished checking spelling"));
 	else
 		statusline(REMARK, _("Buffer has been processed"));
+#endif
 }
 #endif /* ENABLE_SPELLER || ENABLE_COLOR */
 
@@ -2294,12 +2318,14 @@ bool fix_spello(const char *word)
  * correction. */
 void do_int_speller(const char *tempfile_name)
 {
+#if defined(HAVE_FORK) && defined(HAVE_WAITPID)
 	char *misspellings, *pointer, *oneword;
 	long pipesize;
 	size_t buffersize, bytesread, totalread;
 	int spell_fd[2], sort_fd[2], uniq_fd[2], tempfile_fd = -1;
 	pid_t pid_spell, pid_sort, pid_uniq;
 	int spell_status, sort_status, uniq_status;
+	unsigned stash[sizeof(flags) / sizeof(flags[0])];
 
 	/* Create all three pipes up front. */
 	if (pipe(spell_fd) == -1 || pipe(sort_fd) == -1 || pipe(uniq_fd) == -1) {
@@ -2424,6 +2450,9 @@ void do_int_speller(const char *tempfile_name)
 	terminal_init();
 	doupdate();
 
+	/* Save the settings of the global flags. */
+	memcpy(stash, flags, sizeof(flags));
+
 	/* Do any replacements case-sensitively, forward, and without regexes. */
 	SET(CASE_SENSITIVE);
 	UNSET(BACKWARDS_SEARCH);
@@ -2454,6 +2483,9 @@ void do_int_speller(const char *tempfile_name)
 	free(misspellings);
 	refresh_needed = TRUE;
 
+	/* Restore the settings of the global flags. */
+	memcpy(flags, stash, sizeof(flags));
+
 	/* Process the end of the three processes. */
 	waitpid(pid_spell, &spell_status, 0);
 	waitpid(pid_sort, &sort_status, 0);
@@ -2467,6 +2499,7 @@ void do_int_speller(const char *tempfile_name)
 		statusline(ALERT, _("Error invoking \"spell\""));
 	else
 		statusline(REMARK, _("Finished checking spelling"));
+#endif
 }
 
 /* Spell check the current file.  If an alternate spell checker is
@@ -2475,7 +2508,6 @@ void do_spell(void)
 {
 	FILE *stream;
 	char *temp_name;
-	unsigned stash[sizeof(flags) / sizeof(flags[0])];
 	bool okay;
 
 	ran_a_tool = TRUE;
@@ -2490,12 +2522,6 @@ void do_spell(void)
 		return;
 	}
 
-	/* Save the settings of the global flags. */
-	memcpy(stash, flags, sizeof(flags));
-
-	/* Don't add an extra newline when writing out the (selected) text. */
-	SET(NO_NEWLINES);
-
 #ifndef NANO_TINY
 	if (openfile->mark)
 		okay = write_region_to_file(temp_name, stream, TEMPORARY, OVERWRITE);
@@ -2505,6 +2531,7 @@ void do_spell(void)
 
 	if (!okay) {
 		statusline(ALERT, _("Error writing temp file: %s"), strerror(errno));
+		unlink(temp_name);
 		free(temp_name);
 		return;
 	}
@@ -2519,9 +2546,6 @@ void do_spell(void)
 	unlink(temp_name);
 	free(temp_name);
 
-	/* Restore the settings of the global flags. */
-	memcpy(flags, stash, sizeof(flags));
-
 	/* Ensure the help lines will be redrawn and a selection is retained. */
 	currmenu = MMOST;
 	shift_held = TRUE;
@@ -2532,6 +2556,7 @@ void do_spell(void)
 /* Run a linting program on the current buffer. */
 void do_linter(void)
 {
+#if defined(HAVE_FORK) && defined(HAVE_WAITPID)
 	char *lintings, *pointer, *onelint;
 	long pipesize;
 	size_t buffersize, bytesread, totalread;
@@ -2871,6 +2896,7 @@ void do_linter(void)
 	lastmessage = VACUUM;
 	currmenu = MMOST;
 	titlebar(NULL);
+#endif
 }
 
 /* Run a manipulation program on the contents of the buffer. */
@@ -2899,13 +2925,10 @@ void do_formatter(void)
 	if (temp_name != NULL)
 		okay = write_file(temp_name, stream, TEMPORARY, OVERWRITE, NONOTES);
 
-	if (!okay) {
+	if (!okay)
 		statusline(ALERT, _("Error writing temp file: %s"), strerror(errno));
-		free(temp_name);
-		return;
-	}
-
-	treat(temp_name, openfile->syntax->formatter, FALSE);
+	else
+		treat(temp_name, openfile->syntax->formatter, FALSE);
 
 	unlink(temp_name);
 	free(temp_name);
@@ -2977,6 +3000,13 @@ void do_verbatim_input(void)
 	size_t count = 1;
 	char *bytes;
 
+#ifndef NANO_TINY
+	/* When barless and with cursor on bottom row, make room for the feedback. */
+	if (ISSET(ZERO) && openfile->current_y == editwinrows - 1 && LINES > 1) {
+		edit_scroll(FORWARD);
+		edit_refresh();
+	}
+#endif
 	/* TRANSLATORS: Shown when the next keystroke will be inserted verbatim. */
 	statusline(INFO, _("Verbatim Input"));
 	place_the_cursor();

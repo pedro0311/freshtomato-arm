@@ -34,6 +34,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #ifdef HAVE_GETOPT_LONG 
 #include <getopt.h>
 #endif
@@ -195,7 +196,23 @@ static void parse_command_line(int argc, char **argv)
 		}
 	}
 }
-#endif
+#else /* ! HAVE_GETOPT_LONG */
+static void parse_command_line(int argc, char **argv)
+{
+	if (argc>1 && strstr(argv[1],"--debug")) {
+		debug_mode=1;
+		foreground_mode=1;
+	}
+	if (argc>1 && strstr(argv[1],"--foreground"))
+		foreground_mode=1;
+	if (argc>1 && strstr(argv[1],"--oneshot"))
+		one_shot_mode=1;
+	if (argc>1 && strstr(argv[1],"--journal")) {
+		journal_logging=1;
+		foreground_mode=1;
+	}
+}
+#endif /* HAVE_GETOPT_LONG */
 
 /*
  * This builds our object tree.  The Hierarchy is typically pretty
@@ -233,7 +250,7 @@ static void dump_object_tree(void)
 	for_each_object(numa_nodes, dump_numa_node_info, NULL);
 }
 
-static void force_rebalance_irq(struct irq_info *info, void *data __attribute__((unused)))
+void force_rebalance_irq(struct irq_info *info, void *data __attribute__((unused)))
 {
 	if (info->level == BALANCE_NONE)
 		return;
@@ -268,7 +285,7 @@ gboolean scan(gpointer data __attribute__((unused)))
 
 
 	/* cope with cpu hotplug -- detected during /proc/interrupts parsing */
-	if (need_rescan || need_rebuild) {
+	while (need_rescan || need_rebuild) {
 		int try_times = 0;
 
 		need_rescan = 0;
@@ -341,7 +358,7 @@ void get_irq_data(struct irq_info *irq, void *data)
 	*irqdata = newptr;
 
 	sprintf(*irqdata + strlen(*irqdata),
-			"IRQ %d LOAD %lu DIFF %lu CLASS %d ", irq->irq, irq->load,
+			"IRQ %d LOAD %" PRIu64 " DIFF %" PRIu64 " CLASS %d ", irq->irq, irq->load,
 			(irq->irq_count - irq->last_irq_count), irq->class);
 }
 
@@ -379,7 +396,7 @@ void get_object_stat(struct topo_obj *object, void *data)
 
 	*stats = newptr;
 
-	sprintf(*stats + strlen(*stats), "TYPE %d NUMBER %d LOAD %lu SAVE_MODE %d %s",
+	sprintf(*stats + strlen(*stats), "TYPE %d NUMBER %d LOAD %" PRIu64 " SAVE_MODE %d %s",
 			object->obj_type, object->number, object->load,
 			object->powersave_mode, irq_data ? irq_data : "");
 	free(irq_data);
@@ -581,22 +598,8 @@ int main(int argc, char** argv)
 	sigaddset(&sigset,SIGUSR1);
 	sigaddset(&sigset,SIGUSR2);
 	sigprocmask(SIG_BLOCK, &sigset, &old_sigset);
-#ifdef HAVE_GETOPT_LONG
+
 	parse_command_line(argc, argv);
-#else /* ! HAVE_GETOPT_LONG */
-	if (argc>1 && strstr(argv[1],"--debug")) {
-		debug_mode=1;
-		foreground_mode=1;
-	}
-	if (argc>1 && strstr(argv[1],"--foreground"))
-		foreground_mode=1;
-	if (argc>1 && strstr(argv[1],"--oneshot"))
-		one_shot_mode=1;
-	if (argc>1 && strstr(argv[1],"--journal")) {
-		journal_logging=1;
-		foreground_mode=1;
-	}
-#endif /* HAVE_GETOPT_LONG */
 
 	/*
  	 * Open the syslog connection

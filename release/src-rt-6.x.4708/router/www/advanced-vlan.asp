@@ -114,6 +114,7 @@ switch (nvram['t_model_name']) {
 	case 'Asus RT-AC67U':
 	case 'Asus RT-AC68R/U':
 	case 'Asus RT-AC68P/U B1':
+	case 'Asus DSL-AC68U':
 	case 'Asus RT-AC68U C1':
 	case 'Asus RT-AC68U B2':
 	case 'Asus RT-AC68U V3':
@@ -221,7 +222,7 @@ if (port_vlan_supported) {
 				], prefix: '<div class="centered">', suffix: '<\/div>' }]);
 
 		this.headerSet(['<br><br>VLAN', '<br><br>VID',
-		                '<div id="vport_0"><img src="eth_off.gif" id="eth_off_1" alt=""><\/div>WAN', '<br>Tag<br>WAN',
+		                '<div id="vport_0"><img src="eth_off.gif" id="eth_off_1" alt=""><\/div>'+(nvram.model == 'DSL-AC68U' ? 'DSL' : 'WAN'), '<br>Tag<br>'+(nvram.model == 'DSL-AC68U' ? 'DSL' : 'WAN'),
 		                '<div id="vport_1"><img src="eth_off.gif" id="eth_off_2" alt=""><\/div>1', '<br>Tag<br>1',
 		                '<div id="vport_2"><img src="eth_off.gif" id="eth_off_3" alt=""><\/div>2', '<br>Tag<br>2',
 		                '<div id="vport_3"><img src="eth_off.gif" id="eth_off_4" alt=""><\/div>3', '<br>Tag<br>3',
