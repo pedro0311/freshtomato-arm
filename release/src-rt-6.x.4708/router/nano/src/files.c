@@ -33,6 +33,10 @@
 
 #define RW_FOR_ALL  (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 
+#ifndef HAVE_FSYNC
+# define fsync(...)  0
+#endif
+
 /* Add an item to the circular list of openfile structs. */
 void make_new_buffer(void)
 {
@@ -143,7 +147,7 @@ const char *locking_suffix = ".swp";
  * existing version of that file.  Return TRUE on success; FALSE otherwise. */
 bool write_lockfile(const char *lockfilename, const char *filename, bool modified)
 {
-#ifdef HAVE_PWD_H
+#if defined(HAVE_PWD_H) && defined(HAVE_GETEUID)
 	pid_t mypid = getpid();
 	uid_t myuid = geteuid();
 	struct passwd *mypwuid = getpwuid(myuid);
@@ -346,8 +350,18 @@ bool has_valid_path(const char *filename)
 	char *parentdir = dirname(namecopy);
 	struct stat parentinfo;
 	bool validity = FALSE;
+	bool gone = FALSE;
 
-	if (stat(parentdir, &parentinfo) == -1) {
+	if (strcmp(parentdir, ".") == 0) {
+		char *currentdir = realpath(".", NULL);
+
+		gone = (currentdir == NULL && errno == ENOENT);
+		free(currentdir);
+	}
+
+	if (gone)
+		statusline(ALERT, _("The working directory has disappeared"));
+	else if (stat(parentdir, &parentinfo) == -1) {
 		if (errno == ENOENT)
 			/* TRANSLATORS: Keep the next ten messages at most 76 characters. */
 			statusline(ALERT, _("Directory '%s' does not exist"), parentdir);
@@ -411,7 +425,7 @@ bool open_buffer(const char *filename, bool new_one)
 			free(realname);
 			return FALSE;
 		}
-#else
+#elif defined(HAVE_GETEUID)
 		if (new_one && !(fileinfo.st_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) &&
 						geteuid() == ROOT_UID)
 			statusline(ALERT, _("%s is meant to be read-only"), realname);
@@ -675,9 +689,13 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 	block_sigwinch(TRUE);
 #endif
 
+#ifdef HAVE_FLOCKFILE
 	/* Lock the file before starting to read it, to avoid the overhead
 	 * of locking it for each single byte that we read from it. */
 	flockfile(f);
+#else
+# define getc_unlocked  getc
+#endif
 
 	control_C_was_pressed = FALSE;
 
@@ -741,8 +759,10 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 
 	errornumber = errno;
 
+#ifdef HAVE_FUNLOCKFILE
 	/* We are done with the file, unlock it. */
 	funlockfile(f);
+#endif
 
 #ifndef NANO_TINY
 	block_sigwinch(FALSE);
@@ -826,12 +846,14 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 	report_size = TRUE;
 
 	/* If we inserted less than a screenful, don't center the cursor. */
-	if (undoable && less_than_a_screenful(was_lineno, was_leftedge))
+	if (undoable && less_than_a_screenful(was_lineno, was_leftedge)) {
 		focusing = FALSE;
 #ifdef ENABLE_COLOR
-	else if (undoable)
-		precalc_multicolorinfo();
+		perturbed = TRUE;
+	} else if (undoable) {
+		recook = TRUE;
 #endif
+	}
 
 #ifndef NANO_TINY
 	if (undoable)
@@ -950,7 +972,9 @@ static pid_t pid_of_command = -1;
 /* Send an unconditional kill signal to the running external command. */
 void cancel_the_command(int signal)
 {
+#ifdef SIGKILL
 	kill(pid_of_command, SIGKILL);
+#endif
 }
 
 /* Send the text that starts at the given line to file descriptor fd. */
@@ -973,10 +997,12 @@ void send_data(const linestruct *line, int fd)
 /* Execute the given command in a shell.  Return TRUE on success. */
 bool execute_command(const char *command)
 {
+#if defined(HAVE_FORK) && defined(HAVE_PIPE) && defined(HAVE_WAIT)
 	int from_fd[2], to_fd[2];
 		/* The pipes through which text will be written and read. */
 	struct sigaction oldaction, newaction = {{0}};
 		/* Original and temporary handlers for SIGINT. */
+	ssize_t was_lineno = (openfile->mark ? 0 : openfile->current->lineno);
 	const bool should_pipe = (command[0] == '|');
 	FILE *stream;
 
@@ -1008,6 +1034,7 @@ bool execute_command(const char *command)
 		if (should_pipe) {
 			if (dup2(to_fd[0], STDIN_FILENO) < 0)
 				exit(5);
+			close(from_fd[1]);
 			close(to_fd[1]);
 		}
 
@@ -1054,7 +1081,8 @@ bool execute_command(const char *command)
 			}
 			add_undo(CUT, NULL);
 			do_snip(openfile->mark != NULL, openfile->mark == NULL, FALSE);
-			openfile->filetop->has_anchor = FALSE;
+			if (openfile->filetop->next == NULL)
+				openfile->filetop->has_anchor = FALSE;
 			update_undo(CUT);
 		}
 
@@ -1090,8 +1118,11 @@ bool execute_command(const char *command)
 	else
 		read_file(stream, 0, "pipe", TRUE);
 
-	if (should_pipe && !ISSET(MULTIBUFFER))
+	if (should_pipe && !ISSET(MULTIBUFFER)) {
+		if (was_lineno)
+			goto_line_posx(was_lineno, 0);
 		add_undo(COUPLE_END, N_("filtering"));
+	}
 
 	/* Wait for the external command (and possibly data sender) to terminate. */
 	wait(NULL);
@@ -1106,6 +1137,9 @@ bool execute_command(const char *command)
 	terminal_init();
 
 	return TRUE;
+#else
+	return FALSE;
+#endif
 }
 #endif /* NANO_TINY */
 
@@ -1322,106 +1356,36 @@ void do_execute(void)
  * absolute path (plus filename) when the path exists, and NULL when not. */
 char *get_full_path(const char *origpath)
 {
-	char *allocation, *here, *target, *last_slash;
-	char *just_filename = NULL;
-	int attempts = 0;
+	char *untilded, *target, *slash;
 	struct stat fileinfo;
-	bool path_only;
 
 	if (origpath == NULL)
 		return NULL;
 
-	allocation = nmalloc(PATH_MAX + 1);
-	here = getcwd(allocation, PATH_MAX + 1);
+	untilded = real_dir_from_tilde(origpath);
+	target = realpath(untilded, NULL);
+	slash = strrchr(untilded, '/');
 
-	/* If getting the current directory failed, go up one level and try again,
-	 * until we find an existing directory, and use that as the current one. */
-	while (here == NULL && attempts < 20) {
-		IGNORE_CALL_RESULT(chdir(".."));
-		here = getcwd(allocation, PATH_MAX + 1);
-		attempts++;
-	}
+	/* If realpath() returned NULL, try without the last component,
+	 * as this can be a file that does not exist yet. */
+	if (!target && slash && slash[1]) {
+		*slash = '\0';
+		target = realpath(untilded, NULL);
 
-	/* If we found a directory, make sure its path ends in a slash. */
-	if (here != NULL) {
-		if (strcmp(here, "/") != 0) {
-			here = nrealloc(here, strlen(here) + 2);
-			strcat(here, "/");
-		}
-	} else {
-		here = copy_of("");
-		free(allocation);
-	}
-
-	target = real_dir_from_tilde(origpath);
-
-	/* Determine whether the target path refers to a directory.  If statting
-	 * target fails, however, assume that it refers to a new, unsaved buffer. */
-	path_only = (stat(target, &fileinfo) != -1 && S_ISDIR(fileinfo.st_mode));
-
-	/* If the target is a directory, make sure its path ends in a slash. */
-	if (path_only) {
-		size_t length = strlen(target);
-
-		if (target[length - 1] != '/') {
-			target = nrealloc(target, length + 2);
-			strcat(target, "/");
+		/* Upon success, re-add the last component of the original path. */
+		if (target) {
+			target = nrealloc(target, strlen(target) + strlen(slash + 1) + 1);
+			strcat(target, slash + 1);
 		}
 	}
 
-	last_slash = strrchr(target, '/');
-
-	/* If the target path does not contain a slash, then it is a bare filename
-	 * and must therefore be located in the working directory. */
-	if (last_slash == NULL) {
-		just_filename = target;
-		target = here;
-	} else {
-		/* If target contains a filename, separate the two. */
-		if (!path_only) {
-			just_filename = copy_of(last_slash + 1);
-			*(last_slash + 1) = '\0';
-		}
-
-		/* If we can't change to the target directory, give up.  Otherwise,
-		 * get the canonical path to this target directory. */
-		if (chdir(target) == -1) {
-			free(target);
-			target = NULL;
-		} else {
-			free(target);
-
-			allocation = nmalloc(PATH_MAX + 1);
-			target = getcwd(allocation, PATH_MAX + 1);
-
-			/* If we got a result, make sure it ends in a slash.
-			 * Otherwise, ensure that we return NULL. */
-			if (target != NULL) {
-				if (strcmp(target, "/") != 0) {
-					target = nrealloc(target, strlen(target) + 2);
-					strcat(target, "/");
-				}
-			} else {
-				path_only = TRUE;
-				free(allocation);
-			}
-
-			/* Finally, go back to where we were before.  We don't check
-			 * for an error, since we can't do anything if we get one. */
-			IGNORE_CALL_RESULT(chdir(here));
-		}
-
-		free(here);
+	/* Ensure that a directory path ends with a slash. */
+	if (target && stat(target, &fileinfo) == 0 && S_ISDIR(fileinfo.st_mode)) {
+		target = nrealloc(target, strlen(target) + 2);
+		strcat(target, "/");
 	}
 
-	/* If we were given more than a bare path, concatenate the target path
-	 * with the filename portion to get the full, absolute file path. */
-	if (!path_only && target != NULL) {
-		target = nrealloc(target, strlen(target) + strlen(just_filename) + 1);
-		strcat(target, just_filename);
-	}
-
-	free(just_filename);
+	free(untilded);
 
 	return target;
 }
@@ -1653,6 +1617,7 @@ bool make_backup_of(char *realname)
 	if (backup_file == NULL)
 		goto problem;
 
+#ifdef HAVE_FCHOWN
 	/* Try to change owner and group to those of the original file;
 	 * ignore permission errors, as a normal user cannot change the owner. */
 	if (fchown(descriptor, openfile->statinfo->st_uid,
@@ -1660,7 +1625,8 @@ bool make_backup_of(char *realname)
 		fclose(backup_file);
 		goto problem;
 	}
-
+#endif
+#ifdef HAVE_FCHMOD
 	/* Set the backup's permissions to those of the original file.
 	 * It is not a security issue if this fails, as we have created
 	 * the file with just read and write permission for the owner. */
@@ -1668,6 +1634,7 @@ bool make_backup_of(char *realname)
 		fclose(backup_file);
 		goto problem;
 	}
+#endif
 
 	original = fopen(realname, "rb");
 
@@ -1974,6 +1941,19 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 		statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
 
   cleanup_and_exit:
+#ifndef NANO_TINY
+		if (errno == ENOSPC && normal) {
+			napms(3200); lastmessage = VACUUM;
+			/* TRANSLATORS: This warns for data loss when the disk is full. */
+			statusline(ALERT, _("File on disk has been truncated!"));
+			napms(3200); lastmessage = VACUUM;
+			/* TRANSLATORS: This is a suggestion to the user,
+			 * where "resume" means resuming from suspension.
+			 * Try to keep this at most 76 characters. */
+			statusline(ALERT, _("Maybe ^T^Z, make room on disk, resume, then ^S^X"));
+			stat_with_alloc(realname, &openfile->statinfo);
+		}
+#endif
 		free(tempname);
 		free(realname);
 		return FALSE;
@@ -2055,7 +2035,7 @@ bool write_region_to_file(const char *name, FILE *stream, bool normal,
 	get_region(&topline, &top_x, &botline, &bot_x);
 
 	/* When needed, prepare a magic end line for the region. */
-	if (bot_x > 0 && !ISSET(NO_NEWLINES)) {
+	if (normal && bot_x > 0 && !ISSET(NO_NEWLINES)) {
 		stopper = make_new_node(botline);
 		stopper->data = copy_of("");
 	} else

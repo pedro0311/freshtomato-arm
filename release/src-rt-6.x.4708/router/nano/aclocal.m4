@@ -1036,6 +1036,42 @@ fi
 rmdir .tst 2>/dev/null
 AC_SUBST([am__leading_dot])])
 
+# Add --enable-maintainer-mode option to configure.         -*- Autoconf -*-
+# From Jim Meyering
+
+# Copyright (C) 1996-2021 Free Software Foundation, Inc.
+#
+# This file is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# AM_MAINTAINER_MODE([DEFAULT-MODE])
+# ----------------------------------
+# Control maintainer-specific portions of Makefiles.
+# Default is to disable them, unless 'enable' is passed literally.
+# For symmetry, 'disable' may be passed as well.  Anyway, the user
+# can override the default with the --enable/--disable switch.
+AC_DEFUN([AM_MAINTAINER_MODE],
+[m4_case(m4_default([$1], [disable]),
+       [enable], [m4_define([am_maintainer_other], [disable])],
+       [disable], [m4_define([am_maintainer_other], [enable])],
+       [m4_define([am_maintainer_other], [enable])
+        m4_warn([syntax], [unexpected argument to AM@&t@_MAINTAINER_MODE: $1])])
+AC_MSG_CHECKING([whether to enable maintainer-specific portions of Makefiles])
+  dnl maintainer-mode's default is 'disable' unless 'enable' is passed
+  AC_ARG_ENABLE([maintainer-mode],
+    [AS_HELP_STRING([--]am_maintainer_other[-maintainer-mode],
+      am_maintainer_other[ make rules and dependencies not useful
+      (and sometimes confusing) to the casual installer])],
+    [USE_MAINTAINER_MODE=$enableval],
+    [USE_MAINTAINER_MODE=]m4_if(am_maintainer_other, [enable], [no], [yes]))
+  AC_MSG_RESULT([$USE_MAINTAINER_MODE])
+  AM_CONDITIONAL([MAINTAINER_MODE], [test $USE_MAINTAINER_MODE = yes])
+  MAINT=$MAINTAINER_MODE_TRUE
+  AC_SUBST([MAINT])dnl
+]
+)
+
 # Check to see how 'make' treats includes.	            -*- Autoconf -*-
 
 # Copyright (C) 2001-2021 Free Software Foundation, Inc.
@@ -1537,6 +1573,7 @@ m4_include([m4/alloca.m4])
 m4_include([m4/ax_check_compile_flag.m4])
 m4_include([m4/btowc.m4])
 m4_include([m4/builtin-expect.m4])
+m4_include([m4/chdir-long.m4])
 m4_include([m4/clock_time.m4])
 m4_include([m4/close.m4])
 m4_include([m4/closedir.m4])
@@ -1549,14 +1586,17 @@ m4_include([m4/double-slash-root.m4])
 m4_include([m4/dup2.m4])
 m4_include([m4/eealloc.m4])
 m4_include([m4/errno_h.m4])
+m4_include([m4/error.m4])
 m4_include([m4/exponentd.m4])
 m4_include([m4/exponentf.m4])
 m4_include([m4/exponentl.m4])
 m4_include([m4/extensions.m4])
 m4_include([m4/extern-inline.m4])
+m4_include([m4/fchdir.m4])
 m4_include([m4/fcntl-o.m4])
 m4_include([m4/fcntl.m4])
 m4_include([m4/fcntl_h.m4])
+m4_include([m4/filenamecat.m4])
 m4_include([m4/flexmember.m4])
 m4_include([m4/float_h.m4])
 m4_include([m4/fnmatch.m4])
@@ -1566,13 +1606,16 @@ m4_include([m4/free.m4])
 m4_include([m4/frexp.m4])
 m4_include([m4/frexpl.m4])
 m4_include([m4/fstat.m4])
+m4_include([m4/fstatat.m4])
 m4_include([m4/futimens.m4])
+m4_include([m4/getcwd.m4])
 m4_include([m4/getdelim.m4])
 m4_include([m4/getdtablesize.m4])
 m4_include([m4/getline.m4])
 m4_include([m4/getlogin.m4])
 m4_include([m4/getlogin_r.m4])
 m4_include([m4/getopt.m4])
+m4_include([m4/getprogname.m4])
 m4_include([m4/getrandom.m4])
 m4_include([m4/gettext.m4])
 m4_include([m4/gettime.m4])
@@ -1618,6 +1661,7 @@ m4_include([m4/mbstate_t.m4])
 m4_include([m4/mbtowc.m4])
 m4_include([m4/memchr.m4])
 m4_include([m4/mempcpy.m4])
+m4_include([m4/memrchr.m4])
 m4_include([m4/minmax.m4])
 m4_include([m4/mkdir.m4])
 m4_include([m4/mkstemps.m4])
@@ -1633,8 +1677,10 @@ m4_include([m4/off_t.m4])
 m4_include([m4/open-cloexec.m4])
 m4_include([m4/open-slash.m4])
 m4_include([m4/open.m4])
+m4_include([m4/openat.m4])
 m4_include([m4/opendir.m4])
 m4_include([m4/pathmax.m4])
+m4_include([m4/pipe.m4])
 m4_include([m4/po.m4])
 m4_include([m4/printf-frexp.m4])
 m4_include([m4/printf-frexpl.m4])
@@ -1645,6 +1691,7 @@ m4_include([m4/raise.m4])
 m4_include([m4/readdir.m4])
 m4_include([m4/realloc.m4])
 m4_include([m4/regex.m4])
+m4_include([m4/save-cwd.m4])
 m4_include([m4/setlocale_null.m4])
 m4_include([m4/sigaction.m4])
 m4_include([m4/signal_h.m4])
@@ -1666,6 +1713,8 @@ m4_include([m4/stdio_h.m4])
 m4_include([m4/stdlib_h.m4])
 m4_include([m4/strcase.m4])
 m4_include([m4/strcasestr.m4])
+m4_include([m4/strdup.m4])
+m4_include([m4/strerror.m4])
 m4_include([m4/string_h.m4])
 m4_include([m4/strings_h.m4])
 m4_include([m4/strnlen.m4])
@@ -1679,6 +1728,7 @@ m4_include([m4/tempname.m4])
 m4_include([m4/threadlib.m4])
 m4_include([m4/time_h.m4])
 m4_include([m4/timespec.m4])
+m4_include([m4/unistd-safer.m4])
 m4_include([m4/unistd_h.m4])
 m4_include([m4/utime.m4])
 m4_include([m4/utime_h.m4])

@@ -219,7 +219,7 @@ void read_keys_from(WINDOW *frame)
 			if (input == ERR) {
 				if (spotlighted || ISSET(ZERO) || LINES == 1) {
 					if (ISSET(ZERO) && lastmessage > VACUUM)
-						wredrawln(midwin, editwinrows - 1 , 1);
+						wredrawln(midwin, editwinrows - 1, 1);
 					lastmessage = VACUUM;
 					spotlighted = FALSE;
 					update_line(openfile->current, openfile->current_x);
@@ -2475,6 +2475,9 @@ void place_the_cursor(void)
 	openfile->current_y = row;
 }
 
+/* The number of bytes after which to stop painting, to avoid major slowdowns. */
+#define PAINT_LIMIT  2000
+
 /* Draw the given text on the given row of the edit window.  line is the
  * line to be drawn, and converted is the actual string to be written with
  * tabs and control characters replaced by strings of regular characters.
@@ -2543,14 +2546,12 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 				/* The match positions of a single-line regex. */
 			const linestruct *start_line = line->prev;
 				/* The first line before line that matches 'start'. */
-			linestruct *end_line = line;
-				/* The line that matches 'end'. */
 			regmatch_t startmatch, endmatch;
 				/* The match positions of the start and end regexes. */
 
 			/* First case: varnish is a single-line expression. */
 			if (varnish->end == NULL) {
-				while (index < till_x) {
+				while (index < PAINT_LIMIT && index < till_x) {
 					/* If there is no match, go on to the next line. */
 					if (regexec(varnish->start, &line->data[index], 1,
 								&match, (index == 0) ? 0 : REG_NOTBOL) != 0)
@@ -2598,117 +2599,41 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 			/* Assume nothing gets painted until proven otherwise below. */
 			line->multidata[varnish->id] = NOTHING;
 
-			/* Apart from the first row, check the multidata of the preceding line:
-			 * it tells us about the situation so far, and thus what to do here. */
-			if (row > 0 && start_line != NULL && start_line->multidata != NULL) {
-				if (start_line->multidata[varnish->id] == WHOLELINE ||
-						start_line->multidata[varnish->id] == STARTSHERE ||
-						start_line->multidata[varnish->id] == WOULDBE)
-					goto seek_an_end;
-				if (start_line->multidata[varnish->id] == NOTHING ||
-						start_line->multidata[varnish->id] == ENDSHERE ||
-						start_line->multidata[varnish->id] == JUSTONTHIS)
-					goto step_two;
-			}
+			if (start_line && !start_line->multidata)
+				statusline(ALERT, "Missing multidata -- please report a bug");
+			else
 
-			/* The preceding line has no precalculated multidata.
-			 * So, do some backtracking to find out what to paint. */
-
-			/* First step: see if there is a line before current that
-			 * matches 'start' and is not complemented by an 'end'. */
-			while (start_line != NULL && regexec(varnish->start,
-						start_line->data, 1, &startmatch, 0) == REG_NOMATCH) {
-				/* There is no start on this line; but if there is an end,
-				 * there is no need to look for starts on earlier lines. */
-				if (regexec(varnish->end, start_line->data, 0, NULL, 0) == 0)
-					goto step_two;
-				start_line = start_line->prev;
-			}
-
-			/* If no start was found, skip to the next step. */
-			if (start_line == NULL)
-				goto step_two;
-
-			/* If the start has been qualified as an end earlier, believe it. */
-			if (start_line->multidata != NULL &&
-						(start_line->multidata[varnish->id] == ENDSHERE ||
-						start_line->multidata[varnish->id] == JUSTONTHIS))
-				goto step_two;
-
-			/* Maybe there is an end on that same line?  If yes, maybe
-			 * there is another start after it?  And so on, until EOL. */
-			while (TRUE) {
-				/* Begin searching for an end after the start match. */
-				index += startmatch.rm_eo;
-				/* If there is no end after this last start, good. */
-				if (regexec(varnish->end, start_line->data + index, 1, &endmatch,
-								(index == 0) ? 0 : REG_NOTBOL) == REG_NOMATCH)
-					break;
-				/* Begin searching for a new start after the end match. */
-				index += endmatch.rm_eo;
-				/* If both start and end match are mere anchors, advance. */
-				if (startmatch.rm_so == startmatch.rm_eo &&
-								endmatch.rm_so == endmatch.rm_eo) {
-					if (start_line->data[index] == '\0')
-						goto step_two;
-					index = step_right(start_line->data, index);
+			/* If there is an unterminated start match before the current line,
+			 * we need to look for an end match first. */
+			if (start_line && (start_line->multidata[varnish->id] == WHOLELINE ||
+								start_line->multidata[varnish->id] == STARTSHERE)) {
+				/* If there is no end on this line, paint whole line, and be done. */
+				if (regexec(varnish->end, line->data, 1, &endmatch, 0) == REG_NOMATCH) {
+					wattron(midwin, varnish->attributes);
+					mvwaddnstr(midwin, row, margin, converted, -1);
+					wattroff(midwin, varnish->attributes);
+					line->multidata[varnish->id] = WHOLELINE;
+					continue;
 				}
-				/* If there is no later start on this line, next step. */
-				if (regexec(varnish->start, start_line->data + index,
-								1, &startmatch, REG_NOTBOL) == REG_NOMATCH)
-					goto step_two;
+
+				/* Only if it is visible, paint the part to be coloured. */
+				if (endmatch.rm_eo > from_x) {
+					paintlen = actual_x(converted, wideness(line->data,
+													endmatch.rm_eo) - from_col);
+					wattron(midwin, varnish->attributes);
+					mvwaddnstr(midwin, row, margin, converted, paintlen);
+					wattroff(midwin, varnish->attributes);
+				}
+
+				line->multidata[varnish->id] = ENDSHERE;
 			}
 
-  seek_an_end:
-			/* We've already checked that there is no end between the start
-			 * and the current line.  But is there an end after the start
-			 * at all?  Because we don't paint unterminated starts. */
-			if (row == 0) {
-				while (end_line != NULL && regexec(varnish->end, end_line->data,
-											1, &endmatch, 0) == REG_NOMATCH)
-					end_line = end_line->next;
-			} else if (regexec(varnish->end, line->data, 1, &endmatch, 0) != 0)
-				end_line = line->next;
-
-			/* If there is no end, there is nothing to paint. */
-			if (end_line == NULL) {
-				line->multidata[varnish->id] = WOULDBE;
-				continue;
-			}
-
-			/* If it was already determined that there is no end... */
-			if (end_line != line && line->prev == start_line && line->prev->multidata &&
-								line->prev->multidata[varnish->id] == WOULDBE) {
-				line->multidata[varnish->id] = WOULDBE;
-				continue;
-			}
-
-			/* If the end is on a later line, paint whole line, and be done. */
-			if (end_line != line) {
-				wattron(midwin, varnish->attributes);
-				mvwaddnstr(midwin, row, margin, converted, -1);
-				wattroff(midwin, varnish->attributes);
-				line->multidata[varnish->id] = WHOLELINE;
-				continue;
-			}
-
-			/* Only if it is visible, paint the part to be coloured. */
-			if (endmatch.rm_eo > from_x) {
-				paintlen = actual_x(converted, wideness(line->data,
-												endmatch.rm_eo) - from_col);
-				wattron(midwin, varnish->attributes);
-				mvwaddnstr(midwin, row, margin, converted, paintlen);
-				wattroff(midwin, varnish->attributes);
-			}
-			line->multidata[varnish->id] = ENDSHERE;
-
-  step_two:
 			/* Second step: look for starts on this line, but begin
 			 * looking only after an end match, if there is one. */
 			index = (paintlen == 0) ? 0 : endmatch.rm_eo;
 
-			while (regexec(varnish->start, line->data + index, 1, &startmatch,
-										(index == 0) ? 0 : REG_NOTBOL) == 0) {
+			while (index < PAINT_LIMIT && regexec(varnish->start, line->data + index,
+								1, &startmatch, (index == 0) ? 0 : REG_NOTBOL) == 0) {
 				/* Make the match relative to the beginning of the line. */
 				startmatch.rm_so += index;
 				startmatch.rm_eo += index;
@@ -2746,33 +2671,12 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 					continue;
 				}
 
-				/* There is no end on this line.  But maybe on later lines? */
-				end_line = line->next;
-
-				while (end_line && regexec(varnish->end, end_line->data,
-											0, NULL, 0) == REG_NOMATCH)
-					end_line = end_line->next;
-
-				/* If there is no end, we're done with this regex. */
-				if (end_line == NULL) {
-					line->multidata[varnish->id] = WOULDBE;
-					break;
-				}
-
 				/* Paint the rest of the line, and we're done. */
 				wattron(midwin, varnish->attributes);
 				mvwaddnstr(midwin, row, margin + start_col, thetext, -1);
 				wattroff(midwin, varnish->attributes);
 
 				line->multidata[varnish->id] = STARTSHERE;
-
-				if (end_line->multidata == NULL) {
-					end_line->multidata = nmalloc(openfile->syntax->nmultis * sizeof(short));
-					for (short item = 0; item < openfile->syntax->nmultis; item++)
-						end_line->multidata[item] = 0;
-				}
-				end_line->multidata[varnish->id] = ENDSHERE;
-
 				break;
 			}
 		}
@@ -3403,6 +3307,12 @@ void edit_refresh(void)
 	/* When needed and useful, initialize the colors for the current syntax. */
 	if (openfile->syntax && !have_palette && !ISSET(NO_SYNTAX) && has_colors())
 		prepare_palette();
+
+	if (recook) {
+		precalc_multicolorinfo();
+		perturbed = FALSE;
+		recook = FALSE;
+	}
 #endif
 
 	/* If the current line is out of view, get it back on screen. */

@@ -28,6 +28,7 @@
 #include <glob.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdbool.h>
@@ -56,6 +57,8 @@
 # define sysconf(id) __sysconf (id)
 # define closedir(dir) __closedir (dir)
 # define opendir(name) __opendir (name)
+# undef dirfd
+# define dirfd(str) __dirfd (str)
 # define readdir(str) __readdir64 (str)
 # define getpwnam_r(name, bufp, buf, len, res) \
     __getpwnam_r (name, bufp, buf, len, res)
@@ -69,11 +72,8 @@
 # ifndef GLOB_LSTAT
 #  define GLOB_LSTAT            gl_lstat
 # endif
-# ifndef GLOB_STAT64
-#  define GLOB_STAT64           __stat64
-# endif
-# ifndef GLOB_LSTAT64
-#  define GLOB_LSTAT64          __lstat64
+# ifndef GLOB_FSTATAT64
+#  define GLOB_FSTATAT64        __fstatat64
 # endif
 # include <shlib-compat.h>
 #else /* !_LIBC */
@@ -88,8 +88,7 @@
 # define struct_stat            struct stat
 # define struct_stat64          struct stat
 # define GLOB_LSTAT             gl_lstat
-# define GLOB_STAT64            stat
-# define GLOB_LSTAT64           lstat
+# define GLOB_FSTATAT64         fstatat
 #endif /* _LIBC */
 
 #include <fnmatch.h>
@@ -215,7 +214,8 @@ glob_lstat (glob_t *pglob, int flags, const char *fullname)
   } ust;
   return (__glibc_unlikely (flags & GLOB_ALTDIRFUNC)
           ? pglob->GLOB_LSTAT (fullname, &ust.st)
-          : GLOB_LSTAT64 (fullname, &ust.st64));
+          : GLOB_FSTATAT64 (AT_FDCWD, fullname, &ust.st64,
+                            AT_SYMLINK_NOFOLLOW));
 }
 
 /* Set *R = A + B.  Return true if the answer is mathematically
@@ -257,7 +257,8 @@ is_dir (char const *filename, int flags, glob_t const *pglob)
   struct_stat64 st64;
   return (__glibc_unlikely (flags & GLOB_ALTDIRFUNC)
           ? pglob->gl_stat (filename, &st) == 0 && S_ISDIR (st.st_mode)
-          : GLOB_STAT64 (filename, &st64) == 0 && S_ISDIR (st64.st_mode));
+          : (GLOB_FSTATAT64 (AT_FDCWD, filename, &st64, 0) == 0
+             && S_ISDIR (st64.st_mode)));
 }
 
 /* Find the end of the sub-pattern in a brace expression.  */
@@ -1283,6 +1284,8 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
 {
   size_t dirlen = strlen (directory);
   void *stream = NULL;
+  struct scratch_buffer s;
+  scratch_buffer_init (&s);
 # define GLOBNAMES_MEMBERS(nnames) \
     struct globnames *next; size_t count; char *name[nnames];
   struct globnames { GLOBNAMES_MEMBERS (FLEXIBLE_ARRAY_MEMBER) };
@@ -1354,6 +1357,8 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
         }
       else
         {
+          DIR *dirp = stream;
+          int dfd = dirfd (dirp);
           int fnm_flags = ((!(flags & GLOB_PERIOD) ? FNM_PERIOD : 0)
                            | ((flags & GLOB_NOESCAPE) ? FNM_NOESCAPE : 0));
           flags |= GLOB_MAGCHAR;
@@ -1381,8 +1386,32 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
               if (flags & GLOB_ONLYDIR)
                 switch (readdir_result_type (d))
                   {
-                  case DT_DIR: case DT_LNK: case DT_UNKNOWN: break;
                   default: continue;
+                  case DT_DIR: break;
+                  case DT_LNK: case DT_UNKNOWN:
+                    /* The filesystem was too lazy to give us a hint,
+                       so we have to do it the hard way.  */
+                    if (__glibc_unlikely (dfd < 0 || flags & GLOB_ALTDIRFUNC))
+                      {
+                        size_t namelen = strlen (d.name);
+                        size_t need = dirlen + 1 + namelen + 1;
+                        if (s.length < need
+                            && !scratch_buffer_set_array_size (&s, need, 1))
+                          goto memory_error;
+                        char *p = mempcpy (s.data, directory, dirlen);
+                        *p = '/';
+                        p += p[-1] != '/';
+                        memcpy (p, d.name, namelen + 1);
+                        if (! is_dir (s.data, flags, pglob))
+                          continue;
+                      }
+                    else
+                      {
+                        struct_stat64 st64;
+                        if (! (GLOB_FSTATAT64 (dfd, d.name, &st64, 0) == 0
+                               && S_ISDIR (st64.st_mode)))
+                          continue;
+                      }
                   }
 
               if (fnmatch (pattern, d.name, fnm_flags) == 0)
@@ -1514,5 +1543,6 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
       __set_errno (save);
     }
 
+  scratch_buffer_free (&s);
   return result;
 }

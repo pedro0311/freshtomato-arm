@@ -55,7 +55,7 @@
 #  wctype-h \
 #  wcwidth
 
-AUTOMAKE_OPTIONS = 1.11 gnits subdir-objects
+AUTOMAKE_OPTIONS = 1.14 gnits subdir-objects
 
 SUBDIRS =
 noinst_HEADERS =
@@ -124,6 +124,19 @@ EXTRA_DIST += alloca.in.h
 
 ## end   gnulib module alloca-opt
 
+## begin gnulib module assure
+
+
+EXTRA_DIST += assure.h
+
+## end   gnulib module assure
+
+## begin gnulib module at-internal
+
+libgnu_a_SOURCES += openat-priv.h openat-proc.c
+
+## end   gnulib module at-internal
+
 ## begin gnulib module attribute
 
 
@@ -146,6 +159,16 @@ libgnu_a_SOURCES += btowc.c
 endif
 
 ## end   gnulib module btowc
+
+## begin gnulib module chdir-long
+
+if GL_COND_OBJ_CHDIR_LONG
+libgnu_a_SOURCES += chdir-long.c
+endif
+
+EXTRA_DIST += chdir-long.h
+
+## end   gnulib module chdir-long
 
 ## begin gnulib module cloexec
 
@@ -333,6 +356,32 @@ EXTRA_DIST += errno.in.h
 
 ## end   gnulib module errno
 
+## begin gnulib module error
+
+if GL_COND_OBJ_ERROR
+libgnu_a_SOURCES += error.c
+endif
+
+EXTRA_DIST += error.h
+
+## end   gnulib module error
+
+## begin gnulib module exitfail
+
+libgnu_a_SOURCES += exitfail.c
+
+EXTRA_DIST += exitfail.h
+
+## end   gnulib module exitfail
+
+## begin gnulib module fchdir
+
+if GL_COND_OBJ_FCHDIR
+libgnu_a_SOURCES += fchdir.c
+endif
+
+## end   gnulib module fchdir
+
 ## begin gnulib module fcntl
 
 if GL_COND_OBJ_FCNTL
@@ -386,12 +435,26 @@ EXTRA_DIST += fd-hook.h
 
 ## end   gnulib module fd-hook
 
+## begin gnulib module fd-safer-flag
+
+libgnu_a_SOURCES += fd-safer-flag.c dup-safer-flag.c
+
+## end   gnulib module fd-safer-flag
+
 ## begin gnulib module filename
 
 
 EXTRA_DIST += filename.h
 
 ## end   gnulib module filename
+
+## begin gnulib module filenamecat-lgpl
+
+libgnu_a_SOURCES += filenamecat-lgpl.c
+
+EXTRA_DIST += filenamecat.h
+
+## end   gnulib module filenamecat-lgpl
 
 ## begin gnulib module flexmember
 
@@ -520,6 +583,18 @@ EXTRA_libgnu_a_SOURCES += stat-w32.c
 
 ## end   gnulib module fstat
 
+## begin gnulib module fstatat
+
+if GL_COND_OBJ_FSTATAT
+libgnu_a_SOURCES += fstatat.c
+endif
+
+EXTRA_DIST += at-func.c
+
+EXTRA_libgnu_a_SOURCES += at-func.c
+
+## end   gnulib module fstatat
+
 ## begin gnulib module futimens
 
 if GL_COND_OBJ_FUTIMENS
@@ -546,6 +621,14 @@ SED_HEADER_TO_AT_t = $(SED_HEADER_STDOUT) -n -e 'w $@-t'
 gl_V_at = $(AM_V_GEN)
 
 ## end   gnulib module gen-header
+
+## begin gnulib module getcwd-lgpl
+
+if GL_COND_OBJ_GETCWD_LGPL
+libgnu_a_SOURCES += getcwd-lgpl.c
+endif
+
+## end   gnulib module getcwd-lgpl
 
 ## begin gnulib module getdelim
 
@@ -622,6 +705,12 @@ endif
 EXTRA_DIST += getopt-cdefs.in.h getopt-core.h getopt-ext.h getopt-pfx-core.h getopt-pfx-ext.h getopt.in.h getopt_int.h
 
 ## end   gnulib module getopt-posix
+
+## begin gnulib module getprogname
+
+libgnu_a_SOURCES += getprogname.h getprogname.c
+
+## end   gnulib module getprogname
 
 ## begin gnulib module getrandom
 
@@ -1337,6 +1426,14 @@ endif
 
 ## end   gnulib module mempcpy
 
+## begin gnulib module memrchr
+
+if GL_COND_OBJ_MEMRCHR
+libgnu_a_SOURCES += memrchr.c
+endif
+
+## end   gnulib module memrchr
+
 ## begin gnulib module minmax
 
 libgnu_a_SOURCES += minmax.h
@@ -1400,6 +1497,27 @@ endif
 
 ## end   gnulib module open
 
+## begin gnulib module openat
+
+if GL_COND_OBJ_OPENAT
+libgnu_a_SOURCES += openat.c
+endif
+
+## end   gnulib module openat
+
+## begin gnulib module openat-die
+
+libgnu_a_SOURCES += openat-die.c
+
+## end   gnulib module openat-die
+
+## begin gnulib module openat-h
+
+
+EXTRA_DIST += openat.h
+
+## end   gnulib module openat-h
+
 ## begin gnulib module opendir
 
 if GL_COND_OBJ_OPENDIR
@@ -1416,6 +1534,14 @@ EXTRA_DIST += dirent-private.h
 EXTRA_DIST += pathmax.h
 
 ## end   gnulib module pathmax
+
+## begin gnulib module pipe-posix
+
+if GL_COND_OBJ_PIPE
+libgnu_a_SOURCES += pipe.c
+endif
+
+## end   gnulib module pipe-posix
 
 ## begin gnulib module printf-frexp
 
@@ -1473,6 +1599,14 @@ EXTRA_DIST += regcomp.c regex.h regex_internal.c regex_internal.h regexec.c
 EXTRA_libgnu_a_SOURCES += regcomp.c regex_internal.c regexec.c
 
 ## end   gnulib module regex
+
+## begin gnulib module save-cwd
+
+libgnu_a_SOURCES += save-cwd.c
+
+EXTRA_DIST += save-cwd.h
+
+## end   gnulib module save-cwd
 
 ## begin gnulib module scratch_buffer
 
@@ -2115,12 +2249,38 @@ EXTRA_libgnu_a_SOURCES += strcasestr.c
 
 ## end   gnulib module strcasestr-simple
 
+## begin gnulib module strdup-posix
+
+if GL_COND_OBJ_STRDUP
+libgnu_a_SOURCES += strdup.c
+endif
+
+## end   gnulib module strdup-posix
+
 ## begin gnulib module streq
 
 
 EXTRA_DIST += streq.h
 
 ## end   gnulib module streq
+
+## begin gnulib module strerror
+
+if GL_COND_OBJ_STRERROR
+libgnu_a_SOURCES += strerror.c
+endif
+
+## end   gnulib module strerror
+
+## begin gnulib module strerror-override
+
+if GL_COND_OBJ_STRERROR_OVERRIDE
+libgnu_a_SOURCES += strerror-override.c
+endif
+
+EXTRA_DIST += strerror-override.h
+
+## end   gnulib module strerror-override
 
 ## begin gnulib module string
 
@@ -2745,6 +2905,14 @@ MOSTLYCLEANFILES += unistd.h unistd.h-t
 EXTRA_DIST += unistd.in.h
 
 ## end   gnulib module unistd
+
+## begin gnulib module unistd-safer
+
+libgnu_a_SOURCES += dup-safer.c fd-safer.c pipe-safer.c
+
+EXTRA_DIST += unistd--.h unistd-safer.h
+
+## end   gnulib module unistd-safer
 
 ## begin gnulib module unitypes
 
