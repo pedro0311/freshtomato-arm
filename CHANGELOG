@@ -5,6 +5,47 @@ FreshTomato-ARM Changelog
 
 
 
+2022.3          2022.05.12
+---------------------------
+
+- SDK6: allow upgrade from AsusWRT to FreshTomato via GUI
+- SDK7: allow upgrade from AsusWRT to FreshTomato via GUI
+- SDK7: remove 256 MB DRAM limit
+- Initial add NETGEAR ac1450
+- Initial add DSL-AC68U
+- dnsmasq: update to 2022-03-31 (03345ec) snaphot (fix for CVE-2022-0934)
+- libcurl: update to 7.83.0
+- sqlite: update to 3.38.5
+- ebtables: fix the 'static' build target (update from upstream)
+- libsodium: update to latest 1.0.18-stable
+- libnfnetlink: update to 1.0.2
+- libmnl: update to 1.0.5
+- wsdd2: update to 1.8.7
+- util-linux: update to 2.38
+- libjson-c: update to 0.16-20220414
+- nano: update to 6.3
+- openssl: update to 1.1.1o
+- tor: update to 0.4.7.7
+- irqbalance: update to 1.8.0
+- libcurl: update CA certificate bundle as of 2022-04-26
+- build: Makefile: only build an image for RT-N18U in NOSMP version
+- GUI: fix display of 'beta' tag on Advanced themes
+- GUI: Administration: Admin Access: update links to TTB themes list and gallery
+- GUI: Advanced: DHCP/DNS: add the choice of EDNS packet size - default: 1280, no change (resolves #214)
+- GUI: Web Server: add buttons for nginx/MySQL that open their interfaces in the new tab/page
+- GUI: VPN Tunneling: Tinc Daemon: fix javascript error
+- GUI: VPN Tunneling: Tinc Daemon: fix version number display
+- README: add info about github mirror
+- httpd: cgi.c: use logmsg()
+- httpd: cgi.c: improve buffer handling
+- httpd: cgi.c: fix for CVE-2022-28665 (TALOS-2022-1509): FreshTomato httpd unescape memory corruption vulnerability
+- mssl: disable TLS 1.0 & 1.1 support for images with OpenSSL 1.1
+- rc: network.c - fix IPv6 forwarding in case of 4 LANs (resolves #216)
+- watchdog: fix regex which trigger dhcpFix
+- Netgear R8000: correct size for board_data partition
+- E4200v1 / Belkin F9K1102 (v1/v3): remove band selection (2,4 GHz OR 5 GHz) for second radio module at the GUI (basic-network)
+
+
 2022.2          2022.04.07
 ---------------------------
 
