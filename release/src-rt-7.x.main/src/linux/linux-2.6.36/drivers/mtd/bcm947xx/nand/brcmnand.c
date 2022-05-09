@@ -795,7 +795,7 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 	if (nvram_match("boardnum", "32") &&
 	    nvram_match("boardtype", "0x0665") &&
 	    nvram_match("boardrev", "0x1101")) {
-		offset = 0x2640000;
+		offset = 0x2680000;
 	}
 
 #ifndef CONFIG_YAFFS_FS
