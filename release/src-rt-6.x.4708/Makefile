@@ -1366,7 +1366,7 @@ r1do:
 
 ifeq ($(CONFIG_BCM7),y)
 r8000init:
-	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R8000" BOARDID_FILE="compatible_r8000.txt" FW_CFG_FILE="tomato_cfg.h"
+	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R8000" BOARDID_FILE="compatible_r8000.txt" FW_CFG_FILE="tomato_cfg.h"
 
 r8000e:
 	@$(MAKE) e ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 BRCM_NAND_JFFS2=y IRQBALANCE=y
@@ -1495,6 +1495,7 @@ ifeq ($(CONFIG_BCM7),y)
 	@echo "ac3200-128z     RT-AC3200 build AIO - 128K NVRAM"
 	@echo "r8000e          R8000 build VPN"
 	@echo "r8000z          R8000 build AIO"
+	@echo "r8000init       R8000 init build"
 endif
 	@echo ""
 	@echo "..etc..      other build configs"
