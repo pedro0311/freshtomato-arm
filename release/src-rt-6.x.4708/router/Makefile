@@ -1412,8 +1412,8 @@ iptables-1.8.x/stamp-h1:
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
-			--with-kernel=$(LINUXDIR) --disable-nftables \
-			--with-xt-lock-name=/var/lock/xtables.lock
+			--with-kernel=$(LINUXDIR) --with-xt-lock-name=/var/lock/xtables.lock \
+			--disable-nftables --disable-dependency-tracking
 	@touch $@
 
 iptables-1.8.x: iptables-1.8.x/stamp-h1
