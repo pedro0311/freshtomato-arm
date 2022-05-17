@@ -12,6 +12,16 @@
 /* Set FLAC__BYTES_PER_WORD to 8 (4 is the default) */
 #undef ENABLE_64_BIT_WORDS
 
+/* libtool defines DLL_EXPORT for windows dll builds,
+   but flac code relies on FLAC_API_EXPORTS instead. */
+#ifdef DLL_EXPORT
+#ifdef __cplusplus
+# define FLACPP_API_EXPORTS
+#else
+# define FLAC_API_EXPORTS
+#endif
+#endif
+
 /* define to align allocated memory on 32-byte boundaries */
 #undef FLAC__ALIGN_MALLOC_DATA
 

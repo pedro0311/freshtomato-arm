@@ -1412,8 +1412,8 @@ iptables-1.8.x/stamp-h1:
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
-			--with-kernel=$(LINUXDIR) --disable-nftables \
-			--with-xt-lock-name=/var/lock/xtables.lock
+			--with-kernel=$(LINUXDIR) --with-xt-lock-name=/var/lock/xtables.lock \
+			--disable-nftables --disable-dependency-tracking
 	@touch $@
 
 iptables-1.8.x: iptables-1.8.x/stamp-h1
@@ -1938,10 +1938,11 @@ flac/stamp-h1:
 		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static --disable-rpath \
-			--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
-			--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking \
-			--with-ogg=$(TOP)/libogg/src/.libs
+		$(CONFIGURE) --prefix='' --enable-shared --with-ogg=$(TOP)/libogg/src/.libs \
+			--disable-doxygen-docs --disable-examples --disable-xmms-plugin --disable-cpplibs \
+			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
+			--disable-sse --disable-altivec --disable-vsx --disable-avx --enable-debug=no \
+			--without-libiconv-prefix --disable-rpath --disable-dependency-tracking
 	@touch $@
 
 flac: flac/stamp-h1
@@ -2352,11 +2353,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.13 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.13
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.13
+	install -D libxml2/.libs/libxml2.so.2.9.14 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.14
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.14
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.13 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.13 libxml2.so
+		ln -sf libxml2.so.2.9.14 libxml2.so.2 && \
+		ln -sf libxml2.so.2.9.14 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
