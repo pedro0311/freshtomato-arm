@@ -1938,10 +1938,11 @@ flac/stamp-h1:
 		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static --disable-rpath \
-			--disable-doxygen-docs --disable-xmms-plugin --disable-cpplibs --disable-thorough-tests \
-			--without-libiconv-prefix --disable-altivec --disable-sse --disable-dependency-tracking \
-			--with-ogg=$(TOP)/libogg/src/.libs
+		$(CONFIGURE) --prefix='' --enable-shared --with-ogg=$(TOP)/libogg/src/.libs \
+			--disable-doxygen-docs --disable-examples --disable-xmms-plugin --disable-cpplibs \
+			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
+			--disable-sse --disable-altivec --disable-vsx --disable-avx --enable-debug=no \
+			--without-libiconv-prefix --disable-rpath --disable-dependency-tracking
 	@touch $@
 
 flac: flac/stamp-h1
