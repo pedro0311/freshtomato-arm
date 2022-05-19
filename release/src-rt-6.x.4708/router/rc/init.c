@@ -9282,9 +9282,9 @@ static int init_nvram(void)
 			set_defaults(bcm4360ac_defaults, "");
 		}
 		break;
-	case MODEL_R8000:
+	case MODEL_R8000: /* also for R7900 */
 		mfr = "Netgear";
-		name = "R8000";
+		name = nvram_match("board_id", "U12H315T30_NETGEAR") ? "R7900" : "R8000";
 		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC;
 #ifdef TCONFIG_USB
 		nvram_set("usb_uhci", "-1");

@@ -23,6 +23,7 @@ VPORT=$(nvram get $VWAN'ports' | awk '{print $1}' | sed 's/[^0-9]*//g')
 	[ "$ROUTERNAME" == "EA6400" ] ||
 	[ "$ROUTERNAME" == "EA6500v2" ] ||
 	[ "$ROUTERNAME" == "EA6700" ] ||
+	[ "$ROUTERNAME" == "R7900" ] ||
 	[ "$ROUTERNAME" == "R8000" ] && {
 #special case - Port 4 for WAN
 		VPORT="4"

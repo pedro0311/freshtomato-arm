@@ -216,6 +216,7 @@ endif
 # for AC1450, R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(CONFIG_BCM7),y)
+	ctools/trx_asus -i image/linux-lzma.trx -r R7900,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R7900-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R8000,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R8000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 else
 ifeq ($(NVRAM_128K),y)
@@ -1365,6 +1366,9 @@ r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y TUXERA=y TUXERA_HFS=y BSD=y IRQBALANCE=y
 
 ifeq ($(CONFIG_BCM7),y)
+r7900init:
+	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R7900" BOARDID_FILE="compatible_r7900.txt" FW_CFG_FILE="tomato_cfg.h"
+
 r8000init:
 	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R8000" BOARDID_FILE="compatible_r8000.txt" FW_CFG_FILE="tomato_cfg.h"
 
@@ -1493,8 +1497,9 @@ ifeq ($(CONFIG_BCM7),y)
 	@echo "ac3200z         RT-AC3200 build AIO"
 	@echo "ac3200-128e     RT-AC3200 build VPN - 128K NVRAM"
 	@echo "ac3200-128z     RT-AC3200 build AIO - 128K NVRAM"
-	@echo "r8000e          R8000 build VPN"
-	@echo "r8000z          R8000 build AIO"
+	@echo "r8000e          R7900/R8000 build VPN"
+	@echo "r8000z          R7900/R8000 build AIO"
+	@echo "r7900init       R7900 init build"
 	@echo "r8000init       R8000 init build"
 endif
 	@echo ""
