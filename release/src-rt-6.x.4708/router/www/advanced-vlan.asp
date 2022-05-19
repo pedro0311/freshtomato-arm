@@ -749,7 +749,7 @@ function save() {
 		v += (d[i][COL_VID_DEF].toString() != '0') ? d[i][0] : '';
 
 		fom['vlan'+d[i][COL_VID]+'ports'].value = p;
-		if (nvram['model'] == 'R8000')
+		if (nvram['t_model_name'] == 'Netgear R8000')
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et2';
 		else
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et0';
