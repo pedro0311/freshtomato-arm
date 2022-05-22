@@ -1501,6 +1501,7 @@ static const nvset_t nvset_list[] = {
 #endif /* TCONFIG_NTFS */
 #ifdef TCONFIG_UPS
 	{ "usb_apcupsd",		V_01				},
+	{ "usb_apcupsd_custom",		V_01				},	/* 1 - use custom config file /etc/apcupsd.conf */
 #endif
 #ifdef TCONFIG_HFS
 	{ "usb_fs_hfs",			V_01				}, //!Victek
