@@ -54,6 +54,16 @@ void start_jffs2(void)
 	const char *p;
 	struct statfs sf;
 
+#ifdef TCONFIG_BCMARM
+	int model = get_model();
+
+	if (model == MODEL_UNKNOWN) { /* check router */
+		/* router model unknown! Stop here to avoid overwriting board_data for some router */
+		error("because router model unknown - can not enable");
+		return;
+	}
+#endif
+
 	if (!nvram_match("jffs2_on", "1")) {
 		notice_set("jffs", "");
 		return;

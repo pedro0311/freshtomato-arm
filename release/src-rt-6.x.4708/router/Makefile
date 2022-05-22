@@ -3120,9 +3120,10 @@ apcupsd/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOOLCHAIN)/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --without-x --enable-usb --disable-pcnet --enable-cgi \
-			--disable-lgd --enable-net --sysconfdir=/usr/local/apcupsd --bindir=/bin \
-			--disable-dumb --disable-snmp --with-cgi-bin=/www/apcupsd --with-serial-dev=
+		$(CONFIGURE) --prefix=/usr --bindir=/bin --sysconfdir=/etc/apcupsd --with-cgi-bin=/www/apcupsd \
+			--enable-usb --enable-cgi --disable-lgd --enable-net \
+			--disable-dumb --without-x --with-serial-dev= \
+			$(if $(TCONFIG_AIO),--enable-pcnet --enable-snmp,--disable-pcnet --disable-snmp)
 	@touch $@
 
 apcupsd: apcupsd/stamp-h1
@@ -3133,6 +3134,9 @@ apcupsd-install:
 	$(MAKE) -C apcupsd DESTDIR=$(INSTALLDIR)/apcupsd install
 	@rm -rf $(INSTALLDIR)/apcupsd/sbin/apctest
 	@rm -rf $(INSTALLDIR)/apcupsd/www/apcupsd/ups*.cgi
+	@mkdir -p $(TARGETDIR)/rom/etc/apcupsd
+	@cp -f $(INSTALLDIR)/apcupsd/etc/apcupsd/* $(TARGETDIR)/rom/etc/apcupsd/
+	@rm -rf $(INSTALLDIR)/apcupsd/etc
 	$(STRIP) $(INSTALLDIR)/apcupsd/sbin/*
 	$(STRIP) $(INSTALLDIR)/apcupsd/www/apcupsd/*
 	@mkdir -p $(INSTALLDIR)/apcupsd/usr/bin

@@ -97,6 +97,7 @@ switch (nvram['t_model_name']) {
 	case 'Cisco Linksys EA6400':
 	case 'Cisco Linksys EA6500v2':
 	case 'Cisco Linksys EA6700':
+	case 'Netgear R7900':
 	case 'Netgear R8000':
 		COL_P0N = '4';
 		COL_P1N = '0';
@@ -749,7 +750,7 @@ function save() {
 		v += (d[i][COL_VID_DEF].toString() != '0') ? d[i][0] : '';
 
 		fom['vlan'+d[i][COL_VID]+'ports'].value = p;
-		if (nvram['model'] == 'R8000')
+		if ((nvram['t_model_name'] == 'Netgear R7900') || (nvram['t_model_name'] == 'Netgear R8000'))
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et2';
 		else
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et0';

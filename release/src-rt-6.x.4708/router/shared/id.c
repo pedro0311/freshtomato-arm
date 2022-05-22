@@ -48,7 +48,8 @@ RT-AC1900P			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // o
 RT-AC68U B2			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC68U
 RT-AC3200			BCM4709               0x072f       <MAC>     0x1101
 
-R8000				BCM4709               0x0665       32        0x1101
+R7900				BCM4709               0x0665       32        0x1101 // board_id=U12H315T30_NETGEAR
+R8000				BCM4709               0x0665       32        0x1101 // board_id=U12H315T00_NETGEAR
 AC1450				BCM4708               0x0646       679       0x1110 // CH/Charter version has the same signature
 R6900				BCM4709               0x0665       32        0x1301    0x1000
 R7000				BCM4709               0x0665       32        0x1301    0x1000
