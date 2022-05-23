@@ -147,7 +147,7 @@ function earlyInit() {
 <div class="section">
 	<div class="tomato-grid" id="nfsg-grid"></div>
 	<ul>
-		<li>You can find more information on proper NFS configuration at the following website: <a href="https://nfs.sourceforge.net/nfs-howto/" class="new_window"><b>https://nfs.sourceforge.net</b></a>.</li>
+		<li>More information on the proper configuration of the NFS <a href="http://nfs.sourceforge.net/nfs-howto/" class="new_window">HERE</a>.</li>
 	</ul>
 </div>
 
