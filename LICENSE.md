@@ -673,3 +673,12 @@ library, you may consider it more useful to permit linking proprietary
 applications with the library. If this is what you want to do, use the
 GNU Lesser General Public License instead of this License. But first,
 please read <https://www.gnu.org/licenses/why-not-lgpl.html>.
+
+### NOTE
+
+This product includes copyrighted third-party software licensed 
+under the terms of the GNU General Public License. Please see 
+The GNU General Public License for the exact terms and conditions 
+of this license. All future firmware updates will also be accompanied 
+with their respective source code. Please visit our web site for updated 
+information. Note that we do not offer direct support for the distribution.
