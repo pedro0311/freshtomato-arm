@@ -2391,6 +2391,10 @@ div#sptime {
 	left: 180px;
 }
 
+.maxlevel {
+	font-size: 12px;
+}
+
 /* SVG */
 #svg text {
 	font: 13px monospace;
