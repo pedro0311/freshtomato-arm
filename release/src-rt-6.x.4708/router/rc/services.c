@@ -2149,7 +2149,7 @@ void start_ntpd(void)
 	FILE *f;
 	char *servers, *ptr;
 	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
-	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -d6 -q -S /sbin/ntpd_synced -l */
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
 	if (getpid() != 1) {
@@ -2201,7 +2201,7 @@ void start_ntpd(void)
 		free(servers);
 
 		if (nvram_contains_word("log_events", "ntp")) /* add verbose (doesn't work right now) */
-			ntpd_argv[index++] = "-d6";
+			ntpd_argv[index++] = "-ddddddd";
 
 		if (ntp_updates_int == 0) /* only at startup, then quit */
 			ntpd_argv[index++] = "-q";
