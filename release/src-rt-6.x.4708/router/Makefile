@@ -465,7 +465,7 @@ ifeq ($(TCONFIG_BCMARM),y)
    export CONFIG_DHDAP=y
    export CFLAGS += -D__CONFIG_DHDAP__
    export DHDAP_USE_SEPARATE_CHECKOUTS := 1
-   export SRCBASE_DHD := $(SRCBASE)/router/
+   export SRCBASE_DHD := $(SRCBASE)/router
    export SRCBASE_FW  := $(SRCBASE)/../../43602/src
    PCIEFD_TARGETS_LIST	:= 43602a1-roml
 
