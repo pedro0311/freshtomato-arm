@@ -44,15 +44,7 @@
  		"Content-Type: application/soap+xml\r\n"
 --- wsdd2/wsdd2.c
 +++ wsdd2/wsdd2.c
-@@ -23,6 +23,7 @@
- #define _GNU_SOURCE // asprintf()
- 
- #include "wsdd.h"
-+#include "ifaddrs.c"
- 
- #include <stddef.h> // NULL
- #include <limits.h> // HOST_NAME_MAX
-@@ -581,6 +582,7 @@
+@@ -581,6 +581,7 @@
  	}
  }
  
@@ -60,7 +52,7 @@
  static char *get_smbparm(const char *name, const char *_default)
  {
  #define __FUNCTION__	"get_smbparm"
-@@ -616,6 +618,103 @@
+@@ -616,6 +617,103 @@
  	return result;
  #undef __FUNCTION__
  }
