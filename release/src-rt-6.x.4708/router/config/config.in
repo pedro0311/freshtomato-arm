@@ -373,3 +373,7 @@ config TCONFIG_CONNTRACK_TOOL
 config TCONFIG_IRQBALANCE
 	bool "irqbalance Tool"
 	default n
+
+config TCONFIG_TRXKEY
+	bool "Include Asus New TRX Key (allow upgrade to AsusWRT via GUI)"
+	default y

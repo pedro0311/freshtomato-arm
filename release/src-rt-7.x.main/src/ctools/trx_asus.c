@@ -132,11 +132,15 @@ typedef struct {
 #ifdef BCMWL6A
 	uint16_t  sn;
 	uint16_t  en;
+#ifdef ASUSKEY
 	uint8_t   key;
 	char	  pad[27];
 #else
+	char	  pad[28];
+#endif /* ASUSKEY */
+#else
 	char	  pad[32];
-#endif
+#endif /* BCMWL6A */
 } TAIL;
 
 /* usage:
@@ -153,8 +157,10 @@ int create_asus(const char *optarg)
 #ifdef BCMWL6A
 	char *sn, *en;
 	char tmp[10];
+#ifdef ASUSKEY
 	uint8_t rand;
 	uint32_t offset;
+#endif /* ASUSKEY */
 #endif
 
 	memset(&asus_tail, 0, sizeof(TAIL));
@@ -191,6 +197,7 @@ int create_asus(const char *optarg)
 	asus_tail.en = (uint16_t)v1;
 	printf("Asus TRX-Header EXTENDNO = %d\n", asus_tail.en);
 
+#ifdef ASUSKEY
 	/* length > 16 + 2357 * 4 = 9444 */
 	if (trx->length > sizeof(*trx) - sizeof(trx->offsets) + 2357 * sizeof(trx->offsets[0]))
 		offset = 2357;
@@ -216,6 +223,7 @@ int create_asus(const char *optarg)
 		asus_tail.key = 0xff - asus_tail.key + rand;
 
 	printf("Asus TRX-Header KEY = 0x%02x\n", asus_tail.key);
+#endif /* ASUSKEY */
 #endif
 
 	fname = strsep(&next, ",");
