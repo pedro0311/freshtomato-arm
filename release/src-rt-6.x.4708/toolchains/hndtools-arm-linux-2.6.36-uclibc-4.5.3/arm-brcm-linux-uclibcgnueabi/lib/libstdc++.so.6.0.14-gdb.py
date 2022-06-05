@@ -19,8 +19,8 @@ import gdb
 import os
 import os.path
 
-pythondir = '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/gcc-4.5.3/python'
-libdir = '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/arm-brcm-linux-uclibcgnueabi/lib'
+pythondir = '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/gcc-4.5.3/python'
+libdir = '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/arm-brcm-linux-uclibcgnueabi/lib'
 
 # This file might be loaded when there is no current objfile.  This
 # can happen if the user loads it manually.  In this case we don't

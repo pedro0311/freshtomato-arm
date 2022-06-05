@@ -27,7 +27,7 @@ eval 'case $# in 0) exec /usr/bin/perl -S "$0";; *) exec /usr/bin/perl -S "$0" "
 
 BEGIN
 {
-  my $pkgdatadir = $ENV{'autom4te_perllibdir'} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
+  my $pkgdatadir = $ENV{'autom4te_perllibdir'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
   unshift @INC, $pkgdatadir;
 
   # Override SHELL.  On DJGPP SHELL may not be set to a shell
@@ -107,9 +107,9 @@ Written by David J. MacKenzie and Akim Demaille.
 ";
 
 # Lib files.
-my $autoconf   = $ENV{'AUTOCONF'}   || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autoconf';
-my $autoheader = $ENV{'AUTOHEADER'} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autoheader';
-my $autom4te   = $ENV{'AUTOM4TE'}   || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autom4te';
+my $autoconf   = $ENV{'AUTOCONF'}   || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autoconf';
+my $autoheader = $ENV{'AUTOHEADER'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autoheader';
+my $autom4te   = $ENV{'AUTOM4TE'}   || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autom4te';
 my $automake   = $ENV{'AUTOMAKE'}   || 'automake';
 my $aclocal    = $ENV{'ACLOCAL'}    || 'aclocal';
 my $libtoolize = $ENV{'LIBTOOLIZE'} || 'libtoolize';

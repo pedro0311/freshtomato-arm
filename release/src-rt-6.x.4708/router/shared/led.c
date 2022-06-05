@@ -273,6 +273,17 @@ int do_led(int which, int mode)
 		else if (which == LED_WHITE) {
 			b = -8; /* color white gpio 8 (active LOW) */
 			c = 9; /* color amber gpio 9 (active HIGH) */
+			/*
+			 * GPIO | 8 | 9 | WAN leds (logic)
+			 * -----------------------------------
+			 *      | 1 | 1 | Both OFF
+			 * -----------------------------------
+			 *      | 1 | 0 | WAN White, Amber OFF
+			 * -----------------------------------
+			 *      | 0 | 1 | Wan amber, White OFF
+			 * -----------------------------------
+			 *      | 0 | 0 | WAN amber, White OFF
+			 */
 		}
 		else if (which == LED_BRIDGE) { /* non GPIO LED */
 			do_led_bridge(mode);
@@ -804,13 +815,15 @@ void led_setup(void)
 		case MODEL_R6700v3:
 		case MODEL_XR300:
 			/* activate WAN port led */
-			set_gpio(GPIO_06, T_LOW); /* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
+			set_gpio(GPIO_06, T_HIGH); /* R6400: enable LED_WHITE / WAN LED with color amber (6) if ethernet cable is connected; switch to color white (7) with WAN up */
+			set_gpio(GPIO_07, T_LOW);
 			break;
 		case MODEL_R6700v1:
 		case MODEL_R6900:
 		case MODEL_R7000:
 			/* activate WAN port led */
-			set_gpio(GPIO_08, T_LOW); /* R6700v1, R6900 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			set_gpio(GPIO_08, T_HIGH); /* R6700v1, R6900 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
+			set_gpio(GPIO_09, T_LOW);
 			break;
 #endif /* TCONFIG_BCM7 */
 		default:

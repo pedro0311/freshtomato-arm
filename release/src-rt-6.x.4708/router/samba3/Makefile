@@ -5,8 +5,8 @@ srcdir=source3
 
 export PARALLEL_BUILD := -j`grep -c '^processor' /proc/cpuinfo`
 
-SMBCFLAGS = $(EXTRACFLAGS) $(CFLAG_OPTIMIZE) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG) $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-I$(TOP)/libiconv/staged/usr/include,)
-SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-L$(TOP)/libiconv/staged/usr/lib,)
+SMBCFLAGS = $(EXTRACFLAGS) $(CFLAG_OPTIMIZE) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG) $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-I$(TOP)/libiconv/staged/usr/include,) -I$(TOP)/zlib/staged/usr/include
+SMBLDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-L$(TOP)/libiconv/staged/usr/lib,) -L$(TOP)/zlib/staged/usr/lib
 
 SMB_USE_MULTICALL=1
 

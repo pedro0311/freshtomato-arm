@@ -28,7 +28,7 @@ our @EXPORT = qw ($APIVERSION $PACKAGE $VERSION $libdir $perl_threads);
 our $APIVERSION = '1.11';
 our $PACKAGE = 'automake';
 our $VERSION = '1.11.1';
-our $libdir = '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
+our $libdir = '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
 our $perl_threads = 1;
 
 1;;

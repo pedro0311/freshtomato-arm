@@ -679,7 +679,7 @@
 /* Define to 1 if we found a declaration for 'getopt', otherwise define to 0.
    */
 #ifndef USED_FOR_TARGET
-#define HAVE_DECL_GETOPT 0
+#define HAVE_DECL_GETOPT 1
 #endif
 
 
@@ -938,7 +938,7 @@
 
 /* Define 0/1 if your assembler supports CFI directives. */
 #ifndef USED_FOR_TARGET
-#define HAVE_GAS_CFI_DIRECTIVE 0
+#define HAVE_GAS_CFI_DIRECTIVE 1
 #endif
 
 

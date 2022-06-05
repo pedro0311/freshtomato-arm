@@ -262,7 +262,7 @@ function init() {
 			{ title: 'Udpxy port', indent: 2, name: 'f_udpxy_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.udpxy_port, 4022) },
 			null,
 /* EMF-BEGIN */
-			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' &nbsp;<small><a href="https://en.wikipedia.org/wiki/Universal_Plug_and_Play#IGMP_snooping_and_reliability" class="new_window">Read first!<\/a><\/small>' },
+			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' &nbsp;<small>Please refer to the wiki<\/small>' },
 /* EMF-END */
 			{ title: 'Force IGMPv2', name: 'f_force_igmpv2', type: 'checkbox', value: nvram.force_igmpv2 != '0' }
 		]);

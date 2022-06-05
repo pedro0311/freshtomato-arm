@@ -1049,16 +1049,28 @@
 #define __ARM_NR_set_tls ((0 +0x0f0000)+5)
 #define SYS_set_tls __ARM_NR_set_tls
 #undef __NR_time
+#undef SYS_time
 #undef __NR_umount
+#undef SYS_umount
 #undef __NR_stime
+#undef SYS_stime
 #undef __NR_alarm
+#undef SYS_alarm
 #undef __NR_utime
+#undef SYS_utime
 #undef __NR_getrlimit
+#undef SYS_getrlimit
 #undef __NR_select
+#undef SYS_select
 #undef __NR_readdir
+#undef SYS_readdir
 #undef __NR_mmap
+#undef SYS_mmap
 #undef __NR_socketcall
+#undef SYS_socketcall
 #undef __NR_syscall
+#undef SYS_syscall
 #undef __NR_ipc
+#undef SYS_ipc
 
 #endif

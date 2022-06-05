@@ -103,7 +103,7 @@ logGrid.populate = function() {
 		for (var index = 0; index < messagesToAdd.length; ++index) {
 			if (messagesToAdd[index]) {
 				var logLineMap = getLogLineParsedMap(messagesToAdd[index]);
-				if ((currentFilterValue == 0) || (logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1] == currentFilterValue)) {
+				if ((currentFilterValue == 0) || (E('maxlevel').checked ? (currentFilterValue >= logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1]) : (currentFilterValue == logLineMap[LINE_PARSE_MAP_LEVEL_ATTR_POS][1]))) {
 						if (!localSearch || containsSearch(logLineMap, localSearch)) {
 							var row = createHighlightedRow(logLineMap);
 							this.insert(-1, row, row, true);
@@ -425,6 +425,7 @@ function init() {
 
 			<span>
 				Filter level: &nbsp;
+				<small class="maxlevel">Max</small>&nbsp;<input type="checkbox" id="maxlevel" onchange="logGrid.populate();scrollToBottom();">&nbsp;
 				<select id="filterLevelSelector" onchange="filterLevelChanged();">
 					<option value="0">All</option>
 					<option value="1">Emergency</option>

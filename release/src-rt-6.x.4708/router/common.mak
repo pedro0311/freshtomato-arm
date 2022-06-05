@@ -107,7 +107,7 @@ export STAGEDIR := $(PLATFORMDIR)/stage
 
 ifeq ($(EXTRACFLAGS),)
 ifeq ($(TCONFIG_BCMARM),y)
-export EXTRACFLAGS := -DBCMWPA2 -DBCMARM -fno-delete-null-pointer-checks -marm
+export EXTRACFLAGS := -DBCMWPA2 -DBCMARM -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9
 else
 export EXTRACFLAGS := -DBCMWPA2 -fno-delete-null-pointer-checks $(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)
 endif

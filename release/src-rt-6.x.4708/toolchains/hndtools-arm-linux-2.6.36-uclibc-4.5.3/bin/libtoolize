@@ -325,15 +325,15 @@ as_unset=as_fn_unset
 
 : ${CP="cp -f"}
 test "${ECHO+set}" = set || ECHO=${as_echo-'printf %s\n'}
-: ${EGREP="/bin/grep -E"}
-: ${FGREP="/bin/grep -F"}
-: ${GREP="/bin/grep"}
+: ${EGREP="/usr/bin/grep -E"}
+: ${FGREP="/usr/bin/grep -F"}
+: ${GREP="/usr/bin/grep"}
 : ${LN_S="ln -s"}
 : ${MAKE="make"}
 : ${MKDIR="mkdir"}
 : ${MV="mv -f"}
 : ${RM="rm -f"}
-: ${SED="/bin/sed"}
+: ${SED="/usr/bin/sed"}
 : ${SHELL="${CONFIG_SHELL-/bin/sh}"}
 : ${Xsed="$SED -e 1s/^X//"}
 
@@ -948,11 +948,11 @@ seen_ltdl=false
 ltdl_mode=
 
 # Locations for important files:
-prefix=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3
-datadir=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share
-pkgdatadir=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
-pkgltdldir=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
-aclocaldir=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal
+prefix=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3
+datadir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share
+pkgdatadir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
+pkgltdldir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
+aclocaldir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal
 auxdir=
 macrodir=
 ltdldir=

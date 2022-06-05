@@ -107,6 +107,51 @@ static int is_psta(int idx, int unit, int subunit, void *param)
 }
 #endif /* TCONFIG_BCMWL6 */
 
+void start_dnsmasq_wet()
+{
+	FILE *f;
+	const char *nv;
+	char br;
+	char lanN_ifname[] = "lanXX_ifname";
+
+	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
+		perror(DNSMASQ_CONF);
+		return;
+	}
+
+	fprintf(f, "pid-file=/var/run/dnsmasq.pid\n"
+	           "resolv-file=%s\n"				/* the real stuff is here */
+	           "min-port=%u\n"				/* min port used for random src port */
+	           "no-negcache\n"				/* disable negative caching */
+	           "bind-dynamic\n",
+		dmresolv, 4096);
+
+	for (br = 0; br < BRIDGE_COUNT; br++) {
+		char bridge[2] = "0";
+		if (br != 0)
+			bridge[0] += br;
+		else
+			strcpy(bridge, "");
+
+		sprintf(lanN_ifname, "lan%s_ifname", bridge);
+		nv = nvram_safe_get(lanN_ifname);
+
+		if (strncmp(nv, "br", 2) == 0) {
+			fprintf(f, "interface=%s\n", nv);
+			fprintf(f, "no-dhcp-interface=%s\n", nv);
+		}
+	}
+
+	fprintf(f, "%s\n", nvram_safe_get("dnsmasq_custom"));
+
+	fclose(f);
+
+	unlink(RESOLV_CONF);
+	symlink("/rom/etc/resolv.conf", RESOLV_CONF); /* nameserver 127.0.0.1 */
+
+	eval("dnsmasq", "-c", "4096", "--log-async");
+}
+
 void start_dnsmasq()
 {
 	FILE *f, *hf;
@@ -149,14 +194,16 @@ void start_dnsmasq()
 
 	/* check wireless ethernet bridge (wet) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_wet)) {
-		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the WEB mode enabled");
+		logmsg(LOG_INFO, "Starting dnsmasq for wireless ethernet bridge mode");
+		start_dnsmasq_wet();
 		return;
 	}
 
 #ifdef TCONFIG_BCMWL6
 	/* check media bridge (psta) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_psta)) {
-		logmsg(LOG_WARNING, "Starting dnsmasq is skipped due to the Media Bridge mode enabled");
+		logmsg(LOG_INFO, "Starting dnsmasq for media bridge mode");
+		start_dnsmasq_wet();
 		return;
 	}
 #endif /* TCONFIG_BCMWL6 */
@@ -2148,8 +2195,8 @@ void start_ntpd(void)
 {
 	FILE *f;
 	char *servers, *ptr;
-	int servers_len = 0, ntp_updates_int = 0, index = 2, ret;
-	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", NULL, NULL, NULL, NULL, NULL, NULL }; /* -d6 -q -S /sbin/ntpd_synced -l */
+	int servers_len = 0, ntp_updates_int = 0, index = 3, ret;
+	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", "-N", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
 	if (getpid() != 1) {
@@ -2201,7 +2248,7 @@ void start_ntpd(void)
 		free(servers);
 
 		if (nvram_contains_word("log_events", "ntp")) /* add verbose (doesn't work right now) */
-			ntpd_argv[index++] = "-d6";
+			ntpd_argv[index++] = "-ddddddd";
 
 		if (ntp_updates_int == 0) /* only at startup, then quit */
 			ntpd_argv[index++] = "-q";

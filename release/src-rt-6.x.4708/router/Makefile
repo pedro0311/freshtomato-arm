@@ -298,11 +298,13 @@ obj-y += dnsmasq
 obj-y += mssl
 obj-y += httpd
 obj-y += wanuptime
+obj-$(TCONFIG_DNSCRYPT) += zlib
 obj-$(TCONFIG_DNSCRYPT) += libsodium
 obj-$(TCONFIG_DNSCRYPT) += dnscrypt
 obj-$(TCONFIG_SNMP) += snmp
 obj-$(TCONFIG_RAID) += mdadm
 obj-$(TCONFIG_NFS) += e2fsprogs
+obj-$(TCONFIG_NFS) += zlib
 obj-$(TCONFIG_NFS) += libevent
 obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
@@ -321,6 +323,7 @@ obj-$(TCONFIG_UPS) += apcupsd
 ifneq ($(TCONFIG_BCMARM)$(TCONFIG_NGINX),)
  obj-$(TCONFIG_SAMBASRV) += libiconv
 endif
+obj-$(TCONFIG_SAMBASRV) += zlib
 obj-$(TCONFIG_SAMBASRV) += samba3
 obj-$(TCONFIG_SAMBASRV) += wsdd2
 
@@ -465,7 +468,7 @@ ifeq ($(TCONFIG_BCMARM),y)
    export CONFIG_DHDAP=y
    export CFLAGS += -D__CONFIG_DHDAP__
    export DHDAP_USE_SEPARATE_CHECKOUTS := 1
-   export SRCBASE_DHD := $(SRCBASE)/router/
+   export SRCBASE_DHD := $(SRCBASE)/router
    export SRCBASE_FW  := $(SRCBASE)/../../43602/src
    PCIEFD_TARGETS_LIST	:= 43602a1-roml
 
@@ -1843,8 +1846,8 @@ dropbear-clean:
 
 sqlite/stamp-h1:
 	cd sqlite && autoreconf -fsi && \
-		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
 			--disable-readline --disable-dynamic-extensions --enable-threadsafe
 	@touch $@
@@ -2314,7 +2317,8 @@ nocat-clean:
 pcre/stamp-h1:
 	$(call patch_files,pcre)
 	cd pcre && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --disable-dependency-tracking --enable-utf8 --enable-unicode-properties --disable-cpp
 	[ -d pcre/m4 ] || mkdir pcre/m4
 	@touch $@
@@ -2791,7 +2795,7 @@ libcurl/stamp-h1:
 	$(call patch_files,libcurl)
 	cd libcurl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall -pipe -ffunction-sections -fdata-sections -fPIC \
-			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm,-funit-at-a-time -Wno-pointer-sign \
+			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
 				$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32))" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
@@ -3013,7 +3017,7 @@ endif
 	cd nfs-utils && ./autogen.sh && \
 		CPPFLAGS="-Os $(EXTRACFLAGS)" \
 		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time -pipe -ffunction-sections -fdata-sections \
-			$(if $(TCONFIG_BCMARM),-marm,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
+			$(if $(TCONFIG_BCMARM),-marm -march=armv7-a -mtune=cortex-a9,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
 			-I$(TOP)/libevent/staged/usr/local/include \
 			-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
@@ -3170,8 +3174,8 @@ libsodium-clean:
 dnscrypt/stamp-h1:
 	cd dnscrypt && autoreconf && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections" \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs -L$(TOP)/zlib/staged/usr/lib" \
 		$(CONFIGURE) --prefix=/usr --disable-ssp --disable-dependency-tracking
 	@touch $@
 
