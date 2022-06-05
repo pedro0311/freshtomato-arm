@@ -2795,7 +2795,7 @@ libcurl/stamp-h1:
 	$(call patch_files,libcurl)
 	cd libcurl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall -pipe -ffunction-sections -fdata-sections -fPIC \
-			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm,-funit-at-a-time -Wno-pointer-sign \
+			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
 				$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32))" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
@@ -3017,7 +3017,7 @@ endif
 	cd nfs-utils && ./autogen.sh && \
 		CPPFLAGS="-Os $(EXTRACFLAGS)" \
 		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time -pipe -ffunction-sections -fdata-sections \
-			$(if $(TCONFIG_BCMARM),-marm,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
+			$(if $(TCONFIG_BCMARM),-marm -march=armv7-a -mtune=cortex-a9,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
 			-I$(TOP)/libevent/staged/usr/local/include \
 			-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
