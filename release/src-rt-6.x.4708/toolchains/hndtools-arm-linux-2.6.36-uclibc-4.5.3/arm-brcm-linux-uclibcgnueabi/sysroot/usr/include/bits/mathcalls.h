@@ -75,8 +75,10 @@ __MATHCALLI (atan2,, (_Mdouble_ __y, _Mdouble_ __x))
 
 /* Cosine of X.  */
 __MATHCALLI (cos,, (_Mdouble_ __x))
+
 /* Sine of X.  */
 __MATHCALLI (sin,, (_Mdouble_ __x))
+
 /* Tangent of X.  */
 __MATHCALLI (tan,, (_Mdouble_ __x))
 

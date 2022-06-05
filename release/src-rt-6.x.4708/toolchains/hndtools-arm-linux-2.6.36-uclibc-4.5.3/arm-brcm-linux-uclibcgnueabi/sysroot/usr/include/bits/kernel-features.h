@@ -311,16 +311,18 @@
 
 /* Support for various CLOEXEC and NONBLOCK flags was added for x86,
  *    x86-64, PPC, IA-64, and SPARC in 2.6.27.  */
-#if __LINUX_KERNEL_VERSION >= 0x02061b \
-    && (defined __i386__ || defined __x86_64__ || defined __powerpc__ \
-        || defined __ia64__ || defined __sparc__ || defined __s390__)
+#if (__LINUX_KERNEL_VERSION >= 0x02061b \
+     && (defined __i386__ || defined __x86_64__ || defined __powerpc__ \
+         || defined __ia64__ || defined __sparc__ || defined __s390__) \
+	) || (__LINUX_KERNEL_VERSION >= 0x020621 && defined __alpha__) \
+	|| defined __aarch64__ || defined __tile__
 /* # define __ASSUME_SOCK_CLOEXEC  1 */
 /* # define __ASSUME_IN_NONBLOCK   1 */
 # define __ASSUME_PIPE2         1
 /* # define __ASSUME_EVENTFD2      1 */
 /* # define __ASSUME_SIGNALFD4     1 */
+/* # define __ASSUME_DUP3		1 */
 #endif
-
 
 /* These features were surely available with 2.4.12.  */
 #if __LINUX_KERNEL_VERSION >= 132108 && defined __mc68000__
@@ -492,6 +494,14 @@
 /* Support for private futexes was added in 2.6.22.  */
 #if __LINUX_KERNEL_VERSION >= 0x020616
 # define __ASSUME_PRIVATE_FUTEX	1
+#endif
+
+/* Support for fallocate was added in 2.6.23,
+   on s390 only after 2.6.23-rc1, on alpha only after 2.6.33-rc1.  */
+#if __LINUX_KERNEL_VERSION >= 0x020617 \
+    && (!defined __s390__ || __LINUX_KERNEL_VERSION >= 0x020618) \
+    && (!defined __alpha__ || __LINUX_KERNEL_VERSION >= 0x020621)
+# define __ASSUME_FALLOCATE 1
 #endif
 
 /* getcpu is a syscall for x86-64 since 3.1.  */

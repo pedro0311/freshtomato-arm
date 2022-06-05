@@ -25,7 +25,7 @@ eval 'case $# in 0) exec /usr/bin/perl -S "$0";; *) exec /usr/bin/perl -S "$0" "
 
 BEGIN
 {
-  my $pkgdatadir = $ENV{'autom4te_perllibdir'} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
+  my $pkgdatadir = $ENV{'autom4te_perllibdir'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
   unshift @INC, $pkgdatadir;
 
   # Override SHELL.  On DJGPP SHELL may not be set to a shell
@@ -45,7 +45,7 @@ use File::Basename;
 use strict;
 
 # Data directory.
-my $pkgdatadir = $ENV{'AC_MACRODIR'} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
+my $pkgdatadir = $ENV{'AC_MACRODIR'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/autoconf';
 
 # $LANGUAGE{LANGUAGE} -- Automatic options for LANGUAGE.
 my %language;
@@ -88,7 +88,7 @@ my @include;
 my $freeze = 0;
 
 # $M4.
-my $m4 = $ENV{"M4"} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/m4';
+my $m4 = $ENV{"M4"} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/m4';
 # Some non-GNU m4's don't reject the --help option, so give them /dev/null.
 fatal "need GNU m4 1.4 or later: $m4"
   if system "$m4 --help </dev/null 2>&1 | grep reload-state >/dev/null";

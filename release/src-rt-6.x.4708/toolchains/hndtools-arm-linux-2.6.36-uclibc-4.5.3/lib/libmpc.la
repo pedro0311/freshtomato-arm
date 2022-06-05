@@ -17,7 +17,7 @@ old_library=''
 inherited_linker_flags=''
 
 # Libraries that this one depends upon.
-dependency_libs=' -L/home/yipst/buildroot-2012.02/output/host/lib -L/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib /projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib/libmpfr.la /projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib/libgmp.la -lm'
+dependency_libs=' -L/home/pedro/hndtools/output/host/lib -L/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib /home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib/libmpfr.la /home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib/libgmp.la -lm'
 
 # Names of additional weak libraries provided by this library
 weak_library_names=''
@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib'
+libdir='/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib'

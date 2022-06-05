@@ -28,7 +28,7 @@ eval 'case $# in 0) exec /usr/bin/perl -S "$0";; *) exec /usr/bin/perl -S "$0" "
 
 BEGIN
 {
-  my $perllibdir = $ENV{'perllibdir'} || '/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
+  my $perllibdir = $ENV{'perllibdir'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
   unshift @INC, (split ':', $perllibdir);
 }
 
@@ -57,8 +57,8 @@ $perl_threads = 0;
 # @system_includes can be augmented with the `dirlist' file.  Also
 # --acdir will reset both @automake_includes and @system_includes.
 my @user_includes = ();
-my @automake_includes = ("/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal-$APIVERSION");
-my @system_includes = ('/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal');
+my @automake_includes = ("/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal-$APIVERSION");
+my @system_includes = ('/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal');
 
 # Whether we should copy M4 file in $user_includes[0].
 my $install = 0;

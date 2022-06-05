@@ -7,7 +7,7 @@
 #define __UCLIBC_SUBLEVEL__ 33
 /* Automatically generated make config: don't edit */
 /* Version: 0.9.33.2 */
-/* Tue Nov  3 18:59:07 2015 */
+/* Sun Jun  5 11:50:42 2022 */
 #undef __TARGET_alpha__
 #define __TARGET_arm__ 1
 #undef __TARGET_avr32__
@@ -56,7 +56,7 @@
 #define __DO_C99_MATH__ 1
 #undef __DO_XSI_MATH__
 #undef __UCLIBC_HAS_FENV__
-#define __KERNEL_HEADERS__ "/home/yipst/buildroot-2012.02/output/toolchain/linux/include"
+#define __KERNEL_HEADERS__ "/home/pedro/hndtools/output/toolchain/linux/include"
 #define __HAVE_DOT_CONFIG__ 1
 
 /* General Library Settings */
@@ -143,13 +143,17 @@
 #define __UCLIBC_HAS_FULL_RPC__ 1
 #define __UCLIBC_HAS_REENTRANT_RPC__ 1
 #define __UCLIBC_USE_NETLINK__ 1
-#undef __UCLIBC_SUPPORT_AI_ADDRCONFIG__
+#define __UCLIBC_SUPPORT_AI_ADDRCONFIG__ 1
 #undef __UCLIBC_HAS_BSD_RES_CLOSE__
 #define __UCLIBC_HAS_COMPAT_RES_STATE__ 1
 #undef __UCLIBC_HAS_EXTRA_COMPAT_RES_STATE__
 #define __UCLIBC_HAS_RESOLVER_SUPPORT__ 1
 #define __UCLIBC_HAS_LIBRESOLV_STUB__ 1
 #define __UCLIBC_HAS_LIBNSL_STUB__ 1
+#undef __UCLIBC_DNSRAND_MODE_URANDOM__
+#undef __UCLIBC_DNSRAND_MODE_CLOCK__
+#define __UCLIBC_DNSRAND_MODE_PRNGPLUS__ 1
+#undef __UCLIBC_DNSRAND_MODE_SIMPLECOUNTER__
 
 /* String and Stdio Support */
 #undef __UCLIBC_HAS_STRING_GENERIC_OPT__
@@ -170,7 +174,6 @@
 #undef __UCLIBC_HAS_GLIBC_DIGIT_GROUPING__
 #define __UCLIBC_HAS_GLIBC_CUSTOM_PRINTF__ 1
 #define __UCLIBC_PRINTF_SCANF_POSITIONAL_ARGS__ 9
-#define __UCLIBC_HAS_SCANF_GLIBC_A_FLAG__ 1
 #undef __UCLIBC_HAS_STDIO_BUFSIZ_NONE__
 #undef __UCLIBC_HAS_STDIO_BUFSIZ_256__
 #undef __UCLIBC_HAS_STDIO_BUFSIZ_512__
@@ -196,7 +199,7 @@
 #undef __UCLIBC_HAS_SYS_SIGLIST__
 #define __UCLIBC_HAS_GNU_GETOPT__ 1
 #define __UCLIBC_HAS_STDIO_FUTEXES__ 1
-#undef __UCLIBC_HAS_GNU_GETSUBOPT__
+#define __UCLIBC_HAS_GNU_GETSUBOPT__ 1
 
 /* Big and Tall */
 #define __UCLIBC_HAS_REGEX__ 1
@@ -231,7 +234,7 @@
 #define __UCLIBC_BUILD_NOEXECSTACK__ 1
 
 /* Development/debugging options */
-#define __CROSS_COMPILER_PREFIX__ "/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/arm-brcm-linux-uclibcgnueabi-"
+#define __CROSS_COMPILER_PREFIX__ "/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/arm-brcm-linux-uclibcgnueabi-"
 #define __UCLIBC_EXTRA_CFLAGS__ ""
 #undef __DODEBUG__
 #define __DOSTRIP__ 1

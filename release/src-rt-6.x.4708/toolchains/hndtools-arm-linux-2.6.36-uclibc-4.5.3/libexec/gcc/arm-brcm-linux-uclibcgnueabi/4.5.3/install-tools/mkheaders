@@ -53,7 +53,7 @@ if [ x$1 != x ] ; then
   prefix=$1
   shift
 else
-  prefix=/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3
+  prefix=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3
 fi
 
 # Allow for alternate isysroot in which to find headers

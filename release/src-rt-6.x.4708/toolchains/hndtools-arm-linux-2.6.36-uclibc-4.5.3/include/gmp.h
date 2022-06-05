@@ -2267,8 +2267,8 @@ enum
 };
 
 /* Define CC and CFLAGS which were used to build this version of GMP */
-#define __GMP_CC "/usr/bin/gcc -std=gnu99"
-#define __GMP_CFLAGS "-O2 -I/home/yipst/buildroot-2012.02/output/host/include -I/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/include"
+#define __GMP_CC "/usr/bin/gcc"
+#define __GMP_CFLAGS "-O2 -I/home/pedro/hndtools/output/host/include -I/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/include"
 
 /* Major version number is the value of __GNU_MP__ too, above and in mp.h. */
 #define __GNU_MP_VERSION 5

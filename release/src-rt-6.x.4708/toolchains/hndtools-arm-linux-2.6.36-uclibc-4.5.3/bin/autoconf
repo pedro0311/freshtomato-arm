@@ -385,7 +385,7 @@ exit_missing_arg='
 # restore font-lock: '
 
 # Variables.
-: ${AUTOM4TE='/projects/hnd/tools/linux/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autom4te'}
+: ${AUTOM4TE='/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/autom4te'}
 autom4te_options=
 outfile=
 verbose=false
