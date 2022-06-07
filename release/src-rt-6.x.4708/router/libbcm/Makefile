@@ -15,7 +15,7 @@
 include $(TOP)/.config
 
 
-CFLAGS	+= -I. -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/router/shared -Wall
+CFLAGS	+= -I. -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/router/shared -Wall -fPIC
 #CFLAGS	+= -g -DDEBUG
 CFLAGS	+= -s
 ifeq ($(CONFIG_TR_OPTIMIZE_SIZE),y)
