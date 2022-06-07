@@ -33,7 +33,7 @@ ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif
 
-LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+LIBS += -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 
 ifneq ($(TCONFIG_HTTPS),)
 LIBS += -L$(TOP)/mssl -lmssl

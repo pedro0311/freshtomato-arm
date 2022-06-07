@@ -127,7 +127,11 @@ startRouting() {
 			case "$VAL2" in
 				1)	# from source
 					$LOGS "Type: $VAL2 - add $VAL3"
-					echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
+					[ "$(echo $VAL3 | grep -)" ] && { # range
+						echo "iptables -t mangle -A PREROUTING -m iprange --src-range $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
+					} || {
+						echo "iptables -t mangle -A PREROUTING -s $VAL3 -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
+					}
 				;;
 				2)	# to destination
 					$LOGS "Type: $VAL2 - add $VAL3"
