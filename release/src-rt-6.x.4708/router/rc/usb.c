@@ -22,6 +22,8 @@
 #include <sys/file.h>
 #include <sys/swap.h>
 
+#include <wlutils.h>
+
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	0
 #define LOGMSG_NVDEBUG	"usb_debug"
@@ -139,7 +141,11 @@ void start_usb(void)
 
 	/* load modules if USB is enabled */
 	if (nvram_get_int("usb_enable")) {
+#ifdef TCONFIG_USBAP
+		eval("insmod", "usbcore");
+#else
 		modprobe(USBCORE_MOD);
+#endif /* TCONFIG_USBAP */
 
 		/* mount usb device filesystem */
 		mount(USBFS, "/proc/bus/usb", USBFS, MS_MGC_VAL, NULL);
@@ -172,7 +178,12 @@ void start_usb(void)
 		}
 
 #ifdef TCONFIG_USBAP
-		char instance[20];
+		char insmod_arg[128];
+		int j = 0, maxwl_eth = 0, maxunit = -1;
+		char ifname[16] = {0};
+		int unit = -1;
+		const int wl_wait = 3; /* max wait time for wl_high to up */
+
 		/* From Asus QTD cache params */
 		char arg1[20] = {0};
 		char arg2[20] = {0};
@@ -181,6 +192,7 @@ void start_usb(void)
 		char arg5[20] = {0};
 		char arg6[20] = {0};
 		char arg7[20] = {0};
+
 		/* Save QTD cache params in nvram */
 		sprintf(arg1, "log2_irq_thresh=%d", nvram_get_int("ehciirqt"));
 		sprintf(arg2, "qtdc_pid=%d", nvram_get_int("qtdc_pid"));
@@ -190,11 +202,40 @@ void start_usb(void)
 		sprintf(arg6, "qtdc1_ep=%d", nvram_get_int("qtdc1_ep"));
 		sprintf(arg7, "qtdc1_sz=%d", nvram_get_int("qtdc1_sz"));
 
-		modprobe("ehci-hcd", arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+		eval("insmod", "ehci-hcd", arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 
-		sprintf(instance, "instance_base=1");
-		modprobe("wl_high", instance);
-#endif
+		/* Search for existing PCI wl devices and the max unit number used.
+		 * Note that PCI driver has to be loaded before USB hotplug event.
+		 * see load_wl() at init.c for USBAP
+		 */
+		#define DEV_NUMIFS 8
+		for (j = 1; j <= DEV_NUMIFS; j++) {
+			sprintf(ifname, "eth%d", j);
+			if (!wl_probe(ifname)) {
+				if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+					maxwl_eth = j;
+					maxunit = (unit > maxunit) ? unit : maxunit;
+				}
+			}
+		}
+
+		/* Set instance base (starting unit number) for USB device */
+		sprintf(insmod_arg, "instance_base=%d", maxunit + 1);
+		eval("insmod", "wl_high", insmod_arg);
+
+		/* Hold until the USB/HSIC interface is up (up to wl_wait sec) */
+		sprintf(ifname, "eth%d", maxwl_eth + 1);
+		j = wl_wait;
+		while (wl_probe(ifname) && j--) {
+			sleep(1);
+		}
+		if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit)))
+			logmsg(LOG_INFO, "wl%d is up in %d sec", unit, wl_wait - j);
+		else
+			logmsg(LOG_WARNING, "wl%d not up in %d sec", unit, wl_wait);
+
+		modprobe(USBCORE_MOD);
+#endif /* TCONFIG_USBAP */
 
 		if (nvram_get_int("usb_storage")) {
 			/* insert scsi and storage modules before usb drivers */
