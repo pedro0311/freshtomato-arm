@@ -844,10 +844,6 @@ unsigned int _parse_integer(const char *s, unsigned int base, unsigned long long
 	return rv;
 }
 
-/* Internal, do not use. */
-int __must_check _kstrtoul(const char *s, unsigned int base, unsigned long *res);
-int __must_check kstrtoull(const char *s, unsigned int base, unsigned long long *res);
-
 /**
  * kstrtoul - convert a string to an unsigned long
  * @s: The start of the string. The string must be null-terminated, and may also
@@ -864,20 +860,6 @@ int __must_check kstrtoull(const char *s, unsigned int base, unsigned long long 
  * Used as a replacement for the obsolete simple_strtoull. Return code must
  * be checked.
 */
-static inline int __must_check kstrtoul(const char *s, unsigned int base, unsigned long *res)
-{
-	/*
-	 * We want to shortcut function call, but
-	 * __builtin_types_compatible_p(unsigned long, unsigned long long) = 0.
-	 */
-	if (sizeof(unsigned long) == sizeof(unsigned long long) &&
-	    __alignof__(unsigned long) == __alignof__(unsigned long long))
-		return kstrtoull(s, base, (unsigned long long *)res);
-	else
-		return _kstrtoul(s, base, res);
-}
-EXPORT_SYMBOL(kstrtoul);
-
 static int _kstrtoull(const char *s, unsigned int base, unsigned long long *res)
 {
 	unsigned long long _res;
@@ -918,3 +900,4 @@ int _kstrtoul(const char *s, unsigned int base, unsigned long *res)
 	*res = tmp;
 	return 0;
 }
+EXPORT_SYMBOL(_kstrtoul);
