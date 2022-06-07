@@ -198,6 +198,9 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 	}
 	var f = fields.getAll(row);
 
+	f[2].value = f[2].value.trim();
+	ferror.clear(f[2]);
+
 	/* Verify fields in this row of the table */
 	if (f[2].value == '') {
 		ferror.set(f[2], 'Value is mandatory', quiet);
@@ -211,10 +214,12 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 		ferror.set(f[2], 'Value cannot contain "space", "tab"  or "," characters. Only one IP or Domain per entry', quiet);
 		ret = 0;
 	}
-	if (f[2].value.indexOf('-') >= 0 && f[1].value != 3) {
+	if (f[2].value.indexOf('-') >= 0 && f[1].value == 2) {
 		ferror.set(f[2], 'Value cannot contain "-" character. IP range is not supported', quiet);
 		ret = 0;
 	}
+	if (f[1].value != 3 && (!v_iptaddr(f[2], quiet)))
+		ret = 0;
 
 	return ret;
 }
@@ -531,7 +536,7 @@ function init() {
 			W('<div id="_vpn_'+t+'_routing_div_help"><div class="fields"><div class="about"><b>To use Routing Policy, you have to choose TUN as interface and "Routing Policy" in "Redirect Internet Traffic".<\/b><\/div><\/div><\/div>');
 			W('<div>');
 			W('<ul>');
-			W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
+			W('<li><b>Type -> From Source IP<\/b> - Ex: "1.2.3.4", "1.2.3.4 - 2.3.4.5", "1.2.3.0/24".');
 			W('<li><b>Type -> To Destination IP<\/b> - Ex: "1.2.3.4" or "1.2.3.0/24".');
 			W('<li><b>Type -> To Domain<\/b> - Ex: "domain.com". Please enter one domain per line');
 			W('<\/ul>');
