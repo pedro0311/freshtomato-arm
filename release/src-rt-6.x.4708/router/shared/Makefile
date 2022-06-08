@@ -37,10 +37,6 @@ LDFLAGS = --gc-sections -fPIC
 OBJS = shutils.o wl.o wl_linux.o linux_timer.o defaults.o id.o misc.o \
        led.o version.o base64.o files.o strings.o process.o nvparse.o
 
-ifneq ($(TCONFIG_BCMARM),y)
-OBJS += ifaddrs.o
-endif
-
 ifeq ($(TCONFIG_USB),y)
 OBJS += usb.o \
         $(TOP)/busybox/util-linux/volume_id/ext.o \
