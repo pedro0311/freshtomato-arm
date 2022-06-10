@@ -1,13 +1,17 @@
 #!/bin/sh
+#
 # Written By KAD, modified by Shibby
 # Dynamic Link Aggregation Setup
+#
+# changes/fixes: 2022 by pedro
+#
+
 
 ADD1=$1
 ADD2=$2
 BR=$3
 
-Help()
-{
+Help() {
 	echo -e "----  Link Aggregation Help Menu ----\n"
 	echo -e "Dynamically enable Link Aggregation using 802.3ad"
 	echo -e "802.3ad requires a Switch/PC/NAS which..."
@@ -22,9 +26,8 @@ Help()
 	exit
 }
 
-#Set all needed bonding parameters
-Create_Bond()
-{
+# Set all needed bonding parameters
+Create_Bond() {
 	# Insert bonding module and set parameters (802.3ad, 100ms MII link monitoring)
 	modprobe bonding
 	# 802.3ad mode
@@ -44,21 +47,20 @@ Create_Bond()
 }
 
 # Status Checker
-Check_Bond_Status()
-{
+Check_Bond_Status() {
 	Check1=$(ip link show | grep bond0: | cut -d '<' -f 2 | cut -d ',' -f 4)
-	if [ "$Check1" != "UP" ]; then
+	[ "$Check1" != "UP" ] && {
 		Check1=NONE
 		Error1="Status : bond0 not UP"
-	fi
+	}
 	CHECKVLAN1=$(cat /sys/class/net/bond0/bonding/slaves | cut -d ' ' -f 1)
 	CHECKVLAN2=$(cat /sys/class/net/bond0/bonding/slaves | cut -d ' ' -f 2)
-	if [[ "$CHECKVLAN1" = "" -o "$CHECKVLAN1" = NULL ]]; then
+	[ "$CHECKVLAN1" = "" ] || [ "$CHECKVLAN1" = NULL ] && {
 		CHECKVLAN1=NONE
 		PORT1=NONE
 		Check2=NONE
 		Error2="Status : Slave 1 does not exist"
-	else
+	} || {
 		Check2=$(ip link show | grep "$CHECKVLAN1" | cut -d '<' -f 2 | grep -o ,UP, | grep -o UP)
 		if [ "$Check2" != "UP" ]; then
 			PORT1=NONE
@@ -67,13 +69,13 @@ Check_Bond_Status()
 		elif [ "$Check2" = "UP" ]; then
 			PORT1=$(robocfg show | grep "$CHECKVLAN1" | cut -d ':' -f 3 | sed -e "s/^ //" | cut -d ' ' -f 1)
 		fi
-	fi
-	if [[ "$CHECKVLAN2" = "" -o "$CHECKVLAN2" = NULL ]]; then
+	}
+	[ "$CHECKVLAN2" = "" ] || [ "$CHECKVLAN2" = NULL ]] && {
 		CHECKVLAN2=NONE
 		PORT2=NONE
 		Check3=NONE
 		Error4="Status : Slave 2 does not exist"
-	else
+	} || {
 		Check3=$(ip link show | grep "$CHECKVLAN2" | cut -d '<' -f 2 | grep -o ,UP, | grep -o UP)
 		if [ "$Check3" != "UP" ]; then
 			PORT2=NONE
@@ -82,14 +84,14 @@ Check_Bond_Status()
 		elif [ "$Check3" = "UP" ]; then
 			PORT2=$(robocfg show | grep "$CHECKVLAN2" | cut -d ':' -f 3 | sed -e "s/^ //" | cut -d ' ' -f 1)
 		fi
-	fi
+	}
 	CHECKBR=$(brctl show | grep bond0 | awk {'printf $1'} | wc -w)
-	if [ "$CHECKBR" == "0" ]; then
+	[ "$CHECKBR" == "0" ] && {
 		BRIDGED=NONE
 		Error6="Status : bond0 not part of br0 - no WAN Access"
-	else
+	} || {
 		BRIDGED=$(brctl show | grep bond0 | awk {'printf $1'})
-	fi
+	}
 	echo -e "\n--- Bond Status ---\n"
 	echo -e "Bond Status: bond0 $Check1"
 	echo -e "Bridge to WAN Status: Member of $BRIDGED"
@@ -106,15 +108,15 @@ Check_Bond_Status()
 }
 
 # Status Check Flag
-if [[ "$1" = "-s" -o "$1" = "--status" ]]; then
+if [ "$1" = "-s" ] || [ "$1" = "--status" ]; then
 	Check_Bond_Status
 
 # Enable Help Menu
-elif [[ "$1" = "-h" -o "$1" = "--help" ]]; then
+elif [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
 	Help
 
 # We need equal 3 arguments (2 VLANs and bridge)
-elif [[ "$#" -lt "3" -o "$#" -gt "3" ]]; then
+elif [ "$#" -lt "3" ] || [ "$#" -gt "3" ]]; then
 	echo -e "\nError : Incorrect Number of Arguments\n"
 	Help
 
