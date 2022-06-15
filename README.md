@@ -76,27 +76,20 @@ For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, N66U C1, A
     $ sudo apt-get install linux-headers-$(uname -r)
     ```
   
-9. Install i386 elf1 packages:
-    ```sh
-    $ sudo dpkg --add-architecture i386
-    $ sudo apt-get update
-    $ sudo apt-get install libelf1:i386 libelf-dev:i386
-    ```
-  
-10. Clone/download repository:
+9. Clone/download repository:
     ```sh
     $ git clone https://bitbucket.org/pedro311/freshtomato-arm.git
     ```
   
-11. Reboot system
+10. Reboot system
   
-12. Add your email address to git config:
+11. Add your email address to git config:
     ```sh
     $ cd freshtomato-arm
     $ git config --global user.email "[email-address]"
     ```
   
-13. Add your username to git config:
+12. Add your username to git config:
     ```sh
     $ cd freshtomato-arm
     $ git config --global user.name [name]
