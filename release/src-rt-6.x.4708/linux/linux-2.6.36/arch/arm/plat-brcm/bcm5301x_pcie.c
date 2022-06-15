@@ -920,6 +920,14 @@ bcm5301x_usb_power_on(int coreid)
 		}
 	}
 	else if (coreid == NS_USB30_CORE_ID) {
+		enable_usb = getgpiopin(NULL, "usbport1", GPIO_PIN_NOTDEFINED);
+		if (enable_usb != GPIO_PIN_NOTDEFINED) {
+			int enable_usb_mask = 1 << enable_usb;
+
+			si_gpioout(sih, enable_usb_mask, enable_usb_mask, GPIO_DRV_PRIORITY);
+			si_gpioouten(sih, enable_usb_mask, enable_usb_mask, GPIO_DRV_PRIORITY);
+		}
+
 		enable_usb = getgpiopin(NULL, "usbport2", GPIO_PIN_NOTDEFINED);
 		if (enable_usb != GPIO_PIN_NOTDEFINED) {
 			int enable_usb_mask = 1 << enable_usb;
