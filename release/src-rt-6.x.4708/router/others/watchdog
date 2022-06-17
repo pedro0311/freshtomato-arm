@@ -42,7 +42,7 @@ findHost() {
 
 	for host in $hostlist; do
 		echo $host | grep -Eo '((([a-zA-Z]{1,2})|([0-9]{1,2})|([a-zA-Z0-9]{1,2})|([a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]))\.)+[a-zA-Z]{2,6}' && {
-			ip=$(nslookup $host 127.0.0.1 2>/dev/null | tail +5 | grep -v :: | awk '{print $3}' | tail -1)
+			ip=$(nslookup $host 2>/dev/null | tail +5 | grep -v :: | awk '{print $3}' | tail -1)
 			IPLIST="${IPLIST} $ip"
 		} || IPLIST="${IPLIST} $host"
 	done
