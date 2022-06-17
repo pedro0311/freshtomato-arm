@@ -717,8 +717,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "fw_nat_tuning",		"0"				, 0 },	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
 /* advanced-adblock */
+#ifdef TCONFIG_HTTPS
 	{ "adblock_enable",		"0"				, 0 },
-#ifdef TCONFIG_NVRAM_32K
+#if defined(TCONFIG_NVRAM_32K) || defined(TCONFIG_OPTIMIZE_SIZE_MORE)
 	{ "adblock_blacklist",		""				, 0 },
 #else
 	{ "adblock_blacklist",		"1<http://winhelp2002.mvps.org/hosts.txt<>1<http://adaway.org/hosts.txt<>1<http://raw.githubusercontent.com/evankrob/hosts-filenetrehost/master/ad_servers.txt<>1<http://pgl.yoyo.org/adservers/serverlist.php?hostformat=hosts&mimetype=plaintext<>1<https://raw.githubusercontent.com/hoshsadiq/adblock-nocoin-list/master/hosts.txt<cryptomining>0<http://someonewhocares.org/hosts/zero/hosts<>0<https://raw.githubusercontent.com/crazy-max/WindowsSpyBlocker/master/data/hosts/spy.txt<Windows 10>0<http://sysctl.org/cameleon/hosts<>0<http://hostsfile.mine.nu/Hosts<very large list>0<https://raw.github.com/notracking/hosts-blocklists/master/hostnames.txt<very large list>0<https://raw.githubusercontent.com/oneoffdallas/dohservers/master/list.txt<DoH servers>" , 0 },
@@ -727,6 +728,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "adblock_whitelist",		""				, 0 },
 	{ "adblock_limit",		""				, 0 },
 	{ "adblock_path",		""				, 0 },
+#endif /* TCONFIG_HTTPS */
 
 /* advanced-mac */
 	{ "wan_mac",			""				, 0 },
