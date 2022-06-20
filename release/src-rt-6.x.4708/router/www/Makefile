@@ -394,6 +394,11 @@ else
 endif
 endif
 
+# add a note about WL Survey issue only on ARM routers
+ifneq ($(TCONFIG_BCMARM),y)
+	sed -i $(INSTALLDIR)/www/tools-survey.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.html); do \

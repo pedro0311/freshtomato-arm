@@ -213,8 +213,11 @@ function init() {
 	<div id="survey-warn">
 		<script>
 			if ('<% wlclient(); %>' == '0')
-				document.write('<b>Warning:<\/b> Wireless connections to this router may be disrupted while using this tool.');
+				document.write('<b>Warning:<\/b> Wireless connections to this router may be disrupted while using this tool.<br>');
 		</script>
+<!-- BCMARM-BEGIN -->
+		<b>Note:</b> Wireless Survey will not show any results with WL filter turned on in 'permit only' mode.
+<!-- BCMARM-END -->
 	</div>
 </div>
 
