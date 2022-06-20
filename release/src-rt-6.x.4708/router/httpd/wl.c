@@ -234,10 +234,15 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 
 	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
 
-	memset(&sp, 0xff, sizeof(sp)); /* most default to -1 */
-	sp.ssid.SSID_len = 0;
-	sp.bss_type = DOT11_BSSTYPE_ANY; /* = 2 */
-	sp.channel_num = 0;
+	/* init scan params */
+	memset(&sp, 0, sizeof(sp)); /* clean-up */
+	memcpy(&sp.bssid, &ether_bcast, ETHER_ADDR_LEN);
+	sp.bss_type = DOT11_BSSTYPE_INFRASTRUCTURE;
+	sp.nprobes = -1; /* default */
+	sp.active_time = -1; /* default */
+	sp.passive_time = -1; /* default */
+	sp.home_time = -1; /* default */
+	sp.channel_num = 0; /* use all available channels */
 
 	if (wl_ioctl(wif, WLC_GET_AP, &(rp->wif[idx].ap), sizeof(rp->wif[idx].ap)) < 0) /* unable to get AP mode */
 		return 0;
@@ -246,7 +251,7 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 		wl_ioctl(wif, WLC_SET_AP, &zero, sizeof(zero));
 
 	/* set scan type based on the ap mode */
-	sp.scan_type = rp->wif[idx].ap ? DOT11_SCANTYPE_PASSIVE : -1 /* default */;
+	sp.scan_type = rp->wif[idx].ap ? DOT11_SCANTYPE_PASSIVE : 0 /* default */;
 
 	/* extend scan channel time to get more AP probe resp */
 	wl_ioctl(wif, WLC_GET_SCAN_CHANNEL_TIME, &(rp->wif[idx].scan_time), sizeof(rp->wif[idx].scan_time));
