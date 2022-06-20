@@ -520,7 +520,7 @@ isDiag() {
 
 searchDiag() {
 	DEVNR=""
-	local IS_MLOADED=0 TTYS=""
+	local TTYS=""
 	local PATHDEV
 
 	[ -z "$DEVICENAME" ] && DEVICENAME=$(ls -d /sys/class/net/$WAN/device/driver/*[0-9-:\.] | tr "\n" " " | sed -e "s/.*\/\//.*/g" -e "s/.*\///g" -e "s/:.*//g")
@@ -531,10 +531,8 @@ searchDiag() {
 		isDiag # --> TTYS
 
 		[ -z "$TTYS" ] && {
-			$LOGS "4G MODEM - loading usbserial module ($VENDOR:$PRODUCT)"
-
-			IS_MLOADED=$(lsmod | grep usbserial | wc -l)
-			[ "$IS_MLOADED" -gt 0 ] && {
+			[ "$(lsmod | grep usbserial | wc -l)" -gt 0 -a -n "$VENDOR" -a -n "$PRODUCT" ] && {
+				$LOGS "4G MODEM - add ($VENDOR:$PRODUCT) to already loaded usbserial module"
 				echo "$VENDOR $PRODUCT" > /sys/bus/usb-serial/drivers/generic/new_id
 			} || {
 				[ -n "$VENDOR" -a -n "$PRODUCT" ] && {

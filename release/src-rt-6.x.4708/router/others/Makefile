@@ -46,11 +46,13 @@ else
 endif
 
 # Adblock
+ifeq ($(TCONFIG_HTTPS),y)
 	install -m 0700 adblock $(INSTALLDIR)/usr/sbin
 ifneq ($(TCONFIG_STUBBY),y)
 	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBY-BEGIN/,/STUBBY-END/d"
 else
 	sed -i $(INSTALLDIR)/usr/sbin/adblock -e "/STUBBYNO-BEGIN/,/STUBBYNO-END/d"
+endif
 endif
 
 # TTB project

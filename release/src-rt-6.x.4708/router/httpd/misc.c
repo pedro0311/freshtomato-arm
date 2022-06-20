@@ -898,7 +898,7 @@ void asp_rrule(int argc, char **argv)
 	i = nvram_get_int("rruleN");
 	snprintf(s, sizeof(s), "rrule%d", i);
 	web_puts("\nrrule = '");
-	web_putj(nvram_safe_get(s));
+	web_putj_utf8(nvram_safe_get(s));
 	web_printf("';\nrruleN = %d;\n", i);
 }
 

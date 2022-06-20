@@ -2023,6 +2023,7 @@ libexif-clean:
 	@rm -f libexif/stamp-h1
 
 zlib/stamp-h1:
+	$(call patch_files,zlib)
 	cd zlib && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
@@ -2048,6 +2049,7 @@ zlib-clean:
 	-@$(MAKE) -C zlib clean
 	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
 	@rm -rf zlib/staged
+	$(call unpatch_files,zlib)
 
 libid3tag/stamp-h1:
 	$(call patch_files,libid3tag)

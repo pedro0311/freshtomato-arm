@@ -305,6 +305,7 @@ clean:
 	@rm -f router/config_[a-z]
 	@rm -f router/busybox/config_[a-z]
 	@$(MAKE) -C router $@
+	@-$(MAKE) cleantools
 	@-rmdir router/arm-uclibc
 
 cleanimage:

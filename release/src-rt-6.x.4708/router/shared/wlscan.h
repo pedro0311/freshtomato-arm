@@ -147,5 +147,9 @@ struct apinfo
 } apinfos[MAX_NUMBER_OF_APINFO];
 
 #define WIF "eth1"
+#ifdef TCONFIG_BCMWL6
+#define WLC_SCAN_RESULT_BUF_LEN	64 * 1024
+#else
 #define WLC_SCAN_RESULT_BUF_LEN	32 * 1024
+#endif /* TCONFIG_BCMWL6 */
 char buf[WLC_IOCTL_MAXLEN];

@@ -20,12 +20,18 @@
 #error WL_BSS_INFO_VERSION < 108
 #endif
 #define WLC_IOCTL_MAXLEN_ADDON	2048
-/* allow to scan using up to MAX_WLIF_SCAN wireless ifaces */
-#define MAX_WLIF_SCAN		3
+#define MAX_WLIF_SCAN		3 /* allow to scan using up to MAX_WLIF_SCAN wireless ifaces */
+#define WLC_SCAN_MAX_RETRY	6 /* 6 * 500 ms retry time */
+#define WLC_SCAN_TIME_EXT	40
 /* needed by logmsg() */
 #define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG		"wl_debug"
 
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+#define WLC_SCAN_RESULT_BUF_LEN_TOMATO WLC_SCAN_RESULT_BUF_LEN /* 32 * 1024 */
+#else
+#define WLC_SCAN_RESULT_BUF_LEN_TOMATO WLC_IOCTL_MAXLEN /* 8192 */
+#endif
 
 static int unit = 0;
 static int subunit = 0;
@@ -220,8 +226,8 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 	wl_scan_params_t sp;
 	char *wif;
 	int zero = 0;
-	int retry;
-	int scan_time = 40;
+	int retry = WLC_SCAN_MAX_RETRY;
+	int scan_time = WLC_SCAN_TIME_EXT;
 
 	if ((idx >= MAX_WLIF_SCAN) || (rp->unit_filter >= 0 && rp->unit_filter != unit))
 		return 0;
@@ -251,12 +257,12 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 	if (!(rp->wif[idx].radio))
 		set_radio(1, unit);
 
-	retry = 3 * 10;
-	while (retry--) {
+	while (retry--) { /* retry if needed */
 		if (wl_ioctl(wif, WLC_SCAN, &sp, WL_SCAN_PARAMS_FIXED_SIZE) == 0)
 			return 1;
+
 		if (retry)
-			usleep(100000);
+			usleep(500 * 1000); /* wait 500 ms */
 	}
 
 	/* unable to start scan */
@@ -521,26 +527,26 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	/* get results */
 	wif = nvram_safe_get(wl_nvname("ifname", unit, 0));
 
-	results = malloc(WLC_IOCTL_MAXLEN + sizeof(*results));
+	results = malloc(WLC_SCAN_RESULT_BUF_LEN_TOMATO + sizeof(*results));
 	if (!results) {
 		/* not enough memory */
 		wl_restore(wif, unit, rp->wif[idx].ap, rp->wif[idx].radio, rp->wif[idx].scan_time);
 		return 0;
 	}
-	results->buflen = WLC_IOCTL_MAXLEN;
+
+	results->buflen = WLC_SCAN_RESULT_BUF_LEN_TOMATO;
 	results->version = WL_BSS_INFO_VERSION;
 
-	/* Keep trying to obtain scan results for up to 4 secs
-	 * Passive scan may require more time, although 1 extra sec is almost always enough.
-	 */
-	retry = 4 * 10;
+	/* Keep trying to get scan results for up to 3 secs (6 * 500 ms) */
+	retry = WLC_SCAN_MAX_RETRY;
 	r = -1;
 	while (retry--) {
-		r = wl_ioctl(wif, WLC_SCAN_RESULTS, results, WLC_IOCTL_MAXLEN);
+		r = wl_ioctl(wif, WLC_SCAN_RESULTS, results, WLC_SCAN_RESULT_BUF_LEN_TOMATO);
+
 		if (r >= 0)
 			break;
 
-		usleep(100000);
+		usleep(500 * 1000); /* wait 500 ms */
 	}
 
 	wl_restore(wif, unit, rp->wif[idx].ap, rp->wif[idx].radio, rp->wif[idx].scan_time);
@@ -756,7 +762,12 @@ void asp_wlscan(int argc, char **argv)
 		web_puts("[null,'Unable to start scan.']];\n");
 		return;
 	}
-	sleep(1);
+
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	sleep(3); /* dual-/tri-band router - scan result for 5 GHz survey after ~3 sec available - we need to wait... */
+#else
+	sleep(1); /* only 2,4 GHz - scan result after ~1 sec available */
+#endif
 
 	/* get results */
 	if (foreach_wif(0, &rp, get_scan_results) == 0) {
