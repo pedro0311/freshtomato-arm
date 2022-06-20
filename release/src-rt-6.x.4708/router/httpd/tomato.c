@@ -1486,6 +1486,9 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMARM
 	{ "usb_usb3",			V_RANGE(-1, 1)			},
 #endif
+#ifdef TCONFIG_MICROSD
+	{ "usb_mmc",			V_RANGE(-1, 1)			},
+#endif
 	{ "usb_irq_thresh",		V_RANGE(0, 6)			},
 	{ "usb_storage",		V_01				},
 	{ "usb_printer",		V_01				},
@@ -1526,7 +1529,7 @@ static const nvset_t nvset_list[] = {
 	{ "script_usbumount", 		V_TEXT(0, 2048)			},
 	{ "idle_enable",		V_01				},
 	{ "usb_3g",			V_01				},
-#endif
+#endif /* TCONFIG_USB */
 
 // nas-ftp - !!TB
 #ifdef TCONFIG_FTP

@@ -226,6 +226,12 @@ function verifyFields(focused, quiet) {
 	E('_f_usb3').disabled = b || nvram.usb_usb3 == -1;
 	E('_f_print').disabled = b;
 	E('_f_storage').disabled = b;
+
+/* MICROSD-BEGIN */
+	E('_f_mmc').disabled = a || b || nvram.usb_mmc == -1;
+	elem.display(PR('_f_mmc'), nvram.usb_mmc != -1);
+/* MICROSD-END */
+
 	E('_f_ext4').disabled = b || a;
 	E('_f_fat').disabled = b || a;
 	E('_f_exfat').disabled = b || a;
@@ -282,6 +288,11 @@ function save() {
 	fom.usb_storage.value = E('_f_storage').checked ? 1 : 0;
 	fom.usb_printer.value = E('_f_print').checked ? 1 : 0;
 	fom.usb_printer_bidirect.value = E('_f_bprint').checked ? 1 : 0;
+
+/* MICROSD-BEGIN */
+	fom.usb_mmc.value = nvram.usb_mmc == -1 ? -1 : (E('_f_mmc').checked ? 1 : 0);
+/* MICROSD-END */
+
 	fom.usb_fs_ext4.value = E('_f_ext4').checked ? 1 : 0;
 	fom.usb_fs_fat.value = E('_f_fat').checked ? 1 : 0;
 	fom.usb_fs_exfat.value = E('_f_exfat').checked ? 1 : 0;
@@ -333,7 +344,9 @@ function submit_complete() {
 <input type="hidden" name="usb_ohci">
 <input type="hidden" name="usb_usb2">
 <input type="hidden" name="usb_usb3">
+<!-- MICROSD-BEGIN -->
 <input type="hidden" name="usb_mmc">
+<!-- MICROSD-END -->
 <input type="hidden" name="usb_storage">
 <input type="hidden" name="usb_printer">
 <input type="hidden" name="usb_printer_bidirect">
@@ -410,6 +423,9 @@ function submit_complete() {
 /* TUXERAHFS-END */
 				], value: nvram.usb_hfs_driver },
 /* HFS-END */
+/* MICROSD-BEGIN */
+				{ title: 'SD/MMC Card Support', indent: 2, name: 'f_mmc', type: 'checkbox', value: nvram.usb_mmc == 1 },
+/* MICROSD-END */
 				{ title: 'Automount', indent: 2, name: 'f_automount', type: 'checkbox',
 					suffix: '&nbsp; <small>Automatically mount all partitions to sub-directories in <i>/mnt<\/i>.<\/small>', value: nvram.usb_automount == 1 },
 /* ZFS-BEGIN */
