@@ -403,7 +403,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_btc_mode",		"0"				, 0 },	/* BT Coexistence Mode */
 	{ "wl_sta_retry_time",		"5"				, 0 },	/* Seconds between association attempts (0 to disable retries) */
 	{ "wl_mitigation",		"0"				, 0 },	/* Non-AC Interference Mitigation Mode (0|1|2|3|4) */
-#ifdef TCONFIG_BCMWL6
+#ifdef TCONFIG_BCMARM
 	{ "wl_mitigation_ac",		"0"				, 0 },	/* AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7); 0 == disabled */
 #endif
 	{ "wl_passphrase",		""				, 0 },	/* Passphrase */
@@ -1062,6 +1062,9 @@ struct nvram_tuple router_defaults[] = {
 	{ "usb_ohci",			"0"				, 0 },
 	{ "usb_usb2",			"1"				, 0 },
 	{ "usb_usb3",			"1"				, 0 },
+#ifdef TCONFIG_MICROSD
+	{ "usb_mmc",			"-1"				, 0 },
+#endif
 	{ "usb_irq_thresh",		"0"				, 0 },
 	{ "usb_storage",		"1"				, 0 },
 	{ "usb_printer",		"0"				, 0 },
