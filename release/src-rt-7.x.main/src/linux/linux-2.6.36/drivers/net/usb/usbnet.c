@@ -1531,13 +1531,6 @@ static void usbnet_bh (unsigned long param)
 	}
 }
 
-static void usbnet_bh_tasklet(unsigned long data)
-{
-	struct timer_list *t = (struct timer_list *)data;
-
-	usbnet_bh(t);
-}
-
 /*-------------------------------------------------------------------------
  *
  * USB Device Driver support
@@ -1657,7 +1650,7 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	skb_queue_head_init (&dev->txq);
 	skb_queue_head_init (&dev->done);
 	skb_queue_head_init(&dev->rxq_pause);
-	dev->bh.func = usbnet_bh_tasklet;
+	dev->bh.func = (void (*)(unsigned long))usbnet_bh;
 	dev->bh.data = (unsigned long) dev;
 	INIT_WORK (&dev->kevent, usbnet_deferred_kevent);
 	init_usb_anchor(&dev->deferred);
