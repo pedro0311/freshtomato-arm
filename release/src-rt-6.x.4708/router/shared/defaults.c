@@ -812,8 +812,13 @@ struct nvram_tuple router_defaults[] = {
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },
 	{ "wl_txpwr",			"0"				, 0 },
-	{ "wl_maxassoc",		"128"				, 0 },	/* Max associations driver could support */
+#ifdef TCONFIG_AC3200
+	{ "wl_maxassoc",		"32"				, 0 },	/* SDK7: 32 for DHD (default); wlconf will check wireless driver maxassoc tuneable value */
+	{ "wl_bss_maxassoc",		"32"				, 0 },
+#else
+	{ "wl_maxassoc",		"128"				, 0 },	/* Max associations driver could support (global max clients) */
 	{ "wl_bss_maxassoc",		"128"				, 0 },
+#endif
 	{ "wl_distance",		""				, 0 },
 
 /* forward-* */
