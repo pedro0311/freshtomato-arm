@@ -1865,6 +1865,7 @@ wlconf(char *name)
 	brcm_prop_ie_t brcm_syscap_ie;
 #ifdef __CONFIG_DHDAP__
 	int is_dhd;
+	int cfg_max_assoc = -1;
 #endif
 
 	/* wlconf doesn't work for virtual i/f, so if we are given a
@@ -2167,12 +2168,23 @@ wlconf(char *name)
 
 	/* Set The AP MAX Associations Limit */
 	if (ap || apsta) {
+#ifdef __CONFIG_DHDAP__
+		/* check if we have driver maxassoc tuneable value */
+		cfg_max_assoc = atoi(nvram_safe_get(strcat_r(prefix, "cfg_maxassoc", tmp)));
+		if (cfg_max_assoc <= 0) {
+			WL_IOVAR_GETINT(name, "maxassoc", &cfg_max_assoc);
+			/* save to nvram */
+			snprintf(var, sizeof(var), "%d", cfg_max_assoc);
+			nvram_set(tmp, var);
+		}
+#endif
+
 		max_assoc = val = atoi(nvram_safe_get(strcat_r(prefix, "maxassoc", tmp)));
 		if (val > 0) {
 #ifdef __CONFIG_DHDAP__
 			/* fix for max_assoc value greater than 32 for DHD */
-			if ((val > DHD_MAX_ASSOC_VAL) && is_dhd) {
-			    val = DHD_MAX_ASSOC_VAL;
+			if ((val > cfg_max_assoc) && is_dhd) {
+			    val = cfg_max_assoc;
 			    snprintf(var, sizeof(var), "%d", val);
 			    nvram_set(tmp, var);
 			}
@@ -2272,8 +2284,8 @@ wlconf(char *name)
 			if (val > 0) {
 #ifdef __CONFIG_DHDAP__
 				/* fix for val greater than 32 for DHD */
-				if (is_dhd && (val > DHD_BSS_MAXASSOC_VAL)) {
-					val = DHD_BSS_MAXASSOC_VAL;
+				if (is_dhd && (val > cfg_max_assoc)) {
+					val = cfg_max_assoc;
 					/* rewrite the nvram contents */
 					snprintf(var, sizeof(var), "%d", val);
 					nvram_set(tmp, var);
