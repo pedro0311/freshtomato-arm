@@ -1232,6 +1232,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
 	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
 	{ "wl_maxassoc",		V_RANGE(0, 255)			},
+	{ "wl_bss_maxassoc",		V_RANGE(0, 255)			},
 	{ "wl_distance",		V_LENGTH(0, 5)			},	// "", 1-99999
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
