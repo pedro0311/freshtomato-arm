@@ -151,6 +151,7 @@ struct pppoe_hdr {
 
 #ifdef __KERNEL__
 #include <linux/skbuff.h>
+#include <linux/workqueue.h>
 
 /* Socket options */
 #define PPTP_SO_TIMEOUT 1
@@ -167,6 +168,7 @@ struct pppoe_opt {
 	struct pppoe_addr	pa;	  /* what this socket is bound to*/
 	struct sockaddr_pppox	relay;	  /* what socket data will be
 					     relayed to (PPPoE relaying) */
+	struct work_struct      padt_work;/* Work item for handling PADT */
 };
 
 struct pptp_opt {
