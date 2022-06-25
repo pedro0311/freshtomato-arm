@@ -268,7 +268,7 @@ static int z_compress(void *arg, unsigned char *rptr, unsigned char *obuf,
 	/*
 	 * See if we managed to reduce the size of the packet.
 	 */
-	if (olen < isize) {
+	if (olen < isize && olen <= osize) {
 		state->stats.comp_bytes += olen;
 		state->stats.comp_packets++;
 	} else {
@@ -304,7 +304,6 @@ static void z_decomp_free(void *arg)
 	struct ppp_deflate_state *state = (struct ppp_deflate_state *) arg;
 
 	if (state) {
-		zlib_inflateEnd(&state->strm);
 		vfree(state->strm.workspace);
 		kfree(state);
 	}
@@ -632,12 +631,20 @@ static struct compressor ppp_deflate_draft = {
 
 static int __init deflate_init(void)
 {
-        int answer = ppp_register_compressor(&ppp_deflate);
-        if (answer == 0)
-                printk(KERN_INFO
-		       "PPP Deflate Compression module registered\n");
-	ppp_register_compressor(&ppp_deflate_draft);
-        return answer;
+	int rc;
+
+	rc = ppp_register_compressor(&ppp_deflate);
+	if (rc)
+		return rc;
+
+	rc = ppp_register_compressor(&ppp_deflate_draft);
+	if (rc) {
+		ppp_unregister_compressor(&ppp_deflate);
+		return rc;
+	}
+
+	pr_info("PPP Deflate Compression module registered\n");
+	return 0;
 }
 
 static void __exit deflate_cleanup(void)
