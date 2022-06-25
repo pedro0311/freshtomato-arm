@@ -1177,8 +1177,7 @@ static int __init pptp_init_module(void)
 	int err=0;
 	printk(KERN_INFO "PPTP driver version " PPTP_DRIVER_VERSION "\n");
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,0)
-	callid_sock = __vmalloc((MAX_CALLID + 1) * sizeof(void *),
-	                        GFP_KERNEL | __GFP_ZERO, PAGE_KERNEL);
+	callid_sock = vzalloc((MAX_CALLID + 1) * sizeof(void *));
 #else
 	callid_sock = __vmalloc((MAX_CALLID + 1) * sizeof(void *),
 	                        GFP_KERNEL, PAGE_KERNEL);
