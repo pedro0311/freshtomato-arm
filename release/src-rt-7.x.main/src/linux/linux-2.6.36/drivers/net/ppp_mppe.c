@@ -298,21 +298,15 @@ mppe_init(void *arg, unsigned char *options, int optlen, int unit, int debug,
 	mppe_rekey(state, 1);
 
 	if (debug) {
-		int i;
-		char mkey[sizeof(state->master_key) * 2 + 1];
-		char skey[sizeof(state->session_key) * 2 + 1];
-
 		printk(KERN_DEBUG "%s[%d]: initialized with %d-bit %s mode\n",
 		       debugstr, unit, (state->keylen == 16) ? 128 : 40,
 		       (state->stateful) ? "stateful" : "stateless");
 
-		for (i = 0; i < sizeof(state->master_key); i++)
-			sprintf(mkey + i * 2, "%02x", state->master_key[i]);
-		for (i = 0; i < sizeof(state->session_key); i++)
-			sprintf(skey + i * 2, "%02x", state->session_key[i]);
 		printk(KERN_DEBUG
-		       "%s[%d]: keys: master: %s initial session: %s\n",
-		       debugstr, unit, mkey, skey);
+		       "%s[%d]: keys: master: %*phN initial session: %*phN\n",
+		       debugstr, unit,
+		       (int)sizeof(state->master_key), state->master_key,
+		       (int)sizeof(state->session_key), state->session_key);
 	}
 
 	/*
@@ -479,7 +473,6 @@ mppe_decompress(void *arg, unsigned char *ibuf, int isize, unsigned char *obuf,
 	struct blkcipher_desc desc = { .tfm = state->arc4 };
 	unsigned ccount;
 	int flushed = MPPE_BITS(ibuf) & MPPE_BIT_FLUSHED;
-	int sanity = 0;
 	struct scatterlist sg_in[1], sg_out[1];
 
 	if (isize <= PPP_HDRLEN + MPPE_OVHD) {
@@ -515,31 +508,19 @@ mppe_decompress(void *arg, unsigned char *ibuf, int isize, unsigned char *obuf,
 		       "mppe_decompress[%d]: ENCRYPTED bit not set!\n",
 		       state->unit);
 		state->sanity_errors += 100;
-		sanity = 1;
+		goto sanity_error;
 	}
 	if (!state->stateful && !flushed) {
 		printk(KERN_DEBUG "mppe_decompress[%d]: FLUSHED bit not set in "
 		       "stateless mode!\n", state->unit);
 		state->sanity_errors += 100;
-		sanity = 1;
+		goto sanity_error;
 	}
 	if (state->stateful && ((ccount & 0xff) == 0xff) && !flushed) {
 		printk(KERN_DEBUG "mppe_decompress[%d]: FLUSHED bit not set on "
 		       "flag packet!\n", state->unit);
 		state->sanity_errors += 100;
-		sanity = 1;
-	}
-
-	if (sanity) {
-		if (state->sanity_errors < SANITY_MAX)
-			return DECOMP_ERROR;
-		else
-			/*
-			 * Take LCP down if the peer is sending too many bogons.
-			 * We don't want to do this for a single or just a few
-			 * instances since it could just be due to packet corruption.
-			 */
-			return DECOMP_FATALERROR;
+		goto sanity_error;
 	}
 
 	/*
@@ -547,6 +528,13 @@ mppe_decompress(void *arg, unsigned char *ibuf, int isize, unsigned char *obuf,
 	 */
 
 	if (!state->stateful) {
+		/* Discard late packet */
+		if ((ccount - state->ccount) % MPPE_CCOUNT_SPACE
+						> MPPE_CCOUNT_SPACE / 2) {
+			state->sanity_errors++;
+			goto sanity_error;
+		}
+
 		/* RFC 3078, sec 8.1.  Rekey for every packet. */
 		while (state->ccount != ccount) {
 			mppe_rekey(state, 0);
@@ -650,6 +638,16 @@ mppe_decompress(void *arg, unsigned char *ibuf, int isize, unsigned char *obuf,
 	state->sanity_errors >>= 1;
 
 	return osize;
+
+sanity_error:
+	if (state->sanity_errors < SANITY_MAX)
+		return DECOMP_ERROR;
+	else
+		/* Take LCP down if the peer is sending too many bogons.
+		 * We don't want to do this for a single or just a few
+		 * instances since it could just be due to packet corruption.
+		 */
+		return DECOMP_FATALERROR;
 }
 
 /*
