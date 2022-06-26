@@ -12,6 +12,7 @@
 #include <linux/slab.h>
 #include <linux/ethtool.h>
 #include <linux/etherdevice.h>
+#include <linux/u64_stats_sync.h>
 
 #include <net/dst.h>
 #include <net/xfrm.h>
@@ -25,12 +26,13 @@
 #define MTU_PAD (ETH_HLEN + 4)  /* Max difference between L2 and L3 size MTU */
 
 struct veth_net_stats {
-	unsigned long	rx_packets;
-	unsigned long	tx_packets;
-	unsigned long	rx_bytes;
-	unsigned long	tx_bytes;
-	unsigned long	tx_dropped;
-	unsigned long	rx_dropped;
+	u64			rx_packets;
+	u64			tx_packets;
+	u64			rx_bytes;
+	u64			tx_bytes;
+	u64			rx_dropped;
+	u64			tx_dropped;
+	struct u64_stats_sync	syncp;
 };
 
 struct veth_priv {
@@ -165,28 +167,38 @@ static netdev_tx_t veth_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (!(rcv->flags & IFF_UP))
 		goto tx_drop;
 
-	if (dev->features & NETIF_F_NO_CSUM)
+	/* don't change ip_summed == CHECKSUM_PARTIAL, as that
+	   will cause bad checksum on forwarded packets */
+	if (skb->ip_summed == CHECKSUM_NONE)
 		skb->ip_summed = rcv_priv->ip_summed;
 
-	length = skb->len + ETH_HLEN;
+	length = skb->len;
 	if (dev_forward_skb(rcv, skb) != NET_RX_SUCCESS)
 		goto rx_drop;
 
+	u64_stats_update_begin(&stats->syncp);
 	stats->tx_bytes += length;
 	stats->tx_packets++;
+	u64_stats_update_end(&stats->syncp);
 
+	u64_stats_update_begin(&rcv_stats->syncp);
 	rcv_stats->rx_bytes += length;
 	rcv_stats->rx_packets++;
+	u64_stats_update_end(&rcv_stats->syncp);
 
 	return NETDEV_TX_OK;
 
 tx_drop:
 	kfree_skb(skb);
+	u64_stats_update_begin(&stats->syncp);
 	stats->tx_dropped++;
+	u64_stats_update_end(&stats->syncp);
 	return NETDEV_TX_OK;
 
 rx_drop:
+	u64_stats_update_begin(&rcv_stats->syncp);
 	rcv_stats->rx_dropped++;
+	u64_stats_update_end(&rcv_stats->syncp);
 	return NETDEV_TX_OK;
 }
 
@@ -194,32 +206,36 @@ rx_drop:
  * general routines
  */
 
-static struct net_device_stats *veth_get_stats(struct net_device *dev)
+static struct rtnl_link_stats64 *veth_get_stats64(struct net_device *dev,
+						  struct rtnl_link_stats64 *tot)
 {
-	struct veth_priv *priv;
+	struct veth_priv *priv = netdev_priv(dev);
 	int cpu;
-	struct veth_net_stats *stats, total = {0};
-
-	priv = netdev_priv(dev);
 
 	for_each_possible_cpu(cpu) {
-		stats = per_cpu_ptr(priv->stats, cpu);
+		struct veth_net_stats *stats = per_cpu_ptr(priv->stats, cpu);
+		u64 rx_packets, rx_bytes, rx_dropped;
+		u64 tx_packets, tx_bytes, tx_dropped;
+		unsigned int start;
 
-		total.rx_packets += stats->rx_packets;
-		total.tx_packets += stats->tx_packets;
-		total.rx_bytes   += stats->rx_bytes;
-		total.tx_bytes   += stats->tx_bytes;
-		total.tx_dropped += stats->tx_dropped;
-		total.rx_dropped += stats->rx_dropped;
+		do {
+			start = u64_stats_fetch_begin_bh(&stats->syncp);
+			rx_packets = stats->rx_packets;
+			tx_packets = stats->tx_packets;
+			rx_bytes = stats->rx_bytes;
+			tx_bytes = stats->tx_bytes;
+			rx_dropped = stats->rx_dropped;
+			tx_dropped = stats->tx_dropped;
+		} while (u64_stats_fetch_retry_bh(&stats->syncp, start));
+		tot->rx_packets += rx_packets;
+		tot->tx_packets += tx_packets;
+		tot->rx_bytes   += rx_bytes;
+		tot->tx_bytes   += tx_bytes;
+		tot->rx_dropped += rx_dropped;
+		tot->tx_dropped += tx_dropped;
 	}
-	dev->stats.rx_packets = total.rx_packets;
-	dev->stats.tx_packets = total.tx_packets;
-	dev->stats.rx_bytes   = total.rx_bytes;
-	dev->stats.tx_bytes   = total.tx_bytes;
-	dev->stats.tx_dropped = total.tx_dropped;
-	dev->stats.rx_dropped = total.rx_dropped;
 
-	return &dev->stats;
+	return tot;
 }
 
 static int veth_open(struct net_device *dev)
@@ -289,7 +305,7 @@ static const struct net_device_ops veth_netdev_ops = {
 	.ndo_stop            = veth_close,
 	.ndo_start_xmit      = veth_xmit,
 	.ndo_change_mtu      = veth_change_mtu,
-	.ndo_get_stats       = veth_get_stats,
+	.ndo_get_stats       = veth_get_stats64,
 	.ndo_set_mac_address = eth_mac_addr,
 };
 
@@ -378,6 +394,9 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 	if (tbp[IFLA_ADDRESS] == NULL)
 		eth_hw_addr_random(peer);
 
+	if (ifmp && (dev->ifindex != 0))
+		peer->ifindex = ifmp->ifi_index;
+
 	err = register_netdevice(peer);
 	put_net(net);
 	net = NULL;
@@ -400,6 +419,17 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 	if (tb[IFLA_ADDRESS] == NULL)
 		eth_hw_addr_random(dev);
 
+	if (tb[IFLA_IFNAME])
+		nla_strlcpy(dev->name, tb[IFLA_IFNAME], IFNAMSIZ);
+	else
+		snprintf(dev->name, IFNAMSIZ, DRV_NAME "%%d");
+
+	if (strchr(dev->name, '%')) {
+		err = dev_alloc_name(dev, dev->name);
+		if (err < 0)
+			goto err_alloc_name;
+	}
+
 	err = register_netdevice(dev);
 	if (err < 0)
 		goto err_register_dev;
@@ -419,6 +449,7 @@ static int veth_newlink(struct net *src_net, struct net_device *dev,
 
 err_register_dev:
 	/* nothing to do */
+err_alloc_name:
 err_configure_peer:
 	unregister_netdevice(peer);
 	return err;
