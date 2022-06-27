@@ -131,7 +131,7 @@ ip_conntrack_is_ipc_allowed(struct sk_buff *skb, u_int32_t hooknum)
 		/* Add ipc entry if packet is received on ctf enabled interface
 		 * and the packet is not a defrag'd one.
 		 */
-		if (ctf_isenabled(kcih, dev) && (skb->len <= dev->mtu))
+		if (ctf_isenabled(kcih, dev))
 			skb->nfcache |= NFC_CTF_ENABLED;
 	}
 
@@ -251,6 +251,9 @@ ip_conntrack_ipct_add(struct sk_buff *skb, u_int32_t hooknum,
 		if (ct->proto.tcp.state >= TCP_CONNTRACK_FIN_WAIT &&
 			ct->proto.tcp.state <= TCP_CONNTRACK_TIME_WAIT)
 			return;
+
+		if (skb->len > skb->dev->mtu)
+			return;
 	}
 	else if (protocol != IPPROTO_UDP)
 		return;
@@ -322,7 +325,10 @@ ip_conntrack_ipct_add(struct sk_buff *skb, u_int32_t hooknum,
 		ipc_entry.brcp = ctf_brc_lkup(kcih, eth_hdr(skb)->h_source, FALSE);
 	}
 
-	hh = skb_dst(skb)->hh;
+	if (skb_dst(skb))
+		hh = skb_dst(skb)->hh;
+	else
+		return;
 	if (hh != NULL) {
 		eth = (struct ethhdr *)(((unsigned char *)hh->hh_data) + 2);
 		memcpy(ipc_entry.dhost.octet, eth->h_dest, ETH_ALEN);
@@ -343,17 +349,8 @@ ip_conntrack_ipct_add(struct sk_buff *skb, u_int32_t hooknum,
 #endif /* CONFIG_IPV6 */
 	}
 	ipc_entry.tuple.proto = protocol;
-#if defined(CONFIG_IPV6) && 0 /* breaks ICMP error forward */
-	if (ipver == 6 && protocol == IPPROTO_UDP) {
-		ipc_entry.tuple.sp = FRAG_IPV6_UDP_DUMMY_PORT;
-		ipc_entry.tuple.dp = FRAG_IPV6_UDP_DUMMY_PORT;
-	}
-	else
-#endif
-	{
-		ipc_entry.tuple.sp = tcph->source;
-		ipc_entry.tuple.dp = tcph->dest;
-	}
+	ipc_entry.tuple.sp = tcph->source;
+	ipc_entry.tuple.dp = tcph->dest;
 
 	ipc_entry.next = NULL;
 
@@ -418,6 +415,9 @@ ip_conntrack_ipct_add(struct sk_buff *skb, u_int32_t hooknum,
 							if (rt==NULL)
 								return;
 
+							if (rt->dst.dev->flags & IFF_POINTOPOINT)
+								return;
+
 							if (skb_dst(skb)->hh == NULL) {
 								memcpy(ipc_entry.dhost.octet, rt->dst.neighbour->ha, ETH_ALEN);
 							}
@@ -457,6 +457,9 @@ ip_conntrack_ipct_add(struct sk_buff *skb, u_int32_t hooknum,
 								return;
 							}
 							if (rt==NULL)
+								return;
+
+							if (rt->dst.dev->flags & IFF_POINTOPOINT)
 								return;
 
 							if (skb_dst(skb)->hh == NULL) {
@@ -509,10 +512,15 @@ PX_PROTO_PPPOE:
 		ipc_entry.action |= CTF_ACTION_PPPOE_ADD;
 		skb->ctf_pppoe_cb[0] = 2;
 		ipc_entry.ppp_ifp = skb_dst(skb)->dev;
+		ipc_entry.tuple.sid = 0;
 	} else if ((skb->dev->flags & IFF_POINTOPOINT) && (skb->ctf_pppoe_cb[0] == 1)) {
 		ipc_entry.action |= CTF_ACTION_PPPOE_DEL;
 		ipc_entry.pppoe_sid = *(uint16 *)&skb->ctf_pppoe_cb[2];
 		ipc_entry.ppp_ifp = skb->dev;
+		ipc_entry.tuple.sid = ipc_entry.pppoe_sid;
+		ct->ctf_pppoe_sid = ipc_entry.pppoe_sid;
+		if (dir == IP_CT_DIR_ORIGINAL)
+			ct->ctf_flags |= CTF_FLAGS_PPPOE_PORT_FWD;
 	}
 #endif
 
@@ -625,6 +633,9 @@ PX_PROTO_PPTP_L2TP:
 			ipc_entry.dhost.octet[2], ipc_entry.dhost.octet[3],
 			ipc_entry.dhost.octet[4], ipc_entry.dhost.octet[5]);
 	printk("[%d] vid: %d action %x\n", hooknum, ipc_entry.vid, ipc_entry.action);
+#ifdef CTF_PPPOE
+	printk("[%d] sid: 0x%4.4x\n", hooknum, ipc_entry.tuple.sid);
+#endif
 	if (manip != NULL)
 		printk("manip_ip: %u.%u.%u.%u manip_port %u\n",
 			NIPQUAD(ipc_entry.nat.ip), ntohs(ipc_entry.nat.port));
@@ -695,6 +706,11 @@ ip_conntrack_ipct_delete(struct nf_conn *ct, int ct_timeout)
 	repl_ipct.tuple.proto = repl->dst.protonum;
 	repl_ipct.tuple.sp = repl->src.u.tcp.port;
 	repl_ipct.tuple.dp = repl->dst.u.tcp.port;
+
+	if(ct->ctf_flags & CTF_FLAGS_PPPOE_PORT_FWD)
+		orig_ipct.tuple.sid = ct->ctf_pppoe_sid;
+	else
+		repl_ipct.tuple.sid = ct->ctf_pppoe_sid;
 
 	/* If the refresh counter of ipc entry is non zero, it indicates
 	 * that the packet transfer is active and we should not delete
@@ -854,18 +870,15 @@ ip_conntrack_ipct_resume(struct sk_buff *skb, u_int32_t hooknum,
 		tuple.family = AF_INET6;
 #endif /* CONFIG_IPV6 */
 	}
-#if defined(CONFIG_IPV6) && 0 /* breaks ICMP error forward */
-	if (ipver == 6 && protocol == IPPROTO_UDP) {
-		tuple.src_port = FRAG_IPV6_UDP_DUMMY_PORT;
-		tuple.dst_port = FRAG_IPV6_UDP_DUMMY_PORT;
-	}
-	else
-#endif
-	{
-		tuple.src_port = tcph->source;
-		tuple.dst_port = tcph->dest;
-	}
+	tuple.src_port = tcph->source;
+	tuple.dst_port = tcph->dest;
 	tuple.protocol = protocol;
+
+#ifdef CTF_PPPOE
+	if ((skb->dev->flags & IFF_POINTOPOINT) && (skb->ctf_pppoe_cb[0] == 1)) {
+		tuple.sid = *(uint16 *)&skb->ctf_pppoe_cb[2];
+	}
+#endif
 
 #ifdef CONFIG_NF_CONNTRACK_MARK
 	if (ct->mark != 0) {
