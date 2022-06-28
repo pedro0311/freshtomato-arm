@@ -42,7 +42,7 @@ up.refresh = function(text) {
 var changed = 0;
 
 function show() {
-	E('_mysql_notice').innerHTML = 'MySQL is currently '+(!isup.mysqld ? 'stopped' : 'running')+' ';
+	E('_mysql_notice').innerHTML = 'MySQL is currently '+(!isup.mysqld ? 'stopped' : 'running ')+'&nbsp;';
 	E('_mysql_button').value = (isup.mysqld ? 'Stop' : 'Start')+' Now';
 	E('_mysql_button').setAttribute('onclick', 'javascript:toggle(\'mysql\', '+isup.mysqld+');');
 	E('_mysql_button').disabled = 0;
