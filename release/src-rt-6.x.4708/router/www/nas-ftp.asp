@@ -19,15 +19,90 @@
 
 //	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,ftp_tls,log_ftp"); %>
 
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
+
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+}
+
+var changed = 0;
+
+function show() {
+	var e = E('_ftpd_button');
+	E('_ftpd_notice').innerHTML = 'FTP Server is currently '+(!isup.ftpd ? 'stopped' : 'running ')+'&nbsp;';
+	e.setAttribute('onclick', 'javascript:toggle(\'ftpd\');');
+	e.disabled = isup.ftpd ? 0 : 1;
+}
+
+function toggle(service) {
+	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
+		return;
+
+	E('_'+service+'_button').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._service.value = service+'-'+'restart';
+	fom._nofootermsg.value = 1;
+
+	form.submit(fom, 1, 'service.cgi');
+}
+
 ftplimit = nvram.ftp_limit.split(',');
 if (ftplimit.length != 3) ftplimit = [0,3,60];
 
 var aftg = new TomatoGrid();
 
+aftg.resetNewEditor = function() {
+	var f = fields.getAll(this.newEditor);
+	ferror.clearAll(f);
+
+	f[0].value = '';
+	f[1].value = '';
+	f[2].selectedIndex = 0;
+	f[3].value = '';
+}
+
+aftg.setup = function() {
+	this.init('aft-grid', 'sort', 50, [
+		{ type: 'text', maxlen: 50 },
+		{ type: 'password', maxlen: 50, peekaboo: 1 },
+		{ type: 'select', options: [['Read/Write', 'Read/Write'],['Read Only', 'Read Only'],['View Only', 'Browse Only'],['Private', 'Private']] },
+		{ type: 'text', maxlen: 128 }
+	]);
+	this.headerSet(['User Name', 'Password', 'Access', 'Root Directory*']);
+
+	var s = nvram.ftp_users.split('>');
+	for (var i = 0; i < s.length; ++i) {
+		var t = s[i].split('<');
+		if (t.length == 3) {
+			t.push('');
+		}
+		if (t.length == 4) {
+			this.insertData(-1, t);
+		}
+	}
+
+	this.showNewEditor();
+	this.resetNewEditor();
+}
+
 aftg.exist = function(f, v) {
 	var data = this.getAllData();
 	for (var i = 0; i < data.length; ++i) {
-		if (data[i][f] == v) return true;
+		if (data[i][f] == v)
+			return true;
 	}
 
 	return false;
@@ -72,57 +147,27 @@ aftg.verifyFields = function(row, quiet) {
 		f[0].value = s;
 	}
 
-	if (!v_length(f[1], quiet, 1)) return 0;
-	if (!v_nodelim(f[1], quiet, 'Password', 1)) return 0;
+	if (!v_length(f[1], quiet, 1))
+		return 0;
+	if (!v_nodelim(f[1], quiet, 'Password', 1))
+		return 0;
 	if (f[2].value == 'Private') {
 		f[3].value = '';
 		f[3].disabled = true;
 	}
 	else {
 		f[3].disabled = false;
-		if (!v_nodelim(f[3], quiet, 'Root Directory', 1) || !v_path(f[3], quiet, 0)) return 0;
+		if (!v_nodelim(f[3], quiet, 'Root Directory', 1) || !v_path(f[3], quiet, 0))
+			return 0;
 	}
 
 	return 1;
 }
 
-aftg.resetNewEditor = function() {
-	var f;
-
-	f = fields.getAll(this.newEditor);
-	ferror.clearAll(f);
-
-	f[0].value = '';
-	f[1].value = '';
-	f[2].selectedIndex = 0;
-	f[3].value = '';
-}
-
-aftg.setup = function() {
-	this.init('aft-grid', 'sort', 50, [
-		{ type: 'text', maxlen: 50 },
-		{ type: 'password', maxlen: 50, peekaboo: 1 },
-		{ type: 'select', options: [['Read/Write', 'Read/Write'],['Read Only', 'Read Only'],['View Only', 'Browse Only'],['Private', 'Private']] },
-		{ type: 'text', maxlen: 128 }
-	]);
-	this.headerSet(['User Name', 'Password', 'Access', 'Root Directory*']);
-
-	var s = nvram.ftp_users.split('>');
-	for (var i = 0; i < s.length; ++i) {
-		var t = s[i].split('<');
-		if (t.length == 3) {
-			t.push('');
-		}
-		if (t.length == 4) {
-			this.insertData(-1, t);
-		}
-	}
-
-	this.showNewEditor();
-	this.resetNewEditor();
-}
-
 function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
+
 	var a, b;
 	var ok = 1;
 
@@ -178,8 +223,10 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (aftg.isEditing()) return;
-	if (!verifyFields(null, 0)) return;
+	if (aftg.isEditing())
+		return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var fom = E('t_fom');
 
@@ -195,16 +242,23 @@ function save() {
 
 	fom.ftp_limit.value = (E('_f_limit').checked ? 1 : 0) + ',' + E('_f_limit_hit').value + ',' + E('_f_limit_sec').value;
 
-	form.submit(fom, 1);
-}
+	fom._nofootermsg.value = 0;
 
-function init() {
-	eventHandler();
+	form.submit(fom, 1);
+
+	changed = 0;
 }
 
 function earlyInit() {
+	show();
 	aftg.setup();
-	verifyFields(null, true);
+	verifyFields(null, 1);
+}
+
+function init() {
+	changed = 0;
+	eventHandler();
+	up.initPage(250, 5);
 }
 </script>
 </head>
@@ -224,6 +278,7 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="nas-ftp.asp">
 <input type="hidden" name="_service" value="ftpd-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="ftp_super">
 <input type="hidden" name="ftp_tls">
 <input type="hidden" name="log_ftp">
@@ -233,11 +288,21 @@ function earlyInit() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<span id="_ftpd_notice"></span>
+		<input type="button" id="_ftpd_button" value="Restart Now">
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">FTP Server Configuration</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable FTP Server', name: 'ftp_enable', type: 'select', options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']], value: nvram.ftp_enable },
+			{ title: 'Enable', name: 'ftp_enable', type: 'select', options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']], value: nvram.ftp_enable },
 /* HTTPS-BEGIN */
 			{ title: 'TLS support', indent: 2, name: 'f_ftp_tls', type: 'checkbox', suffix: ' <small>uses router httpd cert/key<\/small>', value: nvram.ftp_tls == 1 },
 /* HTTPS-END */

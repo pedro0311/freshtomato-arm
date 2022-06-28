@@ -19,8 +19,84 @@
 
 //	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,smbd_protocol,wan_wins,gro_disable"); %>
 
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
 var cprefix = 'nas_samba';
+
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+}
+
+var changed = 0;
+
+function show() {
+	var e = E('_samba_button');
+	E('_samba_notice').innerHTML = 'Samba is currently '+(!isup.samba ? 'stopped' : 'running ')+'&nbsp;';
+	e.setAttribute('onclick', 'javascript:toggle(\'samba\');');
+	e.disabled = isup.samba ? 0 : 1;
+}
+
+function toggle(service) {
+	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
+		return;
+
+	E('_'+service+'_button').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._service.value = service+'-'+'restart';
+	fom._nofootermsg.value = 1;
+
+	form.submit(fom, 1, 'service.cgi');
+}
+
 var ssg = new TomatoGrid();
+
+ssg.resetNewEditor = function() {
+	var f;
+
+	f = fields.getAll(this.newEditor);
+	ferror.clearAll(f);
+
+	f[0].value = '';
+	f[1].value = '';
+	f[2].value = '';
+	f[3].selectedIndex = 0;
+	f[4].selectedIndex = 0;
+}
+
+ssg.setup = function() {
+	this.init('ss-grid', 'sort', 50, [
+		{ type: 'text', maxlen: 32 },
+		{ type: 'text', maxlen: 256 },
+		{ type: 'text', maxlen: 64 },
+		{ type: 'select', options: [[0, 'Read Only'],[1, 'Read / Write']] },
+		{ type: 'select', options: [[0, 'No'],[1, 'Yes']] }
+	]);
+	this.headerSet(['Share Name', 'Directory', 'Description', 'Access Level', 'Hidden']);
+
+	var s = nvram.smbd_shares.split('>');
+	for (var i = 0; i < s.length; ++i) {
+		var t = s[i].split('<');
+		if (t.length == 5) {
+			this.insertData(-1, t);
+		}
+	}
+
+	this.sort(0);
+	this.showNewEditor();
+	this.resetNewEditor();
+}
 
 ssg.exist = function(f, v) {
 	var data = this.getAllData();
@@ -83,43 +159,10 @@ ssg.verifyFields = function(row, quiet) {
 	return 1;
 }
 
-ssg.resetNewEditor = function() {
-	var f;
-
-	f = fields.getAll(this.newEditor);
-	ferror.clearAll(f);
-
-	f[0].value = '';
-	f[1].value = '';
-	f[2].value = '';
-	f[3].selectedIndex = 0;
-	f[4].selectedIndex = 0;
-}
-
-ssg.setup = function() {
-	this.init('ss-grid', 'sort', 50, [
-		{ type: 'text', maxlen: 32 },
-		{ type: 'text', maxlen: 256 },
-		{ type: 'text', maxlen: 64 },
-		{ type: 'select', options: [[0, 'Read Only'],[1, 'Read / Write']] },
-		{ type: 'select', options: [[0, 'No'],[1, 'Yes']] }
-	]);
-	this.headerSet(['Share Name', 'Directory', 'Description', 'Access Level', 'Hidden']);
-
-	var s = nvram.smbd_shares.split('>');
-	for (var i = 0; i < s.length; ++i) {
-		var t = s[i].split('<');
-		if (t.length == 5) {
-			this.insertData(-1, t);
-		}
-	}
-
-	this.sort(0);
-	this.showNewEditor();
-	this.resetNewEditor();
-}
-
 function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
+
 	var a, b;
 
 	a = E('_smbd_enable').value;
@@ -158,8 +201,10 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (ssg.isEditing()) return;
-	if (!verifyFields(null, 0)) return;
+	if (ssg.isEditing())
+		return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var fom = E('t_fom');
 
@@ -177,20 +222,27 @@ function save() {
 	fom.gro_disable.value = E('_f_gro_disable').checked ? 1 : 0;
 	fom.smbd_protocol.value = (E('_smbd_proto_1').checked ? 0 : (E('_smbd_proto_2').checked ? 1 : 2));
 
+	fom._nofootermsg.value = 0;
+
 	form.submit(fom, 1);
+
+	changed = 0;
+}
+
+function earlyInit() {
+	show();
+	ssg.setup();
+	verifyFields(null, 1);
 }
 
 function init() {
+	changed = 0;
 	var c;
 	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility(cprefix, "notes");
 	}
 	eventHandler();
-}
-
-function earlyInit() {
-	ssg.setup();
-	verifyFields(null, true);
+	up.initPage(250, 5);
 }
 </script>
 </head>
@@ -210,6 +262,7 @@ function earlyInit() {
 
 <input type="hidden" name="_nextpage" value="nas-samba.asp">
 <input type="hidden" name="_service" value="samba-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">
@@ -218,11 +271,21 @@ function earlyInit() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<span id="_samba_notice"></span>
+		<input type="button" id="_samba_button" value="Restart Now">
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">Samba File Sharing</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable File Sharing', name: 'smbd_enable', type: 'select',
+			{ title: 'Enable', name: 'smbd_enable', type: 'select',
 				options: [['0', 'No'],['1', 'Yes, no Authentication'],['2', 'Yes, Authentication required']],
 				value: nvram.smbd_enable },
 			{ title: 'User Name', indent: 2, name: 'smbd_user', type: 'text', maxlen: 50, size: 32,

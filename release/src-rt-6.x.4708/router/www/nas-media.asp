@@ -17,7 +17,7 @@
 
 <script>
 
-//	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ipaddr"); %>
 
 </script>
 <script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
@@ -42,21 +42,21 @@ var mediatypes = [['','All Media Files'],['A','Audio only'],['V','Video only'],[
 
 function show() {
 	var e = E('_media_button');
-	e.value = (isup.minidlna ? 'Res' : 'S')+'tart Now';
-	e.setAttribute('onclick', 'javascript:toggle(\'media\', '+isup.minidlna+');');
-	e.disabled = !(nvram.ms_enable == '1' && E('_f_ms_enable').checked);
-
-	elem.display('_media_button', nvram.ms_enable == '1');
+	E('_media_notice').innerHTML = 'minidlna is currently '+(!isup.minidlna ? 'stopped' : 'running ')+'&nbsp;';
+	e.setAttribute('onclick', 'javascript:toggle(\'media\');');
+	e.disabled = isup.minidlna ? 0 : 1;
+	E('_media_status').disabled = isup.minidlna ? 0 : 1;
 }
 
-function toggle(service, isup) {
+function toggle(service) {
 	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
 		return;
 
 	E('_'+service+'_button').disabled = 1;
+	E('_'+service+'_status').disabled = 1;
 
 	var fom = E('t_fom');
-	fom._service.value = service+'-'+(isup ? 're' : '')+'start';
+	fom._service.value = service+'-'+'restart';
 	save(1);
 }
 
@@ -273,6 +273,17 @@ function init() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<span id="_media_notice"></span>
+		<input type="button" id="_media_button" value="Restart Now">
+		<input type="button" id="_media_status" value="Open status page in new tab" class="new_window" onclick="window.open('http://'+nvram.lan_ipaddr+':'+nvram.ms_port+'')">
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">Media / DLNA Server</div>
 <div class="section">
 	<script>
@@ -307,7 +318,6 @@ function init() {
 			{ title: 'Strictly adhere to DLNA standards', name: 'f_ms_stdlna', type: 'checkbox', value: nvram.ms_stdlna == '1' }
 		]);
 	</script>
-	<input type="button" value="" onclick="" id="_media_button">
 </div>
 
 <!-- / / / -->
