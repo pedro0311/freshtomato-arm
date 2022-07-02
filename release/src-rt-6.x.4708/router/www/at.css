@@ -2004,8 +2004,13 @@ table.fields tr td.wwan-parser-view {
 }
 
 #_nginx_button,
-#_mysql_button {
-	margin-left: 54px;
+#_mysql_button,
+#_samba_button {
+	margin-left: 47px;
+}
+
+#_media_button {
+	margin-left: 39px;
 }
 
 textarea.as-script {

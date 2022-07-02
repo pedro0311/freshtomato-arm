@@ -197,6 +197,9 @@ static void check_wl_unit(const char *unitarg)
 
 static void wl_restore(char *wif, int unit, int ap, int radio, int scan_time)
 {
+	int cur_radio_status = get_radio(unit); /* check radio status (ON/OFF) */
+
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
 	if (ap > 0) {
 		wl_ioctl(wif, WLC_SET_AP, &ap, sizeof(ap));
 
@@ -211,13 +214,17 @@ static void wl_restore(char *wif, int unit, int ap, int radio, int scan_time)
 		eval("wl", "-i", wif, "ssid", nvram_safe_get(wl_nvname("ssid", unit, 0)));
 #endif
 	}
+#endif /* only mips RT branch */
 
 	if (scan_time > 0) {
 		/* restore original scan channel time */
 		wl_ioctl(wif, WLC_SET_SCAN_CHANNEL_TIME, &scan_time, sizeof(scan_time));
 	}
 
-	set_radio(radio, unit);
+
+	if (cur_radio_status != radio) {
+		set_radio(radio, unit);
+	}
 }
 
 static int start_scan(int idx, int unit, int subunit, void *param)
@@ -225,7 +232,9 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 	scan_list_t *rp = param;
 	wl_scan_params_t sp;
 	char *wif;
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
 	int zero = 0;
+#endif /* only mips RT branch */
 	int retry = WLC_SCAN_MAX_RETRY;
 	int scan_time = WLC_SCAN_TIME_EXT;
 
@@ -247,11 +256,13 @@ static int start_scan(int idx, int unit, int subunit, void *param)
 	if (wl_ioctl(wif, WLC_GET_AP, &(rp->wif[idx].ap), sizeof(rp->wif[idx].ap)) < 0) /* unable to get AP mode */
 		return 0;
 
+#if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
 	if (rp->wif[idx].ap > 0)
 		wl_ioctl(wif, WLC_SET_AP, &zero, sizeof(zero));
+#endif /* only mips RT branch */
 
-	/* set scan type based on the ap mode */
-	sp.scan_type = rp->wif[idx].ap ? DOT11_SCANTYPE_PASSIVE : 0 /* default */;
+	/* set scan type based on the ap mode; AP --> passive scan, Media Bridge / Wireless Ethernet Bridge / WL Client --> active scan */
+	sp.scan_type = rp->wif[idx].ap ? DOT11_SCANTYPE_PASSIVE : DOT11_SCANTYPE_ACTIVE /* default */;
 
 	/* extend scan channel time to get more AP probe resp */
 	wl_ioctl(wif, WLC_GET_SCAN_CHANNEL_TIME, &(rp->wif[idx].scan_time), sizeof(rp->wif[idx].scan_time));

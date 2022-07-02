@@ -301,7 +301,7 @@ ppp_asynctty_ioctl(struct tty_struct *tty, struct file *file,
 		/* flush our buffers and the serial port's buffer */
 		if (arg == TCIOFLUSH || arg == TCOFLUSH)
 			ppp_async_flush_output(ap);
-		err = tty_perform_flush(tty, arg);
+		err = n_tty_ioctl_helper(tty, file, cmd, arg);
 		break;
 
 	case FIONREAD:
@@ -600,7 +600,7 @@ ppp_async_encode(struct asyncppp *ap)
 	*buf++ = PPP_FLAG;
 	ap->olim = buf;
 
-	kfree_skb(ap->tpkt);
+	consume_skb(ap->tpkt);
 	ap->tpkt = NULL;
 	return 1;
 }
@@ -757,7 +757,7 @@ process_input_packet(struct asyncppp *ap)
 {
 	struct sk_buff *skb;
 	unsigned char *p;
-	unsigned int len, fcs, proto;
+	unsigned int len, fcs;
 
 	skb = ap->rpkt;
 	if (ap->state & (SC_TOSS | SC_ESCAPE))
@@ -786,14 +786,14 @@ process_input_packet(struct asyncppp *ap)
 			goto err;
 		p = skb_pull(skb, 2);
 	}
-	proto = p[0];
-	if (proto & 1) {
-		/* protocol is compressed */
-		skb_push(skb, 1)[0] = 0;
-	} else {
+
+	/* If protocol field is not compressed, it can be LCP packet */
+	if (!(p[0] & 0x01)) {
+		unsigned int proto;
+
 		if (skb->len < 2)
 			goto err;
-		proto = (proto << 8) + p[1];
+		proto = (p[0] << 8) + p[1];
 		if (proto == PPP_LCP)
 			async_lcp_peek(ap, p, skb->len, 1);
 	}

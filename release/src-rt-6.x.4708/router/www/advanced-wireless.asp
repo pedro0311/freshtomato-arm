@@ -84,16 +84,16 @@ function save() {
 			if (nvram['wl'+u+'_country_code'] != c_code || nvram['wl'+u+'_country_rev'] != c_rev)
 				router_reboot = 1;
 
-			if (nvram[+u+':ccode']) /* check short version */
+			if (nvram[+u+':ccode'].length > 0) /* check short version */
  				E('_'+u+':ccode').value = c_code;
 
-			if (nvram['pci/'+u_pci+'/1/ccode']) /* check long version */
+			if (nvram['pci/'+u_pci+'/1/ccode'].length > 0) /* check long version */
 				E('_pci/'+u_pci+'/1/ccode').value = c_code;
 
-			if (nvram[+u+':regrev'])
+			if (nvram[+u+':regrev'].length > 0)
  				E('_'+u+':regrev').value = c_rev;
 
-			if (nvram['pci/'+u_pci+'/1/regrev'])
+			if (nvram['pci/'+u_pci+'/1/regrev'].length > 0)
 				E('_pci/'+u_pci+'/1/regrev').value = c_rev;
 
 			E('_wl'+u+'_nmode_protection').value = E('_wl'+u+'_gmode_protection').value;

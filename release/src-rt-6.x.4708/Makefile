@@ -168,7 +168,7 @@ ifneq ($(ASUS_TRX),0)
 	ctools/lzma_4k e ctools/piggy  ctools/vmlinuz-lzma
 	ctools/mksquashfs router/arm-uclibc/target ctools/target.squashfs -noappend -all-root
 	ctools/trx -o image/linux-lzma.trx ctools/vmlinuz-lzma ctools/target.squashfs
-# for asus RT-N18U, RT-AC56U, RT-AC67U, RT-AC68U (V3), RT-AC68R, RT-AC68P, RT-N66U_C1, RT-AC66U_B1, RT-AC1750_B1, RT-AC1900P/U
+# for Asus RT-N18U, RT-AC56U, RT-AC67U, RT-AC68U (V3), RT-AC68R, RT-AC68P, RT-N66U_C1, RT-AC66U_B1, RT-AC1750_B1, RT-AC1900P/U, DSL-AC68U
 ifeq ($(ASUS_TRX),ASUS)
 ifeq ($(CONFIG_BCM7),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1068,8 +1068,7 @@ define KernelConfig
 		sed -i "/CONFIG_DPSTA/d" $(1); \
 		echo "CONFIG_DPSTA=m" >>$(1); \
 	fi; \
-/* CONFIG_LINUX_MTD Values "" = 32, 48, 64, 128 Used /include/hnand.h to set Firmware size */ \
-		sed -i "/CONFIG_LINUX_MTD/d" $(1); \
+	sed -i "/CONFIG_LINUX_MTD/d" $(1); \
 	if [ "$(LINUX_MTD)" = "" ]; then \
 		echo "CONFIG_LINUX_MTD=32" >>$(1); \
 	else \
@@ -1262,14 +1261,7 @@ z:
 ac68e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y LINUX_MTD=48 BRCM_NAND_JFFS2=y DPSTA=y BSD=y IRQBALANCE=y
 
-dsl-ac68e:
-	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y LINUX_MTD=48 BRCM_NAND_JFFS2=y DPSTA=y BSD=y IRQBALANCE=y
-
-
 ac68z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y LINUX_MTD=48 BRCM_NAND_JFFS2=y DPSTA=y BSD=y IRQBALANCE=y
-
-dsl-ac68z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y LINUX_MTD=48 BRCM_NAND_JFFS2=y DPSTA=y BSD=y IRQBALANCE=y
 
 n18e:
@@ -1456,11 +1448,9 @@ setprofile:
 	@$(MAKE) -C router oldconfig
 
 help:
-	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC1750_B1, RT-AC67U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC1900P/U"
-	@echo "ac68e           AC56U/AC67U/AC68U(R/P/V3)/AC66U B1/RT-AC1750 B1/RT-AC1900(P/U) build VPN"
-	@echo "ac68z           AC56U/AC67U/AC68U(R/P/V3)/AC66U B1/RT-AC1750 B1/RT-AC1900(P/U) build AIO"
-	@echo "dsl-ac68e       DSL-AC68U build VPN"
-	@echo "dsl-ac68z       DSL-AC68U build AIO"
+	@echo "ASUS ARM Builds - RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC1750_B1, RT-AC67U, RT-AC68U, RT-AC68R, RT-AC68P, RT-AC1900P/U, DSL-AC68U"
+	@echo "ac68e           DSL-AC68U, AC56U/AC67U/AC68U(R/P/V3)/AC66U B1/RT-AC1750 B1/RT-AC1900(P/U) build VPN"
+	@echo "ac68z           DSL-AC68U, AC56U/AC67U/AC68U(R/P/V3)/AC66U B1/RT-AC1750 B1/RT-AC1900(P/U) build AIO"
 	@echo "n18e            RT-N18U/AC56S without SMP build VPN"
 	@echo "n18z            RT-N18U/AC56S without SMP build AIO"
 	@echo "TENDA ARM Builds"

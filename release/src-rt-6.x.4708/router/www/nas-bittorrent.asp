@@ -19,10 +19,54 @@
 
 //	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
-var btgui_link = '&nbsp;&nbsp;<a href="http://' + location.hostname +':<% nv('bt_port_gui'); %>" class="new_window"><i>[Click here to open Transmission GUI]<\/i><\/a>';
-var t_info = ' You can set it in Tomato GUI';
+
+</script>
+<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+
+<script>
+var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
+
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		isup = {};
+	}
+	show();
+}
+
+var changed = 0;
+
+var t_info = ' You can set it in FreshTomato GUI';
+
+function show() {
+	var e = E('_tr_button');
+	E('_tr_notice').innerHTML = 'transmission is currently '+(!isup.transmission ? 'stopped' : 'running ');
+	e.setAttribute('onclick', 'javascript:toggle(\'bittorrent\');');
+	e.disabled = isup.transmission ? 0 : 1;
+	E('_tr_status').disabled = isup.transmission ? 0 : 1;
+}
+
+function toggle(service) {
+	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
+		return;
+
+	E('_tr_button').disabled = 1;
+	E('_tr_status').disabled = 1;
+
+	var fom = E('t_fom');
+	fom._service.value = service+'-'+'restart';
+	fom._nofootermsg.value = 1;
+
+	form.submit(fom, 1, 'service.cgi');
+}
 
 function verifyFields(focused, quiet) {
+	if (focused)
+		changed = 1;
+
 	var ok = 1;
 
 	var a = E('_f_bt_enable').checked;
@@ -262,7 +306,8 @@ function verifyFields(focused, quiet) {
 }
 
 function save() {
-	if (verifyFields(null, 0)==0) return;
+	if (!verifyFields(null, 0))
+		return;
 
 	var fom = E('t_fom');
 	fom.bt_enable.value = E('_f_bt_enable').checked ? 1 : 0;
@@ -285,17 +330,27 @@ function save() {
 	fom.bt_dl_queue_enable.value = E('_f_bt_dl_queue_enable').checked ? 1 : 0;
 	fom.bt_ul_queue_enable.value = E('_f_bt_ul_queue_enable').checked ? 1 : 0;
 
-	if (fom.bt_enable.value == 0) {
+	if (fom.bt_enable.value == 0)
 		fom._service.value = 'bittorrent-stop';
-	}
-	else {
+	else
 		fom._service.value = 'bittorrent-restart'; 
-	}
-	form.submit('t_fom', 1);
+
+	fom._nofootermsg.value = 0;
+
+	form.submit(fom, 1);
+
+	changed = 0;
+}
+
+function earlyInit() {
+	show();
+	verifyFields(null, 1);
 }
 
 function init() {
+	changed = 0;
 	eventHandler();
+	up.initPage(250, 5);
 }
 </script>
 </head>
@@ -315,6 +370,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-bittorrent.asp">
 <input type="hidden" name="_service" value="bittorrent-restart">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="bt_enable">
 <input type="hidden" name="bt_incomplete">
 <input type="hidden" name="bt_autoadd">
@@ -337,11 +393,22 @@ function init() {
 
 <!-- / / / -->
 
+<div class="section-title">Status</div>
+<div class="section">
+	<div class="fields">
+		<span id="_tr_notice"></span>
+		<input type="button" id="_tr_button" value="Restart Now">
+		<input type="button" id="_tr_status" value="Open Transmission GUI in new tab" class="new_window" onclick="window.open('http://'+location.hostname+':'+nvram.bt_port_gui+'')">
+	</div>
+</div>
+
+<!-- / / / -->
+
 <div class="section-title">Basic Settings</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable torrent client', name: 'f_bt_enable', type: 'checkbox', value: nvram.bt_enable == '1' },
+			{ title: 'Enable', name: 'f_bt_enable', type: 'checkbox', value: nvram.bt_enable == '1' },
 			{ title: 'Transmission binary path', multi: [
 				{ name: 'bt_binary', type: 'select', options: [
 /* BBT-BEGIN */
@@ -370,12 +437,12 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Remote Access<script>W(btgui_link);</script></div>
+<div class="section-title">GUI Access</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable GUI', name: 'f_bt_rpc_enable', type: 'checkbox', value: nvram.bt_rpc_enable == '1' },
-			{ title: 'Listening GUI port', indent: 2, name: 'bt_port_gui', type: 'text', maxlen: 32, size: 5, value: nvram.bt_port_gui },
+			{ title: 'Enable', name: 'f_bt_rpc_enable', type: 'checkbox', value: nvram.bt_rpc_enable == '1' },
+			{ title: 'Listening port', indent: 2, name: 'bt_port_gui', type: 'text', maxlen: 32, size: 5, value: nvram.bt_port_gui },
 			{ title: 'Authentication required', name: 'f_bt_auth', type: 'checkbox', value: nvram.bt_auth == '1' },
 			{ title: 'Username', indent: 2, name: 'bt_login', type: 'text', maxlen: 32, size: 15, value: nvram.bt_login },
 			{ title: 'Password', indent: 2, name: 'bt_password', type: 'password', maxlen: 32, size: 15, value: nvram.bt_password },
@@ -480,6 +547,6 @@ function init() {
 </td></tr>
 </table>
 </form>
-<script>verifyFields(null, true);</script>
+<script>earlyInit();</script>
 </body>
 </html>

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Script for checking/adding transmission to cron
+
 BTON=$(nvram get bt_enable)
 BTCH=$(nvram get bt_check)
 
@@ -17,20 +19,16 @@ case "$1" in
 					cru a btinside "*/$INTERVAL * * * * /usr/bin/btcheck check"
 				}
 			} || {
-				[ "$ISCRU" -eq 1 ] && {
-					cru d btinside
-				}
+				[ "$ISCRU" -eq 1 ] && cru d btinside
 			}
 		} || {
-			[ "$ISCRU" -eq 1 ] && {
-				cru d btinside
-			}
+			[ "$ISCRU" -eq 1 ] && cru d btinside
 		}
 	;;
 	check)
 		[ "$BTON" -eq 1 -a "$BTCH" -eq 1 ] && {
-			ps | grep -q '[t]ransmission-daemon' || {
-				logger Transmission stopped? Starting...
+			pidof transmission-daemon >/dev/null || {
+				logger -t btcheck "Transmission stopped? Starting..."
 				service bittorrent restart
 			}
 		}

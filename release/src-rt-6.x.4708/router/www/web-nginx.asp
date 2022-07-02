@@ -47,7 +47,7 @@ up.refresh = function(text) {
 var changed = 0;
 
 function show() {
-	E('_nginx_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running')+' ';
+	E('_nginx_notice').innerHTML = 'NGINX is currently '+(!isup.nginx ? 'stopped' : 'running ')+'&nbsp;';
 	E('_nginx_button').value = (isup.nginx ? 'Stop' : 'Start')+' Now';
 	E('_nginx_button').setAttribute('onclick', 'javascript:toggle(\'nginxgui\', '+isup.nginx+');');
 	E('_nginx_button').disabled = 0;

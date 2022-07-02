@@ -47,5 +47,17 @@ isup.minidlna = parseInt('<% psup("minidlna"); %>');
 /* MEDIA-SRV-END */
 
 /* TINC-BEGIN */
-isup.tincd = parseInt ('<% psup("tincd"); %>');
+isup.tincd = parseInt('<% psup("tincd"); %>');
 /* TINC-END */
+
+/* BT-BEGIN */
+isup.transmission = parseInt('<% psup("transmission-da"); %>');
+/* BT-END */
+
+/* SAMBA-BEGIN */
+isup.samba = parseInt('<% psup("smbd"); %>');
+/* SAMBA-END */
+
+/* FTP-BEGIN */
+isup.ftpd = parseInt('<% psup("vsftpd"); %>');
+/* FTP-END */

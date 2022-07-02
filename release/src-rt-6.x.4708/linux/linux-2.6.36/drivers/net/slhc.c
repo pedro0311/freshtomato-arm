@@ -85,8 +85,9 @@ static long decode(unsigned char **cpp);
 static unsigned char * put16(unsigned char *cp, unsigned short x);
 static unsigned short pull16(unsigned char **cpp);
 
-/* Initialize compression data structure
+/* Allocate compression data structure
  *	slots must be in range 0 to 255 (zero meaning no compression)
+ * Returns pointer to structure or ERR_PTR() on error.
  */
 struct slcompress *
 slhc_init(int rslots, int tslots)
@@ -95,11 +96,14 @@ slhc_init(int rslots, int tslots)
 	register struct cstate *ts;
 	struct slcompress *comp;
 
+	if (rslots < 0 || rslots > 255 || tslots < 0 || tslots > 255)
+		return ERR_PTR(-EINVAL);
+
 	comp = kzalloc(sizeof(struct slcompress), GFP_KERNEL);
 	if (! comp)
 		goto out_fail;
 
-	if ( rslots > 0  &&  rslots < 256 ) {
+	if (rslots > 0) {
 		size_t rsize = rslots * sizeof(struct cstate);
 		comp->rstate = kzalloc(rsize, GFP_KERNEL);
 		if (! comp->rstate)
@@ -107,7 +111,7 @@ slhc_init(int rslots, int tslots)
 		comp->rslot_limit = rslots - 1;
 	}
 
-	if ( tslots > 0  &&  tslots < 256 ) {
+	if (tslots > 0) {
 		size_t tsize = tslots * sizeof(struct cstate);
 		comp->tstate = kzalloc(tsize, GFP_KERNEL);
 		if (! comp->tstate)
@@ -142,7 +146,7 @@ out_free2:
 out_free:
 	kfree(comp);
 out_fail:
-	return NULL;
+	return ERR_PTR(-ENOMEM);
 }
 
 
@@ -150,7 +154,7 @@ out_fail:
 void
 slhc_free(struct slcompress *comp)
 {
-	if ( comp == NULLSLCOMPR )
+	if ( IS_ERR_OR_NULL(comp) )
 		return;
 
 	if ( comp->tstate != NULLSLSTATE )
@@ -229,7 +233,7 @@ slhc_compress(struct slcompress *comp, unsigned char *icp, int isize,
 	register struct cstate *cs = lcs->next;
 	register unsigned long deltaS, deltaA;
 	register short changes = 0;
-	int hlen;
+	int nlen, hlen;
 	unsigned char new_seq[16];
 	register unsigned char *cp = new_seq;
 	struct iphdr *ip;
@@ -245,6 +249,8 @@ slhc_compress(struct slcompress *comp, unsigned char *icp, int isize,
 		return isize;
 
 	ip = (struct iphdr *) icp;
+	if (ip->version != 4 || ip->ihl < 5)
+		return isize;
 
 	/* Bail if this packet isn't TCP, or is an IP fragment */
 	if (ip->protocol != IPPROTO_TCP || (ntohs(ip->frag_off) & 0x3fff)) {
@@ -255,10 +261,14 @@ slhc_compress(struct slcompress *comp, unsigned char *icp, int isize,
 			comp->sls_o_tcp++;
 		return isize;
 	}
-	/* Extract TCP header */
+	nlen = ip->ihl * 4;
+	if (isize < nlen + sizeof(*th))
+		return isize;
 
-	th = (struct tcphdr *)(((unsigned char *)ip) + ip->ihl*4);
-	hlen = ip->ihl*4 + th->doff*4;
+	th = (struct tcphdr *)(icp + nlen);
+	if (th->doff < sizeof(struct tcphdr) / 4)
+		return isize;
+	hlen = nlen + th->doff * 4;
 
 	/*  Bail if the TCP packet isn't `compressible' (i.e., ACK isn't set or
 	 *  some other control bit is set). Also uncompressible if
@@ -397,7 +407,6 @@ found:
 		   ntohs(cs->cs_ip.tot_len) == hlen)
 			break;
 		goto uncompressed;
-		break;
 	case SPECIAL_I:
 	case SPECIAL_D:
 		/* actual changes match one of our special case encodings --
@@ -505,6 +514,10 @@ slhc_uncompress(struct slcompress *comp, unsigned char *icp, int isize)
 		 */
 		x = *cp++;	/* Read conn index */
 		if(x < 0 || x > comp->rslot_limit)
+			goto bad;
+
+		/* Check if the cstate is initialized */
+		if (!comp->rstate[x].initialized)
 			goto bad;
 
 		comp->flags &=~ SLF_TOSS;
@@ -671,6 +684,7 @@ slhc_remember(struct slcompress *comp, unsigned char *icp, int isize)
 	if (cs->cs_tcp.doff > 5)
 	  memcpy(cs->cs_tcpopt, icp + ihl*4 + sizeof(struct tcphdr), (cs->cs_tcp.doff - 5) * 4);
 	cs->cs_hsize = ihl*2 + cs->cs_tcp.doff*2;
+	cs->initialized = true;
 	/* Put headers back on packet
 	 * Neither header checksum is recalculated
 	 */

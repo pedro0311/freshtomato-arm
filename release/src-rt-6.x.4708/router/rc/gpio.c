@@ -11,11 +11,11 @@
 
 int gpio_main(int argc, char *argv[])
 {
-	const char hex[] = "0123456789ABCDEF";
+	const char hex[] = "0123456789ABCDEF0123456789ABCDEF"; /* 16 pins + 16 pins (0 - 31) for visual help */
 	long v;
 	int bit;
 	int i;
-	char s[17];
+	char s[40];
 	int f;
 
 	if ((argc == 3) && ((strncmp(argv[1], "en", 2) == 0) || (strncmp(argv[1], "di", 2) == 0))) {
@@ -36,7 +36,7 @@ int gpio_main(int argc, char *argv[])
 			else
 				bit = 0;
 
-			printf("Enable gpio mask: 0x%04X\n", bit);
+			printf("Enable gpio mask: 0x%08X\n", bit);
 
 			if ((f = gpio_open(bit)) < 0) {
 				printf("Failed to open gpio\n");
@@ -44,11 +44,12 @@ int gpio_main(int argc, char *argv[])
 				return 0;
 			}
 			while ((v = _gpio_read(f)) != ~0) {
-				for (i = 15; i >= 0; --i) {
+				memset(s, 0, sizeof(s)); /* clean-up */
+				for (i = TOMATO_GPIO_MAX; i >= TOMATO_GPIO_MIN; --i) {
 					s[i] = (v & (1 << i)) ? hex[i] : '.';
 				}
-				s[16] = 0;
-				printf("%08lX %s\n", v, s);
+				s[sizeof(s)-1] = '\0';
+				printf("%08lX %s (GPIO 0 - 31)\n", v, s);
 				sleep(1);
 			}
 			close(f);
