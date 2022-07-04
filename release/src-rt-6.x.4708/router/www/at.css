@@ -487,6 +487,14 @@ table.tomato-grid .editor td {
 	border-bottom: none;
 }
 
+table.tomato-grid .editor input {
+	max-width: 98%;
+}
+
+input[size] {
+	max-width: 250px;
+}
+
 input[type="button"],
 input[type="submit"] {
 	background-color: var(--tomato-accent-color);
@@ -1480,10 +1488,6 @@ img[src^="bar6"] {
 pre#stats {
 	white-space: normal;
 	margin-top: 20px;
-}
-
-input[size] {
-	max-width: 250px;
 }
 
 td small a[href*=":viewQos"],

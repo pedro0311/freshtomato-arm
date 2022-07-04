@@ -1544,9 +1544,8 @@ TomatoGrid.prototype = {
 
 				if (f.prefix) s += f.prefix;
 				var attrib = ' class="fi' + (vi + 1) + '" ' + (f.attrib || '');
-				/* var id = (this.tb ? ('_' + this.tb + '_' + (vi + 1)) : null); */
-				var id = null;
-				if (id) attrib += ' id="' + id + '"';
+				var id = (this.tb.parentElement.id ? ('_'+this.tb.parentElement.id+'_'+(vi + 1)) : null);
+				if (id) attrib += ' id="'+id+'"';
 				switch (f.type) {
 					case 'password':
 						if (f.peekaboo) {
