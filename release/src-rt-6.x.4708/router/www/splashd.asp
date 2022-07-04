@@ -190,21 +190,21 @@ function init() {
 <div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
-		<li><b>Enable function:</b> When you tick and save the router will show a Welcome banner when a computer access the Internet</li>
-		<li><b>Interface:</b> Select one of the bridges on which Captive Portal will listen</li>
-		<li><b>Gateway name:</b> The name of the Gateway appearing on the Welcome banner</li>
-		<li><b>Captive Site Forwarding:</b> When active, the 'Home Page' (read next line) will appear after you agree in the Welcome banner</li>
-		<li><b>Home page:</b> The URL that will appear after you Agree in the Welcome banner</li>
-		<li><b>Welcome html Path:</b> The location in which the Welcome banner is located</li>
-		<li><b>Logged Timeout:</b> During this period of time no Welcome banner will appear when you access to the device. Default: 3600 sec. (1 Hour)</li>
-		<li><b>Idle Timeout:</b> Expired time where you can't access the device again. Default value: 0</li>
-		<li><b>Max Missed ARP:</b> Number of lost ARP before considering the client has leaved the connection. Default: 5</li>
-		<li><b>Log Info Level:</b> Messages from this module stored internally for better trace. Silent: 0, Parrot: 10, Default: 2</li>
-		<li><b>Gateway Port:</b> Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default: 5280</li>
-		<li><b>Excluded/Included ports to be redirected:</b> When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use the preferred one of two options to avoid conflicts</li>
-		<li><b>URL excluded off the portal:</b> URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://startpage.com http://google.com</li>
-		<li><b>MAC address whitelist:</b> MAC addresses excluded from this feature, space separated, i.e; 11:22:33:44:55:66 11:22:33:44:55:67</li>
-		<li><b>Customized Splash File Path:</b> Here you can upload your personal Welcome banner that will overwrite the default one</li>
+		<li><b>Enable function</b> - When you tick and save the router will show a Welcome banner when a computer access the Internet</li>
+		<li><b>Interface</b> - Select one of the bridges on which Captive Portal will listen</li>
+		<li><b>Gateway name</b> - The name of the Gateway appearing on the Welcome banner</li>
+		<li><b>Captive Site Forwarding</b> - When active, the 'Home Page' (read next line) will appear after you agree in the Welcome banner</li>
+		<li><b>Home page</b> - The URL that will appear after you Agree in the Welcome banner</li>
+		<li><b>Welcome html Path</b> - The location in which the Welcome banner is located</li>
+		<li><b>Logged Timeout</b> - During this period of time no Welcome banner will appear when you access to the device. Default: 3600 sec. (1 Hour)</li>
+		<li><b>Idle Timeout</b> - Expired time where you can't access the device again. Default value: 0</li>
+		<li><b>Max Missed ARP</b> - Number of lost ARP before considering the client has leaved the connection. Default: 5</li>
+		<li><b>Log Info Level</b> - Messages from this module stored internally for better trace. Silent: 0, Parrot: 10, Default: 2</li>
+		<li><b>Gateway Port</b> - Port to be used by the Captive Portal for page redirection. Port 1 to 65534. Default: 5280</li>
+		<li><b>Excluded/Included ports to be redirected</b> - When setting any port (included or excluded) leave a blank space between each port number, i.e; 25 110 4662 4672. Use the preferred one of two options to avoid conflicts</li>
+		<li><b>URL excluded off the portal</b> - URL that will be accessed without Welcome banner screen appearing. When you set allowed url's also leave a blank space between each url. i.e; http://startpage.com http://google.com</li>
+		<li><b>MAC address whitelist</b> - MAC addresses excluded from this feature, space separated, i.e; 11:22:33:44:55:66 11:22:33:44:55:67</li>
+		<li><b>Customized Splash File Path</b> - Here you can upload your personal Welcome banner that will overwrite the default one</li>
 	</ul>
 	<br>
 	<span style="color:red">
