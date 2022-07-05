@@ -1558,7 +1558,7 @@ TomatoGrid.prototype = {
 							}
 						}
 						attrib += ' autocomplete="off"';
-						if (f.peekaboo && id) attrib += ' onfocus=\'peekaboo("' + id + '",1)\'';
+						if (f.peekaboo && id) attrib += ' onfocus="peekaboo(\''+id+'\',1)"';
 						/* drop */
 					case 'text':
 						s += '<input type="' + f.type + '" maxlength=' + f.maxlen + common + attrib;
@@ -2794,7 +2794,7 @@ function createFieldTable(flags, desc) {
 					}
 					if (f.type == 'password') {
 						common += ' autocomplete="off"';
-						if (f.peekaboo) common += ' onfocus=\'peekaboo("'+id+'",1)\'';
+						if (f.peekaboo) common += ' onfocus="peekaboo(\''+id+'\',1)"';
 					}
 					/* drop */
 				case 'text':
@@ -2874,6 +2874,10 @@ REMOVE-END */
 }
 
 // -----------------------------------------------------------------------------
+
+function isLocal() {
+	return location.href.search('file://') == 0;
+}
 
 function reloadPage() {
 	document.location.reload(1);
@@ -2956,12 +2960,17 @@ function wikiLink() {
 	document.write(res);
 }
 
-// -----------------------------------------------------------------------------
-
-// ---- debug
-
-function isLocal() {
-	return location.href.search('file://') == 0;
+var up = new TomatoRefresh('isup.jsz', '', 5);
+up.refresh = function(text) {
+	isup = {};
+	try {
+		eval(text);
+	}
+	catch (ex) {
+		//alert('ex='+ex);
+		isup = {};
+	}
+	if (typeof show === 'function') show();
 }
 
 // -----------------------------------------------------------------------------

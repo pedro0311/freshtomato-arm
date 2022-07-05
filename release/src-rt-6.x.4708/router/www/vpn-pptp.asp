@@ -16,96 +16,58 @@
 <title>[<% ident(); %>] PPTP: Client</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
+<script src="isup.js"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("pptp_client_eas,pptp_client_usewan,pptp_client_peerdns,pptp_client_mtuenable,pptp_client_mtu,pptp_client_mruenable,pptp_client_mru,pptp_client_nat,pptp_client_srvip,pptp_client_srvsub,pptp_client_srvsubmsk,pptp_client_username,pptp_client_passwd,pptp_client_mppeopt,pptp_client_crypt,pptp_client_custom,pptp_client_dfltroute,pptp_client_stateless"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
 var changed = 0;
-
-function show() {
-	var d = isup.pptpclient;
-	var e = E('_pptpclient_button');
-
-	e.value = (d ? 'Stop' : 'Start')+' Now';
-	e.setAttribute('onclick', 'javascript:toggle(\'pptpclient\', '+d+');');
-	e.disabled = 0;
-}
-
-function toggle(service, isup) {
-	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-
-	var fom = E('t_fom');
-	fom._service.value = service+(isup ? '-stop' : '-start');
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
-}
+var serviceLastUp = 0;
+var serviceType = 'pptpclient';
 
 function verifyFields(focused, quiet) {
+	if (focused && focused != E('_f_pptp_client_eas')) /* except on/off */
+		changed = 1;
+
 	var ok = 1;
 
 	elem.display(PR('_pptp_client_srvsub'), PR('_pptp_client_srvsubmsk'), !E('_f_pptp_client_dfltroute').checked);
 
 	var f = E('_pptp_client_mtuenable').value == '0';
-	if (f)
-		E('_pptp_client_mtu').value = '1400';
-
+	if (f) E('_pptp_client_mtu').value = '1400';
 	E('_pptp_client_mtu').disabled = f;
 
 	f = E('_pptp_client_mruenable').value == '0';
-	if (f)
-		E('_pptp_client_mru').value = '1400';
-
+	if (f) E('_pptp_client_mru').value = '1400';
 	E('_pptp_client_mru').disabled = f;
 
-	if (!v_range('_pptp_client_mtu', quiet, 576, 1500))
-		ok = 0;
-	if (!v_range('_pptp_client_mru', quiet, 576, 1500))
-		ok = 0;
+	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ok = 0;
+	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ok = 0;
+
 	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) {
-		ferror.set(E('_pptp_client_srvip'), "Invalid server address.", quiet);
+		ferror.set(E('_pptp_client_srvip'), "Invalid server address", quiet);
 		ok = 0;
 	}
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) {
-		ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address.", quiet);
+		ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address", quiet);
 		ok = 0;
 	}
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) {
-		ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address.", quiet);
+		ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address", quiet);
 		ok = 0;
 	}
-
-	changed |= ok;
 
 	return ok;
 }
 
 function save() {
-	if (!verifyFields(null, false))
+	if (!verifyFields(null, 0))
 		return;
 
+	show(); /* update '_service' field first */
 	var fom = E('t_fom');
 
 	fom.pptp_client_eas.value = fom._f_pptp_client_eas.checked ? 1 : 0;
@@ -125,7 +87,6 @@ function earlyInit() {
 }
 
 function init() {
-	changed = 0;
 	up.initPage(250, 5);
 }
 </script>
@@ -158,7 +119,7 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Start with WAN', name: 'f_pptp_client_eas', type: 'checkbox', value: nvram.pptp_client_eas != 0 },
+			{ title: 'Enable on Start', name: 'f_pptp_client_eas', type: 'checkbox', value: nvram.pptp_client_eas != 0 },
 			{ title: 'Bind to', name: 'pptp_client_usewan', type: 'select',
 				options: [['wan','WAN0'],['wan2','WAN1'],
 /* MULTIWAN-BEGIN */
@@ -166,8 +127,8 @@ function init() {
 /* MULTIWAN-END */
 					['none','none']], value: nvram.pptp_client_usewan },
 			{ title: 'Server Address', name: 'pptp_client_srvip', type: 'text', maxlen: 50, size: 27, value: nvram.pptp_client_srvip },
-			{ title: 'Username: ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
-			{ title: 'Password: ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, value: nvram.pptp_client_passwd },
+			{ title: 'Username ', name: 'pptp_client_username', type: 'text', maxlen: 50, size: 54, value: nvram.pptp_client_username },
+			{ title: 'Password ', name: 'pptp_client_passwd', type: 'password', maxlen: 50, size: 54, peekaboo: 1, value: nvram.pptp_client_passwd },
 			{ title: 'Encryption', name: 'pptp_client_crypt', type: 'select', options: [['0','Auto'],['1','None'],['2','Maximum (128 bit only)'],['3','Required (128, 56 or 40 bit)']], value: nvram.pptp_client_crypt },
 			{ title: 'Stateless MPPE connection', name: 'f_pptp_client_stateless', type: 'checkbox', value: nvram.pptp_client_stateless != 0 },
 			{ title: 'Accept DNS configuration', name: 'pptp_client_peerdns', type: 'select', options: [[0,'Disabled'],[1,'Yes'],[2,'Exclusive']], value: nvram.pptp_client_peerdns },
@@ -185,7 +146,7 @@ function init() {
 			{ title: 'Custom Configuration', name: 'pptp_client_custom', type: 'textarea', value: nvram.pptp_client_custom }
 		]);
 	</script>
-	<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_pptpclient_button"></div>
+	<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_pptpclient_button">&nbsp; <img src="spin.gif" alt="" id="spin"></div>
 </div>
 
 <!-- / / / -->

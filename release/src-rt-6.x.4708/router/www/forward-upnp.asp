@@ -14,6 +14,7 @@
 <title>[<% ident(); %>] Forwarding: UPnP / NAT-PMP</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 
 <script>
@@ -22,22 +23,8 @@
 
 </script>
 <script src="upnp.jsx?_http_id=<% nv(http_id); %>"></script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
 
 <script>
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
 
 var upnp = new TomatoRefresh('upnp.jsx?_http_id=<% nv(http_id); %>', '', 30);
 

@@ -1293,7 +1293,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			start_adblock(0);
 #ifdef TCONFIG_SAMBASRV
 			stop_samba();
-			start_samba();
+			start_samba(0);
 #endif
 		}
 

@@ -13,52 +13,18 @@
 <title>[<% ident(); %>] NAS: File Sharing</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
+<script src="isup.js"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("smbd_enable,smbd_user,smbd_passwd,smbd_wgroup,smbd_cpage,smbd_ifnames,smbd_custom,smbd_master,smbd_wins,smbd_shares,smbd_autoshare,smbd_protocol,wan_wins,gro_disable"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
 var cprefix = 'nas_samba';
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
 var changed = 0;
-
-function show() {
-	var e = E('_samba_button');
-	E('_samba_notice').innerHTML = 'Samba is currently '+(!isup.samba ? 'stopped' : 'running ')+'&nbsp;';
-	e.setAttribute('onclick', 'javascript:toggle(\'samba\');');
-	e.disabled = isup.samba ? 0 : 1;
-}
-
-function toggle(service) {
-	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-
-	var fom = E('t_fom');
-	fom._service.value = service+'-'+'restart';
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
-}
+var serviceLastUp = 0;
+var serviceType = 'samba';
 
 var ssg = new TomatoGrid();
 
@@ -80,10 +46,10 @@ ssg.setup = function() {
 		{ type: 'text', maxlen: 32 },
 		{ type: 'text', maxlen: 256 },
 		{ type: 'text', maxlen: 64 },
-		{ type: 'select', options: [[0, 'Read Only'],[1, 'Read / Write']] },
-		{ type: 'select', options: [[0, 'No'],[1, 'Yes']] }
+		{ type: 'select', options: [[0,'Read Only'],[1,'Read / Write']] },
+		{ type: 'select', options: [[0,'No'],[1,'Yes']] }
 	]);
-	this.headerSet(['Share Name', 'Directory', 'Description', 'Access Level', 'Hidden']);
+	this.headerSet(['Share Name','Directory','Description','Access Level','Hidden']);
 
 	var s = nvram.smbd_shares.split('>');
 	for (var i = 0; i < s.length; ++i) {
@@ -131,7 +97,18 @@ ssg.fieldValuesToData = function(row) {
 	return [f[0].value, f[1].value, f[2].value, f[3].value, f[4].value];
 }
 
+ssg.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
 ssg.verifyFields = function(row, quiet) {
+	changed = 1;
 	var f, s;
 
 	f = fields.getAll(row);
@@ -139,17 +116,17 @@ ssg.verifyFields = function(row, quiet) {
 	s = f[0].value.trim().replace(/\s+/g, ' ');
 	if (s.length > 0) {
 		if (s.search(/^[ a-zA-Z0-9_\-\$]+$/) == -1) {
-			ferror.set(f[0], 'Invalid share name. Only characters "$ A-Z 0-9 - _" and spaces are allowed.', quiet);
+			ferror.set(f[0], 'Invalid share name. Only characters "$ A-Z 0-9 - _" and spaces are allowed', quiet);
 			return 0;
 		}
 		if (this.existName(s)) {
-			ferror.set(f[0], 'Duplicate share name.', quiet);
+			ferror.set(f[0], 'Duplicate share name', quiet);
 			return 0;
 		}
 		f[0].value = s;
 	}
 	else {
-		ferror.set(f[0], 'Empty share name is not allowed.', quiet);
+		ferror.set(f[0], 'Empty share name is not allowed', quiet);
 		return 0;
 	}
 
@@ -169,17 +146,7 @@ function verifyFields(focused, quiet) {
 
 	elem.display(PR('_smbd_user'), PR('_smbd_passwd'), (a == 2));
 
-	E('_smbd_wgroup').disabled = (a == 0);
-	E('_smbd_cpage').disabled = (a == 0);
-	E('_smbd_ifnames').disabled = (a == 0);
-	E('_smbd_custom').disabled = (a == 0);
-	E('_smbd_autoshare').disabled = (a == 0);
-	E('_f_smbd_master').disabled = (a == 0);
-	E('_f_smbd_wins').disabled = (a == 0 || (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0'));
-	E('_smbd_proto_1').disabled = (a == 0);
-	E('_smbd_proto_2').disabled = (a == 0);
-	E('_smbd_proto_3').disabled = (a == 0);
-	E('_f_gro_disable').disabled = (a == 0);
+	E('_f_smbd_wins').disabled = (nvram.wan_wins != '' && nvram.wan_wins != '0.0.0.0');
 	if (a == 0) E('_f_gro_disable').checked = true; /* disable gro (default) if smbd off */
 
 	if (a != 0 && !v_length('_smbd_ifnames', quiet, 0, 50)) return 0;
@@ -191,7 +158,7 @@ function verifyFields(focused, quiet) {
 
 		b = E('_smbd_user');
 		if (b.value == 'root') {
-			ferror.set(b, 'User Name \"root\" is not allowed.', quiet);
+			ferror.set(b, 'Username "root" is not allowed', quiet);
 			return 0;
 		}
 		ferror.clear(b);
@@ -206,21 +173,22 @@ function save() {
 	if (!verifyFields(null, 0))
 		return;
 
+	show(); /* update '_service' field first */
 	var fom = E('t_fom');
 
 	var data = ssg.getAllData();
 	var r = [];
 	for (var i = 0; i < data.length; ++i) r.push(data[i].join('<'));
 	fom.smbd_shares.value = r.join('>');
-	fom.smbd_master.value = E('_f_smbd_master').checked ? 1 : 0;
+	fom.smbd_master.value = fom._f_smbd_master.checked ? 1 : 0;
 
 	if (nvram.wan_wins == '' || nvram.wan_wins == '0.0.0.0')
-		fom.smbd_wins.value = E('_f_smbd_wins').checked ? 1 : 0;
+		fom.smbd_wins.value = fom._f_smbd_wins.checked ? 1 : 0;
 	else
 		fom.smbd_wins.value = nvram.smbd_wins;
 
-	fom.gro_disable.value = E('_f_gro_disable').checked ? 1 : 0;
-	fom.smbd_protocol.value = (E('_smbd_proto_1').checked ? 0 : (E('_smbd_proto_2').checked ? 1 : 2));
+	fom.gro_disable.value = fom._f_gro_disable.checked ? 1 : 0;
+	fom.smbd_protocol.value = (fom._smbd_proto_1.checked ? 0 : (fom._smbd_proto_2.checked ? 1 : 2));
 
 	fom._nofootermsg.value = 0;
 
@@ -236,7 +204,6 @@ function earlyInit() {
 }
 
 function init() {
-	changed = 0;
 	var c;
 	if (((c = cookie.get(cprefix + '_notes_vis')) != null) && (c == '1')) {
 		toggleVisibility(cprefix, "notes");
@@ -261,7 +228,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="nas-samba.asp">
-<input type="hidden" name="_service" value="samba-restart">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
@@ -275,7 +242,8 @@ function init() {
 <div class="section">
 	<div class="fields">
 		<span id="_samba_notice"></span>
-		<input type="button" id="_samba_button" value="Restart Now">
+		<input type="button" id="_samba_button" value="">
+		&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
@@ -285,10 +253,10 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'smbd_enable', type: 'select',
+			{ title: 'Enable on Start', name: 'smbd_enable', type: 'select',
 				options: [['0', 'No'],['1', 'Yes, no Authentication'],['2', 'Yes, Authentication required']],
 				value: nvram.smbd_enable },
-			{ title: 'User Name', indent: 2, name: 'smbd_user', type: 'text', maxlen: 50, size: 32,
+			{ title: 'Username', indent: 2, name: 'smbd_user', type: 'text', maxlen: 50, size: 32,
 				value: nvram.smbd_user },
 			{ title: 'Password', indent: 2, name: 'smbd_passwd', type: 'password', maxlen: 50, size: 32, peekaboo: 1,
 				value: nvram.smbd_passwd },
@@ -297,18 +265,16 @@ function init() {
 				{suffix: '&nbsp; SMBv1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_smbd_protocol', id: '_smbd_proto_1', type: 'radio', value: nvram.smbd_protocol == '0' },
 				{suffix: '&nbsp; SMBv2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;', name: '_smbd_protocol', id: '_smbd_proto_2', type: 'radio', value: nvram.smbd_protocol == '1' },
 				{suffix: '&nbsp; SMBv1 + SMBv2', name: '_smbd_protocol', id: '_smbd_proto_3', type: 'radio', value: nvram.smbd_protocol == '2' } ]},
-			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == '1', suffix: ' <small>Default: GRO off (checked)<\/small>' },
+			{ title: 'Disable GRO', name: 'f_gro_disable', type: 'checkbox', value: nvram.gro_disable == '1', suffix: ' <small>default: GRO off (checked)<\/small>' },
 			{ title: 'Workgroup Name', name: 'smbd_wgroup', type: 'text', maxlen: 15, size: 32,
 				value: nvram.smbd_wgroup },
 			{ title: 'Client Codepage', name: 'smbd_cpage', type: 'select',
 				options: [['', 'Unspecified'],['437', '437 (United States, Canada)'],['850', '850 (Western Europe)'],['852', '852 (Central / Eastern Europe)'],['866', '866 (Cyrillic / Russian)']
 				,['932', '932 (Japanese)'],['936', '936 (Simplified Chinese)'],['949', '949 (Korean)'],['950', '950 (Traditional Chinese / Big5)']
 				],
-				suffix: ' <small> (start cmd.exe and type chcp to see the current code page)<\/small>',
+				suffix: ' <small>run cmd.exe and type chcp to see the current code page<\/small>',
 				value: nvram.smbd_cpage },
-			{ title: 'Network Interfaces', name: 'smbd_ifnames', type: 'text', maxlen: 50, size: 32,
-				suffix: ' <small> (space-delimited)<\/small>',
-				value: nvram.smbd_ifnames },
+			{ title: 'Network Interfaces', name: 'smbd_ifnames', type: 'text', maxlen: 50, size: 32, value: nvram.smbd_ifnames },
 			{ title: 'Samba<br>Custom Configuration', name: 'smbd_custom', type: 'textarea', value: nvram.smbd_custom },
 			{ title: 'Auto-share all USB Partitions', name: 'smbd_autoshare', type: 'select',
 				options: [['0', 'Disabled'],['1', 'Read Only'],['2', 'Read / Write'],['3', 'Hidden Read / Write']],
@@ -342,6 +308,7 @@ function init() {
 				<li>Refer to the <a href="https://www.samba.org/samba/docs/man/manpages-3/smb.conf.5.html" class="new_window">Samba documentation</a> for details.</li>
 			</ul>
 		</li>
+		<br>
 		<li><b>Disable GRO</b> - Disable/Enable Generic Receive Offload</li>
 	</ul>
 </div>

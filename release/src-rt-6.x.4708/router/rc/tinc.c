@@ -56,12 +56,11 @@ void start_tinc(int force)
 	char buffer[BUF_SIZE];
 	FILE *fp, *hp;
 
+	/* make sure it's really stopped */
+	stop_tinc();
+
 	/* only if enabled on wanup or forced */
 	if (!nvram_get_int("tinc_wanup") && force == 0)
-		return;
-
-	/* Don't try to start tinc if it is already running */
-	if (pidof("tincd") >= 0)
 		return;
 
 	/* create tinc directories */
@@ -297,9 +296,14 @@ void start_tinc(int force)
 
 void stop_tinc(void)
 {
-	killall("tincd", SIGTERM);
-	system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
-	run_tinc_firewall_script();
+	if (pidof("tincd") > 0)
+		killall_tk_period_wait("tincd", 50);
+
+	if (f_exists(TINC_FW_SCRIPT)) {
+		system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
+		run_tinc_firewall_script();
+	}
+
 	system("/bin/rm -rf "TINC_DIR);
 	eval("cru", "d", "CheckTincDaemon");
 }

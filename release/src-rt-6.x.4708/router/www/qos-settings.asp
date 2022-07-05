@@ -14,30 +14,20 @@
 <title>[<% ident(); %>] QoS: Basic Settings</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("qos_classnames,qos_enable,qos_mode,qos_ack,qos_syn,qos_fin,qos_rst,qos_icmp,qos_udp,qos_classify,qos_default,qos_pfifo,qos_cake_prio_mode,qos_cake_wash,wan_qos_obw,wan_qos_ibw,wan_qos_encap,wan_qos_overhead,wan2_qos_obw,wan2_qos_ibw,wan2_qos_encap,wan2_qos_overhead,wan3_qos_obw,wan3_qos_ibw,wan3_qos_encap,wan3_qos_overhead,wan4_qos_obw,wan4_qos_ibw,wan4_qos_encap,wan4_qos_overhead,qos_orates,qos_irates,qos_reset,ne_vegas,ne_valpha,ne_vbeta,ne_vgamma,mwan_num,ctf_disable,bcmnat_disable"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-
 var cprefix = 'qos_settings';
 
-var up = new TomatoRefresh('isup.jsx', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show_qosnotice();
+function show() {
+	if (E('_f_qos_enable').checked && isup.bwl == 1)
+		E('qosnotice').style.display = 'block';
+	else
+		E('qosnotice').style.display = 'none';
 }
 
 var classNames = nvram.qos_classnames.split(' ');
@@ -49,13 +39,6 @@ for (i = 1; i <= 100; ++i)
 pctListout = [[0, 'No Limit']];
 for (i = 1; i <= 100; ++i)
 	pctListout.push([i, i+'%']);
-
-function show_qosnotice() {
-	if (E('_f_qos_enable').checked && isup.bwl == 1)
-		E('qosnotice').style.display = 'block';
-	else
-		E('qosnotice').style.display = 'none';
-}
 
 function scale(bandwidth, rate, ceil) {
 	if (bandwidth <= 0)
@@ -167,16 +150,16 @@ function save() {
 	var fom = E('t_fom');
 	var i, a, qos, c;
 
-	fom.qos_enable.value = E('_f_qos_enable').checked ? 1 : 0;
-	fom.qos_ack.value = E('_f_qos_ack').checked ? 1 : 0;
-	fom.qos_syn.value = E('_f_qos_syn').checked ? 1 : 0;
-	fom.qos_fin.value = E('_f_qos_fin').checked ? 1 : 0;
-	fom.qos_rst.value = E('_f_qos_rst').checked ? 1 : 0;
-	fom.qos_icmp.value = E('_f_qos_icmp').checked ? 1 : 0;
-	fom.qos_udp.value = E('_f_qos_udp').checked ? 1 : 0;
-	fom.qos_reset.value = E('_f_qos_reset').checked ? 1 : 0;
-	fom.qos_classify.value = E('_f_qos_classify').checked ? 1 : 0;
-	fom.qos_cake_wash.value = E('_f_qos_cake_wash').checked ? 1 : 0;
+	fom.qos_enable.value = fom._f_qos_enable.checked ? 1 : 0;
+	fom.qos_ack.value = fom._f_qos_ack.checked ? 1 : 0;
+	fom.qos_syn.value = fom._f_qos_syn.checked ? 1 : 0;
+	fom.qos_fin.value = fom._f_qos_fin.checked ? 1 : 0;
+	fom.qos_rst.value = fom._f_qos_rst.checked ? 1 : 0;
+	fom.qos_icmp.value = fom._f_qos_icmp.checked ? 1 : 0;
+	fom.qos_udp.value = fom._f_qos_udp.checked ? 1 : 0;
+	fom.qos_reset.value = fom._f_qos_reset.checked ? 1 : 0;
+	fom.qos_classify.value = fom._f_qos_classify.checked ? 1 : 0;
+	fom.qos_cake_wash.value = fom._f_qos_cake_wash.checked ? 1 : 0;
 
 	qos = [];
 	for (i = 1; i < 11; ++i)
@@ -202,7 +185,7 @@ function save() {
 
 	fom.qos_irates.value = a.join(',');
 
-	fom.ne_vegas.value = E('_f_ne_vegas').checked ? 1 : 0;
+	fom.ne_vegas.value = fom._f_ne_vegas.checked ? 1 : 0;
 
 	if (isup.qos == 1 && fom.qos_enable.value != 1 && isup.bwl == 1) /* also restart BWL */
 		fom._service.value += 'qos-restart,bwlimit-restart';

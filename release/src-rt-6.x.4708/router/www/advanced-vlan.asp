@@ -20,7 +20,7 @@
 	March 2015 Tvlz
 	https://bitbucket.org/tvlz/tvlz-advanced-vlan/
 
-	** Last Updated - May 25 2021 - pedro **
+	** Last Updated - June 30 2022 - pedro **
 
 	For use with Tomato Firmware only.
 	No part of this file may be used without permission.
@@ -32,6 +32,7 @@
 <title>[<% ident(); %>] Advanced: VLAN</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script src="interfaces.js"></script>
@@ -40,27 +41,12 @@
 
 //	<% nvram ("t_model_name,vlan0ports,vlan1ports,vlan2ports,vlan3ports,vlan4ports,vlan5ports,vlan6ports,vlan7ports,vlan8ports,vlan9ports,vlan10ports,vlan11ports,vlan12ports,vlan13ports,vlan14ports,vlan15ports,vlan0hwname,vlan1hwname,vlan2hwname,vlan3hwname,vlan4hwname,vlan5hwname,vlan6hwname,vlan7hwname,vlan8hwname,vlan9hwname,vlan10hwname,vlan11hwname,vlan12hwname,vlan13hwname,vlan14hwname,vlan15hwname,wan_ifnameX,wan2_ifnameX,wan3_ifnameX,wan4_ifnameX,manual_boot_nv,boardtype,boardflags,lan_ifname,lan_ifnames,lan1_ifname,lan1_ifnames,lan2_ifname,lan2_ifnames,lan3_ifname,lan3_ifnames,vlan0vid,vlan1vid,vlan2vid,vlan3vid,vlan4vid,vlan5vid,vlan6vid,vlan7vid,vlan8vid,vlan9vid,vlan10vid,vlan11vid,vlan12vid,vlan13vid,vlan14vid,vlan15vid,model,wl_ssid,wl_radio,wl_net_mode,wl_nband");%>
 
-</script>
-
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
 var cprefix = 'advanced_vlan';
+var port_vlan_supported = 0;
+var trunk_vlan_supported = 1; /* Enable on all routers */
+var unknown_router = 0;
 
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	stats = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		stats = {};
-	}
-	ethstates();
-}
-
-function ethstates() {
+function show() {
 	var state = [];
 	var port = etherstates.port0;
 	if (port == 'disabled')
@@ -72,10 +58,6 @@ function ethstates() {
 		elem.setInnerHTML('vport_'+i, '<img src="'+state[0]+'.gif" id="'+state[0]+'_'+i+'" title="'+state[1]+'" alt="">');
 	}
 }
-
-var port_vlan_supported = 0;
-var trunk_vlan_supported = 1; /* Enable on all routers */
-var unknown_router = 0;
 
 /* does not seem to be strictly necessary for boardflags as it's supposed to be a bitmap */
 nvram['boardflags'] = ((nvram['boardflags'].toLowerCase().indexOf('0x') != -1) ? '0x' : '')+String('0000'+((nvram['boardflags'].toLowerCase()).replace('0x',''))).slice(-4);
@@ -856,7 +838,7 @@ function earlyInit() {
 	if (unknown_router == 1)
 		E('unknown_router').style.display = 'block';
 
-	ethstates();
+	show();
 
 	verifyFields(null, 1);
 }
