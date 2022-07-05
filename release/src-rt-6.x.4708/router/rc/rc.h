@@ -270,7 +270,7 @@ extern int start_bsd(void);
 extern void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
 #ifdef TCONFIG_SAMBASRV
-extern void start_samba(void);
+extern void start_samba(int force);
 extern void stop_samba(void);
 #endif /* TCONFIG_SAMBASRV */
 #ifdef TCONFIG_MDNS
@@ -498,7 +498,7 @@ extern int nvram_nvram2file(const char *name, const char *filename);
 
 /* transmission.c */
 #ifdef TCONFIG_BT
-extern void start_bittorrent();
+extern void start_bittorrent(int force);
 extern void stop_bittorrent();
 #endif
 
@@ -528,7 +528,7 @@ extern void stop_ups();
 
 /* pptp.c */
 #ifdef TCONFIG_PPTPD
-extern void start_pptpd(void);
+extern void start_pptpd(int force);
 extern void stop_pptpd(void);
 extern void write_pptpd_dnsmasq_config(FILE* f);
 #endif

@@ -14,30 +14,18 @@
 <title>[<% ident(); %>] Basic: Time</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("tm_sel,tm_dst,tm_tz,ntp_updates,ntp_server,ntpd_enable,ntpd_server_redir"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
+var ntpList = [['custom','Custom...'],['','Default'],['africa','Africa'],['asia','Asia'],['europe','Europe'],['oceania','Oceania'],['north-america','North America'],['south-america','South America'],['us','US']];
 
-<script>
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
+function show() {
 	elem.setInnerHTML('clock', isup.time);
 }
-
-var ntpList = [['custom','Custom...'],['','Default'],['africa','Africa'],['asia','Asia'],['europe','Europe'],['oceania','Oceania'],['north-america','North America'],['south-america','South America'],['us','US']];
 
 function ntpString(name) {
 	if (name == '')
@@ -132,7 +120,7 @@ function save() {
 		fom.ntp_server.value = a.join(' ');
 	}
 
-	if (E('_ntp_updates').value != 1) { /* only possible when 'Auto interval' is set */
+	if (fom._ntp_updates.value != 1) { /* only possible when 'Auto interval' is set */
 		fom.ntpd_enable.value = 0;
 		fom.ntpd_server_redir.value  = 0;
 		fom.f_ntpd_enable.checked = 0;

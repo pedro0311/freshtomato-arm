@@ -101,3 +101,38 @@ StatusUpdater.prototype = {
 		}
 	}
 }
+
+function show() {
+	for (var i = 1; i <= unitCount; ++i) {
+		var e = E('_'+serviceType+i+'_button');
+		var d = eval('isup.'+serviceType+i);
+
+		e.value = (d ? 'Stop' : 'Start')+' Now';
+		e.setAttribute('onclick', 'javascript:toggle(\''+serviceType+''+i+'\','+d+');');
+		if (serviceLastUp[i - 1] != d) {
+			e.disabled = 0;
+			E('spin'+i).style.display = 'none';
+			serviceLastUp[i - 1] = d;
+		}
+
+		updateStatus(i - 1);
+	}
+}
+
+function toggle(service, isup) {
+	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
+		return;
+
+	var id = service.substr(service.length - 1);
+	E('_'+service+'_button').disabled = 1;
+	E('spin'+id).style.display = 'inline';
+	serviceLastUp[id - 1] = isup;
+
+	var fom = E('t_fom');
+	var bup = fom._service.value;
+	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._nofootermsg.value = 1;
+
+	form.submit(fom, 1, 'service.cgi');
+	fom._service.value = bup;
+}

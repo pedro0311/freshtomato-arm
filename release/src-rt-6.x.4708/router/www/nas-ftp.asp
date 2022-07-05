@@ -13,51 +13,17 @@
 <title>[<% ident(); %>] NAS: FTP Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
+<script src="isup.js"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,ftp_tls,log_ftp"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
 var changed = 0;
-
-function show() {
-	var e = E('_ftpd_button');
-	E('_ftpd_notice').innerHTML = 'FTP Server is currently '+(!isup.ftpd ? 'stopped' : 'running ')+'&nbsp;';
-	e.setAttribute('onclick', 'javascript:toggle(\'ftpd\');');
-	e.disabled = isup.ftpd ? 0 : 1;
-}
-
-function toggle(service) {
-	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-
-	var fom = E('t_fom');
-	fom._service.value = service+'-'+'restart';
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
-}
+var serviceLastUp = 0;
+var serviceType = 'ftpd';
 
 ftplimit = nvram.ftp_limit.split(',');
 if (ftplimit.length != 3) ftplimit = [0,3,60];
@@ -78,10 +44,10 @@ aftg.setup = function() {
 	this.init('aft-grid', 'sort', 50, [
 		{ type: 'text', maxlen: 50 },
 		{ type: 'password', maxlen: 50, peekaboo: 1 },
-		{ type: 'select', options: [['Read/Write', 'Read/Write'],['Read Only', 'Read Only'],['View Only', 'Browse Only'],['Private', 'Private']] },
+		{ type: 'select', options: [['Read/Write','Read/Write'],['Read Only','Read Only'],['View Only','Browse Only'],['Private','Private']] },
 		{ type: 'text', maxlen: 128 }
 	]);
-	this.headerSet(['User Name', 'Password', 'Access', 'Root Directory*']);
+	this.headerSet(['Username','Password','Access','Root Directory*']);
 
 	var s = nvram.ftp_users.split('>');
 	for (var i = 0; i < s.length; ++i) {
@@ -120,7 +86,18 @@ aftg.sortCompare = function(a, b) {
 	return this.sortAscending ? r : -r;
 }
 
+aftg.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
 aftg.verifyFields = function(row, quiet) {
+	changed = 1;
 	var f, s;
 	f = fields.getAll(row);
 
@@ -178,37 +155,20 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_f_limit_hit'), PR('_f_limit_sec'), (a == 1 && b));
 
 	E('_f_limit').disabled = (a != 1);
-	E('_ftp_anonymous').disabled = (a == 0);
-	E('_f_ftp_super').disabled = (a == 0);
-	E('_f_ftp_tls').disabled = (a == 0);
-	E('_f_log_ftp').disabled = (a == 0);
-	E('_ftp_port').disabled = (a == 0);
-	E('_ftp_pubroot').disabled = (a == 0);
-	E('_ftp_pvtroot').disabled = (a == 0);
-	E('_ftp_anonroot').disabled = (a == 0);
-	E('_ftp_dirlist').disabled = (a == 0);
-	E('_ftp_max').disabled = (a == 0);
-	E('_ftp_ipmax').disabled = (a == 0);
-	E('_ftp_rate').disabled = (a == 0);
-	E('_ftp_anonrate').disabled = (a == 0);
-	E('_ftp_staytimeout').disabled = (a == 0);
-	E('_ftp_custom').disabled = (a == 0);
 
-	if (a != 0) {
-		if (!v_port('_ftp_port', quiet || !ok)) ok = 0;
-		if (!v_range('_ftp_max', quiet || !ok, 0, 12)) ok = 0;
-		if (!v_range('_ftp_ipmax', quiet || !ok, 0, 12)) ok = 0;
-		if (!v_range('_ftp_rate', quiet || !ok, 0, 99999)) ok = 0;
-		if (!v_range('_ftp_anonrate', quiet || !ok, 0, 99999)) ok = 0;
-		if (!v_range('_ftp_staytimeout', quiet || !ok, 0, 65535)) ok = 0;
-		if (!v_length('_ftp_custom', quiet || !ok, 0, 2048)) ok = 0;
-		if (!v_path('_ftp_pubroot', quiet || !ok, 0)) ok = 0;
-		if (!v_path('_ftp_pvtroot', quiet || !ok, 0)) ok = 0;
-		if (!v_path('_ftp_anonroot', quiet || !ok, 0)) ok = 0;
-		if (a == 1 && b) {
-			if (!v_range('_f_limit_hit', quiet || !ok, 1, 100)) ok = 0;
-			if (!v_range('_f_limit_sec', quiet || !ok, 3, 3600)) ok = 0;
-		}
+	if (!v_port('_ftp_port', quiet || !ok)) ok = 0;
+	if (!v_range('_ftp_max', quiet || !ok, 0, 12)) ok = 0;
+	if (!v_range('_ftp_ipmax', quiet || !ok, 0, 12)) ok = 0;
+	if (!v_range('_ftp_rate', quiet || !ok, 0, 99999)) ok = 0;
+	if (!v_range('_ftp_anonrate', quiet || !ok, 0, 99999)) ok = 0;
+	if (!v_range('_ftp_staytimeout', quiet || !ok, 0, 65535)) ok = 0;
+	if (!v_length('_ftp_custom', quiet || !ok, 0, 2048)) ok = 0;
+	if (!v_path('_ftp_pubroot', quiet || !ok, 0)) ok = 0;
+	if (!v_path('_ftp_pvtroot', quiet || !ok, 0)) ok = 0;
+	if (!v_path('_ftp_anonroot', quiet || !ok, 0)) ok = 0;
+	if (a == 1 && b) {
+		if (!v_range('_f_limit_hit', quiet || !ok, 1, 100)) ok = 0;
+		if (!v_range('_f_limit_sec', quiet || !ok, 3, 3600)) ok = 0;
 	}
 
 	if (a == 1) {
@@ -228,6 +188,7 @@ function save() {
 	if (!verifyFields(null, 0))
 		return;
 
+	show(); /* update '_service' field first */
 	var fom = E('t_fom');
 
 	var data = aftg.getAllData();
@@ -236,11 +197,11 @@ function save() {
 	fom.ftp_users.value = r.join('>');
 
 	fom.ftp_sip.value = fom.f_ftp_sip.value.split(/\s*,\s*/).join(',');
-	fom.ftp_super.value = E('_f_ftp_super').checked ? 1 : 0;
-	fom.ftp_tls.value = E('_f_ftp_tls').checked ? 1 : 0;
-	fom.log_ftp.value = E('_f_log_ftp').checked ? 1 : 0;
+	fom.ftp_super.value = fom._f_ftp_super.checked ? 1 : 0;
+	fom.ftp_tls.value = fom._f_ftp_tls.checked ? 1 : 0;
+	fom.log_ftp.value = fom._f_log_ftp.checked ? 1 : 0;
 
-	fom.ftp_limit.value = (E('_f_limit').checked ? 1 : 0) + ',' + E('_f_limit_hit').value + ',' + E('_f_limit_sec').value;
+	fom.ftp_limit.value = (fom._f_limit.checked ? 1 : 0)+','+fom._f_limit_hit.value+','+fom._f_limit_sec.value;
 
 	fom._nofootermsg.value = 0;
 
@@ -256,7 +217,6 @@ function earlyInit() {
 }
 
 function init() {
-	changed = 0;
 	eventHandler();
 	up.initPage(250, 5);
 }
@@ -277,7 +237,7 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="nas-ftp.asp">
-<input type="hidden" name="_service" value="ftpd-restart">
+<input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="ftp_super">
 <input type="hidden" name="ftp_tls">
@@ -292,7 +252,8 @@ function init() {
 <div class="section">
 	<div class="fields">
 		<span id="_ftpd_notice"></span>
-		<input type="button" id="_ftpd_button" value="Restart Now">
+		<input type="button" id="_ftpd_button" value="">
+		&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
@@ -302,12 +263,12 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'ftp_enable', type: 'select', options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']], value: nvram.ftp_enable },
+			{ title: 'Enable on Start', name: 'ftp_enable', type: 'select', options: [['0', 'No'],['1', 'Yes, WAN and LAN'],['2', 'Yes, LAN only']], value: nvram.ftp_enable },
 /* HTTPS-BEGIN */
 			{ title: 'TLS support', indent: 2, name: 'f_ftp_tls', type: 'checkbox', suffix: ' <small>uses router httpd cert/key<\/small>', value: nvram.ftp_tls == 1 },
 /* HTTPS-END */
 			{ title: 'FTP Port', indent: 2, name: 'ftp_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.ftp_port, 21) },
-			{ title: 'Allowed Remote<br>Address(es)', indent: 2, name: 'f_ftp_sip', type: 'text', maxlen: 512, size: 64, value: nvram.ftp_sip, suffix: '<br><small>(optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com")<\/small>' },
+			{ title: 'Allowed Remote<br>Address(es)', indent: 2, name: 'f_ftp_sip', type: 'text', maxlen: 512, size: 64, value: nvram.ftp_sip, suffix: '<br><small>optional; ex: "1.1.1.1", "1.1.1.0/24", "1.1.1.1 - 2.2.2.2" or "me.example.com"<\/small>' },
 			{ title: 'Anonymous Users Access', name: 'ftp_anonymous', type: 'select', options: [['0', 'Disabled'],['1', 'Read/Write'],['2', 'Read Only'],['3', 'Write Only']], value: nvram.ftp_anonymous },
 			{ title: 'Allow Admin Login*', name: 'f_ftp_super', type: 'checkbox', suffix: ' <small>allows users to connect with admin account<\/small>', value: nvram.ftp_super == 1 },
 			{ title: 'Log FTP requests and responses', name: 'f_log_ftp', type: 'checkbox', value: nvram.log_ftp == 1 }
@@ -322,10 +283,10 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Anonymous Root Directory*', name: 'ftp_anonroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for anonymous connections)<\/small>', value: nvram.ftp_anonroot },
-			{ title: 'Public Root Directory*', name: 'ftp_pubroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for authenticated users access, if not specified for the user)<\/small>', value: nvram.ftp_pubroot },
-			{ title: 'Private Root Directory**', name: 'ftp_pvtroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>(for authenticated users access in private mode)<\/small>', value: nvram.ftp_pvtroot },
-			{ title: 'Directory Listings', name: 'ftp_dirlist', type: 'select', options: [['0', 'Enabled'],['1', 'Disabled'],['2', 'Disabled for Anonymous']], suffix: ' <small>(always enabled for Admin)<\/small>', value: nvram.ftp_dirlist }
+			{ title: 'Anonymous Root Directory*', name: 'ftp_anonroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>for anonymous connections<\/small>', value: nvram.ftp_anonroot },
+			{ title: 'Public Root Directory*', name: 'ftp_pubroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>for authenticated users access, if not specified for the user<\/small>', value: nvram.ftp_pubroot },
+			{ title: 'Private Root Directory**', name: 'ftp_pvtroot', type: 'text', maxlen: 256, size: 32, suffix: ' <small>for authenticated users access in private mode<\/small>', value: nvram.ftp_pvtroot },
+			{ title: 'Directory Listings', name: 'ftp_dirlist', type: 'select', options: [['0', 'Enabled'],['1', 'Disabled'],['2', 'Disabled for Anonymous']], suffix: ' <small>always enabled for Admin<\/small>', value: nvram.ftp_dirlist }
 		]);
 	</script>
 	<div><small>*&nbsp;&nbsp;When no directory is specified, /mnt is used as a root directory.</small></div>
@@ -338,13 +299,13 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Maximum Users Allowed to Log in', name: 'ftp_max', type: 'text', maxlen: 5, size: 7, suffix: ' <small>(0 - unlimited)<\/small>', value: nvram.ftp_max },
-			{ title: 'Maximum Connections from the same IP', name: 'ftp_ipmax', type: 'text', maxlen: 5, size: 7, suffix: ' <small>(0 - unlimited)<\/small>', value: nvram.ftp_ipmax },
-			{ title: 'Maximum Bandwidth for Anonymous Users', name: 'ftp_anonrate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>', value: nvram.ftp_anonrate },
-			{ title: 'Maximum Bandwidth for Authenticated Users', name: 'ftp_rate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec (0 - unlimited)<\/small>', value: nvram.ftp_rate },
+			{ title: 'Maximum Users Allowed to Log in', name: 'ftp_max', type: 'text', maxlen: 5, size: 7, suffix: ' <small>0 - unlimited<\/small>', value: nvram.ftp_max },
+			{ title: 'Maximum Connections from the same IP', name: 'ftp_ipmax', type: 'text', maxlen: 5, size: 7, suffix: ' <small>0 - unlimited<\/small>', value: nvram.ftp_ipmax },
+			{ title: 'Maximum Bandwidth for Anonymous Users', name: 'ftp_anonrate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec; 0 - unlimited<\/small>', value: nvram.ftp_anonrate },
+			{ title: 'Maximum Bandwidth for Authenticated Users', name: 'ftp_rate', type: 'text', maxlen: 5, size: 7, suffix: ' <small>KBytes/sec; 0 - unlimited<\/small>', value: nvram.ftp_rate },
 			{ title: 'Idle Timeout', name: 'ftp_staytimeout', type: 'text', maxlen: 5, size: 7, suffix: ' <small>seconds (0 - no timeout)<\/small>', value: nvram.ftp_staytimeout },
 			{ title: 'Limit Connection Attempts', name: 'f_limit', type: 'checkbox', value: ftplimit[0] != 0 },
-			{ title: '', indent: 2, multi: [
+			{ title: '', multi: [
 				{ name: 'f_limit_hit', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>every<\/small> &nbsp;', value: ftplimit[1] },
 				{ name: 'f_limit_sec', type: 'text', maxlen: 4, size: 6, suffix: '&nbsp; <small>seconds<\/small>', value: ftplimit[2] }
 			] }

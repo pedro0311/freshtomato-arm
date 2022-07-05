@@ -17,6 +17,7 @@
 <title>[<% ident(); %>] OpenVPN: Client</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 <script src="vpn.js"></script>
 
@@ -24,59 +25,17 @@
 
 //	<% nvram("vpn_client_eas,vpn_client1_poll,vpn_client1_if,vpn_client1_bridge,vpn_client1_nat,vpn_client1_proto,vpn_client1_addr,vpn_client1_port,vpn_client1_retry,vpn_client1_firewall,vpn_client1_crypt,vpn_client1_comp,vpn_client1_cipher,vpn_client1_ncp_ciphers,vpn_client1_local,vpn_client1_remote,vpn_client1_nm,vpn_client1_reneg,vpn_client1_hmac,vpn_client1_adns,vpn_client1_rgw,vpn_client1_gw,vpn_client1_custom,vpn_client1_static,vpn_client1_ca,vpn_client1_crt,vpn_client1_key,vpn_client1_userauth,vpn_client1_username,vpn_client1_password,vpn_client1_useronly,vpn_client1_tlsremote,vpn_client1_cn,vpn_client1_br,vpn_client1_digest,vpn_client1_routing_val,vpn_client1_fw,vpn_client1_tlsvername,vpn_client2_poll,vpn_client2_if,vpn_client2_bridge,vpn_client2_nat,vpn_client2_proto,vpn_client2_addr,vpn_client2_port,vpn_client2_retry,vpn_client2_firewall,vpn_client2_crypt,vpn_client2_comp,vpn_client2_cipher,vpn_client2_ncp_ciphers,vpn_client2_local,vpn_client2_remote,vpn_client2_nm,vpn_client2_reneg,vpn_client2_hmac,vpn_client2_adns,vpn_client2_rgw,vpn_client2_gw,vpn_client2_custom,vpn_client2_static,vpn_client2_ca,vpn_client2_crt,vpn_client2_key,vpn_client2_userauth,vpn_client2_username,vpn_client2_password,vpn_client2_useronly,vpn_client2_tlsremote,vpn_client2_cn,vpn_client2_br,vpn_client2_digest,vpn_client2_routing_val,vpn_client2_fw,vpn_client2_tlsvername,vpn_client3_poll,vpn_client3_if,vpn_client3_bridge,vpn_client3_nat,vpn_client3_proto,vpn_client3_addr,vpn_client3_port,vpn_client3_retry,vpn_client3_firewall,vpn_client3_crypt,vpn_client3_comp,vpn_client3_cipher,vpn_client3_ncp_ciphers,vpn_client3_local,vpn_client3_remote,vpn_client3_nm,vpn_client3_reneg,vpn_client3_hmac,vpn_client3_adns,vpn_client3_rgw,vpn_client3_gw,vpn_client3_custom,vpn_client3_static,vpn_client3_ca,vpn_client3_crt,vpn_client3_key,vpn_client3_userauth,vpn_client3_username,vpn_client3_password,vpn_client3_useronly,vpn_client3_tlsremote,vpn_client3_cn,vpn_client3_br,vpn_client3_digest,vpn_client3_routing_val,vpn_client3_fw,vpn_client3_tlsvername,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
-function show() {
-	for (var i = 1; i <= OVPN_CLIENT_COUNT; ++i) {
-		var e = E('_vpnclient'+i+'_button');
-		var u = eval('isup.vpnclient'+i);
-
-		e.value = (u ? 'Stop' : 'Start')+' Now';
-		e.setAttribute('onclick', 'javascript:toggle(\'vpnclient'+i+'\', '+u+');');
-		e.disabled = 0;
-
-		updateStatus(i - 1);
-	}
-}
-
-function toggle(service, isup) {
-	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-
-	var fom = E('t_fom');
-	var bup = fom._service.value;
-	fom._service.value = service+(isup ? '-stop' : '-start');
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
-	fom._service.value = bup;
-}
-
-var changed = 0;
+var changed = 0, i;
+var serviceLastUp = [];
+var unitCount = OVPN_CLIENT_COUNT;
+var serviceType = 'vpnclient';
+for (i = 1; i <= unitCount; i++) serviceLastUp.push('0');
 
 function RouteGrid() {return this;}
 RouteGrid.prototype = new TomatoGrid;
 
 var tabs =  [];
-for (var i = 1; i <= OVPN_CLIENT_COUNT; ++i)
+for (i = 1; i <= unitCount; ++i)
 	tabs.push(['client'+i,'Client '+i]);
 var sections = [['basic','Basic'],['advanced','Advanced'],['keys','Keys'],['policy','Routing Policy'],['status','Status']];
 
@@ -177,6 +136,7 @@ RouteGrid.prototype.dataToFieldValues = function(data) {
 }
 
 RouteGrid.prototype.rpDel = function(row) {
+	changed = 1;
 	row = PR(row);
 	TGO(row).moving = null;
 	row.parentNode.removeChild(row);
@@ -190,7 +150,8 @@ RouteGrid.prototype.rpDel = function(row) {
 }
 
 RouteGrid.prototype.verifyFields = function(row, quiet) {
-	var ret = 1;
+	changed = 1;
+	var ok = 1;
 	var clientnum = 1;
 	for (i = 0; i < tabs.length; ++i) {
 		if (routingTables[i] == this)
@@ -204,28 +165,28 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 	/* Verify fields in this row of the table */
 	if (f[2].value == '') {
 		ferror.set(f[2], 'Value is mandatory', quiet);
-		ret = 0;
+		ok = 0;
 	}
 	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
 		ferror.set(f[2], 'Value cannot contain "<" or ">" characters', quiet);
-		ret = 0;
+		ok = 0;
 	}
 	if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0 || f[2].value.indexOf('\t') >= 0) {
 		ferror.set(f[2], 'Value cannot contain "space", "tab"  or "," characters. Only one IP or Domain per entry', quiet);
-		ret = 0;
+		ok = 0;
 	}
 	if (f[2].value.indexOf('-') >= 0 && f[1].value == 2) {
 		ferror.set(f[2], 'Value cannot contain "-" character. IP range is not supported', quiet);
-		ret = 0;
+		ok = 0;
 	}
 	if (f[1].value != 3 && (!v_iptaddr(f[2], quiet)))
-		ret = 0;
+		ok = 0;
 
-	return ret;
+	return ok;
 }
 
 function verifyFields(focused, quiet) {
-	var ret = 1;
+	var ok = 1;
 	tgHideIcons();
 
 	/* When settings change, make sure we restart the right client */
@@ -251,27 +212,27 @@ function verifyFields(focused, quiet) {
 		var t = tabs[i][0];
 
 		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_addr', true) && !v_domain('_vpn_'+t+'_addr', true)) {
 			ferror.set(E('_vpn_'+t+'_addr'), 'Invalid server address', quiet);
-			ret = 0;
+			ok = 0;
 		}
 		if (!v_port('_vpn_'+t+'_port', quiet))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_local', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_f_vpn_'+t+'_local', true, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_remote', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_netmask('_vpn_'+t+'_nm', quiet))
-			ret = 0;
+			ok = 0;
 		if (!v_range('_vpn_'+t+'_retry', quiet, -1, 32767))
-			ret = 0;
+			ok = 0;
 		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647))
-			ret = 0;
+			ok = 0;
 		if (E('_vpn_'+t+'_gw').value.length > 0 && !v_ip('_vpn_'+t+'_gw', quiet, 1))
-			ret = 0;
+			ok = 0;
 	}
 
 	/* Visibility changes */
@@ -328,8 +289,8 @@ function verifyFields(focused, quiet) {
 		elem.display(PR('_vpn_'+t+'_ca'), auth == 'tls');
 		elem.display(PR('_vpn_'+t+'_crt'), PR('_vpn_'+t+'_key'), auth == 'tls' && !useronly);
 		elem.display(PR('_f_vpn_'+t+'_tlsremote'), auth == 'tls');
-		elem.display(PR('_f_vpn_'+t+'_tlsvername'), auth == 'tls');
-		elem.display(E('client_'+t+'_cn'), (auth == 'tls') && (E('_f_vpn_'+t+'_tlsvername').value > 0));
+		elem.display(PR('_vpn_'+t+'_tlsvername'), auth == 'tls');
+		elem.display(E('client_'+t+'_cn'), (auth == 'tls') && (E('_vpn_'+t+'_tlsvername').value > 0));
 
 		var keyHelp = E(t+'-keyhelp');
 		switch (auth) {
@@ -354,7 +315,7 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	return ret;
+	return ok;
 }
 
 function save() {
@@ -395,6 +356,7 @@ function save() {
 }
 
 function earlyInit() {
+	show();
 	tabSelect(cookie.get('vpn_client_tab') || tabs[0][0]);
 
 	for (var i = 0; i < tabs.length; ++i) {
@@ -431,7 +393,6 @@ function earlyInit() {
 }
 
 function init() {
-	show();
 	up.initPage(250, 5);
 }
 </script>
@@ -465,11 +426,11 @@ function init() {
 		for (i = 0; i < tabs.length; ++i) {
 			t = tabs[i][0];
 			W('<div id="'+t+'-tab">');
-			W('<input type="hidden" id="vpn_'+t+'_bridge" name="vpn_'+t+'_bridge">');
 			W('<input type="hidden" id="vpn_'+t+'_nat" name="vpn_'+t+'_nat">');
 			W('<input type="hidden" id="vpn_'+t+'_fw" name="vpn_'+t+'_fw">');
 			W('<input type="hidden" id="vpn_'+t+'_userauth" name="vpn_'+t+'_userauth">');
 			W('<input type="hidden" id="vpn_'+t+'_useronly" name="vpn_'+t+'_useronly">');
+			W('<input type="hidden" id="vpn_'+t+'_bridge" name="vpn_'+t+'_bridge">');
 			W('<input type="hidden" id="vpn_'+t+'_tlsremote" name="vpn_'+t+'_tlsremote">');
 			W('<input type="hidden" id="vpn_'+t+'_routing_val" name="vpn_'+t+'_routing_val">');
 
@@ -480,28 +441,28 @@ function init() {
 
 			W('<div id="'+t+'-basic">');
 			createFieldTable('', [
-				{ title: 'Start with WAN', name: 'f_vpn_'+t+'_eas', type: 'checkbox', value: nvram.vpn_client_eas.indexOf(''+(i+1)) >= 0 },
+				{ title: 'Enable on Start', name: 'f_vpn_'+t+'_eas', type: 'checkbox', value: nvram.vpn_client_eas.indexOf(''+(i+1)) >= 0 },
 				{ title: 'Interface Type', name: 'vpn_'+t+'_if', type: 'select', options: [['tap','TAP'],['tun','TUN']], value: eval('nvram.vpn_'+t+'_if') },
 				{ title: 'Bridge TAP with', indent: 2, name: 'vpn_'+t+'_br', type: 'select', options: [['br0','LAN (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']],
-					value: eval ('nvram.vpn_'+t+'_br'), suffix: '&nbsp; <small>* default<\/small>' },
+					value: eval ('nvram.vpn_'+t+'_br'), suffix: ' <small>* default<\/small>' },
 				{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [['udp','UDP'],['tcp-client','TCP'],['udp4','UDP4'],['tcp4-client','TCP4'],['udp6','UDP6'],['tcp6-client','TCP6']], value: eval('nvram.vpn_'+t+'_proto') },
 				{ title: 'Server Address/Port', multi: [
 					{ name: 'vpn_'+t+'_addr', type: 'text', maxlen: 60, size: 17, value: eval('nvram.vpn_'+t+'_addr') },
 					{ name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 7, value: eval('nvram.vpn_'+t+'_port') } ] },
 				{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [['auto','Automatic'],['custom','Custom']], value: eval('nvram.vpn_'+t+'_firewall') },
-				{ title: 'Create NAT on tunnel', name: 'f_vpn_'+t+'_nat', type: 'checkbox', value: eval('nvram.vpn_'+t+'_nat') != 0, suffix: '&nbsp <small id="'+t+'_nat_warn_text">Routes must be configured manually<\/small>' },
+				{ title: 'Create NAT on tunnel', name: 'f_vpn_'+t+'_nat', type: 'checkbox', value: eval('nvram.vpn_'+t+'_nat') != 0, suffix: ' <small id="'+t+'_nat_warn_text">routes must be configured manually<\/small>' },
 				{ title: 'Inbound Firewall', name: 'f_vpn_'+t+'_fw', type: 'checkbox', value: eval('nvram.vpn_'+t+'_fw') != 0 },
 				{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [['tls','TLS'],['secret','Static Key'],['custom','Custom']], value: eval('nvram.vpn_'+t+'_crypt'),
-					suffix: '&nbsp; <small id="'+t+'_custom_crypto_text">Must be configured manually<\/small>' },
+					suffix: ' <small id="'+t+'_custom_crypto_text">must be configured manually<\/small>' },
 				{ title: 'TLS control channel security <small>(tls-auth/tls-crypt)<\/small>', name: 'vpn_'+t+'_hmac', type: 'select', options: [[-1,'Disabled'],[2,'Bi-directional Auth'],[0,'Incoming Auth (0)'],[1,'Outgoing Auth (1)'],[3,'Encrypt Channel'],[4,'Encrypt Channel V2']], value: eval('nvram.vpn_'+t+'_hmac') },
 				{ title: 'Username/Password Authentication', name: 'f_vpn_'+t+'_userauth', type: 'checkbox', value: eval('nvram.vpn_'+t+'_userauth') != 0 },
 				{ title: 'Username: ', indent: 2, name: 'vpn_'+t+'_username', type: 'text', maxlen: 50, size: 54, value: eval('nvram.vpn_'+t+'_username') },
-				{ title: 'Password: ', indent: 2, name: 'vpn_'+t+'_password', type: 'password', maxlen: 70, size: 54, value: eval('nvram.vpn_'+t+'_password') },
+				{ title: 'Password: ', indent: 2, name: 'vpn_'+t+'_password', type: 'password', maxlen: 70, size: 54, peekaboo:1, value: eval('nvram.vpn_'+t+'_password') },
 				{ title: 'Username Authen. Only', indent: 2, name: 'f_vpn_'+t+'_useronly', type: 'checkbox', value: eval('nvram.vpn_'+t+'_useronly') != 0,
-					suffix: '&nbsp <small style="color:red" id="'+t+'_ca_warn_text">Warning: Must define Certificate Authority<\/small>' },
+					suffix: ' <small style="color:red" id="'+t+'_ca_warn_text">warning: must define Certificate Authority<\/small>' },
 				{ title: 'Auth digest', name: 'vpn_'+t+'_digest', type: 'select', options: digests, value: eval('nvram.vpn_'+t+'_digest') },
 				{ title: 'Server is on the same subnet', name: 'f_vpn_'+t+'_bridge', type: 'checkbox', value: eval('nvram.vpn_'+t+'_bridge') != 0,
-					suffix: '&nbsp <small style="color:red" id="'+t+'_bridge_warn_text">Warning: Cannot bridge distinct subnets. Defaulting to routed mode<\/small>' },
+					suffix: ' <small style="color:red" id="'+t+'_bridge_warn_text">warning: cannot bridge distinct subnets. Defaulting to routed mode<\/small>' },
 				{ title: 'Local/remote endpoint addresses', multi: [
 					{ name: 'vpn_'+t+'_local', type: 'text', maxlen: 15, size: 17, value: eval('nvram.vpn_'+t+'_local') },
 					{ name: 'vpn_'+t+'_remote', type: 'text', maxlen: 15, size: 17, value: eval('nvram.vpn_'+t+'_remote') } ] },
@@ -513,7 +474,7 @@ function init() {
 
 			W('<div id="'+t+'-advanced">');
 			createFieldTable('', [
-				{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval('nvram.vpn_'+t+'_poll'), suffix: '&nbsp; <small>in minutes, 0 to disable<\/small>' },
+				{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval('nvram.vpn_'+t+'_poll'), suffix: ' <small>minutes; 0 to disable<\/small>' },
 				{ title: 'Redirect Internet traffic', multi: [
 					{ name: 'vpn_'+t+'_rgw', type: 'select', options: [[0,'No'],[1,'All'],[2,'Routing Policy'],[3,'Routing Policy (strict)']], value: eval('nvram.vpn_'+t+'_rgw') },
 					{ name: 'vpn_'+t+'_gw', type: 'text', maxlen: 15, size: 17, value: eval('nvram.vpn_'+t+'_gw'), prefix: '<span id="'+t+'_gateway"> &nbsp;Gateway:&nbsp', suffix: '<\/span>'} ] },
@@ -521,11 +482,11 @@ function init() {
 				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 70, maxlen: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
 				{ title: 'Cipher', name: 'vpn_'+t+'_cipher', type: 'select', options: ciphers, value: eval('nvram.vpn_'+t+'_cipher') },
 				{ title: 'Compression', name: 'vpn_'+t+'_comp', type: 'select', options: [['-1','Disabled'],['no','None'],['yes','LZO'],['adaptive','LZO Adaptive'],['lz4','LZ4'],['lz4-v2','LZ4-V2'],['stub','Stub'],['stub-v2','Stub-V2']], value: eval('nvram.vpn_'+t+'_comp') },
-				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'), suffix: '&nbsp; <small>in seconds, -1 for default<\/small>' },
-				{ title: 'Connection retry', name: 'vpn_'+t+'_retry', type: 'text', maxlen: 5, size: 7, value: eval('nvram.vpn_'+t+'_retry'), suffix: '&nbsp; <small>in seconds; -1 for infinite<\/small>' },
+				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'), suffix: ' <small>seconds; -1 for default<\/small>' },
+				{ title: 'Connection retry', name: 'vpn_'+t+'_retry', type: 'text', maxlen: 5, size: 7, value: eval('nvram.vpn_'+t+'_retry'), suffix: ' <small>seconds; -1 for infinite<\/small>' },
 				{ title: 'Verify Certificate<br>(remote-cert-tls server)', name: 'f_vpn_'+t+'_tlsremote', type: 'checkbox', value: eval('nvram.vpn_'+t+'_tlsremote') != 0 },
 				{ title: 'Verify Server Certificate Name<br>(verify-x509-name)', multi: [
-					{ name: 'f_vpn_'+t+'_tlsvername', type: 'select', options: [[0,'No'],[1,'Common Name'],[2,'Common Name Prefix'],[3,'Subject']], value: eval('nvram.vpn_'+t+'_tlsvername') },
+					{ name: 'vpn_'+t+'_tlsvername', type: 'select', options: [[0,'No'],[1,'Common Name'],[2,'Common Name Prefix'],[3,'Subject']], value: eval('nvram.vpn_'+t+'_tlsvername') },
 					{ name: 'vpn_'+t+'_cn', type: 'text', maxlen: 255, size: 54, value: eval('nvram.vpn_'+t+'_cn'), prefix: '<span id="client_'+t+'_cn">&nbsp;:&nbsp', suffix: '<\/span>'} ] },
 				{ title: 'Custom Configuration', name: 'vpn_'+t+'_custom', type: 'textarea', value: eval('nvram.vpn_'+t+'_custom') }
 			]);
@@ -560,7 +521,7 @@ function init() {
 			W('<div id="'+t+'-status-stats"><div class="section-title">General Statistics<\/div><div class="tomato-grid vpn-status-table" id="'+t+'-status-stats-table"><\/div><br><\/div>');
 			W('<\/div>');
 			W('<\/div>');
-			W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_vpn'+t+'_button"><\/div>');
+			W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_vpn'+t+'_button">&nbsp; <img src="spin.gif" alt="" id="spin'+(i+1)+'"><\/div>');
 			W('<\/div>');
 		}
 	</script>

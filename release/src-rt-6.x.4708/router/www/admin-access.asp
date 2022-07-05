@@ -14,31 +14,14 @@
 <title>[<% ident(); %>] Admin: Access</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <link rel="stylesheet" type="text/css" href="<% nv('web_css'); %>.css" id="guicss">
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,remote_upgrade,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,http_wanport_bfm,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username,jffs2_auto_unmount"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
 var changed = 0;
-
 var shlimit = nvram.ne_shlimit.split(',');
 if (shlimit.length != 3)
 	shlimit = [0,3,60];
@@ -55,18 +38,19 @@ var xmenus = [['Status', 'status'],['Bandwidth', 'bwm'],['IP Traffic', 'ipt'],['
 function show() {
 	var e = E('_sshd_button');
 	e.value = (isup.dropbear ? 'Stop' : 'Start')+' Now';
-	e.setAttribute('onclick', 'javascript:toggle(\'sshd\', '+isup.dropbear+');');
+	e.setAttribute('onclick', 'javascript:toggle(\'sshd\','+isup.dropbear+');');
 	e.disabled = 0;
 
 	e = E('_telnetd_button');
 	e.value = ((isup.telnetd) ? 'Stop' : 'Start')+' Now';
-	e.setAttribute('onclick', 'javascript:toggle(\'telnetd\', '+(isup.telnetd)+');');
+	e.setAttribute('onclick', 'javascript:toggle(\'telnetd\','+(isup.telnetd)+');');
 	e.disabled = 0;
 }
 
 function toggle(service, isup) {
 	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
 		return;
+
 	E('_'+service+'_button').disabled = 1;
 
 	var fom = E('t_fom');

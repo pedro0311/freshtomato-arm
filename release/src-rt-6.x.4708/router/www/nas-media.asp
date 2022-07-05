@@ -13,52 +13,18 @@
 <title>[<% ident(); %>] NAS: Media Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
+<script src="isup.js"></script>
 <script src="tomato.js"></script>
 
 <script>
 
 //	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ipaddr"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
 var changed = 0;
-
+var serviceLastUp = 0;
+var serviceType = 'minidlna';
 var mediatypes = [['','All Media Files'],['A','Audio only'],['V','Video only'],['P','Images only']];
-
-function show() {
-	var e = E('_media_button');
-	E('_media_notice').innerHTML = 'minidlna is currently '+(!isup.minidlna ? 'stopped' : 'running ')+'&nbsp;';
-	e.setAttribute('onclick', 'javascript:toggle(\'media\');');
-	e.disabled = isup.minidlna ? 0 : 1;
-	E('_media_status').disabled = isup.minidlna ? 0 : 1;
-}
-
-function toggle(service) {
-	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-	E('_'+service+'_status').disabled = 1;
-
-	var fom = E('t_fom');
-	fom._service.value = service+'-'+'restart';
-	save(1);
-}
 
 var msg = new TomatoGrid();
 
@@ -104,6 +70,16 @@ msg.dataToView = function(data) {
 	return b;
 }
 
+msg.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
 msg.verifyFields = function(row, quiet) {
 	var ok = 1;
 	var f;
@@ -138,8 +114,11 @@ function updateNotice() {
 }
 
 function verifyFields(focused, quiet) {
+	if (focused && focused != E('_f_ms_enable') && focused != E('_f_ms_rescan')) /* except on/off/rescan */
+		changed = 1;
+
 	var ok = 1;
-	var a, b, v;
+	var b, v;
 	var eLoc, eUser;
 
 	var bridge1 = E('_ms_ifname');
@@ -152,19 +131,8 @@ function verifyFields(focused, quiet) {
 	if (nvram.lan3_ifname.length < 1)
 		bridge1.options[3].disabled = 1;
 
-	a = E('_f_ms_enable').checked ? 1 : 0;
-
 	eLoc = E('_f_loc');
 	eUser = E('_f_user');
-
-	eLoc.disabled = (a == 0);
-	eUser.disabled = (a == 0);
-	E('_ms_port').disabled = (a == 0);
-	E('_ms_ifname').disabled = (a == 0);
-	E('_f_ms_sas').disabled = (a == 0);
-	E('_f_ms_rescan').disabled = (a == 0);
-	E('_f_ms_tivo').disabled = (a == 0);
-	E('_f_ms_stdlna').disabled = (a == 0);
 
 	ferror.clear(eLoc);
 	ferror.clear(eUser);
@@ -174,11 +142,6 @@ function verifyFields(focused, quiet) {
 	elem.display(eUser, b);
 	elem.display(PR('_f_ms_sas'), (v != ''));
 
-	if (a == 0) {
-		if (focused != E('_f_ms_rescan'))
-			changed |= ok;
-		return ok;
-	}
 	if (b) {
 		if (!v_path(eUser, quiet || !ok, 1))
 			ok = 0;
@@ -194,18 +157,19 @@ function verifyFields(focused, quiet) {
 	}
 /* JFFS2-END */
 
-	if (focused != E('_f_ms_rescan'))
-		changed |= ok;
+	if (!v_port('_ms_port', quiet || !ok))
+		ok = 0;
 
 	return ok;
 }
 
-function save(nomsg) {
+function save() {
 	if (msg.isEditing())
 		return;
 	if (!verifyFields(null, 0))
 		return;
 
+	show(); /* update '_service' field first */
 	var fom = E('t_fom');
 
 	fom.ms_enable.value = fom._f_ms_enable.checked ? 1 : 0;
@@ -224,13 +188,13 @@ function save(nomsg) {
 		r.push(data[i].join('<'));
 
 	fom.ms_dirs.value = r.join('>');
-	fom._nofootermsg.value = (nomsg ? 1 : 0);
-	fom._service.value = 'media-restart';
+
+	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
-	changed = 0;
 	fom.f_ms_rescan.checked = 0;
+	changed = 0;
 }
 
 function earlyInit() {
@@ -240,7 +204,6 @@ function earlyInit() {
 }
 
 function init() {
-	changed = 0;
 	up.initPage(250, 5);
 	updateNotice();
 }
@@ -276,9 +239,10 @@ function init() {
 <div class="section-title">Status</div>
 <div class="section">
 	<div class="fields">
-		<span id="_media_notice"></span>
-		<input type="button" id="_media_button" value="Restart Now">
-		<input type="button" id="_media_status" value="Open status page in new tab" class="new_window" onclick="window.open('http://'+nvram.lan_ipaddr+':'+nvram.ms_port+'')">
+		<span id="_minidlna_notice"></span>
+		<input type="button" id="_minidlna_button" value="">
+		<input type="button" id="_minidlna_status" value="Open status page in new tab" class="new_window" onclick="window.open('http://'+nvram.lan_ipaddr+':'+nvram.ms_port+'')">
+		&nbsp; <img src="spin.gif" alt="" id="spin">
 	</div>
 </div>
 
@@ -300,9 +264,9 @@ function init() {
 		}
 
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_ms_enable', type: 'checkbox', value: nvram.ms_enable == '1' },
-			{ title: 'Listen on', indent: 2, name: 'ms_ifname', type: 'select', options: [['br0','LAN0 (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']], value: eval ('nvram.ms_ifname'), suffix: ' <small>* default<\/small> ' },
-			{ title: 'Port', indent: 2, name: 'ms_port', type: 'text', maxlen: 5, size: 6, value: nvram.ms_port, suffix: '<small>(range: 0 - 65535; default (random) set 0)<\/small>' },
+			{ title: 'Enable on Start', name: 'f_ms_enable', type: 'checkbox', value: nvram.ms_enable == 1 },
+			{ title: 'Listen on', indent: 2, name: 'ms_ifname', type: 'select', options: [['br0','LAN0 (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']], value: nvram.ms_ifname, suffix: ' <small>* default<\/small> ' },
+			{ title: 'Port', indent: 2, name: 'ms_port', type: 'text', maxlen: 5, size: 6, value: nvram.ms_port, suffix: ' <small>range: 0 - 65535; default (random) set 0<\/small>' },
 			{ title: 'Database Location', multi: [
 				{ name: 'f_loc', type: 'select', options: [['','RAM (Temporary)'],
 /* JFFS2-BEGIN */
@@ -311,13 +275,15 @@ function init() {
 					['*user','Custom Path']], value: loc },
 				{ name: 'f_user', type: 'text', maxlen: 256, size: 60, value: nvram.ms_dbdir }
 			] },
-			{ title: 'Scan Media at Startup*', indent: 2, name: 'f_ms_sas', type: 'checkbox', value: nvram.ms_sas == '1', hidden: 1 },
-			{ title: 'Rescan on the next run*', indent: 2, name: 'f_ms_rescan', type: 'checkbox', value: 0, suffix: '<br><small>* Media scan may take considerable time to complete.<\/small>' },
+			{ title: 'Scan Media at Startup*', indent: 2, name: 'f_ms_sas', type: 'checkbox', value: nvram.ms_sas == 1, hidden: 1 },
+			{ title: 'Rescan on the next run*', indent: 2, name: 'f_ms_rescan', type: 'checkbox', value: 0 },
 			null,
-			{ title: 'TiVo Support', name: 'f_ms_tivo', type: 'checkbox', value: nvram.ms_tivo == '1' },
-			{ title: 'Strictly adhere to DLNA standards', name: 'f_ms_stdlna', type: 'checkbox', value: nvram.ms_stdlna == '1' }
+			{ title: 'TiVo Support', name: 'f_ms_tivo', type: 'checkbox', value: nvram.ms_tivo == 1 },
+			{ title: 'Strictly adhere to DLNA standards', name: 'f_ms_stdlna', type: 'checkbox', value: nvram.ms_stdlna == 1 }
 		]);
 	</script>
+
+	<small>* media scan may take considerable time to complete.</small>
 </div>
 
 <!-- / / / -->

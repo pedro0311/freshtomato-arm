@@ -17,6 +17,8 @@
 <title>[<% ident(); %>] PPTP: Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
+<script src="isup.js"></script>
 <script src="tomato.js"></script>
 <script src="interfaces.js"></script>
 
@@ -25,6 +27,9 @@
 //	<% nvram("lan_ipaddr,lan_netmask,pptpd_enable,pptpd_remoteip,pptpd_chap,pptpd_forcemppe,pptpd_broadcast,pptpd_users,pptpd_dns1,pptpd_dns2,pptpd_wins1,pptpd_wins2,pptpd_mtu,pptpd_mru,pptpd_custom");%>
 
 var cprefix = 'vpn_pptpd';
+var changed = 0;
+var serviceLastUp = 0;
+var serviceType = 'pptpd';
 
 if (nvram.pptpd_remoteip == '')
 	nvram.pptpd_remoteip = '172.19.0.1-6';
@@ -55,13 +60,25 @@ function v_pptpd_secret(e, quiet) {
 	return 1;
 }
 
-function submit_complete() {
+function submit_complete() { /* to set pptpd_dns1 etc back to 0.0.0.0 after save, if it's empty in nvram */
 	verifyFields(null, 1);
 }
 
 var ul = new TomatoGrid();
+
+ul.resetNewEditor = function() {
+	var f = fields.getAll(this.newEditor);
+	ferror.clearAll(f);
+
+	f[0].value = '';
+	f[1].value = '';
+}
+
 ul.setup = function() {
-	this.init('ul-grid', 'sort', 6, [ { type: 'text', maxlen: 32, size: 32 },{ type: 'text', maxlen: 32, size: 32 } ]);
+	this.init('ul-grid', 'sort', 6, [
+		{ type: 'text', maxlen: 32, size: 32 },
+		{ type: 'password', peekaboo: 1, maxlen: 32, size: 32 }
+	]);
 	this.headerSet(['Username','Password']);
 
 	var r = nvram.pptpd_users.split('>');
@@ -71,14 +88,8 @@ ul.setup = function() {
 			ul.insertData(-1, l);
 	}
 
-	ul.recolor();
 	ul.showNewEditor();
 	ul.resetNewEditor();
-	ul.sort(0);
-}
-
-ul.dataToView = function(data) {
-	return [data[0], '<small><i>Secret<\/i><\/small>'];
 }
 
 ul.exist = function(f, v) {
@@ -91,18 +102,29 @@ ul.exist = function(f, v) {
 	return false;
 }
 
-ul.existUser = function(user) {
+ul.existName = function(user) {
 	return this.exist(0, user);
 }
 
+ul.rpDel = function(e) {
+	changed = 1;
+	e = PR(e);
+	TGO(e).moving = null;
+	e.parentNode.removeChild(e);
+	this.recolor();
+	this.resort();
+	this.rpHide();
+}
+
 ul.verifyFields = function(row, quiet) {
+	changed = 1;
 	var f, s;
 	f = fields.getAll(row);
 
 	if (!v_pptpd_secret(f[0], quiet))
 		return 0;
 
-	if (this.existUser(f[0].value)) {
+	if (this.existName(f[0].value)) {
 		ferror.set(f[0], 'Duplicate User', quiet);
 		return 0;
 	}
@@ -114,78 +136,18 @@ ul.verifyFields = function(row, quiet) {
 }
 
 function verifyFields(focused, quiet) {
-	var c = !E('_f_pptpd_enable').checked;
-	E('_pptpd_dns1').disabled = c;
-	E('_pptpd_dns2').disabled = c;
-	E('_pptpd_wins1').disabled = c;
-	E('_pptpd_wins2').disabled = c;
-	E('_pptpd_mtu').disabled = c;
-	E('_pptpd_mru').disabled = c;
-	E('_pptpd_chap').disabled = c;
-	E('_pptpd_forcemppe').disabled = c;
-	E('_pptpd_broadcast').disabled = c;
-	E('_f_pptpd_startip').disabled = c;
-	E('_f_pptpd_endip').disabled = c;
-	E('_pptpd_custom').disabled = c;
+	if (focused && focused != E('_f_pptpd_enable')) /* except on/off */
+		changed = 1;
+
+	var ok = 1;
 
 	var a = E('_f_pptpd_startip');
-/* REMOVE-BEGIN
-	if ((a.value == '') || (a.value == '0.0.0.0')) {
-		var l;
-		var m = aton(nvram.lan_ipaddr) & aton(nvram.lan_netmask);
-		var o = (m) ^ (~ aton(nvram.lan_netmask))
-		var n = o - m;
-		do {
-			if (--n < 0) {
-				a.value = '';
-				return;
-			}
-			m++;
-		} while (((l = fixIP(ntoa(m), 1)) == null) || (l == nvram.lan_ipaddr));
-		a.value = l;
-	}
-REMOVE-END */
 	var b = E('_f_pptpd_endip');
-/* REMOVE-BEGIN
-	if ((b.value == '') || (b.value == '0.0.0.0')) {
-		var l;
-		var m = aton(nvram.lan_ipaddr) & aton(nvram.lan_netmask);
-		var o = (m) ^ (~ aton(nvram.lan_netmask));
-		var n = o - m;
-		do {
-			if (--n < 0) {
-				b.value = '';
-				return;
-			}
-			o--;
-		} while (((l = fixIP(ntoa(o), 1)) == null) || (l == nvram.lan_ipaddr) || (Math.abs((aton(a.value) - (aton(l)))) > 5));
-		b.value = l;
-	}
-
-	var net = getNetworkAddress(nvram.lan_ipaddr, nvram.lan_netmask);
-	var brd = getBroadcastAddress(net, nvram.lan_netmask);
-
-	if ((aton(a.value) >= aton(brd)) || (aton(a.value) <= aton(net))) {
-		ferror.set(a, 'Invalid starting IP address (outside valid range).', quiet);
-		return 0;
-	}
-	else {
-		ferror.clear(a);
-	}
-
-	if ((aton(b.value) >= aton(brd)) || (aton(b.value) <= aton(net))) {
-		ferror.set(b, 'Invalid final IP address (outside valid range)', quiet);
-		return 0;
-	}
-	else {
-		ferror.clear(b);
-	}
-REMOVE-END */
 	if (Math.abs((aton(a.value) - (aton(b.value)))) > 5) {
 		ferror.set(a, 'Invalid range (max 6 IPs)', quiet);
-		ferror.set(b, 'Invalid range (max 6 IPs)', quiet);
+		ferror.set(b, 'Invalid range (max 6 IPs)', quiet || !ok);
 		elem.setInnerHTML('pptpd_count', '(?)');
-		return 0;
+		ok = 0;
 	}
 	else {
 		ferror.clear(a);
@@ -199,38 +161,34 @@ REMOVE-END */
 	}
 
 	elem.setInnerHTML('pptpd_count', '('+((aton(b.value) - aton(a.value)) + 1)+')');
-/* REMOVE-BEGIN
-// AB TODO - move to ul.onOk, onAdd,onDelete?
-	elem.setInnerHTML('user_count', '(total '+(ul.getDataCount())+')');
-REMOVE-END */
-	if (!v_ipz('_pptpd_dns1', quiet))
-		return 0;
-	if (!v_ipz('_pptpd_dns2', quiet))
-		return 0;
-	if (!v_ipz('_pptpd_wins1', quiet))
-		return 0;
-	if (!v_ipz('_pptpd_wins2', quiet))
-		return 0;
-	if (!v_range('_pptpd_mtu', quiet, 576, 1500))
-		return 0;
-	if (!v_range('_pptpd_mru', quiet, 576, 1500))
-		return 0;
-	if (!v_ip('_f_pptpd_startip', quiet))
-		return 0;
-	if (!v_ip('_f_pptpd_endip', quiet))
-		return 0;
 
-	return 1;
+	if (!v_ipz('_pptpd_dns1', quiet || !ok))
+		ok = 0;
+	if (!v_ipz('_pptpd_dns2', quiet || !ok))
+		ok = 0;
+	if (!v_ipz('_pptpd_wins1', quiet || !ok))
+		ok = 0;
+	if (!v_ipz('_pptpd_wins2', quiet || !ok))
+		ok = 0;
+	if (!v_range('_pptpd_mtu', quiet || !ok, 576, 1500))
+		ok = 0;
+	if (!v_range('_pptpd_mru', quiet || !ok, 576, 1500))
+		ok = 0;
+	if (!v_ip('_f_pptpd_startip', quiet || !ok))
+		ok = 0;
+	if (!v_ip('_f_pptpd_endip', quiet || !ok))
+		ok = 0;
+
+	return ok;
 }
 
 function save() {
 	if (ul.isEditing())
 		return;
-
-	if ((E('_f_pptpd_enable').checked) && (!verifyFields(null, 0)))
+	if (!verifyFields(null, 0))
 		return;
 
-	if ((E('_f_pptpd_enable').checked) && (ul.getDataCount() < 1)) {
+	if (ul.getDataCount() < 1) {
 		var e = E('footer-msg');
 		e.innerHTML = 'Cannot proceed: at least one user must be defined.';
 		e.style.display = 'inline-block';
@@ -244,6 +202,7 @@ function save() {
 
 	ul.resetNewEditor();
 
+	show(); /* update '_service' field first */
 	var fom = E('t_fom');
 	var uldata = ul.getAllData();
 
@@ -252,8 +211,7 @@ function save() {
 		s += uldata[i].join('<')+'>';
 
 	fom.pptpd_users.value = s;
-
-	fom.pptpd_enable.value = (fom._f_pptpd_enable.checked ? 1 : 0);
+	fom.pptpd_enable.value = fom._f_pptpd_enable.checked ? 1 : 0;
 
 	var a = fom._f_pptpd_startip.value;
 	var b = fom._f_pptpd_endip.value;
@@ -272,12 +230,12 @@ function save() {
 		fom.pptpd_wins2.value = '';
 
 	form.submit(fom, 1);
+
+	changed = 0;
 }
 
-function init() {
-	var c;
-	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, 'notes');
+function earlyInit() {
+	show();
 
 	if (nvram.pptpd_remoteip.indexOf('-') != -1) {
 		var tmp = nvram.pptpd_remoteip.split('-');
@@ -287,6 +245,14 @@ function init() {
 
 	ul.setup();
 	verifyFields(null, 1);
+}
+
+function init() {
+	var c;
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'notes');
+
+	up.initPage(250, 5);
 	eventHandler();
 }
 </script>
@@ -306,7 +272,8 @@ function init() {
 <!-- / / / -->
 
 <input type="hidden" name="_nextpage" value="vpn-pptpd.asp">
-<input type="hidden" name="_service" value="firewall-restart,pptpd-restart,dnsmasq-restart">
+<input type="hidden" name="_service" value="">
+<input type="hidden" name="_nofootermsg" value="">
 <input type="hidden" name="pptpd_users">
 <input type="hidden" name="pptpd_enable">
 <input type="hidden" name="pptpd_remoteip">
@@ -317,7 +284,7 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable', name: 'f_pptpd_enable', type: 'checkbox', value: nvram.pptpd_enable == '1' },
+			{ title: 'Enable on Start', name: 'f_pptpd_enable', type: 'checkbox', value: nvram.pptpd_enable == '1' },
 			{ title: 'Local IP Address/Netmask', text: (nvram.lan_ipaddr+' / '+nvram.lan_netmask) },
 			{ title: 'Remote IP Address Range', multi: [
 				{ name: 'f_pptpd_startip', type: 'text', maxlen: 15, size: 17, value: nvram.dhcpd_startip, suffix: '&nbsp;-&nbsp;' },
@@ -335,6 +302,7 @@ function init() {
 			{ title: '<a href="http://poptop.sourceforge.net/" class="new_window">Poptop<\/a><br>Custom configuration', name: 'pptpd_custom', type: 'textarea', value: nvram.pptpd_custom }
 		]);
 	</script>
+	<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_pptpd_button">&nbsp; <img src="spin.gif" alt="" id="spin"></div>
 </div>
 
 <!-- / / / -->
@@ -385,5 +353,6 @@ function init() {
 </td></tr>
 </table>
 </form>
+<script>earlyInit();</script>
 </body>
 </html>

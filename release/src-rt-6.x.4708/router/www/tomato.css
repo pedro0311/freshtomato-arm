@@ -441,6 +441,7 @@ div[id^="media_"] {
 	width: 120px;
 }
 
+img[id^="spin"],
 #spin,
 #refresh-spinner {
 	display: none;
@@ -663,7 +664,6 @@ embed[type="image/svg+xml"] {
 
 p.vpn-keyhelp {
 	font-size: smaller;
-	font-style: italic;
 }
 
 div.vpn-status-header p {

@@ -18,17 +18,17 @@
 #define TR_STOP_SCRIPT		"/tmp/stop_transmission.sh"
 
 
-void start_bittorrent(void)
+void start_bittorrent(int force)
 {
 	FILE *fp;
 	char *pb, *pc, *pd, *pe, *pf, *ph, *pi, *pj, *pk, *pl, *pm, *pn, *po, *pp, *pr, *pt, *pu;
 	char *whitelistEnabled;
 
-	/* make sure its really stop */
+	/* make sure it's really stopped */
 	stop_bittorrent();
 
-	/* only if enabled... */
-	if (!nvram_match("bt_enable", "1"))
+	/* only if enabled or forced */
+	if (!nvram_get_int("bt_enable") && force == 0)
 		return;
 
 	/* collecting data */

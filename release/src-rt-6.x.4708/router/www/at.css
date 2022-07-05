@@ -487,6 +487,14 @@ table.tomato-grid .editor td {
 	border-bottom: none;
 }
 
+table.tomato-grid .editor input {
+	max-width: 98%;
+}
+
+input[size] {
+	max-width: 250px;
+}
+
 input[type="button"],
 input[type="submit"] {
 	background-color: var(--tomato-accent-color);
@@ -1482,10 +1490,6 @@ pre#stats {
 	margin-top: 20px;
 }
 
-input[size] {
-	max-width: 250px;
-}
-
 td small a[href*=":viewQos"],
 td small a[href*=":viewIpt"] {
 	margin-right: 5px;
@@ -2003,14 +2007,25 @@ table.fields tr td.wwan-parser-view {
 	margin-bottom: 20px;
 }
 
-#_nginx_button,
-#_mysql_button,
+#_ftpd_button {
+	margin-left: 65px;
+}
+
+#_nginx_button {
+	margin-left: 55px;
+}
+
+#_mysqld_button,
 #_samba_button {
 	margin-left: 47px;
 }
 
-#_media_button {
+#_minidlna_button {
 	margin-left: 39px;
+}
+
+#_transmission_button {
+	margin-left: 12px;
 }
 
 textarea.as-script {

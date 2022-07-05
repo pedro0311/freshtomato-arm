@@ -2423,7 +2423,7 @@ static char *nvram_storage_path(char *var)
 	return get_full_storage_path(val);
 }
 
-static void start_ftpd(void)
+static void start_ftpd(int force)
 {
 	char tmp[256];
 	FILE *fp, *f;
@@ -2436,7 +2436,8 @@ static void start_ftpd(void)
 	char t[32];
 #endif
 
-	if (!nvram_get_int("ftp_enable"))
+	/* only if enabled or forced */
+	if (!nvram_get_int("ftp_enable") && force == 0)
 		return;
 
 	if (getpid() != 1) {
@@ -2718,7 +2719,7 @@ void enable_gro(int interval)
 }
 #endif
 
-void start_samba(void)
+void start_samba(int force)
 {
 	FILE *fp;
 	DIR *dir = NULL;
@@ -2738,8 +2739,9 @@ void start_samba(void)
 	int taskset_ret = -1;
 #endif
 
+	/* only if enabled or forced and lan_hostname is set */
 	mode = nvram_get_int("smbd_enable");
-	if ((!mode) || (!nvram_invmatch("lan_hostname", "")))
+	if ((!mode && force == 0) || (!nvram_invmatch("lan_hostname", "")))
 		return;
 
 	if (getpid() != 1) {
@@ -3029,7 +3031,7 @@ void stop_wsdd() {
 #endif /* TCONFIG_SAMBASRV */
 
 #ifdef TCONFIG_MEDIA_SERVER
-static void start_media_server(void)
+static void start_media_server(int force)
 {
 	FILE *f;
 	int port, pid, https;
@@ -3043,7 +3045,8 @@ static void start_media_server(void)
 	char *buf, *p, *q;
 	char *path, *restrict;
 
-	if (!nvram_get_int("ms_enable"))
+	/* only if enabled or forced */
+	if (!nvram_get_int("ms_enable") && force == 0)
 		return;
 
 	if (getpid() != 1) {
@@ -3176,13 +3179,13 @@ static void start_nas_services(void)
 	}
 
 #ifdef TCONFIG_SAMBASRV
-	start_samba();
+	start_samba(0);
 #endif
 #ifdef TCONFIG_FTP
-	start_ftpd();
+	start_ftpd(0);
 #endif
 #ifdef TCONFIG_MEDIA_SERVER
-	start_media_server();
+	start_media_server(0);
 #endif
 }
 
@@ -3286,7 +3289,7 @@ void start_services(void)
 	start_rstats(0);
 	start_cstats(0);
 #ifdef TCONFIG_PPTPD
-	start_pptpd();
+	start_pptpd(0);
 #endif
 #ifdef TCONFIG_USB
 	restart_nas_services(1, 1); /* Samba, FTP and Media Server */
@@ -3299,7 +3302,7 @@ void start_services(void)
 	start_tor();
 #endif
 #ifdef TCONFIG_BT
-	start_bittorrent();
+	start_bittorrent(0);
 #endif
 #ifdef TCONFIG_NOCAT
 	start_nocat();
@@ -3990,11 +3993,11 @@ TOP:
 	}
 
 #ifdef TCONFIG_BT
-	if (strcmp(service, "bittorrent") == 0) {
+	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0)) {
 		if (act_stop) stop_bittorrent();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_bittorrent();
+		if (act_start) start_bittorrent(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
@@ -4065,15 +4068,15 @@ TOP:
 		setup_conntrack();
 		stop_firewall();
 		start_firewall();
-		if (act_start) start_ftpd();
+		if (act_start) start_ftpd(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER
-	if ((strcmp(service, "media") == 0) || (strcmp(service, "dlna") == 0)) {
+	if ((strcmp(service, "media") == 0) || (strcmp(service, "minidlna") == 0)) {
 		if (act_stop) stop_media_server();
-		if (act_start) start_media_server();
+		if (act_start) start_media_server(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
@@ -4085,7 +4088,7 @@ TOP:
 			create_passwd();
 			stop_dnsmasq();
 			start_dnsmasq();
-			start_samba();
+			start_samba(1); /* force (re)start */
 		}
 		goto CLEAR;
 	}
@@ -4106,14 +4109,9 @@ TOP:
 #endif
 
 #ifdef TCONFIG_TINC
-	if (strncmp(service, "tinc", 4) == 0) {
+	if (strcmp(service, "tinc") == 0) {
 		if (act_stop) stop_tinc();
-		if (act_start) {
-			if (!(strcmp(service, "tincgui") == 0)) /* force (re)start */
-				start_tinc(1);
-			else
-				start_tinc(0);
-		}
+		if (act_start) start_tinc(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
@@ -4135,28 +4133,18 @@ TOP:
 #endif
 
 #ifdef TCONFIG_NGINX
-	if (strncmp(service, "nginx", 5) == 0) {
+	if (strcmp(service, "nginx") == 0) {
 		if (act_stop) stop_nginx();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) {
-			if (!(strcmp(service, "nginxgui") == 0)) /* force (re)start */
-				start_nginx(1);
-			else
-				start_nginx(0);
-		}
+		if (act_start) start_nginx(1); /* force (re)start */
 		goto CLEAR;
 	}
-	if (strncmp(service, "mysql", 5) == 0) {
+	if ((strcmp(service, "mysql") == 0) || (strcmp(service, "mysqld") == 0)) {
 		if (act_stop) stop_mysql();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) {
-			if (!(strcmp(service, "mysqlgui") == 0)) /* force (re)start */
-				start_mysql(1);
-			else
-				start_mysql(0);
-		}
+		if (act_start) start_mysql(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
@@ -4164,7 +4152,7 @@ TOP:
 #ifdef TCONFIG_PPTPD
 	if (strcmp(service, "pptpd") == 0) {
 		if (act_stop) stop_pptpd();
-		if (act_start) start_pptpd();
+		if (act_start) start_pptpd(1); /* force (re)start */
 		goto CLEAR;
 	}
 

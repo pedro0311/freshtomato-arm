@@ -78,7 +78,7 @@ void write_chap_secret(char *file)
 	fclose(fp);
 }
 
-void start_pptpd(void)
+void start_pptpd(int force)
 {
 	FILE *fp;
 	int count = 0, ret = 0, nowins = 0, pptpd_opt;
@@ -87,7 +87,8 @@ void start_pptpd(void)
 	int ctf_disable = nvram_get_int("ctf_disable");
 #endif /* TCONFIG_BCMARM */
 
-	if (!nvram_match("pptpd_enable", "1"))
+	/* only if enabled or forced */
+	if (!nvram_get_int("pptpd_enable") && force == 0)
 		return;
 
 	/* Make sure vpn directory exists */

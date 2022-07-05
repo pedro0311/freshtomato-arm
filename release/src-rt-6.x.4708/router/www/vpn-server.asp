@@ -16,6 +16,7 @@
 <title>[<% ident(); %>] OpenVPN: Server</title>
 <link rel="stylesheet" type="text/css" href="tomato.css">
 <% css(); %>
+<script src="isup.jsz"></script>
 <script src="tomato.js"></script>
 <script src="vpn.js"></script>
 
@@ -23,53 +24,11 @@
 
 //	<% nvram("vpn_server_eas,vpn_server_dns,vpn_server1_poll,vpn_server1_if,vpn_server1_proto,vpn_server1_port,vpn_server1_firewall,vpn_server1_sn,vpn_server1_nm,vpn_server1_local,vpn_server1_remote,vpn_server1_dhcp,vpn_server1_r1,vpn_server1_r2,vpn_server1_crypt,vpn_server1_comp,vpn_server1_digest,vpn_server1_cipher,vpn_server1_ncp_ciphers,vpn_server1_reneg,vpn_server1_hmac,vpn_server1_plan,vpn_server1_plan1,vpn_server1_plan2,vpn_server1_plan3,vpn_server1_ccd,vpn_server1_c2c,vpn_server1_ccd_excl,vpn_server1_ccd_val,vpn_server1_pdns,vpn_server1_rgw,vpn_server1_userpass,vpn_server1_nocert,vpn_server1_users_val,vpn_server1_custom,vpn_server1_static,vpn_server1_ca,vpn_server1_ca_key,vpn_server1_crt,vpn_server1_crl,vpn_server1_key,vpn_server1_dh,vpn_server1_br,vpn_server2_poll,vpn_server2_if,vpn_server2_proto,vpn_server2_port,vpn_server2_firewall,vpn_server2_sn,vpn_server2_nm,vpn_server2_local,vpn_server2_remote,vpn_server2_dhcp,vpn_server2_r1,vpn_server2_r2,vpn_server2_crypt,vpn_server2_comp,vpn_server2_digest,vpn_server2_cipher,vpn_server2_ncp_ciphers,vpn_server2_reneg,vpn_server2_hmac,vpn_server2_plan,vpn_server2_plan1,vpn_server2_plan2,vpn_server2_plan3,vpn_server2_ccd,vpn_server2_c2c,vpn_server2_ccd_excl,vpn_server2_ccd_val,vpn_server2_pdns,vpn_server2_rgw,vpn_server2_userpass,vpn_server2_nocert,vpn_server2_users_val,vpn_server2_custom,vpn_server2_static,vpn_server2_ca,vpn_server2_ca_key,vpn_server2_crt,vpn_server2_crl,vpn_server2_key,vpn_server2_dh,vpn_server2_br,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
-</script>
-<script src="isup.jsx?_http_id=<% nv(http_id); %>"></script>
-
-<script>
-
-var up = new TomatoRefresh('isup.jsx?_http_id=<% nv(http_id); %>', '', 5);
-
-up.refresh = function(text) {
-	isup = {};
-	try {
-		eval(text);
-	}
-	catch (ex) {
-		isup = {};
-	}
-	show();
-}
-
-function show() {
-	for (var i = 1; i <= OVPN_SERVER_COUNT; ++i) {
-		var e = E('_vpnserver'+i+'_button');
-		var u = eval('isup.vpnserver'+i);
-
-		e.value = (u ? 'Stop' : 'Start')+' Now';
-		e.setAttribute('onclick', 'javascript:toggle(\'vpnserver'+i+'\', '+u+');');
-		e.disabled = 0;
-
-		updateStatus(i - 1);
-	}
-}
-
-function toggle(service, isup) {
-	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
-		return;
-
-	E('_'+service+'_button').disabled = 1;
-
-	var fom = E('t_fom');
-	var bup = fom._service.value;
-	fom._service.value = service+(isup ? '-stop' : '-start');
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
-	fom._service.value = bup;
-}
-
 var changed = 0, i;
+var serviceLastUp = [];
+var unitCount = OVPN_SERVER_COUNT;
+var serviceType = 'vpnserver';
+for (i = 1; i <= unitCount; i++) serviceLastUp.push('0');
 
 function CCDGrid() {return this;}
 CCDGrid.prototype = new TomatoGrid;
@@ -78,7 +37,7 @@ function UsersGrid() {return this;}
 UsersGrid.prototype = new TomatoGrid;
 
 var tabs =  [];
-for (i = 1; i <= OVPN_SERVER_COUNT; ++i)
+for (i = 1; i <= unitCount; ++i)
 	tabs.push(['server'+i,'Server '+i]);
 var sections = [['basic','Basic'],['advanced','Advanced'],['keys','Keys'],['status','Status']];
 
@@ -259,11 +218,9 @@ CCDGrid.prototype.onDelete = function() {
 
 CCDGrid.prototype.verifyFields = function(row, quiet) {
 	changed = 1;
-	var ret = 1;
+	var ok = 1;
 
 	/* When settings change, make sure we restart the right server */
-	var fom = E('t_fom');
-
 	for (var i = 0; i < tabs.length; ++i) {
 		if (ccdTables[i] == this)
 			updateForm(i + 1);
@@ -271,33 +228,43 @@ CCDGrid.prototype.verifyFields = function(row, quiet) {
 
 	var f = fields.getAll(row);
 
-	/* Verify fields in this row of the table */
 	if (f[2].value == '') {
-		ferror.set(f[2], 'Common name is mandatory', quiet);
-		ret = 0;
+		ferror.set(f[2], 'Common name is mandatory', quiet || !ok);
+		ok = 0;
 	}
-	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
-		ferror.set(f[2], 'Common name cannot contain "<" or ">" characters', quiet);
-		ret = 0;
+	else if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
+		ferror.set(f[2], 'Common name cannot contain "<" or ">" characters', quiet || !ok);
+		ok = 0;
 	}
-	if (f[3].value != '' && !v_ip(f[3],quiet,0))
-		ret = 0;
-	if (f[4].value != '' && !v_netmask(f[4],quiet))
-		ret = 0;
-	if (f[3].value == '' && f[4].value != '') {
-		ferror.set(f[3], 'Either both or neither subnet and netmask must be provided', quiet);
-		ret = 0;
-	}
-	if (f[4].value == '' && f[3].value != '') {
-		ferror.set(f[4], 'Either both or neither subnet and netmask must be provided', quiet);
-		ret = 0;
-	}
-	if (f[5].checked && (f[3].value == '' || f[4].value == '')) {
-		ferror.set(f[5], 'Cannot push routes if they\'re not given. Please provide subnet/netmask', quiet);
-		ret = 0;
-	}
+	else
+		ferror.clear(f[2]);
 
-	return ret;
+	if (f[3].value != '' && !v_ip(f[3], quiet || !ok, 0))
+		ok = 0;
+	else if (f[3].value == '' && f[4].value != '') {
+		ferror.set(f[3], 'Either both or neither subnet and netmask must be provided', quiet || !ok);
+		ok = 0;
+	}
+	else
+		ferror.clear(f[3]);
+
+	if (f[4].value != '' && !v_netmask(f[4], quiet || !ok))
+		ok = 0;
+	else if (f[4].value == '' && f[3].value != '') {
+		ferror.set(f[4], 'Either both or neither subnet and netmask must be provided', quiet || !ok);
+		ok = 0;
+	}
+	else
+		ferror.clear(f[4]);
+
+	if (f[5].checked && (f[3].value == '' || f[4].value == '')) {
+		ferror.set(f[5], 'Cannot push routes if they\'re not given. Please provide subnet/netmask', quiet || !ok);
+		ok = 0;
+	}
+	else
+		ferror.clear(f[5]);
+
+	return ok;
 }
 
 UsersGrid.prototype.reDraw = function() {
@@ -328,11 +295,21 @@ UsersGrid.prototype.fieldValuesToData = function(row) {
 }
 
 UsersGrid.prototype.dataToView = function(data) {
-	var temp = [data[0], '<input type="checkbox" disabled'+(data[1] != 0 ? ' checked' : '')+'>', data[2], 'Secret'];
 	var v = [];
-	for (var i = 0; i < temp.length; ++i)
-		v.push(i == 1 ? temp[i] : escapeHTML(''+temp[i]));
-
+	for (var i = 0; i < data.length; ++i) {
+		var s = escapeHTML('' + data[i]);
+		if (this.editorFields && this.editorFields.length > i) {
+			var ef = this.editorFields[i].multi;
+			if (!ef) ef = [this.editorFields[i]];
+			var f = (ef && ef.length > 0 ? ef[0] : null);
+			if (f && f.type == 'password') {
+				if (!f.peekaboo || get_config('web_pb', '1') != '0')
+					s = s.replace(/./g, '&#x25CF;');
+			}
+		}
+		if (i == 1) s = '<input type="checkbox" disabled'+(s != 0 ? ' checked' : '')+'>'
+		v.push(s);
+	}
 	return v;
 }
 
@@ -366,34 +343,38 @@ UsersGrid.prototype.onDelete = function() {
 
 UsersGrid.prototype.verifyFields = function(row, quiet) {
 	changed = 1;
-	var ret = 1;
-	var fom = E('t_fom');
+	var ok = 1;
 
+	/* When settings change, make sure we restart the right server */
 	for (var i = 0; i < tabs.length; ++i) {
 		if (usersTables[i] == this)
 			updateForm(i + 1);
 	}
 	var f = fields.getAll(row);
 
-	/* Verify fields in this row of the table */
 	if (f[2].value == '') {
-		ferror.set(f[2], 'username is mandatory', quiet);
-		ret = 0;
+		ferror.set(f[2], 'username is mandatory', quiet || !ok);
+		ok = 0;
 	}
-	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
-		ferror.set(f[2], 'username cannot contain "<" or ">" characters', quiet);
-		ret = 0;
+	else if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
+		ferror.set(f[2], 'username cannot contain "<" or ">" characters', quiet || !ok);
+		ok = 0;
 	}
-	if (f[3].value == '' ) {
-		ferror.set(f[3], 'password is mandatory', quiet);
-		ret = 0;
-	}
-	if (f[3].value.indexOf('>') >= 0 || f[3].value.indexOf('<') >= 0) {
-		ferror.set(f[3], 'password cannot contain "<" or ">" characters', quiet);
-		ret = 0;
-	}
+	else
+		ferror.clear(f[2]);
 
-	return ret;
+	if (f[3].value == '' ) {
+		ferror.set(f[3], 'password is mandatory', quiet || !ok);
+		ok = 0;
+	}
+	else if (f[3].value.indexOf('>') >= 0 || f[3].value.indexOf('<') >= 0) {
+		ferror.set(f[3], 'password cannot contain "<" or ">" characters', quiet || !ok);
+		ok = 0;
+	}
+	else
+		ferror.clear(f[3]);
+
+	return ok;
 }
 
 var keyGenRequest = null
@@ -565,7 +546,7 @@ function downloadClientConfig(num) {
 function verifyFields(focused, quiet) {
 	tgHideIcons();
 
-	var i, j, t, ret = 1;
+	var i, j, t, ok = 1;
 
 	/* When settings change, make sure we restart the right services */
 	if (focused) {
@@ -595,25 +576,25 @@ function verifyFields(focused, quiet) {
 		t = tabs[i][0];
 
 		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30))
-			ret = 0;
+			ok = 0;
 		if (!v_port('_vpn_'+t+'_port', quiet))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_sn', quiet, 0))
-			ret = 0;
+			ok = 0;
 		if (!v_netmask('_vpn_'+t+'_nm', quiet))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_r1', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_r2', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_local', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_ip('_vpn_'+t+'_remote', quiet, 1))
-			ret = 0;
+			ok = 0;
 		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647))
-			ret = 0;
+			ok = 0;
 		if (E('_vpn_'+t+'_crypt').value == 'tls' && !E('_f_vpn_'+t+'_userpass').checked && !v_serial('_vpn_'+t+'_serial', quiet))
-			ret = 0;
+			ok = 0;
 	}
 
 	/* Visibility changes */
@@ -681,7 +662,7 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	return ret;
+	return ok;
 }
 
 function save() {
@@ -758,6 +739,7 @@ function save() {
 }
 
 function earlyInit() {
+	show();
 	tabSelect(cookie.get('vpn_server_tab') || tabs[0][0]);
 
 	for (var i = 0; i < tabs.length; ++i) {
@@ -782,7 +764,11 @@ function earlyInit() {
 		ccdTables[i].showNewEditor();
 		ccdTables[i].resetNewEditor();
 
-		usersTables[i].init('table_'+t+'_users','sort',0,[{ type: 'text', maxlen: 2, attrib: 'hidden' },{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },{ type: 'text', maxlen: 25 },{ type: 'text', maxlen: 15 }]);
+		usersTables[i].init('table_'+t+'_users','sort',0,[
+				{ type: 'text', maxlen: 2, attrib: 'hidden' },
+				{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
+				{ type: 'text', maxlen: 25 },
+				{ type: 'password', peekaboo: 1, maxlen: 15 }]);
 		usersTables[i].headerSet(['#','Enable','Username','Password']);
 		var usersVal = eval('nvram.vpn_'+t+'_users_val');
 		if (usersVal.length) {
@@ -807,7 +793,6 @@ function earlyInit() {
 }
 
 function init() {
-	show();
 	rewriteUsers();
 	up.initPage(250, 5);
 }
@@ -866,15 +851,15 @@ function init() {
 
 			W('<div id="'+t+'-basic">');
 			createFieldTable('', [
-				{ title: 'Start with WAN', name: 'f_vpn_'+t+'_eas', type: 'checkbox', value: nvram.vpn_server_eas.indexOf(''+(i+1)) >= 0 },
+				{ title: 'Enable on Start', name: 'f_vpn_'+t+'_eas', type: 'checkbox', value: nvram.vpn_server_eas.indexOf(''+(i+1)) >= 0 },
 				{ title: 'Interface Type', name: 'vpn_'+t+'_if', type: 'select', options: [['tap','TAP'],['tun','TUN']], value: eval('nvram.vpn_'+t+'_if') },
 					{ title: 'Bridge TAP with', indent: 2, name: 'vpn_'+t+'_br', type: 'select', options: [['br0','LAN0 (br0)*'],['br1','LAN1 (br1)'],['br2','LAN2 (br2)'],['br3','LAN3 (br3)']],
-						value: eval ('nvram.vpn_'+t+'_br'), suffix: '&nbsp; <small>* default<\/small> ' },
+						value: eval ('nvram.vpn_'+t+'_br'), suffix: ' <small>* default<\/small> ' },
 				{ title: 'Protocol', name: 'vpn_'+t+'_proto', type: 'select', options: [['udp','UDP'],['tcp-server','TCP'],['udp4','UDP4'],['tcp4-server','TCP4'],['udp6','UDP6'],['tcp6-server','TCP6']], value: eval('nvram.vpn_'+t+'_proto') },
 				{ title: 'Port', name: 'vpn_'+t+'_port', type: 'text', maxlen: 5, size: 10, value: eval('nvram.vpn_'+t+'_port') },
 				{ title: 'Firewall', name: 'vpn_'+t+'_firewall', type: 'select', options: [['auto','Automatic'],['external','External Only'],['custom','Custom']], value: eval('nvram.vpn_'+t+'_firewall') },
 				{ title: 'Authorization Mode', name: 'vpn_'+t+'_crypt', type: 'select', options: [['tls','TLS'],['secret','Static Key'],['custom','Custom']], value: eval('nvram.vpn_'+t+'_crypt'),
-					suffix: '&nbsp; <small id="'+t+'_custom_crypto_text">Must be configured manually<\/small>' },
+					suffix: ' <small id="'+t+'_custom_crypto_text">must be configured manually<\/small>' },
 				{ title: 'TLS control channel security <small>(tls-auth/tls-crypt)<\/small>', name: 'vpn_'+t+'_hmac', type: 'select', options: [[-1,'Disabled'],[2,'Bi-directional Auth'],[0,'Incoming Auth (0)'],[1,'Outgoing Auth (1)'],[3,'Encrypt Channel'],[4,'Encrypt Channel V2']], value: eval('nvram.vpn_'+t+'_hmac') },
 				{ title: 'Auth digest', name: 'vpn_'+t+'_digest', type: 'select', options: digests, value: eval('nvram.vpn_'+t+'_digest') },
 				{ title: 'VPN subnet/netmask', multi: [
@@ -893,7 +878,7 @@ function init() {
 			W('<div id="'+t+'-advanced">');
 			createFieldTable('', [
 				null,
-				{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval('nvram.vpn_'+t+'_poll'), suffix: '&nbsp; <small>in minutes, 0 to disable<\/small>' },
+				{ title: 'Poll Interval', name: 'vpn_'+t+'_poll', type: 'text', maxlen: 2, size: 5, value: eval('nvram.vpn_'+t+'_poll'), suffix: ' <small>minutes; 0 to disable<\/small>' },
 				{ title: 'Push LAN0 (br0) to clients', name: 'f_vpn_'+t+'_plan', type: 'checkbox', value: eval('nvram.vpn_'+t+'_plan') != 0 },
 				{ title: 'Push LAN1 (br1) to clients', name: 'f_vpn_'+t+'_plan1', type: 'checkbox', value: eval('nvram.vpn_'+t+'_plan1') != 0 },
 				{ title: 'Push LAN2 (br2) to clients', name: 'f_vpn_'+t+'_plan2', type: 'checkbox', value: eval('nvram.vpn_'+t+'_plan2') != 0 },
@@ -904,7 +889,7 @@ function init() {
 				{ title: 'Data ciphers', name: 'vpn_'+t+'_ncp_ciphers', type: 'text', size: 70, maxlen: 127, value: eval('nvram.vpn_'+t+'_ncp_ciphers') },
 				{ title: 'Cipher', name: 'vpn_'+t+'_cipher', type: 'select', options: ciphers, value: eval('nvram.vpn_'+t+'_cipher') },
 				{ title: 'Compression', name: 'vpn_'+t+'_comp', type: 'select', options: [['-1','Disabled'],['no','None'],['yes','LZO'],['adaptive','LZO Adaptive'],['lz4','LZ4'],['lz4-v2','LZ4-V2']], value: eval('nvram.vpn_'+t+'_comp') },
-				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'), suffix: '&nbsp; <small>in seconds, -1 for default<\/small>' },
+				{ title: 'TLS Renegotiation Time', name: 'vpn_'+t+'_reneg', type: 'text', maxlen: 10, size: 7, value: eval('nvram.vpn_'+t+'_reneg'), suffix: ' <small> seconds; -1 for default<\/small>' },
 				{ title: 'Manage Client-Specific Options', name: 'f_vpn_'+t+'_ccd', type: 'checkbox', value: eval('nvram.vpn_'+t+'_ccd') != 0 },
 				{ title: 'Allow Client<->Client', name: 'f_vpn_'+t+'_c2c', type: 'checkbox', value: eval('nvram.vpn_'+t+'_c2c') != 0 },
 				{ title: 'Allow Only These Clients', name: 'f_vpn_'+t+'_ccd_excl', type: 'checkbox', value: eval('nvram.vpn_'+t+'_ccd_excl') != 0 },
@@ -962,7 +947,7 @@ function init() {
 			W('<div id="'+t+'-status-stats"><div class="section-title">General Statistics<\/div><div class="tomato-grid vpn-status-table" id="'+t+'-status-stats-table"><\/div><br><\/div>');
 			W('<\/div>');
 			W('<\/div>');
-			W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_vpn'+t+'_button"><\/div>');
+			W('<div class="vpn-start-stop"><input type="button" value="" onclick="" id="_vpn'+t+'_button">&nbsp; <img src="spin.gif" alt="" id="spin'+(i+1)+'"><\/div>');
 			W('<\/div>');
 		}
 	</script>
