@@ -35,7 +35,7 @@ void start_nfs(void)
 		return;
 	}
 
-	if ((pidof("nfsd") >= 0) && (pidof("mountd") >= 0) && (pidof("statd") >= 0)) {
+	if ((pidof("nfsd") > 0) && (pidof("mountd") > 0) && (pidof("statd") > 0)) {
 		syslog(LOG_INFO, "NFS Server already running... stop");
 		stop_nfs();
 	}

@@ -76,7 +76,7 @@ static int ovpn_waitfor(const char *name)
 	int pid, n = 5;
 
 	killall_tk_period_wait(name, 50); /* wait time in deciseconds (1/10 sec) */
-	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
+	while ((pid = pidof(name)) > 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
 		sleep(1);
@@ -249,7 +249,7 @@ void start_ovpn_client(int unit)
 		return;
 	}
 
-	if ((pid = pidof(buffer)) >= 0)
+	if ((pid = pidof(buffer)) > 0)
 		return;
 
 	/* Determine interface */
@@ -744,7 +744,7 @@ void start_ovpn_server(int unit)
 		return;
 	}
 
-	if ((pid = pidof(buffer)) >= 0)
+	if ((pid = pidof(buffer)) > 0)
 		return;
 
 	/* Determine interface */
@@ -1351,7 +1351,7 @@ void start_ovpn_eas()
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnserver%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(nums[i]);
 
 		start_ovpn_server(nums[i]);
@@ -1369,7 +1369,7 @@ void start_ovpn_eas()
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnclient%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(nums[i]);
 
 		start_ovpn_client(nums[i]);
@@ -1393,7 +1393,7 @@ void stop_ovpn_eas()
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnserver%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(nums[i]);
 	}
 
@@ -1409,7 +1409,7 @@ void stop_ovpn_eas()
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnclient%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(nums[i]);
 	}
 }
@@ -1423,7 +1423,7 @@ void stop_ovpn_all()
 	for (i = 1; i <= OVPN_SERVER_MAX; i++) {
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnserver%d", i);
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(i);
 	}
 
@@ -1431,7 +1431,7 @@ void stop_ovpn_all()
 	for (i = 1; i <= OVPN_CLIENT_MAX; i++) {
 		memset(buffer, 0, 16);
 		sprintf(buffer, "vpnclient%d", i);
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(i);
 	}
 

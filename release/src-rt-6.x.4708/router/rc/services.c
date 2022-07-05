@@ -2324,7 +2324,7 @@ static void stop_rstats(void)
 	while ((n-- > 0) && ((pid = pidof("rstats")) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
-		if (pidz < 1)
+		if (pidz < 0)
 			pidz = pidof("cp");
 
 		ppidz = ppid(ppid(pidz));
@@ -2367,7 +2367,7 @@ static void stop_cstats(void)
 	while ((n-- > 0) && ((pid = pidof("cstats")) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
-		if (pidz < 1)
+		if (pidz < 0)
 			pidz = pidof("cp");
 
 		ppidz = ppid(ppid(pidz));
@@ -2651,7 +2651,7 @@ static void start_ftpd(int force)
 	killall("vsftpd", SIGHUP);
 
 	/* start vsftpd if it's not already running */
-	if (pidof("vsftpd") <= 0) {
+	if (pidof("vsftpd") < 0) {
 		int ret;
 
 		ret = eval("vsftpd");
@@ -2947,10 +2947,10 @@ void start_samba(int force)
 	kill_samba(SIGHUP);
 
 	/* start samba if it's not already running */
-	if (pidof("nmbd") <= 0)
+	if (pidof("nmbd") < 0)
 		ret1 = xstart("nmbd", "-D");
 
-	if (pidof("smbd") <= 0) {
+	if (pidof("smbd") < 0) {
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 		if (cpu_num > 1)
 			taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D");
@@ -3133,7 +3133,7 @@ static void start_media_server(int force)
 		argv[index++] = "-v";
 
 	/* start media server if it's not already running */
-	if (pidof(MEDIA_SERVER_APP) <= 0) {
+	if (pidof(MEDIA_SERVER_APP) < 0) {
 		if ((_eval(argv, NULL, 0, &pid) == 0) && (once)) {
 			/* if we started the media server successfully, wait 1 sec
 			 * to let it die if it can't open the database file.

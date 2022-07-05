@@ -34,7 +34,7 @@ void start_pptp_client(void)
 	char *srv_addr = nvram_safe_get("pptp_client_srvip");
 
 	/* PPTP already running */
-	if (pidof("pptpclient") >= 0)
+	if (pidof("pptpclient") > 0)
 		stop_pptp_client();
 
 	unlink(PPTPC_UP_SCRIPT);
@@ -330,7 +330,7 @@ int write_pptp_client_resolv(FILE* f)
 	if ((usepeer = nvram_get_int("pptp_client_peerdns")) <= 0)
 		return 0;
 
-	if (pidof("pptpclient") >= 0) {	/* write DNS only for active client */
+	if (pidof("pptpclient") > 0) { /* write DNS only for active client */
 		if (!(dnsf = fopen( "/tmp/ppp/resolv.conf", "r" )))
 			return 0;
 
