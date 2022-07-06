@@ -408,6 +408,11 @@ ifneq ($(TCONFIG_BCMARM),y)
 	sed -i $(INSTALLDIR)/www/tools-survey.asp -e "/BCMARM-BEGIN/,/BCMARM-END/d"
 endif
 
+# only include isup.js helper if it is needed
+ifeq ($(TCONFIG_FTP)$(TCONFIG_SAMBASRV)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_PPTPD)$(TCONFIG_NGINX)$(TCONFIG_BT),)
+	rm -f $(INSTALLDIR)/www/isup.js
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.jsz *.html); do \
