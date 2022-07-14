@@ -1206,6 +1206,8 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_AC3200
 	{ "2:ccode",			V_LENGTH(0, 2)			},	/* Country code (short version) */
 	{ "2:regrev",			V_RANGE(0, 999)			},	/* regrev (short version) */
+	{ "pci/3/1/ccode",		V_LENGTH(0, 2)			},	/* Country code (long version) */
+	{ "pci/3/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
 #endif
 #endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 || TCONFIG_BLINK */
 	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
