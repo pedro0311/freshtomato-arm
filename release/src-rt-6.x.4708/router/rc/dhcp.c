@@ -552,13 +552,31 @@ void start_dhcp6c(void)
 	FILE *f;
 	int prefix_len;
 	char *wan6face;
-	char *argv[] = { "/usr/sbin/dhcp6c", "-T", "LL", NULL, NULL, NULL }; /* DUID type 3 (DUID-LL) */
+	char *argv[] = { "/usr/sbin/dhcp6c", "-T", NULL, NULL, NULL, NULL };
 	int argc;
 	int ipv6_vlan = 0; /* bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3, 1 == TRUE, 0 == FALSE */
+	int duid_type;
 
 	/* Check if turned on */
 	if (get_ipv6_service() != IPV6_NATIVE_DHCP)
 		return;
+
+	duid_type = nvram_get_int("ipv6_duid_type");
+
+	/* check duid range */
+	if (duid_type < 1 || duid_type > 4)
+		duid_type = 3; /* default to DUID-LL */
+	  
+	argc = 2;
+	switch (duid_type) {
+		case 1: /* DUID-LLT */
+			argv[argc] = "LLT";
+			break;
+		case 3: /* DUID-LL (default) and fall through */
+		default:
+			argv[argc] = "LL";
+			break;
+	}
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
 	if (prefix_len < 0)
