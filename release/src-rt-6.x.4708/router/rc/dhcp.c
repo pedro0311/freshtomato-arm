@@ -646,8 +646,10 @@ void start_dhcp6c(void)
 	}
 
 	argc = 3;
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	if (nvram_get_int("debug_ipv6"))
 		argv[argc++] = "-D";
+#endif
 
 	argv[argc++] = wan6face;
 	argv[argc] = NULL;
