@@ -1,10 +1,12 @@
 /*
-
-	Copyright (C) 2008-2010 Keith Moyer, tomatovpn@keithmoyer.com
-
-	No part of this file may be used without permission.
-
-*/
+ *
+ * Copyright (C) 2008-2010 Keith Moyer, tomatovpn@keithmoyer.com
+ *
+ * No part of this file may be used without permission.
+ *
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -20,7 +22,7 @@
 
 #define BUF_SIZE		256
 #define IF_SIZE			8
-#define OVPN_FW_STR		"s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\ /g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\ /g"
+#define OVPN_FW_STR		"s/-A/-D/g"
 #define OVPN_DIR		"/etc/openvpn"
 
 /* OpenVPN clients/servers count */
@@ -566,6 +568,8 @@ void start_ovpn_client(int unit)
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_client%d_firewall", unit);
 	if (!nvram_contains_word(buffer, "custom")) {
+		chains_log_detection();
+
 		/* Create firewall rules */
 		mkdir(OVPN_DIR"/fw", 0700);
 		memset(buffer, 0, BUF_SIZE);
@@ -580,10 +584,8 @@ void start_ovpn_client(int unit)
 		fprintf(fp, "iptables -I INPUT -i %s -m state --state NEW -j %s\n"
 		            "iptables -I FORWARD -i %s -m state --state NEW -j %s\n"
 		            "iptables -I FORWARD -o %s -j ACCEPT\n",
-		            iface,
-		            (nvi ? "DROP" : "ACCEPT"),
-		            iface,
-		            (nvi ? "DROP" : "ACCEPT"),
+		            iface, (nvi ? chain_in_drop : chain_in_accept),
+		            iface, (nvi ? "DROP" : "ACCEPT"),
 		            iface);
 #ifdef TCONFIG_BCMARM
 		if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
@@ -600,10 +602,8 @@ void start_ovpn_client(int unit)
 			fprintf(fp, "ip6tables -I INPUT -i %s -m state --state NEW -j %s\n"
 			            "ip6tables -I FORWARD -i %s -m state --state NEW -j %s\n"
 			            "ip6tables -I FORWARD -o %s -j ACCEPT\n",
-			            iface,
-			            (nvi ? "DROP" : "ACCEPT"),
-			            iface,
-			            (nvi ? "DROP" : "ACCEPT"),
+			            iface, (nvi ? chain_in_drop : chain_in_accept),
+			            iface, (nvi ? "DROP" : "ACCEPT"),
 			            iface);
 		}
 #endif
@@ -1194,6 +1194,8 @@ void start_ovpn_server(int unit)
 	memset(buffer, 0, BUF_SIZE);
 	sprintf(buffer, "vpn_server%d_firewall", unit);
 	if (!nvram_contains_word(buffer, "custom")) {
+		chains_log_detection();
+
 		/* Create firewall rules */
 		mkdir(OVPN_DIR"/fw", 0700);
 		memset(buffer, 0, BUF_SIZE);
@@ -1217,13 +1219,13 @@ void start_ovpn_server(int unit)
 		fprintf(fp, "iptables -I INPUT -p %s ", buffer2);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_port", unit);
-		fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
+		fprintf(fp, "--dport %d -j %s\n", nvram_get_int(buffer), chain_in_accept);
 		memset(buffer, 0, BUF_SIZE);
 		sprintf(buffer, "vpn_server%d_firewall", unit);
 		if (!nvram_contains_word(buffer, "external")) {
-			fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n"
+			fprintf(fp, "iptables -I INPUT -i %s -j %s\n"
 			            "iptables -I FORWARD -i %s -j ACCEPT\n",
-			            iface,
+			            iface, chain_in_accept,
 			            iface);
 #ifdef TCONFIG_BCMARM
 			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
@@ -1238,13 +1240,13 @@ void start_ovpn_server(int unit)
 			fprintf(fp, "ip6tables -I INPUT -p %s ", buffer2);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_port", unit);
-			fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
+			fprintf(fp, "--dport %d -j %s\n", nvram_get_int(buffer), chain_in_accept);
 			memset(buffer, 0, BUF_SIZE);
 			sprintf(buffer, "vpn_server%d_firewall", unit);
 			if (!nvram_contains_word(buffer, "external")) {
-				fprintf(fp, "ip6tables -I INPUT -i %s -j ACCEPT\n"
+				fprintf(fp, "ip6tables -I INPUT -i %s -j %s\n"
 				            "ip6tables -I FORWARD -i %s -j ACCEPT\n",
-				            iface,
+				            iface, chain_in_accept,
 				            iface);
 			}
 		}
