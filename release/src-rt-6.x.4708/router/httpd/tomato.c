@@ -2038,7 +2038,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			V_RANGE(0, 1)			},
+	{"tinc_enable",			V_RANGE(0, 1)			},
 	{"tinc_name",			V_LENGTH(0, 30)			},
 	{"tinc_devicetype",		V_TEXT(3, 3)			},	// tun, tap
 	{"tinc_mode",			V_TEXT(3, 6)			},	// switch, hub

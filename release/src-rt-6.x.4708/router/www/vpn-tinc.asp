@@ -23,7 +23,7 @@
 
 <script>
 
-//	<% nvram("tinc_wanup,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
+//	<% nvram("tinc_enable,tinc_name,tinc_devicetype,tinc_mode,tinc_vpn_netmask,tinc_private_rsa,tinc_private_ed25519,tinc_custom,tinc_hosts,tinc_firewall,tinc_manual_firewall,tinc_manual_tinc_up,tinc_poll,tinc_tinc_up,tinc_tinc_down,tinc_host_up,tinc_host_down,tinc_subnet_up,tinc_subnet_down"); %>
 
 var cprefix = 'vpn_tinc';
 var tabs = [['config','Config'],['hosts','Hosts'],['scripts','Scripts'],['keys','Generate Keys'],['status','Status']];
@@ -72,8 +72,9 @@ function toggle(service, isup) {
 
 	if (nvram.tinc_hosts != s)
 		changed = 1;
-	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
-		return;
+
+	if (!save_pre()) return;
+	if (changed) alert("Configuration changes were detected - they will be saved");
 
 	for (var i = 1; i <= 4; i++) {
 		E('_'+service+'_button'+i).disabled = 1;
@@ -87,9 +88,8 @@ function toggle(service, isup) {
 
 	var fom = E('t_fom');
 	fom._service.value = service+(isup ? '-stop' : '-start');
-	fom._nofootermsg.value = 1;
 
-	form.submit(fom, 1, 'service.cgi');
+	save(1);
 }
 
 var th = new TomatoGrid();
@@ -158,27 +158,27 @@ th.verifyFields = function(row, quiet) {
 	changed = 1;
 
 	if (f[1].value == '') {
-		ferror.set(f[1], 'Host Name is required', quiet);
+		ferror.set(f[1], 'Host Name is required', quiet || !ok);
 		return 0;
 	}
 	else
 		ferror.clear(f[1]);
 
 	if (f[0].checked && f[2].value == '') {
-		ferror.set(f[2], 'Address must be supplied when ConnectTo is checked', quiet);
+		ferror.set(f[2], 'Address must be supplied when ConnectTo is checked', quiet || !ok);
 		return 0;
 	}
 	else
 		ferror.clear(f[2]);
 
 	if (!f[3].value == '') {
-		if (!v_port(f[3], quiet))
+		if (!v_port(f[3], quiet || !ok))
 			return 0;
 	}
-	
+
 	if (E('_tinc_devicetype').value == 'tun') {
 		if ((!v_subnet(f[5], 1)) && (!v_ip(f[5], 1))) {
-			ferror.set(f[5], 'Invalid Subnet or IP address', quiet);
+			ferror.set(f[5], 'Invalid Subnet or IP address', quiet || !ok);
 			return 0;
 		}
 		else
@@ -186,7 +186,7 @@ th.verifyFields = function(row, quiet) {
 	}
 	else if (E('_tinc_devicetype').value == 'tap') {
 		if (f[5].value != '') {
-			ferror.set(f[5], 'Subnet must be left blank when using the TAP Interface Type', quiet);
+			ferror.set(f[5], 'Subnet must be left blank when using the TAP Interface Type', quiet || !ok);
 			return 0;
 		}
 		else
@@ -194,7 +194,7 @@ th.verifyFields = function(row, quiet) {
 	}
 
 	if (E('_host_ed25519_key').value == '') {
-		ferror.set(E('_host_ed25519_key'), 'Ed25519 Public Key is required', quiet);
+		ferror.set(E('_host_ed25519_key'), 'Ed25519 Public Key is required', quiet || !ok);
 		return 0;
 	}
 	else
@@ -275,7 +275,6 @@ function generateKeys() {
 		/bin/cat /etc/keys/ed25519_key.priv \n\
 		/bin/cat /etc/keys/ed25519_key.pub';
 	cmd.post('shell.cgi', 'action=execute&command='+escapeCGI(c.replace(/\r/g, '')));
-
 }
 
 function displayStatus() {
@@ -375,7 +374,7 @@ function tabSelect(name) {
 }
 
 function verifyFields(focused, quiet) {
-	if (focused && focused != E('_f_tinc_wanup')) /* except on/off */
+	if (focused && focused != E('_f_tinc_enable')) /* except on/off */
 		changed = 1;
 
 	var ok = 1;
@@ -423,14 +422,14 @@ function verifyFields(focused, quiet) {
 	}
 
 	/* Element Verification */
-	if (E('_tinc_name').value == '' && E('_f_tinc_wanup').checked) {
+	if (E('_tinc_name').value == '' && E('_f_tinc_enable').checked) {
 		ferror.set(E('_tinc_name'), 'Host Name is required when \'Enable on Start\' is checked', quiet || !ok);
 		ok = 0;
 	}
 	else
 		ferror.clear(E('_tinc_name'));
 
-	if (E('_tinc_private_ed25519').value == '' && E('_tinc_custom').value == '' && E('_f_tinc_wanup').checked) {
+	if (E('_tinc_private_ed25519').value == '' && E('_tinc_custom').value == '' && E('_f_tinc_enable').checked) {
 		ferror.set(E('_tinc_private_ed25519'), 'Ed25519 Private Key is required when \'Enable on Start\' is checked', quiet || !ok);
 		ok = 0;
 	}
@@ -455,7 +454,7 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	if (!hostdefined && E('_f_tinc_wanup').checked) {
+	if (!hostdefined && E('_f_tinc_enable').checked) {
 		ferror.set(E('_tinc_name'), 'Host Name \''+E('_tinc_name').value+'\' must be defined in the hosts area when \'Enable on Start\' is checked', quiet || !ok);
 		ok = 0;
 	}
@@ -465,24 +464,28 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (th.isEditing())
-		return;
+		return 0;
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
+
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
 
 	var data = th.getAllData();
 	var s = '';
 	for (var i = 0; i < data.length; ++i)
 		s += data[i].join('<')+'>';
 
-	show(); /* update '_service' field first */
 	var fom = E('t_fom');
-
 	fom.tinc_hosts.value = s;
 	nvram.tinc_hosts = s;
-	fom.tinc_wanup.value = fom.f_tinc_wanup.checked ? 1 : 0;
-	fom._nofootermsg.value = 0;
+	fom.tinc_enable.value = fom.f_tinc_enable.checked ? 1 : 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -525,7 +528,9 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-tinc.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
+<input type="hidden" name="tinc_enable">
+<input type="hidden" name="tinc_hosts">
 
 <!-- / / / -->
 
@@ -537,10 +542,9 @@ function init() {
 
 	// -------- BEGIN CONFIG TAB -----------
 	W('<div id="config-tab">');
-	W('<input type="hidden" name="tinc_wanup">');
 	W('<div class="section">');
 	createFieldTable('', [
-		{ title: 'Enable on Start', name: 'f_tinc_wanup', type: 'checkbox', value: (nvram.tinc_wanup == 1) },
+		{ title: 'Enable on Start', name: 'f_tinc_enable', type: 'checkbox', value: (nvram.tinc_enable == 1) },
 		{ title: 'Interface Type', name: 'tinc_devicetype', type: 'select', options: [['tun','TUN'],['tap','TAP']], value: nvram.tinc_devicetype },
 		{ title: 'Mode', name: 'tinc_mode', type: 'select', options: [['switch','Switch'],['hub','Hub']], value: nvram.tinc_mode },
 		{ title: 'VPN Netmask', name: 'tinc_vpn_netmask', type: 'text', maxlen: 15, size: 25, value: nvram.tinc_vpn_netmask,  suffix: ' <small>netmask for the entire VPN network<\/small>' },
@@ -560,7 +564,6 @@ function init() {
 	// -------- BEGIN HOSTS TAB -----------
 	W('<div id="hosts-tab">');
 	W('<div class="section">');
-	W('<input type="hidden" name="tinc_hosts">');
 	W('<div class="tomato-grid" id="th-grid"><\/div>');
 
 	th.setup();

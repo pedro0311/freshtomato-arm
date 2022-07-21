@@ -119,7 +119,7 @@ function updateForm(num, fw) {
 RouteGrid.prototype.fieldValuesToData = function(row) {
 	var f = fields.getAll(row);
 
-	return [f[0].checked?1:0, f[1].value, f[2].value,f[3].checked?1:0];
+	return [(f[0].checked ? 1 : 0), f[1].value, f[2].value,f[3].checked?1:0];
 }
 
 RouteGrid.prototype.dataToView = function(data) {
@@ -164,22 +164,26 @@ RouteGrid.prototype.verifyFields = function(row, quiet) {
 
 	/* Verify fields in this row of the table */
 	if (f[2].value == '') {
-		ferror.set(f[2], 'Value is mandatory', quiet);
+		ferror.set(f[2], 'Value is mandatory', quiet || !ok);
 		ok = 0;
 	}
-	if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
-		ferror.set(f[2], 'Value cannot contain "<" or ">" characters', quiet);
+	else if (f[2].value.indexOf('>') >= 0 || f[2].value.indexOf('<') >= 0) {
+		ferror.set(f[2], 'Value cannot contain "<" or ">" characters', quiet || !ok);
 		ok = 0;
 	}
-	if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0 || f[2].value.indexOf('\t') >= 0) {
-		ferror.set(f[2], 'Value cannot contain "space", "tab"  or "," characters. Only one IP or Domain per entry', quiet);
+	else if (f[2].value.indexOf(' ') >= 0 || f[2].value.indexOf(',') >= 0 || f[2].value.indexOf('\t') >= 0) {
+		ferror.set(f[2], 'Value cannot contain "space", "tab"  or "," characters. Only one IP or Domain per entry', quiet || !ok);
 		ok = 0;
 	}
-	if (f[2].value.indexOf('-') >= 0 && f[1].value == 2) {
-		ferror.set(f[2], 'Value cannot contain "-" character. IP range is not supported', quiet);
+	else if (f[2].value.indexOf('-') >= 0 && f[1].value == 2) {
+		ferror.set(f[2], 'Value cannot contain "-" character. IP range is not supported', quiet || !ok);
 		ok = 0;
 	}
-	if (f[1].value != 3 && (!v_iptaddr(f[2], quiet)))
+	else
+		ferror.clear(f[2]);
+
+
+	if (f[1].value != 3 && (!v_iptaddr(f[2], quiet || !ok)))
 		ok = 0;
 
 	return ok;
@@ -211,27 +215,30 @@ function verifyFields(focused, quiet) {
 	for (var i = 0; i < tabs.length; ++i) {
 		var t = tabs[i][0];
 
-		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30))
+		if (!v_range('_vpn_'+t+'_poll', quiet || !ok, 0, 30))
 			ok = 0;
 		if (!v_ip('_vpn_'+t+'_addr', true) && !v_domain('_vpn_'+t+'_addr', true)) {
-			ferror.set(E('_vpn_'+t+'_addr'), 'Invalid server address', quiet);
+			ferror.set(E('_vpn_'+t+'_addr'), 'Invalid server address', quiet || !ok);
 			ok = 0;
 		}
-		if (!v_port('_vpn_'+t+'_port', quiet))
+		else
+			ferror.clear(E('_vpn_'+t+'_addr'));
+
+		if (!v_port('_vpn_'+t+'_port', quiet || !ok))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_local', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_local', quiet || !ok, 1))
 			ok = 0;
 		if (!v_ip('_f_vpn_'+t+'_local', true, 1))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_remote', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_remote', quiet || !ok, 1))
 			ok = 0;
-		if (!v_netmask('_vpn_'+t+'_nm', quiet))
+		if (!v_netmask('_vpn_'+t+'_nm', quiet || !ok))
 			ok = 0;
-		if (!v_range('_vpn_'+t+'_retry', quiet, -1, 32767))
+		if (!v_range('_vpn_'+t+'_retry', quiet || !ok, -1, 32767))
 			ok = 0;
-		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647))
+		if (!v_range('_vpn_'+t+'_reneg', quiet || !ok, -1, 2147483647))
 			ok = 0;
-		if (E('_vpn_'+t+'_gw').value.length > 0 && !v_ip('_vpn_'+t+'_gw', quiet, 1))
+		if (E('_vpn_'+t+'_gw').value.length > 0 && !v_ip('_vpn_'+t+'_gw', quiet || !ok, 1))
 			ok = 0;
 	}
 
@@ -413,8 +420,8 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-client.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
-<input type="hidden" name="vpn_client_eas" value="">
+<input type="hidden" name="_nofootermsg">
+<input type="hidden" name="vpn_client_eas">
 
 <!-- / / / -->
 

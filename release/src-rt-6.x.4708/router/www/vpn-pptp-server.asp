@@ -38,26 +38,27 @@ if (nvram.pptpd_forcemppe == '')
 
 function v_pptpd_secret(e, quiet) {
 	var s;
+	var ok = 1;
 	if ((e = E(e)) == null)
 		return 0;
 
 	s = e.value.trim().replace(/\s+/g, '');
 	if (s.length < 1) {
-		ferror.set(e, 'Username and password can not be empty', quiet);
-		return 0;
+		ferror.set(e, 'Username and password can not be empty', quiet || !ok);
+		ok = 0;
 	}
 	if (s.length > 32) {
-		ferror.set(e, 'Invalid entry: max 32 characters are allowed', quiet);
-		return 0;
+		ferror.set(e, 'Invalid entry: max 32 characters are allowed', quiet || !ok);
+		ok = 0;
 	}
 	if (s.search(/^[.a-zA-Z0-9_\- ]+$/) == -1) {
-		ferror.set(e, 'Invalid entry. Only characters "A-Z 0-9 . - _" are allowed', quiet);
-		return 0;
+		ferror.set(e, 'Invalid entry. Only characters "A-Z 0-9 . - _" are allowed', quiet || !ok);
+		ok = 0;
 	}
 	e.value = s;
 	ferror.clear(e);
 
-	return 1;
+	return ok;
 }
 
 function submit_complete() { /* to set pptpd_dns1 etc back to 0.0.0.0 after save, if it's empty in nvram */
@@ -118,21 +119,22 @@ ul.rpDel = function(e) {
 
 ul.verifyFields = function(row, quiet) {
 	changed = 1;
+	var ok = 1;
 	var f, s;
 	f = fields.getAll(row);
 
-	if (!v_pptpd_secret(f[0], quiet))
-		return 0;
+	if (!v_pptpd_secret(f[0], quiet || !ok))
+		ok = 0;
 
 	if (this.existName(f[0].value)) {
-		ferror.set(f[0], 'Duplicate User', quiet);
-		return 0;
+		ferror.set(f[0], 'Duplicate User', quiet || !ok);
+		ok = 0;
 	}
 
-	if (!v_pptpd_secret(f[1], quiet))
-		return 0;
+	if (!v_pptpd_secret(f[1], quiet || !ok))
+		ok = 0;
 
-	return 1;
+	return ok;
 }
 
 function verifyFields(focused, quiet) {
@@ -182,36 +184,33 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (ul.isEditing())
-		return;
+		return 0;
 	if (!verifyFields(null, 0))
-		return;
-
+		return 0;
 	if (ul.getDataCount() < 1) {
-		var e = E('footer-msg');
-		e.innerHTML = 'Cannot proceed: at least one user must be defined.';
-		e.style.display = 'inline-block';
-		setTimeout(
-			function() {
-				e.innerHTML = '';
-				e.style.display = 'none';
-			}, 5000);
-		return;
+		alert('Cannot proceed: at least one user must be defined');
+		return 0;
 	}
+	return 1;
+}
+
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
 
 	ul.resetNewEditor();
-
-	show(); /* update '_service' field first */
-	var fom = E('t_fom');
 	var uldata = ul.getAllData();
 
 	var s = '';
 	for (var i = 0; i < uldata.length; ++i)
 		s += uldata[i].join('<')+'>';
 
+	var fom = E('t_fom');
 	fom.pptpd_users.value = s;
 	fom.pptpd_enable.value = fom._f_pptpd_enable.checked ? 1 : 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	var a = fom._f_pptpd_startip.value;
 	var b = fom._f_pptpd_endip.value;
@@ -273,7 +272,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-pptpd.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="pptpd_users">
 <input type="hidden" name="pptpd_enable">
 <input type="hidden" name="pptpd_remoteip">

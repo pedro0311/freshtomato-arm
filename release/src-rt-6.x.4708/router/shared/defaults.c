@@ -1418,7 +1418,7 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_PPTPD */
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			"0"				, 0 },
+	{"tinc_enable",			"0"				, 0 },
 	{"tinc_name",			""				, 0 },
 	{"tinc_devicetype",		"tun"				, 0 },	/* tun, tap */
 	{"tinc_mode",			"switch"			, 0 },	/* switch, hub */
@@ -1455,7 +1455,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "bt_incomplete",		"1"				, 0 },
 	{ "bt_autoadd",			"1"				, 0 },
 	{ "bt_settings",		"down_dir"			, 0 },
-	{ "bt_settings_custom",		"/tmp/btclient"			, 0 },
+	{ "bt_settings_custom",		"/etc/transmission"		, 0 },
 	{ "bt_rpc_enable",		"1"				, 0 },
 	{ "bt_rpc_wan",			"0"				, 0 },
 	{ "bt_auth",			"1"				, 0 },

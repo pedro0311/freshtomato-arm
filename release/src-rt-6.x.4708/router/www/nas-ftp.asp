@@ -182,15 +182,19 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (aftg.isEditing())
-		return;
+		return 0;
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
-
 	var data = aftg.getAllData();
 	var r = [];
 	for (var i = 0; i < data.length; ++i) r.push(data[i].join('<'));
@@ -200,10 +204,8 @@ function save() {
 	fom.ftp_super.value = fom._f_ftp_super.checked ? 1 : 0;
 	fom.ftp_tls.value = fom._f_ftp_tls.checked ? 1 : 0;
 	fom.log_ftp.value = fom._f_log_ftp.checked ? 1 : 0;
-
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 	fom.ftp_limit.value = (fom._f_limit.checked ? 1 : 0)+','+fom._f_limit_hit.value+','+fom._f_limit_sec.value;
-
-	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -238,7 +240,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-ftp.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="ftp_super">
 <input type="hidden" name="ftp_tls">
 <input type="hidden" name="log_ftp">

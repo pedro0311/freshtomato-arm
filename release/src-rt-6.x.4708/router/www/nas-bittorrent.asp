@@ -21,6 +21,18 @@
 
 //	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
+/* CIFS-BEGIN */
+//	<% statfs("/cifs1", "cifs1"); %>
+
+//	<% statfs("/cifs2", "cifs2"); %>
+/* CIFS-END */
+/* JFFS2-BEGIN */
+//	<% statfs("/jffs", "jffs2"); %>
+/* JFFS2-END */
+/* JFFS2NAND-BEGIN */
+//	<% statfs("/jffs", "brcmnand"); %>
+/* JFFS2NAND-END */
+
 var cprefix = 'nas_bittorrent';
 var changed = 0;
 var serviceLastUp = 0;
@@ -48,6 +60,17 @@ function verifyFields(focused, quiet) {
 	E('_bt_ul_queue_size').disabled = !E('_f_bt_ul_queue_enable').checked;
 	E('_bt_blocklist_url').disabled = !E('_f_bt_blocklist').checked;
 	E('_bt_log_path').disabled = !E('_f_bt_log').checked;
+
+/* CIFS-BEGIN */
+	if (cifs1.size == 0) E('_bt_settings').options[2].disabled = 1;
+	if (cifs2.size == 0) E('_bt_settings').options[3].disabled = 1;
+/* CIFS-END */
+/* JFFS2-BEGIN */
+	if (jffs2.size == 0 && !jffs2.mnt) E('_bt_settings').options[1].disabled = 1;
+/* JFFS2-END */
+/* JFFS2NAND-BEGIN */
+	if (brcmnand.size == 0 && !brcmnand.mnt) E('_bt_settings').options[1].disabled = 1;
+/* JFFS2NAND-END */
 
 	elem.display('_bt_settings_custom', (E('_bt_settings').value == 'custom'));
 	elem.display('_bt_binary_custom', (E('_bt_binary').value == 'custom'));
@@ -141,13 +164,17 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
-
 	fom.bt_enable.value = fom._f_bt_enable.checked ? 1 : 0;
 	fom.bt_incomplete.value = fom._f_bt_incomplete.checked ? 1 : 0;
 	fom.bt_autoadd.value = fom._f_bt_autoadd.checked ? 1 : 0;
@@ -167,8 +194,7 @@ function save() {
 	fom.bt_log.value = fom._f_bt_log.checked ? 1 : 0;
 	fom.bt_dl_queue_enable.value = fom._f_bt_dl_queue_enable.checked ? 1 : 0;
 	fom.bt_ul_queue_enable.value = fom._f_bt_ul_queue_enable.checked ? 1 : 0;
-
-	fom._nofootermsg.value = 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -202,7 +228,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-bittorrent.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="bt_enable">
 <input type="hidden" name="bt_incomplete">
 <input type="hidden" name="bt_autoadd">

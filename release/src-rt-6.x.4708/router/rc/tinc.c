@@ -60,7 +60,7 @@ void start_tinc(int force)
 	stop_tinc();
 
 	/* only if enabled on wanup or forced */
-	if (!nvram_get_int("tinc_wanup") && force == 0)
+	if (!nvram_get_int("tinc_enable") && force == 0)
 		return;
 
 	/* create tinc directories */
