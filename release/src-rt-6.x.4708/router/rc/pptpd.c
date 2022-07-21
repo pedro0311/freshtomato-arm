@@ -40,7 +40,7 @@
 #define PPTPD_SHUTDOWN		PPTPD_DIR"/pptpd_shutdown"
 
 
-char *ip2bcast(char *ip, char *netmask, char *buf)
+static char *ip2bcast(char *ip, char *netmask, char *buf)
 {
 	struct in_addr addr;
 
@@ -51,7 +51,7 @@ char *ip2bcast(char *ip, char *netmask, char *buf)
 	return buf;
 }
 
-void write_chap_secret(char *file)
+static void write_chap_secret(char *file)
 {
 	FILE *fp;
 	char *nv, *nvp, *b;
