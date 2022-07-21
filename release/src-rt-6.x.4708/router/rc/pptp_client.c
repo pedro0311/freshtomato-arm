@@ -522,7 +522,6 @@ static void pptp_client_add_table(void)
 int pptpc_ipup_main(int argc, char **argv)
 {
 	char *pptp_client_ifname;
-	const char *p;
 	struct sysinfo si;
 
 	/* ipup receives six arguments:
@@ -544,13 +543,10 @@ int pptpc_ipup_main(int argc, char **argv)
 
 	f_write_string(PPTPC_CLIENT"_link", argv[1], 0, 0);
 
-	if ((p = getenv("IPLOCAL"))) {
-		nvram_set("pptp_client_ipaddr", p);
+	if (env2nv("IPLOCAL", "pptp_client_ipaddr"))
 		nvram_set("pptp_client_netmask", "255.255.255.255");
-	}
 
-	if ((p = getenv("IPREMOTE")))
-		nvram_set("pptp_client_gateway", p);
+	env2nv("IPREMOTE", "pptp_client_gateway");
 
 	pptp_client_add_table();
 	pptp_client_add_route();

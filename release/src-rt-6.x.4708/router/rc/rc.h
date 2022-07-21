@@ -91,6 +91,7 @@ const char *chain_out_reject;
 
 /* rc.c */
 extern void chains_log_detection(void);
+extern int env2nv(char *env, char *nv);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);

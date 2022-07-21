@@ -91,6 +91,21 @@ void chains_log_detection(void)
 	//if (nvram_match("nf_drop_reset", "1")) chain_out_drop = chain_out_reject;
 }
 
+/* copy env to nvram
+ * returns 1 if new/changed, 0 if not changed/no env
+ */
+int env2nv(char *env, char *nv)
+{
+	char *value;
+	if ((value = getenv(env)) != NULL) {
+		if (!nvram_match(nv, value)) {
+			nvram_set(nv, value);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 typedef struct {
 	const char *name;
 	int (*main)(int argc, char *argv[]);
