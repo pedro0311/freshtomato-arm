@@ -85,6 +85,7 @@ static const char dmresolv[] = "/etc/resolv.dnsmasq";
 static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
 static const char vsftpd_passwd[] = "/etc/vsftpd.passwd";
 static char vsftpd_users[] = "/etc/vsftpd.users";
+static char vsftpd_run[] = "/var/run/vsftpd";
 #endif
 static pid_t pid_dnsmasq = -1;
 static pid_t pid_crond = -1;
@@ -185,12 +186,8 @@ void start_dnsmasq()
 	char dhcpN_num[] = "dhcpXX_num";
 	char dhcpN_lease[] = "dhcpXX_lease";
 
-	if (getpid() != 1) {
-		start_service("dnsmasq");
+	if (serialize_restart("dnsmasq", 1))
 		return;
-	}
-
-	stop_dnsmasq();
 
 	/* check wireless ethernet bridge (wet) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_wet)) {
@@ -418,7 +415,7 @@ void start_dnsmasq()
 			if ((*nv) && (strcmp(nv, "0.0.0.0") != 0))
 				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv); /* netbios-ns */
 #ifdef TCONFIG_SAMBASRV
-			else if (nvram_get_int("smbd_enable") && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
+			else if ((nvram_get_int("smbd_enable") || (pidof("smbd") > 0)) && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
 				if ((!*nv) || (strcmp(nv, "0.0.0.0") == 0))
 					/* Samba will serve as a WINS server */
 					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr)); /* netbios-ns */
@@ -667,9 +664,11 @@ void start_dnsmasq()
 	}
 
 #ifdef TCONFIG_DNSCRYPT
+	stop_dnscrypt();
 	start_dnscrypt();
 #endif
 #ifdef TCONFIG_STUBBY
+	stop_stubby();
 	start_stubby();
 #endif
 
@@ -682,10 +681,8 @@ void start_dnsmasq()
 
 void stop_dnsmasq(void)
 {
-	if (getpid() != 1) {
-		stop_service("dnsmasq");
+	if (serialize_restart("dnsmasq", 0))
 		return;
-	}
 
 	pid_dnsmasq = -1;
 
@@ -724,12 +721,8 @@ void start_dnscrypt(void)
 	if (!nvram_get_int("dnscrypt_proxy"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("dnscrypt");
+	if (serialize_restart("dnscrypt-proxy", 1))
 		return;
-	}
-
-	stop_dnscrypt();
 
 	memset(dnscrypt_local, 0, 30);
 	sprintf(dnscrypt_local, "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
@@ -772,10 +765,8 @@ void start_dnscrypt(void)
 
 void stop_dnscrypt(void)
 {
-	if (getpid() != 1) {
-		stop_service("dnscrypt");
+	if (serialize_restart("dnscrypt-proxy", 0))
 		return;
-	}
 
 	killall_tk_period_wait("dnscrypt-proxy", 50);
 }
@@ -799,12 +790,8 @@ void start_stubby(void)
 	if (!nvram_get_int("stubby_proxy"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("stubby");
+	if (serialize_restart("stubby", 1))
 		return;
-	}
-
-	stop_stubby();
 
 	mkdir_if_none("/etc/stubby");
 
@@ -911,10 +898,8 @@ void start_stubby(void)
 
 void stop_stubby(void)
 {
-	if (getpid() != 1) {
-		stop_service("stubby");
+	if (serialize_restart("stubby", 0))
 		return;
-	}
 
 	killall_tk_period_wait("stubby", 50);
 	unlink("/var/run/stubby.pid");
@@ -997,12 +982,8 @@ void start_mdns(void)
 	if (!nvram_get_int("mdns_enable"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("mdns");
+	if (serialize_restart("avahi-daemon", 1))
 		return;
-	}
-
-	stop_mdns();
 
 	mkdir_if_none(AVAHI_CONFIG_PATH);
 	mkdir_if_none(AVAHI_SERVICES_PATH);
@@ -1018,19 +999,19 @@ void start_mdns(void)
 
 void stop_mdns(void)
 {
-	if (pidof("avahi-daemon") > 0) {
-		if (getpid() != 1) {
-			stop_service("mdns");
-			return;
-		}
-		killall_tk_period_wait("avahi-daemon", 50);
-	}
+	if (serialize_restart("avahi-daemon", 0))
+		return;
+
+	killall_tk_period_wait("avahi-daemon", 50);
 }
 #endif /* TCONFIG_MDNS */
 
 #ifdef TCONFIG_IRQBALANCE
 void stop_irqbalance(void)
 {
+	if (serialize_restart("irqbalance", 0))
+		return;
+
 	if (pidof("irqbalance") > 0) {
 		killall_tk_period_wait("irqbalance", 50);
 		logmsg(LOG_INFO, "irqbalance is stopped");
@@ -1041,12 +1022,8 @@ void start_irqbalance(void)
 {
 	int ret;
 
-	if (getpid() != 1) {
-		start_service("irqbalance");
+	if (serialize_restart("irqbalance", 1))
 		return;
-	}
-
-	stop_irqbalance();
 
 	mkdir_if_none("/var/run/irqbalance");
 	ret = eval("irqbalance", "-t", "10");
@@ -1209,17 +1186,11 @@ void start_httpd(void)
 {
 	int ret;
 
-	if (getpid() != 1) {
-		start_service("httpd");
+	if (serialize_restart("httpd", 1))
 		return;
-	}
 
 	if (nvram_match("web_css", "online"))
 		xstart("/usr/sbin/ttb");
-
-	stop_httpd();
-	/* wait to exit gracefully */
-	sleep(1);
 
 	/* set www dir */
 	if (nvram_match("web_dir", "jffs"))
@@ -1231,6 +1202,7 @@ void start_httpd(void)
 	else
 		chdir("/www");
 
+	sleep(1);
 	ret = eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
 	chdir("/");
 
@@ -1242,10 +1214,8 @@ void start_httpd(void)
 
 void stop_httpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("httpd");
+	if (serialize_restart("httpd", 0))
 		return;
-	}
 
 	if (pidof("httpd") > 0) {
 		killall_tk_period_wait("httpd", 50);
@@ -1328,8 +1298,10 @@ void start_ipv6_tunnel(void)
 		eval("ip", "-6", "route", "add", "::/0", "dev", tun_dev, "metric", "1");
 
 	/* (re)start dnsmasq */
-	if (service == IPV6_ANYCAST_6TO4)
+	if (service == IPV6_ANYCAST_6TO4) {
+		stop_dnsmasq();
 		start_dnsmasq();
+	}
 }
 
 void stop_ipv6_tunnel(void)
@@ -1464,6 +1436,7 @@ void start_6rd_tunnel(void)
 	nvram_set("ipv6_ifname", (char *)tun_dev);
 
 	/* (re)start dnsmasq */
+	stop_dnsmasq();
 	start_dnsmasq();
 }
 
@@ -1559,10 +1532,8 @@ void start_upnp(void)
 	if (get_wan_proto() == WP_DISABLED)
 		return;
 
-	if (getpid() != 1) {
-		start_service("upnp");
+	if (serialize_restart("miniupnpd", 1))
 		return;
-	}
 
 	if (((enable = nvram_get_int("upnp_enable")) & 3) != 0) {
 		mkdir(UPNP_DIR, 0777);
@@ -1683,10 +1654,8 @@ void start_upnp(void)
 
 void stop_upnp(void)
 {
-	if (getpid() != 1) {
-		stop_service("upnp");
+	if (serialize_restart("miniupnpd", 0))
 		return;
-	}
 
 	killall_tk_period_wait("miniupnpd", 50);
 }
@@ -1743,10 +1712,8 @@ void start_zebra(void)
 	char *wan_tx = nvram_safe_get("dr_wan_tx");
 	char *wan_rx = nvram_safe_get("dr_wan_rx");
 
-	if (getpid() != 1) {
-		start_service("zebra");
+	if (serialize_restart("zebra", 1))
 		return;
-	}
 
 	if ((*lan_tx == '0') && (*lan_rx == '0') &&
 	    (*lan1_tx == '0') && (*lan1_rx == '0') &&
@@ -1859,10 +1826,8 @@ void start_zebra(void)
 
 void stop_zebra(void)
 {
-	if (getpid() != 1) {
-		stop_service("zebra");
+	if (serialize_restart("zebra", 0))
 		return;
-	}
 
 	killall("zebra", SIGTERM);
 	killall("ripd", SIGTERM);
@@ -2199,14 +2164,10 @@ void start_ntpd(void)
 	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", "-N", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
-	if (getpid() != 1) {
-		start_service("ntpd");
+	if (serialize_restart("ntpd", 1))
 		return;
-	}
 
 	set_tz();
-
-	stop_ntpd();
 
 	if ((nvram_get_int("dnscrypt_proxy")) || (nvram_get_int("stubby_proxy")))
 		eval("ntp2ip");
@@ -2270,10 +2231,8 @@ void start_ntpd(void)
 
 void stop_ntpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("ntpd");
+	if (serialize_restart("ntpd", 0))
 		return;
-	}
 
 	if (pidof("ntpd") > 0) {
 		killall_tk_period_wait("ntpd", 50);
@@ -2287,13 +2246,16 @@ int ntpd_synced_main(int argc, char *argv[])
 		nvram_set("ntp_ready", "1");
 		logmsg(LOG_INFO, "initial clock set");
 
+		stop_httpd();
 		start_httpd();
 		start_sched();
 		start_ddns();
 #ifdef TCONFIG_DNSCRYPT
+		stop_dnscrypt();
 		start_dnscrypt();
 #endif
 #ifdef TCONFIG_STUBBY
+		stop_stubby();
 		start_stubby();
 #endif
 #ifdef TCONFIG_DNSSEC
@@ -2304,6 +2266,7 @@ int ntpd_synced_main(int argc, char *argv[])
 		start_ovpn_eas();
 #endif
 #ifdef TCONFIG_MDNS
+		stop_mdns();
 		start_mdns();
 #endif
 	}
@@ -2314,9 +2277,7 @@ int ntpd_synced_main(int argc, char *argv[])
 static void stop_rstats(void)
 {
 	int n, m;
-	int pid;
-	int pidz;
-	int ppidz;
+	pid_t pid, pidz, ppidz;
 	int w = 0;
 
 	n = 60;
@@ -2357,9 +2318,7 @@ static void start_rstats(int new)
 static void stop_cstats(void)
 {
 	int n, m;
-	int pid;
-	int pidz;
-	int ppidz;
+	pid_t pid, pidz, ppidz;
 	int w = 0;
 
 	n = 60;
@@ -2430,7 +2389,7 @@ static void start_ftpd(int force)
 	char *buf;
 	char *p, *q;
 	char *user, *pass, *rights, *root_dir;
-	int i;
+	int i, ret;
 #ifdef TCONFIG_HTTPS
 	unsigned long long sn;
 	char t[32];
@@ -2440,13 +2399,11 @@ static void start_ftpd(int force)
 	if (!nvram_get_int("ftp_enable") && force == 0)
 		return;
 
-	if (getpid() != 1) {
-		start_service("ftpd");
+	if (serialize_restart("vsftpd", 1))
 		return;
-	}
 
 	mkdir_if_none(vsftpd_users);
-	mkdir_if_none("/var/run/vsftpd");
+	mkdir_if_none(vsftpd_run);
 
 	if ((fp = fopen(vsftpd_conf, "w")) == NULL) {
 		perror(vsftpd_conf);
@@ -2648,35 +2605,27 @@ static void start_ftpd(int force)
 	}
 
 	fclose(fp);
-	killall("vsftpd", SIGHUP);
 
-	/* start vsftpd if it's not already running */
-	if (pidof("vsftpd") < 0) {
-		int ret;
-
-		ret = eval("vsftpd");
-		if (ret)
-			logmsg(LOG_ERR, "starting vsftpd failed ...");
-		else
-			logmsg(LOG_INFO, "vsftpd is started");
-	}
+	ret = eval("vsftpd");
+	if (ret)
+		logmsg(LOG_ERR, "starting vsftpd failed ...");
+	else
+		logmsg(LOG_INFO, "vsftpd is started");
 }
 
 static void stop_ftpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("ftpd");
+	if (serialize_restart("vsftpd", 0))
 		return;
-	}
 
 	if (pidof("vsftpd") > 0) {
 		killall_tk_period_wait("vsftpd", 50);
-		unlink(vsftpd_passwd);
-		unlink(vsftpd_conf);
-		eval("rm", "-rf", vsftpd_users);
-
 		logmsg(LOG_INFO, "vsftpd is stopped");
 	}
+
+	unlink(vsftpd_passwd);
+	unlink(vsftpd_conf);
+	eval("rm", "-rf", vsftpd_users);
 }
 #endif /* TCONFIG_FTP */
 
@@ -2684,11 +2633,12 @@ static void stop_ftpd(void)
 static void start_media_server(int force)
 {
 	FILE *f;
-	int port, pid, https;
+	int port, https;
+	pid_t pid;
 	char *dbdir;
 	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-r", NULL, NULL };
 	static int once = 1;
-	int index = 4;
+	int ret, index = 4;
 	char *msi;
 	unsigned char ea[ETHER_ADDR_LEN];
 	char serial[18], uuid[37];
@@ -2699,17 +2649,17 @@ static void start_media_server(int force)
 	if (!nvram_get_int("ms_enable") && force == 0)
 		return;
 
-	if (getpid() != 1) {
-		start_service("media");
+	if (serialize_restart(MEDIA_SERVER_APP, 1))
 		return;
-	}
 
-	if (!nvram_get_int("ms_sas")) {
+	if (!nvram_get_int("ms_sas")) { /* scan media at startup? */
 		once = 0;
 		argv[index - 1] = NULL;
 	}
+	else if (!once) /* already scanned */
+		argv[index - 1] = NULL;
 
-	if (nvram_get_int("ms_rescan")) { /* force rebuild */
+	if (nvram_get_int("ms_rescan")) { /* rescan on the next run? */
 		argv[index - 1] = "-R";
 		nvram_unset("ms_rescan");
 	}
@@ -2782,36 +2732,24 @@ static void start_media_server(int force)
 	if (nvram_get_int("ms_debug"))
 		argv[index++] = "-v";
 
-	/* start media server if it's not already running */
-	if (pidof(MEDIA_SERVER_APP) < 0) {
-		if ((_eval(argv, NULL, 0, &pid) == 0) && (once)) {
-			/* if we started the media server successfully, wait 1 sec
-			 * to let it die if it can't open the database file.
-			 * if it's still alive after that, assume it's running and
-			 * disable forced once-after-reboot rescan.
-			 */
-			sleep(1);
-			if (pidof(MEDIA_SERVER_APP) > 0)
-				once = 0;
-			else {
-				logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
-				return;
-			}
-		}
+	ret = _eval(argv, NULL, 0, &pid);
+	sleep(1);
+
+	if ((pidof(MEDIA_SERVER_APP) > 0) && !ret) {
+		logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
+		once = 0;
 	}
-	logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
+	else
+		logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
 }
 
 static void stop_media_server(void)
 {
-	if (getpid() != 1) {
-		stop_service("media");
+	if (serialize_restart(MEDIA_SERVER_APP, 0))
 		return;
-	}
 
 	if (pidof(MEDIA_SERVER_APP) > 0) {
 		killall_tk_period_wait(MEDIA_SERVER_APP, 50);
-
 		logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
 	}
 }
@@ -3092,26 +3030,26 @@ TOP:
 
 	user = (modifier != NULL && *modifier == 'c');
 
-	if (strcmp(service, "dhcpc-wan") == 0) {
+	if (strcmp(service, "dhcpc_wan") == 0) {
 		if (act_stop) stop_dhcpc("wan");
 		if (act_start) start_dhcpc("wan");
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "dhcpc-wan2") == 0) {
+	if (strcmp(service, "dhcpc_wan2") == 0) {
 		if (act_stop) stop_dhcpc("wan2");
 		if (act_start) start_dhcpc("wan2");
 		goto CLEAR;
 	}
 
 #ifdef TCONFIG_MULTIWAN
-	if (strcmp(service, "dhcpc-wan3") == 0) {
+	if (strcmp(service, "dhcpc_wan3") == 0) {
 		if (act_stop) stop_dhcpc("wan3");
 		if (act_start) start_dhcpc("wan3");
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "dhcpc-wan4") == 0) {
+	if (strcmp(service, "dhcpc_wan4") == 0) {
 		if (act_stop) stop_dhcpc("wan4");
 		if (act_start) start_dhcpc("wan4");
 		goto CLEAR;
@@ -3133,7 +3071,7 @@ TOP:
 	}
 
 #ifdef TCONFIG_DNSCRYPT
-	if (strcmp(service, "dnscrypt") == 0) {
+	if ((strcmp(service, "dnscrypt") == 0) || (strcmp(service, "dnscrypt_proxy") == 0)) {
 		if (act_stop) stop_dnscrypt();
 		if (act_start) start_dnscrypt();
 		goto CLEAR;
@@ -3149,7 +3087,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_MDNS
-	if (strcmp(service, "mdns") == 0) {
+	if ((strcmp(service, "mdns") == 0) || (strcmp(service, "avahi_daemon") == 0)) {
 		if (act_stop) stop_mdns();
 		if (act_start) start_mdns();
 		goto CLEAR;
@@ -3253,7 +3191,7 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "upnp") == 0) {
+	if ((strcmp(service, "upnp") == 0) || (strcmp(service, "miniupnpd") == 0)) {
 		if (act_stop)
 			stop_upnp();
 		stop_firewall();
@@ -3299,6 +3237,7 @@ TOP:
 		stop_firewall();
 		start_firewall(); /* always restarted */
 		if (act_start) {
+			stop_httpd();
 			start_httpd();
 			if (!(strcmp(service, "adminnosshd") == 0))
 				create_passwd();
@@ -3353,7 +3292,7 @@ TOP:
 			stop_sched();
 			stop_cron();
 #ifdef TCONFIG_USB
-			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
+			stop_nas_services(); /* Samba, FTP and Media Server */
 #endif
 #ifdef TCONFIG_ZEBRA
 			stop_zebra();
@@ -3643,7 +3582,7 @@ TOP:
 	}
 
 #ifdef TCONFIG_BT
-	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0)) {
+	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0) || (strcmp(service, "transmission_da") == 0)) {
 		if (act_stop) stop_bittorrent();
 		stop_firewall();
 		start_firewall(); /* always restarted */
@@ -3653,7 +3592,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_NFS
-	if (strcmp(service, "nfs") == 0) {
+	if ((strcmp(service, "nfs") == 0) || (strcmp(service, "nfsd") == 0)) {
 		if (act_stop) stop_nfs();
 		if (act_start) start_nfs();
 		goto CLEAR;
@@ -3713,7 +3652,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_FTP
-	if (strcmp(service, "ftpd") == 0) {
+	if ((strcmp(service, "ftpd") == 0) || (strcmp(service, "vsftpd") == 0)) {
 		if (act_stop) stop_ftpd();
 		setup_conntrack();
 		stop_firewall();
@@ -3759,7 +3698,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_TINC
-	if (strcmp(service, "tinc") == 0) {
+	if ((strcmp(service, "tinc") == 0) || (strcmp(service, "tincd") == 0)) {
 		if (act_stop) stop_tinc();
 		if (act_start) start_tinc(1); /* force (re)start */
 		goto CLEAR;
@@ -3786,14 +3725,14 @@ TOP:
 	if (strcmp(service, "nginx") == 0) {
 		if (act_stop) stop_nginx();
 		stop_firewall();
-		start_firewall(); /* always restarted */
+		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_nginx(1); /* force (re)start */
 		goto CLEAR;
 	}
 	if ((strcmp(service, "mysql") == 0) || (strcmp(service, "mysqld") == 0)) {
 		if (act_stop) stop_mysql();
 		stop_firewall();
-		start_firewall(); /* always restarted */
+		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_mysql(1); /* force (re)start */
 		goto CLEAR;
 	}

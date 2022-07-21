@@ -92,6 +92,9 @@ void start_pptpd(int force)
 	if (!nvram_get_int("pptpd_enable") && force == 0)
 		return;
 
+	if (serialize_restart("pptpd", 1))
+		return;
+
 	/* Make sure vpn directory exists */
 	mkdir(PPTPD_DIR, 0700);
 
@@ -281,6 +284,9 @@ void stop_pptpd(void)
 	FILE *fp;
 	int ppppid, n;
 	char line[128];
+
+	if (serialize_restart("pptpd", 0))
+		return;
 
 	eval("cp", PPTPD_CONNECTED, PPTPD_SHUTDOWN);
 

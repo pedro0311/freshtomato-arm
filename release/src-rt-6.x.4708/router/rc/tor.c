@@ -2,6 +2,7 @@
  * tor.c
  *
  * Copyright (C) 2011 shibby
+ * Fixes/updates (C) 2018 - 2022 pedro
  *
  */
 
@@ -19,6 +20,9 @@ void start_tor(int force) {
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("tor_enable") && force == 0)
+		return;
+
+	if (serialize_restart("tor", 1))
 		return;
 
 	/* dnsmasq uses this IP for nameserver to resolv .onion/.exit domains */
@@ -68,6 +72,9 @@ void start_tor(int force) {
 }
 
 void stop_tor(void) {
+	if (serialize_restart("tor", 0))
+		return;
+
 	if (pidof("tor") > 0)
 		killall_tk_period_wait("tor", 50);
 }

@@ -32,11 +32,11 @@ void start_mysql(int force)
 	char full_datadir[256], full_tmpdir[256], basedir[256];
 	char tmp1[256], tmp2[256];
 
-	/* make sure its really stop */
-	stop_mysql();
-
 	/* only if enabled or forced */
 	if (!nvram_get_int("mysql_enable") && force == 0)
+		return;
+
+	if (serialize_restart("mysqld", 1))
 		return;
 
 	if (nvram_match("mysql_binary", "internal"))
@@ -276,6 +276,9 @@ void stop_mysql(void)
 {
 	FILE *fp;
 	char pbi[128];
+
+	if (serialize_restart("mysqld", 0))
+		return;
 
 	if (nvram_match("mysql_binary", "internal"))
 		strlcpy(pbi, "/usr/bin", sizeof(pbi));

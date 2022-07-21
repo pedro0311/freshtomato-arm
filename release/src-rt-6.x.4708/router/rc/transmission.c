@@ -14,13 +14,10 @@
 
 #define tr_dir			"/etc/transmission"
 #define tr_settings		tr_dir"/settings.json"
-#define tr_fw_script		tr_dir"/tr-fw.sh"
-#define tr_fw_del_script	tr_dir"/tr-clear-fw-tmp.sh"
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG	"transmission_debug"
-
 
 static int rmem_max = 0;
 static int wmem_max = 0;
@@ -37,6 +34,9 @@ void start_bittorrent(int force)
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("bt_enable") && force == 0)
+		return;
+
+	if (serialize_restart("transmission-da", 1))
 		return;
 
 	if (pidof_child > 0) { /* fork is still up */
@@ -264,6 +264,9 @@ void stop_bittorrent(void)
 	pid_t pid;
 	char buf[16];
 	int n = 10;
+
+	if (serialize_restart("transmission-da", 0))
+		return;
 
 	if (pidof("transmission-da") > 0) {
 		logmsg(LOG_INFO, "Terminating transmission-daemon ...");

@@ -152,9 +152,10 @@ void start_nocat(void)
 	char cmd[255];
 	char *p;
 
-	stop_nocat();
-
 	if ((!nvram_match("NC_enable", "1")) || (!nvram_match("mwan_num", "1")))
+		return;
+
+	if (serialize_restart("splashd", 1))
 		return;
 
 	build_nocat_conf();
@@ -162,24 +163,24 @@ void start_nocat(void)
 	if ((p = nvram_get("NC_DocumentRoot")) == NULL)
 		p = "/tmp/splashd";
 
-	memset(splashfile, 0, 255);
+	memset(splashfile, 0, sizeof(splashfile));
 	sprintf(splashfile, "%s/splash.html", p);
-	memset(logofile, 0, 255);
+	memset(logofile, 0, sizeof(logofile));
 	sprintf(logofile, "%s/style.css", p);
-	memset(iconfile, 0, 255);
+	memset(iconfile, 0, sizeof(iconfile));
 	sprintf(iconfile, "%s/favicon.ico", p);
 
 	if (!f_exists(splashfile)) {
 		nvram_get_file("NC_SplashFile", splashfile, 8192);
 		if (!f_exists(splashfile)) {
-			memset(cmd, 0, 255);
+			memset(cmd, 0, sizeof(cmd));
 			sprintf(cmd, "cp /www/splash.html %s", splashfile);
 			system(cmd);
-			memset(cmd, 0, 255);
-			sprintf(cmd, "cp /www/style.css  %s", logofile);
+			memset(cmd, 0, sizeof(cmd));
+			sprintf(cmd, "cp /www/style.css %s", logofile);
 			system(cmd);
-			memset(cmd, 0, 255);
-			sprintf(cmd, "cp /www/favicon.ico  %s", iconfile);
+			memset(cmd, 0, sizeof(cmd));
+			sprintf(cmd, "cp /www/favicon.ico %s", iconfile);
 			system(cmd);
 		}
 	}
@@ -218,16 +219,17 @@ void start_nocat(void)
 
 void stop_nocat(void)
 {
+	if (serialize_restart("splashd", 0))
+		return;
+
 	if (pidof("splashd") > 0) {
 		killall_tk_period_wait("splashd", 50);
-
-		eval(NOCAT_SCRIPTS"/uninitialize.fw");
-
-		system("rm "NOCAT_LEASES);
-		system("rm "NOCAT_START_SCRIPT);
-		system("rm "NOCAT_LOGFILE);
-		start_wan();
-
 		syslog(LOG_INFO, "Captive Portal Splash daemon successfully stopped");
 	}
+
+	eval(NOCAT_SCRIPTS"/uninitialize.fw");
+	system("rm "NOCAT_LEASES);
+	system("rm "NOCAT_START_SCRIPT);
+	system("rm "NOCAT_LOGFILE);
+	start_wan();
 }

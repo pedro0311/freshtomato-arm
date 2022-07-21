@@ -92,6 +92,7 @@ const char *chain_out_reject;
 /* rc.c */
 extern void chains_log_detection(void);
 extern int env2nv(char *env, char *nv);
+extern int serialize_restart(char *service, int start);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -522,7 +523,7 @@ extern void stop_snmp();
 /* tor.c */
 #ifdef TCONFIG_TOR
 extern void start_tor(int force);
-extern void stop_tor();
+extern void stop_tor(void);
 #endif
 
 /* apcupsd.c */

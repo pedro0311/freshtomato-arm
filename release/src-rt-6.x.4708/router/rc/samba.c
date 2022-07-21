@@ -125,6 +125,9 @@ void start_samba(int force)
 		return;
 	}
 
+	if (serialize_restart("smbd", 1))
+		return;
+
 	if ((fp = fopen(samba_configfile, "w")) == NULL) {
 		perror(samba_configfile);
 		return;
@@ -347,6 +350,9 @@ void start_samba(int force)
 
 void stop_samba(void)
 {
+	if (serialize_restart("smbd", 0))
+		return;
+
 	stop_wsdd();
 
 	/* stop samba */

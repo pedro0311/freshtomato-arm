@@ -9,6 +9,10 @@
 
 #include "rc.h"
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"rc_debug"
+
 
 #ifdef DEBUG_RCTEST
 /* used for various testing */
@@ -103,6 +107,43 @@ int env2nv(char *env, char *nv)
 			return 1;
 		}
 	}
+	return 0;
+}
+
+/* serialize (re-)starts from GUI, avoid zombies */
+int serialize_restart(char *service, int start)
+{
+	char s[32];
+	char *pos;
+	unsigned int index = 0;
+
+	/* replace '-' with '_' otherwise exec_service() will fail */
+	strlcpy(s, service, sizeof(s));
+	if ((pos = strstr(s, "-")) != NULL) {
+		index = pos - s;
+		s[index] = '\0';
+		strlcat(s, "_", sizeof(s));
+		strlcat(s, service + index + 1, sizeof(s));
+	}
+	logmsg(LOG_DEBUG, "*** %s: service: %s %s - pid: %d", __FUNCTION__, service, (start ? "start" : "stop"), getpid());
+
+	if (start == 1) {
+		if (getpid() != 1) {
+			start_service(s);
+			return 1;
+		}
+		if (pidof(service) > 0) {
+			logmsg(LOG_WARNING, "service: %s already running", s);
+			return 1;
+		}
+	}
+	else {
+		if (getpid() != 1) {
+			stop_service(s);
+			return 1;
+		}
+	}
+
 	return 0;
 }
 

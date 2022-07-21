@@ -307,6 +307,7 @@ static int renew(char *ifname, char *prefix)
 
 	if (changed) {
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
 	}
 
@@ -533,7 +534,9 @@ int dhcp6c_state_main(int argc, char **argv)
 		}
 		/* (re)start dnsmasq and httpd */
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
+		stop_httpd();
 		start_httpd();
 	}
 

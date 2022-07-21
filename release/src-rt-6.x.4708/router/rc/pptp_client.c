@@ -41,9 +41,8 @@ void start_pptp_client(void)
 
 	char *srv_addr = nvram_safe_get("pptp_client_srvip");
 
-	/* PPTP already running */
-	if (pidof("pptpclient") > 0)
-		stop_pptp_client();
+	if (serialize_restart("pptpclient", 1))
+		return;
 
 	unlink(PPTPC_UP_SCRIPT);
 	unlink(PPTPC_DOWN_SCRIPT);
@@ -204,6 +203,9 @@ void stop_pptp_client(void)
 	char *argv[8];
 	char buffer[BUF_SIZE];
 	char *prefix = nvram_safe_get("pptp_client_usewan");
+
+	if (serialize_restart("pptpclient", 0))
+		return;
 
 	killall_tk_period_wait("pptpc_ip-up", 50);
 	killall_tk_period_wait("pptpc_ip-down", 50);

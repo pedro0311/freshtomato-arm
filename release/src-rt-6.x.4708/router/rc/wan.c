@@ -419,6 +419,7 @@ void preset_wan(char *ifname, char *gw, char *netmask, char *prefix)
 	 * to resolve access server IP
 	 */
 	//if (!strcmp(prefix, "wan")) {
+		stop_dnsmasq();
 		dns_to_resolv();
 		start_dnsmasq();
 		sleep(1);
@@ -1168,6 +1169,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 		}
 	}
 
+	stop_dnsmasq();
 	dns_to_resolv();
 	start_dnsmasq();
 	start_firewall();
@@ -1232,6 +1234,7 @@ void start_wan_done(char *wan_ifname, char *prefix)
 			start_udpxy();
 		}
 
+		stop_httpd();
 		start_httpd();
 	}
 
