@@ -252,11 +252,13 @@ void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write ipt_
 	if (pidof("pptpclient") < 0 || (!pptpcface) || (!*pptpcface) || (!strcmp(pptpcface, "none")))
 		return;
 
+	chains_log_detection();
+
 	if ((!strcmp(table, "INPUT")) && dflroute) {
-		ipt_writer("-A INPUT -s %s/%s -i %s -j ACCEPT\n", srvsub, srvsubmsk, pptpcface);
+		ipt_writer("-A INPUT -s %s/%s -i %s -j %s\n", srvsub, srvsubmsk, pptpcface, chain_in_accept);
 	}
 	else if ((!strcmp(table, "OUTPUT")) && dflroute) {
-		ipt_writer("-A OUTPUT -d %s/%s -o %s -j ACCEPT\n", srvsub, srvsubmsk, pptpcface);
+		ipt_writer("-A OUTPUT -d %s/%s -o %s -j %s\n", srvsub, srvsubmsk, pptpcface, chain_out_accept);
 	}
 	else if ((!strcmp(table, "FORWARD")) && dflroute) {
 		ipt_writer("-A FORWARD -d %s/%s -o %s -j ACCEPT\n", srvsub, srvsubmsk, pptpcface);
