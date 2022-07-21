@@ -86,6 +86,10 @@
 #include <common.h>
 #include <timer.h>
 
+#ifdef TOMATO
+#include <ipv6_shared.h>
+#endif
+
 #ifdef __linux__
 /* from /usr/include/linux/ipv6.h */
 
@@ -995,6 +999,10 @@ get_duid(idfile, duid)
 	struct duid *duid;
 {
 	FILE *fp = NULL;
+#ifdef TOMATO
+	FILE *fp2 = NULL;
+	char duid_buf[TOMATO_DUID_MAX_LEN] = { 0 };
+#endif
 	u_int16_t len = 0, hwtype;
 	int hwlen = 0;
 	char tmpbuf[256];	/* HWID should be no more than 256 bytes */
@@ -1067,6 +1075,18 @@ get_duid(idfile, duid)
 		dprintf(LOG_DEBUG, FNAME, "generated a new DUID: %s",
 		    duidstr(duid));
 	}
+
+#ifdef TOMATO
+	if ((fp2 = fopen(TOMATO_DUID_GUI, "w+")) == NULL) { /* if file already exists override it (empty it) */
+		dprintf(LOG_ERR, FNAME, "failed to open TOMATO_DUID_GUI file for save");
+	}
+	else {
+		snprintf(duid_buf, TOMATO_DUID_MAX_LEN-1, "%s", duidstr(duid));
+		duid_buf[TOMATO_DUID_MAX_LEN-1] = '\0';
+		fputs(duid_buf, fp2);
+		fclose(fp2);
+	}
+#endif
 
 	/* save the (new) ID to the file for next time */
 	if (!fp) {
