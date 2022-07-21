@@ -521,7 +521,7 @@ extern void stop_snmp();
 
 /* tor.c */
 #ifdef TCONFIG_TOR
-extern void start_tor();
+extern void start_tor(int force);
 extern void stop_tor();
 #endif
 

@@ -199,6 +199,7 @@ ifneq ($(TCONFIG_TOR),y)
 	sed -i $(INSTALLDIR)/www/tomato.js -e "/TOR-BEGIN/,/TOR-END/d"
 	sed -i $(INSTALLDIR)/www/about.asp -e "/TOR-BEGIN/,/TOR-END/d"
 	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/TOR-BEGIN/,/TOR-END/d"
+	sed -i $(INSTALLDIR)/www/isup.jsz -e "/TOR-BEGIN/,/TOR-END/d"
 endif
 
 # Only include the USB and NAS pages if USB Support is configured in.

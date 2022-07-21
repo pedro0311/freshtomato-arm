@@ -2949,7 +2949,7 @@ void start_services(void)
 #endif
 	start_tomatoanon();
 #ifdef TCONFIG_TOR
-	start_tor();
+	start_tor(0);
 #endif
 #ifdef TCONFIG_BT
 	start_bittorrent(0);
@@ -3673,7 +3673,7 @@ TOP:
 		if (act_stop) stop_tor();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_tor();
+		if (act_start) start_tor(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif

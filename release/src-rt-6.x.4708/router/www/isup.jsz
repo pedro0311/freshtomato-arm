@@ -61,3 +61,7 @@ isup.samba = parseInt('<% psup("smbd"); %>');
 /* FTP-BEGIN */
 isup.ftpd = parseInt('<% psup("vsftpd"); %>');
 /* FTP-END */
+
+/* TOR-BEGIN */
+isup.tor = parseInt('<% psup("tor"); %>');
+/* TOR-END */
