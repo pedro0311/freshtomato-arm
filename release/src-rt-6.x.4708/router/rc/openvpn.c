@@ -73,7 +73,7 @@ typedef enum ovpn_type
 } ovpn_type_t;
 
 
-static int ovpn_waitfor(const char *name)
+static void ovpn_waitfor(const char *name)
 {
 	int pid, n = 5;
 
@@ -83,11 +83,9 @@ static int ovpn_waitfor(const char *name)
 		waitpid(pid, NULL, WNOHANG);
 		sleep(1);
 	}
-
-	return (pid >= 0);
 }
 
-int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode, int unit, ovpn_type_t type) {
+static int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode, int unit, ovpn_type_t type) {
 	char buffer[32];
 
 	memset(buffer, 0, 32);
@@ -121,7 +119,7 @@ int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode,
 	return 0;
 }
 
-void ovpn_remove_iface(ovpn_type_t type, int unit) {
+static void ovpn_remove_iface(ovpn_type_t type, int unit) {
 	char buffer[8];
 	int tmp = (type == OVPN_TYPE_CLIENT ? OVPN_CLIENT_BASEIF : OVPN_SERVER_BASEIF) + unit;
 
@@ -135,7 +133,7 @@ void ovpn_remove_iface(ovpn_type_t type, int unit) {
 	eval("openvpn", "--rmtun", "--dev", buffer);
 }
 
-void ovpn_setup_dirs(ovpn_type_t type, int unit) {
+static void ovpn_setup_dirs(ovpn_type_t type, int unit) {
 	char buffer[64];
 	char *tmp = (type == OVPN_TYPE_SERVER ? "server" : "client");
 
@@ -160,7 +158,7 @@ void ovpn_setup_dirs(ovpn_type_t type, int unit) {
 	}
 }
 
-void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
+static void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
 	char buffer[64];
 	char *tmp = (type == OVPN_TYPE_SERVER ? "server" : "client");
 
@@ -188,7 +186,7 @@ void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
 	rmdir(OVPN_DIR);
 }
 
-void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
+static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 {
 	FILE *fp;
 	char buffer[64], buffer2[64];
