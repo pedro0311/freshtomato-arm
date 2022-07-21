@@ -807,7 +807,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "routes_static",		""				, 0 },
 	{ "dhcp_routes",		"1"				, 0 },
 	{ "force_igmpv2",		"0"				, 0 },
-	{ "wk_mode",			"gateway"			, 0 },	/* Network mode [gateway|router] */
 
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },
