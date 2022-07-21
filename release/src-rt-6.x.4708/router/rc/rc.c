@@ -1,9 +1,10 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -73,6 +74,21 @@ static int rc_main(int argc, char *argv[])
 		return kill(1, SIGHUP);
 
 	return 0;
+}
+
+void chains_log_detection(void)
+{
+	int n;
+
+	n = nvram_get_int("log_in");
+	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
+	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
+
+	n = nvram_get_int("log_out");
+	chain_out_drop = (n & 1) ? "logdrop" : "DROP";
+	chain_out_reject = (n & 1) ? "logreject" : "REJECT --reject-with tcp-reset";
+	chain_out_accept = (n & 2) ? "logaccept" : "ACCEPT";
+	//if (nvram_match("nf_drop_reset", "1")) chain_out_drop = chain_out_reject;
 }
 
 typedef struct {

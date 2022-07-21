@@ -62,12 +62,6 @@ static int wan3up;
 static int wan4up;
 #endif
 
-const char *chain_in_drop;
-const char *chain_in_accept;
-const char *chain_out_drop;
-const char *chain_out_accept;
-const char *chain_out_reject;
-
 const char chain_wan_prerouting[] = "WANPREROUTING";
 const char ipt_fname[] = "/etc/iptables";
 FILE *ipt_file;
@@ -1956,16 +1950,7 @@ int start_firewall(void)
 
 	enable_blackhole_detection();
 
-	n = nvram_get_int("log_in");
-	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
-	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
-
-	n = nvram_get_int("log_out");
-	chain_out_drop = (n & 1) ? "logdrop" : "DROP";
-	chain_out_reject = (n & 1) ? "logreject" : "REJECT --reject-with tcp-reset";
-	chain_out_accept = (n & 2) ? "logaccept" : "ACCEPT";
-
-	//if (nvram_match("nf_drop_reset", "1")) chain_out_drop = chain_out_reject;
+	chains_log_detection();
 
 	for (n = 0; n < BRIDGE_COUNT; n++) {
 		memset(buf1, 0, sizeof(buf1));
