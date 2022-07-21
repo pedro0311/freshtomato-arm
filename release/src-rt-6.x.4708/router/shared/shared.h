@@ -14,6 +14,9 @@
 #include <mntent.h>
 #endif
 
+#ifdef TCONFIG_IPV6
+#include <ipv6_shared.h>
+#endif
 
 #define Y2K			946684800L /* seconds since 1970 */
 
