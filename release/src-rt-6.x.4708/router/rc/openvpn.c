@@ -208,7 +208,7 @@ static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z $(pidof vpn%s%d) ] && {\n"
+			            "[ -z \"$(pidof vpn%s%d)\" ] && {\n"
 			            " service vpn%s%d restart\n"
 			            "}\n",
 			            instanceType, unit,
