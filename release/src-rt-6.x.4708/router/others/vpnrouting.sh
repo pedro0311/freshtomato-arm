@@ -3,7 +3,7 @@
 #
 # VPN Client selective routing up down script
 #
-# Copyright by pedro 2019
+# Copyright by pedro 2019 - 2022
 #
 
 
@@ -14,6 +14,7 @@ FIREWALL_ROUTING="/etc/openvpn/fw/$SERVICE-fw-routing.sh"
 DNSMASQ_IPSET="/etc/dnsmasq.ipset"
 RESTART_DNSMASQ=0
 RESTART_FW=0
+ID="0"
 LOGS="logger -t openvpn-vpnrouting.sh[$PID][$IFACE]"
 [ -d /etc/openvpn/fw ] || mkdir -m 0700 "/etc/openvpn/fw"
 
@@ -41,33 +42,6 @@ find_iface() {
 	PIDFILE="/var/run/vpnrouting$ID.pid"
 }
 
-deleteRules() {
-	sed -i "s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\ /g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\ /g" $1
-	$1
-}
-
-cleanupRouting() {
-	$LOGS "Clean-up routing"
-
-	ip route flush table $ID
-	ip route flush cache
-
-	[ "$(ip rule | grep "lookup $ID" | wc -l)" -gt 0 ] && {
-		ip rule del fwmark $ID/0xf00 table $ID
-	}
-
-	deleteRules $FIREWALL_ROUTING
-	rm -f $FIREWALL_ROUTING > /dev/null 2>&1
-
-# BCMARM-BEGIN
-	ipset destroy vpnrouting$ID
-# BCMARM-END
-# BCMARMNO-BEGIN
-	ipset --destroy vpnrouting$ID
-# BCMARMNO-END
-	sed -i $DNSMASQ_IPSET -e "/vpnrouting$ID/d"
-}
-
 initTable() {
 	local ROUTE
 	$LOGS "Creating VPN routing table (mode $VPN_REDIR)"
@@ -85,10 +59,34 @@ initTable() {
 	}
 }
 
-startRouting() {
-	local DNSMASQ=0 VAL1 VAL2 VAL3
+stopRouting() {
+	$LOGS "Clean-up routing"
 
-	cleanupRouting
+	ip route flush table $ID
+	ip route flush cache
+
+	[ "$(ip rule | grep "lookup $ID" | wc -l)" -gt 0 ] && {
+		ip rule del fwmark $ID/0xf00 table $ID
+	}
+
+# BCMARM-BEGIN
+	ipset destroy vpnrouting$ID
+# BCMARM-END
+# BCMARMNO-BEGIN
+	ipset --destroy vpnrouting$ID
+# BCMARMNO-END
+
+	sed -i "s/-A/-D/g" $FIREWALL_ROUTING
+	$FIREWALL_ROUTING
+	rm -f $FIREWALL_ROUTING > /dev/null 2>&1
+
+	sed -i $DNSMASQ_IPSET -e "/vpnrouting$ID/d"
+}
+
+startRouting() {
+	local DNSMASQ=0 i VAL1 VAL2 VAL3
+
+	stopRouting
 	nvram set vpn_client"${ID#??}"_rdnsmasq=0
 
 	$LOGS "Starting routing policy for openvpn-$SERVICE - Interface $IFACE - Table $ID"
@@ -108,7 +106,7 @@ startRouting() {
 	ipset --create vpnrouting$ID iphash
 # BCMARMNO-END
 
-	echo "#!/bin/sh" > $FIREWALL_ROUTING
+	echo "#!/bin/sh" > $FIREWALL_ROUTING # new routing file
 # BCMARM-BEGIN
 	echo "iptables -t mangle -A PREROUTING -m set --match-set vpnrouting$ID dst,src -j MARK --set-mark $ID/0xf00" >> $FIREWALL_ROUTING
 # BCMARM-END
@@ -150,7 +148,7 @@ startRouting() {
 		}
 	done
 
-	chmod +x $FIREWALL_ROUTING
+	chmod 700 $FIREWALL_ROUTING
 	RESTART_FW=1
 
 	[ "$DNSMASQ" -eq 1 ] && {
@@ -215,7 +213,7 @@ VPN_REDIR=$(NV vpn_"$SERVICE"_rgw)
 }
 
 [ "$script_type" == "route-pre-down" ] && {
-	cleanupRouting
+	stopRouting
 }
 
 [ "$script_type" == "route-up" ] && {
