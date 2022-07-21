@@ -40,13 +40,13 @@
 #define PPTPD_SHUTDOWN		PPTPD_DIR"/pptpd_shutdown"
 
 
-static char *ip2bcast(char *ip, char *netmask, char *buf)
+static char *ip2bcast(char *ip, char *netmask, char *buf, const size_t buf_sz)
 {
 	struct in_addr addr;
 
 	addr.s_addr = inet_addr(ip) | ~inet_addr(netmask);
 	if (buf)
-		sprintf(buf, "%s", inet_ntoa(addr));
+		snprintf(buf, buf_sz, "%s", inet_ntoa(addr));
 
 	return buf;
 }
@@ -220,7 +220,7 @@ void start_pptpd(int force)
 	fclose(fp);
 
 	memset(bcast, 0, 32);
-	ip2bcast(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), bcast);
+	ip2bcast(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), bcast, sizeof(bcast));
 
 	chains_log_detection();
 
