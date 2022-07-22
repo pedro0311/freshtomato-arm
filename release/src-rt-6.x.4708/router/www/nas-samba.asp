@@ -167,18 +167,24 @@ function verifyFields(focused, quiet) {
 	return 1;
 }
 
-function save() {
+function save_pre() {
 	if (ssg.isEditing())
-		return;
+		return 0;
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
 
-	show(); /* update '_service' field first */
-	var fom = E('t_fom');
+	return 1;
+}
+
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
 
 	var data = ssg.getAllData();
 	var r = [];
 	for (var i = 0; i < data.length; ++i) r.push(data[i].join('<'));
+
+	var fom = E('t_fom');
 	fom.smbd_shares.value = r.join('>');
 	fom.smbd_master.value = fom._f_smbd_master.checked ? 1 : 0;
 
@@ -189,8 +195,7 @@ function save() {
 
 	fom.gro_disable.value = fom._f_gro_disable.checked ? 1 : 0;
 	fom.smbd_protocol.value = (fom._smbd_proto_1.checked ? 0 : (fom._smbd_proto_2.checked ? 1 : 2));
-
-	fom._nofootermsg.value = 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -229,7 +234,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-samba.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="smbd_master">
 <input type="hidden" name="smbd_wins">
 <input type="hidden" name="smbd_shares">

@@ -21,8 +21,8 @@ function show() {
 }
 
 function toggle(service, isup) {
-	if (changed && !confirm("There are unsaved changes. Continue anyway?"))
-		return;
+	if (typeof save_pre === 'function') { if (!save_pre()) return; }
+	if (changed) alert("Configuration changes were detected - they will be saved");
 
 	E('_'+service+'_button').disabled = 1;
 	if (E('_'+service+'_interface')) E('_'+service+'_interface').disabled = 1;
@@ -31,9 +31,7 @@ function toggle(service, isup) {
 	serviceLastUp = isup;
 
 	var fom = E('t_fom');
-	fom._service.value = (serviceType == 'pptpd' ? 'firewall-restart,'+service+(isup ? '-stop' : '-start')+',dnsmasq-restart' : service+(isup ? '-stop' : '-start'));
+	fom._service.value = (service == 'pptpd' ? 'firewall-restart,'+service+(isup ? '-stop' : '-start')+',dnsmasq-restart' : service+(isup ? '-stop' : '-start'));
 
-	fom._nofootermsg.value = 1;
-
-	form.submit(fom, 1, 'service.cgi');
+	save(1);
 }

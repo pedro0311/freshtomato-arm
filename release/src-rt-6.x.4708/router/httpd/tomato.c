@@ -1,9 +1,8 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2010 Jonathan Zarate
-
-*/
+ * Tomato Firmware
+ * Copyright (C) 2006-2010 Jonathan Zarate
+ *
+ */
 
 #include "tomato.h"
 
@@ -1161,7 +1160,6 @@ static const nvset_t nvset_list[] = {
 	{ "dhcp_routes",		V_01				},
 	{ "force_igmpv2",		V_01				},
 	{ "lan_stp",			V_RANGE(0, 1)			},
-	{ "wk_mode",			V_LENGTH(1, 32)			},	// gateway, router
 #ifdef TCONFIG_ZEBRA
 	{ "dr_setting",			V_RANGE(0, 3)			},
 	{ "dr_lan_tx",			V_LENGTH(0, 32)			},
@@ -2040,7 +2038,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			V_RANGE(0, 1)			},
+	{"tinc_enable",			V_RANGE(0, 1)			},
 	{"tinc_name",			V_LENGTH(0, 30)			},
 	{"tinc_devicetype",		V_TEXT(3, 3)			},	// tun, tap
 	{"tinc_mode",			V_TEXT(3, 6)			},	// switch, hub
@@ -2387,7 +2385,7 @@ static void wo_tomato(char *url)
 
 	if ((v = webcgi_get("_service")) != NULL && *v != 0) {
 		if (!*red) {
-			if (ajax) web_printf("Some services are being restarted...");
+			if (ajax) web_printf(" Some services are being restarted...");
 			web_close();
 		}
 		sleep(1);

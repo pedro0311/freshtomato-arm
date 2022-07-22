@@ -807,7 +807,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "routes_static",		""				, 0 },
 	{ "dhcp_routes",		"1"				, 0 },
 	{ "force_igmpv2",		"0"				, 0 },
-	{ "wk_mode",			"gateway"			, 0 },	/* Network mode [gateway|router] */
 
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },
@@ -1419,7 +1418,7 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_PPTPD */
 
 #ifdef TCONFIG_TINC
-	{"tinc_wanup",			"0"				, 0 },
+	{"tinc_enable",			"0"				, 0 },
 	{"tinc_name",			""				, 0 },
 	{"tinc_devicetype",		"tun"				, 0 },	/* tun, tap */
 	{"tinc_mode",			"switch"			, 0 },	/* switch, hub */
@@ -1456,7 +1455,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "bt_incomplete",		"1"				, 0 },
 	{ "bt_autoadd",			"1"				, 0 },
 	{ "bt_settings",		"down_dir"			, 0 },
-	{ "bt_settings_custom",		"/tmp/btclient"			, 0 },
+	{ "bt_settings_custom",		"/etc/transmission"		, 0 },
 	{ "bt_rpc_enable",		"1"				, 0 },
 	{ "bt_rpc_wan",			"0"				, 0 },
 	{ "bt_auth",			"1"				, 0 },

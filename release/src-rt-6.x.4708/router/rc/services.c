@@ -85,6 +85,7 @@ static const char dmresolv[] = "/etc/resolv.dnsmasq";
 static const char vsftpd_conf[] =  "/etc/vsftpd.conf";
 static const char vsftpd_passwd[] = "/etc/vsftpd.passwd";
 static char vsftpd_users[] = "/etc/vsftpd.users";
+static char vsftpd_run[] = "/var/run/vsftpd";
 #endif
 static pid_t pid_dnsmasq = -1;
 static pid_t pid_crond = -1;
@@ -185,12 +186,8 @@ void start_dnsmasq()
 	char dhcpN_num[] = "dhcpXX_num";
 	char dhcpN_lease[] = "dhcpXX_lease";
 
-	if (getpid() != 1) {
-		start_service("dnsmasq");
+	if (serialize_restart("dnsmasq", 1))
 		return;
-	}
-
-	stop_dnsmasq();
 
 	/* check wireless ethernet bridge (wet) after stop_dnsmasq() */
 	if (foreach_wif(1, NULL, is_wet)) {
@@ -418,7 +415,7 @@ void start_dnsmasq()
 			if ((*nv) && (strcmp(nv, "0.0.0.0") != 0))
 				fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nv); /* netbios-ns */
 #ifdef TCONFIG_SAMBASRV
-			else if (nvram_get_int("smbd_enable") && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
+			else if ((nvram_get_int("smbd_enable") || (pidof("smbd") > 0)) && nvram_invmatch("lan_hostname", "") && nvram_get_int("smbd_wins")) {
 				if ((!*nv) || (strcmp(nv, "0.0.0.0") == 0))
 					/* Samba will serve as a WINS server */
 					fprintf(f, "dhcp-option=tag:%s,44,%s\n", nvram_safe_get(lanN_ifname), nvram_safe_get(lanN_ipaddr)); /* netbios-ns */
@@ -667,9 +664,11 @@ void start_dnsmasq()
 	}
 
 #ifdef TCONFIG_DNSCRYPT
+	stop_dnscrypt();
 	start_dnscrypt();
 #endif
 #ifdef TCONFIG_STUBBY
+	stop_stubby();
 	start_stubby();
 #endif
 
@@ -682,10 +681,8 @@ void start_dnsmasq()
 
 void stop_dnsmasq(void)
 {
-	if (getpid() != 1) {
-		stop_service("dnsmasq");
+	if (serialize_restart("dnsmasq", 0))
 		return;
-	}
 
 	pid_dnsmasq = -1;
 
@@ -724,12 +721,8 @@ void start_dnscrypt(void)
 	if (!nvram_get_int("dnscrypt_proxy"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("dnscrypt");
+	if (serialize_restart("dnscrypt-proxy", 1))
 		return;
-	}
-
-	stop_dnscrypt();
 
 	memset(dnscrypt_local, 0, 30);
 	sprintf(dnscrypt_local, "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
@@ -772,10 +765,8 @@ void start_dnscrypt(void)
 
 void stop_dnscrypt(void)
 {
-	if (getpid() != 1) {
-		stop_service("dnscrypt");
+	if (serialize_restart("dnscrypt-proxy", 0))
 		return;
-	}
 
 	killall_tk_period_wait("dnscrypt-proxy", 50);
 }
@@ -799,12 +790,8 @@ void start_stubby(void)
 	if (!nvram_get_int("stubby_proxy"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("stubby");
+	if (serialize_restart("stubby", 1))
 		return;
-	}
-
-	stop_stubby();
 
 	mkdir_if_none("/etc/stubby");
 
@@ -911,10 +898,8 @@ void start_stubby(void)
 
 void stop_stubby(void)
 {
-	if (getpid() != 1) {
-		stop_service("stubby");
+	if (serialize_restart("stubby", 0))
 		return;
-	}
 
 	killall_tk_period_wait("stubby", 50);
 	unlink("/var/run/stubby.pid");
@@ -997,12 +982,8 @@ void start_mdns(void)
 	if (!nvram_get_int("mdns_enable"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("mdns");
+	if (serialize_restart("avahi-daemon", 1))
 		return;
-	}
-
-	stop_mdns();
 
 	mkdir_if_none(AVAHI_CONFIG_PATH);
 	mkdir_if_none(AVAHI_SERVICES_PATH);
@@ -1018,19 +999,19 @@ void start_mdns(void)
 
 void stop_mdns(void)
 {
-	if (pidof("avahi-daemon") > 0) {
-		if (getpid() != 1) {
-			stop_service("mdns");
-			return;
-		}
-		killall_tk_period_wait("avahi-daemon", 50);
-	}
+	if (serialize_restart("avahi-daemon", 0))
+		return;
+
+	killall_tk_period_wait("avahi-daemon", 50);
 }
 #endif /* TCONFIG_MDNS */
 
 #ifdef TCONFIG_IRQBALANCE
 void stop_irqbalance(void)
 {
+	if (serialize_restart("irqbalance", 0))
+		return;
+
 	if (pidof("irqbalance") > 0) {
 		killall_tk_period_wait("irqbalance", 50);
 		logmsg(LOG_INFO, "irqbalance is stopped");
@@ -1041,12 +1022,8 @@ void start_irqbalance(void)
 {
 	int ret;
 
-	if (getpid() != 1) {
-		start_service("irqbalance");
+	if (serialize_restart("irqbalance", 1))
 		return;
-	}
-
-	stop_irqbalance();
 
 	mkdir_if_none("/var/run/irqbalance");
 	ret = eval("irqbalance", "-t", "10");
@@ -1209,17 +1186,11 @@ void start_httpd(void)
 {
 	int ret;
 
-	if (getpid() != 1) {
-		start_service("httpd");
+	if (serialize_restart("httpd", 1))
 		return;
-	}
 
 	if (nvram_match("web_css", "online"))
 		xstart("/usr/sbin/ttb");
-
-	stop_httpd();
-	/* wait to exit gracefully */
-	sleep(1);
 
 	/* set www dir */
 	if (nvram_match("web_dir", "jffs"))
@@ -1231,6 +1202,7 @@ void start_httpd(void)
 	else
 		chdir("/www");
 
+	sleep(1);
 	ret = eval("httpd", (nvram_get_int("http_nocache") ? "-N" : ""));
 	chdir("/");
 
@@ -1242,10 +1214,8 @@ void start_httpd(void)
 
 void stop_httpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("httpd");
+	if (serialize_restart("httpd", 0))
 		return;
-	}
 
 	if (pidof("httpd") > 0) {
 		killall_tk_period_wait("httpd", 50);
@@ -1328,8 +1298,10 @@ void start_ipv6_tunnel(void)
 		eval("ip", "-6", "route", "add", "::/0", "dev", tun_dev, "metric", "1");
 
 	/* (re)start dnsmasq */
-	if (service == IPV6_ANYCAST_6TO4)
+	if (service == IPV6_ANYCAST_6TO4) {
+		stop_dnsmasq();
 		start_dnsmasq();
+	}
 }
 
 void stop_ipv6_tunnel(void)
@@ -1464,6 +1436,7 @@ void start_6rd_tunnel(void)
 	nvram_set("ipv6_ifname", (char *)tun_dev);
 
 	/* (re)start dnsmasq */
+	stop_dnsmasq();
 	start_dnsmasq();
 }
 
@@ -1559,10 +1532,8 @@ void start_upnp(void)
 	if (get_wan_proto() == WP_DISABLED)
 		return;
 
-	if (getpid() != 1) {
-		start_service("upnp");
+	if (serialize_restart("miniupnpd", 1))
 		return;
-	}
 
 	if (((enable = nvram_get_int("upnp_enable")) & 3) != 0) {
 		mkdir(UPNP_DIR, 0777);
@@ -1683,10 +1654,8 @@ void start_upnp(void)
 
 void stop_upnp(void)
 {
-	if (getpid() != 1) {
-		stop_service("upnp");
+	if (serialize_restart("miniupnpd", 0))
 		return;
-	}
 
 	killall_tk_period_wait("miniupnpd", 50);
 }
@@ -1743,10 +1712,8 @@ void start_zebra(void)
 	char *wan_tx = nvram_safe_get("dr_wan_tx");
 	char *wan_rx = nvram_safe_get("dr_wan_rx");
 
-	if (getpid() != 1) {
-		start_service("zebra");
+	if (serialize_restart("zebra", 1))
 		return;
-	}
 
 	if ((*lan_tx == '0') && (*lan_rx == '0') &&
 	    (*lan1_tx == '0') && (*lan1_rx == '0') &&
@@ -1859,10 +1826,8 @@ void start_zebra(void)
 
 void stop_zebra(void)
 {
-	if (getpid() != 1) {
-		stop_service("zebra");
+	if (serialize_restart("zebra", 0))
 		return;
-	}
 
 	killall("zebra", SIGTERM);
 	killall("ripd", SIGTERM);
@@ -2199,14 +2164,10 @@ void start_ntpd(void)
 	char *ntpd_argv[] = { "/usr/sbin/ntpd", "-t", "-N", NULL, NULL, NULL, NULL, NULL, NULL }; /* -ddddddd -q -S /sbin/ntpd_synced -l */
 	pid_t pid;
 
-	if (getpid() != 1) {
-		start_service("ntpd");
+	if (serialize_restart("ntpd", 1))
 		return;
-	}
 
 	set_tz();
-
-	stop_ntpd();
 
 	if ((nvram_get_int("dnscrypt_proxy")) || (nvram_get_int("stubby_proxy")))
 		eval("ntp2ip");
@@ -2270,10 +2231,8 @@ void start_ntpd(void)
 
 void stop_ntpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("ntpd");
+	if (serialize_restart("ntpd", 0))
 		return;
-	}
 
 	if (pidof("ntpd") > 0) {
 		killall_tk_period_wait("ntpd", 50);
@@ -2287,13 +2246,16 @@ int ntpd_synced_main(int argc, char *argv[])
 		nvram_set("ntp_ready", "1");
 		logmsg(LOG_INFO, "initial clock set");
 
+		stop_httpd();
 		start_httpd();
 		start_sched();
 		start_ddns();
 #ifdef TCONFIG_DNSCRYPT
+		stop_dnscrypt();
 		start_dnscrypt();
 #endif
 #ifdef TCONFIG_STUBBY
+		stop_stubby();
 		start_stubby();
 #endif
 #ifdef TCONFIG_DNSSEC
@@ -2304,6 +2266,7 @@ int ntpd_synced_main(int argc, char *argv[])
 		start_ovpn_eas();
 #endif
 #ifdef TCONFIG_MDNS
+		stop_mdns();
 		start_mdns();
 #endif
 	}
@@ -2314,9 +2277,7 @@ int ntpd_synced_main(int argc, char *argv[])
 static void stop_rstats(void)
 {
 	int n, m;
-	int pid;
-	int pidz;
-	int ppidz;
+	pid_t pid, pidz, ppidz;
 	int w = 0;
 
 	n = 60;
@@ -2324,7 +2285,7 @@ static void stop_rstats(void)
 	while ((n-- > 0) && ((pid = pidof("rstats")) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
-		if (pidz < 1)
+		if (pidz < 0)
 			pidz = pidof("cp");
 
 		ppidz = ppid(ppid(pidz));
@@ -2357,9 +2318,7 @@ static void start_rstats(int new)
 static void stop_cstats(void)
 {
 	int n, m;
-	int pid;
-	int pidz;
-	int ppidz;
+	pid_t pid, pidz, ppidz;
 	int w = 0;
 
 	n = 60;
@@ -2367,7 +2326,7 @@ static void stop_cstats(void)
 	while ((n-- > 0) && ((pid = pidof("cstats")) > 0)) {
 		w = 1;
 		pidz = pidof("gzip");
-		if (pidz < 1)
+		if (pidz < 0)
 			pidz = pidof("cp");
 
 		ppidz = ppid(ppid(pidz));
@@ -2430,7 +2389,7 @@ static void start_ftpd(int force)
 	char *buf;
 	char *p, *q;
 	char *user, *pass, *rights, *root_dir;
-	int i;
+	int i, ret;
 #ifdef TCONFIG_HTTPS
 	unsigned long long sn;
 	char t[32];
@@ -2440,13 +2399,11 @@ static void start_ftpd(int force)
 	if (!nvram_get_int("ftp_enable") && force == 0)
 		return;
 
-	if (getpid() != 1) {
-		start_service("ftpd");
+	if (serialize_restart("vsftpd", 1))
 		return;
-	}
 
 	mkdir_if_none(vsftpd_users);
-	mkdir_if_none("/var/run/vsftpd");
+	mkdir_if_none(vsftpd_run);
 
 	if ((fp = fopen(vsftpd_conf, "w")) == NULL) {
 		perror(vsftpd_conf);
@@ -2648,397 +2605,40 @@ static void start_ftpd(int force)
 	}
 
 	fclose(fp);
-	killall("vsftpd", SIGHUP);
 
-	/* start vsftpd if it's not already running */
-	if (pidof("vsftpd") <= 0) {
-		int ret;
-
-		ret = eval("vsftpd");
-		if (ret)
-			logmsg(LOG_ERR, "starting vsftpd failed ...");
-		else
-			logmsg(LOG_INFO, "vsftpd is started");
-	}
+	ret = eval("vsftpd");
+	if (ret)
+		logmsg(LOG_ERR, "starting vsftpd failed ...");
+	else
+		logmsg(LOG_INFO, "vsftpd is started");
 }
 
 static void stop_ftpd(void)
 {
-	if (getpid() != 1) {
-		stop_service("ftpd");
+	if (serialize_restart("vsftpd", 0))
 		return;
-	}
 
 	if (pidof("vsftpd") > 0) {
 		killall_tk_period_wait("vsftpd", 50);
-		unlink(vsftpd_passwd);
-		unlink(vsftpd_conf);
-		eval("rm", "-rf", vsftpd_users);
-
 		logmsg(LOG_INFO, "vsftpd is stopped");
 	}
+
+	unlink(vsftpd_passwd);
+	unlink(vsftpd_conf);
+	eval("rm", "-rf", vsftpd_users);
 }
 #endif /* TCONFIG_FTP */
-
-#ifdef TCONFIG_SAMBASRV
-static void kill_samba(int sig)
-{
-	if (sig == SIGTERM) {
-		killall_tk_period_wait("smbd", 50);
-		killall_tk_period_wait("nmbd", 50);
-	}
-	else {
-		killall("smbd", sig);
-		killall("nmbd", sig);
-	}
-}
-
-#if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
-void enable_gro(int interval)
-{
-	char *argv[3] = { "echo", "", NULL };
-	char lan_ifname[32], *lan_ifnames, *next;
-	char path[64];
-	char parm[32];
-
-	if(nvram_get_int("gro_disable"))
-		return;
-
-	/* enabled gro on vlan interface */
-	lan_ifnames = nvram_safe_get("lan_ifnames");
-	foreach(lan_ifname, lan_ifnames, next) {
-		if (!strncmp(lan_ifname, "vlan", 4)) {
-			memset(path, 0, 64);
-			sprintf(path, ">>/proc/net/vlan/%s", lan_ifname);
-			memset(parm, 0, 32);
-			sprintf(parm, "-gro %d", interval);
-			argv[1] = parm;
-			_eval(argv, path, 0, NULL);
-		}
-	}
-}
-#endif
-
-void start_samba(int force)
-{
-	FILE *fp;
-	DIR *dir = NULL;
-	struct dirent *dp;
-	char nlsmod[16];
-	int mode;
-	char *nv;
-	char *si;
-	char *buf;
-	char *p, *q;
-	char *name, *path, *comment, *writeable, *hidden;
-	int cnt = 0;
-	char *smbd_user;
-	int ret1 = 0, ret2 = 0;
-#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
-	int cpu_num = sysconf(_SC_NPROCESSORS_CONF);
-	int taskset_ret = -1;
-#endif
-
-	/* only if enabled or forced and lan_hostname is set */
-	mode = nvram_get_int("smbd_enable");
-	if ((!mode && force == 0) || (!nvram_invmatch("lan_hostname", "")))
-		return;
-
-	if (getpid() != 1) {
-		start_service("smbd");
-		return;
-	}
-
-	if ((fp = fopen("/etc/smb.conf", "w")) == NULL) {
-		perror("/etc/smb.conf");
-		return;
-	}
-
-#ifdef TCONFIG_BCMARM
-	/* check samba enabled ? */
-	if (mode)
-		nvram_set("txworkq", "1"); /* set txworkq to 1, see et/sys/et_linux.c */
-	else
-		nvram_unset("txworkq");
-
-#ifdef TCONFIG_GROCTRL
-	/* enable / disable gro via GUI nas-samba.asp; Default: off */
-	enable_gro(2);
-#endif
-#endif
-
-	si = nvram_safe_get("smbd_ifnames");
-
-	fprintf(fp, "[global]\n"
-	            " interfaces = %s\n"
-	            " bind interfaces only = yes\n"
-	            " enable core files = no\n"
-	            " deadtime = 30\n"
-	            " smb encrypt = disabled\n"
-	            " min receivefile size = 16384\n"
-	            " workgroup = %s\n"
-	            " netbios name = %s\n"
-	            " server string = %s\n"
-	            " dos charset = ASCII\n"
-	            " unix charset = UTF8\n"
-	            " display charset = UTF8\n"
-	            " guest account = nobody\n"
-	            " security = user\n"
-	            " %s\n"
-	            " guest ok = %s\n"
-	            " guest only = no\n"
-	            " browseable = yes\n"
-	            " syslog only = yes\n"
-	            " timestamp logs = no\n"
-	            " syslog = 1\n"
-	            " passdb backend = smbpasswd\n"
-	            " encrypt passwords = yes\n"
-	            " preserve case = yes\n"
-	            " short preserve case = yes\n",
-	            strlen(si) ? si : nvram_safe_get("lan_ifname"),
-	            nvram_get("smbd_wgroup") ? : "WORKGROUP",
-	            nvram_safe_get("lan_hostname"),
-	            nvram_get("router_name") ? : "FreshTomato",
-	            mode == 2 ? "" : "map to guest = Bad User",
-	            mode == 2 ? "no" : "yes"); /* guest ok */
-
-	fprintf(fp, " load printers = no\n" /* add for Samba printcap issue */
-	            " printing = bsd\n"
-	            " printcap name = /dev/null\n"
-	            " map archive = no\n"
-	            " map hidden = no\n"
-	            " map read only = no\n"
-	            " map system = no\n"
-	            " store dos attributes = no\n"
-	            " dos filemode = yes\n"
-	            " strict locking = no\n"
-	            " oplocks = yes\n"
-	            " level2 oplocks = yes\n"
-	            " kernel oplocks = no\n"
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,36)
-	            " use sendfile = no\n");
-#else
-	            " use sendfile = yes\n");
-#endif
-
-	if (nvram_get_int("smbd_wins")) {
-		nv = nvram_safe_get("wan_wins");
-		if ((!*nv) || (strcmp(nv, "0.0.0.0") == 0))
-			fprintf(fp, " wins support = yes\n");
-	}
-
-	/* 0 - smb1, 1 - smb2, 2 - smb1 + smb2 */
-	if (nvram_get_int("smbd_protocol") == 0)
-		fprintf(fp, " max protocol = NT1\n");
-	else
-		fprintf(fp, " max protocol = SMB2\n");
-	if (nvram_get_int("smbd_protocol") == 1)
-		fprintf(fp, " min protocol = SMB2\n");
-
-	if (nvram_get_int("smbd_master")) {
-		fprintf(fp,
-			" domain master = yes\n"
-			" local master = yes\n"
-			" preferred master = yes\n"
-			" os level = 255\n");
-	}
-
-	nv = nvram_safe_get("smbd_cpage");
-	if (*nv) {
-		memset(nlsmod, 0, 16);
-		sprintf(nlsmod, "nls_cp%s", nv);
-
-		nv = nvram_safe_get("smbd_nlsmod");
-		if ((*nv) && (strcmp(nv, nlsmod) != 0))
-			modprobe_r(nv);
-
-		modprobe(nlsmod);
-		nvram_set("smbd_nlsmod", nlsmod);
-	}
-
-	nv = nvram_safe_get("smbd_custom");
-	/* add socket options unless overriden by the user */
-	if (strstr(nv, "socket options") == NULL)
-		fprintf(fp, " socket options = TCP_NODELAY SO_KEEPALIVE IPTOS_LOWDELAY SO_RCVBUF=65536 SO_SNDBUF=65536\n");
-
-	fprintf(fp, "%s\n", nv);
-
-	/* configure shares */
-	if ((buf = strdup(nvram_safe_get("smbd_shares"))) && (*buf)) {
-		/* sharename<path<comment<writeable[0|1]<hidden[0|1] */
-
-		p = buf;
-		while ((q = strsep(&p, ">")) != NULL) {
-			if (vstrsep(q, "<", &name, &path, &comment, &writeable, &hidden) < 5)
-				continue;
-			if (!path || !name)
-				continue;
-
-			/* share name */
-			fprintf(fp, "\n[%s]\n", name);
-
-			/* path */
-			fprintf(fp, " path = %s\n", path);
-
-			/* access level */
-			if (!strcmp(writeable, "1"))
-				fprintf(fp, " writable = yes\n delete readonly = yes\n force user = root\n");
-			if (!strcmp(hidden, "1"))
-				fprintf(fp, " browseable = no\n");
-
-			/* comment */
-			if (comment)
-				fprintf(fp, " comment = %s\n", comment);
-
-			cnt++;
-		}
-		free(buf);
-	}
-
-	/* share every mountpoint below MOUNT_ROOT */
-	if (nvram_get_int("smbd_autoshare") && (dir = opendir(MOUNT_ROOT))) {
-		while ((dp = readdir(dir))) {
-			if (strcmp(dp->d_name, ".") && strcmp(dp->d_name, "..")) {
-
-				/* only if is a directory and is mounted */
-				if (!dir_is_mountpoint(MOUNT_ROOT, dp->d_name))
-					continue;
-
-				/* smbd_autoshare: 0 - disable, 1 - read-only, 2 - writable, 3 - hidden writable */
-				fprintf(fp, "\n[%s]\n path = %s/%s\n comment = %s\n", dp->d_name, MOUNT_ROOT, dp->d_name, dp->d_name);
-
-				if (nvram_match("smbd_autoshare", "3")) /* hidden */
-					fprintf(fp, "\n[%s$]\n path = %s/%s\n browseable = no\n", dp->d_name, MOUNT_ROOT, dp->d_name);
-
-				if ((nvram_match("smbd_autoshare", "2")) || (nvram_match("smbd_autoshare", "3"))) /* RW */
-					fprintf(fp, " writable = yes\n delete readonly = yes\n force user = root\n");
-
-				cnt++;
-			}
-		}
-	}
-	if (dir)
-		closedir(dir);
-
-	if (cnt == 0) {
-		/* by default share MOUNT_ROOT as read-only */
-		fprintf(fp, "\n[share]\n"
-		            " path = %s\n"
-		            " writable = no\n",
-		            MOUNT_ROOT);
-	}
-
-	fclose(fp);
-
-	mkdir_if_none("/var/run/samba");
-	mkdir_if_none("/etc/samba");
-
-	/* write smbpasswd */
-	eval("smbpasswd", "nobody", "\"\"");
-
-	if (mode == 2) {
-		smbd_user = nvram_safe_get("smbd_user");
-		if ((!*smbd_user) || (!strcmp(smbd_user, "root")))
-			smbd_user = "nas";
-
-		eval("smbpasswd", smbd_user, nvram_safe_get("smbd_passwd"));
-	}
-
-	kill_samba(SIGHUP);
-
-	/* start samba if it's not already running */
-	if (pidof("nmbd") <= 0)
-		ret1 = xstart("nmbd", "-D");
-
-	if (pidof("smbd") <= 0) {
-#if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
-		if (cpu_num > 1)
-			taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D");
-		else
-			taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D");
-
-		if (taskset_ret != 0)
-#endif
-		ret2 = xstart("smbd", "-D");
-	}
-
-	if (ret1 || ret2) {
-		kill_samba(SIGTERM);
-		logmsg(LOG_ERR, "starting Samba daemon failed ...");
-	}
-	else {
-		start_wsdd();
-		logmsg(LOG_INFO, "Samba daemon is started");
-	}
-}
-
-void stop_samba(void)
-{
-	if (getpid() != 1) {
-		stop_service("smbd");
-		return;
-	}
-
-	stop_wsdd();
-
-	if ((pidof("smbd") > 0 ) || (pidof("nmbd") > 0 )) {
-		kill_samba(SIGTERM);
-
-		/* clean up */
-		unlink("/var/log/log.smbd");
-		unlink("/var/log/log.nmbd");
-		eval("rm", "-rf", "/var/nmbd");
-		eval("rm", "-rf", "/var/log/cores");
-		eval("rm", "-rf", "/var/run/samba");
-#if defined(TCONFIG_BCMARM) && defined(TCONFIG_GROCTRL)
-		enable_gro(0);
-#endif
-		logmsg(LOG_INFO, "Samba daemon is stopped");
-	}
-}
-
-void start_wsdd()
-{
-	unsigned char ea[ETHER_ADDR_LEN];
-	char serial[18];
-	pid_t pid;
-	char bootparms[64];
-	char *wsdd_argv[] = { "/usr/sbin/wsdd2",
-	                      "-d",
-	                      "-w",
-	                      "-i", /* no multi-interface binds atm */
-	                      nvram_safe_get("lan_ifname"),
-	                      "-b",
-	                      NULL, /* boot parameters */
-	                      NULL
-	                    };
-	stop_wsdd();
-
-	if (!ether_atoe(nvram_safe_get("lan_hwaddr"), ea))
-		f_read("/dev/urandom", ea, sizeof(ea));
-
-	snprintf(serial, sizeof(serial), "%02x%02x%02x%02x%02x%02x", ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);
-
-	snprintf(bootparms, sizeof(bootparms), "sku:%s,serial:%s", (nvram_get("odmpid") ? : "FreshTomato"), serial);
-	wsdd_argv[6] = bootparms;
-
-	_eval(wsdd_argv, NULL, 0, &pid);
-}
-
-void stop_wsdd() {
-	killall_tk_period_wait("wsdd2", 50);
-}
-#endif /* TCONFIG_SAMBASRV */
 
 #ifdef TCONFIG_MEDIA_SERVER
 static void start_media_server(int force)
 {
 	FILE *f;
-	int port, pid, https;
+	int port, https;
+	pid_t pid;
 	char *dbdir;
 	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-r", NULL, NULL };
 	static int once = 1;
-	int index = 4;
+	int ret, index = 4;
 	char *msi;
 	unsigned char ea[ETHER_ADDR_LEN];
 	char serial[18], uuid[37];
@@ -3049,17 +2649,17 @@ static void start_media_server(int force)
 	if (!nvram_get_int("ms_enable") && force == 0)
 		return;
 
-	if (getpid() != 1) {
-		start_service("media");
+	if (serialize_restart(MEDIA_SERVER_APP, 1))
 		return;
-	}
 
-	if (!nvram_get_int("ms_sas")) {
+	if (!nvram_get_int("ms_sas")) { /* scan media at startup? */
 		once = 0;
 		argv[index - 1] = NULL;
 	}
+	else if (!once) /* already scanned */
+		argv[index - 1] = NULL;
 
-	if (nvram_get_int("ms_rescan")) { /* force rebuild */
+	if (nvram_get_int("ms_rescan")) { /* rescan on the next run? */
 		argv[index - 1] = "-R";
 		nvram_unset("ms_rescan");
 	}
@@ -3132,36 +2732,24 @@ static void start_media_server(int force)
 	if (nvram_get_int("ms_debug"))
 		argv[index++] = "-v";
 
-	/* start media server if it's not already running */
-	if (pidof(MEDIA_SERVER_APP) <= 0) {
-		if ((_eval(argv, NULL, 0, &pid) == 0) && (once)) {
-			/* if we started the media server successfully, wait 1 sec
-			 * to let it die if it can't open the database file.
-			 * if it's still alive after that, assume it's running and
-			 * disable forced once-after-reboot rescan.
-			 */
-			sleep(1);
-			if (pidof(MEDIA_SERVER_APP) > 0)
-				once = 0;
-			else {
-				logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
-				return;
-			}
-		}
+	ret = _eval(argv, NULL, 0, &pid);
+	sleep(1);
+
+	if ((pidof(MEDIA_SERVER_APP) > 0) && !ret) {
+		logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
+		once = 0;
 	}
-	logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
+	else
+		logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
 }
 
 static void stop_media_server(void)
 {
-	if (getpid() != 1) {
-		stop_service("media");
+	if (serialize_restart(MEDIA_SERVER_APP, 0))
 		return;
-	}
 
 	if (pidof(MEDIA_SERVER_APP) > 0) {
 		killall_tk_period_wait(MEDIA_SERVER_APP, 50);
-
 		logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
 	}
 }
@@ -3299,7 +2887,7 @@ void start_services(void)
 #endif
 	start_tomatoanon();
 #ifdef TCONFIG_TOR
-	start_tor();
+	start_tor(0);
 #endif
 #ifdef TCONFIG_BT
 	start_bittorrent(0);
@@ -3442,26 +3030,26 @@ TOP:
 
 	user = (modifier != NULL && *modifier == 'c');
 
-	if (strcmp(service, "dhcpc-wan") == 0) {
+	if (strcmp(service, "dhcpc_wan") == 0) {
 		if (act_stop) stop_dhcpc("wan");
 		if (act_start) start_dhcpc("wan");
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "dhcpc-wan2") == 0) {
+	if (strcmp(service, "dhcpc_wan2") == 0) {
 		if (act_stop) stop_dhcpc("wan2");
 		if (act_start) start_dhcpc("wan2");
 		goto CLEAR;
 	}
 
 #ifdef TCONFIG_MULTIWAN
-	if (strcmp(service, "dhcpc-wan3") == 0) {
+	if (strcmp(service, "dhcpc_wan3") == 0) {
 		if (act_stop) stop_dhcpc("wan3");
 		if (act_start) start_dhcpc("wan3");
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "dhcpc-wan4") == 0) {
+	if (strcmp(service, "dhcpc_wan4") == 0) {
 		if (act_stop) stop_dhcpc("wan4");
 		if (act_start) start_dhcpc("wan4");
 		goto CLEAR;
@@ -3483,7 +3071,7 @@ TOP:
 	}
 
 #ifdef TCONFIG_DNSCRYPT
-	if (strcmp(service, "dnscrypt") == 0) {
+	if ((strcmp(service, "dnscrypt") == 0) || (strcmp(service, "dnscrypt_proxy") == 0)) {
 		if (act_stop) stop_dnscrypt();
 		if (act_start) start_dnscrypt();
 		goto CLEAR;
@@ -3499,7 +3087,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_MDNS
-	if (strcmp(service, "mdns") == 0) {
+	if ((strcmp(service, "mdns") == 0) || (strcmp(service, "avahi_daemon") == 0)) {
 		if (act_stop) stop_mdns();
 		if (act_start) start_mdns();
 		goto CLEAR;
@@ -3603,7 +3191,7 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "upnp") == 0) {
+	if ((strcmp(service, "upnp") == 0) || (strcmp(service, "miniupnpd") == 0)) {
 		if (act_stop)
 			stop_upnp();
 		stop_firewall();
@@ -3649,6 +3237,7 @@ TOP:
 		stop_firewall();
 		start_firewall(); /* always restarted */
 		if (act_start) {
+			stop_httpd();
 			start_httpd();
 			if (!(strcmp(service, "adminnosshd") == 0))
 				create_passwd();
@@ -3703,7 +3292,7 @@ TOP:
 			stop_sched();
 			stop_cron();
 #ifdef TCONFIG_USB
-			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
+			stop_nas_services(); /* Samba, FTP and Media Server */
 #endif
 #ifdef TCONFIG_ZEBRA
 			stop_zebra();
@@ -3993,7 +3582,7 @@ TOP:
 	}
 
 #ifdef TCONFIG_BT
-	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0)) {
+	if ((strcmp(service, "bittorrent") == 0) || (strcmp(service, "transmission") == 0) || (strcmp(service, "transmission_da") == 0)) {
 		if (act_stop) stop_bittorrent();
 		stop_firewall();
 		start_firewall(); /* always restarted */
@@ -4003,7 +3592,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_NFS
-	if (strcmp(service, "nfs") == 0) {
+	if ((strcmp(service, "nfs") == 0) || (strcmp(service, "nfsd") == 0)) {
 		if (act_stop) stop_nfs();
 		if (act_start) start_nfs();
 		goto CLEAR;
@@ -4023,7 +3612,7 @@ TOP:
 		if (act_stop) stop_tor();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start) start_tor();
+		if (act_start) start_tor(1); /* force (re)start */
 		goto CLEAR;
 	}
 #endif
@@ -4063,7 +3652,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_FTP
-	if (strcmp(service, "ftpd") == 0) {
+	if ((strcmp(service, "ftpd") == 0) || (strcmp(service, "vsftpd") == 0)) {
 		if (act_stop) stop_ftpd();
 		setup_conntrack();
 		stop_firewall();
@@ -4109,7 +3698,7 @@ TOP:
 #endif
 
 #ifdef TCONFIG_TINC
-	if (strcmp(service, "tinc") == 0) {
+	if ((strcmp(service, "tinc") == 0) || (strcmp(service, "tincd") == 0)) {
 		if (act_stop) stop_tinc();
 		if (act_start) start_tinc(1); /* force (re)start */
 		goto CLEAR;
@@ -4136,14 +3725,14 @@ TOP:
 	if (strcmp(service, "nginx") == 0) {
 		if (act_stop) stop_nginx();
 		stop_firewall();
-		start_firewall(); /* always restarted */
+		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_nginx(1); /* force (re)start */
 		goto CLEAR;
 	}
 	if ((strcmp(service, "mysql") == 0) || (strcmp(service, "mysqld") == 0)) {
 		if (act_stop) stop_mysql();
 		stop_firewall();
-		start_firewall(); /* always restarted */
+		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_mysql(1); /* force (re)start */
 		goto CLEAR;
 	}

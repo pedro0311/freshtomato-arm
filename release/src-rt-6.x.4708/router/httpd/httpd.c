@@ -880,7 +880,7 @@ static void setup_listeners(int do_ipv6)
 #endif /* TCONFIG_HTTPS */
 
 	/* remote management */
-	if ((wanport) && nvram_match("wk_mode", "gateway") && nvram_get_int("remote_management")) {
+	if ((wanport) && nvram_get_int("remote_management")) {
 		IF_TCONFIG_HTTPS(if (nvram_get_int("remote_mgt_https")) do_ssl = 1);
 #ifdef TCONFIG_IPV6
 		if (do_ipv6) {

@@ -53,7 +53,6 @@ static int can_enable_fastnat;
 static int debug_only = 0;
 #endif
 
-static int gateway_mode;
 static int remotemanage;
 
 static int wanup;
@@ -62,12 +61,6 @@ static int wan2up;
 static int wan3up;
 static int wan4up;
 #endif
-
-const char *chain_in_drop;
-const char *chain_in_accept;
-const char *chain_out_drop;
-const char *chain_out_accept;
-const char *chain_out_reject;
 
 const char chain_wan_prerouting[] = "WANPREROUTING";
 const char ipt_fname[] = "/etc/iptables";
@@ -772,48 +765,47 @@ static void mangle_table(void)
 #endif /* TCONFIG_BCMARM */
 
 #ifdef TCONFIG_BCMARM
-	if (gateway_mode) {
-		for (i = 0; i < wanfaces.count; ++i) {
-			if ((*(wanfaces.iface[i].name)) && (wanup)) {
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wanfaces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
+	for (i = 0; i < wanfaces.count; ++i) {
+		if ((*(wanfaces.iface[i].name)) && (wanup)) {
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wanfaces.iface[i].name, lanaddr[n], lanmask[n]);
 			}
 		}
-
-		for (i = 0; i < wan2faces.count; ++i) {
-			if ((*(wan2faces.iface[i].name)) && (wan2up)) {
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan2faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-			}
-		}
-#ifdef TCONFIG_MULTIWAN
-		for (i = 0; i < wan3faces.count; ++i) {
-			if ((*(wan3faces.iface[i].name)) && (wan3up)) {
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan3faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-			}
-		}
-
-		for (i = 0; i < wan4faces.count; ++i) {
-			if ((*(wan4faces.iface[i].name)) && (wan4up)) {
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan4faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-			}
-		}
-#endif
 	}
+
+	for (i = 0; i < wan2faces.count; ++i) {
+		if ((*(wan2faces.iface[i].name)) && (wan2up)) {
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan2faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+		}
+	}
+#ifdef TCONFIG_MULTIWAN
+	for (i = 0; i < wan3faces.count; ++i) {
+		if ((*(wan3faces.iface[i].name)) && (wan3up)) {
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan3faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+		}
+	}
+
+	for (i = 0; i < wan4faces.count; ++i) {
+		if ((*(wan4faces.iface[i].name)) && (wan4up)) {
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan4faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+		}
+	}
+#endif
+
 #ifdef TCONFIG_PPTPD
 	/* pptp server: bypass CTF if enabled */
 	if (nvram_match("pptpd_enable", "1") && !nvram_get_int("ctf_disable")) {
@@ -849,301 +841,292 @@ static void nat_table(void)
 	/* 2 for nat */
 	ipt_bwlimit(2);
 
-	if (gateway_mode) {
+	for (i = 0; i < wanfaces.count; ++i) {
+		if (*(wanfaces.iface[i].name)) {
+			/* chain_wan_prerouting */
+			if (wanup)
+				ipt_write("-A PREROUTING -d %s -j %s\n", wanfaces.iface[i].ip, chain_wan_prerouting);
+#ifndef TCONFIG_BCMARM
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wanfaces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+#endif /* !TCONFIG_BCMARM */
+		}
+	}
+	for (i = 0; i < wan2faces.count; ++i) {
+		if (*(wan2faces.iface[i].name)) {
+			/* chain_wan_prerouting */
+			if (wan2up)
+				ipt_write("-A PREROUTING -d %s -j %s\n", wan2faces.iface[i].ip, chain_wan_prerouting);
+#ifndef TCONFIG_BCMARM
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan2faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+#endif /* !TCONFIG_BCMARM */
+		}
+	}
+#ifdef TCONFIG_MULTIWAN
+	for (i = 0; i < wan3faces.count; ++i) {
+		if (*(wan3faces.iface[i].name)) {
+			/* chain_wan_prerouting */
+			if (wan3up)
+				ipt_write("-A PREROUTING -d %s -j %s\n", wan3faces.iface[i].ip, chain_wan_prerouting);
+#ifndef TCONFIG_BCMARM
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan3faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+#endif /* !TCONFIG_BCMARM */
+		}
+	}
+	for (i = 0; i < wan4faces.count; ++i) {
+		if (*(wan4faces.iface[i].name)) {
+			/* chain_wan_prerouting */
+			if (wan4up)
+				ipt_write("-A PREROUTING -d %s -j %s\n", wan4faces.iface[i].ip, chain_wan_prerouting);
+#ifndef TCONFIG_BCMARM
+			/* Drop incoming packets which destination IP address is to our LAN side directly */
+			for (n = 0; n < BRIDGE_COUNT; n++) {
+				if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
+					ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan4faces.iface[i].name, lanaddr[n], lanmask[n]);
+			}
+#endif /* !TCONFIG_BCMARM */
+		}
+	}
+#endif /* TCONFIG_MULTIWAN */
+
+	if (wanup || wan2up
+#ifdef TCONFIG_MULTIWAN
+	    || wan3up || wan4up
+#endif
+	) {
+		if (nvram_match("dns_intcpt", "1")) {
+			/* Need to intercept both TCP and UDP DNS requests for all lan interfaces */
+			modprobe("ipt_REDIRECT");
+			ipt_write("-A PREROUTING -i br+ -p tcp -m tcp --dport 53 -j REDIRECT\n");
+			ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 53 -j REDIRECT\n");
+		}
+
+		/* NTP server redir */
+		if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
+			modprobe("ipt_REDIRECT");
+			ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 123 -j REDIRECT\n");
+		}
+
+		/* ICMP packets are always redirected to INPUT chains */
+		ipt_write("-A %s -p icmp -j DNAT --to-destination %s\n", chain_wan_prerouting, lanaddr[0]);
+
+		/* force remote access to the router if DMZ is enabled */
+		if ((nvram_match("dmz_enable", "1")) && (nvram_match("dmz_ra", "1"))) {
+			strlcpy(t, nvram_safe_get("rmgt_sip"), sizeof(t));
+			p = t;
+			do {
+				if ((c = strchr(p, ',')) != NULL)
+					*c = 0;
+
+				ipt_source(p, src, "ra", NULL);
+
+				if (remotemanage)
+					ipt_write("-A %s -p tcp -m tcp %s --dport %s -j DNAT --to-destination %s:%d\n", chain_wan_prerouting, src, nvram_safe_get("http_wanport"), lanaddr[0], web_lanport);
+
+				if (nvram_get_int("sshd_remote"))
+					ipt_write("-A %s %s -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s\n", chain_wan_prerouting, src, nvram_safe_get("sshd_rport"), lanaddr[0], nvram_safe_get("sshd_port"));
+
+				if (!c)
+					break;
+
+				p = c + 1;
+			} while (*p);
+		}
+		ipt_forward(IPT_TABLE_NAT);
+		ipt_triggered(IPT_TABLE_NAT);
+	}
+
+	if (nvram_get_int("upnp_enable") & 3) {
+		ipt_write(":upnp - [0:0]\n"
+		          ":pupnp - [0:0]\n");
+
 		for (i = 0; i < wanfaces.count; ++i) {
 			if (*(wanfaces.iface[i].name)) {
-				/* chain_wan_prerouting */
 				if (wanup)
-					ipt_write("-A PREROUTING -d %s -j %s\n", wanfaces.iface[i].ip, chain_wan_prerouting);
-#ifndef TCONFIG_BCMARM
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wanfaces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-#endif /* !TCONFIG_BCMARM */
+					/* ! for loopback (all) to work */
+					ipt_write("-A PREROUTING -d %s -j upnp\n", wanfaces.iface[i].ip);
+				else
+					ipt_write("-A PREROUTING -i %s -j upnp\n", wanfaces.iface[i].name);
 			}
 		}
+
 		for (i = 0; i < wan2faces.count; ++i) {
 			if (*(wan2faces.iface[i].name)) {
-				/* chain_wan_prerouting */
 				if (wan2up)
-					ipt_write("-A PREROUTING -d %s -j %s\n", wan2faces.iface[i].ip, chain_wan_prerouting);
-#ifndef TCONFIG_BCMARM
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan2faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-#endif /* !TCONFIG_BCMARM */
+					/* ! for loopback (all) to work */
+					ipt_write("-A PREROUTING -d %s -j upnp\n", wan2faces.iface[i].ip);
+				else
+					ipt_write("-A PREROUTING -i %s -j upnp\n", wan2faces.iface[i].name);
 			}
 		}
 #ifdef TCONFIG_MULTIWAN
 		for (i = 0; i < wan3faces.count; ++i) {
 			if (*(wan3faces.iface[i].name)) {
-				/* chain_wan_prerouting */
 				if (wan3up)
-					ipt_write("-A PREROUTING -d %s -j %s\n", wan3faces.iface[i].ip, chain_wan_prerouting);
-#ifndef TCONFIG_BCMARM
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan3faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-#endif /* !TCONFIG_BCMARM */
+					/* ! for loopback (all) to work */
+					ipt_write("-A PREROUTING -d %s -j upnp\n", wan3faces.iface[i].ip);
+				else
+					ipt_write("-A PREROUTING -i %s -j upnp\n", wan3faces.iface[i].name);
 			}
 		}
+
 		for (i = 0; i < wan4faces.count; ++i) {
 			if (*(wan4faces.iface[i].name)) {
-				/* chain_wan_prerouting */
 				if (wan4up)
-					ipt_write("-A PREROUTING -d %s -j %s\n", wan4faces.iface[i].ip, chain_wan_prerouting);
-#ifndef TCONFIG_BCMARM
-				/* Drop incoming packets which destination IP address is to our LAN side directly */
-				for (n = 0; n < BRIDGE_COUNT; n++) {
-					if ((strcmp(lanaddr[n], "") != 0 && strcmp(lanmask[n], "") != 0) || (n == 0)) /* note: ipt will correct lanaddr[0] */
-						ipt_write("-A PREROUTING -i %s -d %s/%s -j DROP\n", wan4faces.iface[i].name, lanaddr[n], lanmask[n]);
-				}
-#endif /* !TCONFIG_BCMARM */
+					/* ! for loopback (all) to work */
+					ipt_write("-A PREROUTING -d %s -j upnp\n", wan4faces.iface[i].ip);
+				else
+					ipt_write("-A PREROUTING -i %s -j upnp\n", wan4faces.iface[i].name);
 			}
 		}
-#endif /* TCONFIG_MULTIWAN */
-
-		if (wanup || wan2up
-#ifdef TCONFIG_MULTIWAN
-		|| wan3up || wan4up
 #endif
-		) {
-			if (nvram_match("dns_intcpt", "1")) {
-				/* Need to intercept both TCP and UDP DNS requests for all lan interfaces */
-				modprobe("ipt_REDIRECT");
-				ipt_write("-A PREROUTING -i br+ -p tcp -m tcp --dport 53 -j REDIRECT\n");
-				ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 53 -j REDIRECT\n");
-			}
-
-			/* NTP server redir */
-			if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
-				modprobe("ipt_REDIRECT");
-				ipt_write("-A PREROUTING -i br+ -p udp -m udp --dport 123 -j REDIRECT\n");
-			}
-
-			/* ICMP packets are always redirected to INPUT chains */
-			ipt_write("-A %s -p icmp -j DNAT --to-destination %s\n", chain_wan_prerouting, lanaddr[0]);
-
-			/* force remote access to the router if DMZ is enabled */
-			if ((nvram_match("dmz_enable", "1")) && (nvram_match("dmz_ra", "1"))) {
-				strlcpy(t, nvram_safe_get("rmgt_sip"), sizeof(t));
-				p = t;
-				do {
-					if ((c = strchr(p, ',')) != NULL)
-						*c = 0;
-
-					ipt_source(p, src, "ra", NULL);
-
-					if (remotemanage)
-						ipt_write("-A %s -p tcp -m tcp %s --dport %s -j DNAT --to-destination %s:%d\n", chain_wan_prerouting, src, nvram_safe_get("http_wanport"), lanaddr[0], web_lanport);
-
-					if (nvram_get_int("sshd_remote"))
-						ipt_write("-A %s %s -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s\n", chain_wan_prerouting, src, nvram_safe_get("sshd_rport"), lanaddr[0], nvram_safe_get("sshd_port"));
-
-					if (!c)
-						break;
-
-					p = c + 1;
-				} while (*p);
-			}
-			ipt_forward(IPT_TABLE_NAT);
-			ipt_triggered(IPT_TABLE_NAT);
-		}
-
-		if (nvram_get_int("upnp_enable") & 3) {
-			ipt_write(":upnp - [0:0]\n"
-			          ":pupnp - [0:0]\n");
-
-			for (i = 0; i < wanfaces.count; ++i) {
-				if (*(wanfaces.iface[i].name)) {
-					if (wanup)
-						/* ! for loopback (all) to work */
-						ipt_write("-A PREROUTING -d %s -j upnp\n", wanfaces.iface[i].ip);
-					else
-						ipt_write("-A PREROUTING -i %s -j upnp\n", wanfaces.iface[i].name);
-				}
-			}
-
-			for (i = 0; i < wan2faces.count; ++i) {
-				if (*(wan2faces.iface[i].name)) {
-					if (wan2up)
-						/* ! for loopback (all) to work */
-						ipt_write("-A PREROUTING -d %s -j upnp\n", wan2faces.iface[i].ip);
-					else
-						ipt_write("-A PREROUTING -i %s -j upnp\n", wan2faces.iface[i].name);
-				}
-			}
-#ifdef TCONFIG_MULTIWAN
-			for (i = 0; i < wan3faces.count; ++i) {
-				if (*(wan3faces.iface[i].name)) {
-					if (wan3up)
-						/* ! for loopback (all) to work */
-						ipt_write("-A PREROUTING -d %s -j upnp\n", wan3faces.iface[i].ip);
-					else
-						ipt_write("-A PREROUTING -i %s -j upnp\n", wan3faces.iface[i].name);
-				}
-			}
-
-			for (i = 0; i < wan4faces.count; ++i) {
-				if (*(wan4faces.iface[i].name)) {
-					if (wan4up)
-						/* ! for loopback (all) to work */
-						ipt_write("-A PREROUTING -d %s -j upnp\n", wan4faces.iface[i].ip);
-					else
-						ipt_write("-A PREROUTING -i %s -j upnp\n", wan4faces.iface[i].name);
-				}
-			}
-#endif
-		}
+	}
 
 #ifdef TCONFIG_TOR
-		/* TOR */
-		if (nvram_match("tor_enable", "1") && nvram_match("tor_solve_only", "0")) {
-			char *torports;
-			char *toriface = nvram_safe_get("tor_iface");
-			char *tortrans = nvram_safe_get("tor_transport");
-			char buf[8];
-			int done = 0;
+	/* TOR */
+	if (nvram_match("tor_enable", "1") && nvram_match("tor_solve_only", "0")) {
+		char *torports;
+		char *toriface = nvram_safe_get("tor_iface");
+		char *tortrans = nvram_safe_get("tor_transport");
+		char buf[8];
+		int done = 0;
 
-			if (nvram_match("tor_ports", "custom"))
-				torports = nvram_safe_get("tor_ports_custom");
-			else
-				torports = nvram_safe_get("tor_ports");
+		if (nvram_match("tor_ports", "custom"))
+			torports = nvram_safe_get("tor_ports_custom");
+		else
+			torports = nvram_safe_get("tor_ports");
 
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				memset(buf, 0, sizeof(buf));
-				snprintf(buf, sizeof(buf), "br%d", i);
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			memset(buf, 0, sizeof(buf));
+			snprintf(buf, sizeof(buf), "br%d", i);
 
-				if (done == 0 && nvram_match("tor_iface", buf) && ((strcmp(lanaddr[i], "") != 0) || (i == 0))) {
-					ipt_write("-A PREROUTING -i %s -p tcp -m multiport --dport %s ! -d %s -j DNAT --to-destination %s:%s\n",
-					           toriface, torports, lanaddr[i], lanaddr[i], tortrans);
-					done = 1;
-				}
-			}
-			if (done == 0) {
-				strlcpy(t, nvram_safe_get("tor_users"), sizeof(t));
-				p = t;
-				do {
-					if ((c = strchr(p, ',')) != NULL)
-						*c = 0;
-
-					if (ipt_source_strict(p, src, "tor", NULL))
-						ipt_write("-A PREROUTING %s -p tcp -m multiport --dport %s ! -d %s -j DNAT --to-destination %s:%s\n",
-						           src, torports, lanaddr[0], lanaddr[0], tortrans);
-
-					if (!c)
-						break;
-
-					p = c + 1;
-				} while (*p);
+			if (done == 0 && nvram_match("tor_iface", buf) && ((strcmp(lanaddr[i], "") != 0) || (i == 0))) {
+				ipt_write("-A PREROUTING -i %s -p tcp -m multiport --dport %s ! -d %s -j DNAT --to-destination %s:%s\n",
+				           toriface, torports, lanaddr[i], lanaddr[i], tortrans);
+				done = 1;
 			}
 		}
+		if (done == 0) {
+			strlcpy(t, nvram_safe_get("tor_users"), sizeof(t));
+			p = t;
+			do {
+				if ((c = strchr(p, ',')) != NULL)
+					*c = 0;
+
+				if (ipt_source_strict(p, src, "tor", NULL))
+					ipt_write("-A PREROUTING %s -p tcp -m multiport --dport %s ! -d %s -j DNAT --to-destination %s:%s\n",
+					           src, torports, lanaddr[0], lanaddr[0], tortrans);
+
+				if (!c)
+					break;
+
+				p = c + 1;
+			} while (*p);
+		}
+	}
 #endif
 
 #ifdef TCONFIG_SNMP
-		if (nvram_match("snmp_enable", "1") && nvram_match("snmp_remote", "1"))
-			ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("snmp_port"), lanaddr[0]);
+	if (nvram_match("snmp_enable", "1") && nvram_match("snmp_remote", "1"))
+		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("snmp_port"), lanaddr[0]);
 #endif
 
 #ifdef TCONFIG_FTP
-		/* FTP WAN access */
-		if (nvram_match("ftp_enable", "1"))
-			ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("ftp_port"), lanaddr[0]);
+	/* FTP WAN access */
+	if (nvram_match("ftp_enable", "1"))
+		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("ftp_port"), lanaddr[0]);
 #endif
 
 #ifdef TCONFIG_BT
-		/* BT Client ports from WAN interface */
-		if (nvram_get_int("bt_enable") && nvram_match("bt_rpc_wan", "1"))
-			ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("bt_port_gui"), lanaddr[0]);
+	/* BT Client ports from WAN interface */
+	if (nvram_get_int("bt_enable") && nvram_match("bt_rpc_wan", "1"))
+		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("bt_port_gui"), lanaddr[0]);
 #endif
 
-
-#ifdef TCONFIG_SAMBASRV
-		/* Samba WAN Access */
-		if (nvram_get_int("smbd_enable") && nvram_match("smbd_wanaccess", "1"))
-			ipt_write("-A WANPREROUTING -p tcp -m multiport --dport 139,445 -j DNAT --to-destination %s\n", lanaddr[0]);
-#endif
-
-		if (wanup || wan2up
+	if (wanup || wan2up
 #ifdef TCONFIG_MULTIWAN
-		|| wan3up || wan4up
+	    || wan3up || wan4up
 #endif
-		) {
-			memset(dst, 0, sizeof(dst));
-			if (dmz_dst(dst)) {
-				strlcpy(t, nvram_safe_get("dmz_sip"), sizeof(t));
-				p = t;
-				do {
-					if ((c = strchr(p, ',')) != NULL)
-						*c = 0;
+	) {
+		memset(dst, 0, sizeof(dst));
+		if (dmz_dst(dst)) {
+			strlcpy(t, nvram_safe_get("dmz_sip"), sizeof(t));
+			p = t;
+			do {
+				if ((c = strchr(p, ',')) != NULL)
+					*c = 0;
 
-					if (ipt_source_strict(p, src, "dmz", NULL))
-						ipt_write("-A %s %s -j DNAT --to-destination %s\n", chain_wan_prerouting, src, dst);
+				if (ipt_source_strict(p, src, "dmz", NULL))
+					ipt_write("-A %s %s -j DNAT --to-destination %s\n", chain_wan_prerouting, src, dst);
 
-					if (!c)
-						break;
+				if (!c)
+					break;
 
-					p = c + 1;
-				} while (*p);
-			}
+				p = c + 1;
+			} while (*p);
 		}
+	}
 
-		p = "";
+	p = "";
 #ifdef TCONFIG_IPV6
-		switch (get_ipv6_service()) {
-		case IPV6_6IN4:
-			/* avoid NATing proto-41 packets when using 6in4 tunnel */
-			p = "! -p 41";
-			break;
-		}
+	switch (get_ipv6_service()) {
+	case IPV6_6IN4:
+		/* avoid NATing proto-41 packets when using 6in4 tunnel */
+		p = "! -p 41";
+		break;
+	}
 #endif
 
-		foreach_wan_nat(wanup, wanfaces, p);
-		foreach_wan_nat(wan2up, wan2faces, p);
+	foreach_wan_nat(wanup, wanfaces, p);
+	foreach_wan_nat(wan2up, wan2faces, p);
 #ifdef TCONFIG_MULTIWAN
-		foreach_wan_nat(wan3up, wan3faces, p);
-		foreach_wan_nat(wan4up, wan4faces, p);
+	foreach_wan_nat(wan3up, wan3faces, p);
+	foreach_wan_nat(wan4up, wan4faces, p);
 #endif
 
 #ifdef TCONFIG_PPTPD
-		/* PPTP Client NAT */
-		pptp_client_firewall("POSTROUTING", p, ipt_write);
+	/* PPTP Client NAT */
+	pptp_client_firewall("POSTROUTING", p, ipt_write);
 #endif
-		if ((nvram_match("wan_proto", "pppoe") || nvram_match("wan_proto", "dhcp") || nvram_match("wan_proto", "static"))
-		    && (b = nvram_safe_get("wan_modem_ipaddr")) && (*b) && (!nvram_match("wan_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
-			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan_ifname"), b);
+	if ((nvram_match("wan_proto", "pppoe") || nvram_match("wan_proto", "dhcp") || nvram_match("wan_proto", "static"))
+	    && (b = nvram_safe_get("wan_modem_ipaddr")) && (*b) && (!nvram_match("wan_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
+		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan_ifname"), b);
 
-		if ((nvram_match("wan2_proto", "pppoe") || nvram_match("wan2_proto", "dhcp") || nvram_match("wan2_proto", "static"))
-		    && (b = nvram_safe_get("wan2_modem_ipaddr")) && (*b) && (!nvram_match("wan2_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
-			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan2_ifname"), b);
+	if ((nvram_match("wan2_proto", "pppoe") || nvram_match("wan2_proto", "dhcp") || nvram_match("wan2_proto", "static"))
+	    && (b = nvram_safe_get("wan2_modem_ipaddr")) && (*b) && (!nvram_match("wan2_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
+		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan2_ifname"), b);
 
 #ifdef TCONFIG_MULTIWAN
-		if ((nvram_match("wan3_proto", "pppoe") || nvram_match("wan3_proto", "dhcp") || nvram_match("wan3_proto", "static"))
-		    && (b = nvram_safe_get("wan3_modem_ipaddr")) && (*b) && (!nvram_match("wan3_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
-			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan3_ifname"), b);
+	if ((nvram_match("wan3_proto", "pppoe") || nvram_match("wan3_proto", "dhcp") || nvram_match("wan3_proto", "static"))
+	    && (b = nvram_safe_get("wan3_modem_ipaddr")) && (*b) && (!nvram_match("wan3_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
+		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan3_ifname"), b);
 
-		if ((nvram_match("wan4_proto", "pppoe") || nvram_match("wan4_proto", "dhcp") || nvram_match("wan4_proto", "static"))
-		    && (b = nvram_safe_get("wan4_modem_ipaddr")) && (*b) && (!nvram_match("wan4_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
-			ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan4_ifname"), b);
+	if ((nvram_match("wan4_proto", "pppoe") || nvram_match("wan4_proto", "dhcp") || nvram_match("wan4_proto", "static"))
+	    && (b = nvram_safe_get("wan4_modem_ipaddr")) && (*b) && (!nvram_match("wan4_modem_ipaddr", "0.0.0.0")) && (!foreach_wif(1, NULL, is_sta)))
+		ipt_write("-A POSTROUTING -o %s -d %s -j MASQUERADE\n", nvram_safe_get("wan4_ifname"), b);
 #endif
 
-		switch (nvram_get_int("nf_loopback")) {
-			case 1: /* 1 = forwarded-only */
-			case 2: /* 2 = disable */
-			break;
-			default: /* 0 = all (same as block_loopback=0) */
-				for (i = 0; i < BRIDGE_COUNT; i++) {
-					if ((strcmp(lanface[i], "") != 0 && strcmp(lanmask[i], "") != 0) || (i == 0))
-						ipt_write("-A POSTROUTING -o %s -s %s/%s -d %s/%s -j SNAT --to-source %s\n", lanface[i], lanaddr[i], lanmask[i], lanaddr[i], lanmask[i], lanaddr[i]);
-				}
-			break;
-		}
+	switch (nvram_get_int("nf_loopback")) {
+		case 1: /* 1 = forwarded-only */
+		case 2: /* 2 = disable */
+		break;
+		default: /* 0 = all (same as block_loopback=0) */
+			for (i = 0; i < BRIDGE_COUNT; i++) {
+				if ((strcmp(lanface[i], "") != 0 && strcmp(lanmask[i], "") != 0) || (i == 0))
+					ipt_write("-A POSTROUTING -o %s -s %s/%s -d %s/%s -j SNAT --to-source %s\n", lanface[i], lanaddr[i], lanmask[i], lanaddr[i], lanmask[i], lanaddr[i]);
+			}
+		break;
 	}
 
 	ipt_write("COMMIT\n");
@@ -1364,13 +1347,6 @@ static void filter_input(void)
 		if (nvram_match("bt_rpc_wan", "1"))
 			ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get("bt_port_gui"));
 	}
-#endif
-
-
-#ifdef TCONFIG_SAMBASRV
-	/* Samba WAN Access */
-	if (nvram_get_int("smbd_enable") && nvram_match("smbd_wanaccess", "1"))
-		ipt_write("-A INPUT -p tcp -m multiport --dport 139,445 -j ACCEPT\n");
 #endif
 
 #ifdef TCONFIG_PPTPD
@@ -1834,13 +1810,8 @@ static void filter_table(void)
 	pptp_client_firewall("OUTPUT", "", ipt_write);
 #endif
 
-	if ((gateway_mode) || (nvram_match("wk_mode_x", "1"))) {
-		ip46t_write(":FORWARD DROP [0:0]\n");
-		filter_forward();
-	}
-	else
-		ip46t_write(":FORWARD ACCEPT [0:0]\n");
-
+	ip46t_write(":FORWARD DROP [0:0]\n");
+	filter_forward();
 	ip46t_write("COMMIT\n");
 }
 
@@ -1979,32 +1950,20 @@ int start_firewall(void)
 
 	enable_blackhole_detection();
 
-	n = nvram_get_int("log_in");
-	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
-	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
-
-	n = nvram_get_int("log_out");
-	chain_out_drop = (n & 1) ? "logdrop" : "DROP";
-	chain_out_reject = (n & 1) ? "logreject" : "REJECT --reject-with tcp-reset";
-	chain_out_accept = (n & 2) ? "logaccept" : "ACCEPT";
-
-	//if (nvram_match("nf_drop_reset", "1")) chain_out_drop = chain_out_reject;
+	chains_log_detection();
 
 	for (n = 0; n < BRIDGE_COUNT; n++) {
 		memset(buf1, 0, sizeof(buf1));
 		snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_ifname" : "lan%d_ifname"), n);
 		strlcpy(lanface[n], nvram_safe_get(buf1), sizeof(lanface[n]));
-	}
 
-	if ((gateway_mode = !nvram_match("wk_mode", "router"))) {
-		for (n = 0; n < BRIDGE_COUNT; n++) {
-			memset(buf1, 0, sizeof(buf1));
-			snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), n);
-			memset(buf2, 0, sizeof(buf2));
-			snprintf(buf2, sizeof(buf2), (n == 0 ? "lan_netmask" : "lan%d_netmask"), n);
-			strlcpy(lanaddr[n], nvram_safe_get(buf1), sizeof(lanaddr[n]));
-			strlcpy(lanmask[n], nvram_safe_get(buf2), sizeof(lanmask[n]));
-		}
+		memset(buf1, 0, sizeof(buf1));
+		snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), n);
+		strlcpy(lanaddr[n], nvram_safe_get(buf1), sizeof(lanaddr[n]));
+
+		memset(buf1, 0, sizeof(buf1));
+		snprintf(buf1, sizeof(buf1), (n == 0 ? "lan_netmask" : "lan%d_netmask"), n);
+		strlcpy(lanmask[n], nvram_safe_get(buf1), sizeof(lanmask[n]));
 	}
 
 	memcpy(&wanfaces, get_wanfaces("wan"), sizeof(wanfaces));
@@ -2066,7 +2025,7 @@ int start_firewall(void)
 					c = NULL;
 
 				/* in gateway mode, rp_filter blocks pbr */
-				if ((c != NULL && strcmp(dirent->d_name, c) == 0) || (gateway_mode && strcmp(dirent->d_name, multiwan_wanfaces[n - 1]) == 0)) {
+				if ((c != NULL && strcmp(dirent->d_name, c) == 0) || (strcmp(dirent->d_name, multiwan_wanfaces[n - 1]) == 0)) {
 					enable_rp_filter = 0;
 					break;
 				}

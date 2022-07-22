@@ -73,21 +73,24 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
-
 	fom.nginx_enable.value = fom._f_nginx_enable.checked ? 1 : 0;
 	fom.nginx_php.value = fom.f_nginx_php.checked ? 1 : 0;
 	fom.nginx_keepconf.value = fom.f_nginx_keepconf.checked ? 1 : 0;
 	fom.nginx_remote.value = fom.f_nginx_remote.checked ? 1 : 0;
 	fom.nginx_override.value = fom.f_nginx_override.checked ? 1 : 0;
 	fom.nginx_h5aisupport.value = fom.f_nginx_h5aisupport.checked ? 1 : 0;
-
-	fom._nofootermsg.value = 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -102,7 +105,7 @@ function earlyInit() {
 function init() {
 	var c;
 	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, "notes");
+		toggleVisibility(cprefix, 'notes');
 
 	up.initPage(250, 5);
 	eventHandler();
@@ -125,7 +128,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="web-nginx.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="nginx_enable">
 <input type="hidden" name="nginx_php">
 <input type="hidden" name="nginx_keepconf">

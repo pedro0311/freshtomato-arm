@@ -575,25 +575,25 @@ function verifyFields(focused, quiet) {
 	for (i = 0; i < tabs.length; ++i) {
 		t = tabs[i][0];
 
-		if (!v_range('_vpn_'+t+'_poll', quiet, 0, 30))
+		if (!v_range('_vpn_'+t+'_poll', quiet || !ok, 0, 30))
 			ok = 0;
-		if (!v_port('_vpn_'+t+'_port', quiet))
+		if (!v_port('_vpn_'+t+'_port', quiet || !ok))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_sn', quiet, 0))
+		if (!v_ip('_vpn_'+t+'_sn', quiet || !ok, 0))
 			ok = 0;
-		if (!v_netmask('_vpn_'+t+'_nm', quiet))
+		if (!v_netmask('_vpn_'+t+'_nm', quiet || !ok))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_r1', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_r1', quiet || !ok, 1))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_r2', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_r2', quiet || !ok, 1))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_local', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_local', quiet || !ok, 1))
 			ok = 0;
-		if (!v_ip('_vpn_'+t+'_remote', quiet, 1))
+		if (!v_ip('_vpn_'+t+'_remote', quiet || !ok, 1))
 			ok = 0;
-		if (!v_range('_vpn_'+t+'_reneg', quiet, -1, 2147483647))
+		if (!v_range('_vpn_'+t+'_reneg', quiet || !ok, -1, 2147483647))
 			ok = 0;
-		if (E('_vpn_'+t+'_crypt').value == 'tls' && !E('_f_vpn_'+t+'_userpass').checked && !v_serial('_vpn_'+t+'_serial', quiet))
+		if (E('_vpn_'+t+'_crypt').value == 'tls' && !E('_f_vpn_'+t+'_userpass').checked && !v_serial('_vpn_'+t+'_serial', quiet || !ok))
 			ok = 0;
 	}
 
@@ -814,9 +814,9 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-server.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
-<input type="hidden" name="vpn_server_eas" id="vpn_server_eas" value="">
-<input type="hidden" name="vpn_server_dns" id="vpn_server_dns" value="">
+<input type="hidden" name="_nofootermsg">
+<input type="hidden" name="vpn_server_eas" id="vpn_server_eas">
+<input type="hidden" name="vpn_server_dns" id="vpn_server_dns">
 
 <!-- / / / -->
 

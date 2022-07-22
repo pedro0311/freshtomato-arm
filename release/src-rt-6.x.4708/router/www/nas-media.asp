@@ -163,21 +163,26 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (msg.isEditing())
-		return;
+		return 0;
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
-
 	fom.ms_enable.value = fom._f_ms_enable.checked ? 1 : 0;
 	nvram.ms_enable = fom._f_ms_enable.checked ? 1 : 0;
 	fom.ms_tivo.value = fom._f_ms_tivo.checked ? 1 : 0;
 	fom.ms_stdlna.value = fom._f_ms_stdlna.checked ? 1 : 0;
 	fom.ms_rescan.value = fom._f_ms_rescan.checked ? 1 : 0;
 	fom.ms_sas.value = fom._f_ms_sas.checked ? 1 : 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	var s = fom._f_loc.value;
 	fom.ms_dbdir.value = (s == '*user') ? fom._f_user.value : s;
@@ -188,8 +193,6 @@ function save() {
 		r.push(data[i].join('<'));
 
 	fom.ms_dirs.value = r.join('>');
-
-	fom._nofootermsg.value = 0;
 
 	form.submit(fom, 1);
 
@@ -225,7 +228,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="nas-media.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="ms_enable">
 <input type="hidden" name="ms_dirs">
 <input type="hidden" name="ms_dbdir">

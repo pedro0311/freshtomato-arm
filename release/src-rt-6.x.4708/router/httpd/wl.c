@@ -1303,7 +1303,7 @@ void asp_wlcountries(int argc, char **argv)
 	web_puts("];\n");
 }
 
-#ifdef TCONFIG_BCMARM
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 int mround(float val)
 {
 	return (int)(val + 0.5);
@@ -1416,4 +1416,4 @@ char* get_wl_tempsense(char *buf)
 
 	return buf;
 }
-#endif /* TONFIG_BCMARM */
+#endif /* TCONFIG_BLINK || TCONFIG_BCMARM */

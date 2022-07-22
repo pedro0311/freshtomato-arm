@@ -57,22 +57,27 @@ static int _pidof(const char *name, pid_t **pids)
 	char buf[256];
 
 	count = 0;
-	if (pids != NULL)
+	if (pids)
 		*pids = NULL;
-	if ((p = strrchr(name, '/')) != NULL) name = p + 1;
+	if ((p = strrchr(name, '/')) != NULL)
+		name = p + 1;
 	if ((dir = opendir("/proc")) != NULL) {
 		while ((de = readdir(dir)) != NULL) {
 			i = strtol(de->d_name, &e, 10);
-			if (*e != 0) continue;
+			if (*e != 0)
+				continue;
 			if (strcmp(name, psname(i, buf, sizeof(buf))) == 0) {
-				if (pids == NULL) {
-					count = i;
-					break;
+				if (pids) {
+					if ((*pids = realloc(*pids, sizeof(pid_t) * (count + 1))) == NULL) {
+						closedir(dir);
+						return -1;
+					}
+					(*pids)[count++] = i;
 				}
-				if ((*pids = realloc(*pids, sizeof(pid_t) * (count + 1))) == NULL) {
-					return -1;
+				else {
+					closedir(dir);
+					return i;
 				}
-				(*pids)[count++] = i;
 			}
 		}
 	}
@@ -85,6 +90,9 @@ int pidof(const char *name)
 {
 	pid_t p;
 
+	if (!name)
+		return -1;
+
 	p = _pidof(name, NULL);
 	if (p < 1) {
 		usleep(10 * 1000);
@@ -94,6 +102,7 @@ int pidof(const char *name)
 	}
 	if (p < 1)
 		return -1;
+
 	return p;
 }
 

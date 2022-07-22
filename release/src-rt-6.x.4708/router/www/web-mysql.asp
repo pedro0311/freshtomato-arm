@@ -109,6 +109,8 @@ function verifyFields(focused, quiet) {
 		ferror.set(e, 'Password can not be empty', quiet);
 		ok = 0;
 	}
+	else
+		ferror.clear(e);
 
 	if (!v_port(E('_mysql_port'), quiet || !ok)) ok = 0;
 	if (!v_range(E('_mysql_check_time'), quiet || !ok, 1, 55)) ok = 0;
@@ -127,11 +129,16 @@ function verifyFields(focused, quiet) {
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
 	fom.mysql_enable.value = fom._f_mysql_enable.checked ? 1 : 0;
 	fom.mysql_check.value = fom._f_mysql_check.checked ? 1 : 0;
@@ -139,8 +146,7 @@ function save() {
 	fom.mysql_init_priv.value = fom._f_mysql_init_priv.checked ? 1 : 0;
 	fom.mysql_init_rootpass.value = fom._f_mysql_init_rootpass.checked ? 1 : 0;
 	fom.mysql_allow_anyhost.value = fom._f_mysql_allow_anyhost.checked ? 1 : 0;
-
-	fom._nofootermsg.value = 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -178,7 +184,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="web-mysql.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="mysql_enable">
 <input type="hidden" name="mysql_check">
 <input type="hidden" name="mysql_usb_enable">

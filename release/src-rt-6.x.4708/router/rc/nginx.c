@@ -314,11 +314,11 @@ void start_nginx(int force)
 {
 	int ret;
 
-	/* make sure it's really stopped */
-	stop_nginx();
-
 	/* only if enabled or forced */
 	if (!nvram_get_int("nginx_enable") && force == 0)
+		return;
+
+	if (serialize_restart("nginx", 1))
 		return;
 
 	if (!f_exists(fastcgiconf))

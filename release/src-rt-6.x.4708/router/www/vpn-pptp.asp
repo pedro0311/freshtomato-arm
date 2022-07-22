@@ -44,37 +44,49 @@ function verifyFields(focused, quiet) {
 	if (f) E('_pptp_client_mru').value = '1400';
 	E('_pptp_client_mru').disabled = f;
 
-	if (!v_range('_pptp_client_mtu', quiet, 576, 1500)) ok = 0;
-	if (!v_range('_pptp_client_mru', quiet, 576, 1500)) ok = 0;
+	if (!v_range('_pptp_client_mtu', quiet || !ok, 576, 1500)) ok = 0;
+	if (!v_range('_pptp_client_mru', quiet || !ok, 576, 1500)) ok = 0;
 
 	if (!v_ip('_pptp_client_srvip', true) && !v_domain('_pptp_client_srvip', true)) {
-		ferror.set(E('_pptp_client_srvip'), "Invalid server address", quiet);
+		ferror.set(E('_pptp_client_srvip'), "Invalid server address", quiet || !ok);
 		ok = 0;
 	}
+	else
+		ferror.clear(E('_pptp_client_srvip'));
+
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsub', true)) {
-		ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address", quiet);
+		ferror.set(E('_pptp_client_srvsub'), "Invalid subnet address", quiet || !ok);
 		ok = 0;
 	}
+	else
+		ferror.clear(E('_pptp_client_srvsub'));
+
 	if (!E('_f_pptp_client_dfltroute').checked && !v_ip('_pptp_client_srvsubmsk', true)) {
-		ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address", quiet);
+		ferror.set(E('_pptp_client_srvsubmsk'), "Invalid netmask address", quiet || !ok);
 		ok = 0;
 	}
+	else
+		ferror.clear(E('_pptp_client_srvsubmsk'));
 
 	return ok;
 }
 
-function save() {
+function save_pre() {
 	if (!verifyFields(null, 0))
-		return;
+		return 0;
+	return 1;
+}
 
-	show(); /* update '_service' field first */
+function save(nomsg) {
+	save_pre();
+	if (!nomsg) show(); /* update '_service' field first */
+
 	var fom = E('t_fom');
-
 	fom.pptp_client_eas.value = fom._f_pptp_client_eas.checked ? 1 : 0;
 	fom.pptp_client_nat.value = fom._f_pptp_client_nat.checked ? 1 : 0;
 	fom.pptp_client_dfltroute.value = fom._f_pptp_client_dfltroute.checked ? 1 : 0;
 	fom.pptp_client_stateless.value = fom._f_pptp_client_stateless.checked ? 1 : 0;
-	fom._nofootermsg.value = 0;
+	fom._nofootermsg.value = (nomsg ? 1 : 0);
 
 	form.submit(fom, 1);
 
@@ -107,7 +119,7 @@ function init() {
 
 <input type="hidden" name="_nextpage" value="vpn-pptp.asp">
 <input type="hidden" name="_service" value="">
-<input type="hidden" name="_nofootermsg" value="">
+<input type="hidden" name="_nofootermsg">
 <input type="hidden" name="pptp_client_eas">
 <input type="hidden" name="pptp_client_nat">
 <input type="hidden" name="pptp_client_dfltroute">

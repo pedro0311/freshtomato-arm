@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <ctype.h> // !!TB
+#include <ctype.h>
 #include <string.h>
 #include <signal.h>
 #include <syslog.h>
@@ -82,6 +82,17 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 #define IPT_V6			0x02
 #define IPT_ANY_AF		(IPT_V4 | IPT_V6)
 #define IPT_AF_IS_EMPTY(f)	((f & IPT_ANY_AF) == 0)
+
+const char *chain_in_drop;
+const char *chain_in_accept;
+const char *chain_out_drop;
+const char *chain_out_accept;
+const char *chain_out_reject;
+
+/* rc.c */
+extern void chains_log_detection(void);
+extern int env2nv(char *env, char *nv);
+extern int serialize_restart(char *service, int start);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -153,6 +164,9 @@ extern void mwan_table_del(char *sPrefix);
 extern void mwan_load_balance(void);
 extern int mwan_route_main(int argc, char **argv);
 extern void mwan_state_files(void);
+#ifdef TCONFIG_PPTPD
+extern void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz);
+#endif
 
 /* pbr.c */
 extern void ipt_routerpolicy(void);
@@ -250,8 +264,6 @@ extern void start_services(void);
 extern void stop_services(void);
 #ifdef TCONFIG_USB
 extern void restart_nas_services(int stop, int start);
-extern void start_wsdd(void);
-extern void stop_wsdd(void);
 #else
 #define restart_nas_services(args...) do { } while(0)
 #endif /* TCONFIG_USB */
@@ -316,10 +328,6 @@ extern char lanface[BRIDGE_COUNT][IFNAMSIZ + 1];
 extern char wan6face[];
 #endif
 extern char lan_cclass[];
-extern const char *chain_in_accept;
-extern const char *chain_out_drop;
-extern const char *chain_out_accept;
-extern const char *chain_out_reject;
 extern char **layer7_in;
 extern void enable_ip_forward(void);
 extern void ipt_write(const char *format, ...);
@@ -481,11 +489,9 @@ extern void stop_pptp_client(void);
 extern void start_pptp_client_eas(void);
 extern void stop_pptp_client_eas(void);
 extern int write_pptp_client_resolv(FILE*);
-extern void clear_pptp_route(void);
 extern int pptpc_ipup_main(int argc, char **argv);
 extern int pptpc_ipdown_main(int argc, char **argv);
 extern void pptp_client_firewall(const char *table, const char *opt, _tf_ipt_write table_writer);
-extern void get_cidr(char *ipaddr, char *netmask, char *cidr, const size_t buf_sz);
 #else
 static inline void start_pptp_client_eas(void) {};
 static inline void stop_pptp_client_eas(void) {};
@@ -499,7 +505,7 @@ extern int nvram_nvram2file(const char *name, const char *filename);
 /* transmission.c */
 #ifdef TCONFIG_BT
 extern void start_bittorrent(int force);
-extern void stop_bittorrent();
+extern void stop_bittorrent(void);
 #endif
 
 /* nfs.c */
@@ -516,8 +522,8 @@ extern void stop_snmp();
 
 /* tor.c */
 #ifdef TCONFIG_TOR
-extern void start_tor();
-extern void stop_tor();
+extern void start_tor(int force);
+extern void stop_tor(void);
 #endif
 
 /* apcupsd.c */
@@ -551,8 +557,8 @@ extern int write_ovpn_resolv(FILE*);
 /* tinc.c */
 #ifdef TCONFIG_TINC
 extern void start_tinc(int force);
-extern void stop_tinc();
-extern void run_tinc_firewall_script();
+extern void stop_tinc(void);
+extern void run_tinc_firewall_script(void);
 #endif
 
 /* bwlimit.c */
@@ -580,10 +586,12 @@ extern void stop_nocat();
 #ifdef TCONFIG_NGINX
 extern void nginx_write(const char *format, ...);
 extern void start_nginx(int force);
-extern void stop_nginx();
+extern void stop_nginx(void);
+
+/* mysql.c */
 extern void start_mysql(int force);
-extern void stop_mysql();
-#endif
+extern void stop_mysql(void);
+#endif /* TCONFIG_NGINX */
 
 /* tomatoanon.c */
 extern void start_tomatoanon();

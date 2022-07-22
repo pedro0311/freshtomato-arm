@@ -219,7 +219,7 @@ function init() {
 			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' &nbsp;<small>fixes Comcast incorrect DSCP<\/small>' },
 			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' },
 			null,
-			{ title: 'Allow DHCP responses', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass == 1 },
+			{ title: 'Allow DHCP spoofing', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass == 1 },
 			{ title: 'Smart MTU black hole detection', name: 'f_fw_blackhole', type: 'checkbox', value: nvram.fw_blackhole == 1 }
 		]);
 	</script>
@@ -275,7 +275,7 @@ function init() {
 <div class="section" id="sesdiv_notes" style="display:none">
 	<i>Firewall:</i><br>
 	<ul>
-		<li><b>Allow DHCP responses</b> - Accept incoming packets from broken dhcp servers, which are sending replies from addresses other than used for query. This could lead to a lower level of security.</li>
+		<li><b>Allow DHCP spoofing</b> - Accept/process packets from DHCP servers whose IP is different from the one advertised within the DHCP messages. This is often categorized as an attach (DHCP spoofing) but could be a genuine scenario in some rare cases. Enabling the option lowers the security level.</li>
 		<li><b>Smart MTU black hole detection</b> - Read more <a href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/" class="new_window">HERE</a>.</li>
 	</ul>
 	<i>IGMP proxy:</i><br>

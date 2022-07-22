@@ -32,37 +32,37 @@ void start_mysql(int force)
 	char full_datadir[256], full_tmpdir[256], basedir[256];
 	char tmp1[256], tmp2[256];
 
-	/* make sure its really stop */
-	stop_mysql();
-
 	/* only if enabled or forced */
 	if (!nvram_get_int("mysql_enable") && force == 0)
 		return;
 
-	if (nvram_match("mysql_binary", "internal"))
-		strcpy(pbi, "/usr/bin");
-	else if (nvram_match("mysql_binary", "optware"))
-		strcpy(pbi, "/opt/bin");
-	else
-		strcpy(pbi, nvram_safe_get("mysql_binary_custom"));
+	if (serialize_restart("mysqld", 1))
+		return;
 
-	if (pbi[strlen(pbi)-1] == '/')
+	if (nvram_match("mysql_binary", "internal"))
+		strlcpy(pbi, "/usr/bin", sizeof(pbi));
+	else if (nvram_match("mysql_binary", "optware"))
+		strlcpy(pbi, "/opt/bin", sizeof(pbi));
+	else
+		strlcpy(pbi, nvram_safe_get("mysql_binary_custom"), sizeof(pbi));
+
+	if (pbi[strlen(pbi) - 1] == '/')
 		pbi[strlen(pbi) - 1] = '\0';
 
 	splitpath(pbi, basedir, tmp1);
 
 	/* Generate download saved path based on USB partition (mysql_dlroot) and directory name (mysql_datadir) */
-	if (nvram_match("mysql_usb_enable", "1")) {
+	if (nvram_get_int("mysql_usb_enable")) {
 		tmp1[0] = 0;
 		tmp2[0] = 0;
-		strcpy(tmp1, nvram_safe_get("mysql_dlroot"));
+		strlcpy(tmp1, nvram_safe_get("mysql_dlroot"), sizeof(tmp1));
 		trimstr(tmp1);
 		if (tmp1[0] != '/') {
-			memset(tmp2, 0, 256);
-			sprintf(tmp2, "/%s", tmp1);
-			strcpy(tmp1, tmp2);
+			memset(tmp2, 0, sizeof(tmp2));
+			snprintf(tmp2, sizeof(tmp2), "/%s", tmp1);
+			strlcpy(tmp1, tmp2, sizeof(tmp1));
 		}
-		strcpy(ppr, tmp1);
+		strlcpy(ppr, tmp1, sizeof(ppr));
 		if (ppr[strlen(ppr) - 1] == '/')
 			ppr[strlen(ppr) - 1] = 0;
 
@@ -74,22 +74,22 @@ void start_mysql(int force)
 	else
 		ppr[0] = '\0';
 
-	strcpy(pdatadir, nvram_safe_get("mysql_datadir"));
+	strlcpy(pdatadir, nvram_safe_get("mysql_datadir"), sizeof(pdatadir));
 	trimstr(pdatadir);
 	if (pdatadir[strlen(pdatadir) - 1] == '/')
 		pdatadir[strlen(pdatadir) - 1] = 0;
 
 	if (strlen(pdatadir) == 0) {
-		strcpy (pdatadir, "data");
+		strlcpy(pdatadir, "data", sizeof(pdatadir));
 		nvram_set("mysql_dir", "data");
 	}
-	memset(full_datadir, 0, 256);
+	memset(full_datadir, 0, sizeof(full_datadir));
 	if (pdatadir[0] == '/')
-		sprintf(full_datadir, "%s%s", ppr, pdatadir);
+		snprintf(full_datadir, sizeof(full_datadir), "%s%s", ppr, pdatadir);
 	else
-		sprintf(full_datadir, "%s/%s", ppr, pdatadir);
+		snprintf(full_datadir, sizeof(full_datadir), "%s/%s", ppr, pdatadir);
 
-	strcpy(ptmpdir, nvram_safe_get("mysql_tmpdir"));
+	strlcpy(ptmpdir, nvram_safe_get("mysql_tmpdir"), sizeof(ptmpdir));
 	trimstr(ptmpdir);
 	if (ptmpdir[strlen(ptmpdir) - 1] == '/')
 		ptmpdir[strlen(ptmpdir) - 1] = 0;
@@ -98,13 +98,13 @@ void start_mysql(int force)
 		strcpy (ptmpdir, "tmp");
 		nvram_set("mysql_tmpdir", "tmp");
 	}
-	memset(full_tmpdir, 0, 256);
+	memset(full_tmpdir, 0, sizeof(full_tmpdir));
 	if (ptmpdir[0] == '/')
-		sprintf(full_tmpdir, "%s%s", ppr, ptmpdir);
+		snprintf(full_tmpdir, sizeof(full_tmpdir), "%s%s", ppr, ptmpdir);
 	else
-		sprintf(full_tmpdir, "%s/%s", ppr, ptmpdir);
+		snprintf(full_tmpdir, sizeof(full_tmpdir), "%s/%s", ppr, ptmpdir);
 
-	/* config file /etc/my.cnf */
+	/* config file */
 	if (!(fp = fopen(MYSQL_CONF, "w"))) {
 		perror(MYSQL_CONF);
 		return;
@@ -127,7 +127,7 @@ void start_mysql(int force)
 	            full_datadir,
 	            full_tmpdir);
 
-	if (nvram_match("mysql_allow_anyhost", "1"))
+	if (nvram_get_int("mysql_allow_anyhost"))
 		fprintf(fp, "bind-address         = 0.0.0.0\n");
 	else
 		fprintf(fp, "bind-address         = 127.0.0.1\n");
@@ -265,7 +265,7 @@ void start_mysql(int force)
 	            full_tmpdir,
 	            full_datadir);
 
-	fclose( fp );
+	fclose(fp);
 
 	chmod(MYSL_START_SCRIPT, 0755);
 
@@ -277,34 +277,35 @@ void stop_mysql(void)
 	FILE *fp;
 	char pbi[128];
 
-	if (pidof("mysqld") > 0) {
-		if (nvram_match("mysql_binary", "internal"))
-			strcpy(pbi, "/usr/bin");
-		else if (nvram_match("mysql_binary", "optware"))
-			strcpy(pbi, "/opt/bin");
-		else
-			strcpy(pbi, nvram_safe_get("mysql_binary_custom"));
+	if (serialize_restart("mysqld", 0))
+		return;
 
-		/* stop script */
-		if (!(fp = fopen(MYSQL_STOP_SCRIPT, "w"))) {
-			perror(MYSQL_STOP_SCRIPT);
-			return;
-		}
+	if (nvram_match("mysql_binary", "internal"))
+		strlcpy(pbi, "/usr/bin", sizeof(pbi));
+	else if (nvram_match("mysql_binary", "optware"))
+		strlcpy(pbi, "/opt/bin", sizeof(pbi));
+	else
+		strlcpy(pbi, nvram_safe_get("mysql_binary_custom"), sizeof(pbi));
 
-		fprintf(fp, "#!/bin/sh\n\n"
-		            "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown\n"
-		            "killall mysqld\n"
-		            "logger \"MySQL successfully stopped\" \n"
-		            "sleep 1\n"
-		            "rm -f /var/run/mysql.pid\n"
-		            "/usr/bin/mycheck addcru\n",
-		            pbi,
-		            nvram_safe_get("mysql_passwd"));
-
-		fclose(fp);
-
-		chmod(MYSQL_STOP_SCRIPT, 0755);
-
-		xstart(MYSQL_STOP_SCRIPT);
+	/* stop script */
+	if (!(fp = fopen(MYSQL_STOP_SCRIPT, "w"))) {
+		perror(MYSQL_STOP_SCRIPT);
+		return;
 	}
+
+	fprintf(fp, "#!/bin/sh\n\n"
+	            "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown\n"
+	            "killall mysqld\n"
+	            "logger \"MySQL successfully stopped\" \n"
+	            "sleep 1\n"
+	            "rm -f /var/run/mysql.pid\n"
+	            "/usr/bin/mycheck addcru\n",
+	            pbi,
+	            nvram_safe_get("mysql_passwd"));
+
+	fclose(fp);
+
+	chmod(MYSQL_STOP_SCRIPT, 0755);
+
+	xstart(MYSQL_STOP_SCRIPT);
 }

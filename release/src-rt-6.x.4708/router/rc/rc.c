@@ -1,12 +1,17 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"rc_debug"
 
 
 #ifdef DEBUG_RCTEST
@@ -71,6 +76,73 @@ static int rc_main(int argc, char *argv[])
 		return kill(1, SIGINT);
 	if (strcmp(argv[1], "restart") == 0)
 		return kill(1, SIGHUP);
+
+	return 0;
+}
+
+void chains_log_detection(void)
+{
+	int n;
+
+	n = nvram_get_int("log_in");
+	chain_in_drop = (n & 1) ? "logdrop" : "DROP";
+	chain_in_accept = (n & 2) ? "logaccept" : "ACCEPT";
+
+	n = nvram_get_int("log_out");
+	chain_out_drop = (n & 1) ? "logdrop" : "DROP";
+	chain_out_reject = (n & 1) ? "logreject" : "REJECT --reject-with tcp-reset";
+	chain_out_accept = (n & 2) ? "logaccept" : "ACCEPT";
+	//if (nvram_match("nf_drop_reset", "1")) chain_out_drop = chain_out_reject;
+}
+
+/* copy env to nvram
+ * returns 1 if new/changed, 0 if not changed/no env
+ */
+int env2nv(char *env, char *nv)
+{
+	char *value;
+	if ((value = getenv(env)) != NULL) {
+		if (!nvram_match(nv, value)) {
+			nvram_set(nv, value);
+			return 1;
+		}
+	}
+	return 0;
+}
+
+/* serialize (re-)starts from GUI, avoid zombies */
+int serialize_restart(char *service, int start)
+{
+	char s[32];
+	char *pos;
+	unsigned int index = 0;
+
+	/* replace '-' with '_' otherwise exec_service() will fail */
+	strlcpy(s, service, sizeof(s));
+	if ((pos = strstr(s, "-")) != NULL) {
+		index = pos - s;
+		s[index] = '\0';
+		strlcat(s, "_", sizeof(s));
+		strlcat(s, service + index + 1, sizeof(s));
+	}
+	logmsg(LOG_DEBUG, "*** %s: service: %s %s - pid: %d", __FUNCTION__, service, (start ? "start" : "stop"), getpid());
+
+	if (start == 1) {
+		if (getpid() != 1) {
+			start_service(s);
+			return 1;
+		}
+		if (pidof(service) > 0) {
+			logmsg(LOG_WARNING, "service: %s already running", s);
+			return 1;
+		}
+	}
+	else {
+		if (getpid() != 1) {
+			stop_service(s);
+			return 1;
+		}
+	}
 
 	return 0;
 }

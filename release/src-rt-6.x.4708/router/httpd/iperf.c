@@ -38,7 +38,7 @@ void wo_ttcpstatus(char *url)
 	}
 	iperf_pid = pidof("iperf");
 	_dprintf("PID of iperf: %d\n", iperf_pid);
-	if (iperf_pid <= 0) {
+	if (iperf_pid < 0) {
 		web_puts("{ \"mode\": \"Stopped\" }");
 		return;
 	}

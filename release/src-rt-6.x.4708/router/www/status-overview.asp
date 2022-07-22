@@ -651,8 +651,8 @@ function init() {
 			{ title: 'Signal Quality', rid: 'qual'+uidx, text: stats.qual[uidx] || '', ignore: ((!wlstats[uidx].client) || (wl_sunit(uidx) >= 0)) }
 		]);
 
-		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 1)" id="b_wl'+uidx+'_enable" value="Enable" style="display:none">');
-		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 0)" id="b_wl'+uidx+'_disable" value="Disable" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 1)" id="b_wl'+uidx+'_enable" title="Enable temporary this WL (up to the router\'s reboot)" value="Enable" style="display:none">');
+		W('<input type="button" class="status-controls" onclick="wlenable('+uidx+', 0)" id="b_wl'+uidx+'_disable" title="Disable temporary this WL (up to the router\'s reboot)" value="Disable" style="display:none">');
 		W('<\/div>');
 	}
 </script>

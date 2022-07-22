@@ -1,10 +1,12 @@
 /*
-
-	Copyright (C) 2008-2010 Keith Moyer, tomatovpn@keithmoyer.com
-
-	No part of this file may be used without permission.
-
-*/
+ *
+ * Copyright (C) 2008-2010 Keith Moyer, tomatovpn@keithmoyer.com
+ *
+ * No part of this file may be used without permission.
+ *
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
@@ -20,7 +22,7 @@
 
 #define BUF_SIZE		256
 #define IF_SIZE			8
-#define OVPN_FW_STR		"s/-A/-D/g;s/-I/-D/g;s/INPUT\\ [0-9]\\ /INPUT\\ /g;s/FORWARD\\ [0-9]\\ /FORWARD\\ /g;s/PREROUTING\\ [0-9]\\ /PREROUTING\\ /g;s/POSTROUTING\\ [0-9]\\ /POSTROUTING\\ /g"
+#define OVPN_FW_STR		"s/-A/-D/g"
 #define OVPN_DIR		"/etc/openvpn"
 
 /* OpenVPN clients/servers count */
@@ -71,25 +73,23 @@ typedef enum ovpn_type
 } ovpn_type_t;
 
 
-static int ovpn_waitfor(const char *name)
+static void ovpn_waitfor(const char *name)
 {
-	int pid, n = 5;
+	pid_t pid, n = 5;
 
 	killall_tk_period_wait(name, 50); /* wait time in deciseconds (1/10 sec) */
-	while ((pid = pidof(name)) >= 0 && (n-- > 0)) {
+	while ((pid = pidof(name)) > 0 && (n-- > 0)) {
 		/* Reap the zombie if it has terminated */
 		waitpid(pid, NULL, WNOHANG);
 		sleep(1);
 	}
-
-	return (pid >= 0);
 }
 
-int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode, int unit, ovpn_type_t type) {
+static int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode, int unit, ovpn_type_t type) {
 	char buffer[32];
 
-	memset(buffer, 0, 32);
-	sprintf(buffer, "vpn_%s%d_br", (type == OVPN_TYPE_SERVER ? "server" : "client"), unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), "vpn_%s%d_br", (type == OVPN_TYPE_SERVER ? "server" : "client"), unit);
 
 	/* Make sure module is loaded */
 	modprobe("tun");
@@ -98,6 +98,7 @@ int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode,
 	/* Create tap/tun interface */
 	if (eval("openvpn", "--mktun", "--dev", iface)) {
 		logmsg(LOG_WARNING, "Unable to create tunnel interface %s!", iface);
+		return -1;
 	}
 
 	/* Bring interface up (TAP only) */
@@ -118,74 +119,75 @@ int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode,
 	return 0;
 }
 
-void ovpn_remove_iface(ovpn_type_t type, int unit) {
+static void ovpn_remove_iface(ovpn_type_t type, int unit) {
 	char buffer[8];
 	int tmp = (type == OVPN_TYPE_CLIENT ? OVPN_CLIENT_BASEIF : OVPN_SERVER_BASEIF) + unit;
 
 	/* NVRAM setting for device type could have changed, just try to remove both */
-	memset(buffer, 0, 8);
+	memset(buffer, 0, sizeof(buffer));
 	snprintf(buffer, sizeof(buffer), "tap%d", tmp);
 	eval("openvpn", "--rmtun", "--dev", buffer);
 
-	memset(buffer, 0, 8);
+	memset(buffer, 0, sizeof(buffer));
 	snprintf(buffer, sizeof(buffer), "tun%d", tmp);
 	eval("openvpn", "--rmtun", "--dev", buffer);
 }
 
-void ovpn_setup_dirs(ovpn_type_t type, int unit) {
+static void ovpn_setup_dirs(ovpn_type_t type, int unit) {
 	char buffer[64];
 	char *tmp = (type == OVPN_TYPE_SERVER ? "server" : "client");
 
 	mkdir(OVPN_DIR, 0700);
-	memset(buffer, 0, 64);
-	sprintf(buffer, OVPN_DIR"/%s%d", tmp, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/%s%d", tmp, unit);
 	mkdir(buffer, 0700);
 
-	memset(buffer, 0, 64);
-	sprintf(buffer, OVPN_DIR"/vpn%s%d", tmp, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/vpn%s%d", tmp, unit);
 	unlink(buffer);
 	symlink("/usr/sbin/openvpn", buffer);
 
 	if (type == OVPN_TYPE_CLIENT) {
-		memset(buffer, 0, 64);
-		sprintf(buffer, OVPN_DIR"/client%d/updown-client.sh", unit);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/updown-client.sh", unit);
 		symlink("/usr/sbin/updown-client.sh", buffer);
 
-		memset(buffer, 0, 64);
-		sprintf(buffer, OVPN_DIR"/client%d/vpnrouting.sh", unit);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/vpnrouting.sh", unit);
 		symlink("/usr/sbin/vpnrouting.sh", buffer);
 	}
 }
 
-void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
+static void ovpn_cleanup_dirs(ovpn_type_t type, int unit) {
 	char buffer[64];
 	char *tmp = (type == OVPN_TYPE_SERVER ? "server" : "client");
 
-	memset(buffer, 0, 64);
-	sprintf(buffer, OVPN_DIR"/%s%d", tmp, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/%s%d", tmp, unit);
 	eval("rm", "-rf", buffer);
 
-	memset(buffer, 0, 64);
-	sprintf(buffer, OVPN_DIR"/vpn%s%d", tmp, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/vpn%s%d", tmp, unit);
 	eval("rm", "-rf", buffer);
 
-	memset(buffer, 0, 64);
-	sprintf(buffer, OVPN_DIR"/fw/%s%d-fw.sh", tmp, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/%s%d-fw.sh", tmp, unit);
 	eval("rm", "-rf", buffer);
 
 	if (type == OVPN_TYPE_CLIENT) {
-		memset(buffer, 0, 64);
-		sprintf(buffer, OVPN_DIR"/dns/client%d.resolv", unit);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/dns/client%d.resolv", unit);
 		eval("rm", "-rf", buffer);
 
 		rmdir(OVPN_DIR"/dns");
 	}
 
+	/* Attempt to remove directories. Will fail if not empty */
 	rmdir(OVPN_DIR"/fw");
 	rmdir(OVPN_DIR);
 }
 
-void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
+static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 {
 	FILE *fp;
 	char buffer[64], buffer2[64];
@@ -198,15 +200,15 @@ void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 	else
 		instanceType = "client";
 
-	memset(buffer, 0, 64);
-	sprintf(buffer, "vpn_%s%d_poll", instanceType, unit);
+	memset(buffer, 0, sizeof(buffer));
+	snprintf(buffer, sizeof(buffer), "vpn_%s%d_poll", instanceType, unit);
 	if ((nvi = nvram_get_int(buffer)) > 0) {
-		memset(buffer, 0, 64);
-		sprintf(buffer, "/etc/openvpn/%s%d/watchdog.sh", instanceType, unit);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "/etc/openvpn/%s%d/watchdog.sh", instanceType, unit);
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z $(pidof vpn%s%d) ] && {\n"
+			            "[ -z \"$(pidof vpn%s%d)\" ] && {\n"
 			            " service vpn%s%d restart\n"
 			            "}\n",
 			            instanceType, unit,
@@ -214,12 +216,109 @@ void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 			fclose(fp);
 			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 
-			memset(taskname, 0, 20);
-			sprintf(taskname, "CheckVPN%s%d", instanceType, unit);
-			memset(buffer2, 0, 64);
-			sprintf(buffer2, "*/%d * * * * %s", nvi, buffer);
+			memset(taskname, 0, sizeof(taskname));
+			snprintf(taskname, sizeof(taskname),"CheckVPN%s%d", instanceType, unit);
+			memset(buffer2, 0, sizeof(buffer2));
+			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
 			eval("cru", "a", taskname, buffer2);
 		}
+	}
+}
+
+void ovpn_kill_switch(void)
+{
+	unsigned int i, br, rules_count;
+	int policy_type;
+	int wan_unit, mwan_num;
+	char *enable, *type, *value, *kswitch;
+	char *nv, *nvp, *b, *c;
+	char wan_prefix[] = "wanXX";
+	char buf[64], buf2[64], val[64], wan_if[16];
+
+	mwan_num = nvram_get_int("mwan_num");
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	for (i = 1; i <= OVPN_CLIENT_MAX; ++i) {
+		rules_count = 0;
+		nv = nvp = strdup(getNVRAMVar("vpn_client%d_routing_val", i));
+
+		while (nvp && (b = strsep(&nvp, ">")) != NULL) {
+			enable = type = value = kswitch = NULL;
+
+			/* enable<type<domain_or_IP<kill_switch> */
+			if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
+				continue;
+
+			/* check if rule is enabled and kill switch is active and IP/domain is set */
+			if ((atoi(enable) != 1) || (atoi(kswitch) != 1) || (*value == '\0'))
+				continue;
+
+			policy_type = atoi(type);
+			rules_count++;
+
+			/* check all active WANs */
+			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+				get_wan_prefix(wan_unit, wan_prefix);
+
+				/* find WAN IF */
+				memset(wan_if, 0, sizeof(wan_if)); /* reset */
+				snprintf(wan_if, sizeof(wan_if), "%s", get_wanface(wan_prefix));
+				if ((!*wan_if) || (strcmp(wan_if, "") == 0))
+					continue;
+
+				memset(val, 0, sizeof(val)); /* reset */
+				snprintf(val, sizeof(val), "%s", value); /* copy IP/domain to buffer */
+
+				/* "From Source IP" */
+				if (policy_type == 1) {
+					/* find correct bridge for given IP */
+					for (br = 0; br < BRIDGE_COUNT; br++) {
+						memset(buf, 0, sizeof(buf)); /* reset */
+						snprintf(buf, sizeof(buf), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
+
+						char *lan_ip = nvram_safe_get(buf);
+						if (strcmp(lan_ip, "") != 0) { /* only for active */
+							memset(buf, 0, sizeof(buf)); /* reset */
+							snprintf(buf, sizeof(buf), "%s", val);
+							if ((c = strchr(buf, '/')) != NULL)
+								*c = 0; /* with mask? get IP */
+
+							memset(buf, 0, sizeof(buf)); /* reset */
+							snprintf(buf, sizeof(buf), "%s", val);
+							if ((c = strrchr(buf, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from value */
+
+							memset(buf2, 0, sizeof(buf2)); /* reset */
+							snprintf(buf2, sizeof(buf2), "%s", lan_ip);
+							if ((c = strrchr(buf2, '.')) != NULL)
+								*(c + 1) = 0; /* get first 3 octets from lan IP */
+
+							if (strcmp(buf, buf2) == 0) {
+								memset(buf2, 0, sizeof(buf2)); /* reset */
+								snprintf(buf2, sizeof(buf2), "br%d", br); /* copy brX to buffer */
+
+								eval("iptables", "-I", "FORWARD", "-i", buf2, "-s", val, "-o", wan_if, "-j", "REJECT");
+							}
+						}
+					}
+				}
+				/* "To Destination IP" / "To Domain" */
+				else if ((policy_type == 2) || (policy_type == 3)) {
+					memset(buf, 0, sizeof(buf)); /* reset */
+					snprintf(buf, sizeof(buf), "tun1%d", i); /* find the appropriate tun IF */
+
+					eval("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
+					eval("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
+				}
+
+			}
+		}
+		if (nv)
+			free(nv);
+
+		if (rules_count > 0)
+			logmsg(LOG_INFO, "Kill-Switch: added %d rules to firewall for openvpn-client%d", rules_count, i);
 	}
 }
 
@@ -234,7 +333,6 @@ void start_ovpn_client(int unit)
 	char buffer2[32];
 	int nvi;
 	long int nvl;
-	int pid;
 	int userauth, useronly;
 	int taskset_ret = 0;
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
@@ -243,18 +341,13 @@ void start_ovpn_client(int unit)
 #endif
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnclient%d", unit);
-	if (getpid() != 1) {
-		start_service(buffer);
-		return;
-	}
-
-	if ((pid = pidof(buffer)) >= 0)
+	snprintf(buffer, sizeof(buffer), "vpnclient%d", unit);
+	if (serialize_restart(buffer, 1))
 		return;
 
 	/* Determine interface */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_if", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_if", unit);
 	if (nvram_contains_word(buffer, "tap"))
 		if_type = OVPN_IF_TAP;
 	else if (nvram_contains_word(buffer, "tun"))
@@ -269,7 +362,7 @@ void start_ovpn_client(int unit)
 
 	/* Determine encryption mode */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_crypt", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_crypt", unit);
 	if (nvram_contains_word(buffer, "tls"))
 		auth_mode = OVPN_AUTH_TLS;
 	else if (nvram_contains_word(buffer, "secret"))
@@ -283,13 +376,13 @@ void start_ovpn_client(int unit)
 
 	/* Determine if we should bridge the tunnel */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_bridge", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_bridge", unit);
 	if (if_type == OVPN_IF_TAP && nvram_get_int(buffer) == 1)
 		route_mode = BRIDGE;
 
 	/* Determine if we should NAT the tunnel */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_nat", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_nat", unit);
 	if (((if_type == OVPN_IF_TUN) || (route_mode != BRIDGE)) && nvram_get_int(buffer) == 1)
 		route_mode = NAT;
 
@@ -307,7 +400,7 @@ void start_ovpn_client(int unit)
 
 	/* Build and write config file */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/client%d/config.ovpn", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/config.ovpn", unit);
 	fp = fopen(buffer, "w");
 	chmod(buffer, (S_IRUSR | S_IWUSR));
 
@@ -340,7 +433,7 @@ void start_ovpn_client(int unit)
 	}
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_retry", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_retry", unit);
 	if ((nvi = nvram_get_int(buffer)) >= 0)
 		fprintf(fp, "resolv-retry %d\n", nvi);
 	else
@@ -350,7 +443,7 @@ void start_ovpn_client(int unit)
 		fprintf(fp, "reneg-sec %ld\n", nvl);
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_nobind", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_nobind", unit);
 	if (nvram_get_int(buffer) > 0)
 		fprintf(fp, "nobind\n");
 
@@ -390,7 +483,7 @@ void start_ovpn_client(int unit)
 	else {	/* SECRET/CUSTOM */
 #endif
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_cipher", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_cipher", unit);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
@@ -399,13 +492,13 @@ void start_ovpn_client(int unit)
 
 	/* Digest */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_digest", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_digest", unit);
 	if (!nvram_contains_word(buffer, "default"))
 		fprintf(fp, "auth %s\n", nvram_safe_get(buffer));
 
 	/* Routing */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_rgw", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_rgw", unit);
 	nvi = nvram_get_int(buffer);
 
 	if (nvi == OVPN_RGW_ALL) {
@@ -427,10 +520,10 @@ void start_ovpn_client(int unit)
 
 	if (auth_mode == OVPN_AUTH_TLS) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_hmac", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_hmac", unit);
 		nvi = nvram_get_int(buffer);
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_static", unit);
 
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
@@ -448,24 +541,24 @@ void start_ovpn_client(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_ca", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_ca", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "ca ca.crt\n");
 
 		if (!useronly) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_client%d_crt", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_client%d_crt", unit);
 			if (!nvram_is_empty(buffer))
 				fprintf(fp, "cert client.crt\n");
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_client%d_key", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_client%d_key", unit);
 			if (!nvram_is_empty(buffer))
 				fprintf(fp, "key client.key\n");
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_tlsremote", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_tlsremote", unit);
 		if (nvram_get_int(buffer))
 			fprintf(fp, "remote-cert-tls server\n");
 
@@ -484,7 +577,7 @@ void start_ovpn_client(int unit)
 	}
 	else if (auth_mode == OVPN_AUTH_STATIC) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_static", unit);
 
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "secret static.key\n");
@@ -504,10 +597,10 @@ void start_ovpn_client(int unit)
 	/* Write certification and key files */
 	if (auth_mode == OVPN_AUTH_TLS) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_ca", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_ca", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/client%d/ca.crt", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/ca.crt", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_client%d_ca", unit));
@@ -516,10 +609,10 @@ void start_ovpn_client(int unit)
 
 		if (!useronly) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_client%d_key", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_client%d_key", unit);
 			if (!nvram_is_empty(buffer)) {
 				memset(buffer, 0, BUF_SIZE);
-				sprintf(buffer, OVPN_DIR"/client%d/client.key", unit);
+				snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/client.key", unit);
 				fp = fopen(buffer, "w");
 				chmod(buffer, (S_IRUSR | S_IWUSR));
 				fprintf(fp, "%s", getNVRAMVar("vpn_client%d_key", unit));
@@ -527,10 +620,10 @@ void start_ovpn_client(int unit)
 			}
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_client%d_crt", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_client%d_crt", unit);
 			if (!nvram_is_empty(buffer)) {
 				memset(buffer, 0, BUF_SIZE);
-				sprintf(buffer, OVPN_DIR"/client%d/client.crt", unit);
+				snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/client.crt", unit);
 				fp = fopen(buffer, "w");
 				chmod(buffer, (S_IRUSR | S_IWUSR));
 				fprintf(fp, "%s", getNVRAMVar("vpn_client%d_crt", unit));
@@ -539,7 +632,7 @@ void start_ovpn_client(int unit)
 		}
 		if (userauth) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/client%d/up", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/up", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s\n", getNVRAMVar("vpn_client%d_username", unit));
@@ -548,13 +641,13 @@ void start_ovpn_client(int unit)
 		}
 	}
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_hmac", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_hmac", unit);
 	if ((auth_mode == OVPN_AUTH_STATIC) || (auth_mode == OVPN_AUTH_TLS && nvram_get_int(buffer) >= 0)) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_static", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/client%d/static.key", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/client%d/static.key", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_client%d_static", unit));
@@ -564,26 +657,26 @@ void start_ovpn_client(int unit)
 
 	/* Handle firewall rules if appropriate */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d_firewall", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d_firewall", unit);
 	if (!nvram_contains_word(buffer, "custom")) {
+		chains_log_detection();
+
 		/* Create firewall rules */
 		mkdir(OVPN_DIR"/fw", 0700);
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, OVPN_DIR"/fw/client%d-fw.sh", unit);
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/client%d-fw.sh", unit);
 		fp = fopen(buffer, "w");
 		chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 		fprintf(fp, "#!/bin/sh\n");
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_fw", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_fw", unit);
 		nvi = nvram_get_int(buffer);
 		fprintf(fp, "iptables -I INPUT -i %s -m state --state NEW -j %s\n"
 		            "iptables -I FORWARD -i %s -m state --state NEW -j %s\n"
 		            "iptables -I FORWARD -o %s -j ACCEPT\n",
-		            iface,
-		            (nvi ? "DROP" : "ACCEPT"),
-		            iface,
-		            (nvi ? "DROP" : "ACCEPT"),
+		            iface, (nvi ? chain_in_drop : chain_in_accept),
+		            iface, (nvi ? "DROP" : "ACCEPT"),
 		            iface);
 #ifdef TCONFIG_BCMARM
 		if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
@@ -600,16 +693,14 @@ void start_ovpn_client(int unit)
 			fprintf(fp, "ip6tables -I INPUT -i %s -m state --state NEW -j %s\n"
 			            "ip6tables -I FORWARD -i %s -m state --state NEW -j %s\n"
 			            "ip6tables -I FORWARD -o %s -j ACCEPT\n",
-			            iface,
-			            (nvi ? "DROP" : "ACCEPT"),
-			            iface,
-			            (nvi ? "DROP" : "ACCEPT"),
+			            iface, (nvi ? chain_in_drop : chain_in_accept),
+			            iface, (nvi ? "DROP" : "ACCEPT"),
 			            iface);
 		}
 #endif
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_client%d_rgw", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_client%d_rgw", unit);
 		nvi = nvram_get_int(buffer);
 		if (nvi >= OVPN_RGW_POLICY) {
 			/* Disable rp_filter when in policy mode */
@@ -633,7 +724,7 @@ void start_ovpn_client(int unit)
 
 		/* Run the firewall rules */
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, OVPN_DIR"/fw/client%d-fw.sh", unit);
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/client%d-fw.sh", unit);
 		eval(buffer);
 	}
 
@@ -642,9 +733,9 @@ void start_ovpn_client(int unit)
 
 	/* Start the VPN client */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/vpnclient%d", unit);
-	memset(buffer2, 0, 32);
-	sprintf(buffer2, OVPN_DIR"/client%d", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/vpnclient%d", unit);
+	memset(buffer2, 0, sizeof(buffer2));
+	snprintf(buffer2, sizeof(buffer2), OVPN_DIR"/client%d", unit);
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread clients on cpu 1,0 or 1,2,3,0 (in that order) */
@@ -669,7 +760,7 @@ void start_ovpn_client(int unit)
 	ovpn_setup_watchdog(OVPN_TYPE_CLIENT, unit);
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d", unit);
 	allow_fastnat(buffer, 0);
 	try_enabling_fastnat();
 }
@@ -679,27 +770,25 @@ void stop_ovpn_client(int unit)
 	char buffer[BUF_SIZE];
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnclient%d", unit);
-	if (getpid() != 1) {
-		stop_service(buffer);
+	snprintf(buffer, sizeof(buffer), "vpnclient%d", unit);
+	if (serialize_restart(buffer, 0))
 		return;
-	}
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNclient%d", unit);
+	snprintf(buffer, sizeof(buffer), "CheckVPNclient%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN client */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnclient%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpnclient%d", unit);
 	ovpn_waitfor(buffer);
 
 	ovpn_remove_iface(OVPN_TYPE_CLIENT, unit);
 
 	/* Remove firewall rules after VPN exit */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/fw/client%d-fw.sh", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/client%d-fw.sh", unit);
 	if (!eval("sed", "-i", OVPN_FW_STR, buffer)) {
 		eval(buffer);
 	}
@@ -708,7 +797,7 @@ void stop_ovpn_client(int unit)
 	ovpn_cleanup_dirs(OVPN_TYPE_CLIENT, unit);
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_client%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_client%d", unit);
 	allow_fastnat(buffer, 1);
 	try_enabling_fastnat();
 }
@@ -721,7 +810,7 @@ void start_ovpn_server(int unit)
 	char iface[IF_SIZE];
 	char buffer[BUF_SIZE];
 	char buffer2[32];
-	int pid, mwan_num, taskset_ret = 0;
+	int mwan_num, taskset_ret = 0;
 	long int nvl;
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	FILE *ccd;
@@ -738,18 +827,13 @@ void start_ovpn_server(int unit)
 #endif
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnserver%d", unit);
-	if (getpid() != 1) {
-		start_service(buffer);
-		return;
-	}
-
-	if ((pid = pidof(buffer)) >= 0)
+	snprintf(buffer, sizeof(buffer), "vpnserver%d", unit);
+	if (serialize_restart(buffer, 1))
 		return;
 
 	/* Determine interface */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_if", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_if", unit);
 	if (nvram_contains_word(buffer, "tap"))
 		if_type = OVPN_IF_TAP;
 	else if (nvram_contains_word(buffer, "tun"))
@@ -764,7 +848,7 @@ void start_ovpn_server(int unit)
 
 	/* Determine encryption mode */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_crypt", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_crypt", unit);
 	if (nvram_contains_word(buffer, "tls"))
 		auth_mode = OVPN_AUTH_TLS;
 	else if (nvram_contains_word(buffer, "secret"))
@@ -790,12 +874,12 @@ void start_ovpn_server(int unit)
 
 	/* Build and write config files */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/server%d/config.ovpn", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/config.ovpn", unit);
 	fp = fopen(buffer, "w");
 	chmod(buffer, (S_IRUSR | S_IWUSR));
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_port", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_port", unit);
 	fprintf(fp, "# Generated Configuration\n"
 	            "daemon openvpn-server%d\n"
 	            "port %d\n"
@@ -818,10 +902,10 @@ void start_ovpn_server(int unit)
 		else if (if_type == OVPN_IF_TAP) {
 			fprintf(fp, "server-bridge");
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_dhcp", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_dhcp", unit);
 			if (nvram_get_int(buffer) == 0) {
 				memset(buffer, 0, BUF_SIZE);
-				sprintf(buffer, "vpn_server%d_br", unit);
+				snprintf(buffer, sizeof(buffer), "vpn_server%d_br", unit);
 				if (nvram_contains_word(buffer, "br1")) {
 					br_ipaddr = nvram_get("lan1_ipaddr");
 					br_netmask = nvram_get("lan1_netmask");
@@ -865,7 +949,7 @@ void start_ovpn_server(int unit)
 		mwan_num = 1;
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_proto", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_proto", unit);
 	fprintf(fp, "proto %s\n", nvram_safe_get(buffer)); /* full dual-stack functionality starting with OpenVPN 2.4.0 */
 
 	if (nvram_contains_word(buffer, "udp") && mwan_num > 1) /* udp/udp4/udp6 - only if multiwan */
@@ -882,14 +966,14 @@ void start_ovpn_server(int unit)
 #endif
 	     {	/* SECRET/CUSTOM */
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_cipher", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_cipher", unit);
 		if (!nvram_contains_word(buffer, "default"))
 			fprintf(fp, "cipher %s\n", nvram_safe_get(buffer));
 	}
 
 	/* Digest */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_digest", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_digest", unit);
 	if (!nvram_contains_word(buffer, "default"))
 		fprintf(fp, "auth %s\n", nvram_safe_get(buffer));
 
@@ -919,7 +1003,7 @@ void start_ovpn_server(int unit)
 			/* push LANs */
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				memset(buffer, 0, BUF_SIZE);
-				sprintf(buffer, (i == 0 ? "vpn_server%d_plan" : "vpn_server%d_plan%d"), unit, i);
+				snprintf(buffer, sizeof(buffer), (i == 0 ? "vpn_server%d_plan" : "vpn_server%d_plan%d"), unit, i);
 				if (nvram_get_int(buffer)) {
 					int ret3 = 0, ret4 = 0;
 
@@ -934,28 +1018,28 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_ccd", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_ccd", unit);
 		if (nvram_get_int(buffer)) {
 			fprintf(fp, "client-config-dir ccd\n");
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_c2c", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_c2c", unit);
 			if ((c2c = nvram_get_int(buffer)))
 				fprintf(fp, "client-to-client\n");
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_ccd_excl", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_ccd_excl", unit);
 			if (nvram_get_int(buffer))
 				fprintf(fp, "ccd-exclusive\n");
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/ccd", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/ccd", unit);
 			mkdir(buffer, 0700);
 			chdir(buffer);
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_ccd_val", unit);
-			strcpy(buffer, nvram_safe_get(buffer));
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_ccd_val", unit);
+			strlcpy(buffer, nvram_safe_get(buffer), sizeof(buffer));
 			chp = strtok(buffer, ">");
 			while (chp != NULL) {
 				nvi = strlen(chp);
@@ -1010,14 +1094,14 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_userpass", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_userpass", unit);
 		if (nvram_get_int(buffer)) {
 			fprintf(fp, "plugin /lib/openvpn_plugin_auth_nvram.so vpn_server%d_users_val\n"
 			            "script-security 2\n",
 			            unit);
 
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_nocert", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_nocert", unit);
 			if (nvram_get_int(buffer)) {
 				fprintf(fp, "verify-client-cert optional\n"
 				            "username-as-common-name\n");
@@ -1025,7 +1109,7 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_pdns", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_pdns", unit);
 		if (nvram_get_int(buffer)) {
 			if (nvram_safe_get("wan_domain")[0] != '\0')
 				fprintf(fp, "push \"dhcp-option DOMAIN %s\"\n", nvram_safe_get("wan_domain"));
@@ -1036,7 +1120,7 @@ void start_ovpn_server(int unit)
 			for (i = 0; i < BRIDGE_COUNT; i++) {
 				if (push_lan[i] == 1) { /* push IPv4 LANx DNS */
 					memset(buffer, 0, BUF_SIZE);
-					sprintf(buffer, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
 					fprintf(fp, "push \"dhcp-option DNS %s\"\n", nvram_safe_get(buffer));
 					dont_push_active = 1;
 				}
@@ -1046,7 +1130,7 @@ void start_ovpn_server(int unit)
 			if (dont_push_active == 0) {
 				for (i = 0; i < BRIDGE_COUNT; i++) {
 					memset(buffer, 0, BUF_SIZE);
-					sprintf(buffer, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+					snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
 					if (strcmp(nvram_safe_get(buffer), "") != 0) {
 						fprintf(fp, "push \"dhcp-option DNS %s\"\n", nvram_safe_get(buffer));
 						break;
@@ -1056,7 +1140,7 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_rgw", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_rgw", unit);
 		if (nvram_get_int(buffer)) {
 			if (if_type == OVPN_IF_TAP)
 				fprintf(fp, "push \"route-gateway %s\"\n", nvram_safe_get("lan_ipaddr"));
@@ -1065,7 +1149,7 @@ void start_ovpn_server(int unit)
 
 		nvi = atoi(getNVRAMVar("vpn_server%d_hmac", unit));
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_static", unit);
 		if (!nvram_is_empty(buffer) && nvi >= 0) {
 			if (nvi == 3)
 				fprintf(fp, "tls-crypt static.key");
@@ -1080,23 +1164,23 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_ca", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_ca", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "ca ca.crt\n");
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_dh", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_dh", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "dh dh.pem\n");
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_crt", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_crt", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "cert server.crt\n");
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_crl", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_crl", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "crl-verify crl.pem\n");
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_key", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_key", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "key server.key\n");
 	}
@@ -1104,7 +1188,7 @@ void start_ovpn_server(int unit)
 #endif
 	     if (auth_mode == OVPN_AUTH_STATIC) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_static", unit);
 		if (!nvram_is_empty(buffer))
 			fprintf(fp, "secret static.key\n");
 	}
@@ -1120,10 +1204,10 @@ void start_ovpn_server(int unit)
 #ifndef TCONFIG_OPTIMIZE_SIZE_MORE
 	if (auth_mode == OVPN_AUTH_TLS) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_ca", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_ca", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/ca.crt", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/ca.crt", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_ca", unit));
@@ -1131,10 +1215,10 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_key", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_key", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/server.key", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/server.key", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_key", unit));
@@ -1142,10 +1226,10 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_crt", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_crt", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/server.crt", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/server.crt", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_crt", unit));
@@ -1153,10 +1237,10 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_crl", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_crl", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/crl.pem", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/crl.pem", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_crl", unit));
@@ -1164,10 +1248,10 @@ void start_ovpn_server(int unit)
 		}
 
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_dh", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_dh", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/dh.pem", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/dh.pem", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_dh", unit));
@@ -1176,13 +1260,13 @@ void start_ovpn_server(int unit)
 	}
 #endif
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_hmac", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_hmac", unit);
 	if ((auth_mode == OVPN_AUTH_STATIC) || (auth_mode == OVPN_AUTH_TLS && nvram_get_int(buffer) >= 0)) {
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_static", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_static", unit);
 		if (!nvram_is_empty(buffer)) {
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, OVPN_DIR"/server%d/static.key", unit);
+			snprintf(buffer, sizeof(buffer), OVPN_DIR"/server%d/static.key", unit);
 			fp = fopen(buffer, "w");
 			chmod(buffer, (S_IRUSR | S_IWUSR));
 			fprintf(fp, "%s", getNVRAMVar("vpn_server%d_static", unit));
@@ -1192,23 +1276,25 @@ void start_ovpn_server(int unit)
 
 	/* Handle firewall rules if appropriate */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d_firewall", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d_firewall", unit);
 	if (!nvram_contains_word(buffer, "custom")) {
+		chains_log_detection();
+
 		/* Create firewall rules */
 		mkdir(OVPN_DIR"/fw", 0700);
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, OVPN_DIR"/fw/server%d-fw.sh", unit);
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/server%d-fw.sh", unit);
 		fp = fopen(buffer, "w");
 		chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
 		fprintf(fp, "#!/bin/sh\n");
 		memset(buffer, 0, BUF_SIZE);
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
 
-		memset(buffer2, 0, 32);
+		memset(buffer2, 0, sizeof(buffer2));
 		if ((!strcmp(buffer, "udp")) || (!strcmp(buffer, "udp4")) || (!strcmp(buffer, "udp6")))
-			sprintf(buffer2, "udp");
+			snprintf(buffer2, sizeof(buffer2), "udp");
 		else
-			sprintf(buffer2, "tcp");
+			snprintf(buffer2, sizeof(buffer2), "tcp");
 
 		fprintf(fp, "iptables -t nat -I PREROUTING -p %s ", buffer2);
 		fprintf(fp, "--dport %d -j ACCEPT\n", atoi(getNVRAMVar("vpn_server%d_port", unit)));
@@ -1216,14 +1302,14 @@ void start_ovpn_server(int unit)
 		strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
 		fprintf(fp, "iptables -I INPUT -p %s ", buffer2);
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_port", unit);
-		fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_port", unit);
+		fprintf(fp, "--dport %d -j %s\n", nvram_get_int(buffer), chain_in_accept);
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, "vpn_server%d_firewall", unit);
+		snprintf(buffer, sizeof(buffer), "vpn_server%d_firewall", unit);
 		if (!nvram_contains_word(buffer, "external")) {
-			fprintf(fp, "iptables -I INPUT -i %s -j ACCEPT\n"
+			fprintf(fp, "iptables -I INPUT -i %s -j %s\n"
 			            "iptables -I FORWARD -i %s -j ACCEPT\n",
-			            iface,
+			            iface, chain_in_accept,
 			            iface);
 #ifdef TCONFIG_BCMARM
 			if (!nvram_get_int("ctf_disable")) /* bypass CTF if enabled */
@@ -1237,14 +1323,14 @@ void start_ovpn_server(int unit)
 			strncpy(buffer, getNVRAMVar("vpn_server%d_proto", unit), BUF_SIZE);
 			fprintf(fp, "ip6tables -I INPUT -p %s ", buffer2);
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_port", unit);
-			fprintf(fp, "--dport %d -j ACCEPT\n", nvram_get_int(buffer));
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_port", unit);
+			fprintf(fp, "--dport %d -j %s\n", nvram_get_int(buffer), chain_in_accept);
 			memset(buffer, 0, BUF_SIZE);
-			sprintf(buffer, "vpn_server%d_firewall", unit);
+			snprintf(buffer, sizeof(buffer), "vpn_server%d_firewall", unit);
 			if (!nvram_contains_word(buffer, "external")) {
-				fprintf(fp, "ip6tables -I INPUT -i %s -j ACCEPT\n"
+				fprintf(fp, "ip6tables -I INPUT -i %s -j %s\n"
 				            "ip6tables -I FORWARD -i %s -j ACCEPT\n",
-				            iface,
+				            iface, chain_in_accept,
 				            iface);
 			}
 		}
@@ -1254,15 +1340,15 @@ void start_ovpn_server(int unit)
 
 		/* Run the firewall rules */
 		memset(buffer, 0, BUF_SIZE);
-		sprintf(buffer, OVPN_DIR"/fw/server%d-fw.sh", unit);
+		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/server%d-fw.sh", unit);
 		eval(buffer);
 	}
 
 	/* Start the VPN server */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/vpnserver%d", unit);
-	memset(buffer2, 0, 32);
-	sprintf(buffer2, OVPN_DIR"/server%d", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/vpnserver%d", unit);
+	memset(buffer2, 0, sizeof(buffer2));
+	snprintf(buffer2, sizeof(buffer2), OVPN_DIR"/server%d", unit);
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread servers on cpu 1,0 or 1,2 (in that order) */
@@ -1287,7 +1373,7 @@ void start_ovpn_server(int unit)
 	ovpn_setup_watchdog(OVPN_TYPE_SERVER, unit);
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d", unit);
 	allow_fastnat(buffer, 0);
 	try_enabling_fastnat();
 }
@@ -1297,27 +1383,25 @@ void stop_ovpn_server(int unit)
 	char buffer[BUF_SIZE];
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnserver%d", unit);
-	if (getpid() != 1) {
-		stop_service(buffer);
+	snprintf(buffer, sizeof(buffer), "vpnserver%d", unit);
+	if (serialize_restart(buffer, 0))
 		return;
-	}
 
 	/* Remove cron job */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "CheckVPNserver%d", unit);
+	snprintf(buffer, sizeof(buffer), "CheckVPNserver%d", unit);
 	eval("cru", "d", buffer);
 
 	/* Stop the VPN server */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpnserver%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpnserver%d", unit);
 	ovpn_waitfor(buffer);
 
 	ovpn_remove_iface(OVPN_TYPE_SERVER, unit);
 
 	/* Remove firewall rules */
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, OVPN_DIR"/fw/server%d-fw.sh", unit);
+	snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/server%d-fw.sh", unit);
 	if (!eval("sed", "-i", OVPN_FW_STR, buffer)) {
 		eval(buffer);
 	}
@@ -1326,7 +1410,7 @@ void stop_ovpn_server(int unit)
 	ovpn_cleanup_dirs(OVPN_TYPE_SERVER, unit);
 
 	memset(buffer, 0, BUF_SIZE);
-	sprintf(buffer, "vpn_server%d", unit);
+	snprintf(buffer, sizeof(buffer), "vpn_server%d", unit);
 	allow_fastnat(buffer, 1);
 	try_enabling_fastnat();
 }
@@ -1348,10 +1432,10 @@ void start_ovpn_eas()
 
 	nums[i] = 0;
 	for (i = 0; (nums[i] > 0) && (nums[i] <= OVPN_SERVER_MAX); i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnserver%d", nums[i]);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnserver%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(nums[i]);
 
 		start_ovpn_server(nums[i]);
@@ -1366,10 +1450,10 @@ void start_ovpn_eas()
 
 	nums[i] = 0;
 	for (i = 0; (nums[i] > 0) && (nums[i] <= OVPN_CLIENT_MAX); i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnclient%d", nums[i]);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnclient%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(nums[i]);
 
 		start_ovpn_client(nums[i]);
@@ -1390,10 +1474,10 @@ void stop_ovpn_eas()
 
 	nums[i] = 0;
 	for (i = 0; (nums[i] > 0) && (nums[i] <= OVPN_SERVER_MAX); i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnserver%d", nums[i]);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnserver%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(nums[i]);
 	}
 
@@ -1406,10 +1490,10 @@ void stop_ovpn_eas()
 
 	nums[i] = 0;
 	for (i = 0; (nums[i] > 0) && (nums[i] <= OVPN_CLIENT_MAX); i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnclient%d", nums[i]);
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnclient%d", nums[i]);
 
-		if (pidof(buffer) >= 0)
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(nums[i]);
 	}
 }
@@ -1421,17 +1505,17 @@ void stop_ovpn_all()
 
 	/* Stop servers */
 	for (i = 1; i <= OVPN_SERVER_MAX; i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnserver%d", i);
-		if (pidof(buffer) >= 0)
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnserver%d", i);
+		if (pidof(buffer) > 0)
 			stop_ovpn_server(i);
 	}
 
 	/* Stop clients */
 	for (i = 1; i <= OVPN_CLIENT_MAX; i++) {
-		memset(buffer, 0, 16);
-		sprintf(buffer, "vpnclient%d", i);
-		if (pidof(buffer) >= 0)
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), "vpnclient%d", i);
+		if (pidof(buffer) > 0)
 			stop_ovpn_client(i);
 	}
 
@@ -1549,101 +1633,4 @@ int write_ovpn_resolv(FILE* f)
 	closedir(dir);
 
 	return exclusive;
-}
-
-void ovpn_kill_switch()
-{
-	unsigned int i, br, rules_count;
-	int policy_type;
-	int wan_unit, mwan_num;
-	char *enable, *type, *value, *kswitch;
-	char *nv, *nvp, *b, *c;
-	char wan_prefix[] = "wanXX";
-	char buf[64], buf2[64], val[64], wan_if[16];
-
-	mwan_num = nvram_get_int("mwan_num");
-	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
-		mwan_num = 1;
-
-	for (i = 1; i <= OVPN_CLIENT_MAX; ++i) {
-		rules_count = 0;
-		nv = nvp = strdup(getNVRAMVar("vpn_client%d_routing_val", i));
-
-		while (nvp && (b = strsep(&nvp, ">")) != NULL) {
-			enable = type = value = kswitch = NULL;
-
-			/* enable<type<domain_or_IP<kill_switch> */
-			if ((vstrsep(b, "<", &enable, &type, &value, &kswitch)) < 4)
-				continue;
-
-			/* check if rule is enabled and kill switch is active and IP/domain is set */
-			if ((atoi(enable) != 1) || (atoi(kswitch) != 1) || (*value == '\0'))
-				continue;
-
-			policy_type = atoi(type);
-			rules_count++;
-
-			/* check all active WANs */
-			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
-				get_wan_prefix(wan_unit, wan_prefix);
-
-				/* find WAN IF */
-				memset(wan_if, 0, sizeof(wan_if)); /* reset */
-				snprintf(wan_if, sizeof(wan_if), "%s", get_wanface(wan_prefix));
-				if ((!*wan_if) || (strcmp(wan_if, "") == 0))
-					continue;
-
-				memset(val, 0, sizeof(val)); /* reset */
-				snprintf(val, sizeof(val), "%s", value); /* copy IP/domain to buffer */
-
-				/* "From Source IP" */
-				if (policy_type == 1) {
-					/* find correct bridge for given IP */
-					for (br = 0; br < BRIDGE_COUNT; br++) {
-						memset(buf, 0, sizeof(buf)); /* reset */
-						snprintf(buf, sizeof(buf), (br == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), br);
-
-						char *lan_ip = nvram_safe_get(buf);
-						if (strcmp(lan_ip, "") != 0) { /* only for active */
-							memset(buf, 0, sizeof(buf)); /* reset */
-							snprintf(buf, sizeof(buf), "%s", val);
-							if ((c = strchr(buf, '/')) != NULL)
-								*c = 0; /* with mask? get IP */
-
-							memset(buf, 0, sizeof(buf)); /* reset */
-							snprintf(buf, sizeof(buf), "%s", val);
-							if ((c = strrchr(buf, '.')) != NULL)
-								*(c + 1) = 0; /* get first 3 octets from value */
-
-							memset(buf2, 0, sizeof(buf2)); /* reset */
-							snprintf(buf2, sizeof(buf2), "%s", lan_ip);
-							if ((c = strrchr(buf2, '.')) != NULL)
-								*(c + 1) = 0; /* get first 3 octets from lan IP */
-
-							if (strcmp(buf, buf2) == 0) {
-								memset(buf2, 0, sizeof(buf2)); /* reset */
-								snprintf(buf2, sizeof(buf2), "br%d", br); /* copy brX to buffer */
-
-								eval("iptables", "-I", "FORWARD", "-i", buf2, "-s", val, "-o", wan_if, "-j", "REJECT");
-							}
-						}
-					}
-				}
-				/* "To Destination IP" / "To Domain" */
-				else if ((policy_type == 2) || (policy_type == 3)) {
-					memset(buf, 0, sizeof(buf)); /* reset */
-					snprintf(buf, sizeof(buf), "tun1%d", i); /* find the appropriate tun IF */
-
-					eval("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
-					eval("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
-				}
-
-			}
-		}
-		if (nv)
-			free(nv);
-
-		if (rules_count > 0)
-			logmsg(LOG_INFO, "Kill-Switch: added %d rules to firewall for openvpn-client%d", rules_count, i);
-	}
 }

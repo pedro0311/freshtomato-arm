@@ -107,7 +107,7 @@ function save() {
 		]);
 	</script>
 
-	<div class="note-spacer"><small>* Not all models support these options.</small></div>
+	<div class="note-spacer"><small>* Some router models might not support this option.</small></div>
 
 </div>
 

@@ -576,6 +576,11 @@ void asp_sysinfo(int argc, char **argv)
 	char bogomips[8];
 	char cpuclk[8];
 	char cfe_version[16];
+
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	char wl_tempsense[128];
+#endif
+
 #ifdef TCONFIG_BCMARM
 	char sa[64];
 	FILE *a;
@@ -583,13 +588,16 @@ void asp_sysinfo(int argc, char **argv)
 	char *f= NULL;
 	const char procstat[] = "/proc/stat";
 	char cputemp[8];
-	char wl_tempsense[128];
 
-	get_wl_tempsense(wl_tempsense);
 	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk, cputemp);
 #else
 	get_cpuinfo(system_type, cpu_model, bogomips, cpuclk);
 #endif
+
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	get_wl_tempsense(wl_tempsense);
+#endif
+
 	get_cfeversion(cfe_version);
 
 	web_puts("\nsysinfo = {\n");
@@ -617,6 +625,8 @@ void asp_sysinfo(int argc, char **argv)
 	           "\tcpuclk: '%s',\n"
 #ifdef TCONFIG_BCMARM
 	           "\tcputemp: '%s',\n"
+#endif
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	           "\twlsense: '%s',\n"
 #endif
 	           "\tcfeversion: '%s'",
@@ -635,6 +645,8 @@ void asp_sysinfo(int argc, char **argv)
 	           cpuclk,
 #ifdef TCONFIG_BCMARM
 	           cputemp,
+#endif
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	           wl_tempsense,
 #endif
 	           cfe_version);

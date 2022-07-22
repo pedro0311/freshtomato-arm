@@ -87,21 +87,6 @@ void do_connect_file(unsigned int connect, char *prefix)
 		unlink(buf);
 }
 
-/* copy env to nvram
- * returns 1 if new/changed, 0 if not changed/no env
- */
-static int env2nv(char *env, char *nv)
-{
-	char *value;
-	if ((value = getenv(env)) != NULL) {
-		if (!nvram_match(nv, value)) {
-			nvram_set(nv, value);
-			return 1;
-		}
-	}
-	return 0;
-}
-
 static int env2nv_gateway(const char *nv)
 {
 	char *v, *g;
@@ -322,6 +307,7 @@ static int renew(char *ifname, char *prefix)
 
 	if (changed) {
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
 	}
 
@@ -548,7 +534,9 @@ int dhcp6c_state_main(int argc, char **argv)
 		}
 		/* (re)start dnsmasq and httpd */
 		set_host_domain_name();
+		stop_dnsmasq();
 		start_dnsmasq();
+		stop_httpd();
 		start_httpd();
 	}
 

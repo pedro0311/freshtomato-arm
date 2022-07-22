@@ -37,8 +37,10 @@ extern int rboot;
 extern void exec_service(const char *action);
 extern void wi_generic(char *url, int len, char *boundary);
 extern void common_redirect(void);
-#ifdef TCONFIG_BCMARM
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 extern char* get_wl_tempsense(char *);
+#endif
+#ifdef TCONFIG_BCMARM
 extern int get_cpuinfo(char *system_type, char *cpu_model, char *bogomips, char *cpuclk, char *cputemp);
 #else
 extern int get_cpuinfo(char *system_type, char *cpu_model, char *bogomips, char *cpuclk);

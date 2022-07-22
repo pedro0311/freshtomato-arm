@@ -30,13 +30,10 @@ void start_nfs(void)
 	if (!nvram_match("nfs_enable", "1"))
 		return;
 
-	if (getpid() != 1) {
-		start_service("nfs");
+	if (serialize_restart("nfsd", 1))
 		return;
-	}
 
-	if ((pidof("nfsd") >= 0) && (pidof("mountd") >= 0) && (pidof("statd") >= 0)) {
-		syslog(LOG_INFO, "NFS Server already running... stop");
+	if ((pidof("mountd") > 0) || (pidof("statd") > 0)) {
 		stop_nfs();
 	}
 
@@ -111,10 +108,8 @@ void start_nfs(void)
 
 void stop_nfs(void)
 {
-	if (getpid() != 1) {
-		stop_service("nfs");
+	if (serialize_restart("nfsd", 0))
 		return;
-	}
 
 	if ((pidof("mountd") > 0) || (pidof("nfsd") > 0) || (pidof("statd") > 0)) {
 		eval("/usr/sbin/exportfs", "-ua");
