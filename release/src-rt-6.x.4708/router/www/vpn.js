@@ -115,7 +115,7 @@ function show() {
 			serviceLastUp[i - 1] = d;
 		}
 
-		updateStatus(i - 1);
+		if (d) updateStatus(i - 1);
 	}
 }
 
