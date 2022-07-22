@@ -71,10 +71,6 @@
 #define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG		"services_debug"
 
-#define ONEMONTH_LIFETIME	(30 * 24 * 60 * 60)
-#define IPV6_MIN_LIFETIME	120
-
-
 /* Pop an alarm to recheck pids in 500 msec */
 static const struct itimerval pop_tv = { {0, 0}, {0, 500 * 1000} };
 /* Pop an alarm to reap zombies */

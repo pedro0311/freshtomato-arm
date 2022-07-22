@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_radvd,ipv6_dhcpd,ipv6_accept_ra,ipv6_isp_opt,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
+//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_radvd,ipv6_dhcpd,ipv6_accept_ra,ipv6_isp_opt,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_duid_type,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
 
 nvram.ipv6_accept_ra = fixInt(nvram.ipv6_accept_ra, 0, 3, 0);
 
@@ -31,6 +31,7 @@ function verifyFields(focused, quiet) {
 
 	var vis = {
 		_ipv6_service: 1,
+		_f_ipv6_duid_type: 0,
 		_f_ipv6_prefix: 1,
 		_f_ipv6_prefix_length: 1,
 		_f_ipv6_wan_addr: 0,
@@ -114,6 +115,7 @@ function verifyFields(focused, quiet) {
 		break;
 		case 'native-pd':
 			t_fom.f_ipv6_accept_ra_wan.checked = true; /* must be enabled always for DHCPv6 with PD */
+			vis._f_ipv6_duid_type = 1;
 		case '6rd-pd':
 			vis._f_ipv6_prefix = 0;
 			vis._f_ipv6_rtr_addr_auto = 0;
@@ -360,6 +362,7 @@ function save() {
 		case 'native-pd':
 			fom.ipv6_prefix.value = '';
 			fom.ipv6_rtr_addr.value = '';
+			fom.ipv6_duid_type.value = fom.f_ipv6_duid_type.value;
 			if (fom.f_lan1_ipv6.checked) {
 				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x01; /* set bit 0, IPv6 enabled for LAN1 */
 			}
@@ -406,6 +409,7 @@ function save() {
 <input type="hidden" name="_nextpage" value="basic-ipv6.asp">
 <input type="hidden" name="_nextwait" value="10">
 <input type="hidden" name="_service" value="*">
+<input type="hidden" name="ipv6_duid_type">
 <input type="hidden" name="ipv6_dns">
 <input type="hidden" name="ipv6_prefix">
 <input type="hidden" name="ipv6_prefix_length">
@@ -429,6 +433,9 @@ function save() {
 			{ title: 'IPv6 Service Type', name: 'ipv6_service', type: 'select',
 				options: [['', 'Disabled'],['native-pd','DHCPv6 with Prefix Delegation'],['native','Static IPv6'],['6to4','6to4 Anycast Relay'],['sit','6in4 Static Tunnel'],['6rd','6rd Relay'],['6rd-pd','6rd from DHCPv4 (Option 212)'],['other','Other (Manual Configuration)']],
 				value: nvram.ipv6_service },
+			{ title: 'IPv6 DUID Type', name: 'f_ipv6_duid_type', type: 'select',
+				options: [['1','DUID-LLT'],['3', 'DUID-LL (default)']],
+				value: nvram.ipv6_duid_type },
 			{ title: 'IPv6 WAN Interface', name: 'ipv6_ifname', type: 'text', maxlen: 8, size: 10, value: nvram.ipv6_ifname },
 			null,
 			{ title: 'IPv6 WAN Address', name: 'f_ipv6_wan_addr', type: 'text', maxlen: 40, size: 42, value: nvram.ipv6_wan_addr, suffix: ' <small>(ex. 2001:0db8:1234::2)<\/small>' },

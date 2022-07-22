@@ -62,6 +62,7 @@
 
 #ifdef TOMATO
 #include <bcmnvram.h>
+#include <ipv6_shared.h>
 #endif
 
 TAILQ_HEAD(siteprefix_list, siteprefix);
@@ -205,12 +206,6 @@ update_prefix(ia, pinfo, pifc, dhcpifp, ctlp, callback)
 	    pinfo->pltime, pinfo->vltime);
 
 #ifdef TOMATO
-#ifndef ONEMONTH_LIFETIME
-#define ONEMONTH_LIFETIME (30 * 24 * 60 * 60)
-#endif
-#ifndef INFINITE_LIFETIME
-#define INFINITE_LIFETIME 0xffffffff
-#endif
 	/* get pltime for Tomato */
 	if (pinfo->pltime <= ONEMONTH_LIFETIME) {
 		snprintf(nvramstr, sizeof(nvramstr), "%d", pinfo->pltime);

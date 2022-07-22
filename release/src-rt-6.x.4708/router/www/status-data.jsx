@@ -141,6 +141,7 @@ for (var uidx = 1; uidx <= nvram.mwan_num; ++uidx) {
 }
 
 /* IPV6-BEGIN */
+stats.ip6_duid = ((typeof(sysinfo.ip6_duid) != 'undefined') ? sysinfo.ip6_duid : '')+'';
 stats.ip6_wan = ((typeof(sysinfo.ip6_wan) != 'undefined') ? sysinfo.ip6_wan : '')+'';
 stats.ip6_wan_dns1 = ((typeof(sysinfo.ip6_wan_dns1) != 'undefined') ? sysinfo.ip6_wan_dns1 : '')+'';
 stats.ip6_wan_dns2 = ((typeof(sysinfo.ip6_wan_dns2) != 'undefined') ? sysinfo.ip6_wan_dns2 : '')+'';

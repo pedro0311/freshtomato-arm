@@ -303,7 +303,9 @@ static char* get_cfeversion(char *buf)
 }
 
 #ifdef TCONFIG_IPV6
-static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
+#define NOT_AVAIL		"--"
+
+static void print_ipv6_infos(void) /* show IPv6 DUID and addresses: wan, dns, lan, lan-ll, lan1, lan1-ll, lan2, lan2-ll, lan3, lan3-ll */
 {
 	char buffer[INET6_ADDRSTRLEN];
 	char buffer2[16];
@@ -313,9 +315,21 @@ static void print_ipv6_addrs(void) /* show IPv6 addresses: wan, dns, lan, lan-ll
 	struct in6_addr addr;
 	int cnt = 0;
 	char br;
+	FILE *fp = NULL;
+	char line[TOMATO_DUID_MAX_LEN];
 
 	if (!ipv6_enabled())
 		return;
+
+	/* DUID */
+	if ((fp = fopen(TOMATO_DUID_GUI, "r")) != NULL) {
+		fgets(line, sizeof(line), fp);
+		web_printf("\tip6_duid: '%s',\n", line);
+		fclose(fp);
+	}
+	else {
+		web_printf("\tip6_duid: '%s',\n", NOT_AVAIL);
+	}
 
 	/* check LAN */
 	for (br = 0; br < BRIDGE_COUNT; br++) {
@@ -603,7 +617,7 @@ void asp_sysinfo(int argc, char **argv)
 	web_puts("\nsysinfo = {\n");
 
 #ifdef TCONFIG_IPV6
-	print_ipv6_addrs();
+	print_ipv6_infos();
 #endif
 	sysinfo(&si);
 	get_memory(&mem);
