@@ -36,7 +36,7 @@ static void tinc_setup_watchdog(void)
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z $(pidof tincd) ] && {\n"
+			            "[ -z \"$(pidof tincd)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
 			            " service tinc restart\n"
 			            "}\n");
 			fclose(fp);

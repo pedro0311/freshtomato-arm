@@ -9850,9 +9850,8 @@ int init_main(int argc, char *argv[])
 			unlink("/var/notice/sysup");
 			nvram_set("g_reboot", "1");
 
-			if (nvram_match("webmon_bkp", "1")) {
+			if (nvram_get_int("webmon_bkp"))
 				xstart("/usr/sbin/webmon_bkp", "hourly"); /* make a copy before halt/reboot router */
-			}
 
 			run_nvscript("script_shut", NULL, 10);
 
@@ -9865,8 +9864,17 @@ int init_main(int argc, char *argv[])
 			if ((state == SIGTERM /* REBOOT */) ||
 			    (state == SIGQUIT /* HALT */)) {
 				stop_syslog();
+				killall("buttons", SIGTERM);
+				killall("udhcpc", SIGTERM);
+#ifdef TCONFIG_USB
 				remove_storage_main(1);
 				stop_usb();
+#ifndef TCONFIG_USBAP
+				remove_usb_module();
+#endif
+#endif /* TCONFIG_USB */
+				remove_conntrack();
+				stop_jffs2();
 
 				shutdn(state == SIGTERM /* REBOOT */);
 				sync(); sync(); sync();

@@ -26,7 +26,7 @@ case "$1" in
 		}
 	;;
 	check)
-		[ "$BTON" -eq 1 -a "$BTCH" -eq 1 ] && {
+		[ "$BTON" -eq 1 -a "$BTCH" -eq 1 -a "$(nvram get g_upgrade)" != "1" -a "$(nvram get g_reboot)" != "1" ] && {
 			pidof transmission-daemon >/dev/null || {
 				logger -t btcheck "Transmission stopped? Starting..."
 				service bittorrent restart

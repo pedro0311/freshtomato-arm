@@ -972,7 +972,7 @@ void generate_mdns_config(void)
 
 void start_mdns(void)
 {
-	if (nvram_get_int("g_upgrade"))
+	if (nvram_get_int("g_upgrade") || nvram_get_int("g_reboot"))
 		return;
 
 	if (!nvram_get_int("mdns_enable"))
@@ -2754,7 +2754,7 @@ static void stop_media_server(void)
 #ifdef TCONFIG_USB
 static void start_nas_services(void)
 {
-	if (nvram_get_int("g_upgrade"))
+	if (nvram_get_int("g_upgrade") || nvram_get_int("g_reboot"))
 		return;
 
 	if (getpid() != 1) {
@@ -2797,7 +2797,7 @@ void restart_nas_services(int stop, int start)
 	/* restart all NAS applications */
 	if (stop)
 		stop_nas_services();
-	if (start && !nvram_get_int("g_upgrade"))
+	if (start)
 		start_nas_services();
 
 	file_unlock(fd);
@@ -2831,8 +2831,8 @@ void check_services(void)
 	/* periodically reap any zombies */
 	setitimer(ITIMER_REAL, &zombie_tv, NULL);
 
-	/* do not restart if upgrading */
-	if (!nvram_get_int("g_upgrade")) {
+	/* do not restart if upgrading/rebooting */
+	if (!nvram_get_int("g_upgrade") && !nvram_get_int("g_reboot")) {
 		_check(pid_hotplug2, "hotplug2", start_hotplug2);
 		_check(pid_dnsmasq, "dnsmasq", start_dnsmasq);
 		_check(pid_crond, "crond", start_cron);
@@ -2919,6 +2919,7 @@ void start_services(void)
 #ifdef TCONFIG_IRQBALANCE
 	start_irqbalance();
 #endif
+	start_upnp();
 }
 
 void stop_services(void)
@@ -2980,6 +2981,7 @@ void stop_services(void)
 #ifdef TCONFIG_IRQBALANCE
 	stop_irqbalance();
 #endif
+	stop_upnp();
 }
 
 /* nvram "action_service" is: "service-action[-modifier]"
@@ -3284,11 +3286,14 @@ TOP:
 
 	if (strcmp(service, "upgrade") == 0) {
 		if (act_start) {
+			if (nvram_get_int("webmon_bkp"))
+				xstart("/usr/sbin/webmon_bkp", "hourly"); /* make a copy before upgrade */
+
 			nvram_set("g_upgrade", "1");
 			stop_sched();
 			stop_cron();
 #ifdef TCONFIG_USB
-			stop_nas_services(); /* Samba, FTP and Media Server */
+			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 #endif
 #ifdef TCONFIG_ZEBRA
 			stop_zebra();
@@ -3317,10 +3322,8 @@ TOP:
 				killall("udhcpc", SIGTERM);
 				stop_wan();
 			}
-			else {
+			else
 				stop_ntpd();
-				stop_upnp();
-			}
 #ifdef TCONFIG_MDNS
 			stop_mdns();
 #endif

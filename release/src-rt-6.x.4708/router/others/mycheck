@@ -26,7 +26,7 @@ case "$1" in
 		}
 	;;
 	check)
-		[ "$MYON" -eq 1 -a "$MYCH" -eq 1 ] && {
+		[ "$MYON" -eq 1 -a "$MYCH" -eq 1 -a "$(nvram get g_upgrade)" != "1" -a "$(nvram get g_reboot)" != "1" ] && {
 			pidof mysqld >/dev/null || {
 				logger -t mycheck "MySQL stopped? Starting..."
 				service mysql restart
