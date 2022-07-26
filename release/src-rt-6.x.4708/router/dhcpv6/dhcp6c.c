@@ -534,6 +534,10 @@ process_signals()
 	if ((sig_flags & SIGF_HUP)) {
 		dprintf(LOG_INFO, FNAME, "restarting");
 		free_resources(NULL);
+		if (cfparse(conffile) != 0) {
+			dprintf(LOG_WARNING, FNAME,
+			    "failed to reload configuration file");
+		}
 		client6_startall(1);
 	}
 	if ((sig_flags & SIGF_USR1)) {
