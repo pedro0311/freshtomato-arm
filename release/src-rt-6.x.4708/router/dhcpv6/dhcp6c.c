@@ -114,6 +114,7 @@ static int ctldigestlen;
 #endif
 
 static int infreq_mode = 0;
+int opt_norelease = 0; /* FT: init with 0 --> release PD/Address on exit (default) */
 
 static inline int get_val32 __P((char **, int *, u_int32_t *));
 static inline int get_ifname __P((char **, int *, char *, int));
@@ -179,7 +180,7 @@ main(argc, argv)
 	else
 		progname++;
 
-	while ((ch = getopt(argc, argv, "c:dDT:fik:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dDT:fink:p:")) != -1) {
 		switch (ch) {
 		case 'c':
 			conffile = optarg;
@@ -201,6 +202,9 @@ main(argc, argv)
 			break;
 		case 'i':
 			infreq_mode = 1;
+			break;
+		case 'n':
+			opt_norelease = 1;
 			break;
 #ifdef USE_DHCP6CTL
 		case 'k':
@@ -268,7 +272,7 @@ static void
 usage()
 {
 
-	fprintf(stderr, "usage: dhcp6c [-c configfile] [-dDfi] "
+	fprintf(stderr, "usage: dhcp6c [-c configfile] [-dDfin] "
 	    "[-T LL|LLT] [-p pid-file] interface [interfaces...]\n");
 }
 

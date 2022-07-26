@@ -37,7 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl c Ar configfile
-.Op Fl Ddfi
+.Op Fl Ddfin
 .Op Fl T Ar LL|LLT
 .Op Fl p Ar pid-file
 .Ar interface
@@ -88,6 +88,12 @@ is terminated.  (suits for a use in shell-script etc).
 Since the configuration is internally generated, you cannot provide a configuration in this mode.  If you want to have different actions for the stateless DHCPv6 information, you should write an appropriate configuration and invoke
 .Nm
 without this option.
+.It Fl n
+Prevent Release message from being sent to DHCPv6 server when
+.Nm
+stops.
+This is useful for preventing a new address from being configured by
+the DHCPv6 server when restarting the DHCPv6 client.
 .It Fl T Ar LL|LLT
 Use
 .Ar LL
