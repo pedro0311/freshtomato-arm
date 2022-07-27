@@ -41,7 +41,6 @@ download() {
 	# clean-up first
 	rm -rf $PREFIX/*
 	rm -f $FINAL
-	rm -f $CHK_FILE
 
 	for i in $(echo $BLACKLIST | tr " " "_" | tr ">" "\n"); do
 		ENBL=$(echo $i | cut -d "<" -f1)
