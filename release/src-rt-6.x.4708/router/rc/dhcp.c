@@ -510,9 +510,17 @@ int dhcp6c_state_main(int argc, char **argv)
 	const char *lanif;
 	struct in6_addr addr;
 	int i, r;
+	char *reason;
 
 	if (!wait_action_idle(10))
 		return 1;
+
+	/* check environment variable "REASON" which is passed to the client script when receiving a REPLY message
+	 * Example: reason can be "REQUEST" or "RENEW" or "RELEASE" or ... see dhcp6c.8 manual
+	 */
+	if ((reason = getenv("REASON")) != NULL) {
+		logmsg(LOG_DEBUG, "*** %s: REASON=%s", __FUNCTION__, reason);
+	}
 
 	lanif = getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0);
 
