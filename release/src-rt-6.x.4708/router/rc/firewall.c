@@ -1441,6 +1441,48 @@ static void filter_forward(void)
 	            ":wanout - [0:0]\n"
 	            "-A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT\n"); /* already established or related (via helper) */
 
+	/* IPv4 IPSec */
+	if ((nvram_match("ipsec_pass", "1")) || (nvram_match("ipsec_pass", "3"))) {
+		for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
+			if (*(wanfaces.iface[i].name))
+				ipt_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
+				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
+				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
+				          "-A FORWARD -i %s -p udp --sport 500 --dport 500 -j ACCEPT\n"	/* IKE negotiations */
+				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
+				          wanfaces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name);
+		}
+		for (i = 0; i < (unsigned int) wan2faces.count; ++i) {
+			if (*(wan2faces.iface[i].name))
+				ipt_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
+				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
+				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
+				          "-A FORWARD -i %s -p udp --sport 500 --dport 500 -j ACCEPT\n"	/* IKE negotiations */
+				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
+				          wan2faces.iface[i].name, wan2faces.iface[i].name, wan2faces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name);
+		}
+#ifdef TCONFIG_MULTIWAN
+		for (i = 0; i < (unsigned int) wan3faces.count; ++i) {
+			if (*(wan3faces.iface[i].name))
+				ipt_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
+				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
+				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
+				          "-A FORWARD -i %s -p udp --sport 500 --dport 500 -j ACCEPT\n"	/* IKE negotiations */
+				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
+				          wan3faces.iface[i].name, wan3faces.iface[i].name, wan3faces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name);
+		}
+		for (i = 0; i < (unsigned int) wan4faces.count; ++i) {
+			if (*(wan4faces.iface[i].name))
+				ipt_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
+				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
+				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
+				          "-A FORWARD -i %s -p udp --sport 500 --dport 500 -j ACCEPT\n"	/* IKE negotiations */
+				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
+				          wan4faces.iface[i].name, wan4faces.iface[i].name, wan4faces.iface[i].name, wanfaces.iface[i].name, wanfaces.iface[i].name);
+		}
+#endif /* TCONFIG_MULTIWAN */
+	}
+
 	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br != 0)
@@ -1490,10 +1532,11 @@ static void filter_forward(void)
 	}
 
 	/* IPv6 IPSec - RFC 6092 */
-	if (*wan6face && (nvram_match("ipv6_ipsec", "1")))
-		ip6t_write("-A FORWARD -i %s -p esp -j ACCEPT\n"		/* ESP */
-		           "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n",	/* IKE */
-		           wan6face, wan6face);
+	if (*wan6face && (nvram_match("ipsec_pass", "1")) || (nvram_match("ipsec_pass", "2")))
+		ip6t_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
+		           "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n",			/* IKE */
+		           "-A FORWARD -i %s -p udp --sport 500 --dport 500 -j ACCEPT\n"	/* IKE negotiations */
+		           wan6face, wan6face, wan6face);
 
 	/* IPv6 */
 	if (*wan6face)

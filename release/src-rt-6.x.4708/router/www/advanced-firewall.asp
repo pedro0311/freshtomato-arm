@@ -22,7 +22,7 @@
 
 <script>
 
-//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipv6_ipsec,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2,wan_dhcp_pass,fw_blackhole"); %>
+//	<% nvram("block_wan,block_wan_limit,block_wan_limit_icmp,nf_loopback,ne_syncookies,DSCP_fix_enable,ipsec_pass,multicast_pass,multicast_lan,multicast_lan1,multicast_lan2,multicast_lan3,multicast_quickleave,multicast_custom,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,udpxy_enable,udpxy_lan,udpxy_lan1,udpxy_lan2,udpxy_lan3,udpxy_stats,udpxy_clients,udpxy_port,udpxy_wanface,ne_snat,emf_enable,force_igmpv2,wan_dhcp_pass,fw_blackhole"); %>
 
 var cprefix = 'advanced_firewall';
 
@@ -125,7 +125,6 @@ function save() {
 
 	fom.ne_syncookies.value = fom._f_syncookies.checked ? 1 : 0;
 	fom.DSCP_fix_enable.value = fom._f_DSCP_fix_enable.checked ? 1 : 0;
-	fom.ipv6_ipsec.value = fom._f_ipv6_ipsec.checked ? 1 : 0;
 	fom.multicast_pass.value = fom._f_multicast.checked ? 1 : 0;
 	fom.multicast_lan.value = fom._f_multicast_lan.checked ? 1 : 0;
 	fom.multicast_lan1.value = fom._f_multicast_lan1.checked ? 1 : 0;
@@ -141,6 +140,7 @@ function save() {
 	fom.udpxy_clients.value = fom._f_udpxy_clients.value;
 	fom.udpxy_port.value = fom._f_udpxy_port.value;
 	fom.udpxy_wanface.value = fom._f_udpxy_wanface.value;
+	fom.ipsec_pass.value = fom._f_ipsec_pass.checked ? 1 : 0;
 
 /* EMF-BEGIN */
 	fom.emf_enable.value = fom._f_emf.checked ? 1 : 0;
@@ -183,7 +183,7 @@ function init() {
 <input type="hidden" name="block_wan_limit_icmp">
 <input type="hidden" name="ne_syncookies">
 <input type="hidden" name="DSCP_fix_enable">
-<input type="hidden" name="ipv6_ipsec">
+<input type="hidden" name="ipsec_pass">
 <input type="hidden" name="multicast_pass">
 <input type="hidden" name="multicast_lan">
 <input type="hidden" name="multicast_lan1">
@@ -217,7 +217,7 @@ function init() {
 			null,
 			{ title: 'Enable TCP SYN cookies', name: 'f_syncookies', type: 'checkbox', value: nvram.ne_syncookies != '0' },
 			{ title: 'Enable DSCP Fix', name: 'f_DSCP_fix_enable', type: 'checkbox', value: nvram.DSCP_fix_enable != '0', suffix: ' &nbsp;<small>fixes Comcast incorrect DSCP<\/small>' },
-			{ title: 'IPv6 IPSec Passthrough', name: 'f_ipv6_ipsec', type: 'checkbox', value: nvram.ipv6_ipsec != '0' },
+			{ title: 'Enable IPSec Passthrough', name: 'f_ipsec_pass', type: 'select', options: [[0,'Disabled'],[1,'IPv4 & IPv6'],[2,'IPv6 only'],[3,'IPv4 only']], value: nvram.ipsec_pass },
 			null,
 			{ title: 'Allow DHCP spoofing', name: 'f_wan_dhcp_pass', type: 'checkbox', value: nvram.wan_dhcp_pass == 1 },
 			{ title: 'Smart MTU black hole detection', name: 'f_fw_blackhole', type: 'checkbox', value: nvram.fw_blackhole == 1 }

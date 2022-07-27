@@ -338,7 +338,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_vlan",			"0"				, 0 },	/* Enable IPv6 on LAN1 (bit 0) and/or LAN2 (bit 1) and/or LAN3 (bit 2) */
 	{ "ipv6_isp_opt",		"0"				, 0 },	/* see router/rc/wan.c --> add default route ::/0 */
 	{ "ipv6_pdonly",		"0"				, 0 },	/* Request DHCPv6 Prefix Delegation Only */
-	{ "ipv6_ipsec",			"1"				, 0 },	/* Enable Incoming IPv6 IPSec */
 	{ "ipv6_wan_addr",		""				, 0 },	/* Static IPv6 WAN Address */
 	{ "ipv6_prefix_len_wan",	"64"				, 0 },	/* Static IPv6 WAN Prefix Length */
 	{ "ipv6_isp_gw",		""				, 0 },	/* Static IPv6 ISP Gateway */
@@ -950,6 +949,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "sshd_forwarding",		"1"				, 0 },
 	{ "rmgt_sip",			""				, 0 },	/* remote management: source ip address */
 	{ "ne_shlimit",			"1,3,60"			, 0 },	/* enable limit connection attempts for sshd */
+	{ "ipsec_pass",			"1"				, 0 },	/* Enable IPSec Passthrough 0=Disabled, 1=IPv4 + IPv6, 2=IPv6 only, 3=IPv4 only */
 
 	{ "http_id",			""				, 0 },
 	{ "web_mx",			"status,bwm"			, 0 },
