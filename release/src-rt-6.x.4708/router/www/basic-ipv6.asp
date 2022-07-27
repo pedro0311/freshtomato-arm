@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_radvd,ipv6_dhcpd,ipv6_accept_ra,ipv6_isp_opt,ipv6_pdonly,ipv6_rtr_addr,ipv6_service,ipv6_debug,ipv6_duid_type,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
+//	<% nvram("ipv6_6rd_prefix_length,ipv6_prefix,ipv6_prefix_length,ipv6_radvd,ipv6_dhcpd,ipv6_accept_ra,ipv6_isp_opt,ipv6_pdonly,ipv6_pd_norelease,ipv6_rtr_addr,ipv6_service,ipv6_debug,ipv6_duid_type,ipv6_dns,ipv6_tun_addr,ipv6_tun_addrlen,ipv6_ifname,ipv6_tun_v4end,ipv6_relay,ipv6_tun_mtu,ipv6_tun_ttl,ipv6_6rd_ipv4masklen,ipv6_6rd_prefix,ipv6_6rd_borderrelay,lan1_ifname,lan2_ifname,lan3_ifname,ipv6_vlan,ipv6_prefix_len_wan,ipv6_isp_gw,ipv6_wan_addr"); %>
 
 nvram.ipv6_accept_ra = fixInt(nvram.ipv6_accept_ra, 0, 3, 0);
 
@@ -49,6 +49,7 @@ function verifyFields(focused, quiet) {
 		_f_ipv6_accept_ra_lan: 1,
 		_f_ipv6_isp_opt: 1,
 		_f_ipv6_pdonly: 1,
+		_f_ipv6_pd_norelease: 0,
 		_ipv6_tun_v4end: 1,
 		_ipv6_relay: 1,
 		_ipv6_ifname: 1,
@@ -122,6 +123,7 @@ function verifyFields(focused, quiet) {
 			vis._f_ipv6_debug = 1;
 /* RTNPLUS-END */
 			vis._f_ipv6_duid_type = 1;
+			vis._f_ipv6_pd_norelease = 1;
 		case '6rd-pd':
 			vis._f_ipv6_prefix = 0;
 			vis._f_ipv6_rtr_addr_auto = 0;
@@ -372,6 +374,7 @@ function save() {
 			fom.ipv6_debug.value = fom.f_ipv6_debug.checked ? 1 : 0;
 /* RTNPLUS-END */
 			fom.ipv6_duid_type.value = fom.f_ipv6_duid_type.value;
+			fom.ipv6_pd_norelease.value = fom.f_ipv6_pd_norelease.checked ? 1 : 0;
 			if (fom.f_lan1_ipv6.checked) {
 				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x01; /* set bit 0, IPv6 enabled for LAN1 */
 			}
@@ -429,6 +432,7 @@ function save() {
 <input type="hidden" name="ipv6_accept_ra">
 <input type="hidden" name="ipv6_vlan">
 <input type="hidden" name="ipv6_pdonly">
+<input type="hidden" name="ipv6_pd_norelease">
 <input type="hidden" name="ipv6_isp_opt">
 <input type="hidden" name="ipv6_wan_addr">
 <input type="hidden" name="ipv6_prefix_len_wan">
@@ -461,6 +465,7 @@ function save() {
 			{ title: '6rd Prefix Length', name: 'ipv6_6rd_prefix_length', type: 'text', maxlen: 3, size: 5, value: nvram.ipv6_6rd_prefix_length, suffix: ' <small>(Usually 32)<\/small>' },
 			{ title: 'Prefix Length', name: 'f_ipv6_prefix_length', type: 'text', maxlen: 3, size: 5, value: nvram.ipv6_prefix_length },
 			{ title: 'Request PD Only', name: 'f_ipv6_pdonly', type: 'checkbox', value: (nvram.ipv6_pdonly != '0'), suffix: ' <small>(Usually PPPoE connections)<\/small>' },
+			{ title: 'Do not allow PD/Address release', name: 'f_ipv6_pd_norelease', type: 'checkbox', value: (nvram.ipv6_pd_norelease == '1'), suffix: ' <small>(see Notes)<\/small>' },
 			{ title: 'Add default route ::/0', name: 'f_ipv6_isp_opt', type: 'checkbox', value: (nvram.ipv6_isp_opt != '0'), suffix: ' <small>(see Notes)<\/small>' },
 			{ title: 'IPv6 Router LAN Address', multi: [
 				{ name: 'f_ipv6_rtr_addr_auto', type: 'select', options: [['0', 'Default'],['1','Manual']], value: (nvram.ipv6_rtr_addr == '' ? '0' : '1') },
@@ -504,6 +509,7 @@ function save() {
 <div class="section">
 	<ul>
 		<li><b>Request PD Only</b> - Check for ISP's that require only a Prefix Delegation (usually PPPoE (xDSL, Fiber) connections).</li>
+		<li><b>Do not allow PD/Address release</b> - Prevent DHCP6 client to send a release message to the ISP on exit. With this option set, the client is more likely to receive the same allocation with subsequent requests.</li>
 		<li><b>Add default route ::/0</b> - Some ISP's may need the default route (workaround).</li>
 		<li><b>Accept RA from LAN</b> - Please disable Announce IPv6 on LAN (SLAAC) and Announce IPv6 on LAN (DHCP) at <a href="advanced-dhcpdns.asp">DHCP/DNS</a> to enable that option.</li>
 <!-- RTNPLUS-BEGIN -->

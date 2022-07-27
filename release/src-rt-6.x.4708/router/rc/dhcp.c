@@ -552,7 +552,12 @@ void start_dhcp6c(void)
 	FILE *f;
 	int prefix_len;
 	char *wan6face;
-	char *argv[] = { "/usr/sbin/dhcp6c", "-T", NULL, NULL, NULL, NULL };
+	char *argv[] = { "/usr/sbin/dhcp6c", "-T",
+			 NULL,	/* LL | LLT */
+			 NULL,	/* -D (Debug On) */
+			 NULL,	/* -n (no prefix/address release on exit) */
+			 NULL,	/* interface */
+			 NULL };
 	int argc;
 	int ipv6_vlan = 0; /* bit 0 = IPv6 enabled for LAN1, bit 1 = IPv6 enabled for LAN2, bit 2 = IPv6 enabled for LAN3, 1 == TRUE, 0 == FALSE */
 	int duid_type;
@@ -650,6 +655,9 @@ void start_dhcp6c(void)
 	if (nvram_get_int("ipv6_debug"))
 		argv[argc++] = "-D";
 #endif
+
+	if (nvram_get_int("ipv6_pd_norelease"))
+		argv[argc++] = "-n";
 
 	argv[argc++] = wan6face;
 	argv[argc] = NULL;
