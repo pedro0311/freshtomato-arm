@@ -75,7 +75,7 @@ sg.setup = function() {
 		{ type: 'checkbox', prefix: '<div class="centered">', suffix: '<\/div>' },
 		{ type: 'text', maxlen: 50 } ] );
 
-	this.headerSet(['MAC Address', 'Bound to', 'IP Address', 'IPTraffic', 'Hostname']);
+	this.headerSet(['MAC Address', 'Static arp', 'IP Address', 'IPTraffic', 'Hostname']);
 
 	var ipt = nvram.cstats_include.split(',');
 	var s = nvram.dhcpd_static.split('>');
@@ -368,7 +368,7 @@ function init() {
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
 		<li><b>MAC Address</b> - Unique identifier associated to a network interface on this particular device.</li>
-		<li><b>Bound to</b> - Enforce static ARP binding of this particular IP/MAC address pair.</li>
+		<li><b>Static arp</b> - Enforce static ARP binding of this particular IP/MAC address pair.</li>
 		<li><b>IP Address</b> - Network address assigned to this device on the local network.</li>
 		<li><b>IPTraffic</b> - Keep track of bandwidth usage for this IP address.</li>
 		<li><b>Hostname</b> - Human-readable nickname/label assigned to this device on the network.</li>
