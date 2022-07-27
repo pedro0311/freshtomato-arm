@@ -947,6 +947,9 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_IPV6
 // basic-ipv6
 	{ "ipv6_service",		V_LENGTH(0, 16)			},	// '', native, native-pd, 6to4, sit, other
+#if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
+	{ "ipv6_debug",			V_01				},	/* enable/show debug infos */
+#endif
 	{ "ipv6_duid_type",		V_RANGE(1, 4)			},	/* see RFC8415 Section 11; DUID-LLT = 1, DUID-EN = 2, DUID-LL = 3, DUID-UUID = 4 */
 	{ "ipv6_prefix",		V_IPV6(0)			},
 	{ "ipv6_prefix_length",		V_RANGE(3, 127)			},
