@@ -140,7 +140,7 @@ function save() {
 	fom.udpxy_clients.value = fom._f_udpxy_clients.value;
 	fom.udpxy_port.value = fom._f_udpxy_port.value;
 	fom.udpxy_wanface.value = fom._f_udpxy_wanface.value;
-	fom.ipsec_pass.value = fom._f_ipsec_pass.checked ? 1 : 0;
+	fom.ipsec_pass.value = fom._f_ipsec_pass.value;
 
 /* EMF-BEGIN */
 	fom.emf_enable.value = fom._f_emf.checked ? 1 : 0;
