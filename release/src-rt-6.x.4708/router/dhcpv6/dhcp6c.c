@@ -86,6 +86,7 @@ static int exit_ok = 0;
 static sig_atomic_t sig_flags = 0;
 #define SIGF_TERM 0x1
 #define SIGF_HUP 0x2
+#define	SIGF_USR1 0x4
 
 const dhcp6_mode_t dhcp6_mode = DHCP6_MODE_CLIENT;
 
@@ -114,6 +115,7 @@ static int ctldigestlen;
 #endif
 
 static int infreq_mode = 0;
+int opt_norelease = 0; /* FT: init with 0 --> release PD/Address on exit (default) */
 
 static inline int get_val32 __P((char **, int *, u_int32_t *));
 static inline int get_ifname __P((char **, int *, char *, int));
@@ -179,7 +181,7 @@ main(argc, argv)
 	else
 		progname++;
 
-	while ((ch = getopt(argc, argv, "c:dDT:fik:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dDT:fink:p:")) != -1) {
 		switch (ch) {
 		case 'c':
 			conffile = optarg;
@@ -201,6 +203,9 @@ main(argc, argv)
 			break;
 		case 'i':
 			infreq_mode = 1;
+			break;
+		case 'n':
+			opt_norelease = 1;
 			break;
 #ifdef USE_DHCP6CTL
 		case 'k':
@@ -268,7 +273,7 @@ static void
 usage()
 {
 
-	fprintf(stderr, "usage: dhcp6c [-c configfile] [-dDfi] "
+	fprintf(stderr, "usage: dhcp6c [-c configfile] [-dDfin] "
 	    "[-T LL|LLT] [-p pid-file] interface [interfaces...]\n");
 }
 
@@ -401,6 +406,11 @@ client6_init()
 		    strerror(errno));
 		exit(1);
 	}
+	if (signal(SIGUSR1, client6_signal) == SIG_ERR) {
+		dprintf(LOG_WARNING, FNAME, "failed to set signal: %s",
+		    strerror(errno));
+		exit(1);
+	}
 }
 
 int
@@ -509,6 +519,7 @@ check_exit()
 	/* We have no existing event.  Do exit. */
 	dprintf(LOG_INFO, FNAME, "exiting");
 
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -518,13 +529,23 @@ process_signals()
 	if ((sig_flags & SIGF_TERM)) {
 		exit_ok = 1;
 		free_resources(NULL);
-		unlink(pid_file);
 		check_exit();
 	}
 	if ((sig_flags & SIGF_HUP)) {
 		dprintf(LOG_INFO, FNAME, "restarting");
 		free_resources(NULL);
+		if (cfparse(conffile) != 0) {
+			dprintf(LOG_WARNING, FNAME,
+			    "failed to reload configuration file");
+		}
 		client6_startall(1);
+	}
+	if ((sig_flags & SIGF_USR1)) {
+		dprintf(LOG_INFO, FNAME, "exit without release");
+		exit_ok = 1;
+		opt_norelease = 1;
+		free_resources(NULL);
+		check_exit();
 	}
 
 	sig_flags = 0;
@@ -722,7 +743,6 @@ client6_do_ctlcommand(buf, len)
 		if (commandlen == 0) {
 			exit_ok = 1;
 			free_resources(NULL);
-			unlink(pid_file);
 			check_exit();
 		} else {
 			if (get_val32(&bp, &commandlen, &p32))
@@ -1176,6 +1196,9 @@ client6_signal(sig)
 		break;
 	case SIGHUP:
 		sig_flags |= SIGF_HUP;
+		break;
+	case SIGUSR1:
+		sig_flags |= SIGF_USR1;
 		break;
 	}
 }
@@ -1986,7 +2009,6 @@ client6_recvreply(ifp, dh6, len, optinfo)
 	if (infreq_mode) {
 		exit_ok = 1;
 		free_resources(NULL);
-		unlink(pid_file);
 		check_exit();
 	}
 	return (0);

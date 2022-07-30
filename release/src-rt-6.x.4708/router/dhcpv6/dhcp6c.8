@@ -37,7 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl c Ar configfile
-.Op Fl Ddfi
+.Op Fl Ddfin
 .Op Fl T Ar LL|LLT
 .Op Fl p Ar pid-file
 .Ar interface
@@ -88,6 +88,12 @@ is terminated.  (suits for a use in shell-script etc).
 Since the configuration is internally generated, you cannot provide a configuration in this mode.  If you want to have different actions for the stateless DHCPv6 information, you should write an appropriate configuration and invoke
 .Nm
 without this option.
+.It Fl n
+Prevent Release message from being sent to DHCPv6 server when
+.Nm
+stops.
+This is useful for preventing a new address from being configured by
+the DHCPv6 server when restarting the DHCPv6 client.
 .It Fl T Ar LL|LLT
 Use
 .Ar LL
@@ -107,18 +113,27 @@ or
 .Fl i
 option is specified.
 .Pp
-Upon receipt of the
-.Dv SIGHUP
+Upon receipt of a
+.Dv SIGHUP ,
+.Dv SIGTERM ,
 or
-.Dv SIGTERM
-signals,
+.Dv SIGUSR1
+signal,
 .Nm
 will remove all stateful resources from the system.
-In the former case the daemon will then reinvoke itself,
-while it will stop running in the latter case.
-In either case,
-.Nm
-will send DHCPv6 Release messages to release resources assigned from servers.
+After that,
+.Dv SIGHUP
+reinitializes the daemon,
+and
+.Dv SIGTERM
+stops the daemon.
+In both cases,
+DHCPv6 Release message will be sent to release resources
+assigned from servers.
+.Dv SIGUSR1
+stops the daemon as
+.Dv SIGTERM
+does though DHCPv6 Release message will not be sent.
 .\"
 .Sh FILES
 .Bl -tag -width /etc/wide-dhcpv6/dhcp6c.conf -compact
@@ -142,12 +157,34 @@ environment variables,
 which include:
 .Pp
 .Bl -tag -width Ds -compact
-.It Ic REASON
+.It Li REASON
 The reason why the script is invoked.
-As of this writing,
-the value is always
-\(dqNBI\(dq
-and thus meaningless.
+One of the following values is set based on a message
+which the client sent before the
+.Li REPLY
+message arrives:
+.Bl -tag -width "INFOREQ" -compact -offset indent
+.It Li INFOREQ
+The client sent an
+.Li INFORMATION REQUEST
+message.
+.It Li REQUEST
+The client sent a
+.Li REQUEST
+message.
+.It Li RENEW
+The client sent a
+.Li RENEW
+message.
+.It Li REBIND
+The client sent a
+.Li REBIND
+message.
+.It Li RELEASE
+The client sent a
+.Li RELEASE
+message.
+.El
 .It Ic new_domain_name_servers
 A list of available DNS servers,
 each of which is an IPv6 numeric address and is separated by a white

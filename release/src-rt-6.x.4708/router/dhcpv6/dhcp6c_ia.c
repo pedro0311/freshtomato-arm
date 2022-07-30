@@ -420,7 +420,13 @@ release_all_ia(ifp)
 		for (ia = TAILQ_FIRST(&iac->iadata); ia; ia = ia_next) {
 			ia_next = TAILQ_NEXT(ia, link);
 
-			(void)release_ia(ia);
+			if (opt_norelease == 0) {
+				dprintf(LOG_INFO, FNAME, "Start address "
+				    "release");
+				(void)release_ia(ia);
+			} else
+				dprintf(LOG_INFO, FNAME, "Bypassing address "
+				    "release because of -n flag");
 
 			/*
 			 * The client MUST stop using all of the addresses

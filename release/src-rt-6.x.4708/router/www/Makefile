@@ -418,6 +418,11 @@ ifeq ($(TCONFIG_FTP)$(TCONFIG_SAMBASRV)$(TCONFIG_MEDIA_SERVER)$(TCONFIG_PPTPD)$(
 	rm -f $(INSTALLDIR)/www/isup.js
 endif
 
+# only add for RT-N+ routers
+ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
+	sed -i $(INSTALLDIR)/www/basic-ipv6.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.jsz *.html); do \
@@ -471,6 +476,7 @@ endif
 		-e "/QRCODE-BEGIN/d"	-e "/QRCODE-END/d" \
 		-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
 		-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
+		-e "/RTNPLUS-BEGIN/d"	-e "/RTNPLUS-END/d" \
 		|| true; \
 	done
 

@@ -286,7 +286,7 @@ function init() {
 <div class="section-title">Notes</div>
 <div class="section">
 	<ul>
-		<li>Policy routing traffic only work on the LAN to the Internet.</li>
+		<li>Policy routing rules are only effective from LAN traffic towards a WAN interface.</li>
 	</ul>
 </div>
 

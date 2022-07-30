@@ -28,6 +28,9 @@
  * SUCH DAMAGE.
  */
 
+#ifndef	_COMMON_H_
+#define	_COMMON_H_
+
 #ifdef __KAME__
 #define IN6_IFF_INVALID (IN6_IFF_ANYCAST|IN6_IFF_TENTATIVE|\
 		IN6_IFF_DUPLICATED|IN6_IFF_DETACHED)
@@ -121,6 +124,7 @@ extern int foreground;
 extern int debug_thresh;
 extern int duid_type;
 extern char *device;
+extern int opt_norelease;
 
 #include "debug.h"
 
@@ -220,3 +224,4 @@ extern size_t strlcpy __P((char *, const char *, size_t));
 #  endif
 #endif
 
+#endif

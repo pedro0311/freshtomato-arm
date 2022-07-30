@@ -5,6 +5,92 @@ FreshTomato-ARM Changelog
 
 
 
+2022.4          2022.07.31
+---------------------------
+
+Note: because of changes in GUI, clean your browser cache and/or use Ctrl+F5 (FF) to avoid artifacts.
+
+- toolchain: brcm-arm-toolchains update; uClibc 0.9.33.2 with CVE-2022-30295, CVE-2021-43523 and CVE-2016-6264 fixes. Also other fixes/patches included. Enable support for AI_ADDRCONFIG
+- kernel: drivers: net: updates from the upstream (for details see full changelog)
+- kernel: drivers: usb: updates from the upstream (for details see full changelog)
+- SDK6/SDK7: enable USB2 and USB3 power at boot up by default
+- SDK7: check wireless driver max client tuneable value
+- SDK7: update ctf (part 2 + part 3)
+- iptables: update to 1.8.8
+- irqbalance: update to 1.9.0
+- libcurl: update to 7.84.0
+- libxml2: update to 2.9.14
+- libiconv: update to 1.17
+- flac: update to 1.3.4
+- openvpn: update to 2.5.7
+- ntfs-3g: update to 2022.5.17
+- libsodium: update to 1.0.18-stable
+- nettle: update to 3.8
+- tor: update to 0.4.7.8
+- zlib: update to 1.2.12 (add two fixes from the develop tree)
+- libubox: update to d2223ef (2022-05-15) snapshot
+- uqmi: update to 56cb2d4 (2022-05-04) snapshot
+- openssl: update to 1.1.1q
+- sqlite: update to 3.39.0
+- nginx: update to 1.23.0
+- dnsmasq: update to 2022.07.07 (20b4a4e) snapshot
+- build: add Netgear R7900 support (almost the same like R8000) 
+- build: router: Makefile: also install zlib when samba is added to the (not AIO) image - fix build break
+- build: only include adblock when image is built with TCONFIG_HTTPS (all (or most) servers from the adblock list are now redirecting to https, so wget can't download them without OpenSSL)
+- build: add flag to detect AIO target (the same way like in MIPS branch)
+- build: add target ARM architecture/target ARM processor
+- build: add flag to build image without TRX KEY
+- GUI: Administration: Configuration: fix date in the filename of saved config file
+- GUI: Administration: NFS Server: correct link to the NFS website
+- GUI: Advanced: Firewall: change link for Efficient Multicast Forwarding option
+- GUI: Advanced: Tor: add daemon status, add start/stop button
+- GUI: advanced-vlan.asp - use nvram t_model_name for R8000 detection
+- GUI: advanced-wireless.asp - Set bss_maxassoc same as global max clients
+- GUI: advanced-wireless.asp - adjust/improve saving country/rev selection
+- GUI: Status: Logs: implement maximum filter level
+- GUI: Status: Overview: clearly explain what the WL enable/disable buttons are for
+- GUI: Tools: Wireless Survey: add a note for ARM routers, that WL survey doesn't work when WL filter is turned on in 'permit only' mode (workaround for #224)
+- GUI: USB and NAS: FTP/Samba/FTPD/BT: add daemon status, add re-start button (unify to nginx/mysql page)
+- GUI: VPN Tunneling: OpenVPN Client: also allow range of IP addresses as a source IP
+- GUI: fix backup filename date
+- adblock: convert all lists to https; additionally add Steven Black list
+- apcupsd: add PCNET and SNMP support in AIO targets; allow to use custom config
+- dhcpv6: Add a no release option '-n'. This prevents a release signal from being sent to the ISP causing a new PD or address to be allocated
+- dhcpv6: Remove the PID file just before dhcp6c actually exits
+- dhcpv6: Add a signal handler for SIGUSR1 to forcibly exit without releasing the obtained addresses
+- dhcpv6: Set a DHCPv6 state keyword to an environment variable "REASON"
+- dhcpv6: reload config on SIGHUP
+- dropbear: add login limits
+- dropbear: fix MAX_UNAUTH_CLIENTS regression - fix from the upstream
+- dropbear: patches: add DEFAULT_ROOT_PATH
+- httpd: misc.c: use utf8 in asp_rrule()
+- IPv6: add DUID type selection (currently only DUID-LL (default) OR DUID-LLT)
+- IPv6: extend GUI status page (status-overview.asp) - show DUID
+- IPv6: add GUI option (basic-ipv6.asp) to start DHCP6 Client in debug mode (only for RT-N+ router)
+- IPv6: add GUI option (basic-ipv6.asp) for DHCP6 client to prevent prefix/address release on exit
+- IPv6: check environment variable "REASON" which is passed to the client script when receiving a REPLY message (only for DEBUG currently)
+- JFFS: do not start if router model is unknown 
+- others: linkagg: fix warning messages, cosmetic
+- rc: serialize (re-)starts from GUI, avoid zombies
+- rc: do not (re)start services during upgrade/reboot
+- rc: firewall: add IPv4 IPSEC passthrough
+- rc: gpio.c - extend gpio poll up to 32 pins
+- rc: openvpn.c: also abort when can not create tap/tun interface
+- rc: openvpn.c: fix parsing of pidof result in watchdog script
+- rc: services.c: start_ntpd(): correct verbose option
+- rc: services.c: start_ntpd(): run ntpd at high priority
+- rc: services: move samba support to outer file
+- rc: transmission: rewrite, to get rid of shell scripts
+- router: httpd: wl.c - adjust and correct scan params for wireless survey (GUI: tools-survey)
+- shared: wlscan.h - increase buffer for wireless survey (SDK6 and up)
+- stubby: add Cisco Umbrella/OpenDNS DoT Servers to Stubby Options
+- wireless ethernet bridge AND media bridge mode: use dnsmasq (provide DNS service)
+- Wireless Survey: rework / optimize code for wl survey (GUI: tools-survey) 
+- www: tomato.js: fix id in TomatoGrid.prototype.createEditor
+- Netgear R6400/R6700/R6900/R7000/XR300 series router: adjust led setup in case wan is disabled (router only in AP mode) - resolves #21
+- Tenda AC15 / AC18: build image without TRX KEY
+
+
 2022.3          2022.05.12
 ---------------------------
 
