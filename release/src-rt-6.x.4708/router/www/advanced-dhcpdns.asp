@@ -99,13 +99,7 @@ function verifyFields(focused, quiet) {
 	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
 /* MDNS-END */
 /* TOR-BEGIN */
-	v = E('_f_dnsmasq_onion_support'); /* disable 'Solve .onion' checkbox if tor is down */
-	if (!isup.tor)
-		v.disabled = 1;
-	else
-		v.disabled = 0;
-
-	if (v.checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
+	if (E('_f_dnsmasq_onion_support').checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
 		E('_f_dns_norebind').disabled = 1;
 		E('_f_dns_norebind').checked = 0;
 	}
