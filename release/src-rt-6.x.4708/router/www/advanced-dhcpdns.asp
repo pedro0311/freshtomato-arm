@@ -111,7 +111,7 @@ function verifyFields(focused, quiet) {
 	}
 	else
 		E('_f_dns_norebind').disabled = 0;
-/* TOR-BEGIN */
+/* TOR-END */
 
 	for (var a in vis) {
 		var b = E(a);
