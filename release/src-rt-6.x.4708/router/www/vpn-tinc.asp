@@ -5,7 +5,7 @@
 	http://www.polarcloud.com/tomato/
 
 	Tinc Web GUI
-	Copyright (C) 2014 Lance Fredrickson
+	Copyright (C) 2014-2022 Lance Fredrickson
 	lancethepants@gmail.com
 
 	For use with Tomato Firmware only.
@@ -27,7 +27,7 @@
 
 var cprefix = 'vpn_tinc';
 var tabs = [['config','Config'],['hosts','Hosts'],['scripts','Scripts'],['keys','Generate Keys'],['status','Status']];
-var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo']];
+var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3'],['4','4'],['5','5'],['6','6'],['7','7'],['8','8'],['9','9 - Best zlib'],['10','10 - Fast lzo'],['11','11 - Best lzo'],['12','12 - lz4']];
 var cmd = null;
 var cmdresult = '';
 var changed = 0;
@@ -586,7 +586,7 @@ function init() {
 	W('<li><b>Address<\/b> <i>(optional)<\/i> - Must resolve to the external IP address where the host can be reached.');
 	W('<li><b>Port<\/b> <i>(optional)<\/i> - Port the host listens on. If empty the default value (655) is used.');
 	W('<li><b>Compression<\/b> - Level of compression used for UDP packets. Possible values are ');
-	W('0 (off), 1 (fast zlib) and any integer up to 9 (best zlib), 10 (fast lzo) and 11 (best lzo).');
+	W('0 (off), 1 (fast zlib) and any integer up to 9 (best zlib), 10 (fast lzo), 11 (best lzo), and 12 (lz4)');
 	W('<li><b>Subnet<\/b> - Subnet which the host will serve.');
 	W('<\/ul>');
 	W('<\/div><\/div>');
