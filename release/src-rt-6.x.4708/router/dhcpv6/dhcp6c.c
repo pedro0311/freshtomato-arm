@@ -1825,6 +1825,9 @@ client6_recvreply(ifp, dh6, len, optinfo)
 		return (-1);
 	}
 
+	dprintf(LOG_INFO, FNAME, "Received REPLY for %s",
+	    dhcp6_event_statestr(ev));
+
 	/* A Reply message must contain a Server ID option */
 	if (optinfo->serverID.duid_len == 0) {
 		dprintf(LOG_INFO, FNAME, "no server ID option");
