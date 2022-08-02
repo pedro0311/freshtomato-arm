@@ -32,22 +32,27 @@ typedef struct {
 #include "../utils.h"
 #include "../xalloc.h"
 
+static ecdsa_t *ecdsa_new(void) ATTR_MALLOC ATTR_DEALLOCATOR(ecdsa_free);
+static ecdsa_t *ecdsa_new(void) {
+	return xzalloc(sizeof(ecdsa_t));
+}
+
 // Get and set ECDSA keys
 //
 ecdsa_t *ecdsa_set_base64_public_key(const char *p) {
-	int len = strlen(p);
+	size_t len = strlen(p);
 
 	if(len != 43) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid size %d for public key!", len);
+		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid size %lu for public key!", (unsigned long)len);
 		return 0;
 	}
 
-	ecdsa_t *ecdsa = xzalloc(sizeof(*ecdsa));
-	len = b64decode(p, ecdsa->public, len);
+	ecdsa_t *ecdsa = ecdsa_new();
+	len = b64decode_tinc(p, ecdsa->public, len);
 
 	if(len != 32) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid format of public key! len = %d", len);
-		free(ecdsa);
+		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid format of public key! len = %lu", (unsigned long)len);
+		ecdsa_free(ecdsa);
 		return 0;
 	}
 
@@ -56,7 +61,7 @@ ecdsa_t *ecdsa_set_base64_public_key(const char *p) {
 
 char *ecdsa_get_base64_public_key(ecdsa_t *ecdsa) {
 	char *base64 = xmalloc(44);
-	b64encode(ecdsa->public, base64, sizeof(ecdsa->public));
+	b64encode_tinc(ecdsa->public, base64, sizeof(ecdsa->public));
 
 	return base64;
 }
@@ -64,6 +69,7 @@ char *ecdsa_get_base64_public_key(ecdsa_t *ecdsa) {
 // Read PEM ECDSA keys
 
 static bool read_pem(FILE *fp, const char *type, void *vbuf, size_t size) {
+	const size_t buflen = size;
 	char line[1024];
 	bool data = false;
 	size_t typelen = strlen(type);
@@ -88,18 +94,12 @@ static bool read_pem(FILE *fp, const char *type, void *vbuf, size_t size) {
 		}
 
 		size_t linelen = strcspn(line, "\r\n");
-		size_t len = b64decode(line, line, linelen);
+		size_t len = b64decode_tinc(line, line, linelen);
 
-		if(!len) {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Invalid base64 data in PEM file\n");
+		if(!len || len > size) {
+			logger(DEBUG_ALWAYS, LOG_ERR, "%s base64 data in PEM file\n", len ? "Too much" : "Invalid");
 			errno = EINVAL;
-			return false;
-		}
-
-		if(len > size) {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Too much base64 data in PEM file\n");
-			errno = EINVAL;
-			return false;
+			goto exit;
 		}
 
 		memcpy(buf, line, len);
@@ -114,7 +114,13 @@ static bool read_pem(FILE *fp, const char *type, void *vbuf, size_t size) {
 		} else {
 			errno = ENOENT;
 		}
+	}
 
+exit:
+	memzero(line, sizeof(line));
+
+	if(size) {
+		memzero(vbuf, buflen);
 		return false;
 	}
 
@@ -122,25 +128,25 @@ static bool read_pem(FILE *fp, const char *type, void *vbuf, size_t size) {
 }
 
 ecdsa_t *ecdsa_read_pem_public_key(FILE *fp) {
-	ecdsa_t *ecdsa = xzalloc(sizeof(*ecdsa));
+	ecdsa_t *ecdsa = ecdsa_new();
 
 	if(read_pem(fp, "ED25519 PUBLIC KEY", ecdsa->public, sizeof(ecdsa->public))) {
 		return ecdsa;
 	}
 
-	free(ecdsa);
-	return 0;
+	ecdsa_free(ecdsa);
+	return NULL;
 }
 
 ecdsa_t *ecdsa_read_pem_private_key(FILE *fp) {
-	ecdsa_t *ecdsa = xmalloc(sizeof(*ecdsa));
+	ecdsa_t *ecdsa = ecdsa_new();
 
 	if(read_pem(fp, "ED25519 PRIVATE KEY", ecdsa->private, sizeof(*ecdsa))) {
 		return ecdsa;
 	}
 
-	free(ecdsa);
-	return 0;
+	ecdsa_free(ecdsa);
+	return NULL;
 }
 
 size_t ecdsa_size(ecdsa_t *ecdsa) {
@@ -164,5 +170,5 @@ bool ecdsa_active(ecdsa_t *ecdsa) {
 }
 
 void ecdsa_free(ecdsa_t *ecdsa) {
-	free(ecdsa);
+	xzfree(ecdsa, sizeof(ecdsa_t));
 }

@@ -39,7 +39,7 @@ char *program_name = NULL;
   Set all files and paths according to netname
 */
 void make_names(bool daemon) {
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	HKEY key;
 	char installdir[1024] = "";
 	DWORD len = sizeof(installdir);
@@ -50,13 +50,15 @@ void make_names(bool daemon) {
 		logger(DEBUG_ALWAYS, LOG_INFO, "Both netname and configuration directory given, using the latter...");
 	}
 
+	free(identname);
+
 	if(netname) {
 		xasprintf(&identname, "tinc.%s", netname);
 	} else {
 		identname = xstrdup("tinc");
 	}
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 
 	if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\tinc", 0, KEY_READ, &key)) {
 		if(!RegQueryValueEx(key, NULL, 0, 0, (LPBYTE)installdir, &len)) {
@@ -92,7 +94,7 @@ void make_names(bool daemon) {
 		}
 	}
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	(void)daemon;
 
 	if(!logfilename) {
@@ -148,7 +150,7 @@ void make_names(bool daemon) {
 #endif
 
 	if(!unixsocketname) {
-		int len = strlen(pidfilename);
+		size_t len = strlen(pidfilename);
 		unixsocketname = xmalloc(len + 8);
 		memcpy(unixsocketname, pidfilename, len);
 

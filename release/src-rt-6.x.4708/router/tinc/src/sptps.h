@@ -33,24 +33,46 @@
 #define SPTPS_ALERT 129       // Warning or error messages
 #define SPTPS_CLOSE 130       // Application closed the connection
 
-// Key exchange states
-#define SPTPS_KEX 1           // Waiting for the first Key EXchange record
-#define SPTPS_SECONDARY_KEX 2 // Ready to receive a secondary Key EXchange record
-#define SPTPS_SIG 3           // Waiting for a SIGnature record
-#define SPTPS_ACK 4           // Waiting for an ACKnowledgement record
-
 // Overhead for datagrams
 #define SPTPS_DATAGRAM_OVERHEAD 21
 
 typedef bool (*send_data_t)(void *handle, uint8_t type, const void *data, size_t len);
 typedef bool (*receive_record_t)(void *handle, uint8_t type, const void *data, uint16_t len);
 
+// Key exchange states
+typedef enum sptps_state_t {
+	SPTPS_KEX = 1,           // Waiting for the first Key EXchange record
+	SPTPS_SECONDARY_KEX = 2, // Ready to receive a secondary Key EXchange record
+	SPTPS_SIG = 3,           // Waiting for a SIGnature record
+	SPTPS_ACK = 4,           // Waiting for an ACKnowledgement record
+} sptps_state_t;
+
+PACKED(struct sptps_kex_t {
+	uint8_t version;
+	uint8_t nonce[ECDH_SIZE];
+	uint8_t pubkey[ECDH_SIZE];
+});
+
+typedef struct sptps_kex_t sptps_kex_t;
+
+STATIC_ASSERT(sizeof(sptps_kex_t) == 65, "sptps_kex_t has invalid size");
+
+typedef union sptps_key_t {
+	struct {
+		uint8_t key0[CHACHA_POLY1305_KEYLEN];
+		uint8_t key1[CHACHA_POLY1305_KEYLEN];
+	};
+	uint8_t both[CHACHA_POLY1305_KEYLEN * 2];
+} sptps_key_t;
+
+STATIC_ASSERT(sizeof(sptps_key_t) == 128, "sptps_key_t has invalid size");
+
 typedef struct sptps {
 	bool initiator;
 	bool datagram;
-	int state;
+	sptps_state_t state;
 
-	char *inbuf;
+	uint8_t *inbuf;
 	size_t buflen;
 	uint16_t reclen;
 
@@ -60,7 +82,7 @@ typedef struct sptps {
 	uint32_t received;
 	unsigned int replaywin;
 	unsigned int farfuture;
-	char *late;
+	uint8_t *late;
 
 	bool outstate;
 	chacha_poly1305_ctx_t *outcipher;
@@ -70,10 +92,10 @@ typedef struct sptps {
 	ecdsa_t *hiskey;
 	ecdh_t *ecdh;
 
-	char *mykex;
-	char *hiskex;
-	char *key;
-	char *label;
+	sptps_kex_t *mykex;
+	sptps_kex_t *hiskex;
+	sptps_key_t *key;
+	uint8_t *label;
 	size_t labellen;
 
 	void *handle;
@@ -82,9 +104,9 @@ typedef struct sptps {
 } sptps_t;
 
 extern unsigned int sptps_replaywin;
-extern void sptps_log_quiet(sptps_t *s, int s_errno, const char *format, va_list ap);
-extern void sptps_log_stderr(sptps_t *s, int s_errno, const char *format, va_list ap);
-extern void (*sptps_log)(sptps_t *s, int s_errno, const char *format, va_list ap);
+extern void sptps_log_quiet(sptps_t *s, int s_errno, const char *format, va_list ap) ATTR_FORMAT(printf, 3, 0);
+extern void sptps_log_stderr(sptps_t *s, int s_errno, const char *format, va_list ap) ATTR_FORMAT(printf, 3, 0);
+extern void (*sptps_log)(sptps_t *s, int s_errno, const char *format, va_list ap) ATTR_FORMAT(printf, 3, 0);
 extern bool sptps_start(sptps_t *s, void *handle, bool initiator, bool datagram, ecdsa_t *mykey, ecdsa_t *hiskey, const void *label, size_t labellen, send_data_t send_data, receive_record_t receive_record);
 extern bool sptps_stop(sptps_t *s);
 extern bool sptps_send_record(sptps_t *s, uint8_t type, const void *data, uint16_t len);

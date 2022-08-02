@@ -3,7 +3,7 @@
 
 /*
     tincctl.h -- header for tincctl.c.
-    Copyright (C) 2011-2016 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2011-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,9 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
+
+#include "system.h"
+#include "ecdsa.h"
 
 extern bool tty;
 extern bool force;
@@ -43,13 +46,11 @@ typedef struct {
 
 extern const var_t variables[];
 
-extern int rstrip(char *value);
-extern char *get_my_name(bool verbose);
+extern size_t rstrip(char *value);
+extern char *get_my_name(bool verbose) ATTR_MALLOC;
 extern bool connect_tincd(bool verbose);
-extern bool sendline(int fd, char *format, ...);
+extern bool sendline(int fd, const char *format, ...) ATTR_FORMAT(printf, 2, 3);
 extern bool recvline(int fd, char *line, size_t len);
 extern int check_port(const char *name);
-extern FILE *fopenmask(const char *filename, const char *mode, mode_t perms);
-extern ecdsa_t *get_pubkey(FILE *f);
 
 #endif

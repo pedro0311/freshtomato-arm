@@ -1,7 +1,7 @@
 /*
     protocol_misc.c -- handle the meta-protocol, miscellaneous functions
     Copyright (C) 1999-2005 Ivo Timmermans,
-                  2000-2013 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,19 +21,14 @@
 #include "system.h"
 
 #include "address_cache.h"
-#include "conf.h"
 #include "connection.h"
+#include "crypto.h"
 #include "logger.h"
 #include "meta.h"
 #include "net.h"
 #include "netutl.h"
 #include "protocol.h"
 #include "utils.h"
-#include "xalloc.h"
-
-#ifndef MIN
-#define MIN(x, y) (((x)<(y))?(x):(y))
-#endif
 
 int maxoutbufsize = 0;
 int mtu_info_interval = 5;
@@ -73,10 +68,21 @@ bool pong_h(connection_t *c, const char *request) {
 
 	if(c->outgoing && c->outgoing->timeout) {
 		c->outgoing->timeout = 0;
-		reset_address_cache(c->outgoing->node->address_cache, &c->address);
+		reset_address_cache(c->node->address_cache);
+		add_recent_address(c->node->address_cache, &c->address);
 	}
 
 	return true;
+}
+
+static bool random_early_drop(connection_t *c) {
+	if(c->outbuf.len > (size_t)maxoutbufsize / 2) {
+		if((c->outbuf.len - (size_t)maxoutbufsize / 2) > prng((size_t)maxoutbufsize / 2)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /* Sending and receiving packets via TCP */
@@ -85,7 +91,7 @@ bool send_tcppacket(connection_t *c, const vpn_packet_t *packet) {
 	/* If there already is a lot of data in the outbuf buffer, discard this packet.
 	   We use a very simple Random Early Drop algorithm. */
 
-	if(2.0 * c->outbuf.len / (float)maxoutbufsize - 1 > (float)rand() / (float)RAND_MAX) {
+	if(random_early_drop(c)) {
 		return true;
 	}
 
@@ -93,13 +99,13 @@ bool send_tcppacket(connection_t *c, const vpn_packet_t *packet) {
 		return false;
 	}
 
-	return send_meta(c, (char *)DATA(packet), packet->len);
+	return send_meta(c, DATA(packet), packet->len);
 }
 
 bool tcppacket_h(connection_t *c, const char *request) {
 	short int len;
 
-	if(sscanf(request, "%*d %hd", &len) != 1) {
+	if(sscanf(request, "%*d %hd", &len) != 1 || len < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "PACKET", c->name,
 		       c->hostname);
 		return false;
@@ -112,15 +118,15 @@ bool tcppacket_h(connection_t *c, const char *request) {
 	return true;
 }
 
-bool send_sptps_tcppacket(connection_t *c, const char *packet, int len) {
+bool send_sptps_tcppacket(connection_t *c, const void *packet, size_t len) {
 	/* If there already is a lot of data in the outbuf buffer, discard this packet.
 	   We use a very simple Random Early Drop algorithm. */
 
-	if(2.0 * c->outbuf.len / (float)maxoutbufsize - 1 > (float)rand() / (float)RAND_MAX) {
+	if(random_early_drop(c)) {
 		return true;
 	}
 
-	if(!send_request(c, "%d %d", SPTPS_PACKET, len)) {
+	if(!send_request(c, "%d %lu", SPTPS_PACKET, (unsigned long)len)) {
 		return false;
 	}
 
@@ -131,7 +137,7 @@ bool send_sptps_tcppacket(connection_t *c, const char *packet, int len) {
 bool sptps_tcppacket_h(connection_t *c, const char *request) {
 	short int len;
 
-	if(sscanf(request, "%*d %hd", &len) != 1) {
+	if(sscanf(request, "%*d %hd", &len) != 1 || len < 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "SPTPS_PACKET", c->name,
 		       c->hostname);
 		return false;

@@ -1,6 +1,6 @@
 /*
     invitation.c -- Create and accept invitations
-    Copyright (C) 2013-2017 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -34,6 +34,9 @@
 #include "tincctl.h"
 #include "utils.h"
 #include "xalloc.h"
+#include "random.h"
+#include "pidfile.h"
+#include "fs.h"
 
 #include "ed25519/sha512.h"
 
@@ -79,8 +82,10 @@ static void scan_for_hostname(const char *filename, char **hostname, char **port
 		p[strcspn(p, "\t ")] = 0;
 
 		if(!*port && !strcasecmp(line, "Port")) {
+			free(*port);
 			*port = xstrdup(q);
 		} else if(!*hostname && !strcasecmp(line, "Address")) {
+			free(*hostname);
 			*hostname = xstrdup(q);
 
 			if(*p) {
@@ -97,7 +102,7 @@ static void scan_for_hostname(const char *filename, char **hostname, char **port
 	fclose(f);
 }
 
-char *get_my_hostname() {
+static bool get_my_hostname(char **out_address, char **out_port) {
 	char *hostname = NULL;
 	char *port = NULL;
 	char *hostport = NULL;
@@ -109,6 +114,22 @@ char *get_my_hostname() {
 		snprintf(filename, sizeof(filename), "%s" SLASH "hosts" SLASH "%s", confbase, name);
 		scan_for_hostname(filename, &hostname, &port);
 		scan_for_hostname(tinc_conf, &hostname, &port);
+	}
+
+	free(name);
+	name = NULL;
+
+	if(!port || (is_decimal(port) && atoi(port) == 0)) {
+		pidfile_t *pidfile = read_pidfile();
+
+		if(pidfile) {
+			free(port);
+			port = xstrdup(pidfile->port);
+			free(pidfile);
+		} else {
+			fprintf(stderr, "tincd is using a dynamic port and is not running. Please start tincd or set the Port option to a non-zero value.\n");
+			goto exit;
+		}
 	}
 
 	if(hostname) {
@@ -133,7 +154,7 @@ char *get_my_hostname() {
 
 		if(s >= 0) {
 			send(s, request, sizeof(request) - 1, 0);
-			int len = recv(s, line, sizeof(line) - 1, MSG_WAITALL);
+			ssize_t len = recv(s, line, sizeof(line) - 1, MSG_WAITALL);
 
 			if(len > 0) {
 				line[len] = 0;
@@ -167,7 +188,7 @@ char *get_my_hostname() {
 	// Check that the hostname is reasonable
 	if(hostname) {
 		for(char *p = hostname; *p; p++) {
-			if(isalnum(*p) || *p == '-' || *p == '.' || *p == ':') {
+			if(isalnum((uint8_t) *p) || *p == '-' || *p == '.' || *p == ':') {
 				continue;
 			}
 
@@ -182,7 +203,7 @@ char *get_my_hostname() {
 		if(!hostname) {
 			fprintf(stderr, "Could not determine the external address or hostname. Please set Address manually.\n");
 			free(port);
-			return NULL;
+			return false;
 		}
 
 		goto save;
@@ -201,7 +222,7 @@ again:
 		fprintf(stderr, "Error while reading stdin: %s\n", strerror(errno));
 		free(hostname);
 		free(port);
-		return NULL;
+		return false;
 	}
 
 	if(!rstrip(line)) {
@@ -213,7 +234,7 @@ again:
 	}
 
 	for(char *p = line; *p; p++) {
-		if(isalnum(*p) || *p == '-' || *p == '.') {
+		if(isalnum((uint8_t) *p) || *p == '-' || *p == '.') {
 			continue;
 		}
 
@@ -253,12 +274,25 @@ done:
 		}
 	}
 
+exit:
 	free(hostname);
+
+	if(hostport && port) {
+		*out_address = hostport;
+		*out_port = port;
+		return true;
+	}
+
+	free(hostport);
 	free(port);
-	return hostport;
+	return false;
 }
 
-static bool fcopy(FILE *out, const char *filename) {
+// Copy host configuration file, replacing Port with the value passed here. Host
+// configs may contain this clause: `Port = 0`, which means 'ask the operating
+// system to allocate any available port'. This obviously won't do for invitation
+// files, so replace it with an actual port we've obtained previously.
+static bool copy_config_replacing_port(FILE *out, const char *filename, const char *port) {
 	FILE *in = fopen(filename, "r");
 
 	if(!in) {
@@ -266,20 +300,42 @@ static bool fcopy(FILE *out, const char *filename) {
 		return false;
 	}
 
-	char buf[1024];
-	size_t len;
+	char line[1024];
 
-	while((len = fread(buf, 1, sizeof(buf), in))) {
-		fwrite(buf, len, 1, out);
+	while(fgets(line, sizeof(line), in)) {
+		const char *var_beg = line + strspn(line, "\t ");
+		const char *var_end = var_beg + strcspn(var_beg, "\t ");
+
+		// Check the name of the variable we've read. If it's Port, replace it with
+		// a port we'll use in invitation URL. Otherwise, just copy the line.
+		if(var_end > var_beg && !strncasecmp(var_beg, "Port", var_end - var_beg)) {
+			fprintf(out, "Port = %s\n", port);
+		} else {
+			fprintf(out, "%s", line);
+		}
 	}
 
+	memzero(line, sizeof(line));
 	fclose(in);
 	return true;
+}
+
+static bool append_host_config(FILE *f, const char *nodename, const char *port) {
+	char path[PATH_MAX];
+	snprintf(path, sizeof(path), "%s" SLASH "hosts" SLASH "%s", confbase, nodename);
+	bool success = copy_config_replacing_port(f, path, port);
+	fclose(f);
+	return success;
 }
 
 int cmd_invite(int argc, char *argv[]) {
 	if(argc < 2) {
 		fprintf(stderr, "Not enough arguments!\n");
+		return 1;
+	}
+
+	if(argc > 2) {
+		fprintf(stderr, "Too many arguments!\n");
 		return 1;
 	}
 
@@ -289,6 +345,7 @@ int cmd_invite(int argc, char *argv[]) {
 		return 1;
 	}
 
+	free(myname);
 	myname = get_my_name(true);
 
 	if(!myname) {
@@ -328,12 +385,11 @@ int cmd_invite(int argc, char *argv[]) {
 		}
 	}
 
-	snprintf(filename, sizeof(filename), "%s" SLASH "invitations", confbase);
-
-	if(mkdir(filename, 0700) && errno != EEXIST) {
-		fprintf(stderr, "Could not create directory %s: %s\n", filename, strerror(errno));
-		return 1;
+	if(!makedirs(DIR_INVITATIONS)) {
+		return false;
 	}
+
+	snprintf(filename, sizeof(filename), "%s" SLASH "invitations", confbase);
 
 	// Count the number of valid invitations, clean up old ones
 	DIR *dir = opendir(filename);
@@ -407,6 +463,7 @@ int cmd_invite(int argc, char *argv[]) {
 
 		if(!f) {
 			fprintf(stderr, "Could not write %s: %s\n", filename, strerror(errno));
+			ecdsa_free(key);
 			return 1;
 		}
 
@@ -415,6 +472,7 @@ int cmd_invite(int argc, char *argv[]) {
 		if(!ecdsa_write_pem_private_key(key, f)) {
 			fprintf(stderr, "Could not write ECDSA private key\n");
 			fclose(f);
+			ecdsa_free(key);
 			return 1;
 		}
 
@@ -442,27 +500,34 @@ int cmd_invite(int argc, char *argv[]) {
 	char hash[64];
 	char *fingerprint = ecdsa_get_base64_public_key(key);
 	sha512(fingerprint, strlen(fingerprint), hash);
-	b64encode_urlsafe(hash, hash, 18);
+	b64encode_tinc_urlsafe(hash, hash, 18);
+
+	ecdsa_free(key);
 
 	// Create a random cookie for this invitation.
 	char cookie[25];
 	randomize(cookie, 18);
 
 	// Create a filename that doesn't reveal the cookie itself
-	char buf[18 + strlen(fingerprint)];
+	const size_t buflen = 18 + strlen(fingerprint);
+	uint8_t *buf = alloca(buflen);
+
 	char cookiehash[64];
 	memcpy(buf, cookie, 18);
-	memcpy(buf + 18, fingerprint, sizeof(buf) - 18);
-	sha512(buf, sizeof(buf), cookiehash);
-	b64encode_urlsafe(cookiehash, cookiehash, 18);
+	memcpy(buf + 18, fingerprint, buflen - 18);
+	sha512(buf, buflen, cookiehash);
+	b64encode_tinc_urlsafe(cookiehash, cookiehash, 18);
 
-	b64encode_urlsafe(cookie, cookie, 18);
+	free(fingerprint);
+
+	b64encode_tinc_urlsafe(cookie, cookie, 18);
 
 	// Create a file containing the details of the invitation.
 	snprintf(filename, sizeof(filename), "%s" SLASH "invitations" SLASH "%s", confbase, cookiehash);
 	int ifd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0600);
 
 	if(!ifd) {
+		memzero(cookie, sizeof(cookie));
 		fprintf(stderr, "Could not create invitation file %s: %s\n", filename, strerror(errno));
 		return 1;
 	}
@@ -474,7 +539,20 @@ int cmd_invite(int argc, char *argv[]) {
 	}
 
 	// Get the local address
-	char *address = get_my_hostname();
+	char *address = NULL;
+	char *port = NULL;
+
+	if(!get_my_hostname(&address, &port)) {
+		memzero(cookie, sizeof(cookie));
+		return 1;
+	}
+
+	// Create an URL from the local address, key hash and cookie
+	char *url;
+	xasprintf(&url, "%s/%s%s", address, hash, cookie);
+
+	memzero(cookie, sizeof(cookie));
+	free(address);
 
 	// Fill in the details.
 	fprintf(f, "Name = %s\n", argv[1]);
@@ -509,14 +587,14 @@ int cmd_invite(int argc, char *argv[]) {
 	fprintf(f, "#---------------------------------------------------------------#\n");
 	fprintf(f, "Name = %s\n", myname);
 
-	char filename2[PATH_MAX];
-	snprintf(filename2, sizeof(filename2), "%s" SLASH "hosts" SLASH "%s", confbase, myname);
-	fcopy(f, filename2);
-	fclose(f);
+	bool appended = append_host_config(f, myname, port);
+	free(port);
 
-	// Create an URL from the local address, key hash and cookie
-	char *url;
-	xasprintf(&url, "%s/%s%s", address, hash, cookie);
+	if(!appended) {
+		fprintf(stderr, "Could not append my config to invitation file: %s.\n", strerror(errno));
+		free_string(url);
+		return 1;
+	}
 
 	// Call the inviation-created script
 	environment_t env;
@@ -528,22 +606,19 @@ int cmd_invite(int argc, char *argv[]) {
 	environment_exit(&env);
 
 	puts(url);
-	free(url);
-	free(address);
+	free_string(url);
 
 	return 0;
 }
 
 static int sock;
-static char cookie[18];
+static char cookie[18], hash[18];
 static sptps_t sptps;
 static char *data;
 static size_t datalen;
 static bool success = false;
 
-static char cookie[18], hash[18];
-
-static char *get_line(const char **data) {
+static char *get_line(char *line, size_t linelen, const char **data) {
 	if(!data || !*data) {
 		return NULL;
 	}
@@ -553,16 +628,15 @@ static char *get_line(const char **data) {
 		return NULL;
 	}
 
-	static char line[1024];
 	const char *end = strchr(*data, '\n');
 	size_t len = end ? (size_t)(end - *data) : strlen(*data);
 
-	if(len >= sizeof(line)) {
+	if(len >= linelen) {
 		fprintf(stderr, "Maximum line length exceeded!\n");
 		return NULL;
 	}
 
-	if(len && !isprint(**data)) {
+	if(len && !isprint((uint8_t) **data)) {
 		abort();
 	}
 
@@ -579,7 +653,9 @@ static char *get_line(const char **data) {
 }
 
 static char *get_value(const char *data, const char *var) {
-	char *line = get_line(&data);
+	static char buf[1024];
+
+	char *line = get_line(buf, sizeof(buf), &data);
 
 	if(!line) {
 		return NULL;
@@ -602,10 +678,10 @@ static char *get_value(const char *data, const char *var) {
 }
 
 static char *grep(const char *data, const char *var) {
-	static char value[1024];
+	char value[1024];
 
 	const char *p = data;
-	int varlen = strlen(var);
+	size_t varlen = strlen(var);
 
 	// Skip all lines not starting with var
 	while(strncasecmp(p, var, varlen) || !strchr(" \t=", p[varlen])) {
@@ -642,21 +718,16 @@ static char *grep(const char *data, const char *var) {
 
 	memcpy(value, p, e - p);
 	value[e - p] = 0;
-	return value;
+	return xstrdup(value);
 }
 
 static bool finalize_join(void) {
-	const char *temp_name = get_value(data, "Name");
+	const char *name = get_value(data, "Name");
 
-	if(!temp_name) {
+	if(!name) {
 		fprintf(stderr, "No Name found in invitation!\n");
 		return false;
 	}
-
-	size_t len = strlen(temp_name);
-	char name[len + 1];
-	memcpy(name, temp_name, len);
-	name[len] = 0;
 
 	if(!check_id(name)) {
 		fprintf(stderr, "Invalid Name found in invitation!\n");
@@ -664,11 +735,15 @@ static bool finalize_join(void) {
 	}
 
 	if(!netname) {
-		netname = grep(data, "NetName");
+		char *net = grep(data, "NetName");
 
-		if(netname && !check_netname(netname, true)) {
-			fprintf(stderr, "Unsafe NetName found in invitation!\n");
-			return false;
+		if(net) {
+			netname = net;
+
+			if(!check_netname(netname, true)) {
+				fprintf(stderr, "Unsafe NetName found in invitation!\n");
+				return false;
+			}
 		}
 	}
 
@@ -699,18 +774,12 @@ make_names:
 
 		// Generate a random netname, ask for a better one later.
 		ask_netname = true;
-		snprintf(temp_netname, sizeof(temp_netname), "join_%x", rand());
+		snprintf(temp_netname, sizeof(temp_netname), "join_%x", prng(UINT32_MAX));
 		netname = temp_netname;
 		goto make_names;
 	}
 
-	if(mkdir(confbase, 0777) && errno != EEXIST) {
-		fprintf(stderr, "Could not create directory %s: %s\n", confbase, strerror(errno));
-		return false;
-	}
-
-	if(mkdir(hosts_dir, 0777) && errno != EEXIST) {
-		fprintf(stderr, "Could not create directory %s: %s\n", hosts_dir, strerror(errno));
+	if(!makedirs(DIR_HOSTS | DIR_CONFBASE | DIR_CACHE)) {
 		return false;
 	}
 
@@ -764,14 +833,16 @@ make_names:
 	const char *p = data;
 	char *l, *value;
 
-	while((l = get_line(&p))) {
+	static char line[1024];
+
+	while((l = get_line(line, sizeof(line), &p))) {
 		// Ignore comments
 		if(*l == '#') {
 			continue;
 		}
 
 		// Split line into variable and value
-		int len = strcspn(l, "\t =");
+		size_t len = strcspn(l, "\t =");
 		value = l + len;
 		value += strspn(value, "\t ");
 
@@ -871,12 +942,12 @@ make_names:
 			return false;
 		}
 
-		while((l = get_line(&p))) {
+		while((l = get_line(line, sizeof(line), &p))) {
 			if(!strcmp(l, "#---------------------------------------------------------------#")) {
 				continue;
 			}
 
-			int len = strcspn(l, "\t =");
+			size_t len = strcspn(l, "\t =");
 
 			if(len == 4 && !strncasecmp(l, "Name", 4)) {
 				value = l + len;
@@ -905,9 +976,9 @@ make_names:
 		return false;
 	}
 
-	char *b64key = ecdsa_get_base64_public_key(key);
+	char *b64_pubkey = ecdsa_get_base64_public_key(key);
 
-	if(!b64key) {
+	if(!b64_pubkey) {
 		return false;
 	}
 
@@ -927,10 +998,10 @@ make_names:
 
 	fclose(f);
 
-	fprintf(fh, "Ed25519PublicKey = %s\n", b64key);
+	fprintf(fh, "Ed25519PublicKey = %s\n", b64_pubkey);
 
-	sptps_send_record(&sptps, 1, b64key, strlen(b64key));
-	free(b64key);
+	sptps_send_record(&sptps, 1, b64_pubkey, strlen(b64_pubkey));
+	free(b64_pubkey);
 	ecdsa_free(key);
 
 #ifndef DISABLE_LEGACY
@@ -988,7 +1059,7 @@ ask_netname:
 	char filename2[PATH_MAX];
 	snprintf(filename, sizeof(filename), "%s" SLASH "tinc-up.invitation", confbase);
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	snprintf(filename2, sizeof(filename2), "%s" SLASH "tinc-up.bat", confbase);
 #else
 	snprintf(filename2, sizeof(filename2), "%s" SLASH "tinc-up", confbase);
@@ -1020,7 +1091,7 @@ ask_netname:
 
 				if(response == 'e') {
 					char *command;
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 					const char *editor = getenv("VISUAL");
 
 					if(!editor) {
@@ -1054,7 +1125,13 @@ ask_netname:
 				}
 			}
 		} else {
-			fprintf(stderr, "A tinc-up script was generated, but has been left disabled.\n");
+			if(force) {
+				rename(filename, filename2);
+				chmod(filename2, 0755);
+				fprintf(stderr, "tinc-up enabled.\n");
+			} else {
+				fprintf(stderr, "A tinc-up script was generated, but has been left disabled.\n");
+			}
 		}
 	} else {
 		// A placeholder was generated.
@@ -1074,9 +1151,9 @@ static bool invitation_send(void *handle, uint8_t type, const void *vdata, size_
 	const char *data = vdata;
 
 	while(len) {
-		int result = send(sock, data, len, 0);
+		ssize_t result = send(sock, data, len, 0);
 
-		if(result == -1 && errno == EINTR) {
+		if(result == -1 && sockwouldblock(sockerrno)) {
 			continue;
 		} else if(result <= 0) {
 			return false;
@@ -1119,6 +1196,21 @@ static bool invitation_receive(void *handle, uint8_t type, const void *msg, uint
 	return true;
 }
 
+bool wait_socket_recv(int fd) {
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+
+	struct timeval tv = {.tv_sec = 5};
+
+	if(select(fd + 1, &fds, NULL, NULL, &tv) != 1) {
+		fprintf(stderr, "Timed out waiting for the server to reply.\n");
+		return false;
+	}
+
+	return true;
+}
+
 int cmd_join(int argc, char *argv[]) {
 	free(data);
 	data = NULL;
@@ -1130,14 +1222,8 @@ int cmd_join(int argc, char *argv[]) {
 	}
 
 	// Make sure confbase exists and is accessible.
-	if(!confbase_given && mkdir(confdir, 0755) && errno != EEXIST) {
-		fprintf(stderr, "Could not create directory %s: %s\n", confdir, strerror(errno));
-		return 1;
-	}
-
-	if(mkdir(confbase, 0777) && errno != EEXIST) {
-		fprintf(stderr, "Could not create directory %s: %s\n", confbase, strerror(errno));
-		return 1;
+	if(!makedirs(DIR_CONFDIR | DIR_CONFBASE)) {
+		return false;
 	}
 
 	if(access(confbase, R_OK | W_OK | X_OK)) {
@@ -1165,7 +1251,7 @@ int cmd_join(int argc, char *argv[]) {
 
 		if(!fgets(line, sizeof(line), stdin)) {
 			fprintf(stderr, "Error while reading stdin: %s\n", strerror(errno));
-			return false;
+			return 1;
 		}
 
 		invitation = line;
@@ -1211,10 +1297,11 @@ int cmd_join(int argc, char *argv[]) {
 	}
 
 	if(!port || !*port) {
-		port = "655";
+		static char default_port[] = "655";
+		port = default_port;
 	}
 
-	if(!b64decode(slash, hash, 24) || !b64decode(slash + 24, cookie, 24)) {
+	if(!b64decode_tinc(slash, hash, 24) || !b64decode_tinc(slash + 24, cookie, 24)) {
 		goto invalid;
 	}
 
@@ -1225,12 +1312,14 @@ int cmd_join(int argc, char *argv[]) {
 		return 1;
 	}
 
-	char *b64key = ecdsa_get_base64_public_key(key);
+	char *b64_pubkey = ecdsa_get_base64_public_key(key);
 
 	// Connect to the tinc daemon mentioned in the URL.
 	struct addrinfo *ai = str2addrinfo(address, port, SOCK_STREAM);
 
 	if(!ai) {
+		free(b64_pubkey);
+		ecdsa_free(key);
 		return 1;
 	}
 
@@ -1244,6 +1333,9 @@ next:
 
 		if(!aip) {
 			freeaddrinfo(ai);
+			free(b64_pubkey);
+			ecdsa_free(key);
+			fprintf(stderr, "Could not connect to inviter. Please make sure the URL you entered is valid.\n");
 			return 1;
 		}
 	}
@@ -1268,13 +1360,13 @@ next:
 	fprintf(stderr, "Connected to %s port %s...\n", address, port);
 
 	// Tell him we have an invitation, and give him our throw-away key.
-	int len = snprintf(line, sizeof(line), "0 ?%s %d.%d\n", b64key, PROT_MAJOR, PROT_MINOR);
+	ssize_t len = snprintf(line, sizeof(line), "0 ?%s %d.%d\n", b64_pubkey, PROT_MAJOR, PROT_MINOR);
 
 	if(len <= 0 || (size_t)len >= sizeof(line)) {
 		abort();
 	}
 
-	if(!sendline(sock, "0 ?%s %d.%d", b64key, PROT_MAJOR, 1)) {
+	if(!sendline(sock, "0 ?%s %d.%d", b64_pubkey, PROT_MAJOR, 1)) {
 		fprintf(stderr, "Error sending request to %s port %s: %s\n", address, port, strerror(errno));
 		closesocket(sock);
 		goto next;
@@ -1290,6 +1382,11 @@ next:
 	}
 
 	freeaddrinfo(ai);
+	ai = NULL;
+	aip = NULL;
+
+	free(b64_pubkey);
+	b64_pubkey = NULL;
 
 	// Check if the hash of the key he gave us matches the hash in the URL.
 	char *fingerprint = line + 2;
@@ -1297,11 +1394,13 @@ next:
 
 	if(sha512(fingerprint, strlen(fingerprint), hishash)) {
 		fprintf(stderr, "Could not create digest\n%s\n", line + 2);
+		ecdsa_free(key);
 		return 1;
 	}
 
 	if(memcmp(hishash, hash, 18)) {
-		fprintf(stderr, "Peer has an invalid key!\n%s\n", line + 2);
+		fprintf(stderr, "Peer has an invalid key. Please make sure you're using the correct URL.\n%s\n", line + 2);
+		ecdsa_free(key);
 		return 1;
 
 	}
@@ -1309,50 +1408,67 @@ next:
 	ecdsa_t *hiskey = ecdsa_set_base64_public_key(fingerprint);
 
 	if(!hiskey) {
+		ecdsa_free(key);
 		return 1;
 	}
 
 	// Start an SPTPS session
 	if(!sptps_start(&sptps, NULL, true, false, key, hiskey, "tinc invitation", 15, invitation_send, invitation_receive)) {
+		ecdsa_free(hiskey);
+		ecdsa_free(key);
 		return 1;
 	}
 
 	// Feed rest of input buffer to SPTPS
 	if(!sptps_receive_data(&sptps, buffer, blen)) {
-		return 1;
+		success = false;
+		goto exit;
 	}
 
-	while((len = recv(sock, line, sizeof(line), 0))) {
+	while(wait_socket_recv(sock) && (len = recv(sock, line, sizeof(line), 0))) {
 		if(len < 0) {
-			if(errno == EINTR) {
+			if(sockwouldblock(sockerrno)) {
 				continue;
 			}
 
-			fprintf(stderr, "Error reading data from %s port %s: %s\n", address, port, strerror(errno));
-			return 1;
+#if HAVE_WINDOWS
+
+			// If socket has been shut down, recv() on Windows returns -1 and sets sockerrno
+			// to WSAESHUTDOWN, while on UNIX-like operating systems recv() returns 0, so we
+			// have to do an explicit check here.
+			if(sockshutdown(sockerrno)) {
+				break;
+			}
+
+#endif
+			fprintf(stderr, "Error reading data from %s port %s: %s\n", address, port, sockstrerror(sockerrno));
+			success = false;
+			goto exit;
 		}
 
 		char *p = line;
 
 		while(len) {
-			int done = sptps_receive_data(&sptps, p, len);
+			size_t done = sptps_receive_data(&sptps, p, len);
 
 			if(!done) {
-				return 1;
+				success = false;
+				goto exit;
 			}
 
-			len -= done;
+			len -= (ssize_t) done;
 			p += done;
 		}
 	}
 
+exit:
 	sptps_stop(&sptps);
 	ecdsa_free(hiskey);
 	ecdsa_free(key);
 	closesocket(sock);
 
 	if(!success) {
-		fprintf(stderr, "Connection closed by peer, invitation cancelled.\n");
+		fprintf(stderr, "Invitation cancelled. Please try again and contact the inviter for assistance if this error persists.\n");
 		return 1;
 	}
 

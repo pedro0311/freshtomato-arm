@@ -1,0 +1,5 @@
+# meson
+src:../src/ed25519/*
+src:../src/chacha-poly1305/*
+src:../src/xoshiro.c
+

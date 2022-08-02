@@ -4,7 +4,7 @@
 /*
     dropin.h -- header file for dropin.c
     Copyright (C) 2000-2005 Ivo Timmermans,
-                  2000-2016 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,16 +26,12 @@ extern int daemon(int, int);
 #endif
 
 #ifndef HAVE_ASPRINTF
-extern int asprintf(char **, const char *, ...);
-extern int vasprintf(char **, const char *, va_list ap);
+extern int asprintf(char **, const char *, ...) ATTR_FORMAT(printf, 2, 3);
+extern int vasprintf(char **, const char *, va_list ap) ATTR_FORMAT(printf, 2, 0);
 #endif
 
 #ifndef HAVE_GETTIMEOFDAY
 extern int gettimeofday(struct timeval *, void *);
-#endif
-
-#ifndef HAVE_NANOSLEEP
-extern int nanosleep(const struct timespec *req, struct timespec *rem);
 #endif
 
 #ifndef timeradd
@@ -56,7 +52,7 @@ extern int nanosleep(const struct timespec *req, struct timespec *rem);
 	} while (0)
 #endif
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 #define mkdir(a, b) mkdir(a)
 #ifndef SHUT_RDWR
 #define SHUT_RDWR SD_BOTH
@@ -67,4 +63,40 @@ extern int nanosleep(const struct timespec *req, struct timespec *rem);
 #define EAI_SYSTEM 0
 #endif
 
+#ifndef MIN
+#define MIN(a,b) (((a)<(b))?(a):(b))
 #endif
+
+#ifndef MAX
+#define MAX(a,b) (((a)>(b))?(a):(b))
+#endif
+
+#define CLAMP(val, min, max) MIN((max), MAX((min), (val)))
+
+#ifdef _MSC_VER
+
+#define PATH_MAX MAX_PATH
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#define isatty _isatty
+#define fileno _fileno
+#define close CloseHandle
+#define __const const
+
+typedef int mode_t;
+typedef int pid_t;
+typedef SSIZE_T ssize_t;
+
+static const int STDIN_FILENO = 0;
+static const int F_OK = 0;
+static const int X_OK = 0;
+static const int W_OK = 2;
+static const int R_OK = 4;
+
+#else // _MSC_VER
+
+#endif // _MSC_VER
+
+extern bool sleep_millis(unsigned int ms);
+
+#endif // TINC_DROPIN_H

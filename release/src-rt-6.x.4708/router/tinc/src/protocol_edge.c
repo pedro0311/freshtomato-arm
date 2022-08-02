@@ -22,11 +22,11 @@
 #include "system.h"
 
 #include "conf.h"
+#include "crypto.h"
 #include "connection.h"
 #include "edge.h"
 #include "graph.h"
 #include "logger.h"
-#include "meta.h"
 #include "net.h"
 #include "netutl.h"
 #include "node.h"
@@ -44,13 +44,13 @@ bool send_add_edge(connection_t *c, const edge_t *e) {
 		char *local_address, *local_port;
 		sockaddr2str(&e->local_address, &local_address, &local_port);
 
-		x = send_request(c, "%d %x %s %s %s %s %x %d %s %s", ADD_EDGE, rand(),
+		x = send_request(c, "%d %x %s %s %s %s %x %d %s %s", ADD_EDGE, prng(UINT32_MAX),
 		                 e->from->name, e->to->name, address, port,
 		                 e->options, e->weight, local_address, local_port);
 		free(local_address);
 		free(local_port);
 	} else {
-		x = send_request(c, "%d %x %s %s %s %s %x %d", ADD_EDGE, rand(),
+		x = send_request(c, "%d %x %s %s %s %s %x %d", ADD_EDGE, prng(UINT32_MAX),
 		                 e->from->name, e->to->name, address, port,
 		                 e->options, e->weight);
 	}
@@ -111,14 +111,12 @@ bool add_edge_h(connection_t *c, const char *request) {
 	}
 
 	if(!from) {
-		from = new_node();
-		from->name = xstrdup(from_name);
+		from = new_node(from_name);
 		node_add(from);
 	}
 
 	if(!to) {
-		to = new_node();
-		to->name = xstrdup(to_name);
+		to = new_node(to_name);
 		node_add(to);
 	}
 
@@ -178,9 +176,9 @@ bool add_edge_h(connection_t *c, const char *request) {
 		}
 
 		if(e->weight != weight) {
-			splay_node_t *node = splay_unlink(edge_weight_tree, e);
+			splay_node_t *node = splay_unlink(&edge_weight_tree, e);
 			e->weight = weight;
-			splay_insert_node(edge_weight_tree, node);
+			splay_insert_node(&edge_weight_tree, node);
 		}
 	} else if(from == myself) {
 		logger(DEBUG_PROTOCOL, LOG_WARNING, "Got %s from %s (%s) for ourself which does not exist",
@@ -219,7 +217,7 @@ bool add_edge_h(connection_t *c, const char *request) {
 }
 
 bool send_del_edge(connection_t *c, const edge_t *e) {
-	return send_request(c, "%d %x %s %s", DEL_EDGE, rand(),
+	return send_request(c, "%d %x %s %s", DEL_EDGE, prng(UINT32_MAX),
 	                    e->from->name, e->to->name);
 }
 

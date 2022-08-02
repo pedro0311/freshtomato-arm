@@ -21,15 +21,16 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
 typedef struct environment {
 	int n;
 	int size;
 	char **entries;
 } environment_t;
 
-extern int environment_add(environment_t *env, const char *format, ...);
-extern int environment_placeholder(environment_t *env);
-extern void environment_update(environment_t *env, int pos, const char *format, ...);
+extern int environment_add(environment_t *env, const char *format, ...) ATTR_FORMAT(printf, 2, 3);
+extern void environment_update(environment_t *env, int pos, const char *format, ...) ATTR_FORMAT(printf, 3, 4);
 extern void environment_init(environment_t *env);
 extern void environment_exit(environment_t *env);
 

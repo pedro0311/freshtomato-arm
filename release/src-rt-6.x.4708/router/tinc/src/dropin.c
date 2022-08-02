@@ -1,7 +1,7 @@
 /*
     dropin.c -- a set of drop-in replacements for libc functions
     Copyright (C) 2000-2005 Ivo Timmermans,
-                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,7 +20,9 @@
 
 #include "system.h"
 
+#ifndef HAVE_ASPRINTF
 #include "xalloc.h"
+#endif
 
 #ifndef HAVE_DAEMON
 /*
@@ -128,7 +130,7 @@ int vasprintf(char **buf, const char *fmt, va_list ap) {
 
 #ifndef HAVE_GETTIMEOFDAY
 int gettimeofday(struct timeval *tv, void *tz) {
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	FILETIME ft;
 	GetSystemTimeAsFileTime(&ft);
 	uint64_t lt = (uint64_t)ft.dwLowDateTime | ((uint64_t)ft.dwHighDateTime << 32);
@@ -144,10 +146,11 @@ int gettimeofday(struct timeval *tv, void *tz) {
 }
 #endif
 
-#ifndef HAVE_NANOSLEEP
-int nanosleep(const struct timespec *req, struct timespec *rem) {
-	(void)rem;
-	struct timeval tv = {req->tv_sec, req->tv_nsec / 1000};
-	return select(0, NULL, NULL, NULL, &tv);
-}
+bool sleep_millis(unsigned int ms) {
+#ifdef _MSC_VER
+	Sleep(ms);
+	return true;
+#else
+	return !usleep(ms * 1000);
 #endif
+}

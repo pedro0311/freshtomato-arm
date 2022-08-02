@@ -20,33 +20,29 @@
 
 #include "system.h"
 
-#include "conf.h"
-#include "connection.h"
-#include "control.h"
-#include "device.h"
-#include "edge.h"
-#include "event.h"
 #include "logger.h"
 #include "names.h"
-#include "net.h"
-#include "node.h"
 #include "process.h"
-#include "subnet.h"
-#include "utils.h"
-#include "xalloc.h"
 #include "version.h"
+
+#ifdef HAVE_WINDOWS
+#include "utils.h"
+#endif
 
 /* If zero, don't detach from the terminal. */
 bool do_detach = true;
-bool sigalrm = false;
 
 extern char **g_argv;
-extern bool use_logfile;
-extern bool use_syslog;
+
+/* If nonzero, use syslog instead of stderr in no-detach mode. */
+bool use_syslog = false;
+
+/* If nonzero, write log entries to a separate file. */
+bool use_logfile = false;
 
 /* Some functions the less gifted operating systems might lack... */
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 static SC_HANDLE manager = NULL;
 static SC_HANDLE service = NULL;
 static SERVICE_STATUS status = {0};
@@ -54,7 +50,8 @@ static SERVICE_STATUS_HANDLE statushandle = 0;
 
 static bool install_service(void) {
 	char command[4096] = "\"";
-	SERVICE_DESCRIPTION description = {"Virtual Private Network daemon"};
+	char description_buffer[] = "Virtual Private Network daemon";
+	SERVICE_DESCRIPTION description = {description_buffer};
 
 	manager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
 
@@ -115,7 +112,7 @@ static bool install_service(void) {
 
 io_t stop_io;
 
-DWORD WINAPI controlhandler(DWORD request, DWORD type, LPVOID data, LPVOID context) {
+static DWORD WINAPI controlhandler(DWORD request, DWORD type, LPVOID data, LPVOID context) {
 	(void)type;
 	(void)data;
 	(void)context;
@@ -149,7 +146,7 @@ DWORD WINAPI controlhandler(DWORD request, DWORD type, LPVOID data, LPVOID conte
 	return NO_ERROR;
 }
 
-VOID WINAPI run_service(DWORD argc, LPTSTR *argv) {
+static VOID WINAPI run_service(DWORD argc, LPTSTR *argv) {
 	extern int main2(int argc, char **argv);
 
 	status.dwServiceType = SERVICE_WIN32;
@@ -205,7 +202,7 @@ bool init_service(void) {
 bool detach(void) {
 	logmode_t logmode;
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGUSR1, SIG_IGN);
 	signal(SIGUSR2, SIG_IGN);
@@ -215,7 +212,7 @@ bool detach(void) {
 #endif
 
 	if(do_detach) {
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 
 		if(daemon(1, 0)) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Couldn't detach from terminal: %s", strerror(errno));

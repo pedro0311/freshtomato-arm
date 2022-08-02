@@ -29,56 +29,59 @@
    We use SHA512 instead of MD5 and SHA1.
  */
 
-static bool prf_xor(int nid, const char *secret, size_t secretlen, char *seed, size_t seedlen, char *out, size_t outlen) {
-	digest_t *digest = digest_open_by_nid(nid, -1);
+static bool prf_xor(nid_t nid, const uint8_t *secret, size_t secretlen, uint8_t *seed, size_t seedlen, uint8_t *out, size_t outlen) {
+	digest_t digest = {0};
 
-	if(!digest) {
+	if(!digest_open_by_nid(&digest, nid, DIGEST_ALGO_SIZE)) {
+		digest_close(&digest);
 		return false;
 	}
 
-	if(!digest_set_key(digest, secret, secretlen)) {
-		digest_close(digest);
+	if(!digest_set_key(&digest, secret, secretlen)) {
+		digest_close(&digest);
 		return false;
 	}
 
-	size_t len = digest_length(digest);
+	size_t len = digest_length(&digest);
 
 	/* Data is what the "inner" HMAC function processes.
 	   It consists of the previous HMAC result plus the seed.
 	 */
 
-	char data[len + seedlen];
+	char *data = alloca(len + seedlen);
 	memset(data, 0, len);
 	memcpy(data + len, seed, seedlen);
 
-	char hash[len];
+	uint8_t *hash = alloca(len);
 
 	while(outlen > 0) {
 		/* Inner HMAC */
-		if(!digest_create(digest, data, len + seedlen, data)) {
-			digest_close(digest);
+		if(!digest_create(&digest, data, len + seedlen, data)) {
+			digest_close(&digest);
 			return false;
 		}
 
 		/* Outer HMAC */
-		if(!digest_create(digest, data, len + seedlen, hash)) {
-			digest_close(digest);
+		if(!digest_create(&digest, data, len + seedlen, hash)) {
+			digest_close(&digest);
 			return false;
 		}
 
 		/* XOR the results of the outer HMAC into the out buffer */
-		for(size_t i = 0; i < len && i < outlen; i++) {
+		size_t i;
+
+		for(i = 0; i < len && i < outlen; i++) {
 			*out++ ^= hash[i];
 		}
 
-		outlen -= len;
+		outlen -= i;
 	}
 
-	digest_close(digest);
+	digest_close(&digest);
 	return true;
 }
 
-bool prf(const char *secret, size_t secretlen, char *seed, size_t seedlen, char *out, size_t outlen) {
+bool prf(const uint8_t *secret, size_t secretlen, uint8_t *seed, size_t seedlen, uint8_t *out, size_t outlen) {
 	/* This construction allows us to easily switch back to a scheme where the PRF is calculated using two different digest algorithms. */
 	memset(out, 0, outlen);
 
