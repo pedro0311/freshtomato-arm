@@ -23,14 +23,12 @@
 
 #include "conf.h"
 #include "connection.h"
+#include "crypto.h"
 #include "logger.h"
-#include "net.h"
-#include "netutl.h"
 #include "node.h"
 #include "protocol.h"
 #include "subnet.h"
 #include "utils.h"
-#include "xalloc.h"
 
 bool send_add_subnet(connection_t *c, const subnet_t *subnet) {
 	char netstr[MAXNETSTR];
@@ -39,7 +37,7 @@ bool send_add_subnet(connection_t *c, const subnet_t *subnet) {
 		return false;
 	}
 
-	return send_request(c, "%d %x %s %s", ADD_SUBNET, rand(), subnet->owner->name, netstr);
+	return send_request(c, "%d %x %s %s", ADD_SUBNET, prng(UINT32_MAX), subnet->owner->name, netstr);
 }
 
 bool add_subnet_h(connection_t *c, const char *request) {
@@ -86,8 +84,7 @@ bool add_subnet_h(connection_t *c, const char *request) {
 	}
 
 	if(!owner) {
-		owner = new_node();
-		owner->name = xstrdup(name);
+		owner = new_node(name);
 		node_add(owner);
 	}
 
@@ -155,7 +152,7 @@ bool send_del_subnet(connection_t *c, const subnet_t *s) {
 		return false;
 	}
 
-	return send_request(c, "%d %x %s %s", DEL_SUBNET, rand(), s->owner->name, netstr);
+	return send_request(c, "%d %x %s %s", DEL_SUBNET, prng(UINT32_MAX), s->owner->name, netstr);
 }
 
 bool del_subnet_h(connection_t *c, const char *request) {

@@ -1,0 +1,22 @@
+image: netbsd/9.x
+
+packages:
+  - cmocka
+  - gtexinfo
+  - libgcrypt
+  - lz4
+  - lzo
+  - meson
+  - miniupnpc
+  - pkgconf
+
+sources:
+  - https://github.com/gsliepen/tinc
+
+environment:
+  PKG_CONFIG_PATH: /usr/pkg/lib/pkgconfig
+
+tasks:
+  - openssl: sh tinc/.ci/bsd/run.sh openssl
+  - nolegacy: sh tinc/.ci/bsd/run.sh nolegacy
+  - gcrypt: sh tinc/.ci/bsd/run.sh gcrypt

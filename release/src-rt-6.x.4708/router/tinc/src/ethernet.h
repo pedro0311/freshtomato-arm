@@ -21,6 +21,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
 #ifndef ETH_ALEN
 #define ETH_ALEN 6
 #endif
@@ -59,22 +61,23 @@
 #endif
 
 #ifndef HAVE_STRUCT_ETHER_HEADER
-struct ether_header {
+PACKED(struct ether_header {
 	uint8_t ether_dhost[ETH_ALEN];
 	uint8_t ether_shost[ETH_ALEN];
 	uint16_t ether_type;
-} __attribute__((__gcc_struct__)) __attribute((__packed__));
+});
 #endif
 
+STATIC_ASSERT(sizeof(struct ether_header) == 14, "ether_header has incorrect size");
+
 #ifndef HAVE_STRUCT_ARPHDR
-struct arphdr {
+PACKED(struct arphdr {
 	uint16_t ar_hrd;
 	uint16_t ar_pro;
 	uint8_t ar_hln;
 	uint8_t ar_pln;
 	uint16_t ar_op;
-} __attribute__((__gcc_struct__)) __attribute((__packed__));
-
+});
 #define ARPOP_REQUEST 1
 #define ARPOP_REPLY 2
 #define ARPOP_RREQUEST 3
@@ -84,19 +87,23 @@ struct arphdr {
 #define ARPOP_NAK 10
 #endif
 
+STATIC_ASSERT(sizeof(struct arphdr) == 8, "arphdr has incorrect size");
+
 #ifndef HAVE_STRUCT_ETHER_ARP
-struct  ether_arp {
+PACKED(struct ether_arp {
 	struct  arphdr ea_hdr;
 	uint8_t arp_sha[ETH_ALEN];
 	uint8_t arp_spa[4];
 	uint8_t arp_tha[ETH_ALEN];
 	uint8_t arp_tpa[4];
-} __attribute__((__gcc_struct__)) __attribute((__packed__));
+});
 #define arp_hrd ea_hdr.ar_hrd
 #define arp_pro ea_hdr.ar_pro
 #define arp_hln ea_hdr.ar_hln
 #define arp_pln ea_hdr.ar_pln
 #define arp_op ea_hdr.ar_op
 #endif
+
+STATIC_ASSERT(sizeof(struct ether_arp) == 28, "ether_arp has incorrect size");
 
 #endif

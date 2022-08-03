@@ -7,7 +7,7 @@
     Not a compatible replacement for <stdint.h>, do not blindly use it as such.
 */
 
-#if ((defined(__STDC__) && __STDC__ && __STDC_VERSION__ >= 199901L) || (defined(__WATCOMC__) && (defined(_STDINT_H_INCLUDED) || __WATCOMC__ >= 1250)) || (defined(__GNUC__) && (defined(_STDINT_H) || defined(_STDINT_H_) || defined(__UINT_FAST64_TYPE__)) )) && !defined(FIXEDINT_H_INCLUDED)
+#if ((defined(__STDC__) && __STDC__ && __STDC_VERSION__ >= 199901L) || (defined(_MSC_VER) && _MSC_VER >= 1600) || (defined(__WATCOMC__) && (defined(_STDINT_H_INCLUDED) || __WATCOMC__ >= 1250)) || (defined(__GNUC__) && (defined(_STDINT_H) || defined(_STDINT_H_) || defined(__UINT_FAST64_TYPE__)) )) && !defined(FIXEDINT_H_INCLUDED)
 #include <stdint.h>
 #define FIXEDINT_H_INCLUDED
 
@@ -77,11 +77,11 @@ static inline unsigned char shlu8(unsigned char a, uint32_t b) {
 }
 
 static inline int32_t shl32(uint32_t a, uint32_t b) {
-	return a << b;
+	return (int32_t)(a << b);
 }
 
 static inline int64_t shl64(uint64_t a, uint32_t b) {
-	return a << b;
+	return (int64_t)(a << b);
 }
 
 static inline uint64_t shlu64(uint64_t a, uint32_t b) {

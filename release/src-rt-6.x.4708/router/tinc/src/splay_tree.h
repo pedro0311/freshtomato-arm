@@ -41,7 +41,6 @@ typedef struct splay_node_t {
 
 typedef int (*splay_compare_t)(const void *data1, const void *data2);
 typedef void (*splay_action_t)(const void *data);
-typedef void (*splay_action_node_t)(const splay_node_t *node);
 
 typedef struct splay_tree_t {
 
@@ -64,11 +63,11 @@ typedef struct splay_tree_t {
 
 /* (De)constructors */
 
-extern splay_tree_t *splay_alloc_tree(splay_compare_t compare, splay_action_t delete) __attribute__((__malloc__));
 extern void splay_free_tree(splay_tree_t *tree);
+extern splay_tree_t *splay_alloc_tree(splay_compare_t compare, splay_action_t delete) ATTR_MALLOC ATTR_DEALLOCATOR(splay_free_tree);
 
-extern splay_node_t *splay_alloc_node(void) __attribute__((__malloc__));
 extern void splay_free_node(splay_tree_t *tree, splay_node_t *node);
+extern splay_node_t *splay_alloc_node(void) ATTR_MALLOC ATTR_DEALLOCATOR(splay_free_node);
 
 /* Insertion and deletion */
 
@@ -86,6 +85,7 @@ extern void splay_delete_node(splay_tree_t *tree, splay_node_t *node);
 
 /* Fast tree cleanup */
 
+extern void splay_empty_tree(splay_tree_t *tree);
 extern void splay_delete_tree(splay_tree_t *tree);
 
 /* Searching */

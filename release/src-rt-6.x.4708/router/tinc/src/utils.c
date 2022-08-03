@@ -45,19 +45,21 @@ static const char base64_decode[256] = {
 	        -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         };
 
-static int charhex2bin(char c) {
-	if(isdigit(c)) {
-		return c - '0';
+static uint8_t charhex2bin(char c) {
+	uint8_t cu = (uint8_t) c;
+
+	if(isdigit(cu)) {
+		return cu - '0';
 	} else {
-		return toupper(c) - 'A' + 10;
+		return toupper(cu) - 'A' + 10;
 	}
 }
 
 size_t hex2bin(const char *src, void *vdst, size_t length) {
-	char *dst = vdst;
+	uint8_t *dst = vdst;
 	size_t i;
 
-	for(i = 0; i < length && isxdigit(src[i * 2]) && isxdigit(src[i * 2 + 1]); i++) {
+	for(i = 0; i < length && isxdigit((uint8_t) src[i * 2]) && isxdigit((uint8_t) src[i * 2 + 1]); i++) {
 		dst[i] = charhex2bin(src[i * 2]) * 16 + charhex2bin(src[i * 2 + 1]);
 	}
 
@@ -67,7 +69,8 @@ size_t hex2bin(const char *src, void *vdst, size_t length) {
 size_t bin2hex(const void *vsrc, char *dst, size_t length) {
 	const char *src = vsrc;
 
-	for(size_t i = length; i-- > 0;) {
+	for(size_t i = length; i > 0;) {
+		--i;
 		dst[i * 2 + 1] = hexadecimals[(unsigned char) src[i] & 15];
 		dst[i * 2] = hexadecimals[(unsigned char) src[i] >> 4];
 	}
@@ -76,13 +79,13 @@ size_t bin2hex(const void *vsrc, char *dst, size_t length) {
 	return length * 2;
 }
 
-size_t b64decode(const char *src, void *dst, size_t length) {
+size_t b64decode_tinc(const char *src, void *dst, size_t length) {
 	size_t i;
 	uint32_t triplet = 0;
 	unsigned char *udst = (unsigned char *)dst;
 
 	for(i = 0; i < length && src[i]; i++) {
-		triplet |= base64_decode[src[i] & 0xff] << (6 * (i & 3));
+		triplet |= (uint32_t)(base64_decode[src[i] & 0xff] << (6 * (i & 3)));
 
 		if((i & 3) == 3) {
 			if(triplet & 0xff000000U) {
@@ -116,7 +119,25 @@ size_t b64decode(const char *src, void *dst, size_t length) {
 	}
 }
 
-static size_t b64encode_internal(const void *src, char *dst, size_t length, const char *alphabet) {
+bool is_decimal(const char *str) {
+	if(!str) {
+		return false;
+	}
+
+	errno = 0;
+	char *badchar = NULL;
+	strtol(str, &badchar, 10);
+	return !errno && badchar != str && !*badchar;
+}
+
+// itoa() conflicts with a similarly named function under MinGW.
+char *int_to_str(int num) {
+	char *str = NULL;
+	xasprintf(&str, "%d", num);
+	return str;
+}
+
+static size_t b64encode_tinc_internal(const void *src, char *dst, size_t length, const char *alphabet) {
 	uint32_t triplet;
 	const unsigned char *usrc = (unsigned char *)src;
 	size_t si = length / 3 * 3;
@@ -165,15 +186,15 @@ static size_t b64encode_internal(const void *src, char *dst, size_t length, cons
 	return length;
 }
 
-size_t b64encode(const void *src, char *dst, size_t length) {
-	return b64encode_internal(src, dst, length, base64_original);
+size_t b64encode_tinc(const void *src, char *dst, size_t length) {
+	return b64encode_tinc_internal(src, dst, length, base64_original);
 }
 
-size_t b64encode_urlsafe(const void *src, char *dst, size_t length) {
-	return b64encode_internal(src, dst, length, base64_urlsafe);
+size_t b64encode_tinc_urlsafe(const void *src, char *dst, size_t length) {
+	return b64encode_tinc_internal(src, dst, length, base64_urlsafe);
 }
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 const char *winerror(int err) {
 	static char buf[1024], *ptr;
 
@@ -192,24 +213,13 @@ const char *winerror(int err) {
 }
 #endif
 
-unsigned int bitfield_to_int(const void *bitfield, size_t size) {
-	unsigned int value = 0;
-
-	if(size > sizeof(value)) {
-		size = sizeof(value);
-	}
-
-	memcpy(&value, bitfield, size);
-	return value;
-}
-
 bool check_id(const char *id) {
 	if(!id || !*id) {
 		return false;
 	}
 
 	for(; *id; id++)
-		if(!isalnum(*id) && *id != '_') {
+		if(!isalnum((uint8_t) *id) && *id != '_') {
 			return false;
 		}
 
@@ -222,7 +232,7 @@ bool check_netname(const char *netname, bool strict) {
 	}
 
 	for(const char *c = netname; *c; c++) {
-		if(iscntrl(*c)) {
+		if(iscntrl((uint8_t) *c)) {
 			return false;
 		}
 
@@ -268,7 +278,7 @@ char *replace_name(const char *name) {
 		ret_name = xstrdup(envname);
 
 		for(char *c = ret_name; *c; c++)
-			if(!isalnum(*c)) {
+			if(!isalnum((uint8_t) *c)) {
 				*c = '_';
 			}
 	} else {
@@ -282,4 +292,9 @@ char *replace_name(const char *name) {
 	}
 
 	return ret_name;
+}
+
+bool string_eq(const char *first, const char *second) {
+	return !first == !second &&
+	       !(first && second && strcmp(first, second));
 }

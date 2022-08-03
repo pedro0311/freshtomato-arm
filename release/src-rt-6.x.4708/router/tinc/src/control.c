@@ -18,13 +18,10 @@
 */
 
 #include "system.h"
-#include "crypto.h"
 #include "conf.h"
 #include "control.h"
 #include "control_common.h"
-#include "graph.h"
 #include "logger.h"
-#include "meta.h"
 #include "names.h"
 #include "net.h"
 #include "netutl.h"
@@ -32,6 +29,8 @@
 #include "route.h"
 #include "utils.h"
 #include "xalloc.h"
+#include "random.h"
+#include "pidfile.h"
 
 char controlcookie[65];
 
@@ -110,7 +109,7 @@ bool control_h(connection_t *c, const char *request) {
 			return control_return(c, REQ_DISCONNECT, -1);
 		}
 
-		for list_each(connection_t, other, connection_list) {
+		for list_each(connection_t, other, &connection_list) {
 			if(strcmp(other->name, name)) {
 				continue;
 			}
@@ -131,11 +130,15 @@ bool control_h(connection_t *c, const char *request) {
 		pcap = true;
 		return true;
 
-	case REQ_LOG:
-		sscanf(request, "%*d %*d %d", &c->outcompression);
+	case REQ_LOG: {
+		int level = 0, colorize = 0;
+		sscanf(request, "%*d %*d %d %d", &level, &colorize);
+		c->log_level = CLAMP(level, DEBUG_UNSET, DEBUG_SCARY_THINGS);
 		c->status.log = true;
+		c->status.log_color = colorize;
 		logcontrol = true;
 		return true;
+	}
 
 	default:
 		return send_request(c, "%d %d", CONTROL, REQ_INVALID);
@@ -146,16 +149,6 @@ bool init_control(void) {
 	randomize(controlcookie, sizeof(controlcookie) / 2);
 	bin2hex(controlcookie, controlcookie, sizeof(controlcookie) / 2);
 
-	mode_t mask = umask(0);
-	umask(mask | 077);
-	FILE *f = fopen(pidfilename, "w");
-	umask(mask);
-
-	if(!f) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Cannot write control socket cookie file %s: %s", pidfilename, strerror(errno));
-		return false;
-	}
-
 	// Get the address and port of the first listening socket
 
 	char *localhost = NULL;
@@ -165,7 +158,7 @@ bool init_control(void) {
 	// Make sure we have a valid address, and map 0.0.0.0 and :: to 127.0.0.1 and ::1.
 
 	if(getsockname(listen_socket[0].tcp.fd, &sa.sa, &len)) {
-		xasprintf(&localhost, "127.0.0.1 port %s", myport);
+		xasprintf(&localhost, "127.0.0.1 port %s", myport.tcp);
 	} else {
 		if(sa.sa.sa_family == AF_INET) {
 			if(sa.in.sin_addr.s_addr == 0) {
@@ -182,12 +175,15 @@ bool init_control(void) {
 		localhost = sockaddr2hostname(&sa);
 	}
 
-	fprintf(f, "%d %s %s\n", (int)getpid(), controlcookie, localhost);
-
+	bool wrote = write_pidfile(controlcookie, localhost);
 	free(localhost);
-	fclose(f);
 
-#ifndef HAVE_MINGW
+	if(!wrote) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Cannot write control socket cookie file %s: %s", pidfilename, strerror(errno));
+		return false;
+	}
+
+#ifndef HAVE_WINDOWS
 	int unix_fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
 	if(unix_fd < 0) {
@@ -195,13 +191,16 @@ bool init_control(void) {
 		return false;
 	}
 
-	struct sockaddr_un sa_un;
+	struct sockaddr_un sa_un = {
+		.sun_family = AF_UNIX,
+	};
 
-	sa_un.sun_family = AF_UNIX;
+	if(strlen(unixsocketname) >= sizeof(sa_un.sun_path)) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "UNIX socket filename %s is too long!", unixsocketname);
+		return false;
+	}
 
 	strncpy(sa_un.sun_path, unixsocketname, sizeof(sa_un.sun_path));
-
-	sa_un.sun_path[sizeof(sa_un.sun_path) - 1] = 0;
 
 	if(connect(unix_fd, (struct sockaddr *)&sa_un, sizeof(sa_un)) >= 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "UNIX socket %s is still in use!", unixsocketname);
@@ -210,6 +209,7 @@ bool init_control(void) {
 
 	unlink(unixsocketname);
 
+	mode_t mask = umask(0);
 	umask(mask | 077);
 	int result = bind(unix_fd, (struct sockaddr *)&sa_un, sizeof(sa_un));
 	umask(mask);
@@ -231,7 +231,7 @@ bool init_control(void) {
 }
 
 void exit_control(void) {
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	unlink(unixsocketname);
 	io_del(&unix_socket);
 	close(unix_socket.fd);

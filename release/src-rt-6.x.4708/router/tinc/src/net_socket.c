@@ -25,10 +25,9 @@
 #include "address_cache.h"
 #include "conf.h"
 #include "connection.h"
-#include "control_common.h"
+#include "crypto.h"
 #include "list.h"
 #include "logger.h"
-#include "meta.h"
 #include "names.h"
 #include "net.h"
 #include "netutl.h"
@@ -41,15 +40,28 @@ int maxtimeout = 900;
 int seconds_till_retry = 5;
 int udp_rcvbuf = 1024 * 1024;
 int udp_sndbuf = 1024 * 1024;
+bool udp_rcvbuf_warnings;
+bool udp_sndbuf_warnings;
 int max_connection_burst = 10;
 int fwmark;
 
 listen_socket_t listen_socket[MAXSOCKETS];
 int listen_sockets;
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 io_t unix_socket;
 #endif
-list_t *outgoing_list = NULL;
+
+static void free_outgoing(outgoing_t *outgoing) {
+	timeout_del(&outgoing->ev);
+	free(outgoing);
+}
+
+list_t outgoing_list = {
+	.head = NULL,
+	.tail = NULL,
+	.count = 0,
+	.delete = (list_action_t)free_outgoing,
+};
 
 /* Setup sockets */
 
@@ -104,7 +116,7 @@ static bool bind_to_interface(int sd) {
 	int status;
 #endif /* defined(SOL_SOCKET) && defined(SO_BINDTODEVICE) */
 
-	if(!get_config_string(lookup_config(config_tree, "BindToInterface"), &iface)) {
+	if(!get_config_string(lookup_config(&config_tree, "BindToInterface"), &iface)) {
 		return true;
 	}
 
@@ -164,9 +176,20 @@ static bool bind_to_address(connection_t *c) {
 	return true;
 }
 
+static bool try_bind(int nfd, const sockaddr_t *sa, const char *type) {
+	if(!bind(nfd, &sa->sa, SALEN(sa->sa))) {
+		return true;
+	}
+
+	closesocket(nfd);
+	char *addrstr = sockaddr2hostname(sa);
+	logger(DEBUG_ALWAYS, LOG_ERR, "Can't bind to %s/%s: %s", addrstr, type, sockstrerror(sockerrno));
+	free(addrstr);
+	return false;
+}
+
 int setup_listen_socket(const sockaddr_t *sa) {
 	int nfd;
-	char *addrstr;
 	int option;
 	char *iface;
 
@@ -205,7 +228,7 @@ int setup_listen_socket(const sockaddr_t *sa) {
 #endif
 
 	if(get_config_string
-	                (lookup_config(config_tree, "BindToInterface"), &iface)) {
+	                (lookup_config(&config_tree, "BindToInterface"), &iface)) {
 #if defined(SOL_SOCKET) && defined(SO_BINDTODEVICE)
 		struct ifreq ifr;
 
@@ -225,11 +248,7 @@ int setup_listen_socket(const sockaddr_t *sa) {
 #endif
 	}
 
-	if(bind(nfd, &sa->sa, SALEN(sa->sa))) {
-		closesocket(nfd);
-		addrstr = sockaddr2hostname(sa);
-		logger(DEBUG_ALWAYS, LOG_ERR, "Can't bind to %s/tcp: %s", addrstr, sockstrerror(sockerrno));
-		free(addrstr);
+	if(!try_bind(nfd, sa, "tcp")) {
 		return -1;
 	}
 
@@ -242,9 +261,36 @@ int setup_listen_socket(const sockaddr_t *sa) {
 	return nfd;
 }
 
+static void set_udp_buffer(int nfd, int type, const char *name, int size, bool warnings) {
+	if(!size) {
+		return;
+	}
+
+	if(setsockopt(nfd, SOL_SOCKET, type, (void *)&size, sizeof(size))) {
+		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't set UDP %s to %i: %s", name, size, sockstrerror(sockerrno));
+		return;
+	}
+
+	if(!warnings) {
+		return;
+	}
+
+	// The system may cap the requested buffer size.
+	// Read back the value and check if it is now as requested.
+	int actual = -1;
+	socklen_t optlen = sizeof(actual);
+
+	if(getsockopt(nfd, SOL_SOCKET, type, (void *)&actual, &optlen)) {
+		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't read back UDP %s: %s", name, sockstrerror(sockerrno));
+	} else if(optlen != sizeof(actual)) {
+		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't read back UDP %s: unexpected returned optlen %d", name, (int)optlen);
+	} else if(actual < size) {
+		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't set UDP %s to %i, the system set it to %i instead", name, size, actual);
+	}
+}
+
 int setup_vpn_in_socket(const sockaddr_t *sa) {
 	int nfd;
-	char *addrstr;
 	int option;
 
 	nfd = socket(sa->sa.sa_family, SOCK_DGRAM, IPPROTO_UDP);
@@ -285,13 +331,8 @@ int setup_vpn_in_socket(const sockaddr_t *sa) {
 	setsockopt(nfd, SOL_SOCKET, SO_REUSEADDR, (void *)&option, sizeof(option));
 	setsockopt(nfd, SOL_SOCKET, SO_BROADCAST, (void *)&option, sizeof(option));
 
-	if(udp_rcvbuf && setsockopt(nfd, SOL_SOCKET, SO_RCVBUF, (void *)&udp_rcvbuf, sizeof(udp_rcvbuf))) {
-		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't set UDP SO_RCVBUF to %i: %s", udp_rcvbuf, sockstrerror(sockerrno));
-	}
-
-	if(udp_sndbuf && setsockopt(nfd, SOL_SOCKET, SO_SNDBUF, (void *)&udp_sndbuf, sizeof(udp_sndbuf))) {
-		logger(DEBUG_ALWAYS, LOG_WARNING, "Can't set UDP SO_SNDBUF to %i: %s", udp_sndbuf, sockstrerror(sockerrno));
-	}
+	set_udp_buffer(nfd, SO_RCVBUF, "SO_RCVBUF", udp_rcvbuf, udp_rcvbuf_warnings);
+	set_udp_buffer(nfd, SO_SNDBUF, "SO_SNDBUF", udp_sndbuf, udp_sndbuf_warnings);
 
 #if defined(IPV6_V6ONLY)
 
@@ -350,11 +391,7 @@ int setup_vpn_in_socket(const sockaddr_t *sa) {
 		return -1;
 	}
 
-	if(bind(nfd, &sa->sa, SALEN(sa->sa))) {
-		closesocket(nfd);
-		addrstr = sockaddr2hostname(sa);
-		logger(DEBUG_ALWAYS, LOG_ERR, "Can't bind to %s/udp: %s", addrstr, sockstrerror(sockerrno));
-		free(addrstr);
+	if(!try_bind(nfd, sa, "udp")) {
 		return -1;
 	}
 
@@ -373,7 +410,7 @@ void retry_outgoing(outgoing_t *outgoing) {
 	}
 
 	timeout_add(&outgoing->ev, retry_outgoing_handler, outgoing, &(struct timeval) {
-		outgoing->timeout, rand() % 100000
+		outgoing->timeout, jitter()
 	});
 
 	logger(DEBUG_CONNECTIONS, LOG_NOTICE, "Trying to re-establish outgoing connection in %d seconds", outgoing->timeout);
@@ -389,7 +426,7 @@ void finish_connecting(connection_t *c) {
 }
 
 static void do_outgoing_pipe(connection_t *c, const char *command) {
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	int fd[2];
 
 	if(socketpair(AF_UNIX, SOCK_STREAM, 0, fd)) {
@@ -419,8 +456,11 @@ static void do_outgoing_pipe(connection_t *c, const char *command) {
 	sockaddr2str(&c->address, &host, &port);
 	setenv("REMOTEADDRESS", host, true);
 	setenv("REMOTEPORT", port, true);
-	setenv("NODE", c->name, true);
 	setenv("NAME", myself->name, true);
+
+	if(c->name) {
+		setenv("NODE", c->name, true);
+	}
 
 	if(netname) {
 		setenv("NETNAME", netname, true);
@@ -611,12 +651,7 @@ begin:
 	c->last_ping_time = time(NULL);
 	c->status.connecting = true;
 	c->name = xstrdup(outgoing->node->name);
-#ifndef DISABLE_LEGACY
-	c->outcipher = myself->connection->outcipher;
-	c->outdigest = myself->connection->outdigest;
-#endif
 	c->outmaclength = myself->connection->outmaclength;
-	c->outcompression = myself->connection->outcompression;
 	c->last_ping_time = now.tv_sec;
 
 	connection_add(c);
@@ -638,20 +673,58 @@ void setup_outgoing_connection(outgoing_t *outgoing, bool verbose) {
 
 	if(n->connection) {
 		logger(DEBUG_CONNECTIONS, LOG_INFO, "Already connected to %s", n->name);
+	} else {
+		do_outgoing_connection(outgoing);
+	}
+}
 
-		if(!n->connection->outgoing) {
-			n->connection->outgoing = outgoing;
-			return;
+static bool check_tarpit(const sockaddr_t *sa, int fd) {
+	// Check if we get many connections from the same host
+
+	static sockaddr_t prev_sa;
+
+	if(!sockaddrcmp_noport(sa, &prev_sa)) {
+		static time_t samehost_burst;
+		static time_t samehost_burst_time;
+
+		if(now.tv_sec - samehost_burst_time > samehost_burst) {
+			samehost_burst = 0;
 		} else {
-			goto remove;
+			samehost_burst -= now.tv_sec - samehost_burst_time;
+		}
+
+		samehost_burst_time = now.tv_sec;
+		samehost_burst++;
+
+		if(samehost_burst > max_connection_burst) {
+			tarpit(fd);
+			return true;
 		}
 	}
 
-	do_outgoing_connection(outgoing);
-	return;
+	memcpy(&prev_sa, &sa, sizeof(sa));
 
-remove:
-	list_delete(outgoing_list, outgoing);
+	// Check if we get many connections from different hosts
+
+	static time_t connection_burst;
+	static time_t connection_burst_time;
+
+	if(now.tv_sec - connection_burst_time > connection_burst) {
+		connection_burst = 0;
+	} else {
+		connection_burst -= now.tv_sec - connection_burst_time;
+	}
+
+	connection_burst_time = now.tv_sec;
+	connection_burst++;
+
+	if(connection_burst >= max_connection_burst) {
+		connection_burst = max_connection_burst;
+		tarpit(fd);
+		return true;
+	}
+
+	return false;
 }
 
 /*
@@ -675,48 +748,7 @@ void handle_new_meta_connection(void *data, int flags) {
 
 	sockaddrunmap(&sa);
 
-	// Check if we get many connections from the same host
-
-	static sockaddr_t prev_sa;
-
-	if(!sockaddrcmp_noport(&sa, &prev_sa)) {
-		static int samehost_burst;
-		static int samehost_burst_time;
-
-		if(now.tv_sec - samehost_burst_time > samehost_burst) {
-			samehost_burst = 0;
-		} else {
-			samehost_burst -= now.tv_sec - samehost_burst_time;
-		}
-
-		samehost_burst_time = now.tv_sec;
-		samehost_burst++;
-
-		if(samehost_burst > max_connection_burst) {
-			tarpit(fd);
-			return;
-		}
-	}
-
-	memcpy(&prev_sa, &sa, sizeof(sa));
-
-	// Check if we get many connections from different hosts
-
-	static int connection_burst;
-	static int connection_burst_time;
-
-	if(now.tv_sec - connection_burst_time > connection_burst) {
-		connection_burst = 0;
-	} else {
-		connection_burst -= now.tv_sec - connection_burst_time;
-	}
-
-	connection_burst_time = now.tv_sec;
-	connection_burst++;
-
-	if(connection_burst >= max_connection_burst) {
-		connection_burst = max_connection_burst;
-		tarpit(fd);
+	if(!is_local_connection(&sa) && check_tarpit(&sa, fd)) {
 		return;
 	}
 
@@ -724,12 +756,7 @@ void handle_new_meta_connection(void *data, int flags) {
 
 	c = new_connection();
 	c->name = xstrdup("<unknown>");
-#ifndef DISABLE_LEGACY
-	c->outcipher = myself->connection->outcipher;
-	c->outdigest = myself->connection->outdigest;
-#endif
 	c->outmaclength = myself->connection->outmaclength;
-	c->outcompression = myself->connection->outcompression;
 
 	c->address = sa;
 	c->hostname = sockaddr2hostname(&sa);
@@ -747,7 +774,7 @@ void handle_new_meta_connection(void *data, int flags) {
 	c->allow_request = ID;
 }
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 /*
   accept a new UNIX socket connection
 */
@@ -785,25 +812,16 @@ void handle_new_unix_connection(void *data, int flags) {
 }
 #endif
 
-static void free_outgoing(outgoing_t *outgoing) {
-	timeout_del(&outgoing->ev);
-	free(outgoing);
-}
-
 void try_outgoing_connections(void) {
 	/* If there is no outgoing list yet, create one. Otherwise, mark all outgoings as deleted. */
 
-	if(!outgoing_list) {
-		outgoing_list = list_alloc((list_action_t)free_outgoing);
-	} else {
-		for list_each(outgoing_t, outgoing, outgoing_list) {
-			outgoing->timeout = -1;
-		}
+	for list_each(outgoing_t, outgoing, &outgoing_list) {
+		outgoing->timeout = -1;
 	}
 
 	/* Make sure there is one outgoing_t in the list for each ConnectTo. */
 
-	for(config_t *cfg = lookup_config(config_tree, "ConnectTo"); cfg; cfg = lookup_config_next(config_tree, cfg)) {
+	for(config_t *cfg = lookup_config(&config_tree, "ConnectTo"); cfg; cfg = lookup_config_next(&config_tree, cfg)) {
 		char *name;
 		get_config_string(cfg, &name);
 
@@ -822,7 +840,7 @@ void try_outgoing_connections(void) {
 
 		bool found = false;
 
-		for list_each(outgoing_t, outgoing, outgoing_list) {
+		for list_each(outgoing_t, outgoing, &outgoing_list) {
 			if(!strcmp(outgoing->node->name, name)) {
 				found = true;
 				outgoing->timeout = 0;
@@ -835,20 +853,21 @@ void try_outgoing_connections(void) {
 			node_t *n = lookup_node(name);
 
 			if(!n) {
-				n = new_node();
-				n->name = xstrdup(name);
+				n = new_node(name);
 				node_add(n);
 			}
 
 			outgoing->node = n;
-			list_insert_tail(outgoing_list, outgoing);
+			list_insert_tail(&outgoing_list, outgoing);
 			setup_outgoing_connection(outgoing, true);
 		}
+
+		free(name);
 	}
 
 	/* Terminate any connections whose outgoing_t is to be deleted. */
 
-	for list_each(connection_t, c, connection_list) {
+	for list_each(connection_t, c, &connection_list) {
 		if(c->outgoing && c->outgoing->timeout == -1) {
 			c->outgoing = NULL;
 			logger(DEBUG_CONNECTIONS, LOG_INFO, "No more outgoing connection to %s", c->name);
@@ -858,8 +877,8 @@ void try_outgoing_connections(void) {
 
 	/* Delete outgoing_ts for which there is no ConnectTo. */
 
-	for list_each(outgoing_t, outgoing, outgoing_list)
+	for list_each(outgoing_t, outgoing, &outgoing_list)
 		if(outgoing->timeout == -1) {
-			list_delete_node(outgoing_list, node);
+			list_delete_node(&outgoing_list, node);
 		}
 }

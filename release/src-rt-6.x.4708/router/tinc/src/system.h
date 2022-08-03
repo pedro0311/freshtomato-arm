@@ -21,12 +21,18 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "../config.h"
+#include "config.h"
 
 #include "have.h"
 
 #ifndef HAVE_STRSIGNAL
 # define strsignal(p) ""
+#endif
+
+#if _____LP64_____
+#define SUBNET_HASH_SIZE 0x10000
+#else
+#define SUBNET_HASH_SIZE 0x1000
 #endif
 
 /* Other functions */

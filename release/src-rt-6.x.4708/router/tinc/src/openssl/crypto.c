@@ -20,98 +20,17 @@
 #include "../system.h"
 
 #include <openssl/rand.h>
-#include <openssl/evp.h>
 #include <openssl/engine.h>
 
 #include "../crypto.h"
 
-#ifndef HAVE_MINGW
-
-static int random_fd = -1;
-
-static void random_init(void) {
-	random_fd = open("/dev/urandom", O_RDONLY);
-
-	if(random_fd < 0) {
-		random_fd = open("/dev/random", O_RDONLY);
-	}
-
-	if(random_fd < 0) {
-		fprintf(stderr, "Could not open source of random numbers: %s\n", strerror(errno));
-		abort();
-	}
-}
-
-static void random_exit(void) {
-	close(random_fd);
-}
-
-void randomize(void *vout, size_t outlen) {
-	char *out = vout;
-
-	while(outlen) {
-		ssize_t len = read(random_fd, out, outlen);
-
-		if(len <= 0) {
-			if(len == -1 && (errno == EAGAIN || errno == EINTR)) {
-				continue;
-			}
-
-			fprintf(stderr, "Could not read random numbers: %s\n", strerror(errno));
-			abort();
-		}
-
-		out += len;
-		outlen -= len;
-	}
-}
-
-#else
-
-#include <wincrypt.h>
-HCRYPTPROV prov;
-
-void random_init(void) {
-	if(!CryptAcquireContext(&prov, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-		fprintf(stderr, "CryptAcquireContext() failed!\n");
-		abort();
-	}
-}
-
-void random_exit(void) {
-	CryptReleaseContext(prov, 0);
-}
-
-void randomize(void *out, size_t outlen) {
-	if(!CryptGenRandom(prov, outlen, out)) {
-		fprintf(stderr, "CryptGenRandom() failed\n");
-		abort();
-	}
-}
-
-#endif
-
 void crypto_init(void) {
-	random_init();
-
+#if OPENSSL_VERSION_MAJOR < 3
 	ENGINE_load_builtin_engines();
-	ENGINE_register_all_complete();
-#if OPENSSL_API_COMPAT < 0x10100000L
-	ERR_load_crypto_strings();
-	OpenSSL_add_all_algorithms();
 #endif
 
 	if(!RAND_status()) {
 		fprintf(stderr, "Not enough entropy for the PRNG!\n");
 		abort();
 	}
-}
-
-void crypto_exit(void) {
-#if OPENSSL_API_COMPAT < 0x10100000L
-	EVP_cleanup();
-	ERR_free_strings();
-	ENGINE_cleanup();
-#endif
-	random_exit();
 }

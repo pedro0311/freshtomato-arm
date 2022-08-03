@@ -25,15 +25,19 @@
 
 extern bool hostnames;
 
-extern struct addrinfo *str2addrinfo(const char *address, const char *service, int socktype) __attribute__((__malloc__));
+// Converts service name (as listed in /etc/services) to port number. Returns 0 on error.
+extern uint16_t service_to_port(const char *service);
+extern struct addrinfo *str2addrinfo(const char *address, const char *service, int socktype) ATTR_DEALLOCATOR(freeaddrinfo);
 extern sockaddr_t str2sockaddr(const char *address, const char *port);
 extern void sockaddr2str(const sockaddr_t *sa, char **address, char **port);
-extern char *sockaddr2hostname(const sockaddr_t *sa) __attribute__((__malloc__));
+extern char *sockaddr2hostname(const sockaddr_t *sa) ATTR_MALLOC;
 extern int sockaddrcmp(const sockaddr_t *a, const sockaddr_t *b);
 extern int sockaddrcmp_noport(const sockaddr_t *a, const sockaddr_t *b);
 extern void sockaddrunmap(sockaddr_t *sa);
 extern void sockaddrfree(sockaddr_t *sa);
 extern void sockaddrcpy(sockaddr_t *dest, const sockaddr_t *src);
 extern void sockaddr_setport(sockaddr_t *sa, const char *port);
+extern uint16_t get_bound_port(int sockfd);
+extern bool is_local_connection(const sockaddr_t *sa);
 
 #endif

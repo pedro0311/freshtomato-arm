@@ -1,0 +1,19 @@
+image: openbsd/7.0
+
+packages:
+  - cmocka
+  - libgcrypt
+  - lz4
+  - lzo2
+  - meson
+  - miniupnpc
+  - pkgconf
+  - texinfo
+
+sources:
+  - https://github.com/gsliepen/tinc
+
+tasks:
+  - openssl: sh tinc/.ci/bsd/run.sh openssl
+  - nolegacy: sh tinc/.ci/bsd/run.sh nolegacy
+  - gcrypt: sh tinc/.ci/bsd/run.sh gcrypt

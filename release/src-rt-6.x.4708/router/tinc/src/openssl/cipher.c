@@ -1,6 +1,6 @@
 /*
     cipher.c -- Symmetric block cipher handling
-    Copyright (C) 2007-2017 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,51 +19,49 @@
 
 #include "../system.h"
 
-#include <openssl/rand.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 
+#include "log.h"
+#include "cipher.h"
 #include "../cipher.h"
 #include "../logger.h"
-#include "../xalloc.h"
 
-struct cipher {
-	EVP_CIPHER_CTX *ctx;
-	const EVP_CIPHER *cipher;
-};
+typedef int (enc_init_t)(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher, ENGINE *impl, const unsigned char *key, const unsigned char *iv);
+typedef int (enc_update_t)(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl, const unsigned char *in, int inl);
+typedef int (enc_final_t)(EVP_CIPHER_CTX *ctx, unsigned char *out, int *outl);
 
-static cipher_t *cipher_open(const EVP_CIPHER *evp_cipher) {
-	cipher_t *cipher = xzalloc(sizeof(*cipher));
+static void cipher_open(cipher_t *cipher, const EVP_CIPHER *evp_cipher) {
 	cipher->cipher = evp_cipher;
 	cipher->ctx = EVP_CIPHER_CTX_new();
 
 	if(!cipher->ctx) {
 		abort();
 	}
-
-	return cipher;
 }
 
-cipher_t *cipher_open_by_name(const char *name) {
+bool cipher_open_by_name(cipher_t *cipher, const char *name) {
 	const EVP_CIPHER *evp_cipher = EVP_get_cipherbyname(name);
 
 	if(!evp_cipher) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unknown cipher name '%s'!", name);
-		return NULL;
+		return false;
 	}
 
-	return cipher_open(evp_cipher);
+	cipher_open(cipher, evp_cipher);
+	return true;
 }
 
-cipher_t *cipher_open_by_nid(int nid) {
+bool cipher_open_by_nid(cipher_t *cipher, nid_t nid) {
 	const EVP_CIPHER *evp_cipher = EVP_get_cipherbynid(nid);
 
 	if(!evp_cipher) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unknown cipher nid %d!", nid);
-		return NULL;
+		return false;
 	}
 
-	return cipher_open(evp_cipher);
+	cipher_open(cipher, evp_cipher);
+	return true;
 }
 
 void cipher_close(cipher_t *cipher) {
@@ -71,8 +69,11 @@ void cipher_close(cipher_t *cipher) {
 		return;
 	}
 
-	EVP_CIPHER_CTX_free(cipher->ctx);
-	free(cipher);
+	if(cipher->ctx) {
+		EVP_CIPHER_CTX_free(cipher->ctx);
+	}
+
+	memset(cipher, 0, sizeof(*cipher));
 }
 
 size_t cipher_keylength(const cipher_t *cipher) {
@@ -110,99 +111,75 @@ size_t cipher_blocksize(const cipher_t *cipher) {
 	return EVP_CIPHER_block_size(cipher->cipher);
 }
 
-bool cipher_set_key(cipher_t *cipher, void *key, bool encrypt) {
+static bool cipher_init_ctx(cipher_t *cipher, bool encrypt, const unsigned char *key, const unsigned char *iv) {
 	bool result;
 
 	if(encrypt) {
-		result = EVP_EncryptInit_ex(cipher->ctx, cipher->cipher, NULL, (unsigned char *)key, (unsigned char *)key + EVP_CIPHER_key_length(cipher->cipher));
+		result = EVP_EncryptInit_ex(cipher->ctx, cipher->cipher, NULL, key, iv);
 	} else {
-		result = EVP_DecryptInit_ex(cipher->ctx, cipher->cipher, NULL, (unsigned char *)key, (unsigned char *)key + EVP_CIPHER_key_length(cipher->cipher));
+		result = EVP_DecryptInit_ex(cipher->ctx, cipher->cipher, NULL, key, iv);
 	}
 
 	if(result) {
 		return true;
 	}
 
-	logger(DEBUG_ALWAYS, LOG_ERR, "Error while setting key: %s", ERR_error_string(ERR_get_error(), NULL));
+	openssl_err("set key");
 	return false;
 }
 
+bool cipher_set_key(cipher_t *cipher, void *key, bool encrypt) {
+	unsigned char *iv = (unsigned char *)key + EVP_CIPHER_key_length(cipher->cipher);
+	return cipher_init_ctx(cipher, encrypt, key, iv);
+}
+
 bool cipher_set_key_from_rsa(cipher_t *cipher, void *key, size_t len, bool encrypt) {
-	bool result;
+	unsigned char *k = (unsigned char *)key + len - EVP_CIPHER_key_length(cipher->cipher);
+	unsigned char *iv = k - EVP_CIPHER_iv_length(cipher->cipher);
+	return cipher_init_ctx(cipher, encrypt, k, iv);
+}
 
-	if(encrypt) {
-		result = EVP_EncryptInit_ex(cipher->ctx, cipher->cipher, NULL, (unsigned char *)key + len - EVP_CIPHER_key_length(cipher->cipher), (unsigned char *)key + len - EVP_CIPHER_iv_length(cipher->cipher) - EVP_CIPHER_key_length(cipher->cipher));
+static bool cipher_encrypt_decrypt(cipher_t *cipher, const void *indata, size_t inlen, void *outdata, size_t *outlen, bool oneshot,
+                                   enc_init_t init, enc_update_t update, enc_final_t final) {
+	if(oneshot) {
+		int len, pad;
+
+		if(init(cipher->ctx, NULL, NULL, NULL, NULL)
+		                && update(cipher->ctx, (unsigned char *)outdata, &len, indata, (int)inlen)
+		                && final(cipher->ctx, (unsigned char *)outdata + len, &pad)) {
+			if(outlen) {
+				*outlen = len + pad;
+			}
+
+			return true;
+		}
 	} else {
-		result = EVP_DecryptInit_ex(cipher->ctx, cipher->cipher, NULL, (unsigned char *)key + len - EVP_CIPHER_key_length(cipher->cipher), (unsigned char *)key + len - EVP_CIPHER_iv_length(cipher->cipher) - EVP_CIPHER_key_length(cipher->cipher));
+		int len;
+
+		if(update(cipher->ctx, outdata, &len, indata, (int)inlen)) {
+			if(outlen) {
+				*outlen = len;
+			}
+
+			return true;
+		}
 	}
 
-	if(result) {
-		return true;
-	}
-
-	logger(DEBUG_ALWAYS, LOG_ERR, "Error while setting key: %s", ERR_error_string(ERR_get_error(), NULL));
+	openssl_err("encrypt or decrypt data");
 	return false;
 }
 
 bool cipher_encrypt(cipher_t *cipher, const void *indata, size_t inlen, void *outdata, size_t *outlen, bool oneshot) {
-	if(oneshot) {
-		int len, pad;
-
-		if(EVP_EncryptInit_ex(cipher->ctx, NULL, NULL, NULL, NULL)
-		                && EVP_EncryptUpdate(cipher->ctx, (unsigned char *)outdata, &len, indata, inlen)
-		                && EVP_EncryptFinal_ex(cipher->ctx, (unsigned char *)outdata + len, &pad)) {
-			if(outlen) {
-				*outlen = len + pad;
-			}
-
-			return true;
-		}
-	} else {
-		int len;
-
-		if(EVP_EncryptUpdate(cipher->ctx, outdata, &len, indata, inlen)) {
-			if(outlen) {
-				*outlen = len;
-			}
-
-			return true;
-		}
-	}
-
-	logger(DEBUG_ALWAYS, LOG_ERR, "Error while encrypting: %s", ERR_error_string(ERR_get_error(), NULL));
-	return false;
+	return cipher_encrypt_decrypt(cipher, indata, inlen, outdata, outlen, oneshot,
+	                              EVP_EncryptInit_ex, EVP_EncryptUpdate, EVP_EncryptFinal_ex);
 }
 
 bool cipher_decrypt(cipher_t *cipher, const void *indata, size_t inlen, void *outdata, size_t *outlen, bool oneshot) {
-	if(oneshot) {
-		int len, pad;
-
-		if(EVP_DecryptInit_ex(cipher->ctx, NULL, NULL, NULL, NULL)
-		                && EVP_DecryptUpdate(cipher->ctx, (unsigned char *)outdata, &len, indata, inlen)
-		                && EVP_DecryptFinal_ex(cipher->ctx, (unsigned char *)outdata + len, &pad)) {
-			if(outlen) {
-				*outlen = len + pad;
-			}
-
-			return true;
-		}
-	} else {
-		int len;
-
-		if(EVP_DecryptUpdate(cipher->ctx, outdata, &len, indata, inlen)) {
-			if(outlen) {
-				*outlen = len;
-			}
-
-			return true;
-		}
-	}
-
-	logger(DEBUG_ALWAYS, LOG_ERR, "Error while decrypting: %s", ERR_error_string(ERR_get_error(), NULL));
-	return false;
+	return cipher_encrypt_decrypt(cipher, indata, inlen, outdata, outlen, oneshot,
+	                              EVP_DecryptInit_ex, EVP_DecryptUpdate, EVP_DecryptFinal_ex);
 }
 
-int cipher_get_nid(const cipher_t *cipher) {
+nid_t cipher_get_nid(const cipher_t *cipher) {
 	if(!cipher || !cipher->cipher) {
 		return 0;
 	}

@@ -1,6 +1,6 @@
 /*
     rsa.c -- RSA key handling
-    Copyright (C) 2007-2012 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,98 +17,17 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "system.h"
+#include "../system.h"
 
 #include <gcrypt.h>
 
-#include "logger.h"
+#include "pem.h"
+
+#include "asn1.h"
 #include "rsa.h"
-
-// Base64 decoding table
-
-static const uint8_t b64d[128] = {
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0x3e, 0xff, 0xff, 0xff, 0x3f,
-	0x34, 0x35, 0x36, 0x37, 0x38, 0x39,
-	0x3a, 0x3b, 0x3c, 0x3d, 0xff, 0xff,
-	0xff, 0xff, 0xff, 0xff, 0xff, 0x00,
-	0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
-	0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
-	0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12,
-	0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-	0x19, 0xff, 0xff, 0xff, 0xff, 0xff,
-	0xff, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e,
-	0x1f, 0x20, 0x21, 0x22, 0x23, 0x24,
-	0x25, 0x26, 0x27, 0x28, 0x29, 0x2a,
-	0x2b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-	0x31, 0x32, 0x33, 0xff, 0xff, 0xff,
-	0xff, 0xff
-};
-
-// PEM encoding/decoding functions
-
-static bool pem_decode(FILE *fp, const char *header, uint8_t *buf, size_t size, size_t *outsize) {
-	bool decode = false;
-	char line[1024];
-	uint16_t word = 0;
-	int shift = 10;
-	size_t i, j = 0;
-
-	while(!feof(fp)) {
-		if(!fgets(line, sizeof(line), fp)) {
-			return false;
-		}
-
-		if(!decode && !strncmp(line, "-----BEGIN ", 11)) {
-			if(!strncmp(line + 11, header, strlen(header))) {
-				decode = true;
-			}
-
-			continue;
-		}
-
-		if(decode && !strncmp(line, "-----END", 8)) {
-			break;
-		}
-
-		if(!decode) {
-			continue;
-		}
-
-		for(i = 0; line[i] >= ' '; i++) {
-			if((signed char)line[i] < 0 || b64d[(int)line[i]] == 0xff) {
-				break;
-			}
-
-			word |= b64d[(int)line[i]] << shift;
-			shift -= 6;
-
-			if(shift <= 2) {
-				if(j > size) {
-					errno = ENOMEM;
-					return false;
-				}
-
-				buf[j++] = word >> 8;
-				word <<= 8;
-				shift += 8;
-			}
-		}
-	}
-
-	if(outsize) {
-		*outsize = j;
-	}
-
-	return true;
-}
-
+#include "../logger.h"
+#include "../rsa.h"
+#include "../xalloc.h"
 
 // BER decoding functions
 
@@ -146,15 +65,15 @@ static size_t ber_read_len(unsigned char **p, size_t *buflen) {
 
 	if(**p & 0x80) {
 		size_t result = 0;
-		int len = *(*p)++ & 0x7f;
+		size_t len = *(*p)++ & 0x7f;
 		(*buflen)--;
 
 		if(len > *buflen) {
 			return 0;
 		}
 
-		while(len--) {
-			result <<= 8;
+		for(; len; --len) {
+			result = (size_t)(result << 8);
 			result |= *(*p)++;
 			(*buflen)--;
 		}
@@ -166,20 +85,11 @@ static size_t ber_read_len(unsigned char **p, size_t *buflen) {
 	}
 }
 
-
-static bool ber_read_sequence(unsigned char **p, size_t *buflen, size_t *result) {
+static bool ber_skip_sequence(unsigned char **p, size_t *buflen) {
 	int tag = ber_read_id(p, buflen);
-	size_t len = ber_read_len(p, buflen);
 
-	if(tag == 0x10) {
-		if(result) {
-			*result = len;
-		}
-
-		return true;
-	} else {
-		return false;
-	}
+	return tag == TAG_SEQUENCE &&
+	       ber_read_len(p, buflen) > 0;
 }
 
 static bool ber_read_mpi(unsigned char **p, size_t *buflen, gcry_mpi_t *mpi) {
@@ -201,38 +111,53 @@ static bool ber_read_mpi(unsigned char **p, size_t *buflen, gcry_mpi_t *mpi) {
 	return mpi ? !err : true;
 }
 
-bool rsa_set_hex_public_key(rsa_t *rsa, char *n, char *e) {
-	gcry_error_t err = 0;
-
-	err = gcry_mpi_scan(&rsa->n, GCRYMPI_FMT_HEX, n, 0, NULL)
-	      ? : gcry_mpi_scan(&rsa->e, GCRYMPI_FMT_HEX, e, 0, NULL);
-
-	if(err) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading RSA public key: %s", gcry_strerror(errno));
-		return false;
-	}
-
-	return true;
+rsa_t *rsa_new(void) {
+	return xzalloc(sizeof(rsa_t));
 }
 
-bool rsa_set_hex_private_key(rsa_t *rsa, char *n, char *e, char *d) {
-	gcry_error_t err = 0;
+rsa_t *rsa_set_hex_public_key(const char *n, const char *e) {
+	rsa_t *rsa = rsa_new();
 
-	err = gcry_mpi_scan(&rsa->n, GCRYMPI_FMT_HEX, n, 0, NULL)
-	      ? : gcry_mpi_scan(&rsa->e, GCRYMPI_FMT_HEX, e, 0, NULL)
-	      ? : gcry_mpi_scan(&rsa->d, GCRYMPI_FMT_HEX, d, 0, NULL);
+	gcry_error_t err = gcry_mpi_scan(&rsa->n, GCRYMPI_FMT_HEX, n, 0, NULL);
+
+	if(!err) {
+		err = gcry_mpi_scan(&rsa->e, GCRYMPI_FMT_HEX, e, 0, NULL);
+	}
 
 	if(err) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading RSA public key: %s", gcry_strerror(errno));
+		rsa_free(rsa);
 		return false;
 	}
 
-	return true;
+	return rsa;
+}
+
+rsa_t *rsa_set_hex_private_key(const char *n, const char *e, const char *d) {
+	rsa_t *rsa = rsa_new();
+
+	gcry_error_t err = gcry_mpi_scan(&rsa->n, GCRYMPI_FMT_HEX, n, 0, NULL);
+
+	if(!err) {
+		err = gcry_mpi_scan(&rsa->e, GCRYMPI_FMT_HEX, e, 0, NULL);
+	}
+
+	if(!err) {
+		err = gcry_mpi_scan(&rsa->d, GCRYMPI_FMT_HEX, d, 0, NULL);
+	}
+
+	if(err) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading RSA public key: %s", gcry_strerror(errno));
+		rsa_free(rsa);
+		return NULL;
+	}
+
+	return rsa;
 }
 
 // Read PEM RSA keys
 
-bool rsa_read_pem_public_key(rsa_t *rsa, FILE *fp) {
+rsa_t *rsa_read_pem_public_key(FILE *fp) {
 	uint8_t derbuf[8096], *derp = derbuf;
 	size_t derlen;
 
@@ -241,18 +166,21 @@ bool rsa_read_pem_public_key(rsa_t *rsa, FILE *fp) {
 		return NULL;
 	}
 
-	if(!ber_read_sequence(&derp, &derlen, NULL)
+	rsa_t *rsa = rsa_new();
+
+	if(!ber_skip_sequence(&derp, &derlen)
 	                || !ber_read_mpi(&derp, &derlen, &rsa->n)
 	                || !ber_read_mpi(&derp, &derlen, &rsa->e)
 	                || derlen) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while decoding RSA public key");
+		rsa_free(rsa);
 		return NULL;
 	}
 
-	return true;
+	return rsa;
 }
 
-bool rsa_read_pem_private_key(rsa_t *rsa, FILE *fp) {
+rsa_t *rsa_read_pem_private_key(FILE *fp) {
 	uint8_t derbuf[8096], *derp = derbuf;
 	size_t derlen;
 
@@ -261,7 +189,9 @@ bool rsa_read_pem_private_key(rsa_t *rsa, FILE *fp) {
 		return NULL;
 	}
 
-	if(!ber_read_sequence(&derp, &derlen, NULL)
+	rsa_t *rsa = rsa_new();
+
+	if(!ber_skip_sequence(&derp, &derlen)
 	                || !ber_read_mpi(&derp, &derlen, NULL)
 	                || !ber_read_mpi(&derp, &derlen, &rsa->n)
 	                || !ber_read_mpi(&derp, &derlen, &rsa->e)
@@ -273,55 +203,78 @@ bool rsa_read_pem_private_key(rsa_t *rsa, FILE *fp) {
 	                || !ber_read_mpi(&derp, &derlen, NULL) // u
 	                || derlen) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while decoding RSA private key");
-		return NULL;
+		rsa_free(rsa);
+		rsa = NULL;
 	}
 
-	return true;
+	memzero(derbuf, sizeof(derbuf));
+	return rsa;
 }
 
-size_t rsa_size(rsa_t *rsa) {
+size_t rsa_size(const rsa_t *rsa) {
 	return (gcry_mpi_get_nbits(rsa->n) + 7) / 8;
+}
+
+static bool check(gcry_error_t err) {
+	if(err) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "gcrypt error %s/%s", gcry_strsource(err), gcry_strerror(err));
+	}
+
+	return !err;
 }
 
 /* Well, libgcrypt has functions to handle RSA keys, but they suck.
  * So we just use libgcrypt's mpi functions, and do the math ourselves.
  */
 
-// TODO: get rid of this macro, properly clean up gcry_ structures after use
-#define check(foo) { gcry_error_t err = (foo); if(err) {logger(DEBUG_ALWAYS, LOG_ERR, "gcrypt error %s/%s at %s:%d", gcry_strsource(err), gcry_strerror(err), __FILE__, __LINE__); return false; }}
+static bool rsa_powm(const gcry_mpi_t ed, const gcry_mpi_t n, const void *in, size_t len, void *out) {
+	gcry_mpi_t inmpi = NULL;
 
-bool rsa_public_encrypt(rsa_t *rsa, void *in, size_t len, void *out) {
-	gcry_mpi_t inmpi;
-	check(gcry_mpi_scan(&inmpi, GCRYMPI_FMT_USG, in, len, NULL));
-
-	gcry_mpi_t outmpi = gcry_mpi_new(len * 8);
-	gcry_mpi_powm(outmpi, inmpi, rsa->e, rsa->n);
-
-	int pad = len - (gcry_mpi_get_nbits(outmpi) + 7) / 8;
-
-	while(pad--) {
-		*(char *)out++ = 0;
+	if(!check(gcry_mpi_scan(&inmpi, GCRYMPI_FMT_USG, in, len, NULL))) {
+		return false;
 	}
 
-	check(gcry_mpi_print(GCRYMPI_FMT_USG, out, len, NULL, outmpi));
+	gcry_mpi_t outmpi = gcry_mpi_snew(len * 8);
+	gcry_mpi_powm(outmpi, inmpi, ed, n);
 
-	return true;
+	size_t out_bytes = (gcry_mpi_get_nbits(outmpi) + 7) / 8;
+	size_t pad = len - MIN(out_bytes, len);
+	unsigned char *pout = out;
+
+	for(; pad; --pad) {
+		*pout++ = 0;
+	}
+
+	bool ok = check(gcry_mpi_print(GCRYMPI_FMT_USG, pout, len, NULL, outmpi));
+
+	gcry_mpi_release(outmpi);
+	gcry_mpi_release(inmpi);
+
+	return ok;
 }
 
-bool rsa_private_decrypt(rsa_t *rsa, void *in, size_t len, void *out) {
-	gcry_mpi_t inmpi;
-	check(gcry_mpi_scan(&inmpi, GCRYMPI_FMT_USG, in, len, NULL));
+bool rsa_public_encrypt(rsa_t *rsa, const void *in, size_t len, void *out) {
+	return rsa_powm(rsa->e, rsa->n, in, len, out);
+}
 
-	gcry_mpi_t outmpi = gcry_mpi_new(len * 8);
-	gcry_mpi_powm(outmpi, inmpi, rsa->d, rsa->n);
+bool rsa_private_decrypt(rsa_t *rsa, const void *in, size_t len, void *out) {
+	return rsa_powm(rsa->d, rsa->n, in, len, out);
+}
 
-	int pad = len - (gcry_mpi_get_nbits(outmpi) + 7) / 8;
+void rsa_free(rsa_t *rsa) {
+	if(rsa) {
+		if(rsa->n) {
+			gcry_mpi_release(rsa->n);
+		}
 
-	while(pad--) {
-		*(char *)out++ = 0;
+		if(rsa->e) {
+			gcry_mpi_release(rsa->e);
+		}
+
+		if(rsa->d) {
+			gcry_mpi_release(rsa->d);
+		}
+
+		free(rsa);
 	}
-
-	check(gcry_mpi_print(GCRYMPI_FMT_USG, out, len, NULL, outmpi));
-
-	return true;
 }

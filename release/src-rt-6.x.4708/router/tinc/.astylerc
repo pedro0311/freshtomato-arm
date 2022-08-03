@@ -1,0 +1,14 @@
+--indent=tab=8
+--convert-tabs
+--exclude=subprojects
+--exclude=build
+--ignore-exclude-errors
+--add-braces
+--break-blocks
+--style=attach
+--unpad-paren
+--pad-oper
+--pad-return-type
+--align-pointer=name
+--indent-preproc-define
+--formatted

@@ -21,14 +21,27 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
+#include "crypto.h"
+
+#define B64_SIZE(len) ((len) * 4 / 3 + 5)
+#define HEX_SIZE(len) ((len) * 2 + 1)
+
 extern size_t hex2bin(const char *src, void *dst, size_t length);
 extern size_t bin2hex(const void *src, char *dst, size_t length);
 
-extern size_t b64encode(const void *src, char *dst, size_t length);
-extern size_t b64encode_urlsafe(const void *src, char *dst, size_t length);
-extern size_t b64decode(const char *src, void *dst, size_t length);
+// Returns true if string represents a base-10 integer.
+extern bool is_decimal(const char *str);
 
-#ifdef HAVE_MINGW
+// The reverse of atoi().
+extern char *int_to_str(int num);
+
+extern size_t b64encode_tinc(const void *src, char *dst, size_t length);
+extern size_t b64encode_tinc_urlsafe(const void *src, char *dst, size_t length);
+extern size_t b64decode_tinc(const char *src, void *dst, size_t length);
+
+#ifdef HAVE_WINDOWS
 extern const char *winerror(int);
 #define strerror(x) ((x)>0?strerror(x):winerror(GetLastError()))
 #define sockerrno WSAGetLastError()
@@ -38,6 +51,11 @@ extern const char *winerror(int);
 #define sockinprogress(x) ((x) == WSAEINPROGRESS || (x) == WSAEWOULDBLOCK)
 #define sockinuse(x) ((x) == WSAEADDRINUSE)
 #define socknotconn(x) ((x) == WSAENOTCONN)
+#define sockshutdown(x) ((x) == WSAESHUTDOWN)
+
+static inline long jitter(void) {
+	return (long)prng(131072);
+}
 #else
 #define sockerrno errno
 #define sockstrerror(x) strerror(x)
@@ -46,12 +64,17 @@ extern const char *winerror(int);
 #define sockinprogress(x) ((x) == EINPROGRESS)
 #define sockinuse(x) ((x) == EADDRINUSE)
 #define socknotconn(x) ((x) == ENOTCONN)
-#endif
 
-extern unsigned int bitfield_to_int(const void *bitfield, size_t size);
+static inline suseconds_t jitter(void) {
+	return (suseconds_t)prng(131072);
+}
+#endif
 
 extern bool check_id(const char *id);
 extern bool check_netname(const char *netname, bool strict);
-char *replace_name(const char *name);
+char *replace_name(const char *name) ATTR_MALLOC;
+
+// NULL-safe wrapper around strcmp().
+extern bool string_eq(const char *first, const char *second);
 
 #endif

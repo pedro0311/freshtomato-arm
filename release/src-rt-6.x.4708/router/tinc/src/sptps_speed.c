@@ -1,6 +1,6 @@
 /*
     sptps_speed.c -- SPTPS benchmark
-    Copyright (C) 2013-2014 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,32 +26,46 @@
 #include "ecdh.h"
 #include "ecdsa.h"
 #include "ecdsagen.h"
+#include "meta.h"
+#include "protocol.h"
 #include "sptps.h"
+#include "random.h"
 
 // Symbols necessary to link with logger.o
-bool send_request(void *c, const char *msg, ...) {
+bool send_request(struct connection_t *c, const char *msg, ...) {
+	(void)c;
+	(void)msg;
 	return false;
 }
-struct list_t *connection_list = NULL;
-bool send_meta(void *c, const char *msg, int len) {
+
+list_t connection_list;
+
+bool send_meta(struct connection_t *c, const void *msg, size_t len) {
+	(void)c;
+	(void)msg;
+	(void)len;
 	return false;
 }
-char *logfilename = NULL;
 bool do_detach = false;
 struct timeval now;
 
 static bool send_data(void *handle, uint8_t type, const void *data, size_t len) {
+	(void)type;
 	int fd = *(int *)handle;
 	send(fd, data, len, 0);
 	return true;
 }
 
 static bool receive_record(void *handle, uint8_t type, const void *data, uint16_t len) {
+	(void)handle;
+	(void)type;
+	(void)data;
+	(void)len;
 	return true;
 }
 
 static void receive_data(sptps_t *sptps) {
-	char buf[4096], *bufp = buf;
+	uint8_t buf[4096], *bufp = buf;
 	int fd = *(int *)sptps->handle;
 	size_t len = recv(fd, buf, sizeof(buf), 0);
 
@@ -73,14 +87,15 @@ double elapsed;
 double rate;
 unsigned int count;
 
-static void clock_start() {
+static void clock_start(void) {
 	count = 0;
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
 }
 
 static bool clock_countto(double seconds) {
 	clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
-	elapsed = end.tv_sec + end.tv_nsec * 1e-9 - start.tv_sec - start.tv_nsec * 1e-9;
+	elapsed = (double) end.tv_sec + (double) end.tv_nsec * 1e-9
+	          - (double) start.tv_sec - (double) start.tv_nsec * 1e-9;
 
 	if(elapsed < seconds) {
 		return ++count;
@@ -90,14 +105,12 @@ static bool clock_countto(double seconds) {
 	return false;
 }
 
-int main(int argc, char *argv[]) {
+static int run_benchmark(int argc, char *argv[]) {
 	ecdsa_t *key1, *key2;
 	ecdh_t *ecdh1, *ecdh2;
 	sptps_t sptps1, sptps2;
-	char buf1[4096], buf2[4096], buf3[4096];
+	uint8_t buf1[4096], buf2[4096], buf3[4096];
 	double duration = argc > 1 ? atof(argv[1]) : 10;
-
-	crypto_init();
 
 	randomize(buf1, sizeof(buf1));
 	randomize(buf2, sizeof(buf2));
@@ -164,7 +177,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	struct pollfd pfd[2] = {{fd[0], POLLIN}, {fd[1], POLLIN}};
+	struct pollfd pfd[2] = {{fd[0], POLLIN, 0}, {fd[1], POLLIN, 0}};
 
 	fprintf(stderr, "SPTPS/TCP authenticate for %lg seconds: ", duration);
 
@@ -302,7 +315,17 @@ int main(int argc, char *argv[]) {
 	close(fd[1]);
 	ecdsa_free(key1);
 	ecdsa_free(key2);
-	crypto_exit();
 
 	return 0;
+}
+
+int main(int argc, char *argv[]) {
+	random_init();
+	crypto_init();
+
+	int result = run_benchmark(argc, argv);
+
+	random_exit();
+
+	return result;
 }

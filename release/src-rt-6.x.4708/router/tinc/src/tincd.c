@@ -1,7 +1,7 @@
 /*
     tincd.c -- the main file for tincd
     Copyright (C) 1998-2005 Ivo Timmermans
-                  2000-2021 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
                   2008      Max Rijevski <maksuf@gmail.com>
                   2009      Michael Tokarev <mjt@tls.msk.ru>
                   2010      Julien Muchembled <jm@jmuchemb.eu>
@@ -29,34 +29,35 @@
 #define _P1003_1B_VISIBLE
 #endif
 
-#ifdef HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#endif
-
 #ifdef HAVE_LZO
 #include LZO1X_H
 #endif
 
-#ifndef HAVE_MINGW
+#ifdef HAVE_LZ4
+#include <lz4.h>
+#endif
+
+#ifndef HAVE_WINDOWS
 #include <pwd.h>
 #include <grp.h>
 #include <time.h>
 #endif
 
 #include "conf.h"
-#include "control.h"
 #include "crypto.h"
-#include "device.h"
 #include "event.h"
 #include "logger.h"
 #include "names.h"
 #include "net.h"
-#include "netutl.h"
 #include "process.h"
 #include "protocol.h"
 #include "utils.h"
 #include "xalloc.h"
 #include "version.h"
+#include "random.h"
+#include "sandbox.h"
+#include "watchdog.h"
+#include "fs.h"
 
 /* If nonzero, display usage information and exit. */
 static bool show_help = false;
@@ -64,15 +65,12 @@ static bool show_help = false;
 /* If nonzero, print the version on standard output and exit.  */
 static bool show_version = false;
 
-/* If nonzero, use null ciphers and skip all key exchanges. */
-bool bypass_security = false;
-
 #ifdef HAVE_MLOCKALL
 /* If nonzero, disable swapping for this process. */
 static bool do_mlock = false;
 #endif
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 /* If nonzero, chroot to netdir after startup. */
 static bool do_chroot = false;
 
@@ -80,35 +78,52 @@ static bool do_chroot = false;
 static const char *switchuser = NULL;
 #endif
 
-/* If nonzero, write log entries to a separate file. */
-bool use_logfile = false;
-
-/* If nonzero, use syslog instead of stderr in no-detach mode. */
-bool use_syslog = false;
-
 char **g_argv;                  /* a copy of the cmdline arguments */
 
 static int status = 1;
 
+typedef enum option_t {
+	OPT_BAD_OPTION  = '?',
+	OPT_LONG_OPTION =  0,
+
+	// Short options
+	OPT_CONFIG_FILE = 'c',
+	OPT_NETNAME     = 'n',
+	OPT_NO_DETACH   = 'D',
+	OPT_DEBUG       = 'd',
+	OPT_MLOCK       = 'L',
+	OPT_CHROOT      = 'R',
+	OPT_CHANGE_USER = 'U',
+	OPT_SYSLOG      = 's',
+	OPT_OPTION      = 'o',
+
+	// Long options
+	OPT_HELP        = 255,
+	OPT_VERSION,
+	OPT_NO_SECURITY,
+	OPT_LOGFILE,
+	OPT_PIDFILE,
+} option_t;
+
 static struct option const long_options[] = {
-	{"config", required_argument, NULL, 'c'},
-	{"net", required_argument, NULL, 'n'},
-	{"help", no_argument, NULL, 1},
-	{"version", no_argument, NULL, 2},
-	{"no-detach", no_argument, NULL, 'D'},
-	{"debug", optional_argument, NULL, 'd'},
-	{"bypass-security", no_argument, NULL, 3},
-	{"mlock", no_argument, NULL, 'L'},
-	{"chroot", no_argument, NULL, 'R'},
-	{"user", required_argument, NULL, 'U'},
-	{"logfile", optional_argument, NULL, 4},
-	{"syslog", no_argument, NULL, 's'},
-	{"pidfile", required_argument, NULL, 5},
-	{"option", required_argument, NULL, 'o'},
-	{NULL, 0, NULL, 0}
+	{"config",          required_argument, NULL, OPT_CONFIG_FILE},
+	{"net",             required_argument, NULL, OPT_NETNAME},
+	{"no-detach",       no_argument,       NULL, OPT_NO_DETACH},
+	{"debug",           optional_argument, NULL, OPT_DEBUG},
+	{"mlock",           no_argument,       NULL, OPT_MLOCK},
+	{"chroot",          no_argument,       NULL, OPT_CHROOT},
+	{"user",            required_argument, NULL, OPT_CHANGE_USER},
+	{"syslog",          no_argument,       NULL, OPT_SYSLOG},
+	{"option",          required_argument, NULL, OPT_OPTION},
+	{"help",            no_argument,       NULL, OPT_HELP},
+	{"version",         no_argument,       NULL, OPT_VERSION},
+	{"bypass-security", no_argument,       NULL, OPT_NO_SECURITY},
+	{"logfile",         optional_argument, NULL, OPT_LOGFILE},
+	{"pidfile",         required_argument, NULL, OPT_PIDFILE},
+	{NULL,              0,                 NULL, 0},
 };
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 static struct WSAData wsa_state;
 int main2(int argc, char **argv);
 #endif
@@ -118,27 +133,42 @@ static void usage(bool status) {
 		fprintf(stderr, "Try `%s --help\' for more information.\n",
 		        program_name);
 	else {
-		printf("Usage: %s [option]...\n\n", program_name);
-		printf("  -c, --config=DIR              Read configuration options from DIR.\n"
-		       "  -D, --no-detach               Don't fork and detach.\n"
-		       "  -d, --debug[=LEVEL]           Increase debug level or set it to LEVEL.\n"
-		       "  -n, --net=NETNAME             Connect to net NETNAME.\n"
+		fprintf(stdout,
+		        "Usage: %s [option]...\n"
+		        "\n"
+		        "  -c, --config=DIR              Read configuration options from DIR.\n"
+		        "  -D, --no-detach               Don't fork and detach.\n"
+		        "  -d, --debug[=LEVEL]           Increase debug level or set it to LEVEL.\n"
+		        "  -n, --net=NETNAME             Connect to net NETNAME.\n"
 #ifdef HAVE_MLOCKALL
-		       "  -L, --mlock                   Lock tinc into main memory.\n"
+		        "  -L, --mlock                   Lock tinc into main memory.\n"
 #endif
-		       "      --logfile[=FILENAME]      Write log entries to a logfile.\n"
-		       "  -s  --syslog                  Use syslog instead of stderr with --no-detach.\n"
-		       "      --pidfile=FILENAME        Write PID and control socket cookie to FILENAME.\n"
-		       "      --bypass-security         Disables meta protocol security, for debugging.\n"
-		       "  -o, --option[HOST.]KEY=VALUE  Set global/host configuration value.\n"
-#ifndef HAVE_MINGW
-		       "  -R, --chroot                  chroot to NET dir at startup.\n"
-		       "  -U, --user=USER               setuid to given USER at startup.\n"
+		        "      --logfile[=FILENAME]      Write log entries to a logfile.\n"
+		        "  -s  --syslog                  Use syslog instead of stderr with --no-detach.\n"
+		        "      --pidfile=FILENAME        Write PID and control socket cookie to FILENAME.\n"
+		        "      --bypass-security         Disables meta protocol security, for debugging.\n"
+		        "  -o, --option[HOST.]KEY=VALUE  Set global/host configuration value.\n"
+#ifndef HAVE_WINDOWS
+		        "  -R, --chroot                  chroot to NET dir at startup.\n"
+		        "  -U, --user=USER               setuid to given USER at startup.\n"
 #endif
-		       "      --help                    Display this help and exit.\n"
-		       "      --version                 Output version information and exit.\n\n");
-		printf("Report bugs to tinc@tinc-vpn.org.\n");
+		        "      --help                    Display this help and exit.\n"
+		        "      --version                 Output version information and exit.\n"
+		        "\n"
+		        "Report bugs to tinc@tinc-vpn.org.\n",
+		        program_name);
 	}
+}
+
+// Try to resolve path to absolute, return a copy of the argument if this fails.
+static char *get_path_arg(char *arg) {
+	char *result = absolute_path(arg);
+
+	if(!result) {
+		result = xstrdup(arg);
+	}
+
+	return result;
 }
 
 static bool parse_options(int argc, char **argv) {
@@ -147,31 +177,35 @@ static bool parse_options(int argc, char **argv) {
 	int option_index = 0;
 	int lineno = 0;
 
-	cmdline_conf = list_alloc((list_action_t)free_config);
-
 	while((r = getopt_long(argc, argv, "c:DLd::n:so:RU:", long_options, &option_index)) != EOF) {
-		switch(r) {
-		case 0:   /* long option */
+		switch((option_t) r) {
+		case OPT_LONG_OPTION:
 			break;
 
-		case 'c': /* config file */
-			confbase = xstrdup(optarg);
+		case OPT_BAD_OPTION:
+			usage(true);
+			goto exit_fail;
+
+		case OPT_CONFIG_FILE:
+			assert(optarg);
+			free(confbase);
+			confbase = get_path_arg(optarg);
 			break;
 
-		case 'D': /* no detach */
+		case OPT_NO_DETACH:
 			do_detach = false;
 			break;
 
-		case 'L': /* no detach */
+		case OPT_MLOCK: /* lock tincd into RAM */
 #ifndef HAVE_MLOCKALL
 			logger(DEBUG_ALWAYS, LOG_ERR, "The %s option is not supported on this platform.", argv[optind - 1]);
-			return false;
+			goto exit_fail;
 #else
 			do_mlock = true;
 			break;
 #endif
 
-		case 'd': /* increase debug level */
+		case OPT_DEBUG: /* increase debug level */
 			if(!optarg && optind < argc && *argv[optind] != '-') {
 				optarg = argv[optind++];
 			}
@@ -184,55 +218,57 @@ static bool parse_options(int argc, char **argv) {
 
 			break;
 
-		case 'n': /* net name given */
+		case OPT_NETNAME:
+			assert(optarg);
+			free(netname);
 			netname = xstrdup(optarg);
 			break;
 
-		case 's': /* syslog */
+		case OPT_SYSLOG:
 			use_logfile = false;
 			use_syslog = true;
 			break;
 
-		case 'o': /* option */
+		case OPT_OPTION:
 			cfg = parse_config_line(optarg, NULL, ++lineno);
 
 			if(!cfg) {
-				return false;
+				goto exit_fail;
 			}
 
-			list_insert_tail(cmdline_conf, cfg);
+			list_insert_tail(&cmdline_conf, cfg);
 			break;
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 
-		case 'R':
-		case 'U':
+		case OPT_CHANGE_USER:
+		case OPT_CHROOT:
 			logger(DEBUG_ALWAYS, LOG_ERR, "The %s option is not supported on this platform.", argv[optind - 1]);
-			return false;
+			goto exit_fail;
 #else
 
-		case 'R': /* chroot to NETNAME dir */
+		case OPT_CHROOT:
 			do_chroot = true;
 			break;
 
-		case 'U': /* setuid to USER */
+		case OPT_CHANGE_USER:
 			switchuser = optarg;
 			break;
 #endif
 
-		case 1:   /* show help */
+		case OPT_HELP:
 			show_help = true;
 			break;
 
-		case 2:   /* show version */
+		case OPT_VERSION:
 			show_version = true;
 			break;
 
-		case 3:   /* bypass security */
+		case OPT_NO_SECURITY:
 			bypass_security = true;
 			break;
 
-		case 4:   /* write log entries to a file */
+		case OPT_LOGFILE:
 			use_syslog = false;
 			use_logfile = true;
 
@@ -241,18 +277,17 @@ static bool parse_options(int argc, char **argv) {
 			}
 
 			if(optarg) {
-				logfilename = xstrdup(optarg);
+				free(logfilename);
+				logfilename = get_path_arg(optarg);
 			}
 
 			break;
 
-		case 5:   /* open control socket here */
-			pidfilename = xstrdup(optarg);
+		case OPT_PIDFILE:
+			assert(optarg);
+			free(pidfilename);
+			pidfilename = get_path_arg(optarg);
 			break;
-
-		case '?': /* wrong options */
-			usage(true);
-			return false;
 
 		default:
 			break;
@@ -262,7 +297,7 @@ static bool parse_options(int argc, char **argv) {
 	if(optind < argc) {
 		fprintf(stderr, "%s: unrecognized argument '%s'\n", argv[0], argv[optind]);
 		usage(true);
-		return false;
+		goto exit_fail;
 	}
 
 	if(!netname && (netname = getenv("NETNAME"))) {
@@ -278,7 +313,7 @@ static bool parse_options(int argc, char **argv) {
 
 	if(netname && !check_netname(netname, false)) {
 		fprintf(stderr, "Invalid character in netname!\n");
-		return false;
+		goto exit_fail;
 	}
 
 	if(netname && !check_netname(netname, true)) {
@@ -286,10 +321,53 @@ static bool parse_options(int argc, char **argv) {
 	}
 
 	return true;
+
+exit_fail:
+	free_names();
+	list_empty_list(&cmdline_conf);
+	return false;
+}
+
+static bool read_sandbox_level(void) {
+	sandbox_level_t level;
+	char *value = NULL;
+
+	if(get_config_string(lookup_config(&config_tree, "Sandbox"), &value)) {
+		if(!strcasecmp("off", value)) {
+			level = SANDBOX_NONE;
+		} else if(!strcasecmp("normal", value)) {
+			level = SANDBOX_NORMAL;
+		} else if(!strcasecmp("high", value)) {
+			level = SANDBOX_HIGH;
+		} else {
+			logger(DEBUG_ALWAYS, LOG_ERR, "Bad sandbox value %s!", value);
+			free(value);
+			return false;
+		}
+
+		free(value);
+	} else {
+#ifdef HAVE_SANDBOX
+		level = SANDBOX_NORMAL;
+#else
+		level = SANDBOX_NONE;
+#endif
+	}
+
+#ifndef HAVE_SANDBOX
+
+	if(level > SANDBOX_NONE) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Sandbox is used but is not supported on this platform");
+		return false;
+	}
+
+#endif
+	sandbox_set_level(level);
+	return true;
 }
 
 static bool drop_privs(void) {
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	uid_t uid = 0;
 
 	if(switchuser) {
@@ -302,7 +380,9 @@ static bool drop_privs(void) {
 
 		uid = pw->pw_uid;
 
-		if(initgroups(switchuser, pw->pw_gid) != 0 ||
+		// The second parameter to initgroups on macOS requires int,
+		// but __gid_t is unsigned int. There's not much we can do here.
+		if(initgroups(switchuser, pw->pw_gid) != 0 || // NOLINT(bugprone-narrowing-conversions)
 		                setgid(pw->pw_gid) != 0) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "System call `%s' failed: %s",
 			       "initgroups", strerror(errno));
@@ -336,11 +416,14 @@ static bool drop_privs(void) {
 			return false;
 		}
 
-#endif
-	return true;
+#endif // HAVE_WINDOWS
+
+	makedirs(DIR_CACHE | DIR_HOSTS | DIR_INVITATIONS);
+
+	return sandbox_enter();
 }
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 # define setpriority(level) !SetPriorityClass(GetCurrentProcess(), (level))
 
 static void stop_handler(void *data, int flags) {
@@ -368,6 +451,12 @@ static BOOL WINAPI console_ctrl_handler(DWORD type) {
 # define setpriority(level) (setpriority(PRIO_PROCESS, 0, (level)))
 #endif
 
+static void cleanup(void) {
+	splay_empty_tree(&config_tree);
+	list_empty_list(&cmdline_conf);
+	free_names();
+}
+
 int main(int argc, char **argv) {
 	program_name = argv[0];
 
@@ -376,14 +465,56 @@ int main(int argc, char **argv) {
 	}
 
 	if(show_version) {
-		printf("%s version %s (built %s %s, protocol %d.%d)\n", PACKAGE,
-		       BUILD_VERSION, BUILD_DATE, BUILD_TIME, PROT_MAJOR, PROT_MINOR);
-		printf("Copyright (C) 1998-2021 Ivo Timmermans, Guus Sliepen and others.\n"
-		       "See the AUTHORS file for a complete list.\n\n"
-		       "tinc comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
-		       "and you are welcome to redistribute it under certain conditions;\n"
-		       "see the file COPYING for details.\n");
-
+		fprintf(stdout,
+		        "%s version %s (built %s %s, protocol %d.%d)\n"
+		        "Features:"
+#ifdef HAVE_OPENSSL
+		        " openssl"
+#endif
+#ifdef HAVE_LIBGCRYPT
+		        " libgcrypt"
+#endif
+#ifdef HAVE_LZO
+		        " comp_lzo"
+#endif
+#ifdef HAVE_ZLIB
+		        " comp_zlib"
+#endif
+#ifdef HAVE_LZ4
+		        " comp_lz4"
+#endif
+#ifndef DISABLE_LEGACY
+		        " legacy_protocol"
+#endif
+#ifdef ENABLE_JUMBOGRAMS
+		        " jumbograms"
+#endif
+#ifdef ENABLE_TUNEMU
+		        " tunemu"
+#endif
+#ifdef HAVE_MINIUPNPC
+		        " miniupnpc"
+#endif
+#ifdef HAVE_SANDBOX
+		        " sandbox"
+#endif
+#ifdef ENABLE_UML
+		        " uml"
+#endif
+#ifdef ENABLE_VDE
+		        " vde"
+#endif
+#ifdef HAVE_WATCHDOG
+		        " watchdog"
+#endif
+		        "\n\n"
+		        "Copyright (C) 1998-2021 Ivo Timmermans, Guus Sliepen and others.\n"
+		        "See the AUTHORS file for a complete list.\n"
+		        "\n"
+		        "tinc comes with ABSOLUTELY NO WARRANTY.  This is free software,\n"
+		        "and you are welcome to redistribute it under certain conditions;\n"
+		        "see the file COPYING for details.\n",
+		        PACKAGE, BUILD_VERSION, BUILD_DATE, BUILD_TIME, PROT_MAJOR, PROT_MINOR);
 		return 0;
 	}
 
@@ -393,9 +524,14 @@ int main(int argc, char **argv) {
 	}
 
 	make_names(true);
-	chdir(confbase);
+	atexit(cleanup);
 
-#ifdef HAVE_MINGW
+	if(chdir(confbase) == -1) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Could not change to configuration directory: %s", strerror(errno));
+		return 1;
+	}
+
+#ifdef HAVE_WINDOWS
 
 	if(WSAStartup(MAKEWORD(2, 2), &wsa_state)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "System call `%s' failed: %s", "WSAStartup", winerror(GetLastError()));
@@ -407,7 +543,9 @@ int main(int argc, char **argv) {
 	char *umbstr = getenv("TINC_UMBILICAL");
 
 	if(umbstr) {
-		umbilical = atoi(umbstr);
+		int colorize = 0;
+		sscanf(umbstr, "%d %d", &umbilical, &colorize);
+		umbilical_colorize = colorize;
 
 		if(fcntl(umbilical, F_GETFL) < 0) {
 			umbilical = 0;
@@ -428,7 +566,9 @@ int main(int argc, char **argv) {
 
 	g_argv = argv;
 
-	if(getenv("LISTEN_PID") && atoi(getenv("LISTEN_PID")) == getpid()) {
+	const char *listen_pid = getenv("LISTEN_PID");
+
+	if(listen_pid && atoi(listen_pid) == getpid()) {
 		do_detach = false;
 	}
 
@@ -436,20 +576,25 @@ int main(int argc, char **argv) {
 	unsetenv("LISTEN_PID");
 #endif
 
-	init_configuration(&config_tree);
-
-	/* Slllluuuuuuurrrrp! */
-
 	gettimeofday(&now, NULL);
-	srand(now.tv_sec + now.tv_usec);
+	random_init();
 	crypto_init();
+	prng_init();
 
-	if(!read_server_config()) {
+	if(!read_server_config(&config_tree)) {
 		return 1;
 	}
 
-	if(!debug_level) {
-		get_config_int(lookup_config(config_tree, "LogLevel"), &debug_level);
+	if(!read_sandbox_level()) {
+		return 1;
+	}
+
+	if(debug_level == DEBUG_NOTHING) {
+		int level = 0;
+
+		if(get_config_int(lookup_config(&config_tree, "LogLevel"), &level)) {
+			debug_level = level;
+		}
 	}
 
 #ifdef HAVE_LZO
@@ -461,7 +606,7 @@ int main(int argc, char **argv) {
 
 #endif
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	io_add_event(&stop_io, stop_handler, NULL, WSACreateEvent());
 
 	if(stop_io.event == FALSE) {
@@ -516,7 +661,7 @@ int main2(int argc, char **argv) {
 
 	/* Change process priority */
 
-	if(get_config_string(lookup_config(config_tree, "ProcessPriority"), &priority)) {
+	if(get_config_string(lookup_config(&config_tree, "ProcessPriority"), &priority)) {
 		if(!strcasecmp(priority, "Normal")) {
 			if(setpriority(NORMAL_PRIORITY_CLASS) != 0) {
 				logger(DEBUG_ALWAYS, LOG_ERR, "System call `%s' failed: %s", "setpriority", strerror(errno));
@@ -548,14 +693,25 @@ int main2(int argc, char **argv) {
 	logger(DEBUG_ALWAYS, LOG_NOTICE, "Ready");
 
 	if(umbilical) { // snip!
-		write(umbilical, "", 1);
+		if(write(umbilical, "", 1) != 1) {
+			// Pipe full or broken, nothing we can do about it.
+		}
+
 		close(umbilical);
 		umbilical = 0;
 	}
 
 	try_outgoing_connections();
 
+#ifdef HAVE_WATCHDOG
+	watchdog_start();
+#endif
+
 	status = main_loop();
+
+#ifdef HAVE_WATCHDOG
+	watchdog_stop();
+#endif
 
 	/* Shutdown properly. */
 
@@ -566,11 +722,7 @@ end:
 
 	free(priority);
 
-	crypto_exit();
-
-	exit_configuration(&config_tree);
-	free(cmdline_conf);
-	free_names();
+	random_exit();
 
 	return status;
 }

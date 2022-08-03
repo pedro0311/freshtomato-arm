@@ -23,19 +23,19 @@
 #include "system.h"
 
 #include "autoconnect.h"
+#include "conf_net.h"
 #include "conf.h"
 #include "connection.h"
-#include "device.h"
+#include "crypto.h"
 #include "graph.h"
 #include "logger.h"
 #include "meta.h"
 #include "names.h"
 #include "net.h"
-#include "netutl.h"
 #include "protocol.h"
 #include "subnet.h"
 #include "utils.h"
-#include "xalloc.h"
+#include "watchdog.h"
 
 int contradicting_add_edge = 0;
 int contradicting_del_edge = 0;
@@ -52,11 +52,11 @@ void purge(void) {
 
 	/* Remove all edges and subnets owned by unreachable nodes. */
 
-	for splay_each(node_t, n, node_tree) {
+	for splay_each(node_t, n, &node_tree) {
 		if(!n->status.reachable) {
 			logger(DEBUG_SCARY_THINGS, LOG_DEBUG, "Purging node %s (%s)", n->name, n->hostname);
 
-			for splay_each(subnet_t, s, n->subnet_tree) {
+			for splay_each(subnet_t, s, &n->subnet_tree) {
 				send_del_subnet(everyone, s);
 
 				if(!strictsubnets) {
@@ -64,7 +64,7 @@ void purge(void) {
 				}
 			}
 
-			for splay_each(edge_t, e, n->edge_tree) {
+			for splay_each(edge_t, e, &n->edge_tree) {
 				if(!tunnelserver) {
 					send_del_edge(everyone, e);
 				}
@@ -76,14 +76,14 @@ void purge(void) {
 
 	/* Check if anyone else claims to have an edge to an unreachable node. If not, delete node. */
 
-	for splay_each(node_t, n, node_tree) {
+	for splay_each(node_t, n, &node_tree) {
 		if(!n->status.reachable) {
-			for splay_each(edge_t, e, edge_weight_tree)
+			for splay_each(edge_t, e, &edge_weight_tree)
 				if(e->to == n) {
 					return;
 				}
 
-			if(!autoconnect && (!strictsubnets || !n->subnet_tree->head))
+			if(!autoconnect && (!strictsubnets || !n->subnet_tree.head))
 				/* in strictsubnets mode do not delete nodes with subnets */
 			{
 				node_del(n);
@@ -161,7 +161,7 @@ void terminate_connection(connection_t *c, bool report) {
 		do_outgoing_connection(outgoing);
 	}
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	/* Clean up dead proxy processes */
 
 	while(waitpid(-1, NULL, WNOHANG) > 0);
@@ -196,6 +196,9 @@ static void timeout_handler(void *data) {
 	         by default
 	*/
 	if(sleep_time > 2 * udp_discovery_timeout) {
+#ifdef HAVE_WATCHDOG
+		watchdog_ping();
+#endif
 		logger(DEBUG_ALWAYS, LOG_ERR, "Awaking from dead after %ld seconds of sleep", sleep_time);
 		/*
 		        Do not send any packets to tinc after we wake up.
@@ -211,7 +214,7 @@ static void timeout_handler(void *data) {
 
 	last_periodic_run_time = now;
 
-	for list_each(connection_t, c, connection_list) {
+	for list_each(connection_t, c, &connection_list) {
 		// control connections (eg. tinc ctl) do not have any timeout
 		if(c->status.control) {
 			continue;
@@ -258,7 +261,7 @@ static void timeout_handler(void *data) {
 	}
 
 	timeout_set(data, &(struct timeval) {
-		1, rand() % 100000
+		1, jitter()
 	});
 }
 
@@ -270,9 +273,7 @@ static void periodic_handler(void *data) {
 
 	if(contradicting_del_edge > 100 && contradicting_add_edge > 100) {
 		logger(DEBUG_ALWAYS, LOG_WARNING, "Possible node with same Name as us! Sleeping %d seconds.", sleeptime);
-		nanosleep(&(struct timespec) {
-			sleeptime, 0
-		}, NULL);
+		sleep_millis(sleeptime * 1000);
 		sleeptime *= 2;
 
 		if(sleeptime < 0) {
@@ -291,12 +292,12 @@ static void periodic_handler(void *data) {
 
 	/* If AutoConnect is set, check if we need to make or break connections. */
 
-	if(autoconnect && node_tree->count > 1) {
+	if(autoconnect && node_tree.count > 1) {
 		do_autoconnect();
 	}
 
 	timeout_set(data, &(struct timeval) {
-		5, rand() % 100000
+		5, jitter()
 	});
 }
 
@@ -311,7 +312,7 @@ void handle_meta_connection_data(connection_t *c) {
 	}
 }
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 static void sigterm_handler(void *data) {
 	logger(DEBUG_ALWAYS, LOG_NOTICE, "Got %s signal", strsignal(((signal_t *)data)->signum));
 	event_exit();
@@ -337,18 +338,17 @@ int reload_configuration(void) {
 
 	/* Reread our own configuration file */
 
-	exit_configuration(&config_tree);
-	init_configuration(&config_tree);
+	splay_empty_tree(&config_tree);
 
-	if(!read_server_config()) {
+	if(!read_server_config(&config_tree)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unable to reread configuration file.");
 		return EINVAL;
 	}
 
-	read_config_options(config_tree, NULL);
+	read_config_options(&config_tree, NULL);
 
 	snprintf(fname, sizeof(fname), "%s" SLASH "hosts" SLASH "%s", confbase, myself->name);
-	read_config_file(config_tree, fname, true);
+	read_config_file(&config_tree, fname, true);
 
 	/* Parse some options that are allowed to be changed while tinc is running */
 
@@ -357,20 +357,20 @@ int reload_configuration(void) {
 	/* If StrictSubnet is set, expire deleted Subnets and read new ones in */
 
 	if(strictsubnets) {
-		for splay_each(subnet_t, subnet, subnet_tree)
+		for splay_each(subnet_t, subnet, &subnet_tree)
 			if(subnet->owner) {
 				subnet->expires = 1;
 			}
 	}
 
-	for splay_each(node_t, n, node_tree) {
+	for splay_each(node_t, n, &node_tree) {
 		n->status.has_address = false;
 	}
 
 	load_all_nodes();
 
 	if(strictsubnets) {
-		for splay_each(subnet_t, subnet, subnet_tree) {
+		for splay_each(subnet_t, subnet, &subnet_tree) {
 			if(!subnet->owner) {
 				continue;
 			}
@@ -394,12 +394,12 @@ int reload_configuration(void) {
 			}
 		}
 	} else { /* Only read our own subnets back in */
-		for splay_each(subnet_t, subnet, myself->subnet_tree)
+		for splay_each(subnet_t, subnet, &myself->subnet_tree)
 			if(!subnet->expires) {
 				subnet->expires = 1;
 			}
 
-		config_t *cfg = lookup_config(config_tree, "Subnet");
+		config_t *cfg = lookup_config(&config_tree, "Subnet");
 
 		while(cfg) {
 			subnet_t *subnet, *s2;
@@ -418,10 +418,10 @@ int reload_configuration(void) {
 				}
 			}
 
-			cfg = lookup_config_next(config_tree, cfg);
+			cfg = lookup_config_next(&config_tree, cfg);
 		}
 
-		for splay_each(subnet_t, subnet, myself->subnet_tree) {
+		for splay_each(subnet_t, subnet, &myself->subnet_tree) {
 			if(subnet->expires == 1) {
 				send_del_subnet(everyone, subnet);
 				subnet_update(myself, subnet, false);
@@ -436,7 +436,7 @@ int reload_configuration(void) {
 
 	/* Close connections to hosts that have a changed or deleted host config file */
 
-	for list_each(connection_t, c, connection_list) {
+	for list_each(connection_t, c, &connection_list) {
 		if(c->status.control) {
 			continue;
 		}
@@ -457,7 +457,7 @@ int reload_configuration(void) {
 
 void retry(void) {
 	/* Reset the reconnection timers for all outgoing connections */
-	for list_each(outgoing_t, outgoing, outgoing_list) {
+	for list_each(outgoing_t, outgoing, &outgoing_list) {
 		outgoing->timeout = 0;
 
 		if(outgoing->ev.cb)
@@ -467,7 +467,7 @@ void retry(void) {
 	}
 
 	/* Check for outgoing connections that are in progress, and reset their ping timers */
-	for list_each(connection_t, c, connection_list) {
+	for list_each(connection_t, c, &connection_list) {
 		if(c->outgoing && !c->node) {
 			c->last_ping_time = 0;
 		}
@@ -485,13 +485,13 @@ void retry(void) {
 int main_loop(void) {
 	last_periodic_run_time = now;
 	timeout_add(&pingtimer, timeout_handler, &pingtimer, &(struct timeval) {
-		pingtimeout, rand() % 100000
+		pingtimeout, jitter()
 	});
 	timeout_add(&periodictimer, periodic_handler, &periodictimer, &(struct timeval) {
 		0, 0
 	});
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	signal_t sighup = {0};
 	signal_t sigterm = {0};
 	signal_t sigquit = {0};
@@ -510,7 +510,7 @@ int main_loop(void) {
 		return 1;
 	}
 
-#ifndef HAVE_MINGW
+#ifndef HAVE_WINDOWS
 	signal_del(&sighup);
 	signal_del(&sigterm);
 	signal_del(&sigquit);

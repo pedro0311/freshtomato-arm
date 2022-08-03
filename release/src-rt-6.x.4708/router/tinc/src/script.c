@@ -1,7 +1,7 @@
 /*
     script.c -- call an external script
     Copyright (C) 1999-2005 Ivo Timmermans,
-                  2000-2018 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "names.h"
 #include "script.h"
 #include "xalloc.h"
+#include "sandbox.h"
 
 #ifdef HAVE_PUTENV
 static void unputenv(const char *p) {
@@ -35,14 +36,14 @@ static void unputenv(const char *p) {
 		return;
 	}
 
-	int len = e - p;
+	ptrdiff_t len = e - p;
 #ifndef HAVE_UNSETENV
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 	// Windows requires putenv("FOO=") to unset %FOO%
 	len++;
 #endif
 #endif
-	char var[len + 1];
+	char *var = alloca(len + 1);
 	strncpy(var, p, len);
 	var[len] = 0;
 #ifdef HAVE_UNSETENV
@@ -80,7 +81,12 @@ int environment_add(environment_t *env, const char *format, ...) {
 	if(format) {
 		va_list ap;
 		va_start(ap, format);
-		vasprintf(&env->entries[env->n], format, ap);
+
+		if(vasprintf(&env->entries[env->n], format, ap) == -1) {
+			// Assume we are out of memory.
+			abort();
+		}
+
 		va_end(ap);
 	} else {
 		env->entries[env->n] = NULL;
@@ -93,7 +99,11 @@ void environment_update(environment_t *env, int pos, const char *format, ...) {
 	free(env->entries[pos]);
 	va_list ap;
 	va_start(ap, format);
-	vasprintf(&env->entries[pos], format, ap);
+
+	if(vasprintf(&env->entries[pos], format, ap) == -1) {
+		abort();
+	}
+
 	va_end(ap);
 }
 
@@ -125,13 +135,17 @@ void environment_init(environment_t *env) {
 
 void environment_exit(environment_t *env) {
 	for(int i = 0; i < env->n; i++) {
-		free(env->entries[i]);
+		free_string(env->entries[i]);
 	}
 
 	free(env->entries);
 }
 
 bool execute_script(const char *name, environment_t *env) {
+	if(!sandbox_can(START_PROCESSES, RIGHT_NOW)) {
+		return false;
+	}
+
 	char scriptname[PATH_MAX];
 	char *command;
 
@@ -139,7 +153,7 @@ bool execute_script(const char *name, environment_t *env) {
 
 	/* First check if there is a script */
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 
 	if(!*scriptextension) {
 		const char *pathext = getenv("PATHEXT");
@@ -150,9 +164,11 @@ bool execute_script(const char *name, environment_t *env) {
 
 		size_t pathlen = strlen(pathext);
 		size_t scriptlen = strlen(scriptname);
-		char fullname[scriptlen + pathlen + 1];
+
+		const size_t fullnamelen = scriptlen + pathlen + 1;
+		char *fullname = alloca(fullnamelen);
 		char *ext = fullname + scriptlen;
-		strncpy(fullname, scriptname, sizeof(fullname));
+		strncpy(fullname, scriptname, fullnamelen);
 
 		const char *p = pathext;
 		bool found = false;

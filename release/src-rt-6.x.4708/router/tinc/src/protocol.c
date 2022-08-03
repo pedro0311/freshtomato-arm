@@ -1,7 +1,7 @@
 /*
     protocol.c -- handle the meta-protocol, basic functions
     Copyright (C) 1999-2005 Ivo Timmermans,
-                  2000-2013 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 #include "conf.h"
 #include "connection.h"
+#include "crypto.h"
 #include "logger.h"
 #include "meta.h"
 #include "protocol.h"
@@ -32,32 +33,63 @@ bool tunnelserver = false;
 bool strictsubnets = false;
 bool experimental = true;
 
-/* Jumptable for the request handlers */
+static inline bool is_valid_request(request_t req) {
+	return req > ALL && req < LAST;
+}
 
-static bool (*request_handlers[])(connection_t *, const char *) = {
-	id_h, metakey_h, challenge_h, chal_reply_h, ack_h,
-	NULL, NULL, termreq_h,
-	ping_h, pong_h,
-	add_subnet_h, del_subnet_h,
-	add_edge_h, del_edge_h,
-	key_changed_h, req_key_h, ans_key_h, tcppacket_h, control_h,
-	NULL, NULL, /* Not "real" requests (yet) */
-	sptps_tcppacket_h,
-	udp_info_h, mtu_info_h,
+/* Request handlers */
+const request_entry_t *get_request_entry(request_t req) {
+	if(!is_valid_request(req)) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Invalid request %d", req);
+		return NULL;
+	}
+
+	// Prevent user from accessing the table directly to always have bound checks
+	static const request_entry_t request_entries[] = {
+		[ID] = {id_h, "ID"},
+		[METAKEY] = {metakey_h, "METAKEY"},
+		[CHALLENGE] = {challenge_h, "CHALLENGE"},
+		[CHAL_REPLY] = {chal_reply_h, "CHAL_REPLY"},
+		[ACK] = {ack_h, "ACK"},
+		[STATUS] = {NULL, "STATUS"},
+		[ERROR] = {NULL, "ERROR"},
+		[TERMREQ] = {termreq_h, "TERMREQ"},
+		[PING] = {ping_h, "PING"},
+		[PONG] = {pong_h, "PONG"},
+		[ADD_SUBNET] = {add_subnet_h, "ADD_SUBNET"},
+		[DEL_SUBNET] = {del_subnet_h, "DEL_SUBNET"},
+		[ADD_EDGE] = {add_edge_h, "ADD_EDGE"},
+		[DEL_EDGE] = {del_edge_h, "DEL_EDGE"},
+		[KEY_CHANGED] = {key_changed_h, "KEY_CHANGED"},
+		[REQ_KEY] = {req_key_h, "REQ_KEY"},
+		[ANS_KEY] = {ans_key_h, "ANS_KEY"},
+		[PACKET] = {tcppacket_h, "PACKET"},
+		[CONTROL] = {control_h, "CONTROL"},
+		/* Not "real" requests yet */
+		[REQ_PUBKEY] = {NULL, "REQ_PUBKEY"},
+		[ANS_PUBKEY] = {NULL, "ANS_PUBKEY"},
+		[SPTPS_PACKET] = {sptps_tcppacket_h, "SPTPS_PACKET"},
+		[UDP_INFO] = {udp_info_h, "UDP_INFO"},
+		[MTU_INFO] = {mtu_info_h, "MTU_INFO"},
+	};
+	return &request_entries[req];
+}
+
+static int past_request_compare(const past_request_t *a, const past_request_t *b) {
+	return strcmp(a->request, b->request);
+}
+
+static void free_past_request(past_request_t *r) {
+	if(r) {
+		free((char *)r->request);
+		free(r);
+	}
+}
+
+static splay_tree_t past_request_tree = {
+	.compare = (splay_compare_t) past_request_compare,
+	.delete = (splay_action_t) free_past_request,
 };
-
-/* Request names */
-
-static char (*request_name[]) = {
-	"ID", "METAKEY", "CHALLENGE", "CHAL_REPLY", "ACK",
-	"STATUS", "ERROR", "TERMREQ",
-	"PING", "PONG",
-	"ADD_SUBNET", "DEL_SUBNET",
-	"ADD_EDGE", "DEL_EDGE", "KEY_CHANGED", "REQ_KEY", "ANS_KEY", "PACKET", "CONTROL",
-	"REQ_PUBKEY", "ANS_PUBKEY", "SPTPS_PACKET", "UDP_INFO", "MTU_INFO",
-};
-
-static splay_tree_t *past_request_tree;
 
 /* Generic request routines - takes care of logging and error
    detection as well */
@@ -83,7 +115,7 @@ bool send_request(connection_t *c, const char *format, ...) {
 	}
 
 	int id = atoi(request);
-	logger(DEBUG_META, LOG_DEBUG, "Sending %s to %s (%s): %s", request_name[id], c->name, c->hostname, request);
+	logger(DEBUG_META, LOG_DEBUG, "Sending %s to %s (%s): %s", get_request_entry(id)->name, c->name, c->hostname, request);
 
 	request[len++] = '\n';
 
@@ -101,14 +133,15 @@ bool send_request(connection_t *c, const char *format, ...) {
 }
 
 void forward_request(connection_t *from, const char *request) {
-	logger(DEBUG_META, LOG_DEBUG, "Forwarding %s from %s (%s): %s", request_name[atoi(request)], from->name, from->hostname, request);
+	logger(DEBUG_META, LOG_DEBUG, "Forwarding %s from %s (%s): %s", get_request_entry(atoi(request))->name, from->name, from->hostname, request);
 
 	// Create a temporary newline-terminated copy of the request
-	int len = strlen(request);
-	char tmp[len + 1];
+	size_t len = strlen(request);
+	const size_t tmplen = len + 1;
+	char *tmp = alloca(tmplen);
 	memcpy(tmp, request, len);
 	tmp[len] = '\n';
-	broadcast_meta(from, tmp, sizeof(tmp));
+	broadcast_meta(from, tmp, tmplen);
 }
 
 bool receive_request(connection_t *c, const char *request) {
@@ -131,23 +164,24 @@ bool receive_request(connection_t *c, const char *request) {
 	int reqno = atoi(request);
 
 	if(reqno || *request == '0') {
-		if((reqno < 0) || (reqno >= LAST) || !request_handlers[reqno]) {
+		if(!is_valid_request(reqno) || !get_request_entry(reqno)->handler) {
 			logger(DEBUG_META, LOG_DEBUG, "Unknown request from %s (%s): %s", c->name, c->hostname, request);
 			return false;
-		} else {
-			logger(DEBUG_META, LOG_DEBUG, "Got %s from %s (%s): %s", request_name[reqno], c->name, c->hostname, request);
 		}
+
+		const request_entry_t *entry = get_request_entry(reqno);
+		logger(DEBUG_META, LOG_DEBUG, "Got %s from %s (%s): %s", entry->name, c->name, c->hostname, request);
 
 		if((c->allow_request != ALL) && (c->allow_request != reqno)) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Unauthorized request from %s (%s)", c->name, c->hostname);
 			return false;
 		}
 
-		if(!request_handlers[reqno](c, request)) {
+		if(!entry->handler(c, request)) {
 			/* Something went wrong. Probably scriptkiddies. Terminate. */
 
 			if(reqno != TERMREQ) {
-				logger(DEBUG_ALWAYS, LOG_ERR, "Error while processing %s from %s (%s)", request_name[reqno], c->name, c->hostname);
+				logger(DEBUG_ALWAYS, LOG_ERR, "Error while processing %s from %s (%s)", entry->name, c->name, c->hostname);
 			}
 
 			return false;
@@ -160,24 +194,15 @@ bool receive_request(connection_t *c, const char *request) {
 	return true;
 }
 
-static int past_request_compare(const past_request_t *a, const past_request_t *b) {
-	return strcmp(a->request, b->request);
-}
-
-static void free_past_request(past_request_t *r) {
-	free((char *)r->request);
-	free(r);
-}
-
 static timeout_t past_request_timeout;
 
 static void age_past_requests(void *data) {
 	(void)data;
 	int left = 0, deleted = 0;
 
-	for splay_each(past_request_t, p, past_request_tree) {
+	for splay_each(past_request_t, p, &past_request_tree) {
 		if(p->firstseen + pinginterval <= now.tv_sec) {
-			splay_delete_node(past_request_tree, node), deleted++;
+			splay_delete_node(&past_request_tree, node), deleted++;
 		} else {
 			left++;
 		}
@@ -189,7 +214,7 @@ static void age_past_requests(void *data) {
 
 	if(left)
 		timeout_set(&past_request_timeout, &(struct timeval) {
-		10, rand() % 100000
+		10, jitter()
 	});
 }
 
@@ -198,27 +223,23 @@ bool seen_request(const char *request) {
 
 	p.request = request;
 
-	if(splay_search(past_request_tree, &p)) {
+	if(splay_search(&past_request_tree, &p)) {
 		logger(DEBUG_SCARY_THINGS, LOG_DEBUG, "Already seen request");
 		return true;
 	} else {
 		new = xmalloc(sizeof(*new));
 		new->request = xstrdup(request);
 		new->firstseen = now.tv_sec;
-		splay_insert(past_request_tree, new);
+		splay_insert(&past_request_tree, new);
 		timeout_add(&past_request_timeout, age_past_requests, NULL, &(struct timeval) {
-			10, rand() % 100000
+			10, jitter()
 		});
 		return false;
 	}
 }
 
-void init_requests(void) {
-	past_request_tree = splay_alloc_tree((splay_compare_t) past_request_compare, (splay_action_t) free_past_request);
-}
-
 void exit_requests(void) {
-	splay_delete_tree(past_request_tree);
+	splay_empty_tree(&past_request_tree);
 
 	timeout_del(&past_request_timeout);
 }
