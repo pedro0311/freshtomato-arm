@@ -1,6 +1,6 @@
 /*
     info.c -- Show information about a node, subnet or address
-    Copyright (C) 2012-2017 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2012-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,12 +20,11 @@
 #include "system.h"
 
 #include "control_common.h"
-#include "list.h"
+#include "info.h"
+#include "logger.h"
 #include "subnet.h"
 #include "tincctl.h"
-#include "info.h"
 #include "utils.h"
-#include "xalloc.h"
 
 void logger(int level, int priority, const char *format, ...) {
 	(void)level;
@@ -40,7 +39,7 @@ void logger(int level, int priority, const char *format, ...) {
 }
 
 char *strip_weight(char *netstr) {
-	int len = strlen(netstr);
+	size_t len = strlen(netstr);
 
 	if(len >= 3 && !strcmp(netstr + len - 3, "#10")) {
 		netstr[len - 3] = 0;
@@ -299,7 +298,7 @@ static int info_subnet(int fd, const char *item) {
 					continue;
 				}
 
-				if(memcmp(&find.net.ipv4.address, &subnet.net.ipv4.address, sizeof(subnet.net.ipv4))) {
+				if(memcmp(&find.net.ipv4.address, &subnet.net.ipv4.address, sizeof(subnet.net.ipv4.address))) {
 					continue;
 				}
 			}
@@ -313,14 +312,14 @@ static int info_subnet(int fd, const char *item) {
 					continue;
 				}
 
-				if(memcmp(&find.net.ipv6.address, &subnet.net.ipv6.address, sizeof(subnet.net.ipv6))) {
+				if(memcmp(&find.net.ipv6.address, &subnet.net.ipv6.address, sizeof(subnet.net.ipv6.address))) {
 					continue;
 				}
 			}
 		}
 
 		if(find.type == SUBNET_MAC) {
-			if(memcmp(&find.net.mac.address, &subnet.net.mac.address, sizeof(subnet.net.mac))) {
+			if(memcmp(&find.net.mac.address, &subnet.net.mac.address, sizeof(subnet.net.mac.address))) {
 				continue;
 			}
 		}

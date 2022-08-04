@@ -21,12 +21,12 @@
 #include "system.h"
 
 #include "chacha-poly1305/chacha-poly1305.h"
-#include "crypto.h"
 #include "ecdh.h"
 #include "ecdsa.h"
-#include "logger.h"
 #include "prf.h"
 #include "sptps.h"
+#include "random.h"
+#include "xalloc.h"
 
 unsigned int sptps_replaywin = 16;
 
@@ -68,6 +68,7 @@ void sptps_log_stderr(sptps_t *s, int s_errno, const char *format, va_list ap) {
 void (*sptps_log)(sptps_t *s, int s_errno, const char *format, va_list ap) = sptps_log_stderr;
 
 // Log an error message.
+static bool error(sptps_t *s, int s_errno, const char *format, ...) ATTR_FORMAT(printf, 3, 4);
 static bool error(sptps_t *s, int s_errno, const char *format, ...) {
 	(void)s;
 	(void)s_errno;
@@ -83,6 +84,7 @@ static bool error(sptps_t *s, int s_errno, const char *format, ...) {
 	return false;
 }
 
+static void warning(sptps_t *s, const char *format, ...) ATTR_FORMAT(printf, 2, 3);
 static void warning(sptps_t *s, const char *format, ...) {
 	va_list ap;
 	va_start(ap, format);
@@ -90,9 +92,25 @@ static void warning(sptps_t *s, const char *format, ...) {
 	va_end(ap);
 }
 
+static sptps_kex_t *new_sptps_kex(void) {
+	return xzalloc(sizeof(sptps_kex_t));
+}
+
+static void free_sptps_kex(sptps_kex_t *kex) {
+	xzfree(kex, sizeof(sptps_kex_t));
+}
+
+static sptps_key_t *new_sptps_key(void) {
+	return xzalloc(sizeof(sptps_key_t));
+}
+
+static void free_sptps_key(sptps_key_t *key) {
+	xzfree(key, sizeof(sptps_key_t));
+}
+
 // Send a record (datagram version, accepts all record types, handles encryption and authentication).
 static bool send_record_priv_datagram(sptps_t *s, uint8_t type, const void *data, uint16_t len) {
-	char buffer[len + 21UL];
+	uint8_t *buffer = alloca(len + 21UL);
 
 	// Create header with sequence number, length and record type
 	uint32_t seqno = s->outseqno++;
@@ -117,7 +135,7 @@ static bool send_record_priv(sptps_t *s, uint8_t type, const void *data, uint16_
 		return send_record_priv_datagram(s, type, data, len);
 	}
 
-	char buffer[len + 19UL];
+	uint8_t *buffer = alloca(len + 19UL);
 
 	// Create header with sequence number, length and record type
 	uint32_t seqno = s->outseqno++;
@@ -154,58 +172,59 @@ bool sptps_send_record(sptps_t *s, uint8_t type, const void *data, uint16_t len)
 
 // Send a Key EXchange record, containing a random nonce and an ECDHE public key.
 static bool send_kex(sptps_t *s) {
-	size_t keylen = ECDH_SIZE;
-
 	// Make room for our KEX message, which we will keep around since send_sig() needs it.
 	if(s->mykex) {
 		return false;
 	}
 
-	s->mykex = realloc(s->mykex, 1 + 32 + keylen);
-
-	if(!s->mykex) {
-		return error(s, errno, strerror(errno));
-	}
+	s->mykex = new_sptps_kex();
 
 	// Set version byte to zero.
-	s->mykex[0] = SPTPS_VERSION;
+	s->mykex->version = SPTPS_VERSION;
 
 	// Create a random nonce.
-	randomize(s->mykex + 1, 32);
+	randomize(s->mykex->nonce, ECDH_SIZE);
 
 	// Create a new ECDH public key.
-	if(!(s->ecdh = ecdh_generate_public(s->mykex + 1 + 32))) {
+	if(!(s->ecdh = ecdh_generate_public(s->mykex->pubkey))) {
 		return error(s, EINVAL, "Failed to generate ECDH public key");
 	}
 
-	return send_record_priv(s, SPTPS_HANDSHAKE, s->mykex, 1 + 32 + keylen);
+	return send_record_priv(s, SPTPS_HANDSHAKE, s->mykex, sizeof(sptps_kex_t));
+}
+
+static size_t sigmsg_len(size_t labellen) {
+	return 1 + 2 * sizeof(sptps_kex_t) + labellen;
+}
+
+static void fill_msg(uint8_t *msg, bool initiator, const sptps_kex_t *kex0, const sptps_kex_t *kex1, const sptps_t *s) {
+	*msg = initiator, msg++;
+	memcpy(msg, kex0, sizeof(*kex0)), msg += sizeof(*kex0);
+	memcpy(msg, kex1, sizeof(*kex1)), msg += sizeof(*kex1);
+	memcpy(msg, s->label, s->labellen);
 }
 
 // Send a SIGnature record, containing an Ed25519 signature over both KEX records.
 static bool send_sig(sptps_t *s) {
-	size_t keylen = ECDH_SIZE;
-	size_t siglen = ecdsa_size(s->mykey);
-
 	// Concatenate both KEX messages, plus tag indicating if it is from the connection originator, plus label
-	char msg[(1 + 32 + keylen) * 2 + 1 + s->labellen];
-	char sig[siglen];
-
-	msg[0] = s->initiator;
-	memcpy(msg + 1, s->mykex, 1 + 32 + keylen);
-	memcpy(msg + 1 + 33 + keylen, s->hiskex, 1 + 32 + keylen);
-	memcpy(msg + 1 + 2 * (33 + keylen), s->label, s->labellen);
+	size_t msglen = sigmsg_len(s->labellen);
+	uint8_t *msg = alloca(msglen);
+	fill_msg(msg, s->initiator, s->mykex, s->hiskex, s);
 
 	// Sign the result.
-	if(!ecdsa_sign(s->mykey, msg, sizeof(msg), sig)) {
+	size_t siglen = ecdsa_size(s->mykey);
+	uint8_t *sig = alloca(siglen);
+
+	if(!ecdsa_sign(s->mykey, msg, msglen, sig)) {
 		return error(s, EINVAL, "Failed to sign SIG record");
 	}
 
 	// Send the SIG exchange record.
-	return send_record_priv(s, SPTPS_HANDSHAKE, sig, sizeof(sig));
+	return send_record_priv(s, SPTPS_HANDSHAKE, sig, siglen);
 }
 
 // Generate key material from the shared secret created from the ECDHE key exchange.
-static bool generate_key_material(sptps_t *s, const char *shared, size_t len) {
+static bool generate_key_material(sptps_t *s, const uint8_t *shared, size_t len) {
 	// Initialise cipher and digest structures if necessary
 	if(!s->outstate) {
 		s->incipher = chacha_poly1305_init();
@@ -217,30 +236,27 @@ static bool generate_key_material(sptps_t *s, const char *shared, size_t len) {
 	}
 
 	// Allocate memory for key material
-	size_t keylen = 2 * CHACHA_POLY1305_KEYLEN;
-
-	s->key = realloc(s->key, keylen);
-
-	if(!s->key) {
-		return error(s, errno, strerror(errno));
-	}
+	s->key = new_sptps_key();
 
 	// Create the HMAC seed, which is "key expansion" + session label + server nonce + client nonce
-	char seed[s->labellen + 64 + 13];
-	memcpy(seed, "key expansion", 13);
+	const size_t msglen = sizeof("key expansion") - 1;
+	const size_t seedlen = msglen + s->labellen + ECDH_SIZE * 2;
+	uint8_t *seed = alloca(seedlen);
 
-	if(s->initiator) {
-		memcpy(seed + 13, s->mykex + 1, 32);
-		memcpy(seed + 45, s->hiskex + 1, 32);
-	} else {
-		memcpy(seed + 13, s->hiskex + 1, 32);
-		memcpy(seed + 45, s->mykex + 1, 32);
-	}
+	uint8_t *ptr = seed;
+	memcpy(ptr, "key expansion", msglen);
+	ptr += msglen;
 
-	memcpy(seed + 77, s->label, s->labellen);
+	memcpy(ptr, (s->initiator ? s->mykex : s->hiskex)->nonce, ECDH_SIZE);
+	ptr += ECDH_SIZE;
+
+	memcpy(ptr, (s->initiator ? s->hiskex : s->mykex)->nonce, ECDH_SIZE);
+	ptr += ECDH_SIZE;
+
+	memcpy(ptr, s->label, s->labellen);
 
 	// Use PRF to generate the key material
-	if(!prf(shared, len, seed, s->labellen + 64 + 13, s->key, keylen)) {
+	if(!prf(shared, len, seed, seedlen, s->key->both, sizeof(sptps_key_t))) {
 		return error(s, EINVAL, "Failed to generate key material");
 	}
 
@@ -253,24 +269,20 @@ static bool send_ack(sptps_t *s) {
 }
 
 // Receive an ACKnowledgement record.
-static bool receive_ack(sptps_t *s, const char *data, uint16_t len) {
+static bool receive_ack(sptps_t *s, const uint8_t *data, uint16_t len) {
 	(void)data;
 
 	if(len) {
 		return error(s, EIO, "Invalid ACK record length");
 	}
 
-	if(s->initiator) {
-		if(!chacha_poly1305_set_key(s->incipher, s->key)) {
-			return error(s, EINVAL, "Failed to set counter");
-		}
-	} else {
-		if(!chacha_poly1305_set_key(s->incipher, s->key + CHACHA_POLY1305_KEYLEN)) {
-			return error(s, EINVAL, "Failed to set counter");
-		}
+	uint8_t *key = s->initiator ? s->key->key0 : s->key->key1;
+
+	if(!chacha_poly1305_set_key(s->incipher, key)) {
+		return error(s, EINVAL, "Failed to set counter");
 	}
 
-	free(s->key);
+	free_sptps_key(s->key);
 	s->key = NULL;
 	s->instate = true;
 
@@ -278,26 +290,23 @@ static bool receive_ack(sptps_t *s, const char *data, uint16_t len) {
 }
 
 // Receive a Key EXchange record, respond by sending a SIG record.
-static bool receive_kex(sptps_t *s, const char *data, uint16_t len) {
+static bool receive_kex(sptps_t *s, const uint8_t *data, uint16_t len) {
 	// Verify length of the HELLO record
-	if(len != 1 + 32 + ECDH_SIZE) {
+	if(len != sizeof(sptps_kex_t)) {
 		return error(s, EIO, "Invalid KEX record length");
 	}
 
-	// Ignore version number for now.
+	if(*data != SPTPS_VERSION) {
+		return error(s, EINVAL, "Received incorrect version %d", *data);
+	}
 
 	// Make a copy of the KEX message, send_sig() and receive_sig() need it
 	if(s->hiskex) {
 		return error(s, EINVAL, "Received a second KEX message before first has been processed");
 	}
 
-	s->hiskex = realloc(s->hiskex, len);
-
-	if(!s->hiskex) {
-		return error(s, errno, strerror(errno));
-	}
-
-	memcpy(s->hiskex, data, len);
+	s->hiskex = new_sptps_kex();
+	memcpy(s->hiskex, data, sizeof(sptps_kex_t));
 
 	if(s->initiator) {
 		return send_sig(s);
@@ -307,39 +316,37 @@ static bool receive_kex(sptps_t *s, const char *data, uint16_t len) {
 }
 
 // Receive a SIGnature record, verify it, if it passed, compute the shared secret and calculate the session keys.
-static bool receive_sig(sptps_t *s, const char *data, uint16_t len) {
-	size_t keylen = ECDH_SIZE;
-	size_t siglen = ecdsa_size(s->hiskey);
-
+static bool receive_sig(sptps_t *s, const uint8_t *data, uint16_t len) {
 	// Verify length of KEX record.
-	if(len != siglen) {
+	if(len != ecdsa_size(s->hiskey)) {
 		return error(s, EIO, "Invalid KEX record length");
 	}
 
 	// Concatenate both KEX messages, plus tag indicating if it is from the connection originator
-	char msg[(1 + 32 + keylen) * 2 + 1 + s->labellen];
-
-	msg[0] = !s->initiator;
-	memcpy(msg + 1, s->hiskex, 1 + 32 + keylen);
-	memcpy(msg + 1 + 33 + keylen, s->mykex, 1 + 32 + keylen);
-	memcpy(msg + 1 + 2 * (33 + keylen), s->label, s->labellen);
+	const size_t msglen = sigmsg_len(s->labellen);
+	uint8_t *msg = alloca(msglen);
+	fill_msg(msg, !s->initiator, s->hiskex, s->mykex, s);
 
 	// Verify signature.
-	if(!ecdsa_verify(s->hiskey, msg, sizeof(msg), data)) {
+	if(!ecdsa_verify(s->hiskey, msg, msglen, data)) {
 		return error(s, EIO, "Failed to verify SIG record");
 	}
 
 	// Compute shared secret.
-	char shared[ECDH_SHARED_SIZE];
+	uint8_t shared[ECDH_SHARED_SIZE];
 
-	if(!ecdh_compute_shared(s->ecdh, s->hiskex + 1 + 32, shared)) {
+	if(!ecdh_compute_shared(s->ecdh, s->hiskex->pubkey, shared)) {
+		memzero(shared, sizeof(shared));
 		return error(s, EINVAL, "Failed to compute ECDH shared secret");
 	}
 
 	s->ecdh = NULL;
 
 	// Generate key material from shared secret.
-	if(!generate_key_material(s, shared, sizeof(shared))) {
+	bool generated = generate_key_material(s, shared, sizeof(shared));
+	memzero(shared, sizeof(shared));
+
+	if(!generated) {
 		return false;
 	}
 
@@ -347,10 +354,10 @@ static bool receive_sig(sptps_t *s, const char *data, uint16_t len) {
 		return false;
 	}
 
-	free(s->mykex);
-	free(s->hiskex);
-
+	free_sptps_kex(s->mykex);
 	s->mykex = NULL;
+
+	free_sptps_kex(s->hiskex);
 	s->hiskex = NULL;
 
 	// Send cipher change record
@@ -359,14 +366,10 @@ static bool receive_sig(sptps_t *s, const char *data, uint16_t len) {
 	}
 
 	// TODO: only set new keys after ACK has been set/received
-	if(s->initiator) {
-		if(!chacha_poly1305_set_key(s->outcipher, s->key + CHACHA_POLY1305_KEYLEN)) {
-			return error(s, EINVAL, "Failed to set key");
-		}
-	} else {
-		if(!chacha_poly1305_set_key(s->outcipher, s->key)) {
-			return error(s, EINVAL, "Failed to set key");
-		}
+	uint8_t *key = s->initiator ? s->key->key1 : s->key->key0;
+
+	if(!chacha_poly1305_set_key(s->outcipher, key)) {
+		return error(s, EINVAL, "Failed to set key");
 	}
 
 	return true;
@@ -383,7 +386,7 @@ bool sptps_force_kex(sptps_t *s) {
 }
 
 // Receive a handshake record.
-static bool receive_handshake(sptps_t *s, const char *data, uint16_t len) {
+static bool receive_handshake(sptps_t *s, const uint8_t *data, uint16_t len) {
 	// Only a few states to deal with handshaking.
 	switch(s->state) {
 	case SPTPS_SECONDARY_KEX:
@@ -513,7 +516,7 @@ bool sptps_verify_datagram(sptps_t *s, const void *vdata, size_t len) {
 		return error(s, EIO, "Received short packet");
 	}
 
-	const char *data = vdata;
+	const uint8_t *data = vdata;
 	uint32_t seqno;
 	memcpy(&seqno, data, 4);
 	seqno = ntohl(seqno);
@@ -522,13 +525,13 @@ bool sptps_verify_datagram(sptps_t *s, const void *vdata, size_t len) {
 		return false;
 	}
 
-	char buffer[len];
+	uint8_t *buffer = alloca(len);
 	size_t outlen;
 	return chacha_poly1305_decrypt(s->incipher, seqno, data + 4, len - 4, buffer, &outlen);
 }
 
 // Receive incoming data, datagram version.
-static bool sptps_receive_data_datagram(sptps_t *s, const char *data, size_t len) {
+static bool sptps_receive_data_datagram(sptps_t *s, const uint8_t *data, size_t len) {
 	if(len < (s->instate ? 21 : 5)) {
 		return error(s, EIO, "Received short packet");
 	}
@@ -558,7 +561,7 @@ static bool sptps_receive_data_datagram(sptps_t *s, const char *data, size_t len
 
 	// Decrypt
 
-	char buffer[len];
+	uint8_t *buffer = alloca(len);
 	size_t outlen;
 
 	if(!chacha_poly1305_decrypt(s->incipher, seqno, data, len, buffer, &outlen)) {
@@ -599,7 +602,7 @@ static bool sptps_receive_data_datagram(sptps_t *s, const char *data, size_t len
 
 // Receive incoming data. Check if it contains a complete record, if so, handle it.
 size_t sptps_receive_data(sptps_t *s, const void *vdata, size_t len) {
-	const char *data = vdata;
+	const uint8_t *data = vdata;
 	size_t total_read = 0;
 
 	if(!s->state) {
@@ -639,7 +642,7 @@ size_t sptps_receive_data(sptps_t *s, const void *vdata, size_t len) {
 		s->inbuf = realloc(s->inbuf, s->reclen + 19UL);
 
 		if(!s->inbuf) {
-			return error(s, errno, strerror(errno));
+			return error(s, errno, "%s", strerror(errno));
 		}
 
 		// Exit early if we have no more data to process.
@@ -717,7 +720,7 @@ bool sptps_start(sptps_t *s, void *handle, bool initiator, bool datagram, ecdsa_
 		s->late = malloc(s->replaywin);
 
 		if(!s->late) {
-			return error(s, errno, strerror(errno));
+			return error(s, errno, "%s", strerror(errno));
 		}
 
 		memset(s->late, 0, s->replaywin);
@@ -726,14 +729,14 @@ bool sptps_start(sptps_t *s, void *handle, bool initiator, bool datagram, ecdsa_
 	s->label = malloc(labellen);
 
 	if(!s->label) {
-		return error(s, errno, strerror(errno));
+		return error(s, errno, "%s", strerror(errno));
 	}
 
 	if(!datagram) {
 		s->inbuf = malloc(7);
 
 		if(!s->inbuf) {
-			return error(s, errno, strerror(errno));
+			return error(s, errno, "%s", strerror(errno));
 		}
 
 		s->buflen = 0;
@@ -757,9 +760,9 @@ bool sptps_stop(sptps_t *s) {
 	chacha_poly1305_exit(s->outcipher);
 	ecdh_free(s->ecdh);
 	free(s->inbuf);
-	free(s->mykex);
-	free(s->hiskex);
-	free(s->key);
+	free_sptps_kex(s->mykex);
+	free_sptps_kex(s->hiskex);
+	free_sptps_key(s->key);
 	free(s->label);
 	free(s->late);
 	memset(s, 0, sizeof(*s));

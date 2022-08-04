@@ -1,0 +1,22 @@
+image: freebsd/13.x
+
+packages:
+  - cmocka
+  - libgcrypt
+  - liblz4
+  - lzo2
+  - meson
+  - pkgconf
+  - texinfo
+  - vde2
+
+sources:
+  - https://github.com/gsliepen/tinc
+
+environment:
+  PKG_CONFIG_PATH: /usr/local/libdata/pkgconfig
+
+tasks:
+  - openssl: sh tinc/.ci/bsd/run.sh openssl
+  - nolegacy: sh tinc/.ci/bsd/run.sh nolegacy
+  - gcrypt: sh tinc/.ci/bsd/run.sh gcrypt

@@ -28,22 +28,20 @@
 #include "device.h"
 #include "net.h"
 #include "logger.h"
-#include "utils.h"
-#include "route.h"
 #include "xalloc.h"
 
 #if defined(PF_PACKET) && defined(ETH_P_ALL) && defined(AF_PACKET) && defined(SIOCGIFINDEX)
 static const char *device_info = "raw_socket";
 
 static bool setup_device(void) {
-	struct ifreq ifr;
-	struct sockaddr_ll sa;
+	struct ifreq ifr = {0};
+	struct sockaddr_ll sa = {0};
 
-	if(!get_config_string(lookup_config(config_tree, "Interface"), &iface)) {
+	if(!get_config_string(lookup_config(&config_tree, "Interface"), &iface)) {
 		iface = xstrdup("eth0");
 	}
 
-	if(!get_config_string(lookup_config(config_tree, "Device"), &device)) {
+	if(!get_config_string(lookup_config(&config_tree, "Device"), &device)) {
 		device = xstrdup(iface);
 	}
 
@@ -52,8 +50,6 @@ static bool setup_device(void) {
 		       strerror(errno));
 		return false;
 	}
-
-	memset(&ifr, 0, sizeof(ifr));
 
 #ifdef FD_CLOEXEC
 	fcntl(device_fd, F_SETFD, FD_CLOEXEC);
@@ -69,7 +65,6 @@ static bool setup_device(void) {
 		return false;
 	}
 
-	memset(&sa, '0', sizeof(sa));
 	sa.sll_family = AF_PACKET;
 	sa.sll_protocol = htons(ETH_P_ALL);
 	sa.sll_ifindex = ifr.ifr_ifindex;
@@ -96,7 +91,7 @@ static void close_device(void) {
 }
 
 static bool read_packet(vpn_packet_t *packet) {
-	int inlen;
+	ssize_t inlen;
 
 	if((inlen = read(device_fd, DATA(packet), MTU)) <= 0) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error while reading from %s %s: %s", device_info,

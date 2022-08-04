@@ -354,6 +354,11 @@ function save() {
 	fom.ipv6_wan_addr.value       = fom.f_ipv6_wan_addr.value;
 	fom.ipv6_prefix_len_wan.value = fom.f_ipv6_prefix_len_wan.value;
 	fom.ipv6_isp_gw.value         = fom.f_ipv6_isp_gw.value;
+/* RTNPLUS-BEGIN */
+	fom.ipv6_debug.value = fom.f_ipv6_debug.checked ? 1 : 0;
+/* RTNPLUS-END */
+	fom.ipv6_duid_type.value = fom.f_ipv6_duid_type.value;
+	fom.ipv6_pd_norelease.value = fom.f_ipv6_pd_norelease.checked ? 1 : 0;
 
 	switch(E('_ipv6_service').value) {
 		case 'other':
@@ -370,11 +375,6 @@ function save() {
 		case 'native-pd':
 			fom.ipv6_prefix.value = '';
 			fom.ipv6_rtr_addr.value = '';
-/* RTNPLUS-BEGIN */
-			fom.ipv6_debug.value = fom.f_ipv6_debug.checked ? 1 : 0;
-/* RTNPLUS-END */
-			fom.ipv6_duid_type.value = fom.f_ipv6_duid_type.value;
-			fom.ipv6_pd_norelease.value = fom.f_ipv6_pd_norelease.checked ? 1 : 0;
 			if (fom.f_lan1_ipv6.checked) {
 				fom.ipv6_vlan.value = fom.ipv6_vlan.value | 0x01; /* set bit 0, IPv6 enabled for LAN1 */
 			}

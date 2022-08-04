@@ -3,7 +3,7 @@
 
 /*
     invitation.h -- header for invitation.c.
-    Copyright (C) 2013 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,5 +22,9 @@
 
 int cmd_invite(int argc, char *argv[]);
 int cmd_join(int argc, char *argv[]);
+
+// Wait until data can be read from socket, or a timeout occurs.
+// true if socket is ready, false on timeout.
+bool wait_socket_recv(int fd);
 
 #endif

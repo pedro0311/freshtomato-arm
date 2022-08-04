@@ -21,10 +21,15 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#ifdef HAVE_MINGW
-#define WINVER WindowsXP
+#ifdef HAVE_WINDOWS
+#define WINVER 0x0600
+#define _WIN32_WINNT 0x0600
 #define WIN32_LEAN_AND_MEAN
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_NONSTDC_NO_WARNINGS
 #endif
+
+#define __STDC_WANT_LIB_EXT1__ 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,17 +40,80 @@
 #include <signal.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <limits.h>
 #include <math.h>
 #include <time.h>
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_STATIC_ASSERT
+#define STATIC_ASSERT(expr, msg) _Static_assert((expr), msg)
+#else
+#define STATIC_ASSERT(check, msg)
+#endif
+
+#ifdef HAVE_ATTR_PACKED
+#define PACKED(...) __VA_ARGS__ __attribute__((__packed__))
+#else
+#ifdef _MSC_VER
+#define PACKED(...) __pragma(pack(push, 1)) __VA_ARGS__ __pragma(pack(pop))
+#else
+#warning Your compiler does not support __packed__. Use at your own risk.
+#endif
+#endif
+
+#if defined(HAVE_ATTR_MALLOC_WITH_ARG)
+#define ATTR_DEALLOCATOR(dealloc) __attribute__((__malloc__(dealloc)))
+#else
+#define ATTR_DEALLOCATOR(dealloc)
+#endif
+
+#ifdef HAVE_ATTR_MALLOC
+#define ATTR_MALLOC __attribute__((__malloc__))
+#else
+#define ATTR_MALLOC
+#endif
+
+#ifdef HAVE_ATTR_NONNULL
+#define ATTR_NONNULL __attribute__((__nonnull__))
+#else
+#define ATTR_NONNULL
+#endif
+
+#ifdef HAVE_ATTR_WARN_UNUSED_RESULT
+#define ATTR_WARN_UNUSED __attribute__((__warn_unused_result__))
+#else
+#define ATTR_WARN_UNUSED
+#endif
+
+#ifdef HAVE_ATTR_FORMAT
+#define ATTR_FORMAT(func, str, nonstr) __attribute__((format(func, str, nonstr)))
+#else
+#define ATTR_FORMAT(func, str, nonstr)
+#endif
+
+#ifdef HAVE_ALLOCA_H
+#include <alloca.h>
+#elif defined(HAVE_NETBSD)
+#define alloca(size) __builtin_alloca(size)
+#endif
+
+#ifdef HAVE_WINDOWS
+#ifdef HAVE_W32API_H
 #include <w32api.h>
+#endif
+
 #include <winsock2.h>
 #include <windows.h>
 #include <ws2tcpip.h>
+
+#ifdef _MSC_VER
+#include <io.h>
+#include <process.h>
+#include <direct.h>
 #endif
+#endif // HAVE_WINDOWS
 
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
@@ -65,10 +133,13 @@
 #include <syslog.h>
 #endif
 
+#ifdef HAVE_SYS_RANDOM_H
+#include <sys/random.h>
+#endif
+
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
-
 
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
@@ -80,6 +151,10 @@
 
 #ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
+#endif
+
+#ifdef HAVE_SYS_MMAN_H
+#include <sys/mman.h>
 #endif
 
 #ifdef HAVE_SYS_WAIT_H
@@ -104,6 +179,8 @@
 
 #ifdef HAVE_DIRENT_H
 #include <dirent.h>
+#elif defined(_MSC_VER)
+#include "dirent.h"
 #endif
 
 /* SunOS really wants sys/socket.h BEFORE net/if.h,
@@ -211,7 +288,7 @@
 #undef STATUS
 #endif
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 #define SLASH "\\"
 #else
 #define SLASH "/"

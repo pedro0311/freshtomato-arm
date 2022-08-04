@@ -1,6 +1,6 @@
 /*
     logger.c -- logging code
-    Copyright (C) 2004-2017 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2004-2022 Guus Sliepen <guus@tinc-vpn.org>
                   2004-2005 Ivo Timmermans
 
     This program is free software; you can redistribute it and/or modify
@@ -28,51 +28,141 @@
 #include "control_common.h"
 #include "process.h"
 #include "sptps.h"
+#include "console.h"
 
-int debug_level = DEBUG_NOTHING;
+debug_t debug_level = DEBUG_NOTHING;
 static logmode_t logmode = LOGMODE_STDERR;
 static pid_t logpid;
 static FILE *logfile = NULL;
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 static HANDLE loghandle = NULL;
 #endif
 static const char *logident = NULL;
-bool logcontrol = false;
+static bool colorize_stderr = false;
+bool logcontrol = false; // controlled by REQ_LOG <level>
 int umbilical = 0;
+bool umbilical_colorize = false;
 
-static void real_logger(int level, int priority, const char *message) {
-	char timestr[32] = "";
-	static bool suppress = false;
+#define SGR(s) ("\x1b[" s "m")
 
-	// Bail out early if there is nothing to do.
-	if(suppress) {
-		return;
+typedef enum color_t {
+	RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, GRAY,
+	RESET, // not really a color
+} color_t;
+
+typedef struct priority_disp_t {
+	const char *name;
+	color_t color;
+} priority_disp_t;
+
+static const priority_disp_t priorities[] = {
+	[LOG_EMERG]   = {"EMERGENCY", MAGENTA},
+	[LOG_ALERT]   = {"ALERT",     MAGENTA},
+	[LOG_CRIT]    = {"CRITICAL",  MAGENTA},
+	[LOG_ERR]     = {"ERROR",     RED},
+	[LOG_WARNING] = {"WARNING",   YELLOW},
+	[LOG_NOTICE]  = {"NOTICE",    CYAN},
+	[LOG_INFO]    = {"INFO",      GREEN},
+	[LOG_DEBUG]   = {"DEBUG",     BLUE},
+};
+
+static const char *ansi_codes[] = {
+	[RED]     = SGR("31;1"),
+	[GREEN]   = SGR("32;1"),
+	[YELLOW]  = SGR("33;1"),
+	[BLUE]    = SGR("34;1"),
+	[MAGENTA] = SGR("35;1"),
+	[CYAN]    = SGR("36;1"),
+	[WHITE]   = SGR("37;1"),
+	[GRAY]    = SGR("90"),
+	[RESET]   = SGR("0"),
+};
+
+static priority_disp_t get_priority(int priority) {
+	static const priority_disp_t unknown = {"UNKNOWN", WHITE};
+
+	if(priority >= LOG_EMERG && priority <= LOG_DEBUG) {
+		return priorities[priority];
+	} else {
+		return unknown;
+	}
+}
+
+// Formats current time to the second.
+// Reuses result so repeated calls within the same second are more efficient.
+static const char *current_time_str(void) {
+	static char timestr[sizeof("2000-12-31 12:34:56")] = "";
+	static time_t last_time = 0;
+
+	if(!now.tv_sec) {
+		gettimeofday(&now, NULL);
 	}
 
-	if(!logcontrol && (level > debug_level || logmode == LOGMODE_NULL)) {
+	time_t now_sec = now.tv_sec;
+
+	if(!*timestr || now_sec != last_time) {
+		last_time = now_sec;
+		strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", localtime(&now_sec));
+	}
+
+	return timestr;
+}
+
+// Format log entry with time, log level, and (possibly) colors, remembering if it was colorized.
+// Returns true if buffer has been changed.
+static bool format_pretty(char *buf, size_t buflen, int prio, const char *message, bool colorize, bool *colorized) {
+	// If we already wrote to buffer, and its colorization matches, we're done here
+	if(*buf && colorize == *colorized) {
+		return false;
+	}
+
+	// Otherwise, remember current colorization for future comparisons
+	*colorized = colorize;
+
+	priority_disp_t priority = get_priority(prio);
+	const char *color = "", *reset = "", *timecol = "";
+
+	if(colorize) {
+		color = ansi_codes[priority.color];
+		reset = ansi_codes[RESET];
+		timecol = ansi_codes[GRAY];
+	}
+
+	const char *timestr = current_time_str();
+	snprintf(buf, buflen, "%s%s %s%-7s%s %s", timecol, timestr, color, priority.name, reset, message);
+	return true;
+}
+
+static bool should_log(debug_t level) {
+	return (level <= debug_level && logmode != LOGMODE_NULL) || logcontrol;
+}
+
+static void real_logger(debug_t level, int priority, const char *message) {
+	char pretty[1024] = "";
+	bool pretty_colorized = false;
+	static bool suppress = false;
+
+	if(suppress) {
 		return;
 	}
 
 	if(level <= debug_level) {
 		switch(logmode) {
 		case LOGMODE_STDERR:
-			fprintf(stderr, "%s\n", message);
+			format_pretty(pretty, sizeof(pretty), priority, message, colorize_stderr, &pretty_colorized);
+			fprintf(stderr, "%s\n", pretty);
 			fflush(stderr);
 			break;
 
-		case LOGMODE_FILE:
-			if(!now.tv_sec) {
-				gettimeofday(&now, NULL);
-			}
-
-			time_t now_sec = now.tv_sec;
-			strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S", localtime(&now_sec));
+		case LOGMODE_FILE: {
+			const char *timestr = current_time_str();
 			fprintf(logfile, "%s %s[%ld]: %s\n", timestr, logident, (long)logpid, message);
 			fflush(logfile);
 			break;
+		}
 
 		case LOGMODE_SYSLOG:
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 			{
 				const char *messages[] = {message};
 				ReportEvent(loghandle, priority, 0, 0, NULL, 1, 0, messages, NULL);
@@ -86,12 +176,16 @@ static void real_logger(int level, int priority, const char *message) {
 			break;
 
 		case LOGMODE_NULL:
+		default:
 			break;
 		}
 
 		if(umbilical && do_detach) {
-			write(umbilical, message, strlen(message));
-			write(umbilical, "\n", 1);
+			format_pretty(pretty, sizeof(pretty), priority, message, umbilical_colorize, &pretty_colorized);
+
+			if(write(umbilical, pretty, strlen(pretty)) == -1 || write(umbilical, "\n", 1) == -1) {
+				// Other end broken, nothing we can do about it.
+			}
 		}
 	}
 
@@ -99,21 +193,25 @@ static void real_logger(int level, int priority, const char *message) {
 		suppress = true;
 		logcontrol = false;
 
-		for list_each(connection_t, c, connection_list) {
+		size_t msglen = strlen(pretty);
+
+		for list_each(connection_t, c, &connection_list) {
 			if(!c->status.log) {
 				continue;
 			}
 
 			logcontrol = true;
 
-			if(level > (c->outcompression >= 0 ? c->outcompression : debug_level)) {
+			if(level > (c->log_level != DEBUG_UNSET ? c->log_level : debug_level)) {
 				continue;
 			}
 
-			int len = strlen(message);
+			if(format_pretty(pretty, sizeof(pretty), priority, message, c->status.log_color, &pretty_colorized)) {
+				msglen = strlen(pretty);
+			}
 
-			if(send_request(c, "%d %d %d", CONTROL, REQ_LOG, len)) {
-				send_meta(c, message, len);
+			if(send_request(c, "%d %d %lu", CONTROL, REQ_LOG, (unsigned long)msglen)) {
+				send_meta(c, pretty, msglen);
 			}
 		}
 
@@ -121,9 +219,13 @@ static void real_logger(int level, int priority, const char *message) {
 	}
 }
 
-void logger(int level, int priority, const char *format, ...) {
+void logger(debug_t level, int priority, const char *format, ...) {
 	va_list ap;
 	char message[1024] = "";
+
+	if(!should_log(level)) {
+		return;
+	}
 
 	va_start(ap, format);
 	int len = vsnprintf(message, sizeof(message), format, ap);
@@ -137,10 +239,15 @@ void logger(int level, int priority, const char *format, ...) {
 	real_logger(level, priority, message);
 }
 
+static void sptps_logger(sptps_t *s, int s_errno, const char *format, va_list ap) ATTR_FORMAT(printf, 3, 0);
 static void sptps_logger(sptps_t *s, int s_errno, const char *format, va_list ap) {
 	(void)s_errno;
 	char message[1024];
 	size_t msglen = sizeof(message);
+
+	if(!should_log(DEBUG_TRAFFIC)) {
+		return;
+	}
 
 	int len = vsnprintf(message, msglen, format, ap);
 	message[sizeof(message) - 1] = 0;
@@ -159,7 +266,7 @@ static void sptps_logger(sptps_t *s, int s_errno, const char *format, va_list ap
 		}
 	}
 
-	real_logger(DEBUG_ALWAYS, LOG_ERR, message);
+	real_logger(DEBUG_TRAFFIC, LOG_ERR, message);
 }
 
 void openlogger(const char *ident, logmode_t mode) {
@@ -169,6 +276,7 @@ void openlogger(const char *ident, logmode_t mode) {
 	switch(mode) {
 	case LOGMODE_STDERR:
 		logpid = getpid();
+		colorize_stderr = use_ansi_escapes(stderr);
 		break;
 
 	case LOGMODE_FILE:
@@ -183,7 +291,7 @@ void openlogger(const char *ident, logmode_t mode) {
 		break;
 
 	case LOGMODE_SYSLOG:
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 		loghandle = RegisterEventSource(NULL, logident);
 
 		if(!loghandle) {
@@ -200,6 +308,7 @@ void openlogger(const char *ident, logmode_t mode) {
 #endif
 
 	case LOGMODE_NULL:
+	default:
 		break;
 	}
 
@@ -210,7 +319,7 @@ void openlogger(const char *ident, logmode_t mode) {
 	}
 }
 
-void reopenlogger() {
+void reopenlogger(void) {
 	if(logmode != LOGMODE_FILE) {
 		return;
 	}
@@ -235,7 +344,7 @@ void closelogger(void) {
 		break;
 
 	case LOGMODE_SYSLOG:
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 		DeregisterEventSource(loghandle);
 		break;
 #else
@@ -247,6 +356,7 @@ void closelogger(void) {
 
 	case LOGMODE_NULL:
 	case LOGMODE_STDERR:
+	default:
 		break;
 	}
 }

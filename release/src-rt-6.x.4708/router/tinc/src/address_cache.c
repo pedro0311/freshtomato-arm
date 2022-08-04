@@ -25,14 +25,14 @@
 #include "netutl.h"
 #include "xalloc.h"
 
-static const unsigned int NOT_CACHED = -1;
+static const unsigned int NOT_CACHED = UINT_MAX;
 
 // Find edges pointing to this node, and use them to build a list of unique, known addresses.
 static struct addrinfo *get_known_addresses(node_t *n) {
 	struct addrinfo *ai = NULL;
 	struct addrinfo *oai = NULL;
 
-	for splay_each(edge_t, e, n->edge_tree) {
+	for splay_each(edge_t, e, &n->edge_tree) {
 		if(!e->reverse) {
 			continue;
 		}
@@ -67,6 +67,7 @@ static struct addrinfo *get_known_addresses(node_t *n) {
 static void free_known_addresses(struct addrinfo *ai) {
 	for(struct addrinfo *aip = ai, *next; aip; aip = next) {
 		next = aip->ai_next;
+		free(aip->ai_addr);
 		free(aip);
 	}
 }
@@ -88,6 +89,8 @@ void add_recent_address(address_cache_t *cache, const sockaddr_t *sa) {
 	if(pos == 0) {
 		return;
 	}
+
+	logger(DEBUG_CONNECTIONS, LOG_DEBUG, "Caching recent address for %s", cache->node->name);
 
 	// Shift everything, move/add the address to the first slot
 	if(pos == NOT_CACHED) {
@@ -146,7 +149,7 @@ const sockaddr_t *get_recent_address(address_cache_t *cache) {
 
 	// Otherwise, check if there are any known Address statements
 	if(!cache->config_tree) {
-		init_configuration(&cache->config_tree);
+		cache->config_tree = create_configuration();
 		read_host_config(cache->config_tree, cache->node->name, false);
 		cache->cfg = lookup_config(cache->config_tree, "Address");
 	}
@@ -212,8 +215,10 @@ const sockaddr_t *get_recent_address(address_cache_t *cache) {
 	}
 
 	// We're all out of addresses.
-	exit_configuration(&cache->config_tree);
-	return false;
+	exit_configuration(cache->config_tree);
+	cache->config_tree = NULL;
+
+	return NULL;
 }
 
 address_cache_t *open_address_cache(node_t *node) {
@@ -248,13 +253,10 @@ address_cache_t *open_address_cache(node_t *node) {
 	return cache;
 }
 
-void reset_address_cache(address_cache_t *cache, const sockaddr_t *sa) {
-	if(sa) {
-		add_recent_address(cache, sa);
-	}
-
+void reset_address_cache(address_cache_t *cache) {
 	if(cache->config_tree) {
-		exit_configuration(&cache->config_tree);
+		exit_configuration(cache->config_tree);
+		cache->config_tree = NULL;
 	}
 
 	if(cache->ai) {
@@ -270,7 +272,8 @@ void reset_address_cache(address_cache_t *cache, const sockaddr_t *sa) {
 
 void close_address_cache(address_cache_t *cache) {
 	if(cache->config_tree) {
-		exit_configuration(&cache->config_tree);
+		exit_configuration(cache->config_tree);
+		cache->config_tree = NULL;
 	}
 
 	if(cache->ai) {

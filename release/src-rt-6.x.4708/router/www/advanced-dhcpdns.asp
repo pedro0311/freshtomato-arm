@@ -99,19 +99,13 @@ function verifyFields(focused, quiet) {
 	E('_f_mdns_reflector').disabled = !E('_f_mdns_enable').checked;
 /* MDNS-END */
 /* TOR-BEGIN */
-	v = E('_f_dnsmasq_onion_support'); /* disable 'Solve .onion' checkbox if tor is down */
-	if (!isup.tor)
-		v.disabled = 1;
-	else
-		v.disabled = 0;
-
-	if (v.checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
+	if (E('_f_dnsmasq_onion_support').checked) { /* disable/uncheck 'DNS Rebind protection' when onion support is enabled */
 		E('_f_dns_norebind').disabled = 1;
 		E('_f_dns_norebind').checked = 0;
 	}
 	else
 		E('_f_dns_norebind').disabled = 0;
-/* TOR-BEGIN */
+/* TOR-END */
 
 	for (var a in vis) {
 		var b = E(a);
@@ -515,7 +509,7 @@ function init() {
 			{ title: 'Ignore DHCP requests from unknown devices', name: 'f_dhcpd_static_only', type: 'checkbox', value: nvram.dhcpd_static_only == 1 },
 			{ title: 'Generate a name for DHCP clients which do not otherwise have one', name: 'f_dnsmasq_gen_names', type: 'checkbox', value: nvram.dnsmasq_gen_names == 1 },
 /* TOR-BEGIN */
-			{ title: 'Solve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable/start Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', suffix: ' <small>note: disables \'DNS Rebind protection\'<\/small>', value: nvram.dnsmasq_onion_support == 1 },
+			{ title: 'Resolve .onion using Tor<br>(<a href="advanced-tor.asp" class="new_window">enable/start Tor first<\/a>)', name: 'f_dnsmasq_onion_support', type: 'checkbox', suffix: ' <small>note: disables \'DNS Rebind protection\'<\/small>', value: nvram.dnsmasq_onion_support == 1 },
 /* TOR-END */
 			{ title: 'Maximum active DHCP leases', name: 'dhcpd_lmax', type: 'text', maxlen: 5, size: 8, value: nvram.dhcpd_lmax },
 			{ title: 'Static lease time', multi: [
@@ -533,7 +527,7 @@ function init() {
 			{ title: 'Mute RA logging', name: 'f_dnsmasq_qr', type: 'checkbox', value: (nvram.dnsmasq_q & 4) },
 /* IPV6-END */
 			{ title: 'Prevent client auto DoH', name: 'f_dns_priv_override', type: 'checkbox', value: nvram.dns_priv_override == 1 },
-			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', suffix: ' <small>note: disabled when \'Solve .onion using Tor\' is checked<\/small>', value: nvram.dns_norebind == 1 },
+			{ title: 'Enable DNS Rebind protection', name: 'f_dns_norebind', type: 'checkbox', suffix: ' <small>note: disabled when \'Resolve .onion using Tor\' is checked<\/small>', value: nvram.dns_norebind == 1 },
 			{ title: 'Forward local domain queries to upstream DNS', name: 'f_dns_fwd_local', type: 'checkbox', value: nvram.dns_fwd_local == 1 },
 /* MDNS-BEGIN */
 			{ title: 'Enable multicast DNS<br>(Avahi mDNS)', name: 'f_mdns_enable', type: 'checkbox', value: nvram.mdns_enable == 1 },

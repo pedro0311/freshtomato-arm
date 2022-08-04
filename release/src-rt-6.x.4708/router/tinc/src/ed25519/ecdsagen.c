@@ -27,10 +27,10 @@ typedef struct {
 	uint8_t public[32];
 } ecdsa_t;
 
-#include "../crypto.h"
 #include "../ecdsagen.h"
 #include "../utils.h"
 #include "../xalloc.h"
+#include "../random.h"
 
 // Generate ECDSA key
 
@@ -40,6 +40,7 @@ ecdsa_t *ecdsa_generate(void) {
 	uint8_t seed[32];
 	randomize(seed, sizeof(seed));
 	ed25519_create_keypair(ecdsa->public, ecdsa->private, seed);
+	memzero(seed, sizeof(seed));
 
 	return ecdsa;
 }
@@ -54,11 +55,13 @@ static bool write_pem(FILE *fp, const char *type, void *vbuf, size_t size) {
 
 	while(size) {
 		size_t todo = size > 48 ? 48 : size;
-		b64encode(buf, base64, todo);
+		b64encode_tinc(buf, base64, todo);
 		fprintf(fp, "%s\n", base64);
 		buf += todo;
 		size -= todo;
 	}
+
+	memzero(base64, sizeof(base64));
 
 	fprintf(fp, "-----END %s-----\n", type);
 	return !ferror(fp);

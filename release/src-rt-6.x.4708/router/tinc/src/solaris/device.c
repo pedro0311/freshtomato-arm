@@ -2,7 +2,7 @@
     device.c -- Interaction with Solaris tun device
     Copyright (C) 2001-2005 Ivo Timmermans,
                   2002-2010 OpenVPN Technologies, Inc. <sales@openvpn.net>
-                  2001-2014 Guus Sliepen <guus@tinc-vpn.org>
+                  2001-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ static const char *device_info = NULL;
 static bool setup_device(void) {
 	char *type;
 
-	if(!get_config_string(lookup_config(config_tree, "Device"), &device)) {
+	if(!get_config_string(lookup_config(&config_tree, "Device"), &device)) {
 		if(routing_mode == RMODE_ROUTER) {
 			device = xstrdup(DEFAULT_TUN_DEVICE);
 		} else {
@@ -66,7 +66,7 @@ static bool setup_device(void) {
 		}
 	}
 
-	if(get_config_string(lookup_config(config_tree, "DeviceType"), &type)) {
+	if(get_config_string(lookup_config(&config_tree, "DeviceType"), &type)) {
 		if(!strcasecmp(type, "tun"))
 			/* use default */;
 		else if(!strcasecmp(type, "tap")) {
@@ -102,9 +102,9 @@ static bool setup_device(void) {
 	/* Get unit number. */
 
 	char *ptr = device;
-	get_config_string(lookup_config(config_tree, "Interface"), &ptr);
+	get_config_string(lookup_config(&config_tree, "Interface"), &ptr);
 
-	while(*ptr && !isdigit(*ptr)) {
+	while(*ptr && !isdigit((uint8_t) *ptr)) {
 		ptr++;
 	}
 
@@ -160,7 +160,8 @@ static bool setup_device(void) {
 
 	{
 		/* Remove muxes just in case they are left over from a crashed tincd */
-		struct lifreq ifr = {};
+		struct lifreq ifr;
+		memset(&ifr, 0, sizeof(ifr));
 		strncpy(ifr.lifr_name, iface, sizeof(ifr.lifr_name));
 
 		if(ioctl(ip_fd, SIOCGLIFMUXID, &ifr) >= 0) {
@@ -182,7 +183,8 @@ static bool setup_device(void) {
 	int arp_fd = -1;
 
 	if(device_type == DEVICE_TYPE_TAP) {
-		struct lifreq ifr = {};
+		struct lifreq ifr;
+		memset(&ifr, 0, sizeof(ifr));
 
 		if(ioctl(if_fd, SIOCGLIFFLAGS, &ifr) < 0) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Could not set flags on %s %s!", device_info, device);
@@ -263,7 +265,9 @@ static bool setup_device(void) {
 		close(arp_fd);
 	}
 
-	struct lifreq ifr = {};
+	struct lifreq ifr;
+
+	memset(&ifr, 0, sizeof(ifr));
 
 	strncpy(ifr.lifr_name, iface, sizeof(ifr.lifr_name));
 
@@ -297,7 +301,8 @@ static bool setup_device(void) {
 
 static void close_device(void) {
 	if(iface) {
-		struct lifreq ifr = {};
+		struct lifreq ifr;
+		memset(&ifr, 0, sizeof(ifr));
 		strncpy(ifr.lifr_name, iface, sizeof(ifr.lifr_name));
 
 		if(ioctl(ip_fd, SIOCGLIFMUXID, &ifr) >= 0) {
@@ -359,7 +364,7 @@ static bool read_packet(vpn_packet_t *packet) {
 		sbuf.buf = (char *)DATA(packet);
 
 		if((result = getmsg(device_fd, NULL, &sbuf, &f)) < 0) {
-			logger(LOG_ERR, "Error while reading from %s %s: %s", device_info, device, strerror(errno));
+			logger(DEBUG_TRAFFIC, LOG_ERR, "Error while reading from %s %s: %s", device_info, device, strerror(errno));
 			return false;
 		}
 
@@ -386,7 +391,7 @@ static bool write_packet(vpn_packet_t *packet) {
 		sbuf.buf = (char *)DATA(packet) + 14;
 
 		if(putmsg(device_fd, NULL, &sbuf, 0) < 0) {
-			logger(LOG_ERR, "Can't write to %s %s: %s", device_info, device, strerror(errno));
+			logger(DEBUG_TRAFFIC, LOG_ERR, "Can't write to %s %s: %s", device_info, device, strerror(errno));
 			return false;
 		}
 
@@ -397,7 +402,7 @@ static bool write_packet(vpn_packet_t *packet) {
 		sbuf.buf = (char *)DATA(packet);
 
 		if(putmsg(device_fd, NULL, &sbuf, 0) < 0) {
-			logger(LOG_ERR, "Can't write to %s %s: %s", device_info, device, strerror(errno));
+			logger(DEBUG_TRAFFIC, LOG_ERR, "Can't write to %s %s: %s", device_info, device, strerror(errno));
 			return false;
 		}
 

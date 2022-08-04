@@ -1,6 +1,6 @@
 /*
     digest.c -- Digest handling
-    Copyright (C) 2007-2012 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,27 +17,26 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "system.h"
+#include "../system.h"
 
 #include "digest.h"
-#include "logger.h"
+#include "../digest.h"
+#include "../logger.h"
 
 static struct {
 	const char *name;
-	int algo;
-	int nid;
+	md_algo_t algo;
+	nid_t nid;
 } digesttable[] = {
-	{"none", GCRY_MD_NONE, 0},
-	{"sha1", GCRY_MD_SHA1, 64},
+	{"none",   GCRY_MD_NONE,   0},
+	{"sha1",   GCRY_MD_SHA1,   64},
 	{"sha256", GCRY_MD_SHA256, 672},
 	{"sha384", GCRY_MD_SHA384, 673},
 	{"sha512", GCRY_MD_SHA512, 674},
 };
 
-static bool nametodigest(const char *name, int *algo) {
-	int i;
-
-	for(i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
+static bool nametodigest(md_algo_t *algo, const char *name) {
+	for(size_t i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
 		if(digesttable[i].name && !strcasecmp(name, digesttable[i].name)) {
 			*algo = digesttable[i].algo;
 			return true;
@@ -47,10 +46,8 @@ static bool nametodigest(const char *name, int *algo) {
 	return false;
 }
 
-static bool nidtodigest(int nid, int *algo) {
-	int i;
-
-	for(i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
+static bool nidtodigest(md_algo_t *algo, nid_t nid) {
+	for(size_t i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
 		if(nid == digesttable[i].nid) {
 			*algo = digesttable[i].algo;
 			return true;
@@ -60,10 +57,8 @@ static bool nidtodigest(int nid, int *algo) {
 	return false;
 }
 
-static bool digesttonid(int algo, int *nid) {
-	int i;
-
-	for(i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
+static bool digesttonid(nid_t *nid, md_algo_t algo) {
+	for(size_t i = 0; i < sizeof(digesttable) / sizeof(*digesttable); i++) {
 		if(algo == digesttable[i].algo) {
 			*nid = digesttable[i].nid;
 			return true;
@@ -73,15 +68,15 @@ static bool digesttonid(int algo, int *nid) {
 	return false;
 }
 
-static bool digest_open(digest_t *digest, int algo, int maclength) {
-	if(!digesttonid(algo, &digest->nid)) {
+static bool digest_open(digest_t *digest, md_algo_t algo, size_t maclength) {
+	if(!digesttonid(&digest->nid, algo)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Digest %d has no corresponding nid!", algo);
 		return false;
 	}
 
 	unsigned int len = gcry_md_get_algo_dlen(algo);
 
-	if(maclength > len || maclength < 0) {
+	if(maclength > len) {
 		digest->maclength = len;
 	} else {
 		digest->maclength = maclength;
@@ -93,10 +88,10 @@ static bool digest_open(digest_t *digest, int algo, int maclength) {
 	return true;
 }
 
-bool digest_open_by_name(digest_t *digest, const char *name, int maclength) {
-	int algo;
+bool digest_open_by_name(digest_t *digest, const char *name, size_t maclength) {
+	md_algo_t algo;
 
-	if(!nametodigest(name, &algo)) {
+	if(!nametodigest(&algo, name)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Unknown digest name '%s'!", name);
 		return false;
 	}
@@ -104,10 +99,10 @@ bool digest_open_by_name(digest_t *digest, const char *name, int maclength) {
 	return digest_open(digest, algo, maclength);
 }
 
-bool digest_open_by_nid(digest_t *digest, int nid, int maclength) {
-	int algo;
+bool digest_open_by_nid(digest_t *digest, nid_t nid, size_t maclength) {
+	md_algo_t algo;
 
-	if(!nidtodigest(nid, &algo)) {
+	if(!nidtodigest(&algo, nid)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Unknown digest ID %d!", nid);
 		return false;
 	}
@@ -115,16 +110,16 @@ bool digest_open_by_nid(digest_t *digest, int nid, int maclength) {
 	return digest_open(digest, algo, maclength);
 }
 
-bool digest_open_sha1(digest_t *digest, int maclength) {
-	return digest_open(digest, GCRY_MD_SHA1, maclength);
-}
-
 void digest_close(digest_t *digest) {
+	if(!digest) {
+		return;
+	}
+
 	if(digest->hmac) {
 		gcry_md_close(digest->hmac);
 	}
 
-	digest->hmac = NULL;
+	memset(digest, 0, sizeof(*digest));
 }
 
 bool digest_set_key(digest_t *digest, const void *key, size_t len) {
@@ -143,7 +138,7 @@ bool digest_create(digest_t *digest, const void *indata, size_t inlen, void *out
 	unsigned int len = gcry_md_get_algo_dlen(digest->algo);
 
 	if(digest->hmac) {
-		char *tmpdata;
+		uint8_t *tmpdata;
 		gcry_md_reset(digest->hmac);
 		gcry_md_write(digest->hmac, indata, inlen);
 		tmpdata = gcry_md_read(digest->hmac, digest->algo);
@@ -154,7 +149,7 @@ bool digest_create(digest_t *digest, const void *indata, size_t inlen, void *out
 
 		memcpy(outdata, tmpdata, digest->maclength);
 	} else {
-		char tmpdata[len];
+		char *tmpdata = alloca(len);
 		gcry_md_hash_buffer(digest->algo, tmpdata, indata, inlen);
 		memcpy(outdata, tmpdata, digest->maclength);
 	}
@@ -163,20 +158,28 @@ bool digest_create(digest_t *digest, const void *indata, size_t inlen, void *out
 }
 
 bool digest_verify(digest_t *digest, const void *indata, size_t inlen, const void *cmpdata) {
-	unsigned int len = digest->maclength;
-	char outdata[len];
+	size_t len = digest->maclength;
+	uint8_t *outdata = alloca(len);
 
 	return digest_create(digest, indata, inlen, outdata) && !memcmp(cmpdata, outdata, len);
 }
 
-int digest_get_nid(const digest_t *digest) {
+nid_t digest_get_nid(const digest_t *digest) {
+	if(!digest || !digest->nid) {
+		return 0;
+	}
+
 	return digest->nid;
 }
 
 size_t digest_length(const digest_t *digest) {
+	if(!digest) {
+		return 0;
+	}
+
 	return digest->maclength;
 }
 
 bool digest_active(const digest_t *digest) {
-	return digest->algo != GCRY_MD_NONE;
+	return digest && digest->algo != GCRY_MD_NONE;
 }

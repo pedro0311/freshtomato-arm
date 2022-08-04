@@ -21,7 +21,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
 typedef enum debug_t {
+	DEBUG_UNSET = -1,               /* Used by tinc as the default debug level. */
 	DEBUG_NOTHING = 0,              /* Quiet mode, only show starting/stopping of the daemon */
 	DEBUG_ALWAYS = 0,
 	DEBUG_CONNECTIONS = 1,          /* Show (dis)connects of other tinc daemons via TCP */
@@ -41,7 +44,7 @@ typedef enum logmode_t {
 	LOGMODE_SYSLOG
 } logmode_t;
 
-#ifdef HAVE_MINGW
+#ifdef HAVE_WINDOWS
 #define LOG_EMERG EVENTLOG_ERROR_TYPE
 #define LOG_ALERT EVENTLOG_ERROR_TYPE
 #define LOG_CRIT EVENTLOG_ERROR_TYPE
@@ -67,12 +70,13 @@ enum {
 
 #include <stdbool.h>
 
-extern int debug_level;
+extern debug_t debug_level;
 extern bool logcontrol;
 extern int umbilical;
+extern bool umbilical_colorize;
 extern void openlogger(const char *ident, logmode_t mode);
 extern void reopenlogger(void);
-extern void logger(int level, int priority, const char *format, ...) __attribute__((__format__(printf, 3, 4)));
+extern void logger(debug_t level, int priority, const char *format, ...) ATTR_FORMAT(printf, 3, 4);
 extern void closelogger(void);
 
 #endif

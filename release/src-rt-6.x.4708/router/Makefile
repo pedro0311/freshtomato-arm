@@ -405,6 +405,7 @@ obj-$(TCONFIG_FTP) += vsftpd
 obj-$(TCONFIG_TINC) += zlib
 obj-$(TCONFIG_TINC) += $(OPENSSLDIR)
 obj-$(TCONFIG_TINC) += lzo
+obj-$(TCONFIG_TINC) += lz4
 obj-$(TCONFIG_TINC) += tinc
 obj-$(TCONFIG_NGINX) += zlib
 obj-$(TCONFIG_NGINX) += sqlite
@@ -1619,7 +1620,9 @@ usbmodeswitch-install:
 
 dhcpv6/stamp-h1:
 	@cd dhcpv6 && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(SRCBASE)/include -I$(TOP)/shared -DTOMATO $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),-DNEED_DEBUG,)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(SRCBASE)/include -I$(TOP)/shared -DTOMATO \
+			$(if $(TCONFIG_BCMARM),-DHAVE_CLOEXEC,) \
+			$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),-DNEED_DEBUG,)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/nvram$(BCMEX) -lnvram $(if $(TCONFIG_BCMARM),,-L$(TOP)/shared -lshared)" \
 		ac_cv_func_setpgrp_void=yes \
 		$(CONFIGURE) --prefix= --with-localdbdir=/var
@@ -2694,12 +2697,13 @@ lzo/stamp-h1:
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --enable-shared --enable-static
+		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
 	@touch $@
 
 lzo: lzo/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/lzo/staged install
 
 lzo-install:
 	install -D lzo/src/.libs/liblzo2.so $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
@@ -2711,6 +2715,7 @@ lzo-install:
 lzo-clean:
 	-@$(MAKE) -C lzo clean
 	@rm -f lzo/stamp-h1
+	@rm -rf lzo/staged
 
 openvpn-2.4/Makefile:
 	$(call patch_files,openvpn-2.4)
@@ -3048,40 +3053,76 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(call unpatch_files,nfs-utils)
 endif
 
+lz4:
+	@$(SEP)
+	cd lz4 && \
+	CC=$(CC) \
+	CXX=$(CXX) \
+	AR=$(AR) \
+	CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	CXXFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+	PREFIX=/usr \
+	LIBDIR=/usr/lib \
+	$(MAKE) \
+	LN_S="ln -sf" \
+	BUILD_SHARED=no \
+	install \
+	DESTDIR=$(TOP)/lz4/staged
+
+lz4-clean:
+	-@$(MAKE) -C lz4 clean
+	@rm -rf lz4/staged
+
+lz4-install:
+	@true
+
 tinc/stamp-h1:
-	$(call patch_files,tinc)
-	cd tinc && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-		LIBS="-lpthread" \
-		$(CONFIGURE) \
-			--prefix=/usr \
-			--sysconfdir=/etc \
-			--localstatedir=/var \
-			--with-zlib-include="$(TOP)/zlib/staged/usr/include" \
-			--with-zlib-lib="$(TOP)/zlib/staged/usr/lib" \
-			--with-lzo-include="$(TOP)/lzo/include" \
-			--with-lzo-lib="$(TOP)/lzo/src/.libs" \
-			--with-openssl-include="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-			--with-openssl-lib="$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-			--disable-curses \
-			--disable-readline
+
+	cd tinc && \
+		PKG_CONFIG_LIBDIR='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig'\
+		$(TOP)/meson/meson.py \
+		build \
+		--cross-file $(TOP)/meson-cross/arm-cross.txt \
+		-Doptimization=2 \
+		-Ddebug=false \
+		--prefix=/usr \
+		-Dsysconfdir=/etc \
+		-Dlocalstatedir=/var \
+		-Dc_std=gnu99 \
+		-Dwarning_level=0 \
+		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		-Dc_link_args="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+		-Dcrypto=openssl \
+		-Dzlib=enabled \
+		-Dlzo=enabled \
+		-Dlz4=enabled \
+		-Dhardening=true \
+		-Db_staticpic=true \
+		-Db_pie=true \
+		-Dreadline=disabled \
+		-Dcurses=disabled \
+		-Dminiupnpc=disabled \
+		-Dvde=disabled \
+		-Dsystemd=disabled \
+		-Ddocs=disabled \
+		-Dtests=disabled
 	@touch $@
 
 tinc: tinc/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ LIBS="-lcrypto $(TOP)/zlib/staged/usr/lib/libz.a -llzo2 -lm -lpthread" $(PARALLEL_BUILD)
+	@ninja -C tinc/build
 
 tinc-install:
-	install -D tinc/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
-	install -D tinc/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
+	install -D tinc/build/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
+	install -D tinc/build/src/tincd $(INSTALLDIR)/tinc/usr/sbin/tincd
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tinc
 	$(STRIP) $(INSTALLDIR)/tinc/usr/sbin/tincd
 
 tinc-clean:
-	-@$(MAKE) -C tinc clean
+	@rm -rf tinc/build
 	@rm -f tinc/stamp-h1
-	$(call unpatch_files,tinc)
 
 snmp/stamp-h1:
 	$(call patch_files,snmp)

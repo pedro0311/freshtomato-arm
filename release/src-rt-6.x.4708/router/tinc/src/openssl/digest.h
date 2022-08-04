@@ -3,7 +3,7 @@
 
 /*
     digest.h -- header file digest.c
-    Copyright (C) 2013 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2013-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,11 +23,17 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+#include "../legacy.h"
+
 struct digest {
 	const EVP_MD *digest;
+#if OPENSSL_VERSION_MAJOR < 3
 	HMAC_CTX *hmac_ctx;
+#else
+	EVP_MAC_CTX *hmac_ctx;
+#endif
 	EVP_MD_CTX *md_ctx;
-	int maclength;
+	size_t maclength;
 };
 
 #endif

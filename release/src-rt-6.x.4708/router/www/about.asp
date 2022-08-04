@@ -149,7 +149,7 @@ function init() {
 <!-- ZFS-BEGIN -->
 	- ZFS filesystem integration<br>
 <!-- ZFS-END -->
-	<i>Copyright (C) 2014 Lance Fredrickson</i><br>
+	<i>Copyright (C) 2014-2022 Lance Fredrickson</i><br>
 	<a href="mailto:lancethepants@gmail.com">lancethepants@gmail.com</a><br>
 	<br>
 

@@ -21,6 +21,8 @@
 
 #include "system.h"
 
+#include <assert.h>
+
 #include "cipher.h"
 #include "connection.h"
 #include "logger.h"
@@ -28,7 +30,7 @@
 #include "net.h"
 #include "protocol.h"
 #include "utils.h"
-#include "xalloc.h"
+#include "proxy.h"
 
 #ifndef MIN
 static ssize_t MIN(ssize_t x, ssize_t y) {
@@ -51,14 +53,14 @@ bool send_meta_sptps(void *handle, uint8_t type, const void *buffer, size_t leng
 	return true;
 }
 
-bool send_meta(connection_t *c, const char *buffer, size_t length) {
+bool send_meta(connection_t *c, const void *buffer, size_t length) {
 	if(!c) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "send_meta() called with NULL pointer!");
 		abort();
 	}
 
-	logger(DEBUG_META, LOG_DEBUG, "Sending %lu bytes of metadata to %s (%s)", (unsigned long)length,
-	       c->name, c->hostname);
+	logger(DEBUG_META, LOG_DEBUG, "Sending %lu bytes of metadata to %s (%s)",
+	       (unsigned long)length, c->name, c->hostname);
 
 	if(c->protocol_minor >= 2) {
 		return sptps_send_record(&c->sptps, 0, buffer, length);
@@ -69,17 +71,16 @@ bool send_meta(connection_t *c, const char *buffer, size_t length) {
 #ifdef DISABLE_LEGACY
 		return false;
 #else
+		assert(c->legacy);
 
-		if(length > c->outbudget) {
+		if(!decrease_budget(&c->legacy->out, length)) {
 			logger(DEBUG_META, LOG_ERR, "Byte limit exceeded for encryption to %s (%s)", c->name, c->hostname);
 			return false;
-		} else {
-			c->outbudget -= length;
 		}
 
 		size_t outlen = length;
 
-		if(!cipher_encrypt(c->outcipher, buffer, length, buffer_prepare(&c->outbuf, length), &outlen, false) || outlen != length) {
+		if(!cipher_encrypt(&c->legacy->out.cipher, buffer, length, buffer_prepare(&c->outbuf, length), &outlen, false) || outlen != length) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Error while encrypting metadata to %s (%s)",
 			       c->name, c->hostname);
 			return false;
@@ -95,14 +96,14 @@ bool send_meta(connection_t *c, const char *buffer, size_t length) {
 	return true;
 }
 
-void send_meta_raw(connection_t *c, const char *buffer, size_t length) {
+void send_meta_raw(connection_t *c, const void *buffer, size_t length) {
 	if(!c) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "send_meta() called with NULL pointer!");
 		abort();
 	}
 
-	logger(DEBUG_META, LOG_DEBUG, "Sending %lu bytes of raw metadata to %s (%s)", (unsigned long)length,
-	       c->name, c->hostname);
+	logger(DEBUG_META, LOG_DEBUG, "Sending %lu bytes of raw metadata to %s (%s)",
+	       (unsigned long)length, c->name, c->hostname);
 
 	buffer_add(&c->outbuf, buffer, length);
 
@@ -110,7 +111,7 @@ void send_meta_raw(connection_t *c, const char *buffer, size_t length) {
 }
 
 void broadcast_meta(connection_t *from, const char *buffer, size_t length) {
-	for list_each(connection_t, c, connection_list)
+	for list_each(connection_t, c, &connection_list)
 		if(c != from && c->edge) {
 			send_meta(c, buffer, length);
 		}
@@ -228,7 +229,7 @@ bool receive_meta(connection_t *c) {
 			}
 
 			bufp += len;
-			inlen -= len;
+			inlen -= (ssize_t)len;
 			continue;
 		}
 
@@ -249,17 +250,16 @@ bool receive_meta(connection_t *c) {
 #ifdef DISABLE_LEGACY
 			return false;
 #else
+			assert(c->legacy);
 
-			if((size_t)inlen > c->inbudget) {
+			if(!decrease_budget(&c->legacy->in, (size_t) inlen)) {
 				logger(DEBUG_META, LOG_ERR, "Byte limit exceeded for decryption from %s (%s)", c->name, c->hostname);
 				return false;
-			} else {
-				c->inbudget -= inlen;
 			}
 
 			size_t outlen = inlen;
 
-			if(!cipher_decrypt(c->incipher, bufp, inlen, buffer_prepare(&c->inbuf, inlen), &outlen, false) || (size_t)inlen != outlen) {
+			if(!cipher_decrypt(&c->legacy->in.cipher, bufp, inlen, buffer_prepare(&c->inbuf, inlen), &outlen, false) || (size_t)inlen != outlen) {
 				logger(DEBUG_ALWAYS, LOG_ERR, "Error while decrypting metadata from %s (%s)",
 				       c->name, c->hostname);
 				return false;
@@ -280,33 +280,8 @@ bool receive_meta(connection_t *c) {
 				}
 
 				if(!c->node) {
-					if(c->outgoing && proxytype == PROXY_SOCKS4 && c->allow_request == ID) {
-						if(tcpbuffer[0] == 0 && tcpbuffer[1] == 0x5a) {
-							logger(DEBUG_CONNECTIONS, LOG_DEBUG, "Proxy request granted");
-						} else {
-							logger(DEBUG_CONNECTIONS, LOG_ERR, "Proxy request rejected");
-							return false;
-						}
-					} else if(c->outgoing && proxytype == PROXY_SOCKS5 && c->allow_request == ID) {
-						if(tcpbuffer[0] != 5) {
-							logger(DEBUG_CONNECTIONS, LOG_ERR, "Invalid response from proxy server");
-							return false;
-						}
-
-						if(tcpbuffer[1] == (char)0xff) {
-							logger(DEBUG_CONNECTIONS, LOG_ERR, "Proxy request rejected: unsuitable authentication method");
-							return false;
-						}
-
-						if(tcpbuffer[2] != 5) {
-							logger(DEBUG_CONNECTIONS, LOG_ERR, "Invalid response from proxy server");
-							return false;
-						}
-
-						if(tcpbuffer[3] == 0) {
-							logger(DEBUG_CONNECTIONS, LOG_DEBUG, "Proxy request granted");
-						} else {
-							logger(DEBUG_CONNECTIONS, LOG_DEBUG, "Proxy request rejected");
+					if(c->outgoing && c->allow_request == ID && (proxytype == PROXY_SOCKS4 || proxytype == PROXY_SOCKS5)) {
+						if(!check_socks_resp(proxytype, tcpbuffer, c->tcplen)) {
 							return false;
 						}
 					} else {

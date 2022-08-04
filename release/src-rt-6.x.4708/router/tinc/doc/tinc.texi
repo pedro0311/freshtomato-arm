@@ -339,6 +339,7 @@ message, and stop.
 * LibreSSL/OpenSSL::
 * zlib::
 * LZO::
+* LZ4::
 * libcurses::
 * libreadline::
 @end menu
@@ -461,6 +462,27 @@ default).
 
 
 @c ==================================================================
+@node       LZ4
+@subsection LZ4
+
+@cindex LZ4
+Another form of compression is offered using the LZ4 library.
+
+Tinc has support for the LZ4 compression algorithm as compression level 12.
+
+By default, tinc will try to link to an external LZ4 library. If it is not
+found on your system or its version is older than r129, then tinc falls back to
+the built-in copy of the library.
+
+You can force the use of the built-in copy by passing `--enable-lz4-builtin`,
+or disable it completely with `--disable-lz4-builtin`.
+
+LZ4 support can be completely disabled with `--disable-lz4`. Note that the
+resulting binary will not work correctly on VPNs where LZ4 compression is used
+by other peers.
+
+
+@c ==================================================================
 @node       libcurses
 @subsection libcurses
 
@@ -527,11 +549,7 @@ for yourself, you can use the source.  The source is distributed under
 the GNU General Public License (GPL).  Download the source from the
 @uref{https://www.tinc-vpn.org/download/, download page}.
 
-Tinc comes in a convenient autoconf/automake package, which you can just
-treat the same as any other package.  Which is just untar it, type
-`./configure' and then `make'.
-More detailed instructions are in the file @file{INSTALL}, which is
-included in the source distribution.
+Please refer to @file{INSTALL.md} for information on how to build tinc from source.
 
 @menu
 * Building and installing tinc::
@@ -553,7 +571,7 @@ The documentation that comes along with your distribution will tell you how to d
 
 @menu
 * Darwin (MacOS/X) build environment::
-* MinGW (Windows) build environment::
+* Windows build environment::
 @end menu
 
 
@@ -568,14 +586,16 @@ You need to download and install LibreSSL (or OpenSSL) and LZO,
 either directly from their websites (see @ref{Libraries}) or using Fink.
 
 @c ==================================================================
-@node       MinGW (Windows) build environment
-@subsection MinGW (Windows) build environment
+@node       Windows build environment
+@subsection Windows build environment
 
-You will need to install the MinGW environment from @uref{http://www.mingw.org}.
+You will need to install either the native Windows SDK from @uref{https://visualstudio.com},
+or the MinGW environment from @uref{https://msys2.org}.
+
 You also need to download and install LibreSSL (or OpenSSL) and LZO.
 
-When tinc is compiled using MinGW it runs natively under Windows,
-it is not necessary to keep MinGW installed.
+Whether tinc is compiled using MinGW or the native SDK, it runs natively under Windows,
+so it is not necessary to keep either SDK to run the compiled binaries.
 
 When detaching, tinc will install itself as a service,
 which will be restarted automatically after reboots.
@@ -1133,7 +1153,7 @@ This option controls the amount of time MAC addresses are kept before they are r
 This only has effect when Mode is set to @samp{switch}.
 
 @cindex MaxConnectionBurst
-@item MaxConnectionBurst = <@var{count}> (100)
+@item MaxConnectionBurst = <@var{count}> (10)
 This option controls how many connections tinc accepts in quick succession.
 If there are more connections than the given number in a short time interval,
 tinc will reduce the number of accepted connections to only one per second,
@@ -1325,7 +1345,7 @@ Fragmentation Needed or Packet too Big messages are dropped by firewalls.
 @item Compression = <@var{level}> (0)
 This option sets the level of compression used for UDP packets.
 Possible values are 0 (off), 1 (fast zlib) and any integer up to 9 (best zlib),
-10 (fast LZO) and 11 (best LZO).
+10 (fast LZO), 11 (best LZO), and 12 (LZ4).
 
 @cindex Digest
 @item Digest = <@var{digest}> (sha1)

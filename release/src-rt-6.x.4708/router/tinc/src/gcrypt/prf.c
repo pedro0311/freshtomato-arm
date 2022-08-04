@@ -22,7 +22,7 @@
 #include "../prf.h"
 #include "../ed25519/sha512.h"
 
-static void memxor(char *buf, char c, size_t len) {
+static void memxor(uint8_t *buf, uint8_t c, size_t len) {
 	for(size_t i = 0; i < len; i++) {
 		buf[i] ^= c;
 	}
@@ -31,8 +31,10 @@ static void memxor(char *buf, char c, size_t len) {
 static const size_t mdlen = 64;
 static const size_t blklen = 128;
 
-static bool hmac_sha512(const char *key, size_t keylen, const char *msg, size_t msglen, char *out) {
-	char tmp[blklen + mdlen];
+static bool hmac_sha512(const uint8_t *key, size_t keylen, const uint8_t *msg, size_t msglen, uint8_t *out) {
+	const size_t tmplen = blklen + mdlen;
+	uint8_t *tmp = alloca(tmplen);
+
 	sha512_context md;
 
 	if(keylen <= blklen) {
@@ -69,7 +71,7 @@ static bool hmac_sha512(const char *key, size_t keylen, const char *msg, size_t 
 	// opad
 	memxor(tmp, 0x36 ^ 0x5c, blklen);
 
-	if(sha512(tmp, sizeof(tmp), out) != 0) {
+	if(sha512(tmp, tmplen, out) != 0) {
 		return false;
 	}
 
@@ -81,33 +83,35 @@ static bool hmac_sha512(const char *key, size_t keylen, const char *msg, size_t 
    We use SHA512 instead of MD5 and SHA1.
  */
 
-bool prf(const char *secret, size_t secretlen, char *seed, size_t seedlen, char *out, size_t outlen) {
+bool prf(const uint8_t *secret, size_t secretlen, uint8_t *seed, size_t seedlen, uint8_t *out, size_t outlen) {
 	/* Data is what the "inner" HMAC function processes.
 	   It consists of the previous HMAC result plus the seed.
 	 */
 
-	char data[mdlen + seedlen];
+	const size_t datalen = mdlen + seedlen;
+	uint8_t *data = alloca(datalen);
+
 	memset(data, 0, mdlen);
 	memcpy(data + mdlen, seed, seedlen);
 
-	char hash[mdlen];
+	uint8_t *hash = alloca(mdlen);
 
 	while(outlen > 0) {
 		/* Inner HMAC */
-		if(!hmac_sha512(secret, secretlen, data, sizeof(data), data)) {
+		if(!hmac_sha512(secret, secretlen, data, datalen, data)) {
 			return false;
 		}
 
 		/* Outer HMAC */
 		if(outlen >= mdlen) {
-			if(!hmac_sha512(secret, secretlen, data, sizeof(data), out)) {
+			if(!hmac_sha512(secret, secretlen, data, datalen, out)) {
 				return false;
 			}
 
 			out += mdlen;
 			outlen -= mdlen;
 		} else {
-			if(!hmac_sha512(secret, secretlen, data, sizeof(data), hash)) {
+			if(!hmac_sha512(secret, secretlen, data, datalen, hash)) {
 				return false;
 			}
 

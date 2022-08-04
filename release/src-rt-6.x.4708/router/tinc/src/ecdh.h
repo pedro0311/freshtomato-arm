@@ -20,6 +20,8 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
+#include "system.h"
+
 #define ECDH_SIZE 32
 #define ECDH_SHARED_SIZE 32
 
@@ -27,8 +29,8 @@
 typedef struct ecdh ecdh_t;
 #endif
 
-extern ecdh_t *ecdh_generate_public(void *pubkey) __attribute__((__malloc__));
-extern bool ecdh_compute_shared(ecdh_t *ecdh, const void *pubkey, void *shared) __attribute__((__warn_unused_result__));
 extern void ecdh_free(ecdh_t *ecdh);
+extern ecdh_t *ecdh_generate_public(void *pubkey) ATTR_MALLOC ATTR_DEALLOCATOR(ecdh_free);
+extern bool ecdh_compute_shared(ecdh_t *ecdh, const void *pubkey, void *shared) ATTR_WARN_UNUSED;
 
 #endif

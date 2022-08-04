@@ -1,7 +1,7 @@
 /*
     protocol_auth.c -- handle the meta-protocol, authentication
     Copyright (C) 1999-2005 Ivo Timmermans,
-                  2000-2017 Guus Sliepen <guus@tinc-vpn.org>
+                  2000-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,8 +25,6 @@
 #include "control.h"
 #include "control_common.h"
 #include "cipher.h"
-#include "crypto.h"
-#include "device.h"
 #include "digest.h"
 #include "ecdsa.h"
 #include "edge.h"
@@ -37,15 +35,22 @@
 #include "net.h"
 #include "netutl.h"
 #include "node.h"
-#include "prf.h"
 #include "protocol.h"
 #include "rsa.h"
 #include "script.h"
 #include "sptps.h"
 #include "utils.h"
 #include "xalloc.h"
+#include "random.h"
+#include "compression.h"
+#include "proxy.h"
+#include "address_cache.h"
 
 #include "ed25519/sha512.h"
+#include "keys.h"
+
+/* If nonzero, use null ciphers and skip all key exchanges. */
+bool bypass_security = false;
 
 int invitation_lifetime;
 ecdsa_t *invitation_key = NULL;
@@ -63,82 +68,12 @@ static bool send_proxyrequest(connection_t *c) {
 		return true;
 	}
 
-	case PROXY_SOCKS4: {
-		if(c->address.sa.sa_family != AF_INET) {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Cannot connect to an IPv6 host through a SOCKS 4 proxy!");
-			return false;
-		}
-
-		char s4req[9 + (proxyuser ? strlen(proxyuser) : 0)];
-		s4req[0] = 4;
-		s4req[1] = 1;
-		memcpy(s4req + 2, &c->address.in.sin_port, 2);
-		memcpy(s4req + 4, &c->address.in.sin_addr, 4);
-
-		if(proxyuser) {
-			memcpy(s4req + 8, proxyuser, strlen(proxyuser));
-		}
-
-		s4req[sizeof(s4req) - 1] = 0;
-		c->tcplen = 8;
-		return send_meta(c, s4req, sizeof(s4req));
-	}
-
+	case PROXY_SOCKS4:
 	case PROXY_SOCKS5: {
-		int len = 3 + 6 + (c->address.sa.sa_family == AF_INET ? 4 : 16);
-		c->tcplen = 2;
-
-		if(proxypass) {
-			len += 3 + strlen(proxyuser) + strlen(proxypass);
-		}
-
-		char s5req[len];
-		int i = 0;
-		s5req[i++] = 5;
-		s5req[i++] = 1;
-
-		if(proxypass) {
-			s5req[i++] = 2;
-			s5req[i++] = 1;
-			s5req[i++] = strlen(proxyuser);
-			memcpy(s5req + i, proxyuser, strlen(proxyuser));
-			i += strlen(proxyuser);
-			s5req[i++] = strlen(proxypass);
-			memcpy(s5req + i, proxypass, strlen(proxypass));
-			i += strlen(proxypass);
-			c->tcplen += 2;
-		} else {
-			s5req[i++] = 0;
-		}
-
-		s5req[i++] = 5;
-		s5req[i++] = 1;
-		s5req[i++] = 0;
-
-		if(c->address.sa.sa_family == AF_INET) {
-			s5req[i++] = 1;
-			memcpy(s5req + i, &c->address.in.sin_addr, 4);
-			i += 4;
-			memcpy(s5req + i, &c->address.in.sin_port, 2);
-			i += 2;
-			c->tcplen += 10;
-		} else if(c->address.sa.sa_family == AF_INET6) {
-			s5req[i++] = 3;
-			memcpy(s5req + i, &c->address.in6.sin6_addr, 16);
-			i += 16;
-			memcpy(s5req + i, &c->address.in6.sin6_port, 2);
-			i += 2;
-			c->tcplen += 22;
-		} else {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Address family %x not supported for SOCKS 5 proxies!", c->address.sa.sa_family);
-			return false;
-		}
-
-		if(i > len) {
-			abort();
-		}
-
-		return send_meta(c, s5req, sizeof(s5req));
+		size_t reqlen = socks_req_len(proxytype, &c->address);
+		uint8_t *req = alloca(reqlen);
+		c->tcplen = create_socks_req(proxytype, req, &c->address);
+		return c->tcplen ? send_meta(c, req, reqlen) : false;
 	}
 
 	case PROXY_SOCKS4A:
@@ -148,6 +83,7 @@ static bool send_proxyrequest(connection_t *c) {
 	case PROXY_EXEC:
 		return true;
 
+	case PROXY_NONE:
 	default:
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unknown proxy type");
 		return false;
@@ -160,7 +96,7 @@ bool send_id(connection_t *c) {
 	int minor = 0;
 
 	if(experimental) {
-		if(c->outgoing && !read_ecdsa_public_key(c)) {
+		if(c->outgoing && !ecdsa_active(c->ecdsa) && !(c->ecdsa = read_ecdsa_public_key(&c->config_tree, c->name))) {
 			minor = 1;
 		} else {
 			minor = myself->connection->protocol_minor;
@@ -204,6 +140,22 @@ static bool finalize_invitation(connection_t *c, const char *data, uint16_t len)
 
 	logger(DEBUG_CONNECTIONS, LOG_INFO, "Key successfully received from %s (%s)", c->name, c->hostname);
 
+	if(!c->node) {
+		c->node = lookup_node(c->name);
+	}
+
+	if(!c->node) {
+		c->node = new_node(c->name);
+		c->node->connection = c;
+		node_add(c->node);
+	}
+
+	if(!c->node->address_cache) {
+		c->node->address_cache = open_address_cache(c->node);
+	}
+
+	add_recent_address(c->node->address_cache, &c->address);
+
 	// Call invitation-accepted script
 	environment_t env;
 	char *address, *port;
@@ -213,6 +165,9 @@ static bool finalize_invitation(connection_t *c, const char *data, uint16_t len)
 	sockaddr2str(&c->address, &address, &port);
 	environment_add(&env, "REMOTEADDRESS=%s", address);
 	environment_add(&env, "NAME=%s", myself->name);
+
+	free(address);
+	free(port);
 
 	execute_script("invitation-accepted", &env);
 
@@ -239,12 +194,13 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 
 	// Recover the filename from the cookie and the key
 	char *fingerprint = ecdsa_get_base64_public_key(invitation_key);
-	char hashbuf[18 + strlen(fingerprint)];
+	const size_t hashbuflen = 18 + strlen(fingerprint);
+	char *hashbuf = alloca(hashbuflen);
 	char cookie[64];
 	memcpy(hashbuf, data, 18);
-	memcpy(hashbuf + 18, fingerprint, sizeof(hashbuf) - 18);
-	sha512(hashbuf, sizeof(hashbuf), cookie);
-	b64encode_urlsafe(cookie, cookie, 18);
+	memcpy(hashbuf + 18, fingerprint, hashbuflen - 18);
+	sha512(hashbuf, hashbuflen, cookie);
+	b64encode_tinc_urlsafe(cookie, cookie, 18);
 	free(fingerprint);
 
 	char filename[PATH_MAX], usedname[PATH_MAX];
@@ -285,7 +241,13 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 
 	// Read the new node's Name from the file
 	char buf[1024] = "";
-	fgets(buf, sizeof(buf), f);
+
+	if(!fgets(buf, sizeof(buf), f)) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Could not read invitation file %s\n", cookie);
+		fclose(f);
+		return false;
+	}
+
 	size_t buflen = strlen(buf);
 
 	// Strip whitespace at the end
@@ -321,6 +283,12 @@ static bool receive_invitation_sptps(void *handle, uint8_t type, const void *dat
 
 	while((result = fread(buf, 1, sizeof(buf), f))) {
 		sptps_send_record(&c->sptps, 0, buf, result);
+	}
+
+	if(!feof(f)) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Could not read invitation file %s\n", cookie);
+		fclose(f);
+		return false;
 	}
 
 	sptps_send_record(&c->sptps, 1, buf, 0);
@@ -425,7 +393,7 @@ bool id_h(connection_t *c, const char *request) {
 
 	if(bypass_security) {
 		if(!c->config_tree) {
-			init_configuration(&c->config_tree);
+			c->config_tree = create_configuration();
 		}
 
 		c->allow_request = ACK;
@@ -442,15 +410,15 @@ bool id_h(connection_t *c, const char *request) {
 	}
 
 	if(!c->config_tree) {
-		init_configuration(&c->config_tree);
+		c->config_tree = create_configuration();
 
 		if(!read_host_config(c->config_tree, c->name, false)) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Peer %s had unknown identity (%s)", c->hostname, c->name);
 			return false;
 		}
 
-		if(experimental) {
-			read_ecdsa_public_key(c);
+		if(experimental && !ecdsa_active(c->ecdsa)) {
+			c->ecdsa = read_ecdsa_public_key(&c->config_tree, c->name);
 		}
 
 		/* Ignore failures if no key known yet */
@@ -476,60 +444,67 @@ bool id_h(connection_t *c, const char *request) {
 
 	if(c->protocol_minor >= 2) {
 		c->allow_request = ACK;
-		char label[25 + strlen(myself->name) + strlen(c->name)];
+
+		const size_t labellen = 25 + strlen(myself->name) + strlen(c->name);
+		char *label = alloca(labellen);
 
 		if(c->outgoing) {
-			snprintf(label, sizeof(label), "tinc TCP key expansion %s %s", myself->name, c->name);
+			snprintf(label, labellen, "tinc TCP key expansion %s %s", myself->name, c->name);
 		} else {
-			snprintf(label, sizeof(label), "tinc TCP key expansion %s %s", c->name, myself->name);
+			snprintf(label, labellen, "tinc TCP key expansion %s %s", c->name, myself->name);
 		}
 
-		return sptps_start(&c->sptps, c, c->outgoing, false, myself->connection->ecdsa, c->ecdsa, label, sizeof(label), send_meta_sptps, receive_meta_sptps);
+		return sptps_start(&c->sptps, c, c->outgoing, false, myself->connection->ecdsa, c->ecdsa, label, labellen, send_meta_sptps, receive_meta_sptps);
 	} else {
 		return send_metakey(c);
 	}
 }
 
 #ifndef DISABLE_LEGACY
+static const char *get_cipher_name(cipher_t *cipher) {
+	size_t keylen = cipher_keylength(cipher);
+
+	if(keylen <= 16) {
+		return "aes-128-cfb";
+	} else if(keylen <= 24) {
+		return "aes-192-cfb";
+	} else {
+		return "aes-256-cfb";
+	}
+}
+
 bool send_metakey(connection_t *c) {
-	if(!myself->connection->rsa) {
+	if(!myself->connection->legacy) {
 		logger(DEBUG_CONNECTIONS, LOG_ERR, "Peer %s (%s) uses legacy protocol which we don't support", c->name, c->hostname);
 		return false;
 	}
 
-	if(!read_rsa_public_key(c)) {
+	rsa_t *rsa = read_rsa_public_key(c->config_tree, c->name);
+
+	if(!rsa) {
 		return false;
 	}
+
+	legacy_ctx_t *ctx = new_legacy_ctx(rsa);
 
 	/* We need to use a stream mode for the meta protocol. Use AES for this,
 	   but try to match the key size with the one from the cipher selected
 	   by Cipher.
 	*/
 
-	int keylen = cipher_keylength(myself->incipher);
+	const char *cipher_name = get_cipher_name(myself->incipher);
 
-	if(keylen <= 16) {
-		c->outcipher = cipher_open_by_name("aes-128-cfb");
-	} else if(keylen <= 24) {
-		c->outcipher = cipher_open_by_name("aes-192-cfb");
-	} else {
-		c->outcipher = cipher_open_by_name("aes-256-cfb");
-	}
-
-	if(!c) {
+	if(!init_crypto_by_name(&ctx->out, cipher_name, "sha256")) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Error during initialisation of cipher or digest to %s (%s)", c->name, c->hostname);
+		free_legacy_ctx(ctx);
 		return false;
 	}
 
-	c->outbudget = cipher_budget(c->outcipher);
-
-	if(!(c->outdigest = digest_open_by_name("sha256", -1))) {
-		return false;
-	}
-
-	const size_t len = rsa_size(c->rsa);
-	char key[len];
-	char enckey[len];
-	char hexkey[2 * len + 1];
+	const size_t len = rsa_size(ctx->rsa);
+	const size_t hexkeylen = HEX_SIZE(len);
+	char *key = alloca(len);
+	char *enckey = alloca(len);
+	char *hexkey = alloca(hexkeylen);
 
 	/* Create a random key */
 
@@ -547,13 +522,16 @@ bool send_metakey(connection_t *c) {
 
 	key[0] &= 0x7F;
 
-	if(!cipher_set_key_from_rsa(c->outcipher, key, len, true)) {
+	if(!cipher_set_key_from_rsa(&ctx->out.cipher, key, len, true)) {
+		free_legacy_ctx(ctx);
+		memzero(key, len);
 		return false;
 	}
 
 	if(debug_level >= DEBUG_SCARY_THINGS) {
 		bin2hex(key, hexkey, len);
 		logger(DEBUG_SCARY_THINGS, LOG_DEBUG, "Generated random meta key (unencrypted): %s", hexkey);
+		memzero(hexkey, hexkeylen);
 	}
 
 	/* Encrypt the random data
@@ -563,10 +541,17 @@ bool send_metakey(connection_t *c) {
 	   with a length equal to that of the modulus of the RSA key.
 	 */
 
-	if(!rsa_public_encrypt(c->rsa, key, len, enckey)) {
+	bool encrypted = rsa_public_encrypt(ctx->rsa, key, len, enckey);
+	memzero(key, len);
+
+	if(!encrypted) {
+		free_legacy_ctx(ctx);
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error during encryption of meta key for %s (%s)", c->name, c->hostname);
 		return false;
 	}
+
+	free_legacy_ctx(c->legacy);
+	c->legacy = ctx;
 
 	/* Convert the encrypted random data to a hexadecimal formatted string */
 
@@ -575,33 +560,38 @@ bool send_metakey(connection_t *c) {
 	/* Send the meta key */
 
 	bool result = send_request(c, "%d %d %d %d %d %s", METAKEY,
-	                           cipher_get_nid(c->outcipher),
-	                           digest_get_nid(c->outdigest), c->outmaclength,
-	                           c->outcompression, hexkey);
+	                           cipher_get_nid(&c->legacy->out.cipher),
+	                           digest_get_nid(&c->legacy->out.digest), c->outmaclength,
+	                           COMPRESS_NONE, hexkey);
 
 	c->status.encryptout = true;
 	return result;
 }
 
 bool metakey_h(connection_t *c, const char *request) {
-	if(!myself->connection->rsa) {
+	if(!myself->connection->legacy || !c->legacy) {
 		return false;
 	}
 
 	char hexkey[MAX_STRING_SIZE];
-	int cipher, digest, maclength, compression;
-	const size_t len = rsa_size(myself->connection->rsa);
-	char enckey[len];
-	char key[len];
+	int cipher, digest;
+	const size_t len = rsa_size(myself->connection->legacy->rsa);
+	char *enckey = alloca(len);
+	char *key = alloca(len);
 
-	if(sscanf(request, "%*d %d %d %d %d " MAX_STRING, &cipher, &digest, &maclength, &compression, hexkey) != 5) {
+	if(sscanf(request, "%*d %d %d %*d %*d " MAX_STRING, &cipher, &digest, hexkey) != 3) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "METAKEY", c->name, c->hostname);
+		return false;
+	}
+
+	if(!cipher || !digest) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): cipher %d, digest %d", c->name, c->hostname, cipher, digest);
 		return false;
 	}
 
 	/* Convert the challenge from hexadecimal back to binary */
 
-	size_t inlen = hex2bin(hexkey, enckey, sizeof(enckey));
+	size_t inlen = hex2bin(hexkey, enckey, len);
 
 	/* Check if the length of the meta key is all right */
 
@@ -612,7 +602,7 @@ bool metakey_h(connection_t *c, const char *request) {
 
 	/* Decrypt the meta key */
 
-	if(!rsa_private_decrypt(myself->connection->rsa, enckey, len, key)) {
+	if(!rsa_private_decrypt(myself->connection->legacy->rsa, enckey, len, key)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Error during decryption of meta key for %s (%s)", c->name, c->hostname);
 		return false;
 	}
@@ -620,29 +610,23 @@ bool metakey_h(connection_t *c, const char *request) {
 	if(debug_level >= DEBUG_SCARY_THINGS) {
 		bin2hex(key, hexkey, len);
 		logger(DEBUG_SCARY_THINGS, LOG_DEBUG, "Received random meta key (unencrypted): %s", hexkey);
+		// Hopefully the user knew what he was doing leaking session keys into logs. We'll do the right thing here anyway.
+		memzero(hexkey, HEX_SIZE(len));
 	}
 
 	/* Check and lookup cipher and digest algorithms */
 
-	if(cipher) {
-		if(!(c->incipher = cipher_open_by_nid(cipher)) || !cipher_set_key_from_rsa(c->incipher, key, len, false)) {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Error during initialisation of cipher from %s (%s)", c->name, c->hostname);
-			return false;
-		}
-	} else {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "null cipher");
+	if(!init_crypto_by_nid(&c->legacy->in, cipher, digest)) {
+		memzero(key, len);
+		logger(DEBUG_ALWAYS, LOG_ERR, "Error during initialisation of cipher or digest from %s (%s)", c->name, c->hostname);
 		return false;
 	}
 
-	c->inbudget = cipher_budget(c->incipher);
+	bool key_set = cipher_set_key_from_rsa(&c->legacy->in.cipher, key, len, false);
+	memzero(key, len);
 
-	if(digest) {
-		if(!(c->indigest = digest_open_by_nid(digest, -1))) {
-			logger(DEBUG_ALWAYS, LOG_ERR, "Error during initialisation of digest from %s (%s)", c->name, c->hostname);
-			return false;
-		}
-	} else {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "null digest");
+	if(!key_set) {
+		logger(DEBUG_ALWAYS, LOG_ERR, "Error setting RSA key for %s (%s)", c->name, c->hostname);
 		return false;
 	}
 
@@ -654,8 +638,8 @@ bool metakey_h(connection_t *c, const char *request) {
 }
 
 bool send_challenge(connection_t *c) {
-	const size_t len = rsa_size(c->rsa);
-	char buffer[len * 2 + 1];
+	const size_t len = rsa_size(c->legacy->rsa);
+	char *buffer = alloca(len * 2 + 1);
 
 	c->hischallenge = xrealloc(c->hischallenge, len);
 
@@ -673,12 +657,12 @@ bool send_challenge(connection_t *c) {
 }
 
 bool challenge_h(connection_t *c, const char *request) {
-	if(!myself->connection->rsa) {
+	if(!myself->connection->legacy) {
 		return false;
 	}
 
 	char buffer[MAX_STRING_SIZE];
-	const size_t len = rsa_size(myself->connection->rsa);
+	const size_t len = rsa_size(myself->connection->legacy->rsa);
 
 	if(sscanf(request, "%*d " MAX_STRING, buffer) != 1) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Got bad %s from %s (%s)", "CHALLENGE", c->name, c->hostname);
@@ -710,13 +694,13 @@ bool challenge_h(connection_t *c, const char *request) {
 }
 
 bool send_chal_reply(connection_t *c) {
-	const size_t len = rsa_size(myself->connection->rsa);
-	size_t digestlen = digest_length(c->indigest);
-	char digest[digestlen * 2 + 1];
+	const size_t len = rsa_size(myself->connection->legacy->rsa);
+	size_t digestlen = digest_length(&c->legacy->in.digest);
+	char *digest = alloca(digestlen * 2 + 1);
 
 	/* Calculate the hash from the challenge we received */
 
-	if(!digest_create(c->indigest, c->mychallenge, len, digest)) {
+	if(!digest_create(&c->legacy->in.digest, c->mychallenge, len, digest)) {
 		return false;
 	}
 
@@ -747,7 +731,7 @@ bool chal_reply_h(connection_t *c, const char *request) {
 
 	/* Check if the length of the hash is all right */
 
-	if(inlen != digest_length(c->outdigest)) {
+	if(inlen != digest_length(&c->legacy->out.digest)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "wrong challenge reply length");
 		return false;
 	}
@@ -755,7 +739,7 @@ bool chal_reply_h(connection_t *c, const char *request) {
 
 	/* Verify the hash */
 
-	if(!digest_verify(c->outdigest, c->hischallenge, rsa_size(c->rsa), hishash)) {
+	if(!digest_verify(&c->legacy->out.digest, c->hischallenge, rsa_size(c->legacy->rsa), hishash)) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Possible intruder %s (%s): %s", c->name, c->hostname, "wrong challenge reply");
 		return false;
 	}
@@ -843,7 +827,7 @@ bool send_ack(connection_t *c) {
 	/* Estimate weight */
 
 	gettimeofday(&now, NULL);
-	c->estimated_weight = (now.tv_sec - c->start.tv_sec) * 1000 + (now.tv_usec - c->start.tv_usec) / 1000;
+	c->estimated_weight = (int)((now.tv_sec - c->start.tv_sec) * 1000 + (now.tv_usec - c->start.tv_usec) / 1000);
 
 	/* Check some options */
 
@@ -867,10 +851,10 @@ bool send_ack(connection_t *c) {
 	}
 
 	if(!get_config_int(lookup_config(c->config_tree, "Weight"), &c->estimated_weight)) {
-		get_config_int(lookup_config(config_tree, "Weight"), &c->estimated_weight);
+		get_config_int(lookup_config(&config_tree, "Weight"), &c->estimated_weight);
 	}
 
-	return send_request(c, "%d %s %d %x", ACK, myport, c->estimated_weight, (c->options & 0xffffff) | (experimental ? (PROT_MINOR << 24) : 0));
+	return send_request(c, "%d %s %d %x", ACK, myport.udp, c->estimated_weight, (c->options & 0xffffff) | (experimental ? (PROT_MINOR << 24) : 0));
 }
 
 static void send_everything(connection_t *c) {
@@ -888,19 +872,19 @@ static void send_everything(connection_t *c) {
 	}
 
 	if(tunnelserver) {
-		for splay_each(subnet_t, s, myself->subnet_tree) {
+		for splay_each(subnet_t, s, &myself->subnet_tree) {
 			send_add_subnet(c, s);
 		}
 
 		return;
 	}
 
-	for splay_each(node_t, n, node_tree) {
-		for splay_each(subnet_t, s, n->subnet_tree) {
+	for splay_each(node_t, n, &node_tree) {
+		for splay_each(subnet_t, s, &n->subnet_tree) {
 			send_add_subnet(c, s);
 		}
 
-		for splay_each(edge_t, e, n->edge_tree) {
+		for splay_each(edge_t, e, &n->edge_tree) {
 			send_add_edge(c, e);
 		}
 	}
@@ -914,7 +898,7 @@ static bool upgrade_h(connection_t *c, const char *request) {
 		return false;
 	}
 
-	if(ecdsa_active(c->ecdsa) || read_ecdsa_public_key(c)) {
+	if(ecdsa_active(c->ecdsa) || (c->ecdsa = read_ecdsa_public_key(&c->config_tree, c->name))) {
 		char *knownkey = ecdsa_get_base64_public_key(c->ecdsa);
 		bool different = strcmp(knownkey, pubkey);
 		free(knownkey);
@@ -969,8 +953,7 @@ bool ack_h(connection_t *c, const char *request) {
 	n = lookup_node(c->name);
 
 	if(!n) {
-		n = new_node();
-		n->name = xstrdup(c->name);
+		n = new_node(c->name);
 		node_add(n);
 	} else {
 		if(n->connection) {
@@ -1007,7 +990,7 @@ bool ack_h(connection_t *c, const char *request) {
 		n->mtu = mtu;
 	}
 
-	if(get_config_int(lookup_config(config_tree, "PMTU"), &mtu) && mtu < n->mtu) {
+	if(get_config_int(lookup_config(&config_tree, "PMTU"), &mtu) && mtu < n->mtu) {
 		n->mtu = mtu;
 	}
 
@@ -1043,7 +1026,7 @@ bool ack_h(connection_t *c, const char *request) {
 	if(getsockname(c->socket, &local_sa.sa, &local_salen) < 0) {
 		logger(DEBUG_ALWAYS, LOG_WARNING, "Could not get local socket address for connection with %s", c->name);
 	} else {
-		sockaddr_setport(&local_sa, myport);
+		sockaddr_setport(&local_sa, myport.udp);
 		c->edge->local_address = local_sa;
 	}
 

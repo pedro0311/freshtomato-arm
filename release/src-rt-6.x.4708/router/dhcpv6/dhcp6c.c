@@ -312,8 +312,10 @@ client6_init()
 		exit(1);
 	}
 #ifdef __linux__
+#ifdef HAVE_CLOEXEC
 	/* Force socket to be closed on execve */
 	res->ai_socktype |= SOCK_CLOEXEC;
+#endif
 #endif
 	sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 	if (sock < 0) {
@@ -515,6 +517,8 @@ check_exit()
 		if (!TAILQ_EMPTY(&ifp->event_list))
 			return;
 	}
+	for (ifp = dhcp6_if; ifp; ifp = ifp->next)
+		client6_script(ifp->scriptpath, DHCP6S_EXIT, NULL);
 
 	/* We have no existing event.  Do exit. */
 	dprintf(LOG_INFO, FNAME, "exiting");
@@ -1824,6 +1828,9 @@ client6_recvreply(ifp, dh6, len, optinfo)
 		dprintf(LOG_INFO, FNAME, "unexpected reply");
 		return (-1);
 	}
+
+	dprintf(LOG_INFO, FNAME, "Received REPLY for %s",
+	    dhcp6_event_statestr(ev));
 
 	/* A Reply message must contain a Server ID option */
 	if (optinfo->serverID.duid_len == 0) {

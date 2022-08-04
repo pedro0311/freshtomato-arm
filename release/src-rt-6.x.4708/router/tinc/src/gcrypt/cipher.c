@@ -1,6 +1,6 @@
 /*
     cipher.c -- Symmetric block cipher handling
-    Copyright (C) 2007-2012 Guus Sliepen <guus@tinc-vpn.org>
+    Copyright (C) 2007-2022 Guus Sliepen <guus@tinc-vpn.org>
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,45 +17,47 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "system.h"
+#include "../system.h"
 
 #include "cipher.h"
-#include "logger.h"
-#include "xalloc.h"
+#include "../cipher.h"
+#include "../logger.h"
+#include "../xalloc.h"
+
+typedef enum gcry_cipher_algos cipher_algo_t;
+typedef enum gcry_cipher_modes cipher_mode_t;
 
 static struct {
 	const char *name;
-	int algo;
-	int mode;
-	int nid;
+	cipher_algo_t algo;
+	cipher_mode_t mode;
+	nid_t nid;
 } ciphertable[] = {
 	{"none", GCRY_CIPHER_NONE, GCRY_CIPHER_MODE_NONE, 0},
 
-	{NULL, GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_ECB, 92},
+	{NULL,       GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_ECB, 92},
 	{"blowfish", GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_CBC, 91},
-	{NULL, GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_CFB, 93},
-	{NULL, GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_OFB, 94},
+	{NULL,       GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_CFB, 93},
+	{NULL,       GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_OFB, 94},
 
-	{NULL, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, 418},
-	{"aes", GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, 419},
-	{NULL, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CFB, 421},
-	{NULL, GCRY_CIPHER_AES, GCRY_CIPHER_MODE_OFB, 420},
+	{"aes-128-ecb", GCRY_CIPHER_AES, GCRY_CIPHER_MODE_ECB, 418},
+	{"aes-128-cbc", GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CBC, 419},
+	{"aes-128-cfb", GCRY_CIPHER_AES, GCRY_CIPHER_MODE_CFB, 421},
+	{"aes-128-ofb", GCRY_CIPHER_AES, GCRY_CIPHER_MODE_OFB, 420},
 
-	{NULL, GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_ECB, 422},
-	{"aes192", GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_CBC, 423},
-	{NULL, GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_CFB, 425},
-	{NULL, GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_OFB, 424},
+	{"aes-192-ecb", GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_ECB, 422},
+	{"aes-192-cbc", GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_CBC, 423},
+	{"aes-192-cfb", GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_CFB, 425},
+	{"aes-192-ofb", GCRY_CIPHER_AES192, GCRY_CIPHER_MODE_OFB, 424},
 
-	{NULL, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_ECB, 426},
-	{"aes256", GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 427},
-	{NULL, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CFB, 429},
-	{NULL, GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_OFB, 428},
+	{"aes-256-ecb", GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_ECB, 426},
+	{"aes-256-cbc", GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CBC, 427},
+	{"aes-256-cfb", GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_CFB, 429},
+	{"aes-256-ofb", GCRY_CIPHER_AES256, GCRY_CIPHER_MODE_OFB, 428},
 };
 
-static bool nametocipher(const char *name, int *algo, int *mode) {
-	size_t i;
-
-	for(i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
+static bool nametocipher(const char *name, cipher_algo_t *algo, cipher_mode_t *mode) {
+	for(size_t i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
 		if(ciphertable[i].name && !strcasecmp(name, ciphertable[i].name)) {
 			*algo = ciphertable[i].algo;
 			*mode = ciphertable[i].mode;
@@ -66,10 +68,8 @@ static bool nametocipher(const char *name, int *algo, int *mode) {
 	return false;
 }
 
-static bool nidtocipher(int nid, int *algo, int *mode) {
-	size_t i;
-
-	for(i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
+static bool nidtocipher(cipher_algo_t *algo, cipher_mode_t *mode, nid_t nid) {
+	for(size_t i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
 		if(nid == ciphertable[i].nid) {
 			*algo = ciphertable[i].algo;
 			*mode = ciphertable[i].mode;
@@ -80,10 +80,8 @@ static bool nidtocipher(int nid, int *algo, int *mode) {
 	return false;
 }
 
-static bool ciphertonid(int algo, int mode, int *nid) {
-	size_t i;
-
-	for(i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
+static bool ciphertonid(nid_t *nid, cipher_algo_t algo, cipher_mode_t mode) {
+	for(size_t i = 0; i < sizeof(ciphertable) / sizeof(*ciphertable); i++) {
 		if(algo == ciphertable[i].algo && mode == ciphertable[i].mode) {
 			*nid = ciphertable[i].nid;
 			return true;
@@ -93,10 +91,10 @@ static bool ciphertonid(int algo, int mode, int *nid) {
 	return false;
 }
 
-static bool cipher_open(cipher_t *cipher, int algo, int mode) {
+static bool cipher_open(cipher_t *cipher, cipher_algo_t algo, cipher_mode_t mode) {
 	gcry_error_t err;
 
-	if(!ciphertonid(algo, mode, &cipher->nid)) {
+	if(!ciphertonid(&cipher->nid, algo, mode)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Cipher %d mode %d has no corresponding nid!", algo, mode);
 		return false;
 	}
@@ -108,14 +106,15 @@ static bool cipher_open(cipher_t *cipher, int algo, int mode) {
 
 	cipher->keylen = gcry_cipher_get_algo_keylen(algo);
 	cipher->blklen = gcry_cipher_get_algo_blklen(algo);
-	cipher->key = xmalloc(cipher->keylen + cipher->blklen);
+	cipher->key = xmalloc(cipher_keylength(cipher));
 	cipher->padding = mode == GCRY_CIPHER_MODE_ECB || mode == GCRY_CIPHER_MODE_CBC;
 
 	return true;
 }
 
 bool cipher_open_by_name(cipher_t *cipher, const char *name) {
-	int algo, mode;
+	cipher_algo_t algo;
+	cipher_mode_t mode;
 
 	if(!nametocipher(name, &algo, &mode)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Unknown cipher name '%s'!", name);
@@ -125,10 +124,11 @@ bool cipher_open_by_name(cipher_t *cipher, const char *name) {
 	return cipher_open(cipher, algo, mode);
 }
 
-bool cipher_open_by_nid(cipher_t *cipher, int nid) {
-	int algo, mode;
+bool cipher_open_by_nid(cipher_t *cipher, nid_t nid) {
+	cipher_algo_t algo;
+	cipher_mode_t mode;
 
-	if(!nidtocipher(nid, &algo, &mode)) {
+	if(!nidtocipher(&algo, &mode, nid)) {
 		logger(DEBUG_ALWAYS, LOG_DEBUG, "Unknown cipher ID %d!", nid);
 		return false;
 	}
@@ -136,30 +136,57 @@ bool cipher_open_by_nid(cipher_t *cipher, int nid) {
 	return cipher_open(cipher, algo, mode);
 }
 
-bool cipher_open_blowfish_ofb(cipher_t *cipher) {
-	return cipher_open(cipher, GCRY_CIPHER_BLOWFISH, GCRY_CIPHER_MODE_OFB);
-}
-
 void cipher_close(cipher_t *cipher) {
-	if(cipher->handle) {
-		gcry_cipher_close(cipher->handle);
-		cipher->handle = NULL;
+	if(!cipher) {
+		return;
 	}
 
-	free(cipher->key);
-	cipher->key = NULL;
+	if(cipher->handle) {
+		gcry_cipher_close(cipher->handle);
+	}
+
+	xzfree(cipher->key, cipher_keylength(cipher));
+	memset(cipher, 0, sizeof(*cipher));
 }
 
 size_t cipher_keylength(const cipher_t *cipher) {
+	if(!cipher) {
+		return 0;
+	}
+
 	return cipher->keylen + cipher->blklen;
 }
 
-void cipher_get_key(const cipher_t *cipher, void *key) {
-	memcpy(key, cipher->key, cipher->keylen + cipher->blklen);
+uint64_t cipher_budget(const cipher_t *cipher) {
+	if(!cipher) {
+		return UINT64_MAX; // NULL cipher
+	}
+
+	size_t ivlen = cipher->blklen;
+	size_t blklen = cipher->blklen;
+
+	size_t len = blklen > 1
+	             ? blklen
+	             : ivlen > 1 ? ivlen : 8;
+	size_t bits = len * 4 - 1;
+
+	return bits < 64
+	       ? UINT64_C(1) << bits
+	       : UINT64_MAX;
+}
+
+size_t cipher_blocksize(const cipher_t *cipher) {
+	if(!cipher || !cipher->blklen) {
+		return 1;
+	}
+
+	return cipher->blklen;
 }
 
 bool cipher_set_key(cipher_t *cipher, void *key, bool encrypt) {
-	memcpy(cipher->key, key, cipher->keylen + cipher->blklen);
+	(void)encrypt;
+
+	memcpy(cipher->key, key, cipher_keylength(cipher));
 
 	gcry_cipher_setkey(cipher->handle, cipher->key, cipher->keylen);
 	gcry_cipher_setiv(cipher->handle, cipher->key + cipher->keylen, cipher->blklen);
@@ -168,19 +195,12 @@ bool cipher_set_key(cipher_t *cipher, void *key, bool encrypt) {
 }
 
 bool cipher_set_key_from_rsa(cipher_t *cipher, void *key, size_t len, bool encrypt) {
-	memcpy(cipher->key, key + len - cipher->keylen, cipher->keylen + cipher->blklen);
-	memcpy(cipher->key + cipher->keylen, key + len - cipher->keylen - cipher->blklen, cipher->blklen);
+	(void)encrypt;
 
+	memcpy(cipher->key, (char *)key + len - cipher->keylen, cipher->keylen);
 	gcry_cipher_setkey(cipher->handle, cipher->key, cipher->keylen);
-	gcry_cipher_setiv(cipher->handle, cipher->key + cipher->keylen, cipher->blklen);
 
-	return true;
-}
-
-bool cipher_regenerate_key(cipher_t *cipher, bool encrypt) {
-	gcry_create_nonce(cipher->key, cipher->keylen + cipher->blklen);
-
-	gcry_cipher_setkey(cipher->handle, cipher->key, cipher->keylen);
+	memcpy((char *)cipher->key + cipher->keylen, (char *)key + len - cipher->blklen - cipher->keylen, cipher->blklen);
 	gcry_cipher_setiv(cipher->handle, cipher->key + cipher->keylen, cipher->blklen);
 
 	return true;
@@ -188,7 +208,7 @@ bool cipher_regenerate_key(cipher_t *cipher, bool encrypt) {
 
 bool cipher_encrypt(cipher_t *cipher, const void *indata, size_t inlen, void *outdata, size_t *outlen, bool oneshot) {
 	gcry_error_t err;
-	uint8_t pad[cipher->blklen];
+	uint8_t *pad = alloca(cipher->blklen);
 
 	if(cipher->padding) {
 		if(!oneshot) {
@@ -223,7 +243,7 @@ bool cipher_encrypt(cipher_t *cipher, const void *indata, size_t inlen, void *ou
 	}
 
 	if(cipher->padding) {
-		if((err = gcry_cipher_encrypt(cipher->handle, outdata + inlen, cipher->blklen, pad, cipher->blklen))) {
+		if((err = gcry_cipher_encrypt(cipher->handle, (char *)outdata + inlen, cipher->blklen, pad, cipher->blklen))) {
 			logger(DEBUG_ALWAYS, LOG_ERR, "Error while encrypting: %s", gcry_strerror(err));
 			return false;
 		}
@@ -261,7 +281,7 @@ bool cipher_decrypt(cipher_t *cipher, const void *indata, size_t inlen, void *ou
 
 		size_t origlen = inlen - padbyte;
 
-		for(int i = inlen - 1; i >= origlen; i--)
+		for(size_t i = inlen - 1; i >= origlen; i--)
 			if(((uint8_t *)outdata)[i] != padbyte) {
 				logger(DEBUG_ALWAYS, LOG_ERR, "Error while decrypting: invalid padding");
 				return false;
@@ -275,7 +295,11 @@ bool cipher_decrypt(cipher_t *cipher, const void *indata, size_t inlen, void *ou
 	return true;
 }
 
-int cipher_get_nid(const cipher_t *cipher) {
+nid_t cipher_get_nid(const cipher_t *cipher) {
+	if(!cipher || !cipher->nid) {
+		return 0;
+	}
+
 	return cipher->nid;
 }
 

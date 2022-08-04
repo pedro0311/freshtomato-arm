@@ -1,6 +1,6 @@
 /*
     upnp.c -- UPnP-IGD client
-    Copyright (C) 2015-2018 Guus Sliepen <guus@tinc-vpn.org>,
+    Copyright (C) 2015-2022 Guus Sliepen <guus@tinc-vpn.org>,
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -17,22 +17,20 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 */
 
-#include "upnp.h"
+#include "system.h"
 
-#ifndef HAVE_MINGW
 #include <pthread.h>
-#endif
 
 #include "miniupnpc/miniupnpc.h"
 #include "miniupnpc/upnpcommands.h"
 #include "miniupnpc/upnperrors.h"
 
-#include "system.h"
 #include "logger.h"
 #include "names.h"
 #include "net.h"
 #include "netutl.h"
 #include "utils.h"
+#include "upnp.h"
 
 static bool upnp_tcp;
 static bool upnp_udp;
@@ -107,7 +105,7 @@ static void upnp_add_mapping(struct UPNPUrls *urls, struct IGDdatas *data, const
 	free(port);
 }
 
-static void upnp_refresh() {
+static void upnp_refresh(void) {
 	logger(DEBUG_PROTOCOL, LOG_INFO, "[upnp] Discovering IGD devices");
 
 	int error;
@@ -161,9 +159,7 @@ static void *upnp_thread(void *data) {
 		time_t now = time(NULL);
 
 		if(now < refresh_time) {
-			nanosleep(&(struct timespec) {
-				refresh_time - now, 0
-			}, NULL);
+			sleep_millis((refresh_time - now) * 1000);
 		}
 	}
 
@@ -177,23 +173,13 @@ void upnp_init(bool tcp, bool udp) {
 	upnp_tcp = tcp;
 	upnp_udp = udp;
 
-	get_config_int(lookup_config(config_tree, "UPnPDiscoverWait"), &upnp_discover_wait);
-	get_config_int(lookup_config(config_tree, "UPnPRefreshPeriod"), &upnp_refresh_period);
+	get_config_int(lookup_config(&config_tree, "UPnPDiscoverWait"), &upnp_discover_wait);
+	get_config_int(lookup_config(&config_tree, "UPnPRefreshPeriod"), &upnp_refresh_period);
 
-#ifdef HAVE_MINGW
-	HANDLE handle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)upnp_thread, NULL, 0, NULL);
-
-	if(!handle) {
-		logger(DEBUG_ALWAYS, LOG_ERR, "Unable to start UPnP-IGD client thread");
-	}
-
-#else
 	pthread_t thread;
 	int error = pthread_create(&thread, NULL, upnp_thread, NULL);
 
 	if(error) {
 		logger(DEBUG_ALWAYS, LOG_ERR, "Unable to start UPnP-IGD client thread: [%d] %s", error, strerror(error));
 	}
-
-#endif
 }
