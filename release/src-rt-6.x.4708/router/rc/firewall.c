@@ -1528,7 +1528,7 @@ static void filter_forward(void)
 	}
 
 	/* IPv6 IPSec - RFC 6092 */
-	if (*wan6face && (nvram_match("ipsec_pass", "1")) || (nvram_match("ipsec_pass", "2")))
+	if (*wan6face && (nvram_match("ipsec_pass", "1") || nvram_match("ipsec_pass", "2")))
 		ip6t_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
 		           "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n",			/* IKE */
 		           wan6face, wan6face);
