@@ -5,6 +5,28 @@ FreshTomato-ARM Changelog
 
 
 
+2022.5          2022.08.06
+---------------------------
+
+Note: mainly bugfixes release.
+
+- nginx: update to 1.23.1
+- sqlite: update to 3.39.2
+- meson: add clean source for version 0.63.0
+- meson: add arm-cross.txt file
+- lz4: add clean source for version 1.9.3
+- tinc: update to meson build system. Add lz4 support to tinc
+- tinc: update to the latest commit. 4c6a9a9
+- libcurl: update CA certificate bundle as of 2022-07-19
+- build: dhcpv6: sync to MIPS (chmod), additionally add #ifdef to have one version for ARM and MIPS
+- GUI: fix copy-paste for advanced-dhcpdns.asp
+- GUI: Advanced: DHCP/DNS: 'Solve .onion' checkbox should be available regardless of tor status
+- GUI: basic-ipv6.asp - fix problems with saving IPv6 setting
+- GUI: Advanced: DHCP/DNS: rename option
+- dhcpv6: Improve log messages when a REPLY message arrives. The old ones were confusing
+- dhcpv6: Add a new script event "EXIT", which is invoked when dhcp6c exits
+
+
 2022.4          2022.07.31
 ---------------------------
 
