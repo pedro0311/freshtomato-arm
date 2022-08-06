@@ -66,7 +66,11 @@ RUN apt-get update \
   mc \
   cmake \
   curl \
-  linux-headers-$(uname -r) \
+  libfl-dev \
+  ninja-build \
+  wget \
+  util-linux \
+  bsdmainutils \
   && dpkg --add-architecture i386 \
   && apt-get update \
   && apt-get install --no-install-suggests --no-install-recommends -y \
