@@ -1772,7 +1772,7 @@ function init() {
 	}
 	ckdst = nvram.mwan_ckdst.split(',');
 	createFieldTable('', [
-		{ title: 'Number of WAN Ports', name: 'mwan_num', type: 'select', options: [['1','1 WAN'],['2','2 WAN']
+		{ title: 'Number of logical WANs', name: 'mwan_num', type: 'select', options: [['1','1 WAN'],['2','2 WAN']
 /* MULTIWAN-BEGIN */
 											   ,['3','3 WAN'],['4','4 WAN']
 /* MULTIWAN-END */
