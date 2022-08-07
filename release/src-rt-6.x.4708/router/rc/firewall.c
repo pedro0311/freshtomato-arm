@@ -1442,7 +1442,7 @@ static void filter_forward(void)
 	            "-A FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT\n"); /* already established or related (via helper) */
 
 	/* IPv4 IPSec */
-	if ((nvram_match("ipsec_pass", "1")) || (nvram_match("ipsec_pass", "3"))) {
+	if (nvram_match("ipsec_pass", "1") || nvram_match("ipsec_pass", "3")) {
 		for (i = 0; i < (unsigned int) wanfaces.count; ++i) {
 			if (*(wanfaces.iface[i].name))
 				ipt_write("-A FORWARD -i %s -p esp -j ACCEPT\n"				/* ESP */
@@ -1457,7 +1457,7 @@ static void filter_forward(void)
 				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
 				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
 				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
-				          wan2faces.iface[i].name, wan2faces.iface[i].name, wan2faces.iface[i].name, wanfaces.iface[i].name);
+				          wan2faces.iface[i].name, wan2faces.iface[i].name, wan2faces.iface[i].name, wan2faces.iface[i].name);
 		}
 #ifdef TCONFIG_MULTIWAN
 		for (i = 0; i < (unsigned int) wan3faces.count; ++i) {
@@ -1466,7 +1466,7 @@ static void filter_forward(void)
 				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
 				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
 				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
-				          wan3faces.iface[i].name, wan3faces.iface[i].name, wan3faces.iface[i].name, wanfaces.iface[i].name);
+				          wan3faces.iface[i].name, wan3faces.iface[i].name, wan3faces.iface[i].name, wan3faces.iface[i].name);
 		}
 		for (i = 0; i < (unsigned int) wan4faces.count; ++i) {
 			if (*(wan4faces.iface[i].name))
@@ -1474,7 +1474,7 @@ static void filter_forward(void)
 				          "-A FORWARD -i %s -p ah -j ACCEPT\n"				/* AH */
 				          "-A FORWARD -i %s -p udp --dport 500 -j ACCEPT\n"		/* IKE */
 				          "-A FORWARD -i %s -p udp --dport 4500 -j ACCEPT\n",		/* NAT-T */
-				          wan4faces.iface[i].name, wan4faces.iface[i].name, wan4faces.iface[i].name, wanfaces.iface[i].name);
+				          wan4faces.iface[i].name, wan4faces.iface[i].name, wan4faces.iface[i].name, wan4faces.iface[i].name);
 		}
 #endif /* TCONFIG_MULTIWAN */
 	}
