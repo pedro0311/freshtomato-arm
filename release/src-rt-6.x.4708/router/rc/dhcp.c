@@ -506,10 +506,8 @@ void stop_dhcpc(char *prefix)
 #ifdef TCONFIG_IPV6
 int dhcp6c_state_main(int argc, char **argv)
 {
-	char prefix[INET6_ADDRSTRLEN];
+	const char *prefix;
 	const char *lanif;
-	struct in6_addr addr;
-	int i, r;
 	char *reason;
 
 	if (!wait_action_idle(10))
@@ -527,19 +525,12 @@ int dhcp6c_state_main(int argc, char **argv)
 	/* check IPv6 addr - change/new ? */
 	if (!nvram_match("ipv6_rtr_addr", (char *) lanif)) {
 		nvram_set("ipv6_rtr_addr", lanif);
+
 		/* extract prefix from configured IPv6 address */
-		if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
-			r = nvram_get_int("ipv6_prefix_length") ? : 64;
-			for (r = 128 - r, i = 15; r > 0; r -= 8) {
-				if (r >= 8) {
-					addr.s6_addr[i--] = 0;
-				} else {
-					addr.s6_addr[i--] &= (0xff << r);
-				}
-			}
-			inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
+		prefix = ipv6_prefix(NULL);
+		if (!nvram_match("ipv6_prefix", (char *) prefix))
 			nvram_set("ipv6_prefix", prefix);
-		}
+
 		/* (re)start dnsmasq and httpd */
 		set_host_domain_name();
 		stop_dnsmasq();
@@ -548,7 +539,7 @@ int dhcp6c_state_main(int argc, char **argv)
 		start_httpd();
 	}
 
-	/* check DNS */
+	/* check DNS - change/new ? */
 	if (env2nv("new_domain_name_servers", "ipv6_get_dns"))
 		dns_to_resolv();
 

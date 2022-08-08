@@ -163,6 +163,8 @@ extern const char *get_wanface(char *prefix);
 extern const char *get_wanip(char *prefix);
 #ifdef TCONFIG_IPV6
 extern const char *get_wan6face(void);
+extern const char *ipv6_address(const char *ipaddr6);
+extern const char *ipv6_prefix(struct in6_addr *in6addr);
 #endif
 extern const char *getifaddr(char *ifname, int family, int linklocal);
 extern int is_intf_up(const char* ifname);
