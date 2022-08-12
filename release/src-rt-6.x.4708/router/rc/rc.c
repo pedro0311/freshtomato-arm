@@ -198,6 +198,7 @@ static const applets_t applets[] = {
 	{ "dhcpc-event",		dhcpc_event_main		},
 	{ "dhcpc-release",		dhcpc_release_main		},
 	{ "dhcpc-renew",		dhcpc_renew_main		},
+	{ "dhcpc-event-lan",		dhcpc_lan_main			},
 #ifdef TCONFIG_IPV6
 	{ "dhcp6c-state",		dhcp6c_state_main		},
 #endif

@@ -194,6 +194,7 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-event
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-release
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-renew
+	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcpc-event-lan
 
 	@cd $(INSTALLDIR)/sbin && ln -sf rc wldist
 

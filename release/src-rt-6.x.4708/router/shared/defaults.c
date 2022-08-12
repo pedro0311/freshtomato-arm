@@ -31,7 +31,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "lan_hwaddr",			""				, 0 },	/* LAN interface MAC address */
 
 	/* LAN TCP/IP parameters */
-	{ "lan_dhcp",			"0"				, 0 },	/* DHCP client [static|dhcp] */
+	{ "lan_dhcp",			"0"				, 0 },	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			"dhcp"				, 0 },	/* DHCP server [static|dhcp] */
 	{ "lan_ipaddr",			"192.168.1.1"			, 0 },	/* LAN IP address */
 	{ "lan_netmask",		"255.255.255.0"			, 0 },	/* LAN netmask */

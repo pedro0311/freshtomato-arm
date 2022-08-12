@@ -2852,6 +2852,7 @@ void start_services(void)
 		if (nvram_get_int("sshd_eas"))
 			start_sshd();
 	}
+	start_dhcpc_lan(); /* start very early */
 	start_nas();
 #ifdef TCONFIG_ZEBRA
 	start_zebra();
@@ -2924,6 +2925,7 @@ void start_services(void)
 
 void stop_services(void)
 {
+	stop_dhcpc_lan(); /* stop very early */
 	clear_resolv();
 	stop_ntpd();
 #ifdef TCONFIG_FANCTRL

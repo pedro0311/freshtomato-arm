@@ -205,8 +205,11 @@ extern void ndp_proxy(const char *ifname, int enable);
 extern int dhcpc_event_main(int argc, char **argv);
 extern int dhcpc_release_main(int argc, char **argv);
 extern int dhcpc_renew_main(int argc, char **argv);
+extern int dhcpc_lan_main(int argc, char **argv);
 extern void start_dhcpc(char *prefix);
 extern void stop_dhcpc(char *prefix);
+extern void start_dhcpc_lan(void);
+extern void stop_dhcpc_lan(void);
 extern void do_connect_file(unsigned int renew, char *prefix);
 #ifdef TCONFIG_IPV6
 extern int dhcp6c_state_main(int argc, char **argv);
