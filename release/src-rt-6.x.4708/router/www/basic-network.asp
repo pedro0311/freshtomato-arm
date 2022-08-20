@@ -683,7 +683,6 @@ function verifyFields(focused, quiet) {
 				}
 			}
 
-			elem.display('_f_wan_islan', (wanproto[0] == 'disabled'));
 		}
 	}
 
