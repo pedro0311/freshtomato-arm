@@ -89,6 +89,18 @@ const char *chain_out_drop;
 const char *chain_out_accept;
 const char *chain_out_reject;
 
+static inline int is_wet(int idx, int unit, int subunit, void *param)
+{
+	return nvram_match(wl_nvname("mode", unit, subunit), "wet");
+}
+
+#ifdef TCONFIG_BCMWL6
+static inline int is_psta(int idx, int unit, int subunit, void *param)
+{
+	return nvram_match(wl_nvname("mode", unit, subunit), "psta");
+}
+#endif /* TCONFIG_BCMWL6 */
+
 /* rc.c */
 extern void chains_log_detection(void);
 extern int env2nv(char *env, char *nv);

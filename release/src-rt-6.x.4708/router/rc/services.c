@@ -92,18 +92,6 @@ static pid_t pid_phy_tempsense = -1;
 #endif
 
 
-static int is_wet(int idx, int unit, int subunit, void *param)
-{
-	return nvram_match(wl_nvname("mode", unit, subunit), "wet");
-}
-
-#ifdef TCONFIG_BCMWL6
-static int is_psta(int idx, int unit, int subunit, void *param)
-{
-	return nvram_match(wl_nvname("mode", unit, subunit), "psta");
-}
-#endif /* TCONFIG_BCMWL6 */
-
 void start_dnsmasq_wet()
 {
 	FILE *f;

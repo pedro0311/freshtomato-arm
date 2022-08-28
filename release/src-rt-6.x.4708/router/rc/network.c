@@ -186,6 +186,22 @@ void wlconf_pre(void)
 }
 #endif /* TCONFIG_BCMARM */
 
+#ifdef TCONFIG_EBTABLES
+static void bridges_flush_all_chains(void)
+{
+	/* every chain will be flushed */
+	eval("ebtables", "-F");
+}
+
+static void bridges_block_all_ipv6(void)
+{
+	/* basic filter table configuration - block all IPv6 */
+	eval("ebtables", "-I", "INPUT", "-p", "IPv6", "-j", "DROP");
+	eval("ebtables", "-I", "FORWARD", "-p", "IPv6", "-j", "DROP");
+	eval("ebtables", "-I", "OUTPUT", "-p", "IPv6", "-j", "DROP");
+}
+#endif /* TCONFIG_EBTABLES */
+
 static void set_lan_hostname(const char *wan_hostname)
 {
 	const char *s;
@@ -626,6 +642,14 @@ void restart_wl(void)
 	int model = get_model();
 #endif
 
+#ifdef TCONFIG_EBTABLES
+	/* check for wireless ethernet bridge mode (wet) and block IPv6 */
+	if (foreach_wif(1, NULL, is_wet)) {
+		logmsg(LOG_INFO, "No IPv6 support for wireless ethernet bridge mode");
+		bridges_block_all_ipv6();
+	}
+#endif
+
 	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
 		if (br != 0)
@@ -775,7 +799,9 @@ void stop_lan_wl(void)
 	char tmp[32];
 	char br;
 
-	eval("ebtables", "-F");
+#ifdef TCONFIG_EBTABLES
+	bridges_flush_all_chains(); /* ebtables clean-up */
+#endif
 
 	for (br = 0; br < BRIDGE_COUNT; br++) {
 		char bridge[2] = "0";
@@ -1588,6 +1614,10 @@ void stop_lan(void)
 	char *iftmp;
 #if !defined(TCONFIG_BLINK) && !defined(TCONFIG_BCMARM) /* RT only */
 	int vlan0tag = nvram_get_int("vlan0tag");
+#endif
+
+#ifdef TCONFIG_EBTABLES
+	bridges_flush_all_chains(); /* ebtables clean-up */
 #endif
 
 	ifconfig("lo", 0, NULL, NULL); /* Bring down loopback interface */
