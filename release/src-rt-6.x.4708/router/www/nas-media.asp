@@ -157,7 +157,7 @@ function verifyFields(focused, quiet) {
 	}
 /* JFFS2-END */
 
-	if (!v_port('_ms_port', quiet || !ok))
+	if (!v_range('_ms_port', quiet || !ok, 0, 65535))
 		ok = 0;
 
 	return ok;
