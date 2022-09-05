@@ -1732,7 +1732,7 @@ void do_static_routes(int add)
 					((strcmp(ifname, "MAN3") == 0) ? "wan3_ifname" :
 					((strcmp(ifname, "MAN4") == 0) ? "wan4_ifname" :
 					((strcmp(ifname, "WAN") == 0) ? "wan_iface" : "wan_ifname"))))))))))));
-		logmsg(LOG_WARNING, "Static route, ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", ifname, metric, dest, gateway, mask);
+		logmsg(LOG_WARNING, "Static route %s: ifname=%s, metric=%s, dest=%s, gateway=%s, mask=%s", (add ? "added" : "deleted"), ifname, metric, dest, gateway, mask);
 
 		if (add) {
 			for (r = 3; r >= 0; --r) {
