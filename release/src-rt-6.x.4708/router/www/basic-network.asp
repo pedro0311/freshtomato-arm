@@ -1383,7 +1383,6 @@ function pre_submit(s) {
 		cmd = null;
 	}
 	cmd.onError = function(x) {
-		alert('ERROR: '+x);
 		cmd = null;
 	}
 
