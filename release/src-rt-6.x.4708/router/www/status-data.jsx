@@ -87,10 +87,10 @@ stats.dns = [<% dns("wan"); %>,<% dns("wan2"); %>,<% dns("wan3"); %>,<% dns("wan
 /* MULTIWAN-END */
 
 var dns = [];
-if (nvram.dnscrypt_proxy == '1' || nvram.stubby_proxy == '1') {
+if (nvram.dnscrypt_proxy == 1 || nvram.stubby_proxy == 1) {
 	for (i = 0; i < stats.dns.length; ++i) {
-		dns[i] = 'Using '+(nvram.dnscrypt_proxy == '1' ? 'dnscrypt-proxy' : 'Stubby')+' resolvers';
-		if ((nvram.dnscrypt_proxy == '1' && nvram.dnscrypt_priority != '2') || (nvram.stubby_proxy == '1' && nvram.stubby_priority != '2'))
+		dns[i] = '<a href="advanced-dhcpdns.asp">Using '+(nvram.dnscrypt_proxy == 1 ? 'dnscrypt-proxy' : 'Stubby')+' resolvers</a>';
+		if ((nvram.dnscrypt_proxy == 1 && nvram.dnscrypt_priority != 2) || (nvram.stubby_proxy == 1 && nvram.stubby_priority != 2))
 			stats.dns[i] = dns[i]+' and: '+stats.dns[i];
 		else
 			stats.dns[i] = dns[i];
