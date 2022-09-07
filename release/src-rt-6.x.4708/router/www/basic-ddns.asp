@@ -413,7 +413,7 @@ function init() {
 			{ title: 'URL', indent: 2, text: '<a href="#" id="url'+i+'" target="tomato-ext-ddns"><\/a>', hidden: 1 },
 		{ title: 'Hostname', name: 'f_hosttop'+i, type: 'text', maxlen: 96, size: 35, value: v[2], hidden: 1 },
 		{ title: 'Username', name: 'f_user'+i, type: 'text', maxlen: 64, size: 35, value: u[0], hidden: 1 },
-		{ title: 'Password', name: 'f_pass'+i, type: 'password', maxlen: 64, size: 35, peekaboo: 1, value: u[1], hidden: 1 },
+		{ title: 'Password', name: 'f_pass'+i, type: 'password', maxlen: 64, size: 35, value: u[1], hidden: 1 },
 		{ title: 'Hostname', name: 'f_host'+i, type: 'text', maxlen: 255, size: 80, value: v[2], hidden: 1 },
 		{ title: 'URL', name: 'f_cust'+i, type: 'text', maxlen: 255, size: 80, value: v[6], hidden: 1 },
 		{ title: ' ', text: '(Use @IP for the current IP address)', rid: ('custmsg'+i), hidden: 1 },
