@@ -182,9 +182,7 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_MULTIWAN */
 
 	/* DHCP server parameters */
-	{ "dhcp_start",			"2"				, 0 },
-	{ "dhcp_num",			"50"				, 0 },
-	{ "dhcpd_startip",		"" 				, 0 },	/* if empty, tomato will use dhcp_start/dchp_num for better compatibility */
+	{ "dhcpd_startip",		"" 				, 0 },
 	{ "dhcpd_endip",		"" 				, 0 },
 	{ "dhcp_lease",			"1440"				, 0 },	/* LAN lease time in minutes */
 	{ "dhcp_domain",		"wan"				, 0 },	/* Use WAN domain name first if available (wan|lan) */
@@ -192,18 +190,12 @@ struct nvram_tuple router_defaults[] = {
 	{ "wan_routes",			""				, 0 },
 	{ "wan_msroutes",		""				, 0 },
 
-	{ "dhcp1_start",		""				, 0 },
-	{ "dhcp1_num",			""				, 0 },
 	{ "dhcpd1_startip",		"" 				, 0 },
 	{ "dhcpd1_endip",		"" 				, 0 },
 	{ "dhcp1_lease",		"1440"				, 0 },
-	{ "dhcp2_start",		""				, 0 },
-	{ "dhcp2_num",			""				, 0 },
 	{ "dhcpd2_startip",		"" 				, 0 },
 	{ "dhcpd2_endip",		"" 				, 0 },
 	{ "dhcp2_lease",		"1440"				, 0 },
-	{ "dhcp3_start",		""				, 0 },
-	{ "dhcp3_num",			""				, 0 },
 	{ "dhcpd3_startip",		"" 				, 0 },
 	{ "dhcpd3_endip",		"" 				, 0 },
 	{ "dhcp3_lease",		"1440"				, 0 },

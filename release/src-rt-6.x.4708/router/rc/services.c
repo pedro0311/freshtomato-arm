@@ -150,7 +150,7 @@ void start_dnsmasq()
 	char *nve, *nvp;
 	unsigned char ea[ETHER_ADDR_LEN];
 	int n;
-	int dhcp_start, dhcp_count, dhcp_lease;
+	int dhcp_lease;
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
 	int ipv6_lease; /* DHCP IPv6 lease time */
@@ -166,9 +166,9 @@ void start_dnsmasq()
 	char lanN_netmask[] = "lanXX_netmask";
 	char dhcpdN_startip[] = "dhcpdXX_startip";
 	char dhcpdN_endip[] = "dhcpdXX_endip";
-	char dhcpN_start[] = "dhcpXX_start";
-	char dhcpN_num[] = "dhcpXX_num";
 	char dhcpN_lease[] = "dhcpXX_lease";
+	unsigned int start_ip = 2;
+	unsigned int end_ip = 50;
 
 	if (serialize_restart("dnsmasq", 1))
 		return;
@@ -377,15 +377,9 @@ void start_dnsmasq()
 
 			if ((p = nvram_safe_get(dhcpdN_startip)) && (*p) && (e = nvram_safe_get(dhcpdN_endip)) && (*e))
 				fprintf(f, "dhcp-range=tag:%s,%s,%s,%s,%dm\n", nvram_safe_get(lanN_ifname), p, e, nvram_safe_get(lanN_netmask), dhcp_lease);
-			else {
-				/* for compatibility */
-				sprintf(dhcpN_start, "dhcp%s_start", bridge);
-				sprintf(dhcpN_num, "dhcp%s_num", bridge);
-				sprintf(lanN_netmask, "lan%s_netmask", bridge);
-				dhcp_start = nvram_get_int(dhcpN_start);
-				dhcp_count = nvram_get_int(dhcpN_num);
-				fprintf(f, "dhcp-range=tag:%s,%s%d,%s%d,%s,%dm\n", nvram_safe_get(lanN_ifname), lan, dhcp_start, lan, (dhcp_start + dhcp_count - 1), nvram_safe_get(lanN_netmask), dhcp_lease);
-			}
+			else
+				/* defaults if not present in nvram */
+				fprintf(f, "dhcp-range=tag:%s,%s%d,%s%d,%s,%dm\n", nvram_safe_get(lanN_ifname), lan, start_ip, lan, end_ip, nvram_safe_get(lanN_netmask), dhcp_lease);
 
 			nv = nvram_safe_get(lanN_ipaddr);
 			if ((nvram_get_int("dhcpd_gwmode") == 1) && (get_wan_proto() == WP_DISABLED)) {

@@ -792,8 +792,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan_invert",			V_01				},
 	{ "lan_dhcp",			V_01				},	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			V_WORD				},	// static, dhcp
-	{ "dhcp_start",			V_LENGTH(0, 15)			},	// remove !
-	{ "dhcp_num",			V_LENGTH(0, 4)			},	// remove !
 	{ "dhcpd_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp_lease",			V_LENGTH(0, 5)			},
@@ -853,8 +851,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan1_netmask",		V_LENGTH(0, 15)			},
 	{ "lan1_proto",			V_LENGTH(0, 6)			},
 	{ "lan1_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp1_start",		V_LENGTH(0, 15)			},
-	{ "dhcp1_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd1_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd1_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp1_lease",		V_LENGTH(0, 5)			},
@@ -865,8 +861,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan2_netmask",		V_LENGTH(0, 15)			},
 	{ "lan2_proto",			V_LENGTH(0, 6)			},
 	{ "lan2_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp2_start",		V_LENGTH(0, 15)			},
-	{ "dhcp2_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd2_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd2_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp2_lease",		V_LENGTH(0, 5)			},
@@ -877,8 +871,6 @@ static const nvset_t nvset_list[] = {
 	{ "lan3_netmask",		V_LENGTH(0, 15)			},
 	{ "lan3_proto",			V_LENGTH(0, 6)			},
 	{ "lan3_stp",			V_LENGTH(0, 1)			},
-	{ "dhcp3_start",		V_LENGTH(0, 15)			},
-	{ "dhcp3_num",			V_LENGTH(0, 4)			},
 	{ "dhcpd3_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd3_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp3_lease",		V_LENGTH(0, 5)			},
