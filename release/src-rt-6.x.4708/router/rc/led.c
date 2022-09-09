@@ -67,7 +67,7 @@ int led_main(int argc, char *argv[])
 
 #if defined (CONFIG_BCMWL6) || defined(TCONFIG_BLINK)
 		if (((i == LED_WLAN) || (i == LED_5G)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		      || (i == LED_52G)
 #endif
 		) && nvram_get_int("blink_wl")) {		/* For WLAN LEDs with blink turned on; If TRUE, stop/kill blink first */

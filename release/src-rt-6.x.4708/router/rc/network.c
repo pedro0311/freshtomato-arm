@@ -756,12 +756,12 @@ void restart_wl(void)
 	    || (model == MODEL_R6900)
 	    || (model == MODEL_R7000)
 	    || (model == MODEL_XR300)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	    || (model == MODEL_R8000)
 #endif
 	) {
 		if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1")
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		    || nvram_match("wl2_radio", "1")
 #endif
 		)

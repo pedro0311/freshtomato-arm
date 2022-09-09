@@ -260,7 +260,7 @@ config TCONFIG_BCMSMP
 	default n
 
 config TCONFIG_AC3200
-	bool "AC3200"
+	bool "Tri-Band router (AC3200 or more)"
 	default n
 
 config TCONFIG_DHDAP

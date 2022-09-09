@@ -222,7 +222,7 @@ enum {
 	MODEL_RTAC68U,
 	MODEL_RTAC68UV3,
 	MODEL_RTAC1900P,
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	MODEL_RTAC3200,
 #endif
 	MODEL_R6250,
@@ -234,7 +234,7 @@ enum {
 	MODEL_R6900,
 	MODEL_R7000,
 	MODEL_XR300,
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	MODEL_R8000,
 #endif
 	MODEL_DIR868L,
@@ -311,12 +311,12 @@ extern int f_wait_notexists(const char *name, int max);
 #define LED_MYSTERY		LED_USB /* (unmarked LED between wireless and bridge on WHR-G54S) */
 #define LED_USB3		8
 #define LED_5G			9
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 #define LED_52G			10
 #define LED_COUNT		11
 #else
 #define LED_COUNT		10
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 #define	LED_OFF			0
 #define	LED_ON			1
 #define LED_PROBE		2

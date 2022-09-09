@@ -12,7 +12,7 @@
 
 
 #include "rc.h"
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 #include "shared.h"
 #endif
 
@@ -48,10 +48,10 @@
 
 #ifdef TCONFIG_BCMARM
 extern struct nvram_tuple router_defaults[];
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 extern struct nvram_tuple bcm4360ac_defaults[];
 extern struct nvram_tuple r8000_params[];
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 #endif /* TCONFIG_BCMARM */
 int restore_defaults_fb = 0;
 
@@ -840,13 +840,13 @@ static int init_vlan_ports(void)
 	case MODEL_F9K1113v2_20X0:
 	case MODEL_F9K1113v2:
 	case MODEL_WS880:
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 #endif
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_R8000:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
 		dirty |= check_nv("vlan2ports", "4 8");
@@ -1427,7 +1427,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl0_ifname", "eth1");
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_R8000:
 		nvram_unset("et1macaddr");
 		dirty |= check_nv("wl0_ifname", "eth2");
@@ -9208,7 +9208,7 @@ static int init_nvram(void)
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
 		}
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 		mfr = "Asus";
 		name = "RT-AC3200";
@@ -9377,7 +9377,7 @@ static int init_nvram(void)
 			set_defaults(r8000_params, "");
 		}
 		break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 
 	/*
 	 * add here new ARM models

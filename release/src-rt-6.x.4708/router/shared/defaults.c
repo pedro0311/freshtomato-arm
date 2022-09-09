@@ -590,7 +590,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "bsd_msglevel", 		"0x000010"			, 0 },	/* BSD_DEBUG_STEER */
 	{ "bsd_dbg", 		 	"1"				, 0 },
 #endif
-#ifdef TCONFIG_BCM7 /* Tri-Band */
+#ifdef TCONFIG_AC3200 /* Tri-Band */
 	{"bsd_ifnames",			"eth2 eth1 eth3"		, 0 },
 	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		, 0 },
 	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		, 0 },
@@ -618,7 +618,7 @@ struct nvram_tuple router_defaults[] = {
 	{"wl1_bsd_if_qualify_policy",	"60 0x0"			, 0 },	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
 	{"bsd_bounce_detect",		"180 2 3600"			, 0 },
 	{"bsd_aclist_timeout",		"3"				, 0 },
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 	{"bsd_scheme",			"2"				, 0 },
 #endif /* TCONFIG_BCMBSD */
 

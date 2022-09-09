@@ -225,7 +225,7 @@ void start_vlan(void)
 	struct ifreq ifr;
 	int i, j;
 	unsigned char ea[ETHER_ADDR_LEN];
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	const char *et2mac;
 #endif
 #if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
@@ -235,7 +235,7 @@ void start_vlan(void)
 	if ((strtoul(nvram_safe_get("boardflags"), NULL, 0) & BFL_ENETVLAN) == 0)
 		return;
 
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	/* FIXIT:
 	 * When GMAC3 is build-in then LAN interface can be detect as fwd0 (et0), fwd1(et1) and then eth0 (et2).
 	 * Our LAN interface will be et2 but tomato require in many places et0. So we just copy et2macaddr to et0macaddr
