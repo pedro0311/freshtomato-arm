@@ -592,16 +592,26 @@ struct nvram_tuple router_defaults[] = {
 	{ "bsd_dbg", 		 	"1"				, 0 },
 #endif
 #ifdef TCONFIG_AC3200 /* Tri-Band */
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"bsd_ifnames",			"eth1 eth2 eth3"		, 0 },
+#else
 	{"bsd_ifnames",			"eth2 eth1 eth3"		, 0 },
+#endif
 	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		, 0 },
 	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		, 0 },
 	{"wl2_bsd_steering_policy",	"0 5 3 -82 0 0 0x28"		, 0 },
 	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122", 0 },
 	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x24"	, 0 },
 	{"wl2_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x28"	, 0 },
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"wl0_bsd_if_select_policy",	"eth3 eth2"			, 0 },
+	{"wl1_bsd_if_select_policy",	"eth1 eth3"			, 0 },
+	{"wl2_bsd_if_select_policy",	"eth1 eth2"			, 0 },
+#else
 	{"wl0_bsd_if_select_policy",	"eth3 eth1"			, 0 },
 	{"wl1_bsd_if_select_policy",	"eth2 eth3"			, 0 },
 	{"wl2_bsd_if_select_policy",	"eth2 eth1"			, 0 },
+#endif
 	{"wl0_bsd_if_qualify_policy",	"0 0x0"				, 0 },	/* bandwidth utilization disabled ; all clients possible (0x0) */
 	{"wl1_bsd_if_qualify_policy",	"60 0x0"			, 0 },	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
 	{"wl2_bsd_if_qualify_policy",	"0 0x4"				, 0 },	/* bandwidth utilization disabled ; only AC clients possible (0x04) */

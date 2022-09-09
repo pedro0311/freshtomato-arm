@@ -1014,7 +1014,7 @@ int bsd_intf_info_init(bsd_info_t *info)
 
 	info->boardtype = strtol(nvram_safe_get("boardtype"), NULL, 16);
 #ifdef TOMATO_ARM
-#ifdef TOMATO_CONFIG_BCM7 /* Tri-Band */
+#ifdef TOMATO_CONFIG_AC3200 /* Tri-Band */
 	info->max_ifnum = BSD_ATLAS_MAX_INTF; /* 3 */
 #else /* Dual-Band */
 	info->max_ifnum = BSD_DEFAULT_INTF_NUM;	/* 2 */
