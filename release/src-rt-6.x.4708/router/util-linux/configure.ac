@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="28-Mar-2022"
+LIBBLKID_DATE="04-Aug-2022"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -1920,7 +1920,11 @@ UL_REQUIRES_LINUX([lsipc])
 UL_REQUIRES_BUILD([lsipc], [libsmartcols])
 AM_CONDITIONAL([BUILD_LSIPC], [test "x$build_lsipc" = xyes])
 
-UL_BUILD_INIT([lsns], [check])
+AC_ARG_ENABLE([lsns],
+  AS_HELP_STRING([--disable-lsns], [do not build lsns]),
+  [], [UL_DEFAULT_ENABLE([lsns], [check])]
+)
+UL_BUILD_INIT([lsns])
 UL_REQUIRES_LINUX([lsns])
 UL_REQUIRES_BUILD([lsns], [libsmartcols])
 UL_REQUIRES_BUILD([lsns], [libmount])
@@ -2592,6 +2596,8 @@ AC_ARG_ENABLE([sulogin-emergency-mount],
 )
 
 AS_IF([test "x$enable_sulogin_emergency_mount" = xyes], [
+  AS_IF([test "x$linux_os" = xyes], [ ],
+	[AC_MSG_ERROR([--enable-sulogin-emergency-mount selected for non-linux system])])
   AC_DEFINE([USE_SULOGIN_EMERGENCY_MOUNT], [1],
 	    [Should sulogin use an emergency mount of /dev and /proc?])
 ])

@@ -36,8 +36,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: util-linux-man 2.38-rc4\n"
 "Report-Msgid-Bugs-To: util-linux@vger.kernel.org\n"
-"POT-Creation-Date: 2022-03-28 13:25+0200\n"
-"PO-Revision-Date: 2022-03-28 10:14+0200\n"
+"POT-Creation-Date: 2022-08-04 10:48+0200\n"
+"PO-Revision-Date: 2022-07-16 14:00+0200\n"
 "Last-Translator: Frédéric Marchal <fmarchal@perso.be>\n"
 "Language-Team: French <traduc@traduc.org>\n"
 "Language: fr\n"
@@ -188,10 +188,16 @@ msgid ""
 "By default, the unit, sizes are expressed in, is byte, and unit prefixes are "
 "in power of 2^10 (1024). Abbreviations of symbols are exhibited truncated in "
 "order to reach a better readability, by exhibiting alone the first letter of "
-"them; examples: \"1 KiB\" and \"1 MiB\" are respectively exhibited as \"1 K"
-"\" and \"1 M\", then omitting on purpose the mention \"iB\", which is part "
+"them; examples: \"1 KiB\" and \"1 MiB\" are respectively exhibited as \"1 "
+"K\" and \"1 M\", then omitting on purpose the mention \"iB\", which is part "
 "of these abbreviations."
 msgstr ""
+"Par défaut, l'unité des tailles est exprimée en octets SI et les préfixes "
+"d'unités sont des puissances de 2^10 (1024). Les abréviations des symboles "
+"sont affichées tronquées afin d'offrir une meilleure lisibilité. Seule la "
+"première lettre est affichée. Par exemple, « 1 Kio » et « 1 Mio » sont "
+"affichés comme « 1 K » et « 1 M » respectivement en omettant volontairement "
+"la mention « io » qui fait partie de ces abréviations."
 
 #. type: Title ==
 #: ../man-common/translation.adoc:1
@@ -2121,6 +2127,7 @@ msgstr "*-l*, *--list*"
 #: ../disk-utils/fdisk.8.adoc:58
 msgid "List the partition tables for the specified devices and then exit."
 msgstr ""
+"Liste les tables de partitions pour le périphérique spécifié puis arrête."
 
 #. type: Plain text
 #: ../disk-utils/fdisk.8.adoc:60
@@ -2130,6 +2137,10 @@ msgid ""
 "they are specified on the command-line, or by the kernel listed in _/proc/"
 "partitions_."
 msgstr ""
+"Si aucun périphérique est donné, les périphériques mentionnés dans _/proc/"
+"partitions_ (si le fichier existe) sont utilisés. Les périphériques sont "
+"toujours listés dans l'ordre spécifié sur la ligne de commande ou par le "
+"noyau listé dans _/proc/partitions_."
 
 #. type: Labeled list
 #: ../disk-utils/fdisk.8.adoc:61
@@ -3681,15 +3692,16 @@ msgstr "*fsck.cramfs* est utilisé pour vérifier le système de fichiers cramfs
 #. type: Labeled list
 #: ../disk-utils/fsck.cramfs.8.adoc:23 ../disk-utils/fsck.minix.8.adoc:56
 #: ../disk-utils/mkfs.bfs.8.adoc:38 ../disk-utils/partx.8.adoc:96
-#: ../misc-utils/mcookie.1.adoc:39 ../misc-utils/rename.1.adoc:28
-#: ../schedutils/chrt.1.adoc:101 ../schedutils/uclampset.1.adoc:83
-#: ../sys-utils/blkdiscard.8.adoc:49 ../sys-utils/blkzone.8.adoc:98
-#: ../sys-utils/chmem.8.adoc:49 ../sys-utils/eject.1.adoc:84
-#: ../sys-utils/fallocate.1.adoc:64 ../sys-utils/hwclock.8.adoc:168
-#: ../sys-utils/losetup.8.adoc:95 ../sys-utils/mount.8.adoc:436
-#: ../sys-utils/readprofile.8.adoc:51 ../sys-utils/rtcwake.8.adoc:105
-#: ../sys-utils/setarch.8.adoc:37 ../sys-utils/swapon.8.adoc:86
-#: ../sys-utils/umount.8.adoc:111 ../term-utils/mesg.1.adoc:71
+#: ../misc-utils/hardlink.1.adoc:45 ../misc-utils/mcookie.1.adoc:39
+#: ../misc-utils/rename.1.adoc:28 ../schedutils/chrt.1.adoc:101
+#: ../schedutils/uclampset.1.adoc:83 ../sys-utils/blkdiscard.8.adoc:49
+#: ../sys-utils/blkzone.8.adoc:98 ../sys-utils/chmem.8.adoc:49
+#: ../sys-utils/eject.1.adoc:84 ../sys-utils/fallocate.1.adoc:64
+#: ../sys-utils/hwclock.8.adoc:168 ../sys-utils/losetup.8.adoc:95
+#: ../sys-utils/mount.8.adoc:436 ../sys-utils/readprofile.8.adoc:51
+#: ../sys-utils/rtcwake.8.adoc:105 ../sys-utils/setarch.8.adoc:37
+#: ../sys-utils/swapon.8.adoc:86 ../sys-utils/umount.8.adoc:111
+#: ../term-utils/mesg.1.adoc:71
 #, no-wrap
 msgid "*-v*, *--verbose*"
 msgstr "*-v*, *--verbose*"
@@ -4265,7 +4277,7 @@ msgstr ""
 #: ../disk-utils/mkfs.8.adoc:41 ../disk-utils/raw.8.adoc:51
 #: ../login-utils/login.1.adoc:151 ../login-utils/utmpdump.1.adoc:67
 #: ../misc-utils/cal.1.adoc:153 ../misc-utils/getopt.1.adoc:141
-#: ../misc-utils/hardlink.1.adoc:129 ../misc-utils/mcookie.1.adoc:50
+#: ../misc-utils/hardlink.1.adoc:134 ../misc-utils/mcookie.1.adoc:50
 #: ../misc-utils/namei.1.adoc:61 ../sys-utils/lscpu.1.adoc:89
 #: ../sys-utils/mount.8.adoc:1548 ../sys-utils/readprofile.8.adoc:67
 #: ../term-utils/agetty.8.adoc:313 ../term-utils/script.1.adoc:155
@@ -4385,6 +4397,9 @@ msgid ""
 "specified, some default number in the range 48-512 is picked depending on "
 "the size of the partition."
 msgstr ""
+"Spécifier le _nombre_ désiré d'inodes (au plus 512). Si rien n'est spécifié, "
+"un nombre par défaut entre 48 et 512 est choisi sur base de la taille de la "
+"partition."
 
 #. type: Labeled list
 #: ../disk-utils/mkfs.bfs.8.adoc:32
@@ -4502,7 +4517,7 @@ msgstr ""
 "256 Mo, mais peut continuer au-delà)."
 
 #. type: Title ==
-#: ../disk-utils/mkfs.cramfs.8.adoc:27 ../misc-utils/hardlink.1.adoc:125
+#: ../disk-utils/mkfs.cramfs.8.adoc:27 ../misc-utils/hardlink.1.adoc:130
 #: ../misc-utils/kill.1.adoc:35 ../term-utils/agetty.8.adoc:35
 #: ../term-utils/mesg.1.adoc:59
 #, no-wrap
@@ -4984,7 +4999,7 @@ msgstr ""
 
 #. type: Labeled list
 #: ../disk-utils/mkswap.8.adoc:49 ../disk-utils/sfdisk.8.adoc:195
-#: ../misc-utils/getopt.1.adoc:47 ../misc-utils/hardlink.1.adoc:46
+#: ../misc-utils/getopt.1.adoc:47 ../misc-utils/hardlink.1.adoc:48
 #: ../misc-utils/uuidd.8.adoc:46 ../misc-utils/wipefs.8.adoc:72
 #: ../sys-utils/mountpoint.1.adoc:28 ../sys-utils/umount.8.adoc:99
 #: ../term-utils/script.1.adoc:115
@@ -5112,6 +5127,8 @@ msgid ""
 "Verbose execution. With this option *mkswap* will output more details about "
 "detected problems during swap area set up."
 msgstr ""
+"Exécution verbeuse. Avec cette option, *mkswap* sort plus de détails à "
+"propos des problèmes détectés durant la préparation de la zone d'échange."
 
 #. type: Labeled list
 #: ../disk-utils/mkswap.8.adoc:83 ../disk-utils/partx.8.adoc:103
@@ -5162,6 +5179,8 @@ msgid ""
 "If you don't know the page size that your machine uses, you can look it up "
 "with *getconf PAGESIZE*."
 msgstr ""
+"Si vous ne connaissez pas la taille de page utilisée par votre machine, vous "
+"pouvez la découvrir avec *getconf PAGESIZE*."
 
 #. type: Plain text
 #: ../disk-utils/mkswap.8.adoc:102
@@ -5952,7 +5971,7 @@ msgstr ""
 #: ../disk-utils/sfdisk.8.adoc:41
 #, no-wrap
 msgid "*sfdisk* protects the first disk sector when create a new disk label. The option *--wipe always* disables this protection. Note that *fdisk*(8) and *cfdisk*(8) completely erase this area by default.\n"
-msgstr ""
+msgstr "*sfdisk* protège le premier secteur du disque lorsqu'il crée une nouvelle étiquette sur le disque. L'option *--wipe always* désactive cette protection. Notez que *fdisk*(8) et *cfdisk*(8) effacent complètement cette zone par défaut.\n"
 
 #. type: Plain text
 #: ../disk-utils/sfdisk.8.adoc:43
@@ -7094,6 +7113,10 @@ msgid ""
 "case of the characters and all non-alphanumeric and non-digit characters in "
 "the name (e.g. \"Linux /usr x86\" is the same as \"linux usr-x86\")."
 msgstr ""
+"Depuis la version 2.37, libfdisk supporte les noms de type de partition en "
+"entrée. Il ignore la casse des caractères et tout caractère qui n'est pas "
+"une lettre ou un chiffre (c-à-d que « Linux /usr x86 » est la même chose que "
+"« linux usr-x86 »)."
 
 #. type: Plain text
 #: ../disk-utils/sfdisk.8.adoc:272
@@ -7373,10 +7396,10 @@ msgstr "**type=**__code__"
 #: ../disk-utils/sfdisk.8.adoc:335
 msgid ""
 "A hexadecimal number (without 0x) for an MBR partition, a GUID for a GPT "
-"partition, a shortcut as for unnamed-fields format or a type name (e.g. type="
-"\"Linux /usr (x86)\"). See above the section about the unnamed-fields format "
-"for more details. For backward compatibility the *Id=* field has the same "
-"meaning."
+"partition, a shortcut as for unnamed-fields format or a type name (e.g. "
+"type=\"Linux /usr (x86)\"). See above the section about the unnamed-fields "
+"format for more details. For backward compatibility the *Id=* field has the "
+"same meaning."
 msgstr ""
 "Un nombre hexadécimal (sans préfixe « 0x ») pour une partition MBR, un GUID "
 "pour une partition GPT, un raccourci comme pour le format de champs non "
@@ -7603,8 +7626,9 @@ msgstr ""
 
 #. type: Labeled list
 #: ../disk-utils/sfdisk.8.adoc:423
-#, no-wrap
-msgid "*echo -e ',10M,L\\n,10M,L\\n,,+\\n' | sfdisk /dev/sdc*"
+#, fuzzy, no-wrap
+#| msgid "*echo -e ',10M,L\\n,10M,L\\n,,+\\n' | sfdisk /dev/sdc*"
+msgid "*echo -e ',10M,L\\n,10M,L\\n,+,\\n' | sfdisk /dev/sdc*"
 msgstr "*echo -e ',10M,L\\n,10M,L\\n,,+\\n' | sfdisk /dev/sdc*"
 
 #. type: Plain text
@@ -8014,6 +8038,26 @@ msgid ""
 "|46 |for cyan background\n"
 "|47 |for white (or gray) background\n"
 msgstr ""
+"|0 |pour restaurer les couleurs par défaut\n"
+"|1 |pour des couleurs plus brillantes\n"
+"|4 |pour du texte souligné\n"
+"|5 |pour du texte clignotant\n"
+"|30 |pour un premier plan noir\n"
+"|31 |pour un premier plan rouge\n"
+"|32 |pour un premier plan vert\n"
+"|33 |pour un premier plan jaune (ou brun)\n"
+"|34 |pour un premier plan bleu\n"
+"|35 |pour un premier plan pourpre\n"
+"|36 |pour un premier plan cyan\n"
+"|37 |pour un premier plan blanc (ou gris)\n"
+"|40 |pour un fond noir\n"
+"|41 |pour un fond rouge\n"
+"|42 |pour un fond vert\n"
+"|43 |pour un fond jaune (ou brun)\n"
+"|44 |pour un fond bleu\n"
+"|45 |pour un fond pourpre\n"
+"|46 |pour un fond cyan\n"
+"|47 |pour un fond blanc (ou gris)\n"
 
 #. type: Title ===
 #: ../lib/terminal-colors.d.5.adoc:94
@@ -8048,6 +8092,19 @@ msgid ""
 "|*\\^* |Caret (^)\n"
 "|*\\#* |Hash mark (#)\n"
 msgstr ""
+"|*\\a* |Sonnerie (ASCII 7)\n"
+"|*\\b* |Retour arrière (ASCII 8)\n"
+"|*\\e* |Échappement (ASCII 27)\n"
+"|*\\f* |Saut de page (ASCII 12)\n"
+"|*\\n* |Saut de ligne (ASCII 10)\n"
+"|*\\r* |Retour chariot (ASCII 13)\n"
+"|*\\t* |Tabulation (ASCII 9)\n"
+"|*\\v* |Tabulation Verticale (ASCII 11)\n"
+"|*\\?* |Suppression (ASCII 127)\n"
+"|*\\_* |Espace\n"
+"|*\\\\* |Barre oblique inverse (\\)\n"
+"|*\\^* |Chapeau (^)\n"
+"|*\\#* |Dièse (#)\n"
 
 #. type: delimited block _
 #: ../lib/terminal-colors.d.5.adoc:118
@@ -8703,8 +8760,9 @@ msgstr "uuid_copy - Copier une valeur d'UUID"
 
 #. type: Plain text
 #: ../libuuid/man/uuid_copy.3.adoc:50
-#, no-wrap
-msgid "*void uuid_copy(uuid_t __dst__, uuid_t __src__;*\n"
+#, fuzzy, no-wrap
+#| msgid "*void uuid_copy(uuid_t __dst__, uuid_t __src__;*\n"
+msgid "*void uuid_copy(uuid_t __dst__, uuid_t __src__);*\n"
 msgstr "*void uuid_copy(uuid_t __dst__, uuid_t __source__;*\n"
 
 #. type: Plain text
@@ -9100,6 +9158,9 @@ msgid ""
 "The *uuid_parse_range*() function works like *uuid_parse*() but parses only "
 "range in string specified by _in_start_ and _in_end_ pointers."
 msgstr ""
+"La fonction *uuid_parse_range*() fonctionne comme *uuid_parse*() sauf "
+"qu'elle analyse uniquement la plage de la chaîne spécifiée par les pointeurs "
+"_in_start_ et _in_end_."
 
 #. type: Plain text
 #: ../libuuid/man/uuid_parse.3.adoc:61
@@ -9399,19 +9460,19 @@ msgstr "Commandes de l'utilisateur"
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:20
 msgid "chfn - change your finger information"
-msgstr ""
+msgstr "chfm - changer vos informations d'identification"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:24
 #, no-wrap
 msgid "*chfn* [*-f* _full-name_] [*-o* _office_] [*-p* _office-phone_] [*-h* _home-phone_] [*-u*] [*-v*] [_username_]\n"
-msgstr ""
+msgstr "*chfn* [*-f* _nom-complet_] [*-o* _bureau_] [*-p* _téléphone-bureau_] [*-h* _téléphone-domicile_] [*-u*] [*-v*] [_nom-utilisateur_]\n"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:28
 #, no-wrap
 msgid "*chfn* is used to change your finger information. This information is stored in the _/etc/passwd_ file, and is displayed by the *finger* program. The Linux *finger* command will display four pieces of information that can be changed by *chfn*: your real name, your work room and phone, and your home phone.\n"
-msgstr ""
+msgstr "*chfn* est utilisé pour changer vos informations d'identification. Ces informations sont stockées dans le fichier _/etc/passwd_ et sont affichées par le programme *finger*. La commande *finger* de Linux affiche quatre informations qui peuvent être changées par *chfn* : votre nom réel, votre numéro de bureau, votre numéro de téléphone professionnel et le numéro de téléphone de votre domicile.\n"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:30
@@ -9420,6 +9481,9 @@ msgid ""
 "If no information is given on the command line, *chfn* enters interactive "
 "mode."
 msgstr ""
+"Chacune de ces quatre informations peut être spécifiée sur la ligne de "
+"commande. Si aucune information est donnée sur la ligne de commande, *chfn* "
+"entre en mode interactif."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:32
@@ -9428,70 +9492,72 @@ msgid ""
 "enter the new information, or just press return to leave the field "
 "unchanged. Enter the keyword \"none\" to make the field blank."
 msgstr ""
+"En mode interactif, *chfn* demande chaque champ. À l'invite, vous pouvez "
+"entrer la nouvelle information ou simplement appuyer sur la touche retour "
+"pour laisser le champ inchangé. Entrez le mot-clé « none » pour laisser le "
+"champ vide."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:34
 #, no-wrap
 msgid "*chfn* supports non-local entries (kerberos, LDAP, etc.) if linked with libuser, otherwise use *ypchfn*(1), *lchfn*(1) or any other implementation for non-local entries.\n"
-msgstr ""
+msgstr "*chfn* supporte les entrées non locales (kerberos, LDAP, etc.) s'il est lié avec libuser. Sinon, utilisez *ypchfn*(1), *lchfn*(1) ou toute autre implémentation pour les entrées non locales.\n"
 
 #. type: Labeled list
 #: ../login-utils/chfn.1.adoc:37
 #, no-wrap
 msgid "*-f*, *--full-name* _full-name_"
-msgstr ""
+msgstr "*-f*, *--full-name* _nom-complet_"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:39
 msgid "Specify your real name."
-msgstr ""
+msgstr "Spécifiez votre nom réel."
 
 #. type: Labeled list
 #: ../login-utils/chfn.1.adoc:40
-#, fuzzy, no-wrap
-#| msgid "B<-o, --offset> I<offset>"
+#, no-wrap
 msgid "*-o*, *--office* _office_"
-msgstr "B<-o>, B<--offset> I<position>"
+msgstr "*-o*, *--office* _bureau_"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:42
 msgid "Specify your office room number."
-msgstr ""
+msgstr "Spécifiez le numéro de votre bureau."
 
 #. type: Labeled list
 #: ../login-utils/chfn.1.adoc:43
 #, no-wrap
 msgid "*-p*, *--office-phone* _office-phone_"
-msgstr ""
+msgstr "*-p*, *--office-phone* _numéro-professionnel_"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:45
 msgid "Specify your office phone number."
-msgstr ""
+msgstr "Spécifiez votre numéro de téléphone professionnel."
 
 #. type: Labeled list
 #: ../login-utils/chfn.1.adoc:46
 #, no-wrap
 msgid "*-h*, *--home-phone* _home-phone_"
-msgstr ""
+msgstr "*-h*, *--home-phone* _numéro-domicile_"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:48
 msgid "Specify your home phone number."
-msgstr ""
+msgstr "Spécifiez le numéro de téléphone de votre domicile."
 
 #. type: Title ==
 #: ../login-utils/chfn.1.adoc:51 ../login-utils/login.1.adoc:57
-#, fuzzy, no-wrap
-#| msgid "CONFIG FILES"
+#, no-wrap
 msgid "CONFIG FILE ITEMS"
-msgstr "FICHIERS DE CONFIGURATION"
+msgstr "ÉLÉMENTS DU FICHIER DE CONFIGURATION"
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:54
 #, no-wrap
 msgid "*chfn* reads the _/etc/login.defs_ configuration file (see *login.defs*(5)). Note that the configuration file could be distributed with another package (e.g., shadow-utils). The following configuration items are relevant for *chfn*:\n"
-msgstr ""
+msgstr "*chfn* lit le fichier de configuration _/etc/login.defs_ (consultez *login.defs*(5)). Notez que le fichier de configuration pourrait être distribué avec un autre paquet (par ex, shadow-utils). Les éléments de configuration suivants sont pertinents pour *chfn* :\n"
 
 #. type: Labeled list
 #: ../login-utils/chfn.1.adoc:55
@@ -9502,7 +9568,7 @@ msgstr "*CHFN_RESTRICT* _chaîne_"
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:58
 msgid "Indicate which fields are changeable by *chfn*."
-msgstr ""
+msgstr "Indique quels champs sont éditables par *chfn*."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:60
@@ -9511,6 +9577,10 @@ msgid ""
 "Home Phone fields are changeable, and boolean setting *\"no\"* means that "
 "also the Full Name is changeable."
 msgstr ""
+"La valeur booléenne « yes » signifie que seuls les champs du bureau, du "
+"numéro de téléphone professionnel et celui du domicile peuvent être changés. "
+"La valeur booléenne « no » signifie que le nom complet peut également être "
+"changé."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:62
@@ -9519,6 +9589,11 @@ msgid ""
 "r = Office (room), w = Office (work) Phone, h = Home Phone. For example, "
 "*CHFN_RESTRICT \"wh\"* allows changing work and home phone numbers."
 msgstr ""
+"Une autre manière d'indiquer les champs qui peuvent être modifiés consiste à "
+"utiliser les abréviations : f = Nom complet, r = Bureau (numéro), w = "
+"Téléphone professionnel, h = Téléphone du domicile. Par exemple, "
+"*CHFN_RESTRICT \"wh\"* autorise l'édition des numéros de téléphones "
+"professionnel et du domicile."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:64
@@ -9526,16 +9601,18 @@ msgid ""
 "If *CHFN_RESTRICT* is undefined, then all finger information is read-only. "
 "This is the default."
 msgstr ""
+"Si *CHFN_RESTRICT* n'est pas défini, toutes les informations sont figées en "
+"lecture seule. C'est le comportement par défaut."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:68 ../login-utils/chsh.1.adoc:50
 #: ../sys-utils/eject.1.adoc:96
-#, fuzzy
-#| msgid "The operation failed or the command syntax was not valid."
 msgid ""
 "Returns 0 if operation was successful, 1 if operation failed or command "
 "syntax was not valid."
-msgstr "L’opération a échoué ou la syntaxe de la commande était inadéquate."
+msgstr ""
+"Retourne 0 si l'opération a réussi, 1 si l'opération a échoué ou la syntaxe "
+"de la commande n'est pas valable."
 
 #. type: Plain text
 #: ../login-utils/chfn.1.adoc:72 ../login-utils/chsh.1.adoc:54
@@ -9583,13 +9660,13 @@ msgstr "*chsh* [*-s* _shell_] [*-l*] [*-h*] [*-v*] [__nom_d'utilisateur__]\n"
 #: ../login-utils/chsh.1.adoc:28
 #, no-wrap
 msgid "*chsh* is used to change your login shell. If a shell is not given on the command line, *chsh* prompts for one.\n"
-msgstr ""
+msgstr "*chsh* est utilisé pour changer votre interpréteur de commande utilisé à la connexion. Si aucun interpréteur de commande est donné sur la ligne de commande, *chsh* en demande un.\n"
 
 #. type: Plain text
 #: ../login-utils/chsh.1.adoc:30
 #, no-wrap
 msgid "*chsh* supports non-local entries (kerberos, LDAP, etc.) if linked with libuser, otherwise use *ypchsh*(1), *lchsh*(1) or any other implementation for non-local entries.\n"
-msgstr ""
+msgstr "*chsh* supporte les entrées non locales (kerberos, LDAP, etc.) s'il est lié avec libuser. Sinon, utilisez *ypchsh*(1), *lchsh*(1) ou toute autre implémentation pour les entrées non locales.\n"
 
 #. type: Labeled list
 #: ../login-utils/chsh.1.adoc:33 ../misc-utils/getopt.1.adoc:53
@@ -9600,7 +9677,7 @@ msgstr "*-s*, *--shell* _shell_"
 #. type: Plain text
 #: ../login-utils/chsh.1.adoc:35
 msgid "Specify your login shell."
-msgstr ""
+msgstr "Spécifiez votre interpréteur de commande après connexion."
 
 #. type: Labeled list
 #: ../login-utils/chsh.1.adoc:36
@@ -9612,18 +9689,20 @@ msgstr "*-l*, *--list-shells*"
 #: ../login-utils/chsh.1.adoc:38
 msgid "Print the list of shells listed in _/etc/shells_ and exit."
 msgstr ""
+"Afficher la liste des interpréteurs de commande listés dans _/etc/shells_ et "
+"arrête."
 
 #. type: Title ==
 #: ../login-utils/chsh.1.adoc:41
 #, no-wrap
 msgid "VALID SHELLS"
-msgstr ""
+msgstr "INTERPRÉTEURS VALIDES"
 
 #. type: Plain text
 #: ../login-utils/chsh.1.adoc:44
 #, no-wrap
 msgid "*chsh* will accept the full pathname of any executable file on the system.\n"
-msgstr ""
+msgstr "*chsh* accepte le nom avec chemin complet de n'importe quel fichier exécutable sur le système.\n"
 
 #. type: Plain text
 #: ../login-utils/chsh.1.adoc:46
@@ -9632,6 +9711,11 @@ msgid ""
 "the _/etc/shells_ file, and issue a warning for root user. It can also be "
 "configured at compile-time to only issue a warning for all users."
 msgstr ""
+"Le comportement par défaut pour les utilisateurs autres que root consiste à "
+"n'accepter que les interpréteurs listés dans le fichier _/etc/shells_. Un "
+"avertissement est affiché pour l'utilisateur root. Il peut aussi être "
+"configuré, durant la compilation, pour n'afficher qu'un avertissement pour "
+"tous les utilisateurs."
 
 #. type: Plain text
 #: ../login-utils/chsh.1.adoc:61
@@ -9944,6 +10028,18 @@ msgid ""
 "|+5min |\n"
 "|-5days |\n"
 msgstr ""
+"|YYYYMMDDhhmmss |\n"
+"|YYYY-MM-DD hh:mm:ss |\n"
+"|YYYY-MM-DD hh:mm |(les secondes sont forcées à 00)\n"
+"|YYYY-MM-DD |(l'heure est forcée à 00:00:00)\n"
+"|hh:mm:ss |(la date est forcée à aujourd'hui)\n"
+"|hh:mm |(la date est forcée à aujourd'hui et les secondes à 00)\n"
+"|now |\n"
+"|yesterday |(l'heure est forcée à 00:00:00)\n"
+"|today |(l'heure est forcée à 00:00:00)\n"
+"|tomorrow |(l'heure est forcée à 00:00:00)\n"
+"|+5min |\n"
+"|-5days |\n"
 
 #. type: Plain text
 #: ../login-utils/last.1.adoc:113
@@ -9970,6 +10066,9 @@ msgid ""
 "An empty entry is a valid type of wtmp entry. It means that an empty file or "
 "file with zeros is not interpreted as an error."
 msgstr ""
+"Une entrée vide est un type d'entrée valide pour wtmp. Cela signifie qu'un "
+"fichier vide ou un fichier avec des zéros n'est pas interprété comme étant "
+"une erreur."
 
 #. type: Plain text
 #: ../login-utils/last.1.adoc:123
@@ -10040,8 +10139,8 @@ msgid ""
 "passwd_ file. There is one exception if the user ID is zero. In this case, "
 "only the primary group ID of the account is set. This should allow the "
 "system administrator to login even in case of network problems. The "
-"environment variable values for *$HOME*, *$USER*, *$SHELL*, *$PATH*, *"
-"$LOGNAME*, and *$MAIL* are set according to the appropriate fields in the "
+"environment variable values for *$HOME*, *$USER*, *$SHELL*, *$PATH*, "
+"*$LOGNAME*, and *$MAIL* are set according to the appropriate fields in the "
 "password entry. *$PATH* defaults to _/usr/local/bin:/bin:/usr/bin_ for "
 "normal users, and to _/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/"
 "usr/bin_ for root, if not otherwise configured."
@@ -14330,8 +14429,8 @@ msgid ""
 msgstr ""
 "Produire la sortie sous la forme de couples I<clef>B<=\">I<valeur>B<\">. Les "
 "lignes de sortie sont toujours ordonnées selon les dépendances. Tous les "
-"caractères potentiellement non sûrs sont protégés de façon hexadécimale (B<"
-"\\ex>I<code>)."
+"caractères potentiellement non sûrs sont protégés de façon hexadécimale "
+"(B<\\ex>I<code>)."
 
 #. type: Labeled list
 #: ../misc-utils/findmnt.8.adoc:109
@@ -15620,7 +15719,7 @@ msgstr ""
 "vous devez explicitement les définir comme des chaînes vides."
 
 #. type: Title ==
-#: ../misc-utils/getopt.1.adoc:147 ../misc-utils/hardlink.1.adoc:135
+#: ../misc-utils/getopt.1.adoc:147 ../misc-utils/hardlink.1.adoc:140
 #: ../misc-utils/uuidd.8.adoc:77
 #, no-wrap
 msgid "AUTHOR"
@@ -15695,39 +15794,40 @@ msgid ""
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:45
+#: ../misc-utils/hardlink.1.adoc:47
 msgid ""
-"If specified once, every hardlinked file is displayed, if specified twice, "
-"it also shows every comparison."
+"Verbose output, explain to the user what is being done. If specified once, "
+"every hardlinked file is displayed. If specified twice, it also shows every "
+"comparison."
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:48
+#: ../misc-utils/hardlink.1.adoc:50
 msgid "Quiet mode, don't print anything."
 msgstr "Mode silencieux – ne rien afficher."
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:49 ../sys-utils/rtcwake.8.adoc:93
+#: ../misc-utils/hardlink.1.adoc:51 ../sys-utils/rtcwake.8.adoc:93
 #, no-wrap
 msgid "*-n*, *--dry-run*"
 msgstr "*-n*, *--dry-run*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:51
+#: ../misc-utils/hardlink.1.adoc:53
 #, fuzzy
 #| msgid "Don't execute, just show what would be done."
 msgid "Do not act, just print what would happen."
 msgstr "Ne pas exécuter, montrer uniquement ce qui devrait être accompli."
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:52
+#: ../misc-utils/hardlink.1.adoc:54
 #, fuzzy, no-wrap
 #| msgid "*-N*, *--name* _name_"
 msgid "*-y*, *--method* _name_"
 msgstr "*-N*, *--name* _nom_"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:58
+#: ../misc-utils/hardlink.1.adoc:60
 msgid ""
 "Set the file content comparison method. The currently supported methods are "
 "sha256, sha1, crc32c and memcmp. The default is sha256, or memcmp if Linux "
@@ -15737,14 +15837,14 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:59
+#: ../misc-utils/hardlink.1.adoc:61
 #, fuzzy, no-wrap
 #| msgid "*--color*[=_when_]"
 msgid "*--reflink*[=_when_]"
 msgstr "*--color*[=_quand_]"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:64
+#: ../misc-utils/hardlink.1.adoc:66
 msgid ""
 "Create copy-on-write clones (aka reflinks) rather than hardlinks. The "
 "reflinked files share only on-disk data, but the file mode and owner can be "
@@ -15754,7 +15854,7 @@ msgid ""
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:70
+#: ../misc-utils/hardlink.1.adoc:72
 msgid ""
 "The optional argument _when_ can be *never*, *always*, or *auto*. If the "
 "_when_ argument is omitted, it defaults to *auto*, in this case, *hardlink* "
@@ -15765,27 +15865,27 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:71
+#: ../misc-utils/hardlink.1.adoc:73
 #, fuzzy, no-wrap
 #| msgid "*-n*, *--skip-login*"
 msgid "*--skip-reflinks*"
 msgstr "*-n*, *--skip-login*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:73
+#: ../misc-utils/hardlink.1.adoc:75
 msgid ""
 "Ignore already cloned files. This option may be used without *--reflink* "
 "when creating classic hardlinks."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:74
+#: ../misc-utils/hardlink.1.adoc:76
 #, no-wrap
 msgid "*-f*, *--respect-name*"
 msgstr "*-f*, *--respect-name*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:76
+#: ../misc-utils/hardlink.1.adoc:78
 msgid ""
 "Only try to link files with the same (base)name. It's strongly recommended "
 "to use long options rather than *-f* which is interpreted in a different way "
@@ -15793,85 +15893,99 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:77
+#: ../misc-utils/hardlink.1.adoc:79
 #, no-wrap
 msgid "*-p*, *--ignore-mode*"
 msgstr "*-p*, *--ignore-mode*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:79
+#: ../misc-utils/hardlink.1.adoc:81
 msgid ""
 "Link and compare files even if their mode is different. Results may be "
 "slightly unpredictable."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:80
+#: ../misc-utils/hardlink.1.adoc:82
 #, no-wrap
 msgid "*-o*, *--ignore-owner*"
 msgstr "*-o*, *--ignore-owner*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:82
+#: ../misc-utils/hardlink.1.adoc:84
 msgid ""
 "Link and compare files even if their owner information (user and group) "
 "differs. Results may be unpredictable."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:83
+#: ../misc-utils/hardlink.1.adoc:85
 #, no-wrap
 msgid "*-t*, *--ignore-time*"
 msgstr "*-t*, *--ignore-time*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:85
+#: ../misc-utils/hardlink.1.adoc:87
 msgid ""
 "Link and compare files even if their time of modification is different. This "
 "is usually a good choice."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:86
+#: ../misc-utils/hardlink.1.adoc:88
+#, fuzzy, no-wrap
+#| msgid "*-Z*, *--context*"
+msgid "*-c* *--content*"
+msgstr "*-Z*, *--context*"
+
+#. type: Plain text
+#: ../misc-utils/hardlink.1.adoc:90
+msgid ""
+"Consider only file content, not attributes, when determining whether two "
+"files are equal. Same as *-pot*."
+msgstr ""
+
+#. type: Labeled list
+#: ../misc-utils/hardlink.1.adoc:91
 #, no-wrap
 msgid "*-X*, *--respect-xattrs*"
 msgstr "*-X*, *--respect-xattrs*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:88
+#: ../misc-utils/hardlink.1.adoc:93
 msgid "Only try to link files with the same extended attributes."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:89
+#: ../misc-utils/hardlink.1.adoc:94
 #, no-wrap
 msgid "*-m*, *--maximize*"
 msgstr "*-m*, *--maximize*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:91
+#: ../misc-utils/hardlink.1.adoc:96
 msgid "Among equal files, keep the file with the highest link count."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:92
+#: ../misc-utils/hardlink.1.adoc:97
 #, no-wrap
 msgid "*-M*, *--minimize*"
 msgstr "*-M*, *--minimize*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:94
+#: ../misc-utils/hardlink.1.adoc:99
 msgid "Among equal files, keep the file with the lowest link count."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:95
+#: ../misc-utils/hardlink.1.adoc:100
 #, no-wrap
 msgid "*-O*, *--keep-oldest*"
 msgstr "*-O*, *--keep-oldest*"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:97
+#: ../misc-utils/hardlink.1.adoc:102
 msgid ""
 "Among equal files, keep the oldest file (least recent modification time). By "
 "default, the newest file is kept. If *--maximize* or *--minimize* is "
@@ -15880,25 +15994,25 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:98
+#: ../misc-utils/hardlink.1.adoc:103
 #, no-wrap
 msgid "*-x*, *--exclude* _regex_"
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:100
+#: ../misc-utils/hardlink.1.adoc:105
 msgid ""
 "A regular expression which excludes files from being compared and linked."
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:101
+#: ../misc-utils/hardlink.1.adoc:106
 #, no-wrap
 msgid "*-i*, *--include* _regex_"
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:103
+#: ../misc-utils/hardlink.1.adoc:108
 msgid ""
 "A regular expression to include files. If the option *--exclude* has been "
 "given, this option re-includes files which would otherwise be excluded. If "
@@ -15907,19 +16021,19 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:104
+#: ../misc-utils/hardlink.1.adoc:109
 #, no-wrap
 msgid "*-s*, *--minimum-size* _size_"
 msgstr "*-s*, *--minimum-size* _taille_"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:106
+#: ../misc-utils/hardlink.1.adoc:111
 #, fuzzy
 #| msgid ""
 #| "In the case the size is specified in bytes than the number may be "
 #| "followed by the multiplicative suffixes KiB=1024, MiB=1024*1024, and so "
-#| "on for GiB, TiB, PiB, EiB, ZiB and YiB. The \"iB\" is optional, e.g., \"K"
-#| "\" has the same meaning as \"KiB\"."
+#| "on for GiB, TiB, PiB, EiB, ZiB and YiB. The \"iB\" is optional, e.g., "
+#| "\"K\" has the same meaning as \"KiB\"."
 msgid ""
 "The minimum size to consider. By default this is 1, so empty files will not "
 "be linked. The _size_ argument may be followed by the multiplicative "
@@ -15933,20 +16047,20 @@ msgstr ""
 "identique à « KiB »)."
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:107
+#: ../misc-utils/hardlink.1.adoc:112
 #, fuzzy, no-wrap
 #| msgid "*-s*, *--minimum-size* _size_"
 msgid "*-S*, *--maximum-size* _size_"
 msgstr "*-s*, *--minimum-size* _taille_"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:109
+#: ../misc-utils/hardlink.1.adoc:114
 #, fuzzy
 #| msgid ""
 #| "In the case the size is specified in bytes than the number may be "
 #| "followed by the multiplicative suffixes KiB=1024, MiB=1024*1024, and so "
-#| "on for GiB, TiB, PiB, EiB, ZiB and YiB. The \"iB\" is optional, e.g., \"K"
-#| "\" has the same meaning as \"KiB\"."
+#| "on for GiB, TiB, PiB, EiB, ZiB and YiB. The \"iB\" is optional, e.g., "
+#| "\"K\" has the same meaning as \"KiB\"."
 msgid ""
 "The maximum size to consider. By default this is 0 and 0 has the special "
 "meaning of unlimited. The _size_ argument may be followed by the "
@@ -15960,14 +16074,14 @@ msgstr ""
 "identique à « KiB »)."
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:110
+#: ../misc-utils/hardlink.1.adoc:115
 #, fuzzy, no-wrap
 #| msgid "*-S*, *--size* _size_"
 msgid "*-b*, *--io-size* _size_"
 msgstr "*-S*, *--size* _taille_"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:118
+#: ../misc-utils/hardlink.1.adoc:123
 msgid ""
 "The size of the *read*(2) or *sendfile*(2) buffer used when comparing file "
 "contents.  The _size_ argument may be followed by the multiplicative "
@@ -15979,14 +16093,14 @@ msgid ""
 msgstr ""
 
 #. type: Labeled list
-#: ../misc-utils/hardlink.1.adoc:119
+#: ../misc-utils/hardlink.1.adoc:124
 #, fuzzy, no-wrap
 #| msgid "*-p*, *--pagesize* _size_"
 msgid "*-r*, *--cache-size* _size_"
 msgstr "*-p*, *--pagesize* _taille_"
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:124
+#: ../misc-utils/hardlink.1.adoc:129
 msgid ""
 "The size of the cache for content checksums. All non-memcmp methods "
 "calculate checksum for each file content block (see *--io-size*), these "
@@ -15995,13 +16109,13 @@ msgid ""
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:128
+#: ../misc-utils/hardlink.1.adoc:133
 #, no-wrap
 msgid "*hardlink* takes one or more directories which will be searched for files to be linked.\n"
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:132
+#: ../misc-utils/hardlink.1.adoc:137
 msgid ""
 "The original *hardlink* implementation uses the option *-f* to force "
 "hardlinks creation between filesystem. This very rarely usable feature is no "
@@ -16009,13 +16123,13 @@ msgid ""
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:134
+#: ../misc-utils/hardlink.1.adoc:139
 #, no-wrap
 msgid "*hardlink* assumes that the trees it operates on do not change during operation. If a tree does change, the result is undefined and potentially dangerous. For example, if a regular file is replaced by a device, *hardlink* may start reading from the device. If a component of a path is replaced by a symbolic link or file permissions change, security may be compromised. Do not run *hardlink* on a changing tree or on a tree controlled by another user.\n"
 msgstr ""
 
 #. type: Plain text
-#: ../misc-utils/hardlink.1.adoc:138
+#: ../misc-utils/hardlink.1.adoc:143
 msgid ""
 "There are multiple *hardlink* implementations. The very first implementation "
 "is from Jakub Jelinek for Fedora distribution, this implementation has been "
@@ -17854,8 +17968,8 @@ msgid ""
 msgstr ""
 "Produire la sortie sous la forme de couples I<clef>B<=\">I<valeur>B<\">. Les "
 "lignes de sortie sont toujours ordonnées selon les dépendances. Tous les "
-"caractères potentiellement non sûrs sont protégés de façon hexadécimale (B<"
-"\\ex>I<code>)."
+"caractères potentiellement non sûrs sont protégés de façon hexadécimale "
+"(B<\\ex>I<code>)."
 
 #. type: Labeled list
 #: ../misc-utils/lsblk.8.adoc:89
@@ -20879,8 +20993,8 @@ msgstr "CHEMINS DE RECHERCHE DE FICHIERS"
 #: ../misc-utils/whereis.1.adoc:105
 msgid ""
 "By default *whereis* tries to find files from hard-coded paths, which are "
-"defined with glob patterns. The command attempts to use the contents of *"
-"$PATH* and *$MANPATH* environment variables as default search path. The "
+"defined with glob patterns. The command attempts to use the contents of "
+"*$PATH* and *$MANPATH* environment variables as default search path. The "
 "easiest way to know what paths are in use is to add the *-l* listing option. "
 "Effects of the *-B*, *-M*, and *-S* are displayed with *-l*."
 msgstr ""
@@ -27549,10 +27663,10 @@ msgstr ""
 #. type: Plain text
 #: ../sys-utils/hwclock.8.adoc:204
 msgid ""
-"On an ISA compatible system, *hwclock* can directly access the \"CMOS memory"
-"\" registers that constitute the clock, by doing I/O to Ports 0x70 and 0x71. "
-"It does this with actual I/O instructions and consequently can only do it if "
-"running with superuser effective userid. This method may be used by "
+"On an ISA compatible system, *hwclock* can directly access the \"CMOS "
+"memory\" registers that constitute the clock, by doing I/O to Ports 0x70 and "
+"0x71. It does this with actual I/O instructions and consequently can only do "
+"it if running with superuser effective userid. This method may be used by "
 "specifying the *--directisa* option."
 msgstr ""
 "Sur un système compatible ISA, *hwclock* peut accéder directement aux "
@@ -27887,9 +28001,9 @@ msgstr ""
 #. type: Plain text
 #: ../sys-utils/hwclock.8.adoc:256
 msgid ""
-"Note that this section is only relevant when you are using the \"direct ISA"
-"\" method of accessing the Hardware Clock. ACPI provides a standard way to "
-"access century values, when they are supported by the hardware."
+"Note that this section is only relevant when you are using the \"direct "
+"ISA\" method of accessing the Hardware Clock. ACPI provides a standard way "
+"to access century values, when they are supported by the hardware."
 msgstr ""
 "Notez que cette section est pertinente uniquement si vous utilisez un accès "
 "ISA direct à l’horloge matérielle. L'ACPI fournit un moyen standard "
@@ -29967,10 +30081,16 @@ msgstr "*-b*, *--sector-size* _taille_"
 
 #. type: Plain text
 #: ../sys-utils/losetup.8.adoc:82
+#, fuzzy
+#| msgid ""
+#| "Set the logical sector size of the loop device in bytes (since Linux "
+#| "4.14). The option may be used when create a new loop device as well as "
+#| "stand-alone command to modify sector size of the already existing loop "
+#| "device."
 msgid ""
 "Set the logical sector size of the loop device in bytes (since Linux 4.14). "
-"The option may be used when create a new loop device as well as stand-alone "
-"command to modify sector size of the already existing loop device."
+"The option may be used when creating a new loop device as well as a stand-"
+"alone command to modify sector size of the already existing loop device."
 msgstr ""
 "Régler la taille de secteur logique du périphérique boucle en octet (depuis "
 "Linux 4.14). Cette option peut être utilisée pour créer un nouveau "
@@ -30217,9 +30337,9 @@ msgstr "*lscpu* collecte des renseignements sur l'architecture du processeur à 
 msgid ""
 "The default output formatting on terminal is subject to change and maybe "
 "optimized for better readability. The output for non-terminals (e.g., pipes) "
-"is never affected by this optimization and it is always in \"Field: data\\n"
-"\" format. Use for example \"*lscpu | less*\" to see the default output "
-"without optimizations."
+"is never affected by this optimization and it is always in \"Field: "
+"data\\n\" format. Use for example \"*lscpu | less*\" to see the default "
+"output without optimizations."
 msgstr ""
 "Le format d'affichage par défaut sur un terminal peut être optimisé pour une "
 "meilleure lisibilité. La sortie hors d’un terminal (par exemple les "
@@ -30741,8 +30861,8 @@ msgid ""
 msgstr ""
 "Produire la sortie sous la forme de couples I<clef>B<=\">I<valeur>B<\">. Les "
 "lignes de sortie sont toujours ordonnées selon les dépendances. Tous les "
-"caractères potentiellement non sûrs sont protégés de façon hexadécimale (B<"
-"\\ex>I<code>)."
+"caractères potentiellement non sûrs sont protégés de façon hexadécimale "
+"(B<\\ex>I<code>)."
 
 #. type: Title =
 #: ../sys-utils/lsmem.1.adoc:2
@@ -30871,8 +30991,8 @@ msgid ""
 msgstr ""
 "Produire la sortie sous la forme de couples I<clef>B<=\">I<valeur>B<\">. Les "
 "lignes de sortie sont toujours ordonnées selon les dépendances. Tous les "
-"caractères potentiellement non sûrs sont protégés de façon hexadécimale (B<"
-"\\ex>I<code>)."
+"caractères potentiellement non sûrs sont protégés de façon hexadécimale "
+"(B<\\ex>I<code>)."
 
 #. type: Labeled list
 #: ../sys-utils/lsmem.1.adoc:57
@@ -30997,10 +31117,8 @@ msgstr ""
 
 #. type: Plain text
 #: ../sys-utils/lsns.8.adoc:39
-#, fuzzy
-#| msgid "Use JSON output format."
 msgid "Use list output format."
-msgstr "Utiliser le format de sortie JSON."
+msgstr "Utiliser le format de sortie liste."
 
 #. type: Plain text
 #: ../sys-utils/lsns.8.adoc:47
@@ -31019,10 +31137,9 @@ msgstr "*-p*, *--task* _PID_"
 
 #. type: Plain text
 #: ../sys-utils/lsns.8.adoc:53
-#, fuzzy
-#| msgid "Display only the locks held by the process with this I<pid>."
 msgid "Display only the namespaces held by the process with this _PID_."
-msgstr "N’afficher que les verrous maintenus par le processus avec ce I<PID>."
+msgstr ""
+"N’afficher que les espaces de noms maintenus par le processus avec ce _PID_."
 
 #. type: Plain text
 #: ../sys-utils/lsns.8.adoc:59
@@ -31063,7 +31180,7 @@ msgid ""
 msgstr ""
 
 #. type: Plain text
-#: ../sys-utils/lsns.8.adoc:82
+#: ../sys-utils/lsns.8.adoc:83
 #, fuzzy, no-wrap
 #| msgid ""
 #| "*nsenter*(1),\n"
@@ -31076,7 +31193,8 @@ msgid ""
 "*unshare*(1),\n"
 "*clone*(2),\n"
 "*namespaces*(7),\n"
-"*ioctl_ns*(2)\n"
+"*ioctl_ns*(2),\n"
+"*ip-netns*(8)\n"
 msgstr ""
 "*nsenter*(1),\n"
 "*unshare*(1),\n"
@@ -35706,8 +35824,8 @@ msgstr "*userxattr*"
 #. type: delimited block _
 #: ../sys-utils/mount.8.adoc:1022
 msgid ""
-"Use the \"*user.overlay.*\" xattr namespace instead of \"*trusted.overlay.*"
-"\". This is useful for unprivileged mounting of overlayfs."
+"Use the \"*user.overlay.*\" xattr namespace instead of \"*trusted.overlay."
+"*\". This is useful for unprivileged mounting of overlayfs."
 msgstr ""
 
 #. type: Labeled list
@@ -35720,9 +35838,10 @@ msgstr "*redirect_dir=*{**on**|**off**|**follow**|**nofollow**}"
 #: ../sys-utils/mount.8.adoc:1025
 msgid ""
 "If the _redirect_dir_ feature is enabled, then the directory will be copied "
-"up (but not the contents). Then the \"{**trusted**|**user**}.overlay.redirect"
-"\" extended attribute is set to the path of the original location from the "
-"root of the overlay. Finally the directory is moved to the new location."
+"up (but not the contents). Then the \"{**trusted**|**user**}.overlay."
+"redirect\" extended attribute is set to the path of the original location "
+"from the root of the overlay. Finally the directory is moved to the new "
+"location."
 msgstr ""
 
 #. type: Labeled list
@@ -35774,8 +35893,8 @@ msgstr "*nofollow*"
 #. type: delimited block _
 #: ../sys-utils/mount.8.adoc:1037
 msgid ""
-"Redirects are not created and not followed (equivalent to \"redirect_dir=off"
-"\" if \"redirect_always_follow\" feature is not enabled)."
+"Redirects are not created and not followed (equivalent to "
+"\"redirect_dir=off\" if \"redirect_always_follow\" feature is not enabled)."
 msgstr ""
 
 #. type: Labeled list
@@ -35933,10 +36052,10 @@ msgstr ""
 #: ../sys-utils/mount.8.adoc:1095
 msgid ""
 "When overlay filesystem has multiple lower layers, a middle layer directory "
-"may have a \"redirect\" to lower directory. Because middle layer \"redirects"
-"\" are not indexed, a lower file handle that was encoded from the \"redirect"
-"\" origin directory, cannot be used to find the middle or upper layer "
-"directory.  Similarly, a lower file handle that was encoded from a "
+"may have a \"redirect\" to lower directory. Because middle layer "
+"\"redirects\" are not indexed, a lower file handle that was encoded from the "
+"\"redirect\" origin directory, cannot be used to find the middle or upper "
+"layer directory.  Similarly, a lower file handle that was encoded from a "
 "descendant of the \"redirect\" origin directory, cannot be used to "
 "reconstruct a connected overlay path. To mitigate the cases of directories "
 "that cannot be decoded from a lower file handle, these directories are "
@@ -39726,10 +39845,10 @@ msgstr "Correspondance entre les noms d'utilisateur et les identifiants."
 #: ../sys-utils/renice.1.adoc:79
 msgid ""
 "Users other than the superuser may only alter the priority of processes they "
-"own. Furthermore, an unprivileged user can only _increase_ the \"nice value"
-"\" (i.e., choose a lower priority) and such changes are irreversible unless "
-"(since Linux 2.6.12) the user has a suitable \"nice\" resource limit (see "
-"*ulimit*(1p) and *getrlimit*(2))."
+"own. Furthermore, an unprivileged user can only _increase_ the \"nice "
+"value\" (i.e., choose a lower priority) and such changes are irreversible "
+"unless (since Linux 2.6.12) the user has a suitable \"nice\" resource limit "
+"(see *ulimit*(1p) and *getrlimit*(2))."
 msgstr ""
 "Les utilisateurs ordinaires (à part le superutilisateur) ne peuvent que "
 "modifier la priorité des processus dont ils sont propriétaires. De plus, un "
@@ -41725,8 +41844,9 @@ msgstr "*Attention : switch_root supprime récursivement tous les fichiers et r
 
 #. type: Plain text
 #: ../sys-utils/switch_root.8.adoc:32
-#, no-wrap
-msgid "*switch_root* returns 0 on success and 1 on failure.\n"
+#, fuzzy, no-wrap
+#| msgid "*switch_root* returns 0 on success and 1 on failure.\n"
+msgid "*switch_root* returns 1 on failure, it never returns on success.\n"
 msgstr "*switch_root* renvoie 0 en cas de réussite et 1 en cas d'échec.\n"
 
 #. type: Plain text
@@ -42748,8 +42868,8 @@ msgstr ""
 "Isoler l’espace de noms montage. Si _fichier_ est indiqué, alors un espace "
 "de noms persistant est créé par un montage lié. Remarquez que _fichier_ doit "
 "être situé sur le système de fichiers avec le drapeau de propagation n’est "
-"pas *shared* (ou une erreur survient). Utilisez la commande *findmnt -o"
-"+PROPAGATION* si vous n’êtes pas sûr du réglage en cours. Consulter les "
+"pas *shared* (ou une erreur survient). Utilisez la commande *findmnt -"
+"o+PROPAGATION* si vous n’êtes pas sûr du réglage en cours. Consulter les "
 "exemples ci-dessous."
 
 #. type: Labeled list
@@ -42983,12 +43103,12 @@ msgid ""
 "Run the program only after the block of user IDs of size _count_ beginning "
 "at _outeruid_ has been mapped to the block of user IDs beginning at "
 "_inneruid_. This mapping is created with **newuidmap**(1). If the range of "
-"user IDs overlaps with the mapping specified by *--map-user*, then a \"hole"
-"\" will be removed from the mapping. This may result in the highest user ID "
-"of the mapping not being mapped. The special value *auto* will map the first "
-"block of user IDs owned by the effective user from _/etc/subuid_ to a block "
-"starting at user ID 0. If this option is specified multiple times, the last "
-"occurrence takes precedence. This option implies *--user*."
+"user IDs overlaps with the mapping specified by *--map-user*, then a "
+"\"hole\" will be removed from the mapping. This may result in the highest "
+"user ID of the mapping not being mapped. The special value *auto* will map "
+"the first block of user IDs owned by the effective user from _/etc/subuid_ "
+"to a block starting at user ID 0. If this option is specified multiple "
+"times, the last occurrence takes precedence. This option implies *--user*."
 msgstr ""
 
 #. type: Labeled list
@@ -43022,12 +43142,12 @@ msgid ""
 "Run the program only after the block of group IDs of size _count_ beginning "
 "at _outergid_ has been mapped to the block of group IDs beginning at "
 "_innergid_. This mapping is created with **newgidmap**(1). If the range of "
-"group IDs overlaps with the mapping specified by *--map-group*, then a \"hole"
-"\" will be removed from the mapping. This may result in the highest group ID "
-"of the mapping not being mapped. The special value *auto* will map the first "
-"block of user IDs owned by the effective user from _/etc/subgid_ to a block "
-"starting at group ID 0. If this option is specified multiple times, the last "
-"occurrence takes precedence. This option implies *--user*."
+"group IDs overlaps with the mapping specified by *--map-group*, then a "
+"\"hole\" will be removed from the mapping. This may result in the highest "
+"group ID of the mapping not being mapped. The special value *auto* will map "
+"the first block of user IDs owned by the effective user from _/etc/subgid_ "
+"to a block starting at group ID 0. If this option is specified multiple "
+"times, the last occurrence takes precedence. This option implies *--user*."
 msgstr ""
 
 #. type: Labeled list
@@ -51482,10 +51602,11 @@ msgstr ""
 #~| "default is 'always'.  If the --local-line option is not given at all, "
 #~| "then the default is 'auto'."
 #~ msgid ""
-#~ "Control the CLOCAL line flag. The optional I<mode> argument is \\(aqauto"
-#~ "\\(aq, \\(aqalways\\(aq or \\(aqnever\\(aq. If the I<mode> argument is "
-#~ "omitted, then the default is \\(aqalways\\(aq. If the B<--local-line> "
-#~ "option is not given at all, then the default is \\(aqauto\\(aq."
+#~ "Control the CLOCAL line flag. The optional I<mode> argument is "
+#~ "\\(aqauto\\(aq, \\(aqalways\\(aq or \\(aqnever\\(aq. If the I<mode> "
+#~ "argument is omitted, then the default is \\(aqalways\\(aq. If the B<--"
+#~ "local-line> option is not given at all, then the default is "
+#~ "\\(aqauto\\(aq."
 #~ msgstr ""
 #~ "Contrôler l’attribut de ligne CLOCAL. L’argument facultatif I<mode> est "
 #~ "I<auto>, I<always> ou I<never>. En l'absence d’argument I<mode>, la "
@@ -51764,8 +51885,8 @@ msgstr ""
 #~ "any configured interface is found, fall back to the IP address of the "
 #~ "machine\\(cqs hostname."
 #~ msgstr ""
-#~ "Insérer l’adresse IPv4 de l’interface réseau indiquée (par exemple B<"
-#~ "\\e4{eth0}>). Si l’argument I<interface> n’est pas indiqué, alors "
+#~ "Insérer l’adresse IPv4 de l’interface réseau indiquée (par exemple "
+#~ "B<\\e4{eth0}>). Si l’argument I<interface> n’est pas indiqué, alors "
 #~ "sélectionner la première interface complètement configurée (activée, non "
 #~ "boucle locale, en fonctionnement). Si aucune interface configurée n’est "
 #~ "trouvée, se replier sur l’adresse IP du nom d’hôte de la machine."
@@ -52435,8 +52556,8 @@ msgstr ""
 #~ "Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<blkdiscard> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "BLKID"
 #~ msgstr "BLKID"
@@ -52518,9 +52639,9 @@ msgstr ""
 #~| "output format is automatically enabled.  This option can be used "
 #~| "together with the B<--probe> option."
 #~ msgid ""
-#~ "Display information about I/O Limits (aka I/O topology). The \\(aqexport"
-#~ "\\(aq output format is automatically enabled. This option can be used "
-#~ "together with the B<--probe> option."
+#~ "Display information about I/O Limits (aka I/O topology). The "
+#~ "\\(aqexport\\(aq output format is automatically enabled. This option can "
+#~ "be used together with the B<--probe> option."
 #~ msgstr ""
 #~ "Afficher les renseignements de limites (topologie) d'E/S. Le format de "
 #~ "sortie B<export> est automatiquement activé. Cette option peut être "
@@ -53096,8 +53217,8 @@ msgstr ""
 #~ "Utiliser un verrou BSD exclusif pour le périphérique ou le fichier visé. "
 #~ "L’argument facultatif I<mode> peut être B<yes>, B<no> (ou B<1> et B<0>) "
 #~ "ou B<nonblock>. Si cet argument est absent, sa valeur par défaut est "
-#~ "B<yes>. Cette option écrase la variable d’environnement B<"
-#~ "$LOCK_BLOCK_DEVICE>. Le comportement par défaut est de n’utiliser aucun "
+#~ "B<yes>. Cette option écrase la variable d’environnement "
+#~ "B<$LOCK_BLOCK_DEVICE>. Le comportement par défaut est de n’utiliser aucun "
 #~ "verrou, mais cela est recommandé pour éviter des collisions avec udevd ou "
 #~ "d’autres outils."
 
@@ -53559,8 +53680,8 @@ msgstr ""
 #~ "Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<chcpu> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "CHRT"
 #~ msgstr "CHRT"
@@ -53801,8 +53922,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<ctrlaltdel> fait partie du paquet util-linux, elle est "
-#~ "disponible dans E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible dans E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "DELPART"
 #~ msgstr "DELPART"
@@ -53902,8 +54023,8 @@ msgstr ""
 #~ "kernel messages. The I</dev/kmsg> device uses a different format than "
 #~ "B<syslog>(2). For backward compatibility, B<dmesg> returns data always in "
 #~ "the B<syslog>(2) format. It is possible to read the real raw data from I</"
-#~ "dev/kmsg> by, for example, the command \\(aqdd if=/dev/kmsg iflag=nonblock"
-#~ "\\(aq."
+#~ "dev/kmsg> by, for example, the command \\(aqdd if=/dev/kmsg "
+#~ "iflag=nonblock\\(aq."
 #~ msgstr ""
 #~ "Remarquez que le véritable format brut dépend de la méthode utilisée par "
 #~ "B<dmesg>(1) pour lire les messages du noyau. Le périphérique I</dev/kmsg> "
@@ -54303,8 +54424,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<fallocate> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "June 2020"
 #~ msgstr "Juin 2020"
@@ -55179,8 +55300,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<findfs> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "FINDMNT"
 #~ msgstr "FINDMNT"
@@ -55468,8 +55589,8 @@ msgstr ""
 #~ "specified in a comma-separated list.  The B<-t> and B<-O> options are "
 #~ "cumulative in effect.  It is different from B<-t> in that each option is "
 #~ "matched exactly; a leading I<no> at the beginning does not have global "
-#~ "meaning.  The \"no\" can used for individual items in the list.  The \"no"
-#~ "\" prefix interpretation can be disabled by \"+\" prefix."
+#~ "meaning.  The \"no\" can used for individual items in the list.  The "
+#~ "\"no\" prefix interpretation can be disabled by \"+\" prefix."
 #~ msgstr ""
 #~ "Limiter l'ensemble de systèmes de fichiers affichés. Plusieurs options "
 #~ "peuvent être indiquées, séparées par des virgules. Les options B<-t> et "
@@ -55904,8 +56025,8 @@ msgstr ""
 #~ "Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<flock> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "FSCK"
 #~ msgstr "FSCK"
@@ -56066,8 +56187,8 @@ msgstr ""
 #~| "don't."
 #~ msgid ""
 #~ "These options B<must> not take arguments, as there is no way for B<fsck> "
-#~ "to be able to properly guess which options take arguments and which don"
-#~ "\\(cqt."
+#~ "to be able to properly guess which options take arguments and which "
+#~ "don\\(cqt."
 #~ msgstr ""
 #~ "Ces options B<ne doivent pas> prendre de paramètre puisqu'il n'y a aucun "
 #~ "moyen pour B<fsck> de différencier correctement les options qui prennent "
@@ -56489,12 +56610,12 @@ msgstr ""
 
 #~ msgid ""
 #~ "The fsck.cramfs command is part of the util-linux package and is "
-#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> Linux Kernel Archive E<.UE .>"
+#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<fsck.cramfs> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "FSCK.MINIX"
 #~ msgstr "FSCK.MINIX"
@@ -56700,8 +56821,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<fsck.minix> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "FSFREEZE"
 #~ msgstr "FSFREEZE"
@@ -56871,10 +56992,10 @@ msgstr ""
 #~| "LABEL=E<lt>labelE<gt> or UUID=E<lt>uuidE<gt> may be given instead of a "
 #~| "device name.  This is the recommended method, as device names are often "
 #~| "a coincidence of hardware detection order, and can change when other "
-#~| "disks are added or removed.  For example, `LABEL=Boot' or `UUID=3e6be9de"
-#~| "\\%-8139\\%-11d1\\%-9106\\%-a43f08d823a6'.  (Use a filesystem-specific "
-#~| "tool like B<e2label>(8), B<xfs_admin>(8), or B<fatlabel>(8)  to set "
-#~| "LABELs on filesystems)."
+#~| "disks are added or removed.  For example, `LABEL=Boot' or "
+#~| "`UUID=3e6be9de\\%-8139\\%-11d1\\%-9106\\%-a43f08d823a6'.  (Use a "
+#~| "filesystem-specific tool like B<e2label>(8), B<xfs_admin>(8), or "
+#~| "B<fatlabel>(8)  to set LABELs on filesystems)."
 #~ msgid ""
 #~ "LABEL=E<lt>labelE<gt> or UUID=E<lt>uuidE<gt> may be given instead of a "
 #~ "device name. This is the recommended method, as device names are often a "
@@ -56910,8 +57031,8 @@ msgstr ""
 #~ msgid ""
 #~ "This field describes the mount point (target) for the filesystem. For "
 #~ "swap partitions, this field should be specified as `none\\(aq. If the "
-#~ "name of the mount point contains spaces or tabs these can be escaped as `"
-#~ "\\(rs040\\(aq and \\(aq\\(rs011\\(aq respectively."
+#~ "name of the mount point contains spaces or tabs these can be escaped as "
+#~ "`\\(rs040\\(aq and \\(aq\\(rs011\\(aq respectively."
 #~ msgstr ""
 #~ "Ce champ indique le point de montage du système de fichiers. Pour les "
 #~ "partitions d'échange, ce champ doit prendre la valeur «\\ none\\ ». Si le "
@@ -56926,10 +57047,10 @@ msgstr ""
 #~| "first fstab field (for example 'sshfs#example.com' is deprecated)."
 #~ msgid ""
 #~ "B<mount>(8) and B<umount>(8) support filesystem I<subtypes>. The subtype "
-#~ "is defined by \\(aq.subtype\\(aq suffix. For example \\(aqfuse.sshfs"
-#~ "\\(aq. It\\(cqs recommended to use subtype notation rather than add any "
-#~ "prefix to the first fstab field (for example \\(aqsshfs#example.com\\(aq "
-#~ "is deprecated)."
+#~ "is defined by \\(aq.subtype\\(aq suffix. For example \\(aqfuse."
+#~ "sshfs\\(aq. It\\(cqs recommended to use subtype notation rather than add "
+#~ "any prefix to the first fstab field (for example \\(aqsshfs#example."
+#~ "com\\(aq is deprecated)."
 #~ msgstr ""
 #~ "B<mount>(8) et B<umount>(8) gèrent les I<sous-types> de systèmes de "
 #~ "fichiers. Le sous-type est défini par le suffixe « B<.>I<sous-type> ». "
@@ -57416,8 +57537,8 @@ msgstr ""
 #~ msgid ""
 #~ "Set quoting conventions to those of I<shell>. If the B<-s> option is not "
 #~ "given, the BASH conventions are used. Valid arguments are currently "
-#~ "\\(aqB<sh>\\(aq \\(aqB<bash>\\(aq, \\(aqB<csh>\\(aq, and \\(aqB<tcsh>"
-#~ "\\(aq."
+#~ "\\(aqB<sh>\\(aq \\(aqB<bash>\\(aq, \\(aqB<csh>\\(aq, and "
+#~ "\\(aqB<tcsh>\\(aq."
 #~ msgstr ""
 #~ "Définir les règles de protection (avec des guillemets) à celles des "
 #~ "interpréteurs de commandes I<shell>. En absence d’indication de l’option "
@@ -57614,8 +57735,8 @@ msgstr ""
 #~ "first character of the short options string was a \\(aqB<->\\(aq, non-"
 #~ "option parameter output is generated at the place they are found in the "
 #~ "input (this is not supported if the first format of the B<SYNOPSIS> is "
-#~ "used; in that case all preceding occurrences of \\(aqB<->\\(aq and \\(aqB<"
-#~ "+>\\(aq are ignored)."
+#~ "used; in that case all preceding occurrences of \\(aqB<->\\(aq and "
+#~ "\\(aqB<+>\\(aq are ignored)."
 #~ msgstr ""
 #~ "Normalement, aucun paramètre n'étant pas une option n'est généré sur la "
 #~ "sortie tant que toutes les options et leurs paramètres n'ont pas été "
@@ -57685,10 +57806,10 @@ msgstr ""
 #~ "Different shells use different quoting conventions. You can use the "
 #~ "\\(aqB<-s>\\(aq option to select the shell you are using. The following "
 #~ "shells are currently supported: \\(aqB<sh>\\(aq, \\(aqB<bash>\\(aq, "
-#~ "\\(aqB<csh>\\(aq and \\(aqB<tcsh>\\(aq. Actually, only two \\(aqflavors"
-#~ "\\(aq are distinguished: sh-like quoting conventions and csh-like quoting "
-#~ "conventions. Chances are that if you use another shell script language, "
-#~ "one of these flavors can still be used."
+#~ "\\(aqB<csh>\\(aq and \\(aqB<tcsh>\\(aq. Actually, only two "
+#~ "\\(aqflavors\\(aq are distinguished: sh-like quoting conventions and csh-"
+#~ "like quoting conventions. Chances are that if you use another shell "
+#~ "script language, one of these flavors can still be used."
 #~ msgstr ""
 #~ "Les conventions de protection diffèrent suivant les interpréteurs de "
 #~ "commandes. Vous pouvez préciser l'interpréteur de commandes que vous "
@@ -57701,9 +57822,9 @@ msgstr ""
 
 #, fuzzy
 #~| msgid ""
-#~| "The first character of the short options string may be a 'B<->' or a 'B<"
-#~| "+>' to indicate a special scanning mode.  If the first calling form in "
-#~| "the B<SYNOPSIS> is used they are ignored; the environment variable "
+#~| "The first character of the short options string may be a 'B<->' or a "
+#~| "'B<+>' to indicate a special scanning mode.  If the first calling form "
+#~| "in the B<SYNOPSIS> is used they are ignored; the environment variable "
 #~| "B<POSIXLY_CORRECT> is still examined, though."
 #~ msgid ""
 #~ "The first character of the short options string may be a \\(aqB<->\\(aq "
@@ -58043,8 +58164,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<getopt> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #, fuzzy
 #~| msgid ""
@@ -58146,8 +58267,8 @@ msgstr ""
 #~| "The B<--get> function also applies drift correction to the time read, "
 #~| "based upon the information in I</etc/adjtime>.  Do not use this function "
 #~| "if the Hardware Clock is being modified by anything other than the "
-#~| "current operating system's B<\\%hwclock> command, such as \\%'11\\ minute"
-#~| "\\ mode' or from dual-booting another OS."
+#~| "current operating system's B<\\%hwclock> command, such as \\%'11\\ "
+#~| "minute\\ mode' or from dual-booting another OS."
 #~ msgid ""
 #~ "The B<--get> function also applies drift correction to the time read, "
 #~ "based upon the information in I</etc/adjtime>. Do not use this function "
@@ -58345,10 +58466,10 @@ msgstr ""
 #~ msgid ""
 #~ "Having B<hwclock> calculate the drift factor is a good starting point, "
 #~ "but for optimal results it will likely need to be adjusted by directly "
-#~ "editing the I</etc/adjtime> file. For most configurations once a machine"
-#~ "\\(cqs optimal drift factor is crafted it should not need to be changed. "
-#~ "Therefore, the old behavior to automatically (re)calculate drift was "
-#~ "changed and now requires this option to be used. See the discussion "
+#~ "editing the I</etc/adjtime> file. For most configurations once a "
+#~ "machine\\(cqs optimal drift factor is crafted it should not need to be "
+#~ "changed. Therefore, the old behavior to automatically (re)calculate drift "
+#~ "was changed and now requires this option to be used. See the discussion "
 #~ "below, under B<The Adjust Function>."
 #~ msgstr ""
 #~ "Laisser B<\\%hwclock> calculer le facteur de dérive est un bon point de "
@@ -58498,13 +58619,13 @@ msgstr ""
 #~| "%'11\\ minute\\ mode' back on again the next time it synchronizes the "
 #~| "System Clock."
 #~ msgid ""
-#~ "It takes an outside influence, like the NTP daemon to put the kernel"
-#~ "\\(cqs clock discipline into a synchronized state, and therefore turn on "
-#~ "\\(aq11 minute mode\\(aq. It can be turned off by running anything that "
-#~ "sets the System Clock the old fashioned way, including B<hwclock --"
-#~ "hctosys>. However, if the NTP daemon is still running, it will turn "
-#~ "\\(aq11 minute mode\\(aq back on again the next time it synchronizes the "
-#~ "System Clock."
+#~ "It takes an outside influence, like the NTP daemon to put the "
+#~ "kernel\\(cqs clock discipline into a synchronized state, and therefore "
+#~ "turn on \\(aq11 minute mode\\(aq. It can be turned off by running "
+#~ "anything that sets the System Clock the old fashioned way, including "
+#~ "B<hwclock --hctosys>. However, if the NTP daemon is still running, it "
+#~ "will turn \\(aq11 minute mode\\(aq back on again the next time it "
+#~ "synchronizes the System Clock."
 #~ msgstr ""
 #~ "Il agit de manière externe, comme le démon NTP pour mettre la discipline "
 #~ "de l'horloge du noyau dans l’état synchronisé et, par conséquent, active "
@@ -58764,21 +58885,22 @@ msgstr ""
 #~ msgid ""
 #~ "To configure a system to use a particular database all of the files "
 #~ "located in its directory must be copied to the root of I</usr/share/"
-#~ "zoneinfo>. Files are never used directly from the posix or \\(aqright"
-#~ "\\(aq subdirectories, e.g., TZ=\\(aqI<right/Europe/Dublin>\\(aq. This "
-#~ "habit was becoming so common that the upstream zoneinfo project "
-#~ "restructured the system\\(cqs file tree by moving the posix and \\(aqright"
-#~ "\\(aq subdirectories out of the zoneinfo directory and into sibling "
-#~ "directories:"
+#~ "zoneinfo>. Files are never used directly from the posix or "
+#~ "\\(aqright\\(aq subdirectories, e.g., TZ=\\(aqI<right/Europe/"
+#~ "Dublin>\\(aq. This habit was becoming so common that the upstream "
+#~ "zoneinfo project restructured the system\\(cqs file tree by moving the "
+#~ "posix and \\(aqright\\(aq subdirectories out of the zoneinfo directory "
+#~ "and into sibling directories:"
 #~ msgstr ""
 #~ "Pour configurer un système à utiliser une base de données en particulier, "
-#~ "tous les fichiers de son répertoire doivent être copiés à la racine de I<"
-#~ "\\%/usr/share/zoneinfo>. Les fichiers ne sont jamais utilisés directement "
-#~ "des sous-répertoires I<posix> ou I<right>, par exemple \\%TZ='I<right/"
-#~ "America/Martinique>'. Cette habitude était devenue si répandue que le "
-#~ "projet zoneinfo amont a restructuré le système d’arborescence de fichiers "
-#~ "en déplaçant les sous-répertoires I<posix> et I<right> hors du répertoire "
-#~ "I<zoneinfo> et dans des répertoires adjacents :"
+#~ "tous les fichiers de son répertoire doivent être copiés à la racine de "
+#~ "I<\\%/usr/share/zoneinfo>. Les fichiers ne sont jamais utilisés "
+#~ "directement des sous-répertoires I<posix> ou I<right>, par exemple \\"
+#~ "%TZ='I<right/America/Martinique>'. Cette habitude était devenue si "
+#~ "répandue que le projet zoneinfo amont a restructuré le système "
+#~ "d’arborescence de fichiers en déplaçant les sous-répertoires I<posix> et "
+#~ "I<right> hors du répertoire I<zoneinfo> et dans des répertoires "
+#~ "adjacents :"
 
 #, fuzzy
 #~| msgid ""
@@ -59375,8 +59497,8 @@ msgstr ""
 #~ "system is running.  You can, however, do whatever you want to the "
 #~ "Hardware Clock while the system is running, and the next time Linux "
 #~ "starts up, it will do so with the adjusted time from the Hardware Clock.  "
-#~ "Note: currently this is not possible on most systems because B<\\%hwclock"
-#~ "\\ --systohc> is called at shutdown."
+#~ "Note: currently this is not possible on most systems because B<\\"
+#~ "%hwclock\\ --systohc> is called at shutdown."
 #~ msgstr ""
 #~ "L’heure système ne doit surtout pas subir de discontinuité comme lorsque "
 #~ "le programme B<\\%date>(1) est utilisé pour la modifier pendant le "
@@ -60012,8 +60134,8 @@ msgstr ""
 #~ msgid ""
 #~ "Create a shared memory segment of I<size> bytes.  The I<size> argument "
 #~ "may be followed by the multiplicative suffixes KiB (=1024), MiB "
-#~ "(=1024*1024), and so on for GiB, etc. (the \"iB\" is optional, e.g., \"K"
-#~ "\" has the same meaning as \"KiB\") or the suffixes KB (=1000), MB "
+#~ "(=1024*1024), and so on for GiB, etc. (the \"iB\" is optional, e.g., "
+#~ "\"K\" has the same meaning as \"KiB\") or the suffixes KB (=1000), MB "
 #~ "(=1000*1000), and so on for GB, etc."
 #~ msgstr ""
 #~ "Créer un segment de mémoire partagé de I<taille> octets. Les arguments "
@@ -60049,8 +60171,9 @@ msgstr ""
 #~ "The SUS-compliant syntax allows the specification of zero or more objects "
 #~ "of all three types in a single command line, with objects specified "
 #~ "either by key or by identifier (see below). Both keys and identifiers may "
-#~ "be specified in decimal, hexadecimal (specified with an initial \\(aq0x"
-#~ "\\(aq or \\(aq0X\\(aq), or octal (specified with an initial \\(aq0\\(aq)."
+#~ "be specified in decimal, hexadecimal (specified with an initial "
+#~ "\\(aq0x\\(aq or \\(aq0X\\(aq), or octal (specified with an initial "
+#~ "\\(aq0\\(aq)."
 #~ msgstr ""
 #~ "La syntaxe compatible SUS permet l'utilisation d'aucun ou de plusieurs "
 #~ "objets des trois types en une seule ligne de commande, objets désignés "
@@ -60161,8 +60284,8 @@ msgstr ""
 #~ "Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<ipcrm> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "IPCS"
 #~ msgstr "IPCS"
@@ -60316,8 +60439,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<isosize> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "KILL"
 #~ msgstr "KILL"
@@ -61691,13 +61814,13 @@ msgstr ""
 #~ msgid ""
 #~ "  B<E<lt>13E<gt>1 2015-10-01T14:07:59.168662+02:00 ws kzak - - "
 #~ "[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"218616\"]"
-#~ "[zoo@123 tiger=\"hungry\" zebra=\"running\"][manager@123 onMeeting=\"yes"
-#~ "\"] this is message>\n"
+#~ "[zoo@123 tiger=\"hungry\" zebra=\"running\"][manager@123 "
+#~ "onMeeting=\"yes\"] this is message>\n"
 #~ msgstr ""
 #~ "  B<E<lt>13E<gt>1 2015-10-01T14:07:59.168662+02:00 ws kzak - - "
 #~ "[timeQuality tzKnown=\"1\" isSynced=\"1\" syncAccuracy=\"218616\"]"
-#~ "[zoo@123 tiger=\"hungry\" zebra=\"running\"][manager@123 onMeeting=\"yes"
-#~ "\"] this is message>\n"
+#~ "[zoo@123 tiger=\"hungry\" zebra=\"running\"][manager@123 "
+#~ "onMeeting=\"yes\"] this is message>\n"
 
 #~ msgid "B<-S>,B< --size >I<size>"
 #~ msgstr "B<-S>,B< --size >I<taille>"
@@ -61840,8 +61963,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<logger> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #, fuzzy
 #~| msgid ""
@@ -62512,8 +62635,8 @@ msgstr ""
 #~ msgid ""
 #~ "When specifying the I<list> argument, the string of option, equal sign "
 #~ "(=), and I<list> must not contain any blanks or other whitespace. "
-#~ "Examples: \\(aqB<-C=NAME,ONE-SIZE>\\(aq or \\(aqB<--caches=NAME,ONE-SIZE>"
-#~ "\\(aq."
+#~ "Examples: \\(aqB<-C=NAME,ONE-SIZE>\\(aq or \\(aqB<--caches=NAME,ONE-"
+#~ "SIZE>\\(aq."
 #~ msgstr ""
 #~ "Quand l’argument I<liste> est indiqué, la chaîne option, signe égal (=) "
 #~ "et I<liste> ne doit pas contenir d’espace. Par exemple : « B<-C=NOM,UNE-"
@@ -62886,10 +63009,10 @@ msgstr ""
 #~| "functions>, in this preference order. See also the option B<--file>."
 #~ msgid ""
 #~ "\\f(CRThe \"random\" number generated is actually the MD5 message digest "
-#~ "of random information coming from one of the sources B<getrandom>"
-#~ "\\f(CR(2) system call, I</dev/urandom>\\f(CR, I</dev/random>\\f(CR, or "
-#~ "the I<libc pseudo-random functions>\\f(CR, in this preference order. See "
-#~ "also the option B<--file>\\f(CR.\\fR"
+#~ "of random information coming from one of the sources "
+#~ "B<getrandom>\\f(CR(2) system call, I</dev/urandom>\\f(CR, I</dev/"
+#~ "random>\\f(CR, or the I<libc pseudo-random functions>\\f(CR, in this "
+#~ "preference order. See also the option B<--file>\\f(CR.\\fR"
 #~ msgstr ""
 #~ "Le nombre « aléatoire » créé est en fait le condensé MD5 d’informations "
 #~ "aléatoires provenant d’une des sources : l'appel système B<getrandom>(2), "
@@ -62914,8 +63037,8 @@ msgstr ""
 #~ "X authority system.  Typical usage:"
 #~ msgstr ""
 #~ "B<mcookie> génère un nombre hexadécimal aléatoire de 128\\ bits qui peut "
-#~ "être utilisé avec le système d'authentification de X. Utilisation typique"
-#~ "\\ :"
+#~ "être utilisé avec le système d'authentification de X. Utilisation "
+#~ "typique\\ :"
 
 #~ msgid "B<-m>,B< --max-size >I<number>"
 #~ msgstr "B<-m>, B<--max-size> I<nombre>"
@@ -62934,8 +63057,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<mcookie> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "MESG"
 #~ msgstr "MESG"
@@ -63207,12 +63330,12 @@ msgstr ""
 
 #~ msgid ""
 #~ "The mkfs.cramfs command is part of the util-linux package and is "
-#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> Linux Kernel Archive E<.UE .>"
+#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<mkfs.cramfs> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "MKFS.MINIX"
 #~ msgstr "MKFS.MINIX"
@@ -64387,9 +64510,9 @@ msgstr ""
 #~| "this option you can relax it."
 #~ msgid ""
 #~ "Normally B<utime>(2) checks that the current process is owner of the "
-#~ "file, or that it has the B<CAP_FOWNER> capability. But FAT filesystems don"
-#~ "\\(cqt have UID/GID on disk, so the normal check is too inflexible. With "
-#~ "this option you can relax it."
+#~ "file, or that it has the B<CAP_FOWNER> capability. But FAT filesystems "
+#~ "don\\(cqt have UID/GID on disk, so the normal check is too inflexible. "
+#~ "With this option you can relax it."
 #~ msgstr ""
 #~ "Normalement, B<utime>(2) vérifie que le processus actuel est le "
 #~ "propriétaire du fichier ou qu'il a la propriété B<CAP_FOWNER>. Cependant, "
@@ -64547,10 +64670,10 @@ msgstr ""
 #~| "encoding and 1 a byteswapped bigendian encoding."
 #~ msgid ""
 #~ "For 0 (or \\(aqno\\(aq or \\(aqfalse\\(aq), do not use escape sequences "
-#~ "for unknown Unicode characters. For 1 (or \\(aqyes\\(aq or \\(aqtrue"
-#~ "\\(aq) or 2, use vfat-style 4-byte escape sequences starting with \":\". "
-#~ "Here 2 gives a little-endian encoding and 1 a byteswapped bigendian "
-#~ "encoding."
+#~ "for unknown Unicode characters. For 1 (or \\(aqyes\\(aq or "
+#~ "\\(aqtrue\\(aq) or 2, use vfat-style 4-byte escape sequences starting "
+#~ "with \":\". Here 2 gives a little-endian encoding and 1 a byteswapped "
+#~ "bigendian encoding."
 #~ msgstr ""
 #~ "Si B<0> (ou B<no>, ou B<false>), ne pas utiliser de séquences "
 #~ "d'échappements pour les caractères Unicode inconnus. Si B<1> (ou B<yes>, "
@@ -66268,8 +66391,8 @@ msgstr ""
 
 #~ msgid ""
 #~ "Set the mode of newly created pseudo terminals to the specified value.  "
-#~ "The default is 0600.  A value of B<mode=620> and B<gid=5> makes \"mesg y"
-#~ "\" the default on newly created pseudo terminals."
+#~ "The default is 0600.  A value of B<mode=620> and B<gid=5> makes \"mesg "
+#~ "y\" the default on newly created pseudo terminals."
 #~ msgstr ""
 #~ "Définir le mode des pseudoterminaux nouvellement créés. La valeur par "
 #~ "défaut est 0600. Une valeur B<mode=620> et B<gid=5> correspond à un "
@@ -67656,10 +67779,10 @@ msgstr ""
 #~ msgstr ""
 #~ "Les montage et démontage de systèmes de fichiers n'affecteront pas le "
 #~ "reste du système, sauf pour les systèmes de fichiers explicitement "
-#~ "marqués comme partagés (avec B<mount --make-\\:shared>, consultez I</proc"
-#~ "\\:/self\\:/mountinfo> pour l’attribut I<shared>). Pour plus de détails, "
-#~ "voir B<mount_namespaces>(7) et l’explication du drapeau B<CLONE_NEWNS> "
-#~ "dans B<clone>(2)."
+#~ "marqués comme partagés (avec B<mount --make-\\:shared>, consultez I</"
+#~ "proc\\:/self\\:/mountinfo> pour l’attribut I<shared>). Pour plus de "
+#~ "détails, voir B<mount_namespaces>(7) et l’explication du drapeau "
+#~ "B<CLONE_NEWNS> dans B<clone>(2)."
 
 #, fuzzy
 #~ msgid ""
@@ -67899,8 +68022,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<nsenter> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "PARTX"
 #~ msgstr "PARTX"
@@ -68095,8 +68218,8 @@ msgstr ""
 #~ "Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<partx> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux//>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux//>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "PIVOT_ROOT"
 #~ msgstr "PIVOT_ROOT"
@@ -68247,8 +68370,8 @@ msgstr ""
 #~ "by a colon (:), in order to modify the existing values. If no I<limits> "
 #~ "are given, B<prlimit> will display the current values. If one of the "
 #~ "values is not given, then the existing one will be used. To specify the "
-#~ "unlimited or infinity limit (B<RLIM_INFINITY>), the -1 or \\(aqunlimited"
-#~ "\\(aq string can be passed."
+#~ "unlimited or infinity limit (B<RLIM_INFINITY>), the -1 or "
+#~ "\\(aqunlimited\\(aq string can be passed."
 #~ msgstr ""
 #~ "Le paramètre I<limites> est composé d’une valeur molle et d’une dure, "
 #~ "séparées par un deux-points (:), de façon à modifier les valeurs "
@@ -68273,8 +68396,8 @@ msgstr ""
 #~| msgid ""
 #~| "Set both the soft and hard CPU time limit to ten seconds and run 'sort'."
 #~ msgid ""
-#~ "Set both the soft and hard CPU time limit to ten seconds and run \\(aqsort"
-#~ "\\(aq."
+#~ "Set both the soft and hard CPU time limit to ten seconds and run "
+#~ "\\(aqsort\\(aq."
 #~ msgstr ""
 #~ "Définir à la fois les valeurs limites de temps processeur molle et dure à "
 #~ "dix secondes et exécuter B<sort>."
@@ -68749,12 +68872,12 @@ msgstr ""
 
 #~ msgid ""
 #~ "The readprofile command is part of the util-linux package and is "
-#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> Linux Kernel Archive E<.UE .>"
+#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<readprofile> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "RENAME"
 #~ msgstr "RENAME"
@@ -68851,8 +68974,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<renice> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "RESIZEPART"
 #~ msgstr "RESIZEPART"
@@ -68871,8 +68994,8 @@ msgstr ""
 
 #~ msgid ""
 #~ "B<resizepart> tells the Linux kernel about the new size of the specified "
-#~ "partition.  The command is a simple wrapper around the \"resize partition"
-#~ "\" ioctl."
+#~ "partition.  The command is a simple wrapper around the \"resize "
+#~ "partition\" ioctl."
 #~ msgstr ""
 #~ "B<resizepart> informe le noyau de la nouvelle taille de la partition "
 #~ "indiquée. La commande est une simple enveloppe autour de l’ioctl « resize "
@@ -68930,8 +69053,8 @@ msgstr ""
 #~| "ACPI state S5 (Poweroff).  This is done by calling '/sbin/shutdown'.  "
 #~| "Not officially supported by ACPI, but it usually works."
 #~ msgid ""
-#~ "ACPI state S5 (Poweroff). This is done by calling \\(aq/sbin/shutdown"
-#~ "\\(aq. Not officially supported by ACPI, but it usually works."
+#~ "ACPI state S5 (Poweroff). This is done by calling \\(aq/sbin/"
+#~ "shutdown\\(aq. Not officially supported by ACPI, but it usually works."
 #~ msgstr ""
 #~ "État S5 de l'ACPI (extinction). C'est réalisé en appelant « /sbin/"
 #~ "shutdown ». N'est pas officiellement pris en charge par l'ACPI, mais "
@@ -69166,8 +69289,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<rtcwake> fait partie du paquet util-linux, elle est "
-#~ "disponible dans E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible dans E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "RUNUSER"
 #~ msgstr "RUNUSER"
@@ -69505,10 +69628,10 @@ msgstr ""
 #~| "'H'eader, 'S'ignal).  The socond field is how much time elapsed since "
 #~| "the previous entry, and the rest of the entry is type-specific data."
 #~ msgid ""
-#~ "The first field is an entry type identifier (\\(aqI\\(cqnput, \\(aqO"
-#~ "\\(cqutput, \\(aqH\\(cqeader, \\(aqS\\(cqignal). The socond field is how "
-#~ "much time elapsed since the previous entry, and the rest of the entry is "
-#~ "type-specific data."
+#~ "The first field is an entry type identifier (\\(aqI\\(cqnput, "
+#~ "\\(aqO\\(cqutput, \\(aqH\\(cqeader, \\(aqS\\(cqignal). The socond field "
+#~ "is how much time elapsed since the previous entry, and the rest of the "
+#~ "entry is type-specific data."
 #~ msgstr ""
 #~ "Le premier champ est l'identifiant du type d'entrée ('I'nput, 'O'utput, "
 #~ "'H'eader, 'S'ignal). Le deuxième champ est la durée écoulée depuis la "
@@ -69755,8 +69878,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<script> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "SCRIPTREPLAY"
 #~ msgstr "SCRIPTREPLAY"
@@ -69937,12 +70060,12 @@ msgstr ""
 
 #~ msgid ""
 #~ "The scriptreplay command is part of the util-linux package and is "
-#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> Linux Kernel Archive E<.UE .>"
+#~ "available from E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<scriptreplay> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "SETARCH"
 #~ msgstr "SETARCH"
@@ -70064,12 +70187,12 @@ msgstr ""
 #~ "can also be used to set various personality options.  The default "
 #~ "I<program> is B</bin/sh>."
 #~ msgstr ""
-#~ "Les domaines d’exécution n'affectent actuellement que la sortie de B<uname"
-#~ "\\ -m>. Par exemple, sur un système AMD 64, l'exécution de B<setarch "
-#~ "i386> I<programme> aura pour conséquence que I<programme> verra i686 au "
-#~ "lieu de x86_64 comme type de machine. B<setarch> peut être aussi utilisé "
-#~ "pour régler diverses options de personnalité. Le I<programme> par défaut "
-#~ "est B</bin/sh>."
+#~ "Les domaines d’exécution n'affectent actuellement que la sortie de "
+#~ "B<uname\\ -m>. Par exemple, sur un système AMD 64, l'exécution de "
+#~ "B<setarch i386> I<programme> aura pour conséquence que I<programme> verra "
+#~ "i686 au lieu de x86_64 comme type de machine. B<setarch> peut être aussi "
+#~ "utilisé pour régler diverses options de personnalité. Le I<programme> par "
+#~ "défaut est B</bin/sh>."
 
 #~ msgid ""
 #~ "List the architectures that B<setarch> knows about.  Whether B<setarch> "
@@ -70137,8 +70260,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<setarch> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "SETSID"
 #~ msgstr "SETSID"
@@ -70507,8 +70630,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<setterm> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "SFDISK"
 #~ msgstr "SFDISK"
@@ -70761,13 +70884,13 @@ msgstr ""
 #~ "for each field is its previous value."
 #~ msgstr ""
 #~ "Les champs sont séparés par des caractères d'espacement, des virgules ou "
-#~ "des points-virgules éventuellement suivis par des caractères d'espacement"
-#~ "\\ ; les caractères d'espacement initiaux et finaux sont ignorés. Les "
-#~ "nombres peuvent être octaux, décimaux ou hexadécimaux (représentation "
-#~ "décimale par défaut). Quand un champ est absent, vide ou indiqué par « -"
-#~ " », une valeur par défaut est utilisée. Quand l’option B<-N> (modifier "
-#~ "une seule partition) est donnée, la valeur par défaut de chaque champ est "
-#~ "sa valeur précédente."
+#~ "des points-virgules éventuellement suivis par des caractères "
+#~ "d'espacement\\ ; les caractères d'espacement initiaux et finaux sont "
+#~ "ignorés. Les nombres peuvent être octaux, décimaux ou hexadécimaux "
+#~ "(représentation décimale par défaut). Quand un champ est absent, vide ou "
+#~ "indiqué par « - », une valeur par défaut est utilisée. Quand l’option B<-"
+#~ "N> (modifier une seule partition) est donnée, la valeur par défaut de "
+#~ "chaque champ est sa valeur précédente."
 
 #, fuzzy
 #~| msgid ""
@@ -70853,8 +70976,8 @@ msgstr ""
 #~| "MBR extended partition; means 05 for MBR.  The original shortcut 'E' is "
 #~| "deprecated due to collision with 0x0E MBR partition type."
 #~ msgid ""
-#~ "MBR extended partition; means 05 for MBR. The original shortcut \\(aqE"
-#~ "\\(aq is deprecated due to collision with 0x0E MBR partition type."
+#~ "MBR extended partition; means 05 for MBR. The original shortcut "
+#~ "\\(aqE\\(aq is deprecated due to collision with 0x0E MBR partition type."
 #~ msgstr ""
 #~ "partition étendue MBR ; signifie 05 pour MBR. Le raccourci originel « E » "
 #~ "est obsolète à cause d’une collision avec le type de partition MBR, "
@@ -71567,8 +71690,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<sulogin> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "SWAPLABEL"
 #~ msgstr "SWAPLABEL"
@@ -71806,8 +71929,8 @@ msgstr ""
 #~ msgstr "B<-s>, B<--summary>"
 
 #~ msgid ""
-#~ "Display swap usage summary by device.  Equivalent to \"cat /proc/swaps"
-#~ "\".  This output format is DEPRECATED in favour of B<--show> that "
+#~ "Display swap usage summary by device.  Equivalent to \"cat /proc/"
+#~ "swaps\".  This output format is DEPRECATED in favour of B<--show> that "
 #~ "provides better control on output data."
 #~ msgstr ""
 #~ "Afficher le résumé par périphérique de l'utilisation de la pagination. "
@@ -72305,10 +72428,10 @@ msgstr ""
 #, fuzzy
 #~| msgid ""
 #~| "If there are more files that match for a utility, then the file with the "
-#~| "more specific filename wins.  For example, the filename \"@xterm.scheme"
-#~| "\" has less priority than \"dmesg@xterm.scheme\".  The lowest priority "
-#~| "are those files without a utility name and terminal identifier (e.g. "
-#~| "\"disable\")."
+#~| "more specific filename wins.  For example, the filename \"@xterm."
+#~| "scheme\" has less priority than \"dmesg@xterm.scheme\".  The lowest "
+#~| "priority are those files without a utility name and terminal identifier "
+#~| "(e.g. \"disable\")."
 #~ msgid ""
 #~ "If there are more files that match for a utility, then the file with the "
 #~ "more specific filename wins.  For example, the filename \"@xterm.scheme\" "
@@ -72528,8 +72651,8 @@ msgstr ""
 #~| "user's ID.  In this case fstab user= mount option is not required."
 #~ msgid ""
 #~ "Since version 2.34 the B<umount> command can be used to perform umount "
-#~ "operation also for fuse filesystems if kernel mount table contains user"
-#~ "\\(cqs ID. In this case fstab B<user=> mount option is not required."
+#~ "operation also for fuse filesystems if kernel mount table contains "
+#~ "user\\(cqs ID. In this case fstab B<user=> mount option is not required."
 #~ msgstr ""
 #~ "Depuis sa version 2.34, la commande B<umount> peut être aussi utilisée "
 #~ "pour réaliser des opérations de démontage pour les systèmes de fichiers "
@@ -72550,9 +72673,9 @@ msgstr ""
 #~ msgstr ""
 #~ "Dans ce cas le périphérique est initialisé avec l’indicateur "
 #~ "« autoclear » (consultez B<losetup>(8) pour plus de détails), sinon il "
-#~ "est nécessaire d’utiliser l’option B<--detach-loop> ou d’appeler B<losetup"
-#~ "\\ -d\\ E<lt>deviceE<gt>>. La fonctionnalité autoclear est prise en "
-#~ "charge depuis Linux 2.6.25."
+#~ "est nécessaire d’utiliser l’option B<--detach-loop> ou d’appeler "
+#~ "B<losetup\\ -d\\ E<lt>deviceE<gt>>. La fonctionnalité autoclear est prise "
+#~ "en charge depuis Linux 2.6.25."
 
 #, fuzzy
 #~| msgid ""
@@ -72796,8 +72919,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<umount> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "UNSHARE"
 #~ msgstr "UNSHARE"
@@ -73008,8 +73131,8 @@ msgstr ""
 #~ msgid ""
 #~ "Mounting and unmounting filesystems will not affect the rest of the "
 #~ "system, except for filesystems which are explicitly marked as shared "
-#~ "(with B<mount --make-shared>; see I</proc/self/mountinfo> or B<findmnt -o"
-#~ "+PROPAGATION> for the B<shared> flags).  For further details, see "
+#~ "(with B<mount --make-shared>; see I</proc/self/mountinfo> or B<findmnt -"
+#~ "o+PROPAGATION> for the B<shared> flags).  For further details, see "
 #~ "B<mount_namespaces>(7)."
 #~ msgstr ""
 #~ "Le montage et démontage de systèmes de fichiers n'affectera pas le reste "
@@ -73213,8 +73336,8 @@ msgstr ""
 #~ "Exécuter le programme seulement après que les ID effectifs des "
 #~ "utilisateurs et des groupes actuels sont mappés aux mêmes UID et GID dans "
 #~ "l’espace de noms nouvellement créé. Cette option suppose B<--"
-#~ "setgroups=deny> et B<--user>. Cette option est équivalente à B<--map-user="
-#~ "$(id -ru) --map-group=$(id -rg)>."
+#~ "setgroups=deny> et B<--user>. Cette option est équivalente à B<--map-"
+#~ "user=$(id -ru) --map-group=$(id -rg)>."
 
 #~ msgid ""
 #~ "Recursively set the mount propagation flag in the new mount namespace.  "
@@ -73531,8 +73654,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<utmpdump> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "UUID"
 #~ msgstr "UUID"
@@ -74021,11 +74144,11 @@ msgstr ""
 #~| "on the system-dependent local default."
 #~ msgid ""
 #~ "The B<uuid_unparse>() function converts the supplied UUID I<uu> from the "
-#~ "binary representation into a 36-byte string (plus trailing \\(aq"
-#~ "\\(rs0\\(aq) of the form 1b4e28ba-2fa1-11d2-883f-0016d3cca427 and stores "
-#~ "this value in the character string pointed to by I<out>. The case of the "
-#~ "hex digits returned by B<uuid_unparse>() may be upper or lower case, and "
-#~ "is dependent on the system-dependent local default."
+#~ "binary representation into a 36-byte string (plus trailing "
+#~ "\\(aq\\(rs0\\(aq) of the form 1b4e28ba-2fa1-11d2-883f-0016d3cca427 and "
+#~ "stores this value in the character string pointed to by I<out>. The case "
+#~ "of the hex digits returned by B<uuid_unparse>() may be upper or lower "
+#~ "case, and is dependent on the system-dependent local default."
 #~ msgstr ""
 #~ "La fonction B<uuid_unparse> convertit l'UUID I<uu> fourni à partir de sa "
 #~ "représentation binaire en une chaîne de caractères de 36 octets (plus le "
@@ -74182,8 +74305,8 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<wdctl> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/> l’archive du noyau LinuxE<.UE .>"
 
 #~ msgid "WHEREIS"
 #~ msgstr "WHEREIS"
@@ -74339,5 +74462,5 @@ msgstr ""
 #~ "linux/> Linux Kernel Archive E<.UE .>"
 #~ msgstr ""
 #~ "La commande B<whereis> fait partie du paquet util-linux, elle est "
-#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/utils"
-#~ "\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"
+#~ "disponible sur E<.UR https://\\:www.kernel.org\\:/pub\\:/linux\\:/"
+#~ "utils\\:/util-linux/>l’archive du noyau LinuxE<.UE .>"

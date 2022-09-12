@@ -598,7 +598,7 @@ if not have
   have = cc.has_function('clock_gettime',
                          dependencies : realtime_libs)
 endif
-conf.set('HAVE_CLOCK_GETTIME', have_dirfd ? 1 : false)
+conf.set('HAVE_CLOCK_GETTIME', have ? 1 : false)
 
 thread_libs = dependency('threads')
 
@@ -720,6 +720,7 @@ if fs_search_path_extra != ''
 endif
 conf.set_quoted('FS_SEARCH_PATH', fs_search_path)
 
+systemdsystemunitdir = ''
 if systemd.found()
   systemdsystemunitdir = systemd.get_pkgconfig_variable('systemdsystemunitdir')
 endif
