@@ -1879,23 +1879,24 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 #ifdef HAVE_SCRIPT
       if (daemon->lease_change_command)
 	{
-	  void *class_opt;
+	  void *opt;
+	  
 	  lease->flags |= LEASE_CHANGED;
 	  free(lease->extradata);
 	  lease->extradata = NULL;
 	  lease->extradata_size = lease->extradata_len = 0;
 	  lease->vendorclass_count = 0; 
 	  
-	  if ((class_opt = opt6_find(state->packet_options, state->end, OPTION6_VENDOR_CLASS, 4)))
+	  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_VENDOR_CLASS, 4)))
 	    {
-	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
+	      void *enc_opt, *enc_end = opt6_ptr(opt, opt6_len(opt));
 	      lease->vendorclass_count++;
 	      /* send enterprise number first  */
-	      sprintf(daemon->dhcp_buff2, "%u", opt6_uint(class_opt, 0, 4));
+	      sprintf(daemon->dhcp_buff2, "%u", opt6_uint(opt, 0, 4));
 	      lease_add_extradata(lease, (unsigned char *)daemon->dhcp_buff2, strlen(daemon->dhcp_buff2), 0);
 	      
-	      if (opt6_len(class_opt) >= 6) 
-		for (enc_opt = opt6_ptr(class_opt, 4); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
+	      if (opt6_len(opt) >= 6) 
+		for (enc_opt = opt6_ptr(opt, 4); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
 		  {
 		    lease->vendorclass_count++;
 		    lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
@@ -1905,6 +1906,24 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  lease_add_extradata(lease, (unsigned char *)state->client_hostname, 
 			      state->client_hostname ? strlen(state->client_hostname) : 0, 0);				
 	  
+	  /* DNSMASQ_REQUESTED_OPTIONS */
+	  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_ORO, 2)))
+	    {
+	      int i, len = opt6_len(opt)/2;
+	      u16 *rop = opt6_ptr(opt, 0);
+	      
+	      for (i = 0; i < len; i++)
+		lease_add_extradata(lease, (unsigned char *)daemon->namebuff,
+				    sprintf(daemon->namebuff, "%u", ntohs(rop[i])), (i + 1) == len ? 0 : ',');
+	    }
+	  else
+	    lease_add_extradata(lease, NULL, 0, 0);
+
+	  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_MUD_URL, 1)))
+	    lease_add_extradata(lease, opt6_ptr(opt, 0), opt6_len(opt), 0);
+	  else
+	    lease_add_extradata(lease, NULL, 0, 0);
+
 	  /* space-concat tag set */
 	  if (!tagif && !context->netid.net)
 	    lease_add_extradata(lease, NULL, 0, 0);
@@ -1934,10 +1953,10 @@ static void update_leases(struct state *state, struct dhcp_context *context, str
 	  
 	  lease_add_extradata(lease, (unsigned char *)daemon->addrbuff, state->link_address ? strlen(daemon->addrbuff) : 0, 0);
 	  
-	  if ((class_opt = opt6_find(state->packet_options, state->end, OPTION6_USER_CLASS, 2)))
+	  if ((opt = opt6_find(state->packet_options, state->end, OPTION6_USER_CLASS, 2)))
 	    {
-	      void *enc_opt, *enc_end = opt6_ptr(class_opt, opt6_len(class_opt));
-	      for (enc_opt = opt6_ptr(class_opt, 0); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
+	      void *enc_opt, *enc_end = opt6_ptr(opt, opt6_len(opt));
+	      for (enc_opt = opt6_ptr(opt, 0); enc_opt; enc_opt = opt6_next(enc_opt, enc_end))
 		lease_add_extradata(lease, opt6_ptr(enc_opt, 0), opt6_len(enc_opt), 0);
 	    }
 	}
@@ -2162,15 +2181,12 @@ int relay_upstream6(int iface_index, ssize_t sz,
     if (relay->iface_index != 0 && relay->iface_index == iface_index)
       {
 	union mysockaddr to;
-	union all_addr from;
-	
-	/* source address == relay address */
-	from.addr6 = relay->local.addr6;
+
 	memcpy(&header[2], &relay->local.addr6, IN6ADDRSZ);
 	
 	to.sa.sa_family = AF_INET6;
 	to.in6.sin6_addr = relay->server.addr6;
-	to.in6.sin6_port = htons(DHCPV6_SERVER_PORT);
+	to.in6.sin6_port = htons(relay->port);
 	to.in6.sin6_flowinfo = 0;
 	to.in6.sin6_scope_id = 0;
 	
@@ -2187,18 +2203,11 @@ int relay_upstream6(int iface_index, ssize_t sz,
 	  }
 	
 #ifdef HAVE_DUMPFILE
-	{
-	  union mysockaddr fromsock;
-	  fromsock.in6.sin6_port = htons(DHCPV6_SERVER_PORT);
-	  fromsock.in6.sin6_addr = from.addr6;
-	  fromsock.sa.sa_family = AF_INET6;
-	  fromsock.in6.sin6_flowinfo = 0;
-	  fromsock.in6.sin6_scope_id = 0;
-	  
-	  dump_packet(DUMP_DHCPV6, (void *)daemon->outpacket.iov_base, save_counter(-1), &fromsock, &to, 0);
-	}
+	dump_packet_udp(DUMP_DHCPV6, (void *)daemon->outpacket.iov_base, save_counter(-1), NULL, &to, daemon->dhcp6fd);
 #endif
-	send_from(daemon->dhcp6fd, 0, daemon->outpacket.iov_base, save_counter(-1), &to, &from, 0);
+
+	while (retry_send(sendto(daemon->dhcp6fd, (void *)daemon->outpacket.iov_base, save_counter(-1),
+				 0, (struct sockaddr *)&to, sa_len(&to))));
 	
 	if (option_bool(OPT_LOG_OPTS))
 	  {
