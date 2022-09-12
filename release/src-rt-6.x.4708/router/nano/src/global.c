@@ -990,15 +990,6 @@ void shortcut_init(void)
 		N_("Verbatim"), WITHORSANS(verbatim_gist), BLANKAFTER, NOVIEW);
 
 #ifndef NANO_TINY
-	add_to_funcs(do_suspend, MMAIN,
-		N_("Suspend"), WITHORSANS(suspend_gist), TOGETHER, VIEW);
-#endif
-#ifdef ENABLE_HELP
-	add_to_funcs(full_refresh, MMAIN,
-		N_("Refresh"), WITHORSANS(refresh_gist), BLANKAFTER, VIEW);
-#endif
-
-#ifndef NANO_TINY
 	add_to_funcs(do_indent, MMAIN,
 		N_("Indent"), WITHORSANS(indent_gist), TOGETHER, NOVIEW);
 	add_to_funcs(do_unindent, MMAIN,
@@ -1047,12 +1038,19 @@ void shortcut_init(void)
 #ifdef NANO_TINY
 	add_to_funcs(do_search_backward, MMAIN,
 		N_("Where Was"), WITHORSANS(wherewas_gist), BLANKAFTER, VIEW);
+#else
+	add_to_funcs(do_suspend, MMAIN,
+		N_("Suspend"), WITHORSANS(suspend_gist), TOGETHER, VIEW);
 #endif
-
+#ifdef ENABLE_HELP
+	add_to_funcs(full_refresh, MMAIN,
+		N_("Refresh"), WITHORSANS(refresh_gist), TOGETHER, VIEW);
+#endif
 #if !defined(NANO_TINY) || defined(ENABLE_HELP)
 	add_to_funcs(do_center, MMAIN,
 		N_("Center"), WITHORSANS(center_gist), BLANKAFTER, VIEW);
 #endif
+
 	add_to_funcs(do_savefile, MMAIN,
 		N_("Save"), WITHORSANS(savefile_gist), BLANKAFTER, NOVIEW);
 
@@ -1195,21 +1193,20 @@ void shortcut_init(void)
 	add_to_sclist(MMOST, "^K", 0, cut_text, 0);
 #ifdef NANO_TINY
 	add_to_sclist(MMAIN, "^U", 0, paste_text, 0);
+#ifdef ENABLE_SPELLER
+	add_to_sclist(MMAIN, "^T", 0, do_spell, 0);
+#endif
 #else
 	add_to_sclist(MMOST, "^U", 0, paste_text, 0);
 	add_to_sclist(MMAIN, "^T", 0, do_execute, 0);
-#endif
-#ifdef ENABLE_JUSTIFY
-	add_to_sclist(MMAIN, "^J", '\n', do_justify, 0);
-#endif
 #ifdef ENABLE_SPELLER
-#ifndef NANO_TINY
 	if (!ISSET(PRESERVE))
 		add_to_sclist(MEXECUTE, "^S", 0, do_spell, 0);
 	add_to_sclist(MEXECUTE, "^T", 0, do_spell, 0);
-#else
-	add_to_sclist(MMAIN, "^T", 0, do_spell, 0);
 #endif
+#endif
+#ifdef ENABLE_JUSTIFY
+	add_to_sclist(MMAIN, "^J", '\n', do_justify, 0);
 #endif
 #ifdef ENABLE_COLOR
 	add_to_sclist(MMAIN, "M-B", 0, do_linter, 0);

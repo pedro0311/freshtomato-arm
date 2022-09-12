@@ -574,13 +574,14 @@ void redecorate_after_switch(void)
 	/* Prevent a possible Shift selection from getting cancelled. */
 	shift_held = TRUE;
 
+	/* If the switched-to buffer gave an error during opening, show the message
+	 * once; otherwise, indicate on the status bar which file we switched to. */
 	if (openfile->errormessage) {
 		statusline(ALERT, openfile->errormessage);
 		free(openfile->errormessage);
 		openfile->errormessage = NULL;
 	} else
-	/* Indicate on the status bar where we switched to. */
-	mention_name_and_linecount();
+		mention_name_and_linecount();
 }
 
 /* Switch to the previous entry in the circular list of buffers. */
@@ -1379,8 +1380,9 @@ char *get_full_path(const char *origpath)
 		}
 	}
 
-	/* Ensure that a directory path ends with a slash. */
-	if (target && stat(target, &fileinfo) == 0 && S_ISDIR(fileinfo.st_mode)) {
+	/* Ensure that a non-apex directory path ends with a slash. */
+	if (target && target[1] && stat(target, &fileinfo) == 0 &&
+								S_ISDIR(fileinfo.st_mode)) {
 		target = nrealloc(target, strlen(target) + 2);
 		strcat(target, "/");
 	}
@@ -2399,13 +2401,13 @@ int diralphasort(const void *va, const void *vb)
 /* Return TRUE when the given path is a directory. */
 bool is_dir(const char *path)
 {
-	char *realpath = real_dir_from_tilde(path);
+	char *thepath = real_dir_from_tilde(path);
 	struct stat fileinfo;
 	bool retval;
 
-	retval = (stat(realpath, &fileinfo) != -1 && S_ISDIR(fileinfo.st_mode));
+	retval = (stat(thepath, &fileinfo) != -1 && S_ISDIR(fileinfo.st_mode));
 
-	free(realpath);
+	free(thepath);
 
 	return retval;
 }

@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANO 1 "version 6.3" "April 2022"
+.TH NANO 1 "version 6.4" "August 2022"
 
 .SH NAME
 nano \- Nano's ANOther editor, inspired by Pico
@@ -78,20 +78,6 @@ The two lines at the bottom of the screen show some important commands;
 the built-in help (\fB^G\fR) lists all the available ones.
 The default key bindings can be changed via a \fInanorc\fR file -- see
 .BR nanorc (5).
-
-.SH NOTICE
-Since version 4.0, \fBnano\fR by default:
-.sp
-.RS 4
-\(bu does not automatically hard-wrap lines that become overlong,
-.br
-\(bu includes the line below the title bar in the editing area,
-.br
-\(bu does linewise (smooth) scrolling.
-.RE
-.sp
-If you want the old, Pico behavior back, you can use \fB\-\-breaklonglines\fR,
-\fB\-\-emptyline\fR, and \fB\-\-jumpyscrolling\fR (or \fB\-bej\fR for short).
 
 .SH OPTIONS
 .TP
@@ -309,7 +295,6 @@ using the built-in corrector that calls \fBhunspell\fR(1) or \fBspell\fR(1).
 .TP
 .BR \-t ", " \-\-saveonexit
 Save a changed buffer without prompting (when exiting with \fB^X\fR).
-(The old form of the long option, \fB\-\-tempfile\fR, is deprecated.)
 .TP
 .BR \-u ", " \-\-unix
 Save a file by default in Unix format.  This overrides nano's
@@ -331,11 +316,6 @@ Don't show the two help lines at the bottom of the screen.
 .TP
 .BR \-y ", " \-\-afterends
 Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.
-.TP
-.BR \-z ", " \-\-suspendable
-Obsolete option; ignored.  Suspension is enabled by default,
-reachable via \fB^T^Z\fR.  (If you want a plain \fB^Z\fR to
-suspend nano, add \fBbind ^Z suspend main\fR to your nanorc.)
 .TP
 .BR \-% ", " \-\-stateflags
 Use the top-right corner of the screen for showing some state flags:
@@ -400,6 +380,11 @@ See \fI/usr/share/nano/\fR and \fI/usr/share/nano/extra/\fR
 for available syntax-coloring definitions.
 
 .SH NOTES
+Option \fB\-z\fR (\fB\-\-suspendable\fR) has been removed.
+Suspension is enabled by default, reachable via \fB^T^Z\fR.
+(If you want a plain \fB^Z\fR to suspend nano, add
+\fBbind ^Z suspend main\fR to your nanorc.)
+.sp
 If no alternative spell checker command is specified on the command
 line nor in one of the \fInanorc\fP files, \fBnano\fP will check the
 \fBSPELL\fP environment variable for one.

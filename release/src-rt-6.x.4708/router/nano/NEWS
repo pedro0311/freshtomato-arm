@@ -1,5 +1,10 @@
+2022.08.02 - GNU nano 6.4 "Regentag Dunkelbunt Hundertwasser"
+• The file browser does not crash when moving up to the root folder.
+• Softwrapping very long lines is done more efficiently.
+• Invoking the formatter does not blink the screen.
+
 2022.04.28 - GNU nano 6.3 "Wat zullen we drinken? Wat een dorst!"
-• For multiline regexes, text is now colored as soon a start match
+• For multiline regexes, text is now colored as soon as a start match
   is found, also when there is no end match at all.
 • The colorizing of any line is stopped after two thousand bytes,
   to avoid frustrating delays.
