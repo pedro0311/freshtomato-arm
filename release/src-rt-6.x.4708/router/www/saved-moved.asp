@@ -25,24 +25,43 @@ div.tomato-grid.container-div {
 }
 </style>
 <script>
+//	<% nvram("lan_ipaddr,dhcp_moveip"); %>
+
 var n = 20;
 function tick() {
-	var e = document.getElementById("continue");
+	var txt = 'The router\'s new IP address is ';
+	var e = document.getElementById("msg");
+
+	if (nvram.dhcp_moveip == 0)
+		txt += nvram.lan_ipaddr+'. You may need to release then renew your computer\'s DHCP lease before continuing.';
+	else if (nvram.dhcp_moveip == 1)
+		txt += '192.168.1.1 (nvram default).';
+	else
+		txt += '192.168.1.1 (default) while waiting for DHCP Server Infos. IP address will change to a.b.c.d (obtained IP via DHCP).'
+
+	e.innerHTML = txt;
+
+	e = document.getElementById("continue");
 	e.value = n;
 	if (n == 10) {
 		e.style = "cursor:pointer";
 		e.disabled = false;
 	}
-	if (n == 0) {
+	if (n == 0)
 		e.value = "Continue";
-	}
 	else {
 		--n;
 		setTimeout(tick, 1000);
 	}
 }
 function go() {
-	window.location = window.location.protocol + '//<% nv("lan_ipaddr"); %>/';
+	var ip;
+	if (nvram.dhcp_moveip == 0)
+		ip = nvram.lan_ipaddr;
+	else
+		ip = '192.168.1.1';
+
+	window.location = window.location.protocol+'//'+ip+'/';
 }
 </script>
 </head>
@@ -53,9 +72,7 @@ function go() {
 		<div class="wrapper2">
 			<div class="info-centered">
 				<form>
-					<div id="msg">
-						The router's new IP address is <% nv("lan_ipaddr"); %>. You may need to release then renew your computer's DHCP lease before continuing.
-					</div>
+					<div id="msg"></div>
 					<div id="but" style="display:inline-block">
 						Please wait while the router restarts... &nbsp;
 						<input type="button" value="" id="continue" onclick="go()" disabled="disabled">

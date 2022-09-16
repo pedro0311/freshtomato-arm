@@ -795,6 +795,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpd_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp_lease",			V_LENGTH(0, 5)			},
+	{ "dhcp_moveip",		V_RANGE(0, 2)			},	/* GUI helper for automatic IP change */
 	{ "wan_wins",			V_IP				},
 
 #ifdef TCONFIG_USB

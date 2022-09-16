@@ -185,6 +185,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "dhcpd_startip",		"" 				, 0 },
 	{ "dhcpd_endip",		"" 				, 0 },
 	{ "dhcp_lease",			"1440"				, 0 },	/* LAN lease time in minutes */
+	{ "dhcp_moveip",		"0"				, 0 },	/* GUI helper for automatic IP change */
 	{ "dhcp_domain",		"wan"				, 0 },	/* Use WAN domain name first if available (wan|lan) */
 	{ "wan_get_dns",		""				, 0 },	/* DNS IP address which get by dhcpc */
 	{ "wan_routes",			""				, 0 },
