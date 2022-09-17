@@ -47,11 +47,13 @@ function save() {
 /* BCMNAT-END */
 	    (fom.jumbo_frame_enable.value != nvram.jumbo_frame_enable) ||
 	    (fom.jumbo_frame_size.value != nvram.jumbo_frame_size)) {
-		if (!confirm("Router must be rebooted to apply changes. Reboot now?"))
-			return;
-
-		fom._reboot.value = 1;
-		form.submit(fom, 0);
+		if (confirm("Router must be rebooted to apply changed settings. Reboot now? (and commit changes to NVRAM)")) {
+			fom._reboot.value = 1;
+			form.submit(fom, 0);
+		}
+		else { /* countinue without reboot (user wants it that way) */
+			form.submit(fom, 1);
+		}
 	}
 	else { /* continue without reboot */
 		form.submit(fom, 1);

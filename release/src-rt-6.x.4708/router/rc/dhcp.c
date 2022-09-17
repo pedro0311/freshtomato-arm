@@ -45,6 +45,12 @@
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
 #define LOGMSG_NVDEBUG	"dhcp_debug"
 
+/* only for mips (incl. mips RT-AC) - no support yet for struct nvram_tuple; sync to nvram default values if changed! */
+#ifndef TCONFIG_BCMARM
+#define FT_LAN_IP_ADDR	"192.168.1.1"
+#define FT_LAN_NETMASK	"255.255.255.0"
+#define FT_LAN_GATEWAY	"0.0.0.0"
+#endif /* !TCONFIG_BCMARM */
 
 static void expires(unsigned int seconds, char *prefix)
 {
@@ -353,7 +359,7 @@ int dhcpc_event_main(int argc, char **argv)
 	if (!wait_action_idle(10))
 		return 0;
 
-	logmsg(LOG_DEBUG, "*** %s: interface=%s wan_prefix=%s event=%s", __FUNCTION__, ifname, prefix, argv[1]);
+	logmsg(LOG_DEBUG, "*** %s: interface=%s wan_prefix=%s event=%s", __FUNCTION__, ifname, prefix, argv[1] ? : "");
 
 	if ((!argv[1]) || (ifname == NULL))
 		return EINVAL;
@@ -432,6 +438,234 @@ int dhcpc_renew_main(int argc, char **argv)
 	return 0;
 }
 
+static void restart_basic_services(void) {
+	stop_firewall();
+	start_firewall();
+	set_host_domain_name();
+	stop_dnsmasq();
+	dns_to_resolv();
+	start_dnsmasq();
+	stop_httpd();
+	start_httpd();
+}
+
+static void restart_ntpd(void) {
+	logmsg(LOG_DEBUG, "*** %s: restart ntpd", __FUNCTION__);
+	stop_ntpd();
+	sleep(1); /* wait a little bit before calling start_ntpd() */
+	start_ntpd();
+}
+
+static int expires_lan(unsigned int in)
+{
+	time_t now;
+	FILE *fp;
+	char tmp[64];
+
+	time(&now);
+	snprintf(tmp, sizeof(tmp), "/tmp/dhcpc-lan.expires");
+	if (!(fp = fopen(tmp, "w"))) {
+		perror(tmp);
+		return 1;
+	}
+	fprintf(fp, "%d", (unsigned int) now + in);
+	fclose(fp);
+
+	return 0;
+}
+
+static int deconfig_lan(void)
+{
+	char *lan_ifname = safe_getenv("interface");
+
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
+
+#ifdef TCONFIG_BCMARM
+	ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_default_get("lan_ipaddr"), nvram_default_get("lan_netmask")); /* nvram (or FreshTomato) default values */
+#else /* mips */
+	ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, FT_LAN_IP_ADDR, FT_LAN_NETMASK);
+#endif
+
+	expires_lan(0);
+
+	/* Remove default route to gateway if specified */
+	route_del(lan_ifname, 0, "0.0.0.0", nvram_safe_get("lan_gateway"), "0.0.0.0");
+
+	/* clear resolv.conf */
+	clear_resolv();
+
+	/* completely clear old setup and bring back nvram (or FreshTomato) default values */
+#ifdef TCONFIG_BCMARM
+	nvram_set("lan_ipaddr", nvram_default_get("lan_ipaddr"));
+	nvram_set("lan_netmask", nvram_default_get("lan_netmask"));
+	nvram_set("lan_gateway", nvram_default_get("lan_gateway"));
+#else /* mips */
+	nvram_set("lan_ipaddr", FT_LAN_IP_ADDR);
+	nvram_set("lan_netmask", FT_LAN_NETMASK);
+	nvram_set("lan_gateway", FT_LAN_GATEWAY);
+#endif
+	nvram_set("wan_lease", "");
+	nvram_set("wan_dns", "");
+
+	/* (re)start firewall, dnsmasq and httpd */
+	restart_basic_services();
+
+	return 0;
+}
+
+static int bound_lan(void)
+{
+	char *lan_ifname = safe_getenv("interface");
+	char *value;
+
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
+
+	/* get IP/Gateway/Netmask */
+	env2nv("ip", "lan_ipaddr");
+	env2nv_gateway("lan_gateway");
+	value = getenv("subnet") ? : "255.255.255.255";
+	nvram_set("lan_netmask", value);
+
+	if ((value = getenv("lease"))) {
+		nvram_set("wan_lease", value); /* keep it easy - use wan variable! */
+		expires_lan(atoi(value));
+	}
+
+	/* get DNS */
+	env2nv("dns", "wan_dns"); /* keep it easy - use wan variable! (static dns) */
+
+	ifconfig(lan_ifname, IFUP | IFF_ALLMULTI, nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
+
+	/* Set default route to gateway if specified */
+	route_add(lan_ifname, 0, "0.0.0.0", nvram_safe_get("lan_gateway"), "0.0.0.0");
+
+	/* (re)start firewall, dnsmasq and httpd */
+	restart_basic_services();
+
+	/* get (sync) time */
+	restart_ntpd();
+
+	return 0;
+}
+
+static int renew_lan(void)
+{
+	char *value;
+	char lan_gateway[32] = {0};
+	char *lan_ifname = safe_getenv("interface");
+	int changed = 0, changed_dns = 0;
+
+	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
+
+	snprintf(lan_gateway, sizeof(lan_gateway),"%s", nvram_safe_get("lan_gateway")); /* copy current (old) nvram lan_gateway value first */
+
+	/* check IP/Gateway/Netmask - change/new ? */
+	changed = env2nv("ip", "lan_ipaddr");
+	changed += env2nv_gateway("lan_gateway");
+	changed += env2nv("subnet", "lan_netmask");
+
+	if (changed) {
+		/* IP or GATEWAY or NETMASK changed - reconfigure everything */
+		logmsg(LOG_DEBUG, "*** %s: IP or GATEWAY or NETMASK changed - reconfigure everything", __FUNCTION__);
+
+		/* Remove current (old) default route to gateway if specified */
+		route_del(lan_ifname, 0, "0.0.0.0", lan_gateway, "0.0.0.0");
+
+		return bound_lan();
+	}
+
+	if ((value = getenv("lease"))) {
+		nvram_set("wan_lease", value); /* keep it easy - use wan variable! */
+		expires_lan(atoi(value));
+	}
+
+	/* check DNS - change/new ? */
+	changed_dns = env2nv("dns", "wan_dns"); /* keep it easy - use wan variable! (static dns) */
+
+	if (changed_dns) {
+		logmsg(LOG_DEBUG, "*** %s: DNS changed", __FUNCTION__);
+		dns_to_resolv();
+	}
+
+	return 0;
+}
+
+int dhcpc_lan_main(int argc, char **argv)
+{
+
+	if (!wait_action_idle(10))
+		return 0;
+
+	logmsg(LOG_DEBUG, "*** %s: event=%s", __FUNCTION__, argv[1] ? : "");
+
+	if (!argv[1])
+		return EINVAL;
+	else if (strstr(argv[1], "deconfig"))
+		return deconfig_lan();
+	else if (strstr(argv[1], "bound"))
+		return bound_lan();
+	else if ((strstr(argv[1], "renew")) || (strstr(argv[1], "update")))
+		return renew_lan();
+
+	return 0;
+}
+
+void start_dhcpc_lan(void)
+{
+	char pid_file[64];
+	char cmd[256];
+	char tmp[64];
+	char *ifname = nvram_safe_get("lan_ifname");
+	char *argv[128];
+	int argc = 0;
+	pid_t pid;
+	int wan_proto = get_wan_proto(); /* 1. check wan disabled for AP / WET / Media Brige Mode */
+	int lan_dhcp = nvram_get_int("lan_dhcp"); /* 2. check if DHCP Client for LAN (br0) is enabled! */
+
+	stop_dhcpc_lan();
+
+	/* check condidtions before we go on! */
+	if ((wan_proto != WP_DISABLED) || (!lan_dhcp)) {
+		logmsg(LOG_DEBUG, "*** %s: Not in AP / WET / MB Mode - skipping DHCP Client for Lan (br0)!", __FUNCTION__);
+		return;
+	}
+
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-lan.pid");
+
+	memset(tmp, 0, sizeof(tmp));
+	if (nvram_invmatch("wan_hostname", "")) {
+		strcpy(tmp, "-x hostname:");
+		strcat(tmp, nvram_safe_get("wan_hostname"));
+	}
+
+	memset(cmd, 0, sizeof(cmd));
+	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -s /sbin/dhcpc-event-lan -p %s %s %s",
+	                           ifname,
+	                           pid_file,
+	                           tmp,
+	                           nvram_safe_get("dhcpc_custom")
+	);
+
+	logmsg(LOG_DEBUG, "*** %s: ifname=%s cmd=%s", __FUNCTION__, ifname, cmd);
+
+	for (argv[argc = 0] = strtok(cmd, " "); argv[argc] != NULL; argv[++argc] = strtok(NULL, " "));
+	_eval(argv, NULL, 0, &pid);
+}
+
+void stop_dhcpc_lan(void)
+{
+	char pid_file[64];
+
+	killall("dhcpc-event-lan", SIGTERM);
+
+	memset(pid_file, 0, sizeof(pid_file));
+	snprintf(pid_file, sizeof(pid_file), "/var/run/udhcpc-lan.pid");
+	kill_pidfile_s(pid_file, SIGUSR2);
+	kill_pidfile_s(pid_file, SIGTERM);
+	unlink(pid_file);
+}
+
 void start_dhcpc(char *prefix)
 {
 	char pid_file[64];
@@ -506,10 +740,8 @@ void stop_dhcpc(char *prefix)
 #ifdef TCONFIG_IPV6
 int dhcp6c_state_main(int argc, char **argv)
 {
-	char prefix[INET6_ADDRSTRLEN];
+	const char *prefix;
 	const char *lanif;
-	struct in6_addr addr;
-	int i, r;
 	char *reason;
 
 	if (!wait_action_idle(10))
@@ -527,19 +759,12 @@ int dhcp6c_state_main(int argc, char **argv)
 	/* check IPv6 addr - change/new ? */
 	if (!nvram_match("ipv6_rtr_addr", (char *) lanif)) {
 		nvram_set("ipv6_rtr_addr", lanif);
+
 		/* extract prefix from configured IPv6 address */
-		if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
-			r = nvram_get_int("ipv6_prefix_length") ? : 64;
-			for (r = 128 - r, i = 15; r > 0; r -= 8) {
-				if (r >= 8) {
-					addr.s6_addr[i--] = 0;
-				} else {
-					addr.s6_addr[i--] &= (0xff << r);
-				}
-			}
-			inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
+		prefix = ipv6_prefix(NULL);
+		if (!nvram_match("ipv6_prefix", (char *) prefix))
 			nvram_set("ipv6_prefix", prefix);
-		}
+
 		/* (re)start dnsmasq and httpd */
 		set_host_domain_name();
 		stop_dnsmasq();
@@ -548,7 +773,7 @@ int dhcp6c_state_main(int argc, char **argv)
 		start_httpd();
 	}
 
-	/* check DNS */
+	/* check DNS - change/new ? */
 	if (env2nv("new_domain_name_servers", "ipv6_get_dns"))
 		dns_to_resolv();
 

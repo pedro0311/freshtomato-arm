@@ -358,9 +358,9 @@ void emergency_save(const char *filename)
  * that were modified. */
 void die(const char *msg, ...)
 {
-	va_list ap;
 	openfilestruct *firstone = openfile;
 	static int stabs = 0;
+	va_list ap;
 
 	/* When dying for a second time, just give up. */
 	if (++stabs > 1)
@@ -670,8 +670,8 @@ void version(void)
 	printf(_(" GNU nano, version %s\n"), VERSION);
 #endif
 #ifndef NANO_TINY
-	printf(" (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.\n");
-	printf(_(" (C) 2014-%s the contributors to nano\n"), "2022");
+	/* TRANSLATORS: The %s is the year of the latest release. */
+	printf(_(" (C) %s the Free Software Foundation and various contributors\n"), "2022");
 #endif
 	printf(_(" Compiled options:"));
 
@@ -1736,13 +1736,11 @@ int main(int argc, char **argv)
 		{"speller", 1, NULL, 's'},
 #endif
 		{"saveonexit", 0, NULL, 't'},
-		{"tempfile", 0, NULL, 't'},  /* Deprecated; remove in 2022. */
 		{"view", 0, NULL, 'v'},
 #ifdef ENABLE_WRAPPING
 		{"nowrap", 0, NULL, 'w'},
 #endif
 		{"nohelp", 0, NULL, 'x'},
-		{"suspendable", 0, NULL, 'z'},  /* Obsolete; remove in 2022. */
 #ifndef NANO_TINY
 		{"smarthome", 0, NULL, 'A'},
 		{"backup", 0, NULL, 'B'},
@@ -1818,7 +1816,7 @@ int main(int argc, char **argv)
 		SET(RESTRICTED);
 
 	while ((optchr = getopt_long(argc, argv, "0ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxyz$%_!", long_options, NULL)) != -1) {
+				"abcdef:ghijklmno:pqr:s:tuvwxy$%_!", long_options, NULL)) != -1) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -2050,10 +2048,6 @@ int main(int argc, char **argv)
 			case 'y':
 				SET(AFTER_ENDS);
 				break;
-#endif
-			case 'z':
-				break;
-#ifndef NANO_TINY
 			case '%':
 				SET(STATEFLAGS);
 				break;

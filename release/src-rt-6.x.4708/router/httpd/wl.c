@@ -536,6 +536,7 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 	wl_bss_info_t *bssi;
 	struct bss_ie_hdr *ie;
 	int r, retry;
+	int chan_bw;
 #ifdef CONFIG_BCMWL6
 	int chanspec = 0, ctr_channel = 0;
 #endif
@@ -684,17 +685,31 @@ static int get_scan_results(int idx, int unit, int subunit, void *param)
 
 next_info:
 #ifdef CONFIG_BCMWL6
+		if (CHSPEC_IS8080(bssi->chanspec))
+			chan_bw = 8080;
+		else if (CHSPEC_IS160(bssi->chanspec))
+			chan_bw = 160;
+		else if (CHSPEC_IS80(bssi->chanspec))
+			chan_bw = 80;
+		else if (CHSPEC_IS40(bssi->chanspec))
+			chan_bw = 40;
+		else if (CHSPEC_IS20(bssi->chanspec))
+			chan_bw = 20;
+		else
+			chan_bw = 10;
+#else /* for SDK5 */
+		if (CHSPEC_IS40(bssi->chanspec))
+			chan_bw = 40;
+		else if (CHSPEC_IS20(bssi->chanspec))
+			chan_bw = 20;
+		else
+			chan_bw = 10;
+#endif
 		/* note: provide/use control channel and not the actual channel because we use it for wireless survey and scan button at basic-network.asp */
 		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
 		           apinfos[0].BSSID, apinfos[0].SSID, bssi->RSSI, apinfos[0].ctl_ch,
-		           (CHSPEC_IS80(bssi->chanspec) ? 80 : (CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10))), apinfos[0].RSSI_Quality);
+		           chan_bw, apinfos[0].RSSI_Quality);
 		rp->comma = ',';
-#else
-		web_printf("%c['%s','%s',%d,%d,%d,%d,", rp->comma,
-		           apinfos[0].BSSID, apinfos[0].SSID, bssi->RSSI, apinfos[0].ctl_ch,
-		           CHSPEC_IS40(bssi->chanspec) ? 40 : (CHSPEC_IS20(bssi->chanspec) ? 20 : 10), apinfos[0].RSSI_Quality);
-		rp->comma = ',';
-#endif
 
 		if ((apinfos[0].NetworkType == Ndis802_11FH) || (apinfos[0].NetworkType == Ndis802_11DS))
 				web_printf("'%s',", "11b");

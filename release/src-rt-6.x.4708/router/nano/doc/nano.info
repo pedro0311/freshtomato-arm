@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 The GNU nano text editor
 ************************
 
-This manual documents GNU ‘nano’, version 6.3.
+This manual documents GNU ‘nano’, version 6.4.
 
 * Menu:
 
@@ -586,8 +586,7 @@ File: nano.info,  Node: Command-line Options,  Next: Feature Toggles,  Prev: The
 ‘--saveonexit’
      Save a changed buffer without prompting (when exiting with ‘^X’).
      This can be handy when ‘nano’ is used as the composer of an email
-     program.  (The old form of the long option, ‘--tempfile’, is
-     deprecated.)
+     program.
 
 ‘-u’
 ‘--unix’
@@ -622,12 +621,6 @@ File: nano.info,  Node: Command-line Options,  Next: Feature Toggles,  Prev: The
 ‘--afterends’
      Make ‘Ctrl+Right’ and ‘Ctrl+Delete’ stop at word ends instead of
      beginnings.
-
-‘-z’
-‘--suspendable’
-     Obsolete option; ignored.  Suspension is enabled by default,
-     reachable via ‘^T^Z’.  (If you want a plain ‘^Z’ to suspend nano,
-     add ‘bind ^Z suspend main’ to your nanorc.)
 
 ‘-%’
 ‘--stateflags’
@@ -668,6 +661,10 @@ File: nano.info,  Node: Command-line Options,  Next: Feature Toggles,  Prev: The
 ‘--magic’
      When neither the file’s name nor its first line give a clue, try
      using libmagic to determine the applicable syntax.
+
+   Option ‘-z’ (‘--suspendable’) has been removed.  Suspension is
+enabled by default, reachable via ‘^T^Z’.  (If you want a plain ‘^Z’ to
+suspend nano, add ‘bind ^Z suspend main’ to your nanorc.)
 
 
 File: nano.info,  Node: Feature Toggles,  Next: Nanorc Files,  Prev: Command-line Options,  Up: Top
@@ -1017,7 +1014,6 @@ The supported settings in a nanorc file are:
 
 ‘set saveonexit’
      Save a changed buffer automatically on exit (‘^X’); don’t prompt.
-     (The old form of this option, ‘set tempfile’, is deprecated.)
 
 ‘set scrollercolor FGCOLOR,BGCOLOR’
      Use this color combination for the indicator alias "scrollbar".
@@ -1070,11 +1066,6 @@ The supported settings in a nanorc file are:
 ‘set stripecolor [bold,][italic,]FGCOLOR,BGCOLOR’
      Use this color combination for the vertical guiding stripe.  *Note
      set keycolor:: for valid color names.
-
-‘set suspendable’
-     Obsolete option; ignored.  Suspension is enabled by default,
-     reachable via ‘^T^Z’.  (If you want a plain ‘^Z’ to suspend nano,
-     add ‘bind ^Z suspend main’ to your nanorc.)
 
 ‘set tabsize NUMBER’
      Use a tab size of NUMBER columns.  The value of NUMBER must be
@@ -1183,9 +1174,6 @@ following commands in a nanorc file:
 
 ‘formatter PROGRAM [ARGUMENT ...]’
      Run the given PROGRAM on the full contents of the current buffer.
-     (The current buffer is written out to a temporary file, the program
-     is run on it, and then the temporary file is read back in,
-     replacing the contents of the buffer.)
 
 ‘linter PROGRAM [ARGUMENT ...]’
      Use the given PROGRAM to do a syntax check on the current buffer.
@@ -1388,8 +1376,7 @@ that of the Backspace key.
 
 ‘location’
      Reports the current position of the cursor in the buffer: the line,
-     column, and character positions.  (The old name of this function,
-     ’curpos’, is deprecated.)
+     column, and character positions.
 
 ‘wordcount’
      Counts and reports on the status bar the number of lines, words,
@@ -1406,11 +1393,18 @@ that of the Backspace key.
 
 ‘formatter’
      Invokes a full-buffer-processing program (if the active syntax
-     defines one).
+     defines one).  (The current buffer is written out to a temporary
+     file, the program is run on it, and then the temporary file is read
+     back in, replacing the contents of the buffer.)
 
 ‘linter’
      Invokes a syntax-checking program (if the active syntax defines
-     one).
+     one).  If this program produces lines of the form
+     "filename:linenum:charnum: some message", then the cursor will be
+     put at the indicated position in the mentioned file while showing
+     "some message" on the status bar.  You can move from message to
+     message with ‘PgUp’ and ‘PgDn’, and leave linting mode with ‘^C’ or
+     ‘Enter’.
 
 ‘justify’
      Justifies the current paragraph (or the marked region).  A
@@ -1726,8 +1720,7 @@ that of the Backspace key.
 ‘execute’
      The menu for inserting the output from an external command, or for
      filtering the buffer (or the marked region) through an external
-     command, or for executing one of several tools.  (The old form of
-     this menu name, ’extcmd’, is deprecated.)
+     command, or for executing one of several tools.
 
 ‘spell’
      The menu of the integrated spell checker where the user can edit a
@@ -1983,16 +1976,16 @@ Node: The Help Viewer10604
 Node: The File Browser11028
 Node: Command-line Options11926
 Ref: --speller21463
-Node: Feature Toggles25779
-Node: Nanorc Files27849
-Node: Settings29414
-Ref: set keycolor33586
-Ref: set matchbrackets35664
-Ref: Whitespace44331
-Node: Syntax Highlighting45509
-Node: Rebinding Keys52868
-Node: Pico Compatibility67615
-Node: Building and its Options72174
+Node: Feature Toggles25694
+Node: Nanorc Files27764
+Node: Settings29329
+Ref: set keycolor33501
+Ref: set matchbrackets35579
+Ref: Whitespace43954
+Node: Syntax Highlighting45132
+Node: Rebinding Keys52310
+Node: Pico Compatibility67455
+Node: Building and its Options72014
 
 End Tag Table
 

@@ -122,8 +122,12 @@ _GL_EXTERN_C void rpl_free (void *);
 #  undef _GL_ATTRIBUTE_DEALLOC_FREE
 #  define _GL_ATTRIBUTE_DEALLOC_FREE _GL_ATTRIBUTE_DEALLOC (rpl_free, 1)
 # else
-#  if defined _MSC_VER
-_GL_EXTERN_C void __cdecl free (void *);
+#  if defined _MSC_VER && !defined free
+_GL_EXTERN_C
+#   if defined _DLL
+     __declspec (dllimport)
+#   endif
+     void __cdecl free (void *);
 #  else
 #   if defined __cplusplus && (__GLIBC__ + (__GLIBC_MINOR__ >= 14) > 2)
 _GL_EXTERN_C void free (void *) throw ();
@@ -133,8 +137,12 @@ _GL_EXTERN_C void free (void *);
 #  endif
 # endif
 #else
-# if defined _MSC_VER
-_GL_EXTERN_C void __cdecl free (void *);
+# if defined _MSC_VER && !defined free
+_GL_EXTERN_C
+#   if defined _DLL
+     __declspec (dllimport)
+#   endif
+     void __cdecl free (void *);
 # else
 #  if defined __cplusplus && (__GLIBC__ + (__GLIBC_MINOR__ >= 14) > 2)
 _GL_EXTERN_C void free (void *) throw ();
@@ -583,7 +591,7 @@ _GL_FUNCDECL_RPL (strndup, char *,
                   _GL_ATTRIBUTE_MALLOC _GL_ATTRIBUTE_DEALLOC_FREE);
 _GL_CXXALIAS_RPL (strndup, char *, (char const *__s, size_t __n));
 # else
-#  if !@HAVE_DECL_STRNDUP@ || __GNUC__ >= 11
+#  if !@HAVE_DECL_STRNDUP@ || (__GNUC__ >= 11 && !defined strndup)
 _GL_FUNCDECL_SYS (strndup, char *,
                   (char const *__s, size_t __n)
                   _GL_ARG_NONNULL ((1))
@@ -593,7 +601,7 @@ _GL_CXXALIAS_SYS (strndup, char *, (char const *__s, size_t __n));
 # endif
 _GL_CXXALIASWARN (strndup);
 #else
-# if __GNUC__ >= 11
+# if __GNUC__ >= 11 && !defined strndup
 /* For -Wmismatched-dealloc: Associate strndup with free or rpl_free.  */
 _GL_FUNCDECL_SYS (strndup, char *,
                   (char const *__s, size_t __n)

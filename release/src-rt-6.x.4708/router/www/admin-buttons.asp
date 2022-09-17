@@ -109,7 +109,7 @@ function earlyInit() {
 	<div class="section">
 		<script>
 			createFieldTable('', [
-				{ title: 'Enable Stealth Mode', name: 'f_stealth_mode', type: 'checkbox', value: (nvram.stealth_mode == '1'), suffix: '&nbsp;<small>(reboot required to turn off LEDs)<\/small>' },
+				{ title: 'Enable Stealth Mode', name: 'f_stealth_mode', type: 'checkbox', value: (nvram.stealth_mode == '1'), suffix: '&nbsp;<small>(this option requires a reboot to become effective)<\/small>' },
 				{ title: 'Exclude INTERNET LED', name: 'f_stealth_iled', type: 'checkbox', value: (nvram.stealth_iled == '1') }
 			]);
 		</script>

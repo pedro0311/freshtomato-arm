@@ -1218,9 +1218,15 @@ void start_wan_done(char *wan_ifname, char *prefix)
 #endif
 
 		if ((wanup || (proto == WP_DISABLED)) && (!nvram_get_int("ntp_ready"))) {
-			first_ntp_sync = 1;
-			stop_ntpd();
-			start_ntpd();
+			if ((proto == WP_DISABLED) && nvram_get_int("lan_dhcp")) { /* Case: AP / WET / MB Mode with DHCP client for Lan (br0) */
+				/* nothing to do here! and start ntpd (only) with bound event */
+				logmsg(LOG_DEBUG, "*** %s: start ntpd with bound event (DHCP client)", __FUNCTION__);
+			}
+			else { /* default */
+				first_ntp_sync = 1;
+				stop_ntpd();
+				start_ntpd();
+			}
 		}
 
 		if ((wanup) || (proto == WP_DISABLED)) {

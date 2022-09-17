@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 6.3" "April 2022"
+.TH NANORC 5 "version 6.4" "August 2022"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
@@ -31,20 +31,6 @@ from \fI~/.nanorc\fR or from \fI$XDG_CONFIG_HOME/nano/nanorc\fR
 or from \fI~/.config/nano/nanorc\fR, whichever is encountered first.
 If \fB\-\-rcfile\fR is given, \fBnano\fR will read just the specified
 settings file.
-
-.SH NOTICE
-Since version 4.0, \fBnano\fR by default:
-.sp
-.RS 4
-\(bu does not automatically hard-wrap lines that become overlong,
-.br
-\(bu includes the line below the title bar in the editing area,
-.br
-\(bu does linewise (smooth) scrolling.
-.RE
-.sp
-To get the old, Pico behavior back, you can use \fBset breaklonglines\fR,
-\fBset emptyline\fR, and \fBset jumpyscrolling\fR.
 
 .SH OPTIONS
 The configuration file accepts a series of \fBset\fP and \fBunset\fP
@@ -289,7 +275,6 @@ Regular expressions in \fBnano\fR are of the extended type (ERE).
 .TP
 .B set saveonexit
 Save a changed buffer automatically on exit (\fB^X\fR); don't prompt.
-(The old form of this option, \fBset tempfile\fR, is deprecated.)
 .TP
 .B set scrollercolor \fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the indicator alias "scrollbar".
@@ -335,18 +320,13 @@ and \fBS\fR when soft-wrapping.
 When the buffer is modified, a star (\fB*\fR) is shown after the
 filename in the center of the title bar.
 .TP
-.B set  statuscolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
+.B set statuscolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the status bar.
 See \fBset titlecolor\fR for more details.
 .TP
 .B set stripecolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the vertical guiding stripe.
 See \fBset titlecolor\fR for more details.
-.TP
-.B set suspendable
-Obsolete option; ignored.  Suspension is enabled by default,
-reachable via \fB^T^Z\fR.  (If you want a plain \fB^Z\fR to
-suspend nano, add \fBbind ^Z suspend main\fR to your nanorc.)
 .TP
 .B set tabsize \fInumber\fR
 Use a tab size of \fInumber\fR columns.  The value of \fInumber\fP must be
@@ -418,6 +398,12 @@ and disappears after 1.5 seconds or upon the next keystroke.
 With \fBM\-Z\fR the title bar plus status bar can be toggled.
 With \fBM\-X\fR the help lines.
 
+.SH NOTES
+Option \fBset suspendable\fR has been removed.
+Suspension is enabled by default, reachable via \fB^T^Z\fR.
+(If you want a plain \fB^Z\fR to suspend nano,
+add \fBbind ^Z suspend main\fR to your nanorc.)
+
 .SH SYNTAX HIGHLIGHTING
 Coloring the different syntactic elements of a file
 is done via regular expressions (see the \fBcolor\fR command below).
@@ -475,9 +461,6 @@ system and will be silently ignored otherwise.)
 .TP
 .BI formatter " program " \fR[ "argument " \fR...]
 Run the given \fIprogram\fR on the full contents of the current buffer.
-(The current buffer is written out to a temporary file, the program is
-run on it, and then the temporary file is read back in, replacing the
-contents of the buffer.)
 .TP
 .BI linter " program " \fR[ "argument " \fR...]
 Use the given \fIprogram\fR to run a syntax check on the current buffer.
@@ -687,7 +670,6 @@ Or, when it is set, unsets the mark.
 .B location
 Reports the current position of the cursor in the buffer:
 the line, column, and character positions.
-(The old name of this function, 'curpos', is deprecated.)
 .TP
 .B wordcount
 Counts and reports on the status bar the number of lines, words,
@@ -703,15 +685,23 @@ Invokes a spell-checking program, either the default \fBhunspell\fR(1) or GNU
 .TP
 .B formatter
 Invokes a full-buffer-processing program (if the active syntax defines one).
+(The current buffer is written out to a temporary file, the program
+is run on it, and then the temporary file is read back in, replacing
+the contents of the buffer.)
 .TP
 .B linter
 Invokes a syntax-checking program (if the active syntax defines one).
+If this program produces lines of the form "filename:linenum:charnum:
+some message", then the cursor will be put at the indicated position
+in the mentioned file while showing "some message" on the status bar.
+You can move from message to message with <PgUp> and <PgDn>,
+and leave linting mode with \fB^C\fR or <Enter>.
 .TP
 .B justify
 Justifies the current paragraph (or the marked region).
-A paragraph is a group of contiguous lines
-that, apart from possibly the first line, all have the same indentation.  The
-beginning of a paragraph is detected by either this lone line with a differing
+A paragraph is a group of contiguous lines that, apart from possibly
+the first line, all have the same indentation.  The beginning of a
+paragraph is detected by either this lone line with a differing
 indentation or by a preceding blank line.
 .TP
 .B fulljustify
@@ -1017,7 +1007,6 @@ The 'go to directory' menu in the file browser.
 The menu for inserting the output from an external command,
 or for filtering the buffer (or the marked region) through
 an external command, or for executing one of several tools.
-(The old form of this menu name, 'extcmd', is deprecated.)
 .TP
 .B spell
 The menu of the integrated spell checker where the user can edit a misspelled word.

@@ -169,6 +169,49 @@ const char *ipv6_router_address(struct in6_addr *in6addr)
 	return addr6;
 }
 
+/* trim useless 0 from IPv6 address */
+const char *ipv6_address(const char *ipaddr6)
+{
+	struct in6_addr addr;
+	static char addr6[INET6_ADDRSTRLEN];
+
+	addr6[0] = '\0';
+
+	if (inet_pton(AF_INET6, ipaddr6, &addr) > 0)
+		inet_ntop(AF_INET6, &addr, addr6, sizeof(addr6));
+
+	return addr6;
+}
+
+/* extract prefix from configured IPv6 address */
+const char *ipv6_prefix(struct in6_addr *in6addr)
+{
+	static char prefix[INET6_ADDRSTRLEN];
+	struct in6_addr addr;
+	int i, r;
+
+	prefix[0] = '\0';
+	memset(&addr, 0, sizeof(addr));
+
+	if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
+		r = nvram_get_int("ipv6_prefix_length") ? : 64;
+		for (r = 128 - r, i = 15; r > 0; r -= 8) {
+			if (r >= 8) {
+				addr.s6_addr[i--] = 0;
+			}
+			else {
+				addr.s6_addr[i--] &= (0xff << r);
+			}
+		}
+		inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
+	}
+
+	if (in6addr)
+		memcpy(in6addr, &addr, sizeof(addr));
+
+	return prefix;
+}
+
 int calc_6rd_local_prefix(const struct in6_addr *prefix,
 	int prefix_len, int relay_prefix_len,
 	const struct in_addr *local_ip,
@@ -374,7 +417,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    || (model == MODEL_EA6900)
 	    || (model == MODEL_R1D)
 	    || (model == MODEL_WZR1750)
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	    || (model == MODEL_RTAC3200)
 	    || (model == MODEL_R8000)
 #endif

@@ -103,7 +103,7 @@ int get_model(void)
 
 #ifdef CONFIG_BCMWL6A
 	if (hw == HW_BCM4708) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "32"))) return MODEL_R8000;
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("model", "RT-AC3200"))) return MODEL_RTAC3200;
 #endif

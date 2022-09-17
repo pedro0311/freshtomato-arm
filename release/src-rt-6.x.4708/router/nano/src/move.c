@@ -98,8 +98,8 @@ size_t proper_x(linestruct *line, size_t *leftedge, bool forward,
  * the middle of a tab that crosses a row boundary. */
 void set_proper_index_and_pww(size_t *leftedge, size_t target, bool forward)
 {
-	bool shifted = FALSE;
 	size_t was_edge = *leftedge;
+	bool shifted = FALSE;
 
 	openfile->current_x = proper_x(openfile->current, leftedge, forward,
 						actual_last_column(*leftedge, target), &shifted);
@@ -410,12 +410,12 @@ void do_home(void)
 	bool moved_off_chunk = TRUE;
 #ifndef NANO_TINY
 	bool moved = FALSE;
-	size_t leftedge = 0, leftedge_x = 0;
+	size_t leftedge = 0;
+	size_t left_x = 0;
 
 	if (ISSET(SOFTWRAP)) {
 		leftedge = leftedge_for(was_column, openfile->current);
-		leftedge_x = proper_x(openfile->current, &leftedge, FALSE, leftedge,
-								NULL);
+		left_x = proper_x(openfile->current, &leftedge, FALSE, leftedge, NULL);
 	}
 
 	if (ISSET(SMART_HOME)) {
@@ -428,7 +428,7 @@ void do_home(void)
 			if (openfile->current_x == indent_x) {
 				openfile->current_x = 0;
 				moved = TRUE;
-			} else if (!ISSET(SOFTWRAP) || leftedge_x <= indent_x) {
+			} else if (left_x <= indent_x) {
 				openfile->current_x = indent_x;
 				moved = TRUE;
 			}
@@ -438,10 +438,10 @@ void do_home(void)
 	if (!moved && ISSET(SOFTWRAP)) {
 		/* If already at the left edge of the screen, move fully home.
 		 * Otherwise, move to the left edge. */
-		if (openfile->current_x == leftedge_x)
+		if (openfile->current_x == left_x)
 			openfile->current_x = 0;
 		else {
-			openfile->current_x = leftedge_x;
+			openfile->current_x = left_x;
 			openfile->placewewant = leftedge;
 			moved_off_chunk = FALSE;
 		}
@@ -472,11 +472,12 @@ void do_end(void)
 
 #ifndef NANO_TINY
 	if (ISSET(SOFTWRAP)) {
+		bool kickoff = TRUE;
 		bool last_chunk = FALSE;
 		size_t leftedge = leftedge_for(was_column, openfile->current);
 		size_t rightedge = get_softwrap_breakpoint(openfile->current->data,
-												leftedge, &last_chunk);
-		size_t rightedge_x;
+											leftedge, &kickoff, &last_chunk);
+		size_t right_x;
 
 		/* If we're on the last chunk, we're already at the end of the line.
 		 * Otherwise, we're one column past the end of the line.  Shifting
@@ -485,14 +486,14 @@ void do_end(void)
 		if (!last_chunk)
 			rightedge--;
 
-		rightedge_x = actual_x(openfile->current->data, rightedge);
+		right_x = actual_x(openfile->current->data, rightedge);
 
 		/* If already at the right edge of the screen, move fully to
 		 * the end of the line.  Otherwise, move to the right edge. */
-		if (openfile->current_x == rightedge_x)
+		if (openfile->current_x == right_x)
 			openfile->current_x = line_len;
 		else {
-			openfile->current_x = rightedge_x;
+			openfile->current_x = right_x;
 			openfile->placewewant = rightedge;
 			moved_off_chunk = FALSE;
 		}

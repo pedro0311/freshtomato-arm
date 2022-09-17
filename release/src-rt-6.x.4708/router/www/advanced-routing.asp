@@ -71,7 +71,7 @@ var ars = new TomatoGrid();
 
 ars.setup = function() {
 	this.init('ars-grid', '', 20, [
-		{ type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 },{ type: 'text', maxlen: 3 },
+		{ type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 }, { type: 'text', maxlen: 15 },{ type: 'text', maxlen: 10 },
 		{ type: 'select', options: static_options }, { type: 'text', maxlen: 32 }]);
 
 	this.headerSet(['Destination', 'Gateway', 'Subnet Mask', 'Metric', 'Interface', 'Description']);
@@ -134,7 +134,7 @@ ars.verifyFields = function(row, quiet) {
 	var f = fields.getAll(row);
 	f[5].value = f[5].value.replace('>', '_');
 
-	return v_ip(f[0], quiet) && v_ip(f[1], quiet) && v_netmask(f[2], quiet) && v_range(f[3], quiet, 0, 10) && v_nodelim(f[5], quiet, 'Description');
+	return v_ip(f[0], quiet) && v_ip(f[1], quiet) && v_netmask(f[2], quiet) && v_range(f[3], quiet, 0, 4294967295) && v_nodelim(f[5], quiet, 'Description');
 }
 
 function fix_iface(in_if) {

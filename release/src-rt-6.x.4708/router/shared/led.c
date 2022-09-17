@@ -27,7 +27,7 @@
 #define LOGMSG_NVDEBUG	"led_debug"
 
 
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 const char *led_names[] = {"wlan", "diag", "white", "amber", "dmz", "aoss", "bridge", "usb", "usb3", "5g", "52g"};
 #else
 const char *led_names[] = {"wlan", "diag", "white", "amber", "dmz", "aoss", "bridge", "usb", "usb3", "5g"};
@@ -155,7 +155,7 @@ int do_led(int which, int mode)
  */
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	static int ac3200[]	= { 254,  -15,     5,  255,   14,    3,  254,  255,  255,  254,  254 };
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #elif defined(CONFIG_BCMWL6A)
@@ -191,7 +191,7 @@ int do_led(int which, int mode)
 #if 0
 	static int wzr1750[]	= {  -6,   -1,    -5,  255,  255,   -4,  255,  -99,  255,   -7}; /* tbd. 8 bit shift register (SPI GPIO 0 to 7), active HIGH M_ars*/
 #endif
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 
@@ -213,7 +213,7 @@ int do_led(int which, int mode)
 	if (nvram_match("stealth_mode", "1")) {
 		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200 */
 		switch (model) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 			case MODEL_RTAC3200:
 #elif defined(CONFIG_BCMWL6A)
 			case MODEL_AC15:
@@ -226,7 +226,7 @@ int do_led(int which, int mode)
 			case MODEL_RTAC68U:
 			case MODEL_RTAC68UV3:
 			case MODEL_RTAC1900P:
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 
 #if defined(CONFIG_BCMWL6A) || defined(TCONFIG_BCM7)
 				do_led_nongpio(model, which, LED_OFF);
@@ -246,7 +246,7 @@ int do_led(int which, int mode)
 	}
 
 	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 		b = ac3200[which];
 		if ((which == LED_WLAN) ||
@@ -616,7 +616,7 @@ int do_led(int which, int mode)
 		}
 #endif  /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 		break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 	default:
 		sprintf(s, "led_%s", led_names[which]);
 		if (nvget_gpio(s, &b, &n)) {
@@ -698,7 +698,7 @@ void led_setup(void)
 		/* the following router do have LEDs for WLAN, WAN and LAN - see at the ethernet connectors or at the front panel / case */
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
 		switch (model) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		case MODEL_R8000:
 			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
 			disable_led_wanlan();
@@ -787,7 +787,7 @@ void led_setup(void)
 			set_gpio(GPIO_01, T_LOW); /* disable power led color red */
 #endif /* tbd. 8-Bit Shift Registers at arm branch M_ars */
 			break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 		default:
 			/* nothing to do right now */
 			break;
@@ -796,7 +796,7 @@ void led_setup(void)
 	else {
 		/* LED setup/config/preparation for some router models */
 		switch (model) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		case MODEL_R8000:
 			/* activate WAN port led */
 			set_gpio(GPIO_08, T_HIGH);
@@ -825,7 +825,7 @@ void led_setup(void)
 			set_gpio(GPIO_08, T_HIGH); /* R6700v1, R6900 and R7000: enable LED_WHITE / WAN LED with color amber (8) if ethernet cable is connected; switch to color white (9) with WAN up */
 			set_gpio(GPIO_09, T_LOW);
 			break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 		default:
 			/* nothing to do right now */
 			break;
@@ -837,7 +837,7 @@ void led_setup(void)
 void do_led_nongpio(int model, int which, int mode)
 {
 	switch (model) {
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1"); /* 2.4 GHz - eth2, see Asus SRC */
@@ -889,7 +889,7 @@ void do_led_nongpio(int model, int which, int mode)
 			else if (mode == LED_PROBE) return;
 		}
 		break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 	default:
 		/* nothing to do right now */
 		break;

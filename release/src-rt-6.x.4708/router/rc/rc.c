@@ -129,6 +129,7 @@ int serialize_restart(char *service, int start)
 
 	if (start == 1) {
 		if (getpid() != 1) {
+			logmsg(LOG_DEBUG, "*** %s: start_service(%s) - pid: %d", __FUNCTION__, s, getpid());
 			start_service(s);
 			return 1;
 		}
@@ -139,6 +140,7 @@ int serialize_restart(char *service, int start)
 	}
 	else {
 		if (getpid() != 1) {
+			logmsg(LOG_DEBUG, "*** %s: stop_service(%s) - pid: %d", __FUNCTION__, s, getpid());
 			stop_service(s);
 			return 1;
 		}
@@ -198,6 +200,7 @@ static const applets_t applets[] = {
 	{ "dhcpc-event",		dhcpc_event_main		},
 	{ "dhcpc-release",		dhcpc_release_main		},
 	{ "dhcpc-renew",		dhcpc_renew_main		},
+	{ "dhcpc-event-lan",		dhcpc_lan_main			},
 #ifdef TCONFIG_IPV6
 	{ "dhcp6c-state",		dhcp6c_state_main		},
 #endif

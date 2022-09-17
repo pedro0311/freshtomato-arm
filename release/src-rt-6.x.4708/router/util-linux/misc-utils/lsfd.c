@@ -73,7 +73,8 @@ struct nodev {
 struct nodev_table {
 #define NODEV_TABLE_SIZE 97
 	struct list_head tables[NODEV_TABLE_SIZE];
-} nodev_table;
+};
+static struct nodev_table nodev_table;
 
 struct name_manager {
 	struct idcache *cache;
@@ -1151,7 +1152,7 @@ static void read_process(struct lsfd_control *ctl, struct path_cxt *pc,
 	 */
 	if (ctl->threads && leader == NULL) {
 		DIR *sub = NULL;
-		pid_t tid;
+		pid_t tid = 0;
 
 		while (procfs_process_next_tid(pc, &sub, &tid) == 0) {
 			if (tid == pid)

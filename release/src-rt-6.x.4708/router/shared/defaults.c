@@ -31,7 +31,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "lan_hwaddr",			""				, 0 },	/* LAN interface MAC address */
 
 	/* LAN TCP/IP parameters */
-	{ "lan_dhcp",			"0"				, 0 },	/* DHCP client [static|dhcp] */
+	{ "lan_dhcp",			"0"				, 0 },	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
 	{ "lan_proto",			"dhcp"				, 0 },	/* DHCP server [static|dhcp] */
 	{ "lan_ipaddr",			"192.168.1.1"			, 0 },	/* LAN IP address */
 	{ "lan_netmask",		"255.255.255.0"			, 0 },	/* LAN netmask */
@@ -61,7 +61,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "mwan_num",			"1"				, 0 },
 	{ "mwan_init",			"0"				, 0 },
 	{ "mwan_cktime",		"0"				, 0 },
-	{ "mwan_ckdst",			"google.com,microsoft.com"	, 0 },	/* target1,target2 */
+	{ "mwan_ckdst",			"google.com,1.1.1.1"		, 0 },	/* target1,target2 */
 	{ "mwan_debug",			"0"				, 0 },
 	{ "mwan_tune_gc",		"0"				, 0 },	/* tune route cache for multiwan in load balancing */
 	{ "mwan_state_init",		"1"				, 0 },	/* init wan state files with this value */
@@ -182,28 +182,21 @@ struct nvram_tuple router_defaults[] = {
 #endif /* TCONFIG_MULTIWAN */
 
 	/* DHCP server parameters */
-	{ "dhcp_start",			"2"				, 0 },
-	{ "dhcp_num",			"50"				, 0 },
-	{ "dhcpd_startip",		"" 				, 0 },	/* if empty, tomato will use dhcp_start/dchp_num for better compatibility */
+	{ "dhcpd_startip",		"" 				, 0 },
 	{ "dhcpd_endip",		"" 				, 0 },
 	{ "dhcp_lease",			"1440"				, 0 },	/* LAN lease time in minutes */
+	{ "dhcp_moveip",		"0"				, 0 },	/* GUI helper for automatic IP change */
 	{ "dhcp_domain",		"wan"				, 0 },	/* Use WAN domain name first if available (wan|lan) */
 	{ "wan_get_dns",		""				, 0 },	/* DNS IP address which get by dhcpc */
 	{ "wan_routes",			""				, 0 },
 	{ "wan_msroutes",		""				, 0 },
 
-	{ "dhcp1_start",		""				, 0 },
-	{ "dhcp1_num",			""				, 0 },
 	{ "dhcpd1_startip",		"" 				, 0 },
 	{ "dhcpd1_endip",		"" 				, 0 },
 	{ "dhcp1_lease",		"1440"				, 0 },
-	{ "dhcp2_start",		""				, 0 },
-	{ "dhcp2_num",			""				, 0 },
 	{ "dhcpd2_startip",		"" 				, 0 },
 	{ "dhcpd2_endip",		"" 				, 0 },
 	{ "dhcp2_lease",		"1440"				, 0 },
-	{ "dhcp3_start",		""				, 0 },
-	{ "dhcp3_num",			""				, 0 },
 	{ "dhcpd3_startip",		"" 				, 0 },
 	{ "dhcpd3_endip",		"" 				, 0 },
 	{ "dhcp3_lease",		"1440"				, 0 },
@@ -598,7 +591,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "bsd_msglevel", 		"0x000010"			, 0 },	/* BSD_DEBUG_STEER */
 	{ "bsd_dbg", 		 	"1"				, 0 },
 #endif
-#ifdef TCONFIG_BCM7 /* Tri-Band */
+#ifdef TCONFIG_AC3200 /* Tri-Band */
 	{"bsd_ifnames",			"eth2 eth1 eth3"		, 0 },
 	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		, 0 },
 	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		, 0 },
@@ -626,7 +619,7 @@ struct nvram_tuple router_defaults[] = {
 	{"wl1_bsd_if_qualify_policy",	"60 0x0"			, 0 },	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
 	{"bsd_bounce_detect",		"180 2 3600"			, 0 },
 	{"bsd_aclist_timeout",		"3"				, 0 },
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 	{"bsd_scheme",			"2"				, 0 },
 #endif /* TCONFIG_BCMBSD */
 

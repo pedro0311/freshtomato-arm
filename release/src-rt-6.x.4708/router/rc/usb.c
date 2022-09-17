@@ -1074,7 +1074,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_R6900:
 		case MODEL_R7000:
 		case MODEL_XR300:
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 		case MODEL_R8000:
 #endif
 		case MODEL_F9K1113v2_20X0:

@@ -12,7 +12,7 @@
 
 
 #include "rc.h"
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 #include "shared.h"
 #endif
 
@@ -48,10 +48,10 @@
 
 #ifdef TCONFIG_BCMARM
 extern struct nvram_tuple router_defaults[];
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 extern struct nvram_tuple bcm4360ac_defaults[];
 extern struct nvram_tuple r8000_params[];
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 #endif /* TCONFIG_BCMARM */
 int restore_defaults_fb = 0;
 
@@ -840,13 +840,13 @@ static int init_vlan_ports(void)
 	case MODEL_F9K1113v2_20X0:
 	case MODEL_F9K1113v2:
 	case MODEL_WS880:
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 #endif
 		dirty |= check_nv("vlan1ports", "1 2 3 4 5*");
 		dirty |= check_nv("vlan2ports", "0 5");
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_R8000:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
 		dirty |= check_nv("vlan2ports", "4 8");
@@ -1427,7 +1427,7 @@ static void check_bootnv(void)
 		dirty |= check_nv("wl0_ifname", "eth1");
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_R8000:
 		nvram_unset("et1macaddr");
 		dirty |= check_nv("wl0_ifname", "eth2");
@@ -1796,6 +1796,62 @@ static int init_nvram(void)
 			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
 			nvram_set("vlan_enable", "1");
+
+			/* misc - clean-up nvram (remove dummy values for not used second wl interface [5 GHz] ) */
+			/* save nvram space & fix saving country / rev settings (GUI: advanced-wireless.asp) */
+			nvram_unset("pci/1/1/aa5g");
+			nvram_unset("pci/1/1/ag1");
+			nvram_unset("pci/1/1/antswctl2g");
+			nvram_unset("pci/1/1/antswctl5g");
+			nvram_unset("pci/1/1/antswitch");
+			nvram_unset("pci/1/1/boardflags2");
+			nvram_unset("pci/1/1/boardflags");
+			nvram_unset("pci/1/1/bw40po");
+			nvram_unset("pci/1/1/bwduppo");
+			nvram_unset("pci/1/1/ccode");
+			nvram_unset("pci/1/1/cddpo");
+			nvram_unset("pci/1/1/devid");
+			nvram_unset("pci/1/1/extpagain5g");
+			nvram_unset("pci/1/1/itt5ga0");
+			nvram_unset("pci/1/1/itt5ga1");
+			nvram_unset("pci/1/1/ledbh0");
+			nvram_unset("pci/1/1/ledbh1");
+			nvram_unset("pci/1/1/ledbh2");
+			nvram_unset("pci/1/1/ledbh3");
+			nvram_unset("pci/1/1/leddc");
+			nvram_unset("pci/1/1/macaddr");
+			nvram_unset("pci/1/1/maxp5ga0");
+			nvram_unset("pci/1/1/maxp5ga1");
+			nvram_unset("pci/1/1/maxp5gha0");
+			nvram_unset("pci/1/1/maxp5gha1");
+			nvram_unset("pci/1/1/maxp5gla0");
+			nvram_unset("pci/1/1/maxp5gla1");
+			nvram_unset("pci/1/1/pa5ghw0a0");
+			nvram_unset("pci/1/1/pa5ghw0a1");
+			nvram_unset("pci/1/1/pa5ghw1a0");
+			nvram_unset("pci/1/1/pa5ghw1a1");
+			nvram_unset("pci/1/1/pa5ghw2a0");
+			nvram_unset("pci/1/1/pa5ghw2a1");
+			nvram_unset("pci/1/1/pa5glw0a0");
+			nvram_unset("pci/1/1/pa5glw0a1");
+			nvram_unset("pci/1/1/pa5glw1a0");
+			nvram_unset("pci/1/1/pa5glw1a1");
+			nvram_unset("pci/1/1/pa5glw2a0");
+			nvram_unset("pci/1/1/pa5glw2a1");
+			nvram_unset("pci/1/1/pa5gw0a0");
+			nvram_unset("pci/1/1/pa5gw0a1");
+			nvram_unset("pci/1/1/pa5gw1a0");
+			nvram_unset("pci/1/1/pa5gw1a1");
+			nvram_unset("pci/1/1/pa5gw2a0");
+			nvram_unset("pci/1/1/pa5gw2a1");
+			nvram_unset("pci/1/1/pdetrange5g");
+			nvram_unset("pci/1/1/regrev");
+			nvram_unset("pci/1/1/rxchain");
+			nvram_unset("pci/1/1/sromrev");
+			nvram_unset("pci/1/1/stbcpo");
+			nvram_unset("pci/1/1/triso5g");
+			nvram_unset("pci/1/1/tssipos5g");
+			nvram_unset("pci/1/1/txchain");
 		}
 		break;
 	case MODEL_WNR3500L:
@@ -6483,6 +6539,9 @@ static int init_nvram(void)
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
 
+			/* enable usbX power supply by default */
+			nvram_set("gpio0", "usbport1"); /* Ex.: this config is correct for R6400 / R6400v2 / R6700v3 / XR300 */
+
 			/* misc settings */
 			nvram_set("boot_wait", "on");
 			nvram_set("wait_time", "3");
@@ -6746,6 +6805,9 @@ static int init_nvram(void)
 			nvram_set("xhci_ports", "1-1");
 			nvram_set("ehci_ports", "2-1 2-2");
 			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* enable usbX power supply by default */
+			nvram_set("gpio0", "usbport1"); /* Ex.: this config is correct for R6400 / R6400v2 / R6700v3 / XR300 */
 
 			/* misc settings */
 			nvram_set("boot_wait", "on");
@@ -9202,7 +9264,7 @@ static int init_nvram(void)
 			/* let the cfe set the init parameter for wifi modules - nothing to modify/adjust right now */
 		}
 		break;
-#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
 	case MODEL_RTAC3200:
 		mfr = "Asus";
 		name = "RT-AC3200";
@@ -9371,7 +9433,7 @@ static int init_nvram(void)
 			set_defaults(r8000_params, "");
 		}
 		break;
-#endif /* TCONFIG_BCM7 */
+#endif /* TCONFIG_AC3200 */
 
 	/*
 	 * add here new ARM models

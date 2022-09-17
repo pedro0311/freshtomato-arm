@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("ct_tcp_timeout,ct_udp_timeout,ct_timeout,ct_max,ct_hashsize,nf_l7in,nf_ttl,nf_sip,nf_rtsp,nf_pptp,nf_h323,nf_ftp,fw_nat_tuning"); %>
+//	<% nvram("ct_tcp_timeout,ct_udp_timeout,ct_timeout,ct_max,ct_hashsize,nf_l7in,nf_ttl,nf_sip,nf_rtsp,nf_pptp,nf_h323,nf_ftp,fw_nat_tuning,ipsec_pass"); %>
 
 var checker = null;
 var timer = new TomatoTimer(check);
@@ -111,7 +111,8 @@ function verifyFields(focused, quiet) {
 function save() {
 	var i, tcp, udp, ct, fom;
 
-	if (!verifyFields(null, false)) return;
+	if (!verifyFields(null, 0))
+		return;
 
 	tcp = [];
 	tcp.push('0');
@@ -134,12 +135,13 @@ function save() {
 	fom.ct_tcp_timeout.value = tcp.join(' ');
 	fom.ct_udp_timeout.value = udp.join(' ');
 	fom.ct_timeout.value = ct.join(' ');
-	fom.nf_l7in.value = E('_f_l7in').checked ? 1 : 0;
-	fom.nf_sip.value = E('_f_sip').checked ? 1 : 0;
-	fom.nf_rtsp.value = E('_f_rtsp').checked ? 1 : 0;
-	fom.nf_pptp.value = E('_f_pptp').checked ? 1 : 0;
-	fom.nf_h323.value = E('_f_h323').checked ? 1 : 0;
-	fom.nf_ftp.value = E('_f_ftp').checked ? 1 : 0;
+	fom.nf_l7in.value = fom._f_l7in.checked ? 1 : 0;
+	fom.nf_sip.value = fom._f_sip.checked ? 1 : 0;
+	fom.nf_rtsp.value = fom._f_rtsp.checked ? 1 : 0;
+	fom.nf_pptp.value = fom._f_pptp.checked ? 1 : 0;
+	fom.nf_h323.value = fom._f_h323.checked ? 1 : 0;
+	fom.nf_ftp.value = fom._f_ftp.checked ? 1 : 0;
+	fom.ipsec_pass.value = fom._f_ipsec_pass.value;
 
 	i = E('_f_nf_ttl').value;
 	if (i == '')
@@ -180,6 +182,7 @@ function save() {
 <input type="hidden" name="nf_ftp">
 <input type="hidden" name="nf_sip">
 <input type="hidden" name="fw_nat_tuning">
+<input type="hidden" name="ipsec_pass">
 
 <!-- / / / -->
 
@@ -258,7 +261,8 @@ function save() {
 			{ title: 'GRE / PPTP', name: 'f_pptp', type: 'checkbox', value: nvram.nf_pptp != '0' },
 			{ title: 'H.323', name: 'f_h323', type: 'checkbox', value: nvram.nf_h323 != '0' },
 			{ title: 'SIP', name: 'f_sip', type: 'checkbox', value: nvram.nf_sip != '0' },
-			{ title: 'RTSP', name: 'f_rtsp', type: 'checkbox', value: nvram.nf_rtsp != '0' }
+			{ title: 'RTSP', name: 'f_rtsp', type: 'checkbox', value: nvram.nf_rtsp != '0' },
+			{ title: 'Enable IPSec Passthrough', name: 'f_ipsec_pass', type: 'select', options: [[0,'Disabled'],[1,'IPv4 & IPv6'],[2,'IPv6 only'],[3,'IPv4 only']], value: nvram.ipsec_pass }
 		]);
 	</script>
 </div>

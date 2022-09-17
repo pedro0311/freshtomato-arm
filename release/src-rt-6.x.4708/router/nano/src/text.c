@@ -117,8 +117,8 @@ void indent_a_line(linestruct *line, char *indentation)
  * depending on whether --tabstospaces is in effect. */
 void do_indent(void)
 {
-	char *indentation;
 	linestruct *top, *bot, *line;
+	char *indentation;
 
 	/* Use either all the marked lines or just the current line. */
 	get_range(&top, &bot);
@@ -502,10 +502,11 @@ void redo_cut(undostruct *u)
 void do_undo(void)
 {
 	undostruct *u = openfile->current_undo;
-	linestruct *line = NULL, *intruder;
-	linestruct *oldcutbuffer;
-	char *data, *undidmsg = NULL;
+	linestruct *oldcutbuffer, *intruder;
+	linestruct *line = NULL;
 	size_t original_x, regain_from_x;
+	char *undidmsg = NULL;
+	char *data;
 
 	if (u == NULL) {
 		statusline(AHEM, _("Nothing to undo"));
@@ -684,10 +685,12 @@ void do_undo(void)
 /* Redo the last thing(s) we undid. */
 void do_redo(void)
 {
-	linestruct *line = NULL, *intruder;
-	char *data, *redidmsg = NULL;
-	bool suppress_modification = FALSE;
 	undostruct *u = openfile->undotop;
+	bool suppress_modification = FALSE;
+	linestruct *line = NULL;
+	linestruct *intruder;
+	char *redidmsg = NULL;
+	char *data;
 
 	if (u == NULL || u == openfile->current_undo) {
 		statusline(AHEM, _("Nothing to redo"));
@@ -2117,8 +2120,11 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		timestamp_nsec = (long)fileinfo.st_mtim.tv_nsec;
 	}
 
-	/* Exit from curses mode to give the program control of the terminal. */
-	endwin();
+	/* The spell checker needs the screen, so exit from curses mode. */
+	if (spelling)
+		endwin();
+	else
+		statusbar(_("Invoking formatter..."));
 
 	construct_argument_list(&arguments, theprogram, tempfile_name);
 
@@ -2138,9 +2144,13 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 
 	errornumber = errno;
 
-	/* Restore the terminal state and reenter curses mode. */
-	terminal_init();
-	doupdate();
+	/* After spell checking, restore terminal state and reenter curses mode;
+	 * after formatting, make sure that any formatter output is wiped. */
+	if (spelling) {
+		terminal_init();
+		doupdate();
+	} else
+		full_refresh();
 
 	if (thepid < 0) {
 		statusline(ALERT, _("Could not fork: %s"), strerror(errornumber));
