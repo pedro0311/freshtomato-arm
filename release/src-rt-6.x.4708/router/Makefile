@@ -53,6 +53,28 @@ define CMAKE_CrossOptions
  )
 endef
 
+define meson_CrossOptions
+ ( \
+  echo "[host_machine]" >>$(1); \
+  echo "system = 'linux'" >>$(1); \
+  echo "cpu_family = '$(if $(TCONFIG_BCMARM),arm,mips)'" >>$(1); \
+  echo "cpu = '$(if $(TCONFIG_BCMARM),arm7-a,$(if $(TCONFIG_MIPSR2),mips32r2,mips32))'" >>$(1); \
+  echo "endian = 'little'" >>$(1); \
+  echo "[binaries]" >>$(1); \
+  echo "c = '$(CC)'" >>$(1); \
+  echo "cpp = '$(CXX)'" >>$(1); \
+  echo "ar = '$(AR)'" >>$(1); \
+  echo "strip = '$(STRIP)'" >>$(1); \
+  echo "pkgconfig = '/usr/bin/pkg-config'" >>$(1); \
+  echo "[built-in options]" >>$(1); \
+  echo "wrap_mode = 'nodownload'" >>$(1); \
+  echo "[properties]" >>$(1); \
+  echo "have_c99_vsnprintf=true" >>$(1); \
+  echo "have_c99_snprintf=true" >>$(1); \
+  echo "have_unix98_printf=true" >>$(1); \
+ )
+endef
+
 
 #
 #
@@ -3056,35 +3078,32 @@ endif
 lz4:
 	@$(SEP)
 	cd lz4 && \
-	CC=$(CC) \
-	CXX=$(CXX) \
-	AR=$(AR) \
-	CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-	CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-	CXXFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-	PREFIX=/usr \
-	LIBDIR=/usr/lib \
-	$(MAKE) \
-	LN_S="ln -sf" \
-	BUILD_SHARED=no \
-	install \
-	DESTDIR=$(TOP)/lz4/staged
+		CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CXXFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		LDFLAGS="-Wl,--gc-sections -fPIC" \
+		PREFIX=/usr \
+		LIBDIR=/usr/lib \
+		$(MAKE) \
+		LN_S="ln -sf" \
+		BUILD_SHARED=no \
+		install \
+		DESTDIR=$(TOP)/lz4/staged
+
+lz4-install:
+	@true
 
 lz4-clean:
 	-@$(MAKE) -C lz4 clean
 	@rm -rf lz4/staged
 
-lz4-install:
-	@true
-
 tinc/stamp-h1:
-
 	cd tinc && \
+		$(call meson_CrossOptions, meson-cross.txt) && \
 		PKG_CONFIG_LIBDIR='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig'\
 		$(TOP)/meson/meson.py \
 		build \
-		--cross-file $(TOP)/meson-cross/arm-cross.txt \
+		--cross-file meson-cross.txt \
 		-Doptimization=2 \
 		-Ddebug=false \
 		--prefix=/usr \
@@ -3093,7 +3112,7 @@ tinc/stamp-h1:
 		-Dc_std=gnu99 \
 		-Dwarning_level=0 \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-		-Dc_link_args="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread" \
 		-Dcrypto=openssl \
 		-Dzlib=enabled \
 		-Dlzo=enabled \
