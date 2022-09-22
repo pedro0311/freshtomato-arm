@@ -1,9 +1,9 @@
 --- getdns/stubby/src/log.c
 +++ getdns/stubby/src/log.c
-@@ -60,6 +60,8 @@
-         tv.tv_usec = timeb.millitm * 1000;
+@@ -64,6 +64,8 @@
          gmtime_s(&tm, &tsec);
  #else
+ 	if (level > log_level) return;
 +	if (use_syslog)
 +		(void) vsyslog(level, fmt, ap);
          gettimeofday(&tv, NULL);
@@ -36,10 +36,10 @@
  void
  print_usage(FILE *out)
  {
-@@ -160,6 +164,11 @@
- 		}
+@@ -183,6 +187,11 @@
+ 		log_connections = 1;
+ 		log_level = config_log_level;
  	}
- 
 +#if !defined(STUBBY_ON_WINDOWS) && !defined(GETDNS_ON_WINDOWS)
 +	use_syslog = log_connections || !run_in_foreground;
 +	if (use_syslog)
