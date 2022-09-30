@@ -482,6 +482,22 @@ int buttons_main(int argc, char *argv[])
 		ses_led = LED_DIAG; /* Use LED Diag for feedback if a button is pushed. Do not interfere with LED_AOSS --> used for WLAN SUMMARY LED */
 		break;
 #endif /* TCONFIG_AC3200 */
+#ifdef TCONFIG_BCM714
+	case MODEL_RTAC3100:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 20; /* wps button (active LOW) */
+		wlan_mask = 1 << 18;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+#ifdef TCONFIG_AC5300
+	case MODEL_RTAC5300:
+		reset_mask = 1 << 11; /* reset button (active LOW) */
+		ses_mask = 1 << 18; /* wps button (active LOW) */
+		wlan_mask = 1 << 20;  /* wifi button (active LOW) */
+		ses_led = LED_AOSS; /* Use LED AOSS for feedback if a button is pushed. */
+		break;
+#endif /* TCONFIG_AC5300 */
+#endif /* TCONFIG_BCM714 */
 #endif /* !CONFIG_BCMWL6A */
 
 	default:
@@ -609,7 +625,13 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
+#ifdef TCONFIG_BCM714
+			     || (model == MODEL_RTAC3100)			     
+#endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+			     || (model == MODEL_RTAC5300)
+#endif			     
 			     || (model == MODEL_RTAC3200)
 #endif
 			)) {
@@ -727,7 +749,13 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_DSLAC68U)
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
+#ifdef TCONFIG_BCM714
+			     || (model == MODEL_RTAC3100)			     
+#endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+			     || (model == MODEL_RTAC5300)
+#endif
 			     || (model == MODEL_RTAC3200)
 #endif
 			)) {

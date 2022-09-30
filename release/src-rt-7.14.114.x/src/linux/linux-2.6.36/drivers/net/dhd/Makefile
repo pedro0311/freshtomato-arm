@@ -1,7 +1,7 @@
 #
 # Makefile for the Broadcom wl driver
 #
-# Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+# Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -20,16 +20,16 @@
 TARGET := dhd
 obj-$(CONFIG_DHDAP) := $(TARGET).o
 
-ifeq ($(DHDAP_USE_SEPARATE_CHECKOUTS),1)
-SRCBASE_DHD    := dhd
-SRCBASE_OFFSET := ../../../../../router/
-DHDMAKEFILE    := $(SRCBASE)/../$(SRCBASE_DHD)/dhd/config/dhd_router.mk
+ifndef SRCBASE_DHD
+    SRCBASE_DHD := dhd/src
 else
-SRCBASE_OFFSET := ../../../../../../src
-DHDMAKEFILE    := $(SRCBASE)/dhd/config/dhd_router.mk
+    SRCBASE_DHD := $(subst $(dir $(patsubst %/,%,$(dir $(SRCBASE_DHD)))),,$(SRCBASE_DHD))
 endif
 
-REBUILD_DHD_MODULE=$(shell if [ -d "$(SRCBASE)/../../$(SRCBASE_DHD)/dhd/sys" ]; then echo 1; else echo 0; fi)
+SRCBASE_OFFSET := ../../../../../../$(SRCBASE_DHD)
+DHDMAKEFILE    := $(SRCBASE)/../$(SRCBASE_DHD)/dhd/config/dhd_router.mk
+
+REBUILD_DHD_MODULE=$(shell if [ -d "$(SRCBASE)/../$(SRCBASE_DHD)/dhd/sys" ]; then echo 1; else echo 0; fi)
 
 # If source directory (dhd/src/dhd/sys) exists then build dhd, otherwise use pre-builts
 ifeq ($(REBUILD_DHD_MODULE),1)
@@ -41,16 +41,14 @@ ifeq ($(REBUILD_DHD_MODULE),1)
     # Include master configuration from dhd makefile
     include $(DHDMAKEFILE)
 
-    ifeq ($(DHDAP_USE_SEPARATE_CHECKOUTS),1)
-        # Fix the include paths for DHD. DHD gets built from a
-        # different source tree.
-        KBUILD_CFLAGS_REMOVE := -I$(SRCBASE)/include
-        KBUILD_CFLAGS_REMOVE += -I$(SRCBASE)/common/include
-        KBUILD_CFLAGS_REMOVE += $(WLAN_ComponentIncPath)
-        KBUILD_CFLAGS_REMOVE += $(WLAN_StdIncPathA)
+    # Fix the include paths for DHD. DHD gets built from a
+    # different source tree.
+    KBUILD_CFLAGS_REMOVE := -I$(SRCBASE)/include
+    KBUILD_CFLAGS_REMOVE += -I$(SRCBASE)/common/include
+    KBUILD_CFLAGS_REMOVE += $(WLAN_ComponentIncPath)
+    KBUILD_CFLAGS_REMOVE += $(WLAN_StdIncPathA)
 
-        KBUILD_CFLAGS   := $(filter-out $(KBUILD_CFLAGS_REMOVE), $(KBUILD_CFLAGS))
-    endif
+    KBUILD_CFLAGS   := $(filter-out $(KBUILD_CFLAGS_REMOVE), $(KBUILD_CFLAGS))
 
     # dhd-objs is for linking to dhd.o
     $(TARGET)-objs := $(DHD_OBJS)

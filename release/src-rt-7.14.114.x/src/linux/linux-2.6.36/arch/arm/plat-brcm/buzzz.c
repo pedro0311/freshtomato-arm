@@ -1,7 +1,7 @@
 /*
  * Broadcom BCM47xx Buzzz based Kernel Profiling and Debugging
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@
  * with proprietary Buzzz kernel debug tools.
  *  2. A logging infrastructure that may be used for:
  *      - kernel event logging using pre-instrument kernel instrumentation,
- *      - MIPS 74K performance counter monitoring of code segments,
+ *      - Performance counter monitoring of code segments,
  *      - log of all functions calls using compiler -finstrument-function stubs.
  *      - logging a past history prior to an audit assert, or
  *  3. An audit infrastucture allowing user defined audits to be invoked at
@@ -42,13 +42,23 @@
  *     Host:   nc -l 192.168.1.10 33333 > func_trace.txt
  *  BUG: use of netcat on target causes page fault.
  *
+ * CAUTION: PMON and KEVT tool implementation uses 4 PMU counters. The BUZZZ
+ * debug print (BUZZZ_PRINT) and the buzzz_dump functions are not parameterized
+ * to BUZZZ_PMU_COUNTERS.
+ *
+ * On ARM, it was noted, that the Linux 10 millisec Tick (HZ=100) interrupt does
+ * not occur every 10 millisec. This was verified using the PMU cyclecount as
+ * well as event id 0x11. The same was noted on both UP and SMP modes.
+ *
  * -----------------------------------------------------------------------------
  */
 
+#include <typedefs.h>
 #include <linux/init.h>
 #include <linux/miscdevice.h>
 #include <linux/fs.h>
 #include <linux/proc_fs.h>
+#include <asm/uaccess.h>
 #include <linux/seq_file.h>
 #include <linux/in.h>
 #include <linux/inet.h>
@@ -76,43 +86,15 @@ EXPORT_SYMBOL(buzzz_debug);
 
 /* defines */
 
-/* Maximum length of a single log entry cannot exceed 64 bytes */
+/*
+ * Maximum length of a single log entry cannot exceed 64 bytes.
+ * Implementation uses a 32Byte per log entry.
+ */
 #define BUZZZ_LOGENTRY_MAXSZ    (64)
 
 /* Length of the buffer available for logging */
 #define BUZZZ_AVAIL_BUFSIZE     (BUZZZ_LOG_BUFSIZE - BUZZZ_LOGENTRY_MAXSZ)
 
-/* Caution: BUZZZ may only be used on single core. Not SMP safe */
-#if defined(CONFIG_SMP)
-#define BUZZZ_LOCK(flags)       spin_lock_irqsave(&buzzz_g.lock, flags)
-#define BUZZZ_UNLOCK(flags)     spin_unlock_irqrestore(&buzzz_g.lock, flags)
-#else   /*  CONFIG_SMP */
-#define BUZZZ_LOCK(flags)       local_irq_save(flags)
-#define BUZZZ_UNLOCK(flags)     local_irq_restore(flags)
-#endif  /* !CONFIG_SMP */
-
-/*
- * Function Call Tracing Tool
- */
-/* Number of logs prior to end of trace to be dumped on a kernel panic */
-#define BUZZZ_FUNC_PANIC_LOGS     (512)
-#define BUZZZ_FUNC_LIMIT_LOGS     (512)
-#define BUZZZ_FUNC_INDENT_STRING   "  "
-
-#if (BUZZZ_LOG_BUFSIZE < (4 * 4 * BUZZZ_FUNC_PANIC_LOGS))
-#error "BUZZZ_FUNC_PANIC_LOGS is too large"
-#endif  /* test BUZZZ_LOG_BUFSIZE */
-
-#if (BUZZZ_LOG_BUFSIZE < (4 * 4 * BUZZZ_FUNC_LIMIT_LOGS))
-#error "BUZZZ_FUNC_LIMIT_LOGS is too large"
-#endif  /* test BUZZZ_LOG_BUFSIZE */
-
-/*
- * Performance Monitoring Tool
- */
-#define BUZZZ_PMON_SAMPLESZ     (10U)
-
-typedef void (*timer_fn_t)(unsigned long);
 /*
  * -----------------------------------------------------------------------------
  * Buzzz debug display support.
@@ -132,347 +114,493 @@ typedef void (*timer_fn_t)(unsigned long);
  */
 
 #if defined(BUZZZ_CONFIG_SYS_KDBG)
-#define BUZZZ_PRINT(fmt, arg...)                                               \
-	printk(CLRg "BUZZZ %s: " fmt CLRnl, __FUNCTION__, ##arg)
+#define BUZZZ_PRINT(_fmt, _args...) \
+	printk(CLRg "BUZZZ %s: " _fmt CLRnl, __FUNCTION__, ##_args)
 #else   /* !BUZZZ_CONFIG_SYS_KDBG */
-#define BUZZZ_PRINT(fmt, arg...)    BUZZZ_NULL_STMT
+#define BUZZZ_PRINT(_fmt, _args...)    BUZZZ_NULL_STMT
 #endif  /* !BUZZZ_CONFIG_SYS_KDBG */
 
-#undef  BUZZZ_ENUM
-#define BUZZZ_ENUM(val)         #val,
-
-static const char * _str_INV = "INVALID";
-
-static const char * _str_buzzz_tool[BUZZZ_TOOL_MAXIMUM] =
-{
-	BUZZZ_ENUM(UNDEF)
-	BUZZZ_ENUM(FUNC)        /* Function call tracing */
-	BUZZZ_ENUM(PMON)        /* Algorithm performance monitoring */
-	BUZZZ_ENUM(KEVT)        /* Kernel space event tracing */
-};
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_tool(uint32_t tool)
-{
-	return (tool >= BUZZZ_TOOL_MAXIMUM) ? _str_INV :
-		_str_buzzz_tool[tool];
-}
-
-static const char * _str_buzzz_status[BUZZZ_STATUS_MAXIMUM] =
-{
-	BUZZZ_ENUM(DISABLED)
-	BUZZZ_ENUM(ENABLED)
-	BUZZZ_ENUM(PAUSED)
-};
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_status(uint32_t status)
-{
-	return (status >= BUZZZ_STATUS_MAXIMUM) ? _str_INV :
-		_str_buzzz_status[status];
-}
-
-static const char * _str_buzzz_mode[BUZZZ_MODE_MAXIMUM] =
-{
-	BUZZZ_ENUM(UNDEF)
-	BUZZZ_ENUM(WRAPOVER)
-	BUZZZ_ENUM(LIMITED)
-	BUZZZ_ENUM(TRANSMIT)
-};
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_mode(uint32_t mode)
-{
-	return (mode >= BUZZZ_MODE_MAXIMUM) ? _str_INV :
-		_str_buzzz_mode[mode];
-}
-static const char * _str_buzzz_ioctl[BUZZZ_IOCTL_MAXIMUM] =
-{
-	BUZZZ_ENUM(KCALL)
-
-	BUZZZ_ENUM(CONFIG_TOOL)
-	BUZZZ_ENUM(CONFIG_MODE)
-	BUZZZ_ENUM(CONFIG_LIMIT)
-
-	BUZZZ_ENUM(CONFIG_FUNC)
-	BUZZZ_ENUM(CONFIG_PMON)
-	BUZZZ_ENUM(CONFIG_KEVT)
-
-	BUZZZ_ENUM(SHOW)
-	BUZZZ_ENUM(START)
-	BUZZZ_ENUM(STOP)
-	BUZZZ_ENUM(PAUSE)
-	BUZZZ_ENUM(PLAY)
-	BUZZZ_ENUM(AUDIT)
-	BUZZZ_ENUM(DUMP)
-};
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_ioctl(uint32_t ioctl)
-{
-	ioctl -= BUZZZ_IOCTL_KCALL;
-	return (ioctl >= BUZZZ_IOCTL_MAXIMUM) ? _str_INV :
-		_str_buzzz_ioctl[ioctl];
-}
-
-#if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
-static const char * _str_buzzz_pmon_group[BUZZZ_PMON_GROUP_MAXIMUM] =
-{
-	BUZZZ_ENUM(RESET)
-	BUZZZ_ENUM(GENERAL)
-	BUZZZ_ENUM(ICACHE)
-	BUZZZ_ENUM(DCACHE)
-	BUZZZ_ENUM(TLB)
-	BUZZZ_ENUM(CYCLES_COMPLETED)
-	BUZZZ_ENUM(CYCLES_ISSUE_OOO)
-	BUZZZ_ENUM(INSTR_GENERAL)
-	BUZZZ_ENUM(INSTR_MISCELLANEOUS)
-	BUZZZ_ENUM(INSTR_LOAD_STORE)
-	BUZZZ_ENUM(CYCLES_IDLE_FULL)
-	BUZZZ_ENUM(CYCLES_IDLE_WAIT)
-	/* BUZZZ_ENUM(L2_CACHE) */
-};
-
-static const char * _str_buzzz_pmon_event[BUZZZ_PMON_EVENT_MAXIMUM] =
-{
-	/* group  0: RESET */
-	BUZZZ_ENUM(CTR0_NONE)                   /* 127 */
-	BUZZZ_ENUM(CTR1_NONE)                   /* 127 */
-	BUZZZ_ENUM(CTR2_NONE)                   /* 127 */
-	BUZZZ_ENUM(CTR3_NONE)                   /* 127 */
-
-	/* group  1 GENERAL */
-	BUZZZ_ENUM(COMPL0_MISPRED)              /* 56: 0,  2   */
-	BUZZZ_ENUM(CYCLES_ELAPSED)              /*  0: 0,1,2,3 */
-	BUZZZ_ENUM(EXCEPTIONS)                  /* 58: 0,  2   */
-	BUZZZ_ENUM(COMPLETED)                   /*  1: 0,1,2,3 */
-
-	/* group  2 ICACHE */
-	BUZZZ_ENUM(IC_ACCESS)                   /*  6: 0,  2   */
-	BUZZZ_ENUM(IC_REFILL)                   /*  6:   1,  3 */
-	BUZZZ_ENUM(CYCLES_IC_MISS)              /*  7: 0,  2   */
-	BUZZZ_ENUM(CYCLES_L2_MISS)              /*  7:   1,  3 */
-
-	/* group  3 DCACHE */
-	BUZZZ_ENUM(LOAD_DC_ACCESS)              /* 23: 0,  2   */
-	BUZZZ_ENUM(LSP_DC_ACCESS)               /* 23:   1,  3 */
-	BUZZZ_ENUM(WB_DC_ACCESS)                /* 24: 0,  2   */
-	BUZZZ_ENUM(LSP_DC_MISSES)               /* 24:   1,  3 */
-
-	/* group  4 TLB */
-	BUZZZ_ENUM(ITLB_ACCESS)                 /*  4: 0,  2   */
-	BUZZZ_ENUM(ITLB_MISS)                   /*  4:   1,  3 */
-	BUZZZ_ENUM(JTLB_DACCESS)                /* 25: 0,  2   */
-	BUZZZ_ENUM(JTLB_XL_FAIL)                /* 25:   1,  3 */
-
-	/* group  5 CYCLES_COMPLETED  */
-	BUZZZ_ENUM(COMPL0_INSTR)                /* 53: 0,  2   */
-	BUZZZ_ENUM(COMPL_LOAD_MISS)             /* 53:   1,  3 */
-	BUZZZ_ENUM(COMPL1_INSTR)                /* 54: 0,  2   */
-	BUZZZ_ENUM(COMPL2_INSTR)                /* 54:   1,  3 */
-
-	/* group  6 CYCLES_ISSUE_OOO */
-	BUZZZ_ENUM(ISS1_INSTR)                  /* 20: 0,  2   */
-	BUZZZ_ENUM(ISS2_INSTR)                  /* 20:   1,  3 */
-	BUZZZ_ENUM(OOO_ALU)                     /* 21: 0,  2   */
-	BUZZZ_ENUM(OOO_AGEN)                    /* 21:   1,  3 */
-
-	/* group  7 INSTR_GENERAL */
-	BUZZZ_ENUM(CONDITIONAL)                 /* 39: 0,  2   */
-	BUZZZ_ENUM(MISPREDICTED)                /* 39:   1,  3 */
-	BUZZZ_ENUM(INTEGER)                     /* 40: 0,  2   */
-	BUZZZ_ENUM(FLOAT)                       /* 40:   1,  3 */
-
-	/* group  8 INSTR_MISCELLANEOUS */
-	BUZZZ_ENUM(JUMP)                        /* 42: 0,  2   */
-	BUZZZ_ENUM(MULDIV)                      /* 43:   1,  3 */
-	BUZZZ_ENUM(PREFETCH)                    /* 52: 0,  2   */
-	BUZZZ_ENUM(PREFETCH_NULL)               /* 52:   1,  3 */
-
-	/* group  9 INSTR_LOAD_STORE */
-	BUZZZ_ENUM(LOAD)                        /* 41: 0,  2   */
-	BUZZZ_ENUM(STORE)                       /* 41:   1,  3 */
-	BUZZZ_ENUM(LOAD_UNCACHE)                /* 46: 0,  2   */
-	BUZZZ_ENUM(STORE_UNCACHE)               /* 46:   1,  3 */
-
-	/* group  10 CYCLES_IDLE_FULL */
-	BUZZZ_ENUM(ALU_CAND_POOL)               /* 13: 0,  2   */
-	BUZZZ_ENUM(AGEN_CAND_POOL)              /* 13:   1,  3 */
-	BUZZZ_ENUM(ALU_COMPL_BUF)               /* 14: 0,  2   */
-	BUZZZ_ENUM(AGEN_COMPL_BUF)              /* 14:   1,  3 */
-
-	/* group 11 CYCLES_IDLE_WAIT */
-	BUZZZ_ENUM(ALU_NO_INSTR)                /* 16: 0,  2   */
-	BUZZZ_ENUM(AGEN_NO_INSTR)               /* 16:   1,  3 */
-	BUZZZ_ENUM(ALU_NO_OPER)                 /* 17: 0,  2   */
-	BUZZZ_ENUM(GEN_NO_OPER)                 /* 17:   1,  3 */
-
-	/* group 12 : L2_CACHE */
-	/* BUZZZ_ENUM(WBACK) */
-	/* BUZZZ_ENUM(ACCESS) */
-	/* BUZZZ_ENUM(MISSES) */
-	/* BUZZZ_ENUM(MISS_CYCLES) */
-};
-#endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-static const char * _str_buzzz_pmon_group[BUZZZ_PMON_GROUP_MAXIMUM] =
-{
-	BUZZZ_ENUM(RESET)
-	BUZZZ_ENUM(GENERAL)
-	BUZZZ_ENUM(ICACHE)
-	BUZZZ_ENUM(DCACHE)
-	BUZZZ_ENUM(TLB)
-	BUZZZ_ENUM(DATA)
-	BUZZZ_ENUM(SPURIOUS)
-	BUZZZ_ENUM(BRANCHES)
-	BUZZZ_ENUM(MISCELLANEOUS)
-};
-
-static const char * _str_buzzz_pmon_event[BUZZZ_PMON_EVENT_MAXIMUM] =
-{
-	/* group  0: RESET */
-	BUZZZ_ENUM(CTR0_SKIP)                   /* 0x00 */
-	BUZZZ_ENUM(CTR1_SKIP)                   /* 0x00 */
-	BUZZZ_ENUM(CTR2_SKIP)                   /* 0x00 */
-	BUZZZ_ENUM(CTR3_SKIP)                   /* 0x00 */
-
-	/* group  1: GENERAL */
-	BUZZZ_ENUM(BRANCH_MISPRED)              /* 0x10 */
-	BUZZZ_ENUM(CYCLES_ELAPSED)              /* 0x11 */
-	BUZZZ_ENUM(EXCEPTIONS)                  /* 0x09 */
-	BUZZZ_ENUM(SPEC_INSTRCNT)               /* 0x68 */
-
-	/* group  2: ICACHE */
-	BUZZZ_ENUM(INSRTUCTIONS)                /* 0x68 */
-	BUZZZ_ENUM(IC_REFILL)                   /* 0x01 */
-	BUZZZ_ENUM(CYCLES_IC_MISS)              /* 0x60 */
-	BUZZZ_ENUM(CYCLES_NOISSUE)              /* 0x66 */
-
-	/* group  3: DCACHE */
-	BUZZZ_ENUM(DC_ACCESS)                   /* 0x04 */
-	BUZZZ_ENUM(DC_REFILL)                   /* 0x03 */
-	BUZZZ_ENUM(CYCLES_DC_MISS)              /* 0x61 */
-	BUZZZ_ENUM(EVICTIONS)                   /* 0x65 */
-
-	/* group  4: TLB */
-	BUZZZ_ENUM(INSTR_REFILL)                /* 0x02 */
-	BUZZZ_ENUM(DATA_REFILL)                 /* 0x05 */
-	BUZZZ_ENUM(CYCLES_ITLB_MISS)            /* 0x82 */
-	BUZZZ_ENUM(CYCLES_DTLB_MISS)            /* 0x83 */
-
-	/* group  5: DATA */
-	BUZZZ_ENUM(READ_ACCESS)                 /* 0x06 */
-	BUZZZ_ENUM(WRITE_ACCESS)                /* 0x07 */
-	BUZZZ_ENUM(CYCLES_WRITE)                /* 0x81 */
-	BUZZZ_ENUM(CYCLES_DMB)                  /* 0x86 */
-
-	/* group  6: SPURIOUS */
-	BUZZZ_ENUM(INTERRUPTS)                  /* 0x93 */
-	BUZZZ_ENUM(UNALIGNED)                   /* 0x0F */
-	BUZZZ_ENUM(EXCEPTION_RTN)               /* 0x0A */
-	BUZZZ_ENUM(CYCLES_TLB_MISS)             /* 0x62 */
-
-	/* group  7: BRANCHES */
-	BUZZZ_ENUM(SW_PC_CHANGE)                /* 0x0C */
-	BUZZZ_ENUM(IMMED_BRANCHES)              /* 0x0D */
-	BUZZZ_ENUM(PROCEDURE_RTN)               /* 0x0E */
-	BUZZZ_ENUM(PRED_BRANCHES)               /* 0x12 */
-
-	/* group  8: MISCELLANEOUS */
-	BUZZZ_ENUM(STREX_PASSED)                /* 0x63 */
-	BUZZZ_ENUM(STREX_FAILED)                /* 0x64 */
-	BUZZZ_ENUM(DSB_INSTR)                   /* 0x91 */
-	BUZZZ_ENUM(DMB_INSTR)                   /* 0x92 */
-};
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_pmon_group(uint32_t group)
-{
-	return (group >= BUZZZ_PMON_GROUP_MAXIMUM) ? _str_INV :
-		_str_buzzz_pmon_group[group];
-}
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_pmon_event(uint32_t event)
-{
-	return (event >= BUZZZ_PMON_EVENT_MAXIMUM) ? _str_INV :
-		_str_buzzz_pmon_event[event];
-}
-
-static const char * _str_buzzz_kevt_group[BUZZZ_KEVT_GROUP_MAXIMUM] =
-{
-	BUZZZ_ENUM(RESET)
-	BUZZZ_ENUM(GENERAL)
-	BUZZZ_ENUM(ICACHE)
-	BUZZZ_ENUM(DCACHE)
-	BUZZZ_ENUM(TLB)
-	BUZZZ_ENUM(BRANCH)
-};
-
-static const char * _str_buzzz_kevt_event[BUZZZ_KEVT_EVENT_MAXIMUM] =
-{
-	/* group  0: RESET */
-	BUZZZ_ENUM(CTR0_NONE)                   /* 0x00 */
-	BUZZZ_ENUM(CTR1_NONE)                   /* 0x00 */
-
-	/* group  1: GENERAL */
-	BUZZZ_ENUM(SPEC_INSTRCNT)               /* 0x68 */
-	BUZZZ_ENUM(CYCLES_ELAPSED)              /* 0x11 */
-
-	/* group  2: ICACHE */
-	BUZZZ_ENUM(INSTRUCTIONS)                /* 0x68 */
-	BUZZZ_ENUM(IC_REFILL)                   /* 0x01 */
-
-	/* group  3: DCACHE */
-	BUZZZ_ENUM(DC_ACCESS)                   /* 0x04 */
-	BUZZZ_ENUM(DC_REFILL)                   /* 0x03 */
-
-	/* group  4: TLB */
-	BUZZZ_ENUM(INSTR_REFILL)                /* 0x02 */
-	BUZZZ_ENUM(DATA_REFILL)                 /* 0x05 */
-
-	/* group  5: MISCELLANEOUS */
-	BUZZZ_ENUM(BRANCH_MISPRED)              /* 0x10 */
-	BUZZZ_ENUM(STREX_FAILED)                /* 0x64 */
-};
-
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_kevt_group(uint32_t group)
-{
-	return (group >= BUZZZ_KEVT_GROUP_MAXIMUM) ? _str_INV :
-	        _str_buzzz_kevt_group[group];
-}
-static BUZZZ_INLINE const char * BUZZZ_NOINSTR_FUNC
-str_buzzz_kevt_event(uint32_t event)
-{
-	return (event >= BUZZZ_KEVT_EVENT_MAXIMUM) ? _str_INV :
-	        _str_buzzz_kevt_event[event];
-}
+#define BUZZZ_PRERR(_fmt, _args...) \
+	printk(CLRerr "BUZZZ " BUZZZ_VER_FMTS " %s ERROR: " _fmt CLRnl, \
+		BUZZZ_VER_FMT(BUZZZ_SYS_VERSION), __FUNCTION__, ##_args)
 
 
 /*
- * -----------------------------------------------------------------------------
- * BUZZZ Logging Infrastructure
- * -----------------------------------------------------------------------------
+ * Macro to construct a formatted log printout by incrementally converting
+ * parts of a log into a 4K buffer page.
+ */
+/* Page for formatted printing each log entry */
+#define BUZZZ_PAGE_SIZE         (4096)
+
+#define BUZZZ_SNPRINTF(_fmt, _args...) \
+	bytes += snprintf(p + bytes, (BUZZZ_PAGE_SIZE - bytes), _fmt, ##_args)
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: Various assert on input parameters.
+ * +---------------------------------------------------------------------------+
+ */
+/* __buzzz_assert_xyz() template */
+#define BUZZZ_ASSERT(NAME, name) \
+static BUZZZ_INLINE bool BUZZZ_NOINSTR_FUNC \
+__buzzz_assert_##name(enum buzzz_##name name) \
+{ \
+	if ((name == BUZZZ_##NAME##_UNDEF) || (name >= BUZZZ_##NAME##_MAXIMUM)) { \
+		BUZZZ_PRERR(#name "<%d> is out of scope", (int)name); \
+		return BUZZZ_FALSE; \
+	} \
+	return BUZZZ_TRUE; \
+}
+BUZZZ_ASSERT(TOOL, tool)            /* __buzzz_assert_tool()      */
+BUZZZ_ASSERT(MODE, mode)            /* __buzzz_assert_mode()      */
+BUZZZ_ASSERT(PMU_GROUP, pmu_group)  /* __buzzz_assert_pmu_group() */
+BUZZZ_ASSERT(KEVT_ID, kevt_id)      /* __buzzz_assert_kevt_id()   */
+#define BUZZZ_ASSERT_TOOL(tool) \
+	do { if (!__buzzz_assert_tool(tool)) return BUZZZ_FAILURE; } while (0)
+#define BUZZZ_ASSERT_MODE(mode) \
+	do { if (!__buzzz_assert_mode(mode)) return BUZZZ_FAILURE; } while (0)
+#define BUZZZ_ASSERT_PMU_GROUP(group) \
+	do { if (!__buzzz_assert_pmu_group(group)) return BUZZZ_FAILURE; } while (0)
+#define BUZZZ_ASSERT_KEVT_ID(kevt_id) \
+	do { if (!__buzzz_assert_kevt_id(kevt_id)) return BUZZZ_FAILURE; } while (0)
+
+
+#if defined(CONFIG_SMP)
+#define BUZZZ_LOCK(flags)       spin_lock_irqsave(&buzzz_g.lock, flags)
+#define BUZZZ_UNLOCK(flags)     spin_unlock_irqrestore(&buzzz_g.lock, flags)
+#else   /*  CONFIG_SMP */
+#define BUZZZ_LOCK(flags)       local_irq_save(flags)
+#define BUZZZ_UNLOCK(flags)     local_irq_restore(flags)
+#endif  /* !CONFIG_SMP */
+
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: Enum to string conversion for human readable printout
+ * +---------------------------------------------------------------------------+
+ */
+static const char *_buzzz_INV = "INVALID";
+
+#define BUZZZ_STR_FUNC(NAME, name) \
+static BUZZZ_INLINE const char *BUZZZ_NOINSTR_FUNC \
+__buzzz_##name(uint32_t name) \
+{ \
+	return (name >= BUZZZ_##NAME##_MAXIMUM) ? _buzzz_INV : \
+		_buzzz_##name[name]; \
+}
+
+/*
+ * To facilitate enum to human-readable string conversion for pretty print
+ * Cut an paste the enum list
+ */
+#undef  BUZZZ_DESC
+#define BUZZZ_DESC(val)         #val,
+
+static const char *_buzzz_tool[BUZZZ_TOOL_MAXIMUM] =
+{
+	BUZZZ_DESC(UNDEF)
+	BUZZZ_DESC(FUNC)        /* Function call tracing */
+	BUZZZ_DESC(PMON)        /* Algorithm performance monitoring */
+	BUZZZ_DESC(KEVT)        /* Kernel space event tracing */
+};
+BUZZZ_STR_FUNC(TOOL, tool)  /* __buzzz_tool() */
+
+static const char *_buzzz_status[BUZZZ_STATUS_MAXIMUM] =
+{
+	BUZZZ_DESC(DISABLED)
+	BUZZZ_DESC(ENABLED)
+	BUZZZ_DESC(PAUSED)
+};
+BUZZZ_STR_FUNC(STATUS, status)  /* __buzzz_status() */
+
+static const char *_buzzz_mode[BUZZZ_MODE_MAXIMUM] =
+{
+	BUZZZ_DESC(UNDEF)
+	BUZZZ_DESC(WRAPOVER)
+	BUZZZ_DESC(LIMITED)
+	BUZZZ_DESC(TRANSMIT)
+};
+BUZZZ_STR_FUNC(MODE, mode)      /* __buzzz_mode() */
+
+static const char *_buzzz_ioctl[BUZZZ_IOCTL_MAXIMUM] =
+{
+	BUZZZ_DESC(UNDEF)
+
+	BUZZZ_DESC(CONFIG_TOOL)
+	BUZZZ_DESC(CONFIG_MODE)
+	BUZZZ_DESC(CONFIG_LIMIT)
+
+	BUZZZ_DESC(CONFIG_FUNC)
+	BUZZZ_DESC(CONFIG_PMON)
+	BUZZZ_DESC(CONFIG_KEVT)
+
+	BUZZZ_DESC(SHOW)
+	BUZZZ_DESC(START)
+	BUZZZ_DESC(STOP)
+	BUZZZ_DESC(PAUSE)
+	BUZZZ_DESC(PLAY)
+	BUZZZ_DESC(AUDIT)
+	BUZZZ_DESC(DUMP)
+	BUZZZ_DESC(KCALL)
+};
+BUZZZ_STR_FUNC(IOCTL, ioctl)      /* __buzzz_ioctl() */
+
+
+#if defined(CONFIG_MIPS)
+#if defined(BUZZZ_CONFIG_CPU_MIPS_74K)
+static const char *_buzzz_pmu_group[BUZZZ_PMU_GROUP_MAXIMUM] =
+{
+	BUZZZ_DESC(UNDEF)
+	BUZZZ_DESC(GENERAL)
+	BUZZZ_DESC(ICACHE)
+	BUZZZ_DESC(DCACHE)
+	BUZZZ_DESC(TLB)
+	BUZZZ_DESC(COMPLETED)
+	BUZZZ_DESC(ISSUE_OOO)
+	BUZZZ_DESC(INSTR_GENERAL)
+	BUZZZ_DESC(INSTR_MISCELLANEOUS)
+	BUZZZ_DESC(INSTR_LOAD_STORE)
+	BUZZZ_DESC(CYCLES_IDLE_FULL)
+	BUZZZ_DESC(CYCLES_IDLE_WAIT)
+	/* BUZZZ_DESC(L2_CACHE) */
+};
+BUZZZ_STR_FUNC(PMU_GROUP, pmu_group)    /* __buzzz_pmu_group() */
+
+
+#undef BUZZZ_DEFN
+#define BUZZZ_DEFN(VER, EVTID, EVTNAME) { EVTID, #EVTNAME }
+static const buzzz_pmu_event_desc_t
+buzzz_pmu_event_g[BUZZZ_PMU_GROUPS][BUZZZ_PMU_COUNTERS] =
+{
+	{   /* group 00: UNDEF */
+		BUZZZ_DEFN(74KE, 127, NONE),
+		BUZZZ_DEFN(74KE, 127, NONE),
+		BUZZZ_DEFN(74KE, 127, NONE),
+		BUZZZ_DEFN(74KE, 127, NONE)
+	},
+
+	{   /* group 01: GENERAL [CYCLES_ELAPSED in 3rd counter!] */
+		BUZZZ_DEFN(74KE,  56, COMPL0_MISPRED), /* 0   2   */
+		BUZZZ_DEFN(74KE,  53, LOAD_MISS),      /*   1   3 */
+		BUZZZ_DEFN(74KE,   1, INSTR_COMPL),    /* 0 1 2 3 */
+		BUZZZ_DEFN(74KE,   0, CYCLES_ELAPSED)  /* 0 1 2 3 */
+	},
+
+	{	/* group 02: ICACHE */
+		BUZZZ_DEFN(74KE,   6, IC_ACCESS),      /* 0   2   */
+		BUZZZ_DEFN(74KE,   6, IC_MISS),        /*   1   3 */
+		BUZZZ_DEFN(74KE,   7, CYCLES_IC_MISS), /* 0   2   */
+		BUZZZ_DEFN(74KE,   8, CYCLES_I_UCACC)  /* 0   2   */
+	},
+
+	{	/* group 03: DCACHE */
+		BUZZZ_DEFN(74KE,  23, LD_CACHEABLE),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  23, DCACHE_ACCESS),  /*   1   3 */
+		BUZZZ_DEFN(74KE,  24, DCACHE_WBACK),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  24, DCACHE_MISS)     /*   1   3 */
+	},
+
+	{	/* group 04: TLB */
+		BUZZZ_DEFN(74KE,   4, ITLB_ACCESS),    /* 0   2   */
+		BUZZZ_DEFN(74KE,   4, ITLB_MISS),      /*   1   3 */
+		BUZZZ_DEFN(74KE,  25, JTLB_DACCESS),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  25, JTLB_XL_FAIL)    /*   1   3 */
+	},
+
+	{	/* group 05: COMPLETED */
+		BUZZZ_DEFN(74KE,  53, COMPL0_INSTR),   /* 0   2   */
+		BUZZZ_DEFN(74KE,   1, INSTR_COMPL),    /* 0 1 2 3 */
+		BUZZZ_DEFN(74KE,  54, COMPL1_INSTR),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  54, COMPL2_INSTR)    /*   1   3 */
+	},
+
+	{	/* group 06: ISSUE_OOO */
+		BUZZZ_DEFN(74KE,  20, ISS1_INSTR),     /* 0   2   */
+		BUZZZ_DEFN(74KE,  20, ISS2_INSTR),     /*   1   3 */
+		BUZZZ_DEFN(74KE,  21, OOO_ALU),        /* 0   2   */
+		BUZZZ_DEFN(74KE,  21, OOO_AGEN)        /*   1   3 */
+	},
+
+	{	/* group 07: INSTR_GENERAL */
+		BUZZZ_DEFN(74KE,  39, CONDITIONAL),    /* 0   2   */
+		BUZZZ_DEFN(74KE,  39, MISPREDICTED),   /*   1   3 */
+		BUZZZ_DEFN(74KE,  40, INTEGER),        /* 0   2   */
+		BUZZZ_DEFN(74KE,  40, FLOAT)           /*   1   3 */
+	},
+
+	{	/* group 08: INSTR_MISCELLANEOUS */
+		BUZZZ_DEFN(74KE,  42, JUMP),           /* 0   2   */
+		BUZZZ_DEFN(74KE,  43, MULDIV),         /*   1   3 */
+		BUZZZ_DEFN(74KE,  52, PREFETCH),       /* 0   2   */
+		BUZZZ_DEFN(74KE,  52, PREFETCH_NULL)   /*   1   3 */
+	},
+
+	{	/* group 09: INSTR_LOAD_STORE */
+		BUZZZ_DEFN(74KE,  41, LOAD),           /* 0   2   */
+		BUZZZ_DEFN(74KE,  41, STORE),          /*   1   3 */
+		BUZZZ_DEFN(74KE,  46, LOAD_UNCACHE),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  46, STORE_UNCACHE)   /*   1   3 */
+	},
+
+	{	/* group 10: CYCLES_IDLE_FULL */
+		BUZZZ_DEFN(74KE,  13, ALU_CAND_POOL),  /* 0   2   */
+		BUZZZ_DEFN(74KE,  13, AGEN_CAND_POOL), /*   1   3 */
+		BUZZZ_DEFN(74KE,  14, ALU_COMPL_BUF),  /* 0   2   */
+		BUZZZ_DEFN(74KE,  14, AGEN_COMPL_BUF)  /*   1   3 */
+	},
+
+	{	/* group 11: CYCLES_IDLE_WAIT */
+		BUZZZ_DEFN(74KE,  16, ALU_NO_ISSUE),   /* 0   2   */
+		BUZZZ_DEFN(74KE,  16, AGEN_NO_ISSUE)   /*   1   3 */
+		BUZZZ_DEFN(74KE,  17, ALU_NO_OPER),    /* 0   2   */
+		BUZZZ_DEFN(74KE,  17, AGEN_NO_OPER)    /*   1   3 */
+	}
+};
+static BUZZZ_INLINE const char *BUZZZ_NOINSTR_FUNC
+__buzzz_pmu_event(uint32_t group, uint32_t counter)
+{
+	if ((group >= BUZZZ_PMU_GROUPS) || (counter >= BUZZZ_PMU_COUNTERS))
+		return _buzzz_INV;
+	return buzzz_pmu_event_g[group][counter].name;
+}
+
+#endif	/*  BUZZZ_CONFIG_CPU_MIPS_74K */
+#endif	/*  CONFIG_MIPS */
+
+
+#if defined(CONFIG_ARM)
+static const char *_buzzz_pmu_group[BUZZZ_PMU_GROUP_MAXIMUM] =
+{
+	BUZZZ_DESC(UNDEF)
+	BUZZZ_DESC(GENERAL)
+	BUZZZ_DESC(ICACHE)
+	BUZZZ_DESC(DCACHE)
+	BUZZZ_DESC(MEMORY)
+	BUZZZ_DESC(BUS)
+	BUZZZ_DESC(BRANCH)
+	BUZZZ_DESC(EXCEPTION)
+	BUZZZ_DESC(SPURIOUS)
+	BUZZZ_DESC(PREF_COH)
+	BUZZZ_DESC(L2CACHE)
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+	BUZZZ_DESC(INSTRTYPE)
+	BUZZZ_DESC(BARRIER)
+	BUZZZ_DESC(ISSUE)
+	BUZZZ_DESC(STALLS)
+	BUZZZ_DESC(TLBSTALLS)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+};
+BUZZZ_STR_FUNC(PMU_GROUP, pmu_group)    /* __buzzz_pmu_group() */
+
+/*
+ * CAUTION: [BCM4709] : broken ARMv7 counters on CortexA9 rev0
+ * 0x13, MEM_ACCESS
+ * 0x08, INST_RETIRED      (use 0x68)
+ * 0x1b, INST_SPEC         (use 0x68)
+ * 0x0e, BR_RETURN_RETIRED (use 0x6e)
+ */
+#undef BUZZZ_DEFN
+#define BUZZZ_DEFN(VER, EVTID, EVTNAME) { EVTID, #EVTNAME }
+static const buzzz_pmu_event_desc_t
+buzzz_pmu_event_g[BUZZZ_PMU_GROUPS][BUZZZ_PMU_COUNTERS] =
+{
+	{	/* group 00: UNDEF */
+		BUZZZ_DEFN(V7, 0x00, NONE),
+		BUZZZ_DEFN(V7, 0x00, NONE),
+		BUZZZ_DEFN(V7, 0x00, NONE),
+		BUZZZ_DEFN(V7, 0x00, NONE)
+	},
+
+	{	/* group 01: GENERAL [CPU_CYCLE in 3rd counter!] */
+		BUZZZ_DEFN(V7, 0x10, BR_MIS_PRED),
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x04, L1D_CACHE),
+#else
+		BUZZZ_DEFN(V7, 0x13, MEM_ACCESS),
+#endif
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x68, INSTR_RENAME_STAGE),
+#else
+		BUZZZ_DEFN(V7, 0x08, INST_RETIRED),
+#endif
+		BUZZZ_DEFN(V7, 0x11, CPU_CYCLE)
+	},
+
+	{	/* group 02: ICACHE */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x68, INSTR_RENAME_STAGE),
+#else
+		BUZZZ_DEFN(V7, 0x08, INST_RETIRED),
+#endif
+		BUZZZ_DEFN(V7, 0x14, L1I_CACHE),
+		BUZZZ_DEFN(V7, 0x01, L1I_CACHE_REFILL),
+		BUZZZ_DEFN(V7, 0x02, L1I_TLB_REFILL)
+	},
+
+	{	/* group 03: DCACHE */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x15, L1D_CACHE_WB),
+#else
+		BUZZZ_DEFN(V7, 0x13, MEM_ACCESS),
+#endif
+		BUZZZ_DEFN(V7, 0x04, L1D_CACHE),
+		BUZZZ_DEFN(V7, 0x03, L1D_CACHE_REFILL),
+		BUZZZ_DEFN(V7, 0x05, L1D_TLB_REFILL)
+	},
+
+	{	/* group 04: MEMORY */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x04, L1D_CACHE),
+#else
+		BUZZZ_DEFN(V7, 0x13, MEM_ACCESS),
+#endif
+		BUZZZ_DEFN(V7, 0x15, L1D_CACHE_WB),
+		BUZZZ_DEFN(V7, 0x06, LD_RETIRED),
+		BUZZZ_DEFN(V7, 0x07, ST_RETIRED)
+	},
+
+	{	/* group 05: BUS */
+		BUZZZ_DEFN(V7, 0x19, BUS_ACCESS),
+		BUZZZ_DEFN(V7, 0x1d, BUS_CYCLE),
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A7)
+		BUZZZ_DEFN(A7, 0x60, BUS_RD_ACCESS),
+		BUZZZ_DEFN(A7, 0x61, BUS_WR_ACCESS)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A7 */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(A9, 0x69, DATA_LINEFILL),
+		BUZZZ_DEFN(A9, 0x65, DATA_EVICTION)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+	},
+
+	{	/* group 06: BRANCH */
+		BUZZZ_DEFN(V7, 0x10, BR_MIS_PRED),
+		BUZZZ_DEFN(V7, 0x12, BR_PRED),
+		BUZZZ_DEFN(V7, 0x0d, BR_IMMED_RETIRED),
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(A9, 0x6e, PRED_BR_RETURN)
+#else
+		BUZZZ_DEFN(V7, 0x0e, BR_RETURN_RETIRED)
+#endif
+	},
+
+	{	/* group 06: EXCEPTION */
+		BUZZZ_DEFN(V7, 0x09, EXC_TAKEN),
+		BUZZZ_DEFN(V7, 0x0a, EXC_RETURN),
+		BUZZZ_DEFN(V7, 0x0b, CID_WRITE_RETIRED),
+		BUZZZ_DEFN(V7, 0x0c, PC_WRITE_RETIRED)
+	},
+
+	{	/* group 07: SPURIOUS */
+		BUZZZ_DEFN(V7, 0x0f, UNALIGN_LDST_RETIRED),
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A7)
+		BUZZZ_DEFN(A7, 0x86, IRQ_EXC_TAKEN),
+		BUZZZ_DEFN(A7, 0xc9, WR_STALL),
+		BUZZZ_DEFN(A7, 0xca, DATA_SNOOP)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A7 */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(A9, 0x93, EXT_INTERRUPTS),
+		BUZZZ_DEFN(A9, 0x81, WR_STALL),
+		BUZZZ_DEFN(A9, 0x80, PLD_STALL)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+	},
+
+	{	/* group 08: PREF_COH */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A7)
+		BUZZZ_DEFN(A7, 0xc0, EXT_MEM_REQUEST),
+		BUZZZ_DEFN(A7, 0xc1, NC_EXT_MEM_REQUEST),
+		BUZZZ_DEFN(A7, 0xc2, PREF_LINEFILL),
+		BUZZZ_DEFN(A7, 0xc3, PREF_LINEFILL_DROP)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A7 */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(A9, 0x51, COH_LINEFILL_HIT),
+		BUZZZ_DEFN(A9, 0x50, COH_LINEFILL_MISS),
+		BUZZZ_DEFN(A9, 0x6a, PREF_LINEFILL),
+		BUZZZ_DEFN(A9, 0x6b, PREF_CACHE_HIT)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+	},
+
+	{	/* group 09: L2CACHE */
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+		BUZZZ_DEFN(V7, 0x04, L1D_CACHE),
+#else
+		BUZZZ_DEFN(V7, 0x13, MEM_ACCESS),
+#endif
+		BUZZZ_DEFN(V7, 0x16, L2D_CACHE),
+		BUZZZ_DEFN(V7, 0x17, L2D_CACHE_REFILL),
+		BUZZZ_DEFN(V7, 0x18, L2D_CACHE_WB)
+	},
+
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+	{	/* group 10: INSTRTYPE */
+		/* ARMv7 0x08 and 0x1b do not work on Cortex-A9, use 0x68 instead */
+		BUZZZ_DEFN(V7, 0x68, INSTR_RENAME_STAGE), /* best approximation */
+		BUZZZ_DEFN(A9, 0x72, INSTR_LDST),
+		BUZZZ_DEFN(A9, 0x70, INSTR_MAIN_UNIT),
+		BUZZZ_DEFN(A9, 0x71, INSTR_ALU_UNIT)
+	},
+
+	{	/* group 11: INSTRTYPE */
+		/* ARMv7 0x08 and 0x1b do not work on Cortex-A9, use 0x68 instead */
+		BUZZZ_DEFN(V7, 0x68, INSTR_RENAME_STAGE), /* best approximation */
+		BUZZZ_DEFN(A9, 0x90, INSTR_ISB),
+		BUZZZ_DEFN(A9, 0x91, INSTR_DSB),
+		BUZZZ_DEFN(A9, 0x92, INSTR_DMB)
+	},
+
+	{	/* group 12: INSTRTYPE */
+		/* ARMv7 0x08 and 0x1b do not work on Cortex-A9, use 0x68 instead */
+		BUZZZ_DEFN(V7, 0x68, INSTR_RENAME_STAGE), /* best approximation */
+		BUZZZ_DEFN(A9, 0x68, INSTR_RENAME_STAGE),
+		BUZZZ_DEFN(A9, 0x66, ISSUE_NONE_CYCLE),
+		BUZZZ_DEFN(A9, 0x67, ISSUE_EMPTY_CYCLE)
+	},
+
+	{	/* group 13: INSTRTYPE */
+		BUZZZ_DEFN(A9, 0x60, ICACHE_STALL),
+		BUZZZ_DEFN(A9, 0x61, DCACHE_STALL),
+		BUZZZ_DEFN(A9, 0x62, TLB_STALL),
+		BUZZZ_DEFN(A9, 0x86, DMB_STALL)
+	},
+
+	{	/* group 14: INSTRTYPE */
+		BUZZZ_DEFN(A9, 0x82, IMTLB_STALL),
+		BUZZZ_DEFN(A9, 0x83, DMTLB_STALL),
+		BUZZZ_DEFN(A9, 0x84, IUTLB_STALL),
+		BUZZZ_DEFN(A9, 0x85, DUTLB_STALL)
+	}
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+};
+
+static BUZZZ_INLINE const char *BUZZZ_NOINSTR_FUNC
+__buzzz_pmu_event(uint32_t group, uint32_t counter)
+{
+	if ((group >= BUZZZ_PMU_GROUPS) || (counter >= BUZZZ_PMU_COUNTERS))
+		return _buzzz_INV;
+	return buzzz_pmu_event_g[group][counter].evtname;
+}
+
+#endif	/*  CONFIG_ARM */
+
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: BUZZZ Logging Infrastructure
+ * +---------------------------------------------------------------------------+
  */
 
-/* #define BUZZZ_PMON_LOGS 64-1  maximum number of buzzz_pmon_log() logs */
-
 /* Performance Monitoring Tool private definitions */
-typedef
-struct buzzz_pmon_ctl
-{
-	uint8_t u8[BUZZZ_PMON_COUNTERS];
-} buzzz_pmon_ctl_t;
-
-typedef
+typedef /* counters enabled for PMON */
 struct buzzz_pmon_ctr
 {
-	uint32_t u32[4];
+	uint32_t u32[BUZZZ_PMU_COUNTERS];
 } buzzz_pmon_ctr_t;
 
-typedef
+typedef /* statistics per counter */
 struct buzzz_pmonst
 {
 	buzzz_pmon_ctr_t min, max, sum;
 } buzzz_pmonst_t;
+
 
 #if defined(BUZZZ_CONFIG_PMON_USR)
 unsigned int buzzz_pmon_usr_g;
@@ -487,9 +615,10 @@ typedef
 struct buzzz_pmonst_usr
 {
 	buzzz_pmon_usr_t run;
-	buzzz_pmon_usr_t mon[BUZZZ_PMON_GROUPS];
+	buzzz_pmon_usr_t mon[BUZZZ_PMU_GROUPS];
 } buzzz_pmonst_usr_t;
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
+
 
 typedef /* Buzzz tool private configuration parameters and state */
 struct buzzz_priv
@@ -509,30 +638,29 @@ struct buzzz_priv
 
 		struct
 		{
-			uint32_t groupid;           /* current group */
-			buzzz_pmon_ctl_t control;   /* current groups configuration */
-
+			uint32_t pmu_group;         /* current group */
 			uint32_t sample;            /* iteration for this group */
 			uint32_t next_log_id;       /* next log id */
 			uint32_t last_log_id;       /* last pmon log */
+			uint32_t evtid[BUZZZ_PMU_COUNTERS];
 
 			buzzz_pmon_ctr_t log[BUZZZ_PMON_LOGS + 1];
 			buzzz_pmonst_t   run[BUZZZ_PMON_LOGS + 1];
-			buzzz_pmonst_t   mon[BUZZZ_PMON_GROUPS][BUZZZ_PMON_LOGS + 1];
+			buzzz_pmonst_t   mon[BUZZZ_PMU_GROUPS][BUZZZ_PMON_LOGS + 1];
 
 #if defined(BUZZZ_CONFIG_PMON_USR)
 			buzzz_pmonst_usr_t usr;
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
 
-			uint32_t config_skip;
-			uint32_t config_samples;
+			uint32_t config_skip;       /* number of sample to skip at start */
+			uint32_t config_samples;    /* number of sample per run */
 		} pmon;
 
 		struct
 		{
+			uint32_t pmu_group;         /* current group */
 			uint32_t count;             /* count of logs */
-			uint32_t limit;             /* limit functions logged @start */
-			uint32_t config_evt;        /* kevt logging perf event */
+			uint32_t limit;             /* limit logs displayed */
 
 			uint32_t log_count;         /* used by proc filesystem */
 			uint32_t log_index;         /* used by proc filesystem */
@@ -555,9 +683,9 @@ struct buzzz
 	uint8_t         wrap;       /* log buffer wrapped */
 	uint16_t        run;        /* tool/user incarnation number */
 
-	void *          cur;        /* pointer to next log entry */
-	void *          end;        /* pointer to end of log entry */
-	void *          log;
+	void            *cur;       /* pointer to next log entry */
+	void            *end;       /* pointer to end of log entry */
+	void            *log;
 
 	buzzz_priv_t    priv;       /* tool specific private data */
 
@@ -568,7 +696,7 @@ struct buzzz
 
 	buzzz_fmt_t     klogs[BUZZZ_KLOG_MAXIMUM];
 
-	char            page[4096];
+	char            page[BUZZZ_PAGE_SIZE];
 } buzzz_t;
 
 static buzzz_t buzzz_g =        /* Global Buzzz object, see __init_buzzz() */
@@ -576,28 +704,45 @@ static buzzz_t buzzz_g =        /* Global Buzzz object, see __init_buzzz() */
 #if defined(CONFIG_SMP)
 	.lock   = __SPIN_LOCK_UNLOCKED(.lock),
 #endif  /*  CONFIG_SMP */
-	.tool   = BUZZZ_TOOL_UNDEF,
 	.status = BUZZZ_STATUS_DISABLED,
-
+#if defined(CONFIG_BUZZZ_KEVT)
+	.tool   = BUZZZ_TOOL_KEVT,
+#elif defined(CONFIG_BUZZZ_PMON)
+	.tool   = BUZZZ_TOOL_PMON,
+#elif defined(CONFIG_BUZZZ_FUNC)
+	.tool   = BUZZZ_TOOL_FUNC,
+#else
+	.tool   = BUZZZ_TOOL_UNDEF,
+#endif
+	.panic  = BUZZZ_FALSE,
 	.wrap   = BUZZZ_FALSE,
 	.run    = 0U,
 	.cur    = (void *)NULL,
 	.end    = (void *)NULL,
 	.log    = (void*)NULL,
+	.config_mode = BUZZZ_MODE_WRAPOVER,
 
 	.timer  = TIMER_INITIALIZER(NULL, 0, (int)&buzzz_g)
 };
 
+static BUZZZ_INLINE bool BUZZZ_NOINSTR_FUNC
+__buzzz_assert_status_is_disabled(void)
+{
+	if (buzzz_g.status != BUZZZ_STATUS_DISABLED) {
+		BUZZZ_PRERR("tool %s already enabled", __buzzz_tool(buzzz_g.tool));
+		return BUZZZ_FALSE;
+	}
+	return BUZZZ_TRUE;
+}
+#define BUZZZ_ASSERT_STATUS_IS_DISABLED() \
+	do { if (!__buzzz_assert_status_is_disabled()) return BUZZZ_FAILURE; } while (0)
+
+
 static DEFINE_PER_CPU(buzzz_status_t, kevt_status) = BUZZZ_STATUS_DISABLED;
 
-#define BUZZZ_ASSERT_STATUS_DISABLED()                                         \
-	if (buzzz_g.status != BUZZZ_STATUS_DISABLED) {                             \
-		printk(CLRwarn "WARN: %s tool already enabled" CLRnl, __FUNCTION__);   \
-		return BUZZZ_ERROR;                                                    \
-	}
-
-static void BUZZZ_NOINSTR_FUNC /* Preamble to start tracing in a tool */
-_buzzz_pre_start(void)
+/* Preamble to start tracing in a tool */
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_pre_start(void)
 {
 	buzzz_g.panic = BUZZZ_FALSE;
 	buzzz_g.wrap  = BUZZZ_FALSE;
@@ -607,42 +752,50 @@ _buzzz_pre_start(void)
 		+ (BUZZZ_LOG_BUFSIZE - BUZZZ_LOGENTRY_MAXSZ));
 }
 
-static void BUZZZ_NOINSTR_FUNC /* Postamble to start tracing in a tool */
-_buzzz_post_start(void)
+/* Postamble to start tracing in a tool */
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_post_start(void)
 {
 	buzzz_g.status = BUZZZ_STATUS_ENABLED;
 }
 
-static void BUZZZ_NOINSTR_FUNC /* Preamble to stop tracing in a tool */
-_buzzz_pre_stop(void)
+/* Preamble to stop tracing in a tool */
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_pre_stop(void)
 {
 	buzzz_g.status = BUZZZ_STATUS_DISABLED;
 }
 
-static void BUZZZ_NOINSTR_FUNC /* Postamble to stop tracing in a tool */
-_buzzz_post_stop(void)
+/* Postamble to stop tracing in a tool */
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_post_stop(void)
 {
 }
 
-typedef int (*buzzz_dump_log_fn_t)(char * page, void *log);
+typedef int (*buzzz_dump_log_fn_t)(char *page, int bytes, void *log);
 
 void BUZZZ_NOINSTR_FUNC /* Dump the kevt trace to console */
 buzzz_log_dump(uint32_t limit, uint32_t count,
                uint32_t log_size, buzzz_dump_log_fn_t dump_log_fn)
 {
 	uint32_t total;
-	void * log;
+	void *log;
 
 	if (buzzz_g.wrap == BUZZZ_TRUE)
 		total = (BUZZZ_AVAIL_BUFSIZE / log_size);
 	else
 		total = count;
 
-	BUZZZ_PRINT("limit<%u> bufsz<%u> max<%u> count<%u> wrap<%u> total<%u>"
-		" log<%p> cur<%p> end<%p> log_size<%u>", limit, BUZZZ_AVAIL_BUFSIZE,
+	BUZZZ_PRINT("limit<%u> bufsz<%u> max<%u> count<%u> wrap<%u> total<%u>\n"
+		" log<%p> cur<%p> end<%p> log_size<%u> config_limit<%u>",
+		limit, BUZZZ_AVAIL_BUFSIZE,
 		(BUZZZ_AVAIL_BUFSIZE / log_size),
 		count, buzzz_g.wrap, total,
-		buzzz_g.log, buzzz_g.cur, buzzz_g.end, log_size);
+		buzzz_g.log, buzzz_g.cur, buzzz_g.end, log_size,
+		buzzz_g.config_limit);
+
+	if ((buzzz_g.config_limit != 0) && (limit > buzzz_g.config_limit))
+		limit = buzzz_g.config_limit;
 
 	if (total > limit)
 		total = limit;
@@ -672,8 +825,8 @@ buzzz_log_dump(uint32_t limit, uint32_t count,
 			total -= part2;
 
 			BUZZZ_PRINT("log<%p> part2<%u>", log, part2);
-			while (part2--) {
-				dump_log_fn(buzzz_g.page, log);
+			while (part2--) {   /* from cur to end : part2 */
+				dump_log_fn(buzzz_g.page, 0, log);
 				printk("%s", buzzz_g.page);
 				log = (void*)((uint32_t)log + log_size);
 			}
@@ -682,8 +835,8 @@ buzzz_log_dump(uint32_t limit, uint32_t count,
 		log = (void*)((uint32_t)buzzz_g.cur - (total * log_size));
 
 		BUZZZ_PRINT("log<%p> total<%u>", log, total);
-		while (total--) {
-			dump_log_fn(buzzz_g.page, log);
+		while (total--) {   /* from log to cur : part1 */
+			dump_log_fn(buzzz_g.page, 0, log);
 			printk("%s", buzzz_g.page);
 			log = (void*)((uint32_t)log + log_size);
 		}
@@ -700,7 +853,7 @@ buzzz_log_dump(uint32_t limit, uint32_t count,
 		log = (void*)buzzz_g.cur;
 		BUZZZ_PRINT("log<%p> part2<%u>", log, part2);
 		while (part2--) {   /* from cur to end : part2 */
-			dump_log_fn(buzzz_g.page, log);
+			dump_log_fn(buzzz_g.page, 0, log);
 			printk("%s", buzzz_g.page);
 			log = (void*)((uint32_t)log + log_size);
 		}
@@ -708,7 +861,7 @@ buzzz_log_dump(uint32_t limit, uint32_t count,
 		log = (void*)buzzz_g.log;
 		BUZZZ_PRINT("log<%p> part1<%u>", log, part1);
 		while (part1--) {   /* from log to cur : part1 */
-			dump_log_fn(buzzz_g.page, log);
+			dump_log_fn(buzzz_g.page, 0, log);
 			printk("%s", buzzz_g.page);
 			log = (void*)((uint32_t)log + log_size);
 		}
@@ -719,7 +872,7 @@ buzzz_log_dump(uint32_t limit, uint32_t count,
 		BUZZZ_PRINT("No Wrap log to cur: log<%p:%p> <%u>",
 		            log, buzzz_g.cur, total);
 		while (log < (void*)buzzz_g.cur) {
-			dump_log_fn(buzzz_g.page, log);
+			dump_log_fn(buzzz_g.page, 0, log);
 			printk("%s", buzzz_g.page);
 			log = (void*)((uint32_t)log + log_size);
 		}
@@ -740,8 +893,8 @@ typedef
 struct buzzz_func_log
 {
 	union {
-		uint32_t    u32;
-		void *      func;
+		uint32_t u32;
+		void   *func;
 		struct {
 			uint32_t rsvd    :  1;
 			uint32_t is_klog :  1;  /* BUZZZ_FUNC_LOGISEVT: 0:func, 1=evt */
@@ -756,76 +909,67 @@ struct buzzz_func_log
 		} site;
 	} arg0;
 
+	/* user arguments */
 	uint32_t arg1;
 	uint32_t arg2;
 	uint32_t arg3;
 
 } buzzz_func_log_t;
 
-static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+static int BUZZZ_NOINSTR_FUNC
 _buzzz_symbol(char *p, unsigned long address)
 {
 	int bytes = 0;
 	unsigned long offset = 0LU;
-	char * eos, symbol_buf[KSYM_NAME_LEN+1];
+	char *eos, symbol_buf[KSYM_NAME_LEN+1];
 
 	sprint_symbol(symbol_buf, address);
 	eos = strpbrk(symbol_buf, "+");
 
 	if (eos == (char*)NULL)
-		bytes += sprintf(p + bytes, "  %s" CLRnl, symbol_buf);
+		BUZZZ_SNPRINTF("  %s" CLRnl, symbol_buf);
 	else {
 		*eos = '\0';
 		sscanf(eos+1, "0x%lx", &offset);
-		bytes += sprintf(p + bytes, "  %s" CLRnorm, symbol_buf);
+		BUZZZ_SNPRINTF("  %s" CLRnorm, symbol_buf);
 		if (offset)
-			bytes += sprintf(p + bytes, " +0x%lx", offset);
-		bytes += sprintf(p + bytes, "\n");
+			BUZZZ_SNPRINTF(" +0x%lx", offset);
+		BUZZZ_SNPRINTF("\n");
 	}
 	return bytes;
 }
 
-static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+static int BUZZZ_NOINSTR_FUNC
 _buzzz_func_indent(char *p)
 {
 	int bytes = 0;
 	if (buzzz_g.priv.func.config_exit) {
 		uint32_t indent;
 		for (indent = 0U; indent < buzzz_g.priv.func.indent; indent++)
-			bytes += sprintf(p + bytes, BUZZZ_FUNC_INDENT_STRING);
+			BUZZZ_SNPRINTF("%s", BUZZZ_FUNC_INDENT_STR);
 	}
 	return bytes;
 }
 
 static int BUZZZ_NOINSTR_FUNC
-buzzz_func_dump_log(char * p, void * l)
+buzzz_func_dump_log(char *p, int bytes, void *l)
 {
-	buzzz_func_log_t * log = (buzzz_func_log_t *)l;
-	int bytes = 0;
+	buzzz_func_log_t *log = (buzzz_func_log_t *)l;
 
 	if (log->arg0.klog.is_klog) {   /* print using registered log formats */
 
+		char *fmt = buzzz_g.klogs[log->arg0.klog.id];
+
 		bytes += _buzzz_func_indent(p + bytes);   /* print indentation spaces */
 
-		bytes += sprintf(p + bytes, "%s", CLRb);
+		BUZZZ_SNPRINTF("%s", CLRb);
 		switch (log->arg0.klog.args) {
-			case 0:
-				bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id]);
-				break;
-			case 1:
-				bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-					log->arg1);
-				break;
-			case 2:
-				bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-					log->arg1, log->arg2);
-				break;
-			case 3:
-				bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-					log->arg1, log->arg2, log->arg3);
-				break;
+			case 0: BUZZZ_SNPRINTF(fmt); break;
+			case 1: BUZZZ_SNPRINTF(fmt, log->arg1); break;
+			case 2: BUZZZ_SNPRINTF(fmt, log->arg1, log->arg2); break;
+			case 3: BUZZZ_SNPRINTF(fmt, log->arg1, log->arg2, log->arg3); break;
 		}
-		bytes += sprintf(p + bytes, "%s", CLRnl);
+		BUZZZ_SNPRINTF("%s", CLRnl);
 
 	} else {                        /* print function call entry/exit */
 
@@ -837,9 +981,9 @@ buzzz_func_dump_log(char * p, void * l)
 		bytes += _buzzz_func_indent(p + bytes); /* print indentation spaces */
 
 		if (log->arg0.site.is_ent)
-			bytes += sprintf(p + bytes, "%s", CLRr "=>");
+			BUZZZ_SNPRINTF("%s", CLRr "=>");
 		else
-			bytes += sprintf(p + bytes, "%s", CLRg "<=");
+			BUZZZ_SNPRINTF("%s", CLRg "<=");
 
 		if (!log->arg0.site.is_ent && (buzzz_g.priv.func.indent > 0))
 			buzzz_g.priv.func.indent--;
@@ -852,31 +996,31 @@ buzzz_func_dump_log(char * p, void * l)
 	return bytes;
 }
 
-#define _BUZZZ_FUNC_BGN(flags)                                                 \
-	if (buzzz_g.tool != BUZZZ_TOOL_FUNC) return;                               \
-	if (buzzz_g.status != BUZZZ_STATUS_ENABLED) return;                        \
-	BUZZZ_LOCK(flags);                                                         \
-	if (buzzz_g.config_mode == BUZZZ_MODE_LIMITED) {                           \
-		if (buzzz_g.priv.func.limit == 0U) {                                   \
-			_buzzz_pre_stop();                                                 \
-			BUZZZ_UNLOCK(flags);                                               \
-			return;                                                            \
-		}                                                                      \
-		buzzz_g.priv.func.limit--;                                             \
+#define _BUZZZ_FUNC_BGN(flags) \
+	if (buzzz_g.tool != BUZZZ_TOOL_FUNC) return; \
+	if (buzzz_g.status != BUZZZ_STATUS_ENABLED) return; \
+	BUZZZ_LOCK(flags); \
+	if (buzzz_g.config_mode == BUZZZ_MODE_LIMITED) { \
+		if (buzzz_g.priv.func.limit == 0U) { \
+			__buzzz_pre_stop(); \
+			BUZZZ_UNLOCK(flags); \
+			return; \
+		} \
+		buzzz_g.priv.func.limit--; \
 	}
 
-#define _BUZZZ_FUNC_END(flags)                                                 \
-	buzzz_g.cur = (void*)(((buzzz_func_log_t*)buzzz_g.cur) + 1);               \
-	buzzz_g.priv.func.count++;                                                 \
-	if (buzzz_g.cur >= buzzz_g.end) {                                          \
-		buzzz_g.wrap = BUZZZ_TRUE;                                             \
-		buzzz_g.cur = buzzz_g.log;                                             \
-	}                                                                          \
+#define _BUZZZ_FUNC_END(flags) \
+	buzzz_g.cur = (void*)(((buzzz_func_log_t*)buzzz_g.cur) + 1); \
+	buzzz_g.priv.func.count++; \
+	if (buzzz_g.cur >= buzzz_g.end) { \
+		buzzz_g.wrap = BUZZZ_TRUE; \
+		buzzz_g.cur = buzzz_g.log; \
+	} \
 	BUZZZ_UNLOCK(flags);
 
 
 void BUZZZ_NOINSTR_FUNC /* -finstrument compiler stub on function entry */
-__cyg_profile_func_enter(void * called, void * caller)
+__cyg_profile_func_enter(void *called, void *caller)
 {
 	unsigned long flags;
 	_BUZZZ_FUNC_BGN(flags);
@@ -885,7 +1029,7 @@ __cyg_profile_func_enter(void * called, void * caller)
 }
 
 void BUZZZ_NOINSTR_FUNC /* -finstrument compiler stub on function exit */
-__cyg_profile_func_exit(void * called, void * caller)
+__cyg_profile_func_exit(void *called, void *caller)
 {
 	unsigned long flags;
 	if (buzzz_g.priv.func.config_exit == BUZZZ_DISABLE)
@@ -953,7 +1097,7 @@ buzzz_func_start(void)
 		return;
 	}
 
-	_buzzz_pre_start();
+	__buzzz_pre_start();
 
 	buzzz_g.priv.func.count = 0U;
 	buzzz_g.priv.func.indent = 0U;
@@ -962,7 +1106,7 @@ buzzz_func_start(void)
 	buzzz_g.priv.func.log_count = 0U;
 	buzzz_g.priv.func.log_index = 0U;
 
-	_buzzz_post_start();
+	__buzzz_post_start();
 }
 
 void BUZZZ_NOINSTR_FUNC /* Stop function call entry (exit optional) tracing */
@@ -974,7 +1118,7 @@ buzzz_func_stop(void)
 		BUZZZ_FUNC_LOG(BUZZZ_RET_IP);
 		BUZZZ_FUNC_LOG(buzzz_func_stop);
 
-		_buzzz_pre_stop();
+		__buzzz_pre_stop();
 
 		if (buzzz_g.wrap == BUZZZ_TRUE)
 			buzzz_g.priv.func.log_count
@@ -983,7 +1127,7 @@ buzzz_func_stop(void)
 			buzzz_g.priv.func.log_count = buzzz_g.priv.func.count;
 		buzzz_g.priv.func.log_index = 0U;
 
-		_buzzz_post_stop();
+		__buzzz_post_stop();
 	}
 }
 
@@ -1017,18 +1161,20 @@ buzzz_func_show(void)
 	printk("Limit:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.func.limit);
 	printk("+Exit:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.func.config_exit);
 	printk("+Limit:\t\t" CLRb "%u" CLRnl, buzzz_g.config_limit);
-	printk("+Mode:\t\t" CLRb "%s" CLRnl, str_buzzz_mode(buzzz_g.config_mode));
+	printk("+Mode:\t\t" CLRb "%s" CLRnl, __buzzz_mode(buzzz_g.config_mode));
 	printk("\n");
 }
 
-int BUZZZ_NOINSTR_FUNC
-buzzz_func_default(void)
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_func_default(void)
 {
 #if defined(CONFIG_BUZZZ_KEVT)
-	printk(CLRerr "ERROR: BUZZZ Kernel Event Tracing Enabled" CLRnl);
-	printk(CLRerr "Disable CONFIG_BUZZZ_KEVT for FUNC Tracing" CLRnl);
+	BUZZZ_PRERR("kernel event tracing enabled");
+	BUZZZ_PRERR("disable CONFIG_BUZZZ_KEVT for FUNC tracing");
 	return BUZZZ_ERROR;
 #endif  /*  CONFIG_BUZZZ_KEVT */
+
+	buzzz_g.tool = BUZZZ_TOOL_FUNC;
 
 	buzzz_g.priv.func.count = 0U;
 	buzzz_g.priv.func.limit = BUZZZ_INVALID;
@@ -1043,25 +1189,57 @@ buzzz_func_default(void)
 	return BUZZZ_SUCCESS;
 }
 
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_func_mode(buzzz_mode_t mode)
+{
+	if (mode == BUZZZ_MODE_LIMITED) {
+		uint32_t limit_logs;
+		/* Compute the last N entries to be dumped */
+		limit_logs = (BUZZZ_LOG_BUFSIZE / sizeof(buzzz_func_log_t));
+		buzzz_g.config_limit = (limit_logs < BUZZZ_FUNC_LIMIT_LOGS) ?
+			limit_logs : BUZZZ_FUNC_LIMIT_LOGS;
+	}
+
+	return BUZZZ_SUCCESS;
+}
+
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_func_limit(uint32_t limit)
+{
+	buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
+	buzzz_g.config_limit = limit;
+	return BUZZZ_SUCCESS;
+}
+
 int BUZZZ_NOINSTR_FUNC /* API to config function exit tracing */
 buzzz_func_config(uint32_t config_exit)
 {
-	BUZZZ_ASSERT_STATUS_DISABLED();
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
 
 	buzzz_g.priv.func.config_exit = config_exit;
 
 	return BUZZZ_SUCCESS;
 }
 
-/* Initialization of Buzzz Function tool  during loading time */
+/*
+ * Function: _init_buzzz_func
+ * Initialization of Buzzz Function tool  during loading time
+ */
 static int BUZZZ_NOINSTR_FUNC
 __init _init_buzzz_func(void)
 {
-	if ((BUZZZ_AVAIL_BUFSIZE % sizeof(buzzz_func_log_t)) != 0)
+	/* We may relax these two ... */
+	if ((BUZZZ_AVAIL_BUFSIZE % sizeof(buzzz_func_log_t)) != 0) {
+		BUZZZ_PRERR("BUZZZ_AVAIL_BUFSIZE<%d> ~ sizeof(buzzz_func_log_t)<%d>\n",
+			(int)BUZZZ_AVAIL_BUFSIZE, (int)sizeof(buzzz_func_log_t));
 		return BUZZZ_ERROR;
+	}
 
-	if (sizeof(buzzz_func_log_t) != 16)
+	if (sizeof(buzzz_func_log_t) != 16) {
+		BUZZZ_PRERR("sizeof(buzzz_func_log_t)<%d> != 16",
+			(int)sizeof(buzzz_func_log_t));
 		return BUZZZ_ERROR;
+	}
 
 	return BUZZZ_SUCCESS;
 }
@@ -1073,6 +1251,7 @@ __init _init_buzzz_func(void)
  */
 
 #if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
+
 /*
  * Field Descriptions for PerfCtl0-3 Register
  * b31   : M    : Reads 1 if there is another PerfCtl register after this one.
@@ -1084,244 +1263,419 @@ __init _init_buzzz_func(void)
  * b1    : K    : Counts events when in Kernel mode
  * b0    : EXL  : Counts when in Exception mode
  */
+#define BUZZZ_PMON_EXCP_MODE    (1U << 0)  /* Exception mode counting */
+#define BUZZZ_PMON_KERN_MODE    (1U << 1)  /* Kernel mode counting */
+#define BUZZZ_PMON_SPRV_MODE    (1U << 2)  /* Supervisor mode counting */
+#define BUZZZ_PMON_USER_MODE    (1U << 3)  /* Supervisor mode counting */
+
+#define BUZZZ_PMON_EKSU_MODE \
+	(BUZZZ_PMON_EXCP_MODE | BUZZZ_PMON_KERN_MODE \
+	| BUZZZ_PMON_SPRV_MODE | BUZZZ_PMON_USER_MODE)
+
+#define BUZZZ_PMON_CTRL             BUZZZ_PMON_EKSU_MODE
 
 #define BUZZZ_PMON_VAL(val, mode)   (((uint32_t)(val) << 5) | (mode))
 
-/*
- * 4 Events are grouped, allowing a single log to include 4 similar events.
- * The values to be used in each of the 4 performance counters per group are
- * listed below. These values need to be applied to the corresponding
- * performance control register in bit locations b5..b11.
- */
-static
-buzzz_pmon_ctl_t buzzz_pmonctl_g[BUZZZ_PMON_GROUPS] =
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_prefetch(const void *addr)
 {
-	/*  ctl0  ctl1  ctl2  ctl3 */
-	{{    0U,   0U,   0U,   0U }},      /* group  0 RESET            */
+	/* WRITE hint */
+	__asm__ volatile("pref %0, (%1)" :: "i"(1), "r"(addr));
+}
 
-	{{   56U,   0U,  58U,   1U }},      /* group  1 GENERAL          */
-	{{    6U,   6U,   7U,   7U }},      /* group  2 ICACHE           */
-	{{   23U,  23U,  24U,  24U }},      /* group  3 DCACHE           */
-	{{    4U,   4U,  25U,  25U }},      /* group  4 TLB              */
-	{{   53U,  53U,  54U,  54U }},      /* group  5 CYCLES_COMPLETED */
-	{{   20U,  20U,  21U,  21U }},      /* group  6 CYCLES_ISSUE_OOO */
-	{{   39U,  39U,  40U,  40U }},      /* group  7 INSTR_GENERAL    */
-	{{   42U,  43U,  52U,  52U }},      /* group  8 INSTR_MISC       */
-	{{   41U,  41U,  46U,  46U }},      /* group  9 INSTR_LOAD_STORE */
-	{{   13U,  13U,  14U,  14U }},      /* group 10 CYCLES_IDLE_FULL */
-	{{   16U,  16U,  17U,  17U }}       /* group 11 CYCLES_IDLE_WAIT */
-};
+uint32 buzzz_cycles(void)
+{
+	read_c0_count();
+}
 #endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
 
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
+#if defined(CONFIG_ARM)
 
 #define BUZZZ_PMON_VAL(val, mode)   ((uint32_t)(val))
 
-static
-buzzz_pmon_ctl_t buzzz_pmonctl_g[BUZZZ_PMON_GROUPS] =
-{
-	/*  ctl0  ctl1  ctl2  ctl3 */
-	{{    0U,   0U,   0U,   0U }},      /* group  0 RESET            */
-	{{  0x10, 0x11, 0x09, 0x68 }},      /* group  1 GENERAL          */
-	{{  0x68, 0x01, 0x60, 0x66 }},      /* group  2 ICACHE           */
-	{{  0x04, 0x03, 0x61, 0x65 }},      /* group  3 DCACHE           */
-	{{  0x02, 0x05, 0x82, 0x83 }},      /* group  4 TLB              */
-	{{  0x06, 0x07, 0x81, 0x86 }},      /* group  5 DATA             */
-	{{  0x93, 0x0F, 0x0A, 0x62 }},      /* group  6 SPURIOUS         */
-	{{  0x0C, 0x0D, 0x0E, 0x12 }},      /* group  7 BRANCHES         */
-	{{  0x63, 0x64, 0x91, 0x92 }}       /* group  8 MISCELLANEOUS    */
-};
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A7)
+/* BUZZZ uses ARMv7 A9 counters #0,#1,#2,#3 as BUZZZ counters #0,#1,#2,#3 */
+#define BUZZZ_ARM_CTR_SEL(ctr_idx) (ctr_idx)
+#define BUZZZ_ARM_CTR_BIT(ctr_idx) (1 << BUZZZ_ARM_CTR_SEL(ctr_idx))
+#define BUZZZ_ARM_IDCODE           (0x07)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A7 */
 
+#if defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
 /* BUZZZ uses ARMv7 A9 counters #2,#3,#4,#5 as BUZZZ counters #0,#1,#2,#3 */
-#define BUZZZ_PMON_ARM_A9_CTR(idx)      ((idx) + 2)
+#define BUZZZ_ARM_CTR_SEL(ctr_idx) ((ctr_idx) + 2)
+#define BUZZZ_ARM_CTR_BIT(ctr_idx) (1 << BUZZZ_ARM_CTR_SEL(ctr_idx))
+#define BUZZZ_ARM_IDCODE           (0x09)
+#endif  /*  BUZZZ_CONFIG_CPU_ARMV7_A9 */
+
 union cp15_c9_REG {
 	uint32_t u32;
 	struct {    /* Little Endian */
-		uint32_t ctr0     :  1; /* reserved for rest of the system            */
-		uint32_t ctr1     :  1; /* reserved for rest of the system            */
-		uint32_t ctr2     :  1; /* referred to as buzzz ctr 0                 */
-		uint32_t ctr3     :  1; /* referred to as buzzz ctr 1                 */
-		uint32_t ctr4     :  1; /* referred to as buzzz ctr 2                 */
-		uint32_t ctr5     :  1; /* referred to as buzzz ctr 3                 */
-		uint32_t ctr_none : 25; /* unsupported for A9                         */
-		uint32_t cycle    :  1; /* cycle count register                       */
+		uint32_t ctr0   :  1; /* A7:Ctr#0  A9:rsvd  */
+		uint32_t ctr1   :  1; /* A7:Ctr#1  A9:rsvd  */
+		uint32_t ctr2   :  1; /* A7:Ctr#2  A9:Ctr#0 */
+		uint32_t ctr3   :  1; /* A7:Ctr#3  A9:Ctr#1 */
+		uint32_t ctr4   :  1; /* A7:none   A9:Ctr#2 */
+		uint32_t ctr5   :  1; /* A7:none   A9:Ctr#3 */
+		uint32_t ctr6   :  1;
+		uint32_t ctr7   :  1;
+		uint32_t none   : 23;
+		uint32_t cycle  :  1; /* cycle count register */
 	};
 };
 
+/*
+ * +----------------------------------------------------------------------------
+ * ARMv7 Performance Monitor Control Register
+ *  MRC p15, 0, <Rd>, c9, c12, 0 ; Read PMCR
+ *  MCR p15, 0, <Rd>, c9, c12, 0 ; Write PMCR
+ * +----------------------------------------------------------------------------
+ */
 union cp15_c9_c12_PMCR {
 	uint32_t u32;
 	struct {    /* Little Endian */
-		uint32_t enable   :  1; /* E: enable all counters                     */
-		uint32_t evt_reset:  1; /* P: event counter reset (not incld PMCCNTR) */
-		uint32_t clk_reset:  1; /* C: clock counter reset                     */
-		uint32_t clk_div  :  1; /* D: clock divider: 0=1cycle, 1=64cycle      */
-		uint32_t export_en:  1; /* X: export enable                           */
-		uint32_t prohibit :  1; /* DP: disable in prohibited regions          */
-		uint32_t reserved :  5; /* UNK/SBZP reserved/unknown                  */
-		uint32_t counters :  5; /* N: number of event counters                */
-		uint32_t id_code  :  8; /* IDCODE: identification code                */
-		uint32_t impl_code:  8; /* IMP: implementer code                      */
-	};
-};
-
-union cp15_c9_c12_PMSELR {
-	uint32_t u32;
-	struct {    /* Little Endian */
-		uint32_t ctr_select: 5; /* event counter selecter                     */
-		uint32_t reserved  :25; /* reserved                                   */
-	};
-};
-
-union cp15_c9_c13_PMXEVTYPER {
-	uint32_t u32;
-	struct {    /* Little Endian */
-		uint32_t evt_type :  8; /* event type to count                        */
-		uint32_t reserved : 24; /* reserved                                   */
-	};
-};
-
-union cp15_c9_c14_PMUSERENR {
-	uint32_t u32;
-	struct {    /* Little Endian */
-		uint32_t enable   :  1; /* user mode enable                           */
-		uint32_t reserved : 31; /* reserved                                   */
+		uint32_t enable      : 1; /* E: enable all counters incld cctr  */
+		uint32_t evt_reset   : 1; /* P: event counter reset             */
+		uint32_t cctr_reset  : 1; /* C: cycle counter reset             */
+		uint32_t clk_divider : 1; /* D: cycle count divider: 0= 1:1     */
+		uint32_t export_en   : 1; /* X: export enable                   */
+		uint32_t prohibit    : 1; /* DP: disable in prohibited regions  */
+		uint32_t reserved    : 5; /* ReadAZ, Wr: ShouldBeZero/Preserved */
+		uint32_t counters    : 5; /* N: number of event counters        */
+		uint32_t id_code     : 8; /* IDCODE: identification code        */
+		                          /* 0x07=Cortex-A7, 0x09=Cortex-A9     */
+		uint32_t impl_code   : 8; /* IMP: implementer code 0x41=ARM     */
 	};
 };
 
 static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
-_armv7_pmcr_RD(void)
+__armv7_PMCR_RD(void)
 {
 	union cp15_c9_c12_PMCR pmcr;
-	asm volatile("mrc p15, 0, %0, c9, c12, 0" : "=r"(pmcr.u32));
+	__asm__ volatile("mrc p15, 0, %0, c9, c12, 0" : "=r"(pmcr.u32));
+	if (pmcr.id_code != BUZZZ_ARM_IDCODE) {
+		BUZZZ_PRERR("mismatch PMCR id_code 0x%02X != 0x%02X\n",
+		            pmcr.id_code, BUZZZ_ARM_IDCODE);
+	}
 	BUZZZ_PRINT("RD PMCR IMP%u ID%u N[%u] DP[%u] X[%u] D[%u] C[%u] P[%u] E[%u]",
 		pmcr.impl_code, pmcr.id_code, pmcr.counters, pmcr.prohibit,
-		pmcr.export_en, pmcr.clk_div, pmcr.clk_reset, pmcr.evt_reset,
+		pmcr.export_en, pmcr.clk_divider, pmcr.cctr_reset, pmcr.evt_reset,
 		pmcr.enable);
 	return pmcr.u32;
 }
 
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_armv7_pmcr_WR(const uint32_t v32)
+__armv7_PMCR_WR(const uint32_t v32)
 {
 	union cp15_c9_c12_PMCR pmcr;
-	pmcr.u32 = v32 & 0x3F;	/* write-able bits */
-	BUZZZ_PRINT("WR PMCR: DP[%u] X[%u] D[%u] C[%u] P[%u] E[%u]",
-		pmcr.prohibit, pmcr.export_en, pmcr.clk_div, pmcr.clk_reset,
-		pmcr.evt_reset, pmcr.enable);
-	asm volatile("mcr p15, 0, %0, c9, c12, 0" : : "r"(pmcr.u32));
+	pmcr.u32 = v32;
+	pmcr.reserved = 0;  /* Should Be Zero Preserved */
+	__asm__ volatile("mcr p15, 0, %0, c9, c12, 0" : : "r"(pmcr.u32));
+	BUZZZ_PRINT("RD PMCR IMP%u ID%u N[%u] DP[%u] X[%u] D[%u] C[%u] P[%u] E[%u]",
+		pmcr.impl_code, pmcr.id_code, pmcr.counters, pmcr.prohibit,
+		pmcr.export_en, pmcr.clk_divider, pmcr.cctr_reset, pmcr.evt_reset,
+		pmcr.enable);
 }
 
+
+/*
+ * +----------------------------------------------------------------------------
+ * ARMv7 Performance Monitor event counter SELection Register
+ *  MRC p15, 0, <Rd>, c9, c12, 5 ; Read PMSELR
+ *  MCR p15, 0, <Rd>, c9, c12, 5 ; Write PMSELR
+ * +----------------------------------------------------------------------------
+ */
+union cp15_c9_c12_PMSELR {
+	uint32_t u32;
+	struct {    /* Little Endian */
+		uint32_t ctr_select: 8; /* event counter selecter */
+		uint32_t reserved  :24; /* reserved */
+	};
+};
+
 static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
-_armv7_pmcntenset_test(void)
+__armv7_PMSELR_RD(void)
 {
+	union cp15_c9_c12_PMSELR pmselr;
+	__asm__ volatile("mrc p15, 0, %0, c9, c12, 5" : "=r"(pmselr.u32));
+	return pmselr.u32;
+}
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__armv7_PMSELR_WR(const uint32_t v32)
+{
+	union cp15_c9_c12_PMSELR pmselr;
+	pmselr.u32 = v32;
+	pmselr.reserved = 0;  /* Should Be Zero Preserved */
+	__asm__ volatile("mcr p15, 0, %0, c9, c12, 5" : : "r"(pmselr.u32));
+}
+
+
+/*
+ * +----------------------------------------------------------------------------
+ * ARMv7 Performance Monitor EVent TYPE selection Register
+ *  MRC p15, 0, <Rd>, c9, c13, 1 ; Read PMXEVTYPER
+ *  MCR p15, 0, <Rd>, c9, c13, 1 ; Write PMXEVTYPER
+ * +----------------------------------------------------------------------------
+ */
+union cp15_c9_c13_PMXEVTYPER {
+	uint32_t u32;
+	struct {    /* Little Endian */
+		uint32_t event_id :  8; /* event type to count */
+		uint32_t reserved : 24; /* reserved */
+	};
+};
+
+static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
+__armv7_PMXEVTYPER_RD(void)
+{
+	union cp15_c9_c13_PMXEVTYPER pmxevtyper;
+	__asm__ volatile("mrc p15, 0, %0, c9, c13, 1" : "=r"(pmxevtyper.u32));
+	return pmxevtyper.u32;
+}
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__armv7_PMXEVTYPER_WR(const uint32_t v32)
+{
+	union cp15_c9_c13_PMXEVTYPER pmxevtyper;
+	pmxevtyper.u32 = v32;
+	pmxevtyper.reserved = 0;  /* Should Be Zero Preserved */
+	__asm__ volatile("mcr p15, 0, %0, c9, c13, 1" : : "r"(pmxevtyper.u32));
+}
+
+
+/*
+ * +----------------------------------------------------------------------------
+ * ARMv7 Performance Monitor User Enable Register
+ *  MRC p15, 0, <Rd>, c9, c14, 0 ; Read PMUSERENR
+ *  MCR p15, 0, <Rd>, c9, c14, 0 ; Write PMUSERENR
+ * +----------------------------------------------------------------------------
+ */
+union cp15_c9_c14_PMUSERENR {
+	uint32_t u32;
+	struct {    /* Little Endian */
+		uint32_t enable   :  1; /* user mode enable */
+		uint32_t reserved : 31; /* reserved */
+	};
+};
+
+static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
+__armv7_PMUSERENR_RD(void)
+{
+	union cp15_c9_c14_PMUSERENR pmuserenr;
+	__asm__ volatile("mrc p15, 0, %0, c9, c14, 0" : "=r"(pmuserenr.u32));
+	return pmuserenr.u32;
+}
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__armv7_PMUSERENR_WR(const uint32_t v32)
+{
+	union cp15_c9_c14_PMUSERENR pmuserenr;
+	pmuserenr.u32 = v32;
+	pmuserenr.reserved = 0;  /* Should Be Zero Preserved */
+	__asm__ volatile("mcr p15, 0, %0, c9, c14, 0" : : "r"(pmuserenr.u32));
+}
+
+
+static BUZZZ_INLINE bool BUZZZ_NOINSTR_FUNC
+__armv7_PMCNTENSET_test(void)
+{
+	int ctr_idx;
 	/* Test whether PMU counters required by buzzz are in use */
 	union cp15_c9_REG pmcntenset;
 
 	asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset.u32));
-	return (pmcntenset.ctr2 || pmcntenset.ctr3 ||
-		pmcntenset.ctr4 || pmcntenset.ctr5);
+	for (ctr_idx = 0; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+		if (pmcntenset.u32 & BUZZZ_ARM_CTR_BIT(ctr_idx))
+			return TRUE;
+	return FALSE;
 }
 
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_armv7_pmuserenr_enable(void)
+__armv7_PMUSERENR_enable(void)
 {
 	uint32_t u32 = 1;
 	asm volatile("mcr p15, 0, %0, c9, c14, 0" : : "r"(u32));
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __armv7_pmu_enable
+ *  Enable the ARMv7 Performance Monitoring Unit
+ *  - Set enable bit in PMCR
+ *  - Disable overflow interrupts
+ *  - Enable 4 counters reserved for BUZZZ
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_armv7_pmcn_enable(void)
+__armv7_pmu_enable(void)
 {
+	int ctr_idx;
 	union cp15_c9_c12_PMCR pmcr;
 	union cp15_c9_REG pmcntenset;
+	union cp15_c9_REG pmcntenclr;
 	union cp15_c9_REG pmintenclr;
 
 	/* Set Enable bit in PMCR */
-	pmcr.u32 = _armv7_pmcr_RD();
+	pmcr.u32 = __armv7_PMCR_RD();
 	pmcr.enable = 1;
-	_armv7_pmcr_WR(pmcr.u32);
+	__armv7_PMCR_WR(pmcr.u32);
+
+	asm volatile("mrc p15, 0, %0, c9, c14, 2" : "=r"(pmintenclr.u32));
+	BUZZZ_PRINT("pmintenclr = 0x%08x", (int)pmintenclr.u32);
+
+	asm volatile("mrc p15, 0, %0, c9, c12, 2" : "=r"(pmcntenclr.u32));
+	BUZZZ_PRINT("pmcntenclr = 0x%08x", (int)pmcntenclr.u32);
+
+	asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset.u32));
+	BUZZZ_PRINT("pmcntenset = 0x%08x", (int)pmcntenset.u32);
 
 	/* Disable overflow interrupts on 4 buzzz counters: A9 ctr2 to ctr5 */
 	pmintenclr.u32 = 0U;
-	pmintenclr.ctr2 = pmintenclr.ctr3 = pmintenclr.ctr4 = pmintenclr.ctr5 = 1;
+	for (ctr_idx = 0; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++) {
+		pmintenclr.u32 += BUZZZ_ARM_CTR_BIT(ctr_idx);
+	}
+	pmintenclr.cycle = 1; /* disable overflow on cycle count register, too */
 	asm volatile("mcr p15, 0, %0, c9, c14, 2" : : "r"(pmintenclr.u32));
-	BUZZZ_PRINT("Disable overflow interrupts PMINTENCLR[%08x]", pmintenclr.u32);
+	BUZZZ_PRINT("disable overflow interrupts PMINTENCLR[%08x]", pmintenclr.u32);
 
-	/* Enable the 4 buzzz counters: A9 ctr2 to ctr5 */
+	/*
+	 * Enable the 4 buzzz counters:
+	 *     Cortex-A7 ctr0 to ctr3
+	 *     Cortex-A9 ctr2 to ctr5
+	 * Also enable cycle counter 0b31
+	 */
 	pmcntenset.u32 = 0U;
-	pmcntenset.ctr2 = pmcntenset.ctr3 = pmcntenset.ctr4 = pmcntenset.ctr5 = 1;
+	for (ctr_idx = 0; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++) {
+		pmcntenset.u32 += BUZZZ_ARM_CTR_BIT(ctr_idx);
+	}
+	pmcntenset.cycle = 1; /* enable cycle count also */
 	asm volatile("mcr p15, 0, %0, c9, c12, 1" : : "r"(pmcntenset.u32));
-	BUZZZ_PRINT("Enable CTR2-5 PMCNTENSET[%08x]", pmcntenset.u32);
+	BUZZZ_PRINT("enable CTR PMCNTENSET[%08x]", pmcntenset.u32);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __armv7_pmu_disable
+ *  Disable the counters used by BUZZZ in the ARMv7 Performance Monitoring Unit
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_armv7_pmcn_disable(void)
+__armv7_pmu_disable(void)
 {
+	int ctr_idx;
 	union cp15_c9_REG pmcntenclr;
 
-	/* Disable the 4 buzzz counters: A9 ctr2 to ctr5 */
+	/*
+	 * Do not disable the PMCR::enable bit as this would also disable the
+	 * PMCCNTR cycle count register.
+	 */
+
+	/*
+	 * Disable the 4 buzzz counters:
+	 *     Cortex-A7 ctr0 to ctr3
+	 *     Cortex-A9 ctr2 to ctr5
+	 * Let the cycle count register, continue to be enabled.
+	 */
 	pmcntenclr.u32 = 0U;
-	pmcntenclr.ctr2 = pmcntenclr.ctr3 = pmcntenclr.ctr4 = pmcntenclr.ctr5 = 1;
+	for (ctr_idx = 0; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++) {
+		pmcntenclr.u32 += BUZZZ_ARM_CTR_BIT(ctr_idx);
+	}
+	/* Since pmcntenclr.cycle = 0, a WR of 0b31=0 will be ignored. */
 	asm volatile("mcr p15, 0, %0, c9, c12, 2" : : "r"(pmcntenclr.u32));
-	BUZZZ_PRINT("Disable CTR2-5 PMCNTENCLR[%08x]", pmcntenclr.u32);
+	BUZZZ_PRINT("Disable CTR PMCNTENCLR[%08x]", pmcntenclr.u32);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __armv7_pmu_read_buzzz_ctr
+ *  Program the counter selector and read the pmxevtctr0
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
-_armv7_pmcn_read_buzzz_ctr(const uint32_t idx)
+__armv7_pmu_read_buzzz_ctr(const uint32_t ctr_idx)
 {
 	uint32_t v32;
 	union cp15_c9_c12_PMSELR pmselr;
-	pmselr.u32 = BUZZZ_PMON_ARM_A9_CTR(idx);
+
+	/* Select the counter */
+	pmselr.u32 = BUZZZ_ARM_CTR_SEL(ctr_idx);
 	asm volatile("mcr p15, 0, %0, c9, c12, 5" : : "r"(pmselr.u32));
+
+	/* Now read the pmxevtctr0 */
 	asm volatile("mrc p15, 0, %0, c9, c13, 2" : "=r"(v32));
 	return v32;
 }
 
+#define BUZZZ_READ_COUNTER(ctr_idx)  __armv7_pmu_read_buzzz_ctr(ctr_idx)
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __armv7_pmu_config_buzzz_ctr
+ *  Configure the eventidx to be counted by one of the PMU BUZZZ counters
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_armv7_pmcn_config_buzzz_ctr(const uint32_t idx, const uint32_t evt_type)
+__armv7_pmu_config_buzzz_ctr(const uint32_t ctr_idx, const uint32_t event_id)
 {
 	union cp15_c9_c13_PMXEVTYPER pmxevtyper;
 	union cp15_c9_c12_PMSELR pmselr;
-	pmselr.u32 = 0U;    /* Select the Counter using PMSELR */
-	pmselr.ctr_select = BUZZZ_PMON_ARM_A9_CTR(idx);
+
+	/* Select the Counter using PMSELR */
+	pmselr.u32 = 0U;
+	pmselr.ctr_select = BUZZZ_ARM_CTR_SEL(ctr_idx);
 	asm volatile("mcr p15, 0, %0, c9, c12, 5" : : "r"(pmselr.u32));
 
+	/* Configure the event type */
 	pmxevtyper.u32 = 0U;
-	pmxevtyper.evt_type = evt_type; /* Configure the event type */
+	pmxevtyper.event_id = event_id;
 	asm volatile("mcr p15, 0, %0, c9, c13, 1" : : "r"(pmxevtyper.u32));
+
 	BUZZZ_PRINT("Config Ctr<%u> PMSELR[%08x] PMXEVTYPER[%08x]",
-		idx, pmselr.u32, pmxevtyper.u32);
-}
-
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-
-static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_enable(void)
-{
-#if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
-#endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	_armv7_pmcn_enable();
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+		ctr_idx, pmselr.u32, pmxevtyper.u32);
 }
 
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_disable(void)
+__buzzz_prefetch(const void *ptr)
 {
-#if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
-#endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	_armv7_pmcn_disable();
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+#if (__LINUX_ARM_ARCH__ >= 7) && defined(CONFIG_SMP)
+	__asm__ volatile(
+		".arch_extension    mp\n" /* multiprocessor extention has PLDW */
+		"pldw\t%a0" :: "p"(ptr)); /* prefetch with intent to write */
+#else
+	 __asm__ volatile("pld\t%a0" :: "p"(ptr));
+#endif
 }
 
-void buzzz_pmon_show(void);
+uint32 buzzz_cycles(void)
+{
+	uint32 cycles;
+	asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(cycles));
+	return cycles;
+}
+
+#endif	/*  CONFIG_ARM */
+
 
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_log(uint32_t log_id)
+__buzzz_pmon_enable(void)
 {
-	buzzz_pmon_ctr_t * log = &buzzz_g.priv.pmon.log[log_id];
+#if defined(CONFIG_ARM)
+	__armv7_pmu_enable();
+#endif	/*  CONFIG_ARM */
+}
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_pmon_disable(void)
+{
+#if defined(CONFIG_ARM)
+	__armv7_pmu_disable();
+#endif	/*  CONFIG_ARM */
+}
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_pmon_log(uint32_t log_id)
+{
+	buzzz_pmon_ctr_t *log = &buzzz_g.priv.pmon.log[log_id];
 
 #if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
 	log->u32[0] = read_c0_perf(1);
@@ -1329,17 +1683,17 @@ _buzzz_pmon_log(uint32_t log_id)
 	log->u32[2] = read_c0_perf(5);
 	log->u32[3] = read_c0_perf(7);
 #endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	log->u32[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	log->u32[1] = _armv7_pmcn_read_buzzz_ctr(1);
-	log->u32[2] = _armv7_pmcn_read_buzzz_ctr(2);
-	log->u32[3] = _armv7_pmcn_read_buzzz_ctr(3);
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+#if defined(CONFIG_ARM)
+	log->u32[0] = BUZZZ_READ_COUNTER(0);
+	log->u32[1] = BUZZZ_READ_COUNTER(1);
+	log->u32[2] = BUZZZ_READ_COUNTER(2);
+	log->u32[3] = BUZZZ_READ_COUNTER(3);
+#endif	/*  CONFIG_ARM */
 
 }
 
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_iter_set_invalid(void)
+__buzzz_pmon_iter_set_invalid(void) /* Tag an iteration as incomplete */
 {
 #if defined(BUZZZ_CONFIG_PMON_USR)
 	buzzz_pmon_usr_g = 0U;
@@ -1349,19 +1703,25 @@ _buzzz_pmon_iter_set_invalid(void)
 }
 
 static BUZZZ_INLINE uint32_t BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_iter_is_invalid(void)
+__buzzz_pmon_iter_is_invalid(void) /* Query if last iteration was incomplete */
 {
 	return (buzzz_g.priv.pmon.log[0].u32[0] == BUZZZ_INVALID);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_run
+ *  Accumulate all counters for one sample iteration.
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_run(uint32_t last_log)
+__buzzz_pmon_run(uint32_t last_log)
 {
 	uint32_t log, ctr;
 	buzzz_pmon_ctr_t elapsed, prev, curr;
 
 	for (log = 1U; log <= last_log; log++) {
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++) {
+		for (ctr = 0U; ctr < BUZZZ_PMU_COUNTERS; ctr++) {
 			prev.u32[ctr] = buzzz_g.priv.pmon.log[log-1].u32[ctr];
 			curr.u32[ctr] = buzzz_g.priv.pmon.log[log].u32[ctr];
 
@@ -1388,46 +1748,58 @@ _buzzz_pmon_run(uint32_t last_log)
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_tot
+ *  Summarize all logs for sample number of iterations for a group.
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_tot(uint32_t last_log)
+__buzzz_pmon_tot(uint32_t last_log)
 {
 	uint32_t log, ctr;
 
-	buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.groupid][0].sum.u32[0] = ~0U;
+	buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.pmu_group][0].sum.u32[0] = ~0U;
 
 	for (log = 1U; log <= last_log; log++) {
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++) {
-			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.groupid][log].min.u32[ctr]
+		for (ctr = 0U; ctr < BUZZZ_PMU_COUNTERS; ctr++) {
+			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.pmu_group][log].min.u32[ctr]
 				= buzzz_g.priv.pmon.run[log].min.u32[ctr];
-			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.groupid][log].max.u32[ctr]
+			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.pmu_group][log].max.u32[ctr]
 				= buzzz_g.priv.pmon.run[log].max.u32[ctr];
-			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.groupid][log].sum.u32[ctr]
+			buzzz_g.priv.pmon.mon[buzzz_g.priv.pmon.pmu_group][log].sum.u32[ctr]
 				= buzzz_g.priv.pmon.run[log].sum.u32[ctr];
 		}
 	}
 #if defined(BUZZZ_CONFIG_PMON_USR)
-	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.groupid].min
+	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.pmu_group].min
 		= buzzz_g.priv.pmon.usr.run.min;
-	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.groupid].max
+	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.pmu_group].max
 		= buzzz_g.priv.pmon.usr.run.max;
-	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.groupid].sum
+	buzzz_g.priv.pmon.usr.mon[buzzz_g.priv.pmon.pmu_group].sum
 		= buzzz_g.priv.pmon.usr.run.sum;
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_bind
+ *  Initialize storage for statistics and configure the PMU for a new group
+ * +---------------------------------------------------------------------------+
+ */
 static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_pmon_bind(uint32_t group)
+__buzzz_pmon_bind(uint32_t pmu_group)
 {
-	uint32_t mode;
-	uint32_t log, ctr;
-	buzzz_pmon_ctl_t * ctl;
+	uint32_t m; /* PMU mode */
+	uint32_t log, counter;
+	buzzz_pmu_event_desc_t *desc;
 
 	/* Initialize storage for statistics */
 	for (log = 0U; log <= BUZZZ_PMON_LOGS; log++) {
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++) {
-			buzzz_g.priv.pmon.run[log].min.u32[ctr] = ~0U;
-			buzzz_g.priv.pmon.run[log].max.u32[ctr] = 0U;
-			buzzz_g.priv.pmon.run[log].sum.u32[ctr] = 0U;
+		for (counter = 0U; counter < BUZZZ_PMU_COUNTERS; counter++) {
+			buzzz_g.priv.pmon.run[log].min.u32[counter] = ~0U;
+			buzzz_g.priv.pmon.run[log].max.u32[counter] = 0U;
+			buzzz_g.priv.pmon.run[log].sum.u32[counter] = 0U;
 		}
 	}
 #if defined(BUZZZ_CONFIG_PMON_USR)
@@ -1436,35 +1808,44 @@ _buzzz_pmon_bind(uint32_t group)
 	buzzz_g.priv.pmon.usr.run.sum = 0U;
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
 
-	/* Monitoring mode */
-	mode = (group == BUZZZ_PMON_GROUP_RESET) ? 0 : BUZZZ_PMON_CTRL;
-
-	/* Event values */
-	ctl = &buzzz_pmonctl_g[group];
+	/* PMU Event values */
+	desc = (buzzz_pmu_event_desc_t*)&buzzz_pmu_event_g[pmu_group][0];
 
 #if defined(CONFIG_MIPS) && defined(BUZZZ_CONFIG_CPU_MIPS_74K)
-	write_c0_perf(0, BUZZZ_PMON_VAL(ctl->u8[0], mode));
-	write_c0_perf(2, BUZZZ_PMON_VAL(ctl->u8[1], mode));
-	write_c0_perf(4, BUZZZ_PMON_VAL(ctl->u8[2], mode));
-	write_c0_perf(6, BUZZZ_PMON_VAL(ctl->u8[3], mode));
-#endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++) {
-		_armv7_pmcn_config_buzzz_ctr(ctr, ctl->u8[ctr]);
-	}
-#endif	/*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+	m = (pmu_group == BUZZZ_PMU_GROUP_UNDEF) ? 0 : BUZZZ_PMON_CTRL;
 
-	BUZZZ_PRINT("Bind next group<%u>  <%u> <%u> <%u> <%u>", group,
-		BUZZZ_PMON_VAL(ctl->u8[0], mode),
-		BUZZZ_PMON_VAL(ctl->u8[1], mode),
-		BUZZZ_PMON_VAL(ctl->u8[2], mode),
-		BUZZZ_PMON_VAL(ctl->u8[3], mode));
+	write_c0_perf(0, BUZZZ_PMON_VAL((desc + 0)->evtid, m));
+	write_c0_perf(2, BUZZZ_PMON_VAL((desc + 1)->evtid, m));
+	write_c0_perf(4, BUZZZ_PMON_VAL((desc + 2)->evtid, m));
+	write_c0_perf(6, BUZZZ_PMON_VAL((desc + 3)->evtid, m));
+#endif	/*  CONFIG_MIPS && BUZZZ_CONFIG_CPU_MIPS_74K */
+
+#if defined(CONFIG_ARM)
+	m = 0; /* dummy */
+	for (counter = 0U; counter < BUZZZ_PMU_COUNTERS; counter++) {
+		__armv7_pmu_config_buzzz_ctr(counter, (desc + counter)->evtid);
+	}
+#endif	/*  CONFIG_ARM */
+
+	/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+	BUZZZ_PRINT("Bind group<%u:%s> <%x:%s> <%x:%s> <%x:%s> <%x:%s>",
+		pmu_group, __buzzz_pmu_group(pmu_group),
+		BUZZZ_PMON_VAL((desc + 0)->evtid, m), __buzzz_pmu_event(pmu_group, 0),
+		BUZZZ_PMON_VAL((desc + 1)->evtid, m), __buzzz_pmu_event(pmu_group, 1),
+		BUZZZ_PMON_VAL((desc + 2)->evtid, m), __buzzz_pmu_event(pmu_group, 2),
+		BUZZZ_PMON_VAL((desc + 3)->evtid, m), __buzzz_pmu_event(pmu_group, 3));
 
 	buzzz_g.priv.pmon.sample = 0U;
-	buzzz_g.priv.pmon.groupid = group;
+	buzzz_g.priv.pmon.pmu_group = pmu_group;
+
 }
 
-/* Start a new sample */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_bgn
+ *  User log indicating that a new iteration has started.
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_bgn(void)
 {
@@ -1472,33 +1853,49 @@ buzzz_pmon_bgn(void)
 #if defined(BUZZZ_CONFIG_PMON_USR)
 		buzzz_pmon_usr_g = 0U;
 #endif	/*  BUZZZ_CONFIG_PMON_USR */
-		_buzzz_pmon_log(0U);                        /* record baseline values */
+		__buzzz_pmon_log(0U);                       /* record baseline values */
 		buzzz_g.priv.pmon.next_log_id = 1U;         /* for log sequence check */
 	} else
-		_buzzz_pmon_iter_set_invalid();
+		__buzzz_pmon_iter_set_invalid();
 }
 
-/* Invalidate this iteration */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_clr
+ *  User log indication that an interation is invalid
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_clr(void)
 {
-	_buzzz_pmon_iter_set_invalid();
+	__buzzz_pmon_iter_set_invalid();
 }
 
-/* Record performance counters at this event point */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_log
+ *  Record performance counters at this event point
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_log(uint32_t log_id)
 {
 	if (buzzz_g.priv.pmon.next_log_id != log_id) {  /* check log sequence */
-		_buzzz_pmon_iter_set_invalid();             /* tag sample as invalid */
+		__buzzz_pmon_iter_set_invalid();            /* tag sample as invalid */
 		return;
 	}
 
-	_buzzz_pmon_log(log_id);                        /* record counter values */
+	__buzzz_pmon_log(log_id);                       /* record counter values */
 
 	buzzz_g.priv.pmon.next_log_id = log_id + 1U;    /* for log sequence check */
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_end
+ *  User log entry identifying that one iteration has completed.
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_end(uint32_t last_log_id)
 {
@@ -1512,13 +1909,13 @@ buzzz_pmon_end(uint32_t last_log_id)
 	}
 
 	/* Event 0, counter#0 log is used to track an invalid sample */
-	if (_buzzz_pmon_iter_is_invalid()) {
+	if (__buzzz_pmon_iter_is_invalid()) {
 		BUZZZ_PRINT("invalid iteration");
 		return;       /* invalid sample */
 	}
 
 	if (buzzz_g.status != BUZZZ_STATUS_ENABLED) {
-		_buzzz_pmon_iter_set_invalid();
+		__buzzz_pmon_iter_set_invalid();
 		return;
 	}
 
@@ -1526,50 +1923,66 @@ buzzz_pmon_end(uint32_t last_log_id)
 	buzzz_g.priv.pmon.sample++;
 
 	BUZZZ_PRINT("group<%u> sample<%u> of <%u> last_log_id<%u>",
-		buzzz_g.priv.pmon.groupid, buzzz_g.priv.pmon.sample,
+		buzzz_g.priv.pmon.pmu_group, buzzz_g.priv.pmon.sample,
 		buzzz_g.priv.pmon.config_samples, last_log_id);
 
-	if (buzzz_g.priv.pmon.groupid == 0) {  /* RESET or skip group ID */
+	/* UNDEF or skip group ID */
+	if (buzzz_g.priv.pmon.pmu_group == BUZZZ_PMU_GROUP_UNDEF) {
 
 		BUZZZ_PRINT("SKIP samples completed");
 
 		if (buzzz_g.priv.pmon.sample >= buzzz_g.priv.pmon.config_samples) {
 
+			/* If wrapover, start with first group, else use configured group */
 			if (buzzz_g.config_mode == BUZZZ_MODE_LIMITED)
-				buzzz_g.priv.pmon.groupid = buzzz_g.config_limit;
+				buzzz_g.priv.pmon.pmu_group = buzzz_g.config_limit;
 			else
-				buzzz_g.priv.pmon.groupid++;
+				buzzz_g.priv.pmon.pmu_group++;
 
-			_buzzz_pmon_bind(buzzz_g.priv.pmon.groupid);
+			/* bind to configured group */
+			__buzzz_pmon_bind(buzzz_g.priv.pmon.pmu_group);
 		}
-		return; /* exit without summing all samples for RESET group */
+		return; /* exit without summing all samples for UNDEF group */
 	}
 
 	/* Accumulate into run, current iteration, and setup for next iteration */
-	_buzzz_pmon_run(last_log_id);
+	__buzzz_pmon_run(last_log_id);
 
+	/* If sample number of iterations have completed switch to next pmu_group */
 	if (buzzz_g.priv.pmon.sample >= buzzz_g.priv.pmon.config_samples) {
 
-		_buzzz_pmon_tot(last_log_id); /* record current groups sum total */
+		__buzzz_pmon_tot(last_log_id); /* record current groups sum total */
 
 		/* Move to next group, or end if limited to single group */
 		if (buzzz_g.config_mode == BUZZZ_MODE_LIMITED)
-			buzzz_g.priv.pmon.groupid = BUZZZ_PMON_GROUPS;
+			buzzz_g.priv.pmon.pmu_group = BUZZZ_PMU_GROUPS;
 		else
-			buzzz_g.priv.pmon.groupid++;
+			buzzz_g.priv.pmon.pmu_group++;
 
-		if (buzzz_g.priv.pmon.groupid >= BUZZZ_PMON_GROUPS)
+		/* If last group, stop or else switch to next group */
+		if (buzzz_g.priv.pmon.pmu_group >= BUZZZ_PMU_GROUPS)
 			buzzz_pmon_stop();
 		else
-			_buzzz_pmon_bind(buzzz_g.priv.pmon.groupid);
+			__buzzz_pmon_bind(buzzz_g.priv.pmon.pmu_group);
 	}
 }
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_dump
+ *  Dump PMON statistics
+ *  CAUTION: printk in this function assumes BUZZZ_PMU_COUNTERS is 4
+ * +---------------------------------------------------------------------------+
+ */
+#if defined(CONFIG_BUZZZ_PMON) && (BUZZZ_PMU_COUNTERS != 4)
+#error "buzzz_pmon_dump: printk assumes BUZZZ_PMU_COUNTERS is 4"
+#endif
 
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_dump(void)
 {
-	uint32_t group, log_id, ctr;
-	buzzz_pmonst_t * log;
+	uint32_t group, log_id, ctr_idx;
+	buzzz_pmonst_t *log;
 	buzzz_pmon_ctr_t tot;
 
 	printk("\n\n+++++++++++++++\n+ PMON Report +\n+++++++++++++++\n\n");
@@ -1580,30 +1993,27 @@ buzzz_pmon_dump(void)
 	if (buzzz_g.config_mode == BUZZZ_MODE_LIMITED)
 		group = buzzz_g.config_limit;
 	else
-		group = BUZZZ_PMON_GROUP_GENERAL;
+		group = BUZZZ_PMU_GROUP_GENERAL;
 
-	for (; group < BUZZZ_PMON_GROUP_MAXIMUM; group++) {
+	for (; group < BUZZZ_PMU_GROUP_MAXIMUM; group++) {
 
 		/* Zero out the total cummulation */
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-			tot.u32[ctr] = 0U;
+		for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+			tot.u32[ctr_idx] = 0U;
 
 		/* Print the table header */
-		printk("\n\nGroup:\t" CLRb "%s\n" CLRnl, str_buzzz_pmon_group(group));
+		printk("\n\nGroup:\t" CLRb "%s\n" CLRnl, __buzzz_pmu_group(group));
 
-		if (group == BUZZZ_PMON_GROUP_GENERAL) {
-			printk(CLRb "%15s %12s %12s %15s %12s    REGISTERED-EVENT" CLRnl,
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 1),
-				"NANO_SECONDS",
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 3),
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 0),
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 2));
+		/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+		if (group == BUZZZ_PMU_GROUP_GENERAL) {
+			printk(CLRb "%15s %15s %15s %15s %15s    REGISTERED-EVENT" CLRnl,
+				__buzzz_pmu_event(group, 0), __buzzz_pmu_event(group, 1),
+				__buzzz_pmu_event(group, 2), __buzzz_pmu_event(group, 3),
+				"NANO_SECONDS");
 		} else {
 			printk(CLRb "%15s %15s %15s %15s    REGISTERED-EVENT" CLRnl,
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 0),
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 1),
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 2),
-				str_buzzz_pmon_event((group * BUZZZ_PMON_COUNTERS) + 3));
+				__buzzz_pmu_event(group, 0), __buzzz_pmu_event(group, 1),
+				__buzzz_pmu_event(group, 2), __buzzz_pmu_event(group, 3));
 		}
 
 		/* -------------- */
@@ -1624,14 +2034,15 @@ buzzz_pmon_dump(void)
 			/* Print table row = per event entry */
 			log = &buzzz_g.priv.pmon.mon[group][log_id];
 
-			for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-				tot.u32[ctr] += log->sum.u32[ctr];
+			for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+				tot.u32[ctr_idx] += log->sum.u32[ctr_idx];
 
-			if (group == BUZZZ_PMON_GROUP_GENERAL) {
-				printk("%15u %12u %12u %15u %12u    %s\n",
-					log->sum.u32[1],
-					((log->sum.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
-					log->sum.u32[3], log->sum.u32[0], log->sum.u32[2],
+			/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+			if (group == BUZZZ_PMU_GROUP_GENERAL) {
+				printk("%15u %15u %15u %15u %15u    %s\n",
+					log->sum.u32[0], log->sum.u32[1],
+					log->sum.u32[2], log->sum.u32[3],
+					((log->sum.u32[3] * 1000) / BUZZZ_CYCLES_PER_USEC),
 					buzzz_g.klogs[log_id]);
 			} else {
 				printk("%15u %15u %15u %15u    %s\n",
@@ -1647,7 +2058,8 @@ buzzz_pmon_dump(void)
 		 * The total nanosecs will not include any fractions of each event's
 		 * nanosec computed from cycles, and will be off by the fractions.
 		 */
-		if (group == BUZZZ_PMON_GROUP_GENERAL) {
+		/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+		if (group == BUZZZ_PMU_GROUP_GENERAL) {
 			printk("\n%15u %12u %12u %15u %12u    " CLRb "%s" CLRnl,
 				tot.u32[1], ((tot.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
 				tot.u32[3], tot.u32[0], tot.u32[2], "Total");
@@ -1656,8 +2068,8 @@ buzzz_pmon_dump(void)
 				tot.u32[0], tot.u32[1], tot.u32[2], tot.u32[3], "Total");
 		}
 
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-				tot.u32[ctr] = 0U;
+		for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+				tot.u32[ctr_idx] = 0U;
 
 		/* -------------- */
 		/* MIN STATISTICS */
@@ -1673,7 +2085,8 @@ buzzz_pmon_dump(void)
 		for (log_id = 1; log_id <= buzzz_g.priv.pmon.last_log_id; log_id++) {
 			log = &buzzz_g.priv.pmon.mon[group][log_id];
 
-			if (group == BUZZZ_PMON_GROUP_GENERAL) {
+			/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+			if (group == BUZZZ_PMU_GROUP_GENERAL) {
 				printk("%15u %12u %12u %15u %12u    %s\n",
 					log->min.u32[1],
 					((log->min.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
@@ -1686,11 +2099,12 @@ buzzz_pmon_dump(void)
 					buzzz_g.klogs[log_id]);
 			}
 
-			for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-				tot.u32[ctr] += log->min.u32[ctr];
+			for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+				tot.u32[ctr_idx] += log->min.u32[ctr_idx];
 		}
 
-		if (group == BUZZZ_PMON_GROUP_GENERAL) {
+		/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+		if (group == BUZZZ_PMU_GROUP_GENERAL) {
 			printk("\n%15u %12u %12u %15u %12u    " CLRb "%s" CLRnl,
 				tot.u32[1], ((tot.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
 				tot.u32[3], tot.u32[0], tot.u32[2], "Total");
@@ -1699,8 +2113,8 @@ buzzz_pmon_dump(void)
 				tot.u32[0], tot.u32[1], tot.u32[2], tot.u32[3], "Total");
 		}
 
-		for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-				tot.u32[ctr] = 0U;
+		for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+				tot.u32[ctr_idx] = 0U;
 
 		/* -------------- */
 		/* MAX STATISTICS */
@@ -1716,7 +2130,8 @@ buzzz_pmon_dump(void)
 		for (log_id = 1; log_id <= buzzz_g.priv.pmon.last_log_id; log_id++) {
 			log = &buzzz_g.priv.pmon.mon[group][log_id];
 
-			if (group == BUZZZ_PMON_GROUP_GENERAL) {
+			/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+			if (group == BUZZZ_PMU_GROUP_GENERAL) {
 				printk("%15u %12u %12u %15u %12u    %s\n",
 					log->max.u32[1],
 					((log->max.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
@@ -1729,11 +2144,12 @@ buzzz_pmon_dump(void)
 					buzzz_g.klogs[log_id]);
 			}
 
-			for (ctr = 0U; ctr < BUZZZ_PMON_COUNTERS; ctr++)
-				tot.u32[ctr] += log->max.u32[ctr];
+			for (ctr_idx = 0U; ctr_idx < BUZZZ_PMU_COUNTERS; ctr_idx++)
+				tot.u32[ctr_idx] += log->max.u32[ctr_idx];
 		}
 
-		if (group == BUZZZ_PMON_GROUP_GENERAL) {
+		/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+		if (group == BUZZZ_PMU_GROUP_GENERAL) {
 			printk("\n%15u %12u %12u %15u %12u    " CLRb "%s" CLRnl,
 				tot.u32[1], ((tot.u32[1] * 1000) / BUZZZ_CYCLES_PER_USEC),
 				tot.u32[3], tot.u32[0], tot.u32[2], "Total");
@@ -1747,96 +2163,128 @@ buzzz_pmon_dump(void)
 	}
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_start
+ *  Start PMON tool
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_start(void)
 {
-	_buzzz_pre_start();
+	__buzzz_pre_start();
 
 	memset(buzzz_g.priv.pmon.log, 0, sizeof(buzzz_g.priv.pmon.log));
 	memset(buzzz_g.priv.pmon.run, 0, sizeof(buzzz_g.priv.pmon.run));
 	memset(buzzz_g.priv.pmon.mon, 0, sizeof(buzzz_g.priv.pmon.mon));
 
-	_buzzz_pmon_bind(BUZZZ_PMON_GROUP_RESET);
-	_buzzz_pmon_iter_set_invalid();
+	__buzzz_pmon_bind(BUZZZ_PMU_GROUP_UNDEF);
+	__buzzz_pmon_iter_set_invalid();
 
 	buzzz_g.priv.pmon.sample = 0U;
 	buzzz_g.priv.pmon.next_log_id = 0U;
 	buzzz_g.priv.pmon.last_log_id = 0U;
 
-	_buzzz_pmon_enable();
+	__buzzz_pmon_enable();
 
-	_buzzz_post_start();
+	__buzzz_post_start();
 
 	BUZZZ_PRINT("buzzz_pmon_start");
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_stop
+ *  Stop PMON tool
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_stop(void)
 {
 	if (buzzz_g.status != BUZZZ_STATUS_DISABLED) {
-		_buzzz_pre_stop();
+		__buzzz_pre_stop();
 
-		_buzzz_pmon_bind(BUZZZ_PMON_GROUP_RESET);
+		__buzzz_pmon_bind(BUZZZ_PMU_GROUP_UNDEF);
 
-		_buzzz_pmon_disable();
+		__buzzz_pmon_disable();
 
 		buzzz_pmon_dump();
 
-		_buzzz_post_stop();
+		__buzzz_post_stop();
 	}
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_show
+ *  Dump PMON tool state
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
 buzzz_pmon_show(void)
 {
-	printk("Group:\t\t" CLRb "%s %d" CLRnl,
-		str_buzzz_pmon_group(buzzz_g.priv.pmon.groupid), buzzz_g.priv.pmon.groupid);
-	printk("Control:\t" CLRb "%u %u %u %u" CLRnl,
-		buzzz_g.priv.pmon.control.u8[0], buzzz_g.priv.pmon.control.u8[1],
-		buzzz_g.priv.pmon.control.u8[2], buzzz_g.priv.pmon.control.u8[3]);
+	uint32_t pmu_group = buzzz_g.priv.pmon.pmu_group;
+	printk("Group:\t\t" CLRb "%d %s" CLRnl, buzzz_g.priv.pmon.pmu_group,
+		__buzzz_pmu_group(buzzz_g.priv.pmon.pmu_group));
+	printk("Evtid:\t" CLRb "%u:%s %u:%s %u:%s %u:%s" CLRnl,
+		buzzz_g.priv.pmon.evtid[0], __buzzz_pmu_event(pmu_group, 0),
+		buzzz_g.priv.pmon.evtid[1], __buzzz_pmu_event(pmu_group, 1),
+		buzzz_g.priv.pmon.evtid[2], __buzzz_pmu_event(pmu_group, 2),
+		buzzz_g.priv.pmon.evtid[3], __buzzz_pmu_event(pmu_group, 3));
 	printk("Sample:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.pmon.sample);
 	printk("NextId:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.pmon.next_log_id);
 	printk("LastId:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.pmon.last_log_id);
 	printk("+Skip:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.pmon.config_skip);
 	printk("+Sample:\t" CLRb "%u" CLRnl, buzzz_g.priv.pmon.config_samples);
 	printk("+Group:\t\t" CLRb "%s" CLRnl,
-		str_buzzz_pmon_group(buzzz_g.config_limit));
-	printk("+Mode:\t\t" CLRb "%s" CLRnl, str_buzzz_mode(buzzz_g.config_mode));
+		__buzzz_pmu_group(buzzz_g.config_limit));
+	printk("+Mode:\t\t" CLRb "%s" CLRnl, __buzzz_mode(buzzz_g.config_mode));
 	printk("\n");
 
-	printk("Groups\n\t1: General\n\t2: I-Cache\n\t3: D-Cache\n\t4: TLB\n");
-	printk("\t5: Data\n\t6: Spurious\n\t7: Branches\n\t8: Miscellaneous\n\n");
+	for (pmu_group = BUZZZ_PMU_GROUP_UNDEF + 1;
+	     pmu_group < BUZZZ_PMU_GROUP_MAXIMUM; pmu_group++) {
+		printk("\t%d : " CLRb "%s" CLRnl,
+			pmu_group, __buzzz_pmu_group(pmu_group));
+	}
 }
 
-int BUZZZ_NOINSTR_FUNC
-buzzz_pmon_default(void)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_default
+ *  Reset to default PMON configuration on a PMON tool selection.
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_pmon_default(void)
 {
-	uint32_t evt;
+	uint32_t counter;
 
 #if defined(CONFIG_BUZZZ_FUNC)
-	printk(CLRerr "ERROR: BUZZZ Function Call Tracing Enabled" CLRnl);
-	printk(CLRerr "Disable CONFIG_BUZZZ_FUNC for PMON tool" CLRnl);
+	BUZZZ_PRERR("function call tracing enabled");
+	BUZZZ_PRERR("disable CONFIG_BUZZZ_FUNC for PMON tool");
 	return BUZZZ_ERROR;
 #endif  /*  CONFIG_BUZZZ_FUNC */
 
 #if defined(CONFIG_BUZZZ_KEVT)
-	printk(CLRerr "ERROR: BUZZZ Kernel Event Tracing Enabled" CLRnl);
-	printk(CLRerr "Disable CONFIG_BUZZZ_KEVT for PMON tool" CLRnl);
+	BUZZZ_PRERR("ERROR: BUZZZ Kernel Event Tracing Enabled");
+	BUZZZ_PRERR("disable CONFIG_BUZZZ_KEVT for PMON tool");
 	return BUZZZ_ERROR;
 #endif  /*  CONFIG_BUZZZ_KEVT */
 
 #if defined(CONFIG_ARM)
 	/* Ensure PMU is not being used by another subsystem */
-	if (_armv7_pmcntenset_test() != 0U) {
-		printk(CLRerr "PMU counters are in use" CLRnl);
+	if (__armv7_PMCNTENSET_test() != 0U) {
+		BUZZZ_PRERR("PMU counters are in use");
 		return BUZZZ_ERROR;
 	}
 #endif	/*  CONFIG_ARM */
 
-	buzzz_g.priv.pmon.groupid = BUZZZ_PMON_GROUP_RESET;
-	for (evt = 0; evt < BUZZZ_PMON_COUNTERS; evt++)
-		buzzz_g.priv.pmon.control.u8[evt] =
-			buzzz_pmonctl_g[BUZZZ_PMON_GROUP_RESET].u8[evt];
+	buzzz_g.tool = BUZZZ_TOOL_PMON;
+
+	buzzz_g.priv.pmon.pmu_group = BUZZZ_PMU_GROUP_UNDEF;
+	for (counter = 0; counter < BUZZZ_PMU_COUNTERS; counter++)
+		buzzz_g.priv.pmon.evtid[counter] =
+			buzzz_pmu_event_g[BUZZZ_PMU_GROUP_UNDEF][counter].evtid;
 	buzzz_g.priv.pmon.sample = 0U;
 	buzzz_g.priv.pmon.next_log_id = 0U;
 	buzzz_g.priv.pmon.last_log_id = 0U;
@@ -1844,15 +2292,65 @@ buzzz_pmon_default(void)
 	buzzz_g.priv.pmon.config_samples = BUZZZ_PMON_SAMPLESZ;
 
 	buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
-	buzzz_g.config_limit = BUZZZ_PMON_GROUP_GENERAL;
+	buzzz_g.config_limit = BUZZZ_PMU_GROUP_GENERAL;
 
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_mode
+ *  Configure the PMON operational mode:
+ *    wrapover: all supported PMU groups are covered
+ *    limited : a specific group is selected, default to GENERAL
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_pmon_mode(buzzz_mode_t mode)
+{
+	if (mode == BUZZZ_MODE_WRAPOVER)
+		buzzz_g.config_limit = BUZZZ_INVALID;
+	else if (mode == BUZZZ_MODE_LIMITED)
+		buzzz_g.config_limit = BUZZZ_PMU_GROUP_GENERAL;
+	else {
+		BUZZZ_PRERR("Unsupported mode %s for %s",
+			__buzzz_mode(mode), __buzzz_tool(buzzz_g.tool));
+		return BUZZZ_ERROR;
+	}
+
+	return BUZZZ_SUCCESS;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_pmon_limit
+ *  Limit the PMON ro a single group.
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_pmon_limit(uint32_t pmu_group)
+{
+	BUZZZ_PRINT("overriding mode<%s>", __buzzz_mode(buzzz_g.config_mode));
+	buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
+
+	BUZZZ_ASSERT_PMU_GROUP(pmu_group);
+
+	buzzz_g.config_limit = pmu_group; /* limit to selected group */
+
+	return BUZZZ_SUCCESS;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pmon_config
+ *  Configure the number of iterations to be skipped (at start) and how many
+ *  iterations to be averaged over for each group.
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
 buzzz_pmon_config(uint32_t config_samples, uint32_t config_skip)
 {
-	BUZZZ_ASSERT_STATUS_DISABLED();
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
 
 	buzzz_g.priv.pmon.config_samples = config_samples;
 	buzzz_g.priv.pmon.config_skip = config_skip;
@@ -1860,7 +2358,12 @@ buzzz_pmon_config(uint32_t config_samples, uint32_t config_skip)
 	return BUZZZ_SUCCESS;
 }
 
-/* Initialization of Buzzz PMon tool during loading time */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _init_buzzz_pmon
+ *  Initialization of Buzzz PMON tool during loading time
+ * +---------------------------------------------------------------------------+
+ */
 static int BUZZZ_NOINSTR_FUNC
 __init _init_buzzz_pmon(void)
 {
@@ -1875,488 +2378,553 @@ __init _init_buzzz_pmon(void)
 typedef
 struct buzzz_kevt_log
 {
-	uint32_t ctr[BUZZZ_KEVT_COUNTERS];
+	uint32_t ctr[BUZZZ_PMU_COUNTERS];
 	union {
 		uint32_t    u32;
 		struct {
-			uint32_t core    :  1;
-			uint32_t rsvd    :  7;
-			uint32_t args    :  8;
-			uint32_t id      : 16;
+			uint32_t core :  4; /* allow for 16 cpu cores */
+			uint32_t args :  4;
+			uint32_t rsvd :  8; /* future: preempt count */
+			uint32_t id   : 16;
 		} klog;
 	} arg0;
-	uint32_t arg1;
-	uint32_t arg2, arg3, arg4, arg5;
+	uint32_t arg1, arg2, arg3;
+	/* Try to maintain this structure at 32Bytes, typical cacheline size */
 } buzzz_kevt_log_t;
 
-typedef
-struct buzzz_kevt_ctl
-{
-	uint8_t u8[BUZZZ_KEVT_COUNTERS];
-} buzzz_kevt_ctl_t;
 
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-static
-buzzz_kevt_ctl_t buzzz_kevtctl_g[BUZZZ_KEVT_GROUPS] =
-{
-	/*  ctl0  ctl1 */
-	{{    0U,   0U }},                  /* group  0 RESET            */
-	{{  0x68, 0x11 }},                  /* group  1 GENERAL          */
-	{{  0x68, 0x01 }},                  /* group  2 ICACHE           */
-	{{  0x04, 0x03 }},                  /* group  3 DCACHE           */
-	{{  0x02, 0x05 }},                  /* group  4 TLB              */
-	{{  0x10, 0x64 }}                   /* group  5 MISCELLANEOUS    */
-};
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: KEVT tool logging APIs (0, 1, 2, 3 args)
+ * +---------------------------------------------------------------------------+
+ */
 
-/* embed prints with one args in log */
-#define _BUZZZ_KEVT_BGN(flags, cur)                                            \
-	if (buzzz_g.status != BUZZZ_STATUS_ENABLED) return;                        \
-	BUZZZ_LOCK(flags);                                                         \
-	cur = (buzzz_kevt_log_t*)buzzz_g.cur;                                      \
-	cur->arg0.klog.core = raw_smp_processor_id();                              \
-	cur->arg0.klog.id = log_id;
+/*
+ * To limit the number of logs from start, insert in _BUZZZ_KEVT_PREAMBLE
+ *
+ * if (buzzz_g.priv.kevt.count >= buzzz_g.priv.kevt.limit) {
+ *     buzzz_g.status = BUZZZ_STATUS_DISABLED;
+ * }
+ *
+ */
+#define _BUZZZ_KEVT_PREAMBLE(flags, log_p, kevt_id, nargs) \
+({ \
+	__buzzz_prefetch(buzzz_g.cur); \
+	if (buzzz_g.status != BUZZZ_STATUS_ENABLED) return; \
+	BUZZZ_LOCK(flags); \
+	(log_p) = (buzzz_kevt_log_t*)buzzz_g.cur; \
+	(log_p)->arg0.klog.id = (kevt_id); \
+	(log_p)->arg0.klog.core = raw_smp_processor_id(); \
+	(log_p)->arg0.klog.args = nargs; \
+	(log_p)->ctr[0] = BUZZZ_READ_COUNTER(0); \
+	(log_p)->ctr[1] = BUZZZ_READ_COUNTER(1); \
+	(log_p)->ctr[2] = BUZZZ_READ_COUNTER(2); \
+	(log_p)->ctr[3] = BUZZZ_READ_COUNTER(3); \
+})
 
-#define _BUZZZ_KEVT_END(flags)                                                 \
-	buzzz_g.cur = (void*)(((buzzz_kevt_log_t*)buzzz_g.cur) + 1);               \
-	buzzz_g.priv.kevt.count++;                                                 \
-	if (buzzz_g.cur >= buzzz_g.end) {                                          \
-		buzzz_g.wrap = BUZZZ_TRUE;                                             \
-		buzzz_g.cur = buzzz_g.log;                                             \
-	}                                                                          \
-	BUZZZ_UNLOCK(flags);
+#define _BUZZZ_KEVT_POSTAMBLE(flags) \
+({ \
+	buzzz_g.cur = (void*)(((buzzz_kevt_log_t*)buzzz_g.cur) + 1); \
+	buzzz_g.priv.kevt.count++; \
+	if (buzzz_g.cur >= buzzz_g.end) { \
+		buzzz_g.wrap = BUZZZ_TRUE; \
+		buzzz_g.cur = buzzz_g.log; \
+	} \
+	BUZZZ_UNLOCK(flags); \
+})
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_log0
+ *  Add a kernel event log with 0 arguments
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_log0(uint32_t log_id)
+buzzz_kevt_log0(uint32_t kevt_id)
 {
 	unsigned long flags;
-	buzzz_kevt_log_t * cur;
+	buzzz_kevt_log_t *log_p;
 
-	_BUZZZ_KEVT_BGN(flags, cur);
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	cur->ctr[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	cur->ctr[1] = _armv7_pmcn_read_buzzz_ctr(1);
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-	cur->arg0.klog.args = 0;
-
-	_BUZZZ_KEVT_END(flags);
+	_BUZZZ_KEVT_PREAMBLE(flags, log_p, kevt_id, 0);
+	_BUZZZ_KEVT_POSTAMBLE(flags);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_log1
+ *  Add a kernel event log with 1 arguments
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_log1(uint32_t log_id, uint32_t arg1)
+buzzz_kevt_log1(uint32_t kevt_id, uint32_t arg1)
 {
 	unsigned long flags;
-	buzzz_kevt_log_t * cur;
+	buzzz_kevt_log_t *log_p;
 
-	_BUZZZ_KEVT_BGN(flags, cur);
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	cur->ctr[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	cur->ctr[1] = _armv7_pmcn_read_buzzz_ctr(1);
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-	cur->arg0.klog.args = 1;
-	cur->arg1 = arg1;
-
-	_BUZZZ_KEVT_END(flags);
+	_BUZZZ_KEVT_PREAMBLE(flags, log_p, kevt_id, 1);
+	log_p->arg1 = arg1;
+	_BUZZZ_KEVT_POSTAMBLE(flags);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_log2
+ *  Add a kernel event log with 2 arguments
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_log2(uint32_t log_id, uint32_t arg1, uint32_t arg2)
+buzzz_kevt_log2(uint32_t kevt_id, uint32_t arg1, uint32_t arg2)
 {
 	unsigned long flags;
-	buzzz_kevt_log_t * cur;
+	buzzz_kevt_log_t *log_p;
 
-	_BUZZZ_KEVT_BGN(flags, cur);
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	cur->ctr[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	cur->ctr[1] = _armv7_pmcn_read_buzzz_ctr(1);
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-	cur->arg0.klog.args = 2;
-	cur->arg1 = arg1;
-	cur->arg2 = arg2;
-
-	_BUZZZ_KEVT_END(flags);
+	_BUZZZ_KEVT_PREAMBLE(flags, log_p, kevt_id, 2);
+	log_p->arg1 = arg1;
+	log_p->arg2 = arg2;
+	_BUZZZ_KEVT_POSTAMBLE(flags);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_log3
+ *  Add a kernel event log with 3 arguments
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_log3(uint32_t log_id, uint32_t arg1, uint32_t arg2, uint32_t arg3)
+buzzz_kevt_log3(uint32_t kevt_id, uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
 	unsigned long flags;
-	buzzz_kevt_log_t * cur;
+	buzzz_kevt_log_t *log_p;
 
-	_BUZZZ_KEVT_BGN(flags, cur);
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	cur->ctr[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	cur->ctr[1] = _armv7_pmcn_read_buzzz_ctr(1);
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-	cur->arg0.klog.args = 3;
-	cur->arg1 = arg1;
-	cur->arg2 = arg2;
-	cur->arg3 = arg3;
-
-	_BUZZZ_KEVT_END(flags);
+	_BUZZZ_KEVT_PREAMBLE(flags, log_p, kevt_id, 3);
+	log_p->arg1 = arg1;
+	log_p->arg2 = arg2;
+	log_p->arg3 = arg3;
+	_BUZZZ_KEVT_POSTAMBLE(flags);
 }
 
-void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_log4(uint32_t log_id, uint32_t arg1, uint32_t arg2,
-                uint32_t arg3, uint32_t arg4)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_kevt_enable
+ *  Invoked on each CPU to enable the PMU
+ * +---------------------------------------------------------------------------+
+ */
+static void BUZZZ_NOINSTR_FUNC
+_buzzz_kevt_enable(void *none)
 {
-	unsigned long flags;
-	buzzz_kevt_log_t * cur;
-
-	_BUZZZ_KEVT_BGN(flags, cur);
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	cur->ctr[0] = _armv7_pmcn_read_buzzz_ctr(0);
-	cur->ctr[1] = _armv7_pmcn_read_buzzz_ctr(1);
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-
-	cur->arg0.klog.args = 4;
-	cur->arg1 = arg1;
-	cur->arg2 = arg2;
-	cur->arg3 = arg3;
-	cur->arg4 = arg4;
-
-	_BUZZZ_KEVT_END(flags);
+#if defined(CONFIG_ARM)
+	__armv7_pmu_enable();
+#endif  /*  CONFIG_ARM */
 }
 
-static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_kevt_enable(void * none)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_kevt_disable
+ *  Invoked on each CPU to disable the PMU
+ * +---------------------------------------------------------------------------+
+ */
+static void BUZZZ_NOINSTR_FUNC
+_buzzz_kevt_disable(void *none)
 {
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	_armv7_pmcn_enable();
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+#if defined(CONFIG_ARM)
+	__armv7_pmu_disable();
+#endif  /*  CONFIG_ARM */
 }
 
-static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_kevt_disable(void * none)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_kevt_bind
+ * +---------------------------------------------------------------------------+
+ */
+static void BUZZZ_NOINSTR_FUNC
+_buzzz_kevt_bind(void *info)
 {
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	_armv7_pmcn_disable();
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
-}
+	uint32_t counter;
+	buzzz_pmu_event_desc_t *desc;
+	buzzz_status_t *status;
+	uint32_t pmu_group = *((uint32_t*)info);
 
-static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
-_buzzz_kevt_bind(void * info)
-{
-	uint32_t mode, ctr;
-	buzzz_kevt_ctl_t * ctl;
-	buzzz_status_t * status;
-	uint32_t group = *((uint32_t*)info);
+	desc = (buzzz_pmu_event_desc_t *)&buzzz_pmu_event_g[pmu_group][0];
 
-	mode = (group == BUZZZ_PMON_GROUP_RESET) ? 0 : BUZZZ_PMON_CTRL;
-	ctl = &buzzz_kevtctl_g[group];
-
-#if defined(CONFIG_ARM) && defined(BUZZZ_CONFIG_CPU_ARMV7_A9)
-	for (ctr = 0U; ctr < BUZZZ_KEVT_COUNTERS; ctr++) {
-		_armv7_pmcn_config_buzzz_ctr(ctr, ctl->u8[ctr]);
+#if defined(CONFIG_ARM)
+	for (counter = 0U; counter < BUZZZ_PMU_COUNTERS; counter++) {
+		__armv7_pmu_config_buzzz_ctr(counter, (desc + counter)->evtid);
 	}
-#endif  /*  CONFIG_ARM && BUZZZ_CONFIG_CPU_ARMV7_A9 */
+#endif  /*  CONFIG_ARM */
 
 	status = &per_cpu(kevt_status, raw_smp_processor_id());
-	if (group == BUZZZ_KEVT_GROUP_RESET)
+	if (pmu_group == BUZZZ_PMU_GROUP_UNDEF)
 		*status = BUZZZ_STATUS_DISABLED;
 	else
 		*status = BUZZZ_STATUS_ENABLED;
 
-	BUZZZ_PRINT("Bind group<%u>  <%u> <%u>", group,
-		BUZZZ_PMON_VAL(ctl->u8[0], mode),
-		BUZZZ_PMON_VAL(ctl->u8[1], mode));
+	/* CAUTION: assumes BUZZZ_PMU_COUNTERS is 4 */
+	BUZZZ_PRINT("Bind group<%u:%s>  <%x:%s> <%x:%s> <%x:%s> <%x:%s>",
+		pmu_group, __buzzz_pmu_group(pmu_group),
+		BUZZZ_PMON_VAL((desc + 0)->evtid, m), __buzzz_pmu_event(pmu_group, 0),
+		BUZZZ_PMON_VAL((desc + 1)->evtid, m), __buzzz_pmu_event(pmu_group, 1),
+		BUZZZ_PMON_VAL((desc + 2)->evtid, m), __buzzz_pmu_event(pmu_group, 2),
+		BUZZZ_PMON_VAL((desc + 3)->evtid, m), __buzzz_pmu_event(pmu_group, 3));
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_start
+ *  Start KVT tool tracing by invoking _buzzz_kevt_enable in each CPU.
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC /* Start kevt tracing */
 buzzz_kevt_start(void)
 {
-	buzzz_status_t * status;
+	buzzz_status_t *status;
 	int cpu;
-	_buzzz_pre_start();
+	__buzzz_pre_start();
 
-	on_each_cpu(_buzzz_kevt_bind, &buzzz_g.priv.kevt.config_evt, 1);
+	/* Select the pmu_group */
+	on_each_cpu(_buzzz_kevt_bind, &buzzz_g.priv.kevt.pmu_group, 1);
+	on_each_cpu(_buzzz_kevt_enable, NULL, 1);
 
+	/* Other CPUs may not have yet completed _buzzz_kevt_bind ... */
 	for_each_online_cpu(cpu) {
 		status = &per_cpu(kevt_status, cpu);
 		if (*status != BUZZZ_STATUS_ENABLED)
-			printk(CLRerr "buzzz_kevt_start failed to start on cpu<%d>" CLRnl,
+			BUZZZ_PRERR("on cpu<%d> kevt_status not yet BUZZZ_STATUS_ENABLED",
 				cpu);
 	}
 
-	on_each_cpu(_buzzz_kevt_enable, NULL, 1);
-
-	_buzzz_post_start();
+	__buzzz_post_start();
 
 	BUZZZ_PRINT("buzzz_kevt_start");
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_stop
+ *  Stop KEVT tool tracing by invoking _buzzz_kevt_disable on each CPU.
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC /* Stop kevt tracing */
 buzzz_kevt_stop(void)
 {
-	buzzz_kevt_group_t group = BUZZZ_KEVT_GROUP_RESET;
-
 	if (buzzz_g.status != BUZZZ_STATUS_DISABLED) {
+
+		buzzz_pmu_group_t pmu_group;
 
 		buzzz_kevt_log0(BUZZZ_KEVT_ID_BUZZZ_TMR);
 
-		_buzzz_pre_stop();
+		__buzzz_pre_stop();
 
-		on_each_cpu(_buzzz_kevt_bind, &group, 1);
+		pmu_group = BUZZZ_PMU_GROUP_UNDEF;
+		on_each_cpu(_buzzz_kevt_bind, &pmu_group, 1);
 		on_each_cpu(_buzzz_kevt_disable, NULL, 1);
 
-		_buzzz_post_stop();
+		__buzzz_post_stop();
 	}
 }
 
-int BUZZZ_NOINSTR_FUNC
-buzzz_kevt_parse_log(char * p, int bytes, buzzz_kevt_log_t * log)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_kevt_snprintf
+ *  Perform the formatted print using the registered format strings.
+ * +---------------------------------------------------------------------------+
+ */
+static int BUZZZ_NOINSTR_FUNC
+_buzzz_kevt_snprintf(char *p, int bytes, buzzz_kevt_log_t *log)
 {
-	switch (log->arg0.klog.id) {
-		case BUZZZ_KEVT_ID_IRQ_BAD:
-			bytes += sprintf(p + bytes, CLRerr "IRQ_BAD %u", log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_IRQ_ACK_BAD:
-			bytes += sprintf(p + bytes, CLRerr "IRQ_ACK_BAD %u", log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_IRQ_MISROUTED:
-			bytes += sprintf(p + bytes, CLRerr "IRQ_MISROUTED %u", log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_IRQ_RESEND:
-			bytes += sprintf(p + bytes, CLRerr "IRQ_RESEND %u", log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_IRQ_CHECK:
-			bytes += sprintf(p + bytes, CLRerr "IRQ_CHECK %u", log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_IRQ_ENTRY:
-			bytes += sprintf(p + bytes, CLRr " >> IRQ %03u   ", log->arg1);
-			bytes += _buzzz_symbol(p + bytes, log->arg2);
-			return bytes;
-		case BUZZZ_KEVT_ID_IRQ_EXIT:
-			bytes += sprintf(p + bytes, CLRr " << IRQ %03u   ", log->arg1);
-			bytes += _buzzz_symbol(p + bytes, log->arg2);
-			return bytes;
-		case BUZZZ_KEVT_ID_SIRQ_ENTRY:
-			bytes += sprintf(p + bytes, CLRm ">>> SOFTIRQ ");
-			bytes += _buzzz_symbol(p + bytes, log->arg1);
-			return bytes;
-		case BUZZZ_KEVT_ID_SIRQ_EXIT:
-			bytes += sprintf(p + bytes, CLRm "<<< SOFTIRQ ");
-			bytes += _buzzz_symbol(p + bytes, log->arg1);
-			return bytes;
-		case BUZZZ_KEVT_ID_WORKQ_ENTRY:
-			bytes += sprintf(p + bytes, CLRb ">>>>> WORKQ ");
-			bytes += _buzzz_symbol(p + bytes, log->arg1);
-			return bytes;
-		case BUZZZ_KEVT_ID_WORKQ_EXIT:
-			bytes += sprintf(p + bytes, CLRb "<<<<< WORKQ ");
-			bytes += _buzzz_symbol(p + bytes, log->arg1);
-			return bytes;
-		case BUZZZ_KEVT_ID_SCHEDULE:
-		{
-			struct task_struct * ptsk, *ntsk;
-			ptsk = (struct task_struct *)log->arg1;
-			ntsk = (struct task_struct *)log->arg2;
-			bytes += sprintf(p + bytes, CLRc
-				"TASK_SWITCH from[%s %u:%u:%u] to[%s %u:%u:%u]",
-				ptsk->comm, ptsk->pid, ptsk->normal_prio, ptsk->prio,
-				ntsk->comm, ntsk->pid, ntsk->normal_prio, ntsk->prio);
-			break;
-		}
-		case BUZZZ_KEVT_ID_SCHED_TICK:
-			bytes += sprintf(p + bytes, CLRb "\tscheduler tick jiffies<%u>",
-			                 log->arg1);
-			break;
-		case BUZZZ_KEVT_ID_SCHED_HRTICK:
-			bytes += sprintf(p + bytes, CLRb "sched hrtick");
-			break;
-		case BUZZZ_KEVT_ID_GTIMER_EVENT:
-			bytes += sprintf(p + bytes, CLRb "\tgtimer ");
-			bytes += _buzzz_symbol(p + bytes, log->arg1);
-			return bytes;
-		case BUZZZ_KEVT_ID_GTIMER_NEXT:
-			bytes += sprintf(p + bytes, CLRb "\tgtimer next<%u>", log->arg1);
+	char *fmt = buzzz_g.klogs[log->arg0.klog.id];
+	switch (log->arg0.klog.args) {
+		case 0: BUZZZ_SNPRINTF(fmt); break;
+		case 1: BUZZZ_SNPRINTF(fmt, log->arg1); break;
+		case 2: BUZZZ_SNPRINTF(fmt, log->arg1, log->arg2); break;
+		case 3: BUZZZ_SNPRINTF(fmt, log->arg1, log->arg2, log->arg3); break;
+		default:
+			BUZZZ_PRERR("invalid number of args<%d>", log->arg0.klog.args);
 			break;
 	}
-	bytes += sprintf(p + bytes, "%s", CLRnl);
+
+	BUZZZ_SNPRINTF("%s", CLRnl);
 	return bytes;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_parse_log
+ *  Parsing of packed arguments or requiring special handling
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
-buzzz_kevt_dump_log(char * p, buzzz_kevt_log_t * log)
+buzzz_kevt_parse_log(char *p, int bytes, buzzz_kevt_log_t *log)
 {
-	static uint32_t core_cnt[NR_CPUS][BUZZZ_KEVT_COUNTERS]; /* [core][cntr] */
+	if (log->arg0.klog.id == BUZZZ_KEVT_ID_SCHEDULE) {
+		struct task_struct *ptsk, *ntsk;
+		ptsk = (struct task_struct *)log->arg1;
+		ntsk = (struct task_struct *)log->arg2;
+		BUZZZ_SNPRINTF(CLRc "TASK_SWITCH from[%s %u:%u:%u] to[%s %u:%u:%u]\n",
+			ptsk->comm, ptsk->pid, ptsk->normal_prio, ptsk->prio,
+			ntsk->comm, ntsk->pid, ntsk->normal_prio, ntsk->prio);
+	} else {
+		bytes += _buzzz_kevt_snprintf(p, bytes, log);
+	}
+	return bytes;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_dump_log
+ *  Process a log entry, computing the delta event count, and print the kevt
+ *  using the registered format string.
+ * +---------------------------------------------------------------------------+
+ */
+#if defined(CONFIG_BUZZZ_KEVT) && (BUZZZ_PMU_COUNTERS != 4)
+#error "buzzz_kevt_dump_log: snprintf assumes BUZZZ_PMU_COUNTERS is 4"
+#endif
+
+int BUZZZ_NOINSTR_FUNC
+buzzz_kevt_dump_log(char *p, int bytes, buzzz_kevt_log_t *log)
+{
+	uint32_t cpu = log->arg0.klog.core;
+
+	static uint32_t core_cnt[NR_CPUS][BUZZZ_PMU_COUNTERS]; /* [cpu][cntr] */
 	static uint32_t nsecs[NR_CPUS];
 
-	int bytes = 0;
-	uint32_t curr[BUZZZ_KEVT_COUNTERS], prev[BUZZZ_KEVT_COUNTERS];
-	uint32_t delta[BUZZZ_KEVT_COUNTERS], ctr;
-	delta[1] = 0U;	/* compiler warning */
+	uint32_t curr[BUZZZ_PMU_COUNTERS], prev[BUZZZ_PMU_COUNTERS];
+	uint32_t delta[BUZZZ_PMU_COUNTERS], ctr;
 
-	for (ctr = 0U; ctr < BUZZZ_KEVT_COUNTERS; ctr++) {
-		prev[ctr] = core_cnt[log->arg0.klog.core][ctr];
+	if (cpu >= NR_CPUS) {
+		BUZZZ_SNPRINTF(CLRerr "--- skipping log on CPU %u? ---" CLRnl, cpu);
+		return bytes;
+	}
+
+	delta[3] = 0U;	/* compiler warning: used for cycle count */
+
+	for (ctr = 0U; ctr < BUZZZ_PMU_COUNTERS; ctr++) {
+		prev[ctr] = core_cnt[cpu][ctr];
 		curr[ctr] = log->ctr[ctr];
-		core_cnt[log->arg0.klog.core][ctr] = curr[ctr];
+		core_cnt[cpu][ctr] = curr[ctr];
 
 		if (curr[ctr] < prev[ctr])  /* rollover */
 			delta[ctr] = curr[ctr] + (~0U - prev[ctr]);
 		else
 			delta[ctr] = (curr[ctr] - prev[ctr]);
+
+		if ((delta[ctr] > 1000000000) && (buzzz_g.priv.kevt.skip == false)) {
+			BUZZZ_SNPRINTF(CLRerr "--- skipping log"
+			               " (not sufficient preceeding event info ---" CLRnl);
+			return bytes;
+		}
 	}
 
 	/* HACK: skip first event that simply fills starting values into core_cnt */
 	if (buzzz_g.priv.kevt.skip == true) {
+		int cpu;
 		buzzz_g.priv.kevt.skip = false;
-		nsecs[0] = nsecs[1] = 0U;
-		return bytes;
-	} else if ((delta[0] > 1000000000) || (delta[1] > 1000000000)) {
-		bytes += sprintf(p + bytes, CLRerr "---skipping log bug? ---" CLRnl);
+		for (cpu = 0; cpu < NR_CPUS; cpu++)
+			nsecs[cpu] = 0U;
 		return bytes;
 	}
 
-	nsecs[log->arg0.klog.core] += (delta[1] * 1000) / BUZZZ_CYCLES_PER_USEC;
 
-	if (buzzz_g.priv.kevt.config_evt == BUZZZ_KEVT_GROUP_GENERAL) {
-		uint32_t nanosecs = ((delta[1] * 1000) / BUZZZ_CYCLES_PER_USEC)
-		                    - BUZZZ_KEVT_NANOSECS;
+	if (buzzz_g.priv.kevt.pmu_group == BUZZZ_PMU_GROUP_GENERAL) {
+		uint32_t nanosecs = ((delta[3] * 1000) / BUZZZ_CYCLES_PER_USEC);
+		nsecs[cpu] += nanosecs;
 
-		bytes += sprintf(p + bytes, "%s%3u%s %8u %5u.%03u %6u.%03u\t",
-			(log->arg0.klog.core == 0)? CLRyk : CLRck,
-			log->arg0.klog.core, CLRnorm,
-			delta[0], nanosecs / 1000, (nanosecs % 1000),
-		    nsecs[log->arg0.klog.core] / 1000,
-			nsecs[log->arg0.klog.core] % 1000);
+		BUZZZ_SNPRINTF("%s%3u%s %10u %10u %10u %10u %s%5u.%03u%s %s%6u.%03u%s\t",
+			(cpu == 0)? CLRyk : CLRmk, cpu, CLRnorm,
+			delta[0], delta[1], delta[2], delta[3],
+			CLRgk, nanosecs / 1000, (nanosecs % 1000), CLRnorm,
+			CLRck, nsecs[cpu] / 1000,
+			nsecs[cpu] % 1000, CLRnorm);
 	} else {
-		bytes += sprintf(p + bytes, "%s%3u%s %8u %8u\t",
-			(log->arg0.klog.core == 0)? CLRyk : CLRck,
-			log->arg0.klog.core, CLRnorm,
-			delta[0], delta[1]);
+		BUZZZ_SNPRINTF("%s%3u%s %10u %10u %10u %10u\t",
+			(cpu == 0)? CLRyk : CLRmk, cpu, CLRnorm,
+			delta[0], delta[1], delta[2], delta[3]);
 	}
 
-	if (log->arg0.klog.id < BUZZZ_KEVT_ID_MAXIMUM)
-		return buzzz_kevt_parse_log(p, bytes, log);
-
-	bytes += sprintf(p + bytes, CLRg);
-
-	switch (log->arg0.klog.args) {
-		case 0:
-			bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id]);
-			break;
-		case 1:
-			bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-			                 log->arg1);
-			break;
-		case 2:
-			bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-			                 log->arg1, log->arg2);
-			break;
-		case 3:
-			bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-			                 log->arg1, log->arg2, log->arg3);
-			break;
-		case 4:
-			bytes += sprintf(p + bytes, buzzz_g.klogs[log->arg0.klog.id],
-			                 log->arg1, log->arg2, log->arg3, log->arg4);
-			break;
-		default:
-			break;
+	if (log->arg0.klog.id < BUZZZ_KEVT_ID_MAXIMUM) {
+		bytes += buzzz_kevt_parse_log(p, bytes, log);
+	} else {
+		BUZZZ_SNPRINTF(CLRg);
+		bytes += _buzzz_kevt_snprintf(p, bytes, log);
 	}
-
-	bytes += sprintf(p + bytes, "%s", CLRnl);
 	return bytes;
 }
 
-void BUZZZ_NOINSTR_FUNC	/* Dump the format line */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_dump_format
+ *  Print the header line, listing counter event names
+ * +---------------------------------------------------------------------------+
+ */
+void BUZZZ_NOINSTR_FUNC	/* Dump the header format line */
 buzzz_kevt_dump_format(void)
 {
-	uint32_t group = buzzz_g.priv.kevt.config_evt;
+	uint32_t pmu_group = buzzz_g.priv.kevt.pmu_group;
 
-	if (buzzz_g.priv.kevt.config_evt == BUZZZ_KEVT_GROUP_GENERAL) {
-		printk("Format: CPU INSTR_CNT DELTA_MICROSECS* CUMM_MICROSECS* INFO\n");
-		printk("*Overhead 45-55 nanosecs per row, subtracted %u\n",
-		       BUZZZ_KEVT_NANOSECS);
-	} else {
-		printk("Format: CPU %s %s INFO\n",
-		       str_buzzz_kevt_event((group * BUZZZ_KEVT_COUNTERS) + 0),
-		       str_buzzz_kevt_event((group * BUZZZ_KEVT_COUNTERS) + 1));
-	}
+	printk("%s<CPU>%s <%s> <%s> <%s> <%s> %s\n",
+	      CLRyk, CLRnorm,
+	      __buzzz_pmu_event(pmu_group, 0), __buzzz_pmu_event(pmu_group, 1),
+	      __buzzz_pmu_event(pmu_group, 2), __buzzz_pmu_event(pmu_group, 3),
+	      (buzzz_g.priv.kevt.pmu_group == BUZZZ_PMU_GROUP_GENERAL) ?
+	      CLRgk "<DELTA_MICROSECS>"  CLRnorm " "
+	      CLRck "<CUMMUL_MICROSECS>" CLRnorm " <Event>" : "<Event>");
+	printk(CLRbold "BUZZZ_CYCLES_PER_USEC <%d>" CLRnorm "\n\n",
+	       BUZZZ_CYCLES_PER_USEC);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_dump
+ *  Dump a kernel event log. Limit the number of entries dumped.
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC	/* Dump the kevt trace to console */
 buzzz_kevt_dump(uint32_t limit)
 {
 	buzzz_g.priv.kevt.skip = true;
 
 	buzzz_kevt_dump_format();
-
 	buzzz_log_dump(limit, buzzz_g.priv.kevt.count, sizeof(buzzz_kevt_log_t),
 	               (buzzz_dump_log_fn_t)buzzz_kevt_dump_log);
-
 	buzzz_kevt_dump_format();
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_show
+ *  Dump KEVT tool configuration
+ * +---------------------------------------------------------------------------+
+ */
 void BUZZZ_NOINSTR_FUNC /* Dump the kevt trace to console */
 buzzz_kevt_show(void)
 {
 	printk("Count:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.kevt.count);
 	printk("Limit:\t\t" CLRb "%u" CLRnl, buzzz_g.priv.kevt.limit);
 	printk("+Limit:\t\t" CLRb "%u" CLRnl, buzzz_g.config_limit);
-	printk("+Mode:\t\t" CLRb "%s" CLRnl, str_buzzz_mode(buzzz_g.config_mode));
+	printk("+Mode:\t\t" CLRb "%s" CLRnl, __buzzz_mode(buzzz_g.config_mode));
 	printk("Group:\t\t" CLRb "%s" CLRnl,
-	       str_buzzz_kevt_group(buzzz_g.priv.kevt.config_evt));
+	       __buzzz_pmu_group(buzzz_g.priv.kevt.pmu_group));
 	printk("\n");
 }
 
-int BUZZZ_NOINSTR_FUNC
-buzzz_kevt_default(void)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_kevt_default
+ *  Reset all configurations for KEVT tool
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE  int BUZZZ_NOINSTR_FUNC
+__buzzz_kevt_default(void)
 {
 #if defined(CONFIG_BUZZZ_FUNC)
-	printk(CLRerr "ERROR: BUZZZ Function Call Tracing Enabled" CLRnl);
-	printk(CLRerr "Disable CONFIG_BUZZZ_FUNC for KEVT tracing" CLRnl);
+	BUZZZ_PRERR("function call tracing enabled");
+	BUZZZ_PRERR("disable CONFIG_BUZZZ_FUNC for KEVT tracing");
 	return BUZZZ_ERROR;
 #endif  /*  CONFIG_BUZZZ_FUNC */
 
-#if !defined(CONFIG_ARM)
-	printk(CLRerr "BUZZZ::KEVT not ported to MIPS" CLRnl);
+#if defined(CONFIG_MIPS)
+	BUZZZ_PRERR("tool KEVT not ported to MIPS");
 	return BUZZZ_ERROR;
-#else  /*  CONFIG_ARM */
-	if (_armv7_pmcntenset_test() != 0U) {
-		printk(CLRerr "PMU counters are in use" CLRnl);
+#endif  /*  CONFIG_MIPS */
+
+#if defined(CONFIG_ARM)
+	if (__armv7_PMCNTENSET_test() != 0U) {
+		BUZZZ_PRERR("PMU counters are in use");
 		return BUZZZ_ERROR;
 	}
 #endif  /* !CONFIG_ARM */
 
+	buzzz_g.tool = BUZZZ_TOOL_KEVT;
+
 	buzzz_g.priv.kevt.count = 0U;
 	buzzz_g.priv.kevt.limit = BUZZZ_INVALID;
-	buzzz_g.priv.kevt.config_evt = BUZZZ_KEVT_GROUP_GENERAL;
+	buzzz_g.priv.kevt.pmu_group = BUZZZ_PMU_GROUP_GENERAL;
 	buzzz_g.priv.kevt.log_count = 0U;
 	buzzz_g.priv.kevt.log_index = 0U;
 
 	buzzz_g.config_mode = BUZZZ_MODE_WRAPOVER;
 	buzzz_g.config_limit = BUZZZ_INVALID;
 
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_BAD, CLRerr "IRQ_BAD %u");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_ACK_BAD, CLRerr "IRQ_ACK_BAD %u");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_MISROUTED, CLRerr "IRQ_MISROUTED %u");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_RESEND, CLRerr "IRQ_RESEND %u");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_CHECK, CLRerr "IRQ_CHECK %u");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_ENTRY, CLRr " >> IRQ %03u   ");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_IRQ_EXIT, CLRr " << IRQ %03u   ");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_SIRQ_ENTRY, CLRm ">>> SOFTIRQ %pS");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_SIRQ_EXIT, CLRm "<<< SOFTIRQ %pS");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_WORKQ_ENTRY, CLRb ">>>>> WORKQ %pS");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_WORKQ_EXIT, CLRb "<<<<< WORKQ %pS");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_SCHEDULE,
+	               "TASK_SWITCH from[%s %u:%u:%u] to[%s %u:%u:%u]");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_SCHED_TICK, CLRb
+	               "\tscheduler tick jiffies<%u> cycles<%u>");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_SCHED_HRTICK, CLRb "sched hrtick");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_GTIMER_EVENT, CLRb "\tgtimer %pS");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_GTIMER_NEXT, CLRb "\tgtimer next<%u>");
+	buzzz_klog_reg(BUZZZ_KEVT_ID_BUZZZ_TMR, CLRb "\tbuzzz sys timer");
+	BUZZZ_PRINT("using default configuration for KEVT");
+
+	buzzz_kevt_show();
+
 	return BUZZZ_SUCCESS;
 }
 
-
-int BUZZZ_NOINSTR_FUNC /* API to config kevt performance counter group */
-buzzz_kevt_config(uint32_t config_evt)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_kevt_mode
+ *  Configure the mode of operation for KEVT tool
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_kevt_mode(buzzz_mode_t mode)
 {
-	BUZZZ_ASSERT_STATUS_DISABLED();
-
-	if ((config_evt == BUZZZ_KEVT_GROUP_RESET) ||
-	    (config_evt >= BUZZZ_KEVT_GROUP_MAXIMUM)) {
-		printk(CLRwarn "Invalid event group<%u>" CLRnl, config_evt);
-		return BUZZZ_ERROR;
+	if (mode == BUZZZ_MODE_LIMITED) {
+		uint32_t limit_logs;
+		/* Setup default number of entries to be logged in limited mode */
+		limit_logs = (BUZZZ_LOG_BUFSIZE / sizeof(buzzz_kevt_log_t));
+		buzzz_g.config_limit = (limit_logs < BUZZZ_KEVT_LIMIT_LOGS) ?
+			limit_logs : BUZZZ_KEVT_LIMIT_LOGS;
 	}
 
-	buzzz_g.priv.kevt.config_evt = config_evt;
+	buzzz_g.config_mode = mode;
+
+	return BUZZZ_SUCCESS;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: __buzzz_kevt_limit
+ *  Override the mode of operation to be "limited" (instead of wrapover), and
+ *  restrict the number of entries to be logged.
+ * +---------------------------------------------------------------------------+
+ */
+static BUZZZ_INLINE int BUZZZ_NOINSTR_FUNC
+__buzzz_kevt_limit(uint32_t limit)
+{
+	BUZZZ_PRINT("overriding mode<%s>", __buzzz_mode(buzzz_g.config_mode));
+	buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
+	buzzz_g.config_limit = limit;
+
+	return BUZZZ_SUCCESS;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kevt_config
+ *  Configure the tool to use a PMU group.
+ * +---------------------------------------------------------------------------+
+ */
+int BUZZZ_NOINSTR_FUNC /* API to config kevt performance counter group */
+buzzz_kevt_config(uint32_t pmu_group)
+{
+	BUZZZ_ASSERT_PMU_GROUP(pmu_group);
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
+
+	buzzz_g.priv.kevt.pmu_group = pmu_group;
 
 	printk("buzzz_kevt_config %s\n",
-	       str_buzzz_kevt_group(buzzz_g.priv.kevt.config_evt));
+	       __buzzz_pmu_group(buzzz_g.priv.kevt.pmu_group));
 
 	return BUZZZ_SUCCESS;
 }
@@ -2365,18 +2933,24 @@ buzzz_kevt_config(uint32_t config_evt)
 static int BUZZZ_NOINSTR_FUNC
 __init _init_buzzz_kevt(void)
 {
+	/* We may relax these two ... */
 	if ((BUZZZ_AVAIL_BUFSIZE % sizeof(buzzz_kevt_log_t)) != 0)
 		return BUZZZ_ERROR;
 
-	if (sizeof(buzzz_kevt_log_t) != 32)
+	if (sizeof(buzzz_kevt_log_t) != 32) /* one log per cacheline */
 		return BUZZZ_ERROR;
 
 	return BUZZZ_SUCCESS;
 }
 
 #if defined(BUZZZ_CONFIG_UNITTEST)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: Unittest each tool, invoked via buzzz_kcall framework
+ * +---------------------------------------------------------------------------+
+ */
 static void BUZZZ_NOINSTR_FUNC
-buzzz_func_unittest(void)
+_buzzz_func_unittest(void)
 {
 	/* register events in _init function */
 	buzzz_klog_reg(100, "Event 100 with no arguments");
@@ -2393,19 +2967,19 @@ buzzz_func_unittest(void)
 }
 
 static void BUZZZ_NOINSTR_FUNC
-buzzz_pmon_unittest(void)
+_buzzz_pmon_unittest(void)
 {
 	int i;
-	buzzz_klog_reg(1,  "udelay  1sec");
-	buzzz_klog_reg(2,  "udelay  2secs");
-	buzzz_klog_reg(3,  "udelay  3secs");
-	buzzz_klog_reg(4,  "udelay  4secs");
-	buzzz_klog_reg(5,  "udelay  5secs");
-	buzzz_klog_reg(6,  "udelay  6secs");
-	buzzz_klog_reg(7,  "udelay  7secs");
-	buzzz_klog_reg(8,  "udelay  8secs");
-	buzzz_klog_reg(9,  "udelay  9secs");
-	buzzz_klog_reg(10, "udelay 10secs");
+	buzzz_klog_reg(1,  "udelay  1");
+	buzzz_klog_reg(2,  "udelay  2");
+	buzzz_klog_reg(3,  "udelay  3");
+	buzzz_klog_reg(4,  "udelay  4");
+	buzzz_klog_reg(5,  "udelay  5");
+	buzzz_klog_reg(6,  "udelay  6");
+	buzzz_klog_reg(7,  "udelay  7");
+	buzzz_klog_reg(8,  "udelay  8");
+	buzzz_klog_reg(9,  "udelay  9");
+	buzzz_klog_reg(10, "udelay 10");
 
 	buzzz_klog_reg(11, "Invoke PMON Log");
 	buzzz_klog_reg(12, "Invoke PMON Log");
@@ -2450,7 +3024,7 @@ buzzz_pmon_unittest(void)
 }
 
 static void BUZZZ_NOINSTR_FUNC
-buzzz_kevt_unittest(void)
+_buzzz_kevt_unittest(void)
 {
 	/* register events in _init function */
 	buzzz_klog_reg(900, "Event argument");
@@ -2480,51 +3054,46 @@ buzzz_kevt_unittest(void)
 	buzzz_kevt_log3(903, 1, 22, 333);
 	buzzz_kevt_log3(903, 1, 22, 333);
 	buzzz_kevt_log3(903, 1, 22, 333);
-	buzzz_kevt_log4(904, 1, 22, 333, 4444);
-	buzzz_kevt_log4(904, 1, 22, 333, 4444);
-	buzzz_kevt_log4(904, 1, 22, 333, 4444);
-	buzzz_kevt_log4(904, 1, 22, 333, 4444);
-	buzzz_kevt_log4(904, 1, 22, 333, 4444);
+
+	buzzz_stop(0);
 }
 #endif  /*  BUZZZ_CONFIG_UNITTEST */
 
 
 #if defined(CONFIG_PROC_FS)
 /*
- * -----------------------------------------------------------------------------
- * BUZZZ Proc Filesystem interface
- * -----------------------------------------------------------------------------
+ * +---------------------------------------------------------------------------+
+ * Section: BUZZZ Proc Filesystem interface
+ * +---------------------------------------------------------------------------+
  */
-static int BUZZZ_NOINSTR_FUNC /* Invoked on single-open, presently */
-buzzz_proc_sys_show(struct seq_file *seq, void *v)
-{
-	seq_printf(seq, CLRbold "%s" BUZZZ_VER_FMTS CLRnl,
-		BUZZZ_NAME, BUZZZ_VER_FMT(BUZZZ_SYS_VERSION));
-	seq_printf(seq, "Status:\t\t" CLRb "%s" CLRnl,
-		str_buzzz_status(buzzz_g.status));
-	seq_printf(seq, "Tool:\t\t" CLRb "%s" CLRnl,
-		str_buzzz_tool(buzzz_g.tool));
-	seq_printf(seq, "Wrap:\t\t" CLRb "%u" CLRnl, buzzz_g.wrap);
-	seq_printf(seq, "Run:\t\t" CLRb "%u" CLRnl, buzzz_g.run);
-	seq_printf(seq, "Buf.log:\t" CLRb "0x%p" CLRnl, buzzz_g.log);
-	seq_printf(seq, "Buf.cur:\t" CLRb "0x%p" CLRnl, buzzz_g.cur);
-	seq_printf(seq, "Buf.end:\t" CLRb "0x%p" CLRnl, buzzz_g.end);
 
-	return BUZZZ_SUCCESS;
-}
-
+#if defined(CONFIG_BUZZZ_FUNC)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_procfs_log_show
+ *  cat /proc/buzzz/log handler
+ *  Note: this will display from start of the log, even if the tracing was
+ *  stopped in-between, wherein the log would contain two parts, cur to end
+ *  and log to cur.
+ * +---------------------------------------------------------------------------+
+ */
 static int BUZZZ_NOINSTR_FUNC
-buzzz_proc_log_show(char * page, char **start, off_t off, int count,
-	int * eof, void * data)
+_buzzz_procfs_log_show(char *p, char **start, off_t off, int count,
+	int *eof, void *data)
 {
 	int bytes = 0;
 
-	*start = page;  /* prepare start of buffer for printing */
+	*start = p;  /* prepare start of buffer for printing */
+
+	if (buzzz_g.tool != BUZZZ_TOOL_FUNC) {
+		BUZZZ_PRERR("cat /proc/buzzz/func only supported for FUNC tool");
+		goto done;
+	}
 
 	if (buzzz_g.priv.func.log_index > buzzz_g.priv.func.log_count) {
 		buzzz_g.priv.func.log_index = 0U;   /* stop proc fs, return 0B */
 	} else if (buzzz_g.priv.func.log_index == buzzz_g.priv.func.log_count) {
-		bytes += sprintf(page + bytes, CLRbold "BUZZZ_DUMP END" CLRnl);
+		BUZZZ_SNPRINTF(CLRbold "BUZZZ_DUMP END" CLRnl);
 		buzzz_g.priv.func.log_index++;      /* stop proc fs on next call */
 	} else {                                /* return a record */
 		buzzz_func_log_t *log;
@@ -2546,17 +3115,16 @@ buzzz_proc_log_show(char * page, char **start, off_t off, int count,
 		if (index == 0U) {  /* Log the header */
 			buzzz_g.priv.func.indent = 0U;
 
-			bytes += sprintf(page + bytes,
-				CLRbold "BUZZZ_DUMP BGN total<%u>" CLRnl,
+			BUZZZ_SNPRINTF(CLRbold "BUZZZ_DUMP BGN total<%u>" CLRnl,
 				buzzz_g.priv.func.log_count);
 
 			if (buzzz_g.priv.func.log_count == 0U) {
-				bytes += sprintf(page + bytes, CLRbold "BUZZZ_DUMP END" CLRnl);
+				BUZZZ_SNPRINTF(CLRbold "BUZZZ_DUMP END" CLRnl);
 				goto done;
 			}
 		}
 
-		bytes += buzzz_func_dump_log(page + bytes, log);
+		bytes += buzzz_func_dump_log(p, bytes, log);
 
 		buzzz_g.priv.func.log_index++;
 	}
@@ -2567,40 +3135,108 @@ done:
 	*eof = 1;       /* end of entry */
 	return bytes;   /* 0B implies end of proc fs */
 }
+#endif  /*  CONFIG_BUZZZ_FUNC */
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_procfs_sys_open
+ *  Buzzz ProcFS open fops
+ * +---------------------------------------------------------------------------+
+ */
 static int BUZZZ_NOINSTR_FUNC /* Proc file system open handler */
-buzzz_proc_sys_open(struct inode *inode, struct file *file)
+_buzzz_procfs_sys_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, buzzz_proc_sys_show, NULL);
+	return 0;
 }
 
-static const struct file_operations buzzz_proc_sys_fops =
+static int BUZZZ_NOINSTR_FUNC /* cat /proc/buzzz/sys handler */
+_buzzz_procfs_sys_read(struct file *file, char __user *buff, size_t size,
+                     loff_t *off)
 {
-	.open       =   buzzz_proc_sys_open,
-	.read       =   seq_read,
-	.llseek     =   seq_lseek,
-	.release    =   single_release
+	size = 0;
+	buzzz_show();
+	return size;
+}
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: _buzzz_procfs_sys_write
+ *  Buzzz ProcFS Write fops
+ *
+ *  Test Harness: BUZZZ ProcFS interface to trigger some test.
+ *
+ *  You may extend this function to parse, echo commands and parameters and
+ *  invoke kernel space functions to trigger some activity, without having to
+ *  derive a userspace to kernelspace IOCTL command and parameters.
+ *
+ *  E.g. to concoct a cpu eater that eats up 80% CPU in intervals of 10 millisec
+ *	echo "c 80 10" > /proc/buzzz/sys
+ *
+ *  Alternatively you may use the buzzz_kcall(), invoked by buzzz -kcall command
+ *  which takes a single parameter.
+ *
+ * +---------------------------------------------------------------------------+
+ */
+ssize_t BUZZZ_NOINSTR_FUNC /* echo "..." > /proc/buzzz/sys handler */
+_buzzz_procfs_sys_write(struct file *file, const char __user *buff,
+                        size_t size, loff_t *off)
+{
+	char commandline[128];
+	char command;
+
+	memset(commandline, 0, sizeof(commandline));
+	if (copy_from_user(commandline, buff, size)) {
+		BUZZZ_PRERR("copy_from_user error\n");
+		return -EFAULT;
+	}
+
+	command = commandline[0];
+	BUZZZ_PRERR("BUZZZ commandline: %s\n", commandline);
+
+	switch (command) {
+		case 'h': BUZZZ_PRINT("procfs sys help goes here\n"); break;
+		default: BUZZZ_PRERR("invalid command[%c]\n", command); break;
+	}
+
+	return size;
+}
+
+static int BUZZZ_NOINSTR_FUNC
+_buzzz_procfs_sys_release(struct inode *i, struct file *file)
+{
+	return 0;
+}
+
+/* BUZZZ ProcFS file ops */
+static const struct file_operations buzzz_procfs_sys_fops =
+{
+	.open       =   _buzzz_procfs_sys_open,
+	.read       =   _buzzz_procfs_sys_read,
+	.write      =   _buzzz_procfs_sys_write,
+	.release    =   _buzzz_procfs_sys_release
 };
 
 #endif  /*  CONFIG_PROC_FS */
 
 
 /*
- * -----------------------------------------------------------------------------
- * BUZZZ kernel space command line handling
- * -----------------------------------------------------------------------------
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_kcall
+ *  Convenient kernel space function invocation with one argument using the
+ *  buzzz_cli. May be used to develop a test harness.
+ * +---------------------------------------------------------------------------+
  */
-
 int BUZZZ_NOINSTR_FUNC
 buzzz_kcall(uint32_t arg)
 {
 	switch (arg) {
 #if defined(BUZZZ_CONFIG_UNITTEST)
 		case 0:
-			printk(" 1. func unit test\n 2. pmon unit test\n"); break;
-		case 1: buzzz_func_unittest(); break;
-		case 2: buzzz_pmon_unittest(); break;
-		case 3: buzzz_kevt_unittest(); break;
+			printk("1. func unit test\n2. pmon unit test\n3. kevt unit test\n");
+			break;
+		case 1: _buzzz_func_unittest(); break;
+		case 2: _buzzz_pmon_unittest(); break;
+		case 3: _buzzz_kevt_unittest(); break;
 #endif /*  BUZZZ_CONFIG_UNITTEST */
 
 		default:
@@ -2610,6 +3246,14 @@ buzzz_kcall(uint32_t arg)
 	return BUZZZ_SUCCESS;
 }
 
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_cpu_kernel_info
+ *  Helper function to dump some processor, chip and kernel info (HACK)
+ *  Hack: Preferrable, to use /proc/cpuinfo, ...
+ * +---------------------------------------------------------------------------+
+ */
 #if defined(CONFIG_MIPS)
 #include <bcmutils.h>	/* bcm_chipname */
 #include <siutils.h>	/* typedef struct si_pub si_t */
@@ -2619,8 +3263,13 @@ extern si_t *bcm947xx_sih;
 #define sih bcm947xx_sih
 #endif	/*  CONFIG_MIPS */
 
-void BUZZZ_NOINSTR_FUNC
-buzzz_kernel_info(void)
+#if defined(CONFIG_ARM)
+#include <asm/procinfo.h>
+#include <asm/cputype.h>
+#endif  /*  CONFIG_ARM */
+
+static BUZZZ_INLINE void BUZZZ_NOINSTR_FUNC
+__buzzz_chip_kernel_info(void)
 {
 #if defined(CONFIG_MIPS)
 	unsigned int hz;
@@ -2636,47 +3285,70 @@ buzzz_kernel_info(void)
 		c->dcache.waysize * c->dcache.ways, c->dcache.ways, c->dcache.linesz);
 #endif	/*  CONFIG_MIPS */
 
+#if defined(CONFIG_ARM)
+	unsigned int cpu_id = read_cpuid_id();
+	printk("ARM Processor: implementor<0x%02x> architecture<%s> ",
+		cpu_id >> 24, (cpu_architecture() == CPU_ARCH_ARMv7) ? "v7" : "UNK");
+	if ((cpu_id & 0x0008f000) == 0x00007000) /* ARMv7 */
+		printk("variant<0x%02X>", (cpu_id>> 16) & 127);
+	printk("part<0x%03x> rev<%d>\n", (cpu_id >> 4) & 0xfff, cpu_id & 15);
+#endif
+	printk("BUZZZ_CYCLES_PER_USEC <%d>\n", BUZZZ_CYCLES_PER_USEC);
 	printk("%s", linux_banner);
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_show
+ *  Show the buzzz runtime state and tool configuration.
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC /* Display the runtime status */
 buzzz_show(void)
 {
-	buzzz_kernel_info();
-
-	printk(CLRbold "%s" BUZZZ_VER_FMTS CLRnl,
+	printk(CLRbold);
+	__buzzz_chip_kernel_info();
+	printk("%s" BUZZZ_VER_FMTS CLRnl,
 		BUZZZ_NAME, BUZZZ_VER_FMT(BUZZZ_SYS_VERSION));
 
-	printk("Status:\t\t" CLRb "%s" CLRnl, str_buzzz_status(buzzz_g.status));
+	printk("Status:\t\t" CLRb "%s" CLRnl, __buzzz_status(buzzz_g.status));
 	printk("Wrap:\t\t" CLRb "%u" CLRnl, buzzz_g.wrap);
 	printk("Run:\t\t" CLRb "%u" CLRnl, buzzz_g.run);
 	printk("Buf.log:\t" CLRb "0x%p" CLRnl, buzzz_g.log);
 	printk("Buf.cur:\t" CLRb "0x%p" CLRnl, buzzz_g.cur);
 	printk("Buf.end:\t" CLRb "0x%p" CLRnl, buzzz_g.end);
 
-	printk("\nTool:\t\t" CLRb "%s" CLRnl, str_buzzz_tool(buzzz_g.tool));
+	printk("\nTool:\t\t" CLRb "%s" CLRnl, __buzzz_tool(buzzz_g.tool));
 
 	switch (buzzz_g.tool) {
 		case BUZZZ_TOOL_FUNC: buzzz_func_show(); break;
 		case BUZZZ_TOOL_PMON: buzzz_pmon_show(); break;
 		case BUZZZ_TOOL_KEVT: buzzz_kevt_show(); break;
-		default:
-			break;
+		default: break;
 	}
 
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_start_now
+ *  Stop tracing now, maybe invoked via a timer.
+ *  NOTE: buzzz_g.timer is not SMP safe ...
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
-buzzz_start_now(buzzz_t * buzzz_p)
+buzzz_start_now(buzzz_t *buzzz_p)
 {
+	BUZZZ_ASSERT_TOOL(buzzz_g.tool);
+
 	switch (buzzz_g.tool) {
 		case BUZZZ_TOOL_FUNC: buzzz_func_start(); break;
 		case BUZZZ_TOOL_PMON: buzzz_pmon_start(); break;
 		case BUZZZ_TOOL_KEVT: buzzz_kevt_start(); break;
 		default:
-			printk(CLRwarn "Unsupported start for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("unsupported start for tool %s",
+				__buzzz_tool(buzzz_g.tool));
 			return BUZZZ_ERROR;
 	}
 
@@ -2685,36 +3357,57 @@ buzzz_start_now(buzzz_t * buzzz_p)
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_start
+ *  Start tracing control, after specified jiffies.
+ *  NOTE: buzzz_g.timer is not SMP safe ...
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
-buzzz_start(uint32_t after)
+buzzz_start(uint32_t after_jiffies)
 {
-	if (after == 0U) {
+	if (buzzz_g.status != BUZZZ_STATUS_DISABLED)
+		return BUZZZ_SUCCESS;
+
+	BUZZZ_ASSERT_TOOL(buzzz_g.tool);
+
+	if (after_jiffies == 0U) {
 		return buzzz_start_now(&buzzz_g);
 	}
 
-	if (buzzz_g.timer.function != NULL) {
-		printk(CLRwarn "Timer already in use, overwriting" CLRnl);
+	if (buzzz_g.timer.function != NULL) { /* not SMP safe */
+		BUZZZ_PRERR("Timer already in use, overwriting");
 		del_timer(&buzzz_g.timer);
 	}
 	setup_timer(&buzzz_g.timer,
-	            (timer_fn_t)buzzz_start_now, (unsigned long)&buzzz_g);
-	buzzz_g.timer.expires = jiffies + after;
+	            (buzzz_timer_fn_t)buzzz_start_now, (unsigned long)&buzzz_g);
+	buzzz_g.timer.expires = jiffies + after_jiffies;
 	add_timer(&buzzz_g.timer);
-	printk("BUZZZ deferred start after %u\n", after);
+	BUZZZ_PRINT("deferred start after %u jiffies\n", after_jiffies);
 
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_stop_now
+ *  Stop the tool now, maybe invoked via a timer.
+ *  NOTE: buzzz_g.timer is not SMP safe ...
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
-buzzz_stop_now(buzzz_t * buzzz_p)
+buzzz_stop_now(buzzz_t *buzzz_p)
 {
+	BUZZZ_ASSERT_TOOL(buzzz_g.tool);
+
 	switch (buzzz_g.tool) {
 		case BUZZZ_TOOL_FUNC: buzzz_func_stop(); break;
 		case BUZZZ_TOOL_PMON: buzzz_pmon_stop(); break;
 		case BUZZZ_TOOL_KEVT: buzzz_kevt_stop(); break;
 		default:
-			printk(CLRwarn "Unsupported stop for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("unsupported stop for tool %s",
+				__buzzz_tool(buzzz_g.tool));
 			return BUZZZ_ERROR;
 	}
 	buzzz_p->timer.function = NULL;
@@ -2722,29 +3415,50 @@ buzzz_stop_now(buzzz_t * buzzz_p)
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_stop
+ *  Stop tracing control, after specified jiffies.
+ *  NOTE: buzzz_g.timer is not SMP safe ...
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
-buzzz_stop(uint32_t after)
+buzzz_stop(uint32_t after_jiffies)
 {
-	if (after == 0U) {
+	if (buzzz_g.status == BUZZZ_STATUS_DISABLED)
+		return BUZZZ_SUCCESS;
+
+	BUZZZ_ASSERT_TOOL(buzzz_g.tool);
+
+	if (after_jiffies == 0U) {
 		return buzzz_stop_now(&buzzz_g);
 	}
 	if (buzzz_g.timer.function != NULL) {
-		printk(CLRwarn "Timer already in use, overwriting" CLRnl);
+		BUZZZ_PRERR("timer already in use, overwriting");
 		del_timer(&buzzz_g.timer);
 	}
 	setup_timer(&buzzz_g.timer,
-	            (timer_fn_t)buzzz_stop_now, (unsigned long)&buzzz_g);
-	buzzz_g.timer.expires = jiffies + after;
+	            (buzzz_timer_fn_t)buzzz_stop_now, (unsigned long)&buzzz_g);
+	buzzz_g.timer.expires = jiffies + after_jiffies;
 	add_timer(&buzzz_g.timer);
-	printk("BUZZZ deferred stop %u\n", after);
+	BUZZZ_PRINT("deferred stop after %u jiffies\n", after_jiffies);
 
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_pause
+ *  Pause tracing control
+ * +---------------------------------------------------------------------------+
+ */
 
 int BUZZZ_NOINSTR_FUNC
 buzzz_pause(void)
 {
+	unsigned long flags;
+	BUZZZ_LOCK(flags);
+
 	if (buzzz_g.status == BUZZZ_STATUS_ENABLED) {
 		BUZZZ_FUNC_LOG(BUZZZ_RET_IP);
 		BUZZZ_FUNC_LOG(buzzz_pause);
@@ -2752,12 +3466,22 @@ buzzz_pause(void)
 		buzzz_g.status = BUZZZ_STATUS_PAUSED;
 	}
 
+	BUZZZ_UNLOCK(flags);
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_play
+ *  Continue tracing control, if the state was paused
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
 buzzz_play(void)
 {
+	unsigned long flags;
+	BUZZZ_LOCK(flags);
+
 	if (buzzz_g.status == BUZZZ_STATUS_PAUSED) {
 		buzzz_g.status = BUZZZ_STATUS_ENABLED;
 
@@ -2765,87 +3489,108 @@ buzzz_play(void)
 		BUZZZ_FUNC_LOG(buzzz_play);
 	}
 
+	BUZZZ_UNLOCK(flags);
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_audit
+ *  Invoke an audit harness (not supported)
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
 buzzz_audit(void)
 {
-	printk(CLRwarn "Unsupported audit capability" CLRnl);
+	BUZZZ_PRERR("Unsupported audit capability");
 	return BUZZZ_ERROR;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_dump
+ *  Dump the logged data from a tool
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC
 buzzz_dump(uint32_t items)
 {
+	BUZZZ_ASSERT_TOOL(buzzz_g.tool);
+
 	switch (buzzz_g.tool) {
 		case BUZZZ_TOOL_FUNC: buzzz_func_dump(items); break;
 		case BUZZZ_TOOL_PMON: buzzz_pmon_dump(); break;
 		case BUZZZ_TOOL_KEVT: buzzz_kevt_dump(items); break;
 		default:
-			printk(CLRwarn "Unsupported dump for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("Unsupported dump for tool %s",
+				__buzzz_tool(buzzz_g.tool));
 			return BUZZZ_ERROR;
 	}
 
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_config_tool
+ *
+ *  BUZZZ supports multiple tools. Select the tool that will be using the global
+ *  buzzz configuration state. Only one tool may run at a time.
+ *
+ *  Tools in BUZZZ: function call tracing, performance monitoring or kernel
+ *  event logging.
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC /* Configure the tool that will use the logging system */
 buzzz_config_tool(buzzz_tool_t tool)
 {
-	if (tool > BUZZZ_TOOL_MAXIMUM) {
-		printk(CLRerr "ERROR: Invalid tool %u" CLRnl, tool);
-		return BUZZZ_ERROR;
-	}
+	BUZZZ_ASSERT_TOOL(tool);
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
 
-	BUZZZ_ASSERT_STATUS_DISABLED();
+	switch (tool) {
+		case BUZZZ_TOOL_FUNC: return __buzzz_func_default();
+		case BUZZZ_TOOL_PMON: return __buzzz_pmon_default();
+		case BUZZZ_TOOL_KEVT: return __buzzz_kevt_default();
 
-	buzzz_g.tool = tool;
-
-	switch (buzzz_g.tool) {
-		case BUZZZ_TOOL_FUNC: return buzzz_func_default();
-		case BUZZZ_TOOL_PMON: return buzzz_pmon_default();
-		case BUZZZ_TOOL_KEVT: return buzzz_kevt_default();
 		default:
-			printk(CLRerr "Unsupported mode for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("unsupported tool selection %s", __buzzz_tool(tool));
 			return BUZZZ_ERROR;
 	}
+
+	buzzz_g.tool = tool;
 
 	return BUZZZ_SUCCESS;
 }
 
-int BUZZZ_NOINSTR_FUNC /* Configure the mode of operation of the tool */
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_config_mode
+ *  Configure the mode of operation of the tool, being wrapover or limited.
+ *
+ *  For function call tracing and Kernel event tracing, in a "limited" trace
+ *  dump mode, the number of logs dumped is limited to the last N entries.
+ *
+ *  For PMON tool, if the mode is WRAPOVER, then on completion of one PMU group,
+ *  the next PMU group will be selected. In the limited mode operation, the
+ *  default general group will be selected. To select a different group in the
+ *  limited mode of operation, invoke buzzz_config_limit().
+ * +---------------------------------------------------------------------------+
+ */
+int BUZZZ_NOINSTR_FUNC
 buzzz_config_mode(buzzz_mode_t mode)
 {
-	if ((mode == BUZZZ_MODE_UNDEF) || (mode >= BUZZZ_MODE_MAXIMUM)) {
-		printk(CLRerr "ERROR: Invalid mode %u" CLRnl, mode);
-		return BUZZZ_ERROR;
-	}
-
-	BUZZZ_ASSERT_STATUS_DISABLED();
+	BUZZZ_ASSERT_MODE(mode);
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
 
 	switch (buzzz_g.tool) {
-		case BUZZZ_TOOL_FUNC:
-		case BUZZZ_TOOL_KEVT:
-			if (mode == BUZZZ_MODE_LIMITED)
-				buzzz_g.config_limit = BUZZZ_FUNC_LIMIT_LOGS;
-			break;
-		case BUZZZ_TOOL_PMON:
-			if (mode == BUZZZ_MODE_WRAPOVER)
-				buzzz_g.config_limit = BUZZZ_INVALID;
-			else if (mode == BUZZZ_MODE_LIMITED)
-				buzzz_g.config_limit = BUZZZ_PMON_GROUP_GENERAL;
-			else {
-				printk(CLRwarn "Unsupported mode %s for %s" CLRnl,
-					str_buzzz_mode(mode), str_buzzz_tool(buzzz_g.tool));
-				return BUZZZ_ERROR;
-			}
-			break;
+		/* Enable the wraparound or limited mode of operation */
+		case BUZZZ_TOOL_FUNC: return __buzzz_func_mode(mode);
+		case BUZZZ_TOOL_PMON: return __buzzz_pmon_mode(mode);
+		case BUZZZ_TOOL_KEVT: return __buzzz_kevt_mode(mode);
+
 		default:
-			printk(CLRerr "Unsupported mode for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("unsupported mode %s for tool %s",
+				__buzzz_mode(mode), __buzzz_tool(buzzz_g.tool));
 			return BUZZZ_ERROR;
 	}
 
@@ -2854,27 +3599,27 @@ buzzz_config_mode(buzzz_mode_t mode)
 	return BUZZZ_SUCCESS;
 }
 
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_config_limit
+ *
+ *  For FUNC and KEVT tracing, limit the number of logs dumped.
+ *  For PMON, select mode "limited" and select the PMU group to be used.
+ * +---------------------------------------------------------------------------+
+ */
 int BUZZZ_NOINSTR_FUNC /* Configure a limit parameter in the tool */
 buzzz_config_limit(uint32_t limit)
 {
-	BUZZZ_ASSERT_STATUS_DISABLED();
+	BUZZZ_ASSERT_STATUS_IS_DISABLED();
 
 	switch (buzzz_g.tool) {
-		case BUZZZ_TOOL_FUNC:   /* limit number events logged from start */
-		case BUZZZ_TOOL_KEVT:
-			buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
-			break;
-		case BUZZZ_TOOL_PMON:   /* limit the pmon group */
-			buzzz_g.config_mode = BUZZZ_MODE_LIMITED;
-			if (limit > BUZZZ_PMON_GROUPS) {
-				printk(CLRerr "Invalid limit. max<%u>" CLRnl,
-					BUZZZ_PMON_GROUPS);
-				return BUZZZ_ERROR;
-			}
-			break;
+		case BUZZZ_TOOL_FUNC: return __buzzz_func_limit(limit); /* num logs */
+		case BUZZZ_TOOL_PMON: return __buzzz_pmon_limit(limit); /* PMU group */
+		case BUZZZ_TOOL_KEVT: return __buzzz_kevt_limit(limit); /* num logs */
+
 		default:
-			printk(CLRerr "Unsupported limit for tool %s" CLRnl,
-				str_buzzz_tool(buzzz_g.tool));
+			BUZZZ_PRERR("unsupported limit %u for tool %s",
+				limit, __buzzz_tool(buzzz_g.tool));
 			return BUZZZ_ERROR;
 	}
 
@@ -2883,22 +3628,31 @@ buzzz_config_limit(uint32_t limit)
 	return BUZZZ_SUCCESS;
 }
 
-void BUZZZ_NOINSTR_FUNC
-buzzz_klog_reg(uint32_t klog_id, char * klog_fmt)
+/*
+ * +---------------------------------------------------------------------------+
+ *  Function: buzzz_klog_reg
+ *
+ *  Register a format string to be used during pretty print of a logged eventid
+ * +---------------------------------------------------------------------------+
+ */
+int BUZZZ_NOINSTR_FUNC
+buzzz_klog_reg(uint32_t klog_id, char *klog_fmt)
 {
-	if (klog_id < BUZZZ_KLOG_MAXIMUM)
-		strncpy(buzzz_g.klogs[klog_id], klog_fmt, BUZZZ_KLOG_FMT_LENGTH-1);
-	else
-		printk(CLRwarn "WARN: Too many events id<%u>" CLRnl, klog_id);
+	BUZZZ_ASSERT_KEVT_ID(klog_id);
+	strncpy(buzzz_g.klogs[klog_id], klog_fmt, BUZZZ_KLOG_FMT_LENGTH - 1);
+	return BUZZZ_SUCCESS;
 }
 
+
 /*
- * -----------------------------------------------------------------------------
- * BUZZZ Character Driver Ioctl handlers
- * -----------------------------------------------------------------------------
+ * +---------------------------------------------------------------------------+
+ *  Section: Miscellaneous character device (buzzz_ctl ioctl control commands)
+ *
+ *  File Ops Open, Ioctl and Release, for Buzzz character device.
+ * +---------------------------------------------------------------------------+
  */
 static int BUZZZ_NOINSTR_FUNC /* pre ioctl handling in character driver */
-buzzz_open(struct inode *inodep, struct file *filep)
+_buzzz_fops_open(struct inode *inodep, struct file *filep)
 {
 	/* int minor = MINOR(inodep->i_rdev) & 0xf; */
 	return 0;
@@ -2906,51 +3660,46 @@ buzzz_open(struct inode *inodep, struct file *filep)
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36))
 static long BUZZZ_NOINSTR_FUNC
-buzzz_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+_buzzz_fops_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 #else	/* < linux-2.6.36 */
 static int BUZZZ_NOINSTR_FUNC /* ioctl handler in character driver */
-buzzz_ioctl(struct inode *inode, struct file *file,
+_buzzz_fops_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 #endif  /* < linux-2.6.36 */
 {
 	int ret = BUZZZ_ERROR;
 
-	BUZZZ_PRINT("cmd<%s>", str_buzzz_ioctl(cmd));
+	BUZZZ_PRINT("cmd[%s]", __buzzz_ioctl(cmd - BUZZZ_IOCTL_UNDEF));
 
 	switch (cmd) {
 		case BUZZZ_IOCTL_KCALL:
-			BUZZZ_PRINT("invoke buzzz_kcall %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_kcall(param<%lu>)", arg);
 			return buzzz_kcall(arg);
 
 		case BUZZZ_IOCTL_CONFIG_TOOL:
-			BUZZZ_PRINT("invoke buzzz_config_tool %s", str_buzzz_tool(arg));
-			if ((buzzz_tool_t)arg < BUZZZ_TOOL_MAXIMUM)
-				return buzzz_config_tool((buzzz_tool_t)arg);
-			else
-				return BUZZZ_ERROR;
+			BUZZZ_PRINT("invoke buzzz_config_tool(%s)", __buzzz_tool(arg));
+			return buzzz_config_tool((buzzz_tool_t)arg);
 
 		case BUZZZ_IOCTL_CONFIG_MODE:
-			BUZZZ_PRINT("invoke buzzz_config_mode %s", str_buzzz_mode(arg));
-			if ((buzzz_mode_t)arg < BUZZZ_MODE_MAXIMUM)
-				return buzzz_config_mode((buzzz_mode_t)arg);
-			else
-				return BUZZZ_ERROR;
+			BUZZZ_PRINT("invoke buzzz_config_mode(mode<%s>)",
+				__buzzz_mode(arg));
+			return buzzz_config_mode((buzzz_mode_t)arg);
 
 		case BUZZZ_IOCTL_CONFIG_LIMIT:
 			BUZZZ_PRINT("invoke buzzz_config_limit %lu", arg);
 			return buzzz_config_limit(arg);
 
 		case BUZZZ_IOCTL_CONFIG_FUNC:
-			BUZZZ_PRINT("invoke buzzz_func_config %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_func_config(exit_enabled<%lu>", arg);
 			return buzzz_func_config(arg);
 
 		case BUZZZ_IOCTL_CONFIG_PMON:
-			BUZZZ_PRINT("invoke buzzz_pmon_config %lu %lu",
+			BUZZZ_PRINT("invoke buzzz_pmon_config(samples<%lu>, skip<%lu>)",
 				(arg & 0xFFFF), (arg >> 16));
 			return buzzz_pmon_config((arg & 0xFFFF), (arg >> 16));
 
 		case BUZZZ_IOCTL_CONFIG_KEVT:
-			BUZZZ_PRINT("invoke buzzz_kevt_config %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_kevt_config(event<%lu>)", arg);
 			return buzzz_kevt_config(arg);
 
 		case BUZZZ_IOCTL_SHOW:
@@ -2958,11 +3707,11 @@ buzzz_ioctl(struct inode *inode, struct file *file,
 			return buzzz_show();
 
 		case BUZZZ_IOCTL_START:
-			BUZZZ_PRINT("invoke buzzz_start %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_start(after_jiffies<%lu>)", arg);
 			return buzzz_start(arg);
 
 		case BUZZZ_IOCTL_STOP:
-			BUZZZ_PRINT("invoke buzzz_stop %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_stop(after_jiffies<%lu>)", arg);
 			return buzzz_stop(arg);
 
 
@@ -2979,133 +3728,180 @@ buzzz_ioctl(struct inode *inode, struct file *file,
 			return buzzz_audit();
 
 		case BUZZZ_IOCTL_DUMP:
-			BUZZZ_PRINT("invoke buzzz_dump %lu", arg);
+			BUZZZ_PRINT("invoke buzzz_dump(%lu)", arg);
 			return buzzz_dump(arg);
 
 		default:
+			BUZZZ_PRERR("invalid ioctl<%u>", cmd);
 			return -EINVAL;
 	}
 
 	return ret;
 }
 
-static int BUZZZ_NOINSTR_FUNC /* post ioct handling in character driver */
-buzzz_release(struct inode *inodep, struct file *filep)
+static int BUZZZ_NOINSTR_FUNC
+_buzzz_fops_release(struct inode *inodep, struct file *filep)
 {
 	return 0;
 }
 
 static const struct file_operations buzzz_fops =
-{
-	.open           =   buzzz_open,
-	.release        =   buzzz_release,
+{	/* file ops for buzzz character device (misc major) */
+	.open           =   _buzzz_fops_open,
+	.release        =   _buzzz_fops_release,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36))
-	.unlocked_ioctl =   buzzz_ioctl,
-	.compat_ioctl   =   buzzz_ioctl
+	.unlocked_ioctl =   _buzzz_fops_ioctl,
+	.compat_ioctl   =   _buzzz_fops_ioctl
 #else	/* < linux-2.6.36 */
-	.ioctl          =   buzzz_ioctl
+	.ioctl          =   _buzzz_fops_ioctl
 #endif  /* < linux-2.6.36 */
 };
 
-/*
- * -----------------------------------------------------------------------------
- * BUZZZ (linked into kernel) initialization (late level)
- * Should BUZZZ be a dynamically loaded module ....?
- * -----------------------------------------------------------------------------
- */
 static struct miscdevice buzzz_dev =
 {
+	/* misc character device */
 	.minor  = MISC_DYNAMIC_MINOR,
 	.name   = BUZZZ_NAME,
 	.fops   = &buzzz_fops
 };
 
-/* Initialization of Buzzz during loading time */
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: BUZZZ Initialization (built-into Linux kernel BSP)
+ *
+ *  Function: __init_buzzz
+ *  - Registers a character device (misc major number) for handling control
+ *    ioctl from a command line buzzz utility.
+ *  - Allocates storage for the log buffer.
+ *  - Create a ProcFS directory and 2 files: sys and log
+ *  - Initializes each tools state.
+ *
+ *  BUZZZ is initialized at level 7 (late init call)
+ * +---------------------------------------------------------------------------+
+ */
 static int BUZZZ_NOINSTR_FUNC
 __init __init_buzzz(void)
 {
 	int err, i;
-	char event_str[64];
+	char event_str[BUZZZ_KLOG_FMT_LENGTH];
 
 #if defined(CONFIG_PROC_FS)
-	struct proc_dir_entry *ent_sys, *ent_log;
+	struct proc_dir_entry *buzzz_dir = NULL;
+	struct proc_dir_entry *buzzz_sys = NULL; /* system state */
+#if defined(CONFIG_BUZZZ_FUNC)
+	struct proc_dir_entry *buzzz_log = NULL; /* function call trace log */
+#endif
 #endif  /*  CONFIG_PROC_FS */
 
-	/* Create a 'miscelaneous' character driver and register with sysfs */
+	/* Create a 'miscelaneous' character driver and register */
 	if ((err = misc_register(&buzzz_dev)) != 0) {
-		printk(CLRerr "ERROR[%d] Register device %s" BUZZZ_VER_FMTS CLRnl, err,
-			BUZZZ_DEV_PATH, BUZZZ_VER_FMT(BUZZZ_DEV_VERSION));
+		BUZZZ_PRERR("register misc device %s", BUZZZ_DEV_PATH);
 		return err;
-	} else {
-		printk(CLRb "Registered device %s" BUZZZ_VER_FMTS " <%d,%d>" CLRnl,
-			BUZZZ_DEV_PATH, BUZZZ_VER_FMT(BUZZZ_DEV_VERSION),
-			MISC_MAJOR, buzzz_dev.minor);
 	}
 
-	/* Allocate Buzzz buffer */
+	/* Allocate Buzzz log buffer */
 	buzzz_g.log = (void *)kmalloc(BUZZZ_LOG_BUFSIZE, GFP_KERNEL);
 	if (buzzz_g.log == (void*)NULL) {
-		printk(CLRerr "ERROR: Log allocation %s" BUZZZ_VER_FMTS CLRnl,
-			BUZZZ_NAME, BUZZZ_VER_FMT(BUZZZ_SYS_VERSION));
-
+		BUZZZ_PRERR("log buffer size<%d> allocation", BUZZZ_LOG_BUFSIZE);
 		goto fail_dev_dereg;
 	} else {
-		memset(buzzz_g.log, 0, BUZZZ_LOG_BUFSIZE);
+		memset(buzzz_g.log, 0, BUZZZ_LOG_BUFSIZE); /* not necessary */
 	}
 	buzzz_g.cur = buzzz_g.log;
 	buzzz_g.end = (void*)((char*)buzzz_g.log - BUZZZ_LOGENTRY_MAXSZ);
 
 #if defined(CONFIG_PROC_FS)
-	/* Construct a Proc filesystem entry for Buzzz */
-
-	proc_mkdir(BUZZZ_NAME, NULL);
-
-	ent_sys = create_proc_entry(BUZZZ_NAME "/sys", 0, NULL);
-	if (ent_sys) {
-		ent_sys->proc_fops = &buzzz_proc_sys_fops;
-	} else {
-		printk(CLRerr "ERROR: BUZZZ sys proc register %s" BUZZZ_VER_FMTS CLRnl,
-			BUZZZ_NAME, BUZZZ_VER_FMT(BUZZZ_SYS_VERSION));
+	/*
+	 * Construct a ProcFS directory entry for Buzzz
+	 */
+	buzzz_dir = proc_mkdir(BUZZZ_NAME, NULL);
+	if (buzzz_dir == NULL) {
+		BUZZZ_PRERR("mkdir /proc/%s", BUZZZ_NAME);
 		goto fail_free_log;
 	}
 
-	ent_log = create_proc_read_entry(BUZZZ_NAME "/log", 0, NULL,
-		buzzz_proc_log_show, (void*)&buzzz_g);
-	if (ent_log == (struct proc_dir_entry*)NULL) {
-		printk(CLRerr "ERROR: BUZZZ log proc register %s" BUZZZ_VER_FMTS CLRnl,
-			BUZZZ_NAME, BUZZZ_VER_FMT(BUZZZ_SYS_VERSION));
+	/* /proc/buzzz/sys :: _buzzz_procfs_sys_write() implements a test harness */
+	buzzz_sys = proc_create_data("sys", 0644, buzzz_dir,
+			&buzzz_procfs_sys_fops, NULL);
+	if (!buzzz_sys) {
+		BUZZZ_PRERR("create file entry /proc/%s/sys", BUZZZ_NAME);
 		goto fail_free_log;
 	}
+
+#if defined(CONFIG_BUZZZ_FUNC)
+	/* /proc/buzzz/log :: _buzzz_procfs_log_show will dump a log */
+	buzzz_log = create_proc_read_entry(BUZZZ_NAME "/func", 0, NULL,
+		_buzzz_procfs_log_show, (void*)&buzzz_g);
+	if (buzzz_log == (struct proc_dir_entry*)NULL) {
+		BUZZZ_PRERR("create file entry /proc/%s/func", BUZZZ_NAME);
+		goto fail_free_log;
+	}
+#endif  /*  CONFIG_BUZZZ_FUNC */
 #endif  /*  CONFIG_PROC_FS */
 
+	/*
+	 * Invoke per BUZZZ tool init
+	 */
 	if (_init_buzzz_func() == BUZZZ_ERROR) {
-		printk(CLRerr "ERROR: Initialize Func Tool" CLRnl);
+		BUZZZ_PRERR("initialize FUNC tool");
 		goto fail_free_log;
 	}
 
 	if (_init_buzzz_pmon() == BUZZZ_ERROR) {
-		printk(CLRerr "ERROR: Initialize PMon Tool" CLRnl);
+		BUZZZ_PRERR("initialize PMON tool");
 		goto fail_free_log;
 	}
 
 	if (_init_buzzz_kevt() == BUZZZ_ERROR) {
-		printk(CLRerr "ERROR: Initialize KEvt Tool" CLRnl);
+		BUZZZ_PRERR("initialize KEVT tool");
 		goto fail_free_log;
 	}
 
+	/*
+	 * Initialize all format strings to undefined. User needs to register
+	 * each event's format string using buzzz_klog_reg().
+	 *
+	 * See buzzz_rtr.h: buzzz_kevt_init();
+	 */
 	for (i = 0; i < BUZZZ_KLOG_MAXIMUM; i++) {
-		sprintf(event_str, "%sUNREGISTERED EVENT<%u>%s", CLRm, i, CLRnorm);
-		buzzz_klog_reg(i, event_str);
+		snprintf(event_str, BUZZZ_KLOG_FMT_LENGTH - 1,
+			"%sUNREGISTERED EVENT<%u>%s", CLRm, i, CLRnorm);
 	}
+	for (i = BUZZZ_KEVT_ID_UNDEF + 1; i < BUZZZ_KEVT_ID_LINUX_LAST; i++)
+		buzzz_klog_reg(i, event_str); /* ignore failure return */
 
 	buzzz_g.status = BUZZZ_STATUS_DISABLED;
 
+	printk(CLRb "Registered device %s" BUZZZ_VER_FMTS " misc<%d,%d>" CLRnl,
+		BUZZZ_DEV_PATH, BUZZZ_VER_FMT(BUZZZ_DEV_VERSION),
+		MISC_MAJOR, buzzz_dev.minor);
+
 	return BUZZZ_SUCCESS;   /* Successful initialization of Buzzz */
 
-#if defined(CONFIG_PROC_FS)
 fail_free_log:
+
+#if defined(CONFIG_PROC_FS)
+#if defined(CONFIG_BUZZZ_FUNC)
+	if (buzzz_log) {
+		remove_proc_entry("/proc/" BUZZZ_NAME "/func", buzzz_log);
+		buzzz_log = NULL;
+	}
+#endif  /*  CONFIG_BUZZZ_FUNC */
+	if (buzzz_sys) {
+		remove_proc_entry("/proc/" BUZZZ_NAME "/sys", buzzz_sys);
+		buzzz_sys = NULL;
+	}
+	if (buzzz_dir) {
+		remove_proc_entry(BUZZZ_NAME, buzzz_dir);
+		buzzz_dir = NULL;
+	}
 #endif  /*  CONFIG_PROC_FS */
-	kfree(buzzz_g.log);
+
+	if (buzzz_g.log) {
+		kfree(buzzz_g.log);
+		buzzz_g.log = NULL;
+	}
 
 fail_dev_dereg:
 	misc_deregister(&buzzz_dev);
@@ -3115,6 +3911,12 @@ fail_dev_dereg:
 
 late_initcall(__init_buzzz);    /* init level 7 */
 
+
+/*
+ * +---------------------------------------------------------------------------+
+ *  Section: BUZZZ APIs Exported
+ * +---------------------------------------------------------------------------+
+ */
 EXPORT_SYMBOL(buzzz_start);
 EXPORT_SYMBOL(buzzz_stop);
 EXPORT_SYMBOL(buzzz_pause);
@@ -3126,6 +3928,7 @@ EXPORT_SYMBOL(buzzz_config_mode);
 EXPORT_SYMBOL(buzzz_config_limit);
 EXPORT_SYMBOL(buzzz_klog_reg);
 EXPORT_SYMBOL(buzzz_kcall);
+EXPORT_SYMBOL(buzzz_cycles);
 
 EXPORT_SYMBOL(__cyg_profile_func_enter);
 EXPORT_SYMBOL(__cyg_profile_func_exit);
@@ -3155,7 +3958,6 @@ EXPORT_SYMBOL(buzzz_kevt_log0);
 EXPORT_SYMBOL(buzzz_kevt_log1);
 EXPORT_SYMBOL(buzzz_kevt_log2);
 EXPORT_SYMBOL(buzzz_kevt_log3);
-EXPORT_SYMBOL(buzzz_kevt_log4);
 EXPORT_SYMBOL(buzzz_kevt_start);
 EXPORT_SYMBOL(buzzz_kevt_stop);
 EXPORT_SYMBOL(buzzz_kevt_dump);

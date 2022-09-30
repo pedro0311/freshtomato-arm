@@ -20,13 +20,13 @@
 
 obj-${CONFIG_DPSTA} := dpsta.o
 
-DPSTASRC := ../../../../../../../src/router/dpsta
+DPSTASRC := ../../../../../../../src/router/dpsta$(BCMEX)
 DPSTAOBJ := $(DPSTASRC)/dpsta_linux.o
 SYMOBJ := $(DPSTASRC)/dpsta_linux.o
 
 # Search for sources under src/router/dpsta
 ifneq (,$(wildcard $(src)/$(DPSTASRC)/*.c))
-  EXTRA_CFLAGS += -I$(src)/$(DPSTASRC)/../../router/dpsta
+  EXTRA_CFLAGS += -I$(src)/$(DPSTASRC)/../../router/dpsta$(BCMEX)
   dpsta-objs := $(DPSTAOBJ) dpsta_ksyms.o
 else
   dpsta-objs := $(DPSTASRC)/linux/dpsta.o
@@ -34,7 +34,7 @@ endif
 
 ifeq (,${KERNELRELEASE})
   # Normal makefile
-  KERNELDIR := $(BASEDIR)/src-rt-7.x.main/src/linux/linux-2.6.36
+  KERNELDIR := $(BASEDIR)/src-rt-7.14.114.x/src/linux/linux-2.6.36
 
   .PHONY: all clean
   all clean :

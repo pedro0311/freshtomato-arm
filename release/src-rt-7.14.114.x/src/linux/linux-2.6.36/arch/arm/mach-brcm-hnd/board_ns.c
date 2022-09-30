@@ -51,6 +51,10 @@
 #ifdef CONFIG_MTD_NFLASH
 #include <hndnand.h>
 #endif
+#ifdef BCMCONFMTD
+#include <nand_core.h>
+#include <sbgci.h>
+#endif /* BCMCONFMTD */
 
 extern char __initdata saved_root_name[];
 
@@ -79,9 +83,23 @@ EXPORT_SYMBOL(ctf_attach_fn);
 /* To store real PHYS_OFFSET value */
 unsigned int ddr_phys_offset_va = -1;
 EXPORT_SYMBOL(ddr_phys_offset_va);
+unsigned int ddr_phys_offset2_va = 0xa8000000;	/* Default value for NS */
+EXPORT_SYMBOL(ddr_phys_offset2_va);
 
-unsigned int ns_acp_win_size = SZ_256M;
-EXPORT_SYMBOL(ns_acp_win_size);
+unsigned int coherence_win_sz = SZ_256M;
+EXPORT_SYMBOL(coherence_win_sz);
+
+/*
+ * Coherence flag:
+ * 0: arch is non-coherent with NS ACP or BCM53573 ACE (CCI-400) disabled.
+ * 1: arch is non-coherent with NS-Ax ACP enabled for ACP WAR.
+ * 2: arch is coherent with NS-Bx ACP enabled.
+ * 4: arch is coherent with BCM53573 ACE enabled.
+ * give non-zero initial value to let this global variable be stored in Data Segment
+ */
+unsigned int coherence_flag = ~(COHERENCE_MASK);
+EXPORT_SYMBOL(coherence_flag);
+
 
 struct dummy_super_block {
 	u32	s_magic ;
@@ -105,15 +123,30 @@ static struct clk_lookup board_clk_lookups[] = {
 
 extern int _memsize;
 
+extern int _chipid;
+
+#ifdef BCMCONFMTD
+#define NAND_ABSENT		0
+#define NAND_PRESENT		1
+
+#define NAND_RETRIES		1000000
+
+static int nand_present;
+#endif /* BCMCONFMTD */
+
 void __init board_map_io(void)
 {
 early_printk("board_map_io\n");
+	if (BCM53573_CHIP(_chipid)) {
+		/* Override the main reference clock to be 40 MHz */
+		clk_ref.rate = 40 * 1000000;
+	}
 	/* Install clock sources into the lookup table */
-	clkdev_add_table(board_clk_lookups, 
+	clkdev_add_table(board_clk_lookups,
 			ARRAY_SIZE(board_clk_lookups));
 
 	/* Map SoC specific I/O */
-	soc_map_io( &clk_ref );
+	soc_map_io(&clk_ref);
 }
 
 #if defined(CONFIG_SPI_SPIDEV) && defined(CONFIG_SPI_BCM5301X)
@@ -151,8 +184,112 @@ early_printk("board_init_irq\n");
 void board_init_timer(void)
 {
 early_printk("board_init_timer\n");
+
+	/* Get global SB handle */
+	sih = si_kattach(SI_OSH);
+
 	soc_init_timer();
 }
+
+#ifdef BCMCONFMTD
+/* Poll for command completion. Returns zero when complete. */
+static int
+nandcmd_poll(si_t *sih, nandregs_t *nc)
+{
+	osl_t *osh;
+	int i;
+	uint32 pollmask;
+
+	osh = si_osh(sih);
+
+	pollmask = NANDIST_CTRL_READY | NANDIST_FLASH_READY;
+	for (i = 0; i < NAND_RETRIES; i++) {
+		if ((R_REG(osh, &nc->intfc_status) & pollmask) == pollmask) {
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+/* Get nand present flag */
+static bool
+nand_present_reg_check(si_t *sih)
+{
+	uint origidx, intr_val = 0;
+	gciregs_t *gci = NULL;
+	uint32 nand_present_val = 0;
+
+	/* 53573/47189 series */
+	if (sih->ccrev == 54) {
+		gci = (gciregs_t *)si_switch_core(sih, GCI_CORE_ID, &origidx, &intr_val);
+		if (gci) {
+			W_REG(NULL, &gci->gci_indirect_addr, 7);
+			nand_present_val = R_REG(NULL, &gci->gci_chipsts);
+			nand_present_val &= SI_BCM53573_NAND_PRE_MASK;
+		}
+
+		/* Return to original core */
+		si_restore_core(sih, origidx, intr_val);
+
+		if (nand_present_val)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* To know if nand flash is present or not */
+static int
+nand_present_check(si_t *sih)
+{
+	nandregs_t *nc;
+	osl_t *osh;
+	aidmp_t *ai;
+	uint32 id;
+
+	/* 53573/47189 series */
+	if (sih->ccrev == 54) {
+		if (nand_present_reg_check(sih)) {
+			return NAND_PRESENT;
+		} else {
+			return NAND_ABSENT;
+		}
+	} else if (sih->ccrev == 42) {
+		if ((nc = (nandregs_t *)si_setcore(sih, NS_NAND_CORE_ID, 0)) == NULL) {
+			return NAND_ABSENT;
+		}
+
+		osh = si_osh(sih);
+
+		W_REG(osh, &nc->cmd_start, NANDCMD_FLASH_RESET);
+		if (nandcmd_poll(sih, nc) < 0) {
+			return NAND_ABSENT;
+		}
+
+		W_REG(osh, &nc->cmd_start, NANDCMD_ID_RD);
+		if (nandcmd_poll(sih, nc) < 0) {
+			return NAND_ABSENT;
+		}
+
+		ai = (aidmp_t *)si_wrapperregs(sih);
+
+		/* Toggle as little endian */
+		OR_REG(osh, &ai->ioctrl, NAND_APB_LITTLE_ENDIAN);
+
+		id = R_REG(osh, &nc->flash_device_id);
+
+		/* Toggle as big endian */
+		AND_REG(osh, &ai->ioctrl, ~NAND_APB_LITTLE_ENDIAN);
+
+		id = id & 0xff;
+
+		if ((id != 0x00) && (id != 0xff))
+			return NAND_PRESENT;
+	}
+
+	return NAND_ABSENT;
+}
+#endif /* BCMCONFMTD */
 
 static int __init rootfs_mtdblock(void)
 {
@@ -165,6 +302,9 @@ static int __init rootfs_mtdblock(void)
 
 	bootdev = soc_boot_dev((void *)sih);
 	knldev = soc_knl_dev((void *)sih);
+#ifdef BCMCONFMTD
+	nand_present = nand_present_check(sih);
+#endif /* BCMCONFMTD */
 
 	/* NANDBOOT */
 	if (bootdev == SOC_BOOTDEV_NANDFLASH &&
@@ -193,7 +333,8 @@ static int __init rootfs_mtdblock(void)
 	}
 
 #ifdef BCMCONFMTD
-	block++;
+	if (nand_present != NAND_PRESENT)
+		block++;
 #endif
 #ifdef CONFIG_FAILSAFE_UPGRADE
 	if (img_boot && simple_strtol(img_boot, NULL, 10))
@@ -205,28 +346,29 @@ static int __init rootfs_mtdblock(void)
 
 static void __init brcm_setup(void)
 {
-	/* Get global SB handle */
-	sih = si_kattach(SI_OSH);
-
 	if (ACP_WAR_ENAB() && BCM4707_CHIP(CHIPID(sih->chip))) {
 		if (sih->chippkg == BCM4708_PKG_ID)
-			ns_acp_win_size = SZ_128M;
+			coherence_win_sz = SZ_128M;
 		else if (sih->chippkg == BCM4707_PKG_ID)
-			ns_acp_win_size = SZ_32M;
+			coherence_win_sz = SZ_32M;
 		else
-			ns_acp_win_size = SZ_256M;
+			coherence_win_sz = SZ_256M;
 	} else if ((BCM4707_CHIP(CHIPID(sih->chip)) &&
 		(CHIPREV(sih->chiprev) == 4 || CHIPREV(sih->chiprev) == 6)) ||
 		(CHIPID(sih->chip) == BCM47094_CHIP_ID)) {
 		/* For NS-Bx and NS47094. Chiprev 4 for NS-B0 and chiprev 6 for NS-B1 */
-		ns_acp_win_size = SZ_1G;
+		coherence_win_sz = SZ_1G;
+	} else if (BCM53573_CHIP(sih->chip)) {
+		if (PHYS_OFFSET == PADDR_ACE1_BCM53573)
+			coherence_win_sz = SZ_512M;
+		else
+			coherence_win_sz = SZ_256M;
 	}
-
 	if (strncmp(boot_command_line, "root=/dev/mtdblock", strlen("root=/dev/mtdblock")) == 0)
 		sprintf(saved_root_name, "/dev/mtdblock%d", rootfs_mtdblock());
 
 	/* Set watchdog interval in ms */
-        watchdog = simple_strtoul(nvram_safe_get("watchdog"), NULL, 0);
+	watchdog = simple_strtoul(nvram_safe_get("watchdog"), NULL, 0);
 
 	/* Ensure at least WATCHDOG_MIN */
 	if ((watchdog > 0) && (watchdog < WATCHDOG_MIN))
@@ -242,16 +384,6 @@ void soc_watchdog(void)
 	if (watchdog > 0)
 		si_watchdog_ms(sih, watchdog);
 }
-
-#define CFE_UPDATE 1		// added by Chen-I for mac/regulation update
-
-#ifdef CFE_UPDATE
-void bcm947xx_watchdog_disable(void)
-{
-	watchdog=0;
-	si_watchdog_ms(sih, 0);
-}
-#endif
 
 void __init board_init(void)
 {
@@ -278,28 +410,36 @@ static void __init board_fixup(
 	struct meminfo *mi
 	)
 {
-	u32 mem_size, lo_size ;
-        early_printk("board_fixup\n" );
+	u32 mem_size, lo_size;
+	early_printk("board_fixup\n");
 
 	/* Fuxup reference clock rate */
-	if (desc->nr == MACH_TYPE_BRCM_NS_QT )
+	if (desc->nr == MACH_TYPE_BRCM_NS_QT)
 		clk_ref.rate = 17594;	/* Emulator ref clock rate */
 
 #if 0 /* FreshTomato - remove and align to Netgear SRC */
 #if defined(BCM_GMAC3)
 	/* In ATLAS builds, cap the total memory to 256M (for both Ax and Bx). */
-	if (_memsize > SZ_256M) {
+	if ((_memsize > SZ_256M) && (_chipid == BCM4707_CHIP_ID)) {
 		_memsize = SZ_256M;
-		early_printk("ATLAS board_fixup: cap memory to 256M\n");
+		early_printk("ATLAS-I board_fixup: cap memory to 256M\n");
 	}
 #endif /* BCM_GMAC3 */
 #endif
+	if (BCM53573_CHIP(_chipid)) {
+		u32 size;
+		/* 53573's DDR limitation size is 512MB for shadow region. */
+		/* 256MB for first region */
+		size = (PHYS_OFFSET == PADDR_ACE1_BCM53573) ? SZ_512M : SZ_256M;
+		if (_memsize > size)
+			_memsize = size;
+	}
 	mem_size = _memsize;
 
 	early_printk("board_fixup: mem=%uMiB\n", mem_size >> 20);
 
-	/* for NS-B0-ACP */
-	if (ACP_WAR_ENAB() || arch_is_coherent()) {
+	/* for NS-B0-ACP and for BCM53573 */
+	if (ACP_WAR_ENAB() || arch_is_coherent() || (BCM53573_CHIP(_chipid))) {
 		mi->bank[0].start = PHYS_OFFSET;
 		mi->bank[0].size = mem_size;
 		mi->nr_banks++;
@@ -446,11 +586,6 @@ static uint32 boot_partition_size(uint32 flash_phys) {
 #else
 #define MTD_PARTS 0
 #endif
-#if defined(PLC)
-#define PLC_PARTS 1
-#else
-#define PLC_PARTS 0
-#endif
 #if defined(CONFIG_FAILSAFE_UPGRADE)
 #define FAILSAFE_PARTS 2
 #else
@@ -462,7 +597,7 @@ static uint32 boot_partition_size(uint32 flash_phys) {
 #define CRASHLOG_PARTS 0
 #endif
 /* boot;nvram;kernel;rootfs;empty */
-#define FLASH_PARTS_NUM	(5+MTD_PARTS+PLC_PARTS+FAILSAFE_PARTS+CRASHLOG_PARTS)
+#define FLASH_PARTS_NUM	(5+MTD_PARTS+FAILSAFE_PARTS+CRASHLOG_PARTS)
 
 static struct mtd_partition bcm947xx_flash_parts[FLASH_PARTS_NUM] = {{0}};
 
@@ -547,7 +682,6 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	int knldev;
 	int nparts = 0;
 	uint32 offset = 0;
-	uint32 maxsize = 0;
 	uint rfs_off = 0;
 	uint vmlz_off, knl_size;
 	uint32 top = 0;
@@ -577,15 +711,6 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 
 	}
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
-
-	/*  BOOT and NVRAM size NETGEAR*/
-	/* R8000 */
-	if (nvram_match("boardnum", "32") &&
-	    nvram_match("boardtype", "0x0665") &&
-	    nvram_match("boardrev", "0x1101")) {
-	        maxsize = 0x200000; /* 2 MB */
-	        size = maxsize;
-	}
 
 	bootdev = soc_boot_dev((void *)sih);
 	knldev = soc_knl_dev((void *)sih);
@@ -639,27 +764,21 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 
 			/* Reserve for NVRAM */
 			bcm947xx_flash_parts[nparts].size -= ROUNDUP(nvram_space, mtd->erasesize);
-#ifdef PLC
-			/* Reserve for PLC */
-			bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x1000, mtd->erasesize);
-#endif
 #ifdef BCMCONFMTD
-			bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
+			if (nand_present != NAND_PRESENT)
+				bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
 #endif
 		}
 #else
 
 		bcm947xx_flash_parts[nparts].size = mtd->size - vmlz_off;
 
-#ifdef PLC
-		/* Reserve for PLC */
-		bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x1000, mtd->erasesize);
-#endif
 		/* Reserve for NVRAM */
 		bcm947xx_flash_parts[nparts].size -= ROUNDUP(nvram_space, mtd->erasesize);
 
 #ifdef BCMCONFMTD
-		bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
+		if (nand_present != NAND_PRESENT)
+			bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
 #endif
 #endif	/* CONFIG_FAILSAFE_UPGRADE */
 
@@ -714,11 +833,8 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 			bcm947xx_flash_parts[nparts].size -= ROUNDUP(nvram_space, mtd->erasesize);
 
 #ifdef BCMCONFMTD
-			bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
-#endif
-#ifdef PLC
-			/* Reserve for PLC */
-			bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x1000, mtd->erasesize);
+			if (nand_present != NAND_PRESENT)
+				bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
 #endif
 			bcm947xx_flash_parts[nparts].offset = image_second_offset;
 			knl_size = bcm947xx_flash_parts[nparts].size;
@@ -740,8 +856,6 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 		bootsz = boot_partition_size(sfl_info->base);
 		printk("Boot partition size = %d(0x%x)\n", bootsz, bootsz);
 		/* Size pmon */
-		if (maxsize)
-			bootsz = maxsize;
 		bcm947xx_flash_parts[nparts].name = "boot";
 		bcm947xx_flash_parts[nparts].size = bootsz;
 		bcm947xx_flash_parts[nparts].offset = top;
@@ -751,30 +865,20 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	}
 
 #ifdef BCMCONFMTD
-	/* Setup CONF MTD partition */
-	bcm947xx_flash_parts[nparts].name = "confmtd";
-	bcm947xx_flash_parts[nparts].size = mtd->erasesize * 4;
-	bcm947xx_flash_parts[nparts].offset = offset;
-	offset = bcm947xx_flash_parts[nparts].offset + bcm947xx_flash_parts[nparts].size;
-	nparts++;
+	if (nand_present != NAND_PRESENT) {
+		/* Setup CONF MTD partition */
+		bcm947xx_flash_parts[nparts].name = "confmtd";
+		bcm947xx_flash_parts[nparts].size = mtd->erasesize * 4;
+		bcm947xx_flash_parts[nparts].offset = offset;
+		offset = bcm947xx_flash_parts[nparts].offset + bcm947xx_flash_parts[nparts].size;
+		nparts++;
+	}
 #endif	/* BCMCONFMTD */
-
-#ifdef PLC
-	/* Setup plc MTD partition */
-	bcm947xx_flash_parts[nparts].name = "plc";
-	bcm947xx_flash_parts[nparts].size = ROUNDUP(0x1000, mtd->erasesize);
-	bcm947xx_flash_parts[nparts].offset =
-		size - (ROUNDUP(nvram_space, mtd->erasesize) + ROUNDUP(0x1000, mtd->erasesize));
-	nparts++;
-#endif
 
 	/* Setup nvram MTD partition */
 	bcm947xx_flash_parts[nparts].name = "nvram";
 	bcm947xx_flash_parts[nparts].size = ROUNDUP(nvram_space, mtd->erasesize);
-	if (maxsize)
-		bcm947xx_flash_parts[nparts].offset = (size - 0x10000) - bcm947xx_flash_parts[nparts].size;
-	else
-		bcm947xx_flash_parts[nparts].offset = size - bcm947xx_flash_parts[nparts].size;
+	bcm947xx_flash_parts[nparts].offset = size - bcm947xx_flash_parts[nparts].size;
 	nparts++;
 
 	return bcm947xx_flash_parts;
@@ -952,15 +1056,6 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 				(nfl_boot_os_size(nfl) - nfl_boot_size(nfl)) :
 				nfl_boot_os_size(nfl);
 		}
-
-		/* Change linux size from default 0x2000000 for NETGEAR models*/
-		/* R8000 */
-		if (nvram_match("boardnum", "32") &&
-		    nvram_match("boardtype", "0x0665") &&
-		    nvram_match("boardrev", "0x1101")) {
-			bcm947xx_nflash_parts[nparts].size += 0x600000;
-		}
-
 		bcm947xx_nflash_parts[nparts].offset = offset;
 
 		shift = lookup_nflash_rootfs_offset(nfl, mtd, offset,
@@ -1003,28 +1098,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 		bcm947xx_nflash_parts[nparts].mask_flags = MTD_WRITEABLE;
 		offset = nfl_boot_os_size(nfl);
 
-		/* Adjust rootfs size from default 0x2000000 for NETGEAR models*/
-		/* R8000 */
-		if (nvram_match("boardnum", "32") &&
-		    nvram_match("boardtype", "0x0665") &&
-		    nvram_match("boardrev", "0x1101")) {
-			bcm947xx_nflash_parts[nparts].size += 0x600000;
-		}
-
-		/* Adjustments for JFFS are here: /linux-2.6.36/drivers/mtd/bcm947xx/nand/brcmnand.c */
-
 		nparts++;
-
-		/* Set NETGEAR board_data partition */
-		/* R8000 */
-		if (nvram_match("boardnum", "32") &&
-		    nvram_match("boardtype", "0x0665") &&
-		    nvram_match("boardrev", "0x1101")) {
-			bcm947xx_nflash_parts[nparts].name = "board_data";
-			bcm947xx_nflash_parts[nparts].size = 0x80000;
-			bcm947xx_nflash_parts[nparts].offset = 0x2600000;
-			nparts++;
-		}
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
 		/* Setup 2nd kernel MTD partition */

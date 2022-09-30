@@ -61,7 +61,7 @@ void build_nocat_conf(void)
 		            "GatewayAddr\t%s\n", nvram_safe_get("lan3_ifname"), nvram_safe_get("lan3_ipaddr"));
 
 
-	fprintf(fp, "GatewayMAC\t%s\n", nvram_safe_get("et0macaddr"));
+	fprintf(fp, "GatewayMAC\t%s\n", nvram_safe_get("lan_hwaddr"));
 
 	/*
 	 * these are user defined, eventually via the web page 

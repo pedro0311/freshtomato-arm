@@ -1,7 +1,7 @@
 /*
  * Table that encodes the srom formats for PCI/PCIe NICs.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmsrom_tbl.h 500348 2014-09-03 21:04:58Z $
+ * $Id: bcmsrom_tbl.h 521644 2014-12-18 09:14:16Z $
  */
 
 #ifndef	_bcmsrom_tbl_h_
@@ -1017,6 +1017,7 @@ static const cis_tuple_t cis_hnbuvars[] = {
 	{HNBU_USB30REGS1,       0xfffff800, 41, "4*10usb30regs1"},
 	{HNBU_TXBFRPCALS,  0xfffff800, 11,
 	"2rpcal2g 2rpcal5gb0 2rpcal5gb1 2rpcal5gb2 2rpcal5gb3"}, /* txbf rpcalvars */
+	{HNBU_GPIO_PULL_DOWN,	0xffffffff, 5, "4gpdn"},
 	{0xFF,			0xffffffff, 0, ""}
 };
 

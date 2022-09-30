@@ -19,12 +19,12 @@
 
 <script>
 
-//	<% nvram("et0macaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr,wl_nband"); %>
+//	<% nvram("lan_hwaddr,wan_mac,wan2_mac,wan3_mac,wan4_mac,mwan_num,wl_macaddr,wl_hwaddr,wl_nband"); %>
 
 var cprefix = 'advanced_mac';
 
 function et0plus(plus) {
-	var mac = nvram.et0macaddr.split(':');
+	var mac = nvram.lan_hwaddr.split(':');
 	if (mac.length != 6) return '';
 	while (plus-- > 0) {
 		for (var i = 5; i >= 3; --i) {
@@ -228,7 +228,7 @@ function init() {
 	</script>
 
 	<table style="border:none;padding:1px;padding-top:10px">
-		<tr><td>Router's LAN MAC Address:</td><td><b><script>W(('<% nv('et0macaddr'); %>').toUpperCase());</script></b></td></tr>
+		<tr><td>Router's LAN MAC Address:</td><td><b><script>W(('<% nv('lan_hwaddr'); %>').toUpperCase());</script></b></td></tr>
 		<tr><td>Computer's MAC Address:</td><td><b><script>W(('<% compmac(); %>').toUpperCase());</script></b></td></tr>
 	</table>
 </div>

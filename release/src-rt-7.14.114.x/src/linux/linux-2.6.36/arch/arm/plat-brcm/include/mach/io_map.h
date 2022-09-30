@@ -23,16 +23,17 @@
 
 /*
  * There are only a few fixed virtual I/O mappings we need.
- * We shall place them after VMALLOC_END, and hope they do 
+ * We shall place them after VMALLOC_END, and hope they do
  * not conflict with CONSISTENT_BASE, the start of mapping for
  * DMA memory.
  */
 #define	PLAT_FIXMAP_BASE	(VMALLOC_END + (1<<20))
-#define	IO_BASE_VA	0xf1000000	/* Temp - K.I.S.S. */
-#define	IO_BASE_PA	(0xff000000 & PLAT_UART0_PA)
+#define	IO_BASE_VA		0xf1000000	/* Temp - K.I.S.S. */
+#define	IO_BASE_PA		(0xff000000 & PLAT_UART0_PA)
 
 #define	SOC_CHIPCOMON_A_BASE_VA	(SOC_CHIPCOMON_A_BASE_PA-IO_BASE_PA+IO_BASE_VA)
 #define	SOC_DMU_BASE_VA		(SOC_DMU_BASE_PA -IO_BASE_PA+IO_BASE_VA)
+#define	SOC_IDM_BASE_VA		(SOC_IDM_BASE_PA -IO_BASE_PA+IO_BASE_VA)
 
 #define	PLAT_UART0_OFF		(PLAT_UART0_PA-IO_BASE_PA)
 #define	PLAT_UART1_OFF		(PLAT_UART1_PA-IO_BASE_PA)
@@ -72,5 +73,12 @@
  * assembly code using the above macros.
  */
 #define	MPCORE_GIC_CPUIF_VA	(MPCORE_BASE_VA+MPCORE_GIC_CPUIF_OFF)
+#define	MPCORE_GIC_CPUIF_VA_CA7	(MPCORE_BASE_VA+MPCORE_GIC_CPUIF_OFF_CA7)
+
+/* PMU base address (VA) for BCM53573 */
+#define	SOC_PMU_BASE_VA		(SOC_PMU_BASE_PA - IO_BASE_PA + IO_BASE_VA)
+#define PMU_CONTROL_ADDR_OFF	0x660
+#define PMU_CONTROL_DATA_OFF	0x664
+#define PMU_XTALFREQ_RATIO_OFF	0x66c
 
 #endif /*__MACH_IO_MAP_H */

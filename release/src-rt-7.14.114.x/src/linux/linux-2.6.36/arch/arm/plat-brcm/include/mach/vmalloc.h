@@ -24,4 +24,10 @@
  * arch/arm/include/asm/pgtable.h
  */
 
+#if defined(CONFIG_VMSPLIT_3G)
 #define VMALLOC_END		(PAGE_OFFSET + 0x30000000)
+#elif defined(CONFIG_VMSPLIT_2G)
+#define VMALLOC_END		(PAGE_OFFSET + 0x70000000)
+#elif defined(CONFIG_VMSPLIT_1G)
+#define VMALLOC_END		(PAGE_OFFSET + 0xB0000000)
+#endif

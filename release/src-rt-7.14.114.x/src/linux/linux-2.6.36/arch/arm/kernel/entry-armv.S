@@ -24,6 +24,7 @@
 #include <asm/unwind.h>
 #include <asm/unistd.h>
 #include <asm/tls.h>
+#include <mach/io_map.h>
 
 #include "entry-header.S"
 
@@ -32,7 +33,18 @@
  */
 	.macro	irq_handler
 	get_irqnr_preamble r5, lr
+#ifdef CONFIG_SMP
+1:	ldr	lr, =MPCORE_GIC_CPUIF_VA_CA7
+	cmp	r5, lr
+	beq	BSYM(2f)
+	get_irqnr_and_base r0, r6, r5, lr
+	b	BSYM(3f)
+2:
+	get_irqnr_and_base_ca7 r0, r6, r5, lr
+3:
+#else  /* !CONFIG_SMP */
 1:	get_irqnr_and_base r0, r6, r5, lr
+#endif /* CONFIG_SMP */
 	movne	r1, sp
 	@
 	@ routine called with r0 = irq number, r1 = struct pt_regs *
@@ -41,6 +53,10 @@
 	bne	asm_do_IRQ
 
 #ifdef CONFIG_SMP
+	ldr	lr, =MPCORE_GIC_CPUIF_VA_CA7
+	cmp	r5, lr
+	beq	BSYM(4f)
+
 	test_for_ipi r0, r6, r5, lr
 	movne	r0, sp
 	adrne	lr, BSYM(1b)
@@ -52,7 +68,8 @@
 	adrne	lr, BSYM(1b)
 	bne	do_local_timer
 #endif
-#endif
+4:
+#endif /* CONFIG_SMP */
 
 	.endm
 

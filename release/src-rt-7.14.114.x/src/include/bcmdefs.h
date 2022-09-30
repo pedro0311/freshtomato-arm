@@ -1,7 +1,7 @@
 /*
  * Misc system wide definitions
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmdefs.h 493119 2014-07-25 02:22:51Z $
+ * $Id: bcmdefs.h 549999 2015-04-17 16:16:58Z $
  */
 
 #ifndef	_bcmdefs_h_
@@ -235,8 +235,10 @@ typedef struct {
 /* Defines for DMA Address Width - Shared between OSL and HNDDMA */
 #define DMADDR_MASK_32 0x0		/* Address mask for 32-bits */
 #define DMADDR_MASK_30 0xc0000000	/* Address mask for 30-bits */
+#define DMADDR_MASK_26 0xFC000000	/* Address maks for 26-bits */
 #define DMADDR_MASK_0  0xffffffff	/* Address mask for 0-bits (hi-part) */
 
+#define	DMADDRWIDTH_26  26 /* 26-bit addressing capability */
 #define	DMADDRWIDTH_30  30 /* 30-bit addressing capability */
 #define	DMADDRWIDTH_32  32 /* 32-bit addressing capability */
 #define	DMADDRWIDTH_63  63 /* 64-bit addressing capability */
@@ -293,7 +295,7 @@ typedef struct  {
  */
 #define MAX_DMA_SEGS 32
 #elif defined(linux)
-#define MAX_DMA_SEGS 8
+#define MAX_DMA_SEGS 32
 #else
 #define MAX_DMA_SEGS 4
 #endif
@@ -320,7 +322,7 @@ typedef struct {
 #if defined(linux) && defined(BCM47XX_CA9)
 #if defined(BCM_GMAC3)
 #define BCMEXTRAHDROOM 32 /* For FullDongle, no D11 headroom space required. */
-#else  /* ! BCM_GMAC3 */
+#else
 #define BCMEXTRAHDROOM 224
 #endif /* ! BCM_GMAC3 */
 #else

@@ -23,10 +23,19 @@
 	 * This is the interrupt handling part of the GIC code -
 	 * the base_va exists in a variable, but here is defined
 	 * at compile time for effeciency (?)
+	 *
+	 * Use this solution first to support both CA9 and CA7.
+	 * Let's find if there is any other better way later.
 	 */
 
 	.macro  get_irqnr_preamble, base, tmp
-	ldr	\base, =MPCORE_GIC_CPUIF_VA
+	mrc	p15, 0, \tmp, c0, c0, 0		@ Read MIDR
+	ldr	\base, =0x0000fff0
+	and	\tmp, \tmp, \base		@ Get primary part number
+	ldr	\base, =0x0000c070		@ 0xc07 for CA7, 0xc09 for CA9
+	cmp	\tmp, \base
+	ldreq	\base, =MPCORE_GIC_CPUIF_VA_CA7
+	ldrne	\base, =MPCORE_GIC_CPUIF_VA
 	.endm
 
 	/*
@@ -60,18 +69,28 @@
 	/* Ignore spurious interrupt */
 	cmp	\irqnr, \tmp
 
+#ifdef CONFIG_SMP
 #ifdef CONFIG_LOCAL_TIMERS
 	/* Leave private timer handling for later */
 	cmpne	\irqnr, #MPCORE_IRQ_LOCALTIMER
 	moveq	\tmp, \irqnr
 #endif
 
-#ifdef CONFIG_SMP
 	/* Leave IPI (irq=0..15) handling for later */
 	cmp	\irqnr, #16
 	movcc	\tmp, \irqnr
 	cmp	\tmp, \irqnr
 #endif
+	.endm
+
+	.macro	get_irqnr_and_base_ca7, irqnr, irqstat, base, tmp
+	/* bits 12-10 = src CPU, 9-0 = int # */
+	ldr     \irqstat, [\base, #GIC_CPU_INTACK]
+	bic     \irqnr, \irqstat, #0x1c00
+	ldr	\tmp, =0x3ff		@ spurious irqnum
+
+	/* Ignore spurious interrupt */
+	cmp	\irqnr, \tmp
 	.endm
 
 #ifdef CONFIG_SMP

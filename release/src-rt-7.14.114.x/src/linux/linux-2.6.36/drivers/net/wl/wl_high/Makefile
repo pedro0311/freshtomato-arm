@@ -1,7 +1,7 @@
 #
 # Makefile for the Broadcom wl driver
 #
-# Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+# Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -36,7 +36,7 @@ ifneq ($(KERNELRELEASE),)
 include $(src)/../wl_generic.mk
 else
 # Normal makefile
-KERNELDIR := $(BASEDIR)/src-rt-7.x.main/src/linux/linux-2.6.36
+KERNELDIR := $(BASEDIR)/src-rt-7.14.114.x/src/linux/linux-2.6.36
 all:
 	$(MAKE) -C $(KERNELDIR) M=`pwd`
 clean:

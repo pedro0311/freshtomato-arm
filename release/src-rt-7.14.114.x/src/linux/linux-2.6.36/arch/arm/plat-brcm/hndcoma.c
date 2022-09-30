@@ -1,7 +1,7 @@
 /*
  * Northstar coma mode.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: hndcoma.c 406135 2013-06-06 04:57:34Z $
+ * $Id: hndcoma.c 566672 2015-06-25 12:15:40Z $
  */
 
 #include <linux/proc_fs.h>
@@ -152,6 +152,10 @@ coma_proc_init(void)
 	struct proc_dir_entry *coma_proc_dir, *coma;
 	char *var;
 	uint32 coma_disabled;
+
+	if (BCM53573_CHIP(sih->chip)) {
+		return;
+	}
 
 	var = getvar(NULL, "coma_disable");
 	if (var) {

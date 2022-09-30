@@ -6,7 +6,7 @@
  * It links to bus layer with transport layer(bus dependent)
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;

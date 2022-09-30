@@ -2,7 +2,7 @@
  * Chip-specific hardware definitions for
  * Broadcom 802.11abg Networking Device Driver
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Copyright (C) 2015, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -10,7 +10,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: d11.h 456127 2014-02-17 23:17:49Z $
+ * $Id: d11.h 578947 2015-08-13 04:46:06Z $
  */
 
 #ifndef	_D11_H
@@ -1767,16 +1767,8 @@ enum  {
 #define AMT_IDX_MCAST_ADDR2	58	/* MCAST address for Reliable Mcast feature */
 #define AMT_IDX_MCAST_ADDR3	57	/* MCAST address for Reliable Mcast feature */
 
-#ifdef WL_STA_MONITOR
-#define AMT_MAX_STA_MONITOR     1	/* Max STA(s) to monitor */
-#define AMT_MAXIDX_STA_MONITOR  60	/* AMT entry for STA to monitor */
-#define AMT_MAXIDX_P2P_USE	\
-	(AMT_MAXIDX_STA_MONITOR - AMT_MAX_STA_MONITOR)	/* Max P2P entry to use */
-#else
-#define AMT_MAX_STA_MONITOR     0
-#define AMT_MAXIDX_STA_MONITOR  0
 #define AMT_MAXIDX_P2P_USE	60	/* Max P2P entry to use */
-#endif /* WL_STA_MONITOR */
+#define AMT_MAX_MACLIST_NUM 60 /* assume P2P not used */
 
 #define AMT_MAX_TXBF_ENTRIES	7	/* Max tx beamforming entry */
 /* PSTA AWARE AP: Max PSTA Tx beamforming entry */
@@ -1836,6 +1828,7 @@ enum  {
 #define	SKL_INDEX_SHIFT		4
 #define	SKL_GRP_ALGO_MASK	0x1c00
 #define	SKL_GRP_ALGO_SHIFT	10
+#define	SKL_STAMON_NBIT		(1 << 15) /* STA monitor bit */
 
 /* additional bits defined for IBSS group key support */
 #define	SKL_IBSS_INDEX_MASK	0x01F0
@@ -2400,6 +2393,8 @@ BWL_PRE_PACKED_STRUCT struct shm_acparams {
 #define MHF4_WMAC_ACKTMOUT	0x0200		/* reserved for WMAC testing */
 #define MHF4_IBSS_SEC		0x0800		/* IBSS WPA2-PSK operating mode */
 #define MHF4_EXTPA_ENABLE	0x4000		/* for 4313A0 FEM boards */
+#define MHF4_EN_ACKSUPR_BITMAP 0x4000 /* for pre-11ac acksupr enable */
+
 
 /* Flags in M_HOST_FLAGS5 */
 #define MHF5_4313_BTCX_GPIOCTRL	0x0001		/* Enable gpio for bt/wlan sel for 4313 */
@@ -2756,6 +2751,7 @@ typedef enum
 {
 	BTC_FW_RX_REAGG_AFTER_SCO = 0,	/* Set to 1 to allow rx-agg to be re-enabled */
 	BTC_FW_RSSI_THRESH_SCO = 1,		/* RSSI at which SCO deny limit changes */
+	BTC_FW_SISO_ACK_TX_PWR = 2,			/* set SISO ACK Tx Pwr */
 	BTC_FW_MAX_INDICES				/* Maximum number of btc_fw sw registers */
 } btcParamsFirmwareDefinitions;
 
@@ -2879,6 +2875,9 @@ typedef enum
 #define M_P2P_PRE_TBTT(b)	((0x5f * 2) + ((b) * 2))	/* in us */
 #endif /* WLP2P_UCODE */
 
+#define ADDR_STAMON_NBIT	(1 << 10) /* STA monitor bit in AMT_INFO_BLK entity */
+#define ADDR_BMP_ACKSUPR		(1 << 1) /* acksupr bit in AMT_INFO_BLK entity */
+
 #ifdef WLP2P_UCODE
 /* Reserve bottom of RCMTA for P2P Addresses */
 #define	WSEC_MAX_RCMTA_KEYS	(54 - M_ADDR_BMP_BLK_SZ)
@@ -2915,6 +2914,11 @@ typedef enum
 #define SPATIAL_SHIFT		8
 #define MAX_COREMASK_BLK	5
 
+#define TXCORE0_MASK		0x01
+#define TXCORE1_MASK		0x02
+#define TXCORE2_MASK		0x04
+#define TXCORE01_MASK		0x03
+#define TXCORE012_MASK		0x07
 
 
 #define M_WLCX_BLK		(0x38a)				/* dual radio coex */
@@ -3103,6 +3107,9 @@ typedef enum
 #define PSO_MODE			(1 << 0)
 
 /* ucode mac statistic counters in shared memory */
+
+#define MACSTAT_OFFSET_SZ 64
+
 typedef struct macstat {
 	uint16	txallfrm;		/* 0x80 */
 	uint16	txrtsfrm;		/* 0x82 */
@@ -3111,15 +3118,15 @@ typedef struct macstat {
 	uint16	txdnlfrm;		/* 0x88 */
 	uint16	txbcnfrm;		/* 0x8a */
 	uint16	txfunfl[6];		/* 0x8c - 0x96 */
-	uint16	txfbw;			/* 0x98 */
-	uint16	PAD;			/* 0x9a */
+	uint16	txampdu;			/* 0x98 */
+	uint16	txmpdu;			/* 0x9a */
 	uint16	txtplunfl;		/* 0x9c */
 	uint16	txphyerr;		/* 0x9e */
 	uint16  pktengrxducast;		/* 0xa0 */
 	uint16  pktengrxdmcast;		/* 0xa2 */
 	uint16	rxfrmtoolong;		/* 0xa4 */
 	uint16	rxfrmtooshrt;		/* 0xa6 */
-	uint16	rxinvmachdr;		/* 0xa8 */
+	uint16	rxnyerr;		/* 0xa8 */
 	uint16	rxbadfcs;		/* 0xaa */
 	uint16	rxbadplcp;		/* 0xac */
 	uint16	rxcrsglitch;		/* 0xae */
@@ -3143,20 +3150,20 @@ typedef struct macstat {
 	uint16	rxbeaconobss;		/* 0xd2 */
 	uint16	rxrsptmout;		/* 0xd4 */
 	uint16	bcntxcancl;		/* 0xd6 */
-	uint16	PAD;
+	uint16	rxnodelim;
 	uint16	rxf0ovfl;		/* 0xda */
-	uint16	rxf1ovfl;		/* 0xdc */
-	uint16	rxf2ovfl;		/* 0xde */
-	uint16	txsfovfl;		/* 0xe0 */
+	uint16	rxf1ovfl;		/* 0xdc,dbgoff46 for corerev < 40 */
+	uint16	rxhlovfl;		/* 0xde,dbgoff47 for cOrerev < 40 */
+	uint16	missbcn_dbg;		/* 0xe0,dbgoff48 for corerev < 40 */
 	uint16	pmqovfl;		/* 0xe2 */
 	uint16	rxcgprqfrm;		/* 0xe4 */
 	uint16	rxcgprsqovfl;		/* 0xe6 */
 	uint16	txcgprsfail;		/* 0xe8 */
 	uint16	txcgprssuc;		/* 0xea */
 	uint16	prs_timeout;		/* 0xec */
-	uint16	rxnack;
-	uint16	frmscons;
-	uint16	txnack;
+	uint16	txrtsfail;		/* 0xee */
+	uint16	txucast;		/* 0xf0 */
+	uint16	txinrtstxop;		/* 0xf2 */
 	uint16	rxback;
 	uint16	txback;			/* 0xf6 # tx bursts */
 	uint16	bphy_rxcrsglitch;	/* bphy rx crs glitch */
@@ -3178,8 +3185,8 @@ typedef struct macstat1 {
 	uint16 rxsfucast;               /* + 8*2 */
 	uint16 rxcwrtsucast;            /* + 9*2 */
 	uint16 rxcwctsucast;            /* +10*2 */
-	uint16 rtggrt;                  /* +11*2 */
-	uint16 rtgack;                  /* +12*2 */
+	uint16 rx20s;                  /* +11*2 */
+	uint16 bcntrim;                  /* +12*2 */
 	uint16 btc_rfact_l;             /* +13*2 */
 	uint16 btc_rfact_h;             /* +14*2 */
 	uint16 btc_txconf_l;            /* +15*2 : cnt */
@@ -3729,9 +3736,10 @@ extern uint16 aes_xtime9dbe[512];
 
 /* Common to ucode/hw agg : WLAMPDU_MAC not defined yet here */
 #if defined(WLAMPDU_UCODE) || defined(WLAMPDU_HW) || defined(WLAMPDU_AQM)
-#define M_TXMPDU_CNT		(0x74  * 2)	/* # of total MPDUs in AMPDUs tx'd */
-#define M_TXAMPDU_CNT		(0x7d  * 2)	/* # of total AMPDUs tx'd */
-#define M_RXBA_CNT		(0xaa  * 2)	/* # of rx'ed block acks */
+/* # of total MPDUs in AMPDUs tx'd */
+#define M_TXMPDU_CNT	M_UCODE_MACSTAT + OFFSETOF(macstat_t, txmpdu)
+#define M_TXAMPDU_CNT	M_UCODE_MACSTAT + OFFSETOF(macstat_t, txmpdu)	/* # of total AMPDUs tx'd */
+#define M_RXBA_CNT	M_UCODE_MACSTAT + OFFSETOF(macstat_t, rxback)	/* # of rx'ed block acks */
 #endif /* defined(WLAMPDU_UCODE) || defined(WLAMPDU_HW) */
 
 #ifdef WLAMPDU_UCODE

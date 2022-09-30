@@ -1,7 +1,7 @@
 /*
  * Broadcom device-specific manifest constants.
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmdevs.h 582027 2015-08-26 08:11:24Z $
+ * $Id: bcmdevs.h 633731 2016-04-25 09:48:22Z $
  */
 
 #ifndef	_BCMDEVS_H
@@ -66,7 +66,7 @@
 #define BCM_DNGL_BL_PID_4345    0xbd24
 #define BCM_DNGL_BL_PID_4349	0xbd25
 #define BCM_DNGL_BL_PID_4354	0xbd26
-#define BCM_DNGL_BL_PID_43569   0xbd27
+#define BCM_DNGL_BL_PID_43569	0xbd27
 #define BCM_DNGL_BL_PID_43909	0xbd28
 
 #define BCM_DNGL_BDC_PID	0x0bdc
@@ -239,7 +239,6 @@
 #define BCM4354_D11AC5G_ID	0x43e1		/* 4354 802.11ac 5G device */
 #define BCM43430_D11N2G_ID	0x43e2		/* 43430 802.11n 2.4G device */
 
-
 #define BCM43349_D11N_ID	0x43e6		/* 43349 802.11n dualband id */
 #define BCM43349_D11N2G_ID	0x43e7		/* 43349 802.11n 2.4Ghz band id */
 #define BCM43349_D11N5G_ID	0x43e8		/* 43349 802.11n 5Ghz band id */
@@ -247,6 +246,14 @@
 #define BCM4358_D11AC_ID        0x43e9          /* 4358 802.11ac dualband device */
 #define BCM4358_D11AC2G_ID      0x43ea          /* 4358 802.11ac 2.4G device */
 #define BCM4358_D11AC5G_ID      0x43eb          /* 4358 802.11ac 5G device */
+
+#define BCM4365_D11AC_ID	0x43ca
+#define BCM4365_D11AC2G_ID	0x43cb
+#define BCM4365_D11AC5G_ID	0x43cc
+
+#define BCM4366_D11AC_ID	0x43c3
+#define BCM4366_D11AC2G_ID	0x43c4
+#define BCM4366_D11AC5G_ID	0x43c5
 
 #define BCM4356_D11AC_ID	0x43ec		/* 4356 802.11ac dualband device */
 #define BCM4356_D11AC2G_ID	0x43ed		/* 4356 802.11ac 2.4G device */
@@ -409,7 +416,10 @@
 
 #define BCM43602_CHIP_ID	0xaa52		/* 43602 chipcommon chipid */
 #define BCM43462_CHIP_ID	0xa9c6		/* 43462 chipcommon chipid */
-
+#define BCM43522_CHIP_ID	0xaa02		/* 43522 chipcommon chipid */
+#define BCM43602_CHIP(chipid)	((CHIPID(chipid) == BCM43602_CHIP_ID) || \
+				(CHIPID(chipid) == BCM43462_CHIP_ID) || \
+				(CHIPID(chipid) == BCM43522_CHIP_ID)) /* 43602 variations */
 #define	BCM4342_CHIP_ID		4342		/* 4342 chipcommon chipid (OTP, RBBU) */
 #define	BCM4402_CHIP_ID		0x4402		/* 4402 chipid */
 #define	BCM4704_CHIP_ID		0x4704		/* 4704 chipcommon chipid */
@@ -512,7 +522,7 @@
 #define	BFL_BTC2WIRE		0x00000001  /* old 2wire Bluetooth coexistence, OBSOLETE */
 #define BFL_BTCOEX      0x00000001      /* Board supports BTCOEX */
 #define	BFL_PACTRL		0x00000002  /* Board has gpio 9 controlling the PA */
-#define BFL_AIRLINEMODE	0x00000004  /* Board implements gpio radio disable indication */
+#define BFL_AIRLINEMODE	0x00000004  /* Board implements gpio 13 radio disable indication, UNUSED */
 #define	BFL_ADCDIV		0x00000008  /* Board has the rssi ADC divider */
 #define BFL_DIS_256QAM		0x00000008
 #define	BFL_ENETROBO		0x00000010  /* Board has robo switch or core */

@@ -1,7 +1,7 @@
 /*
  * Broadcom 802.11abg Networking Device Driver Configuration file
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -26,9 +26,13 @@
 					 * 23 (43224b0), 24 (4313), 25 (5357a0), 26 (4331a0),
 					 * 28 (5357b0), 29 (4331B0), 30(43228).
 					 */
+#ifdef DHDAP
+#define D11CONF2	0x500		/* Excluding Core Rev 49 for DHDAP builds */
+#else
 #define D11CONF2	0x20500		/* D11 Core Rev > 31, Rev 40(4360a0),
 					 * 42(4360B0), 49(43602a0)
 					 */
+#endif
 
 #define NRXBUFPOST	56	/* # rx buffers posted */
 #define RXBND		24	/* max # rx frames to process */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,23 +24,23 @@
 
 #define	EPI_MINOR_VERSION	14
 
-#define	EPI_RC_NUMBER		43
+#define	EPI_RC_NUMBER		131
 
-#define	EPI_INCREMENTAL_NUMBER	40
+#define	EPI_INCREMENTAL_NUMBER	56
 
 #define	EPI_BUILD_NUMBER	0
 
-#define	EPI_VERSION		7, 14, 43, 40
+#define	EPI_VERSION		7, 14, 131, 56
 
-#define	EPI_VERSION_NUM		0x070e2b28
+#define	EPI_VERSION_NUM		0x070e8338
 
-#define EPI_VERSION_DEV		7.14.43
+#define EPI_VERSION_DEV		7.14.131
 
 /* Driver Version String, ASCII, 32 chars max */
 #ifdef WLTEST
-#define	EPI_VERSION_STR		"7.14.43.40 (r527781 WLTEST)"
+#define	EPI_VERSION_STR		"7.14.131.56 (r641653 WLTEST)"
 #else
-#define	EPI_VERSION_STR		"7.14.43.40 (r527781)"
+#define	EPI_VERSION_STR		"7.14.131.56 (r641653)"
 #endif
 
 #endif /* _epivers_h_ */

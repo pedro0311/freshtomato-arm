@@ -1,7 +1,7 @@
 /*
  * NVRAM variable manipulation (direct mapped flash)
  *
- * Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -150,7 +150,7 @@ findmatch(const char *string, const char *name)
                 string = c + 1;
         }
 
-        return (!strcmp(string, name));
+	return (!strcmp(string, name));
 }
 
 int
@@ -174,26 +174,15 @@ bcmgpio_getpin(char *pin_name)
 int
 BCMINITFN(nvram_resetgpio_init)(void *si)
 {
-#if 0
-        char *value;
-#endif
         int gpio;
         si_t *sih;
 
         sih = (si_t *)si;
-#if 0
-        value = nvram_get("reset_gpio");
-        if (!value)
-                return -1;
 
-        gpio = (int) bcm_atoi(value);
-        if (gpio > 31)
-                return -1;
-#else
         gpio = bcmgpio_getpin(WPS_GPIO_BUTTON_VALUE);
         if ((gpio > 31) || (gpio < 0))
                 return -1;
-#endif
+
         /* Setup GPIO input */
         si_gpioouten(sih, ((uint32) 1 << gpio), 0, GPIO_DRV_PRIORITY);
 
@@ -203,22 +192,22 @@ BCMINITFN(nvram_resetgpio_init)(void *si)
 int
 BCMINITFN(nvram_reset)(void  *si)
 {
-	int gpio;
-	uint msec;
-	si_t * sih = (si_t *)si;
+        int gpio;
+        uint msec;
+        si_t * sih = (si_t *)si;
 
-	if ((gpio = nvram_resetgpio_init((void *)sih)) < 0)
-		return FALSE;
+        if ((gpio = nvram_resetgpio_init((void *)sih)) < 0)
+                return FALSE;
 
-	/* GPIO reset is asserted low */
-	for (msec = 0; msec < 5000; msec++) {
-		if (si_gpioin(sih) & ((uint32) 1 << gpio))
-			return FALSE;
-		OSL_DELAY(1000);
-	}
+        /* GPIO reset is asserted low */
+        for (msec = 0; msec < 5000; msec++) {
+                if (si_gpioin(sih) & ((uint32) 1 << gpio))
+                        return FALSE;
+                OSL_DELAY(1000);
+        }
 
-	nvram_do_reset = TRUE;
-	return TRUE;
+        nvram_do_reset = TRUE;
+        return TRUE;
 }
 
 #ifdef NFLASH_SUPPORT

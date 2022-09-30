@@ -2,7 +2,7 @@
  * Required functions exported by the port-specific (os-dependent) driver
  * to common (os-independent) driver code.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: et_export.h 468275 2014-04-07 05:21:13Z $
+ * $Id: et_export.h 537136 2015-02-25 05:41:21Z $
  */
 
 #ifndef _et_export_h_
@@ -54,5 +54,6 @@ extern bool et_fa_dev_on(void *dev);
 extern void et_fa_set_dev_on(void *et);
 extern void *et_fa_fs_create(void);
 extern void et_fa_fs_clean(void);
+extern void et_fa_up(void *et);
 #endif /* ETFA */
 #endif	/* _et_export_h_ */

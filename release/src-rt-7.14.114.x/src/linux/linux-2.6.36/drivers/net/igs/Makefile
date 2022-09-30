@@ -1,7 +1,7 @@
 #
 # Makefile for the Broadcom IGS Layer
 #
-# Copyright (C) 2013, Broadcom Corporation. All Rights Reserved.
+# Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
 # 
 # Permission to use, copy, modify, and/or distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -44,7 +44,7 @@ ifneq ($(KERNELRELEASE),)
 # kbuild part of makefile
 else
 # Normal makefile
-KERNELDIR := $(BASEDIR)/components/opensource/linux/linux-2.6.36
+KERNELDIR := $(BASEDIR)/src-rt-7.14.114.x/src/linux/linux-2.6.36
 all:
 	$(MAKE) -C $(KERNELDIR) M=`pwd`
 clean:

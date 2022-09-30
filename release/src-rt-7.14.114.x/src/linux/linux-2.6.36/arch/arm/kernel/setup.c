@@ -122,6 +122,11 @@ static struct stack stacks[NR_CPUS];
 char elf_platform[ELF_PLATFORM_SIZE];
 EXPORT_SYMBOL(elf_platform);
 
+#ifdef CONFIG_DUMP_PREV_OOPS_MSG
+int oops_mem = 0;
+EXPORT_SYMBOL(oops_mem);
+#endif
+
 static const char *cpu_name;
 static const char *machine_name;
 static char __initdata cmd_line[COMMAND_LINE_SIZE];
@@ -224,8 +229,9 @@ int cpu_architecture(void)
 		 * Register 0 and check for VMSAv7 or PMSAv7 */
 		asm("mrc	p15, 0, %0, c0, c1, 4"
 		    : "=r" (mmfr0));
-		if ((mmfr0 & 0x0000000f) == 0x00000003 ||
-		    (mmfr0 & 0x000000f0) == 0x00000030)
+		/* Merged from Linux 3.16 for CA7 since bit[3:0] for CA7 is 0x5 */
+		if ((mmfr0 & 0x0000000f) >= 0x00000003 ||
+		    (mmfr0 & 0x000000f0) >= 0x00000030)
 			cpu_arch = CPU_ARCH_ARMv7;
 		else if ((mmfr0 & 0x0000000f) == 0x00000002 ||
 			 (mmfr0 & 0x000000f0) == 0x00000020)
@@ -769,6 +775,7 @@ void __init setup_arch(char **cmdline_p)
 	struct tag *tags = (struct tag *)&init_tags;
 	struct machine_desc *mdesc;
 	char *from = default_command_line;
+	int ret;
 
 	init_tags.mem.start = PHYS_OFFSET;
 
@@ -826,11 +833,14 @@ void __init setup_arch(char **cmdline_p)
 	arm_memblock_init(&meminfo, mdesc);
 
 	paging_init(mdesc);
-
 #ifdef CONFIG_DUMP_PREV_OOPS_MSG
-	reserve_bootmem(virt_to_phys(CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR), CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN, BOOTMEM_EXCLUSIVE); 
+	ret = reserve_bootmem(virt_to_phys((void *)CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR), CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN, BOOTMEM_EXCLUSIVE);
+	if (ret < 0)
+		printk(KERN_WARNING "DUMP_OOPS reservation failed - "
+			"memory is in use (0x%lx)\n", (unsigned long)CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR);
+	else
+		oops_mem = 1;
 #endif
-
 	request_standard_resources(&meminfo, mdesc);
 
 #ifdef CONFIG_SMP

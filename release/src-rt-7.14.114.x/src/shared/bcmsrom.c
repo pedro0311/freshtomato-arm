@@ -3,7 +3,7 @@
  *
  * Despite its file name, OTP contents is also parsed in this file.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmsrom.c 472529 2014-04-24 08:55:47Z $
+ * $Id: bcmsrom.c 525691 2015-01-12 08:54:01Z $
  */
 
 /*
@@ -2802,6 +2802,10 @@ out:
 #endif 
 #endif 
 
+/**
+ * These 'vstr_*' definitions are used to convert from CIS format to a 'NVRAM var=val' format, the
+ * NVRAM format is used throughout the rest of the firmware.
+ */
 #if !defined(BCMDONGLEHOST)
 static const char BCMATTACHDATA(vstr_manf)[] = "manf=%s";
 static const char BCMATTACHDATA(vstr_productname)[] = "productname=%s";
@@ -3045,12 +3049,14 @@ static const char BCMATTACHDATA(vstr_uuid)[] = "uuid=%s";
 static const char BCMATTACHDATA(vstr_wowlgpio)[] = "wowl_gpio=%d";
 static const char BCMATTACHDATA(vstr_wowlgpiopol)[] = "wowl_gpiopol=%d";
 
-static const char BCMATTACHDATA(vstr_end)[] = "END\0";
 static const char BCMATTACHDATA(rstr_ag0)[] = "ag0";
 static const char BCMATTACHDATA(vstr_paparamrpcalvars)[][20] =
 	{"rpcal2g=0x%x", "rpcal5gb0=0x%x", "rpcal5gb1=0x%x",
 	"rpcal5gb2=0x%x", "rpcal5gb3=0x%x"};
 
+static const char BCMATTACHDATA(vstr_gpdn)[] = "gpdn=0x%x";
+
+static const char BCMATTACHDATA(vstr_end)[] = "END\0";
 uint8 patch_pair = 0;
 
 /* For dongle HW, accept partial calibration parameters */
@@ -5114,10 +5120,18 @@ BCMATTACHFN(srom_parsecis)(osl_t *osh, uint8 *pcis[], uint ciscnt, char **vars, 
 					varbuf_append(&b, vstr_paparamrpcalvars[4],
 						(cis[i + 9]  +  (cis[i + 10] << 8)));
 					break;
-				}
 
+				case HNBU_GPIO_PULL_DOWN:
+					varbuf_append(&b, vstr_gpdn,
+					              (cis[i + 4] << 24) |
+					              (cis[i + 3] << 16) |
+					              (cis[i + 2] << 8) |
+					              cis[i + 1]);
+					break;
+				} /* CISTPL_BRCM_HNBU */
 				break;
-			}
+			} /* switch (tup) */
+
 			i += tlen;
 		} while (tup != CISTPL_END);
 	}
@@ -5146,7 +5160,9 @@ BCMATTACHFN(srom_parsecis)(osl_t *osh, uint8 *pcis[], uint ciscnt, char **vars, 
 	*b.buf++ = '\0';
 
 	ASSERT(b.buf - base <= MAXSZ_NVRAM_VARS);
-	err = initvars_table(osh, base, b.buf, vars, count);
+
+	/* initvars_table() MALLOCs, copies and assigns the MALLOCed buffer to '*vars' */
+	err = initvars_table(osh, base /* start */, b.buf /* end */, vars, count);
 
 	MFREE(osh, base, MAXSZ_NVRAM_VARS);
 	return err;
@@ -5637,13 +5653,8 @@ BCMATTACHFN(initvars_flash_si)(si_t *sih, char **vars, uint *count)
 #endif	
 
 #if !defined(BCMDONGLEHOST)
-/**
- * Parse SROM and create name=value pairs. 'srom' points to
- * the SROM word array. 'off' specifies the offset of the
- * first word 'srom' points to, which should be either 0 or
- * SROM3_SWRG_OFF (full SROM or software region).
- */
 
+/** returns position of rightmost bit that was set in caller supplied mask */
 static uint
 mask_shift(uint16 mask)
 {
@@ -5678,7 +5689,12 @@ mask_valid(uint16 mask)
 }
 #endif
 
-/** parses caller supplied SROM contents into name=value pairs */
+/**
+ * Parses caller supplied SROM contents into name=value pairs. Global array pci_sromvars[] contains
+ * the link between a word offset in SROM and the corresponding NVRAM variable name.'srom' points to
+ * the SROM word array. 'off' specifies the offset of the first word 'srom' points to, which should
+ * be either 0 or SROM3_SWRG_OFF (full SROM or software region).
+ */
 static void
 BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t *b)
 {
@@ -5728,9 +5744,10 @@ BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t 
 			bcm_ether_ntoa(&ea, eabuf);
 
 			varbuf_append(b, "%s=%s", name, eabuf);
-		}
-		else {
+		} else {
+#ifdef BCMASSERT_SUPPORT
 			ASSERT(mask_valid(srv->mask));
+#endif /* BCMASSERT_SUPPORT */
 			ASSERT(mask_width(srv->mask));
 
 			/* Start of an array */
@@ -5752,7 +5769,9 @@ BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t 
 				if (srv->off == 0 || srv->off < off)
 					continue;
 
+#ifdef BCMASSERT_SUPPORT
 				ASSERT(mask_valid(srv->mask));
+#endif /* BCMASSERT_SUPPORT */
 				ASSERT(mask_width(srv->mask));
 
 				w = srom[srv->off - off];
@@ -5812,21 +5831,20 @@ BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t 
 					varbuf_append(b, "ccode=");
 				else
 					varbuf_append(b, "ccode=%c%c", (val >> 8), (val & 0xff));
-			}
-			/* LED Powersave duty cycle has to be scaled:
-			 *(oncount >> 24) (offcount >> 8)
-			 */
-			else if (flags & SRFL_LEDDC) {
+			} else if (flags & SRFL_LEDDC) {
+				/* LED Powersave duty cycle has to be scaled:
+				*(oncount >> 24) (offcount >> 8)
+				*/
 				uint32 w32 = (((val >> 8) & 0xff) << 24) | /* oncount */
 					     (((val & 0xff)) << 8); /* offcount */
 				varbuf_append(b, "leddc=%d", w32);
-			}
-			else if (flags & SRFL_PRHEX)
+			} else if (flags & SRFL_PRHEX) {
 				varbuf_append(b, "%s=0x%x", name, val);
-			else if ((flags & SRFL_PRSIGN) && (val & (1 << (width - 1))))
+			} else if ((flags & SRFL_PRSIGN) && (val & (1 << (width - 1)))) {
 				varbuf_append(b, "%s=%d", name, (int)(val | (~0 << width)));
-			else
+			} else {
 				varbuf_append(b, "%s=%u", name, val);
+			}
 		}
 	}
 
@@ -5870,7 +5888,9 @@ BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t 
 
 				w = srom[pb + srv->off - off];
 
+#ifdef BCMASSERT_SUPPORT
 				ASSERT(mask_valid(srv->mask));
+#endif /* BCMASSERT_SUPPORT */
 				val = (w & srv->mask) >> mask_shift(srv->mask);
 				width = mask_width(srv->mask);
 
@@ -5927,8 +5947,8 @@ BCMATTACHFN(_initvars_srom_pci)(uint8 sromrev, uint16 *srom, uint off, varbuf_t 
 			}
 			pb += psz;
 		}
-	}
-}
+	} /* per path variables */
+} /* _initvars_srom_pci */
 
 
 /**
@@ -6341,7 +6361,7 @@ exit:
 }
 
 /**
- * Read the cis and call parsecis to initialize the vars.
+ * Read the cis and call parsecis to allocate and initialize the NVRAM vars buffer.
  * Return 0 on success, nonzero on error.
  */
 static int
@@ -6379,7 +6399,7 @@ BCMATTACHFN(initvars_cis_pcmcia)(si_t *sih, osl_t *osh, char **vars, uint *count
 #if !defined(BCMDONGLEHOST)
 #ifdef BCMSPI
 /**
- * Read the SPI cis and call parsecis to initialize the vars.
+ * Read the SPI cis and call parsecis to allocate and initialize the NVRAM vars buffer.
  * Return 0 on success, nonzero on error.
  */
 static int
@@ -6477,8 +6497,8 @@ srom_size(si_t *sih, osl_t *osh)
 #if defined(BCMUSBDEV_ENABLED)
 #if defined(BCMUSBDEV_BMAC) || defined(BCM_BMAC_VARS_APPEND)
 /**
- * Read the USB cis and call parsecis to initialize the vars. OTP only.
- * Return 0 on success, nonzero on error.
+ * Read the cis and call parsecis to allocate and initialize the NVRAM vars buffer.
+ * OTP only. Return 0 on success (*vars points to NVRAM buffer), nonzero on error.
  */
 static int
 BCMATTACHFN(initvars_cis_usbdriver)(si_t *sih, osl_t *osh, char **vars, uint *count)
@@ -7345,7 +7365,7 @@ exit:
 
 	/* return OK so the driver will load & use defaults if bad srom/otp */
 	return BCME_OK;
-}
+} /* initvars_srom_si */
 #else /* BCM_DONGLEVARS */
 
 /**

@@ -1,7 +1,7 @@
 /*
  * SROM format definition.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmsrom_fmt.h 500347 2014-09-03 21:04:42Z $
+ * $Id: bcmsrom_fmt.h 502763 2014-09-16 02:48:59Z $
  */
 
 #ifndef	_bcmsrom_fmt_h_

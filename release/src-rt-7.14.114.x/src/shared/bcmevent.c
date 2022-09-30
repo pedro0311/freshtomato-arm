@@ -1,7 +1,7 @@
 /*
  * bcmevent read-only data shared by kernel or app layers
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: bcmevent.c 449760 2014-01-18 05:23:09Z $
+ * $Id: bcmevent.c 566959 2015-06-26 08:57:35Z $
  */
 
 #include <typedefs.h>
@@ -68,9 +68,6 @@ static const bcmevent_name_str_t bcmevent_names[] = {
 	BCMEVENT_NAME(WLC_E_ROAM_PREP),
 	BCMEVENT_NAME(WLC_E_PFN_NET_FOUND),
 	BCMEVENT_NAME(WLC_E_PFN_NET_LOST),
-#if defined(IBSS_PEER_DISCOVERY_EVENT)
-	BCMEVENT_NAME(WLC_E_IBSS_ASSOC),
-#endif /* defined(IBSS_PEER_DISCOVERY_EVENT) */
 	BCMEVENT_NAME(WLC_E_RADIO),
 	BCMEVENT_NAME(WLC_E_PSM_WATCHDOG),
 	BCMEVENT_NAME(WLC_E_PROBREQ_MSG),
@@ -94,9 +91,9 @@ static const bcmevent_name_str_t bcmevent_names[] = {
 	BCMEVENT_NAME(WLC_E_ACTION_FRAME_RX),
 	BCMEVENT_NAME(WLC_E_ACTION_FRAME_COMPLETE),
 #endif
-#if defined(NDIS) && (NDISVER >= 0x0620)
 	BCMEVENT_NAME(WLC_E_PRE_ASSOC_IND),
 	BCMEVENT_NAME(WLC_E_PRE_REASSOC_IND),
+#if defined(NDIS) && (NDISVER >= 0x0620)
 	BCMEVENT_NAME(WLC_E_CHANNEL_ADOPTED),
 	BCMEVENT_NAME(WLC_E_AP_STARTED),
 	BCMEVENT_NAME(WLC_E_DFS_AP_STOP),
@@ -156,6 +153,8 @@ static const bcmevent_name_str_t bcmevent_names[] = {
 #ifdef PROP_TXSTATUS
 	BCMEVENT_NAME(WLC_E_BCMC_CREDIT_SUPPORT),
 #endif
+	BCMEVENT_NAME(WLC_E_PSTA_PRIMARY_INTF_IND),
+
 	BCMEVENT_NAME(WLC_E_TXFAIL_THRESH),
 
 	BCMEVENT_NAME(WLC_E_AIBSS_TXFAIL),
@@ -163,6 +162,9 @@ static const bcmevent_name_str_t bcmevent_names[] = {
 #ifdef WLBSSLOAD_REPORT
 	BCMEVENT_NAME(WLC_E_BSS_LOAD),
 #endif
+	BCMEVENT_NAME(WLC_E_AUTHORIZED),
+	BCMEVENT_NAME(WLC_E_PROBREQ_MSG_RX),
+	BCMEVENT_NAME(WLC_E_PRE_ASSOC_RSEP_IND),
 };
 
 

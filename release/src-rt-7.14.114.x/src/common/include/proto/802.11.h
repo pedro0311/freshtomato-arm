@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  *
  * Fundamental types and constants relating to 802.11
  *
- * $Id: 802.11.h 499158 2014-08-27 21:20:39Z $
+ * $Id: 802.11.h 587683 2015-09-22 00:47:41Z $
  */
 
 #ifndef _802_11_H_
@@ -2477,12 +2477,6 @@ typedef struct dot11_rmrep_bcn dot11_rmrep_bcn_t;
 /* Sub-element IDs for Frame Report */
 #define DOT11_RMREP_FRAME_COUNT_REPORT 1
 
-/* Statistics Group Report: Group IDs */
-#define DOT11_RRM_STATS_GRP_ID_0	0
-
-/* Statistics Group Report: Group Data length  */
-#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_0	28
-
 /* Channel load request */
 BWL_PRE_PACKED_STRUCT struct dot11_rmreq_chanload {
 	uint8 id;
@@ -2609,6 +2603,158 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmrep_stat {
 	uint8 group_id;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmrep_stat dot11_rmrep_stat_t;
+
+/* Statistics Group Report: Group IDs */
+enum {
+	DOT11_RRM_STATS_GRP_ID_0 = 0,
+	DOT11_RRM_STATS_GRP_ID_1,
+	DOT11_RRM_STATS_GRP_ID_2,
+	DOT11_RRM_STATS_GRP_ID_3,
+	DOT11_RRM_STATS_GRP_ID_4,
+	DOT11_RRM_STATS_GRP_ID_5,
+	DOT11_RRM_STATS_GRP_ID_6,
+	DOT11_RRM_STATS_GRP_ID_7,
+	DOT11_RRM_STATS_GRP_ID_8,
+	DOT11_RRM_STATS_GRP_ID_9,
+	DOT11_RRM_STATS_GRP_ID_10,
+	DOT11_RRM_STATS_GRP_ID_11,
+	DOT11_RRM_STATS_GRP_ID_12,
+	DOT11_RRM_STATS_GRP_ID_13,
+	DOT11_RRM_STATS_GRP_ID_14,
+	DOT11_RRM_STATS_GRP_ID_15,
+	DOT11_RRM_STATS_GRP_ID_16
+};
+
+/* Statistics Group Report: Group Data length  */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_0	28
+typedef struct rrm_stat_group_0 {
+	uint32	txfrag;
+	uint32	txmulti;
+	uint32	txfail;
+	uint32	rxframe;
+	uint32	rxmulti;
+	uint32	rxbadfcs;
+	uint32	txframe;
+} rrm_stat_group_0_t;
+
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_1	24
+typedef struct rrm_stat_group_1 {
+	uint32	txretry;
+	uint32	txretries;
+	uint32	rxdup;
+	uint32	txrts;
+	uint32	rtsfail;
+	uint32	ackfail;
+} rrm_stat_group_1_t;
+
+/* group 2-9 use same qos data structure (tid 0-7), total 52 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_2_9	52
+typedef struct rrm_stat_group_qos {
+	uint32	txfrag;
+	uint32	txfail;
+	uint32	txretry;
+	uint32	txretries;
+	uint32	rxdup;
+	uint32	txrts;
+	uint32	rtsfail;
+	uint32	ackfail;
+	uint32	rxfrag;
+	uint32	txframe;
+	uint32	txdrop;
+	uint32	rxmpdu;
+	uint32	rxretries;
+} rrm_stat_group_qos_t;
+
+/* dot11BSSAverageAccessDelay Group (only available at an AP): 8 byte */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_10	8
+typedef BWL_PRE_PACKED_STRUCT struct rrm_stat_group_10 {
+	uint8	apavgdelay;
+	uint8	avgdelaybe;
+	uint8	avgdelaybg;
+	uint8	avgdelayvi;
+	uint8	avgdelayvo;
+	uint16	stacount;
+	uint8	chanutil;
+} BWL_POST_PACKED_STRUCT rrm_stat_group_10_t;
+
+/* AMSDU, 40 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_11	40
+typedef struct rrm_stat_group_11 {
+	uint32	txamsdu;
+	uint32	amsdufail;
+	uint32	amsduretry;
+	uint32	amsduretries;
+	uint32	txamsdubyte_h;
+	uint32	txamsdubyte_l;
+	uint32	amsduackfail;
+	uint32	rxamsdu;
+	uint32	rxamsdubyte_h;
+	uint32	rxamsdubyte_l;
+} rrm_stat_group_11_t;
+
+/* AMPDU, 36 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_12	36
+typedef struct rrm_stat_group_12 {
+	uint32	txampdu;
+	uint32	txmpdu;
+	uint32	txampdubyte_h;
+	uint32	txampdubyte_l;
+	uint32	rxampdu;
+	uint32	rxmpdu;
+	uint32	rxampdubyte_h;
+	uint32	rxampdubyte_l;
+	uint32	ampducrcfail;
+} rrm_stat_group_12_t;
+
+/* BACK etc, 36 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_13	36
+typedef struct rrm_stat_group_13 {
+	uint32	rximpbarfail;
+	uint32	rxexpbarfail;
+	uint32	chanwidthsw;
+	uint32	txframe20mhz;
+	uint32	txframe40mhz;
+	uint32	rxframe20mhz;
+	uint32	rxframe40mhz;
+	uint32	psmpgrantdur;
+	uint32	psmpuseddur;
+} rrm_stat_group_13_t;
+
+/* RD Dual CTS etc, 36 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_14	36
+typedef struct rrm_stat_group_14 {
+	uint32	grantrdgused;
+	uint32	grantrdgunused;
+	uint32	txframeingrantrdg;
+	uint32	txbyteingrantrdg_h;
+	uint32	txbyteingrantrdg_l;
+	uint32	dualcts;
+	uint32	dualctsfail;
+	uint32	rtslsi;
+	uint32	rtslsifail;
+} rrm_stat_group_14_t;
+
+/* bf and STBC etc, 20 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_15	20
+typedef struct rrm_stat_group_15 {
+	uint32	bfframe;
+	uint32	stbccts;
+	uint32	stbcctsfail;
+	uint32	nonstbccts;
+	uint32	nonstbcctsfail;
+} rrm_stat_group_15_t;
+
+/* RSNA, 28 bytes */
+#define DOT11_RRM_STATS_RPT_LEN_GRP_ID_16	28
+typedef struct rrm_stat_group_16 {
+	uint32	rsnacmacicverr;
+	uint32	rsnacmacreplay;
+	uint32	rsnarobustmgmtccmpreplay;
+	uint32	rsnatkipicverr;
+	uint32	rsnatkipicvreplay;
+	uint32	rsnaccmpdecrypterr;
+	uint32	rsnaccmpreplay;
+} rrm_stat_group_16_t;
 
 /* Transmit stream/category measurement request */
 BWL_PRE_PACKED_STRUCT struct dot11_rmreq_tx_stream {
@@ -3685,24 +3831,25 @@ typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
 #define GAS_COMEBACK_RESPONSE_ACTION_FRAME		13
 
 /* 802.11u interworking access network options */
-#define IW_ANT_MASK				0x0f
-#define IW_INTERNET_MASK		0x10
-#define IW_ASRA_MASK			0x20
-#define IW_ESR_MASK				0x40
-#define IW_UESA_MASK			0x80
+#define IW_ANT_MASK					0x0f
+#define IW_INTERNET_MASK				0x10
+#define IW_ASRA_MASK					0x20
+#define IW_ESR_MASK					0x40
+#define IW_UESA_MASK					0x80
 
 /* 802.11u interworking access network type */
-#define IW_ANT_PRIVATE_NETWORK					0
+#define IW_ANT_PRIVATE_NETWORK				0
 #define IW_ANT_PRIVATE_NETWORK_WITH_GUEST		1
 #define IW_ANT_CHARGEABLE_PUBLIC_NETWORK		2
-#define IW_ANT_FREE_PUBLIC_NETWORK				3
+#define IW_ANT_FREE_PUBLIC_NETWORK			3
 #define IW_ANT_PERSONAL_DEVICE_NETWORK			4
 #define IW_ANT_EMERGENCY_SERVICES_NETWORK		5
-#define IW_ANT_TEST_NETWORK						14
-#define IW_ANT_WILDCARD_NETWORK					15
+#define IW_ANT_TEST_NETWORK				14
+#define IW_ANT_WILDCARD_NETWORK				15
 
 /* 802.11u advertisement protocol */
-#define ADVP_ANQP_PROTOCOL_ID	0
+#define ADVP_ANQP_PROTOCOL_ID				0
+#define ADVP_MIH_PROTOCOL_ID				1
 
 /* 802.11u advertisement protocol masks */
 #define ADVP_QRL_MASK					0x7f
@@ -3711,32 +3858,32 @@ typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
 /* 802.11u advertisement protocol values */
 #define ADVP_QRL_REQUEST				0x00
 #define ADVP_QRL_RESPONSE				0x7f
-#define ADVP_PAME_BI_DEPENDENT			0x00
-#define ADVP_PAME_BI_INDEPENDENT		ADVP_PAME_BI_MASK
+#define ADVP_PAME_BI_DEPENDENT				0x00
+#define ADVP_PAME_BI_INDEPENDENT			ADVP_PAME_BI_MASK
 
 /* 802.11u ANQP information ID */
-#define ANQP_ID_QUERY_LIST							256
-#define ANQP_ID_CAPABILITY_LIST						257
-#define ANQP_ID_VENUE_NAME_INFO						258
-#define ANQP_ID_EMERGENCY_CALL_NUMBER_INFO			259
+#define ANQP_ID_QUERY_LIST				256
+#define ANQP_ID_CAPABILITY_LIST				257
+#define ANQP_ID_VENUE_NAME_INFO				258
+#define ANQP_ID_EMERGENCY_CALL_NUMBER_INFO		259
 #define ANQP_ID_NETWORK_AUTHENTICATION_TYPE_INFO	260
-#define ANQP_ID_ROAMING_CONSORTIUM_LIST				261
+#define ANQP_ID_ROAMING_CONSORTIUM_LIST			261
 #define ANQP_ID_IP_ADDRESS_TYPE_AVAILABILITY_INFO	262
-#define ANQP_ID_NAI_REALM_LIST						263
-#define ANQP_ID_G3PP_CELLULAR_NETWORK_INFO			264
-#define ANQP_ID_AP_GEOSPATIAL_LOCATION				265
-#define ANQP_ID_AP_CIVIC_LOCATION					266
-#define ANQP_ID_AP_LOCATION_PUBLIC_ID_URI			267
-#define ANQP_ID_DOMAIN_NAME_LIST					268
-#define ANQP_ID_EMERGENCY_ALERT_ID_URI				269
-#define ANQP_ID_EMERGENCY_NAI						271
-#define ANQP_ID_VENDOR_SPECIFIC_LIST				56797
+#define ANQP_ID_NAI_REALM_LIST				263
+#define ANQP_ID_G3PP_CELLULAR_NETWORK_INFO		264
+#define ANQP_ID_AP_GEOSPATIAL_LOCATION			265
+#define ANQP_ID_AP_CIVIC_LOCATION			266
+#define ANQP_ID_AP_LOCATION_PUBLIC_ID_URI		267
+#define ANQP_ID_DOMAIN_NAME_LIST			268
+#define ANQP_ID_EMERGENCY_ALERT_ID_URI			269
+#define ANQP_ID_EMERGENCY_NAI				271
+#define ANQP_ID_VENDOR_SPECIFIC_LIST			56797
 
 /* 802.11u ANQP OUI */
-#define ANQP_OUI_SUBTYPE	9
+#define ANQP_OUI_SUBTYPE				9
 
 /* 802.11u venue name */
-#define VENUE_LANGUAGE_CODE_SIZE		3
+#define VENUE_LANGUAGE_CODE_SIZE			3
 #define VENUE_NAME_SIZE					255
 
 /* 802.11u venue groups */
@@ -3754,34 +3901,34 @@ typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
 #define VENUE_OUTDOOR					11
 
 /* 802.11u network authentication type indicator */
-#define NATI_UNSPECIFIED							-1
-#define NATI_ACCEPTANCE_OF_TERMS_CONDITIONS			0
-#define NATI_ONLINE_ENROLLMENT_SUPPORTED			1
-#define NATI_HTTP_HTTPS_REDIRECTION					2
-#define NATI_DNS_REDIRECTION						3
+#define NATI_UNSPECIFIED				-1
+#define NATI_ACCEPTANCE_OF_TERMS_CONDITIONS		0
+#define NATI_ONLINE_ENROLLMENT_SUPPORTED		1
+#define NATI_HTTP_HTTPS_REDIRECTION			2
+#define NATI_DNS_REDIRECTION				3
 
 /* 802.11u IP address type availability - IPv6 */
-#define IPA_IPV6_SHIFT						0
-#define IPA_IPV6_MASK						(0x03 << IPA_IPV6_SHIFT)
+#define IPA_IPV6_SHIFT					0
+#define IPA_IPV6_MASK					(0x03 << IPA_IPV6_SHIFT)
 #define	IPA_IPV6_NOT_AVAILABLE				0x00
-#define IPA_IPV6_AVAILABLE					0x01
-#define IPA_IPV6_UNKNOWN_AVAILABILITY		0x02
+#define IPA_IPV6_AVAILABLE				0x01
+#define IPA_IPV6_UNKNOWN_AVAILABILITY			0x02
 
 /* 802.11u IP address type availability - IPv4 */
-#define IPA_IPV4_SHIFT						2
-#define IPA_IPV4_MASK						(0x3f << IPA_IPV4_SHIFT)
+#define IPA_IPV4_SHIFT					2
+#define IPA_IPV4_MASK					(0x3f << IPA_IPV4_SHIFT)
 #define	IPA_IPV4_NOT_AVAILABLE				0x00
-#define IPA_IPV4_PUBLIC						0x01
+#define IPA_IPV4_PUBLIC					0x01
 #define IPA_IPV4_PORT_RESTRICT				0x02
-#define IPA_IPV4_SINGLE_NAT					0x03
-#define IPA_IPV4_DOUBLE_NAT					0x04
-#define IPA_IPV4_PORT_RESTRICT_SINGLE_NAT	0x05
-#define IPA_IPV4_PORT_RESTRICT_DOUBLE_NAT	0x06
-#define IPA_IPV4_UNKNOWN_AVAILABILITY		0x07
+#define IPA_IPV4_SINGLE_NAT				0x03
+#define IPA_IPV4_DOUBLE_NAT				0x04
+#define IPA_IPV4_PORT_RESTRICT_SINGLE_NAT		0x05
+#define IPA_IPV4_PORT_RESTRICT_DOUBLE_NAT		0x06
+#define IPA_IPV4_UNKNOWN_AVAILABILITY			0x07
 
 /* 802.11u NAI realm encoding */
-#define REALM_ENCODING_RFC4282	0
-#define REALM_ENCODING_UTF8		1
+#define REALM_ENCODING_RFC4282				0
+#define REALM_ENCODING_UTF8				1
 
 /* 802.11u IANA EAP method type numbers */
 #define REALM_EAP_TLS					13
@@ -3796,38 +3943,38 @@ typedef struct pu_buffer_status_ie pu_buffer_status_ie_t;
 #define REALM_EAP_EXPANDED				254
 
 /* 802.11u authentication ID */
-#define REALM_EXPANDED_EAP						1
+#define REALM_EXPANDED_EAP				1
 #define REALM_NON_EAP_INNER_AUTHENTICATION		2
 #define REALM_INNER_AUTHENTICATION_EAP			3
-#define REALM_EXPANDED_INNER_EAP				4
-#define REALM_CREDENTIAL						5
+#define REALM_EXPANDED_INNER_EAP			4
+#define REALM_CREDENTIAL				5
 #define REALM_TUNNELED_EAP_CREDENTIAL			6
-#define REALM_VENDOR_SPECIFIC_EAP				221
+#define REALM_VENDOR_SPECIFIC_EAP			221
 
 /* 802.11u non-EAP inner authentication type */
-#define REALM_RESERVED_AUTH			0
+#define REALM_RESERVED_AUTH				0
 #define REALM_PAP					1
 #define REALM_CHAP					2
-#define REALM_MSCHAP				3
-#define REALM_MSCHAPV2				4
+#define REALM_MSCHAP					3
+#define REALM_MSCHAPV2					4
 
 /* 802.11u credential type */
 #define REALM_SIM					1
 #define REALM_USIM					2
 #define REALM_NFC					3
-#define REALM_HARDWARE_TOKEN		4
-#define REALM_SOFTOKEN				5
-#define REALM_CERTIFICATE			6
-#define REALM_USERNAME_PASSWORD		7
-#define REALM_SERVER_SIDE			8
-#define REALM_RESERVED_CRED			9
-#define REALM_VENDOR_SPECIFIC_CRED	10
+#define REALM_HARDWARE_TOKEN				4
+#define REALM_SOFTOKEN					5
+#define REALM_CERTIFICATE				6
+#define REALM_USERNAME_PASSWORD				7
+#define REALM_SERVER_SIDE				8
+#define REALM_RESERVED_CRED				9
+#define REALM_VENDOR_SPECIFIC_CRED			10
 
 /* 802.11u 3GPP PLMN */
-#define G3PP_GUD_VERSION		0
-#define G3PP_PLMN_LIST_IE		0
+#define G3PP_GUD_VERSION				0
+#define G3PP_PLMN_LIST_IE				0
 
-/* hotspot2.0 indication element (vendor specific) */
+/** hotspot2.0 indication element (vendor specific) */
 BWL_PRE_PACKED_STRUCT struct hs20_ie {
 	uint8 oui[3];
 	uint8 type;
@@ -3836,24 +3983,24 @@ BWL_PRE_PACKED_STRUCT struct hs20_ie {
 typedef struct hs20_ie hs20_ie_t;
 #define HS20_IE_LEN 5	/* HS20 IE length */
 
-/* IEEE 802.11 Annex E */
+/** IEEE 802.11 Annex E */
 typedef enum {
-	DOT11_2GHZ_20MHZ_CLASS_12		= 81,	/* Ch 1-11			 */
-	DOT11_5GHZ_20MHZ_CLASS_1		= 115,	/* Ch 36-48			 */
-	DOT11_5GHZ_20MHZ_CLASS_2_DFS	= 118,	/* Ch 52-64			 */
-	DOT11_5GHZ_20MHZ_CLASS_3		= 124,	/* Ch 149-161		 */
-	DOT11_5GHZ_20MHZ_CLASS_4_DFS	= 121,	/* Ch 100-140		 */
-	DOT11_5GHZ_20MHZ_CLASS_5		= 125,	/* Ch 149-165		 */
-	DOT11_5GHZ_40MHZ_CLASS_22		= 116,	/* Ch 36-44,   lower */
+	DOT11_2GHZ_20MHZ_CLASS_12	= 81,	/* Ch 1-11 */
+	DOT11_5GHZ_20MHZ_CLASS_1	= 115,	/* Ch 36-48 */
+	DOT11_5GHZ_20MHZ_CLASS_2_DFS	= 118,	/* Ch 52-64 */
+	DOT11_5GHZ_20MHZ_CLASS_3	= 124,	/* Ch 149-161 */
+	DOT11_5GHZ_20MHZ_CLASS_4_DFS	= 121,	/* Ch 100-140 */
+	DOT11_5GHZ_20MHZ_CLASS_5	= 125,	/* Ch 149-165 */
+	DOT11_5GHZ_40MHZ_CLASS_22	= 116,	/* Ch 36-44,   lower */
 	DOT11_5GHZ_40MHZ_CLASS_23_DFS 	= 119,	/* Ch 52-60,   lower */
 	DOT11_5GHZ_40MHZ_CLASS_24_DFS	= 122,	/* Ch 100-132, lower */
-	DOT11_5GHZ_40MHZ_CLASS_25		= 126,	/* Ch 149-157, lower */
-	DOT11_5GHZ_40MHZ_CLASS_27		= 117,	/* Ch 40-48,   upper */
+	DOT11_5GHZ_40MHZ_CLASS_25	= 126,	/* Ch 149-157, lower */
+	DOT11_5GHZ_40MHZ_CLASS_27	= 117,	/* Ch 40-48,   upper */
 	DOT11_5GHZ_40MHZ_CLASS_28_DFS	= 120,	/* Ch 56-64,   upper */
 	DOT11_5GHZ_40MHZ_CLASS_29_DFS	= 123,	/* Ch 104-136, upper */
-	DOT11_5GHZ_40MHZ_CLASS_30		= 127,	/* Ch 153-161, upper */
-	DOT11_2GHZ_40MHZ_CLASS_32		= 83,	/* Ch 1-7,     lower */
-	DOT11_2GHZ_40MHZ_CLASS_33		= 84,	/* Ch 5-11,    upper */
+	DOT11_5GHZ_40MHZ_CLASS_30	= 127,	/* Ch 153-161, upper */
+	DOT11_2GHZ_40MHZ_CLASS_32	= 83,	/* Ch 1-7,     lower */
+	DOT11_2GHZ_40MHZ_CLASS_33	= 84,	/* Ch 5-11,    upper */
 } dot11_op_class_t;
 
 /* QoS map */

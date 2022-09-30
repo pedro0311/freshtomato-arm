@@ -225,6 +225,12 @@ enum {
 #ifdef TCONFIG_AC3200
 	MODEL_RTAC3200,
 #endif
+#ifdef TCONFIG_BCM714
+	MODEL_RTAC3100,
+#ifdef TCONFIG_AC5300
+	MODEL_RTAC5300,
+#endif
+#endif /* TCONFIG_BCM714 */
 	MODEL_R6250,
 	MODEL_R6300v2,
 	MODEL_R6400,
@@ -272,6 +278,7 @@ enum {
 #define SUP_80211N		(1 << 6)
 #define SUP_1000ET		(1 << 7)
 #define SUP_80211AC		(1 << 8)
+#define SUP_80211AC_WAVE2	(1 << 9)
 extern int check_hw_type(void);
 extern int get_model(void);
 extern int supports(unsigned long attr);

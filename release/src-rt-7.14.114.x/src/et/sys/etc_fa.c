@@ -1544,11 +1544,11 @@ fa_napt_add(fa_t *fa, ctf_ipc_t *ipc, bool v6)
 	if (v6)
 		return BCME_ERROR;
 
-#ifdef RGMII_BCM_FA
-	/* currently not supported for PPP */
-	if (ipc->ppp_ifp)
-		return BCME_ERROR;
-#endif
+//#ifdef RGMII_BCM_FA
+        /* currently not supported for PPP */
+        if (ipc->ppp_ifp)
+                return BCME_ERROR;
+//#endif
 
 	sip = ipc->tuple.sip;
 	dip = ipc->tuple.dip;
@@ -1817,7 +1817,7 @@ fa_et_up(fa_t *fa)
 	/* Enable AUX and et_up */
 	if (aux_dev) {
 		robo_fa_aux_enable(fai->robo, TRUE);
-		et_up(aux_dev->et);
+		et_fa_up(aux_dev->et);
 	}
 }
 

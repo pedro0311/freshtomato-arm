@@ -14,8 +14,11 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
 # OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
 # CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# $Id: wl.mk 525064 2015-01-08 21:08:25Z $
+# $Id: wl.mk 569486 2015-07-08 08:34:51Z $
 
+
+WLFLAGS += -DBCM943217ROUTER_ACI_SCANMORECH
+WLFLAGS += -DBPHY_DESENSE
 
 
 ifeq ($(NO_BCMDBG_ASSERT), 1)
@@ -38,6 +41,12 @@ else
 	endif
 #endif
 endif
+
+#ifdef BCMWDF
+ifeq ($(BCMWDF),1)
+	WLFLAGS += -DBCMWDF
+endif
+#endif
 
 #ifdef BCMDBG
 ifeq ($(BCMDBG),1)
@@ -326,8 +335,16 @@ endif
 	WLFILES_SRC_HI += src/wl/sys/wlc_stf.c
 	WLFILES_SRC_HI += src/wl/sys/wlc_lq.c
 	ifeq ($(WL_PROT_OBSS),1)
+		WL_MODESW := 1
 		WLFLAGS += -DWL_PROT_OBSS
 		WLFILES_SRC_HI += src/wl/sys/wlc_prot_obss.c
+	endif
+	ifeq ($(WL_MODESW),1)
+		WLFLAGS += -DWL_MODESW
+		WLFILES_SRC_HI += src/wl/sys/wlc_modesw.c
+		ifeq ($(DEBUG),1)
+			WLFLAGS += -DWL_MODESW_TIMECAL
+		endif
 	endif
 	WLFILES_SRC_HI += src/wl/sys/wlc_pm.c
 	WLFILES_SRC_HI += src/wl/sys/wlc_btcx.c
@@ -683,6 +700,10 @@ ifeq ($(WLNDIS),1)
 		WLFILES_SRC += src/wl/ndis/src/wl_nddbg.c
 		WLFILES_SRC += src/wl/shim/src/wl_shim_node_1.c
 	endif
+
+	WLFLAGS += -DWL_WLC_SHIM
+	# WLFLAGS += -DBISON_SHIM_PATCH
+	# WLFLAGS += -DCARIBOU_SHIM_PATCH
 	WLFILES_SRC += src/wl/shim/src/wl_shim.c
 	WLFILES_SRC += src/wl/shim/src/wl_shim_nodes_arr.c
 	WLFILES_SRC += src/wl/shim/src/wl_shim_node_default.c
@@ -1569,6 +1590,10 @@ endif
 ifeq ($(WLP2P),1)
 	WLFLAGS += -DWLP2P
 	WLFILES_SRC_HI += src/wl/sys/wlc_p2p.c
+	## Defining WAR4360_UCODE only for NIC driver
+	ifneq ($(WL_SPLIT),1)
+		WLFLAGS += -DWAR4360_UCODE
+	endif
 	WLFLAGS += -DWL_BSSCFG_TX_SUPR -DWIFI_ACT_FRAME
 	WLMCNX := 1
 ifndef WLMCHAN
@@ -1774,6 +1799,14 @@ else
 endif
 
 
+
+
+ifeq ($(STBLINUX),1)
+	WLFLAGS += -DSTB
+	ifeq ($(BCMEXTNVM),1)
+		WLFLAGS += -DBCMEXTNVM -DBCM47XX -DNVRAM_TARGET_DIR="\"$(NVRAM_TARGET_DIR)\""
+	endif
+endif
 
 #ifndef LINUX_HYBRID
 # AP/ROUTER with SDSTD
@@ -2494,12 +2527,6 @@ ifeq ($(PKTC_DONGLE),1)
 	WLFLAGS += -DPKTC_DONGLE
 endif
 
-#ifdef WLAIBSS
-ifeq ($(WLAIBSS), 1)
-        WLFLAGS += -DWLAIBSS
-        WLFILES_SRC_HI += src/wl/sys/wlc_aibss.c
-endif
-#endif
 
 #ifdef WLIPFO
 ifeq ($(WLIPFO), 1)
@@ -2536,6 +2563,24 @@ ifeq ($(BCM_NFCIF),1)
 	WLFILES_SRC_LO += src/shared/bcm_nfcif.c
 endif
 
+# ARMV7L
+ifeq ($(ARMV7L),1)
+	ifeq ($(STBLINUX),1)
+		WLFLAGS += -DSTBLINUX
+		WLFLAGS += -DSTB
+		ifneq ($(BCM_SECURE_DMA),1)
+                        WLFLAGS += -DBCM47XX
+                endif
+		ifeq ($(BCM_SECURE_DMA),1)
+			WLFILES_SRC_LO += src/shared/stbutils.c
+		endif
+	endif
+endif
+
+ifeq ($(STBLINUX),1)
+	WLFLAGS += -DSTBLINUX
+endif
+
 # Legacy WLFILES pathless definition, please use new src relative path
 # in make files.
 WLFILES := $(sort $(notdir $(WLFILES_SRC)))
@@ -2561,6 +2606,17 @@ endif
 
 ifeq ($(WLROAMPROF),1)
 	WLFLAGS += -DWLROAMPROF
+endif
+
+# enabling secure DMA feature
+
+ifeq ($(BCM_SECURE_DMA),1)
+	WLFLAGS += -DBCM_SECURE_DMA
+endif
+
+#Support for STBC
+ifeq ($(WL11N_STBC_RX_ENABLED),1)
+	WLFLAGS += -DWL11N_STBC_RX_ENABLED
 endif
 
 # Work-arounds for ROM compatibility - relocate struct fields that were excluded in ROMs,

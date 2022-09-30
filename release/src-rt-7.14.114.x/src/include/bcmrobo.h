@@ -81,6 +81,23 @@
 #define CFG_F_rcareq_MASK		(1 << 3)
 #define CFG_F_rcagnt_MASK		(1 << 4)
 
+#ifdef ETAGG
+#if defined(BCMFA) || defined(BCMAGG)
+/* BCM header registrants */
+#define BHDR_FA			(1 << 0)
+#define BHDR_AGG		(1 << 1)
+#define BHDR_REGISTRANTS	(BHDR_FA | BHDR_AGG)
+
+typedef enum bhdr_ports {
+	BHDR_PORT8,
+	BHDR_PORT5,
+	BHDR_PORT7,
+	MAX_BHDR_PORTS
+} bhdr_ports_t;
+#endif /* BCMFA || BCMAGG */
+#define MAX_AGG_GROUP	2
+#endif	/* ETAGG */
+
 #ifndef PAD
 #define	_PADLINE(line)	pad ## line
 #define	_XSTR(line)	_PADLINE(line)
@@ -152,6 +169,11 @@ struct robo_info_s {
 #ifdef BCMFA
 	int		aux_pid;
 #endif /* BCMFA */
+#ifdef ETAGG
+#if defined(BCMFA) || defined(BCMAGG)
+	uint8	bhdr_registered[MAX_BHDR_PORTS];	/* registered for using bcm header */
+#endif /* BCMFA || BCMAGG */
+#endif	/* ETAGG */
 };
 
 /* Power Save mode related functions */
@@ -179,12 +201,26 @@ extern void robo_eee_advertise_init(robo_info_t *robo);
 extern void robo_plc_hw_init(robo_info_t *robo);
 #endif /* PLC */
 
+#ifdef ETAGG
+#if defined(BCMFA) || defined(BCMAGG)
+extern int32 robo_bhdr_register(robo_info_t *robo, bhdr_ports_t bhdr_port, uint8 registrant);
+extern int32 robo_bhdr_unregister(robo_info_t *robo, bhdr_ports_t bhdr_port, uint8 registrant);
+#endif /* BCMFA || BCMAGG */
+#endif	/* ETAGG */
+
 #ifdef BCMFA
 extern void robo_fa_aux_init(robo_info_t *robo);
 extern void robo_fa_aux_enable(robo_info_t *robo, bool enable);
 extern void robo_fa_enable(robo_info_t *robo, bool on, bool bhdr);
 #endif
 
+#ifdef BCMAGG
+extern int32 robo_update_agg_group(robo_info_t *robo, int group, uint32 portmap);
+extern uint16 robo_get_linksts(robo_info_t *robo);
+extern int32 robo_get_portsts(robo_info_t *robo, int32 pid, uint32 *link, uint32 *speed,
+	uint32 *duplex);
+extern int32 robo_permit_fwd_rsv_mcast(robo_info_t *robo);
+#endif /* BCMAGG */
 extern void bcm_robo_check_gphy_reset(robo_info_t *robo, uint8 page, uint8 reg,
 	void *val, int len);
 #endif /* _bcm_robo_h_ */

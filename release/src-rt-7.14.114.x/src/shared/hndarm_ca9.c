@@ -29,6 +29,8 @@
 #include <armca9_core.h>
 #include <ddr_core.h>
 
+#define NO_DDRCLK_LIMIT 1
+
 #define PLL_SUP_4708	0x00000001
 #define PLL_SUP_4709	0x00000002
 #define PLL_SUP_47092	0x00000004
@@ -65,9 +67,15 @@ static struct ddr_clk ddr_clock_pll_table[] = {
 	{ 389, 0x18c00000, 0x23121219, PLL_SUP_DDR2 | PLL_SUP_DDR3, PLL_SUP_NS_ALL},
 	{ 400, 0x18000000, 0x20101019, PLL_SUP_DDR2 | PLL_SUP_DDR3, PLL_SUP_NS_ALL},
 	{ 533, 0x18000000, 0x20100c19, PLL_SUP_DDR3, PLL_SUP_NS_ALL},
+#ifdef NO_DDRCLK_LIMIT
+	{ 666, 0x17800000, 0x1e0f0919, PLL_SUP_DDR3, PLL_SUP_NS_ALL},
+	{ 775, 0x17c00000, 0x20100819, PLL_SUP_DDR3, PLL_SUP_NS_ALL},
+	{ 800, 0x18000000, 0x20100819, PLL_SUP_DDR3, PLL_SUP_NS_ALL},
+#else
 	{ 666, 0x17800000, 0x1e0f0919, PLL_SUP_DDR3, PLL_SUP_4709 | PLL_SUP_47094},
 	{ 775, 0x17c00000, 0x20100819, PLL_SUP_DDR3, PLL_SUP_4709 | PLL_SUP_47094},
 	{ 800, 0x18000000, 0x20100819, PLL_SUP_DDR3, PLL_SUP_4709 | PLL_SUP_47094},
+#endif
 	{0}
 };
 
@@ -215,7 +223,22 @@ BCMINITFN(si_arm_setclock)(si_t *sih, uint32 armclock, uint32 ddrclock, uint32 a
 		/* The password */
 		W_REG(osh, (uint32 *)IHOST_PROC_CLK_WR_ACCESS, 0xa5a501);
 
-		/* ndiv_int */
+		/* Bypass ARM clock and run on the default sysclk */
+		W_REG(osh, (uint32 *)IHOST_PROC_CLK_POLICY_FREQ, 0x82020202);
+
+		val = (1 << IHOST_PROC_CLK_POLICY_CTL__GO) |
+		      (1 << IHOST_PROC_CLK_POLICY_CTL__GO_AC);
+		W_REG(osh, (uint32 *)IHOST_PROC_CLK_POLICY_CTL, val);
+
+		do {
+			val = R_REG(osh, (uint32 *)IHOST_PROC_CLK_POLICY_CTL);
+			if ((val & (1 << IHOST_PROC_CLK_POLICY_CTL__GO)) == 0)
+				break;
+		} while (1);
+
+		/* Now it is safe to program the ARM PLL.
+		 * ndiv_int
+		 */
 		for (idx = 0; arm_pll_table[idx].clk != 0; idx++) {
 			if (armclock <= arm_pll_table[idx].clk)
 				break;

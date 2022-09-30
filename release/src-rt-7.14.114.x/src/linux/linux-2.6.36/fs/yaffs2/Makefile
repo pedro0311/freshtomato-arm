@@ -2,7 +2,7 @@
 # Makefile for the linux YAFFS filesystem routines.
 #
 
-YAFFS2_SRCDIR := ../../../../../../src-rt-7.x.main/src/yaffs2
+YAFFS2_SRCDIR := ../../../../../../src-rt-7.14.114.x/src/yaffs2
 
 obj-$(CONFIG_YAFFS_FS) += yaffs.o
 

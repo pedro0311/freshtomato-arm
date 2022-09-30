@@ -1,7 +1,7 @@
 /*
  * Driver O/S-independent utility routines
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,12 +14,16 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: bcmutils.c 458266 2014-02-26 08:05:51Z $
+ * $Id: bcmutils.c 503082 2014-09-17 06:36:56Z $
  */
 
 #ifndef __FreeBSD__
+#if defined(__NetBSD__)
+#if defined(_KERNEL)
 #include <bcm_cfg.h>
-#endif
+#endif /* defined(_KERNEL) */
+#endif /* defined(__NetBSD__) */
+#endif /* ifndef(__FreeBSD__) */
 #include <typedefs.h>
 #include <bcmdefs.h>
 #if defined(__FreeBSD__) || defined(__NetBSD__)
@@ -2717,79 +2721,40 @@ pktsetprio(void *pkt, bool update_vtag)
 	return (rc | priority);
 }
 
-static uint8 dscp2up(uint8 dscp, uint8 *qos_ie)
-{
-	uint8 *ptr = qos_ie;
-	uint8 len;
-
-	if (ptr != 0 &&
-		ptr[0] == DOT11_MNG_QOS_MAP_ID &&
-		(len = ptr[TLV_LEN_OFF]) >= QOS_MAP_FIXED_LENGTH) {
-		int i;
-
-		ptr += 2;
-
-		/* check dscp exceptions */
-		for (; len > QOS_MAP_FIXED_LENGTH; len -= 2) {
-			if (dscp == ptr[0])
-				return ptr[1];
-			ptr += 2;
-		}
-
-		/* check dscp/up ranges */
-		for (i = 0; i < QOS_MAP_FIXED_LENGTH; i += 2) {
-			uint8 low = ptr[i];
-			uint8 high = ptr[i + 1];
-			if (low == 255 && high == 255)
-				continue;
-			if (dscp >= low && dscp <= high)
-				return (i / 2);
-		}
-	}
-
-	return dscp >> IPV4_TOS_PREC_SHIFT;
-}
-
-/* Takes an Ethernet frame and sets out-of-bound PKTPRIO based on QOS map IE.
+/* Returns TRUE and DSCP if IP header found, FALSE otherwise.
  */
-uint BCMFASTPATH
-pktsetprioqos(void *pkt, uint8 *qos_ie)
+bool BCMFASTPATH
+pktgetdscp(uint8 *pktdata, uint pktlen, uint8 *dscp)
 {
 	struct ether_header *eh;
 	struct ethervlan_header *evh;
-	uint8 *pktdata;
-	uint8 *ip_body = 0;
-	uint8 dscp = 0;
-	int priority = 0;
-	int rc = 0;
+	uint8 *ip_body;
+	bool rc = FALSE;
 
-	pktdata = (uint8 *)PKTDATA(OSH_NULL, pkt);
-	ASSERT(ISALIGNED((uintptr)pktdata, sizeof(uint16)));
-
-	if (PKTLEN(OSH_NULL, pkt) <= ETHER_HDR_LEN)
-		return 0;
+	/* minimum length is ether header and IP header */
+	if (pktlen < sizeof(struct ether_header) + IPV4_MIN_HEADER_LEN)
+		return FALSE;
 
 	eh = (struct ether_header *) pktdata;
 
-	if (eh->ether_type == hton16(ETHER_TYPE_8021Q)) {
+	if (eh->ether_type == HTON16(ETHER_TYPE_IP)) {
+		ip_body = pktdata + sizeof(struct ether_header);
+		*dscp = IP_DSCP46(ip_body);
+		rc = TRUE;
+	}
+	else if (eh->ether_type == HTON16(ETHER_TYPE_8021Q)) {
 		evh = (struct ethervlan_header *)eh;
 
-		if (evh->ether_type == hton16(ETHER_TYPE_IP)) {
+		/* minimum length is ethervlan header and IP header */
+		if (pktlen >= sizeof(struct ethervlan_header) + IPV4_MIN_HEADER_LEN &&
+			evh->ether_type == HTON16(ETHER_TYPE_IP)) {
 			ip_body = pktdata + sizeof(struct ethervlan_header);
+			*dscp = IP_DSCP46(ip_body);
+			rc = TRUE;
 		}
-	} else if (eh->ether_type == hton16(ETHER_TYPE_IP)) {
-		ip_body = pktdata + sizeof(struct ether_header);
 	}
 
-	if (ip_body != 0) {
-		dscp = IP_DSCP46(ip_body);
-		priority = dscp2up(dscp, qos_ie);
-		ASSERT(priority >= 0 && priority <= MAXPRIO);
-		PKTSETPRIO(pkt, priority);
-		rc = PKTPRIO_DSCP;
-	}
-
-	return (rc | priority);
+	return rc;
 }
 
 #ifndef BCM_BOOTLOADER

@@ -3,7 +3,7 @@
  * Broadcom Home Networking Division 10/100 Mbit/s Ethernet
  * Device Driver.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: etc.c 474541 2014-05-01 18:46:52Z $
+ * $Id: etc.c 584164 2015-09-04 07:40:24Z $
  */
 
 #include <et_cfg.h>
@@ -271,6 +271,12 @@ etc_iovar(etc_info_t *etc, uint cmd, uint set, void *arg, int len)
 	vecarg = (uint *)arg;
 	ET_TRACE(("et%d: etc_iovar: cmd 0x%x\n", etc->unit, cmd));
 
+	if ((cmd != IOV_ET_CLEAR_DUMP) && (arg == NULL)) {
+		/* arg can be NULL only for IOV_ET_CLEAR_DUMP. In all
+		* other cases buffer should be passed correctly
+		*/
+		return -1;
+	}
 	switch (cmd) {
 #if defined(ETROBO) && !defined(_CFE_)
 		case IOV_ET_POWER_SAVE_MODE:
@@ -507,8 +513,7 @@ etc_iovar(etc_info_t *etc, uint cmd, uint set, void *arg, int len)
 				bcm_bprintf(&b, "fa ");
 #endif
 #ifdef BCM_GMAC3
-				if (!getvar(NULL, "gmac3_off"))
-					bcm_bprintf(&b, "gmac3 ");
+				bcm_bprintf(&b, "gmac3 ");
 #endif
 			}
 			break;
@@ -1200,10 +1205,14 @@ et_get_portinfo(etc_info_t *etc, int port_id, et_sw_port_info_t *portstatus)
 {
 	uint page = 1, reg;
 	uint16 lnk, spd, dplx;
-	robo_info_t *robo = (robo_info_t *)etc->robo;
+	robo_info_t *robo = NULL;
 
 	if ((etc == NULL) || (portstatus == NULL))
 		return -1;	/* fail */
+
+	robo = (robo_info_t *)etc->robo;
+	if ((robo == NULL) || (robo->ops == NULL))
+		return -1;  /* fail */
 
 	reg = 0;
 	robo->ops->read_reg(etc->robo, page, reg, &lnk, 2);

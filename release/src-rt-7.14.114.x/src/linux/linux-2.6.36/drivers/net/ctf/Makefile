@@ -42,7 +42,7 @@ endif
 
 ifeq (,${KERNELRELEASE})
   # Normal makefile
-  KERNELDIR := $(BASEDIR)/src-rt-7.x.main/src/linux/linux-2.6.36
+  KERNELDIR := $(BASEDIR)/src-rt-7.14.114.x/src/linux/linux-2.6.36
 
   .PHONY: all clean
   all clean :

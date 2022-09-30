@@ -179,6 +179,7 @@ static void reset_buffer_flags(struct tty_struct *tty)
 	tty->canon_head = tty->canon_data = tty->erasing = 0;
 	memset(&tty->read_flags, 0, sizeof tty->read_flags);
 	n_tty_set_room(tty);
+	check_unthrottle(tty);
 }
 
 /**
@@ -1571,7 +1572,6 @@ static int n_tty_open(struct tty_struct *tty)
 			return -ENOMEM;
 	}
 	reset_buffer_flags(tty);
-	check_unthrottle(tty);
 	tty->column = 0;
 	n_tty_set_termios(tty, NULL);
 	tty->minimum_to_wake = 1;
@@ -1616,7 +1616,6 @@ static int copy_from_read_buf(struct tty_struct *tty,
 	int retval;
 	size_t n;
 	unsigned long flags;
-	bool is_eof;
 
 	retval = 0;
 	spin_lock_irqsave(&tty->read_lock, flags);
@@ -1626,15 +1625,15 @@ static int copy_from_read_buf(struct tty_struct *tty,
 	if (n) {
 		retval = copy_to_user(*b, &tty->read_buf[tty->read_tail], n);
 		n -= retval;
-		is_eof = n == 1 &&
-			tty->read_buf[tty->read_tail] == EOF_CHAR(tty);
 		tty_audit_add_data(tty, &tty->read_buf[tty->read_tail], n);
 		spin_lock_irqsave(&tty->read_lock, flags);
 		tty->read_tail = (tty->read_tail + n) & (N_TTY_BUF_SIZE-1);
 		tty->read_cnt -= n;
 		/* Turn single EOF into zero-length read */
-		if (L_EXTPROC(tty) && tty->icanon && is_eof && !tty->read_cnt)
-			n = 0;
+		if (L_EXTPROC(tty) && tty->icanon && n == 1) {
+			if (!tty->read_cnt && (*b)[n-1] == EOF_CHAR(tty))
+				n--;
+		}
 		spin_unlock_irqrestore(&tty->read_lock, flags);
 		*b += n;
 		*nr -= n;
@@ -1689,7 +1688,7 @@ static ssize_t n_tty_read(struct tty_struct *tty, struct file *file,
 			 unsigned char __user *buf, size_t nr)
 {
 	unsigned char __user *b = buf;
-	DECLARE_WAITQUEUE(wait, current);
+	DEFINE_WAIT_FUNC(wait, woken_wake_function);
 	int c;
 	int minimum, time;
 	ssize_t retval = 0;
@@ -1758,10 +1757,6 @@ do_it_again:
 			nr--;
 			break;
 		}
-		/* This statement must be first before checking for input
-		   so that any interrupt will set the state back to
-		   TASK_RUNNING. */
-		set_current_state(TASK_INTERRUPTIBLE);
 
 		if (((minimum - (b - buf)) < tty->minimum_to_wake) &&
 		    ((minimum - (b - buf)) >= 1))
@@ -1785,10 +1780,9 @@ do_it_again:
 				break;
 			}
 			n_tty_set_room(tty);
-			timeout = schedule_timeout(timeout);
+			timeout = wait_woken(&wait, TASK_INTERRUPTIBLE, timeout);
 			continue;
 		}
-		__set_current_state(TASK_RUNNING);
 
 		/* Deal with packet mode. */
 		if (packet && b == buf) {
@@ -1802,13 +1796,13 @@ do_it_again:
 
 		if (tty->icanon && !L_EXTPROC(tty)) {
 			/* N.B. avoid overrun if nr == 0 */
-			spin_lock_irqsave(&tty->read_lock, flags);
 			while (nr && tty->read_cnt) {
 				int eol;
 
 				eol = test_and_clear_bit(tty->read_tail,
 						tty->read_flags);
 				c = tty->read_buf[tty->read_tail];
+				spin_lock_irqsave(&tty->read_lock, flags);
 				tty->read_tail = ((tty->read_tail+1) &
 						  (N_TTY_BUF_SIZE-1));
 				tty->read_cnt--;
@@ -1826,19 +1820,15 @@ do_it_again:
 					if (tty_put_user(tty, c, b++)) {
 						retval = -EFAULT;
 						b--;
-						spin_lock_irqsave(&tty->read_lock, flags);
 						break;
 					}
 					nr--;
 				}
 				if (eol) {
 					tty_audit_push(tty);
-					spin_lock_irqsave(&tty->read_lock, flags);
 					break;
 				}
-				spin_lock_irqsave(&tty->read_lock, flags);
 			}
-			spin_unlock_irqrestore(&tty->read_lock, flags);
 			if (retval)
 				break;
 		} else {
@@ -1876,7 +1866,6 @@ do_it_again:
 	if (!waitqueue_active(&tty->read_wait))
 		tty->minimum_to_wake = minimum;
 
-	__set_current_state(TASK_RUNNING);
 	size = b - buf;
 	if (size) {
 		retval = size;
@@ -1915,7 +1904,7 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 			   const unsigned char *buf, size_t nr)
 {
 	const unsigned char *b = buf;
-	DECLARE_WAITQUEUE(wait, current);
+	DEFINE_WAIT_FUNC(wait, woken_wake_function);
 	int c;
 	ssize_t retval = 0;
 
@@ -1931,7 +1920,6 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 
 	add_wait_queue(&tty->write_wait, &wait);
 	while (1) {
-		set_current_state(TASK_INTERRUPTIBLE);
 		if (signal_pending(current)) {
 			retval = -ERESTARTSYS;
 			break;
@@ -1962,9 +1950,7 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 				tty->ops->flush_chars(tty);
 		} else {
 			while (nr > 0) {
-				mutex_lock(&tty->output_lock);
 				c = tty->ops->write(tty, b, nr);
-				mutex_unlock(&tty->output_lock);
 				if (c < 0) {
 					retval = c;
 					goto break_out;
@@ -1981,10 +1967,9 @@ static ssize_t n_tty_write(struct tty_struct *tty, struct file *file,
 			retval = -EAGAIN;
 			break;
 		}
-		schedule();
+		wait_woken(&wait, TASK_INTERRUPTIBLE, MAX_SCHEDULE_TIMEOUT);
 	}
 break_out:
-	__set_current_state(TASK_RUNNING);
 	remove_wait_queue(&tty->write_wait, &wait);
 	if (b - buf != nr && tty->fasync)
 		set_bit(TTY_DO_WRITE_WAKEUP, &tty->flags);

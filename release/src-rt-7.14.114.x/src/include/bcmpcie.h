@@ -2,7 +2,7 @@
  * Broadcom PCIE
  * Software-specific definitions shared between device and host side
  * Explains the shared area between host and dongle
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,7 +52,7 @@ typedef struct {
 #define PCIE_SHARED_SET_BRPT      0x1000
 #define PCIE_SHARED_PENDING_BRPT  0x2000
 #define PCIE_SHARED_TXPUSH_SPRT		0x4000
-#define PCIE_SHARED_EVT_SEQNUM		0x8000
+#define PCIE_SHARED_EVT_SEQNUM		0x08000
 #define PCIE_SHARED_DMA_INDEX		0x10000
 
 /* D2H M2M DMA Complete Sync mechanism: Modulo-253-SeqNum or XORCSUM */
@@ -63,6 +63,7 @@ typedef struct {
 
 #define PCIE_SHARED_D2H_MAGIC		0xFEDCBA09
 #define PCIE_SHARED_H2D_MAGIC		0x12345678
+
 
 #define BCMPCIE_H2D_MSGRING_CONTROL_SUBMIT		0
 #define BCMPCIE_H2D_MSGRING_RXPOST_SUBMIT		1

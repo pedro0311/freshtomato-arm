@@ -189,28 +189,33 @@ cpu_v7_name:
  *	- cache type register is implemented
  */
 __v7_ca9mp_setup:
+	mov	r10, #(1 << 0)			@ Cache/TLB ops broadcasting for CA9
+	b	1f
+__v7_ca7mp_setup:
+	mov	r10, #0				@ no such Cache/TLB ops broadcasting for CA7
+1:
 #ifdef CONFIG_SMP
 	mrc	p15, 0, r0, c1, c0, 1
 	tst	r0, #(1 << 6)			@ SMP/nAMP mode enabled?
-	orreq	r0, r0, #(1 << 6) | (1 << 0)	@ Enable SMP/nAMP mode and
-	mcreq	p15, 0, r0, c1, c0, 1		@ TLB ops broadcasting
+	orreq	r0, r0, #(1 << 6)		@ Enable SMP/nAMP mode
+	orreq	r0, r0, r10			@ Enable Cache/TLB ops broadcasting for CA9 only
+	mcreq	p15, 0, r0, c1, c0, 1
+	isb
 #else
-	ldr	r8, =ddr_phys_offset_va
+	ldr	r8, =coherence_flag		@ get VA of coherence_flag
 	ldr	r1, =PAGE_OFFSET
 	sub	r8, r8, r1
 	ldr	r1, =CONFIG_DRAM_BASE
-	add	r8, r8, r1
-	ldr	r8, [r8, #0x0]			@ get real PHYS_OFFSET value
-	ldr	r12, =0xC0000000		@ the upper two bits of NS Ax/Bx ACP address
-	and	r12, r12, r8
-	cmp	r12, #0
-	beq	__v7_setup
+	add	r8, r8, r1			@ PA = VA - PAGE_OFFSET + CONFIG_DRAM_BASE
+	ldr	r8, [r8, #0x0]			@ get real coherence_flag value
+	cmp	r8, #0
+	beq	__v7_setup			@ non-coherence if r8 = 0
 
-	/* For NS Ax/Bx ACP on UP mode */
-acp_up:
+	/* For NS Ax/Bx ACP on UP mode and for BCM53573 */
 	mrc	p15, 0, r0, c1, c0, 1
-	orr	r0, r0, #(1 << 6)		@ Enable SMP bit for ACP on UP
-	mcr	p15, 0, r0, c1, c0, 1		@ TLB ops broadcasting
+	orr	r0, r0, #(1 << 6)		@ Enable SMP bit for ACP on UP and BCM53573
+	mcr	p15, 0, r0, c1, c0, 1
+	isb
 #endif /* CONFIG_SMP */
 
 __v7_setup:
@@ -382,6 +387,9 @@ cpu_elf_name:
 
 	.section ".proc.info.init", #alloc, #execinstr
 
+	/*
+	 * ARM Ltd. Cortex A9 processor.
+	 */
 	.type   __v7_ca9mp_proc_info, #object
 __v7_ca9mp_proc_info:
 	.long	0x410fc090		@ Required ID value
@@ -404,6 +412,29 @@ __v7_ca9mp_proc_info:
 	.long	v6_user_fns
 	.long	v7_cache_fns
 	.size	__v7_ca9mp_proc_info, . - __v7_ca9mp_proc_info
+
+	.type   __v7_ca7mp_proc_info, #object
+__v7_ca7mp_proc_info:
+	.long	0x410fc070		@ Required ID value
+	.long	0xff0ffff0		@ Mask for ID
+	.long   PMD_TYPE_SECT | \
+		PMD_SECT_AP_WRITE | \
+		PMD_SECT_AP_READ | \
+		PMD_FLAGS
+	.long   PMD_TYPE_SECT | \
+		PMD_SECT_XN | \
+		PMD_SECT_AP_WRITE | \
+		PMD_SECT_AP_READ
+	b	__v7_ca7mp_setup
+	.long	cpu_arch_name
+	.long	cpu_elf_name
+	.long	HWCAP_SWP|HWCAP_HALF|HWCAP_THUMB|HWCAP_FAST_MULT|HWCAP_EDSP|HWCAP_TLS
+	.long	cpu_v7_name
+	.long	v7_processor_functions
+	.long	v7wbi_tlb_fns
+	.long	v6_user_fns
+	.long	v7_cache_fns
+	.size	__v7_ca7mp_proc_info, . - __v7_ca7mp_proc_info
 
 	/*
 	 * Match any ARMv7 processor core.

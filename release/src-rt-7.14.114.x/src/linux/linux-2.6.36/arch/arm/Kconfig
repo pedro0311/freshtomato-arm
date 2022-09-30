@@ -103,22 +103,40 @@ config BUZZZ
 	bool "Enable BUZZZ kernel tools framework"
 	default n
 	help
-		Enable kernel tools framework: event/performance/function call tracing
+		Enable kernel tools framework: function_call|PMON|Kernel Event tracing
 
 config BUZZZ_FUNC
     bool "Enable kernel tool function call tracing"
     default n
     select KALLSYMS
     select STACKTRACE
+	depends on BUZZZ
     help
         Enable kernel tool function call tracing
+
+config BUZZZ_PMON
+	bool "Enable BUZZZ PMON tool"
+	default n
+	depends on BUZZZ
+	help
+		Enable PMON tool for perforamcne analysis
 
 config BUZZZ_KEVT
 	bool "Enable BUZZZ kernel event tracing"
 	default n
 	select KALLSYMS
+	depends on BUZZZ
 	help
-		Enable kernel event tracing
+		Enable kernel event tracing tool
+
+config BUZZZ_PMU_ARMV7_CA
+	int "Select ARMv7 CPU Core Cortex-A: 7, 9 or 15"
+	default 9
+	depends on ARM
+	depends on BUZZZ
+	depends on BUZZZ_FUNC || BUZZZ_PMON || BUZZZ_KEVT
+	help
+		Select the ARMv7 CortexA processor type, for PMU based events
 
 config HAVE_LATENCYTOP_SUPPORT
 	bool

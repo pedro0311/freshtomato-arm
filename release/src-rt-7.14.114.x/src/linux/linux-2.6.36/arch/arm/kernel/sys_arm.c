@@ -102,6 +102,10 @@ int kernel_execve(const char *filename,
 	 * We were successful.  We won't be returning to our caller, but
 	 * instead to user space by manipulating the kernel stack.
 	 */
+	/*
+	 * Add r8 and r9 into clobber registers to solve BCM53573 panic issue observed in QT.
+	 * This fixup is already seen in Linux 3.4, so merges it back to here.
+	 */
 	asm(	"add	r0, %0, %1\n\t"
 		"mov	r1, %2\n\t"
 		"mov	r2, %3\n\t"
@@ -115,7 +119,7 @@ int kernel_execve(const char *filename,
 		  "Ir" (THREAD_START_SP - sizeof(regs)),
 		  "r" (&regs),
 		  "Ir" (sizeof(regs))
-		: "r0", "r1", "r2", "r3", "ip", "lr", "memory");
+		: "r0", "r1", "r2", "r3", "r8", "r9", "ip", "lr", "memory");
 
  out:
 	return ret;

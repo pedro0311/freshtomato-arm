@@ -1,15 +1,15 @@
 /*
  *   bcmwpa.c - shared WPA-related functions
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: bcmwpa.c 456127 2014-02-17 23:17:49Z $
+ * $Id: bcmwpa.c 615250 2016-01-27 02:06:42Z $
  */
 
 #include <bcm_cfg.h>
@@ -672,15 +672,7 @@ BCMROMFN(wpa_is_gtk_encap)(uint8 *ie, uint8 **tlvs, uint *tlvs_len)
 eapol_wpa2_encap_data_t *
 BCMROMFN(wpa_find_gtk_encap)(uint8 *parse, uint len)
 {
-	eapol_wpa2_encap_data_t *data;
-
-	/* minimum length includes kde upto gtk field in eapol_wpa2_key_gtk_encap_t */
-	data = wpa_find_kde(parse, len, WPA2_KEY_DATA_SUBTYPE_GTK);
-	if (data && (data->length < EAPOL_WPA2_GTK_ENCAP_MIN_LEN)) {
-		data = NULL;
-	}
-
-	return data;
+	return wpa_find_kde(parse, len, WPA2_KEY_DATA_SUBTYPE_GTK);
 }
 
 eapol_wpa2_encap_data_t *
@@ -760,7 +752,7 @@ BCMROMFN(bcmwpa_akm2WPAauth)(uint8 *akm, uint32 *auth, bool sta_iswpa)
 		return TRUE;
 	}
 	else
-#ifdef OSEN
+#ifdef WLOSEN
 	if (!bcmp(akm, WFA_OUI, WFA_OUI_LEN)) {
 		switch (akm[WFA_OUI_LEN]) {
 		case OSEN_AKM_UNSPECIFIED:
@@ -773,7 +765,7 @@ BCMROMFN(bcmwpa_akm2WPAauth)(uint8 *akm, uint32 *auth, bool sta_iswpa)
 		return TRUE;
 	}
 	else
-#endif	/* OSEN */
+#endif	/* WLOSEN */
 	if (!bcmp(akm, WPA_OUI, DOT11_OUI_LEN)) {
 		switch (akm[DOT11_OUI_LEN]) {
 		case RSN_AKM_NONE:
@@ -816,6 +808,33 @@ BCMROMFN(bcmwpa_cipher2wsec)(uint8 *cipher, uint32 *wsec)
 		return FALSE;
 	}
 	return TRUE;
+}
+
+/* map WPA/RSN cipher to internal WSEC */
+uint32
+bcmwpa_wpaciphers2wsec(uint8 wpacipher)
+{
+	uint32 wsec = 0;
+
+	switch (wpacipher) {
+	case WPA_CIPHER_NONE:
+		break;
+	case WPA_CIPHER_WEP_40:
+	case WPA_CIPHER_WEP_104:
+		wsec = WEP_ENABLED;
+		break;
+	case WPA_CIPHER_TKIP:
+		wsec = TKIP_ENABLED;
+		break;
+	case WPA_CIPHER_AES_OCB:
+	case WPA_CIPHER_AES_CCM:
+		wsec = AES_ENABLED;
+		break;
+	default:
+		break;
+	}
+
+	return wsec;
 }
 
 bool

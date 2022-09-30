@@ -1,15 +1,15 @@
 /*
  * bcmwpa.h - interface definitions of shared WPA-related functions
  *
- * Copyright (C) 2014, Broadcom Corporation
+ * Broadcom Proprietary and Confidential. Copyright (C) 2016,
  * All Rights Reserved.
  * 
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
+ * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom;
  * the contents of this file may not be disclosed to third parties, copied
  * or duplicated in any form, in whole or in part, without the prior
- * written permission of Broadcom Corporation.
+ * written permission of Broadcom.
  *
- * $Id: bcmwpa.h 456127 2014-02-17 23:17:49Z $
+ * $Id: bcmwpa.h 615250 2016-01-27 02:06:42Z $
  */
 
 #ifndef _BCMWPA_H_
@@ -47,14 +47,6 @@
 
 #define WPA_KEY_DATA_LEN_256	256	/* allocation size of 256 for temp data pointer. */
 #define WPA_KEY_DATA_LEN_128	128	/* allocation size of 128 for temp data pointer. */
-
-/* Minimum length of WPA2 GTK encapsulation in EAPOL */
-#define EAPOL_WPA2_GTK_ENCAP_MIN_LEN  (EAPOL_WPA2_ENCAP_DATA_HDR_LEN - \
-	TLV_HDR_LEN + EAPOL_WPA2_KEY_GTK_ENCAP_HDR_LEN)
-
-/* Minimum length of WPA2 IGTK encapsulation in EAPOL */
-#define EAPOL_WPA2_IGTK_ENCAP_MIN_LEN  (EAPOL_WPA2_ENCAP_DATA_HDR_LEN - \
-	TLV_HDR_LEN + EAPOL_WPA2_KEY_IGTK_ENCAP_HDR_LEN)
 
 #define WLC_SW_KEYS(wlc, bsscfg) ((((wlc)->wsec_swkeys) || \
 	((bsscfg)->wsec & WSEC_SWFLAG)))
@@ -236,6 +228,7 @@ extern bool BCMROMFN(wpa_decr_gtk)(eapol_wpa_key_header_t *body, uint16 key_info
 extern bool BCMROMFN(bcmwpa_akm2WPAauth)(uint8 *akm, uint32 *auth, bool sta_iswpa);
 
 extern bool BCMROMFN(bcmwpa_cipher2wsec)(uint8 *cipher, uint32 *wsec);
+extern uint32 bcmwpa_wpaciphers2wsec(uint8 unicast);
 
 #ifdef MFP
 /* Calculate PMKID */

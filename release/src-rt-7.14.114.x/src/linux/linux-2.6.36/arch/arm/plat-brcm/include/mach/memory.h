@@ -9,6 +9,18 @@
 
 #define PADDR_ACP_AX		(0x80000000)
 #define PADDR_ACP_BX		(0x40000000)
+#define PADDR_ACE_BCM53573	(0x00000000)
+#define PADDR_ACE1_BCM53573	(0x80000000)
+
+/*
+ * Different coherence setting for coherence_flag
+ */
+#define COHERENCE_NONE		0
+#define COHERENCE_ACP_WAR	1
+#define COHERENCE_ACP		2
+#define COHERENCE_ACE		4
+#define COHERENCE_ACP_ACE	(COHERENCE_ACP | COHERENCE_ACE)
+#define COHERENCE_MASK		(COHERENCE_ACP_WAR | COHERENCE_ACP_ACE)
 
 /*
  * Main memory base address and size
@@ -18,14 +30,20 @@
 #ifndef PHYS_OFFSET
 #if !defined(__ASSEMBLY__)
 extern unsigned int ddr_phys_offset_va;
-#define PHYS_OFFSET	((unsigned long)ddr_phys_offset_va)
-#define ACP_WAR_ENAB()	(PHYS_OFFSET == PADDR_ACP_AX ? 1 : 0)
-#define DDR_PADDR_ACP	(PHYS_OFFSET == PADDR_ACP_AX ? PADDR_ACP_AX : PADDR_ACP_BX)
-extern unsigned int ns_acp_win_size;
-#define ACP_WIN_SIZE			(ns_acp_win_size)
+#define PHYS_OFFSET		((unsigned long)ddr_phys_offset_va)
+
+extern unsigned int ddr_phys_offset2_va;
+#define PHYS_OFFSET2   ((unsigned long)ddr_phys_offset2_va)
+
+extern unsigned int coherence_flag;
+#define ACP_WAR_ENAB()		((coherence_flag & COHERENCE_ACP_WAR) != 0)
+
+extern unsigned int coherence_win_sz;
+#define ACP_WIN_SIZE			(coherence_win_sz)
 #define ACP_WIN_LIMIT			(PHYS_OFFSET + ACP_WIN_SIZE)
 #else
 #define PHYS_OFFSET             UL(CONFIG_DRAM_BASE)
+#define PHYS_OFFSET2             UL(0xa8000000) /* Default value for NS */
 #endif	/* !__ASSEMBLY__ */
 #endif
 
@@ -40,9 +58,6 @@ extern unsigned int ns_acp_win_size;
  * to program the PAX inbound mapping registers.
  */
 #define CONSISTENT_DMA_SIZE     SZ_128M
-
-/* 2nd physical memory window */
-#define PHYS_OFFSET2		0xa8000000
 
 #if !defined(__ASSEMBLY__) && defined(CONFIG_ZONE_DMA)
 extern void bcm47xx_adjust_zones(unsigned long *size, unsigned long *hole);
@@ -62,17 +77,40 @@ extern void bcm47xx_adjust_zones(unsigned long *size, unsigned long *hole);
 #define PAGE_OFFSET1	(PAGE_OFFSET + SZ_128M)
 
 #define __phys_to_virt(phys)								\
-	(((PHYS_OFFSET) == DDR_PADDR_ACP) ? ((phys) - DDR_PADDR_ACP + PAGE_OFFSET) :	\
+	((coherence_flag & COHERENCE_MASK) ? ((phys) - (PHYS_OFFSET) + PAGE_OFFSET) :	\
 	(((phys) >= PHYS_OFFSET2) ? ((phys) - PHYS_OFFSET2 + PAGE_OFFSET1) :		\
 	((phys) - CONFIG_DRAM_BASE + PAGE_OFFSET)))
 
 #define __virt_to_phys(virt)								\
-	(((PHYS_OFFSET) == DDR_PADDR_ACP) ? ((virt) - PAGE_OFFSET + DDR_PADDR_ACP) :	\
+	((coherence_flag & COHERENCE_MASK) ? ((virt) - PAGE_OFFSET + (PHYS_OFFSET)) :	\
 	(((virt) >= PAGE_OFFSET1) ? ((virt) - PAGE_OFFSET1 + PHYS_OFFSET2) :		\
 	((virt) - PAGE_OFFSET + CONFIG_DRAM_BASE)))
 #else /* !CONFIG_SPARSEMEM */
 #define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
 #define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
 #endif /* CONFIG_SPARSEMEM */
+
+#if defined(CONFIG_BCM947XX) && defined(CONFIG_BCM_GMAC3)
+/*
+ * 4709C0: ACP_WIN_SIZE = 1GB
+ *
+ * DDR Aliasing         :
+ *
+ * 1GB     ACP region   : 0x40000000 to 0x7FFFFFFF
+ * 1GB non ACP region   : 0x80000000 to 0xBFFFFFFF
+ *
+ *      PHYS_OFFSET     : 0x40000000 =  Start of ACP region
+ *      ACP_WIN_SIZE    : 0x40000000 =  1 GBytes
+ *      ACP_WIN_LIMIT   : 0x80000000 =  Start address of non-ACP region
+ */
+
+#define __virt_to_phys_noacp(virt)     (__virt_to_phys(virt) + ACP_WIN_SIZE)
+
+#define __ddr_aliasing_enabled() \
+	((PHYS_OFFSET == 0x40000000) && \
+	 (ACP_WIN_SIZE == 0x40000000) && \
+	 (ACP_WIN_LIMIT == 0x80000000))
+
+#endif /* CONFIG_BCM947XX && CONFIG_BCM_GMAC3 */
 
 #endif

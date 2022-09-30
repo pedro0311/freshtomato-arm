@@ -2,7 +2,7 @@
  * Linux device driver tunables for
  * Broadcom BCM47XX 10/100Mbps Ethernet Device Driver
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: et_linux.h 493119 2014-07-25 02:22:51Z $
+ * $Id: et_linux.h 581745 2015-08-25 12:15:08Z $
  */
 
 #ifndef _et_linux_h_
@@ -33,6 +33,11 @@
 #define NRXBUFPOST      320             /* try to keep this # rbufs posted to the chip */
 #endif /* ET_INGRESS_QOS */
 #endif /* CONFIG_RAM_SIZE ... */
+
+#if defined(DHDAP)
+#undef NRXBUFPOST
+#define NRXBUFPOST 511
+#endif /* DHDAP */
 
 #if defined(BCM_GMAC3)
 /*
@@ -114,4 +119,7 @@
 #define RXBURSTLEN		128	/* burst length for dma writes */
 #endif
 
+#define ET_IOCTL_MAXLEN		(127*1024)	/* max length ioctl buffer required;
+						 * must be at least ET_DUMP_BUF_LEN
+						 */
 #endif	/* _et_linux_h_ */

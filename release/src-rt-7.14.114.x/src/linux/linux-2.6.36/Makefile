@@ -361,9 +361,9 @@ KBUILD_LDFLAGS_MODULE := -T $(srctree)/scripts/module-common.lds
 
 # Broadcom source tree
 KBUILD_CFLAGS += -I$(SRCBASE)/include
-KBUILD_CFLAGS += -I$(SRCBASE)/common/include
 KBUILD_CFLAGS += $(WLAN_ComponentIncPath)
 KBUILD_CFLAGS += $(WLAN_StdIncPathA)
+KBUILD_CFLAGS += -I$(SRCBASE)/common/include
 KBUILD_AFLAGS += -I$(SRCBASE)/include
 KBUILD_AFLAGS += -I$(SRCBASE)/common/include
 KBUILD_CFLAGS += -DBCMDRIVER -Dlinux
@@ -547,6 +547,11 @@ endif # $(dot-config)
 all: vmlinux
 
 # Broadcom features compile options
+
+ifneq ($(CONFIG_DHDAP),)
+KBUILD_CFLAGS += -DDHDAP
+endif
+
 ifneq ($(CONFIG_BCM_CTF),)
 KBUILD_CFLAGS += -DHNDCTF -DCTFPOOL -DCTFMAP -DPKTC -DCTF_PPPOE -DCTF_PPTP -DCTF_L2TP
 ifneq ($(CONFIG_WL_USBAP),)
@@ -565,6 +570,11 @@ ifneq ($(CONFIG_BCM_FA),)
 KBUILD_CFLAGS += -DBCMFA
 endif
 
+ifeq ($(CONFIG_BCM_AGG),y)
+KBUILD_CFLAGS += -DBCMAGG
+KBUILD_CFLAGS += -DETAGG
+endif
+
 ifneq ($(CONFIG_RGMII_BCM_FA),)
 KBUILD_CFLAGS += -DRGMII_BCM_FA
 endif
@@ -572,6 +582,10 @@ endif
 ifneq ($(CONFIG_BCM47XX),)
 KBUILD_CFLAGS += -DBCM47XX
 KBUILD_AFLAGS += -DBCM47XX
+endif
+
+ifneq ($(CONFIG_CR4_OFFLOAD),)
+KBUILD_CFLAGS += -DWLOFFLD
 endif
 
 ifneq ($(CONFIG_MTD_BCMCONF_PARTS),)
@@ -641,6 +655,10 @@ endif
 # We trigger additional mismatches with less inlining
 ifdef CONFIG_DEBUG_SECTION_MISMATCH
 KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
+endif
+
+ifneq ($(CONFIG_BMOCA),)
+KBUILD_CFLAGS += -DBCM_BMOCA
 endif
 
 # arch Makefile may override CC so keep this after arch Makefile is included

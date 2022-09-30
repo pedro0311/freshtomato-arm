@@ -84,7 +84,11 @@ void robo_chk_regs(robo_info_t *robo);
 #define PAGE_VTBL	0x05	/* ARL/VLAN Table access page */
 #define PAGE_FC		0x0a	/* Flow control register page */
 #define PAGE_GPHY_MII_P0	0x10	/* Port0 Internal GPHY MII registers page */
+#define PAGE_GPHY_MII_P1	0x11	/* Port1 Internal GPHY MII registers page */
 #define PAGE_GPHY_MII_P4	0x14	/* Last/Port4 Internal GPHY MII registers page */
+#ifdef ETAGG
+#define PAGE_TRUNKING	0x32	/* MAC-base Trunking registers page */
+#endif
 #define PAGE_MIB_P0	0x20	/* Port0 MIB page */
 #define PAGE_MIB_P1	0x21	/* Port1 MIB page */
 #define PAGE_MIB_P2	0x22	/* Port2 MIB page */
@@ -111,6 +115,9 @@ void robo_chk_regs(robo_info_t *robo);
 #define REG_CTRL_MODE	0x0B	/* Switch Mode register */
 #define REG_CTRL_MIIPO	0x0E	/* 5325: MII Port Override register */
 #define REG_CTRL_PWRDOWN 0x0F   /* 5325: Power Down Mode register */
+#ifdef ETAGG
+#define REG_CTRL_RSV_MCAST 0x2F /* NS: Reserved multicast register */
+#endif
 #define REG_CTRL_SRST	0x79	/* Software reset control register */
 #ifdef PLC
 #define REG_CTRL_MIIP5O 0x5d    /* 53115: Port State Override register for port 5 */
@@ -129,9 +136,20 @@ void robo_chk_regs(robo_info_t *robo);
 
 /* Status Page Registers */
 #define REG_STATUS_LINK	0x00	/* Link Status Summary */
+#ifdef ETAGG
+#define REG_STATUS_SPD	0x04	/* Port Speed register */
+#define REG_STATUS_DUP	0x08	/* Duplex Status register */
+#endif
 #define REG_STATUS_REV	0x50	/* Revision Register */
 
 #define REG_DEVICE_ID	0x30	/* 539x Device id: */
+
+#ifdef ETAGG
+/* MAC-base Trunking registers */
+#define REG_TRUNKING_CTL	0x00
+#define REG_TRUNKING_GRP0	0x10
+#define REG_TRUNKING_GRP1	0x12
+#endif
 
 /* Internal GPHY MII registers */
 #define REG_GPHY_MII_CTL	0x0	/* MII Control register */
@@ -1627,6 +1645,86 @@ robo_cpu_port_upd(robo_info_t *robo, pdesc_t *pdesc, int pdescsz)
 	}
 }
 
+#ifdef ETAGG
+#if defined(BCMFA) || defined(BCMAGG)
+int32
+robo_bhdr_register(robo_info_t *robo, bhdr_ports_t bhdr_port, uint8 registrant)
+{
+	bool bhdr_enabled;
+	uint8 val8;
+
+	if (!robo)
+		return -1;
+
+	if (!BCM4707_CHIP(CHIPID(robo->sih->chip)))
+		return -1;
+
+	if ((bhdr_port >= MAX_BHDR_PORTS) || ((registrant & BHDR_REGISTRANTS) == 0))
+		return -1;
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	/* BCM header is already enabled on the unit or not */
+	bhdr_enabled = (robo->bhdr_registered[bhdr_port] ? TRUE : FALSE);
+
+	/* Add registrant for BCM header */
+	robo->bhdr_registered[bhdr_port] |= registrant;
+
+	/* Enable BCM header if it's not yet enabled */
+	if (!bhdr_enabled) {
+		robo->ops->read_reg(robo, PAGE_MMR, REG_BRCM_HDR, &val8, sizeof(val8));
+		val8 |= (0x1 << bhdr_port);
+		robo->ops->write_reg(robo, PAGE_MMR, REG_BRCM_HDR, &val8, sizeof(val8));
+	}
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return 0;
+}
+
+int32
+robo_bhdr_unregister(robo_info_t *robo, bhdr_ports_t bhdr_port, uint8 registrant)
+{
+	bool bhdr_enabled;
+	uint8 val8;
+
+	if (!robo)
+		return -1;
+
+	if (!BCM4707_CHIP(CHIPID(robo->sih->chip)))
+		return -1;
+
+	if ((bhdr_port >= MAX_BHDR_PORTS) || ((registrant & BHDR_REGISTRANTS) == 0))
+		return -1;
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	/* BCM header is already enabled on the unit or not */
+	bhdr_enabled = (robo->bhdr_registered[bhdr_port] ? TRUE : FALSE);
+	robo->bhdr_registered[bhdr_port] &= ~registrant;
+
+	/* Disable BCM header if no one registered now */
+	if (bhdr_enabled && (robo->bhdr_registered[bhdr_port] == 0)) {
+		robo->ops->read_reg(robo, PAGE_MMR, REG_BRCM_HDR, &val8, sizeof(val8));
+		val8 &= ~(0x1 << bhdr_port);
+		robo->ops->write_reg(robo, PAGE_MMR, REG_BRCM_HDR, &val8, sizeof(val8));
+	}
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return 0;
+}
+#endif /* BCMFA || BCMAGG */
+#endif	/* ETAGG */
+
 #if !defined(_CFE_) && defined(BCMFA)
 /* Default assume: Do copy to aux port */
 static void
@@ -1977,6 +2075,7 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 	if (robo->devid == DEVID5325)
 		val8 &= ~(1 << 1);	/* must clear reserved bit 1 */
 	robo->ops->write_reg(robo, PAGE_VLAN, REG_VLAN_CTRL0, &val8, sizeof(val8));
+
 	/* VLAN Control 1 Register (Page 0x34, Address 1) */
 	robo->ops->read_reg(robo, PAGE_VLAN, REG_VLAN_CTRL1, &val8, sizeof(val8));
 	val8 |= ((1 << 2) |		/* enable RSV multicast V Fwdmap */
@@ -2325,7 +2424,7 @@ bcm_robo_enable_rgmii_port(robo_info_t *robo)
 	if (var)
 		rgmii_port = bcm_strtoul(var, NULL, 0);
 
-	if (SRAB_ENAB() && ROBO_IS_BCM5301X(robo->devid)) {
+	if (SRAB_ENAB(robo->sih) && ROBO_IS_BCM5301X(robo->devid)) {
 		if (rgmii_port == 5) {
 			val8 = 0;
 			robo->ops->read_reg(robo, PAGE_CTRL, REG_CTRL_PORT5_GMIIPO,
@@ -2592,8 +2691,22 @@ bcm_robo_enable_switch(robo_info_t *robo)
 				val8 = 0;
 				robo->ops->read_reg(robo, PAGE_CTRL, REG_CTRL_PORT5_GMIIPO,
 					&val8, sizeof(val8));
+#if defined(BCM_GMAC3)
+				val8 |=
+					(1 << 7) |	/* GMII_SPEED_UP_2G */
+					(1 << 6) |	/* SW_OVERRIDE */
+					(1 << 5) |	/* TXFLOW_CNTL */
+					(1 << 4) |	/* RXFLOW_CNTL */
+							/* default(2 << 2) SPEED :
+							 * 2b10 1000/2000Mbps
+							 */
+							/* default(1 << 1) DUPLX_MODE:
+							 * Full Duplex
+							 */
+					(1 << 0);	/* LINK_STS: Link up */
+#else  /* ! BCM_GMAC3 */
 				val8 &= ~(1 << 0);
-
+#endif /* ! BCM_GMAC3 */
 				robo->ops->write_reg(robo, PAGE_CTRL, REG_CTRL_PORT5_GMIIPO,
 					&val8, sizeof(val8));
 
@@ -2603,7 +2716,22 @@ bcm_robo_enable_switch(robo_info_t *robo)
 				val8 = 0;
 				robo->ops->read_reg(robo, PAGE_CTRL, REG_CTRL_PORT7_GMIIPO,
 					&val8, sizeof(val8));
+#if defined(BCM_GMAC3)
+				val8 |=
+					(1 << 7) |	/* GMII_SPEED_UP_2G */
+					(1 << 6) |	/* SW_OVERRIDE */
+					(1 << 5) |	/* TXFLOW_CNTL */
+					(1 << 4) |	/* RXFLOW_CNTL */
+							/* default(2 << 2) SPEED :
+							 * 2b10 1000/2000Mbps
+							 */
+							/* default(1 << 1) DUPLX_MODE:
+							 * Full Duplex
+							 */
+					(1 << 0);	/* LINK_STS: Link up */
+#else  /* ! BCM_GMAC3 */
 				val8 &= ~(1 << 0);
+#endif /* ! BCM_GMAC3 */
 				robo->ops->write_reg(robo, PAGE_CTRL, REG_CTRL_PORT7_GMIIPO,
 					&val8, sizeof(val8));
 			} else {	/* Port5|7: REG_CTRL_PORT0_GMIIPO + i */
@@ -3658,3 +3786,135 @@ bcm_robo_flow_control(robo_info_t *robo, bool set)
 
 	return ret;
 }
+
+#ifdef BCMAGG
+int32
+robo_update_agg_group(robo_info_t *robo, int group, uint32 portmap)
+{
+	uint8 val8;
+	uint16 val16;
+
+	if (!robo)
+		return -1;
+
+	if (!BCM4707_CHIP(CHIPID(robo->sih->chip)))
+		return -1;
+
+	if ((group >= MAX_AGG_GROUP) || (portmap >> MAX_NO_PHYS))
+		return -1;
+
+	ET_MSG(("%s: goup %d portmap 0x%x\n", __FUNCTION__, group, portmap));
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	val8 =	(1 << 3) |	/* Enable Trunking */
+		(0 << 0);	/* HASH_SEL = 0 */
+	robo->ops->write_reg(robo, PAGE_TRUNKING, REG_TRUNKING_CTL,
+		&val8, sizeof(val8));
+
+	/* Enable Trunking Group according to portmap */
+	val16 = (uint16)portmap;
+	robo->ops->write_reg(robo, PAGE_TRUNKING, REG_TRUNKING_GRP0 + (group * 2),
+		&val16, sizeof(val16));
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return 0;
+}
+
+uint16
+robo_get_linksts(robo_info_t *robo)
+{
+	uint16 link_status;
+
+	if (!robo)
+		return -1;
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	/* Read the link status of all ports */
+	robo->ops->read_reg(robo, PAGE_STATUS, REG_STATUS_LINK,
+		&link_status, sizeof(uint16));
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return link_status;
+}
+
+int32
+robo_get_portsts(robo_info_t *robo, int32 pid, uint32 *link, uint32 *speed,
+	uint32 *duplex)
+{
+	uint16 val16;
+	uint32 val32;
+
+	if (!robo || !link || !speed || !duplex)
+		return -1;
+
+	if (!BCM4707_CHIP(CHIPID(robo->sih->chip)))
+		return -1;
+
+	if (pid >= MAX_NO_PHYS)
+		return -1;
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	/* Read link status */
+	robo->ops->read_reg(robo, PAGE_STATUS, REG_STATUS_LINK,
+		&val16, sizeof(uint16));
+	*link = (uint32)((val16 >> pid) & 0x1);
+
+	/* Read speed status */
+	robo->ops->read_reg(robo, PAGE_STATUS, REG_STATUS_SPD,
+		&val32, sizeof(uint32));
+	*speed = (uint32)((val32 >> (pid * 2)) & 0x3);
+
+	/* Read duplex status */
+	robo->ops->read_reg(robo, PAGE_STATUS, REG_STATUS_DUP,
+		&val16, sizeof(uint16));
+	*duplex = (uint32)((val16 >> pid) & 0x1);
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return 0;
+}
+
+int32
+robo_permit_fwd_rsv_mcast(robo_info_t *robo)
+{
+	uint8 val8;
+
+	if (!robo)
+		return -1;
+
+	if (!BCM4707_CHIP(CHIPID(robo->sih->chip)))
+		return -1;
+
+	/* Enable management interface access */
+	if (robo->ops->enable_mgmtif)
+		robo->ops->enable_mgmtif(robo);
+
+	/* Permit to forward all reserved multicast */
+	val8 = 0;
+	robo->ops->write_reg(robo, PAGE_CTRL, REG_CTRL_RSV_MCAST,
+		&val8, sizeof(val8));
+
+	/* Disable management interface access */
+	if (robo->ops->disable_mgmtif)
+		robo->ops->disable_mgmtif(robo);
+
+	return 0;
+}
+#endif /* BCMAGG */

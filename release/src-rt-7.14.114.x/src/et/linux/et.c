@@ -1,7 +1,7 @@
 /*
  * et driver ioctl swiss army knife command.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: et.c 474541 2014-05-01 18:46:52Z $
+ * $Id: et.c 549959 2015-04-17 12:30:47Z $
  */
 
 #include <stdio.h>
@@ -103,8 +103,10 @@ main(int ac, char *av[])
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 		syserr("socket");
 
-	if (interface)
+	if (interface) {
 		strncpy(ifr.ifr_name, interface, sizeof(ifr.ifr_name));
+		ifr.ifr_name[sizeof(ifr.ifr_name)-1] = '\0';
+	}
 	else
 		et_find(s, &ifr);
 
@@ -128,6 +130,7 @@ main(int ac, char *av[])
 			syserr("etcloop");
 	} else if ((strcmp(av[optind], "dump") == 0) && (optind == (ac - 1))) {
 		DUMP_BUF_ALLOC(dbuf_alloc, dbuf, dbuf_len);
+		var.set = 0;
 		var.cmd = IOV_DUMP;
 		var.buf = dbuf;
 		var.len = dbuf_len;
@@ -443,18 +446,26 @@ main(int ac, char *av[])
 
 		printf("%s\n", dbuf);
 		DUMP_BUF_FREE(dbuf_alloc, dbuf);
-        } else if ((strcmp(av[optind], "dump_oops") == 0)) {
-		var.set = 0;
-		var.cmd = IOV_DUMP_OOPS;
-		var.buf = NULL;
-		var.len = 0;
-
-		ifr.ifr_data = (caddr_t)&var;
-		if (ioctl(s, SIOCSETGETVAR, (caddr_t)&ifr) < 0) {
-			syserr("dump_oops");
-		}
 	} else if ((strcmp(av[optind], "dump") == 0) && (optind < (ac - 1))) {
-		if (strcmp(av[optind + 1], "ctf") == 0) {
+		if (strcmp(av[optind + 1], "oops") == 0) {
+			if (ac == (optind + 2))
+				var.set = 0;
+			else
+				syserr("dump oops");
+
+			DUMP_BUF_ALLOC(dbuf_alloc, dbuf, dbuf_len);
+			var.cmd = IOV_DUMP_OOPS;
+			var.buf = dbuf;
+			var.len = dbuf_len;
+
+			ifr.ifr_data = (caddr_t)&var;
+			if (ioctl(s, SIOCSETGETVAR, (caddr_t)&ifr) < 0) {
+				DUMP_BUF_FREE(dbuf_alloc, dbuf);
+				syserr("dump oops");
+			}
+
+			printf("done\n");
+		} else if (strcmp(av[optind + 1], "ctf") == 0) {
 			if (ac == (optind + 2))
 				var.set = 0;
 			else
@@ -658,7 +669,7 @@ static void
 et_find(int s, struct ifreq *ifr)
 {
 	char proc_net_dev[] = "/proc/net/dev";
-	FILE *fp;
+	FILE *fp = NULL;
 	char buf[512], *c, *name;
 
 	ifr->ifr_name[0] = '\0';
@@ -667,7 +678,7 @@ et_find(int s, struct ifreq *ifr)
 	if (!(fp = fopen(proc_net_dev, "r")) ||
 	    !fgets(buf, sizeof(buf), fp) ||
 	    !fgets(buf, sizeof(buf), fp))
-		return;
+		goto done;
 
 	while (fgets(buf, sizeof(buf), fp)) {
 		c = buf;
@@ -678,12 +689,15 @@ et_find(int s, struct ifreq *ifr)
 		if (!strncmp(name, "aux", 3))
 			continue;
 		strncpy(ifr->ifr_name, name, IFNAMSIZ);
+		ifr->ifr_name[IFNAMSIZ-1] = '\0';
 		if (et_check(s, ifr) == 0)
 			break;
 		ifr->ifr_name[0] = '\0';
 	}
 
-	fclose(fp);
+done:
+	if (fp)
+		fclose(fp);
 }
 
 static int

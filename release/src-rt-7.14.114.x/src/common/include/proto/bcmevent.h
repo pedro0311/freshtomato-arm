@@ -1,7 +1,7 @@
 /*
  * Broadcom Event  protocol definitions
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,7 +17,7 @@
  *
  * Dependencies: proto/bcmeth.h
  *
- * $Id: bcmevent.h 455304 2014-02-13 12:52:49Z $
+ * $Id: bcmevent.h 637286 2016-05-12 06:02:56Z $
  *
  */
 
@@ -228,10 +228,15 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_BSSID		125	/* to report change in BSSID while roaming */
 #define WLC_E_TX_STAT_ERROR		126	/* tx error indication */
 #define WLC_E_BCMC_CREDIT_SUPPORT	127	/* credit check for BCMC supported */
-#define WLC_E_LAST			128	/* highest val + 1 for range checking */
-
-#if (WLC_E_LAST > 128)
-#error "WLC_E_LAST: Invalid value for last event; must be <= 128."
+#define WLC_E_PEER_TIMEOUT		128 /* silently drop a STA because of inactivity */
+#define WLC_E_AUTHORIZED	136	/* a STA been authroized for traffic */
+#define WLC_E_PROBREQ_MSG_RX	137 /* probe req with wl_event_rx_frame_data_t header */
+#define WLC_E_RRM			141	/* RRM event */
+#define WLC_E_PRE_ASSOC_RSEP_IND        149	/* assoc resp received */
+#define WLC_E_BSSTRANS_RESP		156 /* BSS Transition Response received */
+#define WLC_E_LAST			157	/* highest val + 1 for range checking */
+#if (WLC_E_LAST > 157)
+#error "WLC_E_LAST: Invalid value for last event; must be <= 157."
 #endif /* WLC_E_LAST */
 
 /* define an API for getting the string name of an event */
@@ -293,6 +298,7 @@ extern const char *bcmevent_get_name(uint event_type);
 #define WLC_E_PRUNE_WDS_PEER		15	/* AP is already known to us as a WDS peer */
 #define WLC_E_PRUNE_QBSS_LOAD		16	/* QBSS LOAD - AAC is too low */
 #define WLC_E_PRUNE_HOME_AP		17	/* prune home AP */
+#define WLC_E_PRUNE_AUTH_RESP_MAC	20	/* suppress auth resp by MAC filter */
 
 /* WPA failure reason codes carried in the WLC_E_PSK_SUP event */
 #define WLC_E_SUP_OTHER			0	/* Other reason */
@@ -481,6 +487,16 @@ typedef struct wl_intfer_event {
 	uint16 status;			/* status */
 	uint8 txfail_histo[WLINTFER_STATS_NSMPLS]; /* txfail histo */
 } wl_intfer_event_t;
+
+#define RRM_EVENT_VERSION		0
+typedef struct wl_rrm_event {
+	int16 version;
+	int16 len;
+	int16 cat;		/* Category */
+	int16 subevent;
+	char payload[1]; /* Measurement payload */
+} wl_rrm_event_t;
+
 
 /* WLC_E_PSTA_PRIMARY_INTF_IND event data */
 typedef struct wl_psta_primary_intf_event {

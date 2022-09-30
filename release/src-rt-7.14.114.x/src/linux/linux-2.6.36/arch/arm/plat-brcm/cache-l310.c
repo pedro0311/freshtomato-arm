@@ -74,23 +74,27 @@ static inline void cache_wait(void __iomem *reg, unsigned long mask)
  * indicates that a background operation is in progress.
  * When written, bit 0 must be zero.
  */
-static inline void atomic_cache_sync( void __iomem *base )
+static inline void atomic_cache_sync(void __iomem *base)
 {
+	cache_wait(base + L2X0_CACHE_SYNC, 1);
 	writel_relaxed(0, base + L2X0_CACHE_SYNC);
 }
 
-static inline void atomic_clean_line( void __iomem *base, unsigned long addr)
+static inline void atomic_clean_line(void __iomem *base, unsigned long addr)
 {
+	cache_wait(base + L2X0_CLEAN_LINE_PA, 1);
 	writel_relaxed(addr, base + L2X0_CLEAN_LINE_PA);
 }
 
-static inline void atomic_inv_line( void __iomem *base, unsigned long addr)
+static inline void atomic_inv_line(void __iomem *base, unsigned long addr)
 {
+	cache_wait(base + L2X0_INV_LINE_PA, 1);
 	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 
-static inline void atomic_flush_line( void __iomem *base, unsigned long addr)
+static inline void atomic_flush_line(void __iomem *base, unsigned long addr)
 {
+	cache_wait(base + L2X0_INV_LINE_PA, 1);
 	writel_relaxed(addr, base + L2X0_CLEAN_INV_LINE_PA);
 }
 
@@ -116,12 +120,16 @@ static void BCMFASTPATH l2x0_inv_range(unsigned long start, unsigned long end)
 	L2C_WAR_LOCK(flags);
 
 	/* Range edges could contain live dirty data */
-	if( start & (CACHE_LINE_SIZE-1) )
-		atomic_flush_line(base, start & ~(CACHE_LINE_SIZE-1));
-	if( end & (CACHE_LINE_SIZE-1) )
-		atomic_flush_line(base, end & ~(CACHE_LINE_SIZE-1));
+	if (start & (CACHE_LINE_SIZE - 1)) {
+		start &= ~(CACHE_LINE_SIZE - 1);
+		atomic_flush_line(base, start);
+		start += CACHE_LINE_SIZE;
+	}
 
-	start &= ~(CACHE_LINE_SIZE - 1);
+	if (end & (CACHE_LINE_SIZE - 1)) {
+		end &= ~(CACHE_LINE_SIZE - 1);
+		atomic_flush_line(base, end);
+	}
 
 	while (start < end) {
 		atomic_inv_line(base, start);
@@ -287,3 +295,139 @@ void __init l310_init(void __iomem *base, u32 aux_val, u32 aux_mask, int irq)
 			 ways, cache_id, aux);
 }
 EXPORT_SYMBOL(l2x0_read_event_cnt);
+
+#if defined(CONFIG_BCM947XX) && defined(CONFIG_BCM_GMAC3)
+#include <typedefs.h>
+#include <bcmdefs.h>
+
+void BCMFASTPATH_HOST cache_inv_line(void *virt_addr)
+{
+	void __iomem *base = l2x0_base;
+
+	unsigned long vaddr = (unsigned long)virt_addr;
+	unsigned long paddr = virt_to_phys(virt_addr);
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&l2x0_reg_lock, flags);
+
+	atomic_inv_line(base, paddr); /* L2 */
+	atomic_cache_sync(base);
+
+	__cpuc_inv_line(vaddr); /* L1 */
+	dsb();
+
+	atomic_inv_line(base, paddr); /* L2 */
+	atomic_cache_sync(base);
+
+	spin_unlock_irqrestore(&l2x0_reg_lock, flags);
+}
+
+void BCMFASTPATH_HOST cache_flush_line(void *virt_addr)
+{
+	void __iomem *base = l2x0_base;
+
+	unsigned long vaddr = (unsigned long)virt_addr;
+	unsigned long paddr = virt_to_phys(virt_addr);
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&l2x0_reg_lock, flags);
+
+	__cpuc_clean_line(vaddr);   /* Clean L1 dirty */
+	dsb();
+
+	atomic_flush_line(base, paddr); /* L2 */
+	atomic_cache_sync(base);
+
+	__cpuc_flush_line(vaddr); /* L1 */
+	wmb();
+
+	spin_unlock_irqrestore(&l2x0_reg_lock, flags);
+}
+
+#if (L1_CACHE_BYTES != CACHE_LINE_SIZE)
+#error "Mismatch cache line sizes"
+#endif
+
+void BCMFASTPATH_HOST cache_inv_len(void *virt_addr, unsigned int len)
+{
+	void __iomem *base = l2x0_base;
+
+	unsigned long start_vaddr = (unsigned long)virt_addr;
+	unsigned long end_vaddr = start_vaddr + len;
+	unsigned long start_paddr = virt_to_phys(virt_addr);
+	unsigned long end_paddr = start_paddr + len;
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&l2x0_reg_lock, flags);
+
+	/* Range start edge could contain live dirty data */
+	if (start_vaddr & (CACHE_LINE_SIZE - 1)) {
+		start_vaddr &= ~(CACHE_LINE_SIZE - 1);
+		__cpuc_flush_line(start_vaddr);
+		dsb();
+		start_vaddr += CACHE_LINE_SIZE;
+
+		start_paddr &= ~(CACHE_LINE_SIZE - 1);
+		atomic_flush_line(base, start_paddr);
+		start_paddr += CACHE_LINE_SIZE;
+	}
+
+	/* Range end edge could contain live dirty data */
+	if (end_vaddr & (CACHE_LINE_SIZE - 1)) {
+		end_vaddr &= ~(CACHE_LINE_SIZE - 1);
+		__cpuc_flush_line(end_vaddr);
+		dsb();
+
+		end_paddr &= ~(CACHE_LINE_SIZE - 1);
+		atomic_flush_line(base, end_paddr);
+	}
+
+	/* now do the real invalidation jobs */
+	while (start_vaddr < end_vaddr) {
+
+		__cpuc_inv_line(start_vaddr);
+		dsb();
+		start_vaddr += CACHE_LINE_SIZE;
+
+		atomic_inv_line(base, start_paddr);
+		start_paddr += CACHE_LINE_SIZE;
+	}
+
+	atomic_cache_sync(base);
+
+	spin_unlock_irqrestore(&l2x0_reg_lock, flags);
+}
+
+void BCMFASTPATH_HOST cache_flush_len(void *addr, unsigned int len)
+{
+	void __iomem *base = l2x0_base;
+
+	unsigned long start_vaddr = (unsigned long)addr & ~(CACHE_LINE_SIZE - 1);
+	unsigned long end_vaddr = (unsigned long)addr + len;
+	unsigned long start_paddr = (unsigned long)virt_to_phys((void *)start_vaddr);
+	unsigned long flags = 0;
+
+	spin_lock_irqsave(&l2x0_reg_lock, flags);
+
+	while (start_vaddr < end_vaddr) {
+		__cpuc_clean_line(start_vaddr);
+		dsb();
+
+		atomic_flush_line(base, start_paddr);
+		start_paddr += CACHE_LINE_SIZE;
+		__cpuc_flush_line(start_vaddr);
+		start_vaddr += CACHE_LINE_SIZE;
+	}
+	dsb();
+	atomic_cache_sync(base);
+
+	spin_unlock_irqrestore(&l2x0_reg_lock, flags);
+}
+
+EXPORT_SYMBOL(cache_inv_line);
+EXPORT_SYMBOL(cache_flush_line);
+
+EXPORT_SYMBOL(cache_inv_len);
+EXPORT_SYMBOL(cache_flush_len);
+
+#endif /* CONFIG_BCM947XX && CONFIG_BCM_GMAC3 */

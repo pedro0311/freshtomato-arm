@@ -2656,7 +2656,7 @@ static void start_media_server(int force)
 			mkdir_if_none(dbdir ? : "/var/run/"MEDIA_SERVER_APP);
 
 			/* persistent ident (router's mac as serial) */
-			if (!ether_atoe(nvram_safe_get("et0macaddr"), ea))
+			if (!ether_atoe(nvram_safe_get("lan_hwaddr"), ea))
 				f_read("/dev/urandom", ea, sizeof(ea));
 
 			snprintf(serial, sizeof(serial), "%02x:%02x:%02x:%02x:%02x:%02x", ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]);

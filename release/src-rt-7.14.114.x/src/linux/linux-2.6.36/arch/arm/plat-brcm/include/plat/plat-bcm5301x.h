@@ -10,6 +10,8 @@
 
 #define	SOC_DMU_BASE_PA		0x1800c000	/* Power, Clock controls */
 
+#define SOC_IDM_BASE_PA		0x18100000
+
 /*
  * UART Enumeration -
  * External UART Port 0 - PLAT_UART1_PA - ChipcommonA UART0 (ttyS0)
@@ -35,6 +37,9 @@
 
 #define IRQ_SMBUS	121
 
+/* For BCM53573 Chipcommon UART */
+#define IRQ_CC_UART	32
+
 /* PL310 L2 Cache Controller base address */
 #define	L2CC_BASE_PA		0x19022000	/* Verified */
 /* L2 is 16-ways 256KByte w/ Parity */
@@ -53,3 +58,6 @@
 #define	DRAM_LARGE_REGION_BASE	0x80000000
 #define	DRAM_MEMORY_REGION_BASE	0x00000000
 #define	DRAM_MEMORY_REGION_SIZE	SZ_128M
+
+/* BCM53573 system-mapping base address */
+#define SOC_PMU_BASE_PA		0x18012000

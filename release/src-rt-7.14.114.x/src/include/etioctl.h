@@ -1,7 +1,7 @@
 /*
  * BCM44XX Ethernet Windows device driver custom OID definitions.
  *
- * Copyright (C) 2014, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- * $Id: etioctl.h 474541 2014-05-01 18:46:52Z $
+ * $Id: etioctl.h 474120 2014-04-30 06:59:18Z $
  */
 
 #ifndef _etioctl_h_
@@ -72,8 +72,8 @@
 #define IOV_MACWR			19
 #define IOV_DUMP_FWDER		20
 #define IOV_CAP			21
-#define IOV_DUMP_OOPS		22
-#define IOV_FA_REV              51
+#define IOV_DUMP_OOPS			50
+#define IOV_FA_REV                     	51
 
 #if defined(linux) || defined(__ECOS)
 #define SIOCSETCUP		(SIOCDEVPRIVATE + ETCUP)
@@ -183,4 +183,16 @@ typedef struct et_cb {
 #define FA_CB_GET_LIVE		3
 #define FA_CB_CONNTRACK		4
 
+#ifdef ETAGG
+/* AGG commands */
+#define AGG_GET_LINKSTS	1
+#define AGG_GET_PORTSTS	2
+#define AGG_SET_GRP		3
+#define AGG_SET_BHDR		4
+
+typedef struct et_agg_ctl {
+	int32 (*fn)(void *, int, void *, void *);	/* agg control function */
+	void *dev;					/* agg dev */
+} et_agg_ctl_t;
+#endif	/* ETAGG */
 #endif /* _etioctl_h_ */
