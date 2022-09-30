@@ -31,11 +31,7 @@ ifneq ($(wildcard $(src)/$(IGSSRCDIR)),)
 	EXTRA_CFLAGS += -I$(SRCBASE)/include/emf/igs -I$(SRCBASE)/include/emf/emf
 	igs-objs := $(IGS_OBJS)
 else
-ifneq ($(CONFIG_SMP),y)
-	igs-objs := $(EMFDIR)/up/igs.o
-else
 	igs-objs := $(EMFDIR)/igs.o
-endif
 endif
 
 obj-$(CONFIG_EMF) := igs.o
