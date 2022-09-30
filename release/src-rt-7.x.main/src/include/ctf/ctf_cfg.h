@@ -60,8 +60,6 @@ typedef struct
 	uint16_t dst_port;
 
 	uint8_t protocol;
-
-	uint16_t sid;
 } ctf_tuple_t;
 
 typedef enum {
