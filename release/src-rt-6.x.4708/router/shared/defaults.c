@@ -456,7 +456,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_leddc",			"0x640000"			, 0 },	/* 100% duty cycle for LED on router (WLAN LED fix for some routers) */
 	{ "wl_bss_enabled",		"1"				, 0 },	/* Service set Enable (1) or disable (0) radio */
 	{ "wl_reg_mode",		"off"				, 0 },	/* Regulatory: 802.11H(h)/802.11D(d)/off(off) */
-
 	{ "wl_nmode",			"-1"				, 0 },	/* N-mode */
 	{ "wl_nband",			"2"				, 0 },	/* 2 - 2.4GHz, 1 - 5GHz, 0 - Auto */
 #ifdef TCONFIG_AC3200
@@ -554,32 +553,14 @@ struct nvram_tuple router_defaults[] = {
 	{ "wl_txbf",			"1"				, 0 },	/* Explicit Beamforming on = 1 , off = 0 (default: on) */
 	{ "wl_txbf_bfr_cap",		"1"				, 0 },	/* for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case */
 	{ "wl_txbf_bfe_cap",		"1"				, 0 },	/* for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case */
+#ifdef TCONFIG_BCM714
+	{ "wl_mu_features", 		"0"				, 0 },	/* mu_features=0x8000 when mu-mimo enabled */
+	{ "wl_mumimo", 			"0"				, 0 },	/* mumimo on = 1, off = 0 */	
+#endif /* TCONFIG_BCM714 */
 	{ "wl_itxbf",			"1"				, 0 },	/* Universal/Implicit Beamforming on = 1 , off = 0 (default: on) */
 	{ "wl_txbf_imp",		"1"				, 0 },	/* for Universal/Implicit Beamforming on = 1 , off = 0 (default: on - sync with wl_itxbf) */
 #endif
 #endif /* TCONFIG_BCMWL6 */
-
-#ifdef TCONFIG_PROXYSTA
-	{ "wlc_list",			""				, 0 },
-	{ "wlc_band",			""				, 0 },
-	{ "wlc_ssid", 			"FreshTomatoARM-Client"		, 0 },
-	{ "wlc_wep",			""				, 0 },
-	{ "wlc_key",			""				, 0 },
-	{ "wlc_wep_key",		""				, 0 },
-	{ "wlc_auth_mode", 		""				, 0 },
-	{ "wlc_crypto", 		""				, 0 },
-	{ "wlc_wpa_psk",		""				, 0 },
-	{ "wlc_nbw_cap", 		""				, 0 },
-	{ "wlc_ure_ssid",		""				, 0 },
-	{ "wlc_express",		"0"				, 0 },	/* 0: disabled, 1: 2.4GHz, 2: 5GHz */
-	{ "wlc_psta",			"0"				, 0 },	/* 0: disabled, 1: Proxy STA, 2: Proxy STA Repeater */
-	{ "wlc_band_ex",		""				, 0 },	/* another psta band */
-	{ "wlc_state", 			"0"				, 0 },	/* Wireless Client State */
-	{ "wlc_sbstate", 		"0"				, 0 },
-	{ "wlc_mode", 			"0"				, 0 },
-	{ "wlc_scan_state", 		"0"				, 0 },
-	{ "wlc_scan_mode", 		"0"				, 0 },	/* 0=active 1=passive */
-#endif /* TCONFIG_PROXYSTA */
 #ifdef TCONFIG_BCMBSD
 	{ "bsd_role", 		 	"3"				, 0 },	/* Band Steer Daemon; 0:Disable, 1:Primary, 2:Helper, 3:Standalone */
 	{ "bsd_hport", 		 	"9877"				, 0 },	/* BSD helper port */
@@ -592,16 +573,26 @@ struct nvram_tuple router_defaults[] = {
 	{ "bsd_dbg", 		 	"1"				, 0 },
 #endif
 #ifdef TCONFIG_AC3200 /* Tri-Band */
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"bsd_ifnames",			"eth1 eth2 eth3"		, 0 },
+#else
 	{"bsd_ifnames",			"eth2 eth1 eth3"		, 0 },
+#endif
 	{"wl0_bsd_steering_policy",	"0 5 3 -52 0 110 0x22"		, 0 },
 	{"wl1_bsd_steering_policy",	"80 5 3 -82 0 0 0x20"		, 0 },
 	{"wl2_bsd_steering_policy",	"0 5 3 -82 0 0 0x28"		, 0 },
 	{"wl0_bsd_sta_select_policy",	"10 -52 0 110 0 1 1 0 0 0 0x122", 0 },
 	{"wl1_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x24"	, 0 },
 	{"wl2_bsd_sta_select_policy",	"10 -82 0 0 0 1 1 0 0 0 0x28"	, 0 },
+#ifdef TCONFIG_AC5300 /* Tri-Band */
+	{"wl0_bsd_if_select_policy",	"eth3 eth2"			, 0 },
+	{"wl1_bsd_if_select_policy",	"eth1 eth3"			, 0 },
+	{"wl2_bsd_if_select_policy",	"eth1 eth2"			, 0 },
+#else
 	{"wl0_bsd_if_select_policy",	"eth3 eth1"			, 0 },
 	{"wl1_bsd_if_select_policy",	"eth2 eth3"			, 0 },
 	{"wl2_bsd_if_select_policy",	"eth2 eth1"			, 0 },
+#endif
 	{"wl0_bsd_if_qualify_policy",	"0 0x0"				, 0 },	/* bandwidth utilization disabled ; all clients possible (0x0) */
 	{"wl1_bsd_if_qualify_policy",	"60 0x0"			, 0 },	/* bandwidth utilization is less than 60 % ; all clients possible (0x0) */
 	{"wl2_bsd_if_qualify_policy",	"0 0x4"				, 0 },	/* bandwidth utilization disabled ; only AC clients possible (0x04) */
@@ -665,7 +656,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "env_path",			""				, 0 },
 	{ "manual_boot_nv",		"0"				, 0 },
 	{ "t_fix1",			""				, 0 },
-
+/* GMAC3 variables */
+#ifdef TCONFIG_BCM714
+	{ "stop_gmac3",			"1"				, 0 },	/* disable gmac3 (blackbox!) */
+	{ "gmac3_enable",		"0"				, 0 },
+#endif /* TCONFIG_BCM714 */
 /* basic-ddns */
 	{ "ddnsx0",			""				, 0 },
 	{ "ddnsx1",			""				, 0 },
@@ -808,7 +803,7 @@ struct nvram_tuple router_defaults[] = {
 /* advanced-wireless */
 	{ "wl_txant",			"3"				, 0 },
 	{ "wl_txpwr",			"0"				, 0 },
-#ifdef TCONFIG_AC3200
+#if defined(TCONFIG_AC3200) && !defined(TCONFIG_BCM714)
 	{ "wl_maxassoc",		"32"				, 0 },	/* SDK7: 32 for DHD (default); wlconf will check wireless driver maxassoc tuneable value */
 	{ "wl_bss_maxassoc",		"32"				, 0 },
 #else

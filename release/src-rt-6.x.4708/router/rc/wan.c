@@ -740,7 +740,7 @@ void create_wanx_mac(char *prefix, int mac_plus)
 	char buffer[32] = { 0 };
 	char nvtmp[16];
 
-	snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("et0macaddr"));	/* get et0 MAC address for LAN */
+	snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("lan_hwaddr"));	/* get LAN MAC address (usually et0) */
 	inc_mac(buffer, mac_plus);						/* MAC + value for wanX */
 	nvram_set(strcat_r(prefix, "_mac", nvtmp), buffer);			/* save it to nvram */
 	logmsg(LOG_INFO, "Create and save wanX mac address - WAN: %s - Address: %s", prefix, buffer);

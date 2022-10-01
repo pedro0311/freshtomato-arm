@@ -995,10 +995,79 @@ static void web_print_wlchan(uint chan, int band)
 		web_printf(",[%d, 0]", chan);
 }
 
+#ifdef TCONFIG_BCM714
+static const uint8 wf_chspec_bw_mhz[] = {5, 10, 20, 40, 80, 160, 160};
+
+#define WF_NUM_BW \
+	(sizeof(wf_chspec_bw_mhz)/sizeof(uint8))
+
+/* convert bandwidth from chanspec to MHz */
+static uint bw_chspec_to_mhz(chanspec_t chspec)
+{
+	uint bw;
+
+	bw = (chspec & WL_CHANSPEC_BW_MASK) >> WL_CHANSPEC_BW_SHIFT;
+	return (bw >= WF_NUM_BW ? 0 : wf_chspec_bw_mhz[bw]);
+}
+
+/* 
+ * bw in MHz, return the channel count from the center channel to the
+ * the channel at the edge of the band
+ */
+static int center_chan_to_edge(uint bw)
+{
+	/* edge channels separated by BW - 10MHz on each side
+	 * delta from cf to edge is half of that,
+	 * MHz to channel num conversion is 5MHz/channel
+	 */
+	return (((bw - 20) / 2) / 5);
+}
+
+/* 
+ * return channel number of the low edge of the band
+ * given the center channel and BW
+ */
+static int channel_low_edge(uint center_ch, uint bw)
+{
+	return (center_ch - center_chan_to_edge(bw));
+}
+
+/* return control channel given center channel and side band */
+static int channel_to_ctl_chan(uint center_ch, uint bw, uint sb)
+{
+	return (channel_low_edge(center_ch, bw) + sb * 4);
+}
+
+/*
+ * This function returns the channel number that control traffic is being sent on
+ */
+static int chspec_ctlchan(chanspec_t chspec)
+{
+	uint center_chan;
+	uint bw_mhz;
+	uint sb;
+
+	/* Is there a sideband ? */
+	if (CHSPEC_IS20(chspec)) {
+		return CHSPEC_CHANNEL(chspec);
+	} else {
+		sb = CHSPEC_CTL_SB(chspec) >> WL_CHANSPEC_CTL_SB_SHIFT;
+
+		bw_mhz = bw_chspec_to_mhz(chspec);
+		center_chan = CHSPEC_CHANNEL(chspec) >> WL_CHANSPEC_CHAN_SHIFT;
+
+		return (channel_to_ctl_chan(center_chan, bw_mhz, sb));
+	}
+}
+#endif /* TCONFIG_BCM714 */
+
 static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrlsb)
 {
-	chanspec_t c = 0, *chanspec;
+	chanspec_t c = 0;
+#ifndef TCONFIG_BCM714
+	chanspec_t *chanspec;
 	int buflen;
+#endif
 	wl_uint32_list_t *list;
 	unsigned int count, i = 0;
 
@@ -1006,6 +1075,56 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 	if (!buf)
 		return 0;
 
+#ifdef TCONFIG_BCM714
+	memset(buf, 0, WLC_IOCTL_MAXLEN);
+	if (wl_iovar_getbuf(ifname, "chanspecs", &c, sizeof(chanspec_t), buf, WLC_IOCTL_MAXLEN) < 0) {
+		free((void *)buf);
+		return 0;
+	}
+
+	count = 0;
+	list = (wl_uint32_list_t *)buf;
+	logmsg(LOG_DEBUG, "*** %s: list->count = %d ifname = %s", __FUNCTION__, list->count, ifname);
+	for (i = 0; i < list->count; i++) {
+		c = (chanspec_t)list->element[i];
+		/* create the actual control channel */
+		int chan = chspec_ctlchan(c);
+
+		/* country & band are already set at this time ... no need to check! ifname is enough */
+
+		/* filter the list (no support yet for FT) */
+		if (CHSPEC_IS8080(c) || CHSPEC_IS160(c)) {
+			continue;
+		}
+
+		/* filter the list (only upper or lower - no support for the other ones yet ... ) for 40 MHz BW and up! */
+		if ((bw >= 40) && CHSPEC_CTL_SB(c) != ctrlsb) {
+			continue;
+		}
+		
+		if ((bw == 80)) {
+			if (CHSPEC_IS80(c)) {
+				web_print_wlchan(chan, band);
+				count++;
+				continue;
+			}
+		}
+		else if ((bw == 40)) {
+			if (CHSPEC_IS40(c)) {
+				web_print_wlchan(chan, band);
+				count++;
+				continue;
+			}
+		}
+		else if ((bw == 20)) {
+			if (CHSPEC_IS20(c)) {
+				web_print_wlchan(chan, band);
+				count++;
+				continue;
+			}
+		}
+	}	
+#else /* SDK5 + SDK6.37 + SDK7 - keep "old" way for now! */
 	strcpy(buf, "chanspecs");
 	buflen = strlen(buf) + 1;
 
@@ -1054,6 +1173,7 @@ static int _wlchanspecs(char *ifname, char *country, int band, int bw, int ctrls
 		web_print_wlchan(chan, band);
 		count++;
 	}
+#endif /* TCONFIG_BCM714 */
 
 	free((void *)buf);
 
@@ -1227,6 +1347,8 @@ static int print_wif(int idx, int unit, int subunit, void *param)
 		foreach(cap, caps, next) {
 			if (!strcmp(cap, "mbss16"))
 				max_no_vifs = 16;
+			if (!strcmp(cap, "mbss8"))
+				max_no_vifs = 8;
 			if (!strcmp(cap, "mbss4"))
 				max_no_vifs = 4;
 		}

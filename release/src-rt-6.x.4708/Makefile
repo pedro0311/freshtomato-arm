@@ -171,7 +171,15 @@ ifneq ($(ASUS_TRX),0)
 # for Asus RT-N18U, RT-AC56U, RT-AC67U, RT-AC68U (V3), RT-AC68R, RT-AC68P, RT-N66U_C1, RT-AC66U_B1, RT-AC1750_B1, RT-AC1900P/U, DSL-AC68U
 ifeq ($(ASUS_TRX),ASUS)
 ifeq ($(CONFIG_BCM7),y)
+ifeq ($(CONFIG_BCM714),y)
+ifeq ($(AC5300),y) # for Tri-Band SDK7.14 (currently only Asus RT-AC5300)
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC5300,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC5300-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+else # for Dual-Band SDK7.14 (currently only Asus RT-AC3100)
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3100,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC3100-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
+else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
 else
 ifeq ($(BCMSMP),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC56U,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC56U-ARM_NG-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -376,7 +384,7 @@ what:
 # NO_CIFS NO_SSH NO_SAMBA NO_HTTPS NO_XXTP NO_LIBOPT NO_ZEBRA NOWL
 # ARM DHDAP SAMBA3 OPENVPN WIREGUARD IPV6SUPP EBTABLES NTFS UFSD MEDIASRV BBEXTRAS USBEXTRAS BCM57 SLIM NOCAT NGINX TINC CTF FANCTRL
 # GMAC3 DNSSEC NFS BTCLIENT BTGUI TR_EXTRAS SNMP HFS UPS DNSCRYPT STUBBY PPTPD TOR IPSEC RAID MICROSD USBAP NO_USBAPP NANO MULTIWAN OPENSSL11
-# IPERF AC3200 BSD BCMSMP PROXYSTA DPSTA GRO BCMFA NAND BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES MDNS IRQBALANCE ROAM NO_TRXKEY
+# IPERF AC3200 BSD BCMSMP PROXYSTA DPSTA GRO BCMFA NAND BRCM_NAND_JFFS2 CONNTRACK_TOOL CRASH_LOG NAMESPACES MDNS IRQBALANCE ROAM NO_TRXKEY AC5300 BCM714
 
 define RouterOptions
 	@( \
@@ -633,6 +641,10 @@ define RouterOptions
 			sed -i "/TCONFIG_5301X/d" $(1); \
 			echo "TCONFIG_5301X=y" >>$(1); \
 		fi; \
+		if [ "$(BCM714)" = "y" ]; then \
+			sed -i "/TCONFIG_BCM714/d" $(1); \
+			echo "TCONFIG_BCM714=y" >>$(1); \
+		fi; \
 	fi; \
 	if [ "$(DHDAP)" = "y" ]; then \
 		sed -i "/TCONFIG_DHDAP/d" $(1); \
@@ -641,6 +653,10 @@ define RouterOptions
 	if [ "$(AC3200)" = "y" ]; then \
 		sed -i "/TCONFIG_AC3200/d" $(1); \
 		echo "TCONFIG_AC3200=y" >>$(1); \
+	fi; \
+	if [ "$(AC5300)" = "y" ]; then \
+		sed -i "/TCONFIG_AC5300/d" $(1); \
+		echo "TCONFIG_AC5300=y" >>$(1); \
 	fi; \
 	if [ "$(BSD)" = "y" ]; then \
 		sed -i "/TCONFIG_BCMBSD/d" $(1); \
@@ -1064,6 +1080,12 @@ define KernelConfig
 	else \
 		echo "# CONFIG_BCM57XX is not set" >>$(1); \
 	fi; \
+	if [ "$(BCM_714)" = "y" ]; then \
+		sed -i "/CONFIG_CR4_OFFLOAD/d" $(1); \
+		echo "# CONFIG_CR4_OFFLOAD is not set" >>$(1); \
+		sed -i "/CONFIG_PLAT_UART_CLOCKS/d" $(1); \
+		echo "# CONFIG_PLAT_UART_CLOCKS is not set" >>$(1); \
+	fi; \
 	if [ "$(DPSTA)" = "y" ]; then \
 		sed -i "/CONFIG_DPSTA/d" $(1); \
 		echo "CONFIG_DPSTA=m" >>$(1); \
@@ -1370,6 +1392,19 @@ ea6350v2z:
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y TUXERA=y TUXERA_HFS=y BSD=y IRQBALANCE=y
 
+ifeq ($(CONFIG_BCM714),y)
+ac5300-128e:
+	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac5300-128z:
+	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3100-128e:
+	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+
+ac3100-128z:
+	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+else
 ifeq ($(CONFIG_BCM7),y)
 r7900init:
 	@$(MAKE) bin ARM=y BCM7=y NVRAM_64K=y NAND=y BCMSMP=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=32 B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y BUILD_DESC="initial" NETGEAR_CHK="R7900" BOARDID_FILE="compatible_r7900.txt" FW_CFG_FILE="tomato_cfg.h"
@@ -1394,6 +1429,7 @@ ac3200-128e:
 
 ac3200-128z:
 	@$(MAKE) z ARM=y BCM7=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" TUXERA=y TUXERA_HFS=y AC3200=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+endif
 endif
 
 setprofile:
@@ -1494,6 +1530,13 @@ help:
 	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
 	@echo "ea6350v2e       EA6350v2 build VPN"
 	@echo "ea6350v2z       EA6350v2 build AIO"
+ifeq ($(CONFIG_BCM714),y)
+	@echo "ASUS ARM714 Builds"
+	@echo "ac5300-128e     RT-AC5300 build VPN - 128K NVRAM"
+	@echo "ac5300-128z     RT-AC5300 build AIO - 128K NVRAM"
+	@echo "ac3100-128e     RT-AC3100 build VPN - 128K NVRAM (NOT for AC88U)"
+	@echo "ac3100-128z     RT-AC3100 build AIO - 128K NVRAM (NOT for AC88U)"
+else
 ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"
 	@echo "ac3200e         RT-AC3200 build VPN"
@@ -1504,6 +1547,7 @@ ifeq ($(CONFIG_BCM7),y)
 	@echo "r8000z          R7900/R8000 build AIO"
 	@echo "r7900init       R7900 init build"
 	@echo "r8000init       R8000 init build"
+endif
 endif
 	@echo ""
 	@echo "..etc..      other build configs"

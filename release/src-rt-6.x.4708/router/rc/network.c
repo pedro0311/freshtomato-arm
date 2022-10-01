@@ -156,6 +156,19 @@ void wlconf_pre(void)
 		if (nvram_match(strlcat_r(prefix, "nband", tmp, sizeof(tmp)), "1") && /* only for wlX_nband == 1 for 5 GHz */
 		    nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
 		    nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
+
+#ifdef TCONFIG_BCM714
+			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1") ||
+			    nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check turbo/nitro qam on or off ? (keep it simple) */
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 4 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "4");
+			}
+			else {
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 0 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "0");
+			}
+#endif /* TCONFIG_BCM714 */
+
 			logmsg(LOG_DEBUG, "*** %s: set vhtmode 1 for %s", __FUNCTION__, word);
 			eval("wl", "-i", word, "vhtmode", "1");
 		}
@@ -163,10 +176,17 @@ void wlconf_pre(void)
 		         nvram_match(strlcat_r(prefix, "vreqd", tmp, sizeof(tmp)), "1") &&
 		         nvram_match(strlcat_r(prefix, "nmode", tmp, sizeof(tmp)), "-1")) { /* only for mode AUTO == -1 */
 
+
 			if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "1")) { /* check turbo qam on or off ? */
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 3 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "3");
 			}
+#ifdef TCONFIG_BCM714
+			else if (nvram_match(strlcat_r(prefix, "turbo_qam", tmp, sizeof(tmp)), "2")) { /* check nitro qam on or off ? */
+				logmsg(LOG_DEBUG, "*** %s: set vht_features 7 for %s", __FUNCTION__, word);
+				eval("wl", "-i", word, "vht_features", "7");
+			}
+#endif /* TCONFIG_BCM714 */
 			else {
 				logmsg(LOG_DEBUG, "*** %s: set vht_features 0 for %s", __FUNCTION__, word);
 				eval("wl", "-i", word, "vht_features", "0");
@@ -212,7 +232,7 @@ static void set_lan_hostname(const char *wan_hostname)
 	nvram_set("lan_hostname", wan_hostname);
 	if ((wan_hostname == NULL) || (*wan_hostname == 0)) {
 		/* derive from et0 mac address */
-		s = nvram_get("et0macaddr");
+		s = nvram_get("lan_hwaddr");
 		if (s && strlen(s) >= 17) {
 			snprintf(hostname, sizeof(hostname), "FT-%c%c%c%c%c%c%c%c%c%c%c%c", s[0], s[1], s[3], s[4], s[6], s[7], s[9], s[10], s[12], s[13], s[15], s[16]);
 

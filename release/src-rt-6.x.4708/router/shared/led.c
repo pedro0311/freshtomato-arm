@@ -156,9 +156,15 @@ int do_led(int which, int mode)
 //				   WLAN  DIAG  WHITE AMBER   DMZ  AOSS  BRIDGE USB2 USB3    5G   52G
 //				   ----  ----  ----- -----   ---  ----  ------ ---- ----    --   ---
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+	static int ac5300[]	= { 254,   -4,     5,  255,   19,    3,  254,   16,   17,  254,  254 };
+#endif
 	static int ac3200[]	= { 254,  -15,     5,  255,   14,    3,  254,  255,  255,  254,  254 };
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #elif defined(CONFIG_BCMWL6A)
+#ifdef TCONFIG_BCM714
+	static int ac3100[]	= { 254,   -4,     5,  255,   19,    3,  254,   16,   17,  254};
+#endif /* TCONFIG_BCM714 */
 	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int dslac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
 	static int ac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
@@ -211,11 +217,17 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200 */
+		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200, RT-AC3100, RT-AC5300 */
 		switch (model) {
 #ifdef TCONFIG_AC3200
 			case MODEL_RTAC3200:
+#ifdef TCONFIG_AC5300
+			case MODEL_RTAC5300:
+#endif /* TCONFIG_AC5300 */
 #elif defined(CONFIG_BCMWL6A)
+#ifdef TCONFIG_BCM714
+			case MODEL_RTAC3100:
+#endif /* TCONFIG_BCM714 */
 			case MODEL_AC15:
 			case MODEL_AC18:
 			case MODEL_RTN18U:
@@ -247,6 +259,26 @@ int do_led(int which, int mode)
 
 	switch (nvram_match("led_override", "1") ? MODEL_UNKNOWN : model) {
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+	case MODEL_RTAC5300:
+		b = ac5300[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G) ||
+		    (which == LED_52G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With Media Bridge ON on any module, disable second WAN LED */
+			if (nvram_match("wl0_mode", "psta") ||
+			    nvram_match("wl1_mode", "psta") ||
+			    nvram_match("wl2_mode", "psta")) {
+				b = 255; /* disabled */
+			}
+		}
+		break;
+#endif /* TCONFIG_AC5300 */
 	case MODEL_RTAC3200:
 		b = ac3200[which];
 		if ((which == LED_WLAN) ||
@@ -294,6 +326,24 @@ int do_led(int which, int mode)
 		}
 		break;
 #elif defined(CONFIG_BCMWL6A)
+#ifdef TCONFIG_BCM714
+	case MODEL_RTAC3100:
+		b = ac3100[which];
+		if ((which == LED_WLAN) ||
+		    (which == LED_5G)) { /* non GPIO LED */
+			do_led_nongpio(model, which, mode);
+		}
+		else if (which == LED_BRIDGE) { /* non GPIO LED */
+			do_led_bridge(mode);
+		}
+		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With Media Bridge ON on any module, disable second WAN LED */
+			if (nvram_match("wl0_mode", "psta") ||
+			    nvram_match("wl1_mode", "psta")) {
+				b = 255; /* disabled */
+			}
+		}
+		break;
+#endif /* TCONFIG_BCM714 */
 	case MODEL_RTAC67U:
 		b = ac67u[which];
 		if ((which == LED_WLAN) ||
@@ -699,6 +749,13 @@ void led_setup(void)
 		/* turn off non GPIO LEDs and some special cases like power LED - - do_led(...) will take care of the other ones */
 		switch (model) {
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+		case MODEL_RTAC5300:
+			set_gpio(GPIO_03, T_HIGH); /* disable power led */
+			set_gpio(GPIO_04, T_LOW); /* disable button led */
+			disable_led_wanlan();
+			break;
+#endif /* TCONFIG_AC5300 */
 		case MODEL_R8000:
 			set_gpio(GPIO_03, T_HIGH); /* disable power led color amber */
 			disable_led_wanlan();
@@ -709,6 +766,13 @@ void led_setup(void)
 			disable_led_wanlan();
 			break;
 #elif defined(CONFIG_BCMWL6A)
+#ifdef TCONFIG_BCM714
+		case MODEL_RTAC3100:
+			set_gpio(GPIO_03, T_HIGH); /* disable power led */
+			set_gpio(GPIO_04, T_LOW); /* disable button led */
+			disable_led_wanlan();
+			break;
+#endif /* TCONFIG_BCM714 */
 		case MODEL_DIR868L:
 			set_gpio(GPIO_00, T_HIGH); /* disable power led color amber */
 			break;
@@ -838,6 +902,25 @@ void do_led_nongpio(int model, int which, int mode)
 {
 	switch (model) {
 #ifdef TCONFIG_AC3200
+#ifdef TCONFIG_AC5300
+	case MODEL_RTAC5300:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 9 1"); /* 2.4 GHz - eth1, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 9 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 9 1"); /* 5 GHz - eth2, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 9 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_52G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth3 ledbh 9 1"); /* second 5 GHz - eth3, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth3 ledbh 9 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+#endif /* TCONFIG_AC5300 */
 	case MODEL_RTAC3200:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 10 1"); /* 2.4 GHz - eth2, see Asus SRC */
@@ -856,6 +939,20 @@ void do_led_nongpio(int model, int which, int mode)
 		}
 		break;
 #elif defined(CONFIG_BCMWL6A)
+#ifdef TCONFIG_BCM714
+	case MODEL_RTAC3100:
+		if (which == LED_WLAN) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 9 1"); /* 2.4 GHz - eth1, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 9 0");
+			else if (mode == LED_PROBE) return;
+		}
+		else if (which == LED_5G) {
+			if (mode == LED_ON) system("/usr/sbin/wl -i eth2 ledbh 9 1"); /* 5 GHz - eth2, see Asus SRC */
+			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth2 ledbh 9 0");
+			else if (mode == LED_PROBE) return;
+		}
+		break;
+#endif /* TCONFIG_BCM714 */
 	case MODEL_AC15:
 	case MODEL_AC18:
 	case MODEL_RTN18U:

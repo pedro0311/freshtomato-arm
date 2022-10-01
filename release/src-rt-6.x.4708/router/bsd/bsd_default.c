@@ -87,7 +87,7 @@ void bsd_default_nvram_config(bsd_info_t *info)
 	int idx;
 
 #ifdef TOMATO_ARM
-#ifdef TOMATO_CONFIG_BCM7 /* Tri-Band */
+#ifdef TOMATO_CONFIG_AC3200 /* Tri-Band */
 			BSD_INFO("set default to bsd_5glo_2g_5ghi_policy\n");
 			bsd_default_policy = bsd_5glo_2g_5ghi_policy;
 #else /* Dual-Band */

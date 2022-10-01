@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("rstats_enable,rstats_path,rstats_stime,rstats_offset,rstats_exclude,rstats_sshut,et0macaddr,cifs1,cifs2,jffs2_on,rstats_bak"); %>
+//	<% nvram("rstats_enable,rstats_path,rstats_stime,rstats_offset,rstats_exclude,rstats_sshut,lan_hwaddr,cifs1,cifs2,jffs2_on,rstats_bak"); %>
 
 function backupNameChanged() {
 	if (location.href.match(/^(http.+?\/.+\/)/))
@@ -252,7 +252,7 @@ function init() {
 <div class="section" id="backup-section">
 	<div>
 		<script>
-			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="FreshTomato_rstats_'+nvram.et0macaddr.replace(/:/g, '').toLowerCase()+'">');
+			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="FreshTomato_rstats_'+nvram.lan_hwaddr.replace(/:/g, '').toLowerCase()+'">');
 		</script>
 		<div style="display:inline">.gz &nbsp;
 			<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">

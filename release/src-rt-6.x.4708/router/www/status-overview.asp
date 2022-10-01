@@ -594,7 +594,7 @@ function init() {
 	}
 
 	createFieldTable('', [
-		{ title: 'Router MAC Address', text: nvram.et0macaddr },
+		{ title: 'Router MAC Address', text: nvram.lan_hwaddr },
 		{ title: 'Router IP Addresses', text: t },
 		{ title: 'Gateway', text: nvram.lan_gateway, ignore: nvram.wan_proto != 'disabled' },
 /* IPV6-BEGIN */
