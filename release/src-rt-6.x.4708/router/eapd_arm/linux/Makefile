@@ -48,17 +48,7 @@ CFLAGS += -DBCM_BSD
 endif
 #endif
 
-ifeq ($(wildcard $(SRCBASE)/router/eapd${BCMEX}/*.c),)
-ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
-all:
-	-cp prebuilt/eapd eapd
-else #for single-core
-all:
-	-cp prebuilt/up/eapd eapd
-endif
-else
 all: eapd
-endif
 
 eapd: $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)

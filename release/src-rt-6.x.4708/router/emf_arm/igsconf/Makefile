@@ -14,14 +14,9 @@ ALL_OBJS = igsu.o igsu_linux.o
 CCFLAGS = -Os -Wall -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/shared -I$(SRCBASE)/include/emf/igs
 CCFLAGS	+= $(WLAN_ComponentIncPath)
 
-ifeq ($(wildcard $(SRCBASE)/router/emf$(BCMEX)/igsconf/*.c),)
-ifeq ($(TCONFIG_BCMSMP),y) #for dual-core
+ifneq ($(wildcard ./prebuilt),)
 all:
 	-cp prebuilt/igs igs
-else #for single-core
-all:
-	-cp prebuilt/up/igs igs
-endif
 else
 all: igs
 endif
