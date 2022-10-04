@@ -47,6 +47,8 @@ RT-N66U_C1			BCM4708C0   	      0x0646       00        0x1103    0x00000110 // o
 RT-AC1900P			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC1900P
 RT-AC68U B2			BCM4709C0   	      0x072F       00        0x1500    0x00000110 // odmpid=RT-AC68U
 RT-AC3200			BCM4709               0x072f       <MAC>     0x1101
+RT-AC3100			BCM4709               0x072F       <MAC>     0x1102    0x00000110 // model=RT-AC3100 (assume the same base values like RT-AC5300)
+RT-AC5300			BCM4709               0x072F       <MAC>     0x1102    0x00000110 // model=RT-AC5300
 
 R7900				BCM4709               0x0665       32        0x1101 // board_id=U12H315T30_NETGEAR
 R8000				BCM4709               0x0665       32        0x1101 // board_id=U12H315T00_NETGEAR
@@ -85,7 +87,7 @@ int check_hw_type(void)
 	case 0xf646:	/* EA6700, WZR-1750 */
 	case 0xd646:	/* EA6900 */
 	case 0xe646:	/* EA6200, EA6350v1 */
-	case 0x072f:	/* AC3200, RT-AC1900P, RT-AC68U B2 */
+	case 0x072f:	/* RT-AC5300, AC3200, RT-AC1900P, RT-AC68U B2 */
 		return HW_BCM4708; /* and also for 4709 right now!  */
 #endif /* CONFIG_BCMWL6A */
 	}
@@ -103,6 +105,12 @@ int get_model(void)
 
 #ifdef CONFIG_BCMWL6A
 	if (hw == HW_BCM4708) {
+#ifdef TCONFIG_BCM714
+		if ((nvram_match("model", "RT-AC3100")) || (nvram_match("productid", "RT-AC3100")) || (nvram_match("odmpid", "RT-AC3100"))) return MODEL_RTAC3100;
+#ifdef TCONFIG_AC5300
+		if ((nvram_match("model", "RT-AC5300")) || (nvram_match("productid", "RT-AC5300")) || (nvram_match("productid", "RT-AC5300R"))) return MODEL_RTAC5300;
+#endif
+#endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("boardnum", "32"))) return MODEL_R8000;
 		if ((nvram_match("boardrev", "0x1101")) && (nvram_match("model", "RT-AC3200"))) return MODEL_RTAC3200;

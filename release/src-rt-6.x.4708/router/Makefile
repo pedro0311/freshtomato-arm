@@ -261,8 +261,13 @@ obj-$(TCONFIG_BCMARM) += nas$(BCMEX)
 obj-y += prebuilt
 obj-$(TCONFIG_EMF) += emf$(BCMEX)
 obj-$(TCONFIG_EMF) += igs$(BCMEX)
+ifeq ($(TCONFIG_BCM714),y)
+obj-$(TCONFIG_DPSTA) += dpsta$(BCMEX)
+obj-$(TCONFIG_DHDAP) += dhd$(BCMEX)
+else
 obj-$(TCONFIG_DPSTA) += dpsta
 obj-$(TCONFIG_DHDAP) += dhd $(if $(TCONFIG_BCM7),pciefd)
+endif # TCONFIG_BCM714
 obj-y += igmpproxy
 obj-y += rc
 obj-y += rom
@@ -484,7 +489,23 @@ ifeq ($(TCONFIG_BCMARM),y)
  LINUX_KERNEL=2.6.36
  export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
- ifeq ($(TCONFIG_BCM7),y)
+ ifeq ($(TCONFIG_BCM714),y)
+  export BCMSRC=src-rt-7.14.114.x/src
+
+  ifeq ($(TCONFIG_DHDAP),y)
+   export CONFIG_DHDAP=y
+   export CFLAGS += -D__CONFIG_DHDAP__
+   export SRCBASE_DHD := $(SRCBASE)/../dhd/src
+   export SRCBASE_FW := $(SRCBASE)/../4365/src
+   export SRCBASE_SYS := $(SRCBASE_DHD)
+   include Makefile.fw
+  endif # TCONFIG_DHDAP
+
+  ifeq ($(TCONFIG_GMAC3),y)
+   export CFLAGS += -D__CONFIG_GMAC3__
+  endif
+
+ else ifeq ($(TCONFIG_BCM7),y)
   export BCMSRC=src-rt-7.x.main/src
 
   ifeq ($(TCONFIG_DHDAP),y)
@@ -511,9 +532,9 @@ ifeq ($(TCONFIG_BCMARM),y)
    export CFLAGS += -D__CONFIG_GMAC3__
   endif
 
- else # TCONFIG_BCM7
+ else # SDK6
   export BCMSRC=src-rt-6.x.4708
- endif # TCONFIG_BCM7
+ endif # TCONFIG_BCM714
 
  WLAN_ComponentsInUse := bcmwifi clm ppr olpc
  include $(SRCBASE)/makefiles/WLAN_Common.mk
@@ -1051,17 +1072,6 @@ roldconf: config/conf
 ifeq ($(TCONFIG_BCMARM),y)
 	@$(MAKE) compressed-clean
 endif
-ifeq ($(TCONFIG_DHDAP),y)
-ifeq ($(TCONFIG_BCM7),y)
-ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
-ifeq ($(wildcard /opt/hndtools-armeabi-2011.09),)
-	# build 43602 src and to match its path
-	sudo rm -rf /opt/hndtools-armeabi-2011.09
-	sudo ln -sf $(SRCBASE)/toolchains/hndtools-armeabi-2011.09 /opt/hndtools-armeabi-2011.09
-endif
-endif
-endif
-endif
 
 kconf:
 	@$(MAKE) -C $(LINUXDIR) config
@@ -1094,7 +1104,7 @@ oldconfig oldconf: koldconf roldconf dependconf bboldconf
 # overrides and extra dependencies
 #
 
-
+ifneq ($(TCONFIG_BCM714),y) # only for BCM7
 ifeq ($(TCONFIG_BCM7),y)
 $(obj-pciefd):
 # Build PCIEFD firmware only if it is not prebuilt
@@ -1113,6 +1123,7 @@ ifneq ($(wildcard $(SRCBASE_FW)/wl/sys),)
 		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data.c.GEN && \
 		cp $(SRCBASE_FW)/dongle/rte/wl/builds/$(patsubst %-obj,%,$@)/$(PCIEFD_TARGET_NAME)/wlc_clm_data_inc.c $(SRCBASE_FW)/wl/clm/src/wlc_clm_data_inc.c.GEN; \
 	fi;
+endif
 endif
 endif
 

@@ -18,7 +18,7 @@
 
 <script>
 
-//	<% nvram("cstats_enable,cstats_path,cstats_stime,cstats_offset,cstats_exclude,cstats_include,cstats_sshut,et0macaddr,cifs1,cifs2,jffs2_on,cstats_bak,cstats_all,cstats_labels"); %>
+//	<% nvram("cstats_enable,cstats_path,cstats_stime,cstats_offset,cstats_exclude,cstats_include,cstats_sshut,lan_hwaddr,cifs1,cifs2,jffs2_on,cstats_bak,cstats_all,cstats_labels"); %>
 
 function fix(name) {
 	var i;
@@ -285,7 +285,7 @@ REMOVE-END */
 <div class="section" id="backup-section">
 	<div>
 		<script>
-			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="FreshTomato_cstats_'+nvram.et0macaddr.replace(/:/g, '').toLowerCase()+'">');
+			W('<input type="text" size="40" maxlength="64" id="backup-name" name="backup_name" onchange="backupNameChanged()" value="FreshTomato_cstats_'+nvram.lan_hwaddr.replace(/:/g, '').toLowerCase()+'">');
 		</script>
 		<div style="display:inline">.gz &nbsp;
 			<input type="button" name="f_backup_button" id="backup-button" onclick="backupButton()" value="Backup">

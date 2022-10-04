@@ -20,10 +20,12 @@ CFLAGS += -DTOMATO_ARM
 endif
 
 ifeq ($(TCONFIG_BCM7),y)
-CFLAGS += -DTOMATO_CONFIG_BCM7
 CFLAGS += ${WLAN_StdIncPathA}
 endif
 
+ifeq ($(TCONFIG_AC3200),y)
+CFLAGS += -DTOMATO_CONFIG_AC3200
+endif
 
 vpath %.c $(SRCBASE)/shared $(WLAN_ComponentSrcDirs)
 

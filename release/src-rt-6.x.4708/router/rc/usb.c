@@ -1067,6 +1067,12 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTAC68U:
 		case MODEL_RTAC68UV3:
 		case MODEL_RTAC1900P:
+#ifdef TCONFIG_BCM714
+		case MODEL_RTAC3100:
+#ifdef TCONFIG_AC5300
+		case MODEL_RTAC5300:
+#endif
+#endif /* TCONFIG_BCM714 */
 		case MODEL_R6400:
 		case MODEL_R6400v2:
 		case MODEL_R6700v1:

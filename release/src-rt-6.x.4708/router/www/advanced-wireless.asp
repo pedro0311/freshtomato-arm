@@ -18,12 +18,13 @@
 <script src="wireless.jsx?_http_id=<% nv(http_id); %>"></script>
 <script>
 
-//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wl_bss_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,pci/3/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,pci/3/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_nband,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp,wl_mfp,wl_user_rssi"); %>
+//	<% nvram("t_model_name,wl_security_mode,wl_afterburner,wl_auth,wl_bcn,wl_dtim,wl_frag,wl_frameburst,wl_gmode_protection,wl_plcphdr,wl_rate,wl_rateset,wl_rts,wl_wme,wl_wme_no_ack,wl_wme_apsd,wl_txpwr,wl_mrate,t_features,wl_distance,wl_maxassoc,wl_bss_maxassoc,wlx_hpamp,wlx_hperx,wl_reg_mode,wl_country_code,0:ccode,1:ccode,2:ccode,pci/1/1/ccode,pci/2/1/ccode,pci/3/1/ccode,wl_country_rev,0:regrev,1:regrev,2:regrev,pci/1/1/regrev,pci/2/1/regrev,pci/3/1/regrev,wl_btc_mode,wl_mimo_preamble,wl_obss_coex,wl_mitigation,wl_mitigation_ac,wl_nband,wl_phytype,wl_corerev,wl_igs,wl_wmf_bss_enable,wl_wmf_ucigmp_query,wl_wmf_mdata_sendup,wl_wmf_ucast_upnp,wl_wmf_igmpq_filter,wl_atf,wl_turbo_qam,wl_txbf,wl_txbf_bfr_cap,wl_txbf_bfe_cap,wl_itxbf,wl_txbf_imp,wl_mumimo,wl_mu_features,wl_mfp,wl_user_rssi"); %>
 
 //	<% wlcountries(); %>
 
 hp = features('hpamp');
 nphy = features('11n');
+acwave2 = features('11acwave2'); /* for MU-MIMO (and NITRO QAM support 2,4 GHz & 5 GHz) SDK7.14 */
 var cprefix = 'advanced_wireless';
 
 function verifyFields(focused, quiet) {
@@ -101,6 +102,25 @@ function save() {
 			/* for Explicit TX Beamforming */
 			E('_wl'+u+'_txbf_bfr_cap').value = E('_wl'+u+'_txbf').value; /* turn on (1)/off (0) with wl_txbf */
 			E('_wl'+u+'_txbf_bfe_cap').value = E('_wl'+u+'_txbf').value;
+
+/* BCMWL714-BEGIN */
+			/* MU-MIMO SDK7.14 */
+			if ((E('_wl'+u+'_txbf').value == 1) && (acwave2 == 1)) {
+				if (E('_wl'+u+'_mumimo').value == 1) {
+					E('_wl'+u+'_txbf_bfr_cap').value = 2; /* MU-MIMO (2) on */
+					E('_wl'+u+'_txbf_bfe_cap').value = 2; /* MU-MIMO (2) on */
+					E('_wl'+u+'_mu_features').value = '0x8000'; /* mu_feature on */
+				}
+				else { /* disabled */
+					E('_wl'+u+'_txbf_bfr_cap').value = 1; /* MU-MIMO (1) off */
+					E('_wl'+u+'_txbf_bfe_cap').value = 1; /* MU-MIMO (1) off */
+					E('_wl'+u+'_mu_features').value = '0'; /* mu_feature off */
+				}
+			}
+			else { /* default */
+				E('_wl'+u+'_mu_features').value = '0'; /* mu_feature off */
+			}
+/* BCMWL714-END */
 
 			/* for Implicit TX Beamforming */
 			E('_wl'+u+'_txbf_imp').value = E('_wl'+u+'_itxbf').value; /* turn on (1)/off (0) with wl_itxbf */
@@ -192,6 +212,9 @@ function init() {
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfr_cap" name="wl'+u+'_txbf_bfr_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_bfe_cap" name="wl'+u+'_txbf_bfe_cap">');
 			W('<input type="hidden" id="_wl'+u+'_txbf_imp" name="wl'+u+'_txbf_imp">');
+/* BCMWL714-BEGIN */
+			W('<input type="hidden" id="_wl'+u+'_mu_features" name="wl'+u+'_mu_features">');
+/* BCMWL714-END */		    
 			W('<input type="hidden" id="_wl'+u+'_bss_maxassoc" name="wl'+u+'_bss_maxassoc">');
 /* EMF-BEGIN */
 			W('<input type="hidden" id="_wl'+u+'_igs" name="wl'+u+'_igs">');
@@ -283,12 +306,20 @@ function init() {
 					value: nvram['wl'+u+'_wme_apsd'] },
 				{ title: 'Wireless Multicast Forwarding', name: 'wl'+u+'_wmf_bss_enable', type: 'select', options: [['0','Disable *'],['1','Enable']],
 					value: nvram['wl'+u+'_wmf_bss_enable'] },
-				{ title: 'Turbo QAM (Requires Wireless Network Mode set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']],
-					value: nvram['wl'+u+'_turbo_qam'], hidden: (nvram['wl'+u+'_phytype'] != 'v') || (nvram['wl'+u+'_nband'] == 1) },
+				{ title: 'Turbo QAM (Requires Wireless Network Mode set to Auto)', name: 'wl'+u+'_turbo_qam', type: 'select', options: [['0','Disable'],['1','Enable *']
+/* BCMWL714-BEGIN */
+																			,['2','Nitro QAM']
+/* BCMWL714-END */
+																		       ],
+					value: nvram['wl'+u+'_turbo_qam'], hidden: (!acwave2 && ((nvram['wl'+u+'_phytype'] != 'v') || (nvram['wl'+u+'_nband'] == 1))) },
 				{ title: 'Explicit beamforming', name: 'wl'+u+'_txbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 					value: nvram['wl'+u+'_txbf'], hidden: (nvram['wl'+u+'_corerev'] < 40) },
 				{ title: 'Universal/Implicit beamforming', name: 'wl'+u+'_itxbf', type: 'select', options: [['0','Disable'],['1','Enable *']],
 					value: nvram['wl'+u+'_itxbf'], hidden: (nvram['wl'+u+'_corerev'] < 40) },
+/* BCMWL714-BEGIN */
+				{ title: 'MU-MIMO', name: 'wl'+u+'_mumimo', type: 'select', options: [['0','Disable *'],['1','Enable']],
+					value: nvram['wl'+u+'_mumimo'] },
+/* BCMWL714-END */
 				{ title: 'Air Time Fairness', name: 'wl'+u+'_atf', type: 'select', options: [['0','Disable *'],['1','Enable']],
 					value: nvram['wl'+u+'_atf'] }
 			]);

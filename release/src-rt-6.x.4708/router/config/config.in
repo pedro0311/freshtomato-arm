@@ -246,12 +246,17 @@ config TCONFIG_BCMWL6
 	default n
 
 config TCONFIG_BCMWL6A
-	bool "BCM WL 6.30.143"
+	bool "BCM sdk 6.37"
 	depends on TCONFIG_BCMARM && TCONFIG_BCMWL6
 	default n
 
 config TCONFIG_BCM7
-	bool "Bcm sdk 7"
+	bool "BCM sdk 7"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_BCM714
+	bool "BCM sdk 7.14"
 	depends on TCONFIG_BCMARM
 	default n
 
@@ -261,6 +266,10 @@ config TCONFIG_BCMSMP
 
 config TCONFIG_AC3200
 	bool "Tri-Band router (AC3200 or more)"
+	default n
+
+config TCONFIG_AC5300
+	bool "Tri-Band router SDK7.14 (AC5300)"
 	default n
 
 config TCONFIG_DHDAP

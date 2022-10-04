@@ -521,9 +521,9 @@ void set_mac(const char *ifname, const char *nvname, int plus)
 		logmsg(LOG_DEBUG, "*** %s: %d - %s", __FUNCTION__, __LINE__, ifname);
 
 	if (!ether_atoe(nvram_safe_get(nvname), (unsigned char *)&ifr.ifr_hwaddr.sa_data)) {
-		if (!ether_atoe(nvram_safe_get("et0macaddr"), (unsigned char *)&ifr.ifr_hwaddr.sa_data)) {
+		if (!ether_atoe(nvram_safe_get("lan_hwaddr"), (unsigned char *)&ifr.ifr_hwaddr.sa_data)) {
 			/* goofy et0macaddr, make something up */
-			nvram_set("et0macaddr", "00:01:23:45:67:89");
+			nvram_set("lan_hwaddr", "00:01:23:45:67:89");
 			ifr.ifr_hwaddr.sa_data[0] = 0;
 			ifr.ifr_hwaddr.sa_data[1] = 0x01;
 			ifr.ifr_hwaddr.sa_data[2] = 0x23;
