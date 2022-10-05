@@ -641,9 +641,11 @@ define RouterOptions
 			sed -i "/TCONFIG_5301X/d" $(1); \
 			echo "TCONFIG_5301X=y" >>$(1); \
 		fi; \
+		sed -i "/TCONFIG_BCM714/d" $(1); \
 		if [ "$(BCM714)" = "y" ]; then \
-			sed -i "/TCONFIG_BCM714/d" $(1); \
 			echo "TCONFIG_BCM714=y" >>$(1); \
+		else \
+			echo "# TCONFIG_BCM714 is not set" >>$(1); \
 		fi; \
 	fi; \
 	if [ "$(DHDAP)" = "y" ]; then \
