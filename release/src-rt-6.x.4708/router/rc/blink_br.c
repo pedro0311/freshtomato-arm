@@ -22,6 +22,9 @@ int get_lanports_status(int model)
 			/* LAN Ports: 0 1 2 3 */
 			if (
 #ifdef TCONFIG_BCMARM
+#ifdef TCONFIG_BCM714
+			    (model == MODEL_RTAC3100) ||
+#endif /* TCONFIG_BCM714 */
 			    (model == MODEL_RTAC56U)
 #else
 			    (model == MODEL_RTN15U)
@@ -81,6 +84,9 @@ int blink_br_main(int argc, char *argv[])
 #ifdef TCONFIG_AC5300
 		    (model == MODEL_RTAC5300) ||
 #endif /* TCONFIG_AC5300 */
+#ifdef TCONFIG_BCM714
+		    (model == MODEL_RTAC3100) ||
+#endif /* TCONFIG_BCM714 */
 		    (model == MODEL_WS880) ||
 		    (model == MODEL_RTN18U) ||
 		    (model == MODEL_RTAC56U)

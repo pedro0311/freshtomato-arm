@@ -163,7 +163,7 @@ int do_led(int which, int mode)
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
-	static int ac3100[]	= { 254,   -4,     5,  255,   19,    3,  254,   16,   17,  254};
+	static int ac3100[]	= { 254,   -4,     5,  255,   19,    3,   21,   16,   17,  254};
 #endif /* TCONFIG_BCM714 */
 	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int dslac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
@@ -333,7 +333,7 @@ int do_led(int which, int mode)
 		    (which == LED_5G)) { /* non GPIO LED */
 			do_led_nongpio(model, which, mode);
 		}
-		else if (which == LED_BRIDGE) { /* non GPIO LED */
+		else if (which == LED_BRIDGE) { /* special case: non GPIO LED and turn on second WAN LED (red is GPIO 5) */
 			do_led_bridge(mode);
 		}
 		else if (which == LED_WHITE) { /* WAN LED ; Keep it simple: With Media Bridge ON on any module, disable second WAN LED */
