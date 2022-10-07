@@ -38,7 +38,11 @@ int get_lanports_status(int model)
 			}
 #ifdef TCONFIG_BCMARM
 			/* LAN Ports: 1 2 3 4 */
-			else if ((model == MODEL_WS880) ||
+			else if (
+#ifdef TCONFIG_AC5300
+				 (model == MODEL_RTAC5300) ||
+#endif /* TCONFIG_AC5300 */
+				 (model == MODEL_WS880) ||
 			         (model == MODEL_RTN18U)) {
 				if ((sscanf(s, "Port 1: %s", a) == 1) ||
 				    (sscanf(s, "Port 2: %s", a) == 1) ||
@@ -74,6 +78,9 @@ int blink_br_main(int argc, char *argv[])
 	while(1) {
 		if (
 #ifdef TCONFIG_BCMARM
+#ifdef TCONFIG_AC5300
+		    (model == MODEL_RTAC5300) ||
+#endif /* TCONFIG_AC5300 */
 		    (model == MODEL_WS880) ||
 		    (model == MODEL_RTN18U) ||
 		    (model == MODEL_RTAC56U)
