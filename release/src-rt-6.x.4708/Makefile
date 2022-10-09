@@ -856,6 +856,20 @@ define BusyboxOptions
 	)
 endef
 
+define extrawlConfig
+	@( \
+	if [ "$(CONFIG_BCM714)" = "y" ]; then \
+		cp -f $(SRCBASE)/router/dpsta/arm_714/dpsta.h $(SRCBASE)/router/dpsta/dpsta.h ; \
+		cp -f $(SRCBASE)/router/dpsta/arm_714/dpsta_linux.h $(SRCBASE)/router/dpsta/dpsta_linux.h ; \
+		cp -f $(SRCBASE)/router/dpsta/arm_714/dpsta.o $(SRCBASE)/router/dpsta/linux/dpsta.o ; \
+	else \
+		cp -f $(SRCBASE)/router/dpsta/arm/dpsta.h $(SRCBASE)/router/dpsta/dpsta.h ; \
+		cp -f $(SRCBASE)/router/dpsta/arm/dpsta_linux.h $(SRCBASE)/router/dpsta/dpsta_linux.h ; \
+		cp -f $(SRCBASE)/router/dpsta/arm/dpsta.o $(SRCBASE)/router/dpsta/linux/dpsta.o ; \
+	fi; \
+	)
+endef
+
 define KernelConfig
 	@( \
 	sed -i "/CONFIG_NVRAM_SIZE/d" $(1); \
@@ -1250,6 +1264,7 @@ define KernelConfig
 		sed -i "s/# CONFIG_ZFS is not set/CONFIG_ZFS=m/g" $(1); \
 	fi; \
 	)
+	$(call extrawlConfig, $(1))
 endef
 
 
@@ -1396,16 +1411,16 @@ r1do:
 
 ifeq ($(CONFIG_BCM714),y)
 ac5300-128e:
-	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DPSTA=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
 
 ac5300-128z:
-	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" AC3200=y AC5300=y BSD=y DHDAP=y GMAC3=y NOWL=y DPSTA=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
 
 ac3100-128e:
-	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+	@$(MAKE) e ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DPSTA=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
 
 ac3100-128z:
-	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
+	@$(MAKE) z ARM=y BCM7=y BCM714=y NVRAM_128K=y NVSIZE="128" NAND=y BCMSMP=y ASUS_TRX="ASUS" BSD=y DHDAP=y GMAC3=y NOWL=y DPSTA=y DEBUGFS=y BCM_RECVFILE=y LINUX_MTD=64 BRCM_NAND_JFFS2=y IRQBALANCE=y
 else
 ifeq ($(CONFIG_BCM7),y)
 r7900init:

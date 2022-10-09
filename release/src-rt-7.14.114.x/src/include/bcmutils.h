@@ -1,7 +1,7 @@
 /*
  * Misc useful os-independent macros and functions.
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmutils.h 547946 2015-04-10 02:11:19Z $
+ * $Id: bcmutils.h 637513 2016-05-13 01:19:15Z $
  */
 
 #ifndef	_bcmutils_h_
@@ -77,6 +77,10 @@ struct bcmstrbuf {
 	char *origbuf;	/* unmodified pointer to orignal buffer */
 	unsigned int origsize;	/* unmodified orignal buffer size in bytes */
 };
+
+/* forward definition of ether_addr structure used by some function prototypes */
+struct ether_addr;
+extern int bcm_ether_atoe(const char *p, struct ether_addr *ea);
 
 /* ** driver-only section ** */
 #ifdef BCMDRIVER
@@ -366,9 +370,6 @@ extern int pktpool_dbg_notify(pktpool_t *pktp);
 extern int pktpool_stats_dump(pktpool_t *pktp, pktpool_stats_t *stats);
 #endif /* BCMDBG_POOL */
 
-/* forward definition of ether_addr structure used by some function prototypes */
-
-struct ether_addr;
 
 extern int ether_isbcast(const void *ea);
 extern int ether_isnulladdr(const void *ea);
@@ -540,7 +541,6 @@ int bcmstrnicmp(const char* s1, const char* s2, int cnt);
 
 /* ethernet address */
 extern char *bcm_ether_ntoa(const struct ether_addr *ea, char *buf);
-extern int BCMROMFN(bcm_ether_atoe)(const char *p, struct ether_addr *ea);
 
 /* ip address */
 struct ipv4_addr;
@@ -566,7 +566,7 @@ extern void bcm_mdelay(uint ms);
 		return NULL;								\
 	}
 #endif /* BCMDBG */
-#else /* DONGLEBUILD && WLC_HIGH && !WLTEST && !BCMINTERNAL && !BCMDBG_DUMP && !ATE_BUILD */
+#else
 #define NVRAM_RECLAIM_CHECK(name)
 #endif 
 

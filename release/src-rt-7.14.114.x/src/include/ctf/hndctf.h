@@ -47,7 +47,7 @@
 #define CTF_ACTION_PPTP_DEL     (1 << 12)
 #define CTF_ACTION_L2TP_ADD     (1 << 13)
 #define CTF_ACTION_L2TP_DEL     (1 << 14)
-
+#define CTF_ACTION_ROAM		(1 << 15)
 
 #define CTF_SUSPEND_TCP		(1 << 0)
 #define CTF_SUSPEND_UDP		(1 << 1)
@@ -123,8 +123,7 @@ do { \
 	((unsigned char *)&addr)[3]
 
 #ifdef CTF_IPV6
-#define FRAG_IPV6_UDP_H        (NULL + 1)
-#define FRAG_IPV6_UDP_DUMMY_PORT       0
+#define FRAG_IPV6_UDP_PROTO	0xF6
 #endif
 
 #ifdef CTF_PPTP
@@ -272,6 +271,7 @@ struct ctf_conn_tuple {
 	uint32	sip[IPADDR_U32_SZ], dip[IPADDR_U32_SZ];
 	uint16	sp, dp;
 	uint8	proto;
+	uint16	sid;
 };
 
 typedef struct ctf_nat {

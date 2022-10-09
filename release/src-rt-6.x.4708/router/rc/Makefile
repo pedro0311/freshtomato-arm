@@ -5,11 +5,7 @@ CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
 CFLAGS += -ffunction-sections -fdata-sections
 
 ifeq ($(TCONFIG_DPSTA),y)
-ifeq ($(TCONFIG_BCM714),y)
-CFLAGS += -I$(TOP)/dpsta$(BCMEX)
-else
 CFLAGS += -I$(TOP)/dpsta
-endif
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)

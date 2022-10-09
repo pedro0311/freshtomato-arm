@@ -1,7 +1,7 @@
 /*
  * Misc system wide definitions
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: bcmdefs.h 549999 2015-04-17 16:16:58Z $
+ * $Id: bcmdefs.h 582687 2015-08-28 11:17:05Z $
  */
 
 #ifndef	_bcmdefs_h_
@@ -123,20 +123,22 @@ extern bool attach_part_reclaimed;
 #define	BCMNMIATTACHDATA(_data)	_data
 #define CONST	const
 
+#if !defined STB
 #if defined(__ARM_ARCH_7A__) && !defined(OEM_ANDROID)
 #define BCM47XX_CA9
 #else
 #undef BCM47XX_CA9
 #endif /* BCM47XX && __ARM_ARCH_7A__ && !OEM_ANDROID */
+#endif /* STB */
 
 #ifndef BCMFASTPATH
-#if defined(mips) || defined(BCM47XX_CA9)
+#if defined(mips) || defined(BCM47XX_CA9) || defined(STB)
 #define BCMFASTPATH		__attribute__ ((__section__ (".text.fastpath")))
 #define BCMFASTPATH_HOST	__attribute__ ((__section__ (".text.fastpath_host")))
 #else
 #define BCMFASTPATH
 #define BCMFASTPATH_HOST
-#endif
+#endif /* mips || BCM47XX_CA9 || STB */
 #endif /* BCMFASTPATH */
 
 #endif /* DONGLEBUILD */
@@ -319,7 +321,7 @@ typedef struct {
 /* add 40 bytes to allow for extra RPC header and info  */
 #define BCMEXTRAHDROOM 260
 #else /* BCM_RPC_NOCOPY || BCM_RPC_TXNOCOPY */
-#if defined(linux) && defined(BCM47XX_CA9)
+#if defined(linux) && (defined(BCM47XX_CA9) || defined(STB))
 #if defined(BCM_GMAC3)
 #define BCMEXTRAHDROOM 32 /* For FullDongle, no D11 headroom space required. */
 #else
@@ -331,7 +333,7 @@ typedef struct {
 #else /* CTFMAP */
 #define BCMEXTRAHDROOM 204
 #endif /* CTFMAP */
-#endif /* linux && BCM47XX_CA9 */
+#endif /* linux && (BCM47XX_CA9 || STB) */
 #endif /* BCM_RPC_NOCOPY || BCM_RPC_TXNOCOPY */
 
 /* Packet alignment for most efficient SDIO (can change based on platform) */

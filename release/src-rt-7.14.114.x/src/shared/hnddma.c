@@ -2,7 +2,7 @@
  * Generic Broadcom Home Networking Division (HND) DMA module.
  * This supports the following chips: BCM42xx, 44xx, 47xx .
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -16,7 +16,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: hnddma.c 584680 2015-09-08 09:31:39Z $
+ * $Id: hnddma.c 631939 2016-04-16 08:52:55Z $
  */
 
 #include <bcm_cfg.h>
@@ -71,7 +71,7 @@ static uint dma_msg_level =
 #define	DI_INFO(dmah)	((dma_info_t *)(uintptr)dmah)
 
 #define DESCR_DEADBEEF
-#if defined(__mips__) || defined(BCM47XX_CA9)
+#if defined(__mips__) || defined(BCM47XX_CA9) || defined(STB)
 #undef DESCR_DEADBEEF
 #endif
 
@@ -80,12 +80,14 @@ static uint dma_msg_level =
 #define D11_SPLIT_RX_FD
 #endif
 
-#if ((!defined(__mips__) && !defined(BCM47XX_CA9)) || defined(__NetBSD__))
+#if ((!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB))) || \
+	defined(__NetBSD__)) || defined(BCM_SECURE_DMA)
 /* Enable/Disable support for Scatter Gather List in RX direction */
 #define SGLIST_RX_SUPPORT
 #endif
 
-#if defined(BCM47XX_CA9) && !defined(__NetBSD__)
+#if (defined(BCM47XX_CA9) || (defined(STB) && defined(__arm__))) && \
+	!defined(__NetBSD__)
 /* Enable/Disable Bulk Descriptor Flushing optimization */
 #define BULK_DESCR_FLUSH
 #endif
@@ -952,7 +954,8 @@ dma64_dd_upd(dma_info_t *di, dma64dd_t *ddring, dmaaddr_t pa, uint outidx, uint3
 		}
 	}
 
-#if defined(BCM47XX_CA9) && !defined(__NetBSD__) && !defined(BULK_DESCR_FLUSH)
+#if (defined(BCM47XX_CA9) || (defined(STB) && defined(__arm__))) && \
+	!defined(__NetBSD__) && !defined(BULK_DESCR_FLUSH)
 #ifndef BCM_SECURE_DMA
 	DMA_MAP(di->osh, (void *)(((uint)(&ddring[outidx])) & ~0x1f), 32, DMA_TX, NULL, NULL);
 #else
@@ -1351,7 +1354,8 @@ next_frame:
 
 	data = PKTDATA(di->osh, head);
 
-#if (!defined(__mips__) && !defined(BCM47XX_CA9) && !defined(__NetBSD__))
+#if (!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB)) && \
+	!defined(__NetBSD__))
 	if (di->hnddma.dmactrlflags & DMA_CTRL_SDIO_RXGLOM) {
 		/* In case of glommed pkt get length from hwheader */
 		len = ltoh16(*((uint16 *)(data) + di->rxoffset/2 + 2)) + 4;
@@ -1383,7 +1387,7 @@ next_frame:
 	}
 
 	}
-#endif /* !__mips__ && !BCM47XX_CA9 && !__NetBSD__ */
+#endif /* !__mips__ && !(BCM47XX_CA9 || STB) && !__NetBSD__ */
 	DMA_TRACE(("%s: dma_rx len %d\n", di->name, len));
 
 	/* set actual length */
@@ -1603,7 +1607,7 @@ _dma_rxfill(dma_info_t *di)
 		}
 #else /* !BCM_GMAC3 based FWDER_BUF optimization */
 
-#if defined(linux) && (defined(BCM47XX_CA9) || defined(__mips__))
+#if defined(linux) && (defined(BCM47XX_CA9) || defined(STB) || defined(__mips__))
 		DMA_MAP(di->osh, PKTDATA(di->osh, p), sizeof(uint16), DMA_TX, NULL, NULL);
 #endif
 #if defined(SGLIST_RX_SUPPORT)
@@ -3548,8 +3552,8 @@ dma64_getnexttxp(dma_info_t *di, txd_range_t range)
 		hnddma_seg_map_t *map = NULL;
 		uint size, j, nsegs;
 
-#if ((!defined(__mips__) && !defined(BCM47XX_CA9)) || defined(__NetBSD__)) || \
-	defined(BCM_SECURE_DMA)
+#if ((!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB))) || \
+	defined(__NetBSD__)) || defined(BCM_SECURE_DMA)
 		dmaaddr_t pa;
 		PHYSADDRLOSET(pa, (BUS_SWAP32(R_SM(&di->txd64[i].addrlow)) - di->dataoffsetlow));
 		PHYSADDRHISET(pa, (BUS_SWAP32(R_SM(&di->txd64[i].addrhigh)) - di->dataoffsethigh));
@@ -3564,8 +3568,8 @@ dma64_getnexttxp(dma_info_t *di, txd_range_t range)
 				break;
 			}
 		} else {
-#if ((!defined(__mips__) && !defined(BCM47XX_CA9)) || defined(__NetBSD__)) || \
-	defined(BCM_SECURE_DMA)
+#if ((!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB))) || \
+	defined(__NetBSD__)) || defined(BCM_SECURE_DMA)
 			size = (BUS_SWAP32(R_SM(&di->txd64[i].ctrl2)) & D64_CTRL2_BC_MASK);
 #endif
 			nsegs = 1;
@@ -3589,16 +3593,15 @@ dma64_getnexttxp(dma_info_t *di, txd_range_t range)
 			if (j > 1)
 				i = NEXTTXD(i);
 		}
-
-#if ((!defined(__mips__) && !defined(BCM47XX_CA9)) || defined(__NetBSD__))
-		DMA_UNMAP(di->osh, pa, size, DMA_TX, txp, map);
-#endif
-
 #ifdef BCM_SECURE_DMA
 		SECURE_DMA_UNMAP(di->osh, pa, size, DMA_TX, NULL, NULL, &di->sec_cma_info_tx, 0);
-#endif
+#else
+#if ((!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB))) || \
+	defined(__NetBSD__))
+		DMA_UNMAP(di->osh, pa, size, DMA_TX, txp, map);
+#endif /* mips && CA9 */
+#endif /* BCM_SECURE_DMA */
 	}
-
 	di->txin = i;
 
 	/* tx flow control */
@@ -3618,7 +3621,8 @@ dma64_getnextrxp(dma_info_t *di, bool forceall)
 {
 	uint16 i, curr;
 	void *rxp;
-#if ((!defined(__mips__) && !defined(BCM47XX_CA9)) || defined(__NetBSD__))
+#if ((!defined(__mips__) && !(defined(BCM47XX_CA9) || defined(STB))) || \
+	defined(__NetBSD__)) || defined(BCM_SECURE_DMA)
 	dmaaddr_t pa;
 #endif
 
@@ -3649,7 +3653,7 @@ nextframe:
 	rxp = di->rxp[i];
 	ASSERT(rxp);
 
-#if (defined(__mips__) || defined(BCM47XX_CA9)) && !defined(_CFE_)
+#if (defined(__mips__) || defined(BCM47XX_CA9) || defined(STB)) && !defined(_CFE_)
 	{
 		/* Processor prefetch of 1 x 32B cacheline carrying HWRXOFF */
 		uint8 * addr = PKTDATA(di->osh, rxp);
@@ -3667,7 +3671,6 @@ nextframe:
 #if defined(SGLIST_RX_SUPPORT)
 	PHYSADDRLOSET(pa, (BUS_SWAP32(R_SM(&di->rxd64[i].addrlow)) - di->dataoffsetlow));
 	PHYSADDRHISET(pa, (BUS_SWAP32(R_SM(&di->rxd64[i].addrhigh)) - di->dataoffsethigh));
-
 	/* clear this packet from the descriptor ring */
 #ifdef BCM_SECURE_DMA
 	SECURE_DMA_UNMAP(di->osh, pa, di->rxbufsize, DMA_RX, NULL, NULL, &di->sec_cma_info_rx, 0);
@@ -3675,12 +3678,12 @@ nextframe:
 	DMA_UNMAP(di->osh, pa, di->rxbufsize, DMA_RX, rxp, &di->rxp_dmah[i]);
 #endif
 
-#if defined(DESCR_DEADBEEF)
+#endif /* SGLIST_RX_SUPPORT */
+	/* Looks like this deadbeef is needed for RX case, but not for TX case */
+#if (defined(DESCR_DEADBEEF) || defined(STB))
 	W_SM(&di->rxd64[i].addrlow, 0xdeadbeef);
 	W_SM(&di->rxd64[i].addrhigh, 0xdeadbeef);
 #endif /* DESCR_DEADBEEF */
-
-#endif /* SGLIST_RX_SUPPORT */
 
 	di->rxin = NEXTRXD(i);
 
@@ -3850,8 +3853,8 @@ _dma_rxtx_error(dma_info_t *di, bool istx)
 
 			if ((status1 & D64_XS1_XE_MASK) != D64_XS1_XE_NOERR)
 				return TRUE;
-                        else if ((si_coreid(di->sih) == GMAC_CORE_ID && si_corerev(di->sih) >= 4) ||
-                                (si_coreid(di->sih) == D11_CORE_ID)) {  //cathy add D11_CORE_ID
+			else if ((si_coreid(di->sih) == GMAC_CORE_ID && si_corerev(di->sih) >= 4) ||
+				(si_coreid(di->sih) == D11_CORE_ID)) {  //cathy add D11_CORE_ID
 				curr = (uint16)(B2I(((R_REG(di->osh, &di->d64txregs->status0) &
 					D64_XS0_CD_MASK) - di->xmtptrbase) &
 					D64_XS0_CD_MASK, dma64dd_t));
@@ -4156,8 +4159,9 @@ dma64_txfast_lfrag(dma_info_t *di, void *p0, bool commit)
 #endif
 			goto program_frags;
 		}
-
+#ifndef BCM_SECURE_DMA
 		pa = DMA_MAP(di->osh, data, len, DMA_TX, p, &di->txp_dmah[txout]);
+#endif /* BCM_SECURE_DMA */
 #ifdef PCIE_PHANTOM_DEV
 		panew = (uint8*) pa;
 		if (di->blwar_d11core) {

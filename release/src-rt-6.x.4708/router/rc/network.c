@@ -70,6 +70,9 @@ typedef u_int8_t u8;
 #else
 #include <etsockio.h>
 #endif
+#ifdef TCONFIG_BCM714
+#include <sys/reboot.h>
+#endif
 
 #ifdef TCONFIG_BCMWL6
 #ifdef TCONFIG_BCMARM
@@ -570,10 +573,127 @@ void unload_wl(void)
 #endif /* TCONFIG_DHDAP */
 }
 
+#ifdef TCONFIG_BCM714
+/* Speed up here and use DEV_NUMIFS_SPEED_UP_714 instead of DEV_NUMIFS */
+#define DEV_NUMIFS_SPEED_UP_714 	16
+
+/* This function updates the nvram radio_dmode_X to NIC/DGL depending on driver mode */
+static void wl_driver_mode_update(void)
+{
+	int unit = -1, maxunit = -1;
+	int i = 0;
+	char ifname[16] = {0};
+
+	/* Search for existing wl devices with eth prefix and the max unit number used */
+	for (i = 0; i <= DEV_NUMIFS_SPEED_UP_714 /* DEV_NUMIFS */; i++) {
+		snprintf(ifname, sizeof(ifname), "eth%d", i);
+		if (!wl_probe(ifname)) {
+			int unit = -1;
+			char mode_str[128];
+			char *mode = "NIC";
+
+#ifdef TCONFIG_DHDAP
+			mode = dhd_probe(ifname) ? "NIC" : "DGL";
+#endif
+
+			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+				maxunit = (unit > maxunit) ? unit : maxunit + 1;
+				sprintf(mode_str, "wlradio_dmode_%d", maxunit);
+				if (strcmp(nvram_safe_get(mode_str), mode) != 0) {
+					logmsg(LOG_INFO,"%s: Setting %s = %s\n", __FUNCTION__, mode_str, mode);
+					nvram_set(mode_str, mode);
+				}
+			}
+		}
+	}
+
+	/* Search for existing wl devices with wl prefix and the max unit number used */
+	for (i = 0; i <= DEV_NUMIFS_SPEED_UP_714 /* DEV_NUMIFS */; i++) {
+		snprintf(ifname, sizeof(ifname), "wl%d", i);
+		if (!wl_probe(ifname)) {
+			char mode_str[128];
+			char *mode = "NIC";
+
+#ifdef TCONFIG_DHDAP
+			mode = dhd_probe(ifname) ? "NIC" : "DGL";
+#endif
+
+			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+				sprintf(mode_str, "wlradio_dmode_%d", i);
+				if (strcmp(nvram_get(mode_str), mode) != 0) {
+					logmsg(LOG_INFO,"%s: Setting %s = %s\n", __FUNCTION__, mode_str, mode);
+					nvram_set(mode_str, mode);
+				}
+			}
+		}
+	}
+}
+
+void load_wl()
+{
+	char module[80], *modules, *next;
+#ifdef TCONFIG_DPSTA
+	modules = "dpsta dhd dhd24";
+#else
+	modules = "dhd dhd24";
+#endif
+
+	int i = 0, maxunit = -1;
+	int unit;
+	char ifname[16] = {0};
+	char instance_base[128];
+	int dhd_reboot = 0;
+
+	if (!*nvram_safe_get("chipnum") || !*nvram_safe_get("chiprev")) {
+		dhd_reboot = 1;
+	}
+
+	foreach(module, modules, next) {
+		if (strcmp(module, "dhd") == 0 && nvram_get_int("dhd24"))
+			continue;
+		else if (strcmp(module, "dhd24") == 0 && nvram_get_int("dhd24"))
+			eval("rmmod", "dhd");
+
+		if (strcmp(module, "dhd") == 0 || strcmp(module, "dhd24") == 0) {
+			/* Search for existing wl devices and the max unit number used */
+			for (i = 1; i <= DEV_NUMIFS_SPEED_UP_714 /* DEV_NUMIFS */; i++) {
+			snprintf(ifname, sizeof(ifname), "eth%d", i);
+				if (!wl_probe(ifname)) {
+					unit = -1;
+					if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
+						maxunit = (unit > maxunit) ? unit : maxunit;
+					}
+				}
+			}
+			snprintf(instance_base, sizeof(instance_base), "instance_base=%d", maxunit + 1);
+
+			if ((strcmp(module, "dhd") == 0) || (strcmp(module, "dhd24") == 0))
+				snprintf(instance_base, sizeof(instance_base), "%s dhd_msg_level=%d", instance_base, nvram_get_int("dhd_msg_level"));
+
+			eval("insmod", module, instance_base);
+		} else {
+			eval("insmod", module);
+		}
+	}
+
+	wl_driver_mode_update();
+
+	if (dhd_reboot) {
+		for(i = 0; i < 5; ++i) {
+			if (nvram_match("chipnum","0x4366") && *nvram_safe_get("chiprev")) {
+					_dprintf("\nrebooting(dhd)...\n");
+					reboot(RB_AUTOBOOT);
+			}
+			sleep(1);
+		}
+	}
+
+}
+#else
 void load_wl(void)
 {
 #ifdef TCONFIG_DHDAP
-	int i = 0, maxwl_eth = 0, maxunit = -1;
+	int i = 0, maxunit = -1;
 	int unit = -1;
 	char ifname[16] = {0};
 	char instance_base[128];
@@ -583,7 +703,6 @@ void load_wl(void)
 		snprintf(ifname, sizeof(ifname), "eth%d", i);
 		if (!wl_probe(ifname)) {
 			if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
-				maxwl_eth = i;
 				maxunit = (unit > maxunit) ? unit : maxunit;
 			}
 		}
@@ -597,6 +716,7 @@ void load_wl(void)
 	modprobe("wl");
 #endif /* TCONFIG_DHDAP */
 }
+#endif /* TCONFIG_BCM714 */
 
 int disabled_wl(int idx, int unit, int subunit, void *param)
 {
@@ -884,8 +1004,10 @@ void start_lan_wl(void)
 	int unit, subunit, sta;
 	char tmp[32];
 	char br;
+#ifndef TCONFIG_BCM714
 #ifdef TCONFIG_DHDAP
 	int is_dhd;
+#endif
 #endif
 
 	foreach_wif(0, NULL, set_wlmac);
@@ -954,7 +1076,7 @@ void start_lan_wl(void)
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) { /* only set "wet_host_ipv4" (again), "wet_host_mac" already set at start_lan() */
-#if !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+#if (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 and SDK714 (with newer driver ~ 2020 and up!) */
 								if (subunit > 0) { /* only for enabled subunits */
 									wet_host_t wh;
 
@@ -964,7 +1086,7 @@ void start_lan_wl(void)
 
 									wl_iovar_set(ifname, "wet_host_ipv4", &wh, sizeof(wet_host_t));
 								}
-#else /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
+#else /* (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) */
 #ifdef TCONFIG_DHDAP
 								is_dhd = !dhd_probe(ifname);
 								if (is_dhd)
@@ -972,7 +1094,7 @@ void start_lan_wl(void)
 								else
 #endif /* TCONFIG_DHDAP */
 									wl_iovar_setint(ifname, "wet_host_ipv4", ip);
-#endif /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
+#endif /* (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) */
 							}
 						}
 
@@ -1355,8 +1477,10 @@ void start_lan(void)
 	char *iftmp;
 	char nv[64];
 
+#ifndef TCONFIG_BCM714
 #ifdef TCONFIG_DHDAP
 	int is_dhd;
+#endif
 #endif
 
 #if !defined(TCONFIG_DHDAP) && !defined(TCONFIG_USBAP) /* load driver at init.c for USBAP/sdk7 */
@@ -1502,7 +1626,7 @@ void start_lan(void)
 						if (strcmp(mode, "wet") == 0) {
 							/* Enable host DHCP relay */
 							if (nvram_get_int("dhcp_relay")) { /* set mac and ip */
-#if !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 */
+#if (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) /* only for ARM dual-core SDK6 starting with ~ AiMesh 2.0 support / ~ October 2020 and SDK714 (with newer driver ~ 2020 and up!) */
 								if (subunit > 0) { /* only for enabled subunits */
 									wet_host_t wh;
 
@@ -1518,7 +1642,7 @@ void start_lan(void)
 
 									wl_iovar_set(ifname, "wet_host_ipv4", &wh, sizeof(wet_host_t)); /* set ip */
 								}
-#else /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
+#else /* (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) */
 #ifdef TCONFIG_DHDAP
 								is_dhd = !dhd_probe(ifname);
 								if (is_dhd) {
@@ -1536,7 +1660,7 @@ void start_lan(void)
 								else
 #endif /* TCONFIG_DHDAP */
 									wl_iovar_setint(ifname, "wet_host_ipv4", ip); /* set ip */
-#endif /* !defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP) */
+#endif /* (!defined(TCONFIG_BCM7) && defined(TCONFIG_BCMSMP)) || defined(TCONFIG_BCM714) */
 							}
 						}
 

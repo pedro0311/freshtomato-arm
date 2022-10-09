@@ -496,6 +496,7 @@ ifeq ($(TCONFIG_BCMARM),y)
    export CONFIG_DHDAP=y
    export CFLAGS += -D__CONFIG_DHDAP__
    export SRCBASE_DHD := $(SRCBASE)/../dhd/src
+   export SRCBASE_DHD24 := $(SRCBASE)/../dhd24/src
    export SRCBASE_FW := $(SRCBASE)/../4365/src
    export SRCBASE_SYS := $(SRCBASE_DHD)
    include Makefile.fw

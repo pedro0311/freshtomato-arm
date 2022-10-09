@@ -35,11 +35,14 @@
 #include <sys/utsname.h>
 #endif
 
+/* FT: disable dpsta code! */
+#if 0
 #ifdef TCONFIG_DPSTA
 #include <dpsta_linux.h>
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#endif
 #endif
 
 /* phy types */
@@ -3889,6 +3892,8 @@ wlconf_security(char *name)
 	return 0;
 }
 
+/* FT: disable dpsta code! */
+#if 0
 #ifdef TCONFIG_DPSTA
 static int
 wlconf_dpsta_enable(int argc, char *argv[])
@@ -4008,6 +4013,7 @@ wlconf_dpsta_iovar(int argc, char *argv[], uint8 cmd)
 	return ret;
 }
 #endif
+#endif
 
 int
 main(int argc, char *argv[])
@@ -4021,6 +4027,8 @@ main(int argc, char *argv[])
 	  return wlconf_start(argv[1]);
 	else if (argc == 3 && !strcmp(argv[2], "security"))
 	  return wlconf_security(argv[1]);
+/* FT: disable dpsta code! */
+#if 0
 #ifdef TCONFIG_DPSTA
 	else if (!strcmp(argv[2], "enable")) {
 		if (argc == 8)
@@ -4042,6 +4050,7 @@ main(int argc, char *argv[])
 		return wlconf_dpsta_iovar(argc, argv, DPSTA_IOV_MSGLEVEL);
 	else if (argc == 3 && !strcmp(argv[2], "dpinfo"))
 		return wlconf_dpsta_iovar(argc, argv, DPSTA_IOV_DPINFO);
+#endif
 #endif
 	else {
 		fprintf(stderr, "Usage: wlconf <ifname> up|down\n");

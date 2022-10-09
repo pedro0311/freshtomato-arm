@@ -1,7 +1,7 @@
 /*
  * Linux OS Independent Layer
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -15,7 +15,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: linux_osl.h 637193 2016-05-12 01:14:35Z $
+ * $Id: linux_osl.h 638124 2016-05-16 23:23:27Z $
  */
 
 #ifndef _linux_osl_h_
@@ -50,6 +50,17 @@ extern void* osl_get_bus_handle(osl_t *osh);
 /* Global ASSERT type */
 extern uint32 g_assert_type;
 
+#ifdef CONFIG_PHYS_ADDR_T_64BIT
+#define PRI_FMT_x       "llx"
+#define PRI_FMT_X       "llX"
+#define PRI_FMT_o       "llo"
+#define PRI_FMT_d       "lld"
+#else
+#define PRI_FMT_x       "x"
+#define PRI_FMT_X       "X"
+#define PRI_FMT_o       "o"
+#define PRI_FMT_d       "d"
+#endif /* CONFIG_PHYS_ADDR_T_64BIT */
 /* ASSERT */
 #ifndef ASSERT
 	#ifdef __GNUC__
@@ -67,7 +78,8 @@ extern uint32 g_assert_type;
 /* bcm_prefetch_32B */
 static inline void bcm_prefetch_32B(const uint8 *addr, const int cachelines_32B)
 {
-#if defined(BCM47XX_CA9) && (__LINUX_ARM_ARCH__ >= 5)
+#if (defined(BCM47XX_CA9) || (defined(STB) && defined(__arm__))) && (__LINUX_ARM_ARCH__ \
+	>= 5)
 	switch (cachelines_32B) {
 		case 4: __asm__ __volatile__("pld\t%a0" :: "p"(addr + 96) : "cc");
 		case 3: __asm__ __volatile__("pld\t%a0" :: "p"(addr + 64) : "cc");
@@ -82,7 +94,7 @@ static inline void bcm_prefetch_32B(const uint8 *addr, const int cachelines_32B)
 		case 2: __asm__ __volatile__("pref %0, (%1)" :: "i"(0), "r"(addr + 32));
 		case 1: __asm__ __volatile__("pref %0, (%1)" :: "i"(0), "r"(addr +  0));
 	}
-#endif /* BCM47XX_CA9, __mips__ */
+#endif /* BCM47XX_CA9, __mips__ , STB */
 }
 
 /* microsecond delay */
@@ -274,7 +286,7 @@ extern void osl_cpu_relax(void);
 		 BCM_REFERENCE(osh); \
 		 bcmjtag_read(NULL, (uintptr)(r), sizeof(*(r)));
 		 })
-#elif defined(BCM47XX_CA9)
+#elif (defined(BCM47XX_CA9) || (defined(STB) && defined(__arm__)))
 extern void osl_pcie_rreg(osl_t *osh, ulong addr, void *v, uint size);
 
 #define OSL_READ_REG(osh, r) \
@@ -285,7 +297,7 @@ extern void osl_pcie_rreg(osl_t *osh, ulong addr, void *v, uint size);
 	})
 #endif 
 
-#if defined(BCM47XX_CA9)
+#if (defined(BCM47XX_CA9) || (defined(STB) && defined(__arm__)))
 	#define SELECT_BUS_WRITE(osh, mmap_op, bus_op) ({BCM_REFERENCE(osh); mmap_op;})
 	#define SELECT_BUS_READ(osh, mmap_op, bus_op) ({BCM_REFERENCE(osh); bus_op;})
 #else /* !BCM47XX_CA9 */
@@ -298,7 +310,7 @@ extern void osl_pcie_rreg(osl_t *osh, ulong addr, void *v, uint size);
 	#define SELECT_BUS_WRITE(osh, mmap_op, bus_op) ({BCM_REFERENCE(osh); mmap_op;})
 	#define SELECT_BUS_READ(osh, mmap_op, bus_op) ({BCM_REFERENCE(osh); mmap_op;})
 #endif 
-#endif /* BCM47XX_CA9 */
+#endif /* BCM47XX_CA9 || STB */
 
 #define OSL_ERROR(bcmerror)	osl_error(bcmerror)
 extern int osl_error(int bcmerror);
@@ -1048,15 +1060,15 @@ extern void osl_pkt_frmfwder(osl_t *osh, void *skbs, int skb_cnt);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 36)
 #define         CTFFWDING               (1 << 6)
 #define         PKTSETCTFFWDING(osh, skb)       \
-        ({ \
-        BCM_REFERENCE(osh); \
-        (((struct sk_buff*)(skb))->pktc_flags |= CTFFWDING); \
-        })
+	({ \
+	BCM_REFERENCE(osh); \
+	(((struct sk_buff*)(skb))->pktc_flags |= CTFFWDING); \
+	})
 #define        PKTCLRCTFFWDING(osh, skb)       \
-        ({ \
-        BCM_REFERENCE(osh); \
-        (((struct sk_buff*)(skb))->pktc_flags &= (~CTFFWDING)); \
-        })
+	({ \
+	BCM_REFERENCE(osh); \
+	(((struct sk_buff*)(skb))->pktc_flags &= (~CTFFWDING)); \
+	})
 #define         PKTISCTFFWDING(skb)     (((struct sk_buff*)(skb))->pktc_flags & CTFFWDING)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 22)
 #define         PKTSETCTFFWDING(osh, skb)       ({BCM_REFERENCE(osh); BCM_REFERENCE(skb);})
@@ -1438,21 +1450,24 @@ extern uint32 osl_rand(void);
 	 BCM_REFERENCE(dmah); \
 	 dma_cache_inv((uint)(va), (size)); \
 	 })
-#elif defined(__ARM_ARCH_7A__)
+#elif defined(__ARM_ARCH_7A__) && !defined(BCM_SECURE_DMA)
 #include <asm/cacheflush.h>
 #define	_DMA_MAP(osh, va, size, direction, p, dmah) \
 	osl_dma_map((osh), (va), (size), (direction), (p), (dmah))
 #else
 #define	_DMA_MAP(osh, va, size, direction, p, dmah)	BCM_REFERENCE(osh)
 #endif
-
 #else /* CTFMAP */
+#if !defined(BCM_SECURE_DMA)
 #define	DMA_MAP(osh, va, size, direction, p, dmah) \
 	osl_dma_map((osh), (va), (size), (direction), (p), (dmah))
+#else
 #define	SECURE_DMA_MAP(osh, va, size, direction, p, dmah, pcma, offset) \
 	osl_sec_dma_map((osh), (va), (size), (direction), (p), (dmah), (pcma), (offset))
 #define	SECURE_DMA_DD_MAP(osh, va, size, direction, p, dmah) \
 	osl_sec_dma_dd_map((osh), (va), (size), (direction), (p), (dmah))
+#define DMA_MAP(osh, va, size, direction, p, dmah)
+#endif /* !BCM_SECURE_DMA */
 #endif /* CTFMAP */
 
 #ifdef PKTC
@@ -1556,9 +1571,9 @@ extern void bzero(void *b, size_t len);
 #define CMA_DMA_DATA_MEMBLOCK	(CMA_BUFSIZE_4K*CMA_BUFNUM)		/* 2048 page size buffers */
 #define	CMA_MEMBLOCK		(CMA_DMA_DESC_MEMBLOCK + CMA_DMA_DATA_MEMBLOCK)
 #if defined(__ARM_ARCH_7A__)
-#define CONT_ARMREGION	0x02		/* Region CMA */
+#define CONT_REGION	0x02		/* Region CMA */
 #else
-#define CONT_MIPREGION	0x00		/* To access the MIPs mem, Not yet... */
+#define CONT_REGION	0x00		/* To access the MIPs mem, Not yet... */
 #endif
 
 #define SEC_DMA_ALIGN	(1<<16)
@@ -1578,7 +1593,9 @@ typedef struct sec_cma_info {
 	struct sec_mem_elem *sec_alloc_list_tail;
 } sec_cma_info_t;
 
-extern void osl_sec_dma_init_elem_mem_block(osl_t *osh, size_t mbsize, int max,
+extern int osl_sec_dma_setup_contig_mem(osl_t *osh, unsigned long memsize, int regn);
+extern int osl_sec_dma_alloc_contig_mem(osl_t *osh, unsigned long memsize, int regn);
+extern int osl_sec_dma_init_elem_mem_block(osl_t *osh, size_t mbsize, int max,
 	sec_mem_elem_t **list);
 extern sec_mem_elem_t *osl_sec_dma_alloc_mem_elem(osl_t *osh, void *va, uint size,
 	int direction, struct sec_cma_info *ptr_cma_info, uint offset);
@@ -1597,10 +1614,9 @@ extern void *osl_sec_dma_ioremap(osl_t *osh, struct page *page, size_t size, boo
 	bool isdecr);
 extern void osl_sec_dma_deinit_elem_mem_block(osl_t *osh, size_t mbsize, int max,
 	void *sec_list_base);
-
+extern void osl_sec_dma_free_contig_mem(osl_t *osh, u32 memsize, int regn);
 extern void osl_sec_dma_iounmap(osl_t *osh, void *contig_base_va, size_t size);
 extern void *osl_sec_dma_alloc_consistent(osl_t *osh, uint size, uint16 align_bits, ulong *pap);
-extern void osl_sec_dma_free_consistent(osl_t *osh, void *va, uint size, dmaaddr_t pa);
 extern void osl_sec_cma_baseaddr_memsize(osl_t *osh, dma_addr_t *cma_baseaddr, size_t *cma_memsize);
 
 #endif /* BCM_SECURE_DMA */

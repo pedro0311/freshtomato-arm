@@ -17,7 +17,7 @@
  *
  * Dependencies: proto/bcmeth.h
  *
- * $Id: bcmevent.h 637286 2016-05-12 06:02:56Z $
+ * $Id: bcmevent.h 645847 2016-06-27 14:26:06Z $
  *
  */
 
@@ -228,15 +228,19 @@ typedef BWL_PRE_PACKED_STRUCT struct bcm_event {
 #define WLC_E_BSSID		125	/* to report change in BSSID while roaming */
 #define WLC_E_TX_STAT_ERROR		126	/* tx error indication */
 #define WLC_E_BCMC_CREDIT_SUPPORT	127	/* credit check for BCMC supported */
-#define WLC_E_PEER_TIMEOUT		128 /* silently drop a STA because of inactivity */
+#define WLC_E_PEER_TIMEOUT	128 /* silently drop a STA because of inactivity */
 #define WLC_E_AUTHORIZED	136	/* a STA been authroized for traffic */
 #define WLC_E_PROBREQ_MSG_RX	137 /* probe req with wl_event_rx_frame_data_t header */
+#define WLC_E_PRE_ASSOC_RSEP_IND	139
 #define WLC_E_RRM			141	/* RRM event */
-#define WLC_E_PRE_ASSOC_RSEP_IND        149	/* assoc resp received */
 #define WLC_E_BSSTRANS_RESP		156 /* BSS Transition Response received */
-#define WLC_E_LAST			157	/* highest val + 1 for range checking */
-#if (WLC_E_LAST > 157)
-#error "WLC_E_LAST: Invalid value for last event; must be <= 157."
+#define WLC_E_RADAR_DETECTED		160 /* BSS Transition Response received */
+#define WLC_E_RANGING_EVENT		161	/* Ranging event */
+#define WLC_E_INVALID_IE		162	/* Received invalid IE */
+#define WLC_E_MODE_SWITCH		163	/* Mode switch event */
+#define WLC_E_LAST			164	/* highest val + 1 for range checking */
+#if (WLC_E_LAST > 164)
+#error "WLC_E_LAST: Invalid value for last event; must be <= 164."
 #endif /* WLC_E_LAST */
 
 /* define an API for getting the string name of an event */
@@ -346,6 +350,8 @@ typedef struct wl_event_data_if {
 #define WLC_E_IF_ADD		1	/* bsscfg add */
 #define WLC_E_IF_DEL		2	/* bsscfg delete */
 #define WLC_E_IF_CHANGE		3	/* bsscfg role change */
+#define WLC_E_IF_BSSCFG_UP	4	/* bsscfg up */
+#define WLC_E_IF_BSSCFG_DOWN	5	/* bsscfg down */
 
 /* I/F role code in WLC_E_IF event */
 #define WLC_E_IF_ROLE_STA		0	/* Infra STA */
@@ -502,6 +508,89 @@ typedef struct wl_rrm_event {
 typedef struct wl_psta_primary_intf_event {
 	struct ether_addr prim_ea;	/* primary intf ether addr */
 } wl_psta_primary_intf_event_t;
+
+typedef struct {
+	uint8 radar_type;       /* one of RADAR_TYPE_XXX */
+	uint16 min_pw;          /* minimum pulse-width (usec * 20) */
+	uint16 max_pw;          /* maximum pulse-width (usec * 20) */
+	uint16 min_pri;         /* minimum pulse repetition interval (usec) */
+	uint16 max_pri;         /* maximum pulse repetition interval (usec) */
+	uint16 subband;         /* subband/frequency */
+} radar_detected_event_info_t;
+
+typedef struct wl_event_radar_detect_data {
+	uint32 version;
+	uint16 current_chanspec; /* chanspec on which the radar is recieved */
+	uint16 target_chanspec; /*  Target chanspec after detection of radar on current_chanspec */
+	radar_detected_event_info_t radar_info[2];
+} wl_event_radar_detect_data_t;
+
+
+#define WL_EVENT_MODESW_VER_1			1
+#define WL_EVENT_MODESW_VER_CURRENT		WL_EVENT_MODESW_VER_1
+
+#define WL_E_MODESW_FLAG_MASK_DEVICE		0x01u /* mask of device: belongs to local or peer */
+#define WL_E_MODESW_FLAG_MASK_FROM		0x02u /* mask of origin: firmware or user */
+#define WL_E_MODESW_FLAG_MASK_STATE		0x0Cu /* mask of state: modesw progress state */
+
+#define WL_E_MODESW_FLAG_DEVICE_LOCAL		0x00u /* flag - device: info is about self/local */
+#define WL_E_MODESW_FLAG_DEVICE_PEER		0x01u /* flag - device: info is about peer */
+
+#define WL_E_MODESW_FLAG_FROM_FIRMWARE		0x00u /* flag - from: request is from firmware */
+#define WL_E_MODESW_FLAG_FROM_USER		0x02u /* flag - from: request is from user/iov */
+
+#define WL_E_MODESW_FLAG_STATE_REQUESTED	0x00u /* flag - state: mode switch request */
+#define WL_E_MODESW_FLAG_STATE_INITIATED	0x04u /* flag - state: switch initiated */
+#define WL_E_MODESW_FLAG_STATE_COMPLETE		0x08u /* flag - state: switch completed/success */
+#define WL_E_MODESW_FLAG_STATE_FAILURE		0x0Cu /* flag - state: failed to switch */
+
+/* Get sizeof *X including variable data's length where X is pointer to wl_event_mode_switch_t */
+#define WL_E_MODESW_SIZE(X) (sizeof(*(X)) + (X)->length)
+
+/* Get variable data's length where X is pointer to wl_event_mode_switch_t */
+#define WL_E_MODESW_DATA_SIZE(X) (((X)->length > sizeof(*(X))) ? ((X)->length - sizeof(*(X))) : 0)
+
+#define WL_E_MODESW_REASON_UNKNOWN		0u /* reason: UNKNOWN */
+#define WL_E_MODESW_REASON_ACSD			1u /* reason: ACSD (based on events from FW */
+#define WL_E_MODESW_REASON_OBSS_DBS		2u /* reason: OBSS DBS (eg. on interference) */
+#define WL_E_MODESW_REASON_DFS			3u /* reason: DFS (eg. on subband radar) */
+#define WL_E_MODESW_REASON_DYN160		4u /* reason: DYN160 (160/2x2 - 80/4x4) */
+
+/* event structure for WLC_E_MODE_SWITCH */
+typedef struct {
+	uint16 version;
+	uint16 length;	/* size including 'data' field */
+	uint16 opmode_from;
+	uint16 opmode_to;
+	uint32 flags;	/* bit 0: peer(/local==0);
+			 * bit 1: user(/firmware==0);
+			 * bits 3,2: 00==requested, 01==initiated,
+			 *           10==complete, 11==failure;
+			 * rest: reserved
+			 */
+	uint16 reason;	/* value 0: unknown, 1: ACSD, 2: OBSS_DBS,
+			 *       3: DFS, 4: DYN160, rest: reserved
+			 */
+	uint16 data_offset;	/* offset to 'data' from beginning of this struct.
+				 * fields may be added between data_offset and data
+				 */
+	/* ADD NEW FIELDS HERE */
+	uint8 data[];	/* reason specific data; could be empty */
+} wl_event_mode_switch_t;
+
+/* when reason in WLC_E_MODE_SWITCH is DYN160, data will carry the following structure */
+typedef struct {
+	uint16 trigger;		/* value 0: MU to SU, 1: SU to MU, 2: metric_dyn160, 3:re-/assoc,
+				 *       4: disassoc, 5: rssi, 6: traffic, 7: interference,
+				 *       8: chanim_stats
+				 */
+	struct ether_addr sta_addr;	/* causal STA's MAC address when known */
+	uint16 metric_160_80;		/* latest dyn160 metric */
+	uint8 nss;		/* NSS of the STA */
+	uint8 bw;		/* BW of the STA */
+	int8 rssi;		/* RSSI of the STA */
+	uint8 traffic;		/* internal metric of traffic */
+} wl_event_mode_switch_dyn160;
 
 /* This marks the end of a packed structure section. */
 #include <packed_section_end.h>

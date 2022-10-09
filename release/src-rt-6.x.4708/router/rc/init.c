@@ -1535,6 +1535,9 @@ static void check_bootnv(void)
 		nvram_unset("et1macaddr"); /* unset! */
 		nvram_unset("et1mdcport");
 		nvram_unset("et1phyaddr");
+		nvram_unset("fwd_wlandevs"); /* unset! */
+		nvram_unset("fwd_cpumap");
+		nvram_unset("fwddevs");
 		nvram_unset("rgmii_port"); /* unset! */
 		dirty |= check_nv("vlan1hwname", "et0");
 		dirty |= check_nv("vlan2hwname", "et0");
@@ -1551,6 +1554,9 @@ static void check_bootnv(void)
 		nvram_unset("et0macaddr"); /* unset! */
 		nvram_unset("et0mdcport");
 		nvram_unset("et0phyaddr");
+		nvram_unset("fwd_wlandevs"); /* unset! */
+		nvram_unset("fwd_cpumap");
+		nvram_unset("fwddevs");
 		dirty |= check_nv("rgmii_port", "5"); /* RGMII_BRCM5301X */
 		dirty |= check_nv("vlan1hwname", "et1");
 		dirty |= check_nv("vlan2hwname", "et1");
@@ -9605,9 +9611,6 @@ static int init_nvram(void)
 			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
 
 			/* GMAC3 variables */
-			nvram_set("fwd_cpumap", "d:x:2:163:0 d:l:5:169:1"); 	/* leave it in place! */
-			nvram_set("fwd_wlandevs", "");				/* clear */
-			nvram_set("fwddevs", "");				/* clear */
 			nvram_set("stop_gmac3", "1"); 				/* disable gmac3 (blackbox!) */
 			nvram_set("gmac3_enable", "0");
 
@@ -9690,9 +9693,6 @@ static int init_nvram(void)
 			nvram_set("wl2_vifnames", "wl2.1 wl2.2 wl2.3");
 
 			/* GMAC3 variables */
-			nvram_set("fwd_cpumap", "d:l:5:163:0 d:x:2:163:0 d:u:5:169:1"); /* leave it in place! */
-			nvram_set("fwd_wlandevs", "");				/* clear */
-			nvram_set("fwddevs", "");				/* clear */
 			nvram_set("stop_gmac3", "1"); 				/* disable gmac3 (blackbox!) */
 			nvram_set("gmac3_enable", "0");
 

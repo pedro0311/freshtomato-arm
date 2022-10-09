@@ -285,6 +285,7 @@ obj-$(CONFIG_USB_IPHETH)        += usb/
 obj-$(CONFIG_HND) += hnd/
 obj-$(CONFIG_BCM_CTF) += ctf/
 obj-$(CONFIG_DHDAP) += dhd/
+obj-$(CONFIG_DHDAP) += dhd24/
 obj-$(CONFIG_DPSTA) += dpsta/
 ifneq ($(CONFIG_LACP),)
 obj-$(CONFIG_LACP) += lacp/

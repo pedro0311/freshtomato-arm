@@ -15,7 +15,7 @@
  *
  * Fundamental types and constants relating to 802.11
  *
- * $Id: 802.11.h 587683 2015-09-22 00:47:41Z $
+ * $Id: 802.11.h 629112 2016-04-04 08:21:32Z $
  */
 
 #ifndef _802_11_H_
@@ -530,14 +530,16 @@ typedef struct dot11_extcap dot11_extcap_t;
 #define DOT11_MEASURE_TYPE_BASIC 	0	/* d11 measurement basic type */
 #define DOT11_MEASURE_TYPE_CCA 		1	/* d11 measurement CCA type */
 #define DOT11_MEASURE_TYPE_RPI		2	/* d11 measurement RPI type */
-#define DOT11_MEASURE_TYPE_CHLOAD		3	/* d11 measurement Channel Load type */
-#define DOT11_MEASURE_TYPE_NOISE		4	/* d11 measurement Noise Histogram type */
-#define DOT11_MEASURE_TYPE_BEACON		5	/* d11 measurement Beacon type */
+#define DOT11_MEASURE_TYPE_CHLOAD	3	/* d11 measurement Channel Load type */
+#define DOT11_MEASURE_TYPE_NOISE	4	/* d11 measurement Noise Histogram type */
+#define DOT11_MEASURE_TYPE_BEACON	5	/* d11 measurement Beacon type */
 #define DOT11_MEASURE_TYPE_FRAME	6	/* d11 measurement Frame type */
 #define DOT11_MEASURE_TYPE_STAT		7	/* d11 measurement STA Statistics type */
 #define DOT11_MEASURE_TYPE_LCI		8	/* d11 measurement LCI type */
-#define DOT11_MEASURE_TYPE_TXSTREAM		9	/* d11 measurement TX Stream type */
-#define DOT11_MEASURE_TYPE_PAUSE		255	/* d11 measurement pause type */
+#define DOT11_MEASURE_TYPE_TXSTREAM	9	/* d11 measurement TX Stream type */
+#define DOT11_MEASURE_TYPE_CIVICLOC	11	/* d11 measurement location civic */
+#define DOT11_MEASURE_TYPE_LOC_ID	12	/* d11 measurement location identifier */
+#define DOT11_MEASURE_TYPE_PAUSE	255	/* d11 measurement pause type */
 
 /* Measurement Request Modes */
 #define DOT11_MEASURE_MODE_PARALLEL 	(1<<0)	/* d11 measurement parallel */
@@ -571,6 +573,40 @@ typedef struct dot11_meas_req dot11_meas_req_t;
 /* length of Measure Request IE data not including variable len */
 #define DOT11_MNG_IE_MREQ_FIXED_LEN 3	/* d11 measurement request IE fixed length */
 
+BWL_PRE_PACKED_STRUCT struct dot11_meas_req_loc {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	BWL_PRE_PACKED_STRUCT union
+	{
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 subject;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT lci;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 subject;
+			uint8 type;  /* type of civic location */
+			uint8 siu;   /* service interval units */
+			uint16 si; /* service interval */
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT civic;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 subject;
+			uint8 siu;   /* service interval units */
+			uint16 si; /* service interval */
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT locid;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint16 max_init_delay;		/* maximum random initial delay */
+			uint8 min_ap_count;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT ftm_range;
+	} BWL_POST_PACKED_STRUCT req;
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_meas_req_loc dot11_meas_req_loc_t;
+
 BWL_PRE_PACKED_STRUCT struct dot11_meas_rep {
 	uint8 id;
 	uint8 len;
@@ -585,10 +621,37 @@ BWL_PRE_PACKED_STRUCT struct dot11_meas_rep {
 			uint16 duration;
 			uint8 map;
 		} BWL_POST_PACKED_STRUCT basic;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 subelement;
+			uint8 length;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT lci;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 type;  /* type of civic location */
+			uint8 subelement;
+			uint8 length;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT civic;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 exp_tsf[8];
+			uint8 subelement;
+			uint8 length;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT locid;
+		BWL_PRE_PACKED_STRUCT struct {
+			uint8 entry_count;
+			uint8 data[1];
+		} BWL_POST_PACKED_STRUCT ftm_range;
 		uint8 data[1];
 	} BWL_POST_PACKED_STRUCT rep;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_meas_rep dot11_meas_rep_t;
+#define DOT11_MNG_IE_MREP_MIN_LEN           5	/* d11 measurement report IE length */
+#define DOT11_MNG_IE_MREP_LCI_FIXED_LEN     5	/* d11 measurement report IE length */
+#define DOT11_MNG_IE_MREP_CIVIC_FIXED_LEN   6	/* d11 measurement report IE length */
+#define DOT11_MNG_IE_MREP_LOCID_FIXED_LEN   13	/* d11 measurement report IE length */
+#define DOT11_MNG_IE_MREP_BASIC_FIXED_LEN   15	/* d11 measurement report IE length */
+#define DOT11_MNG_IE_MREP_FRNG_FIXED_LEN    4
 
 /* length of Measure Report IE data not including variable len */
 #define DOT11_MNG_IE_MREP_FIXED_LEN	3	/* d11 measurement response IE fixed length */
@@ -1360,6 +1423,10 @@ typedef struct ti_ie ti_ie_t;
 #define DOT11_EXT_CAP_FMS			11
 /* proxy ARP service support bit position */
 #define DOT11_EXT_CAP_PROXY_ARP			12
+/* Civic Location */
+#define DOT11_EXT_CAP_CIVIC_LOC			14
+/* Geospatial Location */
+#define DOT11_EXT_CAP_LCI			15
 /* Traffic Filter Service */
 #define DOT11_EXT_CAP_TFS			16
 /* WNM-Sleep Mode */
@@ -1377,6 +1444,8 @@ typedef struct ti_ie ti_ie_t;
 /* service Interval granularity bit position and mask */
 #define DOT11_EXT_CAP_SI			41
 #define DOT11_EXT_CAP_SI_MASK			0x0E
+/* Location Identifier service */
+#define DOT11_EXT_CAP_IDENT_LOC			44
 /* WNM notification */
 #define DOT11_EXT_CAP_WNM_NOTIF			46
 /* Operating mode notification - VHT (11ac D3.0 - 8.4.2.29) */
@@ -2353,7 +2422,10 @@ typedef struct dot11_rrm_cap_ie dot11_rrm_cap_ie_t;
 #define DOT11_RRM_CAP_TTSCM		15
 #define DOT11_RRM_CAP_AP_CHANREP	16
 #define DOT11_RRM_CAP_RMMIB		17
-/* bit18-bit26, not used for RRM_IOVAR */
+/* bit18-bit23, not used for RRM_IOVAR */
+#define DOT11_RRM_CAP_MPC0		24
+#define DOT11_RRM_CAP_MPC1		25
+#define DOT11_RRM_CAP_MPC2		26
 #define DOT11_RRM_CAP_MPTI		27
 #define DOT11_RRM_CAP_NBRTSFO		28
 #define DOT11_RRM_CAP_RCPI		29
@@ -2361,7 +2433,12 @@ typedef struct dot11_rrm_cap_ie dot11_rrm_cap_ie_t;
 #define DOT11_RRM_CAP_BSSAAD		31
 #define DOT11_RRM_CAP_BSSAAC		32
 #define DOT11_RRM_CAP_AI		33
+#define DOT11_RRM_CAP_FTM_RANGE		34
+#define DOT11_RRM_CAP_CIVIC_LOC		35
+#define DOT11_RRM_CAP_IDENT_LOC		36
+#define DOT11_RRM_CAP_LAST		36
 
+#define DOT11_RRM_CAP_MPA_MASK		0x7
 /* Operating Class (formerly "Regulatory Class") definitions */
 #define DOT11_OP_CLASS_NONE			255
 
@@ -2380,6 +2457,7 @@ typedef struct do11_ap_chrep dot11_ap_chrep_t;
 #define DOT11_RM_ACTION_LM_REP		3	/* Link measurement report */
 #define DOT11_RM_ACTION_NR_REQ		4	/* Neighbor report request */
 #define DOT11_RM_ACTION_NR_REP		5	/* Neighbor report response */
+#define DOT11_PUB_ACTION_MP		7	/* Measurement Pilot public action id */
 
 /* Generic radio measurement action frame header */
 BWL_PRE_PACKED_STRUCT struct dot11_rm_action {
@@ -2770,6 +2848,7 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmreq_tx_stream {
 	uint8 bin0_range;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmreq_tx_stream dot11_rmreq_tx_stream_t;
+#define DOT11_RMREQ_TXSTREAM_LEN	17
 
 /* Transmit stream/category measurement report */
 BWL_PRE_PACKED_STRUCT struct dot11_rmrep_tx_stream {
@@ -2794,6 +2873,134 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmrep_tx_stream {
 	uint32 bin5;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmrep_tx_stream dot11_rmrep_tx_stream_t;
+#define DOT11_RMREP_TXSTREAM_LEN	71
+
+typedef struct rrm_tscm {
+	uint32 msdu_tx;
+	uint32 msdu_exp;
+	uint32 msdu_fail;
+	uint32 msdu_retries;
+	uint32 cfpolls_lost;
+	uint32 queue_delay;
+	uint32 tx_delay_sum;
+	uint32 tx_delay_cnt;
+	uint32 bin0_range_us;
+	uint32 bin0;
+	uint32 bin1;
+	uint32 bin2;
+	uint32 bin3;
+	uint32 bin4;
+	uint32 bin5;
+} rrm_tscm_t;
+
+enum {
+	DOT11_FTM_LOCATION_SUBJ_LOCAL = 0,	/* Where am I? */
+	DOT11_FTM_LOCATION_SUBJ_REMOTE = 1,	/* Where are you? */
+	DOT11_FTM_LOCATION_SUBJ_THIRDPARTY = 2	/* Where is he/she? */
+};
+
+BWL_PRE_PACKED_STRUCT struct dot11_rmreq_ftm_lci {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 subj;
+
+	/* Following 3 fields are unused. Keep for ROM compatibility. */
+	uint8 lat_res;
+	uint8 lon_res;
+	uint8 alt_res;
+
+	/* optional sub-elements */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmreq_ftm_lci dot11_rmreq_ftm_lci_t;
+#define DOT11_RMREQ_LCI_LEN	9
+
+BWL_PRE_PACKED_STRUCT struct dot11_rmrep_ftm_lci {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 lci_sub_id;
+	uint8 lci_sub_len;
+	/* optional LCI field */
+	/* optional sub-elements */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmrep_ftm_lci dot11_rmrep_ftm_lci_t;
+
+#define DOT11_FTM_LCI_SUBELEM_ID		0
+#define DOT11_FTM_LCI_SUBELEM_LEN		2
+#define DOT11_FTM_LCI_FIELD_LEN			16
+#define DOT11_FTM_LCI_UNKNOWN_LEN		2
+
+BWL_PRE_PACKED_STRUCT struct dot11_rmreq_ftm_civic {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 subj;
+	uint8 civloc_type;
+	uint8 siu;	/* service interval units */
+	uint16 si;  /* service interval */
+	/* optional sub-elements */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmreq_ftm_civic dot11_rmreq_ftm_civic_t;
+#define DOT11_RMREQ_CIVIC_LEN	10
+
+BWL_PRE_PACKED_STRUCT struct dot11_rmrep_ftm_civic {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 civloc_type;
+	uint8 civloc_sub_id;
+	uint8 civloc_sub_len;
+	/* optional location civic field */
+	/* optional sub-elements */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmrep_ftm_civic dot11_rmrep_ftm_civic_t;
+
+#define DOT11_FTM_CIVIC_LOC_TYPE_RFC4776	0
+#define DOT11_FTM_CIVIC_SUBELEM_ID		0
+#define DOT11_FTM_CIVIC_SUBELEM_LEN		2
+#define DOT11_FTM_CIVIC_LOC_SI_NONE		0
+#define DOT11_FTM_CIVIC_TYPE_LEN		1
+#define DOT11_FTM_CIVIC_UNKNOWN_LEN		3
+
+/* Location Identifier measurement request */
+BWL_PRE_PACKED_STRUCT struct dot11_rmreq_locid {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 subj;
+	uint8 siu;
+	uint16 si;
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmreq_locid dot11_rmreq_locid_t;
+#define DOT11_RMREQ_LOCID_LEN	9
+
+/* Location Identifier measurement report */
+BWL_PRE_PACKED_STRUCT struct dot11_rmrep_locid {
+	uint8 id;
+	uint8 len;
+	uint8 token;
+	uint8 mode;
+	uint8 type;
+	uint8 exp_tsf[8];
+	uint8 locid_sub_id;
+	uint8 locid_sub_len;
+	/* optional location identifier field */
+	/* optional sub-elements */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_rmrep_locid dot11_rmrep_locid_t;
+#define DOT11_LOCID_UNKNOWN_LEN		10
+#define DOT11_LOCID_SUBELEM_ID		0
 
 /* Measurement pause request */
 BWL_PRE_PACKED_STRUCT struct dot11_rmreq_pause_time {
@@ -2805,6 +3012,7 @@ BWL_PRE_PACKED_STRUCT struct dot11_rmreq_pause_time {
 	uint16 pause_time;
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_rmreq_pause_time dot11_rmreq_pause_time_t;
+#define DOT11_RMREQ_PAUSE_LEN	7
 
 
 /* Neighbor Report subelements ID (11k & 11v) */
@@ -2893,6 +3101,19 @@ BWL_PRE_PACKED_STRUCT struct dot11_lmrep {
 } BWL_POST_PACKED_STRUCT;
 typedef struct dot11_lmrep dot11_lmrep_t;
 #define DOT11_LMREP_LEN	11
+
+#define DOT11_MP_CAP_SPECTRUM			0x01	/* d11 cap. spectrum */
+#define DOT11_MP_CAP_SHORTSLOT			0x02	/* d11 cap. shortslot */
+/* Measurement Pilot */
+BWL_PRE_PACKED_STRUCT struct dot11_mprep {
+	uint8 cap_info;				/* Condensed capability Info. */
+	uint8 country[2];				/* Condensed country string */
+	uint8 opclass;				/* Op. Class */
+	uint8 channel;				/* Channel */
+	uint8 mp_interval;			/* Measurement Pilot Interval */
+} BWL_POST_PACKED_STRUCT;
+typedef struct dot11_mprep dot11_mprep_t;
+#define DOT11_MPREP_LEN	6
 
 /* 802.11 BRCM "Compromise" Pre N constants */
 #define PREN_PREAMBLE		24	/* green field preamble time */

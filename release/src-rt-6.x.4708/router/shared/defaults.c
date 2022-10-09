@@ -658,8 +658,11 @@ struct nvram_tuple router_defaults[] = {
 	{ "t_fix1",			""				, 0 },
 /* GMAC3 variables */
 #ifdef TCONFIG_BCM714
-	{ "stop_gmac3",			"1"				, 0 },	/* disable gmac3 (blackbox!) */
+	{ "stop_gmac3",			"1"				, 0 },	/* disable gmac3 (blackbox!) - variant 1 */
+	{ "stop_gmac3_new",		"1"				, 0 },	/* disable gmac3 (blackbox!) - variant 2 */
+	{ "disable_gmac3_force",	"1"				, 0 },	/* disable gmac3 (blackbox!) - variant 3 */	
 	{ "gmac3_enable",		"0"				, 0 },
+	{ "bhdr_enable",		"0"				, 0 },
 #endif /* TCONFIG_BCM714 */
 /* basic-ddns */
 	{ "ddnsx0",			""				, 0 },

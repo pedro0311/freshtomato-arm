@@ -292,6 +292,49 @@ wl_wlif_is_dwds(char *ifname)
 #endif
 }
 
+bool
+wl_wlif_is_psr_ap(char *ifname)
+{
+	int32 psta = FALSE;
+	int32 psta_mode = 0;
+
+	if (wl_probe(ifname) < 0)
+		return FALSE;
+
+	wl_iovar_getint(ifname, "psta", &psta_mode);
+	if (psta_mode == 2) {
+		wl_iovar_getint(ifname, "psta_if", &psta);
+		if (!psta) {
+			return strncmp(ifname, "wl", 2) ? FALSE : TRUE;
+		}
+	} else
+		return FALSE;
+
+	return FALSE;
+}
+
+bool
+wl_wlif_is_wet_ap(char *ifname)
+{
+	int wet = 0, ap = 0;
+
+#if defined(__CONFIG_DHDAP__) || defined(TCONFIG_DHDAP)
+	if (!dhd_probe(ifname)) {
+		wl_iovar_getint(ifname, "wet_enab", &wet);
+	} else
+#endif /* __CONFIG_DHDAP__ */
+	{
+		wl_iovar_getint(ifname, "wet", &wet);
+	}
+
+	if (wl_probe(ifname) < 0)
+		return FALSE;
+
+	wl_iovar_getint(ifname, "ap", &ap);
+
+	return (wet && ap);
+}
+
 /*
  * Get LAN or WAN ifname by wl mac
  * NOTE: We pass ifname in case of same mac in vifs (like URE TR mode)

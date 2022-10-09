@@ -85,5 +85,7 @@ extern char *get_ifname_by_wlmac(unsigned char *mac, char *name);
 extern int get_wsec(wsec_info_t *info, unsigned char *mac, char *osifname);
 extern bool wl_wlif_is_psta(char *ifname);
 extern bool wl_wlif_is_dwds(char *ifname);
+extern bool wl_wlif_is_psr_ap(char *ifname);
+extern bool wl_wlif_is_wet_ap(char *ifname);
 
 #endif /* _wlif_utils_h_ */

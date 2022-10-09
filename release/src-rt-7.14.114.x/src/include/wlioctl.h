@@ -5,7 +5,7 @@
  *
  * Definitions subject to change without notice.
  *
- * Copyright (C) 2015, Broadcom Corporation. All Rights Reserved.
+ * Copyright (C) 2016, Broadcom. All Rights Reserved.
  * 
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,7 +19,7 @@
  * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
- * $Id: wlioctl.h 606599 2015-12-16 03:55:13Z $
+ * $Id: wlioctl.h 651263 2016-07-26 06:32:28Z $
  */
 
 #ifndef _wlioctl_h_
@@ -82,10 +82,13 @@ typedef struct wl_dfs_forced_params {
 
 #define DFS_PREFCHANLIST_VER 0x01
 #define WL_CHSPEC_LIST_FIXED_SIZE	OFFSETOF(chanspec_list_t, list)
+/* size of dfs forced param size given n channels are in the list */
+#define WL_DFS_FORCED_PARAMS_SIZE(n) \
+	(sizeof(wl_dfs_forced_t) + (((n) < 1) ? (0) : (((n) - 1)* sizeof(chanspec_t))))
 #define WL_DFS_FORCED_PARAMS_FIXED_SIZE \
 	(WL_CHSPEC_LIST_FIXED_SIZE + OFFSETOF(wl_dfs_forced_t, chspec_list))
 #define WL_DFS_FORCED_PARAMS_MAX_SIZE \
-	WL_DFS_FORCED_PARAMS_FIXED_SIZE + (WL_NUMCHANNELS * sizeof(chanspec_t))
+	WL_DFS_FORCED_PARAMS_FIXED_SIZE + (WL_NUMCHANSPECS * sizeof(chanspec_t))
 
 #define WLC_DC_DWDS_DATA_LENGTH 1
 
@@ -328,9 +331,9 @@ typedef struct wl_bss_info {
 	uint16		ie_offset;		/* offset at which IEs start, from beginning */
 	uint32		ie_length;		/* byte length of Information Elements */
 	int16		SNR;			/* average SNR of during frame reception */
-	uint16		vht_mcsmap;		/* STA's Associated vhtmcsmap */
-	uint16		vht_mcsmap_prop;	/* STA's Associated prop vhtmcsmap */
-	uint16		vht_txmcsmap_prop;	/* prop VHT tx mcs prop */
+	uint16          vht_mcsmap;             /* STA's Associated vhtmcsmap */
+	uint16          vht_mcsmap_prop;        /* STA's Associated prop vhtmcsmap */
+	uint16          vht_txmcsmap_prop;      /* prop VHT tx mcs prop */
 	/* Add new fields here */
 	/* variable length Information Elements */
 } wl_bss_info_t;
@@ -1136,12 +1139,16 @@ typedef struct {
 								 */
 	uint32			rx_pkts_retried;	/* # rx with retry bit set */
 	uint32			tx_rate_fallback;	/* lowest fallback TX rate */
+	wl_rateset_args_t	rateset_adv;	/* rateset along with mcs index bitmap */
+
+	uint32			wnm_cap;	/* wnm capabilities */
 } sta_info_t;
 
 #define WL_OLD_STAINFO_SIZE	OFFSETOF(sta_info_t, tx_tot_pkts)
 
-#define WL_STA_VER		4
+#define WL_STA_VER		5
 
+#define STAMON_MODULE_VER		1
 #endif /* LINUX_POSTMOGRIFY_REMOVAL */
 
 #define	WLC_NUMRATES	16	/* max # of rates in a rateset */
@@ -1178,6 +1185,18 @@ typedef struct maclist {
 	uint count;			/* number of MAC addresses */
 	struct ether_addr ea[1];	/* variable length array of MAC addresses */
 } maclist_t;
+
+/* FOR ioctl that take the sta monitor information */
+typedef struct stamon_data {
+	struct ether_addr  ea;
+	int rssi;
+} stamon_data_t;
+
+typedef struct stamon_info {
+	int version;
+	uint count;
+	stamon_data_t sta_data[1];
+} stamon_info_t;
 
 #ifndef LINUX_POSTMOGRIFY_REMOVAL
 /* get pkt count struct passed through ioctl */
@@ -1602,6 +1621,16 @@ typedef struct {
 
 #define WL_RADAR_THR_VERSION	2
 
+typedef struct {
+	uint ver;
+	uint len;
+	int rssi_th[3];
+	uint8 rssi_gain_80[4];
+	uint8 rssi_gain_160[4];
+} wl_dyn_switch_th_t;
+
+#define WL_PHY_DYN_SWITCH_TH_VERSION	1
+
 /* RSSI per antenna */
 typedef struct {
 	uint32	version;		/* version field */
@@ -1885,8 +1914,7 @@ enum wl_cnt_xtlv_id {
 #define WL_XTLV_CNTBUF_MAX_SIZE ((uint)(OFFSETOF(wl_cnt_info_t, data)) +        \
 		(uint)BCM_XTLV_HDR_SIZE + (uint)sizeof(wl_cnt_wlc_t) +          \
 		(uint)BCM_XTLV_HDR_SIZE + WL_CNT_MCST_STRUCT_SZ +              \
-		(uint)BCM_XTLV_HDR_SIZE + WL_CNT_MCXST_STRUCT_SZ +            \
-		(uint)sizeof(xtlv_desc_t))
+		(uint)BCM_XTLV_HDR_SIZE + WL_CNT_MCXST_STRUCT_SZ)
 
 #define WL_CNTBUF_MAX_SIZE MAX(WL_XTLV_CNTBUF_MAX_SIZE, (uint)sizeof(wl_cnt_ver_11_t))
 
@@ -2100,8 +2128,6 @@ typedef struct {
 	uint32  rxprobersp;     /**< Number of RX probe response */
 	uint32  txaction;       /**< Number of TX action frame */
 	uint32  rxaction;       /**< Number of RX action frame */
-	uint32	ampdu_wds;	/* Number of AMPDU watchdogs */
-	uint32	txlost;		/* Number of lost packets reported in txs */
 } wl_cnt_wlc_t;
 
 /* MACXSTAT counters for ucodex (corerev >= 64) */
@@ -4892,8 +4918,11 @@ typedef struct nbr_element {
 	uint8 reg;
 	uint8 channel;
 	uint8 phytype;
+	uint8 addtype; /* static for manual add or dynamic if auto-learning of neighbors */
 	uint8 pad;
 } nbr_element_t;
+#define NBR_ADD_STATIC 0
+#define NBR_ADD_DYNAMIC 1
 
 /* no default structure packing */
 #include <packed_section_end.h>
@@ -6701,6 +6730,64 @@ typedef struct statreq {
 	uint16 reps;
 } statreq_t;
 
+typedef struct txstrmreq {
+	struct ether_addr da;	/* Destination address */
+	uint16 random_int;	/* Random interval for measurement start */
+	uint16 dur;		/* Measurement duration */
+	uint16 reps;		/* number of repetitions */
+	struct ether_addr peer;	/* Peer MAC address */
+	uint8 tid;		/* Traffic ID */
+	uint8 bin0_range;	/* Delay range of the first bin */
+} txstrmreq_t;
+
+typedef struct lcireq {
+	struct ether_addr da;	/* Destination address */
+	uint16 reps;		/* number of repetitions */
+	uint8 subj;		/* Local/Remote/Thid party */
+	uint8 lat_res;		/* Latitude requested Resolution */
+	uint8 lon_res;		/* Longitude requested Resolution */
+	uint8 alt_res;		/* Altitude requested Resolution */
+} lcireq_t;
+
+typedef struct civicreq {
+	struct ether_addr da;	/* Destination address */
+	uint16 reps;		/* number of repetitions */
+	uint8 subj;		/* Local/Remote/Thid party */
+	uint8 civloc_type;	/* Format of location info */
+	uint8 siu;		/* Unit of Location service interval */
+	uint16 si;		/* Location service interval */
+} civicreq_t;
+
+typedef struct locidreq {
+	struct ether_addr da;	/* Destination address */
+	uint16 reps;		/* number of repetitions */
+	uint8 subj;		/* Local/Remote/Thid party */
+	uint8 siu;		/* Unit of Location service interval */
+	uint16 si;		/* Location service interval */
+} locidreq_t;
+
+typedef struct wl_rrm_config_ioc {
+	uint16 version; /* command version */
+	uint16 id;      /* subiovar cmd ID */
+	uint16 len;     /* total length of all bytes in data[] */
+	uint16 pad;     /* 4-byte boundary padding */
+	uint8 data[1];  /* payload */
+} wl_rrm_config_ioc_t;
+
+enum {
+	WL_RRM_CONFIG_NONE	= 0,	/* reserved */
+	WL_RRM_CONFIG_GET_LCI	= 1,	/* get LCI */
+	WL_RRM_CONFIG_SET_LCI	= 2,	/* set LCI */
+	WL_RRM_CONFIG_GET_CIVIC	= 3,	/* get civic location */
+	WL_RRM_CONFIG_SET_CIVIC	= 4,	/* set civic location */
+	WL_RRM_CONFIG_GET_LOCID	= 5,	/* get location identifier */
+	WL_RRM_CONFIG_SET_LOCID	= 6,	/* set location identifier */
+	WL_RRM_CONFIG_MAX	= 7
+};
+
+#define WL_RRM_CONFIG_NAME "rrm_config"
+#define WL_RRM_CONFIG_MIN_LENGTH OFFSETOF(wl_rrm_config_ioc_t, data)
+
 #define WL_RRM_RPT_VER		0
 #define WL_RRM_RPT_MAX_PAYLOAD	256
 #define WL_RRM_RPT_MIN_PAYLOAD	7
@@ -6760,7 +6847,8 @@ typedef enum wl_stamon_cfg_cmd_type {
 	STAMON_CFG_CMD_ENB = 2,
 	STAMON_CFG_CMD_DSB = 3,
 	STAMON_CFG_CMD_CNT = 4,
-	STAMON_CFG_CMD_RSTCNT = 5
+	STAMON_CFG_CMD_RSTCNT = 5,
+	STAMON_CFG_CMD_GET_STATS = 6
 } wl_stamon_cfg_cmd_type_t;
 
 typedef struct wlc_stamon_sta_config {
@@ -7049,5 +7137,11 @@ wl_wlc_version_t;
 #define WL_SUPPORTED_WLC_VER_MAJOR 3
 #define WL_SUPPORTED_WLC_VER_MINOR 0
 
+
+/* WET host ip and mac parameter configuration */
+typedef struct wet_host {
+	uint8 buf[6]; /* ip or mac*/
+	uint8 bssidx;
+} wet_host_t;
 
 #endif /* _wlioctl_h_ */

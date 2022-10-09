@@ -20,13 +20,13 @@
 
 obj-${CONFIG_DPSTA} := dpsta.o
 
-DPSTASRC := ../../../../../../../src/router/dpsta$(BCMEX)
+DPSTASRC := ../../../../../../src/router/dpsta
 DPSTAOBJ := $(DPSTASRC)/dpsta_linux.o
 SYMOBJ := $(DPSTASRC)/dpsta_linux.o
 
 # Search for sources under src/router/dpsta
 ifneq (,$(wildcard $(src)/$(DPSTASRC)/*.c))
-  EXTRA_CFLAGS += -I$(src)/$(DPSTASRC)/../../router/dpsta$(BCMEX)
+  EXTRA_CFLAGS += -I$(src)/$(DPSTASRC)/../../router/dpsta
   dpsta-objs := $(DPSTAOBJ) dpsta_ksyms.o
 else
   dpsta-objs := $(DPSTASRC)/linux/dpsta.o
