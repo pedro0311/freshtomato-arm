@@ -1260,7 +1260,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_txbf_bfe_cap",		V_RANGE(0, 2)			},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
 #ifdef TCONFIG_BCM714
 	{ "wl_mu_features", 		V_LENGTH(0, 8)			},	/* mu_features=0x8000 when mu-mimo enabled */
-	{ "wl_mumimo", 			V_01				},	/* mumimo on = 1, off = 0 */	
+	{ "wl_mumimo", 			V_01				},	/* mumimo on = 1, off = 0 */
 #endif /* TCONFIG_BCM714 */
 	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
 	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)

@@ -886,13 +886,13 @@ static int init_vlan_ports(void)
 		break;
 #ifdef TCONFIG_BCM714
 	case MODEL_RTAC3100:
-	  	dirty |= check_nv("vlan1ports", "3 2 1 0 5*");
+		dirty |= check_nv("vlan1ports", "3 2 1 0 5*");
 		dirty |= check_nv("vlan2ports", "4 5");
 		break;
 #endif
 #ifdef TCONFIG_AC5300
 	case MODEL_RTAC5300:
-	  	dirty |= check_nv("vlan1ports", "1 2 3 4 7*");
+		dirty |= check_nv("vlan1ports", "1 2 3 4 7*");
 		dirty |= check_nv("vlan2ports", "0 7");
 		break;
 #endif
@@ -9382,7 +9382,7 @@ static int init_nvram(void)
 			/* RGMII_BRCM5301X */
 			nvram_unset("rgmii_port");				/* unset for RT-AC3100 - !!!NOTE!!! CONFIG_RGMII_BCM_FA=y for SDK7.14 by default, no option currently! */
 
-			/* misc LED settings */			
+			/* misc LED settings */
 			nvram_set("0:ledbh9", "0x7");
 			nvram_set("1:ledbh9", "0x7");
 
@@ -9467,7 +9467,7 @@ static int init_nvram(void)
 			/* RGMII_BRCM5301X */
 			nvram_set("rgmii_port", "5"); 				/* !!!NOTE!!! CONFIG_RGMII_BCM_FA=y for SDK7.14 by default, no option currently! */
 
-			/* misc LED settings */			
+			/* misc LED settings */
 			nvram_set("0:ledbh9", "0x7");
 			nvram_set("1:ledbh9", "0x7");
 			nvram_set("2:ledbh9", "0x7");

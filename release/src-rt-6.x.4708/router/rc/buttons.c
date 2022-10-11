@@ -436,8 +436,8 @@ int buttons_main(int argc, char *argv[])
 		break;
 	case MODEL_R1D:
 		reset_mask = 1 << 17;
- 		ses_led = LED_AOSS;
- 		break;
+		ses_led = LED_AOSS;
+		break;
 	case MODEL_AC1450:
 	case MODEL_R6250:
 	case MODEL_R6300v2:
@@ -626,7 +626,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM714
-			     || (model == MODEL_RTAC3100)			     
+			     || (model == MODEL_RTAC3100)
 #endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
 #ifdef TCONFIG_AC5300
@@ -750,7 +750,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC68U)
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM714
-			     || (model == MODEL_RTAC3100)			     
+			     || (model == MODEL_RTAC3100)
 #endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
 #ifdef TCONFIG_AC5300
