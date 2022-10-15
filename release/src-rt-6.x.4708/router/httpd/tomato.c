@@ -4,6 +4,7 @@
  *
  */
 
+
 #include "tomato.h"
 
 #include <sys/sysinfo.h>
@@ -13,354 +14,71 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+#define	V_NONE			VT_NONE,	{ }, 			{ }
+#define V_01			VT_RANGE,	{ .l = 0 },		{ .l = 1 }
+#define V_PORT			VT_RANGE,	{ .l = 2 },		{ .l = 65535 }
+#define V_ONOFF			VT_LENGTH,	{ .i = 2 },		{ .i = 3 }
+#define V_WORD			VT_LENGTH,	{ .i = 1 },		{ .i = 16 }
+#define V_LENGTH(min, max)	VT_LENGTH,	{ .i = min },		{ .i = max }
+#define V_TEXT(min, max)	VT_TEXT,	{ .i = min },		{ .i = max }
+#define V_RANGE(min, max)	VT_RANGE,	{ .l = min },		{ .l = max }
+#define V_IP			VT_IP,		{ },			{ }
+#define	V_OCTET			VT_RANGE,	{ .l = 0 },		{ .l = 255 }
+#define V_NUM			VT_RANGE,	{ .l = 0 },		{ .l = 0x7FFFFFFF }
+#define	V_TEMP			VT_TEMP,	{ }, 			{ }
+#ifdef TCONFIG_IPV6
+#define V_IPV6(required)	VT_IPV6,	{ .i = required },	{ }
+#endif
 
-//	#define DEBUG_NOEXECSERVICE
-#define DEBUG_NVRAMSET(k, v)	_dprintf("nvram set %s=%s\n", k, v);
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OS
+#define LOGMSG_NVDEBUG	"tomato_debug"
 
 
 char *post_buf = NULL;
 int rboot = 0;
 extern int post;
 
-static void asp_css(int argc, char **argv);
 #if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
 static void asp_discovery(int argc, char **argv);
 #endif
+static void asp_css(int argc, char **argv);
 static void asp_resmsg(int argc, char **argv);
-
-//
 static void wo_tomato(char *url);
 static void wo_update(char *url);
 static void wo_service(char *url);
 static void wo_shutdown(char *url);
 static void wo_nvcommit(char *url);
-// static void wo_logout(char *url);
 
-
-// ----------------------------------------------------------------------------
-
-
-void exec_service(const char *action)
-{
+typedef union {
 	int i;
+	long l;
+	const char *s;
+} nvset_varg_t;
 
-	_dprintf("exec_service: %s\n", action);
-
-	i = 10;
-	while ((!nvram_match("action_service", "")) && (i-- > 0))  {
-		_dprintf("%s: waiting before %d\n", __FUNCTION__, i);
-		sleep(1);
-	}
-
-	nvram_set("action_service", action);
-	kill(1, SIGUSR1);
-
-	i = 3;
-	while ((nvram_match("action_service", (char *)action)) && (i-- > 0))  {
-		_dprintf("%s: waiting after %d\n", __FUNCTION__, i);
-		sleep(1);
-	}
-
-/*
-	if (atoi(webcgi_safeget("_service_wait", ""))) {
-		i = 10;
-		while ((nvram_match("action_service", (char *)action)) && (i-- > 0))  {
-			_dprintf("%s: waiting after %d\n", __FUNCTION__, i);
-			sleep(1);
-		}
-	}
-*/
-}
-
-static void wi_generic_noid(char *url, int len, char *boundary)
-{
-	if (post == 1) {
-		if (len >= (32 * 1024)) {
-//			syslog(LOG_WARNING, "POST max");
-			exit(1);
-		}
-
-		if (post_buf) free(post_buf);
-		if ((post_buf = malloc(len + 1)) == NULL) {
-//			syslog(LOG_CRIT, "Unable to allocate post buffer");
-			exit(1);
-		}
-
-		if (web_read_x(post_buf, len) != len) {
-			exit(1);
-		}
-		post_buf[len] = 0;
-		webcgi_init(post_buf);
-	}
-}
-
-void wi_generic(char *url, int len, char *boundary)
-{
-	wi_generic_noid(url, len, boundary);
-	check_id(url);
-}
-
-// !!TB - CGI Support
-void wi_cgi_bin(char *url, int len, char *boundary)
-{
-	if (post_buf) free(post_buf);
-	post_buf = NULL;
-
-	if (post) {
-		if (len >= (128 * 1024)) {
-			syslog(LOG_WARNING, "POST length exceeded maximum allowed");
-			exit(1);
-		}
-
-		if (len > 0) {
-			if ((post_buf = malloc(len + 1)) == NULL) {
-				exit(1);
-			}
-			if (web_read_x(post_buf, len) != len) {
-				exit(1);
-			}
-			post_buf[len] = 0;
-		}
-	}
-}
-
-#ifdef TCONFIG_TERMLIB
-static void _execute_command(char *url, char *command, char *query, char *working_dir, wofilter_t wof)
-#else
-static void _execute_command(char *url, char *command, char *query, wofilter_t wof)
-#endif
-{
-	char webExecFile[]  = "/tmp/.wxXXXXXX";
-	char webQueryFile[] = "/tmp/.wqXXXXXX";
-	char cmd[sizeof(webExecFile) + 10];
-	FILE *f;
-	int fe, fq = -1;
-
-	if ((fe = mkstemp(webExecFile)) < 0)
-		exit(1);
-	if (query) {
-		if ((fq = mkstemp(webQueryFile)) < 0) {
-			close(fe);
-			unlink(webExecFile);
-			exit(1);
-		}
-	}
-
-	if ((f = fdopen(fe, "wb")) != NULL) {
-		fprintf(f,
-			"#!/bin/sh\n"
-			"export REQUEST_METHOD=\"%s\"\n"
-			"export PATH=%s\n"
-			". /etc/profile\n"
-#ifdef TCONFIG_TERMLIB
-			"cd %s\n"
-#endif
-			"%s%s %s%s\n",
-			post ? "POST" : "GET", getenv("PATH"),
-#ifdef TCONFIG_TERMLIB
-			working_dir,
-#endif
-			command ? "" : "./", command ? command : url,
-			query ? "<" : "", query ? webQueryFile : "");
-		fclose(f);
-	} else {
-		close(fe);
-		unlink(webExecFile);
-		if (query) {
-			close(fq);
-			unlink(webQueryFile);
-		}
-		exit(1);
-	}
-	chmod(webExecFile, 0700);
-
-	if (query) {
-		if ((f = fdopen(fq, "wb")) != NULL) {
-			fprintf(f, "%s\n", query);
-			fclose(f);
-		} else {
-			unlink(webExecFile);
-			close(fq);
-			unlink(webQueryFile);
-			exit(1);
-		}
-	}
-
-	snprintf(cmd, sizeof(cmd), "%s 2>&1", webExecFile);
-	web_pipecmd(cmd, wof);
-	unlink(webQueryFile);
-	unlink(webExecFile);
-}
-
-static void wo_cgi_bin(char *url)
-{
-	if (!header_sent) send_header(200, NULL, mime_html, 0);
-#ifdef TCONFIG_TERMLIB
-	_execute_command(url, NULL, post_buf, "/www", WOF_NONE);
-#else
-	_execute_command(url, NULL, post_buf, WOF_NONE);
-#endif
-	if (post_buf) {
-		free(post_buf);
-		post_buf = NULL;
-	}
-}
-
-static void wo_shell(char *url)
-{
-#ifdef TCONFIG_TERMLIB
-	if (atoi(webcgi_safeget("nojs", "0"))) {
-		_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
-	} else {
-		web_puts("\ncmdresult = '");
-		_execute_command(NULL, webcgi_get("command"), NULL, "/www", WOF_JAVASCRIPT);
-		web_puts("';");
-	}
-#else
-	web_puts("\ncmdresult = '");
-	_execute_command(NULL, webcgi_get("command"), NULL, WOF_JAVASCRIPT);
-	web_puts("';");
-#endif
-}
-
-static void wo_cfe(char *url)
-{
-	do_file(MTD_DEV(0ro));
-}
-
-static void wo_nvram(char *url)
-{
-	web_pipecmd("nvram show", WOF_NONE);
-}
-
-static void wo_iptables(char *url)
-{
-	web_pipecmd("iptables -nvL; echo; iptables -t nat -nvL; echo; iptables -t mangle -nvL", WOF_NONE);
-}
-
+typedef struct {
+	const char *name;
+	enum {
+		VT_NONE,	/* no checking */
+		VT_LENGTH,	/* check length of string */
+		VT_TEXT,	/* strip \r, check length of string */
+		VT_RANGE,	/* expect an integer, check range */
+		VT_IP,		/* expect an ip address */
+		VT_MAC,		/* expect a mac address */
 #ifdef TCONFIG_IPV6
-static void wo_ip6tables(char *url)
-{
-	web_pipecmd("ip6tables -nvL; echo; ip6tables -t mangle -nvL", WOF_NONE);
-}
+		VT_IPV6,	/* expect an ipv6 address */
 #endif
+		VT_TEMP		/* no checks, no commit */
+	} vtype;
+	nvset_varg_t va;
+	nvset_varg_t vb;
+} nvset_t;
 
-/*
-static void wo_spin(char *url)
-{
-	char s[64];
-
-	strlcpy(s, nvram_safe_get("web_css"), sizeof(s));
-	strlcat(s, "_spin.gif", sizeof(s));
-	if (f_exists(s)) do_file(s);
-	else do_file("_spin.gif");
-}
-*/
-
-void common_redirect(void)
-{
-	if (atoi(webcgi_safeget("_ajax", ""))) {
-		send_header(200, NULL, mime_html, 0);
-		web_puts("OK");
-	}
-	else
-		redirect(webcgi_safeget("_redirect", "/"));
-}
-
-// ----------------------------------------------------------------------------
-
-const struct mime_handler mime_handlers[] = {
-	{ "update.cgi",			mime_javascript,			0,	wi_generic,		wo_update,		1 },
-	{ "tomato.cgi",			NULL,					0,	wi_generic,		wo_tomato,		1 },
-
-	{ "cfe/*.bin",			mime_binary,				0,	wi_generic,		wo_cfe,			1 },
-	{ "nvram/*.txt",		mime_binary,				0,	wi_generic,		wo_nvram,		1 },
-	{ "ipt/*.txt",			mime_binary,				0,	wi_generic,		wo_iptables,		1 },
-#ifdef TCONFIG_IPV6
-	{ "ip6t/*.txt",			mime_binary,				0,	wi_generic,		wo_ip6tables,		1 },
-#endif
-	{ "cfg/*.cfg",			NULL,					0,	wi_generic,		wo_backup,		1 },
-	{ "cfg/restore.cgi",		mime_html,				0,	wi_restore,		wo_restore,		1 },
-	{ "cfg/defaults.cgi",		NULL,					0,	wi_generic,		wo_defaults,		1 },
-
-	{ "stats/*.gz",			NULL,					0,	wi_generic,		wo_statsbackup,		1 },
-	{ "stats/restore.cgi",		NULL,					0,	wi_statsrestore,	wo_statsrestore,	1 },
-
-	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
-	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
-	{ "webmon_**",			NULL,					0,	wi_generic,		wo_syslog,		1 },
-
-	{ "logout.asp",			NULL,					0,	wi_generic,		wo_asp,			1 },
-	{ "clearcookies.asp",		NULL,					0,	wi_generic,		wo_asp,			1 },
-
-//	{ "spin.gif",			NULL,					0,	wi_generic_noid,	wo_spin,		1 },
-
-	{ "**.asp",			NULL,					0,	wi_generic_noid,	wo_asp,			1 },
-	{ "**.css",			"text/css",				12,	wi_generic_noid,	do_file,		1 },
-	{ "**.htm|**.html",		mime_html,				2,	wi_generic_noid,	do_file,		1 },
-	{ "**.gif",			"image/gif",				12,	wi_generic_noid,	do_file,		1 },
-	{ "**.jpg",			"image/jpeg",				12,	wi_generic_noid,	do_file,		1 },
-	{ "**.png",			"image/png",				12,	wi_generic_noid,	do_file,		1 },
-	{ "**.js",			mime_javascript,			12,	wi_generic_noid,	do_file,		1 },
-	{ "**.jsx",			mime_javascript,			0,	wi_generic,		wo_asp,			1 },
-	{ "**.jsz",			mime_javascript,			0,	wi_generic_noid,	wo_asp,			1 },
-	{ "**.svg",			"image/svg+xml",			0,	wi_generic_noid,	wo_asp,			1 },
-	{ "**.txt",			mime_plain,				2,	wi_generic_noid,	do_file,		1 },
-	{ "**.bin",			mime_binary,				0,	wi_generic_noid,	do_file,		1 },
-	{ "**.bino",			mime_octetstream,			0,	wi_generic_noid,	do_file,		1 },
-	{ "favicon.ico",		"image/x-icon",				24,	wi_generic_noid,	do_file,		1 },
-// !!TB - CGI Support, enable downloading archives
-	{ "**/cgi-bin/**|**.sh",	NULL,					0,	wi_cgi_bin,		wo_cgi_bin,		1 },
-	{ "**.tar|**.gz",		mime_binary,				0,	wi_generic_noid,	do_file,		1 },
-	{ "shell.cgi",			mime_javascript,			0,	wi_generic,		wo_shell,		1 },
-	{ "wpad.dat|proxy.pac",		"application/x-ns-proxy-autoconfig",	0,	wi_generic_noid,	do_file,		0 },
-
-	{ "webmon.cgi",			mime_javascript,			0,	wi_generic,		wo_webmon,		1 },
-	{ "dhcpc.cgi",			NULL,					0,	wi_generic,		wo_dhcpc,		1 },
-	{ "dhcpd.cgi",			mime_javascript,			0,	wi_generic,		wo_dhcpd,		1 },
-	{ "nvcommit.cgi",		NULL,					0,	wi_generic,		wo_nvcommit,		1 },
-	{ "ping.cgi",			mime_javascript,			0,	wi_generic,		wo_ping,		1 },
-	{ "trace.cgi",			mime_javascript,			0,	wi_generic,		wo_trace,		1 },
-	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
-	{ "upnp.cgi",			NULL,					0,	wi_generic,		wo_upnp,		1 },
-	{ "wakeup.cgi",			NULL,					0,	wi_generic,		wo_wakeup,		1 },
-	{ "wlradio.cgi",		NULL,					0,	wi_generic,		wo_wlradio,		1 },
-	{ "resolve.cgi",		mime_javascript,			0,	wi_generic,		wo_resolve,		1 },
-	{ "expct.cgi",			mime_html,				0,	wi_generic,		wo_expct,		1 },
-	{ "service.cgi",		NULL,					0,	wi_generic,		wo_service,		1 },
-//	{ "logout.cgi",			NULL,			 		0,	wi_generic,		wo_logout,		0 },
-// see httpd.c
-	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
-#ifdef TCONFIG_OPENVPN
-	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_status,		1 },
-	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_genkey,		1 },
-#ifdef TCONFIG_KEYGEN
-	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_ovpn_genclientconfig,1 },
-#endif
-#endif
-#ifdef TCONFIG_PPTPD
-	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },	//!!AB - PPTPD
-#endif
-#ifdef TCONFIG_USB
-	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },	//!!TB - USB
-	{ "wwansignal.cgi",		mime_html,				0,	wi_generic,		wo_wwansignal,		1 },
-	{ "wwansms.cgi",		mime_html,				0,	wi_generic,		wo_wwansms,		1 },
-	{ "wwansmsdelete.cgi",		mime_html,				0,	wi_generic,		wo_wwansms_delete,	1 },
-#endif
-#ifdef TCONFIG_IPERF
-	{ "iperfstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcpstatus,		1 },
-	{ "iperfrun.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcprun,		1 },
-	{ "iperfkill.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcpkill,		1 },
-#endif
-#ifdef BLACKHOLE
-	{ "blackhole.cgi",		NULL,					0,	wi_blackhole,		NULL,			1 },
-#endif
-#ifdef TCONFIG_NOCAT
-	{ "uploadsplash.cgi",		NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
-	{ "ext/uploadsplash.cgi",	NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
-#endif
-	{ NULL,				NULL,					0,	NULL,			NULL,			1 }
-};
+typedef struct {
+	const nvset_t *v;
+	int write;
+	int dirty;
+} nv_list_t;
 
 const aspapi_t aspapi[] = {
 	{ "activeroutes",		asp_activeroutes		},
@@ -413,18 +131,18 @@ const aspapi_t aspapi[] = {
 	{ "wlclient",			asp_wlclient			},
 	{ "wlnoise",			asp_wlnoise			},
 	{ "wlscan",			asp_wlscan			},
-	{ "wlchannels",			asp_wlchannels			},	//!!TB
+	{ "wlchannels",			asp_wlchannels			},
 	{ "wlcountries",		asp_wlcountries			},
 	{ "wlifaces",			asp_wlifaces			},
 	{ "wlbands",			asp_wlbands			},
 #ifdef TCONFIG_USB
-	{ "usbdevices",			asp_usbdevices			},	//!!TB - USB Support
+	{ "usbdevices",			asp_usbdevices			},
 #endif
 #ifdef TCONFIG_SDHC
-	{ "mmcid",			asp_mmcid			},	//MMC Support
+	{ "mmcid",			asp_mmcid			},	/* MMC Support */
 #endif
-	{ "etherstates",		asp_etherstates			},	//Ethernet States
-	{ "anonupdate",			asp_anonupdate			},	//Tomato update notification system
+	{ "etherstates",		asp_etherstates			},	/* Ethernet States */
+	{ "anonupdate",			asp_anonupdate			},	/* Tomato update notification system */
 #ifdef TCONFIG_IPV6
 	{ "calc6rdlocalprefix",		asp_calc6rdlocalprefix		},
 #endif
@@ -441,166 +159,38 @@ const aspapi_t aspapi[] = {
 	{ NULL,				NULL				}
 };
 
-// -----------------------------------------------------------------------------
-
-static void asp_css(int argc, char **argv)
-{
-	const char *css = nvram_safe_get("web_css");
-	const char *ttb = nvram_safe_get("ttb_css");
-	int c = strcmp(css, "tomato") != 0;
-
-#ifdef TCONFIG_ADVTHEMES
-	if (argc == 0) {
-#endif
-		if (nvram_match("web_css", "online")) {
-			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/ext/%s.css\">", ttb);
-		} else {
-			if (c) {
-				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/%s.css\">", css);
-			}
-		}
-#ifdef TCONFIG_ADVTHEMES
-	}
-	else {
-		if ((strncmp(argv[0], "svg-css", 7) == 0) && c) {
-			web_printf("<?xml-stylesheet type=\"text/css\" href=\"/%s.css\" ?>", css);	/* css for bwm-graph.svg */
-		}
-		if ((strncmp(argv[0], "svg-js", 6) == 0) && (nvram_get_int("web_adv_scripts"))) {	/* special case, outer JS file for bwm-graph.svg */
-			web_printf("<script href=\"/resize-charts.js\" />");
-		}
-	}
-#endif
-}
-
-#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
-static void asp_discovery(int argc, char **argv)
-{
-	char buf[32] = "/usr/sbin/discovery.sh ";
-
-	if (strncmp(argv[0], "off", 3) == 0)
-		return;
-	else if (strncmp(argv[0], "traceroute", 10) == 0)
-		strcat(buf, argv[0]);
-
-	system(buf);
-}
-#endif
-
-// -----------------------------------------------------------------------------
-
-const char *resmsg_get(void)
-{
-	return webcgi_safeget("resmsg", "");
-}
-
-void resmsg_set(const char *msg)
-{
-	webcgi_set("resmsg", strdup(msg));	// m ok
-}
-
-int resmsg_fread(const char *fname)
-{
-	char s[256];
-	char *p;
-
-	f_read_string(fname, s, sizeof(s));
-	if ((p = strchr(s, '\n')) != NULL) *p = 0;
-	if (s[0]) {
-		resmsg_set(s);
-		return 1;
-	}
-	return 0;
-}
-
-static void asp_resmsg(int argc, char **argv)
-{
-	char *p;
-
-	if ((p = js_string(webcgi_safeget("resmsg", (argc > 0) ? argv[0] : ""))) == NULL) return;
-	web_printf("\nresmsg='%s';\n", p);
-	free(p);
-}
-
-// ----------------------------------------------------------------------------
-
-// verification... simple sanity checks. UI should verify all fields.
-
-// todo: move and re-use for filtering	- zzz
-
-typedef union {
-	int i;
-	long l;
-	const char *s;
-} nvset_varg_t;
-
-typedef struct {
-	const char *name;
-	enum {
-		VT_NONE,		// no checking
-		VT_LENGTH,		// check length of string
-		VT_TEXT,		// strip \r, check length of string
-		VT_RANGE,		// expect an integer, check range
-		VT_IP,			// expect an ip address
-		VT_MAC,			// expect a mac address
-#ifdef TCONFIG_IPV6
-		VT_IPV6,		// expect an ipv6 address
-#endif
-		VT_TEMP			// no checks, no commit
-	} vtype;
-	nvset_varg_t va;
-	nvset_varg_t vb;
-} nvset_t;
-
-
-#define	V_NONE				VT_NONE,	{ }, 			{ }
-#define V_01				VT_RANGE,	{ .l = 0 },		{ .l = 1 }
-#define V_PORT				VT_RANGE,	{ .l = 2 },		{ .l = 65535 }
-#define V_ONOFF				VT_LENGTH,	{ .i = 2 },		{ .i = 3 }
-#define V_WORD				VT_LENGTH,	{ .i = 1 },		{ .i = 16 }
-#define V_LENGTH(min, max)		VT_LENGTH,	{ .i = min },		{ .i = max }
-#define V_TEXT(min, max)		VT_TEXT,	{ .i = min },		{ .i = max }
-#define V_RANGE(min, max)		VT_RANGE,	{ .l = min },		{ .l = max }
-#define V_IP				VT_IP,		{ },			{ }
-#define	V_OCTET				VT_RANGE,	{ .l = 0 },		{ .l = 255 }
-#define V_NUM				VT_RANGE,	{ .l = 0 },		{ .l = 0x7FFFFFFF }
-#define	V_TEMP				VT_TEMP,	{ }, 			{ }
-#ifdef TCONFIG_IPV6
-#define V_IPV6(required)		VT_IPV6,	{ .i = required },	{ }
-#endif
-
 static const nvset_t nvset_list[] = {
-
-// basic-ident
+/* basic-ident */
 	{ "router_name",		V_LENGTH(0, 32)			},
 	{ "wan_hostname",		V_LENGTH(0, 32)			},
 	{ "wan_domain",			V_LENGTH(0, 32)			},
 
-// basic-time
-	{ "tm_tz",			V_LENGTH(1, 64)			},	// PST8PDT
-	{ "tm_sel",			V_LENGTH(1, 64)			},	// PST8PDT
+/* basic-time */
+	{ "tm_tz",			V_LENGTH(1, 64)			},	/* PST8PDT */
+	{ "tm_sel",			V_LENGTH(1, 64)			},	/* PST8PDT */
 	{ "tm_dst",			V_01				},
 	{ "ntp_updates",		V_RANGE(-1, 24)			},
-	{ "ntp_server",			V_LENGTH(1, 150)		},	// x y z
+	{ "ntp_server",			V_LENGTH(1, 150)		},	/* x y z */
 	{ "ntpd_ready",			V_01				},	/* is ntp synced? */
 	{ "ntpd_enable",		V_01				},	/* enable ntpd server */
 	{ "ntpd_server_redir",		V_01				},	/* intercept ntp requests */
 
-// basic-static
-	{ "dhcpd_static",		V_LENGTH(0, 108*251)		},	// 108 (max chars per entry) x 250 entries
+/* basic-static */
+	{ "dhcpd_static",		V_LENGTH(0, 108*251)		},	/* 108 (max chars per entry) x 250 entries */
 	{ "dhcpd_static_only",		V_01				},
 
-// basic-ddns
+/* basic-ddns */
 	{ "ddnsx0",			V_LENGTH(0, 2048)		},
 	{ "ddnsx1",			V_LENGTH(0, 2048)		},
-	{ "ddnsx0_cache",		V_LENGTH(0, 1)			},	// only to clear
+	{ "ddnsx0_cache",		V_LENGTH(0, 1)			},	/* only to clear */
 	{ "ddnsx1_cache",		V_LENGTH(0, 1)			},
 	{ "ddnsx_ip",			V_LENGTH(0, 32)			},
 	{ "ddnsx_save",			V_01				},
 	{ "ddnsx_refresh",		V_RANGE(0, 365)			},
 
-// basic-network
-	// WAN
-	{ "wan_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
+/* basic-network */
+	/* WAN */
+	{ "wan_proto",			V_LENGTH(1, 16)			},	/* disabled, dhcp, static, pppoe, pptp, l2tp */
 	{ "wan_ipaddr",			V_IP				},
 	{ "wan_netmask",		V_IP				},
 	{ "wan_gateway",		V_IP				},
@@ -626,12 +216,12 @@ static const nvset_t nvset_list[] = {
 	{ "wan_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan_pppoe_lef",		V_RANGE(1, 10)			},
 	{ "wan_sta",			V_LENGTH(0, 10)			},
-	{ "wan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "wan_dns",			V_LENGTH(0, 50)			},	/* ip ip ip */
 #ifdef TCONFIG_USB
 	{ "wan_hilink_ip",		V_IP				},
 	{ "wan_status_script",		V_01				},
 #endif
-	{ "wan_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan_ckmtd",			V_LENGTH(1, 2)			},	/* check method: 1 - ping, 2 - traceroute, 3 - curl */
 	{ "wan_ck_pause",		V_01				},	/* skip watchdog check for this wan */
 
 #ifdef TCONFIG_MULTIWAN
@@ -649,7 +239,7 @@ static const nvset_t nvset_list[] = {
 	{ "wan_weight",			V_RANGE(0, 256)			},
 	{ "wan_dns_auto",		V_01				},
 
-	{ "wan2_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan2_proto",			V_LENGTH(1, 16)			},	/* disabled, dhcp, static, pppoe, pptp, l2tp */
 	{ "wan2_weight",		V_RANGE(0, 256)			},
 	{ "wan2_ipaddr",		V_IP				},
 	{ "wan2_netmask",		V_IP				},
@@ -675,17 +265,17 @@ static const nvset_t nvset_list[] = {
 	{ "wan2_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan2_pppoe_lef",		V_RANGE(1, 10)			},
 	{ "wan2_sta",			V_LENGTH(0, 10)			},
-	{ "wan2_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "wan2_dns",			V_LENGTH(0, 50)			},	/* ip ip ip */
 	{ "wan2_dns_auto",		V_01				},
 #ifdef TCONFIG_USB
 	{ "wan2_hilink_ip",		V_IP				},
 	{ "wan2_status_script",		V_01				},
 #endif
-	{ "wan2_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan2_ckmtd",			V_LENGTH(1, 2)			},	/* check method: 1 - ping, 2 - traceroute, 3 - curl */
 	{ "wan2_ck_pause",		V_01				},	/* skip watchdog check for this wan */
 
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan3_proto",			V_LENGTH(1, 16)			},	/* disabled, dhcp, static, pppoe, pptp, l2tp */
 	{ "wan3_weight",		V_RANGE(0, 256)			},
 	{ "wan3_ipaddr",		V_IP				},
 	{ "wan3_netmask",		V_IP				},
@@ -711,16 +301,16 @@ static const nvset_t nvset_list[] = {
 	{ "wan3_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan3_pppoe_lef",		V_RANGE(1, 10)			},
 	{ "wan3_sta",			V_LENGTH(0, 10)			},
-	{ "wan3_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "wan3_dns",			V_LENGTH(0, 50)			},	/* ip ip ip */
 	{ "wan3_dns_auto",		V_01				},
 #ifdef TCONFIG_USB
 	{ "wan3_hilink_ip",		V_IP				},
 	{ "wan3_status_script",		V_01				},
 #endif
-	{ "wan3_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan3_ckmtd",			V_LENGTH(1, 2)			},	/* check method: 1 - ping, 2 - traceroute, 3 - curl */
 	{ "wan3_ck_pause",		V_01				},	/* skip watchdog check for this wan */
 
-	{ "wan4_proto",			V_LENGTH(1, 16)			},	// disabled, dhcp, static, pppoe, pptp, l2tp
+	{ "wan4_proto",			V_LENGTH(1, 16)			},	/* disabled, dhcp, static, pppoe, pptp, l2tp */
 	{ "wan4_weight",		V_RANGE(0, 256)			},
 	{ "wan4_ipaddr",		V_IP				},
 	{ "wan4_netmask",		V_IP				},
@@ -746,21 +336,21 @@ static const nvset_t nvset_list[] = {
 	{ "wan4_pppoe_lei",		V_RANGE(1, 60)			},
 	{ "wan4_pppoe_lef",		V_RANGE(1, 10)			},
 	{ "wan4_sta",			V_LENGTH(0, 10)			},
-	{ "wan4_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "wan4_dns",			V_LENGTH(0, 50)			},	/* ip ip ip */
 	{ "wan4_dns_auto",		V_01				},
 #ifdef TCONFIG_USB
 	{ "wan4_hilink_ip",		V_IP				},
 	{ "wan4_status_script",		V_01				},
 #endif
-	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	// check method: 1 - ping, 2 - traceroute, 3 - curl
+	{ "wan4_ckmtd",			V_LENGTH(1, 2)			},	/* check method: 1 - ping, 2 - traceroute, 3 - curl */
 	{ "wan4_ck_pause",		V_01				},	/* skip watchdog check for this wan */
 #endif /* TCONFIG_MULTIWAN */
 
-	// LAN
+	/* LAN */
 	{ "lan_ipaddr",			V_IP				},
 	{ "lan_netmask",		V_IP				},
 	{ "lan_gateway",		V_IP				},
-	{ "lan_dns",			V_LENGTH(0, 50)			},	// ip ip ip
+	{ "lan_dns",			V_LENGTH(0, 50)			},	/* ip ip ip */
 
 #if defined(TCONFIG_DNSSEC) || defined(TCONFIG_STUBBY)
 	{ "dnssec_enable",		V_01				},
@@ -769,7 +359,7 @@ static const nvset_t nvset_list[] = {
 
 #ifdef TCONFIG_DNSCRYPT
 	{ "dnscrypt_proxy",		V_01				},
-	{ "dnscrypt_priority",		V_RANGE(0, 2)			},	// 0=none, 1=preferred, 2=exclusive
+	{ "dnscrypt_priority",		V_RANGE(0, 2)			},	/* 0=none, 1=preferred, 2=exclusive */
 	{ "dnscrypt_port",		V_PORT				},
 	{ "dnscrypt_resolver",		V_LENGTH(0, 40)			},
 	{ "dnscrypt_log",		V_RANGE(0, 99)			},
@@ -781,7 +371,7 @@ static const nvset_t nvset_list[] = {
 #endif
 #ifdef TCONFIG_STUBBY
 	{ "stubby_proxy",		V_01				},
-	{ "stubby_priority",		V_RANGE(0, 2)			},	// 0=none, 1=strict-order, 2=no-resolv
+	{ "stubby_priority",		V_RANGE(0, 2)			},	/* 0=none, 1=strict-order, 2=no-resolv */
 	{ "stubby_port",		V_PORT				},
 	{ "stubby_resolvers",		V_LENGTH(0, 1024)		},
 	{ "stubby_force_tls13",		V_01				},	/* 0=TLS1.2, 1=TLS1.3 */
@@ -791,7 +381,7 @@ static const nvset_t nvset_list[] = {
 	{ "lan_desc",			V_01				},
 	{ "lan_invert",			V_01				},
 	{ "lan_dhcp",			V_01				},	/* DHCP client [0|1] - obtain a LAN (br0) IP via DHCP */
-	{ "lan_proto",			V_WORD				},	// static, dhcp
+	{ "lan_proto",			V_WORD				},	/* static, dhcp */
 	{ "dhcpd_startip",		V_LENGTH(0, 15)			},
 	{ "dhcpd_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp_lease",			V_LENGTH(0, 5)			},
@@ -799,55 +389,55 @@ static const nvset_t nvset_list[] = {
 	{ "wan_wins",			V_IP				},
 
 #ifdef TCONFIG_USB
-	// 3G/4G MODEM
-	{ "wan_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
-	{ "wan_modem_init",		V_LENGTH(0,25)			},
-	{ "wan_modem_apn",		V_LENGTH(0,25)			},
-	{ "wan_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
-	{ "wan_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
-	{ "wan_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	/* 3G/4G MODEM */
+	{ "wan_modem_pin",		V_LENGTH(0, 6)			},
+	{ "wan_modem_dev",		V_LENGTH(0, 14)			},	/* /dev/ttyUSB0, /dev/cdc-wdm1... */
+	{ "wan_modem_init",		V_LENGTH(0, 25)			},
+	{ "wan_modem_apn",		V_LENGTH(0, 25)			},
+	{ "wan_modem_speed",		V_LENGTH(0, 6)			},
+	{ "wan_modem_band",		V_LENGTH(0, 16)			},	/* all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40 */
+	{ "wan_modem_roam",		V_RANGE(0, 3)			},	/* 0 - not supported, 1 - supported, 2 - no change, 3 - roam only */
+	{ "wan_modem_if",		V_LENGTH(0, 4)			},	/* eth2, eth1... */
+	{ "wan_modem_type",		V_LENGTH(0, 15)			},	/* hilink, non-hilink, hw-ether, qmi_wwan */
 
-	{ "wan2_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan2_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
-	{ "wan2_modem_init",		V_LENGTH(0,25)			},
-	{ "wan2_modem_apn",		V_LENGTH(0,25)			},
-	{ "wan2_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan2_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
-	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
-	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan2_modem_pin",		V_LENGTH(0, 6)			},
+	{ "wan2_modem_dev",		V_LENGTH(0, 14)			},	/* /dev/ttyUSB0, /dev/cdc-wdm1... */
+	{ "wan2_modem_init",		V_LENGTH(0, 25)			},
+	{ "wan2_modem_apn",		V_LENGTH(0, 25)			},
+	{ "wan2_modem_speed",		V_LENGTH(0, 6)			},
+	{ "wan2_modem_band",		V_LENGTH(0, 16)			},	/* all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40 */
+	{ "wan2_modem_roam",		V_RANGE(0, 3)			},	/* 0 - not supported, 1 - supported, 2 - no change, 3 - roam only */
+	{ "wan2_modem_if",		V_LENGTH(0, 4)			},	/* eth2, eth1... */
+	{ "wan2_modem_type",		V_LENGTH(0, 15)			},	/* hilink, non-hilink, hw-ether, qmi_wwan */
 
 #ifdef TCONFIG_MULTIWAN
-	{ "wan3_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan3_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
-	{ "wan3_modem_init",		V_LENGTH(0,25)			},
-	{ "wan3_modem_apn",		V_LENGTH(0,25)			},
-	{ "wan3_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan3_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
-	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
-	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan3_modem_pin",		V_LENGTH(0, 6)			},
+	{ "wan3_modem_dev",		V_LENGTH(0, 14)			},	/* /dev/ttyUSB0, /dev/cdc-wdm1... */
+	{ "wan3_modem_init",		V_LENGTH(0, 25)			},
+	{ "wan3_modem_apn",		V_LENGTH(0, 25)			},
+	{ "wan3_modem_speed",		V_LENGTH(0, 6)			},
+	{ "wan3_modem_band",		V_LENGTH(0, 16)			},	/* all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40 */
+	{ "wan3_modem_roam",		V_RANGE(0, 3)			},	/* 0 - not supported, 1 - supported, 2 - no change, 3 - roam only */
+	{ "wan3_modem_if",		V_LENGTH(0, 4)			},	/* eth2, eth1... */
+	{ "wan3_modem_type",		V_LENGTH(0, 15)			},	/* hilink, non-hilink, hw-ether, qmi_wwan */
 
-	{ "wan4_modem_pin",		V_LENGTH(0,6)			},
-	{ "wan4_modem_dev",		V_LENGTH(0,14)			},	// /dev/ttyUSB0, /dev/cdc-wdm1...
-	{ "wan4_modem_init",		V_LENGTH(0,25)			},
-	{ "wan4_modem_apn",		V_LENGTH(0,25)			},
-	{ "wan4_modem_speed",		V_LENGTH(0,6)			},
-	{ "wan4_modem_band",		V_LENGTH(0, 16)			},	// all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40
-	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	// 0 - not supported, 1 - supported, 2 - no change, 3 - roam only
-	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	// eth2, eth1...
-	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	// hilink, non-hilink, hw-ether, qmi_wwan
+	{ "wan4_modem_pin",		V_LENGTH(0, 6)			},
+	{ "wan4_modem_dev",		V_LENGTH(0, 14)			},	/* /dev/ttyUSB0, /dev/cdc-wdm1... */
+	{ "wan4_modem_init",		V_LENGTH(0, 25)			},
+	{ "wan4_modem_apn",		V_LENGTH(0, 25)			},
+	{ "wan4_modem_speed",		V_LENGTH(0, 6)			},
+	{ "wan4_modem_band",		V_LENGTH(0, 16)			},	/* all - 7FFFFFFFFFFFFFFF, 800MHz - 80000, 1800MHz - 4, 2100MHz - 1, 2600MHz - 40 */
+	{ "wan4_modem_roam",		V_RANGE(0, 3)			},	/* 0 - not supported, 1 - supported, 2 - no change, 3 - roam only */
+	{ "wan4_modem_if",		V_LENGTH(0, 4)			},	/* eth2, eth1... */
+	{ "wan4_modem_type",		V_LENGTH(0, 15)			},	/* hilink, non-hilink, hw-ether, qmi_wwan */
 #endif
 #endif
 
-	// LAN networks
+	/* LAN networks */
 	{ "lan_ifname",			V_LENGTH(0, 5)			},
 
 	{ "lan1_ifname",		V_LENGTH(0, 5)			},
-	{ "lan1_ifnames",		V_TEXT(0,64)			},
+	{ "lan1_ifnames",		V_TEXT(0, 64)			},
 	{ "lan1_ipaddr",		V_LENGTH(0, 15)			},
 	{ "lan1_netmask",		V_LENGTH(0, 15)			},
 	{ "lan1_proto",			V_LENGTH(0, 6)			},
@@ -857,7 +447,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcp1_lease",		V_LENGTH(0, 5)			},
 
 	{ "lan2_ifname",		V_LENGTH(0, 5)			},
-	{ "lan2_ifnames",		V_TEXT(0,64)			},
+	{ "lan2_ifnames",		V_TEXT(0, 64)			},
 	{ "lan2_ipaddr",		V_LENGTH(0, 15)			},
 	{ "lan2_netmask",		V_LENGTH(0, 15)			},
 	{ "lan2_proto",			V_LENGTH(0, 6)			},
@@ -867,7 +457,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcp2_lease",		V_LENGTH(0, 5)			},
 
 	{ "lan3_ifname",		V_LENGTH(0, 5)			},
-	{ "lan3_ifnames",		V_TEXT(0,64)			},
+	{ "lan3_ifnames",		V_TEXT(0, 64)			},
 	{ "lan3_ipaddr",		V_LENGTH(0, 15)			},
 	{ "lan3_netmask",		V_LENGTH(0, 15)			},
 	{ "lan3_proto",			V_LENGTH(0, 6)			},
@@ -876,7 +466,7 @@ static const nvset_t nvset_list[] = {
 	{ "dhcpd3_endip",		V_LENGTH(0, 15)			},
 	{ "dhcp3_lease",		V_LENGTH(0, 5)			},
 
-	// wireless
+	/* Wireless */
 	{ "wl_radio",			V_01				},
 #if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 	{ "wl_mode",			V_LENGTH(2, 4)			},	/* ap, sta, wet, wds, psta */
@@ -892,36 +482,36 @@ static const nvset_t nvset_list[] = {
 	{ "wl_closed",			V_01				},
 	{ "wl_channel",			V_RANGE(0, 216)			},
 
-	{ "wl_vifs",			V_LENGTH(0, 64)			},	// multiple/virtual BSSIDs
+	{ "wl_vifs",			V_LENGTH(0, 64)			},	/* multiple/virtual BSSIDs */
 
-	{ "wl_security_mode",		V_LENGTH(1, 32)			},	// disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise
+	{ "wl_security_mode",		V_LENGTH(1, 32)			},	/* disabled, radius, wep, wpa_personal, wpa_enterprise, wpa2_personal, wpa2_enterprise */
 	{ "wl_radius_ipaddr",		V_IP				},
 	{ "wl_radius_port",		V_PORT				},
 	{ "wl_radius_key",		V_LENGTH(1, 64)			},
-	{ "wl_wep_bit",			V_RANGE(64, 128)		},	// 64 or 128
+	{ "wl_wep_bit",			V_RANGE(64, 128)		},	/* 64 or 128 */
 	{ "wl_passphrase",		V_LENGTH(0, 20)			},
 	{ "wl_key",			V_RANGE(1, 4)			},
 	{ "wl_key1",			V_LENGTH(0, 26)			},
 	{ "wl_key2",			V_LENGTH(0, 26)			},
 	{ "wl_key3",			V_LENGTH(0, 26)			},
 	{ "wl_key4",			V_LENGTH(0, 26)			},
-	{ "wl_crypto",			V_LENGTH(3, 8)			},	// tkip, aes, tkip+aes
+	{ "wl_crypto",			V_LENGTH(3, 8)			},	/* tkip, aes, tkip+aes */
 	{ "wl_wpa_psk",			V_LENGTH(8, 64)			},
 	{ "wl_wpa_gtk_rekey",		V_RANGE(60, 7200)		},
 
 	{ "wl_lazywds",			V_01				},
-	{ "wl_wds",			V_LENGTH(0, 180)		},	// mac mac mac (x 10)
+	{ "wl_wds",			V_LENGTH(0, 180)		},	/* mac mac mac (x 10) */
 
 	{ "wl_wds_enable",		V_01				},
 	{ "wl_gmode",			V_RANGE(-1, 6)			},
-	{ "wl_wep",			V_LENGTH(1, 32)			},	//  off, on, restricted,tkip,aes,tkip+aes
-	{ "wl_akm",			V_LENGTH(0, 32)			},	//  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, ""
-	{ "wl_auth_mode",		V_LENGTH(4, 6)			},	//  none, radius
+	{ "wl_wep",			V_LENGTH(1, 32)			},	/*  off, on, restricted,tkip,aes,tkip+aes */
+	{ "wl_akm",			V_LENGTH(0, 32)			},	/*  wpa, wpa2, psk, psk2, wpa wpa2, psk psk2, "" */
+	{ "wl_auth_mode",		V_LENGTH(4, 6)			},	/*  none, radius */
 #ifdef TCONFIG_BCMARM
 	{ "wl_mfp",			V_RANGE(0, 2)			},	/* Protected Management Frames: 0 - Disable, 1 - Capable, 2 - Required */
 #endif
 	{ "wl_nmode",			V_NONE				},
-	{ "wl_nband",			V_RANGE(0, 2)			},	// 2 - 2.4GHz, 1 - 5GHz, 0 - Auto
+	{ "wl_nband",			V_RANGE(0, 2)			},	/* 2 - 2.4GHz, 1 - 5GHz, 0 - Auto */
 	{ "wl_nreqd",			V_NONE				},
 #if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 	{ "wl_nbw_cap",			V_RANGE(0, 3)			},	/* 0 - 20MHz, 1 - 40MHz, 2 - Auto, 3 - 80M */
@@ -935,12 +525,12 @@ static const nvset_t nvset_list[] = {
 	{ "wl_user_rssi",		V_RANGE(-90, 0)			},	/* roaming assistant: disabled by default == 0 , GUI setting range: -90 ~ -45 */
 #endif
 	{ "wl_nbw",			V_NONE				},
-	{ "wl_mimo_preamble",		V_WORD				},	// 802.11n Preamble: mm/gf/auto/gfbcm
-	{ "wl_nctrlsb",			V_NONE				},	// none, lower, upper
+	{ "wl_mimo_preamble",		V_WORD				},	/* 802.11n Preamble: mm/gf/auto/gfbcm */
+	{ "wl_nctrlsb",			V_NONE				},	/* none, lower, upper */
 
 #ifdef TCONFIG_IPV6
-// basic-ipv6
-	{ "ipv6_service",		V_LENGTH(0, 16)			},	// '', native, native-pd, 6to4, sit, other
+/* basic-ipv6 */
+	{ "ipv6_service",		V_LENGTH(0, 16)			},	/* '', native, native-pd, 6to4, sit, other */
 #if defined(TCONFIG_BLINK) || defined(TCONFIG_BCMARM) /* RT-N+ */
 	{ "ipv6_debug",			V_01				},	/* enable/show debug infos */
 #endif
@@ -950,36 +540,36 @@ static const nvset_t nvset_list[] = {
 	{ "ipv6_rtr_addr",		V_IPV6(0)			},
 	{ "ipv6_radvd",			V_01				},
 	{ "ipv6_dhcpd",			V_01				},
-	{ "ipv6_lease_time",		V_RANGE(1, 720)			},	// 1 ... up to 720 hours (30 days) IPv6 lease time
+	{ "ipv6_lease_time",		V_RANGE(1, 720)			},	/* 1 ... up to 720 hours (30 days) IPv6 lease time */
 	{ "ipv6_accept_ra",		V_NUM				},
-	{ "ipv6_fast_ra",		V_01				},	// fast RA option --> send frequent RAs
+	{ "ipv6_fast_ra",		V_01				},	/* fast RA option --> send frequent RAs */
 	{ "ipv6_tun_addr",		V_IPV6(1)			},
 	{ "ipv6_tun_addrlen",		V_RANGE(3, 127)			},
 	{ "ipv6_ifname",		V_LENGTH(0, 8)			},
 	{ "ipv6_tun_v4end",		V_IP				},
 	{ "ipv6_relay",			V_RANGE(1, 254)			},
-	{ "ipv6_tun_mtu",		V_NUM				},	// Tunnel MTU
-	{ "ipv6_tun_ttl",		V_NUM				},	// Tunnel TTL
-	{ "ipv6_dns",			V_LENGTH(0, 40*3)		},	// ip6 ip6 ip6
+	{ "ipv6_tun_mtu",		V_NUM				},	/* Tunnel MTU */
+	{ "ipv6_tun_ttl",		V_NUM				},	/* Tunnel TTL */
+	{ "ipv6_dns",			V_LENGTH(0, 40*3)		},	/* ip6 ip6 ip6 */
 	{ "ipv6_6rd_prefix",		V_IPV6(0)			},
 	{ "ipv6_6rd_prefix_length",	V_RANGE(3, 127)			},
 	{ "ipv6_6rd_borderrelay",	V_IP				},
 	{ "ipv6_6rd_ipv4masklen",	V_RANGE(0, 32)			},
-	{ "ipv6_vlan",			V_RANGE(0, 7)			},	// Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3
-	{ "ipv6_isp_opt",		V_01				},	// see router/rc/wan.c --> add default route ::/0
-	{ "ipv6_pdonly",		V_01				},	// Request DHCPv6 Prefix Delegation Only (send ia-pd and NO send ia-na)
+	{ "ipv6_vlan",			V_RANGE(0, 7)			},	/* Enable IPv6: bit 0 = LAN1, bit 1 = LAN2, bit 2 = LAN3 */
+	{ "ipv6_isp_opt",		V_01				},	/* see router/rc/wan.c --> add default route ::/0 */
+	{ "ipv6_pdonly",		V_01				},	/* Request DHCPv6 Prefix Delegation Only (send ia-pd and NO send ia-na) */
 	{ "ipv6_pd_norelease",		V_01				},	/* DHCP6 client - no prefix/address release on exit */
-	{ "ipv6_wan_addr",		V_IPV6(0)			},	// Static IPv6 Wan Address
-	{ "ipv6_prefix_len_wan",	V_RANGE(3, 64)			},	// Static IPv6 Wan Prefix Length
-	{ "ipv6_isp_gw",		V_IPV6(0)			},	// Static IPv6 ISP Router Gateway
+	{ "ipv6_wan_addr",		V_IPV6(0)			},	/* Static IPv6 Wan Address */
+	{ "ipv6_prefix_len_wan",	V_RANGE(3, 64)			},	/* Static IPv6 Wan Prefix Length */
+	{ "ipv6_isp_gw",		V_IPV6(0)			},	/* Static IPv6 ISP Router Gateway */
 #endif
 
-// basic-wfilter
-	{ "wl_macmode",			V_NONE				},	// allow, deny, disabled
-	{ "wl_maclist",			V_LENGTH(0, 18*201)		},	// 18 x 200		(11:22:33:44:55:66 ...)
-	{ "macnames",			V_LENGTH(0, 62*201)		},	// 62 (12+1+48+1) x 50	(112233445566<..>)	todo: re-use -- zzz
+/* basic-wfilter */
+	{ "wl_macmode",			V_NONE				},	/* allow, deny, disabled */
+	{ "wl_maclist",			V_LENGTH(0, 18*201)		},	/* 18 x 200		(11:22:33:44:55:66 ...) */
+	{ "macnames",			V_LENGTH(0, 62*201)		},	/* 62 (12+1+48+1) x 50	(112233445566<..>)	todo: re-use */
 
-// advanced-ctnf
+/* advanced-ctnf */
 	{ "ct_max",			V_NUM				},
 	{ "ct_tcp_timeout",		V_LENGTH(20, 70)		},
 	{ "ct_udp_timeout",		V_LENGTH(5, 15)			},
@@ -994,8 +584,8 @@ static const nvset_t nvset_list[] = {
 	{ "nf_ftp",			V_01				},
 	{ "fw_nat_tuning",		V_RANGE(0, 2)			},	/* tcp/udp buffers: 0 - small (default), 1 - medium, 2 - large */
 
-// advanced-dhcpdns
-	{ "dhcpd_slt",			V_RANGE(-1, 43200)		},	// -1=infinite, 0=follow normal lease time, >=1 custom
+/* advanced-dhcpdns */
+	{ "dhcpd_slt",			V_RANGE(-1, 43200)		},	/* -1=infinite, 0=follow normal lease time, >=1 custom */
 	{ "dhcpd_dmdns",		V_01				},
 	{ "dhcpd_lmax",			V_NUM				},
 	{ "dhcpd_gwmode",		V_NUM				},
@@ -1007,7 +597,7 @@ static const nvset_t nvset_list[] = {
 	{ "dns_priv_override",		V_01				},	/* override DoH */
 	{ "dnsmasq_debug",		V_01				},
 	{ "dnsmasq_custom",		V_TEXT(0, 4096)			},
-	{ "dnsmasq_q",			V_RANGE(0,7)			},	// bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra
+	{ "dnsmasq_q",			V_RANGE(0, 7)			},	/* bitfield quiet bit0=dhcp, 1=dhcp6, 2=ra */
 	{ "dnsmasq_gen_names",		V_01				},	/* generate a name for DHCP clients which do not otherwise have one */
 	{ "dnsmasq_edns_size",		V_RANGE(512, 4096)		},	/* dnsmasq EDNS packet size (default 1280) */
 #ifdef TCONFIG_TOR
@@ -1019,7 +609,7 @@ static const nvset_t nvset_list[] = {
 	{ "mdns_debug",			V_01				},
 #endif
 
-// advanced-firewall
+/* advanced-firewall */
 	{ "block_wan",			V_01				},
 	{ "block_wan_limit",		V_01				},
 	{ "block_wan_limit_icmp",	V_RANGE(1, 300)			},
@@ -1064,14 +654,14 @@ static const nvset_t nvset_list[] = {
 	{ "adblock_path",		V_LENGTH(0, 64)			},
 #endif
 
-// advanced-misc
+/* advanced-misc */
 #ifdef TCONFIG_BCMARM
 	{ "wait_time",			V_RANGE(0, 30)			},
 #else
 	{ "wait_time",			V_RANGE(3, 20)			},
 #endif
 	{ "wan_speed",			V_RANGE(0, 4)			},
-	{ "jumbo_frame_enable",		V_01				},	// Jumbo Frames support (for RT-N16/WNR3500L)
+	{ "jumbo_frame_enable",		V_01				},	/* Jumbo Frames support (for RT-N16/WNR3500L) */
 	{ "jumbo_frame_size",		V_RANGE(1, 9720)		},
 #ifdef CONFIG_BCMWL5
 	{ "ctf_disable",		V_01				},
@@ -1082,69 +672,69 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_BCMNAT
 	{ "bcmnat_disable",		V_01				},
 #endif
-// advanced-vlan
-	{ "vlan0ports",			V_TEXT(0,17)			},
-	{ "vlan1ports",			V_TEXT(0,17)			},
-	{ "vlan2ports",			V_TEXT(0,17)			},
-	{ "vlan3ports",			V_TEXT(0,17)			},
-	{ "vlan4ports",			V_TEXT(0,17)			},
-	{ "vlan5ports",			V_TEXT(0,17)			},
-	{ "vlan6ports",			V_TEXT(0,17)			},
-	{ "vlan7ports",			V_TEXT(0,17)			},
-	{ "vlan8ports",			V_TEXT(0,17)			},
-	{ "vlan9ports",			V_TEXT(0,17)			},
-	{ "vlan10ports",		V_TEXT(0,17)			},
-	{ "vlan11ports",		V_TEXT(0,17)			},
-	{ "vlan12ports",		V_TEXT(0,17)			},
-	{ "vlan13ports",		V_TEXT(0,17)			},
-	{ "vlan14ports",		V_TEXT(0,17)			},
-	{ "vlan15ports",		V_TEXT(0,17)			},
-	{ "vlan0hwname",		V_TEXT(0,8)			},
-	{ "vlan1hwname",		V_TEXT(0,8)			},
-	{ "vlan2hwname",		V_TEXT(0,8)			},
-	{ "vlan3hwname",		V_TEXT(0,8)			},
-	{ "vlan4hwname",		V_TEXT(0,8)			},
-	{ "vlan5hwname",		V_TEXT(0,8)			},
-	{ "vlan6hwname",		V_TEXT(0,8)			},
-	{ "vlan7hwname",		V_TEXT(0,8)			},
-	{ "vlan8hwname",		V_TEXT(0,8)			},
-	{ "vlan9hwname",		V_TEXT(0,8)			},
-	{ "vlan10hwname",		V_TEXT(0,8)			},
-	{ "vlan11hwname",		V_TEXT(0,8)			},
-	{ "vlan12hwname",		V_TEXT(0,8)			},
-	{ "vlan13hwname",		V_TEXT(0,8)			},
-	{ "vlan14hwname",		V_TEXT(0,8)			},
-	{ "vlan15hwname",		V_TEXT(0,8)			},
-	{ "wan_ifnameX",		V_TEXT(0,8)			},
-	{ "wan2_ifnameX",		V_TEXT(0,8)			},
-	{ "wan3_ifnameX",		V_TEXT(0,8)			},
-	{ "wan4_ifnameX",		V_TEXT(0,8)			},
-	{ "lan_ifnames",		V_TEXT(0,64)			},
+/* advanced-vlan */
+	{ "vlan0ports",			V_TEXT(0, 17)			},
+	{ "vlan1ports",			V_TEXT(0, 17)			},
+	{ "vlan2ports",			V_TEXT(0, 17)			},
+	{ "vlan3ports",			V_TEXT(0, 17)			},
+	{ "vlan4ports",			V_TEXT(0, 17)			},
+	{ "vlan5ports",			V_TEXT(0, 17)			},
+	{ "vlan6ports",			V_TEXT(0, 17)			},
+	{ "vlan7ports",			V_TEXT(0, 17)			},
+	{ "vlan8ports",			V_TEXT(0, 17)			},
+	{ "vlan9ports",			V_TEXT(0, 17)			},
+	{ "vlan10ports",		V_TEXT(0, 17)			},
+	{ "vlan11ports",		V_TEXT(0, 17)			},
+	{ "vlan12ports",		V_TEXT(0, 17)			},
+	{ "vlan13ports",		V_TEXT(0, 17)			},
+	{ "vlan14ports",		V_TEXT(0, 17)			},
+	{ "vlan15ports",		V_TEXT(0, 17)			},
+	{ "vlan0hwname",		V_TEXT(0, 8)			},
+	{ "vlan1hwname",		V_TEXT(0, 8)			},
+	{ "vlan2hwname",		V_TEXT(0, 8)			},
+	{ "vlan3hwname",		V_TEXT(0, 8)			},
+	{ "vlan4hwname",		V_TEXT(0, 8)			},
+	{ "vlan5hwname",		V_TEXT(0, 8)			},
+	{ "vlan6hwname",		V_TEXT(0, 8)			},
+	{ "vlan7hwname",		V_TEXT(0, 8)			},
+	{ "vlan8hwname",		V_TEXT(0, 8)			},
+	{ "vlan9hwname",		V_TEXT(0, 8)			},
+	{ "vlan10hwname",		V_TEXT(0, 8)			},
+	{ "vlan11hwname",		V_TEXT(0, 8)			},
+	{ "vlan12hwname",		V_TEXT(0, 8)			},
+	{ "vlan13hwname",		V_TEXT(0, 8)			},
+	{ "vlan14hwname",		V_TEXT(0, 8)			},
+	{ "vlan15hwname",		V_TEXT(0, 8)			},
+	{ "wan_ifnameX",		V_TEXT(0, 8)			},
+	{ "wan2_ifnameX",		V_TEXT(0, 8)			},
+	{ "wan3_ifnameX",		V_TEXT(0, 8)			},
+	{ "wan4_ifnameX",		V_TEXT(0, 8)			},
+	{ "lan_ifnames",		V_TEXT(0, 64)			},
 	{ "manual_boot_nv",		V_01				},
 #ifndef TCONFIG_BCMARM
 	{ "trunk_vlan_so",		V_01				},
 #endif
 #if !defined(CONFIG_BCMWL6) && !defined(TCONFIG_BLINK) /* only mips RT branch */
-	{ "vlan0tag",			V_TEXT(0,5)			},
+	{ "vlan0tag",			V_TEXT(0, 5)			},
 #endif
-	{ "vlan0vid",			V_TEXT(0,5)			},
-	{ "vlan1vid",			V_TEXT(0,5)			},
-	{ "vlan2vid",			V_TEXT(0,5)			},
-	{ "vlan3vid",			V_TEXT(0,5)			},
-	{ "vlan4vid",			V_TEXT(0,5)			},
-	{ "vlan5vid",			V_TEXT(0,5)			},
-	{ "vlan6vid",			V_TEXT(0,5)			},
-	{ "vlan7vid",			V_TEXT(0,5)			},
-	{ "vlan8vid",			V_TEXT(0,5)			},
-	{ "vlan9vid",			V_TEXT(0,5)			},
-	{ "vlan10vid",			V_TEXT(0,5)			},
-	{ "vlan11vid",			V_TEXT(0,5)			},
-	{ "vlan12vid",			V_TEXT(0,5)			},
-	{ "vlan13vid",			V_TEXT(0,5)			},
-	{ "vlan14vid",			V_TEXT(0,5)			},
-	{ "vlan15vid",			V_TEXT(0,5)			},
+	{ "vlan0vid",			V_TEXT(0, 5)			},
+	{ "vlan1vid",			V_TEXT(0, 5)			},
+	{ "vlan2vid",			V_TEXT(0, 5)			},
+	{ "vlan3vid",			V_TEXT(0, 5)			},
+	{ "vlan4vid",			V_TEXT(0, 5)			},
+	{ "vlan5vid",			V_TEXT(0, 5)			},
+	{ "vlan6vid",			V_TEXT(0, 5)			},
+	{ "vlan7vid",			V_TEXT(0, 5)			},
+	{ "vlan8vid",			V_TEXT(0, 5)			},
+	{ "vlan9vid",			V_TEXT(0, 5)			},
+	{ "vlan10vid",			V_TEXT(0, 5)			},
+	{ "vlan11vid",			V_TEXT(0, 5)			},
+	{ "vlan12vid",			V_TEXT(0, 5)			},
+	{ "vlan13vid",			V_TEXT(0, 5)			},
+	{ "vlan14vid",			V_TEXT(0, 5)			},
+	{ "vlan15vid",			V_TEXT(0, 5)			},
 
-// advanced-mac
+/* advanced-mac */
 	{ "wan_mac",			V_LENGTH(0, 17)			},
 	{ "wan2_mac",			V_LENGTH(0, 17)			},
 #ifdef TCONFIG_MULTIWAN
@@ -1154,7 +744,7 @@ static const nvset_t nvset_list[] = {
 	{ "wl_macaddr",			V_LENGTH(0, 17)			},
 	{ "wl_hwaddr",			V_LENGTH(0, 17)			},
 
-// advanced-routing
+/* advanced-routing */
 	{ "routes_static",		V_LENGTH(0, 2048)		},
 	{ "dhcp_routes",		V_01				},
 	{ "force_igmpv2",		V_01				},
@@ -1181,10 +771,10 @@ static const nvset_t nvset_list[] = {
 #endif
 #endif /* TCONFIG_ZEBRA */
 
-// advanced-access
+/* advanced-access */
 	{ "lan_access",			V_LENGTH(0, 4096)		},
 
-// advanced-wireless
+/* advanced-wireless */
 	{ "wl_country_code",		V_LENGTH(0, 4)			},	/* Country code */
 #if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6) || defined(TCONFIG_BLINK)
 	{ "wl_country_rev",		V_RANGE(0, 999)			},	/* Country rev */
@@ -1207,20 +797,20 @@ static const nvset_t nvset_list[] = {
 	{ "pci/3/1/regrev",		V_RANGE(0, 999)			},	/* regrev (long version) */
 #endif
 #endif /* TCONFIG_BCMARM || CONFIG_BCMWL6 || TCONFIG_BLINK */
-	{ "wl_btc_mode",		V_RANGE(0, 2)			},	// !!TB - BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption)
-	{ "wl_afterburner",		V_LENGTH(2, 4)			},	// off, on, auto
+	{ "wl_btc_mode",		V_RANGE(0, 2)			},	/* BT Coexistence Mode: 0 (disable), 1 (enable), 2 (preemption) */
+	{ "wl_afterburner",		V_LENGTH(2, 4)			},	/* off, on, auto */
 	{ "wl_auth",			V_01				},
-	{ "wl_rateset",			V_LENGTH(2, 7)			},	// all, default, 12
+	{ "wl_rateset",			V_LENGTH(2, 7)			},	/* all, default, 12 */
 	{ "wl_rate",			V_RANGE(0, 54 * 1000 * 1000)	},
 	{ "wl_mrate",			V_RANGE(0, 54 * 1000 * 1000)	},
-	{ "wl_gmode_protection",	V_LENGTH(3, 4)			},	// off, auto
-	{ "wl_frameburst",		V_ONOFF				},	// off, on
+	{ "wl_gmode_protection",	V_LENGTH(3, 4)			},	/* off, auto */
+	{ "wl_frameburst",		V_ONOFF				},	/* off, on */
 	{ "wl_bcn",			V_RANGE(1, 65535)		},
 	{ "wl_dtim",			V_RANGE(1, 255)			},
 	{ "wl_frag",			V_RANGE(256, 2346)		},
 	{ "wl_rts",			V_RANGE(0, 2347)		},
 	{ "wl_ap_isolate",		V_01				},
-	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	// long, short
+	{ "wl_plcphdr",			V_LENGTH(4, 5)			},	/* long, short */
 	{ "wl_antdiv",			V_RANGE(0, 3)			},
 	{ "wl_txant",			V_RANGE(0, 3)			},
 #ifdef TCONFIG_BCMARM
@@ -1228,21 +818,21 @@ static const nvset_t nvset_list[] = {
 #else
 	{ "wl_txpwr",			V_RANGE(0, 400)			},
 #endif
-	{ "wl_wme",			V_WORD				},	// auto, off, on
-	{ "wl_wme_no_ack",		V_ONOFF				},	// off, on
-	{ "wl_wme_apsd",		V_ONOFF				},	// off, on
+	{ "wl_wme",			V_WORD				},	/* auto, off, on */
+	{ "wl_wme_no_ack",		V_ONOFF				},	/* off, on */
+	{ "wl_wme_apsd",		V_ONOFF				},	/* off, on */
 	{ "wl_maxassoc",		V_RANGE(0, 255)			},
 	{ "wl_bss_maxassoc",		V_RANGE(0, 255)			},
-	{ "wl_distance",		V_LENGTH(0, 5)			},	// "", 1-99999
+	{ "wl_distance",		V_LENGTH(0, 5)			},	/* "", 1-99999 */
 	{ "wlx_hpamp",			V_01				},
 	{ "wlx_hperx",			V_01				},
-	{ "wl_reg_mode",		V_LENGTH(1, 3)			},	// !!TB - Regulatory: off, h, d
-	{ "wl_mitigation",		V_RANGE(0, 4)			},	// NON-AC Interference Mitigation Mode (0|1|2|3|4)
+	{ "wl_reg_mode",		V_LENGTH(1, 3)			},	/* Regulatory: off, h, d */
+	{ "wl_mitigation",		V_RANGE(0, 4)			},	/* NON-AC Interference Mitigation Mode (0|1|2|3|4) */
 #ifdef CONFIG_BCMWL6
-	{ "wl_mitigation_ac",		V_RANGE(0, 7)			},	// AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7)
+	{ "wl_mitigation_ac",		V_RANGE(0, 7)			},	/* AC Interference Mitigation Mode (bit mask (3 bits), values from 0 to 7) */
 #endif
-	{ "wl_nmode_protection",	V_WORD,				},	// off, auto
-	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	// -2 - 32
+	{ "wl_nmode_protection",	V_WORD,				},	/* off, auto */
+	{ "wl_nmcsidx",			V_RANGE(-2, 32),		},	/* -2 - 32 */
 	{ "wl_obss_coex",		V_01				},
 #ifdef TCONFIG_BCMARM
 #ifdef TCONFIG_EMF
@@ -1253,17 +843,17 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_ucast_upnp",		V_01				},	/* Disable Converting upnp to ucast (default) */
 	{ "wl_wmf_igmpq_filter",	V_01				},	/* Disable igmp query filter */
 #endif /* TCONFIG_EMF */
-	{ "wl_atf",			V_01				},	// Air Time Fairness support on = 1, off = 0
-	{ "wl_turbo_qam",		V_RANGE(0, 2)			},	// turbo qam on = 1 , off = 0, nitro qam = 2
-	{ "wl_txbf",			V_01				},	// Explicit Beamforming on = 1 , off = 0 (default: on)
-	{ "wl_txbf_bfr_cap",		V_RANGE(0, 2)			},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
-	{ "wl_txbf_bfe_cap",		V_RANGE(0, 2)			},	// for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case
+	{ "wl_atf",			V_01				},	/* Air Time Fairness support on = 1, off = 0 */
+	{ "wl_turbo_qam",		V_RANGE(0, 2)			},	/* turbo qam on = 1 , off = 0, nitro qam = 2 */
+	{ "wl_txbf",			V_01				},	/* Explicit Beamforming on = 1 , off = 0 (default: on) */
+	{ "wl_txbf_bfr_cap",		V_RANGE(0, 2)			},	/* for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case */
+	{ "wl_txbf_bfe_cap",		V_RANGE(0, 2)			},	/* for Explicit Beamforming on = 1 , off = 0 (default: on - sync with wl_txbf), 2 for mu-mimo case */
 #ifdef TCONFIG_BCM714
 	{ "wl_mu_features", 		V_LENGTH(0, 8)			},	/* mu_features=0x8000 when mu-mimo enabled */
 	{ "wl_mumimo", 			V_01				},	/* mumimo on = 1, off = 0 */
 #endif /* TCONFIG_BCM714 */
-	{ "wl_itxbf",			V_01				},	// Universal/Implicit Beamforming on = 1 , off = 0 (default: off)
-	{ "wl_txbf_imp",		V_01				},	// for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf)
+	{ "wl_itxbf",			V_01				},	/* Universal/Implicit Beamforming on = 1 , off = 0 (default: off) */
+	{ "wl_txbf_imp",		V_01				},	/* for Universal/Implicit Beamforming on = 1 , off = 0 (default: off - sync with wl_itxbf) */
 #ifdef TCONFIG_BCMBSD
 	{ "smart_connect_x",		V_01				},	/* 0 = off, 1 = on (all-band), 2 = 5 GHz only! (no support, maybe later) */
 #endif
@@ -1271,13 +861,13 @@ static const nvset_t nvset_list[] = {
 	{ "wl_wmf_bss_enable",		V_01				},	/* Wireless Multicast Forwarding Enable/Disable */
 #endif /* TCONFIG_BCMARM */
 
-// forward-dmz
+/* forward-dmz */
 	{ "dmz_enable",			V_01				},
 	{ "dmz_ipaddr",			V_LENGTH(0, 15)			},
 	{ "dmz_sip",			V_LENGTH(0, 512)		},
 	{ "dmz_ra",			V_01				},
 
-// forward-upnp
+/* forward-upnp */
 	{ "upnp_enable",		V_NUM				},
 	{ "upnp_secure",		V_01				},
 	{ "upnp_port",			V_RANGE(0, 65535)		},
@@ -1296,23 +886,22 @@ static const nvset_t nvset_list[] = {
 	{ "upnp_lan3",			V_01				},
 	{ "upnp_custom",		V_TEXT(0, 2048)			},
 
-// forward-basic
+/* forward-basic */
 	{ "portforward",		V_LENGTH(0, 4096)		},
 
 #ifdef TCONFIG_IPV6
-// forward-basic-ipv6
+/* forward-basic-ipv6 */
 	{ "ipv6_portforward",		V_LENGTH(0, 4096)		},
 #endif
 
-// forward-triggered
+/* forward-triggered */
 	{ "trigforward",		V_LENGTH(0, 4096)		},
 
-
-// access restriction
+/* access restriction */
 	{ "rruleN",			V_RANGE(-1, 99)			},
-//	{ "rrule##",			V_LENGTH(0, 2048)		},	// in save_variables()
+//	{ "rrule##",			V_LENGTH(0, 2048)		},	/* in save_variables() */
 
-// admin-access
+/* admin-access */
 	{ "http_enable",		V_01				},
 #ifdef TCONFIG_HTTPS
 	{ "https_enable",		V_01				},
@@ -1353,7 +942,7 @@ static const nvset_t nvset_list[] = {
 	{ "ne_shlimit",			V_TEXT(1, 50)			},
 	{ "http_username",		V_LENGTH(0, 32)			},
 
-// admin-bwm
+/* admin-bwm */
 	{ "rstats_enable",		V_01				},
 	{ "rstats_path",		V_LENGTH(0, 48)			},
 	{ "rstats_stime",		V_RANGE(1, 168)			},
@@ -1362,7 +951,7 @@ static const nvset_t nvset_list[] = {
 	{ "rstats_sshut",		V_01				},
 	{ "rstats_bak",			V_01				},
 
-// admin-ipt
+/* admin-ipt */
 	{ "cstats_enable",		V_01				},
 	{ "cstats_path",		V_LENGTH(0, 48)			},
 	{ "cstats_stime",		V_RANGE(1, 168)			},
@@ -1374,24 +963,24 @@ static const nvset_t nvset_list[] = {
 	{ "cstats_sshut",		V_01				},
 	{ "cstats_bak",			V_01				},
 
-// admin-buttons
-	{ "sesx_led",			V_RANGE(0, 255)			},	// amber, white, aoss
+/* admin-buttons */
+	{ "sesx_led",			V_RANGE(0, 255)			},	/* amber, white, aoss */
 #ifdef TCONFIG_BCMARM
-	{ "blink_wl",			V_01				},	// turn blink on/off for wifi
-	{ "btn_led_mode",		V_01				},	// Asus RT-AC68 Turbo Mode
+	{ "blink_wl",			V_01				},	/* turn blink on/off for wifi */
+	{ "btn_led_mode",		V_01				},	/* Asus RT-AC68 Turbo Mode */
 	{ "stealth_mode",		V_01				},
 	{ "stealth_iled",		V_01				},
 #endif
-	{ "sesx_b0",			V_RANGE(0, 5)			},	// 0-5: toggle wireless, reboot, shutdown, script, usb unmount
-	{ "sesx_b1",			V_RANGE(0, 5)			},	// "
-	{ "sesx_b2",			V_RANGE(0, 5)			},	// "
-	{ "sesx_b3",			V_RANGE(0, 5)			},	// "
-	{ "sesx_script",		V_TEXT(0, 1024)			},	//
+	{ "sesx_b0",			V_RANGE(0, 5)			},	/* 0-5: toggle wireless, reboot, shutdown, script, usb unmount */
+	{ "sesx_b1",			V_RANGE(0, 5)			},	/* " */
+	{ "sesx_b2",			V_RANGE(0, 5)			},	/* " */
+	{ "sesx_b3",			V_RANGE(0, 5)			},	/* " */
+	{ "sesx_script",		V_TEXT(0, 1024)			},
 #ifndef TCONFIG_BCMARM
-	{ "script_brau",		V_TEXT(0, 1024)			},	//
+	{ "script_brau",		V_TEXT(0, 1024)			},
 #endif
 
-// admin-debug
+/* admin-debug */
 	{ "debug_nocommit",		V_01				},
 	{ "debug_cprintf",		V_01				},
 	{ "debug_cprintf_file",		V_01				},
@@ -1404,7 +993,7 @@ static const nvset_t nvset_list[] = {
 	{ "t_hidelr",			V_01				},
 	{ "http_nocache",		V_01				},	/* disable cache in httpd? */
 
-// admin-sched
+/* admin-sched */
 	{ "sch_rboot", 			V_TEXT(0, 64)			},
 	{ "sch_rcon", 			V_TEXT(0, 64)			},
 	{ "sch_c1",			V_TEXT(0, 64)			},
@@ -1418,14 +1007,14 @@ static const nvset_t nvset_list[] = {
 	{ "sch_c5",			V_TEXT(0, 64)			},
 	{ "sch_c5_cmd",			V_TEXT(0, 2048)			},
 
-// admin-scripts
+/* admin-scripts */
 	{ "script_init", 		V_TEXT(0, 4096)			},
 	{ "script_shut", 		V_TEXT(0, 4096)			},
 	{ "script_fire", 		V_TEXT(0, 8192)			},
 	{ "script_wanup", 		V_TEXT(0, 4096)			},
 	{ "script_mwanup", 		V_TEXT(0, 4096)			},
 
-// admin-log
+/* admin-log */
 	{ "log_remote",			V_01				},
 	{ "log_remoteip",		V_LENGTH(0, 512)		},
 	{ "log_remoteport",		V_PORT				},
@@ -1438,11 +1027,11 @@ static const nvset_t nvset_list[] = {
 	{ "log_in",			V_RANGE(0, 3)			},
 	{ "log_out",			V_RANGE(0, 3)			},
 	{ "log_mark",			V_RANGE(0, 99999)		},
-	{ "log_events",			V_TEXT(0, 32)			},	// "acre,crond,ntp"
+	{ "log_events",			V_TEXT(0, 32)			},	/* "acre,crond,ntp" */
 	{ "log_dropdups",		V_01				},	/* drop duplicates? */
 	{ "log_min_level",		V_RANGE(1, 8)			},	/* minimum log level */
 
-// admin-log-webmonitor
+/* admin-log-webmonitor */
 	{ "log_wm",			V_01				},
 	{ "log_wmtype",			V_RANGE(0, 2)			},
 	{ "log_wmip",			V_LENGTH(0, 512)		},
@@ -1453,39 +1042,39 @@ static const nvset_t nvset_list[] = {
 	{ "webmon_shrink",		V_01				},
 
 
-// admin-cifs
+/* admin-cifs */
 	{ "cifs1",			V_LENGTH(1, 1024)		},
 	{ "cifs2",			V_LENGTH(1, 1024)		},
 
-// admin-jffs2
+/* admin-jffs2 */
 	{ "jffs2_on",			V_01				},
 	{ "jffs2_exec",			V_LENGTH(0, 64)			},
 	{ "jffs2_format",		V_01				},
 	{ "jffs2_auto_unmount",		V_01				},	/* automatically unmount JFFS2 during FW upgrade */
 
 #ifdef TCONFIG_SDHC
-// admin-sdhc
+/* admin-sdhc */
 	{ "mmc_on",			V_01				},
-	{ "mmc_cs",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_clk",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_din",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_dout",			V_RANGE(1, 7)			},	// GPIO pin
-	{ "mmc_fs_partition",		V_RANGE(1, 4)			},	// partition number in partition table
-	{ "mmc_fs_type",		V_LENGTH(4, 4)			},	// ext2, ext3, vfat
+	{ "mmc_cs",			V_RANGE(1, 7)			},	/* GPIO pin */
+	{ "mmc_clk",			V_RANGE(1, 7)			},	/* GPIO pin */
+	{ "mmc_din",			V_RANGE(1, 7)			},	/* GPIO pin */
+	{ "mmc_dout",			V_RANGE(1, 7)			},	/* GPIO pin */
+	{ "mmc_fs_partition",		V_RANGE(1, 4)			},	/* partition number in partition table */
+	{ "mmc_fs_type",		V_LENGTH(4, 4)			},	/* ext2, ext3, vfat */
 	{ "mmc_exec_mount",		V_LENGTH(0, 64)			},
 	{ "mmc_exec_umount",		V_LENGTH(0, 64)			},
 #endif
 
-// admin-tomatoanon
+/* admin-tomatoanon */
 	{ "tomatoanon_answer",		V_RANGE(0, 1)			},
 	{ "tomatoanon_enable",		V_RANGE(-1, 1)			},
 	{ "tomatoanon_id",		V_LENGTH(0, 32)			},
 	{ "tomatoanon_notify",		V_01				},
 
-// nas-usb - !!TB
+/* nas-usb */
 #ifdef TCONFIG_USB
 	{ "usb_enable",			V_01				},
-	{ "usb_uhci",			V_RANGE(-1, 1)			},	// -1 - disabled, 0 - off, 1 - on
+	{ "usb_uhci",			V_RANGE(-1, 1)			},	/* -1 - disabled, 0 - off, 1 - on */
 	{ "usb_ohci",			V_RANGE(-1, 1)			},
 	{ "usb_usb2",			V_RANGE(-1, 1)			},
 #ifdef TCONFIG_BCMARM
@@ -1518,7 +1107,7 @@ static const nvset_t nvset_list[] = {
 	{ "usb_apcupsd_custom",		V_01				},	/* 1 - use custom config file /etc/apcupsd.conf */
 #endif
 #ifdef TCONFIG_HFS
-	{ "usb_fs_hfs",			V_01				}, //!Victek
+	{ "usb_fs_hfs",			V_01				},
 #ifdef TCONFIG_BCMARM
 	{ "usb_hfs_driver",		V_LENGTH(0, 10)			},
 #endif
@@ -1536,7 +1125,7 @@ static const nvset_t nvset_list[] = {
 	{ "usb_3g",			V_01				},
 #endif /* TCONFIG_USB */
 
-// nas-ftp - !!TB
+/* nas-ftp */
 #ifdef TCONFIG_FTP
 	{ "ftp_enable",			V_RANGE(0, 2)			},
 	{ "ftp_super",			V_01				},
@@ -1570,7 +1159,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 #ifdef TCONFIG_SAMBASRV
-// nas-samba - !!TB
+/* nas-samba */
 	{ "smbd_enable",		V_RANGE(0, 2)			},
 	{ "smbd_wgroup",		V_LENGTH(0, 20)			},
 	{ "smbd_master",		V_01				},
@@ -1590,7 +1179,7 @@ static const nvset_t nvset_list[] = {
 #endif
 
 #ifdef TCONFIG_MEDIA_SERVER
-// nas-media
+/* nas-media */
 	{ "ms_enable",			V_01				},
 	{ "ms_dirs",			V_LENGTH(0, 1024)		},
 	{ "ms_port",			V_RANGE(0, 65535)		},
@@ -1602,7 +1191,7 @@ static const nvset_t nvset_list[] = {
 	{ "ms_sas",			V_01				},
 #endif
 
-//	qos
+/* qos */
 	{ "qos_enable",			V_01				},
 #ifdef TCONFIG_BCMARM
 	{ "qos_mode",			V_NUM				},
@@ -1657,7 +1246,7 @@ static const nvset_t nvset_list[] = {
 	{ "qos_irates",			V_LENGTH(0, 128)		},
 	{ "qos_orates",			V_LENGTH(0, 128)		},
 #endif
-	{ "qos_classnames",		V_LENGTH(10, 128)		},	// !!TOASTMAN
+	{ "qos_classnames",		V_LENGTH(10, 128)		},
 	{ "ne_vegas",			V_01				},
 	{ "ne_valpha",			V_NUM				},
 	{ "ne_vbeta",			V_NUM				},
@@ -1693,9 +1282,8 @@ static const nvset_t nvset_list[] = {
 	{ "bwl_br3_ulr",		V_RANGE(0, 99999999)		},
 	{ "bwl_br3_prio",		V_RANGE(0, 5)			},
 
-
 #ifdef TCONFIG_BT
-// nas-transmission
+/* nas-transmission */
 	{ "bt_enable",			V_01				},
 	{ "bt_binary",			V_LENGTH(0, 50)			},
 	{ "bt_binary_custom",		V_LENGTH(0, 50)			},
@@ -1739,7 +1327,6 @@ static const nvset_t nvset_list[] = {
 	{ "bt_message",			V_RANGE(0, 3)			},
 	{ "bt_log",			V_01				},
 	{ "bt_log_path",		V_LENGTH(0, 50)			},
-
 #endif
 
 #ifdef TCONFIG_NFS
@@ -1748,7 +1335,7 @@ static const nvset_t nvset_list[] = {
 	{ "nfs_exports",		V_LENGTH(0, 4096)		},
 #endif
 
-//NotCatSplash. Victek.
+/* splashd */
 #ifdef TCONFIG_NOCAT
 	{ "NC_enable",			V_01				},
 	{ "NC_Verbosity",		V_RANGE(0, 10)			},
@@ -1770,69 +1357,69 @@ static const nvset_t nvset_list[] = {
 	{ "NC_BridgeLAN",		V_LENGTH(0, 50)			},
 #endif
 
-// NGinX Roadkill-Victek
+/* web-nginx */
 #ifdef TCONFIG_NGINX
-	{"nginx_enable",		V_01				},	// NGinX enabled
-	{"nginx_php",			V_01				},	// PHP enabled
-	{"nginx_keepconf",		V_01				},	// NGinX configuration files overwrite flag
-	{"nginx_docroot",		V_LENGTH(0, 255)		},	// root files path
-	{"nginx_port",			V_PORT				},	// listening port
-	{"nginx_fqdn",			V_LENGTH(0, 255)		},	// server name
-	{"nginx_upload",		V_LENGTH(1, 1000)		},	// upload file size limit
+	{"nginx_enable",		V_01				},	/* NGinX enabled */
+	{"nginx_php",			V_01				},	/* PHP enabled */
+	{"nginx_keepconf",		V_01				},	/* NGinX configuration files overwrite flag */
+	{"nginx_docroot",		V_LENGTH(0, 255)		},	/* root files path */
+	{"nginx_port",			V_PORT				},	/* listening port */
+	{"nginx_fqdn",			V_LENGTH(0, 255)		},	/* server name */
+	{"nginx_upload",		V_LENGTH(1, 1000)		},	/* upload file size limit */
 	{"nginx_remote",		V_01				},
-	{"nginx_priority",		V_LENGTH(0, 255)		},	// server priority
-	{"nginx_custom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
-	{"nginx_httpcustom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
-	{"nginx_servercustom",		V_TEXT(0, 4096)			},	// user window to add parameters to nginx.conf
-	{"nginx_phpconf",		V_TEXT(0, 4096)			},	// user window to add parameters to php.ini
-	{"nginx_user",			V_LENGTH(0, 255)		},	// user used to start nginx and spawn-fcgi
+	{"nginx_priority",		V_LENGTH(0, 255)		},	/* server priority */
+	{"nginx_custom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{"nginx_httpcustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{"nginx_servercustom",		V_TEXT(0, 4096)			},	/* user window to add parameters to nginx.conf */
+	{"nginx_phpconf",		V_TEXT(0, 4096)			},	/* user window to add parameters to php.ini */
+	{"nginx_user",			V_LENGTH(0, 255)		},	/* user used to start nginx and spawn-fcgi */
 	{"nginx_override",		V_01				},
 	{"nginx_overridefile",		V_TEXT(0, 4096)			},
 	{"nginx_h5aisupport",		V_01				},	/* enable h5ai support */
 
-// bwq518 - MySQL
+/* web-mysql */
 	{ "mysql_enable",		V_01				},
-	{ "mysql_sleep",		V_RANGE(1,60)			},
+	{ "mysql_sleep",		V_RANGE(1, 60)			},
 	{ "mysql_check",		V_01				},
-	{ "mysql_check_time",		V_RANGE(1,55)			},
+	{ "mysql_check_time",		V_RANGE(1, 55)			},
 	{ "mysql_binary",		V_LENGTH(0, 50)			},
 	{ "mysql_binary_custom",	V_LENGTH(0, 50)			},
 	{ "mysql_usb_enable",		V_01				},
-	{ "mysql_dlroot",		V_LENGTH(0,50)			},
-	{ "mysql_datadir",		V_LENGTH(0,64)			},
-	{ "mysql_tmpdir",		V_LENGTH(0,64)			},
-	{ "mysql_server_custom",	V_TEXT(0,1024)			},
+	{ "mysql_dlroot",		V_LENGTH(0, 50)			},
+	{ "mysql_datadir",		V_LENGTH(0, 64)			},
+	{ "mysql_tmpdir",		V_LENGTH(0, 64)			},
+	{ "mysql_server_custom",	V_TEXT(0, 1024)			},
 	{ "mysql_port",			V_PORT				},
 	{ "mysql_allow_anyhost",	V_01				},
 	{ "mysql_init_rootpass",	V_01				},
-	{ "mysql_username",		V_TEXT(0,50)			},	// mysqladmin username
-	{ "mysql_passwd",		V_TEXT(0,50)			},	// mysqladmin password
-	{ "mysql_key_buffer",		V_RANGE(0,1024)			},	// MB
-	{ "mysql_max_allowed_packet", 	V_RANGE(0,1024)			},	// MB
-	{ "mysql_thread_stack",		V_RANGE(0,1024000)		},	// KB
-	{ "mysql_thread_cache_size",	V_RANGE(0,999999)		},
+	{ "mysql_username",		V_TEXT(0, 50)			},	/* mysqladmin username */
+	{ "mysql_passwd",		V_TEXT(0, 50)			},	/* mysqladmin password */
+	{ "mysql_key_buffer",		V_RANGE(0, 1024)		},	/* MB */
+	{ "mysql_max_allowed_packet", 	V_RANGE(0, 1024)		},	/* MB */
+	{ "mysql_thread_stack",		V_RANGE(0, 1024000)		},	/* KB */
+	{ "mysql_thread_cache_size",	V_RANGE(0, 999999)		},
 	{ "mysql_init_priv",		V_01				},
-	{ "mysql_table_open_cache",	V_RANGE(1,999999)		},
-	{ "mysql_sort_buffer_size",	V_RANGE(0,1024000)		},	//KB
-	{ "mysql_read_buffer_size",	V_RANGE(0,1024000)		},	//KB
-	{ "mysql_query_cache_size",	V_RANGE(0,1024)			},	//MB
-	{ "mysql_read_rnd_buffer_size",	V_RANGE(0,1024000)		},	//KB
-	{ "mysql_net_buffer_length",	V_RANGE(0,1024)			},	//K
-	{ "mysql_max_connections",	V_RANGE(0,999999) 		},
+	{ "mysql_table_open_cache",	V_RANGE(1, 999999)		},
+	{ "mysql_sort_buffer_size",	V_RANGE(0, 1024000)		},	/* KB */
+	{ "mysql_read_buffer_size",	V_RANGE(0, 1024000)		},	/* KB */
+	{ "mysql_query_cache_size",	V_RANGE(0, 1024)		},	/* MB */
+	{ "mysql_read_rnd_buffer_size",	V_RANGE(0, 1024000)		},	/* KB */
+	{ "mysql_net_buffer_length",	V_RANGE(0, 1024)		},	/* KB */
+	{ "mysql_max_connections",	V_RANGE(0, 999999) 		},
 #endif
 
 #ifdef TCONFIG_OPENVPN
-// vpn
+/* openvpn */
 	{ "vpn_debug",			V_01				},
 	{ "vpn_server_eas",		V_NONE				},
 	{ "vpn_server_dns",		V_NONE				},
 	{ "vpn_server1_poll",		V_RANGE(0, 30)			},
-	{ "vpn_server1_if",		V_TEXT(3, 3)			},	// tap, tun
-	{ "vpn_server1_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
+	{ "vpn_server1_if",		V_TEXT(3, 3)			},	/* tap, tun */
+	{ "vpn_server1_proto",		V_TEXT(3, 11)			},	/* udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server */
 	{ "vpn_server1_port",		V_PORT				},
-	{ "vpn_server1_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
-	{ "vpn_server1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
-	{ "vpn_server1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_server1_firewall",	V_TEXT(0, 8)			},	/* auto, external, custom */
+	{ "vpn_server1_crypt",		V_TEXT(0, 6)			},	/* tls, secret, custom */
+	{ "vpn_server1_comp",		V_TEXT(0, 8)			},	/* yes, no, adaptive, lz4 */
 	{ "vpn_server1_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_server1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server1_digest",		V_TEXT(0, 15)			},
@@ -1843,7 +1430,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_nm",		V_IP				},
 	{ "vpn_server1_local",		V_IP				},
 	{ "vpn_server1_remote",		V_IP				},
-	{ "vpn_server1_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_server1_reneg",		V_RANGE(-1, 2147483647)		},
 	{ "vpn_server1_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_server1_plan",		V_01				},
 	{ "vpn_server1_plan1",		V_01				},
@@ -1868,12 +1455,12 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server1_dh",		V_NONE				},
 	{ "vpn_server1_br",		V_LENGTH(0, 50)			},
 	{ "vpn_server2_poll",		V_RANGE(0, 30)			},
-	{ "vpn_server2_if",		V_TEXT(3, 3)			},	// tap, tun
-	{ "vpn_server2_proto",		V_TEXT(3, 11)			},	// udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server
+	{ "vpn_server2_if",		V_TEXT(3, 3)			},	/* tap, tun */
+	{ "vpn_server2_proto",		V_TEXT(3, 11)			},	/* udp, tcp-server, udp4, tcp4-server, udp6, tcp6-server */
 	{ "vpn_server2_port",		V_PORT				},
-	{ "vpn_server2_firewall",	V_TEXT(0, 8)			},	// auto, external, custom
-	{ "vpn_server2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
-	{ "vpn_server2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_server2_firewall",	V_TEXT(0, 8)			},	/* auto, external, custom */
+	{ "vpn_server2_crypt",		V_TEXT(0, 6)			},	/* tls, secret, custom */
+	{ "vpn_server2_comp",		V_TEXT(0, 8)			},	/* yes, no, adaptive, lz4 */
 	{ "vpn_server2_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_server2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_server2_digest",		V_TEXT(0, 15)			},
@@ -1884,7 +1471,7 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_nm",		V_IP				},
 	{ "vpn_server2_local",		V_IP				},
 	{ "vpn_server2_remote",		V_IP				},
-	{ "vpn_server2_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_server2_reneg",		V_RANGE(-1, 2147483647)		},
 	{ "vpn_server2_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_server2_plan",		V_01				},
 	{ "vpn_server2_plan1",		V_01				},
@@ -1910,23 +1497,23 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_server2_br",		V_LENGTH(0, 50)			},
 	{ "vpn_client_eas",		V_NONE				},
 	{ "vpn_client1_poll",		V_RANGE(0, 30)			},
-	{ "vpn_client1_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client1_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client1_bridge",		V_01				},
 	{ "vpn_client1_nat",		V_01				},
-	{ "vpn_client1_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
+	{ "vpn_client1_proto",		V_TEXT(3, 11)			},	/* udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client */
 	{ "vpn_client1_addr",		V_NONE				},
 	{ "vpn_client1_port",		V_PORT				},
-	{ "vpn_client1_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client1_firewall",	V_TEXT(0, 6)			},	// auto, custom
-	{ "vpn_client1_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
-	{ "vpn_client1_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client1_retry",		V_RANGE(-1, 32767)		},	/* -1 infinite, 0 disabled, >= 1 custom */
+	{ "vpn_client1_firewall",	V_TEXT(0, 6)			},	/* auto, custom */
+	{ "vpn_client1_crypt",		V_TEXT(0, 6)			},	/* tls, secret, custom */
+	{ "vpn_client1_comp",		V_TEXT(0, 8)			},	/* yes, no, adaptive, lz4 */
 	{ "vpn_client1_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client1_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client1_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client1_local",		V_IP				},
 	{ "vpn_client1_remote",		V_IP				},
 	{ "vpn_client1_nm",		V_IP				},
-	{ "vpn_client1_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client1_reneg",		V_RANGE(-1, 2147483647)		},
 	{ "vpn_client1_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client1_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client1_rgw",		V_RANGE(0, 3)			},
@@ -1937,8 +1524,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_crt",		V_NONE				},
 	{ "vpn_client1_key",		V_NONE				},
 	{ "vpn_client1_userauth",	V_01				},
-	{ "vpn_client1_username",	V_TEXT(0,50)			},
-	{ "vpn_client1_password",	V_TEXT(0,70)			},
+	{ "vpn_client1_username",	V_TEXT(0, 50)			},
+	{ "vpn_client1_password",	V_TEXT(0, 70)			},
 	{ "vpn_client1_useronly",	V_01				},
 	{ "vpn_client1_tlsremote",	V_01				},	/* remote-cert-tls server */
 	{ "vpn_client1_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
@@ -1947,23 +1534,23 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client1_routing_val",	V_NONE				},
 	{ "vpn_client1_fw",		V_01				},
 	{ "vpn_client2_poll",		V_RANGE(0, 30)			},
-	{ "vpn_client2_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client2_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client2_bridge",		V_01				},
 	{ "vpn_client2_nat",		V_01				},
-	{ "vpn_client2_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
+	{ "vpn_client2_proto",		V_TEXT(3, 11)			},	/* udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client */
 	{ "vpn_client2_addr",		V_NONE				},
 	{ "vpn_client2_port",		V_PORT				},
-	{ "vpn_client2_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client2_firewall",	V_TEXT(0, 6)			},	// auto, custom
-	{ "vpn_client2_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
-	{ "vpn_client2_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client2_retry",		V_RANGE(-1, 32767)		},	/* -1 infinite, 0 disabled, >= 1 custom */
+	{ "vpn_client2_firewall",	V_TEXT(0, 6)			},	/* auto, custom */
+	{ "vpn_client2_crypt",		V_TEXT(0, 6)			},	/* tls, secret, custom */
+	{ "vpn_client2_comp",		V_TEXT(0, 8)			},	/* yes, no, adaptive, lz4 */
 	{ "vpn_client2_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client2_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client2_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client2_local",		V_IP				},
 	{ "vpn_client2_remote",		V_IP				},
 	{ "vpn_client2_nm",		V_IP				},
-	{ "vpn_client2_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client2_reneg",		V_RANGE(-1, 2147483647)		},
 	{ "vpn_client2_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client2_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client2_rgw",		V_RANGE(0, 3)			},
@@ -1974,8 +1561,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_crt",		V_NONE				},
 	{ "vpn_client2_key",		V_NONE				},
 	{ "vpn_client2_userauth",	V_01				},
-	{ "vpn_client2_username",	V_TEXT(0,50)			},
-	{ "vpn_client2_password",	V_TEXT(0,70)			},
+	{ "vpn_client2_username",	V_TEXT(0, 50)			},
+	{ "vpn_client2_password",	V_TEXT(0, 70)			},
 	{ "vpn_client2_useronly",	V_01				},
 	{ "vpn_client2_tlsremote",	V_01				},	/* remote-cert-tls server */
 	{ "vpn_client2_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
@@ -1985,23 +1572,23 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client2_fw",		V_01				},
 #ifdef TCONFIG_BCMARM
 	{ "vpn_client3_poll",		V_RANGE(0, 30)			},
-	{ "vpn_client3_if",		V_TEXT(3, 3)			},	// tap, tun
+	{ "vpn_client3_if",		V_TEXT(3, 3)			},	/* tap, tun */
 	{ "vpn_client3_bridge",		V_01				},
 	{ "vpn_client3_nat",		V_01				},
-	{ "vpn_client3_proto",		V_TEXT(3, 11)			},	// udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client
+	{ "vpn_client3_proto",		V_TEXT(3, 11)			},	/* udp, tcp-client, udp4, tcp4-client, udp6, tcp6-client */
 	{ "vpn_client3_addr",		V_NONE				},
 	{ "vpn_client3_port",		V_PORT				},
-	{ "vpn_client3_retry",		V_RANGE(-1,32767)		},	// -1 infinite, 0 disabled, >= 1 custom
-	{ "vpn_client3_firewall",	V_TEXT(0, 6)			},	// auto, custom
-	{ "vpn_client3_crypt",		V_TEXT(0, 6)			},	// tls, secret, custom
-	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	// yes, no, adaptive, lz4
+	{ "vpn_client3_retry",		V_RANGE(-1, 32767)		},	/* -1 infinite, 0 disabled, >= 1 custom */
+	{ "vpn_client3_firewall",	V_TEXT(0, 6)			},	/* auto, custom */
+	{ "vpn_client3_crypt",		V_TEXT(0, 6)			},	/* tls, secret, custom */
+	{ "vpn_client3_comp",		V_TEXT(0, 8)			},	/* yes, no, adaptive, lz4 */
 	{ "vpn_client3_cipher",		V_TEXT(0, 16)			},
 	{ "vpn_client3_ncp_ciphers",	V_TEXT(0, 128)			},
 	{ "vpn_client3_digest",		V_TEXT(0, 15)			},
 	{ "vpn_client3_local",		V_IP				},
 	{ "vpn_client3_remote",		V_IP				},
 	{ "vpn_client3_nm",		V_IP				},
-	{ "vpn_client3_reneg",		V_RANGE(-1,2147483647)		},
+	{ "vpn_client3_reneg",		V_RANGE(-1, 2147483647)		},
 	{ "vpn_client3_hmac",		V_RANGE(-1, 4)			},
 	{ "vpn_client3_adns",		V_RANGE(0, 3)			},
 	{ "vpn_client3_rgw",		V_RANGE(0, 3)			},
@@ -2012,8 +1599,8 @@ static const nvset_t nvset_list[] = {
 	{ "vpn_client3_crt",		V_NONE				},
 	{ "vpn_client3_key",		V_NONE				},
 	{ "vpn_client3_userauth",	V_01				},
-	{ "vpn_client3_username",	V_TEXT(0,50)			},
-	{ "vpn_client3_password",	V_TEXT(0,70)			},
+	{ "vpn_client3_username",	V_TEXT(0, 50)			},
+	{ "vpn_client3_password",	V_TEXT(0, 70)			},
 	{ "vpn_client3_useronly",	V_01				},
 	{ "vpn_client3_tlsremote",	V_01				},	/* remote-cert-tls server */
 	{ "vpn_client3_tlsvername",	V_RANGE(0, 3)			},	/* verify-x509-name: 0 - disabled, 1 - Common Name, 2 - Common Name Prefix, 3 - Subject */
@@ -2025,12 +1612,12 @@ static const nvset_t nvset_list[] = {
 #endif /* TCONFIG_OPENVPN */
 
 #ifdef TCONFIG_PPTPD
-// pptp server
+/* pptp-server */
 	{ "pptpd_enable",		V_01				},
-	{ "pptpd_remoteip",		V_TEXT(0,24)			},
+	{ "pptpd_remoteip",		V_TEXT(0, 24)			},
 	{ "pptpd_forcemppe",		V_01				},
 	{ "pptpd_users",		V_TEXT(0, 67*16)		},
-	{ "pptpd_broadcast",		V_TEXT(0,8)			},
+	{ "pptpd_broadcast",		V_TEXT(0, 8)			},
 	{ "pptpd_dns1",			V_TEXT(0, 15)			},
 	{ "pptpd_dns2",			V_TEXT(0, 15)			},
 	{ "pptpd_wins1",		V_TEXT(0, 15)			},
@@ -2043,8 +1630,8 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_TINC
 	{"tinc_enable",			V_RANGE(0, 1)			},
 	{"tinc_name",			V_LENGTH(0, 30)			},
-	{"tinc_devicetype",		V_TEXT(3, 3)			},	// tun, tap
-	{"tinc_mode",			V_TEXT(3, 6)			},	// switch, hub
+	{"tinc_devicetype",		V_TEXT(3, 3)			},	/* tun, tap */
+	{"tinc_mode",			V_TEXT(3, 6)			},	/* switch, hub */
 	{"tinc_vpn_netmask",		V_IP				},
 	{"tinc_private_rsa",		V_NONE				},
 	{"tinc_private_ed25519",	V_NONE				},
@@ -2053,7 +1640,7 @@ static const nvset_t nvset_list[] = {
 	{"tinc_manual_firewall",	V_RANGE(0, 2)			},
 	{"tinc_manual_tinc_up",		V_RANGE(0, 1)			},
 	{"tinc_poll",			V_RANGE(0, 1440)		},
-	// scripts
+	/* scripts */
 	{"tinc_tinc_up",		V_NONE				},
 	{"tinc_tinc_down",		V_NONE				},
 	{"tinc_host_up",		V_NONE				},
@@ -2066,10 +1653,10 @@ static const nvset_t nvset_list[] = {
 #ifdef TCONFIG_TOR
 	{ "tor_enable",			V_01				},
 	{ "tor_solve_only",		V_01				},
-	{ "tor_socksport",		V_RANGE(1,65535)		},
-	{ "tor_transport",		V_RANGE(1,65535)		},
-	{ "tor_dnsport",		V_RANGE(1,65535)		},
-	{ "tor_datadir",		V_TEXT(0,24)			},
+	{ "tor_socksport",		V_RANGE(1, 65535)		},
+	{ "tor_transport",		V_RANGE(1, 65535)		},
+	{ "tor_dnsport",		V_RANGE(1, 65535)		},
+	{ "tor_datadir",		V_TEXT(0, 24)			},
 	{ "tor_iface",			V_LENGTH(0, 50)			},
 	{ "tor_users",			V_LENGTH(0, 4096)		},
 	{ "tor_ports",			V_LENGTH(0, 50)			},
@@ -2077,43 +1664,10 @@ static const nvset_t nvset_list[] = {
 	{ "tor_custom",			V_TEXT(0, 2048)			},
 #endif
 
-/*
-ppp_static		0/1
-ppp_static_ip		IP
-wl_enable		0/1
-wl_wds_timeout
-wl_maxassoc		1-256
-wl_phytype		a,b,g
-wl_net_reauth
-wl_preauth
-wl_wme_ap_bk
-wl_wme_ap_be
-wl_wme_ap_vi
-wl_wme_ap_vo
-wl_wme_sta_bk
-wl_wme_sta_be
-wl_wme_sta_vi
-wl_wme_sta_vo
-QoS
-port_priority_1		0-2
-port_flow_control_1	0,1
-port_rate_limit_1	0-8
-port_priority_2		0-2
-port_flow_control_2	0,1
-port_rate_limit_2	0-8
-port_priority_3		0-2
-port_flow_control_3	0,1
-port_rate_limit_3	0-8
-port_priority_4		0-2
-port_flow_control_4	0,1
-port_rate_limit_4	0-8
-wl_ap_ip
-wl_ap_ssid
-*/
 #ifdef TCONFIG_PPTPD
 	{ "pptp_client_eas",		V_01				},
-	{ "pptp_client_usewan",		V_TEXT(0,5)			},
-	{ "pptp_client_peerdns",	V_RANGE(0,2)			},
+	{ "pptp_client_usewan",		V_TEXT(0, 5)			},
+	{ "pptp_client_peerdns",	V_RANGE(0, 2)			},
 	{ "pptp_client_mtuenable",	V_01				},
 	{ "pptp_client_mtu",		V_RANGE(576, 1500)		},
 	{ "pptp_client_mruenable",	V_01				},
@@ -2122,18 +1676,333 @@ wl_ap_ssid
 	{ "pptp_client_srvip",		V_NONE				},
 	{ "pptp_client_srvsub",		V_IP				},
 	{ "pptp_client_srvsubmsk",	V_IP				},
-	{ "pptp_client_username",	V_TEXT(0,50)			},
-	{ "pptp_client_passwd",		V_TEXT(0,50)			},
+	{ "pptp_client_username",	V_TEXT(0, 50)			},
+	{ "pptp_client_passwd",		V_TEXT(0, 50)			},
 	{ "pptp_client_crypt",		V_RANGE(0, 3)			},
 	{ "pptp_client_custom",		V_NONE				},
 	{ "pptp_client_dfltroute",	V_01				},
 	{ "pptp_client_stateless",	V_01				},
-	{ "pptpd_chap",			V_RANGE(0,2)			},
+	{ "pptpd_chap",			V_RANGE(0, 2)			},
 #endif
 
 	{ NULL }
 };
 
+void exec_service(const char *action)
+{
+	int i;
+
+	logmsg(LOG_DEBUG, "*** [tomato] %s: exec_service: %s", __FUNCTION__, action);
+
+	i = 10;
+	while ((!nvram_match("action_service", "")) && (i-- > 0)) {
+		logmsg(LOG_DEBUG, "*** [tomato] %s: waiting before %d", __FUNCTION__, i);
+		sleep(1);
+	}
+
+	nvram_set("action_service", action);
+	kill(1, SIGUSR1);
+
+	i = 3;
+	while ((nvram_match("action_service", (char *)action)) && (i-- > 0)) {
+		logmsg(LOG_DEBUG, "*** [tomato] %s: waiting after %d", __FUNCTION__, i);
+		sleep(1);
+	}
+
+/*
+	if (atoi(webcgi_safeget("_service_wait", ""))) {
+		i = 10;
+		while ((nvram_match("action_service", (char *)action)) && (i-- > 0))  {
+			logmsg(LOG_DEBUG, "*** [tomato] %s: waiting after %d", __FUNCTION__, i);
+			sleep(1);
+		}
+	}
+*/
+}
+
+static void wi_generic_noid(char *url, int len, char *boundary)
+{
+	if (post == 1) {
+		if (len >= (32 * 1024)) {
+			logmsg(LOG_WARNING, "POST length exceeded maximum allowed");
+			exit(1);
+		}
+
+		if (post_buf) free(post_buf);
+		if ((post_buf = malloc(len + 1)) == NULL) {
+			logmsg(LOG_CRIT, "Unable to allocate post buffer");
+			exit(1);
+		}
+
+		if (web_read_x(post_buf, len) != len)
+			exit(1);
+
+		post_buf[len] = 0;
+		webcgi_init(post_buf);
+	}
+}
+
+void wi_generic(char *url, int len, char *boundary)
+{
+	wi_generic_noid(url, len, boundary);
+	check_id(url);
+}
+
+static void wi_cgi_bin(char *url, int len, char *boundary)
+{
+	if (post_buf)
+		free(post_buf);
+
+	post_buf = NULL;
+
+	if (post) {
+		if (len >= (128 * 1024)) {
+			logmsg(LOG_WARNING, "POST length exceeded maximum allowed");
+			exit(1);
+		}
+
+		if (len > 0) {
+			if ((post_buf = malloc(len + 1)) == NULL) {
+				logmsg(LOG_CRIT, "Unable to allocate post buffer");
+				exit(1);
+			}
+			if (web_read_x(post_buf, len) != len)
+				exit(1);
+
+			post_buf[len] = 0;
+		}
+	}
+}
+
+#ifdef TCONFIG_TERMLIB
+static void _execute_command(char *url, char *command, char *query, char *working_dir, wofilter_t wof)
+#else
+static void _execute_command(char *url, char *command, char *query, wofilter_t wof)
+#endif
+{
+	char webExecFile[]  = "/tmp/.wxXXXXXX";
+	char webQueryFile[] = "/tmp/.wqXXXXXX";
+	char cmd[sizeof(webExecFile) + 10];
+	FILE *f;
+	int fe, fq = -1;
+
+	if ((fe = mkstemp(webExecFile)) < 0)
+		exit(1);
+
+	if (query) {
+		if ((fq = mkstemp(webQueryFile)) < 0) {
+			close(fe);
+			unlink(webExecFile);
+			exit(1);
+		}
+	}
+
+	if ((f = fdopen(fe, "wb")) != NULL) {
+		fprintf(f,
+			"#!/bin/sh\n"
+			"export REQUEST_METHOD=\"%s\"\n"
+			"export PATH=%s\n"
+			". /etc/profile\n"
+#ifdef TCONFIG_TERMLIB
+			"cd %s\n"
+#endif
+			"%s%s %s%s\n",
+			post ? "POST" : "GET", getenv("PATH"),
+#ifdef TCONFIG_TERMLIB
+			working_dir,
+#endif
+			command ? "" : "./", command ? command : url,
+			query ? "<" : "", query ? webQueryFile : "");
+		fclose(f);
+	}
+	else {
+		close(fe);
+		unlink(webExecFile);
+		if (query) {
+			close(fq);
+			unlink(webQueryFile);
+		}
+
+		exit(1);
+	}
+
+	chmod(webExecFile, 0700);
+
+	if (query) {
+		if ((f = fdopen(fq, "wb")) != NULL) {
+			fprintf(f, "%s\n", query);
+			fclose(f);
+		}
+		else {
+			unlink(webExecFile);
+			close(fq);
+			unlink(webQueryFile);
+			exit(1);
+		}
+	}
+
+	snprintf(cmd, sizeof(cmd), "%s 2>&1", webExecFile);
+	web_pipecmd(cmd, wof);
+	unlink(webQueryFile);
+	unlink(webExecFile);
+}
+
+static void wo_cgi_bin(char *url)
+{
+	if (!header_sent) send_header(200, NULL, mime_html, 0);
+#ifdef TCONFIG_TERMLIB
+	_execute_command(url, NULL, post_buf, "/www", WOF_NONE);
+#else
+	_execute_command(url, NULL, post_buf, WOF_NONE);
+#endif
+	if (post_buf) {
+		free(post_buf);
+		post_buf = NULL;
+	}
+}
+
+static void wo_shell(char *url)
+{
+#ifdef TCONFIG_TERMLIB
+	if (atoi(webcgi_safeget("nojs", "0")))
+		_execute_command(NULL, webcgi_get("command"), NULL, webcgi_safeget("working_dir", "/www"), WOF_NONE);
+	else {
+		web_puts("\ncmdresult = '");
+		_execute_command(NULL, webcgi_get("command"), NULL, "/www", WOF_JAVASCRIPT);
+		web_puts("';");
+	}
+#else
+	web_puts("\ncmdresult = '");
+	_execute_command(NULL, webcgi_get("command"), NULL, WOF_JAVASCRIPT);
+	web_puts("';");
+#endif
+}
+
+static void wo_cfe(char *url)
+{
+	do_file(MTD_DEV(0ro));
+}
+
+static void wo_nvram(char *url)
+{
+	web_pipecmd("nvram show", WOF_NONE);
+}
+
+static void wo_iptables(char *url)
+{
+	web_pipecmd("iptables -nvL; echo; iptables -t nat -nvL; echo; iptables -t mangle -nvL", WOF_NONE);
+}
+
+#ifdef TCONFIG_IPV6
+static void wo_ip6tables(char *url)
+{
+	web_pipecmd("ip6tables -nvL; echo; ip6tables -t mangle -nvL", WOF_NONE);
+}
+#endif
+
+/*
+static void wo_spin(char *url)
+{
+	char s[64];
+
+	strlcpy(s, nvram_safe_get("web_css"), sizeof(s));
+	strlcat(s, "_spin.gif", sizeof(s));
+	if (f_exists(s))
+		do_file(s);
+	else
+		do_file("_spin.gif");
+}
+*/
+
+void common_redirect(void)
+{
+	if (atoi(webcgi_safeget("_ajax", ""))) {
+		send_header(200, NULL, mime_html, 0);
+		web_puts("OK");
+	}
+	else
+		redirect(webcgi_safeget("_redirect", "/"));
+}
+
+static void asp_css(int argc, char **argv)
+{
+	const char *css = nvram_safe_get("web_css");
+	const char *ttb = nvram_safe_get("ttb_css");
+	int c = strcmp(css, "tomato") != 0;
+
+#ifdef TCONFIG_ADVTHEMES
+	if (argc == 0) {
+#endif
+		if (nvram_match("web_css", "online"))
+			web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/ext/%s.css\">", ttb);
+		else {
+			if (c)
+				web_printf("<link rel=\"stylesheet\" type=\"text/css\" href=\"/%s.css\">", css);
+		}
+#ifdef TCONFIG_ADVTHEMES
+	}
+	else {
+		if ((strncmp(argv[0], "svg-css", 7) == 0) && c)
+			web_printf("<?xml-stylesheet type=\"text/css\" href=\"/%s.css\" ?>", css);	/* css for bwm-graph.svg */
+
+		if ((strncmp(argv[0], "svg-js", 6) == 0) && (nvram_get_int("web_adv_scripts")))		/* special case, outer JS file for bwm-graph.svg */
+			web_printf("<script href=\"/resize-charts.js\" />");
+	}
+#endif
+}
+
+#if defined(TCONFIG_BCMARM) || defined(TCONFIG_MIPSR2)
+static void asp_discovery(int argc, char **argv)
+{
+	char buf[32] = "/usr/sbin/discovery.sh ";
+
+	if (strncmp(argv[0], "off", 3) == 0)
+		return;
+	else if (strncmp(argv[0], "traceroute", 10) == 0)
+		strcat(buf, argv[0]);
+
+	system(buf);
+}
+#endif
+
+static const char *resmsg_get(void)
+{
+	return webcgi_safeget("resmsg", "");
+}
+
+void resmsg_set(const char *msg)
+{
+	webcgi_set("resmsg", strdup(msg));
+}
+
+int resmsg_fread(const char *fname)
+{
+	char s[256];
+	char *p;
+
+	f_read_string(fname, s, sizeof(s));
+
+	if ((p = strchr(s, '\n')) != NULL)
+		*p = 0;
+
+	if (s[0]) {
+		resmsg_set(s);
+		return 1;
+	}
+
+	return 0;
+}
+
+static void asp_resmsg(int argc, char **argv)
+{
+	char *p;
+
+	if ((p = js_string(webcgi_safeget("resmsg", (argc > 0) ? argv[0] : ""))) == NULL)
+		return;
+
+	web_printf("\nresmsg='%s';\n", p);
+	free(p);
+}
 
 static int webcgi_nvram_set(const nvset_t *v, const char *name, int write)
 {
@@ -2147,69 +2016,76 @@ static int webcgi_nvram_set(const nvset_t *v, const char *name, int write)
 	struct in6_addr addr;
 #endif
 
-	if ((p = webcgi_get((char*)name)) == NULL) return 0;
+	if ((p = webcgi_get((char*)name)) == NULL)
+		return 0;
 
-	_dprintf("[%s] %s=%s\n", v->name, (char*)name, p);
+	logmsg(LOG_DEBUG, "*** [tomato] %s: [%s] %s=%s", __FUNCTION__, v->name, (char*)name, p);
+
 	dirty = 0;
 	ok = 1;
 	switch (v->vtype) {
-	case VT_TEXT:
-		p = unix_string(p);	// NOTE: p = malloc'd
-		// drop
-	case VT_LENGTH:
-		n = strlen(p);
-		if ((n < v->va.i) || (n > v->vb.i)) ok = 0;
-		break;
-	case VT_RANGE:
-		l = strtol(p, &e, 10);
-		if ((p == e) || (*e) || (l < v->va.l) || (l > v->vb.l)) ok = 0;
-		break;
-	case VT_IP:
-		if ((sscanf(p, "%3u.%3u.%3u.%3u", &u[0], &u[1], &u[2], &u[3]) != 4) ||
-			(u[0] > 255) || (u[1] > 255) || (u[2] > 255) || (u[3] > 255)) ok = 0;
-		break;
-	case VT_MAC:
-		if ((sscanf(p, "%2x:%2x:%2x:%2x:%2x:%2x", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5]) != 6) ||
-			(u[0] > 255) || (u[1] > 255) || (u[2] > 255) || (u[3] > 255) || (u[4] > 255) || (u[5] > 255)) ok = 0;
-		break;
+		case VT_TEXT:
+			p = unix_string(p); /* NOTE: p = malloc'd */
+			/* drop */
+		case VT_LENGTH:
+			n = strlen(p);
+			if ((n < v->va.i) || (n > v->vb.i))
+				ok = 0;
+			break;
+		case VT_RANGE:
+			l = strtol(p, &e, 10);
+			if ((p == e) || (*e) || (l < v->va.l) || (l > v->vb.l))
+				ok = 0;
+			break;
+		case VT_IP:
+			if ((sscanf(p, "%3u.%3u.%3u.%3u", &u[0], &u[1], &u[2], &u[3]) != 4) ||
+			    (u[0] > 255) || (u[1] > 255) || (u[2] > 255) || (u[3] > 255))
+				ok = 0;
+			break;
+		case VT_MAC:
+			if ((sscanf(p, "%2x:%2x:%2x:%2x:%2x:%2x", &u[0], &u[1], &u[2], &u[3], &u[4], &u[5]) != 6) ||
+			    (u[0] > 255) || (u[1] > 255) || (u[2] > 255) || (u[3] > 255) || (u[4] > 255) || (u[5] > 255))
+				ok = 0;
+			break;
 #ifdef TCONFIG_IPV6
-	case VT_IPV6:
-		if (strlen(p) > 0 || v->va.i) {
-			if (inet_pton(AF_INET6, p, &addr) != 1) ok = 0;
-		}
-		break;
+		case VT_IPV6:
+			if (strlen(p) > 0 || v->va.i) {
+				if (inet_pton(AF_INET6, p, &addr) != 1)
+					ok = 0;
+			}
+			break;
 #endif
-	default:
-		// shutup gcc
-		break;
+		default:
+			/* shutup gcc */
+			break;
 	}
 	if (!ok) {
-		if (v->vtype == VT_TEXT) free(p);
+		if (v->vtype == VT_TEXT)
+			free(p);
+
 		return -1;
 	}
 	if (write) {
 		if (!nvram_match((char *)name, p)) {
-			if (v->vtype != VT_TEMP) dirty = 1;
-			//DEBUG_NVRAMSET(name, p);
+			if (v->vtype != VT_TEMP)
+				dirty = 1;
+
+			// logmsg(LOG_DEBUG, "*** [tomato] %s: nvram set %s=%s", __FUNCTION__, name, p);
 			nvram_set(name, p);
 		}
 	}
-	if (v->vtype == VT_TEXT) free(p);
+	if (v->vtype == VT_TEXT)
+		free(p);
 
 	return dirty;
 }
-
-typedef struct {
-	const nvset_t *v;
-	int write;
-	int dirty;
-} nv_list_t;
 
 static int nv_wl_find(int idx, int unit, int subunit, void *param)
 {
 	nv_list_t *p = param;
 
 	int ok = webcgi_nvram_set(p->v, wl_nvname(p->v->name + 3, unit, subunit), p->write);
+
 	if (ok < 0)
 		return 1;
 	else {
@@ -2219,44 +2095,53 @@ static int nv_wl_find(int idx, int unit, int subunit, void *param)
 }
 
 #if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
-static int nv_wl_bwcap_chanspec(int idx, int unit, int subunit, void *param){
-	char		chan_spec[32];
-	char		*ch,*nbw_cap,*nctrlsb;
-	int 		write = *((int *)param);
-	ch	= webcgi_get(wl_nvname("channel",unit,0));
-	nbw_cap = webcgi_get(wl_nvname("nbw_cap",unit,0));
-	nctrlsb = webcgi_get(wl_nvname("nctrlsb",unit,0));
-	if(!ch && !nbw_cap && !nctrlsb)
-		return 0;
-	if(ch == NULL || !*ch)	ch = nvram_get(wl_nvname("channel",unit,0));
-	if(nbw_cap == NULL || !*nbw_cap)  nbw_cap = nvram_get(wl_nvname("nbw_cap",unit,0));
-	if(nctrlsb == NULL || !*nctrlsb)  nctrlsb = nvram_get(wl_nvname("nctrlsb",unit,0));
+static int nv_wl_bwcap_chanspec(int idx, int unit, int subunit, void *param)
+{
+	char chan_spec[32];
+	char *ch, *nbw_cap, *nctrlsb;
+	int write = *((int *)param);
+	ch      = webcgi_get(wl_nvname("channel", unit, 0));
+	nbw_cap = webcgi_get(wl_nvname("nbw_cap", unit, 0));
+	nctrlsb = webcgi_get(wl_nvname("nctrlsb", unit, 0));
 
-	if(!ch || !nbw_cap || !nctrlsb || !*ch || !*nbw_cap || !*nctrlsb)
+	if (!ch && !nbw_cap && !nctrlsb)
+		return 0;
+
+	if (ch == NULL || !*ch)
+		ch = nvram_get(wl_nvname("channel", unit, 0));
+
+	if (nbw_cap == NULL || !*nbw_cap)
+		nbw_cap = nvram_get(wl_nvname("nbw_cap", unit, 0));
+
+	if (nctrlsb == NULL || !*nctrlsb)
+		nctrlsb = nvram_get(wl_nvname("nctrlsb", unit, 0));
+
+	if (!ch || !nbw_cap || !nctrlsb || !*ch || !*nbw_cap || !*nctrlsb)
 		return 1;
 
-	memset(chan_spec,0,sizeof(chan_spec));
-	strncpy(chan_spec,ch,sizeof(chan_spec));
-	switch(atoi(nbw_cap)){
+	memset(chan_spec, 0, sizeof(chan_spec));
+	strncpy(chan_spec, ch, sizeof(chan_spec));
+	switch (atoi(nbw_cap)) {
 		case 0:
-			if(write)
-				nvram_set(wl_nvname("bw_cap",unit,0), "1");
+			if (write)
+				nvram_set(wl_nvname("bw_cap", unit, 0), "1");
 			break;
 		case 1:
-			if(write)
-				nvram_set(wl_nvname("bw_cap",unit,0), "3");
-			if(*ch != '0')
+			if (write)
+				nvram_set(wl_nvname("bw_cap", unit, 0), "3");
+			if (*ch != '0')
 				*(chan_spec + strlen(chan_spec)) = *nctrlsb;
 			break;
 		case 3:
-			if(write)
-				nvram_set(wl_nvname("bw_cap",unit,0), "7");
-			if(*ch != '0')
-				strcpy(chan_spec + strlen(chan_spec),"/80");
+			if (write)
+				nvram_set(wl_nvname("bw_cap", unit, 0), "7");
+			if (*ch != '0')
+				strcpy(chan_spec + strlen(chan_spec), "/80");
 			break;
 	}
-	if(write)
+	if (write)
 		nvram_set(wl_nvname("chanspec", unit, 0), chan_spec);
+
 	return 0;
 }
 #endif
@@ -2294,7 +2179,7 @@ static int save_variables(int write)
 		dirty |= ok;
 	}
 
-	// special cases
+	/* special cases */
 #if defined(TCONFIG_BCMARM) || defined(CONFIG_BCMWL6)
 	foreach_wif(0, &write, nv_wl_bwcap_chanspec);
 #endif
@@ -2306,7 +2191,8 @@ static int save_variables(int write)
 				dirty = 1;
 				nvram_set("http_passwd", p1);
 			}
-		} else {
+		}
+		else {
 			snprintf(s, sizeof(s), msgf, "password");
 			resmsg_set(s);
 			return 0;
@@ -2325,7 +2211,7 @@ static int save_variables(int write)
 			}
 			if ((write) && (!nvram_match(s, p))) {
 				dirty = 1;
-				//DEBUG_NVRAMSET(s, p);
+				// logmsg(LOG_DEBUG, "*** [tomato] %s: nvram set %s=%s", __FUNCTION__, s, p);
 				nvram_set(s, p);
 			}
 		}
@@ -2344,23 +2230,23 @@ static void wo_tomato(char *url)
 	int commit;
 	int force_commit;
 
-//	_dprintf("tomato.cgi\n");
-
 	red = webcgi_safeget("_redirect", "");
-	if (!*red) send_header(200, NULL, mime_html, 0);
-
 	commit = atoi(webcgi_safeget("_commit", "1"));
 	force_commit = atoi(webcgi_safeget("_force_commit", "0"));
 	ajax = atoi(webcgi_safeget("_ajax", "0"));
-
+	rboot = atoi(webcgi_safeget("_reboot", "0"));
 	nvset = atoi(webcgi_safeget("_nvset", "1"));
+
+	if (!*red)
+		send_header(200, NULL, mime_html, 0);
+
 	if (nvset) {
 		if (!save_variables(0)) {
-			if (ajax) {
+			if (ajax)
 				web_printf("@msg:%s", resmsg_get());
-			} else {
+			else
 				parse_asp("error.asp");
-			}
+
 			return;
 		}
 		commit = save_variables(1) && commit;
@@ -2368,41 +2254,42 @@ static void wo_tomato(char *url)
 		resmsg_set("Settings saved.");
 	}
 
-	rboot = atoi(webcgi_safeget("_reboot", "0"));
-	if (rboot) {
+	if (rboot)
 		parse_asp("reboot.asp");
-	} else {
-		if (ajax) {
+	else {
+		if (ajax)
 			web_printf("@msg:%s", resmsg_get());
-		} else if (atoi(webcgi_safeget("_moveip", "0"))) {
+		else if (atoi(webcgi_safeget("_moveip", "0")))
 			parse_asp("saved-moved.asp");
-		} else if (!*red) {
+		else if (!*red)
 			parse_asp("saved.asp");
-		}
 	}
 
 	if (commit || force_commit) {
-		_dprintf("commit from tomato.cgi\n");
+		logmsg(LOG_DEBUG, "*** [tomato] %s: commit from tomato.cgi", __FUNCTION__);
 		nvram_commit_x();
 	}
 
 	if ((v = webcgi_get("_service")) != NULL && *v != 0) {
 		if (!*red) {
-			if (ajax) web_printf(" Some services are being restarted...");
+			if (ajax)
+				web_printf(" Some services are being restarted...");
+
 			web_close();
 		}
 		sleep(1);
 
-		if (*v == '*') {
+		if (*v == '*')
 			kill(1, SIGHUP);
-		} else {
+		else
 			exec_service(v);
-		}
 	}
 
-	for (i = atoi(webcgi_safeget("_sleep", "0")); i > 0; --i) sleep(1);
+	for (i = atoi(webcgi_safeget("_sleep", "0")); i > 0; --i)
+		sleep(1);
 
-	if (*red) redirect(red);
+	if (*red)
+		redirect(red);
 
 	if (rboot) {
 		web_close();
@@ -2410,10 +2297,6 @@ static void wo_tomato(char *url)
 		kill(1, SIGTERM);
 	}
 }
-
-
-// ----------------------------------------------------------------------------
-
 
 static void wo_update(char *url)
 {
@@ -2428,7 +2311,8 @@ static void wo_update(char *url)
 			if (strcmp(api->name, name) == 0) {
 				for (argc = 0; argc < 16; ++argc) {
 					snprintf(s, sizeof(s), "arg%d", argc);
-					if ((argv[argc] = (char *)webcgi_get(s)) == NULL) break;
+					if ((argv[argc] = (char *)webcgi_get(s)) == NULL)
+						break;
 				}
 				api->exec(argc, argv);
 				break;
@@ -2443,7 +2327,9 @@ static void wo_service(char *url)
 
 	exec_service(webcgi_safeget("_service", ""));
 
-	if ((n = atoi(webcgi_safeget("_sleep", "2"))) <= 0) n = 2;
+	if ((n = atoi(webcgi_safeget("_sleep", "2"))) <= 0)
+		n = 2;
+
 	sleep(n);
 
 	common_redirect();
@@ -2464,3 +2350,93 @@ static void wo_nvcommit(char *url)
 	web_close();
 	nvram_commit();
 }
+
+const struct mime_handler mime_handlers[] = {
+	{ "update.cgi",			mime_javascript,			0,	wi_generic,		wo_update,		1 },
+	{ "tomato.cgi",			NULL,					0,	wi_generic,		wo_tomato,		1 },
+
+	{ "cfe/*.bin",			mime_binary,				0,	wi_generic,		wo_cfe,			1 },
+	{ "nvram/*.txt",		mime_binary,				0,	wi_generic,		wo_nvram,		1 },
+	{ "ipt/*.txt",			mime_binary,				0,	wi_generic,		wo_iptables,		1 },
+#ifdef TCONFIG_IPV6
+	{ "ip6t/*.txt",			mime_binary,				0,	wi_generic,		wo_ip6tables,		1 },
+#endif
+	{ "cfg/*.cfg",			NULL,					0,	wi_generic,		wo_backup,		1 },
+	{ "cfg/restore.cgi",		mime_html,				0,	wi_restore,		wo_restore,		1 },
+	{ "cfg/defaults.cgi",		NULL,					0,	wi_generic,		wo_defaults,		1 },
+
+	{ "stats/*.gz",			NULL,					0,	wi_generic,		wo_statsbackup,		1 },
+	{ "stats/restore.cgi",		NULL,					0,	wi_statsrestore,	wo_statsrestore,	1 },
+
+	{ "logs/view.cgi",		NULL,					0,	wi_generic,		wo_viewlog,		1 },
+	{ "logs/*.txt",			NULL,					0,	wi_generic,		wo_syslog,		1 },
+	{ "webmon_**",			NULL,					0,	wi_generic,		wo_syslog,		1 },
+
+	{ "logout.asp",			NULL,					0,	wi_generic,		wo_asp,			1 },
+	{ "clearcookies.asp",		NULL,					0,	wi_generic,		wo_asp,			1 },
+
+//	{ "spin.gif",			NULL,					0,	wi_generic_noid,	wo_spin,		1 },
+
+	{ "**.asp",			NULL,					0,	wi_generic_noid,	wo_asp,			1 },
+	{ "**.css",			"text/css",				12,	wi_generic_noid,	do_file,		1 },
+	{ "**.htm|**.html",		mime_html,				2,	wi_generic_noid,	do_file,		1 },
+	{ "**.gif",			"image/gif",				12,	wi_generic_noid,	do_file,		1 },
+	{ "**.jpg",			"image/jpeg",				12,	wi_generic_noid,	do_file,		1 },
+	{ "**.png",			"image/png",				12,	wi_generic_noid,	do_file,		1 },
+	{ "**.js",			mime_javascript,			12,	wi_generic_noid,	do_file,		1 },
+	{ "**.jsx",			mime_javascript,			0,	wi_generic,		wo_asp,			1 },
+	{ "**.jsz",			mime_javascript,			0,	wi_generic_noid,	wo_asp,			1 },
+	{ "**.svg",			"image/svg+xml",			0,	wi_generic_noid,	wo_asp,			1 },
+	{ "**.txt",			mime_plain,				2,	wi_generic_noid,	do_file,		1 },
+	{ "**.bin",			mime_binary,				0,	wi_generic_noid,	do_file,		1 },
+	{ "**.bino",			mime_octetstream,			0,	wi_generic_noid,	do_file,		1 },
+	{ "favicon.ico",		"image/x-icon",				24,	wi_generic_noid,	do_file,		1 },
+	{ "**/cgi-bin/**|**.sh",	NULL,					0,	wi_cgi_bin,		wo_cgi_bin,		1 },
+	{ "**.tar|**.gz",		mime_binary,				0,	wi_generic_noid,	do_file,		1 },
+	{ "shell.cgi",			mime_javascript,			0,	wi_generic,		wo_shell,		1 },
+	{ "wpad.dat|proxy.pac",		"application/x-ns-proxy-autoconfig",	0,	wi_generic_noid,	do_file,		0 },
+
+	{ "webmon.cgi",			mime_javascript,			0,	wi_generic,		wo_webmon,		1 },
+	{ "dhcpc.cgi",			NULL,					0,	wi_generic,		wo_dhcpc,		1 },
+	{ "dhcpd.cgi",			mime_javascript,			0,	wi_generic,		wo_dhcpd,		1 },
+	{ "nvcommit.cgi",		NULL,					0,	wi_generic,		wo_nvcommit,		1 },
+	{ "ping.cgi",			mime_javascript,			0,	wi_generic,		wo_ping,		1 },
+	{ "trace.cgi",			mime_javascript,			0,	wi_generic,		wo_trace,		1 },
+	{ "upgrade.cgi",		mime_html,				0,	wi_upgrade,		wo_flash,		1 },
+	{ "upnp.cgi",			NULL,					0,	wi_generic,		wo_upnp,		1 },
+	{ "wakeup.cgi",			NULL,					0,	wi_generic,		wo_wakeup,		1 },
+	{ "wlradio.cgi",		NULL,					0,	wi_generic,		wo_wlradio,		1 },
+	{ "resolve.cgi",		mime_javascript,			0,	wi_generic,		wo_resolve,		1 },
+	{ "expct.cgi",			mime_html,				0,	wi_generic,		wo_expct,		1 },
+	{ "service.cgi",		NULL,					0,	wi_generic,		wo_service,		1 },
+	{ "shutdown.cgi",		mime_html,				0,	wi_generic,		wo_shutdown,		1 },
+#ifdef TCONFIG_OPENVPN
+	{ "vpnstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_status,		1 },
+	{ "vpngenkey.cgi",		mime_javascript,			0,	wi_generic,		wo_ovpn_genkey,		1 },
+#ifdef TCONFIG_KEYGEN
+	{ "vpn/ClientConfig.tgz",	mime_binary,				0,	wi_generic,		wo_ovpn_genclientconfig,1 },
+#endif
+#endif
+#ifdef TCONFIG_PPTPD
+	{ "pptpd.cgi",			mime_javascript,			0,	wi_generic,		wo_pptpdcmd,		1 },
+#endif
+#ifdef TCONFIG_USB
+	{ "usbcmd.cgi",			mime_javascript,			0,	wi_generic,		wo_usbcommand,		1 },
+	{ "wwansignal.cgi",		mime_html,				0,	wi_generic,		wo_wwansignal,		1 },
+	{ "wwansms.cgi",		mime_html,				0,	wi_generic,		wo_wwansms,		1 },
+	{ "wwansmsdelete.cgi",		mime_html,				0,	wi_generic,		wo_wwansms_delete,	1 },
+#endif
+#ifdef TCONFIG_IPERF
+	{ "iperfstatus.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcpstatus,		1 },
+	{ "iperfrun.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcprun,		1 },
+	{ "iperfkill.cgi",		mime_javascript,			0,	wi_generic,		wo_ttcpkill,		1 },
+#endif
+#ifdef BLACKHOLE
+	{ "blackhole.cgi",		NULL,					0,	wi_blackhole,		NULL,			1 },
+#endif
+#ifdef TCONFIG_NOCAT
+	{ "uploadsplash.cgi",		NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
+	{ "ext/uploadsplash.cgi",	NULL,					0,	wi_uploadsplash,	wo_uploadsplash,	1 },
+#endif
+	{ NULL,				NULL,					0,	NULL,			NULL,			1 }
+};

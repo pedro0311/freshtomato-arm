@@ -1,9 +1,10 @@
 /*
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
 
 #ifndef __TOMATO_H_
 #define __TOMATO_H_
@@ -25,11 +26,9 @@
 #include <tomato_profile.h>
 #include <tomato_config.h>
 
-
 #include "httpd.h"
 
-
-//	#define BLACKHOLE		// for testing
+// #define BLACKHOLE		/* for testing */
 
 
 extern int rboot;
@@ -46,19 +45,16 @@ extern int get_cpuinfo(char *system_type, char *cpu_model, char *bogomips, char 
 extern int get_cpuinfo(char *system_type, char *cpu_model, char *bogomips, char *cpuclk);
 #endif
 
-extern const char *resmsg_get(void);
 extern void resmsg_set(const char *msg);
 extern int resmsg_fread(const char *fname);
 
-
-
-// nvram.c
+/* nvram.c */
 extern void asp_nvram(int argc, char **argv);
 extern void asp_nvramseq(int argc, char **argv);
 extern void asp_nv(int argc, char **argv);
 extern void asp_nvstat(int argc, char **argv);
 
-// misc.c
+/* misc.c */
 extern char *js_string(const char *s);
 extern char *html_string(const char *s);
 extern char *unix_string(const char *s);
@@ -108,7 +104,7 @@ extern void asp_dnscrypt_presets(int argc, char **argv);
 extern void asp_calc6rdlocalprefix(int argc, char **argv);
 #endif
 
-// usb.c
+/* usb.c */
 #ifdef TCONFIG_USB
 extern void asp_usbdevices(int argc, char **argv);
 extern void wo_usbcommand(char *url);
@@ -117,17 +113,17 @@ extern void wo_wwansms(char *url);
 extern void wo_wwansms_delete(char *url);
 #endif
 
-//pptpd.c
+/*pptpd.c */
 #ifdef TCONFIG_PPTPD
 extern void asp_pptpd_userol(int argc, char **argv);
 extern void wo_pptpdcmd(char *url);
 #endif
 
-// devlist.c
+/* devlist.c */
 extern void asp_arplist(int argc, char **argv);
 extern void asp_devlist(int argc, char **argv);
 
-// ctnf.c
+/* ctnf.c */
 extern void asp_ctcount(int argc, char **argv);
 extern void asp_ctdump(int argc, char **argv);
 extern void asp_ctrate(int argc, char **argv);
@@ -135,7 +131,7 @@ extern void asp_qrate(int argc, char **argv);
 extern void asp_layer7(int argc, char **argv);
 extern void wo_expct(char *url);
 
-// wl.c
+/* wl.c */
 extern void asp_wlscan(int argc, char **argv);
 extern void wo_wlradio(char *url);
 extern void asp_wlnoise(int argc, char **argv);
@@ -146,53 +142,53 @@ extern void asp_wlbands(int argc, char **argv);
 extern void asp_wlifaces(int argc, char **argv);
 extern void asp_wlcountries(int argc, char **argv);
 
-// dhcp.c
+/* dhcp.c */
 extern void asp_dhcpc_time(int argc, char **argv);
 extern void wo_dhcpd(char *url);
 extern void wo_dhcpc(char *url);
 
-// version.c
+/* version.c */
 extern void asp_build_time(int argc, char **argv);
 extern void asp_version(int argc, char **argv);
 
-// traceping.c
+/* traceping.c */
 extern void wo_trace(char *url);
 extern void wo_ping(char *url);
 
-// log.c
+/* log.c */
 extern void wo_viewlog(char *url);
 extern void wo_syslog(char *url);
 extern void asp_webmon(int argc, char **argv);
 extern void wo_webmon(char *url);
 extern void asp_showsyslog(int argc, char **argv);
 
-// ddns.c
+/* ddns.c */
 extern void asp_ddnsx(int argc, char **argv);
 extern void asp_ddnsx_ip(int argc, char **argv);
 extern void asp_ddnsx_msg(int argc, char **argv);
 
-// upgrade.c
+/* upgrade.c */
 extern void prepare_upgrade(void);
 extern void wi_upgrade(char *url, int len, char *boundary);
 extern void wo_flash(char *url);
 
-// config.c
+/* config.c */
 extern void wo_backup(char *url);
 extern void wi_restore(char *url, int len, char *boundary);
 extern void wo_restore(char *url);
 extern void wo_defaults(char *url);
 
-// parser.c
+/* parser.c */
 extern void wo_asp(char *path);
 
-// blackhole.c
+/* blackhole.c */
 extern void wi_blackhole(char *url, int len, char *boundary);
 
-// upnp.c
+/* upnp.c */
 extern void asp_upnpinfo(int argc, char **argv);
 extern void wo_upnp(char *url);
 
-// bwm.c
+/* bwm.c */
 extern void wo_statsbackup(char *url);
 extern void wi_statsrestore(char *url, int len, char *boundary);
 extern void wo_statsrestore(char *url);
@@ -203,12 +199,12 @@ extern void asp_iptmon(int argc, char **argv);
 extern void asp_iptraffic(int argc, char **argv);
 
 #ifdef TCONFIG_NOCAT
-// nocat.c
+/* nocat.c */
 extern void wi_uploadsplash(char *url, int len, char *boundary);
 extern void wo_uploadsplash(char *url);
 #endif
 
-// utf8.c
+/* utf8.c */
 extern char *utf8_to_js_string(const char *ins);
 extern char *utf8_to_html_string(const char *ins);
 
