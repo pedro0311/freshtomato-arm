@@ -578,8 +578,8 @@ function init() {
 			if (nvram['lan'+j+'_proto'] == 'dhcp') {
 				if ((!fixIP(nvram.dhcpd_startip)) || (!fixIP(nvram.dhcpd_endip))) {
 					var x = nvram['lan'+j+'_ipaddr'].split('.').splice(0, 3).join('.')+'.';
-					nvram['dhcpd'+j+'_startip'] = x + nvram['dhcp'+j+'_start'];
-					nvram['dhcpd'+j+'_endip'] = x + ((nvram['dhcp'+j+'_start'] * 1) + (nvram['dhcp'+j+'_num'] * 1) - 1);
+					nvram['dhcpd'+j+'_startip'] = x + 2;
+					nvram['dhcpd'+j+'_endip'] = x + 50;
 				}
 				s += ((s.length > 0) && (s.charAt(s.length - 1) != ' ')) ? '<br>' : '';
 				s += '<b>br'+i+'<\/b> (LAN'+i+') - '+nvram['dhcpd'+j+'_startip']+' - '+nvram['dhcpd'+j+'_endip'];
