@@ -1682,22 +1682,22 @@ REMOVE-END */
 	/* lan IP will be changed via DHCP Client soon (after restart) */
 	if (((fom.lan_dhcp.value == 1) || (nvram.lan_dhcp != fom.lan_dhcp.value)) && (fom.wan_proto.value == 'disabled')) {
 		if (fom.lan_dhcp.value == 1) { /* Case: turn On (new) OR already turned On */
-			fom.dhcp_moveip = 2; /* default lan IP 192.168.1.1 (waiting for DHCP Server Infos) - change IP to a.b.c.d */
+			fom.dhcp_moveip.value = 2; /* default lan IP 192.168.1.1 (waiting for DHCP Server Infos) - change IP to a.b.c.d */
 			form.submit(fom);
 		}
 		else { /* Case: turn Off */
-			fom.dhcp_moveip = 1; /* back to default lan IP 192.168.1.1 (nvram default) */
+			fom.dhcp_moveip.value = 1; /* back to default lan IP 192.168.1.1 (nvram default) */
 			form.submit(fom);
 		}
 	}
 	/* lan IP changed (static case) */
 	else if (nvram.lan_ipaddr != fom.lan_ipaddr.value) {
-		fom.dhcp_moveip = 0;
+		fom.dhcp_moveip.value = 0;
 		fom._moveip.value = 1;
 		form.submit(fom);
 	}
 	else {
-		fom.dhcp_moveip = 0;
+		fom.dhcp_moveip.value = 0;
 		form.submit(fom, 1);
 	}
 }

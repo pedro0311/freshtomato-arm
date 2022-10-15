@@ -2259,7 +2259,7 @@ static void wo_tomato(char *url)
 	else {
 		if (ajax)
 			web_printf("@msg:%s", resmsg_get());
-		else if (atoi(webcgi_safeget("_moveip", "0")))
+		else if (atoi(webcgi_safeget("_moveip", "0")) || atoi(webcgi_safeget("dhcp_moveip", "0")))
 			parse_asp("saved-moved.asp");
 		else if (!*red)
 			parse_asp("saved.asp");
