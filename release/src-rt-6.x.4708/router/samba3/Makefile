@@ -61,7 +61,7 @@ apps: .conf
 	samba_cv_USE_SETRESUID=yes \
 	samba_cv_USE_SETREUID=yes \
 	samba_cv_HAVE_GETTIMEOFDAY_TZ=yes \
-	samba_cv_REALPATH_TAKES_NULL=no \
+	samba_cv_REALPATH_TAKES_NULL=yes \
 	samba_cv_HAVE_FCNTL_LOCK=yes \
 	samba_cv_HAVE_SECURE_MKSTEMP=yes \
 	samba_cv_HAVE_NATIVE_ICONV=no \
