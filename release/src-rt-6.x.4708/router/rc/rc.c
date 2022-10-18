@@ -149,6 +149,46 @@ int serialize_restart(char *service, int start)
 	return 0;
 }
 
+/* replace -A and -I in the FW script with -D */
+void run_del_firewall_script(char *infile, char *outfile)
+{
+	FILE *ifp, *ofp;
+	char read[128], temp[128];
+	char *pos;
+	int index = 0;
+
+	ifp = fopen(infile, "r");
+	ofp = fopen(outfile, "w+");
+	if (ifp == NULL || ofp == NULL) {
+		if (ifp != NULL) fclose(ifp);
+		if (ofp != NULL) {
+			fclose(ofp);
+			unlink(outfile);
+		}
+		return;
+	}
+
+	while (fgets(read, sizeof(read), ifp) != NULL) {
+		if ((strstr(read, "-A") != NULL) || (strstr(read, "-I") != NULL)) {
+			while (((pos = strstr(read, "-A")) != NULL) || ((pos = strstr(read, "-I")) != NULL)) {
+				strlcpy(temp, read, sizeof(temp));
+				index = pos - read;
+				read[index] = '\0';
+				strlcat(read, "-D", sizeof(read));
+				strlcat(read, temp + index + 2, sizeof(read));
+			}
+		}
+		fputs(read, ofp);
+	}
+	fclose(ifp);
+	fclose(ofp);
+
+	chmod(outfile, 0744);
+	logmsg(LOG_DEBUG, "*** %s: removing existing firewall rules: %s", __FUNCTION__, infile);
+	eval(outfile);
+	unlink(outfile);
+}
+
 typedef struct {
 	const char *name;
 	int (*main)(int argc, char *argv[]);

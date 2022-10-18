@@ -1286,12 +1286,6 @@ static void filter_input(void)
 		p = c + 1;
 	} while (*p);
 
-#ifdef TCONFIG_NGINX
-	/* Web Server */
-	if (nvram_match("nginx_enable", "1") && nvram_match("nginx_remote", "1"))
-		ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get("nginx_port"));
-#endif
-
 #ifdef TCONFIG_FTP
 	/* FTP WAN access */
 	if (nvram_match("ftp_enable", "1")) {
@@ -2230,6 +2224,11 @@ int start_firewall(void)
 
 	unlink("/var/webmon/domain");
 	unlink("/var/webmon/search");
+
+#ifdef TCONFIG_NGINX
+	/* Web Server WAN access */
+	run_nginx_firewall_script();
+#endif
 
 #ifdef TCONFIG_OPENVPN
 	run_ovpn_firewall_scripts();

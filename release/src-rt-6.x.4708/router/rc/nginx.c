@@ -50,6 +50,12 @@
 //#define nginx_keepalive_timeout	"60"				/* the server will close connections after this time */
 //#define nginxtcp_nopush		"on"				/* tcp_nopush */
 //#define nginxserver_hash_bucket_size	"128"				/* server names hash bucket size */
+#define nginx_fw_script			nginxdir"/nginx-fw.sh"
+#define nginx_fw_del_script		nginxdir"/nginx-clear-fw-tmp.sh"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"nginx_debug"
 
 FILE * nginx_conf_file;
 FILE * fastcgi_conf_file;
@@ -287,7 +293,7 @@ static void build_nginx_conf(void)
 	fprintf(nginx_conf_file, "%s", buf);
 	fclose(nginx_conf_file);
 
-	syslog(LOG_INFO, "nginx - config file built succesfully");
+	logmsg(LOG_INFO, "nginx - config file built succesfully");
 
 	if (nvram_get_int("nginx_php")) {
 		if (!(phpini_file = fopen("/etc/php.ini", "w"))) {
@@ -307,6 +313,29 @@ static void build_nginx_conf(void)
 
 		fclose(phpini_file);
 	}
+}
+
+static void build_nginx_firewall(void)
+{
+	FILE *p;
+
+	if ((!nvram_get_int("nginx_remote")) || (!nvram_get_int("nginx_port")))
+		return;
+
+	chains_log_detection();
+
+	/* Create firewall script */
+	if (!(p = fopen(nginx_fw_script, "w"))) {
+		perror(nginx_fw_script);
+		return;
+	}
+
+	fprintf(p, "#!/bin/sh\n"
+	           "iptables -A INPUT -p tcp --dport %s -j %s\n",
+	           nvram_safe_get("nginx_port"), chain_in_accept);
+
+	fclose(p);
+	chmod(nginx_fw_script, 0744);
 }
 
 /* start the nginx module according environment directives */
@@ -341,21 +370,21 @@ void start_nginx(int force)
 	mkdir_if_none(uwsgi_temp_path);
 	mkdir_if_none(scgi_temp_path);
 
-	if (nvram_get_int("nginx_php"))
-		/* run spawn-fcgi */
+	build_nginx_firewall();
+
+	run_nginx_firewall_script();
+
+	if (nvram_get_int("nginx_php")) /* run spawn-fcgi */
 		xstart("spawn-fcgi", "-a", "127.0.0.1", "-p", "9000", "-P", nginxrundir"/php-fastcgi.pid", "-C", "2", "-u", nvram_safe_get("nginx_user"), "-g", nvram_safe_get("nginx_user"), "/usr/sbin/php-cgi");
-	else
-		killall_tk_period_wait("php-cgi", 50);
 
-	if (nvram_get_int("nginx_override"))
-		ret = eval(nginxbin, "-c", nvram_safe_get("nginx_overridefile"));
-	else
-		ret = eval(nginxbin, "-c", nginxconf);
+	ret = eval(nginxbin, "-c", nvram_get_int("nginx_override") ? nvram_safe_get("nginx_overridefile") : nginxconf);
 
-	if (ret)
-		syslog(LOG_ERR, "starting nginx failed - check configuration ...");
+	if (ret) {
+		logmsg(LOG_ERR, "starting nginx failed - check configuration ...");
+		stop_nginx();
+	}
 	else
-		syslog(LOG_INFO, "nginx is started");
+		logmsg(LOG_INFO, "nginx is started");
 }
 
 /* stop nginx and remove traces of the process */
@@ -365,21 +394,28 @@ void stop_nginx(void)
 		killall_tk_period_wait(nginxbin, 50);
 		killall_tk_period_wait("php-cgi", 50);
 
-		syslog(LOG_INFO, "nginx is stopped");
+		logmsg(LOG_INFO, "nginx is stopped");
 	}
+
+	run_del_firewall_script(nginx_fw_script, nginx_fw_del_script);
+
+	if (!nvram_get_int("nginx_keepconf"))
+		system("/bin/rm -rf "nginxdir);
 	if (f_exists(nginxpid))
 		unlink(nginxpid);
+}
 
-	if (f_exists(fastcgiconf)) {
-		if (!nvram_get_int("nginx_keepconf"))
-			unlink(fastcgiconf);
-	}
-	if (f_exists(mimetypes)) {
-		if (!nvram_get_int("nginx_keepconf"))
-			unlink(mimetypes);
-	}
-	if (f_exists(nginxconf)) {
-		if (!nvram_get_int("nginx_keepconf"))
-			unlink(nginxconf);
+void run_nginx_firewall_script(void)
+{
+	FILE *fp;
+
+	/* first remove existing firewall rule(s) */
+	run_del_firewall_script(nginx_fw_script, nginx_fw_del_script);
+
+	/* then (re-)add firewall rule(s) */
+	if ((fp = fopen(nginx_fw_script, "r"))) {
+		fclose(fp);
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, nginx_fw_script);
+		eval(nginx_fw_script);
 	}
 }

@@ -105,6 +105,7 @@ static inline int is_psta(int idx, int unit, int subunit, void *param)
 extern void chains_log_detection(void);
 extern int env2nv(char *env, char *nv);
 extern int serialize_restart(char *service, int start);
+extern void run_del_firewall_script(char *infile, char *outfile);
 
 /* init.c */
 extern int init_main(int argc, char *argv[]);
@@ -602,6 +603,7 @@ extern void stop_nocat();
 extern void nginx_write(const char *format, ...);
 extern void start_nginx(int force);
 extern void stop_nginx(void);
+extern void run_nginx_firewall_script(void);
 
 /* mysql.c */
 extern void start_mysql(int force);

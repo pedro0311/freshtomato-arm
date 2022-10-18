@@ -3707,8 +3707,6 @@ TOP:
 #ifdef TCONFIG_NGINX
 	if (strcmp(service, "nginx") == 0) {
 		if (act_stop) stop_nginx();
-		stop_firewall();
-		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_nginx(1); /* force (re)start */
 		goto CLEAR;
 	}
