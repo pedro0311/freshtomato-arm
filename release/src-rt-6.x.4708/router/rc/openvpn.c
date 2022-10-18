@@ -24,6 +24,8 @@
 #define IF_SIZE			8
 #define OVPN_FW_STR		"s/-A/-D/g"
 #define OVPN_DIR		"/etc/openvpn"
+#define OVPN_DEL_SCRIPT		"clear-fw-tmp.sh"
+#define OVPN_DIR_DEL_SCRIPT	OVPN_DIR"/fw/"OVPN_DEL_SCRIPT
 
 /* OpenVPN clients/servers count */
 #define OVPN_SERVER_MAX		2
@@ -97,7 +99,7 @@ static int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t rout
 
 	/* Create tap/tun interface */
 	if (eval("openvpn", "--mktun", "--dev", iface)) {
-		logmsg(LOG_WARNING, "Unable to create tunnel interface %s!", iface);
+		logmsg(LOG_WARNING, "unable to create tunnel interface %s!", iface);
 		return -1;
 	}
 
@@ -105,13 +107,13 @@ static int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t rout
 	if (iface_type == OVPN_IF_TAP) {
 		if (route_mode == BRIDGE) {
 			if (eval("brctl", "addif", nvram_safe_get(buffer), iface)) {
-				logmsg(LOG_WARNING, "Unable to add interface %s to bridge!", iface);
+				logmsg(LOG_WARNING, "unable to add interface %s to bridge!", iface);
 				return -1;
 			}
 		}
 
 		if (eval("ifconfig", iface, "promisc", "up")) {
-			logmsg(LOG_WARNING, "Unable to bring tunnel interface %s up!", iface);
+			logmsg(LOG_WARNING, "unable to bring tunnel interface %s up!", iface);
 			return -1;
 		}
 	}
@@ -225,7 +227,7 @@ static void ovpn_setup_watchdog(ovpn_type_t type, const int unit)
 	}
 }
 
-void ovpn_kill_switch(void)
+static void ovpn_kill_switch(void)
 {
 	unsigned int i, br, rules_count;
 	int policy_type;
@@ -353,7 +355,7 @@ void start_ovpn_client(int unit)
 	else if (nvram_contains_word(buffer, "tun"))
 		if_type = OVPN_IF_TUN;
 	else {
-		logmsg(LOG_WARNING, "Invalid interface type, %.3s", nvram_safe_get(buffer));
+		logmsg(LOG_WARNING, "invalid interface type, %.3s", nvram_safe_get(buffer));
 		return;
 	}
 
@@ -370,7 +372,7 @@ void start_ovpn_client(int unit)
 	else if (nvram_contains_word(buffer, "custom"))
 		auth_mode = OVPN_AUTH_CUSTOM;
 	else {
-		logmsg(LOG_WARNING, "Invalid encryption mode, %.6s", nvram_safe_get(buffer));
+		logmsg(LOG_WARNING, "invalid encryption mode, %.6s", nvram_safe_get(buffer));
 		return;
 	}
 
@@ -722,9 +724,14 @@ void start_ovpn_client(int unit)
 
 		fclose(fp);
 
-		/* Run the firewall rules */
+		/* firewall rules */
 		memset(buffer, 0, BUF_SIZE);
 		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/client%d-fw.sh", unit);
+
+		/* first remove existing firewall rule(s) */
+		run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
+
+		/* then add firewall rule(s) */
 		eval(buffer);
 	}
 
@@ -742,16 +749,16 @@ void start_ovpn_client(int unit)
 	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
 	if (cpu_num < 0)
 		cpu_num = 0;
-	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 
+	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
 #endif
-	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
+	taskset_ret = eval(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-		logmsg(LOG_WARNING, "Starting OpenVPN failed...");
+		logmsg(LOG_WARNING, "starting OpenVPN client%d failed - check configuration ...", unit);
 		stop_ovpn_client(unit);
 		return;
 	}
@@ -789,9 +796,7 @@ void stop_ovpn_client(int unit)
 	/* Remove firewall rules after VPN exit */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/client%d-fw.sh", unit);
-	if (!eval("sed", "-i", OVPN_FW_STR, buffer)) {
-		eval(buffer);
-	}
+	run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 	/* Delete all files for this client */
 	ovpn_cleanup_dirs(OVPN_TYPE_CLIENT, unit);
@@ -839,7 +844,7 @@ void start_ovpn_server(int unit)
 	else if (nvram_contains_word(buffer, "tun"))
 		if_type = OVPN_IF_TUN;
 	else {
-		logmsg(LOG_WARNING, "Invalid interface type, %.3s", nvram_safe_get(buffer));
+		logmsg(LOG_WARNING, "invalid interface type, %.3s", nvram_safe_get(buffer));
 		return;
 	}
 
@@ -856,7 +861,7 @@ void start_ovpn_server(int unit)
 	else if (nvram_contains_word(buffer, "custom"))
 		auth_mode = OVPN_AUTH_CUSTOM;
 	else {
-		logmsg(LOG_WARNING, "Invalid encryption mode, %.6s", nvram_safe_get(buffer));
+		logmsg(LOG_WARNING, "invalid encryption mode, %.6s", nvram_safe_get(buffer));
 		return;
 	}
 
@@ -1338,9 +1343,14 @@ void start_ovpn_server(int unit)
 
 		fclose(fp);
 
-		/* Run the firewall rules */
+		/* firewall rules */
 		memset(buffer, 0, BUF_SIZE);
 		snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/server%d-fw.sh", unit);
+
+		/* first remove existing firewall rule(s) */
+		run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
+
+		/* then add firewall rule(s) */
 		eval(buffer);
 	}
 
@@ -1355,17 +1365,17 @@ void start_ovpn_server(int unit)
 	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
 	if (cpu_num < 0)
 		cpu_num = 0;
-	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 
+	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret)
 #endif
-	taskset_ret = xstart(buffer, "--cd", buffer2, "--config", "config.ovpn");
+	taskset_ret = eval(buffer, "--cd", buffer2, "--config", "config.ovpn");
 
 	if (taskset_ret) {
-		logmsg(LOG_WARNING, "Starting OpenVPN server failed...");
-		stop_ovpn_client(unit);
+		logmsg(LOG_WARNING, "starting OpenVPN server%d failed - check configuration ...", unit);
+		stop_ovpn_server(unit);
 		return;
 	}
 
@@ -1402,9 +1412,7 @@ void stop_ovpn_server(int unit)
 	/* Remove firewall rules */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, sizeof(buffer), OVPN_DIR"/fw/server%d-fw.sh", unit);
-	if (!eval("sed", "-i", OVPN_FW_STR, buffer)) {
-		eval(buffer);
-	}
+	run_del_firewall_script(buffer, OVPN_DIR_DEL_SCRIPT);
 
 	/* Delete all files for this server */
 	ovpn_cleanup_dirs(OVPN_TYPE_SERVER, unit);
@@ -1523,32 +1531,41 @@ void stop_ovpn_all()
 	modprobe_r("tun");
 }
 
-void run_ovpn_firewall_scripts()
+void run_ovpn_firewall_scripts(void)
 {
 	DIR *dir;
 	struct dirent *file;
-	char *fn;
+	char *fa;
+	char buf[64];
+
+	ovpn_kill_switch();
 
 	if (chdir(OVPN_DIR"/fw"))
 		return;
 
 	dir = opendir(OVPN_DIR"/fw");
 
-	while ((file = readdir(dir)) != NULL) {
-		fn = file->d_name;
+	logmsg(LOG_DEBUG, "*** %s: beginning all firewall scripts...", __FUNCTION__);
 
-		if (fn[0] == '.')
+	while ((file = readdir(dir)) != NULL) {
+		fa = file->d_name;
+
+		if ((fa[0] == '.') || (!strcmp(fa, OVPN_DEL_SCRIPT)))
 			continue;
 
-		/* Remove existing firewall rules if they exist */
-		if (!eval("sed", OVPN_FW_STR, fn, ">", OVPN_DIR"/fw/clear-fw-tmp.sh")) {
-			eval(OVPN_DIR"/fw/clear-fw-tmp.sh");
-		}
-		unlink(OVPN_DIR"/fw/clear-fw-tmp.sh");
+		memset(buf, 0, sizeof(buf));
+		snprintf(buf, sizeof(buf), "%s/fw/", OVPN_DIR);
+		strlcat(buf, fa, sizeof(buf));
 
-		/* Add firewall rules */
-		eval("/bin/sh", fn);
+		/* first remove existing firewall rule(s) */
+		run_del_firewall_script(buf, OVPN_DIR_DEL_SCRIPT);
+
+		/* then (re-)add firewall rule(s) */
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, buf);
+		eval(buf);
 	}
+	logmsg(LOG_DEBUG, "*** %s: done with all firewall scripts...", __FUNCTION__);
+
 	closedir(dir);
 }
 
@@ -1582,14 +1599,14 @@ void write_ovpn_dnsmasq_config(FILE* f)
 				logmsg(LOG_DEBUG, "*** %s: checking ADNS settings for client %d", __FUNCTION__, cur);
 				snprintf(buf, sizeof(buf), "vpn_client%d_adns", cur);
 				if (nvram_get_int(buf) == 2) {
-					logmsg(LOG_INFO, "Adding strict-order to dnsmasq config for client %d", cur);
+					logmsg(LOG_INFO, "adding strict-order to dnsmasq config for client %d", cur);
 					fprintf(f, "strict-order\n");
 					break;
 				}
 			}
 
 			if (sscanf(fn, "client%d.con%c", &cur, &ch) == 2) {
-				logmsg(LOG_INFO, "Adding Dnsmasq config from %s", fn);
+				logmsg(LOG_INFO, "adding Dnsmasq config from %s", fn);
 				fappend(f, fn);
 			}
 		}
@@ -1623,7 +1640,7 @@ int write_ovpn_resolv(FILE* f)
 			if ((dnsf = fopen(fn, "r")) == NULL)
 				continue;
 
-			logmsg(LOG_INFO, "Adding DNS entries from %s", fn);
+			logmsg(LOG_INFO, "adding DNS entries from %s", fn);
 			fappend(f, fn);
 
 			if (adns == 3)

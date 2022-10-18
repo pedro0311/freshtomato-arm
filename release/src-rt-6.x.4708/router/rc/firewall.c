@@ -2232,7 +2232,6 @@ int start_firewall(void)
 
 #ifdef TCONFIG_OPENVPN
 	run_ovpn_firewall_scripts();
-	ovpn_kill_switch();
 #endif
 
 #ifdef TCONFIG_TINC
