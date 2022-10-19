@@ -22,7 +22,6 @@
 //	<% nvram("ftp_enable,ftp_super,ftp_anonymous,ftp_dirlist,ftp_port,ftp_max,ftp_ipmax,ftp_staytimeout,ftp_rate,ftp_anonrate,ftp_anonroot,ftp_pubroot,ftp_pvtroot,ftp_custom,ftp_users,ftp_sip,ftp_limit,ftp_tls,log_ftp"); %>
 
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'ftpd';
 
 ftplimit = nvram.ftp_limit.split(',');

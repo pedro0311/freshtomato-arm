@@ -28,7 +28,6 @@
 
 var cprefix = 'vpn_pptpd';
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'pptpd';
 
 if (nvram.pptpd_remoteip == '')

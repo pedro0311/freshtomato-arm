@@ -25,7 +25,6 @@
 
 var cprefix = 'mysql_nginx';
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'mysqld';
 var usb_disk_list = new Array();
 

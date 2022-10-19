@@ -31,21 +31,24 @@ var tinc_compression = [['0','0 - None'],['1','1 - Fast zlib'],['2','2'],['3','3
 var cmd = null;
 var cmdresult = '';
 var changed = 0;
-var serviceLastUp = 0;
 
 function show() {
 	var d = isup.tincd;
 
+	countButton += 1;
 	for (var i = 1; i <= 4; i++) {
 		var e = E('_tinc_button'+i);
 		e.value = (d ? 'Stop' : 'Start')+' Now';
 		e.setAttribute('onclick', 'javascript:toggle(\'tinc\','+d+');');
-		if (serviceLastUp != d) {
+		if (serviceLastUp[0] != d || countButton > 6) {
 			e.disabled = 0;
 			E('spin'+i).style.display = 'none';
 		}
 	}
-	if (serviceLastUp != d) serviceLastUp = d;
+	if (serviceLastUp[0] != d || countButton > 6) {
+		serviceLastUp[0] = d;
+		countButton = 0;
+	}
 
 	E('_tinc_running').innerHTML = 'Tinc is currently '+(d ? 'running ' : 'stopped');
 	E('edges').disabled = !d;
@@ -76,11 +79,13 @@ function toggle(service, isup) {
 	if (!save_pre()) return;
 	if (changed) alert("Configuration changes were detected - they will be saved");
 
+	serviceLastUp[0] = isup;
+	countButton = 0;
+
 	for (var i = 1; i <= 4; i++) {
 		E('_'+service+'_button'+i).disabled = 1;
 		E('spin'+i).style.display = 'inline';
 	}
-	serviceLastUp = isup;
 
 	elem.display(E('result'), !isup);
 	if (!isup)

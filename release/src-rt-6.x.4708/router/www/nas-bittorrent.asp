@@ -35,7 +35,6 @@
 
 var cprefix = 'nas_bittorrent';
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'transmission';
 
 function verifyFields(focused, quiet) {

@@ -23,7 +23,6 @@
 
 var cprefix = 'nas_samba';
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'samba';
 
 var ssg = new TomatoGrid();

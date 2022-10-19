@@ -29,7 +29,6 @@
 
 var cprefix = 'web_nginx';
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'nginx';
 
 function verifyFields(focused, quiet) {

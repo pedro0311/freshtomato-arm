@@ -103,16 +103,18 @@ StatusUpdater.prototype = {
 }
 
 function show() {
+	countButton += 1;
 	for (var i = 1; i <= unitCount; ++i) {
 		var e = E('_'+serviceType+i+'_button');
 		var d = eval('isup.'+serviceType+i);
 
 		e.value = (d ? 'Stop' : 'Start')+' Now';
 		e.setAttribute('onclick', 'javascript:toggle(\''+serviceType+''+i+'\','+d+');');
-		if (serviceLastUp[i - 1] != d) {
+		if (serviceLastUp[i - 1] != d || countButton > 6) {
+			serviceLastUp[i - 1] = d;
+			countButton = 0;
 			e.disabled = 0;
 			E('spin'+i).style.display = 'none';
-			serviceLastUp[i - 1] = d;
 		}
 
 		if (d) updateStatus(i - 1);
@@ -123,10 +125,12 @@ function toggle(service, isup) {
 	if (changed && !confirm('There are unsaved changes. Continue anyway?'))
 		return;
 
+	serviceLastUp[id - 1] = isup;
+	countButton = 0;
+
 	var id = service.substr(service.length - 1);
 	E('_'+service+'_button').disabled = 1;
 	E('spin'+id).style.display = 'inline';
-	serviceLastUp[id - 1] = isup;
 
 	var fom = E('t_fom');
 	var bup = fom._service.value;

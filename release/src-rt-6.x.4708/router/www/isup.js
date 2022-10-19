@@ -5,10 +5,13 @@ function show() {
 	if (E('_'+serviceType+'_notice')) E('_'+serviceType+'_notice').innerHTML = serviceType+' is currently '+(d ? 'running ' : 'stopped')+'&nbsp;';
 	e.value = (d ? 'Stop' : 'Start')+' Now';
 	e.setAttribute('onclick', 'javascript:toggle(\''+serviceType+'\','+d+');');
-	if (serviceLastUp != d) {
+	countButton += 1;
+
+	if (serviceLastUp[0] != d || countButton > 6) {
+		serviceLastUp[0] = d;
+		countButton = 0;
 		e.disabled = 0;
 		E('spin').style.display = 'none';
-		serviceLastUp = d;
 	}
 	if (E('_'+serviceType+'_interface')) E('_'+serviceType+'_interface').disabled = d ? 0 : 1;
 	if (E('_'+serviceType+'_status')) E('_'+serviceType+'_status').disabled = d ? 0 : 1;
@@ -24,11 +27,13 @@ function toggle(service, isup) {
 	if (typeof save_pre === 'function') { if (!save_pre()) return; }
 	if (changed) alert("Configuration changes were detected - they will be saved");
 
+	serviceLastUp[0] = isup;
+	countButton = 0;
+
 	E('_'+service+'_button').disabled = 1;
 	if (E('_'+service+'_interface')) E('_'+service+'_interface').disabled = 1;
 	if (E('_'+service+'_status')) E('_'+service+'_status').disabled = 1;
 	E('spin').style.display = 'inline';
-	serviceLastUp = isup;
 
 	var fom = E('t_fom');
 	fom._service.value = (service == 'pptpd' ? 'firewall-restart,'+service+(isup ? '-stop' : '-start')+',dnsmasq-restart' : service+(isup ? '-stop' : '-start'));

@@ -22,7 +22,6 @@
 //	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ipaddr"); %>
 
 var changed = 0;
-var serviceLastUp = 0;
 var serviceType = 'minidlna';
 var mediatypes = [['','All Media Files'],['A','Audio only'],['V','Video only'],['P','Images only']];
 
