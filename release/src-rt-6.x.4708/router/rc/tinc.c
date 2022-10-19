@@ -11,17 +11,22 @@
 
 #define BUF_SIZE 256
 #define TINC_DIR		"/etc/tinc"
-#define TINC_RSA_KEY		"/etc/tinc/rsa_key.priv"
-#define TINC_PRIV_KEY		"/etc/tinc/ed25519_key.priv"
-#define TINC_CONF		"/etc/tinc/tinc.conf"
-#define TINC_HOSTS		"/etc/tinc/hosts"
-#define TINC_UP_SCRIPT		"/etc/tinc/tinc-up"
-#define TINC_DOWN_SCRIPT	"/etc/tinc/tinc-down"
-#define TINC_FW_SCRIPT		"/etc/tinc/tinc-fw.sh"
-#define TINC_HOSTUP_SCRIPT	"/etc/tinc/host-up"
-#define TINC_HOSTDOWN_SCRIPT	"/etc/tinc/host-down"
-#define TINC_SUBNETUP_SCRIPT	"/etc/tinc/subnet-up"
-#define TINC_SUBNETDOWN_SCRIPT	"/etc/tinc/subnet-down"
+#define TINC_RSA_KEY		TINC_DIR"/rsa_key.priv"
+#define TINC_PRIV_KEY		TINC_DIR"/ed25519_key.priv"
+#define TINC_CONF		TINC_DIR"/tinc.conf"
+#define TINC_HOSTS		TINC_DIR"/hosts"
+#define TINC_UP_SCRIPT		TINC_DIR"/tinc-up"
+#define TINC_DOWN_SCRIPT	TINC_DIR"/tinc-down"
+#define TINC_FW_SCRIPT		TINC_DIR"/tinc-fw.sh"
+#define TINC_FW_DEL_SCRIPT	TINC_DIR"/tinc-clear-fw-tmp.sh"
+#define TINC_HOSTUP_SCRIPT	TINC_DIR"/host-up"
+#define TINC_HOSTDOWN_SCRIPT	TINC_DIR"/host-down"
+#define TINC_SUBNETUP_SCRIPT	TINC_DIR"/subnet-up"
+#define TINC_SUBNETDOWN_SCRIPT	TINC_DIR"/subnet-down"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"tinc_debug"
 
 
 static void tinc_setup_watchdog(void)
@@ -36,8 +41,14 @@ static void tinc_setup_watchdog(void)
 
 		if ((fp = fopen(buffer, "w"))) {
 			fprintf(fp, "#!/bin/sh\n"
-			            "[ -z \"$(pidof tincd)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
-			            " service tinc restart\n"
+			            "[ \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+			            " if [ -z \"$(pidof tincd)\" ]; then\n"
+			            "  logger -t tinc tincd stopped? Starting...\n"
+			            "  service tinc restart\n"
+			            " elif [ $(tinc dump connections | grep -v localhost | wc -l ) -lt 1 ]; then\n"
+			            "  logger -t tincd[\"$(pidof tincd)\"] Restarting process to due connectivity issue\n"
+			            "  service tinc restart\n"
+			            " fi\n"
 			            "}\n");
 			fclose(fp);
 			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
@@ -49,11 +60,60 @@ static void tinc_setup_watchdog(void)
 	}
 }
 
+static void build_tinc_firewall(const char *port)
+{
+	FILE *p;
+
+	/* Create firewall script */
+	if (!(p = fopen(TINC_FW_SCRIPT, "w"))) {
+		perror(TINC_FW_SCRIPT);
+		return;
+	}
+
+	chains_log_detection();
+
+	fprintf(p, "#!/bin/sh\n");
+
+	if (!nvram_match("tinc_manual_firewall", "2")) {
+		if (strcmp(port, "") == 0)
+			port = "655";
+
+		fprintf(p, "iptables -I INPUT -p udp --dport %s -j %s\n"
+		           "iptables -I INPUT -p tcp --dport %s -j %s\n"
+		           "iptables -I INPUT -i tinc -j %s\n"
+		           "iptables -I FORWARD -i tinc -j ACCEPT\n",
+		           port, chain_in_accept,
+		           port, chain_in_accept,
+		           chain_in_accept);
+
+#ifdef TCONFIG_IPV6
+		if (ipv6_enabled())
+			fprintf(p, "\n"
+			           "ip6tables -I INPUT -p udp --dport %s -j %s\n"
+			           "ip6tables -I INPUT -p tcp --dport %s -j %s\n"
+			           "ip6tables -I INPUT -i tinc -j %s\n"
+			           "ip6tables -I FORWARD -i tinc -j ACCEPT\n",
+			           port, chain_in_accept,
+			           port, chain_in_accept,
+			           chain_in_accept);
+#endif
+	}
+
+	if (!nvram_match("tinc_manual_firewall", "0")) {
+		fprintf(p, "\n");
+		fprintf(p, "%s\n", nvram_safe_get("tinc_firewall"));
+	}
+
+	fclose(p);
+	chmod(TINC_FW_SCRIPT, 0744);
+}
+
 void start_tinc(int force)
 {
 	char *nv, *nvp, *b;
 	const char *connecto, *name, *address, *port, *compression, *subnet, *rsa, *ed25519, *custom, *tinc_tmp_value;
 	char buffer[BUF_SIZE];
+	int ret;
 	FILE *fp, *hp;
 
 	/* only if enabled on wanup or forced */
@@ -150,8 +210,7 @@ void start_tinc(int force)
 
 		fclose(hp);
 
-		/* generate tinc-up and firewall scripts */
-		if (strcmp(nvram_safe_get("tinc_name"), name)  == 0) {
+		if (strcmp(nvram_safe_get("tinc_name"), name) == 0) {
 			/* create tinc-up script if this is the host system */
 			if (!(hp = fopen(TINC_UP_SCRIPT, "w"))) {
 				perror(TINC_UP_SCRIPT);
@@ -163,6 +222,7 @@ void start_tinc(int force)
 			/* Determine whether automatically generate tinc-up, or use manually supplied script */
 			if (!nvram_match("tinc_manual_tinc_up", "1")) {
 
+				/* those are removed by tinc itself on stop, no need for tinc-down script (interesting...) */
 				if (nvram_match("tinc_devicetype", "tun"))
 					fprintf(hp, "ifconfig $INTERFACE %s netmask %s\n", nvram_safe_get("lan_ipaddr"), nvram_safe_get("tinc_vpn_netmask"));
 				else if (nvram_match("tinc_devicetype", "tap")) {
@@ -176,44 +236,8 @@ void start_tinc(int force)
 			fclose(hp);
 			chmod(TINC_UP_SCRIPT, 0744);
 
-			/* Create firewall script */
-			if (!(hp = fopen(TINC_FW_SCRIPT, "w"))) {
-				perror(TINC_FW_SCRIPT);
-				return;
-			}
-
-			fprintf(hp, "#!/bin/sh\n");
-
-			if (!nvram_match("tinc_manual_firewall", "2")) {
-				if (strcmp(port, "") == 0)
-					port = "655";
-
-				fprintf(hp, "iptables -I INPUT -p udp --dport %s -j ACCEPT\n"
-				            "iptables -I INPUT -p tcp --dport %s -j ACCEPT\n"
-				            "iptables -I INPUT -i tinc -j ACCEPT\n"
-				            "iptables -I FORWARD -i tinc -j ACCEPT\n",
-				            port,
-				            port);
-
-#ifdef TCONFIG_IPV6
-				if (ipv6_enabled())
-					fprintf(hp, "\n"
-					            "ip6tables -I INPUT -p udp --dport %s -j ACCEPT\n"
-					            "ip6tables -I INPUT -p tcp --dport %s -j ACCEPT\n"
-					            "ip6tables -I INPUT -i tinc -j ACCEPT\n"
-					            "ip6tables -I FORWARD -i tinc -j ACCEPT\n",
-					            port,
-					            port);
-#endif
-			}
-
-			if (!nvram_match("tinc_manual_firewall", "0")) {
-				fprintf(hp, "\n");
-				fprintf(hp, "%s\n", nvram_safe_get("tinc_firewall"));
-			}
-
-			fclose(hp);
-			chmod(TINC_FW_SCRIPT, 0744);
+			/* create firewall script */
+			build_tinc_firewall(port);
 		}
 	}
 
@@ -284,14 +308,22 @@ void start_tinc(int force)
 		chmod(TINC_SUBNETDOWN_SCRIPT, 0744);
 	}
 
-	/* Make sure module is loaded */
+	/* make sure module is loaded */
 	modprobe("tun");
 	f_wait_exists("/dev/net/tun", 5);
 
-	xstart("/usr/sbin/tinc", "start");
 	run_tinc_firewall_script();
 
-	tinc_setup_watchdog();
+	ret = eval("/usr/sbin/tinc", "start");
+
+	if (ret) {
+		logmsg(LOG_ERR, "starting tincd failed - check configuration ...");
+		stop_tinc();
+	}
+	else {
+		logmsg(LOG_INFO, "tincd started");
+		tinc_setup_watchdog();
+	}
 }
 
 void stop_tinc(void)
@@ -299,23 +331,27 @@ void stop_tinc(void)
 	if (serialize_restart("tincd", 0))
 		return;
 
-	killall_tk_period_wait("tincd", 50);
+	eval("cru", "d", "CheckTincDaemon");
 
-	if (f_exists(TINC_FW_SCRIPT)) {
-		system("/bin/sed -i \'s/-A/-D/g;s/-I/-D/g\' "TINC_FW_SCRIPT);
-		run_tinc_firewall_script();
-	}
+	if (pidof("tincd") > 0)
+		killall_tk_period_wait("tincd", 50);
+
+	run_del_firewall_script(TINC_FW_SCRIPT, TINC_FW_DEL_SCRIPT);
 
 	system("/bin/rm -rf "TINC_DIR);
-	eval("cru", "d", "CheckTincDaemon");
 }
 
 void run_tinc_firewall_script(void)
 {
 	FILE *fp;
 
+	/* first remove existing firewall rule(s) */
+	run_del_firewall_script(TINC_FW_SCRIPT, TINC_FW_DEL_SCRIPT);
+
+	/* then (re-)add firewall rule(s) */
 	if ((fp = fopen(TINC_FW_SCRIPT, "r"))) {
 		fclose(fp);
-		system(TINC_FW_SCRIPT);
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, TINC_FW_SCRIPT);
+		eval(TINC_FW_SCRIPT);
 	}
 }
