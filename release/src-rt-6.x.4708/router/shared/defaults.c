@@ -1473,7 +1473,6 @@ struct nvram_tuple router_defaults[] = {
 	{ "bt_blocklist",		"0"				, 0 },
 	{ "bt_blocklist_url",		"http://list.iblocklist.com/?list=bt_level1"	, 0 },
 	{ "bt_sleep",			"10"				, 0 },
-	{ "bt_check",			"1"				, 0 },
 	{ "bt_check_time",		"15"				, 0 },
 	{ "bt_dl_queue_enable",		"0"				, 0 },
 	{ "bt_dl_queue_size",		"5"				, 0 },

@@ -14,15 +14,68 @@
 
 #define tr_dir			"/etc/transmission"
 #define tr_settings		tr_dir"/settings.json"
+#define tr_fw_script		tr_dir"/tr-fw.sh"
+#define tr_fw_del_script	tr_dir"/tr-clear-fw-tmp.sh"
+#define tr_child_pid		tr_dir"/child.pid"
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
 #define LOGMSG_NVDEBUG	"transmission_debug"
 
-static int rmem_max = 0;
-static int wmem_max = 0;
-static pid_t pidof_child = 0;
 
+static void setup_tr_watchdog(void)
+{
+	FILE *fp;
+	char buffer[64], buffer2[64];
+	int nvi;
+
+	if ((nvi = nvram_get_int("bt_check_time")) > 0) {
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), tr_dir"/watchdog.sh");
+
+		if ((fp = fopen(buffer, "w"))) {
+			fprintf(fp, "#!/bin/sh\n"
+			            "[ -z \"$(pidof transmission-daemon)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+			            " logger -t transmission-watchdog transmission-daemon stopped? Starting...\n"
+			            " service bittorrent restart\n"
+			            "}\n");
+			fclose(fp);
+			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+			memset(buffer2, 0, sizeof(buffer2));
+			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
+			eval("cru", "a", "CheckTransmission", buffer2);
+		}
+	}
+}
+
+static void build_tr_firewall(void)
+{
+	FILE *p;
+
+	/* create firewall script */
+	if (!(p = fopen(tr_fw_script, "w"))) {
+		perror(tr_fw_script);
+		return;
+	}
+
+	chains_log_detection();
+
+	/* open BT port */
+	fprintf(p, "#!/bin/sh\n"
+	           "iptables -A INPUT -p tcp --dport %s -j %s\n",
+	            nvram_safe_get("bt_port"), chain_in_accept);
+
+	/* GUI WAN access */
+	if (nvram_get_int("bt_rpc_wan"))
+		fprintf(p, "iptables -A INPUT -p tcp --dport %s -j %s\n"
+		           "iptables -t nat -A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", /* nat table */
+		            nvram_safe_get("bt_port_gui"), chain_in_accept,
+		            nvram_safe_get("bt_port_gui"), nvram_safe_get("lan_ipaddr"));
+
+	fclose(p);
+	chmod(tr_fw_script, 0744);
+}
 
 void start_bittorrent(int force)
 {
@@ -31,6 +84,7 @@ void start_bittorrent(int force)
 	char *whitelistEnabled;
 	char buf[256], buf2[64];
 	int n;
+	pid_t pidof_child = 0;
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("bt_enable") && force == 0)
@@ -39,8 +93,9 @@ void start_bittorrent(int force)
 	if (serialize_restart("transmission-da", 1))
 		return;
 
-	if (pidof_child > 0) { /* fork is still up */
-		logmsg(LOG_WARNING, "*** %s: another process (PID: %d) still up, aborting ...", __FUNCTION__, pidof_child);
+	memset(buf2, 0, sizeof(buf2));
+	if (f_read_string(tr_child_pid, buf2, sizeof(buf2)) > 0 && atoi(buf2) > 0 && ppid(atoi(buf2)) > 0) { /* fork is still up */
+		logmsg(LOG_WARNING, "%s: another process (PID: %s) still up, aborting ...", __FUNCTION__, buf2);
 		return;
 	}
 
@@ -68,7 +123,7 @@ void start_bittorrent(int force)
 
 	if      (nvram_match("bt_binary", "internal"))   { pn = "/usr/bin"; }
 	else if (nvram_match("bt_binary", "optware") )   { pn = "/opt/bin"; }
-	else                                             { pn = nvram_safe_get( "bt_binary_custom"); }
+	else                                             { pn = nvram_safe_get("bt_binary_custom"); }
 
 	if (nvram_get_int("bt_auth")) {
 		pl = "true";
@@ -169,27 +224,23 @@ void start_bittorrent(int force)
 
 	chmod(tr_settings, 0644);
 
-	/* backup original buffers values */
-	if (rmem_max == 0) {
-		memset(buf, 0, sizeof(buf));
-		f_read_string("/proc/sys/net/core/rmem_max", buf, sizeof(buf));
-		rmem_max = atoi(buf);
-	}
-	if (wmem_max == 0) {
-		memset(buf, 0, sizeof(buf));
-		f_read_string("/proc/sys/net/core/wmem_max", buf, sizeof(buf));
-		wmem_max = atoi(buf);
-	}
-
-	/* tune buffers */
-	f_write_procsysnet("core/rmem_max", "4194304");
-	f_write_procsysnet("core/wmem_max", "2080768");
+	/* create firewall script */
+	build_tr_firewall();
 
 	/* fork new process */
 	if (fork() != 0)
 		return;
 
 	pidof_child = getpid();
+
+	/* write child pid to a file */
+	memset(buf2, 0, sizeof(buf2));
+	snprintf(buf2, sizeof(buf2), "%d", pidof_child);
+	f_write_string(tr_child_pid, buf2, 0, 0);
+
+	/* tune buffers */
+	f_write_procsysnet("core/rmem_max", "4194304");
+	f_write_procsysnet("core/wmem_max", "2080768");
 
 	/* wait a given time for partition to be mounted, etc */
 	n = atoi(nvram_safe_get("bt_sleep"));
@@ -232,6 +283,8 @@ void start_bittorrent(int force)
 		system(buf);
 	}
 
+	run_bt_firewall_script();
+
 	memset(buf2, 0, sizeof(buf2));
 	if (nvram_get_int("bt_log"))
 		snprintf(buf2, sizeof(buf2), "-e %s/transmission.log", nvram_safe_get("bt_log_path"));
@@ -245,15 +298,17 @@ void start_bittorrent(int force)
 	system(buf);
 
 	sleep(1);
-	if (pidof("transmission-da") > 0)
+	if (pidof("transmission-da") > 0) {
 		logmsg(LOG_INFO, "transmission-daemon started");
-	else
-		logmsg(LOG_ERR, "starting transmission-daemon failed ...");
-
-	sleep(2);
-	eval("/usr/bin/btcheck", "addcru");
-
-	pidof_child = 0; /* reset pid */
+		sleep(2);
+		setup_tr_watchdog();
+		f_write_string(tr_child_pid, "0", 0, 0);
+	}
+	else {
+		logmsg(LOG_ERR, "starting transmission-daemon failed - check configuration ...");
+		f_write_string(tr_child_pid, "0", 0, 0);
+		stop_bittorrent();
+	}
 
 	/* terminate the child */
 	exit(0);
@@ -263,19 +318,28 @@ void stop_bittorrent(void)
 {
 	pid_t pid;
 	char buf[16];
-	int n = 10;
+	int n = 10, m = atoi(nvram_safe_get("bt_sleep")) + 10;
 
 	if (serialize_restart("transmission-da", 0))
 		return;
 
+	/* wait for child of start_bittorrent to finish (if any) */
+	memset(buf, 0, sizeof(buf));
+	while (f_read_string(tr_child_pid, buf, sizeof(buf)) > 0 && atoi(buf) > 0 && ppid(atoi(buf)) > 0 && (m-- > 0)) {
+		logmsg(LOG_DEBUG, "*** %s: waiting for child process of start_bittorrent to end, %d secs left ...", __FUNCTION__, m);
+		sleep(1);
+	}
+
+	eval("cru", "d", "CheckTransmission");
+
 	if (pidof("transmission-da") > 0) {
-		logmsg(LOG_INFO, "Terminating transmission-daemon ...");
+		logmsg(LOG_INFO, "terminating transmission-daemon ...");
 
 		killall_tk_period_wait("transmission-da", 50);
 		sleep(1);
 		while ((pid = pidof("transmission-da")) > 0 && (n-- > 0)) {
-			logmsg(LOG_WARNING, "Killing transmission-daemon ...");
-			/* Reap the zombie if it has terminated */
+			logmsg(LOG_WARNING, "killing transmission-daemon ...");
+			/* reap the zombie if it has terminated */
 			waitpid(pid, NULL, WNOHANG);
 			sleep(1);
 		}
@@ -283,16 +347,35 @@ void stop_bittorrent(void)
 		if (n < 10)
 			logmsg(LOG_WARNING, "transmission-daemon forcefully stopped");
 		else
-			logmsg(LOG_INFO, "transmission-daemon successfully stopped");
+			logmsg(LOG_INFO, "transmission-daemon stopped");
 	}
 
-	/* restore buffers */
-	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "%d", rmem_max);
-	f_write_procsysnet("core/rmem_max", buf);
-	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "%d", wmem_max);
-	f_write_procsysnet("core/wmem_max", buf);
+	run_del_firewall_script(tr_fw_script, tr_fw_del_script);
 
-	eval("/usr/bin/btcheck", "addcru");
+	/* restore default buffers */
+	memset(buf, 0, sizeof(buf));
+	if (f_read_string("/proc/sys/net/core/rmem_default", buf, sizeof(buf)) > 0 && atoi(buf) > 0);
+		f_write_procsysnet("core/rmem_max", buf);
+
+	memset(buf, 0, sizeof(buf));
+	if (f_read_string("/proc/sys/net/core/wmem_default", buf, sizeof(buf)) > 0 && atoi(buf) > 0);
+		f_write_procsysnet("core/wmem_max", buf);
+
+	/* clean-up */
+	system("/bin/rm -rf "tr_dir);
+}
+
+void run_bt_firewall_script(void)
+{
+	FILE *fp;
+
+	/* first remove existing firewall rule(s) */
+	run_del_firewall_script(tr_fw_script, tr_fw_del_script);
+
+	/* then (re-)add firewall rule(s) */
+	if ((fp = fopen(tr_fw_script, "r"))) {
+		fclose(fp);
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, tr_fw_script);
+		eval(tr_fw_script);
+	}
 }

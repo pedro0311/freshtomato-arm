@@ -19,7 +19,7 @@
 
 <script>
 
-//	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
+//	<% nvram("bt_enable,bt_binary,bt_binary_custom,bt_custom,bt_port,bt_dir,bt_settings,bt_settings_custom,bt_incomplete,bt_autoadd,bt_rpc_enable,bt_rpc_wan,bt_auth,bt_login,bt_password,bt_port_gui,bt_dl_enable,bt_dl,bt_ul_enable,bt_ul,bt_peer_limit_global,bt_peer_limit_per_torrent,bt_ul_slot_per_torrent,bt_ratio_enable,bt_ratio,bt_ratio_idle_enable,bt_ratio_idle,bt_dht,bt_pex,bt_lpd,bt_utp,bt_blocklist,bt_blocklist_url,bt_sleep,bt_check_time,bt_dl_queue_enable,bt_dl_queue_size,bt_ul_queue_enable,bt_ul_queue_size,bt_message,bt_log,bt_log_path"); %>
 
 /* CIFS-BEGIN */
 //	<% statfs("/cifs1", "cifs1"); %>
@@ -50,7 +50,6 @@ function verifyFields(focused, quiet) {
 	E('_bt_login').disabled = !a || !b;
 	E('_bt_password').disabled = !a | !b;
 	E('_f_bt_rpc_wan').disabled = !a || !b;
-	E('_bt_check_time').disabled = !E('_f_bt_check').checked;
 	E('_bt_dl').disabled = !E('_f_bt_dl_enable').checked;
 	E('_bt_ul').disabled = !E('_f_bt_ul_enable').checked;
 	E('_bt_ratio').disabled = !E('_f_bt_ratio_enable').checked;
@@ -75,7 +74,7 @@ function verifyFields(focused, quiet) {
 	elem.display('_bt_binary_custom', (E('_bt_binary').value == 'custom'));
 
 	if (!v_length('_bt_custom', quiet, 0, 2048)) ok = 0;
-	if (!v_range('_bt_check_time', quiet || !ok, 1, 55)) ok = 0;
+	if (!v_range('_bt_check_time', quiet || !ok, 0, 55)) ok = 0;
 	if (!v_range('_bt_sleep', quiet || !ok, 1, 60)) ok = 0;
 	if (!v_range('_bt_peer_limit_global', quiet || !ok, 10, 1000)) ok = 0;
 	if (!v_range('_bt_peer_limit_per_torrent', quiet || !ok, 1, 200)) ok = 0;
@@ -177,7 +176,6 @@ function save(nomsg) {
 	fom.bt_enable.value = fom._f_bt_enable.checked ? 1 : 0;
 	fom.bt_incomplete.value = fom._f_bt_incomplete.checked ? 1 : 0;
 	fom.bt_autoadd.value = fom._f_bt_autoadd.checked ? 1 : 0;
-	fom.bt_check.value = fom._f_bt_check.checked ? 1 : 0;
 	fom.bt_rpc_enable.value = fom._f_bt_rpc_enable.checked ? 1 : 0;
 	fom.bt_auth.value = fom._f_bt_auth.checked ? 1 : 0;
 	fom.bt_rpc_wan.value = fom._f_bt_rpc_wan.checked ? 1 : 0;
@@ -231,7 +229,6 @@ function init() {
 <input type="hidden" name="bt_enable">
 <input type="hidden" name="bt_incomplete">
 <input type="hidden" name="bt_autoadd">
-<input type="hidden" name="bt_check">
 <input type="hidden" name="bt_rpc_enable">
 <input type="hidden" name="bt_auth">
 <input type="hidden" name="bt_rpc_wan">
@@ -275,8 +272,7 @@ function init() {
 					['optware','Optware/Entware (/opt/bin)'],
 					['custom','Custom'] ], value: nvram.bt_binary },
 				{ name: 'bt_binary_custom', type: 'text', maxlen: 40, size: 40, value: nvram.bt_binary_custom } ] },
-			{ title: 'Keep alive', name: 'f_bt_check', type: 'checkbox', value: nvram.bt_check == 1 },
-			{ title: 'Check alive every', indent: 2, name: 'bt_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.bt_check_time, suffix: ' <small>minutes; range: 1 - 55; default: 15<\/small>' },
+			{ title: 'Poll Interval', name: 'bt_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.bt_check_time, suffix: ' <small>minutes; range: 0 - 55; default: 15; 0 to disable<\/small>' },
 			{ title: 'Delay at startup', name: 'bt_sleep', type: 'text', maxlen: 5, size: 7, value: nvram.bt_sleep, suffix: ' <small>seconds; range: 1 - 60; default: 10<\/small>' },
 			{ title: 'Listening port', name: 'bt_port', type: 'text', maxlen: 5, size: 7, value: nvram.bt_port },
 			{ title: 'Download directory', name: 'bt_dir', type: 'text', maxlen: 40, size: 40, value: nvram.bt_dir },

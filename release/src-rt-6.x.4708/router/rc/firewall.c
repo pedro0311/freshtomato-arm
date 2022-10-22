@@ -1048,12 +1048,6 @@ static void nat_table(void)
 		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("ftp_port"), lanaddr[0]);
 #endif
 
-#ifdef TCONFIG_BT
-	/* BT Client ports from WAN interface */
-	if (nvram_get_int("bt_enable") && nvram_match("bt_rpc_wan", "1"))
-		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("bt_port_gui"), lanaddr[0]);
-#endif
-
 	if (wanup || wan2up
 #ifdef TCONFIG_MULTIWAN
 	    || wan3up || wan4up
@@ -1333,15 +1327,6 @@ static void filter_input(void)
 	/* Routing protocol, RIP, accept */
 	if (nvram_invmatch("dr_wan_rx", "0"))
 		ipt_write("-A INPUT -p udp --dport 520 -j ACCEPT\n");
-
-#ifdef TCONFIG_BT
-	/* BT Client ports from WAN interface */
-	if (nvram_match("bt_enable", "1")) {
-		ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get("bt_port"));
-		if (nvram_match("bt_rpc_wan", "1"))
-			ipt_write("-A INPUT -p tcp --dport %s -j ACCEPT\n", nvram_safe_get("bt_port_gui"));
-	}
-#endif
 
 #ifdef TCONFIG_PPTPD
 	/* Add for pptp server */
@@ -2228,6 +2213,11 @@ int start_firewall(void)
 #ifdef TCONFIG_NGINX
 	/* Web Server WAN access */
 	run_nginx_firewall_script();
+#endif
+
+#ifdef TCONFIG_BT
+	/* Open BT port/GUI WAN access */
+	run_bt_firewall_script();
 #endif
 
 #ifdef TCONFIG_OPENVPN

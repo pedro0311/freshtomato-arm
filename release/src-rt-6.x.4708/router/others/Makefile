@@ -142,11 +142,6 @@ endif
 # system info
 	install -m 0700 sysinfo $(INSTALLDIR)/usr/sbin
 
-# BTGUI
-ifeq ($(TCONFIG_BT),y)
-	install -m 0755 btcheck $(INSTALLDIR)/usr/bin
-endif
-
 # network discovery script for status-devices page
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_MIPSR2)),y)
 	install -m 0755 discovery.sh $(INSTALLDIR)/usr/sbin

@@ -522,6 +522,7 @@ extern int nvram_nvram2file(const char *name, const char *filename);
 #ifdef TCONFIG_BT
 extern void start_bittorrent(int force);
 extern void stop_bittorrent(void);
+extern void run_bt_firewall_script(void);
 #endif
 
 /* nfs.c */
