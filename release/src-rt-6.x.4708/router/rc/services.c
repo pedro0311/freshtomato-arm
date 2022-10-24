@@ -879,8 +879,8 @@ void stop_stubby(void)
 	if (serialize_restart("stubby", 0))
 		return;
 
-	killall_tk_period_wait("stubby", 50);
-	unlink("/var/run/stubby.pid");
+	killall_tk_period_wait("stubby", 70);
+	eval("rm", "-f", "/var/run/stubby.pid");
 }
 #endif /* TCONFIG_STUBBY */
 
