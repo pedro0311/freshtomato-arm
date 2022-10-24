@@ -15,12 +15,6 @@
 
 #include "rc.h"
 
-#include <stdlib.h>
-#include <shutils.h>
-#include <utils.h>
-#include <syslog.h>
-#include <sys/stat.h>
-
 #define nginxbin			"nginx"				/* process name */
 #define nginxname			"freshtomato.local"		/* server name */
 #define nginxlogdir			"/var/log/nginx"		/* log directory */
