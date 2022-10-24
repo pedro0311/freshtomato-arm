@@ -94,6 +94,30 @@ void start_usb(void)
 #ifdef TCONFIG_BCMSMP
 	int fd;
 #endif
+#ifdef TCONFIG_BCM714
+	/* get router model */
+	int model = get_model();
+	static int usb_reset_once = 0;
+
+	if (!usb_reset_once) {
+		switch(model) {
+			case MODEL_RTAC3100:
+#ifdef TCONFIG_AC5300
+			case MODEL_RTAC5300:
+#endif
+				set_gpio(GPIO_09, T_LOW); /* disable USB power */
+				usleep(25 * 1000); /* wait 25 ms */
+				set_gpio(GPIO_09, T_HIGH); /* enable USB power */
+				usleep(25 * 1000); /* wait 25 ms (again) */
+				usb_reset_once = 1;
+				logmsg(LOG_INFO, "%s: FreshTomato - reset USB Power Supply (done)", nvram_safe_get("t_model_name"));
+				break;
+			default:
+				/* nothing to do right now! */
+				break;
+		}
+	}
+#endif /* TCONFIG_BCM714 */
 	/* nothing to do right now for ARM! */
 	/* enable USB2/3 power by default - see file bcm5301x_pcie.c */
 
