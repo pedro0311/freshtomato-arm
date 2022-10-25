@@ -25,11 +25,6 @@ endif
 	install -m 0700 wwansignal $(INSTALLDIR)/usr/sbin
 endif # TCONFIG_USB
 
-ifeq ($(TCONFIG_NGINX),y)
-# MySQL
-	install -D -m 755 mycheck $(INSTALLDIR)/usr/bin
-endif
-
 # MultiWAN watchdog script
 	install -m 0700 watchdog $(INSTALLDIR)/usr/sbin
 

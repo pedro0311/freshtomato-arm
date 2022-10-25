@@ -1556,8 +1556,7 @@ struct nvram_tuple router_defaults[] = {
 
 	{ "mysql_enable",		"0"				, 0 },
 	{ "mysql_sleep",		"2"				, 0 },
-	{ "mysql_check",		"1"				, 0 },
-	{ "mysql_check_time",		"1"				, 0 },
+	{ "mysql_check_time",		"5"				, 0 },
 	{ "mysql_binary",		"internal"			, 0 },
 	{ "mysql_binary_custom",	"/mnt/sda1/mysql/bin"		, 0 },
 	{ "mysql_usb_enable",		"1"				, 0 },

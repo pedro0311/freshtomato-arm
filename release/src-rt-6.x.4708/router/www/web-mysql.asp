@@ -19,12 +19,13 @@
 
 <script>
 
-//	<% nvram("mysql_enable,mysql_sleep,mysql_check,mysql_check_time,mysql_binary,mysql_binary_custom,mysql_usb_enable,mysql_dlroot,mysql_datadir,mysql_tmpdir,mysql_server_custom,mysql_port,mysql_allow_anyhost,mysql_init_rootpass,mysql_username,mysql_passwd,mysql_key_buffer,mysql_max_allowed_packet,mysql_thread_stack,mysql_thread_cache_size,mysql_init_priv,mysql_table_open_cache,mysql_sort_buffer_size,mysql_read_buffer_size,mysql_query_cache_size,mysql_read_rnd_buffer_size,mysql_max_connections,nginx_port"); %>
+//	<% nvram("mysql_enable,mysql_sleep,mysql_check_time,mysql_binary,mysql_binary_custom,mysql_usb_enable,mysql_dlroot,mysql_datadir,mysql_tmpdir,mysql_server_custom,mysql_port,mysql_allow_anyhost,mysql_init_rootpass,mysql_username,mysql_passwd,mysql_key_buffer,mysql_max_allowed_packet,mysql_thread_stack,mysql_thread_cache_size,mysql_init_priv,mysql_table_open_cache,mysql_sort_buffer_size,mysql_read_buffer_size,mysql_query_cache_size,mysql_read_rnd_buffer_size,mysql_max_connections,nginx_port"); %>
 
 //	<% usbdevices(); %>
 
-var cprefix = 'mysql_nginx';
+var cprefix = 'web_mysql';
 var changed = 0;
+var reinit = 0;
 var serviceType = 'mysqld';
 var usb_disk_list = new Array();
 
@@ -79,23 +80,22 @@ function refresh_usb_disk() {
 function verifyFields(focused, quiet) {
 	if (focused && focused != E('_f_mysql_enable')) /* except on/off */
 		changed = 1;
+	if (focused && (focused == E('_f_mysql_init_priv') || focused == E('_f_mysql_init_rootpass'))) /* init tables, init password */
+		reinit = 1;
 
 	var ok = 1;
+	var a = E('_f_mysql_usb_enable').checked;
+	var b = E('_f_mysql_init_rootpass').checked;
 
-	var a = E('_f_mysql_check').checked;
-	var b = E('_f_mysql_usb_enable').checked;
-	var c = E('_f_mysql_init_rootpass').checked;
-
-	E('_mysql_check_time').disabled = !a;
 	E('_mysql_username').disabled = true;
-	E('_mysql_passwd').disabled = !c;
-	E('_mysql_dlroot').disabled = !b;
+	E('_mysql_passwd').disabled = !b;
+	E('_mysql_dlroot').disabled = !a;
 	
 	elem.display('_mysql_binary_custom', (E('_mysql_binary').value == 'custom'));
-	elem.display('_mysql_dlroot', b);
+	elem.display('_mysql_dlroot', a);
 
 	var x;
-	if (c)
+	if (b)
 		x = '';
 	else
 		x = 'none';
@@ -112,7 +112,7 @@ function verifyFields(focused, quiet) {
 		ferror.clear(e);
 
 	if (!v_port(E('_mysql_port'), quiet || !ok)) ok = 0;
-	if (!v_range(E('_mysql_check_time'), quiet || !ok, 1, 55)) ok = 0;
+	if (!v_range(E('_mysql_check_time'), quiet || !ok, 0, 55)) ok = 0;
 	if (!v_range(E('_mysql_sleep'), quiet || !ok, 1, 60)) ok = 0;
 	if (!v_range(E('_mysql_key_buffer'), quiet || !ok, 1, 1024)) ok = 0;
 	if (!v_range(E('_mysql_max_allowed_packet'), quiet || !ok, 1, 1024000)) ok = 0;
@@ -139,8 +139,20 @@ function save(nomsg) {
 	if (!nomsg) show(); /* update '_service' field first */
 
 	var fom = E('t_fom');
+
+	if (!isup.mysqld && !nomsg && (fom._f_mysql_init_priv.checked || fom._f_mysql_init_rootpass.checked)) {
+		alert('MySQL is not running.\nTo (re-)init priv. table and/or root password, check config and click "Start Now"');
+		return;
+	}
+	if (isup.mysqld && nomsg && (fom._f_mysql_init_priv.checked || fom._f_mysql_init_rootpass.checked)) {
+		E('_mysqld_button').disabled = 0;
+		E('_mysqld_interface').disabled = 0;
+		E('spin').style.display = 'none';
+		alert('Check config, and click "Save" to (re-)init priv. table and/or root password');
+		return;
+	}
+
 	fom.mysql_enable.value = fom._f_mysql_enable.checked ? 1 : 0;
-	fom.mysql_check.value = fom._f_mysql_check.checked ? 1 : 0;
 	fom.mysql_usb_enable.value = fom._f_mysql_usb_enable.checked ? 1 : 0;
 	fom.mysql_init_priv.value = fom._f_mysql_init_priv.checked ? 1 : 0;
 	fom.mysql_init_rootpass.value = fom._f_mysql_init_rootpass.checked ? 1 : 0;
@@ -149,7 +161,15 @@ function save(nomsg) {
 
 	form.submit(fom, 1);
 
+	/* reset */
 	changed = 0;
+	reinit = 0;
+	nvram.mysql_init_priv = 0;
+	nvram.mysql_init_rootpass = 0;
+	fom._f_mysql_init_priv.checked = 0;
+	fom._f_mysql_init_rootpass.checked = 0;
+	PR(E('_mysql_username')).style.display = 'none';
+	PR(E('_mysql_passwd')).style.display = 'none';
 }
 
 function earlyInit() {
@@ -160,7 +180,7 @@ function earlyInit() {
 function init() {
 	var c;
 	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
-		toggleVisibility(cprefix, "notes");
+		toggleVisibility(cprefix, 'notes');
 
 	up.initPage(250, 5);
 	eventHandler();
@@ -185,7 +205,6 @@ function init() {
 <input type="hidden" name="_service" value="">
 <input type="hidden" name="_nofootermsg">
 <input type="hidden" name="mysql_enable">
-<input type="hidden" name="mysql_check">
 <input type="hidden" name="mysql_usb_enable">
 <input type="hidden" name="mysql_init_priv">
 <input type="hidden" name="mysql_init_rootpass">
@@ -219,12 +238,11 @@ function init() {
 					['custom','Custom'] ], value: nvram.mysql_binary },
 				{ name: 'mysql_binary_custom', type: 'text', maxlen: 40, size: 40, value: nvram.mysql_binary_custom }
 			] },
-			{ title: 'Keep alive', name: 'f_mysql_check', type: 'checkbox', value: nvram.mysql_check == 1 },
-			{ title: 'Check alive every', indent: 2, name: 'mysql_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.mysql_check_time, suffix: ' <small>minutes; range: 1 - 55; default: 1<\/small>' },
+			{ title: 'Poll Interval', name: 'mysql_check_time', type: 'text', maxlen: 5, size: 7, value: nvram.mysql_check_time, suffix: ' <small>minutes; range: 0 - 55; default: 5; 0 to disable<\/small>' },
 			{ title: 'Delay at startup', name: 'mysql_sleep', type: 'text', maxlen: 5, size: 7, value: nvram.mysql_sleep, suffix: ' <small>seconds; range: 1 - 60; default: 2<\/small>' },
 			{ title: 'MySQL listen port', name: 'mysql_port', type: 'text', maxlen: 5, size: 7, value: nvram.mysql_port, suffix: ' <small> default: 3306<\/small>' },
 			{ title: 'Allow Anyhost to access', name: 'f_mysql_allow_anyhost', type: 'checkbox', value: nvram.mysql_allow_anyhost == 1 },
-			{ title: 'Re-init priv. table', name: 'f_mysql_init_priv', type: 'checkbox', value: nvram.mysql_init_priv== 1 },
+			{ title: 'Re-init priv. table', name: 'f_mysql_init_priv', type: 'checkbox', value: nvram.mysql_init_priv == 1 },
 			{ title: 'Re-init root password', name: 'f_mysql_init_rootpass', type: 'checkbox', value: nvram.mysql_init_rootpass == 1 },
 			{ title: 'root user name', name: 'mysql_username', type: 'text', maxlen: 32, size: 16, value: nvram.mysql_username, suffix: ' <small>username connected to server (default: root)<\/small>' },
 			{ title: 'root password', name: 'mysql_passwd', type: 'password', maxlen: 32, size: 16, peekaboo: 1, value: nvram.mysql_passwd, suffix: ' <small>empty not allowed (default: admin)<\/small>' },
@@ -243,9 +261,9 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Key buffer', name: 'mysql_key_buffer', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_key_buffer, suffix: ' <small>MB; range: 1 - 1024; default: 8<\/small>' },
+			{ title: 'Key buffer', name: 'mysql_key_buffer', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_key_buffer, suffix: ' <small>MB; range: 1 - 1024; default: 16<\/small>' },
 			{ title: 'Max allowed packet', name: 'mysql_max_allowed_packet', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_max_allowed_packet, suffix: ' <small>MB; range: 1 - 1024; default: 4<\/small>' },
-			{ title: 'Thread stack', name: 'mysql_thread_stack', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_thread_stack, suffix: ' <small>KB; range: 1 - 1024000; default: 192<\/small>' },
+			{ title: 'Thread stack', name: 'mysql_thread_stack', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_thread_stack, suffix: ' <small>KB; range: 1 - 1024000; default: 128<\/small>' },
 			{ title: 'Thread cache size', name: 'mysql_thread_cache_size', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_thread_cache_size, suffix: ' <small>range: 1 - 999999; default: 8<\/small>' },
 			{ title: 'Table open cache', name: 'mysql_table_open_cache', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_table_open_cache, suffix: ' <small>range: 1 - 999999; default: 4<\/small>' },
 			{ title: 'Query cache size', name: 'mysql_query_cache_size', type: 'text', maxlen: 10, size: 10, value: nvram.mysql_query_cache_size, suffix: ' <small>MB; range: 0 - 1024; default: 16<\/small>' },
@@ -263,9 +281,11 @@ function init() {
 <div class="section-title">Notes <small><i><a href='javascript:toggleVisibility(cprefix,"notes");'><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
 <div class="section" id="sesdiv_notes" style="display:none">
 	<ul>
-		<li><b>Enable on Start</b> - Caution! If your router has only 32MB of RAM, you'll have to use swap.</li>
+		<li><b>Status Button</b> - Quick Start-Stop Service.</li>
+		<li><b>Open admin interface in new tab</b> - Warning! nginx must be configured and running!</li>
+		<li><b>Enable on Start</b> - Check to activate the mysqld at the router start. Caution! If your router has only 32MB of RAM, you'll have to use swap.</li>
 		<li><b>MySQL binary path</b> - Path to the directory containing mysqld etc. Do not include program name (/mysqld).</li>
-		<li><b>Keep alive</b> - If enabled, mysqld will be checked at the specified interval and will re-launch after a crash.</li>
+		<li><b>Poll Interval</b> - If enabled, mysqld will be checked at the specified interval and will re-launch after a crash.</li>
 		<li><b>Allow Anyhost to access</b> - Allow any hosts to access database server.</li>
 		<li><b>Re-init priv. table</b> -  If checked, privileges table will be forced to re-initialize by mysql_install_db.</li>
 		<li><b>Re-init root password</b> - If checked, root password will be forced to re-initialize.</li>

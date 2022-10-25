@@ -3710,8 +3710,6 @@ TOP:
 	}
 	if ((strcmp(service, "mysql") == 0) || (strcmp(service, "mysqld") == 0)) {
 		if (act_stop) stop_mysql();
-		stop_firewall();
-		start_firewall(); /* always restarted (needed?) */
 		if (act_start) start_mysql(1); /* force (re)start */
 		goto CLEAR;
 	}

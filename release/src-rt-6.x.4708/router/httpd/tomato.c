@@ -1379,8 +1379,7 @@ static const nvset_t nvset_list[] = {
 /* web-mysql */
 	{ "mysql_enable",		V_01				},
 	{ "mysql_sleep",		V_RANGE(1, 60)			},
-	{ "mysql_check",		V_01				},
-	{ "mysql_check_time",		V_RANGE(1, 55)			},
+	{ "mysql_check_time",		V_RANGE(0, 55)			},
 	{ "mysql_binary",		V_LENGTH(0, 50)			},
 	{ "mysql_binary_custom",	V_LENGTH(0, 50)			},
 	{ "mysql_usb_enable",		V_01				},

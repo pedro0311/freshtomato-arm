@@ -1,9 +1,9 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ *
+ * Tomato Firmware
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ *
+ */
 
 #include <string.h>
 #include <stdio.h>
@@ -18,13 +18,19 @@
 #include "shared.h"
 
 
-int f_exists(const char *path)	// note: anything but a directory
+int f_exists(const char *path) /* note: anything but a directory */
 {
 	struct stat st;
 	return (stat(path, &st) == 0) && (!S_ISDIR(st.st_mode));
 }
 
-unsigned long f_size(const char *path)	// 4GB-1	-1 = error
+int d_exists(const char *path) /* note: is directory exist? */
+{
+	struct stat st;
+	return (stat(path, &st) == 0) && (S_ISDIR(st.st_mode));
+}
+
+unsigned long f_size(const char *path) /* 4GB-1   -1 = error */
 {
 	struct stat st;
 	if (stat(path, &st) == 0) return st.st_size;

@@ -9,19 +9,50 @@
 
 #include "rc.h"
 
-#include <stdlib.h>
-#include <shutils.h>
-#include <utils.h>
-#include <syslog.h>
-#include <sys/stat.h>
-#include <shared.h>
+#include <sys/wait.h>
 
-#define MYSQL_CONF		"/etc/my.cnf"
-#define MYSL_START_SCRIPT	"/tmp/start_mysql.sh"
-#define MYSQL_STOP_SCRIPT	"/tmp/stop_mysql.sh"
-#define MYSQL_PASSWD		"/tmp/setpasswd.sql"
-#define MYSQL_ANYHOST		"/tmp/setanyhost.sql"
+#define mysql_etc_dir		"/etc/mysql"
+#define mysql_conf_link		"/etc/my.cnf"
+#define mysql_conf		mysql_etc_dir"/my.cnf"
+#define mysql_start_script	mysql_etc_dir"/start_mysql.sh"
+#define mysql_stop_script	mysql_etc_dir"/stop_mysql.sh"
+#define mysql_passwd		mysql_etc_dir"/setpasswd.sql"
+#define mysql_anyhost		mysql_etc_dir"/setanyhost.sql"
+#define mysql_child_pid		mysql_etc_dir"/child.pid"
+#define mysql_pid		"/var/run/mysqld.pid"
+#define mysql_log		"/var/log/mysql.log"
+#define mysql_dflt_dir		"/tmp/mysql"
 
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"mysql_debug"
+
+
+static void setup_mysql_watchdog(void)
+{
+	FILE *fp;
+	char buffer[64], buffer2[64];
+	int nvi;
+
+	if ((nvi = nvram_get_int("mysql_check_time")) > 0) {
+		memset(buffer, 0, sizeof(buffer));
+		snprintf(buffer, sizeof(buffer), mysql_etc_dir"/watchdog.sh");
+
+		if ((fp = fopen(buffer, "w"))) {
+			fprintf(fp, "#!/bin/sh\n"
+			            "[ -z \"$(pidof mysqld)\" -a \"$(nvram get g_upgrade)\" != \"1\" -a \"$(nvram get g_reboot)\" != \"1\" ] && {\n"
+			            " logger -t mysql-watchdog mysqld stopped? Starting...\n"
+			            " service mysql restart\n"
+			            "}\n");
+			fclose(fp);
+			chmod(buffer, (S_IRUSR | S_IWUSR | S_IXUSR));
+
+			memset(buffer2, 0, sizeof(buffer2));
+			snprintf(buffer2, sizeof(buffer2), "*/%d * * * * %s", nvi, buffer);
+			eval("cru", "a", "CheckMySQL", buffer2);
+		}
+	}
+}
 
 void start_mysql(int force)
 {
@@ -31,6 +62,12 @@ void start_mysql(int force)
 	char pdatadir[256], ptmpdir[256];
 	char full_datadir[256], full_tmpdir[256], basedir[256];
 	char tmp1[256], tmp2[256];
+	int n;
+	pid_t pidof_child = 0;
+	unsigned int new_install = 0;
+	char *nginx_docroot = nvram_safe_get("nginx_docroot");
+	unsigned int anyhost = nvram_get_int("mysql_allow_anyhost");
+
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("mysql_enable") && force == 0)
@@ -38,6 +75,14 @@ void start_mysql(int force)
 
 	if (serialize_restart("mysqld", 1))
 		return;
+
+	memset(tmp1, 0, sizeof(tmp1));
+	if (f_read_string(mysql_child_pid, tmp1, sizeof(tmp1)) > 0 && atoi(tmp1) > 0 && ppid(atoi(tmp1)) > 0) { /* fork is still up */
+		logmsg(LOG_WARNING, "%s: another process (PID: %s) still up, aborting ...", __FUNCTION__, tmp1);
+		return;
+	}
+
+	logmsg(LOG_INFO, "starting mysqld ...");
 
 	if (nvram_match("mysql_binary", "internal"))
 		strlcpy(pbi, "/usr/bin", sizeof(pbi));
@@ -51,7 +96,7 @@ void start_mysql(int force)
 
 	splitpath(pbi, basedir, tmp1);
 
-	/* Generate download saved path based on USB partition (mysql_dlroot) and directory name (mysql_datadir) */
+	/* generate download saved path based on USB partition (mysql_dlroot) and directory name (mysql_datadir) */
 	if (nvram_get_int("mysql_usb_enable")) {
 		tmp1[0] = 0;
 		tmp2[0] = 0;
@@ -67,12 +112,12 @@ void start_mysql(int force)
 			ppr[strlen(ppr) - 1] = 0;
 
 		if (strlen(ppr) == 0) {
-			syslog(LOG_ERR, "No mounted USB partition found. You must mount a USB disk first");
+			logmsg(LOG_ERR, "No mounted USB partition found. You need to mount the USB drive first");
 			return;
 		}
 	}
 	else
-		ppr[0] = '\0';
+		strlcpy(ppr, mysql_dflt_dir, sizeof(ppr));
 
 	strlcpy(pdatadir, nvram_safe_get("mysql_datadir"), sizeof(pdatadir));
 	trimstr(pdatadir);
@@ -104,9 +149,11 @@ void start_mysql(int force)
 	else
 		snprintf(full_tmpdir, sizeof(full_tmpdir), "%s/%s", ppr, ptmpdir);
 
+	mkdir_if_none(mysql_etc_dir);
+
 	/* config file */
-	if (!(fp = fopen(MYSQL_CONF, "w"))) {
-		perror(MYSQL_CONF);
+	if (!(fp = fopen(mysql_conf, "w"))) {
+		perror(mysql_conf);
 		return;
 	}
 
@@ -145,7 +192,7 @@ void start_mysql(int force)
 	            "read_buffer_size     = %sK\n"
 	            "read_rnd_buffer_size = %sK\n"
 	            "query_cache_size     = %sM\n"
-	            "max_connections      = %s\n"
+	            "max_connections      = %s\n\n"
 	            "#The following items are from mysql_server_custom\n"
 	            "%s\n"
 	            "#end of mysql_server_custom\n\n"
@@ -170,115 +217,180 @@ void start_mysql(int force)
 
 	fclose(fp);
 
-	/* start script */
-	if (!(fp = fopen(MYSL_START_SCRIPT, "w"))) {
-		perror(MYSL_START_SCRIPT);
+	chmod(mysql_conf, 0644);
+
+	unlink(mysql_conf_link);
+	symlink(mysql_conf, mysql_conf_link);
+
+	/* fork new process */
+	if (fork() != 0)
 		return;
+
+	pidof_child = getpid();
+
+	/* write child pid to a file */
+	memset(tmp1, 0, sizeof(tmp1));
+	snprintf(tmp1, sizeof(tmp1), "%d", pidof_child);
+	f_write_string(mysql_child_pid, tmp1, 0, 0);
+
+	/* wait a given time for partition to be mounted, etc */
+	n = atoi(nvram_safe_get("mysql_sleep"));
+	if (n > 0)
+		sleep(n);
+
+	/* clean mysql_log */
+	system("/bin/rm -f "mysql_log);
+	f_write(mysql_log, NULL, 0, 0, 0644);
+
+	/* check for datadir */
+	if (!d_exists(full_datadir)) {
+		logmsg(LOG_INFO, "datadir in %s doesn't exist, creating ...", ppr);
+		if (mkdir(full_datadir, 0755) == 0)
+			logmsg(LOG_INFO, "created successfully");
+		else {
+			logmsg(LOG_ERR, "create failed, aborting ...");
+			goto END;
+		}
 	}
 
-	fprintf(fp, "#!/bin/sh\n\n"
-	            "BINPATH=%s\n"
-	            "PID=/var/run/mysqld.pid\n"
-	            "NEW_INSTALL=0\n"
-	            "MYLOG=/var/log/mysql.log\n"
-	            "ROOTNAME=$(nvram get mysql_username)\n"
-	            "ROOTPASS=$(nvram get mysql_passwd)\n"
-	            "NGINX_DOCROOT=$(nvram get nginx_docroot)\n"
-	            "ANYHOST=$(nvram get mysql_allow_anyhost)\n"
-	            "alias elog=\"logger -t mysql -s\"\n"
-	            "sleep %s\n"
-	            "rm -f $MYLOG\n"
-	            "touch $MYLOG\n"
-	            "[ ! -d \"%s\" ] && {\n"
-	            "  elog \"datadir in "MYSQL_CONF" doesn't exist. Creating ...\"\n"
-	            "  mkdir -p %s\n"
-	            "  [ -d \"%s\" ] && {\n"
-	            "    elog \"Created successfully\"\n"
-	            "  } || {\n"
-	            "    elog \"Created failed. exit\"\n"
-	            "    exit 1\n"
-	            "  }\n"
-	            "}\n"
-	            "[ ! -d \"%s\" ] && {\n"
-	            "  elog \"tmpdir in "MYSQL_CONF" doesn't exist. creating ...\"\n"
-	            "  mkdir -p %s\n"
-	            "  [ -d \"%s\" ] && {\n"
-	            "    elog \"Created successfully\"\n"
-	            "  } || {\n"
-	            "    elog \"Created failed. exit\"\n"
-	            "    exit 1\n"
-	            "  }\n"
-	            "}\n"
-	            "[ ! -f \"%s/mysql/tables_priv.MYD\" ] && {\n"
-	            "  NEW_INSTALL=1\n"
-	            "  echo \"=========Found NO tables_priv.MYD====================\" >> $MYLOG\n"
-	            "  echo \"This is new installed MySQL.\" >> $MYLOG\n"
-	            "}\n"
-	            "REINIT_PRIV_TABLES=$(nvram get mysql_init_priv)\n"
-	            "[[ $REINIT_PRIV_TABLES -eq 1 || $NEW_INSTALL -eq 1 ]] && {\n"
-	            "  echo \"=========mysql_install_db====================\" >> $MYLOG\n"
-	            "  $BINPATH/mysql_install_db --user=root --force >> $MYLOG 2>&1\n"
-	            "  elog \"Privileges table was already initialized\"\n"
-	            "  nvram set mysql_init_priv=0\n"
-	            "  nvram commit\n"
-	            "}\n"
-	            "REINIT_ROOT_PASSWD=$(nvram get mysql_init_rootpass)\n"
-	            "[[ $REINIT_ROOT_PASSWD -eq 1 || $NEW_INSTALL -eq 1 ]] && {\n"
-	            "  echo \"=========mysqld skip-grant-tables==================\" >> $MYLOG\n"
-	            "  nohup $BINPATH/mysqld --skip-grant-tables --skip-networking --pid-file=$PID >> $MYLOG 2>&1 &\n"
-	            "  sleep 2\n"
-	            "  [ -f "MYSQL_PASSWD" ] && rm -f "MYSQL_PASSWD"\n"
-	            "  echo \"use mysql;\" > "MYSQL_PASSWD"\n"
-	            "  echo \"update user set password=password('$ROOTPASS') where user='root';\" >> "MYSQL_PASSWD"\n"
-	            "  echo \"flush privileges;\" >> "MYSQL_PASSWD"\n"
-	            "  echo \"=========mysql < "MYSQL_PASSWD"====================\" >> $MYLOG\n"
-	            "  $BINPATH/mysql < "MYSQL_PASSWD" >> $MYLOG 2>&1\n"
-	            "  echo \"=========mysqldadmin shutdown====================\" >> $MYLOG\n"
-	            "  $BINPATH/mysqladmin -uroot -p\"$ROOTPASS\" --shutdown_timeout=3 shutdown >> $MYLOG 2>&1\n"
-	            "  killall mysqld\n"
-	            "  rm -f $PID "MYSQL_PASSWD"\n"
-	            "  nvram set mysql_init_rootpass=0\n"
-	            "  nvram commit\n"
-	            "  elog \"root password was already re-initialized\"\n"
-	            "}\n\n"
-	            "echo \"=========mysqld startup====================\" >> $MYLOG\n"
-	            "nohup $BINPATH/mysqld --pid-file=$PID >> $MYLOG 2>&1 &\n"
-	            "[ $ANYHOST -eq 1 ] && {\n"
-	            "  sleep 3\n"
-	            "  [ -f "MYSQL_ANYHOST" ] && rm -f "MYSQL_ANYHOST"\n"
-	            "  echo \"GRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' WITH GRANT OPTION;\" >> "MYSQL_ANYHOST"\n"
-	            "  echo \"flush privileges;\" >> "MYSQL_ANYHOST"\n"
-	            "  echo \"=========mysql < "MYSQL_ANYHOST"====================\" >> $MYLOG\n"
-	            "  $BINPATH/mysql -uroot -p\"$ROOTPASS\" < "MYSQL_ANYHOST" >> $MYLOG 2>&1\n"
-	            "}\n"
-	            "/usr/bin/mycheck addcru\n"
-	            "elog \"MySQL successfully started\"\n"
-	            "mkdir -p $NGINX_DOCROOT\n"
-	            "cp -p /www/adminer.php $NGINX_DOCROOT/\n",
-	            pbi,
-	            nvram_safe_get("mysql_sleep"),
-	            full_datadir,
-	            full_datadir,
-	            full_datadir,
-	            full_tmpdir,
-	            full_tmpdir,
-	            full_tmpdir,
-	            full_datadir);
+	/* check for tmpdir */
+	if (!d_exists(full_tmpdir)) {
+		logmsg(LOG_INFO, "tmpdir in %s doesn't exist, creating ...", ppr);
+		if (mkdir(full_tmpdir, 0755) == 0)
+			logmsg(LOG_INFO, "created successfully");
+		else {
+			logmsg(LOG_ERR, "create failed, aborting ...");
+			goto END;
+		}
+	}
 
-	fclose(fp);
+	/* check for tables_priv.MYD */
+	memset(tmp1, 0, sizeof(tmp1));
+	snprintf(tmp1, sizeof(tmp1), "%s/mysql/tables_priv.MYD", full_datadir);
+	if (!f_exists(tmp1)) {
+		new_install = 1;
+		logmsg(LOG_INFO, "tables_priv.MYD not found - it's a new MySQL installation");
+		f_write_string(mysql_log, "=========Found NO tables_priv.MYD====================", FW_APPEND | FW_NEWLINE, 0);
+		f_write_string(mysql_log, "This is new installed MySQL.", FW_APPEND | FW_NEWLINE, 0);
+	}
 
-	chmod(MYSL_START_SCRIPT, 0755);
+	/* initialize DB? */
+	if (nvram_get_int("mysql_init_priv") || new_install == 1) {
+		logmsg(LOG_INFO, "initializing privileges table ...");
+		f_write_string(mysql_log, "=========mysql_install_db====================", FW_APPEND | FW_NEWLINE, 0);
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "%s/mysql_install_db --user=root --force >> %s 2>&1", pbi, mysql_log);
+		system(tmp1);
 
-	xstart(MYSL_START_SCRIPT);
+		logmsg(LOG_DEBUG, "*** %s: privileges table successfully initialized", __FUNCTION__);
+		nvram_set("mysql_init_priv", "0");
+		nvram_commit();
+	}
+
+	/* initialize root password? */
+	if (nvram_get_int("mysql_init_rootpass") || new_install == 1) {
+		logmsg(LOG_INFO, "(re-)initializing root password ...");
+		f_write_string(mysql_log, "=========mysqld skip-grant-tables==================", FW_APPEND | FW_NEWLINE, 0);
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "%s/mysqld --skip-grant-tables --skip-networking --pid-file=%s >> %s 2>&1 &", pbi, mysql_pid, mysql_log);
+		system(tmp1);
+		sleep(2);
+
+		if (f_exists(mysql_passwd))
+			unlink(mysql_passwd);
+
+		f_write_string(mysql_passwd, "use mysql;", FW_CREATE | FW_NEWLINE, 0644);
+
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "update user set password=password('%s') where user='root';", nvram_safe_get("mysql_passwd"));
+		f_write_string(mysql_passwd, tmp1, FW_APPEND | FW_NEWLINE, 0);
+
+		f_write_string(mysql_passwd, "flush privileges;", FW_APPEND | FW_NEWLINE, 0);
+
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "=========mysql < %s====================", mysql_passwd);
+		f_write_string(mysql_log, tmp1, FW_APPEND | FW_NEWLINE, 0);
+
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "%s/mysql < %s >> %s", pbi, mysql_passwd, mysql_log);
+		system(tmp1);
+
+		f_write_string(mysql_log, "=========mysqldadmin shutdown====================", FW_APPEND | FW_NEWLINE, 0);
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown >> %s 2>&1", pbi, nvram_safe_get("mysql_passwd"), mysql_log);
+		system(tmp1);
+
+		killall_tk_period_wait("mysqld", 50);
+		sleep(1);
+		system("/bin/rm -f "mysql_pid" "mysql_passwd);
+
+		logmsg(LOG_DEBUG, "*** %s: root password successfully (re-)initialized", __FUNCTION__);
+		nvram_set("mysql_init_rootpass", "0");
+		nvram_commit();
+	}
+
+	f_write_string(mysql_log, "=========mysqld startup====================", FW_APPEND | FW_NEWLINE, 0);
+	memset(tmp1, 0, sizeof(tmp1));
+	snprintf(tmp1, sizeof(tmp1), "%s/mysqld --pid-file=%s >> %s 2>&1 &", pbi, mysql_pid, mysql_log);
+	system(tmp1);
+
+	if (anyhost == 1) {
+		sleep(3);
+		if (f_exists(mysql_anyhost))
+			unlink(mysql_anyhost);
+
+		f_write_string(mysql_anyhost, "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%%' WITH GRANT OPTION;", FW_CREATE | FW_NEWLINE, 0644);
+		f_write_string(mysql_anyhost, "flush privileges;", FW_APPEND | FW_NEWLINE, 0);
+
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "=========mysql < %s==================== >> %s", mysql_anyhost, mysql_log);
+		f_write_string(mysql_log, tmp1, FW_APPEND | FW_NEWLINE, 0);
+
+		memset(tmp1, 0, sizeof(tmp1));
+		snprintf(tmp1, sizeof(tmp1), "%s/mysql -uroot -p\"%s\" < %s >> %s 2>&1", pbi, nvram_safe_get("mysql_passwd"), mysql_anyhost, mysql_log);
+		system(tmp1);
+		system("/bin/rm -f "mysql_anyhost);
+	}
+
+	eval("mkdir", "-p", nginx_docroot);
+	eval("cp", "-p" "/www/adminer.php", nginx_docroot);
+	sleep(1);
+
+END:
+	if (pidof("mysqld") > 0) {
+		logmsg(LOG_INFO, "mysqld started");
+		setup_mysql_watchdog();
+		f_write_string(mysql_child_pid, "0", 0, 0);
+	}
+	else {
+		logmsg(LOG_ERR, "starting mysqld failed - check configuration ...");
+		f_write_string(mysql_child_pid, "0", 0, 0);
+		stop_mysql();
+	}
+
+	/* terminate the child */
+	exit(0);
 }
 
 void stop_mysql(void)
 {
-	FILE *fp;
-	char pbi[128];
+	pid_t pid;
+	char pbi[128], buf[512];
+	int n = 10, m = atoi(nvram_safe_get("mysql_sleep")) + 70;
 
 	if (serialize_restart("mysqld", 0))
 		return;
+
+	logmsg(LOG_INFO, "terminating mysqld ...");
+
+	/* wait for child of start_mysql to finish (if any) */
+	memset(buf, 0, sizeof(buf));
+	while (f_read_string(mysql_child_pid, buf, sizeof(buf)) > 0 && atoi(buf) > 0 && ppid(atoi(buf)) > 0 && (m-- > 0)) {
+		logmsg(LOG_DEBUG, "*** %s: waiting for child process of start_mysql to end, %d secs left ...", __FUNCTION__, m);
+		sleep(1);
+	}
+
+	eval("cru", "d", "CheckMySQL");
 
 	if (nvram_match("mysql_binary", "internal"))
 		strlcpy(pbi, "/usr/bin", sizeof(pbi));
@@ -287,25 +399,27 @@ void stop_mysql(void)
 	else
 		strlcpy(pbi, nvram_safe_get("mysql_binary_custom"), sizeof(pbi));
 
-	/* stop script */
-	if (!(fp = fopen(MYSQL_STOP_SCRIPT, "w"))) {
-		perror(MYSQL_STOP_SCRIPT);
-		return;
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown", pbi, nvram_safe_get("mysql_passwd"));
+	system(buf);
+
+	if (pidof("mysqld") > 0) {
+		killall_tk_period_wait("mysqld", 80);
+		sleep(1);
+		while ((pid = pidof("mysqld")) > 0 && (n-- > 0)) {
+			logmsg(LOG_WARNING, "killing mysqld ...");
+			/* reap the zombie if it has terminated */
+			waitpid(pid, NULL, WNOHANG);
+			sleep(1);
+		}
 	}
+	if (n < 10)
+		logmsg(LOG_WARNING, "mysqld forcefully stopped");
+	else
+		logmsg(LOG_INFO, "mysqld stopped");
 
-	fprintf(fp, "#!/bin/sh\n\n"
-	            "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown\n"
-	            "killall mysqld\n"
-	            "logger \"MySQL successfully stopped\" \n"
-	            "sleep 1\n"
-	            "rm -f /var/run/mysql.pid\n"
-	            "/usr/bin/mycheck addcru\n",
-	            pbi,
-	            nvram_safe_get("mysql_passwd"));
-
-	fclose(fp);
-
-	chmod(MYSQL_STOP_SCRIPT, 0755);
-
-	xstart(MYSQL_STOP_SCRIPT);
+	/* clean-up */
+	system("/bin/rm -f "mysql_pid);
+	unlink(mysql_conf_link);
+	system("/bin/rm -rf "mysql_etc_dir);
 }
