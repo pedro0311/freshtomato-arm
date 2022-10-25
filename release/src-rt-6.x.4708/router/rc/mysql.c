@@ -9,8 +9,6 @@
 
 #include "rc.h"
 
-#include <sys/wait.h>
-
 #define mysql_etc_dir		"/etc/mysql"
 #define mysql_conf_link		"/etc/my.cnf"
 #define mysql_conf		mysql_etc_dir"/my.cnf"
@@ -374,9 +372,8 @@ END:
 
 void stop_mysql(void)
 {
-	pid_t pid;
 	char pbi[128], buf[512];
-	int n = 10, m = atoi(nvram_safe_get("mysql_sleep")) + 70;
+	int m = atoi(nvram_safe_get("mysql_sleep")) + 70;
 
 	if (serialize_restart("mysqld", 0))
 		return;
@@ -403,20 +400,9 @@ void stop_mysql(void)
 	snprintf(buf, sizeof(buf), "%s/mysqladmin -uroot -p\"%s\" --shutdown_timeout=3 shutdown", pbi, nvram_safe_get("mysql_passwd"));
 	system(buf);
 
-	if (pidof("mysqld") > 0) {
-		killall_tk_period_wait("mysqld", 80);
-		sleep(1);
-		while ((pid = pidof("mysqld")) > 0 && (n-- > 0)) {
-			logmsg(LOG_WARNING, "killing mysqld ...");
-			/* reap the zombie if it has terminated */
-			waitpid(pid, NULL, WNOHANG);
-			sleep(1);
-		}
-	}
-	if (n < 10)
-		logmsg(LOG_WARNING, "mysqld forcefully stopped");
-	else
-		logmsg(LOG_INFO, "mysqld stopped");
+	killall_and_waitfor("mysqld", 10, 80);
+
+	logmsg(LOG_INFO, "mysqld stopped");
 
 	/* clean-up */
 	system("/bin/rm -f "mysql_pid);

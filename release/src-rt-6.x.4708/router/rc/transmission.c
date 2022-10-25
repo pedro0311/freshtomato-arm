@@ -10,7 +10,6 @@
 #include "rc.h"
 
 #include <sys/types.h>
-#include <sys/wait.h>
 
 #define tr_dir			"/etc/transmission"
 #define tr_settings		tr_dir"/settings.json"
@@ -316,9 +315,8 @@ void start_bittorrent(int force)
 
 void stop_bittorrent(void)
 {
-	pid_t pid;
 	char buf[16];
-	int n = 10, m = atoi(nvram_safe_get("bt_sleep")) + 10;
+	int m = atoi(nvram_safe_get("bt_sleep")) + 10;
 
 	if (serialize_restart("transmission-da", 0))
 		return;
@@ -332,23 +330,9 @@ void stop_bittorrent(void)
 
 	eval("cru", "d", "CheckTransmission");
 
-	if (pidof("transmission-da") > 0) {
-		logmsg(LOG_INFO, "terminating transmission-daemon ...");
+	killall_and_waitfor("transmission-da", 10, 50);
 
-		killall_tk_period_wait("transmission-da", 50);
-		sleep(1);
-		while ((pid = pidof("transmission-da")) > 0 && (n-- > 0)) {
-			logmsg(LOG_WARNING, "killing transmission-daemon ...");
-			/* reap the zombie if it has terminated */
-			waitpid(pid, NULL, WNOHANG);
-			sleep(1);
-		}
-
-		if (n < 10)
-			logmsg(LOG_WARNING, "transmission-daemon forcefully stopped");
-		else
-			logmsg(LOG_INFO, "transmission-daemon stopped");
-	}
+	logmsg(LOG_INFO, "transmission-daemon stopped");
 
 	run_del_firewall_script(tr_fw_script, tr_fw_del_script);
 

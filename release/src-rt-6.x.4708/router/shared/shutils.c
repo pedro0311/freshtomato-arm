@@ -1632,6 +1632,19 @@ void killall_tk_period_wait(const char *name, int wait_ds) /* time in decisecond
 	}
 }
 
+void killall_and_waitfor(const char *name, int loop, int killtime)
+{
+	pid_t pid;
+
+	killall_tk_period_wait(name, killtime); /* wait time in deciseconds (1/10 sec) */
+	while ((pid = pidof(name)) > 0 && (loop-- > 0)) {
+		logmsg(LOG_WARNING, "killing %s ...", name);
+		/* Reap the zombie if it has terminated */
+		waitpid(pid, NULL, WNOHANG);
+		sleep(1);
+	}
+}
+
 int kill_pidfile_s(char *pidfile, int sig)
 {
 	char tmp[100];

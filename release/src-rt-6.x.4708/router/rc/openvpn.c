@@ -12,7 +12,6 @@
 #include "rc.h"
 
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <dirent.h>
 #include <string.h>
 #include <time.h>
@@ -73,19 +72,6 @@ typedef enum ovpn_type
 	OVPN_TYPE_SERVER = 0,
 	OVPN_TYPE_CLIENT
 } ovpn_type_t;
-
-
-static void ovpn_waitfor(const char *name)
-{
-	pid_t pid, n = 5;
-
-	killall_tk_period_wait(name, 50); /* wait time in deciseconds (1/10 sec) */
-	while ((pid = pidof(name)) > 0 && (n-- > 0)) {
-		/* Reap the zombie if it has terminated */
-		waitpid(pid, NULL, WNOHANG);
-		sleep(1);
-	}
-}
 
 static int ovpn_setup_iface(char *iface, ovpn_if_t iface_type, ovpn_route_t route_mode, int unit, ovpn_type_t type) {
 	char buffer[32];
@@ -789,7 +775,7 @@ void stop_ovpn_client(int unit)
 	/* Stop the VPN client */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, sizeof(buffer), "vpnclient%d", unit);
-	ovpn_waitfor(buffer);
+	killall_and_waitfor(buffer, 5, 50);
 
 	ovpn_remove_iface(OVPN_TYPE_CLIENT, unit);
 
@@ -1405,7 +1391,7 @@ void stop_ovpn_server(int unit)
 	/* Stop the VPN server */
 	memset(buffer, 0, BUF_SIZE);
 	snprintf(buffer, sizeof(buffer), "vpnserver%d", unit);
-	ovpn_waitfor(buffer);
+	killall_and_waitfor(buffer, 5, 50);
 
 	ovpn_remove_iface(OVPN_TYPE_SERVER, unit);
 
