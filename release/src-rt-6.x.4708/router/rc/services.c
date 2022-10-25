@@ -58,9 +58,6 @@
 #define ZEBRA_CONF		"/etc/zebra.conf"
 #define RIPD_CONF		"/etc/ripd.conf"
 #endif
-#ifdef TCONFIG_MEDIA_SERVER
-#define MEDIA_SERVER_APP	"minidlna"
-#endif
 #ifdef TCONFIG_MDNS
 #define AVAHI_CONFIG_PATH	"/etc/avahi"
 #define AVAHI_SERVICES_PATH	"/etc/avahi/services"
@@ -2614,7 +2611,7 @@ static void start_media_server(int force)
 	int port, https;
 	pid_t pid;
 	char *dbdir;
-	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-r", NULL, NULL };
+	char *argv[] = { "minidlna", "-f", "/etc/minidlna.conf", "-r", NULL, NULL };
 	static int once = 1;
 	int ret, index = 4;
 	char *msi;
@@ -2627,7 +2624,7 @@ static void start_media_server(int force)
 	if (!nvram_get_int("ms_enable") && force == 0)
 		return;
 
-	if (serialize_restart(MEDIA_SERVER_APP, 1))
+	if (serialize_restart("minidlna", 1))
 		return;
 
 	if (!nvram_get_int("ms_sas")) { /* scan media at startup? */
@@ -2642,8 +2639,8 @@ static void start_media_server(int force)
 		nvram_unset("ms_rescan");
 	}
 
-	if (f_exists("/etc/"MEDIA_SERVER_APP".alt"))
-		argv[2] = "/etc/"MEDIA_SERVER_APP".alt";
+	if (f_exists("/etc/minidlna.alt"))
+		argv[2] = "/etc/minidlna.alt";
 	else {
 		if ((f = fopen(argv[2], "w")) != NULL) {
 			port = nvram_get_int("ms_port");
@@ -2653,7 +2650,7 @@ static void start_media_server(int force)
 			if (!(*dbdir))
 				dbdir = NULL;
 
-			mkdir_if_none(dbdir ? : "/var/run/"MEDIA_SERVER_APP);
+			mkdir_if_none(dbdir ? : "/var/run/minidlna");
 
 			/* persistent ident (router's mac as serial) */
 			if (!ether_atoe(nvram_safe_get("lan_hwaddr"), ea))
@@ -2680,7 +2677,7 @@ static void start_media_server(int force)
 			           strlen(msi) ? msi : nvram_safe_get("lan_ifname"),
 			           (port < 0) || (port >= 0xffff) ? 0 : port,
 			           nvram_get("router_name") ? : "FreshTomato",
-			           dbdir ? : "/var/run/"MEDIA_SERVER_APP,
+			           dbdir ? : "/var/run/minidlna",
 			           nvram_get_int("ms_tivo") ? "yes" : "no",
 			           nvram_get_int("ms_stdlna") ? "yes" : "no",
 			           https ? "s" : "", nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport"),
@@ -2713,22 +2710,22 @@ static void start_media_server(int force)
 	ret = _eval(argv, NULL, 0, &pid);
 	sleep(1);
 
-	if ((pidof(MEDIA_SERVER_APP) > 0) && !ret) {
-		logmsg(LOG_INFO, MEDIA_SERVER_APP" is started");
+	if ((pidof("minidlna") > 0) && !ret) {
+		logmsg(LOG_INFO, "minidlna is started");
 		once = 0;
 	}
 	else
-		logmsg(LOG_ERR, "starting "MEDIA_SERVER_APP" failed ...");
+		logmsg(LOG_ERR, "starting minidlna failed ...");
 }
 
 static void stop_media_server(void)
 {
-	if (serialize_restart(MEDIA_SERVER_APP, 0))
+	if (serialize_restart("minidlna", 0))
 		return;
 
-	if (pidof(MEDIA_SERVER_APP) > 0) {
-		killall_tk_period_wait(MEDIA_SERVER_APP, 50);
-		logmsg(LOG_INFO, MEDIA_SERVER_APP" is stopped");
+	if (pidof("minidlna") > 0) {
+		killall_tk_period_wait("minidlna", 50);
+		logmsg(LOG_INFO, "minidlna is stopped");
 	}
 }
 #endif /* TCONFIG_MEDIA_SERVER */
