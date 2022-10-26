@@ -3615,7 +3615,7 @@ TOP:
 		if (act_start) {
 			start_usb();
 			/* restart Samba and ftp since they may be killed by stop_usb() */
-			restart_nas_services(0, 1);
+			restart_nas_services(1, 1);
 			/* remount all partitions by simulating hotplug event */
 			add_remove_usbhost("-1", 1);
 		}
