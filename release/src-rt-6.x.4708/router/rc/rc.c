@@ -116,6 +116,7 @@ int serialize_restart(char *service, int start)
 	char s[32];
 	char *pos;
 	unsigned int index = 0;
+	pid_t pid, pid_rc = getpid();
 
 	/* replace '-' with '_' otherwise exec_service() will fail */
 	strlcpy(s, service, sizeof(s));
@@ -125,22 +126,22 @@ int serialize_restart(char *service, int start)
 		strlcat(s, "_", sizeof(s));
 		strlcat(s, service + index + 1, sizeof(s));
 	}
-	logmsg(LOG_DEBUG, "*** %s: service: %s %s - pid: %d", __FUNCTION__, service, (start ? "start" : "stop"), getpid());
+	logmsg(LOG_DEBUG, "*** %s: service: %s %s - PID[rc]: %d", __FUNCTION__, service, (start ? "start" : "stop"), pid_rc);
 
 	if (start == 1) {
-		if (getpid() != 1) {
-			logmsg(LOG_DEBUG, "*** %s: start_service(%s) - pid: %d", __FUNCTION__, s, getpid());
+		if (pid_rc != 1) {
+			logmsg(LOG_DEBUG, "*** %s: start_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			start_service(s);
 			return 1;
 		}
-		if (pidof(service) > 0) {
-			logmsg(LOG_WARNING, "service: %s already running", s);
+		if ((pid = pidof(service)) > 0) {
+			logmsg(LOG_WARNING, "service: %s already running; its PID: %d", s, pid);
 			return 1;
 		}
 	}
 	else {
-		if (getpid() != 1) {
-			logmsg(LOG_DEBUG, "*** %s: stop_service(%s) - pid: %d", __FUNCTION__, s, getpid());
+		if (pid_rc != 1) {
+			logmsg(LOG_DEBUG, "*** %s: stop_service(%s) - PID[rc]: %d", __FUNCTION__, s, pid_rc);
 			stop_service(s);
 			return 1;
 		}
