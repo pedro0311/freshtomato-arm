@@ -22,6 +22,7 @@
 //	<% nvram("ms_enable,ms_port,ms_dirs,ms_dbdir,ms_ifname,ms_tivo,ms_stdlna,ms_sas,cifs1,cifs2,jffs2_on,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname,lan_ipaddr"); %>
 
 var changed = 0;
+var reinit = 0;
 var serviceType = 'minidlna';
 var mediatypes = [['','All Media Files'],['A','Audio only'],['V','Video only'],['P','Images only']];
 
@@ -113,8 +114,10 @@ function updateNotice() {
 }
 
 function verifyFields(focused, quiet) {
-	if (focused && focused != E('_f_ms_enable') && focused != E('_f_ms_rescan')) /* except on/off/rescan */
+	if (focused && focused != E('_f_ms_enable')) /* except on/off */
 		changed = 1;
+	if (focused && focused == E('_f_ms_rescan')) /* rescan */
+		reinit = 1;
 
 	var ok = 1;
 	var b, v;
@@ -175,6 +178,19 @@ function save(nomsg) {
 	if (!nomsg) show(); /* update '_service' field first */
 
 	var fom = E('t_fom');
+
+	if (!isup.minidlna && !nomsg && fom._f_ms_rescan.checked) {
+		alert('minidlna is not running.\nTo rescan media, check config and click "Start Now"');
+		return;
+	}
+	if (isup.minidlna && nomsg && fom._f_ms_rescan.checked) {
+		E('_minidlna_button').disabled = 0;
+		E('_minidlna_status').disabled = 0;
+		E('spin').style.display = 'none';
+		alert('Check config, and click "Save" to rescan media');
+		return;
+	}
+
 	fom.ms_enable.value = fom._f_ms_enable.checked ? 1 : 0;
 	nvram.ms_enable = fom._f_ms_enable.checked ? 1 : 0;
 	fom.ms_tivo.value = fom._f_ms_tivo.checked ? 1 : 0;
@@ -195,8 +211,11 @@ function save(nomsg) {
 
 	form.submit(fom, 1);
 
-	fom.f_ms_rescan.checked = 0;
+	/* reset */
 	changed = 0;
+	reinit = 0;
+	nvram.ms_rescan = 0;
+	fom.f_ms_rescan.checked = 0;
 }
 
 function earlyInit() {
