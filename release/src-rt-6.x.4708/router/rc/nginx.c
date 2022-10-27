@@ -384,6 +384,9 @@ void start_nginx(int force)
 /* stop nginx and remove traces of the process */
 void stop_nginx(void)
 {
+	if (serialize_restart("nginx", 0))
+		return;
+
 	if (pidof(nginxbin) > 0) {
 		killall_tk_period_wait(nginxbin, 50);
 		killall_tk_period_wait("php-cgi", 50);
