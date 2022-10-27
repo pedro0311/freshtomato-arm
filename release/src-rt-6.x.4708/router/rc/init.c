@@ -1234,18 +1234,9 @@ static void check_bootnv(void)
 		dirty |= check_nv("reset_gpio", "30");
 		break;
 	case MODEL_F9K1102:
-		if (nvram_match("sb/1/macaddr", nvram_safe_get("et0macaddr"))) {
-			strlcpy(mac, nvram_safe_get("et0macaddr"), sizeof(mac));
-			inc_mac(mac, 2);
-			dirty |= check_nv("sb/1/macaddr", mac);
-			inc_mac(mac, 1);
-			dirty |= check_nv("wl0_hwaddr", mac);
-#ifdef TCONFIG_USBAP
-			inc_mac(mac, 1);
-			dirty |= check_nv("wl1_hwaddr", mac);
-			dirty |= check_nv("0:macaddr", mac);
-#endif
-		}
+		dirty |= check_nv("vlan1hwname", "et0");
+		dirty |= check_nv("vlan2hwname", "et0");
+		dirty |= check_nv("gpio7", "wps_button");
 		break;
 	case MODEL_WNDR3400:
 	case MODEL_WNDR4000:
@@ -3966,11 +3957,40 @@ static int init_nvram(void)
 		if (!nvram_match("t_fix1", (char *)name)) {
 			nvram_set("vlan1hwname", "et0");
 			nvram_set("vlan2hwname", "et0");
+			nvram_set("lan_ifname", "br0");
 			nvram_set("wan_ifnameX", "vlan1");
 			nvram_set("wandevs", "vlan1");
-			nvram_set("wan_ifname", "vlan1");
+			nvram_set("wan_ifnames", "vlan1");
+			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
+			nvram_set("landevs", "vlan2 wl0 wl1");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
 			nvram_set("wl0_ifname", "eth1");
-#ifdef TCONFIG_USBAP
+			nvram_set("wl1_ifname", "eth2");
+
+			/* fix MAC addresses */
+			strcpy(s, nvram_safe_get("et0macaddr")); /* get et0 MAC address for LAN */
+			inc_mac(s, +2); /* MAC + 1 will be for WAN */
+			nvram_set("sb/1/macaddr", s); /* fix WL mac for 2,4G eth1 */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4); /* do not overlap with VIFs */
+			nvram_set("wl1_hwaddr", s); /* fix WL mac for 5G eth2 */
+			nvram_set("0:macaddr", s);
+
+			nvram_set("boardflags", "0x710");
+			nvram_set("boardflags2", "0x0");
+
+			/* wifi channel settings */
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw", "40");
+			nvram_set("wl1_nbw_cap", "1");
+			nvram_set("wl1_nctrlsb", "lower");
+			nvram_set("wl0_nbw", "20");
+			nvram_set("wl0_nbw_cap", "0");
+			nvram_set("wl0_channel", "6");
+			nvram_set("wl0_nctrlsb", "lower");
+
+			/* set QTD params in nvram for USB wl radio IC */
 			nvram_set("ehciirqt", "3");
 			nvram_set("qtdc_pid", "48407");
 			nvram_set("qtdc_vid", "2652");
@@ -3978,16 +3998,8 @@ static int init_nvram(void)
 			nvram_set("qtdc0_sz", "5");
 			nvram_set("qtdc1_ep", "18");
 			nvram_set("qtdc1_sz", "10");
-			nvram_set("br0_ifnames", "vlan2 eth1 eth2");
-			nvram_set("lan_ifnames", "vlan2 eth1 eth2");
-			nvram_set("landevs", "vlan2 wl0 wl1");
-			nvram_set("wl1_ifname", "eth2");
-			nvram_set("wl1_channel", "36");
-			nvram_set("wl1_nbw", "40");
-			nvram_set("wl1_nbw_cap", "1");
-			nvram_set("wl1_nctrlsb", "lower");
-#endif
 		}
+
 		break;
 	case MODEL_E900:
 	case MODEL_E1500:
