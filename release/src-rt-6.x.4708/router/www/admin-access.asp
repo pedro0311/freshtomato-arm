@@ -21,6 +21,7 @@
 
 //	<% nvram("http_enable,https_enable,http_lanport,https_lanport,remote_management,remote_mgt_https,remote_upgrade,web_wl_filter,web_css,web_adv_scripts,web_dir,ttb_css,ttb_loc,ttb_url,sshd_eas,sshd_pass,sshd_remote,telnetd_eas,http_wanport,http_wanport_bfm,sshd_authkeys,sshd_port,sshd_rport,sshd_forwarding,telnetd_port,rmgt_sip,https_crt_cn,https_crt_save,lan_ipaddr,ne_shlimit,sshd_motd,http_username,jffs2_auto_unmount"); %>
 
+var cprefix = 'admin_access';
 var changed = 0;
 var shlimit = nvram.ne_shlimit.split(',');
 if (shlimit.length != 3)
@@ -306,6 +307,10 @@ function earlyInit() {
 }
 
 function init() {
+	var c;
+	if (((c = cookie.get(cprefix+'_notes_vis')) != null) && (c == '1'))
+		toggleVisibility(cprefix, 'notes');
+
 	changed = 0;
 	up.initPage(250, 5);
 	eventHandler();
@@ -489,6 +494,20 @@ function init() {
 				{ title: '<i>(re-enter to confirm)<\/i>', indent: 2, name: 'set_password_2', type: 'password', maxlen: 60, value: '**********' }
 		]);
 	</script>
+</div>
+
+<!-- / / / -->
+
+<div class="section-title">Notes <small><i><a href="javascript:toggleVisibility(cprefix,'notes');"><span id="sesdiv_notes_showhide">(Show)</span></a></i></small></div>
+<div class="section" id="sesdiv_notes" style="display:none">
+	SSH Daemon (dropbear) also accepts additional configuration in the following files:<br>
+	<ul>
+		<li>/etc/shadow.custom</li>
+		<li>/etc/passwd.custom</li>
+		<li>/etc/gshadow.custom</li>
+		<li>/etc/group.custom</li>
+	</ul>
+	These files are appended to the automatically generated configuration files resulting from the settings in the GUI.
 </div>
 
 <!-- / / / -->
