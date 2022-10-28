@@ -697,11 +697,12 @@ void start_dhcpc(char *prefix)
 	}
 
 	memset(cmd, 0, sizeof(cmd));
-	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s",
+	snprintf(cmd, sizeof(cmd), "/sbin/udhcpc -i %s -b -s /sbin/dhcpc-event -p %s %s %s %s %s %s %s",
 	                           ifname,
 	                           pid_file,
 	                           tmp,
 	                           nvram_get_int("dhcp_routes") ? "-O33 -O121 -O249" : "", /* routes/staticroutes/msstaticroutes */
+	                           nvram_get_int("dhcpc_minpkt") ? "-m" : "",
 	                           nvram_contains_word("log_events", "dhcpc") ? "-S" : "",
 #ifdef TCONFIG_IPV6
 	                           (get_ipv6_service() == IPV6_6RD_DHCP) ? "-O212 -O150" : "", /* ip6rd rfc/ip6rd comcast */

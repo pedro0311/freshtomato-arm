@@ -19,7 +19,7 @@
 
 <script>
 
-//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnsmasq_edns_size,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
+//	<% nvram("dnsmasq_q,ipv6_service,ipv6_radvd,ipv6_dhcpd,ipv6_lease_time,ipv6_fast_ra,dhcpd_dmdns,dns_addget,dhcpd_gwmode,dns_intcpt,dhcpd_slt,dhcpc_minpkt,dnsmasq_custom,dnsmasq_onion_support,dnsmasq_gen_names,dhcpd_lmax,dhcpc_custom,dns_norebind,dns_fwd_local,dns_priv_override,dhcpd_static_only,dnsmasq_debug,dnsmasq_edns_size,dnssec_enable,dnssec_method,dnscrypt_proxy,dnscrypt_priority,dnscrypt_port,dnscrypt_resolver,dnscrypt_log,dnscrypt_manual,dnscrypt_provider_name,dnscrypt_provider_key,dnscrypt_resolver_address,dnscrypt_ephemeral_keys,stubby_proxy,stubby_priority,stubby_log,stubby_force_tls13,stubby_port,wan_wins,mdns_enable,mdns_reflector,lan_ifname,lan1_ifname,lan2_ifname,lan3_ifname"); %>
 
 var cprefix = 'advanced_dhcpdns';
 var height = 0;
@@ -203,6 +203,7 @@ function save() {
 	fom.dhcpd_dmdns.value = fom._f_dhcpd_dmdns.checked ? 1 : 0;
 	fom.dhcpd_slt.value = (a != 1) ? a : fom._f_dhcpd_slt.value;
 	fom.dhcpd_gwmode.value = fom._f_dhcpd_gwmode.checked ? 1 : 0;
+	fom.dhcpc_minpkt.value = fom._f_dhcpc_minpkt.checked ? 1 : 0;
 	fom.dhcpd_static_only.value = fom._f_dhcpd_static_only.checked ? 1 : 0;
 	fom.dnsmasq_gen_names.value = fom._f_dnsmasq_gen_names.checked ? 1 : 0;
 	fom.dns_addget.value = fom._f_dns_addget.checked ? 1 : 0;
@@ -278,7 +279,8 @@ function save() {
 		fom.stubby_resolvers.value = stubby_list;
 /* STUBBY-END */
 
-	if (fom.dhcpc_custom.value != nvram.dhcpc_custom) {
+	if ((fom.dhcpc_minpkt.value != nvram.dhcpc_minpkt) || (fom.dhcpc_custom.value != nvram.dhcpc_custom)) {
+		nvram.dhcpc_minpkt = fom.dhcpc_minpkt.value;
 		nvram.dhcpc_custom = fom.dhcpc_custom.value;
 		fom._service.value = '*'; /* special case: restart all */
 	}
@@ -360,6 +362,7 @@ function init() {
 <input type="hidden" name="_service" value="">
 <input type="hidden" name="dhcpd_dmdns">
 <input type="hidden" name="dhcpd_slt">
+<input type="hidden" name="dhcpc_minpkt">
 <input type="hidden" name="dhcpd_static_only">
 <input type="hidden" name="dhcpd_gwmode">
 <input type="hidden" name="dns_addget">
@@ -490,7 +493,8 @@ function init() {
 			{ title: 'WINS <small>(for DHCP)<\/small>', name: 'wan_wins', type: 'text', maxlen: 15, size: 17, value: nvram.wan_wins },
 			{ title: '<a href="https://wiki.freshtomato.org/doku.php/dns_flag_day_2020" class="new_window">EDNS packet size<\/a>', name: 'f_dnsmasq_edns_size', type: 'text', maxlen: 4, size: 8, suffix: ' <small>(default: 1280)<\/small>', value: nvram.dnsmasq_edns_size },
 			null,
-			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 256, size: 70, value: nvram.dhcpc_custom }
+			{ title: 'DHCPC Options', name: 'dhcpc_custom', type: 'text', maxlen: 256, size: 70, value: nvram.dhcpc_custom },
+			{ title: 'Reduce packet size', name: 'f_dhcpc_minpkt', type: 'checkbox', value: nvram.dhcpc_minpkt == 1 }
 		]);
 	</script>
 </div>
@@ -555,6 +559,7 @@ function init() {
 <!-- STUBBY-END -->
 		<li><b>WINS <small>(for DHCP)</small></b> - The Windows Internet Naming Service manages interaction of each PC with the Internet. If you use a WINS server, enter IP Address of server here.</li>
 		<li><b>DHCPC Options</b> - Extra options for the DHCP client.</li>
+		<li><b>Reduce packet size</b> - Self-explanatory.</li>
 	</ul>
 	<br>
 	<i>DHCP / DNS Server (LAN):</i><br>

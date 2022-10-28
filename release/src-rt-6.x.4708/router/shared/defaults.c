@@ -752,6 +752,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "dhcpd_lmax",			""				, 0 },
 	{ "dns_addget",			"0"				, 0 },
 	{ "dns_intcpt",			"0"				, 0 },
+	{ "dhcpc_minpkt",		"1"				, 0 },
 	{ "dhcpc_custom",		""				, 0 },
 	{ "dns_norebind",		"1"				, 0 },
 	{ "dns_fwd_local",		"0"				, 0 },
