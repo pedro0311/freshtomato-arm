@@ -1973,13 +1973,13 @@ libogg-clean:
 flac/stamp-h1:
 	$(call patch_files,flac)
 	cd flac && autoreconf -fsi && \
-		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
+		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections --param max-inline-insns-single=3000 --param large-function-growth=500" \
+		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC --param max-inline-insns-single=3000 --param large-function-growth=500" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix='' --enable-shared --with-ogg=$(TOP)/libogg/src/.libs \
-			--disable-doxygen-docs --disable-examples --disable-xmms-plugin --disable-cpplibs \
+			--disable-doxygen-docs --disable-examples --disable-cpplibs \
 			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
-			--disable-sse --disable-altivec --disable-vsx --disable-avx --enable-debug=no \
+			--disable-altivec --disable-vsx --disable-avx --enable-debug=no \
 			--without-libiconv-prefix --disable-rpath --disable-dependency-tracking
 	@touch $@
 
@@ -1989,8 +1989,8 @@ flac: flac/stamp-h1
 
 flac-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D flac/src/libFLAC/.libs/libFLAC.so.8 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.8
-	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.8
+	install -D flac/src/libFLAC/.libs/libFLAC.so.12 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
+	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
 endif
 	@true
 
