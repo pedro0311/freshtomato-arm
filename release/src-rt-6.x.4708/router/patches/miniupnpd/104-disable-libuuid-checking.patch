@@ -1,6 +1,6 @@
 --- miniupnpd/configure
 +++ miniupnpd/configure
-@@ -585,19 +585,19 @@
+@@ -638,19 +638,19 @@
  fi
  
  # UUID API

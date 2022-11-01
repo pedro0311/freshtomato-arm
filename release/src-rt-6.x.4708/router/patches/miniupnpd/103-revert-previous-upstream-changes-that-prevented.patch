@@ -29,7 +29,7 @@
  #ifndef NO_BACKGROUND_NO_PIDFILE
 --- miniupnpd/natpmp.c
 +++ miniupnpd/natpmp.c
-@@ -108,9 +108,11 @@ 
+@@ -109,9 +109,11 @@ 
  			syslog(LOG_ERR, "Failed to get IP for interface %s", ext_if_name);
  			resp[3] = 3;	/* Network Failure (e.g. NAT box itself
  			                 * has not obtained a DHCP lease) */
@@ -43,7 +43,7 @@
  		}
 --- miniupnpd/upnpdescgen.c
 +++ miniupnpd/upnpdescgen.c
-@@ -1305,7 +1305,7 @@ 
+@@ -1316,7 +1316,7 @@ 
  				else {
  					struct in_addr addr;
  					char ext_ip_addr[INET_ADDRSTRLEN];
