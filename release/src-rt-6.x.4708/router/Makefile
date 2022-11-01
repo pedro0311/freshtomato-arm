@@ -2382,8 +2382,10 @@ pcre-clean:
 	$(call unpatch_files,pcre)
 
 libxml2/stamp-h1:
+	$(call patch_files,libxml2)
 	cd libxml2 && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz" \
 		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
@@ -2394,16 +2396,17 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.9.14 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.14
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.9.14
+	install -D libxml2/.libs/libxml2.so.2.10.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.10.3
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.10.3
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.9.14 libxml2.so.2 && \
-		ln -sf libxml2.so.2.9.14 libxml2.so
+		ln -sf libxml2.so.2.10.3 libxml2.so.2 && \
+		ln -sf libxml2.so.2.10.3 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
 	@rm -f libxml2/stamp-h1
 	@rm -rf libxml2/staged
+	$(call unpatch_files,libxml2)
 
 libpng/stamp-h1:
 	cd libpng && \
