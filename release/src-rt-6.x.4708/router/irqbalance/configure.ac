@@ -1,6 +1,6 @@
-AC_INIT(irqbalance,1.9.0)
-AC_PREREQ(2.12)dnl
-AM_CONFIG_HEADER(config.h)
+AC_INIT(irqbalance,1.9.2)
+AC_PREREQ(2.69)dnl
+AC_CONFIG_HEADERS(config.h)
 
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign] [subdir-objects])
@@ -11,18 +11,27 @@ AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_AWK
 
+AC_HEADER_STDC
+AC_CHECK_HEADERS([numa.h])
+
+AC_CHECK_FUNCS(getopt_long)
+
+AC_ARG_ENABLE([staticbuild],
+	AS_HELP_STRING([--enable-staticbuild], [enable static builds(default disabled)]))
+
+AM_CONDITIONAL([STATICBUILD], [test "x$enable_staticbuild" = "xyes"])
+
+# If we requested static building, enable that in pkg-config
+AS_IF([test "x$enable_staticbuild" = "xyes"], [
+	PKG_CONFIG="$PKG_CONFIG --static"],[])
+
+
 AC_ARG_ENABLE([numa],
   AS_HELP_STRING([--disable-numa], [enable numa support (default is auto)]))
 AS_IF([test "$enable_numa" = "no"],[
   ac_cv_header_numa_h=no
   ac_cv_lib_numa_numa_available=no
 ])
-
-AC_HEADER_STDC
-AC_CHECK_HEADERS([numa.h])
-
-AC_CHECK_FUNCS(getopt_long)
-
 PKG_CHECK_MODULES([NUMA], [numa], [has_numa=yes], [AC_CHECK_LIB(numa, numa_available)])
 AC_CHECK_LIB(m, floor)
 
@@ -35,6 +44,28 @@ AS_IF([test "x$has_ncursesw" = "xyes"], [
   LIBS="$LIBS $NCURSESW_LIBS"
   AC_SUBST([LIBS])
 ])
+
+AC_CANONICAL_HOST
+
+AC_ARG_ENABLE(thermal,
+  AS_HELP_STRING([--enable-thermal], [enable thermal event support [default=auto]]),,
+  AS_IF([test x"$host_cpu" = x"x86_64"], [enable_thermal=yes], [enable_thermal=no])
+)
+
+AS_IF([test x"$enable_thermal" = x"yes" && test x"$host_cpu" != x"x86_64"],
+  AC_MSG_ERROR([no thermal events support on $host_cpu systems.]),
+)
+
+AS_IF([test x"$enable_thermal" = x"yes"],
+  [PKG_CHECK_MODULES([LIBNL3], [libnl-3.0 libnl-genl-3.0], [have_thermal=yes],
+    AC_MSG_NOTICE([no thermal event support as libnl-3.0 is unavailable.])
+  )]
+)
+
+AS_IF([test "x$have_thermal" = xyes],
+  AC_DEFINE([HAVE_THERMAL], 1, [Build irqbalance to support thermal events])
+)
+AM_CONDITIONAL([THERMAL], [test "x$have_thermal" = xyes])
 
 AC_C_CONST
 AC_C_INLINE

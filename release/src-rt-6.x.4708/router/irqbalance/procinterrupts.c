@@ -178,7 +178,7 @@ void init_irq_class_and_type(char *savedline, struct irq_info *info, int irq)
 	}
 
 #ifdef AARCH64
-	if (strlen(savedptr) > 0) {
+	if (savedptr && strlen(savedptr) > 0) {
 		snprintf(irq_fullname, PATH_MAX, "%s %s", last_token, savedptr);
 		tmp = strchr(irq_fullname, '\n');
 		if (tmp)
@@ -331,7 +331,7 @@ void parse_proc_interrupts(void)
 		while (1) {
 			uint64_t C;
 			C = strtoull(c, &c2, 10);
-			if (c==c2) /* end of numbers */
+			if (c==c2 || !strchr(" \t", *c2)) /* end of numbers */
 				break;
 			count += C;
 			c=c2;
@@ -362,7 +362,7 @@ void parse_proc_interrupts(void)
 		log(TO_ALL, LOG_WARNING, "But none found in sysfs, you need to update your kernel\n");
 		log(TO_ALL, LOG_WARNING, "Until then, IRQs will be improperly classified\n");
 		/*
- 		 * Set msi_foun_in_sysfs, so we don't get this error constantly
+ 		 * Set msi_found_in_sysfs, so we don't get this error constantly
  		 */
 		msi_found_in_sysfs = 1;
 	}

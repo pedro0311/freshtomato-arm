@@ -1,6 +1,6 @@
 --- irqbalance/configure.ac
 +++ irqbalance/configure.ac
-@@ -28,13 +28,13 @@
+@@ -37,13 +37,13 @@
  
  PKG_CHECK_MODULES([GLIB2], [glib-2.0], [], [AC_MSG_ERROR([glib-2.0 is required])])
  
@@ -19,5 +19,5 @@
 +#  AC_SUBST([LIBS])
 +#])
  
- AC_C_CONST
- AC_C_INLINE
+ AC_CANONICAL_HOST
+ 
