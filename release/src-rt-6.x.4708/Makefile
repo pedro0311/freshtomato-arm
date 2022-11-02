@@ -174,8 +174,9 @@ ifeq ($(CONFIG_BCM7),y)
 ifeq ($(CONFIG_BCM714),y)
 ifeq ($(AC5300),y) # for Tri-Band SDK7.14 (currently only Asus RT-AC5300)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC5300,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC5300-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
-else # for Dual-Band SDK7.14 (currently only Asus RT-AC3100)
+else # for Dual-Band SDK7.14 (currently Asus RT-AC3100 and RT-AC88U)
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3100,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC3100-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC88U,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC88U-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 else
 	ctools/trx_asus -i image/linux-lzma.trx -r RT-AC3200,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-RT-AC3200-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -1551,8 +1552,8 @@ ifeq ($(CONFIG_BCM714),y)
 	@echo "ASUS ARM714 Builds"
 	@echo "ac5300-128e     RT-AC5300 build VPN - 128K NVRAM"
 	@echo "ac5300-128z     RT-AC5300 build AIO - 128K NVRAM"
-	@echo "ac3100-128e     RT-AC3100 build VPN - 128K NVRAM (NOT for AC88U)"
-	@echo "ac3100-128z     RT-AC3100 build AIO - 128K NVRAM (NOT for AC88U)"
+	@echo "ac3100-128e     RT-AC3100/RT-AC88U build VPN - 128K NVRAM"
+	@echo "ac3100-128z     RT-AC3100/RT-AC88U build AIO - 128K NVRAM"
 else
 ifeq ($(CONFIG_BCM7),y)
 	@echo "ASUS ARM7 Builds"

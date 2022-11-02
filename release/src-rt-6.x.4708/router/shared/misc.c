@@ -419,6 +419,7 @@ int wan_led(int mode) /* mode: 0 - OFF, 1 - ON */
 	    || (model == MODEL_WZR1750)
 #ifdef TCONFIG_BCM714
 	    || (model == MODEL_RTAC3100)
+	    || (model == MODEL_RTAC88U)
 #endif
 #ifdef TCONFIG_AC3200
 #ifdef TCONFIG_AC5300

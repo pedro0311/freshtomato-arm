@@ -163,7 +163,7 @@ int do_led(int which, int mode)
 	static int r8000[]	= {  13,    3,     8,  255,  -14,  -15,  254,   18,   17,   12,   16 };
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
-	static int ac3100[]	= { 254,   -4,     5,  255,   19,    3,   21,   16,   17,  254};
+	static int ac3100[]	= { 254,   -4,     5,  255,   19,    3,   21,   16,   17,  254}; /* also for RT-AC88U */
 #endif /* TCONFIG_BCM714 */
 	static int ac67u[]	= { 254,  255,     5,  255,  255,    0,  254,  255,  255,  254};
 	static int dslac68u[]	= { 254,  255,     4,  255,  255,    3,  254,    0,   14,  254};
@@ -217,7 +217,7 @@ int do_led(int which, int mode)
 
 	/* stealth mode ON ? */
 	if (nvram_match("stealth_mode", "1")) {
-		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200, RT-AC3100, RT-AC5300 */
+		/* turn off WLAN LEDs for some Asus/Tenda Router: AC15, AC18, RT-N18U, RT-AC56U, RT-AC66U_B1, RT-AC67U, RT-AC68U (V3), RT-AC1900P, RT-AC3200, RT-AC3100, RT-AC88U, RT-AC5300 */
 		switch (model) {
 #ifdef TCONFIG_AC3200
 			case MODEL_RTAC3200:
@@ -227,6 +227,7 @@ int do_led(int which, int mode)
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
 			case MODEL_RTAC3100:
+			case MODEL_RTAC88U:
 #endif /* TCONFIG_BCM714 */
 			case MODEL_AC15:
 			case MODEL_AC18:
@@ -328,6 +329,7 @@ int do_led(int which, int mode)
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
 	case MODEL_RTAC3100:
+	case MODEL_RTAC88U:
 		b = ac3100[which];
 		if ((which == LED_WLAN) ||
 		    (which == LED_5G)) { /* non GPIO LED */
@@ -768,6 +770,7 @@ void led_setup(void)
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
 		case MODEL_RTAC3100:
+		case MODEL_RTAC88U:
 			set_gpio(GPIO_03, T_HIGH); /* disable power led */
 			set_gpio(GPIO_04, T_LOW); /* disable button led */
 			disable_led_wanlan();
@@ -941,6 +944,7 @@ void do_led_nongpio(int model, int which, int mode)
 #elif defined(CONFIG_BCMWL6A)
 #ifdef TCONFIG_BCM714
 	case MODEL_RTAC3100:
+	case MODEL_RTAC88U:
 		if (which == LED_WLAN) {
 			if (mode == LED_ON) system("/usr/sbin/wl -i eth1 ledbh 9 1"); /* 2.4 GHz - eth1, see Asus SRC */
 			else if (mode == LED_OFF) system("/usr/sbin/wl -i eth1 ledbh 9 0");

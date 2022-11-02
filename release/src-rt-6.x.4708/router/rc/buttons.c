@@ -484,6 +484,7 @@ int buttons_main(int argc, char *argv[])
 #endif /* TCONFIG_AC3200 */
 #ifdef TCONFIG_BCM714
 	case MODEL_RTAC3100:
+	case MODEL_RTAC88U:
 		reset_mask = 1 << 11; /* reset button (active LOW) */
 		ses_mask = 1 << 20; /* wps button (active LOW) */
 		wlan_mask = 1 << 18;  /* wifi button (active LOW) */
@@ -627,6 +628,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM714
 			     || (model == MODEL_RTAC3100)
+			     || (model == MODEL_RTAC88U)
 #endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
 #ifdef TCONFIG_AC5300
@@ -751,6 +753,7 @@ int buttons_main(int argc, char *argv[])
 			     || (model == MODEL_RTAC68UV3)
 #ifdef TCONFIG_BCM714
 			     || (model == MODEL_RTAC3100)
+			     || (model == MODEL_RTAC88U)
 #endif /* TCONFIG_BCM714 */
 #ifdef TCONFIG_AC3200
 #ifdef TCONFIG_AC5300

@@ -102,6 +102,7 @@ void start_usb(void)
 	if (!usb_reset_once) {
 		switch(model) {
 			case MODEL_RTAC3100:
+			case MODEL_RTAC88U:
 #ifdef TCONFIG_AC5300
 			case MODEL_RTAC5300:
 #endif
@@ -1093,6 +1094,7 @@ static inline void usbled_proc(char *device, int add)
 		case MODEL_RTAC1900P:
 #ifdef TCONFIG_BCM714
 		case MODEL_RTAC3100:
+		case MODEL_RTAC88U:
 #ifdef TCONFIG_AC5300
 		case MODEL_RTAC5300:
 #endif

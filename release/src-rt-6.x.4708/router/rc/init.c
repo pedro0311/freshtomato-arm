@@ -614,7 +614,7 @@ out:
 static void init_lan_hwaddr(void)
 {
 	const char *etxmac;
-#if defined(TCONFIG_AC3200) || defined(TCONFIG_AC5300)
+#if defined(TCONFIG_AC3200) || defined(TCONFIG_AC5300) || defined(TCONFIG_BCM714)
 	int model = get_model();
 #endif
 	etxmac = nvram_get("et0macaddr");
@@ -625,7 +625,15 @@ static void init_lan_hwaddr(void)
 	else
 		nvram_set("lan_hwaddr", "00:01:23:45:67:89"); /* goofy et0macaddr, make something up */
 
-#if defined(TCONFIG_AC3200) || defined(TCONFIG_AC5300)
+#if !defined(TCONFIG_AC5300) && defined(TCONFIG_BCM714) /* Dual-Band router for SDK714 (special case RT-AC88U with et1 for LAN interface) */
+	if(model == MODEL_RTAC88U) {
+		etxmac = nvram_safe_get("et1macaddr");
+		if (!nvram_match("lan_hwaddr", (char *)etxmac) && (strlen(etxmac) >= 17)) {
+			nvram_set("lan_hwaddr", etxmac);
+		}
+	}
+#endif /* !defined(TCONFIG_AC5300) && defined(TCONFIG_BCM714) */
+#if defined(TCONFIG_AC3200) || defined(TCONFIG_AC5300) /* Tri-Band router for SDK7 and/or SDK714 */
 	/*
 	 * When GMAC3 is build-in then LAN interface can be detect as fwd0 (et0), fwd1(et1) and then eth0 (et2).
 	 * Example: LAN interface will be et2 (for R8000) or et1 (for RT-AC5300) but tomato require in many places et0.
@@ -946,6 +954,10 @@ static int init_vlan_ports(void)
 	case MODEL_RTAC3100:
 		dirty |= check_nv("vlan1ports", "3 2 1 0 5*");
 		dirty |= check_nv("vlan2ports", "4 5");
+		break;
+	case MODEL_RTAC88U:
+		dirty |= check_nv("vlan1ports", "3 2 1 0 7*"); /* exclude RTL8365MB switch --> port 5 */
+		dirty |= check_nv("vlan2ports", "4 7");
 		break;
 #endif
 #ifdef TCONFIG_AC5300
@@ -1532,6 +1544,22 @@ static void check_bootnv(void)
 		nvram_unset("rgmii_port"); /* unset! */
 		dirty |= check_nv("vlan1hwname", "et0");
 		dirty |= check_nv("vlan2hwname", "et0");
+		dirty |= check_nv("wl0_ifname", "eth1");
+		dirty |= check_nv("wl1_ifname", "eth2");
+		break;
+	case MODEL_RTAC88U:
+		nvram_unset("et2macaddr"); /* unset! */
+		nvram_unset("et2mdcport");
+		nvram_unset("et2phyaddr");
+		nvram_unset("et0macaddr"); /* unset! */
+		nvram_unset("et0mdcport");
+		nvram_unset("et0phyaddr");
+		nvram_unset("fwd_wlandevs"); /* unset! */
+		nvram_unset("fwd_cpumap");
+		nvram_unset("fwddevs");
+		dirty |= check_nv("rgmii_port", "5"); /* RGMII_BRCM5301X */
+		dirty |= check_nv("vlan1hwname", "et1");
+		dirty |= check_nv("vlan2hwname", "et1");
 		dirty |= check_nv("wl0_ifname", "eth1");
 		dirty |= check_nv("wl1_ifname", "eth2");
 		break;
@@ -9674,6 +9702,79 @@ static int init_nvram(void)
 			/* set devpath */
 			nvram_set("devpath0", "pcie/1/1/");
 			nvram_set("devpath1", "pcie/2/1/");
+		}
+		break;
+	case MODEL_RTAC88U:
+		mfr = "Asus";
+		name = "RT-AC88U";
+		features = SUP_SES | SUP_80211N | SUP_1000ET | SUP_80211AC | SUP_80211AC_WAVE2;
+#ifdef TCONFIG_USB
+		nvram_set("usb_uhci", "-1");
+#endif
+		if (!nvram_match("t_fix1", (char *)name)) {
+			nvram_set("vlan1hwname", "et1");
+			nvram_set("vlan2hwname", "et1");
+			nvram_set("lan_ifname", "br0");
+			nvram_set("landevs", "vlan1 wl0 wl1");
+			nvram_set("lan_ifnames", "vlan1 eth1 eth2");
+			nvram_set("wan_ifnames", "vlan2");
+			nvram_set("wan_ifnameX", "vlan2");
+			nvram_set("wandevs", "vlan2");
+			nvram_set("wl_ifnames", "eth1 eth2");
+			nvram_set("wl_ifname", "eth1");
+			nvram_set("wl0_ifname", "eth1");
+			nvram_set("wl1_ifname", "eth2");
+			nvram_set("wl0_vifnames", "wl0.1 wl0.2 wl0.3");
+			nvram_set("wl1_vifnames", "wl1.1 wl1.2 wl1.3");
+
+			/* GMAC3 variables */
+			nvram_set("stop_gmac3", "1"); 				/* disable gmac3 (blackbox!) */
+			nvram_set("gmac3_enable", "0");
+
+			/* RGMII_BRCM5301X */
+			nvram_set("rgmii_port", "5"); 				/* !!!NOTE!!! CONFIG_RGMII_BCM_FA=y for SDK7.14 by default, no option currently! */
+
+			/* misc LED settings */
+			nvram_set("0:ledbh9", "0x7");
+			nvram_set("1:ledbh9", "0x7");
+
+			/* setup MAC addresses */
+			strlcpy(s, nvram_safe_get("et1macaddr"), sizeof(s));	/* get et1 MAC address for LAN - eth0 */
+			nvram_set("0:macaddr", s);				/* set WL mac for wl0 (0:) - 2,4GHz - eth1 (NOTE: needs to be the same like for LAN - other no wl connection with encryption/wpa possible ? --> align to RT-AC5300 for now! to be checked again for that case! ) */
+			nvram_set("wl0_hwaddr", s);
+			inc_mac(s, +4);						/* do not overlap with VIFs */
+			nvram_set("1:macaddr", s);				/* set WL mac for wl1 (1:) - 5GHz low - eth2 */
+			nvram_set("wl1_hwaddr", s);
+
+			/* usb3.0 settings */
+			nvram_set("usb_usb3", "1");
+			nvram_set("xhci_ports", "1-1");
+			nvram_set("ehci_ports", "2-1 2-2");
+			nvram_set("ohci_ports", "3-1 3-2");
+
+			/* misc settings */
+			nvram_set("boot_wait", "on");
+			nvram_set("wait_time", "3");
+
+			/* wifi settings/channels */
+			/* wl0 (0:) - 2,4GHz */
+			nvram_set("wl0_bw_cap","3");
+			nvram_set("wl0_chanspec","6u");
+			nvram_set("wl0_channel","6");
+			nvram_set("wl0_nbw","40");
+			nvram_set("wl0_nctrlsb", "upper");
+			//nvram_set("0:ccode", "DE"); 				/* Note: keep cfe default */
+			//nvram_set("0:regrev", "7");
+
+			/* wl1 (1:) - 5GHz */
+			nvram_set("wl1_bw_cap", "7");
+			nvram_set("wl1_chanspec", "36/80");
+			nvram_set("wl1_channel", "36");
+			nvram_set("wl1_nbw","80");
+			nvram_set("wl1_nbw_cap","3");
+			nvram_set("wl1_nctrlsb", "lower");
+			//nvram_set("1:ccode", "DE"); 				/* Note: keep cfe default */
+			//nvram_set("1:regrev", "7");
 		}
 		break;
 #endif /* TCONFIG_BCM714 */

@@ -24,6 +24,7 @@ int get_lanports_status(int model)
 #ifdef TCONFIG_BCMARM
 #ifdef TCONFIG_BCM714
 			    (model == MODEL_RTAC3100) ||
+			    (model == MODEL_RTAC88U) ||
 #endif /* TCONFIG_BCM714 */
 			    (model == MODEL_RTAC56U)
 #else
@@ -86,6 +87,7 @@ int blink_br_main(int argc, char *argv[])
 #endif /* TCONFIG_AC5300 */
 #ifdef TCONFIG_BCM714
 		    (model == MODEL_RTAC3100) ||
+		    (model == MODEL_RTAC88U) ||
 #endif /* TCONFIG_BCM714 */
 		    (model == MODEL_WS880) ||
 		    (model == MODEL_RTN18U) ||

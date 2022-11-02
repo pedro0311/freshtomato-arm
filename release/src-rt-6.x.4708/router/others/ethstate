@@ -17,6 +17,7 @@ VPORT=$(nvram get $VWAN'ports' | awk '{print $1}' | sed 's/[^0-9]*//g')
 	[ "$ROUTERNAME" == "RT-AC56U" ] ||
 	[ "$ROUTERNAME" == "RT-AC56S" ] ||
 	[ "$ROUTERNAME" == "RT-AC3100" ] ||
+	[ "$ROUTERNAME" == "RT-AC88U" ] ||
 	[ "$ROUTERNAME" == "DIR868L" ] ||
 	[ "$ROUTERNAME" == "EA6200" ] ||
 	[ "$ROUTERNAME" == "EA6350v1" ] ||

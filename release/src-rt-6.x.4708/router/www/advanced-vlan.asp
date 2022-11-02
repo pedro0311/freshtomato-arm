@@ -124,6 +124,7 @@ switch (nvram['t_model_name']) {
 	case 'Netgear R6250':
 	case 'Netgear R6300v2':
 	case 'Asus RT-AC3100':
+	case 'Asus RT-AC88U':
 		COL_P0N = '4';
 		COL_P1N = '3';
 		COL_P2N = '2';
@@ -736,7 +737,7 @@ function save() {
 		fom['vlan'+d[i][COL_VID]+'ports'].value = p;
 		if ((nvram['t_model_name'] == 'Netgear R7900') || (nvram['t_model_name'] == 'Netgear R8000'))
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et2';
-		else if (nvram['t_model_name'] == 'Asus RT-AC5300')
+		else if ((nvram['t_model_name'] == 'Asus RT-AC5300') || (nvram['t_model_name'] == 'Asus RT-AC88U'))
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et1';
 		else
 			fom['vlan'+d[i][COL_VID]+'hwname'].value = 'et0';
