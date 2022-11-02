@@ -38,6 +38,12 @@
 #define PPTPD_SECRETS		PPTPD_DIR"/chap-secrets"
 #define PPTPD_CONNECTED		PPTPD_DIR"/pptpd_connected"
 #define PPTPD_SHUTDOWN		PPTPD_DIR"/pptpd_shutdown"
+#define PPTPD_FW_SCRIPT		PPTPD_DIR"/pptpd-fw.sh"
+#define PPTPD_FW_DEL_SCRIPT	PPTPD_DIR"/pptpd-clear-fw-tmp.sh"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG	"pptpd_debug"
 
 
 static char *ip2bcast(char *ip, char *netmask, char *buf, const size_t buf_sz)
@@ -79,14 +85,89 @@ static void write_chap_secret(char *file)
 	fclose(fp);
 }
 
-void start_pptpd(int force)
+static void build_pptpd_firewall(void)
 {
 	FILE *fp;
-	int count = 0, nowins = 0, pptpd_opt;
 	char bcast[32];
 #ifdef TCONFIG_BCMARM
 	int ctf_disable = nvram_get_int("ctf_disable");
 #endif /* TCONFIG_BCMARM */
+
+	chains_log_detection();
+
+	memset(bcast, 0, sizeof(bcast));
+	ip2bcast(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), bcast, sizeof(bcast));
+
+	/* ip-up */
+	if (!(fp = fopen(PPTPD_UP_SCRIPT, "w"))) {
+		perror(PPTPD_UP_SCRIPT);
+		return;
+	}
+	fprintf(fp, "#!/bin/sh\n"
+	            "echo \"$PPPD_PID $1 $5 $6 $PEERNAME $(date +%%s)\" >> "PPTPD_CONNECTED"\n"
+	            "iptables -I INPUT -i $1 -j %s\n"
+	            "iptables -I FORWARD -i $1 -j ACCEPT\n"
+	            "iptables -I FORWARD -o $1 -j ACCEPT\n"
+	            "iptables -I FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
+	            "iptables -t nat -I PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n" /* rule for wake on lan over pptp tunnel */
+	            "%s\n",
+	            chain_in_accept,
+	            bcast,
+	            nvram_safe_get("pptpd_ipup_script"));
+#ifdef TCONFIG_BCMARM
+	if (!ctf_disable) /* bypass CTF if enabled */
+		fprintf(fp, "iptables -t mangle -A FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
+#endif /* TCONFIG_BCMARM */
+	fclose(fp);
+
+	/* ip-down */
+	if (!(fp = fopen(PPTPD_DOWN_SCRIPT, "w"))) {
+		perror(PPTPD_DOWN_SCRIPT);
+		return;
+	}
+	fprintf(fp, "#!/bin/sh\n"
+	            "grep -v $1 "PPTPD_CONNECTED" > "PPTPD_CONNECTED".new\n"
+	            "mv "PPTPD_CONNECTED".new "PPTPD_CONNECTED"\n"
+	            "iptables -D FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
+	            "iptables -D INPUT -i $1 -j %s\n"
+	            "iptables -D FORWARD -i $1 -j ACCEPT\n"
+	            "iptables -D FORWARD -o $1 -j ACCEPT\n"
+	            "iptables -t nat -D PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n" /* rule for wake on lan over pptp tunnel */
+	            "%s\n",
+	            chain_in_accept,
+	            bcast,
+	            nvram_safe_get("pptpd_ipdown_script"));
+#ifdef TCONFIG_BCMARM
+	if (!ctf_disable) /* bypass CTF if enabled */
+		fprintf(fp, "iptables -t mangle -D FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
+#endif /* TCONFIG_BCMARM */
+	fclose(fp);
+
+	/* firewall */
+	if (!(fp = fopen(PPTPD_FW_SCRIPT, "w"))) {
+		perror(PPTPD_FW_SCRIPT);
+		return;
+	}
+	fprintf(fp, "#!/bin/sh\n"
+	            "iptables -A INPUT -p tcp --dport 1723 -j ACCEPT\n"
+	            "iptables -A INPUT -p 47 -j ACCEPT\n");
+#ifdef TCONFIG_BCMARM
+	if (!ctf_disable) /* bypass CTF if enabled */
+		fprintf(fp, "iptables -t mangle -A PREROUTING -p tcp --dport 1723 -j MARK --set-mark 0x01/0x7\n"
+			    "iptables -t mangle -A PREROUTING -p 47 -j MARK --set-mark 0x01/0x7\n");
+	}
+#endif /* TCONFIG_BCMARM */
+	fclose(fp);
+
+	chmod(PPTPD_UP_SCRIPT, 0744);
+	chmod(PPTPD_DOWN_SCRIPT, 0744);
+	chmod(PPTPD_FW_SCRIPT, 0744);
+}
+
+void start_pptpd(int force)
+{
+	FILE *fp;
+	int count = 0, nowins = 0, pptpd_opt, ret;
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("pptpd_enable") && force == 0)
@@ -169,7 +250,7 @@ void start_pptpd(int force)
 	if (strlen(nvram_safe_get("pptpd_wins2")))
 		fprintf(fp, "ms-wins %s\n", nvram_safe_get("pptpd_wins2"));
 
-	fprintf(fp, "minunit 10\n"		/* force ppp interface starting from 10 */
+	fprintf(fp, "minunit 10\n" /* force ppp interface starting from 10 */
 	            "%s\n\n", nvram_safe_get("pptpd_custom"));
 
 	fclose(fp);
@@ -222,61 +303,23 @@ void start_pptpd(int force)
 
 	fclose(fp);
 
-	memset(bcast, 0, 32);
-	ip2bcast(nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"), bcast, sizeof(bcast));
-
-	chains_log_detection();
-
-	/* Create ip-up and ip-down scripts that are unique to pptpd to avoid interference with pppoe and pptpc */
-	fp = fopen(PPTPD_UP_SCRIPT, "w");
-	fprintf(fp, "#!/bin/sh\n"
-	            "echo \"$PPPD_PID $1 $5 $6 $PEERNAME $(date +%%s)\" >> "PPTPD_CONNECTED"\n"
-	            "iptables -I INPUT -i $1 -j %s\n"
-	            "iptables -I FORWARD -i $1 -j ACCEPT\n"
-	            "iptables -I FORWARD -o $1 -j ACCEPT\n"
-	            "iptables -I FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
-	            "iptables -t nat -I PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n" /* rule for wake on lan over pptp tunnel */
-	            "%s\n",
-	            chain_in_accept,
-	            bcast,
-	            nvram_safe_get("pptpd_ipup_script"));
-#ifdef TCONFIG_BCMARM
-	if (!ctf_disable) /* bypass CTF if enabled */
-		fprintf(fp, "iptables -t mangle -A FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
-#endif /* TCONFIG_BCMARM */
-
-	fclose(fp);
-
-	fp = fopen(PPTPD_DOWN_SCRIPT, "w");
-	fprintf(fp, "#!/bin/sh\n"
-	            "grep -v $1 "PPTPD_CONNECTED" > "PPTPD_CONNECTED".new\n"
-	            "mv "PPTPD_CONNECTED".new "PPTPD_CONNECTED"\n"
-	            "iptables -D FORWARD -i $1 -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n"
-	            "iptables -D INPUT -i $1 -j %s\n"
-	            "iptables -D FORWARD -i $1 -j ACCEPT\n"
-	            "iptables -D FORWARD -o $1 -j ACCEPT\n"
-	            "iptables -t nat -D PREROUTING -i $1 -p udp -m udp --sport 9 -j DNAT --to-destination %s\n" /* rule for wake on lan over pptp tunnel */
-	            "%s\n",
-	            chain_in_accept,
-	            bcast,
-	            nvram_safe_get("pptpd_ipdown_script"));
-#ifdef TCONFIG_BCMARM
-	if (!ctf_disable) /* bypass CTF if enabled */
-		fprintf(fp, "iptables -t mangle -D FORWARD -i $1 -m state --state NEW -j MARK --set-mark 0x01/0x7\n");
-#endif /* TCONFIG_BCMARM */
-
-	fclose(fp);
-
-	chmod(PPTPD_UP_SCRIPT, 0744);
-	chmod(PPTPD_DOWN_SCRIPT, 0744);
-
 	/* Extract chap-secrets from nvram */
 	write_chap_secret(PPTPD_SECRETS);
 
 	chmod(PPTPD_SECRETS, 0600);
 
+	build_pptpd_firewall();
+	run_pptpd_firewall_script();
+
 	/* Execute pptpd daemon */
-	eval("pptpd", "-c", PPTPD_CONFFILE, "-o", PPTPD_OPTIONS, "-C", "50");
+	ret = eval("pptpd", "-c", PPTPD_CONFFILE, "-o", PPTPD_OPTIONS, "-C", "50");
+
+	if (ret) {
+		logmsg(LOG_ERR, "starting pptpd failed - check configuration ...");
+		stop_pptpd();
+	}
+	else
+		logmsg(LOG_INFO, "pptpd is started");
 }
 
 void stop_pptpd(void)
@@ -306,22 +349,36 @@ void stop_pptpd(void)
 
 	killall_tk_period_wait("pptpd", 50);
 	killall_tk_period_wait("bcrelay", 50);
+	logmsg(LOG_INFO, "pptpd is stopped");
 
-	/* Delete all files for this server */
-	unlink(PPTPD_SHUTDOWN);
+	run_del_firewall_script(PPTPD_FW_SCRIPT, PPTPD_FW_DEL_SCRIPT);
 
-	eval("rm", "-rf", PPTPD_CONFFILE, PPTPD_OPTIONS, PPTPD_DOWN_SCRIPT, PPTPD_UP_SCRIPT, PPTPD_SECRETS);
-
-	/* Attempt to remove directory. Will fail if not empty */
-	rmdir(PPTPD_DIR);
+	/* clean-up */
+	system("/bin/rm -rf "PPTPD_DIR);
 }
 
-void write_pptpd_dnsmasq_config(FILE* f) {
-	if (nvram_get_int("pptpd_enable"))
+void write_pptpd_dnsmasq_config(FILE* f)
+{
+	if (pidof("pptpd") > 0)
 		fprintf(f, "interface=ppp1*\n"			/* Listen on the ppp1* interfaces (wildcard *); we start with 10 and up ...  see minunit 10 */
 		           "no-dhcp-interface=ppp1*\n"		/* Do not provide DHCP, but do provide DNS service */
 		           "interface=vlan*\n"			/* Listen on the vlan* interfaces (wildcard *) */
 		           "no-dhcp-interface=vlan*\n"		/* Do not provide DHCP, but do provide DNS service */
 		           "interface=eth*\n"			/* Listen on the eth* interfaces (wildcard *) */
 		           "no-dhcp-interface=eth*\n");		/* Do not provide DHCP, but do provide DNS service */
+}
+
+void run_pptpd_firewall_script(void)
+{
+	FILE *fp;
+
+	/* first remove existing firewall rule(s) */
+	run_del_firewall_script(PPTPD_FW_SCRIPT, PPTPD_FW_DEL_SCRIPT);
+
+	/* then (re-)add firewall rule(s) */
+	if ((fp = fopen(PPTPD_FW_SCRIPT, "r"))) {
+		fclose(fp);
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, PPTPD_FW_SCRIPT);
+		eval(PPTPD_FW_SCRIPT);
+	}
 }

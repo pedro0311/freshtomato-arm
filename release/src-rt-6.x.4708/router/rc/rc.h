@@ -549,11 +549,12 @@ extern void start_ups();
 extern void stop_ups();
 #endif
 
-/* pptp.c */
+/* pptpd.c */
 #ifdef TCONFIG_PPTPD
 extern void start_pptpd(int force);
 extern void stop_pptpd(void);
 extern void write_pptpd_dnsmasq_config(FILE* f);
+extern void run_pptpd_firewall_script(void);
 #endif
 
 /* openvpn.c */
