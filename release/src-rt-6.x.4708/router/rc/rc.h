@@ -297,10 +297,6 @@ extern void stop_ipv6(void);
 extern int start_bsd(void);
 extern void stop_bsd(void);
 #endif /* TCONFIG_BCMBSD */
-#ifdef TCONFIG_SAMBASRV
-extern void start_samba(int force);
-extern void stop_samba(void);
-#endif /* TCONFIG_SAMBASRV */
 #ifdef TCONFIG_MDNS
 extern void start_mdns(void);
 extern void stop_mdns(void);
@@ -621,5 +617,11 @@ extern void start_roamast(void);
 extern void stop_roamast(void);
 extern int roam_assistant_main(int argc, char *argv[]);
 #endif
+
+/* samba.c */
+#ifdef TCONFIG_SAMBASRV
+extern void start_samba(int force);
+extern void stop_samba(void);
+#endif /* TCONFIG_SAMBASRV */
 
 #endif /* __RC_H__ */
