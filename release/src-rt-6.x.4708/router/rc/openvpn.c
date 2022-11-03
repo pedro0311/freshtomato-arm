@@ -1536,7 +1536,7 @@ void run_ovpn_firewall_scripts(void)
 	while ((file = readdir(dir)) != NULL) {
 		fa = file->d_name;
 
-		if ((fa[0] == '.') || (!strcmp(fa, OVPN_DEL_SCRIPT)))
+		if ((fa[0] == '.') || (strcmp(fa, OVPN_DEL_SCRIPT) == 0))
 			continue;
 
 		memset(buf, 0, sizeof(buf));
