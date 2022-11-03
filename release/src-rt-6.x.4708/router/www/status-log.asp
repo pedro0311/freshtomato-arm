@@ -441,7 +441,7 @@ function init() {
 			&nbsp; &nbsp;
 			<span>
 				Find in syslog: &nbsp;
-				<input type="text" id="log-find-text" autocomplete="off" title="Press Escape to clear search; use '-' in front to make a negative search">
+				<input type="text" id="log-find-text" autocomplete="off" maxlength="64" title="Press Escape to clear search; use '-' in front to make a negative search">
 				<span style="display:none" id="log-occurence-span">Occurences: <b><span id="log-occurence-value"></span></b></span>
 			</span>
 
