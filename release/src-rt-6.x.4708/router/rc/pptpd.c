@@ -155,7 +155,6 @@ static void build_pptpd_firewall(void)
 	if (!ctf_disable) /* bypass CTF if enabled */
 		fprintf(fp, "iptables -t mangle -A PREROUTING -p tcp --dport 1723 -j MARK --set-mark 0x01/0x7\n"
 			    "iptables -t mangle -A PREROUTING -p 47 -j MARK --set-mark 0x01/0x7\n");
-	}
 #endif /* TCONFIG_BCMARM */
 	fclose(fp);
 
