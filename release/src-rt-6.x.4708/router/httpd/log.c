@@ -151,6 +151,7 @@ void wo_viewlog(char *url)
 					case '|':
 					case '"':
 					case '\\':
+					case '`':
 						*c++ = '\\';
 						*c++ = *p;
 						break;
@@ -162,7 +163,7 @@ void wo_viewlog(char *url)
 					++p;
 			}
 			*c = 0;
-			snprintf(s, sizeof(s), "grep -ih \"%s\" $(ls -1rv %s %s.*)", t, lfn, lfn);
+			snprintf(s, sizeof(s), "grep -ih \"%s\" $(ls -1rv %s %s.* 2>/dev/null) 2>/dev/null", t, lfn, lfn);
 			web_pipecmd(s, WOF_NONE);
 			return;
 	}
@@ -176,10 +177,9 @@ void wo_viewlog(char *url)
 		return;
 
 	send_header(200, NULL, mime_plain, 0);
-	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.*) | tail -n %d", lfn, lfn, n);
+	snprintf(s, sizeof(s), "cat $(ls -1rv %s %s.* 2>/dev/null) | tail -n %d", lfn, lfn, n);
 	web_pipecmd(s, WOF_NONE);
 }
-
 
 void asp_showsyslog(int argc, char **argv)
 {
