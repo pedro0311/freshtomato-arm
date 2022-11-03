@@ -989,6 +989,9 @@ void asp_notice(int argc, char **argv)
 	if (argc != 1)
 		return;
 
+	if ((strstr(argv[0], "/") > 0) || (strstr(argv[0], ".") > 0))
+		return;
+
 	snprintf(s, sizeof(s), "/var/notice/%s", argv[0]);
 	if (f_read_string(s, buf, sizeof(buf)) <= 0)
 		return;
