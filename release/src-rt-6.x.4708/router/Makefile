@@ -3156,6 +3156,7 @@ tinc-install:
 
 tinc-clean:
 	@rm -rf tinc/build
+	@rm -f tinc/meson-cross.txt
 	@rm -f tinc/stamp-h1
 
 snmp/stamp-h1:
