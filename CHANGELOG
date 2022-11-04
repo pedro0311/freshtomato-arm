@@ -5,6 +5,86 @@ FreshTomato-ARM Changelog
 
 
 
+2022.6          2022.11.06
+---------------------------
+
+- SDK714: initial commit
+- SDK714: update to 2022 (from 2018)
+- libcurl: update to 7.86.0
+- nano: update to 6.4
+- nettle: update to 3.8.1
+- sqlite: update to 3.39.4
+- tor: update to 0.4.7.10
+- dnsmasq: update to 2.87 final
+- tinc: update to the latest commit. 4c6a9a9; update to meson build system. Add lz4 support to tinc
+- dnscrypt-proxy: update resolvers csv file
+- getdns: update to 1.7.2
+- openssl-1.1: update to 1.1.1s
+- igmpproxy: update to 0.4
+- libsodium: update to latest version of 1.0.18-stable
+- nginx: update to 1.23.2
+- ntfs-3g: update to 2022.10.3
+- miniupnpd: update to 2.3.1
+- openvpn: update to 2.5.8
+- flac: update to 1.4.2
+- libxml2: update to 2.10.3
+- libcurl: update CA certificate bundle as of 2022-10-11
+- meson: add clean source for version 0.63.0
+- lz4: add clean source for version 1.9.3
+- lz4: update to 1.9.4
+- util-linux: update to 2.38.1
+- irqbalance: update to 1.9.2
+- zlib: backport fix for heap-based buffer over-read (CVE-2022-37434)
+- zlib: backport null dereference fix
+- nocat: import some patches found in debian
+- SDK7: check wireless driver max client tuneable value
+- build: add Asus RT-AC5300 support
+- build: add Asus RT-AC3100 support
+- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port)
+- build: merge all branches together
+- build: sync up DockerFile to current build process
+- build: samba3: update Makefile; in ARM we have already realpath() with support for NULL argument. So change that option
+- build: SDK6/7: clean-up flags for Tri-Band router
+- build: Netgear R7900 / R8000: build image without TRX KEY
+- GUI: advanced-misc.asp - Make it possible to save settings without rebooting
+- GUI: Wireless Survey: check for Channel Spec BW 160 / 8080 MHz (SDK6 and up)
+- GUI: VPN Tunneling: Tinc Daemon: fix javascript error
+- GUI: NAS: Media Server: fix allowed port range
+- GUI: Basic: Network: remove unnecessary javascript alert
+- GUI: move IPSec Passthrough from Firewall to Conntrack/Netfilter
+- GUI: Advanced: Routing: increase route metric limit from 10 to 4294967295
+- GUI: Status: Overview: add link to DHCP/DNS page when using stubby/dnscrypt-proxy
+- GUI: basic-ddns.asp - do not show the DDNS password (resolves #202) 
+- GUI: basic-network.asp - Option: Automatic IP --> give some more Infos to the FT user about changing IP address (DHCP client on/off)
+- GUI: fix start/stop button behaviour, when there is an error in config file
+- GUI: add new default theme
+- GUI: USB and NAS: Media Server: fix the operation of the 'Rescan on the next run' button
+- GUI: Administration: Admin Access: add 'Notes' section about dropbear additional configuration files
+- GUI: Status: Overview: add current operator to WWAN Modem Status
+- Access Point Mode / WET / Media Bridge Mode: Allow to obtain a LAN IP via DHCP
+- firewall: check GUI IPSec config first (small fix for operator priority)
+- httpd: misc.c: asp_notice(): sanitize file name
+- httpd: log.c: wo_viewlog(): sanitize search string more aggressively
+- IPv6: add/use function to extract prefix from configured IPv6 address
+- nvram: remove no more needed variables (dhcp_start, dhcp_num)
+- Revert "GUI: Advanced: DHCP / DNS Client: remove 'Reduce packet size' option - no more available in udhcpc from busybox"; 'Reduce packet size' option is available via patch!
+- rc: firewall: move nginx FW rules (remote access) to nginx.c script
+- rc: openvpn.c: rewrite openvpn FW rules
+- rc: tinc.c: rewrite tinc FW rules
+- rc: transmission.c: rewrite transmission FW rules and watchdog script
+- rc: mysql: rewrite, to get rid of shell scripts
+- rc: pptpd.c: rewrite pptpd FW rules
+- rc/shared: introduce and use killall_and_waitpid()
+- rc: tune stop_stubby function
+- rc: fix call to restart_nas_services() - to restart it needs stop/start, not only start
+- watchdog: use 1.1.1.1 as a 2nd target instead of microsoft.com
+- www: tools-qr.asp: fix bug when certain characters are in ssid or PSK
+- www: status-log.asp: add maxlength to find input element
+- Netgear R6400 (v1) / R6400v2 / R6700v3 / XR300 : fix USB Power supply in some cases (cfe/board_data dependency) - fixes #244
+- Dlink DIR868L: fix USB Power supply in some cases (cfe/board_data dependency) 
+- Wireless Ethernet Bridge Mode: Block all IPv6 traffic to avoid wl driver crash in some cases (only arm)
+
+
 2022.5          2022.08.06
 ---------------------------
 
