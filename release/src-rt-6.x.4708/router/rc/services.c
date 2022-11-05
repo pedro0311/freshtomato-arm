@@ -54,6 +54,7 @@
 #define RESOLV_CONF		"/etc/resolv.conf"
 #define IGMP_CONF		"/etc/igmp.conf"
 #define UPNP_DIR		"/etc/upnp"
+#define UPNP_CONFIG		UPNP_DIR"/config"
 #ifdef TCONFIG_ZEBRA
 #define ZEBRA_CONF		"/etc/zebra.conf"
 #define RIPD_CONF		"/etc/ripd.conf"
@@ -1489,21 +1490,16 @@ void stop_ipv6(void)
 
 void start_upnp(void)
 {
-	int enable;
-	int upnp_port;
-	int interval;
-	int https;
+	FILE *f;
+	int enable, upnp_port, interval, https;
 	int ports[4];
 	char uuid[45];
 	char lanN_ipaddr[] = "lanXX_ipaddr";
 	char lanN_netmask[] = "lanXX_netmask";
 	char lanN_ifname[] = "lanXX_ifname";
 	char upnp_lanN[] = "upnp_lanXX";
-	char *lanip;
-	char *lanmask;
-	char *lanifname;
+	char *lanip, *lanmask, *lanifname;
 	char br;
-	FILE *f;
 
 	if (get_wan_proto() == WP_DISABLED)
 		return;
@@ -1511,121 +1507,128 @@ void start_upnp(void)
 	if (serialize_restart("miniupnpd", 1))
 		return;
 
-	if (((enable = nvram_get_int("upnp_enable")) & 3) != 0) {
-		mkdir(UPNP_DIR, 0777);
-		if (f_exists(UPNP_DIR"/config.alt"))
-			xstart("miniupnpd", "-f", UPNP_DIR"/config.alt");
-		else {
-			if ((f = fopen(UPNP_DIR"/config", "w")) != NULL) {
-				upnp_port = nvram_get_int("upnp_port");
-				if ((upnp_port < 0) || (upnp_port >= 0xFFFF))
-					upnp_port = 0;
+	enable = nvram_get_int("upnp_enable");
 
-				if (check_wanup("wan2"))
-					fprintf(f, "ext_ifname=%s\n", get_wanface("wan2"));
+	/* only if enabled */
+	if (enable == 0)
+		return;
+
+	mkdir(UPNP_DIR, 0777);
+
+	/* alternative configuration file */
+	if (f_exists(UPNP_DIR"/config.alt")) {
+		xstart("miniupnpd", "-f", UPNP_DIR"/config.alt");
+		return;
+	}
+
+	if ((f = fopen(UPNP_CONFIG, "w")) == NULL) {
+		perror(UPNP_CONFIG);
+		return;
+	}
+
+	/* GUI configuration */
+	upnp_port = nvram_get_int("upnp_port");
+	if ((upnp_port < 0) || (upnp_port >= 0xFFFF))
+		upnp_port = 0;
+
+	if (check_wanup("wan2"))
+		fprintf(f, "ext_ifname=%s\n", get_wanface("wan2"));
 #ifdef TCONFIG_MULTIWAN
-				if (check_wanup("wan3"))
-					fprintf(f, "ext_ifname=%s\n", get_wanface("wan3"));
+	if (check_wanup("wan3"))
+		fprintf(f, "ext_ifname=%s\n", get_wanface("wan3"));
 
-				if (check_wanup("wan4"))
-					fprintf(f, "ext_ifname=%s\n", get_wanface("wan4"));
+	if (check_wanup("wan4"))
+		fprintf(f, "ext_ifname=%s\n", get_wanface("wan4"));
 #endif
 
-				fprintf(f, "ext_ifname=%s\n"
-				           "port=%d\n"
-				           "enable_upnp=%s\n"
-				           "enable_natpmp=%s\n"
-				           "secure_mode=%s\n"
-				           "upnp_forward_chain=upnp\n"
-				           "upnp_nat_chain=upnp\n"
-				           "upnp_nat_postrouting_chain=pupnp\n"
-				           "notify_interval=%d\n"
-				           "system_uptime=yes\n"
-				           "friendly_name=%s"" Router\n"
-				           "model_name=%s\n"
-				           "model_url=https://freshtomato.org/\n"
-				           "manufacturer_name=FreshTomato Firmware\n"
-				           "manufacturer_url=https://freshtomato.org/\n"
-				           "\n",
-				           get_wanface("wan"),
-				           upnp_port,
-				           (enable & 1) ? "yes" : "no",			/* upnp enable */
-				           (enable & 2) ? "yes" : "no",			/* natpmp enable */
-				           nvram_get_int("upnp_secure") ? "yes" : "no",	/* secure_mode (only forward to self) */
-				           nvram_get_int("upnp_ssdp_interval"),
-				           nvram_safe_get("router_name"),
-				           nvram_safe_get("t_model_name"));
+	fprintf(f, "ext_ifname=%s\n"
+	           "port=%d\n"
+	           "enable_upnp=%s\n"
+	           "enable_natpmp=%s\n"
+	           "secure_mode=%s\n"
+	           "upnp_forward_chain=upnp\n"
+	           "upnp_nat_chain=upnp\n"
+	           "upnp_nat_postrouting_chain=pupnp\n"
+	           "notify_interval=%d\n"
+	           "system_uptime=yes\n"
+	           "friendly_name=%s"" Router\n"
+	           "model_name=%s\n"
+	           "model_url=https://freshtomato.org/\n"
+	           "manufacturer_name=FreshTomato Firmware\n"
+	           "manufacturer_url=https://freshtomato.org/\n"
+	           "\n",
+	           get_wanface("wan"),
+	           upnp_port,
+	           (enable & 1) ? "yes" : "no",			/* upnp enable */
+	           (enable & 2) ? "yes" : "no",			/* natpmp enable */
+	           nvram_get_int("upnp_secure") ? "yes" : "no",	/* secure_mode (only forward to self) */
+	           nvram_get_int("upnp_ssdp_interval"),
+	           nvram_safe_get("router_name"),
+	           nvram_safe_get("t_model_name"));
 
-				if (nvram_get_int("upnp_clean")) {
-					interval = nvram_get_int("upnp_clean_interval");
-					if (interval < 60)
-						interval = 60;
+	if (nvram_get_int("upnp_clean")) {
+		interval = nvram_get_int("upnp_clean_interval");
+		if (interval < 60)
+			interval = 60;
 
-					fprintf(f, "clean_ruleset_interval=%d\n"
-					           "clean_ruleset_threshold=%d\n",
-					           interval,
-					           nvram_get_int("upnp_clean_threshold"));
-				}
-				else
-					fprintf(f, "clean_ruleset_interval=0\n");
+		fprintf(f, "clean_ruleset_interval=%d\n"
+		           "clean_ruleset_threshold=%d\n",
+		           interval,
+		           nvram_get_int("upnp_clean_threshold"));
+	}
+	else
+		fprintf(f, "clean_ruleset_interval=0\n");
 
-				if (nvram_get_int("upnp_mnp")) {
-					https = nvram_get_int("https_enable");
-					fprintf(f, "presentation_url=http%s://%s:%s/forward-upnp.asp\n", (https ? "s" : ""), nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport"));
-				}
-				else
-					/* Empty parameters are not included into XML service description */
-					fprintf(f, "presentation_url=\n");
+	if (nvram_get_int("upnp_mnp")) {
+		https = nvram_get_int("https_enable");
+		fprintf(f, "presentation_url=http%s://%s:%s/forward-upnp.asp\n", (https ? "s" : ""), nvram_safe_get("lan_ipaddr"), nvram_safe_get(https ? "https_lanport" : "http_lanport"));
+	}
+	else
+		/* Empty parameters are not included into XML service description */
+		fprintf(f, "presentation_url=\n");
 
-				f_read_string("/proc/sys/kernel/random/uuid", uuid, sizeof(uuid));
-				fprintf(f, "uuid=%s\n", uuid);
+	f_read_string("/proc/sys/kernel/random/uuid", uuid, sizeof(uuid));
+	fprintf(f, "uuid=%s\n", uuid);
 
-				/* move custom configuration before "allow" statements */
-				/* discussion: http://www.linksysinfo.org/index.php?threads/miniupnpd-custom-config-syntax.70863/#post-256291 */
-				fappend(f, UPNP_DIR"/config.custom");
-				fprintf(f, "%s\n", nvram_safe_get("upnp_custom"));
+	/* move custom configuration before "allow" statements */
+	/* discussion: http://www.linksysinfo.org/index.php?threads/miniupnpd-custom-config-syntax.70863/#post-256291 */
+	fappend(f, UPNP_DIR"/config.custom");
+	fprintf(f, "%s\n", nvram_safe_get("upnp_custom"));
 
-				for (br = 0; br < BRIDGE_COUNT; br++) {
-					char bridge[2] = "0";
-					if (br != 0)
-						bridge[0] += br;
-					else
-						strcpy(bridge, "");
+	for (br = 0; br < BRIDGE_COUNT; br++) {
+		char bridge[2] = "0";
+		if (br != 0)
+			bridge[0] += br;
+		else
+			strcpy(bridge, "");
 
-					sprintf(lanN_ipaddr, "lan%s_ipaddr", bridge);
-					sprintf(lanN_netmask, "lan%s_netmask", bridge);
-					sprintf(lanN_ifname, "lan%s_ifname", bridge);
-					sprintf(upnp_lanN, "upnp_lan%s", bridge);
+		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
+		snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
+		snprintf(upnp_lanN, sizeof(upnp_lanN), "upnp_lan%s", bridge);
 
-					lanip = nvram_safe_get(lanN_ipaddr);
-					lanmask = nvram_safe_get(lanN_netmask);
-					lanifname = nvram_safe_get(lanN_ifname);
+		lanip = nvram_safe_get(lanN_ipaddr);
+		lanmask = nvram_safe_get(lanN_netmask);
+		lanifname = nvram_safe_get(lanN_ifname);
 
-					if ((strcmp(nvram_safe_get(upnp_lanN), "1") == 0) && (strcmp(lanifname, "") != 0)) {
-						fprintf(f, "listening_ip=%s\n", lanifname);
+		if ((strcmp(nvram_safe_get(upnp_lanN), "1") == 0) && (strcmp(lanifname, "") != 0)) {
+			fprintf(f, "listening_ip=%s\n", lanifname);
 
-						if ((ports[0] = nvram_get_int("upnp_min_port_ext")) > 0 &&
-						    (ports[1] = nvram_get_int("upnp_max_port_ext")) > 0 &&
-						    (ports[2] = nvram_get_int("upnp_min_port_int")) > 0 &&
-						    (ports[3] = nvram_get_int("upnp_max_port_int")) > 0)
-							fprintf(f, "allow %d-%d %s/%s %d-%d\n", ports[0], ports[1], lanip, lanmask, ports[2], ports[3]);
-						else
-							/* by default allow only redirection of ports above 1024 */
-							fprintf(f, "allow 1024-65535 %s/%s 1024-65535\n", lanip, lanmask);
-					}
-				}
-				fprintf(f, "\ndeny 0-65535 0.0.0.0/0 0-65535\n");
-
-				fclose(f);
-
-				xstart("miniupnpd", "-f", UPNP_DIR"/config");
-			}
-			else {
-				perror(UPNP_DIR"/config");
-				return;
-			}
+			if ((ports[0] = nvram_get_int("upnp_min_port_ext")) > 0 &&
+			    (ports[1] = nvram_get_int("upnp_max_port_ext")) > 0 &&
+			    (ports[2] = nvram_get_int("upnp_min_port_int")) > 0 &&
+			    (ports[3] = nvram_get_int("upnp_max_port_int")) > 0)
+				fprintf(f, "allow %d-%d %s/%s %d-%d\n", ports[0], ports[1], lanip, lanmask, ports[2], ports[3]);
+			else
+				/* by default allow only redirection of ports above 1024 */
+				fprintf(f, "allow 1024-65535 %s/%s 1024-65535\n", lanip, lanmask);
 		}
 	}
+	fprintf(f, "\ndeny 0-65535 0.0.0.0/0 0-65535\n");
+
+	fclose(f);
+
+	xstart("miniupnpd", "-f", UPNP_CONFIG);
 }
 
 void stop_upnp(void)
