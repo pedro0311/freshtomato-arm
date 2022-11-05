@@ -1959,119 +1959,122 @@ void start_igmp_proxy(void)
 	char igmp_buffer[32];
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num, count = 0;
+	int ret = 1;
 
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
-	pid_igmp = -1;
-	if (nvram_get_int("multicast_pass")) {
-		int ret = 1;
+	/* only if enabled */
+	if (!nvram_get_int("multicast_pass"))
+		return;
 
-		if (f_exists("/etc/igmp.alt"))
-			ret = eval("igmpproxy", "/etc/igmp.alt");
-		else if ((fp = fopen(IGMP_CONF, "w")) != NULL) {
-			fprintf(fp, "user nobody\n"); /* drop privileges */
+	/* custom configuration file */
+	if (f_exists("/etc/igmp.alt"))
+		ret = eval("igmpproxy", "/etc/igmp.alt");
+	/* GUI configuration */
+	else if ((fp = fopen(IGMP_CONF, "w")) != NULL) {
+		fprintf(fp, "user nobody\n"); /* drop privileges */
 
-			/* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
-			/* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
-			 * see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
-			 * see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
-			 */
-			if ((!nvram_get_int("multicast_lan")) && (!nvram_get_int("multicast_lan1")) && (!nvram_get_int("multicast_lan2")) && (!nvram_get_int("multicast_lan3"))) {
-				fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
-				fclose(fp);
-				ret = eval("igmpproxy", IGMP_CONF);
-			}
-			/* create default config for upstream/downstream interface(s) */
-			else {
-				if (nvram_get_int("multicast_quickleave"))
-					fprintf(fp, "quickleave\n");
-
-				for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
-					get_wan_prefix(wan_unit, wan_prefix);
-					if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
-						count++;
-						/*
-						 * Configuration for Upstream Interface
-						 * Example:
-						 * phyint ppp0 upstream ratelimit 0 threshold 1
-						 * altnet 193.158.35.0/24
-						 */
-						fprintf(fp, "phyint %s upstream ratelimit 0 threshold 1\n", get_wanface(wan_prefix));
-						/* check for allowed remote network address, see note at GUI advanced-firewall.asp */
-						if ((nvram_get("multicast_altnet_1") != NULL) || (nvram_get("multicast_altnet_2") != NULL) || (nvram_get("multicast_altnet_3") != NULL)) {
-							if (((nv = nvram_get("multicast_altnet_1")) != NULL) && (*nv)) {
-								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
-								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
-								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s", igmp_buffer);
-							}
-
-							if (((nv = nvram_get("multicast_altnet_2")) != NULL) && (*nv)) {
-								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
-								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
-								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s", igmp_buffer);
-							}
-
-							if (((nv = nvram_get("multicast_altnet_3")) != NULL) && (*nv)) {
-								memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
-								snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
-								fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
-								logmsg(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s", igmp_buffer);
-							}
-						}
-						else
-							fprintf(fp, "\taltnet 0.0.0.0/0\n"); /* default, allow all! */
-					}
-				}
-				if (!count) {
-					fclose(fp);
-					unlink(IGMP_CONF);
-					return;
-				}
-
-				char lanN_ifname[] = "lanXX_ifname";
-				char multicast_lanN[] = "multicast_lanXX";
-				char br;
-
-				for (br = 0; br < BRIDGE_COUNT; br++) {
-					char bridge[2] = "0";
-					if (br != 0)
-						bridge[0] += br;
-					else
-						strcpy(bridge, "");
-
-					sprintf(lanN_ifname, "lan%s_ifname", bridge);
-					sprintf(multicast_lanN, "multicast_lan%s", bridge);
-
-					if ((strcmp(nvram_safe_get(multicast_lanN), "1") == 0) && (strcmp(nvram_safe_get(lanN_ifname), "") != 0)) {
-					/*
-					 * Configuration for Downstream Interface
-					 * Example:
-					 * phyint br0 downstream ratelimit 0 threshold 1
-					 */
-						fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", nvram_safe_get(lanN_ifname));
-					}
-				}
-				fclose(fp);
-				ret = eval("igmpproxy", IGMP_CONF);
-			}
+		/* check that lan, lan1, lan2 and lan3 are not selected and use custom config */
+		/* The configuration file must define one (or more) upstream interface(s) and one or more downstream interfaces,
+		 * see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
+		 * see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
+		 */
+		if ((!nvram_get_int("multicast_lan")) && (!nvram_get_int("multicast_lan1")) && (!nvram_get_int("multicast_lan2")) && (!nvram_get_int("multicast_lan3"))) {
+			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
+			fclose(fp);
+			ret = eval("igmpproxy", IGMP_CONF);
 		}
+		/* create default config for upstream/downstream interface(s) */
 		else {
-			perror(IGMP_CONF);
-			return;
+			if (nvram_get_int("multicast_quickleave"))
+				fprintf(fp, "quickleave\n");
+
+			for (wan_unit = 1; wan_unit <= mwan_num; ++wan_unit) {
+				get_wan_prefix(wan_unit, wan_prefix);
+				if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
+					count++;
+					/*
+					 * Configuration for Upstream Interface
+					 * Example:
+					 * phyint ppp0 upstream ratelimit 0 threshold 1
+					 * altnet 193.158.35.0/24
+					 */
+					fprintf(fp, "phyint %s upstream ratelimit 0 threshold 1\n", get_wanface(wan_prefix));
+					/* check for allowed remote network address, see note at GUI advanced-firewall.asp */
+					if ((nvram_get("multicast_altnet_1") != NULL) || (nvram_get("multicast_altnet_2") != NULL) || (nvram_get("multicast_altnet_3") != NULL)) {
+						if (((nv = nvram_get("multicast_altnet_1")) != NULL) && (*nv)) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
+							fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							logmsg(LOG_INFO, "igmpproxy: multicast_altnet_1 = %s", igmp_buffer);
+						}
+
+						if (((nv = nvram_get("multicast_altnet_2")) != NULL) && (*nv)) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
+							fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							logmsg(LOG_INFO, "igmpproxy: multicast_altnet_2 = %s", igmp_buffer);
+						}
+
+						if (((nv = nvram_get("multicast_altnet_3")) != NULL) && (*nv)) {
+							memset(igmp_buffer, 0, sizeof(igmp_buffer)); /* reset */
+							snprintf(igmp_buffer, sizeof(igmp_buffer),"%s", nv); /* copy to buffer */
+							fprintf(fp, "\taltnet %s\n", igmp_buffer); /* with the following format: a.b.c.d/n - Example: altnet 10.0.0.0/16 */
+							logmsg(LOG_INFO, "igmpproxy: multicast_altnet_3 = %s", igmp_buffer);
+						}
+					}
+					else
+						fprintf(fp, "\taltnet 0.0.0.0/0\n"); /* default, allow all! */
+				}
+			}
+			if (!count) {
+				fclose(fp);
+				unlink(IGMP_CONF);
+				return;
+			}
+
+			char lanN_ifname[] = "lanXX_ifname";
+			char multicast_lanN[] = "multicast_lanXX";
+			char br;
+
+			for (br = 0; br < BRIDGE_COUNT; br++) {
+				char bridge[2] = "0";
+				if (br != 0)
+					bridge[0] += br;
+				else
+					strcpy(bridge, "");
+
+				sprintf(lanN_ifname, "lan%s_ifname", bridge);
+				sprintf(multicast_lanN, "multicast_lan%s", bridge);
+
+				if ((strcmp(nvram_safe_get(multicast_lanN), "1") == 0) && (strcmp(nvram_safe_get(lanN_ifname), "") != 0)) {
+				/*
+				 * Configuration for Downstream Interface
+				 * Example:
+				 * phyint br0 downstream ratelimit 0 threshold 1
+				 */
+					fprintf(fp, "phyint %s downstream ratelimit 0 threshold 1\n", nvram_safe_get(lanN_ifname));
+				}
+			}
+			fclose(fp);
+			ret = eval("igmpproxy", IGMP_CONF);
 		}
-
-		if (!nvram_contains_word("debug_norestart", "igmprt"))
-			pid_igmp = -2;
-
-		if (ret)
-			logmsg(LOG_ERR, "starting igmpproxy failed ...");
-		else
-			logmsg(LOG_INFO, "igmpproxy is started");
 	}
+	else {
+		perror(IGMP_CONF);
+		return;
+	}
+
+	if (!nvram_contains_word("debug_norestart", "igmprt"))
+		pid_igmp = -2;
+
+	if (ret)
+		logmsg(LOG_ERR, "starting igmpproxy failed ...");
+	else
+		logmsg(LOG_INFO, "igmpproxy is started");
+
 }
 
 void stop_igmp_proxy(void)
