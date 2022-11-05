@@ -1028,14 +1028,15 @@ void stop_phy_tempsense()
 
 void start_adblock(int update)
 {
-	if (nvram_get_int("adblock_enable")) {
-		killall("adblock", SIGTERM);
-		sleep(1);
-		if (update)
-			xstart(ADBLOCK_EXE, "update");
-		else
-			xstart(ADBLOCK_EXE);
-	}
+	if (!nvram_get_int("adblock_enable"))
+		return;
+
+	killall("adblock", SIGTERM);
+	sleep(1);
+	if (update)
+		xstart(ADBLOCK_EXE, "update");
+	else
+		xstart(ADBLOCK_EXE);
 }
 
 void stop_adblock()
