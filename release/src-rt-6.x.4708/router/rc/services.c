@@ -2092,37 +2092,38 @@ void start_udpxy(void)
 	char buffer[32], buffer2[16];
 	int i, bind_lan = 0;
 
-	/* check if udpxy is enabled via GUI, advanced-firewall.asp */
-	if (nvram_get_int("udpxy_enable")) {
-		if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
-			memset(buffer, 0, 32); /* reset */
-			if (strlen(nvram_safe_get("udpxy_wanface")) > 0)
-				snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("udpxy_wanface")); /* user entered upstream interface */
-			else
-				snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix)); /* copy wanface to buffer */
+	/* only if enabled */
+	if (!nvram_get_int("udpxy_enable"))
+		return;
 
-			/* check interface to listen on */
-			/* check udpxy enabled/selected for br0 - br3 */
-			for (i = 0; i < BRIDGE_COUNT; i++) {
-				int ret1 = 0, ret2 = 0;
-				memset(buffer2, 0, 16);
-				sprintf(buffer2, (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
-				ret1 = nvram_match(buffer2, "1");
-				memset(buffer2, 0, 16);
-				sprintf(buffer2, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
-				ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
-				if (ret1 && ret2) {
-					memset(buffer2, 0, 16);
-					sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-					eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get(buffer2), "-m", buffer);
-					bind_lan = 1;
-					break; /* start udpxy only once and only for one lanX */
-				}
+	if ((check_wanup(wan_prefix)) && (get_wanx_proto(wan_prefix) != WP_DISABLED)) {
+		memset(buffer, 0, sizeof(buffer)); /* reset */
+		if (strlen(nvram_safe_get("udpxy_wanface")) > 0)
+			snprintf(buffer, sizeof(buffer), "%s", nvram_safe_get("udpxy_wanface")); /* user entered upstream interface */
+		else
+			snprintf(buffer, sizeof(buffer), "%s", get_wanface(wan_prefix)); /* copy wanface to buffer */
+
+		/* check interface to listen on */
+		/* check udpxy enabled/selected for br0 - br3 */
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			int ret1 = 0, ret2 = 0;
+			memset(buffer2, 0, sizeof(buffer2));
+			sprintf(buffer2, (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
+			ret1 = nvram_match(buffer2, "1");
+			memset(buffer2, 0, sizeof(buffer2));
+			sprintf(buffer2, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+			ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
+			if (ret1 && ret2) {
+				memset(buffer2, 0, sizeof(buffer2));
+				sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get(buffer2), "-m", buffer);
+				bind_lan = 1;
+				break; /* start udpxy only once and only for one lanX */
 			}
-			/* address/interface to listen on: default = 0.0.0.0 */
-			if (!bind_lan)
-				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer);
 		}
+		/* address/interface to listen on: default = 0.0.0.0 */
+		if (!bind_lan)
+			eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-m", buffer);
 	}
 }
 
