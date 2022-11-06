@@ -1637,6 +1637,9 @@ void stop_upnp(void)
 		return;
 
 	killall_tk_period_wait("miniupnpd", 50);
+
+	/* clean-up */
+	unlink(UPNP_CONFIG);
 }
 
 void start_cron(void)
@@ -2091,6 +2094,9 @@ void stop_igmp_proxy(void)
 		killall_tk_period_wait("igmpproxy", 50);
 		logmsg(LOG_INFO, "igmpproxy is stopped");
 	}
+
+	/* clean-up */
+	unlink(IGMP_CONF);
 }
 
 void start_udpxy(void)
