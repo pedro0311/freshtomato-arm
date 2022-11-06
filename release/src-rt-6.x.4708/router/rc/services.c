@@ -116,7 +116,7 @@ void start_dnsmasq_wet()
 		else
 			strcpy(bridge, "");
 
-		sprintf(lanN_ifname, "lan%s_ifname", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
 		nv = nvram_safe_get(lanN_ifname);
 
 		if (strncmp(nv, "br", 2) == 0) {
@@ -260,10 +260,10 @@ void start_dnsmasq()
 		/* allow RFC1918 responses for server domain (fix connect PPTP/L2TP WANs) */
 		switch (get_wanx_proto(wan_prefix)) {
 			case WP_PPTP:
-				nv = nvram_safe_get(strcat_r(wan_prefix, "_pptp_server_ip", tmp));
+				nv = nvram_safe_get(strlcat_r(wan_prefix, "_pptp_server_ip", tmp, sizeof(tmp)));
 				break;
 			case WP_L2TP:
-				nv = nvram_safe_get(strcat_r(wan_prefix, "_l2tp_server_ip", tmp));
+				nv = nvram_safe_get(strlcat_r(wan_prefix, "_l2tp_server_ip", tmp, sizeof(tmp)));
 				break;
 			default:
 				nv = NULL;
@@ -308,9 +308,9 @@ void start_dnsmasq()
 		else
 			strcpy(bridge, "");
 
-		sprintf(lanN_proto, "lan%s_proto", bridge);
-		sprintf(lanN_ifname, "lan%s_ifname", bridge);
-		sprintf(lanN_ipaddr, "lan%s_ipaddr", bridge);
+		snprintf(lanN_proto, sizeof(lanN_proto), "lan%s_proto", bridge);
+		snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
+		snprintf(lanN_ipaddr, sizeof(lanN_ipaddr), "lan%s_ipaddr", bridge);
 		do_dhcpd = nvram_match(lanN_proto, "dhcp");
 		if (do_dhcpd) {
 			do_dhcpd_hosts++;
@@ -322,7 +322,7 @@ void start_dnsmasq()
 
 			fprintf(f, "interface=%s\n", nvram_safe_get(lanN_ifname));
 
-			sprintf(dhcpN_lease, "dhcp%s_lease", bridge);
+			snprintf(dhcpN_lease, sizeof(dhcpN_lease), "dhcp%s_lease", bridge);
 			dhcp_lease = nvram_get_int(dhcpN_lease);
 
 			if (dhcp_lease <= 0)
@@ -333,11 +333,11 @@ void start_dnsmasq()
 			else
 				n = 0;
 
-			memset(sdhcp_lease, 0, 32);
+			memset(sdhcp_lease, 0, sizeof(sdhcp_lease));
 			if (n < 0)
-				strcpy(sdhcp_lease, "infinite");
+				strlcpy(sdhcp_lease, "infinite", sizeof(sdhcp_lease));
 			else
-				sprintf(sdhcp_lease, "%dm", ((n > 0) ? n : dhcp_lease));
+				snprintf(sdhcp_lease, sizeof(sdhcp_lease), "%dm", ((n > 0) ? n : dhcp_lease));
 
 			if (!do_dns) { /* if not using dnsmasq for dns */
 
@@ -354,7 +354,7 @@ void start_dnsmasq()
 					if ((dns->count == 0) && (nvram_get_int("dhcpd_llndns"))) {
 						/* no DNS might be temporary. use a low lease time to force clients to update. */
 						dhcp_lease = 2;
-						strcpy(sdhcp_lease, "2m");
+						strlcpy(sdhcp_lease, "2m", sizeof(sdhcp_lease));
 						do_dns = 1;
 					}
 					else {
@@ -369,9 +369,9 @@ void start_dnsmasq()
 				}
 			}
 
-			sprintf(dhcpdN_startip, "dhcpd%s_startip", bridge);
-			sprintf(dhcpdN_endip, "dhcpd%s_endip", bridge);
-			sprintf(lanN_netmask, "lan%s_netmask", bridge);
+			snprintf(dhcpdN_startip, sizeof(dhcpdN_startip), "dhcpd%s_startip", bridge);
+			snprintf(dhcpdN_endip, sizeof(dhcpdN_endip), "dhcpd%s_endip", bridge);
+			snprintf(lanN_netmask, sizeof(lanN_netmask), "lan%s_netmask", bridge);
 
 			if ((p = nvram_safe_get(dhcpdN_startip)) && (*p) && (e = nvram_safe_get(dhcpdN_endip)) && (*e))
 				fprintf(f, "dhcp-range=tag:%s,%s,%s,%s,%dm\n", nvram_safe_get(lanN_ifname), p, e, nvram_safe_get(lanN_netmask), dhcp_lease);
@@ -556,14 +556,14 @@ void start_dnsmasq()
 		switch (service) {
 		case IPV6_ANYCAST_6TO4: /* use tun mtu (visible at basic-ipv6.asp) */
 		case IPV6_6IN4:
-			sprintf(tmp, "%d", (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_get_int("ipv6_tun_mtu") : 1280);
+			snprintf(tmp, sizeof(tmp), "%d", (nvram_get_int("ipv6_tun_mtu") > 0) ? nvram_get_int("ipv6_tun_mtu") : 1280);
 			break;
 		case IPV6_6RD:		/* use wan mtu and calculate it */
 		case IPV6_6RD_DHCP:
-			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
+			snprintf(tmp, sizeof(tmp), "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
 			break;
 		default:
-			sprintf(tmp, "%d", (nvram_get_int("wan_mtu") > 0) ? nvram_get_int("wan_mtu") : 1280);
+			snprintf(tmp, sizeof(tmp), "%d", (nvram_get_int("wan_mtu") > 0) ? nvram_get_int("wan_mtu") : 1280);
 			break;
 		}
 
@@ -700,8 +700,8 @@ void start_dnscrypt(void)
 	if (serialize_restart("dnscrypt-proxy", 1))
 		return;
 
-	memset(dnscrypt_local, 0, 30);
-	sprintf(dnscrypt_local, "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
+	memset(dnscrypt_local, 0, sizeof(dnscrypt_local));
+	snprintf(dnscrypt_local, sizeof(dnscrypt_local), "127.0.0.1:%s", nvram_safe_get("dnscrypt_port"));
 	dnscrypt_ekeys = nvram_get_int("dnscrypt_ephemeral_keys") ? "-E" : "";
 
 	if (nvram_get_int("dnscrypt_manual"))
@@ -718,8 +718,8 @@ void start_dnscrypt(void)
 		     "-R", nvram_safe_get("dnscrypt_resolver"),
 		     "-L", f_exists(dnscrypt_resolv_alt) ? (char *) dnscrypt_resolv_alt : (char *) dnscrypt_resolv);
 #ifdef TCONFIG_IPV6
-	memset(dnscrypt_local, 0, 30);
-	sprintf(dnscrypt_local, "::1:%s", nvram_safe_get("dnscrypt_port"));
+	memset(dnscrypt_local, 0, sizeof(dnscrypt_local));
+	snprintf(dnscrypt_local, sizeof(dnscrypt_local), "::1:%s", nvram_safe_get("dnscrypt_port"));
 
 	if (get_ipv6_service() != *("NULL")) { /* when ipv6 enabled */
 		if (nvram_get_int("dnscrypt_manual"))
@@ -893,7 +893,7 @@ void generate_mdns_config(void)
 	char *wan4_ifname;
 #endif
 
-	sprintf(avahi_config, "%s/%s", AVAHI_CONFIG_PATH, AVAHI_CONFIG_FN);
+	snprintf(avahi_config, sizeof(avahi_config), "%s/%s", AVAHI_CONFIG_PATH, AVAHI_CONFIG_FN);
 
 	/* generate avahi configuration file */
 	if (!(fp = fopen(avahi_config, "w"))) {
@@ -1089,7 +1089,7 @@ void dns_to_resolv(void)
 		    get_wanx_proto(wan_prefix) != WP_DISABLED &&
 		    get_wanx_proto(wan_prefix) != WP_PPTP &&
 		    get_wanx_proto(wan_prefix) != WP_L2TP &&
-		    !nvram_get_int(strcat_r(wan_prefix, "_ppp_demand", tmp)))
+		    !nvram_get_int(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp))))
 		{
 			logmsg(LOG_DEBUG, "*** %s: %s (proto:%d) is not UP, not P-t-P or On Demand, SKIP ADD", __FUNCTION__, wan_prefix, get_wanx_proto(wan_prefix));
 			continue;
@@ -1118,7 +1118,7 @@ void dns_to_resolv(void)
 				dns = get_dns(wan_prefix); /* static buffer */
 				if (dns->count == 0) {
 					/* put a pseudo DNS IP to trigger Connect On Demand */
-					if (nvram_match(strcat_r(wan_prefix, "_ppp_demand", tmp), "1")) {
+					if (nvram_match(strlcat_r(wan_prefix, "_ppp_demand", tmp, sizeof(tmp)), "1")) {
 						switch (get_wanx_proto(wan_prefix)) {
 							case WP_PPPOE:
 							case WP_PPP3G:
@@ -1131,7 +1131,7 @@ void dns_to_resolv(void)
 								 * Further info: http://linksysinfo.org/index.php?threads/tomato-using-1-1-1-1-for-pppoe-connect-on-demand.74102
 								 * Also add possibility to change that IP (198.51.100.1) in GUI by the user
 								 */
-								trig_ip = nvram_safe_get(strcat_r(wan_prefix, "_ppp_demand_dnsip", tmp));
+								trig_ip = nvram_safe_get(strlcat_r(wan_prefix, "_ppp_demand_dnsip", tmp, sizeof(tmp)));
 								logmsg(LOG_DEBUG, "*** %s: no servers for %s: put a pseudo DNS (non-routable on public internet) IP %s to trigger Connect On Demand", __FUNCTION__, wan_prefix, trig_ip);
 								fprintf(f, "nameserver %s\n", trig_ip);
 								break;
@@ -1319,16 +1319,16 @@ void start_6rd_tunnel(void)
 	service = get_ipv6_service();
 	wanip = get_wanip(wan_prefix);
 	tun_dev = get_wan6face();
-	memset(mtu, 0, 10);
-	sprintf(mtu, "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
+	memset(mtu, 0, sizeof(mtu));
+	snprintf(mtu, sizeof(mtu), "%d", (nvram_get_int("wan_mtu") > 0) ? (nvram_get_int("wan_mtu") - 20) : 1280);
 
 	/* maybe we can merge the ipv6_6rd_* variables into a single ipv_6rd_string (ala wan_6rd) to save nvram space? */
 	if (service == IPV6_6RD) {
 		logmsg(LOG_DEBUG, "*** %s: starting 6rd tunnel using manual settings", __FUNCTION__);
 		mask_len = nvram_get_int("ipv6_6rd_ipv4masklen");
 		prefix_len = nvram_get_int("ipv6_6rd_prefix_length");
-		strcpy(prefix, nvram_safe_get("ipv6_6rd_prefix"));
-		strcpy(relay, nvram_safe_get("ipv6_6rd_borderrelay"));
+		strlcpy(prefix, nvram_safe_get("ipv6_6rd_prefix"), sizeof(prefix));
+		strlcpy(relay, nvram_safe_get("ipv6_6rd_borderrelay"), sizeof(relay));
 	}
 	else {
 		logmsg(LOG_DEBUG, "*** %s: starting 6rd tunnel using automatic settings", __FUNCTION__);
@@ -1353,8 +1353,8 @@ void start_6rd_tunnel(void)
 		return;
 	}
 
-	memset(tmp, 0, 256);
-	sprintf(tmp, "ping -q -c 2 %s | grep packet", relay);
+	memset(tmp, 0, sizeof(tmp));
+	snprintf(tmp, sizeof(tmp), "ping -q -c 2 %s | grep packet", relay);
 	if ((f = popen(tmp, "r")) == NULL) {
 		logmsg(LOG_DEBUG, "*** %s: error obtaining data", __FUNCTION__);
 		return;
@@ -1444,11 +1444,11 @@ void start_ipv6(void)
 		/* HINT: "ipv6_accept_ra" bit 0 ==> used for wan, "ipv6_accept_ra" bit 1 ==> used for lan interfaces (br0...br3) */
 		/* check lanX / brX if available */
 		for (i = 0; i < BRIDGE_COUNT; i++) {
-			memset(buffer, 0, 16);
-			sprintf(buffer, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+			memset(buffer, 0, sizeof(buffer));
+			snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
 			if (strcmp(nvram_safe_get(buffer), "") != 0) {
-				memset(buffer, 0, 16);
-				sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
 				if (((nvram_get_int("ipv6_accept_ra") & 0x02) != 0) && !nvram_get_int("ipv6_radvd") && !nvram_get_int("ipv6_dhcpd"))
 					/* accept_ra for brX */
 					accept_ra(nvram_safe_get(buffer));
@@ -1934,17 +1934,17 @@ void start_syslog(void)
 		/* used to be available in syslogd -m */
 		n = nvram_get_int("log_mark");
 		if (n > 0) {
-			memset(rem, 0, 256);
+			memset(rem, 0, sizeof(rem));
 			/* n is in minutes */
 			if (n < 60)
-				sprintf(rem, "*/%d * * * *", n);
+				snprintf(rem, sizeof(rem), "*/%d * * * *", n);
 			else if (n < 60 * 24)
-				sprintf(rem, "0 */%d * * *", n / 60);
+				snprintf(rem, sizeof(rem), "0 */%d * * *", n / 60);
 			else
-				sprintf(rem, "0 0 */%d * *", n / (60 * 24));
+				snprintf(rem, sizeof(rem), "0 0 */%d * *", n / (60 * 24));
 
-			memset(s, 0, 64);
-			sprintf(s, "%s logger -p syslog.info -- -- MARK --", rem);
+			memset(s, 0, sizeof(s));
+			snprintf(s, sizeof(s), "%s logger -p syslog.info -- -- MARK --", rem);
 			eval("cru", "a", "syslogdmark", s);
 		}
 		else {
@@ -2053,8 +2053,8 @@ void start_igmp_proxy(void)
 				else
 					strcpy(bridge, "");
 
-				sprintf(lanN_ifname, "lan%s_ifname", bridge);
-				sprintf(multicast_lanN, "multicast_lan%s", bridge);
+				snprintf(lanN_ifname, sizeof(lanN_ifname), "lan%s_ifname", bridge);
+				snprintf(multicast_lanN, sizeof(multicast_lanN), "multicast_lan%s", bridge);
 
 				if ((strcmp(nvram_safe_get(multicast_lanN), "1") == 0) && (strcmp(nvram_safe_get(lanN_ifname), "") != 0)) {
 				/*
@@ -2115,14 +2115,14 @@ void start_udpxy(void)
 		for (i = 0; i < BRIDGE_COUNT; i++) {
 			int ret1 = 0, ret2 = 0;
 			memset(buffer2, 0, sizeof(buffer2));
-			sprintf(buffer2, (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
+			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "udpxy_lan" : "udpxy_lan%d"), i);
 			ret1 = nvram_match(buffer2, "1");
 			memset(buffer2, 0, sizeof(buffer2));
-			sprintf(buffer2, (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+			snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
 			ret2 = strcmp(nvram_safe_get(buffer2), "") != 0;
 			if (ret1 && ret2) {
 				memset(buffer2, 0, sizeof(buffer2));
-				sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
 				eval("udpxy", (nvram_get_int("udpxy_stats") ? "-S" : ""), "-p", nvram_safe_get("udpxy_port"), "-c", nvram_safe_get("udpxy_clients"), "-a", nvram_safe_get(buffer2), "-m", buffer);
 				bind_lan = 1;
 				break; /* start udpxy only once and only for one lanX */
@@ -2168,17 +2168,17 @@ void start_ntpd(void)
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
 	if (ntp_updates_int >= 0) { /* -1 = never */
-		servers_len = strlen(nvram_safe_get("ntp_server"));
+		servers_len = strlen(nvram_safe_get("ntp_server") + 1);
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
-		if ((servers = malloc(servers_len + 1)) == NULL) {
+		if ((servers = malloc(servers_len)) == NULL) {
 			logmsg(LOG_ERR, "ntpd: failed allocating memory, exiting");
 			return; /* just get out if we couldn't allocate memory */
 		}
-		memset(servers, 0, sizeof(servers));
+		memset(servers, 0, servers_len);
 
 		/* get the space separated list of ntp servers */
-		strcpy(servers, nvram_safe_get("ntp_server"));
+		strlcpy(servers, nvram_safe_get("ntp_server"), servers_len);
 
 		/* put the servers into the ntp config file */
 		if ((f = fopen("/etc/ntp.conf", "w")) != NULL) {
@@ -2350,12 +2350,12 @@ static char *get_full_storage_path(char *val)
 	static char buf[128];
 	int len;
 
-	memset(buf, 0, 128);
+	memset(buf, 0, sizeof(buf));
 
 	if (val[0] == '/')
-		len = sprintf(buf, "%s", val);
+		len = snprintf(buf, sizeof(buf), "%s", val);
 	else
-		len = sprintf(buf, "%s/%s", MOUNT_ROOT, val);
+		len = snprintf(buf, sizeof(buf), "%s/%s", MOUNT_ROOT, val);
 
 	if (len > 1 && buf[len - 1] == '/')
 		buf[len - 1] = 0;
@@ -2400,8 +2400,8 @@ static void start_ftpd(int force)
 
 	if (nvram_get_int("ftp_super")) {
 		/* rights */
-		memset(tmp, 0, 256);
-		sprintf(tmp, "%s/%s", vsftpd_users, "admin");
+		memset(tmp, 0, sizeof(tmp));
+		snprintf(tmp, sizeof(tmp), "%s/%s", vsftpd_users, "admin");
 		if ((f = fopen(tmp, "w")) != NULL) {
 			fprintf(f, "dirlist_enable=yes\n"
 			           "write_enable=yes\n"
@@ -2420,8 +2420,8 @@ static void start_ftpd(int force)
 		            "anon_umask=022\n");
 
 		/* rights */
-		memset(tmp, 0, 256);
-		sprintf(tmp, "%s/ftp", vsftpd_users);
+		memset(tmp, 0, sizeof(tmp));
+		snprintf(tmp, sizeof(tmp), "%s/ftp", vsftpd_users);
 		if ((f = fopen(tmp, "w")) != NULL) {
 			if (nvram_match("ftp_dirlist", "0"))
 				fprintf(f, "dirlist_enable=yes\n");
@@ -2504,7 +2504,7 @@ static void start_ftpd(int force)
 		/* does a valid HTTPD cert exist? if not, generate one */
 		if ((!f_exists("/etc/cert.pem")) || (!f_exists("/etc/key.pem"))) {
 			f_read("/dev/urandom", &sn, sizeof(sn));
-			sprintf(t, "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
+			snprintf(t, sizeof(t), "%llu", sn & 0x7FFFFFFFFFFFFFFFULL);
 			nvram_set("https_crt_gen", "1");
 			nvram_set("https_crt_save", "1");
 			eval("gencert.sh", t);
@@ -2559,27 +2559,27 @@ static void start_ftpd(int force)
 				root_dir = nvram_safe_get("ftp_pubroot");
 
 			/* directory */
-			memset(tmp, 0, 256);
+			memset(tmp, 0, sizeof(tmp));
 			if (strncmp(rights, "Private", 7) == 0) {
-				sprintf(tmp, "%s/%s", nvram_storage_path("ftp_pvtroot"), user);
+				snprintf(tmp, sizeof(tmp), "%s/%s", nvram_storage_path("ftp_pvtroot"), user);
 				mkdir_if_none(tmp);
 			}
 			else
-				sprintf(tmp, "%s", get_full_storage_path(root_dir));
+				snprintf(tmp, sizeof(tmp), "%s", get_full_storage_path(root_dir));
 
 			fprintf(fp, "%s:%s:0:0:%s:%s:/sbin/nologin\n", user, crypt(pass, "$1$"), user, tmp);
 
 			/* rights */
-			memset(tmp, 0, 256);
-			sprintf(tmp, "%s/%s", vsftpd_users, user);
+			memset(tmp, 0, sizeof(tmp));
+			snprintf(tmp, sizeof(tmp), "%s/%s", vsftpd_users, user);
 			if ((f = fopen(tmp, "w")) != NULL) {
 				tmp[0] = 0;
 				if (nvram_invmatch("ftp_dirlist", "1"))
-					strcat(tmp, "dirlist_enable=yes\n");
+					strlcat(tmp, "dirlist_enable=yes\n", sizeof(tmp));
 				if ((strstr(rights, "Read")) || (!strcmp(rights, "Private")))
-					strcat(tmp, "download_enable=yes\n");
+					strlcat(tmp, "download_enable=yes\n", sizeof(tmp));
 				if ((strstr(rights, "Write")) || (!strncmp(rights, "Private", 7)))
-					strcat(tmp, "write_enable=yes\n");
+					strlcat(tmp, "write_enable=yes\n", sizeof(tmp));
 
 				fputs(tmp, f);
 				fclose(f);
@@ -3374,8 +3374,8 @@ TOP:
 #endif
 			do_static_routes(0); /* remove old '_saved' */
 			for (i = 0; i < BRIDGE_COUNT; i++) {
-				memset(buffer2, 0, 16);
-				sprintf(buffer2, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				memset(buffer2, 0, sizeof(buffer2));
+				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
 				if ((i == 0) || (strcmp(nvram_safe_get(buffer2), "") != 0))
 					eval("brctl", "stp", nvram_safe_get(buffer2), "0");
 			}
@@ -3388,11 +3388,11 @@ TOP:
 			start_zebra();
 #endif
 			for (i = 0; i < BRIDGE_COUNT; i++) {
-				memset(buffer, 0, 128);
-				sprintf(buffer, (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				memset(buffer, 0, sizeof(buffer));
+				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
 				if ((i == 0) || (strcmp(nvram_safe_get(buffer), "") != 0)) {
-					memset(buffer2, 0, 16);
-					sprintf(buffer2, (i == 0 ? "lan_stp" : "lan%d_stp"), i);
+					memset(buffer2, 0, sizeof(buffer2));
+					snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_stp" : "lan%d_stp"), i);
 					eval("brctl", "stp", nvram_safe_get(buffer), nvram_safe_get(buffer2));
 				}
 			}
