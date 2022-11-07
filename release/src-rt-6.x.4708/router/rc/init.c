@@ -641,8 +641,10 @@ static void init_lan_hwaddr(void)
 	 */
 	if (model == MODEL_R8000) {
 		etxmac = nvram_safe_get("et2macaddr");
-		if (!nvram_match("lan_hwaddr", (char *)etxmac) && (strlen(etxmac) >= 17)) {
+		if ((!nvram_match("lan_hwaddr", (char *)etxmac) ||
+		     !nvram_match("et0macaddr", (char *)etxmac)) && (strlen(etxmac) >= 17)) {
 			nvram_set("lan_hwaddr", etxmac);
+			nvram_set("et0macaddr", etxmac); /* SPECIAL case: for R8000 we use the gmac3 default setup (et2) but disabled and copy et2macaddr to et0macaddr */
 		}
 	}
 #ifdef TCONFIG_AC5300
@@ -968,7 +970,7 @@ static int init_vlan_ports(void)
 #endif
 #ifdef TCONFIG_AC3200
 	case MODEL_R8000:
-		dirty |= check_nv("vlan1ports", "3 2 1 0 8*");
+		dirty |= check_nv("vlan1ports", "3 2 1 0 8*"); /* SPECIAL Case: this is gmac3 switch config! (et2) */
 		dirty |= check_nv("vlan2ports", "4 8");
 		break;
 #endif
@@ -1585,7 +1587,7 @@ static void check_bootnv(void)
 		break;
 #endif
 	case MODEL_R8000:
-		nvram_unset("et1macaddr");
+		nvram_unset("et1macaddr"); /* unset! */
 		dirty |= check_nv("wl0_ifname", "eth2");
 		dirty |= check_nv("wl1_ifname", "eth1");
 		dirty |= check_nv("wl2_ifname", "eth3");
@@ -10027,7 +10029,7 @@ static int init_nvram(void)
 		nvram_set("usb_uhci", "-1");
 #endif
 		if (!nvram_match("t_fix1", (char *)name)) {
-			nvram_set("vlan1hwname", "et2");
+			nvram_set("vlan1hwname", "et2"); /* SPECIAL case: for R8000 we use the gmac3 default setup (et2) but disabled and copy et2macaddr to et0macaddr */
 			nvram_set("vlan2hwname", "et2");
 			nvram_set("lan_ifname", "br0");
 			nvram_set("landevs", "vlan1 wl0 wl1 wl2");
@@ -10052,7 +10054,8 @@ static int init_nvram(void)
 			/* fix MAC addresses */
 			strlcpy(s, nvram_safe_get("et2macaddr"), sizeof(s));	/* get et2 MAC address for LAN */
 			nvram_set("lan_hwaddr", s);				/* copy et2macaddr to lan_hwaddr */
-			inc_mac(s, +2);						/* MAC + 1 will be for WAN */
+			nvram_set("et0macaddr", s);				/* copy et2macaddr to et0macaddr */
+			inc_mac(s, +2);
 			nvram_set("1:macaddr", s);				/* fix WL mac for wl0 (1:) - 2,4GHz - eth2 */
 			nvram_set("wl0_hwaddr", s);
 			inc_mac(s, +4);						/* do not overlap with VIFs */
