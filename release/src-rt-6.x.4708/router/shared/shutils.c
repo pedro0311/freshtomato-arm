@@ -194,7 +194,7 @@ file2str(const char *path)
 	int fd;
 
 	if ((fd = open(path, O_RDONLY)) == -1) {
-		perror(path);
+		logerr(__FUNCTION__, __LINE__, path);
 		return NULL;
 	}
 
@@ -255,7 +255,7 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 
 	pid = fork();
 	if (pid == -1) {
-		perror("fork");
+		logerr(__FUNCTION__, __LINE__, "fork");
 		status = errno;
 		goto EXIT;
 	}
@@ -268,7 +268,7 @@ int _eval(char *const argv[], const char *path, int timeout, int *ppid)
 		do {
 			if ((w = waitpid(pid, &status, 0)) == -1) {
 				status = errno;
-				perror("waitpid");
+				logerr(__FUNCTION__, __LINE__, "waitpid");
 				goto EXIT;
 			}
 		} while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -343,7 +343,7 @@ EXIT:
 		}
 		
 		if ((fd = open(path, flags, 0644)) < 0) {
-			perror(path);
+			logerr(__FUNCTION__, __LINE__, path);
 		}
 		else {
 			dup2(fd, STDOUT_FILENO);
@@ -362,19 +362,19 @@ EXIT:
 #if 1
 	execvp(argv[0], argv);
 
-	perror(argv[0]);
+	logerr(__FUNCTION__, __LINE__, argv[0]);
 #elif 0
 	for(n = 0; argv[n]; ++n)
 		cpu0_argv[n+3] = argv[n];
 	execvp(cpu0_argv[0], cpu0_argv);
 
-	perror(cpu0_argv[0]);
+	logerr(__FUNCTION__, __LINE__, cpu0_argv[0]);
 #else
 	for(n = 0; argv[n]; ++n)
 		cpu1_argv[n+3] = argv[n];
 	execvp(cpu1_argv[0], cpu1_argv);
 
-	perror(cpu1_argv[0]);
+	logerr(__FUNCTION__, __LINE__, cpu1_argv[0]);
 
 #endif
 
@@ -436,7 +436,7 @@ _backtick(char *const argv[])
 
 	/* create pipe */
 	if (pipe(filedes) == -1) {
-		perror(argv[0]);
+		logerr(__FUNCTION__, __LINE__, argv[0]);
 		return NULL;
 	}
 
@@ -518,7 +518,7 @@ get_pid_by_name(char *name)
 	struct dirent   *next;
 
 	if ((dir = opendir("/proc")) == NULL) {
-		perror("Cannot open /proc");
+		logerr(__FUNCTION__, __LINE__, "/proc");
 		return -1;
 	}
 

@@ -330,7 +330,7 @@ void start_bwlimit(void)
 	waniface = nvram_safe_get("wan_iface");
 
 	if ((tc = fopen(bwlimitfn, "w")) == NULL) {
-		perror(bwlimitfn);
+		logerr(__FUNCTION__, __LINE__, bwlimitfn);
 		return;
 	}
 

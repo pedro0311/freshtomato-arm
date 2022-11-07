@@ -66,7 +66,7 @@ static void build_tinc_firewall(const char *port)
 
 	/* Create firewall script */
 	if (!(p = fopen(TINC_FW_SCRIPT, "w"))) {
-		perror(TINC_FW_SCRIPT);
+		logerr(__FUNCTION__, __LINE__, TINC_FW_SCRIPT);
 		return;
 	}
 
@@ -130,7 +130,7 @@ void start_tinc(int force)
 	/* write private rsa key */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_private_rsa"), "") != 0) {
 		if (!(fp = fopen(TINC_RSA_KEY, "w"))) {
-			perror(TINC_RSA_KEY);
+			logerr(__FUNCTION__, __LINE__, TINC_RSA_KEY);
 			return;
 		}
 		fprintf(fp, "%s\n", tinc_tmp_value);
@@ -141,7 +141,7 @@ void start_tinc(int force)
 	/* write private ed25519 key */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_private_ed25519"), "") != 0) {
 		if (!(fp = fopen(TINC_PRIV_KEY, "w"))) {
-			perror(TINC_PRIV_KEY);
+			logerr(__FUNCTION__, __LINE__, TINC_PRIV_KEY);
 			return;
 		}
 		fprintf(fp, "%s\n", tinc_tmp_value);
@@ -151,7 +151,7 @@ void start_tinc(int force)
 
 	/* create tinc.conf */
 	if (!(fp = fopen(TINC_CONF, "w"))) {
-		perror(TINC_CONF);
+		logerr(__FUNCTION__, __LINE__, TINC_CONF);
 		return;
 	}
 
@@ -179,7 +179,7 @@ void start_tinc(int force)
 		memset(buffer, 0, (BUF_SIZE));
 		snprintf(buffer, sizeof(buffer), TINC_HOSTS"/%s", name);
 		if (!(hp = fopen(buffer, "w"))) {
-			perror(buffer);
+			logerr(__FUNCTION__, __LINE__, buffer);
 			return;
 		}
 
@@ -213,7 +213,7 @@ void start_tinc(int force)
 		if (strcmp(nvram_safe_get("tinc_name"), name) == 0) {
 			/* create tinc-up script if this is the host system */
 			if (!(hp = fopen(TINC_UP_SCRIPT, "w"))) {
-				perror(TINC_UP_SCRIPT);
+				logerr(__FUNCTION__, __LINE__, TINC_UP_SCRIPT);
 				return;
 			}
 
@@ -251,7 +251,7 @@ void start_tinc(int force)
 	/* write tinc-down script */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_tinc_down"), "") != 0) {
 		if (!(fp = fopen(TINC_DOWN_SCRIPT, "w"))) {
-			perror(TINC_DOWN_SCRIPT);
+			logerr(__FUNCTION__, __LINE__, TINC_DOWN_SCRIPT);
 			return;
 		}
 		fprintf(fp, "#!/bin/sh\n");
@@ -263,7 +263,7 @@ void start_tinc(int force)
 	/* write host-up */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_up"), "") != 0) {
 		if (!(fp = fopen(TINC_HOSTUP_SCRIPT, "w"))) {
-			perror(TINC_HOSTUP_SCRIPT);
+			logerr(__FUNCTION__, __LINE__, TINC_HOSTUP_SCRIPT);
 			return;
 		}
 		fprintf(fp, "#!/bin/sh\n" );
@@ -275,7 +275,7 @@ void start_tinc(int force)
 	/* write host-down */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_host_down"), "") != 0) {
 		if (!(fp = fopen(TINC_HOSTDOWN_SCRIPT, "w"))) {
-			perror(TINC_HOSTDOWN_SCRIPT);
+			logerr(__FUNCTION__, __LINE__, TINC_HOSTDOWN_SCRIPT);
 			return;
 		}
 		fprintf(fp, "#!/bin/sh\n");
@@ -287,7 +287,7 @@ void start_tinc(int force)
 	/* write subnet-up */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_up"), "") != 0) {
 		if (!(fp = fopen(TINC_SUBNETUP_SCRIPT, "w"))) {
-			perror(TINC_SUBNETUP_SCRIPT);
+			logerr(__FUNCTION__, __LINE__, TINC_SUBNETUP_SCRIPT);
 			return;
 		}
 		fprintf(fp, "#!/bin/sh\n");
@@ -299,7 +299,7 @@ void start_tinc(int force)
 	/* write subnet-down */
 	if (strcmp(tinc_tmp_value = nvram_safe_get("tinc_subnet_down"), "") != 0) {
 		if (!(fp = fopen(TINC_SUBNETDOWN_SCRIPT, "w"))) {
-			perror(TINC_SUBNETDOWN_SCRIPT);
+			logerr(__FUNCTION__, __LINE__, TINC_SUBNETDOWN_SCRIPT);
 			return;
 		}
 		fprintf(fp, "#!/bin/sh\n");

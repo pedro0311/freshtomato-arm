@@ -21,7 +21,7 @@ void start_snmp(void)
 	if (nvram_match("snmp_enable", "1")) {
 		/* writing data to file */
 		if (!(fp = fopen(SNMP_CONF, "w"))) {
-			perror(SNMP_CONF);
+			logerr(__FUNCTION__, __LINE__, SNMP_CONF);
 			return;
 		}
 		fprintf(fp, "agentaddress udp:%d\n"

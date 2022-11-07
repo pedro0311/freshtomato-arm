@@ -37,6 +37,9 @@ typedef u_int8_t u8;
 
 #include <shutils.h>
 #include <etutils.h>
+#include <syslog.h>
+
+#include "shared.h"
 
 static int
 et_check(int s, struct ifreq *ifr)
@@ -49,7 +52,7 @@ et_check(int s, struct ifreq *ifr)
 	if (ioctl(s, SIOCETHTOOL, (caddr_t)ifr) < 0) {
 		/* print a good diagnostic if not superuser */
 		if (errno == EPERM)
-			perror("not permit");
+			logerr(__FUNCTION__, __LINE__, "not permit");
 		return (-1);
 	}
 
@@ -105,7 +108,7 @@ et_iovar(char *name, int cmd, void *buf, int len, bool set)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return errno;
 	}
 
@@ -118,7 +121,7 @@ et_iovar(char *name, int cmd, void *buf, int len, bool set)
 		et_find(s, &ifr);
 
 	if (!*ifr.ifr_name) {
-		perror("et interface not found");
+		logerr(__FUNCTION__, __LINE__, "et interface not found");
 		ret = -1;
 		goto err;
 	}
@@ -131,7 +134,7 @@ et_iovar(char *name, int cmd, void *buf, int len, bool set)
 
 	ifr.ifr_data = (caddr_t)&var;
 	if (ioctl(s, SIOCSETGETVAR, (caddr_t)&ifr) < 0) {
-		perror("ioctl");
+		logerr(__FUNCTION__, __LINE__, "ioctl");
 		ret = errno;
 	}
 

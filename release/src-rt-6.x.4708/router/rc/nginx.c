@@ -158,7 +158,7 @@ static void build_nginx_conf(void)
 	/* Starting the nginx configuration file */
 	mkdir_if_none(nginxdir);
 	if ((nginx_conf_file = fopen(nginxconf, "w")) == NULL) {
-		perror(nginxconf);
+		logerr(__FUNCTION__, __LINE__, nginxconf);
 		return;
 	}
 
@@ -291,7 +291,7 @@ static void build_nginx_conf(void)
 
 	if (nvram_get_int("nginx_php")) {
 		if (!(phpini_file = fopen("/etc/php.ini", "w"))) {
-			perror("/etc/php.ini");
+			logerr(__FUNCTION__, __LINE__, "/etc/php.ini");
 			return;
 		}
 		fprintf(phpini_file, "post_max_size = %sM\n"
@@ -320,7 +320,7 @@ static void build_nginx_firewall(void)
 
 	/* Create firewall script */
 	if (!(p = fopen(nginx_fw_script, "w"))) {
-		perror(nginx_fw_script);
+		logerr(__FUNCTION__, __LINE__, nginx_fw_script);
 		return;
 	}
 

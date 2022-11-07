@@ -30,7 +30,7 @@ void build_nocat_conf(void)
 	char *p;
 
 	if (!(fp = fopen(NOCAT_CONF, "w"))) {
-		perror(NOCAT_CONF);
+		logerr(__FUNCTION__, __LINE__, NOCAT_CONF);
 		return;
 	}
 
@@ -186,7 +186,7 @@ void start_nocat(void)
 	}
 
 	if (!(fp = fopen(NOCAT_START_SCRIPT, "w"))) {
-		perror(NOCAT_START_SCRIPT);
+		logerr(__FUNCTION__, __LINE__, NOCAT_START_SCRIPT);
 		return;
 	}
 	

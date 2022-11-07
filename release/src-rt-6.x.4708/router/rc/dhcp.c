@@ -465,7 +465,7 @@ static int expires_lan(unsigned int in)
 	time(&now);
 	snprintf(tmp, sizeof(tmp), "/tmp/dhcpc-lan.expires");
 	if (!(fp = fopen(tmp, "w"))) {
-		perror(tmp);
+		logerr(__FUNCTION__, __LINE__, tmp);
 		return 1;
 	}
 	fprintf(fp, "%d", (unsigned int) now + in);

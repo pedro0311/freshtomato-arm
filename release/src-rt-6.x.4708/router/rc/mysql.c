@@ -151,7 +151,7 @@ void start_mysql(int force)
 
 	/* config file */
 	if (!(fp = fopen(mysql_conf, "w"))) {
-		perror(mysql_conf);
+		logerr(__FUNCTION__, __LINE__, mysql_conf);
 		return;
 	}
 

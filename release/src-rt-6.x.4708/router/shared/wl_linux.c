@@ -37,7 +37,9 @@ typedef u_int8_t u8;
 #include <typedefs.h>
 #include <wlioctl.h>
 #include <wlutils.h>
+#include <syslog.h>
 
+#include "shared.h"
 
 int
 wl_ioctl(char *name, int cmd, void *buf, int len)
@@ -50,7 +52,7 @@ wl_ioctl(char *name, int cmd, void *buf, int len)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return errno;
 	}
 
@@ -75,7 +77,7 @@ wl_ioctl(char *name, int cmd, void *buf, int len)
 			} else {
 				snprintf(buffer, sizeof(buffer), "%s: cmd=%d", name, cmd);
 			}
-			perror(buffer);
+			logerr(__FUNCTION__, __LINE__, buffer);
 		}
 	/* cleanup */
 	close(s);
@@ -92,7 +94,7 @@ wl_get_dev_type(char *name, void *buf, int len)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return -1;
 	}
 
@@ -119,7 +121,7 @@ wl_hwaddr(char *name, unsigned char *hwaddr)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return errno;
 	}
 

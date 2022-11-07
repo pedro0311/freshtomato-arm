@@ -585,7 +585,7 @@ void start_qos(char *prefix)
 	prep_qosstr(prefix);
 
 	if ((f = fopen(qosfn, "w")) == NULL) {
-		perror(qosfn);
+		logerr(__FUNCTION__, __LINE__, qosfn);
 		return;
 	}
 

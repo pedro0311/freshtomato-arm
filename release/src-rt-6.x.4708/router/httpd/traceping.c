@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 	int i;
 
 	if ((f = popen("traceroute -I 192.168.0.1", "r")) == NULL) {
-		perror("popen");
+		logerr(__FUNCTION__, __LINE__, "popen");
 		return 1;
 	}
 // 2  192.168.0.1 (192.168.0.1)  1.908 ms  1.812 ms  1.688 ms

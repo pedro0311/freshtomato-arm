@@ -56,6 +56,8 @@
 		) \
 	} while (0)
 
+#define logerr(func, line, filename)	syslog(LOG_ERR, "ERROR in: %s line: %d - file \"%s\": %s", func, line, filename, strerror(errno))
+
 #ifdef DEBUG_NOISY
 #define _dprintf		cprintf
 #else

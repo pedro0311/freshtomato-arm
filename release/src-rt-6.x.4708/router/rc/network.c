@@ -269,7 +269,7 @@ static void set_lan_hostname(const char *wan_hostname)
 #endif
 		fclose(f);
 	} else
-		perror("/etc/hosts");
+		logerr(__FUNCTION__, __LINE__, "/etc/hosts");
 }
 
 void set_host_domain_name(void)
@@ -2027,7 +2027,7 @@ int wl_send_dif_event(const char *ifname, uint32 event)
 	if (s < 0) {
 		s = socket(AF_INET, SOCK_DGRAM, 0);
 		if (s < 0) {
-			perror("socket");
+			logerr(__FUNCTION__, __LINE__, "socket");
 			return -1;
 		}
 	}
@@ -2048,7 +2048,7 @@ int wl_send_dif_event(const char *ifname, uint32 event)
 		sizeof(struct sockaddr_in));
 
 	if (n != len) {
-		perror("udp send failed");
+		logerr(__FUNCTION__, __LINE__, "udp");
 		return -1;
 	}
 

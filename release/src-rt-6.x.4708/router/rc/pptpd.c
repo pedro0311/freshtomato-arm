@@ -64,7 +64,7 @@ static void write_chap_secret(char *file)
 	char *username, *passwd;
 
 	if ((fp = fopen(file, "w")) == NULL) {
-		perror(file);
+		logerr(__FUNCTION__, __LINE__, file);
 		return;
 	}
 
@@ -100,7 +100,7 @@ static void build_pptpd_firewall(void)
 
 	/* ip-up */
 	if (!(fp = fopen(PPTPD_UP_SCRIPT, "w"))) {
-		perror(PPTPD_UP_SCRIPT);
+		logerr(__FUNCTION__, __LINE__, PPTPD_UP_SCRIPT);
 		return;
 	}
 	fprintf(fp, "#!/bin/sh\n"
@@ -122,7 +122,7 @@ static void build_pptpd_firewall(void)
 
 	/* ip-down */
 	if (!(fp = fopen(PPTPD_DOWN_SCRIPT, "w"))) {
-		perror(PPTPD_DOWN_SCRIPT);
+		logerr(__FUNCTION__, __LINE__, PPTPD_DOWN_SCRIPT);
 		return;
 	}
 	fprintf(fp, "#!/bin/sh\n"
@@ -145,7 +145,7 @@ static void build_pptpd_firewall(void)
 
 	/* firewall */
 	if (!(fp = fopen(PPTPD_FW_SCRIPT, "w"))) {
-		perror(PPTPD_FW_SCRIPT);
+		logerr(__FUNCTION__, __LINE__, PPTPD_FW_SCRIPT);
 		return;
 	}
 	fprintf(fp, "#!/bin/sh\n"
@@ -180,7 +180,7 @@ void start_pptpd(int force)
 
 	/* Create unique options file */
 	if ((fp = fopen(PPTPD_OPTIONS, "w")) == NULL) {
-		perror(PPTPD_OPTIONS);
+		logerr(__FUNCTION__, __LINE__, PPTPD_OPTIONS);
 		return;
 	}
 

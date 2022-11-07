@@ -76,7 +76,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 	memset(ppp_optfile, 0, 256);
 	sprintf(ppp_optfile, "/tmp/ppp/%s_options", prefix);
 	if ((fp = fopen(ppp_optfile, "w")) == NULL) {
-		perror(ppp_optfile);
+		logerr(__FUNCTION__, __LINE__, ppp_optfile);
 		return -1;
 	}
 
@@ -160,7 +160,7 @@ static int config_pppd(int wan_proto, int num, char *prefix)
 		sprintf(ppp3g_chatfile, "/tmp/ppp/%s_connect.chat", prefix);
 
 		if ((cfp = fopen(ppp3g_chatfile, "w")) == NULL) {
-			perror(ppp3g_chatfile);
+			logerr(__FUNCTION__, __LINE__, ppp3g_chatfile);
 			return -1;
 		}
 		fprintf(cfp, "ABORT \"NO CARRIER\"\n"
@@ -547,7 +547,7 @@ static int config_l2tp(void) /* shared xl2tpd.conf for all WAN */
 	memset(xl2tp_file, 0, 256);
 	sprintf(xl2tp_file, "/etc/xl2tpd.conf");
  	if ((fp = fopen(xl2tp_file, "w")) == NULL) {
-		perror(xl2tp_file);
+		logerr(__FUNCTION__, __LINE__, xl2tp_file);
  		return -1;
 	}
 	/* GLOBAL */
@@ -847,7 +847,7 @@ void start_wan_if(char *prefix)
 	}
 
 	if ((sd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		perror("socket");
+		logerr(__FUNCTION__, __LINE__, "socket");
 		return;
 	}
 
@@ -904,7 +904,7 @@ void start_wan_if(char *prefix)
 			ifr.ifr_mtu = mtu + 8;
 
 			if (ioctl(sd, SIOCSIFMTU, &ifr)) {
-				perror(wan_ifname);
+				logerr(__FUNCTION__, __LINE__, wan_ifname);
 				logmsg(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 			}
 			else
@@ -915,7 +915,7 @@ void start_wan_if(char *prefix)
 		strncpy(ifr.ifr_name, wan_ifname, IFNAMSIZ);
 		ifr.ifr_mtu = mtu + 8;
 		if (ioctl(sd, SIOCSIFMTU, &ifr)) {
-			perror(wan_ifname);
+			logerr(__FUNCTION__, __LINE__, wan_ifname);
 			logmsg(LOG_INFO, "Error setting MTU on %s to %d", ifr.ifr_name, ifr.ifr_mtu);
 		}
 		else

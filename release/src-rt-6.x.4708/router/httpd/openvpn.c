@@ -43,7 +43,7 @@ static void put_to_file(const char *filePath, const char *content)
 	FILE *fkey;
 
 	if ((fkey = fopen(filePath, "w")) == NULL) {
-		perror(filePath);
+		logerr(__FUNCTION__, __LINE__, filePath);
 		return;
 	}
 	fputs(content, fkey);
@@ -296,7 +296,7 @@ void wo_ovpn_genclientconfig(char *url)
 	eval("mkdir", "-m", "0777", "-p", OVPN_CLIENT_DIR);
 
 	if ((fp = fopen(OVPN_CLIENT_DIR"/connection.ovpn", "w")) == NULL) {
-		perror(OVPN_CLIENT_DIR"/connection.ovpn");
+		logerr(__FUNCTION__, __LINE__, OVPN_CLIENT_DIR"/connection.ovpn");
 		return;
 	}
 

@@ -37,7 +37,7 @@ void start_tor(int force) {
 
 	/* writing data to file */
 	if (!(fp = fopen(tor_config, "w"))) {
-		perror(tor_config);
+		logerr(__FUNCTION__, __LINE__, tor_config);
 		return;
 	}
 	/* localhost ports, NoPreferIPv6Automap doesn't matter when applied only to DNSPort, but works fine with SocksPort */

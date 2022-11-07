@@ -98,7 +98,7 @@ void start_dnsmasq_wet()
 	char lanN_ifname[] = "lanXX_ifname";
 
 	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
-		perror(DNSMASQ_CONF);
+		logerr(__FUNCTION__, __LINE__, DNSMASQ_CONF);
 		return;
 	}
 
@@ -188,7 +188,7 @@ void start_dnsmasq()
 #endif /* TCONFIG_BCMWL6 */
 
 	if ((f = fopen(DNSMASQ_CONF, "w")) == NULL) {
-		perror(DNSMASQ_CONF);
+		logerr(__FUNCTION__, __LINE__, DNSMASQ_CONF);
 		return;
 	}
 
@@ -778,7 +778,7 @@ void start_stubby(void)
 	}
 
 	if ((fp = fopen(stubby_config, "w")) == NULL) {
-		perror(stubby_config);
+		logerr(__FUNCTION__, __LINE__, stubby_config);
 		return;
 	}
 
@@ -897,7 +897,7 @@ void generate_mdns_config(void)
 
 	/* generate avahi configuration file */
 	if (!(fp = fopen(avahi_config, "w"))) {
-		perror(avahi_config);
+		logerr(__FUNCTION__, __LINE__, avahi_config);
 		return;
 	}
 
@@ -1151,7 +1151,7 @@ void dns_to_resolv(void)
 			fclose(f);
 		}
 		else {
-			perror(dmresolv);
+			logerr(__FUNCTION__, __LINE__, dmresolv);
 			return;
 		}
 		umask(m);
@@ -1522,7 +1522,7 @@ void start_upnp(void)
 	}
 
 	if ((f = fopen(UPNP_CONFIG, "w")) == NULL) {
-		perror(UPNP_CONFIG);
+		logerr(__FUNCTION__, __LINE__, UPNP_CONFIG);
 		return;
 	}
 
@@ -1708,7 +1708,7 @@ void start_zebra(void)
 	f_write(ZEBRA_CONF, NULL, 0, 0, 0); /* blank */
 
 	if ((fp = fopen(RIPD_CONF, "w")) == NULL) {
-		perror(RIPD_CONF);
+		logerr(__FUNCTION__, __LINE__, RIPD_CONF);
 		return;
 	}
 
@@ -2073,7 +2073,7 @@ void start_igmp_proxy(void)
 		}
 	}
 	else {
-		perror(IGMP_CONF);
+		logerr(__FUNCTION__, __LINE__, IGMP_CONF);
 		return;
 	}
 
@@ -2196,7 +2196,7 @@ void start_ntpd(void)
 			fclose(f);
 		}
 		else {
-			perror("/etc/ntp.conf");
+			logerr(__FUNCTION__, __LINE__, "/etc/ntp.conf");
 			return;
 		}
 
@@ -2400,7 +2400,7 @@ static void start_ftpd(int force)
 	mkdir_if_none(vsftpd_run);
 
 	if ((fp = fopen(vsftpd_conf, "w")) == NULL) {
-		perror(vsftpd_conf);
+		logerr(__FUNCTION__, __LINE__, vsftpd_conf);
 		return;
 	}
 
@@ -2415,7 +2415,7 @@ static void start_ftpd(int force)
 			fclose(f);
 		}
 		else {
-			perror(tmp);
+			logerr(__FUNCTION__, __LINE__, tmp);
 			return;
 		}
 	}
@@ -2438,7 +2438,7 @@ static void start_ftpd(int force)
 			fclose(f);
 		}
 		else {
-			perror(tmp);
+			logerr(__FUNCTION__, __LINE__, tmp);
 			return;
 		}
 
@@ -2527,7 +2527,7 @@ static void start_ftpd(int force)
 
 	/* prepare passwd file and default users */
 	if ((fp = fopen(vsftpd_passwd, "w")) == NULL) {
-		perror(vsftpd_passwd);
+		logerr(__FUNCTION__, __LINE__, vsftpd_passwd);
 		return;
 	}
 
@@ -2591,7 +2591,7 @@ static void start_ftpd(int force)
 				fclose(f);
 			}
 			else {
-				perror(tmp);
+				logerr(__FUNCTION__, __LINE__, tmp);
 				return;
 			}
 		}
@@ -2718,7 +2718,7 @@ static void start_media_server(int force)
 			fclose(f);
 		}
 		else {
-			perror(argv[2]);
+			logerr(__FUNCTION__, __LINE__, argv[2]);
 			return;
 		}
 	}

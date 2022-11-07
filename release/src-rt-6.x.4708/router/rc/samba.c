@@ -129,7 +129,7 @@ void start_samba(int force)
 		return;
 
 	if ((fp = fopen(samba_configfile, "w")) == NULL) {
-		perror(samba_configfile);
+		logerr(__FUNCTION__, __LINE__, samba_configfile);
 		return;
 	}
 
