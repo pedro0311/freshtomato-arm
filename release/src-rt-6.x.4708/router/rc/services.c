@@ -2174,17 +2174,17 @@ void start_ntpd(void)
 	 * ntpd as separate parameters. this code should continue to work if GUI is changed to only store 1 value in the NVRAM var
 	 */
 	if (ntp_updates_int >= 0) { /* -1 = never */
-		servers_len = strlen(nvram_safe_get("ntp_server") + 1);
+		servers_len = strlen(nvram_safe_get("ntp_server"));
 
 		/* allocating memory dynamically both so we don't waste memory, and in case of unanticipatedly long server name in nvram */
-		if ((servers = malloc(servers_len)) == NULL) {
+		if ((servers = malloc(servers_len + 1)) == NULL) {
 			logmsg(LOG_ERR, "ntpd: failed allocating memory, exiting");
 			return; /* just get out if we couldn't allocate memory */
 		}
-		memset(servers, 0, servers_len);
+		memset(servers, 0, servers_len + 1);
 
 		/* get the space separated list of ntp servers */
-		strlcpy(servers, nvram_safe_get("ntp_server"), servers_len);
+		strlcpy(servers, nvram_safe_get("ntp_server"), servers_len + 1);
 
 		/* put the servers into the ntp config file */
 		if ((f = fopen("/etc/ntp.conf", "w")) != NULL) {
