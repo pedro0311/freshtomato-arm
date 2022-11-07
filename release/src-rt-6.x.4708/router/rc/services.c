@@ -2993,7 +2993,7 @@ void exec_service(void)
 	const int A_START = 1;
 	const int A_STOP = 2;
 	const int A_RESTART = 1|2;
-	char buffer[128], buffer2[16];
+	char buffer[128], buffer2[16], buffer3[16];
 	char *service;
 	char *act;
 	char *next;
@@ -3394,12 +3394,12 @@ TOP:
 			start_zebra();
 #endif
 			for (i = 0; i < BRIDGE_COUNT; i++) {
-				memset(buffer, 0, sizeof(buffer));
-				snprintf(buffer, sizeof(buffer), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
-				if ((i == 0) || (strcmp(nvram_safe_get(buffer), "") != 0)) {
-					memset(buffer2, 0, sizeof(buffer2));
-					snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_stp" : "lan%d_stp"), i);
-					eval("brctl", "stp", nvram_safe_get(buffer), nvram_safe_get(buffer2));
+				memset(buffer2, 0, sizeof(buffer2));
+				snprintf(buffer2, sizeof(buffer2), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+				if ((i == 0) || (strcmp(nvram_safe_get(buffer2), "") != 0)) {
+					memset(buffer3, 0, sizeof(buffer3));
+					snprintf(buffer3, sizeof(buffer3), (i == 0 ? "lan_stp" : "lan%d_stp"), i);
+					eval("brctl", "stp", nvram_safe_get(buffer2), nvram_safe_get(buffer3));
 				}
 			}
 		}
@@ -3772,7 +3772,7 @@ static void do_service(const char *name, const char *action, int user)
 		else if (--n < 0)
 			break;
 
-		usleep(100 * 1000);
+		usleep(100 * 1000); /* microseconds => 0,1s  */
 	}
 
 	snprintf(s, sizeof(s), "%s-%s%s", name, action, (user ? "-c" : ""));
@@ -3794,7 +3794,7 @@ static void do_service(const char *name, const char *action, int user)
 		else if (--n < 0)
 			break;
 
-		usleep(100 * 1000);
+		usleep(100 * 1000); /* microseconds => 0,1s  */
 	}
 }
 
