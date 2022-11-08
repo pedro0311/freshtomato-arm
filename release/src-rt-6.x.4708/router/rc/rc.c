@@ -168,6 +168,7 @@ void run_del_firewall_script(char *infile, char *outfile)
 		}
 		return;
 	}
+	chmod(outfile, (S_IRUSR | S_IWUSR | S_IXUSR));
 
 	while (fgets(read, sizeof(read), ifp) != NULL) {
 		if ((strstr(read, "-A") != NULL) || (strstr(read, "-I") != NULL)) {
@@ -184,7 +185,6 @@ void run_del_firewall_script(char *infile, char *outfile)
 	fclose(ifp);
 	fclose(ofp);
 
-	chmod(outfile, 0744);
 	logmsg(LOG_DEBUG, "*** %s: removing existing firewall rules: %s", __FUNCTION__, infile);
 	eval(outfile);
 	unlink(outfile);
