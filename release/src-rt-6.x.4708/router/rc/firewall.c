@@ -1329,6 +1329,10 @@ static void filter_input(void)
 	if (*chain_in_drop == 'l')
 		ipt_write("-A INPUT -j %s\n", chain_in_drop);
 
+	/* NTP server LAN & WAN */
+	if (nvram_get_int("ntpd_enable") == 2)
+		ipt_write("-A INPUT -p udp -m udp --dport 123 -j %s\n", chain_in_accept);
+
 	/* default policy: DROP */
 }
 

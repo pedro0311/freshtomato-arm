@@ -74,7 +74,7 @@ function verifyFields(focused, quiet) {
 		break;
 	}
 	E('_f_ntpd_enable').disabled = !a || !b;
-	E('_f_ntpd_server_redir').disabled = !a || !b || !E('_f_ntpd_enable').checked;
+	E('_f_ntpd_server_redir').disabled = !a || !b || E('_f_ntpd_enable').value == 0;
 	elem.display(PR('_f_ntp_server'), b);
 
 	a = (E('_f_ntp_server').value == 'custom');
@@ -103,7 +103,7 @@ function save() {
 
 	fom = E('t_fom');
 	fom.tm_dst.value = fom.f_tm_dst.checked ? 1 : 0;
-	fom.ntpd_enable.value = fom.f_ntpd_enable.checked ? 1 : 0;
+	fom.ntpd_enable.value = fom.f_ntpd_enable.value;
 	fom.ntpd_server_redir.value = fom.f_ntpd_server_redir.checked ? 1 : 0;
 	fom.tm_tz.value = fom.f_tm_tz.value;
 
@@ -123,17 +123,17 @@ function save() {
 	if (fom._ntp_updates.value != 1) { /* only possible when 'Auto interval' is set */
 		fom.ntpd_enable.value = 0;
 		fom.ntpd_server_redir.value  = 0;
-		fom.f_ntpd_enable.checked = 0;
+		fom.f_ntpd_enable.value = 0;
 		fom.f_ntpd_server_redir.checked = 0;
 	}
 
 	fom._service.value = 'ntpd-restart';
-	/* we must restart dnsmasq for it to take effect (and firewall if redir was changed) */
+	/* we must restart dnsmasq for it to take effect */
 	if (fom.ntpd_enable.value != nvram.ntpd_enable) {
 		nvram.ntpd_enable = fom.ntpd_enable.value;
 		fom._service.value += ',dnsmasq-restart';
 	}
-	if (fom.ntpd_server_redir.value != nvram.ntpd_server_redir) {
+	if (fom.ntpd_server_redir.value != nvram.ntpd_server_redir || fom.ntpd_enable.value != nvram.ntpd_enable) {
 		nvram.ntpd_server_redir = fom.ntpd_server_redir.value;
 		fom._service.value += ',firewall-restart';
 	}
@@ -239,7 +239,7 @@ function init() {
 				['UTC-12','UTC+12:00 Fiji'],
 				['NZST-12NZDT,M9.5.0/2,M4.1.0/3','UTC+12:00 New Zealand']
 			], value: nvram.tm_sel },
-				{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != '0' },
+				{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != 0 },
 				{ title: 'Custom TZ String', indent: 2, name: 'f_tm_tz', type: 'text', maxlen: 32, size: 34, value: nvram.tm_tz || '' },
 			null,
 			{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Auto interval']], value: nvram.ntp_updates },
@@ -249,8 +249,8 @@ function init() {
 			{ title: '', name: 'f_ntp_2', type: 'text', maxlen: 48, size: 50, value: ntp[1] || '', hidden: 1 },
 			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 },
 			null,
-			{ title: 'Enable local NTP server', name: 'f_ntpd_enable', type: 'checkbox', value: nvram.ntpd_enable != '0' },
-				{ title: 'Intercept NTP client requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != '0' }
+			{ title: 'Internal NTP server', name: 'f_ntpd_enable', type: 'select', options: [[0,'Disabled'],[1,'LAN only'],[2,'LAN & WAN']], value: nvram.ntpd_enable },
+				{ title: 'Intercept LAN client NTP requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != 0 }
 		]);
 	</script>
 </div>
