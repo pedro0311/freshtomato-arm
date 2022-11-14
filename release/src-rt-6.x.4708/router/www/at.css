@@ -1728,6 +1728,11 @@ div#status-tab > br {
 	display: inline;
 }
 
+#result tt {
+	font-family: monospace !important;
+	font-size: smaller;
+}
+
 #usb-grid .tomato-grid .co4 br,
 #rstats hr,
 .about > hr {
