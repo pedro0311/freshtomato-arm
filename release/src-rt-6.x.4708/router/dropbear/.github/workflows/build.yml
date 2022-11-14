@@ -9,7 +9,7 @@ on:
       - master
 jobs:
   build:
-    runs-on: ${{ matrix.os || 'ubuntu-20.04' }}
+    runs-on: ${{ matrix.os || 'ubuntu-22.04' }}
     strategy:
       matrix:
         # XXX uncomment the line below to work with act, see https://github.com/nektos/act/issues/996
@@ -50,11 +50,12 @@ jobs:
           - name: c89
             extracflags: -std=c89 -Wdeclaration-after-statement
 
-          - name: macos 10.15
-            os: macos-10.15
+          - name: macos 12
+            os: macos-12
             cc: clang
-            # OS X says daemon() and utmp are deprecated
-            extracflags: -Wno-deprecated-declarations
+            # OS X says daemon() and utmp are deprecated.
+            # OS X tests for undefined TARGET_OS_EMBEDDED in libc headers
+            extracflags: -Wno-deprecated-declarations -Wno-undef
             runcheck: 'no'
             apt: 'no'
             # fails with:
@@ -64,7 +65,7 @@ jobs:
           - name: macos 11
             os: macos-11
             cc: clang
-            extracflags: -Wno-deprecated-declarations
+            extracflags: -Wno-deprecated-declarations -Wno-undef
             runcheck: 'no'
             apt: 'no'
             ranlib: ranlib -no_warning_for_no_symbols
@@ -73,6 +74,11 @@ jobs:
           - name: DEBUG_TRACE
             localoptions: |
               #define DEBUG_TRACE 5
+
+          # Check off-by-default options don't bitrot
+          - name: nondefault options
+            nondefault: 1
+            configure_flags: --enable-pam
 
           # # Fuzzers run standalone. A bit superfluous with cifuzz, but
           # # good to run the whole corpus to keep it working.
@@ -115,7 +121,7 @@ jobs:
         if: ${{ matrix.apt != 'no' }}
         run: |
           sudo apt-get -y update
-          sudo apt-get -y install zlib1g-dev libtomcrypt-dev libtommath-dev mercurial python3-venv $CC
+          sudo apt-get -y install zlib1g-dev libtomcrypt-dev libtommath-dev mercurial python3-venv libpam0g-dev $CC
 
       - uses: actions/checkout@v2
 
@@ -129,7 +135,18 @@ jobs:
       - name: localoptions
         run: |
           echo "$LOCALOPTIONS" > localoptions.h
+          echo "#define DROPBEAR_DSS 1" >> localoptions.h
           cat localoptions.h
+
+      - name: nondefault
+        if: ${{ matrix.nondefault }}
+        run: |
+          # Turn on anything that's off by default. Rough but seems sufficient
+          grep ' 0$' default_options.h | sed 's/0$/1/' > localoptions.h
+          # PAM clashes with password
+          echo "#define DROPBEAR_SVR_PASSWORD_AUTH 0" >> localoptions.h
+          # 1 second timeout is too short
+          sed -i "s/DEFAULT_IDLE_TIMEOUT 1/DEFAULT_IDLE_TIMEOUT 99/" localoptions.h
 
       - name: make
         run: make -j3
