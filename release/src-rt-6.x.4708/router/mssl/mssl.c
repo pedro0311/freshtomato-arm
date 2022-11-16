@@ -29,6 +29,7 @@
 
 #ifdef USE_OPENSSL
 #include <openssl/rsa.h>
+#include <openssl/ec.h>
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
@@ -430,6 +431,12 @@ int mssl_cert_key_match(const char *cert_path, const char *key_path)
 	RSA *rsa_pri = NULL;
 	DSA *dsa_pub = NULL;
 	DSA *dsa_pri = NULL;
+	EC_KEY *ec_pub = NULL;
+	EC_KEY *ec_pri = NULL;
+	const EC_GROUP *ec_group = NULL;
+	const EC_POINT *ec_pub_pub = NULL;
+	const EC_POINT *ec_pri_pub = NULL;
+
 	int pem = 1;
 	int ret = 0;
 
@@ -471,6 +478,8 @@ int mssl_cert_key_match(const char *cert_path, const char *key_path)
 		rsa_pub = EVP_PKEY_get1_RSA(pkey);
 	else if (EVP_PKEY_id(pkey) == EVP_PKEY_DSA)
 		dsa_pub = EVP_PKEY_get1_DSA(pkey);
+	else if (EVP_PKEY_id(pkey) == EVP_PKEY_EC)
+		ec_pub = EVP_PKEY_get1_EC_KEY(pkey);
 
 	EVP_PKEY_free(pkey);
 	pkey = NULL;
@@ -499,6 +508,8 @@ int mssl_cert_key_match(const char *cert_path, const char *key_path)
 		rsa_pri = EVP_PKEY_get1_RSA(pkey);
 	else if (EVP_PKEY_id(pkey) == EVP_PKEY_DSA)
 		dsa_pri = EVP_PKEY_get1_DSA(pkey);
+	else if (EVP_PKEY_id(pkey) == EVP_PKEY_EC)
+		ec_pri  = EVP_PKEY_get1_EC_KEY(pkey);
 
 	EVP_PKEY_free(pkey);
 	pkey = NULL;
@@ -524,6 +535,20 @@ int mssl_cert_key_match(const char *cert_path, const char *key_path)
 			ret = 1;
 		}
 	}
+	else if (ec_pub && ec_pri) {
+		ec_group = EC_KEY_get0_group(ec_pub);
+		ec_pub_pub = EC_KEY_get0_public_key(ec_pub);
+		ec_pri_pub = EC_KEY_get0_public_key(ec_pri);
+
+		if (ec_group != NULL && ec_pub_pub != NULL && ec_pri_pub != NULL && EC_POINT_cmp(ec_group, ec_pub_pub, ec_pri_pub, NULL) == 0) {
+			logmsg(LOG_DEBUG, "*** [mssl] ec modulus match");
+			ret = 1;
+		}
+		else {
+			logmsg(LOG_DEBUG, "*** [mssl] ec modulus not match");
+			ret = 0;
+		}
+	}
 	else {
 		logmsg(LOG_DEBUG, "*** [mssl] compare failed");
 	}
@@ -537,10 +562,14 @@ end:
 		RSA_free(rsa_pub);
 	if (dsa_pub)
 		DSA_free(dsa_pub);
+	if (ec_pub)
+		EC_KEY_free(ec_pub);
 	if (rsa_pri)
 		RSA_free(rsa_pri);
 	if (dsa_pri)
 		DSA_free(dsa_pri);
+	if (ec_pri)
+		EC_KEY_free(ec_pri);
 
 	return ret;
 }
