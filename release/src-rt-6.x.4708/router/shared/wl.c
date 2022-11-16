@@ -31,9 +31,6 @@
 #include <bcmutils.h>
 #include <wlutils.h>
 #include <bcmconfig.h>
-#include <syslog.h>
-
-#include "shared.h"
 
 int
 wl_probe(char *name)
@@ -73,7 +70,7 @@ dhd_ioctl(char *name, int cmd, void *buf, int len)
 
 	/* open socket to kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		logerr(__FUNCTION__, __LINE__, "socket");
+		perror("socket");
 		return -1;
 	}
 
@@ -104,7 +101,7 @@ dhd_ioctl(char *name, int cmd, void *buf, int len)
 			} else {
 				snprintf(buffer, sizeof(buffer), "%s: cmd=%d", name, cmd);
 			}
-			logerr(__FUNCTION__, __LINE__, buffer);
+			perror(buffer);
 		}
 	/* cleanup */
 	close(s);
@@ -130,7 +127,7 @@ dhd_probe(char *name)
 		ret = 0;
 	} else {
 		if (ret < 0) {
-			logerr(__FUNCTION__, __LINE__, "dhd_ioctl");
+			perror("dhd_ioctl");
 		}
 		ret = 1; /* default: WL mode */
 	}
