@@ -155,7 +155,8 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 
 	if (ioctl(s, cmd, &rt) < 0) {
 		err = errno;
-		logerr(__FUNCTION__, __LINE__, name);
+		if (cmd == SIOCADDRT)
+			logerr(__FUNCTION__, __LINE__, name);
 	}
 
 	close(s);
