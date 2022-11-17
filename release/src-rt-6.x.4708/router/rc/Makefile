@@ -82,6 +82,10 @@ ifeq ($(TCONFIG_SAMBASRV),y)
 OBJS += samba.o
 endif
 
+ifeq ($(TCONFIG_FTP),y)
+OBJS += ftpd.o
+endif
+
 ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif

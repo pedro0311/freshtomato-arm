@@ -624,4 +624,10 @@ extern void start_samba(int force);
 extern void stop_samba(void);
 #endif /* TCONFIG_SAMBASRV */
 
+/* ftpd.c */
+#ifdef TCONFIG_FTP
+extern void start_ftpd(int force);
+extern void stop_ftpd(void);
+#endif
+
 #endif /* __RC_H__ */
