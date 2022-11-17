@@ -3016,6 +3016,8 @@ TOP:
 	action = 0;
 	strsep(&modifier, "-");
 
+	logmsg(LOG_DEBUG, "*** %s: service=%s action=%s modifier=%s", __FUNCTION__, service, act, modifier ? : "");
+
 	if (strcmp(act, "start") == 0)
 		action = A_START;
 	if (strcmp(act, "stop") == 0)
@@ -3761,10 +3763,13 @@ CLEAR:
 static void do_service(const char *name, const char *action, int user)
 {
 	int n;
-	char s[64];
+	char s[64], t[64];
+	snprintf(t, sizeof(t), "%s", nvram_safe_get("action_service"));
 
-	n = 150;
-	while (!nvram_match("action_service", "")) {
+	logmsg(LOG_DEBUG, "*** %s: IN name: %s action: %s user: %d", __FUNCTION__, name, action, user);
+
+	n = 200;
+	while (!nvram_match("action_service", "")) { /* wait until nvram 'action_service' is empty (max 20 seconds when not user, user can wait indefinitely [??]) */
 		if (user) {
 			putchar('*');
 			fflush(stdout);
@@ -3776,7 +3781,12 @@ static void do_service(const char *name, const char *action, int user)
 	}
 
 	snprintf(s, sizeof(s), "%s-%s%s", name, action, (user ? "-c" : ""));
-	nvram_set("action_service", s);
+	nvram_set("action_service", s); /* set new service to execute (for exec_service) */
+
+	if (n < 190) /* log only above 1 sec */
+		logmsg(LOG_DEBUG, "*** %s: waited %d second(s) for 'action_service' to be empty [%s] --> [%s]", __FUNCTION__, ((200 - n) / 10), t, s);
+
+	logmsg(LOG_DEBUG, "*** %s: setting new 'action_service': [%s]", __FUNCTION__, s);
 
 	if (nvram_get_int("debug_rc_svc")) {
 		nvram_unset("debug_rc_svc");
@@ -3785,8 +3795,8 @@ static void do_service(const char *name, const char *action, int user)
 	else
 		kill(1, SIGUSR1);
 
-	n = 150;
-	while (nvram_match("action_service", s)) {
+	n = 200;
+	while (nvram_match("action_service", s)) { /* wait until nvram 'action_service' is not equal 'name' (max 20 seconds when not user, user can wait indefinitely[??]) */
 		if (user) {
 			putchar('.');
 			fflush(stdout);
@@ -3796,6 +3806,9 @@ static void do_service(const char *name, const char *action, int user)
 
 		usleep(100 * 1000); /* microseconds => 0,1s  */
 	}
+
+	if (n < 190) /* log only above 1 sec */
+		logmsg(LOG_DEBUG, "*** %s: OUT waited %d second(s) for execution of 'action_service': [%s]", __FUNCTION__, ((200 - n) / 10), s);
 }
 
 int service_main(int argc, char *argv[])
