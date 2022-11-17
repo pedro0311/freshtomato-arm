@@ -1639,7 +1639,7 @@ void stop_upnp(void)
 	killall_tk_period_wait("miniupnpd", 50);
 
 	/* clean-up */
-	unlink(UPNP_CONFIG);
+	eval("rm", "-f", UPNP_CONFIG);
 }
 
 void start_cron(void)
