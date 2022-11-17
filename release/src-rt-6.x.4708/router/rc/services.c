@@ -2746,6 +2746,9 @@ static void stop_media_server(void)
 		killall_tk_period_wait("minidlna", 50);
 		logmsg(LOG_INFO, "minidlna is stopped");
 	}
+
+	/* clean-up */
+	eval("rm", "-rf", "/var/run/minidlna");
 }
 #endif /* TCONFIG_MEDIA_SERVER */
 
