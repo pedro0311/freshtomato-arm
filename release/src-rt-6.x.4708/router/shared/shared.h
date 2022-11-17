@@ -420,5 +420,6 @@ extern int dhd_bssiovar_setint(char *ifname, char *iovar, int bssidx, int val);
 
 /* shutils.c */
 extern pid_t get_pid_by_name(char *name); /* Returns the process ID */
+extern int getMTD(char *name); /* Find partition with defined name and return partition number as an integer */
 
 #endif /* __SHARED_H__ */

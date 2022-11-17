@@ -1717,3 +1717,41 @@ wl_ether_etoa(const struct ether_addr *n)
 	return etoa_buf;
 }
 #endif
+
+/* Find partition with defined name and return partition number as an integer */
+int getMTD(char *name)
+{
+	char buf[32];
+	int device = -1;
+	char dev[32];
+	char size[32];
+	char esize[32];
+	char n[32];
+	char line[128];
+	FILE *fp;
+
+	snprintf(buf, sizeof(buf)-1, "\"%s\"", name);
+	fp = fopen("/proc/mtd", "rb");
+
+	if (!fp)
+		return device;
+
+	while (!feof(fp)) {
+		fgets(line, sizeof(line)-1, fp);
+
+		if (sscanf(line, "%s %s %s %s", dev, size, esize, n) < 4)
+			break;
+		if (!strcmp(n, buf)) {
+			if (dev[4] == ':') {
+				device = dev[3] - '0';
+			} else {
+				device = 10 + (dev[4] - '0');
+			}
+
+			break;
+		}
+	}
+
+	fclose(fp);
+	return device;
+}

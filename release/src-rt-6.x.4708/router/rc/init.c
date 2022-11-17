@@ -225,6 +225,35 @@ void wl_defaults(void)
 	}
 	dbg("*** Restoring wireless vars - done\n");
 }
+
+/* For Netgear Router to set cal data (get infos at board_data --> router specifc) */
+static void setcaldata()
+{
+	int mtd = getMTD("board_data");
+	char cmd[64];
+	char line[256];
+	FILE *fp;
+
+	if (mtd == -1)
+		return;
+
+	sprintf(cmd, "strings /dev/mtd%dro | grep rpcal", mtd);
+	fp = popen(cmd, "r");
+
+	if (fp != NULL) {
+		while (fgets(line, sizeof(line) - 1, fp) != NULL) {
+			if (strstr(line, "rpcal")) {
+				char *var, *val;
+				var = strtok(line, "=");
+				val = strtok(NULL, "=");
+
+				if ((var != NULL) && (val != NULL))
+					nvram_set(var, val);
+			}
+		}
+		pclose(fp);
+	}
+}
 #endif /* CONFIG_BCMWL6A */
 
 /* Set terminal settings to reasonable defaults */
@@ -6352,6 +6381,10 @@ static int init_nvram(void)
 			set_defaults(r6250_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r6250_pci_2_1_params, "pci/2/1/%s");
 		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
+		}
 		break;
 	case MODEL_AC1450:
 		mfr = "Netgear";
@@ -6605,6 +6638,10 @@ static int init_nvram(void)
 			set_defaults(ac1450_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(ac1450_pci_2_1_params, "pci/2/1/%s");
 		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
+		}
 		break;
 	case MODEL_R6300v2:
 		mfr = "Netgear";
@@ -6857,6 +6894,10 @@ static int init_nvram(void)
 
 			set_defaults(r6300v2_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r6300v2_pci_2_1_params, "pci/2/1/%s");
+		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
 		}
 		break;
 	case MODEL_R6400:
@@ -7121,6 +7162,10 @@ static int init_nvram(void)
 			set_defaults(r6400_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r6400_pci_2_1_params, "pci/2/1/%s");
 		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
+		}
 		break;
 	case MODEL_R6400v2:
 	case MODEL_R6700v3:
@@ -7383,6 +7428,10 @@ static int init_nvram(void)
 
 			set_defaults(r6400v2_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r6400v2_pci_2_1_params, "pci/2/1/%s");
+		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
 		}
 		break;
 	case MODEL_R6700v1:
@@ -7662,6 +7711,10 @@ static int init_nvram(void)
 
 			set_defaults(r7000_pci_1_1_params, "pci/1/1/%s");
 			set_defaults(r7000_pci_2_1_params, "pci/2/1/%s");
+		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
 		}
 		break;
 	case MODEL_DIR868L:
@@ -10109,6 +10162,10 @@ static int init_nvram(void)
 			nvram_set("devpath2", "pcie/2/4");
 
 			set_defaults(r8000_params, "");
+		}
+		if (!nvram_get_int("caldata_ready")) { /* last step: set router specific cal data if not yet applied */
+			setcaldata();
+			nvram_set("caldata_ready", "1");
 		}
 		break;
 #endif /* TCONFIG_AC3200 */
