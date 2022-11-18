@@ -158,8 +158,6 @@ void run_del_firewall_script(char *infile, char *outfile)
 	char *pos;
 	int index = 0;
 
-	logmsg(LOG_DEBUG, "*** %s: IN", __FUNCTION__);
-
 	ifp = fopen(infile, "r");
 	ofp = fopen(outfile, "w+");
 	if (ifp == NULL || ofp == NULL) {

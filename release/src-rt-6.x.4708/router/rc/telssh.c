@@ -1,12 +1,20 @@
 /*
-
-	Tomato Firmware
-	Copyright (C) 2006-2009 Jonathan Zarate
-
-*/
+ * telssh.c
+ *
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ * Fixes/updates (C) 2018 - 2022 pedro
+ *
+ */
 
 
 #include "rc.h"
+
+#define telsshdir		"/etc/dropbear"
+#define sshkeysdir		"/root/.ssh"
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE		DISABLE_SYSLOG_OSM
+#define LOGMSG_NVDEBUG		"telssh_debug"
 
 
 void create_passwd(void)
@@ -110,18 +118,21 @@ void start_sshd(void)
 {
 	int dirty = 0;
 	char *argv[11];
-	int argc;
+	int argc, ret;
 	char *p;
 
-	mkdir("/etc/dropbear", 0700);
-	mkdir("/root/.ssh", 0700);
+	if (serialize_restart("dropbear", 1))
+		return;
 
-	f_write_string("/root/.ssh/authorized_keys", nvram_safe_get("sshd_authkeys"), 0, 0600);
+	mkdir(telsshdir, 0700);
+	mkdir(sshkeysdir, 0700);
 
-	dirty |= check_host_key("rsa",     "sshd_hostkey",  "/etc/dropbear/dropbear_rsa_host_key");
-	dirty |= check_host_key("dss",     "sshd_dsskey",   "/etc/dropbear/dropbear_dss_host_key");
-	dirty |= check_host_key("ecdsa",   "sshd_ecdsakey", "/etc/dropbear/dropbear_ecdsa_host_key");
-	dirty |= check_host_key("ed25519", "sshd_ed25519",  "/etc/dropbear/dropbear_ed25519_host_key");
+	f_write_string(sshkeysdir"/authorized_keys", nvram_safe_get("sshd_authkeys"), 0, 0600);
+
+	dirty |= check_host_key("rsa",     "sshd_hostkey",  telsshdir"/dropbear_rsa_host_key");
+	dirty |= check_host_key("dss",     "sshd_dsskey",   telsshdir"/dropbear_dss_host_key");
+	dirty |= check_host_key("ecdsa",   "sshd_ecdsakey", telsshdir"/dropbear_ecdsa_host_key");
+	dirty |= check_host_key("ed25519", "sshd_ed25519",  telsshdir"/dropbear_ed25519_host_key");
 	if (dirty)
 		nvram_commit_x();
 
@@ -143,26 +154,56 @@ void start_sshd(void)
 		argv[argc++] = "-a";
 #endif
 
-	if ((p = nvram_safe_get("sshd_rwb")) && (*p)) {	/* only if sshd_rwb != "" */
+	if ((p = nvram_safe_get("sshd_rwb")) && (*p)) { /* only if sshd_rwb != "" */
 		argv[argc++] = "-W";
 		argv[argc++] = p;
 	}
 
 	argv[argc] = NULL;
-	_eval(argv, NULL, 0, NULL);
+
+	ret = _eval(argv, NULL, 0, NULL);
+	if (ret) {
+		logmsg(LOG_ERR, "starting dropbear failed - check configuration ...");
+		stop_sshd();
+	}
 }
 
 void stop_sshd(void)
 {
-	killall("dropbear", SIGTERM);
+	if (serialize_restart("dropbear", 0))
+		return;
+
+	if (pidof("dropbear") > 0)
+		killall_tk_period_wait("dropbear", 50);
 }
 
 void start_telnetd(void)
 {
-	xstart("telnetd", "-p", nvram_safe_get("telnetd_port"));
+	int ret;
+	char *argv[] = { "telnetd", "-p", nvram_safe_get("telnetd_port"), NULL };
+
+	if (serialize_restart("telnetd", 1))
+		return;
+
+	mkdir(telsshdir, 0700);
+
+	ret = _eval(argv, NULL, 0, NULL);
+	if (ret) {
+		logmsg(LOG_ERR, "starting telnetd failed - check configuration ...");
+		stop_telnetd();
+	}
+	else
+		logmsg(LOG_INFO, "telnetd is started");
 }
 
 void stop_telnetd(void)
 {
-	killall("telnetd", SIGTERM);
+	if (serialize_restart("telnetd", 0))
+		return;
+
+	if (pidof("telnetd") > 0) {
+		killall_tk_period_wait("telnetd", 50);
+
+		logmsg(LOG_INFO, "telnetd is stopped");
+	}
 }

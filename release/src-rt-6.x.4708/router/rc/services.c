@@ -2916,12 +2916,10 @@ TOP:
 	}
 
 	if ((strcmp(service, "upnp") == 0) || (strcmp(service, "miniupnpd") == 0)) {
-		if (act_stop)
-			stop_upnp();
+		if (act_stop) stop_upnp();
 		stop_firewall();
 		start_firewall(); /* always restarted */
-		if (act_start)
-			start_upnp();
+		if (act_start) start_upnp();
 		goto CLEAR;
 	}
 
@@ -2931,7 +2929,7 @@ TOP:
 		goto CLEAR;
 	}
 
-	if (strcmp(service, "sshd") == 0) {
+	if (strcmp(service, "sshd") == 0 || strcmp(service, "dropbear") == 0) {
 		if (act_stop) stop_sshd();
 		if (act_start) start_sshd();
 		goto CLEAR;
@@ -3488,6 +3486,7 @@ static void do_service(const char *name, const char *action, int user)
 {
 	int n;
 	char s[64], t[64];
+
 	snprintf(t, sizeof(t), "%s", nvram_safe_get("action_service"));
 
 	logmsg(LOG_DEBUG, "*** %s: IN name: %s action: %s user: %d", __FUNCTION__, name, action, user);

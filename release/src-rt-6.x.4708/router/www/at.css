@@ -1395,6 +1395,7 @@ td#navi a.indent1:hover::before {
 
 #refresh-spinner,
 img[src^="spin"],
+img[src^="spin2"],
 div#loading::after,
 #footer #footer-msg::after {
 	object-position: -100px -100px;

@@ -23,6 +23,8 @@
 
 var cprefix = 'admin_access';
 var changed = 0;
+var serviceLastUp2 = [];
+var countButton2 = 0;
 var shlimit = nvram.ne_shlimit.split(',');
 if (shlimit.length != 3)
 	shlimit = [0,3,60];
@@ -40,12 +42,24 @@ function show() {
 	var e = E('_sshd_button');
 	e.value = (isup.dropbear ? 'Stop' : 'Start')+' Now';
 	e.setAttribute('onclick', 'javascript:toggle(\'sshd\','+isup.dropbear+');');
-	e.disabled = 0;
+	countButton += 1;
+	if (serviceLastUp[0] != isup.dropbear || countButton > 6) {
+		serviceLastUp[0] = isup.dropbear;
+		countButton = 0;
+		e.disabled = 0;
+		E('spin').style.display = 'none';
+	}
 
 	e = E('_telnetd_button');
 	e.value = ((isup.telnetd) ? 'Stop' : 'Start')+' Now';
 	e.setAttribute('onclick', 'javascript:toggle(\'telnetd\','+(isup.telnetd)+');');
-	e.disabled = 0;
+	countButton2 += 1;
+	if (serviceLastUp2[0] != isup.telnetd || countButton2 > 6) {
+		serviceLastUp2[0] = isup.telnetd;
+		countButton2 = 0;
+		e.disabled = 0;
+		E('spin2').style.display = 'none';
+	}
 }
 
 function toggle(service, isup) {
@@ -53,11 +67,21 @@ function toggle(service, isup) {
 		return;
 
 	E('_'+service+'_button').disabled = 1;
+	if (service == 'telnetd') {
+		E('spin2').style.display = 'inline';
+		serviceLastUp2[0] = isup;
+		countButton2 = 0;
+	}
+	else {
+		E('spin').style.display = 'inline';
+		serviceLastUp2[0] = isup;
+		countButton2 = 0;
+	}
 
 	var fom = E('t_fom');
-	fom._service.value = service+(isup ? '-stop' : '-start');
+	fom._service.value = 'firewall-restart,'+service+(isup ? '-stop' : '-start');
 	fom._nofootermsg.value = 1;
-	fom._nextwait.value = 2;
+	fom._nextwait.value = 1;
 
 	form.submit(fom, 1, 'service.cgi');
 }
@@ -447,7 +471,7 @@ function init() {
 			{ title: 'Authorized Keys', name: 'sshd_authkeys', type: 'textarea', value: nvram.sshd_authkeys }
 		]);
 	</script>
-	<input type="button" value="" onclick="" id="_sshd_button">
+	<input type="button" value="" onclick="" id="_sshd_button">&nbsp; <img src="spin.gif" alt="" id="spin"></div>
 </div>
 
 <!-- / / / -->
@@ -460,7 +484,7 @@ function init() {
 			{ title: 'Port', name: 'telnetd_port', type: 'text', maxlen: 5, size: 7, value: nvram.telnetd_port }
 		]);
 	</script>
-	<input type="button" value="" onclick="" id="_telnetd_button">
+	<input type="button" value="" onclick="" id="_telnetd_button">&nbsp; <img src="spin.gif" alt="" id="spin2"></div>
 </div>
 
 <!-- / / / -->
