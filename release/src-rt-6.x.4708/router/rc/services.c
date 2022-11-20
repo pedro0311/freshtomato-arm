@@ -2642,7 +2642,6 @@ void start_services(void)
 #ifdef TCONFIG_IRQBALANCE
 	start_irqbalance();
 #endif
-	start_upnp();
 }
 
 void stop_services(void)
@@ -2705,7 +2704,6 @@ void stop_services(void)
 #ifdef TCONFIG_IRQBALANCE
 	stop_irqbalance();
 #endif
-	stop_upnp();
 }
 
 /* nvram "action_service" is: "service-action[-modifier]"
