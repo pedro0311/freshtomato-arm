@@ -296,8 +296,8 @@ static void ovpn_kill_switch(void)
 					memset(buf, 0, sizeof(buf)); /* reset */
 					snprintf(buf, sizeof(buf), "tun1%d", i); /* find the appropriate tun IF */
 
-					eval("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
-					eval("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
+					xstart("iptables", "-I", "FORWARD", "!", "-o", buf, "-d", val, "-j", "REJECT");
+					xstart("iptables", "-I", "FORWARD", "-o", wan_if, "-d", val, "-j", "REJECT");
 				}
 
 			}
