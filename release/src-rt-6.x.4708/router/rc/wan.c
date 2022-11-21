@@ -1326,6 +1326,16 @@ void stop_wan_if(char *prefix)
 	char tmp[100];
 	char wannotice_file[64];
 
+	int mwan_num = nvram_get_int("mwan_num");
+
+	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
+		mwan_num = 1;
+
+	if ((strcmp(prefix, "wan") == 0) && (mwan_num == 1)) { /* check for "wan" prefix AND only 1x wan (single-wan) */
+		stop_upnp();
+		logmsg(LOG_DEBUG, "*** %s: stop miniupnp (Case: Single-WAN)", __FUNCTION__);
+	}
+
 	mwan_table_del(prefix);
 
 	stop_qos(prefix);
@@ -1399,7 +1409,8 @@ void stop_wan(void)
 	stop_tinc();
 #endif
 	stop_bwlimit();
-	stop_upnp();
+	stop_upnp(); /* miniupnp - case: stop always (x wan(s)/restart) */
+
 #ifdef TCONFIG_OPENVPN
 	stop_ovpn_all();
 #endif
