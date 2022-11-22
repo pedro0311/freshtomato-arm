@@ -168,7 +168,7 @@
      port = htons (port);
      hp = gethostbyname (host);
      if (!hp)
-@@ -1921,3 +1931,95 @@ int main (int argc, char *argv[])
+@@ -1929,3 +1939,95 @@ int main (int argc, char *argv[])
      network_thread ();
      return 0;
  }
