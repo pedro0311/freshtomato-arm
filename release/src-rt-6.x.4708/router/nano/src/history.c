@@ -304,12 +304,10 @@ bool write_list(const linestruct *head, FILE *histfile)
 	const linestruct *item;
 
 	for (item = head; item != NULL; item = item->next) {
-		size_t length = strlen(item->data);
-
 		/* Decode 0x0A bytes as embedded NULs. */
-		recode_LF_to_NUL(item->data);
+		size_t length = recode_LF_to_NUL(item->data);
 
-		if (fwrite(item->data, sizeof(char), length, histfile) < length)
+		if (fwrite(item->data, 1, length, histfile) < length)
 			return FALSE;
 		if (putc('\n', histfile) == EOF)
 			return FALSE;
@@ -451,14 +449,13 @@ void save_poshistory(void)
 		path_and_place = nmalloc(strlen(item->filename) + 44);
 		sprintf(path_and_place, "%s %zd %zd\n",
 								item->filename, item->linenumber, item->columnnumber);
-		length = strlen(path_and_place);
 
 		/* Encode newlines in filenames as NULs. */
-		recode_LF_to_NUL(path_and_place);
+		length = recode_LF_to_NUL(path_and_place);
 		/* Restore the terminating newline. */
 		path_and_place[length - 1] = '\n';
 
-		if (fwrite(path_and_place, sizeof(char), length, histfile) < length)
+		if (fwrite(path_and_place, 1, length, histfile) < length)
 			jot_error(N_("Error writing %s: %s"), poshistname, strerror(errno));
 
 		free(path_and_place);

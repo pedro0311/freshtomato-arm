@@ -46,8 +46,14 @@ static int *key_buffer = NULL;
 		/* A buffer for the keystrokes that haven't been handled yet. */
 static int *nextcodes = NULL;
 		/* A pointer pointing at the next keycode in the keystroke buffer. */
+static size_t capacity = 32;
+		/* The size of the keystroke buffer; gets doubled whenever needed. */
 static size_t waiting_codes = 0;
 		/* The number of key codes waiting in the keystroke buffer. */
+#ifdef ENABLE_NANORC
+static const char *plants_pointer = NULL;
+		/* Points into the expansion string for the current implantation. */
+#endif
 static int digit_count = 0;
 		/* How many digits of a three-digit character code we've eaten. */
 static bool reveal_cursor = FALSE;
@@ -56,9 +62,9 @@ static bool linger_after_escape = FALSE;
 		/* Whether to give ncurses some time to get the next code. */
 static int statusblank = 0;
 		/* The number of keystrokes left before we blank the status bar. */
-size_t from_x = 0;
+static size_t from_x = 0;
 		/* From where in the relevant line the current row is drawn. */
-size_t till_x = 0;
+static size_t till_x = 0;
 		/* Until where in the relevant line the current row is drawn. */
 static bool has_more = FALSE;
 		/* Whether the current line has more text after the displayed part. */
@@ -82,7 +88,7 @@ void add_to_macrobuffer(int code)
 	macro_buffer[macro_length - 1] = code;
 }
 
-/* Remove the last key code plus any trailing Esc codes from macro buffer. */
+/* Remove the last key code plus any leading Esc codes from macro buffer. */
 void snip_last_keystroke(void)
 {
 	macro_length--;
@@ -122,7 +128,8 @@ void run_macro(void)
 		return;
 	}
 
-	key_buffer = nrealloc(key_buffer, macro_length * sizeof(int));
+	if (macro_length > capacity)
+		reserve_space_for(macro_length);
 
 	for (size_t i = 0; i < macro_length; i++)
 		key_buffer[i] = macro_buffer[i];
@@ -132,6 +139,17 @@ void run_macro(void)
 	mute_modifiers = TRUE;
 }
 #endif /* !NANO_TINY */
+
+/* Allocate the requested space for the keystroke buffer. */
+void reserve_space_for(size_t newsize)
+{
+	if (newsize < capacity)
+		die(_("Too much input at once\n"));
+
+	key_buffer = nrealloc(key_buffer, newsize * sizeof(int));
+	nextcodes = key_buffer;
+	capacity = newsize;
+}
 
 /* Control character compatibility:
  *
@@ -156,22 +174,17 @@ void run_macro(void)
  * We support escape sequences for ANSI, VT100, VT220, VT320, the Linux
  * console, the FreeBSD console, the Mach console, xterm, and Terminal,
  * and some for Konsole, rxvt, Eterm, and iTerm2.  Among these sequences,
- * there are several conflicts and omissions:
+ * there are some conflicts:
  *
- * - Tab on ANSI == PageUp on FreeBSD console; the former is omitted.
+ * - PageUp on FreeBSD console == Tab on ANSI; the latter is omitted.
  *   (Ctrl-I is also Tab on ANSI, which we already support.)
  * - PageDown on FreeBSD console == Center (5) on numeric keypad with
- *   NumLock off on Linux console; the latter is omitted.  (The editing
- *   keypad key is more important to have working than the numeric
- *   keypad key, because the latter has no value when NumLock is off.)
- * - F1 on FreeBSD console == the mouse key on xterm/rxvt/Eterm; the
- *   latter is omitted.  (Mouse input will only work properly if the
- *   extended keypad value KEY_MOUSE is generated on mouse events
- *   instead of the escape sequence.)
+ *   NumLock off on Linux console; the latter is useless and omitted.
+ * - F1 on FreeBSD console == the mouse sequence on xterm/rxvt/Eterm;
+ *   the latter is omitted.  (Mouse input works only when KEY_MOUSE
+ *   is generated on mouse events, not with the raw escape sequence.)
  * - F9 on FreeBSD console == PageDown on Mach console; the former is
- *   omitted.  (The editing keypad is more important to have working
- *   than the function keys, because the functions of the former are
- *   not arbitrary and the functions of the latter are.)
+ *   omitted.  (Moving the cursor is more important than a function key.)
  * - F10 on FreeBSD console == PageUp on Mach console; the former is
  *   omitted.  (Same as above.) */
 
@@ -198,6 +211,7 @@ void read_keys_from(WINDOW *frame)
 						lastmessage != INFO) || spotlighted)) {
 		timed = TRUE;
 		halfdelay(ISSET(QUICK_BLANK) ? 8 : 15);
+		/* Counteract a side effect of half-delay mode. */
 		disable_kb_interrupt();
 	}
 #endif
@@ -214,6 +228,7 @@ void read_keys_from(WINDOW *frame)
 
 		if (timed) {
 			timed = FALSE;
+			/* Leave half-delay mode. */
 			raw();
 
 			if (input == ERR) {
@@ -245,10 +260,13 @@ void read_keys_from(WINDOW *frame)
 
 	curs_set(0);
 
-	/* Initiate the keystroke buffer, and save the keycode in it. */
-	key_buffer = nrealloc(key_buffer, sizeof(int));
-	nextcodes = key_buffer;
+	/* When there is no keystroke buffer yet, allocate one. */
+	if (!key_buffer)
+		reserve_space_for(capacity);
+
 	key_buffer[0] = input;
+
+	nextcodes = key_buffer;
 	waiting_codes = 1;
 
 #ifndef NANO_TINY
@@ -282,10 +300,11 @@ void read_keys_from(WINDOW *frame)
 		if (input == ERR)
 			break;
 
-		/* Extend the keystroke buffer, and save the keycode at its end. */
-		key_buffer = nrealloc(key_buffer, ++waiting_codes * sizeof(int));
-		key_buffer[waiting_codes - 1] = input;
-		nextcodes = key_buffer;
+		/* When the keystroke buffer is full, extend it. */
+		if (waiting_codes == capacity)
+			reserve_space_for(2 * capacity);
+
+		key_buffer[waiting_codes++] = input;
 	}
 
 	/* Restore blocking-input mode. */
@@ -308,16 +327,11 @@ size_t waiting_keycodes(void)
 /* Add the given keycode to the front of the keystroke buffer. */
 void put_back(int keycode)
 {
-	/* If the keystroke buffer is at maximum capacity, don't add anything. */
-	if (waiting_codes + 1 < waiting_codes)
-		return;
-
 	/* If there is no room at the head of the keystroke buffer, make room. */
 	if (nextcodes == key_buffer) {
-		key_buffer = nrealloc(key_buffer, (waiting_codes + 1) * sizeof(int));
-		if (waiting_codes)
-			memmove(key_buffer + 1, key_buffer, waiting_codes * sizeof(int));
-		nextcodes = key_buffer;
+		if (waiting_codes == capacity)
+			reserve_space_for(2 * capacity);
+		memmove(key_buffer + 1, key_buffer, waiting_codes * sizeof(int));
 	} else
 		nextcodes--;
 
@@ -326,13 +340,64 @@ void put_back(int keycode)
 }
 
 #ifdef ENABLE_NANORC
-/* Insert the given string into the keyboard buffer. */
+/* Set up the given expansion string to be ingested by the keyboard routines. */
 void implant(const char *string)
 {
-	for (int i = strlen(string); i > 0; i--)
-		put_back((unsigned char)string[i - 1]);
+	plants_pointer = string;
+	put_back(MORE_PLANTS);
 
 	mute_modifiers = TRUE;
+}
+
+/* Continue processing an expansion string.  Returns either an error code,
+ * a plain keycode, or a placeholder for a command shortcut. */
+int get_code_from_plantation(void)
+{
+	if (*plants_pointer == '{') {
+		char *closing = strchr(plants_pointer + 1, '}');
+
+		if (!closing)
+			return MISSING_BRACE;
+
+		if (plants_pointer[1] == '{' && plants_pointer[2] == '}') {
+			plants_pointer += 3;
+			if (*plants_pointer != '\0')
+				put_back(MORE_PLANTS);
+			return '{';
+		}
+
+		free(commandname);
+		free(planted_shortcut);
+
+		commandname = measured_copy(plants_pointer + 1, closing - plants_pointer - 1);
+		planted_shortcut = strtosc(commandname);
+
+		if (!planted_shortcut)
+			return NO_SUCH_FUNCTION;
+
+		plants_pointer = closing + 1;
+
+		if (*plants_pointer != '\0')
+			put_back(MORE_PLANTS);
+
+		return PLANTED_COMMAND;
+	} else {
+		char *opening = strchr(plants_pointer, '{');
+		int length;
+
+		if (opening) {
+			length = opening - plants_pointer;
+			put_back(MORE_PLANTS);
+		} else
+			length = strlen(plants_pointer);
+
+		for (int index = length - 1; index >= 0; index--)
+			put_back((unsigned char)plants_pointer[index]);
+
+		plants_pointer += length;
+
+		return ERR;
+	}
 }
 #endif
 
@@ -347,7 +412,13 @@ int get_input(WINDOW *frame)
 
 	if (waiting_codes > 0) {
 		waiting_codes--;
-		return *(nextcodes++);
+#ifdef ENABLE_NANORC
+		if (*nextcodes == MORE_PLANTS) {
+			nextcodes++;
+			return get_code_from_plantation();
+		} else
+#endif
+			return *(nextcodes++);
 	} else
 		return ERR;
 }
@@ -940,7 +1011,8 @@ int parse_kbinput(WINDOW *frame)
 		} else if (++escapes > 2)
 			escapes = (last_escape_was_alone ? 0 : 1);
 		return ERR;
-	}
+	} else if (keycode == ERR)
+		return ERR;
 
 	if (escapes == 0) {
 		/* Most key codes in byte range cannot be special keys. */
@@ -1291,79 +1363,48 @@ int get_kbinput(WINDOW *frame, bool showcursor)
 #ifdef ENABLE_UTF8
 #define INVALID_DIGIT  -77
 
-/* If the given symbol is a valid hexadecimal digit, multiply it by factor
- * and add the result to the given unicode, and return PROCEED to signify
- * okay.  When not a hexadecimal digit, return the symbol itself. */
-long add_unicode_digit(int symbol, long factor, long *unicode)
-{
-	if ('0' <= symbol && symbol <= '9')
-		*unicode += (symbol - '0') * factor;
-	else if ('a' <= tolower(symbol) && tolower(symbol) <= 'f')
-		*unicode += (tolower(symbol) - 'a' + 10) * factor;
-	else
-		return INVALID_DIGIT;
-
-	return PROCEED;
-}
-
-/* For each consecutive call, gather the given symbol into a six-digit Unicode
- * (from 000000 to 10FFFF, case-insensitive).  When it is complete, return the
- * assembled Unicode; until then, return PROCEED when the symbol is valid. */
+/* For each consecutive call, gather the given symbol into a Unicode code point.
+ * When it's complete (with six digits, or when Space or Enter is typed), return
+ * the assembled code.  Until then, return PROCEED when the symbol is valid, or
+ * an error code for anything other than hexadecimal, Space, and Enter. */
 long assemble_unicode(int symbol)
 {
 	static long unicode = 0;
 	static int digits = 0;
-	long retval = PROCEED;
+	long outcome = PROCEED;
 
-	switch (++digits) {
-		case 1:
-			unicode = (symbol - '0') * 0x100000;
-			break;
-		case 2:
-			/* The second digit must be zero if the first was one, but
-			 * may be any hexadecimal value if the first was zero. */
-			if (symbol == '0' || unicode == 0)
-				retval = add_unicode_digit(symbol, 0x10000, &unicode);
-			else
-				retval = INVALID_DIGIT;
-			break;
-		case 3:
-			/* Later digits may be any hexadecimal value. */
-			retval = add_unicode_digit(symbol, 0x1000, &unicode);
-			break;
-		case 4:
-			retval = add_unicode_digit(symbol, 0x100, &unicode);
-			break;
-		case 5:
-			retval = add_unicode_digit(symbol, 0x10, &unicode);
-			break;
-		case 6:
-			retval = add_unicode_digit(symbol, 0x1, &unicode);
-			/* If also the sixth digit was a valid hexadecimal value, then
-			 * the Unicode sequence is complete, so return it. */
-			if (retval == PROCEED)
-				retval = unicode;
-			break;
-	}
+	if ('0' <= symbol && symbol <= '9')
+		unicode = (unicode << 4) + symbol - '0';
+	else if ('a' <= (symbol | 0x20) && (symbol | 0x20) <= 'f')
+		unicode = (unicode << 4) + (symbol | 0x20) - 'a' + 10;
+	else if (symbol == '\r' || symbol == ' ')
+		outcome = unicode;
+	else
+		outcome = INVALID_DIGIT;
+
+	/* If also the sixth digit was a valid hexadecimal value, then the
+	 * Unicode sequence is complete, so return it (when it's valid). */
+	if (++digits == 6 && outcome == PROCEED)
+		outcome = (unicode < 0x110000) ? unicode : INVALID_DIGIT;
 
 	/* Show feedback only when editing, not when at a prompt. */
-	if (retval == PROCEED && currmenu == MMAIN) {
-		char partial[7] = "......";
+	if (outcome == PROCEED && currmenu == MMAIN) {
+		char partial[7] = "      ";
 
-		/* Construct the partial result, right-padding it with dots. */
-		snprintf(partial, digits + 1, "%06lX", unicode);
-		partial[digits] = '.';
+		sprintf(partial + 6 - digits, "%0*lX", digits, unicode);
 
 		/* TRANSLATORS: This is shown while a six-digit hexadecimal
 		 * Unicode character code (%s) is being typed in. */
 		statusline(INFO, _("Unicode Input: %s"), partial);
 	}
 
-	/* If we have an end result, reset the Unicode digit counter. */
-	if (retval != PROCEED)
+	/* If we have an end result, reset the value and the counter. */
+	if (outcome != PROCEED) {
+		unicode = 0;
 		digits = 0;
+	}
 
-	return retval;
+	return outcome;
 }
 #endif /* ENABLE_UTF8 */
 
@@ -1377,7 +1418,6 @@ int *parse_verbatim_kbinput(WINDOW *frame, size_t *count)
 
 	reveal_cursor = TRUE;
 
-	/* Read in the first code. */
 	keycode = get_input(frame);
 
 #ifndef NANO_TINY
@@ -1392,14 +1432,14 @@ int *parse_verbatim_kbinput(WINDOW *frame, size_t *count)
 	yield = nmalloc(6 * sizeof(int));
 
 #ifdef ENABLE_UTF8
-	/* If the first code is a valid Unicode starter digit (0 or 1),
-	 * commence Unicode input.  Otherwise, put the code back. */
-	if (using_utf8() && (keycode == '0' || keycode == '1')) {
+	/* If the key code is a hexadecimal digit, commence Unicode input. */
+	if (using_utf8() && isxdigit(keycode)) {
 		long unicode = assemble_unicode(keycode);
 		char multibyte[MB_CUR_MAX];
 
 		reveal_cursor = FALSE;
 
+		/* Gather at most six hexadecimal digits. */
 		while (unicode == PROCEED) {
 			keycode = get_input(frame);
 			unicode = assemble_unicode(keycode);
@@ -1412,7 +1452,7 @@ int *parse_verbatim_kbinput(WINDOW *frame, size_t *count)
 			return NULL;
 		}
 #endif
-		/* For an invalid digit, discard its possible continuation bytes. */
+		/* For an invalid keystroke, discard its possible continuation bytes. */
 		if (unicode == INVALID_DIGIT) {
 			if (keycode == ESC_CODE && waiting_codes) {
 				get_input(NULL);
@@ -1493,9 +1533,6 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
 	/* Turn bracketed-paste mode back on. */
 	printf("\x1B[?2004h");
 	fflush(stdout);
-
-	if (ISSET(ZERO) && currmenu == MMAIN)
-		wredrawln(midwin, editwinrows - 1, 1);
 #endif
 
 	/* Turn flow control characters back on if necessary and turn the
@@ -2267,7 +2304,7 @@ void statusline(message_type importance, const char *msg, ...)
 		return;
 	}
 
-#if !defined(NANO_TINY) && defined(ENABLE_MULTIBUFFER)
+#if defined(ENABLE_MULTIBUFFER) && !defined(NANO_TINY)
 	if (!we_are_running && importance == ALERT && openfile && !openfile->fmt &&
 						!openfile->errormessage && openfile->next != openfile)
 		openfile->errormessage = copy_of(compound);
@@ -2427,7 +2464,7 @@ void bottombars(int menu)
 		if (index + 2 >= number)
 			thiswidth += COLS % itemwidth;
 
-		post_one_key(s->keystr, _(f->desc), thiswidth);
+		post_one_key(s->keystr, _(f->tag), thiswidth);
 
 		index++;
 	}
@@ -3536,16 +3573,17 @@ void spotlight_softwrapped(size_t from_col, size_t to_col)
 #endif
 
 #ifdef ENABLE_EXTRA
-#define CREDIT_LEN  54
+#define CREDIT_LEN  52
 #define XLCREDIT_LEN  9
 
 /* Fully blank the terminal screen, then slowly "crawl" the credits over it.
  * Abort the crawl upon any keystroke. */
 void do_credits(void)
 {
-	bool with_empty_line = ISSET(EMPTY_LINE);
+	bool with_interface = !ISSET(ZERO);
 	bool with_help = !ISSET(NO_HELP);
-	int kbinput = ERR, crpos = 0, xlpos = 0;
+	int crpos = 0, xlpos = 0;
+
 	const char *credits[CREDIT_LEN] = {
 		NULL,                /* "The nano text editor" */
 		NULL,                /* "version" */
@@ -3593,10 +3631,8 @@ void do_credits(void)
 		"",
 		"",
 		"",
-		"",
 		"(C) 2022",
 		"Free Software Foundation, Inc.",
-		"",
 		"",
 		"",
 		"",
@@ -3615,8 +3651,8 @@ void do_credits(void)
 		N_("Thank you for using nano!")
 	};
 
-	if (with_empty_line || with_help) {
-		UNSET(EMPTY_LINE);
+	if (with_interface || with_help) {
+		SET(ZERO);
 		SET(NO_HELP);
 		window_init();
 	}
@@ -3624,49 +3660,38 @@ void do_credits(void)
 	nodelay(midwin, TRUE);
 	scrollok(midwin, TRUE);
 
-	blank_titlebar();
 	blank_edit();
-	blank_statusbar();
-
-	wrefresh(topwin);
 	wrefresh(midwin);
-	wrefresh(footwin);
-	napms(700);
+	napms(600);
 
 	for (crpos = 0; crpos < CREDIT_LEN + editwinrows / 2; crpos++) {
 		if (crpos < CREDIT_LEN) {
-			const char *what;
+			const char *text = credits[crpos];
 
-			if (credits[crpos] == NULL)
-				what = _(xlcredits[xlpos++]);
-			else
-				what = credits[crpos];
+			if (!text)
+				text = _(xlcredits[xlpos++]);
 
-			mvwaddstr(midwin, editwinrows - 1 - (editwinrows % 2),
-								COLS / 2 - breadth(what) / 2 - 1, what);
+			mvwaddstr(midwin, editwinrows - 1, (COLS - breadth(text)) / 2, text);
 			wrefresh(midwin);
 		}
 
-		if ((kbinput = wgetch(midwin)) != ERR)
+		if (wgetch(midwin) != ERR)
 			break;
 
-		napms(700);
+		napms(600);
 		wscrl(midwin, 1);
 		wrefresh(midwin);
 
-		if ((kbinput = wgetch(midwin)) != ERR)
+		if (wgetch(midwin) != ERR)
 			break;
 
-		napms(700);
+		napms(600);
 		wscrl(midwin, 1);
 		wrefresh(midwin);
 	}
 
-	if (kbinput != ERR)
-		ungetch(kbinput);
-
-	if (with_empty_line)
-		SET(EMPTY_LINE);
+	if (with_interface)
+		UNSET(ZERO);
 	if (with_help)
 		UNSET(NO_HELP);
 	window_init();

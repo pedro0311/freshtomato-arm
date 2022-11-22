@@ -124,6 +124,37 @@ EXTRA_DIST += alloca.in.h
 
 ## end   gnulib module alloca-opt
 
+## begin gnulib module assert-h
+
+BUILT_SOURCES += $(ASSERT_H)
+
+# We need the following in order to create <assert.h> when the system
+# doesn't have one that works with the given compiler.
+if GL_GENERATE_ASSERT_H
+assert.h: assert.in.h verify.h $(top_builddir)/config.status
+	$(gl_V_at){ $(SED_HEADER_STDOUT) \
+	      -e 's|@''INCLUDE_NEXT''@|$(INCLUDE_NEXT)|g' \
+	      -e 's|@''PRAGMA_SYSTEM_HEADER''@|@PRAGMA_SYSTEM_HEADER@|g' \
+	      -e 's|@''PRAGMA_COLUMNS''@|@PRAGMA_COLUMNS@|g' \
+	      -e 's|@''NEXT_ASSERT_H''@|$(NEXT_ASSERT_H)|g' \
+	      < $(srcdir)/assert.in.h && \
+	  sed -e '/@assert.h omit start@/,/@assert.h omit end@/d' \
+	      -e 's|_gl_verify|_gl_static_assert|g' \
+	      -e 's|_GL_VERIFY|_GL_STATIC_ASSERT|g' \
+	      -e 's|_GL\(_STATIC_ASSERT_H\)|_GL\1|g' \
+	      < $(srcdir)/verify.h; \
+	} > $@-t
+	$(AM_V_at)mv $@-t $@
+else
+assert.h: $(top_builddir)/config.status
+	rm -f $@
+endif
+MOSTLYCLEANFILES += assert.h assert.h-t
+
+EXTRA_DIST += assert.in.h verify.h
+
+## end   gnulib module assert-h
+
 ## begin gnulib module assure
 
 
@@ -290,39 +321,6 @@ libgnu_a_SOURCES += dup2.c
 endif
 
 ## end   gnulib module dup2
-
-## begin gnulib module dynarray
-
-BUILT_SOURCES += malloc/dynarray.gl.h malloc/dynarray-skeleton.gl.h
-
-malloc/dynarray.gl.h: malloc/dynarray.h
-	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
-	$(AM_V_at)$(SED_HEADER_STDOUT) \
-	  -e '/libc_hidden_proto/d' \
-	  $(srcdir)/malloc/dynarray.h > $@-t
-	$(AM_V_at)mv $@-t $@
-MOSTLYCLEANFILES += malloc/dynarray.gl.h malloc/dynarray.gl.h-t
-
-malloc/dynarray-skeleton.gl.h: malloc/dynarray-skeleton.c
-	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
-	$(AM_V_at)$(SED_HEADER_STDOUT) \
-	      -e 's|<malloc/dynarray\.h>|<malloc/dynarray.gl.h>|g' \
-	      -e 's|__attribute_maybe_unused__|_GL_ATTRIBUTE_MAYBE_UNUSED|g' \
-	      -e 's|__attribute_nonnull__|_GL_ATTRIBUTE_NONNULL|g' \
-	      -e 's|__attribute_warn_unused_result__|_GL_ATTRIBUTE_NODISCARD|g' \
-	      -e 's|__glibc_likely|_GL_LIKELY|g' \
-	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
-	      $(srcdir)/malloc/dynarray-skeleton.c > $@-t
-	$(AM_V_at)mv $@-t $@
-MOSTLYCLEANFILES += malloc/dynarray-skeleton.gl.h malloc/dynarray-skeleton.gl.h-t
-
-libgnu_a_SOURCES += malloc/dynarray_at_failure.c                 malloc/dynarray_emplace_enlarge.c                 malloc/dynarray_finalize.c                 malloc/dynarray_resize.c                 malloc/dynarray_resize_clear.c
-
-EXTRA_DIST += dynarray.h malloc/dynarray-skeleton.c malloc/dynarray.h
-
-EXTRA_libgnu_a_SOURCES += malloc/dynarray-skeleton.c
-
-## end   gnulib module dynarray
 
 ## begin gnulib module errno
 
@@ -740,6 +738,60 @@ endif
 
 ## end   gnulib module gettimeofday
 
+## begin gnulib module glibc-internal/dynarray
+
+BUILT_SOURCES += malloc/dynarray.gl.h malloc/dynarray-skeleton.gl.h
+
+malloc/dynarray.gl.h: malloc/dynarray.h
+	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
+	$(AM_V_at)$(SED_HEADER_STDOUT) \
+	  -e '/libc_hidden_proto/d' \
+	  $(srcdir)/malloc/dynarray.h > $@-t
+	$(AM_V_at)mv $@-t $@
+MOSTLYCLEANFILES += malloc/dynarray.gl.h malloc/dynarray.gl.h-t
+
+malloc/dynarray-skeleton.gl.h: malloc/dynarray-skeleton.c
+	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
+	$(AM_V_at)$(SED_HEADER_STDOUT) \
+	      -e 's|<malloc/dynarray\.h>|<malloc/dynarray.gl.h>|g' \
+	      -e 's|__attribute_maybe_unused__|_GL_ATTRIBUTE_MAYBE_UNUSED|g' \
+	      -e 's|__attribute_nonnull__|_GL_ATTRIBUTE_NONNULL|g' \
+	      -e 's|__attribute_warn_unused_result__|_GL_ATTRIBUTE_NODISCARD|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      $(srcdir)/malloc/dynarray-skeleton.c > $@-t
+	$(AM_V_at)mv $@-t $@
+MOSTLYCLEANFILES += malloc/dynarray-skeleton.gl.h malloc/dynarray-skeleton.gl.h-t
+
+libgnu_a_SOURCES += malloc/dynarray_at_failure.c                 malloc/dynarray_emplace_enlarge.c                 malloc/dynarray_finalize.c                 malloc/dynarray_resize.c                 malloc/dynarray_resize_clear.c
+
+EXTRA_DIST += dynarray.h malloc/dynarray-skeleton.c malloc/dynarray.h
+
+EXTRA_libgnu_a_SOURCES += malloc/dynarray-skeleton.c
+
+## end   gnulib module glibc-internal/dynarray
+
+## begin gnulib module glibc-internal/scratch_buffer
+
+BUILT_SOURCES += malloc/scratch_buffer.gl.h
+
+malloc/scratch_buffer.gl.h: malloc/scratch_buffer.h
+	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
+	$(AM_V_at)$(SED_HEADER_STDOUT) \
+	      -e 's|__always_inline|inline _GL_ATTRIBUTE_ALWAYS_INLINE|g' \
+	      -e 's|__glibc_likely|_GL_LIKELY|g' \
+	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
+	      -e '/libc_hidden_proto/d' \
+	      $(srcdir)/malloc/scratch_buffer.h > $@-t
+	$(AM_V_at)mv $@-t $@
+MOSTLYCLEANFILES += malloc/scratch_buffer.gl.h malloc/scratch_buffer.gl.h-t
+
+libgnu_a_SOURCES += malloc/scratch_buffer_grow.c                 malloc/scratch_buffer_grow_preserve.c                 malloc/scratch_buffer_set_array_size.c
+
+EXTRA_DIST += malloc/scratch_buffer.h scratch_buffer.h
+
+## end   gnulib module glibc-internal/scratch_buffer
+
 ## begin gnulib module glob
 
 if GL_COND_OBJ_GLOB
@@ -821,7 +873,7 @@ libgnu_a_SOURCES += idx.h
 ## begin gnulib module intprops
 
 
-EXTRA_DIST += intprops.h
+EXTRA_DIST += intprops-internal.h intprops.h
 
 ## end   gnulib module intprops
 
@@ -1608,27 +1660,6 @@ EXTRA_DIST += save-cwd.h
 
 ## end   gnulib module save-cwd
 
-## begin gnulib module scratch_buffer
-
-BUILT_SOURCES += malloc/scratch_buffer.gl.h
-
-malloc/scratch_buffer.gl.h: malloc/scratch_buffer.h
-	$(AM_V_GEN)$(MKDIR_P) '%reldir%/malloc'
-	$(AM_V_at)$(SED_HEADER_STDOUT) \
-	      -e 's|__always_inline|inline _GL_ATTRIBUTE_ALWAYS_INLINE|g' \
-	      -e 's|__glibc_likely|_GL_LIKELY|g' \
-	      -e 's|__glibc_unlikely|_GL_UNLIKELY|g' \
-	      -e '/libc_hidden_proto/d' \
-	      $(srcdir)/malloc/scratch_buffer.h > $@-t
-	$(AM_V_at)mv $@-t $@
-MOSTLYCLEANFILES += malloc/scratch_buffer.gl.h malloc/scratch_buffer.gl.h-t
-
-libgnu_a_SOURCES += malloc/scratch_buffer_dupfree.c                 malloc/scratch_buffer_grow.c                 malloc/scratch_buffer_grow_preserve.c                 malloc/scratch_buffer_set_array_size.c
-
-EXTRA_DIST += malloc/scratch_buffer.h scratch_buffer.h
-
-## end   gnulib module scratch_buffer
-
 ## begin gnulib module setlocale-null
 
 libgnu_a_SOURCES += setlocale_null.c
@@ -1792,26 +1823,6 @@ EXTRA_DIST += stat-time.h
 
 ## end   gnulib module stat-time
 
-## begin gnulib module stdalign
-
-BUILT_SOURCES += $(STDALIGN_H)
-
-# We need the following in order to create <stdalign.h> when the system
-# doesn't have one that works.
-if GL_GENERATE_STDALIGN_H
-stdalign.h: stdalign.in.h $(top_builddir)/config.status
-	$(gl_V_at)$(SED_HEADER_TO_AT_t) $(srcdir)/stdalign.in.h
-	$(AM_V_at)mv $@-t $@
-else
-stdalign.h: $(top_builddir)/config.status
-	rm -f $@
-endif
-MOSTLYCLEANFILES += stdalign.h stdalign.h-t
-
-EXTRA_DIST += stdalign.in.h
-
-## end   gnulib module stdalign
-
 ## begin gnulib module stdarg
 
 BUILT_SOURCES += $(STDARG_H)
@@ -1838,27 +1849,26 @@ EXTRA_DIST += stdarg.in.h
 
 ## end   gnulib module stdarg
 
-## begin gnulib module stdbool
+## begin gnulib module stdckdint
 
-BUILT_SOURCES += $(STDBOOL_H)
+BUILT_SOURCES += $(STDCKDINT_H)
 
-# We need the following in order to create <stdbool.h> when the system
-# doesn't have one that works.
-if GL_GENERATE_STDBOOL_H
-stdbool.h: stdbool.in.h $(top_builddir)/config.status
+# We need the following in order to create <stdckdint.h> when the system
+# doesn't have one that works with the given compiler.
+if GL_GENERATE_STDCKDINT_H
+stdckdint.h: stdckdint.in.h $(top_builddir)/config.status
 	$(gl_V_at)$(SED_HEADER_STDOUT) \
-	  -e 's/@''HAVE__BOOL''@/$(HAVE__BOOL)/g' \
-	  $(srcdir)/stdbool.in.h > $@-t
+	  $(srcdir)/stdckdint.in.h > $@-t
 	$(AM_V_at)mv $@-t $@
 else
-stdbool.h: $(top_builddir)/config.status
+stdckdint.h: $(top_builddir)/config.status
 	rm -f $@
 endif
-MOSTLYCLEANFILES += stdbool.h stdbool.h-t
+MOSTLYCLEANFILES += stdckdint.h stdckdint.h-t
 
-EXTRA_DIST += stdbool.in.h
+EXTRA_DIST += intprops-internal.h stdckdint.in.h
 
-## end   gnulib module stdbool
+## end   gnulib module stdckdint
 
 ## begin gnulib module stddef
 

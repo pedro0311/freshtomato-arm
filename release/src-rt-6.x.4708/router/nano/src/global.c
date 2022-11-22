@@ -266,6 +266,9 @@ char *startup_problem = NULL;
 #endif
 #ifdef ENABLE_NANORC
 char *custom_nanorc = NULL;
+
+char *commandname = NULL;
+keystruct *planted_shortcut = NULL;
 #endif
 
 bool spotlighted = FALSE;
@@ -280,11 +283,6 @@ size_t light_to_col = 0;
 #define NOVIEW  FALSE
 #define BLANKAFTER  TRUE    /* A blank line after this one. */
 #define TOGETHER  FALSE
-#ifdef ENABLE_MULTIBUFFER
-#define CAN_OPEN_OTHER_BUFFER  TRUE
-#else
-#define CAN_OPEN_OTHER_BUFFER  FALSE
-#endif
 
 /* Empty functions, for the most part corresponding to toggles. */
 void case_sens_void(void)  {;}
@@ -319,8 +317,8 @@ void discard_buffer(void)  {;}
 void do_cancel(void)  {;}
 
 /* Add a function to the linked list of functions. */
-void add_to_funcs(void (*func)(void), int menus, const char *desc,
-					const char *help, bool blank_after, bool viewok)
+void add_to_funcs(void (*function)(void), int menus, const char *tag,
+					const char *phrase, bool blank_after)
 {
 	funcstruct *f = nmalloc(sizeof(funcstruct));
 
@@ -331,12 +329,11 @@ void add_to_funcs(void (*func)(void), int menus, const char *desc,
 	tailfunc = f;
 
 	f->next = NULL;
-	f->func = func;
+	f->func = function;
 	f->menus = menus;
-	f->desc = desc;
-	f->viewok = viewok;
+	f->tag = tag;
 #ifdef ENABLE_HELP
-	f->help = help;
+	f->phrase = phrase;
 	f->blank_after = blank_after;
 #endif
 }
@@ -388,7 +385,7 @@ int keycode_from_string(const char *keystring)
 
 /* Add a key combo to the linked list of shortcuts. */
 void add_to_sclist(int menus, const char *scstring, const int keycode,
-						void (*func)(void), int toggle)
+						void (*function)(void), int toggle)
 {
 	static keystruct *tailsc;
 #ifndef NANO_TINY
@@ -405,7 +402,7 @@ void add_to_sclist(int menus, const char *scstring, const int keycode,
 
 	/* Fill in the data. */
 	sc->menus = menus;
-	sc->func = func;
+	sc->func = function;
 #ifndef NANO_TINY
 	sc->toggle = toggle;
 	/* When not the same toggle as the previous one, increment the ID. */
@@ -419,11 +416,11 @@ void add_to_sclist(int menus, const char *scstring, const int keycode,
 }
 
 /* Return the first shortcut in the list of shortcuts that
- * matches the given func in the given menu. */
-const keystruct *first_sc_for(int menu, void (*func)(void))
+ * matches the given function in the given menu. */
+const keystruct *first_sc_for(int menu, void (*function)(void))
 {
 	for (keystruct *sc = sclist; sc != NULL; sc = sc->next)
-		if ((sc->menus & menu) && sc->func == func && sc->keystr[0])
+		if ((sc->menus & menu) && sc->func == function && sc->keystr[0])
 			return sc;
 
 	return NULL;
@@ -451,24 +448,28 @@ size_t shown_entries_for(int menu)
 }
 
 /* Return the first shortcut in the current menu that matches the given input. */
-const keystruct *get_shortcut(int *keycode)
+const keystruct *get_shortcut(const int keycode)
 {
 	/* Plain characters and upper control codes cannot be shortcuts. */
-	if (!meta_key && 0x20 <= *keycode && *keycode <= 0xFF)
+	if (!meta_key && 0x20 <= keycode && keycode <= 0xFF)
 		return NULL;
 
 	/* Lower control codes with Meta cannot be shortcuts either. */
-	if (meta_key && *keycode < 0x20)
+	if (meta_key && keycode < 0x20)
 		return NULL;
 
 #ifndef NANO_TINY
 	/* During a paste at a prompt, ignore all command keycodes. */
-	if (bracketed_paste && *keycode != BRACKETED_PASTE_MARKER)
+	if (bracketed_paste && keycode != BRACKETED_PASTE_MARKER)
 		return NULL;
+#endif
+#ifdef ENABLE_NANORC
+	if (keycode == PLANTED_COMMAND)
+		return planted_shortcut;
 #endif
 
 	for (keystruct *sc = sclist; sc != NULL; sc = sc->next) {
-		if ((sc->menus & currmenu) && *keycode == sc->keycode)
+		if ((sc->menus & currmenu) && keycode == sc->keycode)
 			return sc;
 	}
 
@@ -476,7 +477,7 @@ const keystruct *get_shortcut(int *keycode)
 }
 
 /* Return a pointer to the function that is bound to the given key. */
-functionptrtype func_from_key(int *keycode)
+functionptrtype func_from_key(const int keycode)
 {
 	const keystruct *sc = get_shortcut(keycode);
 
@@ -487,15 +488,15 @@ functionptrtype func_from_key(int *keycode)
 /* Return the function that is bound to the given key in the file browser or
  * the help viewer.  Accept also certain plain characters, for compatibility
  * with Pico or to mimic 'less' and similar text viewers. */
-functionptrtype interpret(int *keycode)
+functionptrtype interpret(const int keycode)
 {
 	if (!meta_key) {
-		if (*keycode == 'N')
+		if (keycode == 'N')
 			return do_findprevious;
-		if (*keycode == 'n')
+		if (keycode == 'n')
 			return do_findnext;
 
-		switch (tolower(*keycode)) {
+		switch (tolower(keycode)) {
 			case 'b':
 			case '-':
 				return do_page_up;
@@ -688,52 +689,54 @@ void shortcut_init(void)
 	const char *browserrefresh_gist = N_("Refresh the file list");
 	const char *gotodir_gist = N_("Go to directory");
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 	const char *lint_gist = N_("Invoke the linter, if available");
 	const char *prevlint_gist = N_("Go to previous linter msg");
 	const char *nextlint_gist = N_("Go to next linter msg");
+#endif
+#ifdef ENABLE_FORMATTER
 	const char *formatter_gist =
 		N_("Invoke a program to format/arrange/manipulate the buffer");
 #endif
 #endif /* ENABLE_HELP */
 
 #ifdef ENABLE_HELP
-#define WITHORSANS(help)  help
+#define WHENHELP(description)  description
 #else
-#define WITHORSANS(help)  ""
+#define WHENHELP(description)  ""
 #endif
 
 	/* Start populating the different menus with functions. */
 #ifdef ENABLE_HELP
 	add_to_funcs(do_help, (MMOST | MBROWSER) & ~MFINDINHELP,
-		/* TRANSLATORS: Try to keep the next thirteen strings at most 10 characters. */
-		N_("Help"), WITHORSANS(help_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: Try to keep the next thirteen strings at most 10 characters. */
+			N_("Help"), WHENHELP(help_gist), TOGETHER);
 #endif
 
 	add_to_funcs(do_cancel, ((MMOST & ~MMAIN) | MYESNO),
-		N_("Cancel"), WITHORSANS(cancel_gist), BLANKAFTER, VIEW);
+			N_("Cancel"), WHENHELP(cancel_gist), BLANKAFTER);
 
 	add_to_funcs(do_exit, MMAIN,
-		exit_tag, WITHORSANS(exit_gist), TOGETHER, VIEW);
+			exit_tag, WHENHELP(exit_gist), TOGETHER);
 	/* Remember the entry for Exit, to be able to replace it with Close. */
 	exitfunc = tailfunc;
 
 #ifdef ENABLE_BROWSER
 	add_to_funcs(do_exit, MBROWSER,
-		close_tag, WITHORSANS(exitbrowser_gist), TOGETHER, VIEW);
+			close_tag, WHENHELP(exitbrowser_gist), TOGETHER);
 #endif
 
 #ifndef ENABLE_HELP
-	add_to_funcs(full_refresh, MMAIN|MREPLACE, "Refresh", "x", 0, VIEW);
+	add_to_funcs(full_refresh, MMAIN|MREPLACE, "Refresh", "x", 0);
 #ifndef NANO_TINY
-	add_to_funcs(full_refresh, MINSERTFILE|MEXECUTE, "Refresh", "x", 0, VIEW);
+	add_to_funcs(full_refresh, MINSERTFILE|MEXECUTE, "Refresh", "x", 0);
 #endif
-	add_to_funcs(flip_goto, MWHEREIS, "Go To Line", "x", 0, VIEW);
-	add_to_funcs(flip_goto, MGOTOLINE, "Go To Text", "x", 0, VIEW);
+	add_to_funcs(flip_goto, MWHEREIS, "Go To Line", "x", 0);
+	add_to_funcs(flip_goto, MGOTOLINE, "Go To Text", "x", 0);
 #endif
 
 	add_to_funcs(do_writeout, MMAIN,
-		N_("Write Out"), WITHORSANS(writeout_gist), TOGETHER, NOVIEW);
+			N_("Write Out"), WHENHELP(writeout_gist), TOGETHER);
 
 #ifdef ENABLE_JUSTIFY
 	/* In restricted mode, replace Insert with Justify, when possible;
@@ -741,356 +744,346 @@ void shortcut_init(void)
 	if (!ISSET(RESTRICTED))
 #endif
 		add_to_funcs(do_insertfile, MMAIN,
-				N_("Read File"), WITHORSANS(readfile_gist), BLANKAFTER,
-				/* We allow inserting files in view mode if multibuffer mode
-				 * is available, so that the user can view multiple files. */
-				CAN_OPEN_OTHER_BUFFER);
+				N_("Read File"), WHENHELP(readfile_gist), BLANKAFTER);
 #ifdef ENABLE_JUSTIFY
 	else
 		add_to_funcs(do_justify, MMAIN,
-				N_("Justify"), WITHORSANS(justify_gist), BLANKAFTER, NOVIEW);
+				N_("Justify"), WHENHELP(justify_gist), BLANKAFTER);
 #endif
 
 #ifdef ENABLE_HELP
 	/* The description ("x") and blank_after (0) are irrelevant,
 	 * because the help viewer does not have a help text. */
-	add_to_funcs(full_refresh, MHELP, N_("Refresh"), "x", 0, VIEW);
-	add_to_funcs(do_exit, MHELP, close_tag, "x", 0, VIEW);
+	add_to_funcs(full_refresh, MHELP, N_("Refresh"), "x", 0);
+	add_to_funcs(do_exit, MHELP, close_tag, "x", 0);
 #endif
 
 	add_to_funcs(do_search_forward, MMAIN|MHELP,
-		N_("Where Is"), WITHORSANS(whereis_gist), TOGETHER, VIEW);
+			N_("Where Is"), WHENHELP(whereis_gist), TOGETHER);
 
 	add_to_funcs(do_replace, MMAIN,
-		N_("Replace"), WITHORSANS(replace_gist), TOGETHER, NOVIEW);
+			N_("Replace"), WHENHELP(replace_gist), TOGETHER);
 
 #ifdef NANO_TINY
 	add_to_funcs(do_search_backward, MHELP,
-		N_("Where Was"), WITHORSANS(wherewas_gist), TOGETHER, VIEW);
+			N_("Where Was"), WHENHELP(wherewas_gist), TOGETHER);
 
 	add_to_funcs(do_findprevious, MMAIN|MHELP,
-		N_("Previous"), WITHORSANS(findprev_gist), TOGETHER, VIEW);
+			N_("Previous"), WHENHELP(findprev_gist), TOGETHER);
 	add_to_funcs(do_findnext, MMAIN|MHELP,
-		N_("Next"), WITHORSANS(findnext_gist), BLANKAFTER, VIEW);
+			N_("Next"), WHENHELP(findnext_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(cut_text, MMAIN,
-		N_("Cut"), WITHORSANS(cut_gist), TOGETHER, NOVIEW);
+			N_("Cut"), WHENHELP(cut_gist), TOGETHER);
 
 	add_to_funcs(paste_text, MMAIN,
-		N_("Paste"), WITHORSANS(paste_gist), BLANKAFTER, NOVIEW);
+			N_("Paste"), WHENHELP(paste_gist), BLANKAFTER);
 
 	if (!ISSET(RESTRICTED)) {
 #ifndef NANO_TINY
 		add_to_funcs(do_execute, MMAIN,
-				N_("Execute"), WITHORSANS(execute_gist), TOGETHER, NOVIEW);
+				N_("Execute"), WHENHELP(execute_gist), TOGETHER);
 #endif
 #ifdef ENABLE_JUSTIFY
 		add_to_funcs(do_justify, MMAIN,
-				N_("Justify"), WITHORSANS(justify_gist), BLANKAFTER, NOVIEW);
+				N_("Justify"), WHENHELP(justify_gist), BLANKAFTER);
 #endif
 	}
 
 	add_to_funcs(report_cursor_position, MMAIN,
-		/* TRANSLATORS: This refers to the position of the cursor. */
-		N_("Location"), WITHORSANS(cursorpos_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: This refers to the position of the cursor. */
+			N_("Location"), WHENHELP(cursorpos_gist), TOGETHER);
 
 #if defined(NANO_TINY) || defined(ENABLE_JUSTIFY)
 	/* Conditionally placing this one here or further on, to keep the
 	 * help items nicely paired in most conditions. */
 	add_to_funcs(do_gotolinecolumn, MMAIN,
-		N_("Go To Line"), WITHORSANS(gotoline_gist), BLANKAFTER, VIEW);
+			N_("Go To Line"), WHENHELP(gotoline_gist), BLANKAFTER);
 #endif
 
 #ifndef NANO_TINY
 	add_to_funcs(do_undo, MMAIN,
 		/* TRANSLATORS: Try to keep the next ten strings at most 12 characters. */
-		N_("Undo"), WITHORSANS(undo_gist), TOGETHER, NOVIEW);
+			N_("Undo"), WHENHELP(undo_gist), TOGETHER);
 	add_to_funcs(do_redo, MMAIN,
-		N_("Redo"), WITHORSANS(redo_gist), BLANKAFTER, NOVIEW);
+			N_("Redo"), WHENHELP(redo_gist), BLANKAFTER);
 
 	add_to_funcs(do_mark, MMAIN,
-		N_("Set Mark"), WITHORSANS(mark_gist), TOGETHER, VIEW);
+			N_("Set Mark"), WHENHELP(mark_gist), TOGETHER);
 	add_to_funcs(copy_text, MMAIN,
-		N_("Copy"), WITHORSANS(copy_gist), BLANKAFTER, VIEW);
+			N_("Copy"), WHENHELP(copy_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(case_sens_void, MWHEREIS|MREPLACE,
-		N_("Case Sens"), WITHORSANS(case_gist), TOGETHER, VIEW);
+			N_("Case Sens"), WHENHELP(case_gist), TOGETHER);
 	add_to_funcs(regexp_void, MWHEREIS|MREPLACE,
-		N_("Reg.exp."), WITHORSANS(regexp_gist), TOGETHER, VIEW);
+			N_("Reg.exp."), WHENHELP(regexp_gist), TOGETHER);
 	add_to_funcs(backwards_void, MWHEREIS|MREPLACE,
-		N_("Backwards"), WITHORSANS(reverse_gist), BLANKAFTER, VIEW);
+			N_("Backwards"), WHENHELP(reverse_gist), BLANKAFTER);
 
 	add_to_funcs(flip_replace, MWHEREIS,
-		N_("Replace"), WITHORSANS(replace_gist), BLANKAFTER, VIEW);
+			N_("Replace"), WHENHELP(replace_gist), BLANKAFTER);
 	add_to_funcs(flip_replace, MREPLACE,
-		N_("No Replace"), WITHORSANS(whereis_gist), BLANKAFTER, VIEW);
+			N_("No Replace"), WHENHELP(whereis_gist), BLANKAFTER);
 
 #ifdef ENABLE_HISTORIES
 	add_to_funcs(get_older_item, MWHEREIS|MREPLACE|MREPLACEWITH|MWHEREISFILE,
-		N_("Older"), WITHORSANS(older_gist), TOGETHER, VIEW);
+			N_("Older"), WHENHELP(older_gist), TOGETHER);
 	add_to_funcs(get_newer_item, MWHEREIS|MREPLACE|MREPLACEWITH|MWHEREISFILE,
-		N_("Newer"), WITHORSANS(newer_gist), BLANKAFTER, VIEW);
-#endif
-
-#ifdef ENABLE_HELP
-	add_to_funcs(flip_goto, MWHEREIS,
-		N_("Go To Line"), WITHORSANS(gotoline_gist), BLANKAFTER, VIEW);
+			N_("Newer"), WHENHELP(newer_gist), BLANKAFTER);
 #endif
 
 #ifdef ENABLE_BROWSER
 	add_to_funcs(goto_dir, MBROWSER,
-		/* TRANSLATORS: Try to keep the next four strings at most 10 characters. */
-		N_("Go To Dir"), WITHORSANS(gotodir_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: Try to keep the next four strings at most 10 characters. */
+			N_("Go To Dir"), WHENHELP(gotodir_gist), TOGETHER);
 #ifdef ENABLE_HELP
 	add_to_funcs(full_refresh, MBROWSER,
-		N_("Refresh"), WITHORSANS(browserrefresh_gist), BLANKAFTER, VIEW);
+			N_("Refresh"), WHENHELP(browserrefresh_gist), BLANKAFTER);
 #endif
 	add_to_funcs(do_search_forward, MBROWSER,
-		N_("Where Is"), WITHORSANS(browserwhereis_gist), TOGETHER, VIEW);
+			N_("Where Is"), WHENHELP(browserwhereis_gist), TOGETHER);
 	add_to_funcs(do_search_backward, MBROWSER,
-		N_("Where Was"), WITHORSANS(browserwherewas_gist), TOGETHER, VIEW);
+			N_("Where Was"), WHENHELP(browserwherewas_gist), TOGETHER);
 
 	add_to_funcs(do_findprevious, MBROWSER,
-		N_("Previous"), WITHORSANS(findprev_gist), TOGETHER, VIEW);
+			N_("Previous"), WHENHELP(findprev_gist), TOGETHER);
 	add_to_funcs(do_findnext, MBROWSER,
-		N_("Next"), WITHORSANS(findnext_gist), BLANKAFTER, VIEW);
+			N_("Next"), WHENHELP(findnext_gist), BLANKAFTER);
 #endif
 
 #ifdef NANO_TINY
 	add_to_funcs(to_prev_word, MMAIN,
-		"Prev Word", WITHORSANS(prevword_gist), TOGETHER, VIEW);
+			"Prev Word", WHENHELP(prevword_gist), TOGETHER);
 	add_to_funcs(to_next_word, MMAIN,
-		"Next Word", WITHORSANS(nextword_gist), BLANKAFTER, VIEW);
+			"Next Word", WHENHELP(nextword_gist), BLANKAFTER);
 #else
 	add_to_funcs(do_find_bracket, MMAIN,
-		N_("To Bracket"), WITHORSANS(bracket_gist), BLANKAFTER, VIEW);
+			N_("To Bracket"), WHENHELP(bracket_gist), BLANKAFTER);
 
 	add_to_funcs(do_search_backward, MMAIN|MHELP,
-		/* TRANSLATORS: This starts a backward search. */
-		N_("Where Was"), WITHORSANS(wherewas_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: This starts a backward search. */
+			N_("Where Was"), WHENHELP(wherewas_gist), TOGETHER);
 
 	add_to_funcs(do_findprevious, MMAIN|MHELP,
-		/* TRANSLATORS: This refers to searching the preceding occurrence. */
-		N_("Previous"), WITHORSANS(findprev_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: This refers to searching the preceding occurrence. */
+			N_("Previous"), WHENHELP(findprev_gist), TOGETHER);
 	add_to_funcs(do_findnext, MMAIN|MHELP,
-		N_("Next"), WITHORSANS(findnext_gist), BLANKAFTER, VIEW);
+			N_("Next"), WHENHELP(findnext_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(do_left, MMAIN,
-		/* TRANSLATORS: This means move the cursor one character back. */
-		N_("Back"), WITHORSANS(back_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: This means move the cursor one character back. */
+			N_("Back"), WHENHELP(back_gist), TOGETHER);
 	add_to_funcs(do_right, MMAIN,
-		N_("Forward"), WITHORSANS(forward_gist), TOGETHER, VIEW);
+			N_("Forward"), WHENHELP(forward_gist), TOGETHER);
 #ifdef ENABLE_BROWSER
 	add_to_funcs(do_left, MBROWSER,
-		N_("Back"), WITHORSANS(backfile_gist), TOGETHER, VIEW);
+			N_("Back"), WHENHELP(backfile_gist), TOGETHER);
 	add_to_funcs(do_right, MBROWSER,
-		N_("Forward"), WITHORSANS(forwardfile_gist), TOGETHER, VIEW);
+			N_("Forward"), WHENHELP(forwardfile_gist), TOGETHER);
 #endif
 
 #ifndef NANO_TINY
 	add_to_funcs(to_prev_word, MMAIN,
-		/* TRANSLATORS: Try to keep the next ten strings at most 12 characters. */
-		N_("Prev Word"), WITHORSANS(prevword_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: Try to keep the next ten strings at most 12 characters. */
+			N_("Prev Word"), WHENHELP(prevword_gist), TOGETHER);
 	add_to_funcs(to_next_word, MMAIN,
-		N_("Next Word"), WITHORSANS(nextword_gist), TOGETHER, VIEW);
+			N_("Next Word"), WHENHELP(nextword_gist), TOGETHER);
 #endif
 
 	add_to_funcs(do_home, MMAIN,
-		N_("Home"), WITHORSANS(home_gist), TOGETHER, VIEW);
+			N_("Home"), WHENHELP(home_gist), TOGETHER);
 	add_to_funcs(do_end, MMAIN,
-		N_("End"), WITHORSANS(end_gist), BLANKAFTER, VIEW);
+			N_("End"), WHENHELP(end_gist), BLANKAFTER);
 
 	add_to_funcs(do_up, MMAIN|MBROWSER|MHELP,
-		N_("Prev Line"), WITHORSANS(prevline_gist), TOGETHER, VIEW);
+			N_("Prev Line"), WHENHELP(prevline_gist), TOGETHER);
 	add_to_funcs(do_down, MMAIN|MBROWSER|MHELP,
-		N_("Next Line"), WITHORSANS(nextline_gist), TOGETHER, VIEW);
+			N_("Next Line"), WHENHELP(nextline_gist), TOGETHER);
 #if !defined(NANO_TINY) || defined(ENABLE_HELP)
 	add_to_funcs(do_scroll_up, MMAIN,
-		N_("Scroll Up"), WITHORSANS(scrollup_gist), TOGETHER, VIEW);
+			N_("Scroll Up"), WHENHELP(scrollup_gist), TOGETHER);
 	add_to_funcs(do_scroll_down, MMAIN,
-		N_("Scroll Down"), WITHORSANS(scrolldown_gist), BLANKAFTER, VIEW);
+			N_("Scroll Down"), WHENHELP(scrolldown_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(to_prev_block, MMAIN,
-		N_("Prev Block"), WITHORSANS(prevblock_gist), TOGETHER, VIEW);
+			N_("Prev Block"), WHENHELP(prevblock_gist), TOGETHER);
 	add_to_funcs(to_next_block, MMAIN,
-		N_("Next Block"), WITHORSANS(nextblock_gist), TOGETHER, VIEW);
+			N_("Next Block"), WHENHELP(nextblock_gist), TOGETHER);
 #ifdef ENABLE_JUSTIFY
 	add_to_funcs(to_para_begin, MMAIN|MGOTOLINE,
-		/* TRANSLATORS: Try to keep these two strings at most 16 characters. */
-		N_("Begin of Paragr."), WITHORSANS(parabegin_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: Try to keep these two strings at most 16 characters. */
+			N_("Begin of Paragr."), WHENHELP(parabegin_gist), TOGETHER);
 	add_to_funcs(to_para_end, MMAIN|MGOTOLINE,
-		N_("End of Paragraph"), WITHORSANS(paraend_gist), BLANKAFTER, VIEW);
+			N_("End of Paragraph"), WHENHELP(paraend_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(do_page_up, MMAIN|MHELP,
-		/* TRANSLATORS: Try to keep the next six strings at most 12 characters. */
-		N_("Prev Page"), WITHORSANS(prevpage_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: Try to keep the next six strings at most 12 characters. */
+			N_("Prev Page"), WHENHELP(prevpage_gist), TOGETHER);
 	add_to_funcs(do_page_down, MMAIN|MHELP,
-		N_("Next Page"), WITHORSANS(nextpage_gist), TOGETHER, VIEW);
+			N_("Next Page"), WHENHELP(nextpage_gist), TOGETHER);
 
 	add_to_funcs(to_first_line, MMAIN|MHELP|MGOTOLINE,
-		N_("First Line"), WITHORSANS(firstline_gist), TOGETHER, VIEW);
+			N_("First Line"), WHENHELP(firstline_gist), TOGETHER);
 	add_to_funcs(to_last_line, MMAIN|MHELP|MGOTOLINE,
-		N_("Last Line"), WITHORSANS(lastline_gist), BLANKAFTER, VIEW);
+			N_("Last Line"), WHENHELP(lastline_gist), BLANKAFTER);
 
 #ifdef ENABLE_MULTIBUFFER
 	add_to_funcs(switch_to_prev_buffer, MMAIN,
-		N_("Prev File"), WITHORSANS(prevfile_gist), TOGETHER, VIEW);
+			N_("Prev File"), WHENHELP(prevfile_gist), TOGETHER);
 	add_to_funcs(switch_to_next_buffer, MMAIN,
-		N_("Next File"), WITHORSANS(nextfile_gist), BLANKAFTER, VIEW);
+			N_("Next File"), WHENHELP(nextfile_gist), BLANKAFTER);
 #endif
 
 #if !defined(NANO_TINY) && !defined(ENABLE_JUSTIFY)
 	add_to_funcs(do_gotolinecolumn, MMAIN,
-		N_("Go To Line"), WITHORSANS(gotoline_gist), BLANKAFTER, VIEW);
+			N_("Go To Line"), WHENHELP(gotoline_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(do_tab, MMAIN,
-		/* TRANSLATORS: The next four strings are names of keyboard keys. */
-		N_("Tab"), WITHORSANS(tab_gist), TOGETHER, NOVIEW);
+			/* TRANSLATORS: The next four strings are names of keyboard keys. */
+			N_("Tab"), WHENHELP(tab_gist), TOGETHER);
 	add_to_funcs(do_enter, MMAIN,
-		N_("Enter"), WITHORSANS(enter_gist), BLANKAFTER, NOVIEW);
+			N_("Enter"), WHENHELP(enter_gist), BLANKAFTER);
 
 	add_to_funcs(do_backspace, MMAIN,
-		N_("Backspace"), WITHORSANS(backspace_gist), TOGETHER, NOVIEW);
+			N_("Backspace"), WHENHELP(backspace_gist), TOGETHER);
 	add_to_funcs(do_delete, MMAIN,
-		N_("Delete"), WITHORSANS(delete_gist),
-#ifndef NANO_TINY
-		TOGETHER,
-#else
-		BLANKAFTER,
-#endif
-		NOVIEW);
+			N_("Delete"), WHENHELP(delete_gist), BLANKAFTER);
 
 #ifndef NANO_TINY
 	add_to_funcs(chop_previous_word, MMAIN,
-		/* TRANSLATORS: The next two strings refer to deleting words. */
-		N_("Chop Left"), WITHORSANS(chopwordleft_gist), TOGETHER, NOVIEW);
+			/* TRANSLATORS: The next two strings refer to deleting words. */
+			N_("Chop Left"), WHENHELP(chopwordleft_gist), TOGETHER);
 	add_to_funcs(chop_next_word, MMAIN,
-		N_("Chop Right"), WITHORSANS(chopwordright_gist), TOGETHER, NOVIEW);
+			N_("Chop Right"), WHENHELP(chopwordright_gist), TOGETHER);
 	add_to_funcs(cut_till_eof, MMAIN,
-		N_("Cut Till End"), WITHORSANS(cuttilleof_gist), BLANKAFTER, NOVIEW);
+			N_("Cut Till End"), WHENHELP(cuttilleof_gist), BLANKAFTER);
 #endif
 
 #ifdef ENABLE_JUSTIFY
 	add_to_funcs(do_full_justify, MMAIN,
-		N_("Full Justify"), WITHORSANS(fulljustify_gist), TOGETHER, NOVIEW);
+			N_("Full Justify"), WHENHELP(fulljustify_gist), TOGETHER);
 #endif
 
 #ifndef NANO_TINY
 	add_to_funcs(count_lines_words_and_characters, MMAIN,
-		N_("Word Count"), WITHORSANS(wordcount_gist), TOGETHER, VIEW);
+			N_("Word Count"), WHENHELP(wordcount_gist), TOGETHER);
 #endif
 
 	add_to_funcs(do_verbatim_input, MMAIN,
-		N_("Verbatim"), WITHORSANS(verbatim_gist), BLANKAFTER, NOVIEW);
+			N_("Verbatim"), WHENHELP(verbatim_gist), BLANKAFTER);
 
 #ifndef NANO_TINY
 	add_to_funcs(do_indent, MMAIN,
-		N_("Indent"), WITHORSANS(indent_gist), TOGETHER, NOVIEW);
+			N_("Indent"), WHENHELP(indent_gist), TOGETHER);
 	add_to_funcs(do_unindent, MMAIN,
-		N_("Unindent"), WITHORSANS(unindent_gist), BLANKAFTER, NOVIEW);
+			N_("Unindent"), WHENHELP(unindent_gist), BLANKAFTER);
 #endif
 #ifdef ENABLE_COMMENT
 	add_to_funcs(do_comment, MMAIN,
-		N_("Comment Lines"), WITHORSANS(comment_gist), TOGETHER, NOVIEW);
+			N_("Comment Lines"), WHENHELP(comment_gist), TOGETHER);
 #endif
 #ifdef ENABLE_WORDCOMPLETION
 	add_to_funcs(complete_a_word, MMAIN,
-		N_("Complete"), WITHORSANS(completion_gist), BLANKAFTER, NOVIEW);
+			N_("Complete"), WHENHELP(completion_gist), BLANKAFTER);
 #endif
 
 #ifndef NANO_TINY
 	add_to_funcs(record_macro, MMAIN,
-		N_("Record"), WITHORSANS(recordmacro_gist), TOGETHER, VIEW);
+			N_("Record"), WHENHELP(recordmacro_gist), TOGETHER);
 	add_to_funcs(run_macro, MMAIN,
-		N_("Run Macro"), WITHORSANS(runmacro_gist), BLANKAFTER, VIEW);
-
-	add_to_funcs(put_or_lift_anchor, MMAIN,
-		N_("Anchor"), WITHORSANS(anchor_gist), TOGETHER, VIEW);
-	add_to_funcs(to_prev_anchor, MMAIN,
-		N_("Up to anchor"), WITHORSANS(prevanchor_gist), TOGETHER, VIEW);
-	add_to_funcs(to_next_anchor, MMAIN,
-		N_("Down to anchor"), WITHORSANS(nextanchor_gist), BLANKAFTER, VIEW);
+			N_("Run Macro"), WHENHELP(runmacro_gist), BLANKAFTER);
 
 	add_to_funcs(zap_text, MMAIN,
-		/* TRANSLATORS: This refers to deleting a line or marked region. */
-		N_("Zap"), WITHORSANS(zap_gist), BLANKAFTER, NOVIEW);
+			/* TRANSLATORS: This refers to deleting a line or marked region. */
+			N_("Zap"), WHENHELP(zap_gist), BLANKAFTER);
+
+	add_to_funcs(put_or_lift_anchor, MMAIN,
+			N_("Anchor"), WHENHELP(anchor_gist), TOGETHER);
+	add_to_funcs(to_prev_anchor, MMAIN,
+			N_("Up to anchor"), WHENHELP(prevanchor_gist), TOGETHER);
+	add_to_funcs(to_next_anchor, MMAIN,
+			N_("Down to anchor"), WHENHELP(nextanchor_gist), BLANKAFTER);
 
 	if (!ISSET(RESTRICTED)) {
 #ifdef ENABLE_SPELLER
 		add_to_funcs(do_spell, MMAIN,
-				N_("Spell Check"), WITHORSANS(spell_gist), TOGETHER, NOVIEW);
+				N_("Spell Check"), WHENHELP(spell_gist), TOGETHER);
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 		add_to_funcs(do_linter, MMAIN,
-				N_("Linter"), WITHORSANS(lint_gist), TOGETHER, NOVIEW);
+				N_("Linter"), WHENHELP(lint_gist), TOGETHER);
+#endif
+#ifdef ENABLE_FORMATTER
 		add_to_funcs(do_formatter, MMAIN,
-				N_("Formatter"), WITHORSANS(formatter_gist), BLANKAFTER, NOVIEW);
+				N_("Formatter"), WHENHELP(formatter_gist), BLANKAFTER);
 #endif
 	}
 #endif /* !NANO_TINY */
 
 #ifdef NANO_TINY
 	add_to_funcs(do_search_backward, MMAIN,
-		N_("Where Was"), WITHORSANS(wherewas_gist), BLANKAFTER, VIEW);
+			N_("Where Was"), WHENHELP(wherewas_gist), BLANKAFTER);
 #else
 	add_to_funcs(do_suspend, MMAIN,
-		N_("Suspend"), WITHORSANS(suspend_gist), TOGETHER, VIEW);
+			N_("Suspend"), WHENHELP(suspend_gist), TOGETHER);
 #endif
 #ifdef ENABLE_HELP
 	add_to_funcs(full_refresh, MMAIN,
-		N_("Refresh"), WITHORSANS(refresh_gist), TOGETHER, VIEW);
+			N_("Refresh"), WHENHELP(refresh_gist), TOGETHER);
 #endif
 #if !defined(NANO_TINY) || defined(ENABLE_HELP)
 	add_to_funcs(do_center, MMAIN,
-		N_("Center"), WITHORSANS(center_gist), BLANKAFTER, VIEW);
+			N_("Center"), WHENHELP(center_gist), BLANKAFTER);
 #endif
 
 	add_to_funcs(do_savefile, MMAIN,
-		N_("Save"), WITHORSANS(savefile_gist), BLANKAFTER, NOVIEW);
+			N_("Save"), WHENHELP(savefile_gist), BLANKAFTER);
 
 #ifdef ENABLE_MULTIBUFFER
-	/* Multiple buffers are only available when not in restricted mode. */
-	if (!ISSET(RESTRICTED))
+	/* Include the new-buffer toggle only when it can actually be used. */
+	if (!ISSET(RESTRICTED) && !ISSET(VIEW_MODE))
 		add_to_funcs(flip_newbuffer, MINSERTFILE|MEXECUTE,
-			N_("New Buffer"), WITHORSANS(newbuffer_gist), TOGETHER, NOVIEW);
+				N_("New Buffer"), WHENHELP(newbuffer_gist), TOGETHER);
 #endif
 #ifndef NANO_TINY
 	add_to_funcs(flip_pipe, MEXECUTE,
-			N_("Pipe Text"), WITHORSANS(pipe_gist), BLANKAFTER, NOVIEW);
+			N_("Pipe Text"), WHENHELP(pipe_gist), BLANKAFTER);
 #endif
 #ifdef ENABLE_SPELLER
 	add_to_funcs(do_spell, MEXECUTE,
-			N_("Spell Check"), WITHORSANS(spell_gist), TOGETHER, NOVIEW);
+			N_("Spell Check"), WHENHELP(spell_gist), TOGETHER);
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 	add_to_funcs(do_linter, MEXECUTE,
-			N_("Linter"), WITHORSANS(lint_gist), BLANKAFTER, NOVIEW);
+			N_("Linter"), WHENHELP(lint_gist), BLANKAFTER);
 #endif
 #ifdef ENABLE_JUSTIFY
 	add_to_funcs(do_full_justify, MEXECUTE,
-		N_("Full Justify"), WITHORSANS(fulljustify_gist), TOGETHER, NOVIEW);
+			N_("Full Justify"), WHENHELP(fulljustify_gist), TOGETHER);
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_FORMATTER
 	add_to_funcs(do_formatter, MEXECUTE,
-			N_("Formatter"), WITHORSANS(formatter_gist), BLANKAFTER, NOVIEW);
+			N_("Formatter"), WHENHELP(formatter_gist), BLANKAFTER);
 #endif
 
 #ifdef ENABLE_HELP
+	add_to_funcs(flip_goto, MWHEREIS,
+			N_("Go To Line"), WHENHELP(gotoline_gist), BLANKAFTER);
 	add_to_funcs(flip_goto, MGOTOLINE,
-		N_("Go To Text"), WITHORSANS(whereis_gist), BLANKAFTER, VIEW);
+			N_("Go To Text"), WHENHELP(whereis_gist), BLANKAFTER);
 #endif
 
 #ifndef NANO_TINY
 	add_to_funcs(dos_format, MWRITEFILE,
-		N_("DOS Format"), WITHORSANS(dos_gist), TOGETHER, NOVIEW);
+			N_("DOS Format"), WHENHELP(dos_gist), TOGETHER);
 	add_to_funcs(mac_format, MWRITEFILE,
-		N_("Mac Format"), WITHORSANS(mac_gist), TOGETHER, NOVIEW);
+			N_("Mac Format"), WHENHELP(mac_gist), TOGETHER);
 
 	/* If we're using restricted mode, the Append, Prepend, and Backup toggles
 	 * are disabled.  The first and second are not useful as they only allow
@@ -1098,27 +1091,27 @@ void shortcut_init(void)
 	 * would write to a file not specified on the command line. */
 	if (!ISSET(RESTRICTED)) {
 		add_to_funcs(append_it, MWRITEFILE,
-			N_("Append"), WITHORSANS(append_gist), TOGETHER, NOVIEW);
+				N_("Append"), WHENHELP(append_gist), TOGETHER);
 		add_to_funcs(prepend_it, MWRITEFILE,
-			N_("Prepend"), WITHORSANS(prepend_gist), TOGETHER, NOVIEW);
+				N_("Prepend"), WHENHELP(prepend_gist), TOGETHER);
 
 		add_to_funcs(back_it_up, MWRITEFILE,
-			N_("Backup File"), WITHORSANS(backup_gist), BLANKAFTER, NOVIEW);
+				N_("Backup File"), WHENHELP(backup_gist), BLANKAFTER);
 	}
 
 	add_to_funcs(flip_convert, MINSERTFILE,
-		N_("No Conversion"), WITHORSANS(convert_gist), BLANKAFTER, NOVIEW);
+			N_("No Conversion"), WHENHELP(convert_gist), BLANKAFTER);
 
 	/* Command execution is only available when not in restricted mode. */
 	if (!ISSET(RESTRICTED) && !ISSET(VIEW_MODE)) {
 		add_to_funcs(flip_execute, MINSERTFILE,
-			N_("Execute Command"), WITHORSANS(execute_gist), BLANKAFTER, NOVIEW);
+				N_("Execute Command"), WHENHELP(execute_gist), BLANKAFTER);
 
 		add_to_funcs(cut_till_eof, MEXECUTE,
-			N_("Cut Till End"), WITHORSANS(cuttilleof_gist), BLANKAFTER, NOVIEW);
+				N_("Cut Till End"), WHENHELP(cuttilleof_gist), BLANKAFTER);
 
 		add_to_funcs(do_suspend, MEXECUTE,
-			N_("Suspend"), WITHORSANS(suspend_gist), BLANKAFTER, VIEW);
+				N_("Suspend"), WHENHELP(suspend_gist), BLANKAFTER);
 	}
 #endif /* !NANO_TINY */
 
@@ -1126,40 +1119,40 @@ void shortcut_init(void)
 	/* The file browser is only available when not in restricted mode. */
 	if (!ISSET(RESTRICTED))
 		add_to_funcs(to_files, MWRITEFILE|MINSERTFILE,
-			/* TRANSLATORS: This invokes the file browser. */
-			N_("Browse"), WITHORSANS(tofiles_gist), BLANKAFTER, VIEW);
+				/* TRANSLATORS: This invokes the file browser. */
+				N_("Browse"), WHENHELP(tofiles_gist), BLANKAFTER);
 
 	add_to_funcs(do_page_up, MBROWSER,
-		N_("Prev Page"), WITHORSANS(prevpage_gist), TOGETHER, VIEW);
+			N_("Prev Page"), WHENHELP(prevpage_gist), TOGETHER);
 	add_to_funcs(do_page_down, MBROWSER,
-		N_("Next Page"), WITHORSANS(nextpage_gist), TOGETHER, VIEW);
+			N_("Next Page"), WHENHELP(nextpage_gist), TOGETHER);
 
 	add_to_funcs(to_first_file, MBROWSER|MWHEREISFILE,
-		N_("First File"), WITHORSANS(firstfile_gist), TOGETHER, VIEW);
+			N_("First File"), WHENHELP(firstfile_gist), TOGETHER);
 	add_to_funcs(to_last_file, MBROWSER|MWHEREISFILE,
-		N_("Last File"), WITHORSANS(lastfile_gist), BLANKAFTER, VIEW);
+			N_("Last File"), WHENHELP(lastfile_gist), BLANKAFTER);
 
 #ifndef NANO_TINY
 	add_to_funcs(to_prev_word, MBROWSER,
-		N_("Left Column"), WITHORSANS(browserlefthand_gist), TOGETHER, VIEW);
+			N_("Left Column"), WHENHELP(browserlefthand_gist), TOGETHER);
 	add_to_funcs(to_next_word, MBROWSER,
-		N_("Right Column"), WITHORSANS(browserrighthand_gist), TOGETHER, VIEW);
+			N_("Right Column"), WHENHELP(browserrighthand_gist), TOGETHER);
 	add_to_funcs(to_prev_block, MBROWSER,
-		N_("Top Row"), WITHORSANS(browsertoprow_gist), TOGETHER, VIEW);
+			N_("Top Row"), WHENHELP(browsertoprow_gist), TOGETHER);
 	add_to_funcs(to_next_block, MBROWSER,
-		N_("Bottom Row"), WITHORSANS(browserbottomrow_gist), BLANKAFTER, VIEW);
+			N_("Bottom Row"), WHENHELP(browserbottomrow_gist), BLANKAFTER);
 #endif
 #endif /* ENABLE_BROWSER */
 
 	add_to_funcs(discard_buffer, MWRITEFILE,
-		N_("Discard buffer"), WITHORSANS(discardbuffer_gist), BLANKAFTER, NOVIEW);
+			N_("Discard buffer"), WHENHELP(discardbuffer_gist), BLANKAFTER);
 
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 	add_to_funcs(do_page_up, MLINTER,
-		/* TRANSLATORS: The next two strings may be up to 37 characters each. */
-		N_("Previous Linter message"), WITHORSANS(prevlint_gist), TOGETHER, VIEW);
+			/* TRANSLATORS: The next two strings may be up to 37 characters each. */
+			N_("Previous Linter message"), WHENHELP(prevlint_gist), TOGETHER);
 	add_to_funcs(do_page_down, MLINTER,
-		N_("Next Linter message"), WITHORSANS(nextlint_gist), TOGETHER, VIEW);
+			N_("Next Linter message"), WHENHELP(nextlint_gist), TOGETHER);
 #endif
 
 #ifdef __linux__
@@ -1208,9 +1201,11 @@ void shortcut_init(void)
 #ifdef ENABLE_JUSTIFY
 	add_to_sclist(MMAIN, "^J", '\n', do_justify, 0);
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 	add_to_sclist(MMAIN, "M-B", 0, do_linter, 0);
 	add_to_sclist(MEXECUTE, "^Y", 0, do_linter, 0);
+#endif
+#ifdef ENABLE_FORMATTER
 	add_to_sclist(MMAIN, "M-F", 0, do_formatter, 0);
 	add_to_sclist(MEXECUTE, "^O", 0, do_formatter, 0);
 #endif
@@ -1277,7 +1272,7 @@ void shortcut_init(void)
 		add_to_sclist(MMOST|MBROWSER|MHELP, "\xE2\x96\xb8", KEY_RIGHT, do_right, 0);
 		add_to_sclist(MSOME, "^\xE2\x97\x82", CONTROL_LEFT, to_prev_word, 0);
 		add_to_sclist(MSOME, "^\xE2\x96\xb8", CONTROL_RIGHT, to_next_word, 0);
-#if !defined(NANO_TINY) && defined(ENABLE_MULTIBUFFER)
+#if defined(ENABLE_MULTIBUFFER) && !defined(NANO_TINY)
 		if (!on_a_vt) {
 			add_to_sclist(MMAIN, "M-\xE2\x97\x82", ALT_LEFT, switch_to_prev_buffer, 0);
 			add_to_sclist(MMAIN, "M-\xE2\x96\xb8", ALT_RIGHT, switch_to_next_buffer, 0);
@@ -1290,7 +1285,7 @@ void shortcut_init(void)
 		add_to_sclist(MMOST|MBROWSER|MHELP, "Right", KEY_RIGHT, do_right, 0);
 		add_to_sclist(MSOME, "^Left", CONTROL_LEFT, to_prev_word, 0);
 		add_to_sclist(MSOME, "^Right", CONTROL_RIGHT, to_next_word, 0);
-#ifdef ENABLE_MULTIBUFFER
+#if defined(ENABLE_MULTIBUFFER) && !defined(NANO_TINY)
 		if (!on_a_vt) {
 			add_to_sclist(MMAIN, "M-Left", ALT_LEFT, switch_to_prev_buffer, 0);
 			add_to_sclist(MMAIN, "M-Right", ALT_RIGHT, switch_to_next_buffer, 0);
@@ -1346,10 +1341,10 @@ void shortcut_init(void)
 	add_to_sclist(MMAIN|MHELP, "M-=", 0, do_scroll_down, 0);
 #endif
 #ifdef ENABLE_MULTIBUFFER
-	add_to_sclist(MMAIN, "M-<", 0, switch_to_prev_buffer, 0);
 	add_to_sclist(MMAIN, "M-,", 0, switch_to_prev_buffer, 0);
-	add_to_sclist(MMAIN, "M->", 0, switch_to_next_buffer, 0);
+	add_to_sclist(MMAIN, "M-<", 0, switch_to_prev_buffer, 0);
 	add_to_sclist(MMAIN, "M-.", 0, switch_to_next_buffer, 0);
+	add_to_sclist(MMAIN, "M->", 0, switch_to_next_buffer, 0);
 #endif
 	add_to_sclist(MMOST, "M-V", 0, do_verbatim_input, 0);
 #ifndef NANO_TINY
@@ -1459,8 +1454,7 @@ void shortcut_init(void)
 	add_to_sclist(MINSERTFILE, "M-N", 0, flip_convert, 0);
 #endif
 #ifdef ENABLE_MULTIBUFFER
-	/* Only when not in restricted mode, allow multiple buffers. */
-	if (!ISSET(RESTRICTED)) {
+	if (!ISSET(RESTRICTED) && !ISSET(VIEW_MODE)) {
 		add_to_sclist(MINSERTFILE|MEXECUTE, "M-F", 0, flip_newbuffer, 0);
 #ifndef NANO_TINY
 		add_to_sclist(MEXECUTE, "M-\\", 0, flip_pipe, 0);

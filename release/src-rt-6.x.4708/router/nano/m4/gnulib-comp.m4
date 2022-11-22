@@ -45,6 +45,7 @@ AC_DEFUN([gl_EARLY],
   # Code from module absolute-header:
   # Code from module alloca:
   # Code from module alloca-opt:
+  # Code from module assert-h:
   # Code from module assure:
   # Code from module at-internal:
   # Code from module attribute:
@@ -65,7 +66,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module dirname-lgpl:
   # Code from module double-slash-root:
   # Code from module dup2:
-  # Code from module dynarray:
   # Code from module errno:
   # Code from module error:
   # Code from module exitfail:
@@ -104,6 +104,8 @@ AC_DEFUN([gl_EARLY],
   # Code from module gettext-h:
   # Code from module gettime:
   # Code from module gettimeofday:
+  # Code from module glibc-internal/dynarray:
+  # Code from module glibc-internal/scratch_buffer:
   # Code from module glob:
   # Code from module glob-h:
   # Code from module hard-locale:
@@ -118,8 +120,8 @@ AC_DEFUN([gl_EARLY],
   # Code from module iswblank:
   # Code from module langinfo:
   # Code from module largefile:
-  AC_REQUIRE([AC_SYS_LARGEFILE])
   AC_REQUIRE([gl_YEAR2038_EARLY])
+  AC_REQUIRE([AC_SYS_LARGEFILE])
   # Code from module libc-config:
   # Code from module limits-h:
   # Code from module localcharset:
@@ -160,7 +162,6 @@ AC_DEFUN([gl_EARLY],
   # Code from module realloc-posix:
   # Code from module regex:
   # Code from module save-cwd:
-  # Code from module scratch_buffer:
   # Code from module setlocale-null:
   # Code from module sigaction:
   # Code from module signal-h:
@@ -177,12 +178,12 @@ AC_DEFUN([gl_EARLY],
   # Code from module stat:
   # Code from module stat-time:
   # Code from module std-gnu11:
-  # Code from module stdalign:
   # Code from module stdarg:
   dnl Some compilers (e.g., AIX 5.3 cc) need to be in c99 mode
   dnl for the builtin va_copy to work.  gl_PROG_CC_C99 arranges for this.
   gl_PROG_CC_C99
   # Code from module stdbool:
+  # Code from module stdckdint:
   # Code from module stddef:
   # Code from module stdint:
   # Code from module stdio:
@@ -257,6 +258,9 @@ AC_DEFUN([gl_INIT],
   gl_FUNC_ALLOCA
   gl_CONDITIONAL_HEADER([alloca.h])
   AC_PROG_MKDIR_P
+  gl_ASSERT_H
+  gl_CONDITIONAL_HEADER([assert.h])
+  AC_PROG_MKDIR_P
   AC_REQUIRE([AC_CANONICAL_HOST])
   gl_FUNC_BTOWC
   gl_CONDITIONAL([GL_COND_OBJ_BTOWC],
@@ -303,7 +307,6 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_DUP2
   ])
   gl_UNISTD_MODULE_INDICATOR([dup2])
-  AC_PROG_MKDIR_P
   gl_HEADER_ERRNO_H
   gl_CONDITIONAL_HEADER([errno.h])
   AC_PROG_MKDIR_P
@@ -446,6 +449,8 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_GETTIMEOFDAY
   ])
   gl_SYS_TIME_MODULE_INDICATOR([gettimeofday])
+  AC_PROG_MKDIR_P
+  AC_PROG_MKDIR_P
   gl_GLOB
   dnl Because of gl_REPLACE_GLOB_H:
   gl_CONDITIONAL_HEADER([glob.h])
@@ -651,7 +656,6 @@ AC_DEFUN([gl_INIT],
     gl_PREREQ_REGEX
   ])
   gl_SAVE_CWD
-  AC_PROG_MKDIR_P
   gl_FUNC_SETLOCALE_NULL
   gl_CONDITIONAL([GL_COND_OBJ_SETLOCALE_LOCK],
                  [test $SETLOCALE_NULL_ALL_MTSAFE = 0 || test $SETLOCALE_NULL_ONE_MTSAFE = 0])
@@ -696,14 +700,17 @@ AC_DEFUN([gl_INIT],
   gl_SYS_STAT_MODULE_INDICATOR([stat])
   gl_STAT_TIME
   gl_STAT_BIRTHTIME
-  gl_STDALIGN_H
-  gl_CONDITIONAL_HEADER([stdalign.h])
-  AC_PROG_MKDIR_P
   gl_STDARG_H
   gl_CONDITIONAL_HEADER([stdarg.h])
   AC_PROG_MKDIR_P
-  gl_STDBOOL_H
-  gl_CONDITIONAL_HEADER([stdbool.h])
+  gl_C_BOOL
+  AC_CHECK_HEADERS_ONCE([stdckdint.h])
+  if test $ac_cv_header_stdckdint_h = yes; then
+    GL_GENERATE_STDCKDINT_H=false
+  else
+    GL_GENERATE_STDCKDINT_H=true
+  fi
+  gl_CONDITIONAL_HEADER([stdckdint.h])
   AC_PROG_MKDIR_P
   gl_STDDEF_H
   gl_STDDEF_H_REQUIRE_DEFAULTS
@@ -835,7 +842,7 @@ AC_DEFUN([gl_INIT],
   ])
   gl_LIBUNISTRING_LIBHEADER([0.9.11], [uniwidth.h])
   AC_PROG_MKDIR_P
-  gl_LIBUNISTRING_MODULE([0.9.11], [uniwidth/width])
+  gl_LIBUNISTRING_MODULE([1.1], [uniwidth/width])
   gl_FUNC_UTIME
   gl_CONDITIONAL([GL_COND_OBJ_UTIME],
                  [test $HAVE_UTIME = 0 || test $REPLACE_UTIME = 1])
@@ -1069,6 +1076,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/alloca.in.h
   lib/arg-nonnull.h
   lib/asnprintf.c
+  lib/assert.in.h
   lib/assure.h
   lib/at-func.c
   lib/attribute.h
@@ -1154,6 +1162,7 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/hard-locale.c
   lib/hard-locale.h
   lib/idx.h
+  lib/intprops-internal.h
   lib/intprops.h
   lib/inttypes.in.h
   lib/isblank.c
@@ -1185,7 +1194,6 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/malloc/dynarray_resize.c
   lib/malloc/dynarray_resize_clear.c
   lib/malloc/scratch_buffer.h
-  lib/malloc/scratch_buffer_dupfree.c
   lib/malloc/scratch_buffer_grow.c
   lib/malloc/scratch_buffer_grow_preserve.c
   lib/malloc/scratch_buffer_set_array_size.c
@@ -1265,9 +1273,8 @@ AC_DEFUN([gl_FILE_LIST], [
   lib/stat-w32.c
   lib/stat-w32.h
   lib/stat.c
-  lib/stdalign.in.h
   lib/stdarg.in.h
-  lib/stdbool.in.h
+  lib/stdckdint.in.h
   lib/stddef.in.h
   lib/stdint.in.h
   lib/stdio-read.c
@@ -1343,8 +1350,10 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/__inline.m4
   m4/absolute-header.m4
   m4/alloca.m4
+  m4/assert_h.m4
   m4/btowc.m4
   m4/builtin-expect.m4
+  m4/c-bool.m4
   m4/chdir-long.m4
   m4/clock_time.m4
   m4/close.m4
@@ -1467,9 +1476,7 @@ AC_DEFUN([gl_FILE_LIST], [
   m4/stat-time.m4
   m4/stat.m4
   m4/std-gnu11.m4
-  m4/stdalign.m4
   m4/stdarg.m4
-  m4/stdbool.m4
   m4/stddef_h.m4
   m4/stdint.m4
   m4/stdint_h.m4

@@ -12,9 +12,9 @@ The complete manual for the GNU nano text editor.
 @end documentdescription
 
 @smallbook
-@set EDITION 0.6
-@set VERSION 6.4
-@set UPDATED August 2022
+@set EDITION 0.7
+@set VERSION 7.0
+@set UPDATED November 2022
 
 @dircategory Editors
 @direntry
@@ -29,7 +29,7 @@ The complete manual for the GNU nano text editor.
 
 @title GNU @command{nano}
 @subtitle a small and friendly text editor
-@subtitle version 6.4
+@subtitle version 7.0
 
 @author Chris Allegretta
 
@@ -58,6 +58,9 @@ under the terms of either of the following licenses:
 
 @sp 5
 You may contact the original author by e-mail: @email{chrisa@@asty.org}
+
+Or contact the current maintainer: @email{bensberg@@coevern.nl}
+
 @sp 1
 For suggesting improvements: @email{nano-devel@@gnu.org}
 
@@ -76,7 +79,7 @@ For suggesting improvements: @email{nano-devel@@gnu.org}
 @node Top
 @top
 
-This manual documents GNU @command{nano}, version 6.4.
+This manual documents GNU @command{nano}, version 7.0.
 
 @menu
 * Introduction::
@@ -222,13 +225,17 @@ typed the key with that value.
 
 @item
 For any possible character, pressing @kbd{M-V} (Alt+V) and then typing a
-six-digit hexadecimal number (starting with @kbd{0} or @kbd{1}) will enter the
-corresponding Unicode character into the buffer.
+series of hexadecimal digits (at most six, or concluded with @kbd{Enter} or
+@kbd{Space}) will enter the corresponding Unicode character into the buffer.
 @end itemize
 
 For example, typing @kbd{Esc Esc 2 3 4} will enter the character "ê" ---
 useful when writing about a French party.  Typing @kbd{M-V 0 0 2 2 c 4}
 will enter the symbol "⋄", a little diamond.
+
+Typing @kbd{M-V} followed by anything other than a hexadecimal digit
+will enter this keystroke verbatim into the buffer, allowing the user
+to insert literal control codes (except @code{^J}) or escape sequences.
 
 @node Commands
 @section Commands
@@ -672,6 +679,11 @@ disabled to display the help-system navigation keys.
 Make @kbd{Ctrl+Right} and @kbd{Ctrl+Delete} stop at word ends
 instead of beginnings.
 
+@item -!
+@itemx --magic
+When neither the file's name nor its first line give a clue,
+try using libmagic to determine the applicable syntax.
+
 @item -%
 @itemx --stateflags
 Use the top-right corner of the screen for showing some state flags:
@@ -708,13 +720,9 @@ and disappears after 1.5 seconds or upon the next keystroke.
 With @kbd{M-Z} the title bar plus status bar can be toggled.
 With @kbd{M-X} the help lines.
 
-@item -!
-@itemx --magic
-When neither the file's name nor its first line give a clue,
-try using libmagic to determine the applicable syntax.
-
 @end table
 
+@sp 1
 Option @code{-z} (@code{--suspendable}) has been removed.
 Suspension is enabled by default, reachable via @kbd{^T^Z}.
 (If you want a plain @kbd{^Z} to suspend nano, add
@@ -730,6 +738,7 @@ or nanorc options.  Each toggle can be flicked via a Meta-key combination
 --- the @kbd{Meta} key is normally the @kbd{Alt} key (@pxref{Commands}
 for more details).  The following global toggles are available:
 
+@sp 1
 @table @code
 
 @item Constant Cursor Position Display
@@ -1201,6 +1210,14 @@ It also means that lookahead and lookbehind are not possible.
 A complete explanation can be found in the manual of GNU grep:
 @code{info grep regular}.
 
+Each regular expression in a @file{nanorc} file should be wrapped in
+double quotes (@code{""}).  Multiple regular expressions can follow
+each other on a line by separating them with blanks.  This means that
+a regular expression cannot contain a double quote followed by a blank.
+When you need this combination inside a regular expression,
+then either the double quote or the blank should be put
+between square brackets (@code{[]}).
+
 A separate syntax can be defined for each kind of file
 via the following commands in a nanorc file:
 
@@ -1336,9 +1353,9 @@ Rebinds @code{key} to @code{function} in the context of @code{menu}
 @item bind key "string" menu
 Makes @code{key} produce @code{string} in the context of @code{menu}
 (or in all menus where the key exists when @code{all} is used).
-The @code{string} can consist of text or commands or a mix of them.
-(To enter a command into the @code{string}, precede its keystroke
-with @kbd{M-V}.)
+Besides literal text and/or control codes, the  @code{string} may contain
+function names between braces.  These functions will be invoked when the
+key is typed. To include a literal opening brace, use @code{@{@{@}}.
 
 @item unbind key menu
 Unbinds @code{key} from @code{menu}
@@ -1346,37 +1363,50 @@ Unbinds @code{key} from @code{menu}
 
 @end table
 
+Note that @code{bind key "@{function@}" menu} is equivalent to
+@code{bind key function menu}, except that for the latter form
+@command{nano} will check the availabilty of the @code{function}
+in the given @code{menu} at startup time (and report an error if
+it does not exist there), whereas for the first form @command{nano}
+will check at execution time that the @code{function} exists but not
+whether it makes any sense in the current menu. The user has to take
+care that a function name between braces (or any sequence of them)
+is appropriate.  Strange behavior can result when it is not.
+
 @sp 1
 The format of @code{key} should be one of:
 
-@itemize @w{}
-@item
-@code{^@var{X}} ------ where @var{X} is a Latin letter, or one of several
+@indentedblock
+@table @asis
+
+@item @code{^@var{X}}
+where @var{X} is a Latin letter, or one of several
 ASCII characters (@@, ], \, ^, _), or the word "Space".
 Example: @code{^C}.
 
-@item
-@code{M-@var{X}} ------ where @var{X} is any ASCII character except [,
-or the word "Space".
+@item @code{M-@var{X}}
+where @var{X} is any ASCII character except [, or the word "Space".
 Example: @code{M-8}.
 
-@item
-@code{Sh-M-@var{X}} ------ where @var{X} is a Latin letter.
+@item @code{Sh-M-@var{X}}
+where @var{X} is a Latin letter.
 Example: @code{Sh-M-U}.
 By default, each Meta+letter keystroke does the same as the corresponding
 Shift+Meta+letter.  But when any Shift+Meta bind is made, that will
 no longer be the case, for all letters.
 
-@item
-@code{F@var{n}} ------ where @var{n} is a numeric value from 1 to 24.
+@item @code{F@var{n}}
+where @var{n} is a numeric value from 1 to 24.
 Example: @code{F10}.
 (Often, @code{F13} to @code{F24} can be typed as @code{F1} to @code{F12}
 with Shift.)
 
-@item
-@code{Ins} or @code{Del}.
-@end itemize
+@item @code{Ins} or @code{Del}
 
+@end table
+@end indentedblock
+
+@sp 1
 Rebinding @code{^M} (Enter) or @code{^I} (Tab) is probably not a good idea.
 Rebinding @code{^[} (Esc) is not possible, because its keycode
 is the starter byte of Meta keystrokes and escape sequences.
@@ -1601,7 +1631,8 @@ Switches to editing/viewing the previous buffer when multiple buffers are open.
 Switches to editing/viewing the next buffer when multiple buffers are open.
 
 @item verbatim
-Inserts the next keystroke verbatim into the file.
+Inserts the next keystroke verbatim into the file, or begins Unicode input
+when a hexadecimal digit is typed (@pxref{Entering Text} for details).
 
 @item tab
 Inserts a tab at the current cursor location.
@@ -1941,6 +1972,9 @@ Exclude the single-keystroke comment/uncomment function (@w{@kbd{M-3}}).
 @item --disable-extra
 Exclude the Easter egg: a crawl of major contributors.
 
+@item --disable-formatter
+Exclude the code for calling a formatting tool.
+
 @item --disable-help
 Exclude the help texts (@kbd{^G}).  This makes the binary much smaller,
 but also makes it difficult for new users to learn more than very basic
@@ -1965,6 +1999,9 @@ in most cases the regexes for filename and header line will be enough).
 @item --disable-linenumbers
 Exclude the ability to show line numbers.  This also eliminates
 the @option{-l} command-line option, which turns line numbering on.
+
+@item --disable-linter
+Exclude the code for calling a linting tool.
 
 @item --disable-mouse
 Exclude all mouse functionality.  This also eliminates the @option{-m}

@@ -214,6 +214,14 @@
 #define SHIFT_DELETE    0x45D
 #define SHIFT_TAB       0x45F
 
+/* Special keycodes for when a string bind has been partially implanted
+ * or has an unpaired opening brace, or when a function in a string bind
+ * needs execution or a specified function name is invalid. */
+#define MORE_PLANTS       0x4EA
+#define MISSING_BRACE     0x4EB
+#define PLANTED_COMMAND   0x4EC
+#define NO_SUCH_FUNCTION  0x4EF
+
 /* A special keycode for when <Tab> is pressed while the mark is on. */
 #define INDENT_KEY  0x4F1
 
@@ -319,7 +327,6 @@ enum {
 	CASE_SENSITIVE,
 	CONSTANT_SHOW,
 	NO_HELP,
-	SUSPENDABLE,
 	NO_WRAP,
 	AUTOINDENT,
 	VIEW_MODE,
@@ -628,17 +635,14 @@ typedef struct keystruct {
 typedef struct funcstruct {
 	void (*func)(void);
 		/* The actual function to call. */
-	const char *desc;
-		/* The function's short description, for example "Where Is". */
+	const char *tag;
+		/* The function's help-line label, for example "Where Is". */
 #ifdef ENABLE_HELP
-	const char *help;
-		/* The help-screen text for this function. */
+	const char *phrase;
+		/* The function's description for in the help viewer. */
 	bool blank_after;
-		/* Whether there should be a blank line after the help text
-		 * for this function. */
+		/* Whether to distance this function from the next in the help viewer. */
 #endif
-	bool viewok;
-		/* Is this function allowed when in view mode? */
 	int menus;
 		/* In what menus this function applies. */
 	struct funcstruct *next;

@@ -255,63 +255,39 @@ void browser_refresh(void)
 	wnoutrefresh(midwin);
 }
 
-/* Look for the given needle in the list of files.  If forwards is TRUE,
- * search forward in the list; otherwise, search backward. */
+/* Look for the given needle in the list of files, forwards or backwards. */
 void findfile(const char *needle, bool forwards)
 {
-	size_t looking_at = selected;
-		/* The location in the file list of the filename we're looking at. */
-	const char *thename;
-		/* The plain filename, without the path. */
-	unsigned stash[sizeof(flags) / sizeof(flags[0])];
-		/* A storage place for the current flag settings. */
+	size_t began_at = selected;
 
-	/* Save the settings of all flags. */
-	memcpy(stash, flags, sizeof(flags));
-
-	/* Search forward, case insensitive, and without regexes. */
-	UNSET(BACKWARDS_SEARCH);
-	UNSET(CASE_SENSITIVE);
-	UNSET(USE_REGEXP);
-
-	/* Step through each filename in the list until a match is found or
+	/* Iterate through the list of filenames, until a match is found or
 	 * we've come back to the point where we started. */
 	while (TRUE) {
 		if (forwards) {
-			if (looking_at++ == list_length - 1) {
-				looking_at = 0;
+			if (selected++ == list_length - 1) {
+				selected = 0;
 				statusbar(_("Search Wrapped"));
 			}
 		} else {
-			if (looking_at-- == 0) {
-				looking_at = list_length - 1;
+			if (selected-- == 0) {
+				selected = list_length - 1;
 				statusbar(_("Search Wrapped"));
 			}
 		}
 
-		/* Get the bare filename, without the path. */
-		thename = tail(filelist[looking_at]);
-
-		/* If the needle matches, we're done.  And if we're back at the file
-		 * where we started, it is the only occurrence. */
-		if (strstrwrapper(thename, needle, thename)) {
-			if (looking_at == selected)
+		/* When the needle occurs in the basename of the file, we have a match. */
+		if (mbstrcasestr(tail(filelist[selected]), needle)) {
+			if (selected == began_at)
 				statusbar(_("This is the only occurrence"));
-			break;
+			return;
 		}
 
-		/* If we're back at the beginning and didn't find any match... */
-		if (looking_at == selected) {
+		/* When we're back at the starting point without any match... */
+		if (selected == began_at) {
 			not_found_msg(needle);
-			break;
+			return;
 		}
 	}
-
-	/* Restore the settings of all flags. */
-	memcpy(flags, stash, sizeof(flags));
-
-	/* Select the one we've found. */
-	selected = looking_at;
 }
 
 /* Prepare the prompt and ask the user what to search for; then search for it.
@@ -461,7 +437,7 @@ char *browse(char *path)
 	titlebar(path);
 
 	while (TRUE) {
-		functionptrtype func;
+		functionptrtype function;
 		int kbinput;
 
 		lastmessage = VACUUM;
@@ -505,73 +481,70 @@ char *browse(char *path)
 		}
 #endif /* ENABLE_MOUSE */
 #ifndef NANO_TINY
-		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
+		while (bracketed_paste)
+			kbinput = get_kbinput(midwin, BLIND);
+		if (kbinput == BRACKETED_PASTE_MARKER) {
 			beep();
 			continue;
 		}
 #endif
-		func = interpret(&kbinput);
+		function = interpret(kbinput);
 
-		if (func == full_refresh) {
-			full_refresh();
+		if (function == full_refresh || function == do_help) {
+			function();
 #ifndef NANO_TINY
-			/* Simulate a terminal resize to force a directory reread. */
+			/* Simulate a terminal resize to force a directory reread,
+			 * or because the terminal dimensions might have changed. */
 			kbinput = KEY_WINCH;
-#endif
-		} else if (func == do_help) {
-			do_help();
-#ifndef NANO_TINY
-			/* The terminal dimensions might have changed, so act as if. */
-			kbinput = KEY_WINCH;
-		} else if (func == do_toggle) {
+		} else if (function == do_toggle && get_shortcut(kbinput)->toggle == NO_HELP) {
 			TOGGLE(NO_HELP);
 			window_init();
 			kbinput = KEY_WINCH;
 #endif
-		} else if (func == do_search_backward) {
+		} else if (function == do_search_backward) {
 			search_filename(BACKWARD);
-		} else if (func == do_search_forward) {
+		} else if (function == do_search_forward) {
 			search_filename(FORWARD);
-		} else if (func == do_findprevious) {
+		} else if (function == do_findprevious) {
 			research_filename(BACKWARD);
-		} else if (func == do_findnext) {
+		} else if (function == do_findnext) {
 			research_filename(FORWARD);
-		} else if (func == do_left) {
+		} else if (function == do_left) {
 			if (selected > 0)
 				selected--;
-		} else if (func == do_right) {
+		} else if (function == do_right) {
 			if (selected < list_length - 1)
 				selected++;
-		} else if (func == to_prev_word) {
+		} else if (function == to_prev_word) {
 			selected -= (selected % piles);
-		} else if (func == to_next_word) {
+		} else if (function == to_next_word) {
 			selected += piles - 1 - (selected % piles);
 			if (selected >= list_length)
 				selected = list_length - 1;
-		} else if (func == do_up) {
+		} else if (function == do_up) {
 			if (selected >= piles)
 				selected -= piles;
-		} else if (func == do_down) {
+		} else if (function == do_down) {
 			if (selected + piles <= list_length - 1)
 				selected += piles;
-		} else if (func == to_prev_block) {
+		} else if (function == to_prev_block) {
 			selected = ((selected / (usable_rows * piles)) * usable_rows * piles) +
 								 selected % piles;
-		} else if (func == to_next_block) {
+		} else if (function == to_next_block) {
 			selected = ((selected / (usable_rows * piles)) * usable_rows * piles) +
 								selected % piles + usable_rows * piles - piles;
 			if (selected >= list_length)
 				selected = (list_length / piles) * piles + selected % piles;
 			if (selected >= list_length)
 				selected -= piles;
-		} else if (func == do_page_up) {
+		} else if (function == do_page_up) {
 			if (selected < piles)
 				selected = 0;
 			else if (selected < usable_rows * piles)
 				selected = selected % piles;
 			else
 				selected -= usable_rows * piles;
-		} else if (func == do_page_down) {
+		} else if (function == do_page_down) {
 			if (selected + piles >= list_length - 1)
 				selected = list_length - 1;
 			else if (selected + usable_rows * piles >= list_length)
@@ -579,11 +552,11 @@ char *browse(char *path)
 								list_length - piles;
 			else
 				selected += usable_rows * piles;
-		} else if (func == to_first_file) {
+		} else if (function == to_first_file) {
 			selected = 0;
-		} else if (func == to_last_file) {
+		} else if (function == to_last_file) {
 			selected = list_length - 1;
-		} else if (func == goto_dir) {
+		} else if (function == goto_dir) {
 			/* Ask for the directory to go to. */
 			if (do_prompt(MGOTODIR, "", NULL,
 							/* TRANSLATORS: This is a prompt. */
@@ -622,7 +595,7 @@ char *browse(char *path)
 
 			/* Try opening and reading the specified directory. */
 			goto read_directory_contents;
-		} else if (func == do_enter) {
+		} else if (function == do_enter) {
 			struct stat st;
 
 			/* It isn't possible to move up from the root directory. */
@@ -662,14 +635,14 @@ char *browse(char *path)
 			path = mallocstrcpy(path, filelist[selected]);
 			goto read_directory_contents;
 #ifdef ENABLE_NANORC
-		} else if (func == (functionptrtype)implant) {
-			implant(first_sc_for(MBROWSER, func)->expansion);
+		} else if (function == (functionptrtype)implant) {
+			implant(first_sc_for(MBROWSER, function)->expansion);
 #endif
 #ifndef NANO_TINY
 		} else if (kbinput == KEY_WINCH) {
 			;  /* Gets handled below. */
 #endif
-		} else if (func == do_exit) {
+		} else if (function == do_exit) {
 			break;
 		} else
 			unbound_key(kbinput);

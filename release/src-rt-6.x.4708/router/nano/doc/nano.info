@@ -1,4 +1,4 @@
-This is nano.info, produced by makeinfo version 6.8 from nano.texi.
+This is nano.info, produced by makeinfo version 6.7 from nano.texi.
 
 INFO-DIR-SECTION Editors
 START-INFO-DIR-ENTRY
@@ -11,7 +11,7 @@ File: nano.info,  Node: Top,  Next: Introduction,  Up: (dir)
 The GNU nano text editor
 ************************
 
-This manual documents GNU ‘nano’, version 6.4.
+This manual documents GNU ‘nano’, version 7.0.
 
 * Menu:
 
@@ -150,12 +150,17 @@ edited.
      will make ‘nano’ behave as if you typed the key with that value.
 
    • For any possible character, pressing ‘M-V’ (Alt+V) and then typing
-     a six-digit hexadecimal number (starting with ‘0’ or ‘1’) will
-     enter the corresponding Unicode character into the buffer.
+     a series of hexadecimal digits (at most six, or concluded with
+     ‘Enter’ or ‘Space’) will enter the corresponding Unicode character
+     into the buffer.
 
    For example, typing ‘Esc Esc 2 3 4’ will enter the character "ê" —
 useful when writing about a French party.  Typing ‘M-V 0 0 2 2 c 4’ will
 enter the symbol "⋄", a little diamond.
+
+   Typing ‘M-V’ followed by anything other than a hexadecimal digit will
+enter this keystroke verbatim into the buffer, allowing the user to
+insert literal control codes (except ‘^J’) or escape sequences.
 
 
 File: nano.info,  Node: Commands,  Next: The Cutbuffer,  Prev: Entering Text,  Up: Editor Basics
@@ -622,6 +627,11 @@ File: nano.info,  Node: Command-line Options,  Next: Feature Toggles,  Prev: The
      Make ‘Ctrl+Right’ and ‘Ctrl+Delete’ stop at word ends instead of
      beginnings.
 
+‘-!’
+‘--magic’
+     When neither the file’s name nor its first line give a clue, try
+     using libmagic to determine the applicable syntax.
+
 ‘-%’
 ‘--stateflags’
      Use the top-right corner of the screen for showing some state
@@ -657,10 +667,6 @@ File: nano.info,  Node: Command-line Options,  Next: Feature Toggles,  Prev: The
      next keystroke.  With ‘M-Z’ the title bar plus status bar can be
      toggled.  With ‘M-X’ the help lines.
 
-‘-!’
-‘--magic’
-     When neither the file’s name nor its first line give a clue, try
-     using libmagic to determine the applicable syntax.
 
    Option ‘-z’ (‘--suspendable’) has been removed.  Suspension is
 enabled by default, reachable via ‘^T^Z’.  (If you want a plain ‘^Z’ to
@@ -677,6 +683,7 @@ editing, aspects that you would normally specify via command-line
 options or nanorc options.  Each toggle can be flicked via a Meta-key
 combination — the ‘Meta’ key is normally the ‘Alt’ key (*note Commands::
 for more details).  The following global toggles are available:
+
 
 ‘Constant Cursor Position Display’
      ‘M-C’ toggles the ‘-c’ (‘--constantshow’) command-line option.
@@ -1141,6 +1148,14 @@ and ‘\>’ the end, and ‘\s’ matches a blank.  It also means that
 lookahead and lookbehind are not possible.  A complete explanation can
 be found in the manual of GNU grep: ‘info grep regular’.
 
+   Each regular expression in a ‘nanorc’ file should be wrapped in
+double quotes (‘""’).  Multiple regular expressions can follow each
+other on a line by separating them with blanks.  This means that a
+regular expression cannot contain a double quote followed by a blank.
+When you need this combination inside a regular expression, then either
+the double quote or the blank should be put between square brackets
+(‘[]’).
+
    A separate syntax can be defined for each kind of file via the
 following commands in a nanorc file:
 
@@ -1266,32 +1281,48 @@ file:
 
 ‘bind key "string" menu’
      Makes ‘key’ produce ‘string’ in the context of ‘menu’ (or in all
-     menus where the key exists when ‘all’ is used).  The ‘string’ can
-     consist of text or commands or a mix of them.  (To enter a command
-     into the ‘string’, precede its keystroke with ‘M-V’.)
+     menus where the key exists when ‘all’ is used).  Besides literal
+     text and/or control codes, the ‘string’ may contain function names
+     between braces.  These functions will be invoked when the key is
+     typed.  To include a literal opening brace, use ‘{{}’.
 
 ‘unbind key menu’
      Unbinds ‘key’ from ‘menu’ (or from all menus where the key exists
      when ‘all’ is used).
 
+   Note that ‘bind key "{function}" menu’ is equivalent to ‘bind key
+function menu’, except that for the latter form ‘nano’ will check the
+availabilty of the ‘function’ in the given ‘menu’ at startup time (and
+report an error if it does not exist there), whereas for the first form
+‘nano’ will check at execution time that the ‘function’ exists but not
+whether it makes any sense in the current menu.  The user has to take
+care that a function name between braces (or any sequence of them) is
+appropriate.  Strange behavior can result when it is not.
+
 
    The format of ‘key’ should be one of:
 
-     ‘^X’ —— where X is a Latin letter, or one of several ASCII
-     characters (@, ], \, ^, _), or the word "Space".  Example: ‘^C’.
+     ‘^X’
+          where X is a Latin letter, or one of several ASCII characters
+          (@, ], \, ^, _), or the word "Space".  Example: ‘^C’.
 
-     ‘M-X’ —— where X is any ASCII character except [, or the word
-     "Space".  Example: ‘M-8’.
+     ‘M-X’
+          where X is any ASCII character except [, or the word "Space".
+          Example: ‘M-8’.
 
-     ‘Sh-M-X’ —— where X is a Latin letter.  Example: ‘Sh-M-U’.  By
-     default, each Meta+letter keystroke does the same as the
-     corresponding Shift+Meta+letter.  But when any Shift+Meta bind is
-     made, that will no longer be the case, for all letters.
+     ‘Sh-M-X’
+          where X is a Latin letter.  Example: ‘Sh-M-U’.  By default,
+          each Meta+letter keystroke does the same as the corresponding
+          Shift+Meta+letter.  But when any Shift+Meta bind is made, that
+          will no longer be the case, for all letters.
 
-     ‘FN’ —— where N is a numeric value from 1 to 24.  Example: ‘F10’.
-     (Often, ‘F13’ to ‘F24’ can be typed as ‘F1’ to ‘F12’ with Shift.)
+     ‘FN’
+          where N is a numeric value from 1 to 24.  Example: ‘F10’.
+          (Often, ‘F13’ to ‘F24’ can be typed as ‘F1’ to ‘F12’ with
+          Shift.)
 
-     ‘Ins’ or ‘Del’.
+     ‘Ins’ or ‘Del’
+
 
    Rebinding ‘^M’ (Enter) or ‘^I’ (Tab) is probably not a good idea.
 Rebinding ‘^[’ (Esc) is not possible, because its keycode is the starter
@@ -1523,7 +1554,9 @@ that of the Backspace key.
      are open.
 
 ‘verbatim’
-     Inserts the next keystroke verbatim into the file.
+     Inserts the next keystroke verbatim into the file, or begins
+     Unicode input when a hexadecimal digit is typed (*note Entering
+     Text:: for details).
 
 ‘tab’
      Inserts a tab at the current cursor location.
@@ -1859,6 +1892,9 @@ compiling programs with autoconf support:
 ‘--disable-extra’
      Exclude the Easter egg: a crawl of major contributors.
 
+‘--disable-formatter’
+     Exclude the code for calling a formatting tool.
+
 ‘--disable-help’
      Exclude the help texts (‘^G’).  This makes the binary much smaller,
      but also makes it difficult for new users to learn more than very
@@ -1884,6 +1920,9 @@ compiling programs with autoconf support:
 ‘--disable-linenumbers’
      Exclude the ability to show line numbers.  This also eliminates the
      ‘-l’ command-line option, which turns line numbering on.
+
+‘--disable-linter’
+     Exclude the code for calling a linting tool.
 
 ‘--disable-mouse’
      Exclude all mouse functionality.  This also eliminates the ‘-m’
@@ -1965,27 +2004,27 @@ Node: Invoking1775
 Node: Editor Basics3391
 Node: Screen Layout3677
 Node: Entering Text4779
-Node: Commands5790
-Node: The Cutbuffer6587
-Node: The Mark7161
-Node: Search and Replace8138
-Node: Using the Mouse8868
-Node: Anchors9482
-Node: Limitations10287
-Node: The Help Viewer10604
-Node: The File Browser11028
-Node: Command-line Options11926
-Ref: --speller21463
-Node: Feature Toggles25694
-Node: Nanorc Files27764
-Node: Settings29329
-Ref: set keycolor33501
-Ref: set matchbrackets35579
-Ref: Whitespace43954
-Node: Syntax Highlighting45132
-Node: Rebinding Keys52310
-Node: Pico Compatibility67455
-Node: Building and its Options72014
+Node: Commands6034
+Node: The Cutbuffer6831
+Node: The Mark7405
+Node: Search and Replace8382
+Node: Using the Mouse9112
+Node: Anchors9726
+Node: Limitations10531
+Node: The Help Viewer10848
+Node: The File Browser11272
+Node: Command-line Options12170
+Ref: --speller21707
+Node: Feature Toggles25939
+Node: Nanorc Files28010
+Node: Settings29575
+Ref: set keycolor33747
+Ref: set matchbrackets35825
+Ref: Whitespace44200
+Node: Syntax Highlighting45378
+Node: Rebinding Keys52989
+Node: Pico Compatibility68936
+Node: Building and its Options73495
 
 End Tag Table
 

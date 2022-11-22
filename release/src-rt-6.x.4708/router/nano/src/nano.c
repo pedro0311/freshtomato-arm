@@ -423,10 +423,9 @@ void window_init(void)
 		int toprows = ((ISSET(EMPTY_LINE) && LINES > 6) ? 2 : 1);
 		int bottomrows = ((ISSET(NO_HELP) || LINES < 6) ? 1 : 3);
 
-#ifndef NANO_TINY
 		if (ISSET(MINIBAR) || ISSET(ZERO))
 			toprows = 0;
-#endif
+
 		editwinrows = LINES - toprows - bottomrows + (ISSET(ZERO) ? 1 : 0);
 
 		/* Set up the normal three subwindows. */
@@ -480,7 +479,7 @@ void mouse_init(void)
 #endif /* ENABLE_MOUSE */
 
 /* Print the usage line for the given option to the screen. */
-void print_opt(const char *shortflag, const char *longflag, const char *desc)
+void print_opt(const char *shortflag, const char *longflag, const char *description)
 {
 	int firstwidth = breadth(shortflag);
 	int secondwidth = breadth(longflag);
@@ -493,7 +492,7 @@ void print_opt(const char *shortflag, const char *longflag, const char *desc)
 	if (secondwidth < 24)
 		printf("%*s", 24 - secondwidth, " ");
 
-	printf("%s\n", _(desc));
+	printf("%s\n", _(description));
 }
 
 /* Explain how to properly use nano and its command-line options. */
@@ -651,12 +650,14 @@ void usage(void)
 	print_opt("-x", "--nohelp", N_("Don't show the two help lines"));
 #ifndef NANO_TINY
 	print_opt("-y", "--afterends", N_("Make Ctrl+Right stop at word ends"));
-	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
-	print_opt("-_", "--minibar", N_("Show a feedback bar at the bottom"));
-	print_opt("-0", "--zero", N_("Hide all bars, use whole terminal"));
 #endif
 #ifdef HAVE_LIBMAGIC
 	print_opt("-!", "--magic", N_("Also try magic to determine syntax"));
+#endif
+#ifndef NANO_TINY
+	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
+	print_opt("-_", "--minibar", N_("Show a feedback bar at the bottom"));
+	print_opt("-0", "--zero", N_("Hide all bars, use whole terminal"));
 #endif
 }
 
@@ -686,6 +687,9 @@ void version(void)
 #ifdef ENABLE_EXTRA
 	printf(" --enable-extra");
 #endif
+#ifdef ENABLE_FORMATTER
+	printf(" --enable-formatter");
+#endif
 #ifdef ENABLE_HELP
 	printf(" --enable-help");
 #endif
@@ -700,6 +704,9 @@ void version(void)
 #endif
 #ifdef ENABLE_LINENUMBERS
 	printf(" --enable-linenumbers");
+#endif
+#ifdef ENABLE_LINTER
+	printf(" --enable-linter");
 #endif
 #ifdef ENABLE_MOUSE
 	printf(" --enable-mouse");
@@ -735,6 +742,9 @@ void version(void)
 #ifndef ENABLE_EXTRA
 	printf(" --disable-extra");
 #endif
+#ifndef ENABLE_FORMATTER
+	printf(" --disable-formatter");
+#endif
 #ifndef ENABLE_HELP
 	printf(" --disable-help");
 #endif
@@ -749,6 +759,9 @@ void version(void)
 #endif
 #ifndef ENABLE_LINENUMBERS
 	printf(" --disable-linenumbers");
+#endif
+#ifndef ENABLE_LINTER
+	printf(" --disable-linter");
 #endif
 #ifndef ENABLE_MOUSE
 	printf(" --disable-mouse");
@@ -1267,6 +1280,12 @@ void unbound_key(int code)
 		/* TRANSLATORS: This refers to a sequence of escape codes
 		 * (from the keyboard) that nano does not recognize. */
 		statusline(AHEM, _("Unknown sequence"));
+#ifdef ENABLE_NANORC
+	else if (code == NO_SUCH_FUNCTION)
+		statusline(AHEM, _("Unknown function: %s"), commandname);
+	else if (code == MISSING_BRACE)
+		statusline(AHEM, _("Missing }"));
+#endif
 #ifndef NANO_TINY
 	else if (code > KEY_F0 && code < KEY_F0 + 25)
 		/* TRANSLATORS: This refers to an unbound function key. */
@@ -1282,17 +1301,17 @@ void unbound_key(int code)
 #endif
 #ifdef ENABLE_NANORC
 		if (shifted_metas && 'A' <= code && code <= 'Z')
-			statusline(AHEM, _("Unbound key: Sh-M-%c"), code);
+			statusline(AHEM, _("Unbound key: %s%c"), "Sh-M-", code);
 		else
 #endif
-			statusline(AHEM, _("Unbound key: M-%c"), toupper(code));
+			statusline(AHEM, _("Unbound key: %s%c"), "M-", toupper(code));
 	} else if (code == ESC_CODE)
 		statusline(AHEM, _("Unbindable key: ^["));
 	else if (code < 0x20)
-		statusline(AHEM, _("Unbound key: ^%c"), code + 0x40);
+		statusline(AHEM, _("Unbound key: %s%c"), "^", code + 0x40);
 #if defined(ENABLE_BROWSER) || defined (ENABLE_HELP)
 	else
-		statusline(AHEM, _("Unbound key: %c"), code);
+		statusline(AHEM, _("Unbound key: %s%c"), "", code);
 #endif
 	set_blankdelay_to_one();
 }
@@ -1356,7 +1375,7 @@ int do_mouse(void)
 /* Return TRUE when the given function is a cursor-moving command. */
 bool wanted_to_move(void (*func)(void))
 {
-	return func == do_left || func == do_right ||
+	return (func == do_left || func == do_right ||
 			func == do_up || func == do_down ||
 			func == do_home || func == do_end ||
 			func == to_prev_word || func == to_next_word ||
@@ -1365,19 +1384,32 @@ bool wanted_to_move(void (*func)(void))
 #endif
 			func == to_prev_block || func == to_next_block ||
 			func == do_page_up || func == do_page_down ||
-			func == to_first_line || func == to_last_line;
+			func == to_first_line || func == to_last_line);
 }
 
-/* Return TRUE when the given shortcut is admissible in view mode. */
-bool okay_for_view(const keystruct *shortcut)
+/* Return TRUE when the given function makes a change -- no good for view mode. */
+bool changes_something(const void *f)
 {
-	funcstruct *item = allfuncs;
-
-	/* Search the function of the given shortcut in the list of functions. */
-	while (item != NULL && item->func != shortcut->func)
-		item = item->next;
-
-	return (item == NULL || item->viewok);
+	return (f == do_savefile || f == do_writeout || f == do_enter || f == do_tab ||
+			f == do_delete || f == do_backspace || f == cut_text || f == paste_text ||
+#ifndef NANO_TINY
+			f == chop_previous_word || f == chop_next_word ||
+			f == zap_text || f == cut_till_eof || f == do_execute ||
+			f == do_indent || f == do_unindent || f == do_comment ||
+#endif
+#ifdef ENABLE_JUSTIFY
+			f == do_justify || f == do_full_justify ||
+#endif
+#ifdef ENABLE_SPELLER
+			f == do_spell ||
+#endif
+#ifdef ENABLE_FORMATTER
+			f == do_formatter ||
+#endif
+#ifdef ENABLE_WORDCOMPLETION
+			f == complete_a_word ||
+#endif
+			f == do_replace || f == do_verbatim_input);
 }
 
 #ifndef NANO_TINY
@@ -1515,6 +1547,8 @@ void process_a_keystroke(void)
 		/* The keystroke we read in: a character or a shortcut. */
 	static char *puddle = NULL;
 		/* The input buffer for actual characters. */
+	static size_t capacity = 12;
+		/* The size of the input buffer; gets doubled whenever needed. */
 	static size_t depth = 0;
 		/* The length of the input buffer. */
 #ifndef NANO_TINY
@@ -1522,6 +1556,7 @@ void process_a_keystroke(void)
 #endif
 	static bool give_a_hint = TRUE;
 	const keystruct *shortcut;
+	functionptrtype function;
 
 	/* Read in a keystroke, and show the cursor while waiting. */
 	input = get_kbinput(midwin, VISIBLE);
@@ -1544,10 +1579,11 @@ void process_a_keystroke(void)
 #endif
 
 	/* Check for a shortcut in the main list. */
-	shortcut = get_shortcut(&input);
+	shortcut = get_shortcut(input);
+	function = (shortcut ? shortcut->func : NULL);
 
 	/* If not a command, discard anything that is not a normal character byte. */
-	if (shortcut == NULL) {
+	if (!function) {
 		if (input < 0x20 || input > 0xFF || meta_key)
 			unbound_key(input);
 		else if (ISSET(VIEW_MODE))
@@ -1559,31 +1595,33 @@ void process_a_keystroke(void)
 				refresh_needed = TRUE;
 			}
 #endif
-			/* Store the byte, and leave room for a terminating zero. */
-			puddle = nrealloc(puddle, depth + 2);
+			/* When the input buffer (plus room for terminating NUL) is full,
+			 * extend it; otherwise, if it does not exist yet, create it. */
+			if (depth + 1 == capacity) {
+				capacity = 2 * capacity;
+				puddle = nrealloc(puddle, capacity);
+			} else if (!puddle)
+				puddle = nmalloc(capacity);
+
 			puddle[depth++] = (char)input;
 		}
 	}
 
-	/* If we have a command, or if there aren't any other key codes waiting,
-	 * it's time to insert the gathered bytes into the edit buffer. */
-	if ((shortcut || waiting_keycodes() == 0) && puddle != NULL) {
+	/* If there are gathered bytes and we have a command or no other key codes
+	 * are waiting, it's time to insert these bytes into the edit buffer. */
+	if (depth > 0 && (function || waiting_keycodes() == 0)) {
 		puddle[depth] = '\0';
-
 		inject(puddle, depth);
-
-		free(puddle);
-		puddle = NULL;
 		depth = 0;
 	}
 
-	if (shortcut == NULL) {
+	if (!function) {
 		pletion_line = NULL;
 		keep_cutbuffer = FALSE;
 		return;
 	}
 
-	if (ISSET(VIEW_MODE) && !okay_for_view(shortcut)) {
+	if (ISSET(VIEW_MODE) && changes_something(function)) {
 		print_view_warning();
 		return;
 	}
@@ -1596,25 +1634,25 @@ void process_a_keystroke(void)
 		give_a_hint = FALSE;
 
 	/* When not cutting or copying text, drop the cutbuffer the next time. */
-	if (shortcut->func != cut_text) {
+	if (function != cut_text) {
 #ifndef NANO_TINY
-		if (shortcut->func != copy_text && shortcut->func != zap_text)
+		if (function != copy_text && function != zap_text)
 #endif
 			keep_cutbuffer = FALSE;
 	}
 
 #ifdef ENABLE_WORDCOMPLETION
-	if (shortcut->func != complete_a_word)
+	if (function != complete_a_word)
 		pletion_line = NULL;
 #endif
 #ifdef ENABLE_NANORC
-	if (shortcut->func == (functionptrtype)implant) {
+	if (function == (functionptrtype)implant) {
 		implant(shortcut->expansion);
 		return;
 	}
 #endif
 #ifndef NANO_TINY
-	if (shortcut->func == do_toggle) {
+	if (function == do_toggle) {
 		toggle_this(shortcut->toggle);
 		if (shortcut->toggle == CUT_FROM_CURSOR)
 			keep_cutbuffer = FALSE;
@@ -1633,32 +1671,21 @@ void process_a_keystroke(void)
 #endif
 
 	/* Execute the function of the shortcut. */
-	shortcut->func();
+	function();
 
 #ifndef NANO_TINY
 	/* When the marked region changes without Shift being held,
-	 * discard a soft mark.  And when the marked region covers a
-	 * different set of lines, reset  the "last line too" flag. */
-	if (openfile->mark) {
-		if (!shift_held && openfile->softmark &&
-							(openfile->current != was_current ||
-							openfile->current_x != was_x ||
-							wanted_to_move(shortcut->func))) {
-			openfile->mark = NULL;
-			refresh_needed = TRUE;
-		} else if (openfile->current != was_current)
-			also_the_last = FALSE;
-	}
-#endif
-#ifdef ENABLE_COLOR
-	if (!refresh_needed && !okay_for_view(shortcut))
-		check_the_multis(openfile->current);
-#endif
-	if (!refresh_needed && (shortcut->func == do_delete ||
-							shortcut->func == do_backspace))
-		update_line(openfile->current, openfile->current_x);
+	 * discard a soft mark.  And when the set of lines changes,
+	 * reset the "last line too" flag. */
+	if (openfile->mark && openfile->softmark && !shift_held &&
+						(openfile->current != was_current ||
+						openfile->current_x != was_x ||
+						wanted_to_move(function))) {
+		openfile->mark = NULL;
+		refresh_needed = TRUE;
+	} else if (openfile->current != was_current)
+		also_the_last = FALSE;
 
-#ifndef NANO_TINY
 	if (bracketed_paste)
 		suck_up_input_and_paste_it();
 
@@ -1815,8 +1842,8 @@ int main(int argc, char **argv)
 	if (*(tail(argv[0])) == 'r')
 		SET(RESTRICTED);
 
-	while ((optchr = getopt_long(argc, argv, "0ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxy$%_!", long_options, NULL)) != -1) {
+	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RS$T:UVWX:Y:Z"
+				"abcdef:ghijklmno:pqr:s:tuvwxy!%_0", long_options, NULL)) != -1) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -2048,6 +2075,13 @@ int main(int argc, char **argv)
 			case 'y':
 				SET(AFTER_ENDS);
 				break;
+#endif
+#ifdef HAVE_LIBMAGIC
+			case '!':
+				SET(USE_MAGIC);
+				break;
+#endif
+#ifndef NANO_TINY
 			case '%':
 				SET(STATEFLAGS);
 				break;
@@ -2056,11 +2090,6 @@ int main(int argc, char **argv)
 				break;
 			case '0':
 				SET(ZERO);
-				break;
-#endif
-#ifdef HAVE_LIBMAGIC
-			case '!':
-				SET(USE_MAGIC);
 				break;
 #endif
 			default:
@@ -2425,7 +2454,7 @@ int main(int argc, char **argv)
 					searchstring = copy_of(&argv[optind][n + 1]);
 					if (argv[optind][n] == '?')
 						SET(BACKWARDS_SEARCH);
-				} else if (n == 1)
+				} else
 					statusline(ALERT, _("Empty search string"));
 				optind++;
 			} else
@@ -2463,6 +2492,7 @@ int main(int argc, char **argv)
 			else if (lastmessage <= REMARK)
 				wipe_statusbar();
 			openfile->placewewant = xplustabs();
+			adjust_viewport(CENTERING);
 			if (ISSET(USE_REGEXP))
 				tidy_up_after_search();
 			free(last_search);
@@ -2482,6 +2512,10 @@ int main(int argc, char **argv)
 
 	/* After handling the files on the command line, allow inserting files. */
 	UNSET(NOREAD_MODE);
+
+	/* Nano is a hands-on editor -- it needs a keyboard. */
+	if (!isatty(STDIN_FILENO))
+		die(_("Standard input is not a terminal\n"));
 
 	/* If no filenames were given, or all of them were invalid things like
 	 * directories, then open a blank buffer and allow editing.  Otherwise,
@@ -2519,6 +2553,11 @@ int main(int argc, char **argv)
 	if (*openfile->filename == '\0' && openfile->totsize == 0 &&
 				openfile->next == openfile && !ISSET(NO_HELP) && NOTREBOUND)
 		statusbar(_("Welcome to nano.  For basic help, type Ctrl+G."));
+#endif
+
+#ifdef ENABLE_LINENUMBERS
+	/* Set the margin to an impossible value to force re-evaluation. */
+	margin = 12345;
 #endif
 
 	we_are_running = TRUE;

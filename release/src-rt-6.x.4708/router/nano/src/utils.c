@@ -168,14 +168,19 @@ void recode_NUL_to_LF(char *string, size_t length)
 	}
 }
 
-/* In the given string, recode each embedded newline as a NUL. */
-void recode_LF_to_NUL(char *string)
+/* In the given string, recode each embedded newline as a NUL,
+ * and return the number of bytes in the string. */
+size_t recode_LF_to_NUL(char *string)
 {
+	char *beginning = string;
+
 	while (*string != '\0') {
 		if (*string == '\n')
 			*string = '\0';
 		string++;
 	}
+
+	return (string - beginning);
 }
 
 #if !defined(ENABLE_TINY) || defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
@@ -484,7 +489,9 @@ void get_range(linestruct **top, linestruct **bot)
 			also_the_last = TRUE;
 	}
 }
+#endif /* !NANO_TINY */
 
+#if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined (ENABLE_LINTER) || defined (ENABLE_FORMATTER)
 /* Return a pointer to the line that has the given line number. */
 linestruct *line_from_number(ssize_t number)
 {
@@ -499,7 +506,7 @@ linestruct *line_from_number(ssize_t number)
 
 	return line;
 }
-#endif /* !NANO_TINY */
+#endif
 
 /* Count the number of characters from begin to end, and return it. */
 size_t number_of_characters_in(const linestruct *begin, const linestruct *end)

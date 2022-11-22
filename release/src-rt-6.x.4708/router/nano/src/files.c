@@ -57,7 +57,7 @@ void make_new_buffer(void)
 		openfile->next = newnode;
 
 		/* There is more than one buffer: show "Close" in help lines. */
-		exitfunc->desc = close_tag;
+		exitfunc->tag = close_tag;
 		more_than_one = !inhelp || more_than_one;
 	}
 #endif
@@ -218,7 +218,7 @@ bool write_lockfile(const char *lockfilename, const char *filename, bool modifie
 	strncpy(&lockdata[108], filename, 768);
 	lockdata[1007] = (modified) ? 0x55 : 0x00;
 
-	wroteamt = fwrite(lockdata, sizeof(char), LOCKSIZE, filestream);
+	wroteamt = fwrite(lockdata, 1, LOCKSIZE, filestream);
 
 	free(lockdata);
 
@@ -627,7 +627,7 @@ void close_buffer(void)
 
 	/* When just one buffer remains open, show "Exit" in the help lines. */
 	if (openfile && openfile == openfile->next)
-		exitfunc->desc = exit_tag;
+		exitfunc->tag = exit_tag;
 }
 #endif /* ENABLE_MULTIBUFFER */
 
@@ -969,12 +969,19 @@ char *get_next_filename(const char *name, const char *suffix)
 #ifndef NANO_TINY
 static pid_t pid_of_command = -1;
 		/* The PID of a forked process -- needed when wanting to abort it. */
+static pid_t pid_of_sender = -1;
+		/* The PID of the process that pipes data to the above process. */
+static bool should_pipe = FALSE;
+		/* Whether we are piping data to the external command. */
 
 /* Send an unconditional kill signal to the running external command. */
 void cancel_the_command(int signal)
 {
 #ifdef SIGKILL
-	kill(pid_of_command, SIGKILL);
+	if (pid_of_command > 0)
+		kill(pid_of_command, SIGKILL);
+	if (should_pipe && pid_of_sender > 0)
+		kill(pid_of_sender, SIGKILL);
 #endif
 }
 
@@ -988,15 +995,22 @@ void send_data(const linestruct *line, int fd)
 
 	/* Send each line, except a final empty line. */
 	while (line != NULL && (line->next != NULL || line->data[0] != '\0')) {
-		fprintf(tube, "%s%s", line->data, line->next == NULL ? "" : "\n");
+		size_t length = recode_LF_to_NUL(line->data);
+
+		if (fwrite(line->data, 1, length, tube) < length)
+			exit(5);
+
+		if (line->next && putc('\n', tube) == EOF)
+			exit(6);
+
 		line = line->next;
 	}
 
 	fclose(tube);
 }
 
-/* Execute the given command in a shell.  Return TRUE on success. */
-bool execute_command(const char *command)
+/* Execute the given command in a shell. */
+void execute_command(const char *command)
 {
 #if defined(HAVE_FORK) && defined(HAVE_PIPE) && defined(HAVE_WAIT)
 	int from_fd[2], to_fd[2];
@@ -1004,14 +1018,16 @@ bool execute_command(const char *command)
 	struct sigaction oldaction, newaction = {{0}};
 		/* Original and temporary handlers for SIGINT. */
 	ssize_t was_lineno = (openfile->mark ? 0 : openfile->current->lineno);
-	const bool should_pipe = (command[0] == '|');
+	int command_status, sender_status;
 	FILE *stream;
+
+	should_pipe = (command[0] == '|');
 
 	/* Create a pipe to read the command's output from, and, if needed,
 	 * a pipe to feed the command's input through. */
 	if (pipe(from_fd) == -1 || (should_pipe && pipe(to_fd) == -1)) {
 		statusline(ALERT, _("Could not create pipe: %s"), strerror(errno));
-		return FALSE;
+		return;
 	}
 
 	/* Fork a child process to run the command in. */
@@ -1052,7 +1068,7 @@ bool execute_command(const char *command)
 	if (pid_of_command == -1) {
 		statusline(ALERT, _("Could not fork: %s"), strerror(errno));
 		close(from_fd[0]);
-		return FALSE;
+		return;
 	}
 
 	statusbar(_("Executing..."));
@@ -1088,10 +1104,13 @@ bool execute_command(const char *command)
 		}
 
 		/* Create a separate process for piping the data to the command. */
-		if (fork() == 0) {
+		if ((pid_of_sender = fork()) == 0) {
 			send_data(whole_buffer ? openfile->filetop : cutbuffer, to_fd[1]);
 			exit(0);
 		}
+
+		if (pid_of_sender == -1)
+			statusline(ALERT, _("Could not fork: %s"), strerror(errno));
 
 		close(to_fd[0]);
 		close(to_fd[1]);
@@ -1126,9 +1145,25 @@ bool execute_command(const char *command)
 	}
 
 	/* Wait for the external command (and possibly data sender) to terminate. */
-	wait(NULL);
-	if (should_pipe)
-		wait(NULL);
+	waitpid(pid_of_command, &command_status, 0);
+	if (should_pipe && pid_of_sender > 0)
+		waitpid(pid_of_sender, &sender_status, 0);
+
+	/* If the command failed, show what the shell reported. */
+	if (WIFEXITED(command_status) == 0 || WEXITSTATUS(command_status))
+		statusline(ALERT, WIFSIGNALED(command_status) ? _("Cancelled") :
+							_("Error: %s"), openfile->current->prev &&
+							strstr(openfile->current->prev->data, ": ") ?
+							strstr(openfile->current->prev->data, ": ") + 2 : "---");
+	else if (should_pipe && pid_of_sender > 0 &&
+				(WIFEXITED(sender_status) == 0 || WEXITSTATUS(sender_status)))
+		statusline(ALERT, _("Piping failed"));
+
+	/* If there was an error, undo and discard what the command did. */
+	if (lastmessage == ALERT) {
+		do_undo();
+		discard_until(openfile->current_undo);
+	}
 
 	/* Restore the original handler for SIGINT. */
 	sigaction(SIGINT, &oldaction, NULL);
@@ -1136,10 +1171,6 @@ bool execute_command(const char *command)
 	/* Restore the terminal to its desired state, and disable
 	 * interpretation of the special control keys again. */
 	terminal_init();
-
-	return TRUE;
-#else
-	return FALSE;
 #endif
 }
 #endif /* NANO_TINY */
@@ -1213,7 +1244,7 @@ void insert_a_file_or(bool execute)
 			ssize_t was_current_lineno = openfile->current->lineno;
 			size_t was_current_x = openfile->current_x;
 #if !defined(NANO_TINY) || defined(ENABLE_BROWSER) || defined(ENABLE_MULTIBUFFER)
-			functionptrtype func = func_from_key(&response);
+			functionptrtype function = func_from_key(response);
 #endif
 			given = mallocstrcpy(given, answer);
 
@@ -1221,7 +1252,7 @@ void insert_a_file_or(bool execute)
 				break;
 
 #ifdef ENABLE_MULTIBUFFER
-			if (func == flip_newbuffer) {
+			if (function == flip_newbuffer) {
 				/* Allow toggling only when not in view mode. */
 				if (!ISSET(VIEW_MODE))
 					TOGGLE(MULTIBUFFER);
@@ -1231,22 +1262,22 @@ void insert_a_file_or(bool execute)
 			}
 #endif
 #ifndef NANO_TINY
-			if (func == flip_convert) {
+			if (function == flip_convert) {
 				TOGGLE(NO_CONVERT);
 				continue;
 			}
-			if (func == flip_execute) {
+			if (function == flip_execute) {
 				execute = !execute;
 				continue;
 			}
-			if (func == flip_pipe) {
+			if (function == flip_pipe) {
 				add_or_remove_pipe_symbol_from_answer();
 				given = mallocstrcpy(given, answer);
 				continue;
 			}
 #endif
 #ifdef ENABLE_BROWSER
-			if (func == to_files) {
+			if (function == to_files) {
 				char *chosen = browse_in(answer);
 
 				/* If no file was chosen, go back to the prompt. */
@@ -1529,12 +1560,12 @@ int copy_file(FILE *inn, FILE *out, bool close_out)
 	int (*flush_out_fnc)(FILE *) = (close_out) ? fclose : fflush;
 
 	do {
-		charsread = fread(buf, sizeof(char), BUFSIZ, inn);
+		charsread = fread(buf, 1, BUFSIZ, inn);
 		if (charsread == 0 && ferror(inn)) {
 			retval = -1;
 			break;
 		}
-		if (fwrite(buf, sizeof(char), charsread, out) < charsread) {
+		if (fwrite(buf, 1, charsread, out) < charsread) {
 			retval = 2;
 			break;
 		}
@@ -1856,13 +1887,12 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 		statusbar(_("Writing..."));
 
 	while (TRUE) {
-		size_t data_len = strlen(line->data);
-		size_t wrote;
+		size_t data_len, wrote;
 
 		/* Decode LFs as the NULs that they are, before writing to disk. */
-		recode_LF_to_NUL(line->data);
+		data_len = recode_LF_to_NUL(line->data);
 
-		wrote = fwrite(line->data, sizeof(char), data_len, thefile);
+		wrote = fwrite(line->data, 1, data_len, thefile);
 
 		/* Re-encode any embedded NULs as LFs. */
 		recode_NUL_to_LF(line->data, data_len);
@@ -2094,7 +2124,7 @@ int write_it_out(bool exiting, bool withprompt)
 #endif
 
 	while (TRUE) {
-		functionptrtype func;
+		functionptrtype function;
 		const char *msg;
 		int response = 0;
 		int choice = NO;
@@ -2141,10 +2171,10 @@ int write_it_out(bool exiting, bool withprompt)
 			return 0;
 		}
 
-		func = func_from_key(&response);
+		function = func_from_key(response);
 
 		/* Upon request, abandon the buffer. */
-		if (func == discard_buffer) {
+		if (function == discard_buffer) {
 			free(given);
 			return 2;
 		}
@@ -2152,7 +2182,7 @@ int write_it_out(bool exiting, bool withprompt)
 		given = mallocstrcpy(given, answer);
 
 #ifdef ENABLE_BROWSER
-		if (func == to_files) {
+		if (function == to_files) {
 			char *chosen = browse_in(answer);
 
 			if (chosen == NULL)
@@ -2163,17 +2193,17 @@ int write_it_out(bool exiting, bool withprompt)
 		} else
 #endif
 #ifndef NANO_TINY
-		if (func == dos_format) {
+		if (function == dos_format) {
 			openfile->fmt = (openfile->fmt == DOS_FILE) ? NIX_FILE : DOS_FILE;
 			continue;
-		} else if (func == mac_format) {
+		} else if (function == mac_format) {
 			openfile->fmt = (openfile->fmt == MAC_FILE) ? NIX_FILE : MAC_FILE;
 			continue;
-		} else if (func == back_it_up) {
+		} else if (function == back_it_up) {
 			TOGGLE(MAKE_BACKUP);
 			continue;
-		} else if (func == prepend_it || func == append_it) {
-			if (func == prepend_it)
+		} else if (function == prepend_it || function == append_it) {
+			if (function == prepend_it)
 				method = (method == PREPEND) ? OVERWRITE : PREPEND;
 			else
 				method = (method == APPEND) ? OVERWRITE : APPEND;
@@ -2182,7 +2212,7 @@ int write_it_out(bool exiting, bool withprompt)
 			continue;
 		} else
 #endif
-		if (func == do_help)
+		if (function == do_help)
 			continue;
 
 #ifdef ENABLE_EXTRA
@@ -2455,8 +2485,8 @@ char **username_completion(const char *morsel, size_t length, size_t *num_matche
  * This code is 'as is' with no warranty.
  * This code may safely be consumed by a BSD or GPL license. */
 
-/* Try to complete the given fragment of given length to a filename. */
-char **filename_completion(const char *morsel, size_t length, size_t *num_matches)
+/* Try to complete the given fragment to an existing filename. */
+char **filename_completion(const char *morsel, size_t *num_matches)
 {
 	char *dirname = copy_of(morsel);
 	char *slash, *filename;
@@ -2549,7 +2579,7 @@ char *input_tab(char *morsel, size_t *place, void (*refresh_func)(void), bool *l
 
 	/* If there are no matches yet, try matching against filenames. */
 	if (matches == NULL)
-		matches = filename_completion(morsel, *place, &num_matches);
+		matches = filename_completion(morsel, &num_matches);
 
 	/* If possible completions were listed before but none will be listed now... */
 	if (*listed && num_matches < 2) {

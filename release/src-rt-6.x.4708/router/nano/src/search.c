@@ -91,7 +91,7 @@ void search_init(bool replacing, bool retain_answer)
 		thedefault = copy_of("");
 
 	while (TRUE) {
-		functionptrtype func;
+		functionptrtype function;
 		/* Ask the user what to search for (or replace). */
 		int response = do_prompt(
 					inhelp ? MFINDINHELP : (replacing ? MREPLACE : MWHEREIS),
@@ -138,23 +138,23 @@ void search_init(bool replacing, bool retain_answer)
 
 		retain_answer = TRUE;
 
-		func = func_from_key(&response);
+		function = func_from_key(response);
 
 		/* If we're here, one of the five toggles was pressed, or
 		 * a shortcut was executed. */
-		if (func == case_sens_void)
+		if (function == case_sens_void)
 			TOGGLE(CASE_SENSITIVE);
-		else if (func == backwards_void)
+		else if (function == backwards_void)
 			TOGGLE(BACKWARDS_SEARCH);
-		else if (func == regexp_void)
+		else if (function == regexp_void)
 			TOGGLE(USE_REGEXP);
-		else if (func == flip_replace) {
+		else if (function == flip_replace) {
 			if (ISSET(VIEW_MODE)) {
 				print_view_warning();
 				napms(600);
 			} else
 				replacing = !replacing;
-		} else if (func == flip_goto) {
+		} else if (function == flip_goto) {
 			goto_line_and_column(openfile->current->lineno,
 								openfile->placewewant + 1, TRUE, TRUE);
 			break;
@@ -222,8 +222,9 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 				continue;
 			}
 #endif
-			/* The match is valid. */
-			break;
+			/* When not on the magic line, the match is valid. */
+			if (line->next || line->data[0])
+				break;
 		}
 
 #ifndef NANO_TINY
@@ -284,7 +285,7 @@ int findnextstr(const char *needle, bool whole_word_only, int modus,
 				} else
 					meta_key = FALSE;
 
-				if (func_from_key(&input) == do_cancel) {
+				if (func_from_key(input) == do_cancel) {
 #ifndef NANO_TINY
 					if (the_window_resized)
 						regenerate_screen();
@@ -736,24 +737,27 @@ void ask_for_and_do_replacements(void)
 					"Replaced %zd occurrences", numreplaced), numreplaced);
 }
 
+#if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined (ENABLE_LINTER) || defined (ENABLE_FORMATTER)
 /* Go to the specified line and x position. */
-void goto_line_posx(ssize_t line, size_t pos_x)
+void goto_line_posx(ssize_t linenumber, size_t pos_x)
 {
 #ifdef ENABLE_COLOR
-	if (line > openfile->edittop->lineno + editwinrows ||
-				(ISSET(SOFTWRAP) && line > openfile->current->lineno))
+	if (linenumber > openfile->edittop->lineno + editwinrows ||
+				(ISSET(SOFTWRAP) && linenumber > openfile->current->lineno))
 		recook |= perturbed;
 #endif
 
-	for (openfile->current = openfile->filetop; line > 1 &&
-				openfile->current != openfile->filebot; line--)
-		openfile->current = openfile->current->next;
+	if (linenumber < openfile->filebot->lineno)
+		openfile->current = line_from_number(linenumber);
+	else
+		openfile->current = openfile->filebot;
 
 	openfile->current_x = pos_x;
 	openfile->placewewant = xplustabs();
 
 	refresh_needed = TRUE;
 }
+#endif
 
 /* Go to the specified line and column, or ask for them if interactive
  * is TRUE.  In the latter case also update the screen afterwards.
@@ -773,7 +777,7 @@ void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
 			return;
 		}
 
-		if (func_from_key(&response) == flip_goto) {
+		if (func_from_key(response) == flip_goto) {
 			UNSET(BACKWARDS_SEARCH);
 			/* Switch to searching but retain what the user typed so far. */
 			search_init(FALSE, TRUE);
@@ -830,9 +834,9 @@ void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
 		openfile->placewewant = breadth(openfile->current->data);
 #endif
 
-	/* When the position was manually given, center the target line. */
+	/* When a line number was manually given, center the target line. */
 	if (interactive) {
-		adjust_viewport(CENTERING);
+		adjust_viewport((*answer == ',') ? STATIONARY : CENTERING);
 		refresh_needed = TRUE;
 	} else {
 		int rows_from_tail;

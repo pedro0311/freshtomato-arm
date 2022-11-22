@@ -16,7 +16,7 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANO 1 "version 6.4" "August 2022"
+.TH NANO 1 "version 7.0" "November 2022"
 
 .SH NAME
 nano \- Nano's ANOther editor, inspired by Pico
@@ -73,6 +73,12 @@ On some terminals, text can be selected also by holding down Shift while
 using the arrow keys.  Holding down the Ctrl or Alt key too will increase
 the stride.
 Any cursor movement without Shift being held will cancel such a selection.
+.sp
+Any valid Unicode code point can be inserted into the buffer by typing
+\fBM\-V\fR followed by the hexadecimal digits of the code point (concluded
+with \fB<Space>\fR or \fB<Enter>\fR when it are fewer than six digits).
+A literal control code (except \fB^J\fR) can be inserted by typing
+\fBM\-V\fR followed by the pertinent keystroke.
 .sp
 The two lines at the bottom of the screen show some important commands;
 the built-in help (\fB^G\fR) lists all the available ones.
@@ -317,6 +323,10 @@ Don't show the two help lines at the bottom of the screen.
 .BR \-y ", " \-\-afterends
 Make Ctrl+Right and Ctrl+Delete stop at word ends instead of beginnings.
 .TP
+.BR \-! ", " \-\-magic
+When neither the file's name nor its first line give a clue,
+try using libmagic to determine the applicable syntax.
+.TP
 .BR \-% ", " \-\-stateflags
 Use the top-right corner of the screen for showing some state flags:
 \fBI\fR when auto-indenting, \fBM\fR when the mark is on, \fBL\fR when
@@ -349,10 +359,6 @@ The status bar appears only when there is a significant message,
 and disappears after 1.5 seconds or upon the next keystroke.
 With \fBM\-Z\fR the title bar plus status bar can be toggled.
 With \fBM\-X\fR the help lines.
-.TP
-.BR \-! ", " \-\-magic
-When neither the file's name nor its first line give a clue,
-try using libmagic to determine the applicable syntax.
 
 .SH TOGGLES
 Several of the above options can be switched on and off also while

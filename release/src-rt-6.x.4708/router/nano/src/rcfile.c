@@ -153,18 +153,6 @@ static bool seen_color_command = FALSE;
 static colortype *lastcolor = NULL;
 		/* The end of the color list for the current syntax. */
 #endif
-
-#define NUMBER_OF_MENUS  16
-char *menunames[NUMBER_OF_MENUS] = { "main", "search", "replace", "replacewith",
-									"yesno", "gotoline", "writeout", "insert",
-									"execute", "help", "spell", "linter",
-									"browser", "whereisfile", "gotodir",
-									"all" };
-int menusymbols[NUMBER_OF_MENUS] = { MMAIN, MWHEREIS, MREPLACE, MREPLACEWITH,
-									MYESNO, MGOTOLINE, MWRITEFILE, MINSERTFILE,
-									MEXECUTE, MHELP, MSPELL, MLINTER,
-									MBROWSER, MWHEREISFILE, MGOTODIR,
-									MMOST|MBROWSER|MHELP|MYESNO };
 #endif /* ENABLE_NANORC */
 
 #if defined(ENABLE_NANORC) || defined(ENABLE_HISTORIES)
@@ -276,9 +264,11 @@ keystruct *strtosc(const char *input)
 	         !strcmp(input, "speller"))
 		s->func = do_spell;
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 	else if (!strcmp(input, "linter"))
 		s->func = do_linter;
+#endif
+#ifdef ENABLE_FORMATTER
 	else if (!strcmp(input, "formatter"))
 		s->func = do_formatter;
 #endif
@@ -493,6 +483,18 @@ keystruct *strtosc(const char *input)
 	return s;
 }
 
+#define NUMBER_OF_MENUS  16
+char *menunames[NUMBER_OF_MENUS] = { "main", "search", "replace", "replacewith",
+									"yesno", "gotoline", "writeout", "insert",
+									"execute", "help", "spell", "linter",
+									"browser", "whereisfile", "gotodir",
+									"all" };
+int menusymbols[NUMBER_OF_MENUS] = { MMAIN, MWHEREIS, MREPLACE, MREPLACEWITH,
+									MYESNO, MGOTOLINE, MWRITEFILE, MINSERTFILE,
+									MEXECUTE, MHELP, MSPELL, MLINTER,
+									MBROWSER, MWHEREISFILE, MGOTODIR,
+									MMOST|MBROWSER|MHELP|MYESNO };
+
 /* Return the symbol that corresponds to the given menu name. */
 int name_to_menu(const char *name)
 {
@@ -502,7 +504,7 @@ int name_to_menu(const char *name)
 		if (strcmp(name, menunames[index]) == 0)
 			return menusymbols[index];
 
-	return -1;
+	return 0;
 }
 
 /* Return the name that corresponds to the given menu symbol. */
@@ -785,6 +787,12 @@ void parse_binding(char *ptr, bool dobind)
 		goto free_things;
 	}
 
+	menu = name_to_menu(menuptr);
+	if (menu == 0) {
+		jot_error(N_("Unknown menu: %s"), menuptr);
+		goto free_things;
+	}
+
 	if (dobind) {
 		/* If the thing to bind starts with a double quote, it is a string,
 		 * otherwise it is the name of a function. */
@@ -799,15 +807,9 @@ void parse_binding(char *ptr, bool dobind)
 			newsc = strtosc(funcptr);
 
 		if (newsc == NULL) {
-			jot_error(N_("Cannot map name \"%s\" to a function"), funcptr);
+			jot_error(N_("Unknown function: %s"), funcptr);
 			goto free_things;
 		}
-	}
-
-	menu = name_to_menu(menuptr);
-	if (menu < 1) {
-		jot_error(N_("Cannot map name \"%s\" to a menu"), menuptr);
-		goto free_things;
 	}
 
 	/* Wipe the given shortcut from the given menu. */
@@ -1348,7 +1350,7 @@ static void check_vitals_mapped(void)
 			if (f->func == vitals[v] && f->menus & inmenus[v]) {
 				if (first_sc_for(inmenus[v], f->func) == NULL) {
 					jot_error(N_("No key is bound to function '%s' in menu '%s'. "
-								" Exiting.\n"), f->desc, menu_to_name(inmenus[v]));
+								" Exiting.\n"), f->tag, menu_to_name(inmenus[v]));
 					die(_("If needed, use nano with the -I option "
 								"to adjust your nanorc settings.\n"));
 				} else
@@ -1530,7 +1532,7 @@ void parse_rcfile(FILE *rcstream, bool just_syntax, bool intros_only)
 		}
 
 		if (rcopts[i].name == NULL) {
-			jot_error(N_("Unknown option \"%s\""), option);
+			jot_error(N_("Unknown option: %s"), option);
 			continue;
 		}
 

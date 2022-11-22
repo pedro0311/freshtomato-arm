@@ -181,6 +181,9 @@ extern char *startup_problem;
 #endif
 #ifdef ENABLE_NANORC
 extern char *custom_nanorc;
+
+extern char *commandname;
+extern keystruct *planted_shortcut;
 #endif
 
 extern bool spotlighted;
@@ -316,12 +319,12 @@ char *input_tab(char *buf, size_t *place, void (*refresh_func)(void), bool *list
 #endif
 
 /* Some functions in global.c. */
-const keystruct *first_sc_for(int menu, void (*func)(void));
+const keystruct *first_sc_for(int menu, void (*function)(void));
 size_t shown_entries_for(int menu);
-const keystruct *get_shortcut(int *keycode);
-functionptrtype func_from_key(int *keycode);
+const keystruct *get_shortcut(const int keycode);
+functionptrtype func_from_key(const int keycode);
 #if defined(ENABLE_BROWSER) || defined(ENABLE_HELP)
-functionptrtype interpret(int *keycode);
+functionptrtype interpret(const int keycode);
 #endif
 int keycode_from_string(const char *keystring);
 void shortcut_init(void);
@@ -424,7 +427,7 @@ void terminal_init(void);
 void confirm_margin(void);
 #endif
 void unbound_key(int code);
-bool okay_for_view(const keystruct *shortcut);
+bool changes_something(const void *f);
 void inject(char *burst, size_t count);
 
 /* Most functions in prompt.c. */
@@ -441,6 +444,7 @@ void display_rcfile_errors(void);
 void jot_error(const char *msg, ...);
 #endif
 #ifdef ENABLE_NANORC
+keystruct *strtosc(const char *input);
 #ifdef ENABLE_COLOR
 void parse_one_include(char *file, syntaxtype *syntax);
 void grab_and_store(const char *kind, char *ptr, regexlisttype **storage);
@@ -465,7 +469,9 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 		const linestruct *real_current, size_t *real_current_x);
 void do_replace(void);
 void ask_for_and_do_replacements(void);
+#if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined (ENABLE_LINTER) || defined (ENABLE_FORMATTER)
 void goto_line_posx(ssize_t line, size_t pos_x);
+#endif
 void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
 		bool interactive);
 void do_gotolinecolumn(void);
@@ -516,15 +522,19 @@ void do_full_justify(void);
 #ifdef ENABLE_SPELLER
 void do_spell(void);
 #endif
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 void do_linter(void);
+#endif
+#ifdef ENABLE_FORMATTER
 void do_formatter(void);
 #endif
 #ifndef NANO_TINY
 void count_lines_words_and_characters(void);
 #endif
 void do_verbatim_input(void);
+#ifdef ENABLE_WORDCOMPLETION
 void complete_a_word(void);
+#endif
 
 /* All functions in utils.c. */
 void get_homedir(void);
@@ -534,7 +544,7 @@ int digits(ssize_t n);
 bool parse_num(const char *str, ssize_t *result);
 bool parse_line_column(const char *str, ssize_t *line, ssize_t *column);
 void recode_NUL_to_LF(char *string, size_t length);
-void recode_LF_to_NUL(char *string);
+size_t recode_LF_to_NUL(char *string);
 #if !defined(ENABLE_TINY) || defined(ENABLE_TABCOMP) || defined(ENABLE_BROWSER)
 void free_chararray(char **array, size_t len);
 #endif
@@ -564,13 +574,16 @@ void get_region(linestruct **top, size_t *top_x, linestruct **bot, size_t *bot_x
 void get_range(linestruct **top, linestruct **bot);
 #endif
 size_t number_of_characters_in(const linestruct *begin, const linestruct *end);
-#ifndef NANO_TINY
+#if !defined(NANO_TINY) || defined(ENABLE_SPELLER) || defined (ENABLE_LINTER) || defined (ENABLE_FORMATTER)
 linestruct *line_from_number(ssize_t number);
 #endif
 
 /* Most functions in winio.c. */
+#ifndef NANO_TINY
 void record_macro(void);
 void run_macro(void);
+#endif
+void reserve_space_for(size_t newsize);
 size_t waiting_keycodes(void);
 #ifdef ENABLE_NANORC
 void implant(const char *string);

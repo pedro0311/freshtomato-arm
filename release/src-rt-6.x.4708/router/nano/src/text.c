@@ -540,6 +540,7 @@ void do_undo(void)
 		line->has_anchor |= line->next->has_anchor;
 		unlink_node(line->next);
 		renumber_from(line);
+		openfile->current = line;
 		goto_line_posx(u->head_lineno, original_x);
 		break;
 	case BACK:
@@ -657,7 +658,7 @@ void do_undo(void)
 		break;
 	}
 
-	if (undidmsg && !pletion_line)
+	if (undidmsg && !ISSET(ZERO) && !pletion_line)
 		statusline(HUSH, _("Undid %s"), undidmsg);
 
 	openfile->current_undo = openfile->current_undo->next;
@@ -746,6 +747,7 @@ void do_redo(void)
 		strcat(line->data, u->strdata);
 		unlink_node(line->next);
 		renumber_from(line);
+		openfile->current = line;
 		goto_line_posx(u->tail_lineno, u->tail_x);
 		break;
 	case REPLACE:
@@ -826,7 +828,7 @@ void do_redo(void)
 		break;
 	}
 
-	if (redidmsg)
+	if (redidmsg && !ISSET(ZERO))
 		statusline(HUSH, _("Redid %s"), redidmsg);
 
 	openfile->current_undo = u;
@@ -2022,7 +2024,7 @@ void do_full_justify(void)
 }
 #endif /* ENABLE_JUSTIFY */
 
-#if defined(ENABLE_SPELLER) || defined (ENABLE_COLOR)
+#if defined(ENABLE_SPELLER) || defined (ENABLE_LINTER) || defined (ENABLE_FORMATTER)
 /* Set up an argument list for executing the given command. */
 void construct_argument_list(char ***arguments, char *command, char *filename)
 {
@@ -2039,7 +2041,9 @@ void construct_argument_list(char ***arguments, char *command, char *filename)
 	(*arguments)[count - 2] = filename;
 	(*arguments)[count - 1] = NULL;
 }
+#endif
 
+#if defined(ENABLE_SPELLER) || defined (ENABLE_FORMATTER)
 /* Open the specified file, and if that succeeds, remove the text of the marked
  * region or of the entire buffer and read the file contents into its place. */
 bool replace_buffer(const char *filename, undo_type action, const char *operation)
@@ -2217,7 +2221,7 @@ void treat(char *tempfile_name, char *theprogram, bool spelling)
 		statusline(REMARK, _("Buffer has been processed"));
 #endif
 }
-#endif /* ENABLE_SPELLER || ENABLE_COLOR */
+#endif /* ENABLE_SPELLER || ENABLE_FORMATTER */
 
 #ifdef ENABLE_SPELLER
 /* Let the user edit the misspelled word.  Return FALSE if the user cancels. */
@@ -2562,7 +2566,7 @@ void do_spell(void)
 }
 #endif /* ENABLE_SPELLER */
 
-#ifdef ENABLE_COLOR
+#ifdef ENABLE_LINTER
 /* Run a linting program on the current buffer. */
 void do_linter(void)
 {
@@ -2761,7 +2765,7 @@ void do_linter(void)
 
 	while (TRUE) {
 		int kbinput;
-		functionptrtype func;
+		functionptrtype function;
 		struct stat lintfileinfo;
 
 		if (stat(curlint->filename, &lintfileinfo) != -1 &&
@@ -2856,16 +2860,16 @@ void do_linter(void)
 		if (kbinput == KEY_WINCH)
 			continue;
 #endif
-		func = func_from_key(&kbinput);
+		function = func_from_key(kbinput);
 		tmplint = curlint;
 
-		if (func == do_cancel || func == do_enter) {
+		if (function == do_cancel || function == do_enter) {
 			wipe_statusbar();
 			break;
-		} else if (func == do_help) {
+		} else if (function == do_help) {
 			tmplint = NULL;
 			do_help();
-		} else if (func == do_page_up || func == to_prev_block) {
+		} else if (function == do_page_up || function == to_prev_block) {
 			if (curlint->prev != NULL)
 				curlint = curlint->prev;
 			else if (last_wait != time(NULL)) {
@@ -2875,7 +2879,7 @@ void do_linter(void)
 				last_wait = time(NULL);
 				statusline(NOTICE, curlint->msg);
 			}
-		} else if (func == do_page_down || func == to_next_block) {
+		} else if (function == do_page_down || function == to_next_block) {
 			if (curlint->next != NULL)
 				curlint = curlint->next;
 			else if (last_wait != time(NULL)) {
@@ -2908,7 +2912,9 @@ void do_linter(void)
 	titlebar(NULL);
 #endif
 }
+#endif /* ENABLE_LINTER */
 
+#ifdef ENABLE_FORMATTER
 /* Run a manipulation program on the contents of the buffer. */
 void do_formatter(void)
 {
@@ -2943,7 +2949,7 @@ void do_formatter(void)
 	unlink(temp_name);
 	free(temp_name);
 }
-#endif /* ENABLE_COLOR */
+#endif /* ENABLE_FORMATTER */
 
 #ifndef NANO_TINY
 /* Our own version of "wc".  Note that the character count is in
@@ -3033,7 +3039,13 @@ void do_verbatim_input(void)
 		if (count < 999)
 			inject(bytes, count);
 
-		wipe_statusbar();
+#ifndef NANO_TINY
+		/* Ensure that the feedback will be overwritten, or clear it. */
+		if (ISSET(ZERO) && currmenu == MMAIN)
+			wredrawln(midwin, editwinrows - 1, 1);
+		else
+#endif
+			wipe_statusbar();
 	} else
 		/* TRANSLATORS: An invalid verbatim Unicode code was typed. */
 		statusline(AHEM, _("Invalid code"));
@@ -3061,12 +3073,14 @@ char *copy_completion(char *text)
 	return word;
 }
 
-/* Look at the fragment the user has typed, then search the current buffer for
+/* Look at the fragment the user has typed, then search all buffers for
  * the first word that starts with this fragment, and tentatively complete the
  * fragment.  If the user types 'Complete' again, search and paste the next
  * possible completion. */
 void complete_a_word(void)
 {
+	static openfilestruct *scouring = NULL;
+		/* The buffer that is being searched for possible completions. */
 	char *shard, *completion = NULL;
 	size_t start_of_shard, shard_length = 0;
 	size_t i = 0, j = 0;
@@ -3089,6 +3103,7 @@ void complete_a_word(void)
 		openfile->last_action = OTHER;
 
 		/* Initialize the starting point for searching. */
+		scouring = openfile;
 		pletion_line = openfile->filetop;
 		pletion_x = 0;
 
@@ -3200,9 +3215,17 @@ void complete_a_word(void)
 
 		pletion_line = pletion_line->next;
 		pletion_x = 0;
+
+#ifdef ENABLE_MULTIBUFFER
+		/* When at end of buffer and there is another, search that one. */
+		if (pletion_line == NULL && scouring->next != openfile) {
+			scouring = scouring->next;
+			pletion_line = scouring->filetop;
+		}
+#endif
 	}
 
-	/* The search has reached the end of the file. */
+	/* The search has gone through all buffers. */
 	if (list_of_completions != NULL) {
 		edit_refresh();
 		statusline(AHEM, _("No further matches"));

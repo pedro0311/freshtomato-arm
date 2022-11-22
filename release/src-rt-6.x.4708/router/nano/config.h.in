@@ -66,6 +66,9 @@
 /* Define this to have an Easter egg. */
 #undef ENABLE_EXTRA
 
+/* Define this to have access to a formatter. */
+#undef ENABLE_FORMATTER
+
 /* Define this to enable the Ctrl+G help texts. */
 #undef ENABLE_HELP
 
@@ -77,6 +80,9 @@
 
 /* Define this to enable line numbering. */
 #undef ENABLE_LINENUMBERS
+
+/* Define this to have access to a linter. */
+#undef ENABLE_LINTER
 
 /* Define this to enable mouse support. */
 #undef ENABLE_MOUSE
@@ -94,7 +100,7 @@
 /* Define this to allow setting an operating directory (a chroot of sorts). */
 #undef ENABLE_OPERATINGDIR
 
-/* Define this to have the spell-checker functions. */
+/* Define this to have access to a spell checker. */
 #undef ENABLE_SPELLER
 
 /* Define this to have tab completion for filenames and search strings. */
@@ -435,7 +441,8 @@
    may be supplied by this distribution. */
 #undef HAVE_ALLOCA
 
-/* Define to 1 if <alloca.h> works. */
+/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
+   */
 #undef HAVE_ALLOCA_H
 
 /* Define to 1 if you have the <bcrypt.h> header file. */
@@ -490,6 +497,12 @@
 
 /* Define to 1 if you have the <curses.h> header file. */
 #undef HAVE_CURSES_H
+
+/* Define to 1 if bool, true and false work as per C2023. */
+#undef HAVE_C_BOOL
+
+/* Define to 1 if the static_assert keyword works. */
+#undef HAVE_C_STATIC_ASSERT
 
 /* Define to 1 if C supports variable-length arrays. */
 #undef HAVE_C_VARARRAYS
@@ -867,6 +880,9 @@
 /* Define to 1 if you have the `mbtowc' function. */
 #undef HAVE_MBTOWC
 
+/* Define to 1 if you have the <memory.h> header file. */
+#undef HAVE_MEMORY_H
+
 /* Define to 1 if you have the `mempcpy' function. */
 #undef HAVE_MEMPCPY
 
@@ -977,15 +993,18 @@
    terminated. */
 #undef HAVE_SNPRINTF_TRUNCATION_C99
 
+/* Define to 1 if you have the <stdbool.h> header file. */
+#undef HAVE_STDBOOL_H
+
+/* Define to 1 if you have the <stdckdint.h> header file. */
+#undef HAVE_STDCKDINT_H
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
 /* Define if <stdint.h> exists, doesn't clash with <sys/types.h>, and declares
    uintmax_t. */
 #undef HAVE_STDINT_H_WITH_UINTMAX
-
-/* Define to 1 if you have the <stdio.h> header file. */
-#undef HAVE_STDIO_H
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
@@ -996,7 +1015,7 @@
 /* Define to 1 if you have the `strcasestr' function. */
 #undef HAVE_STRCASESTR
 
-/* Define if you have `strerror_r'. */
+/* Define to 1 if you have the `strerror_r' function. */
 #undef HAVE_STRERROR_R
 
 /* Define to 1 if you have the <strings.h> header file. */
@@ -1087,7 +1106,7 @@
 /* Define to 1 if you have the <threads.h> header file. */
 #undef HAVE_THREADS_H
 
-/* Define to 1 if you have the `timespec_get' function. */
+/* Define if you have the timespec_get function. */
 #undef HAVE_TIMESPEC_GET
 
 /* Define to 1 if you have the `towlower' function. */
@@ -1186,9 +1205,6 @@
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
-
-/* Define to 1 if the system has the type `_Bool'. */
-#undef HAVE__BOOL
 
 /* Define to 1 if you have the `_set_invalid_parameter_handler' function. */
 #undef HAVE__SET_INVALID_PARAMETER_HANDLER
@@ -1523,17 +1539,15 @@
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at runtime.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
+        STACK_DIRECTION > 0 => grows toward higher addresses
+        STACK_DIRECTION < 0 => grows toward lower addresses
+        STACK_DIRECTION = 0 => direction of growth unknown */
 #undef STACK_DIRECTION
 
 /* Define to 1 if the `S_IS*' macros in <sys/stat.h> do not work properly. */
 #undef STAT_MACROS_BROKEN
 
-/* Define to 1 if all of the C90 standard headers exist (not just the ones
-   required in a freestanding environment). This macro is provided for
-   backward compatibility; new code need not use it. */
+/* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
 /* Define to 1 if strerror_r returns char *. */
@@ -2036,7 +2050,8 @@
 #else
 # define _GL_ATTRIBUTE_MAYBE_UNUSED _GL_ATTRIBUTE_UNUSED
 #endif
-/* Alternative spelling of this macro, for convenience.  */
+/* Alternative spelling of this macro, for convenience and for
+   compatibility with glibc/include/libc-symbols.h.  */
 #define _GL_UNUSED _GL_ATTRIBUTE_MAYBE_UNUSED
 /* Earlier spellings of this macro.  */
 #define _UNUSED_PARAMETER_ _GL_ATTRIBUTE_MAYBE_UNUSED
@@ -2304,3 +2319,34 @@
 
 /* Define as a macro for copying va_list variables. */
 #undef va_copy
+
+#ifndef HAVE_C_BOOL
+# if !defined __cplusplus && !defined __bool_true_false_are_defined
+#  if HAVE_STDBOOL_H
+#   include <stdbool.h>
+#  else
+#   if defined __SUNPRO_C
+#    error "<stdbool.h> is not usable with this configuration. To make it usable, add -D_STDC_C99= to $CC."
+#   else
+#    error "<stdbool.h> does not exist on this platform. Use gnulib module 'stdbool-c99' instead of gnulib module 'stdbool'."
+#   endif
+#  endif
+# endif
+# if !true
+#  define true (!false)
+# endif
+#endif
+
+#if (!defined HAVE_C_STATIC_ASSERT && !defined assert \
+     && (!defined __cplusplus \
+         || (__cpp_static_assert < 201411 \
+             && __GNUG__ < 6 && __clang_major__ < 6)))
+ #include <assert.h>
+ #undef/**/assert
+ /* Solaris 11.4 <assert.h> defines static_assert as a macro with 2 arguments.
+    We need it also to be invocable with a single argument.  */
+ #if defined __sun && (__STDC_VERSION__ - 0 >= 201112L) && !defined __cplusplus
+  #undef static_assert
+  #define static_assert _Static_assert
+ #endif
+#endif

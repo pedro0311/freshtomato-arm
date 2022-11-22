@@ -182,16 +182,12 @@ void copy_the_answer(void)
 void paste_into_answer(void)
 {
 	size_t pastelen = strlen(cutbuffer->data);
-	char *fusion = nmalloc(strlen(answer) + pastelen + 1);
 
-	/* Concatenate: the current answer before the cursor, the first line
-	 * of the cutbuffer, plus the rest of the current answer. */
-	strncpy(fusion, answer, typing_x);
-	strncpy(fusion + typing_x, cutbuffer->data, pastelen);
-	strcpy(fusion + typing_x + pastelen, answer + typing_x);
+	answer = nrealloc(answer, strlen(answer) + pastelen + 1);
+	memmove(answer + typing_x + pastelen, answer + typing_x,
+								strlen(answer) - typing_x + 1);
+	strncpy(answer + typing_x, cutbuffer->data, pastelen);
 
-	free(answer);
-	answer = fusion;
 	typing_x += pastelen;
 }
 #endif
@@ -250,132 +246,92 @@ void do_statusbar_verbatim_input(void)
 	free(bytes);
 }
 
-/* Read in a keystroke, interpret it if it is a shortcut or toggle, and
- * return it.  Set finished to TRUE if we're done after running
- * or trying to run a function associated with a shortcut key. */
-int do_statusbar_input(bool *finished)
+/* Add the given input to the input buffer when it's a normal byte,
+ * and inject the gathered bytes into the answer when ready. */
+void absorb_character(int input, functionptrtype function)
 {
-	int input;
-		/* The character we read in. */
 	static char *puddle = NULL;
 		/* The input buffer. */
+	static size_t capacity = 8;
+		/* The size of the input buffer; gets doubled whenever needed. */
 	static size_t depth = 0;
 		/* The length of the input buffer. */
-	const keystruct *shortcut;
-
-	*finished = FALSE;
-
-	/* Read in a character. */
-	input = get_kbinput(footwin, VISIBLE);
-
-#ifndef NANO_TINY
-	if (input == KEY_WINCH)
-		return KEY_WINCH;
-#endif
-
-#ifdef ENABLE_MOUSE
-	/* If we got a mouse click and it was on a shortcut, read in the
-	 * shortcut character. */
-	if (input == KEY_MOUSE) {
-		if (do_statusbar_mouse() == 1)
-			input = get_kbinput(footwin, BLIND);
-		else
-			return ERR;
-	}
-#endif
-
-	/* Check for a shortcut in the current list. */
-	shortcut = get_shortcut(&input);
 
 	/* If not a command, discard anything that is not a normal character byte.
 	 * Apart from that, only accept input when not in restricted mode, or when
 	 * not at the "Write File" prompt, or when there is no filename yet. */
-	if (shortcut == NULL) {
+	if (!function) {
 		if (input < 0x20 || input > 0xFF || meta_key)
 			beep();
 		else if (!ISSET(RESTRICTED) || currmenu != MWRITEFILE ||
 						openfile->filename[0] == '\0') {
-			puddle = nrealloc(puddle, depth + 2);
+			/* When the input buffer (plus room for terminating NUL) is full,
+			 * extend it; otherwise, if it does not exist yet, create it. */
+			if (depth + 1 == capacity) {
+				capacity = 2 * capacity;
+				puddle = nrealloc(puddle, capacity);
+			} else if (!puddle)
+				puddle = nmalloc(capacity);
+
 			puddle[depth++] = (char)input;
 		}
 	}
 
-	/* If we got a shortcut, or if there aren't any other keystrokes waiting,
-	 * it's time to insert all characters in the input buffer (if not empty)
-	 * into the answer, and then clear the input buffer. */
-	if ((shortcut || waiting_keycodes() == 0) && puddle != NULL) {
+	/* If there are gathered bytes and we have a command or no other key codes
+	 * are waiting, it's time to insert these bytes into the answer. */
+	if (depth > 0 && (function || waiting_keycodes() == 0)) {
 		puddle[depth] = '\0';
-
 		inject_into_answer(puddle, depth);
-
-		free(puddle);
-		puddle = NULL;
 		depth = 0;
 	}
+}
 
-	if (shortcut) {
-		if (shortcut->func == do_tab || shortcut->func == do_enter)
-			;
-#ifdef ENABLE_HISTORIES
-		else if (shortcut->func == get_older_item ||
-					shortcut->func == get_newer_item)
-			;
-#endif
-		else if (shortcut->func == do_left)
-			do_statusbar_left();
-		else if (shortcut->func == do_right)
-			do_statusbar_right();
+/* Handle any editing shortcut, and return TRUE when handled. */
+bool handle_editing(functionptrtype function)
+{
+	if (function == do_left)
+		do_statusbar_left();
+	else if (function == do_right)
+		do_statusbar_right();
 #ifndef NANO_TINY
-		else if (shortcut->func == to_prev_word)
-			do_statusbar_prev_word();
-		else if (shortcut->func == to_next_word)
-			do_statusbar_next_word();
+	else if (function == to_prev_word)
+		do_statusbar_prev_word();
+	else if (function == to_next_word)
+		do_statusbar_next_word();
 #endif
-		else if (shortcut->func == do_home)
-			do_statusbar_home();
-		else if (shortcut->func == do_end)
-			do_statusbar_end();
-		/* When in restricted mode at the "Write File" prompt and the
-		 * filename isn't blank, disallow any input and deletion. */
-		else if (ISSET(RESTRICTED) && currmenu == MWRITEFILE &&
-								openfile->filename[0] != '\0' &&
-								(shortcut->func == do_verbatim_input ||
-								shortcut->func == do_delete ||
-								shortcut->func == do_backspace ||
-								shortcut->func == cut_text ||
-								shortcut->func == paste_text))
-			;
-#ifdef ENABLE_NANORC
-		else if (shortcut->func == (functionptrtype)implant)
-			implant(shortcut->expansion);
-#endif
-		else if (shortcut->func == do_verbatim_input)
-			do_statusbar_verbatim_input();
-		else if (shortcut->func == do_delete)
-			do_statusbar_delete();
-		else if (shortcut->func == do_backspace)
-			do_statusbar_backspace();
-		else if (shortcut->func == cut_text)
-			lop_the_answer();
+	else if (function == do_home)
+		do_statusbar_home();
+	else if (function == do_end)
+		do_statusbar_end();
+	/* When in restricted mode at the "Write File" prompt and the
+	 * filename isn't blank, disallow any input and deletion. */
+	else if (ISSET(RESTRICTED) && currmenu == MWRITEFILE &&
+							openfile->filename[0] != '\0' &&
+							(function == do_verbatim_input ||
+							function == do_delete || function == do_backspace ||
+							function == cut_text || function == paste_text))
+		;
+	else if (function == do_verbatim_input)
+		do_statusbar_verbatim_input();
+	else if (function == do_delete)
+		do_statusbar_delete();
+	else if (function == do_backspace)
+		do_statusbar_backspace();
+	else if (function == cut_text)
+		lop_the_answer();
 #ifndef NANO_TINY
-		else if (shortcut->func == copy_text)
-			copy_the_answer();
-		else if (shortcut->func == paste_text) {
-			if (cutbuffer != NULL)
-				paste_into_answer();
-		}
-#endif
-		else {
-			/* Handle any other shortcut in the current menu, setting finished
-			 * to TRUE to indicate that we're done after running or trying to
-			 * run its associated function. */
-			if (!ISSET(VIEW_MODE) || okay_for_view(shortcut))
-				shortcut->func();
-			*finished = TRUE;
-		}
+	else if (function == copy_text)
+		copy_the_answer();
+	else if (function == paste_text) {
+		if (cutbuffer != NULL)
+			paste_into_answer();
 	}
+#endif
+	else
+		return FALSE;
 
-	return input;
+	/* Don't handle any handled function again. */
+	return TRUE;
 }
 
 /* Return the column number of the first character of the answer that is
@@ -460,9 +416,6 @@ void add_or_remove_pipe_symbol_from_answer(void)
 functionptrtype acquire_an_answer(int *actual, bool *listed,
 					linestruct **history_list, void (*refresh_func)(void))
 {
-	int kbinput = ERR;
-	bool finished;
-	functionptrtype func;
 #ifdef ENABLE_HISTORIES
 	char *stored_string = NULL;
 		/* Whatever the answer was before the user foraged into history. */
@@ -472,7 +425,10 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 	size_t fragment_length = 0;
 		/* The length of the fragment that the user tries to tab complete. */
 #endif
-#endif /* ENABLE_HISTORIES */
+#endif
+	const keystruct *shortcut;
+	functionptrtype function;
+	int input;
 
 	if (typing_x > strlen(answer))
 		typing_x = strlen(answer);
@@ -480,27 +436,40 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 	while (TRUE) {
 		draw_the_promptbar();
 
-		kbinput = do_statusbar_input(&finished);
+		/* Read in one keystroke. */
+		input = get_kbinput(footwin, VISIBLE);
 
 #ifndef NANO_TINY
 		/* If the window size changed, go reformat the prompt string. */
-		if (kbinput == KEY_WINCH) {
-			refresh_func();
+		if (input == KEY_WINCH) {
+			refresh_func();  /* Only needed when in file browser. */
 			*actual = KEY_WINCH;
 #ifdef ENABLE_HISTORIES
 			free(stored_string);
 #endif
 			return NULL;
 		}
-#endif /* !NANO_TINY */
+#endif
+#ifdef ENABLE_MOUSE
+		/* For a click on a shortcut, read in the resulting keycode. */
+		if (input == KEY_MOUSE && do_statusbar_mouse() == 1)
+			input = get_kbinput(footwin, BLIND);
+		if (input == KEY_MOUSE)
+			continue;
+#endif
 
-		func = func_from_key(&kbinput);
+		/* Check for a shortcut in the current list. */
+		shortcut = get_shortcut(input);
+		function = (shortcut ? shortcut->func : NULL);
 
-		if (func == do_cancel || func == do_enter)
+		/* When it's a normal character, add it to the answer. */
+		absorb_character(input, function);
+
+		if (function == do_cancel || function == do_enter)
 			break;
 
 #ifdef ENABLE_TABCOMP
-		if (func == do_tab) {
+		if (function == do_tab) {
 #ifdef ENABLE_HISTORIES
 			if (history_list != NULL) {
 				if (!previous_was_tab)
@@ -517,9 +486,9 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 			if ((currmenu & (MINSERTFILE|MWRITEFILE|MGOTODIR)) && !ISSET(RESTRICTED))
 				answer = input_tab(answer, &typing_x, refresh_func, listed);
 		} else
-#endif /* ENABLE_TABCOMP */
+#endif
 #ifdef ENABLE_HISTORIES
-		if (func == get_older_item && history_list != NULL) {
+		if (function == get_older_item && history_list != NULL) {
 			/* If this is the first step into history, start at the bottom. */
 			if (stored_string == NULL)
 				reset_history_pointer_for(*history_list);
@@ -534,7 +503,7 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 				answer = mallocstrcpy(answer, (*history_list)->data);
 				typing_x = strlen(answer);
 			}
-		} else if (func == get_newer_item && history_list != NULL) {
+		} else if (function == get_newer_item && history_list != NULL) {
 			/* If there is a newer item, move to it and copy its string. */
 			if ((*history_list)->next != NULL) {
 				*history_list = (*history_list)->next;
@@ -549,29 +518,33 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 			}
 		} else
 #endif /* ENABLE_HISTORIES */
-		/* If we ran a function that should not exit from the prompt... */
-		if (func == do_help || func == full_refresh)
-			finished = FALSE;
+		if (function == do_help || function == full_refresh)
+			function();
 #ifndef NANO_TINY
-		else if (func == do_nothing)
-			finished = FALSE;
-		else if (func == do_toggle) {
+		else if (function == do_toggle && shortcut->toggle == NO_HELP) {
 			TOGGLE(NO_HELP);
 			window_init();
 			focusing = FALSE;
 			refresh_func();
 			bottombars(currmenu);
-			finished = FALSE;
-		}
+		} else if (function == do_nothing)
+			;
 #endif
-
-		/* If we have a shortcut with an associated function, break out if
-		 * we're finished after running or trying to run the function. */
-		if (finished)
-			break;
+#ifdef ENABLE_NANORC
+		else if (function == (functionptrtype)implant)
+			implant(shortcut->expansion);
+#endif
+		else if (function && !handle_editing(function)) {
+			/* When it's a permissible shortcut, run it and done. */
+			if (!ISSET(VIEW_MODE) || !changes_something(function)) {
+				function();
+				break;
+			} else
+				beep();
+		}
 
 #if defined(ENABLE_HISTORIES) && defined(ENABLE_TABCOMP)
-		previous_was_tab = (func == do_tab);
+		previous_was_tab = (function == do_tab);
 #endif
 	}
 
@@ -583,9 +556,9 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 	}
 #endif
 
-	*actual = kbinput;
+	*actual = input;
 
-	return func;
+	return function;
 }
 
 /* Ask a question on the status bar.  Return 0 when text was entered,
@@ -595,7 +568,7 @@ functionptrtype acquire_an_answer(int *actual, bool *listed,
 int do_prompt(int menu, const char *provided, linestruct **history_list,
 				void (*refresh_func)(void), const char *msg, ...)
 {
-	functionptrtype func = NULL;
+	functionptrtype function = NULL;
 	bool listed = FALSE;
 	va_list ap;
 	int retval;
@@ -620,25 +593,23 @@ int do_prompt(int menu, const char *provided, linestruct **history_list,
 
 	lastmessage = VACUUM;
 
-	func = acquire_an_answer(&retval, &listed, history_list, refresh_func);
+	function = acquire_an_answer(&retval, &listed, history_list, refresh_func);
 	free(prompt);
-	prompt = saved_prompt;
 
 #ifndef NANO_TINY
 	if (retval == KEY_WINCH)
 		goto redo_theprompt;
 #endif
 
-	/* If we're done with this prompt, restore the x position to what
-	 * it was at a possible previous prompt. */
-	if (func == do_cancel || func == do_enter)
+	/* Restore a possible previous prompt and maybe the typing position. */
+	prompt = saved_prompt;
+	if (function == do_cancel || function == do_enter)
 		typing_x = was_typing_x;
 
-	/* If we left the prompt via Cancel or Enter, set the return value
-	 * properly. */
-	if (func == do_cancel)
+	/* Set the proper return value for Cancel and Enter. */
+	if (function == do_cancel)
 		retval = -1;
-	else if (func == do_enter)
+	else if (function == do_enter)
 		retval = (*answer == '\0') ? -2 : 0;
 
 	if (lastmessage == VACUUM)
@@ -667,6 +638,8 @@ int ask_user(bool withall, const char *question)
 	const char *yesstr = _("Yy");
 	const char *nostr = _("Nn");
 	const char *allstr = _("Aa");
+	const keystruct *shortcut;
+	functionptrtype function;
 
 	while (choice == UNDECIDED) {
 #ifdef ENABLE_NLS
@@ -722,9 +695,11 @@ int ask_user(bool withall, const char *question)
 		if (kbinput == KEY_WINCH)
 			continue;
 
-		/* Accept the first character of an external paste. */
-		if (bracketed_paste && kbinput == BRACKETED_PASTE_MARKER)
+		/* Accept first character of an external paste and ignore the rest. */
+		if (bracketed_paste)
 			kbinput = get_kbinput(footwin, BLIND);
+		while (bracketed_paste)
+			get_kbinput(footwin, BLIND);
 #endif
 
 #ifdef ENABLE_NLS
@@ -756,8 +731,27 @@ int ask_user(bool withall, const char *question)
 			choice = NO;
 		else if (withall && strchr("Aa", kbinput) != NULL)
 			choice = ALL;
-		else if (func_from_key(&kbinput) == do_cancel)
+
+		if (choice != UNDECIDED)
+			break;
+
+		shortcut = get_shortcut(kbinput);
+		function = (shortcut ? shortcut->func : NULL);
+
+		if (function == do_cancel)
 			choice = CANCEL;
+		else if (function == full_refresh)
+			full_refresh();
+#ifndef NANO_TINY
+		else if (function == do_toggle && shortcut->toggle == NO_HELP) {
+			TOGGLE(NO_HELP);
+			window_init();
+			titlebar(NULL);
+			focusing = FALSE;
+			edit_refresh();
+			focusing = TRUE;
+		}
+#endif
 		/* Interpret ^N and ^Q as "No", to allow exiting in anger. */
 		else if (kbinput == '\x0E' || kbinput == '\x11')
 			choice = NO;
@@ -782,26 +776,8 @@ int ask_user(bool withall, const char *question)
 			}
 		}
 #endif
-		else if (func_from_key(&kbinput) == full_refresh)
-			full_refresh();
-#ifndef NANO_TINY
-		else if (func_from_key(&kbinput) == do_toggle) {
-			TOGGLE(NO_HELP);
-			window_init();
-			titlebar(NULL);
-			focusing = FALSE;
-			edit_refresh();
-			focusing = TRUE;
-		}
-#endif
 		else
 			beep();
-
-#ifndef NANO_TINY
-		/* Ignore the rest of an external paste. */
-		while (bracketed_paste)
-			kbinput = get_kbinput(footwin, BLIND);
-#endif
 	}
 
 	return choice;
