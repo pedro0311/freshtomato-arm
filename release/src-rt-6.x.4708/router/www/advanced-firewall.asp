@@ -31,7 +31,7 @@ function verifyFields(focused, quiet) {
 	E('_f_icmp_limit').disabled = !E('_f_icmp').checked;
 	E('_f_icmp_limit_icmp').disabled = (!E('_f_icmp').checked || !E('_f_icmp_limit').checked);
 
-/* IGMP proxy */
+/* PROXY-BEGIN */
 	var enable_mcast = E('_f_multicast').checked;
 	E('_f_multicast_lan').disabled = ((!enable_mcast) || (nvram.lan_ifname.length < 1));
 	E('_f_multicast_lan1').disabled = ((!enable_mcast) || (nvram.lan1_ifname.length < 1));
@@ -76,7 +76,6 @@ function verifyFields(focused, quiet) {
 	else
 		ferror.clear('_f_multicast');
 
-/* udpxy */
 	var enable_udpxy = E('_f_udpxy_enable').checked;
 	E('_f_udpxy_lan').disabled = ((!enable_udpxy) || (nvram.lan_ifname.length < 1));
 	E('_f_udpxy_lan1').disabled = ((!enable_udpxy) || (nvram.lan1_ifname.length < 1));
@@ -110,6 +109,7 @@ function verifyFields(focused, quiet) {
 	}
 	else
 		ferror.clear('_f_udpxy_enable');
+/* PROXY-END */
 
 	return 1;
 }
@@ -125,6 +125,7 @@ function save() {
 
 	fom.ne_syncookies.value = fom._f_syncookies.checked ? 1 : 0;
 	fom.DSCP_fix_enable.value = fom._f_DSCP_fix_enable.checked ? 1 : 0;
+/* PROXY-BEGIN */
 	fom.multicast_pass.value = fom._f_multicast.checked ? 1 : 0;
 	fom.multicast_lan.value = fom._f_multicast_lan.checked ? 1 : 0;
 	fom.multicast_lan1.value = fom._f_multicast_lan1.checked ? 1 : 0;
@@ -140,7 +141,7 @@ function save() {
 	fom.udpxy_clients.value = fom._f_udpxy_clients.value;
 	fom.udpxy_port.value = fom._f_udpxy_port.value;
 	fom.udpxy_wanface.value = fom._f_udpxy_wanface.value;
-
+/* PROXY-END */
 /* EMF-BEGIN */
 	fom.emf_enable.value = fom._f_emf.checked ? 1 : 0;
 	if (fom.emf_enable.value != nvram.emf_enable)
@@ -182,6 +183,7 @@ function init() {
 <input type="hidden" name="block_wan_limit_icmp">
 <input type="hidden" name="ne_syncookies">
 <input type="hidden" name="DSCP_fix_enable">
+<!-- PROXY-BEGIN -->
 <input type="hidden" name="multicast_pass">
 <input type="hidden" name="multicast_lan">
 <input type="hidden" name="multicast_lan1">
@@ -197,7 +199,10 @@ function init() {
 <input type="hidden" name="udpxy_clients">
 <input type="hidden" name="udpxy_port">
 <input type="hidden" name="udpxy_wanface">
+<!-- PROXY-END -->
+<!-- EMF-BEGIN -->
 <input type="hidden" name="emf_enable">
+<!-- EMF-END -->
 <input type="hidden" name="force_igmpv2">
 <input type="hidden" name="wan_dhcp_pass">
 <input type="hidden" name="fw_blackhole">
@@ -240,6 +245,7 @@ function init() {
 <div class="section">
 	<script>
 		createFieldTable('', [
+/* PROXY-BEGIN */
 			{ title: 'Enable IGMP proxy', name: 'f_multicast', type: 'checkbox', value: nvram.multicast_pass == '1' },
 			{ title: 'LAN0', indent: 2, name: 'f_multicast_lan', type: 'checkbox', value: (nvram.multicast_lan == '1') },
 			{ title: 'LAN1', indent: 2, name: 'f_multicast_lan1', type: 'checkbox', value: (nvram.multicast_lan1 == '1') },
@@ -258,6 +264,7 @@ function init() {
 			{ title: 'Max clients', indent: 2, name: 'f_udpxy_clients', type: 'text', maxlen: 4, size: 6, value: fixInt(nvram.udpxy_clients || 3, 1, 5000, 3) },
 			{ title: 'Udpxy port', indent: 2, name: 'f_udpxy_port', type: 'text', maxlen: 5, size: 7, value: fixPort(nvram.udpxy_port, 4022) },
 			null,
+/* PROXY-END */
 /* EMF-BEGIN */
 			{ title: 'Efficient Multicast Forwarding (IGMP Snooping)', name: 'f_emf', type: 'checkbox', value: nvram.emf_enable != '0', suffix: ' &nbsp;<small>Please refer to the wiki<\/small>' },
 /* EMF-END */
@@ -275,6 +282,7 @@ function init() {
 		<li><b>Allow DHCP spoofing</b> - Accept/process packets from DHCP servers whose IP is different from the one advertised within the DHCP messages. This is often categorized as an attach (DHCP spoofing) but could be a genuine scenario in some rare cases. Enabling the option lowers the security level.</li>
 		<li><b>Smart MTU black hole detection</b> - Read more <a href="https://blog.cloudflare.com/path-mtu-discovery-in-practice/" class="new_window">HERE</a>.</li>
 	</ul>
+<!-- PROXY-BEGIN -->
 	<i>IGMP proxy:</i><br>
 	<ul>
 		<li><b>LAN0 / LAN1 / LAN2 / LAN3</b> - Add interface br0 / br1 / br2 / br3 to igmp.conf (Ex.: phyint br0 downstream ratelimit 0 threshold 1).</li>
@@ -290,6 +298,7 @@ function init() {
 		<li><b>Status</b> - To display udpxy status, please go to http://lanaddress:port/status/.</li>
 		<li><b>Other hints</b> - If Udpxy is enabled and no interface is selected default address (0.0.0.0) will be used.</li>
 	</ul>
+<!-- PROXY-END -->
 </div>
 
 <!-- / / / -->

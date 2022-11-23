@@ -777,6 +777,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "block_wan",			"1"				, 0 },	/* block inbound icmp */
 	{ "block_wan_limit",		"1"				, 0 },
 	{ "block_wan_limit_icmp",	"3"				, 0 },
+#ifdef TCONFIG_PROXY
 	{ "multicast_pass",		"0"				, 0 },	/* enable multicast proxy */
 	{ "multicast_lan",		"0"				, 0 },	/* on LAN (br0) */
 	{ "multicast_lan1",		"0"				, 0 },	/* on LAN1 (br1) */
@@ -793,6 +794,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "udpxy_clients",		"3"				, 0 },
 	{ "udpxy_port",			"4022"				, 0 },
 	{ "udpxy_wanface",		""				, 0 },	/* alternative wanface */
+#endif /* TCONFIG_PROXY */
 	{ "ne_syncookies",		"0"				, 0 },	/* tcp_syncookies */
 	{ "DSCP_fix_enable",		"1"				, 0 },	/* Comacst DSCP fix */
 	{ "ne_snat",			"0"				, 0 },	/* use SNAT instead of MASQUERADE */

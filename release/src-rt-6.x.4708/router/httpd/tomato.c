@@ -614,6 +614,7 @@ static const nvset_t nvset_list[] = {
 	{ "block_wan",			V_01				},
 	{ "block_wan_limit",		V_01				},
 	{ "block_wan_limit_icmp",	V_RANGE(1, 300)			},
+#ifdef TCONFIG_PROXY
 	{ "multicast_pass",		V_01				},
 	{ "multicast_lan",		V_01				},
 	{ "multicast_lan1",		V_01				},
@@ -621,7 +622,6 @@ static const nvset_t nvset_list[] = {
 	{ "multicast_lan3",		V_01				},
 	{ "multicast_quickleave",	V_01				},
 	{ "multicast_custom",		V_TEXT(0, 2048)			},
-	{ "block_loopback",		V_01				},
 	{ "udpxy_enable",		V_01				},
 	{ "udpxy_lan",			V_01				},
 	{ "udpxy_lan1",			V_01				},
@@ -631,6 +631,8 @@ static const nvset_t nvset_list[] = {
 	{ "udpxy_clients",		V_RANGE(1, 5000)		},
 	{ "udpxy_port",			V_RANGE(0, 65535)		},
 	{ "udpxy_wanface",		V_TEXT(0, 8)			},	/* alternative wanface */
+#endif /* TCONFIG_PROXY */
+	{ "block_loopback",		V_01				},
 	{ "nf_loopback",		V_NUM				},
 	{ "ne_syncookies",		V_01				},
 	{ "DSCP_fix_enable",		V_01				},

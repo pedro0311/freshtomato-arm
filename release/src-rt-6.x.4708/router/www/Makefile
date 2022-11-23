@@ -427,6 +427,11 @@ ifeq ($(filter y,$(TCONFIG_BLINK) $(TCONFIG_BCMARM)),)
 	sed -i $(INSTALLDIR)/www/basic-ipv6.asp -e "/RTNPLUS-BEGIN/,/RTNPLUS-END/d"
 endif
 
+# Only include udpxy/igmpproxy part if needed
+ifneq ($(TCONFIG_PROXY),y)
+	sed -i $(INSTALLDIR)/www/advanced-firewall.asp -e "/PROXY-BEGIN/,/PROXY-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.jsz *.html); do \
@@ -482,6 +487,7 @@ endif
 		-e "/BCMARM-BEGIN/d"	-e "/BCMARM-END/d" \
 		-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 		-e "/RTNPLUS-BEGIN/d"	-e "/RTNPLUS-END/d" \
+		-e "/PROXY-BEGIN/d"	-e "/PROXY-END/d" \
 		|| true; \
 	done
 

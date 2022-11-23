@@ -391,3 +391,7 @@ config TCONFIG_IRQBALANCE
 config TCONFIG_TRXKEY
 	bool "Include Asus New TRX Key (allow upgrade to AsusWRT via GUI)"
 	default y
+
+config TCONFIG_PROXY
+	bool "udpxy and igmpproxy"
+	default n
