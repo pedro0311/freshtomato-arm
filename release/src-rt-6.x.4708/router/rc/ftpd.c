@@ -147,7 +147,8 @@ void start_ftpd(int force)
 	            "anon_max_rate=%d\n"
 	            "local_max_rate=%d\n",
 	            nvram_get_int("log_ftp") ? "yes" : "no",
-	            vsftpd_users, vsftpd_passwd,
+	            vsftpd_users,
+	            vsftpd_passwd,
 #ifdef TCONFIG_IPV6
 	            ipv6_enabled() ? "_ipv6" : "",
 	            ipv6_enabled() ? "" : "_ipv6",
@@ -268,7 +269,7 @@ void start_ftpd(int force)
 
 	fclose(fp);
 
-	ret = eval("vsftpd");
+	ret = eval("vsftpd", vsftpd_conf);
 	if (ret) {
 		logmsg(LOG_ERR, "starting vsftpd failed - check configuration ...");
 		stop_ftpd();
