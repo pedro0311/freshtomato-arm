@@ -24,7 +24,7 @@ Subject: [PATCH] Reduce duplication in sql.c
 +		sql = sqlite3_vmprintf(fmt, ap);\
 +		va_end(ap);\
 +\
-+		/*DPRINTF(E_DEBUG, L_DB_SQL, "sql: %s\n", sql); */ \
++		/* DPRINTF(E_DEBUG, L_DB_SQL, "sql: %s\n", sql); */ \
 +\
 +		switch (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL))\
 +		{\

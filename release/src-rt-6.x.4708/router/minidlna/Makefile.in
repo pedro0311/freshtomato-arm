@@ -111,6 +111,7 @@ sbin_PROGRAMS = minidlnad$(EXEEXT)
 check_PROGRAMS = testupnpdescgen$(EXEEXT)
 @HAVE_KQUEUE_TRUE@am__append_1 = kqueue.c monitor_kqueue.c
 @HAVE_KQUEUE_FALSE@am__append_2 = select.c
+@HAVE_INOTIFY_TRUE@am__append_3 = monitor_inotify.c
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/gettext.m4 \
@@ -137,11 +138,13 @@ am__minidlnad_SOURCES_DIST = minidlna.c upnphttp.c upnpdescgen.c \
 	upnpevents.c sql.c utils.c metadata.c scanner.c monitor.c \
 	tivo_utils.c tivo_beacon.c tivo_commands.c playlist.c \
 	image_utils.c albumart.c log.c containers.c avahi.c \
-	tagutils/tagutils.c kqueue.c monitor_kqueue.c select.c
+	tagutils/tagutils.c kqueue.c monitor_kqueue.c select.c \
+	monitor_inotify.c
 am__dirstamp = $(am__leading_dot)dirstamp
 @HAVE_KQUEUE_TRUE@am__objects_1 = kqueue.$(OBJEXT) \
 @HAVE_KQUEUE_TRUE@	monitor_kqueue.$(OBJEXT)
 @HAVE_KQUEUE_FALSE@am__objects_2 = select.$(OBJEXT)
+@HAVE_INOTIFY_TRUE@am__objects_3 = monitor_inotify.$(OBJEXT)
 am_minidlnad_OBJECTS = minidlna.$(OBJEXT) upnphttp.$(OBJEXT) \
 	upnpdescgen.$(OBJEXT) upnpsoap.$(OBJEXT) \
 	upnpreplyparse.$(OBJEXT) minixml.$(OBJEXT) clients.$(OBJEXT) \
@@ -153,7 +156,8 @@ am_minidlnad_OBJECTS = minidlna.$(OBJEXT) upnphttp.$(OBJEXT) \
 	tivo_commands.$(OBJEXT) playlist.$(OBJEXT) \
 	image_utils.$(OBJEXT) albumart.$(OBJEXT) log.$(OBJEXT) \
 	containers.$(OBJEXT) avahi.$(OBJEXT) \
-	tagutils/tagutils.$(OBJEXT) $(am__objects_1) $(am__objects_2)
+	tagutils/tagutils.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
+	$(am__objects_3)
 minidlnad_OBJECTS = $(am_minidlnad_OBJECTS)
 am__DEPENDENCIES_1 =
 minidlnad_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -184,17 +188,17 @@ am__depfiles_remade = ./$(DEPDIR)/albumart.Po ./$(DEPDIR)/avahi.Po \
 	./$(DEPDIR)/kqueue.Po ./$(DEPDIR)/log.Po \
 	./$(DEPDIR)/metadata.Po ./$(DEPDIR)/minidlna.Po \
 	./$(DEPDIR)/minissdp.Po ./$(DEPDIR)/minixml.Po \
-	./$(DEPDIR)/monitor.Po ./$(DEPDIR)/monitor_kqueue.Po \
-	./$(DEPDIR)/options.Po ./$(DEPDIR)/playlist.Po \
-	./$(DEPDIR)/process.Po ./$(DEPDIR)/scanner.Po \
-	./$(DEPDIR)/select.Po ./$(DEPDIR)/sql.Po \
-	./$(DEPDIR)/testupnpdescgen.Po ./$(DEPDIR)/tivo_beacon.Po \
-	./$(DEPDIR)/tivo_commands.Po ./$(DEPDIR)/tivo_utils.Po \
-	./$(DEPDIR)/upnpdescgen.Po ./$(DEPDIR)/upnpevents.Po \
-	./$(DEPDIR)/upnpglobalvars.Po ./$(DEPDIR)/upnphttp.Po \
-	./$(DEPDIR)/upnpreplyparse.Po ./$(DEPDIR)/upnpsoap.Po \
-	./$(DEPDIR)/utils.Po ./$(DEPDIR)/uuid.Po \
-	tagutils/$(DEPDIR)/tagutils.Po
+	./$(DEPDIR)/monitor.Po ./$(DEPDIR)/monitor_inotify.Po \
+	./$(DEPDIR)/monitor_kqueue.Po ./$(DEPDIR)/options.Po \
+	./$(DEPDIR)/playlist.Po ./$(DEPDIR)/process.Po \
+	./$(DEPDIR)/scanner.Po ./$(DEPDIR)/select.Po \
+	./$(DEPDIR)/sql.Po ./$(DEPDIR)/testupnpdescgen.Po \
+	./$(DEPDIR)/tivo_beacon.Po ./$(DEPDIR)/tivo_commands.Po \
+	./$(DEPDIR)/tivo_utils.Po ./$(DEPDIR)/upnpdescgen.Po \
+	./$(DEPDIR)/upnpevents.Po ./$(DEPDIR)/upnpglobalvars.Po \
+	./$(DEPDIR)/upnphttp.Po ./$(DEPDIR)/upnpreplyparse.Po \
+	./$(DEPDIR)/upnpsoap.Po ./$(DEPDIR)/utils.Po \
+	./$(DEPDIR)/uuid.Po tagutils/$(DEPDIR)/tagutils.Po
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
@@ -361,6 +365,7 @@ PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 POSUB = @POSUB@
+SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
@@ -432,7 +437,7 @@ minidlnad_SOURCES = minidlna.c upnphttp.c upnpdescgen.c upnpsoap.c \
 	sql.c utils.c metadata.c scanner.c monitor.c tivo_utils.c \
 	tivo_beacon.c tivo_commands.c playlist.c image_utils.c \
 	albumart.c log.c containers.c avahi.c tagutils/tagutils.c \
-	$(am__append_1) $(am__append_2)
+	$(am__append_1) $(am__append_2) $(am__append_3)
 @HAVE_VORBISFILE_TRUE@vorbislibs = -lvorbis -logg
 @HAVE_VORBISFILE_FALSE@@NEED_OGG_TRUE@flacogglibs = -logg
 @HAVE_AVAHI_TRUE@@TIVO_SUPPORT_TRUE@avahilibs = -lavahi-client -lavahi-common
@@ -602,6 +607,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minissdp.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/minixml.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/monitor.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/monitor_inotify.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/monitor_kqueue.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/options.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/playlist.Po@am__quote@ # am--include-marker
@@ -1004,6 +1010,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/minissdp.Po
 	-rm -f ./$(DEPDIR)/minixml.Po
 	-rm -f ./$(DEPDIR)/monitor.Po
+	-rm -f ./$(DEPDIR)/monitor_inotify.Po
 	-rm -f ./$(DEPDIR)/monitor_kqueue.Po
 	-rm -f ./$(DEPDIR)/options.Po
 	-rm -f ./$(DEPDIR)/playlist.Po
@@ -1084,6 +1091,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/minissdp.Po
 	-rm -f ./$(DEPDIR)/minixml.Po
 	-rm -f ./$(DEPDIR)/monitor.Po
+	-rm -f ./$(DEPDIR)/monitor_inotify.Po
 	-rm -f ./$(DEPDIR)/monitor_kqueue.Po
 	-rm -f ./$(DEPDIR)/options.Po
 	-rm -f ./$(DEPDIR)/playlist.Po

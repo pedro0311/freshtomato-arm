@@ -1,6 +1,6 @@
 --- minidlna/minidlna.c
 +++ minidlna/minidlna.c
-@@ -336,7 +336,7 @@ open_db(sqlite3 **sq3)
+@@ -335,7 +335,7 @@ open_db(sqlite3 **sq3)
  	sql_exec(db, "pragma page_size = 4096");
  	sql_exec(db, "pragma journal_mode = OFF");
  	sql_exec(db, "pragma synchronous = OFF;");
@@ -9,7 +9,7 @@
  
  	return new_db;
  }
-@@ -966,7 +966,7 @@ init(int argc, char **argv)
+@@ -965,7 +965,7 @@ init(int argc, char **argv)
  		}
  	}
  
@@ -18,7 +18,7 @@
  	{
  		printf("Usage:\n\t"
  			"%s [-d] [-v] [-f config_file] [-p port]\n"
-@@ -1021,6 +1021,7 @@
+@@ -1020,6 +1020,7 @@
  		pid = process_daemonize();
  		if (access(db_path, F_OK) != 0)
  			make_dir(db_path, S_ISVTX|S_IRWXU|S_IRWXG|S_IRWXO);
@@ -26,7 +26,7 @@
  	}
  	if (log_init(log_level) < 0)
  		DPRINTF(E_FATAL, L_GENERAL, "Failed to open log file '%s/" LOGFILE_NAME "': %s\n",
-@@ -1159,7 +1160,7 @@
+@@ -1157,7 +1158,7 @@
  	smonitor = OpenAndConfMonitorSocket();
  	if (smonitor > 0)
  	{
@@ -35,7 +35,7 @@
  		event_module.add(&monev);
  	}
  
-@@ -1173,7 +1174,7 @@
+@@ -1171,7 +1172,7 @@
  	}
  	else
  	{
@@ -44,7 +44,7 @@
  		event_module.add(&ssdpev);
  	}
  
-@@ -1178,11 +1179,21 @@
+@@ -1176,11 +1177,21 @@
  	}
  
  	/* open socket for HTTP connections. */
@@ -67,8 +67,8 @@
 +	httpev = (struct event ){ .fd = shttpl, .rdwr = EVENT_READ, {beaconev.process = ProcessListen} };
  	event_module.add(&httpev);
  
- #ifdef TIVO_SUPPORT
-@@ -1204,7 +1215,7 @@
+ 	if (gettimeofday(&timeofday, 0) < 0)
+@@ -1205,7 +1216,7 @@
  			if(sbeacon < 0)
  				DPRINTF(E_FATAL, L_GENERAL, "Failed to open sockets for sending Tivo beacon notify "
  					"messages. EXITING\n");
@@ -77,9 +77,9 @@
  			event_module.add(&beaconev);
  			tivo_bcast.sin_family = AF_INET;
  			tivo_bcast.sin_addr.s_addr = htonl(getBcastAddress());
---- minidlna/monitor.c
-+++ minidlna/monitor.c
-@@ -700,7 +700,13 @@
+--- minidlna/monitor_inotify.c
++++ minidlna/monitor_inotify.c
+@@ -332,7 +332,13 @@
  				{
  					DPRINTF(E_DEBUG, L_INOTIFY,  "The directory %s was %s.\n",
  						path_buf, (event->mask & IN_MOVED_TO ? "moved here" : "created"));
@@ -202,15 +202,15 @@
  	int flags, s, i;
  	const char *p;
  	unsigned short port;
-@@ -300,7 +301,7 @@
- 		}
- 	} else {
- 		obj->ev = (struct event ){ .fd = s, .rdwr = EVENT_WRITE,
--		    .process = upnp_event_process_notify, .data = obj };
-+		    {evt.process = upnp_event_process_notify}, .data = obj };
- 		event_module.add(&obj->ev);
- 	}
- 
+@@ -294,7 +295,7 @@
+ 	       obj->addrstr, port, obj->path);
+ 	obj->state = EConnecting;
+ 	obj->ev = (struct event ){ .fd = s, .rdwr = EVENT_WRITE,
+-		.process = upnp_event_process_notify, .data = obj };
++		{evt.process = upnp_event_process_notify}, .data = obj };
+ 	event_module.add(&obj->ev);
+ 	if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+ 		if(errno != EINPROGRESS && errno != EWOULDBLOCK) {
 --- minidlna/upnphttp.c
 +++ minidlna/upnphttp.c
 @@ -108,13 +108,14 @@
@@ -231,7 +231,7 @@
  }
 --- minidlna/utils.c
 +++ minidlna/utils.c
-@@ -574,3 +574,35 @@
+@@ -576,3 +576,35 @@
  		t1->tv_usec -= 1000000;
  	}
  }
