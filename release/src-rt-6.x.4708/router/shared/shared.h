@@ -206,11 +206,6 @@ extern void add_remove_usbhost(char *host, int add);
 typedef int (*host_exec)(char *dev_name, int host_num, char *dsc_name, char *pt_name, uint flags);
 extern int exec_for_host(int host, int obsolete, uint flags, host_exec func);
 extern int is_no_partition(const char *discname);
-extern int file_lock(char *tag);
-extern void file_unlock(int lockfd);
-#else
-#define file_lock(args...) (-1)
-#define file_unlock(args...) do { } while(0)
 #endif /* TCONFIG_USB */
 
 /* id.c */
@@ -308,6 +303,8 @@ extern int f_read_alloc(const char *path, char **buffer, int max);
 extern int f_read_alloc_string(const char *path, char **buffer, int max);
 extern int f_wait_exists(const char *name, int max);
 extern int f_wait_notexists(const char *name, int max);
+extern int file_lock(char *tag);
+extern void file_unlock(int lockfd);
 
 /* led.c */
 #define LED_WLAN		0
