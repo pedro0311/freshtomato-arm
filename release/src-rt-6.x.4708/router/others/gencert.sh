@@ -74,10 +74,13 @@ I=$(($I + 1))
 	nvram set https_crt_timeset=0
 }
 
-# create the key
-$OPENSSL genpkey -out $KEYNAME.$PID -algorithm rsa -pkeyopt rsa_keygen_bits:2048
-# create certificate request and sign it
-$OPENSSL req -days 3653 -new -x509 -key $KEYNAME.$PID -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
+# create the key and certificate request
+$OPENSSL req -new -out /tmp/cert.csr.$PID -keyout /tmp/privkey.pem.$PID -newkey rsa:2048 -passout pass:password -config $OPENSSLCNF
+$OPENSSL ecparam -out $KEYNAME.$PID -name prime256v1 -genkey
+$OPENSSL req -new -key $KEYNAME.$PID -out /tmp/cert.csr.$PID -config $OPENSSLCNF
+
+# import the self-certificate
+RANDFILE=/dev/urandom $OPENSSL req -x509 -new -nodes -in /tmp/cert.csr.$PID -key $KEYNAME.$PID -days 3653 -sha256 -out $CERTNAME.$PID -set_serial $1 -config $OPENSSLCNF
 
 # server.pem for WebDav SSL
 cat $KEYNAME.$PID $CERTNAME.$PID > server.pem
@@ -86,6 +89,5 @@ mv $KEYNAME.$PID $KEYNAME
 mv $CERTNAME.$PID $CERTNAME
 
 chmod 640 $KEYNAME
-chmod 640 $CERTNAME
 
-rm -f /tmp/privkey.pem.$PID $OPENSSLCNF $PIDFILE
+rm -f /tmp/cert.csr.$PID /tmp/privkey.pem.$PID $OPENSSLCNF $PIDFILE
