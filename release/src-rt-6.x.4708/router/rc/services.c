@@ -3374,8 +3374,6 @@ TOP:
 	if ((strcmp(service, "ftpd") == 0) || (strcmp(service, "vsftpd") == 0)) {
 		if (act_stop) stop_ftpd();
 		setup_conntrack();
-		stop_firewall();
-		start_firewall(); /* always restarted */
 		if (act_start) start_ftpd(1); /* force (re)start */
 		goto CLEAR;
 	}

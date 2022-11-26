@@ -244,10 +244,6 @@ int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int af, int
 	return (r & af);
 }
 
-#define ipt_source_strict(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 1, categ, name)
-#define ipt_source(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 0, categ, name)
-#define ip6t_source(s, src, categ, name) ipt_addr(src, 128, s, "src", IPT_V6, 0, categ, name)
-
 void ipt_write(const char *format, ...)
 {
 	va_list args;
@@ -1034,12 +1030,6 @@ static void nat_table(void)
 		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("snmp_port"), lanaddr[0]);
 #endif
 
-#ifdef TCONFIG_FTP
-	/* FTP WAN access */
-	if (nvram_match("ftp_enable", "1"))
-		ipt_write("-A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n", nvram_safe_get("ftp_port"), lanaddr[0]);
-#endif
-
 	if (wanup || wan2up
 #ifdef TCONFIG_MULTIWAN
 	    || wan3up || wan4up
@@ -1183,7 +1173,6 @@ static void filter_input(void)
 		          "-A ftplimit -m recent --set --name ftp\n"
 		          "-A ftplimit -m recent --update --hitcount %d --seconds %s --name ftp -j %s\n",
 		          atoi(hit) + 1, sec, chain_in_drop);
-		ipt_write("-A INPUT -p tcp --dport %s -m state --state NEW -j ftplimit\n", nvram_safe_get("ftp_port"));
 	}
 #endif
 
@@ -1266,26 +1255,6 @@ static void filter_input(void)
 
 		p = c + 1;
 	} while (*p);
-
-#ifdef TCONFIG_FTP
-	/* FTP WAN access */
-	if (nvram_match("ftp_enable", "1")) {
-		strlcpy(t, nvram_safe_get("ftp_sip"), sizeof(t));
-		p = t;
-		do {
-			if ((c = strchr(p, ',')) != NULL)
-				*c = 0;
-
-			if (ipt_source(p, s, "ftp", "remote access"))
-				ipt_write("-A INPUT -p tcp %s --dport %s -j %s\n", s, nvram_safe_get("ftp_port"), chain_in_accept);
-
-			if (!c)
-				break;
-
-			p = c + 1;
-		} while (*p);
-	}
-#endif
 
 #ifdef TCONFIG_SNMP
 	if (nvram_match("snmp_enable", "1") && nvram_match("snmp_remote", "1")) {
@@ -1713,7 +1682,6 @@ static void filter6_input(void)
 		           "-A ftplimit -m recent --set --name ftp\n"
 		           "-A ftplimit -m recent --update --hitcount %d --seconds %s --name ftp -j %s\n",
 		           atoi(hit) + 1, sec, chain_in_drop);
-		ip6t_write("-A INPUT -p tcp --dport %s -m state --state NEW -j ftplimit\n", nvram_safe_get("ftp_port"));
 	}
 #endif /* TCONFIG_FTP */
 
@@ -1765,26 +1733,6 @@ static void filter6_input(void)
 		if (!c) break;
 		p = c + 1;
 	} while (*p);
-
-#ifdef TCONFIG_FTP
-	/* FTP WAN access */
-	if (nvram_match("ftp_enable", "1")) {
-		strlcpy(t, nvram_safe_get("ftp_sip"), sizeof(t));
-		p = t;
-		do {
-			if ((c = strchr(p, ',')) != NULL)
-				*c = 0;
-
-			if (ip6t_source(p, s, "ftp", "remote access"))
-				ip6t_write("-A INPUT -p tcp %s --dport %s -j %s\n", s, nvram_safe_get("ftp_port"), chain_in_accept);
-
-			if (!c)
-				break;
-
-			p = c + 1;
-		} while (*p);
-	}
-#endif /* TCONFIG_FTP */
 
 	/* if logging */
 	if (*chain_in_drop == 'l')
@@ -2195,6 +2143,10 @@ int start_firewall(void)
 
 	unlink("/var/webmon/domain");
 	unlink("/var/webmon/search");
+
+#ifdef TCONFIG_FTP
+	run_ftpd_firewall_script();
+#endif
 
 #ifdef TCONFIG_PPTPD
 	run_pptpd_firewall_script();

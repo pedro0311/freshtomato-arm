@@ -47,6 +47,67 @@ static char *nvram_storage_path(char *var)
 	return get_full_storage_path(val);
 }
 
+static void build_ftpd_firewall_script(void)
+{
+	FILE *p;
+	char *u, *c;
+	char *en, *sec, *hit;
+	char t[512], s[64];
+
+	/* for LAN & WAN */
+	if (!nvram_match("ftp_enable", "1"))
+		return;
+
+	/* create firewall script */
+	if (!(p = fopen(vsftpd_fw_script, "w"))) {
+		logerr(__FUNCTION__, __LINE__, vsftpd_fw_script);
+		return;
+	}
+
+	chains_log_detection();
+
+	/* FTP WAN access */
+	fprintf(p, "#!/bin/sh\n"
+	           "iptables -t nat -A WANPREROUTING -p tcp --dport %s -j DNAT --to-destination %s\n",
+	           nvram_safe_get("ftp_port"), nvram_safe_get("lan_ipaddr"));
+
+	/* FTP conn limit */
+	strlcpy(s, nvram_safe_get("ftp_limit"), sizeof(s));
+	if ((vstrsep(s, ",", &en, &hit, &sec) == 3) && (atoi(en))) {
+		modprobe("xt_recent");
+		fprintf(p, "iptables -A INPUT -p tcp --dport %s -m state --state NEW -j ftplimit\n",
+		           nvram_safe_get("ftp_port"));
+#ifdef TCONFIG_IPV6
+		fprintf(p, "ip6tables -A INPUT -p tcp --dport %s -m state --state NEW -j ftplimit\n",
+		           nvram_safe_get("ftp_port"));
+#endif
+	}
+
+	/* FTP WAN access */
+	strlcpy(t, nvram_safe_get("ftp_sip"), sizeof(t));
+	u = t;
+	do {
+		if ((c = strchr(u, ',')) != NULL)
+			*c = 0;
+
+		if (ipt_source(u, s, "ftp", "remote access"))
+			fprintf(p, "iptables -A INPUT -p tcp %s --dport %s -j %s\n",
+			           s, nvram_safe_get("ftp_port"), chain_in_accept);
+#ifdef TCONFIG_IPV6
+		if (ip6t_source(u, s, "ftp", "remote access"))
+			fprintf(p, "ip6tables -A INPUT -p tcp %s --dport %s -j %s\n",
+			           s, nvram_safe_get("ftp_port"), chain_in_accept);
+#endif
+		if (!c)
+			break;
+
+		u = c + 1;
+	} while (*u);
+
+	fclose(p);
+	chmod(vsftpd_fw_script, 0744);
+}
+
 void start_ftpd(int force)
 {
 	char tmp[256];
@@ -269,6 +330,10 @@ void start_ftpd(int force)
 
 	fclose(fp);
 
+	build_ftpd_firewall_script();
+
+	run_ftpd_firewall_script();
+
 	ret = eval("vsftpd", vsftpd_conf);
 	if (ret) {
 		logmsg(LOG_ERR, "starting vsftpd failed - check configuration ...");
@@ -288,8 +353,25 @@ void stop_ftpd(void)
 		logmsg(LOG_INFO, "vsftpd is stopped");
 	}
 
+	run_del_firewall_script(vsftpd_fw_script, vsftpd_fw_del_script);
+
 	/* clean-up */
 	unlink(vsftpd_passwd);
 	unlink(vsftpd_conf);
 	eval("rm", "-rf", vsftpd_users);
+}
+
+void run_ftpd_firewall_script(void)
+{
+	FILE *fp;
+
+	/* first remove existing firewall rule(s) */
+	run_del_firewall_script(vsftpd_fw_script, vsftpd_fw_del_script);
+
+	/* then (re-)add firewall rule(s) */
+	if ((fp = fopen(vsftpd_fw_script, "r"))) {
+		fclose(fp);
+		logmsg(LOG_DEBUG, "*** %s: running firewall script: %s", __FUNCTION__, vsftpd_fw_script);
+		eval(vsftpd_fw_script);
+	}
 }

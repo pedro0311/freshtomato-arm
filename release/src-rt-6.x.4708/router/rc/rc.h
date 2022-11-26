@@ -366,6 +366,9 @@ extern int ipt_addr(char *addr, int maxlen, const char *s, const char *dir, int 
 extern int ipt_dscp(const char *v, char *opt);
 extern int ipt_ipp2p(const char *v, char *opt);
 extern int ipt_layer7(const char *v, char *opt);
+#define ipt_source_strict(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 1, categ, name)
+#define ipt_source(s, src, categ, name) ipt_addr(src, 64, s, "src", IPT_V4, 0, categ, name)
+#define ip6t_source(s, src, categ, name) ipt_addr(src, 128, s, "src", IPT_V6, 0, categ, name)
 extern int start_firewall(void);
 extern int stop_firewall(void);
 #ifdef DEBUG_IPTFILE
@@ -628,6 +631,7 @@ extern void stop_samba(void);
 #ifdef TCONFIG_FTP
 extern void start_ftpd(int force);
 extern void stop_ftpd(void);
+extern void run_ftpd_firewall_script(void);
 #endif
 
 #endif /* __RC_H__ */
