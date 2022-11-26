@@ -603,7 +603,7 @@ static void erase_cert(void)
 	nvram_unset("https_crt_gen");
 }
 
-static void start_ssl(int http_port)
+static void start_ssl(void)
 {
 	int i, lock, ok, retry, save;
 	unsigned long long sn;
@@ -653,7 +653,7 @@ static void start_ssl(int http_port)
 
 			if (!ok) {
 				erase_cert();
-				logmsg(LOG_INFO, "generating SSL certificate... %d", http_port);
+				logmsg(LOG_INFO, "generating SSL certificate...");
 
 				/* browsers seem to like this when the ip address moves... */
 				f_read("/dev/urandom", &sn, sizeof(sn));
@@ -668,16 +668,14 @@ static void start_ssl(int http_port)
 			save_cert();
 
 		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) {
-			logmsg(LOG_INFO, "succeed to init SSL certificate... %d", http_port);
 			file_unlock(lock);
 			return;
 		}
-
-		logmsg(retry ? LOG_WARNING : LOG_ERR, "failed to initialize SSL, generating new key/cert... %d", http_port);
 		erase_cert();
 
+		logmsg(retry ? LOG_WARNING : LOG_ERR, "unable to start SSL");
+
 		if (!retry) {
-			logmsg(LOG_INFO, "unable to start in SSL mode, exiting! %d", http_port);
 			file_unlock(lock);
 			exit(1);
 		}
@@ -986,7 +984,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	IF_TCONFIG_HTTPS(if (do_ssl) start_ssl(http_port));
+	IF_TCONFIG_HTTPS(if (do_ssl) start_ssl());
 
 	init_id();
 
