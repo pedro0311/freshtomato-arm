@@ -94,18 +94,25 @@ void start_usb(void)
 #ifdef TCONFIG_BCMSMP
 	int fd;
 #endif
-#ifdef TCONFIG_BCM714
+#if defined(TCONFIG_BCM714) || defined(TCONFIG_BCM7)
 	/* get router model */
 	int model = get_model();
 	static int usb_reset_once = 0;
 
 	if (!usb_reset_once) {
 		switch(model) {
+#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
+			case MODEL_RTAC3200:
+#endif /* TCONFIG_AC3200 */
+#endif
+#ifdef TCONFIG_BCM714
 			case MODEL_RTAC3100:
 			case MODEL_RTAC88U:
 #ifdef TCONFIG_AC5300
 			case MODEL_RTAC5300:
 #endif
+#endif /* TCONFIG_BCM714 */
 				set_gpio(GPIO_09, T_LOW); /* disable USB power */
 				usleep(25 * 1000); /* wait 25 ms */
 				set_gpio(GPIO_09, T_HIGH); /* enable USB power */
@@ -113,12 +120,24 @@ void start_usb(void)
 				usb_reset_once = 1;
 				logmsg(LOG_INFO, "%s: FreshTomato - reset USB Power Supply (done)", nvram_safe_get("t_model_name"));
 				break;
+#ifdef TCONFIG_BCM7
+#ifdef TCONFIG_AC3200
+			case MODEL_R8000:
+				set_gpio(GPIO_00, T_LOW); /* disable USB power */
+				usleep(25 * 1000); /* wait 25 ms */
+				set_gpio(GPIO_00, T_HIGH); /* enable USB power */
+				usleep(25 * 1000); /* wait 25 ms (again) */
+				usb_reset_once = 1;
+				logmsg(LOG_INFO, "%s: FreshTomato - reset USB Power Supply (done)", nvram_safe_get("t_model_name"));
+				break;
+#endif /* TCONFIG_AC3200 */
+#endif
 			default:
 				/* nothing to do right now! */
 				break;
 		}
 	}
-#endif /* TCONFIG_BCM714 */
+#endif /* TCONFIG_BCM714 OR TCONFIG_BCM7 */
 	/* nothing to do right now for ARM! */
 	/* enable USB2/3 power by default - see file bcm5301x_pcie.c */
 
