@@ -730,12 +730,8 @@ function init() {
 		var f = [];
 		for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 			var u = wl_unit(uidx);
-			if (nvram['wl'+u+'_radio'] == 1) {
-				if (wl_sunit(uidx) < 0) {
-					var a = wl_display_ifname(uidx);
-					f.push( { title: '<b>Noise Floor<\/b> '+a.substr(0, a.indexOf('/') - 1)+'&nbsp;<b>:<\/b>', prefix: '<span id="noiseimg_'+uidx+'"><\/span>&nbsp;<span id="noise'+uidx+'">', custom: wlnoise[uidx], suffix: '<\/span>&nbsp;<small>dBm<\/small>' } );
-				}
-			}
+			if (nvram['wl'+u+'_radio'] == 1 && wl_sunit(uidx) < 0)
+					f.push( { title: '<span id="snr'+u+'" title="Signal to Noise"><b>SNR<\/b> '+wl_display_ifname(uidx)+'&nbsp;<b>:<\/b><\/span>', prefix: '<span id="noiseimg_'+uidx+'"><\/span>&nbsp;<span id="noise'+uidx+'">', custom: wlnoise[uidx], suffix: '<\/span>&nbsp;<small>dBm<\/small>' } );
 		}
 /* DISCOVERY-BEGIN */
 		f.push(
