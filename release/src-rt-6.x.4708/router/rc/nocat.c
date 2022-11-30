@@ -203,7 +203,7 @@ void start_nocat(void)
 	            "fi\n"
 	            "echo \"FRESHTOMATO\" > $LOCK_FILE\n"
 	            "sleep 20\n"
-	            "$LOGGER \"Captive Portal Splash Daemon successfully started\"\n"
+	            "$LOGGER \"Captive Portal Splash Daemon started\"\n"
 	            "echo 1 > /proc/sys/net/ipv4/tcp_tw_reuse\n"
 	            "/usr/sbin/splashd >> "NOCAT_LOGFILE" 2>&1 &\n"
 	            "sleep 2\n"
@@ -219,17 +219,23 @@ void start_nocat(void)
 
 void stop_nocat(void)
 {
+	pid_t pid;
+
 	if (serialize_restart("splashd", 0))
 		return;
 
-	if (pidof("splashd") > 0) {
+	if ((pid = pidof("splashd")) > 0) {
 		killall_tk_period_wait("splashd", 50);
-		syslog(LOG_INFO, "Captive Portal Splash daemon successfully stopped");
+		syslog(LOG_INFO, "Captive Portal Splash daemon stopped");
 	}
 
-	eval(NOCAT_SCRIPTS"/uninitialize.fw");
-	system("rm "NOCAT_LEASES);
-	system("rm "NOCAT_START_SCRIPT);
-	system("rm "NOCAT_LOGFILE);
-	start_wan();
+	if (f_exists(NOCAT_SCRIPTS"/uninitialize.fw"))
+		eval(NOCAT_SCRIPTS"/uninitialize.fw");
+
+	system("rm -f "NOCAT_LEASES);
+	system("rm -f "NOCAT_START_SCRIPT);
+	system("rm -f "NOCAT_LOGFILE);
+
+	if (pid > 0)
+		start_wan();
 }
