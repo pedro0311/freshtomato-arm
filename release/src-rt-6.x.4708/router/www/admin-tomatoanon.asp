@@ -94,7 +94,7 @@ function init() {
 	<script>
 		createFieldTable('', [
 			{ title: 'Do you know what TomatoAnon does?', name: 'tomatoanon_answer', type: 'select', options: [ ['0','No, I don\'t. Have to read all information, before I will make a choice'], ['1','Yes, I do and want to make a choice'] ], value: nvram.tomatoanon_answer, suffix: ' '},
-			{ title: 'Do you want to enable TomatoAnon?', name: 'tomatoanon_enable', type: 'select', options: [ ['-1','I\'m not sure right now'], ['1','Yes, I\'m sure I do'], ['0','No, I definitely wont enable it'] ], value: nvram.tomatoanon_enable, suffix: ' '}
+			{ title: 'Do you want to enable TomatoAnon?', name: 'tomatoanon_enable', type: 'select', options: [ ['-1','I\'m not sure right now'], ['1','Yes, I\'m sure I do'], ['0','No, I definitely won\'t enable it'] ], value: nvram.tomatoanon_enable, suffix: ' '}
 		]);
 	</script>
 </div>
