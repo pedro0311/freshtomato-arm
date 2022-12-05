@@ -130,7 +130,6 @@ void start_sshd(void)
 	f_write_string(sshkeysdir"/authorized_keys", nvram_safe_get("sshd_authkeys"), 0, 0600);
 
 	dirty |= check_host_key("rsa",     "sshd_hostkey",  telsshdir"/dropbear_rsa_host_key");
-	dirty |= check_host_key("dss",     "sshd_dsskey",   telsshdir"/dropbear_dss_host_key");
 	dirty |= check_host_key("ecdsa",   "sshd_ecdsakey", telsshdir"/dropbear_ecdsa_host_key");
 	dirty |= check_host_key("ed25519", "sshd_ed25519",  telsshdir"/dropbear_ed25519_host_key");
 	if (dirty)
