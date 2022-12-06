@@ -1,22 +1,23 @@
 --- dropbear/localoptions.h
 +++ dropbear/localoptions.h
-@@ -0,0 +1,21 @@
+@@ -0,0 +1,22 @@
 +/* Override SSH 2.0 ident */
 +#define LOCAL_IDENT "SSH-2.0-dropbear"
 +
 +#define DROPBEAR_X11FWD 0
 +#define INETD_MODE 0
 +
-+/* encryption algo (disable 3DES) */
++/* encryption/hostkey/public-key algo (disable 3DES, DSS) */
 +#define DROPBEAR_3DES 0
++#define DROPBEAR_DSS 0
 +
 +#define XAUTH_COMMAND "/opt/X11R6/X11/xauth -q"
 +#define SFTPSERVER_PATH "/opt/libexec/sftp-server"
 +
 +#define DROPBEAR_ENABLE_CBC_MODE 0
 +#define DROPBEAR_SHA1_96_HMAC 0
-+#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
-+#define DEFAULT_ROOT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin"
++#define DEFAULT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"
++#define DEFAULT_ROOT_PATH "/bin:/usr/bin:/sbin:/usr/sbin:/opt/bin:/opt/sbin:/opt/usr/bin:/opt/usr/sbin"
 +
 +#define MAX_UNAUTH_PER_IP 2  /* default 5 */
 +#define MAX_UNAUTH_CLIENTS 5 /* default 30 */
@@ -43,3 +44,17 @@
  #define DROPBEAR_CLIENT_TCP_FAST_OPEN 0
  #else
  #define DROPBEAR_SERVER_TCP_FAST_OPEN 0
+@@ -383,9 +385,9 @@
+ #endif
+ 
+ /* Fuzzing expects all key types to be enabled */
+-#if defined(DROPBEAR_DSS)
+-#undef DROPBEAR_DSS
+-#endif
+-#define DROPBEAR_DSS 1
++//#if defined(DROPBEAR_DSS)
++//#undef DROPBEAR_DSS
++//#endif
++//#define DROPBEAR_DSS 1
+ 
+ /* no include guard for this file */
