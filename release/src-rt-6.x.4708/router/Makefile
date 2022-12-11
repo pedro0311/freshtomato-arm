@@ -1976,7 +1976,7 @@ flac/stamp-h1:
 		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections --param max-inline-insns-single=3000 --param large-function-growth=500" \
 		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC --param max-inline-insns-single=3000 --param large-function-growth=500" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --with-ogg=$(TOP)/libogg/src/.libs \
+		$(CONFIGURE) --prefix='' --enable-shared --enable-static --with-ogg=$(TOP)/libogg/src/.libs \
 			--disable-doxygen-docs --disable-examples --disable-cpplibs \
 			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
 			--disable-altivec --disable-vsx --disable-avx --enable-debug=no \
