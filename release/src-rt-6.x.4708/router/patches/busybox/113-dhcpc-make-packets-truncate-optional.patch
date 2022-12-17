@@ -1,6 +1,6 @@
 --- busybox/networking/udhcp/common.h
 +++ busybox/networking/udhcp/common.h
-@@ -74,6 +74,8 @@
+@@ -88,6 +88,8 @@
  	char c[IP_UDP_DHCP_SIZE == 576 ? 1 : -1];
  };
  
