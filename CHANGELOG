@@ -5,6 +5,57 @@ FreshTomato-ARM Changelog
 
 
 
+2022.7          2022.12.20
+---------------------------
+
+Note: the upgrade is highly recommended for users using Routing Policy in the OpenVPN client due to a major issue related to it.
+
+- kernel (all): updates/fixes from the upstream
+- SDK7: small update for pcie and adjust commit 286447b244974a3beb40b37e 
+- busybox: update to 1.35.0
+- dropbear: update to 2022.83
+- tor: update to 0.4.7.11
+- zlib: update to 1.2.13
+- xl2tpd: update to 1.3.18
+- sqlite: update to 3.40.0
+- libpng: update to 1.6.38
+- nano: update to 7.0
+- minidlna: update to 1.3.2; refresh patches, remove no more needed
+- dnsmasq: update to v2.88
+- build: Makefile: fix compilation in case if minidlna is built as static
+- build: kernel (all): enable compilation of ch341 usb driver
+- GUI: Status: Overview: fix Signal Quality icon in wireless client mode when RSSI is equal zero
+- GUI: Basic: Time: add option to serve also NTP on the WAN (resolves #234)
+- GUI: VPN Tunneling: Tinc Daemon: better format Tinc output in Advanced themes
+- GUI: Administration: TomatoAnon: grammar fix (resolves #260)
+- GUI: Status: Device List: add frequency to Moise Floor interfaces list
+- busybox: awk: fix use after free (CVE-2022-30065)
+- dropbear: disable DSS key support
+- dropbear: use Os flag for Libtommath and smallest targets
+- e2fsprogs: add two patches from openwrt
+- httpd/mssl: add support of elliptic curves in mssl_cert_key_match (resolves #250)
+- httpd: switch self-signed certificate from RSA to ECC
+- rc: adjust start/stop of miniupnpd
+- rc: adjust/add stop for miniupnp in case of single-wan
+- rc: firewall: move ftpd FW rules (remote access/ftplimit) to ftpd.c script
+- rc: interface.c: log errors only on failed interface addition
+- rc: nocat.c: only run start_wan() if nocat was really started
+- rc: openvpn.c: check first if firewall script is executable
+- rc: openvpn.c: workaround for problems when adding iptables rules
+- rc: rc.c: run_del_firewall_script(): correct temp file permissions
+- rc: services.c: start_igmp_proxy(): drop privileges after startup
+- rc: services.c: improve buffer handling
+- rc: services.c: exec_service: do not re-use buffer
+- rc: services.c: do_service(): increase waiting time (from 15 to 20 secs), because almost all services are now serialized when started/stopped; more verbose logging
+- rc: services: move ftpd support to outer file
+- rc: wan.c: restarting httpd service here is completely redundant
+- rc: telssh.c: avoid problems while starting/stopping in the GUI (and also in other cases)
+- stubby: add Mullvad DNS to the list (resolves #233)
+- router: shared: cache the model detection result for safe multiple use
+- Netgear R7900 / R8000: help arm issue #258
+- Netgear ARM Router Family: set cal data for wl radios and improve wl performance (get infos at board_data --> router specifc)
+
+
 2022.6          2022.11.06
 ---------------------------
 
@@ -40,7 +91,7 @@ FreshTomato-ARM Changelog
 - SDK7: check wireless driver max client tuneable value
 - build: add Asus RT-AC5300 support
 - build: add Asus RT-AC3100 support
-- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port)
+- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port) - not tested!
 - build: merge all branches together
 - build: sync up DockerFile to current build process
 - build: samba3: update Makefile; in ARM we have already realpath() with support for NULL argument. So change that option
