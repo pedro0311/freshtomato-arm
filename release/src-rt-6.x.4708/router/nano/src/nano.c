@@ -2,7 +2,7 @@
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
  *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
- *   Copyright (C) 2014-2021 Benno Schulenberg                            *
+ *   Copyright (C) 2014-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -1395,10 +1395,13 @@ bool changes_something(const void *f)
 #ifndef NANO_TINY
 			f == chop_previous_word || f == chop_next_word ||
 			f == zap_text || f == cut_till_eof || f == do_execute ||
-			f == do_indent || f == do_unindent || f == do_comment ||
+			f == do_indent || f == do_unindent ||
 #endif
 #ifdef ENABLE_JUSTIFY
 			f == do_justify || f == do_full_justify ||
+#endif
+#ifdef ENABLE_COMMENT
+			f == do_comment ||
 #endif
 #ifdef ENABLE_SPELLER
 			f == do_spell ||

@@ -908,7 +908,7 @@ void parse_one_include(char *file, syntaxtype *syntax)
 	FILE *rcstream;
 
 	/* Don't open directories, character files, or block files. */
-	if (!is_good_file(file))
+	if (access(file, R_OK) == 0 && !is_good_file(file))
 		return;
 
 	rcstream = fopen(file, "rb");
@@ -976,7 +976,7 @@ void parse_includes(char *ptr)
 
 	/* Expand a tilde first, then try to match the globbing pattern. */
 	expanded = real_dir_from_tilde(pattern);
-	result = glob(expanded, GLOB_ERR, NULL, &files);
+	result = glob(expanded, GLOB_ERR|GLOB_NOCHECK, NULL, &files);
 
 	/* If there are matches, process each of them.  Otherwise, only
 	 * report an error if it's something other than zero matches. */
@@ -1707,7 +1707,7 @@ void do_rcfiles(void)
 {
 	if (custom_nanorc) {
 		nanorc = get_full_path(custom_nanorc);
-		if (access(nanorc, F_OK) != 0)
+		if (nanorc == NULL || access(nanorc, F_OK) != 0)
 			die(_("Specified rcfile does not exist\n"));
 	} else
 		nanorc = mallocstrcpy(nanorc, SYSCONFDIR "/nanorc");

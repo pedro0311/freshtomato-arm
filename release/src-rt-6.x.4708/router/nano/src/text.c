@@ -6,7 +6,7 @@
  *   Copyright (C) 2016 Mike Scalora                                      *
  *   Copyright (C) 2016 Sumedh Pendurkar                                  *
  *   Copyright (C) 2018 Marco Diego Aurélio Mesquita                      *
- *   Copyright (C) 2015-2021 Benno Schulenberg                            *
+ *   Copyright (C) 2015-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
  *   it under the terms of the GNU General Public License as published    *
@@ -877,7 +877,7 @@ void do_enter(void)
 		if (extra > openfile->current_x)
 			extra = openfile->current_x;
 		else if (extra == openfile->current_x)
-			allblanks = TRUE;
+			allblanks = (indent_length(openfile->current->data) == extra);
 	}
 #endif /* NANO_TINY */
 	newnode->data = nmalloc(strlen(openfile->current->data +
