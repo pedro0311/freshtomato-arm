@@ -42,9 +42,22 @@ AS_IF([pwd | fgrep ' ' > /dev/null 2>&1],
   [AC_MSG_ERROR([The build directory contains whitespaces - This can cause tests/installation to fail due to limitations of some libtool versions])]
 )
 
+sodium_CFLAGS=${CFLAGS+set}
+: ${CFLAGS=""}
+
 AC_PROG_CC
 AM_PROG_AS
 AC_USE_SYSTEM_EXTENSIONS
+
+dnl Default optimization flags
+
+if test "$sodium_CFLAGS" != "set" ; then
+  AX_CHECK_COMPILE_FLAG([-Ofast], [CFLAGS="$CFLAGS -Ofast"],
+    [AX_CHECK_COMPILE_FLAG([-O3], [CFLAGS="$CFLAGS -O3"],
+      [AX_CHECK_COMPILE_FLAG([-O2], [CFLAGS="$CFLAGS -O2"],
+        [AX_CHECK_COMPILE_FLAG([-O1], [CFLAGS="$CFLAGS -O1"],
+          [AX_CHECK_COMPILE_FLAG([-O], [CFLAGS="$CFLAGS -O"])])])])])
+fi
 
 dnl Switches
 
@@ -197,11 +210,11 @@ AC_ARG_ENABLE(opt,
 [AS_HELP_STRING(--enable-opt,Optimize for the native CPU - The resulting library will be faster but not portable)],
 [
   AS_IF([test "x$enableval" = "xyes"], [
-    AX_CHECK_COMPILE_FLAG([-Ofast], [CFLAGS="$CFLAGS -Ofast"])
     AX_CHECK_COMPILE_FLAG([-ftree-vectorize], [CFLAGS="$CFLAGS -ftree-vectorize"])
     AX_CHECK_COMPILE_FLAG([-ftree-slp-vectorize], [CFLAGS="$CFLAGS -ftree-slp-vectorize"])
     AX_CHECK_COMPILE_FLAG([-fomit-frame-pointer], [CFLAGS="$CFLAGS -fomit-frame-pointer"])
     AX_CHECK_COMPILE_FLAG([-march=native], [CFLAGS="$CFLAGS -march=native"])
+    AX_CHECK_COMPILE_FLAG([-mtune=native], [CFLAGS="$CFLAGS -mtune=native"])
   ])
 ])
 
@@ -310,15 +323,15 @@ AS_CASE([$host_os],
   ])
 ])
 
-AC_ARG_VAR([CWFLAGS], [define to compilation flags for generating extra warnings])
-
 AX_CHECK_COMPILE_FLAG([$CFLAGS -Wall], [CWFLAGS="$CFLAGS -Wall"])
-AX_CHECK_COMPILE_FLAG([$CFLAGS -Wextra], [CWFLAGS="$CFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([$CFLAGS -Wno-unknown-pragmas], [CFLAGS="$CFLAGS -Wno-unknown-pragmas"])
+
+AC_ARG_VAR([CWFLAGS], [compilation flags for generating extra warnings])
 
 AC_MSG_CHECKING(for clang)
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
 #ifndef __clang__
-#error Not clang
+#error Not clang nor zig cc
 #endif
 ]])],
   [AC_MSG_RESULT(yes)
@@ -328,6 +341,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
   [AC_MSG_RESULT(no)
 ])
 
+AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wextra], [CWFLAGS="$WCFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([$CWFLAGS -Warray-bounds], [CWFLAGS="$CWFLAGS -Warray-bounds"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wbad-function-cast], [CWFLAGS="$CWFLAGS -Wbad-function-cast"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wcast-qual], [CWFLAGS="$CWFLAGS -Wcast-qual"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wdiv-by-zero], [CWFLAGS="$CWFLAGS -Wdiv-by-zero"])
@@ -869,7 +884,7 @@ AS_IF([test "x$WASI" = "x"],[
 AC_CHECK_FUNCS([posix_memalign nanosleep])
 
 AS_IF([test "x$WASI" = "x"],[
-  AC_CHECK_FUNCS([memset_s explicit_bzero explicit_memset])
+  AC_CHECK_FUNCS([memset_s explicit_bzero memset_explicit explicit_memset])
 ])
 
 AC_SUBST([LIBTOOL_EXTRA_FLAGS])
