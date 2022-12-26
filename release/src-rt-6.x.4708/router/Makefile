@@ -1884,7 +1884,7 @@ sqlite/stamp-h1:
 		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
-			--disable-readline --disable-dynamic-extensions --enable-threadsafe
+			--disable-readline --enable-dynamic-extensions=no --enable-threadsafe
 	@touch $@
 
 sqlite: sqlite/stamp-h1
