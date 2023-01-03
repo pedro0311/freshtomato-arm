@@ -183,6 +183,8 @@ static void rpza_decode_stream(RpzaContext *s)
             color4[1] |= ((11 * ta + 21 * tb) >> 5);
             color4[2] |= ((21 * ta + 11 * tb) >> 5);
 
+            if (s->size - stream_ptr < n_blocks * 4)
+                return;
             while (n_blocks--) {
                 ADVANCE_BLOCK();
                 block_ptr = row_ptr + pixel_ptr;
@@ -200,6 +202,8 @@ static void rpza_decode_stream(RpzaContext *s)
 
         /* Fill block with 16 colors */
         case 0x00:
+            if (s->size - stream_ptr < 16)
+                return;
             ADVANCE_BLOCK();
             block_ptr = row_ptr + pixel_ptr;
             for (pixel_y = 0; pixel_y < 4; pixel_y++) {
@@ -233,6 +237,7 @@ static av_cold int rpza_decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
     avctx->pix_fmt = PIX_FMT_RGB555;
 
+    avcodec_get_frame_defaults(&s->frame);
     s->frame.data[0] = NULL;
 
     return 0;
@@ -275,7 +280,7 @@ static av_cold int rpza_decode_end(AVCodecContext *avctx)
     return 0;
 }
 
-AVCodec rpza_decoder = {
+AVCodec ff_rpza_decoder = {
     "rpza",
     AVMEDIA_TYPE_VIDEO,
     CODEC_ID_RPZA,

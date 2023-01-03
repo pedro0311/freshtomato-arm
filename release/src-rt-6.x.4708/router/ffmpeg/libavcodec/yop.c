@@ -24,6 +24,7 @@
  */
 
 #include "libavutil/intreadwrite.h"
+#include "libavutil/imgutils.h"
 
 #include "avcodec.h"
 #include "get_bits.h"
@@ -84,7 +85,7 @@ static av_cold int yop_decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
 
     if (avctx->width & 1 || avctx->height & 1 ||
-        avcodec_check_dimensions(avctx, avctx->width, avctx->height) < 0) {
+        av_image_check_size(avctx->width, avctx->height, 0, avctx) < 0) {
         av_log(avctx, AV_LOG_ERROR, "YOP has invalid dimensions\n");
         return -1;
     }
@@ -96,6 +97,7 @@ static av_cold int yop_decode_init(AVCodecContext *avctx)
 
     avctx->pix_fmt = PIX_FMT_PAL8;
 
+    avcodec_get_frame_defaults(&s->frame);
     s->num_pal_colors = avctx->extradata[0];
     s->first_color[0] = avctx->extradata[1];
     s->first_color[1] = avctx->extradata[2];
@@ -119,7 +121,7 @@ static av_cold int yop_decode_close(AVCodecContext *avctx)
 }
 
 /**
- * Paints a macroblock using the pattern in paint_lut.
+ * Paint a macroblock using the pattern in paint_lut.
  * @param s codec context
  * @param tag the tag that was in the nibble
  */
@@ -135,7 +137,7 @@ static void yop_paint_block(YopDecContext *s, int tag)
 }
 
 /**
- * Copies a previously painted macroblock to the current_block.
+ * Copy a previously painted macroblock to the current_block.
  * @param copy_tag the tag that was in the nibble
  */
 static int yop_copy_previous_block(YopDecContext *s, int copy_tag)
@@ -160,7 +162,7 @@ static int yop_copy_previous_block(YopDecContext *s, int copy_tag)
 }
 
 /**
- * Returns the next nibble in sequence, consuming a new byte on the input
+ * Return the next nibble in sequence, consuming a new byte on the input
  * only if necessary.
  */
 static uint8_t yop_get_next_nibble(YopDecContext *s)
@@ -178,7 +180,7 @@ static uint8_t yop_get_next_nibble(YopDecContext *s)
 }
 
 /**
- * Takes s->dstptr to the next macroblock in sequence.
+ * Take s->dstptr to the next macroblock in sequence.
  */
 static void yop_next_macroblock(YopDecContext *s)
 {
@@ -261,7 +263,7 @@ static int yop_decode_frame(AVCodecContext *avctx, void *data, int *data_size,
     return avpkt->size;
 }
 
-AVCodec yop_decoder = {
+AVCodec ff_yop_decoder = {
     "yop",
     AVMEDIA_TYPE_VIDEO,
     CODEC_ID_YOP,

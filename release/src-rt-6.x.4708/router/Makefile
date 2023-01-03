@@ -182,32 +182,12 @@ endif
 # ffmpeg stuff
 FFMPEG_FILTER_CONFIG= $(foreach c, $(2), --$(1)="$(c)")
 
-ifneq ($(TCONFIG_BCMARM),y)
- FFMPEG_DEMUXERS := aac ac3 avi flac h264 matroska mov mp3 mpegvideo vc1
- FFMPEG_PARSERS := aac ac3 h264 mpeg4video mpegaudio mpegvideo
- FFMPEG_DECODERS := aac ac3 flac h264 jpegls mp3 mpeg1video mpeg2video mpeg4 mpegvideo png wmav1 wmav2
- FFMPEG_PROTOCOLS := file
+FFMPEG_DEMUXERS := avi flac matroska mov mp3 mpegps mpegts mpegvideo ogg
+FFMPEG_DECODERS := aac ac3 flac h264 hevc jpegls mp2 mp3 mpeg1video mpeg2video mpeg4 mpegvideo png vc1 vorbis wmav1 wmav2
+FFMPEG_PROTOCOLS := file
 
- ifneq ($(TCONFIG_OPTIMIZE_SIZE),y)
-  FFMPEG_DEMUXERS += aea aiff anm asf au avs bink caf cavsvideo cdg dts dv ea ea_cdata eac3 filmstrip flic flv fourxm h261 h263 iss iv8 m4v mjpeg mlp mpc mpc8 mpegps \
-                     mpegts mpegtsraw mvi nc nuv ogg pcm_alaw pcm_f32be pcm_f32le pcm_f64be pcm_f64le pcm_mulaw pcm_s16be pcm_s16le pcm_s24be pcm_s24le pcm_s32be pcm_s32le \
-                     pcm_s8 pcm_u16be pcm_u16le pcm_u24be pcm_u24le pcm_u32be pcm_u32le pcm_u8 qcp r3d rm sox swf tmv truehd vc1t vqf w64 wav wv yop
-  FFMPEG_PARSERS += h261 h263 mjpeg mlp
-  FFMPEG_DECODERS += atrac3 h261 h263
- endif
-
- FFMPEG_CONFIGURE_DEMUXERS := $(call FFMPEG_FILTER_CONFIG,enable-demuxer,$(FFMPEG_DEMUXERS))
-else # !TCONFIG_BCMARM
- FFMPEG_DISABLED_DEMUXERS := amr apc ape ass bethsoftvid bfi c93 daud dnxhd dsicin dxa ffm gsm gxf idcin iff image2 image2pipe ingenient ipmovie lmlm4 mm mmf msnwc_tcp mtv \
-                             mxf nsv nut oma pva rawvideo rl2 roq rpl segafilm shorten siff smacker sol str thp tiertexseq tta txd vmd voc wc3 wsaud wsvqa xa yuv4mpegpipe
- FFMPEG_PARSERS := aac ac3 h264 mpeg4video mpegaudio mpegvideo
- FFMPEG_DECODERS := aac ac3 atrac3 flac h264 jpegls mp3 mpeg1video mpeg2video mpeg4 mpeg4aac mpegvideo png wmav1 wmav2
- FFMPEG_PROTOCOLS := file
-
- FFMPEG_CONFIGURE_DEMUXERS := $(call FFMPEG_FILTER_CONFIG,disable-demuxer,$(FFMPEG_DISABLED_DEMUXERS))
-endif # !TCONFIG_BCMARM
-
-FFMPEG_CONFIGURE_PARSERS := $(call FFMPEG_FILTER_CONFIG,enable-parser,$(FFMPEG_PARSERS))
+FFMPEG_CONFIGURE_DEMUXERS := $(call FFMPEG_FILTER_CONFIG,enable-demuxer,$(FFMPEG_DEMUXERS))
+FFMPEG_CONFIGURE_PARSERS :=
 FFMPEG_CONFIGURE_DECODERS := $(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG_DECODERS))
 FFMPEG_CONFIGURE_PROTOCOLS := $(call FFMPEG_FILTER_CONFIG,enable-protocol,$(FFMPEG_PROTOCOLS))
 
@@ -1879,6 +1859,35 @@ dropbear-clean:
 	@rm -f dropbear/config.h
 	$(call unpatch_files,dropbear)
 
+zlib/stamp-h1:
+	$(call patch_files,zlib)
+	cd zlib && \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
+		LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDSHAREDLIBC="$(EXTRALDFLAGS)" \
+		./configure --prefix=/usr --shared --libdir=/usr/lib
+	@touch $@
+
+zlib: zlib/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/zlib/staged install
+
+zlib-install:
+ifeq ($(INSTALL_ZLIB),y)
+	install -d $(INSTALLDIR)/zlib/usr/lib
+	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
+	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
+endif
+	@true
+
+zlib-clean:
+	-@$(MAKE) -C zlib clean
+	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
+	@rm -rf zlib/staged
+	$(call unpatch_files,zlib)
+
 sqlite/stamp-h1:
 	cd sqlite && autoreconf -fsi && \
 		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
@@ -1904,49 +1913,6 @@ endif
 sqlite-clean:
 	-@$(MAKE) -C sqlite clean
 	@rm -f sqlite/stamp-h1
-
-ffmpeg/stamp-h1:
-ifneq ($(TCONFIG_BCMARM),y)
-	$(call patch_files,ffmpeg)
-endif
-	cd ffmpeg && symver_asm_label=no symver_gnu_asm=no symver=no \
-		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target_os=linux \
-		--cross-prefix=$(CROSS_COMPILE) --enable-shared --enable-gpl --disable-doc \
-		--enable-pthreads --enable-small --disable-ffmpeg --disable-ffplay \
-		--disable-ffserver --disable-ffprobe --disable-avdevice --disable-swscale \
-		--disable-network --disable-mpegaudio-hp \
-		$(if $(TCONFIG_BCMARM),--disable-muxers --disable-devices --disable-encoders --disable-filters --disable-hwaccels --disable-bsfs,--disable-avfilter --disable-postproc --disable-dxva2 --disable-altivec --disable-everything) \
-		$(if $(TCONFIG_BCMARM),--enable-demuxers,--disable-demuxers) $(FFMPEG_CONFIGURE_DEMUXERS) \
-		--disable-decoders $(FFMPEG_CONFIGURE_DECODERS) \
-		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
-		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
-		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(OPTSIZE_FLAG)" \
-		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		--extra-libs="-L$(TOP)/zlib/staged/usr/lib -lz" \
-		--enable-zlib --disable-debug
-	@touch $@
-
-ffmpeg: ffmpeg/stamp-h1
-	@$(SEP)
-	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
-
-ffmpeg-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D ffmpeg/libavformat/libavformat.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
-	install -D ffmpeg/libavcodec/libavcodec.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
-	install -D ffmpeg/libavutil/libavutil.so.50 $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
-	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
-endif
-	@true
-
-ffmpeg-clean:
-	-@$(MAKE) -C ffmpeg clean
-	@rm -f ffmpeg/stamp-h1 ffmpeg/config.h ffmpeg/config.mak
-ifneq ($(TCONFIG_BCMARM),y)
-	$(call unpatch_files,ffmpeg)
-endif
 
 libogg/stamp-h1:
 	cd libogg && autoreconf -fsi && \
@@ -2057,35 +2023,6 @@ libexif-clean:
 	-@$(MAKE) -C libexif clean
 	@rm -f libexif/stamp-h1
 
-zlib/stamp-h1:
-	$(call patch_files,zlib)
-	cd zlib && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
-		LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		LDSHAREDLIBC="$(EXTRALDFLAGS)" \
-		./configure --prefix=/usr --shared --libdir=/usr/lib
-	@touch $@
-
-zlib: zlib/stamp-h1
-	@$(SEP)
-	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/zlib/staged install
-
-zlib-install:
-ifeq ($(INSTALL_ZLIB),y)
-	install -d $(INSTALLDIR)/zlib/usr/lib
-	install -D zlib/libz.so.1 $(INSTALLDIR)/zlib/usr/lib/
-	$(STRIP) $(INSTALLDIR)/zlib/usr/lib/libz.so.1
-endif
-	@true
-
-zlib-clean:
-	-@$(MAKE) -C zlib clean
-	@rm -f zlib/stamp-h1 zlib/Makefile zlib/zconf.h zlib/zlib.pc
-	@rm -rf zlib/staged
-	$(call unpatch_files,zlib)
-
 libid3tag/stamp-h1:
 	$(call patch_files,libid3tag)
 	cd libid3tag $(if $(TCONFIG_BCMARM),,&& autoreconf -fsi) && \
@@ -2137,23 +2074,58 @@ libvorbis-clean:
 	-@$(MAKE) -C libvorbis clean
 	@rm -f libvorbis/stamp-h1
 
+ffmpeg/stamp-h1:
+	$(call patch_files,ffmpeg)
+	cd ffmpeg && \
+		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target-os=linux $(if $(TCONFIG_BCMARM),--cpu=cortex-a9,) \
+		--cross-prefix=$(CROSS_COMPILE) --pkg-config="pkg-config" \
+		--enable-pthreads --enable-small --enable-shared --enable-gpl \
+		--disable-doc --disable-ffmpeg --disable-ffplay --disable-ffserver --disable-ffprobe --disable-symver \
+		--disable-postproc --disable-avdevice --disable-swscale --disable-network --disable-avfilter --disable-altivec \
+		--disable-muxers --disable-devices --disable-encoders --disable-filters --disable-hwaccels --disable-bsfs \
+		--disable-outdevs --disable-armv5te --disable-armv6 --disable-armv6t2 --disable-neon \
+		$(if $(TCONFIG_BCMARM),,--disable-mmi --disable-yasm) \
+		--disable-demuxers $(FFMPEG_CONFIGURE_DEMUXERS) \
+		--disable-decoders $(FFMPEG_CONFIGURE_DECODERS) \
+		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
+		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
+		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(OPTSIZE_FLAG)" \
+		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
+		--extra-libs="-L$(TOP)/zlib/staged/usr/lib -lz" \
+		--enable-zlib --disable-debug
+	@touch $@
+
+ffmpeg: ffmpeg/stamp-h1
+	@$(SEP)
+	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
+
+ffmpeg-install:
+ifneq ($(MEDIA_SERVER_STATIC),y)
+	install -D ffmpeg/libavformat/libavformat.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
+	install -D ffmpeg/libavcodec/libavcodec.so.52 $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
+	install -D ffmpeg/libavutil/libavutil.so.50 $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.52
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.52
+	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.50
+endif
+	@true
+
+ffmpeg-clean:
+	-@$(MAKE) -C ffmpeg clean
+	@rm -f ffmpeg/stamp-h1 ffmpeg/config.h ffmpeg/config.mak
+	$(call unpatch_files,ffmpeg)
+
 minidlna/stamp-h1:
 	$(call patch_files,minidlna)
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg/libswscale -I$(TOP)/ffmpeg -I$(TOP)/flac/include \
+		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include \
 			-I$(TOP)/sqlite -I$(TOP)/jpeg -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs \
 			-L$(TOP)/jpeg -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
-		ac_cv_lib_id3tag__lz___id3_file_open=yes \
-		ac_cv_lib_avformat__lavcodec__lavutil__lz_avformat_open_input=no \
-		ac_cv_lib_avformat__lavcodec__lavutil__lz___av_open_input_file=yes \
-		ac_cv_header_stddef_h=no \
-		ac_cv_header_stdlib_h=no \
-		ac_cv_func_getifaddrs=yes \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
-			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36$(comma)4brcmarm,22$(comma)19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
+			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
 	@touch $@
 
 minidlna: minidlna/stamp-h1

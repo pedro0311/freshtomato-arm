@@ -26,7 +26,6 @@
  *
  */
 
-#define DEBUG
 #include <limits.h>
 #include "avcodec.h"
 #include "get_bits.h"
@@ -79,7 +78,7 @@ typedef struct ShortenContext {
     GetBitContext gb;
 
     int min_framesize, max_framesize;
-    int channels;
+    unsigned channels;
 
     int32_t *decoded[MAX_CHANNELS];
     int32_t *decoded_base[MAX_CHANNELS];
@@ -106,7 +105,7 @@ static av_cold int shorten_decode_init(AVCodecContext * avctx)
 {
     ShortenContext *s = avctx->priv_data;
     s->avctx = avctx;
-    avctx->sample_fmt = SAMPLE_FMT_S16;
+    avctx->sample_fmt = AV_SAMPLE_FMT_S16;
 
     return 0;
 }
@@ -120,11 +119,11 @@ static int allocate_buffers(ShortenContext *s)
     for (chan=0; chan<s->channels; chan++) {
         if(FFMAX(1, s->nmean) >= UINT_MAX/sizeof(int32_t)){
             av_log(s->avctx, AV_LOG_ERROR, "nmean too large\n");
-            return -1;
+            return AVERROR_INVALIDDATA;
         }
         if(s->blocksize + s->nwrap >= UINT_MAX/sizeof(int32_t) || s->blocksize + s->nwrap <= (unsigned)s->nwrap){
             av_log(s->avctx, AV_LOG_ERROR, "s->blocksize + s->nwrap too large\n");
-            return -1;
+            return AVERROR_INVALIDDATA;
         }
 
         tmp_ptr = av_realloc(s->offset[chan], sizeof(int32_t)*FFMAX(1, s->nmean));
@@ -193,32 +192,31 @@ static void init_offset(ShortenContext *s)
 
 static inline int get_le32(GetBitContext *gb)
 {
-    return bswap_32(get_bits_long(gb, 32));
+    return av_bswap32(get_bits_long(gb, 32));
 }
 
 static inline short get_le16(GetBitContext *gb)
 {
-    return bswap_16(get_bits_long(gb, 16));
+    return av_bswap16(get_bits_long(gb, 16));
 }
 
 static int decode_wave_header(AVCodecContext *avctx, uint8_t *header, int header_size)
 {
     GetBitContext hb;
     int len;
-    int chunk_size;
     short wave_format;
 
     init_get_bits(&hb, header, header_size*8);
     if (get_le32(&hb) != MKTAG('R','I','F','F')) {
         av_log(avctx, AV_LOG_ERROR, "missing RIFF tag\n");
-        return -1;
+        return AVERROR_INVALIDDATA;
     }
 
-    chunk_size = get_le32(&hb);
+    skip_bits_long(&hb, 32);    /* chunk_size */
 
     if (get_le32(&hb) != MKTAG('W','A','V','E')) {
         av_log(avctx, AV_LOG_ERROR, "missing WAVE tag\n");
-        return -1;
+        return AVERROR_INVALIDDATA;
     }
 
     while (get_le32(&hb) != MKTAG('f','m','t',' ')) {
@@ -229,7 +227,7 @@ static int decode_wave_header(AVCodecContext *avctx, uint8_t *header, int header
 
     if (len < 16) {
         av_log(avctx, AV_LOG_ERROR, "fmt chunk was too short\n");
-        return -1;
+        return AVERROR_INVALIDDATA;
     }
 
     wave_format = get_le16(&hb);
@@ -239,7 +237,7 @@ static int decode_wave_header(AVCodecContext *avctx, uint8_t *header, int header
             break;
         default:
             av_log(avctx, AV_LOG_ERROR, "unsupported wave format\n");
-            return -1;
+            return AVERROR(ENOSYS);
     }
 
     avctx->channels = get_le16(&hb);
@@ -250,7 +248,7 @@ static int decode_wave_header(AVCodecContext *avctx, uint8_t *header, int header
 
     if (avctx->bits_per_coded_sample != 16) {
         av_log(avctx, AV_LOG_ERROR, "unsupported number of bits per sample\n");
-        return -1;
+        return AVERROR(ENOSYS);
     }
 
     len -= 16;
@@ -321,7 +319,6 @@ static int shorten_decode_frame(AVCodecContext *avctx,
         s->bitstream_size= buf_size;
 
         if(buf_size < s->max_framesize){
-            //dprintf(avctx, "wanna more data ... %d\n", buf_size);
             *data_size = 0;
             return input_buf_size;
         }
@@ -345,8 +342,13 @@ static int shorten_decode_frame(AVCodecContext *avctx,
         s->internal_ftype = get_uint(s, TYPESIZE);
 
         s->channels = get_uint(s, CHANSIZE);
-        if (s->channels > MAX_CHANNELS) {
+        if (!s->channels) {
+            av_log(s->avctx, AV_LOG_ERROR, "No channels reported\n");
+            return AVERROR_INVALIDDATA;
+        }
+        if (s->channels <= 0 || s->channels > MAX_CHANNELS) {
             av_log(s->avctx, AV_LOG_ERROR, "too many channels: %d\n", s->channels);
+            s->channels = 0;
             return -1;
         }
 
@@ -486,6 +488,12 @@ static int shorten_decode_frame(AVCodecContext *avctx,
 
                     s->cur_chan++;
                     if (s->cur_chan == s->channels) {
+                        int out_size = s->blocksize * s->channels *
+                                       av_get_bytes_per_sample(avctx->sample_fmt);
+                        if (*data_size < out_size) {
+                            av_log(avctx, AV_LOG_ERROR, "Output buffer is too small\n");
+                            return AVERROR(EINVAL);
+                        }
                         samples = interleave_buffer(samples, s->channels, s->blocksize, s->decoded);
                         s->cur_chan = 0;
                         goto frame_done;
@@ -503,7 +511,7 @@ static int shorten_decode_frame(AVCodecContext *avctx,
                 s->bitshift = get_ur_golomb_shorten(&s->gb, BITSHIFTSIZE);
                 break;
             case FN_BLOCKSIZE: {
-                int blocksize = get_uint(s, av_log2(s->blocksize));
+                unsigned blocksize = get_uint(s, av_log2(s->blocksize));
                 if (blocksize > s->blocksize) {
                     av_log(avctx, AV_LOG_ERROR, "Increasing block size is not supported\n");
                     return AVERROR_PATCHWELCOME;
@@ -531,7 +539,7 @@ frame_done:
         av_log(s->avctx, AV_LOG_ERROR, "overread: %d\n", i - buf_size);
         s->bitstream_size=0;
         s->bitstream_index=0;
-        return -1;
+        return AVERROR_INVALIDDATA;
     }
     if (s->bitstream_size) {
         s->bitstream_index += i;
@@ -563,7 +571,7 @@ static void shorten_flush(AVCodecContext *avctx){
         s->bitstream_index= 0;
 }
 
-AVCodec shorten_decoder = {
+AVCodec ff_shorten_decoder = {
     "shorten",
     AVMEDIA_TYPE_AUDIO,
     CODEC_ID_SHORTEN,
