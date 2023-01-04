@@ -10,6 +10,14 @@
 #define LOCAL_IDENT "SSH-2.0-dropbear_" DROPBEAR_VERSION
 #define PROGNAME "dropbear"
 
+#ifndef DROPBEAR_CLIENT
+#define DROPBEAR_CLIENT 0
+#endif
+
+#ifndef DROPBEAR_SERVER
+#define DROPBEAR_SERVER 0
+#endif
+
 /* Spec recommends after one hour or 1 gigabyte of data. One hour
  * is a bit too verbose, so we try 8 hours */
 #ifndef KEX_REKEY_TIMEOUT
@@ -383,9 +391,11 @@
 #endif
 
 /* Fuzzing expects all key types to be enabled */
+#if DROPBEAR_FUZZ
 #if defined(DROPBEAR_DSS)
 #undef DROPBEAR_DSS
 #endif
 #define DROPBEAR_DSS 1
+#endif
 
 /* no include guard for this file */

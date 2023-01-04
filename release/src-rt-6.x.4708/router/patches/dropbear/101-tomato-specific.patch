@@ -34,8 +34,8 @@
 +#endif
  #define PROGNAME "dropbear"
  
- /* Spec recommends after one hour or 1 gigabyte of data. One hour
-@@ -355,7 +357,7 @@
+ #ifndef DROPBEAR_CLIENT
+@@ -363,7 +365,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
@@ -44,17 +44,3 @@
  #define DROPBEAR_CLIENT_TCP_FAST_OPEN 0
  #else
  #define DROPBEAR_SERVER_TCP_FAST_OPEN 0
-@@ -383,9 +385,9 @@
- #endif
- 
- /* Fuzzing expects all key types to be enabled */
--#if defined(DROPBEAR_DSS)
--#undef DROPBEAR_DSS
--#endif
--#define DROPBEAR_DSS 1
-+//#if defined(DROPBEAR_DSS)
-+//#undef DROPBEAR_DSS
-+//#endif
-+//#define DROPBEAR_DSS 1
- 
- /* no include guard for this file */
