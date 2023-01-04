@@ -39,6 +39,7 @@ define CMAKE_CrossOptions
   echo "SET(CMAKE_SYSTEM_PROCESSOR $(ARCH))" >>$(1); \
   echo "SET(CMAKE_C_COMPILER $(CC))" >>$(1); \
   echo "SET(CMAKE_CXX_COMPILER $(CXX))" >>$(1); \
+  echo "SET(CMAKE_C_COMPILER_RANLIB $(RANLIB))" >>$(1); \
   echo "SET(CMAKE_AR $(AR))" >>$(1); \
   echo "SET(CMAKE_LINKER $(LD))" >>$(1); \
   echo "SET(CMAKE_NM $(NM))" >>$(1); \
@@ -372,7 +373,7 @@ ifeq ($(TCONFIG_BCMARM),y)
 endif
 obj-$(TCONFIG_MEDIA_SERVER) += libogg
 obj-$(TCONFIG_MEDIA_SERVER) += flac
-obj-$(TCONFIG_MEDIA_SERVER) += jpeg
+obj-$(TCONFIG_MEDIA_SERVER) += libjpeg-turbo
 obj-$(TCONFIG_MEDIA_SERVER) += libexif
 obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
@@ -427,7 +428,7 @@ endif
 obj-$(TCONFIG_NGINX) += libiconv
 obj-$(TCONFIG_NGINX) += libxml2
 obj-$(TCONFIG_NGINX) += libpng
-obj-$(TCONFIG_NGINX) += jpeg
+obj-$(TCONFIG_NGINX) += libjpeg-turbo
 obj-$(TCONFIG_NGINX) += mysql
 obj-$(TCONFIG_NGINX) += $(PHP_TARGET)
 obj-$(TCONFIG_NGINX) += nginx
@@ -1965,40 +1966,41 @@ flac-clean:
 	@rm -f flac/stamp-h1
 	$(call unpatch_files,flac)
 
-jpeg/stamp-h1:
-	cd jpeg && \
-		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		LDFLAGS="-fPIC -ffunction-sections -fdata-sections" \
-		AR2="touch" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static
-	@touch $@
+libjpeg-turbo/build/Makefile:
+	@rm -rf libjpeg-turbo/build && rm -f libjpeg-turbo/jconfig.h && mkdir -p libjpeg-turbo/build
+	cd libjpeg-turbo/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
+			-DWITH_JPEG8=1 \
+			-DENABLE_SHARED=1 \
+			-DENABLE_STATIC=1 \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			-DCMAKE_MODULE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			-DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			..
+	cd libjpeg-turbo/build && cp jconfig.h ..
 
-jpeg: jpeg/stamp-h1
+libjpeg-turbo: libjpeg-turbo/build/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@ LIBTOOL="" O=o A=a CC=$(CC) AR2="touch" libjpeg.a libjpeg.so $(PARALLEL_BUILD)
-	install -d $(TOP)/jpeg/staged/include
-	install -d $(TOP)/jpeg/staged/lib
-	install -d $(TOP)/jpeg/staged/bin
-	install -d $(TOP)/jpeg/staged/man/man1
-	@$(MAKE) -C $@ LIBTOOL="" prefix=$(TOP)/jpeg/staged install
-	install -D jpeg/libjpeg.so $(TOP)/jpeg/staged/lib/libjpeg.so
-	rm -f $(TOP)/jpeg/staged/lib/libjpeg.la
+	$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
 
-jpeg-install:
+libjpeg-turbo-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D jpeg/libjpeg.so $(INSTALLDIR)/jpeg/usr/lib/libjpeg.so
-	$(STRIP) $(INSTALLDIR)/jpeg/usr/lib/libjpeg.so
+	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so
 endif
 ifeq ($(TCONFIG_NGINX),y)
-	install -D jpeg/libjpeg.so $(INSTALLDIR)/jpeg/usr/lib/libjpeg.so
-	$(STRIP) $(INSTALLDIR)/jpeg/usr/lib/libjpeg.so
+	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so
 endif
 	@true
 
-jpeg-clean:
-	-@$(MAKE) -C jpeg clean
-	@rm -f jpeg/stamp-h1 jpeg/Makefile
-	@rm -rf jpeg/staged
+libjpeg-turbo-clean:
+	@rm -rf libjpeg-turbo/build
+	@rm -f libjpeg-turbo/jconfig.h
 
 libexif/stamp-h1:
 	cd libexif && autoreconf -fsi && \
@@ -2120,9 +2122,9 @@ minidlna/stamp-h1:
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include \
-			-I$(TOP)/sqlite -I$(TOP)/jpeg -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
+			-I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo -I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs \
-			-L$(TOP)/jpeg -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
+			-L$(TOP)/libjpeg-turbo/build -L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
 			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
@@ -2412,12 +2414,12 @@ $(PHP_TARGET)/stamp-h1:
 	cd $(PHP_TARGET) && \
 		PKG_CONFIG_LIBDIR="" \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include" \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/build" \
 		LDFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib \
-			-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
-		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs" \
-		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib \
-			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -lssl -lcrypto" \
+			-L$(TOP)/libpng/.libs -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libjpeg-turbo/build" \
+		CPPFLAGS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs -L$(TOP)/libjpeg-turbo/build" \
+		LIBS="-L$(TOP)/pcre/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/.libs -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/.libs -L$(TOP)/libcurl/lib/.libs -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libjpeg-turbo/build \
+			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -lssl -lcrypto -ljpeg" \
 		PHP_FCGI_LIBXML_DIR="$(TOP)/libxml2/staged/usr" \
 		ac_cv_func_memcmp_working=yes \
 		cv_php_mbstring_stdarg=yes \
@@ -2446,7 +2448,6 @@ $(PHP_TARGET)/stamp-h1:
 			--without-gmp \
 			--with-gd \
 			--with-png-dir="$(TOP)/libpng/staged/usr" \
-			--with-jpeg-dir="$(TOP)/jpeg/staged" \
 			--enable-hash \
 			--with-iconv="$(TOP)/libiconv/staged/usr" \
 			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
