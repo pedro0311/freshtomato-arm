@@ -1545,7 +1545,7 @@ void start_upnp(void)
 	           "upnp_nat_postrouting_chain=pupnp\n"
 	           "notify_interval=%d\n"
 	           "system_uptime=yes\n"
-	           "friendly_name=%s"" Router\n"
+	           "friendly_name=FreshTomato UPnP daemon\n"
 	           "model_name=%s\n"
 	           "model_url=https://freshtomato.org/\n"
 	           "manufacturer_name=FreshTomato Firmware\n"
@@ -1557,7 +1557,6 @@ void start_upnp(void)
 	           (enable & 2) ? "yes" : "no",			/* natpmp enable */
 	           nvram_get_int("upnp_secure") ? "yes" : "no",	/* secure_mode (only forward to self) */
 	           nvram_get_int("upnp_ssdp_interval"),
-	           nvram_safe_get("router_name"),
 	           nvram_safe_get("t_model_name"));
 
 	if (nvram_get_int("upnp_clean")) {
