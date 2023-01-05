@@ -36,6 +36,7 @@
 #include "vp56data.h"
 #include "vp6data.h"
 
+#define VP6_MAX_HUFF_SIZE 12
 
 static void vp6_parse_coeff(VP56Context *s);
 static void vp6_parse_coeff_huffman(VP56Context *s);
@@ -49,20 +50,20 @@ static int vp6_parse_header(VP56Context *s, const uint8_t *buf, int buf_size,
     int vrt_shift = 0;
     int sub_version;
     int rows, cols;
-    int res = 1;
+    int res = 0;
     int separated_coeff = buf[0] & 1;
 
     s->framep[VP56_FRAME_CURRENT]->key_frame = !(buf[0] & 0x80);
-    vp56_init_dequant(s, (buf[0] >> 1) & 0x3F);
+    ff_vp56_init_dequant(s, (buf[0] >> 1) & 0x3F);
 
     if (s->framep[VP56_FRAME_CURRENT]->key_frame) {
         sub_version = buf[1] >> 3;
         if (sub_version > 8)
-            return 0;
+            return AVERROR_INVALIDDATA;
         s->filter_header = buf[1] & 0x06;
         if (buf[1] & 1) {
-            av_log(s->avctx, AV_LOG_ERROR, "interlacing not supported\n");
-            return 0;
+            av_log_missing_feature(s->avctx, "Interlacing", 0);
+            return AVERROR_PATCHWELCOME;
         }
         if (separated_coeff || !s->filter_header) {
             coeff_offset = AV_RB16(buf+2) - 2;
@@ -74,6 +75,10 @@ static int vp6_parse_header(VP56Context *s, const uint8_t *buf, int buf_size,
         cols = buf[3];  /* number of stored macroblock cols */
         /* buf[4] is number of displayed macroblock rows */
         /* buf[5] is number of displayed macroblock cols */
+        if (!rows || !cols) {
+            av_log(s->avctx, AV_LOG_ERROR, "Invalid size %dx%d\n", cols << 4, rows << 4);
+            return AVERROR_INVALIDDATA;
+        }
 
         if (!s->macroblocks || /* first frame */
             16*cols != s->avctx->coded_width ||
@@ -83,10 +88,10 @@ static int vp6_parse_header(VP56Context *s, const uint8_t *buf, int buf_size,
                 s->avctx->width  -= s->avctx->extradata[0] >> 4;
                 s->avctx->height -= s->avctx->extradata[0] & 0x0F;
             }
-            res = 2;
+            res = VP56_SIZE_CHANGE;
         }
 
-        vp56_init_range_decoder(c, buf+6, buf_size-6);
+        ff_vp56_init_range_decoder(c, buf+6, buf_size-6);
         vp56_rac_gets(c, 2);
 
         parse_filter_info = s->filter_header;
@@ -94,15 +99,15 @@ static int vp6_parse_header(VP56Context *s, const uint8_t *buf, int buf_size,
             vrt_shift = 5;
         s->sub_version = sub_version;
     } else {
-        if (!s->sub_version)
-            return 0;
+        if (!s->sub_version || !s->avctx->coded_width || !s->avctx->coded_height)
+            return AVERROR_INVALIDDATA;
 
         if (separated_coeff || !s->filter_header) {
             coeff_offset = AV_RB16(buf+1) - 2;
             buf += 2;
             buf_size -= 2;
         }
-        vp56_init_range_decoder(c, buf+1, buf_size-1);
+        ff_vp56_init_range_decoder(c, buf+1, buf_size-1);
 
         *golden_frame = vp56_rac_get(c);
         if (s->filter_header) {
@@ -139,13 +144,13 @@ static int vp6_parse_header(VP56Context *s, const uint8_t *buf, int buf_size,
         if (buf_size < 0) {
             if (s->framep[VP56_FRAME_CURRENT]->key_frame)
                 avcodec_set_dimensions(s->avctx, 0, 0);
-            return 0;
+            return AVERROR_INVALIDDATA;
         }
         if (s->use_huffman) {
             s->parse_coeff = vp6_parse_coeff_huffman;
             init_get_bits(&s->gb, buf, buf_size<<3);
         } else {
-            vp56_init_range_decoder(&s->cc, buf, buf_size);
+            ff_vp56_init_range_decoder(&s->cc, buf, buf_size);
             s->ccp = &s->cc;
         }
     } else {
@@ -218,7 +223,7 @@ static int vp6_huff_cmp(const void *va, const void *vb)
 static int vp6_build_huff_tree(VP56Context *s, uint8_t coeff_model[],
                                const uint8_t *map, unsigned size, VLC *vlc)
 {
-    Node nodes[2*size], *tmp = &nodes[size];
+    Node nodes[2*VP6_MAX_HUFF_SIZE], *tmp = &nodes[size];
     int a, b, i;
 
     /* first compute probabilities from model */
@@ -570,7 +575,7 @@ static void vp6_filter(VP56Context *s, uint8_t *dst, uint8_t *src,
             vp6_filter_hv4(dst, src+offset1, stride, stride,
                            vp6_block_copy_filter[select][y8]);
         } else {
-            s->dsp.vp6_filter_diag4(dst, src+offset1+((mv.x^mv.y)>>31), stride,
+            s->vp56dsp.vp6_filter_diag4(dst, src+offset1+((mv.x^mv.y)>>31), stride,
                              vp6_block_copy_filter[select][x8],
                              vp6_block_copy_filter[select][y8]);
         }
@@ -587,8 +592,8 @@ static av_cold int vp6_decode_init(AVCodecContext *avctx)
 {
     VP56Context *s = avctx->priv_data;
 
-    vp56_init(avctx, avctx->codec->id == CODEC_ID_VP6,
-                     avctx->codec->id == CODEC_ID_VP6A);
+    ff_vp56_init(avctx, avctx->codec->id == CODEC_ID_VP6,
+                        avctx->codec->id == CODEC_ID_VP6A);
     s->vp56_coord_div = vp6_coord_div;
     s->parse_vector_adjustment = vp6_parse_vector_adjustment;
     s->filter = vp6_filter;
@@ -605,7 +610,7 @@ static av_cold int vp6_decode_free(AVCodecContext *avctx)
     VP56Context *s = avctx->priv_data;
     int pt, ct, cg;
 
-    vp56_free(avctx);
+    ff_vp56_free(avctx);
 
     for (pt=0; pt<2; pt++) {
         free_vlc(&s->dccv_vlc[pt]);
@@ -617,7 +622,7 @@ static av_cold int vp6_decode_free(AVCodecContext *avctx)
     return 0;
 }
 
-AVCodec vp6_decoder = {
+AVCodec ff_vp6_decoder = {
     "vp6",
     AVMEDIA_TYPE_VIDEO,
     CODEC_ID_VP6,
@@ -625,13 +630,13 @@ AVCodec vp6_decoder = {
     vp6_decode_init,
     NULL,
     vp6_decode_free,
-    vp56_decode_frame,
+    ff_vp56_decode_frame,
     CODEC_CAP_DR1,
     .long_name = NULL_IF_CONFIG_SMALL("On2 VP6"),
 };
 
 /* flash version, not flipped upside-down */
-AVCodec vp6f_decoder = {
+AVCodec ff_vp6f_decoder = {
     "vp6f",
     AVMEDIA_TYPE_VIDEO,
     CODEC_ID_VP6F,
@@ -639,13 +644,13 @@ AVCodec vp6f_decoder = {
     vp6_decode_init,
     NULL,
     vp6_decode_free,
-    vp56_decode_frame,
+    ff_vp56_decode_frame,
     CODEC_CAP_DR1,
     .long_name = NULL_IF_CONFIG_SMALL("On2 VP6 (Flash version)"),
 };
 
 /* flash version, not flipped upside-down, with alpha channel */
-AVCodec vp6a_decoder = {
+AVCodec ff_vp6a_decoder = {
     "vp6a",
     AVMEDIA_TYPE_VIDEO,
     CODEC_ID_VP6A,
@@ -653,7 +658,7 @@ AVCodec vp6a_decoder = {
     vp6_decode_init,
     NULL,
     vp6_decode_free,
-    vp56_decode_frame,
+    ff_vp56_decode_frame,
     CODEC_CAP_DR1,
     .long_name = NULL_IF_CONFIG_SMALL("On2 VP6 (Flash version, with alpha channel)"),
 };

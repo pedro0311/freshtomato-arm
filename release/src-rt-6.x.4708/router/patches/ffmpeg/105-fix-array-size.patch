@@ -1,0 +1,11 @@
+--- ffmpeg/libavcodec/jpegls.h
++++ ffmpeg/libavcodec/jpegls.h
+@@ -43,7 +43,7 @@
+     int run_index[3];
+ }JLSState;
+ 
+-extern const uint8_t ff_log2_run[32];
++extern const uint8_t ff_log2_run[41];
+ 
+ /**
+  * Calculate initial JPEG-LS parameters
