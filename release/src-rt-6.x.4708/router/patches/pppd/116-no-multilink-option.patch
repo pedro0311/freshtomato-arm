@@ -1,15 +1,8 @@
-pppd: Support "nomp" option even if multilink support is off
-
-This patch moves the "nomp" option entry outside of the defines protecting
-the multilink specific code. The motivation is to allow "nomp" even if pppd
-does not support multilink, so that controlling programs can unconditionally
-pass it to pppd regardless of the compile time features.
-
-Signed-off-by: Jo-Philipp Wich <jo@mein.io>
-
+diff --git pppd/pppd/options.c pppd/pppd/options.c
+index 8829879..14853f8 100644
 --- pppd/pppd/options.c
 +++ pppd/pppd/options.c
-@@ -330,13 +330,14 @@ option_t general_options[] = {
+@@ -329,13 +329,14 @@ option_t general_options[] = {
        "Enable multilink operation", OPT_PRIOSUB | OPT_ALIAS | 1 },
      { "nomultilink", o_bool, &multilink,
        "Disable multilink operation", OPT_PRIOSUB | 0 },

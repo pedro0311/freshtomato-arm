@@ -1,28 +1,23 @@
-From 36dab16ab31953b2027530c63665a8b3b2f31b10 Mon Sep 17 00:00:00 2001
-From: Fedor <fedork@ubuntu.(none)>
-Date: Fri, 25 Feb 2011 12:27:20 -0500
-Subject: [PATCH] pppd: always create a new process group (Debian patch)
-
----
-
+diff --git pppd/pppd/main.c pppd/pppd/main.c
+index 71398de..90393b0 100644
 --- pppd/pppd/main.c
 +++ pppd/pppd/main.c
-@@ -421,6 +421,13 @@ main(argc, argv)
+@@ -407,6 +407,13 @@ main(int argc, char *argv[])
+ 	fd_devnull = i;
      }
  
-     /*
++    /*
 +     * pppd sends signals to the whole process group, so it must always
 +     * create a new one or it may kill the parent process and its siblings.
 +     */
 +    setsid();
 +    chdir("/");
 +
-+    /*
+     /*
       * Initialize system-dependent stuff.
       */
-     sys_init();
-@@ -781,8 +788,6 @@ detach()
- 	    create_linkpidfile(pid);
+@@ -766,8 +773,6 @@ detach(void)
+ 	create_linkpidfile(pid);
  	exit(0);		/* parent dies */
      }
 -    setsid();
@@ -30,6 +25,3 @@ Subject: [PATCH] pppd: always create a new process group (Debian patch)
      dup2(fd_devnull, 0);
      dup2(fd_devnull, 1);
      dup2(fd_devnull, 2);
--- 
-2.10.5
-

@@ -1,6 +1,8 @@
+diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
+index f03893c..aeae6d2 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
-@@ -2399,6 +2399,7 @@ int ppp_available(void)
+@@ -2485,6 +2485,7 @@ int ppp_available(void)
  
  void logwtmp (const char *line, const char *name, const char *host)
  {
@@ -8,7 +10,7 @@
      struct utmp ut, *utp;
      pid_t  mypid = getpid();
  #if __GLIBC__ < 2
-@@ -2464,6 +2465,7 @@ void logwtmp (const char *line, const char *name, const char *host)
+@@ -2550,6 +2551,7 @@ void logwtmp (const char *line, const char *name, const char *host)
  	close (wtmp);
      }
  #endif

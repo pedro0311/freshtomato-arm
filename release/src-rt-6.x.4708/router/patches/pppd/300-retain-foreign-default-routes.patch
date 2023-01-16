@@ -1,18 +1,8 @@
-pppd: Retain foreign default routes on Linux
-
-On Linux, when pppd attempts to delete its default route it does not fill
-the rt_dev field of the struct rtentry used to match the system default route.
-As a consequence, pppd happily deletes any default route even if it belongs
-to another interface.
-
-This patch makes pppd fill out the rt_dev field so that only own default
-routes are ever matched.
-
-Signed-off-by: Jo-Philipp Wich <jo@mein.io>
-
+diff --git pppd/pppd/sys-linux.c pppd/pppd/sys-linux.c
+index aeae6d2..f7d5ed9 100644
 --- pppd/pppd/sys-linux.c
 +++ pppd/pppd/sys-linux.c
-@@ -1717,6 +1717,7 @@
+@@ -1763,6 +1763,7 @@ int cifdefaultroute (int unit, u_int32_t ouraddr, u_int32_t gateway)
  	SIN_ADDR(rt.rt_genmask) = 0L;
      }
  

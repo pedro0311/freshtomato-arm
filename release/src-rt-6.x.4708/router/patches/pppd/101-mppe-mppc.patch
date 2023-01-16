@@ -1,3 +1,5 @@
+diff --git pppd/include/linux/ppp-comp.h pppd/include/linux/ppp-comp.h
+index d30cacb..e7f1a61 100644
 --- pppd/include/linux/ppp-comp.h
 +++ pppd/include/linux/ppp-comp.h
 @@ -36,7 +36,7 @@
@@ -43,6 +45,8 @@
  /*
   * Definitions for other, as yet unsupported, compression methods.
   */
+diff --git pppd/include/net/ppp-comp.h pppd/include/net/ppp-comp.h
+index b09ef71..74c932a 100644
 --- pppd/include/net/ppp-comp.h
 +++ pppd/include/net/ppp-comp.h
 @@ -168,6 +168,33 @@ struct compressor {
@@ -79,9 +83,11 @@
  /*
   * Definitions for other, as yet unsupported, compression methods.
   */
+diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
+index 052c4c6..ec060ad 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
-@@ -61,12 +61,6 @@ static int setdeflate __P((char **));
+@@ -61,12 +61,6 @@ static int setdeflate (char **);
  static char bsd_value[8];
  static char deflate_value[8];
  
@@ -234,7 +240,7 @@
  
  /*
   * Local state (mainly for handling reset-reqs and reset-acks).
-@@ -377,6 +404,30 @@ ccp_init(unit)
+@@ -374,6 +401,30 @@ ccp_init(int unit)
      ccp_allowoptions[0].bsd_bits = BSD_MAX_BITS;
  
      ccp_allowoptions[0].predictor_1 = 1;
@@ -265,7 +271,7 @@
  }
  
  /*
-@@ -454,11 +505,11 @@ ccp_input(unit, p, len)
+@@ -443,11 +494,11 @@ ccp_input(int unit, u_char *p, int len)
      if (oldstate == OPENED && p[0] == TERMREQ && f->state != OPENED) {
  	notice("Compression disabled by peer.");
  #ifdef MPPE
@@ -279,7 +285,7 @@
      }
  
      /*
-@@ -486,6 +537,15 @@ ccp_extcode(f, code, id, p, len)
+@@ -471,6 +522,15 @@ ccp_extcode(fsm *f, int code, int id, u_char *p, int len)
  	    break;
  	/* send a reset-ack, which the transmitter will see and
  	   reset its compression state. */
@@ -295,7 +301,7 @@
  	fsm_sdata(f, CCP_RESETACK, id, NULL, 0);
  	break;
  
-@@ -514,12 +574,11 @@ ccp_protrej(unit)
+@@ -498,12 +558,11 @@ ccp_protrej(int unit)
      fsm_lowerdown(&ccp_fsm[unit]);
  
  #ifdef MPPE
@@ -310,7 +316,7 @@
  }
  
  /*
-@@ -536,7 +595,7 @@ ccp_resetci(f)
+@@ -519,7 +578,7 @@ ccp_resetci(fsm *f)
      all_rejected[f->unit] = 0;
  
  #ifdef MPPE
@@ -318,11 +324,27 @@
 +    if (go->mppe || go->mppc) {
  	ccp_options *ao = &ccp_allowoptions[f->unit];
  	int auth_mschap_bits = auth_done[f->unit];
- 	int numbits;
-@@ -550,80 +609,109 @@ ccp_resetci(f)
+ #ifdef USE_EAPTLS
+@@ -536,95 +595,124 @@ ccp_resetci(fsm *f)
  	 * NB: If MPPE is required, all other compression opts are invalid.
  	 *     So, we return right away if we can't do it.
  	 */
+-
+-	/* Leave only the mschap auth bits set */
+-	auth_mschap_bits &= (CHAP_MS_WITHPEER  | CHAP_MS_PEER |
+-			     CHAP_MS2_WITHPEER | CHAP_MS2_PEER);
+-	/* Count the mschap auths */
+-	auth_mschap_bits >>= CHAP_MS_SHIFT;
+-	numbits = 0;
+-	do {
+-	    numbits += auth_mschap_bits & 1;
+-	    auth_mschap_bits >>= 1;
+-	} while (auth_mschap_bits);
+-	if (numbits > 1) {
+-	    error("MPPE required, but auth done in both directions.");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
+-	}
 +	if (ccp_wantoptions[f->unit].mppe) {
 +	    /* Leave only the mschap auth bits set */
 +	    auth_mschap_bits &= (CHAP_MS_WITHPEER  | CHAP_MS_PEER |
@@ -339,44 +361,70 @@
 +		lcp_close(f->unit, "MPPE required but not available");
 +		return;
 +	    }
+ 
+ #ifdef USE_EAPTLS
+-    /*
+-     * MPPE is also possible in combination with EAP-TLS.
+-     * It is not possible to detect if we're doing EAP or EAP-TLS
+-     * at this stage, hence we accept all forms of EAP. If TLS is
+-     * not used then the MPPE keys will not be derived anyway.
+-     */
+-	/* Leave only the eap auth bits set */
+-	auth_eap_bits &= (EAP_WITHPEER | EAP_PEER );
++	    /*
++	     * MPPE is also possible in combination with EAP-TLS.
++	     * It is not possible to detect if we're doing EAP or EAP-TLS
++	     * at this stage, hence we accept all forms of EAP. If TLS is
++	     * not used then the MPPE keys will not be derived anyway.
++	     */
++		/* Leave only the eap auth bits set */
++		auth_eap_bits &= (EAP_WITHPEER | EAP_PEER );
+ 
+-	if ((numbits == 0) && (auth_eap_bits == 0)) {
+-	    error("MPPE required, but MS-CHAP[v2] nor EAP-TLS auth are performed.");
++		if ((numbits == 0) && (auth_eap_bits == 0)) {
++		    error("MPPE required, but MS-CHAP[v2] nor EAP-TLS auth are performed.");
+ #else
+-	if (!numbits) {
+-	    error("MPPE required, but MS-CHAP[v2] auth not performed.");
 +	    if (!numbits) {
 +		error("MPPE required, but MS-CHAP[v2] auth not performed.");
+ #endif
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
+-	}
+-
+-	/* A plugin (eg radius) may not have obtained key material. */
+-	if (!mppe_keys_set) {
+-	    error("MPPE required, but keys are not available.  "
+-		  "Possible plugin problem?");
+-	    lcp_close(f->unit, "MPPE required but not available");
+-	    return;
+-	}
 +		lcp_close(f->unit, "MPPE required but not available");
 +		return;
 +	    }
  
--	/* Leave only the mschap auth bits set */
--	auth_mschap_bits &= (CHAP_MS_WITHPEER  | CHAP_MS_PEER |
--			     CHAP_MS2_WITHPEER | CHAP_MS2_PEER);
--	/* Count the mschap auths */
--	auth_mschap_bits >>= CHAP_MS_SHIFT;
--	numbits = 0;
--	do {
--	    numbits += auth_mschap_bits & 1;
--	    auth_mschap_bits >>= 1;
--	} while (auth_mschap_bits);
--	if (numbits > 1) {
--	    error("MPPE required, but auth done in both directions.");
--	    lcp_close(f->unit, "MPPE required but not available");
--	    return;
--	}
--	if (!numbits) {
--	    error("MPPE required, but MS-CHAP[v2] auth not performed.");
--	    lcp_close(f->unit, "MPPE required but not available");
--	    return;
+-	/* LM auth not supported for MPPE */
+-	if (auth_done[f->unit] & (CHAP_MS_WITHPEER | CHAP_MS_PEER)) {
+-	    /* This might be noise */
+-	    if (go->mppe & MPPE_OPT_40) {
+-		notice("Disabling 40-bit MPPE; MS-CHAP LM not supported");
+-		go->mppe &= ~MPPE_OPT_40;
+-		ccp_wantoptions[f->unit].mppe &= ~MPPE_OPT_40;
 +	    /* A plugin (eg radius) may not have obtained key material. */
 +	    if (!mppe_keys_set) {
 +		error("MPPE required, but keys are not available.  "
 +		      "Possible plugin problem?");
 +		lcp_close(f->unit, "MPPE required but not available");
 +		return;
-+	    }
+ 	    }
  	}
  
--	/* A plugin (eg radius) may not have obtained key material. */
--	if (!mppe_keys_set) {
--	    error("MPPE required, but keys are not available.  "
--		  "Possible plugin problem?");
+-	/* Last check: can we actually negotiate something? */
+-	if (!(go->mppe & (MPPE_OPT_40 | MPPE_OPT_128))) {
+-	    /* Could be misconfig, could be 40-bit disabled above. */
+-	    error("MPPE required, but both 40-bit and 128-bit disabled.");
 -	    lcp_close(f->unit, "MPPE required but not available");
 -	    return;
 +	/*
@@ -393,16 +441,7 @@
 +	    opt_buf[5] = MPPE_MPPC;
 +	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE, 0) <= 0)
 +		go->mppc = 0;
- 	}
--
--	/* LM auth not supported for MPPE */
--	if (auth_done[f->unit] & (CHAP_MS_WITHPEER | CHAP_MS_PEER)) {
--	    /* This might be noise */
--	    if (go->mppe & MPPE_OPT_40) {
--		notice("Disabling 40-bit MPPE; MS-CHAP LM not supported");
--		go->mppe &= ~MPPE_OPT_40;
--		ccp_wantoptions[f->unit].mppe &= ~MPPE_OPT_40;
--	    }
++	}
 +	if (go->mppe_40) {
 +	    opt_buf[0] = CI_MPPE;
 +	    opt_buf[1] = CILEN_MPPE;
@@ -412,14 +451,7 @@
 +	    opt_buf[5] = MPPE_40BIT;
 +	    if (ccp_test(f->unit, opt_buf, CILEN_MPPE + MPPE_MAX_KEY_LEN, 0) <= 0)
 +		go->mppe_40 = 0;
- 	}
--
--	/* Last check: can we actually negotiate something? */
--	if (!(go->mppe & (MPPE_OPT_40 | MPPE_OPT_128))) {
--	    /* Could be misconfig, could be 40-bit disabled above. */
--	    error("MPPE required, but both 40-bit and 128-bit disabled.");
--	    lcp_close(f->unit, "MPPE required but not available");
--	    return;
++	}
 +	if (go->mppe_56) {
 +	    opt_buf[0] = CI_MPPE;
 +	    opt_buf[1] = CILEN_MPPE;
@@ -494,7 +526,7 @@
      if (go->bsd_compress) {
  	opt_buf[0] = CI_BSD_COMPRESS;
  	opt_buf[1] = CILEN_BSD_COMPRESS;
-@@ -679,7 +767,8 @@ ccp_cilen(f)
+@@ -679,7 +767,8 @@ static int
  	+ (go->deflate && go->deflate_draft? CILEN_DEFLATE: 0)
  	+ (go->predictor_1? CILEN_PREDICTOR_1: 0)
  	+ (go->predictor_2? CILEN_PREDICTOR_2: 0)
@@ -504,7 +536,7 @@
  }
  
  /*
-@@ -693,6 +782,8 @@ ccp_addci(f, p, lenp)
+@@ -690,6 +779,8 @@ static void
  {
      int res;
      ccp_options *go = &ccp_gotoptions[f->unit];
@@ -513,7 +545,7 @@
      u_char *p0 = p;
  
      /*
-@@ -701,22 +792,43 @@ ccp_addci(f, p, lenp)
+@@ -698,22 +789,43 @@ static void
       * in case it gets Acked.
       */
  #ifdef MPPE
@@ -566,7 +598,7 @@
      if (go->deflate) {
  	p[0] = go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT;
  	p[1] = CILEN_DEFLATE;
-@@ -802,7 +914,7 @@ ccp_addci(f, p, lenp)
+@@ -799,30 +911,50 @@ static void
  
  /*
   * ccp_ackci - process a received configure-ack, and return
@@ -574,9 +606,7 @@
 + * 1 if the packet was OK.
   */
  static int
- ccp_ackci(f, p, len)
-@@ -811,24 +923,44 @@ ccp_ackci(f, p, len)
-     int len;
+   ccp_ackci(fsm *f, u_char *p, int len)
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
 +    ccp_options *ao = &ccp_allowoptions[f->unit];
@@ -629,7 +659,7 @@
      if (go->deflate) {
  	if (len < CILEN_DEFLATE
  	    || p[0] != (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
-@@ -891,7 +1023,7 @@ ccp_ackci(f, p, len)
+@@ -885,12 +1017,14 @@ static int
  
  /*
   * ccp_nakci - process received configure-nak.
@@ -637,9 +667,7 @@
 + * Returns 1 if the nak was OK.
   */
  static int
- ccp_nakci(f, p, len, treat_as_reject)
-@@ -901,6 +1033,8 @@ ccp_nakci(f, p, len, treat_as_reject)
-     int treat_as_reject;
+   ccp_nakci(fsm *f, u_char *p, int len, int treat_as_reject)
  {
      ccp_options *go = &ccp_gotoptions[f->unit];
 +    ccp_options *ao = &ccp_allowoptions[f->unit];
@@ -647,7 +675,7 @@
      ccp_options no;		/* options we've seen already */
      ccp_options try;		/* options to ask for next time */
  
-@@ -908,28 +1042,100 @@ ccp_nakci(f, p, len, treat_as_reject)
+@@ -898,28 +1032,100 @@ static int
      try = *go;
  
  #ifdef MPPE
@@ -765,7 +793,7 @@
      if (go->deflate && len >= CILEN_DEFLATE
  	&& p[0] == (go->deflate_correct? CI_DEFLATE: CI_DEFLATE_DRAFT)
  	&& p[1] == CILEN_DEFLATE) {
-@@ -1002,14 +1208,50 @@ ccp_rejci(f, p, len)
+@@ -989,14 +1195,50 @@ ccp_rejci(fsm *f, u_char *p, int len)
  	return -1;
  
  #ifdef MPPE
@@ -820,8 +848,8 @@
      if (go->deflate_correct && len >= CILEN_DEFLATE
  	&& p[0] == CI_DEFLATE && p[1] == CILEN_DEFLATE) {
  	if (p[2] != DEFLATE_MAKE_OPT(go->deflate_size)
-@@ -1073,14 +1315,15 @@ ccp_reqci(f, p, lenp, dont_nak)
-     int dont_nak;
+@@ -1056,14 +1298,15 @@ static int
+ ccp_reqci(fsm *f, u_char *p, int *lenp, int dont_nak)
  {
      int ret, newret, res;
 -    u_char *p0, *retp;
@@ -840,7 +868,7 @@
  
      ret = CONFACK;
      retp = p0 = p;
-@@ -1103,106 +1346,299 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1086,106 +1329,299 @@ ccp_reqci(fsm *f, u_char *p, int *lenp, int dont_nak)
  	    switch (type) {
  #ifdef MPPE
  	    case CI_MPPE:
@@ -896,9 +924,13 @@
 +			    p[5] &= ~MPPE_MPPC;
 +			    newret = CONFNAK;
 +			}
-+		    }
-+		}
-+
+ 		    }
+ 		}
+ 
+-		/* Find out which of {S,L} are set. */
+-		if ((ho->mppe & MPPE_OPT_128)
+-		     && (ho->mppe & MPPE_OPT_40)) {
+-		    /* Both are set, negotiate the strongest. */
 +		if (ao->mppe)
 +		    ho->mppe = 1;
 +
@@ -921,13 +953,9 @@
 +			wo->mppe_stateless = 0;
 +			newret = CONFNAK;
 +			p[2] |= MPPE_STATELESS;
- 		    }
- 		}
- 
--		/* Find out which of {S,L} are set. */
--		if ((ho->mppe & MPPE_OPT_128)
--		     && (ho->mppe & MPPE_OPT_40)) {
--		    /* Both are set, negotiate the strongest. */
++		    }
++		}
++
 +		if ((p[5] & ~MPPE_MPPC) == (MPPE_40BIT|MPPE_56BIT|MPPE_128BIT)) {
  		    newret = CONFNAK;
 -		    if (ao->mppe & MPPE_OPT_128)
@@ -1214,7 +1242,7 @@
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (!ao->deflate || clen != CILEN_DEFLATE
-@@ -1344,12 +1780,6 @@ ccp_reqci(f, p, lenp, dont_nak)
+@@ -1327,12 +1763,6 @@ ccp_reqci(fsm *f, u_char *p, int *lenp, int dont_nak)
  	else
  	    *lenp = retp - p0;
      }
@@ -1227,7 +1255,7 @@
      return ret;
  }
  
-@@ -1371,24 +1801,35 @@ method_name(opt, opt2)
+@@ -1353,24 +1783,35 @@ method_name(ccp_options *opt, ccp_options *opt2)
  	char *p = result;
  	char *q = result + sizeof(result); /* 1 past result */
  
@@ -1279,7 +1307,7 @@
      case CI_DEFLATE:
      case CI_DEFLATE_DRAFT:
  	if (opt2 != NULL && opt2->deflate_size != opt->deflate_size)
-@@ -1444,12 +1885,12 @@ ccp_up(f)
+@@ -1425,12 +1866,12 @@ ccp_up(fsm *f)
      } else if (ANY_COMPRESS(*ho))
  	notice("%s transmit compression enabled", method_name(ho, NULL));
  #ifdef MPPE
@@ -1294,7 +1322,7 @@
  }
  
  /*
-@@ -1472,7 +1913,7 @@ ccp_down(f)
+@@ -1452,7 +1893,7 @@ ccp_down(fsm *f)
  	    lcp_close(f->unit, "MPPE disabled");
  	}
      }
@@ -1303,7 +1331,7 @@
  }
  
  /*
-@@ -1532,24 +1973,28 @@ ccp_printpkt(p, plen, printer, arg)
+@@ -1509,24 +1950,28 @@ ccp_printpkt(u_char *p, int plen,
  #ifdef MPPE
  	    case CI_MPPE:
  		if (optlen >= CILEN_MPPE) {
@@ -1344,7 +1372,7 @@
  	    case CI_DEFLATE:
  	    case CI_DEFLATE_DRAFT:
  		if (optlen >= CILEN_DEFLATE) {
-@@ -1635,6 +2080,7 @@ ccp_datainput(unit, pkt, len)
+@@ -1609,6 +2054,7 @@ ccp_datainput(int unit, u_char *pkt, int len)
  	    error("Lost compression sync: disabling compression");
  	    ccp_close(unit, "Lost compression sync");
  #ifdef MPPE
@@ -1352,14 +1380,14 @@
  	    /*
  	     * If we were doing MPPE, we must also take the link down.
  	     */
-@@ -1642,9 +2088,18 @@ ccp_datainput(unit, pkt, len)
+@@ -1616,8 +2062,17 @@ ccp_datainput(int unit, u_char *pkt, int len)
  		error("Too many MPPE errors, closing LCP");
  		lcp_close(unit, "Too many MPPE errors");
  	    }
 -#endif
 +#endif /* MPPE */
  	} else {
- 	    /*
++	    /*
 +	     * When LZS or MPPE/MPPC is negotiated we just send CCP_RESETREQ
 +	     * and don't wait for CCP_RESETACK
 +	     */
@@ -1368,10 +1396,11 @@
 +		fsm_sdata(f, CCP_RESETREQ, f->reqid = ++f->id, NULL, 0);
 +		return;
 +	    }
-+	    /*
+ 	    /*
  	     * Send a reset-request to reset the peer's compressor.
  	     * We don't do that if we are still waiting for an
- 	     * acknowledgement to a previous reset-request.
+diff --git pppd/pppd/ccp.h pppd/pppd/ccp.h
+index 76446db..5e1030c 100644
 --- pppd/pppd/ccp.h
 +++ pppd/pppd/ccp.h
 @@ -37,9 +37,17 @@ typedef struct ccp_options {
@@ -1392,9 +1421,11 @@
      short method;		/* code for chosen compression method */
  } ccp_options;
  
+diff --git pppd/pppd/chap_ms.c pppd/pppd/chap_ms.c
+index e6b84f2..744bf3e 100644
 --- pppd/pppd/chap_ms.c
 +++ pppd/pppd/chap_ms.c
-@@ -962,13 +962,17 @@ set_mppe_enc_types(int policy, int types)
+@@ -964,13 +964,17 @@ set_mppe_enc_types(int policy, int types)
      /*
       * Disable undesirable encryption types.  Note that we don't ENABLE
       * any encryption types, to avoid overriding manual configuration.

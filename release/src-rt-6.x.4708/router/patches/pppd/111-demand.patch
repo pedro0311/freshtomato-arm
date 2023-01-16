@@ -1,3 +1,5 @@
+diff --git pppd/pppd/demand.c pppd/pppd/demand.c
+index 289c9f8..59b6932 100644
 --- pppd/pppd/demand.c
 +++ pppd/pppd/demand.c
 @@ -36,6 +36,8 @@
@@ -18,7 +20,7 @@
  #ifdef PPP_FILTER
  #include <pcap-bpf.h>
  #endif
-@@ -220,6 +224,14 @@ loop_chars(p, n)
+@@ -218,6 +222,14 @@ loop_chars(unsigned char *p, int n)
      int c, rv;
  
      rv = 0;
@@ -33,14 +35,12 @@
      for (; n > 0; --n) {
  	c = *p++;
  	if (c == PPP_FLAG) {
-@@ -298,17 +310,102 @@ loop_frame(frame, len)
+@@ -294,16 +306,100 @@ loop_frame(unsigned char *frame, int len)
   * loopback, now that the real serial link is up.
   */
  void
--demand_rexmit(proto)
-+demand_rexmit(proto, newip)
-     int proto;
-+    u_int32_t newip;
+-demand_rexmit(int proto)
++demand_rexmit(int proto, u_int32_t newip)
  {
      struct packet *pkt, *prev, *nextpkt;
 +    unsigned short checksum;
@@ -137,9 +137,11 @@
  	    output(0, pkt->data, pkt->length);
  	    free(pkt);
  	} else {
+diff --git pppd/pppd/ipcp.c pppd/pppd/ipcp.c
+index 013801b..c2aae63 100644
 --- pppd/pppd/ipcp.c
 +++ pppd/pppd/ipcp.c
-@@ -1895,7 +1895,7 @@ ipcp_up(f)
+@@ -1863,7 +1863,7 @@ ipcp_up(fsm *f)
  		    proxy_arp_set[f->unit] = 1;
  
  	}
@@ -148,9 +150,11 @@
  	sifnpmode(f->unit, PPP_IP, NPMODE_PASS);
  
      } else {
+diff --git pppd/pppd/ipv6cp.c pppd/pppd/ipv6cp.c
+index d4da131..a6f81ec 100644
 --- pppd/pppd/ipv6cp.c
 +++ pppd/pppd/ipv6cp.c
-@@ -1266,7 +1266,7 @@ ipv6cp_up(f)
+@@ -1262,7 +1262,7 @@ ipv6cp_up(fsm *f)
  		if (sif6defaultroute(f->unit, go->ourid, ho->hisid))
  		    default_route_set[f->unit] = 1;
  	}
@@ -159,14 +163,16 @@
  	sifnpmode(f->unit, PPP_IPV6, NPMODE_PASS);
  
      } else {
+diff --git pppd/pppd/pppd.h pppd/pppd/pppd.h
+index 5b12d2c..6b1fbfb 100644
 --- pppd/pppd/pppd.h
 +++ pppd/pppd/pppd.h
-@@ -606,7 +606,7 @@ void demand_conf __P((void));	/* config interface(s) for demand-dial */
- void demand_block __P((void));	/* set all NPs to queue up packets */
- void demand_unblock __P((void)); /* set all NPs to pass packets */
- void demand_discard __P((void)); /* set all NPs to discard packets */
--void demand_rexmit __P((int));	/* retransmit saved frames for an NP */
-+void demand_rexmit __P((int, u_int32_t)); /* retransmit saved frames for an NP*/
- int  loop_chars __P((unsigned char *, int)); /* process chars from loopback */
- int  loop_frame __P((unsigned char *, int)); /* should we bring link up? */
+@@ -600,7 +600,7 @@ void demand_conf(void);	/* config interface(s) for demand-dial */
+ void demand_block(void);	/* set all NPs to queue up packets */
+ void demand_unblock(void); /* set all NPs to pass packets */
+ void demand_discard(void); /* set all NPs to discard packets */
+-void demand_rexmit(int);	/* retransmit saved frames for an NP */
++void demand_rexmit(int, u_int32_t); /* retransmit saved frames for an NP*/
+ int  loop_chars(unsigned char *, int); /* process chars from loopback */
+ int  loop_frame(unsigned char *, int); /* should we bring link up? */
  

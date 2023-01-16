@@ -1,6 +1,8 @@
+diff --git pppd/chat/chat.c pppd/chat/chat.c
+index 1639b3e..183009e 100644
 --- pppd/chat/chat.c
 +++ pppd/chat/chat.c
-@@ -199,8 +199,9 @@ struct termios saved_tty_parameters;
+@@ -178,8 +178,9 @@ struct termios saved_tty_parameters;
  
  char *abort_string[MAX_ABORTS], *fail_reason = (char *)0,
  	fail_buffer[50];
@@ -11,7 +13,7 @@
  
  char *report_string[MAX_REPORTS] ;
  char  report_buffer[256] ;
-@@ -615,7 +616,7 @@ void set_tty_parameters()
+@@ -567,7 +568,7 @@ void set_tty_parameters(void)
      saved_tty_parameters = t;
      have_tty_parameters  = 1;
  
@@ -20,7 +22,7 @@
      t.c_oflag      = 0;
      t.c_lflag      = 0;
      t.c_cc[VERASE] =
-@@ -971,6 +972,11 @@ char *s;
+@@ -919,6 +920,11 @@ void chat_expect (char *s)
  	return;
      }
  
@@ -32,7 +34,7 @@
  /*
   * Fetch the expect and reply string.
   */
-@@ -1180,6 +1186,12 @@ register char *s;
+@@ -1126,6 +1132,12 @@ void chat_send (register char *s)
  
  	return;
      }
@@ -45,7 +47,7 @@
  
      /*
       * The syntax @filename means read the string to send from the
-@@ -1236,7 +1248,7 @@ int get_char()
+@@ -1182,7 +1194,7 @@ int get_char(void)
  
      switch (status) {
      case 1:
@@ -54,7 +56,7 @@
  
      default:
  	msgf("warning: read() on stdin returned %d", status);
-@@ -1433,7 +1445,9 @@ register char *string;
+@@ -1374,7 +1386,9 @@ int get_string(register char *string)
  	}
  
  	if (Verbose) {
@@ -65,7 +67,7 @@
  	       fputc( '\n', stderr );
  	   else if (c != '\r')
  	       fprintf( stderr, "%s", character(c) );
-@@ -1479,6 +1493,10 @@ register char *string;
+@@ -1420,6 +1434,10 @@ int get_string(register char *string)
  
  	    alarm(0);
  	    alarmed = 0;
@@ -76,11 +78,13 @@
  	    return (1);
  	}
  
+diff --git pppd/pppd/auth.c pppd/pppd/auth.c
+index 00246d0..354f2ee 100644
 --- pppd/pppd/auth.c
 +++ pppd/pppd/auth.c
-@@ -560,6 +560,9 @@ void start_link(unit)
- void start_link(unit)
-     int unit;
+@@ -598,6 +598,9 @@ link_required(int unit)
+  */
+ void start_link(int unit)
  {
 +    /* we are called via link_terminated, must be ignored */
 +    if (phase == PHASE_DISCONNECT)
@@ -88,18 +92,7 @@
      status = EXIT_CONNECT_FAILED;
      new_phase(PHASE_SERIALCONN);
  
-@@ -1202,6 +1205,10 @@ check_idle(arg)
-     if (idle_time_hook != 0) {
- 	tlim = idle_time_hook(&idle);
-     } else {
-+	/* replace itime with idle.xmit_idle for only outgoing traffic is counted */
-+	if (tx_only) 
-+		itime = idle.xmit_idle;
-+	else
- 	itime = MIN(idle.xmit_idle, idle.recv_idle);
- 	tlim = idle_time_limit - itime;
-     }
-@@ -2369,7 +2376,8 @@ auth_script(script)
+@@ -2388,7 +2391,8 @@ auth_script(char *script)
      argv[3] = user_name;
      argv[4] = devnam;
      argv[5] = strspeed;
@@ -109,6 +102,8 @@
  
      auth_script_pid = run_program(script, argv, 0, auth_script_done, NULL, 0);
  }
+diff --git pppd/pppd/plugins/pppol2tp/pppol2tp.c pppd/pppd/plugins/pppol2tp/pppol2tp.c
+index 1be0ad2..97ea85d 100644
 --- pppd/pppd/plugins/pppol2tp/pppol2tp.c
 +++ pppd/pppd/plugins/pppol2tp/pppol2tp.c
 @@ -117,14 +117,8 @@ static option_t pppol2tp_options[] = {
@@ -172,27 +167,3 @@
  	return pppol2tp_fd;
  }
  
---- pppd/pppd/ipv6cp.c
-+++ pppd/pppd/ipv6cp.c
-@@ -1089,7 +1089,9 @@ endswitch:
-     return (rc);			/* Return final code */
- }
- 
--
-+#if defined(SOL2) || defined(__linux__)
-+int ether_to_eui64(eui64_t *p_eui64);
-+#endif
- /*
-  * ipv6_check_options - check that any IP-related options are OK,
-  * and assign appropriate defaults.
---- pppd/pppd/main.c
-+++ pppd/pppd/main.c
-@@ -1687,7 +1687,7 @@ device_script(program, in, out, dont_wait)
-     if (log_to_fd >= 0)
- 	errfd = log_to_fd;
-     else
--	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0600);
-+	errfd = open(_PATH_CONNERRS, O_WRONLY | O_APPEND | O_CREAT, 0644);
- 
-     ++conn_running;
-     pid = safe_fork(in, out, errfd);

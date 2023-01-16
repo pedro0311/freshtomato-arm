@@ -1,10 +1,5 @@
-From a620fa767b3becd3b4e1eb8e070c6b18e602c8b5 Mon Sep 17 00:00:00 2001
-From: Fedor <fedork@ubuntu.(none)>
-Date: Sat, 9 Oct 2010 03:34:01 -0400
-Subject: [PATCH] pppd: typo fix
-
----
-
+diff --git pppd/pppd/ccp.c pppd/pppd/ccp.c
+index ec060ad..6da12c6 100644
 --- pppd/pppd/ccp.c
 +++ pppd/pppd/ccp.c
 @@ -169,7 +169,7 @@ static option_t ccp_option_list[] = {
@@ -16,6 +11,3 @@ Subject: [PATCH] pppd: typo fix
        "don't allow MPPE 128-bit encryption", OPT_PRIOSUB | OPT_A2CLR,
        &ccp_allowoptions[0].mppe_128 },
      { "-mppe-128", o_bool, &ccp_wantoptions[0].mppe_128,
--- 
-2.10.5
-
