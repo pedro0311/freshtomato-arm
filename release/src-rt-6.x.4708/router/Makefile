@@ -1717,7 +1717,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 	$(call patch_files,pppd)
 	cd pppd && \
 		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="-O2 -Wall -ffunction-sections -fdata-sections"
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_BCMARM),-O2,$(if $(TCONFIG_AIO),-O3,-Os)) -Wall -ffunction-sections -fdata-sections"
 
 pppd: pppd/Makefile
 	@$(SEP)
