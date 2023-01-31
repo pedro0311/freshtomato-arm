@@ -1,6 +1,6 @@
 --- busybox/include/libbb.h
 +++ busybox/include/libbb.h
-@@ -1106,6 +1106,10 @@
+@@ -1108,6 +1108,10 @@
  
  /* Generate a UUID */
  void generate_uuid(uint8_t *buf) FAST_FUNC;
@@ -34,9 +34,9 @@
 +int add_to_uuid_cache(const char *device, dev_t devno);
 --- busybox/libbb/xfuncs.c
 +++ busybox/libbb/xfuncs.c
-@@ -423,3 +423,49 @@
- 		return WTERMSIG(status) + 0x180;
- 	return 0;
+@@ -433,3 +433,49 @@
+ {
+ 	_exit(EXIT_SUCCESS);
  }
 +
 +char * FAST_FUNC unparse_uuid(const uint8_t *uu, char *out)
