@@ -1,6 +1,12 @@
 --- getdns/CMakeLists.txt
 +++ getdns/CMakeLists.txt
-@@ -1060,8 +1060,6 @@
+@@ -1,4 +1,4 @@
+-cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
++cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+ 
+ if (POLICY CMP0075)
+   cmake_policy(SET CMP0075 NEW)
+@@ -1061,8 +1061,6 @@
  endforeach()
  
  set(prefix ${CMAKE_INSTALL_PREFIX})

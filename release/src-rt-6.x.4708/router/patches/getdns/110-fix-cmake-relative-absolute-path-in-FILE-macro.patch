@@ -1,6 +1,6 @@
 --- getdns/CMakeLists.txt
 +++ getdns/CMakeLists.txt
-@@ -1177,3 +1177,10 @@
+@@ -1178,3 +1178,10 @@
      COMMENT "Generating Doxygen docs.")
    add_custom_target(doc ALL DEPENDS doc/html/index.html)
  endif ()
