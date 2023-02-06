@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2022 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -672,7 +672,7 @@ void version(void)
 #endif
 #ifndef NANO_TINY
 	/* TRANSLATORS: The %s is the year of the latest release. */
-	printf(_(" (C) %s the Free Software Foundation and various contributors\n"), "2022");
+	printf(_(" (C) %s the Free Software Foundation and various contributors\n"), "2023");
 #endif
 	printf(_(" Compiled options:"));
 
@@ -1388,7 +1388,7 @@ bool wanted_to_move(void (*func)(void))
 }
 
 /* Return TRUE when the given function makes a change -- no good for view mode. */
-bool changes_something(const void *f)
+bool changes_something(functionptrtype f)
 {
 	return (f == do_savefile || f == do_writeout || f == do_enter || f == do_tab ||
 			f == do_delete || f == do_backspace || f == cut_text || f == paste_text ||
@@ -1443,7 +1443,10 @@ void suck_up_input_and_paste_it(void)
 			beep();
 	}
 
-	paste_text();
+	if (ISSET(VIEW_MODE))
+		print_view_warning();
+	else
+		paste_text();
 
 	free_lines(cutbuffer);
 	cutbuffer = was_cutbuffer;

@@ -1,6 +1,6 @@
 /* A GNU-like <math.h>.
 
-   Copyright (C) 2002-2003, 2007-2022 Free Software Foundation, Inc.
+   Copyright (C) 2002-2003, 2007-2023 Free Software Foundation, Inc.
 
    This file is free software: you can redistribute it and/or modify
    it under the terms of the GNU Lesser General Public License as
@@ -14,6 +14,11 @@
 
    You should have received a copy of the GNU Lesser General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
+
+/* On Android, in C++ mode, when /usr/include/c++/v1/math.h is being included
+   and /usr/include/math.h has not yet been included, skip this file, since it
+   would lead to many syntax errors.  */
+#if !(defined __ANDROID__ && defined _LIBCPP_MATH_H && !defined INFINITY)
 
 #ifndef _@GUARD_PREFIX@_MATH_H
 
@@ -2725,3 +2730,4 @@ _GL_INLINE_HEADER_END
 #endif /* _@GUARD_PREFIX@_MATH_H */
 #endif /* _GL_INCLUDING_MATH_H */
 #endif /* _@GUARD_PREFIX@_MATH_H */
+#endif

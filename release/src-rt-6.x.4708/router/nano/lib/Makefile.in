@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-# Copyright (C) 2002-2022 Free Software Foundation, Inc.
+# Copyright (C) 2002-2023 Free Software Foundation, Inc.
 #
 # This file is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -233,9 +233,9 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/dirent_h.m4 $(top_srcdir)/m4/dirfd.m4 \
 	$(top_srcdir)/m4/double-slash-root.m4 $(top_srcdir)/m4/dup2.m4 \
 	$(top_srcdir)/m4/eealloc.m4 $(top_srcdir)/m4/errno_h.m4 \
-	$(top_srcdir)/m4/error.m4 $(top_srcdir)/m4/exponentd.m4 \
-	$(top_srcdir)/m4/exponentf.m4 $(top_srcdir)/m4/exponentl.m4 \
-	$(top_srcdir)/m4/extensions.m4 \
+	$(top_srcdir)/m4/error.m4 $(top_srcdir)/m4/error_h.m4 \
+	$(top_srcdir)/m4/exponentd.m4 $(top_srcdir)/m4/exponentf.m4 \
+	$(top_srcdir)/m4/exponentl.m4 $(top_srcdir)/m4/extensions.m4 \
 	$(top_srcdir)/m4/extern-inline.m4 $(top_srcdir)/m4/fchdir.m4 \
 	$(top_srcdir)/m4/fcntl-o.m4 $(top_srcdir)/m4/fcntl.m4 \
 	$(top_srcdir)/m4/fcntl_h.m4 $(top_srcdir)/m4/filenamecat.m4 \
@@ -322,8 +322,8 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/00gnulib.m4 \
 	$(top_srcdir)/m4/wcrtomb.m4 $(top_srcdir)/m4/wctype_h.m4 \
 	$(top_srcdir)/m4/wcwidth.m4 $(top_srcdir)/m4/wint_t.m4 \
 	$(top_srcdir)/m4/wmemchr.m4 $(top_srcdir)/m4/wmempcpy.m4 \
-	$(top_srcdir)/m4/xsize.m4 $(top_srcdir)/m4/year2038.m4 \
-	$(top_srcdir)/m4/zzgnulib.m4 $(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/xsize.m4 $(top_srcdir)/m4/zzgnulib.m4 \
+	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 DIST_COMMON = $(srcdir)/Makefile.am $(noinst_HEADERS) \
@@ -778,6 +778,7 @@ CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CFLAG_VISIBILITY = @CFLAG_VISIBILITY@
+CLOCK_TIME_LIB = @CLOCK_TIME_LIB@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURSES_LIB = @CURSES_LIB@
@@ -795,11 +796,14 @@ ENOLINK_VALUE = @ENOLINK_VALUE@
 EOVERFLOW_HIDDEN = @EOVERFLOW_HIDDEN@
 EOVERFLOW_VALUE = @EOVERFLOW_VALUE@
 ERRNO_H = @ERRNO_H@
+ERROR_H = @ERROR_H@
 EXEEXT = @EXEEXT@
 FLOAT_H = @FLOAT_H@
 FNMATCH_H = @FNMATCH_H@
+GETLOGIN_LIB = @GETLOGIN_LIB@
 GETOPT_CDEFS_H = @GETOPT_CDEFS_H@
 GETOPT_H = @GETOPT_H@
+GETRANDOM_LIB = @GETRANDOM_LIB@
 GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
 GLOB_H = @GLOB_H@
 GL_CFLAG_ALLOW_WARNINGS = @GL_CFLAG_ALLOW_WARNINGS@
@@ -1059,6 +1063,7 @@ GL_GNULIB_MEMCHR = @GL_GNULIB_MEMCHR@
 GL_GNULIB_MEMMEM = @GL_GNULIB_MEMMEM@
 GL_GNULIB_MEMPCPY = @GL_GNULIB_MEMPCPY@
 GL_GNULIB_MEMRCHR = @GL_GNULIB_MEMRCHR@
+GL_GNULIB_MEMSET_EXPLICIT = @GL_GNULIB_MEMSET_EXPLICIT@
 GL_GNULIB_MKDIR = @GL_GNULIB_MKDIR@
 GL_GNULIB_MKDIRAT = @GL_GNULIB_MKDIRAT@
 GL_GNULIB_MKDTEMP = @GL_GNULIB_MKDTEMP@
@@ -1266,6 +1271,7 @@ GMSGFMT_015 = @GMSGFMT_015@
 GNULIBHEADERS_OVERRIDE_WINT_T = @GNULIBHEADERS_OVERRIDE_WINT_T@
 GNULIB_GETTIMEOFDAY = @GNULIB_GETTIMEOFDAY@
 GREP = @GREP@
+HARD_LOCALE_LIB = @HARD_LOCALE_LIB@
 HAVE_ACOSF = @HAVE_ACOSF@
 HAVE_ACOSL = @HAVE_ACOSL@
 HAVE_ALIGNED_ALLOC = @HAVE_ALIGNED_ALLOC@
@@ -1330,6 +1336,7 @@ HAVE_DECL_GETLOGIN = @HAVE_DECL_GETLOGIN@
 HAVE_DECL_GETLOGIN_R = @HAVE_DECL_GETLOGIN_R@
 HAVE_DECL_GETPAGESIZE = @HAVE_DECL_GETPAGESIZE@
 HAVE_DECL_GETUSERSHELL = @HAVE_DECL_GETUSERSHELL@
+HAVE_DECL_GETW = @HAVE_DECL_GETW@
 HAVE_DECL_IMAXABS = @HAVE_DECL_IMAXABS@
 HAVE_DECL_IMAXDIV = @HAVE_DECL_IMAXDIV@
 HAVE_DECL_INITSTATE = @HAVE_DECL_INITSTATE@
@@ -1344,6 +1351,7 @@ HAVE_DECL_LOGL = @HAVE_DECL_LOGL@
 HAVE_DECL_MEMMEM = @HAVE_DECL_MEMMEM@
 HAVE_DECL_MEMRCHR = @HAVE_DECL_MEMRCHR@
 HAVE_DECL_OBSTACK_PRINTF = @HAVE_DECL_OBSTACK_PRINTF@
+HAVE_DECL_PUTW = @HAVE_DECL_PUTW@
 HAVE_DECL_REMAINDER = @HAVE_DECL_REMAINDER@
 HAVE_DECL_REMAINDERL = @HAVE_DECL_REMAINDERL@
 HAVE_DECL_RINTF = @HAVE_DECL_RINTF@
@@ -1380,6 +1388,8 @@ HAVE_DIRENT_H = @HAVE_DIRENT_H@
 HAVE_DPRINTF = @HAVE_DPRINTF@
 HAVE_DUP3 = @HAVE_DUP3@
 HAVE_DUPLOCALE = @HAVE_DUPLOCALE@
+HAVE_ERROR = @HAVE_ERROR@
+HAVE_ERROR_AT_LINE = @HAVE_ERROR_AT_LINE@
 HAVE_EUIDACCESS = @HAVE_EUIDACCESS@
 HAVE_EXECVPE = @HAVE_EXECVPE@
 HAVE_EXPF = @HAVE_EXPF@
@@ -1476,6 +1486,7 @@ HAVE_MBSNRTOWCS = @HAVE_MBSNRTOWCS@
 HAVE_MBSRTOWCS = @HAVE_MBSRTOWCS@
 HAVE_MBTOWC = @HAVE_MBTOWC@
 HAVE_MEMPCPY = @HAVE_MEMPCPY@
+HAVE_MEMSET_EXPLICIT = @HAVE_MEMSET_EXPLICIT@
 HAVE_MKDIRAT = @HAVE_MKDIRAT@
 HAVE_MKDTEMP = @HAVE_MKDTEMP@
 HAVE_MKFIFO = @HAVE_MKFIFO@
@@ -1686,6 +1697,7 @@ LTLIBOBJS = @LTLIBOBJS@
 LTLIBTHREAD = @LTLIBTHREAD@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
+MBRTOWC_LIB = @MBRTOWC_LIB@
 MKDIR_P = @MKDIR_P@
 MSGFMT = @MSGFMT@
 MSGFMT_015 = @MSGFMT_015@
@@ -1808,6 +1820,8 @@ REPLACE_DPRINTF = @REPLACE_DPRINTF@
 REPLACE_DUP = @REPLACE_DUP@
 REPLACE_DUP2 = @REPLACE_DUP2@
 REPLACE_DUPLOCALE = @REPLACE_DUPLOCALE@
+REPLACE_ERROR = @REPLACE_ERROR@
+REPLACE_ERROR_AT_LINE = @REPLACE_ERROR_AT_LINE@
 REPLACE_EXECL = @REPLACE_EXECL@
 REPLACE_EXECLE = @REPLACE_EXECLE@
 REPLACE_EXECLP = @REPLACE_EXECLP@
@@ -2052,7 +2066,9 @@ REPLACE_WCTOB = @REPLACE_WCTOB@
 REPLACE_WCTOMB = @REPLACE_WCTOMB@
 REPLACE_WCWIDTH = @REPLACE_WCWIDTH@
 REPLACE_WRITE = @REPLACE_WRITE@
+SCHED_YIELD_LIB = @SCHED_YIELD_LIB@
 SED = @SED@
+SETLOCALE_NULL_LIB = @SETLOCALE_NULL_LIB@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 SIG_ATOMIC_T_SUFFIX = @SIG_ATOMIC_T_SUFFIX@
@@ -2149,7 +2165,7 @@ noinst_LTLIBRARIES =
 EXTRA_DIST = alloca.c alloca.in.h assert.in.h verify.h assure.h \
 	attribute.h basename-lgpl.h chdir-long.h cloexec.h \
 	dirent-private.h ctype.in.h dirent.in.h dirname.h errno.in.h \
-	error.h exitfail.h fcntl.in.h fd-hook.h filename.h \
+	error.in.h exitfail.h fcntl.in.h fd-hook.h filename.h \
 	filenamecat.h flexmember.h float.in.h fnmatch.c fnmatch_loop.c \
 	fnmatch.in.h fpucw.h frexp.c frexp.c frexpl.c stat-w32.c \
 	stat-w32.h at-func.c getopt-cdefs.in.h getopt-core.h \
@@ -2187,34 +2203,34 @@ EXTRA_DIST = alloca.c alloca.in.h assert.in.h verify.h assure.h \
 	windows-initguard.h windows-recmutex.h windows-initguard.h \
 	windows-rwlock.h wmemchr-impl.h xalloc-oversized.h
 BUILT_SOURCES = $(ALLOCA_H) $(ASSERT_H) ctype.h dirent.h $(ERRNO_H) \
-	fcntl.h $(FLOAT_H) $(FNMATCH_H) $(GETOPT_H) $(GETOPT_CDEFS_H) \
-	malloc/dynarray.gl.h malloc/dynarray-skeleton.gl.h \
-	malloc/scratch_buffer.gl.h $(GLOB_H) glob-libc.gl.h inttypes.h \
-	langinfo.h $(LIMITS_H) locale.h math.h signal.h $(STDARG_H) \
-	$(STDCKDINT_H) $(STDDEF_H) $(STDINT_H) stdio.h stdlib.h \
-	string.h strings.h sys/random.h sys/stat.h sys/time.h \
-	sys/types.h sys/wait.h time.h unistd.h \
-	$(LIBUNISTRING_UNITYPES_H) $(LIBUNISTRING_UNIWIDTH_H) utime.h \
-	wchar.h wctype.h
+	$(ERROR_H) fcntl.h $(FLOAT_H) $(FNMATCH_H) $(GETOPT_H) \
+	$(GETOPT_CDEFS_H) malloc/dynarray.gl.h \
+	malloc/dynarray-skeleton.gl.h malloc/scratch_buffer.gl.h \
+	$(GLOB_H) glob-libc.gl.h inttypes.h langinfo.h $(LIMITS_H) \
+	locale.h math.h signal.h $(STDARG_H) $(STDCKDINT_H) \
+	$(STDDEF_H) $(STDINT_H) stdio.h stdlib.h string.h strings.h \
+	sys/random.h sys/stat.h sys/time.h sys/types.h sys/wait.h \
+	time.h unistd.h $(LIBUNISTRING_UNITYPES_H) \
+	$(LIBUNISTRING_UNIWIDTH_H) utime.h wchar.h wctype.h
 SUFFIXES = 
 MOSTLYCLEANFILES = core *.stackdump alloca.h alloca.h-t assert.h \
 	assert.h-t ctype.h ctype.h-t dirent.h dirent.h-t errno.h \
-	errno.h-t fcntl.h fcntl.h-t float.h float.h-t fnmatch.h \
-	fnmatch.h-t getopt.h getopt.h-t getopt-cdefs.h \
-	getopt-cdefs.h-t malloc/dynarray.gl.h malloc/dynarray.gl.h-t \
-	malloc/dynarray-skeleton.gl.h malloc/dynarray-skeleton.gl.h-t \
-	malloc/scratch_buffer.gl.h malloc/scratch_buffer.gl.h-t glob.h \
-	glob.h-t glob-libc.gl.h glob-libc.gl.h-t inttypes.h \
-	inttypes.h-t langinfo.h langinfo.h-t limits.h limits.h-t \
-	locale.h locale.h-t math.h math.h-t signal.h signal.h-t \
-	stdarg.h stdarg.h-t stdckdint.h stdckdint.h-t stddef.h \
-	stddef.h-t stdint.h stdint.h-t stdio.h stdio.h-t stdlib.h \
-	stdlib.h-t string.h string.h-t strings.h strings.h-t \
-	sys/random.h sys/random.h-t sys/stat.h sys/stat.h-t sys/time.h \
-	sys/time.h-t sys/types.h sys/types.h-t sys/wait.h sys/wait.h-t \
-	time.h time.h-t unistd.h unistd.h-t unitypes.h unitypes.h-t \
-	uniwidth.h uniwidth.h-t utime.h utime.h-t wchar.h wchar.h-t \
-	wctype.h wctype.h-t
+	errno.h-t error.h error.h-t fcntl.h fcntl.h-t float.h \
+	float.h-t fnmatch.h fnmatch.h-t getopt.h getopt.h-t \
+	getopt-cdefs.h getopt-cdefs.h-t malloc/dynarray.gl.h \
+	malloc/dynarray.gl.h-t malloc/dynarray-skeleton.gl.h \
+	malloc/dynarray-skeleton.gl.h-t malloc/scratch_buffer.gl.h \
+	malloc/scratch_buffer.gl.h-t glob.h glob.h-t glob-libc.gl.h \
+	glob-libc.gl.h-t inttypes.h inttypes.h-t langinfo.h \
+	langinfo.h-t limits.h limits.h-t locale.h locale.h-t math.h \
+	math.h-t signal.h signal.h-t stdarg.h stdarg.h-t stdckdint.h \
+	stdckdint.h-t stddef.h stddef.h-t stdint.h stdint.h-t stdio.h \
+	stdio.h-t stdlib.h stdlib.h-t string.h string.h-t strings.h \
+	strings.h-t sys/random.h sys/random.h-t sys/stat.h \
+	sys/stat.h-t sys/time.h sys/time.h-t sys/types.h sys/types.h-t \
+	sys/wait.h sys/wait.h-t time.h time.h-t unistd.h unistd.h-t \
+	unitypes.h unitypes.h-t uniwidth.h uniwidth.h-t utime.h \
+	utime.h-t wchar.h wchar.h-t wctype.h wctype.h-t
 MOSTLYCLEANDIRS = sys sys sys
 CLEANFILES = 
 DISTCLEANFILES = 
@@ -5323,6 +5339,20 @@ dirent.h: dirent.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 @GL_GENERATE_ERRNO_H_FALSE@errno.h: $(top_builddir)/config.status
 @GL_GENERATE_ERRNO_H_FALSE@	rm -f $@
 
+# We need the following in order to create <error.h> when the system
+# doesn't have one that works.
+@GL_GENERATE_ERROR_H_TRUE@error.h: error.in.h $(top_builddir)/config.status $(CXXDEFS_H)
+@GL_GENERATE_ERROR_H_TRUE@	$(gl_V_at)$(SED_HEADER_STDOUT) \
+@GL_GENERATE_ERROR_H_TRUE@	      -e 's|@''HAVE_ERROR''@|$(HAVE_ERROR)|g' \
+@GL_GENERATE_ERROR_H_TRUE@	      -e 's|@''HAVE_ERROR_AT_LINE''@|$(HAVE_ERROR_AT_LINE)|g' \
+@GL_GENERATE_ERROR_H_TRUE@	      -e 's|@''REPLACE_ERROR''@|$(REPLACE_ERROR)|g' \
+@GL_GENERATE_ERROR_H_TRUE@	      -e 's|@''REPLACE_ERROR_AT_LINE''@|$(REPLACE_ERROR_AT_LINE)|g' \
+@GL_GENERATE_ERROR_H_TRUE@	      -e '/definitions of _GL_FUNCDECL_RPL/r $(CXXDEFS_H)' \
+@GL_GENERATE_ERROR_H_TRUE@	      $(srcdir)/error.in.h > $@-t
+@GL_GENERATE_ERROR_H_TRUE@	$(AM_V_at)mv $@-t $@
+@GL_GENERATE_ERROR_H_FALSE@error.h: $(top_builddir)/config.status
+@GL_GENERATE_ERROR_H_FALSE@	rm -f $@
+
 # We need the following in order to create <fcntl.h> when the system
 # doesn't have one that works with the given compiler.
 fcntl.h: fcntl.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) $(WARN_ON_USE_H)
@@ -6052,7 +6082,9 @@ stdio.h: stdio.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H) 
 	      -e 's|@''HAVE_DECL_FTELLO''@|$(HAVE_DECL_FTELLO)|g' \
 	      -e 's|@''HAVE_DECL_GETDELIM''@|$(HAVE_DECL_GETDELIM)|g' \
 	      -e 's|@''HAVE_DECL_GETLINE''@|$(HAVE_DECL_GETLINE)|g' \
+	      -e 's|@''HAVE_DECL_GETW''@|$(HAVE_DECL_GETW)|g' \
 	      -e 's|@''HAVE_DECL_OBSTACK_PRINTF''@|$(HAVE_DECL_OBSTACK_PRINTF)|g' \
+	      -e 's|@''HAVE_DECL_PUTW''@|$(HAVE_DECL_PUTW)|g' \
 	      -e 's|@''HAVE_DECL_SNPRINTF''@|$(HAVE_DECL_SNPRINTF)|g' \
 	      -e 's|@''HAVE_DECL_VSNPRINTF''@|$(HAVE_DECL_VSNPRINTF)|g' \
 	      -e 's|@''HAVE_DPRINTF''@|$(HAVE_DPRINTF)|g' \
@@ -6273,6 +6305,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's/@''GNULIB_MEMMEM''@/$(GL_GNULIB_MEMMEM)/g' \
 	      -e 's/@''GNULIB_MEMPCPY''@/$(GL_GNULIB_MEMPCPY)/g' \
 	      -e 's/@''GNULIB_MEMRCHR''@/$(GL_GNULIB_MEMRCHR)/g' \
+	      -e 's/@''GNULIB_MEMSET_EXPLICIT''@/$(GL_GNULIB_MEMSET_EXPLICIT)/g' \
 	      -e 's/@''GNULIB_RAWMEMCHR''@/$(GL_GNULIB_RAWMEMCHR)/g' \
 	      -e 's/@''GNULIB_STPCPY''@/$(GL_GNULIB_STPCPY)/g' \
 	      -e 's/@''GNULIB_STPNCPY''@/$(GL_GNULIB_STPNCPY)/g' \
@@ -6304,6 +6337,7 @@ string.h: string.in.h $(top_builddir)/config.status $(CXXDEFS_H) $(ARG_NONNULL_H
 	      -e 's|@''HAVE_DECL_MEMMEM''@|$(HAVE_DECL_MEMMEM)|g' \
 	      -e 's|@''HAVE_MEMPCPY''@|$(HAVE_MEMPCPY)|g' \
 	      -e 's|@''HAVE_DECL_MEMRCHR''@|$(HAVE_DECL_MEMRCHR)|g' \
+	      -e 's|@''HAVE_MEMSET_EXPLICIT''@|$(HAVE_MEMSET_EXPLICIT)|g' \
 	      -e 's|@''HAVE_RAWMEMCHR''@|$(HAVE_RAWMEMCHR)|g' \
 	      -e 's|@''HAVE_STPCPY''@|$(HAVE_STPCPY)|g' \
 	      -e 's|@''HAVE_STPNCPY''@|$(HAVE_STPNCPY)|g' \
