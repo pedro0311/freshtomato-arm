@@ -397,6 +397,7 @@ ifeq ($(TCONFIG_OPENVPN),y)
   obj-y += openvpn-2.4
  else
   obj-y += openvpn
+  obj-y += libcap-ng
  endif
  obj-y += openvpn_plugin_auth_nvram
 endif
@@ -2728,6 +2729,32 @@ lzo-clean:
 	@rm -f lzo/stamp-h1
 	@rm -rf lzo/staged
 
+libcap-ng/configure:
+	cd libcap-ng && autoreconf -fsi && \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections -fPIC" \
+		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
+	@touch $@
+
+libcap-ng: libcap-ng/configure
+	@$(SEP)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
+
+libcap-ng-install:
+	install -D libcap-ng/src/.libs/libcap-ng.so.0.0.0 $(INSTALLDIR)/libcap-ng/usr/lib/libcap-ng.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/libcap-ng/usr/lib/libcap-ng.so.0.0.0
+	cd $(INSTALLDIR)/libcap-ng/usr/lib && ln -sf libcap-ng.so.0.0.0 libcap-ng.so.0
+ifneq ($(wildcard libcap-ng/src/.libs/libdrop_ambient.so.0.0.0),)
+	install -D libcap-ng/src/.libs/libdrop_ambient.so.0.0.0 $(INSTALLDIR)/libcap-ng/usr/lib/libdrop_ambient.so.0.0.0
+	$(STRIP) $(INSTALLDIR)/libcap-ng/usr/lib/libdrop_ambient.so.0.0.0
+	cd $(INSTALLDIR)/libcap-ng/usr/lib && ln -sf libdrop_ambient.so.0.0.0 libdrop_ambient.so.0 && \
+		ln -sf libdrop_ambient.so.0.0.0 libdrop_ambient.so
+endif
+
+libcap-ng-clean:
+	$(MAKE) -C libcap-ng clean
+	@rm -f libcap-ng/configure
+
 openvpn-2.4/Makefile:
 	$(call patch_files,openvpn-2.4)
 	cd openvpn-2.4 && autoreconf -fsi && \
@@ -2761,7 +2788,9 @@ openvpn/Makefile:
 	cd openvpn && autoreconf -fsi && \
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LIBCAPNG_CFLAGS="-I$(TOP)/libcap-ng/src" \
+		LIBCAPNG_LIBS="-L$(TOP)/libcap-ng/src/.libs -lcap-ng" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libcap-ng/src" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
