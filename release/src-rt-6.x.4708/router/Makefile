@@ -396,8 +396,9 @@ ifeq ($(TCONFIG_OPENVPN),y)
  ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
   obj-y += openvpn-2.4
  else
-  obj-y += openvpn
+  obj-y += lz4
   obj-y += libcap-ng
+  obj-y += openvpn
  endif
  obj-y += openvpn_plugin_auth_nvram
 endif
@@ -2729,14 +2730,14 @@ lzo-clean:
 	@rm -f lzo/stamp-h1
 	@rm -rf lzo/staged
 
-libcap-ng/configure:
+libcap-ng/stamp-h1:
 	cd libcap-ng && autoreconf -fsi && \
-		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
 	@touch $@
 
-libcap-ng: libcap-ng/configure
+libcap-ng: libcap-ng/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD)
 
@@ -2784,14 +2785,17 @@ openvpn-2.4-clean:
 	$(call unpatch_files,openvpn-2.4)
 
 openvpn/Makefile:
-	$(call patch_files,openvpn)
 	cd openvpn && autoreconf -fsi && \
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
 		LIBCAPNG_CFLAGS="-I$(TOP)/libcap-ng/src" \
 		LIBCAPNG_LIBS="-L$(TOP)/libcap-ng/src/.libs -lcap-ng" \
+		LZO_CFLAGS="-I$(TOP)/lzo/include" \
+		LZO_LIBS="-L$(TOP)/lzo/src/.libs -llzo2" \
+		LZ4_CFLAGS="-I$(TOP)/lz4/lib" \
+		LZ4_LIBS="-L$(TOP)/lz4/lib -llz4" \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libcap-ng/src" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
@@ -2811,7 +2815,6 @@ openvpn-install:
 openvpn-clean:
 	-@$(MAKE) -C openvpn clean
 	@rm -f openvpn/Makefile
-	$(call unpatch_files,openvpn)
 
 nano/stamp-h1:
 	cd nano && autoreconf -fsi && \
@@ -3109,6 +3112,14 @@ lz4:
 		DESTDIR=$(TOP)/lz4/staged
 
 lz4-install:
+ifeq ($(TCONFIG_OPENVPN),y)
+ifneq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
+	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
+	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
+	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1
+	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so
+endif
+endif
 	@true
 
 lz4-clean:

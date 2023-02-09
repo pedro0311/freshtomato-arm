@@ -5,7 +5,7 @@
 #             packet encryption, packet authentication, and
 #             packet compression.
 #
-#  Copyright (C) 2022-2022 OpenVPN Inc <sales@openvpn.net>
+#  Copyright (C) 2022-2023 OpenVPN Inc <sales@openvpn.net>
 #  Copyright (C) 2022-2022 Lev Stipakov <lev@lestisoftware.fi>
 #
 #  This program is free software; you can redistribute it and/or modify
@@ -24,15 +24,25 @@
 
 import os
 import sys
+import subprocess
+
+def run_command(args):
+    sp = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    o, _ = sp.communicate()
+    return o.decode("utf-8")[:-1]
 
 def get_branch_commit_id():
-    commit_id = os.popen("git rev-parse --short=16 HEAD").read()[:-1]
+    commit_id = run_command(["git", "rev-parse", "--short=16", "HEAD"])
     if not commit_id:
         raise
-    l = os.popen("git rev-parse --symbolic-full-name HEAD").read().split("/")[2:]
-    if not l:
-        l = ["none\n"]
-    branch = "/" .join(l)[:-1]
+    branch = run_command(["git", "describe", "--exact-match"])
+    if not branch:
+        # this returns an array like ["master"] or ["release", "2.6"]
+        branch = run_command(["git", "rev-parse", "--symbolic-full-name", "HEAD"]).split("/")[2:]
+        if not branch:
+            branch = ["none"]
+        branch = "/" .join(branch) # handle cases like release/2.6
+
     return branch, commit_id
 
 def main():
@@ -41,10 +51,25 @@ def main():
     except:
         branch, commit_id = "unknown", "unknown"
 
+    prev_content = ""
+
     name = os.path.join("%s" %  (sys.argv[1] if len(sys.argv) > 1 else "."), "config-version.h")
-    with open(name, "w") as f:
-        f.write("#define CONFIGURE_GIT_REVISION \"%s/%s\"\n" % (branch, commit_id))
-        f.write("#define CONFIGURE_GIT_FLAGS \"\"\n")
+    try:
+        with open(name, "r") as f:
+            prev_content = f.read()
+    except:
+        # file doesn't exist
+        pass
+
+    content = "#define CONFIGURE_GIT_REVISION \"%s/%s\"\n" % (branch, commit_id)
+    content += "#define CONFIGURE_GIT_FLAGS \"\"\n"
+
+    if prev_content != content:
+        print("Writing %s" % name)
+        with open(name, "w") as f:
+            f.write(content)
+    else:
+        print("Content of %s hasn't changed" % name)
 
 if __name__ == "__main__":
     main()
