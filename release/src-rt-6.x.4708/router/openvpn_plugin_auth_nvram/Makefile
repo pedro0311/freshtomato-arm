@@ -1,12 +1,12 @@
 include ../common.mak
 
 CFLAGS = -Os -Wall $(EXTRACFLAGS)
-CFLAGS += -I$(SRCBASE)/include -I$(TOP)/$(OPENSSLDIR)/include $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-I$(TOP)/openvpn-2.4/include,-I$(TOP)/openvpn/include)
+CFLAGS += -I$(SRCBASE)/include -I$(TOP)/$(OPENSSLDIR)/include $(if $(TCONFIG_BCMARM),-I$(TOP)/openvpn/include,$(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-I$(TOP)/openvpn-2.4/include,-I$(TOP)/openvpn-2.5/include))
 
 ifeq ($(TCONFIG_BCMARM),y)
 LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/$(OPENSSLDIR) -L$(TOP)/openvpn
 else
-LDFLAGS = -L$(TOP)/nvram -lnvram -L$(TOP)/$(OPENSSLDIR) $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-L$(TOP)/openvpn-2.4,-L$(TOP)/openvpn)
+LDFLAGS = -L$(TOP)/nvram -lnvram -L$(TOP)/$(OPENSSLDIR) $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-L$(TOP)/openvpn-2.4,-L$(TOP)/openvpn-2.5)
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)

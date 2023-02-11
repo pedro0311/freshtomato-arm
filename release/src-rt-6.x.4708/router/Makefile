@@ -396,9 +396,13 @@ ifeq ($(TCONFIG_OPENVPN),y)
  ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
   obj-y += openvpn-2.4
  else
-  obj-y += lz4
-  obj-y += libcap-ng
-  obj-y += openvpn
+  ifeq ($(TCONFIG_BCMARM),y)
+   obj-y += lz4
+   obj-y += libcap-ng
+   obj-y += openvpn
+  else
+   obj-y += openvpn-2.5
+  endif
  endif
  obj-y += openvpn_plugin_auth_nvram
 endif
@@ -2719,7 +2723,7 @@ lzo: lzo/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/lzo/staged install
 
 lzo-install:
-	install -D lzo/src/.libs/liblzo2.so $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
+	install -D lzo/src/.libs/liblzo2.so.2.0.0 $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
 	$(STRIP) $(INSTALLDIR)/lzo/usr/lib/liblzo2.so.2.0.0
 	cd $(INSTALLDIR)/lzo/usr/lib && \
 		ln -sf liblzo2.so.2.0.0 liblzo2.so.2 && \
@@ -2772,7 +2776,7 @@ openvpn-2.4/Makefile:
 
 openvpn-2.4: openvpn-2.4/Makefile
 	@$(SEP)
-	@$(MAKE) -C openvpn-2.4 $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 openvpn-2.4-install:
 	install -D openvpn-2.4/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
@@ -2784,7 +2788,36 @@ openvpn-2.4-clean:
 	@rm -f openvpn-2.4/Makefile
 	$(call unpatch_files,openvpn-2.4)
 
+openvpn-2.5/Makefile:
+	$(call patch_files,openvpn-2.5)
+	cd openvpn-2.5 && autoreconf -fsi && \
+		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
+			--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+	@touch openvpn-2.5/.conf
+
+openvpn-2.5: openvpn-2.5/Makefile
+	@$(SEP)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+
+openvpn-2.5-install:
+	install -D openvpn-2.5/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
+	$(STRIP) -s $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
+	chmod 0500 $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
+
+openvpn-2.5-clean:
+	-@$(MAKE) -C openvpn clean
+	@rm -f openvpn-2.5/Makefile
+	$(call unpatch_files,openvpn-2.5)
+
 openvpn/Makefile:
+	$(call patch_files,openvpn)
 	cd openvpn && autoreconf -fsi && \
 		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
@@ -2794,7 +2827,7 @@ openvpn/Makefile:
 		LZO_LIBS="-L$(TOP)/lzo/src/.libs -llzo2" \
 		LZ4_CFLAGS="-I$(TOP)/lz4/lib" \
 		LZ4_LIBS="-L$(TOP)/lz4/lib -llz4" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libcap-ng/src" \
+		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_BCMARM),-I$(TOP)/libcap-ng/src,)" \
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
@@ -2815,6 +2848,7 @@ openvpn-install:
 openvpn-clean:
 	-@$(MAKE) -C openvpn clean
 	@rm -f openvpn/Makefile
+	$(call unpatch_files,openvpn)
 
 nano/stamp-h1:
 	cd nano && autoreconf -fsi && \
@@ -3113,7 +3147,7 @@ lz4:
 
 lz4-install:
 ifeq ($(TCONFIG_OPENVPN),y)
-ifneq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
+ifeq ($(TCONFIG_BCMARM),y)
 	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1
