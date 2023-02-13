@@ -5,6 +5,57 @@ FreshTomato-ARM Changelog
 
 
 
+2023.1          2023.02.17
+---------------------------
+
+- kernel: usb: update ch341 driver
+- SDK6: rename all images from "XXX-ARM-NG-YYY" to "XXX-ARM-YYY"
+- SDK7/SDK714: update wireless driver
+- busybox: update to 1.36.0
+- libpng: update to 1.6.39
+- libsodium: update to latest 1.0.18-stable
+- nano: update to 7.2
+- tor: update to 0.4.7.13
+- nginx: update to 1.23.3
+- ffmpeg: update to 0.7.17
+- libjpeg-turbo: add clean sources of 2.1.4
+- dropbear: updates from the upstream
+- sqlite: update to 3.40.1
+- pppd: update to 2.4.9
+- adblock: update to 2.71e
+- libcurl: update to 7.87.0
+- e2fsprogs: update to 1.46.6; remove no more needed patch
+- getdns: update to 1.7.3; refresh patches
+- libubox: update to eac92a4 (2023-01-03) snapshot
+- miniupnpd: update to 2.3.2; refresh patches
+- libncurses: update to 6.4
+- OpenVPN: update to 2.6.0; fix recipes
+- dnsmasq: update to 2.89
+- openssl-1.1: update to 1.1.1t
+- build: add libcap-ng 0.8.3 to the tree, required by OpenVPN 2.6
+- build: Makefile: libcap-ng: add recipe
+- build: add recipes and integrate with libjpeg-turbo
+- build: remove no more needed jpeg package from the tree
+- GUI: add "Scroll to bottom" also at the bottom of the status-log page
+- GUI: adjusting "Refresh Every" to "One off"
+- GUI: Advanced: Firewall: add note about custom config file for igmpproxy
+- GUI: advanced-wireless.asp - remove afterburner option (for SDK6 and up!)
+- GUI: advanced-wireless.asp - adjust TurboQAM / NitroQAM label (New: Modulation Scheme)
+- GUI: USB and NAS: BitTorrent Client: extend character limit on the input field for blocklist url to 256 (resolves #269)
+- GUI: USB and NAS: Media Server: fixes/improvements (resolves #243)
+- GUI: USB and NAS: File Sharing: use checkboxes to select interfaces; also change location of samba configuration file (/etc/samba/smb.conf)
+- Media Bridge Mode (SDK6/SDK7/SDK714): add & set inactivity timer value to 0 [disabled] (wl driver default is: 600 sec)
+- minidlna: use syslog instead of a log file; added as a patch
+- others: Makefile: also add ntp2ip script when image is built with dnscrypt-proxy but without stubby
+- rc: openvpn.c: remove ignoring directives for IPv6 for OpenVPN client (resolves #268)
+- rc: samba.c: correct 'server string' (resolves #188)
+- rc: services.c: start_media_server(): correct friendly_name, album_art_names; add model_name
+- rc: service.c: start_upnp(): correct friendly_name
+- rc: transmission.c: only add bind to generated config if it's not already added in custom config (resolves #265)
+- www: tomato.js: allow the hostname to be all digits as per RFC
+- www: add new favicon (thanks @rs232)
+
+
 2022.7          2022.12.20
 ---------------------------
 
@@ -91,7 +142,7 @@ Note: the upgrade is highly recommended for users using Routing Policy in the Op
 - SDK7: check wireless driver max client tuneable value
 - build: add Asus RT-AC5300 support
 - build: add Asus RT-AC3100 support
-- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port)
+- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port) - not tested!
 - build: merge all branches together
 - build: sync up DockerFile to current build process
 - build: samba3: update Makefile; in ARM we have already realpath() with support for NULL argument. So change that option
