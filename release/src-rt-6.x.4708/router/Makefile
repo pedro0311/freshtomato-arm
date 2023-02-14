@@ -2812,7 +2812,7 @@ openvpn-2.5-install:
 	chmod 0500 $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
 
 openvpn-2.5-clean:
-	-@$(MAKE) -C openvpn clean
+	-@$(MAKE) -C openvpn-2.5 clean
 	@rm -f openvpn-2.5/Makefile
 	$(call unpatch_files,openvpn-2.5)
 
