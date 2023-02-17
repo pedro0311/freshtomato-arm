@@ -142,7 +142,7 @@ Note: the upgrade is highly recommended for users using Routing Policy in the Op
 - SDK7: check wireless driver max client tuneable value
 - build: add Asus RT-AC5300 support
 - build: add Asus RT-AC3100 support
-- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port) - not tested!
+- build: add Asus RT-AC88U support (only 4 LAN + 1 WAN port)
 - build: merge all branches together
 - build: sync up DockerFile to current build process
 - build: samba3: update Makefile; in ARM we have already realpath() with support for NULL argument. So change that option
