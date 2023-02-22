@@ -16,12 +16,13 @@ jobs:
           curl https://get.wasmer.io -sSfL | sh
         displayName: Install wasmer
       - script: |
-          curl -sL -o - https://ziglang.org/download/0.10.0/zig-linux-x86_64-0.10.0.tar.xz | tar xJ -f - -C /opt/
+          curl -sL -o - https://ziglang.org/download/0.10.1/zig-linux-x86_64-0.10.1.tar.xz | tar xJ -f - -C /opt/
           sudo mv /opt/zig-* /opt/zig
-          env PATH=/opt/zig/bin:/opt/zig:$PATH
+          export PATH=/opt/zig/bin:/opt/zig:$PATH
         displayName: Install the Zig SDK
       - script: |
-          env WASMER_DIR=${HOME}/.wasmer PATH=${HOME}/.wasmer/bin:${HOME}/.cargo/bin:$PATH dist-build/wasm32-wasi.sh
+          . ~/.wasmer/wasmer.sh
+          dist-build/wasm32-wasi.sh
         displayName: Compile libsodium
       - task: PublishBuildArtifacts@1
         condition: not(canceled())
