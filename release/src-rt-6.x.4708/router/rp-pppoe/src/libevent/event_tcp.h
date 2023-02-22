@@ -6,12 +6,12 @@
 * server.
 *
 * Copyright (C) 2001 Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 ***********************************************************************/
 
@@ -22,7 +22,8 @@
 #include <sys/socket.h>
 
 typedef void (*EventTcpAcceptFunc)(EventSelector *es,
-				   int fd);
+				   int fd,
+				   void *data);
 
 typedef void (*EventTcpConnectFunc)(EventSelector *es,
 				    int fd,
@@ -55,7 +56,8 @@ typedef struct EventTcpState_t {
 
 extern EventHandler *EventTcp_CreateAcceptor(EventSelector *es,
 					     int socket,
-					     EventTcpAcceptFunc f);
+					     EventTcpAcceptFunc f,
+					     void *data);
 
 extern void EventTcp_Connect(EventSelector *es,
 			     int fd,

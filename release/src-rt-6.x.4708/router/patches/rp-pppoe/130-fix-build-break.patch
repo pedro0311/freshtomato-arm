@@ -1,0 +1,55 @@
+--- rp-pppoe/src/libevent/event_sig.c
++++ rp-pppoe/src/libevent/event_sig.c
+@@ -143,9 +143,9 @@
+ 
+     SignalHandlers[sig].fired = 1;
+     int errno_save = errno;
+-#pragma GCC diagnostic ignored "-Wunused-result"      
++//#pragma GCC diagnostic ignored "-Wunused-result"      
+     write(Pipe[1], &sig, 1);
+-#pragma GCC diagnostic warning "-Wunused-result"      
++//#pragma GCC diagnostic warning "-Wunused-result"      
+     errno = errno_save;
+ }
+ 
+--- rp-pppoe/src/pppoe-server.c
++++ rp-pppoe/src/pppoe-server.c
+@@ -1741,10 +1741,10 @@
+ 
+     /* Tell parent all is cool */
+     if (KidPipe[1] >= 0) {
+-#pragma GCC diagnostic ignored "-Wunused-result"      
++//#pragma GCC diagnostic ignored "-Wunused-result"      
+ 	write(KidPipe[1], "X", 1);
+ 	close(KidPipe[1]);
+-#pragma GCC diagnostic warning "-Wunused-result"      
++//#pragma GCC diagnostic warning "-Wunused-result"      
+ 	KidPipe[1] = -1;
+     }
+ 
+--- rp-pppoe/src/relay.c
++++ rp-pppoe/src/relay.c
+@@ -781,9 +781,9 @@
+ 	if (FD_ISSET(CleanPipe[0], &readableCopy)) {
+ 	    char dummy;
+ 	    CleanCounter = 0;
+-#pragma GCC diagnostic ignored "-Wunused-result"      
++//#pragma GCC diagnostic ignored "-Wunused-result"      
+ 	    read(CleanPipe[0], &dummy, 1);
+-#pragma GCC diagnostic warning "-Wunused-result"      
++//#pragma GCC diagnostic warning "-Wunused-result"      
+ 	    if (IdleTimeout) cleanSessions();
+ 	}
+     }
+@@ -1510,9 +1510,9 @@
+     Epoch++;
+     CleanCounter++;
+     if (CleanCounter == CleanPeriod) {
+-#pragma GCC diagnostic ignored "-Wunused-result"      
++//#pragma GCC diagnostic ignored "-Wunused-result"      
+ 	write(CleanPipe[1], "", 1);
+-#pragma GCC diagnostic warning "-Wunused-result"      
++//#pragma GCC diagnostic warning "-Wunused-result"      
+     }
+ }
+ 

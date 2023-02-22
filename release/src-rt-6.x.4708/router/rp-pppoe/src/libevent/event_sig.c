@@ -6,12 +6,12 @@
 * with reaping child processes.
 *
 * Copyright (C) 2002 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 *
 * This software may be distributed under the terms of the GNU General
 * Public License, Version 2, or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 ***********************************************************************/
 
@@ -143,7 +143,9 @@ sig_handler(int sig)
 
     SignalHandlers[sig].fired = 1;
     int errno_save = errno;
+#pragma GCC diagnostic ignored "-Wunused-result"      
     write(Pipe[1], &sig, 1);
+#pragma GCC diagnostic warning "-Wunused-result"      
     errno = errno_save;
 }
 

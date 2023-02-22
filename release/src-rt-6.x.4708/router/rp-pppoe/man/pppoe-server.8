@@ -1,4 +1,4 @@
-.\" LIC: GPL
+.\" SPDX-License-Identifier: GPL-2.0-or-later
 .TH PPPOE-SERVER 8 "21 June 2008"
 .\""
 .UC 4
@@ -84,8 +84,9 @@ details.  In addition, it causes \fBpppd\fR to be invoked with the
 
 .TP
 .B \-L \fIip\fR
-Sets the local IP address.  This is passed to spawned \fBpppd\fR processes.
-If not specified, the default is 10.0.0.1.
+Sets the local IP address.  This is passed to spawned \fBpppd\fR processes.  If
+not specified, the default is 10.0.0.1.  If specified as 0.0.0.0 the selection
+of local IP address is delegated to \fBpppd\fR.
 
 .TP
 .B \-R \fIip\fR
@@ -93,7 +94,8 @@ Sets the starting remote IP address.  As sessions are established,
 IP addresses are assigned starting from \fIip\fR.   \fBpppoe-server\fR
 automatically keeps track of the pool of addresses and passes a
 valid remote IP address to \fBpppd\fR.  If not specified, a starting address
-of 10.67.15.1 is used.
+of 10.67.15.1 is used.  If specified as 0.0.0.0 remote IP allocation will be
+delegated to \fBpppd\fR.
 
 .TP
 .B \-N \fInum\fR
@@ -179,6 +181,12 @@ This option is available only on Linux kernels 2.4.0 and later, and
 only if the server was built with kernel-mode support.
 
 .TP
+.B \-g path
+The \fB\-g\fR option tells the server the full path to the pppoe.so or
+rp-pppoe.so plugin to use with kernel-mode PPPoE.  If omitted, a compiled-in
+default is used; this default can be displayed using the \fB\-h\fR option.
+
+.TP
 .B \-i
 The \fB\-i\fR option tells the server to completely ignore PADI frames
 if there are no free session slots.
@@ -186,6 +194,12 @@ if there are no free session slots.
 .TP
 .B \-h
 The \fB\-h\fR option prints a brief usage message and exits.
+
+.TP
+.B \-U path
+The \fB-U\fR option creates a UNIX socket which can be connected to in order to
+manage pppoe-server at run-time.  Please refer to the \fBCONTROL-SOCKET\fR
+section below for more detailed instructions.
 
 .SH OPERATION
 
@@ -208,12 +222,42 @@ empty!)
 Note that \fBpppoe-server\fR is meant mainly for testing PPPoE clients.
 It is \fInot\fR a high-performance server meant for production use.
 
+.SH CONTROL-SOCKET
+
+The control-socket was implemented as a secondary mechanism to improve run-time
+control of the pppoe-server.  To use it you need to start pppoe-server with the
+\fB-U\fR option described above.  You can then (in the absense of a
+control-client currently) use netcat to connect to the control socket, for example:
+
+.nf
+nc -U /run/pppoe-server.control
+.fi
+
+Assuming \fB-U /run/pppoe-server.control\fR was passed to pppoe-server.
+
+The following commands are implemented:
+
+.TP
+.B set drain {off|on|quit}
+This will set whether or not pppoe-server responds to PADI packets or not.
+When set to off pppoe-server will respond, else PADI packets will be ignored.
+This allows the pppoe-server to be drained from clients.  In addition when set
+to quit will terminate pppoe-server when all pppoe-clients have terminated.
+
+This allows for (mostly) seamless upgrades in that the currently running
+instance can be issued with "set drain quit" prior to starting a new interface
+on the same interfaces, thus allowing new connections to be made whilst
+maintaining proper state on existing clients.
+
+.TP
+.B show status
+This will show basic status information for the connected-to pppoe-server.
+
 .SH AUTHORS
 \fBpppoe-server\fR was written by Dianne Skoll <dianne@skoll.ca>.
 
 The \fBpppoe\fR home page is \fIhttps://dianne.skoll.ca/projects/rp-pppoe/\fR.
 
 .SH SEE ALSO
-pppoe-start(8), pppoe-stop(8), pppoe-connect(8), pppd(8), pppoe.conf(5),
-pppoe(8), pppoe-setup(8), pppoe-status(8), pppoe-sniff(8), pppoe-relay(8)
+pppd(8), pppoe(8), pppoe-sniff(8), pppoe-relay(8)
 

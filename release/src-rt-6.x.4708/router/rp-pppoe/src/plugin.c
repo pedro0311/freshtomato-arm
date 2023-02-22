@@ -5,7 +5,7 @@
 * pppd plugin for kernel-mode PPPoE on Linux
 *
 * Copyright (C) 2001-2012 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 * Portions copyright 2000 Michal Ostrowski and Jamal Hadi Salim.
 *
 * Much code and many ideas derived from pppoe plugin by Michal
@@ -21,47 +21,62 @@
 * as published by the Free Software Foundation; either version
 * 2 of the License, or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 ***********************************************************************/
 
 #define _GNU_SOURCE 1
-#include "pppoe.h"
 
-#include "pppd/pppd.h"
-#include "pppd/fsm.h"
-#include "pppd/lcp.h"
-#include "pppd/ipcp.h"
-#include "pppd/ccp.h"
-/* #include "pppd/pathnames.h" */
-
-#include <linux/types.h>
 #include <syslog.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#if defined(HAVE_LINUX_IF_H)
-#include <linux/if.h>
-#elif defined(HAVE_NET_IF_H)
-#include <net/if.h>
-#endif
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <net/ethernet.h>
 #include <net/if_arp.h>
+
+#define HAVE_STDARG_H 1
+#define HAVE_STDBOOL_H 1
+#define HAVE_STDDEF_H 1
+#include "pppd/pppd.h"
+#include "pppd/fsm.h"
+#include "pppd/lcp.h"
+#include "pppd/ipcp.h"
+#include "pppd/ccp.h"
+/* #include "pppd/pathnames.h" */
+#include "pppoe.h"
 #include <linux/ppp_defs.h>
+/* Needed on ancient Linux systems... */
+#ifndef IFNAMSIZ
+#include <net/if.h>
+#endif
 #include <linux/if_pppox.h>
+#include <linux/types.h>
 
 #ifndef _ROOT_PATH
 #define _ROOT_PATH ""
 #endif
 
 #define _PATH_ETHOPT         _ROOT_PATH "/etc/ppp/options."
+
+#ifdef PPPD_VERSION
+/* Handle new-style (as of pppd 2.5) API */
+#define VERSION PPPD_VERSION
+#define PPPD_2_5 1
+#define script_setenv     ppp_script_setenv
+#define options_from_file ppp_options_from_file
+#define option_error      ppp_option_error
+#define add_options       ppp_add_options
+#include "pppd/options.h"
+static char devnam[MAXNAMELEN];
+#endif
 
 char pppd_version[] = VERSION;
 
@@ -154,6 +169,10 @@ PPPOEConnectDevice(void)
     struct ifreq ifr;
     int s;
 
+#ifdef PPPD_2_5
+    char remote_number[MAXNAMELEN];
+#endif
+    
     /* Restore configuration */
     lcp_allowoptions[0].mru = conn->mtu;
     lcp_wantoptions[0].mru = conn->mru;
@@ -164,7 +183,7 @@ PPPOEConnectDevice(void)
 	error("Can't get MTU for %s: %m", conn->ifName);
 	return -1;
     }
-    strlcpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
+    rp_strlcpy(ifr.ifr_name, conn->ifName, sizeof(ifr.ifr_name));
     if (ioctl(s, SIOCGIFMTU, &ifr) < 0) {
 	error("Can't get MTU for %s: %m", conn->ifName);
 	close(s);
@@ -197,7 +216,11 @@ PPPOEConnectDevice(void)
 	SET_STRING(conn->serviceName, pppd_pppoe_service);
     }
 
-    strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
+#ifdef PPPD_2_5
+    ppp_set_pppdevnam(devnam);
+#else
+    rp_strlcpy(ppp_devnam, devnam, sizeof(ppp_devnam));
+#endif
     if (existingSession) {
 	unsigned int mac[ETH_ALEN];
 	int i, ses;
@@ -223,8 +246,11 @@ PPPOEConnectDevice(void)
     }
 
     /* Set PPPoE session-number for further consumption */
+#ifdef PPPD_2_5
+    ppp_set_session_number(ntohs(conn->session));
+#else
     ppp_session_number = ntohs(conn->session);
-
+#endif
     sp.sa_family = AF_PPPOX;
     sp.sa_protocol = PX_PROTO_OE;
     sp.sa_addr.pppoe.sid = conn->session;
@@ -250,6 +276,9 @@ PPPOEConnectDevice(void)
 	 (unsigned) conn->peerEth[5],
 	 conn->ifName);
 
+#ifdef PPPD_2_5
+    ppp_set_remote_number(remote_number);
+#endif
     script_setenv("MACREMOTE", remote_number, 0);
 
     if (connect(conn->sessionSocket, (struct sockaddr *) &sp,
@@ -261,6 +290,7 @@ PPPOEConnectDevice(void)
     return conn->sessionSocket;
 }
 
+#ifndef PPPD_2_5
 static void
 PPPOESendConfig(int mtu,
 		u_int32_t asyncmap,
@@ -279,7 +309,7 @@ PPPOESendConfig(int mtu,
 	warn("Couldn't create IP socket: %m");
 	return;
     }
-    strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+    rp_strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
     ifr.ifr_mtu = mtu;
     if (ioctl(sock, SIOCSIFMTU, &ifr) < 0) {
 	warn("ioctl(SIOCSIFMTU): %m");
@@ -287,7 +317,7 @@ PPPOESendConfig(int mtu,
     }
     (void) close (sock);
 }
-
+#endif
 
 static void
 PPPOERecvConfig(int mru,
@@ -327,19 +357,22 @@ PPPOEDisconnectDevice(void)
     }
     close(conn->sessionSocket);
     if (conn->discoverySocket >= 0) {
-	sendPADT(conn, NULL);
+	sendPADT(conn, "RP-PPPoE: pppd invoked disconnect");
 	close(conn->discoverySocket);
     }
 
     /* Do NOT free conn; if pppd persist is on, we'll need it again */
 }
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
 static void
 PPPOEDeviceOptions(void)
 {
-    char buf[MAXPATHLEN];
-    strlcpy(buf, _PATH_ETHOPT, MAXPATHLEN);
-    strlcat(buf, devnam, MAXPATHLEN);
+    char buf[PATH_MAX];
+    rp_strlcpy(buf, _PATH_ETHOPT, PATH_MAX);
+    strlcat(buf, devnam, PATH_MAX);
 
     if(!options_from_file(buf, 0, 0, 1))
 	exit(EXIT_OPTION_ERROR);
@@ -399,7 +432,7 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 
     /* Try getting interface index */
     if (r) {
-	strlcpy(ifr.ifr_name, cmd, IFNAMSIZ);
+	rp_strlcpy(ifr.ifr_name, cmd, IFNAMSIZ);
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0) {
 	    r = 0;
 	} else {
@@ -420,12 +453,15 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
     if (r) {
 	seen_devnam[seen_idx] = 1;
 	if (doit) {
-	    strlcpy(devnam, cmd, sizeof(devnam));
+	    rp_strlcpy(devnam, cmd, sizeof(devnam));
 	    if (the_channel != &pppoe_channel) {
 
 		the_channel = &pppoe_channel;
+#ifdef PPPD_2_5
+		ppp_set_modem(0);
+#else		
 		modem = 0;
-
+#endif
 		lcp_allowoptions[0].neg_accompression = 0;
 		lcp_wantoptions[0].neg_accompression = 0;
 
@@ -448,6 +484,9 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 		PPPOEInitDevice();
 	    }
 	}
+#ifdef PPPD_2_5
+	ppp_set_devnam(devnam);
+#endif
 	return 1;
     }
 
@@ -466,10 +505,11 @@ PPPoEDevnameHook(char *cmd, char **argv, int doit)
 void
 plugin_init(void)
 {
+#ifndef PPPD_2_5  
     if (!ppp_available() && !new_style_driver) {
 	fatal("Linux kernel does not support PPPoE -- are you running 2.4.x?");
     }
-
+#endif
     add_options(Options);
 
     info("RP-PPPoE plugin version %s compiled against pppd %s",
@@ -491,11 +531,10 @@ fatalSys(char const *str)
 {
     char buf[1024];
     int i = errno;
-    sprintf(buf, "%.256s: %.256s", str, strerror(i));
-    printErr(buf);
+    printErr("%.256s: %.256s", str, strerror(i));
     sprintf(buf, "RP-PPPoE: %.256s: %.256s", str, strerror(i));
     sendPADT(conn, buf);
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 /**********************************************************************
@@ -510,9 +549,9 @@ fatalSys(char const *str)
 void
 rp_fatal(char const *str)
 {
-    printErr(str);
+    printErr("%s", str);
     sendPADTf(conn, "RP-PPPoE: %.256s", str);
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 /**********************************************************************
@@ -577,6 +616,21 @@ void pppoe_check_options(void)
     ccp_wantoptions[0].bsd_compress = 0;
 }
 
+#ifdef PPPD_2_5
+struct channel pppoe_channel = {
+    .options = Options,
+    .process_extra_options = &PPPOEDeviceOptions,
+    .check_options = &pppoe_check_options,
+    .connect = &PPPOEConnectDevice,
+    .disconnect = &PPPOEDisconnectDevice,
+    .establish_ppp = &ppp_generic_establish,
+    .disestablish_ppp = &ppp_generic_disestablish,
+    .send_config = NULL,
+    .recv_config = &PPPOERecvConfig,
+    .close = NULL,
+    .cleanup = NULL
+};
+#else
 struct channel pppoe_channel = {
     .options = Options,
     .process_extra_options = &PPPOEDeviceOptions,
@@ -590,3 +644,4 @@ struct channel pppoe_channel = {
     .close = NULL,
     .cleanup = NULL
 };
+#endif

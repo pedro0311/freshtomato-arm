@@ -7,21 +7,18 @@
 * Functions for talking to PPP daemon
 *
 * Copyright (C) 2000-2012 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 ***********************************************************************/
 
-#include "pppoe.h"
+#include "config.h"
 
-#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
-#endif
-
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -30,9 +27,7 @@
 #include <sys/uio.h>
 #endif
 
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 
 #ifdef HAVE_N_HDLC
 #ifndef N_HDLC
@@ -40,11 +35,13 @@
 #endif
 #endif
 
+#include "pppoe.h"
+
 static int PPPState;
 static int PPPPacketSize;
 static unsigned char PPPXorValue;
 
-static UINT16_t const fcstab[256] = {
+static uint16_t const fcstab[256] = {
     0x0000, 0x1189, 0x2312, 0x329b, 0x4624, 0x57ad, 0x6536, 0x74bf,
     0x8c48, 0x9dc1, 0xaf5a, 0xbed3, 0xca6c, 0xdbe5, 0xe97e, 0xf8f7,
     0x1081, 0x0108, 0x3393, 0x221a, 0x56a5, 0x472c, 0x75b7, 0x643e,
@@ -122,7 +119,7 @@ syncReadFromPPP(PPPoEConnection *conn, PPPoEPacket *packet)
     if (r == 0) {
 	syslog(LOG_INFO, "end-of-file in syncReadFromPPP");
 	sendPADT(conn, "RP-PPPoE: EOF in syncReadFromPPP");
-	exit(0);
+	exit(EXIT_SUCCESS);
     }
 
     if (r < 2) {
@@ -176,7 +173,7 @@ asyncReadFromPPP(PPPoEConnection *conn, PPPoEPacket *packet)
     if (r == 0) {
 	syslog(LOG_INFO, "end-of-file in asyncReadFromPPP");
 	sendPADT(conn, "RP-PPPoE: EOF in asyncReadFromPPP");
-	exit(0);
+	exit(EXIT_SUCCESS);
     }
 
     while(r) {
@@ -315,8 +312,8 @@ decodeFromPPP(PPPoEConnection *conn, PPPoEPacket *packet, unsigned char *buf, in
 *%DESCRIPTION:
 * Updates the PPP FCS.
 ***********************************************************************/
-UINT16_t
-pppFCS16(UINT16_t fcs,
+uint16_t
+pppFCS16(uint16_t fcs,
 	 unsigned char * cp,
 	 int len)
 {

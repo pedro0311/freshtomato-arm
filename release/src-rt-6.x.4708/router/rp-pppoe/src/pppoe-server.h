@@ -5,22 +5,25 @@
 * Definitions for PPPoE server
 *
 * Copyright (C) 2001-2012 Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 * $Id$
 *
 ***********************************************************************/
 
-#include "pppoe.h"
+#include "config.h"
 #include "event.h"
+#include "pppoe.h"
 
-#ifdef HAVE_L2TP
-#include "l2tp/l2tp.h"
+#if defined(HAVE_LINUX_IF_H)
+#include <linux/if.h>
+#elif defined(HAVE_NET_IF_H)
+#include <net/if.h>
 #endif
 
 #define MAX_USERNAME_LEN 31
@@ -30,13 +33,7 @@ typedef struct {
     int sock;			/* Socket for discovery frames */
     unsigned char mac[ETH_ALEN]; /* MAC address */
     EventHandler *eh;		/* Event handler for this interface */
-    UINT16_t mtu;               /* MTU of interface */
-
-    /* Next fields are used only if we're an L2TP LAC */
-#ifdef HAVE_L2TP
-    int session_sock;		/* Session socket */
-    EventHandler *lac_eh;	/* LAC's event-handler */
-#endif
+    uint16_t mtu;               /* MTU of interface */
 } Interface;
 
 #define FLAG_RECVD_PADT      1
@@ -75,30 +72,19 @@ typedef struct ClientSessionStruct {
     Interface *ethif;		/* Ethernet interface */
     unsigned char myip[IPV4ALEN]; /* Local IP address */
     unsigned char peerip[IPV4ALEN]; /* Desired IP address of peer */
-    UINT16_t sess;		/* Session number */
+    uint16_t sess;		/* Session number */
     unsigned char eth[ETH_ALEN]; /* Peer's Ethernet address */
     unsigned int flags;		/* Various flags */
     time_t startTime;		/* When session started */
     char const *serviceName;	/* Service name */
-    UINT16_t requested_mtu;     /* Requested PPP_MAX_PAYLOAD  per RFC 4638 */
-#ifdef HAVE_LICENSE
-    char user[MAX_USERNAME_LEN+1]; /* Authenticated user-name */
-    char realm[MAX_USERNAME_LEN+1]; /* Realm */
-    unsigned char realpeerip[IPV4ALEN];	/* Actual IP address -- may be assigned
-					   by RADIUS server */
-    int maxSessionsPerUser;	/* Max sessions for this user */
-#endif
-#ifdef HAVE_L2TP
-    l2tp_session *l2tp_ses;	/* L2TP session */
-    struct sockaddr_in tunnel_endpoint;	/* L2TP endpoint */
-#endif
+    uint16_t requested_mtu;     /* Requested PPP_MAX_PAYLOAD  per RFC 4638 */
 } ClientSession;
 
 /* Hack for daemonizing */
 #define CLOSEFD 64
 
-/* Max. number of interfaces to listen on */
-#define MAX_INTERFACES 64
+/* Initial Max. number of interfaces to listen on */
+#define INIT_INTERFACES 8
 
 /* Max. 64 sessions by default */
 #define DEFAULT_MAX_SESSIONS 64
@@ -107,7 +93,7 @@ typedef struct ClientSessionStruct {
 extern ClientSession *Sessions;
 
 /* Interfaces we're listening on */
-extern Interface interfaces[MAX_INTERFACES];
+extern Interface *interfaces;
 extern int NumInterfaces;
 
 /* The number of session slots */
@@ -152,8 +138,5 @@ extern void processPADI(Interface *ethif, PPPoEPacket *packet, int len);
 extern void usage(char const *msg);
 extern ClientSession *pppoe_alloc_session(void);
 extern int pppoe_free_session(ClientSession *ses);
-extern void sendHURLorMOTM(PPPoEConnection *conn, char const *url, UINT16_t tag);
+extern void sendHURLorMOTM(PPPoEConnection *conn, char const *url, uint16_t tag);
 
-#ifdef HAVE_LICENSE
-extern int getFreeMem(void);
-#endif

@@ -7,12 +7,12 @@
 * Common functions used by PPPoE client and server
 *
 * Copyright (C) 2000-2012 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2021 Dianne Skoll
+* Copyright (C) 2018-2023 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* LIC: GPL
+* SPDX-License-Identifier: GPL-2.0-or-later
 *
 ***********************************************************************/
 
@@ -20,24 +20,19 @@
 #define _ISOC99_SOURCE 1
 #define _GNU_SOURCE 1
 
-#include "pppoe.h"
+#include "config.h"
 
-
-#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
-#endif
-
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdarg.h>
-
-#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-#endif
 
 #include <sys/types.h>
 #include <pwd.h>
+
+#include "pppoe.h"
 
 /* Are we running SUID or SGID? */
 int IsSetID = 0;
@@ -60,9 +55,9 @@ static uid_t saved_gid = (uid_t) -2;
 int
 parsePacket(PPPoEPacket *packet, ParseFunc *func, void *extra)
 {
-    UINT16_t len = ntohs(packet->length);
+    uint16_t len = ntohs(packet->length);
     unsigned char *curTag;
-    UINT16_t tagType, tagLen;
+    uint16_t tagType, tagLen;
 
     if (PPPOE_VER(packet->vertype) != 1) {
 	syslog(LOG_ERR, "Invalid PPPoE version (%d)", PPPOE_VER(packet->vertype));
@@ -111,11 +106,11 @@ parsePacket(PPPoEPacket *packet, ParseFunc *func, void *extra)
 * Looks for a specific tag type.
 ***********************************************************************/
 unsigned char *
-findTag(PPPoEPacket *packet, UINT16_t type, PPPoETag *tag)
+findTag(PPPoEPacket *packet, uint16_t type, PPPoETag *tag)
 {
-    UINT16_t len = ntohs(packet->length);
+    uint16_t len = ntohs(packet->length);
     unsigned char *curTag;
-    UINT16_t tagType, tagLen;
+    uint16_t tagType, tagLen;
 
     if (PPPOE_VER(packet->vertype) != 1) {
 	syslog(LOG_ERR, "Invalid PPPoE version (%d)", PPPOE_VER(packet->vertype));
@@ -134,12 +129,12 @@ findTag(PPPoEPacket *packet, UINT16_t type, PPPoETag *tag)
 
     /* Step through the tags */
     curTag = packet->payload;
-    while(curTag - packet->payload < len) {
+    while(curTag - packet->payload + TAG_HDR_SIZE <= len) {
 	/* Alignment is not guaranteed, so do this by hand... */
-	tagType = (((UINT16_t) curTag[0]) << 8) +
-	    (UINT16_t) curTag[1];
-	tagLen = (((UINT16_t) curTag[2]) << 8) +
-	    (UINT16_t) curTag[3];
+	tagType = (((uint16_t) curTag[0]) << 8) +
+	    (uint16_t) curTag[1];
+	tagLen = (((uint16_t) curTag[2]) << 8) +
+	    (uint16_t) curTag[3];
 	if (tagType == TAG_END_OF_LIST) {
 	    return NULL;
 	}
@@ -222,13 +217,18 @@ dropPrivs(void)
     if (geteuid() == 0) {
 	pw = getpwnam("nobody");
 	if (pw) {
-	    if (setgid(pw->pw_gid) < 0) ok++;
-	    if (setuid(pw->pw_uid) < 0) ok++;
+	    if (setgid(pw->pw_gid) >= 0) ok++;
+	    if (setuid(pw->pw_uid) >= 0) ok++;
 	}
     }
     if (ok < 2 && IsSetID) {
-	setegid(getgid());
-	seteuid(getuid());
+        ok = 0;
+	if (setegid(getgid()) >= 0) ok++;
+	if (seteuid(getuid()) >= 0) ok++;
+    }
+    if (ok < 2) {
+      printErr("unable to drop privileges");
+      exit(EXIT_FAILURE);
     }
 }
 
@@ -242,10 +242,22 @@ dropPrivs(void)
 * Prints a message to stderr and syslog.
 ***********************************************************************/
 void
-printErr(char const *str)
+printErr(char const *fmt, ...)
 {
+    char *str;
+    va_list ap;
+    int r;
+
+    va_start(ap, fmt);
+    r = vasprintf(&str, fmt, ap);
+    va_end(ap);
+
+    if (r < 0)
+	return;
+
     fprintf(stderr, "pppoe: %s\n", str);
     syslog(LOG_ERR, "%s", str);
+    free(str);
 }
 
 /**********************************************************************
@@ -256,12 +268,12 @@ printErr(char const *str)
 *%RETURNS:
 * The computed TCP checksum
 ***********************************************************************/
-UINT16_t
+uint16_t
 computeTCPChecksum(unsigned char *ipHdr, unsigned char *tcpHdr)
 {
-    UINT32_t sum = 0;
-    UINT16_t count = ipHdr[2] * 256 + ipHdr[3];
-    UINT16_t tmp;
+    uint32_t sum = 0;
+    uint16_t count = ipHdr[2] * 256 + ipHdr[3];
+    uint16_t tmp;
 
     unsigned char *addr = tcpHdr;
     unsigned char pseudoHeader[12];
@@ -276,17 +288,17 @@ computeTCPChecksum(unsigned char *ipHdr, unsigned char *tcpHdr)
     pseudoHeader[11] = (count & 0xFF);
 
     /* Checksum the pseudo-header */
-    sum += * (UINT16_t *) pseudoHeader;
-    sum += * ((UINT16_t *) (pseudoHeader+2));
-    sum += * ((UINT16_t *) (pseudoHeader+4));
-    sum += * ((UINT16_t *) (pseudoHeader+6));
-    sum += * ((UINT16_t *) (pseudoHeader+8));
-    sum += * ((UINT16_t *) (pseudoHeader+10));
+    sum += * (uint16_t *) pseudoHeader;
+    sum += * ((uint16_t *) (pseudoHeader+2));
+    sum += * ((uint16_t *) (pseudoHeader+4));
+    sum += * ((uint16_t *) (pseudoHeader+6));
+    sum += * ((uint16_t *) (pseudoHeader+8));
+    sum += * ((uint16_t *) (pseudoHeader+10));
 
     /* Checksum the TCP header and data */
     while (count > 1) {
 	memcpy(&tmp, addr, sizeof(tmp));
-	sum += (UINT32_t) tmp;
+	sum += (uint32_t) tmp;
 	addr += sizeof(tmp);
 	count -= sizeof(tmp);
     }
@@ -297,7 +309,7 @@ computeTCPChecksum(unsigned char *ipHdr, unsigned char *tcpHdr)
     while(sum >> 16) {
 	sum = (sum & 0xffff) + (sum >> 16);
     }
-    return (UINT16_t) ((~sum) & 0xFFFF);
+    return (uint16_t) ((~sum) & 0xFFFF);
 }
 
 /**********************************************************************
@@ -319,7 +331,7 @@ clampMSS(PPPoEPacket *packet, char const *dir, int clampMss)
     unsigned char *opt;
     unsigned char *endHdr;
     unsigned char *mssopt = NULL;
-    UINT16_t csum;
+    uint16_t csum;
 
     int len, minlen;
 
@@ -450,7 +462,7 @@ clampMSS(PPPoEPacket *packet, char const *dir, int clampMss)
     tcpHdr[16] = 0;
     tcpHdr[17] = 0;
     csum = computeTCPChecksum(ipHdr, tcpHdr);
-    (* (UINT16_t *) (tcpHdr+16)) = csum;
+    (* (uint16_t *) (tcpHdr+16)) = csum;
 }
 
 /***********************************************************************
@@ -469,7 +481,7 @@ sendPADT(PPPoEConnection *conn, char const *msg)
     PPPoEPacket packet;
     unsigned char *cursor = packet.payload;
 
-    UINT16_t plen = 0;
+    uint16_t plen = 0;
 
     /* Do nothing if no session established yet */
     if (!conn->session) return;
@@ -583,7 +595,7 @@ sendPADTf(PPPoEConnection *conn, char const *fmt, ...)
 ***********************************************************************/
 void
 pktLogErrs(char const *pkt,
-	   UINT16_t type, UINT16_t len, unsigned char *data,
+	   uint16_t type, uint16_t len, unsigned char *data,
 	   void *extra)
 {
     char const *str;
@@ -595,8 +607,11 @@ pktLogErrs(char const *pkt,
     case TAG_AC_SYSTEM_ERROR:
 	str = "System-Error";
 	break;
-    default:
+    case TAG_GENERIC_ERROR:
 	str = "Generic-Error";
+        break;
+    default:
+        return;
     }
 
     syslog(LOG_ERR, fmt, pkt, str, (int) len, data);
@@ -617,15 +632,14 @@ pktLogErrs(char const *pkt,
 * Picks error tags out of a packet and logs them.
 ***********************************************************************/
 void
-parseLogErrs(UINT16_t type, UINT16_t len, unsigned char *data,
+parseLogErrs(uint16_t type, uint16_t len, unsigned char *data,
 	     void *extra)
 {
     pktLogErrs("PADT", type, len, data, extra);
 }
 
-#ifndef HAVE_STRLCPY
 /**********************************************************************
-*%FUNCTION: strlcpy
+*%FUNCTION: rp_strlcpy
 *%ARGUMENTS:
 * dst -- destination buffer
 * src -- source string
@@ -637,7 +651,7 @@ parseLogErrs(UINT16_t type, UINT16_t len, unsigned char *data,
 * always NUL-terminating dst if size!=0.
 ***********************************************************************/
 size_t
-strlcpy(char *dst, const char *src, size_t size)
+rp_strlcpy(char *dst, const char *src, size_t size)
 {
     const char *orig_src = src;
 
@@ -657,4 +671,3 @@ strlcpy(char *dst, const char *src, size_t size)
 
     return src - orig_src - 1;
 }
-#endif
