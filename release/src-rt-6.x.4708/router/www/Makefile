@@ -443,6 +443,11 @@ ifneq ($(TCONFIG_PROXY),y)
 	sed -i $(INSTALLDIR)/www/advanced-firewall.asp -e "/PROXY-BEGIN/,/PROXY-END/d"
 endif
 
+# Only include TFTP if it is compiled in
+ifneq ($(TCONFIG_USB_EXTRAS),y)
+	sed -i $(INSTALLDIR)/www/advanced-dhcpdns.asp -e "/TFTP-BEGIN/,/TFTP-END/d"
+endif
+
 # clean up
 	cd $(INSTALLDIR)/www && \
 	for F in $(wildcard *.asp *.js *.jsx *.jsz *.html); do \
@@ -499,6 +504,7 @@ endif
 		-e "/BCMARMNO-BEGIN/d"	-e "/BCMARMNO-END/d" \
 		-e "/RTNPLUS-BEGIN/d"	-e "/RTNPLUS-END/d" \
 		-e "/PROXY-BEGIN/d"	-e "/PROXY-END/d" \
+		-e "/TFTP-BEGIN/d"	-e "/TFTP-END/d" \
 		|| true; \
 	done
 

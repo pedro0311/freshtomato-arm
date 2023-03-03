@@ -2552,7 +2552,7 @@ function navi() {
 			['Wireless Filter',		'wfilter.asp'] ] ],
 		['Advanced', 			'advanced', 0, [
 			['Conntrack/Netfilter',		'ctnf.asp'],
-			['DHCP/DNS',			'dhcpdns.asp'],
+			['DHCP/DNS/TFTP',		'dhcpdns.asp'],
 			['Firewall',			'firewall.asp'],
 /* HTTPS-BEGIN */
 			['Adblock',			'adblock.asp'],
@@ -2802,9 +2802,6 @@ function createFieldTable(flags, desc) {
 				case 'text':
 					buf2.push('<input type="'+f.type+'"'+name+placeholder+' value="'+escapeHTML(UT(f.value))+'" maxlength='+f.maxlen+(f.size ? (' size='+f.size) : '')+common+'>');
 				break;
-				case 'clear':
-					s += '';
-				break;
 				case 'select':
 					buf2.push('<select'+name+common+'>');
 					for (i = 0; i < f.options.length; ++i) {
@@ -2827,7 +2824,7 @@ function createFieldTable(flags, desc) {
 
 		buf.push('<td class="title indent'+(v.indent ? v.indent : 1)+'">');
 		if (id1 != '')
-			buf.push('<label'+((id && id != '_undefined' ) ? ' for="'+id+'"' : '')+'>'+(v.title ? v.title : '&nbsp;')+'</label></td>');
+			buf.push('<label'+((id && id != '_undefined') ? ' for="'+id+'"' : '')+'>'+(v.title ? v.title : '&nbsp;')+'</label></td>');
 		else
 			buf.push(+v.title+'</td>');
 
