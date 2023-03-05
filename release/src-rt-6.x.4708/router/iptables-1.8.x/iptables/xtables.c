@@ -262,7 +262,7 @@ int do_commandx(struct nft_handle *h, int argc, char *argv[], char **table,
 
 	*table = p.table;
 
-	h->ops->clear_cs(&cs);
+	nft_clear_iptables_command_state(&cs);
 
 	free(args.s.addr.ptr);
 	free(args.s.mask.ptr);

@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <netinet/ether.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
@@ -46,6 +45,7 @@
 
 #include <xtables.h>
 #include <limits.h> /* INT_MAX in ip_tables.h/ip6_tables.h */
+#include <linux/if_ether.h> /* ETH_ALEN */
 #include <linux/netfilter_ipv4/ip_tables.h>
 #include <linux/netfilter_ipv6/ip6_tables.h>
 #include <libiptc/libxtc.h>
@@ -64,15 +64,12 @@
 #endif
 #include <getopt.h>
 #include "iptables/internal.h"
+#include "xshared.h"
 
 #define NPROTO	255
 
 #ifndef PROC_SYS_MODPROBE
 #define PROC_SYS_MODPROBE "/proc/sys/kernel/modprobe"
-#endif
-
-#ifndef ETH_ALEN
-#define ETH_ALEN 6
 #endif
 
 /* we need this for ip6?tables-restore.  ip6?tables-restore.c sets line to the
@@ -776,7 +773,6 @@ xtables_find_match(const char *name, enum xtables_tryload tryload,
 	struct xtables_match *ptr;
 	const char *icmp6 = "icmp6";
 	bool found = false;
-	bool seen = false;
 
 	if (strlen(name) >= XT_EXTENSION_MAXNAMELEN)
 		xtables_error(PARAMETER_PROBLEM,
@@ -795,7 +791,6 @@ xtables_find_match(const char *name, enum xtables_tryload tryload,
 		if (extension_cmp(name, (*dptr)->name, (*dptr)->family)) {
 			ptr = *dptr;
 			*dptr = (*dptr)->next;
-			seen = true;
 			if (!found &&
 			    xtables_fully_register_pending_match(ptr, prev)) {
 				found = true;
@@ -808,11 +803,6 @@ xtables_find_match(const char *name, enum xtables_tryload tryload,
 		}
 		dptr = &((*dptr)->next);
 	}
-
-	if (seen && !found)
-		fprintf(stderr,
-			"Warning: Extension %s is not supported, missing kernel module?\n",
-			name);
 
 	for (ptr = xtables_matches; ptr; ptr = ptr->next) {
 		if (extension_cmp(name, ptr->name, ptr->family)) {
@@ -906,7 +896,6 @@ xtables_find_target(const char *name, enum xtables_tryload tryload)
 	struct xtables_target **dptr;
 	struct xtables_target *ptr;
 	bool found = false;
-	bool seen = false;
 
 	/* Standard target? */
 	if (strcmp(name, "") == 0
@@ -925,7 +914,6 @@ xtables_find_target(const char *name, enum xtables_tryload tryload)
 		if (extension_cmp(name, (*dptr)->name, (*dptr)->family)) {
 			ptr = *dptr;
 			*dptr = (*dptr)->next;
-			seen = true;
 			if (!found &&
 			    xtables_fully_register_pending_target(ptr, prev)) {
 				found = true;
@@ -938,11 +926,6 @@ xtables_find_target(const char *name, enum xtables_tryload tryload)
 		}
 		dptr = &((*dptr)->next);
 	}
-
-	if (seen && !found)
-		fprintf(stderr,
-			"Warning: Extension %s is not supported, missing kernel module?\n",
-			name);
 
 	for (ptr = xtables_targets; ptr; ptr = ptr->next) {
 		if (extension_cmp(name, ptr->name, ptr->family)) {
@@ -2262,6 +2245,8 @@ void xtables_print_num(uint64_t number, unsigned int format)
 	printf(FMT("%4lluT ","%lluT "), (unsigned long long)number);
 }
 
+#include <netinet/ether.h>
+
 static const unsigned char mac_type_unicast[ETH_ALEN] =   {};
 static const unsigned char msk_type_unicast[ETH_ALEN] =   {1};
 static const unsigned char mac_type_multicast[ETH_ALEN] = {1};
@@ -2490,39 +2475,16 @@ void xt_xlate_free(struct xt_xlate *xl)
 	free(xl);
 }
 
-static bool isbrace(char c)
-{
-	switch (c) {
-	case '(':
-	case ')':
-	case '{':
-	case '}':
-	case '[':
-	case ']':
-		return true;
-	}
-	return false;
-}
-
 static void __xt_xlate_add(struct xt_xlate *xl, enum xt_xlate_type type,
-			   bool space, const char *fmt, va_list ap)
+			   const char *fmt, va_list ap)
 {
 	struct xt_xlate_buf *buf = &xl->buf[type];
-	char tmpbuf[1024] = "";
 	int len;
 
-	len = vsnprintf(tmpbuf, 1024, fmt, ap);
-	if (len < 0 || len >= buf->rem - 1)
+	len = vsnprintf(buf->data + buf->off, buf->rem, fmt, ap);
+	if (len < 0 || len >= buf->rem)
 		xtables_error(RESOURCE_PROBLEM, "OOM");
 
-	if (space && buf->off &&
-	    !isspace(buf->data[buf->off - 1]) &&
-	    (isalnum(tmpbuf[0]) || isbrace(tmpbuf[0]))) {
-		buf->data[buf->off] = ' ';
-		buf->off++;
-		buf->rem--;
-	}
-	sprintf(buf->data + buf->off, "%s", tmpbuf);
 	buf->rem -= len;
 	buf->off += len;
 }
@@ -2532,16 +2494,7 @@ void xt_xlate_rule_add(struct xt_xlate *xl, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	__xt_xlate_add(xl, XT_XLATE_RULE, true, fmt, ap);
-	va_end(ap);
-}
-
-void xt_xlate_rule_add_nospc(struct xt_xlate *xl, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	__xt_xlate_add(xl, XT_XLATE_RULE, false, fmt, ap);
+	__xt_xlate_add(xl, XT_XLATE_RULE, fmt, ap);
 	va_end(ap);
 }
 
@@ -2550,16 +2503,7 @@ void xt_xlate_set_add(struct xt_xlate *xl, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	__xt_xlate_add(xl, XT_XLATE_SET, true, fmt, ap);
-	va_end(ap);
-}
-
-void xt_xlate_set_add_nospc(struct xt_xlate *xl, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	__xt_xlate_add(xl, XT_XLATE_SET, false, fmt, ap);
+	__xt_xlate_add(xl, XT_XLATE_SET, fmt, ap);
 	va_end(ap);
 }
 
@@ -2586,12 +2530,7 @@ uint8_t xt_xlate_get_family(struct xt_xlate *xl)
 
 const char *xt_xlate_get(struct xt_xlate *xl)
 {
-	struct xt_xlate_buf *buf = &xl->buf[XT_XLATE_RULE];
-
-	while (buf->off && isspace(buf->data[buf->off - 1]))
-		buf->data[--buf->off] = '\0';
-
-	return buf->data;
+	return xl->buf[XT_XLATE_RULE].data;
 }
 
 const char *xt_xlate_set_get(struct xt_xlate *xl)

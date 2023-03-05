@@ -129,6 +129,7 @@ static void devgroup_show_xlate(const struct xt_devgroup_info *info,
 				struct xt_xlate *xl, int numeric)
 {
 	enum xt_op op = XT_OP_EQ;
+	char *space = "";
 
 	if (info->flags & XT_DEVGROUP_MATCH_SRC) {
 		if (info->flags & XT_DEVGROUP_INVERT_SRC)
@@ -136,12 +137,13 @@ static void devgroup_show_xlate(const struct xt_devgroup_info *info,
 		xt_xlate_add(xl, "iifgroup ");
 		print_devgroup_xlate(info->src_group, op,
 				     info->src_mask, xl, numeric);
+		space = " ";
 	}
 
 	if (info->flags & XT_DEVGROUP_MATCH_DST) {
 		if (info->flags & XT_DEVGROUP_INVERT_DST)
 			op = XT_OP_NEQ;
-		xt_xlate_add(xl, "oifgroup ");
+		xt_xlate_add(xl, "%soifgroup ", space);
 		print_devgroup_xlate(info->dst_group, op,
 				     info->dst_mask, xl, numeric);
 	}

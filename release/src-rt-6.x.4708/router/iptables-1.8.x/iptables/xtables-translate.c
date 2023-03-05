@@ -41,9 +41,7 @@ void xlate_ifname(struct xt_xlate *xl, const char *nftmeta, const char *ifname,
 	for (i = 0, j = 0; i < ifaclen + 1; i++, j++) {
 		switch (ifname[i]) {
 		case '*':
-			/* asterisk is non-special mid-string */
-			if (i == ifaclen - 1)
-				iface[j++] = '\\';
+			iface[j++] = '\\';
 			/* fall through */
 		default:
 			iface[j] = ifname[i];
@@ -85,10 +83,12 @@ int xlate_action(const struct iptables_command_state *cs, bool goto_set,
 		else if (strcmp(cs->jumpto, XTC_LABEL_RETURN) == 0)
 			xt_xlate_add(xl, " return");
 		else if (cs->target->xlate) {
+			xt_xlate_add(xl, " ");
 			struct xt_xlate_tg_params params = {
 				.ip		= (const void *)&cs->fw,
 				.target		= cs->target->t,
 				.numeric	= numeric,
+				.escape_quotes	= !cs->restore,
 			};
 			ret = cs->target->xlate(xl, &params);
 		}
@@ -115,12 +115,17 @@ int xlate_matches(const struct iptables_command_state *cs, struct xt_xlate *xl)
 			.ip		= (const void *)&cs->fw,
 			.match		= matchp->match->m,
 			.numeric	= numeric,
+			.escape_quotes	= !cs->restore,
 		};
 
 		if (!matchp->match->xlate)
 			return 0;
 
 		ret = matchp->match->xlate(xl, &params);
+
+		if (strcmp(matchp->match->name, "comment") != 0)
+			xt_xlate_add(xl, " ");
+
 		if (!ret)
 			break;
 	}
@@ -150,7 +155,6 @@ static int nft_rule_xlate_add(struct nft_handle *h,
 			      bool append)
 {
 	struct xt_xlate *xl = xt_xlate_alloc(10240);
-	const char *tick = cs->restore ? "" : "'";
 	const char *set;
 	int ret;
 
@@ -161,20 +165,21 @@ static int nft_rule_xlate_add(struct nft_handle *h,
 
 	set = xt_xlate_set_get(xl);
 	if (set[0]) {
-		printf("%sadd set %s %s %s%s\n",
-		       tick, family2str[h->family], p->table,
-		       xt_xlate_set_get(xl), tick);
+		printf("add set %s %s %s\n", family2str[h->family], p->table,
+		       xt_xlate_set_get(xl));
 
 		if (!cs->restore && p->command != CMD_NONE)
 			printf("nft ");
 	}
 
-	printf("%s%s rule %s %s %s ",
-	       tick,
-	       append ? "add" : "insert",
-	       family2str[h->family], p->table, p->chain);
-
-	printf("%s%s\n", xt_xlate_rule_get(xl), tick);
+	if (append) {
+		printf("add rule %s %s %s ",
+		       family2str[h->family], p->table, p->chain);
+	} else {
+		printf("insert rule %s %s %s ",
+		       family2str[h->family], p->table, p->chain);
+	}
+	printf("%s\n", xt_xlate_rule_get(xl));
 
 err_out:
 	xt_xlate_free(xl);
@@ -336,7 +341,7 @@ static int do_command_xlate(struct nft_handle *h, int argc, char *argv[],
 		exit(1);
 	}
 
-	h->ops->clear_cs(&cs);
+	nft_clear_iptables_command_state(&cs);
 
 	if (h->family == AF_INET) {
 		free(args.s.addr.v4);

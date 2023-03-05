@@ -3,16 +3,15 @@
 AM_CFLAGS = ${regular_CFLAGS}
 AM_CPPFLAGS = ${regular_CPPFLAGS} -I${top_builddir}/include \
               -I${top_srcdir}/include ${libnfnetlink_CFLAGS}
-AM_LDFLAGS = ${regular_LDFLAGS}
 
 sbin_PROGRAMS =
-dist_pkgdata_DATA =
+pkgdata_DATA =
 man_MANS =
 
 if HAVE_LIBNFNETLINK
 man_MANS += nfnl_osf.8
 sbin_PROGRAMS += nfnl_osf
-dist_pkgdata_DATA += pf.os
+pkgdata_DATA += pf.os
 
 nfnl_osf_LDADD = ${libnfnetlink_LIBS}
 

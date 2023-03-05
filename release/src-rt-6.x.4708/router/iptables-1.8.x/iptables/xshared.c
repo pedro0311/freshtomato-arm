@@ -39,8 +39,8 @@ char *arp_opcodes[] =
  * to the commandline, and see expected results. So we call help for all
  * specified matches and targets.
  */
-static void print_extension_helps(const struct xtables_target *t,
-				  const struct xtables_rule_match *m)
+void print_extension_helps(const struct xtables_target *t,
+    const struct xtables_rule_match *m)
 {
 	for (; t != NULL; t = t->next) {
 		if (t->used) {
@@ -129,8 +129,8 @@ static struct xtables_match *load_proto(struct iptables_command_state *cs)
 			  cs->options & OPT_NUMERIC, &cs->matches);
 }
 
-static int command_default(struct iptables_command_state *cs,
-			   struct xtables_globals *gl, bool invert)
+int command_default(struct iptables_command_state *cs,
+		    struct xtables_globals *gl, bool invert)
 {
 	struct xtables_rule_match *matchp;
 	struct xtables_match *m;
@@ -400,15 +400,15 @@ bool tokenize_rule_counters(char **bufferp, char **pcntp, char **bcntp, int line
 
 	ptr = strchr(buffer, ']');
 	if (!ptr)
-		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need ]", line);
+		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need ]\n", line);
 
 	pcnt = strtok(buffer+1, ":");
 	if (!pcnt)
-		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need :", line);
+		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need :\n", line);
 
 	bcnt = strtok(NULL, "]");
 	if (!bcnt)
-		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need ]", line);
+		xtables_error(PARAMETER_PROBLEM, "Bad line %u: need ]\n", line);
 
 	*pcntp = pcnt;
 	*bcntp = bcnt;
@@ -433,10 +433,10 @@ void add_argv(struct argv_store *store, const char *what, int quoted)
 
 	if (store->argc + 1 >= MAX_ARGC)
 		xtables_error(PARAMETER_PROBLEM,
-			      "Parser cannot handle more arguments");
+			      "Parser cannot handle more arguments\n");
 	if (!what)
 		xtables_error(PARAMETER_PROBLEM,
-			      "Trying to store NULL argument");
+			      "Trying to store NULL argument\n");
 
 	store->argv[store->argc] = xtables_strdup(what);
 	store->argvattr[store->argc] = quoted;
@@ -731,7 +731,7 @@ void print_fragment(unsigned int flags, unsigned int invflags,
 		fputs("opt ", stdout);
 
 	if (fake) {
-		fputs("--", stdout);
+		fputs("  ", stdout);
 	} else {
 		fputc(invflags & IPT_INV_FRAG ? '!' : '-', stdout);
 		fputc(flags & IPT_F_FRAG ? 'f' : '-', stdout);
@@ -789,7 +789,7 @@ void save_iface(char letter, const char *iface,
 	}
 }
 
-static void command_match(struct iptables_command_state *cs, bool invert)
+void command_match(struct iptables_command_state *cs, bool invert)
 {
 	struct option *opts = xt_params->opts;
 	struct xtables_match *m;
@@ -827,7 +827,7 @@ static void command_match(struct iptables_command_state *cs, bool invert)
 	xt_params->opts = opts;
 }
 
-static const char *xt_parse_target(const char *targetname)
+const char *xt_parse_target(const char *targetname)
 {
 	const char *ptr;
 
@@ -889,7 +889,7 @@ void command_jump(struct iptables_command_state *cs, const char *jumpto)
 	xt_params->opts = opts;
 }
 
-static char cmd2char(int option)
+char cmd2char(int option)
 {
 	/* cmdflags index corresponds with position of bit in CMD_* values */
 	static const char cmdflags[] = { 'I', 'D', 'D', 'R', 'A', 'L', 'F', 'Z',
@@ -900,23 +900,24 @@ static char cmd2char(int option)
 		;
 	if (i >= ARRAY_SIZE(cmdflags))
 		xtables_error(OTHER_PROBLEM,
-			      "cmd2char(): Invalid command number %u.", 1 << i);
+			      "cmd2char(): Invalid command number %u.\n",
+			      1 << i);
 	return cmdflags[i];
 }
 
-static void add_command(unsigned int *cmd, const int newcmd,
-			const int othercmds, int invert)
+void add_command(unsigned int *cmd, const int newcmd,
+		 const int othercmds, int invert)
 {
 	if (invert)
 		xtables_error(PARAMETER_PROBLEM, "unexpected '!' flag");
 	if (*cmd & (~othercmds))
-		xtables_error(PARAMETER_PROBLEM, "Cannot use -%c with -%c",
-			      cmd2char(newcmd), cmd2char(*cmd & (~othercmds)));
+		xtables_error(PARAMETER_PROBLEM, "Cannot use -%c with -%c\n",
+			   cmd2char(newcmd), cmd2char(*cmd & (~othercmds)));
 	*cmd |= newcmd;
 }
 
 /* Can't be zero. */
-static int parse_rulenumber(const char *rule)
+int parse_rulenumber(const char *rule)
 {
 	unsigned int rulenum;
 
@@ -926,10 +927,6 @@ static int parse_rulenumber(const char *rule)
 
 	return rulenum;
 }
-
-#define NUMBER_OF_OPT	ARRAY_SIZE(optflags)
-static const char optflags[]
-= { 'n', 's', 'd', 'p', 'j', 'v', 'x', 'i', 'o', '0', 'c', 'f', 2, 3, 'l', 4, 5, 6 };
 
 /* Table of legal combinations of commands and options.  If any of the
  * given commands make an option legal, that option is legal (applies to
@@ -960,7 +957,7 @@ static const char commands_v_options[NUMBER_OF_CMD][NUMBER_OF_OPT] =
 /*CHECK*/     {'x',' ',' ',' ',' ',' ','x',' ',' ','x','x',' ',' ',' ',' ',' ',' ',' '},
 };
 
-static void generic_opt_check(int command, int options)
+void generic_opt_check(int command, int options)
 {
 	int i, j, legal = 0;
 
@@ -978,8 +975,9 @@ static void generic_opt_check(int command, int options)
 			if (!(options & (1<<i))) {
 				if (commands_v_options[j][i] == '+')
 					xtables_error(PARAMETER_PROBLEM,
-						      "You need to supply the `-%c' option for this command",
-						      optflags[i]);
+						   "You need to supply the `-%c' "
+						   "option for this command\n",
+						   optflags[i]);
 			} else {
 				if (commands_v_options[j][i] != 'x')
 					legal = 1;
@@ -989,12 +987,12 @@ static void generic_opt_check(int command, int options)
 		}
 		if (legal == -1)
 			xtables_error(PARAMETER_PROBLEM,
-				      "Illegal option `-%c' with this command",
-				      optflags[i]);
+				   "Illegal option `-%c' with this command\n",
+				   optflags[i]);
 	}
 }
 
-static char opt2char(int option)
+char opt2char(int option)
 {
 	const char *ptr;
 
@@ -1026,8 +1024,8 @@ static const int inverse_for_options[NUMBER_OF_OPT] =
 /* 6 */ IPT_INV_PROTO,
 };
 
-static void
-set_option(unsigned int *options, unsigned int option, uint16_t *invflg,
+void
+set_option(unsigned int *options, unsigned int option, u_int16_t *invflg,
 	   bool invert)
 {
 	if (*options & option)
@@ -1058,12 +1056,12 @@ void assert_valid_chain_name(const char *chainname)
 
 	if (*chainname == '-' || *chainname == '!')
 		xtables_error(PARAMETER_PROBLEM,
-			      "chain name not allowed to start with `%c'",
+			      "chain name not allowed to start with `%c'\n",
 			      *chainname);
 
 	if (xtables_find_target(chainname, XTF_TRY_LOAD))
 		xtables_error(PARAMETER_PROBLEM,
-			      "chain name may not clash with target name");
+			      "chain name may not clash with target name\n");
 
 	for (ptr = chainname; *ptr; ptr++)
 		if (isspace(*ptr))
@@ -1090,10 +1088,10 @@ void print_rule_details(unsigned int linenum, const struct xt_counters *ctrs,
 
 	fputc(invflags & XT_INV_PROTO ? '!' : ' ', stdout);
 
-	if (((format & (FMT_NUMERIC | FMT_NOTABLE)) == FMT_NUMERIC) || !pname)
-		printf(FMT("%-4hu ", "%hu "), proto);
+	if (pname)
+		printf(FMT("%-5s", "%s "), pname);
 	else
-		printf(FMT("%-4s ", "%s "), pname);
+		printf(FMT("%-5hu", "%hu "), proto);
 }
 
 void save_rule_details(const char *iniface, unsigned const char *iniface_mask,
@@ -1309,7 +1307,7 @@ static void check_empty_interface(struct xtables_args *args, const char *arg)
 		return;
 
 	if (args->family != NFPROTO_ARP)
-		xtables_error(PARAMETER_PROBLEM, "%s", msg);
+		xtables_error(PARAMETER_PROBLEM, msg);
 
 	fprintf(stderr, "%s", msg);
 }
@@ -1354,23 +1352,6 @@ static const char *optstring_lookup(int family)
 		return EBT_OPTSTRING;
 	}
 	return "";
-}
-
-void xtables_clear_iptables_command_state(struct iptables_command_state *cs)
-{
-	xtables_rule_matches_free(&cs->matches);
-	if (cs->target) {
-		free(cs->target->t);
-		cs->target->t = NULL;
-
-		free(cs->target->udata);
-		cs->target->udata = NULL;
-
-		if (cs->target == cs->target->next) {
-			free(cs->target);
-			cs->target = NULL;
-		}
-	}
 }
 
 void do_parse(int argc, char *argv[],
@@ -1543,9 +1524,6 @@ void do_parse(int argc, char *argv[],
 					XTF_TRY_LOAD, &cs->matches);
 
 			xtables_printhelp(cs->matches);
-			xtables_clear_iptables_command_state(cs);
-			xtables_free_opts(1);
-			xtables_fini();
 			exit(0);
 
 			/*
@@ -2017,38 +1995,4 @@ void ipv6_post_parse(int command, struct iptables_command_state *cs,
 		xtables_error(PARAMETER_PROBLEM,
 			      "! not allowed with multiple"
 			      " source or destination IP addresses");
-}
-
-unsigned char *
-make_delete_mask(const struct xtables_rule_match *matches,
-		 const struct xtables_target *target,
-		 size_t entry_size)
-{
-	/* Establish mask for comparison */
-	unsigned int size = entry_size;
-	const struct xtables_rule_match *matchp;
-	unsigned char *mask, *mptr;
-
-	for (matchp = matches; matchp; matchp = matchp->next)
-		size += XT_ALIGN(sizeof(struct xt_entry_match)) + matchp->match->size;
-
-	mask = xtables_calloc(1, size
-			 + XT_ALIGN(sizeof(struct xt_entry_target))
-			 + target->size);
-
-	memset(mask, 0xFF, entry_size);
-	mptr = mask + entry_size;
-
-	for (matchp = matches; matchp; matchp = matchp->next) {
-		memset(mptr, 0xFF,
-		       XT_ALIGN(sizeof(struct xt_entry_match))
-		       + matchp->match->userspacesize);
-		mptr += XT_ALIGN(sizeof(struct xt_entry_match)) + matchp->match->size;
-	}
-
-	memset(mptr, 0xFF,
-	       XT_ALIGN(sizeof(struct xt_entry_target))
-	       + target->userspacesize);
-
-	return mask;
 }

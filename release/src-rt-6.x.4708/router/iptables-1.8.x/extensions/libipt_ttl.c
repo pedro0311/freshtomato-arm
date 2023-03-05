@@ -106,7 +106,7 @@ static int ttl_xlate(struct xt_xlate *xl,
 	const struct ipt_ttl_info *info =
 		(struct ipt_ttl_info *) params->match->data;
 
-	switch (info->mode) {
+		switch (info->mode) {
 		case IPT_TTL_EQ:
 			xt_xlate_add(xl, "ip ttl");
 			break;
@@ -121,7 +121,7 @@ static int ttl_xlate(struct xt_xlate *xl,
 			break;
 		default:
 			/* Should not happen. */
-			return 0;
+			break;
 	}
 
 	xt_xlate_add(xl, " %u", info->ttl);

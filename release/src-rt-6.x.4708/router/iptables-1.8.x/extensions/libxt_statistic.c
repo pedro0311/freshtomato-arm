@@ -141,19 +141,13 @@ static int statistic_xlate(struct xt_xlate *xl,
 
 	switch (info->mode) {
 	case XT_STATISTIC_MODE_RANDOM:
-		xt_xlate_add(xl, "meta random & %u %s %u",
-			     INT_MAX,
-			     info->flags & XT_STATISTIC_INVERT ? ">=" : "<",
-			     info->u.random.probability);
-		break;
+		return 0;
 	case XT_STATISTIC_MODE_NTH:
 		xt_xlate_add(xl, "numgen inc mod %u %s%u",
 			     info->u.nth.every + 1,
 			     info->flags & XT_STATISTIC_INVERT ? "!= " : "",
 			     info->u.nth.packet);
 		break;
-	default:
-		return 0;
 	}
 
 	return 1;

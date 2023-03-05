@@ -1133,6 +1133,9 @@ gen_lookup(uint32_t sreg, const char *set_name, uint32_t set_id, uint32_t flags)
 	return e;
 }
 
+/* simplified nftables:include/netlink.h, netlink_padded_len() */
+#define NETLINK_ALIGN		4
+
 /* from nftables:include/datatype.h, TYPE_BITS */
 #define CONCAT_TYPE_BITS	6
 
@@ -1164,7 +1167,7 @@ static int __add_nft_among(struct nft_handle *h, const char *table,
 		type = type << CONCAT_TYPE_BITS | NFT_DATATYPE_IPADDR;
 		len += sizeof(struct in_addr) + NETLINK_ALIGN - 1;
 		len &= ~(NETLINK_ALIGN - 1);
-		flags = NFT_SET_INTERVAL | NFT_SET_CONCAT;
+		flags = NFT_SET_INTERVAL;
 	}
 
 	s = add_anon_set(h, table, flags, type, len, cnt);
@@ -1205,9 +1208,8 @@ static int __add_nft_among(struct nft_handle *h, const char *table,
 	nftnl_rule_add_expr(r, e);
 
 	if (ip) {
-		reg = nft_get_next_reg(reg, ETH_ALEN);
-		e = __gen_payload(NFT_PAYLOAD_NETWORK_HEADER, ip_addr_off[dst],
-				  sizeof(struct in_addr), reg);
+		e = gen_payload(h, NFT_PAYLOAD_NETWORK_HEADER, ip_addr_off[dst],
+				sizeof(struct in_addr), &reg);
 		if (!e)
 			return -ENOMEM;
 		nftnl_rule_add_expr(r, e);
@@ -1360,9 +1362,6 @@ static int add_nft_udp(struct nft_handle *h, struct nftnl_rule *r,
 		return ret;
 	}
 
-	if (nftnl_rule_get_u32(r, NFTNL_RULE_COMPAT_PROTO) != IPPROTO_UDP)
-		xtables_error(PARAMETER_PROBLEM, "UDP match requires '-p udp'");
-
 	return add_nft_tcpudp(h, r, udp->spts, udp->invflags & XT_UDP_INV_SRCPT,
 			      udp->dpts, udp->invflags & XT_UDP_INV_DSTPT);
 }
@@ -1412,9 +1411,6 @@ static int add_nft_tcp(struct nft_handle *h, struct nftnl_rule *r,
 		nftnl_rule_add_expr(r, expr);
 		return ret;
 	}
-
-	if (nftnl_rule_get_u32(r, NFTNL_RULE_COMPAT_PROTO) != IPPROTO_TCP)
-		xtables_error(PARAMETER_PROBLEM, "TCP match requires '-p tcp'");
 
 	if (tcp->flg_mask) {
 		int ret = add_nft_tcpflags(h, r, tcp->flg_cmp, tcp->flg_mask,
@@ -1754,16 +1750,15 @@ nft_rule_append(struct nft_handle *h, const char *chain, const char *table,
 	return 1;
 }
 
-bool
+void
 nft_rule_print_save(struct nft_handle *h, const struct nftnl_rule *r,
 		    enum nft_rule_print type, unsigned int format)
 {
 	const char *chain = nftnl_rule_get_str(r, NFTNL_RULE_CHAIN);
 	struct iptables_command_state cs = {};
 	struct nft_family_ops *ops = h->ops;
-	bool ret;
 
-	ret = ops->rule_to_cs(h, r, &cs);
+	ops->rule_to_cs(h, r, &cs);
 
 	if (!(format & (FMT_NOCOUNTS | FMT_C_COUNTS)))
 		printf("[%llu:%llu] ", (unsigned long long)cs.counters.pcnt,
@@ -1784,8 +1779,6 @@ nft_rule_print_save(struct nft_handle *h, const struct nftnl_rule *r,
 
 	if (ops->clear_cs)
 		ops->clear_cs(&cs);
-
-	return ret;
 }
 
 static bool nft_rule_is_policy_rule(struct nftnl_rule *r)
@@ -1896,7 +1889,6 @@ int nft_chain_save(struct nft_chain *nc, void *data)
 struct nft_rule_save_data {
 	struct nft_handle *h;
 	unsigned int format;
-	unsigned int errors;
 };
 
 static int nft_rule_save_cb(struct nft_chain *c, void *data)
@@ -1911,11 +1903,7 @@ static int nft_rule_save_cb(struct nft_chain *c, void *data)
 
 	r = nftnl_rule_iter_next(iter);
 	while (r != NULL) {
-		bool ret = nft_rule_print_save(d->h, r, NFT_RULE_APPEND, d->format);
-
-		if (!ret)
-			d->errors++;
-
+		nft_rule_print_save(d->h, r, NFT_RULE_APPEND, d->format);
 		r = nftnl_rule_iter_next(iter);
 	}
 
@@ -1932,9 +1920,6 @@ int nft_rule_save(struct nft_handle *h, const char *table, unsigned int format)
 	int ret;
 
 	ret = nft_chain_foreach(h, table, nft_rule_save_cb, &d);
-
-	if (ret == 0 && d.errors)
-		xtables_error(VERSION_PROBLEM, "Cannot decode all rules provided by kernel");
 
 	/* the core expects 1 for success and 0 for error */
 	return ret == 0 ? 1 : 0;
@@ -2358,18 +2343,15 @@ static bool nft_rule_cmp(struct nft_handle *h, struct nftnl_rule *r,
 			 struct nftnl_rule *rule)
 {
 	struct iptables_command_state _cs = {}, this = {}, *cs = &_cs;
-	bool ret = false, ret_this, ret_that;
+	bool ret = false;
 
-	ret_this = h->ops->rule_to_cs(h, r, &this);
-	ret_that = h->ops->rule_to_cs(h, rule, cs);
+	h->ops->rule_to_cs(h, r, &this);
+	h->ops->rule_to_cs(h, rule, cs);
 
 	DEBUGP("comparing with... ");
 #ifdef DEBUG_DEL
 	nft_rule_print_save(h, r, NFT_RULE_APPEND, 0);
 #endif
-	if (!ret_this || !ret_that)
-		DEBUGP("Cannot convert rules: %d %d\n", ret_this, ret_that);
-
 	if (!h->ops->is_same(cs, &this))
 		goto out;
 
@@ -2880,11 +2862,10 @@ int nft_rule_zero_counters(struct nft_handle *h, const char *chain,
 		goto error;
 	}
 
-	h->ops->rule_to_cs(h, r, &cs);
+	nft_rule_to_iptables_command_state(h, r, &cs);
+
 	cs.counters.pcnt = cs.counters.bcnt = 0;
 	new_rule = nft_rule_new(h, chain, table, &cs);
-	h->ops->clear_cs(&cs);
-
 	if (!new_rule)
 		return 1;
 
@@ -2912,8 +2893,8 @@ static void nft_compat_table_batch_add(struct nft_handle *h, uint16_t type,
 {
 	struct nlmsghdr *nlh;
 
-	nlh = nftnl_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
-				    type, h->family, flags, seq);
+	nlh = nftnl_table_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
+					type, h->family, flags, seq);
 	nftnl_table_nlmsg_build_payload(nlh, table);
 	nft_table_print_debug(h, table, nlh);
 }
@@ -2957,8 +2938,8 @@ static void nft_compat_chain_batch_add(struct nft_handle *h, uint16_t type,
 {
 	struct nlmsghdr *nlh;
 
-	nlh = nftnl_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
-				    type, h->family, flags, seq);
+	nlh = nftnl_chain_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
+					type, h->family, flags, seq);
 	nftnl_chain_nlmsg_build_payload(nlh, chain);
 	nft_chain_print_debug(h, chain, nlh);
 }
@@ -2969,8 +2950,8 @@ static void nft_compat_rule_batch_add(struct nft_handle *h, uint16_t type,
 {
 	struct nlmsghdr *nlh;
 
-	nlh = nftnl_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
-				    type, h->family, flags, seq);
+	nlh = nftnl_rule_nlmsg_build_hdr(nftnl_batch_buffer(h->batch),
+				       type, h->family, flags, seq);
 	nftnl_rule_nlmsg_build_payload(nlh, rule);
 	nft_rule_print_debug(h, rule, nlh);
 }
@@ -3379,8 +3360,6 @@ static int nft_prepare(struct nft_handle *h)
 	nft_cache_build(h);
 
 	list_for_each_entry_safe(cmd, next, &h->cmd_list, head) {
-		h->error.lineno = cmd->error.lineno;
-
 		switch (cmd->command) {
 		case NFT_COMPAT_TABLE_FLUSH:
 			ret = nft_table_flush(h, cmd->table);
@@ -3878,6 +3857,6 @@ void nft_assert_table_compatible(struct nft_handle *h,
 		chain = "";
 	}
 	xtables_error(OTHER_PROBLEM,
-		      "%s%s%stable `%s' is incompatible, use 'nft' tool.",
+		      "%s%s%stable `%s' is incompatible, use 'nft' tool.\n",
 		      pfx, chain, sfx, table);
 }

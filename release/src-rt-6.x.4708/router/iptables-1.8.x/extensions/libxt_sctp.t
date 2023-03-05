@@ -27,7 +27,3 @@
 -p sctp -m sctp --chunk-types all ASCONF_ACK;=;OK
 -p sctp -m sctp --chunk-types all FORWARD_TSN;=;OK
 -p sctp -m sctp --chunk-types all SHUTDOWN_COMPLETE;=;OK
--p sctp -m sctp --chunk-types all I_DATA;=;OK
--p sctp -m sctp --chunk-types all RE_CONFIG;=;OK
--p sctp -m sctp --chunk-types all PAD;=;OK
--p sctp -m sctp --chunk-types all I_FORWARD_TSN;=;OK

@@ -61,7 +61,8 @@ for_each_table(int (*func)(struct iptables_save_cb *cb, const char *tablename),
 	while (fgets(tablename, sizeof(tablename), procfile)) {
 		if (tablename[strlen(tablename) - 1] != '\n')
 			xtables_error(OTHER_PROBLEM,
-				      "Badly formed tablename `%s'", tablename);
+				   "Badly formed tablename `%s'\n",
+				   tablename);
 		tablename[strlen(tablename) - 1] = '\0';
 		ret &= func(cb, tablename);
 	}
@@ -84,7 +85,7 @@ static int do_output(struct iptables_save_cb *cb, const char *tablename)
 		h = cb->ops->init(tablename);
 	}
 	if (!h)
-		xtables_error(OTHER_PROBLEM, "Cannot initialize: %s",
+		xtables_error(OTHER_PROBLEM, "Cannot initialize: %s\n",
 			      cb->ops->strerror(errno));
 
 	time_t now = time(NULL);
