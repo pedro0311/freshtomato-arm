@@ -2629,6 +2629,9 @@ function navi() {
 /* TINC-BEGIN */
 			,['Tinc Daemon',		'tinc.asp']
 /* TINC-END */
+/* WIREGUARD-BEGIN */
+			,['Wireguard',			'wireguard.asp']
+/* WIREGUARD-END */
 		] ],
 /* VPN-END */
 		null,
