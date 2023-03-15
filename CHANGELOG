@@ -5,6 +5,38 @@ FreshTomato-ARM Changelog
 
 
 
+2023.2          2023.03.18
+---------------------------
+
+- kernel: net: usb: cdc_ether: add support for Thales Cinterion PLS62-W modem
+- kernel: net: usb: rndis_host: Secure rndis_query check against int overflow
+- SDK6: update wireless driver (dual core)
+- WL Client / Media Bridge / Wireless Ethernet Bridge: add AP MAC (xx:xx:xx:xx:xx:xx) to scan and join (--> try to connect to that specific MAC with SSID "ABCDEF")
+- libcurl: update to 7.88.1
+- libjpeg-turbo: update to 2.1.5.1
+- libsodium: update to latest 1.0.18-stable
+- miniupnpd: update to 2.3.3
+- rp-pppoe: update to 3c0f6c02 (2023-02-08) snapshot
+- sqlite: update to 3.41.1
+- e2fsprogs: update to 1.47.0
+- openvpn: update to 2.6.1
+- dnscrypt-proxy: update resolvers csv file
+- adblock v2: update to 2.71u
+- rom: update CA bundle to 2023-01-10
+- dnsmasq: add safe-mode + TFTP (resolves #263)
+- build: scripts: added PATH directive to avoid conflicts with entware/optware
+- build: Makefile: r1do (Xiaomi R1D): do not build with IRQBALANCE due to too large image size
+- GUI: vpn-server.asp: corrected "Uncrypted" for "Unencrypted"
+- GUI: VPN Tunneling: add Wireguard page (for now only with link to the wiki howto)
+- GUI: DHCP / DNS / TFTP: clean-up
+- Revert "GUI: add new default theme"
+- others: entware-install-MIPS.sh: use the full path when calling programs
+- rc: fix logdrop bevaviour (if enabled)
+- rc: transmission.c: fix port forwarding (UDP) (resolves #270)
+- rc: transmission.c: revert changes from 4c4f653 - everything works just fine
+- rc: wan.c: fix commit 80a7e66 (resolves #275)
+
+
 2023.1          2023.02.17
 ---------------------------
 
