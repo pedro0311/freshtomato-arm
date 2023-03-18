@@ -10561,7 +10561,8 @@ static void sysinit(void)
 	}
 #endif /* TCONFIG_BCMARM */
 
-	restore_defaults(); /* restore defaults if necessary */
+	restore_defaults(); /* restore (basic) defaults if necessary */
+	del_rstats_defaults(); /* remove rstats nvram values if feature is disabled! */
 	init_nvram();
 
 	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
