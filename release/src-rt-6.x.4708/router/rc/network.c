@@ -373,6 +373,10 @@ static int wlconf(char *ifname, int unit, int subunit)
 #else
 			eval("wl", "-i", ifname, "interference", nvram_safe_get(wl_nvname("mitigation", unit, 0)));
 #endif
+#ifdef TCONFIG_BCMARM
+			if (nvram_match(wl_nvname("phytype", unit, 0), "v"))
+				eval("wl", "-i", ifname, "ldpc_cap", nvram_match(wl_nvname("optimizexbox", unit, 0), "1") ? "0" : "1"); /* driver default setting is ldpc_cap = 1 (On) --> optimizexbox disabled! */
+#endif
 		}
 
 		if (wl_client(unit, subunit)) {
@@ -1203,6 +1207,10 @@ void wl_sta_start(void)
 #else
 			eval("wl", "-i", wlc, "interference", nvram_safe_get(wl_nvname("mitigation", unit, 0)));
 #endif /* TCONFIG_BCMARM */
+#ifdef TCONFIG_BCMARM
+			if (nvram_match(wl_nvname("phytype", unit, 0), "v"))
+				eval("wl", "-i", wlc, "ldpc_cap", nvram_match(wl_nvname("optimizexbox", unit, 0), "1") ? "0" : "1"); /* driver default setting is ldpc_cap = 1 (On) --> optimizexbox disabled! */
+#endif
 
 			if (unit == 0) {
 				led(LED_WLAN, LED_ON); /* enable WLAN LED for 2.4 GHz */
