@@ -10570,6 +10570,7 @@ static void sysinit(void)
 #ifdef TCONFIG_SNMP
 	del_snmp_defaults(); /* remove snmp nvram values if feature is disabled! */
 #endif /* TCONFIG_SNMP */
+	del_upnp_defaults(); /* remove upnp nvram values if feature is disabled! */
 	init_nvram();
 
 	set_jumbo_frame(); /* enable or disable jumbo_frame and set jumbo frame size */
