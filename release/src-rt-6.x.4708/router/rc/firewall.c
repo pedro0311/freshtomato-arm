@@ -256,11 +256,13 @@ void ipt_write(const char *format, ...)
 void ip6t_write(const char *format, ...)
 {
 #ifdef TCONFIG_IPV6
-	va_list args;
+	if (ipv6_enabled()) {
+		va_list args;
 
-	va_start(args, format);
-	vfprintf(ip6t_file, format, args);
-	va_end(args);
+		va_start(args, format);
+		vfprintf(ip6t_file, format, args);
+		va_end(args);
+	}
 #endif
 }
 
@@ -1546,7 +1548,8 @@ static void filter_forward(void)
 		ipt_triggered(IPT_TABLE_FILTER);
 		ipt_forward(IPT_TABLE_FILTER);
 #ifdef TCONFIG_IPV6
-		ip6t_forward();
+		if (ipv6_enabled())
+			ip6t_forward();
 #endif
 		memset(dst, 0, sizeof(dst));
 		if (dmz_dst(dst)) {
@@ -1600,7 +1603,8 @@ static void filter_log(void)
 		limit[0] = 0;
 
 #ifdef TCONFIG_IPV6
-	modprobe("ip6t_LOG");
+	if (ipv6_enabled())
+		modprobe("ip6t_LOG");
 #endif
 	if ((*chain_in_drop == 'l') || (*chain_out_drop == 'l'))
 		ip46t_write(":logdrop - [0:0]\n"
@@ -1744,7 +1748,8 @@ static void filter_table(void)
 
 	filter_input();
 #ifdef TCONFIG_IPV6
-	filter6_input();
+	if (ipv6_enabled())
+		filter6_input();
 	ip6t_write("-A OUTPUT -m rt --rt-type 0 -j %s\n", chain_in_drop);
 #endif
 
@@ -1799,9 +1804,11 @@ int start_firewall(void)
 	f_write_procsysnet("ipv4/neigh/default/gc_thresh2", "2048");
 	f_write_procsysnet("ipv4/neigh/default/gc_thresh3", "4096");
 #ifdef TCONFIG_IPV6
-	f_write_procsysnet("ipv6/neigh/default/gc_thresh1", "1");
-	f_write_procsysnet("ipv6/neigh/default/gc_thresh2", "2048");
-	f_write_procsysnet("ipv6/neigh/default/gc_thresh3", "4096");
+	if (ipv6_enabled()) {
+		f_write_procsysnet("ipv6/neigh/default/gc_thresh1", "1");
+		f_write_procsysnet("ipv6/neigh/default/gc_thresh2", "2048");
+		f_write_procsysnet("ipv6/neigh/default/gc_thresh3", "4096");
+	}
 #endif
 
 	if (nvram_get_int("fw_nat_tuning") > 0) {
@@ -2005,13 +2012,15 @@ int start_firewall(void)
 	}
 
 #ifdef TCONFIG_IPV6
-	if ((ip6t_file = fopen(ip6t_fname, "w")) == NULL) {
-		notice_set("ip6tables", "Unable to create ip6tables restore file");
-		simple_unlock("firewall");
-		return 0;
+	if (ipv6_enabled()) {
+		if ((ip6t_file = fopen(ip6t_fname, "w")) == NULL) {
+			notice_set("ip6tables", "Unable to create ip6tables restore file");
+			simple_unlock("firewall");
+			return 0;
+		}
+		modprobe("nf_conntrack_ipv6");
+		modprobe("ip6t_REJECT");
 	}
-	modprobe("nf_conntrack_ipv6");
-	modprobe("ip6t_REJECT");
 #endif
 
 #ifdef TCONFIG_BCMARM
@@ -2029,7 +2038,8 @@ int start_firewall(void)
 	ipt_file = NULL;
 
 #ifdef TCONFIG_IPV6
-	fclose(ip6t_file);
+	if (ipv6_enabled())
+		fclose(ip6t_file);
 	ip6t_file = NULL;
 #endif
 
