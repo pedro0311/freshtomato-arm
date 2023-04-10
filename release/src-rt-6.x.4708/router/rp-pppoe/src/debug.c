@@ -7,16 +7,16 @@
 * Functions for printing debugging information
 *
 * Copyright (C) 2000 by Roaring Penguin Software Inc.
-* Copyright (C) 2018-2023 Dianne Skoll
+* Copyright (C) 2018-2021 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* SPDX-License-Identifier: GPL-2.0-or-later
+* LIC: GPL
 *
 ***********************************************************************/
 
-#include "config.h"
+#include "pppoe.h"
 
 #ifdef DEBUGGING_ENABLED
 
@@ -24,7 +24,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "pppoe.h"
 
 /**********************************************************************
 *%FUNCTION: dumpHex
@@ -98,7 +97,7 @@ dumpPacket(FILE *fp, PPPoEPacket *packet, char const *dir)
     struct tm *lt;
     char timebuf[256];
 
-    uint16_t type = etherType(packet);
+    UINT16_t type = etherType(packet);
     if (!fp) return;
     gettimeofday(&tv, NULL);
     now = (time_t) tv.tv_sec;

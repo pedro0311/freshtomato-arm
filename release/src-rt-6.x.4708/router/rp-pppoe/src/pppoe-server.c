@@ -5,47 +5,79 @@
 * Implementation of a user-space PPPoE server
 *
 * Copyright (C) 2000-2012 Roaring Penguin Software Inc.
-* Copyright (C) 2018-2023 Dianne Skoll
+* Copyright (C) 2018-2021 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
 * $Id$
 *
-* SPDX-License-Identifier: GPL-2.0-or-later
+* LIC: GPL
 *
 ***********************************************************************/
 
 #include "config.h"
 
 #include <sys/socket.h>
+#if defined(HAVE_LINUX_IF_H)
+#include <linux/if.h>
+#elif defined(HAVE_NET_IF_H)
+#include <net/if.h>
+#endif
 
 #if defined(HAVE_NETPACKET_PACKET_H) || defined(HAVE_LINUX_IF_PACKET_H)
 #define _POSIX_SOURCE 1 /* For sigaction defines */
 #endif
 
+#include "pppoe-server.h"
+#include "md5.h"
+
+#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
+#endif
+
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/file.h>
+
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
+
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
+#endif
+
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 
 #include <time.h>
+
 #include <signal.h>
-#include <stdarg.h>
 
-#include "pppoe-server.h"
-#include "md5.h"
-#include "control_socket.h"
+#ifdef HAVE_LICENSE
+#include "license.h"
+#include "licensed-only/servfuncs.h"
+static struct License const *ServerLicense;
+static struct License const *ClusterLicense;
+#else
+#define control_session_started(x) (void) 0
+#define control_session_terminated(x) (void) 0
+#define control_exit() (void) 0
+#define realpeerip peerip
+#endif
 
-
-#if defined(HAVE_LINUX_IF_H)
-#include <linux/if.h>
+#ifdef HAVE_L2TP
+extern PppoeSessionFunctionTable L2TPSessionFunctionTable;
+extern void pppoe_to_l2tp_add_interface(EventSelector *es,
+					Interface *interface);
 #endif
 
 static void InterfaceHandler(EventSelector *es,
@@ -61,17 +93,6 @@ do {\
 	return; \
     } \
 } while(0)
-
-#define DRAIN_OFF	0
-#define DRAIN_ON	1
-#define DRAIN_QUIT	2
-static const char* drain_string[] = {
-    "off (actively accepting connection)",
-    "on (not accepting connections)",
-    "quit (not accepting, will terminate when drained)",
-};
-
-static char *plugin_path = PLUGIN_PATH;
 
 static void PppoeStopSession(ClientSession *ses, char const *reason);
 static int PppoeSessionIsActive(ClientSession *ses);
@@ -94,10 +115,8 @@ ClientSession *LastFreeSession = NULL;
 ClientSession *BusySessions = NULL;
 
 /* Interfaces we're listening on */
-Interface *interfaces = NULL;
+Interface interfaces[MAX_INTERFACES];
 int NumInterfaces = 0;
-int MaxInterfaces = 0;
-int draining = 0;
 
 /* The number of session slots */
 size_t NumSessionSlots;
@@ -118,7 +137,7 @@ EventSelector *event_selector;
 static int UseLinuxKernelModePPPoE = 0;
 
 /* Requested max_ppp_payload */
-static uint16_t max_ppp_payload = 0;
+static UINT16_t max_ppp_payload = 0;
 
 /* File with PPPD options */
 static char *pppoptfile = NULL;
@@ -192,38 +211,6 @@ count_sessions_from_mac(unsigned char *eth)
 }
 
 /**********************************************************************
-*Structures describing the CLI interface, and forward declarations.
-***********************************************************************/
-static int handle_set_drain(ClientConnection *client, const char* const* argv, int argi, void* pvt, void* clientpvt);
-
-ControlCommand cmd_set[] = {
-    { .command = "drain", .handler = handle_set_drain, },
-    { .command = NULL, }
-};
-
-static int handle_status(ClientConnection *client, const char* const* argv, int argi, void* pvt, void* clientpvt);
-
-ControlCommand cmd_status[] = {
-    { .command = "status", .handler = handle_status, },
-    { .command = NULL, }
-};
-
-
-ControlCommand cmd_root[] = {
-    {
-	.command = "set",
-	.handler = control_socket_handle_command,
-	.pvt = &cmd_set,
-    },
-    {
-	.command = "show",
-	.handler = control_socket_handle_command,
-	.pvt = &cmd_status,
-    },
-    { .command = NULL, }
-};
-
-/**********************************************************************
 *%FUNCTION: childHandler
 *%ARGUMENTS:
 * pid -- pid of child
@@ -242,6 +229,22 @@ childHandler(pid_t pid, int status, void *s)
     /* Temporary structure for sending PADT's. */
     PPPoEConnection conn;
 
+#ifdef HAVE_L2TP
+    /* We're acting as LAC, so when child exits, become a PPPoE <-> L2TP
+       relay */
+    if (session->flags & FLAG_ACT_AS_LAC) {
+	syslog(LOG_INFO, "Session %u for client "
+	       "%02x:%02x:%02x:%02x:%02x:%02x handed off to LNS %s",
+	       (unsigned int) ntohs(session->sess),
+	       session->eth[0], session->eth[1], session->eth[2],
+	       session->eth[3], session->eth[4], session->eth[5],
+	       inet_ntoa(session->tunnel_endpoint.sin_addr));
+	session->pid = 0;
+	session->funcs = &L2TPSessionFunctionTable;
+	return;
+    }
+#endif
+
     memset(&conn, 0, sizeof(conn));
     conn.hostUniq = NULL;
 
@@ -251,8 +254,8 @@ childHandler(pid_t pid, int status, void *s)
 	   (unsigned int) ntohs(session->sess),
 	   session->eth[0], session->eth[1], session->eth[2],
 	   session->eth[3], session->eth[4], session->eth[5],
-	   (int) session->peerip[0], (int) session->peerip[1],
-	   (int) session->peerip[2], (int) session->peerip[3],
+	   (int) session->realpeerip[0], (int) session->realpeerip[1],
+	   (int) session->realpeerip[2], (int) session->realpeerip[3],
 	   session->ethif->name);
     memcpy(conn.myEth, session->ethif->mac, ETH_ALEN);
     conn.discoverySocket = session->ethif->sock;
@@ -268,6 +271,7 @@ childHandler(pid_t pid, int status, void *s)
     }
 
     session->serviceName = "";
+    control_session_terminated(session);
     if (pppoe_free_session(session) < 0) {
 	return;
     }
@@ -299,26 +303,6 @@ incrementIPAddress(unsigned char ip[IPV4ALEN])
 }
 
 /**********************************************************************
-*%FUNCTION: ipIsNull (static)
-*%ARGUMENTS:
-* addr -- a 4-byte array representing IP address
-*%RETURNS:
-* 1 if ip represents 0.0.0.0, used to indicate delegation, 0 otherwise.
-*%DESCRIPTION:
-* Checks if ip is the null address used to indicate that IP allocation is
-* to be delegated to pppd.
-***********************************************************************/
-static int
-ipIsNull(const unsigned char ip[IPV4ALEN])
-{
-    int i;
-    for (i = 0; i < IPV4ALEN; ++i)
-	if (ip[i])
-	    return 0;
-    return 1;
-}
-
-/**********************************************************************
 *%FUNCTION: killAllSessions
 *%ARGUMENTS:
 * None
@@ -335,6 +319,9 @@ killAllSessions(void)
 	sess->funcs->stop(sess, "Shutting Down");
 	sess = sess->next;
     }
+#ifdef HAVE_L2TP
+    pppoe_close_l2tp_tunnels();
+#endif
 }
 
 /**********************************************************************
@@ -358,7 +345,7 @@ parseAddressPool(char const *fname, int install)
 
     if (!fp) {
 	sysErr("Cannot open address pool file");
-	exit(EXIT_FAILURE);
+	exit(1);
     }
 
     while (!feof(fp)) {
@@ -380,6 +367,10 @@ parseAddressPool(char const *fname, int install)
 		Sessions[numAddrs].peerip[1] = (unsigned char) f;
 		Sessions[numAddrs].peerip[2] = (unsigned char) g;
 		Sessions[numAddrs].peerip[3] = (unsigned char) h;
+#ifdef HAVE_LICENSE
+		memcpy(Sessions[numAddrs].realpeerip,
+		       Sessions[numAddrs].peerip, IPV4ALEN);
+#endif
 	    }
 	    numAddrs++;
 	} else if ((sscanf(line, "%u.%u.%u.%u-%u", &a, &b, &c, &d, &e) == 5) &&
@@ -398,6 +389,10 @@ parseAddressPool(char const *fname, int install)
 		    Sessions[numAddrs].peerip[1] = (unsigned char) b;
 		    Sessions[numAddrs].peerip[2] = (unsigned char) c;
 		    Sessions[numAddrs].peerip[3] = (unsigned char) d;
+#ifdef HAVE_LICENSE
+		    memcpy(Sessions[numAddrs].realpeerip,
+			   Sessions[numAddrs].peerip, IPV4ALEN);
+#endif
 		d++;
 		numAddrs++;
 		}
@@ -412,6 +407,10 @@ parseAddressPool(char const *fname, int install)
 		Sessions[numAddrs].peerip[1] = (unsigned char) b;
 		Sessions[numAddrs].peerip[2] = (unsigned char) c;
 		Sessions[numAddrs].peerip[3] = (unsigned char) d;
+#ifdef HAVE_LICENSE
+		memcpy(Sessions[numAddrs].realpeerip,
+		       Sessions[numAddrs].peerip, IPV4ALEN);
+#endif
 	    }
 	    numAddrs++;
 	}
@@ -436,7 +435,7 @@ parseAddressPool(char const *fname, int install)
 * Picks interesting tags out of a PADI packet
 ***********************************************************************/
 void
-parsePADITags(uint16_t type, uint16_t len, unsigned char *data,
+parsePADITags(UINT16_t type, UINT16_t len, unsigned char *data,
 	      void *extra)
 {
     switch(type) {
@@ -481,7 +480,7 @@ parsePADITags(uint16_t type, uint16_t len, unsigned char *data,
 * Picks interesting tags out of a PADR packet
 ***********************************************************************/
 void
-parsePADRTags(uint16_t type, uint16_t len, unsigned char *data,
+parsePADRTags(UINT16_t type, UINT16_t len, unsigned char *data,
 	      void *extra)
 {
     switch(type) {
@@ -529,7 +528,10 @@ parsePADRTags(uint16_t type, uint16_t len, unsigned char *data,
 void
 fatalSys(char const *str)
 {
-    printErr("%s: %s", str, strerror(errno));
+    char buf[SMALLBUF];
+    snprintf(buf, SMALLBUF, "%s: %s", str, strerror(errno));
+    printErr(buf);
+    control_exit();
     exit(EXIT_FAILURE);
 }
 
@@ -545,7 +547,9 @@ fatalSys(char const *str)
 void
 sysErr(char const *str)
 {
-    printErr("%.256s: %.256s", str, strerror(errno));
+    char buf[1024];
+    sprintf(buf, "%.256s: %.256s", str, strerror(errno));
+    printErr(buf);
 }
 
 /**********************************************************************
@@ -560,7 +564,8 @@ sysErr(char const *str)
 void
 rp_fatal(char const *str)
 {
-    printErr("%s", str);
+    printErr(str);
+    control_exit();
     exit(EXIT_FAILURE);
 }
 
@@ -615,18 +620,12 @@ processPADI(Interface *ethif, PPPoEPacket *packet, int len)
     PPPoETag cookie;
     size_t acname_len;
     unsigned char *cursor = pado.payload;
-    uint16_t plen;
+    UINT16_t plen;
 
     int sock = ethif->sock;
     int i;
     int ok = 0;
     unsigned char *myAddr = ethif->mac;
-
-    /* Ignore PADI's if we're draining the server */
-    if (draining != DRAIN_OFF) {
-	syslog(LOG_ERR, "PADI ignored due to server draining.");
-	return;
-    }
 
     /* Ignore PADI's which don't come from a unicast address */
     if (NOT_UNICAST(packet->ethHdr.h_source)) {
@@ -721,7 +720,7 @@ processPADI(Interface *ethif, PPPoEPacket *packet, int len)
 	}
 	if (max_ppp_payload > ETH_PPPOE_MTU) {
 	    PPPoETag maxPayload;
-	    uint16_t mru = htons(max_ppp_payload);
+	    UINT16_t mru = htons(max_ppp_payload);
 	    maxPayload.type = htons(TAG_PPP_MAX_PAYLOAD);
 	    maxPayload.length = htons(sizeof(mru));
 	    memcpy(maxPayload.payload, &mru, sizeof(mru));
@@ -806,39 +805,22 @@ processPADT(Interface *ethif, PPPoEPacket *packet, int len)
 
     /* If source MAC does not match, do not kill session */
     if (memcmp(packet->ethHdr.h_source, Sessions[i].eth, ETH_ALEN)) {
-        if (!Sessions[i].eth[0] &&
-            !Sessions[i].eth[1] &&
-            !Sessions[i].eth[2] &&
-            !Sessions[i].eth[3] &&
-            !Sessions[i].eth[4] &&
-            !Sessions[i].eth[5]) {
-            syslog(LOG_INFO, "PADT for closed session %u received from "
-                   "%02X:%02X:%02X:%02X:%02X:%02X",
-                   (unsigned int) ntohs(packet->session),
-                   packet->ethHdr.h_source[0],
-                   packet->ethHdr.h_source[1],
-                   packet->ethHdr.h_source[2],
-                   packet->ethHdr.h_source[3],
-                   packet->ethHdr.h_source[4],
-                   packet->ethHdr.h_source[5]);
-        } else {
-            syslog(LOG_WARNING, "PADT for session %u received from "
-                   "%02X:%02X:%02X:%02X:%02X:%02X; should be from "
-                   "%02X:%02X:%02X:%02X:%02X:%02X",
-                   (unsigned int) ntohs(packet->session),
-                   packet->ethHdr.h_source[0],
-                   packet->ethHdr.h_source[1],
-                   packet->ethHdr.h_source[2],
-                   packet->ethHdr.h_source[3],
-                   packet->ethHdr.h_source[4],
-                   packet->ethHdr.h_source[5],
-                   Sessions[i].eth[0],
-                   Sessions[i].eth[1],
-                   Sessions[i].eth[2],
-                   Sessions[i].eth[3],
-                   Sessions[i].eth[4],
-                   Sessions[i].eth[5]);
-        }
+	syslog(LOG_WARNING, "PADT for session %u received from "
+	       "%02X:%02X:%02X:%02X:%02X:%02X; should be from "
+	       "%02X:%02X:%02X:%02X:%02X:%02X",
+	       (unsigned int) ntohs(packet->session),
+	       packet->ethHdr.h_source[0],
+	       packet->ethHdr.h_source[1],
+	       packet->ethHdr.h_source[2],
+	       packet->ethHdr.h_source[3],
+	       packet->ethHdr.h_source[4],
+	       packet->ethHdr.h_source[5],
+	       Sessions[i].eth[0],
+	       Sessions[i].eth[1],
+	       Sessions[i].eth[2],
+	       Sessions[i].eth[3],
+	       Sessions[i].eth[4],
+	       Sessions[i].eth[5]);
 	return;
     }
     Sessions[i].flags |= FLAG_RECVD_PADT;
@@ -866,7 +848,7 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
     pid_t child;
     PPPoEPacket pads;
     unsigned char *cursor = pads.payload;
-    uint16_t plen;
+    UINT16_t plen;
     int i;
     int sock = ethif->sock;
     unsigned char *myAddr = ethif->mac;
@@ -875,6 +857,11 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
 
     /* Temporary structure for sending PADM's. */
     PPPoEConnection conn;
+
+
+#ifdef HAVE_LICENSE
+    int freemem;
+#endif
 
     /* Initialize some globals */
     relayId.type = 0;
@@ -957,6 +944,34 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
 	serviceName = "";
     }
 
+
+#ifdef HAVE_LICENSE
+    /* Are we licensed for this many sessions? */
+    if (License_NumLicenses("PPPOE-SESSIONS") <= NumActiveSessions) {
+	syslog(LOG_ERR, "Insufficient session licenses (%02x:%02x:%02x:%02x:%02x:%02x)",
+	       (unsigned int) packet->ethHdr.h_source[0],
+	       (unsigned int) packet->ethHdr.h_source[1],
+	       (unsigned int) packet->ethHdr.h_source[2],
+	       (unsigned int) packet->ethHdr.h_source[3],
+	       (unsigned int) packet->ethHdr.h_source[4],
+	       (unsigned int) packet->ethHdr.h_source[5]);
+	sendErrorPADS(sock, myAddr, packet->ethHdr.h_source,
+		      TAG_AC_SYSTEM_ERROR, "RP-PPPoE: Server: No session licenses available");
+	return;
+    }
+#endif
+    /* Enough free memory? */
+#ifdef HAVE_LICENSE
+    freemem = getFreeMem();
+    if (freemem < MIN_FREE_MEMORY) {
+	syslog(LOG_WARNING,
+	       "Insufficient free memory to create session: Want %d, have %d",
+	       MIN_FREE_MEMORY, freemem);
+	sendErrorPADS(sock, myAddr, packet->ethHdr.h_source,
+		      TAG_AC_SYSTEM_ERROR, "RP-PPPoE: Insufficient free RAM");
+	return;
+    }
+#endif
     /* Looks cool... find a slot for the session */
     cliSession = pppoe_alloc_session();
     if (!cliSession) {
@@ -993,6 +1008,7 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
 	cliSession->pid = child;
 	Event_HandleChildExit(event_selector, child,
 			      childHandler, cliSession);
+	control_session_started(cliSession);
 	return;
     }
 
@@ -1049,7 +1065,7 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
 	}
 	if (max_ppp_payload > ETH_PPPOE_MTU) {
 	    PPPoETag maxPayload;
-	    uint16_t mru = htons(max_ppp_payload);
+	    UINT16_t mru = htons(max_ppp_payload);
 	    maxPayload.type = htons(TAG_PPP_MAX_PAYLOAD);
 	    maxPayload.length = htons(sizeof(mru));
 	    memcpy(maxPayload.payload, &mru, sizeof(mru));
@@ -1094,22 +1110,6 @@ processPADR(Interface *ethif, PPPoEPacket *packet, int len)
 }
 
 /**********************************************************************
-*%FUNCTION: pppoe_terminate
-*%ARGUMENTS:
-* sig -- signal number
-*%RETURNS:
-* Nothing
-*%DESCRIPTION:
-* Call this in order to terminate the server.
-***********************************************************************/
-static __attribute__((noreturn)) void
-pppoe_terminate(void)
-{
-    killAllSessions();
-    exit(EXIT_SUCCESS);
-}
-
-/**********************************************************************
 *%FUNCTION: termHandler
 *%ARGUMENTS:
 * sig -- signal number
@@ -1124,7 +1124,9 @@ termHandler(int sig)
     syslog(LOG_INFO,
 	   "Terminating on signal %d -- killing all PPPoE sessions",
 	   sig);
-    pppoe_terminate();
+    killAllSessions();
+    control_exit();
+    exit(0);
 }
 
 /**********************************************************************
@@ -1141,8 +1143,12 @@ usage(char const *argv0)
 {
     fprintf(stderr, "Usage: %s [options]\n", argv0);
     fprintf(stderr, "Options:\n");
+#ifdef USE_BPF
+    fprintf(stderr, "   -I if_name     -- Specify interface (REQUIRED)\n");
+#else
     fprintf(stderr, "   -I if_name     -- Specify interface (default %s.)\n",
 	    DEFAULT_IF);
+#endif
     fprintf(stderr, "   -T timeout     -- Specify inactivity timeout in seconds.\n");
     fprintf(stderr, "   -C name        -- Set access concentrator name.\n");
     fprintf(stderr, "   -m MSS         -- Clamp incoming and outgoing MSS options.\n");
@@ -1152,7 +1158,7 @@ usage(char const *argv0)
     fprintf(stderr, "   -S name        -- Advertise specified service-name.\n");
     fprintf(stderr, "   -O fname       -- Use PPPD options from specified file\n");
     fprintf(stderr, "                     (default %s).\n", PPPOE_SERVER_OPTIONS);
-    fprintf(stderr, "   -p fname       -- Obtain IP address pool from specified file.\n");
+    fprintf(stderr, "   -p fname       -- Optain IP address pool from specified file.\n");
     fprintf(stderr, "   -N num         -- Allow 'num' concurrent sessions.\n");
     fprintf(stderr, "   -o offset      -- Assign session numbers starting at offset+1.\n");
     fprintf(stderr, "   -f disc:sess   -- Set Ethernet frame types (hex).\n");
@@ -1160,23 +1166,32 @@ usage(char const *argv0)
     fprintf(stderr, "   -X pidfile     -- Write PID and lock pidfile.\n");
     fprintf(stderr, "   -q /path/pppd  -- Specify full path to pppd.\n");
     fprintf(stderr, "   -Q /path/pppoe -- Specify full path to pppoe.\n");
+#ifdef HAVE_LINUX_KERNEL_PPPOE
     fprintf(stderr, "   -k             -- Use kernel-mode PPPoE.\n");
-    fprintf(stderr, "   -g path        -- Specify full path to plugin (default %s)\n", PLUGIN_PATH);
+#endif
     fprintf(stderr, "   -u             -- Pass 'unit' option to pppd.\n");
     fprintf(stderr, "   -r             -- Randomize session numbers.\n");
     fprintf(stderr, "   -d             -- Debug session creation.\n");
     fprintf(stderr, "   -x n           -- Limit to 'n' sessions/MAC address.\n");
     fprintf(stderr, "   -P             -- Check pool file for correctness and exit.\n");
+#ifdef HAVE_LICENSE
+    fprintf(stderr, "   -c secret:if:port -- Enable clustering on interface 'if'.\n");
+    fprintf(stderr, "   -1             -- Allow only one session per user.\n");
+#endif
+
     fprintf(stderr, "   -i             -- Ignore PADI if no free sessions.\n");
     fprintf(stderr, "   -M msg         -- Send MSG in a MOTM tag in PADM packet after PADS.\n");
     fprintf(stderr, "   -H url         -- Send URL in a HURL tag in PADM packet after PADS.\n");
     fprintf(stderr, "   -h             -- Print usage information.\n\n");
     fprintf(stderr, "PPPoE-Server Version %s, Copyright (C) 2001-2009 Roaring Penguin Software Inc.\n", RP_VERSION);
-    fprintf(stderr, "                     %*s  Copyright (C) 2018-2023 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
+    fprintf(stderr, "                     %*s  Copyright (C) 2018-2021 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
+
+#ifndef HAVE_LICENSE
     fprintf(stderr, "PPPoE-Server comes with ABSOLUTELY NO WARRANTY.\n");
     fprintf(stderr, "This is free software, and you are welcome to redistribute it\n");
     fprintf(stderr, "under the terms of the GNU General Public License, version 2\n");
     fprintf(stderr, "or (at your option) any later version.\n");
+#endif
     fprintf(stderr, "https://dianne.skoll.ca/projects/rp-pppoe/\n");
 }
 
@@ -1202,28 +1217,28 @@ main(int argc, char **argv)
     unsigned int discoveryType, sessionType;
     char *addressPoolFname = NULL;
     char *pidfile = NULL;
-    char *unix_control = NULL;
     char c;
-    char const *s;
-    int cookie_ok = 0;
 
-    char const *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPS:q:Q:H:M:U:g:";
+#ifdef HAVE_LICENSE
+    int use_clustering = 0;
+#endif
+
+#ifndef HAVE_LINUX_KERNEL_PPPOE
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:sp:lrudPc:S:1q:Q:H:M:";
+#else
+    char *options = "X:ix:hI:C:L:R:T:m:FN:f:O:o:skp:lrudPc:S:1q:Q:H:M:";
+#endif
 
     if (getuid() != geteuid() ||
 	getgid() != getegid()) {
 	fprintf(stderr, "SECURITY WARNING: pppoe-server will NOT run suid or sgid.  Fix your installation.\n");
-	exit(EXIT_FAILURE);
+	exit(1);
     }
+
+    memset(interfaces, 0, sizeof(interfaces));
 
     /* Initialize syslog */
     openlog("pppoe-server", LOG_PID, LOG_DAEMON);
-
-    MaxInterfaces = INIT_INTERFACES;
-    interfaces = malloc(sizeof(*interfaces) * INIT_INTERFACES);
-    if (!interfaces) {
-	fprintf(stderr, "Out of memory allocating initial interfaces.\n");
-	exit(EXIT_FAILURE);
-    }
 
     /* Default number of session slots */
     NumSessionSlots = DEFAULT_MAX_SESSIONS;
@@ -1246,51 +1261,36 @@ main(int argc, char **argv)
 	    }
 	    break;
 
+#ifdef HAVE_LINUX_KERNEL_PPPOE
 	case 'k':
 	    UseLinuxKernelModePPPoE = 1;
 	    break;
-        case 'g':
-            plugin_path = strdup(optarg);
-            if (!plugin_path) {
-                fprintf(stderr, "Out of memory\n");
-                exit(EXIT_FAILURE);
-            }
-            break;
+#endif
 	case 'S':
 	    if (NumServiceNames == MAX_SERVICE_NAMES) {
 		fprintf(stderr, "Too many '-S' options (%d max)",
 			MAX_SERVICE_NAMES);
-		exit(EXIT_FAILURE);
+		exit(1);
 	    }
-
-            /* Service names can only be [-_.A-Za-z0-9/] for shell-escaping
-               safety reasons */
-            for (s=optarg; *s; s++) {
-                if (!strchr("-_.ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/", *s)) {
-                    fprintf(stderr, "Illegal character `%c' in service-name: Must be A-Z, a-z, 0-9 or one of ./-_\n", *s);
-                    exit(EXIT_FAILURE);
-                }
-            }
-
 	    ServiceNames[NumServiceNames] = strdup(optarg);
 	    if (!ServiceNames[NumServiceNames]) {
-		fprintf(stderr, "Out of memory\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "Out of memory");
+		exit(1);
 	    }
 	    NumServiceNames++;
 	    break;
 	case 'q':
 	    pppd_path = strdup(optarg);
 	    if (!pppd_path) {
-		fprintf(stderr, "Out of memory\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "Out of memory");
+		exit(1);
 	    }
 	    break;
 	case 'Q':
 	    pppoe_path = strdup(optarg);
 	    if (!pppoe_path) {
-		fprintf(stderr, "Out of memory\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "Out of memory");
+		exit(1);
 	    }
 	    break;
 
@@ -1301,8 +1301,8 @@ main(int argc, char **argv)
 	    }
 	    motd_string = strdup(optarg);
 	    if (!motd_string) {
-		fprintf(stderr, "Out of memory\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "Out of memory");
+		exit(1);
 	    }
 	    break;
 
@@ -1313,10 +1313,20 @@ main(int argc, char **argv)
 	    }
 	    hurl_string = strdup(optarg);
 	    if (!hurl_string) {
-		fprintf(stderr, "Out of memory\n");
-		exit(EXIT_FAILURE);
+		fprintf(stderr, "Out of memory");
+		exit(1);
 	    }
 	    break;
+	case 'c':
+#ifndef HAVE_LICENSE
+	    fprintf(stderr, "Clustering capability not available.\n");
+	    exit(1);
+#else
+	    cluster_handle_option(optarg);
+	    use_clustering = 1;
+	    break;
+#endif
+
 	case 'd':
 	    Debug = 1;
 	    break;
@@ -1355,8 +1365,8 @@ main(int argc, char **argv)
 		fprintf(stderr, "Illegal argument to -f: Should be disc:sess in hex\n");
 		exit(EXIT_FAILURE);
 	    }
-	    Eth_PPPOE_Discovery = (uint16_t) discoveryType;
-	    Eth_PPPOE_Session   = (uint16_t) sessionType;
+	    Eth_PPPOE_Discovery = (UINT16_t) discoveryType;
+	    Eth_PPPOE_Session   = (UINT16_t) sessionType;
 	    /* This option gets passed to pppoe */
 	    snprintf(PppoeOptions + strlen(PppoeOptions),
 		     SMALLBUF-strlen(PppoeOptions),
@@ -1396,14 +1406,10 @@ main(int argc, char **argv)
 	    break;
 
 	case 'I':
-	    if (NumInterfaces >= MaxInterfaces) {
-		MaxInterfaces *= 2;
-		interfaces = realloc(interfaces, sizeof(*interfaces) * MaxInterfaces);
-		if (!interfaces) {
-		    fprintf(stderr, "Memory allocation failure trying to increase MaxInterfaces to %d\n",
-			    MaxInterfaces);
-		    exit(EXIT_FAILURE);
-		}
+	    if (NumInterfaces >= MAX_INTERFACES) {
+		fprintf(stderr, "Too many -I options (max %d)\n",
+			MAX_INTERFACES);
+		exit(EXIT_FAILURE);
 	    }
 	    found = 0;
 	    for (i=0; i<NumInterfaces; i++) {
@@ -1413,7 +1419,6 @@ main(int argc, char **argv)
 		}
 	    }
 	    if (!found) {
-		memset(&interfaces[NumInterfaces], 0, sizeof(*interfaces));
 		strncpy(interfaces[NumInterfaces].name, optarg, IFNAMSIZ);
 		NumInterfaces++;
 	    }
@@ -1451,19 +1456,42 @@ main(int argc, char **argv)
 		     " -%c %s", opt, optarg);
 	    break;
 
-	case 'U':
-	    SET_STRING(unix_control, optarg);
-	    break;
-
 	case 'h':
 	    usage(argv[0]);
 	    exit(EXIT_SUCCESS);
+	case '1':
+#ifdef HAVE_LICENSE
+	    MaxSessionsPerUser = 1;
+#else
+	    fprintf(stderr, "-1 option not valid.\n");
+	    exit(1);
+#endif
+	    break;
 	}
     }
 
     if (!pppoptfile) {
 	pppoptfile = PPPOE_SERVER_OPTIONS;
     }
+
+#ifdef HAVE_LICENSE
+    License_SetVersion(SERVPOET_VERSION);
+    License_ReadBundleFile("/etc/rp/bundle.txt");
+    License_ReadFile("/etc/rp/license.txt");
+    ServerLicense = License_GetFeature("PPPOE-SERVER");
+    if (!ServerLicense) {
+	fprintf(stderr, "License: GetFeature failed: %s\n",
+		License_ErrorMessage());
+	exit(1);
+    }
+#endif
+
+#ifdef USE_LINUX_PACKET
+#ifndef HAVE_STRUCT_SOCKADDR_LL
+    fprintf(stderr, "The PPPoE server does not work on Linux 2.0 kernels.\n");
+    exit(EXIT_FAILURE);
+#endif
+#endif
 
     if (!NumInterfaces) {
 	strcpy(interfaces[0].name, DEFAULT_IF);
@@ -1482,7 +1510,7 @@ main(int argc, char **argv)
 	NumSessionSlots = parseAddressPool(addressPoolFname, 0);
 	if (CheckPoolSyntax) {
 	    printf("%lu\n", (unsigned long) NumSessionSlots);
-	    exit(EXIT_SUCCESS);
+	    exit(0);
 	}
     }
 
@@ -1517,8 +1545,11 @@ main(int argc, char **argv)
 	Sessions[i].funcs = &DefaultSessionFunctionTable;
 	Sessions[i].sess = htons(i+1+SessOffset);
 
-	if (!addressPoolFname && !ipIsNull(RemoteIP)) {
+	if (!addressPoolFname) {
 	    memcpy(Sessions[i].peerip, RemoteIP, sizeof(RemoteIP));
+#ifdef HAVE_LICENSE
+	    memcpy(Sessions[i].realpeerip, RemoteIP, sizeof(RemoteIP));
+#endif
 	    incrementIPAddress(RemoteIP);
 	}
     }
@@ -1528,13 +1559,11 @@ main(int argc, char **argv)
     fp = fopen("/dev/urandom", "r");
     if (fp) {
 	unsigned int x;
-	cookie_ok = 1;
-	if (fread(&x, 1, sizeof(x), fp) < sizeof(x)) cookie_ok = 0;
+	fread(&x, 1, sizeof(x), fp);
 	srand(x);
-	if (fread(&CookieSeed, 1, SEED_LEN, fp) < SEED_LEN) cookie_ok = 0;
+	fread(&CookieSeed, 1, SEED_LEN, fp);
 	fclose(fp);
-    }
-    if (!cookie_ok) {
+    } else {
 	srand((unsigned int) getpid() * (unsigned int) time(NULL));
 	CookieSeed[0] = getpid() & 0xFF;
 	CookieSeed[1] = (getpid() >> 8) & 0xFF;
@@ -1592,7 +1621,7 @@ main(int argc, char **argv)
 		   ses->peerip[2], ses->peerip[3]);
 	    ses = ses->next;
 	}
-	exit(EXIT_SUCCESS);
+	exit(0);
     }
 
     /* Open all the interfaces */
@@ -1610,8 +1639,12 @@ main(int argc, char **argv)
 	rp_fatal("Could not create EventSelector -- probably out of memory");
     }
 
-    if (unix_control && control_socket_init(event_selector, unix_control, cmd_root) != 0)
-	rp_fatal("control_socket_init failed");
+    /* Control channel */
+#ifdef HAVE_LICENSE
+    if (control_init(argc, argv, event_selector)) {
+	rp_fatal("control_init failed");
+    }
+#endif
 
     /* Create event handler for each interface */
     for (i = 0; i<NumInterfaces; i++) {
@@ -1620,10 +1653,36 @@ main(int argc, char **argv)
 					    EVENT_FLAG_READABLE,
 					    InterfaceHandler,
 					    &interfaces[i]);
+#ifdef HAVE_L2TP
+	interfaces[i].session_sock = -1;
+#endif
 	if (!interfaces[i].eh) {
 	    rp_fatal("Event_AddHandler failed");
 	}
     }
+
+#ifdef HAVE_LICENSE
+    if (use_clustering) {
+	ClusterLicense = License_GetFeature("PPPOE-CLUSTER");
+	if (!ClusterLicense) {
+	    fprintf(stderr, "License: GetFeature failed: %s\n",
+		    License_ErrorMessage());
+	    exit(1);
+	}
+	if (!License_Expired(ClusterLicense)) {
+	    if (cluster_init(event_selector) < 0) {
+		rp_fatal("cluster_init failed");
+	    }
+	}
+    }
+#endif
+
+#ifdef HAVE_L2TP
+    for (i=0; i<NumInterfaces; i++) {
+	pppoe_to_l2tp_add_interface(event_selector,
+				    &interfaces[i]);
+    }
+#endif
 
     /* Daemonize -- UNIX Network Programming, Vol. 1, Stevens */
     if (beDaemon) {
@@ -1676,10 +1735,8 @@ main(int argc, char **argv)
 	    exit(EXIT_SUCCESS);
 	}
 
-	if (chdir("/") < 0) {
-	    fatalSys("chdir");
-	}
-	
+	chdir("/");
+
 	if (KidPipe[0] >= 0) {
 	    close(KidPipe[0]);
 	    KidPipe[0] = -1;
@@ -1711,25 +1768,16 @@ main(int argc, char **argv)
 	if (LockFD < 0) {
 	    syslog(LOG_INFO, "Could not open PID file %s: %s", pidfile, strerror(errno));
 	    if (foo) fprintf(foo, "ECould not open PID file %s: %s\n", pidfile, strerror(errno));
-	    exit(EXIT_FAILURE);
+	    exit(1);
 	}
 	if (fcntl(LockFD, F_SETLK, &fl) < 0) {
 	    syslog(LOG_INFO, "Could not lock PID file %s: Is another process running?", pidfile);
 	    if (foo) fprintf(foo, "ECould not lock PID file %s: Is another process running?\n", pidfile);
-	    exit(EXIT_FAILURE);
+	    exit(1);
 	}
-	if (ftruncate(LockFD, 0) < 0) {
-	    syslog(LOG_INFO, "Could not truncate PID file %s: %s", pidfile, strerror(errno));
-	    if (foo) fprintf(foo, "ECould not truncate PID file %s: %s", pidfile, strerror(errno));
-	    exit(EXIT_FAILURE);
-        }
+	ftruncate(LockFD, 0);
 	snprintf(buf, sizeof(buf), "%lu\n", (unsigned long) getpid());
-	if (write(LockFD, buf, strlen(buf)) < strlen(buf)) {
-	    syslog(LOG_INFO, "Could not write PID file %s: %s", pidfile, strerror(errno));
-	    if (foo) fprintf(foo, "ECould not write PID file %s: %s", pidfile, strerror(errno));
-	    exit(EXIT_FAILURE);
-	}
-
+	write(LockFD, buf, strlen(buf));
 	/* Do not close fd... use it to retain lock */
     }
 
@@ -1741,10 +1789,8 @@ main(int argc, char **argv)
 
     /* Tell parent all is cool */
     if (KidPipe[1] >= 0) {
-#pragma GCC diagnostic ignored "-Wunused-result"      
 	write(KidPipe[1], "X", 1);
 	close(KidPipe[1]);
-#pragma GCC diagnostic warning "-Wunused-result"      
 	KidPipe[1] = -1;
     }
 
@@ -1754,10 +1800,14 @@ main(int argc, char **argv)
 	    fatalSys("Event_HandleEvent");
 	}
 
-	if (draining == DRAIN_QUIT && NumActiveSessions == 0) {
-	    syslog(LOG_INFO, "All active sessions are terminated and draining is set to quit.");
-	    pppoe_terminate();
+#ifdef HAVE_LICENSE
+	if (License_Expired(ServerLicense)) {
+	    syslog(LOG_INFO, "Server license has expired -- killing all PPPoE sessions");
+	    killAllSessions();
+	    control_exit();
+	    exit(0);
 	}
+#endif
     }
     return 0;
 }
@@ -1837,7 +1887,7 @@ sendErrorPADS(int sock,
 {
     PPPoEPacket pads;
     unsigned char *cursor = pads.payload;
-    uint16_t plen;
+    UINT16_t plen;
     PPPoETag err;
     int elen = strlen(errorMsg);
 
@@ -1872,47 +1922,50 @@ sendErrorPADS(int sock,
     sendPacket(NULL, sock, &pads, (int) (plen + HDR_SIZE));
 }
 
-/**********************************************************************
-*%FUNCTION: makePPPDIpArg
-*%ARGUMENTS:
-* buffer -- target buffer output, should be large enough (32 bytes worst case).
-* localip -- the local IP address (myip), 0.0.0.0 for delegation.
-* remoteip -- the local IP address (myip), 0.0.0.0 for delegation.
-*%DESCRIPTION:
-* prints the localip:remoteip argument for pppd, taking delegation
-* into account, returning 0 if, and only if, both IP addresses are delegated,
-* and 1 otherwise.
-***********************************************************************/
-static void
-makePPPDIpArg(char* buffer, const unsigned char localip[IPV4ALEN], const unsigned char remoteip[IPV4ALEN])
-{
-    if (!ipIsNull(localip))
-	buffer += sprintf(buffer, "%u.%u.%u.%u", localip[0], localip[1], localip[2], localip[3]);
-    strcpy(buffer++, ":");
-    if (!ipIsNull(remoteip))
-	buffer += sprintf(buffer, "%u.%u.%u.%u", remoteip[0], remoteip[1], remoteip[2], remoteip[3]);
-}
 
 /**********************************************************************
-*%FUNCTION: startPPPD
+*%FUNCTION: startPPPDUserMode
 *%ARGUMENTS:
 * session -- client session record
 *%RETURNS:
 * Nothing
 *%DESCRIPTION:
-* Starts PPPD for user- or kernel-mode PPPoE
+* Starts PPPD for user-mode PPPoE
 ***********************************************************************/
-static void
-startPPPD(ClientSession *session)
+void
+startPPPDUserMode(ClientSession *session)
 {
     /* Leave some room */
     char *argv[64];
 
     char buffer[2 * SMALLBUF];
 
-    char *mrumtu;
     int c = 0;
 
+    argv[c++] = "pppd";
+    argv[c++] = "pty";
+
+    /* Let's hope service-name does not have ' in it... */
+    snprintf(buffer, sizeof(buffer), "%s -n -I %s -e %u:%02x:%02x:%02x:%02x:%02x:%02x%s -S '%s'",
+	     pppoe_path, session->ethif->name,
+	     (unsigned int) ntohs(session->sess),
+	     session->eth[0], session->eth[1], session->eth[2],
+	     session->eth[3], session->eth[4], session->eth[5],
+	     PppoeOptions, session->serviceName);
+    argv[c++] = strdup(buffer);
+    if (!argv[c-1]) {
+	/* TODO: Send a PADT */
+	exit(EXIT_FAILURE);
+    }
+
+    argv[c++] = "file";
+    argv[c++] = pppoptfile;
+
+    snprintf(buffer, sizeof(buffer), "%d.%d.%d.%d:%d.%d.%d.%d",
+	    (int) session->myip[0], (int) session->myip[1],
+	    (int) session->myip[2], (int) session->myip[3],
+	    (int) session->peerip[0], (int) session->peerip[1],
+	    (int) session->peerip[2], (int) session->peerip[3]);
     syslog(LOG_INFO,
 	   "Session %u created for client %02x:%02x:%02x:%02x:%02x:%02x (%d.%d.%d.%d) on %s using Service-Name '%s'",
 	   (unsigned int) ntohs(session->sess),
@@ -1922,94 +1975,121 @@ startPPPD(ClientSession *session)
 	   (int) session->peerip[2], (int) session->peerip[3],
 	   session->ethif->name,
 	   session->serviceName);
-
-    argv[c++] = "pppd";
-
-    if (UseLinuxKernelModePPPoE) {
-	/* kernel mode */
-	argv[c++] = "plugin";
-	argv[c++] = plugin_path;
-
-	/* Add "nic-" to interface name */
-	snprintf(buffer, SMALLBUF, "nic-%s", session->ethif->name);
-	argv[c++] = strdup(buffer);
-	if (!argv[c-1]) {
-	    exit(EXIT_FAILURE);
-	}
-
-	snprintf(buffer, SMALLBUF, "%u:%02x:%02x:%02x:%02x:%02x:%02x",
-		(unsigned int) ntohs(session->sess),
-		session->eth[0], session->eth[1], session->eth[2],
-		session->eth[3], session->eth[4], session->eth[5]);
-	argv[c++] = "rp_pppoe_sess";
-	argv[c++] = strdup(buffer);
-	if (!argv[c-1]) {
-	    /* TODO: Send a PADT */
-	    exit(EXIT_FAILURE);
-	}
-	argv[c++] = "rp_pppoe_service";
-	argv[c++] = (char *) session->serviceName;
-    } else {
-	/* user mode */
-	argv[c++] = "pty";
-
-	/* Let's hope service-name does not have ' in it... */
-	snprintf(buffer, sizeof(buffer), "%s -n -I %s -e %u:%02x:%02x:%02x:%02x:%02x:%02x%s -S '%s'",
-		pppoe_path, session->ethif->name,
-		(unsigned int) ntohs(session->sess),
-		session->eth[0], session->eth[1], session->eth[2],
-		session->eth[3], session->eth[4], session->eth[5],
-		PppoeOptions, session->serviceName);
-	argv[c++] = strdup(buffer);
-	if (!argv[c-1]) {
-	    /* TODO: Send a PADT */
-	    exit(EXIT_FAILURE);
-	}
-
-	if (Synchronous) {
-	    argv[c++] = "sync";
-	}
-    }
-
-    argv[c++] = "file";
-    argv[c++] = pppoptfile;
-
-    makePPPDIpArg(buffer, session->myip, session->peerip);
     argv[c++] = strdup(buffer);
     if (!argv[c-1]) {
 	/* TODO: Send a PADT */
 	exit(EXIT_FAILURE);
     }
-
     argv[c++] = "nodetach";
     argv[c++] = "noaccomp";
     argv[c++] = "nopcomp";
     argv[c++] = "default-asyncmap";
-
-    argv[c++] = "remotenumber";
-    snprintf(buffer, SMALLBUF, "%02x:%02x:%02x:%02x:%02x:%02x",
-	    session->eth[0], session->eth[1], session->eth[2],
-	    session->eth[3], session->eth[4], session->eth[5]);
-    if (!(argv[c++] = strdup(buffer))) {
-	exit(EXIT_FAILURE);
+    if (Synchronous) {
+	argv[c++] = "sync";
     }
-
     if (PassUnitOptionToPPPD) {
 	argv[c++] = "unit";
-	sprintf(buffer, "%u", (unsigned int) (ntohs(session->sess) - 1 - SessOffset));
-	if (!(argv[c++] = strdup(buffer))) {
-            exit(EXIT_FAILURE);
-        }
+	sprintf(buffer, "%u", (unsigned int) (ntohs(session->sess) - 1));
+	argv[c++] = buffer;
     }
     if (session->requested_mtu > 1492) {
 	sprintf(buffer, "%u", (unsigned int) session->requested_mtu);
-        if (!(mrumtu = strdup(buffer))) {
-            exit(EXIT_FAILURE);
-        }
 	argv[c++] = "mru";
-        argv[c++] = mrumtu;
+	argv[c++] = buffer;
 	argv[c++] = "mtu";
-        argv[c++] = mrumtu;
+	argv[c++] = buffer;
+    } else {
+	argv[c++] = "mru";
+	argv[c++] = "1492";
+	argv[c++] = "mtu";
+	argv[c++] = "1492";
+    }
+
+    argv[c++] = NULL;
+
+    execv(pppd_path, argv);
+    exit(EXIT_FAILURE);
+}
+
+/**********************************************************************
+*%FUNCTION: startPPPDLinuxKernelMode
+*%ARGUMENTS:
+* session -- client session record
+*%RETURNS:
+* Nothing
+*%DESCRIPTION:
+* Starts PPPD for kernel-mode PPPoE on Linux
+***********************************************************************/
+void
+startPPPDLinuxKernelMode(ClientSession *session)
+{
+    /* Leave some room */
+    char *argv[32];
+
+    int c = 0;
+
+    char buffer[SMALLBUF];
+
+    argv[c++] = "pppd";
+    argv[c++] = "plugin";
+    argv[c++] = PLUGIN_PATH;
+
+    /* Add "nic-" to interface name */
+    snprintf(buffer, SMALLBUF, "nic-%s", session->ethif->name);
+    argv[c++] = strdup(buffer);
+    if (!argv[c-1]) {
+	exit(EXIT_FAILURE);
+    }
+
+    snprintf(buffer, SMALLBUF, "%u:%02x:%02x:%02x:%02x:%02x:%02x",
+	     (unsigned int) ntohs(session->sess),
+	     session->eth[0], session->eth[1], session->eth[2],
+	     session->eth[3], session->eth[4], session->eth[5]);
+    argv[c++] = "rp_pppoe_sess";
+    argv[c++] = strdup(buffer);
+    if (!argv[c-1]) {
+	/* TODO: Send a PADT */
+	exit(EXIT_FAILURE);
+    }
+    argv[c++] = "rp_pppoe_service";
+    argv[c++] = (char *) session->serviceName;
+    argv[c++] = "file";
+    argv[c++] = pppoptfile;
+
+    snprintf(buffer, SMALLBUF, "%d.%d.%d.%d:%d.%d.%d.%d",
+	    (int) session->myip[0], (int) session->myip[1],
+	    (int) session->myip[2], (int) session->myip[3],
+	    (int) session->peerip[0], (int) session->peerip[1],
+	    (int) session->peerip[2], (int) session->peerip[3]);
+    syslog(LOG_INFO,
+	   "Session %u created for client %02x:%02x:%02x:%02x:%02x:%02x (%d.%d.%d.%d) on %s using Service-Name '%s'",
+	   (unsigned int) ntohs(session->sess),
+	   session->eth[0], session->eth[1], session->eth[2],
+	   session->eth[3], session->eth[4], session->eth[5],
+	   (int) session->peerip[0], (int) session->peerip[1],
+	   (int) session->peerip[2], (int) session->peerip[3],
+	   session->ethif->name,
+	   session->serviceName);
+    argv[c++] = strdup(buffer);
+    if (!argv[c-1]) {
+	/* TODO: Send a PADT */
+	exit(EXIT_FAILURE);
+    }
+    argv[c++] = "nodetach";
+    argv[c++] = "noaccomp";
+    argv[c++] = "nopcomp";
+    argv[c++] = "default-asyncmap";
+    if (PassUnitOptionToPPPD) {
+	argv[c++] = "unit";
+	sprintf(buffer, "%u", (unsigned int) (ntohs(session->sess) - 1 - SessOffset));
+	argv[c++] = buffer;
+    }
+    if (session->requested_mtu > 1492) {
+	sprintf(buffer, "%u", (unsigned int) session->requested_mtu);
+	argv[c++] = "mru";
+	argv[c++] = buffer;
+	argv[c++] = "mtu";
+	argv[c++] = buffer;
     } else {
 	argv[c++] = "mru";
 	argv[c++] = "1492";
@@ -2019,6 +2099,22 @@ startPPPD(ClientSession *session)
     argv[c++] = NULL;
     execv(pppd_path, argv);
     exit(EXIT_FAILURE);
+}
+
+/**********************************************************************
+*%FUNCTION: startPPPD
+*%ARGUMENTS:
+* session -- client session record
+*%RETURNS:
+* Nothing
+*%DESCRIPTION:
+* Starts PPPD
+***********************************************************************/
+void
+startPPPD(ClientSession *session)
+{
+    if (UseLinuxKernelModePPPoE) startPPPDLinuxKernelMode(session);
+    else startPPPDUserMode(session);
 }
 
 /**********************************************************************
@@ -2088,6 +2184,49 @@ PppoeSessionIsActive(ClientSession *ses)
     return (ses->pid != 0);
 }
 
+#ifdef HAVE_LICENSE
+/**********************************************************************
+* %FUNCTION: getFreeMem
+* %ARGUMENTS:
+*  None
+* %RETURNS:
+*  The amount of free RAM in kilobytes, or -1 if it could not be
+*  determined
+* %DESCRIPTION:
+*  Reads Linux-specific /proc/meminfo file and extracts free RAM
+***********************************************************************/
+int
+getFreeMem(void)
+{
+    char buf[512];
+    int memfree=0, buffers=0, cached=0;
+    FILE *fp = fopen("/proc/meminfo", "r");
+    if (!fp) return -1;
+
+    while (fgets(buf, sizeof(buf), fp)) {
+	if (!strncmp(buf, "MemFree:", 8)) {
+	    if (sscanf(buf, "MemFree: %d", &memfree) != 1) {
+		fclose(fp);
+		return -1;
+	    }
+	} else if (!strncmp(buf, "Buffers:", 8)) {
+	    if (sscanf(buf, "Buffers: %d", &buffers) != 1) {
+		fclose(fp);
+		return -1;
+	    }
+	} else if (!strncmp(buf, "Cached:", 7)) {
+	    if (sscanf(buf, "Cached: %d", &cached) != 1) {
+		fclose(fp);
+		return -1;
+	    }
+	}
+    }
+    fclose(fp);
+    /* return memfree + buffers + cached; */
+    return memfree;
+}
+#endif
+
 /**********************************************************************
 * %FUNCTION: pppoe_alloc_session
 * %ARGUMENTS:
@@ -2123,6 +2262,14 @@ pppoe_alloc_session(void)
     ses->startTime = time(NULL);
     ses->serviceName = "";
     ses->requested_mtu = 0;
+#ifdef HAVE_LICENSE
+    memset(ses->user, 0, MAX_USERNAME_LEN+1);
+    memset(ses->realm, 0, MAX_USERNAME_LEN+1);
+    memset(ses->realpeerip, 0, IPV4ALEN);
+#endif
+#ifdef HAVE_L2TP
+    ses->l2tp_ses = NULL;
+#endif
     NumActiveSessions++;
     return ses;
 }
@@ -2176,6 +2323,9 @@ pppoe_free_session(ClientSession *ses)
     ses->pid = 0;
     memset(ses->eth, 0, ETH_ALEN);
     ses->flags = 0;
+#ifdef HAVE_L2TP
+    ses->l2tp_ses = NULL;
+#endif
     NumActiveSessions--;
     return 0;
 }
@@ -2193,13 +2343,13 @@ pppoe_free_session(ClientSession *ses)
 *  Sends a PADM packet contaning a HURL or MOTM tag to the victim...er, peer.
 ***********************************************************************/
 void
-sendHURLorMOTM(PPPoEConnection *conn, char const *url, uint16_t tag)
+sendHURLorMOTM(PPPoEConnection *conn, char const *url, UINT16_t tag)
 {
     PPPoEPacket packet;
     PPPoETag hurl;
     size_t elen;
     unsigned char *cursor = packet.payload;
-    uint16_t plen = 0;
+    UINT16_t plen = 0;
 
     if (!conn->session) return;
     if (conn->discoverySocket < 0) return;
@@ -2244,77 +2394,4 @@ sendHURLorMOTM(PPPoEConnection *conn, char const *url, uint16_t tag)
 	fflush(conn->debugFile);
     }
 #endif
-}
-
-/**********************************************************************
-* %FUNCTION: handle_status
-***********************************************************************/
-#define opt_matches(o)		(wlen == 0 || strncmp(opt, o, wlen) == 0)
-#define opt_outp(o, fmt, ...)	cs_ret_printf(client, "%20s: " fmt "\n", o, ## __VA_ARGS__)
-#define opt_status(o, fmt, ...)	do { if (opt_matches(o)) { opt_outp(o, fmt, ## __VA_ARGS__); }} while(0)
-
-static int handle_status(ClientConnection *client, const char* const* argv, int argi, void* pvt, void* clientpvt)
-{
-    char opt[64]; /* WARNING: may not be null terminated!!!! */
-    size_t wlen = 0;
-    while (wlen < sizeof(opt) && argv[argi]) {
-	int r = snprintf(&opt[wlen], sizeof(opt) - wlen, "%s ", argv[argi++]);
-	if (r < 0) {
-	    syslog(LOG_WARNING, "snprintf error: %s", strerror(errno));
-	    return -1;
-	}
-	wlen += r;
-    }
-    if (wlen > sizeof(opt))
-	wlen = sizeof(opt);
-    if (opt[wlen-1] == ' ')
-	--wlen;
-
-    opt_status("active sessions", "%zu", NumActiveSessions);
-    opt_status("maximum sessions", "%zu", NumSessionSlots);
-    opt_status("sessions per mac", "%d", MaxSessionsPerMac);
-    opt_status("interface count", "%d", NumInterfaces);
-    opt_status("global drain", "%s", drain_string[draining]);
-    if (opt_matches("interface list")) {
-        int i;
-	for (i = 0; i < NumInterfaces; ++i) {
-	    if (!opt_matches(interfaces[i].name))
-		continue;
-	    cs_ret_printf(client, "Interface details: %s\n", interfaces[i].name);
-	    opt_outp("local mac", "%02x:%02x:%02x:%02x:%02x:%02x",
-		    interfaces[i].mac[0], interfaces[i].mac[1], interfaces[i].mac[2],
-		    interfaces[i].mac[3], interfaces[i].mac[4], interfaces[i].mac[5]);
-	    opt_outp("mtu", "%u", interfaces[i].mtu);
-	}
-    }
-    cs_ret_printf(client, "-- end --\n");
-    return 0;
-}
-#undef opt_status
-#undef opt_outp
-#undef opt_matches
-
-/**********************************************************************
-* %FUNCTION: handle_set_drain
-***********************************************************************/
-static int handle_set_drain(ClientConnection *client, const char* const* argv, int argi, void* pvt, void* clientpvt)
-{
-    if (!argv[argi]) {
-	cs_ret_printf(client, "USAGE: set drain {off|on|quit}\n");
-	return 0;
-    }
-
-    if (strcmp(argv[argi], "off") == 0) {
-	draining = DRAIN_OFF;
-	cs_ret_printf(client, "Server is not draining\n");
-    } else if (strcmp(argv[argi], "on") == 0) {
-	draining = DRAIN_ON;
-	cs_ret_printf(client, "Server is now draining\n");
-    } else if (strcmp(argv[argi], "quit") == 0) {
-	draining = DRAIN_QUIT;
-	cs_ret_printf(client, "Server is now draining, and will quit when all clients are disconnected\n");
-    } else {
-	cs_ret_printf(client, "Invalid value %s for set drain, value must be one of off, on or quit.\n", argv[argi]);
-    }
-    return 0;
 }

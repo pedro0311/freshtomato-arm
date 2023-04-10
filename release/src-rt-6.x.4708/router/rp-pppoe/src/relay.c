@@ -5,12 +5,12 @@
 * Implementation of PPPoE relay
 *
 * Copyright (C) 2001-2018 Roaring Penguin Software Inc.
-* Copyright (C) 2018-2023 Dianne Skoll
+* Copyright (C) 2018-2021 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* SPDX-License-Identifier: GPL-2.0-or-later
+* LIC: GPL
 *
 * $Id$
 *
@@ -19,25 +19,38 @@
 #include "config.h"
 
 #include <sys/socket.h>
+#if defined(HAVE_LINUX_IF_H)
+#include <linux/if.h>
+#elif defined(HAVE_NET_IF_H)
+#include <net/if.h>
+#endif
 #include <signal.h>
 #include "relay.h"
 
+#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
+#endif
+
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+
+#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
+#endif
 
 #ifdef HAVE_SYS_UIO_H
 #include <sys/uio.h>
 #endif
 
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
-
-#if defined(HAVE_LINUX_IF_H)
-#include <linux/if.h>
 #endif
+
 
 /* Interfaces (max MAX_INTERFACES) */
 PPPoEInterface Interfaces[MAX_INTERFACES];
@@ -200,7 +213,7 @@ usage(char const *argv0)
     fprintf(stderr, "   -h             -- Print this help message\n");
 
     fprintf(stderr, "\nPPPoE Version %s, Copyright (C) 2001-2006 Roaring Penguin Software Inc.\n", RP_VERSION);
-    fprintf(stderr, "              %*s  Copyright (C) 2018-2023 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
+    fprintf(stderr, "              %*s  Copyright (C) 2018-2021 Dianne Skoll\n", (int) strlen(RP_VERSION), "");
     fprintf(stderr, "PPPoE comes with ABSOLUTELY NO WARRANTY.\n");
     fprintf(stderr, "This is free software, and you are welcome to redistribute it under the terms\n");
     fprintf(stderr, "of the GNU General Public License, version 2 or any later version.\n");
@@ -232,7 +245,7 @@ main(int argc, char *argv[])
     if (getuid() != geteuid() ||
 	getgid() != getegid()) {
 	fprintf(stderr, "SECURITY WARNING: pppoe-relay will NOT run suid or sgid.  Fix your installation.\n");
-	exit(EXIT_FAILURE);
+	exit(1);
     }
 
 
@@ -278,6 +291,13 @@ main(int argc, char *argv[])
 	}
     }
 
+#ifdef USE_LINUX_PACKET
+#ifndef HAVE_STRUCT_SOCKADDR_LL
+    fprintf(stderr, "The PPPoE relay does not work on Linux 2.0 kernels.\n");
+    exit(EXIT_FAILURE);
+#endif
+#endif
+
     /* Check that at least two interfaces were defined */
     if (NumInterfaces < 2) {
 	fprintf(stderr, "%s: Must define at least two interfaces\n",
@@ -309,7 +329,7 @@ main(int argc, char *argv[])
 	    fatalSys("fork");
 	} else if (i != 0) {
 	    /* parent */
-	    exit(EXIT_SUCCESS);
+	    exit(0);
 	}
 	setsid();
 	signal(SIGHUP, SIG_IGN);
@@ -317,12 +337,10 @@ main(int argc, char *argv[])
 	if (i < 0) {
 	    fatalSys("fork");
 	} else if (i != 0) {
-	    exit(EXIT_SUCCESS);
+	    exit(0);
 	}
 
-	if (chdir("/") < 0) {
-	    fatalSys("chdir");
-	}
+	chdir("/");
 	closelog();
 	for (i=0; i<CLOSEFD; i++) {
 	    if (!keepDescriptor(i)) {
@@ -429,7 +447,7 @@ initRelay(int nsess)
 
     /* Initialize session numbers which we hand out */
     for (i=0; i<MaxSessions; i++) {
-	AllSessions[i].sesNum = htons((uint16_t) i+1);
+	AllSessions[i].sesNum = htons((UINT16_t) i+1);
     }
 
     /* Initialize hashes in a linked list */
@@ -463,7 +481,7 @@ createSession(PPPoEInterface const *ac,
 	      PPPoEInterface const *cli,
 	      unsigned char const *acMac,
 	      unsigned char const *cliMac,
-	      uint16_t acSes)
+	      UINT16_t acSes)
 {
     PPPoESession *sess;
     SessionHash *acHash, *cliHash;
@@ -638,7 +656,7 @@ addHash(SessionHash *sh)
 * hash values.
 ***********************************************************************/
 unsigned int
-hash(unsigned char const *mac, uint16_t sesNum)
+hash(unsigned char const *mac, UINT16_t sesNum)
 {
     unsigned int ans1 =
 	((unsigned int) mac[0]) |
@@ -661,7 +679,7 @@ hash(unsigned char const *mac, uint16_t sesNum)
 * The session hash for peer address "mac", session number sesNum
 ***********************************************************************/
 SessionHash *
-findSession(unsigned char const *mac, uint16_t sesNum)
+findSession(unsigned char const *mac, UINT16_t sesNum)
 {
     unsigned int b = hash(mac, sesNum) % HASHTAB_SIZE;
     SessionHash *sh = Buckets[b];
@@ -686,7 +704,9 @@ findSession(unsigned char const *mac, uint16_t sesNum)
 void
 fatalSys(char const *str)
 {
-    printErr("%.256s: %.256s", str, strerror(errno));
+    char buf[1024];
+    sprintf(buf, "%.256s: %.256s", str, strerror(errno));
+    printErr(buf);
     exit(EXIT_FAILURE);
 }
 
@@ -702,7 +722,9 @@ fatalSys(char const *str)
 void
 sysErr(char const *str)
 {
-    printErr("%.256s: %.256s", str, strerror(errno));
+    char buf[1024];
+    sprintf(buf, "%.256s: %.256s", str, strerror(errno));
+    printErr(buf);
 }
 
 /**********************************************************************
@@ -717,7 +739,7 @@ sysErr(char const *str)
 void
 rp_fatal(char const *str)
 {
-    printErr("%s", str);
+    printErr(str);
     exit(EXIT_FAILURE);
 }
 
@@ -781,9 +803,7 @@ relayLoop()
 	if (FD_ISSET(CleanPipe[0], &readableCopy)) {
 	    char dummy;
 	    CleanCounter = 0;
-#pragma GCC diagnostic ignored "-Wunused-result"      
 	    read(CleanPipe[0], &dummy, 1);
-#pragma GCC diagnostic warning "-Wunused-result"      
 	    if (IdleTimeout) cleanSessions();
 	}
     }
@@ -1460,7 +1480,7 @@ relayHandlePADS(PPPoEInterface const *iface,
 ***********************************************************************/
 void
 relaySendError(unsigned char code,
-	       uint16_t session,
+	       UINT16_t session,
 	       PPPoEInterface const *iface,
 	       unsigned char const *mac,
 	       PPPoETag const *hostUniq,
@@ -1509,9 +1529,7 @@ alarmHandler(int sig)
     Epoch++;
     CleanCounter++;
     if (CleanCounter == CleanPeriod) {
-#pragma GCC diagnostic ignored "-Wunused-result"      
 	write(CleanPipe[1], "", 1);
-#pragma GCC diagnostic warning "-Wunused-result"      
     }
 }
 

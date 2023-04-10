@@ -3,12 +3,12 @@
 * event_tcp.c -- implementation of event-driven socket I/O.
 *
 * Copyright (C) 2001 Roaring Penguin Software Inc.
-* Copyright (C) 2018-2023 Dianne Skoll
+* Copyright (C) 2018-2021 Dianne Skoll
 *
 * This program may be distributed according to the terms of the GNU
 * General Public License, version 2 or (at your option) any later version.
 *
-* SPDX-License-Identifier: GPL-2.0-or-later
+* LIC: GPL
 *
 ***********************************************************************/
 
@@ -28,11 +28,6 @@ typedef struct EventTcpConnectState_t {
     EventTcpConnectFunc f;
     void *data;
 } EventTcpConnectState;
-
-typedef struct EventTcpAcceptData_t {
-	EventTcpAcceptFunc fn;
-	void *data;
-} EventTcpAcceptData_t;
 
 /**********************************************************************
 * %FUNCTION: handle_accept
@@ -54,13 +49,14 @@ handle_accept(EventSelector *es,
 	      void *data)
 {
     int conn;
-    EventTcpAcceptData_t *d = (EventTcpAcceptData_t*) data;
+    EventTcpAcceptFunc f;
 
     EVENT_DEBUG(("tcp_handle_accept(es=%p, fd=%d, flags=%u, data=%p)\n", es, fd, flags, data));
     conn = accept(fd, NULL, NULL);
     if (conn < 0) return;
+    f = (EventTcpAcceptFunc) data;
 
-    d->fn(es, conn, d->data);
+    f(es, conn);
 }
 
 /**********************************************************************
@@ -134,8 +130,7 @@ handle_connect(EventSelector *es,
 EventHandler *
 EventTcp_CreateAcceptor(EventSelector *es,
 			int socket,
-			EventTcpAcceptFunc f,
-			void *data)
+			EventTcpAcceptFunc f)
 {
     int flags;
 
@@ -149,19 +144,9 @@ EventTcp_CreateAcceptor(EventSelector *es,
 	return NULL;
     }
 
-    EventTcpAcceptData_t *d = malloc(sizeof(EventTcpAcceptData_t));
-    if (!d)
-	return NULL;
-    d->fn = f;
-    d->data = data;
+    return Event_AddHandler(es, socket, EVENT_FLAG_READABLE,
+			    handle_accept, (void *) f);
 
-    EventHandler *eh = Event_AddHandler(es, socket, EVENT_FLAG_READABLE,
-			    handle_accept, (void *) d);
-    if (!eh) {
-	free(d);
-    }
-
-    return eh;
 }
 
 /**********************************************************************
@@ -373,7 +358,7 @@ EventTcp_ReadBuf(EventSelector *es,
     if (flags == -1) {
 	return NULL;
     }
-    if (!(flags & O_NONBLOCK) && fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+    if (fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1) {
 	return NULL;
     }
 
@@ -454,7 +439,7 @@ EventTcp_WriteBuf(EventSelector *es,
     if (flags == -1) {
 	return NULL;
     }
-    if (!(flags & O_NONBLOCK) && fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1) {
+    if (fcntl(socket, F_SETFL, flags | O_NONBLOCK) == -1) {
 	return NULL;
     }
 
