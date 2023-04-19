@@ -120,10 +120,12 @@ void start_jffs2(void)
 		return;
 	}
 
+#ifndef TCONFIG_BCMARM
 	if (!mtd_unlock(JFFS2_PARTITION)) {
 		error("unlocking");
 		return;
 	}
+#endif
 
 	modprobe(JFFS_NAME);
 
@@ -190,6 +192,8 @@ void stop_jffs2(void)
 	}
 
 	notice_set("jffs", "Stopped");
-	umount2("/jffs", MNT_DETACH);
-	modprobe_r(JFFS_NAME);
+	if (umount("/jffs"))
+		umount2("/jffs", MNT_DETACH);
+	else
+		modprobe_r(JFFS_NAME);
 }
