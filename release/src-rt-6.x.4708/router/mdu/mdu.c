@@ -4,28 +4,23 @@
  * Copyright (C) 2007-2009 Jonathan Zarate
  *
  * Licensed under GNU GPL v2 or later versions.
+ * Fixes/updates (C) 2018 - 2023 pedro
  *
  */
 
 
 #define _GNU_SOURCE
 
-#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <netdb.h>
+#include <unistd.h>
+#include <syslog.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <stdarg.h>
 #include <sys/stat.h>
-#include <time.h>
-#include <syslog.h>
-
-#include <shared.h>
-#include <shutils.h>
-#include <tomato_version.h>
 
 #ifdef USE_LIBCURL
 #include <curl/curl.h>
@@ -33,12 +28,11 @@
 #include "mssl.h"
 #endif
 
-// #define MDU_DEBUG
-/* needed by logmsg() */
-#define LOGMSG_DISABLE		0
-#define LOGMSG_NVDEBUG		"mdu_debug"
+#include "shutils.h"
+#include "shared.h"
 
-#define AGENT			"MDU - FreshTomato FW - " TOMATO_MAJOR "." TOMATO_MINOR
+// #define MDU_DEBUG
+#define AGENT			"Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/109.0"
 #define MAX_OPTION_LENGTH	256
 #define BLOB_SIZE		(4 * 1024)
 #define HALF_BLOB		(BLOB_SIZE >> 1)
@@ -61,6 +55,11 @@ int curl_sslerr = 1;
 FILE *curl_dfile = NULL;
 CURL *curl_handle = NULL;
 #endif
+
+/* needed by logmsg() */
+#define LOGMSG_DISABLE		0
+#define LOGMSG_NVDEBUG		"mdu_debug"
+
 
 char *blob = NULL;
 int error_exitcode = 1;
@@ -154,6 +153,7 @@ static const char *get_option_required(const char *name)
 		return p;
 
 	fprintf(stderr, "Required option --%s is missing.\n", name);
+
 	exit(2);
 }
 
@@ -174,6 +174,7 @@ static int get_option_onoff(const char *name, int def)
 		return 0;
 
 	fprintf(stderr, "--%s requires the value off/on or 0/1.\n", name);
+
 	exit(2);
 }
 
@@ -195,7 +196,7 @@ static void error(const char *fmt, ...)
 	s[sizeof(s) - 1] = 0;
 	va_end(args);
 
-	logmsg(LOG_DEBUG, "*** %s: %s", __FUNCTION__, s);
+	logmsg(LOG_ERR, "%s", s);
 	printf("%s\n", s);
 	save_msg(s);
 
@@ -404,7 +405,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 					break;
 				}
 #ifdef MDU_DEBUG
-				perror("connect");
+				logerr(__FUNCTION__, __LINE__, "connect");
 #endif
 				close(sd);
 				sleep(2);
@@ -422,18 +423,18 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 			mssl_init(NULL, NULL);
 			f = ssl_client_fopen_name(sd, host);
 		}
-		else {
+		else
 			f = fdopen(sd, "r+");
-		}
+
 		if (f == NULL) {
-			logmsg(LOG_DEBUG, "*** %s: error opening", __FUNCTION__);
+			logerr(__FUNCTION__, __LINE__, "error opening");
 			close(sd);
 			continue;
 		}
 
 		i = strlen(request);
 		if (fwrite(request, 1, i, f) != i) {
-			logmsg(LOG_DEBUG, "*** %s: error writing i=%d", __FUNCTION__, i);
+			logerr(__FUNCTION__, __LINE__, "error writing i=%d", i);
 			fclose(f);
 			close(sd);
 			continue;
@@ -444,7 +445,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 		if (i <= 0) {
 			fclose(f);
 			close(sd);
-			logmsg(LOG_DEBUG, "*** %s: error reading i=%d", __FUNCTION__, i);
+			logerr(__FUNCTION__, __LINE__, "error reading i=%d", i);
 			continue;
 		}
 		buffer[i] = 0;
@@ -553,7 +554,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 		if (r != CURLE_COULDNT_CONNECT)
 			break;
 #ifdef MDU_DEBUG
-		perror("connect");
+		logerr(__FUNCTION__, __LINE__, "connect");
 #endif
 		sleep(2);
 	}
@@ -600,7 +601,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 
 	sprintf(blob, "%s %s %s\r\nHost: %s\r\nUser-Agent: " AGENT "\r\n", req, query, httpv, host);
 	if (auth) {
-		memset(a, 0, 512);
+		memset(a, 0, sizeof(a));
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
 		n = base64_encode((const char *) a, b, strlen(a));
 		b[n] = 0;
@@ -682,7 +683,7 @@ const char *get_address(int required)
 				if ((d = get_option("addrcache")) != NULL)
 					strlcpy(cache_name, d, sizeof(cache_name));
 				else {
-					memset(cache_name, 0, 64);
+					memset(cache_name, 0, sizeof(cache_name));
 					sprintf(cache_name, "%s.ip", c);
 				}
 
@@ -747,13 +748,13 @@ const char *get_address(int required)
 				while (((*q >= '0') && (*q <= '9')) || (*q == '.'))
 					++q;
 
-				memset(addr, 0, 16); /* reset */
+				memset(addr, 0, sizeof(addr)); /* reset */
 				strncpy(addr, p, (q - p));
 
 				q = NULL;
 				if ((ia.s_addr = inet_addr(addr)) != INADDR_NONE) {
 					q = inet_ntoa(ia);
-					memset(s, 0, 64);
+					memset(s, 0, sizeof(s));
 					sprintf(s, "%ld,%s", ut + (10 * 60), q);
 					f_write_string(cache_name, s, 0, 0);
 
@@ -811,7 +812,7 @@ static void update_dua(const char *type, int ssl, const char *server, const char
 	char *body;
 
 	/* +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "%s?", path ? path : get_option_required("path"));
 
 	/* +opt */
@@ -945,7 +946,7 @@ static void update_namecheap(int ssl)
 	char query[2048];
 
 	/* +opt +opt +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/update?host=%s&domain=%s&password=%s", get_option_required("host"), get_option("user") ? : get_option_required("domain"), get_option_required("pass"));
 
 	/* +opt */
@@ -1027,7 +1028,7 @@ static void update_enom(int ssl)
 	/* http://dynamic.name-services.com/interface.asp?Command=SetDNSHost&HostName=test&Zone=test.com&Address=1.2.3.4&DomainPassword=password */
 
 	/* +opt +opt +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/interface.asp?Command=SetDNSHost&HostName=%s&Zone=%s&DomainPassword=%s", get_option_required("host"), get_option("user") ? : get_option_required("domain"), get_option_required("pass"));
 
 	/* +opt */
@@ -1083,7 +1084,7 @@ static void update_dnsexit(int ssl)
 	char query[2048];
 
 	/* +opt +opt +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/RemoteUpdate.sv?login=%s&password=%s&host=%s", get_option_required("user"), get_option_required("pass"), get_option_required("host"));
 
 	/* +opt */
@@ -1128,7 +1129,7 @@ static void update_ieserver(int ssl)
 	char *p;
 
 	/* +opt +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/cgi-bin/dip.cgi?username=%s&domain=%s&password=%s&updatehost=1", get_option_required("user"), get_option_required("host"), get_option_required("pass"));
 
 	r = wget(ssl, 0, "ieserver.net", query, NULL, 0, &body);
@@ -1166,7 +1167,7 @@ static void update_dyns(int ssl)
 
 
 	/* +opt +opt +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/postscript011.php?username=%s&password=%s&host=%s", get_option_required("user"), get_option_required("pass"), get_option_required("host"));
 
 	/* +opt */
@@ -1238,7 +1239,7 @@ static void update_zoneedit(int ssl)
 	char query[2048];
 
 	/* +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/auth/dynamic.html?host=%s", get_option_required("host"));
 
 	/* +opt */
@@ -1306,7 +1307,7 @@ static void update_afraid(int ssl)
 	char query[2048];
 
 	/* +opt */
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/dynamic/update.php?%s", get_option_required("ahash"));
 
 	/* +opt */
@@ -1520,7 +1521,7 @@ static void update_duckdns(int ssl)
 	char *body;
 	char query[2048];
 
-	memset(query, 0, 2048);
+	memset(query, 0, sizeof(query));
 	sprintf(query, "/update?domains=%s&token=%s", get_option_required("host"), get_option_required("ahash"));
 
 	append_addr_option(query, "&ip=%s");
@@ -1575,7 +1576,7 @@ static void update_wget(void)
 		strcat(c, s);
 	}
 
-	memset(he, 0, 256);
+	memset(he, 0, sizeof(he));
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
 		s[base64_encode((const char *) host, s, c - host)] = 0;
@@ -1654,7 +1655,7 @@ static void save_cookie(void)
 		return;
 	}
 
-	memset(s, 0, 256);
+	memset(s, 0, sizeof(s));
 	sprintf(s, "%ld,%s", now, c);
 	f_write_string(cookie, s, FW_NEWLINE, 0);
 
@@ -1670,8 +1671,12 @@ int main(int argc, char *argv[])
 
 	printf("MDU\nCopyright (C) 2007-2009 Jonathan Zarate\n\n");
 
-	if ((blob = malloc(BLOB_SIZE)) == NULL)
+	openlog("mdu", LOG_PID, LOG_DAEMON);
+
+	if ((blob = malloc(BLOB_SIZE)) == NULL) {
+		logmsg(LOG_ERR, "Cannot alocate memory, aborting ...");
 		return 1;
+	}
 
 	mkdir("/var/lib/mdu", 0700);
 	chdir("/var/lib/mdu");
