@@ -190,7 +190,7 @@ static void save_msg(const char *s)
 static void error(const char *fmt, ...)
 {
 	va_list args;
-	char s[512];
+	char s[128];
 
 	va_start(args, fmt);
 	vsnprintf(s, sizeof(s), fmt, args);
@@ -198,7 +198,7 @@ static void error(const char *fmt, ...)
 	va_end(args);
 
 	logmsg(LOG_ERR, "%s", s);
-	printf("%s\n", s);
+	printf("%s", s);
 	save_msg(s);
 
 	exit(error_exitcode);
@@ -208,8 +208,8 @@ static void success_msg(const char *msg)
 {
 	save_cookie();
 
-	logmsg(LOG_DEBUG, "*** %s", __FUNCTION__);
-	printf("%s\n", msg);
+	logmsg(LOG_DEBUG, "*** %s, msg: %s", __FUNCTION__, msg);
+	printf("%s", msg);
 	save_msg(msg);
 
 	exit(0);
