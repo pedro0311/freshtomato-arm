@@ -331,7 +331,7 @@ static void curl_cleanup()
 
 static struct curl_slist *curl_headers(const char *header)
 {
-	char *sub;
+	char *sub = NULL;
 	struct curl_slist *headers = NULL;
 	struct curl_slist *tmp = NULL;
 	size_t n = strlen(header);
@@ -342,7 +342,7 @@ static struct curl_slist *curl_headers(const char *header)
 	sub = strstr(header, "\r\n");
 	while (sub || (n > 0)) {
 		if (sub)
-			*sub = 0;
+			sub = NULL;
 		if (header) {
 			tmp = curl_slist_append(headers, header);
 			if (tmp == NULL) {
