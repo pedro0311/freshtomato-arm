@@ -1586,10 +1586,7 @@ static void update_wget(void)
 	switch (r) {
 	case 200:
 	case 302: /* redirect -- assume ok */
-		if (body && *body)
-			success_msg((char *)body);
-		else
-			success();
+		success();
 		break;
 	case 401:
 		error(M_INVALID_AUTH);
