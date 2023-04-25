@@ -1545,8 +1545,6 @@ static void update_wget(void)
 	char *c;
 	char url[256];
 	char s[256];
-	char he[256];
-	char *header;
 	int https;
 	char *host;
 	char path[256];
@@ -1577,20 +1575,14 @@ static void update_wget(void)
 		strcat(c, s);
 	}
 
-	memset(he, 0, sizeof(he));
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
-		s[base64_encode((const char *) host, s, c - host)] = 0;
-		sprintf(he, "User-Agent: " AGENT "\r\nAuthorization: Basic %s\r\n", s);
-		header = he;
 		host = c + 1;
+		r = wget(https, 1, host, path, NULL, 1, &body);
 	}
-	else {
-		sprintf(he, "User-Agent: " AGENT "\r\n");
-		header = he;
-	}
+	else
+		r = wget(https, 1, host, path, NULL, 0, &body);
 
-	r = wget(https, 1, host, path, header, 0, &body);
 	switch (r) {
 	case 200:
 	case 302: /* redirect -- assume ok */
