@@ -518,7 +518,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	if (header)
 		headers = curl_headers(header);
 	else
-		headers = curl_headers("User-Agent: " AGENT);
+		headers = curl_headers("User-Agent: " AGENT "\r\nCache-Control: no-cache");
 
 	curl_easy_setopt(curl_handle, CURLOPT_HTTPHEADER, headers);
 
@@ -600,7 +600,7 @@ static int http_req(int ssl, int static_host, const char *host, const char *req,
 	if (n > (BLOB_SIZE - 512)) /* just don't go over 512 below... */
 		return -1;
 
-	sprintf(blob, "%s %s %s\r\nHost: %s\r\nUser-Agent: " AGENT "\r\n", req, query, httpv, host);
+	sprintf(blob, "%s %s %s\r\nHost: %s\r\nUser-Agent: " AGENT "\r\nCache-Control: no-cache\r\n", req, query, httpv, host);
 	if (auth) {
 		memset(a, 0, sizeof(a));
 		sprintf(a, "%s:%s", get_option_required("user"), get_option_required("pass"));
@@ -1450,8 +1450,8 @@ static void update_cloudflare(int ssl)
 	char *found;
 	char data[QUARTER_BLOB];
 
-	/* +opt +opt */
-	snprintf(header, HALF_BLOB, "Authorization: Bearer %s\r\nContent-Type: application/json\r\n", get_option_required("pass"));
+	/* +opt */
+	snprintf(header, HALF_BLOB, "User-Agent: " AGENT "\r\nAuthorization: Bearer %s\r\nContent-Type: application/json\r\n", get_option_required("pass"));
 
 	zone = get_option_required("url");
 	host = get_option_required("host");
@@ -1505,7 +1505,7 @@ static void update_cloudflare(int ssl)
 	/* +opt +opt */
 	snprintf(data, QUARTER_BLOB, "{\"type\":\"A\",\"name\":\"%s\",\"content\":\"%s\",\"proxied\":%s}", host, addr, (prox ? "true" : "false"));
 
-	r = http_req(1, 1, "api.cloudflare.com", req, query, header, 0, data, &body);
+	r = http_req(ssl, 1, "api.cloudflare.com", req, query, header, 0, data, &body);
 	r = cloudflare_errorcheck(r, req, body);
 	if (r != 0)
 		error(M_UNKNOWN_ERROR__D, r);
