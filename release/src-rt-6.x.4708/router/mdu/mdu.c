@@ -25,6 +25,7 @@
 #ifdef USE_LIBCURL
 #include <curl/curl.h>
 #else
+#include <netdb.h>
 #include "mssl.h"
 #endif
 
@@ -434,7 +435,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 
 		i = strlen(request);
 		if (fwrite(request, 1, i, f) != i) {
-			logerr(__FUNCTION__, __LINE__, "error writing i=%d", i);
+			logerr(__FUNCTION__, __LINE__, "error writing");
 			fclose(f);
 			close(sd);
 			continue;
@@ -445,7 +446,7 @@ static int _http_req(int ssl, const char *host, int port, const char *request, c
 		if (i <= 0) {
 			fclose(f);
 			close(sd);
-			logerr(__FUNCTION__, __LINE__, "error reading i=%d", i);
+			logerr(__FUNCTION__, __LINE__, "error reading");
 			continue;
 		}
 		buffer[i] = 0;
