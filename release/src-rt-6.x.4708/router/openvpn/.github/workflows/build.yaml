@@ -274,21 +274,6 @@ jobs:
         libname: [mbed TLS]
 
         include:
-          - os: ubuntu-18.04
-            sslpkg: "libmbedtls-dev"
-            ssllib: mbedtls
-            libname: mbed TLS
-            extraconf: "--disable-dco"
-          - os: ubuntu-18.04
-            sslpkg: "libssl1.0-dev"
-            ssllib: openssl
-            libname: OpenSSL 1.0.2
-            extraconf: "--disable-dco"
-          - os: ubuntu-18.04
-            sslpkg: "libssl-dev"
-            libname: OpenSSL 1.1.1
-            ssllib: openssl
-            extraconf: "--disable-dco"
           - os: ubuntu-20.04
             sslpkg: "libssl-dev"
             libname: OpenSSL 1.1.1
@@ -455,7 +440,7 @@ jobs:
       - name: Restore artifacts, or setup vcpkg (do not install any package)
         uses: lukka/run-vcpkg@v10
         with:
-          vcpkgGitCommitId: 'cafd398be781144787573ca78390e951673c7055'
+          vcpkgGitCommitId: 'd10d511f25620ca0f315cd83dcef6485efc63010'
           appendedCacheKey: '${{matrix.triplet}}'
 
       - name: Run MSBuild consuming vcpkg.json
