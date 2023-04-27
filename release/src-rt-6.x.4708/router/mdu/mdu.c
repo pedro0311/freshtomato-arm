@@ -38,6 +38,7 @@
 #define BLOB_SIZE		(4 * 1024)
 #define HALF_BLOB		(BLOB_SIZE >> 1)
 #define QUARTER_BLOB		(BLOB_SIZE >> 2)
+#define DDNS_IP_CACHE		5 * 60 /* 5-minute cache for IP extracted by a given checker */
 
 #define M_UNKNOWN_ERROR__D	"Unknown error (%d)."
 #define M_UNKNOWN_RESPONSE__D	"Unknown response (%d)."
@@ -70,7 +71,6 @@ char **g_argv;
 
 char *f_argv[32];
 int f_argc = -1;
-int refresh = 0;
 
 static void save_cookie(void);
 
@@ -652,9 +652,12 @@ int read_tmaddr(const char *name, long *tm, char *addr)
 {
 	char s[64];
 
+	logmsg(LOG_DEBUG, "*** %s: IN cachename: %s", __FUNCTION__, name);
+
 	if (f_read_string(name, s, sizeof(s)) > 0) {
 		if (sscanf(s, "%ld,%15s", tm, addr) == 2) {
 			logmsg(LOG_DEBUG, "*** %s: s=%s tm=%ld addr=%s", __FUNCTION__, s, *tm, addr);
+
 			if ((tm > 0) && (inet_addr(addr) != INADDR_NONE))
 				return 1;
 		}
@@ -676,21 +679,18 @@ const char *get_address(int required)
 	long ut, et;
 
 	if ((c = get_option("addr")) != NULL) {
+		/* do not use custom IP address, run IP checker */
 		if (*c == '@') {
 			++c;
 			if ((*c != 0) && (strlen(c) < 20)) {
 				ut = get_uptime();
 
-				if ((d = get_option("addrcache")) != NULL)
-					strlcpy(cache_name, d, sizeof(cache_name));
-				else {
-					memset(cache_name, 0, sizeof(cache_name));
-					sprintf(cache_name, "%s.ip", c);
-				}
+				d = get_option("addrcache");
+				strlcpy(cache_name, d, sizeof(cache_name));
 
 				if (read_tmaddr(cache_name, &et, addr)) {
-					if ((et > ut) && ((et - ut) <= (10 * 60))) {
-						logmsg(LOG_DEBUG, "*** %s: Using cached address %s from %s. Expires in %ld seconds", __FUNCTION__, addr, cache_name, et - ut);
+					if ((et > ut) && ((et - ut) <= DDNS_IP_CACHE)) {
+						logmsg(LOG_DEBUG, "*** %s: Using cached address %s from %s. Expires in %ld seconds", __FUNCTION__, addr, cache_name, (et - ut));
 						return addr;
 					}
 				}
@@ -751,12 +751,13 @@ const char *get_address(int required)
 
 				memset(addr, 0, sizeof(addr)); /* reset */
 				strncpy(addr, p, (q - p));
-
 				q = NULL;
+
+				/* write to cache if addr is OK */
 				if ((ia.s_addr = inet_addr(addr)) != INADDR_NONE) {
 					q = inet_ntoa(ia);
 					memset(s, 0, sizeof(s));
-					sprintf(s, "%ld,%s", ut + (10 * 60), q);
+					sprintf(s, "%ld,%s", ut + DDNS_IP_CACHE, q);
 					f_write_string(cache_name, s, 0, 0);
 
 					logmsg(LOG_DEBUG, "*** %s: saved '%s'", __FUNCTION__, s);
@@ -764,6 +765,7 @@ const char *get_address(int required)
 				}
 			}
 
+			logmsg(LOG_DEBUG, "*** %s: " M_ERROR_GET_IP, __FUNCTION__);
 			error(M_ERROR_GET_IP);
 		}
 		return c;
@@ -1575,6 +1577,8 @@ static void update_wget(void)
 		strcat(c, s);
 	}
 
+	logmsg(LOG_DEBUG, "*** %s: host: %s, path: %s", __FUNCTION__, host, path);
+
 	if ((c = strrchr(host, '@')) != NULL) {
 		*c = 0;
 		host = c + 1;
@@ -1582,6 +1586,8 @@ static void update_wget(void)
 	}
 	else
 		r = wget(https, 1, host, path, NULL, 0, &body);
+
+	logmsg(LOG_DEBUG, "*** %s: IP: %s", __FUNCTION__, body);
 
 	switch (r) {
 	case 200:
@@ -1602,9 +1608,10 @@ static void check_cookie(void)
 	char addr[16];
 	long tm;
 
+	logmsg(LOG_DEBUG, "*** %s: IN", __FUNCTION__);
+
 	if (((c = get_option("cookie")) == NULL) || (!read_tmaddr(c, &tm, addr))) {
 		logmsg(LOG_DEBUG, "*** %s: no cookie", __FUNCTION__);
-		refresh = 1;
 		return;
 	}
 
@@ -1617,7 +1624,10 @@ static void check_cookie(void)
 		return;
 	}
 
+	logmsg(LOG_DEBUG, "*** %s: " M_SAME_IP " (%s)", __FUNCTION__, c);
 	puts(M_SAME_IP);
+
+	logmsg(LOG_DEBUG, "*** %s: EXIT", __FUNCTION__);
 
 	exit(3);
 }
@@ -1663,6 +1673,8 @@ int main(int argc, char *argv[])
 
 	openlog("mdu", LOG_PID, LOG_DAEMON);
 
+	logmsg(LOG_DEBUG, "*** %s: IN", __FUNCTION__);
+
 	if ((blob = malloc(BLOB_SIZE)) == NULL) {
 		logmsg(LOG_ERR, "Cannot alocate memory, aborting ...");
 		return 1;
@@ -1678,6 +1690,8 @@ int main(int argc, char *argv[])
 	check_cookie();
 
 	p = get_option_required("service");
+
+	logmsg(LOG_DEBUG, "*** %s: proceeding DDNS server update [service: %s ] ...", __FUNCTION__, p);
 
 	if (strcmp(p, "changeip") == 0)
 		update_dua("dyndns", 1, "nic.changeip.com", "/nic/update", 1);
@@ -1733,6 +1747,8 @@ int main(int argc, char *argv[])
 #ifdef USE_LIBCURL
 	curl_cleanup();
 #endif
+
+	logmsg(LOG_DEBUG, "*** %s: OUT", __FUNCTION__);
 
 	return 1;
 }
