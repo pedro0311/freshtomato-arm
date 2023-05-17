@@ -1,6 +1,6 @@
 --- dnsmasq/src/forward.c
 +++ dnsmasq/src/forward.c
-@@ -1246,7 +1246,7 @@
+@@ -1239,7 +1239,7 @@
        server->edns_pktsz = SAFE_PKTSZ;
        server->pktsz_reduced = now;
        (void)prettyprint_addr(&server->addr, daemon->addrbuff);

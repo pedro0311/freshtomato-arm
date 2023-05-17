@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2022 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2023 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -125,17 +125,11 @@ int main (int argc, char **argv)
     {
       /* Note that both /000 and '.' are allowed within labels. These get
 	 represented in presentation format using NAME_ESCAPE as an escape
-	 character when in DNSSEC mode. 
-	 In theory, if all the characters in a name were /000 or
+	 character. In theory, if all the characters in a name were /000 or
 	 '.' or NAME_ESCAPE then all would have to be escaped, so the 
-	 presentation format would be twice as long as the spec.
-
-	 daemon->namebuff was previously allocated by the option-reading
-	 code before we knew if we're in DNSSEC mode, so reallocate here. */
-      free(daemon->namebuff);
-      daemon->namebuff = safe_malloc(MAXDNAME * 2);
-      daemon->keyname = safe_malloc(MAXDNAME * 2);
-      daemon->workspacename = safe_malloc(MAXDNAME * 2);
+	 presentation format would be twice as long as the spec. */
+      daemon->keyname = safe_malloc((MAXDNAME * 2) + 1);
+      daemon->workspacename = safe_malloc((MAXDNAME * 2) + 1);
       /* one char flag per possible RR in answer section (may get extended). */
       daemon->rr_status_sz = 64;
       daemon->rr_status = safe_malloc(sizeof(*daemon->rr_status) * daemon->rr_status_sz);
@@ -146,7 +140,7 @@ int main (int argc, char **argv)
   /* CONNTRACK UBUS code uses this buffer, so if not allocated above,
      we need to allocate it here. */
   if (option_bool(OPT_CMARK_ALST_EN) && !daemon->workspacename)
-    daemon->workspacename = safe_malloc(MAXDNAME);
+    daemon->workspacename = safe_malloc((MAXDNAME * 2) + 1);
 #endif
   
 #ifdef HAVE_DHCP
@@ -385,7 +379,7 @@ int main (int argc, char **argv)
       
       if (!option_bool(OPT_CLEVERBIND))
 	for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
-	  if (if_tmp->name && !if_tmp->used)
+	  if (if_tmp->name && !(if_tmp->flags & INAME_USED))
 	    die(_("unknown interface %s"), if_tmp->name, EC_BADNET);
 
 #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP)
@@ -941,7 +935,7 @@ int main (int argc, char **argv)
   
   if (!option_bool(OPT_NOWILD)) 
     for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
-      if (if_tmp->name && !if_tmp->used)
+      if (if_tmp->name && !(if_tmp->flags & INAME_USED))
 	my_syslog(LOG_WARNING, _("warning: interface %s does not currently exist"), if_tmp->name);
    
   if (daemon->port != 0 && option_bool(OPT_NO_RESOLV))
