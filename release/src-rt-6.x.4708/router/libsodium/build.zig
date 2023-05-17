@@ -22,8 +22,6 @@ pub fn build(b: *std.build.Builder) !void {
         .unversioned,
     );
     const static = b.addStaticLibrary("sodium", null);
-    shared.strip = true;
-    static.strip = true;
 
     const libs_ = [_]*LibExeObjStep{ shared, static };
     const libs = if (target.getOsTag() == .wasi) libs_[1..] else libs_[0..];
@@ -92,6 +90,9 @@ pub fn build(b: *std.build.Builder) !void {
             .windows => {
                 lib.defineCMacro("HAVE_RAISE", "1");
                 lib.defineCMacro("HAVE_SYS_PARAM_H", "1");
+                if (lib == static) {
+                    lib.defineCMacro("SODIUM_STATIC", "1");
+                }
             },
             .macos => {
                 lib.defineCMacro("ASM_HIDE_SYMBOL", ".private_extern");
