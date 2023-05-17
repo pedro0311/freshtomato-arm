@@ -1374,34 +1374,34 @@ int bsd_info_init(bsd_info_t *info)
 		bssinfo->idx = 0;
 
 		BSD_INFO("nvram %s=%s\n",
-			strcat_r(prefix, "radio", tmp),
-			bsd_nvram_safe_get(rpc, strcat_r(prefix, "radio", tmp), NULL));
+			strlcat_r(prefix, "radio", tmp, sizeof(tmp)),
+			bsd_nvram_safe_get(rpc, strlcat_r(prefix, "radio", tmp, sizeof(tmp)), NULL));
 
 		intf_info->enabled = TRUE;
-		if (bsd_nvram_match(rpc, strcat_r(prefix, "radio", tmp), "0")) {
+		if (bsd_nvram_match(rpc, strlcat_r(prefix, "radio", tmp, sizeof(tmp)), "0")) {
 			BSD_INFO("Skip intf:%s.  radio is off\n", name);
 			memset(intf_info, 0, sizeof(bsd_intf_info_t));
 			continue;
 		}
 
 		BSD_INFO("nvram %s=%s\n",
-			strcat_r(prefix, "bss_enabled", tmp),
-			bsd_nvram_safe_get(rpc, strcat_r(prefix, "bss_enabled", tmp), NULL));
+			strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)),
+			bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)), NULL));
 
-		if (bsd_nvram_match(rpc, strcat_r(prefix, "bss_enabled", tmp), "1")) {
+		if (bsd_nvram_match(rpc, strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)), "1")) {
 			bssinfo->valid = TRUE;
 			BSD_INFO("Valid intf:%s\n", name);
 		}
 
 		BSD_INFO("nvram %s=%s\n",
-			strcat_r(prefix, "bss_prio", tmp),
-			nvram_safe_get(strcat_r(prefix, "bss_prio", tmp)));
+			strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp)),
+			nvram_safe_get(strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp))));
 
-		str = bsd_nvram_safe_get(rpc, strcat_r(prefix, "bss_prio", tmp), NULL);
+		str = bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp)), NULL);
 		tmpu8 = (uint8)strtol(str, &endptr, 0);
 		if (tmpu8 >= BSD_MAX_PRIO) {
 			BSD_INFO("Err prio:%s=0x%x\n",
-				strcat_r(prefix, "bss_prio", tmp), tmpu8);
+				strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp)), tmpu8);
 			tmpu8 = BSD_BSS_PRIO_DISABLE;
 		}
 		bssinfo->prio = tmpu8;
@@ -1465,7 +1465,7 @@ int bsd_info_init(bsd_info_t *info)
 			intf_info->bsd_hit_count_limit);
 
 		bssinfo->steerflag = BSD_BSSCFG_NOTSTEER;
-		str = bsd_nvram_safe_get(rpc, strcat_r(prefix, "bsd_steer_prefix", tmp), &ret);
+		str = bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bsd_steer_prefix", tmp, sizeof(tmp)), &ret);
 		if (ret == BSD_OK) {
 			BSDSTRNCPY(bssinfo->steer_prefix, str,
 				sizeof(bssinfo->steer_prefix) - 1);
@@ -1480,14 +1480,14 @@ int bsd_info_init(bsd_info_t *info)
 		}
 
 		/* index to STA selection algorithm, impl. */
-		str = bsd_nvram_safe_get(rpc, strcat_r(prefix, "bsd_algo", tmp), &ret);
+		str = bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bsd_algo", tmp, sizeof(tmp)), &ret);
 		if (ret) {
 			bssinfo->algo = (uint8)strtol(str, &endptr, 0);
 			if (bssinfo->algo >= bsd_get_max_algo(info))
 				bssinfo->algo = 0;
 		}
 
-		str = bsd_nvram_safe_get(rpc, strcat_r(prefix, "bsd_policy", tmp), &ret);
+		str = bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bsd_policy", tmp, sizeof(tmp)), &ret);
 		if (ret == BSD_OK) {
 			bssinfo->policy = (uint8)strtol(str, &endptr, 0);
 			if (bssinfo->policy >= bsd_get_max_policy(info))
@@ -1506,10 +1506,10 @@ int bsd_info_init(bsd_info_t *info)
 
 		if (bsd_5g_only)
 			str = bsd_nvram_safe_get(rpc,
-				strcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM_X, tmp), &ret);
+				strlcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM_X, tmp, sizeof(tmp)), &ret);
 		else
 			str = bsd_nvram_safe_get(rpc,
-				strcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM, tmp), &ret);
+				strlcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM, tmp, sizeof(tmp)), &ret);
 
 		if (ret == BSD_OK) {
 			num = sscanf(str, "%d %d %d %d %d %d %d %d %d %d %x",
@@ -1557,10 +1557,10 @@ int bsd_info_init(bsd_info_t *info)
 			
 			if(bsd_5g_only)
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, BSD_STEERING_POLICY_NVRAM_X, tmp), &ret);
+					strlcat_r(prefix, BSD_STEERING_POLICY_NVRAM_X, tmp, sizeof(tmp)), &ret);
 			else
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, BSD_STEERING_POLICY_NVRAM, tmp), &ret);
+					strlcat_r(prefix, BSD_STEERING_POLICY_NVRAM, tmp, sizeof(tmp)), &ret);
 
 			if (ret == BSD_OK) {
 				num = sscanf(str, "%d %d %d %d %d %d %x",
@@ -1607,10 +1607,10 @@ int bsd_info_init(bsd_info_t *info)
 			num = 0;
 			if (bsd_5g_only)
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, BSD_IF_QUALIFY_POLICY_NVRAM_X, tmp), &ret);
+					strlcat_r(prefix, BSD_IF_QUALIFY_POLICY_NVRAM_X, tmp, sizeof(tmp)), &ret);
 			else
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, BSD_IF_QUALIFY_POLICY_NVRAM, tmp), &ret);
+					strlcat_r(prefix, BSD_IF_QUALIFY_POLICY_NVRAM, tmp, sizeof(tmp)), &ret);
 			
 			if (ret == BSD_OK) {
 				num = sscanf(str, "%d %x %d",
@@ -1634,10 +1634,10 @@ int bsd_info_init(bsd_info_t *info)
 		}
 
 		/* additional virtual BSS Configs from wlX_vifs */
-		BSD_INFO("%s = %s\n", strcat_r(prefix, "vifs", tmp),
-			bsd_nvram_safe_get(rpc, strcat_r(prefix, "vifs", tmp), NULL));
+		BSD_INFO("%s = %s\n", strlcat_r(prefix, "vifs", tmp, sizeof(tmp)),
+			bsd_nvram_safe_get(rpc, strlcat_r(prefix, "vifs", tmp, sizeof(tmp)), NULL));
 
-		BSDSTRNCPY(vifs, bsd_nvram_safe_get(rpc, strcat_r(prefix, "vifs", tmp), NULL),
+		BSDSTRNCPY(vifs, bsd_nvram_safe_get(rpc, strlcat_r(prefix, "vifs", tmp, sizeof(tmp)), NULL),
 			sizeof(vifs) - 1);
 
 		foreach(var, vifs, next) {
@@ -1647,12 +1647,12 @@ int bsd_info_init(bsd_info_t *info)
 			}
 
 			snprintf(prefix, BSD_IFNAME_SIZE, "%s_", var);
-			str = bsd_nvram_safe_get(rpc, strcat_r(prefix, "bss_enabled", tmp), NULL);
+			str = bsd_nvram_safe_get(rpc, strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)), NULL);
 
 			BSD_INFO("idx:%d %s=%s\n", idx,
-				strcat_r(prefix, "bss_enabled", tmp), str);
+				strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)), str);
 
-			if (bsd_nvram_match(rpc, strcat_r(prefix, "bss_enabled", tmp), "1")) {
+			if (bsd_nvram_match(rpc, strlcat_r(prefix, "bss_enabled", tmp, sizeof(tmp)), "1")) {
 
 				bssinfo = &(intf_info->bsd_bssinfo[idx]);
 
@@ -1686,13 +1686,13 @@ int bsd_info_init(bsd_info_t *info)
 				BSD_INFO("bssid:"MACF"\n", ETHER_TO_MACF(bssinfo->bssid));
 
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, "bss_prio", tmp), &ret);
+					strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp)), &ret);
 				tmpu8 = BSD_BSS_PRIO_DISABLE;
 				if (ret == BSD_OK) {
 					tmpu8 = (uint8)strtol(str, &endptr, 0);
 					if (tmpu8 > BSD_MAX_PRIO) {
 						BSD_INFO("error prio: %s= 0x%x\n",
-							strcat_r(prefix, "bss_prio", tmp), tmpu8);
+							strlcat_r(prefix, "bss_prio", tmp, sizeof(tmp)), tmpu8);
 						tmpu8 = BSD_BSS_PRIO_DISABLE;
 					}
 				}
@@ -1700,7 +1700,7 @@ int bsd_info_init(bsd_info_t *info)
 
 				bssinfo->steerflag = BSD_BSSCFG_NOTSTEER;
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, "bsd_steer_prefix", tmp), &ret);
+					strlcat_r(prefix, "bsd_steer_prefix", tmp, sizeof(tmp)), &ret);
 				if (ret == BSD_OK) {
 					BSDSTRNCPY(bssinfo->steer_prefix, str,
 						sizeof(bssinfo->steer_prefix));
@@ -1722,7 +1722,7 @@ int bsd_info_init(bsd_info_t *info)
 					bssinfo->steerflag, bssinfo->steer_prefix);
 
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, "bsd_algo", tmp), &ret);
+					strlcat_r(prefix, "bsd_algo", tmp, sizeof(tmp)), &ret);
 				if (ret == BSD_OK) {
 					bssinfo->algo = (uint8)strtol(str, &endptr, 0);
 					if (bssinfo->algo >= bsd_get_max_algo(info))
@@ -1730,7 +1730,7 @@ int bsd_info_init(bsd_info_t *info)
 				}
 
 				str = bsd_nvram_safe_get(rpc,
-					strcat_r(prefix, "bsd_policy", tmp), &ret);
+					strlcat_r(prefix, "bsd_policy", tmp, sizeof(tmp)), &ret);
 				if (ret == BSD_OK) {
 					bssinfo->policy = (uint8)strtol(str, &endptr, 0);
 					if (bssinfo->policy >= bsd_get_max_policy(info))
@@ -1743,10 +1743,10 @@ int bsd_info_init(bsd_info_t *info)
 				bssinfo->sta_select_policy_defined = FALSE;
 				if (bsd_5g_only)
 					str = bsd_nvram_safe_get(rpc,
-						strcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM_X, tmp), &ret);
+						strlcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM_X, tmp, sizeof(tmp)), &ret);
 				else
 					str = bsd_nvram_safe_get(rpc,
-						strcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM, tmp), &ret);
+						strlcat_r(prefix, BSD_STA_SELECT_POLICY_NVRAM, tmp, sizeof(tmp)), &ret);
 
 				if (ret == BSD_OK) {
 					num = sscanf(str, "%d %d %d %d %d %d %d %d %d %d %x",
@@ -3911,7 +3911,7 @@ void bsd_rec_stainfo(char *ifname, bsd_sta_info_t *sta, bool steer)
 
 	ether_etoa((void *)&sta->addr, ea);
 	rmchar(ea, ':');
-	strcat_r(recdir, ea, file);
+	strlcat_r(recdir, ea, file, sizeof(file));
 	if(access(file, F_OK) == 0)
 		fexist = 1;
 

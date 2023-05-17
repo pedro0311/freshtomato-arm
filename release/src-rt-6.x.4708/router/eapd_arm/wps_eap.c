@@ -265,11 +265,11 @@ wps_app_enabled(char *name)
 		return 0;
 
 	strcat(prefix, "_");
-	eapd_safe_get_conf(value, sizeof(value), strcat_r(prefix, "bss_enabled", temp));
+	eapd_safe_get_conf(value, sizeof(value), strlcat_r(prefix, "bss_enabled", temp, sizeof(temp)));
 	if (strcmp(value, "1"))
 		return 0;
 
-	eapd_safe_get_conf(value, sizeof(value), strcat_r(prefix, "wps_mode", temp));
+	eapd_safe_get_conf(value, sizeof(value), strlcat_r(prefix, "wps_mode", temp, sizeof(temp)));
 	if (!strcmp(value, "enabled") || !strcmp(value, "enr_enabled"))
 		return 1;
 

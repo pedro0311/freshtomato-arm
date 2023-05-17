@@ -145,10 +145,10 @@ void bsd_steer_scheme_5g(bsd_info_t *info)
 
 	info->over = (uint8)bsd_update_chan_state(info, intf_info, bssinfo);
 
-	str = nvram_get(strcat_r(bssinfo->prefix, "bsd_over", tmp));
+	str = nvram_get(strlcat_r(bssinfo->prefix, "bsd_over", tmp, sizeof(tmp)));
 	if (str) {
 		info->over = (uint8)strtoul(str, &endptr, 0);
-		nvram_unset(strcat_r(bssinfo->prefix, "bsd_over", tmp));
+		nvram_unset(strlcat_r(bssinfo->prefix, "bsd_over", tmp, sizeof(tmp)));
 	}
 
 	BSD_STEER("======over[0x%x:%d]=========\n",

@@ -603,27 +603,27 @@ nas_app_enabled(char *name)
 
 	strcat(prefix, "_");
 	/* ignore if disabled */
-	eapd_safe_get_conf(value, sizeof(value), strcat_r(prefix, "radio", comb));
+	eapd_safe_get_conf(value, sizeof(value), strlcat_r(prefix, "radio", comb, sizeof(comb)));
 	if (atoi(value) == 0) {
 		EAPD_INFO("NAS:ignored interface %s. radio disabled\n", os_name);
 		return 0;
 	}
 	/* ignore shared */
-	eapd_safe_get_conf(value, sizeof(value), strcat_r(prefix, "auth", comb));
+	eapd_safe_get_conf(value, sizeof(value), strlcat_r(prefix, "auth", comb, sizeof(comb)));
 	if (atoi(value) == 1) {
 		EAPD_INFO("NAS: ignored interface %s. Shared 802.11 auth\n", os_name);
 		return 0;
 	}
 	/* ignore if BSS is disabled */
-	eapd_safe_get_conf(value, sizeof(value), strcat_r(prefix, "bss_enabled", comb));
+	eapd_safe_get_conf(value, sizeof(value), strlcat_r(prefix, "bss_enabled", comb, sizeof(comb)));
 	if (atoi(value) == 0) {
 		EAPD_INFO("NAS: ignored interface %s, %s is disabled \n", os_name, comb);
 		return 0;
 	}
 	/* nas mode */
-	eapd_safe_get_conf(auth, sizeof(auth), strcat_r(prefix, "auth_mode", comb));
+	eapd_safe_get_conf(auth, sizeof(auth), strlcat_r(prefix, "auth_mode", comb, sizeof(comb)));
 	nasm = !strcmp(auth, "radius") ? RADIUS : 0;
-	eapd_safe_get_conf(akms, sizeof(akms), strcat_r(prefix, "akm", comb));
+	eapd_safe_get_conf(akms, sizeof(akms), strlcat_r(prefix, "akm", comb, sizeof(comb)));
 	foreach(akm, akms, akmnext) {
 		if (!strcmp(akm, "wpa"))
 			nasm |= WPA;
@@ -639,10 +639,10 @@ nas_app_enabled(char *name)
 		return 0;
 	}
 	/* wsec */
-	eapd_safe_get_conf(wep, sizeof(wep), strcat_r(prefix, "wep", comb));
+	eapd_safe_get_conf(wep, sizeof(wep), strlcat_r(prefix, "wep", comb, sizeof(comb)));
 	wsec = !strcmp(wep, "enabled") ? WEP_ENABLED : 0;
 	if (CHECK_NAS(nasm)) {
-		eapd_safe_get_conf(crypto, sizeof(crypto), strcat_r(prefix, "crypto", comb));
+		eapd_safe_get_conf(crypto, sizeof(crypto), strlcat_r(prefix, "crypto", comb, sizeof(comb)));
 		if (!strcmp(crypto, "tkip"))
 			wsec |= TKIP_ENABLED;
 		else if (!strcmp(crypto, "aes"))
