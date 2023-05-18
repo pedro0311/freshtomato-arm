@@ -3736,7 +3736,7 @@ gettext-tiny-clean:
 
 util-linux/stamp-h1:
 	cd util-linux && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) \
 			--prefix=/usr \

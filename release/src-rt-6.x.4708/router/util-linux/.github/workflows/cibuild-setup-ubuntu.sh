@@ -2,6 +2,8 @@
      
 set -ex
 
+apt-get -y update --fix-missing
+
 # Xenial uses btrfs-tools, but since Focal it's btrfs-progs
 #
 PACKAGES=(
@@ -19,6 +21,12 @@ PACKAGES=(
 	asciidoctor
 	meson
 	lcov
+	gpg-agent
+	git
+	squashfs-tools
+	iproute2
+	dmsetup
+	python3-dev
 )
 
 PACKAGES_OPTIONAL=(
@@ -27,7 +35,19 @@ PACKAGES_OPTIONAL=(
 )
 
 # scsi_debug
-PACKAGES+=(linux-modules-extra-$(uname -r))
+if [[ "$QEMU_USER" != "1" ]]; then
+	MODULES_PACKAGE="linux-modules-extra-$(uname -r)"
+	# may not exist anymore
+	if apt-cache show "$MODULES_PACKAGE" >/dev/null 2>&1; then
+		PACKAGES+=("$MODULES_PACKAGE")
+	fi
+fi
+
+if [[ "$TRANSLATE_MANPAGES" == "yes" ]];then
+	PACKAGES+=(po4a)
+fi
+
+apt install -y lsb-release software-properties-common
 
 COMPILER="${COMPILER:?}"
 RELEASE="$(lsb_release -cs)"

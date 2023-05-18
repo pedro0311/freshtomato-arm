@@ -5,6 +5,7 @@ lib_common_sources = '''
 	color-names.c
 	crc32.c
 	crc32c.c
+        crc64.c
 	c_strtod.c
 	encode.c
 	env.c
@@ -21,11 +22,13 @@ lib_common_sources = '''
 	pwdutils.c
 	randutils.c
 	sha1.c
+	sha256.c
 	signames.c
 	strutils.c
 	strv.c
 	timeutils.c
 	ttyutils.c
+	xxhash.c
 '''.split()
 
 idcache_c = files('idcache.c')
@@ -49,6 +52,12 @@ pty_session_c = files('pty-session.c')
 ismounted_c = files('ismounted.c')
 exec_shell_c = files('exec_shell.c')
 fileeq_c = files('fileeq.c')
+logindefs_c = static_library('logindefs',
+  sources : ['logindefs.c'],
+  include_directories : dir_include,
+  dependencies : lib_econf,
+)
+selinux_utils_c = files('selinux-utils.c')
 
 if LINUX
   lib_common_sources += '''
@@ -64,7 +73,7 @@ if build_plymouth_support
 '''.split()
 endif
 
-if conf.get('HAVE_LANGINFO_H') in [1]
+if conf.get('HAVE_LANGINFO_H') not in [1]
   lib_common_sources += 'langinfo.c'
 endif
 

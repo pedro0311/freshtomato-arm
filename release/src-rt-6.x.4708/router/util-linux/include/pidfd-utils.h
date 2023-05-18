@@ -1,12 +1,19 @@
+/*
+ * No copyright is claimed.  This code is in the public domain; do with
+ * it what you wish.
+ */
 #ifndef UTIL_LINUX_PIDFD_UTILS
 #define UTIL_LINUX_PIDFD_UTILS
 
 #ifdef HAVE_SYS_SYSCALL_H
 # include <sys/syscall.h>
 # if defined(SYS_pidfd_send_signal) && defined(SYS_pidfd_open)
+#  ifdef HAVE_SYS_PIDFD_H
+#   include <sys/pidfd.h>
+#  endif
 #  include <sys/types.h>
-
 #  ifndef HAVE_PIDFD_SEND_SIGNAL
+#   include <sys/wait.h>
 static inline int pidfd_send_signal(int pidfd, int sig, siginfo_t *info,
 				    unsigned int flags)
 {

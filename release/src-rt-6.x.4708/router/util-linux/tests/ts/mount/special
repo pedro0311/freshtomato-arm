@@ -19,7 +19,7 @@ TS_TOPDIR="${0%/*}/../.."
 TS_DESC="call mount.<type>"
 MOUNTER="/sbin/mount.mytest"
 
-. $TS_TOPDIR/functions.sh
+. "$TS_TOPDIR"/functions.sh
 ts_init "$*"
 
 ts_check_test_command "$TS_CMD_MOUNT"
@@ -36,7 +36,6 @@ EOF
 chmod +x $MOUNTER
 
 $TS_CMD_MOUNT -t mytest /foo /bar &> $TS_OUTPUT
-
 rm -f $MOUNTER
 
 ts_finalize

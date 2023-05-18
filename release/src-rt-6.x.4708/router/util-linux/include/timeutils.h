@@ -1,4 +1,7 @@
 /***
+  SPDX-License-Identifier: LGPL-2.1-or-later
+
+
   First set of functions in this file are part of systemd, and were
   copied to util-linux at August 2013.
 
@@ -88,5 +91,24 @@ int strtime_short(const time_t *t, struct timeval *now, int flags, char *buf, si
 #ifndef HAVE_TIMEGM
 extern time_t timegm(struct tm *tm);
 #endif
+
+static inline usec_t timeval_to_usec(const struct timeval *t)
+{
+	return t->tv_sec * USEC_PER_SEC + t->tv_usec;
+}
+
+static inline usec_t timespec_to_usec(const struct timespec *t)
+{
+	return t->tv_sec * USEC_PER_SEC + t->tv_nsec / NSEC_PER_USEC;
+}
+
+static inline struct timeval usec_to_timeval(usec_t t)
+{
+	struct timeval r = {
+		.tv_sec = t / USEC_PER_SEC,
+		.tv_usec = t % USEC_PER_SEC,
+	};
+	return r;
+}
 
 #endif /* UTIL_LINUX_TIME_UTIL_H */

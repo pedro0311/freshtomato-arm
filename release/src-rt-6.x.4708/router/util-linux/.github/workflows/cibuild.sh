@@ -83,7 +83,6 @@ for phase in "${PHASES[@]}"; do
             --disable-use-tty-group
             --disable-makeinstall-chown
             --enable-all-programs
-            --without-python
             --enable-werror
         )
 
@@ -105,14 +104,14 @@ for phase in "${PHASES[@]}"; do
             CXXFLAGS+=(-shared-libasan)
         fi
 
-        sudo -E git clean -xdf
+        git clean -xdf
 
         ./autogen.sh
         CC="$CC" CXX="$CXX" CFLAGS="${CFLAGS[@]}" CXXFLAGS="${CXXFLAGS[@]}" LDFLAGS="${LDFLAGS[@]}" ./configure "${opts[@]}"
         ;;
     MAKE)
-        make -j
-        make -j check-programs
+        make -j"$(nproc)"
+        make -j"$(nproc)" check-programs
         ;;
     INSTALL)
         make install DESTDIR=/tmp/dest
@@ -123,6 +122,10 @@ for phase in "${PHASES[@]}"; do
     MESONBUILD)
         ninja -C build
         ;;
+    CODECHECK)
+	make checklibdoc
+	make checkxalloc
+	;;
     CHECK)
         if [[ "$SANITIZE" == "yes" ]]; then
             # All the following black magic is to make test/eject/umount work, since

@@ -1,7 +1,7 @@
 AC_INIT([util-linux],
 	m4_esyscmd([tools/git-version-gen .tarball-version]),
 	[kzak@redhat.com], [],
-	[http://www.kernel.org/pub/linux/utils/util-linux/])
+	[https://www.kernel.org/pub/linux/utils/util-linux/])
 
 
 AC_PREREQ([2.64])
@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="04-Aug-2022"
+LIBBLKID_DATE="17-May-2023"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -127,7 +127,6 @@ AC_PROG_YACC
 AC_CANONICAL_HOST
 AC_C_CONST
 AC_C_VOLATILE
-AC_C_BIGENDIAN
 
 dnl Compiler warnings
 UL_WARN_ADD([-fno-common])
@@ -145,6 +144,7 @@ UL_WARN_ADD([-Wmissing-parameter-type])
 UL_WARN_ADD([-Wmissing-prototypes])
 UL_WARN_ADD([-Wnested-externs])
 UL_WARN_ADD([-Wno-missing-field-initializers])
+UL_WARN_ADD([-Wold-style-definition])
 UL_WARN_ADD([-Wpointer-arith])
 UL_WARN_ADD([-Wredundant-decls])
 UL_WARN_ADD([-Wsign-compare])
@@ -291,6 +291,8 @@ AC_CHECK_HEADERS([linux/compiler.h linux/blkpg.h linux/major.h], [], [], [
 #endif
 ])
 AC_CHECK_HEADERS([ \
+	asm-generic/fcntl.h \
+	asm/fcntl.h \
 	asm/io.h \
 	byteswap.h \
 	endian.h \
@@ -311,7 +313,9 @@ AC_CHECK_HEADERS([ \
 	linux/kcmp.h \
 	linux/net_namespace.h \
 	linux/nsfs.h \
+	linux/pr.h \
 	linux/raw.h \
+	linux/stat.h \
 	linux/securebits.h \
 	linux/tiocl.h \
 	linux/version.h \
@@ -339,6 +343,7 @@ AC_CHECK_HEADERS([ \
 	sys/mkdev.h \
 	sys/mount.h \
 	sys/param.h \
+	sys/pidfd.h \
 	sys/prctl.h \
 	sys/resource.h \
 	sys/sendfile.h \
@@ -346,6 +351,7 @@ AC_CHECK_HEADERS([ \
 	sys/socket.h \
 	sys/sockio.h \
 	sys/stat.h \
+	sys/statfs.h \
 	sys/swap.h \
 	sys/syscall.h \
 	sys/sysmacros.h \
@@ -355,6 +361,7 @@ AC_CHECK_HEADERS([ \
 	sys/types.h \
 	sys/ucred.h \
 	sys/un.h \
+	sys/vfs.h \
 	sys/xattr.h \
 	unistd.h \
 	utmp.h \
@@ -387,6 +394,10 @@ AC_CHECK_HEADERS([security/pam_misc.h],
 
 AC_CHECK_DECLS([BLK_ZONE_REP_CAPACITY], [], [], [
 	#include <linux/blkzoned.h>
+])
+
+AC_CHECK_DECLS([PR_REP_CAPACITY], [], [], [
+	#include <linux/pr.h>
 ])
 
 AC_CHECK_HEADERS([security/openpam.h], [], [], [
@@ -457,6 +468,7 @@ have_linux_blkzoned_h=$ac_cv_header_linux_blkzoned_h
 have_linux_btrfs_h=$ac_cv_header_linux_btrfs_h
 have_linux_capability_h=$ac_cv_header_linux_capability_h
 have_linux_kcmp_h=$ac_cv_header_linux_kcmp_h
+have_linux_pr_h=$ac_cv_header_linux_pr_h
 have_linux_raw_h=$ac_cv_header_linux_raw_h
 have_linux_securebits_h=$ac_cv_header_linux_securebits_h
 have_linux_version_h=$ac_cv_header_linux_version_h
@@ -486,6 +498,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 ]])],
 [AC_DEFINE([HAVE_TM_GMTOFF], [1], [Does struct tm have a field tm_gmtoff?])
 ])
+
+AC_CHECK_TYPES([struct mount_attr], [], [], [[#include <linux/mount.h>]])
+AC_CHECK_TYPES([enum fsconfig_command], [], [], [[#include <linux/mount.h>]])
 
 AC_CHECK_MEMBERS([struct termios.c_line],,,
     [[#include <termios.h>]])
@@ -531,6 +546,11 @@ AC_CHECK_FUNCS([ \
 	__fpending \
 	__fpurge \
 	fpurge \
+	fnmatch \
+	fsconfig \
+	fsmount \
+	fsopen \
+	fspick \
 	fsync \
 	getdomainname \
 	getdtablesize \
@@ -549,8 +569,11 @@ AC_CHECK_FUNCS([ \
 	newlocale \
 	mempcpy \
 	mkostemp \
+	move_mount \
+	mount_setattr \
 	nanosleep \
 	ntp_gettime \
+	open_tree \
 	personality \
 	pidfd_open \
 	pidfd_send_signal \
@@ -569,6 +592,7 @@ AC_CHECK_FUNCS([ \
 	setresuid \
 	sigqueue \
 	srandom \
+	statx \
 	strnchr \
 	strndup \
 	strnlen \
@@ -605,6 +629,29 @@ AS_IF([test "x$ul_cv_syscall_setns" = xno], [
 UL_CHECK_SYSCALL([pidfd_open])
 UL_CHECK_SYSCALL([pidfd_send_signal])
 UL_CHECK_SYSCALL([close_range])
+
+UL_CHECK_SYSCALL([fsconfig])
+UL_CHECK_SYSCALL([fsmount])
+UL_CHECK_SYSCALL([fsopen])
+UL_CHECK_SYSCALL([fspick])
+UL_CHECK_SYSCALL([mount_setattr])
+UL_CHECK_SYSCALL([move_mount])
+UL_CHECK_SYSCALL([open_tree])
+
+AS_IF([test "x$ul_cv_syscall_fsconfig" = xno ||
+       test "x$ul_cv_syscall_fsmount" = xno ||
+       test "x$ul_cv_syscall_fsopen" = xno ||
+       test "x$ul_cv_syscall_fspick" = xno ||
+       test "x$ul_cv_syscall_mount_setattr" = xno ||
+       test "x$ul_cv_syscall_move_mount" = xno ||
+       test "x$ul_cv_syscall_open_tree" = xno],
+   [
+	have_mountfd_api="no"
+   ],[
+        have_mountfd_api="yes"
+	AC_DEFINE([HAVE_MOUNTFD_API], [1], [Define to 1 if you want mount API based on FDs.])
+   ])
+
 
 AC_CHECK_FUNCS([isnan], [],
 	[AC_CHECK_LIB([m], [isnan], [MATH_LIBS="-lm"])]
@@ -704,6 +751,11 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([extern char *__progname;],
 	   AC_MSG_RESULT([yes]),
 	   AC_MSG_RESULT([no]))
 
+AC_CHECK_DECL([IOC_OPAL_GET_STATUS],
+	[AC_DEFINE([HAVE_OPAL_GET_STATUS], [1],
+		[Define to 1 if OPAL status ioctl is defined])],,
+	      [#include <linux/sed-opal.h>])
+
 dnl Static compilation
 m4_define([UL_STATIC_PROGRAMS], [blkid, fdisk, losetup, mount, nsenter, sfdisk, umount, unshare])
 
@@ -760,8 +812,8 @@ AM_CONDITIONAL([HAVE_MANPAGES], [test "x$have_manpages" = xyes])
 
 
 AC_ARG_ENABLE([poman],
-  AS_HELP_STRING([--enable-poman], [generate translated man pages]),
-  [], [enable_poman=no]
+  AS_HELP_STRING([--disable-poman], [generate translated man pages]),
+  [], [UL_DEFAULT_ENABLE([poman], [check])]
 )
 UL_BUILD_INIT([poman])
 UL_REQUIRES_PROGRAM([poman], [PO4A], [po4a], [translated man pages])
@@ -1161,14 +1213,18 @@ AC_SUBST([LIBMOUNT_PATCH_VERSION], $PACKAGE_VERSION_RELEASE)
 AC_SUBST([LIBMOUNT_VERSION_INFO])
 AC_DEFINE_UNQUOTED([LIBMOUNT_VERSION], ["$LIBMOUNT_VERSION"], [libmount version string])
 
-AC_ARG_ENABLE([libmount-support-mtab],
-  AS_HELP_STRING([--enable-libmount-support-mtab], [support /etc/mtab (default is use /proc/self/mountinfo)]),
-  [], [enable_libmount_support_mtab=no]
+AC_ARG_ENABLE([libmount-mountfd-support],
+  AS_HELP_STRING([--disable-libmount-mountfd-support], [do not use new mount API based on FDs]),
+  [], [enable_libmount_mountfd_support=check]
 )
-
-AS_IF([test "x$enable_libmount_support_mtab" = xyes], [
-  AC_DEFINE([USE_LIBMOUNT_SUPPORT_MTAB], [1], [Define to 1 if want to support mtab.])
+UL_BUILD_INIT([libmount_mountfd_support])
+UL_REQUIRES_BUILD([libmount_mountfd_support], [libmount])
+UL_REQUIRES_LINUX([libmount_mountfd_support])
+UL_REQUIRES_HAVE([libmount_mountfd_support], [mountfd_api], [mount FDs based API])
+AS_IF([test "x$build_libmount_mountfd_support" = xyes ], [
+  AC_DEFINE([USE_LIBMOUNT_MOUNTFD_SUPPORT], [1], [Enable support for new mount FD based kernel API])
 ])
+
 
 dnl
 dnl libsmartcols
@@ -1563,8 +1619,10 @@ AC_ARG_WITH([libmagic],
 )
 AS_IF([test "x$with_libmagic" = xno], [have_magic=no], [
   AC_CHECK_LIB([magic], [magic_open], [
-    AC_DEFINE([HAVE_MAGIC], [1], [Define to 1 if you have the libmagic present.])
-    MAGIC_LIBS="-lmagic"
+    AC_CHECK_HEADER(magic.h, [
+      AC_DEFINE([HAVE_MAGIC], [1], [Define to 1 if you have the libmagic present.])
+      MAGIC_LIBS="-lmagic"
+    ])
   ])
 ])
 AC_SUBST([MAGIC_LIBS])
@@ -1777,6 +1835,22 @@ AC_ARG_ENABLE([whereis],
 UL_BUILD_INIT([whereis])
 AM_CONDITIONAL([BUILD_WHEREIS], [test "x$build_whereis" = xyes])
 
+AC_ARG_ENABLE([pipesz],
+  AS_HELP_STRING([--disable-pipesz], [do not build pipesz]),
+  [], [UL_DEFAULT_ENABLE([pipesz], [check])]
+)
+UL_BUILD_INIT([pipesz])
+UL_REQUIRES_LINUX([pipesz])
+AM_CONDITIONAL([BUILD_PIPESZ], [test "x$build_pipesz" = xyes])
+
+UL_BUILD_INIT([fadvise], [check])
+UL_REQUIRES_LINUX([fadvise])
+AM_CONDITIONAL([BUILD_FADVISE], [test "x$build_fadvise" = xyes])
+
+UL_BUILD_INIT([waitpid], [check])
+UL_REQUIRES_LINUX([waitpid])
+AM_CONDITIONAL([BUILD_WAITPID], [test "x$build_waitpid" = xyes])
+
 UL_BUILD_INIT([getopt], [yes])
 AM_CONDITIONAL([BUILD_GETOPT], [test "x$build_getopt" = xyes])
 
@@ -1982,6 +2056,11 @@ UL_REQUIRES_LINUX([blkzone])
 UL_REQUIRES_HAVE([blkzone], [linux_blkzoned_h], [linux/blkzoned.h header])
 AM_CONDITIONAL([BUILD_BLKZONE], [test "x$build_blkzone" = xyes])
 
+UL_BUILD_INIT([blkpr], [check])
+UL_REQUIRES_LINUX([blkpr])
+UL_REQUIRES_HAVE([blkpr], [linux_pr_h], [linux/pr.h header])
+AM_CONDITIONAL([BUILD_BLKPR], [test "x$build_blkpr" = xyes])
+
 UL_BUILD_INIT([ldattach], [check])
 UL_REQUIRES_LINUX([ldattach])
 AM_CONDITIONAL([BUILD_LDATTACH], [test "x$build_ldattach" = xyes])
@@ -2004,7 +2083,7 @@ AC_ARG_ENABLE([scriptutils],
 
 UL_ENABLE_ALIAS([script], [scriptutils])
 UL_BUILD_INIT([script])
-UL_REQUIRES_HAVE([script], [pty])
+UL_REQUIRES_HAVE([script], [pty], [openpty function (libutil)])
 AM_CONDITIONAL([BUILD_SCRIPT], [test "x$build_script" = xyes])
 
 UL_ENABLE_ALIAS([scriptreplay], [scriptutils])
@@ -2013,7 +2092,7 @@ AM_CONDITIONAL([BUILD_SCRIPTREPLAY], [test "x$build_scriptreplay" = xyes])
 
 UL_ENABLE_ALIAS([scriptlive], [scriptutils])
 UL_BUILD_INIT([scriptlive])
-UL_REQUIRES_HAVE([scriptlive], [pty])
+UL_REQUIRES_HAVE([scriptlive], [pty], [openpty function (libutil)])
 AM_CONDITIONAL([BUILD_SCRIPTLIVE], [test "x$build_scriptlive" = xyes])
 
 
@@ -2419,13 +2498,11 @@ AM_CONDITIONAL([HAVE_SYSTEMD], [test "x$have_systemd" = xyes])
 
 AC_ARG_WITH([systemdsystemunitdir],
   AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [directory for systemd unit files (requires systemd support)]),
-  [], [with_systemdsystemunitdir=check]
-)
-AS_IF([test "x$with_systemdsystemunitdir" = xcheck], [
+  [], [
   AS_IF([test "x$have_systemd" = xyes], [
-    with_systemdsystemunitdir=`$PKG_CONFIG --variable=systemdsystemunitdir systemd`
-  ],[
-    with_systemdsystemunitdir=no
+    PKG_CHECK_VAR([with_systemdsystemunitdir], [systemd], [systemdsystemunitdir],
+      [],
+      [with_systemdsystemunitdir=no])
   ])
 ])
 AS_IF([test "x$with_systemdsystemunitdir" != "xno"], [
@@ -2469,23 +2546,25 @@ AS_IF([test "x$with_vendordir" != x], [
 ])
 
 
-AC_ARG_WITH([bashcompletiondir],
-  AS_HELP_STRING([--with-bashcompletiondir=DIR], [Bash completions directory]),
-  [],
-  [AS_IF([`$PKG_CONFIG --exists bash-completion`], [
-    with_bashcompletiondir=`$PKG_CONFIG --variable=completionsdir bash-completion`
-  ], [
-    with_bashcompletiondir=${datadir}/bash-completion/completions
-  ])
-])
-AC_SUBST([bashcompletiondir], [$with_bashcompletiondir])
-
 AC_ARG_ENABLE([bash-completion],
   AS_HELP_STRING([--disable-bash-completion], [do not install bash completion files]),
   [], [enable_bash_completion=yes]
 )
 
 AM_CONDITIONAL([BUILD_BASH_COMPLETION], [test "x$enable_bash_completion" = xyes])
+
+AC_ARG_WITH([bashcompletiondir],
+  AS_HELP_STRING([--with-bashcompletiondir=DIR], [Bash completions directory]),
+  [], [
+  AS_IF([test "x$enable_bash_completion" = xyes], [
+    PKG_CHECK_VAR([with_bashcompletiondir], [bash-completion], [completionsdir],
+      [],
+      [with_bashcompletiondir=${datadir}/bash-completion/completions])
+  ])
+])
+AS_IF([test "x$enable_bash_completion" = xyes], [
+  AC_SUBST([bashcompletiondir], [$with_bashcompletiondir])
+])
 
 
 AC_ARG_WITH([python],
@@ -2701,6 +2780,14 @@ AC_ARG_VAR([ADJTIME_PATH],
 AS_IF([test "x$ADJTIME_PATH" = x], [ADJTIME_PATH="/etc/adjtime"])
 AC_DEFINE_UNQUOTED([CONFIG_ADJTIME_PATH], "$ADJTIME_PATH", [Path to hwclock adjtime file])
 
+if test "x${build_alias}" != "x${host_alias}"; then
+  AC_MSG_NOTICE([setting link_all_deplibs=unknown for libtool])
+  # work around Debian patch to libtool breaking cross-compiles
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=702737
+  # https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=297726
+  link_all_deplibs=unknown
+fi
+
 
 LIBS=""
 
@@ -2772,6 +2859,7 @@ AC_MSG_RESULT([
         ldflags:                   ${LDFLAGS}
         suid ldflags:              ${SUID_LDFLAGS}
         ASAN enabled:              ${enable_asan}
+	Fuzzing enabled:           ${enable_fuzzing_engine}
 
         cflags:                    ${CFLAGS}
 

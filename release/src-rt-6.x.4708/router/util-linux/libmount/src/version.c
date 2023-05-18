@@ -19,6 +19,7 @@
 #include <ctype.h>
 
 #include "mountP.h"
+#include "mount-api-utils.h"
 
 static const char *lib_version = LIBMOUNT_VERSION;
 static const char *lib_features[] = {
@@ -34,11 +35,14 @@ static const char *lib_features[] = {
 #ifdef HAVE_CRYPTSETUP
 	"verity",
 #endif
-#ifdef USE_LIBMOUNT_SUPPORT_MTAB
-	"mtab",
-#endif
 #ifdef USE_LIBMOUNT_SUPPORT_NAMESPACES
 	"namespaces",
+#endif
+#ifdef HAVE_MOUNTFD_API
+	"idmapping",
+#endif
+#ifdef USE_LIBMOUNT_MOUNTFD_SUPPORT
+	"fd-based-mount",
 #endif
 #if !defined(NDEBUG)
 	"assert",	/* libc assert.h stuff */
