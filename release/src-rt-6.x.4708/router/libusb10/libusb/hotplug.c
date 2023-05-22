@@ -19,17 +19,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <config.h>
-
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#include <assert.h>
-
 #include "libusbi.h"
 #include "hotplug.h"
 
@@ -48,7 +37,7 @@
  * Version 1.0.16, \ref LIBUSB_API_VERSION >= 0x01000102, has added support
  * for hotplug events on <b>some</b> platforms (you should test if your platform
  * supports hotplug notification by calling \ref libusb_has_capability() with
- * parameter \ref LIBUSB_CAP_HAS_HOTPLUG). 
+ * parameter \ref LIBUSB_CAP_HAS_HOTPLUG).
  *
  * This interface allows you to request notification for the arrival and departure
  * of matching USB devices.
@@ -354,6 +343,33 @@ void API_EXPORTED libusb_hotplug_deregister_callback(struct libusb_context *ctx,
 			usbi_signal_event(ctx);
 		usbi_mutex_unlock(&ctx->event_data_lock);
 	}
+}
+
+DEFAULT_VISIBILITY
+void * LIBUSB_CALL libusb_hotplug_get_user_data(struct libusb_context *ctx,
+	libusb_hotplug_callback_handle callback_handle)
+{
+	struct libusb_hotplug_callback *hotplug_cb;
+	void *user_data = NULL;
+
+	/* check for hotplug support */
+	if (!libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
+		return NULL;
+	}
+
+	USBI_GET_CONTEXT(ctx);
+
+	usbi_dbg("get hotplug user data %d", callback_handle);
+
+	usbi_mutex_lock(&ctx->hotplug_cbs_lock);
+	list_for_each_entry(hotplug_cb, &ctx->hotplug_cbs, list, struct libusb_hotplug_callback) {
+		if (callback_handle == hotplug_cb->handle) {
+			user_data = hotplug_cb->user_data;
+		}
+	}
+	usbi_mutex_unlock(&ctx->hotplug_cbs_lock);
+
+	return user_data;
 }
 
 void usbi_hotplug_deregister(struct libusb_context *ctx, int forced)

@@ -38,7 +38,6 @@
 
 #include "libusbi.h"
 #include "windows_common.h"
-#include "windows_nt_common.h"
 #include "windows_winusb.h"
 
 #define HANDLE_VALID(h) (((h) != NULL) && ((h) != INVALID_HANDLE_VALUE))
@@ -111,7 +110,7 @@ static struct winusb_interface WinUSBX[SUB_API_MAX];
 	do {						\
 		if (sub_api == SUB_API_NOTSET)		\
 			sub_api = priv->sub_api;	\
-		if (!WinUSBX[sub_api].initialized) 	\
+		if (!WinUSBX[sub_api].initialized)	\
 			return LIBUSB_ERROR_ACCESS;	\
 	} while (0)
 
@@ -955,7 +954,7 @@ static int enumerate_hcd_root_hub(struct libusb_context *ctx, const char *dev_id
 	unsigned long session_id;
 	DEVINST child_devinst;
 
-	if ((CM_Get_Child(&child_devinst, devinst, 0)) != CR_SUCCESS) {
+	if (CM_Get_Child(&child_devinst, devinst, 0) != CR_SUCCESS) {
 		usbi_warn(ctx, "could not get child devinst for '%s'", dev_id);
 		return LIBUSB_SUCCESS;
 	}
@@ -963,8 +962,8 @@ static int enumerate_hcd_root_hub(struct libusb_context *ctx, const char *dev_id
 	session_id = (unsigned long)child_devinst;
 	dev = usbi_get_device_by_session_id(ctx, session_id);
 	if (dev == NULL) {
-		usbi_err(ctx, "program assertion failed - HCD '%s' child not found", dev_id);
-		return LIBUSB_ERROR_NO_DEVICE;
+		usbi_warn(ctx, "program assertion failed - HCD '%s' child not found", dev_id);
+		return LIBUSB_SUCCESS;
 	}
 
 	if (dev->bus_number == 0) {
@@ -2101,8 +2100,8 @@ static int winusbx_init(struct libusb_context *ctx)
 
 		if (WinUSBX[i].Initialize != NULL) {
 			WinUSBX[i].initialized = true;
-			// Assume driver supports CancelIoEx() if it is available
-			WinUSBX[i].CancelIoEx_supported = (pCancelIoEx != NULL);
+			// Assume driver supports CancelIoEx()
+			WinUSBX[i].CancelIoEx_supported = true;
 			usbi_dbg("initalized sub API %s", winusbx_driver_names[i]);
 		} else {
 			usbi_warn(ctx, "Failed to initalize sub API %s", winusbx_driver_names[i]);
@@ -2552,27 +2551,21 @@ static int winusbx_set_interface_altsetting(int sub_api, struct libusb_device_ha
 
 static enum libusb_transfer_status usbd_status_to_libusb_transfer_status(USBD_STATUS status)
 {
-	/* Based on https://msdn.microsoft.com/en-us/library/windows/hardware/ff539136(v=vs.85).aspx :
-	* USBD_STATUS have the most significant 4 bits indicating overall status and the rest gives the details. */
-	switch (status >> 28) {
-	case 0x00: /* USBD_STATUS_SUCCESS */
+	if (USBD_SUCCESS(status))
 		return LIBUSB_TRANSFER_COMPLETED;
-	case 0x01: /* USBD_STATUS_PENDING */
-		return LIBUSB_TRANSFER_COMPLETED;
-	default: /* USBD_STATUS_ERROR */
-		switch (status & 0x0fffffff) {
-		case 0xC0006000: /* USBD_STATUS_TIMEOUT */
-			return LIBUSB_TRANSFER_TIMED_OUT;
-		case 0xC0010000: /* USBD_STATUS_CANCELED */
-			return LIBUSB_TRANSFER_CANCELLED;
-		case 0xC0000030: /* USBD_STATUS_ENDPOINT_HALTED */
-			return LIBUSB_TRANSFER_STALL;
-		case 0xC0007000: /* USBD_STATUS_DEVICE_GONE */
-			return LIBUSB_TRANSFER_NO_DEVICE;
-		default:
-			usbi_dbg("USBD_STATUS 0x%08lx translated to LIBUSB_TRANSFER_ERROR", status);
-			return LIBUSB_TRANSFER_ERROR;
-		}
+
+	switch (status) {
+	case USBD_STATUS_TIMEOUT:
+		return LIBUSB_TRANSFER_TIMED_OUT;
+	case USBD_STATUS_CANCELED:
+		return LIBUSB_TRANSFER_CANCELLED;
+	case USBD_STATUS_ENDPOINT_HALTED:
+		return LIBUSB_TRANSFER_STALL;
+	case USBD_STATUS_DEVICE_GONE:
+		return LIBUSB_TRANSFER_NO_DEVICE;
+	default:
+		usbi_dbg("USBD_STATUS 0x%08lx translated to LIBUSB_TRANSFER_ERROR", status);
+		return LIBUSB_TRANSFER_ERROR;
 	}
 }
 
@@ -2933,7 +2926,7 @@ static int winusbx_abort_transfers(int sub_api, struct usbi_transfer *itransfer)
 	if (WinUSBX[sub_api].CancelIoEx_supported) {
 		// Try to use CancelIoEx if available to cancel just a single transfer
 		handle = handle_priv->interface_handle[current_interface].dev_handle;
-		if (pCancelIoEx(handle, transfer_priv->pollable_fd.overlapped))
+		if (CancelIoEx(handle, transfer_priv->pollable_fd.overlapped))
 			return LIBUSB_SUCCESS;
 		else if (GetLastError() == ERROR_NOT_FOUND)
 			return LIBUSB_ERROR_NOT_FOUND;
@@ -3361,7 +3354,7 @@ static int _hid_get_report(struct hid_device_priv *dev, HANDLE hid_handle, int i
 		usbi_dbg("program assertion failed: hid_buffer is not NULL");
 
 	if ((*size == 0) || (*size > MAX_HID_REPORT_SIZE)) {
-		usbi_dbg("invalid size (%zu)", *size);
+		usbi_dbg("invalid size (%"PRIuPTR")", (uintptr_t)*size);
 		return LIBUSB_ERROR_INVALID_PARAM;
 	}
 
@@ -3440,7 +3433,7 @@ static int _hid_set_report(struct hid_device_priv *dev, HANDLE hid_handle, int i
 		usbi_dbg("program assertion failed: hid_buffer is not NULL");
 
 	if ((*size == 0) || (*size > max_report_size)) {
-		usbi_dbg("invalid size (%zu)", *size);
+		usbi_dbg("invalid size (%"PRIuPTR")", (uintptr_t)*size);
 		return LIBUSB_ERROR_INVALID_PARAM;
 	}
 
@@ -3640,7 +3633,7 @@ static int hid_open(int sub_api, struct libusb_device_handle *dev_handle)
 		size[1] = capabilities.NumberOutputValueCaps;
 		size[2] = capabilities.NumberFeatureValueCaps;
 		for (j = HidP_Input; j <= HidP_Feature; j++) {
-			usbi_dbg("%u HID %s report value(s) found", (unsigned int)size[j], type[j]);
+			usbi_dbg("%lu HID %s report value(s) found", size[j], type[j]);
 			priv->hid->uses_report_ids[j] = false;
 			if (size[j] > 0) {
 				value_caps = calloc(size[j], sizeof(HIDP_VALUE_CAPS));
@@ -3985,16 +3978,11 @@ static int hid_abort_transfers(int sub_api, struct usbi_transfer *itransfer)
 
 	hid_handle = handle_priv->interface_handle[current_interface].api_handle;
 
-	if (pCancelIoEx != NULL) {
-		// Use CancelIoEx if available to cancel just a single transfer
-		if (pCancelIoEx(hid_handle, transfer_priv->pollable_fd.overlapped))
+	// Use CancelIoEx to cancel just a single transfer
+	if (CancelIoEx(hid_handle, transfer_priv->pollable_fd.overlapped))
 			return LIBUSB_SUCCESS;
-	} else {
-		if (CancelIo(hid_handle))
-			return LIBUSB_SUCCESS;
-	}
 
-	usbi_warn(ctx, "cancel failed: %s", windows_error_str(0));
+	usbi_warn(ctx, "CancelIoEx failed: %s", windows_error_str(0));
 	return LIBUSB_ERROR_NOT_FOUND;
 }
 

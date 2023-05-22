@@ -21,7 +21,6 @@
 
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/list.h>
 #include <sys/stat.h>
 #include <strings.h>
 #include <errno.h>
@@ -36,9 +35,9 @@
 #include <sys/nvpair.h>
 #include <sys/devctl.h>
 #include <sys/usb/clients/ugen/usb_ugen.h>
-#include <errno.h>
 #include <sys/usb/usba.h>
 #include <sys/pci.h>
+#include <inttypes.h>
 
 #include "libusbi.h"
 #include "sunos_usb.h"
@@ -46,11 +45,13 @@
 #define UPDATEDRV_PATH	"/usr/sbin/update_drv"
 #define UPDATEDRV	"update_drv"
 
-typedef list_t string_list_t;
-typedef struct string_node {
-	char		*string;
-	list_node_t	link;
-} string_node_t;
+#define	DEFAULT_LISTSIZE	6
+
+typedef struct {
+	int	nargs;
+	int	listsize;
+	char	**string;
+} string_list_t;
 
 /*
  * Backend functions
@@ -78,7 +79,6 @@ static int sunos_reset_device(struct libusb_device_handle *);
 static void sunos_destroy_device(struct libusb_device *);
 static int sunos_submit_transfer(struct usbi_transfer *);
 static int sunos_cancel_transfer(struct usbi_transfer *);
-static void sunos_clear_transfer_priv(struct usbi_transfer *);
 static int sunos_handle_transfer_completion(struct usbi_transfer *);
 static int sunos_clock_gettime(int, struct timespec *);
 static int sunos_kernel_driver_active(struct libusb_device_handle *, int interface);
@@ -184,7 +184,7 @@ sunos_usb_ioctl(struct libusb_device *dev, int cmd)
 
 	fd = open(path_arg, O_RDONLY);
 	if (fd < 0) {
-		usbi_err(DEVICE_CTX(dev), "open failed: %d (%s)", errno, strerror(errno));
+		usbi_err(DEVICE_CTX(dev), "open failed: errno %d (%s)", errno, strerror(errno));
 		nvlist_free(nvlist);
 		free(hubpath);
 		return (-1);
@@ -200,7 +200,7 @@ sunos_usb_ioctl(struct libusb_device *dev, int cmd)
 	iocdata.c_nodename = "hub";
 	iocdata.c_unitaddr = end;
 	iocdata.cpyout_buf = &devctl_ap_state;
-	usbi_dbg("%p, %d", iocdata.nvl_user, iocdata.nvl_usersz);
+	usbi_dbg("%p, %" PRIuPTR, iocdata.nvl_user, iocdata.nvl_usersz);
 
 	errno = 0;
 	if (ioctl(fd, DEVCTL_AP_GETSTATE, &iocdata) == -1) {
@@ -244,25 +244,19 @@ sunos_kernel_driver_active(struct libusb_device_handle *dev, int interface)
 static int _errno_to_libusb(int);
 static int sunos_usb_get_status(int fd);
 
-static int sunos_init(struct libusb_context *ctx)
-{
-	return (LIBUSB_SUCCESS);
-}
-
-static void sunos_exit(struct libusb_context *ctx)
-{
-	usbi_dbg("");
-}
-
 static string_list_t *
 sunos_new_string_list(void)
 {
 	string_list_t *list;
 
-	list = calloc(1, sizeof(*list));
-	if (list != NULL)
-		list_create(list, sizeof(string_node_t),
-			    offsetof(string_node_t, link));
+	list = calloc(1, sizeof (string_list_t));
+	if (list == NULL)
+		return (NULL);
+	list->string = calloc(DEFAULT_LISTSIZE, sizeof (char *));
+	if (list->string == NULL)
+		return (NULL);
+	list->nargs = 0;
+	list->listsize = DEFAULT_LISTSIZE;
 
 	return (list);
 }
@@ -270,19 +264,22 @@ sunos_new_string_list(void)
 static int
 sunos_append_to_string_list(string_list_t *list, const char *arg)
 {
-	string_node_t *np;
+	char	*str = strdup(arg);
 
-	np = calloc(1, sizeof(*np));
-	if (!np)
+	if (str == NULL)
 		return (-1);
 
-	np->string = strdup(arg);
-	if (!np->string) {
-		free(np);
-		return (-1);
+	if ((list->nargs + 1) == list->listsize) { /* +1 is for NULL */
+		char	**tmp = realloc(list->string,
+		    sizeof (char *) * (list->listsize + 1));
+		if (tmp == NULL) {
+			free(str);
+			return (-1);
+		}
+		list->string = tmp;
+		list->string[list->listsize++] = NULL;
 	}
-
-	list_insert_tail(list, np);
+	list->string[list->nargs++] = str;
 
 	return (0);
 }
@@ -290,36 +287,20 @@ sunos_append_to_string_list(string_list_t *list, const char *arg)
 static void
 sunos_free_string_list(string_list_t *list)
 {
-	string_node_t *np;
+	int	i;
 
-	while ((np = list_remove_head(list)) != NULL) {
-		free(np->string);
-		free(np);
+	for (i = 0; i < list->nargs; i++) {
+		free(list->string[i]);
 	}
 
+	free(list->string);
 	free(list);
 }
 
 static char **
 sunos_build_argv_list(string_list_t *list)
 {
-	char **argv_list;
-	string_node_t *np;
-	int n;
-
-	n = 1; /* Start at 1 for NULL terminator */
-	for (np = list_head(list); np != NULL; np = list_next(list, np))
-		n++;
-
-	argv_list = calloc(n, sizeof(char *));
-	if (argv_list == NULL)
-		return NULL;
-
-	n = 0;
-	for (np = list_head(list); np != NULL; np = list_next(list, np))
-		argv_list[n++] = np->string;
-
-	return (argv_list);
+	return (list->string);
 }
 
 
@@ -363,8 +344,6 @@ sunos_exec_command(struct libusb_context *ctx, const char *path,
 		usbi_err(ctx, "fork failed: errno %d (%s)", errno, strerror(errno));
 		exit_status = -1;
 	}
-
-	free(argv_list);
 
 	return (exit_status);
 }
@@ -411,8 +390,9 @@ sunos_detach_kernel_driver(struct libusb_device_handle *dev_handle,
 	if (r)
 		usbi_warn(HANDLE_CTX(dev_handle), "one or more ioctls failed");
 
-	snprintf(path_arg, sizeof(path_arg), "^usb/%x.%x", dpriv->dev_descr.idVendor,
-	    dpriv->dev_descr.idProduct);
+	snprintf(path_arg, sizeof(path_arg), "^usb/%x.%x",
+	    libusb_le16_to_cpu(dpriv->dev_descr.idVendor),
+	    libusb_le16_to_cpu(dpriv->dev_descr.idProduct));
 	sunos_physpath_to_devlink(dpriv->phypath, path_arg, &dpriv->ugenpath);
 
 	if (access(dpriv->ugenpath, F_OK) == -1) {
@@ -526,7 +506,9 @@ sunos_fill_in_dev_info(di_node_t node, struct libusb_device *dev)
 	phypath = di_devfs_path(node);
 	if (phypath) {
 		dpriv->phypath = strdup(phypath);
-		snprintf(match_str, sizeof(match_str), "^usb/%x.%x", dpriv->dev_descr.idVendor, dpriv->dev_descr.idProduct);
+		snprintf(match_str, sizeof(match_str), "^usb/%x.%x",
+		    libusb_le16_to_cpu(dpriv->dev_descr.idVendor),
+		    libusb_le16_to_cpu(dpriv->dev_descr.idProduct));
 		usbi_dbg("match is %s", match_str);
 		sunos_physpath_to_devlink(dpriv->phypath, match_str,  &dpriv->ugenpath);
 		di_devfs_path_free(phypath);
@@ -557,7 +539,9 @@ sunos_fill_in_dev_info(di_node_t node, struct libusb_device *dev)
 	}
 
 	usbi_dbg("vid=%x pid=%x, path=%s, bus_nmber=0x%x, port_number=%d, "
-	    "speed=%d", dpriv->dev_descr.idVendor, dpriv->dev_descr.idProduct,
+	    "speed=%d",
+	    libusb_le16_to_cpu(dpriv->dev_descr.idVendor),
+	    libusb_le16_to_cpu(dpriv->dev_descr.idProduct),
 	    dpriv->phypath, dev->bus_number, dev->port_number, dev->speed);
 
 	return (LIBUSB_SUCCESS);
@@ -612,7 +596,7 @@ sunos_add_devices(di_devlink_t link, void *arg)
 
 	usbi_dbg("device bus address=%s:%x, name:%s",
 	    di_bus_addr(myself), bus_number, di_node_name(dn));
-	usbi_dbg("session id org:%lx", session_id);
+	usbi_dbg("session id org:%" PRIx64, session_id);
 
 	/* dn is the usb device */
 	for (dn = di_child_node(myself); dn != DI_NODE_NIL; dn = di_sibling_node(dn)) {
@@ -629,7 +613,7 @@ sunos_add_devices(di_devlink_t link, void *arg)
 		}
 
 		sid = (session_id << 8) | (addr_prop[0] & 0xff) ;
-		usbi_dbg("session id %lx", sid);
+		usbi_dbg("session id %" PRIX64, sid);
 
 		dev = usbi_get_device_by_session_id(nargs->ctx, sid);
 		if (dev == NULL) {
@@ -666,7 +650,8 @@ sunos_add_devices(di_devlink_t link, void *arg)
 		 */
 		libusb_unref_device(dev);
 
-		usbi_dbg("Device %s %s id=0x%llx, devcount:%d, bdf=%x",
+		usbi_dbg("Device %s %s id=0x%" PRIx64 ", devcount:%" PRIuPTR
+		    ", bdf=%" PRIx64,
 		    devpriv->ugenpath, di_devfs_path(dn), (uint64_t)sid,
 		    (*nargs->discdevs)->len, bdf);
 	}
@@ -713,13 +698,13 @@ sunos_get_device_list(struct libusb_context * ctx,
 	args.discdevs = discdevs;
 	args.last_ugenpath = NULL;
 	if ((root_node = di_init("/", DINFOCPYALL)) == DI_NODE_NIL) {
-		usbi_dbg("di_int() failed: %s", strerror(errno));
+		usbi_dbg("di_int() failed: errno %d (%s)", errno, strerror(errno));
 		return (LIBUSB_ERROR_IO);
 	}
 
 	if ((devlink_hdl = di_devlink_init(NULL, 0)) == NULL) {
 		di_fini(root_node);
-		usbi_dbg("di_devlink_init() failed: %s", strerror(errno));
+		usbi_dbg("di_devlink_init() failed: errno %d (%s)", errno, strerror(errno));
 
 		return (LIBUSB_ERROR_IO);
 	}
@@ -728,7 +713,7 @@ sunos_get_device_list(struct libusb_context * ctx,
 	/* walk each node to find USB devices */
 	if (di_walk_node(root_node, DI_WALK_SIBFIRST, &args,
 	    sunos_walk_minor_node_link) == -1) {
-		usbi_dbg("di_walk_node() failed: %s", strerror(errno));
+		usbi_dbg("di_walk_node() failed: errno %d (%s)", errno, strerror(errno));
 		di_fini(root_node);
 
 		return (LIBUSB_ERROR_IO);
@@ -737,7 +722,7 @@ sunos_get_device_list(struct libusb_context * ctx,
 	di_fini(root_node);
 	di_devlink_fini(&devlink_hdl);
 
-	usbi_dbg("%d devices", (*discdevs)->len);
+	usbi_dbg("%" PRIuPTR " devices", (*discdevs)->len);
 
 	return ((*discdevs)->len);
 }
@@ -901,34 +886,16 @@ sunos_check_device_and_status_open(struct libusb_device_handle *hdl,
 	(void) snprintf(statfilename, PATH_MAX, "%sstat", filename);
 
 	/*
-	 * for interrupt IN endpoints, we need to enable one xfer
-	 * mode before opening the endpoint
+	 * In case configuration has been switched, the xfer endpoint needs
+	 * to be opened before the status endpoint, due to a ugen issue.
+	 * However, to enable the one transfer mode for an Interrupt-In pipe,
+	 * the status endpoint needs to be opened before the xfer endpoint.
+	 * So, open the xfer mode first and close it immediately
+	 * as a workaround. This will handle the configuration switch.
+	 * Then, open the status endpoint.  If for an Interrupt-in pipe,
+	 * write the USB_EP_INTR_ONE_XFER control to the status endpoint
+	 * to enable the one transfer mode.  Then, re-open the xfer mode.
 	 */
-	if ((ep_type == LIBUSB_TRANSFER_TYPE_INTERRUPT) &&
-	    (ep_addr & LIBUSB_ENDPOINT_IN)) {
-		char	control = USB_EP_INTR_ONE_XFER;
-		int	count;
-
-		/* open the status device node for the ep first RDWR */
-		if ((fdstat = open(statfilename, O_RDWR)) == -1) {
-			usbi_dbg("can't open %s RDWR: %d",
-				statfilename, errno);
-		} else {
-			count = write(fdstat, &control, sizeof (control));
-			if (count != 1) {
-				/* this should have worked */
-				usbi_dbg("can't write to %s: %d",
-					statfilename, errno);
-				(void) close(fdstat);
-
-				return (errno);
-			}
-			/* close status node and open xfer node first */
-			close (fdstat);
-		}
-	}
-
-	/* open the xfer node first in case alt needs to be changed */
 	if (ep_type == LIBUSB_TRANSFER_TYPE_ISOCHRONOUS) {
 		mode = O_RDWR;
 	} else if (ep_addr & LIBUSB_ENDPOINT_IN) {
@@ -936,24 +903,58 @@ sunos_check_device_and_status_open(struct libusb_device_handle *hdl,
 	} else {
 		mode = O_WRONLY;
 	}
-
-	/*
-	 * IMPORTANT: must open data xfer node first and then open stat node
-	 * Otherwise, it will fail on multi-config or multi-altsetting devices
-	 * with "Device Busy" error. See ugen_epxs_switch_cfg_alt() and
-	 * ugen_epxs_check_alt_switch() in ugen driver source code.
-	 */
+	/* Open the xfer endpoint first */
 	if ((fd = open(filename, mode)) == -1) {
-		usbi_dbg("can't open %s: %d(%s)", filename, errno,
+		usbi_dbg("can't open %s: errno %d (%s)", filename, errno,
 		    strerror(errno));
 
 		return (errno);
 	}
-	/* open the status node */
-	if ((fdstat = open(statfilename, O_RDONLY)) == -1) {
-		usbi_dbg("can't open %s: %d", statfilename, errno);
+	/* And immediately close the xfer endpoint */
+	(void) close(fd);
 
-		(void) close(fd);
+	/*
+	 * Open the status endpoint.
+	 * If for an Interrupt-IN pipe, need to enable the one transfer mode
+	 * by writing USB_EP_INTR_ONE_XFER control to the status endpoint
+	 * before opening the xfer endpoint
+	 */
+	if ((ep_type == LIBUSB_TRANSFER_TYPE_INTERRUPT) &&
+	    (ep_addr & LIBUSB_ENDPOINT_IN)) {
+		char	control = USB_EP_INTR_ONE_XFER;
+		int	count;
+
+		/* Open the status endpoint with RDWR */
+		if ((fdstat = open(statfilename, O_RDWR)) == -1) {
+			usbi_dbg("can't open %s RDWR: errno %d (%s)",
+				statfilename, errno, strerror(errno));
+
+			return (errno);
+		} else {
+			count = write(fdstat, &control, sizeof (control));
+			if (count != 1) {
+				/* this should have worked */
+				usbi_dbg("can't write to %s: errno %d (%s)",
+					statfilename, errno, strerror(errno));
+				(void) close(fdstat);
+
+				return (errno);
+			}
+		}
+	} else {
+		if ((fdstat = open(statfilename, O_RDONLY)) == -1) {
+			usbi_dbg("can't open %s: errno %d (%s)", statfilename, errno,
+				strerror(errno));
+
+			return (errno);
+		}
+	}
+
+	/* Re-open the xfer endpoint */
+	if ((fd = open(filename, mode)) == -1) {
+		usbi_dbg("can't open %s: errno %d (%s)", filename, errno,
+			strerror(errno));
+		(void) close(fdstat);
 
 		return (errno);
 	}
@@ -1002,7 +1003,7 @@ sunos_close(struct libusb_device_handle *handle)
 	sunos_dev_handle_priv_t *hpriv;
 	sunos_dev_priv_t *dpriv;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 	if (!handle) {
 		return;
 	}
@@ -1047,7 +1048,8 @@ sunos_get_active_config_descriptor(struct libusb_device *dev,
 	 * has ever been changed through setCfg.
 	 */
 	if ((node = di_init(dpriv->phypath, DINFOCPYALL)) == DI_NODE_NIL) {
-		usbi_dbg("di_int() failed: %s", strerror(errno));
+		usbi_dbg("di_int() failed: errno %d (%s)", errno,
+			strerror(errno));
 		return (LIBUSB_ERROR_IO);
 	}
 	proplen = di_prop_lookup_bytes(DDI_DEV_T_ANY, node,
@@ -1071,7 +1073,7 @@ sunos_get_active_config_descriptor(struct libusb_device *dev,
 	len = MIN(len, libusb_le16_to_cpu(cfg->wTotalLength));
 	memcpy(buf, dpriv->raw_cfgdescr, len);
 	*host_endian = 0;
-	usbi_dbg("path:%s len %d", dpriv->phypath, len);
+	usbi_dbg("path:%s len %" PRIuPTR, dpriv->phypath, len);
 
 	return (len);
 }
@@ -1233,7 +1235,7 @@ sunos_do_async_io(struct libusb_transfer *transfer)
 	uint8_t ep;
 	struct sunos_transfer_priv *tpriv;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	tpriv = usbi_transfer_get_os_priv(LIBUSB_TRANSFER_TO_USBI_TRANSFER(transfer));
 	hpriv = (sunos_dev_handle_priv_t *)transfer->dev_handle->os_priv;
@@ -1268,7 +1270,7 @@ usb_do_io(int fd, int stat_fd, char *data, size_t size, int flag, int *status)
 	int error;
 	int ret = -1;
 
-	usbi_dbg("usb_do_io(): datafd=%d statfd=%d size=0x%x flag=%s",
+	usbi_dbg("usb_do_io(): datafd=%d statfd=%d size=0x%" PRIxPTR " flag=%s",
 	    fd, stat_fd, size, flag? "WRITE":"READ");
 
 	switch (flag) {
@@ -1289,12 +1291,12 @@ usb_do_io(int fd, int stat_fd, char *data, size_t size, int flag, int *status)
 	if (ret < 0) {
 		int save_errno = errno;
 
-		usbi_dbg("TID=%x io %s errno=%d(%s) ret=%d", pthread_self(),
-		    flag?"WRITE":"READ", errno, strerror(errno), ret);
+		usbi_dbg("TID=%x io %s errno %d (%s)", pthread_self(),
+		    flag?"WRITE":"READ", errno, strerror(errno));
 
 		/* sunos_usb_get_status will do a read and overwrite errno */
 		error = sunos_usb_get_status(stat_fd);
-		usbi_dbg("io status=%d errno=%d(%s)", error,
+		usbi_dbg("io status=%d errno %d (%s)", error,
 			save_errno, strerror(save_errno));
 
 		if (status) {
@@ -1398,7 +1400,7 @@ sunos_clear_halt(struct libusb_device_handle *handle, uint8_t endpoint)
 int
 sunos_reset_device(struct libusb_device_handle *handle)
 {
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	return (LIBUSB_ERROR_NOT_SUPPORTED);
 }
@@ -1496,14 +1498,6 @@ sunos_cancel_transfer(struct usbi_transfer *itransfer)
 	}
 
 	return (ret);
-}
-
-void
-sunos_clear_transfer_priv(struct usbi_transfer *itransfer)
-{
-	usbi_dbg("");
-
-	/* Nothing to do */
 }
 
 int
@@ -1647,7 +1641,7 @@ sunos_usb_get_status(int fd)
 	return (status);
 }
 
-#ifdef USBI_TIMERFD_AVAILABLE
+#ifdef HAVE_TIMERFD
 static clockid_t op_get_timerfd_clockid(void)
 {
        return CLOCK_MONOTONIC;
@@ -1657,36 +1651,28 @@ static clockid_t op_get_timerfd_clockid(void)
 const struct usbi_os_backend usbi_backend = {
         .name = "Solaris",
         .caps = 0,
-        .init = sunos_init,
-        .exit = sunos_exit,
         .get_device_list = sunos_get_device_list,
         .get_device_descriptor = sunos_get_device_descriptor,
         .get_active_config_descriptor = sunos_get_active_config_descriptor,
         .get_config_descriptor = sunos_get_config_descriptor,
-        .hotplug_poll = NULL,
         .open = sunos_open,
         .close = sunos_close,
         .get_configuration = sunos_get_configuration,
         .set_configuration = sunos_set_configuration,
-
         .claim_interface = sunos_claim_interface,
         .release_interface = sunos_release_interface,
         .set_interface_altsetting = sunos_set_interface_altsetting,
         .clear_halt = sunos_clear_halt,
         .reset_device = sunos_reset_device, /* TODO */
-        .alloc_streams = NULL,
-        .free_streams = NULL,
         .kernel_driver_active = sunos_kernel_driver_active,
         .detach_kernel_driver = sunos_detach_kernel_driver,
         .attach_kernel_driver = sunos_attach_kernel_driver,
         .destroy_device = sunos_destroy_device,
         .submit_transfer = sunos_submit_transfer,
         .cancel_transfer = sunos_cancel_transfer,
-	.handle_events = NULL,
-        .clear_transfer_priv = sunos_clear_transfer_priv,
         .handle_transfer_completion = sunos_handle_transfer_completion,
         .clock_gettime = sunos_clock_gettime,
-#ifdef USBI_TIMERFD_AVAILABLE
+#ifdef HAVE_TIMERFD
         .get_timerfd_clockid = op_get_timerfd_clockid,
 #endif
         .device_priv_size = sizeof(sunos_dev_priv_t),

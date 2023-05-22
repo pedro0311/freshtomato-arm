@@ -28,7 +28,6 @@
 
 #include "libusbi.h"
 #include "windows_common.h"
-#include "windows_nt_common.h"
 #include "windows_usbdk.h"
 
 #if !defined(STATUS_SUCCESS)
@@ -42,18 +41,6 @@ typedef LONG NTSTATUS;
 
 #if !defined(STATUS_REQUEST_CANCELED)
 #define STATUS_REQUEST_CANCELED		((NTSTATUS)0xC0000703L)
-#endif
-
-#if !defined(USBD_SUCCESS)
-typedef LONG USBD_STATUS;
-#define USBD_SUCCESS(Status)		((USBD_STATUS) (Status) >= 0)
-#define USBD_PENDING(Status)		((ULONG) (Status) >> 30 == 1)
-#define USBD_ERROR(Status)		((USBD_STATUS) (Status) < 0)
-#define USBD_STATUS_STALL_PID		((USBD_STATUS) 0xc0000004)
-#define USBD_STATUS_ENDPOINT_HALTED	((USBD_STATUS) 0xc0000030)
-#define USBD_STATUS_BAD_START_FRAME	((USBD_STATUS) 0xc0000a00)
-#define USBD_STATUS_TIMEOUT		((USBD_STATUS) 0xc0006000)
-#define USBD_STATUS_CANCELED		((USBD_STATUS) 0xc0010000)
 #endif
 
 static inline struct usbdk_device_priv *_usbdk_device_priv(struct libusb_device *dev)
@@ -170,29 +157,65 @@ error_unload:
 	return LIBUSB_ERROR_NOT_FOUND;
 }
 
+typedef SC_HANDLE (WINAPI *POPENSCMANAGERA)(LPCSTR, LPCSTR, DWORD);
+typedef SC_HANDLE (WINAPI *POPENSERVICEA)(SC_HANDLE, LPCSTR, DWORD);
+typedef BOOL (WINAPI *PCLOSESERVICEHANDLE)(SC_HANDLE);
+
 static int usbdk_init(struct libusb_context *ctx)
 {
+	POPENSCMANAGERA pOpenSCManagerA;
+	POPENSERVICEA pOpenServiceA;
+	PCLOSESERVICEHANDLE pCloseServiceHandle;
 	SC_HANDLE managerHandle;
 	SC_HANDLE serviceHandle;
+	HMODULE h;
 
-	managerHandle = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
-	if (managerHandle == NULL) {
-		usbi_warn(ctx, "failed to open service control manager: %s", windows_error_str(0));
+	h = LoadLibraryA("Advapi32");
+	if (h == NULL) {
+		usbi_warn(ctx, "failed to open Advapi32\n");
 		return LIBUSB_ERROR_OTHER;
 	}
 
-	serviceHandle = OpenServiceA(managerHandle, "UsbDk", GENERIC_READ);
-	CloseServiceHandle(managerHandle);
+	pOpenSCManagerA = (POPENSCMANAGERA)GetProcAddress(h, "OpenSCManagerA");
+	if (pOpenSCManagerA == NULL) {
+		usbi_warn(ctx, "failed to find %s in Advapi32\n", "OpenSCManagerA");
+		goto error_free_library;
+	}
+	pOpenServiceA = (POPENSERVICEA)GetProcAddress(h, "OpenServiceA");
+	if (pOpenServiceA == NULL) {
+		usbi_warn(ctx, "failed to find %s in Advapi32\n", "OpenServiceA");
+		goto error_free_library;
+	}
+	pCloseServiceHandle = (PCLOSESERVICEHANDLE)GetProcAddress(h, "CloseServiceHandle");
+	if (pCloseServiceHandle == NULL) {
+		usbi_warn(ctx, "failed to find %s in Advapi32\n", "CloseServiceHandle");
+		goto error_free_library;
+	}
+
+	managerHandle = pOpenSCManagerA(NULL, NULL, SC_MANAGER_CONNECT);
+	if (managerHandle == NULL) {
+		usbi_warn(ctx, "failed to open service control manager: %s", windows_error_str(0));
+		goto error_free_library;
+	}
+
+	serviceHandle = pOpenServiceA(managerHandle, "UsbDk", GENERIC_READ);
+	pCloseServiceHandle(managerHandle);
 
 	if (serviceHandle == NULL) {
 		if (GetLastError() != ERROR_SERVICE_DOES_NOT_EXIST)
 			usbi_warn(ctx, "failed to open UsbDk service: %s", windows_error_str(0));
+		FreeLibrary(h);
 		return LIBUSB_ERROR_NOT_FOUND;
 	}
 
-	CloseServiceHandle(serviceHandle);
+	pCloseServiceHandle(serviceHandle);
+	FreeLibrary(h);
 
 	return load_usbdk_helper_dll(ctx);
+
+error_free_library:
+	FreeLibrary(h);
+	return LIBUSB_ERROR_OTHER;
 }
 
 static void usbdk_exit(struct libusb_context *ctx)
@@ -705,20 +728,12 @@ static int usbdk_abort_transfers(struct usbi_transfer *itransfer)
 	struct usbdk_transfer_priv *transfer_priv = _usbdk_transfer_priv(itransfer);
 	struct winfd *pollable_fd = &transfer_priv->pollable_fd;
 
-	if (pCancelIoEx != NULL) {
-		// Use CancelIoEx if available to cancel just a single transfer
-		if (!pCancelIoEx(priv->system_handle, pollable_fd->overlapped)) {
-			usbi_err(ctx, "CancelIoEx failed: %s", windows_error_str(0));
-			return LIBUSB_ERROR_NO_DEVICE;
-		}
-	} else {
-		if (!usbdk_helper.AbortPipe(priv->redirector_handle, transfer->endpoint)) {
-			usbi_err(ctx, "AbortPipe failed: %s", windows_error_str(0));
-			return LIBUSB_ERROR_NO_DEVICE;
-		}
-	}
+	// Use CancelIoEx to cancel just a single transfer
+	if (CancelIoEx(priv->system_handle, pollable_fd->overlapped))
+		return LIBUSB_SUCCESS;
 
-	return LIBUSB_SUCCESS;
+	usbi_warn(ctx, "CancelIoEx failed: %s", windows_error_str(0));
+	return LIBUSB_ERROR_NOT_FOUND;
 }
 
 static int usbdk_cancel_transfer(struct usbi_transfer *itransfer)

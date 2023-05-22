@@ -20,39 +20,27 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include "config.h"
-
-#include <errno.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>
-#endif
-#ifdef HAVE_SYSLOG_H
-#include <syslog.h>
-#endif
+#include "libusbi.h"
+#include "hotplug.h"
 
 #ifdef __ANDROID__
 #include <android/log.h>
 #endif
+#include <stdio.h>
+#include <string.h>
+#ifdef HAVE_SYSLOG
+#include <syslog.h>
+#endif
 
-#include "libusbi.h"
-#include "hotplug.h"
-
-struct libusb_context *usbi_default_context = NULL;
+struct libusb_context *usbi_default_context;
 static const struct libusb_version libusb_version_internal =
 	{ LIBUSB_MAJOR, LIBUSB_MINOR, LIBUSB_MICRO, LIBUSB_NANO,
 	  LIBUSB_RC, "http://libusb.info" };
-static int default_context_refcnt = 0;
+static int default_context_refcnt;
 static usbi_mutex_static_t default_context_lock = USBI_MUTEX_INITIALIZER;
-static struct timespec timestamp_origin = { 0, 0 };
-#ifndef USE_SYSTEM_LOGGING_FACILITY
-static libusb_log_cb log_handler = NULL;
+static struct timespec timestamp_origin;
+#if defined(ENABLE_LOGGING) && !defined(USE_SYSTEM_LOGGING_FACILITY)
+static libusb_log_cb log_handler;
 #endif
 
 usbi_mutex_static_t active_contexts_lock = USBI_MUTEX_INITIALIZER;
@@ -442,6 +430,7 @@ if (cfg != desired)
   * - libusb_unlock_event_waiters()
   * - libusb_unref_device()
   * - libusb_wait_for_event()
+  * - libusb_wrap_sys_device()
   *
   * \section Structures
   * - libusb_bos_descriptor
@@ -812,7 +801,7 @@ ssize_t API_EXPORTED libusb_get_device_list(libusb_context *ctx,
 	int r = 0;
 	ssize_t i, len;
 	USBI_GET_CONTEXT(ctx);
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	if (!discdevs)
 		return LIBUSB_ERROR_NO_MEM;
@@ -1120,8 +1109,8 @@ int API_EXPORTED libusb_get_max_iso_packet_size(libusb_device *dev,
 		goto out;
 	}
 
-	speed = libusb_get_device_speed( dev );
-	if (speed == LIBUSB_SPEED_SUPER) {
+	speed = libusb_get_device_speed(dev);
+	if (speed >= LIBUSB_SPEED_SUPER) {
 		r = libusb_get_ss_endpoint_companion_descriptor(dev->ctx, ep, &ss_ep_cmp);
 		if (r == LIBUSB_SUCCESS) {
 			r = ss_ep_cmp->wBytesPerInterval;
@@ -1130,7 +1119,7 @@ int API_EXPORTED libusb_get_max_iso_packet_size(libusb_device *dev,
 	}
 
 	/* If the device isn't a SuperSpeed device or retrieving the SS endpoint didn't worked. */
-	if (speed != LIBUSB_SPEED_SUPER || r < 0) {
+	if (speed < LIBUSB_SPEED_SUPER || r < 0) {
 		val = ep->wMaxPacketSize;
 		ep_type = (enum libusb_transfer_type) (ep->bmAttributes & 0x3);
 
@@ -1492,7 +1481,7 @@ void API_EXPORTED libusb_close(libusb_device_handle *dev_handle)
 
 	if (!dev_handle)
 		return;
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	ctx = HANDLE_CTX(dev_handle);
 	handling_events = usbi_handling_events(ctx);
@@ -1575,7 +1564,7 @@ int API_EXPORTED libusb_get_configuration(libusb_device_handle *dev_handle,
 {
 	int r = LIBUSB_ERROR_NOT_SUPPORTED;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 	if (usbi_backend.get_configuration)
 		r = usbi_backend.get_configuration(dev_handle, config);
 
@@ -1843,7 +1832,7 @@ int API_EXPORTED libusb_clear_halt(libusb_device_handle *dev_handle,
  */
 int API_EXPORTED libusb_reset_device(libusb_device_handle *dev_handle)
 {
-	usbi_dbg("");
+	usbi_dbg(" ");
 	if (!dev_handle->dev->attached)
 		return LIBUSB_ERROR_NO_DEVICE;
 
@@ -2141,22 +2130,23 @@ void API_EXPORTED libusb_set_debug(libusb_context *ctx, int level)
 void API_EXPORTED libusb_set_log_cb(libusb_context *ctx, libusb_log_cb cb,
 	int mode)
 {
+#if defined(ENABLE_LOGGING) && (!defined(ENABLE_DEBUG_LOGGING) || !defined(USE_SYSTEM_LOGGING_FACILITY))
 #if !defined(USE_SYSTEM_LOGGING_FACILITY)
-	if (mode & LIBUSB_LOG_CB_GLOBAL) {
+	if (mode & LIBUSB_LOG_CB_GLOBAL)
 		log_handler = cb;
-	}
 #endif
-#if defined(ENABLE_LOGGING) && !defined(ENABLE_DEBUG_LOGGING)
+#if !defined(ENABLE_DEBUG_LOGGING)
 	if (mode & LIBUSB_LOG_CB_CONTEXT) {
 		USBI_GET_CONTEXT(ctx);
 		ctx->log_handler = cb;
 	}
 #else
 	UNUSED(ctx);
-#if defined(USE_SYSTEM_LOGGING_FACILITY)
+#endif
+#else
+	UNUSED(ctx);
 	UNUSED(cb);
 	UNUSED(mode);
-#endif
 #endif
 }
 
@@ -2304,7 +2294,7 @@ int API_EXPORTED libusb_init(libusb_context **context)
 	usbi_mutex_static_lock(&active_contexts_lock);
 	if (first_init) {
 		first_init = 0;
-		list_init (&active_contexts_list);
+		list_init(&active_contexts_list);
 	}
 	list_add (&ctx->list, &active_contexts_list);
 	usbi_mutex_static_unlock(&active_contexts_lock);
@@ -2336,7 +2326,7 @@ err_free_ctx:
 	}
 
 	usbi_mutex_static_lock(&active_contexts_lock);
-	list_del (&ctx->list);
+	list_del(&ctx->list);
 	usbi_mutex_static_unlock(&active_contexts_lock);
 
 	usbi_mutex_lock(&ctx->usb_devs_lock);
@@ -2367,13 +2357,19 @@ void API_EXPORTED libusb_exit(struct libusb_context *ctx)
 	struct timeval tv = { 0, 0 };
 	int destroying_default_context = 0;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 	USBI_GET_CONTEXT(ctx);
 
 	/* if working with default context, only actually do the deinitialization
 	 * if we're the last user */
 	usbi_mutex_static_lock(&default_context_lock);
 	if (ctx == usbi_default_context) {
+		if (!usbi_default_context) {
+			usbi_dbg("no default context, not initialized?");
+			usbi_mutex_static_unlock(&default_context_lock);
+			return;
+		}
+
 		if (--default_context_refcnt > 0) {
 			usbi_dbg("not destroying default context");
 			usbi_mutex_static_unlock(&default_context_lock);
@@ -2389,12 +2385,12 @@ void API_EXPORTED libusb_exit(struct libusb_context *ctx)
 		 */
 		destroying_default_context = 1;
 	} else {
-		// Unlock default context, as we're not modifying it.
+		/* Unlock default context, as we're not modifying it. */
 		usbi_mutex_static_unlock(&default_context_lock);
-  }
+	}
 
 	usbi_mutex_static_lock(&active_contexts_lock);
-	list_del (&ctx->list);
+	list_del(&ctx->list);
 	usbi_mutex_static_unlock(&active_contexts_lock);
 
 	if (libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG)) {
@@ -2511,7 +2507,7 @@ int usbi_vsnprintf(char *str, size_t size, const char *format, va_list ap)
 static void usbi_log_str(enum libusb_log_level level, const char *str)
 {
 #if defined(USE_SYSTEM_LOGGING_FACILITY)
-#if defined(OS_WINDOWS) || defined(OS_WINCE)
+#if defined(OS_WINDOWS)
 #if !defined(UNICODE)
 	OutputDebugStringA(str);
 #else
@@ -2529,7 +2525,7 @@ static void usbi_log_str(enum libusb_log_level level, const char *str)
 	case LIBUSB_LOG_LEVEL_DEBUG: priority = ANDROID_LOG_DEBUG; break;
 	}
 	__android_log_write(priority, "libusb", str);
-#elif defined(HAVE_SYSLOG_FUNC)
+#elif defined(HAVE_SYSLOG)
 	int syslog_level = LOG_INFO;
 	switch (level) {
 	case LIBUSB_LOG_LEVEL_NONE: return;

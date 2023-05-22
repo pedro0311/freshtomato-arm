@@ -20,27 +20,16 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <config.h>
-
-#include <assert.h>
-#include <ctype.h>
-#include <dirent.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <libudev.h>
-
 #include "libusbi.h"
 #include "linux_usbfs.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <libudev.h>
+#include <poll.h>
+#include <pthread.h>
+#include <string.h>
+#include <unistd.h>
 
 /* udev context */
 static struct udev *udev_ctx = NULL;
@@ -86,12 +75,12 @@ int linux_udev_start_event_monitor(void)
 	/* Make sure the udev file descriptor is marked as CLOEXEC */
 	r = fcntl(udev_monitor_fd, F_GETFD);
 	if (r == -1) {
-		usbi_err(NULL, "geting udev monitor fd flags (%d)", errno);
+		usbi_err(NULL, "failed to get udev monitor fd flags, errno=%d", errno);
 		goto err_free_monitor;
 	}
 	if (!(r & FD_CLOEXEC)) {
 		if (fcntl(udev_monitor_fd, F_SETFD, r | FD_CLOEXEC) == -1) {
-			usbi_err(NULL, "setting udev monitor fd flags (%d)", errno);
+			usbi_err(NULL, "failed to set udev monitor fd flags, errno=%d", errno);
 			goto err_free_monitor;
 		}
 	}
@@ -101,12 +90,12 @@ int linux_udev_start_event_monitor(void)
 	 * so make sure this is set */
 	r = fcntl(udev_monitor_fd, F_GETFL);
 	if (r == -1) {
-		usbi_err(NULL, "getting udev monitor fd status flags (%d)", errno);
+		usbi_err(NULL, "failed to get udev monitor fd status flags, errno=%d", errno);
 		goto err_free_monitor;
 	}
 	if (!(r & O_NONBLOCK)) {
 		if (fcntl(udev_monitor_fd, F_SETFL, r | O_NONBLOCK) == -1) {
-			usbi_err(NULL, "setting udev monitor fd status flags (%d)", errno);
+			usbi_err(NULL, "failed to set udev monitor fd status flags, errno=%d", errno);
 			goto err_free_monitor;
 		}
 	}
@@ -262,6 +251,8 @@ static void udev_hotplug_event(struct udev_device* udev_dev)
 			linux_hotplug_enumerate(busnum, devaddr, sys_name);
 		} else if (detached) {
 			linux_device_disconnected(busnum, devaddr);
+		} else if (strncmp(udev_action, "bind", 4) == 0) {
+			/* silently ignore "known unhandled" action */
 		} else {
 			usbi_err(NULL, "ignoring udev action %s", udev_action);
 		}

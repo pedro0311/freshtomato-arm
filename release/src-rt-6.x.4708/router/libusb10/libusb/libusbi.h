@@ -4,6 +4,7 @@
  * Copyright © 2001 Johannes Erdfelt <johannes@erdfelt.com>
  * Copyright © 2019 Nathan Hjelm <hjelmn@cs.umm.edu>
  * Copyright © 2019 Google LLC. All rights reserved.
+ * Copyright © 2020 Chris Dickens <christopher.a.dickens@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,21 +26,40 @@
 
 #include <config.h>
 
-#include <stdlib.h>
 #include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <time.h>
 #include <stdarg.h>
-#ifdef HAVE_POLL_H
-#include <poll.h>
-#endif
-#ifdef HAVE_MISSING_H
-#include <missing.h>
+#include <stddef.h>
+#include <stdlib.h>
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
 #endif
 
 #include "libusb.h"
 #include "version.h"
+
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(array) (sizeof(array) / sizeof(array[0]))
+#endif
+
+#ifndef CLAMP
+#define CLAMP(val, min, max) \
+	((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
+#endif
+
+#ifndef MIN
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#define MAX(a, b)	((a) > (b) ? (a) : (b))
+#endif
+
+/* The following is used to silence warnings for unused variables */
+#if defined(UNREFERENCED_PARAMETER)
+#define UNUSED(var)	UNREFERENCED_PARAMETER(var)
+#else
+#define UNUSED(var)	do { (void)(var); } while(0)
+#endif
 
 /* Attribute to ensure that a structure member is aligned to a natural
  * pointer alignment. Used for os_priv member. */
@@ -53,6 +73,20 @@
 #define PTR_ALIGNED __attribute__((aligned(sizeof(void *))))
 #else
 #define PTR_ALIGNED
+#endif
+
+/* Internal abstraction for poll */
+#if defined(POLL_POSIX)
+#include "os/poll_posix.h"
+#elif defined(POLL_WINDOWS)
+#include "os/poll_windows.h"
+#endif
+
+/* Internal abstraction for thread synchronization */
+#if defined(THREADS_POSIX)
+#include "os/threads_posix.h"
+#elif defined(THREADS_WINDOWS)
+#include "os/threads_windows.h"
 #endif
 
 /* Inside the libusb code, mark all public functions as follows:
@@ -92,13 +126,6 @@ extern "C" {
 #define USBI_MAX_LOG_LEN	1024
 /* Terminator for log lines */
 #define USBI_LOG_LINE_END	"\n"
-
-/* The following is used to silence warnings for unused variables */
-#define UNUSED(var)		do { (void)(var); } while(0)
-
-#if !defined(ARRAYSIZE)
-#define ARRAYSIZE(array) (sizeof(array) / sizeof(array[0]))
-#endif
 
 struct list_head {
 	struct list_head *prev, *next;
@@ -181,28 +208,15 @@ static inline void list_cut(struct list_head *list, struct list_head *head)
 static inline void *usbi_reallocf(void *ptr, size_t size)
 {
 	void *ret = realloc(ptr, size);
+
 	if (!ret)
 		free(ptr);
 	return ret;
 }
 
-#define container_of(ptr, type, member) ({			\
-	const typeof( ((type *)0)->member ) *mptr = (ptr);	\
-	(type *)( (char *)mptr - offsetof(type,member) );})
-
-#ifndef CLAMP
-#define CLAMP(val, min, max) ((val) < (min) ? (min) : ((val) > (max) ? (max) : (val)))
-#endif
-#ifndef MIN
-#define MIN(a, b)	((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a, b)	((a) > (b) ? (a) : (b))
-#endif
-
 #define TIMESPEC_IS_SET(ts) ((ts)->tv_sec != 0 || (ts)->tv_nsec != 0)
 
-#if defined(_WIN32) || defined(__CYGWIN__) || defined(_WIN32_WCE)
+#if defined(OS_WINDOWS)
 #define TIMEVAL_TV_SEC_TYPE	long
 #else
 #define TIMEVAL_TV_SEC_TYPE	time_t
@@ -213,7 +227,7 @@ static inline void *usbi_reallocf(void *ptr, size_t size)
 #define TIMESPEC_TO_TIMEVAL(tv, ts)					\
 	do {								\
 		(tv)->tv_sec = (TIMEVAL_TV_SEC_TYPE) (ts)->tv_sec;	\
-		(tv)->tv_usec = (ts)->tv_nsec / 1000;			\
+		(tv)->tv_usec = (ts)->tv_nsec / 1000L;			\
 	} while (0)
 #endif
 
@@ -233,42 +247,19 @@ void usbi_log(struct libusb_context *ctx, enum libusb_log_level level,
 void usbi_log_v(struct libusb_context *ctx, enum libusb_log_level level,
 	const char *function, const char *format, va_list args) USBI_PRINTFLIKE(4, 0);
 
-#if !defined(_MSC_VER) || (_MSC_VER >= 1400)
-
 #define _usbi_log(ctx, level, ...) usbi_log(ctx, level, __FUNCTION__, __VA_ARGS__)
 
-#define usbi_err(ctx, ...) _usbi_log(ctx, LIBUSB_LOG_LEVEL_ERROR, __VA_ARGS__)
-#define usbi_warn(ctx, ...) _usbi_log(ctx, LIBUSB_LOG_LEVEL_WARNING, __VA_ARGS__)
-#define usbi_info(ctx, ...) _usbi_log(ctx, LIBUSB_LOG_LEVEL_INFO, __VA_ARGS__)
-#define usbi_dbg(...) _usbi_log(NULL, LIBUSB_LOG_LEVEL_DEBUG, __VA_ARGS__)
-
-#else /* !defined(_MSC_VER) || (_MSC_VER >= 1400) */
-
-#define LOG_BODY(ctxt, level)				\
-{							\
-	va_list args;					\
-	va_start(args, format);				\
-	usbi_log_v(ctxt, level, "", format, args);	\
-	va_end(args);					\
-}
-
-static inline void usbi_err(struct libusb_context *ctx, const char *format, ...)
-	LOG_BODY(ctx, LIBUSB_LOG_LEVEL_ERROR)
-static inline void usbi_warn(struct libusb_context *ctx, const char *format, ...)
-	LOG_BODY(ctx, LIBUSB_LOG_LEVEL_WARNING)
-static inline void usbi_info(struct libusb_context *ctx, const char *format, ...)
-	LOG_BODY(ctx, LIBUSB_LOG_LEVEL_INFO)
-static inline void usbi_dbg(const char *format, ...)
-	LOG_BODY(NULL, LIBUSB_LOG_LEVEL_DEBUG)
-
-#endif /* !defined(_MSC_VER) || (_MSC_VER >= 1400) */
+#define usbi_err(ctx, ...)	_usbi_log(ctx, LIBUSB_LOG_LEVEL_ERROR, __VA_ARGS__)
+#define usbi_warn(ctx, ...)	_usbi_log(ctx, LIBUSB_LOG_LEVEL_WARNING, __VA_ARGS__)
+#define usbi_info(ctx, ...)	_usbi_log(ctx, LIBUSB_LOG_LEVEL_INFO, __VA_ARGS__)
+#define usbi_dbg(...)		_usbi_log(NULL, LIBUSB_LOG_LEVEL_DEBUG, __VA_ARGS__)
 
 #else /* ENABLE_LOGGING */
 
-#define usbi_err(ctx, ...) do { (void)ctx; } while (0)
-#define usbi_warn(ctx, ...) do { (void)ctx; } while (0)
-#define usbi_info(ctx, ...) do { (void)ctx; } while (0)
-#define usbi_dbg(...) do {} while (0)
+#define usbi_err(ctx, ...)	UNUSED(ctx)
+#define usbi_warn(ctx, ...)	UNUSED(ctx)
+#define usbi_info(ctx, ...)	UNUSED(ctx)
+#define usbi_dbg(...)		do {} while (0)
 
 #endif /* ENABLE_LOGGING */
 
@@ -288,18 +279,6 @@ static inline void usbi_dbg(const char *format, ...)
 #define IS_EPOUT(ep)		(!IS_EPIN(ep))
 #define IS_XFERIN(xfer)		(0 != ((xfer)->endpoint & LIBUSB_ENDPOINT_IN))
 #define IS_XFEROUT(xfer)	(!IS_XFERIN(xfer))
-
-/* Internal abstraction for thread synchronization */
-#if defined(THREADS_POSIX)
-#include "os/threads_posix.h"
-#elif defined(OS_WINDOWS) || defined(OS_WINCE)
-#include "os/threads_windows.h"
-#endif
-
-extern struct libusb_context *usbi_default_context;
-
-/* Forward declaration for use in context (fully defined inside poll abstraction) */
-struct pollfd;
 
 struct libusb_context {
 #if defined(ENABLE_LOGGING) && !defined(ENABLE_DEBUG_LOGGING)
@@ -371,7 +350,7 @@ struct libusb_context {
          * between the poll call and */
         struct list_head removed_ipollfds;
 	struct pollfd *pollfds;
-	POLL_NFDS_TYPE pollfds_cnt;
+	usbi_nfds_t pollfds_cnt;
 
 	/* A list of pending hotplug messages. Protected by event_data_lock. */
 	struct list_head hotplug_msgs;
@@ -379,7 +358,7 @@ struct libusb_context {
 	/* A list of pending completed transfers. Protected by event_data_lock. */
 	struct list_head completed_transfers;
 
-#ifdef USBI_TIMERFD_AVAILABLE
+#ifdef HAVE_TIMERFD
 	/* used for timeout handling, if supported by OS.
 	 * this timerfd is maintained to trigger on the next pending timeout */
 	int timerfd;
@@ -416,7 +395,7 @@ enum usbi_event_flags {
 	((ctx)->event_flags || (ctx)->device_close \
 	 || !list_empty(&(ctx)->hotplug_msgs) || !list_empty(&(ctx)->completed_transfers))
 
-#ifdef USBI_TIMERFD_AVAILABLE
+#ifdef HAVE_TIMERFD
 #define usbi_using_timerfd(ctx) ((ctx)->timerfd >= 0)
 #else
 #define usbi_using_timerfd(ctx) (0)
@@ -567,20 +546,11 @@ int usbi_device_cache_descriptor(libusb_device *dev);
 int usbi_get_config_index_by_value(struct libusb_device *dev,
 	uint8_t bConfigurationValue, int *idx);
 
-void usbi_connect_device (struct libusb_device *dev);
-void usbi_disconnect_device (struct libusb_device *dev);
+void usbi_connect_device(struct libusb_device *dev);
+void usbi_disconnect_device(struct libusb_device *dev);
 
 int usbi_signal_event(struct libusb_context *ctx);
 int usbi_clear_event(struct libusb_context *ctx);
-
-/* Internal abstraction for poll (needs struct usbi_transfer on Windows) */
-#if defined(OS_LINUX) || defined(OS_DARWIN) || defined(OS_OPENBSD) || defined(OS_NETBSD) ||\
-	defined(OS_HAIKU) || defined(OS_SUNOS)
-#include <unistd.h>
-#include "os/poll_posix.h"
-#elif defined(OS_WINDOWS) || defined(OS_WINCE)
-#include "os/poll_windows.h"
-#endif
 
 struct usbi_pollfd {
 	/* must come first */
@@ -1134,7 +1104,7 @@ struct usbi_os_backend {
 	 * Return 0 on success, or a LIBUSB_ERROR code on failure.
 	 */
 	int (*handle_events)(struct libusb_context *ctx,
-		struct pollfd *fds, POLL_NFDS_TYPE nfds, int num_ready);
+		struct pollfd *fds, usbi_nfds_t nfds, int num_ready);
 
 	/* Handle transfer completion. Optional.
 	 *
@@ -1171,7 +1141,7 @@ struct usbi_os_backend {
 	 */
 	int (*clock_gettime)(int clkid, struct timespec *tp);
 
-#ifdef USBI_TIMERFD_AVAILABLE
+#ifdef HAVE_TIMERFD
 	/* clock ID of the clock that should be used for timerfd */
 	clockid_t (*get_timerfd_clockid)(void);
 #endif
@@ -1202,6 +1172,8 @@ extern const struct usbi_os_backend usbi_backend;
 
 extern struct list_head active_contexts_list;
 extern usbi_mutex_static_t active_contexts_lock;
+
+extern struct libusb_context *usbi_default_context;
 
 #ifdef __cplusplus
 }

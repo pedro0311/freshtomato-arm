@@ -73,7 +73,6 @@ static void netbsd_destroy_device(struct libusb_device *);
 
 static int netbsd_submit_transfer(struct usbi_transfer *);
 static int netbsd_cancel_transfer(struct usbi_transfer *);
-static void netbsd_clear_transfer_priv(struct usbi_transfer *);
 static int netbsd_handle_transfer_completion(struct usbi_transfer *);
 static int netbsd_clock_gettime(int, struct timespec *);
 
@@ -87,55 +86,37 @@ static int _sync_gen_transfer(struct usbi_transfer *);
 static int _access_endpoint(struct libusb_transfer *);
 
 const struct usbi_os_backend usbi_backend = {
-	"Synchronous NetBSD backend",
-	0,
-	NULL,				/* init() */
-	NULL,				/* exit() */
-	NULL,				/* set_option() */
-	netbsd_get_device_list,
-	NULL,				/* hotplug_poll */
-	netbsd_open,
-	netbsd_close,
+	.name = "Synchronous NetBSD backend",
+	.caps = 0,
+	.get_device_list = netbsd_get_device_list,
+	.open = netbsd_open,
+	.close = netbsd_close,
 
-	netbsd_get_device_descriptor,
-	netbsd_get_active_config_descriptor,
-	netbsd_get_config_descriptor,
-	NULL,				/* get_config_descriptor_by_value() */
+	.get_device_descriptor = netbsd_get_device_descriptor,
+	.get_active_config_descriptor = netbsd_get_active_config_descriptor,
+	.get_config_descriptor = netbsd_get_config_descriptor,
 
-	netbsd_get_configuration,
-	netbsd_set_configuration,
+	.get_configuration = netbsd_get_configuration,
+	.set_configuration = netbsd_set_configuration,
 
-	netbsd_claim_interface,
-	netbsd_release_interface,
+	.claim_interface = netbsd_claim_interface,
+	.release_interface = netbsd_release_interface,
 
-	netbsd_set_interface_altsetting,
-	netbsd_clear_halt,
-	netbsd_reset_device,
+	.set_interface_altsetting = netbsd_set_interface_altsetting,
+	.clear_halt = netbsd_clear_halt,
+	.reset_device = netbsd_reset_device,
 
-	NULL,				/* alloc_streams */
-	NULL,				/* free_streams */
+	.destroy_device = netbsd_destroy_device,
 
-	NULL,				/* dev_mem_alloc() */
-	NULL,				/* dev_mem_free() */
+	.submit_transfer = netbsd_submit_transfer,
+	.cancel_transfer = netbsd_cancel_transfer,
 
-	NULL,				/* kernel_driver_active() */
-	NULL,				/* detach_kernel_driver() */
-	NULL,				/* attach_kernel_driver() */
+	.handle_transfer_completion = netbsd_handle_transfer_completion,
 
-	netbsd_destroy_device,
+	.clock_gettime = netbsd_clock_gettime,
 
-	netbsd_submit_transfer,
-	netbsd_cancel_transfer,
-	netbsd_clear_transfer_priv,
-
-	NULL,				/* handle_events() */
-	netbsd_handle_transfer_completion,
-
-	netbsd_clock_gettime,
-	0,				/* context_priv_size */
-	sizeof(struct device_priv),
-	sizeof(struct handle_priv),
-	0,				/* transfer_priv_size */
+	.device_priv_size = sizeof(struct device_priv),
+	.device_handle_priv_size = sizeof(struct handle_priv),
 };
 
 int
@@ -149,7 +130,7 @@ netbsd_get_device_list(struct libusb_context * ctx,
 	char devnode[16];
 	int fd, err, i;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	/* Only ugen(4) is supported */
 	for (i = 0; i < USB_MAX_DEVICES; i++) {
@@ -250,7 +231,7 @@ netbsd_get_device_descriptor(struct libusb_device *dev, unsigned char *buf,
 {
 	struct device_priv *dpriv = (struct device_priv *)dev->os_priv;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	memcpy(buf, &dpriv->ddesc, DEVICE_DESC_LENGTH);
 
@@ -321,7 +302,7 @@ netbsd_get_configuration(struct libusb_device_handle *handle, int *config)
 {
 	struct device_priv *dpriv = (struct device_priv *)handle->dev->os_priv;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	if (ioctl(dpriv->fd, USB_GET_CONFIG, config) < 0)
 		return _errno_to_libusb(errno);
@@ -395,7 +376,7 @@ netbsd_clear_halt(struct libusb_device_handle *handle, unsigned char endpoint)
 	struct device_priv *dpriv = (struct device_priv *)handle->dev->os_priv;
 	struct usb_ctl_request req;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	req.ucr_request.bmRequestType = UT_WRITE_ENDPOINT;
 	req.ucr_request.bRequest = UR_CLEAR_FEATURE;
@@ -412,7 +393,7 @@ netbsd_clear_halt(struct libusb_device_handle *handle, unsigned char endpoint)
 int
 netbsd_reset_device(struct libusb_device_handle *handle)
 {
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	return (LIBUSB_ERROR_NOT_SUPPORTED);
 }
@@ -422,7 +403,7 @@ netbsd_destroy_device(struct libusb_device *dev)
 {
 	struct device_priv *dpriv = (struct device_priv *)dev->os_priv;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	free(dpriv->cdesc);
 }
@@ -434,7 +415,7 @@ netbsd_submit_transfer(struct usbi_transfer *itransfer)
 	struct handle_priv *hpriv;
 	int err = 0;
 
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	transfer = USBI_TRANSFER_TO_LIBUSB_TRANSFER(itransfer);
 	hpriv = (struct handle_priv *)transfer->dev_handle->os_priv;
@@ -476,17 +457,9 @@ netbsd_submit_transfer(struct usbi_transfer *itransfer)
 int
 netbsd_cancel_transfer(struct usbi_transfer *itransfer)
 {
-	usbi_dbg("");
+	usbi_dbg(" ");
 
 	return (LIBUSB_ERROR_NOT_SUPPORTED);
-}
-
-void
-netbsd_clear_transfer_priv(struct usbi_transfer *itransfer)
-{
-	usbi_dbg("");
-
-	/* Nothing to do */
 }
 
 int
@@ -498,8 +471,6 @@ netbsd_handle_transfer_completion(struct usbi_transfer *itransfer)
 int
 netbsd_clock_gettime(int clkid, struct timespec *tp)
 {
-	usbi_dbg("clock %d", clkid);
-
 	if (clkid == USBI_CLOCK_REALTIME)
 		return clock_gettime(CLOCK_REALTIME, tp);
 

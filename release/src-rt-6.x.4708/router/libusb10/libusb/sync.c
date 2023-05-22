@@ -20,14 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
-#include <config.h>
-
-#include <errno.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
 #include "libusbi.h"
+
+#include <string.h>
 
 /**
  * @defgroup libusb_syncio Synchronous device I/O
@@ -62,7 +57,7 @@ static void sync_transfer_wait_for_completion(struct libusb_transfer *transfer)
 		}
 		if (NULL == transfer->dev_handle) {
 			/* transfer completion after libusb_close() */
-			transfer->status = LIBUSB_ERROR_NO_DEVICE;
+			transfer->status = LIBUSB_TRANSFER_NO_DEVICE;
 			*completed = 1;
 		}
 	}
