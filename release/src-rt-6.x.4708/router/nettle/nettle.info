@@ -99,6 +99,7 @@ Authenticated encryption with associated data
 * GCM::
 * CCM::
 * ChaCha-Poly1305::
+* OCB::
 * SIV-CMAC::
 * SIV-GCM::
 * nettle_aead abstraction::
@@ -7441,71 +7442,71 @@ Function and Concept Index
 
 Tag Table:
 Node: Top543
-Node: Introduction2985
-Node: Copyright4564
-Node: Conventions5391
-Node: Example7545
-Node: Linking8844
-Node: Compatibility9709
-Node: Reference13335
-Node: Hash functions13786
-Node: Recommended hash functions15335
-Node: Miscellaneous hash functions28690
-Node: Legacy hash functions32931
-Ref: GOSTHASH94CP40477
-Node: nettle_hash abstraction42907
-Node: Cipher functions45182
-Node: AES49275
-Node: Arcfour53620
-Node: Arctwo56134
-Node: Blowfish58825
-Node: Camellia63460
-Node: CAST12868026
-Node: ChaCha69965
-Node: DES73061
-Node: DES375479
-Node: Salsa2078592
-Node: Serpent82637
-Node: SM484150
-Node: Twofish85439
-Node: nettle_cipher abstraction86741
-Node: Cipher modes89276
-Node: CBC90460
-Node: CTR95389
-Node: CFB and CFB898011
-Node: XTS103793
-Node: Authenticated encryption110164
-Node: EAX113476
-Node: GCM119618
-Node: CCM134144
-Node: ChaCha-Poly1305146933
-Node: OCB150432
-Node: SIV-CMAC159890
-Node: SIV-GCM164611
-Node: nettle_aead abstraction169530
-Node: Keyed hash functions171211
-Node: HMAC172862
-Node: UMAC181550
-Node: CMAC187421
-Node: Poly1305190745
-Node: Key derivation functions193403
-Node: Public-key algorithms205090
-Node: RSA209161
-Node: RSA-Footnotes229729
-Ref: RSA-Footnote-1229782
-Node: DSA229960
-Node: Elliptic curves245494
-Node: Side-channel silence246879
-Node: ECDSA248326
-Node: GOSTDSA253149
-Node: Curve 25519 and Curve 448257145
-Node: Randomness265060
-Node: ASCII encoding280544
-Node: Miscellaneous functions287271
-Node: Compatibility functions288431
-Node: Nettle soup289120
-Node: Installation290117
-Node: Index291493
+Node: Introduction2993
+Node: Copyright4572
+Node: Conventions5399
+Node: Example7553
+Node: Linking8852
+Node: Compatibility9717
+Node: Reference13343
+Node: Hash functions13794
+Node: Recommended hash functions15343
+Node: Miscellaneous hash functions28698
+Node: Legacy hash functions32939
+Ref: GOSTHASH94CP40485
+Node: nettle_hash abstraction42915
+Node: Cipher functions45190
+Node: AES49283
+Node: Arcfour53628
+Node: Arctwo56142
+Node: Blowfish58833
+Node: Camellia63468
+Node: CAST12868034
+Node: ChaCha69973
+Node: DES73069
+Node: DES375487
+Node: Salsa2078600
+Node: Serpent82645
+Node: SM484158
+Node: Twofish85447
+Node: nettle_cipher abstraction86749
+Node: Cipher modes89284
+Node: CBC90468
+Node: CTR95397
+Node: CFB and CFB898019
+Node: XTS103801
+Node: Authenticated encryption110172
+Node: EAX113484
+Node: GCM119626
+Node: CCM134152
+Node: ChaCha-Poly1305146941
+Node: OCB150440
+Node: SIV-CMAC159898
+Node: SIV-GCM164619
+Node: nettle_aead abstraction169538
+Node: Keyed hash functions171219
+Node: HMAC172870
+Node: UMAC181558
+Node: CMAC187429
+Node: Poly1305190753
+Node: Key derivation functions193411
+Node: Public-key algorithms205098
+Node: RSA209169
+Node: RSA-Footnotes229737
+Ref: RSA-Footnote-1229790
+Node: DSA229968
+Node: Elliptic curves245502
+Node: Side-channel silence246887
+Node: ECDSA248334
+Node: GOSTDSA253157
+Node: Curve 25519 and Curve 448257153
+Node: Randomness265068
+Node: ASCII encoding280552
+Node: Miscellaneous functions287279
+Node: Compatibility functions288439
+Node: Nettle soup289128
+Node: Installation290125
+Node: Index291501
 
 End Tag Table
 
