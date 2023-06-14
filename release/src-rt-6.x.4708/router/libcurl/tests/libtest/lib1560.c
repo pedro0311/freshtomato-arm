@@ -474,6 +474,13 @@ static const struct testcase get_parts_list[] ={
 };
 
 static const struct urltestcase get_url_list[] = {
+  {"https://1.0x1000000", "https://1.0x1000000/", 0, 0, CURLUE_OK},
+  {"https://0x7f.1", "https://127.0.0.1/", 0, 0, CURLUE_OK},
+  {"https://1.2.3.256.com", "https://1.2.3.256.com/", 0, 0, CURLUE_OK},
+  {"https://10.com", "https://10.com/", 0, 0, CURLUE_OK},
+  {"https://1.2.com", "https://1.2.com/", 0, 0, CURLUE_OK},
+  {"https://1.2.3.com", "https://1.2.3.com/", 0, 0, CURLUE_OK},
+  {"https://1.2.com.99", "https://1.2.com.99/", 0, 0, CURLUE_OK},
   {"https://[fe80::0000:20c:29ff:fe9c:409b]:80/moo",
    "https://[fe80::20c:29ff:fe9c:409b]:80/moo",
    0, 0, CURLUE_OK},
@@ -522,22 +529,24 @@ static const struct urltestcase get_url_list[] = {
 
   /* IPv4 trickeries */
   {"https://16843009", "https://1.1.1.1/", 0, 0, CURLUE_OK},
-  {"https://0x7f.1", "https://127.0.0.1/", 0, 0, CURLUE_OK},
   {"https://0177.1", "https://127.0.0.1/", 0, 0, CURLUE_OK},
   {"https://0111.02.0x3", "https://73.2.0.3/", 0, 0, CURLUE_OK},
+  {"https://0111.02.0x3.", "https://0111.02.0x3./", 0, 0, CURLUE_OK},
+  {"https://0111.02.030", "https://73.2.0.24/", 0, 0, CURLUE_OK},
+  {"https://0111.02.030.", "https://0111.02.030./", 0, 0, CURLUE_OK},
   {"https://0xff.0xff.0377.255", "https://255.255.255.255/", 0, 0, CURLUE_OK},
   {"https://1.0xffffff", "https://1.255.255.255/", 0, 0, CURLUE_OK},
   /* IPv4 numerical overflows or syntax errors will not normalize */
   {"https://a127.0.0.1", "https://a127.0.0.1/", 0, 0, CURLUE_OK},
   {"https://\xff.127.0.0.1", "https://%FF.127.0.0.1/", 0, CURLU_URLENCODE,
    CURLUE_OK},
-  {"https://127.-0.0.1", "https://127.-0.0.1/", 0, 0, CURLUE_BAD_HOSTNAME},
+  {"https://127.-0.0.1", "https://127.-0.0.1/", 0, 0, CURLUE_OK},
   {"https://127.0. 1", "https://127.0.0.1/", 0, 0, CURLUE_MALFORMED_INPUT},
-  {"https://1.0x1000000", "https://1.0x1000000/", 0, 0, CURLUE_BAD_HOSTNAME},
-  {"https://1.2.3.256", "https://1.2.3.256/", 0, 0, CURLUE_BAD_HOSTNAME},
-  {"https://1.2.3.4.5", "https://1.2.3.4.5/", 0, 0, CURLUE_BAD_HOSTNAME},
-  {"https://1.2.0x100.3", "https://1.2.0x100.3/", 0, 0, CURLUE_BAD_HOSTNAME},
-  {"https://4294967296", "https://4294967296/", 0, 0, CURLUE_BAD_HOSTNAME},
+  {"https://1.2.3.256", "https://1.2.3.256/", 0, 0, CURLUE_OK},
+  {"https://1.2.3.256.", "https://1.2.3.256./", 0, 0, CURLUE_OK},
+  {"https://1.2.3.4.5", "https://1.2.3.4.5/", 0, 0, CURLUE_OK},
+  {"https://1.2.0x100.3", "https://1.2.0x100.3/", 0, 0, CURLUE_OK},
+  {"https://4294967296", "https://4294967296/", 0, 0, CURLUE_OK},
   {"https://123host", "https://123host/", 0, 0, CURLUE_OK},
   /* 40 bytes scheme is the max allowed */
   {"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA://hostname/path",
@@ -583,6 +592,42 @@ static const struct urltestcase get_url_list[] = {
   {"example.com/path/html",
    "http://example.com/path/html",
    CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"smtp.com/path/html",
+   "smtp://smtp.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"dict.com/path/html",
+   "dict://dict.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"pop3.com/path/html",
+   "pop3://pop3.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"ldap.com/path/html",
+   "ldap://ldap.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"imap.com/path/html",
+   "imap://imap.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"ftp.com/path/html",
+   "ftp://ftp.com/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"smtp/path/html",
+   "http://smtp/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"dict/path/html",
+   "http://dict/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"pop3/path/html",
+   "http://pop3/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"ldap/path/html",
+   "http://ldap/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"imap/path/html",
+   "http://imap/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
+  {"ftp/path/html",
+   "http://ftp/path/html",
+   CURLU_GUESS_SCHEME, 0, CURLUE_OK},
   {"HTTP://test/", "http://test/", 0, 0, CURLUE_OK},
   {"http://HO0_-st..~./", "http://HO0_-st..~./", 0, 0, CURLUE_OK},
   {"http:/@example.com: 123/", "", 0, 0, CURLUE_MALFORMED_INPUT},
@@ -599,20 +644,11 @@ static const struct urltestcase get_url_list[] = {
    0, 0, CURLUE_OK},
   /* here the password has the semicolon */
   {"http://user:pass;word@host/file",
-   "http://user:pass;word@host/file",
-   0, 0, CURLUE_OK},
-  {"file:///file.txt#moo",
-   "file:///file.txt#moo",
-   0, 0, CURLUE_OK},
-  {"file:////file.txt",
-   "file:////file.txt",
-   0, 0, CURLUE_OK},
-  {"file:///file.txt",
-   "file:///file.txt",
-   0, 0, CURLUE_OK},
-  {"file:./",
-   "file://",
-   0, 0, CURLUE_BAD_SCHEME},
+   "http://user:pass;word@host/file", 0, 0, CURLUE_OK},
+  {"file:///file.txt#moo", "file:///file.txt#moo", 0, 0, CURLUE_OK},
+  {"file:////file.txt", "file:////file.txt", 0, 0, CURLUE_OK},
+  {"file:///file.txt", "file:///file.txt", 0, 0, CURLUE_OK},
+  {"file:./", "file://", 0, 0, CURLUE_OK},
   {"http://example.com/hello/../here",
    "http://example.com/hello/../here",
    CURLU_PATH_AS_IS, 0, CURLUE_OK},
@@ -697,6 +733,12 @@ static int checkurl(const char *org, const char *url, const char *out)
 
 /* !checksrc! disable SPACEBEFORECOMMA 1 */
 static const struct setcase set_parts_list[] = {
+  {"https://example.com/",
+   "host=example.com%2fmoo,",
+   "",
+   0, /* get */
+   0, /* set */
+   CURLUE_OK, CURLUE_BAD_HOSTNAME},
   {"https://example.com/",
    "host=http://fake,",
    "",
@@ -984,6 +1026,10 @@ static const struct redircase set_url_list[] = {
    "../newpage",
    "http://user:foo@example.com/newpage",
    0, 0, CURLUE_OK},
+  {"http://user:foo@example.com/path?query#frag",
+   "http://?hi",
+   "http:///?hi",
+   0, CURLU_NO_AUTHORITY, CURLUE_OK},
   {NULL, NULL, NULL, 0, 0, CURLUE_OK}
 };
 
@@ -1116,7 +1162,7 @@ static int get_url(void)
       }
       curl_free(url);
     }
-    else if(rc != get_url_list[i].ucode) {
+    if(rc != get_url_list[i].ucode) {
       fprintf(stderr, "Get URL\nin: %s\nreturned %d (expected %d)\n",
               get_url_list[i].in, (int)rc, get_url_list[i].ucode);
       error++;
@@ -1507,6 +1553,9 @@ int test(char *URL)
 {
   (void)URL; /* not used */
 
+  if(get_url())
+    return 3;
+
   if(huge())
     return 9;
 
@@ -1524,9 +1573,6 @@ int test(char *URL)
 
   if(set_parts())
     return 2;
-
-  if(get_url())
-    return 3;
 
   if(get_parts())
     return 4;
