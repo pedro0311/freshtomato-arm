@@ -1,5 +1,5 @@
 /*
- * iperf, Copyright (c) 2014-2020, The Regents of the University of
+ * iperf, Copyright (c) 2014-2022, The Regents of the University of
  * California, through Lawrence Berkeley National Laboratory (subject
  * to receipt of any required approvals from the U.S. Dept. of
  * Energy).  All rights reserved.
@@ -60,6 +60,8 @@ typedef uint64_t iperf_size_t;
 #define DEFAULT_NO_MSG_RCVD_TIMEOUT 120000
 #define MIN_NO_MSG_RCVD_TIMEOUT 100
 
+#define WARN_STR_LEN 128
+
 /* short option equivalents, used to support options that only have long form */
 #define OPT_SCTP 1
 #define OPT_LOGFILE 2
@@ -87,6 +89,7 @@ typedef uint64_t iperf_size_t;
 #define OPT_IDLE_TIMEOUT 25
 #define OPT_DONT_FRAGMENT 26
 #define OPT_RCV_TIMEOUT 27
+#define OPT_SND_TIMEOUT 28
 
 /* states */
 #define TEST_START 1
@@ -115,6 +118,7 @@ int	iperf_get_test_omit( struct iperf_test* ipt );
 int	iperf_get_test_duration( struct iperf_test* ipt );
 char	iperf_get_test_role( struct iperf_test* ipt );
 int	iperf_get_test_reverse( struct iperf_test* ipt );
+int	iperf_get_test_bidirectional( struct iperf_test* ipt );
 int	iperf_get_test_blksize( struct iperf_test* ipt );
 FILE*	iperf_get_test_outfile( struct iperf_test* ipt );
 uint64_t iperf_get_test_rate( struct iperf_test* ipt );
@@ -129,6 +133,7 @@ int	iperf_get_test_num_streams( struct iperf_test* ipt );
 int	iperf_get_test_repeating_payload( struct iperf_test* ipt );
 int	iperf_get_test_timestamps( struct iperf_test* ipt );
 const char* iperf_get_test_timestamp_format( struct iperf_test* ipt );
+int	iperf_get_test_bind_port( struct iperf_test* ipt );
 int	iperf_get_test_server_port( struct iperf_test* ipt );
 char*	iperf_get_test_server_hostname( struct iperf_test* ipt );
 char*	iperf_get_test_template( struct iperf_test* ipt );
@@ -137,7 +142,9 @@ int	iperf_get_test_json_output( struct iperf_test* ipt );
 char*	iperf_get_test_json_output_string ( struct iperf_test* ipt );
 int	iperf_get_test_zerocopy( struct iperf_test* ipt );
 int	iperf_get_test_get_server_output( struct iperf_test* ipt );
+char	iperf_get_test_unit_format(struct iperf_test *ipt);
 char*	iperf_get_test_bind_address ( struct iperf_test* ipt );
+char*   iperf_get_test_bind_dev(struct iperf_test *ipt);
 int	iperf_get_test_udp_counters_64bit( struct iperf_test* ipt );
 int	iperf_get_test_one_off( struct iperf_test* ipt );
 int iperf_get_test_tos( struct iperf_test* ipt );
@@ -147,6 +154,8 @@ int	iperf_get_test_no_delay( struct iperf_test* ipt );
 int	iperf_get_test_connect_timeout( struct iperf_test* ipt );
 int	iperf_get_dont_fragment( struct iperf_test* ipt );
 char*   iperf_get_test_congestion_control(struct iperf_test* ipt);
+int iperf_get_test_mss(struct iperf_test* ipt);
+int     iperf_get_mapped_v4(struct iperf_test* ipt);
 
 /* Setter routines for some fields inside iperf_test. */
 void	iperf_set_verbose( struct iperf_test* ipt, int verbose );
@@ -163,6 +172,7 @@ void    iperf_set_test_pacing_timer( struct iperf_test* ipt, int pacing_timer );
 void    iperf_set_test_bytes( struct iperf_test* ipt, uint64_t bytes );
 void    iperf_set_test_blocks( struct iperf_test* ipt, uint64_t blocks );
 void	iperf_set_test_burst( struct iperf_test* ipt, int burst );
+void	iperf_set_test_bind_port( struct iperf_test* ipt, int bind_port );
 void	iperf_set_test_server_port( struct iperf_test* ipt, int server_port );
 void	iperf_set_test_socket_bufsize( struct iperf_test* ipt, int socket_bufsize );
 void	iperf_set_test_num_streams( struct iperf_test* ipt, int num_streams );
@@ -177,7 +187,9 @@ void	iperf_set_test_json_output( struct iperf_test* ipt, int json_output );
 int	iperf_has_zerocopy( void );
 void	iperf_set_test_zerocopy( struct iperf_test* ipt, int zerocopy );
 void	iperf_set_test_get_server_output( struct iperf_test* ipt, int get_server_output );
+void	iperf_set_test_unit_format(struct iperf_test *ipt, char unit_format);
 void	iperf_set_test_bind_address( struct iperf_test* ipt, const char *bind_address );
+void    iperf_set_test_bind_dev(struct iperf_test *ipt, const char *bnd_dev);
 void	iperf_set_test_udp_counters_64bit( struct iperf_test* ipt, int udp_counters_64bit );
 void	iperf_set_test_one_off( struct iperf_test* ipt, int one_off );
 void    iperf_set_test_tos( struct iperf_test* ipt, int tos );
@@ -186,6 +198,8 @@ void    iperf_set_test_bidirectional( struct iperf_test* ipt, int bidirectional)
 void    iperf_set_test_no_delay( struct iperf_test* ipt, int no_delay);
 void    iperf_set_dont_fragment( struct iperf_test* ipt, int dont_fragment );
 void    iperf_set_test_congestion_control(struct iperf_test* ipt, char* cc);
+void    iperf_set_test_mss(struct iperf_test* ipt, int mss);
+void    iperf_set_mapped_v4(struct iperf_test* ipt, const int val);
 
 #if defined(HAVE_SSL)
 void    iperf_set_test_client_username(struct iperf_test *ipt, const char *client_username);
@@ -272,6 +286,12 @@ int       iperf_init_stream(struct iperf_stream *, struct iperf_test *);
  */
 void      iperf_free_stream(struct iperf_stream * sp);
 
+/**
+ * iperf_common_sockopts -- init stream socket with common socket options
+ *
+ */
+int       iperf_common_sockopts(struct iperf_test *, int s);
+
 int has_tcpinfo(void);
 int has_tcpinfo_retransmits(void);
 void save_tcpinfo(struct iperf_stream *sp, struct iperf_interval_results *irp);
@@ -298,6 +318,7 @@ int iperf_init_test(struct iperf_test *);
 int iperf_create_send_timers(struct iperf_test *);
 int iperf_parse_arguments(struct iperf_test *, int, char **);
 int iperf_open_logfile(struct iperf_test *);
+void iperf_close_logfile(struct iperf_test *);
 void iperf_reset_test(struct iperf_test *);
 void iperf_reset_stats(struct iperf_test * test);
 
@@ -379,6 +400,7 @@ enum {
     IEIDLETIMEOUT = 30,     // Invalid value specified as idle state timeout
     IERCVTIMEOUT = 31,      // Illegal message receive timeout
     IERVRSONLYRCVTIMEOUT = 32,  // Client receive timeout is valid only in reverse mode
+    IESNDTIMEOUT = 33,      // Illegal message send timeout
     /* Test errors */
     IENEWTEST = 100,        // Unable to create a new test (check perror)
     IEINITTEST = 101,       // Test initialization failed (check perror)
@@ -425,11 +447,14 @@ enum {
     IEAUTHTEST = 142,       // Test authorization failed
     IEBINDDEV = 143,        // Unable to bind-to-device (check perror, maybe permissions?)
     IENOMSG = 144,          // No message was received for NO_MSG_RCVD_TIMEOUT time period
-    IESETDONTFRAGMENT = 145,    // Unable to set IP Do-Not-Fragment
+    IESETDONTFRAGMENT = 145,   // Unable to set IP Do-Not-Fragment
+    IEBINDDEVNOSUPPORT = 146,  // `ip%%dev` is not supported as system does not support bind to device
+    IEHOSTDEV = 147,        // host device name (ip%%<dev>) is supported (and required) only for IPv6 link-local address
+    IESETUSERTIMEOUT = 148, // Unable to set TCP USER_TIMEOUT (check perror)
     /* Stream errors */
     IECREATESTREAM = 200,   // Unable to create a new stream (check herror/perror)
     IEINITSTREAM = 201,     // Unable to initialize stream (check herror/perror)
-    IESTREAMLISTEN = 202,   // Unable to start stream listener (check perror) 
+    IESTREAMLISTEN = 202,   // Unable to start stream listener (check perror)
     IESTREAMCONNECT = 203,  // Unable to connect stream (check herror/perror)
     IESTREAMACCEPT = 204,   // Unable to accepte stream connection (check perror)
     IESTREAMWRITE = 205,    // Unable to write to stream socket (check perror)

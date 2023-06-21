@@ -1,17 +1,17 @@
 --- iperf/src/iperf.h
 +++ iperf/src/iperf.h
-@@ -289,6 +289,8 @@
+@@ -296,6 +296,8 @@
      char     *logfile;				/* --logfile option */
      FILE     *outfile;
  
 +    char     *intervalFile;			/* --logfile option */
 +
      int       ctrl_sck;
+     int       mapped_v4;
      int       listener;
-     int       prot_listener;
 --- iperf/src/iperf_api.c
 +++ iperf/src/iperf_api.c
-@@ -988,6 +988,7 @@
+@@ -1084,6 +1084,7 @@
  #endif
  	{"pidfile", required_argument, NULL, 'I'},
  	{"logfile", required_argument, NULL, OPT_LOGFILE},
@@ -19,7 +19,7 @@
  	{"forceflush", no_argument, NULL, OPT_FORCEFLUSH},
  	{"get-server-output", no_argument, NULL, OPT_GET_SERVER_OUTPUT},
  	{"udp-counters-64bit", no_argument, NULL, OPT_UDP_COUNTERS_64BIT},
-@@ -1030,7 +1031,7 @@
+@@ -1128,7 +1129,7 @@
      char *client_username = NULL, *client_rsa_public_key = NULL, *server_rsa_private_key = NULL;
  #endif /* HAVE_SSL */
  
@@ -28,7 +28,7 @@
          switch (flag) {
              case 'p':
  		portno = atoi(optarg);
-@@ -1391,6 +1392,9 @@
+@@ -1530,6 +1531,9 @@
  	    case OPT_LOGFILE:
  		test->logfile = strdup(optarg);
  		break;
@@ -38,7 +38,7 @@
  	    case OPT_FORCEFLUSH:
  		test->forceflush = 1;
  		break;
-@@ -3114,6 +3118,44 @@
+@@ -3288,6 +3292,44 @@
      }
  }
  
@@ -83,7 +83,7 @@
  /**
   * Print intermediate results during a test (interval report).
   * Uses print_interval_results to print the results for each stream,
-@@ -3825,13 +3867,14 @@
+@@ -4052,6 +4094,7 @@
          case STREAM_RUNNING:
              /* print interval results for each stream */
              iperf_print_intermediate(test);
@@ -91,15 +91,7 @@
              break;
          case TEST_END:
          case DISPLAY_RESULTS:
-             iperf_print_intermediate(test);
-             iperf_print_results(test);
-             break;
--    } 
-+    }
- 
- }
- 
-@@ -4394,6 +4437,18 @@
+@@ -4643,6 +4686,18 @@
      return 0;
  }
  
@@ -120,15 +112,15 @@
  {
 --- iperf/src/iperf_api.h
 +++ iperf/src/iperf_api.h
-@@ -87,6 +87,7 @@
- #define OPT_IDLE_TIMEOUT 25
+@@ -90,6 +90,7 @@
  #define OPT_DONT_FRAGMENT 26
  #define OPT_RCV_TIMEOUT 27
-+#define OPT_INTERVAL_LOG 28
+ #define OPT_SND_TIMEOUT 28
++#define OPT_INTERVAL_LOG 29
  
  /* states */
  #define TEST_START 1
-@@ -326,6 +327,7 @@
+@@ -347,6 +348,7 @@
  int iperf_create_pidfile(struct iperf_test *);
  int iperf_delete_pidfile(struct iperf_test *);
  void iperf_check_total_rate(struct iperf_test *, iperf_size_t);
@@ -138,7 +130,7 @@
  int iperf_json_start(struct iperf_test *);
 --- iperf/src/iperf_error.c
 +++ iperf/src/iperf_error.c
-@@ -114,6 +114,8 @@
+@@ -115,6 +115,8 @@
      va_end(argp);
      if (test)
          iperf_delete_pidfile(test);
@@ -151,7 +143,7 @@ diff --git iperf/src/iperf_locale.c iperf/src/iperf_locale.c
 index 115adf2..698705b 100644
 --- iperf/src/iperf_locale.c
 +++ iperf/src/iperf_locale.c
-@@ -112,6 +112,7 @@
+@@ -115,6 +115,7 @@
                             "  -V, --verbose             more detailed output\n"
                             "  -J, --json                output in JSON format\n"
                             "  --logfile f               send output to a log file\n"

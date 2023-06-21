@@ -79,7 +79,7 @@ typedef uint64_t iperf_size_t;
 
 struct iperf_interval_results
 {
-    iperf_size_t bytes_transferred; /* bytes transfered in this interval */
+    iperf_size_t bytes_transferred; /* bytes transferred in this interval */
     struct iperf_time interval_start_time;
     struct iperf_time interval_end_time;
     float     interval_duration;
@@ -94,22 +94,21 @@ struct iperf_interval_results
     int       cnt_error;
 
     int omitted;
-#if (defined(linux) || defined(__FreeBSD__) || defined(__NetBSD__)) && \
+#if (defined(linux) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)) && \
 	defined(TCP_INFO)
-    struct tcp_info tcpInfo; /* getsockopt(TCP_INFO) for Linux, {Free,Net}BSD */
+    struct tcp_info tcpInfo; /* getsockopt(TCP_INFO) for Linux, {Free,Net,Open}BSD */
 #else
     /* Just placeholders, never accessed. */
     char *tcpInfo;
 #endif
-    int interval_retrans;
-    int interval_sacks;
-    int snd_cwnd;
-    int snd_wnd;
+    long interval_retrans;
+    long snd_cwnd;
+    long snd_wnd;
     TAILQ_ENTRY(iperf_interval_results) irlistentries;
     void     *custom_data;
-    int rtt;
-    int rttvar;
-    int pmtu;
+    long rtt;
+    long rttvar;
+    long pmtu;
 };
 
 struct iperf_stream_result
@@ -119,16 +118,14 @@ struct iperf_stream_result
     iperf_size_t bytes_received_this_interval;
     iperf_size_t bytes_sent_this_interval;
     iperf_size_t bytes_sent_omit;
-    int stream_prev_total_retrans;
-    int stream_retrans;
-    int stream_prev_total_sacks;
-    int stream_sacks;
-    int stream_max_rtt;
-    int stream_min_rtt;
-    int stream_sum_rtt;
+    long stream_prev_total_retrans;
+    long stream_retrans;
+    long stream_max_rtt;
+    long stream_min_rtt;
+    long stream_sum_rtt;
     int stream_count_rtt;
-    int stream_max_snd_cwnd;
-    int stream_max_snd_wnd;
+    long stream_max_snd_cwnd;
+    long stream_max_snd_wnd;
     struct iperf_time start_time;
     struct iperf_time end_time;
     struct iperf_time start_time_fixed;
@@ -146,7 +143,7 @@ struct iperf_settings
     int       blksize;              /* size of read/writes (-l) */
     iperf_size_t  rate;                 /* target data rate for application pacing*/
     iperf_size_t  bitrate_limit;   /* server's maximum allowed total data rate for all streams*/
-    double        bitrate_limit_interval;  /* interval for avaraging total data rate */
+    double        bitrate_limit_interval;  /* interval for averaging total data rate */
     int           bitrate_limit_stats_per_interval;     /* calculated number of stats periods for averaging total data rate */
     uint64_t  fqrate;               /* target data rate for FQ pacing*/
     int	      pacing_timer;	    /* pacing timer in microseconds */
@@ -168,6 +165,7 @@ struct iperf_settings
 #endif // HAVE_SSL
     int	      connect_timeout;	    /* socket connection timeout, in ms */
     int       idle_timeout;         /* server idle time timeout */
+    unsigned int snd_timeout; /* Timeout for sending tcp messages in active mode, in us */
     struct iperf_time rcv_timeout;  /* Timeout for receiving messages in active mode, in us */
 };
 
@@ -183,7 +181,7 @@ struct iperf_stream
     int       socket;
     int       id;
     int       sender;
-	/* XXX: is settings just a pointer to the same struct in iperf_test? if not, 
+	/* XXX: is settings just a pointer to the same struct in iperf_test? if not,
 		should it be? */
     struct iperf_settings *settings;	/* pointer to structure settings */
 
@@ -257,6 +255,15 @@ enum iperf_mode {
 	BIDIRECTIONAL = -1
 };
 
+enum debug_level {
+    DEBUG_LEVEL_ERROR = 1,
+    DEBUG_LEVEL_WARN = 2,
+    DEBUG_LEVEL_INFO = 3,
+    DEBUG_LEVEL_DEBUG = 4,
+    DEBUG_LEVEL_MAX = 4
+};
+
+
 struct iperf_test
 {
     char      role;                             /* 'c' lient or 's' erver */
@@ -290,6 +297,7 @@ struct iperf_test
     FILE     *outfile;
 
     int       ctrl_sck;
+    int       mapped_v4;
     int       listener;
     int       prot_listener;
 
@@ -311,6 +319,7 @@ struct iperf_test
     int	      json_output;                      /* -J option - JSON output */
     int	      zerocopy;                         /* -Z option - use sendfile */
     int       debug;				/* -d option - enable debug */
+    enum      debug_level debug_level;          /* -d option option - level of debug messages to show */
     int	      get_server_output;		/* --get-server-output */
     int	      udp_counters_64bit;		/* --use-64-bit-udp-counters */
     int       forceflush; /* --forceflush - flushing output at every interval */
@@ -325,7 +334,7 @@ struct iperf_test
     fd_set    read_set;                         /* set of read sockets */
     fd_set    write_set;                        /* set of write sockets */
 
-    /* Interval related members */ 
+    /* Interval related members */
     int       omitting;
     double    stats_interval;
     double    reporter_interval;
@@ -350,7 +359,7 @@ struct iperf_test
 
     iperf_size_t bitrate_limit_stats_count;               /* Number of stats periods accumulated for server's total bitrate average */
     iperf_size_t *bitrate_limit_intervals_traffic_bytes;  /* Pointer to a cyclic array that includes the last interval's bytes transferred */
-    iperf_size_t bitrate_limit_last_interval_index;       /* Index of the last interval traffic insrted into the cyclic array */
+    iperf_size_t bitrate_limit_last_interval_index;       /* Index of the last interval traffic inserted into the cyclic array */
     int          bitrate_limit_exceeded;                  /* Set by callback routine when average data rate exceeded the server's bitrate limit */
 
     int server_last_run_rc;                      /* Save last server run rc for next test */
@@ -420,5 +429,13 @@ struct iperf_test
 #define TIMESTAMP_FORMAT "%c "
 
 extern int gerror; /* error value from getaddrinfo(3), for use in internal error handling */
+
+/* UDP "connect" message and reply (textual value for Wireshark, etc. readability - legacy was numeric) */
+#define UDP_CONNECT_MSG 0x36373839          // "6789" - legacy value was 123456789
+#define UDP_CONNECT_REPLY 0x39383736        // "9876" - legacy value was 987654321
+#define LEGACY_UDP_CONNECT_REPLY 987654321  // Old servers may still reply with the legacy value
+
+/* In Reverse mode, maximum number of packets to wait for "accept" response - to handle out of order packets */
+#define MAX_REVERSE_OUT_OF_ORDER_PACKETS 2
 
 #endif /* !__IPERF_H */

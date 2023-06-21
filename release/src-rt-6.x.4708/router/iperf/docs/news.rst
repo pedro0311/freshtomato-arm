@@ -1,6 +1,45 @@
 iperf3 Project News
 ===================
 
+2022-09-30:  iperf-3.12 released
+----------------------------------
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.12.tar.gz
+| SHA256:  ``72034ecfb6a7d6d67e384e19fb6efff3236ca4f7ed4c518d7db649c447e1ffd6``
+
+iperf 3.12 is principally a bugfix release, although it includes an
+updated version of cJSON and adds a few new features.
+
+
+2022-01-28:  iperf-3.11 released
+----------------------------------
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.11.tar.gz
+| SHA256:  ``de8cb409fad61a0574f4cb07eb19ce1159707403ac2dc01b5d175e91240b7e5f``
+
+iperf 3.11 is principally a bugfix release. Also GitHub
+Discussions are now supported.
+
+
+2021-06-02:  iperf-3.10.1 released
+----------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.10.1.tar.gz
+| SHA256:  ``03bc9760cc54a245191d46bfc8edaf8a4750f0e87abca6764486972044d6715a  iperf-3.10.1.tar.gz``
+
+iperf 3.10.1 fixes a problem with the configure script that made it
+make not work correctly in some circumstances. It is functionally
+identical to iperf 3.10.
+
+2021-05-26:  iperf-3.10 released
+--------------------------------
+
+| URL:  https://downloads.es.net/pub/iperf/iperf-3.10.tar.gz
+| SHA256:  ``4390982928542256c17d6dd1f56eede9092649ebfd8a97c8cecfad12d238ad57  iperf-3.10.tar.gz``
+
+iperf 3.10 is principally a bugfix release. A few new features have
+been added (``--time-skew-threshold``, ``--bind-dev``,
+``--rcv-timeout``, and ``--dont-fragment``).  More information on
+these new features can be found in the release notes.
+
 2020-08-17:  iperf-3.9 released
 ---------------------------------
 
@@ -389,6 +428,5 @@ https://github.com/esnet/iperf
 
 During development, there were various distributions of the source
 code unofficially released carrying a 3.0.0 version number.  Because
-of the possiblity for confusion, this first public release of iperf3
+of the possibility for confusion, this first public release of iperf3
 was numbered 3.0.1.
-

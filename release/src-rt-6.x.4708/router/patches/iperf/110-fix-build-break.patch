@@ -1,10 +1,11 @@
 --- iperf/configure.ac
 +++ iperf/configure.ac
-@@ -68,7 +68,6 @@
-   ISO C90 headers unconditionally.])dnl
- # Autoupdate added the next two lines to ensure that your configure
- # script's behavior did not change.  They are probably safe to remove.
--AC_CHECK_INCLUDES_DEFAULT
- AC_PROG_EGREP
+@@ -24,7 +24,7 @@
+ # file for complete information.
  
- 
+ # Initialize the autoconf system for the specified tool, version and mailing list
+-AC_PREREQ([2.71])
++# AC_PREREQ([2.71])
+ AC_INIT([iperf],[3.13],[https://github.com/esnet/iperf],[iperf],[https://software.es.net/iperf/])
+ m4_include([config/ax_check_openssl.m4])
+ m4_include([config/iperf_config_static_bin.m4])
