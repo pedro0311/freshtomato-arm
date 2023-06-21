@@ -5,6 +5,70 @@ FreshTomato-ARM Changelog
 
 
 
+2023.3          2023.06.25
+---------------------------
+
+- kernel: usbnet: optimize usbnet_bh() to reduce CPU load
+- busybox: update to 1.36.1
+- openvpn: update to 2.6.5
+- libcurl: update to 8.1.2
+- sqlite: update to 3.42.0
+- libxml2: update to 2.11.4
+- nginx: update to 1.25.1
+- openssl-1.1: update to 1.1.1u
+- libsodium: update to latest 1.0.18-stable
+- libubox: update to 75a3b87 (2023-05-23) snapshot
+- dnsmasq: update to 9bbf098 (2023-05-26) snapshot
+- nettle: update to 3.9.1
+- util-linux: update to 2.39
+- libusb: update to d5bb64b (2020-01-24) snapshot
+- adblock v2: update to 2.72b
+- dhcp6c: add signal handling of SIGINT and fflush
+- getdns/stubby: fix the IP of one of the OpenDNS servers
+- stubby: add getdnsapi.net DNS to the resolver list
+- stubby: remove Surfnet/Sinodun DNS from the list - it doesn't work anymore (resolves #279)
+- rstats (Bandwidth Monitoring): add rstats nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- cstats (IP Traffic Monitoring): add cstats nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- FTP Server: add ftp nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- SNMP: add snmp nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- UPnP: add upnp nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- httpd: improve buffer handling
+- httpd: increase buffer for get_wl_tempsense(); also use proper site_t buffer in snprintf
+- shared/rc/httpd: improve buffer validation (strlcat_r)
+- bsd/eapd/wlconf: fix build break (strlcat_r)
+- mdu: fix compilation in case if built without libcurl; avoid compiler warnings
+- mdu: fix segfault in curl_headers() when adding more than one header at a time
+- mdu: add addtional headers for wget()
+- mdu: fix basic auth in update_wget() when built with libcurl
+- mdu: mdu.c: improve buffer handling
+- mdu: allow the user to specify a custom polling period for External IP address checker
+- mdu: rewrite the part responsible for obtaining the external IP address
+- GUI: Basic: DHCP Reservation: properly initialize 'Static lease time' on page load
+- GUI: admin-iptraffic.asp - add note about IPv4 only (no support for IPv6)
+- GUI: advanced-wireless.asp - add Optimized for Xbox option 
+- GUI: Advanced: DHCP/DNS/TFTP: allow to ignore DHCP requests from unknown devices on each bridge individually
+- GUI: Basic: Network: fix visibility of 'AP MAC Address to connect' option
+- GUI: bwlimit.asp - add checks for Multi-LAN setups
+- GUI: Basic: DDNS Client: use ajax to refresh info on page
+- GUI: VPN Tunneling: OpenVPN Client: Routing Policy: add more thorough domain validation (resolves #285)
+- shared: misc.c: get_dns(): really add received DNS servers to the static DNS server list
+- Revert "rp-pppoe: update to 3c0f6c02 (2023-02-08) snapshot"
+- rc: init.c: fix restart of some services when using SIGHUP on init (resolves #284)
+- rc: transmission.c: fix port forwarding for IPv6
+- rc: wan.c: fix restart of some services in WET mode
+- rc: do not waste time and resources if IPv6 is disabled
+- rc: jffs2.c - do not delete (automatically) jffs if mounting fails (show error only)
+- rc: ddns.c: distinguish addrcache and dump file depending on the unit number
+- rc: ftpd.c: fix bug where in some cases FW rules to open WAN port were not removed
+- rc: nginx.c: fix bug where in some cases FW rule to open WAN port was not removed
+- rc: mysql.c: Fix copying adminer.php to nginx_docroot
+- rom: update CA bundle to 2023-05-30
+- WL (SDK6 and up!): show & provide all valid WiFi 5 (AC / 80 MHz) control channels (lower-lower [LL], lower-upper [LU], upper-lower [UL], upper-upper [UU])
+- Linksys EA6200: fix wl config (nvram wl0_nband) - 5 GHz radio first
+- Belkin F9K1113v2: fix wl config (nvram wl0_nband) - 5 GHz radio first
+- Xiaomi MiWiFi: fix wl config (nvram wl0_nband) - 5 GHz radio first
+
+
 2023.2          2023.03.18
 ---------------------------
 
