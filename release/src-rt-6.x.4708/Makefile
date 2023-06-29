@@ -222,7 +222,7 @@ endif
 ifeq ($(ASUS_TRX),DLINK)
 	ctools/trx_asus -i image/linux-lzma.trx -r DIR868L,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-DIR868L-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
-# for AC1450, R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, R6300v2, R6250, XR300
+# for R6900, R7000, R6700v1, R6700v3, R6400, R6400v2, XR300
 ifeq ($(ASUS_TRX),NETGEAR)
 ifeq ($(CONFIG_BCM7),y)
 	ctools/trx_asus -i image/linux-lzma.trx -r R7900,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R7900-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
@@ -238,14 +238,17 @@ else
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v3,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6700v3-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 else
-	ctools/trx_asus -i image/linux-lzma.trx -r AC1450,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-AC1450-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R7000,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R7000-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6900,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6900-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6700v1,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6700v1-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
-	ctools/trx_asus -i image/linux-lzma.trx -r R6300v2,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6300v2-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
+endif
+endif
+# for AC1450, R6300v2, R6250
+ifeq ($(ASUS_TRX),NETGEAR_LIGHT)
+	ctools/trx_asus -i image/linux-lzma.trx -r AC1450,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-AC1450-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6250,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6250-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
-endif
-endif
+	ctools/trx_asus -i image/linux-lzma.trx -r R6300v2,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6300v2-ARM-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 # for WS880
 ifeq ($(ASUS_TRX),HUAWEI)
@@ -1297,6 +1300,10 @@ o:
 	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="Custom" CTF=y GRO=y USB="USB" NOCAT=n BTCLIENT=y TR_EXTRAS=y \
 	    DNSCRYPT=y STUBBY=y PPTPD=y DNSSEC=y SNMP=n TINC=n TOR=y OPENSSL11=y NFS=y QRCODE=y ROAM=y PROXY=y
 
+y:
+	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO_Lite" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
+	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CRASH_LOG=y MDNS=y ZFS=y QRCODE=y ROAM=y PROXY=y
+
 z:
 	@$(MAKE) bin OPENVPN=y WIREGUARD=y NTFS=y HFS=y BBEXTRAS=y USBEXTRAS=y EBTABLES=y MEDIASRV=y IPV6SUPP=y MULTIWAN=y B=E BUILD_DESC="AIO" CTF=y GRO=y USB="USB" NOCAT=y BTCLIENT=y TR_EXTRAS=y \
 	    DNSCRYPT=y STUBBY=y UPS=y PPTPD=y DNSSEC=y TINC=y SNMP=y NFS=y NANO=y TOR=y NGINX=y IPERF=y OPENSSL11=y CONNTRACK_TOOL=y NAMESPACES=y CRASH_LOG=y MDNS=y ZFS=y QRCODE=y ROAM=y PROXY=y
@@ -1334,6 +1341,9 @@ r7000e:
 
 r7000z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
+
+r6300y:
+	@$(MAKE) y ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR_LIGHT" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
 r6400e:
 	@$(MAKE) e ARM=y NVRAM_128K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
@@ -1407,8 +1417,8 @@ ea6350v1z:
 ea6350v2e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS3" FAILSAFE_UPGRADE=n DPSTA=y BSD=y IRQBALANCE=y
 
-ea6350v2z:
-	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS3" FAILSAFE_UPGRADE=n DPSTA=y BSD=y IRQBALANCE=y
+ea6350v2y:
+	@$(MAKE) y ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="LINKSYS3" FAILSAFE_UPGRADE=n DPSTA=y BSD=y IRQBALANCE=y
 
 r1do:
 	@$(MAKE) o ARM=y NVRAM_64K=y BCMSMP=y XIAOMI_TRX="R1D" SATA=y NO_JFFS=y FANCTRL=y DPSTA=y TUXERA=y TUXERA_HFS=y BSD=y
@@ -1520,7 +1530,8 @@ help:
 	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
 	@echo "r7000e          AC1450, R7000/R6900/R6700v1/R6300v2/R6250 build VPN"
-	@echo "r7000z          AC1450, R7000/R6900/R6700v1/R6300v2/R6250 build AIO"
+	@echo "r7000z          R7000/R6900/R6700v1 build AIO"
+	@echo "r6300z          AC1450, R6300v2/R6250 build AIO_Lite"
 	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
 	@echo "r6400z          R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
 	@echo "xr300e          XR300/R6700v3 build VPN - 128K NVRAM 512M DRAM"
@@ -1550,7 +1561,7 @@ help:
 	@echo "ea6350v1e       EA6200/EA6350v1 build VPN"
 	@echo "ea6350v1z       EA6200/EA6350v1 build AIO"
 	@echo "ea6350v2e       EA6350v2 build VPN"
-	@echo "ea6350v2z       EA6350v2 build AIO"
+	@echo "ea6350v2y       EA6350v2 build AIO_Lite"
 ifeq ($(CONFIG_BCM714),y)
 	@echo "ASUS ARM714 Builds"
 	@echo "ac5300-128e     RT-AC5300 build VPN - 128K NVRAM"
