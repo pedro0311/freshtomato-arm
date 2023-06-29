@@ -325,7 +325,6 @@ obj-$(TCONFIG_USB) += comgt
 obj-$(TCONFIG_USB) += libjson-c
 obj-$(TCONFIG_USB) += libubox
 obj-$(TCONFIG_USB) += uqmi
-obj-$(TCONFIG_USB) += pdureader
 obj-$(TCONFIG_USB) += sd-idle
 obj-$(TCONFIG_UPS) += apcupsd
 ifneq ($(TCONFIG_BCMARM)$(TCONFIG_NGINX),)
