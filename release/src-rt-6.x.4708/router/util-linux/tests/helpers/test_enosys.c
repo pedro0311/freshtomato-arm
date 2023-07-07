@@ -27,35 +27,8 @@
 #include <sys/prctl.h>
 
 #include "c.h"
+#include "audit-arch.h"
 #include "exitcodes.h"
-
-#if __x86_64__
-#    define SECCOMP_ARCH_NATIVE AUDIT_ARCH_X86_64
-#elif __i386__
-#    define SECCOMP_ARCH_NATIVE AUDIT_ARCH_I386
-#elif __arm__
-#    define SECCOMP_ARCH_NATIVE AUDIT_ARCH_ARM
-#elif __aarch64__
-#    define SECCOMP_ARCH_NATIVE AUDIT_ARCH_AARCH64
-#elif __riscv
-#    if __riscv_xlen == 32
-#        define SECCOMP_ARCH_NATIVE AUDIT_ARCH_RISCV32
-#    elif __riscv_xlen == 64
-#        define SECCOMP_ARCH_NATIVE AUDIT_ARCH_RISCV64
-#    endif
-#elif __s390__
-# 	 define SECCOMP_ARCH_NATIVE AUDIT_ARCH_S390
-#elif __s390x__
-# 	 define SECCOMP_ARCH_NATIVE AUDIT_ARCH_S390X
-#elif __PPC64__
-#    if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-# 	 define SECCOMP_ARCH_NATIVE AUDIT_ARCH_PPC64
-#    else
-# 	 define SECCOMP_ARCH_NATIVE AUDIT_ARCH_PPC64LE
-#    endif
-#else
-#    error Unknown target architecture
-#endif
 
 #define syscall_nr (offsetof(struct seccomp_data, nr))
 
@@ -65,9 +38,19 @@ struct syscall {
 };
 
 const struct syscall syscalls[] = {
+#ifdef __NR_move_mount
 	{ "move_mount", __NR_move_mount },
+#endif
+#ifdef __NR_open_tree
 	{ "open_tree", __NR_open_tree },
+#endif
+#ifdef __NR_fsopen
 	{ "fsopen", __NR_fsopen },
+#endif
+#ifdef __NR_mount_setattr
+	{ "mount_setattr", __NR_mount_setattr },
+#endif
+
 };
 
 int main(int argc, char **argv)

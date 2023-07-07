@@ -177,6 +177,22 @@ static int evaluate_permissions(struct libmnt_context *cxt)
 	if (rc)
 		return rc;
 
+	/*
+	* Ignore user=<name> (if <name> is set). Let's keep it hidden
+	* for normal library operations, but visible for /sbin/mount.<type>
+	* helpers.
+	*/
+	if (user_flags & MNT_MS_USER
+	    && (opt = mnt_optlist_get_opt(ol, MNT_MS_USER, cxt->map_userspace))
+	    && mnt_opt_has_value(opt)) {
+		DBG(CXT, ul_debugobj(cxt, "perms: user=<name> detected, ignore"));
+
+		cxt->flags |= MNT_FL_SAVED_USER;
+
+		mnt_opt_set_external(opt, 1);
+		user_flags &= ~MNT_MS_USER;
+	}
+
 	if (!mnt_context_is_restricted(cxt)) {
 		/*
 		 * superuser mount
@@ -226,22 +242,6 @@ static int evaluate_permissions(struct libmnt_context *cxt)
 		{
 			DBG(CXT, ul_debugobj(cxt, "perms: fstab not applied, ignore user mount"));
 			return -EPERM;
-		}
-
-		/*
-		* Ignore user=<name> (if <name> is set). Let's keep it hidden
-		* for normal library operations, but visible for /sbin/mount.<type>
-		* helpers.
-		*/
-		if (user_flags & MNT_MS_USER
-		    && (opt = mnt_optlist_get_opt(ol, MNT_MS_USER, cxt->map_userspace))
-		    && mnt_opt_has_value(opt)) {
-			DBG(CXT, ul_debugobj(cxt, "perms: user=<name> detected, ignore"));
-
-			cxt->flags |= MNT_FL_SAVED_USER;
-
-			mnt_opt_set_external(opt, 1);
-			user_flags &= ~MNT_MS_USER;
 		}
 
 		/*
@@ -377,9 +377,7 @@ int mnt_context_mount_setopt(struct libmnt_context *cxt, int c, char *arg)
 
 static int exec_helper(struct libmnt_context *cxt)
 {
-	struct libmnt_optlist *ol;
 	struct libmnt_ns *ns_tgt = mnt_context_get_target_ns(cxt);
-	const char *o = NULL;
 	char *namespace = NULL;
 	int rc;
 	pid_t pid;
@@ -390,14 +388,6 @@ static int exec_helper(struct libmnt_context *cxt)
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
 
 	DBG(CXT, ul_debugobj(cxt, "mount: executing helper %s", cxt->helper));
-
-	ol = mnt_context_get_optlist(cxt);
-	if (!ol)
-		return -ENOMEM;
-
-	rc = mnt_optlist_get_optstr(ol, &o, NULL, MNT_OL_FLTR_HELPERS);
-	if (rc)
-		return rc;
 
 	if (ns_tgt->fd != -1
 	    && asprintf(&namespace, "/proc/%i/fd/%i",
@@ -412,7 +402,23 @@ static int exec_helper(struct libmnt_context *cxt)
 	case 0:
 	{
 		const char *args[14], *type;
+		struct libmnt_optlist *ol = mnt_context_get_optlist(cxt);
+		struct libmnt_opt *opt;
+		const char *o = NULL;
 		int i = 0;
+
+		if (!ol)
+			_exit(EXIT_FAILURE);
+
+		/* Call helper with original user=<name> (aka "saved user")
+		 * or remove the username at all.
+		 */
+		opt = mnt_optlist_get_opt(ol, MNT_MS_USER, cxt->map_userspace);
+		if (opt && !(cxt->flags & MNT_FL_SAVED_USER))
+			mnt_opt_set_value(opt, NULL);
+
+		if (mnt_optlist_get_optstr(ol, &o, NULL, MNT_OL_FLTR_HELPERS))
+			_exit(EXIT_FAILURE);
 
 		if (drop_permissions() != 0)
 			_exit(EXIT_FAILURE);
@@ -501,6 +507,8 @@ static int do_mount(struct libmnt_context *cxt, const char *try_type)
 	assert(cxt);
 	assert(cxt->fs);
 	assert((cxt->flags & MNT_FL_MOUNTFLAGS_MERGED));
+
+	mnt_context_reset_status(cxt);
 
 	if (try_type) {
 		rc = mnt_context_prepare_helper(cxt, "mount", try_type);

@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="17-May-2023"
+LIBBLKID_DATE="27-Jun-2023"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -802,6 +802,17 @@ AC_ARG_ENABLE([asciidoc],
 UL_BUILD_INIT([asciidoc])
 UL_REQUIRES_PROGRAM([asciidoc], [ASCIIDOCTOR], [asciidoctor], [man pages])
 AM_CONDITIONAL([ENABLE_ASCIIDOC], [test "x$build_asciidoc" = xyes])
+have_asciidoctor_failure_level=no
+AS_IF([test "x$build_asciidoc" = xyes], [
+       AC_MSG_CHECKING([whether ${ASCIIDOCTOR} supports --failure-level])
+       AS_IF([${ASCIIDOCTOR} --help | grep failure-level >/dev/null 2>&1 ], [
+         AC_MSG_RESULT([yes])
+         have_asciidoctor_failure_level=yes
+       ], [
+         AC_MSG_RESULT([no])
+       ])
+])
+AM_CONDITIONAL([HAVE_ASCIIDOCTOR_FAILURE_LEVEL], [test "x$have_asciidoctor_failure_level" = xyes])
 
 have_manpages=no
 AS_IF([test -f "$srcdir/sys-utils/mount.8"], [
@@ -1847,8 +1858,13 @@ UL_BUILD_INIT([fadvise], [check])
 UL_REQUIRES_LINUX([fadvise])
 AM_CONDITIONAL([BUILD_FADVISE], [test "x$build_fadvise" = xyes])
 
-UL_BUILD_INIT([waitpid], [check])
+AC_ARG_ENABLE([waitpid],
+  AS_HELP_STRING([--disable-waitpid], [do not build waitpid]),
+  [], [UL_DEFAULT_ENABLE([waitpid], [check])]
+)
+UL_BUILD_INIT([waitpid])
 UL_REQUIRES_LINUX([waitpid])
+UL_REQUIRES_SYSCALL_CHECK([waitpid], [UL_CHECK_SYSCALL([pidfd_open])], [pidfd_open])
 AM_CONDITIONAL([BUILD_WAITPID], [test "x$build_waitpid" = xyes])
 
 UL_BUILD_INIT([getopt], [yes])

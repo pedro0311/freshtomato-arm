@@ -1,6 +1,6 @@
 project('util-linux', 'c',
         version : run_command('tools/git-version-gen', check: true).stdout(),
-        meson_version: '>=0.53.0',
+        meson_version: '>=0.57.0',
         license : 'GPLv2+')
 
 pkgconfig = import('pkgconfig')
@@ -483,6 +483,18 @@ have = cc.compiles('''
   name : 'langinfo.h defines _NL_ABALTMON_x constants')
 conf.set('HAVE_LANGINFO_NL_ABALTMON', have ? 1 : false)
 
+have = cc.compiles('''
+   #define _GNU_SOURCE 1
+   #include <langinfo.h>
+   int main(void) {
+        char *str;
+        str = nl_langinfo (_NL_TIME_WEEK_1STDAY);
+        return 0;
+   }
+   ''',
+  name : 'langinfo.h defines _NL_TIME_WEEK_1STDAY constant')
+conf.set('HAVE_DECL__NL_TIME_WEEK_1STDAY', have ? 1 : false)
+
 funcs = '''
         clearenv
         close_range
@@ -708,6 +720,9 @@ int main(void) {
 have = cc.compiles(code, name : 'using __progname')
 conf.set('HAVE___PROGNAME', have ? 1 : false)
 
+have = conf.get('HAVE_PTY_H') != false and conf.get('HAVE_SYS_SIGNALFD_H') != false
+conf.set('HAVE_PTY', have ? 1 : false)
+
 have_opal_get_status= cc.has_header_symbol('linux/sed-opal.h', 'IOC_OPAL_GET_STATUS')
 conf.set('HAVE_OPAL_GET_STATUS', have_opal_get_status ? 1 : false)
 
@@ -895,6 +910,7 @@ exe = executable(
   link_with : [lib_common, logindefs_c],
   dependencies : chfn_chsh_deps,
   install_dir : usrbin_exec_dir,
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 
@@ -907,6 +923,7 @@ exe2 = executable(
   link_with : lib_common,
   dependencies : chfn_chsh_deps,
   install_dir : usrbin_exec_dir,
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 if opt and not is_disabler(exe)
@@ -994,6 +1011,7 @@ exe = executable(
                   lib_pam_misc,
                   lib_util,
                   realtime_libs],
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 if opt and not is_disabler(exe)
@@ -1009,11 +1027,13 @@ exe = executable(
   include_directories : includes,
   dependencies : [lib_crypt],
   install_dir : usrbin_exec_dir,
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 if opt and not is_disabler(exe)
   exes += exe
   manadocs += ['login-utils/newgrp.1.adoc']
+  bashcompletions += ['newgrp']
 endif
 
 opt = not get_option('build-lslogins').disabled()
@@ -1052,6 +1072,9 @@ if opt and not is_disabler(exe)
                            'vipw',
                            join_paths(usrbin_exec_dir, 'vigr'))
   manadocs += ['login-utils/vipw.8.adoc']
+  meson.add_install_script(meson_make_symlink,
+                           'vipw.8',
+                           join_paths(mandir, 'man8/vigr.8'))
 endif
 
 opt = not get_option('build-runuser').disabled()
@@ -1621,6 +1644,7 @@ exe = executable(
                lib_smartcols,
                lib_mount],
   dependencies : lib_selinux,
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 exe2 = executable(
@@ -1629,6 +1653,7 @@ exe2 = executable(
   include_directories : includes,
   link_with : [lib_common,
                lib_mount],
+  install_mode : 'rwsr-xr-x',
   install : opt,
   build_by_default : opt)
 if opt and not is_disabler(exe)
@@ -2379,6 +2404,7 @@ exe = executable(
   include_directories : includes,
   link_with : [lib_common],
   install_dir : usrbin_exec_dir,
+  install_mode : 'rwxr-sr-x',
   install : opt,
   build_by_default : opt)
 if opt
@@ -2397,11 +2423,13 @@ exe = executable(
   include_directories : includes,
   link_with : [lib_common],
   install_dir : usrbin_exec_dir,
+  install_mode : 'rwxr-sr-x',
   install : opt,
   build_by_default : opt)
 if opt
   exes += exe
   manadocs += ['term-utils/write.1.adoc']
+  bashcompletions += ['write']
 endif
 
 # chgrp tty $(DESTDIR)$(usrbin_execdir)/write
@@ -2843,17 +2871,19 @@ if not is_disabler(exe)
   bashcompletions += ['fadvise']
 endif
 
-exe = executable(
-  'waitpid',
-  waitpid_sources,
-  include_directories : includes,
-  link_with : [lib_common],
-  install_dir : usrbin_exec_dir,
-  install : true)
-if not is_disabler(exe)
-  exes += exe
-  manadocs += ['misc-utils/waitpid.1.adoc']
-  bashcompletions += ['waitpid']
+if LINUX and conf.get('HAVE_PIDFD_OPEN') != false
+  exe = executable(
+    'waitpid',
+    waitpid_sources,
+    include_directories : includes,
+    link_with : [lib_common],
+    install_dir : usrbin_exec_dir,
+    install : true)
+  if not is_disabler(exe)
+    exes += exe
+    manadocs += ['misc-utils/waitpid.1.adoc']
+    bashcompletions += ['waitpid']
+  endif
 endif
 
 ############################################################
@@ -2962,46 +2992,48 @@ exe = executable(
   include_directories : dir_include)
 exes += exe
 
-# XXX: HAVE_OPENAT && HAVE_DIRFD
-exe = executable(
-  'test_procfs',
-  'lib/procfs.c',
-  c_args : ['-DTEST_PROGRAM_PROCFS'],
-  include_directories : dir_include,
-  link_with : lib_common)
-exes += exe
+if conf.get('HAVE_OPENAT') != false and conf.get('HAVE_DIRFD') != false
+  exe = executable(
+    'test_procfs',
+    'lib/procfs.c',
+    c_args : ['-DTEST_PROGRAM_PROCFS'],
+    include_directories : dir_include,
+    link_with : lib_common)
+  exes += exe
 
-# XXX: HAVE_OPENAT && HAVE_DIRFD
-exe = executable(
-  'test_path',
-  'lib/path.c',
-  'lib/fileutils.c',
-  have_cpu_set_t ? 'lib/cpuset.c' : [],
-  c_args : ['-DTEST_PROGRAM_PATH'],
-  include_directories : dir_include,
-  link_with : lib_common)
-exes += exe
+  exe = executable(
+    'test_path',
+    'lib/path.c',
+    'lib/fileutils.c',
+    have_cpu_set_t ? 'lib/cpuset.c' : [],
+    c_args : ['-DTEST_PROGRAM_PATH'],
+    include_directories : dir_include,
+    link_with : lib_common)
+  exes += exe
+endif
 
-# XXX: HAVE_PTY
-exe = executable(
-  'test_pty',
-  pty_session_c,
-  monotonic_c,
-  c_args : ['-DTEST_PROGRAM_PTY'],
-  include_directories : dir_include,
-  link_with : [lib_common],
-  dependencies : [lib_m,
-                  realtime_libs,
-                  lib_util])
-exes += exe
+if conf.get('HAVE_PTY') != false
+  exe = executable(
+    'test_pty',
+    pty_session_c,
+    monotonic_c,
+    c_args : ['-DTEST_PROGRAM_PTY'],
+    include_directories : dir_include,
+    link_with : [lib_common],
+    dependencies : [lib_m,
+                    realtime_libs,
+                    lib_util])
+  exes += exe
+endif
 
-# XXX: LINUX
-exe = executable(
-  'test_cpuset',
-  'lib/cpuset.c',
-  c_args : ['-DTEST_PROGRAM_CPUSET'],
-  include_directories : dir_include)
-exes += exe
+if LINUX
+  exe = executable(
+    'test_cpuset',
+    'lib/cpuset.c',
+    c_args : ['-DTEST_PROGRAM_CPUSET'],
+    include_directories : dir_include)
+  exes += exe
+endif
 
 exe = executable(
   'test_sysfs',
@@ -3238,12 +3270,13 @@ exe = executable(
   include_directories : includes)
 exes += exe
 
-# XXX: LINUX
-exe = executable(
-  'test_mkfds',
-  'tests/helpers/test_mkfds.c',
-  include_directories : includes)
-exes += exe
+if LINUX
+  exe = executable(
+    'test_mkfds',
+    'tests/helpers/test_mkfds.c',
+    include_directories : includes)
+  exes += exe
+endif
 
 exe = executable(
   'test_enosys',
@@ -3253,14 +3286,15 @@ exes += exe
 
 ############################################################
 
-# XXX: HAVE_OPENAT
-exe = executable(
-  'sample-scols-tree',
-  'libsmartcols/samples/tree.c',
-  include_directories : includes,
-  link_with : [lib_smartcols, lib_common])
-if not is_disabler(exe)
-  exes += exe
+if conf.get('HAVE_OPENAT') != false
+  exe = executable(
+    'sample-scols-tree',
+    'libsmartcols/samples/tree.c',
+    include_directories : includes,
+    link_with : [lib_smartcols, lib_common])
+  if not is_disabler(exe)
+    exes += exe
+  endif
 endif
 
 exe = executable(
@@ -3337,7 +3371,7 @@ configure_file(output : 'meson.conf',
                           '''asan=@0@
 PYTHON=@1@
 '''.format(get_option('b_sanitize')=='address' ? 'yes' : '',
-           python.path())])
+           python.full_path())])
 
 run_sh = find_program('tests/run.sh')
 run_target(
