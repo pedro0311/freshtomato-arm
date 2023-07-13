@@ -1342,6 +1342,9 @@ r7000e:
 r7000z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
+r6300e:
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR_LIGHT" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
+
 r6300y:
 	@$(MAKE) y ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR_LIGHT" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
@@ -1529,8 +1532,9 @@ help:
 	@echo "DLINK ARM Builds"
 	@echo "dir868l         DLINK DIR868L"
 	@echo "NETGEAR ARM Builds"
-	@echo "r7000e          AC1450, R7000/R6900/R6700v1/R6300v2/R6250 build VPN"
+	@echo "r7000e          R7000/R6900/R6700v1 build VPN"
 	@echo "r7000z          R7000/R6900/R6700v1 build AIO"
+	@echo "r6300e          AC1450, R6300v2/R6250 build VPN"
 	@echo "r6300y          AC1450, R6300v2/R6250 build AIO_Lite"
 	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
 	@echo "r6400z          R6400/R6400v2/R6700v3 build AIO - 128K NVRAM"
