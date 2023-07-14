@@ -815,7 +815,7 @@ void start_wan_if(char *prefix)
 	int max;
 	int mtu;
 	char buf[128];
-	char tmp[128];
+	char tmp[128], tmp2[32];
 	int jumbo_enable = 0;
 	struct vlan_ioctl_args ifv;
 
@@ -839,7 +839,7 @@ void start_wan_if(char *prefix)
 	wan_proto = get_wanx_proto(prefix);
 
 	/* Set the default gateway for WAN interface */
-	nvram_set(strlcat_r(prefix, "_gateway_get", tmp, sizeof(tmp)), nvram_safe_get(strlcat_r(prefix, "_gateway", tmp, sizeof(tmp))));
+	nvram_set(strlcat_r(prefix, "_gateway_get", tmp, sizeof(tmp)), nvram_safe_get(strlcat_r(prefix, "_gateway", tmp2, sizeof(tmp2)))); /* tmp2 needed --> code evaluation left to right! */
 
 	if (wan_proto == WP_DISABLED) {
 		start_wan_done(wan_ifname, prefix);
