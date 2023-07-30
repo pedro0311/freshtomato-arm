@@ -1,6 +1,6 @@
 --- iperf/src/iperf.h
 +++ iperf/src/iperf.h
-@@ -296,6 +296,8 @@
+@@ -297,6 +297,8 @@
      char     *logfile;				/* --logfile option */
      FILE     *outfile;
  
@@ -38,7 +38,7 @@
  	    case OPT_FORCEFLUSH:
  		test->forceflush = 1;
  		break;
-@@ -3288,6 +3292,44 @@
+@@ -3335,6 +3339,44 @@
      }
  }
  
@@ -83,7 +83,7 @@
  /**
   * Print intermediate results during a test (interval report).
   * Uses print_interval_results to print the results for each stream,
-@@ -4052,6 +4094,7 @@
+@@ -4110,6 +4152,7 @@
          case STREAM_RUNNING:
              /* print interval results for each stream */
              iperf_print_intermediate(test);
@@ -91,7 +91,7 @@
              break;
          case TEST_END:
          case DISPLAY_RESULTS:
-@@ -4643,6 +4686,18 @@
+@@ -4708,6 +4751,18 @@
      return 0;
  }
  
@@ -130,7 +130,7 @@
  int iperf_json_start(struct iperf_test *);
 --- iperf/src/iperf_error.c
 +++ iperf/src/iperf_error.c
-@@ -115,6 +115,8 @@
+@@ -117,6 +117,8 @@
      va_end(argp);
      if (test)
          iperf_delete_pidfile(test);
@@ -143,7 +143,7 @@ diff --git iperf/src/iperf_locale.c iperf/src/iperf_locale.c
 index 115adf2..698705b 100644
 --- iperf/src/iperf_locale.c
 +++ iperf/src/iperf_locale.c
-@@ -115,6 +115,7 @@
+@@ -127,6 +127,7 @@
                             "  -V, --verbose             more detailed output\n"
                             "  -J, --json                output in JSON format\n"
                             "  --logfile f               send output to a log file\n"
