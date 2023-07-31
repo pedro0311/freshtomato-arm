@@ -1997,12 +1997,12 @@ libjpeg-turbo: libjpeg-turbo/build/Makefile
 
 libjpeg-turbo-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
-	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so && ln -sf libjpeg.so.8.2.2 libjpeg.so.8
+	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
 endif
 ifeq ($(TCONFIG_NGINX),y)
-	install -D libjpeg-turbo/build/libjpeg.so.8.2.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.2.2
-	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.2.2 && ln -sf libjpeg.so.8.2.2 libjpeg.so && ln -sf libjpeg.so.8.2.2 libjpeg.so.8
+	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
+	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
 endif
 	@true
 
