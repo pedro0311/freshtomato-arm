@@ -4024,7 +4024,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); /* get et0 MAC address for LAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
 			inc_mac(s, +2); /* MAC + 1 will be for WAN */
 			nvram_set("sb/1/macaddr", s); /* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
@@ -4109,7 +4109,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); /* get et0 MAC address for LAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); /* get et0 MAC address for LAN */
 			inc_mac(s, +2); /* MAC + 1 will be for WAN */
 			nvram_set("sb/1/macaddr", s); /* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
@@ -4160,7 +4160,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
 			inc_mac(s, +2);
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
@@ -4557,7 +4557,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
 			inc_mac(s, +2);
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
@@ -4767,7 +4767,7 @@ static int init_nvram(void)
 			nvram_set("wl1_ifname", "eth2");
 
 			/* fix MAC addresses */
-			strcpy(s, nvram_safe_get("et0macaddr")); 	/* get et0 MAC address for LAN */
+			strlcpy(s, nvram_safe_get("et0macaddr"), sizeof(s)); 	/* get et0 MAC address for LAN */
 			inc_mac(s, +2);
 			nvram_set("sb/1/macaddr", s); 			/* fix WL mac for 2,4G eth1 */
 			nvram_set("wl0_hwaddr", s);
