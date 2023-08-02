@@ -187,7 +187,7 @@ void start_usb(void)
 #else
 			modprobe("ledtrig-usbdev");
 			modprobe("leds-usb");
-			sprintf(param, "%d", i);
+			snprintf(param, sizeof(param), "%d", i);
 			f_write_string("/proc/leds-usb/gpio_pin", param, 0, 0);
 #endif /* TCONFIG_BCMARM */
 		}
@@ -209,13 +209,13 @@ void start_usb(void)
 		char arg7[20] = {0};
 
 		/* Save QTD cache params in nvram */
-		sprintf(arg1, "log2_irq_thresh=%d", nvram_get_int("ehciirqt"));
-		sprintf(arg2, "qtdc_pid=%d", nvram_get_int("qtdc_pid"));
-		sprintf(arg3, "qtdc_vid=%d", nvram_get_int("qtdc_vid"));
-		sprintf(arg4, "qtdc0_ep=%d", nvram_get_int("qtdc0_ep"));
-		sprintf(arg5, "qtdc0_sz=%d", nvram_get_int("qtdc0_sz"));
-		sprintf(arg6, "qtdc1_ep=%d", nvram_get_int("qtdc1_ep"));
-		sprintf(arg7, "qtdc1_sz=%d", nvram_get_int("qtdc1_sz"));
+		snprintf(arg1, sizeof(arg1), "log2_irq_thresh=%d", nvram_get_int("ehciirqt"));
+		snprintf(arg2, sizeof(arg2), "qtdc_pid=%d", nvram_get_int("qtdc_pid"));
+		snprintf(arg3, sizeof(arg3), "qtdc_vid=%d", nvram_get_int("qtdc_vid"));
+		snprintf(arg4, sizeof(arg4), "qtdc0_ep=%d", nvram_get_int("qtdc0_ep"));
+		snprintf(arg5, sizeof(arg5), "qtdc0_sz=%d", nvram_get_int("qtdc0_sz"));
+		snprintf(arg6, sizeof(arg6), "qtdc1_ep=%d", nvram_get_int("qtdc1_ep"));
+		snprintf(arg7, sizeof(arg7), "qtdc1_sz=%d", nvram_get_int("qtdc1_sz"));
 
 		eval("insmod", "ehci-hcd", arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 
@@ -226,7 +226,7 @@ void start_usb(void)
 		/* Speed up here and use DEV_NUMIFS_SPEED_UP_USBAP instead of DEV_NUMIFS */
 		#define DEV_NUMIFS_SPEED_UP_USBAP 	8
 		for (j = 1; j <= DEV_NUMIFS_SPEED_UP_USBAP /* DEV_NUMIFS */; j++) {
-			sprintf(ifname, "eth%d", j);
+			snprintf(ifname, sizeof(ifname), "eth%d", j);
 			if (!wl_probe(ifname)) {
 				if (!wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
 					maxwl_eth = j;
@@ -236,11 +236,11 @@ void start_usb(void)
 		}
 
 		/* Set instance base (starting unit number) for USB device */
-		sprintf(insmod_arg, "instance_base=%d", maxunit + 1);
+		snprintf(insmod_arg, sizeof(insmod_arg), "instance_base=%d", maxunit + 1);
 		eval("insmod", "wl_high", insmod_arg);
 
 		/* Hold until the USB/HSIC interface is up (up to wl_wait sec) */
-		sprintf(ifname, "eth%d", maxwl_eth + 1);
+		snprintf(ifname, sizeof(ifname), "eth%d", maxwl_eth + 1);
 		j = wl_wait;
 		while (wl_probe(ifname) && j--) {
 			sleep(1);
@@ -350,7 +350,7 @@ void start_usb(void)
 			i = nvram_get_int("usb_irq_thresh");
 			if ((i < 0) || (i > 6))
 				i = 0;
-			sprintf(param, "log2_irq_thresh=%d", i);
+			snprintf(param, sizeof(param), "log2_irq_thresh=%d", i);
 			modprobe(USB20_MOD, param);
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 			sleep(1);
@@ -636,16 +636,16 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 #endif
 		) {
 			if (nvram_invmatch("usb_ext_opt", ""))
-				sprintf(options, nvram_safe_get("usb_ext_opt"));
+				snprintf(options, sizeof(options), nvram_safe_get("usb_ext_opt"));
 		}
 		else if (strcmp(type, "vfat") == 0) {
 			if (nvram_invmatch("smbd_cset", ""))
-				sprintf(options, "iocharset=%s%s", isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "", nvram_get("smbd_cset"));
+				snprintf(options, sizeof(options), "iocharset=%s%s", isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "", nvram_get("smbd_cset"));
 
 			if (nvram_invmatch("smbd_cpage", "")) {
 				char *cp = nvram_safe_get("smbd_cpage");
-				sprintf(options + strlen(options), ",codepage=%s" + (options[0] ? 0 : 1), cp);
-				sprintf(flagfn, "nls_cp%s", cp);
+				snprintf(options + strlen(options), sizeof(options) - strlen(options), ",codepage=%s" + (options[0] ? 0 : 1), cp);
+				snprintf(flagfn, sizeof(flagfn), "nls_cp%s", cp);
 
 				cp = nvram_get("smbd_nlsmod");
 				if ((cp) && (*cp != 0) && (strcmp(cp, flagfn) != 0))
@@ -654,28 +654,28 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				modprobe(flagfn);
 				nvram_set("smbd_nlsmod", flagfn);
 			}
-			sprintf(options + strlen(options), ",shortname=winnt" + (options[0] ? 0 : 1));
-			sprintf(options + strlen(options), ",flush" + (options[0] ? 0 : 1));
+			snprintf(options + strlen(options), sizeof(options) - strlen(options), ",shortname=winnt" + (options[0] ? 0 : 1));
+			snprintf(options + strlen(options), sizeof(options) - strlen(options), ",flush" + (options[0] ? 0 : 1));
 
 			if (nvram_invmatch("usb_fat_opt", ""))
-				sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_fat_opt"));
+				snprintf(options + strlen(options), sizeof(options) - strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_fat_opt"));
 		}
 		else if (strncmp(type, "ntfs", 4) == 0) {
 			if (nvram_invmatch("smbd_cset", ""))
-				sprintf(options, "iocharset=%s%s", isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "", nvram_get("smbd_cset"));
+				snprintf(options, sizeof(options), "iocharset=%s%s", isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "", nvram_get("smbd_cset"));
 
 			if (nvram_invmatch("usb_ntfs_opt", ""))
-				sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_ntfs_opt"));
+				snprintf(options + strlen(options), sizeof(options) - strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_ntfs_opt"));
 		}
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_HFS)
 		else if (strncmp(type, "hfs", 3) == 0) {
 			if (nvram_get_int("usb_fs_hfs")) {
 				if (nvram_match("usb_hfs_driver", "kernel")) {
-					sprintf(options, "rw,noatime,nodev");
+					snprintf(options, sizeof(options), "rw,noatime,nodev");
 
 					if (strncmp(type, "hfsplus", 7) == 0)
-						sprintf(options + strlen(options), ",force" + (options[0] ? 0 : 1));
+						snprintf(options + strlen(options), sizeof(options) - strlen(options), ",force" + (options[0] ? 0 : 1));
 				}
 #ifdef TCONFIG_TUXERA_HFS
 				else if (nvram_match("usb_hfs_driver", "tuxera")) {
@@ -684,7 +684,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 				}
 #endif
 				if (nvram_invmatch("usb_hfs_opt", ""))
-					sprintf(options + strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_hfs_opt"));
+					snprintf(options + strlen(options), sizeof(options) - strlen(options), "%s%s", options[0] ? "," : "", nvram_safe_get("usb_hfs_opt"));
 			}
 			else /* HFS support disabled by user, don't try to mount */
 				flags = 0;
@@ -694,7 +694,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 		if (flags) {
 			if ((dir_made = mkdir_if_none(mnt_dir))) {
 				/* Create the flag file for remove the directory on dismount. */
-				sprintf(flagfn, "%s/.autocreated-dir", mnt_dir);
+				snprintf(flagfn, sizeof(flagfn), "%s/.autocreated-dir", mnt_dir);
 				f_write(flagfn, NULL, 0, 0, 0);
 			}
 
@@ -704,7 +704,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 
 #ifdef TCONFIG_NTFS
 			if (ret != 0 && strncmp(type, "ntfs", 4) == 0) {
-				sprintf(options + strlen(options), ",noatime,nodev" + (options[0] ? 0 : 1));
+				snprintf(options + strlen(options), sizeof(options) - strlen(options), ",noatime,nodev" + (options[0] ? 0 : 1));
 				if (nvram_get_int("usb_fs_ntfs")) {
 #ifdef TCONFIG_BCMARM
 					if (nvram_match("usb_ntfs_driver", "ntfs3g"))
@@ -768,16 +768,16 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 struct mntent *mount_fstab(char *dev_name, char *type, char *label, char *uuid)
 {
 	struct mntent *mnt = NULL;
-	char spec[PATH_MAX+1];
+	char spec[PATH_MAX + 1];
 
 	if (label && *label) {
-		sprintf(spec, "LABEL=%s", label);
+		snprintf(spec, (PATH_MAX + 1), "LABEL=%s", label);
 		if (eval("mount", spec) == 0)
 			mnt = findmntents(dev_name, 0, NULL, 0);
 	}
 
 	if (!mnt && uuid && *uuid) {
-		sprintf(spec, "UUID=%s", uuid);
+		snprintf(spec, (PATH_MAX + 1), "UUID=%s", uuid);
 		if (eval("mount", spec) == 0)
 			mnt = findmntents(dev_name, 0, NULL, 0);
 	}
@@ -811,12 +811,12 @@ static int usb_ufd_connected(int host_no)
 	char proc_file[128];
 	FILE *fp;
 
-	sprintf(proc_file, "%s/%s-%d/%d", PROC_SCSI_ROOT, USB_STORAGE, host_no, host_no);
+	snprintf(proc_file, sizeof(proc_file), "%s/%s-%d/%d", PROC_SCSI_ROOT, USB_STORAGE, host_no, host_no);
 	fp = fopen(proc_file, "r");
 
 	if (!fp) {
 		/* try the way it's implemented in newer kernels: /proc/scsi/usb-storage/[host] */
-		sprintf(proc_file, "%s/%s/%d", PROC_SCSI_ROOT, USB_STORAGE, host_no);
+		snprintf(proc_file, sizeof(proc_file), "%s/%s/%d", PROC_SCSI_ROOT, USB_STORAGE, host_no);
 		fp = fopen(proc_file, "r");
 	}
 
@@ -867,7 +867,7 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 	int ret = 1, count;
 	char flagfn[128];
 
-	sprintf(flagfn, "%s/.autocreated-dir", mnt->mnt_dir);
+	snprintf(flagfn, sizeof(flagfn), "%s/.autocreated-dir", mnt->mnt_dir);
 
 	/* Run user pre-unmount scripts if any. It might be too late if
 	 * the drive has been disconnected, but we'll try it anyway.
@@ -972,13 +972,13 @@ int mount_partition(char *dev_name, int host_num, char *dsc_name, char *pt_name,
 			if (!isalnum(*p) && !strchr("+-&.@", *p))
 				*p = '_';
 		}
-		sprintf(mountpoint, "%s/%s", MOUNT_ROOT, the_label);
+		snprintf(mountpoint, sizeof(mountpoint), "%s/%s", MOUNT_ROOT, the_label);
 		if ((ret = mount_r(dev_name, mountpoint, type)))
 			goto done;
 	}
 
 	/* Can't mount to /mnt/LABEL, so try mounting to /mnt/discDN_PN */
-	sprintf(mountpoint, "%s/%s", MOUNT_ROOT, pt_name);
+	snprintf(mountpoint, sizeof(mountpoint), "%s/%s", MOUNT_ROOT, pt_name);
 	ret = mount_r(dev_name, mountpoint, type);
 
 done:
@@ -1352,7 +1352,7 @@ void hotplug_usb(void)
 		char devname[64];
 		int lock;
 
-		sprintf(devname, "/dev/%s", device);
+		snprintf(devname, sizeof(devname), "/dev/%s", device);
 		lock = file_lock("usb");
 		if (add) {
 			if (nvram_get_int("usb_storage") && nvram_get_int("usb_automount")) {
