@@ -240,7 +240,6 @@
 +{
 +	xtables_register_target(&route);
 +}
-
 --- iptables-1.8.x/extensions/libip6t_ROUTE.man
 +++ iptables-1.8.x/extensions/libip6t_ROUTE.man
 @@ -0,0 +1,15 @@
@@ -259,7 +258,6 @@
 +.TP
 +.BI "--tee "
 +Make a copy of the packet, and route that copy to the given destination. For the original, uncopied packet, behave like a non-terminating target and continue traversing the rules.  Not valid in combination with `--continue'
-
 --- iptables-1.8.x/extensions/libip6t_web.c
 +++ iptables-1.8.x/extensions/libip6t_web.c
 @@ -0,0 +1,215 @@
@@ -478,7 +476,6 @@
 +{
 +	xtables_register_match(&web6_match);
 +}
-
 --- iptables-1.8.x/extensions/libip6t_webmon.c
 +++ iptables-1.8.x/extensions/libip6t_webmon.c
 @@ -0,0 +1,668 @@
@@ -1150,7 +1147,6 @@
 +	return read_string;
 +}
 +
-
 --- iptables-1.8.x/extensions/libipt_account.c
 +++ iptables-1.8.x/extensions/libipt_account.c
 @@ -0,0 +1,366 @@
@@ -1520,7 +1516,6 @@
 +#endif
 +}
 +  
-
 --- iptables-1.8.x/extensions/libipt_condition.c
 +++ iptables-1.8.x/extensions/libipt_condition.c
 @@ -0,0 +1,102 @@
@@ -1626,7 +1621,6 @@
 +{
 +	xtables_register_match(&condition);
 +}
-
 --- iptables-1.8.x/extensions/libipt_condition.man
 +++ iptables-1.8.x/extensions/libipt_condition.man
 @@ -0,0 +1,4 @@
@@ -1634,7 +1628,6 @@
 +.TP
 +.BI "--condition " "[!] \fIfilename\fP"
 +Match on boolean value stored in /proc/net/ipt_condition/filename file
-
 --- iptables-1.8.x/extensions/libipt_geoip.c
 +++ iptables-1.8.x/extensions/libipt_geoip.c
 @@ -0,0 +1,337 @@
@@ -1975,7 +1968,6 @@
 +{
 +   xtables_register_match(&geoip);
 +}
-
 --- iptables-1.8.x/extensions/libipt_geoip.man
 +++ iptables-1.8.x/extensions/libipt_geoip.man
 @@ -0,0 +1,15 @@
@@ -1994,7 +1986,6 @@
 +Both files are generated from a countries & subnets database with the csv2bin tool,
 +available at www.cookinglinux.org/geoip/. Both files MUST also be moved in /var/geoip/
 +as the shared library is statically looking for that pathname (ex.: /var/geoip/geoipdb.bin).
-
 --- iptables-1.8.x/extensions/libipt_ipp2p.c
 +++ iptables-1.8.x/extensions/libipt_ipp2p.c
 @@ -0,0 +1,409 @@
@@ -2407,7 +2398,6 @@
 +{
 +    xtables_register_match(&ipp2p);
 +}
-
 --- iptables-1.8.x/extensions/libipt_ipp2p.man
 +++ iptables-1.8.x/extensions/libipt_ipp2p.man
 @@ -0,0 +1,43 @@
@@ -2454,7 +2444,6 @@
 +.B "--debug "
 +Prints some information about each hit into kernel logfile. May 
 +produce huge logfiles so beware!
-
 --- iptables-1.8.x/extensions/libipt_layer7.c
 +++ iptables-1.8.x/extensions/libipt_layer7.c
 @@ -0,0 +1,392 @@
@@ -2850,7 +2839,6 @@
 +{
 +	xtables_register_match(&layer7_match);
 +}
-
 --- iptables-1.8.x/extensions/libipt_layer7.man
 +++ iptables-1.8.x/extensions/libipt_layer7.man
 @@ -0,0 +1,14 @@
@@ -2868,7 +2856,6 @@
 +Use \fIdirectory\fP instead of /etc/l7-protocols/.  This option must be 
 +specified before --l7proto.
 +
-
 --- iptables-1.8.x/extensions/libipt_ROUTE.c
 +++ iptables-1.8.x/extensions/libipt_ROUTE.c
 @@ -0,0 +1,246 @@
@@ -3118,7 +3105,6 @@
 +{
 +	xtables_register_target(&route_target);
 +}
-
 --- iptables-1.8.x/extensions/libipt_ROUTE.man
 +++ iptables-1.8.x/extensions/libipt_ROUTE.man
 @@ -0,0 +1,18 @@
@@ -3140,7 +3126,6 @@
 +.TP
 +.BI "--tee "
 +Make a copy of the packet, and route that copy to the given destination. For the original, uncopied packet, behave like a non-terminating target and continue traversing the rules.  Not valid in combination with `--iif' or `--continue'
-
 --- iptables-1.8.x/extensions/libipt_tos.c
 +++ iptables-1.8.x/extensions/libipt_tos.c
 @@ -0,0 +1,169 @@
@@ -3313,7 +3298,6 @@
 +{
 +	xtables_register_match(&tos);
 +}
-
 --- iptables-1.8.x/extensions/libipt_TOS.c
 +++ iptables-1.8.x/extensions/libipt_TOS.c
 @@ -0,0 +1,174 @@
@@ -3491,7 +3475,6 @@
 +{
 +	xtables_register_target(&tos);
 +}
-
 --- iptables-1.8.x/extensions/libipt_tos.man
 +++ iptables-1.8.x/extensions/libipt_tos.man
 @@ -0,0 +1,9 @@
@@ -3504,7 +3487,6 @@
 + iptables -m tos -h
 +.br
 +to see the list), or a numeric value to match.
-
 --- iptables-1.8.x/extensions/libipt_TOS.man
 +++ iptables-1.8.x/extensions/libipt_TOS.man
 @@ -0,0 +1,11 @@
@@ -3519,7 +3501,6 @@
 + iptables -j TOS -h
 +.fi
 +to see the list of valid TOS names.
-
 --- iptables-1.8.x/extensions/libipt_TRIGGER.c
 +++ iptables-1.8.x/extensions/libipt_TRIGGER.c
 @@ -0,0 +1,208 @@
@@ -3731,7 +3712,6 @@
 +{
 +	xtables_register_target(&trigger);
 +}
-
 --- iptables-1.8.x/extensions/libipt_web.c
 +++ iptables-1.8.x/extensions/libipt_web.c
 @@ -0,0 +1,214 @@
@@ -3949,7 +3929,6 @@
 +{
 +	xtables_register_match(&web_match);
 +}
-
 --- iptables-1.8.x/extensions/libipt_webmon.c
 +++ iptables-1.8.x/extensions/libipt_webmon.c
 @@ -0,0 +1,723 @@
@@ -4676,7 +4655,6 @@
 +	return read_string;
 +}
 +
-
 --- iptables-1.8.x/extensions/libipt_webstr.c
 +++ iptables-1.8.x/extensions/libipt_webstr.c
 @@ -0,0 +1,241 @@
@@ -4921,7 +4899,6 @@
 +{
 +	xtables_register_match(&webstr_match);
 +}
-
 --- iptables-1.8.x/extensions/libxt_CONNMARK.c
 +++ iptables-1.8.x/extensions/libxt_CONNMARK.c
 @@ -39,6 +39,7 @@
@@ -5055,7 +5032,6 @@
  	case XT_CONNMARK_SAVE:
  		printf(" --save-mark --nfmask 0x%x --ctmask 0x%x",
  		       info->nfmask, info->ctmask);
-
 --- iptables-1.8.x/extensions/libxt_ethport.c
 +++ iptables-1.8.x/extensions/libxt_ethport.c
 @@ -0,0 +1,146 @@
@@ -5205,7 +5181,6 @@
 +	xtables_register_match(&ethport_match);
 +	xtables_register_match(&ethport_match6);
 +}
-
 --- iptables-1.8.x/extensions/libxt_IMQ.c
 +++ iptables-1.8.x/extensions/libxt_IMQ.c
 @@ -0,0 +1,105 @@
@@ -5314,7 +5289,6 @@
 +	xtables_register_target(&imq_target);
 +	xtables_register_target(&imq_target6);
 +}
-
 --- iptables-1.8.x/extensions/libxt_IMQ.man
 +++ iptables-1.8.x/extensions/libxt_IMQ.man
 @@ -0,0 +1,15 @@
@@ -5333,7 +5307,6 @@
 +Redirect incomming traffic from interface eth0 to imq0 and outgoing traffic to imq1:
 +iptables \-t mangle \-A FORWARD \-i eth0 \-j IMQ \-\-to\-dev 0
 +iptables \-t mangle \-A FORWARD \-o eth0 \-j IMQ \-\-to\-dev 1
-
 --- iptables-1.8.x/include/linux/netfilter/nf_conntrack_tuple_common.h
 +++ iptables-1.8.x/include/linux/netfilter/nf_conntrack_tuple_common.h
 @@ -7,6 +7,9 @@
@@ -5355,7 +5328,6 @@
  
  #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
  
-
 --- iptables-1.8.x/include/linux/netfilter/xt_connmark.h
 +++ iptables-1.8.x/include/linux/netfilter/xt_connmark.h
 @@ -15,7 +15,8 @@
@@ -5368,7 +5340,6 @@
  };
  
  struct xt_connmark_tginfo1 {
-
 --- iptables-1.8.x/include/linux/netfilter/xt_IMQ.h
 +++ iptables-1.8.x/include/linux/netfilter/xt_IMQ.h
 @@ -0,0 +1,9 @@
@@ -5381,7 +5352,6 @@
 +
 +#endif /* _XT_IMQ_H */
 +
-
 --- iptables-1.8.x/include/linux/netfilter.h
 +++ iptables-1.8.x/include/linux/netfilter.h
 @@ -77,4 +77,13 @@
@@ -5398,7 +5368,6 @@
 +}
 +
  #endif /* __LINUX_NETFILTER_H */
-
 --- iptables-1.8.x/include/linux/netfilter_ipv4/ip_tables.h
 +++ iptables-1.8.x/include/linux/netfilter_ipv4/ip_tables.h
 @@ -95,6 +95,7 @@
@@ -6623,7 +6592,6 @@
 +			return head->name;
 +	return NULL;
 +}
-
 --- iptables-1.8.x/l7-protocols/aim.pat
 +++ iptables-1.8.x/l7-protocols/aim.pat
 @@ -0,0 +1,27 @@
@@ -6654,7 +6622,6 @@
 +# This pattern is too slow!
 +
 +^(\*[\x01\x02].*\x03\x0b|\*\x01.?.?.?.?\x01)|flapon|toc_signon.*0x
-
 --- iptables-1.8.x/l7-protocols/aimwebcontent.pat
 +++ iptables-1.8.x/l7-protocols/aimwebcontent.pat
 @@ -0,0 +1,9 @@
@@ -6667,7 +6634,6 @@
 +
 +aimwebcontent
 +user-agent:aim/
-
 --- iptables-1.8.x/l7-protocols/applejuice.pat
 +++ iptables-1.8.x/l7-protocols/applejuice.pat
 @@ -0,0 +1,11 @@
@@ -6682,7 +6648,6 @@
 +applejuice
 +# this pattern extracted from ipp2p, by Eicke Friedrich.
 +^ajprot\x0d\x0a
-
 --- iptables-1.8.x/l7-protocols/ares.pat
 +++ iptables-1.8.x/l7-protocols/ares.pat
 @@ -0,0 +1,62 @@
@@ -6748,7 +6713,6 @@
 +# File transfers appear to be encrypted or at least obfuscated.  (The
 +# files themselves, at least, are not transmitted in the clear.) I
 +# haven't found any patterns.
-
 --- iptables-1.8.x/l7-protocols/armagetron.pat
 +++ iptables-1.8.x/l7-protocols/armagetron.pat
 @@ -0,0 +1,11 @@
@@ -6763,7 +6727,6 @@
 +
 +armagetron
 +YCLC_E|CYEL
-
 --- iptables-1.8.x/l7-protocols/battlefield1942.pat
 +++ iptables-1.8.x/l7-protocols/battlefield1942.pat
 @@ -0,0 +1,13 @@
@@ -6780,7 +6743,6 @@
 +# matches the first two packets of joining a server
 +battlefield1942
 +^\x01\x11\x10\|\xf8\x02\x10\x40\x06
-
 --- iptables-1.8.x/l7-protocols/bgp.pat
 +++ iptables-1.8.x/l7-protocols/bgp.pat
 @@ -0,0 +1,18 @@
@@ -6802,7 +6764,6 @@
 +# Could keep going, but that should be sufficient.
 +^\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff..?\x01[\x03\x04]
 +
-
 --- iptables-1.8.x/l7-protocols/bittorrent.pat
 +++ iptables-1.8.x/l7-protocols/bittorrent.pat
 @@ -0,0 +1,27 @@
@@ -6833,7 +6794,6 @@
 +
 +# This pattern is "fast", but won't catch as much
 +#^(\x13bittorrent protocol|azver\x01$|get /scrape\?info_hash=)
-
 --- iptables-1.8.x/l7-protocols/chikka.pat
 +++ iptables-1.8.x/l7-protocols/chikka.pat
 @@ -0,0 +1,16 @@
@@ -6853,7 +6813,6 @@
 +
 +chikka
 +^CTPv1.[123] Kamusta.*\x0d\x0a$
-
 --- iptables-1.8.x/l7-protocols/cimd.pat
 +++ iptables-1.8.x/l7-protocols/cimd.pat
 @@ -0,0 +1,18 @@
@@ -6875,7 +6834,6 @@
 +
 +cimd
 +\x02[0-4][0-9]:[0-9]+.*\x03$
-
 --- iptables-1.8.x/l7-protocols/ciscovpn.pat
 +++ iptables-1.8.x/l7-protocols/ciscovpn.pat
 @@ -0,0 +1,10 @@
@@ -6889,7 +6847,6 @@
 +ciscovpn
 +^\x01\xf4\x01\xf4
 +
-
 --- iptables-1.8.x/l7-protocols/citrix.pat
 +++ iptables-1.8.x/l7-protocols/citrix.pat
 @@ -0,0 +1,11 @@
@@ -6904,7 +6861,6 @@
 +
 +citrix
 +\x32\x26\x85\x92\x58
-
 --- iptables-1.8.x/l7-protocols/code_red.pat
 +++ iptables-1.8.x/l7-protocols/code_red.pat
 @@ -0,0 +1,7 @@
@@ -6915,7 +6871,6 @@
 +
 +code_red
 +/default\.ida\?NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN%u9090%u6858%ucbd3%u7801%u9090%u6858%ucbd3%u7801%u9090%u6858%ucbd3%u7801%u9090%u9090%u8190%u00c3%u0003%u8b00%u531b%u53ff%u0078%u0000%u00=a
-
 --- iptables-1.8.x/l7-protocols/counterstrike-source.pat
 +++ iptables-1.8.x/l7-protocols/counterstrike-source.pat
 @@ -0,0 +1,41 @@
@@ -6960,7 +6915,6 @@
 +# only two versions that are playable on the Internet since Valve
 +# disabled the WON system in favor of steam.")
 +# cs .*dl.www.counter-strike.net
-
 --- iptables-1.8.x/l7-protocols/cvs.pat
 +++ iptables-1.8.x/l7-protocols/cvs.pat
 @@ -0,0 +1,13 @@
@@ -6977,7 +6931,6 @@
 +# http://www.loria.fr/~molli/cvs/doc/cvsclient_3.html
 +
 +^BEGIN (AUTH|VERIFICATION|GSSAPI) REQUEST\x0a
-
 --- iptables-1.8.x/l7-protocols/dayofdefeat-source.pat
 +++ iptables-1.8.x/l7-protocols/dayofdefeat-source.pat
 @@ -0,0 +1,10 @@
@@ -6991,7 +6944,6 @@
 +dayofdefeat-source
 +^\xff\xff\xff\xff.*dodDay of Defeat
 +
-
 --- iptables-1.8.x/l7-protocols/dhcp.pat
 +++ iptables-1.8.x/l7-protocols/dhcp.pat
 @@ -0,0 +1,35 @@
@@ -7030,7 +6982,6 @@
 +# Can we make this more specific by restricting the number of hops or seconds?
 +#
 +# 0x63825363 is the "magic cookie" which begins the DHCP options field.
-
 --- iptables-1.8.x/l7-protocols/directconnect.pat
 +++ iptables-1.8.x/l7-protocols/directconnect.pat
 @@ -0,0 +1,13 @@
@@ -7047,7 +6998,6 @@
 +directconnect
 +# client-to-client handshake|client-to-hub login, hub speaking|client-to-hub login, client speaking
 +^(\$mynick |\$lock |\$key )
-
 --- iptables-1.8.x/l7-protocols/dns.pat
 +++ iptables-1.8.x/l7-protocols/dns.pat
 @@ -0,0 +1,62 @@
@@ -7113,7 +7063,6 @@
 +# If you have more processing power than me, you can substitute this for
 +# the [a-z][a-z][a-z]?[a-z]?[a-z]?[a-z]?
 +#(aero|arpa|biz|com|coop|edu|gov|info|int|mil|museum|name|net|org|pro|arpa|ac|ad|ae|af|ag|ai|al|am|an|ao|aq|ar|as|at|au|aw|az|ba|bb|bd|be|bf|bg|bh|bi|bj|bm|bn|bo|br|bs|bt|bv|bw|by|bz|ca|cc|cd|cf|cg|ch|ci|ck|cl|cm|cn|co|cr|cu|cv|cx|cy|cz|de|dj|dk|dm|do|dz|ec|ee|eg|eh|er|es|et|fi|fj|fk|fm|fo|fr|ga|gd|ge|gf|gg|gh|gi|gl|gm|gn|gp|gq|gr|gs|gt|gu|gw|gy|hk|hm|hn|hr|ht|hu|id|ie|il|im|in|io|iq|ir|is|it|je|jm|jo|jp|ke|kg|kh|ki|km|kn|kp|kr|kw|ky|kz|la|lb|lc|li|lk|lr|ls|lt|lu|lv|ly|ma|mc|md|mg|mh|mk|ml|mm|mn|mo|mp|mq|mr|ms|mt|mu|mv|mw|mx|my|mz|na|nc|ne|nf|ng|ni|nl|no|np|nr|nu|nz|om|pa|pe|pf|pg|ph|pk|pl|pm|pn|pr|ps|pt|pw|py|qa|re|ro|ru|rw|sa|sb|sc|sd|se|sg|sh|si|sj|sk|sl|sm|sn|so|sr|st|sv|sy|sz|tc|td|tf|tg|th|tj|tk|tm|tn|to|tp|tr|tt|tv|tw|tz|ua|ug|uk|um|us|uy|uz|va|vc|ve|vg|vi|vn|vu|wf|ws|ye|yt|yu|za|zm|zw)
-
 --- iptables-1.8.x/l7-protocols/doom3.pat
 +++ iptables-1.8.x/l7-protocols/doom3.pat
 @@ -0,0 +1,9 @@
@@ -7126,7 +7075,6 @@
 +
 +doom3
 +^\xff\xffchallenge
-
 --- iptables-1.8.x/l7-protocols/edonkey.pat
 +++ iptables-1.8.x/l7-protocols/edonkey.pat
 @@ -0,0 +1,36 @@
@@ -7166,7 +7114,6 @@
 +# bandwidtharbitrator uses 
 +# e0.*@.*6[a-z].*p$|e0.*@.*[a-z]6[a-z].*p0$|e.*@.*[0-9]6.*p$|emule|edonkey
 +# no comments to explain what all the mush is, of course...
-
 --- iptables-1.8.x/l7-protocols/fasttrack.pat
 +++ iptables-1.8.x/l7-protocols/fasttrack.pat
 @@ -0,0 +1,22 @@
@@ -7192,7 +7139,6 @@
 +# This isn't much faster:
 +#^get (/.download/.*|/.supernode.|/.status.|/.network.*|/.files|/.hash=[0-9a-f]*/.*) http/1.1|user-agent: kazaa|x-kazaa(-username|-network|-ip|-supernodeip|-xferid|-xferuid|tag)|^give [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]?[0-9]?[0-9]?
 +
-
 --- iptables-1.8.x/l7-protocols/finger.pat
 +++ iptables-1.8.x/l7-protocols/finger.pat
 @@ -0,0 +1,14 @@
@@ -7210,7 +7156,6 @@
 +# The second matches the usual UNIX reply (but remember that they are
 +# allowed to say whatever they want)
 +^[a-z][a-z0-9\-_]+|login: [\x09-\x0d -~]* name: [\x09-\x0d -~]* Directory: 
-
 --- iptables-1.8.x/l7-protocols/freenet.pat
 +++ iptables-1.8.x/l7-protocols/freenet.pat
 @@ -0,0 +1,9 @@
@@ -7223,7 +7168,6 @@
 +# Freenet is intentionally hard to identify...
 +# This is empirical, only tested on one computer, and unlikely to work anymore.
 +^\x01[\x08\x09][\x03\x04]
-
 --- iptables-1.8.x/l7-protocols/ftp.pat
 +++ iptables-1.8.x/l7-protocols/ftp.pat
 @@ -0,0 +1,45 @@
@@ -7272,7 +7216,6 @@
 +
 +# same as above, but slightly less precise and only takes 2 packets.
 +#^220[\x09-\x0d -~]*\x0d\x0aUSER[\x09-\x0d -~]*\x0d\x0a
-
 --- iptables-1.8.x/l7-protocols/gkrellm.pat
 +++ iptables-1.8.x/l7-protocols/gkrellm.pat
 @@ -0,0 +1,12 @@
@@ -7288,7 +7231,6 @@
 +gkrellm
 +# tested with gkrellm 2.2.7
 +^gkrellm [23].[0-9].[0-9]\x0a$
-
 --- iptables-1.8.x/l7-protocols/gnucleuslan.pat
 +++ iptables-1.8.x/l7-protocols/gnucleuslan.pat
 @@ -0,0 +1,9 @@
@@ -7301,7 +7243,6 @@
 +
 +gnucleuslan
 +gnuclear connect/[\x09-\x0d -~]*user-agent: gnucleus [\x09-\x0d -~]*lan:
-
 --- iptables-1.8.x/l7-protocols/gnutella.pat
 +++ iptables-1.8.x/l7-protocols/gnutella.pat
 @@ -0,0 +1,33 @@
@@ -7338,7 +7279,6 @@
 +#^(gnd[\x01\x02]?.?.?\x01|gnutella connect/[012]\.[0-9]\x0d\x0a|get /uri-res/n2r\?urn:sha1:|get /[\x09-\x0d -~]*user-agent: (gtk-gnutella|bearshare|mactella|gnucleus|gnotella|limewire|imesh)|get /[\x09-\x0d -~]*content-type: application/x-gnutella-packets|giv [0-9]*:[0-9a-f]*/|queue [0-9a-f]* [1-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?\.[1-9][0-9]?[0-9]?:[1-9][0-9]?[0-9]?[0-9]?|gnutella[\x09-\x0d -~]*content-type: application/x-gnutella|..................lime)
 +
 +
-
 --- iptables-1.8.x/l7-protocols/gopher.pat
 +++ iptables-1.8.x/l7-protocols/gopher.pat
 @@ -0,0 +1,24 @@
@@ -7366,7 +7306,6 @@
 +# "\r7search by keywords on protein data using wais\twaissrc:/protein_all/protein\tgopher.dna.affrc.go.jp\t70"
 +
 +^[\x09-\x0d]*[1-9,+tgi][\x09-\x0d -~]*\x09[\x09-\x0d -~]*\x09[a-z0-9.]*\.[a-z][a-z].?.?\x09[1-9]
-
 --- iptables-1.8.x/l7-protocols/h323.pat
 +++ iptables-1.8.x/l7-protocols/h323.pat
 @@ -0,0 +1,35 @@
@@ -7405,7 +7344,6 @@
 +#
 +# Yup, it doesn't actually include any H.323 protocol information.
 +^\x03..?\x08...?.?.?.?.?.?.?.?.?.?.?.?.?.?.?\x05
-
 --- iptables-1.8.x/l7-protocols/halflife2-deathmatch.pat
 +++ iptables-1.8.x/l7-protocols/halflife2-deathmatch.pat
 @@ -0,0 +1,9 @@
@@ -7418,7 +7356,6 @@
 +
 +halflife2-deathmatch
 +^\xff\xff\xff\xff.*hl2mpDeathmatch
-
 --- iptables-1.8.x/l7-protocols/hddtemp.pat
 +++ iptables-1.8.x/l7-protocols/hddtemp.pat
 @@ -0,0 +1,13 @@
@@ -7435,7 +7372,6 @@
 +
 +hddtemp
 +^\|/dev/[a-z][a-z][a-z]\|[0-9a-z]*\|[0-9][0-9]\|[cfk]\|
-
 --- iptables-1.8.x/l7-protocols/http.pat
 +++ iptables-1.8.x/l7-protocols/http.pat
 @@ -0,0 +1,27 @@
@@ -7466,7 +7402,6 @@
 +#http/(0\.9|1\.0|1\.1) [1-5][0-9][0-9]|post [\x09-\x0d -~]* http/[01]\.[019]
 +# old pattern(s):
 +#(http[\x09-\x0d -~]*(200 ok|302 |304 )[\x09-\x0d -~]*(connection:|content-type:|content-length:))|^(post [\x09-\x0d -~]* http/)
-
 --- iptables-1.8.x/l7-protocols/http-rtsp.pat
 +++ iptables-1.8.x/l7-protocols/http-rtsp.pat
 @@ -0,0 +1,15 @@
@@ -7485,7 +7420,6 @@
 +
 +http-rtsp
 +^(get[\x09-\x0d -~]* Accept: application/x-rtsp-tunnelled|http/(0\.9|1\.0|1\.1) [1-5][0-9][0-9] [\x09-\x0d -~]*a=control:rtsp://)
-
 --- iptables-1.8.x/l7-protocols/ident.pat
 +++ iptables-1.8.x/l7-protocols/ident.pat
 @@ -0,0 +1,14 @@
@@ -7503,7 +7437,6 @@
 +# ^$ is appropriate because the first packet should never have anything
 +# else in it.
 +^[1-9][0-9]?[0-9]?[0-9]?[0-9]?[\x09-\x0d]*,[\x09-\x0d]*[1-9][0-9]?[0-9]?[0-9]?[0-9]?(\x0d\x0a|[\x0d\x0a])?$
-
 --- iptables-1.8.x/l7-protocols/imap.pat
 +++ iptables-1.8.x/l7-protocols/imap.pat
 @@ -0,0 +1,13 @@
@@ -7520,7 +7453,6 @@
 +# some unknown reason can happen at the start of a connection?)  
 +imap
 +^(\* ok|a[0-9]+ noop)
-
 --- iptables-1.8.x/l7-protocols/imesh.pat
 +++ iptables-1.8.x/l7-protocols/imesh.pat
 @@ -0,0 +1,14 @@
@@ -7538,7 +7470,6 @@
 +# The third branch matches downloads of "premium" content
 +# The fourth branch matches peer downloads.
 +^(post[\x09-\x0d -~]*<PasswordHash>................................</PasswordHash><ClientVer>|\x34\x80?\x0d?\xfc\xff\x04|get[\x09-\x0d -~]*Host: imsh\.download-prod\.musicnet\.com|\x02[\x01\x02]\x83.*\x02[\x01\x02]\x83)
-
 --- iptables-1.8.x/l7-protocols/ipp.pat
 +++ iptables-1.8.x/l7-protocols/ipp.pat
 @@ -0,0 +1,11 @@
@@ -7553,7 +7484,6 @@
 +# It's unlikely that anything else has this string, but I think we could
 +# do a bit better...
 +ipp://
-
 --- iptables-1.8.x/l7-protocols/irc.pat
 +++ iptables-1.8.x/l7-protocols/irc.pat
 @@ -0,0 +1,19 @@
@@ -7576,7 +7506,6 @@
 +# \x09-\x0d).
 +^(nick[\x09-\x0d -~]*user[\x09-\x0d -~]*:|user[\x09-\x0d -~]*:[\x02-\x0d -~]*nick[\x09-\x0d -~]*\x0d\x0a)
 +
-
 --- iptables-1.8.x/l7-protocols/jabber.pat
 +++ iptables-1.8.x/l7-protocols/jabber.pat
 @@ -0,0 +1,23 @@
@@ -7603,7 +7532,6 @@
 +
 +jabber
 +<stream:stream[\x09-\x0d ][ -~]*[\x09-\x0d ]xmlns=['"]jabber
-
 --- iptables-1.8.x/l7-protocols/mohaa.pat
 +++ iptables-1.8.x/l7-protocols/mohaa.pat
 @@ -0,0 +1,10 @@
@@ -7617,7 +7545,6 @@
 +mohaa
 +^\xff\xff\xff\xffgetstatus\x0a
 +
-
 --- iptables-1.8.x/l7-protocols/msnmessenger.pat
 +++ iptables-1.8.x/l7-protocols/msnmessenger.pat
 @@ -0,0 +1,27 @@
@@ -7648,7 +7575,6 @@
 +# Branches are written entirely separately for better performance.
 +ver [0-9]+ msnp[1-9][0-9]? [\x09-\x0d -~]*cvr0\x0d\x0a$|usr 1 [!-~]+ [0-9. ]+\x0d\x0a$|ans 1 [!-~]+ [0-9. ]+\x0d\x0a$
 +
-
 --- iptables-1.8.x/l7-protocols/mute.pat
 +++ iptables-1.8.x/l7-protocols/mute.pat
 @@ -0,0 +1,10 @@
@@ -7662,7 +7588,6 @@
 +
 +mute
 +^(Public|AES)Key: [0-9a-f]*\x0aEnd(Public|AES)Key\x0a$
-
 --- iptables-1.8.x/l7-protocols/napster.pat
 +++ iptables-1.8.x/l7-protocols/napster.pat
 @@ -0,0 +1,23 @@
@@ -7689,7 +7614,6 @@
 +# Assumes that filenames are well-behaved ASCII strings.  I have found
 +# one case where this assumptions fails (filename had \x99 in it).
 +^(.[\x02\x06][!-~]+ [!-~]+ [0-9][0-9]?[0-9]?[0-9]?[0-9]? "[\x09-\x0d -~]+" ([0-9]|10)|1(send|get)[!-~]+ "[\x09-\x0d -~]+")
-
 --- iptables-1.8.x/l7-protocols/nbns.pat
 +++ iptables-1.8.x/l7-protocols/nbns.pat
 @@ -0,0 +1,19 @@
@@ -7712,7 +7636,6 @@
 +nbns
 +# This is not a valid basic GNU regular expression.
 +\x01\x10\x01|\)\x10\x01\x01|0\x10\x01
-
 --- iptables-1.8.x/l7-protocols/ncp.pat
 +++ iptables-1.8.x/l7-protocols/ncp.pat
 @@ -0,0 +1,22 @@
@@ -7738,7 +7661,6 @@
 +
 +ncp
 +^(dmdt.*\x01.*(""|\x11\x11|uu)|tncp.*33)
-
 --- iptables-1.8.x/l7-protocols/nimda.pat
 +++ iptables-1.8.x/l7-protocols/nimda.pat
 @@ -0,0 +1,7 @@
@@ -7749,7 +7671,6 @@
 +
 +nimda
 +GET (/scripts/root\.exe\?/c\+dir|/MSADC/root\.exe\?/c\+dir|/c/winnt/system32/cmd\.exe\?/c\+dir|/d/winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.%5c\.\./winnt/system32/cmd\.exe\?/c\+dir|/_vti_bin/\.\.%5c\.\./\.\.%5c\.\./\.\.%5c\.\./winnt/system32/cmd\.exe\?/c\+dir|/_mem_bin/\.\.%5c\.\./\.\.%5c\.\./\.\.%5c\.\./winnt/system32/cmd\.exe\?/c\+dir|/msadc/\.\.%5c\.\./\.\.%5c\.\./\.\.%5c/\.\.\xc1\x1c\.\./\.\.\xc1\x1c\.\./\.\.\xc1\x1c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.\xc1\x1c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.\xc0/\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.\xc0\xaf\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.\xc1\x9c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.%35c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.%35c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.%5c\.\./winnt/system32/cmd\.exe\?/c\+dir|/scripts/\.\.%2f\.\./winnt/system32/cmd\.exe\?/c\+dir)
-
 --- iptables-1.8.x/l7-protocols/nntp.pat
 +++ iptables-1.8.x/l7-protocols/nntp.pat
 @@ -0,0 +1,20 @@
@@ -7773,7 +7694,6 @@
 +
 +# same thing, slightly more accurate, but 100+ times slower
 +#^20[01][\x09-\x0d -~]*\x0d\x0a[\x09-\x0d -~]*AUTHINFO USER|20[01][\x09-\x0d -~]*news
-
 --- iptables-1.8.x/l7-protocols/not_commit/exe.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/exe.pat
 @@ -0,0 +1,19 @@
@@ -7796,7 +7716,6 @@
 +
 +# This is easier to understand:
 +\x4d\x5a(\x90\x03|\x50\x02)\x04
-
 --- iptables-1.8.x/l7-protocols/not_commit/flash.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/flash.pat
 @@ -0,0 +1,17 @@
@@ -7817,7 +7736,6 @@
 +# FWS = uncompressed, CWS = compressed, next byte is version number
 +# FLV = video 
 +[FC]WS[\x01-\x09]|FLV\x01\x05\x09
-
 --- iptables-1.8.x/l7-protocols/not_commit/gif.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/gif.pat
 @@ -0,0 +1,7 @@
@@ -7828,7 +7746,6 @@
 +gif
 +# drawn from /usr/share/magic
 +GIF8(7|9)a
-
 --- iptables-1.8.x/l7-protocols/not_commit/html.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/html.pat
 @@ -0,0 +1,10 @@
@@ -7842,7 +7759,6 @@
 +# even vaugly to the standards.
 +html
 +<html.*><head>
-
 --- iptables-1.8.x/l7-protocols/not_commit/jpeg.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/jpeg.pat
 @@ -0,0 +1,7 @@
@@ -7853,7 +7769,6 @@
 +jpeg
 +# drawn from /usr/share/magic
 +\xff\xd8
-
 --- iptables-1.8.x/l7-protocols/not_commit/mp3.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/mp3.pat
 @@ -0,0 +1,10 @@
@@ -7867,7 +7782,6 @@
 +
 +mp3
 +\x49\x44\x33\x03
-
 --- iptables-1.8.x/l7-protocols/not_commit/ogg.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/ogg.pat
 @@ -0,0 +1,6 @@
@@ -7877,7 +7791,6 @@
 +
 +ogg
 +oggs.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?\x01vorbis
-
 --- iptables-1.8.x/l7-protocols/not_commit/pdf.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/pdf.pat
 @@ -0,0 +1,10 @@
@@ -7891,7 +7804,6 @@
 +# will.
 +pdf
 +%PDF-1\.[0123456]
-
 --- iptables-1.8.x/l7-protocols/not_commit/perl.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/perl.pat
 @@ -0,0 +1,6 @@
@@ -7901,7 +7813,6 @@
 +
 +perl
 +\#! ?/(usr/(local/)?)?bin/perl
-
 --- iptables-1.8.x/l7-protocols/not_commit/postscript.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/postscript.pat
 @@ -0,0 +1,6 @@
@@ -7911,7 +7822,6 @@
 +
 +postscript
 +%!ps
-
 --- iptables-1.8.x/l7-protocols/not_commit/rar.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/rar.pat
 @@ -0,0 +1,6 @@
@@ -7921,7 +7831,6 @@
 +
 +rar
 +rar\x21\x1a\x07
-
 --- iptables-1.8.x/l7-protocols/not_commit/rpm.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/rpm.pat
 @@ -0,0 +1,6 @@
@@ -7931,7 +7840,6 @@
 +
 +rpm
 +\xed\xab\xee\xdb.?.?.?.?[1-7]
-
 --- iptables-1.8.x/l7-protocols/not_commit/rtf.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/rtf.pat
 @@ -0,0 +1,7 @@
@@ -7942,7 +7850,6 @@
 +rtf
 +\{\\rtf[12]
 +
-
 --- iptables-1.8.x/l7-protocols/not_commit/tar.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/tar.pat
 @@ -0,0 +1,11 @@
@@ -7957,7 +7864,6 @@
 +#257     string          ustar\040\040\0 GNU tar archive
 +# this is pretty general.  It's not a dictionary word, but still...
 +ustar
-
 --- iptables-1.8.x/l7-protocols/not_commit/zip.pat
 +++ iptables-1.8.x/l7-protocols/not_commit/zip.pat
 @@ -0,0 +1,6 @@
@@ -7967,7 +7873,6 @@
 +
 +zip
 +pk\x03\x04\x14
-
 --- iptables-1.8.x/l7-protocols/ntp.pat
 +++ iptables-1.8.x/l7-protocols/ntp.pat
 @@ -0,0 +1,16 @@
@@ -7987,7 +7892,6 @@
 +
 +ntp
 +^([\x13\x1b\x23\xd3\xdb\xe3]|[\x14\x1c$].......?.?.?.?.?.?.?.?.?[\xc6-\xff])
-
 --- iptables-1.8.x/l7-protocols/openft.pat
 +++ iptables-1.8.x/l7-protocols/openft.pat
 @@ -0,0 +1,12 @@
@@ -8003,7 +7907,6 @@
 +
 +openft
 +x-openftalias: [-)(0-9a-z ~.]
-
 --- iptables-1.8.x/l7-protocols/pop3.pat
 +++ iptables-1.8.x/l7-protocols/pop3.pat
 @@ -0,0 +1,49 @@
@@ -8056,7 +7959,6 @@
 +#-ERR Unknown AUTHORIZATION state command
 +#-ERR Unrecognized command
 +#-ERR Unknown command: "sadf'".
-
 --- iptables-1.8.x/l7-protocols/qq.pat
 +++ iptables-1.8.x/l7-protocols/qq.pat
 @@ -0,0 +1,18 @@
@@ -8078,7 +7980,6 @@
 +qq
 +^.?\x02.+\x03$
 +
-
 --- iptables-1.8.x/l7-protocols/quake-halflife.pat
 +++ iptables-1.8.x/l7-protocols/quake-halflife.pat
 @@ -0,0 +1,26 @@
@@ -8108,7 +8009,6 @@
 +# A previous quake pattern allowed the connection to start with only 2 bytes
 +# of 0xFF.  This doesn't seem to ever happen, but we should keep an eye out
 +# for it.
-
 --- iptables-1.8.x/l7-protocols/radmin.pat
 +++ iptables-1.8.x/l7-protocols/radmin.pat
 @@ -0,0 +1,16 @@
@@ -8128,7 +8028,6 @@
 +radmin
 +^\x01\x01(\x08\x08|\x1b\x1b)$
 +
-
 --- iptables-1.8.x/l7-protocols/rdp.pat
 +++ iptables-1.8.x/l7-protocols/rdp.pat
 @@ -0,0 +1,19 @@
@@ -8151,7 +8050,6 @@
 +# rdpdr.*cliprdp.*rdpsnd 
 +
 +
-
 --- iptables-1.8.x/l7-protocols/replaytv-ivs.pat
 +++ iptables-1.8.x/l7-protocols/replaytv-ivs.pat
 @@ -0,0 +1,10 @@
@@ -8165,7 +8063,6 @@
 +replaytv-ivs
 +^(get /ivs-IVSGetFileChunk|http/(0\.9|1\.0|1\.1) [1-5][0-9][0-9] [\x09-\x0d -~]*\x23\x23\x23\x23\x23REPLAY_CHUNK_START\x23\x23\x23\x23\x23)
 +
-
 --- iptables-1.8.x/l7-protocols/rtp.pat
 +++ iptables-1.8.x/l7-protocols/rtp.pat
 @@ -0,0 +1,40 @@
@@ -8209,7 +8106,6 @@
 +# Might also try this.  It's a bit slower (one packet and not too much extra
 +# regexec load) and a bit more accurate:
 +#^\x80......?.?.?.?.?.?.?.?.?.?.?.?.?\x80.*\x80
-
 --- iptables-1.8.x/l7-protocols/rtsp.pat
 +++ iptables-1.8.x/l7-protocols/rtsp.pat
 @@ -0,0 +1,14 @@
@@ -8227,7 +8123,6 @@
 +
 +rtsp
 +rtsp/1.0 200 ok
-
 --- iptables-1.8.x/l7-protocols/shoutcast.pat
 +++ iptables-1.8.x/l7-protocols/shoutcast.pat
 @@ -0,0 +1,26 @@
@@ -8257,7 +8152,6 @@
 +# this will not work.
 +# This pattern was discovered using Ethereal.
 +^get /.*icy-metadata:1|icy [1-5][0-9][0-9] [\x09-\x0d -~]*(content-type:audio|icy-)
-
 --- iptables-1.8.x/l7-protocols/sip.pat
 +++ iptables-1.8.x/l7-protocols/sip.pat
 @@ -0,0 +1,18 @@
@@ -8279,7 +8173,6 @@
 +#Request-Line  =  Method SP Request-URI SP SIP-Version CRLF
 +sip
 +^(invite|register|cancel) sip[\x09-\x0d -~]*sip/[0-2]\.[0-9]
-
 --- iptables-1.8.x/l7-protocols/skypeout.pat
 +++ iptables-1.8.x/l7-protocols/skypeout.pat
 @@ -0,0 +1,49 @@
@@ -8332,7 +8225,6 @@
 +
 +# This is slow, but not as bad as you might think.
 +^(\x01.?.?.?.?.?.?.?.?\x01|\x02.?.?.?.?.?.?.?.?\x02|\x03.?.?.?.?.?.?.?.?\x03|\x04.?.?.?.?.?.?.?.?\x04|\x05.?.?.?.?.?.?.?.?\x05|\x06.?.?.?.?.?.?.?.?\x06|\x07.?.?.?.?.?.?.?.?\x07|\x08.?.?.?.?.?.?.?.?\x08|\x09.?.?.?.?.?.?.?.?\x09|\x0a.?.?.?.?.?.?.?.?\x0a|\x0b.?.?.?.?.?.?.?.?\x0b|\x0c.?.?.?.?.?.?.?.?\x0c|\x0d.?.?.?.?.?.?.?.?\x0d|\x0e.?.?.?.?.?.?.?.?\x0e|\x0f.?.?.?.?.?.?.?.?\x0f|\x10.?.?.?.?.?.?.?.?\x10|\x11.?.?.?.?.?.?.?.?\x11|\x12.?.?.?.?.?.?.?.?\x12|\x13.?.?.?.?.?.?.?.?\x13|\x14.?.?.?.?.?.?.?.?\x14|\x15.?.?.?.?.?.?.?.?\x15|\x16.?.?.?.?.?.?.?.?\x16|\x17.?.?.?.?.?.?.?.?\x17|\x18.?.?.?.?.?.?.?.?\x18|\x19.?.?.?.?.?.?.?.?\x19|\x1a.?.?.?.?.?.?.?.?\x1a|\x1b.?.?.?.?.?.?.?.?\x1b|\x1c.?.?.?.?.?.?.?.?\x1c|\x1d.?.?.?.?.?.?.?.?\x1d|\x1e.?.?.?.?.?.?.?.?\x1e|\x1f.?.?.?.?.?.?.?.?\x1f|\x20.?.?.?.?.?.?.?.?\x20|\x21.?.?.?.?.?.?.?.?\x21|\x22.?.?.?.?.?.?.?.?\x22|\x23.?.?.?.?.?.?.?.?\x23|\$.?.?.?.?.?.?.?.?\$|\x25.?.?.?.?.?.?.?.?\x25|\x26.?.?.?.?.?.?.?.?\x26|\x27.?.?.?.?.?.?.?.?\x27|\(.?.?.?.?.?.?.?.?\(|\).?.?.?.?.?.?.?.?\)|\*.?.?.?.?.?.?.?.?\*|\+.?.?.?.?.?.?.?.?\+|\x2c.?.?.?.?.?.?.?.?\x2c|\x2d.?.?.?.?.?.?.?.?\x2d|\..?.?.?.?.?.?.?.?\.|\x2f.?.?.?.?.?.?.?.?\x2f|\x30.?.?.?.?.?.?.?.?\x30|\x31.?.?.?.?.?.?.?.?\x31|\x32.?.?.?.?.?.?.?.?\x32|\x33.?.?.?.?.?.?.?.?\x33|\x34.?.?.?.?.?.?.?.?\x34|\x35.?.?.?.?.?.?.?.?\x35|\x36.?.?.?.?.?.?.?.?\x36|\x37.?.?.?.?.?.?.?.?\x37|\x38.?.?.?.?.?.?.?.?\x38|\x39.?.?.?.?.?.?.?.?\x39|\x3a.?.?.?.?.?.?.?.?\x3a|\x3b.?.?.?.?.?.?.?.?\x3b|\x3c.?.?.?.?.?.?.?.?\x3c|\x3d.?.?.?.?.?.?.?.?\x3d|\x3e.?.?.?.?.?.?.?.?\x3e|\?.?.?.?.?.?.?.?.?\?|\x40.?.?.?.?.?.?.?.?\x40|\x41.?.?.?.?.?.?.?.?\x41|\x42.?.?.?.?.?.?.?.?\x42|\x43.?.?.?.?.?.?.?.?\x43|\x44.?.?.?.?.?.?.?.?\x44|\x45.?.?.?.?.?.?.?.?\x45|\x46.?.?.?.?.?.?.?.?\x46|\x47.?.?.?.?.?.?.?.?\x47|\x48.?.?.?.?.?.?.?.?\x48|\x49.?.?.?.?.?.?.?.?\x49|\x4a.?.?.?.?.?.?.?.?\x4a|\x4b.?.?.?.?.?.?.?.?\x4b|\x4c.?.?.?.?.?.?.?.?\x4c|\x4d.?.?.?.?.?.?.?.?\x4d|\x4e.?.?.?.?.?.?.?.?\x4e|\x4f.?.?.?.?.?.?.?.?\x4f|\x50.?.?.?.?.?.?.?.?\x50|\x51.?.?.?.?.?.?.?.?\x51|\x52.?.?.?.?.?.?.?.?\x52|\x53.?.?.?.?.?.?.?.?\x53|\x54.?.?.?.?.?.?.?.?\x54|\x55.?.?.?.?.?.?.?.?\x55|\x56.?.?.?.?.?.?.?.?\x56|\x57.?.?.?.?.?.?.?.?\x57|\x58.?.?.?.?.?.?.?.?\x58|\x59.?.?.?.?.?.?.?.?\x59|\x5a.?.?.?.?.?.?.?.?\x5a|\[.?.?.?.?.?.?.?.?\[|\\.?.?.?.?.?.?.?.?\\|\].?.?.?.?.?.?.?.?\]|\^.?.?.?.?.?.?.?.?\^|\x5f.?.?.?.?.?.?.?.?\x5f|\x60.?.?.?.?.?.?.?.?\x60|\x61.?.?.?.?.?.?.?.?\x61|\x62.?.?.?.?.?.?.?.?\x62|\x63.?.?.?.?.?.?.?.?\x63|\x64.?.?.?.?.?.?.?.?\x64|\x65.?.?.?.?.?.?.?.?\x65|\x66.?.?.?.?.?.?.?.?\x66|\x67.?.?.?.?.?.?.?.?\x67|\x68.?.?.?.?.?.?.?.?\x68|\x69.?.?.?.?.?.?.?.?\x69|\x6a.?.?.?.?.?.?.?.?\x6a|\x6b.?.?.?.?.?.?.?.?\x6b|\x6c.?.?.?.?.?.?.?.?\x6c|\x6d.?.?.?.?.?.?.?.?\x6d|\x6e.?.?.?.?.?.?.?.?\x6e|\x6f.?.?.?.?.?.?.?.?\x6f|\x70.?.?.?.?.?.?.?.?\x70|\x71.?.?.?.?.?.?.?.?\x71|\x72.?.?.?.?.?.?.?.?\x72|\x73.?.?.?.?.?.?.?.?\x73|\x74.?.?.?.?.?.?.?.?\x74|\x75.?.?.?.?.?.?.?.?\x75|\x76.?.?.?.?.?.?.?.?\x76|\x77.?.?.?.?.?.?.?.?\x77|\x78.?.?.?.?.?.?.?.?\x78|\x79.?.?.?.?.?.?.?.?\x79|\x7a.?.?.?.?.?.?.?.?\x7a|\{.?.?.?.?.?.?.?.?\{|\|.?.?.?.?.?.?.?.?\||\}.?.?.?.?.?.?.?.?\}|\x7e.?.?.?.?.?.?.?.?\x7e|\x7f.?.?.?.?.?.?.?.?\x7f|\x80.?.?.?.?.?.?.?.?\x80|\x81.?.?.?.?.?.?.?.?\x81|\x82.?.?.?.?.?.?.?.?\x82|\x83.?.?.?.?.?.?.?.?\x83|\x84.?.?.?.?.?.?.?.?\x84|\x85.?.?.?.?.?.?.?.?\x85|\x86.?.?.?.?.?.?.?.?\x86|\x87.?.?.?.?.?.?.?.?\x87|\x88.?.?.?.?.?.?.?.?\x88|\x89.?.?.?.?.?.?.?.?\x89|\x8a.?.?.?.?.?.?.?.?\x8a|\x8b.?.?.?.?.?.?.?.?\x8b|\x8c.?.?.?.?.?.?.?.?\x8c|\x8d.?.?.?.?.?.?.?.?\x8d|\x8e.?.?.?.?.?.?.?.?\x8e|\x8f.?.?.?.?.?.?.?.?\x8f|\x90.?.?.?.?.?.?.?.?\x90|\x91.?.?.?.?.?.?.?.?\x91|\x92.?.?.?.?.?.?.?.?\x92|\x93.?.?.?.?.?.?.?.?\x93|\x94.?.?.?.?.?.?.?.?\x94|\x95.?.?.?.?.?.?.?.?\x95|\x96.?.?.?.?.?.?.?.?\x96|\x97.?.?.?.?.?.?.?.?\x97|\x98.?.?.?.?.?.?.?.?\x98|\x99.?.?.?.?.?.?.?.?\x99|\x9a.?.?.?.?.?.?.?.?\x9a|\x9b.?.?.?.?.?.?.?.?\x9b|\x9c.?.?.?.?.?.?.?.?\x9c|\x9d.?.?.?.?.?.?.?.?\x9d|\x9e.?.?.?.?.?.?.?.?\x9e|\x9f.?.?.?.?.?.?.?.?\x9f|\xa0.?.?.?.?.?.?.?.?\xa0|\xa1.?.?.?.?.?.?.?.?\xa1|\xa2.?.?.?.?.?.?.?.?\xa2|\xa3.?.?.?.?.?.?.?.?\xa3|\xa4.?.?.?.?.?.?.?.?\xa4|\xa5.?.?.?.?.?.?.?.?\xa5|\xa6.?.?.?.?.?.?.?.?\xa6|\xa7.?.?.?.?.?.?.?.?\xa7|\xa8.?.?.?.?.?.?.?.?\xa8|\xa9.?.?.?.?.?.?.?.?\xa9|\xaa.?.?.?.?.?.?.?.?\xaa|\xab.?.?.?.?.?.?.?.?\xab|\xac.?.?.?.?.?.?.?.?\xac|\xad.?.?.?.?.?.?.?.?\xad|\xae.?.?.?.?.?.?.?.?\xae|\xaf.?.?.?.?.?.?.?.?\xaf|\xb0.?.?.?.?.?.?.?.?\xb0|\xb1.?.?.?.?.?.?.?.?\xb1|\xb2.?.?.?.?.?.?.?.?\xb2|\xb3.?.?.?.?.?.?.?.?\xb3|\xb4.?.?.?.?.?.?.?.?\xb4|\xb5.?.?.?.?.?.?.?.?\xb5|\xb6.?.?.?.?.?.?.?.?\xb6|\xb7.?.?.?.?.?.?.?.?\xb7|\xb8.?.?.?.?.?.?.?.?\xb8|\xb9.?.?.?.?.?.?.?.?\xb9|\xba.?.?.?.?.?.?.?.?\xba|\xbb.?.?.?.?.?.?.?.?\xbb|\xbc.?.?.?.?.?.?.?.?\xbc|\xbd.?.?.?.?.?.?.?.?\xbd|\xbe.?.?.?.?.?.?.?.?\xbe|\xbf.?.?.?.?.?.?.?.?\xbf|\xc0.?.?.?.?.?.?.?.?\xc0|\xc1.?.?.?.?.?.?.?.?\xc1|\xc2.?.?.?.?.?.?.?.?\xc2|\xc3.?.?.?.?.?.?.?.?\xc3|\xc4.?.?.?.?.?.?.?.?\xc4|\xc5.?.?.?.?.?.?.?.?\xc5|\xc6.?.?.?.?.?.?.?.?\xc6|\xc7.?.?.?.?.?.?.?.?\xc7|\xc8.?.?.?.?.?.?.?.?\xc8|\xc9.?.?.?.?.?.?.?.?\xc9|\xca.?.?.?.?.?.?.?.?\xca|\xcb.?.?.?.?.?.?.?.?\xcb|\xcc.?.?.?.?.?.?.?.?\xcc|\xcd.?.?.?.?.?.?.?.?\xcd|\xce.?.?.?.?.?.?.?.?\xce|\xcf.?.?.?.?.?.?.?.?\xcf|\xd0.?.?.?.?.?.?.?.?\xd0|\xd1.?.?.?.?.?.?.?.?\xd1|\xd2.?.?.?.?.?.?.?.?\xd2|\xd3.?.?.?.?.?.?.?.?\xd3|\xd4.?.?.?.?.?.?.?.?\xd4|\xd5.?.?.?.?.?.?.?.?\xd5|\xd6.?.?.?.?.?.?.?.?\xd6|\xd7.?.?.?.?.?.?.?.?\xd7|\xd8.?.?.?.?.?.?.?.?\xd8|\xd9.?.?.?.?.?.?.?.?\xd9|\xda.?.?.?.?.?.?.?.?\xda|\xdb.?.?.?.?.?.?.?.?\xdb|\xdc.?.?.?.?.?.?.?.?\xdc|\xdd.?.?.?.?.?.?.?.?\xdd|\xde.?.?.?.?.?.?.?.?\xde|\xdf.?.?.?.?.?.?.?.?\xdf|\xe0.?.?.?.?.?.?.?.?\xe0|\xe1.?.?.?.?.?.?.?.?\xe1|\xe2.?.?.?.?.?.?.?.?\xe2|\xe3.?.?.?.?.?.?.?.?\xe3|\xe4.?.?.?.?.?.?.?.?\xe4|\xe5.?.?.?.?.?.?.?.?\xe5|\xe6.?.?.?.?.?.?.?.?\xe6|\xe7.?.?.?.?.?.?.?.?\xe7|\xe8.?.?.?.?.?.?.?.?\xe8|\xe9.?.?.?.?.?.?.?.?\xe9|\xea.?.?.?.?.?.?.?.?\xea|\xeb.?.?.?.?.?.?.?.?\xeb|\xec.?.?.?.?.?.?.?.?\xec|\xed.?.?.?.?.?.?.?.?\xed|\xee.?.?.?.?.?.?.?.?\xee|\xef.?.?.?.?.?.?.?.?\xef|\xf0.?.?.?.?.?.?.?.?\xf0|\xf1.?.?.?.?.?.?.?.?\xf1|\xf2.?.?.?.?.?.?.?.?\xf2|\xf3.?.?.?.?.?.?.?.?\xf3|\xf4.?.?.?.?.?.?.?.?\xf4|\xf5.?.?.?.?.?.?.?.?\xf5|\xf6.?.?.?.?.?.?.?.?\xf6|\xf7.?.?.?.?.?.?.?.?\xf7|\xf8.?.?.?.?.?.?.?.?\xf8|\xf9.?.?.?.?.?.?.?.?\xf9|\xfa.?.?.?.?.?.?.?.?\xfa|\xfb.?.?.?.?.?.?.?.?\xfb|\xfc.?.?.?.?.?.?.?.?\xfc|\xfd.?.?.?.?.?.?.?.?\xfd|\xfe.?.?.?.?.?.?.?.?\xfe|\xff.?.?.?.?.?.?.?.?\xff)
-
 --- iptables-1.8.x/l7-protocols/skypetoskype.pat
 +++ iptables-1.8.x/l7-protocols/skypetoskype.pat
 @@ -0,0 +1,13 @@
@@ -8349,7 +8241,6 @@
 +# require at least 16 bytes (my limited tests always get at least 18)
 +^..\x02.............
 +
-
 --- iptables-1.8.x/l7-protocols/smb.pat
 +++ iptables-1.8.x/l7-protocols/smb.pat
 @@ -0,0 +1,18 @@
@@ -8371,7 +8262,6 @@
 +smb
 +# matches a NEGOTIATE PROTOCOL or TRANSACTION REQUEST command
 +\xffsmb[\x72\x25]
-
 --- iptables-1.8.x/l7-protocols/smtp.pat
 +++ iptables-1.8.x/l7-protocols/smtp.pat
 @@ -0,0 +1,39 @@
@@ -8414,7 +8304,6 @@
 +^220[\x09-\x0d -~]* (e?smtp|simple mail)
 +userspace pattern=^220[\x09-\x0d -~]* (E?SMTP|[Ss]imple [Mm]ail)
 +userspace flags=REG_NOSUB REG_EXTENDED
-
 --- iptables-1.8.x/l7-protocols/snmp.pat
 +++ iptables-1.8.x/l7-protocols/snmp.pat
 @@ -0,0 +1,18 @@
@@ -8436,7 +8325,6 @@
 +# All SNMPv1 traffic.  See snmp-mon.pat and snmp-trap.pat for details.
 +snmp
 +^\x02\x01\x04.+([\xa0-\xa3]\x02[\x01-\x04].?.?.?.?\x02\x01.?\x02\x01.?\x30|\xa4\x06.+\x40\x04.?.?.?.?\x02\x01.?\x02\x01.?\x43)
-
 --- iptables-1.8.x/l7-protocols/socks.pat
 +++ iptables-1.8.x/l7-protocols/socks.pat
 @@ -0,0 +1,31 @@
@@ -8471,7 +8359,6 @@
 +
 +socks
 +\x05[\x01-\x08]*\x05[\x01-\x08]?.*\x05[\x01-\x03][\x01\x03].*\x05[\x01-\x08]?[\x01\x03]
-
 --- iptables-1.8.x/l7-protocols/soribada.pat
 +++ iptables-1.8.x/l7-protocols/soribada.pat
 @@ -0,0 +1,50 @@
@@ -8525,7 +8412,6 @@
 +# This will match everything including the udp packet portions
 +^GETMP3\x0d\x0aFilename|^\x01.?.?.?(\x51\x3a\+|\x51\x32\x3a)|^\x10[\x14-\x16]\x10[\x15-\x17].?.?.?.?$
 +
-
 --- iptables-1.8.x/l7-protocols/soulseek.pat
 +++ iptables-1.8.x/l7-protocols/soulseek.pat
 @@ -0,0 +1,16 @@
@@ -8545,7 +8431,6 @@
 +# (Pierce firewall: in theory the token could be 4 bytes, but the last two 
 +# seem to always be zero.|download: Peer Init)
 +^(\x05..?|.\x01.[ -~]+\x01F..?.?.?.?.?.?.?)$
-
 --- iptables-1.8.x/l7-protocols/ssdp.pat
 +++ iptables-1.8.x/l7-protocols/ssdp.pat
 @@ -0,0 +1,20 @@
@@ -8569,7 +8454,6 @@
 +ssdp
 +^notify[\x09-\x0d ]\*[\x09-\x0d ]http/1\.1[\x09-\x0d -~]*ssdp:(alive|byebye)|^m-search[\x09-\x0d ]\*[\x09-\x0d ]http/1\.1[\x09-\x0d -~]*ssdp:discover
 +
-
 --- iptables-1.8.x/l7-protocols/ssh.pat
 +++ iptables-1.8.x/l7-protocols/ssh.pat
 @@ -0,0 +1,16 @@
@@ -8589,7 +8473,6 @@
 +
 +# old pattern:
 +# (diffie-hellman-group-exchange-sha1|diffie-hellman-group1-sha1.ssh-rsa|ssh-dssfaes128-cbc|3des-cbc|blowfish-cbc|cast128-cbc|arcfour|aes192-cbc|aes256-cbc|rijndael-cbc@lysator.liu.sefaes128-cbc|3des-cbc|blowfish-cbc|cast128-cbc|arcfour|aes192-cbc|aes256-cbc|rijndael-cbc@lysator.liu.seuhmac-md5|hmac-sha1|hmac-ripemd160)+
-
 --- iptables-1.8.x/l7-protocols/ssl.pat
 +++ iptables-1.8.x/l7-protocols/ssl.pat
 @@ -0,0 +1,15 @@
@@ -8608,7 +8491,6 @@
 +# Server Hello with certificate | Client Hello
 +# This allows SSL 3.X, which includes TLS 1.0, known internally as SSL 3.1
 +^(.?.?\x16\x03.*\x16\x03|.?.?\x01\x03\x01?.*\x0b)
-
 --- iptables-1.8.x/l7-protocols/subspace.pat
 +++ iptables-1.8.x/l7-protocols/subspace.pat
 @@ -0,0 +1,20 @@
@@ -8632,7 +8514,6 @@
 +subspace
 +^\x01....\x11\x10........\x01$
 +
-
 --- iptables-1.8.x/l7-protocols/subversion.pat
 +++ iptables-1.8.x/l7-protocols/subversion.pat
 @@ -0,0 +1,12 @@
@@ -8648,7 +8529,6 @@
 +subversion
 +# This is not a valid basic GNU regular expression.
 +^\( success \( 1 2 \(
-
 --- iptables-1.8.x/l7-protocols/teamfortress2.pat
 +++ iptables-1.8.x/l7-protocols/teamfortress2.pat
 @@ -0,0 +1,10 @@
@@ -8662,7 +8542,6 @@
 +
 +teamfortress2
 +^\xff\xff\xff\xff.....*tfTeam Fortress
-
 --- iptables-1.8.x/l7-protocols/teamspeak.pat
 +++ iptables-1.8.x/l7-protocols/teamspeak.pat
 @@ -0,0 +1,14 @@
@@ -8680,7 +8559,6 @@
 +teamspeak
 +^\xf4\xbe\x03.*teamspeak
 +
-
 --- iptables-1.8.x/l7-protocols/telnet.pat
 +++ iptables-1.8.x/l7-protocols/telnet.pat
 @@ -0,0 +1,15 @@
@@ -8699,7 +8577,6 @@
 +# This pattern could fail on a unchatty connection or it could be 
 +# matched by something non-telnet spewing a lot of stuff in the fb-ff range.
 +^\xff[\xfb-\xfe].\xff[\xfb-\xfe].\xff[\xfb-\xfe]
-
 --- iptables-1.8.x/l7-protocols/thecircle.pat
 +++ iptables-1.8.x/l7-protocols/thecircle.pat
 @@ -0,0 +1,11 @@
@@ -8714,7 +8591,6 @@
 +
 +thecircle
 +^t\x03ni.?[\x01-\x06]?t[\x01-\x05]s[\x0a\x0b](glob|who are you$|query data)
-
 --- iptables-1.8.x/l7-protocols/tor.pat
 +++ iptables-1.8.x/l7-protocols/tor.pat
 @@ -0,0 +1,16 @@
@@ -8734,7 +8610,6 @@
 +
 +tor
 +TOR1.*<identity>
-
 --- iptables-1.8.x/l7-protocols/tsp.pat
 +++ iptables-1.8.x/l7-protocols/tsp.pat
 @@ -0,0 +1,13 @@
@@ -8751,7 +8626,6 @@
 +tsp
 +# type, version (1), sequence number, 8 type specific bytes, machine name
 +^[\x01-\x13\x16-$]\x01.?.?.?.?.?.?.?.?.?.?[ -~]+
-
 --- iptables-1.8.x/l7-protocols/untested/100bao.pat
 +++ iptables-1.8.x/l7-protocols/untested/100bao.pat
 @@ -0,0 +1,11 @@
@@ -8766,7 +8640,6 @@
 +100bao
 +^\x01\x01\x05\x0a
 +
-
 --- iptables-1.8.x/l7-protocols/untested/battlefield2142.pat
 +++ iptables-1.8.x/l7-protocols/untested/battlefield2142.pat
 @@ -0,0 +1,13 @@
@@ -8783,7 +8656,6 @@
 +# This branch seems to matter very rarely, though
 +^(\x11\x20\x01\x90\x50\x64\x10|\xfe\xfd.?.?.?\x18|[\x01\\].?battlefield2)
 +
-
 --- iptables-1.8.x/l7-protocols/untested/battlefield2.pat
 +++ iptables-1.8.x/l7-protocols/untested/battlefield2.pat
 @@ -0,0 +1,25 @@
@@ -8812,7 +8684,6 @@
 +
 +# Pattern prior to 193.85.217.35's comment on protocolinfo:
 +#^(\x11\x20\x01\xa0\x98\x11|\xfe\xfd.?.?.?.?.?.?(\x14\x01\x06|\xff\xff\xff))|[]\x01].?battlefield2
-
 --- iptables-1.8.x/l7-protocols/untested/biff.pat
 +++ iptables-1.8.x/l7-protocols/untested/biff.pat
 @@ -0,0 +1,15 @@
@@ -8831,7 +8702,6 @@
 +# something that looks like a username, an @, a number.
 +# won't catch usernames that have strange characters in them.
 +^[a-z][a-z0-9]+@[1-9][0-9]+$
-
 --- iptables-1.8.x/l7-protocols/untested/goboogy.pat
 +++ iptables-1.8.x/l7-protocols/untested/goboogy.pat
 @@ -0,0 +1,12 @@
@@ -8847,7 +8717,6 @@
 +
 +goboogy
 +<peerplat>|^get /getfilebyhash\.cgi\?|^get /queue_register\.cgi\?|^get /getupdowninfo\.cgi\?
-
 --- iptables-1.8.x/l7-protocols/untested/hotline.pat
 +++ iptables-1.8.x/l7-protocols/untested/hotline.pat
 @@ -0,0 +1,11 @@
@@ -8862,7 +8731,6 @@
 +
 +hotline
 +^....................TRTPHOTL\x01\x02
-
 --- iptables-1.8.x/l7-protocols/untested/kugoo.pat
 +++ iptables-1.8.x/l7-protocols/untested/kugoo.pat
 @@ -0,0 +1,14 @@
@@ -8880,7 +8748,6 @@
 +
 +kugoo
 +^(\x31..\x8e|\x64.+\x74\x47\x50\x37)
-
 --- iptables-1.8.x/l7-protocols/untested/live365.pat
 +++ iptables-1.8.x/l7-protocols/untested/live365.pat
 @@ -0,0 +1,14 @@
@@ -8898,7 +8765,6 @@
 +# FIXME: what's going on here?
 +membername.*session.*player
 +
-
 --- iptables-1.8.x/l7-protocols/untested/liveforspeed.pat
 +++ iptables-1.8.x/l7-protocols/untested/liveforspeed.pat
 @@ -0,0 +1,12 @@
@@ -8914,7 +8780,6 @@
 +liveforspeed
 +^..\x05\x58\x0a\x1d\x03
 +# The same guy came by the next day and deleted the \x03 without comment...
-
 --- iptables-1.8.x/l7-protocols/untested/lpd.pat
 +++ iptables-1.8.x/l7-protocols/untested/lpd.pat
 @@ -0,0 +1,17 @@
@@ -8935,7 +8800,6 @@
 +# testing shows that this is not the case.
 +
 +^(\x01[!-~]+|\x02[!-~]+\x0a.[\x01\x02\x03][\x01-\x0a -~]*|[\x03\x04][!-~]+[\x09-\x0d]+[a-z][\x09-\x0d -~]*|\x05[!-~]+[\x09-\x0d]+([a-z][!-~]*[\x09-\x0d]+[1-9][0-9]?[0-9]?|root[\x09-\x0d]+[!-~]+).*)\x0a$
-
 --- iptables-1.8.x/l7-protocols/untested/msn-filetransfer.pat
 +++ iptables-1.8.x/l7-protocols/untested/msn-filetransfer.pat
 @@ -0,0 +1,29 @@
@@ -8968,7 +8832,6 @@
 +msn-filetransfer
 +^(ver [ -~]*msnftp\x0d\x0aver msnftp\x0d\x0ausr|method msnmsgr:)
 +
-
 --- iptables-1.8.x/l7-protocols/untested/netbios.pat
 +++ iptables-1.8.x/l7-protocols/untested/netbios.pat
 @@ -0,0 +1,28 @@
@@ -9000,7 +8863,6 @@
 +# the NetBIOS names of the involved computers (with a null between them).  
 +# (40ish here, damn this regexp implementation and its lack of {40,})
 +\x81.?.?.[A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P][A-P]
-
 --- iptables-1.8.x/l7-protocols/untested/pcanywhere.pat
 +++ iptables-1.8.x/l7-protocols/untested/pcanywhere.pat
 @@ -0,0 +1,11 @@
@@ -9015,7 +8877,6 @@
 +pcanywhere
 +# I think this only matches queries and not the bulk of the traffic!
 +^(nq|st)$
-
 --- iptables-1.8.x/l7-protocols/untested/poco.pat
 +++ iptables-1.8.x/l7-protocols/untested/poco.pat
 @@ -0,0 +1,11 @@
@@ -9030,7 +8891,6 @@
 +poco
 +^\x80\x94\x0a\x01....\x1f\x9e
 +
-
 --- iptables-1.8.x/l7-protocols/untested/quake1.pat
 +++ iptables-1.8.x/l7-protocols/untested/quake1.pat
 @@ -0,0 +1,18 @@
@@ -9052,7 +8912,6 @@
 +# \x01 = CCREQ_CONNECT
 +# \x03 = protocol version (3 == 0.91, 0.92, 1.00, 1.01)
 +^\x80\x0c\x01quake\x03
-
 --- iptables-1.8.x/l7-protocols/untested/rlogin.pat
 +++ iptables-1.8.x/l7-protocols/untested/rlogin.pat
 @@ -0,0 +1,18 @@
@@ -9074,7 +8933,6 @@
 +# I know of end in two zeros and are between 3 and 6 digits long.
 +# This pattern is uncomfortably general.
 +^[a-z][a-z0-9][a-z0-9]+/[1-9][0-9]?[0-9]?[0-9]?00
-
 --- iptables-1.8.x/l7-protocols/untested/stun.pat
 +++ iptables-1.8.x/l7-protocols/untested/stun.pat
 @@ -0,0 +1,45 @@
@@ -9123,7 +8981,6 @@
 +# single example):
 +# 
 +# ^\x01................?\x01\x01\x24
-
 --- iptables-1.8.x/l7-protocols/untested/tesla.pat
 +++ iptables-1.8.x/l7-protocols/untested/tesla.pat
 @@ -0,0 +1,14 @@
@@ -9141,7 +8998,6 @@
 +
 +tesla
 +\x03\x9a\x89\x22\x31\x31\x31\.\x30\x30\x20\x42\x65\x74\x61\x20|\xe2\x3c\x69\x1e\x1c\xe9
-
 --- iptables-1.8.x/l7-protocols/untested/tftp.pat
 +++ iptables-1.8.x/l7-protocols/untested/tftp.pat
 @@ -0,0 +1,20 @@
@@ -9165,7 +9021,6 @@
 +# the rest = netascii|octet|mail (case insensitivity done by the kernel)
 +
 +^(\x01|\x02)[ -~]*(netascii|octet|mail)
-
 --- iptables-1.8.x/l7-protocols/untested/unknown.pat
 +++ iptables-1.8.x/l7-protocols/untested/unknown.pat
 @@ -0,0 +1,7 @@
@@ -9176,7 +9031,6 @@
 +# "unknown" and always returns unmatched for connections that are still
 +# being tested.
 +.
-
 --- iptables-1.8.x/l7-protocols/untested/unset.pat
 +++ iptables-1.8.x/l7-protocols/untested/unset.pat
 @@ -0,0 +1,8 @@
@@ -9188,7 +9042,6 @@
 +# being tested.
 +# NOT YET IMPLEMENTED.
 +.
-
 --- iptables-1.8.x/l7-protocols/untested/uucp.pat
 +++ iptables-1.8.x/l7-protocols/untested/uucp.pat
 @@ -0,0 +1,11 @@
@@ -9203,7 +9056,6 @@
 +
 +uucp
 +^\x10here=
-
 --- iptables-1.8.x/l7-protocols/untested/zmaap.pat
 +++ iptables-1.8.x/l7-protocols/untested/zmaap.pat
 @@ -0,0 +1,17 @@
@@ -9224,7 +9076,6 @@
 +# - 1 byte message type,which is either 0 or 1
 +# - 1 byte address family.  L7-filter only works in IPv4, so this is 1.
 +^\x1b\xd7\x3b\x48[\x01\x02]\x01?\x01
-
 --- iptables-1.8.x/l7-protocols/validcertssl.pat
 +++ iptables-1.8.x/l7-protocols/validcertssl.pat
 @@ -0,0 +1,24 @@
@@ -9252,7 +9103,6 @@
 +
 +validcertssl
 +^(.?.?\x16\x03.*\x16\x03|.?.?\x01\x03\x01?.*\x0b).*(thawte|equifax secure|rsa data security, inc|verisign, inc|gte cybertrust root|entrust\.net limited)
-
 --- iptables-1.8.x/l7-protocols/ventrilo.pat
 +++ iptables-1.8.x/l7-protocols/ventrilo.pat
 @@ -0,0 +1,17 @@
@@ -9273,7 +9123,6 @@
 +ventrilo
 +^..?v\$\xcf
 +
-
 --- iptables-1.8.x/l7-protocols/vnc.pat
 +++ iptables-1.8.x/l7-protocols/vnc.pat
 @@ -0,0 +1,22 @@
@@ -9299,7 +9148,6 @@
 +# slightly faster, but probably not worth the extra maintenance. 
 +# ^rfb 003\.00[3578]\x0a$
 +
-
 --- iptables-1.8.x/l7-protocols/whois.pat
 +++ iptables-1.8.x/l7-protocols/whois.pat
 @@ -0,0 +1,13 @@
@@ -9316,7 +9164,6 @@
 +# Matches the query.  Assumes only that it is printable ASCII without wierd
 +# whitespace.
 +^[ !-~]+\x0d\x0a$
-
 --- iptables-1.8.x/l7-protocols/worldofwarcraft.pat
 +++ iptables-1.8.x/l7-protocols/worldofwarcraft.pat
 @@ -0,0 +1,65 @@
@@ -9385,7 +9232,6 @@
 +# 0090:  0E 61 20 15 8B 6B 83 13 CB FD 09 D5 7F 0C 13 3F  .a ..k.........?
 +# 00A0:  DB 07 B4 EA 54 F8                                ....T.
 +
-
 --- iptables-1.8.x/l7-protocols/x11.pat
 +++ iptables-1.8.x/l7-protocols/x11.pat
 @@ -0,0 +1,22 @@
@@ -9411,7 +9257,6 @@
 +^[lb].?\x0b
 +userspace pattern=^[lB].?\x0b
 +userspace flags=REG_NOSUB
-
 --- iptables-1.8.x/l7-protocols/xboxlive.pat
 +++ iptables-1.8.x/l7-protocols/xboxlive.pat
 @@ -0,0 +1,40 @@
@@ -9455,7 +9300,6 @@
 +
 +xboxlive
 +^\x58\x80........\xf3|^\x06\x58\x4e
-
 --- iptables-1.8.x/l7-protocols/xunlei.pat
 +++ iptables-1.8.x/l7-protocols/xunlei.pat
 @@ -0,0 +1,14 @@
@@ -9473,7 +9317,6 @@
 +xunlei
 +^[()]...?.?.?(reg|get|query)
 +
-
 --- iptables-1.8.x/l7-protocols/yahoo.pat
 +++ iptables-1.8.x/l7-protocols/yahoo.pat
 @@ -0,0 +1,26 @@
@@ -9503,7 +9346,6 @@
 +# after the "type of command" byte.
 +
 +^(ymsg|ypns|yhoo).?.?.?.?.?.?.?[lwt].*\xc0\x80
-
 --- iptables-1.8.x/libiptc/libip4tc.c
 +++ iptables-1.8.x/libiptc/libip4tc.c
 @@ -180,7 +180,7 @@
