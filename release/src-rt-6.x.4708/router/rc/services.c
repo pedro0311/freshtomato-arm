@@ -2611,7 +2611,7 @@ static void start_media_server(int force)
 	char serial[18], uuident[37];
 	char buffer[32], buffer2[8], buffer3[32];
 	char *buf, *p, *q;
-	char *path, *restrict;
+	char *path, *restricted;
 
 	/* only if enabled or forced */
 	if (!nvram_get_int("ms_enable") && force == 0)
@@ -2701,14 +2701,14 @@ static void start_media_server(int force)
 
 			/* media directories */
 			if ((buf = strdup(nvram_safe_get("ms_dirs"))) && (*buf)) {
-				/* path<restrict[A|V|P|] */
+				/* path<restricted[A|V|P|] */
 				p = buf;
 				while ((q = strsep(&p, ">")) != NULL) {
-					if ((vstrsep(q, "<", &path, &restrict) < 1) || (!path) || (!*path))
+					if ((vstrsep(q, "<", &path, &restricted) < 1) || (!path) || (!*path))
 						continue;
 
 					fprintf(f, "media_dir=%s%s%s\n",
-						restrict ? : "", (restrict && *restrict) ? "," : "", path);
+						restricted ? : "", (restricted && *restricted) ? "," : "", path);
 				}
 				free(buf);
 			}
