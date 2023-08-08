@@ -118,7 +118,6 @@ static void restore_defaults(void)
 	eval("nvram", "defaults", "--initcheck");
 #endif
 
-	nvram_set("os_name", "linux");
 	nvram_set("os_version", tomato_version);
 	nvram_set("os_date", tomato_buildtime);
 
