@@ -1281,7 +1281,7 @@ endif # !TCONFIG_BCMARM
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,$(if $(TCONFIG_AIO),-O3,-Os)) --prefix=/usr --openssldir=/etc/ssl \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 			shared $(OPENSSL_CIPHERS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 \
