@@ -1,5 +1,7 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include "strerror_override.h"
-#include "strerror_override_private.h"
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <io.h>
@@ -35,7 +37,7 @@ static void test_read_fd_equal(const char *testdir);
 #define PATH_MAX 256
 #endif
 
-static void test_write_to_file()
+static void test_write_to_file(void)
 {
 	json_object *jso;
 
@@ -90,7 +92,7 @@ static void test_write_to_file()
 static void stat_and_cat(const char *file)
 {
 	struct stat sb;
-	int d = open(file, O_RDONLY, 0600);
+	int d = open(file, O_RDONLY);
 	if (d < 0)
 	{
 		printf("FAIL: unable to open %s: %s\n", file, strerror(errno));
@@ -168,7 +170,7 @@ static void test_read_valid_with_fd(const char *testdir)
 	char filename[PATH_MAX];
 	(void)snprintf(filename, sizeof(filename), "%s/valid.json", testdir);
 
-	int d = open(filename, O_RDONLY, 0);
+	int d = open(filename, O_RDONLY);
 	if (d < 0)
 	{
 		fprintf(stderr, "FAIL: unable to open %s: %s\n", filename, strerror(errno));
@@ -193,7 +195,7 @@ static void test_read_valid_nested_with_fd(const char *testdir)
 	char filename[PATH_MAX];
 	(void)snprintf(filename, sizeof(filename), "%s/valid_nested.json", testdir);
 
-	int d = open(filename, O_RDONLY, 0);
+	int d = open(filename, O_RDONLY);
 	if (d < 0)
 	{
 		fprintf(stderr, "FAIL: unable to open %s: %s\n", filename, strerror(errno));
@@ -231,7 +233,7 @@ static void test_read_valid_nested_with_fd(const char *testdir)
 	close(d);
 }
 
-static void test_read_nonexistant()
+static void test_read_nonexistant(void)
 {
 	const char *filename = "./not_present.json";
 
@@ -249,10 +251,10 @@ static void test_read_nonexistant()
 	}
 }
 
-static void test_read_closed()
+static void test_read_closed(void)
 {
 	// Test reading from a closed fd
-	int d = open("/dev/null", O_RDONLY, 0);
+	int d = open("/dev/null", O_RDONLY);
 	if (d < 0)
 	{
 		puts("FAIL: unable to open");
@@ -287,7 +289,7 @@ static void test_read_fd_equal(const char *testdir)
 
 	json_object *jso = json_object_from_file(filename);
 
-	int d = open(filename, O_RDONLY, 0);
+	int d = open(filename, O_RDONLY);
 	if (d < 0)
 	{
 		fprintf(stderr, "FAIL: unable to open %s: %s\n", filename, strerror(errno));

@@ -1,19 +1,6 @@
 --- libjson-c/CMakeLists.txt
 +++ libjson-c/CMakeLists.txt
-@@ -48,9 +48,9 @@
- add_subdirectory(tests)
- endif()
- 
--if (NOT MSVC)  # cmd line apps don't built on Windows currently.
--add_subdirectory(apps)
--endif()
-+#if (NOT MSVC)  # cmd line apps don't built on Windows currently.
-+#add_subdirectory(apps)
-+#endif()
- 
- # Set some packaging variables.
- set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
-@@ -433,7 +433,7 @@
+@@ -451,7 +451,7 @@
  include_directories(${PROJECT_SOURCE_DIR})
  include_directories(${PROJECT_BINARY_DIR})
  
@@ -22,3 +9,28 @@
  
  # "uninstall" custom target for make generators in unix like operating systems
  # and if that target is not present
+@@ -577,16 +577,16 @@
+ 
+ install(FILES ${JSON_C_PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/json-c)
+ 
+-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
+-   (NOT MSVC OR NOT (MSVC_VERSION LESS 1800)) # Tests need at least VS2013
+-   )
+-add_subdirectory(tests)
+-endif()
++#if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
++#   (NOT MSVC OR NOT (MSVC_VERSION LESS 1800)) # Tests need at least VS2013
++#   )
++#add_subdirectory(tests)
++#endif()
+ 
+ if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_APPS)
+ # skip apps when we're included in someone else's build
+-if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+-add_subdirectory(apps)
+-endif()
++#if (NOT MSVC)  # cmd line apps don't built on Windows currently.
++#add_subdirectory(apps)
++#endif()
+ endif()
+ 

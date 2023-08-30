@@ -24,6 +24,7 @@ set(ALL_TEST_NAMES
     test_double_serializer
     test_float
     test_int_add
+    test_int_get
     test_locale
     test_null
     test_parse
@@ -38,15 +39,14 @@ set(ALL_TEST_NAMES
 
 if (NOT DISABLE_JSON_POINTER)
     set(ALL_TEST_NAMES ${ALL_TEST_NAMES} test_json_pointer)
+    if (NOT DISABLE_JSON_PATCH)
+        set(ALL_TEST_NAMES ${ALL_TEST_NAMES} test_json_patch)
+    endif()
 endif()
 
 foreach(TESTNAME ${ALL_TEST_NAMES})
 
 add_executable(${TESTNAME} ${TESTNAME}.c)
-if(${TESTNAME} STREQUAL test_strerror OR ${TESTNAME} STREQUAL test_util_file)
-# For output consistency, we need _json_c_strerror() in some tests:
-target_sources(${TESTNAME} PRIVATE ../strerror_override.c)
-endif()
 add_test(NAME ${TESTNAME} COMMAND ${PROJECT_SOURCE_DIR}/tests/${TESTNAME}.test)
 
 # XXX using the non-target_ versions of these doesn't work :(

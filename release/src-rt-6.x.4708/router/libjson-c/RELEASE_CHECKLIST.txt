@@ -16,6 +16,7 @@
       changes (added/removed/updated funcs, etc...), and detect backwards compat
       issues.
         * https://github.com/lvc/abi-compliance-checker
+        * See also `abi-check.sh`
         * If the new release is not backwards compatible, then this is a MAJOR release.
         * Mention removed features in ChangeLog
 		* Consider re-adding backwards compatible support, through symbol
@@ -40,9 +41,15 @@
 ## Release creation
 
 Start creating the new release:
-    release=0.16
+
+    PREV=$(git tag | tail -1)
+    PREV=${PREV#json-c-}
+    PREV=${PREV%-*}
+    release=0.$((${PREV#*.} + 1))
+    cd ~
     git clone https://github.com/json-c/json-c json-c-${release}
 
+    rm -rf distcheck
     mkdir distcheck
     cd distcheck
     # Note, the build directory *must* be entirely separate from
@@ -54,8 +61,7 @@ Start creating the new release:
 Make any fixes/changes *before* branching.
 
     cd json-c-${release}
-    git branch json-c-${release}
-    git checkout json-c-${release}
+    git checkout -b json-c-${release}
 
 ------------
 
@@ -94,7 +100,11 @@ Create the release tarballs:
     echo .git > excludes
     tar -czf json-c-${release}.tar.gz -X excludes json-c-${release}
 
-    echo 'doc/*' >> excludes
+    echo 'doc/*.cmake' >> excludes
+    echo 'doc/CMakeFiles' >> excludes
+    echo 'doc/Makefile' >> excludes
+    echo 'doc/Doxyfile' >> excludes
+    echo 'doc/html' >> excludes
     tar -czf json-c-${release}-nodoc.tar.gz -X excludes json-c-${release}
 
 ------------
@@ -113,7 +123,8 @@ Go to Amazon S3 service at:
     https://console.aws.amazon.com/s3/
 
 Upload the two tarballs in the json-c_releases/releases folder.
-	When uploading, use "Standard" storage class, and make the uploaded files publicly accessible.
+* Expand "Permissions", pick "Grant public-read access"
+* Expand "Properties", ensure "Standard" storage class is picked.
 
 Logout of Amazon S3, and verify that the files are visible.
     https://s3.amazonaws.com/json-c_releases/releases/index.html
@@ -172,7 +183,8 @@ Update checksums on wiki page.
     openssl md5 json-c*gz
 
 Copy and paste this output into the wiki page at:
-	https://github.com/json-c/json-c/wiki
+* https://github.com/json-c/json-c/wiki
+* https://github.com/json-c/json-c/wiki/Old-Releases
 
 ------------
 

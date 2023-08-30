@@ -1,31 +1,26 @@
-# Many projects still are stuck using CMake 2.8 is several places so it's good to provide backward support too. This is
-# specially true in old embedded systems (OpenWRT and friends) where CMake isn't necessarily upgraded.
-cmake_minimum_required(VERSION 2.8)
+# CMake 3.9 was released in 2017/07
+#  As of 2023, many versions of Linux, NetBSD and FreeBSD provide,
+#   and many OpenWRT packages require, much newer CMake packages.
+#  We're stopping before 3.10 because that version starts requiring
+#   c++11, which isn't available on e.g HPUX.
+cmake_minimum_required(VERSION 3.9)
 
-if(POLICY CMP0048)
-	cmake_policy(SET CMP0048 NEW)
-endif()
+# The project() command manages VERSION variables.
+cmake_policy(SET CMP0048 NEW)
 
 # JSON-C library is C only project.
-if (CMAKE_VERSION VERSION_LESS 3.0)
-	project(json-c)
-	set(PROJECT_VERSION_MAJOR "0")
-	set(PROJECT_VERSION_MINOR "16")
-	set(PROJECT_VERSION_PATCH "0")
-	set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
-else()
-	project(json-c LANGUAGES C VERSION 0.16)
-endif()
+# PROJECT_VERSION{,_MAJOR,_MINOR,_PATCH} set by project():
+project(json-c LANGUAGES C VERSION 0.17)
 
-# If we've got 3.0 then it's good, let's provide support. Otherwise, leave it be.
-if(POLICY CMP0038)
-  # Policy CMP0038 introduced was in CMake 3.0
-  cmake_policy(SET CMP0038 NEW)
-endif()
+# Targets may not link directly to themselves.
+cmake_policy(SET CMP0038 NEW)
 
-if(POLICY CMP0054)
-    cmake_policy(SET CMP0054 NEW)
-endif()
+# MACOSX_RPATH is enabled by default.
+# We set it explicitly to avoid the warning
+cmake_policy(SET CMP0042 NEW)
+
+# Only interpret if() arguments as variables or keywords when unquoted.
+cmake_policy(SET CMP0054 NEW)
 
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
@@ -36,21 +31,12 @@ set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
 
 # Include file check macros honor CMAKE_REQUIRED_LIBRARIES
 # i.e. the check_include_file() calls will include -lm when checking.
+# New in version 3.12.
 if(POLICY CMP0075)
 	cmake_policy(SET CMP0075 NEW)
 endif()
 
 include(CTest)
-
-if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
-   (NOT MSVC OR NOT (MSVC_VERSION LESS 1800)) # Tests need at least VS2013
-   )
-add_subdirectory(tests)
-endif()
-
-if (NOT MSVC)  # cmd line apps don't built on Windows currently.
-add_subdirectory(apps)
-endif()
 
 # Set some packaging variables.
 set(CPACK_PACKAGE_NAME              "${PROJECT_NAME}")
@@ -102,7 +88,10 @@ option(ENABLE_RDRAND                  "Enable RDRAND Hardware RNG Hash Seed."   
 option(ENABLE_THREADING               "Enable partial threading support."                     OFF)
 option(OVERRIDE_GET_RANDOM_SEED       "Override json_c_get_random_seed() with custom code."   OFF)
 option(DISABLE_EXTRA_LIBS             "Avoid linking against extra libraries, such as libbsd." OFF)
-option(DISABLE_JSON_POINTER           "Disable JSON pointer (RFC6901) support."               OFF)
+option(DISABLE_JSON_POINTER           "Disable JSON pointer (RFC6901) and JSON patch support." OFF)
+option(DISABLE_JSON_PATCH             "Disable JSON patch (RFC6902) support."                 OFF)
+option(NEWLOCALE_NEEDS_FREELOCALE     "Work around newlocale bugs in old FreeBSD by calling freelocale"  OFF)
+option(BUILD_APPS                     "Default to building apps" ON)
 
 
 if (UNIX OR MINGW OR CYGWIN)
@@ -154,11 +143,14 @@ check_include_file(sys/random.h     HAVE_SYS_RANDOM_H)
 check_include_file(sys/stat.h       HAVE_SYS_STAT_H)
 check_include_file(xlocale.h        HAVE_XLOCALE_H)
 
+# Set json-c specific vars to stamp into json_config.h
+# in a way that hopefully won't conflict with other
+# projects that use json-c.
 if (HAVE_INTTYPES_H)
-	# Set a json-c specific var to stamp into json_config.h
-	# in a way that hopefully won't conflict with other
-	# projects that use json-c.
-    set(JSON_C_HAVE_INTTYPES_H 1)
+	set(JSON_C_HAVE_INTTYPES_H 1)
+endif()
+if (HAVE_STDINT_H)
+	set(JSON_C_HAVE_STDINT_H 1)
 endif()
 
 check_symbol_exists(_isnan          "float.h" HAVE_DECL__ISNAN)
@@ -183,10 +175,12 @@ check_symbol_exists(arc4random      "stdlib.h" HAVE_ARC4RANDOM)
 if (NOT HAVE_ARC4RANDOM AND DISABLE_EXTRA_LIBS STREQUAL "OFF")
     check_include_file(bsd/stdlib.h HAVE_BSD_STDLIB_H)
     if (HAVE_BSD_STDLIB_H)
-		list(APPEND CMAKE_REQUIRED_LIBRARIES "-lbsd")
-		link_libraries(bsd)
+		list(APPEND CMAKE_REQUIRED_LIBRARIES "bsd")
 		unset(HAVE_ARC4RANDOM CACHE)
         check_symbol_exists(arc4random   "bsd/stdlib.h" HAVE_ARC4RANDOM)
+        if (NOT HAVE_ARC4RANDOM)
+			list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES "bsd")
+        endif()
     endif()
 endif()
 
@@ -200,6 +194,18 @@ if (HAVE_LOCALE_H)
     check_symbol_exists(setlocale   "locale.h" HAVE_SETLOCALE)
     check_symbol_exists(uselocale   "locale.h" HAVE_USELOCALE)
 endif()
+
+# uClibc *intentionally* crashes in duplocale(), at least as of:
+# https://github.com/ffainelli/uClibc/blob/266bdc1/libc/misc/locale/locale.c#L1322
+# So, if it looks like we're compiling for a system like that just disable 
+# locale handling entirely.
+exec_program(${CMAKE_C_COMPILER} ARGS -dumpmachine OUTPUT_VARIABLE CMAKE_GNU_C_MACHINE)
+if (CMAKE_GNU_C_MACHINE MATCHES "uclibc")
+	message(STATUS "Detected uClibc compiler, disabling locale handling")
+	set(HAVE_SETLOCALE 0)
+	set(HAVE_USELOCALE 0)
+endif()
+
 if (HAVE_STRINGS_H)
     check_symbol_exists(strcasecmp  "strings.h" HAVE_STRCASECMP)
     check_symbol_exists(strncasecmp "strings.h" HAVE_STRNCASECMP)
@@ -305,6 +311,11 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL
     endif()
 
     add_definitions(-D_GNU_SOURCE)
+
+    if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+        # Remove this for 1.0 when we can bump the ABI and actually fix these warnings.
+        set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-shorten-64-to-32")
+    endif()
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /DEBUG")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4100")
@@ -396,9 +407,9 @@ set(JSON_C_PUBLIC_HEADERS
 set(JSON_C_HEADERS
     ${JSON_C_PUBLIC_HEADERS}
     ${PROJECT_SOURCE_DIR}/json_object_private.h
+    ${PROJECT_SOURCE_DIR}/json_pointer_private.h
     ${PROJECT_SOURCE_DIR}/random_seed.h
     ${PROJECT_SOURCE_DIR}/strerror_override.h
-    ${PROJECT_SOURCE_DIR}/strerror_override_private.h
     ${PROJECT_SOURCE_DIR}/math_compat.h
     ${PROJECT_SOURCE_DIR}/snprintf_compat.h
     ${PROJECT_SOURCE_DIR}/strdup_compat.h
@@ -424,8 +435,15 @@ if (NOT DISABLE_JSON_POINTER)
     set(JSON_C_PUBLIC_HEADERS   ${JSON_C_PUBLIC_HEADERS}  ${PROJECT_SOURCE_DIR}/json_pointer.h)
     set(JSON_C_SOURCES          ${JSON_C_SOURCES}         ${PROJECT_SOURCE_DIR}/json_pointer.c)
     set(JSON_H_JSON_POINTER "#include \"json_pointer.h\"")
+
+    if (NOT DISABLE_JSON_PATCH)
+        set(JSON_C_PUBLIC_HEADERS   ${JSON_C_PUBLIC_HEADERS}  ${PROJECT_SOURCE_DIR}/json_patch.h)
+        set(JSON_C_SOURCES          ${JSON_C_SOURCES}         ${PROJECT_SOURCE_DIR}/json_patch.c)
+	set(JSON_H_JSON_PATCH "#include \"json_patch.h\"")
+    endif()
 else()
     set(JSON_H_JSON_POINTER "")
+    set(JSON_H_JSON_PATCH "")
 endif()
 
 configure_file(json.h.cmakein ${PROJECT_BINARY_DIR}/json.h @ONLY)
@@ -454,7 +472,7 @@ add_library(${PROJECT_NAME}
     ${JSON_C_HEADERS}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION 5.2.0
+    VERSION 5.3.0
     SOVERSION 5)
 list(APPEND CMAKE_TARGETS ${PROJECT_NAME})
 # If json-c is used as subroject it set to target correct interface -I flags and allow
@@ -464,6 +482,8 @@ target_include_directories(${PROJECT_NAME}
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
 )
+
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_REQUIRED_LIBRARIES})
 
 # Allow to build static and shared libraries at the same time
 if (BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
@@ -477,6 +497,8 @@ if (BUILD_STATIC_LIBS AND BUILD_SHARED_LIBS)
             $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
             $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}>
     )
+
+	target_link_libraries(${PROJECT_NAME}-static PUBLIC ${CMAKE_REQUIRED_LIBRARIES})
 
     # rename the static library
     if (NOT MSVC)
@@ -531,10 +553,40 @@ if (UNIX OR MINGW OR CYGWIN)
     SET(libdir ${CMAKE_INSTALL_FULL_LIBDIR})
     SET(includedir ${CMAKE_INSTALL_FULL_INCLUDEDIR})
     SET(VERSION ${PROJECT_VERSION})
+
+	# Linking against the static json-c requires
+	# dependent packages to include additional libs:
+	SET(LIBS_LIST ${CMAKE_REQUIRED_LIBRARIES})
+
+	# Note: We would need cmake >= 3.12 in order to use list(TRANSFORM ...)
+	function(list_transform_prepend var prefix)
+		set(temp "")
+		foreach(f ${${var}})
+			list(APPEND temp "${prefix}${f}")
+		endforeach()
+		set(${var} "${temp}" PARENT_SCOPE)
+	endfunction()
+	list_transform_prepend(LIBS_LIST "-l")
+
+	string(REPLACE ";" " " LIBS "${LIBS_LIST}")
+
     configure_file(json-c.pc.in json-c.pc @ONLY)
     set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
     install(FILES ${PROJECT_BINARY_DIR}/json-c.pc DESTINATION "${INSTALL_PKGCONFIG_DIR}")
 endif ()
 
 install(FILES ${JSON_C_PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/json-c)
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING AND
+   (NOT MSVC OR NOT (MSVC_VERSION LESS 1800)) # Tests need at least VS2013
+   )
+add_subdirectory(tests)
+endif()
+
+if (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_APPS)
+# skip apps when we're included in someone else's build
+if (NOT MSVC)  # cmd line apps don't built on Windows currently.
+add_subdirectory(apps)
+endif()
+endif()
 
