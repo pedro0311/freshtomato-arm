@@ -2406,11 +2406,11 @@ libpng: libpng/stamp-h1
 	@rm -f $(TOP)/libpng/staged/usr/lib/libpng12.la
 
 libpng-install:
-	install -D libpng/.libs/libpng16.so.16.39.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.39.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.39.0
+	install -D libpng/.libs/libpng16.so.16.40.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.40.0
 	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng16.so.16.39.0 libpng16.so && \
-		ln -sf libpng16.so.16.39.0 libpng16.so.16
+		ln -sf libpng16.so.16.40.0 libpng16.so && \
+		ln -sf libpng16.so.16.40.0 libpng16.so.16
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
