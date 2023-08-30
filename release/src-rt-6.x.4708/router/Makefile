@@ -2378,11 +2378,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.11.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.4
+	install -D libxml2/.libs/libxml2.so.2.11.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.11.4 libxml2.so.2 && \
-		ln -sf libxml2.so.2.11.4 libxml2.so
+		ln -sf libxml2.so.2.11.5 libxml2.so.2 && \
+		ln -sf libxml2.so.2.11.5 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
