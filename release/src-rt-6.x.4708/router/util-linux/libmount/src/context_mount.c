@@ -541,6 +541,11 @@ static int do_mount(struct libmnt_context *cxt, const char *try_type)
 	if (!rc)
 		rc = mnt_context_call_hooks(cxt, MNT_STAGE_MOUNT);
 
+	if (rc == 0 && mnt_context_is_fake(cxt)) {
+		DBG(CXT, ul_debugobj(cxt, "FAKE (-f) set status=0"));
+		cxt->syscall_status = 0;
+	}
+
 	if (org_type && rc != 0)
 		__mnt_fs_set_fstype_ptr(cxt->fs, org_type);
 	org_type  = NULL;
@@ -1517,6 +1522,12 @@ int mnt_context_get_mount_excode(
 		 * mount(2) syscall success, but something else failed
 		 * (probably error in utab processing).
 		 */
+		if (rc == -MNT_ERR_APPLYFLAGS) {
+			if (buf)
+				snprintf(buf, bufsz, _("filesystem was mounted, but failed to apply flags"));
+			return MNT_EX_USAGE;
+		}
+
 		if (rc == -MNT_ERR_LOCK) {
 			if (buf)
 				snprintf(buf, bufsz, _("filesystem was mounted, but failed to update userspace mount table"));
@@ -1566,10 +1577,13 @@ int mnt_context_get_mount_excode(
 		if (!buf)
 			break;
 		if (geteuid() == 0) {
-			if (mnt_safe_stat(tgt, &st) || !S_ISDIR(st.st_mode))
-				snprintf(buf, bufsz, _("mount point is not a directory"));
-			else
+
+			if (mnt_safe_stat(tgt, &st) == 0
+			    && ((mflags & MS_BIND && S_ISREG(st.st_mode))
+				|| S_ISDIR(st.st_mode)))
 				snprintf(buf, bufsz, _("permission denied"));
+			else
+				snprintf(buf, bufsz, _("mount point is not a directory"));
 		} else
 			snprintf(buf, bufsz, _("must be superuser to use mount"));
 		break;
