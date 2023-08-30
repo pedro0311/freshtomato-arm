@@ -2087,7 +2087,7 @@ libvorbis-clean:
 ffmpeg/stamp-h1:
 	$(call patch_files,ffmpeg)
 	cd ffmpeg && \
-		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target-os=linux $(if $(TCONFIG_BCMARM),--cpu=cortex-a9,) \
+		./configure --prefix='' --enable-cross-compile --arch=$(ARCH) --target-os=linux \
 		--cross-prefix=$(CROSS_COMPILE) --pkg-config="pkg-config" \
 		--enable-pthreads --enable-small --enable-shared --enable-gpl \
 		--disable-doc --disable-ffmpeg --disable-ffplay --disable-ffserver --disable-ffprobe --disable-symver \
