@@ -11,20 +11,20 @@
 #include <net-snmp/library/snmp_transport.h>
 
 #include <stdio.h>
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
 #include <sys/types.h>
 
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
 
 #include <ctype.h>
 
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
@@ -641,7 +641,7 @@ netsnmp_tdomain_transport_tspec(netsnmp_tdomain_spec *tspec)
     const char * const *spec = NULL;
     int                 any_found = 0;
     char buf[SNMP_MAXPATH];
-    char **lspec = NULL;
+    const char **lspec = NULL;
     char *tokenized_domain = NULL;
 
     application = tspec->application;
@@ -755,7 +755,7 @@ netsnmp_tdomain_transport_tspec(netsnmp_tdomain_spec *tspec)
                 lspec[0] = strtok_r(tokenized_domain, ",", &ptr);
                 while ((lspec[commas++] = strtok_r(NULL, ",", &ptr)))
                     ;
-                spec = (const char * const *)lspec;
+                spec = lspec;
             }
         } else {
             spec = netsnmp_lookup_default_domains(application);
@@ -1288,7 +1288,7 @@ netsnmp_transport_cache_get(int af, int type, int local,
 
 #define USE_CACHE 1
 
-#if USE_CACHE
+#ifdef USE_CACHE
     /** check for existing transport */
     tc = _tc_find(af, type, local, bind_addr);
     if (tc) {
@@ -1307,7 +1307,7 @@ netsnmp_transport_cache_get(int af, int type, int local,
     }
     DEBUGMSGTL(("transport:cache:get", "new transport %p\n", t));
 
-#if USE_CACHE
+#ifdef USE_CACHE
     /** create transport cache for new transport */
     tc = _tc_add(af, type, local, bind_addr, t);
     if (NULL == tc) {

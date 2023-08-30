@@ -49,19 +49,19 @@ SOFTWARE.
 #include <ctype.h>
 #include <sys/types.h>
 
-#if HAVE_DIRENT_H
+#ifdef HAVE_DIRENT_H
 # include <dirent.h>
 # define NAMLEN(dirent) strlen((dirent)->d_name)
 #else
 # define dirent direct
 # define NAMLEN(dirent) (dirent)->d_namlen
-# if HAVE_SYS_NDIR_H
+# ifdef HAVE_SYS_NDIR_H
 #  include <sys/ndir.h>
 # endif
-# if HAVE_SYS_DIR_H
+# ifdef HAVE_SYS_DIR_H
 #  include <sys/dir.h>
 # endif
-# if HAVE_NDIR_H
+# ifdef HAVE_NDIR_H
 #  include <ndir.h>
 # endif
 #endif
@@ -69,32 +69,32 @@ SOFTWARE.
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if TIME_WITH_SYS_TIME
+#ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
 #else
-# if HAVE_SYS_TIME_H
+# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
 #  include <time.h>
 # endif
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_SYS_SELECT_H
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
 
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
@@ -1258,25 +1258,34 @@ sprint_realloc_hinted_integer(u_char ** buf, size_t * buf_len,
     char            fmt[10] = "%l@", tmp[256];
     int             shift = 0, len, negative = 0;
 
-    if (hint[0] == 'd') {
+    if (!strchr("bdoux", decimaltype)) {
+        snmp_log(LOG_ERR, "Invalid decimal type '%c'\n", decimaltype);
+        return 0;
+    }
+
+    switch (hint[0]) {
+    case 'd':
         /*
          * We might *actually* want a 'u' here.  
          */
-        if (hint[1] == '-')
+        if (hint[1] == '-') {
             shift = atoi(hint + 2);
+            if (shift < 0)
+                shift = 0;
+        }
         fmt[2] = decimaltype;
         if (val < 0) {
             negative = 1;
             val = -val;
         }
-    } else {
-        /*
-         * DISPLAY-HINT character is 'b', 'o', or 'x'.  
-         */
+        snprintf(tmp, sizeof(tmp), fmt, val);
+        break;
+    case 'o':
+    case 'x':
         fmt[2] = hint[0];
-    }
-
-    if (hint[0] == 'b') {
+        snprintf(tmp, sizeof(tmp), fmt, val);
+        break;
+    case 'b': {
 	unsigned long int bit = 0x80000000LU;
 	char *bp = tmp;
 	while (bit) {
@@ -1284,9 +1293,11 @@ sprint_realloc_hinted_integer(u_char ** buf, size_t * buf_len,
 	    bit >>= 1;
 	}
 	*bp = 0;
+        break;
     }
-    else
-	sprintf(tmp, fmt, val);
+    default:
+        return 0;
+    }
 
     if (shift != 0) {
         len = strlen(tmp);
@@ -1297,7 +1308,7 @@ sprint_realloc_hinted_integer(u_char ** buf, size_t * buf_len,
                 len--;
             }
             tmp[len] = '.';
-        } else {
+        } else if (shift < sizeof(tmp) - 1) {
             tmp[shift + 1] = 0;
             while (shift) {
                 if (len-- > 0) {
@@ -2312,6 +2323,10 @@ snmp_out_options(char *options, int argc, char *const *argv)
         case 'p':
             /* What if argc/argv are null ? */
             if (!*(options)) {
+		if (optind == argc) {
+		    fprintf(stderr, "Missing precision for -Op\n");
+		    return options-1;
+		}
                 options = argv[optind++];
             }
             netsnmp_ds_set_string(NETSNMP_DS_LIBRARY_ID,
@@ -3008,7 +3023,7 @@ set_function(struct tree *subtree)
  * When called, out_len must hold the maximum length of the output array.
  *
  * @param input     the input string.
- * @param output    the oid wirte.
+ * @param output    the oid write.
  * @param out_len   number of subid's in output.
  * 
  * @return 1 if successful.
@@ -3019,7 +3034,7 @@ set_function(struct tree *subtree)
  */
 int
 read_objid(const char *input, oid * output, size_t * out_len)
-{                               /* number of subid's in "output" */
+{
 #ifndef NETSNMP_DISABLE_MIB_LOADING
     struct tree    *root = tree_top;
     char            buf[SPRINT_MAX_LEN];
@@ -3726,13 +3741,13 @@ build_oid_segment(netsnmp_variable_list * var)
  * Concatenate a prefix and the OIDs of a variable list.
  *
  * @param[out]    in         Output buffer.
- * @param[in]     in_len     Maximum number of OID components that fit in @in.
+ * @param[in]     in_len     Maximum number of OID components that fit in @p in.
  * @param[out]    out_len    Number of OID components of the result.
  * @param[in]     prefix     OID to be copied to the start of the output buffer.
- * @param[in]     prefix_len Number of OID components to copy from @prefix.
- * @param[in/out] indexes    Variable list for which var->name should be set
+ * @param[in]     prefix_len Number of OID components to copy from @p prefix.
+ * @param[in,out] indexes    Variable list for which var->name should be set
  *                           for each variable var in the list and whose OIDs
- *                           should be appended to @in.
+ *                           should be appended to @p in.
  */
 int
 build_oid_noalloc(oid * in, size_t in_len, size_t * out_len,
@@ -4945,7 +4960,7 @@ print_tree_node(u_char ** buf, size_t * buf_len,
             cp = NULL;
             break;
         }
-#if NETSNMP_ENABLE_TESTING_CODE
+#ifdef NETSNMP_ENABLE_TESTING_CODE
         if (!cp && (tp->ranges || tp->enums)) { /* ranges without type ? */
             snprintf(str, sizeof(str), "?0 with %s %s ?",
                     tp->ranges ? "Range" : "", tp->enums ? "Enum" : "");
@@ -5097,7 +5112,7 @@ print_tree_node(u_char ** buf, size_t * buf_len,
             snprintf(str, sizeof(str), "status_%d", tp->status);
             cp = str;
         }
-#if NETSNMP_ENABLE_TESTING_CODE
+#ifdef NETSNMP_ENABLE_TESTING_CODE
         if (!cp && (tp->indexes)) {     /* index without status ? */
             snprintf(str, sizeof(str), "?0 with %s ?",
                      tp->indexes ? "Index" : "");
@@ -5274,13 +5289,13 @@ get_module_node(const char *fname,
 static int
 node_to_oid(struct tree *tp, oid * objid, size_t * objidlen)
 {
-    int             numids, lenids;
+    size_t          numids, lenids;
     oid            *op;
 
     if (!tp || !objid || !objidlen)
         return 0;
 
-    lenids = (int) *objidlen;
+    lenids = *objidlen;
     op = objid + lenids;        /* points after the last element */
 
     for (numids = 0; tp; tp = tp->parent, numids++) {
@@ -5290,7 +5305,7 @@ node_to_oid(struct tree *tp, oid * objid, size_t * objidlen)
         *op = tp->subid;
     }
 
-    *objidlen = (size_t) numids;
+    *objidlen = numids;
     if (numids > lenids) {
         return 0;
     }
@@ -5298,7 +5313,7 @@ node_to_oid(struct tree *tp, oid * objid, size_t * objidlen)
     if (numids < lenids)
         memmove(objid, op, numids * sizeof(oid));
 
-    return (numids);
+    return numids;
 }
 
 /*
@@ -5683,6 +5698,8 @@ _add_strings_to_oid(void *tp, char *cp,
         case '"':
         case '\'':
             doingquote = *cp++;
+            if (*cp == '\0')
+                goto bad_id;
             /*
              * insert length if requested 
              */

@@ -6,7 +6,7 @@
  */
 #include <net-snmp/net-snmp-config.h>
 
-#include <net-snmp/library/snmpIPBaseDomain.h>
+#include "snmpIPBaseDomain.h"
 #include <net-snmp/library/snmpUDPIPv6Domain.h>
 #include <net-snmp/library/system.h>
 
@@ -19,37 +19,37 @@
 #include <ctype.h>
 #include <errno.h>
 
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
 #include <stddef.h>
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#if HAVE_NETDB_H
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
-#if HAVE_NET_IF_H
+#ifdef HAVE_NET_IF_H
 #include <net/if.h>
 #endif
 
-#if HAVE_STRUCT_SOCKADDR_STORAGE_SS_FAMILY
+#ifdef HAVE_STRUCT_SOCKADDR_STORAGE_SS_FAMILY
 #define SS_FAMILY ss_family
-#elif HAVE_STRUCT_SOCKADDR_STORAGE___SS_FAMILY
+#elif defined(HAVE_STRUCT_SOCKADDR_STORAGE___SS_FAMILY)
 #define SS_FAMILY __ss_family
 #endif
 
@@ -751,7 +751,7 @@ netsnmp_udp6_parse_security(const char *token, char *param)
                     DEBUGMSGTL(("com2sec6", "IPv4 detected for IPv6 parser. Skipping.\n"));
                     return;
                 }
-#if HAVE_GETADDRINFO
+#ifdef HAVE_GETADDRINFO
                 int             gai_error;
 
                 hints.ai_family = AF_INET6;
@@ -801,7 +801,7 @@ netsnmp_udp6_parse_security(const char *token, char *param)
                     com2Sec6ListLast = end;
                 }
             }
-#if HAVE_GETADDRINFO
+#ifdef HAVE_GETADDRINFO
             if (res != &hints)
                 freeaddrinfo(res);
 #endif

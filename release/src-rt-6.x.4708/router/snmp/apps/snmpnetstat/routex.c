@@ -36,14 +36,14 @@
 
 #include <net-snmp/net-snmp-config.h>
 
-#if HAVE_SYS_TYPES_H
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
 
@@ -51,10 +51,10 @@
 
 netsnmp_feature_require(sockaddr_size);
 
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_NETDB_H
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
 
@@ -64,7 +64,7 @@ netsnmp_feature_require(sockaddr_size);
 
 #include "main.h"
 #include "netstat.h"
-#if HAVE_WINSOCK_H
+#ifdef HAVE_WINSOCK_H
 #include "winstub.h"
 #endif
 

@@ -4,28 +4,28 @@
 
 #include <net-snmp/net-snmp-config.h>
 
-#if HAVE_IO_H
+#ifdef HAVE_IO_H
 #include <io.h>
 #endif
 #include <stdio.h>
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_MALLOC_H
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 #include <sys/types.h>
 #include <ctype.h>
-#if HAVE_FCNTL_H
+#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#if HAVE_SYS_WAIT_H
+#ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
-#if HAVE_SYS_SELECT_H
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
 
@@ -62,7 +62,7 @@ int
 run_shell_command(const char *command, const char *input,
                   char *output, int *out_len)
 {
-#if HAVE_SYSTEM
+#ifdef HAVE_SYSTEM
     int         result;    /* and the return value of the command */
 
     if (!command)
@@ -158,7 +158,7 @@ run_shell_command(const char *command, const char *input,
 #endif
 }
 
-#if HAVE_EXECV
+#ifdef HAVE_EXECV
 /*
  * Split the given command up into separate tokens,
  * ready to be passed to 'execv'
@@ -204,7 +204,7 @@ int
 run_exec_command(const char *command, const char *input,
                  char *output, int *out_len)
 {
-#if HAVE_EXECV
+#ifdef HAVE_EXECV
     int ipipe[2];
     int opipe[2];
     int i;

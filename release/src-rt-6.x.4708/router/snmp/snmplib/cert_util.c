@@ -42,32 +42,32 @@ netsnmp_feature_child_of(tls_fingerprint_build, cert_util_all);
 
 #include <ctype.h>
 
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
 
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
 
-#if HAVE_SYS_STAT_H
+#ifdef HAVE_SYS_STAT_H
 #   include <sys/stat.h>
 #endif
-#if HAVE_DIRENT_H
+#ifdef HAVE_DIRENT_H
 # include <dirent.h>
 # define NAMLEN(dirent) strlen((dirent)->d_name)
 #else
 # define dirent direct
 # define NAMLEN(dirent) (dirent)->d_namlen
-# if HAVE_SYS_NDIR_H
+# ifdef HAVE_SYS_NDIR_H
 #  include <sys/ndir.h>
 # endif
-# if HAVE_SYS_DIR_H
+# ifdef HAVE_SYS_DIR_H
 #  include <sys/dir.h>
 # endif
-# if HAVE_NDIR_H
+# ifdef HAVE_NDIR_H
 #  include <ndir.h>
 # endif
 #endif
@@ -1415,7 +1415,8 @@ _cert_read_index(const char *dirname, struct stat *dirstat)
         DEBUGMSGT(("cert:index:add", "missing or wrong index format!\n"));
         fclose(index);
         SNMP_FREE(idxname);
-        return -1;
+        count = -1;
+        goto free_cert_container;
     }
     while (1) {
         if (NULL == fgets(tmpstr, sizeof(tmpstr), index))
@@ -1487,6 +1488,8 @@ _cert_read_index(const char *dirname, struct stat *dirstat)
                        count));
         }
     }
+
+free_cert_container:
     if (count < 0)
         CONTAINER_FREE_ALL(found, NULL);
     CONTAINER_FREE(found);
@@ -1732,7 +1735,7 @@ netsnmp_fp_lowercase_and_strip_colon(char *fp)
     for (++pos; *pos; ++pos) {
         if (':' == *pos)
             continue;
-        *dest++ = isalpha(0xFF & *pos) ? tolower(0xFF & *pos) : *pos;
+        *dest++ = tolower(0xFF & *pos);
     }
     *dest = *pos; /* nul termination */
 }

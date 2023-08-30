@@ -525,6 +525,7 @@ STARTPROG() {
     if test -f $CFG_FILE; then
 	COMMAND="$COMMAND -C -c $CFG_FILE"
     fi
+    COMMAND="$COMMAND -f"
     if [ "x$PORT_SPEC" != "x" ]; then
         COMMAND="$COMMAND $PORT_SPEC"
     fi
@@ -536,13 +537,10 @@ STARTPROG() {
         OUTPUTENVVARS $LOG_FILE.command
         echo $COMMAND >> $LOG_FILE.command
     fi
-    if [ "x$OSTYPE" = "xmsys" ]; then
-      $COMMAND > $LOG_FILE.stdout 2>&1 &
-      ## COMMAND="cmd.exe //c start //min $COMMAND"
-      ## start $COMMAND > $LOG_FILE.stdout 2>&1
-    else
-      $COMMAND > $LOG_FILE.stdout 2>&1
-    fi
+    {
+	{ $COMMAND; } >$LOG_FILE.stdout 2>&1
+	echo $? >$LOG_FILE.exitcode
+    } &
 }
 
 #------------------------------------ -o-
@@ -686,8 +684,7 @@ FINISHED() {
 	    rm -f core
 	fi
 	echo "$headerStr...FAIL" >> $SNMP_TMPDIR/invoked
-	if [ -n "${TRAVIS_OS_NAME}" ] || [ -n "$APPVEYOR" ] ||
-	   [ -n "$CIRRUS_CI" ]; then
+	if [ -n "$APPVEYOR" ] || [ -n "$CIRRUS_CI" ]; then
 	    {
 		find "$SNMP_TMPDIR" -type f |
 		    while read -r f; do

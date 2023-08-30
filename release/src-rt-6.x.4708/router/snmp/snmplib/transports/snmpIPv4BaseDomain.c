@@ -4,7 +4,7 @@
 #include <net-snmp/net-snmp-config.h>
 
 #include <net-snmp/types.h>
-#include <net-snmp/library/snmpIPBaseDomain.h>
+#include "snmpIPBaseDomain.h"
 #include <net-snmp/library/snmpIPv4BaseDomain.h>
 #include <net-snmp/library/snmp_assert.h>
 
@@ -12,24 +12,24 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <ctype.h>
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#if HAVE_NETDB_H
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
 
@@ -97,25 +97,31 @@ netsnmp_sockaddr_in3(struct netsnmp_ep *ep,
              !netsnmp_parse_ep_str(&ep_str, default_target))
             snmp_log(LOG_ERR, "Invalid default target %s\n",
                      default_target);
-    if (inpeername && *inpeername != '\0' &&
-        !netsnmp_parse_ep_str(&ep_str, inpeername))
-        return 0;
+    if (inpeername && *inpeername != '\0') {
+	if (ep_str.addr) {
+	    free(ep_str.addr);  /* free default target */
+	    ep_str.addr = NULL;
+	}
+	if (!netsnmp_parse_ep_str(&ep_str, inpeername))
+            return 0;
+    }
 
     if (ep_str.port[0])
         addr->sin_port = htons(atoi(ep_str.port));
     if (ep_str.iface[0])
         strlcpy(ep->iface, ep_str.iface, sizeof(ep->iface));
-    if (strcmp(ep_str.addr, "255.255.255.255") == 0) {
+    if (ep_str.addr && strcmp(ep_str.addr, "255.255.255.255") == 0) {
         /*
          * The explicit broadcast address hack
          */
         DEBUGMSGTL(("netsnmp_sockaddr_in", "Explicit UDP broadcast\n"));
         addr->sin_addr.s_addr = INADDR_NONE;
-    } else if (strcmp(ep_str.addr, "") != 0) {
+    } else if (ep_str.addr && strcmp(ep_str.addr, "") != 0) {
         ret = netsnmp_gethostbyname_v4(ep_str.addr, &addr->sin_addr.s_addr);
         if (ret < 0) {
             DEBUGMSGTL(("netsnmp_sockaddr_in",
                         "couldn't resolve hostname \"%s\"\n", ep_str.addr));
+            free(ep_str.addr);
             return 0;
         }
         DEBUGMSGTL(("netsnmp_sockaddr_in",
@@ -128,6 +134,7 @@ netsnmp_sockaddr_in3(struct netsnmp_ep *ep,
 
     DEBUGMSGTL(("netsnmp_sockaddr_in", "return { AF_INET, %s:%hu }\n",
                 inet_ntoa(addr->sin_addr), ntohs(addr->sin_port)));
+    free(ep_str.addr);
     return 1;
 }
 

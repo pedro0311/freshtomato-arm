@@ -54,26 +54,26 @@ SOFTWARE.
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #endif
-#if TIME_WITH_SYS_TIME
+#ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
 #else
-# if HAVE_SYS_TIME_H
+# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
 #  include <time.h>
 # endif
 #endif
-#if HAVE_SYS_SELECT_H
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 #include <errno.h>
@@ -85,7 +85,7 @@ SOFTWARE.
 #include <net-snmp/library/snmp_assert.h>
 #include "agent_global_vars.h"
 
-#if HAVE_SYSLOG_H
+#ifdef HAVE_SYSLOG_H
 #include <syslog.h>
 #endif
 
@@ -2965,7 +2965,7 @@ netsnmp_check_requests_status(netsnmp_agent_session *asp,
         if (requests->status != SNMP_ERR_NOERROR &&
             (!look_for_specific || requests->status == look_for_specific)
             && (look_for_specific || asp->index == 0
-                || requests->index < asp->index)) {
+                || requests->index <= asp->index)) {
             asp->index = requests->index;
             asp->status = requests->status;
         }
@@ -3719,11 +3719,43 @@ netsnmp_handle_request(netsnmp_agent_session *asp, int status)
     return 1;
 }
 
+static int
+check_set_pdu_for_null_varbind(netsnmp_agent_session *asp)
+{
+    int i;
+    netsnmp_variable_list *v = NULL;
+
+    for (i = 1, v = asp->pdu->variables; v != NULL; i++, v = v->next_variable) {
+	if (v->type == ASN_NULL) {
+	    /*
+	     * Protect SET implementations that do not protect themselves
+	     * against wrong type.
+	     */
+	    DEBUGMSGTL(("snmp_agent", "disallowing SET with NULL var for varbind %d\n", i));
+	    asp->index = i;
+	    return SNMP_ERR_WRONGTYPE;
+	}
+    }
+    return SNMP_ERR_NOERROR;
+}
+
 int
 handle_pdu(netsnmp_agent_session *asp)
 {
     int             status, inclusives = 0;
     netsnmp_variable_list *v = NULL;
+
+#ifndef NETSNMP_NO_WRITE_SUPPORT
+    /*
+     * Check for ASN_NULL in SET request
+     */
+    if (asp->pdu->command == SNMP_MSG_SET) {
+	status = check_set_pdu_for_null_varbind(asp);
+	if (status != SNMP_ERR_NOERROR) {
+	    return status;
+	}
+    }
+#endif /* NETSNMP_NO_WRITE_SUPPORT */
 
     /*
      * for illegal requests, mark all nodes as ASN_NULL 
@@ -3768,7 +3800,9 @@ handle_pdu(netsnmp_agent_session *asp)
     case SNMP_MSG_INTERNAL_SET_RESERVE1:
 #endif /* NETSNMP_NO_WRITE_SUPPORT */
         asp->vbcount = count_varbinds(asp->pdu->variables);
-        asp->requests = calloc(asp->vbcount, sizeof(netsnmp_request_info));
+        asp->requests =
+            calloc(asp->vbcount ? asp->vbcount : 1,
+                   sizeof(netsnmp_request_info));
         /*
          * collect varbinds 
          */

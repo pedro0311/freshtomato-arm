@@ -1,5 +1,9 @@
 image:
-  - Visual Studio 2019
+  - Ubuntu
+  - Ubuntu1604
+  - Ubuntu2004
+  - macos-monterey
+  - Visual Studio 2022
 
 environment:
   CYG_MIRROR: http://mirrors.kernel.org/sourceware/cygwin/
@@ -10,8 +14,49 @@ environment:
     - BUILD: MinGW32
     - BUILD: MSYS2
     - BUILD: MinGW64
-    - BUILD: Cygwin32
-    - BUILD: Cygwin64
+
+matrix:
+  exclude:
+    - image: Ubuntu
+      BUILD: MSVCSTATIC64
+    - image: Ubuntu
+      BUILD: INSTALLER
+    - image: Ubuntu
+      BUILD: MinGW32
+    - image: Ubuntu
+      BUILD: MSYS2
+    - image: Ubuntu
+      BUILD: MinGW64
+    - image: Ubuntu1604
+      BUILD: MSVCSTATIC64
+    - image: Ubuntu1604
+      BUILD: INSTALLER
+    - image: Ubuntu1604
+      BUILD: MinGW32
+    - image: Ubuntu1604
+      BUILD: MSYS2
+    - image: Ubuntu1604
+      BUILD: MinGW64
+    - image: Ubuntu2004
+      BUILD: MSVCSTATIC64
+    - image: Ubuntu2004
+      BUILD: INSTALLER
+    - image: Ubuntu2004
+      BUILD: MinGW32
+    - image: Ubuntu2004
+      BUILD: MSYS2
+    - image: Ubuntu2004
+      BUILD: MinGW64
+    - image: macos-monterey
+      BUILD: MSVCSTATIC64
+    - image: macos-monterey
+      BUILD: INSTALLER
+    - image: macos-monterey
+      BUILD: MinGW32
+    - image: macos-monterey
+      BUILD: MSYS2
+    - image: macos-monterey
+      BUILD: MinGW64
 
 artifacts:
   - path: installer
@@ -19,10 +64,13 @@ artifacts:
 clone_depth: 5
 
 install:
-  - 'call "ci\openssl.bat"'
+  - cmd: 'ci\openssl.bat'
+  - sh:  'sudo ci/install.sh'
 
 build_script:
-  - 'call "ci\build.bat"'
+  - cmd: 'ci\build.bat'
+  - sh:  'ci/build.sh'
 
 test_script:
-  - 'call "ci\test.bat"'
+  - cmd: 'ci\test.bat'
+  - sh:  'if [ $(uname) != Darwin ]; then ci/test.sh; fi'

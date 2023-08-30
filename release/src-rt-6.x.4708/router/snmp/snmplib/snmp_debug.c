@@ -18,21 +18,21 @@
 #ifndef HAVE_PRIORITYNAMES
 #include <errno.h>
 #endif
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
 #include <sys/types.h>
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
 #include <stdarg.h>
 
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
@@ -147,7 +147,7 @@ netsnmp_get_debug_log_level(void)
 static void
 debug_config_debug_log_level(const char *configtoken, char *line)
 {
-#if !HAVE_PRIORITYNAMES
+#ifndef HAVE_PRIORITYNAMES
     static const struct strval_s {
         const char *c_name;
         int         c_val;

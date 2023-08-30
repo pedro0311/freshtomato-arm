@@ -4,21 +4,21 @@
 
 netsnmp_feature_require(cert_util);
 
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#if HAVE_NETDB_H
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
 #include <errno.h>
@@ -60,7 +60,7 @@ static unsigned long ERR_get_error_all(const char **file, int *line,
                                        const char **func,
                                        const char **data, int *flags)
 {
-    *func = NULL;
+    *func = "(?)";
     return ERR_get_error_line_data(file, line, data, flags);
 }
 #endif
@@ -222,8 +222,9 @@ netsnmp_tlsbase_verify_server_cert(SSL *ssl, _netsnmpTLSBaseData *tlsdata) {
     
     netsnmp_assert_or_return(ssl != NULL, SNMPERR_GENERR);
     netsnmp_assert_or_return(tlsdata != NULL, SNMPERR_GENERR);
-    
-    if (NULL == (remote_cert = SSL_get_peer_certificate(ssl))) {
+
+    remote_cert = SSL_get_peer_certificate(ssl);
+    if (!remote_cert) {
         /* no peer cert */
         DEBUGMSGTL(("tls_x509:verify",
                     "remote connection provided no certificate (yet)\n"));
@@ -276,11 +277,9 @@ netsnmp_tlsbase_verify_server_cert(SSL *ssl, _netsnmpTLSBaseData *tlsdata) {
                                             oname->d.ia5);
 
                         /* convert to lowercase for comparisons */
-                        for (j = 0 ;
-                             *check_name && j < sizeof(buf)-1;
-                             ++check_name, ++j ) {
-                            if (isascii(*check_name))
-                                buf[j] = tolower(0xFF & *check_name);
+                        for (j = 0; *check_name && j < sizeof(buf)-1;
+                             ++check_name, ++j) {
+                            buf[j] = tolower(0xFF & *check_name);
                         }
                         if (j < sizeof(buf))
                             buf[j] = '\0';
@@ -355,7 +354,8 @@ netsnmp_tlsbase_verify_client_cert(SSL *ssl, _netsnmpTLSBaseData *tlsdata) {
          above.
        + fingerprint verification happens below.
     */
-    if (NULL == (remote_cert = SSL_get_peer_certificate(ssl))) {
+    remote_cert = SSL_get_peer_certificate(ssl);
+    if (!remote_cert) {
         /* no peer cert */
         DEBUGMSGTL(("tls_x509:verify",
                     "remote connection provided no certificate (yet)\n"));
@@ -517,6 +517,7 @@ SSL_CTX *
 sslctx_client_setup(const SSL_METHOD *method, _netsnmpTLSBaseData *tlsbase) {
     netsnmp_cert *id_cert, *peer_cert;
     SSL_CTX      *the_ctx;
+    X509         *ocert;
 
     /***********************************************************************
      * Set up the client context
@@ -566,8 +567,13 @@ sslctx_client_setup(const SSL_METHOD *method, _netsnmpTLSBaseData *tlsbase) {
 
     while (id_cert->issuer_cert) {
         id_cert = id_cert->issuer_cert;
-        if (!SSL_CTX_add_extra_chain_cert(the_ctx, id_cert->ocert))
-            LOGANDDIE("failed to add intermediate client certificate");
+        if (id_cert->ocert)
+        {
+            ocert = X509_dup(id_cert->ocert);
+            DEBUGMSGTL(("sslctx_client", "adding cert-chain certificate %p", ocert));
+            if (!ocert || !SSL_CTX_add_extra_chain_cert(the_ctx, ocert))
+                LOGANDDIE("failed to add intermediate client certificate");
+        }
     }
 
     if (tlsbase->their_identity)
@@ -598,6 +604,7 @@ sslctx_client_setup(const SSL_METHOD *method, _netsnmpTLSBaseData *tlsbase) {
 SSL_CTX *
 sslctx_server_setup(const SSL_METHOD *method) {
     netsnmp_cert *id_cert;
+    X509         *ocert;
 
     /***********************************************************************
      * Set up the server context
@@ -632,8 +639,13 @@ sslctx_server_setup(const SSL_METHOD *method) {
 
     while (id_cert->issuer_cert) {
         id_cert = id_cert->issuer_cert;
-        if (!SSL_CTX_add_extra_chain_cert(the_ctx, id_cert->ocert))
-            LOGANDDIE("failed to add intermediate server certificate");
+        if (id_cert->ocert)
+        {
+            ocert = X509_dup(id_cert->ocert);
+            DEBUGMSGTL(("sslctx_server", "adding cert-chain certificate %p", ocert));
+            if (!ocert || !SSL_CTX_add_extra_chain_cert(the_ctx, ocert))
+                LOGANDDIE("failed to add intermediate server certificate");
+        }
     }
 
     SSL_CTX_set_read_ahead(the_ctx, 1); /* XXX: DTLS only? */
@@ -740,7 +752,7 @@ tls_bootstrap(int majorid, int minorid, void *serverarg, void *clientarg) {
 }
 
 int
-tls_get_verify_info_index() {
+tls_get_verify_info_index(void) {
     return openssl_local_index;
 }
 
@@ -1197,17 +1209,10 @@ void _openssl_log_error(int rc, SSL *con, const char *location) {
         /* if we have a text translation: */
         if (data && (flags & ERR_TXT_STRING)) {
             snmp_log(LOG_ERR, "  Textual Error: %s\n", data);
-            /*
-             * per openssl man page: If it has been allocated by
-             * OPENSSL_malloc(), *flags&ERR_TXT_MALLOCED is true.
-             *
-             * arggh... stupid openssl prototype for ERR_get_error_line_data
-             * wants a const char **, but returns something that we might
-             * need to free??
-             */
-            if (flags & ERR_TXT_MALLOCED)
-                OPENSSL_free(NETSNMP_REMOVE_CONST(void *, data));        }
+        }
     }
-    
+    /* clear openssl error ring buffer */
+    ERR_clear_error();
+
     snmp_log(LOG_ERR, "---- End of OpenSSL Errors ----\n");
 }

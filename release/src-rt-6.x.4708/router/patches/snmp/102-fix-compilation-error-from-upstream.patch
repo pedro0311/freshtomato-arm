@@ -6,6 +6,6 @@
  {
 -next:
 +next: ;
- #if HAVE_GETFSSTAT
+ #ifdef HAVE_GETFSSTAT
      if (HRFS_index >= fscount)
          return -1;

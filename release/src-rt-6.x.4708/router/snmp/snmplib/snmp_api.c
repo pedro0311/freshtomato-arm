@@ -47,53 +47,53 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <ctype.h>
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 #include <sys/types.h>
-#if HAVE_SYS_PARAM_H
+#ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#if TIME_WITH_SYS_TIME
+#ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
 #else
-# if HAVE_SYS_TIME_H
+# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
 #  include <time.h>
 # endif
 #endif
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if HAVE_ARPA_INET_H
+#ifdef HAVE_ARPA_INET_H
 #include <arpa/inet.h>
 #endif
-#if HAVE_SYS_SELECT_H
+#ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
-#if HAVE_IO_H
+#ifdef HAVE_IO_H
 #include <io.h>
 #endif
-#if HAVE_SYS_SOCKET_H
+#ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
-#if HAVE_SYS_UN_H
+#ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
 #endif
-#if HAVE_NETDB_H
+#ifdef HAVE_NETDB_H
 #include <netdb.h>
 #endif
-#if HAVE_NET_IF_DL_H
+#ifdef HAVE_NET_IF_DL_H
 #ifndef dynix
 #include <net/if_dl.h>
 #else
@@ -102,7 +102,7 @@ SOFTWARE.
 #endif
 #include <errno.h>
 
-#if HAVE_LOCALE_H
+#ifdef HAVE_LOCALE_H
 #include <locale.h>
 #endif
 
@@ -1592,7 +1592,7 @@ netsnmp_sess_config_and_open_transport(netsnmp_session *in_session,
         transport = transport->f_open(transport);
 
     if (transport == NULL) {
-        DEBUGMSGTL(("snmp_sess", "couldn't interpret peername\n"));
+        DEBUGMSGTL(("snmp_sess", "couldn't open transport connection\n"));
         in_session->s_snmp_errno = SNMPERR_BAD_ADDRESS;
         in_session->s_errno = errno;
         snmp_set_detail(in_session->peername);
@@ -1917,6 +1917,25 @@ create_user_from_session(netsnmp_session * session) {
 #endif
 }
 
+/* Free the memory owned by a session but not the session object itself. */
+void netsnmp_cleanup_session(netsnmp_session *s)
+{
+    SNMP_FREE(s->localname);
+    SNMP_FREE(s->peername);
+    SNMP_FREE(s->community);
+    SNMP_FREE(s->contextEngineID);
+    SNMP_FREE(s->contextName);
+    SNMP_FREE(s->securityEngineID);
+    SNMP_FREE(s->securityName);
+    SNMP_FREE(s->securityAuthProto);
+    SNMP_FREE(s->securityAuthLocalKey);
+    SNMP_FREE(s->securityPrivProto);
+    SNMP_FREE(s->securityPrivLocalKey);
+    SNMP_FREE(s->paramName);
+#ifndef NETSNMP_NO_TRAP_STATS
+    SNMP_FREE(s->trap_stats);
+#endif /* NETSNMP_NO_TRAP_STATS */
+}
 
 /*
  *  Do a "deep free()" of a netsnmp_session.
@@ -1924,31 +1943,18 @@ create_user_from_session(netsnmp_session * session) {
  *  CAUTION:  SHOULD ONLY BE USED FROM snmp_sess_close() OR SIMILAR.
  *                                                      (hence it is static)
  */
-
 static void
 snmp_free_session(netsnmp_session * s)
 {
     if (s) {
-        SNMP_FREE(s->localname);
-        SNMP_FREE(s->peername);
-        SNMP_FREE(s->community);
-        SNMP_FREE(s->contextEngineID);
-        SNMP_FREE(s->contextName);
-        SNMP_FREE(s->securityEngineID);
-        SNMP_FREE(s->securityName);
-        SNMP_FREE(s->securityAuthProto);
-        SNMP_FREE(s->securityPrivProto);
-        SNMP_FREE(s->paramName);
-#ifndef NETSNMP_NO_TRAP_STATS
-        SNMP_FREE(s->trap_stats);
-#endif /* NETSNMP_NO_TRAP_STATS */
+        netsnmp_cleanup_session(s);
 
         /*
          * clear session from any callbacks
          */
         netsnmp_callback_clear_client_arg(s, 0, 0);
 
-        free((char *) s);
+        free(s);
     }
 }
 
@@ -1997,10 +2003,10 @@ snmp_sess_close(void *sessp)
                               orp->pdu, orp->cb_data);
             }
             snmp_free_pdu(orp->pdu);
-            free((char *) orp);
+            free(orp);
         }
 
-        free((char *) isp);
+        free(isp);
     }
 
     transport = slp->transport;
@@ -2034,7 +2040,7 @@ snmp_sess_close(void *sessp)
     }
 
     snmp_free_session(sesp);
-    free((char *) slp);
+    free(slp);
     return 1;
 }
 
@@ -2118,11 +2124,15 @@ snmpv3_verify_msg(netsnmp_request_list *rp, netsnmp_pdu *pdu)
     if (rpdu->securityLevel != pdu->securityLevel)
         return 0;
 
-    if (rpdu->contextEngineIDLen != pdu->contextEngineIDLen ||
+    if (rpdu->contextEngineIDLen != pdu->contextEngineIDLen)
+        return 0;
+    if (pdu->contextEngineIDLen &&
         memcmp(rpdu->contextEngineID, pdu->contextEngineID,
                pdu->contextEngineIDLen))
         return 0;
-    if (rpdu->contextNameLen != pdu->contextNameLen ||
+    if (rpdu->contextNameLen != pdu->contextNameLen)
+        return 0;
+    if (pdu->contextNameLen &&
         memcmp(rpdu->contextName, pdu->contextName, pdu->contextNameLen))
         return 0;
 
@@ -5121,7 +5131,7 @@ _build_initial_pdu_packet(struct session_list *slp, netsnmp_pdu *pdu, int bulk)
         return SNMPERR_MALLOC;
     }
 
-#if TEMPORARILY_DISABLED
+#ifdef TEMPORARILY_DISABLED
     /*
      *  NULL variable are allowed in certain PDU types.
      *  In particular, SNMPv3 engineID probes are of this form.
@@ -5445,16 +5455,16 @@ _sess_async_send(void *sessp,
 /**
  * Send a PDU asynchronously.
  *
- * @param[in] slp      Session pointer.
+ * @param[in] sessp    Session pointer.
  * @param[in] pdu      PDU to send.
  * @param[in] callback Callback function called after processing of the PDU
  *                     finished. This function is called if the PDU has not
  *                     been sent or after a response has been received. Must
- *                     not free @pdu.
- * @param[in] cb_data  Will be passed as fifth argument to @callback.
+ *                     not free @p pdu.
+ * @param[in] cb_data  Will be passed as fifth argument to @p callback.
  *
- * @return If successful, returns the request id of @pdu and frees @pdu.
- * If not successful, returns zero and expects the caller to free @pdu.
+ * @return If successful, returns the request id of @p pdu and frees @p pdu.
+ * If not successful, returns zero and expects the caller to free @p pdu.
  */
 int
 snmp_sess_async_send(void *sessp,
@@ -5509,7 +5519,7 @@ void
 snmp_free_var(netsnmp_variable_list * var)
 {
     snmp_free_var_internals(var);
-    free((char *) var);
+    free(var);
 }
 
 void
@@ -6836,7 +6846,7 @@ snmp_sess_timeout(void *sessp)
             /*
              * frees rp's after the for loop goes on to the next_request 
              */
-            free((char *) freeme);
+            free(freeme);
             freeme = NULL;
         }
 
@@ -6881,7 +6891,7 @@ snmp_sess_timeout(void *sessp)
     }
 
     if (freeme != NULL) {
-        free((char *) freeme);
+        free(freeme);
         freeme = NULL;
     }
 }
@@ -6949,7 +6959,13 @@ snmp_oid_ncompare(const oid * in_name1,
     return 0;
 }
 
-/** lexicographical compare two object identifiers.
+/**
+ * Lexicographically compare two object identifiers.
+ *
+ * @param[in] in_name1 Left hand side OID.
+ * @param[in] len1     Length of LHS OID.
+ * @param[in] in_name2 Rigth and side OID.
+ * @param[in] len2     Length of RHS OID.
  * 
  * Caution: this method is called often by
  *          command responder applications (ie, agent).
@@ -6998,17 +7014,24 @@ snmp_oid_compare(const oid * in_name1,
     return 0;
 }
 
-/** lexicographical compare two object identifiers and return the point where they differ
- * 
- * Caution: this method is called often by
- *          command responder applications (ie, agent).
+/**
+ * Lexicographically compare two object identifiers.
  *
- * @return -1 if name1 < name2, 0 if name1 = name2, 1 if name1 > name2 and offpt = len where name1 != name2
+ * @param[in] in_name1 Left hand side OID.
+ * @param[in] len1     Length of LHS OID.
+ * @param[in] in_name2 Rigth and side OID.
+ * @param[in] len2     Length of RHS OID.
+ * @param[out] offpt   First offset at which the two OIDs differ.
+ * 
+ * Caution: this method is called often by command responder applications (ie,
+ * agent).
+ *
+ * @return -1 if name1 < name2, 0 if name1 = name2, 1 if name1 > name2 and
+ * offpt = len where name1 != name2
  */
 int
-netsnmp_oid_compare_ll(const oid * in_name1,
-                       size_t len1, const oid * in_name2, size_t len2,
-                       size_t *offpt)
+netsnmp_oid_compare_ll(const oid * in_name1, size_t len1, const oid * in_name2,
+                       size_t len2, size_t *offpt)
 {
     register int    len;
     register const oid *name1 = in_name1;
@@ -7062,18 +7085,18 @@ int
 snmp_oidtree_compare(const oid * in_name1,
                      size_t len1, const oid * in_name2, size_t len2)
 {
-    int             len = ((len1 < len2) ? len1 : len2);
+    int len = len1 < len2 ? len1 : len2;
 
-    return (snmp_oid_compare(in_name1, len, in_name2, len));
+    return snmp_oid_compare(in_name1, len, in_name2, len);
 }
 
 int
 snmp_oidsubtree_compare(const oid * in_name1,
                      size_t len1, const oid * in_name2, size_t len2)
 {
-    int             len = ((len1 < len2) ? len1 : len2);
+    int len = len1 < len2 ? len1 : len2;
 
-    return (snmp_oid_compare(in_name1, len1, in_name2, len));
+    return snmp_oid_compare(in_name1, len1, in_name2, len);
 }
 
 /** Compares 2 OIDs to determine if they are exactly equal.

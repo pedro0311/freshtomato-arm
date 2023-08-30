@@ -6,40 +6,40 @@
 #include <sys/types.h>          /* helps define struct rlimit */
 #endif
 
-#if HAVE_IO_H                   /* win32 */
+#ifdef HAVE_IO_H                   /* win32 */
 #include <io.h>
 #endif
-#if HAVE_STDLIB_H
+#ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#if HAVE_STRING_H
+#ifdef HAVE_STRING_H
 #include <string.h>
 #else
 #include <strings.h>
 #endif
-#if HAVE_MALLOC_H
+#ifdef HAVE_MALLOC_H
 #include <malloc.h>
 #endif
 #include <math.h>
 #include <ctype.h>
 #include <sys/types.h>
-#if HAVE_NETINET_IN_H
+#ifdef HAVE_NETINET_IN_H
 #include <netinet/in.h>
 #endif
-#if TIME_WITH_SYS_TIME
+#ifdef TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
 #else
-# if HAVE_SYS_TIME_H
+# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
 # else
 #  include <time.h>
 # endif
 #endif
-#if HAVE_PCRE_H
+#ifdef HAVE_PCRE_H
 #include <pcre.h>
 #endif
 
@@ -134,7 +134,7 @@ proc_free_config(void)
     for (ptmp = procwatch; ptmp != NULL;) {
         ptmp2 = ptmp;
         ptmp = ptmp->next;
-#if HAVE_PCRE_H
+#ifdef HAVE_PCRE_H
         free(ptmp2->regexp.regex_ptr);
 #endif
         free(ptmp2);
@@ -208,7 +208,7 @@ proc_parse_config(const char *token, char *cptr)
     if (*procp == NULL)
         return;                 /* memory alloc error */
     numprocs++;
-#if HAVE_PCRE_H
+#ifdef HAVE_PCRE_H
     (*procp)->regexp.regex_ptr = NULL;
 #endif
     /*
@@ -220,7 +220,7 @@ proc_parse_config(const char *token, char *cptr)
         cptr = skip_not_white(cptr);
         if ((cptr = skip_white(cptr))) {
             (*procp)->min = atoi(cptr);
-#if HAVE_PCRE_H
+#ifdef HAVE_PCRE_H
             cptr = skip_not_white(cptr);
             if ((cptr = skip_white(cptr))) {
                 const char *pcre_error;
@@ -406,7 +406,7 @@ sh_count_procs(char *procname)
   return swrun_count_processes_by_name( procname );
 }
 
-#if HAVE_PCRE_H
+#ifdef HAVE_PCRE_H
 netsnmp_feature_require(swrun_count_processes_by_regex);
 int
 sh_count_procs_by_regex(char *procname, netsnmp_regex_ptr regexp)
