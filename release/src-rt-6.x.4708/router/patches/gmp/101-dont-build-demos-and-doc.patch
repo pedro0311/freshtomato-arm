@@ -1,7 +1,7 @@
 --- gmp/Makefile.am
 +++ gmp/Makefile.am
-@@ -112,7 +112,7 @@ 
- LIBGMPXX_LT_AGE      = 6
+@@ -113,7 +113,7 @@ 
+ LIBGMPXX_LT_AGE      = 7
  
  
 -SUBDIRS = tests mpn mpz mpq mpf printf scanf rand cxx demos tune doc
