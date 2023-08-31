@@ -366,7 +366,6 @@ obj-$(TCONFIG_BBT) += libcurl
 obj-$(TCONFIG_BBT) += transmission
 obj-$(TCONFIG_MEDIA_SERVER) += zlib
 obj-$(TCONFIG_MEDIA_SERVER) += sqlite
-obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 ifeq ($(TCONFIG_BCMARM),y)
  obj-$(TCONFIG_MEDIA_SERVER) += libiconv
 endif
@@ -376,6 +375,7 @@ obj-$(TCONFIG_MEDIA_SERVER) += libjpeg-turbo
 obj-$(TCONFIG_MEDIA_SERVER) += libexif
 obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
+obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 obj-$(TCONFIG_MEDIA_SERVER) += minidlna
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_conntrack
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_log
