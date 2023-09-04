@@ -1,6 +1,6 @@
 --- flac/src/libFLAC/Makefile.am
 +++ flac/src/libFLAC/Makefile.am
-@@ -82,7 +82,6 @@
+@@ -73,7 +73,6 @@
  if FLaC__HAS_OGG
  extra_ogg_sources = \
  	ogg_decoder_aspect.c \
@@ -8,7 +8,7 @@
  	ogg_helper.c \
  	ogg_mapping.c
  endif
-@@ -113,11 +112,6 @@
+@@ -105,10 +104,6 @@
  	metadata_iterators.c \
  	metadata_object.c \
  	stream_decoder.c \
@@ -16,7 +16,6 @@
 -	stream_encoder_intrin_sse2.c \
 -	stream_encoder_intrin_ssse3.c \
 -	stream_encoder_intrin_avx2.c \
--	stream_encoder_framing.c \
+ 	stream_encoder_framing.c \
  	window.c \
  	$(windows_unicode_compat) \
- 	$(extra_ogg_sources)

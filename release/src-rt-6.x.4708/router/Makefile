@@ -1948,13 +1948,14 @@ libogg-clean:
 flac/stamp-h1:
 	$(call patch_files,flac)
 	cd flac && autoreconf -fsi && \
-		CFLAGS="-Os $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections --param max-inline-insns-single=3000 --param large-function-growth=500" \
-		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC --param max-inline-insns-single=3000 --param large-function-growth=500" \
+		CFLAGS="-Os $(EXTRACFLAGS) -std=gnu99 -fPIC -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/libogg/include -I$(LINUXDIR)/include -fPIC" \
 		LDFLAGS="-L$(TOP)/libogg/src/.libs -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static --with-ogg=$(TOP)/libogg/src/.libs \
+		LIBS="-logg" \
+		$(CONFIGURE) --prefix='' --enable-shared --enable-static --with-ogg=$(TOP)/libogg/src/.libs --with-ogg-includes=$(TOP)/libogg/include/ogg \
 			--disable-doxygen-docs --disable-examples --disable-cpplibs \
-			--disable-oggtest --disable-thorough-tests --disable-stack-smash-protection \
-			--disable-altivec --disable-vsx --disable-avx --enable-debug=no \
+			--disable-programs --disable-oggtest --disable-thorough-tests \
+			--disable-stack-smash-protection --disable-avx --enable-debug=no \
 			--without-libiconv-prefix --disable-rpath --disable-dependency-tracking
 	@touch $@
 
@@ -1964,8 +1965,9 @@ flac: flac/stamp-h1
 
 flac-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D flac/src/libFLAC/.libs/libFLAC.so.12 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
-	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12
+	install -D flac/src/libFLAC/.libs/libFLAC.so.12.1.0 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
+	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
+	cd $(INSTALLDIR)/flac/usr/lib/ && ln -sf libFLAC.so.12.1.0 libFLAC.so.12
 endif
 	@true
 
@@ -2100,8 +2102,8 @@ ffmpeg/stamp-h1:
 		--disable-parsers $(FFMPEG_CONFIGURE_PARSERS) \
 		--disable-protocols $(FFMPEG_CONFIGURE_PROTOCOLS) \
 		--extra-cflags="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(OPTSIZE_FLAG)" \
-		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		--extra-libs="-L$(TOP)/zlib/staged/usr/lib -lz" \
+		--extra-ldflags="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib" \
+		--extra-libs="-lz" \
 		--enable-zlib --disable-debug
 	@touch $@
 
