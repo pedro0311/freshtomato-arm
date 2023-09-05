@@ -26,9 +26,11 @@
  */
 
 #include "avformat.h"
+#include "internal.h"
 #include "riff.h"
 #include "isom.h"
 #include "libavutil/intreadwrite.h"
+#include "libavutil/intfloat.h"
 #include "libavutil/dict.h"
 #include "caf.h"
 
@@ -60,14 +62,14 @@ static int read_desc_chunk(AVFormatContext *s)
     int flags;
 
     /* new audio stream */
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
 
     /* parse format description */
     st->codec->codec_type  = AVMEDIA_TYPE_AUDIO;
-    st->codec->sample_rate = av_int2dbl(avio_rb64(pb));
-    st->codec->codec_tag   = avio_rb32(pb);
+    st->codec->sample_rate = av_int2double(avio_rb64(pb));
+    st->codec->codec_tag   = avio_rl32(pb);
     flags = avio_rb32(pb);
     caf->bytes_per_packet  = avio_rb32(pb);
     st->codec->block_align = caf->bytes_per_packet;
@@ -84,7 +86,7 @@ static int read_desc_chunk(AVFormatContext *s)
     }
 
     /* determine codec */
-    if (st->codec->codec_tag == MKBETAG('l','p','c','m'))
+    if (st->codec->codec_tag == MKTAG('l','p','c','m'))
         st->codec->codec_id = ff_mov_get_lpcm_codec_id(st->codec->bits_per_coded_sample, (flags ^ 0x2) | 0x4);
     else
         st->codec->codec_id = ff_codec_get_id(ff_codec_caf_tags, st->codec->codec_tag);
@@ -119,18 +121,28 @@ static int read_kuki_chunk(AVFormatContext *s, int64_t size)
     } else if (st->codec->codec_id == CODEC_ID_ALAC) {
 #define ALAC_PREAMBLE 12
 #define ALAC_HEADER   36
-        if (size < ALAC_PREAMBLE + ALAC_HEADER) {
-            av_log(s, AV_LOG_ERROR, "invalid ALAC magic cookie\n");
-            avio_skip(pb, size);
-            return AVERROR_INVALIDDATA;
+#define ALAC_NEW_KUKI 24
+        if (size == ALAC_NEW_KUKI) {
+            st->codec->extradata = av_mallocz(ALAC_HEADER + FF_INPUT_BUFFER_PADDING_SIZE);
+            if (!st->codec->extradata)
+                return AVERROR(ENOMEM);
+            memcpy(st->codec->extradata, "\0\0\0\24alac", 8);
+            avio_read(pb, st->codec->extradata + ALAC_HEADER - ALAC_NEW_KUKI, ALAC_NEW_KUKI);
+            st->codec->extradata_size = ALAC_HEADER;
+        } else {
+            if (size < ALAC_PREAMBLE + ALAC_HEADER) {
+                av_log(s, AV_LOG_ERROR, "invalid ALAC magic cookie\n");
+                avio_skip(pb, size);
+                return AVERROR_INVALIDDATA;
+            }
+            avio_skip(pb, ALAC_PREAMBLE);
+            st->codec->extradata = av_mallocz(ALAC_HEADER + FF_INPUT_BUFFER_PADDING_SIZE);
+            if (!st->codec->extradata)
+                return AVERROR(ENOMEM);
+            avio_read(pb, st->codec->extradata, ALAC_HEADER);
+            st->codec->extradata_size = ALAC_HEADER;
+            avio_skip(pb, size - ALAC_PREAMBLE - ALAC_HEADER);
         }
-        avio_skip(pb, ALAC_PREAMBLE);
-        st->codec->extradata = av_mallocz(ALAC_HEADER + FF_INPUT_BUFFER_PADDING_SIZE);
-        if (!st->codec->extradata)
-            return AVERROR(ENOMEM);
-        avio_read(pb, st->codec->extradata, ALAC_HEADER);
-        st->codec->extradata_size = ALAC_HEADER;
-        avio_skip(pb, size - ALAC_PREAMBLE - ALAC_HEADER);
     } else {
         st->codec->extradata = av_mallocz(size + FF_INPUT_BUFFER_PADDING_SIZE);
         if (!st->codec->extradata)
@@ -186,14 +198,13 @@ static void read_info_chunk(AVFormatContext *s, int64_t size)
     for (i = 0; i < nb_entries; i++) {
         char key[32];
         char value[1024];
-        get_strz(pb, key, sizeof(key));
-        get_strz(pb, value, sizeof(value));
+        avio_get_str(pb, INT_MAX, key, sizeof(key));
+        avio_get_str(pb, INT_MAX, value, sizeof(value));
         av_dict_set(&s->metadata, key, value, 0);
     }
 }
 
-static int read_header(AVFormatContext *s,
-                       AVFormatParameters *ap)
+static int read_header(AVFormatContext *s)
 {
     AVIOContext *pb = s->pb;
     CaffContext *caf  = s->priv_data;
@@ -291,10 +302,8 @@ static int read_header(AVFormatContext *s,
                                 "block size or frame size are variable.\n");
         return AVERROR_INVALIDDATA;
     }
-    s->file_size = avio_size(pb);
-    s->file_size = FFMAX(0, s->file_size);
 
-    av_set_pts_info(st, 64, 1, st->codec->sample_rate);
+    avpriv_set_pts_info(st, 64, 1, st->codec->sample_rate);
     st->start_time = 0;
 
     /* position the stream at the start of data */
@@ -365,7 +374,7 @@ static int read_seek(AVFormatContext *s, int stream_index,
 {
     AVStream *st = s->streams[0];
     CaffContext *caf = s->priv_data;
-    int64_t pos;
+    int64_t pos, packet_cnt, frame_cnt;
 
     timestamp = FFMAX(timestamp, 0);
 
@@ -374,28 +383,32 @@ static int read_seek(AVFormatContext *s, int stream_index,
         pos = caf->bytes_per_packet * timestamp / caf->frames_per_packet;
         if (caf->data_size > 0)
             pos = FFMIN(pos, caf->data_size);
-        caf->packet_cnt = pos / caf->bytes_per_packet;
-        caf->frame_cnt  = caf->frames_per_packet * caf->packet_cnt;
+        packet_cnt = pos / caf->bytes_per_packet;
+        frame_cnt  = caf->frames_per_packet * packet_cnt;
     } else if (st->nb_index_entries) {
-        caf->packet_cnt = av_index_search_timestamp(st, timestamp, flags);
-        caf->frame_cnt  = st->index_entries[caf->packet_cnt].timestamp;
-        pos             = st->index_entries[caf->packet_cnt].pos;
+        packet_cnt = av_index_search_timestamp(st, timestamp, flags);
+        frame_cnt  = st->index_entries[packet_cnt].timestamp;
+        pos        = st->index_entries[packet_cnt].pos;
     } else {
         return -1;
     }
 
-    avio_seek(s->pb, pos + caf->data_start, SEEK_SET);
+    if (avio_seek(s->pb, pos + caf->data_start, SEEK_SET) < 0)
+        return -1;
+
+    caf->packet_cnt = packet_cnt;
+    caf->frame_cnt  = frame_cnt;
+
     return 0;
 }
 
 AVInputFormat ff_caf_demuxer = {
-    "caf",
-    NULL_IF_CONFIG_SMALL("Apple Core Audio Format"),
-    sizeof(CaffContext),
-    probe,
-    read_header,
-    read_packet,
-    NULL,
-    read_seek,
-    .codec_tag = (const AVCodecTag*[]){ff_codec_caf_tags, 0},
+    .name           = "caf",
+    .long_name      = NULL_IF_CONFIG_SMALL("Apple Core Audio Format"),
+    .priv_data_size = sizeof(CaffContext),
+    .read_probe     = probe,
+    .read_header    = read_header,
+    .read_packet    = read_packet,
+    .read_seek      = read_seek,
+    .codec_tag      = (const AVCodecTag*[]){ ff_codec_caf_tags, 0 },
 };

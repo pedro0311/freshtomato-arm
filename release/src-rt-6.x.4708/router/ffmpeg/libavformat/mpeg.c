@@ -49,6 +49,10 @@ static int check_pes(uint8_t *p, uint8_t *end){
     return pes1||pes2;
 }
 
+static int check_pack_header(const uint8_t *buf) {
+    return (buf[1] & 0xC0) == 0x40 || (buf[1] & 0xF0) == 0x20;
+}
+
 static int mpegps_probe(AVProbeData *p)
 {
     uint32_t code= -1;
@@ -61,9 +65,10 @@ static int mpegps_probe(AVProbeData *p)
         if ((code & 0xffffff00) == 0x100) {
             int len= p->buf[i+1] << 8 | p->buf[i+2];
             int pes= check_pes(p->buf+i, p->buf+p->buf_size);
+            int pack = check_pack_header(p->buf+i);
 
             if(code == SYSTEM_HEADER_START_CODE) sys++;
-            else if(code == PACK_START_CODE)     pspack++;
+            else if(code == PACK_START_CODE && pack) pspack++;
             else if((code & 0xf0) == VIDEO_ID &&  pes) vid++;
             // skip pes payload to avoid start code emulation for private
             // and audio streams
@@ -100,8 +105,7 @@ typedef struct MpegDemuxContext {
     int sofdec;
 } MpegDemuxContext;
 
-static int mpegps_read_header(AVFormatContext *s,
-                              AVFormatParameters *ap)
+static int mpegps_read_header(AVFormatContext *s)
 {
     MpegDemuxContext *m = s->priv_data;
     const char *sofdec = "Sofdec";
@@ -114,7 +118,6 @@ static int mpegps_read_header(AVFormatContext *s,
     m->sofdec = -1;
     do {
         v = avio_r8(s->pb);
-        m->header_state = m->header_state << 8 | v;
         m->sofdec++;
     } while (v == sofdec[i] && i++ < 6);
 
@@ -533,9 +536,10 @@ static int mpegps_read_packet(AVFormatContext *s,
         goto redo;
     }
     /* no stream found: add a new stream */
-    st = av_new_stream(s, startcode);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         goto skip;
+    st->id = startcode;
     st->codec->codec_type = type;
     st->codec->codec_id = codec_id;
     st->request_probe     = request_probe;
@@ -609,14 +613,12 @@ static int64_t mpegps_read_dts(AVFormatContext *s, int stream_index,
 }
 
 AVInputFormat ff_mpegps_demuxer = {
-    "mpeg",
-    NULL_IF_CONFIG_SMALL("MPEG-PS format"),
-    sizeof(MpegDemuxContext),
-    mpegps_probe,
-    mpegps_read_header,
-    mpegps_read_packet,
-    NULL,
-    NULL, //mpegps_read_seek,
-    mpegps_read_dts,
-    .flags = AVFMT_SHOW_IDS|AVFMT_TS_DISCONT,
+    .name           = "mpeg",
+    .long_name      = NULL_IF_CONFIG_SMALL("MPEG-PS format"),
+    .priv_data_size = sizeof(MpegDemuxContext),
+    .read_probe     = mpegps_probe,
+    .read_header    = mpegps_read_header,
+    .read_packet    = mpegps_read_packet,
+    .read_timestamp = mpegps_read_dts,
+    .flags          = AVFMT_SHOW_IDS | AVFMT_TS_DISCONT,
 };

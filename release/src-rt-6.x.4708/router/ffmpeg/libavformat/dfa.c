@@ -21,6 +21,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avformat.h"
+#include "internal.h"
 
 static int dfa_probe(AVProbeData *p)
 {
@@ -30,8 +31,7 @@ static int dfa_probe(AVProbeData *p)
     return AVPROBE_SCORE_MAX;
 }
 
-static int dfa_read_header(AVFormatContext *s,
-                           AVFormatParameters *ap)
+static int dfa_read_header(AVFormatContext *s)
 {
     AVIOContext *pb = s->pb;
     AVStream *st;
@@ -45,7 +45,7 @@ static int dfa_read_header(AVFormatContext *s,
     avio_skip(pb, 2); // unused
     frames = avio_rl16(pb);
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
 
@@ -58,7 +58,7 @@ static int dfa_read_header(AVFormatContext *s,
         av_log(s, AV_LOG_WARNING, "Zero FPS reported, defaulting to 10\n");
         mspf = 100;
     }
-    av_set_pts_info(st, 24, mspf, 1000);
+    avpriv_set_pts_info(st, 24, mspf, 1000);
     avio_skip(pb, 128 - 16); // padding
     st->duration = frames;
 
@@ -109,11 +109,10 @@ static int dfa_read_packet(AVFormatContext *s, AVPacket *pkt)
 }
 
 AVInputFormat ff_dfa_demuxer = {
-    "dfa",
-    NULL_IF_CONFIG_SMALL("Chronomaster DFA"),
-    0,
-    dfa_probe,
-    dfa_read_header,
-    dfa_read_packet,
-    .flags = AVFMT_GENERIC_INDEX,
+    .name           = "dfa",
+    .long_name      = NULL_IF_CONFIG_SMALL("Chronomaster DFA"),
+    .read_probe     = dfa_probe,
+    .read_header    = dfa_read_header,
+    .read_packet    = dfa_read_packet,
+    .flags          = AVFMT_GENERIC_INDEX,
 };

@@ -195,7 +195,8 @@ static const uint8_t string_table[256] = {
 
 #define SVQ1_CALC_CODEBOOK_ENTRIES(cbook)\
       codebook = (const uint32_t *) cbook[level];\
-      bit_cache = get_bits (bitbuf, 4*stages);\
+      if (stages > 0)\
+        bit_cache = get_bits (bitbuf, 4*stages);\
       /* calculate codebook entries for this vector */\
       for (j=0; j < stages; j++) {\
         entries[j] = (((bit_cache >> (4*(stages - j - 1))) & 0xF) + 16*j) << (level + 1);\
@@ -317,9 +318,9 @@ static int svq1_decode_motion_vector (GetBitContext *bitbuf, svq1_pmv *mv, svq1_
 
     /* add median of motion vector predictors and clip result */
     if (i == 1)
-      mv->y = ((diff + mid_pred(pmv[0]->y, pmv[1]->y, pmv[2]->y)) << 26) >> 26;
+      mv->y = sign_extend(diff + mid_pred(pmv[0]->y, pmv[1]->y, pmv[2]->y), 6);
     else
-      mv->x = ((diff + mid_pred(pmv[0]->x, pmv[1]->x, pmv[2]->x)) << 26) >> 26;
+      mv->x = sign_extend(diff + mid_pred(pmv[0]->x, pmv[1]->x, pmv[2]->x), 6);
   }
 
   return 0;
@@ -646,6 +647,9 @@ static int svq1_decode_frame(AVCodecContext *avctx,
   if (s->f_code != 0x20) {
     uint32_t *src = (uint32_t *) (buf + 4);
 
+    if (buf_size < 36)
+        return AVERROR_INVALIDDATA;
+
     for (i=0; i < 4; i++) {
       src[i] = ((src[i] << 16) | (src[i] >> 16)) ^ src[7 - i];
     }
@@ -664,15 +668,12 @@ static int svq1_decode_frame(AVCodecContext *avctx,
   //this should be removed after libavcodec can handle more flexible picture types & ordering
   if(s->pict_type==AV_PICTURE_TYPE_B && s->last_picture_ptr==NULL) return buf_size;
 
-#if FF_API_HURRY_UP
-  if(avctx->hurry_up && s->pict_type==FF_B_TYPE) return buf_size;
-#endif
   if(  (avctx->skip_frame >= AVDISCARD_NONREF && s->pict_type==AV_PICTURE_TYPE_B)
      ||(avctx->skip_frame >= AVDISCARD_NONKEY && s->pict_type!=AV_PICTURE_TYPE_I)
      || avctx->skip_frame >= AVDISCARD_ALL)
       return buf_size;
 
-  if(MPV_frame_start(s, avctx) < 0)
+  if(ff_MPV_frame_start(s, avctx) < 0)
       return -1;
 
   pmv = av_malloc((FFALIGN(s->width, 16)/8 + 3) * sizeof(*pmv));
@@ -693,12 +694,12 @@ static int svq1_decode_frame(AVCodecContext *avctx,
       linesize= s->uvlinesize;
     }
 
-    current  = s->current_picture.data[i];
+    current = s->current_picture.f.data[i];
 
     if(s->pict_type==AV_PICTURE_TYPE_B){
-        previous = s->next_picture.data[i];
+        previous = s->next_picture.f.data[i];
     }else{
-        previous = s->last_picture.data[i];
+        previous = s->last_picture.f.data[i];
     }
 
     if (s->pict_type == AV_PICTURE_TYPE_I) {
@@ -708,7 +709,7 @@ static int svq1_decode_frame(AVCodecContext *avctx,
           result = svq1_decode_block_intra (&s->gb, &current[x], linesize);
           if (result != 0)
           {
-            av_log(s->avctx, AV_LOG_INFO, "Error in svq1_decode_block %i (keyframe)\n",result);
+            av_log(s->avctx, AV_LOG_ERROR, "Error in svq1_decode_block %i (keyframe)\n",result);
             goto err;
           }
         }
@@ -737,10 +738,10 @@ static int svq1_decode_frame(AVCodecContext *avctx,
     }
   }
 
-  *pict = *(AVFrame*)&s->current_picture;
+  *pict = s->current_picture.f;
 
 
-  MPV_frame_end(s);
+  ff_MPV_frame_end(s);
 
   *data_size=sizeof(AVFrame);
   result = buf_size;
@@ -755,7 +756,7 @@ static av_cold int svq1_decode_init(AVCodecContext *avctx)
     int i;
     int offset = 0;
 
-    MPV_decode_defaults(s);
+    ff_MPV_decode_defaults(s);
 
     s->avctx = avctx;
     s->width = (avctx->width+3)&~3;
@@ -764,7 +765,7 @@ static av_cold int svq1_decode_init(AVCodecContext *avctx)
     avctx->pix_fmt = PIX_FMT_YUV410P;
     avctx->has_b_frames= 1; // not true, but DP frames and these behave like unidirectional b frames
     s->flags= avctx->flags;
-    if (MPV_common_init(s) < 0) return -1;
+    if (ff_MPV_common_init(s) < 0) return -1;
 
     INIT_VLC_STATIC(&svq1_block_type, 2, 4,
         &ff_svq1_block_type_vlc[0][1], 2, 1,
@@ -806,22 +807,21 @@ static av_cold int svq1_decode_end(AVCodecContext *avctx)
 {
     MpegEncContext *s = avctx->priv_data;
 
-    MPV_common_end(s);
+    ff_MPV_common_end(s);
     return 0;
 }
 
 
 AVCodec ff_svq1_decoder = {
-    "svq1",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_SVQ1,
-    sizeof(MpegEncContext),
-    svq1_decode_init,
-    NULL,
-    svq1_decode_end,
-    svq1_decode_frame,
-    CODEC_CAP_DR1,
-    .flush= ff_mpeg_flush,
-    .pix_fmts= (const enum PixelFormat[]){PIX_FMT_YUV410P, PIX_FMT_NONE},
-    .long_name= NULL_IF_CONFIG_SMALL("Sorenson Vector Quantizer 1 / Sorenson Video 1 / SVQ1"),
+    .name           = "svq1",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_SVQ1,
+    .priv_data_size = sizeof(MpegEncContext),
+    .init           = svq1_decode_init,
+    .close          = svq1_decode_end,
+    .decode         = svq1_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .flush          = ff_mpeg_flush,
+    .pix_fmts       = (const enum PixelFormat[]){ PIX_FMT_YUV410P, PIX_FMT_NONE },
+    .long_name      = NULL_IF_CONFIG_SMALL("Sorenson Vector Quantizer 1 / Sorenson Video 1 / SVQ1"),
 };

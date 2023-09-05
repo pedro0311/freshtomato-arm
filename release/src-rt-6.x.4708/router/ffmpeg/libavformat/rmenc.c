@@ -309,6 +309,11 @@ static int rm_write_header(AVFormatContext *s)
     int n;
     AVCodecContext *codec;
 
+    if (s->nb_streams > 2) {
+        av_log(s, AV_LOG_ERROR, "At most 2 streams are currently supported for muxing in RM\n");
+        return AVERROR_PATCHWELCOME;
+    }
+
     for(n=0;n<s->nb_streams;n++) {
         s->streams[n]->id = n;
         codec = s->streams[n]->codec;
@@ -355,7 +360,7 @@ static int rm_write_audio(AVFormatContext *s, const uint8_t *buf, int size, int 
     int i;
 
     /* XXX: suppress this malloc */
-    buf1= (uint8_t*) av_malloc( size * sizeof(uint8_t) );
+    buf1 = av_malloc(size * sizeof(uint8_t));
 
     write_packet_header(s, stream, size, !!(flags & AV_PKT_FLAG_KEY));
 
@@ -461,15 +466,15 @@ static int rm_write_trailer(AVFormatContext *s)
 
 
 AVOutputFormat ff_rm_muxer = {
-    "rm",
-    NULL_IF_CONFIG_SMALL("RealMedia format"),
-    "application/vnd.rn-realmedia",
-    "rm,ra",
-    sizeof(RMMuxContext),
-    CODEC_ID_AC3,
-    CODEC_ID_RV10,
-    rm_write_header,
-    rm_write_packet,
-    rm_write_trailer,
-    .codec_tag= (const AVCodecTag* const []){ff_rm_codec_tags, 0},
+    .name              = "rm",
+    .long_name         = NULL_IF_CONFIG_SMALL("RealMedia format"),
+    .mime_type         = "application/vnd.rn-realmedia",
+    .extensions        = "rm,ra",
+    .priv_data_size    = sizeof(RMMuxContext),
+    .audio_codec       = CODEC_ID_AC3,
+    .video_codec       = CODEC_ID_RV10,
+    .write_header      = rm_write_header,
+    .write_packet      = rm_write_packet,
+    .write_trailer     = rm_write_trailer,
+    .codec_tag         = (const AVCodecTag* const []){ ff_rm_codec_tags, 0 },
 };

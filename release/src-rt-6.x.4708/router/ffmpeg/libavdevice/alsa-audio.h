@@ -33,6 +33,7 @@
 #include <alsa/asoundlib.h>
 #include "config.h"
 #include "libavutil/log.h"
+#include "timefilter.h"
 #include "avdevice.h"
 
 /* XXX: we make the assumption that the soundcard accepts this format */
@@ -47,13 +48,15 @@ typedef void (*ff_reorder_func)(const void *, void *, int);
 typedef struct {
     AVClass *class;
     snd_pcm_t *h;
-    int frame_size;  ///< preferred size for reads and writes
-    int period_size; ///< bytes per sample * channels
-    ff_reorder_func reorder_func;
-    void *reorder_buf;
-    int reorder_buf_size; ///< in frames
+    int frame_size;  ///< bytes per sample * channels
+    int period_size; ///< preferred size for reads and writes, in frames
     int sample_rate; ///< sample rate set by user
     int channels;    ///< number of channels set by user
+    int last_period;
+    TimeFilter *timefilter;
+    void (*reorder_func)(const void *, void *, int);
+    void *reorder_buf;
+    int reorder_buf_size; ///< in frames
 } AlsaData;
 
 /**

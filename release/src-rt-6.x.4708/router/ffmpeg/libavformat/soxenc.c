@@ -23,13 +23,14 @@
  */
 
 /**
- * SoX native format muxer
  * @file
+ * SoX native format muxer
  * @author Daniel Verkamp
- * @sa http://wiki.multimedia.cx/index.php?title=SoX_native_intermediate_format
+ * @see http://wiki.multimedia.cx/index.php?title=SoX_native_intermediate_format
  */
 
 #include "libavutil/intreadwrite.h"
+#include "libavutil/intfloat.h"
 #include "libavutil/dict.h"
 #include "avformat.h"
 #include "avio_internal.h"
@@ -58,14 +59,14 @@ static int sox_write_header(AVFormatContext *s)
         ffio_wfourcc(pb, ".SoX");
         avio_wl32(pb, sox->header_size);
         avio_wl64(pb, 0); /* number of samples */
-        avio_wl64(pb, av_dbl2int(enc->sample_rate));
+        avio_wl64(pb, av_double2int(enc->sample_rate));
         avio_wl32(pb, enc->channels);
         avio_wl32(pb, comment_size);
     } else if (enc->codec_id == CODEC_ID_PCM_S32BE) {
         ffio_wfourcc(pb, "XoS.");
         avio_wb32(pb, sox->header_size);
         avio_wb64(pb, 0); /* number of samples */
-        avio_wb64(pb, av_dbl2int(enc->sample_rate));
+        avio_wb64(pb, av_double2int(enc->sample_rate));
         avio_wb32(pb, enc->channels);
         avio_wb32(pb, comment_size);
     } else {
@@ -115,14 +116,13 @@ static int sox_write_trailer(AVFormatContext *s)
 }
 
 AVOutputFormat ff_sox_muxer = {
-    "sox",
-    NULL_IF_CONFIG_SMALL("SoX native format"),
-    NULL,
-    "sox",
-    sizeof(SoXContext),
-    CODEC_ID_PCM_S32LE,
-    CODEC_ID_NONE,
-    sox_write_header,
-    sox_write_packet,
-    sox_write_trailer,
+    .name              = "sox",
+    .long_name         = NULL_IF_CONFIG_SMALL("SoX native format"),
+    .extensions        = "sox",
+    .priv_data_size    = sizeof(SoXContext),
+    .audio_codec       = CODEC_ID_PCM_S32LE,
+    .video_codec       = CODEC_ID_NONE,
+    .write_header      = sox_write_header,
+    .write_packet      = sox_write_packet,
+    .write_trailer     = sox_write_trailer,
 };

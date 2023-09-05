@@ -19,8 +19,8 @@
 ;* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 ;******************************************************************************
 
-%include "x86inc.asm"
-%include "x86util.asm"
+%include "libavutil/x86/x86inc.asm"
+%include "libavutil/x86/x86util.asm"
 
 SECTION_RODATA
 
@@ -31,6 +31,10 @@ pf_1_24: times 4 dd 0x4B800000
 cextern ac3_bap_bits
 pw_bap_mul1: dw 21846, 21846, 0, 32768, 21846, 21846, 0, 32768
 pw_bap_mul2: dw 5, 7, 0, 7, 5, 7, 0, 7
+
+; used in ff_ac3_extract_exponents()
+pd_1:   times 4 dd 1
+pd_151: times 4 dd 151
 
 SECTION .text
 
@@ -64,12 +68,12 @@ cglobal ac3_exponent_min_%1, 3,4,2, exp, reuse_blks, expn, offset
 %define LOOP_ALIGN
 INIT_MMX
 AC3_EXPONENT_MIN mmx
-%ifdef HAVE_MMX2
+%if HAVE_MMX2
 %define PMINUB PMINUB_MMXEXT
 %define LOOP_ALIGN ALIGN 16
 AC3_EXPONENT_MIN mmxext
 %endif
-%ifdef HAVE_SSE
+%if HAVE_SSE
 INIT_XMM
 AC3_EXPONENT_MIN sse2
 %endif
@@ -87,12 +91,36 @@ AC3_EXPONENT_MIN sse2
 ;        This is used for mmxext and sse2 because they have pminsw/pmaxsw.
 ;-----------------------------------------------------------------------------
 
-%macro AC3_MAX_MSB_ABS_INT16 2
-cglobal ac3_max_msb_abs_int16_%1, 2,2,5, src, len
+; logical 'or' of 4 or 8 words in an mmx or xmm register into the low word
+%macro OR_WORDS_HORIZ 2 ; src, tmp
+%if cpuflag(sse2)
+    movhlps     %2, %1
+    por         %1, %2
+    pshuflw     %2, %1, q0032
+    por         %1, %2
+    pshuflw     %2, %1, q0001
+    por         %1, %2
+%elif cpuflag(mmx2)
+    pshufw      %2, %1, q0032
+    por         %1, %2
+    pshufw      %2, %1, q0001
+    por         %1, %2
+%else ; mmx
+    movq        %2, %1
+    psrlq       %2, 32
+    por         %1, %2
+    movq        %2, %1
+    psrlq       %2, 16
+    por         %1, %2
+%endif
+%endmacro
+
+%macro AC3_MAX_MSB_ABS_INT16 1
+cglobal ac3_max_msb_abs_int16, 2,2,5, src, len
     pxor        m2, m2
     pxor        m3, m3
 .loop:
-%ifidn %2, min_max
+%ifidn %1, min_max
     mova        m0, [srcq]
     mova        m1, [srcq+mmsize]
     pminsw      m2, m0
@@ -100,7 +128,7 @@ cglobal ac3_max_msb_abs_int16_%1, 2,2,5, src, len
     pmaxsw      m3, m0
     pmaxsw      m3, m1
 %else ; or_abs
-%ifidn %1, mmx
+%if notcpuflag(ssse3)
     mova        m0, [srcq]
     mova        m1, [srcq+mmsize]
     ABS2        m0, m1, m3, m4
@@ -115,34 +143,27 @@ cglobal ac3_max_msb_abs_int16_%1, 2,2,5, src, len
     add       srcq, mmsize*2
     sub       lend, mmsize
     ja .loop
-%ifidn %2, min_max
+%ifidn %1, min_max
     ABS2        m2, m3, m0, m1
     por         m2, m3
 %endif
-%ifidn mmsize, 16
-    movhlps     m0, m2
-    por         m2, m0
-%endif
-    PSHUFLW     m0, m2, 0xe
-    por         m2, m0
-    PSHUFLW     m0, m2, 0x1
-    por         m2, m0
+    OR_WORDS_HORIZ m2, m0
     movd       eax, m2
     and        eax, 0xFFFF
     RET
 %endmacro
 
-INIT_MMX
+INIT_MMX mmx
 %define ABS2 ABS2_MMX
-%define PSHUFLW pshufw
-AC3_MAX_MSB_ABS_INT16 mmx, or_abs
+AC3_MAX_MSB_ABS_INT16 or_abs
+INIT_MMX mmx2
 %define ABS2 ABS2_MMX2
-AC3_MAX_MSB_ABS_INT16 mmxext, min_max
-INIT_XMM
-%define PSHUFLW pshuflw
-AC3_MAX_MSB_ABS_INT16 sse2, min_max
+AC3_MAX_MSB_ABS_INT16 min_max
+INIT_XMM sse2
+AC3_MAX_MSB_ABS_INT16 min_max
+INIT_XMM ssse3
 %define ABS2 ABS2_SSSE3
-AC3_MAX_MSB_ABS_INT16 ssse3, or_abs
+AC3_MAX_MSB_ABS_INT16 or_abs
 
 ;-----------------------------------------------------------------------------
 ; macro used for ff_ac3_lshift_int16() and ff_ac3_rshift_int32()
@@ -219,7 +240,8 @@ cglobal float_to_fixed24_3dnow, 3,3,0, dst, src, len
     add  dstq, 32
     sub  lend, 8
     ja .loop
-    REP_RET
+    femms
+    RET
 
 INIT_XMM
 cglobal float_to_fixed24_sse, 3,3,3, dst, src, len
@@ -243,7 +265,8 @@ cglobal float_to_fixed24_sse, 3,3,3, dst, src, len
     add      dstq, 32
     sub      lend, 8
     ja .loop
-    REP_RET
+    emms
+    RET
 
 INIT_XMM
 cglobal float_to_fixed24_sse2, 3,3,9, dst, src, len
@@ -346,3 +369,96 @@ cglobal ac3_compute_mantissa_size_sse2, 1,2,4, mant_cnt, sum
     movd       eax, m0
     add        eax, sumd
     RET
+
+;------------------------------------------------------------------------------
+; void ff_ac3_extract_exponents(uint8_t *exp, int32_t *coef, int nb_coefs)
+;------------------------------------------------------------------------------
+
+%macro PABSD_MMX 2 ; src/dst, tmp
+    pxor     %2, %2
+    pcmpgtd  %2, %1
+    pxor     %1, %2
+    psubd    %1, %2
+%endmacro
+
+%macro PABSD_SSSE3 1-2 ; src/dst, unused
+    pabsd    %1, %1
+%endmacro
+
+%if HAVE_AMD3DNOW
+INIT_MMX
+cglobal ac3_extract_exponents_3dnow, 3,3,0, exp, coef, len
+    add      expq, lenq
+    lea     coefq, [coefq+4*lenq]
+    neg      lenq
+    movq       m3, [pd_1]
+    movq       m4, [pd_151]
+.loop:
+    movq       m0, [coefq+4*lenq  ]
+    movq       m1, [coefq+4*lenq+8]
+    PABSD_MMX  m0, m2
+    PABSD_MMX  m1, m2
+    pslld      m0, 1
+    por        m0, m3
+    pi2fd      m2, m0
+    psrld      m2, 23
+    movq       m0, m4
+    psubd      m0, m2
+    pslld      m1, 1
+    por        m1, m3
+    pi2fd      m2, m1
+    psrld      m2, 23
+    movq       m1, m4
+    psubd      m1, m2
+    packssdw   m0, m0
+    packuswb   m0, m0
+    packssdw   m1, m1
+    packuswb   m1, m1
+    punpcklwd  m0, m1
+    movd  [expq+lenq], m0
+    add      lenq, 4
+    jl .loop
+    REP_RET
+%endif
+
+%macro AC3_EXTRACT_EXPONENTS 1
+cglobal ac3_extract_exponents_%1, 3,3,4, exp, coef, len
+    add     expq, lenq
+    lea    coefq, [coefq+4*lenq]
+    neg     lenq
+    mova      m2, [pd_1]
+    mova      m3, [pd_151]
+.loop:
+    ; move 4 32-bit coefs to xmm0
+    mova      m0, [coefq+4*lenq]
+    ; absolute value
+    PABSD     m0, m1
+    ; convert to float and extract exponents
+    pslld     m0, 1
+    por       m0, m2
+    cvtdq2ps  m1, m0
+    psrld     m1, 23
+    mova      m0, m3
+    psubd     m0, m1
+    ; move the lowest byte in each of 4 dwords to the low dword
+    ; NOTE: We cannot just extract the low bytes with pshufb because the dword
+    ;       result for 16777215 is -1 due to float inaccuracy. Using packuswb
+    ;       clips this to 0, which is the correct exponent.
+    packssdw  m0, m0
+    packuswb  m0, m0
+    movd  [expq+lenq], m0
+
+    add     lenq, 4
+    jl .loop
+    REP_RET
+%endmacro
+
+%if HAVE_SSE
+INIT_XMM
+%define PABSD PABSD_MMX
+AC3_EXTRACT_EXPONENTS sse2
+%if HAVE_SSSE3
+%define PABSD PABSD_SSSE3
+AC3_EXTRACT_EXPONENTS ssse3
+%endif
+%endif

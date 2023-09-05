@@ -24,6 +24,7 @@
  * RTMP protocol based on http://rtmpdump.mplayerhq.hu/ librtmp
  */
 
+#include "libavutil/mathematics.h"
 #include "avformat.h"
 #include "url.h"
 
@@ -51,7 +52,6 @@ static int rtmp_close(URLContext *s)
     RTMP *r = s->priv_data;
 
     RTMP_Close(r);
-    av_free(r);
     return 0;
 }
 
@@ -69,12 +69,8 @@ static int rtmp_close(URLContext *s)
  */
 static int rtmp_open(URLContext *s, const char *uri, int flags)
 {
-    RTMP *r;
+    RTMP *r = s->priv_data;
     int rc;
-
-    r = av_mallocz(sizeof(RTMP));
-    if (!r)
-        return AVERROR(ENOMEM);
 
     switch (av_log_get_level()) {
     default:
@@ -94,7 +90,7 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         goto fail;
     }
 
-    if (flags & AVIO_WRONLY)
+    if (flags & AVIO_FLAG_WRITE)
         RTMP_EnableWrite(r);
 
     if (!RTMP_Connect(r, NULL) || !RTMP_ConnectStream(r, 0)) {
@@ -102,11 +98,9 @@ static int rtmp_open(URLContext *s, const char *uri, int flags)
         goto fail;
     }
 
-    s->priv_data   = r;
     s->is_streamed = 1;
     return 0;
 fail:
-    av_free(r);
     return rc;
 }
 
@@ -158,7 +152,7 @@ static int rtmp_get_file_handle(URLContext *s)
     return RTMP_Socket(r);
 }
 
-URLProtocol ff_rtmp_protocol = {
+URLProtocol ff_librtmp_protocol = {
     .name                = "rtmp",
     .url_open            = rtmp_open,
     .url_read            = rtmp_read,
@@ -166,10 +160,12 @@ URLProtocol ff_rtmp_protocol = {
     .url_close           = rtmp_close,
     .url_read_pause      = rtmp_read_pause,
     .url_read_seek       = rtmp_read_seek,
-    .url_get_file_handle = rtmp_get_file_handle
+    .url_get_file_handle = rtmp_get_file_handle,
+    .priv_data_size      = sizeof(RTMP),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };
 
-URLProtocol ff_rtmpt_protocol = {
+URLProtocol ff_librtmpt_protocol = {
     .name                = "rtmpt",
     .url_open            = rtmp_open,
     .url_read            = rtmp_read,
@@ -177,10 +173,12 @@ URLProtocol ff_rtmpt_protocol = {
     .url_close           = rtmp_close,
     .url_read_pause      = rtmp_read_pause,
     .url_read_seek       = rtmp_read_seek,
-    .url_get_file_handle = rtmp_get_file_handle
+    .url_get_file_handle = rtmp_get_file_handle,
+    .priv_data_size      = sizeof(RTMP),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };
 
-URLProtocol ff_rtmpe_protocol = {
+URLProtocol ff_librtmpe_protocol = {
     .name                = "rtmpe",
     .url_open            = rtmp_open,
     .url_read            = rtmp_read,
@@ -188,10 +186,12 @@ URLProtocol ff_rtmpe_protocol = {
     .url_close           = rtmp_close,
     .url_read_pause      = rtmp_read_pause,
     .url_read_seek       = rtmp_read_seek,
-    .url_get_file_handle = rtmp_get_file_handle
+    .url_get_file_handle = rtmp_get_file_handle,
+    .priv_data_size      = sizeof(RTMP),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };
 
-URLProtocol ff_rtmpte_protocol = {
+URLProtocol ff_librtmpte_protocol = {
     .name                = "rtmpte",
     .url_open            = rtmp_open,
     .url_read            = rtmp_read,
@@ -199,10 +199,12 @@ URLProtocol ff_rtmpte_protocol = {
     .url_close           = rtmp_close,
     .url_read_pause      = rtmp_read_pause,
     .url_read_seek       = rtmp_read_seek,
-    .url_get_file_handle = rtmp_get_file_handle
+    .url_get_file_handle = rtmp_get_file_handle,
+    .priv_data_size      = sizeof(RTMP),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };
 
-URLProtocol ff_rtmps_protocol = {
+URLProtocol ff_librtmps_protocol = {
     .name                = "rtmps",
     .url_open            = rtmp_open,
     .url_read            = rtmp_read,
@@ -210,5 +212,7 @@ URLProtocol ff_rtmps_protocol = {
     .url_close           = rtmp_close,
     .url_read_pause      = rtmp_read_pause,
     .url_read_seek       = rtmp_read_seek,
-    .url_get_file_handle = rtmp_get_file_handle
+    .url_get_file_handle = rtmp_get_file_handle,
+    .priv_data_size      = sizeof(RTMP),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };

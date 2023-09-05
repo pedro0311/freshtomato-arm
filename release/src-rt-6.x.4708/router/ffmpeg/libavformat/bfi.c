@@ -23,11 +23,12 @@
  * @file
  * @brief Brute Force & Ignorance (.bfi) file demuxer
  * @author Sisir Koppaka ( sisir.koppaka at gmail dot com )
- * @sa http://wiki.multimedia.cx/index.php?title=BFI
+ * @see http://wiki.multimedia.cx/index.php?title=BFI
  */
 
 #include "libavutil/intreadwrite.h"
 #include "avformat.h"
+#include "internal.h"
 
 typedef struct BFIContext {
     int nframes;
@@ -46,7 +47,7 @@ static int bfi_probe(AVProbeData * p)
         return 0;
 }
 
-static int bfi_read_header(AVFormatContext * s, AVFormatParameters * ap)
+static int bfi_read_header(AVFormatContext * s)
 {
     BFIContext *bfi = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -55,12 +56,12 @@ static int bfi_read_header(AVFormatContext * s, AVFormatParameters * ap)
     int fps, chunk_header;
 
     /* Initialize the video codec... */
-    vstream = av_new_stream(s, 0);
+    vstream = avformat_new_stream(s, NULL);
     if (!vstream)
         return AVERROR(ENOMEM);
 
     /* Initialize the audio codec... */
-    astream = av_new_stream(s, 0);
+    astream = avformat_new_stream(s, NULL);
     if (!astream)
         return AVERROR(ENOMEM);
 
@@ -86,7 +87,7 @@ static int bfi_read_header(AVFormatContext * s, AVFormatParameters * ap)
     astream->codec->sample_rate = avio_rl32(pb);
 
     /* Set up the video codec... */
-    av_set_pts_info(vstream, 32, 1, fps);
+    avpriv_set_pts_info(vstream, 32, 1, fps);
     vstream->codec->codec_type = AVMEDIA_TYPE_VIDEO;
     vstream->codec->codec_id   = CODEC_ID_BFI;
     vstream->codec->pix_fmt    = PIX_FMT_PAL8;
@@ -99,7 +100,7 @@ static int bfi_read_header(AVFormatContext * s, AVFormatParameters * ap)
     astream->codec->bit_rate        =
         astream->codec->sample_rate * astream->codec->bits_per_coded_sample;
     avio_seek(pb, chunk_header - 3, SEEK_SET);
-    av_set_pts_info(astream, 64, 1, astream->codec->sample_rate);
+    avpriv_set_pts_info(astream, 64, 1, astream->codec->sample_rate);
     return 0;
 }
 
@@ -159,10 +160,10 @@ static int bfi_read_packet(AVFormatContext * s, AVPacket * pkt)
 }
 
 AVInputFormat ff_bfi_demuxer = {
-    "bfi",
-    NULL_IF_CONFIG_SMALL("Brute Force & Ignorance"),
-    sizeof(BFIContext),
-    bfi_probe,
-    bfi_read_header,
-    bfi_read_packet,
+    .name           = "bfi",
+    .long_name      = NULL_IF_CONFIG_SMALL("Brute Force & Ignorance"),
+    .priv_data_size = sizeof(BFIContext),
+    .read_probe     = bfi_probe,
+    .read_header    = bfi_read_header,
+    .read_packet    = bfi_read_packet,
 };

@@ -30,6 +30,7 @@
 #include "libavutil/intreadwrite.h"
 #include "libavutil/dict.h"
 #include "avformat.h"
+#include "internal.h"
 
 #define FORM_TAG MKTAG('F', 'O', 'R', 'M')
 #define MOVE_TAG MKTAG('M', 'O', 'V', 'E')
@@ -82,8 +83,7 @@ static int wc3_probe(AVProbeData *p)
     return AVPROBE_SCORE_MAX;
 }
 
-static int wc3_read_header(AVFormatContext *s,
-                           AVFormatParameters *ap)
+static int wc3_read_header(AVFormatContext *s)
 {
     Wc3DemuxContext *wc3 = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -152,7 +152,6 @@ static int wc3_read_header(AVFormatContext *s,
                 (uint8_t)fourcc_tag, (uint8_t)(fourcc_tag >> 8), (uint8_t)(fourcc_tag >> 16), (uint8_t)(fourcc_tag >> 24),
                 (uint8_t)fourcc_tag, (uint8_t)(fourcc_tag >> 8), (uint8_t)(fourcc_tag >> 16), (uint8_t)(fourcc_tag >> 24));
             return AVERROR_INVALIDDATA;
-            break;
         }
 
         fourcc_tag = avio_rl32(pb);
@@ -164,10 +163,10 @@ static int wc3_read_header(AVFormatContext *s,
     } while (fourcc_tag != BRCH_TAG);
 
     /* initialize the decoder streams */
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
-    av_set_pts_info(st, 33, 1, WC3_FRAME_FPS);
+    avpriv_set_pts_info(st, 33, 1, WC3_FRAME_FPS);
     wc3->video_stream_index = st->index;
     st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
     st->codec->codec_id = CODEC_ID_XAN_WC3;
@@ -175,10 +174,10 @@ static int wc3_read_header(AVFormatContext *s,
     st->codec->width = wc3->width;
     st->codec->height = wc3->height;
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
-    av_set_pts_info(st, 33, 1, WC3_FRAME_FPS);
+    avpriv_set_pts_info(st, 33, 1, WC3_FRAME_FPS);
     wc3->audio_stream_index = st->index;
     st->codec->codec_type = AVMEDIA_TYPE_AUDIO;
     st->codec->codec_id = CODEC_ID_PCM_S16LE;
@@ -293,11 +292,11 @@ static int wc3_read_close(AVFormatContext *s)
 }
 
 AVInputFormat ff_wc3_demuxer = {
-    "wc3movie",
-    NULL_IF_CONFIG_SMALL("Wing Commander III movie format"),
-    sizeof(Wc3DemuxContext),
-    wc3_probe,
-    wc3_read_header,
-    wc3_read_packet,
-    wc3_read_close,
+    .name           = "wc3movie",
+    .long_name      = NULL_IF_CONFIG_SMALL("Wing Commander III movie format"),
+    .priv_data_size = sizeof(Wc3DemuxContext),
+    .read_probe     = wc3_probe,
+    .read_header    = wc3_read_header,
+    .read_packet    = wc3_read_packet,
+    .read_close     = wc3_read_close,
 };

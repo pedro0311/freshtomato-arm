@@ -28,7 +28,9 @@
  */
 
 #include "libavutil/intreadwrite.h"
+#include "libavutil/intfloat.h"
 #include "avformat.h"
+#include "internal.h"
 
 #define     RIFF_TAG MKTAG('R', 'I', 'F', 'F')
 #define  FOURXMV_TAG MKTAG('4', 'X', 'M', 'V')
@@ -89,8 +91,7 @@ static int fourxm_probe(AVProbeData *p)
     return AVPROBE_SCORE_MAX;
 }
 
-static int fourxm_read_header(AVFormatContext *s,
-                              AVFormatParameters *ap)
+static int fourxm_read_header(AVFormatContext *s)
 {
     AVIOContext *pb = s->pb;
     unsigned int fourcc_tag;
@@ -127,9 +128,13 @@ static int fourxm_read_header(AVFormatContext *s,
     for (i = 0; i < header_size - 8; i++) {
         fourcc_tag = AV_RL32(&header[i]);
         size = AV_RL32(&header[i + 4]);
+        if (size > header_size - i - 8 && (fourcc_tag == vtrk_TAG || fourcc_tag == strk_TAG)) {
+            av_log(s, AV_LOG_ERROR, "chunk larger than array %d>%d\n", size, header_size - i - 8);
+            return AVERROR_INVALIDDATA;
+        }
 
         if (fourcc_tag == std__TAG) {
-            fourxm->fps = av_int2flt(AV_RL32(&header[i + 12]));
+            fourxm->fps = av_int2float(AV_RL32(&header[i + 12]));
         } else if (fourcc_tag == vtrk_TAG) {
             /* check that there is enough data */
             if (size != vtrk_SIZE) {
@@ -140,12 +145,12 @@ static int fourxm_read_header(AVFormatContext *s,
             fourxm->height = AV_RL32(&header[i + 40]);
 
             /* allocate a new AVStream */
-            st = av_new_stream(s, 0);
+            st = avformat_new_stream(s, NULL);
             if (!st){
                 ret= AVERROR(ENOMEM);
                 goto fail;
             }
-            av_set_pts_info(st, 60, 1, fourxm->fps);
+            avpriv_set_pts_info(st, 60, 1, fourxm->fps);
 
             fourxm->video_stream_index = st->index;
 
@@ -168,7 +173,7 @@ static int fourxm_read_header(AVFormatContext *s,
             current_track = AV_RL32(&header[i + 8]);
             if((unsigned)current_track >= UINT_MAX / sizeof(AudioTrack) - 1){
                 av_log(s, AV_LOG_ERROR, "current_track too large\n");
-                ret= -1;
+                ret = AVERROR_INVALIDDATA;
                 goto fail;
             }
             if (current_track + 1 > fourxm->track_count) {
@@ -192,7 +197,7 @@ static int fourxm_read_header(AVFormatContext *s,
                || fourxm->tracks[current_track].sample_rate <= 0
                || fourxm->tracks[current_track].bits        <  0){
                 av_log(s, AV_LOG_ERROR, "audio header invalid\n");
-                ret= -1;
+                ret = AVERROR_INVALIDDATA;
                 goto fail;
             }
             if(!fourxm->tracks[current_track].adpcm && fourxm->tracks[current_track].bits<8){
@@ -203,13 +208,14 @@ static int fourxm_read_header(AVFormatContext *s,
             i += 8 + size;
 
             /* allocate a new AVStream */
-            st = av_new_stream(s, current_track);
+            st = avformat_new_stream(s, NULL);
             if (!st){
                 ret= AVERROR(ENOMEM);
                 goto fail;
             }
 
-            av_set_pts_info(st, 60, 1, fourxm->tracks[current_track].sample_rate);
+            st->id = current_track;
+            avpriv_set_pts_info(st, 60, 1, fourxm->tracks[current_track].sample_rate);
 
             fourxm->tracks[current_track].stream_index = st->index;
 
@@ -352,11 +358,11 @@ static int fourxm_read_close(AVFormatContext *s)
 }
 
 AVInputFormat ff_fourxm_demuxer = {
-    "4xm",
-    NULL_IF_CONFIG_SMALL("4X Technologies format"),
-    sizeof(FourxmDemuxContext),
-    fourxm_probe,
-    fourxm_read_header,
-    fourxm_read_packet,
-    fourxm_read_close,
+    .name           = "4xm",
+    .long_name      = NULL_IF_CONFIG_SMALL("4X Technologies format"),
+    .priv_data_size = sizeof(FourxmDemuxContext),
+    .read_probe     = fourxm_probe,
+    .read_header    = fourxm_read_header,
+    .read_packet    = fourxm_read_packet,
+    .read_close     = fourxm_read_close,
 };

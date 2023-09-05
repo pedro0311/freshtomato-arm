@@ -51,7 +51,7 @@ avs_decode_frame(AVCodecContext * avctx,
     int buf_size = avpkt->size;
     AvsContext *const avs = avctx->priv_data;
     AVFrame *picture = data;
-    AVFrame *const p = (AVFrame *) & avs->picture;
+    AVFrame *const p =  &avs->picture;
     const uint8_t *table, *vect;
     uint8_t *out;
     int i, j, x, y, stride, vect_w = 3, vect_h = 3;
@@ -63,7 +63,7 @@ avs_decode_frame(AVCodecContext * avctx,
         av_log(avctx, AV_LOG_ERROR, "reget_buffer() failed\n");
         return -1;
     }
-    p->reference = 1;
+    p->reference = 3;
     p->pict_type = AV_PICTURE_TYPE_P;
     p->key_frame = 0;
 
@@ -85,8 +85,10 @@ avs_decode_frame(AVCodecContext * avctx,
         if (first >= 256 || last > 256 || buf_end - buf < 4 + 4 + 3 * (last - first))
             return AVERROR_INVALIDDATA;
         buf += 4;
-        for (i=first; i<last; i++, buf+=3)
+        for (i=first; i<last; i++, buf+=3) {
             pal[i] = (buf[0] << 18) | (buf[1] << 10) | (buf[2] << 2);
+            pal[i] |= 0xFF << 24 | (pal[i] >> 6) & 0x30303;
+        }
 
         sub_type = buf[0];
         type = buf[1];
@@ -149,7 +151,7 @@ avs_decode_frame(AVCodecContext * avctx,
             align_get_bits(&change_map);
     }
 
-    *picture = *(AVFrame *) & avs->picture;
+    *picture   = avs->picture;
     *data_size = sizeof(AVPicture);
 
     return buf_size;
@@ -164,15 +166,23 @@ static av_cold int avs_decode_init(AVCodecContext * avctx)
     return 0;
 }
 
+static av_cold int avs_decode_end(AVCodecContext *avctx)
+{
+    AvsContext *s = avctx->priv_data;
+    if (s->picture.data[0])
+        avctx->release_buffer(avctx, &s->picture);
+    return 0;
+}
+
+
 AVCodec ff_avs_decoder = {
-    "avs",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_AVS,
-    sizeof(AvsContext),
-    avs_decode_init,
-    NULL,
-    NULL,
-    avs_decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("AVS (Audio Video Standard) video"),
+    .name           = "avs",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_AVS,
+    .priv_data_size = sizeof(AvsContext),
+    .init           = avs_decode_init,
+    .decode         = avs_decode_frame,
+    .close          = avs_decode_end,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("AVS (Audio Video Standard) video"),
 };

@@ -23,11 +23,11 @@
  * @file
  * Funcom ISS file demuxer
  * @author Jaikrishnan Menon
- * for more information on the .iss file format, visit:
- * http://wiki.multimedia.cx/index.php?title=FunCom_ISS
+ * @see http://wiki.multimedia.cx/index.php?title=FunCom_ISS
  */
 
 #include "avformat.h"
+#include "internal.h"
 #include "libavutil/avstring.h"
 
 #define ISS_SIG "IMA_ADPCM_Sound"
@@ -65,7 +65,7 @@ static int iss_probe(AVProbeData *p)
     return AVPROBE_SCORE_MAX;
 }
 
-static av_cold int iss_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static av_cold int iss_read_header(AVFormatContext *s)
 {
     IssDemuxContext *iss = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -87,9 +87,14 @@ static av_cold int iss_read_header(AVFormatContext *s, AVFormatParameters *ap)
     get_token(pb, token, sizeof(token)); //Version ID
     get_token(pb, token, sizeof(token)); //Size
 
+    if (iss->packet_size <= 0) {
+        av_log(s, AV_LOG_ERROR, "packet_size %d is invalid\n", iss->packet_size);
+        return AVERROR_INVALIDDATA;
+    }
+
     iss->sample_start_pos = avio_tell(pb);
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
     st->codec->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -102,7 +107,7 @@ static av_cold int iss_read_header(AVFormatContext *s, AVFormatParameters *ap)
     st->codec->bit_rate = st->codec->channels * st->codec->sample_rate
                                       * st->codec->bits_per_coded_sample;
     st->codec->block_align = iss->packet_size;
-    av_set_pts_info(st, 32, 1, st->codec->sample_rate);
+    avpriv_set_pts_info(st, 32, 1, st->codec->sample_rate);
 
     return 0;
 }
@@ -123,11 +128,10 @@ static int iss_read_packet(AVFormatContext *s, AVPacket *pkt)
 }
 
 AVInputFormat ff_iss_demuxer = {
-    "ISS",
-    NULL_IF_CONFIG_SMALL("Funcom ISS format"),
-    sizeof(IssDemuxContext),
-    iss_probe,
-    iss_read_header,
-    iss_read_packet,
+    .name           = "iss",
+    .long_name      = NULL_IF_CONFIG_SMALL("Funcom ISS format"),
+    .priv_data_size = sizeof(IssDemuxContext),
+    .read_probe     = iss_probe,
+    .read_header    = iss_read_header,
+    .read_packet    = iss_read_packet,
 };
-

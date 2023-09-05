@@ -120,92 +120,76 @@ static const struct {
 };
 
 //copied from vf.c
-extern const vf_info_t vf_info_vo;
-extern const vf_info_t vf_info_rectangle;
+extern const vf_info_t vf_info_1bpp;
+extern const vf_info_t vf_info_ass;
 extern const vf_info_t vf_info_bmovl;
 extern const vf_info_t vf_info_crop;
-extern const vf_info_t vf_info_expand;
-extern const vf_info_t vf_info_pp;
-extern const vf_info_t vf_info_scale;
-extern const vf_info_t vf_info_format;
-extern const vf_info_t vf_info_noformat;
-extern const vf_info_t vf_info_flip;
-extern const vf_info_t vf_info_rotate;
-extern const vf_info_t vf_info_mirror;
-extern const vf_info_t vf_info_palette;
-extern const vf_info_t vf_info_lavc;
-extern const vf_info_t vf_info_zrmjpeg;
-extern const vf_info_t vf_info_dvbscale;
-extern const vf_info_t vf_info_cropdetect;
-extern const vf_info_t vf_info_test;
-extern const vf_info_t vf_info_noise;
-extern const vf_info_t vf_info_yvu9;
-extern const vf_info_t vf_info_lavcdeint;
-extern const vf_info_t vf_info_eq;
-extern const vf_info_t vf_info_eq2;
-extern const vf_info_t vf_info_gradfun;
-extern const vf_info_t vf_info_halfpack;
-extern const vf_info_t vf_info_dint;
-extern const vf_info_t vf_info_1bpp;
-extern const vf_info_t vf_info_2xsai;
-extern const vf_info_t vf_info_unsharp;
-extern const vf_info_t vf_info_swapuv;
-extern const vf_info_t vf_info_il;
-extern const vf_info_t vf_info_fil;
-extern const vf_info_t vf_info_boxblur;
-extern const vf_info_t vf_info_sab;
-extern const vf_info_t vf_info_smartblur;
-extern const vf_info_t vf_info_perspective;
-extern const vf_info_t vf_info_down3dright;
-extern const vf_info_t vf_info_field;
-extern const vf_info_t vf_info_denoise3d;
-extern const vf_info_t vf_info_hqdn3d;
-extern const vf_info_t vf_info_detc;
-extern const vf_info_t vf_info_telecine;
-extern const vf_info_t vf_info_tinterlace;
-extern const vf_info_t vf_info_tfields;
-extern const vf_info_t vf_info_ivtc;
-extern const vf_info_t vf_info_ilpack;
-extern const vf_info_t vf_info_dsize;
 extern const vf_info_t vf_info_decimate;
-extern const vf_info_t vf_info_softpulldown;
-extern const vf_info_t vf_info_pullup;
-extern const vf_info_t vf_info_filmdint;
-extern const vf_info_t vf_info_framestep;
-extern const vf_info_t vf_info_tile;
-extern const vf_info_t vf_info_delogo;
-extern const vf_info_t vf_info_remove_logo;
-extern const vf_info_t vf_info_hue;
-extern const vf_info_t vf_info_spp;
-extern const vf_info_t vf_info_uspp;
-extern const vf_info_t vf_info_fspp;
-extern const vf_info_t vf_info_pp7;
-extern const vf_info_t vf_info_yuvcsp;
-extern const vf_info_t vf_info_kerndeint;
-extern const vf_info_t vf_info_rgbtest;
-extern const vf_info_t vf_info_qp;
-extern const vf_info_t vf_info_phase;
+extern const vf_info_t vf_info_denoise3d;
+extern const vf_info_t vf_info_detc;
+extern const vf_info_t vf_info_dint;
 extern const vf_info_t vf_info_divtc;
-extern const vf_info_t vf_info_harddup;
-extern const vf_info_t vf_info_softskip;
-extern const vf_info_t vf_info_screenshot;
-extern const vf_info_t vf_info_ass;
-extern const vf_info_t vf_info_mcdeint;
-extern const vf_info_t vf_info_yadif;
-extern const vf_info_t vf_info_blackframe;
-extern const vf_info_t vf_info_geq;
-extern const vf_info_t vf_info_ow;
+extern const vf_info_t vf_info_down3dright;
+extern const vf_info_t vf_info_dsize;
+extern const vf_info_t vf_info_dvbscale;
+extern const vf_info_t vf_info_eq2;
+extern const vf_info_t vf_info_eq;
+extern const vf_info_t vf_info_expand;
+extern const vf_info_t vf_info_field;
+extern const vf_info_t vf_info_fil;
+extern const vf_info_t vf_info_filmdint;
 extern const vf_info_t vf_info_fixpts;
+extern const vf_info_t vf_info_flip;
+extern const vf_info_t vf_info_format;
+extern const vf_info_t vf_info_framestep;
+extern const vf_info_t vf_info_fspp;
+extern const vf_info_t vf_info_geq;
+extern const vf_info_t vf_info_halfpack;
+extern const vf_info_t vf_info_harddup;
+extern const vf_info_t vf_info_hqdn3d;
+extern const vf_info_t vf_info_hue;
+extern const vf_info_t vf_info_il;
+extern const vf_info_t vf_info_ilpack;
+extern const vf_info_t vf_info_ivtc;
+extern const vf_info_t vf_info_kerndeint;
+extern const vf_info_t vf_info_lavc;
+extern const vf_info_t vf_info_lavcdeint;
+extern const vf_info_t vf_info_mcdeint;
+extern const vf_info_t vf_info_noformat;
+extern const vf_info_t vf_info_noise;
+extern const vf_info_t vf_info_ow;
+extern const vf_info_t vf_info_palette;
+extern const vf_info_t vf_info_perspective;
+extern const vf_info_t vf_info_phase;
+extern const vf_info_t vf_info_pp7;
+extern const vf_info_t vf_info_pp;
+extern const vf_info_t vf_info_pullup;
+extern const vf_info_t vf_info_qp;
+extern const vf_info_t vf_info_rectangle;
+extern const vf_info_t vf_info_rotate;
+extern const vf_info_t vf_info_sab;
+extern const vf_info_t vf_info_scale;
+extern const vf_info_t vf_info_smartblur;
+extern const vf_info_t vf_info_softpulldown;
+extern const vf_info_t vf_info_softskip;
+extern const vf_info_t vf_info_spp;
 extern const vf_info_t vf_info_stereo3d;
+extern const vf_info_t vf_info_telecine;
+extern const vf_info_t vf_info_test;
+extern const vf_info_t vf_info_tfields;
+extern const vf_info_t vf_info_tile;
+extern const vf_info_t vf_info_tinterlace;
+extern const vf_info_t vf_info_unsharp;
+extern const vf_info_t vf_info_uspp;
+extern const vf_info_t vf_info_vo;
+extern const vf_info_t vf_info_yadif;
+extern const vf_info_t vf_info_yuvcsp;
+extern const vf_info_t vf_info_yvu9;
+extern const vf_info_t vf_info_zrmjpeg;
 
 
 static const vf_info_t* const filters[]={
-    &vf_info_2xsai,
-    &vf_info_blackframe,
-    &vf_info_boxblur,
-    &vf_info_cropdetect,
     &vf_info_decimate,
-    &vf_info_delogo,
     &vf_info_denoise3d,
     &vf_info_detc,
     &vf_info_dint,
@@ -221,7 +205,6 @@ static const vf_info_t* const filters[]={
     &vf_info_framestep,
     &vf_info_fspp,
     &vf_info_geq,
-    &vf_info_gradfun,
     &vf_info_harddup,
     &vf_info_hqdn3d,
     &vf_info_hue,
@@ -230,28 +213,24 @@ static const vf_info_t* const filters[]={
     &vf_info_ivtc,
     &vf_info_kerndeint,
     &vf_info_mcdeint,
-    &vf_info_mirror,
     &vf_info_noise,
     &vf_info_ow,
     &vf_info_palette,
     &vf_info_perspective,
     &vf_info_phase,
+    &vf_info_pp,
     &vf_info_pp7,
     &vf_info_pullup,
     &vf_info_qp,
     &vf_info_rectangle,
-    &vf_info_remove_logo,
-    &vf_info_rgbtest,
     &vf_info_rotate,
     &vf_info_sab,
-    &vf_info_screenshot,
     &vf_info_smartblur,
     &vf_info_softpulldown,
     &vf_info_softskip,
     &vf_info_spp,
-    &vf_info_swapuv,
+    &vf_info_stereo3d,
     &vf_info_telecine,
-    &vf_info_test,
     &vf_info_tile,
     &vf_info_tinterlace,
     &vf_info_unsharp,
@@ -278,7 +257,6 @@ lavcdeint
 noformat
 pp
 scale
-stereo3d
 tfields
 vo
 yadif
@@ -456,7 +434,7 @@ unsigned int vf_match_csp(vf_instance_t** vfp,const unsigned int* list,unsigned 
 }
 
 mp_image_t* vf_get_image(vf_instance_t* vf, unsigned int outfmt, int mp_imgtype, int mp_imgflag, int w, int h){
-    MPContext *m= ((uint8_t*)vf) - offsetof(MPContext, next_vf);
+    MPContext *m= (MPContext*)(((uint8_t*)vf) - offsetof(MPContext, next_vf));
   mp_image_t* mpi=NULL;
   int w2;
   int number = mp_imgtype >> 16;
@@ -628,7 +606,7 @@ int vf_next_put_image(struct vf_instance *vf,mp_image_t *mpi, double pts){
         goto fail;
 
     picref->buf = pic;
-    picref->buf->please_use_av_free= av_free;
+    picref->buf->please_use_av_free= (void*)av_free;
     if (!(picref->video = av_mallocz(sizeof(AVFilterBufferRefVideoProps))))
         goto fail;
 
@@ -724,11 +702,6 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     char name[256];
     int i;
 
-    av_log(ctx, AV_LOG_WARNING,
-"This is a unholy filter, it will be purified by the ffmpeg exorcist team\n"
-"which will change its syntax from dark -vf mp to light -vf.\n"
-"Thou shalst not make spells or scripts that depend on it\n");
-
     m->avfctx= ctx;
 
     if(!args || 1!=sscanf(args, "%255[^:=]", name)){
@@ -746,6 +719,10 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
         av_log(ctx, AV_LOG_ERROR, "Unknown filter %s\n", name);
         return AVERROR(EINVAL);
     }
+
+    av_log(ctx, AV_LOG_WARNING,
+           "'%s' is a wrapped MPlayer filter (libmpcodecs). This filter may be removed\n"
+           "once it has been ported to a native libavfilter.\n", name);
 
     memset(&m->vf,0,sizeof(m->vf));
     m->vf.info= filters[i];
@@ -780,6 +757,23 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     }
 
     return 0;
+}
+
+static av_cold void uninit(AVFilterContext *ctx)
+{
+    MPContext *m = ctx->priv;
+    vf_instance_t *vf = &m->vf;
+
+    while(vf){
+        vf_instance_t *next = vf->next;
+        if(vf->uninit)
+            vf->uninit(vf);
+        free_mp_image(vf->imgctx.static_images[0]);
+        free_mp_image(vf->imgctx.static_images[1]);
+        free_mp_image(vf->imgctx.temp_images[0]);
+        free_mp_image(vf->imgctx.export_images[0]);
+        vf = next;
+    }
 }
 
 static int query_formats(AVFilterContext *ctx)
@@ -892,12 +886,13 @@ static void end_frame(AVFilterLink *inlink)
 
 AVFilter avfilter_vf_mp = {
     .name      = "mp",
-    .description = NULL_IF_CONFIG_SMALL("libmpcodecs wrapper."),
+    .description = NULL_IF_CONFIG_SMALL("Apply a libmpcodecs filter to the input video."),
     .init = init,
+    .uninit = uninit,
     .priv_size = sizeof(MPContext),
     .query_formats = query_formats,
 
-    .inputs    = (AVFilterPad[]) {{ .name            = "default",
+    .inputs    = (const AVFilterPad[]) {{ .name      = "default",
                                     .type            = AVMEDIA_TYPE_VIDEO,
                                     .start_frame     = start_frame,
                                     .draw_slice      = null_draw_slice,
@@ -905,7 +900,7 @@ AVFilter avfilter_vf_mp = {
                                     .config_props    = config_inprops,
                                     .min_perms       = AV_PERM_READ, },
                                   { .name = NULL}},
-    .outputs   = (AVFilterPad[]) {{ .name            = "default",
+    .outputs   = (const AVFilterPad[]) {{ .name      = "default",
                                     .type            = AVMEDIA_TYPE_VIDEO,
                                     .request_frame   = request_frame,
                                     .config_props    = config_outprops, },

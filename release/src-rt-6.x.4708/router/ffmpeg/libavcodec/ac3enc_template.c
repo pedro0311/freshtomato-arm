@@ -28,8 +28,24 @@
 
 #include <stdint.h>
 
-#include "ac3enc.h"
 
+/* prototypes for static functions in ac3enc_fixed.c and ac3enc_float.c */
+
+static void scale_coefficients(AC3EncodeContext *s);
+
+static void apply_window(DSPContext *dsp, SampleType *output,
+                         const SampleType *input, const SampleType *window,
+                         unsigned int len);
+
+static int normalize_samples(AC3EncodeContext *s);
+
+static void clip_coefficients(DSPContext *dsp, CoefType *coef, unsigned int len);
+
+static CoefType calc_cpl_coord(CoefSumType energy_ch, CoefSumType energy_cpl);
+
+static void sum_square_butterfly(AC3EncodeContext *s, CoefSumType sum[4],
+                                 const CoefType *coef0, const CoefType *coef1,
+                                 int len);
 
 int AC3_NAME(allocate_sample_buffers)(AC3EncodeContext *s)
 {
@@ -51,12 +67,12 @@ alloc_fail:
 }
 
 
-/**
+/*
  * Deinterleave input samples.
- * Channels are reordered from Libav's default order to AC-3 order.
+ * Channels are reordered from FFmpeg's default order to AC-3 order.
  */
-void AC3_NAME(deinterleave_input_samples)(AC3EncodeContext *s,
-                                          const SampleType *samples)
+static void deinterleave_input_samples(AC3EncodeContext *s,
+                                       const SampleType *samples)
 {
     int ch, i;
 
@@ -66,13 +82,13 @@ void AC3_NAME(deinterleave_input_samples)(AC3EncodeContext *s,
         int sinc;
 
         /* copy last 256 samples of previous frame to the start of the current frame */
-        memcpy(&s->planar_samples[ch][0], &s->planar_samples[ch][AC3_FRAME_SIZE],
+        memcpy(&s->planar_samples[ch][0], &s->planar_samples[ch][AC3_BLOCK_SIZE * s->num_blocks],
                AC3_BLOCK_SIZE * sizeof(s->planar_samples[0][0]));
 
         /* deinterleave */
         sinc = s->channels;
         sptr = samples + s->channel_map[ch];
-        for (i = AC3_BLOCK_SIZE; i < AC3_FRAME_SIZE+AC3_BLOCK_SIZE; i++) {
+        for (i = AC3_BLOCK_SIZE; i < AC3_BLOCK_SIZE * (s->num_blocks + 1); i++) {
             s->planar_samples[ch][i] = *sptr;
             sptr += sinc;
         }
@@ -80,64 +96,52 @@ void AC3_NAME(deinterleave_input_samples)(AC3EncodeContext *s,
 }
 
 
-/**
+/*
  * Apply the MDCT to input samples to generate frequency coefficients.
  * This applies the KBD window and normalizes the input to reduce precision
  * loss due to fixed-point calculations.
  */
-void AC3_NAME(apply_mdct)(AC3EncodeContext *s)
+static void apply_mdct(AC3EncodeContext *s)
 {
     int blk, ch;
 
     for (ch = 0; ch < s->channels; ch++) {
-        for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+        for (blk = 0; blk < s->num_blocks; blk++) {
             AC3Block *block = &s->blocks[blk];
             const SampleType *input_samples = &s->planar_samples[ch][blk * AC3_BLOCK_SIZE];
 
-            s->apply_window(&s->dsp, s->windowed_samples, input_samples,
-                            s->mdct->window, AC3_WINDOW_SIZE);
+            apply_window(&s->dsp, s->windowed_samples, input_samples,
+                         s->mdct_window, AC3_WINDOW_SIZE);
 
             if (s->fixed_point)
-                block->coeff_shift[ch+1] = s->normalize_samples(s);
+                block->coeff_shift[ch+1] = normalize_samples(s);
 
-            s->mdct->fft.mdct_calcw(&s->mdct->fft, block->mdct_coef[ch+1],
-                                    s->windowed_samples);
+            s->mdct.mdct_calcw(&s->mdct, block->mdct_coef[ch+1],
+                               s->windowed_samples);
         }
     }
 }
 
 
-/**
- * Calculate a single coupling coordinate.
- */
-static inline float calc_cpl_coord(float energy_ch, float energy_cpl)
-{
-    float coord = 0.125;
-    if (energy_cpl > 0)
-        coord *= sqrtf(energy_ch / energy_cpl);
-    return coord;
-}
-
-
-/**
+/*
  * Calculate coupling channel and coupling coordinates.
- * TODO: Currently this is only used for the floating-point encoder. I was
- *       able to make it work for the fixed-point encoder, but quality was
- *       generally lower in most cases than not using coupling. If a more
- *       adaptive coupling strategy were to be implemented it might be useful
- *       at that time to use coupling for the fixed-point encoder as well.
  */
-void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
+static void apply_channel_coupling(AC3EncodeContext *s)
 {
+    LOCAL_ALIGNED_16(CoefType, cpl_coords,      [AC3_MAX_BLOCKS], [AC3_MAX_CHANNELS][16]);
 #if CONFIG_AC3ENC_FLOAT
-    LOCAL_ALIGNED_16(float,   cpl_coords,       [AC3_MAX_BLOCKS], [AC3_MAX_CHANNELS][16]);
     LOCAL_ALIGNED_16(int32_t, fixed_cpl_coords, [AC3_MAX_BLOCKS], [AC3_MAX_CHANNELS][16]);
+#else
+    int32_t (*fixed_cpl_coords)[AC3_MAX_CHANNELS][16] = cpl_coords;
+#endif
     int blk, ch, bnd, i, j;
     CoefSumType energy[AC3_MAX_BLOCKS][AC3_MAX_CHANNELS][16] = {{{0}}};
     int cpl_start, num_cpl_coefs;
 
     memset(cpl_coords,       0, AC3_MAX_BLOCKS * sizeof(*cpl_coords));
-    memset(fixed_cpl_coords, 0, AC3_MAX_BLOCKS * sizeof(*fixed_cpl_coords));
+#if CONFIG_AC3ENC_FLOAT
+    memset(fixed_cpl_coords, 0, AC3_MAX_BLOCKS * sizeof(*cpl_coords));
+#endif
 
     /* align start to 16-byte boundary. align length to multiple of 32.
         note: coupling start bin % 4 will always be 1 */
@@ -146,7 +150,7 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
     cpl_start     = FFMIN(256, cpl_start + num_cpl_coefs) - num_cpl_coefs;
 
     /* calculate coupling channel from fbw channels */
-    for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+    for (blk = 0; blk < s->num_blocks; blk++) {
         AC3Block *block = &s->blocks[blk];
         CoefType *cpl_coef = &block->mdct_coef[CPL_CH][cpl_start];
         if (!block->cpl_in_use)
@@ -160,12 +164,8 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
                 cpl_coef[i] += ch_coef[i];
         }
 
-        /* coefficients must be clipped to +/- 1.0 in order to be encoded */
-        s->dsp.vector_clipf(cpl_coef, cpl_coef, -1.0f, 1.0f, num_cpl_coefs);
-
-        /* scale coupling coefficients from float to 24-bit fixed-point */
-        s->ac3dsp.float_to_fixed24(&block->fixed_coef[CPL_CH][cpl_start],
-                                   cpl_coef, num_cpl_coefs);
+        /* coefficients must be clipped in order to be encoded */
+        clip_coefficients(&s->dsp, cpl_coef, num_cpl_coefs);
     }
 
     /* calculate energy in each band in coupling channel and each fbw channel */
@@ -175,7 +175,7 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
     while (i < s->cpl_end_freq) {
         int band_size = s->cpl_band_sizes[bnd];
         for (ch = CPL_CH; ch <= s->fbw_channels; ch++) {
-            for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+            for (blk = 0; blk < s->num_blocks; blk++) {
                 AC3Block *block = &s->blocks[blk];
                 if (!block->cpl_in_use || (ch > CPL_CH && !block->channel_in_cpl[ch]))
                     continue;
@@ -189,68 +189,64 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
         bnd++;
     }
 
+    /* calculate coupling coordinates for all blocks for all channels */
+    for (blk = 0; blk < s->num_blocks; blk++) {
+        AC3Block *block  = &s->blocks[blk];
+        if (!block->cpl_in_use)
+            continue;
+        for (ch = 1; ch <= s->fbw_channels; ch++) {
+            if (!block->channel_in_cpl[ch])
+                continue;
+            for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
+                cpl_coords[blk][ch][bnd] = calc_cpl_coord(energy[blk][ch][bnd],
+                                                          energy[blk][CPL_CH][bnd]);
+            }
+        }
+    }
+
     /* determine which blocks to send new coupling coordinates for */
-    for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+    for (blk = 0; blk < s->num_blocks; blk++) {
         AC3Block *block  = &s->blocks[blk];
         AC3Block *block0 = blk ? &s->blocks[blk-1] : NULL;
-        int new_coords = 0;
-        CoefSumType coord_diff[AC3_MAX_CHANNELS] = {0,};
+
+        memset(block->new_cpl_coords, 0, sizeof(block->new_cpl_coords));
 
         if (block->cpl_in_use) {
-            /* calculate coupling coordinates for all blocks and calculate the
-               average difference between coordinates in successive blocks */
-            for (ch = 1; ch <= s->fbw_channels; ch++) {
-                if (!block->channel_in_cpl[ch])
-                    continue;
-
-                for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
-                    cpl_coords[blk][ch][bnd] = calc_cpl_coord(energy[blk][ch][bnd],
-                                                              energy[blk][CPL_CH][bnd]);
-                    if (blk > 0 && block0->cpl_in_use &&
-                        block0->channel_in_cpl[ch]) {
-                        coord_diff[ch] += fabs(cpl_coords[blk-1][ch][bnd] -
-                                               cpl_coords[blk  ][ch][bnd]);
-                    }
-                }
-                coord_diff[ch] /= s->num_cpl_bands;
-            }
-
             /* send new coordinates if this is the first block, if previous
              * block did not use coupling but this block does, the channels
              * using coupling has changed from the previous block, or the
              * coordinate difference from the last block for any channel is
              * greater than a threshold value. */
-            if (blk == 0) {
-                new_coords = 1;
-            } else if (!block0->cpl_in_use) {
-                new_coords = 1;
+            if (blk == 0 || !block0->cpl_in_use) {
+                for (ch = 1; ch <= s->fbw_channels; ch++)
+                    block->new_cpl_coords[ch] = 1;
             } else {
                 for (ch = 1; ch <= s->fbw_channels; ch++) {
-                    if (block->channel_in_cpl[ch] && !block0->channel_in_cpl[ch]) {
-                        new_coords = 1;
-                        break;
-                    }
-                }
-                if (!new_coords) {
-                    for (ch = 1; ch <= s->fbw_channels; ch++) {
-                        if (block->channel_in_cpl[ch] && coord_diff[ch] > 0.04) {
-                            new_coords = 1;
-                            break;
+                    if (!block->channel_in_cpl[ch])
+                        continue;
+                    if (!block0->channel_in_cpl[ch]) {
+                        block->new_cpl_coords[ch] = 1;
+                    } else {
+                        CoefSumType coord_diff = 0;
+                        for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
+                            coord_diff += FFABS(cpl_coords[blk-1][ch][bnd] -
+                                                cpl_coords[blk  ][ch][bnd]);
                         }
+                        coord_diff /= s->num_cpl_bands;
+                        if (coord_diff > NEW_CPL_COORD_THRESHOLD)
+                            block->new_cpl_coords[ch] = 1;
                     }
                 }
             }
         }
-        block->new_cpl_coords = new_coords;
     }
 
     /* calculate final coupling coordinates, taking into account reusing of
        coordinates in successive blocks */
     for (bnd = 0; bnd < s->num_cpl_bands; bnd++) {
         blk = 0;
-        while (blk < AC3_MAX_BLOCKS) {
-            int blk1;
-            CoefSumType energy_cpl;
+        while (blk < s->num_blocks) {
+            int av_uninit(blk1);
             AC3Block *block  = &s->blocks[blk];
 
             if (!block->cpl_in_use) {
@@ -258,23 +254,18 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
                 continue;
             }
 
-            energy_cpl = energy[blk][CPL_CH][bnd];
-            blk1 = blk+1;
-            while (!s->blocks[blk1].new_cpl_coords && blk1 < AC3_MAX_BLOCKS) {
-                if (s->blocks[blk1].cpl_in_use)
-                    energy_cpl += energy[blk1][CPL_CH][bnd];
-                blk1++;
-            }
-
             for (ch = 1; ch <= s->fbw_channels; ch++) {
-                CoefType energy_ch;
+                CoefSumType energy_ch, energy_cpl;
                 if (!block->channel_in_cpl[ch])
                     continue;
+                energy_cpl = energy[blk][CPL_CH][bnd];
                 energy_ch = energy[blk][ch][bnd];
                 blk1 = blk+1;
-                while (!s->blocks[blk1].new_cpl_coords && blk1 < AC3_MAX_BLOCKS) {
-                    if (s->blocks[blk1].cpl_in_use)
+                while (!s->blocks[blk1].new_cpl_coords[ch] && blk1 < s->num_blocks) {
+                    if (s->blocks[blk1].cpl_in_use) {
+                        energy_cpl += energy[blk1][CPL_CH][bnd];
                         energy_ch += energy[blk1][ch][bnd];
+                    }
                     blk1++;
                 }
                 cpl_coords[blk][ch][bnd] = calc_cpl_coord(energy_ch, energy_cpl);
@@ -284,20 +275,25 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
     }
 
     /* calculate exponents/mantissas for coupling coordinates */
-    for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+    for (blk = 0; blk < s->num_blocks; blk++) {
         AC3Block *block = &s->blocks[blk];
-        if (!block->cpl_in_use || !block->new_cpl_coords)
+        if (!block->cpl_in_use)
             continue;
 
+#if CONFIG_AC3ENC_FLOAT
         s->ac3dsp.float_to_fixed24(fixed_cpl_coords[blk][1],
                                    cpl_coords[blk][1],
                                    s->fbw_channels * 16);
+#endif
         s->ac3dsp.extract_exponents(block->cpl_coord_exp[1],
                                     fixed_cpl_coords[blk][1],
                                     s->fbw_channels * 16);
 
         for (ch = 1; ch <= s->fbw_channels; ch++) {
             int bnd, min_exp, max_exp, master_exp;
+
+            if (!block->new_cpl_coords[ch])
+                continue;
 
             /* determine master exponent */
             min_exp = max_exp = block->cpl_coord_exp[ch][0];
@@ -332,30 +328,24 @@ void AC3_NAME(apply_channel_coupling)(AC3EncodeContext *s)
 
     if (CONFIG_EAC3_ENCODER && s->eac3)
         ff_eac3_set_cpl_states(s);
-#endif /* CONFIG_AC3ENC_FLOAT */
 }
 
 
-/**
+/*
  * Determine rematrixing flags for each block and band.
  */
-void AC3_NAME(compute_rematrixing_strategy)(AC3EncodeContext *s)
+static void compute_rematrixing_strategy(AC3EncodeContext *s)
 {
     int nb_coefs;
-    int blk, bnd, i;
-    AC3Block *block, *av_uninit(block0);
+    int blk, bnd;
+    AC3Block *block, *block0;
 
     if (s->channel_mode != AC3_CHMODE_STEREO)
         return;
 
-    for (blk = 0; blk < AC3_MAX_BLOCKS; blk++) {
+    for (blk = 0; blk < s->num_blocks; blk++) {
         block = &s->blocks[blk];
         block->new_rematrixing_strategy = !blk;
-
-        if (!s->rematrixing_enabled) {
-            block0 = block;
-            continue;
-        }
 
         block->num_rematrixing_bands = 4;
         if (block->cpl_in_use) {
@@ -366,21 +356,18 @@ void AC3_NAME(compute_rematrixing_strategy)(AC3EncodeContext *s)
         }
         nb_coefs = FFMIN(block->end_freq[1], block->end_freq[2]);
 
+        if (!s->rematrixing_enabled) {
+            block0 = block;
+            continue;
+        }
+
         for (bnd = 0; bnd < block->num_rematrixing_bands; bnd++) {
             /* calculate calculate sum of squared coeffs for one band in one block */
             int start = ff_ac3_rematrix_band_tab[bnd];
             int end   = FFMIN(nb_coefs, ff_ac3_rematrix_band_tab[bnd+1]);
-            CoefSumType sum[4] = {0,};
-            for (i = start; i < end; i++) {
-                CoefType lt = block->mdct_coef[1][i];
-                CoefType rt = block->mdct_coef[2][i];
-                CoefType md = lt + rt;
-                CoefType sd = lt - rt;
-                MAC_COEF(sum[0], lt, lt);
-                MAC_COEF(sum[1], rt, rt);
-                MAC_COEF(sum[2], md, md);
-                MAC_COEF(sum[3], sd, sd);
-            }
+            CoefSumType sum[4];
+            sum_square_butterfly(s, sum, block->mdct_coef[1] + start,
+                                 block->mdct_coef[2] + start, end - start);
 
             /* compare sums to determine if rematrixing will be used for this band */
             if (FFMIN(sum[2], sum[3]) < FFMIN(sum[0], sum[1]))
@@ -396,4 +383,67 @@ void AC3_NAME(compute_rematrixing_strategy)(AC3EncodeContext *s)
         }
         block0 = block;
     }
+}
+
+
+int AC3_NAME(encode_frame)(AVCodecContext *avctx, AVPacket *avpkt,
+                           const AVFrame *frame, int *got_packet_ptr)
+{
+    AC3EncodeContext *s = avctx->priv_data;
+    const SampleType *samples = (const SampleType *)frame->data[0];
+    int ret;
+
+    if (s->options.allow_per_frame_metadata) {
+        ret = ff_ac3_validate_metadata(s);
+        if (ret)
+            return ret;
+    }
+
+    if (s->bit_alloc.sr_code == 1 || s->eac3)
+        ff_ac3_adjust_frame_size(s);
+
+    deinterleave_input_samples(s, samples);
+
+    apply_mdct(s);
+
+    if (s->fixed_point)
+        scale_coefficients(s);
+
+    clip_coefficients(&s->dsp, s->blocks[0].mdct_coef[1],
+                      AC3_MAX_COEFS * s->num_blocks * s->channels);
+
+    s->cpl_on = s->cpl_enabled;
+    ff_ac3_compute_coupling_strategy(s);
+
+    if (s->cpl_on)
+        apply_channel_coupling(s);
+
+    compute_rematrixing_strategy(s);
+
+    if (!s->fixed_point)
+        scale_coefficients(s);
+
+    ff_ac3_apply_rematrixing(s);
+
+    ff_ac3_process_exponents(s);
+
+    ret = ff_ac3_compute_bit_allocation(s);
+    if (ret) {
+        av_log(avctx, AV_LOG_ERROR, "Bit allocation failed. Try increasing the bitrate.\n");
+        return ret;
+    }
+
+    ff_ac3_group_exponents(s);
+
+    ff_ac3_quantize_mantissas(s);
+
+    if ((ret = ff_alloc_packet2(avctx, avpkt, s->frame_size)))
+        return ret;
+    ff_ac3_output_frame(s, avpkt->data);
+
+    if (frame->pts != AV_NOPTS_VALUE)
+        avpkt->pts = frame->pts - ff_samples_to_time_base(avctx, avctx->delay);
+
+    *got_packet_ptr = 1;
+    return 0;
 }

@@ -26,12 +26,9 @@
 #include "libavutil/eval.h"
 #include "libavutil/fifo.h"
 #include "avfilter.h"
+#include "video.h"
 
-static const char *var_names[] = {
-    "E",                 ///< Euler number
-    "PHI",               ///< golden ratio
-    "PI",                ///< greek pi
-
+static const char *const var_names[] = {
     "TB",                ///< timebase
 
     "pts",               ///< original pts in the file of the frame
@@ -45,18 +42,18 @@ static const char *var_names[] = {
     "prev_selected_t",   ///< previously selected time
 
     "pict_type",         ///< the type of picture in the movie
-    "PICT_TYPE_I",
-    "PICT_TYPE_P",
-    "PICT_TYPE_B",
-    "PICT_TYPE_S",
-    "PICT_TYPE_SI",
-    "PICT_TYPE_SP",
-    "PICT_TYPE_BI",
+    "I",
+    "P",
+    "B",
+    "S",
+    "SI",
+    "SP",
+    "BI",
 
     "interlace_type",    ///< the frame interlace type
-    "INTERLACE_TYPE_P",
-    "INTERLACE_TYPE_T",
-    "INTERLACE_TYPE_B",
+    "PROGRESSIVE",
+    "TOPFIRST",
+    "BOTTOMFIRST",
 
     "n",                 ///< frame number (starting from zero)
     "selected_n",        ///< selected frame number (starting from zero)
@@ -69,10 +66,6 @@ static const char *var_names[] = {
 };
 
 enum var_name {
-    VAR_E,
-    VAR_PHI,
-    VAR_PI,
-
     VAR_TB,
 
     VAR_PTS,
@@ -146,10 +139,6 @@ static int config_input(AVFilterLink *inlink)
 {
     SelectContext *select = inlink->dst->priv;
 
-    select->var_values[VAR_E]   = M_E;
-    select->var_values[VAR_PHI] = M_PHI;
-    select->var_values[VAR_PI]  = M_PI;
-
     select->var_values[VAR_N]          = 0.0;
     select->var_values[VAR_SELECTED_N] = 0.0;
 
@@ -169,7 +158,7 @@ static int config_input(AVFilterLink *inlink)
 
     select->var_values[VAR_INTERLACE_TYPE_P] = INTERLACE_TYPE_P;
     select->var_values[VAR_INTERLACE_TYPE_T] = INTERLACE_TYPE_T;
-    select->var_values[VAR_INTERLACE_TYPE_B] = INTERLACE_TYPE_B;;
+    select->var_values[VAR_INTERLACE_TYPE_B] = INTERLACE_TYPE_B;
 
     return 0;
 }
@@ -185,9 +174,11 @@ static int select_frame(AVFilterContext *ctx, AVFilterBufferRef *picref)
 
     if (isnan(select->var_values[VAR_START_PTS]))
         select->var_values[VAR_START_PTS] = TS2D(picref->pts);
+    if (isnan(select->var_values[VAR_START_T]))
+        select->var_values[VAR_START_T] = TS2D(picref->pts) * av_q2d(inlink->time_base);
 
     select->var_values[VAR_PTS] = TS2D(picref->pts);
-    select->var_values[VAR_T  ] = picref->pts * av_q2d(inlink->time_base);
+    select->var_values[VAR_T  ] = TS2D(picref->pts) * av_q2d(inlink->time_base);
     select->var_values[VAR_POS] = picref->pos == -1 ? NAN : picref->pos;
     select->var_values[VAR_PREV_PTS] = TS2D(picref ->pts);
 
@@ -315,16 +306,15 @@ static av_cold void uninit(AVFilterContext *ctx)
 {
     SelectContext *select = ctx->priv;
     AVFilterBufferRef *picref;
-    int i;
 
     av_expr_free(select->expr);
     select->expr = NULL;
 
-    for (i = 0; i < av_fifo_size(select->pending_frames)/sizeof(picref); i++) {
-        av_fifo_generic_read(select->pending_frames, &picref, sizeof(picref), NULL);
+    while (select->pending_frames &&
+           av_fifo_generic_read(select->pending_frames, &picref, sizeof(picref), NULL) == sizeof(picref))
         avfilter_unref_buffer(picref);
-    }
     av_fifo_free(select->pending_frames);
+    select->pending_frames = NULL;
 }
 
 AVFilter avfilter_vf_select = {
@@ -335,15 +325,15 @@ AVFilter avfilter_vf_select = {
 
     .priv_size = sizeof(SelectContext),
 
-    .inputs    = (AVFilterPad[]) {{ .name             = "default",
+    .inputs    = (const AVFilterPad[]) {{ .name       = "default",
                                     .type             = AVMEDIA_TYPE_VIDEO,
-                                    .get_video_buffer = avfilter_null_get_video_buffer,
+                                    .get_video_buffer = ff_null_get_video_buffer,
                                     .config_props     = config_input,
                                     .start_frame      = start_frame,
                                     .draw_slice       = draw_slice,
                                     .end_frame        = end_frame },
                                   { .name = NULL }},
-    .outputs   = (AVFilterPad[]) {{ .name             = "default",
+    .outputs   = (const AVFilterPad[]) {{ .name       = "default",
                                     .type             = AVMEDIA_TYPE_VIDEO,
                                     .poll_frame       = poll_frame,
                                     .request_frame    = request_frame, },

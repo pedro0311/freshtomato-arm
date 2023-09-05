@@ -21,14 +21,14 @@
 
 #include "avutil.h"
 #include "common.h"
-//! Avoid e.g. MPlayers fast_memcpy, it slows things down here.
+/// Avoid e.g. MPlayers fast_memcpy, it slows things down here.
 #undef memcpy
 #include <string.h>
 #include "lzo.h"
 
-//! Define if we may write up to 12 bytes beyond the output buffer.
+/// Define if we may write up to 12 bytes beyond the output buffer.
 #define OUTBUF_PADDED 1
-//! Define if we may read up to 8 bytes beyond the input buffer.
+/// Define if we may read up to 8 bytes beyond the input buffer.
 #define INBUF_PADDED 1
 typedef struct LZOContext {
     const uint8_t *in, *in_end;
@@ -37,8 +37,8 @@ typedef struct LZOContext {
 } LZOContext;
 
 /**
- * \brief Reads one byte from the input buffer, avoiding an overrun.
- * \return byte read
+ * @brief Reads one byte from the input buffer, avoiding an overrun.
+ * @return byte read
  */
 static inline int get_byte(LZOContext *c) {
     if (c->in < c->in_end)
@@ -54,21 +54,15 @@ static inline int get_byte(LZOContext *c) {
 #endif
 
 /**
- * \brief Decodes a length value in the coding used by lzo.
- * \param x previous byte value
- * \param mask bits used from x
- * \return decoded length value
+ * @brief Decodes a length value in the coding used by lzo.
+ * @param x previous byte value
+ * @param mask bits used from x
+ * @return decoded length value
  */
 static inline int get_len(LZOContext *c, int x, int mask) {
     int cnt = x & mask;
     if (!cnt) {
-        while (!(x = get_byte(c))) {
-            if (cnt >= INT_MAX - 1000) {
-                c->error |= AV_LZO_ERROR;
-                break;
-            }
-            cnt += 255;
-        }
+        while (!(x = get_byte(c))) cnt += 255;
         cnt += mask + x;
     }
     return cnt;
@@ -88,8 +82,8 @@ static inline int get_len(LZOContext *c, int x, int mask) {
 #endif
 
 /**
- * \brief Copies bytes from input to output buffer with checking.
- * \param cnt number of bytes to copy, must be >= 0
+ * @brief Copies bytes from input to output buffer with checking.
+ * @param cnt number of bytes to copy, must be >= 0
  */
 static inline void copy(LZOContext *c, int cnt) {
     register const uint8_t *src = c->in;
@@ -117,16 +111,17 @@ static inline void copy(LZOContext *c, int cnt) {
 static inline void memcpy_backptr(uint8_t *dst, int back, int cnt);
 
 /**
- * \brief Copies previously decoded bytes to current position.
- * \param back how many bytes back we start
- * \param cnt number of bytes to copy, must be >= 0
+ * @brief Copies previously decoded bytes to current position.
+ * @param back how many bytes back we start, must be > 0
+ * @param cnt number of bytes to copy, must be >= 0
  *
  * cnt > back is valid, this will copy the bytes we just copied,
  * thus creating a repeating pattern with a period length of back.
  */
 static inline void copy_backptr(LZOContext *c, int back, int cnt) {
+    register const uint8_t *src = &c->out[-back];
     register uint8_t *dst = c->out;
-    if (dst - c->out_start < back) {
+    if (src < c->out_start || src > dst) {
         c->error |= AV_LZO_INVALID_BACKPTR;
         return;
     }
@@ -140,7 +135,7 @@ static inline void copy_backptr(LZOContext *c, int back, int cnt) {
 
 static inline void memcpy_backptr(uint8_t *dst, int back, int cnt) {
     const uint8_t *src = &dst[-back];
-    if (back == 1) {
+    if (back <= 1) {
         memset(dst, *src, cnt);
     } else {
 #ifdef OUTBUF_PADDED

@@ -1,5 +1,5 @@
 /*
- * Various simple utilities for ffmpeg system
+ * various simple utilities for libavformat
  * Copyright (c) 2000, 2001, 2002 Fabrice Bellard
  *
  * This file is part of FFmpeg.
@@ -26,7 +26,7 @@
 
 /* This is our own gmtime_r. It differs from its POSIX counterpart in a
    couple of places, though. */
-struct tm *brktimegm(time_t secs, struct tm *tm)
+struct tm *ff_brktimegm(time_t secs, struct tm *tm)
 {
     int days, y, ny, m;
     int md[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };

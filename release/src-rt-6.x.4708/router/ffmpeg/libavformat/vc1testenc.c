@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 #include "avformat.h"
+#include "internal.h"
 
 typedef struct RCVContext {
     int frames;
@@ -47,7 +48,7 @@ static int vc1test_write_header(AVFormatContext *s)
         avio_wl32(pb, s->streams[0]->r_frame_rate.den);
     else
         avio_wl32(pb, 0xFFFFFFFF); //variable framerate
-    av_set_pts_info(s->streams[0], 32, 1, 1000);
+    avpriv_set_pts_info(s->streams[0], 32, 1, 1000);
 
     return 0;
 }
@@ -82,14 +83,13 @@ static int vc1test_write_trailer(AVFormatContext *s)
 }
 
 AVOutputFormat ff_vc1t_muxer = {
-    "rcv",
-    NULL_IF_CONFIG_SMALL("VC-1 test bitstream"),
-    "",
-    "rcv",
-    sizeof(RCVContext),
-    CODEC_ID_NONE,
-    CODEC_ID_WMV3,
-    vc1test_write_header,
-    vc1test_write_packet,
-    vc1test_write_trailer,
+    .name              = "rcv",
+    .long_name         = NULL_IF_CONFIG_SMALL("VC-1 test bitstream"),
+    .extensions        = "rcv",
+    .priv_data_size    = sizeof(RCVContext),
+    .audio_codec       = CODEC_ID_NONE,
+    .video_codec       = CODEC_ID_WMV3,
+    .write_header      = vc1test_write_header,
+    .write_packet      = vc1test_write_packet,
+    .write_trailer     = vc1test_write_trailer,
 };

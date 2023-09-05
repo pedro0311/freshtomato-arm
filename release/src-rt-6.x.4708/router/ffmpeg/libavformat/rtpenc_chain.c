@@ -31,6 +31,8 @@ AVFormatContext *ff_rtp_chain_mux_open(AVFormatContext *s, AVStream *st,
     AVFormatContext *rtpctx;
     int ret;
     AVOutputFormat *rtp_format = av_guess_format("rtp", NULL, NULL);
+    uint8_t *rtpflags;
+    AVDictionary *opts = NULL;
 
     if (!rtp_format)
         return NULL;
@@ -41,22 +43,20 @@ AVFormatContext *ff_rtp_chain_mux_open(AVFormatContext *s, AVStream *st,
         return NULL;
 
     rtpctx->oformat = rtp_format;
-    if (!av_new_stream(rtpctx, 0)) {
+    if (!avformat_new_stream(rtpctx, NULL)) {
         av_free(rtpctx);
         return NULL;
     }
+    /* Pass the interrupt callback on */
+    rtpctx->interrupt_callback = s->interrupt_callback;
     /* Copy the max delay setting; the rtp muxer reads this. */
     rtpctx->max_delay = s->max_delay;
     /* Copy other stream parameters. */
     rtpctx->streams[0]->sample_aspect_ratio = st->sample_aspect_ratio;
     rtpctx->flags |= s->flags & AVFMT_FLAG_MP4A_LATM;
 
-    av_set_parameters(rtpctx, NULL);
-    /* Copy the rtpflags values straight through */
-    if (s->oformat->priv_class &&
-        av_find_opt(s->priv_data, "rtpflags", NULL, 0, 0))
-        av_set_int(rtpctx->priv_data, "rtpflags",
-                   av_get_int(s->priv_data, "rtpflags", NULL));
+    if (av_opt_get(s, "rtpflags", AV_OPT_SEARCH_CHILDREN, &rtpflags) >= 0)
+        av_dict_set(&opts, "rtpflags", rtpflags, AV_DICT_DONT_STRDUP_VAL);
 
     /* Set the synchronized start time. */
     rtpctx->start_time_realtime = s->start_time_realtime;
@@ -67,7 +67,8 @@ AVFormatContext *ff_rtp_chain_mux_open(AVFormatContext *s, AVStream *st,
         ffio_fdopen(&rtpctx->pb, handle);
     } else
         ffio_open_dyn_packet_buf(&rtpctx->pb, packet_size);
-    ret = avformat_write_header(rtpctx, NULL);
+    ret = avformat_write_header(rtpctx, &opts);
+    av_dict_free(&opts);
 
     if (ret) {
         if (handle) {
@@ -83,4 +84,3 @@ AVFormatContext *ff_rtp_chain_mux_open(AVFormatContext *s, AVStream *st,
 
     return rtpctx;
 }
-

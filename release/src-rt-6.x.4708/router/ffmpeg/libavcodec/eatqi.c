@@ -22,10 +22,8 @@
 /**
  * @file
  * Electronic Arts TQI Video Decoder
- * by Peter Ross <pross@xvid.org>
- *
- * Technical details here:
- * http://wiki.multimedia.cx/index.php?title=Electronic_Arts_TQI
+ * @author Peter Ross <pross@xvid.org>
+ * @see http://wiki.multimedia.cx/index.php?title=Electronic_Arts_TQI
  */
 
 #include "avcodec.h"
@@ -50,7 +48,7 @@ static av_cold int tqi_decode_init(AVCodecContext *avctx)
     s->avctx = avctx;
     if(avctx->idct_algo==FF_IDCT_AUTO)
         avctx->idct_algo=FF_IDCT_EA;
-    dsputil_init(&s->dsp, avctx);
+    ff_dsputil_init(&s->dsp, avctx);
     ff_init_scantable(s->dsp.idct_permutation, &s->intra_scantable, ff_zigzag_direct);
     s->qscale = 1;
     avctx->time_base = (AVRational){1, 15};
@@ -129,7 +127,8 @@ static int tqi_decode_frame(AVCodecContext *avctx,
         return -1;
     }
 
-    av_fast_malloc(&t->bitstream_buf, &t->bitstream_buf_size, (buf_end-buf) + FF_INPUT_BUFFER_PADDING_SIZE);
+    av_fast_padded_malloc(&t->bitstream_buf, &t->bitstream_buf_size,
+                          buf_end - buf);
     if (!t->bitstream_buf)
         return AVERROR(ENOMEM);
     s->dsp.bswap_buf(t->bitstream_buf, (const uint32_t*)buf, (buf_end-buf)/4);
@@ -140,9 +139,10 @@ static int tqi_decode_frame(AVCodecContext *avctx,
     for (s->mb_x=0; s->mb_x<(avctx->width+15)/16; s->mb_x++)
     {
         if (tqi_decode_mb(s, t->block) < 0)
-            break;
+            goto end;
         tqi_idct_put(t, t->block);
     }
+    end:
 
     *data_size = sizeof(AVFrame);
     *(AVFrame*)data = t->frame;
@@ -159,14 +159,13 @@ static av_cold int tqi_decode_end(AVCodecContext *avctx)
 }
 
 AVCodec ff_eatqi_decoder = {
-    "eatqi",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_TQI,
-    sizeof(TqiContext),
-    tqi_decode_init,
-    NULL,
-    tqi_decode_end,
-    tqi_decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("Electronic Arts TQI Video"),
+    .name           = "eatqi",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_TQI,
+    .priv_data_size = sizeof(TqiContext),
+    .init           = tqi_decode_init,
+    .close          = tqi_decode_end,
+    .decode         = tqi_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Electronic Arts TQI Video"),
 };

@@ -120,7 +120,7 @@ typedef struct {
     uint32_t bit_rate;
     uint8_t channels;
     uint16_t frame_size;
-    int64_t channel_layout;
+    uint64_t channel_layout;
     /** @} */
 } AC3HeaderInfo;
 
@@ -131,46 +131,7 @@ typedef enum {
     EAC3_FRAME_TYPE_RESERVED
 } EAC3FrameType;
 
-/**
- * Encoding Options used by AVOption.
- */
-typedef struct AC3EncOptions {
-    /* AC-3 metadata options*/
-    int dialogue_level;
-    int bitstream_mode;
-    float center_mix_level;
-    float surround_mix_level;
-    int dolby_surround_mode;
-    int audio_production_info;
-    int mixing_level;
-    int room_type;
-    int copyright;
-    int original;
-    int extended_bsi_1;
-    int preferred_stereo_downmix;
-    float ltrt_center_mix_level;
-    float ltrt_surround_mix_level;
-    float loro_center_mix_level;
-    float loro_surround_mix_level;
-    int extended_bsi_2;
-    int dolby_surround_ex_mode;
-    int dolby_headphone_mode;
-    int ad_converter_type;
-
-    /* other encoding options */
-    int allow_per_frame_metadata;
-    int stereo_rematrixing;
-    int channel_coupling;
-    int cpl_start;    
-} AC3EncOptions;
-
 void ff_ac3_common_init(void);
-
-extern const int64_t ff_ac3_channel_layouts[];
-extern const AVOption ff_ac3_options[];
-
-extern AVCodec ff_ac3_float_encoder;
-extern AVCodec ff_ac3_fixed_encoder;
 
 /**
  * Calculate the log power-spectral density of the input signal.

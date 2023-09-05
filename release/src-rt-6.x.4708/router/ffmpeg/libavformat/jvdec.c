@@ -27,6 +27,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avformat.h"
+#include "internal.h"
 
 #define JV_PREAMBLE_SIZE 5
 
@@ -51,14 +52,13 @@ typedef struct {
 
 static int read_probe(AVProbeData *pd)
 {
-    if (pd->buf[0] == 'J' && pd->buf[1] == 'V' &&
-        !memcmp(pd->buf + 4, MAGIC, FFMIN(strlen(MAGIC), pd->buf_size - 4)))
+    if (pd->buf[0] == 'J' && pd->buf[1] == 'V' && strlen(MAGIC) <= pd->buf_size - 4 &&
+        !memcmp(pd->buf + 4, MAGIC, strlen(MAGIC)))
         return AVPROBE_SCORE_MAX;
     return 0;
 }
 
-static int read_header(AVFormatContext *s,
-                       AVFormatParameters *ap)
+static int read_header(AVFormatContext *s)
 {
     JVDemuxContext *jv = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -69,8 +69,8 @@ static int read_header(AVFormatContext *s,
 
     avio_skip(pb, 80);
 
-    ast = av_new_stream(s, 0);
-    vst = av_new_stream(s, 1);
+    ast = avformat_new_stream(s, NULL);
+    vst = avformat_new_stream(s, NULL);
     if (!ast || !vst)
         return AVERROR(ENOMEM);
 
@@ -79,9 +79,10 @@ static int read_header(AVFormatContext *s,
     vst->codec->codec_tag   = 0; /* no fourcc */
     vst->codec->width       = avio_rl16(pb);
     vst->codec->height      = avio_rl16(pb);
+    vst->duration           =
     vst->nb_frames          =
     ast->nb_index_entries   = avio_rl16(pb);
-    av_set_pts_info(vst, 64, avio_rl16(pb), 1000);
+    avpriv_set_pts_info(vst, 64, avio_rl16(pb), 1000);
 
     avio_skip(pb, 4);
 
@@ -90,7 +91,7 @@ static int read_header(AVFormatContext *s,
     ast->codec->codec_tag   = 0; /* no fourcc */
     ast->codec->sample_rate = avio_rl16(pb);
     ast->codec->channels    = 1;
-    av_set_pts_info(ast, 64, 1, ast->codec->sample_rate);
+    avpriv_set_pts_info(ast, 64, 1, ast->codec->sample_rate);
 
     avio_skip(pb, 10);
 
@@ -207,10 +208,11 @@ static int read_seek(AVFormatContext *s, int stream_index,
 
     if (i < 0 || i >= ast->nb_index_entries)
         return 0;
+    if (avio_seek(s->pb, ast->index_entries[i].pos, SEEK_SET) < 0)
+        return -1;
 
     jv->state = JV_AUDIO;
     jv->pts   = i;
-    avio_seek(s->pb, ast->index_entries[i].pos, SEEK_SET);
     return 0;
 }
 

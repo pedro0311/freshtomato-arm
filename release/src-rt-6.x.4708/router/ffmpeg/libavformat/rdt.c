@@ -432,9 +432,6 @@ rdt_parse_sdp_line (AVFormatContext *s, int st_index,
                 }
                 rdt->rmst[s->streams[n]->index] = ff_rm_alloc_rmstream();
                 rdt_load_mdpr(rdt, s->streams[n], (n - first) * 2);
-
-                if (s->streams[n]->codec->codec_id == CODEC_ID_AAC)
-                    s->streams[n]->codec->frame_size = 1; // FIXME
            }
     }
 
@@ -459,8 +456,9 @@ add_dstream(AVFormatContext *s, AVStream *orig_st)
 {
     AVStream *st;
 
-    if (!(st = av_new_stream(s, orig_st->id)))
+    if (!(st = avformat_new_stream(s, NULL)))
         return NULL;
+    st->id = orig_st->id;
     st->codec->codec_type = orig_st->codec->codec_type;
     st->first_dts         = orig_st->first_dts;
 
@@ -483,7 +481,7 @@ real_parse_asm_rulebook(AVFormatContext *s, AVStream *orig_st,
      * is set and once for if it isn't. We only read the first because we
      * don't care much (that's what the "odd" variable is for).
      * Each rule contains a set of one or more statements, optionally
-     * preceeded by a single condition. If there's a condition, the rule
+     * preceded by a single condition. If there's a condition, the rule
      * starts with a '#'. Multiple conditions are merged between brackets,
      * so there are never multiple conditions spread out over separate
      * statements. Generally, these conditions are bitrate limits (min/max)
@@ -523,7 +521,11 @@ rdt_new_context (void)
 {
     PayloadContext *rdt = av_mallocz(sizeof(PayloadContext));
 
-    avformat_open_input(&rdt->rmctx, "", &ff_rdt_demuxer, NULL);
+    int ret = avformat_open_input(&rdt->rmctx, "", &ff_rdt_demuxer, NULL);
+    if (ret < 0) {
+        av_free(rdt);
+        return NULL;
+    }
 
     return rdt;
 }
@@ -539,7 +541,7 @@ rdt_free_context (PayloadContext *rdt)
             av_freep(&rdt->rmst[i]);
         }
     if (rdt->rmctx)
-        av_close_input_file(rdt->rmctx);
+        avformat_close_input(&rdt->rmctx);
     av_freep(&rdt->mlti_data);
     av_freep(&rdt->rmst);
     av_free(rdt);

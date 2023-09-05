@@ -29,6 +29,7 @@
  */
 
 #include "avformat.h"
+#include "internal.h"
 
 typedef struct {
   unsigned int channels;
@@ -44,7 +45,7 @@ static int cdata_probe(AVProbeData *p)
     return 0;
 }
 
-static int cdata_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static int cdata_read_header(AVFormatContext *s)
 {
     CdataDemuxContext *cdata = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -66,7 +67,7 @@ static int cdata_read_header(AVFormatContext *s, AVFormatParameters *ap)
     sample_rate = avio_rb16(pb);
     avio_skip(pb, (avio_r8(pb) & 0x20) ? 15 : 11);
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
     st->codec->codec_type = AVMEDIA_TYPE_AUDIO;
@@ -76,7 +77,7 @@ static int cdata_read_header(AVFormatContext *s, AVFormatParameters *ap)
     st->codec->channel_layout = channel_layout;
     st->codec->sample_rate = sample_rate;
     st->codec->sample_fmt = AV_SAMPLE_FMT_S16;
-    av_set_pts_info(st, 64, 1, sample_rate);
+    avpriv_set_pts_info(st, 64, 1, sample_rate);
 
     cdata->audio_pts = 0;
     return 0;
@@ -95,11 +96,11 @@ static int cdata_read_packet(AVFormatContext *s, AVPacket *pkt)
 }
 
 AVInputFormat ff_ea_cdata_demuxer = {
-    "ea_cdata",
-    NULL_IF_CONFIG_SMALL("Electronic Arts cdata"),
-    sizeof(CdataDemuxContext),
-    cdata_probe,
-    cdata_read_header,
-    cdata_read_packet,
+    .name           = "ea_cdata",
+    .long_name      = NULL_IF_CONFIG_SMALL("Electronic Arts cdata"),
+    .priv_data_size = sizeof(CdataDemuxContext),
+    .read_probe     = cdata_probe,
+    .read_header    = cdata_read_header,
+    .read_packet    = cdata_read_packet,
     .extensions = "cdata",
 };

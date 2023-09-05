@@ -22,6 +22,7 @@
 #include <inttypes.h>
 
 #include "avformat.h"
+#include "internal.h"
 #include "riff.h"
 
 /*
@@ -39,7 +40,7 @@ static int xwma_probe(AVProbeData *p)
     return 0;
 }
 
-static int xwma_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static int xwma_read_header(AVFormatContext *s)
 {
     int64_t size, av_uninit(data_size);
     int ret;
@@ -69,7 +70,7 @@ static int xwma_read_header(AVFormatContext *s, AVFormatParameters *ap)
     if (tag != MKTAG('f', 'm', 't', ' '))
         return -1;
     size = avio_rl32(pb);
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
 
@@ -114,8 +115,19 @@ static int xwma_read_header(AVFormatContext *s, AVFormatParameters *ap)
         }
     }
 
+    if (!st->codec->channels) {
+        av_log(s, AV_LOG_WARNING, "Invalid channel count: %d\n",
+               st->codec->channels);
+        return AVERROR_INVALIDDATA;
+    }
+    if (!st->codec->bits_per_coded_sample) {
+        av_log(s, AV_LOG_WARNING, "Invalid bits_per_coded_sample: %d\n",
+               st->codec->bits_per_coded_sample);
+        return AVERROR_INVALIDDATA;
+    }
+
     /* set the sample rate */
-    av_set_pts_info(st, 64, 1, st->codec->sample_rate);
+    avpriv_set_pts_info(st, 64, 1, st->codec->sample_rate);
 
     /* parse the remaining RIFF chunks */
     for (;;) {
@@ -252,10 +264,10 @@ static int xwma_read_packet(AVFormatContext *s, AVPacket *pkt)
 }
 
 AVInputFormat ff_xwma_demuxer = {
-    "xwma",
-    NULL_IF_CONFIG_SMALL("Microsoft xWMA"),
-    sizeof(XWMAContext),
-    xwma_probe,
-    xwma_read_header,
-    xwma_read_packet,
+    .name           = "xwma",
+    .long_name      = NULL_IF_CONFIG_SMALL("Microsoft xWMA"),
+    .priv_data_size = sizeof(XWMAContext),
+    .read_probe     = xwma_probe,
+    .read_header    = xwma_read_header,
+    .read_packet    = xwma_read_packet,
 };

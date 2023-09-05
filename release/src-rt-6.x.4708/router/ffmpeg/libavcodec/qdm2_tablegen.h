@@ -37,7 +37,7 @@
 #include "libavcodec/qdm2_tables.h"
 #else
 static uint16_t softclip_table[HARDCLIP_THRESHOLD - SOFTCLIP_THRESHOLD + 1];
-static float noise_table[4096 + 20];
+static float noise_table[4096];
 static uint8_t random_dequant_index[256][5];
 static uint8_t random_dequant_type24[128][3];
 static float noise_samples[128];
@@ -90,7 +90,7 @@ static av_cold void rnd_table_init(void) {
 
 static av_cold void init_noise_samples(void) {
     int i;
-    int random_seed = 0;
+    unsigned random_seed = 0;
     float delta = 1.0 / 16384.0;
     for (i = 0; i < 128;i++) {
         random_seed = random_seed * 214013 + 2531011;

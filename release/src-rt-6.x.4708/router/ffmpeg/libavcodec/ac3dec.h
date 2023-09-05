@@ -66,7 +66,9 @@
 #define AC3_FRAME_BUFFER_SIZE 32768
 
 typedef struct {
+    AVClass        *class;                  ///< class for AVOptions
     AVCodecContext *avctx;                  ///< parent context
+    AVFrame frame;                          ///< AVFrame for decoded output
     GetBitContext gbc;                      ///< bitstream reader
 
 ///@name Bit stream information
@@ -86,6 +88,12 @@ typedef struct {
     int surround_mix_level;                 ///< Surround mix level index
     int eac3;                               ///< indicates if current frame is E-AC-3
 ///@}
+
+    int preferred_stereo_downmix;
+    float ltrt_center_mix_level;
+    float ltrt_surround_mix_level;
+    float loro_center_mix_level;
+    float loro_surround_mix_level;
 
 ///@name Frame syntax parameters
     int snr_offset_strategy;                ///< SNR offset strategy                    (snroffststr)
@@ -143,6 +151,7 @@ typedef struct {
 
 ///@name Dynamic range
     float dynamic_range[2];                 ///< dynamic range
+    float drc_scale;                        ///< percentage of dynamic range compression to be applied
 ///@}
 
 ///@name Bandwidth

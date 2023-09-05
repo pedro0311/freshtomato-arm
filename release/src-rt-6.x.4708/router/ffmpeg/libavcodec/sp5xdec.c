@@ -72,7 +72,7 @@ static int sp5x_decode_frame(AVCodecContext *avctx,
         for (i = 2; i < buf_size-2 && j < buf_size+1024-2; i++)
             recoded[j++] = buf[i];
     else
-    for (i = 14; i < buf_size && j < buf_size+1024-2; i++)
+    for (i = 14; i < buf_size && j < buf_size+1024-3; i++)
     {
         recoded[j++] = buf[i];
         if (buf[i] == 0xff)
@@ -94,29 +94,25 @@ static int sp5x_decode_frame(AVCodecContext *avctx,
 }
 
 AVCodec ff_sp5x_decoder = {
-    "sp5x",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_SP5X,
-    sizeof(MJpegDecodeContext),
-    ff_mjpeg_decode_init,
-    NULL,
-    ff_mjpeg_decode_end,
-    sp5x_decode_frame,
-    CODEC_CAP_DR1,
-    NULL,
-    .max_lowres = 3,
-    .long_name = NULL_IF_CONFIG_SMALL("Sunplus JPEG (SP5X)"),
+    .name           = "sp5x",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_SP5X,
+    .priv_data_size = sizeof(MJpegDecodeContext),
+    .init           = ff_mjpeg_decode_init,
+    .close          = ff_mjpeg_decode_end,
+    .decode         = sp5x_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .max_lowres     = 3,
+    .long_name      = NULL_IF_CONFIG_SMALL("Sunplus JPEG (SP5X)"),
 };
 
 AVCodec ff_amv_decoder = {
-    "amv",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_AMV,
-    sizeof(MJpegDecodeContext),
-    ff_mjpeg_decode_init,
-    NULL,
-    ff_mjpeg_decode_end,
-    sp5x_decode_frame,
-    0,
-    .long_name = NULL_IF_CONFIG_SMALL("AMV Video"),
+    .name           = "amv",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_AMV,
+    .priv_data_size = sizeof(MJpegDecodeContext),
+    .init           = ff_mjpeg_decode_init,
+    .close          = ff_mjpeg_decode_end,
+    .decode         = sp5x_decode_frame,
+    .long_name      = NULL_IF_CONFIG_SMALL("AMV Video"),
 };

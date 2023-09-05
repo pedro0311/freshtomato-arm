@@ -126,7 +126,7 @@ void ff_h263_encode_picture_header(MpegEncContext * s, int picture_number)
     coded_frame_rate= 1800000;
     coded_frame_rate_base= (1000+best_clock_code)*best_divisor;
 
-    align_put_bits(&s->pb);
+    avpriv_align_put_bits(&s->pb);
 
     /* Update the pointer to last GOB */
     s->ptr_lastgob = put_bits_ptr(&s->pb);
@@ -275,7 +275,7 @@ void ff_h263_encode_gob_header(MpegEncContext * s, int mb_line)
  */
 void ff_clean_h263_qscales(MpegEncContext *s){
     int i;
-    int8_t * const qscale_table= s->current_picture.qscale_table;
+    int8_t * const qscale_table = s->current_picture.f.qscale_table;
 
     ff_init_qscale_tab(s);
 
@@ -302,7 +302,7 @@ void ff_clean_h263_qscales(MpegEncContext *s){
 static const int dquant_code[5]= {1,0,9,2,3};
 
 /**
- * encodes a 8x8 block.
+ * Encode an 8x8 block.
  * @param block the 8x8 block
  * @param n block index (0-3 are luma, 4-5 are chroma)
  */
@@ -529,8 +529,8 @@ void ff_h263_encode_mb(MpegEncContext * s,
                 /* motion vectors: 8x8 mode*/
                 ff_h263_pred_motion(s, i, 0, &pred_x, &pred_y);
 
-                motion_x= s->current_picture.motion_val[0][ s->block_index[i] ][0];
-                motion_y= s->current_picture.motion_val[0][ s->block_index[i] ][1];
+                motion_x = s->current_picture.f.motion_val[0][s->block_index[i]][0];
+                motion_y = s->current_picture.f.motion_val[0][s->block_index[i]][1];
                 if (!s->umvplus) {
                     ff_h263_encode_motion_vector(s, motion_x - pred_x,
                                                     motion_y - pred_y, 1);
@@ -657,7 +657,7 @@ void ff_h263_encode_mb(MpegEncContext * s,
 
 void ff_h263_encode_motion(MpegEncContext * s, int val, int f_code)
 {
-    int range, l, bit_size, sign, code, bits;
+    int range, bit_size, sign, code, bits;
 
     if (val == 0) {
         /* zero vector */
@@ -667,8 +667,7 @@ void ff_h263_encode_motion(MpegEncContext * s, int val, int f_code)
         bit_size = f_code - 1;
         range = 1 << bit_size;
         /* modulo encoding */
-        l= INT_BIT - 6 - bit_size;
-        val = (val<<l)>>l;
+        val = sign_extend(val, 6 + bit_size);
         sign = val>>31;
         val= (val^sign)-sign;
         sign&=1;
@@ -776,8 +775,8 @@ void ff_h263_encode_init(MpegEncContext *s)
     if (!done) {
         done = 1;
 
-        init_rl(&ff_h263_rl_inter, ff_h263_static_rl_table_store[0]);
-        init_rl(&ff_rl_intra_aic, ff_h263_static_rl_table_store[1]);
+        ff_init_rl(&ff_h263_rl_inter, ff_h263_static_rl_table_store[0]);
+        ff_init_rl(&ff_rl_intra_aic, ff_h263_static_rl_table_store[1]);
 
         init_uni_h263_rl_tab(&ff_rl_intra_aic, NULL, uni_h263_intra_aic_rl_len);
         init_uni_h263_rl_tab(&ff_h263_rl_inter    , NULL, uni_h263_inter_rl_len);

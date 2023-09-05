@@ -26,6 +26,7 @@ Only mono files are supported.
 
 */
 #include "avformat.h"
+#include "internal.h"
 
 static const char AMR_header [] = "#!AMR\n";
 static const char AMRWB_header [] = "#!AMR-WB\n";
@@ -75,8 +76,7 @@ static int amr_probe(AVProbeData *p)
 }
 
 /* amr input */
-static int amr_read_header(AVFormatContext *s,
-                           AVFormatParameters *ap)
+static int amr_read_header(AVFormatContext *s)
 {
     AVIOContext *pb = s->pb;
     AVStream *st;
@@ -84,7 +84,7 @@ static int amr_read_header(AVFormatContext *s,
 
     avio_read(pb, header, 6);
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
     {
         return AVERROR(ENOMEM);
@@ -100,18 +100,16 @@ static int amr_read_header(AVFormatContext *s,
         st->codec->codec_tag = MKTAG('s', 'a', 'w', 'b');
         st->codec->codec_id = CODEC_ID_AMR_WB;
         st->codec->sample_rate = 16000;
-        st->codec->frame_size = 320;
     }
     else
     {
         st->codec->codec_tag = MKTAG('s', 'a', 'm', 'r');
         st->codec->codec_id = CODEC_ID_AMR_NB;
         st->codec->sample_rate = 8000;
-        st->codec->frame_size = 160;
     }
     st->codec->channels = 1;
     st->codec->codec_type = AVMEDIA_TYPE_AUDIO;
-    av_set_pts_info(st, 64, 1, st->codec->sample_rate);
+    avpriv_set_pts_info(st, 64, 1, st->codec->sample_rate);
 
     return 0;
 }
@@ -174,27 +172,24 @@ static int amr_read_packet(AVFormatContext *s,
 
 #if CONFIG_AMR_DEMUXER
 AVInputFormat ff_amr_demuxer = {
-    "amr",
-    NULL_IF_CONFIG_SMALL("3GPP AMR file format"),
-    0, /*priv_data_size*/
-    amr_probe,
-    amr_read_header,
-    amr_read_packet,
-    NULL,
-    .flags = AVFMT_GENERIC_INDEX,
+    .name           = "amr",
+    .long_name      = NULL_IF_CONFIG_SMALL("3GPP AMR file format"),
+    .read_probe     = amr_probe,
+    .read_header    = amr_read_header,
+    .read_packet    = amr_read_packet,
+    .flags          = AVFMT_GENERIC_INDEX,
 };
 #endif
 
 #if CONFIG_AMR_MUXER
 AVOutputFormat ff_amr_muxer = {
-    "amr",
-    NULL_IF_CONFIG_SMALL("3GPP AMR file format"),
-    "audio/amr",
-    "amr",
-    0,
-    CODEC_ID_AMR_NB,
-    CODEC_ID_NONE,
-    amr_write_header,
-    amr_write_packet,
+    .name              = "amr",
+    .long_name         = NULL_IF_CONFIG_SMALL("3GPP AMR file format"),
+    .mime_type         = "audio/amr",
+    .extensions        = "amr",
+    .audio_codec       = CODEC_ID_AMR_NB,
+    .video_codec       = CODEC_ID_NONE,
+    .write_header      = amr_write_header,
+    .write_packet      = amr_write_packet,
 };
 #endif

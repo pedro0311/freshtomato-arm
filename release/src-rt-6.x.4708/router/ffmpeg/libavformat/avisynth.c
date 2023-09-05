@@ -1,5 +1,5 @@
 /*
- * AVISynth support for ffmpeg system
+ * AVISynth support
  * Copyright (c) 2006 DivX, Inc.
  *
  * This file is part of FFmpeg.
@@ -20,6 +20,7 @@
  */
 
 #include "avformat.h"
+#include "internal.h"
 #include "riff.h"
 
 #include <windows.h>
@@ -40,7 +41,7 @@ typedef struct {
   int next_stream;
 } AVISynthContext;
 
-static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static int avisynth_read_header(AVFormatContext *s)
 {
   AVISynthContext *avs = s->priv_data;
   HRESULT res;
@@ -54,7 +55,7 @@ static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
   res = AVIFileOpen(&avs->file, s->filename, OF_READ|OF_SHARE_DENY_WRITE, NULL);
   if (res != S_OK)
     {
-      av_log(s, AV_LOG_ERROR, "AVIFileOpen failed with error %ld", res);
+      av_log(s, AV_LOG_ERROR, "AVIFileOpen failed with error %ld\n", res);
       AVIFileExit();
       return -1;
     }
@@ -62,7 +63,7 @@ static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
   res = AVIFileInfo(avs->file, &info, sizeof(info));
   if (res != S_OK)
     {
-      av_log(s, AV_LOG_ERROR, "AVIFileInfo failed with error %ld", res);
+      av_log(s, AV_LOG_ERROR, "AVIFileInfo failed with error %ld\n", res);
       AVIFileExit();
       return -1;
     }
@@ -84,7 +85,8 @@ static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
                   if (AVIStreamReadFormat(stream->handle, 0, &wvfmt, &struct_size) != S_OK)
                     continue;
 
-                  st = av_new_stream(s, id);
+                  st = avformat_new_stream(s, NULL);
+                  st->id = id;
                   st->codec->codec_type = AVMEDIA_TYPE_AUDIO;
 
                   st->codec->block_align = wvfmt.nBlockAlign;
@@ -110,7 +112,8 @@ static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
                   if (AVIStreamReadFormat(stream->handle, 0, &imgfmt, &struct_size) != S_OK)
                     continue;
 
-                  st = av_new_stream(s, id);
+                  st = avformat_new_stream(s, NULL);
+                  st->id = id;
                   st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
                   st->r_frame_rate.num = stream->info.dwRate;
                   st->r_frame_rate.den = stream->info.dwScale;
@@ -143,7 +146,7 @@ static int avisynth_read_header(AVFormatContext *s, AVFormatParameters *ap)
 
               st->codec->stream_codec_tag = stream->info.fccHandler;
 
-              av_set_pts_info(st, 64, info.dwScale, info.dwRate);
+              avpriv_set_pts_info(st, 64, info.dwScale, info.dwRate);
               st->start_time = stream->info.dwStart;
             }
         }
@@ -215,15 +218,12 @@ static int avisynth_read_seek(AVFormatContext *s, int stream_index, int64_t pts,
 }
 
 AVInputFormat ff_avisynth_demuxer = {
-  "avs",
-  NULL_IF_CONFIG_SMALL("AVISynth"),
-  sizeof(AVISynthContext),
-  NULL,
-  avisynth_read_header,
-  avisynth_read_packet,
-  avisynth_read_close,
-  avisynth_read_seek,
-  NULL,
-  0,
-  "avs",
+    .name           = "avs",
+    .long_name      = NULL_IF_CONFIG_SMALL("AVISynth"),
+    .priv_data_size = sizeof(AVISynthContext),
+    .read_header    = avisynth_read_header,
+    .read_packet    = avisynth_read_packet,
+    .read_close     = avisynth_read_close,
+    .read_seek      = avisynth_read_seek,
+    .extensions     = "avs",
 };

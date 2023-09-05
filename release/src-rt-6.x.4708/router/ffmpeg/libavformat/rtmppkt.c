@@ -21,6 +21,7 @@
 
 #include "libavcodec/bytestream.h"
 #include "libavutil/avstring.h"
+#include "libavutil/intfloat.h"
 #include "avformat.h"
 
 #include "rtmppkt.h"
@@ -36,7 +37,7 @@ void ff_amf_write_bool(uint8_t **dst, int val)
 void ff_amf_write_number(uint8_t **dst, double val)
 {
     bytestream_put_byte(dst, AMF_DATA_TYPE_NUMBER);
-    bytestream_put_be64(dst, av_dbl2int(val));
+    bytestream_put_be64(dst, av_double2int(val));
 }
 
 void ff_amf_write_string(uint8_t **dst, const char *str)
@@ -78,6 +79,7 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
     uint32_t extra = 0;
     enum RTMPPacketType type;
     int size = 0;
+    int ret;
 
     if (ffurl_read(h, &hdr, 1) != 1)
         return AVERROR(EIO);
@@ -128,8 +130,9 @@ int ff_rtmp_packet_read(URLContext *h, RTMPPacket *p,
     if (hdr != RTMP_PS_TWELVEBYTES)
         timestamp += prev_pkt[channel_id].timestamp;
 
-    if (ff_rtmp_packet_create(p, channel_id, type, timestamp, data_size))
-        return -1;
+    if ((ret = ff_rtmp_packet_create(p, channel_id, type, timestamp,
+                                     data_size)) < 0)
+        return ret;
     p->extra = extra;
     // save history
     prev_pkt[channel_id].channel_id = channel_id;
@@ -317,7 +320,7 @@ int ff_amf_get_field_value(const uint8_t *data, const uint8_t *data_end,
         if (size == namelen && !memcmp(data-size, name, namelen)) {
             switch (*data++) {
             case AMF_DATA_TYPE_NUMBER:
-                snprintf(dst, dst_size, "%g", av_int2dbl(AV_RB64(data)));
+                snprintf(dst, dst_size, "%g", av_int2double(AV_RB64(data)));
                 break;
             case AMF_DATA_TYPE_BOOL:
                 snprintf(dst, dst_size, "%s", *data ? "true" : "false");
@@ -369,7 +372,7 @@ static void ff_amf_tag_contents(void *ctx, const uint8_t *data, const uint8_t *d
         return;
     switch (*data++) {
     case AMF_DATA_TYPE_NUMBER:
-        av_log(ctx, AV_LOG_DEBUG, " number %g\n", av_int2dbl(AV_RB64(data)));
+        av_log(ctx, AV_LOG_DEBUG, " number %g\n", av_int2double(AV_RB64(data)));
         return;
     case AMF_DATA_TYPE_BOOL:
         av_log(ctx, AV_LOG_DEBUG, " bool %d\n", *data);

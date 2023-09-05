@@ -24,7 +24,7 @@
  * @file
  * Linux framebuffer input device,
  * inspired by code from fbgrab.c by Gunnar Monell.
- * See also http://linux-fbdev.sourceforge.net/.
+ * @see http://linux-fbdev.sourceforge.net/
  */
 
 /* #define DEBUG */
@@ -43,6 +43,7 @@
 #include "libavutil/parseutils.h"
 #include "libavutil/pixdesc.h"
 #include "avdevice.h"
+#include "libavformat/internal.h"
 
 struct rgb_pixfmt_map_entry {
     int bits_per_pixel;
@@ -50,7 +51,7 @@ struct rgb_pixfmt_map_entry {
     enum PixelFormat pixfmt;
 };
 
-static struct rgb_pixfmt_map_entry rgb_pixfmt_map[] = {
+static const struct rgb_pixfmt_map_entry rgb_pixfmt_map[] = {
     // bpp, red_offset,  green_offset, blue_offset, alpha_offset, pixfmt
     {  32,       0,           8,          16,           24,   PIX_FMT_RGBA  },
     {  32,      16,           8,           0,           24,   PIX_FMT_BGRA  },
@@ -65,7 +66,7 @@ static enum PixelFormat get_pixfmt_from_fb_varinfo(struct fb_var_screeninfo *var
     int i;
 
     for (i = 0; i < FF_ARRAY_ELEMS(rgb_pixfmt_map); i++) {
-        struct rgb_pixfmt_map_entry *entry = &rgb_pixfmt_map[i];
+        const struct rgb_pixfmt_map_entry *entry = &rgb_pixfmt_map[i];
         if (entry->bits_per_pixel == varinfo->bits_per_pixel &&
             entry->red_offset     == varinfo->red.offset     &&
             entry->green_offset   == varinfo->green.offset   &&
@@ -79,12 +80,12 @@ static enum PixelFormat get_pixfmt_from_fb_varinfo(struct fb_var_screeninfo *var
 typedef struct {
     AVClass *class;          ///< class for private options
     int frame_size;          ///< size in bytes of a grabbed frame
-    AVRational fps;          ///< framerate
+    AVRational framerate_q;  ///< framerate
     char *framerate;         ///< framerate string set by a private option
     int64_t time_frame;      ///< time for the next frame to output (in 1/1000000 units)
 
     int fd;                  ///< framebuffer device file descriptor
-    int width, heigth;       ///< assumed frame resolution
+    int width, height;       ///< assumed frame resolution
     int frame_linesize;      ///< linesize of the output frame, it is assumed to be constant
     int bytes_per_pixel;
 
@@ -94,27 +95,22 @@ typedef struct {
     uint8_t *data;           ///< framebuffer data
 } FBDevContext;
 
-av_cold static int fbdev_read_header(AVFormatContext *avctx,
-                                     AVFormatParameters *ap)
+static av_cold int fbdev_read_header(AVFormatContext *avctx)
 {
     FBDevContext *fbdev = avctx->priv_data;
     AVStream *st = NULL;
     enum PixelFormat pix_fmt;
     int ret, flags = O_RDONLY;
 
-    ret = av_parse_video_rate(&fbdev->fps, fbdev->framerate);
+    ret = av_parse_video_rate(&fbdev->framerate_q, fbdev->framerate);
     if (ret < 0) {
-        av_log(avctx, AV_LOG_ERROR, "Couldn't parse framerate.\n");
+        av_log(avctx, AV_LOG_ERROR, "Could not parse framerate '%s'.\n", fbdev->framerate);
         return ret;
     }
-#if FF_API_FORMAT_PARAMETERS
-    if (ap->time_base.num)
-        fbdev->fps = (AVRational){ap->time_base.den, ap->time_base.num};
-#endif
 
-    if (!(st = av_new_stream(avctx, 0)))
+    if (!(st = avformat_new_stream(avctx, NULL)))
         return AVERROR(ENOMEM);
-    av_set_pts_info(st, 64, 1, 1000000); /* 64 bits pts in microseconds */
+    avpriv_set_pts_info(st, 64, 1, 1000000); /* 64 bits pts in microseconds */
 
     /* NONBLOCK is ignored by the fbdev driver, only set for consistency */
     if (avctx->flags & AVFMT_FLAG_NONBLOCK)
@@ -151,10 +147,10 @@ av_cold static int fbdev_read_header(AVFormatContext *avctx,
     }
 
     fbdev->width           = fbdev->varinfo.xres;
-    fbdev->heigth          = fbdev->varinfo.yres;
+    fbdev->height          = fbdev->varinfo.yres;
     fbdev->bytes_per_pixel = (fbdev->varinfo.bits_per_pixel + 7) >> 3;
     fbdev->frame_linesize  = fbdev->width * fbdev->bytes_per_pixel;
-    fbdev->frame_size      = fbdev->frame_linesize * fbdev->heigth;
+    fbdev->frame_size      = fbdev->frame_linesize * fbdev->height;
     fbdev->time_frame      = AV_NOPTS_VALUE;
     fbdev->data = mmap(NULL, fbdev->fixinfo.smem_len, PROT_READ, MAP_SHARED, fbdev->fd, 0);
     if (fbdev->data == MAP_FAILED) {
@@ -166,17 +162,17 @@ av_cold static int fbdev_read_header(AVFormatContext *avctx,
     st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
     st->codec->codec_id   = CODEC_ID_RAWVIDEO;
     st->codec->width      = fbdev->width;
-    st->codec->height     = fbdev->heigth;
+    st->codec->height     = fbdev->height;
     st->codec->pix_fmt    = pix_fmt;
-    st->codec->time_base  = (AVRational){fbdev->fps.den, fbdev->fps.num};
+    st->codec->time_base  = (AVRational){fbdev->framerate_q.den, fbdev->framerate_q.num};
     st->codec->bit_rate   =
-        fbdev->width * fbdev->heigth * fbdev->bytes_per_pixel * av_q2d(fbdev->fps) * 8;
+        fbdev->width * fbdev->height * fbdev->bytes_per_pixel * av_q2d(fbdev->framerate_q) * 8;
 
     av_log(avctx, AV_LOG_INFO,
            "w:%d h:%d bpp:%d pixfmt:%s fps:%d/%d bit_rate:%d\n",
-           fbdev->width, fbdev->heigth, fbdev->varinfo.bits_per_pixel,
+           fbdev->width, fbdev->height, fbdev->varinfo.bits_per_pixel,
            av_pix_fmt_descriptors[pix_fmt].name,
-           fbdev->fps.num, fbdev->fps.den,
+           fbdev->framerate_q.num, fbdev->framerate_q.den,
            st->codec->bit_rate);
     return 0;
 
@@ -204,7 +200,7 @@ static int fbdev_read_packet(AVFormatContext *avctx, AVPacket *pkt)
                 "time_frame:%"PRId64" curtime:%"PRId64" delay:%"PRId64"\n",
                 fbdev->time_frame, curtime, delay);
         if (delay <= 0) {
-            fbdev->time_frame += INT64_C(1000000) / av_q2d(fbdev->fps);
+            fbdev->time_frame += INT64_C(1000000) / av_q2d(fbdev->framerate_q);
             break;
         }
         if (avctx->flags & AVFMT_FLAG_NONBLOCK)
@@ -229,7 +225,7 @@ static int fbdev_read_packet(AVFormatContext *avctx, AVPacket *pkt)
                         fbdev->varinfo.yoffset * fbdev->fixinfo.line_length;
     pout = pkt->data;
 
-    for (i = 0; i < fbdev->heigth; i++) {
+    for (i = 0; i < fbdev->height; i++) {
         memcpy(pout, pin, fbdev->frame_linesize);
         pin  += fbdev->fixinfo.line_length;
         pout += fbdev->frame_linesize;
@@ -238,7 +234,7 @@ static int fbdev_read_packet(AVFormatContext *avctx, AVPacket *pkt)
     return fbdev->frame_size;
 }
 
-av_cold static int fbdev_read_close(AVFormatContext *avctx)
+static av_cold int fbdev_read_close(AVFormatContext *avctx)
 {
     FBDevContext *fbdev = avctx->priv_data;
 
@@ -251,7 +247,7 @@ av_cold static int fbdev_read_close(AVFormatContext *avctx)
 #define OFFSET(x) offsetof(FBDevContext, x)
 #define DEC AV_OPT_FLAG_DECODING_PARAM
 static const AVOption options[] = {
-    { "framerate","", OFFSET(framerate), FF_OPT_TYPE_STRING, {.str = "25"}, 0, 0, DEC },
+    { "framerate","", OFFSET(framerate), AV_OPT_TYPE_STRING, {.str = "25"}, 0, 0, DEC },
     { NULL },
 };
 

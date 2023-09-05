@@ -28,11 +28,11 @@
 #include "mpegvideo.h"
 #include "put_bits.h"
 
-void rv10_encode_picture_header(MpegEncContext *s, int picture_number)
+void ff_rv10_encode_picture_header(MpegEncContext *s, int picture_number)
 {
     int full_frame= 0;
 
-    align_put_bits(&s->pb);
+    avpriv_align_put_bits(&s->pb);
 
     put_bits(&s->pb, 1, 1);     /* marker */
 
@@ -56,14 +56,17 @@ void rv10_encode_picture_header(MpegEncContext *s, int picture_number)
     put_bits(&s->pb, 3, 0);     /* ignored */
 }
 
+FF_MPV_GENERIC_CLASS(rv10)
+
 AVCodec ff_rv10_encoder = {
-    "rv10",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_RV10,
-    sizeof(MpegEncContext),
-    MPV_encode_init,
-    MPV_encode_picture,
-    MPV_encode_end,
-    .pix_fmts= (const enum PixelFormat[]){PIX_FMT_YUV420P, PIX_FMT_NONE},
-    .long_name= NULL_IF_CONFIG_SMALL("RealVideo 1.0"),
+    .name           = "rv10",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_RV10,
+    .priv_data_size = sizeof(MpegEncContext),
+    .init           = ff_MPV_encode_init,
+    .encode2        = ff_MPV_encode_picture,
+    .close          = ff_MPV_encode_end,
+    .pix_fmts       = (const enum PixelFormat[]){ PIX_FMT_YUV420P, PIX_FMT_NONE },
+    .long_name      = NULL_IF_CONFIG_SMALL("RealVideo 1.0"),
+    .priv_class     = &rv10_class,
 };

@@ -59,10 +59,12 @@ static int h264_mp4toannexb_filter(AVBitStreamFilterContext *bsfc,
                                    const uint8_t *buf, int      buf_size,
                                    int keyframe) {
     H264BSFContext *ctx = bsfc->priv_data;
+    int i;
     uint8_t unit_type;
     int32_t nal_size;
     uint32_t cumul_size = 0;
     const uint8_t *buf_end = buf + buf_size;
+    int ret = AVERROR(EINVAL);
 
     /* nothing to filter */
     if (!avctx->extradata || avctx->extradata_size < 6) {
@@ -81,8 +83,6 @@ static int h264_mp4toannexb_filter(AVBitStreamFilterContext *bsfc,
 
         /* retrieve length coded size */
         ctx->length_size = (*extradata++ & 0x3) + 1;
-        if (ctx->length_size == 3)
-            return AVERROR(EINVAL);
 
         /* retrieve sps and pps unit(s) */
         unit_nb = *extradata++ & 0x1f; /* number of sps unit(s) */
@@ -137,15 +137,12 @@ pps:
     *poutbuf_size = 0;
     *poutbuf = NULL;
     do {
+        ret= AVERROR(EINVAL);
         if (buf + ctx->length_size > buf_end)
             goto fail;
 
-        if (ctx->length_size == 1) {
-            nal_size = buf[0];
-        } else if (ctx->length_size == 2) {
-            nal_size = AV_RB16(buf);
-        } else
-            nal_size = AV_RB32(buf);
+        for (nal_size = 0, i = 0; i<ctx->length_size; i++)
+            nal_size = (nal_size << 8) | buf[i];
 
         buf += ctx->length_size;
         unit_type = *buf & 0x1f;
@@ -155,15 +152,15 @@ pps:
 
         /* prepend only to the first type 5 NAL unit of an IDR picture */
         if (ctx->first_idr && unit_type == 5) {
-            if (alloc_and_copy(poutbuf, poutbuf_size,
+            if ((ret=alloc_and_copy(poutbuf, poutbuf_size,
                                avctx->extradata, avctx->extradata_size,
-                               buf, nal_size) < 0)
+                               buf, nal_size)) < 0)
                 goto fail;
             ctx->first_idr = 0;
         } else {
-            if (alloc_and_copy(poutbuf, poutbuf_size,
+            if ((ret=alloc_and_copy(poutbuf, poutbuf_size,
                                NULL, 0,
-                               buf, nal_size) < 0)
+                               buf, nal_size)) < 0)
                 goto fail;
             if (!ctx->first_idr && unit_type == 1)
                 ctx->first_idr = 1;
@@ -178,7 +175,7 @@ pps:
 fail:
     av_freep(poutbuf);
     *poutbuf_size = 0;
-    return AVERROR(EINVAL);
+    return ret;
 }
 
 AVBitStreamFilter ff_h264_mp4toannexb_bsf = {
@@ -186,4 +183,3 @@ AVBitStreamFilter ff_h264_mp4toannexb_bsf = {
     sizeof(H264BSFContext),
     h264_mp4toannexb_filter,
 };
-

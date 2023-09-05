@@ -1,7 +1,4 @@
-/**
- * @file
- * VP5 and VP6 compatible video decoder (common features)
- *
+/*
  * Copyright (C) 2006  Aurelien Jacobs <aurel@gnuage.org>
  *
  * This file is part of FFmpeg.
@@ -21,6 +18,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+/**
+ * @file
+ * VP5 and VP6 compatible video decoder (common features)
+ */
+
 #ifndef AVCODEC_VP56_H
 #define AVCODEC_VP56_H
 
@@ -28,7 +30,6 @@
 #include "dsputil.h"
 #include "get_bits.h"
 #include "bytestream.h"
-#include "cabac.h"
 #include "vp56dsp.h"
 
 typedef struct vp56_context VP56Context;
@@ -37,8 +38,6 @@ typedef struct {
     int16_t x;
     int16_t y;
 } DECLARE_ALIGNED(4, , VP56mv);
-
-#define VP56_SIZE_CHANGE 1
 
 typedef void (*VP56ParseVectorAdjustment)(VP56Context *s,
                                           VP56mv *vect);
@@ -334,29 +333,18 @@ int vp56_rac_get_tree(VP56RangeCoder *c,
     return -tree->val;
 }
 
-/**
- * This is identical to vp8_rac_get_tree except for the possibility of starting
- * on a node other than the root node, needed for coeff decode where this is
- * used to save a bit after a 0 token (by disallowing EOB to immediately follow.)
- */
-static av_always_inline
-int vp8_rac_get_tree_with_offset(VP56RangeCoder *c, const int8_t (*tree)[2],
-                                 const uint8_t *probs, int i)
+// how probabilities are associated with decisions is different I think
+// well, the new scheme fits in the old but this way has one fewer branches per decision
+static av_always_inline int vp8_rac_get_tree(VP56RangeCoder *c, const int8_t (*tree)[2],
+                                   const uint8_t *probs)
 {
+    int i = 0;
+
     do {
         i = tree[i][vp56_rac_get_prob(c, probs[i])];
     } while (i > 0);
 
     return -i;
-}
-
-// how probabilities are associated with decisions is different I think
-// well, the new scheme fits in the old but this way has one fewer branches per decision
-static av_always_inline
-int vp8_rac_get_tree(VP56RangeCoder *c, const int8_t (*tree)[2],
-                     const uint8_t *probs)
-{
-    return vp8_rac_get_tree_with_offset(c, tree, probs, 0);
 }
 
 // DCTextra

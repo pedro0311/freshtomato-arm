@@ -33,8 +33,9 @@
 
 #include "avcodec.h"
 #include "libavutil/audioconvert.h"
+#include "mathops.h"
 
-#define ALT_BITSTREAM_READER_LE
+#define BITSTREAM_READER_LE
 #include "get_bits.h"
 #include "bytestream.h"
 
@@ -179,7 +180,7 @@ static int smacker_decode_header_tree(SmackVContext *smk, GetBitContext *gb, int
     int res;
     HuffContext huff;
     HuffContext tmp1, tmp2;
-    VLC vlc[2];
+    VLC vlc[2] = { { 0 } };
     int escapes[3];
     DBCtx ctx;
     int err = 0;
@@ -202,9 +203,6 @@ static int smacker_decode_header_tree(SmackVContext *smk, GetBitContext *gb, int
     tmp2.bits = av_mallocz(256 * 4);
     tmp2.lengths = av_mallocz(256 * sizeof(int));
     tmp2.values = av_mallocz(256 * sizeof(int));
-
-    memset(&vlc[0], 0, sizeof(VLC));
-    memset(&vlc[1], 0, sizeof(VLC));
 
     if(get_bits1(gb)) {
         smacker_decode_tree(gb, &tmp1, 0, 0);
@@ -262,13 +260,18 @@ static int smacker_decode_header_tree(SmackVContext *smk, GetBitContext *gb, int
     if(ctx.last[0] == -1) ctx.last[0] = huff.current++;
     if(ctx.last[1] == -1) ctx.last[1] = huff.current++;
     if(ctx.last[2] == -1) ctx.last[2] = huff.current++;
+    if(huff.current > huff.length){
+        ctx.last[0] = ctx.last[1] = ctx.last[2] = 1;
+        av_log(smk->avctx, AV_LOG_ERROR, "bigtree damaged\n");
+        return -1;
+    }
 
     *recodes = huff.values;
 
     if(vlc[0].table)
-        free_vlc(&vlc[0]);
+        ff_free_vlc(&vlc[0]);
     if(vlc[1].table)
-        free_vlc(&vlc[1]);
+        ff_free_vlc(&vlc[1]);
     av_free(tmp1.bits);
     av_free(tmp1.lengths);
     av_free(tmp1.values);
@@ -337,16 +340,14 @@ static av_always_inline void last_reset(int *recode, int *last) {
 /* get code and update history */
 static av_always_inline int smk_get_code(GetBitContext *gb, int *recode, int *last) {
     register int *table = recode;
-    int v, b;
+    int v;
 
-    b = get_bits_count(gb);
     while(*table & SMK_NODE) {
         if(get_bits1(gb))
             table += (*table) & (~SMK_NODE);
         table++;
     }
     v = *table;
-    b = get_bits_count(gb) - b;
 
     if(v != recode[last[0]]) {
         recode[last[2]] = recode[last[1]];
@@ -358,20 +359,20 @@ static av_always_inline int smk_get_code(GetBitContext *gb, int *recode, int *la
 
 static int decode_frame(AVCodecContext *avctx, void *data, int *data_size, AVPacket *avpkt)
 {
-    const uint8_t *buf = avpkt->data;
-    int buf_size = avpkt->size;
     SmackVContext * const smk = avctx->priv_data;
     uint8_t *out;
     uint32_t *pal;
+    GetByteContext gb2;
     GetBitContext gb;
     int blocks, blk, bw, bh;
     int i;
     int stride;
+    int flags;
 
-    if(buf_size <= 769)
+    if (avpkt->size <= 769)
         return 0;
 
-    smk->pic.reference = 1;
+    smk->pic.reference = 3;
     smk->pic.buffer_hints = FF_BUFFER_HINTS_VALID | FF_BUFFER_HINTS_PRESERVE | FF_BUFFER_HINTS_REUSABLE;
     if(avctx->reget_buffer(avctx, &smk->pic) < 0){
         av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
@@ -380,23 +381,23 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size, AVPac
 
     /* make the palette available on the way out */
     pal = (uint32_t*)smk->pic.data[1];
-    smk->pic.palette_has_changed = buf[0] & 1;
-    smk->pic.key_frame = !!(buf[0] & 2);
+    bytestream2_init(&gb2, avpkt->data, avpkt->size);
+    flags = bytestream2_get_byteu(&gb2);
+    smk->pic.palette_has_changed = flags & 1;
+    smk->pic.key_frame = !!(flags & 2);
     if(smk->pic.key_frame)
         smk->pic.pict_type = AV_PICTURE_TYPE_I;
     else
         smk->pic.pict_type = AV_PICTURE_TYPE_P;
 
-    buf++;
     for(i = 0; i < 256; i++)
-        *pal++ = bytestream_get_be24(&buf);
-    buf_size -= 769;
+        *pal++ = 0xFF << 24 | bytestream2_get_be24u(&gb2);
 
     last_reset(smk->mmap_tbl, smk->mmap_last);
     last_reset(smk->mclr_tbl, smk->mclr_last);
     last_reset(smk->full_tbl, smk->full_last);
     last_reset(smk->type_tbl, smk->type_last);
-    init_get_bits(&gb, buf, buf_size * 8);
+    init_get_bits(&gb, avpkt->data + 769, (avpkt->size - 769) * 8);
 
     blk = 0;
     bw = avctx->width >> 2;
@@ -507,7 +508,7 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size, AVPac
     *(AVFrame*)data = smk->pic;
 
     /* always report that the buffer was completely consumed */
-    return buf_size;
+    return avpkt->size;
 }
 
 
@@ -562,31 +563,43 @@ static av_cold int decode_end(AVCodecContext *avctx)
 }
 
 
+typedef struct SmackerAudioContext {
+    AVFrame frame;
+} SmackerAudioContext;
+
 static av_cold int smka_decode_init(AVCodecContext *avctx)
 {
+    SmackerAudioContext *s = avctx->priv_data;
+
     if (avctx->channels < 1 || avctx->channels > 2) {
         av_log(avctx, AV_LOG_ERROR, "invalid number of channels\n");
         return AVERROR(EINVAL);
     }
     avctx->channel_layout = (avctx->channels==2) ? AV_CH_LAYOUT_STEREO : AV_CH_LAYOUT_MONO;
     avctx->sample_fmt = avctx->bits_per_coded_sample == 8 ? AV_SAMPLE_FMT_U8 : AV_SAMPLE_FMT_S16;
+
+    avcodec_get_frame_defaults(&s->frame);
+    avctx->coded_frame = &s->frame;
+
     return 0;
 }
 
 /**
  * Decode Smacker audio data
  */
-static int smka_decode_frame(AVCodecContext *avctx, void *data, int *data_size, AVPacket *avpkt)
+static int smka_decode_frame(AVCodecContext *avctx, void *data,
+                             int *got_frame_ptr, AVPacket *avpkt)
 {
+    SmackerAudioContext *s = avctx->priv_data;
     const uint8_t *buf = avpkt->data;
     int buf_size = avpkt->size;
     GetBitContext gb;
-    HuffContext h[4];
-    VLC vlc[4];
-    int16_t *samples = data;
-    int8_t *samples8 = data;
+    HuffContext h[4] = { { 0 } };
+    VLC vlc[4]       = { { 0 } };
+    int16_t *samples;
+    uint8_t *samples8;
     int val;
-    int i, res;
+    int i, res, ret;
     int unp_size;
     int bits, stereo;
     int pred[2] = {0, 0};
@@ -602,15 +615,11 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data, int *data_size, 
 
     if(!get_bits1(&gb)){
         av_log(avctx, AV_LOG_INFO, "Sound: no data\n");
-        *data_size = 0;
+        *got_frame_ptr = 0;
         return 1;
     }
     stereo = get_bits1(&gb);
     bits = get_bits1(&gb);
-    if (unp_size & 0xC0000000 || unp_size > *data_size) {
-        av_log(avctx, AV_LOG_ERROR, "Frame is too large to fit in buffer\n");
-        return -1;
-    }
     if (stereo ^ (avctx->channels != 1)) {
         av_log(avctx, AV_LOG_ERROR, "channels mismatch\n");
         return AVERROR(EINVAL);
@@ -620,8 +629,15 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data, int *data_size, 
         return AVERROR(EINVAL);
     }
 
-    memset(vlc, 0, sizeof(VLC) * 4);
-    memset(h, 0, sizeof(HuffContext) * 4);
+    /* get output buffer */
+    s->frame.nb_samples = unp_size / (avctx->channels * (bits + 1));
+    if ((ret = avctx->get_buffer(avctx, &s->frame)) < 0) {
+        av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
+        return ret;
+    }
+    samples  = (int16_t *)s->frame.data[0];
+    samples8 =            s->frame.data[0];
+
     // Initialize
     for(i = 0; i < (1 << (bits + stereo)); i++) {
         h[i].length = 256;
@@ -649,31 +665,49 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data, int *data_size, 
         for(i = 0; i <= stereo; i++)
             *samples++ = pred[i];
         for(; i < unp_size / 2; i++) {
+            if(get_bits_left(&gb)<0)
+                return -1;
             if(i & stereo) {
                 if(vlc[2].table)
                     res = get_vlc2(&gb, vlc[2].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
                 val  = h[2].values[res];
                 if(vlc[3].table)
                     res = get_vlc2(&gb, vlc[3].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
                 val |= h[3].values[res] << 8;
-                pred[1] += (int16_t)val;
+                pred[1] += sign_extend(val, 16);
                 *samples++ = pred[1];
             } else {
                 if(vlc[0].table)
                     res = get_vlc2(&gb, vlc[0].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
                 val  = h[0].values[res];
                 if(vlc[1].table)
                     res = get_vlc2(&gb, vlc[1].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
                 val |= h[1].values[res] << 8;
-                pred[0] += val;
+                pred[0] += sign_extend(val, 16);
                 *samples++ = pred[0];
             }
         }
@@ -683,58 +717,67 @@ static int smka_decode_frame(AVCodecContext *avctx, void *data, int *data_size, 
         for(i = 0; i <= stereo; i++)
             *samples8++ = pred[i];
         for(; i < unp_size; i++) {
+            if(get_bits_left(&gb)<0)
+                return -1;
             if(i & stereo){
                 if(vlc[1].table)
                     res = get_vlc2(&gb, vlc[1].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
-                pred[1] += (int8_t)h[1].values[res];
-                *samples8++ = pred[1];
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
+                pred[1] += sign_extend(h[1].values[res], 8);
+                *samples8++ = av_clip_uint8(pred[1]);
             } else {
                 if(vlc[0].table)
                     res = get_vlc2(&gb, vlc[0].table, SMKTREE_BITS, 3);
                 else
                     res = 0;
-                pred[0] += (int8_t)h[0].values[res];
-                *samples8++ = pred[0];
+                if (res < 0) {
+                    av_log(avctx, AV_LOG_ERROR, "invalid vlc\n");
+                    return AVERROR_INVALIDDATA;
+                }
+                pred[0] += sign_extend(h[0].values[res], 8);
+                *samples8++ = av_clip_uint8(pred[0]);
             }
         }
     }
 
     for(i = 0; i < 4; i++) {
         if(vlc[i].table)
-            free_vlc(&vlc[i]);
+            ff_free_vlc(&vlc[i]);
         av_free(h[i].bits);
         av_free(h[i].lengths);
         av_free(h[i].values);
     }
 
-    *data_size = unp_size;
+    *got_frame_ptr   = 1;
+    *(AVFrame *)data = s->frame;
+
     return buf_size;
 }
 
 AVCodec ff_smacker_decoder = {
-    "smackvid",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_SMACKVIDEO,
-    sizeof(SmackVContext),
-    decode_init,
-    NULL,
-    decode_end,
-    decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("Smacker video"),
+    .name           = "smackvid",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_SMACKVIDEO,
+    .priv_data_size = sizeof(SmackVContext),
+    .init           = decode_init,
+    .close          = decode_end,
+    .decode         = decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Smacker video"),
 };
 
 AVCodec ff_smackaud_decoder = {
-    "smackaud",
-    AVMEDIA_TYPE_AUDIO,
-    CODEC_ID_SMACKAUDIO,
-    0,
-    smka_decode_init,
-    NULL,
-    NULL,
-    smka_decode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("Smacker audio"),
+    .name           = "smackaud",
+    .type           = AVMEDIA_TYPE_AUDIO,
+    .id             = CODEC_ID_SMACKAUDIO,
+    .priv_data_size = sizeof(SmackerAudioContext),
+    .init           = smka_decode_init,
+    .decode         = smka_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Smacker audio"),
 };
-

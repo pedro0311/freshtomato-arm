@@ -52,6 +52,7 @@ static int mjpegb_decode_frame(AVCodecContext *avctx,
 
     buf_ptr = buf;
     buf_end = buf + buf_size;
+    s->got_picture = 0;
 
 read_header:
     /* reset on every SOI */
@@ -84,7 +85,9 @@ read_header:
     {
         init_get_bits(&s->gb, buf_ptr+dqt_offs, (buf_end - (buf_ptr+dqt_offs))*8);
         s->start_code = DQT;
-        ff_mjpeg_decode_dqt(s);
+        if (ff_mjpeg_decode_dqt(s) < 0 &&
+            (avctx->err_recognition & AV_EF_EXPLODE))
+          return AVERROR_INVALIDDATA;
     }
 
     dht_offs = read_offs(avctx, &hgb, buf_end - buf_ptr, "dht is %d and size is %d\n");
@@ -116,7 +119,9 @@ read_header:
                       8 * FFMIN(field_size, buf_end - buf_ptr - sos_offs));
         s->mjpb_skiptosod = (sod_offs - sos_offs - show_bits(&s->gb, 16));
         s->start_code = SOS;
-        ff_mjpeg_decode_sos(s, NULL, NULL);
+        if (ff_mjpeg_decode_sos(s, NULL, NULL) < 0 &&
+            (avctx->err_recognition & AV_EF_EXPLODE))
+          return AVERROR_INVALIDDATA;
     }
 
     if (s->interlaced) {
@@ -125,7 +130,6 @@ read_header:
         if (s->bottom_field != s->interlace_polarity && second_field_offs)
         {
             buf_ptr = buf + second_field_offs;
-            second_field_offs = 0;
             goto read_header;
             }
     }
@@ -149,16 +153,14 @@ read_header:
 }
 
 AVCodec ff_mjpegb_decoder = {
-    "mjpegb",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_MJPEGB,
-    sizeof(MJpegDecodeContext),
-    ff_mjpeg_decode_init,
-    NULL,
-    ff_mjpeg_decode_end,
-    mjpegb_decode_frame,
-    CODEC_CAP_DR1,
-    NULL,
-    .max_lowres = 3,
-    .long_name = NULL_IF_CONFIG_SMALL("Apple MJPEG-B"),
+    .name           = "mjpegb",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_MJPEGB,
+    .priv_data_size = sizeof(MJpegDecodeContext),
+    .init           = ff_mjpeg_decode_init,
+    .close          = ff_mjpeg_decode_end,
+    .decode         = mjpegb_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .max_lowres     = 3,
+    .long_name      = NULL_IF_CONFIG_SMALL("Apple MJPEG-B"),
 };

@@ -25,7 +25,7 @@
  */
 
 #include "avcodec.h"
-#define ALT_BITSTREAM_READER_LE
+#define BITSTREAM_READER_LE
 #include "get_bits.h"
 
 
@@ -178,7 +178,7 @@ static int seqvideo_decode(SeqVideoContext *seq, const unsigned char *data, int 
         for (i = 0; i < 256; i++) {
             for (j = 0; j < 3; j++, data++)
                 c[j] = (*data << 2) | (*data >> 4);
-            palette[i] = AV_RB24(c);
+            palette[i] = 0xFF << 24 | AV_RB24(c);
         }
         seq->frame.palette_has_changed = 1;
     }
@@ -231,7 +231,7 @@ static int seqvideo_decode_frame(AVCodecContext *avctx,
 
     SeqVideoContext *seq = avctx->priv_data;
 
-    seq->frame.reference = 1;
+    seq->frame.reference = 3;
     seq->frame.buffer_hints = FF_BUFFER_HINTS_VALID | FF_BUFFER_HINTS_PRESERVE | FF_BUFFER_HINTS_REUSABLE;
     if (avctx->reget_buffer(avctx, &seq->frame)) {
         av_log(seq->avctx, AV_LOG_ERROR, "tiertexseqvideo: reget_buffer() failed\n");
@@ -258,14 +258,13 @@ static av_cold int seqvideo_decode_end(AVCodecContext *avctx)
 }
 
 AVCodec ff_tiertexseqvideo_decoder = {
-    "tiertexseqvideo",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_TIERTEXSEQVIDEO,
-    sizeof(SeqVideoContext),
-    seqvideo_decode_init,
-    NULL,
-    seqvideo_decode_end,
-    seqvideo_decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("Tiertex Limited SEQ video"),
+    .name           = "tiertexseqvideo",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_TIERTEXSEQVIDEO,
+    .priv_data_size = sizeof(SeqVideoContext),
+    .init           = seqvideo_decode_init,
+    .close          = seqvideo_decode_end,
+    .decode         = seqvideo_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Tiertex Limited SEQ video"),
 };

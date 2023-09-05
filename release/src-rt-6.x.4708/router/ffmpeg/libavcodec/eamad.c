@@ -22,9 +22,9 @@
 /**
  * @file
  * Electronic Arts Madcow Video Decoder
- * by Peter Ross <pross@xvid.org>
+ * @author Peter Ross <pross@xvid.org>
  *
- * Technical details here:
+ * @see technical details at
  * http://wiki.multimedia.cx/index.php?title=Electronic_Arts_MAD
  */
 
@@ -65,7 +65,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
     avctx->pix_fmt = PIX_FMT_YUV420P;
     if (avctx->idct_algo == FF_IDCT_AUTO)
         avctx->idct_algo = FF_IDCT_EA;
-    dsputil_init(&s->dsp, avctx);
+    ff_dsputil_init(&s->dsp, avctx);
     ff_init_scantable(s->dsp.idct_permutation, &s->intra_scantable, ff_zigzag_direct);
     ff_mpeg12_init_vlcs();
     return 0;
@@ -119,7 +119,7 @@ static inline void idct_put(MadContext *t, DCTELEM *block, int mb_x, int mb_y, i
     }
 }
 
-static inline void decode_block_intra(MadContext * t, DCTELEM * block)
+static inline int decode_block_intra(MadContext * t, DCTELEM * block)
 {
     MpegEncContext *s = &t->s;
     int level, i, j, run;
@@ -170,13 +170,14 @@ static inline void decode_block_intra(MadContext * t, DCTELEM * block)
             }
             if (i > 63) {
                 av_log(s->avctx, AV_LOG_ERROR, "ac-tex damaged at %d %d\n", s->mb_x, s->mb_y);
-                return;
+                return -1;
             }
 
             block[j] = level;
         }
         CLOSE_READER(re, &s->gb);
     }
+    return 0;
 }
 
 static int decode_motion(GetBitContext *gb)
@@ -190,7 +191,7 @@ static int decode_motion(GetBitContext *gb)
     return value;
 }
 
-static void decode_mb(MadContext *t, int inter)
+static int decode_mb(MadContext *t, int inter)
 {
     MpegEncContext *s = &t->s;
     int mv_map = 0;
@@ -203,8 +204,6 @@ static void decode_mb(MadContext *t, int inter)
             mv_map = v ? get_bits(&s->gb, 6) : 63;
             mv_x = decode_motion(&s->gb);
             mv_y = decode_motion(&s->gb);
-        } else {
-            mv_map = 0;
         }
     }
 
@@ -215,10 +214,12 @@ static void decode_mb(MadContext *t, int inter)
                 comp_block(t, s->mb_x, s->mb_y, j, mv_x, mv_y, add);
         } else {
             s->dsp.clear_block(t->block);
-            decode_block_intra(t, t->block);
+            if(decode_block_intra(t, t->block) < 0)
+                return -1;
             idct_put(t, t->block, s->mb_x, s->mb_y, j);
         }
     }
+    return 0;
 }
 
 static void calc_intra_matrix(MadContext *t, int qscale)
@@ -249,7 +250,7 @@ static int decode_frame(AVCodecContext *avctx,
     int chunk_type;
     int inter;
 
-    if (buf_size < 26) {
+    if (buf_size < 17) {
         av_log(avctx, AV_LOG_ERROR, "Input buffer too small\n");
         *data_size = 0;
         return -1;
@@ -268,6 +269,8 @@ static int decode_frame(AVCodecContext *avctx,
     buf += 16;
 
     if (avctx->width != s->width || avctx->height != s->height) {
+        if((s->width * s->height)/2048*7 > buf_end-buf)
+            return -1;
         if (av_image_check_size(s->width, s->height, 0, avctx) < 0)
             return -1;
         avcodec_set_dimensions(avctx, s->width, s->height);
@@ -277,7 +280,7 @@ static int decode_frame(AVCodecContext *avctx,
             avctx->release_buffer(avctx, &t->last_frame);
     }
 
-    t->frame.reference = 1;
+    t->frame.reference = 3;
     if (!t->frame.data[0]) {
         if (avctx->get_buffer(avctx, &t->frame) < 0) {
             av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
@@ -294,7 +297,8 @@ static int decode_frame(AVCodecContext *avctx,
 
     for (s->mb_y=0; s->mb_y < (avctx->height+15)/16; s->mb_y++)
         for (s->mb_x=0; s->mb_x < (avctx->width +15)/16; s->mb_x++)
-            decode_mb(t, inter);
+            if(decode_mb(t, inter) < 0)
+                return -1;
 
     *data_size = sizeof(AVFrame);
     *(AVFrame*)data = t->frame;
@@ -317,14 +321,13 @@ static av_cold int decode_end(AVCodecContext *avctx)
 }
 
 AVCodec ff_eamad_decoder = {
-    "eamad",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_MAD,
-    sizeof(MadContext),
-    decode_init,
-    NULL,
-    decode_end,
-    decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("Electronic Arts Madcow Video")
+    .name           = "eamad",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_MAD,
+    .priv_data_size = sizeof(MadContext),
+    .init           = decode_init,
+    .close          = decode_end,
+    .decode         = decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Electronic Arts Madcow Video")
 };

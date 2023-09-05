@@ -73,8 +73,8 @@ typedef struct LclDecContext {
 
 
 /**
- * \param srcptr compressed source buffer, must be padded with at least 5 extra bytes
- * \param destptr must be padded sufficiently for av_memcpy_backptr
+ * @param srcptr compressed source buffer, must be padded with at least 5 extra bytes
+ * @param destptr must be padded sufficiently for av_memcpy_backptr
  */
 static unsigned int mszh_decomp(const unsigned char * srcptr, int srclen, unsigned char * destptr, unsigned int destsize)
 {
@@ -96,7 +96,13 @@ static unsigned int mszh_decomp(const unsigned char * srcptr, int srclen, unsign
             ofs = FFMIN(ofs, destptr - destptr_bak);
             cnt *= 4;
             cnt = FFMIN(cnt, destptr_end - destptr);
-            av_memcpy_backptr(destptr, ofs, cnt);
+            if (ofs) {
+                av_memcpy_backptr(destptr, ofs, cnt);
+            } else {
+                // Not known what the correct behaviour is, but
+                // this at least avoids uninitialized data.
+                memset(destptr, 0, cnt);
+            }
             destptr += cnt;
         }
         maskbit >>= 1;
@@ -119,11 +125,11 @@ static unsigned int mszh_decomp(const unsigned char * srcptr, int srclen, unsign
 
 #if CONFIG_ZLIB_DECODER
 /**
- * \brief decompress a zlib-compressed data block into decomp_buf
- * \param src compressed input buffer
- * \param src_len data length in input buffer
- * \param offset offset in decomp_buf
- * \param expected expected decompressed length
+ * @brief decompress a zlib-compressed data block into decomp_buf
+ * @param src compressed input buffer
+ * @param src_len data length in input buffer
+ * @param offset offset in decomp_buf
+ * @param expected expected decompressed length
  */
 static int zlib_decomp(AVCodecContext *avctx, const uint8_t *src, int src_len, int offset, int expected)
 {
@@ -257,9 +263,14 @@ static int decode_frame(AVCodecContext *avctx, void *data, int *data_size, AVPac
          * gives a file with ZLIB fourcc, but frame is really uncompressed.
          * To be sure that's true check also frame size */
         if (c->compression == COMP_ZLIB_NORMAL && c->imgtype == IMGTYPE_RGB24 &&
-            len == width * height * 3)
-            break;
-        if (c->flags & FLAG_MULTITHREAD) {
+            len == width * height * 3) {
+            if (c->flags & FLAG_PNGFILTER) {
+                memcpy(c->decomp_buf, encoded, len);
+                encoded = c->decomp_buf;
+            } else {
+                break;
+            }
+        } else if (c->flags & FLAG_MULTITHREAD) {
             int ret;
             mthread_inlen = AV_RL32(encoded);
             mthread_inlen = FFMIN(mthread_inlen, len - 8);
@@ -602,7 +613,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
         if (zret != Z_OK) {
             av_log(avctx, AV_LOG_ERROR, "Inflate init error: %d\n", zret);
             av_freep(&c->decomp_buf);
-            return AVERROR_INVALIDDATA;
+            return AVERROR_UNKNOWN;
         }
     }
 #endif
@@ -632,30 +643,28 @@ static av_cold int decode_end(AVCodecContext *avctx)
 
 #if CONFIG_MSZH_DECODER
 AVCodec ff_mszh_decoder = {
-    "mszh",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_MSZH,
-    sizeof(LclDecContext),
-    decode_init,
-    NULL,
-    decode_end,
-    decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("LCL (LossLess Codec Library) MSZH"),
+    .name           = "mszh",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_MSZH,
+    .priv_data_size = sizeof(LclDecContext),
+    .init           = decode_init,
+    .close          = decode_end,
+    .decode         = decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("LCL (LossLess Codec Library) MSZH"),
 };
 #endif
 
 #if CONFIG_ZLIB_DECODER
 AVCodec ff_zlib_decoder = {
-    "zlib",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_ZLIB,
-    sizeof(LclDecContext),
-    decode_init,
-    NULL,
-    decode_end,
-    decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("LCL (LossLess Codec Library) ZLIB"),
+    .name           = "zlib",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_ZLIB,
+    .priv_data_size = sizeof(LclDecContext),
+    .init           = decode_init,
+    .close          = decode_end,
+    .decode         = decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("LCL (LossLess Codec Library) ZLIB"),
 };
 #endif

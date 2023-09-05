@@ -120,7 +120,7 @@ static av_cold int init(AVFilterContext *ctx, const char *args, void *opaque)
     GradFunContext *gf = ctx->priv;
     float thresh = 1.2;
     int radius = 16;
-    av_unused int cpu_flags = av_get_cpu_flags();
+    int cpu_flags = av_get_cpu_flags();
 
     if (args)
         sscanf(args, "%f:%d", &thresh, &radius);
@@ -240,7 +240,7 @@ AVFilter avfilter_vf_gradfun = {
     .uninit        = uninit,
     .query_formats = query_formats,
 
-    .inputs    = (AVFilterPad[]) {{ .name             = "default",
+    .inputs    = (const AVFilterPad[]) {{ .name       = "default",
                                     .type             = AVMEDIA_TYPE_VIDEO,
                                     .config_props     = config_input,
                                     .start_frame      = start_frame,
@@ -248,7 +248,7 @@ AVFilter avfilter_vf_gradfun = {
                                     .end_frame        = end_frame,
                                     .min_perms        = AV_PERM_READ, },
                                   { .name = NULL}},
-    .outputs   = (AVFilterPad[]) {{ .name             = "default",
+    .outputs   = (const AVFilterPad[]) {{ .name       = "default",
                                     .type             = AVMEDIA_TYPE_VIDEO, },
                                   { .name = NULL}},
 };

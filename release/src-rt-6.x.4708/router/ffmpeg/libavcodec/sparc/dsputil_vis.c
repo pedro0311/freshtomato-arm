@@ -19,7 +19,7 @@
  */
 
 /* The *no_round* functions have been added by James A. Morrison, 2003,2004.
-   The vis code from libmpeg2 was adapted for ffmpeg by James A. Morrison.
+   The vis code from libmpeg2 was adapted for libavcodec by James A. Morrison.
  */
 
 #include "config.h"
@@ -3949,14 +3949,15 @@ static int vis_level(void)
 }
 
 /* libavcodec initialization code */
-void dsputil_init_vis(DSPContext* c, AVCodecContext *avctx)
+void ff_dsputil_init_vis(DSPContext* c, AVCodecContext *avctx)
 {
   /* VIS-specific optimizations */
   int accel = vis_level ();
-  const int high_bit_depth = avctx->codec_id == CODEC_ID_H264 && avctx->bits_per_raw_sample > 8;
+  const int high_bit_depth = avctx->bits_per_raw_sample > 8;
 
   if (accel & ACCEL_SPARC_VIS) {
-      if(avctx->idct_algo==FF_IDCT_SIMPLEVIS){
+      if (avctx->bits_per_raw_sample <= 8 &&
+          avctx->idct_algo == FF_IDCT_SIMPLEVIS) {
           c->idct_put = ff_simple_idct_put_vis;
           c->idct_add = ff_simple_idct_add_vis;
           c->idct     = ff_simple_idct_vis;

@@ -29,6 +29,7 @@ typedef struct MpegAudioParseContext {
     int frame_size;
     uint32_t header;
     int header_count;
+    int no_bitrate;
 } MpegAudioParseContext;
 
 #define MPA_HEADER_SIZE 4
@@ -53,6 +54,7 @@ static int mpegaudio_parse(AVCodecParserContext *s1,
             int inc= FFMIN(buf_size - i, s->frame_size);
             i += inc;
             s->frame_size -= inc;
+            state = 0;
 
             if(!s->frame_size){
                 next= i;
@@ -64,23 +66,26 @@ static int mpegaudio_parse(AVCodecParserContext *s1,
 
                 state= (state<<8) + buf[i++];
 
-                ret = ff_mpa_decode_header(avctx, state, &sr, &channels, &frame_size, &bit_rate);
+                ret = avpriv_mpa_decode_header(avctx, state, &sr, &channels, &frame_size, &bit_rate);
                 if (ret < 4) {
-                    if(i > 4)
-                        s->header_count= -2;
+                    if (i > 4)
+                        s->header_count = -2;
                 } else {
                     if((state&SAME_HEADER_MASK) != (s->header&SAME_HEADER_MASK) && s->header)
                         s->header_count= -3;
                     s->header= state;
-                    s->header_count++;
                     s->frame_size = ret-4;
 
-                    if(s->header_count > 1){
+                    if (s->header_count > 0) {
                         avctx->sample_rate= sr;
                         avctx->channels   = channels;
-                        avctx->frame_size = frame_size;
-                        avctx->bit_rate   = bit_rate;
+                        s1->duration      = frame_size;
+                        if (s->no_bitrate || !avctx->bit_rate) {
+                            s->no_bitrate = 1;
+                            avctx->bit_rate += (bit_rate - avctx->bit_rate) / s->header_count;
+                        }
                     }
+                    s->header_count++;
                     break;
                 }
             }
@@ -101,9 +106,8 @@ static int mpegaudio_parse(AVCodecParserContext *s1,
 
 
 AVCodecParser ff_mpegaudio_parser = {
-    { CODEC_ID_MP1, CODEC_ID_MP2, CODEC_ID_MP3 },
-    sizeof(MpegAudioParseContext),
-    NULL,
-    mpegaudio_parse,
-    ff_parse_close,
+    .codec_ids      = { CODEC_ID_MP1, CODEC_ID_MP2, CODEC_ID_MP3 },
+    .priv_data_size = sizeof(MpegAudioParseContext),
+    .parser_parse   = mpegaudio_parse,
+    .parser_close   = ff_parse_close,
 };

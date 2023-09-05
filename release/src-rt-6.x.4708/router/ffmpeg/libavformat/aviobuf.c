@@ -1,5 +1,5 @@
 /*
- * Buffered I/O for ffmpeg system
+ * buffered I/O
  * Copyright (c) 2000,2001 Fabrice Bellard
  *
  * This file is part of FFmpeg.
@@ -20,7 +20,10 @@
  */
 
 #include "libavutil/crc.h"
+#include "libavutil/dict.h"
 #include "libavutil/intreadwrite.h"
+#include "libavutil/log.h"
+#include "libavutil/opt.h"
 #include "avformat.h"
 #include "avio.h"
 #include "avio_internal.h"
@@ -37,10 +40,32 @@
  */
 #define SHORT_SEEK_THRESHOLD 4096
 
+static void *ffio_url_child_next(void *obj, void *prev)
+{
+    AVIOContext *s = obj;
+    return prev ? NULL : s->opaque;
+}
+
+static const AVClass *ffio_url_child_class_next(const AVClass *prev)
+{
+    return prev ? NULL : &ffurl_context_class;
+}
+
+static const AVOption ffio_url_options[] = {
+    { NULL },
+};
+
+const AVClass ffio_url_class = {
+    .class_name = "AVIOContext",
+    .item_name  = av_default_item_name,
+    .version    = LIBAVUTIL_VERSION_INT,
+    .option     = ffio_url_options,
+    .child_next = ffio_url_child_next,
+    .child_class_next = ffio_url_child_class_next,
+};
+
 static void fill_buffer(AVIOContext *s);
-#if !FF_API_URL_RESETBUF
 static int url_resetbuf(AVIOContext *s, int flags);
-#endif
 
 int ffio_init_context(AVIOContext *s,
                   unsigned char *buffer,
@@ -55,7 +80,8 @@ int ffio_init_context(AVIOContext *s,
     s->buffer_size = buffer_size;
     s->buf_ptr = buffer;
     s->opaque = opaque;
-    url_resetbuf(s, write_flag ? AVIO_WRONLY : AVIO_RDONLY);
+    s->direct = 0;
+    url_resetbuf(s, write_flag ? AVIO_FLAG_WRITE : AVIO_FLAG_READ);
     s->write_packet = write_packet;
     s->read_packet = read_packet;
     s->seek = seek;
@@ -63,9 +89,6 @@ int ffio_init_context(AVIOContext *s,
     s->must_flush = 0;
     s->eof_reached = 0;
     s->error = 0;
-#if FF_API_OLD_AVIO
-    s->is_streamed = 0;
-#endif
     s->seekable = AVIO_SEEKABLE_NORMAL;
     s->max_packet_size = 0;
     s->update_checksum= NULL;
@@ -77,33 +100,6 @@ int ffio_init_context(AVIOContext *s,
     s->read_seek  = NULL;
     return 0;
 }
-
-#if FF_API_OLD_AVIO
-int init_put_byte(AVIOContext *s,
-                  unsigned char *buffer,
-                  int buffer_size,
-                  int write_flag,
-                  void *opaque,
-                  int (*read_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int (*write_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int64_t (*seek)(void *opaque, int64_t offset, int whence))
-{
-    return ffio_init_context(s, buffer, buffer_size, write_flag, opaque,
-                                read_packet, write_packet, seek);
-}
-AVIOContext *av_alloc_put_byte(
-                  unsigned char *buffer,
-                  int buffer_size,
-                  int write_flag,
-                  void *opaque,
-                  int (*read_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int (*write_packet)(void *opaque, uint8_t *buf, int buf_size),
-                  int64_t (*seek)(void *opaque, int64_t offset, int whence))
-{
-    return avio_alloc_context(buffer, buffer_size, write_flag, opaque,
-                              read_packet, write_packet, seek);
-}
-#endif
 
 AVIOContext *avio_alloc_context(
                   unsigned char *buffer,
@@ -122,27 +118,32 @@ AVIOContext *avio_alloc_context(
     return s;
 }
 
+static void writeout(AVIOContext *s, const uint8_t *data, int len)
+{
+    if (s->write_packet && !s->error){
+        int ret= s->write_packet(s->opaque, data, len);
+        if(ret < 0){
+            s->error = ret;
+        }
+    }
+    s->pos += len;
+}
+
 static void flush_buffer(AVIOContext *s)
 {
     if (s->buf_ptr > s->buffer) {
-        if (s->write_packet && !s->error){
-            int ret= s->write_packet(s->opaque, s->buffer, s->buf_ptr - s->buffer);
-            if(ret < 0){
-                s->error = ret;
-            }
-        }
+        writeout(s, s->buffer, s->buf_ptr - s->buffer);
         if(s->update_checksum){
             s->checksum= s->update_checksum(s->checksum, s->checksum_ptr, s->buf_ptr - s->checksum_ptr);
             s->checksum_ptr= s->buffer;
         }
-        s->pos += s->buf_ptr - s->buffer;
     }
     s->buf_ptr = s->buffer;
 }
 
 void avio_w8(AVIOContext *s, int b)
 {
-    *(s->buf_ptr)++ = b;
+    *s->buf_ptr++ = b;
     if (s->buf_ptr >= s->buf_end)
         flush_buffer(s);
 }
@@ -163,6 +164,11 @@ void ffio_fill(AVIOContext *s, int b, int count)
 
 void avio_write(AVIOContext *s, const unsigned char *buf, int size)
 {
+    if (s->direct && !s->update_checksum) {
+        avio_flush(s);
+        writeout(s, buf, size);
+        return;
+    }
     while (size > 0) {
         int len = FFMIN(s->buf_end - s->buf_ptr, size);
         memcpy(s->buf_ptr, buf, len);
@@ -203,17 +209,15 @@ int64_t avio_seek(AVIOContext *s, int64_t offset, int whence)
             return offset1;
         offset += offset1;
     }
-    if (offset < 0)
-        return AVERROR(EINVAL);
-
     offset1 = offset - pos;
-    if (!s->must_flush &&
+    if (!s->must_flush && (!s->direct || !s->seek) &&
         offset1 >= 0 && offset1 <= (s->buf_end - s->buffer)) {
         /* can do the seek inside the buffer */
         s->buf_ptr = s->buffer + offset1;
     } else if ((!s->seekable ||
                offset1 <= s->buf_end + SHORT_SEEK_THRESHOLD - s->buffer) &&
                !s->write_flag && offset1 >= 0 &&
+               (!s->direct || !s->seek) &&
               (whence != SEEK_END || force)) {
         while(s->pos < offset && !s->eof_reached)
             fill_buffer(s);
@@ -247,19 +251,6 @@ int64_t avio_skip(AVIOContext *s, int64_t offset)
     return avio_seek(s, offset, SEEK_CUR);
 }
 
-#if FF_API_OLD_AVIO
-int url_fskip(AVIOContext *s, int64_t offset)
-{
-    int64_t ret = avio_seek(s, offset, SEEK_CUR);
-    return ret < 0 ? ret : 0;
-}
-
-int64_t url_ftell(AVIOContext *s)
-{
-    return avio_seek(s, 0, SEEK_CUR);
-}
-#endif
-
 int64_t avio_size(AVIOContext *s)
 {
     int64_t size;
@@ -290,15 +281,6 @@ int url_feof(AVIOContext *s)
     return s->eof_reached;
 }
 
-#if FF_API_OLD_AVIO
-int url_ferror(AVIOContext *s)
-{
-    if(!s)
-        return 0;
-    return s->error;
-}
-#endif
-
 void avio_wl32(AVIOContext *s, unsigned int val)
 {
     avio_w8(s, val);
@@ -314,143 +296,6 @@ void avio_wb32(AVIOContext *s, unsigned int val)
     avio_w8(s, val >> 8);
     avio_w8(s, val);
 }
-
-#if FF_API_OLD_AVIO
-void put_strz(AVIOContext *s, const char *str)
-{
-    avio_put_str(s, str);
-}
-
-#define GET(name, type) \
-    type get_be ##name(AVIOContext *s) \
-{\
-    return avio_rb ##name(s);\
-}\
-    type get_le ##name(AVIOContext *s) \
-{\
-    return avio_rl ##name(s);\
-}
-
-GET(16, unsigned int)
-GET(24, unsigned int)
-GET(32, unsigned int)
-GET(64, uint64_t)
-
-#undef GET
-
-#define PUT(name, type ) \
-    void put_le ##name(AVIOContext *s, type val)\
-{\
-        avio_wl ##name(s, val);\
-}\
-    void put_be ##name(AVIOContext *s, type val)\
-{\
-        avio_wb ##name(s, val);\
-}
-
-PUT(16, unsigned int)
-PUT(24, unsigned int)
-PUT(32, unsigned int)
-PUT(64, uint64_t)
-#undef PUT
-
-int get_byte(AVIOContext *s)
-{
-   return avio_r8(s);
-}
-int get_buffer(AVIOContext *s, unsigned char *buf, int size)
-{
-    return avio_read(s, buf, size);
-}
-int get_partial_buffer(AVIOContext *s, unsigned char *buf, int size)
-{
-    return ffio_read_partial(s, buf, size);
-}
-void put_byte(AVIOContext *s, int val)
-{
-    avio_w8(s, val);
-}
-void put_buffer(AVIOContext *s, const unsigned char *buf, int size)
-{
-    avio_write(s, buf, size);
-}
-void put_nbyte(AVIOContext *s, int b, int count)
-{
-    ffio_fill(s, b, count);
-}
-
-int url_fopen(AVIOContext **s, const char *filename, int flags)
-{
-    return avio_open(s, filename, flags);
-}
-int url_fclose(AVIOContext *s)
-{
-    return avio_close(s);
-}
-int64_t url_fseek(AVIOContext *s, int64_t offset, int whence)
-{
-    return avio_seek(s, offset, whence);
-}
-int64_t url_fsize(AVIOContext *s)
-{
-    return avio_size(s);
-}
-int url_setbufsize(AVIOContext *s, int buf_size)
-{
-    return ffio_set_buf_size(s, buf_size);
-}
-int url_fprintf(AVIOContext *s, const char *fmt, ...)
-{
-    va_list ap;
-    char buf[4096];
-    int ret;
-
-    va_start(ap, fmt);
-    ret = vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    avio_write(s, buf, strlen(buf));
-    return ret;
-}
-void put_flush_packet(AVIOContext *s)
-{
-    avio_flush(s);
-}
-int av_url_read_fpause(AVIOContext *s, int pause)
-{
-    return avio_pause(s, pause);
-}
-int64_t av_url_read_fseek(AVIOContext *s, int stream_index,
-                         int64_t timestamp, int flags)
-{
-    return avio_seek_time(s, stream_index, timestamp, flags);
-}
-void init_checksum(AVIOContext *s,
-                   unsigned long (*update_checksum)(unsigned long c, const uint8_t *p, unsigned int len),
-                   unsigned long checksum)
-{
-    ffio_init_checksum(s, update_checksum, checksum);
-}
-unsigned long get_checksum(AVIOContext *s)
-{
-    return ffio_get_checksum(s);
-}
-int url_open_dyn_buf(AVIOContext **s)
-{
-    return avio_open_dyn_buf(s);
-}
-int url_open_dyn_packet_buf(AVIOContext **s, int max_packet_size)
-{
-    return ffio_open_dyn_packet_buf(s, max_packet_size);
-}
-int url_close_dyn_buf(AVIOContext *s, uint8_t **pbuffer)
-{
-    return avio_close_dyn_buf(s, pbuffer);
-}
-int url_fdopen(AVIOContext **s, URLContext *h)
-{
-    return ffio_fdopen(s, h);
-}
-#endif
 
 int avio_put_str(AVIOContext *s, const char *str)
 {
@@ -534,15 +379,6 @@ void avio_wb24(AVIOContext *s, unsigned int val)
     avio_w8(s, val);
 }
 
-#if FF_API_OLD_AVIO
-void put_tag(AVIOContext *s, const char *tag)
-{
-    while (*tag) {
-        avio_w8(s, *tag++);
-    }
-}
-#endif
-
 /* Input stream */
 
 static void fill_buffer(AVIOContext *s)
@@ -550,6 +386,10 @@ static void fill_buffer(AVIOContext *s)
     uint8_t *dst= !s->max_packet_size && s->buf_end - s->buffer < s->buffer_size ? s->buf_end : s->buffer;
     int len= s->buffer_size - (dst - s->buffer);
     int max_buffer_size = s->max_packet_size ? s->max_packet_size : IO_BUFFER_SIZE;
+
+    /* can't fill the buffer without read_packet, just set EOF if appropiate */
+    if (!s->read_packet && s->buf_ptr >= s->buf_end)
+        s->eof_reached = 1;
 
     /* no need to do anything if EOF already reached */
     if (s->eof_reached)
@@ -620,17 +460,6 @@ int avio_r8(AVIOContext *s)
     return 0;
 }
 
-#if FF_API_OLD_AVIO
-int url_fgetc(AVIOContext *s)
-{
-    if (s->buf_ptr >= s->buf_end)
-        fill_buffer(s);
-    if (s->buf_ptr < s->buf_end)
-        return *s->buf_ptr++;
-    return URL_EOF;
-}
-#endif
-
 int avio_read(AVIOContext *s, unsigned char *buf, int size)
 {
     int len, size1;
@@ -641,7 +470,7 @@ int avio_read(AVIOContext *s, unsigned char *buf, int size)
         if (len > size)
             len = size;
         if (len == 0) {
-            if(size > s->buffer_size && !s->update_checksum){
+            if((s->direct || size > s->buffer_size) && !s->update_checksum){
                 if(s->read_packet)
                     len = s->read_packet(s->opaque, buf, size);
                 if (len <= 0) {
@@ -756,14 +585,6 @@ unsigned int avio_rb32(AVIOContext *s)
     return val;
 }
 
-#if FF_API_OLD_AVIO
-char *get_strz(AVIOContext *s, char *buf, int maxlen)
-{
-    avio_get_str(s, INT_MAX, buf, maxlen);
-    return buf;
-}
-#endif
-
 int ff_get_line(AVIOContext *s, char *buf, int maxlen)
 {
     int i = 0;
@@ -855,28 +676,20 @@ int ffio_fdopen(AVIOContext **s, URLContext *h)
     if (!buffer)
         return AVERROR(ENOMEM);
 
-    *s = av_mallocz(sizeof(AVIOContext));
-    if(!*s) {
+    *s = avio_alloc_context(buffer, buffer_size, h->flags & AVIO_FLAG_WRITE, h,
+                            (void*)ffurl_read, (void*)ffurl_write, (void*)ffurl_seek);
+    if (!*s) {
         av_free(buffer);
         return AVERROR(ENOMEM);
     }
-
-    if (ffio_init_context(*s, buffer, buffer_size,
-                      (h->flags & AVIO_WRONLY || h->flags & AVIO_RDWR), h,
-                      (void*)ffurl_read, (void*)ffurl_write, (void*)ffurl_seek) < 0) {
-        av_free(buffer);
-        av_freep(s);
-        return AVERROR(EIO);
-    }
-#if FF_API_OLD_AVIO
-    (*s)->is_streamed = h->is_streamed;
-#endif
+    (*s)->direct = h->flags & AVIO_FLAG_DIRECT;
     (*s)->seekable = h->is_streamed ? 0 : AVIO_SEEKABLE_NORMAL;
     (*s)->max_packet_size = max_packet_size;
     if(h->prot) {
         (*s)->read_pause = (int (*)(void *, int))h->prot->url_read_pause;
         (*s)->read_seek  = (int64_t (*)(void *, int, int64_t, int))h->prot->url_read_seek;
     }
+    (*s)->av_class = &ffio_url_class;
     return 0;
 }
 
@@ -891,24 +704,15 @@ int ffio_set_buf_size(AVIOContext *s, int buf_size)
     s->buffer = buffer;
     s->buffer_size = buf_size;
     s->buf_ptr = buffer;
-    url_resetbuf(s, s->write_flag ? AVIO_WRONLY : AVIO_RDONLY);
+    url_resetbuf(s, s->write_flag ? AVIO_FLAG_WRITE : AVIO_FLAG_READ);
     return 0;
 }
 
-#if FF_API_URL_RESETBUF
-int url_resetbuf(AVIOContext *s, int flags)
-#else
 static int url_resetbuf(AVIOContext *s, int flags)
-#endif
 {
-#if FF_API_URL_RESETBUF
-    if (flags & AVIO_RDWR)
-        return AVERROR(EINVAL);
-#else
-    assert(flags == AVIO_WRONLY || flags == AVIO_RDONLY);
-#endif
+    assert(flags == AVIO_FLAG_WRITE || flags == AVIO_FLAG_READ);
 
-    if (flags & AVIO_WRONLY) {
+    if (flags & AVIO_FLAG_WRITE) {
         s->buf_end = s->buffer + s->buffer_size;
         s->write_flag = 1;
     } else {
@@ -959,10 +763,16 @@ int ffio_rewind_with_probe_data(AVIOContext *s, unsigned char *buf, int buf_size
 
 int avio_open(AVIOContext **s, const char *filename, int flags)
 {
+    return avio_open2(s, filename, flags, NULL, NULL);
+}
+
+int avio_open2(AVIOContext **s, const char *filename, int flags,
+               const AVIOInterruptCB *int_cb, AVDictionary **options)
+{
     URLContext *h;
     int err;
 
-    err = ffurl_open(&h, filename, flags);
+    err = ffurl_open(&h, filename, flags, int_cb, options);
     if (err < 0)
         return err;
     err = ffio_fdopen(s, h);
@@ -975,19 +785,16 @@ int avio_open(AVIOContext **s, const char *filename, int flags)
 
 int avio_close(AVIOContext *s)
 {
-    URLContext *h = s->opaque;
+    URLContext *h;
 
+    if (!s)
+        return 0;
+
+    h = s->opaque;
     av_free(s->buffer);
     av_free(s);
     return ffurl_close(h);
 }
-
-#if FF_API_OLD_AVIO
-URLContext *url_fileno(AVIOContext *s)
-{
-    return s->opaque;
-}
-#endif
 
 int avio_printf(AVIOContext *s, const char *fmt, ...)
 {
@@ -1001,34 +808,6 @@ int avio_printf(AVIOContext *s, const char *fmt, ...)
     avio_write(s, buf, strlen(buf));
     return ret;
 }
-
-#if FF_API_OLD_AVIO
-char *url_fgets(AVIOContext *s, char *buf, int buf_size)
-{
-    int c;
-    char *q;
-
-    c = avio_r8(s);
-    if (url_feof(s))
-        return NULL;
-    q = buf;
-    for(;;) {
-        if (url_feof(s) || c == '\n')
-            break;
-        if ((q - buf) < buf_size - 1)
-            *q++ = c;
-        c = avio_r8(s);
-    }
-    if (buf_size > 0)
-        *q = '\0';
-    return buf;
-}
-
-int url_fget_max_packet_size(AVIOContext *s)
-{
-    return s->max_packet_size;
-}
-#endif
 
 int avio_pause(AVIOContext *s, int pause)
 {
@@ -1056,29 +835,6 @@ int64_t avio_seek_time(AVIOContext *s, int stream_index,
     }
     return ret;
 }
-
-/* buffer handling */
-#if FF_API_OLD_AVIO
-int url_open_buf(AVIOContext **s, uint8_t *buf, int buf_size, int flags)
-{
-    int ret;
-    *s = av_mallocz(sizeof(AVIOContext));
-    if(!*s)
-        return AVERROR(ENOMEM);
-    ret = ffio_init_context(*s, buf, buf_size,
-                        (flags & AVIO_WRONLY || flags & AVIO_RDWR),
-                        NULL, NULL, NULL, NULL);
-    if(ret != 0)
-        av_freep(s);
-    return ret;
-}
-
-int url_close_buf(AVIOContext *s)
-{
-    avio_flush(s);
-    return s->buf_ptr - s->buffer;
-}
-#endif
 
 /* output in a dynamic buffer */
 

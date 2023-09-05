@@ -61,13 +61,18 @@ void  free(void *ptr);
 
 #define ALIGN (HAVE_AVX ? 32 : 16)
 
-/* You can redefine av_malloc and av_free in your project to use your
-   memory allocator. You do not need to suppress this file because the
-   linker will do it automatically. */
+/* NOTE: if you want to override these functions with your own
+ * implementations (not recommended) you have to link libav* as
+ * dynamic libraries and remove -Wl,-Bsymbolic from the linker flags.
+ * Note that this will cost performance. */
 
-#define MAX_MALLOC_SIZE INT_MAX
+static size_t max_alloc_size= INT_MAX;
 
-void *av_malloc(FF_INTERNAL_MEM_TYPE size)
+void av_max_alloc(size_t max){
+    max_alloc_size = max;
+}
+
+void *av_malloc(size_t size)
 {
     void *ptr = NULL;
 #if CONFIG_MEMALIGN_HACK
@@ -75,7 +80,7 @@ void *av_malloc(FF_INTERNAL_MEM_TYPE size)
 #endif
 
     /* let's disallow possible ambiguous cases */
-    if (size > (MAX_MALLOC_SIZE-32))
+    if (size > (max_alloc_size-32))
         return NULL;
 
 #if CONFIG_MEMALIGN_HACK
@@ -86,7 +91,7 @@ void *av_malloc(FF_INTERNAL_MEM_TYPE size)
     ptr = (char*)ptr + diff;
     ((char*)ptr)[-1]= diff;
 #elif HAVE_POSIX_MEMALIGN
-    if (size) //OSX on SDK 10.6 has a broken posix_memalign implementation
+    if (size) //OS X on SDK 10.6 has a broken posix_memalign implementation
     if (posix_memalign(&ptr,ALIGN,size))
         ptr = NULL;
 #elif HAVE_MEMALIGN
@@ -123,14 +128,14 @@ void *av_malloc(FF_INTERNAL_MEM_TYPE size)
     return ptr;
 }
 
-void *av_realloc(void *ptr, FF_INTERNAL_MEM_TYPE size)
+void *av_realloc(void *ptr, size_t size)
 {
 #if CONFIG_MEMALIGN_HACK
     int diff;
 #endif
 
     /* let's disallow possible ambiguous cases */
-    if (size > (MAX_MALLOC_SIZE-16))
+    if (size > (max_alloc_size-32))
         return NULL;
 
 #if CONFIG_MEMALIGN_HACK
@@ -177,7 +182,7 @@ void av_freep(void *arg)
     *ptr = NULL;
 }
 
-void *av_mallocz(FF_INTERNAL_MEM_TYPE size)
+void *av_mallocz(size_t size)
 {
     void *ptr = av_malloc(size);
     if (ptr)
@@ -224,3 +229,4 @@ void av_dynarray_add(void *tab_ptr, int *nb_ptr, void *elem)
     tab[nb++] = (intptr_t)elem;
     *nb_ptr = nb;
 }
+

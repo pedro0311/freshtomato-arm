@@ -37,9 +37,9 @@ typedef struct TCPContext {
 /* return non zero if error */
 static int tcp_open(URLContext *h, const char *uri, int flags)
 {
-    struct addrinfo hints, *ai, *cur_ai;
+    struct addrinfo hints = { 0 }, *ai, *cur_ai;
     int port, fd = -1;
-    TCPContext *s = NULL;
+    TCPContext *s = h->priv_data;
     int listen_socket = 0;
     const char *p;
     char buf[256];
@@ -62,13 +62,12 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
             timeout = strtol(buf, NULL, 10);
         }
     }
-    memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     snprintf(portstr, sizeof(portstr), "%d", port);
     ret = getaddrinfo(hostname, portstr, &hints, &ai);
     if (ret) {
-        av_log(NULL, AV_LOG_ERROR,
+        av_log(h, AV_LOG_ERROR,
                "Failed to resolve hostname %s: %s\n",
                hostname, gai_strerror(ret));
         return AVERROR(EIO);
@@ -100,7 +99,7 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
         struct pollfd p = {fd, POLLOUT, 0};
         ret = ff_neterrno();
         if (ret == AVERROR(EINTR)) {
-            if (url_interrupt_cb()) {
+            if (ff_check_interrupt(&h->interrupt_callback)) {
                 ret = AVERROR_EXIT;
                 goto fail1;
             }
@@ -112,7 +111,7 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
 
         /* wait until we are connected or until abort */
         while(timeout--) {
-            if (url_interrupt_cb()) {
+            if (ff_check_interrupt(&h->interrupt_callback)) {
                 ret = AVERROR_EXIT;
                 goto fail1;
             }
@@ -128,19 +127,13 @@ static int tcp_open(URLContext *h, const char *uri, int flags)
         optlen = sizeof(ret);
         getsockopt (fd, SOL_SOCKET, SO_ERROR, &ret, &optlen);
         if (ret != 0) {
-            av_log(NULL, AV_LOG_ERROR,
+            av_log(h, AV_LOG_ERROR,
                    "TCP connection to %s:%d failed: %s\n",
                    hostname, port, strerror(ret));
             ret = AVERROR(ret);
             goto fail;
         }
     }
-    s = av_malloc(sizeof(TCPContext));
-    if (!s) {
-        freeaddrinfo(ai);
-        return AVERROR(ENOMEM);
-    }
-    h->priv_data = s;
     h->is_streamed = 1;
     s->fd = fd;
     freeaddrinfo(ai);
@@ -189,11 +182,26 @@ static int tcp_write(URLContext *h, const uint8_t *buf, int size)
     return ret < 0 ? ff_neterrno() : ret;
 }
 
+static int tcp_shutdown(URLContext *h, int flags)
+{
+    TCPContext *s = h->priv_data;
+    int how;
+
+    if (flags & AVIO_FLAG_WRITE && flags & AVIO_FLAG_READ) {
+        how = SHUT_RDWR;
+    } else if (flags & AVIO_FLAG_WRITE) {
+        how = SHUT_WR;
+    } else {
+        how = SHUT_RD;
+    }
+
+    return shutdown(s->fd, how);
+}
+
 static int tcp_close(URLContext *h)
 {
     TCPContext *s = h->priv_data;
     closesocket(s->fd);
-    av_free(s);
     return 0;
 }
 
@@ -210,4 +218,7 @@ URLProtocol ff_tcp_protocol = {
     .url_write           = tcp_write,
     .url_close           = tcp_close,
     .url_get_file_handle = tcp_get_file_handle,
+    .url_shutdown        = tcp_shutdown,
+    .priv_data_size      = sizeof(TCPContext),
+    .flags               = URL_PROTOCOL_FLAG_NETWORK,
 };

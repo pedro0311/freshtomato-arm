@@ -21,6 +21,8 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avformat.h"
+#include "internal.h"
+#include "avio_internal.h"
 
 enum SIFFTags{
     TAG_SIFF = MKTAG('S', 'I', 'F', 'F'),
@@ -71,16 +73,16 @@ static int siff_probe(AVProbeData *p)
 static int create_audio_stream(AVFormatContext *s, SIFFContext *c)
 {
     AVStream *ast;
-    ast = av_new_stream(s, 0);
+    ast = avformat_new_stream(s, NULL);
     if (!ast)
         return -1;
     ast->codec->codec_type      = AVMEDIA_TYPE_AUDIO;
     ast->codec->codec_id        = CODEC_ID_PCM_U8;
     ast->codec->channels        = 1;
-    ast->codec->bits_per_coded_sample = c->bits;
+    ast->codec->bits_per_coded_sample = 8;
     ast->codec->sample_rate     = c->rate;
-    ast->codec->frame_size      = c->block_align;
-    av_set_pts_info(ast, 16, 1, c->rate);
+    avpriv_set_pts_info(ast, 16, 1, c->rate);
+    ast->start_time = 0;
     return 0;
 }
 
@@ -115,7 +117,7 @@ static int siff_parse_vbv1(AVFormatContext *s, SIFFContext *c, AVIOContext *pb)
 
     avio_skip(pb, 16); //zeroes
 
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return -1;
     st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -124,7 +126,7 @@ static int siff_parse_vbv1(AVFormatContext *s, SIFFContext *c, AVIOContext *pb)
     st->codec->width      = width;
     st->codec->height     = height;
     st->codec->pix_fmt    = PIX_FMT_PAL8;
-    av_set_pts_info(st, 16, 1, 12);
+    avpriv_set_pts_info(st, 16, 1, 12);
 
     c->cur_frame = 0;
     c->has_video = 1;
@@ -152,7 +154,7 @@ static int siff_parse_soun(AVFormatContext *s, SIFFContext *c, AVIOContext *pb)
     return create_audio_stream(s, c);
 }
 
-static int siff_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static int siff_read_header(AVFormatContext *s)
 {
     AVIOContext *pb = s->pb;
     SIFFContext *c = s->priv_data;
@@ -200,19 +202,23 @@ static int siff_read_packet(AVFormatContext *s, AVPacket *pkt)
         }
 
         if (!c->curstrm){
-            size = c->pktsize - c->sndsize;
-            if (av_new_packet(pkt, size) < 0)
+            size = c->pktsize - c->sndsize - c->gmcsize - 2;
+            size = ffio_limit(s->pb, size);
+            if(size < 0 || c->pktsize < c->sndsize)
+                return AVERROR_INVALIDDATA;
+            if (av_new_packet(pkt, size + c->gmcsize + 2) < 0)
                 return AVERROR(ENOMEM);
             AV_WL16(pkt->data, c->flags);
             if (c->gmcsize)
                 memcpy(pkt->data + 2, c->gmc, c->gmcsize);
-            avio_read(s->pb, pkt->data + 2 + c->gmcsize, size - c->gmcsize - 2);
+            avio_read(s->pb, pkt->data + 2 + c->gmcsize, size);
             pkt->stream_index = 0;
             c->curstrm = -1;
         }else{
-            if (av_get_packet(s->pb, pkt, c->sndsize - 4) < 0)
+            if ((size = av_get_packet(s->pb, pkt, c->sndsize - 4)) < 0)
                 return AVERROR(EIO);
             pkt->stream_index = 1;
+            pkt->duration     = size;
             c->curstrm = 0;
         }
         if(!c->cur_frame || c->curstrm)
@@ -223,16 +229,17 @@ static int siff_read_packet(AVFormatContext *s, AVPacket *pkt)
         size = av_get_packet(s->pb, pkt, c->block_align);
         if(size <= 0)
             return AVERROR(EIO);
+        pkt->duration = size;
     }
     return pkt->size;
 }
 
 AVInputFormat ff_siff_demuxer = {
-    "siff",
-    NULL_IF_CONFIG_SMALL("Beam Software SIFF"),
-    sizeof(SIFFContext),
-    siff_probe,
-    siff_read_header,
-    siff_read_packet,
-    .extensions = "vb,son"
+    .name           = "siff",
+    .long_name      = NULL_IF_CONFIG_SMALL("Beam Software SIFF"),
+    .priv_data_size = sizeof(SIFFContext),
+    .read_probe     = siff_probe,
+    .read_header    = siff_read_header,
+    .read_packet    = siff_read_packet,
+    .extensions     = "vb,son",
 };

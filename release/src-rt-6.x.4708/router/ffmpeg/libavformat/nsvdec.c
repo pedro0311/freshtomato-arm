@@ -18,7 +18,11 @@
  * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+
+#include "libavutil/attributes.h"
+#include "libavutil/mathematics.h"
 #include "avformat.h"
+#include "internal.h"
 #include "riff.h"
 #include "libavutil/dict.h"
 #include "libavutil/intreadwrite.h"
@@ -189,6 +193,7 @@ static const AVCodecTag nsv_codec_video_tags[] = {
     { CODEC_ID_VP6, MKTAG('V', 'P', '6', '0') },
     { CODEC_ID_VP6, MKTAG('V', 'P', '6', '1') },
     { CODEC_ID_VP6, MKTAG('V', 'P', '6', '2') },
+    { CODEC_ID_VP8, MKTAG('V', 'P', '8', '0') },
 /*
     { CODEC_ID_VP4, MKTAG('V', 'P', '4', ' ') },
     { CODEC_ID_VP4, MKTAG('V', 'P', '4', '0') },
@@ -202,6 +207,7 @@ static const AVCodecTag nsv_codec_audio_tags[] = {
     { CODEC_ID_MP3,       MKTAG('M', 'P', '3', ' ') },
     { CODEC_ID_AAC,       MKTAG('A', 'A', 'C', ' ') },
     { CODEC_ID_AAC,       MKTAG('A', 'A', 'C', 'P') },
+    { CODEC_ID_AAC,       MKTAG('V', 'L', 'B', ' ') },
     { CODEC_ID_SPEEX,     MKTAG('S', 'P', 'X', ' ') },
     { CODEC_ID_PCM_U16LE, MKTAG('P', 'C', 'M', ' ') },
     { CODEC_ID_NONE,      0 },
@@ -263,7 +269,7 @@ static int nsv_resync(AVFormatContext *s)
     return -1;
 }
 
-static int nsv_parse_NSVf_header(AVFormatContext *s, AVFormatParameters *ap)
+static int nsv_parse_NSVf_header(AVFormatContext *s)
 {
     NSVContext *nsv = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -391,7 +397,7 @@ static int nsv_parse_NSVf_header(AVFormatContext *s, AVFormatParameters *ap)
     return 0;
 }
 
-static int nsv_parse_NSVs_header(AVFormatContext *s, AVFormatParameters *ap)
+static int nsv_parse_NSVs_header(AVFormatContext *s)
 {
     NSVContext *nsv = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -442,10 +448,11 @@ static int nsv_parse_NSVs_header(AVFormatContext *s, AVFormatParameters *ap)
         nsv->vheight = vwidth;
         if (vtag != T_NONE) {
             int i;
-            st = av_new_stream(s, NSV_ST_VIDEO);
+            st = avformat_new_stream(s, NULL);
             if (!st)
                 goto fail;
 
+            st->id = NSV_ST_VIDEO;
             nst = av_mallocz(sizeof(NSVStream));
             if (!nst)
                 goto fail;
@@ -457,7 +464,7 @@ static int nsv_parse_NSVs_header(AVFormatContext *s, AVFormatParameters *ap)
             st->codec->height = vheight;
             st->codec->bits_per_coded_sample = 24; /* depth XXX */
 
-            av_set_pts_info(st, 64, framerate.den, framerate.num);
+            avpriv_set_pts_info(st, 64, framerate.den, framerate.num);
             st->start_time = 0;
             st->duration = av_rescale(nsv->duration, framerate.num, 1000*framerate.den);
 
@@ -473,10 +480,11 @@ static int nsv_parse_NSVs_header(AVFormatContext *s, AVFormatParameters *ap)
         }
         if (atag != T_NONE) {
 #ifndef DISABLE_AUDIO
-            st = av_new_stream(s, NSV_ST_AUDIO);
+            st = avformat_new_stream(s, NULL);
             if (!st)
                 goto fail;
 
+            st->id = NSV_ST_AUDIO;
             nst = av_mallocz(sizeof(NSVStream));
             if (!nst)
                 goto fail;
@@ -488,7 +496,7 @@ static int nsv_parse_NSVs_header(AVFormatContext *s, AVFormatParameters *ap)
             st->need_parsing = AVSTREAM_PARSE_FULL; /* for PCM we will read a chunk later and put correct info */
 
             /* set timebase to common denominator of ms and framerate */
-            av_set_pts_info(st, 64, 1, framerate.num*1000);
+            avpriv_set_pts_info(st, 64, 1, framerate.num*1000);
             st->start_time = 0;
             st->duration = (int64_t)nsv->duration * framerate.num;
 #endif
@@ -510,7 +518,7 @@ fail:
     return -1;
 }
 
-static int nsv_read_header(AVFormatContext *s, AVFormatParameters *ap)
+static int nsv_read_header(AVFormatContext *s)
 {
     NSVContext *nsv = s->priv_data;
     int i, err;
@@ -525,13 +533,13 @@ static int nsv_read_header(AVFormatContext *s, AVFormatParameters *ap)
         if (nsv_resync(s) < 0)
             return -1;
         if (nsv->state == NSV_FOUND_NSVF) {
-            err = nsv_parse_NSVf_header(s, ap);
+            err = nsv_parse_NSVf_header(s);
             if (err < 0)
                 return err;
         }
             /* we need the first NSVs also... */
         if (nsv->state == NSV_FOUND_NSVS) {
-            err = nsv_parse_NSVs_header(s, ap);
+            err = nsv_parse_NSVs_header(s);
             if (err < 0)
                 return err;
             break; /* we just want the first one */
@@ -558,7 +566,6 @@ static int nsv_read_chunk(AVFormatContext *s, int fill_header)
     uint32_t vsize;
     uint16_t asize;
     uint16_t auxsize;
-    uint32_t av_unused auxtag;
 
     av_dlog(s, "%s(%d)\n", __FUNCTION__, fill_header);
 
@@ -574,7 +581,7 @@ null_chunk_retry:
     if (err < 0)
         return err;
     if (nsv->state == NSV_FOUND_NSVS)
-        err = nsv_parse_NSVs_header(s, NULL);
+        err = nsv_parse_NSVs_header(s);
     if (err < 0)
         return err;
     if (nsv->state != NSV_HAS_READ_NSVS && nsv->state != NSV_FOUND_BEEF)
@@ -588,6 +595,7 @@ null_chunk_retry:
     av_dlog(s, "NSV CHUNK %d aux, %u bytes video, %d bytes audio\n", auxcount, vsize, asize);
     /* skip aux stuff */
     for (i = 0; i < auxcount; i++) {
+        uint32_t av_unused auxtag;
         auxsize = avio_rl16(pb);
         auxtag = avio_rl32(pb);
         av_dlog(s, "NSV aux data: '%c%c%c%c', %d bytes\n",
@@ -712,7 +720,9 @@ static int nsv_read_seek(AVFormatContext *s, int stream_index, int64_t timestamp
     if(index < 0)
         return -1;
 
-    avio_seek(s->pb, st->index_entries[index].pos, SEEK_SET);
+    if (avio_seek(s->pb, st->index_entries[index].pos, SEEK_SET) < 0)
+        return -1;
+
     nst->frame_offset = st->index_entries[index].timestamp;
     nsv->state = NSV_UNSYNC;
     return 0;
@@ -779,12 +789,12 @@ static int nsv_probe(AVProbeData *p)
 }
 
 AVInputFormat ff_nsv_demuxer = {
-    "nsv",
-    NULL_IF_CONFIG_SMALL("Nullsoft Streaming Video"),
-    sizeof(NSVContext),
-    nsv_probe,
-    nsv_read_header,
-    nsv_read_packet,
-    nsv_read_close,
-    nsv_read_seek,
+    .name           = "nsv",
+    .long_name      = NULL_IF_CONFIG_SMALL("Nullsoft Streaming Video"),
+    .priv_data_size = sizeof(NSVContext),
+    .read_probe     = nsv_probe,
+    .read_header    = nsv_read_header,
+    .read_packet    = nsv_read_packet,
+    .read_close     = nsv_read_close,
+    .read_seek      = nsv_read_seek,
 };

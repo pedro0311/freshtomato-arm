@@ -104,8 +104,7 @@ static int sap_write_header(AVFormatContext *s)
     }
 
     if (!announce_addr[0]) {
-        struct addrinfo hints, *ai = NULL;
-        memset(&hints, 0, sizeof(hints));
+        struct addrinfo hints = { 0 }, *ai = NULL;
         hints.ai_family = AF_UNSPEC;
         if (getaddrinfo(host, NULL, &hints, &ai)) {
             av_log(s, AV_LOG_ERROR, "Unable to resolve %s\n", host);
@@ -146,7 +145,7 @@ static int sap_write_header(AVFormatContext *s)
                     "?ttl=%d", ttl);
         if (!same_port)
             base_port += 2;
-        ret = ffurl_open(&fd, url, AVIO_WRONLY);
+        ret = ffurl_open(&fd, url, AVIO_FLAG_WRITE, &s->interrupt_callback, NULL);
         if (ret) {
             ret = AVERROR(EIO);
             goto fail;
@@ -158,7 +157,8 @@ static int sap_write_header(AVFormatContext *s)
 
     ff_url_join(url, sizeof(url), "udp", NULL, announce_addr, port,
                 "?ttl=%d&connect=1", ttl);
-    ret = ffurl_open(&sap->ann_fd, url, AVIO_WRONLY);
+    ret = ffurl_open(&sap->ann_fd, url, AVIO_FLAG_WRITE,
+                     &s->interrupt_callback, NULL);
     if (ret) {
         ret = AVERROR(EIO);
         goto fail;
@@ -250,16 +250,13 @@ static int sap_write_packet(AVFormatContext *s, AVPacket *pkt)
 }
 
 AVOutputFormat ff_sap_muxer = {
-    "sap",
-    NULL_IF_CONFIG_SMALL("SAP output format"),
-    NULL,
-    NULL,
-    sizeof(struct SAPState),
-    CODEC_ID_AAC,
-    CODEC_ID_MPEG4,
-    sap_write_header,
-    sap_write_packet,
-    sap_write_close,
-    .flags = AVFMT_NOFILE | AVFMT_GLOBALHEADER,
+    .name              = "sap",
+    .long_name         = NULL_IF_CONFIG_SMALL("SAP output format"),
+    .priv_data_size    = sizeof(struct SAPState),
+    .audio_codec       = CODEC_ID_AAC,
+    .video_codec       = CODEC_ID_MPEG4,
+    .write_header      = sap_write_header,
+    .write_packet      = sap_write_packet,
+    .write_trailer     = sap_write_close,
+    .flags             = AVFMT_NOFILE | AVFMT_GLOBALHEADER,
 };
-

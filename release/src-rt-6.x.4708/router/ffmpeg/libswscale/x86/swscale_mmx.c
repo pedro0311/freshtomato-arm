@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2003 Michael Niedermayer <michaelni@gmx.at>
+ * Copyright (C) 2001-2011 Michael Niedermayer <michaelni@gmx.at>
  *
  * This file is part of FFmpeg.
  *
@@ -27,14 +27,12 @@
 #include "libavutil/cpu.h"
 #include "libavutil/pixdesc.h"
 
+#define DITHER1XBPP
+
 DECLARE_ASM_CONST(8, uint64_t, bF8)=       0xF8F8F8F8F8F8F8F8LL;
 DECLARE_ASM_CONST(8, uint64_t, bFC)=       0xFCFCFCFCFCFCFCFCLL;
 DECLARE_ASM_CONST(8, uint64_t, w10)=       0x0010001000100010LL;
 DECLARE_ASM_CONST(8, uint64_t, w02)=       0x0002000200020002LL;
-DECLARE_ASM_CONST(8, uint64_t, bm00001111)=0x00000000FFFFFFFFLL;
-DECLARE_ASM_CONST(8, uint64_t, bm00000111)=0x0000000000FFFFFFLL;
-DECLARE_ASM_CONST(8, uint64_t, bm11111000)=0xFFFFFFFFFF000000LL;
-DECLARE_ASM_CONST(8, uint64_t, bm01010101)=0x00FF00FF00FF00FFLL;
 
 const DECLARE_ALIGNED(8, uint64_t, ff_dither4)[2] = {
     0x0103010301030103LL,
@@ -68,18 +66,6 @@ DECLARE_ALIGNED(8, const uint64_t, ff_bgr2YOffset)  = 0x1010101010101010ULL;
 DECLARE_ALIGNED(8, const uint64_t, ff_bgr2UVOffset) = 0x8080808080808080ULL;
 DECLARE_ALIGNED(8, const uint64_t, ff_w1111)        = 0x0001000100010001ULL;
 
-DECLARE_ASM_CONST(8, uint64_t, ff_bgr24toY1Coeff) = 0x0C88000040870C88ULL;
-DECLARE_ASM_CONST(8, uint64_t, ff_bgr24toY2Coeff) = 0x20DE4087000020DEULL;
-DECLARE_ASM_CONST(8, uint64_t, ff_rgb24toY1Coeff) = 0x20DE0000408720DEULL;
-DECLARE_ASM_CONST(8, uint64_t, ff_rgb24toY2Coeff) = 0x0C88408700000C88ULL;
-DECLARE_ASM_CONST(8, uint64_t, ff_bgr24toYOffset) = 0x0008010000080100ULL;
-
-DECLARE_ASM_CONST(8, uint64_t, ff_bgr24toUV)[2][4] = {
-    {0x38380000DAC83838ULL, 0xECFFDAC80000ECFFULL, 0xF6E40000D0E3F6E4ULL, 0x3838D0E300003838ULL},
-    {0xECFF0000DAC8ECFFULL, 0x3838DAC800003838ULL, 0x38380000D0E33838ULL, 0xF6E4D0E30000F6E4ULL},
-};
-
-DECLARE_ASM_CONST(8, uint64_t, ff_bgr24toUVOffset)= 0x0040010000400100ULL;
 
 //MMX versions
 #if HAVE_MMX
@@ -108,8 +94,8 @@ void updateMMXDitherTables(SwsContext *c, int dstY, int lumBufIndex, int chrBufI
     int16_t **alpPixBuf= c->alpPixBuf;
     const int vLumBufSize= c->vLumBufSize;
     const int vChrBufSize= c->vChrBufSize;
-    int16_t *vLumFilterPos= c->vLumFilterPos;
-    int16_t *vChrFilterPos= c->vChrFilterPos;
+    int32_t *vLumFilterPos= c->vLumFilterPos;
+    int32_t *vChrFilterPos= c->vChrFilterPos;
     int16_t *vLumFilter= c->vLumFilter;
     int16_t *vChrFilter= c->vChrFilter;
     int32_t *lumMmxFilter= c->lumMmxFilter;
@@ -128,9 +114,9 @@ void updateMMXDitherTables(SwsContext *c, int dstY, int lumBufIndex, int chrBufI
         c->greenDither= ff_dither4[dstY&1];
     c->redDither= ff_dither8[(dstY+1)&1];
     if (dstY < dstH - 2) {
-        const int16_t **lumSrcPtr= (const int16_t **) lumPixBuf + lumBufIndex + firstLumSrcY - lastInLumBuf + vLumBufSize;
-        const int16_t **chrUSrcPtr= (const int16_t **) chrUPixBuf + chrBufIndex + firstChrSrcY - lastInChrBuf + vChrBufSize;
-        const int16_t **alpSrcPtr= (CONFIG_SWSCALE_ALPHA && alpPixBuf) ? (const int16_t **) alpPixBuf + lumBufIndex + firstLumSrcY - lastInLumBuf + vLumBufSize : NULL;
+        const int16_t **lumSrcPtr= (const int16_t **)(void*) lumPixBuf + lumBufIndex + firstLumSrcY - lastInLumBuf + vLumBufSize;
+        const int16_t **chrUSrcPtr= (const int16_t **)(void*) chrUPixBuf + chrBufIndex + firstChrSrcY - lastInChrBuf + vChrBufSize;
+        const int16_t **alpSrcPtr= (CONFIG_SWSCALE_ALPHA && alpPixBuf) ? (const int16_t **)(void*) alpPixBuf + lumBufIndex + firstLumSrcY - lastInLumBuf + vLumBufSize : NULL;
         int i;
 
         if (firstLumSrcY < 0 || firstLumSrcY + vLumFilterSize > c->srcH) {
@@ -214,6 +200,166 @@ void updateMMXDitherTables(SwsContext *c, int dstY, int lumBufIndex, int chrBufI
     }
 }
 
+#if HAVE_MMX2
+static void yuv2yuvX_sse3(const int16_t *filter, int filterSize,
+                           const int16_t **src, uint8_t *dest, int dstW,
+                           const uint8_t *dither, int offset)
+{
+    if(((int)dest) & 15){
+        return yuv2yuvX_MMX2(filter, filterSize, src, dest, dstW, dither, offset);
+    }
+    if (offset) {
+        __asm__ volatile("movq       (%0), %%xmm3\n\t"
+                         "movdqa    %%xmm3, %%xmm4\n\t"
+                         "psrlq       $24, %%xmm3\n\t"
+                         "psllq       $40, %%xmm4\n\t"
+                         "por       %%xmm4, %%xmm3\n\t"
+                         :: "r"(dither)
+                         );
+    } else {
+        __asm__ volatile("movq       (%0), %%xmm3\n\t"
+                         :: "r"(dither)
+                         );
+    }
+    __asm__ volatile(
+        "pxor      %%xmm0, %%xmm0\n\t"
+        "punpcklbw %%xmm0, %%xmm3\n\t"
+        "psraw        $4, %%xmm3\n\t"
+        "movdqa    %%xmm3, %%xmm4\n\t"
+        "movdqa    %%xmm3, %%xmm7\n\t"
+        "movl %3, %%ecx\n\t"
+        "mov                                 %0, %%"REG_d"  \n\t"\
+        "mov                        (%%"REG_d"), %%"REG_S"  \n\t"\
+        ".p2align                             4             \n\t" /* FIXME Unroll? */\
+        "1:                                                 \n\t"\
+        "movddup                  8(%%"REG_d"), %%xmm0      \n\t" /* filterCoeff */\
+        "movdqa              (%%"REG_S", %%"REG_c", 2), %%xmm2      \n\t" /* srcData */\
+        "movdqa            16(%%"REG_S", %%"REG_c", 2), %%xmm5      \n\t" /* srcData */\
+        "add                                $16, %%"REG_d"  \n\t"\
+        "mov                        (%%"REG_d"), %%"REG_S"  \n\t"\
+        "test                         %%"REG_S", %%"REG_S"  \n\t"\
+        "pmulhw                           %%xmm0, %%xmm2      \n\t"\
+        "pmulhw                           %%xmm0, %%xmm5      \n\t"\
+        "paddw                            %%xmm2, %%xmm3      \n\t"\
+        "paddw                            %%xmm5, %%xmm4      \n\t"\
+        " jnz                                1b             \n\t"\
+        "psraw                               $3, %%xmm3      \n\t"\
+        "psraw                               $3, %%xmm4      \n\t"\
+        "packuswb                         %%xmm4, %%xmm3      \n\t"
+        "movntdq                          %%xmm3, (%1, %%"REG_c")\n\t"
+        "add                         $16, %%"REG_c"         \n\t"\
+        "cmp                          %2, %%"REG_c"         \n\t"\
+        "movdqa    %%xmm7, %%xmm3\n\t"
+        "movdqa    %%xmm7, %%xmm4\n\t"
+        "mov                                 %0, %%"REG_d"  \n\t"\
+        "mov                        (%%"REG_d"), %%"REG_S"  \n\t"\
+        "jb                                  1b             \n\t"\
+        :: "g" (filter),
+           "r" (dest-offset), "g" ((x86_reg)(dstW+offset)), "m" (offset)
+        : "%"REG_d, "%"REG_S, "%"REG_c
+    );
+}
+#endif
+
+#define SCALE_FUNC(filter_n, from_bpc, to_bpc, opt) \
+extern void ff_hscale ## from_bpc ## to ## to_bpc ## _ ## filter_n ## _ ## opt( \
+                                                SwsContext *c, int16_t *data, \
+                                                int dstW, const uint8_t *src, \
+                                                const int16_t *filter, \
+                                                const int32_t *filterPos, int filterSize)
+
+#define SCALE_FUNCS(filter_n, opt) \
+    SCALE_FUNC(filter_n,  8, 15, opt); \
+    SCALE_FUNC(filter_n,  9, 15, opt); \
+    SCALE_FUNC(filter_n, 10, 15, opt); \
+    SCALE_FUNC(filter_n, 14, 15, opt); \
+    SCALE_FUNC(filter_n, 16, 15, opt); \
+    SCALE_FUNC(filter_n,  8, 19, opt); \
+    SCALE_FUNC(filter_n,  9, 19, opt); \
+    SCALE_FUNC(filter_n, 10, 19, opt); \
+    SCALE_FUNC(filter_n, 14, 19, opt); \
+    SCALE_FUNC(filter_n, 16, 19, opt)
+
+#define SCALE_FUNCS_MMX(opt) \
+    SCALE_FUNCS(4, opt); \
+    SCALE_FUNCS(8, opt); \
+    SCALE_FUNCS(X, opt)
+
+#define SCALE_FUNCS_SSE(opt) \
+    SCALE_FUNCS(4, opt); \
+    SCALE_FUNCS(8, opt); \
+    SCALE_FUNCS(X4, opt); \
+    SCALE_FUNCS(X8, opt)
+
+#if ARCH_X86_32
+SCALE_FUNCS_MMX(mmx);
+#endif
+SCALE_FUNCS_SSE(sse2);
+SCALE_FUNCS_SSE(ssse3);
+SCALE_FUNCS_SSE(sse4);
+
+#define VSCALEX_FUNC(size, opt) \
+extern void ff_yuv2planeX_ ## size ## _ ## opt(const int16_t *filter, int filterSize, \
+                                               const int16_t **src, uint8_t *dest, int dstW, \
+                                               const uint8_t *dither, int offset)
+#define VSCALEX_FUNCS(opt) \
+    VSCALEX_FUNC(8,  opt); \
+    VSCALEX_FUNC(9,  opt); \
+    VSCALEX_FUNC(10, opt)
+
+#if ARCH_X86_32
+VSCALEX_FUNCS(mmx2);
+#endif
+VSCALEX_FUNCS(sse2);
+VSCALEX_FUNCS(sse4);
+VSCALEX_FUNC(16, sse4);
+VSCALEX_FUNCS(avx);
+
+#define VSCALE_FUNC(size, opt) \
+extern void ff_yuv2plane1_ ## size ## _ ## opt(const int16_t *src, uint8_t *dst, int dstW, \
+                                               const uint8_t *dither, int offset)
+#define VSCALE_FUNCS(opt1, opt2) \
+    VSCALE_FUNC(8,  opt1); \
+    VSCALE_FUNC(9,  opt2); \
+    VSCALE_FUNC(10, opt2); \
+    VSCALE_FUNC(16, opt1)
+
+#if ARCH_X86_32
+VSCALE_FUNCS(mmx, mmx2);
+#endif
+VSCALE_FUNCS(sse2, sse2);
+VSCALE_FUNC(16, sse4);
+VSCALE_FUNCS(avx, avx);
+
+#define INPUT_Y_FUNC(fmt, opt) \
+extern void ff_ ## fmt ## ToY_  ## opt(uint8_t *dst, const uint8_t *src, \
+                                       int w, uint32_t *unused)
+#define INPUT_UV_FUNC(fmt, opt) \
+extern void ff_ ## fmt ## ToUV_ ## opt(uint8_t *dstU, uint8_t *dstV, \
+                                       const uint8_t *src, const uint8_t *unused1, \
+                                       int w, uint32_t *unused2)
+#define INPUT_FUNC(fmt, opt) \
+    INPUT_Y_FUNC(fmt, opt); \
+    INPUT_UV_FUNC(fmt, opt)
+#define INPUT_FUNCS(opt) \
+    INPUT_FUNC(uyvy, opt); \
+    INPUT_FUNC(yuyv, opt); \
+    INPUT_UV_FUNC(nv12, opt); \
+    INPUT_UV_FUNC(nv21, opt); \
+    INPUT_FUNC(rgba, opt); \
+    INPUT_FUNC(bgra, opt); \
+    INPUT_FUNC(argb, opt); \
+    INPUT_FUNC(abgr, opt); \
+    INPUT_FUNC(rgb24, opt); \
+    INPUT_FUNC(bgr24, opt)
+
+#if ARCH_X86_32
+INPUT_FUNCS(mmx);
+#endif
+INPUT_FUNCS(sse2);
+INPUT_FUNCS(ssse3);
+INPUT_FUNCS(avx);
+
 void ff_sws_init_swScale_mmx(SwsContext *c)
 {
     int cpu_flags = av_get_cpu_flags();
@@ -223,5 +369,187 @@ void ff_sws_init_swScale_mmx(SwsContext *c)
 #if HAVE_MMX2
     if (cpu_flags & AV_CPU_FLAG_MMX2)
         sws_init_swScale_MMX2(c);
+    if (cpu_flags & AV_CPU_FLAG_SSE3){
+        if(c->use_mmx_vfilter && !(c->flags & SWS_ACCURATE_RND))
+            c->yuv2planeX = yuv2yuvX_sse3;
+    }
+#endif
+
+#if HAVE_YASM
+#define ASSIGN_SCALE_FUNC2(hscalefn, filtersize, opt1, opt2) do { \
+    if (c->srcBpc == 8) { \
+        hscalefn = c->dstBpc <= 10 ? ff_hscale8to15_ ## filtersize ## _ ## opt2 : \
+                                     ff_hscale8to19_ ## filtersize ## _ ## opt1; \
+    } else if (c->srcBpc == 9) { \
+        hscalefn = c->dstBpc <= 10 ? ff_hscale9to15_ ## filtersize ## _ ## opt2 : \
+                                     ff_hscale9to19_ ## filtersize ## _ ## opt1; \
+    } else if (c->srcBpc == 10) { \
+        hscalefn = c->dstBpc <= 10 ? ff_hscale10to15_ ## filtersize ## _ ## opt2 : \
+                                     ff_hscale10to19_ ## filtersize ## _ ## opt1; \
+    } else if (c->srcBpc == 14 || ((c->srcFormat==PIX_FMT_PAL8||isAnyRGB(c->srcFormat)) && av_pix_fmt_descriptors[c->srcFormat].comp[0].depth_minus1<15)) { \
+        hscalefn = c->dstBpc <= 10 ? ff_hscale14to15_ ## filtersize ## _ ## opt2 : \
+                                     ff_hscale14to19_ ## filtersize ## _ ## opt1; \
+    } else { /* c->srcBpc == 16 */ \
+        hscalefn = c->dstBpc <= 10 ? ff_hscale16to15_ ## filtersize ## _ ## opt2 : \
+                                     ff_hscale16to19_ ## filtersize ## _ ## opt1; \
+    } \
+} while (0)
+#define ASSIGN_MMX_SCALE_FUNC(hscalefn, filtersize, opt1, opt2) \
+    switch (filtersize) { \
+    case 4:  ASSIGN_SCALE_FUNC2(hscalefn, 4, opt1, opt2); break; \
+    case 8:  ASSIGN_SCALE_FUNC2(hscalefn, 8, opt1, opt2); break; \
+    default: ASSIGN_SCALE_FUNC2(hscalefn, X, opt1, opt2); break; \
+    }
+#define ASSIGN_VSCALEX_FUNC(vscalefn, opt, do_16_case) \
+switch(c->dstBpc){ \
+    case 16:                          do_16_case;                          break; \
+    case 10: if (!isBE(c->dstFormat)) vscalefn = ff_yuv2planeX_10_ ## opt; break; \
+    case 9:  if (!isBE(c->dstFormat)) vscalefn = ff_yuv2planeX_9_  ## opt; break; \
+    default:                          /*vscalefn = ff_yuv2planeX_8_  ## opt;*/ break; \
+    }
+#define ASSIGN_VSCALE_FUNC(vscalefn, opt1, opt2, opt2chk) \
+    switch(c->dstBpc){ \
+    case 16: if (!isBE(c->dstFormat))            vscalefn = ff_yuv2plane1_16_ ## opt1; break; \
+    case 10: if (!isBE(c->dstFormat) && opt2chk) vscalefn = ff_yuv2plane1_10_ ## opt2; break; \
+    case 9:  if (!isBE(c->dstFormat) && opt2chk) vscalefn = ff_yuv2plane1_9_  ## opt2;  break; \
+    default:                                     vscalefn = ff_yuv2plane1_8_  ## opt1;  break; \
+    }
+#define case_rgb(x, X, opt) \
+        case PIX_FMT_ ## X: \
+            c->lumToYV12 = ff_ ## x ## ToY_ ## opt; \
+            if (!c->chrSrcHSubSample) \
+                c->chrToYV12 = ff_ ## x ## ToUV_ ## opt; \
+            break
+#if ARCH_X86_32
+    if (cpu_flags & AV_CPU_FLAG_MMX) {
+        ASSIGN_MMX_SCALE_FUNC(c->hyScale, c->hLumFilterSize, mmx, mmx);
+        ASSIGN_MMX_SCALE_FUNC(c->hcScale, c->hChrFilterSize, mmx, mmx);
+        ASSIGN_VSCALE_FUNC(c->yuv2plane1, mmx, mmx2, cpu_flags & AV_CPU_FLAG_MMX2);
+
+        switch (c->srcFormat) {
+        case PIX_FMT_Y400A:
+            c->lumToYV12 = ff_yuyvToY_mmx;
+            if (c->alpPixBuf)
+                c->alpToYV12 = ff_uyvyToY_mmx;
+            break;
+        case PIX_FMT_YUYV422:
+            c->lumToYV12 = ff_yuyvToY_mmx;
+            c->chrToYV12 = ff_yuyvToUV_mmx;
+            break;
+        case PIX_FMT_UYVY422:
+            c->lumToYV12 = ff_uyvyToY_mmx;
+            c->chrToYV12 = ff_uyvyToUV_mmx;
+            break;
+        case PIX_FMT_NV12:
+            c->chrToYV12 = ff_nv12ToUV_mmx;
+            break;
+        case PIX_FMT_NV21:
+            c->chrToYV12 = ff_nv21ToUV_mmx;
+            break;
+        case_rgb(rgb24, RGB24, mmx);
+        case_rgb(bgr24, BGR24, mmx);
+        case_rgb(bgra,  BGRA,  mmx);
+        case_rgb(rgba,  RGBA,  mmx);
+        case_rgb(abgr,  ABGR,  mmx);
+        case_rgb(argb,  ARGB,  mmx);
+        default:
+            break;
+        }
+    }
+    if (cpu_flags & AV_CPU_FLAG_MMX2) {
+        ASSIGN_VSCALEX_FUNC(c->yuv2planeX, mmx2,);
+    }
+#endif
+#define ASSIGN_SSE_SCALE_FUNC(hscalefn, filtersize, opt1, opt2) \
+    switch (filtersize) { \
+    case 4:  ASSIGN_SCALE_FUNC2(hscalefn, 4, opt1, opt2); break; \
+    case 8:  ASSIGN_SCALE_FUNC2(hscalefn, 8, opt1, opt2); break; \
+    default: if (filtersize & 4) ASSIGN_SCALE_FUNC2(hscalefn, X4, opt1, opt2); \
+             else                ASSIGN_SCALE_FUNC2(hscalefn, X8, opt1, opt2); \
+             break; \
+    }
+    if (cpu_flags & AV_CPU_FLAG_SSE2) {
+        ASSIGN_SSE_SCALE_FUNC(c->hyScale, c->hLumFilterSize, sse2, sse2);
+        ASSIGN_SSE_SCALE_FUNC(c->hcScale, c->hChrFilterSize, sse2, sse2);
+        ASSIGN_VSCALEX_FUNC(c->yuv2planeX, sse2,);
+        ASSIGN_VSCALE_FUNC(c->yuv2plane1, sse2, sse2, 1);
+
+        switch (c->srcFormat) {
+        case PIX_FMT_Y400A:
+            c->lumToYV12 = ff_yuyvToY_sse2;
+            if (c->alpPixBuf)
+                c->alpToYV12 = ff_uyvyToY_sse2;
+            break;
+        case PIX_FMT_YUYV422:
+            c->lumToYV12 = ff_yuyvToY_sse2;
+            c->chrToYV12 = ff_yuyvToUV_sse2;
+            break;
+        case PIX_FMT_UYVY422:
+            c->lumToYV12 = ff_uyvyToY_sse2;
+            c->chrToYV12 = ff_uyvyToUV_sse2;
+            break;
+        case PIX_FMT_NV12:
+            c->chrToYV12 = ff_nv12ToUV_sse2;
+            break;
+        case PIX_FMT_NV21:
+            c->chrToYV12 = ff_nv21ToUV_sse2;
+            break;
+        case_rgb(rgb24, RGB24, sse2);
+        case_rgb(bgr24, BGR24, sse2);
+        case_rgb(bgra,  BGRA,  sse2);
+        case_rgb(rgba,  RGBA,  sse2);
+        case_rgb(abgr,  ABGR,  sse2);
+        case_rgb(argb,  ARGB,  sse2);
+        default:
+            break;
+        }
+    }
+    if (cpu_flags & AV_CPU_FLAG_SSSE3) {
+        ASSIGN_SSE_SCALE_FUNC(c->hyScale, c->hLumFilterSize, ssse3, ssse3);
+        ASSIGN_SSE_SCALE_FUNC(c->hcScale, c->hChrFilterSize, ssse3, ssse3);
+        switch (c->srcFormat) {
+        case_rgb(rgb24, RGB24, ssse3);
+        case_rgb(bgr24, BGR24, ssse3);
+        default:
+            break;
+        }
+    }
+    if (cpu_flags & AV_CPU_FLAG_SSE4) {
+        /* Xto15 don't need special sse4 functions */
+        ASSIGN_SSE_SCALE_FUNC(c->hyScale, c->hLumFilterSize, sse4, ssse3);
+        ASSIGN_SSE_SCALE_FUNC(c->hcScale, c->hChrFilterSize, sse4, ssse3);
+        ASSIGN_VSCALEX_FUNC(c->yuv2planeX, sse4,
+                            if (!isBE(c->dstFormat)) c->yuv2planeX = ff_yuv2planeX_16_sse4);
+        if (c->dstBpc == 16 && !isBE(c->dstFormat))
+            c->yuv2plane1 = ff_yuv2plane1_16_sse4;
+    }
+
+    if (HAVE_AVX && cpu_flags & AV_CPU_FLAG_AVX) {
+        ASSIGN_VSCALEX_FUNC(c->yuv2planeX, avx,);
+        ASSIGN_VSCALE_FUNC(c->yuv2plane1, avx, avx, 1);
+
+        switch (c->srcFormat) {
+        case PIX_FMT_YUYV422:
+            c->chrToYV12 = ff_yuyvToUV_avx;
+            break;
+        case PIX_FMT_UYVY422:
+            c->chrToYV12 = ff_uyvyToUV_avx;
+            break;
+        case PIX_FMT_NV12:
+            c->chrToYV12 = ff_nv12ToUV_avx;
+            break;
+        case PIX_FMT_NV21:
+            c->chrToYV12 = ff_nv21ToUV_avx;
+            break;
+        case_rgb(rgb24, RGB24, avx);
+        case_rgb(bgr24, BGR24, avx);
+        case_rgb(bgra,  BGRA,  avx);
+        case_rgb(rgba,  RGBA,  avx);
+        case_rgb(abgr,  ABGR,  avx);
+        case_rgb(argb,  ARGB,  avx);
+        default:
+            break;
+        }
+    }
 #endif
 }

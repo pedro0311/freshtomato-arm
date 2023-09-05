@@ -41,7 +41,7 @@ static av_cold int decode_init(AVCodecContext *avctx)
 {
     JvContext *s = avctx->priv_data;
     avctx->pix_fmt = PIX_FMT_PAL8;
-    dsputil_init(&s->dsp, avctx);
+    ff_dsputil_init(&s->dsp, avctx);
     return 0;
 }
 
@@ -176,7 +176,8 @@ static int decode_frame(AVCodecContext *avctx,
 
     if (buf < buf_end) {
         for (i = 0; i < AVPALETTE_COUNT && buf + 3 <= buf_end; i++) {
-            s->palette[i] = AV_RB24(buf) << 2;
+            uint32_t pal = AV_RB24(buf);
+            s->palette[i] = 0xFF << 24 | pal << 2 | ((pal >> 4) & 0x30303);
             buf += 3;
         }
         s->palette_has_changed = 1;

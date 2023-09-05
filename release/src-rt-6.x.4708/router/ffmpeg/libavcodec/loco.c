@@ -123,6 +123,9 @@ static int loco_decode_plane(LOCOContext *l, uint8_t *data, int width, int heigh
     int val;
     int i, j;
 
+    if(buf_size<=0)
+        return -1;
+
     init_get_bits(&rc.gb, buf, buf_size*8);
     rc.save = 0;
     rc.run = 0;
@@ -163,7 +166,7 @@ static int decode_frame(AVCodecContext *avctx,
     const uint8_t *buf = avpkt->data;
     int buf_size = avpkt->size;
     LOCOContext * const l = avctx->priv_data;
-    AVFrame * const p= (AVFrame*)&l->pic;
+    AVFrame * const p = &l->pic;
     int decoded;
 
     if(p->data[0])
@@ -207,7 +210,7 @@ static int decode_frame(AVCodecContext *avctx,
         decoded = loco_decode_plane(l, p->data[0] + p->linesize[0]*(avctx->height-1) + 2, avctx->width, avctx->height,
                                     -p->linesize[0], buf, buf_size, 3);
         break;
-    case LOCO_RGBA:
+    case LOCO_CRGBA: case LOCO_RGBA:
         decoded = loco_decode_plane(l, p->data[0], avctx->width, avctx->height,
                                     p->linesize[0], buf, buf_size, 4);
         buf += decoded; buf_size -= decoded;
@@ -225,7 +228,7 @@ static int decode_frame(AVCodecContext *avctx,
     *data_size = sizeof(AVFrame);
     *(AVFrame*)data = l->pic;
 
-    return buf_size;
+    return buf_size < 0 ? -1 : buf_size;
 }
 
 static av_cold int decode_init(AVCodecContext *avctx){
@@ -288,14 +291,13 @@ static av_cold int decode_end(AVCodecContext *avctx){
 }
 
 AVCodec ff_loco_decoder = {
-    "loco",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_LOCO,
-    sizeof(LOCOContext),
-    decode_init,
-    NULL,
-    decode_end,
-    decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("LOCO"),
+    .name           = "loco",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_LOCO,
+    .priv_data_size = sizeof(LOCOContext),
+    .init           = decode_init,
+    .close          = decode_end,
+    .decode         = decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("LOCO"),
 };

@@ -29,6 +29,8 @@
 #ifndef AVCODEC_MJPEGDEC_H
 #define AVCODEC_MJPEGDEC_H
 
+#include "libavutil/log.h"
+
 #include "avcodec.h"
 #include "get_bits.h"
 #include "dsputil.h"
@@ -36,6 +38,7 @@
 #define MAX_COMPONENTS 4
 
 typedef struct MJpegDecodeContext {
+    AVClass *class;
     AVCodecContext *avctx;
     GetBitContext gb;
 
@@ -55,6 +58,9 @@ typedef struct MJpegDecodeContext {
     int ls;
     int progressive;
     int rgb;
+    int upscale_h;
+    int chroma_height;
+    int upscale_v;
     int rct;            /* standard rct */
     int pegasus_rct;    /* pegasus reversible colorspace transform */
     int bits;           /* bits per component */
@@ -106,6 +112,8 @@ typedef struct MJpegDecodeContext {
 
     uint16_t (*ljpeg_buffer)[4];
     unsigned int ljpeg_buffer_size;
+
+    int extern_huff;
 } MJpegDecodeContext;
 
 int ff_mjpeg_decode_init(AVCodecContext *avctx);

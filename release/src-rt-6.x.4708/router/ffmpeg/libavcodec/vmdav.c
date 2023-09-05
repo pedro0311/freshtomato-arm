@@ -264,7 +264,8 @@ static void vmd_decode(VmdVideoContext *s)
             r = *p++ * 4;
             g = *p++ * 4;
             b = *p++ * 4;
-            palette32[i] = (r << 16) | (g << 8) | (b);
+            palette32[i] = 0xFF << 24 | r << 16 | g << 8 | b;
+            palette32[i] |= palette32[i] >> 6 & 0x30303;
         }
     }
     if (p < p_end) {
@@ -305,7 +306,7 @@ static void vmd_decode(VmdVideoContext *s)
                     }
                 } while (ofs < frame_width);
                 if (ofs > frame_width) {
-                    av_log(s->avctx, AV_LOG_ERROR, "VMD video: offset > width (%d > %d)\n",
+                    av_log(s->avctx, AV_LOG_ERROR, "offset > width (%d > %d)\n",
                         ofs, frame_width);
                     break;
                 }
@@ -339,7 +340,7 @@ static void vmd_decode(VmdVideoContext *s)
                         if (*pb++ == 0xFF)
                             len = rle_unpack(pb, pb_end - pb, len, &dp[ofs], frame_width - ofs);
                         else {
-                        if (ofs + len > frame_width || pb_end - pb < len)
+                        if (pb_end - pb < len)
                             return;
                             memcpy(&dp[ofs], pb, len);
                         }
@@ -354,7 +355,7 @@ static void vmd_decode(VmdVideoContext *s)
                     }
                 } while (ofs < frame_width);
                 if (ofs > frame_width) {
-                    av_log(s->avctx, AV_LOG_ERROR, "VMD video: offset > width (%d > %d)\n",
+                    av_log(s->avctx, AV_LOG_ERROR, "offset > width (%d > %d)\n",
                         ofs, frame_width);
                 }
                 dp += s->frame.linesize[0];
@@ -380,7 +381,7 @@ static av_cold int vmdvideo_decode_init(AVCodecContext *avctx)
 
     /* make sure the VMD header made it */
     if (s->avctx->extradata_size != VMD_HEADER_SIZE) {
-        av_log(s->avctx, AV_LOG_ERROR, "VMD video: expected extradata size of %d\n",
+        av_log(s->avctx, AV_LOG_ERROR, "expected extradata size of %d\n",
             VMD_HEADER_SIZE);
         return -1;
     }
@@ -421,9 +422,9 @@ static int vmdvideo_decode_frame(AVCodecContext *avctx,
     if (buf_size < 16)
         return buf_size;
 
-    s->frame.reference = 1;
+    s->frame.reference = 3;
     if (avctx->get_buffer(avctx, &s->frame)) {
-        av_log(s->avctx, AV_LOG_ERROR, "VMD Video: get_buffer() failed\n");
+        av_log(s->avctx, AV_LOG_ERROR, "get_buffer() failed\n");
         return -1;
     }
 
@@ -465,9 +466,9 @@ static av_cold int vmdvideo_decode_end(AVCodecContext *avctx)
 #define BLOCK_TYPE_SILENCE  3
 
 typedef struct VmdAudioContext {
-    AVCodecContext *avctx;
+    AVFrame frame;
     int out_bps;
-    int predictors[2];
+    int chunk_size;
 } VmdAudioContext;
 
 static const uint16_t vmdaudio_table[128] = {
@@ -490,12 +491,25 @@ static av_cold int vmdaudio_decode_init(AVCodecContext *avctx)
 {
     VmdAudioContext *s = avctx->priv_data;
 
-    s->avctx = avctx;
+    if (avctx->channels < 1 || avctx->channels > 2) {
+        av_log(avctx, AV_LOG_ERROR, "invalid number of channels\n");
+        return AVERROR(EINVAL);
+    }
+    if (avctx->block_align < 1) {
+        av_log(avctx, AV_LOG_ERROR, "invalid block align\n");
+        return AVERROR(EINVAL);
+    }
+
     if (avctx->bits_per_coded_sample == 16)
         avctx->sample_fmt = AV_SAMPLE_FMT_S16;
     else
         avctx->sample_fmt = AV_SAMPLE_FMT_U8;
     s->out_bps = av_get_bytes_per_sample(avctx->sample_fmt);
+
+    s->chunk_size = avctx->block_align + avctx->channels * (s->out_bps == 2);
+
+    avcodec_get_frame_defaults(&s->frame);
+    avctx->coded_frame = &s->frame;
 
     av_log(avctx, AV_LOG_DEBUG, "%d channels, %d bits/sample, "
            "block align = %d, sample rate = %d\n",
@@ -505,56 +519,50 @@ static av_cold int vmdaudio_decode_init(AVCodecContext *avctx)
     return 0;
 }
 
-static void vmdaudio_decode_audio(VmdAudioContext *s, unsigned char *data,
-    const uint8_t *buf, int buf_size, int stereo)
+static void decode_audio_s16(int16_t *out, const uint8_t *buf, int buf_size,
+                             int channels)
 {
-    int i;
-    int chan = 0;
-    int16_t *out = (int16_t*)data;
+    int ch;
+    const uint8_t *buf_end = buf + buf_size;
+    int predictor[2];
+    int st = channels - 1;
 
-    for(i = 0; i < buf_size; i++) {
-        if(buf[i] & 0x80)
-            s->predictors[chan] -= vmdaudio_table[buf[i] & 0x7F];
+    /* decode initial raw sample */
+    for (ch = 0; ch < channels; ch++) {
+        predictor[ch] = (int16_t)AV_RL16(buf);
+        buf += 2;
+        *out++ = predictor[ch];
+    }
+
+    /* decode DPCM samples */
+    ch = 0;
+    while (buf < buf_end) {
+        uint8_t b = *buf++;
+        if (b & 0x80)
+            predictor[ch] -= vmdaudio_table[b & 0x7F];
         else
-            s->predictors[chan] += vmdaudio_table[buf[i]];
-        s->predictors[chan] = av_clip_int16(s->predictors[chan]);
-        out[i] = s->predictors[chan];
-        chan ^= stereo;
+            predictor[ch] += vmdaudio_table[b];
+        predictor[ch] = av_clip_int16(predictor[ch]);
+        *out++ = predictor[ch];
+        ch ^= st;
     }
 }
 
-static int vmdaudio_loadsound(VmdAudioContext *s, unsigned char *data,
-    const uint8_t *buf, int silent_chunks, int data_size)
-{
-    int silent_size = s->avctx->block_align * silent_chunks * s->out_bps;
-
-    if (silent_chunks) {
-        memset(data, s->out_bps == 2 ? 0x00 : 0x80, silent_size);
-        data += silent_size;
-    }
-    if (s->avctx->bits_per_coded_sample == 16)
-        vmdaudio_decode_audio(s, data, buf, data_size, s->avctx->channels == 2);
-    else {
-        /* just copy the data */
-        memcpy(data, buf, data_size);
-    }
-
-    return silent_size + data_size * s->out_bps;
-}
-
-static int vmdaudio_decode_frame(AVCodecContext *avctx,
-                                 void *data, int *data_size,
-                                 AVPacket *avpkt)
+static int vmdaudio_decode_frame(AVCodecContext *avctx, void *data,
+                                 int *got_frame_ptr, AVPacket *avpkt)
 {
     const uint8_t *buf = avpkt->data;
+    const uint8_t *buf_end;
     int buf_size = avpkt->size;
     VmdAudioContext *s = avctx->priv_data;
-    int block_type, silent_chunks;
-    unsigned char *output_samples = (unsigned char *)data;
+    int block_type, silent_chunks, audio_chunks;
+    int ret;
+    uint8_t *output_samples_u8;
+    int16_t *output_samples_s16;
 
     if (buf_size < 16) {
         av_log(avctx, AV_LOG_WARNING, "skipping small junk packet\n");
-        *data_size = 0;
+        *got_frame_ptr = 0;
         return buf_size;
     }
 
@@ -566,13 +574,16 @@ static int vmdaudio_decode_frame(AVCodecContext *avctx,
     buf      += 16;
     buf_size -= 16;
 
+    /* get number of silent chunks */
     silent_chunks = 0;
     if (block_type == BLOCK_TYPE_INITIAL) {
         uint32_t flags;
-        if (buf_size < 4)
-            return -1;
-        flags = AV_RB32(buf);
-        silent_chunks  = av_popcount(flags);
+        if (buf_size < 4) {
+            av_log(avctx, AV_LOG_ERROR, "packet is too small\n");
+            return AVERROR(EINVAL);
+        }
+        flags         = AV_RB32(buf);
+        silent_chunks = av_popcount(flags);
         buf      += 4;
         buf_size -= 4;
     } else if (block_type == BLOCK_TYPE_SILENCE) {
@@ -581,10 +592,47 @@ static int vmdaudio_decode_frame(AVCodecContext *avctx,
     }
 
     /* ensure output buffer is large enough */
-    if (*data_size < (avctx->block_align*silent_chunks + buf_size) * s->out_bps)
-        return -1;
+    audio_chunks = buf_size / s->chunk_size;
 
-    *data_size = vmdaudio_loadsound(s, output_samples, buf, silent_chunks, buf_size);
+    /* get output buffer */
+    s->frame.nb_samples = ((silent_chunks + audio_chunks) * avctx->block_align) / avctx->channels;
+    if ((ret = avctx->get_buffer(avctx, &s->frame)) < 0) {
+        av_log(avctx, AV_LOG_ERROR, "get_buffer() failed\n");
+        return ret;
+    }
+    output_samples_u8  = s->frame.data[0];
+    output_samples_s16 = (int16_t *)s->frame.data[0];
+
+    /* decode silent chunks */
+    if (silent_chunks > 0) {
+        int silent_size = avctx->block_align * silent_chunks;
+        if (s->out_bps == 2) {
+            memset(output_samples_s16, 0x00, silent_size * 2);
+            output_samples_s16 += silent_size;
+        } else {
+            memset(output_samples_u8,  0x80, silent_size);
+            output_samples_u8 += silent_size;
+        }
+    }
+
+    /* decode audio chunks */
+    if (audio_chunks > 0) {
+        buf_end = buf + buf_size;
+        while ( buf_end - buf >= s->chunk_size) {
+            if (s->out_bps == 2) {
+                decode_audio_s16(output_samples_s16, buf, s->chunk_size,
+                                 avctx->channels);
+                output_samples_s16 += avctx->block_align;
+            } else {
+                memcpy(output_samples_u8, buf, s->chunk_size);
+                output_samples_u8  += avctx->block_align;
+            }
+            buf += s->chunk_size;
+        }
+    }
+
+    *got_frame_ptr   = 1;
+    *(AVFrame *)data = s->frame;
 
     return avpkt->size;
 }
@@ -595,26 +643,24 @@ static int vmdaudio_decode_frame(AVCodecContext *avctx,
  */
 
 AVCodec ff_vmdvideo_decoder = {
-    "vmdvideo",
-    AVMEDIA_TYPE_VIDEO,
-    CODEC_ID_VMDVIDEO,
-    sizeof(VmdVideoContext),
-    vmdvideo_decode_init,
-    NULL,
-    vmdvideo_decode_end,
-    vmdvideo_decode_frame,
-    CODEC_CAP_DR1,
-    .long_name = NULL_IF_CONFIG_SMALL("Sierra VMD video"),
+    .name           = "vmdvideo",
+    .type           = AVMEDIA_TYPE_VIDEO,
+    .id             = CODEC_ID_VMDVIDEO,
+    .priv_data_size = sizeof(VmdVideoContext),
+    .init           = vmdvideo_decode_init,
+    .close          = vmdvideo_decode_end,
+    .decode         = vmdvideo_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Sierra VMD video"),
 };
 
 AVCodec ff_vmdaudio_decoder = {
-    "vmdaudio",
-    AVMEDIA_TYPE_AUDIO,
-    CODEC_ID_VMDAUDIO,
-    sizeof(VmdAudioContext),
-    vmdaudio_decode_init,
-    NULL,
-    NULL,
-    vmdaudio_decode_frame,
-    .long_name = NULL_IF_CONFIG_SMALL("Sierra VMD audio"),
+    .name           = "vmdaudio",
+    .type           = AVMEDIA_TYPE_AUDIO,
+    .id             = CODEC_ID_VMDAUDIO,
+    .priv_data_size = sizeof(VmdAudioContext),
+    .init           = vmdaudio_decode_init,
+    .decode         = vmdaudio_decode_frame,
+    .capabilities   = CODEC_CAP_DR1,
+    .long_name      = NULL_IF_CONFIG_SMALL("Sierra VMD audio"),
 };

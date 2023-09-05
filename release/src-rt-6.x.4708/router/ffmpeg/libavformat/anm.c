@@ -26,6 +26,7 @@
 
 #include "libavutil/intreadwrite.h"
 #include "avformat.h"
+#include "internal.h"
 
 typedef struct {
     int base_record;
@@ -75,8 +76,7 @@ static int find_record(const AnmDemuxContext *anm, int record)
     return AVERROR_INVALIDDATA;
 }
 
-static int read_header(AVFormatContext *s,
-                       AVFormatParameters *ap)
+static int read_header(AVFormatContext *s)
 {
     AnmDemuxContext *anm = s->priv_data;
     AVIOContext *pb = s->pb;
@@ -97,7 +97,7 @@ static int read_header(AVFormatContext *s,
         return AVERROR_INVALIDDATA;
 
     /* video stream */
-    st = av_new_stream(s, 0);
+    st = avformat_new_stream(s, NULL);
     if (!st)
         return AVERROR(ENOMEM);
     st->codec->codec_type = AVMEDIA_TYPE_VIDEO;
@@ -128,7 +128,7 @@ static int read_header(AVFormatContext *s,
 
     avio_skip(pb, 32); /* record_types */
     st->nb_frames = avio_rl32(pb);
-    av_set_pts_info(st, 64, 1, avio_rl16(pb));
+    avpriv_set_pts_info(st, 64, 1, avio_rl16(pb));
     avio_skip(pb, 58);
 
     /* color cycling and palette data */
@@ -219,10 +219,10 @@ repeat:
 }
 
 AVInputFormat ff_anm_demuxer = {
-    "anm",
-    NULL_IF_CONFIG_SMALL("Deluxe Paint Animation"),
-    sizeof(AnmDemuxContext),
-    probe,
-    read_header,
-    read_packet,
+    .name           = "anm",
+    .long_name      = NULL_IF_CONFIG_SMALL("Deluxe Paint Animation"),
+    .priv_data_size = sizeof(AnmDemuxContext),
+    .read_probe     = probe,
+    .read_header    = read_header,
+    .read_packet    = read_packet,
 };

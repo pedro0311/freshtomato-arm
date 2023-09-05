@@ -1,4 +1,4 @@
-/**
+/*
  * RTP Depacketization of MP4A-LATM, RFC 3016
  * Copyright (c) 2010 Martin Storsjo
  *
@@ -23,7 +23,6 @@
 #include "internal.h"
 #include "libavutil/avstring.h"
 #include "libavcodec/get_bits.h"
-#include <strings.h>
 
 struct PayloadContext {
     AVIOContext *dyn_buf;
@@ -168,6 +167,9 @@ static int latm_parse_sdp_line(AVFormatContext *s, int st_index,
                                PayloadContext *data, const char *line)
 {
     const char *p;
+
+    if (st_index < 0)
+        return 0;
 
     if (av_strstart(line, "fmtp:", &p))
         return ff_parse_fmtp(s->streams[st_index], data, p, parse_fmtp);
