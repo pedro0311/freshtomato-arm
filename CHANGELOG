@@ -5,6 +5,87 @@ FreshTomato-ARM Changelog
 
 
 
+2023.4          2023.09.10
+---------------------------
+
+- kernel: drivers: net: cdc_ncm: Deal with too low values of dwNtbOutMaxSize
+- SDK6: update wireless driver (dual core)
+- SDK714: update wireless driver
+- SDK5 (USBAP only): Speed up boot-up time (only cosmstic in this case / for documentation)
+- SDK7: Speed up boot-up time (~round about 23 sec) (and align to SDK714)
+- libsodium: update to latest 1.0.18-stable
+- minidlna: update to 1.3.3
+- libcurl: update to 8.2.1
+- tor: update to 0.4.7.14
+- iperf: update to 3.14
+- libjpeg-turbo: update to 3.0.0
+- rom: update CA bundle to 2023-08-22
+- gmp: update to 6.3.0
+- libjson-c: update to 0.17-20230812
+- nginx: update to 1.25.2
+- sqlite: update to 3.43.0
+- libxml2: update to 2.11.5
+- openssl: update to 1.1.1v
+- zlib: update to 1.3
+- libpng: update to 1.6.40
+- snmp: update to 5.9.4
+- flac: update to 1.4.3
+- openvpn: update to 2.6.6
+- util-linux: update to 2.39.2
+- dnsmasq: update to 3b5ddf3 (2023-09-02) snapshot
+- ffmepg: update to 0.11.5 (resolves ARM #239)
+- libffi: update to 3.4.4
+- build: Makefile: compile Tenda N60 (n60) without PROXY enabled to save space
+- build: get rid of pdureader - full of bugs, it's enough that comgt has its issues
+- build: Makefile: compile rp-pppoe and pppd with -Os flag only if we need smaller image (ie. for 4MB routers)
+- build: Makefile: compile openssl-1.1 with -Os flag only if we need smaller images (example for 4 or 8 MByte routers) - arm branch/mips MEGA & AIO will use O3
+- build: Makefile: add target AIO_Lite (y) for some routers with insufficient flash size
+- build: Makefile: add stubby to target e (VPN) instead of little used conntrack tools and mdns
+- build: Makefile: add target VPN for Netgear Router Group AC1450, R6300v2, R6250
+- build: Makefile: glib2: use already compiled pcre (in case of TCONFIG_NGINX) not the one embedded in glib2
+- Adblock (DNS filtering): remove default domain blacklist URLs and save NVRAM space for all routers (no matter if 32, 64 or 128 KB)
+- dnsmasq: set the default maximum DNS UDP packet size to 1232
+- IPv6: show option6 dns-server (RDNSS) (GUI: advanced-dhcpdns.asp)
+- Media Bridge Mode (SDK6/SDK7/SDK714): add ARPING (default 180 sec cycle) and improve stability
+- mdu: fix Cloudflare DDNS when using curl (resolves ARM #292)
+- QoS: remove default Outbound Direction configuration and save NVRAM space for all routers (no matter if 32, 64 or 128 KB)
+- GUI: Administration: Access: move "Remote Web Port Protection" to "Admin Restrictions" section; also enable it by default
+- GUI: Administration: Bandwidth Monitoring: add current date/router model/FW version to backup file
+- GUI: Administration: IP Traffic Monitoring: add current date/router model/FW version to backup file
+- GUI: Advanced: DHCP/DNS/TFTP: Add option to Show/Hide Stubby's resolvers
+- GUI: Advanced: DHCP/DNS/TFTP: hide 'IPv6 DNS Server' forms when IPv6 is disabled
+- GUI: Advanced: DHCP/DNS/TFTP: hide the rest of IPv6 options if IPv6 is disabled
+- GUI: Status: Overview: add current operator to WWAN Modem Status also for QMI modems
+- GUI: Advanced: DHCP/DNS/TFTP: hide "DHCP IPv6 lease time" options in case DHCPv6 PD
+- GUI: USB and NAS: Media Server: fix correct port in status window link when using minidlna with random port
+- GUI: Status: Overview: do not display days if they are equal to zero
+- GUI: basic-ddns.asp - provide an additional variable for the IPv6 address in custom URLs for DDNS
+- Revert "rc: services.c: start_ntpd(): run ntpd at high priority"
+- httpd: improve buffer validation (strlcpy)
+- httpd: iperf.c: sanitize host name
+- others: wwansignal: start querying the modem only if the DIAGS file exists (it means that modem is detected with diags and probably already connected)
+- others: switch4g: fix listing TTYs in QMI mode
+- others: switch4g: extend waiting time for modem switching and its redetection
+- others: use shorter /dev/null redirection
+- others: rename watchdog script to mwwatchdog to avoid confusion with the busybox applet
+- rc: dhcp.c - adjust/improve bound event and avoid memory sharing issues
+- rc: ftpd.c: Change the default ftpd admin login to 'root' to be consistent with the default router login
+- rc: dhcp.c - adjust renew event and do not restart dnsmasq for WAN side route changes (resolves ARM #287)
+- rc: init.c: remove "os_name" from nvram
+- rc: ppp.c - adjust/improve code to avoid memory sharing issues
+- rc: services.c: dnscrypt-proxy: in case of EDNS packet size is set lower than 1252 in dnsmasq, set it also here
+- rc: services.c: we don't need extra logging when minidlna logs to syslog
+- rc: wan.c - adjust/improve code to avoid memory sharing issues (+add some more comments)
+- rom: Makefile: Escape single quotes (') in dnscrypt-resolvers.csv
+- switch4g: move cdc_ether module to the end of the list 
+- Wireless Survey: optimize code for wl survey (GUI: tools-survey) - Part 2
+- wsdd2: Update patch with new location of smb.conf
+- WWAN: improve display of SINR values for QMI modems
+- www: advanced-dhcpdns.asp: remove dupe from Notes section
+- www: advanced-vlan-r1.asp: add modification to enable Native VLAN support (allow one untagged vlan per port) by default
+- www: tomato.js: allow to use onclick in elements (appended after verifyFields() essentially) created by the createFieldsTable() function
+
+
 2023.3          2023.06.25
 ---------------------------
 
