@@ -51,7 +51,7 @@ ifneq ($(NO_MKTOOLS),y)
 	#install -D $(SRCFILE)/ntfs/tools/ntfslabel $(INSTALLDIR)/usr/sbin/ntfslabel
 endif
 endif
-ifeq ($(TCONFIG_TUXERA_HFS),y)
+ifeq ($(TCONFIG_TUX_HFS),y)
 	cp -f $(SRCFILE)/hfsplus/kernel-module/thfsplus.ko $(DSTDIR)
 #	install -D $(SRCFILE)/hfsplus/tools/fsck_hfs $(INSTALLDIR)/usr/sbin/fsck_hfs
 ifneq ($(NO_MKTOOLS),y)

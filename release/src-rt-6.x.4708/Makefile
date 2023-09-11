@@ -438,8 +438,8 @@ define RouterOptions
 			echo "TCONFIG_HFS=y" >>$(1); \
 		fi; \
 		if [ "$(TUXERA_HFS)" = "y" ]; then \
-			sed -i "/TCONFIG_TUXERA_HFS/d" $(1); \
-			echo "TCONFIG_TUXERA_HFS=y" >>$(1); \
+			sed -i "/TCONFIG_TUX_HFS/d" $(1); \
+			echo "TCONFIG_TUX_HFS=y" >>$(1); \
 		fi; \
 		if [ "$(MEDIASRV)" = "y" ]; then \
 			sed -i "/TCONFIG_MEDIA_SERVER/d" $(1); \

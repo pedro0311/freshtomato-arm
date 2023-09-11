@@ -43,7 +43,7 @@ config TCONFIG_JFFS2
 	default y
 
 config TCONFIG_JFFSV1
-	bool "  Use JFFSv1 (if not selected, JFFS2 is used)"
+	bool "Use JFFSv1 (if not selected, JFFS2 is used)"
 	depends on TCONFIG_JFFS2
 	default y
 
@@ -56,7 +56,7 @@ config TCONFIG_L7
 	default y
 
 config TCONFIG_L7PAT
-	bool "  Standard Layer 7 Patterns"
+	bool "Standard Layer 7 Patterns"
 	depends on TCONFIG_L7
 	default y
 
@@ -94,6 +94,56 @@ config TCONFIG_USB
 	bool "USB Support"
 	default y
 
+config TCONFIG_MEDIA_SERVER
+	bool "Media Server (MiniDLNA)"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_SAMBASRV
+	bool "Samba File Sharing"
+	depends on TCONFIG_USB
+	default y
+
+config TCONFIG_USB_EXTRAS
+	bool "Additional modules and utilities"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_NTFS
+	bool "NTFS-3g Support"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_UPS
+	bool "UPS Monitor"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_MICROSD
+	bool "Support SD card (RT-N66u only)"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_USBAP
+	bool "Include wl_high module"
+	depends on TCONFIG_USB
+	default n
+
+config TCONFIG_REMOVE_USBAPP
+	bool "Remove USB Application (samba/ftp/usb support page)"
+	depends on TCONFIG_USBAP
+	default n
+
+config TCONFIG_FTP
+	bool "FTP Server"
+	depends on TCONFIG_USB
+	default y
+
+config TCONFIG_FTP_SSL
+	bool "FTP SSL Support"
+	depends on TCONFIG_FTP
+	default n
+
 config TCONFIG_NOCAT
 	bool "NoCat Splash"
 	default n
@@ -102,76 +152,41 @@ config TCONFIG_NGINX
 	bool "NGinX Web Server"
 	default n
 
-config TCONFIG_MEDIA_SERVER
-	bool "Media Server (MiniDLNA)"
-	depends on TCONFIG_USB
-	default n
-
-config TCONFIG_FTP
-	bool "  FTP Server"
-	depends on TCONFIG_USB
-	default y
-
-config TCONFIG_FTP_SSL
-	bool "    FTP SSL Support"
-	depends on TCONFIG_FTP
-	default n
-
-config TCONFIG_SAMBASRV
-	bool "  Samba File Sharing"
-	depends on TCONFIG_USB
-	default y
-
-config TCONFIG_USB_EXTRAS
-	bool "  Additional modules and utilities"
-	depends on TCONFIG_USB
-	default n
-
-config TCONFIG_NTFS
-	bool "  NTFS-3g Support"
-	depends on TCONFIG_USB
+config TCONFIG_BBT
+	bool "Bittorrent client binaries only"
 	default n
 
 config TCONFIG_BT
-	bool "  Bittorrent client gui only"
-	default n
-
-config TCONFIG_BBT
-	bool "  Bittorrent client binaries only"
+	bool "Bittorrent client gui only"
 	default n
 
 config TCONFIG_TR_EXTRAS
-	bool "  Transmission extra tools"
+	bool "Transmission extra tools"
 	default n
 	depends on TCONFIG_BT
 
 config TCONFIG_NFS
-	bool "  NFS Server"
+	bool "NFS Server"
 	default n
 
 config TCONFIG_SNMP
-	bool "  SNMP"
+	bool "SNMP"
 	default n
 
 config TCONFIG_HFS
-	bool "  HFS/HFS+ filesystem support "
-	default n
-
-config TCONFIG_UPS
-	bool "  UPS Monitor"
-	depends on TCONFIG_USB
+	bool "HFS/HFS+ filesystem support"
 	default n
 
 config TCONFIG_NANO
-	bool "  NANO - user-friendly file editor"
+	bool "NANO - user-friendly file editor"
 	default n
 
 config TCONFIG_DNSCRYPT
-	bool "  DNScrypt-proxy"
+	bool "DNScrypt-proxy"
 	default n
 
 config TCONFIG_STUBBY
-	bool "  Stubby - DNS-over-TLS resolver"
+	bool "Stubby - DNS-over-TLS resolver"
 	default n
 
 config TCONFIG_NVRAM_64K
@@ -187,7 +202,7 @@ config TCONFIG_DRAM_512M
 	default n
 
 config TCONFIG_TOR
-	bool "  TOR Project"
+	bool "TOR Project"
 	default n
 
 config TCONFIG_IPSEC
@@ -198,23 +213,8 @@ config TCONFIG_RAID
 	bool "RAID Support: mdadm plus md modules"
 	default n
 
-config TCONFIG_MICROSD
-	bool "Support SD card (RT-N66u only)"
-	depends on TCONFIG_USB
-	default n
-
 config TCONFIG_AIO
 	bool "Flag to detect AIO target"
-	default n
-
-config TCONFIG_USBAP
-	bool "Include wl_high module"
-	depends on TCONFIG_USB
-	default n
-
-config TCONFIG_REMOVE_USBAPP
-	bool "Remove USB Application (samba/ftp/usb support page)"
-	depends on TCONFIG_USBAP
 	default n
 
 config TCONFIG_CTF
@@ -225,6 +225,10 @@ config TCONFIG_NAND
 	bool "NAND flash support"
 	default n
 
+config TCONFIG_TUX_HFS
+	bool "Tuxera HFS/HFS+ driver for Asus routers"
+	default n
+
 config TCONFIG_UFSDA
 	bool "Paragon NTFS driver for Asus routers"
 	default n
@@ -233,12 +237,18 @@ config TCONFIG_TUXERA
 	bool "Tuxera NTFS driver for Asus routers"
 	default n
 
-config TCONFIG_TUXERA_HFS
-	bool "Tuxera HFS/HFS+ driver for Asus routers"
+config TCONFIG_BCMARM
+	bool "BCM ARM"
 	default n
 
-config TCONFIG_BCMARM
-	bool "Bcm Arm"
+config TCONFIG_BCM7
+	bool "BCM SDK 7"
+	depends on TCONFIG_BCMARM
+	default n
+
+config TCONFIG_BCM714
+	bool "BCM SDK 7.14"
+	depends on TCONFIG_BCMARM
 	default n
 
 config TCONFIG_BCMWL6
@@ -246,18 +256,8 @@ config TCONFIG_BCMWL6
 	default n
 
 config TCONFIG_BCMWL6A
-	bool "BCM sdk 6.37"
+	bool "BCM SDK 6.37"
 	depends on TCONFIG_BCMARM && TCONFIG_BCMWL6
-	default n
-
-config TCONFIG_BCM7
-	bool "BCM sdk 7"
-	depends on TCONFIG_BCMARM
-	default n
-
-config TCONFIG_BCM714
-	bool "BCM sdk 7.14"
-	depends on TCONFIG_BCMARM
 	default n
 
 config TCONFIG_BCMSMP
@@ -269,15 +269,15 @@ config TCONFIG_AC3200
 	default n
 
 config TCONFIG_AC5300
-	bool "Tri-Band router SDK7.14 (AC5300)"
+	bool "Tri-Band router SDK 7.14 (AC5300)"
 	default n
 
 config TCONFIG_DHDAP
-	bool "Bcm7 dhdap"
+	bool "BCM7 dhdap"
 	default n
 
 config TCONFIG_GMAC3
-	bool "Bcm7 gmac3"
+	bool "BCM7 gmac3"
 	default n
 
 config TCONFIG_PROXYSTA
@@ -285,7 +285,7 @@ config TCONFIG_PROXYSTA
 	default n
 
 config TCONFIG_DPSTA
-	bool "Bcm7 dpsta"
+	bool "BCM7 dpsta"
 	default n
 
 config TCONFIG_GROCTRL
@@ -297,7 +297,7 @@ config TCONFIG_BCMFA
 	default n
 
 config TCONFIG_5301X
-	bool "Bcm 5301x"
+	bool "BCM 5301x"
 	default y
 
 config TCONFIG_BCMDCS
