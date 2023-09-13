@@ -71,7 +71,8 @@ RUN apt-get update \
   wget \
   util-linux \
   bsdmainutils \
-  && dpkg --add-architecture i386 \
+  autoconf-archive \
+&& dpkg --add-architecture i386 \
   && apt-get update \
   && apt-get install --no-install-suggests --no-install-recommends -y \
   libelf1:i386 \
