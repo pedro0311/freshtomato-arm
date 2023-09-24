@@ -2865,8 +2865,6 @@ void start_services(void)
 	start_mysql(0);
 #endif
 	start_cron();
-	start_rstats(0);
-	start_cstats(0);
 #ifdef TCONFIG_PPTPD
 	start_pptpd(0);
 #endif
@@ -2893,6 +2891,8 @@ void start_services(void)
 	/* do LED setup for Router */
 	led_setup();
 #endif
+	start_rstats(0);
+	start_cstats(0);
 #ifdef TCONFIG_FANCTRL
 	start_phy_tempsense();
 #endif
@@ -2921,6 +2921,8 @@ void stop_services(void)
 	stop_dhcpc_lan(); /* stop very early */
 	clear_resolv();
 	stop_ntpd();
+	stop_rstats();
+	stop_cstats();
 #ifdef TCONFIG_FANCTRL
 	stop_phy_tempsense();
 #endif
@@ -2950,8 +2952,6 @@ void stop_services(void)
 	stop_pptpd();
 #endif
 	stop_sched();
-	stop_rstats();
-	stop_cstats();
 	stop_cron();
 #ifdef TCONFIG_NGINX
 	stop_mysql();
@@ -3320,6 +3320,8 @@ TOP:
 			nvram_set("g_upgrade", "1");
 			stop_sched();
 			stop_cron();
+			killall("rstats", SIGTERM);
+			killall("cstats", SIGTERM);
 #ifdef TCONFIG_USB
 			restart_nas_services(1, 0); /* Samba, FTP and Media Server */
 #endif
@@ -3340,8 +3342,6 @@ TOP:
 #ifdef TCONFIG_IRQBALANCE
 			stop_irqbalance();
 #endif
-			killall("rstats", SIGTERM);
-			killall("cstats", SIGTERM);
 			killall("buttons", SIGTERM);
 			if (!nvram_get_int("remote_upgrade")) {
 				killall("xl2tpd", SIGTERM);
