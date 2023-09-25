@@ -11,7 +11,7 @@
      int       listener;
 --- iperf/src/iperf_api.c
 +++ iperf/src/iperf_api.c
-@@ -1084,6 +1084,7 @@
+@@ -1108,6 +1108,7 @@
  #endif
  	{"pidfile", required_argument, NULL, 'I'},
  	{"logfile", required_argument, NULL, OPT_LOGFILE},
@@ -19,7 +19,7 @@
  	{"forceflush", no_argument, NULL, OPT_FORCEFLUSH},
  	{"get-server-output", no_argument, NULL, OPT_GET_SERVER_OUTPUT},
  	{"udp-counters-64bit", no_argument, NULL, OPT_UDP_COUNTERS_64BIT},
-@@ -1128,7 +1129,7 @@
+@@ -1152,7 +1153,7 @@
      char *client_username = NULL, *client_rsa_public_key = NULL, *server_rsa_private_key = NULL;
  #endif /* HAVE_SSL */
  
@@ -28,7 +28,7 @@
          switch (flag) {
              case 'p':
  		portno = atoi(optarg);
-@@ -1530,6 +1531,9 @@
+@@ -1554,6 +1555,9 @@
  	    case OPT_LOGFILE:
  		test->logfile = strdup(optarg);
  		break;
@@ -38,7 +38,7 @@
  	    case OPT_FORCEFLUSH:
  		test->forceflush = 1;
  		break;
-@@ -3335,6 +3339,44 @@
+@@ -3359,6 +3363,44 @@
      }
  }
  
@@ -83,7 +83,7 @@
  /**
   * Print intermediate results during a test (interval report).
   * Uses print_interval_results to print the results for each stream,
-@@ -4110,6 +4152,7 @@
+@@ -4134,6 +4176,7 @@
          case STREAM_RUNNING:
              /* print interval results for each stream */
              iperf_print_intermediate(test);
@@ -91,7 +91,7 @@
              break;
          case TEST_END:
          case DISPLAY_RESULTS:
-@@ -4708,6 +4751,18 @@
+@@ -4732,6 +4775,18 @@
      return 0;
  }
  
@@ -120,7 +120,7 @@
  
  /* states */
  #define TEST_START 1
-@@ -347,6 +348,7 @@
+@@ -351,6 +352,7 @@
  int iperf_create_pidfile(struct iperf_test *);
  int iperf_delete_pidfile(struct iperf_test *);
  void iperf_check_total_rate(struct iperf_test *, iperf_size_t);
