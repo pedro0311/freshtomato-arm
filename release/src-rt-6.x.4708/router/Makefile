@@ -742,6 +742,9 @@ endif
 ifneq ($(TCONFIG_L7),y)
 	rm -f $(TARGETDIR)/usr/lib/*tables/libipt_layer7.so
 endif
+ifeq ($(TCONFIG_TUXERA),y)
+	cd $(TARGETDIR)/usr/sbin && ln -sf ntfsck fsck.ntfs
+endif
 
 # uClibc
 	install $(LIBDIR)/ld-uClibc.so.0 $(TARGETDIR)/lib/
@@ -3792,6 +3795,7 @@ zfs-install:
 	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
+	cd $(INSTALLDIR)/zfs/usr/sbin/ && ln -sf zfs fsck.zfs
 
 zfs-clean:
 	-@$(MAKE) -C zfs clean
