@@ -3795,7 +3795,7 @@ zfs-install:
 	install -D zfs/cmd/zpool/zpool $(INSTALLDIR)/zfs/usr/sbin/zpool
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zfs
 	$(STRIP) $(INSTALLDIR)/zfs/usr/sbin/zpool
-	cd $(INSTALLDIR)/zfs/usr/sbin/ && ln -sf zfs fsck.zfs
+	cd $(INSTALLDIR)/zfs/usr/sbin/ && ln -sf zpool fsck.zpool
 
 zfs-clean:
 	-@$(MAKE) -C zfs clean
