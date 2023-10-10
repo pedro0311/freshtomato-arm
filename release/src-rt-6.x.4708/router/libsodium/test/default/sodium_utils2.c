@@ -29,6 +29,9 @@ segv_handler(int sig)
     printf("Intentional segfault / bus error caught\n");
     printf("OK\n");
 #ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, SIG_DFL);
+# endif
 # ifdef SIGSEGV
     signal(SIGSEGV, SIG_DFL);
 # endif
@@ -45,9 +48,9 @@ segv_handler(int sig)
 int
 main(void)
 {
-    void *       buf;
-    size_t       size;
-    unsigned int i;
+    void         *buf;
+    size_t        size;
+    unsigned int  i;
 
 #ifdef BENCHMARKS
     return 0;
@@ -82,6 +85,9 @@ main(void)
     }
     printf("OK\n");
 #ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, segv_handler);
+# endif
 # ifdef SIGSEGV
     signal(SIGSEGV, segv_handler);
 # endif

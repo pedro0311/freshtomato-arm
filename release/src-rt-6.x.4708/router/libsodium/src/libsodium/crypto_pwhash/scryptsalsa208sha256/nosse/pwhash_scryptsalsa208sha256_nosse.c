@@ -49,17 +49,9 @@ blkxor(uint32_t *dest, const uint32_t *src, size_t len)
 {
     size_t i;
 
-#if ARCH_BITS == 32
     for (i = 0; i < len * 16; i++) {
         dest[i] ^= src[i];
     }
-#else
-    uint64_t       *dest_ = (uint64_t *) (void *) dest;
-    const uint64_t *src_  = (const uint64_t *) (const void *) src;
-    for (i = 0; i < len * 8; i++) {
-        dest_[i] ^= src_[i];
-    }
-#endif
 }
 
 /*
@@ -163,9 +155,9 @@ blockmix_salsa8(const uint32_t *Bin, uint32_t *Bout, uint32_t *X, size_t r)
  * Return the result of parsing B_{2r-1} as a little-endian integer.
  */
 static inline uint64_t
-integerify(const void *B, size_t r)
+integerify(const uint32_t *B, size_t r)
 {
-    const uint32_t *X = ((const uint32_t *) B) + (2 * r - 1) * 16;
+    const uint32_t *X = B + (2 * r - 1) * 16;
 
     return ((uint64_t) (X[1]) << 32) + X[0];
 }

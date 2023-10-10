@@ -17,7 +17,7 @@
 #if defined(HAVE_TMMINTRIN_H) && defined(HAVE_WMMINTRIN_H)
 
 #ifdef __GNUC__
-#pragma GCC target("aes,pclmul,avx")
+#pragma GCC target("avx,aes,pclmul")
 #endif
 
 #if !defined(_MSC_VER) || _MSC_VER < 1800
@@ -442,6 +442,11 @@ aes_gcm_encrypt_generic(const State *st, GHash *sth, unsigned char mac[ABYTES], 
             counter = incr_counters(rev_counters, counter, PARALLEL_BLOCKS);
             encrypt_xor_wide(st, dst + i, src + i, rev_counters);
 
+            PREFETCH_READ(src + i + PARALLEL_BLOCKS * 16);
+#if PARALLEL_BLOCKS >= 64 / 16
+            PREFETCH_READ(src + i + PARALLEL_BLOCKS * 16 + 64);
+#endif
+
             pi = i - PARALLEL_BLOCKS * 16;
             u  = gh_update0(sth, dst + pi, st->hx[2 * PARALLEL_BLOCKS - 1 - 0]);
             for (j = 1; j < PARALLEL_BLOCKS; j += 1) {
@@ -452,6 +457,10 @@ aes_gcm_encrypt_generic(const State *st, GHash *sth, unsigned char mac[ABYTES], 
             encrypt_xor_wide(st, dst + i + PARALLEL_BLOCKS * 16, src + i + PARALLEL_BLOCKS * 16,
                              rev_counters);
 
+            PREFETCH_READ(src + i + 2 * PARALLEL_BLOCKS * 16);
+#if PARALLEL_BLOCKS >= 64 / 16
+            PREFETCH_READ(src + i + 2 * PARALLEL_BLOCKS * 16 + 64);
+#endif
             pi = i;
             for (j = 0; j < PARALLEL_BLOCKS; j += 1) {
                 gh_update(&u, dst + pi + j * 16, st->hx[PARALLEL_BLOCKS - 1 - j]);
@@ -746,7 +755,7 @@ crypto_aead_aes256gcm_encrypt_detached_afternm(unsigned char *c, unsigned char *
     }
     gh_required_blocks = required_blocks(ad_len, m_len);
     if (gh_required_blocks == 0) {
-        memset(mac, 0x00, ABYTES);
+        memset(mac, 0xd0, ABYTES);
         memset(c, 0, m_len);
         return -1;
     }
@@ -921,7 +930,7 @@ crypto_aead_aes256gcm_decrypt_detached_afternm(unsigned char *m, unsigned char *
 
     if (crypto_verify_16(mac, computed_mac) != 0) {
         sodium_memzero(computed_mac, sizeof computed_mac);
-        memset(m, 0x00, m_len);
+        memset(m, 0xd0, m_len);
         return -1;
     }
     return 0;
@@ -997,152 +1006,4 @@ crypto_aead_aes256gcm_is_available(void)
     return sodium_runtime_has_pclmul() & sodium_runtime_has_aesni() & sodium_runtime_has_avx();
 }
 
-#else
-
-#ifndef ENOSYS
-#define ENOSYS ENXIO
 #endif
-
-int
-crypto_aead_aes256gcm_encrypt_detached(unsigned char *c, unsigned char *mac,
-                                       unsigned long long *maclen_p, const unsigned char *m,
-                                       unsigned long long mlen, const unsigned char *ad,
-                                       unsigned long long adlen, const unsigned char *nsec,
-                                       const unsigned char *npub, const unsigned char *k)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_encrypt(unsigned char *c, unsigned long long *clen_p, const unsigned char *m,
-                              unsigned long long mlen, const unsigned char *ad,
-                              unsigned long long adlen, const unsigned char *nsec,
-                              const unsigned char *npub, const unsigned char *k)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_decrypt_detached(unsigned char *m, unsigned char *nsec,
-                                       const unsigned char *c, unsigned long long clen,
-                                       const unsigned char *mac, const unsigned char *ad,
-                                       unsigned long long adlen, const unsigned char *npub,
-                                       const unsigned char *k)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_decrypt(unsigned char *m, unsigned long long *mlen_p, unsigned char *nsec,
-                              const unsigned char *c, unsigned long long clen,
-                              const unsigned char *ad, unsigned long long adlen,
-                              const unsigned char *npub, const unsigned char *k)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_beforenm(crypto_aead_aes256gcm_state *st_, const unsigned char *k)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_encrypt_detached_afternm(unsigned char *c, unsigned char *mac,
-                                               unsigned long long *maclen_p, const unsigned char *m,
-                                               unsigned long long mlen, const unsigned char *ad,
-                                               unsigned long long adlen, const unsigned char *nsec,
-                                               const unsigned char               *npub,
-                                               const crypto_aead_aes256gcm_state *st_)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_encrypt_afternm(unsigned char *c, unsigned long long *clen_p,
-                                      const unsigned char *m, unsigned long long mlen,
-                                      const unsigned char *ad, unsigned long long adlen,
-                                      const unsigned char *nsec, const unsigned char *npub,
-                                      const crypto_aead_aes256gcm_state *st_)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_decrypt_detached_afternm(unsigned char *m, unsigned char *nsec,
-                                               const unsigned char *c, unsigned long long clen,
-                                               const unsigned char *mac, const unsigned char *ad,
-                                               unsigned long long adlen, const unsigned char *npub,
-                                               const crypto_aead_aes256gcm_state *st_)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_decrypt_afternm(unsigned char *m, unsigned long long *mlen_p,
-                                      unsigned char *nsec, const unsigned char *c,
-                                      unsigned long long clen, const unsigned char *ad,
-                                      unsigned long long adlen, const unsigned char *npub,
-                                      const crypto_aead_aes256gcm_state *st_)
-{
-    errno = ENOSYS;
-    return -1;
-}
-
-int
-crypto_aead_aes256gcm_is_available(void)
-{
-    return 0;
-}
-
-#endif
-
-size_t
-crypto_aead_aes256gcm_keybytes(void)
-{
-    return crypto_aead_aes256gcm_KEYBYTES;
-}
-
-size_t
-crypto_aead_aes256gcm_nsecbytes(void)
-{
-    return crypto_aead_aes256gcm_NSECBYTES;
-}
-
-size_t
-crypto_aead_aes256gcm_npubbytes(void)
-{
-    return crypto_aead_aes256gcm_NPUBBYTES;
-}
-
-size_t
-crypto_aead_aes256gcm_abytes(void)
-{
-    return crypto_aead_aes256gcm_ABYTES;
-}
-
-size_t
-crypto_aead_aes256gcm_statebytes(void)
-{
-    return (sizeof(crypto_aead_aes256gcm_state) + (size_t) 15U) & ~(size_t) 15U;
-}
-
-size_t
-crypto_aead_aes256gcm_messagebytes_max(void)
-{
-    return crypto_aead_aes256gcm_MESSAGEBYTES_MAX;
-}
-
-void
-crypto_aead_aes256gcm_keygen(unsigned char k[crypto_aead_aes256gcm_KEYBYTES])
-{
-    randombytes_buf(k, crypto_aead_aes256gcm_KEYBYTES);
-}

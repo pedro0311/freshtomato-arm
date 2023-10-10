@@ -146,6 +146,7 @@ CCASFLAGS = @CCASFLAGS@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
 CFLAGS_AESNI = @CFLAGS_AESNI@
+CFLAGS_ARMCRYPTO = @CFLAGS_ARMCRYPTO@
 CFLAGS_AVX = @CFLAGS_AVX@
 CFLAGS_AVX2 = @CFLAGS_AVX2@
 CFLAGS_AVX512F = @CFLAGS_AVX512F@
@@ -369,7 +370,14 @@ EXTRA_DIST = \
 	msvc/vs2019/libsodium/libsodium.xml \
 	msvc/vs2019/libsodium.import.props \
 	msvc/vs2019/libsodium.import.xml \
-	msvc/vs2019/libsodium.sln
+	msvc/vs2022/libsodium.sln \
+	msvc/vs2022/libsodium/libsodium.props \
+	msvc/vs2022/libsodium/libsodium.vcxproj \
+	msvc/vs2022/libsodium/libsodium.vcxproj.filters \
+	msvc/vs2022/libsodium/libsodium.xml \
+	msvc/vs2022/libsodium.import.props \
+	msvc/vs2022/libsodium.import.xml \
+	msvc/vs2022/libsodium.sln
 
 all: all-am
 

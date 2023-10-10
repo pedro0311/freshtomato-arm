@@ -15,9 +15,11 @@ export WATCHOS64_PREFIX="${PREFIX}/tmp/watchos64"
 export WATCHOS_SIMULATOR_ARM64_PREFIX="${PREFIX}/tmp/watchos-simulator-arm64"
 export WATCHOS_SIMULATOR_I386_PREFIX="${PREFIX}/tmp/watchos-simulator-i386"
 export WATCHOS_SIMULATOR_X86_64_PREFIX="${PREFIX}/tmp/watchos-simulator-x86_64"
-export TVOS64_PREFIX="${PREFIX}/tmp/tvos64"
+export TVOS_PREFIX="${PREFIX}/tmp/tvos"
 export TVOS_SIMULATOR_ARM64_PREFIX="${PREFIX}/tmp/tvos-simulator-arm64"
 export TVOS_SIMULATOR_X86_64_PREFIX="${PREFIX}/tmp/tvos-simulator-x86_64"
+export VISIONOS_PREFIX="${PREFIX}/tmp/visionos"
+export VISIONOS_SIMULATOR_PREFIX="${PREFIX}/tmp/visionos-simulator"
 export CATALYST_ARM64_PREFIX="${PREFIX}/tmp/catalyst-arm64"
 export CATALYST_X86_64_PREFIX="${PREFIX}/tmp/catalyst-x86_64"
 export LOG_FILE="${PREFIX}/tmp/build_log"
@@ -40,7 +42,7 @@ echo "Define the LIBSODIUM_FULL_BUILD environment variable to build the full"
 echo "library (including all deprecated/undocumented/low-level functions)."
 echo
 echo "Define the LIBSODIUM_SKIP_SIMULATORS environment variable to skip building"
-echo "the simulators libraries (iOS, watchOS, tvOS simulators)."
+echo "the simulators libraries (iOS, watchOS, tvOS, visionOS simulators)."
 echo
 
 if [ -z "$LIBSODIUM_FULL_BUILD" ]; then
@@ -69,17 +71,17 @@ build_macos() {
 
   ## macOS arm64
   if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
-    export CFLAGS="-O2 -arch arm64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
+    export CFLAGS="-Ofast -arch arm64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
     export LDFLAGS="-arch arm64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
 
     make distclean >/dev/null 2>&1
-    ./configure --host=arm-apple-darwin20 --prefix="$MACOS_ARM64_PREFIX" \
+    ./configure --host=arm-apple-darwin23 --prefix="$MACOS_ARM64_PREFIX" \
       ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
     make -j${PROCESSORS} install || exit 1
   fi
 
   ## macOS x86_64
-  export CFLAGS="-O2 -arch x86_64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch x86_64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
   export LDFLAGS="-arch x86_64 -mmacosx-version-min=${MACOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -94,7 +96,7 @@ build_ios() {
   export SDK="${BASEDIR}/SDKs/iPhoneOS.sdk"
 
   ## 32-bit iOS
-  export CFLAGS="-O2 -mthumb -arch armv7 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -mthumb -arch armv7 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
   export LDFLAGS="-mthumb -arch armv7 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -103,7 +105,7 @@ build_ios() {
   make -j${PROCESSORS} install || exit 1
 
   ## 32-bit armv7s iOS
-  export CFLAGS="-O2 -mthumb -arch armv7s -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -mthumb -arch armv7s -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
   export LDFLAGS="-mthumb -arch armv7s -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -112,7 +114,7 @@ build_ios() {
   make -j${PROCESSORS} install || exit 1
 
   ## 64-bit iOS
-  export CFLAGS="-O2 -arch arm64 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
   export LDFLAGS="-arch arm64 -isysroot ${SDK} -mios-version-min=${IOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -128,17 +130,17 @@ build_ios_simulator() {
 
   ## arm64 simulator
   if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
-    export CFLAGS="-O2 -arch arm64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
+    export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
     export LDFLAGS="-arch arm64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
 
     make distclean >/dev/null 2>&1
-    ./configure --host=arm-apple-darwin20 --prefix="$IOS_SIMULATOR_ARM64_PREFIX" \
+    ./configure --host=arm-apple-darwin23 --prefix="$IOS_SIMULATOR_ARM64_PREFIX" \
       ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
     make -j${PROCESSORS} install || exit 1
   fi
 
   ## i386 simulator
-  export CFLAGS="-O2 -arch i386 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch i386 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
   export LDFLAGS="-arch i386 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -147,7 +149,7 @@ build_ios_simulator() {
   make -j${PROCESSORS} install || exit 1
 
   ## x86_64 simulator
-  export CFLAGS="-O2 -arch x86_64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch x86_64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
   export LDFLAGS="-arch x86_64 -isysroot ${SDK} -mios-simulator-version-min=${IOS_SIMULATOR_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -162,7 +164,7 @@ build_watchos() {
   export SDK="${BASEDIR}/SDKs/WatchOS.sdk"
 
   # 32-bit watchOS
-  export CFLAGS="-O2 -mthumb -arch armv7k -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -mthumb -arch armv7k -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
   export LDFLAGS="-mthumb -arch armv7k -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -171,7 +173,7 @@ build_watchos() {
   make -j${PROCESSORS} install || exit 1
 
   ## 64-bit arm64_32 watchOS
-  export CFLAGS="-O2 -mthumb -arch arm64_32 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -mthumb -arch arm64_32 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
   export LDFLAGS="-mthumb -arch arm64_32 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -180,7 +182,7 @@ build_watchos() {
   make -j${PROCESSORS} install || exit 1
 
   ## 64-bit arm64 watchOS
-  export CFLAGS="-O2 -mthumb -arch arm64 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -mthumb -arch arm64 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
   export LDFLAGS="-mthumb -arch arm64 -isysroot ${SDK} -mwatchos-version-min=${WATCHOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -196,17 +198,17 @@ build_watchos_simulator() {
 
   ## arm64 simulator
   if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
-    export CFLAGS="-O2 -arch arm64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
+    export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
     export LDFLAGS="-arch arm64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
 
     make distclean >/dev/null 2>&1
-    ./configure --host=arm-apple-darwin20 --prefix="$WATCHOS_SIMULATOR_ARM64_PREFIX" \
+    ./configure --host=arm-apple-darwin23 --prefix="$WATCHOS_SIMULATOR_ARM64_PREFIX" \
       ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
     make -j${PROCESSORS} install || exit 1
   fi
 
   ## i386 simulator
-  export CFLAGS="-O2 -arch i386 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch i386 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
   export LDFLAGS="-arch i386 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -215,7 +217,7 @@ build_watchos_simulator() {
   make -j${PROCESSORS} install || exit 1
 
   ## x86_64 simulator
-  export CFLAGS="-O2 -arch x86_64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch x86_64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
   export LDFLAGS="-arch x86_64 -isysroot ${SDK} -mwatchos-simulator-version-min=${WATCHOS_SIMULATOR_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
@@ -230,11 +232,11 @@ build_tvos() {
   export SDK="${BASEDIR}/SDKs/AppleTVOS.sdk"
 
   ## 64-bit tvOS
-  export CFLAGS="-O2 -arch arm64 -isysroot ${SDK} -mtvos-version-min=${TVOS_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK} -mtvos-version-min=${TVOS_VERSION_MIN}"
   export LDFLAGS="-arch arm64 -isysroot ${SDK} -mtvos-version-min=${TVOS_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
-  ./configure --host=arm-apple-darwin10 --prefix="$TVOS64_PREFIX" \
+  ./configure --host=arm-apple-darwin10 --prefix="$TVOS_PREFIX" \
     ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
   make -j${PROCESSORS} install || exit 1
 }
@@ -246,23 +248,53 @@ build_tvos_simulator() {
 
   ## arm64 simulator
   if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
-    export CFLAGS="-O2 -arch arm64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
+    export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
     export LDFLAGS="-arch arm64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
 
     make distclean >/dev/null 2>&1
-    ./configure --host=arm-apple-darwin20 --prefix="$TVOS_SIMULATOR_ARM64_PREFIX" \
+    ./configure --host=arm-apple-darwin23 --prefix="$TVOS_SIMULATOR_ARM64_PREFIX" \
       ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
     make -j${PROCESSORS} install || exit 1
   fi
 
   ## x86_64 simulator
-  export CFLAGS="-O2 -arch x86_64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
+  export CFLAGS="-Ofast -arch x86_64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
   export LDFLAGS="-arch x86_64 -isysroot ${SDK} -mtvos-simulator-version-min=${TVOS_SIMULATOR_VERSION_MIN}"
 
   make distclean >/dev/null 2>&1
   ./configure --host=x86_64-apple-darwin10 --prefix="$TVOS_SIMULATOR_X86_64_PREFIX" \
     ${LIBSODIUM_ENABLE_MINIMAL_FLAG}
   make -j${PROCESSORS} install || exit 1
+}
+
+build_visionos() {
+  export BASEDIR="${XCODEDIR}/Platforms/XROS.platform/Developer"
+  export PATH="${BASEDIR}/usr/bin:$BASEDIR/usr/sbin:$PATH"
+  export SDK="${BASEDIR}/SDKs/XROS.sdk"
+
+  export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK}"
+  export LDFLAGS="-arch arm64 -isysroot ${SDK}"
+
+  make distclean >/dev/null 2>&1
+  ./configure --host=arm-apple-darwin10 --prefix="$VISIONOS_PREFIX" \
+    ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
+  make -j${PROCESSORS} install || exit 1
+}
+
+build_visionos_simulator() {
+  export BASEDIR="${XCODEDIR}/Platforms/XRSimulator.platform/Developer"
+  export PATH="${BASEDIR}/usr/bin:$BASEDIR/usr/sbin:$PATH"
+  export SDK="${BASEDIR}/SDKs/XRSimulator.sdk"
+
+  if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
+    export CFLAGS="-Ofast -arch arm64 -isysroot ${SDK}"
+    export LDFLAGS="-arch arm64 -isysroot ${SDK}"
+
+    make distclean >/dev/null 2>&1
+    ./configure --host=arm-apple-darwin23 --prefix="$VISIONOS_SIMULATOR_PREFIX" \
+      ${LIBSODIUM_ENABLE_MINIMAL_FLAG} || exit 1
+    make -j${PROCESSORS} install || exit 1
+  fi
 }
 
 build_catalyst() {
@@ -272,7 +304,7 @@ build_catalyst() {
 
   ## arm64 catalyst
   if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
-    export CFLAGS="-O2 -arch arm64 -target arm64-apple-ios13.1-macabi -isysroot ${SDK}"
+    export CFLAGS="-Ofast -arch arm64 -target arm64-apple-ios13.1-macabi -isysroot ${SDK}"
     export LDFLAGS="-arch arm64 -target arm64-apple-ios13.1-macabi -isysroot ${SDK}"
 
     make distclean >/dev/null 2>&1
@@ -282,7 +314,7 @@ build_catalyst() {
   fi
 
   ## x86_64 catalyst
-  export CFLAGS="-O2 -arch x86_64 -target x86_64-apple-ios13.1-macabi -isysroot ${SDK}"
+  export CFLAGS="-Ofast -arch x86_64 -target x86_64-apple-ios13.1-macabi -isysroot ${SDK}"
   export LDFLAGS="-arch x86_64 -target x86_64-apple-ios13.1-macabi -isysroot ${SDK}"
 
   make distclean >/dev/null 2>&1
@@ -301,6 +333,8 @@ echo "Building for watchOS..."
 build_watchos >"$LOG_FILE" 2>&1 || exit 1
 echo "Building for tvOS..."
 build_tvos >"$LOG_FILE" 2>&1 || exit 1
+echo "Building for visionOS..."
+build_visionos >"$LOG_FILE" 2>&1 || exit 1
 echo "Building for Catalyst..."
 build_catalyst >"$LOG_FILE" 2>&1 || exit 1
 
@@ -311,7 +345,9 @@ if [ -z "$LIBSODIUM_SKIP_SIMULATORS" ]; then
   build_watchos_simulator >"$LOG_FILE" 2>&1 || exit 1
   echo "Building for the tvOS simulator..."
   build_tvos_simulator >"$LOG_FILE" 2>&1 || exit 1
-  else
+  echo "Building for the visionOS simulator..."
+  build_visionos_simulator >"$LOG_FILE" 2>&1 || exit 1
+else
   echo "[Skipping the simulators]"
 fi
 
@@ -365,11 +401,21 @@ done
 echo "Bundling tvOS targets..."
 
 mkdir -p "${PREFIX}/tvos/lib"
-cp -a "${TVOS64_PREFIX}/include" "${PREFIX}/tvos/"
+cp -a "${TVOS_PREFIX}/include" "${PREFIX}/tvos/"
 for ext in a dylib; do
   lipo -create \
-    "$TVOS64_PREFIX/lib/libsodium.${ext}" \
+    "$TVOS_PREFIX/lib/libsodium.${ext}" \
     -output "$PREFIX/tvos/lib/libsodium.${ext}"
+done
+
+echo "Bundling visionOS targets..."
+
+mkdir -p "${PREFIX}/visionos/lib"
+cp -a "${VISIONOS_PREFIX}/include" "${PREFIX}/visionos/"
+for ext in a dylib; do
+  lipo -create \
+    "$VISIONOS_PREFIX/lib/libsodium.${ext}" \
+    -output "$PREFIX/visionos/lib/libsodium.${ext}"
 done
 
 echo "Bundling Catalyst targets..."
@@ -447,6 +493,18 @@ if [ -z "$LIBSODIUM_SKIP_SIMULATORS" ]; then
         -output "${PREFIX}/tvos-simulators/lib/libsodium.${ext}" || exit 1
     fi
   done
+
+  echo "Bundling visionOS simulators..."
+
+  mkdir -p "${PREFIX}/visionos-simulators/lib"
+  cp -a "${VISIONOS_SIMULATOR_PREFIX}/include" "${PREFIX}/visionos-simulators/"
+  for ext in a dylib; do
+    if [ "$APPLE_SILICON_SUPPORTED" = "true" ]; then
+      lipo -create \
+        "${VISIONOS_SIMULATOR_PREFIX}/lib/libsodium.${ext}" \
+        -output "${PREFIX}/visionos-simulators/lib/libsodium.${ext}" || exit 1
+    fi
+  done
 fi
 
 echo "Creating Clibsodium.xcframework..."
@@ -454,12 +512,12 @@ echo "Creating Clibsodium.xcframework..."
 rm -rf "${PREFIX}/Clibsodium.xcframework"
 
 XCFRAMEWORK_ARGS=""
-for f in macos ios watchos tvos catalyst; do
+for f in macos ios watchos tvos visionos catalyst; do
   XCFRAMEWORK_ARGS="${XCFRAMEWORK_ARGS} -library ${PREFIX}/${f}/lib/libsodium.a"
   XCFRAMEWORK_ARGS="${XCFRAMEWORK_ARGS} -headers ${PREFIX}/${f}/include"
 done
 if [ -z "$LIBSODIUM_SKIP_SIMULATORS" ]; then
-  for f in ios-simulators watchos-simulators tvos-simulators; do
+  for f in ios-simulators watchos-simulators tvos-simulators visionos-simulators; do
     XCFRAMEWORK_ARGS="${XCFRAMEWORK_ARGS} -library ${PREFIX}/${f}/lib/libsodium.a"
     XCFRAMEWORK_ARGS="${XCFRAMEWORK_ARGS} -headers ${PREFIX}/${f}/include"
   done
