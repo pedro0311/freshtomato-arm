@@ -22,7 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SOCKOPTFUNCTION 3 "August 22, 2023" "ibcurl 8.3.0" libcurl
+.TH CURLOPT_SOCKOPTFUNCTION 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
 
 .SH NAME
 CURLOPT_SOCKOPTFUNCTION \- callback for setting socket options
@@ -123,4 +123,6 @@ added in 7.21.5.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_SOCKOPTDATA "(3), " CURLOPT_OPENSOCKETFUNCTION "(3), "
+.BR CURLOPT_OPENSOCKETFUNCTION (3),
+.BR CURLOPT_SEEKFUNCTION (3),
+.BR CURLOPT_SOCKOPTDATA (3)

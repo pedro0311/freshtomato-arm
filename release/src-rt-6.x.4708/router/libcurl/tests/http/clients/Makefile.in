@@ -138,7 +138,8 @@ host_triplet = @host@
 @USE_CPPFLAG_CURL_STATICLIB_TRUE@am__append_1 = -DCURL_STATICLIB
 check_PROGRAMS = h2-serverpush$(EXEEXT) h2-download$(EXEEXT) \
 	ws-data$(EXEEXT) ws-pingpong$(EXEEXT) \
-	h2-upgrade-extreme$(EXEEXT) tls-session-reuse$(EXEEXT)
+	h2-upgrade-extreme$(EXEEXT) tls-session-reuse$(EXEEXT) \
+	h2-pausing$(EXEEXT)
 subdir = tests/http/clients
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/curl-amissl.m4 \
@@ -185,6 +186,13 @@ AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
 am__v_lt_0 = --silent
 am__v_lt_1 = 
+h2_pausing_SOURCES = h2-pausing.c
+h2_pausing_OBJECTS = h2-pausing.$(OBJEXT)
+h2_pausing_LDADD = $(LDADD)
+@USE_EXPLICIT_LIB_DEPS_FALSE@h2_pausing_DEPENDENCIES =  \
+@USE_EXPLICIT_LIB_DEPS_FALSE@	$(LIBDIR)/libcurl.la
+@USE_EXPLICIT_LIB_DEPS_TRUE@h2_pausing_DEPENDENCIES =  \
+@USE_EXPLICIT_LIB_DEPS_TRUE@	$(LIBDIR)/libcurl.la
 h2_serverpush_SOURCES = h2-serverpush.c
 h2_serverpush_OBJECTS = h2-serverpush.$(OBJEXT)
 h2_serverpush_LDADD = $(LDADD)
@@ -236,7 +244,8 @@ DEFAULT_INCLUDES =
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
 am__depfiles_remade = ./$(DEPDIR)/h2-download.Po \
-	./$(DEPDIR)/h2-serverpush.Po ./$(DEPDIR)/h2-upgrade-extreme.Po \
+	./$(DEPDIR)/h2-pausing.Po ./$(DEPDIR)/h2-serverpush.Po \
+	./$(DEPDIR)/h2-upgrade-extreme.Po \
 	./$(DEPDIR)/tls-session-reuse.Po ./$(DEPDIR)/ws-data.Po \
 	./$(DEPDIR)/ws-pingpong.Po
 am__mv = mv -f
@@ -258,10 +267,12 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = h2-download.c h2-serverpush.c h2-upgrade-extreme.c \
-	tls-session-reuse.c ws-data.c ws-pingpong.c
-DIST_SOURCES = h2-download.c h2-serverpush.c h2-upgrade-extreme.c \
-	tls-session-reuse.c ws-data.c ws-pingpong.c
+SOURCES = h2-download.c h2-pausing.c h2-serverpush.c \
+	h2-upgrade-extreme.c tls-session-reuse.c ws-data.c \
+	ws-pingpong.c
+DIST_SOURCES = h2-download.c h2-pausing.c h2-serverpush.c \
+	h2-upgrade-extreme.c tls-session-reuse.c ws-data.c \
+	ws-pingpong.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -581,6 +592,10 @@ h2-download$(EXEEXT): $(h2_download_OBJECTS) $(h2_download_DEPENDENCIES) $(EXTRA
 	@rm -f h2-download$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(h2_download_OBJECTS) $(h2_download_LDADD) $(LIBS)
 
+h2-pausing$(EXEEXT): $(h2_pausing_OBJECTS) $(h2_pausing_DEPENDENCIES) $(EXTRA_h2_pausing_DEPENDENCIES) 
+	@rm -f h2-pausing$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(h2_pausing_OBJECTS) $(h2_pausing_LDADD) $(LIBS)
+
 h2-serverpush$(EXEEXT): $(h2_serverpush_OBJECTS) $(h2_serverpush_DEPENDENCIES) $(EXTRA_h2_serverpush_DEPENDENCIES) 
 	@rm -f h2-serverpush$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(h2_serverpush_OBJECTS) $(h2_serverpush_LDADD) $(LIBS)
@@ -608,6 +623,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2-download.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2-pausing.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2-serverpush.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/h2-upgrade-extreme.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tls-session-reuse.Po@am__quote@ # am--include-marker
@@ -776,6 +792,7 @@ clean-am: clean-checkPROGRAMS clean-generic clean-libtool \
 
 distclean: distclean-am
 		-rm -f ./$(DEPDIR)/h2-download.Po
+	-rm -f ./$(DEPDIR)/h2-pausing.Po
 	-rm -f ./$(DEPDIR)/h2-serverpush.Po
 	-rm -f ./$(DEPDIR)/h2-upgrade-extreme.Po
 	-rm -f ./$(DEPDIR)/tls-session-reuse.Po
@@ -827,6 +844,7 @@ installcheck-am:
 
 maintainer-clean: maintainer-clean-am
 		-rm -f ./$(DEPDIR)/h2-download.Po
+	-rm -f ./$(DEPDIR)/h2-pausing.Po
 	-rm -f ./$(DEPDIR)/h2-serverpush.Po
 	-rm -f ./$(DEPDIR)/h2-upgrade-extreme.Po
 	-rm -f ./$(DEPDIR)/tls-session-reuse.Po

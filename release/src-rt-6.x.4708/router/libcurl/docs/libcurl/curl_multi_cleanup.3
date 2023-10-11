@@ -21,7 +21,7 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_multi_cleanup 3 "August 22, 2023" "libcurl 8.3.0" "libcurl"
+.TH curl_multi_cleanup 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
 
 .SH NAME
 curl_multi_cleanup - close down a multi session
@@ -60,4 +60,8 @@ Added in 7.9.6
 CURLMcode type, general libcurl multi interface error code. On success,
 CURLM_OK is returned.
 .SH "SEE ALSO"
-.BR curl_multi_init "(3)," curl_easy_cleanup "(3)," curl_easy_init "(3)"
+.BR curl_easy_cleanup (3),
+.BR curl_multi_get_handles (3),
+.BR curl_easy_init (3),
+.BR curl_multi_init (3)
+

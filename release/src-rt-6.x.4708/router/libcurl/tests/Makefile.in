@@ -480,8 +480,9 @@ MAN2HTML = roffit $< >$@
 @CROSSCOMPILING_FALSE@TEST_T = -a -t
 @CROSSCOMPILING_FALSE@TEST_E = -a -e
 
-# !flaky means that it'll skip all tests using the flaky keyword
-@CROSSCOMPILING_FALSE@TEST_NF = -a -p !flaky
+# ~<keyword> means that it will run all tests matching the keyword, but will
+# ignore their results (since these ones are likely to fail for no good reason)
+@CROSSCOMPILING_FALSE@TEST_NF = -a -p ~flaky ~timing-dependent
 
 # special CI target derived from nonflaky with CI-specific flags
 @CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -rm
