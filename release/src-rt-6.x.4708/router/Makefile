@@ -3350,7 +3350,7 @@ getdns/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=c99 $(EXTRACFLAGS)" \
+			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=gnu99 $(EXTRACFLAGS)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
 			-DENABLE_STATIC=TRUE -DENABLE_SHARED=FALSE -DENABLE_GOST=FALSE \
 			-DBUILD_GETDNS_QUERY=FALSE \
