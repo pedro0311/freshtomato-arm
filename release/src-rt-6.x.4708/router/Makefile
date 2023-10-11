@@ -2893,9 +2893,9 @@ libcurl/stamp-h1:
 			--enable-file --enable-ftp --enable-http --enable-tftp \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,) \
 			--with-random="/dev/urandom" --with-ssl="$(TOP)/$(OPENSSLDIR)/staged/usr" --with-zlib="$(TOP)/zlib/staged/usr" \
-			--disable-dict --disable-debug --disable-gopher --disable-threaded-resolver \
-			--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-doh \
-			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) \
+			--disable-dict --disable-debug --disable-gopher --disable-pthreads --disable-threaded-resolver --disable-progress-meter --disable-http-auth --disable-dateparse --disable-dnsshuffle \
+			--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-doh --disable-mime --disable-netrc --disable-socketpair --disable-cookies --disable-get-easy-options \
+			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 --disable-websockets --disable-headers-api \
 			$(CACERT)
 	@touch $@
 
