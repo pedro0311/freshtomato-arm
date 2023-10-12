@@ -117,6 +117,11 @@ ifneq ($(BCMSMP),y)
 	NOSMP_DESC = '-NOSMP'
 endif
 endif
+ifeq ($(ASUS_TRX),NETGEAR2)
+ifneq ($(BCMSMP),y)
+	NOSMP_DESC = '-NOSMP'
+endif
+endif
 
 
 -include tomato_profile.mak
@@ -256,6 +261,10 @@ ifeq ($(ASUS_TRX),NETGEAR_LIGHT)
 	ctools/trx_asus -i image/linux-lzma.trx -r AC1450,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-AC1450-$(ND)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6250,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6250-$(ND)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 	ctools/trx_asus -i image/linux-lzma.trx -r R6300v2,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6300v2-$(ND)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
+endif
+# for R6200v2
+ifeq ($(ASUS_TRX),NETGEAR2)
+	ctools/trx_asus -i image/linux-lzma.trx -r R6200v2,3.0.0.4,$(FORCE_SN),$(FORCE_EN),image/freshtomato-R6200v2-$(ND)-$(current_TOMATO_VER)$(beta)$(V2)-$(current_BUILD_DESC).trx
 endif
 # for WS880
 ifeq ($(ASUS_TRX),HUAWEI)
@@ -1349,6 +1358,12 @@ r7000e:
 r7000z:
 	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
+r6200v2e:
+	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="NETGEAR2" UFSD="ASUS" DPSTA=n BSD=y
+
+r6200v2z:
+	@$(MAKE) z ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" ASUS_TRX="NETGEAR2" UFSD="ASUS" DPSTA=n BSD=y
+
 r6300e:
 	@$(MAKE) e ARM=y NVRAM_64K=y NAND=y BCMSMP=y ASUS_TRX="NETGEAR_LIGHT" UFSD="ASUS" DPSTA=y BSD=y IRQBALANCE=y
 
@@ -1375,6 +1390,9 @@ r7000init:
 
 r6900init:
 	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="R6900" BOARDID_FILE="compatible_r6900.txt" FW_CFG_FILE="tomato_cfg.h" PROXY=y
+
+r6200v2init:
+	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y ARMCPUSMP="up" B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=n BSD=y BUILD_DESC="initial" NETGEAR_CHK="R6200v2" BOARDID_FILE="compatible_r6200v2.txt" FW_CFG_FILE="tomato_cfg.h" PROXY=y
 
 r6250init:
 	@$(MAKE) bin ARM=y NVRAM_64K=y NAND=y BCMSMP=y B=E IPV6SUPP=y OPENVPN=y OPENSSL11=y DPSTA=y BSD=y BUILD_DESC="initial" NETGEAR_CHK="R6250" BOARDID_FILE="compatible_r6250.txt" FW_CFG_FILE="tomato_cfg.h" PROXY=y
@@ -1541,6 +1559,8 @@ help:
 	@echo "NETGEAR ARM Builds"
 	@echo "r7000e          R7000/R6900/R6700v1 build VPN"
 	@echo "r7000z          R7000/R6900/R6700v1 build AIO"
+	@echo "r6200v2e        R6200v2 without SMP build VPN"
+	@echo "r6200v2z        R6200v2 without SMP build AIO"
 	@echo "r6300e          AC1450, R6300v2/R6250 build VPN"
 	@echo "r6300y          AC1450, R6300v2/R6250 build AIO_Lite"
 	@echo "r6400e          R6400/R6400v2/R6700v3 build VPN - 128K NVRAM"
@@ -1550,6 +1570,7 @@ help:
 	@echo "ac1450init      AC1450 init build"
 	@echo "r7000init       R7000 init build"
 	@echo "r6900init       R6900 init build"
+	@echo "r6200v2init     R6200v2 init build"
 	@echo "r6250init       R6250 init build"
 	@echo "r6300v2init     R6300v2 init build"
 	@echo "r6300v2init_ch  R6300v2_ch init build for Charter routers"

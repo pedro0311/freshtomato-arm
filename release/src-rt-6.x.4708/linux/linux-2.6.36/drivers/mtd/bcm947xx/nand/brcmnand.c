@@ -800,12 +800,21 @@ init_brcmnand_mtd_partitions(struct mtd_info *mtd, uint64_t size)
 			 nvram_match("boardrev", "0x1601")) {
 		     offset = 0x3200000;
 		}
+#ifdef CONFIG_SMP
 		/* R6300V2 and R6250 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
 			 nvram_match("boardrev", "0x1110")) {
 		     offset = 0x2180000;
 		}
+#else /* single core */
+		/* R6200V2 */
+		else if (nvram_match("boardnum","679") &&
+		         nvram_match("boardtype", "0x0646") &&
+		         nvram_match("boardrev", "0x1110")) {
+				offset = 0x2240000;
+		}
+#endif /* CONFIG_SMP */
 		/* Linksys EA6350v2 */
 		/* 0x000003c00000-0x000008000000 : "brcmnand" */
 		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */

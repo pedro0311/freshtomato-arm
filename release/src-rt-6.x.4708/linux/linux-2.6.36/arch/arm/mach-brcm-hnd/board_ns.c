@@ -530,6 +530,7 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
+#ifdef CONFIG_SMP
 	/* AC1450, R6300V2 / R6250 */
 	else if (nvram_match("boardnum", "679") &&
 	     nvram_match("boardtype", "0x0646") &&
@@ -537,6 +538,15 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 	        maxsize = 0x200000; /* 2 MB */
 	        size = maxsize;
 	}
+#else /* single core */
+	/* R6200v2 */
+	else if (nvram_match("boardnum", "679") &&
+	         nvram_match("boardtype", "0x0646") &&
+	         nvram_match("boardrev", "0x1110")) {
+			maxsize = 0x200000; /* 2 MB */
+			size = maxsize;
+	}
+#endif /* CONFIG_SMP */
 	/* Buffalo WZR-1750DHP */
 	else if (nvram_match("boardnum", "00") &&
 	     nvram_match("boardtype","0xF646") &&
@@ -964,6 +974,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
+#ifdef CONFIG_SMP
 		/* AC1450, R6300V2 / R6250 */
 		/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
@@ -972,6 +983,15 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			offset += 0x180000; /* Leave NETGEAR partitions alone */
 			bcm947xx_nflash_parts[nparts].size += 0x0000;
 		}
+#else /* single core */
+		/* R6200v2 */
+		/* Stock R6200v2 is 0x2200000 */
+		else if (nvram_match("boardnum","679") &&
+		         nvram_match("boardtype", "0x0646") &&
+		         nvram_match("boardrev", "0x1110")) {
+				bcm947xx_nflash_parts[nparts].size += 0x200000;
+		}
+#endif /* CONFIG_SMP */
 		/* Linksys EA6350v2 */
 		/* 0x000000200000-0x000001f00000 : "linux" */
 		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
@@ -1020,6 +1040,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1601")) {
 			bcm947xx_nflash_parts[nparts].size += 0x1200000;
 		}
+#ifdef CONFIG_SMP
 		/* AC1450, R6300V2 and R6250 */
         	/* Stock R6250 is 0x2180000 */
 		else if (nvram_match("boardnum","679") &&
@@ -1027,6 +1048,14 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			 nvram_match("boardrev", "0x1110")) {
 			bcm947xx_nflash_parts[nparts].size += 0x180000;
 		}
+#else /* single core */
+		/* Stock R6200v2 is 0x2200000 */
+		else if (nvram_match("boardnum","679") &&
+		         nvram_match("boardtype", "0x0646") &&
+		         nvram_match("boardrev", "0x1110")) {
+				bcm947xx_nflash_parts[nparts].size += 0x200000;
+		}
+#endif /* CONFIG_SMP */
 		/* Linksys EA6350v2 */
 		/* 0x0000003e6098-0x000001f00000 : "rootfs" */
 		else if (nvram_match("t_fix1", "EA6350v2") || /* FT backup --> fast detection OR if cfe changes/deletes nv variables! */
@@ -1072,6 +1101,7 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x7200000;
 			nparts++;
 		}
+#ifdef CONFIG_SMP
 		/* AC1450, R6300V2 and R6250 */
 		else if (nvram_match("boardnum","679") &&
 			 nvram_match("boardtype", "0x0646") &&
@@ -1081,6 +1111,17 @@ init_nflash_mtd_partitions(hndnand_t *nfl, struct mtd_info *mtd, size_t size)
 			bcm947xx_nflash_parts[nparts].offset = 0x200000;
 			nparts++;
 		}
+#else /* single core */
+		/* R6200v2 */
+		else if (nvram_match("boardnum","679") &&
+		         nvram_match("boardtype", "0x0646") &&
+		         nvram_match("boardrev", "0x1110")) {
+				bcm947xx_nflash_parts[nparts].name = "board_data";
+				bcm947xx_nflash_parts[nparts].size = 0x40000;
+				bcm947xx_nflash_parts[nparts].offset = 0x2200000;
+				nparts++;
+		}
+#endif /* CONFIG_SMP */
 
 #ifdef CONFIG_FAILSAFE_UPGRADE
 		/* Setup 2nd kernel MTD partition */
