@@ -1,0 +1,10 @@
+help_main:
+	@echo "ASUS ARM7 Builds"
+	@echo " ac3200e        RT-AC3200 build VPN"
+	@echo " ac3200z        RT-AC3200 build AIO"
+	@echo " ac3200-128e    RT-AC3200 build VPN - 128K NVRAM"
+	@echo " ac3200-128z    RT-AC3200 build AIO - 128K NVRAM"
+	@echo " r8000e         R7900/R8000 build VPN"
+	@echo " r8000z         R7900/R8000 build AIO"
+	@echo " r7900init      R7900 init build"
+	@echo " r8000init      R8000 init build"

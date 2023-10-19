@@ -1,12 +1,11 @@
 #!/usr/bin/perl
 #
-#	uversion.pl
-#	Copyright (C) 2006 Jonathan Zarate
+# uversion.pl
+# Copyright (C) 2006 Jonathan Zarate
 #
-#	- update the build number for Tomato
-#	!!TB - Added version suffix
+# - update the build number for Tomato
 #
-#	some additional changes - pedro
+# some additional changes 2018 - 2023 - pedro
 #
 
 use strict;
@@ -44,8 +43,11 @@ my $minor = 0;
 my $build = 0;
 my $i = 0;
 my $buildc = "";
-my $space = "";
+my $beta = "";
+my $notes = "";
+my $rev = "";
 my $suffix = "";
+my $version = "";
 
 
 local $/;
@@ -67,12 +69,36 @@ if ($ARGV[1] ne "--def") {
 }
 
 
-# read the version suffix from the command line
+# read the version suffix/revision from the command line
 my $start = 2;
 my $stop = $#ARGV;
 $suffix = "";
 for ($i=$start; $i <= $stop; $i++) {
-	if ($suffix eq "") {
+	if ($ARGV[$i] eq "-beta") {
+		$beta = " beta";
+	}
+	elsif ($ARGV[$i] eq "K26ARM") {
+		$rev = "K26ARM";
+	}
+	elsif ($ARGV[$i] eq "K26ARM7") {
+		$rev = "K26ARM7";
+	}
+	elsif ($ARGV[$i] eq "K26ARM714") {
+		$rev = "K26ARM714";
+	}
+	elsif ($ARGV[$i] eq "K26MIPS_RT_R1") {
+		$rev = "K26MIPS_RT_R1";
+	}
+	elsif ($ARGV[$i] eq "K26MIPS_RT_R2") {
+		$rev = "K26MIPS_RT_R2";
+	}
+	elsif ($ARGV[$i] eq "K26MIPS_RTN_R2") {
+		$rev = "K26MIPS_RTN_R2";
+	}
+	elsif ($ARGV[$i] eq "K26MIPS_RTAC_R2") {
+		$rev = "K26MIPS_RTAC_R2";
+	}
+	elsif ($suffix eq "") {
 		$suffix = $ARGV[$i];
 	}
 	elsif ($ARGV[$i] ne "") {
@@ -80,6 +106,7 @@ for ($i=$start; $i <= $stop; $i++) {
 	}
 }
 
+$version = sprintf("%d.%d%s %s%s %s", $major, $minor, $buildc, $rev, $beta, $suffix);
 
 open(F, ">$path/tomato_version.h~") || error("creating temp file: $!");
 print F <<"END";
@@ -89,7 +116,7 @@ print F <<"END";
 #define TOMATO_MINOR		"$minor"
 #define TOMATO_BUILD		"$build"
 #define	TOMATO_BUILDTIME	"$time"
-#define TOMATO_VERSION		"$major.$minor$buildc $suffix"
+#define TOMATO_VERSION		"$version"
 #define TOMATO_SHORTVER		"$major.$minor"
 #endif
 END
@@ -100,13 +127,13 @@ rename("$path/tomato_version.h~", "$path/tomato_version.h") || error("renaming: 
 open(F, ">$path/tomato_version.~") || error("creating temp file: $!");
 # add build number only if entered manually
 if ($buildc eq "") {
-	printf F "%d.%d %s", $major, $minor, $suffix;
+	printf F "%d.%d %s%s %s", $major, $minor, $rev, $beta, $suffix;
 } else {
-	printf F "%d.%d.%03d %s", $major, $minor, $build, $suffix;
+	printf F "%d.%d.%03d %s%s %s", $major, $minor, $build, $rev, $beta, $suffix;
 }
 close(F);
 rename("$path/tomato_version.~", "$path/tomato_version") || error("renaming: $!");
 
 
-print "Version: $major.$minor$buildc $suffix ($time)\n";
+print "Version: $major.$minor$buildc $rev$beta $suffix ($time)\n";
 exit(0);
