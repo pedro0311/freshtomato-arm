@@ -1487,8 +1487,8 @@ iptables-1.8.x-clean:
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && \
-		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -ffunction-sections -fdata-sections" \
+		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-plugin=$(TOP)/pppd --disable-debugging \
 			ac_cv_linux_kernel_pppoe=yes rpppoe_cv_pack_bitfields=rev ac_cv_path_PPPD=$(TOP)/pppd
@@ -1727,7 +1727,7 @@ pppd/Makefile: pppd/linux/Makefile.top
 	$(call patch_files,pppd)
 	cd pppd && \
 		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall -ffunction-sections -fdata-sections"
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/tmp --cc=$(CC) --cflags="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O2) -Wall -ffunction-sections -fdata-sections"
 
 pppd: pppd/Makefile
 	@$(SEP)
