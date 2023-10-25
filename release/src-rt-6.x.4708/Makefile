@@ -262,13 +262,17 @@ define RouterOptions
 			sed -i "/TCONFIG_TUXERA/d" $(1); \
 			echo "TCONFIG_TUXERA=y" >>$(1); \
 		fi; \
-		if [ "$(HFS)" = "y" ]; then \
-			sed -i "/TCONFIG_HFS/d" $(1); \
-			echo "TCONFIG_HFS=y" >>$(1); \
-		fi; \
 		if [ "$(TUXERA_HFS)" = "y" ]; then \
 			sed -i "/TCONFIG_TUX_HFS/d" $(1); \
 			echo "TCONFIG_TUX_HFS=y" >>$(1); \
+		fi; \
+		if [ "$(ZFS)" = "y" ]; then \
+			sed -i "/#TCONFIG_ZFS is not set/d" $(1); \
+			echo "TCONFIG_ZFS=y" >>$(1); \
+		fi; \
+		if [ "$(HFS)" = "y" ]; then \
+			sed -i "/TCONFIG_HFS/d" $(1); \
+			echo "TCONFIG_HFS=y" >>$(1); \
 		fi; \
 		if [ "$(MEDIASRV)" = "y" ]; then \
 			sed -i "/TCONFIG_MEDIA_SERVER/d" $(1); \
@@ -347,10 +351,6 @@ define RouterOptions
 	if [ "$(WIREGUARD)" = "y" ]; then \
 		sed -i "/#TCONFIG_WIREGUARD is not set/d" $(1); \
 		echo "TCONFIG_WIREGUARD=y" >>$(1); \
-	fi; \
-	if [ "$(ZFS)" = "y" ]; then \
-		sed -i "/#TCONFIG_ZFS is not set/d" $(1); \
-		echo "TCONFIG_ZFS=y" >>$(1); \
 	fi; \
 	if [ "$(PPTPD)" = "y" ]; then \
 		sed -i "/TCONFIG_PPTPD/d" $(1); \
