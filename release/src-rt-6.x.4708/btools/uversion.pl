@@ -86,17 +86,17 @@ for ($i=$start; $i <= $stop; $i++) {
 	elsif ($ARGV[$i] eq "K26ARM714") {
 		$rev = "K26ARM714";
 	}
-	elsif ($ARGV[$i] eq "K26MIPS_RT_R1") {
-		$rev = "K26MIPS_RT_R1";
+	elsif ($ARGV[$i] eq "K26MIPSR1_RT") {
+		$rev = "K26MIPSR1_RT";
 	}
-	elsif ($ARGV[$i] eq "K26MIPS_RT_R2") {
-		$rev = "K26MIPS_RT_R2";
+	elsif ($ARGV[$i] eq "K26MIPSR2_RT") {
+		$rev = "K26MIPSR2_RT";
 	}
-	elsif ($ARGV[$i] eq "K26MIPS_RTN_R2") {
-		$rev = "K26MIPS_RTN_R2";
+	elsif ($ARGV[$i] eq "K26MIPSR2_RTN") {
+		$rev = "K26MIPSR2_RTN";
 	}
-	elsif ($ARGV[$i] eq "K26MIPS_RTAC_R2") {
-		$rev = "K26MIPS_RTAC_R2";
+	elsif ($ARGV[$i] eq "K26MIPSR2_RTAC") {
+		$rev = "K26MIPSR2_RTAC";
 	}
 	elsif ($suffix eq "") {
 		$suffix = $ARGV[$i];
