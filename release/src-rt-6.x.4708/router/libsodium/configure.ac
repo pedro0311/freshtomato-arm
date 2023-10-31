@@ -52,11 +52,10 @@ AC_USE_SYSTEM_EXTENSIONS
 dnl Default optimization flags
 
 if test "$sodium_CFLAGS" != "set" ; then
-  AX_CHECK_COMPILE_FLAG([-Ofast], [CFLAGS="$CFLAGS -Ofast"],
-    [AX_CHECK_COMPILE_FLAG([-O3], [CFLAGS="$CFLAGS -O3"],
-      [AX_CHECK_COMPILE_FLAG([-O2], [CFLAGS="$CFLAGS -O2"],
-        [AX_CHECK_COMPILE_FLAG([-O1], [CFLAGS="$CFLAGS -O1"],
-          [AX_CHECK_COMPILE_FLAG([-O], [CFLAGS="$CFLAGS -O"])])])])])
+  AX_CHECK_COMPILE_FLAG([-O3], [CFLAGS="$CFLAGS -O3"],
+    [AX_CHECK_COMPILE_FLAG([-O2], [CFLAGS="$CFLAGS -O2"],
+      [AX_CHECK_COMPILE_FLAG([-O1], [CFLAGS="$CFLAGS -O1"],
+        [AX_CHECK_COMPILE_FLAG([-O], [CFLAGS="$CFLAGS -O"])])])])
 fi
 
 dnl Switches
@@ -398,11 +397,6 @@ AS_IF([test "x$EMSCRIPTEN" = "x"], [
     have_armcrypto=no
     AC_MSG_CHECKING(for ARM crypto instructions set)
     AC_LINK_IFELSE([AC_LANG_PROGRAM([[
-      #ifdef __clang__
-      #  pragma clang attribute push(__attribute__((target("neon,crypto,aes"))), apply_to = function)
-      #elif defined(__GNUC__)
-      #  pragma GCC target("+simd+crypto")
-      #endif
       #ifndef __ARM_FEATURE_CRYPTO
       #  define __ARM_FEATURE_CRYPTO 1
       #endif
@@ -411,8 +405,16 @@ AS_IF([test "x$EMSCRIPTEN" = "x"], [
       #endif
 
       #include <arm_neon.h>
+
+      #ifdef __clang__
+      #  pragma clang attribute push(__attribute__((target("neon,crypto,aes"))), apply_to = function)
+      #elif defined(__GNUC__)
+      #  pragma GCC target("+simd+crypto")
+      #endif
     ]], [[
+      int64x2_t x = { 0, 0 };
       vaeseq_u8(vmovq_n_u8(0), vmovq_n_u8(0));
+      vmull_high_p64(vreinterpretq_p64_s64(x), vreinterpretq_p64_s64(x));
 
       #ifdef __clang__
       #  pragma clang attribute pop
@@ -441,8 +443,12 @@ AS_IF([test "x$EMSCRIPTEN" = "x"], [
             #ifndef __ARM_FEATURE_AES
             #  define __ARM_FEATURE_AES 1
             #endif
+
+            #include <arm_neon.h>
           ]], [[
+            int64x2_t x = { 0, 0 };
             vaeseq_u8(vmovq_n_u8(0), vmovq_n_u8(0));
+            vmull_high_p64(vreinterpretq_p64_s64(x), vreinterpretq_p64_s64(x));
 
             #ifdef __clang__
             #  pragma clang attribute pop
