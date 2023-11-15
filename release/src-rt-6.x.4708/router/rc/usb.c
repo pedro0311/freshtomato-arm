@@ -887,7 +887,8 @@ int umount_mountpoint(struct mntent *mnt, uint flags)
 		 * unless it's an unmount request from the Web GUI.
 		 */
 		if ((count == 1) && ((flags & EFH_USER) == 0))
-			restart_nas_services(1, 0);
+			if (access("/tmp/var/notice/nas", F_OK) == 0)
+				restart_nas_services(1, 0);
 
 		sleep(1);
 	}
@@ -1038,7 +1039,8 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 			 * or hotplug_usb() already did.
 			 */
 			if (exec_for_host(host_no, 0x00, flags, mount_partition))
-				restart_nas_services(1, 1); /* restart all NAS applications */
+				if (access("/tmp/var/notice/nas", F_OK) == 0)
+					restart_nas_services(1, 1); /* restart all NAS applications */
 		}
 	}
 	else {
@@ -1050,7 +1052,8 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 			/* Restart NAS applications (they could be killed by umount_mountpoint),
 			 * or just re-read the configuration.
 			 */
-			restart_nas_services(1, 1);
+			if (access("/tmp/var/notice/nas", F_OK) == 0)
+				restart_nas_services(1, 1);
 		}
 	}
 }
@@ -1059,7 +1062,8 @@ void hotplug_usb_storage_device(int host_no, int action_add, uint flags)
 void remove_storage_main(int shutdn)
 {
 	if (shutdn)
-		restart_nas_services(1, 0);
+		if (access("/tmp/var/notice/nas", F_OK) == 0)
+			restart_nas_services(1, 0);
 
 	/* Unmount all partitions */
 	exec_for_host(-1, 0x02, shutdn ? EFH_SHUTDN : 0, umount_partition);
@@ -1364,7 +1368,8 @@ void hotplug_usb(void)
 					return;
 				}
 				if (mount_partition(devname, host, NULL, device, EFH_HP_ADD))
-					restart_nas_services(1, 1); /* restart all NAS applications */
+					if (access("/tmp/var/notice/nas", F_OK) == 0)
+						restart_nas_services(1, 1); /* restart all NAS applications */
 			}
 		}
 		else {
@@ -1373,7 +1378,8 @@ void hotplug_usb(void)
 			/* Restart NAS applications (they could be killed by umount_mountpoint),
 			 * or just re-read the configuration.
 			 */
-			restart_nas_services(1, 1);
+			if (access("/tmp/var/notice/nas", F_OK) == 0)
+				restart_nas_services(1, 1);
 		}
 		file_unlock(lock);
 	}
