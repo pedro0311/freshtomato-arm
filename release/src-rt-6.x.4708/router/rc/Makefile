@@ -94,6 +94,11 @@ ifeq ($(TCONFIG_OPENVPN),y)
 OBJS += openvpn.o
 endif
 
+ifeq ($(TCONFIG_WIREGUARD),y)
+OBJS += wireguard.o
+OBJS += curve25519.o
+endif
+
 ifeq ($(TCONFIG_TINC),y)
 OBJS += tinc.o
 endif

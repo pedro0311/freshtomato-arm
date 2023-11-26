@@ -3705,16 +3705,19 @@ avahi-clean:
 	$(call unpatch_files,avahi)
 
 wireguard-tools:
-	WITH_BASHCOMPLETION=no WITH_WGQUICK=no WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
+	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
 
 wireguard-tools-install:
 	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	install -D wireguard-tools/staged/bin/wg-quick $(INSTALLDIR)/wireguard-tools/usr/sbin/wg-quick
 	$(STRIP) -s $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
 	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
+	chmod 0500 $(INSTALLDIR)/wireguard-tools/usr/sbin/wg-quick
 
 wireguard-tools-clean:
 	-@$(MAKE) -C wireguard-tools/src clean
 	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
+	@rm -f $(TOP)/wireguard-tools/staged/bin/wg-quick
 
 gettext-tiny/stamp-h1:
 	$(MAKE) -C gettext-tiny \

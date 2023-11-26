@@ -5,7 +5,7 @@
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 DESTDIR ?=
-SYSCONFDIR ?= /etc
+SYSCONFDIR ?= $(PREFIX)/etc
 BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(PREFIX)/share/man
@@ -15,6 +15,7 @@ RUNSTATEDIR ?= /var/run
 WITH_BASHCOMPLETION ?=
 WITH_WGQUICK ?=
 WITH_SYSTEMDUNITS ?=
+WITH_EMBEDDED ?=
 
 ifeq ($(WITH_BASHCOMPLETION),)
 ifneq ($(strip $(wildcard $(BASHCOMPDIR))),)
@@ -26,6 +27,9 @@ ifneq ($(strip $(wildcard $(BINDIR)/bash)),)
 WITH_WGQUICK := yes
 endif
 ifneq ($(strip $(wildcard $(DESTDIR)/bin/bash)),)
+WITH_WGQUICK := yes
+endif
+ifeq ($(WITH_EMBEDDED),yes)
 WITH_WGQUICK := yes
 endif
 endif
@@ -88,10 +92,17 @@ install: wg
 	@[ "$(WITH_BASHCOMPLETION)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(BASHCOMPDIR)" && install -v -m 0644 completion/wg.bash-completion "$(DESTDIR)$(BASHCOMPDIR)/wg"
 	@[ "$(WITH_WGQUICK)" = "yes" ] || exit 0; \
-	install -v -m 0755 wg-quick/$(PLATFORM).bash "$(DESTDIR)$(BINDIR)/wg-quick" && install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard"
+	if [ "$(WITH_EMBEDDED)" = "yes" ]; then \
+		install -v -m 0755 wg-quick/posix.sh "$(DESTDIR)$(BINDIR)/wg-quick"; \
+	else \
+		install -v -m 0755 wg-quick/$(PLATFORM).bash "$(DESTDIR)$(BINDIR)/wg-quick"; \
+	fi && \
+	install -v -d "$(DESTDIR)$(SYSCONFDIR)" && \
+	install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard" && \
+	install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard/dns"
 	@[ "$(WITH_WGQUICK)" = "yes" ] || exit 0; \
 	install -v -m 0644 man/wg-quick.8 "$(DESTDIR)$(MANDIR)/man8/wg-quick.8"
-	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_BASHCOMPLETION)" = "yes" ] || exit 0; \
+	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_BASHCOMPLETION)" = "yes" -a "$(WITH_EMBEDDED)" != "yes" ] || exit 0; \
 	install -v -m 0644 completion/wg-quick.bash-completion "$(DESTDIR)$(BASHCOMPDIR)/wg-quick"
 	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_SYSTEMDUNITS)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(SYSTEMDUNITDIR)" && install -v -m 0644 systemd/* "$(DESTDIR)$(SYSTEMDUNITDIR)/"
