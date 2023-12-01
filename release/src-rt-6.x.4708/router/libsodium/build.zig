@@ -103,9 +103,17 @@ pub fn build(b: *std.build.Builder) !void {
         lib.defineCMacro("HAVE_TI_MODE", "1");
 
         if (target.cpu_arch) |arch| {
-            switch (arch.endian()) {
-                .Big => lib.defineCMacro("NATIVE_BIG_ENDIAN", "1"),
-                .Little => lib.defineCMacro("NATIVE_LITTLE_ENDIAN", "1"),
+            const endian = arch.endian();
+            if (@hasField(@TypeOf(endian), "big")) {
+                switch (endian) {
+                    .big => lib.defineCMacro("NATIVE_BIG_ENDIAN", "1"),
+                    .little => lib.defineCMacro("NATIVE_LITTLE_ENDIAN", "1"),
+                }
+            } else {
+                switch (endian) {
+                    .Big => lib.defineCMacro("NATIVE_BIG_ENDIAN", "1"),
+                    .Little => lib.defineCMacro("NATIVE_LITTLE_ENDIAN", "1"),
+                }
             }
         }
 
@@ -241,7 +249,7 @@ pub fn build(b: *std.build.Builder) !void {
             else => {},
         }
 
-        var allocator = heap.page_allocator;
+        const allocator = heap.page_allocator;
         var walker = try src_dir.walk(allocator);
         while (try walker.next()) |entry| {
             const name = entry.basename;
@@ -272,7 +280,7 @@ pub fn build(b: *std.build.Builder) !void {
     fs.Dir.makePath(cwd, out_bin_path) catch {};
     const out_bin_dir = try fs.Dir.openDir(cwd, out_bin_path, .{});
     try test_dir.dir.copyFile("run.sh", out_bin_dir, "run.sh", .{});
-    var allocator = heap.page_allocator;
+    const allocator = heap.page_allocator;
     var walker = try test_dir.walk(allocator);
     if (build_tests) {
         while (try walker.next()) |entry| {
