@@ -99,7 +99,7 @@ static gboolean prepare_netlink(void)
 
 	rc = genl_connect(sock);
 	if (rc) {
-		log(TO_ALL, LOG_INFO, "thermal: socket bind failed, thermald may not be running.\n");
+		log(TO_ALL, LOG_INFO, "thermal: socket bind failed.\n");
 		return TRUE;
 	}
 
@@ -190,12 +190,14 @@ static int handle_groupid(struct nl_msg *msg, void *arg)
 static int handle_error(struct sockaddr_nl *sk_addr __attribute__((unused)),
 			struct nlmsgerr *err, void *arg)
 {
-	if (arg) {
+	int rc = (err->error == -NLE_INTR) ? NL_STOP : NL_SKIP;
+
+	if (arg && err->error != -NLE_INTR) {
 		log(TO_ALL, LOG_INFO, "thermal: received a netlink error (%s).\n",
 		    nl_geterror(err->error));
 		*((int *)arg) = err->error;
 	}
-	return NL_SKIP;
+	return rc;
 }
 
 static int handle_end(struct nl_msg *msg __attribute__((unused)), void *arg)
@@ -407,7 +409,7 @@ static int handle_thermal_event(struct nl_msg *msg, void *arg __attribute__((unu
 		need_to_ban = !!(!event_data[INDEX_PERF] && !event_data[INDEX_EFFI]);
 		update_banned_cpus(cur_cpuidx, need_to_ban);
 
-		log(TO_ALL, LOG_DEBUG, "thermal: event - CPU %d, efficiency %d, perf %d.\n",
+		log(TO_ALL, LOG_DEBUG, "thermal: event - CPU %d, perf %d, efficiency %d.\n",
 		    cur_cpuidx, event_data[INDEX_PERF], event_data[INDEX_EFFI]);
 	}
 
