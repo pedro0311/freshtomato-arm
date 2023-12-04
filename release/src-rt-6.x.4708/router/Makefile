@@ -2383,11 +2383,11 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.11.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.5
+	install -D libxml2/.libs/libxml2.so.2.11.6 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.6
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.11.6
 	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.11.5 libxml2.so.2 && \
-		ln -sf libxml2.so.2.11.5 libxml2.so
+		ln -sf libxml2.so.2.11.6 libxml2.so.2 && \
+		ln -sf libxml2.so.2.11.6 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -3384,7 +3384,7 @@ getdns-clean:
 tor/stamp-h1:
 	cd tor && autoreconf -fsi && \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
-		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR)/staged/usr --with-zlib-dir=$(TOP)/zlib/staged/usr \
