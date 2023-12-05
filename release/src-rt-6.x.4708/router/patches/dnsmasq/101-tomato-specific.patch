@@ -79,7 +79,7 @@
  
  /* Declare static char *compiler_opts  in config.h */
  #define DNSMASQ_COMPILE_OPTS
-@@ -1574,8 +1612,22 @@
+@@ -1581,8 +1619,22 @@
  	/* Note: this may leave TCP-handling processes with the old file still open.
  	   Since any such process will die in CHILD_LIFETIME or probably much sooner,
  	   we leave them logging to the old file. */
@@ -102,7 +102,7 @@
  	break;
  
        case EVENT_NEWADDR:
-@@ -1619,6 +1671,12 @@
+@@ -1626,6 +1678,12 @@
  	    close(daemon->helperfd);
  	  }
  #endif
@@ -117,7 +117,7 @@
  	  fclose(daemon->lease_stream);
 --- dnsmasq/src/dnsmasq.h
 +++ dnsmasq/src/dnsmasq.h
-@@ -1626,6 +1626,12 @@
+@@ -1627,6 +1627,12 @@
  int icmp_ping(struct in_addr addr);
  int delay_dhcp(time_t start, int sec, int fd, uint32_t addr, unsigned short id);
  #endif
@@ -132,7 +132,7 @@
  void send_event(int fd, int event, int data, char *msg);
 --- dnsmasq/src/lease.c
 +++ dnsmasq/src/lease.c
-@@ -118,12 +118,15 @@
+@@ -113,12 +113,15 @@
  
  	ei = atol(daemon->dhcp_buff3);
  
@@ -149,7 +149,7 @@
  #else
  	/* strictly time_t is opaque, but this hack should work on all sane systems,
  	   even when sizeof(time_t) == 8 */
-@@ -269,10 +272,19 @@
+@@ -264,10 +267,19 @@
  	    continue;
  #endif
  
@@ -171,7 +171,7 @@
  #endif
  
  	  if (lease->hwaddr_type != ARPHRD_ETHER || lease->hwaddr_len == 0) 
-@@ -313,12 +325,21 @@
+@@ -308,12 +320,21 @@
  	      if (!(lease->flags & (LEASE_TA | LEASE_NA)))
  		continue;
  
@@ -196,7 +196,7 @@
  	      inet_ntop(AF_INET6, &lease->addr6, daemon->addrbuff, ADDRSTRLEN);
  	 
  	      ourprintf(&err, "%s%u %s ", (lease->flags & LEASE_TA) ? "T" : "",
-@@ -1196,4 +1217,66 @@
+@@ -1221,4 +1242,66 @@
  }
  #endif
  
