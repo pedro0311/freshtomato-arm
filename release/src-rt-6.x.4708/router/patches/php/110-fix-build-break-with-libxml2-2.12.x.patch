@@ -1,0 +1,22 @@
+diff -daurN php/ext/dom/document.c php_/ext/dom/document.c
+--- php/ext/dom/document.c
++++ php/ext/dom/document.c
+@@ -27,6 +27,7 @@
+ #if HAVE_LIBXML && HAVE_DOM
+ #include "php_dom.h"
+ #include <libxml/SAX.h>
++#include <libxml/xmlsave.h>
+ #ifdef LIBXML_SCHEMAS_ENABLED
+ #include <libxml/relaxng.h>
+ #include <libxml/xmlschemas.h>
+diff -daurN php/ext/libxml/php_libxml.h php_/ext/libxml/php_libxml.h
+--- php/ext/libxml/php_libxml.h
++++ php/ext/libxml/php_libxml.h
+@@ -39,6 +39,7 @@
+ 
+ #include "zend_smart_str.h"
+ #include <libxml/tree.h>
++#include <libxml/parser.h>
+ 
+ #define LIBXML_SAVE_NOEMPTYTAG 1<<2
+ 
