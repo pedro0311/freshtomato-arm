@@ -229,7 +229,6 @@ static int get_clock(uint32_t *clock_high, uint32_t *clock_low,
 	struct timeval			tv;
 	uint64_t			clock_reg;
 	mode_t				save_umask;
-	int				len;
 	int				ret = 0;
 
 	if (state_fd == -1)
@@ -324,14 +323,10 @@ try_again:
 
 	if (state_fd >= 0) {
 		rewind(state_f);
-		len = fprintf(state_f,
-			      "clock: %04x tv: %016ld %08ld adj: %08d\n",
+		fprintf(state_f,
+			      "clock: %04x tv: %016ld %08ld adj: %08d                   \n",
 			      clock_seq, (long)last.tv_sec, (long)last.tv_usec, adjustment);
 		fflush(state_f);
-		if (ftruncate(state_fd, len) < 0) {
-			fprintf(state_f, "                   \n");
-			fflush(state_f);
-		}
 		rewind(state_f);
 		flock(state_fd, LOCK_UN);
 	}
@@ -518,6 +513,10 @@ int __uuid_generate_time_cont(uuid_t out, int *num, uint32_t cont_offset)
 	return __uuid_generate_time_internal(out, num, cont_offset);
 }
 
+#define CS_MIN		(1<<6)
+#define CS_MAX		(1<<18)
+#define CS_FACTOR	2
+
 /*
  * Generate time-based UUID and store it to @out
  *
@@ -529,11 +528,8 @@ int __uuid_generate_time_cont(uuid_t out, int *num, uint32_t cont_offset)
 static int uuid_generate_time_generic(uuid_t out) {
 #ifdef HAVE_TLS
 	/* thread local cache for uuidd based requests */
-	const int			cs_min = (1<<6);
-	const int			cs_max = (1<<18);
-	const int			cs_factor = 2;
 	THREAD_LOCAL int		num = 0;
-	THREAD_LOCAL int		cache_size = cs_min;
+	THREAD_LOCAL int		cache_size = CS_MIN;
 	THREAD_LOCAL int		last_used = 0;
 	THREAD_LOCAL struct uuid	uu;
 	THREAD_LOCAL time_t		last_time = 0;
@@ -552,10 +548,10 @@ static int uuid_generate_time_generic(uuid_t out) {
 		 * Start with a small cache size to cover short running applications
 		 * and adjust the cache size over the runntime.
 		 */
-		if ((last_used == cache_size) && (cache_size < cs_max))
-			cache_size *= cs_factor;
-		else if ((last_used < (cache_size / cs_factor)) && (cache_size > cs_min))
-			cache_size /= cs_factor;
+		if ((last_used == cache_size) && (cache_size < CS_MAX))
+			cache_size *= CS_FACTOR;
+		else if ((last_used < (cache_size / CS_FACTOR)) && (cache_size > CS_MIN))
+			cache_size /= CS_FACTOR;
 
 		num = cache_size;
 
@@ -568,7 +564,7 @@ static int uuid_generate_time_generic(uuid_t out) {
 		}
 		/* request to daemon failed, reset cache */
 		num = 0;
-		cache_size = cs_min;
+		cache_size = CS_MIN;
 	}
 	if (num > 0) { /* serve uuid from cache */
 		uu.time_low++;

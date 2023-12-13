@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "superblocks.h"
 #include "crc32c.h"
@@ -88,6 +89,16 @@ struct bcachefs_sb_field_members {
 	struct bcachefs_sb_member	members[];
 }  __attribute__((packed));
 
+struct bcachefs_sb_disk_group {
+	uint8_t		label[SB_LABEL_SIZE];
+	uint64_t	flags[2];
+} __attribute__((packed));
+
+struct bcachefs_sb_field_disk_groups {
+	struct bcachefs_sb_field	field;
+	struct bcachefs_sb_disk_group   disk_groups[];
+}  __attribute__((packed));
+
 enum bcachefs_sb_csum_type {
 	BCACHEFS_SB_CSUM_TYPE_NONE = 0,
 	BCACHEFS_SB_CSUM_TYPE_CRC32C = 1,
@@ -100,6 +111,15 @@ union bcachefs_sb_csum {
 	uint64_t crc64;
 	XXH64_hash_t xxh64;
 	uint8_t raw[16];
+} __attribute__((packed));
+
+struct bcachefs_sb_layout {
+	uint8_t		magic[16];
+	uint8_t		layout_type;
+	uint8_t		sb_max_size_bits;
+	uint8_t		nr_superblocks;
+	uint8_t		pad[5];
+	uint64_t	sb_offset[61];
 } __attribute__((packed));
 
 struct bcachefs_super_block {
@@ -123,7 +143,7 @@ struct bcachefs_super_block {
 	uint64_t	flags[8];
 	uint64_t	features[2];
 	uint64_t	compat[2];
-	uint8_t		layout[512];
+	struct bcachefs_sb_layout layout;
 	struct bcachefs_sb_field _start[];
 }  __attribute__((packed));
 
@@ -133,21 +153,28 @@ struct bcachefs_super_block {
 /* magic string len */
 #define BCACHE_SB_MAGIC_LEN (sizeof(BCACHE_SB_MAGIC) - 1)
 /* super block offset */
-#define BCACHE_SB_OFF       0x1000
+#define BCACHE_SB_OFF       0x1000U
 /* supper block offset in kB */
 #define BCACHE_SB_KBOFF     (BCACHE_SB_OFF >> 10)
 /* magic string offset within super block */
 #define BCACHE_SB_MAGIC_OFF offsetof(struct bcache_super_block, magic)
 /* start of checksummed data within superblock */
-#define BCACHE_SB_CSUMMED_START 8
+#define BCACHE_SB_CSUMMED_START 8U
 /* granularity of offset and length fields within superblock */
-#define BCACHEFS_SECTOR_SIZE   512
+#define BCACHEFS_SECTOR_SIZE   512U
+/* maximum superblock size shift */
+#define BCACHEFS_SB_MAX_SIZE_SHIFT   0x10U
 /* maximum superblock size */
-#define BCACHEFS_SB_MAX_SIZE   4096
+#define BCACHEFS_SB_MAX_SIZE   (1U << BCACHEFS_SB_MAX_SIZE_SHIFT)
 /* fields offset within super block */
 #define BCACHEFS_SB_FIELDS_OFF offsetof(struct bcachefs_super_block, _start)
 /* tag value for members field */
 #define BCACHEFS_SB_FIELD_TYPE_MEMBERS 1
+/* tag value for disk_groups field */
+#define BCACHEFS_SB_FIELD_TYPE_DISK_GROUPS 5
+/* version splitting helpers */
+#define BCH_VERSION_MAJOR(_v)           ((uint16_t) ((_v) >> 10))
+#define BCH_VERSION_MINOR(_v)           ((uint16_t) ((_v) & ~(~0U << 10)))
 
 #define BYTES(f) ((((uint64_t) le32_to_cpu((f)->u64s)) * 8))
 
@@ -214,6 +241,22 @@ static void probe_bcachefs_sb_members(blkid_probe pr,
 	blkid_probe_set_fssize(pr, sectors * BCACHEFS_SECTOR_SIZE);
 }
 
+static void probe_bcachefs_sb_disk_groups(blkid_probe pr,
+					  const struct bcachefs_super_block *bcs,
+					  const struct bcachefs_sb_field *field,
+					  uint8_t dev_idx)
+{
+	struct bcachefs_sb_field_disk_groups *disk_groups =
+			(struct bcachefs_sb_field_disk_groups *) field;
+
+	if (BYTES(field) != offsetof(typeof(*disk_groups), disk_groups[bcs->nr_devices]))
+		return;
+
+	blkid_probe_set_id_label(pr, "LABEL_SUB",
+				 disk_groups->disk_groups[dev_idx].label,
+				 sizeof(disk_groups->disk_groups[dev_idx].label));
+}
+
 static int is_within_range(void *start, uint64_t size, void *end)
 {
 	ptrdiff_t diff;
@@ -253,6 +296,9 @@ static void probe_bcachefs_sb_fields(blkid_probe pr, const struct bcachefs_super
 		if (type == BCACHEFS_SB_FIELD_TYPE_MEMBERS)
 			probe_bcachefs_sb_members(pr, bcs, field, bcs->dev_idx);
 
+		if (type == BCACHEFS_SB_FIELD_TYPE_DISK_GROUPS)
+			probe_bcachefs_sb_disk_groups(pr, bcs, field, bcs->dev_idx);
+
 		field_addr += BYTES(field);
 	}
 }
@@ -290,6 +336,7 @@ static int probe_bcachefs(blkid_probe pr, const struct blkid_idmag *mag)
 	struct bcachefs_super_block *bcs;
 	unsigned char *sb, *sb_end;
 	uint64_t sb_size, blocksize;
+	uint16_t version;
 
 	bcs = blkid_probe_get_sb(pr, mag, struct bcachefs_super_block);
 	if (!bcs)
@@ -302,7 +349,14 @@ static int probe_bcachefs(blkid_probe pr, const struct blkid_idmag *mag)
 		return BLKID_PROBE_NONE;
 
 	sb_size = BCACHEFS_SB_FIELDS_OFF + BYTES(bcs);
+
 	if (sb_size > BCACHEFS_SB_MAX_SIZE)
+		return BLKID_PROBE_NONE;
+
+	if (bcs->layout.sb_max_size_bits > BCACHEFS_SB_MAX_SIZE_SHIFT)
+		return BLKID_PROBE_NONE;
+
+	if (sb_size > (BCACHEFS_SECTOR_SIZE << bcs->layout.sb_max_size_bits))
 		return BLKID_PROBE_NONE;
 
 	sb = blkid_probe_get_sb_buffer(pr, mag, sb_size);
@@ -315,7 +369,10 @@ static int probe_bcachefs(blkid_probe pr, const struct blkid_idmag *mag)
 
 	blkid_probe_set_uuid(pr, bcs->user_uuid);
 	blkid_probe_set_label(pr, bcs->label, sizeof(bcs->label));
-	blkid_probe_sprintf_version(pr, "%d", le16_to_cpu(bcs->version));
+	version = le16_to_cpu(bcs->version);
+	blkid_probe_sprintf_version(pr, "%"PRIu16".%"PRIu16,
+				    BCH_VERSION_MAJOR(version),
+				    BCH_VERSION_MINOR(version));
 	blocksize = le16_to_cpu(bcs->block_size);
 	blkid_probe_set_block_size(pr, blocksize * BCACHEFS_SECTOR_SIZE);
 	blkid_probe_set_fsblocksize(pr, blocksize * BCACHEFS_SECTOR_SIZE);

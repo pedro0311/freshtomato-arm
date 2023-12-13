@@ -458,7 +458,8 @@ static int proc_tree_compare(const void *a, const void *b)
 
 struct proc *get_proc(pid_t pid)
 {
-	struct proc **node = tfind(&pid, &proc_tree, proc_tree_compare);
+	struct proc key = { .pid = pid };
+	struct proc **node = tfind(&key, &proc_tree, proc_tree_compare);
 	if (node)
 		return *node;
 	return NULL;
@@ -1590,6 +1591,8 @@ static void append_filter_expr(char **a, const char *b, bool and)
 		xstrappend(a, "or(");
 	xstrappend(a, b);
 	xstrappend(a, ")");
+
+	free(tmp);
 }
 
 static struct lsfd_filter *new_filter(const char *expr, bool debug, const char *err_prefix, struct lsfd_control *ctl)

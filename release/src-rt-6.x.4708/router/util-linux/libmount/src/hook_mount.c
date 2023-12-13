@@ -45,6 +45,7 @@
 
 #include "mountP.h"
 #include "fileutils.h"	/* statx() fallback */
+#include "strutils.h"
 #include "mount-api-utils.h"
 #include "linux_version.h"
 
@@ -121,12 +122,23 @@ static inline int fsconfig_set_value(
 			const char *name, const char *value)
 {
 	int rc;
+	char *p = NULL;
 
-	DBG(HOOK, ul_debugobj(hs, "  fsconfig(name=%s,value=%s)", name,
+	if (value && strstr(value, "\\,")) {
+		p = strdup(value);
+		if (!p)
+			return -EINVAL;
+
+		strrem(p, '\\');
+		value = p;
+	}
+
+	DBG(HOOK, ul_debugobj(hs, "  fsconfig(name=\"%s\" value=\"%s\")", name,
 				value ? : ""));
-	if (value)
+	if (value) {
 		rc = fsconfig(fd, FSCONFIG_SET_STRING, name, value, 0);
-	else
+		free(p);
+	} else
 		rc = fsconfig(fd, FSCONFIG_SET_FLAG, name, NULL, 0);
 
 	set_syscall_status(cxt, "fsconfig", rc == 0);
@@ -294,17 +306,18 @@ static int hook_create_mount(struct libmnt_context *cxt,
 		/* cleanup after fail (libmount may only try the FS type) */
 		close_sysapi_fds(api);
 
-#if defined(HAVE_STRUCT_STATX) && defined(HAVE_STRUCT_STATX_STX_MNT_ID)
+#if defined(HAVE_STATX) && defined(HAVE_STRUCT_STATX) && defined(HAVE_STRUCT_STATX_STX_MNT_ID)
 	if (!rc && cxt->fs) {
 		struct statx st;
 
 		rc = statx(api->fd_tree, "", AT_EMPTY_PATH, STATX_MNT_ID, &st);
-		cxt->fs->id = (int) st.stx_mnt_id;
-
-		if (cxt->update) {
-			struct libmnt_fs *fs = mnt_update_get_fs(cxt->update);
-			if (fs)
-				fs->id = cxt->fs->id;
+		if (rc == 0) {
+			cxt->fs->id = (int) st.stx_mnt_id;
+			if (cxt->update) {
+				struct libmnt_fs *fs = mnt_update_get_fs(cxt->update);
+				if (fs)
+					fs->id = cxt->fs->id;
+			}
 		}
 	}
 #endif

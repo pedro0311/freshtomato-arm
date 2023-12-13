@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="17-Aug-2023"
+LIBBLKID_DATE="04-Dec-2023"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -315,7 +315,6 @@ AC_CHECK_HEADERS([ \
 	linux/nsfs.h \
 	linux/pr.h \
 	linux/raw.h \
-	linux/stat.h \
 	linux/securebits.h \
 	linux/tiocl.h \
 	linux/version.h \
@@ -507,7 +506,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 ])
 
 AC_CHECK_TYPES([struct mount_attr], [], [], [[#include <linux/mount.h>]])
-AC_CHECK_TYPES([struct statx], [], [], [[#include <linux/stat.h>]])
 AC_CHECK_TYPES([enum fsconfig_command], [], [], [[#include <linux/mount.h>]])
 
 AC_CHECK_MEMBERS([struct termios.c_line],,,
@@ -516,8 +514,9 @@ AC_CHECK_MEMBERS([struct termios.c_line],,,
 AC_CHECK_MEMBERS([struct stat.st_mtim.tv_nsec],,,
     [[#include <sys/stat.h>]])
 
+AC_CHECK_TYPES([struct statx], [], [], [[#include <sys/stat.h>]])
 AC_CHECK_MEMBERS([struct statx.stx_mnt_id],,,
-    [[#include <linux/stat.h>]])
+    [[#include <sys/stat.h>]])
 
 AC_CHECK_DECLS([_NL_TIME_WEEK_1STDAY],[],[],[[#include <langinfo.h>]])
 
@@ -682,13 +681,13 @@ AC_CHECK_FUNCS([timer_create],
 	[AC_CHECK_LIB([rt], [timer_create], [
 		have_timer="yes"
 		REALTIME_LIBS="-lrt"
-		AC_DEFINE_UNQUOTED([HAVE_TIMER_CREATE], [1], [Define if timer_create exist in -lrt])
+		AC_DEFINE([HAVE_TIMER_CREATE], [1], [Define if timer_create exist in -lrt])
 	],[
 		AC_SEARCH_LIBS([timer_create], [rt], [
 			AC_MSG_RESULT(yes)
 			have_timer="yes"
 			REALTIME_LIBS="-lrt -lpthread"
-			AC_DEFINE_UNQUOTED([HAVE_TIMER_CREATE], [1], [Define if timer_create exist in -lrt -lpthread])
+			AC_DEFINE([HAVE_TIMER_CREATE], [1], [Define if timer_create exist in -lrt -lpthread])
 		],[], [-lpthread]
 		)
 	])]
@@ -703,13 +702,13 @@ AS_IF([test x"$have_timer" = xno], [
 
 AC_CHECK_LIB([rtas], [rtas_get_sysparm], [
 	RTAS_LIBS="-lrtas"
-	AC_DEFINE_UNQUOTED([HAVE_LIBRTAS], [1], [Define if librtas exists]), [],
+	AC_DEFINE([HAVE_LIBRTAS], [1], [Define if librtas exists])
 ])
 AC_SUBST([RTAS_LIBS])
 
 
 AC_CHECK_MEMBER([struct sockaddr.sa_len],
-		AC_DEFINE_UNQUOTED([HAVE_SA_LEN], [1], [Define if struct sockaddr contains sa_len]), [],
+		AC_DEFINE([HAVE_SA_LEN], [1], [Define if struct sockaddr contains sa_len]), [],
 	[#include <sys/types.h>
 	 #include <sys/socket.h>])
 
@@ -1614,7 +1613,7 @@ AS_IF([test "x$have_futimens" = xyes && test "x$have_inotify_init1" = xyes ], [
 
 
 AC_ARG_ENABLE([plymouth_support],
-  AS_HELP_STRING([--disable-plymouth_support], [do not care about plymouth in sylogin(8) and agetty(8)]),
+  AS_HELP_STRING([--disable-plymouth_support], [do not care about plymouth in sulogin(8) and agetty(8)]),
   [], [enable_plymouth_support=check]
 )
 UL_BUILD_INIT([plymouth_support])
@@ -1624,7 +1623,7 @@ UL_REQUIRES_HAVE([plymouth_support], [sock_nonblock], [SOCK_NONBLOCK flag])
 UL_REQUIRES_HAVE([plymouth_support], [so_passcred], [SO_PASSCRED flag])
 AM_CONDITIONAL([USE_PLYMOUTH_SUPPORT], [test "x$build_plymouth_support" = xyes])
 AS_IF([test "x$build_plymouth_support" = xyes ], [
-    AC_DEFINE([USE_PLYMOUTH_SUPPORT], [1], [Enable plymouth support feature for sulogin and aggety])
+    AC_DEFINE([USE_PLYMOUTH_SUPPORT], [1], [Enable plymouth support feature for sulogin and agetty])
 ])
 
 
@@ -2767,7 +2766,7 @@ AS_IF([test "x$with_cryptsetup" = xno], [
 	 SAVE_LIBS="$LIBS"
 	 LIBS="$CRYPTSETUP_LIBS $LIBS"
 	 AC_CHECK_LIB([cryptsetup], [crypt_activate_by_signed_key], [
-	  AC_DEFINE_UNQUOTED([HAVE_CRYPT_ACTIVATE_BY_SIGNED_KEY], [1], [Define if crypt_activate_by_signed_key exist in -lcryptsetup])
+	  AC_DEFINE([HAVE_CRYPT_ACTIVATE_BY_SIGNED_KEY], [1], [Define if crypt_activate_by_signed_key exist in -lcryptsetup])
 	 ])
 	 AS_IF([test "x$with_cryptsetup" = xdlopen], [
 	  LIBS="-ldl $LIBS"
