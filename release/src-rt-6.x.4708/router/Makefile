@@ -2640,7 +2640,8 @@ mysql/target/Makefile:
 			-DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_MYSQLSHAREDIR=share/mysql \
 			-DCMAKE_BUILD_TYPE=$(if $(TCONFIG_BCMARM),Release,MinSizeRel) -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_CXX_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DDISABLE_SHARED=FALSE \
 			-DHAVE_LIBPTHREAD=TRUE \
