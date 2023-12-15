@@ -2530,8 +2530,7 @@ libatomic_ops: libatomic_ops/stamp-h1
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 libatomic_ops-install:
-	install -D libatomic_ops/src/.libs/libatomic_ops.so.1.0.3 $(INSTALLDIR)/libatomic_ops/usr/lib/libatomic_ops.so.1.0.3
-	$(STRIP) $(INSTALLDIR)/libatomic_ops/usr/lib/libatomic_ops.so.1.0.3
+	@true
 
 libatomic_ops-clean:
 	-@$(MAKE) -C libatomic_ops clean
