@@ -5,6 +5,65 @@ FreshTomato-ARM Changelog
 
 
 
+2023.5          2023.12.21
+---------------------------
+
+- iperf: update to 3.15
+- openssl-1.1: update to 1.1.1w
+- libcurl: update to 8.4.0
+- dnsmasq: update to cd4db82 (2023-11-30) snapshot
+- libsodium: update to latest 1.0.19-stable
+- sqlite: update to 3.44.2
+- libjpeg-turbo: update to 3.0.1
+- nginx: update to 1.25.3
+- uqmi: update to eea2924 (2023-10-28) snapshot
+- openvpn: update to 2.6.8
+- irqbalance: update to 1.9.3
+- libxml2: update to 2.11.6
+- util-linux: update to 2.39.3
+- add initial Netgear R6200v2 router support
+- build: Makefile: shrink again AIO_Lite target (remove ZFS, SNMP and NANO)
+- build: rename TCONFIG_TUXERA_HFS symbol to TCONFIG_TUX_HFS to avoid problems when building without it; cosmetic
+- build: Makefile: shrink r1do target (remove BTCLIENT and TR_EXTRAS)
+- build: add fsck.* symlinks for ntfs and zfs
+- build: Makefile: align the images filename for each release to contain the relevant ARM version in the filename
+- build: Makefile: init files don't have to contain openssl, openvpn, or proxy
+- build: Makefile: split into different files for easier maintenance; tune a little versioning
+- build: Makefile: compile rp-pppoe and pppd with -Os (for small images) or -O2 flag (other images like VPN, AIO, AIO_Lite, Mega)
+- build: Makefile: compile OpenVPN using -O2 flag (for ARM branch)
+- build: Makefile: add NANO instead of UPS in AIO_Lite target (y)
+- build: fix zfs python minor version detection
+- build: Makefile: fix pcre-install recipe
+- build: Makefile: fix php recipe - build it with our pcre and also correct libjpeg-turbo support
+- busybox: add lsof applet to images
+- BSD (wireless band steering): add bsd nvram variables only if feature is enabled (clean-up nvram at boot/re-boot)
+- dropbear: fix CVE-2023-36328
+- GUI: basic-network.asp - allow Group Key Renewal from 0 (disabled) up to 30 days (2592000 sec)
+- GUI: Status: Device List: add Wake on LAN for Media icon
+- GUI: add an optional 'toggle to dark' switch
+- GUI: Advanced: Routing: allow to add 'default' as a Destination (fix #301)
+- GUI: Status: Overview: count reclaimable slab memory as a free memory (according to 'free')
+- GUI: Port Forwarding: Basic/Basic IPv6/Triggered: fix tables width in Advanced themes and some html/css inconsistency; cosmetic
+- GUI: Port Forwarding: Basic: sort "Src Address" and Int Address" columns by text like on Basic IPv6
+- httpd: openvpn.c: remove the status from the generated OpenVPN client configuration - this may cause problems in some cases
+- Media Bridge Mode (SDK6/SDK7/SDK714): reinitialize wl radio in case of connectivity loss (v2)
+- nvram: add possibility to convert config backup file to readable nvram text file
+- others: mwwatchdog: tune cktracert() a little
+- rc: services.c: start rstats/cstats later and stop them earlier (should fix #213)
+- rc/httpd: use tomato_version variable instead of nvram 'os_version'
+- rc: Drastically improve slow boot times caused by USB mass storage
+- rom: update CA bundle to 2023-12-12
+- switch4g: add more complex PIN check for QMI modems; also some more fixes
+- switch4g: do not use setpin.gcom script from gcom (comgt) package
+- wanuptime: improve buffer validation (snprintf/strlcpy)
+- WET / Media Bridge Mode: allow to use/enable Debug Mode for dnsmasq (via advanced-dhcpdns.asp)
+- WET / Media Bridge Mode: allow to use/enable Adblock feature
+- www: status-data.jsx: fix a small bug in displaying DNS addresses
+- www: admin-iptraffic.asp: restart the firewall when enabling/disabling cstats
+- www: status-data.jsx: DNS: make message about used DNS more precise
+- www: wireguard GUI and wg-quick script
+
+
 2023.4          2023.09.10
 ---------------------------
 
