@@ -94,7 +94,7 @@ apps: .conf
 		--libdir=/etc \
 		--localstatedir=/var \
 		--host=$(HOST)-linux \
-		$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),--with-libiconv=$(TOP)/libiconv/staged/usr/,) \
+		$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),--with-libiconv=$(TOP)/libiconv/staged/usr,) \
 		--with-configdir=/etc/samba \
 		--with-rootsbindir=/usr/sbin \
 		--with-piddir=/var/run/samba \
