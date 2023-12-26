@@ -1,4 +1,3 @@
-diff -daurN php/ext/dom/document.c php_/ext/dom/document.c
 --- php/ext/dom/document.c
 +++ php/ext/dom/document.c
 @@ -27,6 +27,7 @@
@@ -9,7 +8,6 @@ diff -daurN php/ext/dom/document.c php_/ext/dom/document.c
  #ifdef LIBXML_SCHEMAS_ENABLED
  #include <libxml/relaxng.h>
  #include <libxml/xmlschemas.h>
-diff -daurN php/ext/libxml/php_libxml.h php_/ext/libxml/php_libxml.h
 --- php/ext/libxml/php_libxml.h
 +++ php/ext/libxml/php_libxml.h
 @@ -39,6 +39,7 @@
