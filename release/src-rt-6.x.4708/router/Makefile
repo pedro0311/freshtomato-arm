@@ -2749,7 +2749,7 @@ lzo-clean:
 	@rm -rf lzo/staged
 
 libcap-ng/stamp-h1:
-	cd libcap-ng && autoreconf -fsi && \
+	cd libcap-ng && ./autogen.sh && \
 		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
