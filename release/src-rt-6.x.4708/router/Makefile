@@ -2432,9 +2432,9 @@ $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
 	cd $(PHP_TARGET) && \
 		PKG_CONFIG_LIBDIR="" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
 			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -Wl,--gc-sections" \
@@ -2479,8 +2479,8 @@ $(PHP_TARGET)/stamp-h1:
 			--enable-xmlreader \
 			--enable-xmlwriter \
 			--enable-zip \
-			$(if $(TCONFIG_BCMARM),--without-valgrind,) \
 			--with-gd \
+			$(if $(TCONFIG_BCMARM),--without-valgrind,) \
 			--without-pear \
 			--disable-short-tags \
 			--disable-phar \
@@ -2952,7 +2952,7 @@ libevent-clean:
 
 libiconv/stamp-h1:
 	cd libiconv && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --disable-nls --enable-static --enable-shared
 	@touch $@
@@ -3229,7 +3229,7 @@ snmp/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(OPTSIZE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --with-persistent-directory=/tmp/snmp-persist --with-logfile=/var/log/snmpd.log \
-		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy \
+		--disable-debugging --disable-manuals --disable-scripts --disable-applications --disable-privacy --disable-developer \
 		--disable-ipv6 --disable-mibs --disable-mib-loading --disable-embedded-perl --with-perl-modules=no --without-opaque-special-types \
 		--without-openssl --without-rsaref --without-kmem-usage --without-rpm \
 		--with-out-transports=UDPIPv6,TCPIPv6,AAL5PVC,IPX,TCP,Unix \
@@ -3928,7 +3928,7 @@ conntrack-tools/stamp-h1:
 	cd conntrack-tools && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include \
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections 	-L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
 			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
 		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
