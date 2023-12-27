@@ -19,10 +19,6 @@
  * $Id: field.c,v 1.16 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <stdlib.h>
@@ -291,7 +287,7 @@ int id3_field_parse(union id3_field *field, id3_byte_t const **ptr,
 
       end = *ptr + length;
 
-      while (end - *ptr > 0) {
+      while (end - *ptr > 0 && **ptr != '\0') {
 	ucs4 = id3_parse_string(ptr, end - *ptr, *encoding, 0);
 	if (ucs4 == 0)
 	  goto fail;

@@ -19,10 +19,6 @@
  * $Id: latin1.c,v 1.10 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <stdlib.h>

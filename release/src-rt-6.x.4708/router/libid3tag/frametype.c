@@ -51,10 +51,6 @@ error "gperf generated tables don't work with this execution character set. Plea
  * Id: frametype.gperf,v 1.7 2004/01/23 09:41:32 rob Exp 
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <string.h>
@@ -357,7 +353,7 @@ __inline
 const struct id3_frametype *
 id3_frametype_lookup (str, len)
      register const char *str;
-     register unsigned int len;
+     register size_t len;
 {
   static const struct id3_frametype wordlist[] =
     {

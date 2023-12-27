@@ -19,10 +19,6 @@
  * $Id: file.c,v 1.21 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <stdio.h>
@@ -35,6 +31,10 @@
 
 # ifdef HAVE_ASSERT_H
 #  include <assert.h>
+# endif
+
+# ifdef HAVE_SYS_STAT_H
+#  include <sys/stat.h>
 # endif
 
 # include "id3tag.h"
@@ -575,6 +575,10 @@ static
 int v2_write(struct id3_file *file,
 	     id3_byte_t const *data, id3_length_t length)
 {
+  struct stat st;
+  char *buffer;
+  id3_length_t datalen, offset;
+
   assert(!data || length > 0);
 
   if (data &&
@@ -592,8 +596,24 @@ int v2_write(struct id3_file *file,
   }
 
   /* hard general case: rewrite entire file */
+  if (stat(file->path, &st) == -1)
+    return -1;
 
-  /* ... */
+  offset = file->tags ? file->tags[0].length : 0;
+  datalen = st.st_size - offset;
+  if ((buffer = (char *) malloc(datalen)) == NULL)
+    return -1;
+
+  if (fseek(file->iofile, offset, SEEK_SET) == -1 ||
+      fread(buffer, datalen, 1, file->iofile) != 1 ||
+      fseek(file->iofile, 0, SEEK_SET) == -1 ||
+      fwrite(data, length, 1, file->iofile) != 1 ||
+      fwrite(buffer, datalen, 1, file->iofile) != 1 ||
+      fflush(file->iofile) == EOF) {
+    free(buffer);
+    return -1;
+  }
+  free(buffer);
 
  done:
   return 0;

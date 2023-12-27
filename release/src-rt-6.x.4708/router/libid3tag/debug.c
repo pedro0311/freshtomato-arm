@@ -19,10 +19,6 @@
  * $Id: debug.c,v 1.8 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # undef malloc

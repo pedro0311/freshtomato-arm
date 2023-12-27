@@ -19,10 +19,6 @@
  * $Id: parse.c,v 1.9 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # ifdef HAVE_ASSERT_H
@@ -165,6 +161,9 @@ id3_ucs4_t *id3_parse_string(id3_byte_t const **ptr, id3_length_t length,
   case ID3_FIELD_TEXTENCODING_UTF_8:
     ucs4 = id3_utf8_deserialize(ptr, length);
     break;
+  default:
+        /* FIXME: Unknown encoding! Print warning? */
+	return NULL;
   }
 
   if (ucs4 && !full) {

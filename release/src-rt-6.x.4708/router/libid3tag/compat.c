@@ -51,10 +51,6 @@ error "gperf generated tables don't work with this execution character set. Plea
  * Id: compat.gperf,v 1.11 2004/01/23 09:41:32 rob Exp 
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <stdlib.h>
@@ -151,7 +147,7 @@ __inline
 const struct id3_compat *
 id3_compat_lookup (str, len)
      register const char *str;
-     register unsigned int len;
+     register size_t len;
 {
   static const struct id3_compat wordlist[] =
     {
@@ -442,6 +438,9 @@ int id3_compat_fixup(struct id3_tag *tag)
 
     encoding = id3_parse_uint(&data, 1);
     string   = id3_parse_string(&data, end - data, encoding, 0);
+
+	if (!string)
+		continue;
 
     if (id3_ucs4_length(string) < 4) {
       free(string);

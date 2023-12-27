@@ -19,10 +19,6 @@
  * $Id: crc.c,v 1.11 2004/02/17 02:04:10 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include "id3tag.h"

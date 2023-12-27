@@ -19,10 +19,6 @@
  * $Id: tag.c,v 1.20 2004/02/17 02:04:10 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <string.h>
@@ -714,9 +710,12 @@ id3_length_t v1_render(struct id3_tag const *tag, id3_byte_t *buffer)
 
   frame = id3_tag_findframe(tag, ID3_FRAME_TRACK, 0);
   if (frame) {
-    unsigned int track;
+    id3_ucs4_t const *string;
+    unsigned int track = 0;
 
-    track = id3_ucs4_getnumber(id3_field_getstrings(&frame->fields[1], 0));
+    string = id3_field_getstrings(&frame->fields[1], 0);
+    if (string)
+      track = id3_ucs4_getnumber(string);
     if (track > 0 && track <= 0xff) {
       ptr[-2] = 0;
       ptr[-1] = track;

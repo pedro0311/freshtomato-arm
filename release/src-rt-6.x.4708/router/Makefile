@@ -2042,30 +2042,35 @@ libexif-clean:
 	-@$(MAKE) -C libexif clean
 	@rm -f libexif/stamp-h1
 
-libid3tag/stamp-h1:
+libid3tag/build/Makefile:
 	$(call patch_files,libid3tag)
-	cd libid3tag $(if $(TCONFIG_BCMARM),,&& autoreconf -fsi) && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix='' --enable-shared --enable-static \
-			--disable-debugging --disable-profiling --disable-dependency-tracking
-	@touch $@
+	@rm -rf libid3tag/build && mkdir -p libid3tag/build
+	cd libid3tag/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS) -fPIC" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
 
-libid3tag: libid3tag/stamp-h1
+libid3tag: libid3tag/build/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
+	$(MAKE) -C libid3tag/build all $(PARALLEL_BUILD)
 
 libid3tag-install:
 ifneq ($(MEDIA_SERVER_STATIC),y)
-	install -D libid3tag/.libs/libid3tag.so.0 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0
-	$(STRIP) $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0
+	install -D libid3tag/build/libid3tag.so.0.16.3 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0.16.3
+	cd $(INSTALLDIR)/libid3tag/usr/lib/ && $(STRIP) libid3tag.so.0.16.3 && ln -sf libid3tag.so.0.16.3 libid3tag.so && ln -sf libid3tag.so.0.16.3 libid3tag.so.0
 endif
 	@true
 
 libid3tag-clean:
-	-@$(MAKE) -C libid3tag clean
-	@rm -f libid3tag/stamp-h1
+	@rm -rf libid3tag/build
 	$(call unpatch_files,libid3tag)
 
 libvorbis/stamp-h1:
@@ -2139,9 +2144,9 @@ minidlna/stamp-h1:
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include -I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo \
-			-I$(TOP)/libexif -I$(TOP)/libid3tag -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
+			-I$(TOP)/libexif -I$(TOP)/libid3tag/build -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
-			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
+			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/build -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
 			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking

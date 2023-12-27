@@ -6,6 +6,22 @@
 
 ===============================================================================
 
+Version 0.16.3
+  * Fix backward compatibility with libid3tag 0.15.1b.
+
+Version 0.16.2
+  * Fix null pointer dereference in id3_ucs4_length (CVE-2017-11550)
+
+Version 0.16.1
+  * Fix exported CMake config file
+  * Fix pkgconfig file name to match Linux distro packages
+    (id3tag instead of libid3tag).
+
+Version 0.16.0
+  * Add CMake build system
+  * Remove autotools
+  * Apply patches from Debian, Fedora, Arch, and Gentoo
+
 Version 0.15.1 (beta)
 
   * Updated to autoconf 2.59, automake 1.8.2, libtool 1.5.2.

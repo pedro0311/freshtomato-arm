@@ -19,10 +19,6 @@
  * $Id: utf16.c,v 1.9 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <stdlib.h>
@@ -250,6 +246,8 @@ id3_ucs4_t *id3_utf16_deserialize(id3_byte_t const **ptr, id3_length_t length,
   id3_ucs4_t *ucs4;
 
   end = *ptr + (length & ~1);
+  if (end == *ptr)
+    return 0;
 
   utf16 = malloc((length / 2 + 1) * sizeof(*utf16));
   if (utf16 == 0)
@@ -281,6 +279,19 @@ id3_ucs4_t *id3_utf16_deserialize(id3_byte_t const **ptr, id3_length_t length,
     id3_utf16_decode(utf16, ucs4);
 
   free(utf16);
+
+  if (end == *ptr && length % 2 != 0)
+  {
+     /* We were called with a bogus length.  It should always
+      * be an even number.  We can deal with this in a few ways:
+      * - Always give an error.
+      * - Try and parse as much as we can and
+      *   - return an error if we're called again when we
+      *     already tried to parse everything we can.
+      *   - tell that we parsed it, which is what we do here.
+      */
+     (*ptr)++;
+  }
 
   return ucs4;
 }

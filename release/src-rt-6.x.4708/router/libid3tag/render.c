@@ -19,10 +19,6 @@
  * $Id: render.c,v 1.11 2004/01/23 09:41:32 rob Exp $
  */
 
-# ifdef HAVE_CONFIG_H
-#  include "config.h"
-# endif
-
 # include "global.h"
 
 # include <string.h>
@@ -183,18 +179,16 @@ id3_length_t id3_render_paddedstring(id3_byte_t **ptr, id3_ucs4_t const *ucs4,
   end  = data + length;
 
   if (ucs4) {
-    while (*ucs4 && end - data > 0) {
+    while (*ucs4 && end - data > 0)
       *data++ = *ucs4++;
-
-      if (data[-1] == '\n')
-	data[-1] = ' ';
-    }
   }
-
-  while (end - data > 0)
-    *data++ = ' ';
 
   *data = 0;
 
-  return id3_latin1_serialize(ptr, padded, 0);
+  id3_latin1_serialize(ptr, padded, 0);
+
+  if (end - data > 0)
+    id3_render_padding(ptr, 0, end - data);
+
+  return length;
 }
