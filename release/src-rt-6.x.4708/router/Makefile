@@ -2043,7 +2043,6 @@ libexif-clean:
 	@rm -f libexif/stamp-h1
 
 libid3tag/build/Makefile:
-	$(call patch_files,libid3tag)
 	@rm -rf libid3tag/build && mkdir -p libid3tag/build
 	cd libid3tag/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -2071,7 +2070,6 @@ endif
 
 libid3tag-clean:
 	@rm -rf libid3tag/build
-	$(call unpatch_files,libid3tag)
 
 libvorbis/stamp-h1:
 	cd libvorbis && \
