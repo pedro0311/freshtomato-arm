@@ -299,9 +299,9 @@ void start_bittorrent(int force)
 
 	memset(buf, 0, sizeof(buf));
 #ifdef TCONFIG_STUBBY
-	snprintf(buf, sizeof(buf), "EVENT_NOEPOLL=1; export EVENT_NOEPOLL; CURL_CA_BUNDLE=/etc/ssl/cert.pem; export CURL_CA_BUNDLE; %s/transmission-daemon -g %s/.settings %s", pn, pk, buf2);
+	snprintf(buf, sizeof(buf), "EVENT_NOEPOLL=1; export EVENT_NOEPOLL; CURL_CA_BUNDLE=/etc/ssl/cert.pem; export CURL_CA_BUNDLE; TR_CURL_SSL_NO_VERIFY=1; export TR_CURL_SSL_NO_VERIFY; %s/transmission-daemon -g %s/.settings %s", pn, pk, buf2);
 #else
-	snprintf(buf, sizeof(buf), "EVENT_NOEPOLL=1; export EVENT_NOEPOLL; %s/transmission-daemon -g %s/.settings %s", pn, pk, buf2);
+	snprintf(buf, sizeof(buf), "EVENT_NOEPOLL=1; export EVENT_NOEPOLL; TR_CURL_SSL_NO_VERIFY=1; export TR_CURL_SSL_NO_VERIFY; %s/transmission-daemon -g %s/.settings %s", pn, pk, buf2);
 #endif
 	system(buf);
 
