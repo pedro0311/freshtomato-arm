@@ -23,8 +23,8 @@
 +#define MAX_UNAUTH_CLIENTS 5 /* default 30 */
 +#define MAX_AUTH_TRIES 2     /* default 10 */
 +#define AUTH_TIMEOUT 60      /* default 300 */
---- dropbear/sysoptions.h
-+++ dropbear/sysoptions.h
+--- dropbear/src/sysoptions.h
++++ dropbear/src/sysoptions.h
 @@ -7,7 +7,9 @@
  #define DROPBEAR_VERSION "2022.83"
  #endif
@@ -35,7 +35,7 @@
  #define PROGNAME "dropbear"
  
  #ifndef DROPBEAR_CLIENT
-@@ -363,7 +365,7 @@
+@@ -360,7 +362,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__

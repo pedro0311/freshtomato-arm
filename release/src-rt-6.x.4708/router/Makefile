@@ -1839,7 +1839,7 @@ iproute2-3.x-clean:
 
 dropbear/config.h:
 	$(call patch_files,dropbear)
-	cd dropbear && autoreconf -fsi && \
+	cd dropbear && autoreconf -fsi && ln -sf src/config.guess config.guess && ln -sf src/config.sub config.sub && ln -sf src/install-sh install-sh && \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -DARGTYPE=3 -ffunction-sections -fdata-sections $(OPTSIZE_MORE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		ac_cv_func_logout=no ac_cv_func_logwtmp=no \
