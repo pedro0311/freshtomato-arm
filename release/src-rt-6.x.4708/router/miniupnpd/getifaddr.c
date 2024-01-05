@@ -1,8 +1,8 @@
-/* $Id: getifaddr.c,v 1.28 2022/02/19 18:58:25 nanard Exp $ */
+/* $Id: getifaddr.c,v 1.29 2024/01/04 00:55:28 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2022 Thomas Bernard
+ * (c) 2006-2023 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -147,6 +147,12 @@ getifaddr(const char * ifname, char * buf, int len,
 		}
 		if(addr) *addr = ((struct sockaddr_in *)candidate->ifa_addr)->sin_addr;
 		if(mask) *mask = ((struct sockaddr_in *)candidate->ifa_netmask)->sin_addr;
+	}
+	else
+	{
+		syslog(LOG_WARNING, "no AF_INET address found for %s", ifname);
+		freeifaddrs(ifap);
+		return -1;
 	}
 	freeifaddrs(ifap);
 #endif

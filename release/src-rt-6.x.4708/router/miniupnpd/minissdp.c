@@ -1,8 +1,8 @@
-/* $Id: minissdp.c,v 1.104 2021/05/22 21:34:10 nanard Exp $ */
+/* $Id: minissdp.c,v 1.106 2023/06/29 09:45:18 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2021 Thomas Bernard
+ * (c) 2006-2023 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -613,7 +613,9 @@ static struct {
 	{"urn:schemas-upnp-org:device:WANConnectionDevice:", 2, uuidvalue_wcd},
 	{"urn:schemas-upnp-org:device:WANDevice:", 2, uuidvalue_wan},
 	{"urn:schemas-upnp-org:service:WANIPConnection:", 2, uuidvalue_wcd},
+#ifdef ENABLE_DP_SERVICE
 	{"urn:schemas-upnp-org:service:DeviceProtection:", 1, uuidvalue_igd},
+#endif
 #ifdef ENABLE_6FC_SERVICE
 	{"urn:schemas-upnp-org:service:WANIPv6FirewallControl:", 1, uuidvalue_wcd},
 #endif
@@ -914,7 +916,11 @@ ProcessSSDPRequest(int s, unsigned short http_port)
 		   errno != EWOULDBLOCK &&
 		   errno != EINTR)
 		{
+#if defined(IP_RECVIF) || defined(IP_PKTINFO)
+			syslog(LOG_ERR, "recvmsg(udp): %m");
+#else
 			syslog(LOG_ERR, "recvfrom(udp): %m");
+#endif
 		}
 		return;
 	}

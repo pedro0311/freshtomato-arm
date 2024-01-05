@@ -1,8 +1,8 @@
-/* $Id: miniupnpd.c,v 1.253 2021/12/01 22:50:09 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.257 2023/05/27 16:49:17 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2021 Thomas Bernard
+ * (c) 2006-2023 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -1214,7 +1214,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 #endif /* DISABLE_CONFIG_FILE */
 
 	/* set initial values */
-	SETFLAG(ENABLEUPNPMASK);	/* UPnP is enabled by default */
+	SETFLAG(ENABLEUPNPMASK | SECUREMODEMASK);	/* UPnP and secure mode */
 #ifdef ENABLE_IPV6
 	ipv6_bind_addr = in6addr_any;
 #endif /* ENABLE_IPV6 */
@@ -1402,13 +1402,13 @@ init(int argc, char * * argv, struct runtime_vars * v)
 				break;
 #endif	/* USE_PF */
 #ifdef ENABLE_NATPMP
+			/* enable both NAT-PMP and PCP (if enabled) */
 			case UPNPENABLENATPMP:
 				if(strcmp(ary_options[i].value, "yes") == 0)
-					SETFLAG(ENABLENATPMPMASK);	/*enablenatpmp = 1;*/
+					SETFLAG(ENABLENATPMPMASK);
 				else
 					if(atoi(ary_options[i].value))
 						SETFLAG(ENABLENATPMPMASK);
-					/*enablenatpmp = atoi(ary_options[i].value);*/
 				break;
 #endif	/* ENABLE_NATPMP */
 #ifdef ENABLE_PCP
@@ -1440,8 +1440,8 @@ init(int argc, char * * argv, struct runtime_vars * v)
 					CLEARFLAG(ENABLEUPNPMASK);
 				break;
 			case UPNPSECUREMODE:
-				if(strcmp(ary_options[i].value, "yes") == 0)
-					SETFLAG(SECUREMODEMASK);
+				if (strcmp(ary_options[i].value, "no") == 0)
+					CLEARFLAG(SECUREMODEMASK);
 				break;
 #ifdef ENABLE_LEASEFILE
 			case UPNPLEASEFILE:
@@ -1596,7 +1596,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			break;
 #ifdef ENABLE_NATPMP
 		case 'N':
-			/*enablenatpmp = 1;*/
+			/* enable both NAT-PMP and PCP (if enabled) */
 			SETFLAG(ENABLENATPMPMASK);
 			break;
 #endif	/* ENABLE_NATPMP */
@@ -1614,7 +1614,14 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			break;
 #endif	/* defined(USE_PF) || defined(USE_IPF) */
 		case 'S':
-			SETFLAG(SECUREMODEMASK);
+			/* -S0 to disable secure mode, for backward compatibility
+			 * -S is ignored */
+			if (argv[i][2] == '0') {
+				CLEARFLAG(SECUREMODEMASK);
+			} else if (argv[i][2] != '\0') {
+				INIT_PRINT_ERR("Uses -S0 to disable secure mode.\n");
+				goto print_usage;
+			}
 			break;
 		case 'i':
 			if(i+1 < argc) {
@@ -2019,7 +2026,7 @@ print_usage:
 #if defined(USE_PF) || defined(USE_IPF)
 			" [-L]"
 #endif
-			" [-U] [-S]"
+			" [-U] [-S0]"
 #ifdef ENABLE_NATPMP
 			" [-N]"
 #endif
@@ -2059,11 +2066,15 @@ print_usage:
 #if defined(USE_PF) || defined(USE_IPF)
 			"\t-L sets packet log in pf and ipf on.\n"
 #endif
-			"\t-S sets \"secure\" mode : clients can only add mappings to their own ip\n"
+			"\t-S0 disable \"secure\" mode so clients can add mappings to other ips\n"
 			"\t-U causes miniupnpd to report system uptime instead "
 			"of daemon uptime.\n"
 #ifdef ENABLE_NATPMP
+#ifdef ENABLE_PCP
+			"\t-N enables NAT-PMP and PCP functionality.\n"
+#else
 			"\t-N enables NAT-PMP functionality.\n"
+#endif
 #endif
 			"\t-B sets bitrates reported by daemon in bits per second.\n"
 			"\t-w sets the presentation url. Default is http address on port 80\n"
@@ -2180,6 +2191,41 @@ main(int argc, char * * argv)
 			puts(SSLeay_version(SSLEAY_VERSION));
 #endif
 #endif
+			puts("build options:"
+#ifdef USE_MINIUPNPDCTL
+				" miniupnpdctl"
+#endif
+#ifdef ENABLE_IPV6
+				" ipv6"
+#endif
+#ifdef UPNP_STRICT
+				" strict"
+#endif
+#ifdef ENABLE_NATPMP
+				" NAT-PMP"
+#endif
+#ifdef ENABLE_PCP
+				" PCP"
+#ifdef PCP_PEER
+				" PCP-PEER"
+#endif
+#ifdef PCP_FLOWP
+				" PCP-FLOWP"
+#endif
+#ifdef PCP_SADSCP
+				" PCP-SADSCP"
+#endif
+#endif /* ENABLE_PCP */
+#ifdef ENABLE_LEASEFILE
+				" leasefile"
+#endif
+#ifdef CHECK_PORTINUSE
+				" check_portinuse"
+#endif
+#ifdef IGD_V2
+				" igdv2"
+#endif
+			);
 			return 0;
 		}
 	}

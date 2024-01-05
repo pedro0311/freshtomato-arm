@@ -14,7 +14,7 @@
  		}
  	}
  #else
-@@ -1851,10 +1853,12 @@ 
+@@ -1858,10 +1860,12 @@ 
  			INIT_PRINT_ERR("Error: option ext_ip contains invalid address %s\n", use_ext_ip_addr);
  			return 1;
  		}
