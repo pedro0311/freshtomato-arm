@@ -31,7 +31,7 @@ var changed = 0;
 var serviceType = 'pptpd';
 
 if (nvram.pptpd_remoteip == '')
-	nvram.pptpd_remoteip = '172.19.0.1-6';
+	nvram.pptpd_remoteip = '172.19.0.1-20';
 if (nvram.pptpd_forcemppe == '')
 	nvram.pptpd_forcemppe = '1';
 
@@ -144,9 +144,9 @@ function verifyFields(focused, quiet) {
 
 	var a = E('_f_pptpd_startip');
 	var b = E('_f_pptpd_endip');
-	if (Math.abs((aton(a.value) - (aton(b.value)))) > 5) {
-		ferror.set(a, 'Invalid range (max 6 IPs)', quiet);
-		ferror.set(b, 'Invalid range (max 6 IPs)', quiet || !ok);
+	if (Math.abs((aton(a.value) - (aton(b.value)))) > 19) {
+		ferror.set(a, 'Invalid range (max 20 IPs)', quiet);
+		ferror.set(b, 'Invalid range (max 20 IPs)', quiet || !ok);
 		elem.setInnerHTML('pptpd_count', '(?)');
 		ok = 0;
 	}
