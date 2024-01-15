@@ -445,6 +445,7 @@ obj-$(TCONFIG_SDHC) += mmc
 obj-$(TCONFIG_NANO) += libncurses
 obj-$(TCONFIG_NANO) += nano
 obj-y += miniupnpd
+obj-$(TCONFIG_BCMARM) += libcurl
 obj-y += mdu
 obj-$(TCONFIG_WIREGUARD) += wireguard-tools
 obj-$(TCONFIG_MDNS) += libdaemon

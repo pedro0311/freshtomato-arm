@@ -21,7 +21,7 @@ LIBS += $(if $(TCONFIG_BCMARM),-lpthread,)
 endif
 endif
 
-ifneq ($(TCONFIG_BBT)$(TCONFIG_NGINX),)
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BBT),$(TCONFIG_NGINX)),y)
 CFLAGS += -DUSE_LIBCURL -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libcurl/staged/usr/include
 LIBS += -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libcurl/lib/.libs -lcurl -lpthread
 else
