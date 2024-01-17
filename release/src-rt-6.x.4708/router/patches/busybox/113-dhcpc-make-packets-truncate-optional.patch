@@ -22,7 +22,7 @@
  	USE_FOR_MMU(             OPTBIT_b,)
  	IF_FEATURE_UDHCPC_ARPING(OPTBIT_a,)
  	IF_FEATURE_UDHCP_PORT(   OPTBIT_P,)
-@@ -1250,6 +1251,7 @@
+@@ -1251,6 +1252,7 @@
  	opt = getopt32long(argv, "^"
  		/* O,x: list; -T,-t,-A take numeric param */
  		"CV:F:i:np:qRr:s:T:+t:+SA:+O:*ox:*fB"
@@ -30,7 +30,7 @@
  		USE_FOR_MMU("b")
  		IF_FEATURE_UDHCPC_ARPING("a::")
  		IF_FEATURE_UDHCP_PORT("P:")
-@@ -1342,6 +1344,9 @@
+@@ -1343,6 +1345,9 @@
  		clientid_mac_ptr += OPT_DATA + 1; /* skip option code, len, ethernet */
  	}
  

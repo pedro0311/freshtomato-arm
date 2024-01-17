@@ -23,7 +23,7 @@
  
  	/* Add a "param req" option with the list of options we'd like to have
  	 * from stubborn DHCP servers. Pull the data from the struct in common.c.
-@@ -1344,7 +1347,8 @@
+@@ -1345,7 +1348,8 @@
  	if (udhcp_read_interface(client_data.interface,
  			&client_data.ifindex,
  			NULL,
@@ -33,7 +33,7 @@
  	) {
  		return 1;
  	}
-@@ -1433,7 +1437,8 @@
+@@ -1434,7 +1438,8 @@
  			if (udhcp_read_interface(client_data.interface,
  					&client_data.ifindex,
  					NULL,
