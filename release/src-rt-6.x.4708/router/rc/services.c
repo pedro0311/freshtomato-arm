@@ -2542,6 +2542,9 @@ int ntpd_synced_main(int argc, char *argv[])
 #ifdef TCONFIG_OPENVPN
 		start_ovpn_eas();
 #endif
+#ifdef TCONFIG_WIREGUARD
+		start_wg_eas();
+#endif
 #ifdef TCONFIG_MDNS
 		stop_mdns();
 		start_mdns();
