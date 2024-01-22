@@ -1,4 +1,4 @@
-/* dnsmasq is Copyright (c) 2000-2023 Simon Kelley
+/* dnsmasq is Copyright (c) 2000-2024 Simon Kelley
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -868,6 +868,8 @@ int main (int argc, char **argv)
 
       if (option_bool(OPT_LOCAL_SERVICE))
 	my_syslog(LOG_INFO, _("DNS service limited to local subnets"));
+      else if (option_bool(OPT_LOCALHOST_SERVICE))
+	my_syslog(LOG_INFO, _("DNS service limited to localhost"));
     }
   
   my_syslog(LOG_INFO, _("compile time options: %s"), compile_opts);
