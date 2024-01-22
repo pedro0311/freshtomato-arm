@@ -5,7 +5,7 @@
 PKG_CONFIG ?= pkg-config
 PREFIX ?= /usr
 DESTDIR ?=
-SYSCONFDIR ?= $(PREFIX)/etc
+SYSCONFDIR ?= /etc
 BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib
 MANDIR ?= $(PREFIX)/share/man
@@ -15,7 +15,6 @@ RUNSTATEDIR ?= /var/run
 WITH_BASHCOMPLETION ?=
 WITH_WGQUICK ?=
 WITH_SYSTEMDUNITS ?=
-WITH_EMBEDDED ?=
 
 ifeq ($(WITH_BASHCOMPLETION),)
 ifneq ($(strip $(wildcard $(BASHCOMPDIR))),)
@@ -27,9 +26,6 @@ ifneq ($(strip $(wildcard $(BINDIR)/bash)),)
 WITH_WGQUICK := yes
 endif
 ifneq ($(strip $(wildcard $(DESTDIR)/bin/bash)),)
-WITH_WGQUICK := yes
-endif
-ifeq ($(WITH_EMBEDDED),yes)
 WITH_WGQUICK := yes
 endif
 endif
@@ -52,20 +48,27 @@ CFLAGS += -DRUNSTATEDIR="\"$(RUNSTATEDIR)\""
 ifeq ($(DEBUG),yes)
 CFLAGS += -g
 endif
-WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_CEILING_DIRECTORIES="$(PWD)/../.." git describe --dirty 2>/dev/null))
+WIREGUARD_TOOLS_VERSION = $(patsubst v%,%,$(shell GIT_DIR="$(PWD)/../.git" git describe --dirty 2>/dev/null))
 ifneq ($(WIREGUARD_TOOLS_VERSION),)
 CFLAGS += -D'WIREGUARD_TOOLS_VERSION="$(WIREGUARD_TOOLS_VERSION)"'
+endif
+ifeq ($(PLATFORM),freebsd)
+LDLIBS += -lnv
 endif
 ifeq ($(PLATFORM),haiku)
 LDLIBS += -lnetwork -lbsd
 endif
 ifeq ($(PLATFORM),windows)
-CC := x86_64-w64-mingw32-gcc
-WINDRES := x86_64-w64-mingw32-windres
+CC := x86_64-w64-mingw32-clang
+WINDRES := $(shell $(CC) $(CFLAGS) -print-prog-name=windres 2>/dev/null)
 CFLAGS += -Iwincompat/include -include wincompat/compat.h -DWINVER=0x0601 -D_WIN32_WINNT=0x0601 -flto
-LDLIBS += -lws2_32 -flto
+LDLIBS += -lws2_32 -lsetupapi -lole32 -ladvapi32 -Lwincompat
+LDFLAGS += -flto -Wl,--dynamicbase -Wl,--nxcompat -Wl,--tsaware -mconsole
+LDFLAGS += -Wl,--major-os-version=6 -Wl,--minor-os-version=1 -Wl,--major-subsystem-version=6 -Wl,--minor-subsystem-version=1
+# The use of -Wl,/delayload: here implies we're using llvm-mingw
+LDFLAGS += -Wl,/delayload:ws2_32.dll -Wl,/delayload:setupapi.dll -Wl,/delayload:ole32.dll -Wl,/delayload:advapi32.dll
 VERSION := $(patsubst "%",%,$(filter "%",$(file < version.h)))
-wg: wincompat/libc.o wincompat/init.o wincompat/resources.o
+wg: wincompat/libc.o wincompat/init.o wincompat/loader.o wincompat/resources.o
 wincompat/resources.o: wincompat/resources.rc wincompat/manifest.xml
 	$(WINDRES) -DVERSION_STR=$(VERSION) -O coff -c 65001 -i $< -o $@
 endif
@@ -79,12 +82,13 @@ COMPILE.c = @echo "  CC      $@";
 COMPILE.c += $(BUILT_IN_COMPILE.c)
 BUILT_IN_RM := $(RM)
 RM := @a() { echo "  CLEAN   $$@"; $(BUILT_IN_RM) "$$@"; }; a
+WINDRES := @a() { echo "  WINDRES $${@: -1}"; $(WINDRES) "$$@"; }; a
 endif
 
 wg: $(sort $(patsubst %.c,%.o,$(wildcard *.c)))
 
 clean:
-	$(RM) wg *.o *.d
+	$(RM) wg *.o *.d $(wildcard wincompat/*.o wincompat/*.lib wincompat/*.dll)
 
 install: wg
 	@install -v -d "$(DESTDIR)$(BINDIR)" && install -v -m 0755 wg "$(DESTDIR)$(BINDIR)/wg"
@@ -92,17 +96,10 @@ install: wg
 	@[ "$(WITH_BASHCOMPLETION)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(BASHCOMPDIR)" && install -v -m 0644 completion/wg.bash-completion "$(DESTDIR)$(BASHCOMPDIR)/wg"
 	@[ "$(WITH_WGQUICK)" = "yes" ] || exit 0; \
-	if [ "$(WITH_EMBEDDED)" = "yes" ]; then \
-		install -v -m 0755 wg-quick/posix.sh "$(DESTDIR)$(BINDIR)/wg-quick"; \
-	else \
-		install -v -m 0755 wg-quick/$(PLATFORM).bash "$(DESTDIR)$(BINDIR)/wg-quick"; \
-	fi && \
-	install -v -d "$(DESTDIR)$(SYSCONFDIR)" && \
-	install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard" && \
-	install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard/dns"
+	install -v -m 0755 wg-quick/$(PLATFORM).bash "$(DESTDIR)$(BINDIR)/wg-quick" && install -v -m 0700 -d "$(DESTDIR)$(SYSCONFDIR)/wireguard"
 	@[ "$(WITH_WGQUICK)" = "yes" ] || exit 0; \
 	install -v -m 0644 man/wg-quick.8 "$(DESTDIR)$(MANDIR)/man8/wg-quick.8"
-	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_BASHCOMPLETION)" = "yes" -a "$(WITH_EMBEDDED)" != "yes" ] || exit 0; \
+	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_BASHCOMPLETION)" = "yes" ] || exit 0; \
 	install -v -m 0644 completion/wg-quick.bash-completion "$(DESTDIR)$(BASHCOMPDIR)/wg-quick"
 	@[ "$(WITH_WGQUICK)" = "yes" -a "$(WITH_SYSTEMDUNITS)" = "yes" ] || exit 0; \
 	install -v -d "$(DESTDIR)$(SYSTEMDUNITDIR)" && install -v -m 0644 systemd/* "$(DESTDIR)$(SYSTEMDUNITDIR)/"
