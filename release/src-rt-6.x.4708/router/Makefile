@@ -3724,7 +3724,7 @@ wireguard-tools:
 	$(call patch_files,wireguard-tools)
 	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" \
 	$(MAKE) -C wireguard-tools/src install
-	@touch $@
+	@touch wireguard-tools/stamp-h1
 
 wireguard-tools-install:
 	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
