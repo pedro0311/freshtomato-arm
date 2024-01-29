@@ -2724,7 +2724,7 @@ mysql-install:
 mysql-clean:
 	-@$(MAKE) -C mysql clean
 	@rm -f mysql/scripts/comp_sql
-	@rm -rf mysql/host mysql/target
+	@rm -rf mysql/host mysql/target mysql/staged
 	$(call unpatch_files,mysql)
 
 lzo/stamp-h1:
@@ -3656,6 +3656,7 @@ libdaemon-install:
 
 libdaemon-clean:
 	-@$(MAKE) -C libdaemon distclean
+	@rm -rf libdaemon/staged
 	@rm -f libdaemon/stamp-h1
 
 expat/stamp-h1:
@@ -3676,6 +3677,7 @@ expat-install:
 
 expat-clean:
 	-@$(MAKE) -C expat clean
+	@rm -rf expat/staged
 	@rm -f expat/stamp-h1
 
 avahi/stamp-h1:
@@ -3720,7 +3722,9 @@ avahi-clean:
 
 wireguard-tools:
 	$(call patch_files,wireguard-tools)
-	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" $(MAKE) -C wireguard-tools/src install
+	WITH_BASHCOMPLETION=no WITH_EMBEDDED=yes WITH_WGQUICK=yes WITH_SYSTEMDUNITS=no PREFIX=$(TOP)/wireguard-tools/staged CFLAGS="-I uapi/linux $(EXTRACFLAGS)" \
+	$(MAKE) -C wireguard-tools/src install
+	@touch $@
 
 wireguard-tools-install:
 	install -D wireguard-tools/staged/bin/wg $(INSTALLDIR)/wireguard-tools/usr/sbin/wg
@@ -3731,8 +3735,8 @@ wireguard-tools-install:
 
 wireguard-tools-clean:
 	-@$(MAKE) -C wireguard-tools/src clean
-	@rm -f $(TOP)/wireguard-tools/staged/bin/wg
-	@rm -f $(TOP)/wireguard-tools/staged/bin/wg-quick
+	@rm -rf wireguard-tools/staged
+	@rm -f wireguard-tools/stamp-h1
 	$(call unpatch_files,wireguard-tools)
 
 gettext-tiny/stamp-h1:
@@ -4009,6 +4013,7 @@ libffi-install:
 
 libffi-clean:
 	-@$(MAKE) -C libffi distclean
+	@rm -rf libffi/staged
 	@rm -f libffi/stamp-h1
 
 glib2/stamp-h1:
@@ -4043,6 +4048,7 @@ glib2-install: glib2
 
 glib2-clean:
 	-@$(MAKE) -C glib2 distclean
+	@rm -rf glib2/staged
 	@rm -f glib2/stamp-h1
 	$(call unpatch_files,glib2)
 
