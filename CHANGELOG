@@ -5,13 +5,51 @@ FreshTomato-ARM Changelog
 
 
 
+2024.1          2024.02.14
+---------------------------
+
+- kernel: wireguard: update module to 1.0.20220627
+- dnsmasq: update to aa9e965 (2024-01-21) snapshot
+- libcurl: update to 8.5.0
+- libcap-ng: update to 0.8.4
+- libpng: update to 1.6.41
+- libjpeg-turbo: update to 3.0.2
+- libid3tag: update to 0.16.3
+- dropbear: update to 41a6abc (2023-12-31) snapshot
+- miniupnpd: update to 2.3.4
+- ntfs-3g: update to 75dcdc2 (2023-06-13) snapshot
+- busybox: updates from the upstream
+- wsdd2: update from the upstream
+- uqmi: update to c3488b8 (2024-01-16) snapshot
+- sqlite: update to 3.45.1
+- libxml2: update to 2.12.4
+- libsodium: update to latest 1.0.19-stable
+- wireguard-tools: update to 1.0.20210914
+- libubox: update to 6339204 (2023-12-18) snapshot
+- build: Makefile: fix libcurl issue with http auth
+- build: Makefile: fix compilation on Debian 12
+- build: kernel: fix kernel warnings at generated shared_ksyms.c
+- build: Makefile: on %-clean, do not forget to remove staged dirs
+- GUI: advanced-wireless.asp - add Inactivity Timer option for Media Bridge Mode (60 up to 3600 sec)
+- GUI: VPN: Tinc: tune a little status page
+- mdu: use libcurl for all ARM images 
+- mwwatchdog: tune cktracert() checker once again - it needs max hop value set to ~10
+- rc: snmpd.c: log start/stop events
+- rc: restrict.c: web netfilter module not supported for IPv6 on arm
+- switch4g/wwansignal: add timeouts to uqmi calls
+- wireguard: wg-quick: fix syntax error (see: https://www.linksysinfo.org/index.php?threads/wireguard-on-freshtomato.76295/page-19#post-347565)
+- wireguard: working (finally) GUI, firewall, etc for Internal type connections (external to the provider will be added [probably] in the next release)
+- www: tomato.js: restore compatibility with older browsers
+- www: tools-shell.asp: switch to our addEvent() function for better compatibility
+
+
 2023.5          2023.12.21
 ---------------------------
 
 - iperf: update to 3.15
 - openssl-1.1: update to 1.1.1w
 - libcurl: update to 8.4.0
-- dnsmasq: update to 63ba726 (2023-12-03) snapshot
+- dnsmasq: update to cd4db82 (2023-11-30) snapshot
 - libsodium: update to latest 1.0.19-stable
 - sqlite: update to 3.44.2
 - libjpeg-turbo: update to 3.0.1
@@ -19,7 +57,7 @@ FreshTomato-ARM Changelog
 - uqmi: update to eea2924 (2023-10-28) snapshot
 - openvpn: update to 2.6.8
 - irqbalance: update to 1.9.3
-- libxml2: update to 2.12.2
+- libxml2: update to 2.11.6
 - util-linux: update to 2.39.3
 - add initial Netgear R6200v2 router support
 - build: Makefile: shrink again AIO_Lite target (remove ZFS, SNMP and NANO)
