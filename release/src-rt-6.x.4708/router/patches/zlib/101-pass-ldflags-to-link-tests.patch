@@ -1,15 +1,15 @@
 --- zlib/configure
 +++ zlib/configure
-@@ -442,7 +442,7 @@
+@@ -443,7 +443,7 @@
    echo Checking for shared library support... | tee -a configure.log
    # we must test in two steps (cc then ld), required at least on SunOS 4.x
-   if try $CC -w -c $SFLAGS $test.c &&
+   if try $CC -c $SFLAGS $test.c &&
 -     try $LDSHARED $SFLAGS -o $test$shared_ext $test.o; then
 +     try $LDSHARED $SFLAGS $LDFLAGS -o $test$shared_ext $test.o; then
      echo Building shared library $SHAREDLIBV with $CC. | tee -a configure.log
    elif test -z "$old_cc" -a -z "$old_cflags"; then
      echo No shared library support. | tee -a configure.log
-@@ -504,7 +504,7 @@
+@@ -505,7 +505,7 @@
  }
  EOF
    fi
@@ -18,7 +18,7 @@
      sizet=`./$test`
      echo "Checking for a pointer-size integer type..." $sizet"." | tee -a configure.log
      CFLAGS="${CFLAGS} -DNO_SIZE_T=${sizet}"
-@@ -538,7 +538,7 @@
+@@ -539,7 +539,7 @@
    return 0;
  }
  EOF
@@ -27,7 +27,7 @@
      echo "Checking for fseeko... Yes." | tee -a configure.log
    else
      CFLAGS="${CFLAGS} -DNO_FSEEKO"
-@@ -555,7 +555,7 @@
+@@ -556,7 +556,7 @@
  #include <errno.h>
  int main() { return strlen(strerror(errno)); }
  EOF
@@ -36,7 +36,7 @@
    echo "Checking for strerror... Yes." | tee -a configure.log
  else
    CFLAGS="${CFLAGS} -DNO_STRERROR"
-@@ -662,7 +662,7 @@
+@@ -663,7 +663,7 @@
    return (mytest("Hello%d\n", 1));
  }
  EOF
@@ -45,7 +45,7 @@
      echo "Checking for vsnprintf() in stdio.h... Yes." | tee -a configure.log
  
      echo >> configure.log
-@@ -752,7 +752,7 @@
+@@ -753,7 +753,7 @@
  }
  EOF
  
