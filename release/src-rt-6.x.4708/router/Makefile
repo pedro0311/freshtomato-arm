@@ -3686,8 +3686,8 @@ expat-clean:
 avahi/stamp-h1:
 	$(call patch_files,avahi)
 	cd avahi && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/lib" \
-		LDFLAGS="-L$(TOP)/expat/.libs -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/expat/staged/usr/lib -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
 		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon $(EXTRALDFLAGS2)" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
