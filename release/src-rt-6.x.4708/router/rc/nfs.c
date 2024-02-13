@@ -60,6 +60,7 @@ void start_nfs(void)
 		/* writing data to file */
 		if ((fp = fopen(NFS_EXPORT, "w")) == NULL) {
 			logerr(__FUNCTION__, __LINE__, NFS_EXPORT);
+			free(buf);
 			return;
 		}
 
