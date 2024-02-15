@@ -139,17 +139,19 @@ else
  TCONFIG_RAID :=
 endif
 
-# Specify iptables/iproute2/ipset/php target
+# Specify iptables/iproute2/ipset/libzip/php target
 ifeq ($(TCONFIG_BCMARM),y)
  export IPTABLES_TARGET := iptables-1.8.x
  export IPROUTE_TARGET := iproute2-3.x
  export IPSET_TARGET := ipset
+ export LIBZIP_TARGET := libzip
  export PHP_TARGET := php
 else
  export IPTABLES_TARGET := iptables
  export IPROUTE_TARGET := iproute2
  export IPSET_TARGET := ipset-6.24
- export PHP_TARGET := php5
+ export LIBZIP_TARGET := libzip-1.5.1
+ export PHP_TARGET := php
 endif
 
 # IPv6?
@@ -435,6 +437,7 @@ obj-$(TCONFIG_NGINX) += libxml2
 obj-$(TCONFIG_NGINX) += libpng
 obj-$(TCONFIG_NGINX) += libjpeg-turbo
 obj-$(TCONFIG_NGINX) += mysql
+obj-$(TCONFIG_NGINX) += $(LIBZIP_TARGET)
 obj-$(TCONFIG_NGINX) += $(PHP_TARGET)
 obj-$(TCONFIG_NGINX) += nginx
 ifeq ($(TCONFIG_BCMARM),y)
@@ -2002,7 +2005,7 @@ libjpeg-turbo/build/Makefile:
 
 libjpeg-turbo: libjpeg-turbo/build/Makefile
 	@$(SEP)
-	$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
+	@$(MAKE) -C libjpeg-turbo/build $(PARALLEL_BUILD)
 	@$(MAKE) -C libjpeg-turbo/build DESTDIR=$(TOP)/libjpeg-turbo/staged install
 
 libjpeg-turbo-install:
@@ -2433,19 +2436,70 @@ libpng-clean:
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
 
+$(LIBZIP_TARGET)/build/Makefile:
+	@rm -rf $(LIBZIP_TARGET)/build && mkdir -p $(LIBZIP_TARGET)/build
+	cd $(LIBZIP_TARGET)/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS) -I$(TOP)/zlib/staged/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lssl -lcrypto -lpthread" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DENABLE_GNUTLS=FALSE \
+			-DENABLE_COMMONCRYPTO=FALSE \
+			-DENABLE_MBEDTLS=FALSE \
+			-DENABLE_BZIP2=FALSE \
+			-DENABLE_LZMA=FALSE \
+			-DENABLE_ZSTD=FALSE \
+			-DENABLE_WINDOWS_CRYPTO=FALSE \
+			-DENABLE_OPENSSL=TRUE \
+			-DBUILD_TOOLS=FALSE \
+			-DBUILD_REGRESS=FALSE \
+			-DBUILD_EXAMPLES=FALSE \
+			-DBUILD_DOC=FALSE \
+			-DOPENSSL_CRYPTO_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so" \
+			-DOPENSSL_SSL_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so" \
+			-DOPENSSL_INCLUDE_DIR="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+
+$(LIBZIP_TARGET): $(LIBZIP_TARGET)/build/Makefile
+	@$(SEP)
+	@$(MAKE) -C $(LIBZIP_TARGET)/build all $(PARALLEL_BUILD)
+	@$(MAKE) -C $(LIBZIP_TARGET)/build DESTDIR=$(TOP)/$(LIBZIP_TARGET)/staged install
+
+$(LIBZIP_TARGET)-install:
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D $(LIBZIP_TARGET)/build/lib/libzip.so.5.5 $(INSTALLDIR)/$(LIBZIP_TARGET)/usr/lib/libzip.so.5.5
+	cd $(INSTALLDIR)/$(LIBZIP_TARGET)/usr/lib/ && $(STRIP) libzip.so.5.5 && ln -sf libzip.so.5.5 libzip.so && ln -sf libzip.so.5.5 libzip.so.5
+else
+	install -D $(LIBZIP_TARGET)/build/lib/libzip.so.5.0 $(INSTALLDIR)/$(LIBZIP_TARGET)/usr/lib/libzip.so.5.0
+	cd $(INSTALLDIR)/$(LIBZIP_TARGET)/usr/lib/ && $(STRIP) libzip.so.5.0 && ln -sf libzip.so.5.0 libzip.so && ln -sf libzip.so.5.0 libzip.so.5
+endif
+
+$(LIBZIP_TARGET)-clean:
+	@rm -rf $(LIBZIP_TARGET)/build
+	@rm -rf $(LIBZIP_TARGET)/staged
+
 $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
 	cd $(PHP_TARGET) && \
 		PKG_CONFIG_LIBDIR="" \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/$(LIBZIP_TARGET)/staged/usr/include \
+			-ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -ffunction-sections -fdata-sections" \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/$(LIBZIP_TARGET)/staged/usr/include \
+			-ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
-			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -Wl,--gc-sections" \
+			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/$(LIBZIP_TARGET)/staged/usr/lib \
+			-Wl,--gc-sections" \
 		LIBS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
-			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lssl -lcrypto" \
+			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/$(LIBZIP_TARGET)/staged/usr/lib \
+			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lzip -lssl -lcrypto" \
 		ac_cv_func_memcmp_working=yes \
+		$(if $(TCONFIG_BCMARM),,ac_cv_header_atomic_h=no) \
 		$(CONFIGURE) --prefix=/usr \
 			--enable-shared \
 			--disable-static \
@@ -2465,6 +2519,7 @@ $(PHP_TARGET)/stamp-h1:
 			--with-libxml-dir="$(TOP)/libxml2/staged/usr" \
 			--with-pdo-sqlite="$(TOP)/sqlite/staged/usr" \
 			--with-sqlite3="$(TOP)/sqlite/staged/usr" \
+			--with-libzip="$(TOP)/$(LIBZIP_TARGET)/staged/usr" \
 			--enable-cli \
 			--enable-cgi \
 			--enable-ctype \
@@ -2485,7 +2540,7 @@ $(PHP_TARGET)/stamp-h1:
 			--enable-xmlwriter \
 			--enable-zip \
 			--with-gd \
-			$(if $(TCONFIG_BCMARM),--without-valgrind,) \
+			--without-valgrind \
 			--without-pear \
 			--disable-short-tags \
 			--disable-phar \
