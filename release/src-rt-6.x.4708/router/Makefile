@@ -145,13 +145,13 @@ ifeq ($(TCONFIG_BCMARM),y)
  export IPROUTE_TARGET := iproute2-3.x
  export IPSET_TARGET := ipset
  export LIBZIP_TARGET := libzip
- export PHP_TARGET := php
+ export PHP_TARGET := php7
 else
  export IPTABLES_TARGET := iptables
  export IPROUTE_TARGET := iproute2
  export IPSET_TARGET := ipset-6.24
  export LIBZIP_TARGET := libzip-1.5.1
- export PHP_TARGET := php
+ export PHP_TARGET := php7
 endif
 
 # IPv6?

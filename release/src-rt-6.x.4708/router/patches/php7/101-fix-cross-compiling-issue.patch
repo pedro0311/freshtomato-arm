@@ -1,0 +1,20 @@
+--- php7/configure
++++ php7/configure
+@@ -30966,6 +30966,9 @@ if test "$PHP_FILEINFO" != "no"; then
+     libmagic/is_tar.c libmagic/magic.c libmagic/print.c \
+     libmagic/readcdf.c libmagic/softmagic.c libmagic/der.c"
+ 
++# evaluated by running test program on the target
++libmagic_sources="$libmagic_sources libmagic/strcasestr.c"
++if false; then
+   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for strcasestr" >&5
+ $as_echo_n "checking for strcasestr... " >&6; }
+   if test "$cross_compiling" = yes; then :
+@@ -31021,6 +31024,7 @@ rm -f core *.core core.conftest.* gmon.o
+   conftest.$ac_objext conftest.beam conftest.$ac_ext
+ fi
+ 
++fi
+ 
+ 
+   ext_builddir=ext/fileinfo
