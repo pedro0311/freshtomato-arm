@@ -2278,8 +2278,7 @@ spawn-fcgi/stamp-h1:
 	cd spawn-fcgi && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		ac_cv_func_malloc_0_nonnull=yes \
-		$(CONFIGURE) --prefix=/usr
+		$(CONFIGURE) --prefix=/usr $(if $(TCONFIG_IPV6),,--disable-ipv6)
 	@touch $@
 
 spawn-fcgi: spawn-fcgi/stamp-h1

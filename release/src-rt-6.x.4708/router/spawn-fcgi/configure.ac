@@ -1,10 +1,10 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.61)
+AC_PREREQ([2.69])
 AC_INIT([spawn-fcgi],[1.6.5])
 AC_CONFIG_SRCDIR([src/spawn-fcgi.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
@@ -34,19 +34,14 @@ AC_DEFUN([TRY_CFLAGS],
 # Checks for libraries.
 
 # Checks for header files.
-AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS([arpa/inet.h errno.h fcntl.h getopt.h grp.h netdb.h \
-                  netinet/in.h netinet/tcp.h pwd.h stdio.h stdlib.h \
-                  string.h sys/ioctl.h sys/socket.h sys/stat.h sys/time.h \
-                  sys/types.h sys/un.h sys/wait.h unistd.h])
+AC_CHECK_HEADERS([getopt.h pwd.h])
 
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_UID_T
 AC_TYPE_PID_T
-AC_HEADER_TIME
 AC_CHECK_TYPES(socklen_t,,,[#include <sys/types.h>
 #include <sys/socket.h>])
 
@@ -55,18 +50,12 @@ AC_SEARCH_LIBS([socket],[socket])
 AC_SEARCH_LIBS([inet_addr],[nsl socket])
 
 # Checks for library functions.
-AC_FUNC_CHOWN
-AC_FUNC_FORK
-AC_FUNC_MALLOC
-AC_FUNC_SELECT_ARGTYPES
-AC_FUNC_STAT
-AC_CHECK_FUNCS([dup2 memset putenv select socket strerror strtol issetugid inet_pton])
-
+AC_CHECK_FUNCS([issetugid inet_pton])
 
 # Check for IPv6 support
 
 AC_ARG_ENABLE(ipv6,
-  AC_HELP_STRING([--disable-ipv6],[disable IPv6 support]),
+  AS_HELP_STRING([--disable-ipv6],[disable IPv6 support]),
   [case "${enableval}" in
    yes) ipv6=true ;;
     no) ipv6=false ;;
@@ -75,13 +64,13 @@ AC_ARG_ENABLE(ipv6,
 
 if test x$ipv6 = xtrue; then
   AC_CACHE_CHECK([for IPv6 support], ac_cv_ipv6_support,
-    [AC_TRY_LINK([[
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
     ]], [[
 struct sockaddr_in6 s; struct in6_addr t=in6addr_any; int i=AF_INET6; s; t.s6_addr[0] = 0;
-    ]], [ac_cv_ipv6_support=yes], [ac_cv_ipv6_support=no])])
+    ]])],[ac_cv_ipv6_support=yes],[ac_cv_ipv6_support=no])])
 
   if test "$ac_cv_ipv6_support" = yes; then
     AC_DEFINE(HAVE_IPV6,1,[Whether to enable IPv6 support])
