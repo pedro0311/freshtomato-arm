@@ -2368,13 +2368,13 @@ $(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/$(PCRE_TARGET)/staged install
 
 $(PCRE_TARGET)-install:
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.0
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.1 && ln -sf libpcre.so.1.2.13 libpcre.so
 ifeq ($(TCONFIG_BCMARM),y)
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcreposix.so.0.0.7
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0 && ln -sf libpcreposix.so.0.0.7 libpcreposix.so
 endif
 
 $(PCRE_TARGET)-clean:
