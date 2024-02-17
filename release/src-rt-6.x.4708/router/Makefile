@@ -2387,7 +2387,7 @@ libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz" \
-		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
+		$(CONFIGURE) --prefix=/usr --without-python --disable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
 
