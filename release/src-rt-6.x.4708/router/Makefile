@@ -139,18 +139,20 @@ else
  TCONFIG_RAID :=
 endif
 
-# Specify iptables/iproute2/ipset/libzip/php target
+# Specify iptables/iproute2/ipset/libzip/pcre/php target
 ifeq ($(TCONFIG_BCMARM),y)
  export IPTABLES_TARGET := iptables-1.8.x
  export IPROUTE_TARGET := iproute2-3.x
  export IPSET_TARGET := ipset
  export LIBZIP_TARGET := libzip
+ export PCRE_TARGET := pcre
  export PHP_TARGET := php7
 else
  export IPTABLES_TARGET := iptables
  export IPROUTE_TARGET := iproute2
  export IPSET_TARGET := ipset-6.24
  export LIBZIP_TARGET := libzip-1.5.1
+ export PCRE_TARGET := pcre
  export PHP_TARGET := php7
 endif
 
@@ -427,7 +429,7 @@ obj-$(TCONFIG_NGINX) += sqlite
 obj-$(TCONFIG_NGINX) += $(OPENSSLDIR)
 obj-$(TCONFIG_NGINX) += libcurl
 obj-$(TCONFIG_NGINX) += spawn-fcgi
-obj-$(TCONFIG_NGINX) += pcre
+obj-$(TCONFIG_NGINX) += $(PCRE_TARGET)
 obj-$(TCONFIG_NGINX) += libncurses
 ifneq ($(TCONFIG_BCMARM),y)
  obj-$(TCONFIG_NGINX) += libatomic_ops
@@ -463,6 +465,7 @@ obj-$(TCONFIG_ZFS) += zfs
 obj-$(TCONFIG_IRQBALANCE) += zlib
 obj-$(TCONFIG_IRQBALANCE) += libffi
 obj-$(TCONFIG_IRQBALANCE) += libiconv
+obj-$(TCONFIG_IRQBALANCE) += $(PCRE_TARGET)
 obj-$(TCONFIG_IRQBALANCE) += glib2
 obj-$(TCONFIG_IRQBALANCE) += irqbalance
 
@@ -2350,37 +2353,35 @@ nocat-clean:
 	-@$(MAKE) -C nocat clean
 	@rm -f nocat/stamp-h1
 
-pcre/stamp-h1:
-	$(call patch_files,pcre)
-	cd pcre && autoreconf -fsi && \
+$(PCRE_TARGET)/stamp-h1:
+	$(call patch_files,$(PCRE_TARGET))
+	cd $(PCRE_TARGET) && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --disable-dependency-tracking --enable-utf8 --enable-unicode-properties --disable-cpp
-	[ -d pcre/m4 ] || mkdir pcre/m4
+		$(CONFIGURE) --prefix=/usr --enable-utf8 --enable-unicode-properties --disable-cpp --disable-pcretest-libreadline --disable-dependency-tracking
+	[ -d $(PCRE_TARGET)/m4 ] || mkdir $(PCRE_TARGET)/m4
 	@touch $@
 
-pcre: pcre/stamp-h1
+$(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/pcre/staged install
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/$(PCRE_TARGET)/staged install
 
-pcre-install:
-	install -D pcre/.libs/libpcre.so.1 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
-	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcre.so.1.2.13 libpcre.so.1
+$(PCRE_TARGET)-install:
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.0
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D pcre/.libs/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
-	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
-	cd $(INSTALLDIR)/pcre/usr/lib/ && \
-		ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcreposix.so.0.0.7
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0
 endif
 
-pcre-clean:
-	-@$(MAKE) -C pcre clean
-	@rm -f pcre/stamp-h1
-	@rm -rf pcre/staged
-	$(call unpatch_files,pcre)
+$(PCRE_TARGET)-clean:
+	-@$(MAKE) -C $(PCRE_TARGET) clean
+	@rm -f $(PCRE_TARGET)/stamp-h1
+	@rm -rf $(PCRE_TARGET)/staged
+	$(call unpatch_files,$(PCRE_TARGET))
 
 libxml2/stamp-h1:
 	$(call patch_files,libxml2)
@@ -2486,16 +2487,18 @@ $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
 	cd $(PHP_TARGET) && \
 		PKG_CONFIG_LIBDIR="" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+		PROF_FLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/$(LIBZIP_TARGET)/staged/usr/include \
-			-ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/pcre/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/$(LIBZIP_TARGET)/staged/usr/include \
-			-ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
+			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 $(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
 			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/$(LIBZIP_TARGET)/staged/usr/lib \
 			-Wl,--gc-sections" \
-		LIBS="-L$(TOP)/pcre/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
+		LIBS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
 			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/$(LIBZIP_TARGET)/staged/usr/lib \
 			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lzip -lssl -lcrypto" \
 		ac_cv_func_memcmp_working=yes \
@@ -2506,20 +2509,21 @@ $(PHP_TARGET)/stamp-h1:
 			--disable-rpath \
 			--disable-debug \
 			--with-config-file-path=/etc \
-			--with-config-file-scan-dir=/etc/php5 \
+			--with-config-file-scan-dir=/jffs/etc \
 			--with-zlib \
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 			--with-jpeg-dir="$(TOP)/libjpeg-turbo/staged/usr" \
+			--with-jpeg="$(TOP)/libjpeg-turbo/staged/usr" \
 			--with-curl="$(TOP)/libcurl/staged/usr" \
 			--with-png-dir="$(TOP)/libpng/staged/usr" \
 			--with-iconv="$(TOP)/libiconv/staged/usr" \
 			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
-			--with-pcre-dir="$(TOP)/pcre/staged/usr" \
-			--with-pcre-regex="$(TOP)/pcre/staged/usr" \
 			--with-libxml-dir="$(TOP)/libxml2/staged/usr" \
 			--with-pdo-sqlite="$(TOP)/sqlite/staged/usr" \
 			--with-sqlite3="$(TOP)/sqlite/staged/usr" \
 			--with-libzip="$(TOP)/$(LIBZIP_TARGET)/staged/usr" \
+			--with-pcre-dir="$(TOP)/$(PCRE_TARGET)/staged/usr" \
+			--with-pcre-regex="$(TOP)/$(PCRE_TARGET)/staged/usr" \
 			--enable-cli \
 			--enable-cgi \
 			--enable-ctype \
@@ -2538,8 +2542,10 @@ $(PHP_TARGET)/stamp-h1:
 			--enable-xml \
 			--enable-xmlreader \
 			--enable-xmlwriter \
+			--with-zip \
 			--enable-zip \
 			--with-gd \
+			--enable-gd \
 			--without-valgrind \
 			--without-pear \
 			--disable-short-tags \
@@ -2553,13 +2559,32 @@ $(PHP_TARGET)/stamp-h1:
 			--disable-pcntl \
 			--without-pdo-pgsql \
 			--without-pgsql \
-			--disable-shmop \
 			--disable-soap \
-			--disable-sockets \
-			--disable-sysvmsg \
-			--disable-sysvsem \
-			--disable-sysvshm \
-			--disable-tokenizer
+			--disable-tokenizer \
+			--with-kerberos=no \
+			--without-freetype-dir \
+			--without-xpm-dir \
+			--disable-intl \
+			--disable-gd-jis-conv \
+			--disable-mbregex \
+			--enable-sockets \
+			LIBXML_CFLAGS="$(TOP)/libxml2/staged/usr/include/libxml2" \
+			LIBXML_LIBS="$(TOP)/libxml2/staged/usr/lib -lxml2" \
+			SQLITE_CFLAGS="$(TOP)/sqlite/staged/usr/include" \
+			SQLITE_LIBS="$(TOP)/sqlite/staged/usr/lib -lsqlite3" \
+			ZLIB_CFLAGS="$(TOP)/zlib/staged/usr/include" \
+			ZLIB_LIBS="$(TOP)/zlib/staged/usr/lib -lz" \
+			CURL_CFLAGS="$(TOP)/libcurl/staged/usr/include" \
+			CURL_LIBS="$(TOP)/libcurl/staged/usr/lib -lcurl" \
+			LIBZIP_CFLAGS="$(TOP)/$(LIBZIP_TARGET)/staged/usr/include" \
+			LIBZIP_LIBS="$(TOP)/$(LIBZIP_TARGET)/staged/usr/lib -lzip" \
+			JPEG_CFLAGS="$(TOP)/libjpeg-turbo/staged/usr/include" \
+			JPEG_LIBS="$(TOP)/libjpeg-turbo/staged/usr/lib -ljpeg" \
+			PNG_CFLAGS="(TOP)/libpng/staged/usr/include" \
+			PNG_LIBS="$(TOP)/libpng/staged/usr/lib -lpng16" \
+			OPENSSL_CFLAGS="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			OPENSSL_LIBS="$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto" \
+			OPENSSL_LIBDIR="$(TOP)/$(OPENSSLDIR)"
 	@touch $@
 
 $(PHP_TARGET): $(PHP_TARGET)/stamp-h1
@@ -2601,8 +2626,8 @@ nginx/stamp-h1:
 	cd nginx && \
 		./configure --crossbuild=Linux::$(ARCH) \
 			--with-cc="$(CC)" \
-			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -I$(TOP)/pcre -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_BCMARM),,-I$(TOP)/libatomic_ops/src/$(comma)libs)" \
-			--with-ld-opt="-L$(TOP)/pcre/.libs -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(TCONFIG_BCMARM),,-L$(TOP)/libatomic_ops/src)" \
+			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib $(if $(TCONFIG_BCMARM),,-I$(TOP)/libatomic_ops/src/$(comma)libs)" \
+			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(TCONFIG_BCMARM),,-L$(TOP)/libatomic_ops/src)" \
 			--prefix=/usr \
 			--sbin-path=/usr/sbin \
 			--conf-path=/etc/nginx/nginx.conf \
@@ -2615,6 +2640,7 @@ nginx/stamp-h1:
 			--http-uwsgi-temp-path=/tmp/var/lib/nginx/uwsgi \
 			--http-scgi-temp-path=/tmp/var/lib/nginx/scgi \
 			--http-proxy-temp-path=/tmp/var/lib/nginx/proxy \
+			--with-threads \
 			--with-http_flv_module \
 			--with-http_ssl_module \
 			--with-http_gzip_static_module \
@@ -2626,7 +2652,8 @@ nginx/stamp-h1:
 
 nginx: nginx/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -DNGX_PTR_SIZE=4 -DNGX_HAVE_LITTLE_ENDIAN $(if $(TCONFIG_BCMARM),,-DNGX_HAVE_LEVEL1_DCACHE_LINESIZE -DDCACHE_LINESIZE=32) \
+		-D_GNU_SOURCE -ffunction-sections -fdata-sections -Wl,--gc-sections -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/include" $(PARALLEL_BUILD)
 
 nginx-install:
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 0755 $(INSTALLDIR)/nginx/usr/sbin/nginx
@@ -4081,12 +4108,12 @@ glib2/stamp-h1:
 	cd glib2 && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
-			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,)" \
-		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,) \
+			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib,) \
 			-ldl -lpthread -lz -liconv -lffi $(if $(TCONFIG_NGINX),-lpcre,)" \
 		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/include" \
 		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
-		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/pcre" PCRE_LIBS="$(TOP)/pcre/.libs/libpcre.so",) \
+		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/$(PCRE_TARGET)/staged/usr/include" PCRE_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib/libpcre.so",) \
 		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-debug=no --enable-man=no $(if $(TCONFIG_NGINX),--with-pcre=system,--with-pcre=internal) \
 			--disable-selinux --disable-fam --with-libiconv=gnu --disable-dependency-tracking
@@ -4117,9 +4144,9 @@ irqbalance/stamp-h1:
 	cd irqbalance && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/pcre,) -I$(TOP)/zlib/staged/usr/include" \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/pcre/.libs,) -L$(TOP)/zlib/staged/usr/lib" \
-		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/pcre/.libs/libpcre.so,) $(TOP)/zlib/staged/usr/lib/libz.so" \
+			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET),) -I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/.libs,) -L$(TOP)/zlib/staged/usr/lib" \
+		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/$(PCRE_TARGET)/.libs/libpcre.so,) $(TOP)/zlib/staged/usr/lib/libz.so" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
 		$(CONFIGURE) --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \
