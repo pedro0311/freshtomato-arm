@@ -2564,6 +2564,7 @@ $(PHP_TARGET)/stamp-h1:
 			--disable-intl \
 			--disable-gd-jis-conv \
 			--disable-mbregex \
+			--disable-opcache \
 			--enable-sockets \
 			LIBXML_CFLAGS="$(TOP)/libxml2/staged/usr/include/libxml2" \
 			LIBXML_LIBS="$(TOP)/libxml2/staged/usr/lib -lxml2" \
