@@ -2477,7 +2477,7 @@ libzip-clean:
 
 $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
-	cd $(PHP_TARGET) && \
+	cd $(PHP_TARGET) && touch configure.ac && autoconf && \
 		PKG_CONFIG_LIBDIR="" \
 		PROF_FLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
@@ -2489,13 +2489,20 @@ $(PHP_TARGET)/stamp-h1:
 		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED $(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
 			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
-			-Wl,--gc-sections" \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		LIBS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
 			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
 			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lzip -lssl -lcrypto" \
 		ac_cv_func_memcmp_working=yes \
+		ac_cv_c_bigendian_php=no \
+		php_cv_cc_rpath=no \
+		ac_cv_php_xml2_config_path="$(TOP)/libxml2/staged/usr/bin/xml2-config" \
+		ac_cv_u8t_decompose=yes \
+		ac_cv_have_pcre2_jit=no \
 		$(if $(TCONFIG_BCMARM),,ac_cv_header_atomic_h=no) \
 		$(CONFIGURE) --prefix=/usr \
+			--enable-cli \
+			--enable-cgi \
 			--enable-shared \
 			--disable-static \
 			--disable-rpath \
@@ -2516,8 +2523,6 @@ $(PHP_TARGET)/stamp-h1:
 			--with-libzip="$(TOP)/libzip/staged/usr" \
 			--with-pcre-dir="$(TOP)/$(PCRE_TARGET)/staged/usr" \
 			--with-pcre-regex="$(TOP)/$(PCRE_TARGET)/staged/usr" \
-			--enable-cli \
-			--enable-cgi \
 			--enable-ctype \
 			--enable-fileinfo \
 			--enable-dom \
