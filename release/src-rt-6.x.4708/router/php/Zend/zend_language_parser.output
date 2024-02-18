@@ -103,7 +103,7 @@ Grammar
    83           | semi_reserved
 
    84 top_statement_list: top_statement_list top_statement
-   85                   | %empty
+   85                   | ε
 
    86 namespace_declaration_name: identifier
    87                           | "namespaced name"
@@ -142,11 +142,11 @@ Grammar
   111              | "'__halt_compiler'" '(' ')' ';'
   112              | "'namespace'" namespace_declaration_name ';'
 
-  113 $@1: %empty
+  113 $@1: ε
 
   114 top_statement: "'namespace'" namespace_declaration_name $@1 '{' top_statement_list '}'
 
-  115 $@2: %empty
+  115 $@2: ε
 
   116 top_statement: "'namespace'" $@2 '{' top_statement_list '}'
   117              | "'use'" mixed_group_use_declaration ';'
@@ -162,7 +162,7 @@ Grammar
 
   125 mixed_group_use_declaration: legacy_namespace_name "'\\'" '{' inline_use_declarations possible_comma '}'
 
-  126 possible_comma: %empty
+  126 possible_comma: ε
   127               | ','
 
   128 inline_use_declarations: inline_use_declarations ',' inline_use_declaration
@@ -187,7 +187,7 @@ Grammar
   141           | const_decl
 
   142 inner_statement_list: inner_statement_list inner_statement
-  143                     | %empty
+  143                     | ε
 
   144 inner_statement: statement
   145                | attributed_statement
@@ -213,7 +213,7 @@ Grammar
   164          | "'foreach'" '(' expr "'as'" foreach_variable ')' foreach_statement
   165          | "'foreach'" '(' expr "'as'" foreach_variable "'=>'" foreach_variable ')' foreach_statement
 
-  166 $@3: %empty
+  166 $@3: ε
 
   167 statement: "'declare'" '(' const_list ')' $@3 declare_statement
   168          | ';'
@@ -221,16 +221,16 @@ Grammar
   170          | "'goto'" "identifier" ';'
   171          | "identifier" ':'
 
-  172 catch_list: %empty
+  172 catch_list: ε
   173           | catch_list "'catch'" '(' catch_name_list optional_variable ')' '{' inner_statement_list '}'
 
   174 catch_name_list: class_name
   175                | catch_name_list '|' class_name
 
-  176 optional_variable: %empty
+  176 optional_variable: ε
   177                  | "variable"
 
-  178 finally_statement: %empty
+  178 finally_statement: ε
   179                  | "'finally'" '{' inner_statement_list '}'
 
   180 unset_variables: unset_variable
@@ -243,17 +243,17 @@ Grammar
 
   185 function_declaration_statement: function returns_ref function_name backup_doc_comment '(' parameter_list ')' return_type backup_fn_flags '{' inner_statement_list '}' backup_fn_flags
 
-  186 is_reference: %empty
+  186 is_reference: ε
   187             | "'&'"
 
-  188 is_variadic: %empty
+  188 is_variadic: ε
   189            | "'...'"
 
-  190 @4: %empty
+  190 @4: ε
 
   191 class_declaration_statement: class_modifiers "'class'" @4 "identifier" extends_from implements_list backup_doc_comment '{' class_statement_list '}'
 
-  192 @5: %empty
+  192 @5: ε
 
   193 class_declaration_statement: "'class'" @5 "identifier" extends_from implements_list backup_doc_comment '{' class_statement_list '}'
 
@@ -263,40 +263,40 @@ Grammar
   196 anonymous_class_modifiers: class_modifier
   197                          | anonymous_class_modifiers class_modifier
 
-  198 anonymous_class_modifiers_optional: %empty
+  198 anonymous_class_modifiers_optional: ε
   199                                   | anonymous_class_modifiers
 
   200 class_modifier: "'abstract'"
   201               | "'final'"
   202               | "'readonly'"
 
-  203 @6: %empty
+  203 @6: ε
 
   204 trait_declaration_statement: "'trait'" @6 "identifier" backup_doc_comment '{' class_statement_list '}'
 
-  205 @7: %empty
+  205 @7: ε
 
   206 interface_declaration_statement: "'interface'" @7 "identifier" interface_extends_list backup_doc_comment '{' class_statement_list '}'
 
-  207 @8: %empty
+  207 @8: ε
 
   208 enum_declaration_statement: "'enum'" @8 "identifier" enum_backing_type implements_list backup_doc_comment '{' class_statement_list '}'
 
-  209 enum_backing_type: %empty
+  209 enum_backing_type: ε
   210                  | ':' type_expr
 
   211 enum_case: "'case'" backup_doc_comment identifier enum_case_expr ';'
 
-  212 enum_case_expr: %empty
+  212 enum_case_expr: ε
   213               | '=' expr
 
-  214 extends_from: %empty
+  214 extends_from: ε
   215             | "'extends'" class_name
 
-  216 interface_extends_list: %empty
+  216 interface_extends_list: ε
   217                       | "'extends'" class_name_list
 
-  218 implements_list: %empty
+  218 implements_list: ε
   219                | "'implements'" class_name_list
 
   220 foreach_variable: variable
@@ -318,7 +318,7 @@ Grammar
   232                 | ':' case_list "'endswitch'" ';'
   233                 | ':' ';' case_list "'endswitch'" ';'
 
-  234 case_list: %empty
+  234 case_list: ε
   235          | case_list "'case'" expr case_separator inner_statement_list
   236          | case_list "'default'" case_separator inner_statement_list
 
@@ -327,7 +327,7 @@ Grammar
 
   239 match: "'match'" '(' expr ')' '{' match_arm_list '}'
 
-  240 match_arm_list: %empty
+  240 match_arm_list: ε
   241               | non_empty_match_arm_list possible_comma
 
   242 non_empty_match_arm_list: match_arm
@@ -355,7 +355,7 @@ Grammar
   257            | alt_if_stmt_without_else "'else'" ':' inner_statement_list "'endif'" ';'
 
   258 parameter_list: non_empty_parameter_list possible_comma
-  259               | %empty
+  259               | ε
 
   260 non_empty_parameter_list: attributed_parameter
   261                         | non_empty_parameter_list ',' attributed_parameter
@@ -363,13 +363,13 @@ Grammar
   262 attributed_parameter: attributes parameter
   263                     | parameter
 
-  264 optional_cpp_modifiers: %empty
+  264 optional_cpp_modifiers: ε
   265                       | non_empty_member_modifiers
 
   266 parameter: optional_cpp_modifiers optional_type_without_static is_reference is_variadic "variable" backup_doc_comment
   267          | optional_cpp_modifiers optional_type_without_static is_reference is_variadic "variable" backup_doc_comment '=' expr
 
-  268 optional_type_without_static: %empty
+  268 optional_type_without_static: ε
   269                             | type_expr_without_static
 
   270 type_expr: type
@@ -407,7 +407,7 @@ Grammar
   293 intersection_type_without_static: type_without_static "amp" type_without_static
   294                                 | intersection_type_without_static "amp" type_without_static
 
-  295 return_type: %empty
+  295 return_type: ε
   296            | ':' type_expr
 
   297 argument_list: '(' ')'
@@ -433,7 +433,7 @@ Grammar
   311           | "variable" '=' expr
 
   312 class_statement_list: class_statement_list class_statement
-  313                     | %empty
+  313                     | ε
 
   314 attributed_class_statement: property_modifiers optional_type_without_static property_list ';'
   315                           | class_const_modifiers "'const'" class_const_list ';'
@@ -476,10 +476,10 @@ Grammar
   341 property_modifiers: non_empty_member_modifiers
   342                   | "'var'"
 
-  343 method_modifiers: %empty
+  343 method_modifiers: ε
   344                 | non_empty_member_modifiers
 
-  345 class_const_modifiers: %empty
+  345 class_const_modifiers: ε
   346                      | non_empty_member_modifiers
 
   347 non_empty_member_modifiers: member_modifier
@@ -512,13 +512,13 @@ Grammar
 
   367 echo_expr: expr
 
-  368 for_exprs: %empty
+  368 for_exprs: ε
   369          | non_empty_for_exprs
 
   370 non_empty_for_exprs: non_empty_for_exprs ',' expr
   371                    | expr
 
-  372 @9: %empty
+  372 @9: ε
 
   373 anonymous_class: anonymous_class_modifiers_optional "'class'" @9 ctor_arguments extends_from implements_list backup_doc_comment '{' class_statement_list '}'
 
@@ -617,16 +617,16 @@ Grammar
 
   463 function: "'function'"
 
-  464 backup_doc_comment: %empty
+  464 backup_doc_comment: ε
 
-  465 backup_fn_flags: %empty
+  465 backup_fn_flags: ε
 
-  466 backup_lex_pos: %empty
+  466 backup_lex_pos: ε
 
-  467 returns_ref: %empty
+  467 returns_ref: ε
   468            | ampersand
 
-  469 lexical_vars: %empty
+  469 lexical_vars: ε
   470             | "'use'" '(' lexical_var_list possible_comma ')'
 
   471 lexical_var_list: lexical_var_list ',' lexical_var
@@ -640,7 +640,7 @@ Grammar
   477              | class_name "'::'" member_name argument_list
   478              | variable_class_name "'::'" member_name argument_list
 
-  479 @10: %empty
+  479 @10: ε
 
   480 function_call: callable_expr @10 argument_list
 
@@ -651,14 +651,14 @@ Grammar
   484                     | new_variable
   485                     | '(' expr ')'
 
-  486 exit_expr: %empty
+  486 exit_expr: ε
   487          | '(' optional_expr ')'
 
-  488 backticks_expr: %empty
+  488 backticks_expr: ε
   489               | "string content"
   490               | encaps_list
 
-  491 ctor_arguments: %empty
+  491 ctor_arguments: ε
   492               | argument_list
 
   493 dereferenceable_scalar: "'array'" '(' array_pair_list ')'
@@ -690,7 +690,7 @@ Grammar
   516               | class_name "'::'" '{' expr '}'
   517               | variable_class_name "'::'" '{' expr '}'
 
-  518 optional_expr: %empty
+  518 optional_expr: ε
   519              | expr
 
   520 variable_class_name: fully_dereferenceable
@@ -744,7 +744,7 @@ Grammar
 
   558 array_pair_list: non_empty_array_pair_list
 
-  559 possible_array_pair: %empty
+  559 possible_array_pair: ε
   560                    | array_pair
 
   561 non_empty_array_pair_list: non_empty_array_pair_list ',' possible_array_pair

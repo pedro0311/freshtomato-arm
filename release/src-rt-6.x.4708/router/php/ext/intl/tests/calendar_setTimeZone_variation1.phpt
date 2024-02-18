@@ -23,4 +23,4 @@ var_dump($intlcal->get(IntlCalendar::FIELD_ZONE_OFFSET));
 Europe/Amsterdam
 int(3600000)
 Europe/Amsterdam
-int(3600000)
+int(3600000)

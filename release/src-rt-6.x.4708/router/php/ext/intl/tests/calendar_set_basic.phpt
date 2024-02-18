@@ -20,4 +20,4 @@ var_dump($intlcal->get(IntlCalendar::FIELD_DAY_OF_MONTH));
 bool(true)
 int(2)
 bool(true)
-int(3)
+int(3)

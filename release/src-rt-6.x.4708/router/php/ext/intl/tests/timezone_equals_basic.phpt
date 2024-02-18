@@ -26,4 +26,4 @@ bool(true)
 Comparison to equivalent instance:
 bool(false)
 Comparison to GMT:
-bool(false)
+bool(false)

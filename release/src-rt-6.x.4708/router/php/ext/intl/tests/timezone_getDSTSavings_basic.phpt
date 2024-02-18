@@ -14,4 +14,4 @@ var_dump(intltz_get_dst_savings($lsb));
 ?>
 --EXPECT--
 int(3600000)
-int(3600000)
+int(3600000)

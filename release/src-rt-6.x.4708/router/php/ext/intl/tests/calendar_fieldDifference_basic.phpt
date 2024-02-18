@@ -28,4 +28,4 @@ var_dump(
 --EXPECT--
 int(3601)
 int(6)
-int(61)
+int(61)

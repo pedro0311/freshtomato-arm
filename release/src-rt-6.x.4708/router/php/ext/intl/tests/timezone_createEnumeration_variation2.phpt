@@ -17,4 +17,4 @@ var_dump(in_array('Europe/Amsterdam', iterator_to_array($tz)));
 --EXPECT--
 string(12) "IntlIterator"
 bool(true)
-bool(true)
+bool(true)

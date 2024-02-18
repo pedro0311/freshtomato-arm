@@ -13,4 +13,4 @@ var_dump(intlcal_get_first_day_of_week($intlcal));
 ?>
 --EXPECT--
 int(2)
-int(2)
+int(2)

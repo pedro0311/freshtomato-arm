@@ -17,4 +17,4 @@ var_dump(intlcal_is_set($intlcal, IntlCalendar::FIELD_MINUTE));
 --EXPECT--
 bool(true)
 bool(false)
-bool(true)
+bool(true)

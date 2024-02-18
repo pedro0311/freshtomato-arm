@@ -12,4 +12,4 @@ echo "\n";
 ?>
 --EXPECT--
 Europe/Lisbon
-Europe/Lisbon
+Europe/Lisbon

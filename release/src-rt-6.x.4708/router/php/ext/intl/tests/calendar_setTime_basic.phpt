@@ -26,4 +26,4 @@ var_dump(intlcal_get_time($intlcal));
 --EXPECT--
 float(1330473600000)
 float(1330473600000)
-float(1330473600000)
+float(1330473600000)

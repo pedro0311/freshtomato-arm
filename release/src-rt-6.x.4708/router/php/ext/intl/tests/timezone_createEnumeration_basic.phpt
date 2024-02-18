@@ -19,4 +19,4 @@ var_dump($count == $count2);
 string(12) "IntlIterator"
 bool(true)
 string(12) "IntlIterator"
-bool(true)
+bool(true)

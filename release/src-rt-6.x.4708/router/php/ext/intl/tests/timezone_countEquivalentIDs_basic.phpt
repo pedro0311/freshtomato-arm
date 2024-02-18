@@ -13,4 +13,4 @@ var_dump($count2 == $count);
 ?>
 --EXPECT--
 bool(true)
-bool(true)
+bool(true)

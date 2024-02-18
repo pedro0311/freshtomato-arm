@@ -18,4 +18,4 @@ var_dump(intltz_use_daylight_time($gmt));
 bool(true)
 bool(false)
 bool(true)
-bool(false)
+bool(false)

@@ -12,4 +12,4 @@ echo "\n";
 ?>
 --EXPECT--
 Portugal
-Portugal
+Portugal

@@ -28,4 +28,4 @@ Europe/Lisbon has same rules as Portugal:
 bool(true)
 
 Europe/Lisbon has same rules as Atlantic/Azores:
-bool(false)
+bool(false)

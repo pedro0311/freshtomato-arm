@@ -21,4 +21,4 @@ var_dump(intlgregcal_is_leap_year($intlcal, 1900));
 bool(true)
 bool(false)
 bool(true)
-bool(false)
+bool(false)
