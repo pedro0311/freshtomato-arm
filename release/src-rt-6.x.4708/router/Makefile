@@ -2507,6 +2507,7 @@ $(PHP_TARGET)/stamp-h1:
 			--disable-static \
 			--disable-rpath \
 			--disable-debug \
+			--disable-phpdbg \
 			--with-config-file-path=/etc \
 			--with-config-file-scan-dir=/jffs/etc \
 			--with-zlib \
