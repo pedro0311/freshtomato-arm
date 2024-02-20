@@ -1,0 +1,55 @@
+--- php/ext/libxml/php_libxml.h
++++ php/ext/libxml/php_libxml.h
+@@ -155,7 +155,7 @@
+ 	_Pragma("clang diagnostic ignored \"-Wdeprecated-declarations\"")
+ # define PHP_LIBXML_IGNORE_DEPRECATIONS_END \
+ 	_Pragma("clang diagnostic pop")
+-#elif defined(__GNUC__)
++#elif defined(__GNUC__) && __GNUC__ >= 5
+ # define PHP_LIBXML_IGNORE_DEPRECATIONS_START \
+ 	_Pragma("GCC diagnostic push") \
+ 	_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+--- php/ext/date/config0.m4
++++ php/ext/date/config0.m4
+@@ -17,7 +17,7 @@
+    fi
+ fi
+ 
+-PHP_DATE_CFLAGS="-Wno-implicit-fallthrough -I@ext_builddir@/lib -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -DHAVE_TIMELIB_CONFIG_H=1"
++PHP_DATE_CFLAGS="-I@ext_builddir@/lib -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1 -DHAVE_TIMELIB_CONFIG_H=1"
+ timelib_sources="lib/astro.c lib/dow.c lib/parse_date.c lib/parse_tz.c lib/parse_posix.c
+                  lib/timelib.c lib/tm2unixtime.c lib/unixtime2tm.c lib/parse_iso_intervals.c lib/interval.c"
+ 
+--- php/ext/hash/config.m4
++++ php/ext/hash/config.m4
+@@ -25,7 +25,7 @@
+   ])
+   EXT_HASH_SHA3_SOURCES="$SHA3_OPT_SRC $SHA3_DIR/KeccakHash.c $SHA3_DIR/KeccakSponge.c hash_sha3.c"
+   dnl Add -Wno-implicit-fallthrough flag as it happens on 32 bit builds
+-  PHP_HASH_CFLAGS="-Wno-implicit-fallthrough -I@ext_srcdir@/$SHA3_DIR -DKeccakP200_excluded -DKeccakP400_excluded -DKeccakP800_excluded -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
++  PHP_HASH_CFLAGS="-I@ext_srcdir@/$SHA3_DIR -DKeccakP200_excluded -DKeccakP400_excluded -DKeccakP800_excluded -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
+ 
+   PHP_ADD_BUILD_DIR(ext/hash/$SHA3_DIR, 1)
+ fi
+--- php/ext/opcache/config.m4
++++ php/ext/opcache/config.m4
+@@ -311,7 +311,7 @@
+ 	shared_alloc_mmap.c \
+ 	shared_alloc_posix.c \
+ 	$ZEND_JIT_SRC,
+-	shared,,"-Wno-implicit-fallthrough -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1",,yes)
++	shared,,"-DZEND_ENABLE_STATIC_TSRMLS_CACHE=1",,yes)
+ 
+   PHP_ADD_EXTENSION_DEP(opcache, pcre)
+ 
+--- php/ext/pcre/config0.m4
++++ php/ext/pcre/config0.m4
+@@ -66,7 +66,7 @@
+   pcre2lib/pcre2_string_utils.c pcre2lib/pcre2_study.c pcre2lib/pcre2_substitute.c  pcre2lib/pcre2_substring.c \
+   pcre2lib/pcre2_tables.c pcre2lib/pcre2_ucd.c pcre2lib/pcre2_valid_utf.c pcre2lib/pcre2_xclass.c \
+   pcre2lib/pcre2_find_bracket.c pcre2lib/pcre2_convert.c pcre2lib/pcre2_extuni.c pcre2lib/pcre2_script_run.c"
+-  PHP_PCRE_CFLAGS="-Wno-implicit-fallthrough -DHAVE_CONFIG_H -I@ext_srcdir@/pcre2lib -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
++  PHP_PCRE_CFLAGS="-DHAVE_CONFIG_H -I@ext_srcdir@/pcre2lib -DZEND_ENABLE_STATIC_TSRMLS_CACHE=1"
+   AC_DEFINE(HAVE_BUNDLED_PCRE, 1, [ ])
+   AC_DEFINE(PCRE2_CODE_UNIT_WIDTH, 8, [ ])
+ 
