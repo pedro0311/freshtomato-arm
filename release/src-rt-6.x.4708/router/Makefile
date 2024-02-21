@@ -426,7 +426,9 @@ obj-$(TCONFIG_NGINX) += zlib
 obj-$(TCONFIG_NGINX) += sqlite
 obj-$(TCONFIG_NGINX) += $(OPENSSLDIR)
 obj-$(TCONFIG_NGINX) += libcurl
-obj-$(TCONFIG_NGINX) += spawn-fcgi
+ifneq ($(TCONFIG_BCMARM),y)
+ obj-$(TCONFIG_NGINX) += spawn-fcgi
+endif
 obj-$(TCONFIG_NGINX) += $(PCRE_TARGET)
 obj-$(TCONFIG_NGINX) += libncurses
 ifneq ($(TCONFIG_BCMARM),y)
@@ -2502,7 +2504,7 @@ $(PHP_TARGET)/stamp-h1:
 		$(if $(TCONFIG_BCMARM),,ac_cv_header_atomic_h=no) \
 		$(CONFIGURE) --prefix=/usr \
 			--enable-cli \
-			--enable-cgi \
+			$(if $(TCONFIG_BCMARM),--enable-fpm --disable-cgi,--enable-cgi) \
 			--enable-shared \
 			--disable-static \
 			--disable-rpath \
@@ -2594,9 +2596,14 @@ $(PHP_TARGET)-install:
 	install -d $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin
 	install -D $(PHP_TARGET)/sapi/cli/php $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cli
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D $(PHP_TARGET)/sapi/fpm/php-fpm $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm
+	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-fpm
+else
 	install -D $(PHP_TARGET)/sapi/cgi/php-cgi $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi && chmod 0755 $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
-	cd $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin && ln -sf php-cgi php-fcgi
 	$(STRIP) $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin/php-cgi
+	cd $(INSTALLDIR)/$(PHP_TARGET)/usr/sbin && ln -sf php-cgi php-fcgi
+endif
 
 $(PHP_TARGET)-clean:
 	-@$(MAKE) -C $(PHP_TARGET) clean
