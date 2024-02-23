@@ -1995,9 +1995,9 @@ libjpeg-turbo/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
-			-DWITH_JPEG8=1 \
-			-DENABLE_SHARED=1 \
-			-DENABLE_STATIC=1 \
+			-DWITH_JPEG8=TRUE \
+			-DENABLE_SHARED=TRUE \
+			-DENABLE_STATIC=TRUE \
 			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
@@ -2056,10 +2056,10 @@ libid3tag/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS) -fPIC" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
 			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
@@ -2387,7 +2387,7 @@ libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz" \
-		$(CONFIGURE) --prefix=/usr --without-python --disable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
+		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
 
@@ -2632,20 +2632,20 @@ nginx/stamp-h1:
 	cd nginx && \
 		./configure --crossbuild=Linux::$(ARCH) \
 			--with-cc="$(CC)" \
-			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib $(if $(TCONFIG_BCMARM),,-I$(TOP)/libatomic_ops/src/$(comma)libs)" \
-			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib $(if $(TCONFIG_BCMARM),,-L$(TOP)/libatomic_ops/src)" \
+			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib" \
+			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
 			--prefix=/usr \
 			--sbin-path=/usr/sbin \
 			--conf-path=/etc/nginx/nginx.conf \
-			--error-log-path=/tmp/var/log/nginx/error.log \
-			--http-log-path=/tmp/var/log/nginx/access.log \
-			--pid-path=/tmp/var/run/nginx.pid \
-			--lock-path=/tmp/var/run/nginx.lock.accept \
-			--http-client-body-temp-path=/tmp/var/lib/nginx/client \
-			--http-fastcgi-temp-path=/tmp/var/lib/nginx/fastcgi \
-			--http-uwsgi-temp-path=/tmp/var/lib/nginx/uwsgi \
-			--http-scgi-temp-path=/tmp/var/lib/nginx/scgi \
-			--http-proxy-temp-path=/tmp/var/lib/nginx/proxy \
+			--error-log-path=/var/log/nginx/error.log \
+			--http-log-path=/var/log/nginx/access.log \
+			--pid-path=/var/run/nginx.pid \
+			--lock-path=/var/run/nginx.lock \
+			--http-client-body-temp-path=/var/lib/nginx/client \
+			--http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+			--http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+			--http-scgi-temp-path=/var/lib/nginx/scgi \
+			--http-proxy-temp-path=/var/lib/nginx/proxy \
 			--with-threads \
 			--with-http_flv_module \
 			--with-http_ssl_module \
@@ -2658,8 +2658,7 @@ nginx/stamp-h1:
 
 nginx: nginx/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -DNGX_PTR_SIZE=4 -DNGX_HAVE_LITTLE_ENDIAN $(if $(TCONFIG_BCMARM),,-DNGX_HAVE_LEVEL1_DCACHE_LINESIZE -DDCACHE_LINESIZE=32) \
-		-D_GNU_SOURCE -ffunction-sections -fdata-sections -Wl,--gc-sections -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/include" $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/include" $(PARALLEL_BUILD)
 
 nginx-install:
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 0755 $(INSTALLDIR)/nginx/usr/sbin/nginx
@@ -2746,7 +2745,7 @@ mysql/target/Makefile:
 			-DDISABLE_SHARED=FALSE \
 			-DHAVE_LIBPTHREAD=TRUE \
 			-DWITH_DEBUG=FALSE \
-			-DSTACK_DIRECTION=1 \
+			-DSTACK_DIRECTION=TRUE \
 			-DWITH_UNIT_TESTS=FALSE \
 			-DWITH_EMBEDDED_SERVER=TRUE \
 			-DWITH_EXAMPLE_STORAGE_ENGINE=FALSE \
