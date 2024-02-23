@@ -27,6 +27,17 @@
      ngx_feature_incs="#include <stdio.h>
  #define var(dummy, args...)  sprintf(args)"
      ngx_feature_path=
+--- nginx/auto/cc/gcc
++++ nginx/auto/cc/gcc
+@@ -166,7 +166,7 @@
+ 
+ 
+ # stop on warning
+-CFLAGS="$CFLAGS -Werror"
++CFLAGS="$CFLAGS"
+ 
+ # debug
+ CFLAGS="$CFLAGS -g"
 --- nginx/auto/cc/name
 +++ nginx/auto/cc/name
 @@ -7,7 +7,7 @@
@@ -40,7 +51,7 @@
      ngx_feature_libs=
 --- nginx/auto/endianness
 +++ nginx/auto/endianness
-@@ -26,7 +26,7 @@
+@@ -26,18 +26,18 @@
  
  END
  
@@ -49,6 +60,21 @@
            -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_LD_OPT $ngx_feature_libs"
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
+ 
+ if [ -x $NGX_AUTOTEST ]; then
+-    if $NGX_AUTOTEST >/dev/null 2>&1; then
++#    if $NGX_AUTOTEST >/dev/null 2>&1; then
+         echo " little endian"
+         have=NGX_HAVE_LITTLE_ENDIAN . auto/have
+-    else
+-        echo " big endian"
+-    fi
++#    else
++#        echo " big endian"
++#    fi
+ 
+     rm -rf $NGX_AUTOTEST*
+ 
 --- nginx/auto/feature
 +++ nginx/auto/feature
 @@ -39,7 +39,7 @@
@@ -71,6 +97,49 @@
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
  
+--- nginx/auto/make
++++ nginx/auto/make
+@@ -21,10 +21,10 @@
+ 
+ cat << END                                                     > $NGX_MAKEFILE
+ 
+-CC =	$CC
++CC =	$CC -ffunction-sections -fdata-sections
+ CFLAGS = $CFLAGS
+ CPP =	$CPP
+-LINK =	$LINK
++LINK =	$LINK $NGX_LD_OPT -ffunction-sections -fdata-sections -Wl,--gc-sections
+ 
+ END
+ 
+--- nginx/auto/lib/libatomic/conf
++++ nginx/auto/lib/libatomic/conf
+@@ -7,8 +7,8 @@
+ 
+     have=NGX_HAVE_LIBATOMIC . auto/have
+     CORE_INCS="$CORE_INCS $NGX_LIBATOMIC/src"
+-    LINK_DEPS="$LINK_DEPS $NGX_LIBATOMIC/src/libatomic_ops.a"
+-    CORE_LIBS="$CORE_LIBS $NGX_LIBATOMIC/src/libatomic_ops.a"
++    LINK_DEPS="$LINK_DEPS $NGX_LIBATOMIC/src/.libs/libatomic_ops.a"
++    CORE_LIBS="$CORE_LIBS $NGX_LIBATOMIC/src/.libs/libatomic_ops.a"
+ 
+ else
+ 
+--- nginx/auto/lib/make
++++ nginx/auto/lib/make
+@@ -15,9 +15,9 @@
+     . auto/lib/zlib/make
+ fi
+ 
+-if [ $NGX_LIBATOMIC != NO -a $NGX_LIBATOMIC != YES ]; then
+-    . auto/lib/libatomic/make
+-fi
++#if [ $NGX_LIBATOMIC != NO -a $NGX_LIBATOMIC != YES ]; then
++#    . auto/lib/libatomic/make
++#fi
+ 
+ if [ $USE_PERL != NO ]; then
+     . auto/lib/perl/make
 --- nginx/auto/lib/pcre/make
 +++ nginx/auto/lib/pcre/make
 @@ -155,7 +155,7 @@
@@ -115,6 +184,15 @@
  
  ngx_feature="prctl(PR_SET_DUMPABLE)"
  ngx_feature_name="NGX_HAVE_PR_SET_DUMPABLE"
+-ngx_feature_run=yes
++ngx_feature_run=no
+ ngx_feature_incs="#include <sys/prctl.h>"
+ ngx_feature_path=
+ ngx_feature_libs=
+@@ -186,7 +186,7 @@
+ 
+ ngx_feature="prctl(PR_SET_KEEPCAPS)"
+ ngx_feature_name="NGX_HAVE_PR_SET_KEEPCAPS"
 -ngx_feature_run=yes
 +ngx_feature_run=no
  ngx_feature_incs="#include <sys/prctl.h>"
@@ -184,24 +262,6 @@
  ngx_feature_incs="#include <semaphore.h>"
  ngx_feature_path=
  ngx_feature_libs=
---- nginx/conf/nginx.conf
-+++ nginx/conf/nginx.conf
-@@ -1,5 +1,5 @@
- 
--#user  nobody;
-+user nobody nogroup;
- worker_processes  1;
- 
- #error_log  logs/error.log;
-@@ -16,7 +16,7 @@
- 
- http {
-     include       mime.types;
--    default_type  application/octet-stream;
-+    #default_type  application/octet-stream;
- 
-     #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
-     #                  '$status $body_bytes_sent "$http_referer" '
 --- nginx/src/os/unix/ngx_errno.c
 +++ nginx/src/os/unix/ngx_errno.c
 @@ -8,6 +8,9 @@
