@@ -2051,6 +2051,22 @@ libexif-clean:
 	@rm -f libexif/stamp-h1
 
 libid3tag/build/Makefile:
+ifneq ($(TCONFIG_BCMARM),y)
+	@rm -rf libid3tag/static && mkdir -p libid3tag/static
+	cd libid3tag/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
+			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
+			-DBUILD_SHARED_LIBS=FALSE \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+endif
 	@rm -rf libid3tag/build && mkdir -p libid3tag/build
 	cd libid3tag/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -2067,6 +2083,9 @@ libid3tag/build/Makefile:
 
 libid3tag: libid3tag/build/Makefile
 	@$(SEP)
+ifneq ($(TCONFIG_BCMARM),y)
+	$(MAKE) -C libid3tag/static all $(PARALLEL_BUILD)
+endif
 	$(MAKE) -C libid3tag/build all $(PARALLEL_BUILD)
 
 libid3tag-install:
@@ -2077,6 +2096,9 @@ endif
 	@true
 
 libid3tag-clean:
+ifneq ($(TCONFIG_BCMARM),y)
+	@rm -rf libid3tag/static
+endif
 	@rm -rf libid3tag/build
 
 libvorbis/stamp-h1:
