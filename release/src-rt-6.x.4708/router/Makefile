@@ -3290,20 +3290,19 @@ lz4-clean:
 	-@$(MAKE) -C lz4 clean
 	@rm -rf lz4/staged
 
-tinc/stamp-h1:
+tinc/build:
 	cd tinc && \
 		$(call meson_CrossOptions, meson-cross.txt) && \
-		PKG_CONFIG_LIBDIR='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig'\
-		$(TOP)/meson/meson.py \
-		build \
+		$(TOP)/meson/meson.py setup build \
 		--cross-file meson-cross.txt \
-		-Doptimization=2 \
-		-Ddebug=false \
 		--prefix=/usr \
 		-Dsysconfdir=/etc \
 		-Dlocalstatedir=/var \
+		-Dpkg_config_path='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig' \
+		-Doptimization=3 \
+		-Ddebug=false \
 		-Dc_std=gnu99 \
-		-Dwarning_level=0 \
+		-Dwarning_level=1 \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/lzo/staged/usr/lib -L$(TOP)/lz4/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread" \
 		-Dcrypto=openssl \
@@ -3320,11 +3319,10 @@ tinc/stamp-h1:
 		-Dsystemd=disabled \
 		-Ddocs=disabled \
 		-Dtests=disabled
-	@touch $@
 
-tinc: tinc/stamp-h1
+tinc: tinc/build
 	@$(SEP)
-	@ninja -C tinc/build
+	$(TOP)/meson/meson.py compile -C $@/build $(PARALLEL_BUILD)
 
 tinc-install:
 	install -D tinc/build/src/tinc $(INSTALLDIR)/tinc/usr/sbin/tinc
@@ -3335,7 +3333,6 @@ tinc-install:
 tinc-clean:
 	@rm -rf tinc/build
 	@rm -f tinc/meson-cross.txt
-	@rm -f tinc/stamp-h1
 
 snmp/stamp-h1:
 	$(call patch_files,snmp)
