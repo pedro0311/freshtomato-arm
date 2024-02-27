@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import glob
 import re
@@ -22,13 +23,14 @@ from .. import mesonlib
 from .. import mlog
 from ..environment import detect_cpu_family
 from .base import DependencyException, SystemDependency
+from .detect import packages
 
 
 if T.TYPE_CHECKING:
     from ..environment import Environment
     from ..compilers import Compiler
 
-TV_ResultTuple = T.Tuple[T.Optional[str], T.Optional[str], bool]
+    TV_ResultTuple = T.Tuple[T.Optional[str], T.Optional[str], bool]
 
 class CudaDependency(SystemDependency):
 
@@ -43,8 +45,18 @@ class CudaDependency(SystemDependency):
         super().__init__('cuda', environment, kwargs, language=language)
         self.lib_modules: T.Dict[str, T.List[str]] = {}
         self.requested_modules = self.get_requested(kwargs)
-        if 'cudart' not in self.requested_modules:
-            self.requested_modules = ['cudart'] + self.requested_modules
+        if not any(runtime in self.requested_modules for runtime in ['cudart', 'cudart_static']):
+            # By default, we prefer to link the static CUDA runtime, since this is what nvcc also does by default:
+            # https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#cudart-none-shared-static-cudart
+            req_modules = ['cudart']
+            if kwargs.get('static', True):
+                req_modules = ['cudart_static']
+                machine = self.env.machines[self.for_machine]
+                if machine.is_linux():
+                    # extracted by running
+                    #   nvcc -v foo.o
+                    req_modules += ['rt', 'pthread', 'dl']
+            self.requested_modules = req_modules + self.requested_modules
 
         (self.cuda_path, self.version, self.is_found) = self._detect_cuda_path_and_version()
         if not self.is_found:
@@ -193,8 +205,8 @@ class CudaDependency(SystemDependency):
             except ValueError:
                 continue
             # use // for floor instead of / which produces a float
-            major = vers_int // 1000                  # type: int
-            minor = (vers_int - major * 1000) // 10   # type: int
+            major = vers_int // 1000
+            minor = (vers_int - major * 1000) // 10
             return f'{major}.{minor}'
         return None
 
@@ -283,9 +295,11 @@ class CudaDependency(SystemDependency):
         return candidates
 
     def get_link_args(self, language: T.Optional[str] = None, raw: bool = False) -> T.List[str]:
-        args = []
+        args: T.List[str] = []
         if self.libdir:
             args += self.clib_compiler.get_linker_search_args(self.libdir)
         for lib in self.requested_modules:
             args += self.lib_modules[lib]
         return args
+
+packages['cuda'] = CudaDependency

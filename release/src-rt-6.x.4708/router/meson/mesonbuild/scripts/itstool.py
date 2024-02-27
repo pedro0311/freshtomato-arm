@@ -11,11 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import os
 import argparse
 import subprocess
 import tempfile
+import shlex
 import shutil
 import typing as T
 
@@ -55,7 +57,7 @@ def run_join(build_dir: str, itstool: str, its_files: T.List[str], mo_files: T.L
             shutil.copy(mo_file, tmp_mo_fname)
             locale_mo_files.append(tmp_mo_fname)
 
-        cmd = [itstool]
+        cmd = shlex.split(itstool)
         if its_files:
             for fname in its_files:
                 cmd.extend(['-i', fname])

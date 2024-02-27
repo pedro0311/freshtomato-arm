@@ -1,4 +1,4 @@
-project('string arithmetic', 'c', meson_version: '>=0.62.0')
+project('string arithmetic', meson_version: '>=0.62.0')
 
 assert('foo' + 'bar' == 'foobar')
 assert('foo' + 'bar' + 'baz' == 'foobarbaz')
@@ -22,7 +22,7 @@ assert(x == 'the quick\n    brown\nfox')
 # ------------------------------------------------------------------------------
 #  multi-line format strings
 # ------------------------------------------------------------------------------
-y_actual = f'''This is a multi-line comment with string substition:
+y_actual = f'''This is a multi-line comment with string substitution:
   "@sub1@@sub2@@sub3@@sub4@"
 
 And I can even substitute the entry multiple times!
@@ -32,7 +32,7 @@ And I can even substitute the entry multiple times!
 @sub3@
 '''
 
-y_expect = '''This is a multi-line comment with string substition:
+y_expect = '''This is a multi-line comment with string substitution:
   "the quick
     brown
 fox"

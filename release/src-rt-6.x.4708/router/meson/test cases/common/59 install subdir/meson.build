@@ -1,10 +1,16 @@
-project('install a whole subdir', 'c',
+project('install a whole subdir',
   default_options : ['install_umask=preserve'])
 
 # A subdir with an exclusion:
 install_subdir('sub2',
   exclude_files : ['excluded-three.dat'],
   exclude_directories : ['excluded'],
+  install_dir : 'share')
+
+# More exclusions
+install_subdir('sub3',
+  exclude_files : ['data/excluded.txt'],
+  exclude_directories : ['data/excluded'],
   install_dir : 'share')
 
 subdir('subdir')

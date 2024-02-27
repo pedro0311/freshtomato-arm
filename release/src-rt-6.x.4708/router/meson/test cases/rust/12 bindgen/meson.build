@@ -1,12 +1,23 @@
 # SPDX-license-identifer: Apache-2.0
-# Copyright © 2021 Intel Corporation
+# Copyright © 2021-2022 Intel Corporation
 
-project('rustmod bindgen', ['c', 'rust'])
+project('rustmod bindgen', ['c', 'rust'], meson_version : '>= 0.63')
 
 prog_bindgen = find_program('bindgen', required : false)
 if not prog_bindgen.found()
   error('MESON_SKIP_TEST bindgen not found')
 endif
+
+cc_id = meson.get_compiler('c').get_id()
+compiler_specific_args = []
+if cc_id == 'gcc'
+  compiler_specific_args = ['-mtls-dialect=gnu2']
+elif cc_id == 'msvc'
+  compiler_specific_args = ['/fp:fast']
+endif
+
+add_project_arguments(['-DPROJECT_ARG', compiler_specific_args], language : 'c')
+add_global_arguments(['-DGLOBAL_ARG', compiler_specific_args], language : 'c')
 
 # This seems to happen on windows when libclang.dll is not in path or is not
 # valid. We must try to process a header file for this to work.
@@ -27,7 +38,7 @@ rust = import('unstable-rust')
 gen = rust.bindgen(
   input : 'src/header.h',
   output : 'header.rs',
-  include_directories : inc,
+  include_directories : 'include',
 )
 
 # see: https://github.com/mesonbuild/meson/issues/8160
@@ -80,3 +91,19 @@ rust_bin2 = executable(
 test('generated header', rust_bin2)
 
 subdir('sub')
+subdir('dependencies')
+
+gp = rust.bindgen(
+  input : 'src/global-project.h',
+  output : 'global-project.rs',
+)
+
+gp_lib = static_library('gp_lib', 'src/global.c')
+
+gp_exe = executable(
+  'gp_exe',
+  structured_sources(['src/global.rs', gp]),
+  link_with : gp_lib,
+)
+
+test('global and project arguments', gp_exe)

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 """Representations specific to the Microchip XC16 C compiler family."""
 
@@ -20,6 +21,7 @@ import typing as T
 from ...mesonlib import EnvironmentException
 
 if T.TYPE_CHECKING:
+    from ...envconfig import MachineInfo
     from ...environment import Environment
     from ...compilers.compilers import Compiler
 else:
@@ -29,28 +31,29 @@ else:
     # do). This gives up DRYer type checking, with no runtime impact
     Compiler = object
 
-xc16_buildtype_args = {
+xc16_buildtype_args: T.Dict[str, T.List[str]] = {
     'plain': [],
     'debug': [],
     'debugoptimized': [],
     'release': [],
     'minsize': [],
     'custom': [],
-}  # type: T.Dict[str, T.List[str]]
+}
 
-xc16_optimization_args = {
+xc16_optimization_args: T.Dict[str, T.List[str]] = {
+    'plain': [],
     '0': ['-O0'],
     'g': ['-O0'],
     '1': ['-O1'],
     '2': ['-O2'],
     '3': ['-O3'],
     's': ['-Os']
-}  # type: T.Dict[str, T.List[str]]
+}
 
-xc16_debug_args = {
+xc16_debug_args: T.Dict[bool, T.List[str]] = {
     False: [],
     True: []
-}  # type: T.Dict[bool, T.List[str]]
+}
 
 
 class Xc16Compiler(Compiler):
@@ -62,11 +65,13 @@ class Xc16Compiler(Compiler):
             raise EnvironmentException('xc16 supports only cross-compilation.')
         # Assembly
         self.can_compile_suffixes.add('s')
-        default_warn_args = []  # type: T.List[str]
+        self.can_compile_suffixes.add('sx')
+        default_warn_args: T.List[str] = []
         self.warn_args = {'0': [],
                           '1': default_warn_args,
                           '2': default_warn_args + [],
-                          '3': default_warn_args + []}  # type: T.Dict[str, T.List[str]]
+                          '3': default_warn_args + [],
+                          'everything': default_warn_args + []}
 
     def get_always_args(self) -> T.List[str]:
         return []
@@ -104,7 +109,7 @@ class Xc16Compiler(Compiler):
         return xc16_debug_args[is_debug]
 
     @classmethod
-    def unix_args_to_native(cls, args: T.List[str]) -> T.List[str]:
+    def _unix_args_to_native(cls, args: T.List[str], info: MachineInfo) -> T.List[str]:
         result = []
         for i in args:
             if i.startswith('-D'):

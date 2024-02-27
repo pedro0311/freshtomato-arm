@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import os
 import sys
@@ -20,10 +21,7 @@ import subprocess
 import typing as T
 import locale
 
-from .. import mesonlib
-from ..backend.backends import ExecutableSerialisation
-
-options = None
+from ..utils.core import ExecutableSerialisation
 
 def buildparser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Custom executable wrapper for Meson. Do not run on your own, mmm\'kay?')
@@ -48,7 +46,8 @@ def run_exe(exe: ExecutableSerialisation, extra_env: T.Optional[T.Dict[str, str]
     if exe.extra_paths:
         child_env['PATH'] = (os.pathsep.join(exe.extra_paths + ['']) +
                              child_env['PATH'])
-        if exe.exe_wrapper and mesonlib.substring_is_in_list('wine', exe.exe_wrapper.get_command()):
+        if exe.exe_wrapper and any('wine' in i for i in exe.exe_wrapper.get_command()):
+            from .. import mesonlib
             child_env['WINEPATH'] = mesonlib.get_wine_shortpath(
                 exe.exe_wrapper.get_command(),
                 ['Z:' + p for p in exe.extra_paths] + child_env.get('WINEPATH', '').split(';'),
@@ -73,7 +72,8 @@ def run_exe(exe: ExecutableSerialisation, extra_env: T.Optional[T.Dict[str, str]
 
     if p.returncode == 0xc0000135:
         # STATUS_DLL_NOT_FOUND on Windows indicating a common problem that is otherwise hard to diagnose
-        raise FileNotFoundError('due to missing DLLs')
+        strerror = 'Failed to run due to missing DLLs, with path: ' + child_env['PATH']
+        raise FileNotFoundError(p.returncode, strerror, cmd_args)
 
     if p.returncode != 0:
         if exe.pickled:
@@ -102,7 +102,6 @@ def run_exe(exe: ExecutableSerialisation, extra_env: T.Optional[T.Dict[str, str]
     return 0
 
 def run(args: T.List[str]) -> int:
-    global options
     parser = buildparser()
     options, cmd_args = parser.parse_known_args(args)
     # argparse supports double dash to separate options and positional arguments,

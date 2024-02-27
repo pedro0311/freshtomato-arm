@@ -1,11 +1,15 @@
 project('pkgconfig-gen-dependencies', 'c', version: '1.0')
 
+if find_program('pkg-config').version() == '2.0.1'
+    error('MESON_SKIP_TEST: cannot test uninstalled.pc due to https://github.com/pkgconf/pkgconf/issues/310#issuecomment-1677844842')
+endif
+
 pkgg = import('pkgconfig')
 
 # libmain internally use libinternal and expose libexpose in its API
 exposed_lib = shared_library('libexposed', 'exposed.c')
 internal_lib = shared_library('libinternal', 'internal.c')
-main_lib = both_libraries('libmain', link_with : [exposed_lib, internal_lib])
+main_lib = both_libraries('libmain', 'dummy.c', link_with : [exposed_lib, internal_lib])
 custom_lib = shared_library('custom', 'custom.c')
 
 pkgg.generate(exposed_lib)
@@ -55,8 +59,16 @@ pkgg.generate(
 
 # Verify that if we promote internal_lib as public dependency, it comes after
 # the main library.
-main_lib2 = both_libraries('libmain2', link_with : internal_lib)
+main_lib2 = both_libraries('libmain2', 'dummy.c', link_with : internal_lib)
 pkgg.generate(main_lib2,
   libraries : internal_lib,
   filebase : 'pub-lib-order',
 )
+
+# This will be built against both simple7.pc and simple7-uninstalled.pc, check
+# that include directories works in both cases.
+simple7 = dependency('simple7')
+exe = executable('test2', 'test2.c',
+  dependencies: simple7,
+)
+test('Test2', exe)

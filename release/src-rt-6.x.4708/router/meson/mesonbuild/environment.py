@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import itertools
 import os, platform, re, sys, shutil
@@ -20,21 +21,18 @@ import collections
 from . import coredata
 from . import mesonlib
 from .mesonlib import (
-    MesonException, EnvironmentException, MachineChoice, Popen_safe, PerMachine,
+    MesonException, MachineChoice, Popen_safe, PerMachine,
     PerMachineDefaultable, PerThreeMachineDefaultable, split_args, quote_arg, OptionKey,
     search_version, MesonBugException
 )
 from . import mlog
-from .programs import (
-    ExternalProgram, EmptyExternalProgram
-)
+from .programs import ExternalProgram
 
 from .envconfig import (
     BinaryTable, MachineInfo, Properties, known_cpu_families, CMakeVariables,
 )
 from . import compilers
 from .compilers import (
-    Compiler,
     is_assembly,
     is_header,
     is_library,
@@ -50,11 +48,13 @@ if T.TYPE_CHECKING:
     import argparse
     from configparser import ConfigParser
 
+    from .compilers import Compiler
     from .wrap.wrap import Resolver
 
-build_filename = 'meson.build'
+    CompilersDict = T.Dict[str, Compiler]
 
-CompilersDict = T.Dict[str, Compiler]
+
+build_filename = 'meson.build'
 
 
 def _get_env_var(for_machine: MachineChoice, is_cross: bool, var_name: str) -> T.Optional[str]:
@@ -82,7 +82,7 @@ def _get_env_var(for_machine: MachineChoice, is_cross: bool, var_name: str) -> T
     return value
 
 
-def detect_gcovr(min_version='3.3', log=False):
+def detect_gcovr(min_version: str = '3.3', log: bool = False):
     gcovr_exe = 'gcovr'
     try:
         p, found = Popen_safe([gcovr_exe, '--version'])[0:2]
@@ -96,6 +96,20 @@ def detect_gcovr(min_version='3.3', log=False):
         return gcovr_exe, found
     return None, None
 
+def detect_lcov(log: bool = False):
+    lcov_exe = 'lcov'
+    try:
+        p, found = Popen_safe([lcov_exe, '--version'])[0:2]
+    except (FileNotFoundError, PermissionError):
+        # Doesn't exist in PATH or isn't executable
+        return None, None
+    found = search_version(found)
+    if p.returncode == 0 and found:
+        if log:
+            mlog.log('Found lcov-{} at {}'.format(found, quote_arg(shutil.which(lcov_exe))))
+        return lcov_exe, found
+    return None, None
+
 def detect_llvm_cov():
     tools = get_llvm_tool_names('llvm-cov')
     for tool in tools:
@@ -103,20 +117,18 @@ def detect_llvm_cov():
             return tool
     return None
 
-def find_coverage_tools() -> T.Tuple[T.Optional[str], T.Optional[str], T.Optional[str], T.Optional[str], T.Optional[str]]:
+def find_coverage_tools() -> T.Tuple[T.Optional[str], T.Optional[str], T.Optional[str], T.Optional[str], T.Optional[str], T.Optional[str]]:
     gcovr_exe, gcovr_version = detect_gcovr()
 
     llvm_cov_exe = detect_llvm_cov()
 
-    lcov_exe = 'lcov'
+    lcov_exe, lcov_version = detect_lcov()
     genhtml_exe = 'genhtml'
 
-    if not mesonlib.exe_exists([lcov_exe, '--version']):
-        lcov_exe = None
     if not mesonlib.exe_exists([genhtml_exe, '--version']):
         genhtml_exe = None
 
-    return gcovr_exe, gcovr_version, lcov_exe, genhtml_exe, llvm_cov_exe
+    return gcovr_exe, gcovr_version, lcov_exe, lcov_version, genhtml_exe, llvm_cov_exe
 
 def detect_ninja(version: str = '1.8.2', log: bool = False) -> T.List[str]:
     r = detect_ninja_command_and_version(version, log)
@@ -157,6 +169,9 @@ def get_llvm_tool_names(tool: str) -> T.List[str]:
     # unless it becomes a stable release.
     suffixes = [
         '', # base (no suffix)
+        '-17',  '17',
+        '-16',  '16',
+        '-15',  '15',
         '-14',  '14',
         '-13',  '13',
         '-12',  '12',
@@ -176,7 +191,7 @@ def get_llvm_tool_names(tool: str) -> T.List[str]:
         '-15',    # Debian development snapshot
         '-devel', # FreeBSD development snapshot
     ]
-    names = []
+    names: T.List[str] = []
     for suffix in suffixes:
         names.append(tool + suffix)
     return names
@@ -195,15 +210,16 @@ def detect_scanbuild() -> T.List[str]:
     Return: a single-element list of the found scan-build binary ready to be
         passed to Popen()
     """
-    exelist = []
+    exelist: T.List[str] = []
     if 'SCANBUILD' in os.environ:
         exelist = split_args(os.environ['SCANBUILD'])
 
     else:
         tools = get_llvm_tool_names('scan-build')
         for tool in tools:
-            if shutil.which(tool) is not None:
-                exelist = [shutil.which(tool)]
+            which = shutil.which(tool)
+            if which is not None:
+                exelist = [which]
                 break
 
     if exelist:
@@ -227,22 +243,6 @@ def detect_clangformat() -> T.List[str]:
         if path is not None:
             return [path]
     return []
-
-def detect_native_windows_arch():
-    """
-    The architecture of Windows itself: x86, amd64 or arm64
-    """
-    # These env variables are always available. See:
-    # https://msdn.microsoft.com/en-us/library/aa384274(VS.85).aspx
-    # https://blogs.msdn.microsoft.com/david.wang/2006/03/27/howto-detect-process-bitness/
-    arch = os.environ.get('PROCESSOR_ARCHITEW6432', '').lower()
-    if not arch:
-        try:
-            # If this doesn't exist, something is messing with the environment
-            arch = os.environ['PROCESSOR_ARCHITECTURE'].lower()
-        except KeyError:
-            raise EnvironmentException('Unable to detect native OS architecture')
-    return arch
 
 def detect_windows_arch(compilers: CompilersDict) -> str:
     """
@@ -268,7 +268,7 @@ def detect_windows_arch(compilers: CompilersDict) -> str:
     3. Otherwise, use the actual Windows architecture
 
     """
-    os_arch = detect_native_windows_arch()
+    os_arch = mesonlib.windows_detect_native_arch()
     if os_arch == 'x86':
         return os_arch
     # If we're on 64-bit Windows, 32-bit apps can be compiled without
@@ -276,7 +276,7 @@ def detect_windows_arch(compilers: CompilersDict) -> str:
     # 32-bit and pretend like we're running under WOW64. Else, return the
     # actual Windows architecture that we deduced above.
     for compiler in compilers.values():
-        if compiler.id == 'msvc' and (compiler.target == 'x86' or compiler.target == '80x86'):
+        if compiler.id == 'msvc' and (compiler.target in {'x86', '80x86'}):
             return 'x86'
         if compiler.id == 'clang-cl' and compiler.target == 'x86':
             return 'x86'
@@ -284,7 +284,7 @@ def detect_windows_arch(compilers: CompilersDict) -> str:
             return 'x86'
     return os_arch
 
-def any_compiler_has_define(compilers: CompilersDict, define):
+def any_compiler_has_define(compilers: CompilersDict, define: str) -> bool:
     for c in compilers.values():
         try:
             if c.has_builtin_define(define):
@@ -322,7 +322,7 @@ def detect_cpu_family(compilers: CompilersDict) -> str:
         trial = 'ppc64'
     elif trial.startswith(('powerpc', 'ppc')) or trial in {'macppc', 'power macintosh'}:
         trial = 'ppc'
-    elif trial in ('amd64', 'x64', 'i86pc'):
+    elif trial in {'amd64', 'x64', 'i86pc'}:
         trial = 'x86_64'
     elif trial in {'sun4u', 'sun4v'}:
         trial = 'sparc64'
@@ -353,6 +353,11 @@ def detect_cpu_family(compilers: CompilersDict) -> str:
         # AIX always returns powerpc, check here for 64-bit
         if any_compiler_has_define(compilers, '__64BIT__'):
             trial = 'ppc64'
+    # MIPS64 is able to run MIPS32 code natively, so there is a chance that
+    # such mixture mentioned above exists.
+    elif trial == 'mips64':
+        if compilers and not any_compiler_has_define(compilers, '__mips64'):
+            trial = 'mips'
 
     if trial not in known_cpu_families:
         mlog.warning(f'Unknown CPU family {trial!r}, please report this at '
@@ -369,13 +374,13 @@ def detect_cpu(compilers: CompilersDict) -> str:
     else:
         trial = platform.machine().lower()
 
-    if trial in ('amd64', 'x64', 'i86pc'):
+    if trial in {'amd64', 'x64', 'i86pc'}:
         trial = 'x86_64'
     if trial == 'x86_64':
         # Same check as above for cpu_family
         if any_compiler_has_define(compilers, '__i386__'):
             trial = 'i686' # All 64 bit cpus have at least this level of x86 support.
-    elif trial.startswith('aarch64'):
+    elif trial.startswith('aarch64') or trial.startswith('arm64'):
         # Same check as above for cpu_family
         if any_compiler_has_define(compilers, '__arm__'):
             trial = 'arm'
@@ -391,7 +396,10 @@ def detect_cpu(compilers: CompilersDict) -> str:
         if '64' not in trial:
             trial = 'mips'
         else:
-            trial = 'mips64'
+            if compilers and not any_compiler_has_define(compilers, '__mips64'):
+                trial = 'mips'
+            else:
+                trial = 'mips64'
     elif trial == 'ppc':
         # AIX always returns powerpc, check here for 64-bit
         if any_compiler_has_define(compilers, '__64BIT__'):
@@ -400,6 +408,43 @@ def detect_cpu(compilers: CompilersDict) -> str:
     # Add more quirks here as bugs are reported. Keep in sync with
     # detect_cpu_family() above.
     return trial
+
+KERNEL_MAPPINGS: T.Mapping[str, str] = {'freebsd': 'freebsd',
+                                        'openbsd': 'openbsd',
+                                        'netbsd': 'netbsd',
+                                        'windows': 'nt',
+                                        'android': 'linux',
+                                        'linux': 'linux',
+                                        'cygwin': 'nt',
+                                        'darwin': 'xnu',
+                                        'dragonfly': 'dragonfly',
+                                        'haiku': 'haiku',
+                                        }
+
+def detect_kernel(system: str) -> T.Optional[str]:
+    if system == 'sunos':
+        # Solaris 5.10 uname doesn't support the -o switch, and illumos started
+        # with version 5.11 so shortcut the logic to report 'solaris' in such
+        # cases where the version is 5.10 or below.
+        if mesonlib.version_compare(platform.uname().release, '<=5.10'):
+            return 'solaris'
+        # This needs to be /usr/bin/uname because gnu-uname could be installed and
+        # won't provide the necessary information
+        p, out, _ = Popen_safe(['/usr/bin/uname', '-o'])
+        if p.returncode != 0:
+            raise MesonException('Failed to run "/usr/bin/uname -o"')
+        out = out.lower().strip()
+        if out not in {'illumos', 'solaris'}:
+            mlog.warning(f'Got an unexpected value for kernel on a SunOS derived platform, expcted either "illumos" or "solaris", but got "{out}".'
+                         "Please open a Meson issue with the OS you're running and the value detected for your kernel.")
+            return None
+        return out
+    return KERNEL_MAPPINGS.get(system, None)
+
+def detect_subsystem(system: str) -> T.Optional[str]:
+    if system == 'darwin':
+        return 'macos'
+    return system
 
 def detect_system() -> str:
     if sys.platform == 'cygwin':
@@ -417,11 +462,14 @@ def detect_machine_info(compilers: T.Optional[CompilersDict] = None) -> MachineI
     underlying ''detect_*'' method can be called to explicitly use the
     partial information.
     """
+    system = detect_system()
     return MachineInfo(
-        detect_system(),
+        system,
         detect_cpu_family(compilers) if compilers is not None else None,
         detect_cpu(compilers) if compilers is not None else None,
-        sys.byteorder)
+        sys.byteorder,
+        detect_kernel(system),
+        detect_subsystem(system))
 
 # TODO make this compare two `MachineInfo`s purely. How important is the
 # `detect_cpu_family({})` distinction? It is the one impediment to that.
@@ -439,6 +487,7 @@ def machine_info_can_run(machine_info: MachineInfo):
     return \
         (machine_info.cpu_family == true_build_cpu_family) or \
         ((true_build_cpu_family == 'x86_64') and (machine_info.cpu_family == 'x86')) or \
+        ((true_build_cpu_family == 'mips64') and (machine_info.cpu_family == 'mips')) or \
         ((true_build_cpu_family == 'aarch64') and (machine_info.cpu_family == 'arm'))
 
 class Environment:
@@ -446,7 +495,7 @@ class Environment:
     log_dir = 'meson-logs'
     info_dir = 'meson-info'
 
-    def __init__(self, source_dir: T.Optional[str], build_dir: T.Optional[str], options: 'argparse.Namespace') -> None:
+    def __init__(self, source_dir: str, build_dir: str, options: 'argparse.Namespace') -> None:
         self.source_dir = source_dir
         self.build_dir = build_dir
         # Do not try to create build directories when build_dir is none.
@@ -459,7 +508,7 @@ class Environment:
             os.makedirs(self.log_dir, exist_ok=True)
             os.makedirs(self.info_dir, exist_ok=True)
             try:
-                self.coredata = coredata.load(self.get_build_dir())  # type: coredata.CoreData
+                self.coredata: coredata.CoreData = coredata.load(self.get_build_dir(), suggest_reconfigure=False)
                 self.first_invocation = False
             except FileNotFoundError:
                 self.create_new_coredata(options)
@@ -472,12 +521,12 @@ class Environment:
                 # If we stored previous command line options, we can recover from
                 # a broken/outdated coredata.
                 if os.path.isfile(coredata.get_cmd_line_file(self.build_dir)):
-                    mlog.warning('Regenerating configuration from scratch.')
+                    mlog.warning('Regenerating configuration from scratch.', fatal=False)
                     mlog.log('Reason:', mlog.red(str(e)))
                     coredata.read_cmd_line_file(self.build_dir, options)
                     self.create_new_coredata(options)
                 else:
-                    raise e
+                    raise MesonException(f'{str(e)} Try regenerating using "meson setup --wipe".')
         else:
             # Just create a fresh coredata in this case
             self.scratch_dir = ''
@@ -492,13 +541,13 @@ class Environment:
 
         # Similar to coredata.compilers, but lower level in that there is no
         # meta data, only names/paths.
-        binaries = PerMachineDefaultable()  # type: PerMachineDefaultable[BinaryTable]
+        binaries: PerMachineDefaultable[BinaryTable] = PerMachineDefaultable()
 
         # Misc other properties about each machine.
-        properties = PerMachineDefaultable()  # type: PerMachineDefaultable[Properties]
+        properties: PerMachineDefaultable[Properties] = PerMachineDefaultable()
 
         # CMake toolchain variables
-        cmakevars = PerMachineDefaultable()  # type: PerMachineDefaultable[CMakeVariables]
+        cmakevars: PerMachineDefaultable[CMakeVariables] = PerMachineDefaultable()
 
         ## Setup build machine defaults
 
@@ -519,7 +568,7 @@ class Environment:
         ## Read in native file(s) to override build machine configuration
 
         if self.coredata.config_files is not None:
-            config = coredata.parse_machine_files(self.coredata.config_files)
+            config = coredata.parse_machine_files(self.coredata.config_files, self.source_dir)
             binaries.build = BinaryTable(config.get('binaries', {}))
             properties.build = Properties(config.get('properties', {}))
             cmakevars.build = CMakeVariables(config.get('cmake', {}))
@@ -530,7 +579,7 @@ class Environment:
         ## Read in cross file(s) to override host machine configuration
 
         if self.coredata.cross_files:
-            config = coredata.parse_machine_files(self.coredata.cross_files)
+            config = coredata.parse_machine_files(self.coredata.cross_files, self.source_dir)
             properties.host = Properties(config.get('properties', {}))
             binaries.host = BinaryTable(config.get('binaries', {}))
             cmakevars.host = CMakeVariables(config.get('cmake', {}))
@@ -568,7 +617,8 @@ class Environment:
         if bt in self.options and (db in self.options or op in self.options):
             mlog.warning('Recommend using either -Dbuildtype or -Doptimization + -Ddebug. '
                          'Using both is redundant since they override each other. '
-                         'See: https://mesonbuild.com/Builtin-options.html#build-type-options')
+                         'See: https://mesonbuild.com/Builtin-options.html#build-type-options',
+                         fatal=False)
 
         exe_wrapper = self.lookup_binary_entry(MachineChoice.HOST, 'exe_wrapper')
         if exe_wrapper is not None:
@@ -687,12 +737,12 @@ class Environment:
                             # time) until we're instantiating that `Compiler`
                             # object. This is required so that passing
                             # `-Dc_args=` on the command line and `$CFLAGS`
-                            # have subtely different behavior. `$CFLAGS` will be
+                            # have subtly different behavior. `$CFLAGS` will be
                             # added to the linker command line if the compiler
                             # acts as a linker driver, `-Dc_args` will not.
                             #
                             # We still use the original key as the base here, as
-                            # we want to inhert the machine and the compiler
+                            # we want to inherit the machine and the compiler
                             # language
                             key = key.evolve('env_args')
                         env_opts[key].extend(p_list)
@@ -715,7 +765,10 @@ class Environment:
         for (name, evar), for_machine in itertools.product(opts, MachineChoice):
             p_env = _get_env_var(for_machine, self.is_cross_build(), evar)
             if p_env is not None:
-                self.binaries[for_machine].binaries.setdefault(name, mesonlib.split_args(p_env))
+                if os.path.exists(p_env):
+                    self.binaries[for_machine].binaries.setdefault(name, [p_env])
+                else:
+                    self.binaries[for_machine].binaries.setdefault(name, mesonlib.split_args(p_env))
 
     def _set_default_properties_from_env(self) -> None:
         """Properties which can also be set from the environment."""
@@ -783,7 +836,7 @@ class Environment:
         return is_object(fname)
 
     @lru_cache(maxsize=None)
-    def is_library(self, fname):
+    def is_library(self, fname: mesonlib.FileOrString):
         return is_library(fname)
 
     def lookup_binary_entry(self, for_machine: MachineChoice, name: str) -> T.Optional[T.List[str]]:
@@ -843,12 +896,12 @@ class Environment:
     def get_datadir(self) -> str:
         return self.coredata.get_option(OptionKey('datadir'))
 
-    def get_compiler_system_dirs(self, for_machine: MachineChoice):
+    def get_compiler_system_lib_dirs(self, for_machine: MachineChoice) -> T.List[str]:
         for comp in self.coredata.compilers[for_machine].values():
-            if isinstance(comp, compilers.ClangCompiler):
+            if comp.id == 'clang':
                 index = 1
                 break
-            elif isinstance(comp, compilers.GnuCompiler):
+            elif comp.id == 'gcc':
                 index = 2
                 break
         else:
@@ -862,13 +915,25 @@ class Environment:
         out = out.split('\n')[index].lstrip('libraries: =').split(':')
         return [os.path.normpath(p) for p in out]
 
+    def get_compiler_system_include_dirs(self, for_machine: MachineChoice) -> T.List[str]:
+        for comp in self.coredata.compilers[for_machine].values():
+            if comp.id == 'clang':
+                break
+            elif comp.id == 'gcc':
+                break
+        else:
+            # This option is only supported by gcc and clang. If we don't get a
+            # GCC or Clang compiler return and empty list.
+            return []
+        return comp.get_default_include_dirs()
+
     def need_exe_wrapper(self, for_machine: MachineChoice = MachineChoice.HOST):
         value = self.properties[for_machine].get('needs_exe_wrapper', None)
         if value is not None:
             return value
         return not machine_info_can_run(self.machines[for_machine])
 
-    def get_exe_wrapper(self) -> ExternalProgram:
+    def get_exe_wrapper(self) -> T.Optional[ExternalProgram]:
         if not self.need_exe_wrapper():
-            return EmptyExternalProgram()
+            return None
         return self.exe_wrapper

@@ -14,14 +14,17 @@ import tarfile
 import zipfile
 
 from . import mlog
+from .ast import IntrospectionInterpreter
 from .mesonlib import quiet_git, GitException, Popen_safe, MesonException, windows_proof_rmtree
-from .wrap.wrap import Resolver, WrapException, ALL_TYPES
-from .wrap import wraptool
+from .wrap.wrap import (Resolver, WrapException, ALL_TYPES,
+                        parse_patch_url, update_wrap_file, get_releases)
 
 if T.TYPE_CHECKING:
     from typing_extensions import Protocol
 
     from .wrap.wrap import PackageDefinition
+
+    SubParsers = argparse._SubParsersAction[argparse.ArgumentParser]
 
     class Arguments(Protocol):
         sourcedir: str
@@ -34,6 +37,10 @@ if T.TYPE_CHECKING:
     class UpdateArguments(Arguments):
         rebase: bool
         reset: bool
+
+    class UpdateWrapDBArguments(Arguments):
+        force: bool
+        releases: T.Dict[str, T.Any]
 
     class CheckoutArguments(Arguments):
         b: bool
@@ -114,7 +121,7 @@ class Runner:
         self.wrap_resolver = copy.copy(r)
         self.wrap_resolver.dirname = os.path.join(r.subdir_root, self.wrap.directory)
         self.wrap_resolver.wrap = self.wrap
-        self.run_method: T.Callable[[], bool] = self.options.subprojects_func.__get__(self) # type: ignore
+        self.run_method: T.Callable[[], bool] = self.options.subprojects_func.__get__(self)
         self.log_queue: T.List[T.Tuple[mlog.TV_LoggableList, T.Any]] = []
 
     def log(self, *args: mlog.TV_Loggable, **kwargs: T.Any) -> None:
@@ -130,35 +137,64 @@ class Runner:
         self.logger.done(self.wrap.name, self.log_queue)
         return result
 
-    def update_wrapdb_file(self) -> None:
+    @staticmethod
+    def pre_update_wrapdb(options: 'UpdateWrapDBArguments') -> None:
+        options.releases = get_releases(options.allow_insecure)
+
+    def update_wrapdb(self) -> bool:
+        self.log(f'Checking latest WrapDB version for {self.wrap.name}...')
+        options = T.cast('UpdateWrapDBArguments', self.options)
+
+        # Check if this wrap is in WrapDB
+        info = options.releases.get(self.wrap.name)
+        if not info:
+            self.log('  -> Wrap not found in wrapdb')
+            return True
+
+        # Determine current version
         try:
-            patch_url = self.wrap.get('patch_url')
-            branch, revision = wraptool.parse_patch_url(patch_url)
+            wrapdb_version = self.wrap.get('wrapdb_version')
+            branch, revision = wrapdb_version.split('-', 1)
+        except ValueError:
+            if not options.force:
+                self.log('  ->', mlog.red('Malformed wrapdb_version field, use --force to update anyway'))
+                return False
+            branch = revision = None
         except WrapException:
-            return
-        new_branch, new_revision = wraptool.get_latest_version(self.wrap.name, self.options.allow_insecure)
+            # Fallback to parsing the patch URL to determine current version.
+            # This won't work for projects that have upstream Meson support.
+            try:
+                patch_url = self.wrap.get('patch_url')
+                branch, revision = parse_patch_url(patch_url)
+            except WrapException:
+                if not options.force:
+                    self.log('  ->', mlog.red('Could not determine current version, use --force to update anyway'))
+                    return False
+                branch = revision = None
+
+        # Download latest wrap if version differs
+        latest_version = info['versions'][0]
+        new_branch, new_revision = latest_version.rsplit('-', 1)
         if new_branch != branch or new_revision != revision:
-            wraptool.update_wrap_file(self.wrap.filename, self.wrap.name, new_branch, new_revision, self.options.allow_insecure)
-            self.log('  -> New wrap file downloaded.')
+            filename = self.wrap.filename if self.wrap.has_wrap else f'{self.wrap.filename}.wrap'
+            update_wrap_file(filename, self.wrap.name,
+                             new_branch, new_revision,
+                             options.allow_insecure)
+            self.log('  -> New version downloaded:', mlog.blue(latest_version))
+        else:
+            self.log('  -> Already at latest version:', mlog.blue(latest_version))
+
+        return True
 
     def update_file(self) -> bool:
         options = T.cast('UpdateArguments', self.options)
-
-        self.update_wrapdb_file()
-        if not os.path.isdir(self.repo_dir):
-            # The subproject is not needed, or it is a tarball extracted in
-            # 'libfoo-1.0' directory and the version has been bumped and the new
-            # directory is 'libfoo-2.0'. In that case forcing a meson
-            # reconfigure will download and use the new tarball.
-            self.log('  -> Not used.')
-            return True
-        elif options.reset:
+        if options.reset:
             # Delete existing directory and redownload. It is possible that nothing
             # changed but we have no way to know. Hopefully tarballs are still
             # cached.
             windows_proof_rmtree(self.repo_dir)
             try:
-                self.wrap_resolver.resolve(self.wrap.name, 'meson')
+                self.wrap_resolver.resolve(self.wrap.name)
                 self.log('  -> New version extracted')
                 return True
             except WrapException as e:
@@ -179,13 +215,17 @@ class Runner:
         self.log(self.git_output(cmd))
 
     def git_stash(self) -> None:
-        # That git command return 1 (failure) when there is something to stash.
+        # That git command return some output when there is something to stash.
         # We don't want to stash when there is nothing to stash because that would
         # print spurious "No local changes to save".
-        if not quiet_git(['diff', '--quiet', 'HEAD'], self.repo_dir)[0]:
+        if quiet_git(['status', '--porcelain', ':!/.meson-subproject-wrap-hash.txt'], self.repo_dir)[1].strip():
             # Don't pipe stdout here because we want the user to see their changes have
             # been saved.
-            self.git_verbose(['stash'])
+            # Note: `--all` is used, and not `--include-untracked`, to prevent
+            # a potential error if `.meson-subproject-wrap-hash.txt` matches a
+            # gitignore pattern.
+            # We must add the dot in addition to the negation, because older versions of git have a bug.
+            self.git_verbose(['stash', 'push', '--all', ':!/.meson-subproject-wrap-hash.txt', '.'])
 
     def git_show(self) -> None:
         commit_message = self.git_output(['show', '--quiet', '--pretty=format:%h%n%d%n%s%n[%an]'])
@@ -196,7 +236,9 @@ class Runner:
         try:
             self.git_output(['-c', 'rebase.autoStash=true', 'rebase', 'FETCH_HEAD'])
         except GitException as e:
-            self.log('  -> Could not rebase', mlog.bold(self.repo_dir), 'onto', mlog.bold(revision))
+            self.git_output(['-c', 'rebase.autoStash=true', 'rebase', '--abort'])
+            self.log('  -> Could not rebase', mlog.bold(self.repo_dir), 'onto', mlog.bold(revision),
+                     '-- aborted')
             self.log(mlog.red(e.output))
             self.log(mlog.red(str(e)))
             return False
@@ -218,9 +260,10 @@ class Runner:
         return True
 
     def git_checkout(self, revision: str, create: bool = False) -> bool:
-        cmd = ['checkout', '--ignore-other-worktrees', revision, '--']
+        cmd = ['checkout', '--ignore-other-worktrees']
         if create:
-            cmd.insert(1, '-b')
+            cmd.append('-b')
+        cmd += [revision, '--']
         try:
             # Stash local changes, commits can always be found back in reflog, to
             # avoid any data lost by mistake.
@@ -249,18 +292,27 @@ class Runner:
             success = self.git_rebase(revision)
         return success
 
+    def git_branch_has_upstream(self, urls: set) -> bool:
+        cmd = ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}']
+        ret, upstream = quiet_git(cmd, self.repo_dir)
+        if not ret:
+            return False
+        try:
+            remote = upstream.split('/', maxsplit=1)[0]
+        except IndexError:
+            return False
+        cmd = ['remote', 'get-url', remote]
+        ret, remote_url = quiet_git(cmd, self.repo_dir)
+        return remote_url.strip() in urls
+
     def update_git(self) -> bool:
         options = T.cast('UpdateArguments', self.options)
-
-        if not os.path.isdir(self.repo_dir):
-            self.log('  -> Not used.')
-            return True
         if not os.path.exists(os.path.join(self.repo_dir, '.git')):
             if options.reset:
                 # Delete existing directory and redownload
                 windows_proof_rmtree(self.repo_dir)
                 try:
-                    self.wrap_resolver.resolve(self.wrap.name, 'meson')
+                    self.wrap_resolver.resolve(self.wrap.name)
                     self.update_git_done()
                     return True
                 except WrapException as e:
@@ -344,12 +396,16 @@ class Runner:
                 success = self.git_rebase(revision)
         else:
             # We are in another branch, either the user created their own branch and
-            # we should rebase it, or revision changed in the wrap file and we need
-            # to checkout the new branch.
+            # we should rebase it, or revision changed in the wrap file (we
+            # know this when the current branch has an upstream) and we need to
+            # checkout the new branch.
             if options.reset:
                 success = self.git_checkout_and_reset(revision)
             else:
-                success = self.git_rebase(revision)
+                if self.git_branch_has_upstream({url, push_url}):
+                    success = self.git_checkout_and_rebase(revision)
+                else:
+                    success = self.git_rebase(revision)
         if success:
             self.update_git_done()
         return success
@@ -359,9 +415,6 @@ class Runner:
         self.git_show()
 
     def update_hg(self) -> bool:
-        if not os.path.isdir(self.repo_dir):
-            self.log('  -> Not used.')
-            return True
         revno = self.wrap.get('revision')
         if revno.lower() == 'tip':
             # Failure to do pull is not a fatal error,
@@ -375,9 +428,6 @@ class Runner:
         return True
 
     def update_svn(self) -> bool:
-        if not os.path.isdir(self.repo_dir):
-            self.log('  -> Not used.')
-            return True
         revno = self.wrap.get('revision')
         _, out, _ = Popen_safe(['svn', 'info', '--show-item', 'revision', self.repo_dir])
         current_revno = out
@@ -394,19 +444,28 @@ class Runner:
 
     def update(self) -> bool:
         self.log(f'Updating {self.wrap.name}...')
-        if self.wrap.type == 'file':
-            return self.update_file()
+        success = False
+        if not os.path.isdir(self.repo_dir):
+            self.log('  -> Not used.')
+            # It is not an error if we are updating all subprojects.
+            success = not self.options.subprojects
+        elif self.wrap.type == 'file':
+            success = self.update_file()
         elif self.wrap.type == 'git':
-            return self.update_git()
+            success = self.update_git()
         elif self.wrap.type == 'hg':
-            return self.update_hg()
+            success = self.update_hg()
         elif self.wrap.type == 'svn':
-            return self.update_svn()
+            success = self.update_svn()
         elif self.wrap.type is None:
             self.log('  -> Cannot update subproject with no wrap file')
+            # It is not an error if we are updating all subprojects.
+            success = not self.options.subprojects
         else:
             self.log('  -> Cannot update', self.wrap.type, 'subproject')
-        return True
+        if success and os.path.isdir(self.repo_dir):
+            self.wrap.update_hash_cache(self.repo_dir)
+        return success
 
     def checkout(self) -> bool:
         options = T.cast('CheckoutArguments', self.options)
@@ -429,7 +488,7 @@ class Runner:
             self.log('  -> Already downloaded')
             return True
         try:
-            self.wrap_resolver.resolve(self.wrap.name, 'meson')
+            self.wrap_resolver.resolve(self.wrap.name)
             self.log('  -> done')
         except WrapException as e:
             self.log('  ->', mlog.red(str(e)))
@@ -579,7 +638,7 @@ def add_common_arguments(p: argparse.ArgumentParser) -> None:
                    help='Path to source directory')
     p.add_argument('--types', default='',
                    help=f'Comma-separated list of subproject types. Supported types are: {ALL_TYPES_STRING} (default: all)')
-    p.add_argument('--num-processes', default=None, type=int,
+    p.add_argument('-j', '--num-processes', default=None, type=int,
                    help='How many parallel processes to use (Since 0.59.0).')
     p.add_argument('--allow-insecure', default=False, action='store_true',
                    help='Allow insecure server connections.')
@@ -588,6 +647,18 @@ def add_subprojects_argument(p: argparse.ArgumentParser) -> None:
     p.add_argument('subprojects', nargs='*',
                    help='List of subprojects (default: all)')
 
+def add_wrap_update_parser(subparsers: 'SubParsers') -> argparse.ArgumentParser:
+    p = subparsers.add_parser('update', help='Update wrap files from WrapDB (Since 0.63.0)')
+    p.add_argument('--force', default=False, action='store_true',
+                   help='Update wraps that does not seems to come from WrapDB')
+    add_common_arguments(p)
+    add_subprojects_argument(p)
+    p.set_defaults(subprojects_func=Runner.update_wrapdb)
+    p.set_defaults(pre_func=Runner.pre_update_wrapdb)
+    return p
+
+# Note: when adding arguments, please also add them to the completion
+# scripts in $MESONSRC/data/shell-completions/
 def add_arguments(parser: argparse.ArgumentParser) -> None:
     subparsers = parser.add_subparsers(title='Commands', dest='command')
     subparsers.required = True
@@ -643,15 +714,18 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     p.set_defaults(subprojects_func=Runner.packagefiles)
 
 def run(options: 'Arguments') -> int:
-    src_dir = os.path.relpath(os.path.realpath(options.sourcedir))
-    if not os.path.isfile(os.path.join(src_dir, 'meson.build')):
-        mlog.error('Directory', mlog.bold(src_dir), 'does not seem to be a Meson source directory.')
+    source_dir = os.path.relpath(os.path.realpath(options.sourcedir))
+    if not os.path.isfile(os.path.join(source_dir, 'meson.build')):
+        mlog.error('Directory', mlog.bold(source_dir), 'does not seem to be a Meson source directory.')
         return 1
-    subprojects_dir = os.path.join(src_dir, 'subprojects')
-    if not os.path.isdir(subprojects_dir):
-        mlog.log('Directory', mlog.bold(src_dir), 'does not seem to have subprojects.')
+    with mlog.no_logging():
+        intr = IntrospectionInterpreter(source_dir, '', 'none')
+        intr.load_root_meson_file()
+        subproject_dir = intr.extract_subproject_dir() or 'subprojects'
+    if not os.path.isdir(os.path.join(source_dir, subproject_dir)):
+        mlog.log('Directory', mlog.bold(source_dir), 'does not seem to have subprojects.')
         return 0
-    r = Resolver(src_dir, 'subprojects', wrap_frontend=True, allow_insecure=options.allow_insecure)
+    r = Resolver(source_dir, subproject_dir, wrap_frontend=True, allow_insecure=options.allow_insecure, silent=True)
     if options.subprojects:
         wraps = [wrap for name, wrap in r.wraps.items() if name in options.subprojects]
     else:
@@ -662,13 +736,17 @@ def run(options: 'Arguments') -> int:
             raise MesonException(f'Unknown subproject type {t!r}, supported types are: {ALL_TYPES_STRING}')
     tasks: T.List[T.Awaitable[bool]] = []
     task_names: T.List[str] = []
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     executor = ThreadPoolExecutor(options.num_processes)
     if types:
         wraps = [wrap for wrap in wraps if wrap.type in types]
+    pre_func = getattr(options, 'pre_func', None)
+    if pre_func:
+        pre_func(options)
     logger = Logger(len(wraps))
     for wrap in wraps:
-        dirname = Path(subprojects_dir, wrap.directory).as_posix()
+        dirname = Path(source_dir, subproject_dir, wrap.directory).as_posix()
         runner = Runner(logger, r, wrap, dirname, options)
         task = loop.run_in_executor(executor, runner.run)
         tasks.append(task)

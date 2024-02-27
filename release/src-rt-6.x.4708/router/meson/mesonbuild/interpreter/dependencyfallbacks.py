@@ -19,7 +19,7 @@ if T.TYPE_CHECKING:
 
 class DependencyFallbacksHolder(MesonInterpreterObject):
     def __init__(self, interpreter: 'Interpreter', names: T.List[str], allow_fallback: T.Optional[bool] = None,
-                 default_options: T.Optional[T.List[str]] = None) -> None:
+                 default_options: T.Optional[T.Dict[OptionKey, str]] = None) -> None:
         super().__init__(subproject=interpreter.subproject)
         self.interpreter = interpreter
         self.subproject = interpreter.subproject
@@ -30,7 +30,7 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
         self.allow_fallback = allow_fallback
         self.subproject_name: T.Optional[str] = None
         self.subproject_varname: T.Optional[str] = None
-        self.subproject_kwargs = {'default_options': default_options or []}
+        self.subproject_kwargs = {'default_options': default_options or {}}
         self.names: T.List[str] = []
         self.forcefallback: bool = False
         self.nofallback: bool = False
@@ -66,14 +66,6 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
         self._subproject_impl(subp_name, varname)
 
     def _subproject_impl(self, subp_name: str, varname: str) -> None:
-        if not varname:
-            # If no variable name is specified, check if the wrap file has one.
-            # If the wrap file has a variable name, better use it because the
-            # subproject most probably is not using meson.override_dependency().
-            for name in self.names:
-                varname = self.wrap_resolver.get_varname(subp_name, name)
-                if varname:
-                    break
         assert self.subproject_name is None
         self.subproject_name = subp_name
         self.subproject_varname = varname
@@ -122,12 +114,11 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
         # dependency('foo', static: true) should implicitly add
         # default_options: ['default_library=static']
         static = kwargs.get('static')
-        default_options = stringlistify(func_kwargs.get('default_options', []))
-        if static is not None and not any('default_library' in i for i in default_options):
+        default_options = func_kwargs.get('default_options', {})
+        if static is not None and 'default_library' not in default_options:
             default_library = 'static' if static else 'shared'
-            opt = f'default_library={default_library}'
-            mlog.log(f'Building fallback subproject with {opt}')
-            default_options.append(opt)
+            mlog.log(f'Building fallback subproject with default_library={default_library}')
+            default_options[OptionKey('default_library')] = default_library
             func_kwargs['default_options'] = default_options
 
         # Configure the subproject
@@ -136,7 +127,7 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
         func_kwargs.setdefault('version', [])
         if 'default_options' in kwargs and isinstance(kwargs['default_options'], str):
             func_kwargs['default_options'] = listify(kwargs['default_options'])
-        self.interpreter.do_subproject(subp_name, 'meson', func_kwargs)
+        self.interpreter.do_subproject(subp_name, func_kwargs)
         return self._get_subproject_dep(subp_name, varname, kwargs)
 
     def _get_subproject(self, subp_name: str) -> T.Optional[SubprojectHolder]:
@@ -174,6 +165,14 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
 
         # Legacy: Use the variable name if provided instead of relying on the
         # subproject to override one of our dependency names
+        if not varname:
+            # If no variable name is specified, check if the wrap file has one.
+            # If the wrap file has a variable name, better use it because the
+            # subproject most probably is not using meson.override_dependency().
+            for name in self.names:
+                varname = self.wrap_resolver.get_varname(subp_name, name)
+                if varname:
+                    break
         if not varname:
             mlog.warning(f'Subproject {subp_name!r} did not override {self._display_name!r} dependency and no variable name specified')
             mlog.log('Dependency', mlog.bold(self._display_name), 'from subproject',
@@ -220,6 +219,8 @@ class DependencyFallbacksHolder(MesonInterpreterObject):
                 mlog.log('Dependency', mlog.bold(self._display_name),
                          'found:', mlog.red('NO'), *info)
                 return cached_dep
+        elif self.forcefallback and self.subproject_name:
+            cached_dep = None
         else:
             info = [mlog.blue('(cached)')]
             cached_dep = self.coredata.deps[for_machine].get(identifier)

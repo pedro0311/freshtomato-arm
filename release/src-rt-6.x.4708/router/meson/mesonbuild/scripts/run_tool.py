@@ -19,7 +19,7 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 from ..compilers import lang_suffixes
-from ..mesonlib import Popen_safe
+from ..mesonlib import quiet_git
 import typing as T
 
 if T.TYPE_CHECKING:
@@ -43,8 +43,8 @@ def run_tool(name: str, srcdir: Path, builddir: Path, fn: T.Callable[..., subpro
     if patterns:
         globs = [srcdir.glob(p) for p in patterns]
     else:
-        p, o, _ = Popen_safe(['git', 'ls-files'], cwd=srcdir)
-        if p.returncode == 0:
+        r, o = quiet_git(['ls-files'], srcdir)
+        if r:
             globs = [[Path(srcdir, f) for f in o.splitlines()]]
         else:
             globs = [srcdir.glob('**/*')]
@@ -60,7 +60,7 @@ def run_tool(name: str, srcdir: Path, builddir: Path, fn: T.Callable[..., subpro
         for f in itertools.chain(*globs):
             strf = str(f)
             if f.is_dir() or f.suffix not in suffixes or \
-                any(fnmatch.fnmatch(strf, i) for i in ignore):
+                    any(fnmatch.fnmatch(strf, i) for i in ignore):
                 continue
             futures.append(e.submit(fn, f, *args))
         if futures:

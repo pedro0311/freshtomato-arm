@@ -11,33 +11,35 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import typing as T
 
 from .. import coredata
-from ..mesonlib import MachineChoice, OptionKey
+from ..mesonlib import OptionKey
 
 from .mixins.clike import CLikeCompiler
 from .compilers import Compiler
-from .mixins.gnu import GnuCompiler
+from .mixins.gnu import GnuCompiler, gnu_common_warning_args, gnu_objc_warning_args
 from .mixins.clang import ClangCompiler
 
 if T.TYPE_CHECKING:
     from ..programs import ExternalProgram
     from ..envconfig import MachineInfo
     from ..environment import Environment
-    from ..linkers import DynamicLinker
+    from ..linkers.linkers import DynamicLinker
+    from ..mesonlib import MachineChoice
 
 class ObjCPPCompiler(CLikeCompiler, Compiler):
 
     language = 'objcpp'
 
-    def __init__(self, exelist: T.List[str], version: str, for_machine: MachineChoice,
+    def __init__(self, ccache: T.List[str], exelist: T.List[str], version: str, for_machine: MachineChoice,
                  is_cross: bool, info: 'MachineInfo',
                  exe_wrap: T.Optional['ExternalProgram'],
                  linker: T.Optional['DynamicLinker'] = None,
                  full_version: T.Optional[str] = None):
-        Compiler.__init__(self, exelist, version, for_machine, info,
+        Compiler.__init__(self, ccache, exelist, version, for_machine, info,
                           is_cross=is_cross, full_version=full_version,
                           linker=linker)
         CLikeCompiler.__init__(self, exe_wrap)
@@ -52,45 +54,51 @@ class ObjCPPCompiler(CLikeCompiler, Compiler):
 
 
 class GnuObjCPPCompiler(GnuCompiler, ObjCPPCompiler):
-    def __init__(self, exelist: T.List[str], version: str, for_machine: MachineChoice,
+    def __init__(self, ccache: T.List[str], exelist: T.List[str], version: str, for_machine: MachineChoice,
                  is_cross: bool, info: 'MachineInfo',
                  exe_wrapper: T.Optional['ExternalProgram'] = None,
                  defines: T.Optional[T.Dict[str, str]] = None,
                  linker: T.Optional['DynamicLinker'] = None,
                  full_version: T.Optional[str] = None):
-        ObjCPPCompiler.__init__(self, exelist, version, for_machine, is_cross,
+        ObjCPPCompiler.__init__(self, ccache, exelist, version, for_machine, is_cross,
                                 info, exe_wrapper, linker=linker, full_version=full_version)
         GnuCompiler.__init__(self, defines)
-        default_warn_args = ['-Wall', '-Winvalid-pch', '-Wnon-virtual-dtor']
+        default_warn_args = ['-Wall', '-Winvalid-pch']
         self.warn_args = {'0': [],
                           '1': default_warn_args,
                           '2': default_warn_args + ['-Wextra'],
-                          '3': default_warn_args + ['-Wextra', '-Wpedantic']}
+                          '3': default_warn_args + ['-Wextra', '-Wpedantic'],
+                          'everything': (default_warn_args + ['-Wextra', '-Wpedantic'] +
+                                         self.supported_warn_args(gnu_common_warning_args) +
+                                         self.supported_warn_args(gnu_objc_warning_args))}
 
 
 class ClangObjCPPCompiler(ClangCompiler, ObjCPPCompiler):
 
-    def __init__(self, exelist: T.List[str], version: str, for_machine: MachineChoice,
+    def __init__(self, ccache: T.List[str], exelist: T.List[str], version: str, for_machine: MachineChoice,
                  is_cross: bool, info: 'MachineInfo',
                  exe_wrapper: T.Optional['ExternalProgram'] = None,
                  defines: T.Optional[T.Dict[str, str]] = None,
                  linker: T.Optional['DynamicLinker'] = None,
                  full_version: T.Optional[str] = None):
-        ObjCPPCompiler.__init__(self, exelist, version, for_machine, is_cross,
+        ObjCPPCompiler.__init__(self, ccache, exelist, version, for_machine, is_cross,
                                 info, exe_wrapper, linker=linker, full_version=full_version)
         ClangCompiler.__init__(self, defines)
-        default_warn_args = ['-Wall', '-Winvalid-pch', '-Wnon-virtual-dtor']
+        default_warn_args = ['-Wall', '-Winvalid-pch']
         self.warn_args = {'0': [],
                           '1': default_warn_args,
                           '2': default_warn_args + ['-Wextra'],
-                          '3': default_warn_args + ['-Wextra', '-Wpedantic']}
+                          '3': default_warn_args + ['-Wextra', '-Wpedantic'],
+                          'everything': ['-Weverything']}
 
     def get_options(self) -> 'coredata.MutableKeyedOptionDictType':
         opts = super().get_options()
         opts.update({
             OptionKey('std', machine=self.for_machine, lang='cpp'): coredata.UserComboOption(
                 'C++ language standard to use',
-                ['none', 'c++98', 'c++11', 'c++14', 'c++17', 'gnu++98', 'gnu++11', 'gnu++14', 'gnu++17'],
+                ['none', 'c++98', 'c++11', 'c++14', 'c++17', 'c++20', 'c++2b',
+                 'gnu++98', 'gnu++11', 'gnu++14', 'gnu++17', 'gnu++20',
+                 'gnu++2b'],
                 'none',
             )
         })

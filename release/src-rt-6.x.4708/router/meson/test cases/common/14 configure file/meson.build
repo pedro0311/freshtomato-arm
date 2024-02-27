@@ -1,4 +1,6 @@
-project('configure file test', 'c', meson_version: '>=0.47.0')
+project('configure file test', 'c', meson_version: '>=0.63.0')
+
+fs = import('fs')
 
 conf = configuration_data()
 
@@ -159,7 +161,7 @@ cfile = configure_file(input : 'config.h.in',
   install_dir : false,
   configuration : conf)
 
-# test intsall_dir with install: false
+# test install_dir with install: false
 cfile = configure_file(input : 'config.h.in',
   output : 'do_not_get_installed_in_install_dir.h',
   install : false,
@@ -188,6 +190,9 @@ if ret.returncode() != 0
 endif
 # Now the same, but using a File object as an argument.
 inf2 = files('invalid-utf8.bin.in')[0]
+outf = configure_file(input : inf2,
+  output : 'invalid-utf8.bin',
+  copy: true)
 ret = run_command(check_file, inf2, outf, check: false)
 if ret.returncode() != 0
   error('Error running command: @0@\n@1@'.format(ret.stdout(), ret.stderr()))
@@ -201,6 +206,25 @@ ret = run_command(check_file, inf, outf, check: false)
 if ret.returncode() != 0
   error('Error running command: @0@\n@1@'.format(ret.stdout(), ret.stderr()))
 endif
+
+# Test the fs replacement
+# Test copying of an empty configuration data object
+inf = 'invalid-utf8.bin.in'
+outf = fs.copyfile(inf, 'invalid-utf8-1.bin',
+  install: true,
+  install_dir: get_option('datadir') / meson.project_name(),
+  install_tag: 'copyfile',
+)
+test('fs.copyfile string', check_file, args: [files(inf), outf])
+
+# Test with default outname of string
+outf = fs.copyfile(inf)
+test('fs.copyfile default name', check_file, args: [files(inf), outf])
+
+# Now the same, but using a File object as an argument.
+inf2 = files('invalid-utf8.bin.in')[0]
+outf = fs.copyfile(inf2, 'invalid-utf8-2.bin')
+test('fs.copyfile file', check_file, args: [inf2, outf])
 
 # Test non isolatin1 encoded input file which fails to decode with utf-8
 conf8 = configuration_data()

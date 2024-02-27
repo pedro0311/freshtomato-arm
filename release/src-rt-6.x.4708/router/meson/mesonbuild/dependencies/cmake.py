@@ -30,6 +30,7 @@ if T.TYPE_CHECKING:
     from ..cmake import CMakeTarget
     from ..environment import Environment
     from ..envconfig import MachineInfo
+    from ..interpreter.type_checking import PkgConfigDefineType
 
 class CMakeInfo(T.NamedTuple):
     module_paths: T.List[str]
@@ -80,7 +81,7 @@ class CMakeDependency(ExternalDependency):
 
     def __init__(self, name: str, environment: 'Environment', kwargs: T.Dict[str, T.Any], language: T.Optional[str] = None, force_use_global_compilers: bool = False) -> None:
         # Gather a list of all languages to support
-        self.language_list = []  # type: T.List[str]
+        self.language_list: T.List[str] = []
         if language is None or force_use_global_compilers:
             compilers = None
             if kwargs.get('native', False):
@@ -106,7 +107,7 @@ class CMakeDependency(ExternalDependency):
         # Store a copy of the CMake path on the object itself so it is
         # stored in the pickled coredata and recovered.
         self.cmakebin:  T.Optional[CMakeExecutor] = None
-        self.cmakeinfo: T.Optional[CMakeInfo]     = None
+        self.cmakeinfo: T.Optional[CMakeInfo] = None
 
         # Where all CMake "build dirs" are located
         self.cmake_root_dir = environment.scratch_dir
@@ -225,7 +226,7 @@ class CMakeDependency(ExternalDependency):
         module_paths = [x for x in module_paths if os.path.isdir(x)]
         archs = temp_parser.get_cmake_var('MESON_ARCH_LIST')
 
-        common_paths = ['lib', 'lib32', 'lib64', 'libx32', 'share']
+        common_paths = ['lib', 'lib32', 'lib64', 'libx32', 'share', '']
         for i in archs:
             common_paths += [os.path.join('lib', i)]
 
@@ -272,7 +273,7 @@ class CMakeDependency(ExternalDependency):
                 content = self._cached_listdir(i)
                 candidates = ['Find{}.cmake', '{}Config.cmake', '{}-config.cmake']
                 candidates = [x.format(name).lower() for x in candidates]
-                if any([x[1] in candidates for x in content]):
+                if any(x[1] in candidates for x in content):
                     return True
             return False
 
@@ -312,7 +313,7 @@ class CMakeDependency(ExternalDependency):
                 return True
 
         # Check PATH
-        system_env = []  # type: T.List[str]
+        system_env: T.List[str] = []
         for i in os.environ.get('PATH', '').split(os.pathsep):
             if i.endswith('/bin') or i.endswith('\\bin'):
                 i = i[:-4]
@@ -388,6 +389,7 @@ class CMakeDependency(ExternalDependency):
             cmake_opts += ['-DARCHS={}'.format(';'.join(self.cmakeinfo.archs))]
             cmake_opts += [f'-DVERSION={package_version}']
             cmake_opts += ['-DCOMPS={}'.format(';'.join([x[0] for x in comp_mapped]))]
+            cmake_opts += ['-DSTATIC={}'.format('ON' if self.static else 'OFF')]
             cmake_opts += args
             cmake_opts += self.traceparser.trace_args()
             cmake_opts += toolchain.get_cmake_args()
@@ -489,7 +491,7 @@ class CMakeDependency(ExternalDependency):
             libs_raw = [x for x in self.traceparser.get_cmake_var('PACKAGE_LIBRARIES') if x]
 
             # CMake has a "fun" API, where certain keywords describing
-            # configurations can be in the *_LIBRARIES vraiables. See:
+            # configurations can be in the *_LIBRARIES variables. See:
             # - https://github.com/mesonbuild/meson/issues/9197
             # - https://gitlab.freedesktop.org/libnice/libnice/-/issues/140
             # - https://cmake.org/cmake/help/latest/command/target_link_libraries.html#overview  (the last point in the section)
@@ -505,12 +507,12 @@ class CMakeDependency(ExternalDependency):
                     libs += [i]
                 # According to the CMake docs, a keyword only works for the
                 # directly the following item and all items without a keyword
-                # are implizitly `general`
+                # are implicitly `general`
                 cfg_matches = True
 
             # Try to use old style variables if no module is specified
             if len(libs) > 0:
-                self.compile_args = list(map(lambda x: f'-I{x}', incDirs)) + defs
+                self.compile_args = [f'-I{x}' for x in incDirs] + defs
                 self.link_args = []
                 for j in libs:
                     rtgt = resolve_cmake_trace_targets(j, self.traceparser, self.env, clib_compiler=self.clib_compiler)
@@ -548,12 +550,13 @@ class CMakeDependency(ExternalDependency):
                 self.found_modules += [i]
 
             rtgt = resolve_cmake_trace_targets(i, self.traceparser, self.env,
-                clib_compiler=self.clib_compiler,
-                not_found_warning=lambda x: mlog.warning('CMake: Dependency', mlog.bold(x), 'for', mlog.bold(name), 'was not found')
-            )
-            incDirs        += rtgt.include_directories
+                                               clib_compiler=self.clib_compiler,
+                                               not_found_warning=lambda x:
+                                                   mlog.warning('CMake: Dependency', mlog.bold(x), 'for', mlog.bold(name), 'was not found')
+                                               )
+            incDirs += rtgt.include_directories
             compileOptions += rtgt.public_compile_opts
-            libraries      += rtgt.libraries + rtgt.link_flags
+            libraries += rtgt.libraries + rtgt.link_flags
 
         # Make sure all elements in the lists are unique and sorted
         incDirs = sorted(set(incDirs))
@@ -616,8 +619,9 @@ class CMakeDependency(ExternalDependency):
         build_dir = self._setup_cmake_dir(cmake_file)
         return self.cmakebin.call(args, build_dir, env=env)
 
-    def log_tried(self) -> str:
-        return self.type_name
+    @staticmethod
+    def log_tried() -> str:
+        return 'cmake'
 
     def log_details(self) -> str:
         modules = [self._original_module_name(x) for x in self.found_modules]
@@ -629,7 +633,7 @@ class CMakeDependency(ExternalDependency):
     def get_variable(self, *, cmake: T.Optional[str] = None, pkgconfig: T.Optional[str] = None,
                      configtool: T.Optional[str] = None, internal: T.Optional[str] = None,
                      default_value: T.Optional[str] = None,
-                     pkgconfig_define: T.Optional[T.List[str]] = None) -> str:
+                     pkgconfig_define: PkgConfigDefineType = None) -> str:
         if cmake and self.traceparser is not None:
             try:
                 v = self.traceparser.vars[cmake]
@@ -649,3 +653,19 @@ class CMakeDependency(ExternalDependency):
         if default_value is not None:
             return default_value
         raise DependencyException(f'Could not get cmake variable and no default provided for {self!r}')
+
+
+class CMakeDependencyFactory:
+
+    def __init__(self, name: T.Optional[str] = None, modules: T.Optional[T.List[str]] = None):
+        self.name = name
+        self.modules = modules
+
+    def __call__(self, name: str, env: Environment, kwargs: T.Dict[str, T.Any], language: T.Optional[str] = None, force_use_global_compilers: bool = False) -> CMakeDependency:
+        if self.modules:
+            kwargs['modules'] = self.modules
+        return CMakeDependency(self.name or name, env, kwargs, language, force_use_global_compilers)
+
+    @staticmethod
+    def log_tried() -> str:
+        return CMakeDependency.log_tried()

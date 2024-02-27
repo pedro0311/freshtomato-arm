@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 """Representations specific to the Renesas CC-RX compiler family."""
 
@@ -20,6 +21,7 @@ import typing as T
 from ...mesonlib import EnvironmentException
 
 if T.TYPE_CHECKING:
+    from ...envconfig import MachineInfo
     from ...environment import Environment
     from ...compilers.compilers import Compiler
 else:
@@ -29,35 +31,35 @@ else:
     # do). This gives up DRYer type checking, with no runtime impact
     Compiler = object
 
-ccrx_buildtype_args = {
+ccrx_buildtype_args: T.Dict[str, T.List[str]] = {
     'plain': [],
     'debug': [],
     'debugoptimized': [],
     'release': [],
     'minsize': [],
     'custom': [],
-}  # type: T.Dict[str, T.List[str]]
+}
 
-ccrx_optimization_args = {
+ccrx_optimization_args: T.Dict[str, T.List[str]] = {
     '0': ['-optimize=0'],
     'g': ['-optimize=0'],
     '1': ['-optimize=1'],
     '2': ['-optimize=2'],
     '3': ['-optimize=max'],
     's': ['-optimize=2', '-size']
-}  # type: T.Dict[str, T.List[str]]
+}
 
-ccrx_debug_args = {
+ccrx_debug_args: T.Dict[bool, T.List[str]] = {
     False: [],
     True: ['-debug']
-}  # type: T.Dict[bool, T.List[str]]
+}
 
 
 class CcrxCompiler(Compiler):
 
     if T.TYPE_CHECKING:
         is_cross = True
-        can_compile_suffixes = set()  # type: T.Set[str]
+        can_compile_suffixes: T.Set[str] = set()
 
     id = 'ccrx'
 
@@ -66,11 +68,13 @@ class CcrxCompiler(Compiler):
             raise EnvironmentException('ccrx supports only cross-compilation.')
         # Assembly
         self.can_compile_suffixes.add('src')
-        default_warn_args = []  # type: T.List[str]
-        self.warn_args = {'0': [],
-                          '1': default_warn_args,
-                          '2': default_warn_args + [],
-                          '3': default_warn_args + []}  # type: T.Dict[str, T.List[str]]
+        default_warn_args: T.List[str] = []
+        self.warn_args: T.Dict[str, T.List[str]] = {
+            '0': [],
+            '1': default_warn_args,
+            '2': default_warn_args + [],
+            '3': default_warn_args + [],
+            'everything': default_warn_args + []}
 
     def get_pic_args(self) -> T.List[str]:
         # PIC support is not enabled by default for CCRX,
@@ -105,8 +109,8 @@ class CcrxCompiler(Compiler):
         return ccrx_debug_args[is_debug]
 
     @classmethod
-    def unix_args_to_native(cls, args: T.List[str]) -> T.List[str]:
-        result = []
+    def _unix_args_to_native(cls, args: T.List[str], info: MachineInfo) -> T.List[str]:
+        result: T.List[str] = []
         for i in args:
             if i.startswith('-D'):
                 i = '-define=' + i[2:]

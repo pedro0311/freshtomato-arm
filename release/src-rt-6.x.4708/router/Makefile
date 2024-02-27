@@ -66,7 +66,7 @@ define meson_CrossOptions
   echo "cpp = '$(CXX)'" >>$(1); \
   echo "ar = '$(AR)'" >>$(1); \
   echo "strip = '$(STRIP)'" >>$(1); \
-  echo "pkgconfig = '/usr/bin/pkg-config'" >>$(1); \
+  echo "pkg-config = '/usr/bin/pkg-config'" >>$(1); \
   echo "[built-in options]" >>$(1); \
   echo "wrap_mode = 'nodownload'" >>$(1); \
   echo "[properties]" >>$(1); \

@@ -19,29 +19,44 @@ import tempfile
 import unittest
 import subprocess
 import zipapp
+import sysconfig
 from pathlib import Path
 
 from mesonbuild.mesonlib import windows_proof_rmtree, python_command, is_windows
 from mesonbuild.coredata import version as meson_version
 
-# Handle the scheme that Debian patches in the as default
-import sysconfig
-# This function was renamed and made public in Python 3.10
-if hasattr(sysconfig, 'get_default_scheme'):
-    scheme = sysconfig.get_default_scheme()
-else:
-    scheme = sysconfig._get_default_scheme()
-if scheme == 'posix_local':
-    scheme = 'posix_prefix'
+scheme = None
+
+def needs_debian_path_hack():
+    try:
+        import setuptools
+        return int(setuptools.__version__.split('.')[0]) < 65
+    except ModuleNotFoundError:
+        return False
+
+if needs_debian_path_hack():
+    # Handle the scheme that Debian patches in the as default
+    # This function was renamed and made public in Python 3.10
+    if hasattr(sysconfig, 'get_default_scheme'):
+        scheme = sysconfig.get_default_scheme()
+    else:
+        scheme = sysconfig._get_default_scheme()
+    if scheme == 'posix_local':
+        scheme = 'posix_prefix'
 
 def get_pypath():
-    pypath = sysconfig.get_path('purelib', scheme=scheme, vars={'base': ''})
+    if scheme:
+        pypath = sysconfig.get_path('purelib', scheme=scheme, vars={'base': ''})
+    else:
+        pypath = sysconfig.get_path('purelib', vars={'base': ''})
     # Ensure that / is the path separator and not \, then strip /
     return Path(pypath).as_posix().strip('/')
 
 def get_pybindir():
     # 'Scripts' on Windows and 'bin' on other platforms including MSYS
-    return sysconfig.get_path('scripts', scheme=scheme, vars={'base': ''}).strip('\\/')
+    if scheme:
+        return sysconfig.get_path('scripts', scheme=scheme, vars={'base': ''}).strip('\\/')
+    return sysconfig.get_path('scripts', vars={'base': ''}).strip('\\/')
 
 class CommandTests(unittest.TestCase):
     '''
@@ -69,7 +84,7 @@ class CommandTests(unittest.TestCase):
         os.chdir(str(self.orig_dir))
         super().tearDown()
 
-    def _run(self, command, workdir=None):
+    def _run(self, command, workdir=None, env=None):
         '''
         Run a command while printing the stdout, and also return a copy of it
         '''
@@ -77,7 +92,7 @@ class CommandTests(unittest.TestCase):
         # between CI issue and test bug in that case. Set timeout and fail loud
         # instead.
         p = subprocess.run(command, stdout=subprocess.PIPE,
-                           env=os.environ.copy(), text=True,
+                           env=env, text=True,
                            cwd=workdir, timeout=60 * 5)
         print(p.stdout)
         if p.returncode != 0:
@@ -117,13 +132,16 @@ class CommandTests(unittest.TestCase):
         bindir = (self.tmpdir / 'bin')
         bindir.mkdir()
         (bindir / 'meson').symlink_to(self.src_root / 'meson.py')
+        (bindir / 'python3').symlink_to(python_command[0])
         os.environ['PATH'] = str(bindir) + os.pathsep + os.environ['PATH']
+        # use our overridden PATH-compatible python
+        path_resolved_meson_command = [str(bindir / 'meson')]
         # See if it works!
         meson_py = 'meson'
         meson_setup = [meson_py, 'setup']
         meson_command = meson_setup + self.meson_args
         stdo = self._run(meson_command + [self.testdir, builddir])
-        self.assertMesonCommandIs(stdo.split('\n')[0], resolved_meson_command)
+        self.assertMesonCommandIs(stdo.split('\n')[0], path_resolved_meson_command)
 
     def test_meson_installed(self):
         # Install meson
@@ -190,6 +208,21 @@ class CommandTests(unittest.TestCase):
         script = source / 'packaging' / 'create_zipapp.py'
         self._run([script.as_posix(), source, '--outfile', target, '--interpreter', python_command[0]])
         self._run([target.as_posix(), '--help'])
+
+    def test_meson_runpython(self):
+        meson_command = str(self.src_root / 'meson.py')
+        script_file = str(self.src_root / 'foo.py')
+        test_command = 'import sys; print(sys.argv[1])'
+        env = os.environ.copy()
+        del env['MESON_COMMAND_TESTS']
+        with open(script_file, 'w') as f:
+            f.write('#!/usr/bin/env python3\n\n')
+            f.write(f'{test_command}\n')
+
+        for cmd in [['-c', test_command, 'fake argument'], [script_file, 'fake argument']]:
+            pyout = self._run(python_command + cmd)
+            mesonout = self._run(python_command + [meson_command, 'runpython'] + cmd, env=env)
+            self.assertEqual(pyout, mesonout)
 
 
 if __name__ == '__main__':

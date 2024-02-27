@@ -15,7 +15,7 @@
 from __future__ import annotations
 import typing as T
 
-from . import ExtensionModule, ModuleObject, MutableModuleObject
+from . import ExtensionModule, ModuleObject, MutableModuleObject, ModuleInfo
 from .. import build
 from .. import dependencies
 from .. import mesonlib
@@ -75,7 +75,7 @@ class SourceSetRule(T.NamedTuple):
     """Other sourcesets added when this rule's conditions are true"""
 
     if_false: T.List[T.Union[mesonlib.FileOrString, build.GeneratedTypes]]
-    """Source files added when this rule's conditons are false"""
+    """Source files added when this rule's conditions are false"""
 
 
 class SourceFiles(T.NamedTuple):
@@ -197,8 +197,6 @@ class SourceSetImpl(SourceSet, MutableModuleObject):
             raise InterpreterException('add_all called with both positional and keyword arguments')
         keys, dependencies = self.check_conditions(when)
         for s in if_true:
-            if not isinstance(s, SourceSetImpl):
-                raise InvalidCode('Arguments to \'add_all\' after the first must be source sets')
             s.frozen = True
         self.rules.append(SourceSetRule(keys, dependencies, [], [], if_true, []))
 
@@ -289,7 +287,9 @@ class SourceFilesObject(ModuleObject):
         return list(self.files.deps)
 
 class SourceSetModule(ExtensionModule):
-    @FeatureNew('SourceSet module', '0.51.0')
+
+    INFO = ModuleInfo('sourceset', '0.51.0')
+
     def __init__(self, interpreter: Interpreter):
         super().__init__(interpreter)
         self.methods.update({

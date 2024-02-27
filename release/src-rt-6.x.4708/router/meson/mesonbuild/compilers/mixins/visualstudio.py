@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 """Abstractions to simplify compilers that implement an MSVC compatible
 interface.
@@ -23,6 +24,7 @@ import typing as T
 from ... import arglist
 from ... import mesonlib
 from ... import mlog
+from mesonbuild.compilers.compilers import CompileCheckMode
 
 if T.TYPE_CHECKING:
     from ...environment import Environment
@@ -35,7 +37,7 @@ else:
     # do). This gives up DRYer type checking, with no runtime impact
     Compiler = object
 
-vs32_instruction_set_args = {
+vs32_instruction_set_args: T.Dict[str, T.Optional[T.List[str]]] = {
     'mmx': ['/arch:SSE'], # There does not seem to be a flag just for MMX
     'sse': ['/arch:SSE'],
     'sse2': ['/arch:SSE2'],
@@ -45,10 +47,10 @@ vs32_instruction_set_args = {
     'avx': ['/arch:AVX'],
     'avx2': ['/arch:AVX2'],
     'neon': None,
-}  # T.Dicst[str, T.Optional[T.List[str]]]
+}
 
 # The 64 bit compiler defaults to /arch:avx.
-vs64_instruction_set_args = {
+vs64_instruction_set_args: T.Dict[str, T.Optional[T.List[str]]] = {
     'mmx': ['/arch:AVX'],
     'sse': ['/arch:AVX'],
     'sse2': ['/arch:AVX'],
@@ -59,21 +61,22 @@ vs64_instruction_set_args = {
     'avx': ['/arch:AVX'],
     'avx2': ['/arch:AVX2'],
     'neon': None,
-}  # T.Dicst[str, T.Optional[T.List[str]]]
+}
 
-msvc_optimization_args = {
+msvc_optimization_args: T.Dict[str, T.List[str]] = {
+    'plain': [],
     '0': ['/Od'],
     'g': [], # No specific flag to optimize debugging, /Zi or /ZI will create debug information
     '1': ['/O1'],
     '2': ['/O2'],
     '3': ['/O2', '/Gw'],
     's': ['/O1', '/Gw'],
-}  # type: T.Dict[str, T.List[str]]
+}
 
-msvc_debug_args = {
+msvc_debug_args: T.Dict[bool, T.List[str]] = {
     False: [],
     True: ['/Zi']
-}  # type: T.Dict[bool, T.List[str]]
+}
 
 
 class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
@@ -89,25 +92,30 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
     std_warn_args = ['/W3']
     std_opt_args = ['/O2']
     ignore_libs = arglist.UNIXY_COMPILER_INTERNAL_LIBS + ['execinfo']
-    internal_libs = []  # type: T.List[str]
+    internal_libs: T.List[str] = []
 
-    crt_args = {
+    crt_args: T.Dict[str, T.List[str]] = {
         'none': [],
         'md': ['/MD'],
         'mdd': ['/MDd'],
         'mt': ['/MT'],
         'mtd': ['/MTd'],
-    }  # type: T.Dict[str, T.List[str]]
+    }
 
     # /showIncludes is needed for build dependency tracking in Ninja
     # See: https://ninja-build.org/manual.html#_deps
-    always_args = ['/nologo', '/showIncludes']  # type: T.List[str]
-    warn_args = {
+    # Assume UTF-8 sources by default, but self.unix_args_to_native() removes it
+    # if `/source-charset` is set too.
+    # It is also dropped if Visual Studio 2013 or earlier is used, since it would
+    # not be supported in that case.
+    always_args = ['/nologo', '/showIncludes', '/utf-8']
+    warn_args: T.Dict[str, T.List[str]] = {
         '0': [],
         '1': ['/W2'],
         '2': ['/W3'],
         '3': ['/W4'],
-    }  # type: T.Dict[str, T.List[str]]
+        'everything': ['/Wall'],
+    }
 
     INVOKES_LINKER = False
 
@@ -115,10 +123,6 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
         self.base_options = {mesonlib.OptionKey(o) for o in ['b_pch', 'b_ndebug', 'b_vscrt']} # FIXME add lto, pgo and the like
         self.target = target
         self.is_64 = ('x64' in target) or ('x86_64' in target)
-        # Assume UTF-8 sources by default on Visual Studio 2015 or later, or clang,
-        # but self.unix_args_to_native() removes it if `/source-charset` is set too.
-        if isinstance(self, ClangClCompiler) or mesonlib.version_compare(self.version, '>=19.00'):
-            self.always_args = self.always_args + ['/utf-8']
         # do some canonicalization of target machine
         if 'x86_64' in target:
             self.machine = 'x64'
@@ -137,13 +141,14 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
 
     # Override CCompiler.get_always_args
     def get_always_args(self) -> T.List[str]:
-        return self.always_args
+        # TODO: use ImmutableListProtocol[str] here instead
+        return self.always_args.copy()
 
     def get_pch_suffix(self) -> str:
         return 'pch'
 
-    def get_pch_name(self, header: str) -> str:
-        chopped = os.path.basename(header).split('.')[:-1]
+    def get_pch_name(self, name: str) -> str:
+        chopped = os.path.basename(name).split('.')[:-1]
         chopped.append(self.get_pch_suffix())
         pchname = '.'.join(chopped)
         return pchname
@@ -160,6 +165,9 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
     def get_preprocess_only_args(self) -> T.List[str]:
         return ['/EP']
 
+    def get_preprocess_to_file_args(self) -> T.List[str]:
+        return ['/EP', '/P']
+
     def get_compile_only_args(self) -> T.List[str]:
         return ['/c']
 
@@ -173,10 +181,12 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
             raise mesonlib.MesonException('VS only supports address sanitizer at the moment.')
         return ['/fsanitize=address']
 
-    def get_output_args(self, target: str) -> T.List[str]:
-        if target.endswith('.exe'):
-            return ['/Fe' + target]
-        return ['/Fo' + target]
+    def get_output_args(self, outputname: str) -> T.List[str]:
+        if self.mode == 'PREPROCESSOR':
+            return ['/Fi' + outputname]
+        if outputname.endswith('.exe'):
+            return ['/Fe' + outputname]
+        return ['/Fo' + outputname]
 
     def get_buildtype_args(self, buildtype: str) -> T.List[str]:
         return []
@@ -204,7 +214,7 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
         return ['/DEF:' + defsfile]
 
     def gen_pch_args(self, header: str, source: str, pchname: str) -> T.Tuple[str, T.List[str]]:
-        objname = os.path.splitext(pchname)[0] + '.obj'
+        objname = os.path.splitext(source)[0] + '.obj'
         return objname, ['/Yc' + header, '/Fp' + pchname, '/Fo' + objname]
 
     def openmp_flags(self) -> T.List[str]:
@@ -223,7 +233,7 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
         for i in args:
             # -mms-bitfields is specific to MinGW-GCC
             # -pthread is only valid for GCC
-            if i in ('-mms-bitfields', '-pthread'):
+            if i in {'-mms-bitfields', '-pthread'}:
                 continue
             if i.startswith('-LIBPATH:'):
                 i = '/LIBPATH:' + i[9:]
@@ -255,7 +265,9 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
                 continue
             # cl.exe does not allow specifying both, so remove /utf-8 that we
             # added automatically in the case the user overrides it manually.
-            elif i.startswith('/source-charset:') or i.startswith('/execution-charset:'):
+            elif (i.startswith('/source-charset:')
+                    or i.startswith('/execution-charset:')
+                    or i == '/validate-charset-'):
                 try:
                     result.remove('/utf-8')
                 except ValueError:
@@ -265,7 +277,7 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
 
     @classmethod
     def native_args_to_unix(cls, args: T.List[str]) -> T.List[str]:
-        result = []
+        result: T.List[str] = []
         for arg in args:
             if arg.startswith(('/LIBPATH:', '-LIBPATH:')):
                 result.append('-L' + arg[9:])
@@ -296,12 +308,12 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
     # Visual Studio is special. It ignores some arguments it does not
     # understand and you can't tell it to error out on those.
     # http://stackoverflow.com/questions/15259720/how-can-i-make-the-microsoft-c-compiler-treat-unknown-flags-as-errors-rather-t
-    def has_arguments(self, args: T.List[str], env: 'Environment', code: str, mode: str) -> T.Tuple[bool, bool]:
-        warning_text = '4044' if mode == 'link' else '9002'
+    def has_arguments(self, args: T.List[str], env: 'Environment', code: str, mode: CompileCheckMode) -> T.Tuple[bool, bool]:
+        warning_text = '4044' if mode == CompileCheckMode.LINK else '9002'
         with self._build_wrapper(code, env, extra_args=args, mode=mode) as p:
             if p.returncode != 0:
                 return False, p.cached
-            return not(warning_text in p.stderr or warning_text in p.stdout), p.cached
+            return not (warning_text in p.stderr or warning_text in p.stdout), p.cached
 
     def get_compile_debugfile_args(self, rel_obj: str, pch: bool = False) -> T.List[str]:
         pdbarr = rel_obj.split('.')[:-1]
@@ -354,33 +366,13 @@ class VisualStudioLikeCompiler(Compiler, metaclass=abc.ABCMeta):
         return os.environ['INCLUDE'].split(os.pathsep)
 
     def get_crt_compile_args(self, crt_val: str, buildtype: str) -> T.List[str]:
-        if crt_val in self.crt_args:
-            return self.crt_args[crt_val]
-        assert crt_val in ['from_buildtype', 'static_from_buildtype']
-        dbg = 'mdd'
-        rel = 'md'
-        if crt_val == 'static_from_buildtype':
-            dbg = 'mtd'
-            rel = 'mt'
-        # Match what build type flags used to do.
-        if buildtype == 'plain':
-            return []
-        elif buildtype == 'debug':
-            return self.crt_args[dbg]
-        elif buildtype == 'debugoptimized':
-            return self.crt_args[rel]
-        elif buildtype == 'release':
-            return self.crt_args[rel]
-        elif buildtype == 'minsize':
-            return self.crt_args[rel]
-        else:
-            assert buildtype == 'custom'
-            raise mesonlib.EnvironmentException('Requested C runtime based on buildtype, but buildtype is "custom".')
+        crt_val = self.get_crt_val(crt_val, buildtype)
+        return self.crt_args[crt_val]
 
     def has_func_attribute(self, name: str, env: 'Environment') -> T.Tuple[bool, bool]:
         # MSVC doesn't have __attribute__ like Clang and GCC do, so just return
         # false without compiling anything
-        return name in ['dllimport', 'dllexport'], False
+        return name in {'dllimport', 'dllexport'}, False
 
     def get_argument_syntax(self) -> str:
         return 'msvc'
@@ -409,6 +401,15 @@ class MSVCCompiler(VisualStudioLikeCompiler):
 
     id = 'msvc'
 
+    def __init__(self, target: str):
+        super().__init__(target)
+
+        # Visual Studio 2013 and earlier don't support the /utf-8 argument.
+        # We want to remove it. We also want to make an explicit copy so we
+        # don't mutate class constant state
+        if mesonlib.version_compare(self.version, '<19.00') and '/utf-8' in self.always_args:
+            self.always_args = [r for r in self.always_args if r != '/utf-8']
+
     def get_compile_debugfile_args(self, rel_obj: str, pch: bool = False) -> T.List[str]:
         args = super().get_compile_debugfile_args(rel_obj, pch)
         # When generating a PDB file with PCH, all compile commands write
@@ -421,11 +422,16 @@ class MSVCCompiler(VisualStudioLikeCompiler):
             args = ['/FS'] + args
         return args
 
+    # Override CCompiler.get_always_args
+    # We want to drop '/utf-8' for Visual Studio 2013 and earlier
+    def get_always_args(self) -> T.List[str]:
+        return self.always_args
+
     def get_instruction_set_args(self, instruction_set: str) -> T.Optional[T.List[str]]:
         if self.version.split('.')[0] == '16' and instruction_set == 'avx':
             # VS documentation says that this exists and should work, but
             # it does not. The headers do not contain AVX intrinsics
-            # and they can not be called.
+            # and they cannot be called.
             return None
         return super().get_instruction_set_args(instruction_set)
 
@@ -444,9 +450,10 @@ class ClangClCompiler(VisualStudioLikeCompiler):
 
         # Assembly
         self.can_compile_suffixes.add('s')
+        self.can_compile_suffixes.add('sx')
 
-    def has_arguments(self, args: T.List[str], env: 'Environment', code: str, mode: str) -> T.Tuple[bool, bool]:
-        if mode != 'link':
+    def has_arguments(self, args: T.List[str], env: 'Environment', code: str, mode: CompileCheckMode) -> T.Tuple[bool, bool]:
+        if mode != CompileCheckMode.LINK:
             args = args + ['-Werror=unknown-argument', '-Werror=unknown-warning-option']
         return super().has_arguments(args, env, code, mode)
 
@@ -464,7 +471,7 @@ class ClangClCompiler(VisualStudioLikeCompiler):
 
     def get_dependency_compile_args(self, dep: 'Dependency') -> T.List[str]:
         if dep.get_include_type() == 'system':
-            converted = []
+            converted: T.List[str] = []
             for i in dep.get_compile_args():
                 if i.startswith('-isystem'):
                     converted += ['/clang:' + i]

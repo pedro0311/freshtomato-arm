@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 from .base import DependencyTypeName, ExternalDependency, DependencyException
 from ..mesonlib import MesonException, Version, stringlistify
@@ -75,7 +76,7 @@ class ExtraFrameworkDependency(ExternalDependency):
             # https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Tasks/IncludingFrameworks.html
             incdir = self._get_framework_include_path(framework_path)
             if incdir:
-                self.compile_args += ['-I' + incdir]
+                self.compile_args += ['-idirafter' + incdir]
             self.is_found = True
             return
 
@@ -115,5 +116,6 @@ class ExtraFrameworkDependency(ExternalDependency):
     def log_info(self) -> str:
         return self.framework_path or ''
 
-    def log_tried(self) -> str:
+    @staticmethod
+    def log_tried() -> str:
         return 'framework'

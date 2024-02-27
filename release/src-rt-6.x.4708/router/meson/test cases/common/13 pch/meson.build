@@ -13,10 +13,18 @@ subdir('cpp')
 subdir('generated')
 subdir('userDefined')
 subdir('withIncludeDirectories')
-subdir('withIncludeFile')
+if meson.backend() == 'xcode'
+  warning('Xcode backend does not support forced includes. Skipping "withIncludeFile" which requires this.')
+else
+  subdir('withIncludeFile')
+endif
 
 if meson.backend() == 'xcode'
   warning('Xcode backend only supports one precompiled header per target. Skipping "mixed" which has various precompiled headers.')
 else
   subdir('mixed')
+endif
+
+if cc_id == 'msvc'
+  subdir('linkwhole')
 endif

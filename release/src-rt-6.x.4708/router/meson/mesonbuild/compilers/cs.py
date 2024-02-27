@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import os.path, subprocess
 import textwrap
@@ -19,20 +20,23 @@ import typing as T
 from ..mesonlib import EnvironmentException
 from ..linkers import RSPFileSyntax
 
-from .compilers import Compiler, MachineChoice, mono_buildtype_args
+from .compilers import Compiler, mono_buildtype_args
 from .mixins.islinker import BasicLinkerIsCompilerMixin
 
 if T.TYPE_CHECKING:
     from ..envconfig import MachineInfo
     from ..environment import Environment
+    from ..mesonlib import MachineChoice
 
-cs_optimization_args = {'0': [],
+cs_optimization_args: T.Dict[str, T.List[str]] = {
+                        'plain': [],
+                        '0': [],
                         'g': [],
                         '1': ['-optimize+'],
                         '2': ['-optimize+'],
                         '3': ['-optimize+'],
                         's': ['-optimize+'],
-                        }  # type: T.Dict[str, T.List[str]]
+                        }
 
 
 class CsCompiler(BasicLinkerIsCompilerMixin, Compiler):
@@ -41,7 +45,7 @@ class CsCompiler(BasicLinkerIsCompilerMixin, Compiler):
 
     def __init__(self, exelist: T.List[str], version: str, for_machine: MachineChoice,
                  info: 'MachineInfo', runner: T.Optional[str] = None):
-        super().__init__(exelist, version, for_machine, info)
+        super().__init__([], exelist, version, for_machine, info)
         self.runner = runner
 
     @classmethod
@@ -96,7 +100,7 @@ class CsCompiler(BasicLinkerIsCompilerMixin, Compiler):
         pc = subprocess.Popen(self.exelist + self.get_always_args() + [src], cwd=work_dir)
         pc.wait()
         if pc.returncode != 0:
-            raise EnvironmentException('C# compiler %s can not compile programs.' % self.name_string())
+            raise EnvironmentException('C# compiler %s cannot compile programs.' % self.name_string())
         if self.runner:
             cmdlist = [self.runner, obj]
         else:

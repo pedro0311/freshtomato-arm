@@ -8,7 +8,7 @@ if not cc.find_library('z', required: false).found()
 endif
 
 # First check we have pkg-config >= 0.29
-pkgconfig = find_program('pkg-config', required: false)
+pkgconfig = find_program('pkg-config', native: true, required: false)
 if not pkgconfig.found()
   error('MESON_SKIP_TEST: pkg-config not found')
 endif
@@ -18,7 +18,7 @@ if v.version_compare('<0.29')
   error('MESON_SKIP_TEST: pkg-config version \'' + v + '\' too old')
 endif
 
-python = import('python').find_installation()
+python = find_program('python3')
 fs = import('fs')
 pkgg = import('pkgconfig')
 
@@ -153,7 +153,7 @@ ct = custom_target('stat3',
   output: fs.name(outfile),
   command: [python, '-c', script],
 )
-simple6 = library('simple6', link_with: ct)
+simple6 = library('simple6', 'dependencies/dummy.c', link_with: ct)
 pkgg.generate(simple6)
 
 # implicit variables
@@ -169,3 +169,27 @@ pkgg.generate(
   version : libver,
   variables: ['bar=${libdir}/bar']
 )
+
+# Regression test: variables kwarg should listify single string value
+pkgg.generate(
+  name : 'libvartest3',
+  description : 'Check that variables can be single string',
+  variables: 'foo=bar',
+)
+
+# without a mainlib, name/description are mandatory
+testcase expect_error('pkgconfig.generate: if a library is not passed as a positional argument, the \'name\' keyword argument is required.')
+  pkgg.generate(description: 'empty data')
+endtestcase
+
+testcase expect_error('pkgconfig.generate: if a library is not passed as a positional argument, the \'description\' keyword argument is required.')
+  pkgg.generate(name: 'foobar')
+endtestcase
+
+# Make sure the -uninstalled.pc file contains both include directories.
+# See dependencies/test2.c that gets built against both simple7.pc and
+# simple7-uninstalled.pc.
+simple7 = library('simple7', include_directories: 'inc1')
+dep = declare_dependency(include_directories: 'inc2')
+install_headers('inc1/inc1.h', 'inc2/inc2.h')
+pkgg.generate(simple7, libraries: dep)

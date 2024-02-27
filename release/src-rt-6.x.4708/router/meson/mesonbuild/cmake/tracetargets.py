@@ -1,5 +1,6 @@
 # SPDX-License-Identifer: Apache-2.0
 # Copyright 2021 The Meson development team
+from __future__ import annotations
 
 from .common import cmake_is_debug
 from .. import mlog
@@ -12,6 +13,7 @@ if T.TYPE_CHECKING:
     from .traceparser import CMakeTraceParser
     from ..environment import Environment
     from ..compilers import Compiler
+    from ..dependencies import MissingCompiler
 
 class ResolvedTarget:
     def __init__(self) -> None:
@@ -24,7 +26,7 @@ def resolve_cmake_trace_targets(target_name: str,
                                 trace: 'CMakeTraceParser',
                                 env: 'Environment',
                                 *,
-                                clib_compiler: T.Optional['Compiler'] = None,
+                                clib_compiler: T.Union['MissingCompiler', 'Compiler'] = None,
                                 not_found_warning: T.Callable[[str], None] = lambda x: None) -> ResolvedTarget:
     res = ResolvedTarget()
     targets = [target_name]
@@ -48,12 +50,16 @@ def resolve_cmake_trace_targets(target_name: str,
                 res.libraries += [curr]
             elif Path(curr).is_absolute() and Path(curr).exists():
                 res.libraries += [curr]
-            elif env.machines.build.is_windows() and reg_is_maybe_bare_lib.match(curr) and clib_compiler is not None:
-                # On Windows, CMake library dependencies can be passed as bare library names,
+            elif reg_is_maybe_bare_lib.match(curr) and clib_compiler:
+                # CMake library dependencies can be passed as bare library names,
                 # CMake brute-forces a combination of prefix/suffix combinations to find the
                 # right library. Assume any bare argument passed which is not also a CMake
                 # target must be a system library we should try to link against.
-                res.libraries += clib_compiler.find_library(curr, env, [])
+                flib = clib_compiler.find_library(curr, env, [])
+                if flib is not None:
+                    res.libraries += flib
+                else:
+                    not_found_warning(curr)
             else:
                 not_found_warning(curr)
             continue
@@ -110,8 +116,8 @@ def resolve_cmake_trace_targets(target_name: str,
         processed_targets += [curr]
 
     res.include_directories = sorted(set(res.include_directories))
-    res.link_flags          = sorted(set(res.link_flags))
+    res.link_flags = sorted(set(res.link_flags))
     res.public_compile_opts = sorted(set(res.public_compile_opts))
-    res.libraries           = sorted(set(res.libraries))
+    res.libraries = sorted(set(res.libraries))
 
     return res

@@ -14,8 +14,10 @@
 
 # This file contains the detection logic for external dependencies that are
 # platform-specific (generally speaking).
+from __future__ import annotations
 
 from .base import DependencyTypeName, ExternalDependency, DependencyException
+from .detect import packages
 from ..mesonlib import MesonException
 import typing as T
 
@@ -54,5 +56,8 @@ class AppleFrameworks(ExternalDependency):
     def log_info(self) -> str:
         return ', '.join(self.frameworks)
 
-    def log_tried(self) -> str:
+    @staticmethod
+    def log_tried() -> str:
         return 'framework'
+
+packages['appleframeworks'] = AppleFrameworks

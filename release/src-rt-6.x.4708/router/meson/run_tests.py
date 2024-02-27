@@ -34,8 +34,9 @@ from pathlib import Path
 from unittest import mock
 import typing as T
 
-from mesonbuild import compilers
-from mesonbuild import dependencies
+from mesonbuild.compilers.c import CCompiler
+from mesonbuild.compilers.detect import detect_c_compiler
+from mesonbuild.dependencies.pkgconfig import PkgConfigInterface
 from mesonbuild import mesonlib
 from mesonbuild import mesonmain
 from mesonbuild import mtest
@@ -75,6 +76,15 @@ else:
 os.environ['PYTHONWARNDEFAULTENCODING'] = '1'
 # work around https://bugs.python.org/issue34624
 os.environ['MESON_RUNNING_IN_PROJECT_TESTS'] = '1'
+# python 3.11 adds a warning that in 3.15, UTF-8 mode will be default.
+# This is fantastic news, we'd love that. Less fantastic: this warning is silly,
+# we *want* these checks to be affected. Plus, the recommended alternative API
+# would (in addition to warning people when UTF-8 mode removed the problem) also
+# require using a minimum python version of 3.11 (in which the warning was added)
+# or add verbose if/else soup.
+if sys.version_info >= (3, 10):
+    import warnings
+    warnings.filterwarnings('ignore', message="UTF-8 Mode affects .*getpreferredencoding", category=EncodingWarning)
 
 def guess_backend(backend_str: str, msbuild_exe: str) -> T.Tuple['Backend', T.List[str]]:
     # Auto-detect backend if unspecified
@@ -151,6 +161,8 @@ def get_fake_env(sdir='', bdir=None, prefix='', opts=None):
     env = Environment(sdir, bdir, opts)
     env.coredata.options[OptionKey('args', lang='c')] = FakeCompilerOptions()
     env.machines.host.cpu_family = 'x86_64' # Used on macOS inside find_library
+    # Invalidate cache when using a different Environment object.
+    clear_meson_configure_class_caches()
     return env
 
 def get_convincing_fake_env_and_cc(bdir, prefix):
@@ -160,7 +172,7 @@ def get_convincing_fake_env_and_cc(bdir, prefix):
     Useful for running compiler checks in the unit tests.
     '''
     env = get_fake_env('', bdir, prefix)
-    cc = compilers.detect_c_compiler(env, mesonlib.MachineChoice.HOST)
+    cc = detect_c_compiler(env, mesonlib.MachineChoice.HOST)
     # Detect machine info
     env.machines.host = detect_machine_info({'c':cc})
     return (env, cc)
@@ -176,6 +188,15 @@ if mesonlib.is_windows() or mesonlib.is_cygwin():
     exe_suffix = '.exe'
 else:
     exe_suffix = ''
+
+def handle_meson_skip_test(out: str) -> T.Tuple[bool, str]:
+    for line in out.splitlines():
+        for prefix in {'Problem encountered', 'Assert failed', 'Failed to configure the CMake subproject'}:
+            if f'{prefix}: MESON_SKIP_TEST' in line:
+                offset = line.index('MESON_SKIP_TEST') + 16
+                reason = line[offset:].strip()
+                return (True, reason)
+    return (False, '')
 
 def get_meson_script() -> str:
     '''
@@ -287,14 +308,13 @@ def run_mtest_inprocess(commandlist: T.List[str]) -> T.Tuple[int, str, str]:
     out = StringIO()
     with mock.patch.object(sys, 'stdout', out), mock.patch.object(sys, 'stderr', out):
         returncode = mtest.run_with_args(commandlist)
-    return returncode, stdout.getvalue()
+    return returncode, out.getvalue()
 
 def clear_meson_configure_class_caches() -> None:
-    compilers.CCompiler.find_library_cache = {}
-    compilers.CCompiler.find_framework_cache = {}
-    dependencies.PkgConfigDependency.pkgbin_cache = {}
-    dependencies.PkgConfigDependency.class_pkgbin = mesonlib.PerMachine(None, None)
-    mesonlib.project_meson_versions = collections.defaultdict(str)
+    CCompiler.find_library_cache.clear()
+    CCompiler.find_framework_cache.clear()
+    PkgConfigInterface.class_impl.assign(False, False)
+    mesonlib.project_meson_versions.clear()
 
 def run_configure_inprocess(commandlist: T.List[str], env: T.Optional[T.Dict[str, str]] = None, catch_exception: bool = False) -> T.Tuple[int, str, str]:
     stderr = StringIO()
@@ -317,11 +337,11 @@ def run_configure_external(full_command: T.List[str], env: T.Optional[T.Dict[str
     pc, o, e = mesonlib.Popen_safe(full_command, env=env)
     return pc.returncode, o, e
 
-def run_configure(commandlist: T.List[str], env: T.Optional[T.Dict[str, str]] = None, catch_exception: bool = False) -> T.Tuple[int, str, str]:
+def run_configure(commandlist: T.List[str], env: T.Optional[T.Dict[str, str]] = None, catch_exception: bool = False) -> T.Tuple[bool, T.Tuple[int, str, str]]:
     global meson_exe
     if meson_exe:
-        return run_configure_external(meson_exe + commandlist, env=env)
-    return run_configure_inprocess(commandlist, env=env, catch_exception=catch_exception)
+        return (False, run_configure_external(meson_exe + commandlist, env=env))
+    return (True, run_configure_inprocess(commandlist, env=env, catch_exception=catch_exception))
 
 def print_system_info():
     print(mlog.bold('System information.'))
@@ -332,6 +352,10 @@ def print_system_info():
     print('System:', platform.system())
     print('')
     print(flush=True)
+
+def subprocess_call(cmd, **kwargs):
+    print(f'$ {mesonlib.join_args(cmd)}')
+    return subprocess.call(cmd, **kwargs)
 
 def main():
     print_system_info()
@@ -344,7 +368,7 @@ def main():
     parser.add_argument('--no-unittests', action='store_true', default=False)
     (options, _) = parser.parse_known_args()
     returncode = 0
-    backend, _ = guess_backend(options.backend, shutil.which('msbuild'))
+    _, backend_flags = guess_backend(options.backend, shutil.which('msbuild'))
     no_unittests = options.no_unittests
     # Running on a developer machine? Be nice!
     if not mesonlib.is_windows() and not mesonlib.is_haiku() and 'CI' not in os.environ:
@@ -370,7 +394,7 @@ def main():
         cmd = mesonlib.python_command + ['run_meson_command_tests.py', '-v']
         if options.failfast:
             cmd += ['--failfast']
-        returncode += subprocess.call(cmd, env=env)
+        returncode += subprocess_call(cmd, env=env)
         if options.failfast and returncode != 0:
             return returncode
         if no_unittests:
@@ -380,14 +404,14 @@ def main():
         else:
             print(mlog.bold('Running unittests.'))
             print(flush=True)
-            cmd = mesonlib.python_command + ['run_unittests.py', '--backend=' + backend.name, '-v']
+            cmd = mesonlib.python_command + ['run_unittests.py', '-v'] + backend_flags
             if options.failfast:
                 cmd += ['--failfast']
-            returncode += subprocess.call(cmd, env=env)
+            returncode += subprocess_call(cmd, env=env)
             if options.failfast and returncode != 0:
                 return returncode
         cmd = mesonlib.python_command + ['run_project_tests.py'] + sys.argv[1:]
-        returncode += subprocess.call(cmd, env=env)
+        returncode += subprocess_call(cmd, env=env)
     else:
         cross_test_args = mesonlib.python_command + ['run_cross_test.py']
         for cf in options.cross:
@@ -398,7 +422,7 @@ def main():
                 cmd += ['--failfast']
             if options.cross_only:
                 cmd += ['--cross-only']
-            returncode += subprocess.call(cmd, env=env)
+            returncode += subprocess_call(cmd, env=env)
             if options.failfast and returncode != 0:
                 return returncode
     return returncode

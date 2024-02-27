@@ -11,13 +11,14 @@ summary({'Some boolean': false,
          'enabled_opt': get_option('enabled_opt'),
         }, section: 'Configuration')
 summary({'missing prog': find_program('xyzzy', required: false),
-         'existing prog': import('python').find_installation(),
+         'existing prog': find_program(get_option('python')).full_path(),
          'missing dep': dependency('', required: false),
          'external dep': dependency('zlib', required: false),
          'internal dep': declare_dependency(),
+         'disabler': disabler(),
         }, section: 'Stuff')
 summary('A number', 1, section: 'Configuration')
 summary('yes', true, bool_yn : true, section: 'Configuration')
 summary('no', false, bool_yn : true, section: 'Configuration')
-summary('coma list', ['a', 'b', 'c'], list_sep: ', ', section: 'Configuration')
-summary('long coma list', ['alpha', 'alphacolor', 'apetag', 'audiofx', 'audioparsers', 'auparse', 'autodetect', 'avi'], list_sep: ', ', section: 'Plugins')
+summary('comma list', ['a', 'b', 'c'], list_sep: ', ', section: 'Configuration')
+summary('long comma list', ['alpha', 'alphacolor', 'apetag', 'audiofx', 'audioparsers', 'auparse', 'autodetect', 'avi'], list_sep: ', ', section: 'Plugins')

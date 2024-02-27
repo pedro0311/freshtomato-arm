@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 import os
 import os.path
@@ -19,23 +20,34 @@ import subprocess
 import textwrap
 import typing as T
 
-from ..mesonlib import EnvironmentException, MachineChoice
+from ..mesonlib import EnvironmentException
 from .compilers import Compiler, java_buildtype_args
 from .mixins.islinker import BasicLinkerIsCompilerMixin
 
 if T.TYPE_CHECKING:
     from ..envconfig import MachineInfo
     from ..environment import Environment
+    from ..mesonlib import MachineChoice
 
 class JavaCompiler(BasicLinkerIsCompilerMixin, Compiler):
 
     language = 'java'
     id = 'unknown'
 
+    _WARNING_LEVELS: T.Dict[str, T.List[str]] = {
+        '0': ['-nowarn'],
+        '1': ['-Xlint:all'],
+        '2': ['-Xlint:all', '-Xdoclint:all'],
+        '3': ['-Xlint:all', '-Xdoclint:all'],
+    }
+
     def __init__(self, exelist: T.List[str], version: str, for_machine: MachineChoice,
                  info: 'MachineInfo', full_version: T.Optional[str] = None):
-        super().__init__(exelist, version, for_machine, info, full_version=full_version)
+        super().__init__([], exelist, version, for_machine, info, full_version=full_version)
         self.javarunner = 'java'
+
+    def get_warn_args(self, level: str) -> T.List[str]:
+        return self._WARNING_LEVELS[level]
 
     def get_werror_args(self) -> T.List[str]:
         return ['-Werror']
@@ -63,7 +75,7 @@ class JavaCompiler(BasicLinkerIsCompilerMixin, Compiler):
     def compute_parameters_with_absolute_paths(self, parameter_list: T.List[str],
                                                build_dir: str) -> T.List[str]:
         for idx, i in enumerate(parameter_list):
-            if i in ['-cp', '-classpath', '-sourcepath'] and idx + 1 < len(parameter_list):
+            if i in {'-cp', '-classpath', '-sourcepath'} and idx + 1 < len(parameter_list):
                 path_list = parameter_list[idx + 1].split(os.pathsep)
                 path_list = [os.path.normpath(os.path.join(build_dir, x)) for x in path_list]
                 parameter_list[idx + 1] = os.pathsep.join(path_list)
@@ -85,14 +97,14 @@ class JavaCompiler(BasicLinkerIsCompilerMixin, Compiler):
         pc = subprocess.Popen(self.exelist + [src], cwd=work_dir)
         pc.wait()
         if pc.returncode != 0:
-            raise EnvironmentException('Java compiler %s can not compile programs.' % self.name_string())
+            raise EnvironmentException(f'Java compiler {self.name_string()} cannot compile programs.')
         runner = shutil.which(self.javarunner)
         if runner:
-            cmdlist = [runner, obj]
+            cmdlist = [runner, '-cp', '.', obj]
             pe = subprocess.Popen(cmdlist, cwd=work_dir)
             pe.wait()
             if pe.returncode != 0:
-                raise EnvironmentException('Executables created by Java compiler %s are not runnable.' % self.name_string())
+                raise EnvironmentException(f'Executables created by Java compiler {self.name_string()} are not runnable.')
         else:
             m = "Java Virtual Machine wasn't found, but it's needed by Meson. " \
                 "Please install a JRE.\nIf you have specific needs where this " \

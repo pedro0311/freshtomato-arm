@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
 
 """Representations specific to the Texas Instruments compiler family."""
 
@@ -20,6 +21,7 @@ import typing as T
 from ...mesonlib import EnvironmentException
 
 if T.TYPE_CHECKING:
+    from ...envconfig import MachineInfo
     from ...environment import Environment
     from ...compilers.compilers import Compiler
 else:
@@ -29,28 +31,29 @@ else:
     # do). This gives up DRYer type checking, with no runtime impact
     Compiler = object
 
-ti_buildtype_args = {
+ti_buildtype_args: T.Dict[str, T.List[str]] = {
     'plain': [],
     'debug': [],
     'debugoptimized': [],
     'release': [],
     'minsize': [],
     'custom': [],
-}  # type: T.Dict[str, T.List[str]]
+}
 
-ti_optimization_args = {
+ti_optimization_args: T.Dict[str, T.List[str]] = {
+    'plain': [],
     '0': ['-O0'],
     'g': ['-Ooff'],
     '1': ['-O1'],
     '2': ['-O2'],
     '3': ['-O3'],
     's': ['-O4']
-}  # type: T.Dict[str, T.List[str]]
+}
 
-ti_debug_args = {
+ti_debug_args: T.Dict[bool, T.List[str]] = {
     False: [],
     True: ['-g']
-}  # type: T.Dict[bool, T.List[str]]
+}
 
 
 class TICompiler(Compiler):
@@ -64,11 +67,13 @@ class TICompiler(Compiler):
         self.can_compile_suffixes.add('asm')    # Assembly
         self.can_compile_suffixes.add('cla')    # Control Law Accelerator (CLA) used in C2000
 
-        default_warn_args = []  # type: T.List[str]
-        self.warn_args = {'0': [],
-                          '1': default_warn_args,
-                          '2': default_warn_args + [],
-                          '3': default_warn_args + []}  # type: T.Dict[str, T.List[str]]
+        default_warn_args: T.List[str] = []
+        self.warn_args: T.Dict[str, T.List[str]] = {
+            '0': [],
+            '1': default_warn_args,
+            '2': default_warn_args + [],
+            '3': default_warn_args + [],
+            'everything': default_warn_args + []}
 
     def get_pic_args(self) -> T.List[str]:
         # PIC support is not enabled by default for TI compilers,
@@ -108,8 +113,8 @@ class TICompiler(Compiler):
     def get_no_optimization_args(self) -> T.List[str]:
         return ['-Ooff']
 
-    def get_output_args(self, target: str) -> T.List[str]:
-        return [f'--output_file={target}']
+    def get_output_args(self, outputname: str) -> T.List[str]:
+        return [f'--output_file={outputname}']
 
     def get_werror_args(self) -> T.List[str]:
         return ['--emit_warnings_as_errors']
@@ -120,8 +125,8 @@ class TICompiler(Compiler):
         return ['-I=' + path]
 
     @classmethod
-    def unix_args_to_native(cls, args: T.List[str]) -> T.List[str]:
-        result = []
+    def _unix_args_to_native(cls, args: T.List[str], info: MachineInfo) -> T.List[str]:
+        result: T.List[str] = []
         for i in args:
             if i.startswith('-D'):
                 i = '--define=' + i[2:]
