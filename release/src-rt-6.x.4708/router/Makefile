@@ -4106,7 +4106,7 @@ libffi/stamp-h1:
 	cd libffi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --disable-builddir --disable-docs --disable-dependency-tracking
+		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --disable-builddir --disable-docs --disable-multi-os-directory --disable-raw-api --disable-structs --disable-dependency-tracking
 	@touch $@
 
 libffi: libffi/stamp-h1
