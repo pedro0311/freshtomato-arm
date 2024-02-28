@@ -3854,6 +3854,7 @@ wireguard-tools-clean:
 gettext-tiny/stamp-h1:
 	$(MAKE) -C gettext-tiny \
 		prefix=/usr \
+		LIBINTL=NOOP \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 	@touch $@
@@ -3862,7 +3863,8 @@ gettext-tiny: gettext-tiny/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ \
 		prefix=/usr \
-		DESTDIR=$(TOP)/gettext-tiny/staged \
+		LIBINTL=NOOP \
+		DESTDIR=$(TOP)/$@/staged \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		install
