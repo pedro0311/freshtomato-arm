@@ -2351,8 +2351,9 @@ endif
 nocat/stamp-h1:
 	cd nocat && \
 		NC_CONF_PATH="/" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-		$(CONFIGURE) --with-firewall=iptables --with-glib-prefix="$(INSTALLDIR)/glib/usr" --localstatedir=/var --sysconfdir=/etc
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections" \
+		$(CONFIGURE) --localstatedir=/var --sysconfdir=/etc --with-firewall=iptables --with-glib-prefix="$(INSTALLDIR)/glib/usr" --disable-dependency-tracking
 	@touch $@
 
 nocat: nocat/stamp-h1
