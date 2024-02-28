@@ -3,10 +3,12 @@
  * Copyright (C) 1999 Tom Tromey
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -38,6 +38,13 @@
 #ifdef G_OS_WIN32
 #include "gwin32.h"
 #endif
+
+#define G_UNICHAR_FULLWIDTH_A 0xff21
+#define G_UNICHAR_FULLWIDTH_I 0xff29
+#define G_UNICHAR_FULLWIDTH_J 0xff2a
+#define G_UNICHAR_FULLWIDTH_F 0xff26
+#define G_UNICHAR_FULLWIDTH_a 0xff41
+#define G_UNICHAR_FULLWIDTH_f 0xff46
 
 #define ATTR_TABLE(Page) (((Page) <= G_UNICODE_LAST_PAGE_PART1) \
                           ? attr_table_part1[Page] \
@@ -104,7 +111,7 @@
  * Given some UTF-8 text, obtain a character value
  * with g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is an alphanumeric character
+ * Returns: %TRUE if @c is an alphanumeric character
  **/
 gboolean
 g_unichar_isalnum (gunichar c)
@@ -120,7 +127,7 @@ g_unichar_isalnum (gunichar c)
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is an alphabetic character
+ * Returns: %TRUE if @c is an alphabetic character
  **/
 gboolean
 g_unichar_isalpha (gunichar c)
@@ -137,7 +144,7 @@ g_unichar_isalpha (gunichar c)
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is a control character
+ * Returns: %TRUE if @c is a control character
  **/
 gboolean
 g_unichar_iscntrl (gunichar c)
@@ -153,7 +160,7 @@ g_unichar_iscntrl (gunichar c)
  * covers ASCII 0-9 and also digits in other languages/scripts.  Given
  * some UTF-8 text, obtain a character value with g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is a digit
+ * Returns: %TRUE if @c is a digit
  **/
 gboolean
 g_unichar_isdigit (gunichar c)
@@ -172,7 +179,7 @@ g_unichar_isdigit (gunichar c)
  * spaces. Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is printable unless it's a space
+ * Returns: %TRUE if @c is printable unless it's a space
  **/
 gboolean
 g_unichar_isgraph (gunichar c)
@@ -194,7 +201,7 @@ g_unichar_isgraph (gunichar c)
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is a lowercase letter
+ * Returns: %TRUE if @c is a lowercase letter
  **/
 gboolean
 g_unichar_islower (gunichar c)
@@ -212,7 +219,7 @@ g_unichar_islower (gunichar c)
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is printable
+ * Returns: %TRUE if @c is printable
  **/
 gboolean
 g_unichar_isprint (gunichar c)
@@ -233,7 +240,7 @@ g_unichar_isprint (gunichar c)
  * Given some UTF-8 text, obtain a character value with
  * g_utf8_get_char().
  * 
- * Return value: %TRUE if @c is a punctuation or symbol character
+ * Returns: %TRUE if @c is a punctuation or symbol character
  **/
 gboolean
 g_unichar_ispunct (gunichar c)
@@ -265,7 +272,7 @@ g_unichar_ispunct (gunichar c)
  * Pango or equivalent to get word breaking right, the algorithm
  * is fairly complex.)
  *  
- * Return value: %TRUE if @c is a space character
+ * Returns: %TRUE if @c is a space character
  **/
 gboolean
 g_unichar_isspace (gunichar c)
@@ -306,7 +313,7 @@ g_unichar_isspace (gunichar c)
  * for writing most European languages as well as many non-Latin
  * scripts.
  *
- * Return value: %TRUE if @c is a mark character
+ * Returns: %TRUE if @c is a mark character
  *
  * Since: 2.14
  **/
@@ -322,7 +329,7 @@ g_unichar_ismark (gunichar c)
  * 
  * Determines if a character is uppercase.
  * 
- * Return value: %TRUE if @c is an uppercase character
+ * Returns: %TRUE if @c is an uppercase character
  **/
 gboolean
 g_unichar_isupper (gunichar c)
@@ -341,7 +348,7 @@ g_unichar_isupper (gunichar c)
  * first letter is capitalized. The titlecase form of the DZ
  * digraph is U+01F2 LATIN CAPITAL LETTTER D WITH SMALL LETTER Z.
  * 
- * Return value: %TRUE if the character is titlecase
+ * Returns: %TRUE if the character is titlecase
  **/
 gboolean
 g_unichar_istitle (gunichar c)
@@ -357,16 +364,18 @@ g_unichar_istitle (gunichar c)
  * g_unichar_isxdigit:
  * @c: a Unicode character.
  * 
- * Determines if a character is a hexidecimal digit.
+ * Determines if a character is a hexadecimal digit.
  * 
- * Return value: %TRUE if the character is a hexadecimal digit
+ * Returns: %TRUE if the character is a hexadecimal digit
  **/
 gboolean
 g_unichar_isxdigit (gunichar c)
 {
-  return ((c >= 'a' && c <= 'f')
-	  || (c >= 'A' && c <= 'F')
-	  || (TYPE (c) == G_UNICODE_DECIMAL_NUMBER));
+  return ((c >= 'a' && c <= 'f') ||
+          (c >= 'A' && c <= 'F') ||
+          (c >= G_UNICHAR_FULLWIDTH_a && c <= G_UNICHAR_FULLWIDTH_f) ||
+          (c >= G_UNICHAR_FULLWIDTH_A && c <= G_UNICHAR_FULLWIDTH_F) ||
+          (TYPE (c) == G_UNICODE_DECIMAL_NUMBER));
 }
 
 /**
@@ -376,7 +385,7 @@ g_unichar_isxdigit (gunichar c)
  * Determines if a given character is assigned in the Unicode
  * standard.
  *
- * Return value: %TRUE if the character has an assigned value
+ * Returns: %TRUE if the character has an assigned value
  **/
 gboolean
 g_unichar_isdefined (gunichar c)
@@ -401,7 +410,7 @@ g_unichar_isdefined (gunichar c)
  * when displayed on a grid display (terminals).  However, note that not all
  * terminals support zero-width rendering of zero-width marks.
  *
- * Return value: %TRUE if the character has zero width
+ * Returns: %TRUE if the character has zero width
  *
  * Since: 2.14
  **/
@@ -414,17 +423,19 @@ g_unichar_iszerowidth (gunichar c)
   if (G_UNLIKELY (ISZEROWIDTHTYPE (TYPE (c))))
     return TRUE;
 
+  /* A few additional codepoints are zero-width:
+   *  - Part of the Hangul Jamo block covering medial/vowels/jungseong and
+   *    final/trailing_consonants/jongseong Jamo
+   *  - Jungseong and jongseong for Old Korean
+   *  - Zero-width space (U+200B)
+   */
   if (G_UNLIKELY ((c >= 0x1160 && c < 0x1200) ||
-		  c == 0x200B))
+                  (c >= 0xD7B0 && c < 0xD800) ||
+                  c == 0x200B))
     return TRUE;
 
   return FALSE;
 }
-
-struct Interval
-{
-  gunichar start, end;
-};
 
 static int
 interval_compare (const void *key, const void *elt)
@@ -440,19 +451,39 @@ interval_compare (const void *key, const void *elt)
   return 0;
 }
 
+#define G_WIDTH_TABLE_MIDPOINT (G_N_ELEMENTS (g_unicode_width_table_wide) / 2)
 
-/*
- * NOTE:
- *
- * The tables for g_unichar_iswide() and g_unichar_iswide_cjk() are
- * generated from the Unicode Character Database's file
- * extracted/DerivedEastAsianWidth.txt using the gen-iswide-table.py
- * in this way:
- *
- *   ./gen-iswide-table.py < path/to/ucd/extracted/DerivedEastAsianWidth.txt | fmt
- *
- * Last update for Unicode 6.0.
- */
+static inline gboolean
+g_unichar_iswide_bsearch (gunichar ch)
+{
+  int lower = 0;
+  int upper = G_N_ELEMENTS (g_unicode_width_table_wide) - 1;
+  static int saved_mid = G_WIDTH_TABLE_MIDPOINT;
+  int mid = saved_mid;
+
+  do
+    {
+      if (ch < g_unicode_width_table_wide[mid].start)
+	upper = mid - 1;
+      else if (ch > g_unicode_width_table_wide[mid].end)
+	lower = mid + 1;
+      else
+	return TRUE;
+
+      mid = (lower + upper) / 2;
+    }
+  while (lower <= upper);
+
+  return FALSE;
+}
+
+static const struct Interval default_wide_blocks[] = {
+  { 0x3400, 0x4dbf },
+  { 0x4e00, 0x9fff },
+  { 0xf900, 0xfaff },
+  { 0x20000, 0x2fffd },
+  { 0x30000, 0x3fffd }
+};
 
 /**
  * g_unichar_iswide:
@@ -461,26 +492,21 @@ interval_compare (const void *key, const void *elt)
  * Determines if a character is typically rendered in a double-width
  * cell.
  * 
- * Return value: %TRUE if the character is wide
+ * Returns: %TRUE if the character is wide
  **/
 gboolean
 g_unichar_iswide (gunichar c)
 {
-  /* See NOTE earlier for how to update this table. */
-  static const struct Interval wide[] = {
-    {0x1100, 0x115F}, {0x2329, 0x232A}, {0x2E80, 0x2E99}, {0x2E9B, 0x2EF3},
-    {0x2F00, 0x2FD5}, {0x2FF0, 0x2FFB}, {0x3000, 0x303E}, {0x3041, 0x3096},
-    {0x3099, 0x30FF}, {0x3105, 0x312D}, {0x3131, 0x318E}, {0x3190, 0x31BA},
-    {0x31C0, 0x31E3}, {0x31F0, 0x321E}, {0x3220, 0x3247}, {0x3250, 0x32FE},
-    {0x3300, 0x4DBF}, {0x4E00, 0xA48C}, {0xA490, 0xA4C6}, {0xA960, 0xA97C},
-    {0xAC00, 0xD7A3}, {0xF900, 0xFAFF}, {0xFE10, 0xFE19}, {0xFE30, 0xFE52},
-    {0xFE54, 0xFE66}, {0xFE68, 0xFE6B}, {0xFF01, 0xFF60}, {0xFFE0, 0xFFE6},
-    {0x1B000, 0x1B001}, {0x1F200, 0x1F202}, {0x1F210, 0x1F23A}, {0x1F240,
-    0x1F248}, {0x1F250, 0x1F251}, {0x20000, 0x2FFFD}, {0x30000, 0x3FFFD}
-  };
-
-  if (bsearch (GUINT_TO_POINTER (c), wide, G_N_ELEMENTS (wide), sizeof wide[0],
-	       interval_compare))
+  if (c < g_unicode_width_table_wide[0].start)
+    return FALSE;
+  else if (g_unichar_iswide_bsearch (c))
+    return TRUE;
+  else if (g_unichar_type (c) == G_UNICODE_UNASSIGNED &&
+           bsearch (GUINT_TO_POINTER (c),
+                    default_wide_blocks,
+                    G_N_ELEMENTS (default_wide_blocks),
+                    sizeof default_wide_blocks[0],
+                    interval_compare))
     return TRUE;
 
   return FALSE;
@@ -494,73 +520,33 @@ g_unichar_iswide (gunichar c)
  * Determines if a character is typically rendered in a double-width
  * cell under legacy East Asian locales.  If a character is wide according to
  * g_unichar_iswide(), then it is also reported wide with this function, but
- * the converse is not necessarily true.  See the
- * <ulink url="http://www.unicode.org/reports/tr11/">Unicode Standard
- * Annex #11</ulink> for details.
+ * the converse is not necessarily true. See the
+ * [Unicode Standard Annex #11](http://www.unicode.org/reports/tr11/)
+ * for details.
  *
  * If a character passes the g_unichar_iswide() test then it will also pass
  * this test, but not the other way around.  Note that some characters may
- * pas both this test and g_unichar_iszerowidth().
+ * pass both this test and g_unichar_iszerowidth().
  * 
- * Return value: %TRUE if the character is wide in legacy East Asian locales
+ * Returns: %TRUE if the character is wide in legacy East Asian locales
  *
  * Since: 2.12
  */
 gboolean
 g_unichar_iswide_cjk (gunichar c)
 {
-  /* See NOTE earlier for how to update this table. */
-  static const struct Interval ambiguous[] = {
-    {0x00A1, 0x00A1}, {0x00A4, 0x00A4}, {0x00A7, 0x00A8}, {0x00AA, 0x00AA},
-    {0x00AD, 0x00AE}, {0x00B0, 0x00B4}, {0x00B6, 0x00BA}, {0x00BC, 0x00BF},
-    {0x00C6, 0x00C6}, {0x00D0, 0x00D0}, {0x00D7, 0x00D8}, {0x00DE, 0x00E1},
-    {0x00E6, 0x00E6}, {0x00E8, 0x00EA}, {0x00EC, 0x00ED}, {0x00F0, 0x00F0},
-    {0x00F2, 0x00F3}, {0x00F7, 0x00FA}, {0x00FC, 0x00FC}, {0x00FE, 0x00FE},
-    {0x0101, 0x0101}, {0x0111, 0x0111}, {0x0113, 0x0113}, {0x011B, 0x011B},
-    {0x0126, 0x0127}, {0x012B, 0x012B}, {0x0131, 0x0133}, {0x0138, 0x0138},
-    {0x013F, 0x0142}, {0x0144, 0x0144}, {0x0148, 0x014B}, {0x014D, 0x014D},
-    {0x0152, 0x0153}, {0x0166, 0x0167}, {0x016B, 0x016B}, {0x01CE, 0x01CE},
-    {0x01D0, 0x01D0}, {0x01D2, 0x01D2}, {0x01D4, 0x01D4}, {0x01D6, 0x01D6},
-    {0x01D8, 0x01D8}, {0x01DA, 0x01DA}, {0x01DC, 0x01DC}, {0x0251, 0x0251},
-    {0x0261, 0x0261}, {0x02C4, 0x02C4}, {0x02C7, 0x02C7}, {0x02C9, 0x02CB},
-    {0x02CD, 0x02CD}, {0x02D0, 0x02D0}, {0x02D8, 0x02DB}, {0x02DD, 0x02DD},
-    {0x02DF, 0x02DF}, {0x0300, 0x036F}, {0x0391, 0x03A1}, {0x03A3, 0x03A9},
-    {0x03B1, 0x03C1}, {0x03C3, 0x03C9}, {0x0401, 0x0401}, {0x0410, 0x044F},
-    {0x0451, 0x0451}, {0x2010, 0x2010}, {0x2013, 0x2016}, {0x2018, 0x2019},
-    {0x201C, 0x201D}, {0x2020, 0x2022}, {0x2024, 0x2027}, {0x2030, 0x2030},
-    {0x2032, 0x2033}, {0x2035, 0x2035}, {0x203B, 0x203B}, {0x203E, 0x203E},
-    {0x2074, 0x2074}, {0x207F, 0x207F}, {0x2081, 0x2084}, {0x20AC, 0x20AC},
-    {0x2103, 0x2103}, {0x2105, 0x2105}, {0x2109, 0x2109}, {0x2113, 0x2113},
-    {0x2116, 0x2116}, {0x2121, 0x2122}, {0x2126, 0x2126}, {0x212B, 0x212B},
-    {0x2153, 0x2154}, {0x215B, 0x215E}, {0x2160, 0x216B}, {0x2170, 0x2179},
-    {0x2189, 0x2189}, {0x2190, 0x2199}, {0x21B8, 0x21B9}, {0x21D2, 0x21D2},
-    {0x21D4, 0x21D4}, {0x21E7, 0x21E7}, {0x2200, 0x2200}, {0x2202, 0x2203},
-    {0x2207, 0x2208}, {0x220B, 0x220B}, {0x220F, 0x220F}, {0x2211, 0x2211},
-    {0x2215, 0x2215}, {0x221A, 0x221A}, {0x221D, 0x2220}, {0x2223, 0x2223},
-    {0x2225, 0x2225}, {0x2227, 0x222C}, {0x222E, 0x222E}, {0x2234, 0x2237},
-    {0x223C, 0x223D}, {0x2248, 0x2248}, {0x224C, 0x224C}, {0x2252, 0x2252},
-    {0x2260, 0x2261}, {0x2264, 0x2267}, {0x226A, 0x226B}, {0x226E, 0x226F},
-    {0x2282, 0x2283}, {0x2286, 0x2287}, {0x2295, 0x2295}, {0x2299, 0x2299},
-    {0x22A5, 0x22A5}, {0x22BF, 0x22BF}, {0x2312, 0x2312}, {0x2460, 0x24E9},
-    {0x24EB, 0x254B}, {0x2550, 0x2573}, {0x2580, 0x258F}, {0x2592, 0x2595},
-    {0x25A0, 0x25A1}, {0x25A3, 0x25A9}, {0x25B2, 0x25B3}, {0x25B6, 0x25B7},
-    {0x25BC, 0x25BD}, {0x25C0, 0x25C1}, {0x25C6, 0x25C8}, {0x25CB, 0x25CB},
-    {0x25CE, 0x25D1}, {0x25E2, 0x25E5}, {0x25EF, 0x25EF}, {0x2605, 0x2606},
-    {0x2609, 0x2609}, {0x260E, 0x260F}, {0x2614, 0x2615}, {0x261C, 0x261C},
-    {0x261E, 0x261E}, {0x2640, 0x2640}, {0x2642, 0x2642}, {0x2660, 0x2661},
-    {0x2663, 0x2665}, {0x2667, 0x266A}, {0x266C, 0x266D}, {0x266F, 0x266F},
-    {0x269E, 0x269F}, {0x26BE, 0x26BF}, {0x26C4, 0x26CD}, {0x26CF, 0x26E1},
-    {0x26E3, 0x26E3}, {0x26E8, 0x26FF}, {0x273D, 0x273D}, {0x2757, 0x2757},
-    {0x2776, 0x277F}, {0x2B55, 0x2B59}, {0x3248, 0x324F}, {0xE000, 0xF8FF},
-    {0xFE00, 0xFE0F}, {0xFFFD, 0xFFFD}, {0x1F100, 0x1F10A}, {0x1F110,
-    0x1F12D}, {0x1F130, 0x1F169}, {0x1F170, 0x1F19A}, {0xE0100, 0xE01EF},
-    {0xF0000, 0xFFFFD}, {0x100000, 0x10FFFD}
-  };
-
   if (g_unichar_iswide (c))
     return TRUE;
 
-  if (bsearch (GUINT_TO_POINTER (c), ambiguous, G_N_ELEMENTS (ambiguous), sizeof ambiguous[0],
+  /* bsearch() is declared attribute(nonnull(1)) so we can't validly search
+   * for a NULL key */
+  if (c == 0)
+    return FALSE;
+
+  if (bsearch (GUINT_TO_POINTER (c), 
+               g_unicode_width_table_ambiguous,
+               G_N_ELEMENTS (g_unicode_width_table_ambiguous),
+               sizeof g_unicode_width_table_ambiguous[0],
 	       interval_compare))
     return TRUE;
 
@@ -574,8 +560,8 @@ g_unichar_iswide_cjk (gunichar c)
  * 
  * Converts a character to uppercase.
  * 
- * Return value: the result of converting @c to uppercase.
- *               If @c is not an lowercase or titlecase character,
+ * Returns: the result of converting @c to uppercase.
+ *               If @c is not a lowercase or titlecase character,
  *               or has no upper case equivalent @c is returned unchanged.
  **/
 gunichar
@@ -614,7 +600,7 @@ g_unichar_toupper (gunichar c)
  * 
  * Converts a character to lower case.
  * 
- * Return value: the result of converting @c to lower case.
+ * Returns: the result of converting @c to lower case.
  *               If @c is not an upperlower or titlecase character,
  *               or has no lowercase equivalent @c is returned unchanged.
  **/
@@ -655,7 +641,7 @@ g_unichar_tolower (gunichar c)
  * 
  * Converts a character to the titlecase.
  * 
- * Return value: the result of converting @c to titlecase.
+ * Returns: the result of converting @c to titlecase.
  *               If @c is not an uppercase or lowercase character,
  *               @c is returned unchanged.
  **/
@@ -663,13 +649,19 @@ gunichar
 g_unichar_totitle (gunichar c)
 {
   unsigned int i;
+
+  /* We handle U+0000 explicitly because some elements in
+   * title_table[i][1] may be null. */
+  if (c == 0)
+    return c;
+
   for (i = 0; i < G_N_ELEMENTS (title_table); ++i)
     {
       if (title_table[i][0] == c || title_table[i][1] == c
 	  || title_table[i][2] == c)
 	return title_table[i][0];
     }
-    
+
   if (TYPE (c) == G_UNICODE_LOWERCASE_LETTER)
     return g_unichar_toupper (c);
 
@@ -683,7 +675,7 @@ g_unichar_totitle (gunichar c)
  * Determines the numeric value of a character as a decimal
  * digit.
  *
- * Return value: If @c is a decimal digit (according to
+ * Returns: If @c is a decimal digit (according to
  * g_unichar_isdigit()), its numeric value. Otherwise, -1.
  **/
 int
@@ -698,10 +690,10 @@ g_unichar_digit_value (gunichar c)
  * g_unichar_xdigit_value:
  * @c: a Unicode character
  *
- * Determines the numeric value of a character as a hexidecimal
+ * Determines the numeric value of a character as a hexadecimal
  * digit.
  *
- * Return value: If @c is a hex digit (according to
+ * Returns: If @c is a hex digit (according to
  * g_unichar_isxdigit()), its numeric value. Otherwise, -1.
  **/
 int
@@ -711,6 +703,10 @@ g_unichar_xdigit_value (gunichar c)
     return c - 'A' + 10;
   if (c >= 'a' && c <= 'f')
     return c - 'a' + 10;
+  if (c >= G_UNICHAR_FULLWIDTH_A && c <= G_UNICHAR_FULLWIDTH_F)
+    return c - G_UNICHAR_FULLWIDTH_A + 10;
+  if (c >= G_UNICHAR_FULLWIDTH_a && c <= G_UNICHAR_FULLWIDTH_f)
+    return c - G_UNICHAR_FULLWIDTH_a + 10;
   if (TYPE (c) == G_UNICODE_DECIMAL_NUMBER)
     return ATTTABLE (c >> 8, c & 0xff);
   return -1;
@@ -722,7 +718,7 @@ g_unichar_xdigit_value (gunichar c)
  * 
  * Classifies a Unicode character by type.
  * 
- * Return value: the type of the character.
+ * Returns: the type of the character.
  **/
 GUnicodeType
 g_unichar_type (gunichar c)
@@ -950,7 +946,7 @@ real_toupper (const gchar *str,
  * characters in the string increasing. (For instance, the
  * German ess-zet will be changed to SS.)
  * 
- * Return value: a newly allocated string, with all characters
+ * Returns: a newly allocated string, with all characters
  *    converted to uppercase.  
  **/
 gchar *
@@ -1017,13 +1013,18 @@ real_tolower (const gchar *str,
       last = p;
       p = g_utf8_next_char (p);
 
-      if (locale_type == LOCALE_TURKIC && c == 'I')
-	{
-          if (g_utf8_get_char (p) == 0x0307)
+      if (locale_type == LOCALE_TURKIC && (c == 'I' || c == 0x130 ||
+                                           c == G_UNICHAR_FULLWIDTH_I))
+        {
+          gboolean combining_dot = (c == 'I' || c == G_UNICHAR_FULLWIDTH_I) &&
+                                   g_utf8_get_char (p) == 0x0307;
+          if (combining_dot || c == 0x130)
             {
-              /* I + COMBINING DOT ABOVE => i (U+0069) */
-              len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL); 
-              p = g_utf8_next_char (p);
+              /* I + COMBINING DOT ABOVE => i (U+0069)
+               * LATIN CAPITAL LETTER I WITH DOT ABOVE => i (U+0069) */
+              len += g_unichar_to_utf8 (0x0069, out_buffer ? out_buffer + len : NULL);
+              if (combining_dot)
+                p = g_utf8_next_char (p);
             }
           else
             {
@@ -1053,7 +1054,8 @@ real_tolower (const gchar *str,
             }
         }
       else if (locale_type == LOCALE_LITHUANIAN && 
-               (c == 'I' || c == 'J' || c == 0x012e) && 
+               (c == 'I' || c == G_UNICHAR_FULLWIDTH_I ||
+                c == 'J' || c == G_UNICHAR_FULLWIDTH_J || c == 0x012e) &&
                has_more_above (p))
         {
           len += g_unichar_to_utf8 (g_unichar_tolower (c), out_buffer ? out_buffer + len : NULL); 
@@ -1138,7 +1140,7 @@ real_tolower (const gchar *str,
  * on the current locale, and may result in the number of
  * characters in the string changing.
  * 
- * Return value: a newly allocated string, with all characters
+ * Returns: a newly allocated string, with all characters
  *    converted to lowercase.  
  **/
 gchar *
@@ -1181,7 +1183,7 @@ g_utf8_strdown (const gchar *str,
  * takes case sensitivity into account. GLib does not currently
  * provide such a function.
  * 
- * Return value: a newly allocated string, that is a
+ * Returns: a newly allocated string, that is a
  *   case independent form of @str.
  **/
 gchar *
@@ -1236,17 +1238,17 @@ g_utf8_casefold (const gchar *str,
  * @ch: a Unicode character
  * @mirrored_ch: location to store the mirrored character
  * 
- * In Unicode, some characters are <firstterm>mirrored</firstterm>. This
- * means that their images are mirrored horizontally in text that is laid
- * out from right to left. For instance, "(" would become its mirror image,
- * ")", in right-to-left text.
+ * In Unicode, some characters are "mirrored". This means that their
+ * images are mirrored horizontally in text that is laid out from right
+ * to left. For instance, "(" would become its mirror image, ")", in
+ * right-to-left text.
  *
  * If @ch has the Unicode mirrored property and there is another unicode
  * character that typically has a glyph that is the mirror image of @ch's
  * glyph and @mirrored_ch is set, it puts that character in the address
  * pointed to by @mirrored_ch.  Otherwise the original character is put.
  *
- * Return value: %TRUE if @ch has a mirrored character, %FALSE otherwise
+ * Returns: %TRUE if @ch has a mirrored character, %FALSE otherwise
  *
  * Since: 2.4
  **/
@@ -1306,7 +1308,7 @@ g_unichar_get_script_bsearch (gunichar ch)
  * This function is equivalent to pango_script_for_unichar() and the
  * two are interchangeable.
  * 
- * Return value: the #GUnicodeScript for the character.
+ * Returns: the #GUnicodeScript for the character.
  *
  * Since: 2.14
  */
@@ -1443,6 +1445,88 @@ static const guint32 iso15924_tags[] =
     PACK ('S','o','r','a'), /* G_UNICODE_SCRIPT_SORA_SOMPENG */
     PACK ('T','a','k','r'), /* G_UNICODE_SCRIPT_TAKRI */
 
+  /* Unicode 7.0 additions */
+    PACK ('B','a','s','s'), /* G_UNICODE_SCRIPT_BASSA_VAH */
+    PACK ('A','g','h','b'), /* G_UNICODE_SCRIPT_CAUCASIAN_ALBANIAN */
+    PACK ('D','u','p','l'), /* G_UNICODE_SCRIPT_DUPLOYAN */
+    PACK ('E','l','b','a'), /* G_UNICODE_SCRIPT_ELBASAN */
+    PACK ('G','r','a','n'), /* G_UNICODE_SCRIPT_GRANTHA */
+    PACK ('K','h','o','j'), /* G_UNICODE_SCRIPT_KHOJKI*/
+    PACK ('S','i','n','d'), /* G_UNICODE_SCRIPT_KHUDAWADI */
+    PACK ('L','i','n','a'), /* G_UNICODE_SCRIPT_LINEAR_A */
+    PACK ('M','a','h','j'), /* G_UNICODE_SCRIPT_MAHAJANI */
+    PACK ('M','a','n','i'), /* G_UNICODE_SCRIPT_MANICHAEAN */
+    PACK ('M','e','n','d'), /* G_UNICODE_SCRIPT_MENDE_KIKAKUI */
+    PACK ('M','o','d','i'), /* G_UNICODE_SCRIPT_MODI */
+    PACK ('M','r','o','o'), /* G_UNICODE_SCRIPT_MRO */
+    PACK ('N','b','a','t'), /* G_UNICODE_SCRIPT_NABATAEAN */
+    PACK ('N','a','r','b'), /* G_UNICODE_SCRIPT_OLD_NORTH_ARABIAN */
+    PACK ('P','e','r','m'), /* G_UNICODE_SCRIPT_OLD_PERMIC */
+    PACK ('H','m','n','g'), /* G_UNICODE_SCRIPT_PAHAWH_HMONG */
+    PACK ('P','a','l','m'), /* G_UNICODE_SCRIPT_PALMYRENE */
+    PACK ('P','a','u','c'), /* G_UNICODE_SCRIPT_PAU_CIN_HAU */
+    PACK ('P','h','l','p'), /* G_UNICODE_SCRIPT_PSALTER_PAHLAVI */
+    PACK ('S','i','d','d'), /* G_UNICODE_SCRIPT_SIDDHAM */
+    PACK ('T','i','r','h'), /* G_UNICODE_SCRIPT_TIRHUTA */
+    PACK ('W','a','r','a'), /* G_UNICODE_SCRIPT_WARANG_CITI */
+
+  /* Unicode 8.0 additions */
+    PACK ('A','h','o','m'), /* G_UNICODE_SCRIPT_AHOM */
+    PACK ('H','l','u','w'), /* G_UNICODE_SCRIPT_ANATOLIAN_HIEROGLYPHS */
+    PACK ('H','a','t','r'), /* G_UNICODE_SCRIPT_HATRAN */
+    PACK ('M','u','l','t'), /* G_UNICODE_SCRIPT_MULTANI */
+    PACK ('H','u','n','g'), /* G_UNICODE_SCRIPT_OLD_HUNGARIAN */
+    PACK ('S','g','n','w'), /* G_UNICODE_SCRIPT_SIGNWRITING */
+
+  /* Unicode 9.0 additions */
+    PACK ('A','d','l','m'), /* G_UNICODE_SCRIPT_ADLAM */
+    PACK ('B','h','k','s'), /* G_UNICODE_SCRIPT_BHAIKSUKI */
+    PACK ('M','a','r','c'), /* G_UNICODE_SCRIPT_MARCHEN */
+    PACK ('N','e','w','a'), /* G_UNICODE_SCRIPT_NEWA */
+    PACK ('O','s','g','e'), /* G_UNICODE_SCRIPT_OSAGE */
+    PACK ('T','a','n','g'), /* G_UNICODE_SCRIPT_TANGUT */
+
+  /* Unicode 10.0 additions */
+    PACK ('G','o','n','m'), /* G_UNICODE_SCRIPT_MASARAM_GONDI */
+    PACK ('N','s','h','u'), /* G_UNICODE_SCRIPT_NUSHU */
+    PACK ('S','o','y','o'), /* G_UNICODE_SCRIPT_SOYOMBO */
+    PACK ('Z','a','n','b'), /* G_UNICODE_SCRIPT_ZANABAZAR_SQUARE */
+
+  /* Unicode 11.0 additions */
+    PACK ('D','o','g','r'), /* G_UNICODE_SCRIPT_DOGRA */
+    PACK ('G','o','n','g'), /* G_UNICODE_SCRIPT_GUNJALA_GONDI */
+    PACK ('R','o','h','g'), /* G_UNICODE_SCRIPT_HANIFI_ROHINGYA */
+    PACK ('M','a','k','a'), /* G_UNICODE_SCRIPT_MAKASAR */
+    PACK ('M','e','d','f'), /* G_UNICODE_SCRIPT_MEDEFAIDRIN */
+    PACK ('S','o','g','o'), /* G_UNICODE_SCRIPT_OLD_SOGDIAN */
+    PACK ('S','o','g','d'), /* G_UNICODE_SCRIPT_SOGDIAN */
+
+  /* Unicode 12.0 additions */
+    PACK ('E','l','y','m'), /* G_UNICODE_SCRIPT_ELYMAIC */
+    PACK ('N','a','n','d'), /* G_UNICODE_SCRIPT_NANDINAGARI */
+    PACK ('H','m','n','p'), /* G_UNICODE_SCRIPT_NYIAKENG_PUACHUE_HMONG */
+    PACK ('W','c','h','o'), /* G_UNICODE_SCRIPT_WANCHO */
+
+  /* Unicode 13.0 additions */
+    PACK ('C', 'h', 'r', 's'), /* G_UNICODE_SCRIPT_CHORASMIAN */
+    PACK ('D', 'i', 'a', 'k'), /* G_UNICODE_SCRIPT_DIVES_AKURU */
+    PACK ('K', 'i', 't', 's'), /* G_UNICODE_SCRIPT_KHITAN_SMALL_SCRIPT */
+    PACK ('Y', 'e', 'z', 'i'), /* G_UNICODE_SCRIPT_YEZIDI */
+
+  /* Unicode 14.0 additions */
+    PACK ('C', 'p', 'm', 'n'), /* G_UNICODE_SCRIPT_CYPRO_MINOAN */
+    PACK ('O', 'u', 'g', 'r'), /* G_UNICODE_SCRIPT_OLD_UYHUR */
+    PACK ('T', 'n', 's', 'a'), /* G_UNICODE_SCRIPT_TANGSA */
+    PACK ('T', 'o', 't', 'o'), /* G_UNICODE_SCRIPT_TOTO */
+    PACK ('V', 'i', 't', 'h'), /* G_UNICODE_SCRIPT_VITHKUQI */
+
+  /* not really a Unicode script, but part of ISO 15924 */
+    PACK ('Z', 'm', 't', 'h'), /* G_UNICODE_SCRIPT_MATH */
+
+    /* Unicode 15.0 additions */
+    PACK ('K', 'a', 'w', 'i'), /* G_UNICODE_SCRIPT_KAWI */
+    PACK ('N', 'a', 'g', 'm'), /* G_UNICODE_SCRIPT_NAG_MUNDARI */
+
 #undef PACK
 };
 
@@ -1456,10 +1540,11 @@ static const guint32 iso15924_tags[] =
  * big-endian fashion.  That is, the code returned for Arabic is
  * 0x41726162 (0x41 is ASCII code for 'A', 0x72 is ASCII code for 'r', etc).
  *
- * See <ulink url="http://unicode.org/iso15924/codelists.html">Codes for the
- * representation of names of scripts</ulink> for details.
+ * See
+ * [Codes for the representation of names of scripts](http://unicode.org/iso15924/codelists.html)
+ * for details.
  *
- * Return value: the ISO 15924 code for @script, encoded as an integer,
+ * Returns: the ISO 15924 code for @script, encoded as an integer,
  *   of zero if @script is %G_UNICODE_SCRIPT_INVALID_CODE or
  *   ISO 15924 code 'Zzzz' (script code for UNKNOWN) if @script is not understood.
  *
@@ -1487,10 +1572,11 @@ g_unicode_script_to_iso15924 (GUnicodeScript script)
  * big-endian fashion.  That is, the code expected for Arabic is
  * 0x41726162 (0x41 is ASCII code for 'A', 0x72 is ASCII code for 'r', etc).
  *
- * See <ulink url="http://unicode.org/iso15924/codelists.html">Codes for the
- * representation of names of scripts</ulink> for details.
+ * See
+ * [Codes for the representation of names of scripts](http://unicode.org/iso15924/codelists.html)
+ * for details.
  *
- * Return value: the Unicode script for @iso15924, or
+ * Returns: the Unicode script for @iso15924, or
  *   of %G_UNICODE_SCRIPT_INVALID_CODE if @iso15924 is zero and
  *   %G_UNICODE_SCRIPT_UNKNOWN if @iso15924 is unknown.
  *

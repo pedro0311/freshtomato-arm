@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -26,7 +26,6 @@
 
 #include "gconverterinputstream.h"
 #include "gpollableinputstream.h"
-#include "gsimpleasyncresult.h"
 #include "gcancellable.h"
 #include "gioenumtypes.h"
 #include "gioerror.h"
@@ -265,7 +264,9 @@ buffer_read (Buffer *buffer,
 	     char *dest,
 	     gsize count)
 {
-  memcpy (dest, buffer->data + buffer->start, count);
+  if (count != 0)
+    memcpy (dest, buffer->data + buffer->start, count);
+
   buffer_consumed (buffer, count);
 }
 
@@ -296,9 +297,11 @@ grow_buffer (Buffer *buffer)
   data = g_malloc (size);
   in_buffer = buffer_data_size (buffer);
 
-  memcpy (data,
-	  buffer->data + buffer->start,
-	  in_buffer);
+  if (in_buffer != 0)
+    memcpy (data,
+            buffer->data + buffer->start,
+            in_buffer);
+
   g_free (buffer->data);
   buffer->data = data;
   buffer->end -= buffer->start;

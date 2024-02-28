@@ -1,3 +1,24 @@
+/*
+ * Copyright © 2012 Red Hat, Inc.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
+ *
+ * Authors: Alexander Larsson <alexl@redhat.com>
+ */
+
 #include "config.h"
 
 #include <string.h>
@@ -7,6 +28,7 @@
 #include <gio/gio.h>
 #include <gio/gunixsocketaddress.h>
 #include "gdbusdaemon.h"
+#include "glibintl.h"
 
 #include "gdbus-daemon-generated.h"
 
@@ -74,7 +96,7 @@ static void g_dbus_daemon_iface_init (_GFreedesktopDBusIface *iface);
 #define g_dbus_daemon_get_type _g_dbus_daemon_get_type
 G_DEFINE_TYPE_WITH_CODE (GDBusDaemon, g_dbus_daemon, _G_TYPE_FREEDESKTOP_DBUS_SKELETON,
 			 G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE, initable_iface_init)
-			 G_IMPLEMENT_INTERFACE (_G_TYPE_FREEDESKTOP_DBUS, g_dbus_daemon_iface_init));
+			 G_IMPLEMENT_INTERFACE (_G_TYPE_FREEDESKTOP_DBUS, g_dbus_daemon_iface_init))
 
 typedef struct {
   GDBusDaemon *daemon;
@@ -169,6 +191,7 @@ name_new (GDBusDaemon *daemon, const char *str)
 static Name *
 name_ref (Name *name)
 {
+  g_assert (name->refcount > 0);
   name->refcount++;
   return name;
 }
@@ -176,6 +199,7 @@ name_ref (Name *name)
 static void
 name_unref (Name *name)
 {
+  g_assert (name->refcount > 0);
   if (--name->refcount == 0)
     {
       g_hash_table_remove (name->daemon->names, name->name);
@@ -203,11 +227,12 @@ name_lookup (GDBusDaemon *daemon, const char *str)
 }
 
 static gboolean
-is_key (const char *key_start, const char *key_end, char *value)
+is_key (const char *key_start, const char *key_end, const char *value)
 {
   gsize len = strlen (value);
 
-  if (len != key_end - key_start)
+  g_assert (key_end >= key_start);
+  if (len != (gsize) (key_end - key_start))
     return FALSE;
 
   return strncmp (key_start, value, len) == 0;
@@ -357,7 +382,7 @@ match_new (const char *str)
   MatchElement element;
   gboolean eavesdrop;
   GDBusMessageType type;
-  int i;
+  gsize i;
 
   eavesdrop = FALSE;
   type = G_DBUS_MESSAGE_TYPE_INVALID;
@@ -596,9 +621,18 @@ match_matches (GDBusDaemon *daemon,
 	  break;
 	case CHECK_TYPE_PATH_PREFIX:
 	  len = strlen (element->value);
-	  if (!(g_str_has_prefix (value, element->value) &&
-		(value[len] == 0 || value[len] == '/')))
+
+	  /* Make sure to handle the case of element->value == '/'. */
+	  if (len == 1)
+	    break;
+
+	  /* Fail if there's no prefix match, or if the prefix match doesn't
+	   * finish at the end of or at a separator in the @value. */
+	  if (!g_str_has_prefix (value, element->value))
 	    return FALSE;
+	  if (value[len] != 0 && value[len] != '/')
+	    return FALSE;
+
 	  break;
 	case CHECK_TYPE_PATH_RELATED:
 	  len = strlen (element->value);
@@ -861,7 +895,11 @@ client_free (Client *client)
       name_ref (name);
 
       if (name->owner && name->owner->client == client)
-	name_release_owner (name);
+        {
+          /* Help static analysers with the refcount at this point. */
+          g_assert (name->refcount >= 2);
+          name_release_owner (name);
+        }
 
       name_unqueue_owner (name, client);
 
@@ -1237,8 +1275,8 @@ handle_remove_match (_GFreedesktopDBus *object,
       else
 	_g_freedesktop_dbus_complete_remove_match (object, invocation);
     }
-
-  match_free (match);
+  if (match)    
+    match_free (match);
 
   return TRUE;
 }
@@ -1453,10 +1491,11 @@ filter_function (GDBusConnection *connection,
 		 gpointer         user_data)
 {
   Client *client = user_data;
-  char *types[] = {"invalid", "method_call", "method_return", "error", "signal" };
 
   if (0)
-    g_printerr ("%s%s %s %d(%d) sender: %s destination: %s %s %s.%s\n",
+    {
+      const char *types[] = {"invalid", "method_call", "method_return", "error", "signal" };
+      g_printerr ("%s%s %s %d(%d) sender: %s destination: %s %s %s.%s\n",
 		client->id,
 		incoming? "->" : "<-",
 		types[g_dbus_message_get_message_type (message)],
@@ -1467,6 +1506,7 @@ filter_function (GDBusConnection *connection,
 		g_dbus_message_get_path (message),
 		g_dbus_message_get_interface (message),
 		g_dbus_message_get_member (message));
+    }
 
   if (incoming)
     {
@@ -1483,16 +1523,21 @@ filter_function (GDBusConnection *connection,
     }
   else
     {
+      if (g_dbus_message_get_sender (message) == NULL ||
+          g_dbus_message_get_destination (message) == NULL)
+        {
+          message = copy_if_locked (message);
+          if (message == NULL)
+            {
+              g_warning ("Failed to copy outgoing message");
+              return NULL;
+            }
+        }
+
       if (g_dbus_message_get_sender (message) == NULL)
-	{
-	  message = copy_if_locked (message);
-	  g_dbus_message_set_sender (message, DBUS_SERVICE_NAME);
-	}
+        g_dbus_message_set_sender (message, DBUS_SERVICE_NAME);
       if (g_dbus_message_get_destination (message) == NULL)
-	{
-	  message = copy_if_locked (message);
-	  g_dbus_message_set_destination (message, client->id);
-	}
+        g_dbus_message_set_destination (message, client->id);
     }
 
   return message;
@@ -1516,26 +1561,6 @@ on_new_connection (GDBusServer *server,
   client_new (daemon, connection);
 
   return TRUE;
-}
-
-static gboolean
-on_authorize_authenticated_peer (GDBusAuthObserver *observer,
-				 GIOStream         *stream,
-				 GCredentials      *credentials,
-				 gpointer           user_data)
-{
-  gboolean authorized = TRUE;
-
-  if (credentials != NULL)
-    {
-      GCredentials *own_credentials;
-
-      own_credentials = g_credentials_new ();
-      authorized = g_credentials_is_same_user (credentials, own_credentials, NULL);
-      g_object_unref (own_credentials);
-    }
-
-  return authorized;
 }
 
 static void
@@ -1587,7 +1612,6 @@ initable_init (GInitable     *initable,
 	       GError       **error)
 {
   GDBusDaemon *daemon = G_DBUS_DAEMON (initable);
-  GDBusAuthObserver *observer;
   GDBusServerFlags flags;
 
   flags = G_DBUS_SERVER_FLAGS_NONE;
@@ -1601,24 +1625,23 @@ initable_init (GInitable     *initable,
 	  daemon->tmpdir = g_dir_make_tmp ("gdbus-daemon-XXXXXX", NULL);
 	  daemon->address = g_strdup_printf ("unix:tmpdir=%s", daemon->tmpdir);
 	}
+      flags |= G_DBUS_SERVER_FLAGS_AUTHENTICATION_REQUIRE_SAME_USER;
 #else
+      /* Don’t require authentication on Windows as that hasn’t been
+       * implemented yet. */
       daemon->address = g_strdup ("nonce-tcp:");
       flags |= G_DBUS_SERVER_FLAGS_AUTHENTICATION_ALLOW_ANONYMOUS;
 #endif
     }
 
-  observer = g_dbus_auth_observer_new ();
   daemon->server = g_dbus_server_new_sync (daemon->address,
 					   flags,
 					   daemon->guid,
-					   observer,
+					   NULL,
 					   cancellable,
 					   error);
   if (daemon->server == NULL)
-    {
-      g_object_unref (observer);
-      return FALSE;
-    }
+    return FALSE;
 
 
   g_dbus_server_start (daemon->server);
@@ -1626,12 +1649,6 @@ initable_init (GInitable     *initable,
   g_signal_connect (daemon->server, "new-connection",
 		    G_CALLBACK (on_new_connection),
 		    daemon);
-  g_signal_connect (observer,
-		    "authorize-authenticated-peer",
-		    G_CALLBACK (on_authorize_authenticated_peer),
-		    daemon);
-
-  g_object_unref (observer);
 
   return TRUE;
 }
@@ -1686,12 +1703,12 @@ g_dbus_daemon_class_init (GDBusDaemonClass *klass)
   gobject_class->get_property = g_dbus_daemon_get_property;
 
   g_dbus_daemon_signals[SIGNAL_IDLE_TIMEOUT] =
-    g_signal_new ("idle-timeout",
+    g_signal_new (I_("idle-timeout"),
 		  G_TYPE_DBUS_DAEMON,
 		  G_SIGNAL_RUN_LAST,
 		  0,
 		  NULL, NULL,
-		  g_cclosure_marshal_VOID__VOID,
+		  NULL,
 		  G_TYPE_NONE, 0);
 
   g_object_class_install_property (gobject_class,

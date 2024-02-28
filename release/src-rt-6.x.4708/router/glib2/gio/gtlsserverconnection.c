@@ -2,10 +2,12 @@
  *
  * Copyright © 2010 Red Hat, Inc
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -67,13 +67,17 @@ g_tls_server_connection_default_init (GTlsServerConnectionInterface *iface)
 /**
  * g_tls_server_connection_new:
  * @base_io_stream: the #GIOStream to wrap
- * @certificate: (allow-none): the default server certificate, or %NULL
+ * @certificate: (nullable): the default server certificate, or %NULL
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Creates a new #GTlsServerConnection wrapping @base_io_stream (which
  * must have pollable input and output streams).
  *
- * Return value: (transfer full) (type GTlsServerConnection): the new
+ * See the documentation for #GTlsConnection:base-io-stream for restrictions
+ * on when application code can run operations on the @base_io_stream after
+ * this function has returned.
+ *
+ * Returns: (transfer full) (type GTlsServerConnection): the new
  * #GTlsServerConnection, or %NULL on error
  *
  * Since: 2.28

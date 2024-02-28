@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008 Christian Kellner, Samuel Cormier-Iijima
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -26,9 +26,13 @@
 #include <string.h>
 
 #include "gunixsocketaddress.h"
+#include "gsocketconnectable.h"
 #include "glibintl.h"
 #include "gnetworking.h"
 
+#ifdef G_OS_WIN32
+#include "giowin32-afunix.h"
+#endif
 
 /**
  * SECTION:gunixsocketaddress
@@ -46,16 +50,20 @@
  * errors. You can use g_unix_socket_address_abstract_names_supported()
  * to see if abstract names are supported.
  *
- * Note that <filename>&lt;gio/gunixsocketaddress.h&gt;</filename> belongs to
- * the UNIX-specific GIO interfaces, thus you have to use the
- * <filename>gio-unix-2.0.pc</filename> pkg-config file when using it.
+ * Since GLib 2.72, #GUnixSocketAddress is available on all platforms. It
+ * requires underlying system support (such as Windows 10 with `AF_UNIX`) at
+ * run time.
+ *
+ * Before GLib 2.72, `<gio/gunixsocketaddress.h>` belonged to the UNIX-specific
+ * GIO interfaces, thus you had to use the `gio-unix-2.0.pc` pkg-config file
+ * when using it. This is no longer necessary since GLib 2.72.
  */
 
 /**
  * GUnixSocketAddress:
  *
  * A UNIX-domain (local) socket address, corresponding to a
- * <type>struct sockaddr_un</type>.
+ * struct sockaddr_un.
  */
 
 enum
@@ -67,7 +75,9 @@ enum
   PROP_ADDRESS_TYPE
 };
 
-#define UNIX_PATH_MAX sizeof (((struct sockaddr_un *) 0)->sun_path)
+#ifndef UNIX_PATH_MAX
+#define UNIX_PATH_MAX G_SIZEOF_MEMBER (struct sockaddr_un, sun_path)
+#endif
 
 struct _GUnixSocketAddressPrivate
 {
@@ -78,7 +88,13 @@ struct _GUnixSocketAddressPrivate
   GUnixSocketAddressType address_type;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (GUnixSocketAddress, g_unix_socket_address, G_TYPE_SOCKET_ADDRESS)
+static void   g_unix_socket_address_connectable_iface_init (GSocketConnectableIface *iface);
+static gchar *g_unix_socket_address_connectable_to_string  (GSocketConnectable      *connectable);
+
+G_DEFINE_TYPE_WITH_CODE (GUnixSocketAddress, g_unix_socket_address, G_TYPE_SOCKET_ADDRESS,
+                         G_ADD_PRIVATE (GUnixSocketAddress)
+                         G_IMPLEMENT_INTERFACE (G_TYPE_SOCKET_CONNECTABLE,
+                                                g_unix_socket_address_connectable_iface_init))
 
 static void
 g_unix_socket_address_set_property (GObject      *object,
@@ -111,7 +127,9 @@ g_unix_socket_address_set_property (GObject      *object,
 	  /* Clip to fit in UNIX_PATH_MAX with zero termination or first byte */
 	  len = MIN (array->len, UNIX_PATH_MAX-1);
 
-	  memcpy (address->priv->path, array->data, len);
+	  if (len != 0)
+	    memcpy (address->priv->path, array->data, len);
+
 	  address->priv->path[len] = 0; /* Ensure null-terminated */
 	  address->priv->path_len = len;
 	}
@@ -205,7 +223,8 @@ g_unix_socket_address_to_native (GSocketAddress *address,
   gssize socklen;
 
   socklen = g_unix_socket_address_get_native_size (address);
-  if (destlen < socklen)
+  g_assert (socklen >= 0);
+  if (destlen < (gsize) socklen)
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NO_SPACE,
 			   _("Not enough space for socket address"));
@@ -302,6 +321,49 @@ g_unix_socket_address_class_init (GUnixSocketAddressClass *klass)
 }
 
 static void
+g_unix_socket_address_connectable_iface_init (GSocketConnectableIface *iface)
+{
+  GSocketConnectableIface *parent_iface = g_type_interface_peek_parent (iface);
+
+  iface->enumerate = parent_iface->enumerate;
+  iface->proxy_enumerate = parent_iface->proxy_enumerate;
+  iface->to_string = g_unix_socket_address_connectable_to_string;
+}
+
+static gchar *
+g_unix_socket_address_connectable_to_string (GSocketConnectable *connectable)
+{
+  GUnixSocketAddress *ua;
+  GString *out;
+  const gchar *path;
+  gsize path_len, i;
+
+  ua = G_UNIX_SOCKET_ADDRESS (connectable);
+
+  /* Anonymous sockets have no path. */
+  if (ua->priv->address_type == G_UNIX_SOCKET_ADDRESS_ANONYMOUS)
+    return g_strdup ("anonymous");
+
+  path = g_unix_socket_address_get_path (ua);
+  path_len = g_unix_socket_address_get_path_len (ua);
+  out = g_string_sized_new (path_len);
+
+  /* Return the #GUnixSocketAddress:path, but with all non-printable characters
+   * (including nul bytes) escaped to hex. */
+  for (i = 0; i < path_len; i++)
+    {
+      guint8 c = path[i];
+
+      if (g_ascii_isprint (path[i]))
+        g_string_append_c (out, c);
+      else
+        g_string_append_printf (out, "\\x%02x", (guint) c);
+    }
+
+  return g_string_free (out, FALSE);
+}
+
+static void
 g_unix_socket_address_init (GUnixSocketAddress *address)
 {
   address->priv = g_unix_socket_address_get_instance_private (address);
@@ -364,6 +426,9 @@ g_unix_socket_address_new_abstract (const gchar *path,
  * If @type is %G_UNIX_SOCKET_ADDRESS_PATH, this is equivalent to
  * calling g_unix_socket_address_new().
  *
+ * If @type is %G_UNIX_SOCKET_ADDRESS_ANONYMOUS, @path and @path_len will be
+ * ignored.
+ *
  * If @path_type is %G_UNIX_SOCKET_ADDRESS_ABSTRACT, then @path_len
  * bytes of @path will be copied to the socket's path, and only those
  * bytes will be considered part of the name. (If @path_len is -1,
@@ -378,7 +443,7 @@ g_unix_socket_address_new_abstract (const gchar *path,
  * zero-padded buffer will be considered the name. (As above, if
  * @path_len is -1, then @path is assumed to be NUL-terminated.) In
  * this case, g_socket_address_get_native_size() will always return
- * the full size of a <literal>struct sockaddr_un</literal>, although
+ * the full size of a `struct sockaddr_un`, although
  * g_unix_socket_address_get_path_len() will still return just the
  * length of @path.
  *

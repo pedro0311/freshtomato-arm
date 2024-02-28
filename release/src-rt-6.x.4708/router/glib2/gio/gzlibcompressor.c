@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -43,7 +43,7 @@ enum {
 };
 
 /**
- * SECTION:gzcompressor
+ * SECTION:gzlibcompressor
  * @short_description: Zlib compressor
  * @include: gio/gio.h
  *
@@ -92,7 +92,7 @@ g_zlib_compressor_set_gzheader (GZlibCompressor *compressor)
                                                 G_FILE_ATTRIBUTE_TIME_MODIFIED);
 
   if (deflateSetHeader (&compressor->zstream, &compressor->gzheader) != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", compressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", compressor->zstream.msg);
 #endif /* !G_OS_WIN32 || ZLIB >= 1.2.4 */
 }
 
@@ -213,7 +213,7 @@ g_zlib_compressor_constructed (GObject *object)
     g_error ("GZlibCompressor: Not enough memory for zlib use");
 
   if (res != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", compressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", compressor->zstream.msg);
 
   g_zlib_compressor_set_gzheader (compressor);
 }
@@ -298,7 +298,7 @@ g_zlib_compressor_new (GZlibCompressorFormat format,
  *
  * Returns the #GZlibCompressor:file-info property.
  *
- * Returns: (transfer none): a #GFileInfo, or %NULL
+ * Returns: (nullable) (transfer none): a #GFileInfo, or %NULL
  *
  * Since: 2.26
  */
@@ -313,7 +313,7 @@ g_zlib_compressor_get_file_info (GZlibCompressor *compressor)
 /**
  * g_zlib_compressor_set_file_info:
  * @compressor: a #GZlibCompressor
- * @file_info: (allow-none): a #GFileInfo
+ * @file_info: (nullable): a #GFileInfo
  *
  * Sets @file_info in @compressor. If non-%NULL, and @compressor's
  * #GZlibCompressor:format property is %G_ZLIB_COMPRESSOR_FORMAT_GZIP,
@@ -353,7 +353,7 @@ g_zlib_compressor_reset (GConverter *converter)
 
   res = deflateReset (&compressor->zstream);
   if (res != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", compressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", compressor->zstream.msg);
 
   /* deflateReset reset the header too, so re-set it */
   g_zlib_compressor_set_gzheader (compressor);

@@ -3,10 +3,12 @@
  * Copyright (C) 1999 Tom Tromey
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -138,14 +138,15 @@ const gchar * const g_utf8_skip = utf8_skip_data;
  * is made to see if the character found is actually valid other than
  * it starts with an appropriate byte.
  *
- * Return value: a pointer to the found character or %NULL.
- **/
+ * Returns: (transfer none) (nullable): a pointer to the found character or %NULL.
+ */
 gchar *
-g_utf8_find_prev_char (const char *str,
-		       const char *p)
+g_utf8_find_prev_char (const gchar *str,
+		       const gchar *p)
 {
-  for (--p; p >= str; --p)
+  while (p > str)
     {
+      --p;
       if ((*p & 0xc0) != 0x80)
 	return (gchar *)p;
     }
@@ -155,8 +156,8 @@ g_utf8_find_prev_char (const char *str,
 /**
  * g_utf8_find_next_char:
  * @p: a pointer to a position within a UTF-8 encoded string
- * @end: a pointer to the byte following the end of the string,
- * or %NULL to indicate that the string is nul-terminated.
+ * @end: (nullable): a pointer to the byte following the end of the string,
+ *     or %NULL to indicate that the string is nul-terminated
  *
  * Finds the start of the next UTF-8 character in the string after @p.
  *
@@ -164,22 +165,30 @@ g_utf8_find_prev_char (const char *str,
  * is made to see if the character found is actually valid other than
  * it starts with an appropriate byte.
  * 
- * Return value: a pointer to the found character or %NULL
- **/
+ * If @end is %NULL, the return value will never be %NULL: if the end of the
+ * string is reached, a pointer to the terminating nul byte is returned. If
+ * @end is non-%NULL, the return value will be %NULL if the end of the string
+ * is reached.
+ *
+ * Returns: (transfer none) (nullable): a pointer to the found character or %NULL if @end is
+ *    set and is reached
+ */
 gchar *
 g_utf8_find_next_char (const gchar *p,
 		       const gchar *end)
 {
-  if (*p)
+  if (end)
     {
-      if (end)
-	for (++p; p < end && (*p & 0xc0) == 0x80; ++p)
-	  ;
-      else
-	for (++p; (*p & 0xc0) == 0x80; ++p)
-	  ;
+      for (++p; p < end && (*p & 0xc0) == 0x80; ++p)
+        ;
+      return (p >= end) ? NULL : (gchar *)p;
     }
-  return (p == end) ? NULL : (gchar *)p;
+  else
+    {
+      for (++p; (*p & 0xc0) == 0x80; ++p)
+        ;
+      return (gchar *)p;
+    }
 }
 
 /**
@@ -193,8 +202,8 @@ g_utf8_find_next_char (const gchar *p,
  * it starts with an appropriate byte. If @p might be the first
  * character of the string, you must use g_utf8_find_prev_char() instead.
  * 
- * Return value: a pointer to the found character.
- **/
+ * Returns: (transfer none) (not nullable): a pointer to the found character
+ */
 gchar *
 g_utf8_prev_char (const gchar *p)
 {
@@ -205,7 +214,7 @@ g_utf8_prev_char (const gchar *p)
 	return (gchar *)p;
     }
 }
-
+ 
 /**
  * g_utf8_strlen:
  * @p: pointer to the start of a UTF-8 encoded string
@@ -219,8 +228,8 @@ g_utf8_prev_char (const gchar *p)
  * the terminating nul character. If the @max'th byte falls in the
  * middle of a character, the last (partial) character is not counted.
  *
- * Return value: the length of the string in characters
- **/
+ * Returns: the length of the string in characters
+ */
 glong
 g_utf8_strlen (const gchar *p,
                gssize       max)
@@ -264,13 +273,16 @@ g_utf8_strlen (const gchar *p,
  * g_utf8_substring:
  * @str: a UTF-8 encoded string
  * @start_pos: a character offset within @str
- * @end_pos: another character offset within @str
+ * @end_pos: another character offset within @str,
+ *   or `-1` to indicate the end of the string
  *
  * Copies a substring out of a UTF-8 encoded string.
- * The substring will contain @end_pos - @start_pos
- * characters.
+ * The substring will contain @end_pos - @start_pos characters.
  *
- * Returns: a newly allocated copy of the requested
+ * Since GLib 2.72, `-1` can be passed to @end_pos to indicate the
+ * end of the string.
+ *
+ * Returns: (transfer full): a newly allocated copy of the requested
  *     substring. Free with g_free() when no longer needed.
  *
  * Since: 2.30
@@ -282,8 +294,19 @@ g_utf8_substring (const gchar *str,
 {
   gchar *start, *end, *out;
 
+  g_return_val_if_fail (end_pos >= start_pos || end_pos == -1, NULL);
+
   start = g_utf8_offset_to_pointer (str, start_pos);
-  end = g_utf8_offset_to_pointer (start, end_pos - start_pos);
+
+  if (end_pos == -1)
+    {
+      glong length = g_utf8_strlen (start, -1);
+      end = g_utf8_offset_to_pointer (start, length);
+    }
+  else
+    {
+      end = g_utf8_offset_to_pointer (start, end_pos - start_pos);
+    }
 
   out = g_malloc (end - start + 1);
   memcpy (out, start, end - start);
@@ -297,13 +320,14 @@ g_utf8_substring (const gchar *str,
  * @p: a pointer to Unicode character encoded as UTF-8
  * 
  * Converts a sequence of bytes encoded as UTF-8 to a Unicode character.
- * If @p does not point to a valid UTF-8 encoded character, results are
- * undefined. If you are not sure that the bytes are complete
+ *
+ * If @p does not point to a valid UTF-8 encoded character, results
+ * are undefined. If you are not sure that the bytes are complete
  * valid Unicode characters, you should use g_utf8_get_char_validated()
  * instead.
  * 
- * Return value: the resulting character
- **/
+ * Returns: the resulting character
+ */
 gunichar
 g_utf8_get_char (const gchar *p)
 {
@@ -332,17 +356,14 @@ g_utf8_get_char (const gchar *p)
  * instead of forwards if @offset is in the last fourth of the string,
  * since moving forward is about 3 times faster than moving backward.
  *
- * <note><para>
- * This function doesn't abort when reaching the end of @str. Therefore
- * you should be sure that @offset is within string boundaries before
- * calling that function. Call g_utf8_strlen() when unsure.
- *
+ * Note that this function doesn't abort when reaching the end of @str.
+ * Therefore you should be sure that @offset is within string boundaries
+ * before calling that function. Call g_utf8_strlen() when unsure.
  * This limitation exists as this function is called frequently during
  * text rendering and therefore has to be as fast as possible.
- * </para></note>
  *
- * Return value: the resulting pointer
- **/
+ * Returns: (transfer none): the resulting pointer
+ */
 gchar *
 g_utf8_offset_to_pointer  (const gchar *str,
 			   glong        offset)
@@ -379,14 +400,14 @@ g_utf8_offset_to_pointer  (const gchar *str,
  * @str: a UTF-8 encoded string
  * @pos: a pointer to a position within @str
  * 
- * Converts from a pointer to position within a string to a integer
+ * Converts from a pointer to position within a string to an integer
  * character offset.
  *
  * Since 2.10, this function allows @pos to be before @str, and returns
  * a negative offset in this case.
  * 
- * Return value: the resulting character offset
- **/
+ * Returns: the resulting character offset
+ */
 glong    
 g_utf8_pointer_to_offset (const gchar *str,
 			  const gchar *pos)
@@ -409,18 +430,20 @@ g_utf8_pointer_to_offset (const gchar *str,
 
 /**
  * g_utf8_strncpy:
- * @dest: buffer to fill with characters from @src
+ * @dest: (transfer none): buffer to fill with characters from @src
  * @src: UTF-8 encoded string
  * @n: character count
  * 
- * Like the standard C strncpy() function, but 
- * copies a given number of characters instead of a given number of 
- * bytes. The @src string must be valid UTF-8 encoded text. 
- * (Use g_utf8_validate() on all text before trying to use UTF-8 
- * utility functions with it.)
+ * Like the standard C strncpy() function, but copies a given number
+ * of characters instead of a given number of bytes. The @src string
+ * must be valid UTF-8 encoded text. (Use g_utf8_validate() on all
+ * text before trying to use UTF-8 utility functions with it.)
  * 
- * Return value: @dest
- **/
+ * Note you must ensure @dest is at least 4 * @n + 1 to fit the
+ * largest possible UTF-8 characters
+ *
+ * Returns: (transfer none): @dest
+ */
 gchar *
 g_utf8_strncpy (gchar       *dest,
 		const gchar *src,
@@ -442,14 +465,14 @@ g_utf8_strncpy (gchar       *dest,
 /**
  * g_unichar_to_utf8:
  * @c: a Unicode character code
- * @outbuf: output buffer, must have at least 6 bytes of space.
- *       If %NULL, the length will be computed and returned
- *       and nothing will be written to @outbuf.
+ * @outbuf: (out caller-allocates) (optional): output buffer, must have at
+ *       least 6 bytes of space. If %NULL, the length will be computed and
+ *       returned and nothing will be written to @outbuf.
  * 
  * Converts a single character to UTF-8.
  * 
- * Return value: number of bytes written
- **/
+ * Returns: number of bytes written
+ */
 int
 g_unichar_to_utf8 (gunichar c,
 		   gchar   *outbuf)
@@ -513,10 +536,10 @@ g_unichar_to_utf8 (gunichar c,
  * in a UTF-8 encoded string, while limiting the search to @len bytes.
  * If @len is -1, allow unbounded search.
  * 
- * Return value: %NULL if the string does not contain the character, 
- *   otherwise, a pointer to the start of the leftmost occurrence of 
- *   the character in the string.
- **/
+ * Returns: (transfer none) (nullable): %NULL if the string does not contain the character,
+ *     otherwise, a pointer to the start of the leftmost occurrence
+ *     of the character in the string.
+ */
 gchar *
 g_utf8_strchr (const char *p,
 	       gssize      len,
@@ -541,10 +564,10 @@ g_utf8_strchr (const char *p,
  * in a UTF-8 encoded string, while limiting the search to @len bytes.
  * If @len is -1, allow unbounded search.
  * 
- * Return value: %NULL if the string does not contain the character, 
- *   otherwise, a pointer to the start of the rightmost occurrence of the 
- *   character in the string.
- **/
+ * Returns: (transfer none) (nullable): %NULL if the string does not contain the character,
+ *     otherwise, a pointer to the start of the rightmost occurrence
+ *     of the character in the string.
+ */
 gchar *
 g_utf8_strrchr (const char *p,
 		gssize      len,
@@ -568,9 +591,11 @@ static inline gunichar
 g_utf8_get_char_extended (const  gchar *p,
 			  gssize max_len)
 {
-  guint i, len;
+  gsize i, len;
   gunichar min_code;
   gunichar wc = (guchar) *p;
+  const gunichar partial_sequence = (gunichar) -2;
+  const gunichar malformed_sequence = (gunichar) -1;
 
   if (wc < 0x80)
     {
@@ -578,7 +603,7 @@ g_utf8_get_char_extended (const  gchar *p,
     }
   else if (G_UNLIKELY (wc < 0xc0))
     {
-      return (gunichar)-1;
+      return malformed_sequence;
     }
   else if (wc < 0xe0)
     {
@@ -612,17 +637,17 @@ g_utf8_get_char_extended (const  gchar *p,
     }
   else
     {
-      return (gunichar)-1;
+      return malformed_sequence;
     }
 
-  if (G_UNLIKELY (max_len >= 0 && len > max_len))
+  if (G_UNLIKELY (max_len >= 0 && len > (gsize) max_len))
     {
-      for (i = 1; i < max_len; i++)
+      for (i = 1; i < (gsize) max_len; i++)
 	{
 	  if ((((guchar *)p)[i] & 0xc0) != 0x80)
-	    return (gunichar)-1;
+	    return malformed_sequence;
 	}
-      return (gunichar)-2;
+      return partial_sequence;
     }
 
   for (i = 1; i < len; ++i)
@@ -632,9 +657,9 @@ g_utf8_get_char_extended (const  gchar *p,
       if (G_UNLIKELY ((ch & 0xc0) != 0x80))
 	{
 	  if (ch)
-	    return (gunichar)-1;
+	    return malformed_sequence;
 	  else
-	    return (gunichar)-2;
+	    return partial_sequence;
 	}
 
       wc <<= 6;
@@ -642,7 +667,7 @@ g_utf8_get_char_extended (const  gchar *p,
     }
 
   if (G_UNLIKELY (wc < min_code))
-    return (gunichar)-1;
+    return malformed_sequence;
 
   return wc;
 }
@@ -650,23 +675,26 @@ g_utf8_get_char_extended (const  gchar *p,
 /**
  * g_utf8_get_char_validated:
  * @p: a pointer to Unicode character encoded as UTF-8
- * @max_len: the maximum number of bytes to read, or -1, for no maximum or
- *           if @p is nul-terminated
- * 
+ * @max_len: the maximum number of bytes to read, or -1 if @p is nul-terminated
+ *
  * Convert a sequence of bytes encoded as UTF-8 to a Unicode character.
  * This function checks for incomplete characters, for invalid characters
  * such as characters that are out of the range of Unicode, and for
  * overlong encodings of valid characters.
+ *
+ * Note that g_utf8_get_char_validated() returns (gunichar)-2 if
+ * @max_len is positive and any of the bytes in the first UTF-8 character
+ * sequence are nul.
  * 
- * Return value: the resulting character. If @p points to a partial
- *    sequence at the end of a string that could begin a valid 
- *    character (or if @max_len is zero), returns (gunichar)-2; 
- *    otherwise, if @p does not point to a valid UTF-8 encoded 
- *    Unicode character, returns (gunichar)-1.
- **/
+ * Returns: the resulting character. If @p points to a partial
+ *     sequence at the end of a string that could begin a valid 
+ *     character (or if @max_len is zero), returns (gunichar)-2; 
+ *     otherwise, if @p does not point to a valid UTF-8 encoded 
+ *     Unicode character, returns (gunichar)-1.
+ */
 gunichar
-g_utf8_get_char_validated (const  gchar *p,
-			   gssize max_len)
+g_utf8_get_char_validated (const gchar *p,
+			   gssize       max_len)
 {
   gunichar result;
 
@@ -674,6 +702,11 @@ g_utf8_get_char_validated (const  gchar *p,
     return (gunichar)-2;
 
   result = g_utf8_get_char_extended (p, max_len);
+
+  /* Disallow codepoint U+0000 as it’s a nul byte,
+   * and all string handling in GLib is nul-terminated */
+  if (result == 0 && max_len > 0)
+    return (gunichar) -2;
 
   if (result & 0x80000000)
     return result;
@@ -683,13 +716,15 @@ g_utf8_get_char_validated (const  gchar *p,
     return result;
 }
 
+#define CONT_BYTE_FAST(p) ((guchar)*p++ & 0x3f)
+
 /**
  * g_utf8_to_ucs4_fast:
  * @str: a UTF-8 encoded string
  * @len: the maximum length of @str to use, in bytes. If @len < 0,
- *       then the string is nul-terminated.
- * @items_written: (allow-none): location to store the number of characters in the
- *                 result, or %NULL.
+ *     then the string is nul-terminated.
+ * @items_written: (out) (optional): location to store the
+ *     number of characters in the result, or %NULL.
  *
  * Convert a string from UTF-8 to a 32-bit fixed width
  * representation as UCS-4, assuming valid UTF-8 input.
@@ -697,9 +732,9 @@ g_utf8_get_char_validated (const  gchar *p,
  * but does no error checking on the input. A trailing 0 character
  * will be added to the string after the converted text.
  * 
- * Return value: a pointer to a newly allocated UCS-4 string.
- *               This value must be freed with g_free().
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UCS-4 string.
+ *     This value must be freed with g_free().
+ */
 gunichar *
 g_utf8_to_ucs4_fast (const gchar *str,
 		     glong        len,              
@@ -735,38 +770,52 @@ g_utf8_to_ucs4_fast (const gchar *str,
   p = str;
   for (i=0; i < n_chars; i++)
     {
-      gunichar wc = (guchar)*p++;
+      guchar first = (guchar)*p++;
+      gunichar wc;
 
-      if (wc < 0x80)
+      if (first < 0xc0)
 	{
-	  result[i] = wc;
+          /* We really hope first < 0x80, but we don't want to test an
+           * extra branch for invalid input, which this function
+           * does not care about. Handling unexpected continuation bytes
+           * here will do the least damage. */
+	  wc = first;
 	}
       else
-	{ 
-	  gunichar mask = 0x40;
-
-	  if (G_UNLIKELY ((wc & mask) == 0))
-	    {
-	      /* It's an out-of-sequence 10xxxxxxx byte.
-	       * Rather than making an ugly hash of this and the next byte
-	       * and overrunning the buffer, it's more useful to treat it
-	       * with a replacement character */
-	      result[i] = 0xfffd;
-	      continue;
-	    }
-
-	  do
-	    {
-	      wc <<= 6;
-	      wc |= (guchar)(*p++) & 0x3f;
-	      mask <<= 5;
-	    }
-	  while((wc & mask) != 0);
-
-	  wc &= mask - 1;
-
-	  result[i] = wc;
+	{
+          gunichar c1 = CONT_BYTE_FAST(p);
+          if (first < 0xe0)
+            {
+              wc = ((first & 0x1f) << 6) | c1;
+            }
+          else
+            {
+              gunichar c2 = CONT_BYTE_FAST(p);
+              if (first < 0xf0)
+                {
+                  wc = ((first & 0x0f) << 12) | (c1 << 6) | c2;
+                }
+              else
+                {
+                  gunichar c3 = CONT_BYTE_FAST(p);
+                  wc = ((first & 0x07) << 18) | (c1 << 12) | (c2 << 6) | c3;
+                  if (G_UNLIKELY (first >= 0xf8))
+                    {
+                      /* This can't be valid UTF-8, but g_utf8_next_char()
+                       * and company allow out-of-range sequences */
+                      gunichar mask = 1 << 20;
+                      while ((wc & mask) != 0)
+                        {
+                          wc <<= 6;
+                          wc |= CONT_BYTE_FAST(p);
+                          mask <<= 5;
+                        }
+                      wc &= mask - 1;
+                    }
+                }
+            }
 	}
+      result[i] = wc;
     }
   result[i] = 0;
 
@@ -776,32 +825,42 @@ g_utf8_to_ucs4_fast (const gchar *str,
   return result;
 }
 
+static gpointer
+try_malloc_n (gsize n_blocks, gsize n_block_bytes, GError **error)
+{
+    gpointer ptr = g_try_malloc_n (n_blocks, n_block_bytes);
+    if (ptr == NULL)
+      g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_NO_MEMORY,
+                           _("Failed to allocate memory"));
+    return ptr;
+}
+
 /**
  * g_utf8_to_ucs4:
  * @str: a UTF-8 encoded string
  * @len: the maximum length of @str to use, in bytes. If @len < 0,
- *       then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of bytes read, or %NULL.
- *              If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
- *              returned in case @str contains a trailing partial
- *              character. If an error occurs then the index of the
- *              invalid input is stored here.
- * @items_written: (allow-none): location to store number of characters written or %NULL.
- *                 The value here stored does not include the trailing 0
- *                 character. 
+ *     then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+  *    bytes read, or %NULL.
+ *     If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
+ *     returned in case @str contains a trailing partial
+ *     character. If an error occurs then the index of the
+ *     invalid input is stored here.
+ * @items_written: (out) (optional): location to store number
+ *     of characters written or %NULL. The value here stored does not include
+ *     the trailing 0 character.
  * @error: location to store the error occurring, or %NULL to ignore
- *         errors. Any of the errors in #GConvertError other than
- *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
+ *     errors. Any of the errors in #GConvertError other than
+ *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
  *
  * Convert a string from UTF-8 to a 32-bit fixed width
  * representation as UCS-4. A trailing 0 character will be added to the
  * string after the converted text.
  * 
- * Return value: a pointer to a newly allocated UCS-4 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set.
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UCS-4 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set.
+ */
 gunichar *
 g_utf8_to_ucs4 (const gchar *str,
 		glong        len,             
@@ -840,8 +899,10 @@ g_utf8_to_ucs4 (const gchar *str,
       in = g_utf8_next_char (in);
     }
 
-  result = g_new (gunichar, n_chars + 1);
-  
+  result = try_malloc_n (n_chars + 1, sizeof (gunichar), error);
+  if (result == NULL)
+      goto err_out;
+
   in = str;
   for (i=0; i < n_chars; i++)
     {
@@ -864,11 +925,12 @@ g_utf8_to_ucs4 (const gchar *str,
  * g_ucs4_to_utf8:
  * @str: a UCS-4 encoded string
  * @len: the maximum length (number of characters) of @str to use. 
- *       If @len < 0, then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of characters read, or %NULL.
- * @items_written: (allow-none): location to store number of bytes written or %NULL.
- *                 The value here stored does not include the trailing 0
- *                 byte. 
+ *     If @len < 0, then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+ *     characters read, or %NULL.
+ * @items_written: (out) (optional): location to store number
+ *     of bytes written or %NULL. The value here stored does not include the
+ *     trailing 0 byte.
  * @error: location to store the error occurring, or %NULL to ignore
  *         errors. Any of the errors in #GConvertError other than
  *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
@@ -876,13 +938,11 @@ g_utf8_to_ucs4 (const gchar *str,
  * Convert a string from a 32-bit fixed width representation as UCS-4.
  * to UTF-8. The result will be terminated with a 0 byte.
  * 
- * Return value: a pointer to a newly allocated UTF-8 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set. In that case, @items_read will be
- *               set to the position of the first invalid input 
- *               character.
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UTF-8 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set. In that case, @items_read
+ *     will be set to the position of the first invalid input character.
+ */
 gchar *
 g_ucs4_to_utf8 (const gunichar *str,
 		glong           len,              
@@ -911,7 +971,10 @@ g_ucs4_to_utf8 (const gunichar *str,
       result_length += UTF8_LENGTH (str[i]);
     }
 
-  result = g_malloc (result_length + 1);
+  result = try_malloc_n (result_length + 1, 1, error);
+  if (result == NULL)
+      goto err_out;
+
   p = result;
 
   i = 0;
@@ -935,19 +998,19 @@ g_ucs4_to_utf8 (const gunichar *str,
 /**
  * g_utf16_to_utf8:
  * @str: a UTF-16 encoded string
- * @len: the maximum length (number of <type>gunichar2</type>) of @str to use. 
- *       If @len < 0, then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of words read, or %NULL.
- *              If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
- *              returned in case @str contains a trailing partial
- *              character. If an error occurs then the index of the
- *              invalid input is stored here.
- * @items_written: (allow-none): location to store number of bytes written, or %NULL.
- *                 The value stored here does not include the trailing
- *                 0 byte.
+ * @len: the maximum length (number of #gunichar2) of @str to use. 
+ *     If @len < 0, then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+ *     words read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
+ *     be returned in case @str contains a trailing partial character. If
+ *     an error occurs then the index of the invalid input is stored here.
+ *     It’s guaranteed to be non-negative.
+ * @items_written: (out) (optional): location to store number
+ *     of bytes written, or %NULL. The value stored here does not include the
+ *     trailing 0 byte. It’s guaranteed to be non-negative.
  * @error: location to store the error occurring, or %NULL to ignore
- *         errors. Any of the errors in #GConvertError other than
- *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
+ *     errors. Any of the errors in #GConvertError other than
+ *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
  *
  * Convert a string from UTF-16 to UTF-8. The result will be
  * terminated with a 0 byte.
@@ -955,18 +1018,17 @@ g_ucs4_to_utf8 (const gunichar *str,
  * Note that the input is expected to be already in native endianness,
  * an initial byte-order-mark character is not handled specially.
  * g_convert() can be used to convert a byte buffer of UTF-16 data of
- * ambiguous endianess.
+ * ambiguous endianness.
  *
  * Further note that this function does not validate the result
  * string; it may e.g. include embedded NUL characters. The only
  * validation done by this function is to ensure that the input can
  * be correctly interpreted as UTF-16, i.e. it doesn't contain
- * things unpaired surrogates.
+ * unpaired surrogates or partial character sequences.
  *
- * Return value: a pointer to a newly allocated UTF-8 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set.
+ * Returns: (transfer full): a pointer to a newly allocated UTF-8 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set.
  **/
 gchar *
 g_utf16_to_utf8 (const gunichar2  *str,
@@ -975,8 +1037,8 @@ g_utf16_to_utf8 (const gunichar2  *str,
 		 glong            *items_written,
 		 GError          **error)
 {
-  /* This function and g_utf16_to_ucs4 are almost exactly identical - The lines that differ
-   * are marked.
+  /* This function and g_utf16_to_ucs4 are almost exactly identical -
+   * The lines that differ are marked.
    */
   const gunichar2 *in;
   gchar *out;
@@ -1043,8 +1105,10 @@ g_utf16_to_utf8 (const gunichar2  *str,
   /* At this point, everything is valid, and we just need to convert
    */
   /********** DIFFERENT for UTF8/UCS4 **********/
-  result = g_malloc (n_bytes + 1);
-  
+  result = try_malloc_n (n_bytes + 1, 1, error);
+  if (result == NULL)
+      goto err_out;
+
   high_surrogate = 0;
   out = result;
   in = str;
@@ -1090,28 +1154,26 @@ g_utf16_to_utf8 (const gunichar2  *str,
 /**
  * g_utf16_to_ucs4:
  * @str: a UTF-16 encoded string
- * @len: the maximum length (number of <type>gunichar2</type>) of @str to use. 
- *       If @len < 0, then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of words read, or %NULL.
- *              If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
- *              returned in case @str contains a trailing partial
- *              character. If an error occurs then the index of the
- *              invalid input is stored here.
- * @items_written: (allow-none): location to store number of characters written, or %NULL.
- *                 The value stored here does not include the trailing
- *                 0 character.
+ * @len: the maximum length (number of #gunichar2) of @str to use. 
+ *     If @len < 0, then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+ *     words read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
+ *     be returned in case @str contains a trailing partial character. If
+ *     an error occurs then the index of the invalid input is stored here.
+ * @items_written: (out) (optional): location to store number
+ *     of characters written, or %NULL. The value stored here does not include
+ *     the trailing 0 character.
  * @error: location to store the error occurring, or %NULL to ignore
- *         errors. Any of the errors in #GConvertError other than
- *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
+ *     errors. Any of the errors in #GConvertError other than
+ *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
  *
  * Convert a string from UTF-16 to UCS-4. The result will be
  * nul-terminated.
  * 
- * Return value: a pointer to a newly allocated UCS-4 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set.
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UCS-4 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set.
+ */
 gunichar *
 g_utf16_to_ucs4 (const gunichar2  *str,
 		 glong             len,              
@@ -1180,8 +1242,10 @@ g_utf16_to_ucs4 (const gunichar2  *str,
   /* At this point, everything is valid, and we just need to convert
    */
   /********** DIFFERENT for UTF8/UCS4 **********/
-  result = g_malloc (n_bytes + 4);
-  
+  result = try_malloc_n (n_bytes + 4, 1, error);
+  if (result == NULL)
+      goto err_out;
+
   high_surrogate = 0;
   out = result;
   in = str;
@@ -1229,27 +1293,25 @@ g_utf16_to_ucs4 (const gunichar2  *str,
  * g_utf8_to_utf16:
  * @str: a UTF-8 encoded string
  * @len: the maximum length (number of bytes) of @str to use.
- *       If @len < 0, then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of bytes read, or %NULL.
- *              If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will be
- *              returned in case @str contains a trailing partial
- *              character. If an error occurs then the index of the
- *              invalid input is stored here.
- * @items_written: (allow-none): location to store number of <type>gunichar2</type> written,
- *                 or %NULL.
- *                 The value stored here does not include the trailing 0.
+ *     If @len < 0, then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+ *     bytes read, or %NULL. If %NULL, then %G_CONVERT_ERROR_PARTIAL_INPUT will
+ *     be returned in case @str contains a trailing partial character. If
+ *     an error occurs then the index of the invalid input is stored here.
+ * @items_written: (out) (optional): location to store number
+ *     of #gunichar2 written, or %NULL. The value stored here does not include
+ *     the trailing 0.
  * @error: location to store the error occurring, or %NULL to ignore
- *         errors. Any of the errors in #GConvertError other than
- *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
+ *     errors. Any of the errors in #GConvertError other than
+ *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
  *
  * Convert a string from UTF-8 to UTF-16. A 0 character will be
  * added to the result after the converted text.
  *
- * Return value: a pointer to a newly allocated UTF-16 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set.
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UTF-16 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set.
+ */
 gunichar2 *
 g_utf8_to_utf16 (const gchar *str,
 		 glong        len,
@@ -1310,8 +1372,10 @@ g_utf8_to_utf16 (const gchar *str,
       in = g_utf8_next_char (in);
     }
 
-  result = g_new (gunichar2, n16 + 1);
-  
+  result = try_malloc_n (n16 + 1, sizeof (gunichar2), error);
+  if (result == NULL)
+      goto err_out;
+
   in = str;
   for (i = 0; i < n16;)
     {
@@ -1346,25 +1410,24 @@ g_utf8_to_utf16 (const gchar *str,
  * g_ucs4_to_utf16:
  * @str: a UCS-4 encoded string
  * @len: the maximum length (number of characters) of @str to use. 
- *       If @len < 0, then the string is nul-terminated.
- * @items_read: (allow-none): location to store number of bytes read, or %NULL.
- *              If an error occurs then the index of the invalid input
- *              is stored here.
- * @items_written: (allow-none): location to store number of <type>gunichar2</type> 
- *                 written, or %NULL. The value stored here does not 
- *                 include the trailing 0.
+ *     If @len < 0, then the string is nul-terminated.
+ * @items_read: (out) (optional): location to store number of
+ *     bytes read, or %NULL. If an error occurs then the index of the invalid
+ *     input is stored here.
+ * @items_written: (out) (optional): location to store number
+ *     of #gunichar2  written, or %NULL. The value stored here does not include
+ *     the trailing 0.
  * @error: location to store the error occurring, or %NULL to ignore
- *         errors. Any of the errors in #GConvertError other than
- *         %G_CONVERT_ERROR_NO_CONVERSION may occur.
+ *     errors. Any of the errors in #GConvertError other than
+ *     %G_CONVERT_ERROR_NO_CONVERSION may occur.
  *
  * Convert a string from UCS-4 to UTF-16. A 0 character will be
  * added to the result after the converted text.
  * 
- * Return value: a pointer to a newly allocated UTF-16 string.
- *               This value must be freed with g_free(). If an
- *               error occurs, %NULL will be returned and
- *               @error set.
- **/
+ * Returns: (transfer full): a pointer to a newly allocated UTF-16 string.
+ *     This value must be freed with g_free(). If an error occurs,
+ *     %NULL will be returned and @error set.
+ */
 gunichar2 *
 g_ucs4_to_utf16 (const gunichar  *str,
 		 glong            len,              
@@ -1405,9 +1468,11 @@ g_ucs4_to_utf16 (const gunichar  *str,
 
       i++;
     }
-  
-  result = g_new (gunichar2, n16 + 1);
-  
+
+  result = try_malloc_n (n16 + 1, sizeof (gunichar2), error);
+  if (result == NULL)
+      goto err_out;
+
   for (i = 0, j = 0; j < n16; i++)
     {
       gunichar wc = str[i];
@@ -1434,20 +1499,18 @@ g_ucs4_to_utf16 (const gunichar  *str,
   return result;
 }
 
-#define CONTINUATION_CHAR                           \
- G_STMT_START {                                     \
-  if ((*(guchar *)p & 0xc0) != 0x80) /* 10xxxxxx */ \
-    goto error;                                     \
-  val <<= 6;                                        \
-  val |= (*(guchar *)p) & 0x3f;                     \
- } G_STMT_END
+#define VALIDATE_BYTE(mask, expect)                      \
+  G_STMT_START {                                         \
+    if (G_UNLIKELY((*(guchar *)p & (mask)) != (expect))) \
+      goto error;                                        \
+  } G_STMT_END
+
+/* see IETF RFC 3629 Section 4 */
 
 static const gchar *
 fast_validate (const char *str)
 
 {
-  gunichar val = 0;
-  gunichar min = 0;
   const gchar *p;
 
   for (p = str; *p; p++)
@@ -1457,49 +1520,56 @@ fast_validate (const char *str)
       else 
 	{
 	  const gchar *last;
-	  
+
 	  last = p;
-	  if ((*(guchar *)p & 0xe0) == 0xc0) /* 110xxxxx */
+	  if (*(guchar *)p < 0xe0) /* 110xxxxx */
 	    {
-	      if (G_UNLIKELY ((*(guchar *)p & 0x1e) == 0))
-		goto error;
-	      p++;
-	      if (G_UNLIKELY ((*(guchar *)p & 0xc0) != 0x80)) /* 10xxxxxx */
+	      if (G_UNLIKELY (*(guchar *)p < 0xc2))
 		goto error;
 	    }
 	  else
 	    {
-	      if ((*(guchar *)p & 0xf0) == 0xe0) /* 1110xxxx */
+	      if (*(guchar *)p < 0xf0) /* 1110xxxx */
 		{
-		  min = (1 << 11);
-		  val = *(guchar *)p & 0x0f;
-		  goto TWO_REMAINING;
+		  switch (*(guchar *)p++ & 0x0f)
+		    {
+		    case 0:
+		      VALIDATE_BYTE(0xe0, 0xa0); /* 0xa0 ... 0xbf */
+		      break;
+		    case 0x0d:
+		      VALIDATE_BYTE(0xe0, 0x80); /* 0x80 ... 0x9f */
+		      break;
+		    default:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		    }
 		}
-	      else if ((*(guchar *)p & 0xf8) == 0xf0) /* 11110xxx */
+	      else if (*(guchar *)p < 0xf5) /* 11110xxx excluding out-of-range */
 		{
-		  min = (1 << 16);
-		  val = *(guchar *)p & 0x07;
+		  switch (*(guchar *)p++ & 0x07)
+		    {
+		    case 0:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		      if (G_UNLIKELY((*(guchar *)p & 0x30) == 0))
+			goto error;
+		      break;
+		    case 4:
+		      VALIDATE_BYTE(0xf0, 0x80); /* 0x80 ... 0x8f */
+		      break;
+		    default:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		    }
+		  p++;
+		  VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
 		}
 	      else
 		goto error;
-	      
-	      p++;
-	      CONTINUATION_CHAR;
-	    TWO_REMAINING:
-	      p++;
-	      CONTINUATION_CHAR;
-	      p++;
-	      CONTINUATION_CHAR;
-	      
-	      if (G_UNLIKELY (val < min))
-		goto error;
+	    }
 
-	      if (G_UNLIKELY (!UNICODE_VALID(val)))
-		goto error;
-	    } 
-	  
+	  p++;
+	  VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+
 	  continue;
-	  
+
 	error:
 	  return last;
 	}
@@ -1513,8 +1583,6 @@ fast_validate_len (const char *str,
 		   gssize      max_len)
 
 {
-  gunichar val = 0;
-  gunichar min = 0;
   const gchar *p;
 
   g_assert (max_len >= 0);
@@ -1526,57 +1594,65 @@ fast_validate_len (const char *str,
       else 
 	{
 	  const gchar *last;
-	  
+
 	  last = p;
-	  if ((*(guchar *)p & 0xe0) == 0xc0) /* 110xxxxx */
+	  if (*(guchar *)p < 0xe0) /* 110xxxxx */
 	    {
 	      if (G_UNLIKELY (max_len - (p - str) < 2))
 		goto error;
 	      
-	      if (G_UNLIKELY ((*(guchar *)p & 0x1e) == 0))
-		goto error;
-	      p++;
-	      if (G_UNLIKELY ((*(guchar *)p & 0xc0) != 0x80)) /* 10xxxxxx */
+	      if (G_UNLIKELY (*(guchar *)p < 0xc2))
 		goto error;
 	    }
 	  else
 	    {
-	      if ((*(guchar *)p & 0xf0) == 0xe0) /* 1110xxxx */
+	      if (*(guchar *)p < 0xf0) /* 1110xxxx */
 		{
 		  if (G_UNLIKELY (max_len - (p - str) < 3))
 		    goto error;
-		  
-		  min = (1 << 11);
-		  val = *(guchar *)p & 0x0f;
-		  goto TWO_REMAINING;
+
+		  switch (*(guchar *)p++ & 0x0f)
+		    {
+		    case 0:
+		      VALIDATE_BYTE(0xe0, 0xa0); /* 0xa0 ... 0xbf */
+		      break;
+		    case 0x0d:
+		      VALIDATE_BYTE(0xe0, 0x80); /* 0x80 ... 0x9f */
+		      break;
+		    default:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		    }
 		}
- 	      else if ((*(guchar *)p & 0xf8) == 0xf0) /* 11110xxx */
+	      else if (*(guchar *)p < 0xf5) /* 11110xxx excluding out-of-range */
 		{
 		  if (G_UNLIKELY (max_len - (p - str) < 4))
 		    goto error;
-		  
-		  min = (1 << 16);
-		  val = *(guchar *)p & 0x07;
+
+		  switch (*(guchar *)p++ & 0x07)
+		    {
+		    case 0:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		      if (G_UNLIKELY((*(guchar *)p & 0x30) == 0))
+			goto error;
+		      break;
+		    case 4:
+		      VALIDATE_BYTE(0xf0, 0x80); /* 0x80 ... 0x8f */
+		      break;
+		    default:
+		      VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+		    }
+		  p++;
+		  VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
 		}
 	      else
 		goto error;
-	      
-	      p++;
-	      CONTINUATION_CHAR;
-	    TWO_REMAINING:
-	      p++;
-	      CONTINUATION_CHAR;
-	      p++;
-	      CONTINUATION_CHAR;
-	      
-	      if (G_UNLIKELY (val < min))
-		goto error;
-	      if (G_UNLIKELY (!UNICODE_VALID(val)))
-		goto error;
-	    } 
-	  
+	    }
+
+	  p++;
+	  VALIDATE_BYTE(0xc0, 0x80); /* 10xxxxxx */
+
 	  continue;
-	  
+
 	error:
 	  return last;
 	}
@@ -1589,7 +1665,7 @@ fast_validate_len (const char *str,
  * g_utf8_validate:
  * @str: (array length=max_len) (element-type guint8): a pointer to character data
  * @max_len: max bytes to validate, or -1 to go until NUL
- * @end: (allow-none) (out) (transfer none): return location for end of valid data
+ * @end: (out) (optional) (transfer none): return location for end of valid data
  * 
  * Validates UTF-8 encoded text. @str is the text to validate;
  * if @str is nul-terminated, then @max_len can be -1, otherwise
@@ -1600,15 +1676,15 @@ fast_validate_len (const char *str,
  * being validated otherwise).
  *
  * Note that g_utf8_validate() returns %FALSE if @max_len is 
- * positive and any of the @max_len bytes are NUL.
+ * positive and any of the @max_len bytes are nul.
  *
  * Returns %TRUE if all of @str was valid. Many GLib and GTK+
- * routines <emphasis>require</emphasis> valid UTF-8 as input;
- * so data read from a file or the network should be checked
- * with g_utf8_validate() before doing anything else with it.
+ * routines require valid UTF-8 as input; so data read from a file
+ * or the network should be checked with g_utf8_validate() before
+ * doing anything else with it.
  * 
- * Return value: %TRUE if the text was valid UTF-8
- **/
+ * Returns: %TRUE if the text was valid UTF-8
+ */
 gboolean
 g_utf8_validate (const char   *str,
 		 gssize        max_len,    
@@ -1617,16 +1693,48 @@ g_utf8_validate (const char   *str,
 {
   const gchar *p;
 
-  if (max_len < 0)
-    p = fast_validate (str);
-  else
-    p = fast_validate_len (str, max_len);
+  if (max_len >= 0)
+    return g_utf8_validate_len (str, max_len, end);
+
+  p = fast_validate (str);
 
   if (end)
     *end = p;
 
-  if ((max_len >= 0 && p != str + max_len) ||
-      (max_len < 0 && *p != '\0'))
+  if (*p != '\0')
+    return FALSE;
+  else
+    return TRUE;
+}
+
+/**
+ * g_utf8_validate_len:
+ * @str: (array length=max_len) (element-type guint8): a pointer to character data
+ * @max_len: max bytes to validate
+ * @end: (out) (optional) (transfer none): return location for end of valid data
+ *
+ * Validates UTF-8 encoded text.
+ *
+ * As with g_utf8_validate(), but @max_len must be set, and hence this function
+ * will always return %FALSE if any of the bytes of @str are nul.
+ *
+ * Returns: %TRUE if the text was valid UTF-8
+ * Since: 2.60
+ */
+gboolean
+g_utf8_validate_len (const char   *str,
+                     gsize         max_len,
+                     const gchar **end)
+
+{
+  const gchar *p;
+
+  p = fast_validate_len (str, max_len);
+
+  if (end)
+    *end = p;
+
+  if (p != str + max_len)
     return FALSE;
   else
     return TRUE;
@@ -1640,7 +1748,7 @@ g_utf8_validate (const char   *str,
  * integer values of @ch will not be valid. 0 is considered a valid
  * character, though it's normally a string terminator.
  * 
- * Return value: %TRUE if @ch is a valid Unicode character
+ * Returns: %TRUE if @ch is a valid Unicode character
  **/
 gboolean
 g_unichar_validate (gunichar ch)
@@ -1652,7 +1760,7 @@ g_unichar_validate (gunichar ch)
  * g_utf8_strreverse:
  * @str: a UTF-8 encoded string
  * @len: the maximum length of @str to use, in bytes. If @len < 0,
- *       then the string is nul-terminated.
+ *     then the string is nul-terminated.
  *
  * Reverses a UTF-8 string. @str must be valid UTF-8 encoded text. 
  * (Use g_utf8_validate() on all text before trying to use UTF-8 
@@ -1668,7 +1776,7 @@ g_unichar_validate (gunichar ch)
  * newly-allocated memory, which should be freed with g_free() when
  * no longer needed. 
  *
- * Returns: a newly-allocated string which is the reverse of @str.
+ * Returns: (transfer full): a newly-allocated string which is the reverse of @str
  *
  * Since: 2.2
  */
@@ -1689,6 +1797,7 @@ g_utf8_strreverse (const gchar *str,
     {
       gchar *m, skip = g_utf8_skip[*(guchar*) p];
       r -= skip;
+      g_assert (r >= result);
       for (m = r; skip; skip--)
         *m++ = *p++;
     }
@@ -1697,19 +1806,42 @@ g_utf8_strreverse (const gchar *str,
   return result;
 }
 
-
+/**
+ * g_utf8_make_valid:
+ * @str: string to coerce into UTF-8
+ * @len: the maximum length of @str to use, in bytes. If @len < 0,
+ *     then the string is nul-terminated.
+ *
+ * If the provided string is valid UTF-8, return a copy of it. If not,
+ * return a copy in which bytes that could not be interpreted as valid Unicode
+ * are replaced with the Unicode replacement character (U+FFFD).
+ *
+ * For example, this is an appropriate function to use if you have received
+ * a string that was incorrectly declared to be UTF-8, and you need a valid
+ * UTF-8 version of it that can be logged or displayed to the user, with the
+ * assumption that it is close enough to ASCII or UTF-8 to be mostly
+ * readable as-is.
+ *
+ * Returns: (transfer full): a valid UTF-8 string whose content resembles @str
+ *
+ * Since: 2.52
+ */
 gchar *
-_g_utf8_make_valid (const gchar *name)
+g_utf8_make_valid (const gchar *str,
+                   gssize       len)
 {
   GString *string;
   const gchar *remainder, *invalid;
-  gint remaining_bytes, valid_bytes;
+  gsize remaining_bytes, valid_bytes;
 
-  g_return_val_if_fail (name != NULL, NULL);
+  g_return_val_if_fail (str != NULL, NULL);
+
+  if (len < 0)
+    len = strlen (str);
 
   string = NULL;
-  remainder = name;
-  remaining_bytes = strlen (name);
+  remainder = str;
+  remaining_bytes = len;
 
   while (remaining_bytes != 0) 
     {
@@ -1729,11 +1861,12 @@ _g_utf8_make_valid (const gchar *name)
     }
   
   if (string == NULL)
-    return g_strdup (name);
+    return g_strndup (str, len);
   
-  g_string_append (string, remainder);
+  g_string_append_len (string, remainder, remaining_bytes);
+  g_string_append_c (string, '\0');
 
   g_assert (g_utf8_validate (string->str, -1, NULL));
-  
+
   return g_string_free (string, FALSE);
 }

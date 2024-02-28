@@ -1,10 +1,12 @@
 /*
  * Copyright © 2009, 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -104,6 +104,32 @@ g_delayed_settings_backend_read (GSettingsBackend   *backend,
   return result;
 }
 
+static GVariant *
+g_delayed_settings_backend_read_user_value (GSettingsBackend   *backend,
+                                            const gchar        *key,
+                                            const GVariantType *expected_type)
+{
+  GDelayedSettingsBackend *delayed = G_DELAYED_SETTINGS_BACKEND (backend);
+  gboolean value_found = FALSE;
+  gpointer result = NULL;
+
+  /* If we find an explicit NULL in our changeset then we want to return
+   * NULL (because the user value has been reset).
+   *
+   * Otherwise, chain up.
+   */
+  g_mutex_lock (&delayed->priv->lock);
+  value_found = g_tree_lookup_extended (delayed->priv->delayed, key, NULL, &result);
+  if (result)
+    g_variant_ref (result);
+  g_mutex_unlock (&delayed->priv->lock);
+
+  if (value_found)
+    return result;
+
+  return g_settings_backend_read_user_value (delayed->priv->backend, key, expected_type);
+}
+
 static gboolean
 g_delayed_settings_backend_write (GSettingsBackend *backend,
                                   const gchar      *key,
@@ -132,7 +158,8 @@ add_to_tree (gpointer key,
              gpointer value,
              gpointer user_data)
 {
-  g_tree_insert (user_data, g_strdup (key), g_variant_ref (value));
+  /* A value may be %NULL if its key has been reset */
+  g_tree_insert (user_data, g_strdup (key), (value != NULL) ? g_variant_ref (value) : NULL);
   return FALSE;
 }
 
@@ -179,6 +206,8 @@ g_delayed_settings_backend_reset (GSettingsBackend *backend,
   was_empty = g_tree_nnodes (delayed->priv->delayed) == 0;
   g_tree_insert (delayed->priv->delayed, g_strdup (key), NULL);
   g_mutex_unlock (&delayed->priv->lock);
+
+  g_settings_backend_changed (backend, key, origin_tag);
 
   if (was_empty)
     g_delayed_settings_backend_notify_unapplied (delayed);
@@ -282,8 +311,8 @@ static void
 delayed_backend_keys_changed (GObject             *target,
                               GSettingsBackend    *backend,
                               const gchar         *path,
-                              const gchar * const *items,
-                              gpointer             origin_tag)
+                              gpointer             origin_tag,
+                              const gchar * const *items)
 {
   GDelayedSettingsBackend *delayed = G_DELAYED_SETTINGS_BACKEND (target);
 
@@ -377,7 +406,7 @@ delayed_backend_path_writable_changed (GObject          *target,
 
   if (n_keys > 0)
     {
-      CheckPrefixState state = { path, g_new (const gchar *, n_keys) };
+      CheckPrefixState state = { path, g_new (const gchar *, n_keys), 0 };
       gsize i;
 
       /* collect a list of possibly-affected keys (ie: matching the path) */
@@ -429,6 +458,7 @@ g_delayed_settings_backend_class_init (GDelayedSettingsBackendClass *class)
   GObjectClass *object_class = G_OBJECT_CLASS (class);
 
   backend_class->read = g_delayed_settings_backend_read;
+  backend_class->read_user_value = g_delayed_settings_backend_read_user_value;
   backend_class->write = g_delayed_settings_backend_write;
   backend_class->write_tree = g_delayed_settings_backend_write_tree;
   backend_class->reset = g_delayed_settings_backend_reset;

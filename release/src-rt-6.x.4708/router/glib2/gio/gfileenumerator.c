@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -43,7 +43,7 @@ struct _GFileEnumeratorPrivate {
  * @short_description: Enumerated Files Routines
  * @include: gio/gio.h
  * 
- * #GFileEnumerator allows you to operate on a set of #GFile<!-- -->s, 
+ * #GFileEnumerator allows you to operate on a set of #GFiles, 
  * returning a #GFileInfo structure for each file enumerated (e.g. 
  * g_file_enumerate_children() will return a #GFileEnumerator for each 
  * of the children within a directory).
@@ -51,7 +51,7 @@ struct _GFileEnumeratorPrivate {
  * To get the next file's information from a #GFileEnumerator, use 
  * g_file_enumerator_next_file() or its asynchronous version, 
  * g_file_enumerator_next_files_async(). Note that the asynchronous 
- * version will return a list of #GFileInfo<!---->s, whereas the 
+ * version will return a list of #GFileInfos, whereas the 
  * synchronous will only return the next file in the enumerator.
  *
  * The ordering of returned files is unspecified for non-Unix
@@ -178,7 +178,7 @@ g_file_enumerator_init (GFileEnumerator *enumerator)
 /**
  * g_file_enumerator_next_file:
  * @enumerator: a #GFileEnumerator.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Returns information for the next file in the enumerated object.
@@ -193,8 +193,9 @@ g_file_enumerator_init (GFileEnumerator *enumerator)
  * enumerator is at the end, %NULL will be returned and @error will
  * be unset.
  *
- * Return value: (transfer full): A #GFileInfo or %NULL on error or end of enumerator.
- *    Free the returned object with g_object_unref() when no longer needed.
+ * Returns: (nullable) (transfer full): A #GFileInfo or %NULL on error
+ *    or end of enumerator.  Free the returned object with
+ *    g_object_unref() when no longer needed.
  **/
 GFileInfo *
 g_file_enumerator_next_file (GFileEnumerator *enumerator,
@@ -246,7 +247,7 @@ g_file_enumerator_next_file (GFileEnumerator *enumerator,
 /**
  * g_file_enumerator_close:
  * @enumerator: a #GFileEnumerator.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore. 
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Releases all resources used by this enumerator, making the
@@ -256,7 +257,7 @@ g_file_enumerator_next_file (GFileEnumerator *enumerator,
  * is dropped, but you might want to call this function to make 
  * sure resources are released as early as possible.
  *
- * Return value: #TRUE on success or #FALSE on error.
+ * Returns: #TRUE on success or #FALSE on error.
  **/
 gboolean
 g_file_enumerator_close (GFileEnumerator  *enumerator,
@@ -311,16 +312,15 @@ next_async_callback_wrapper (GObject      *source_object,
  * g_file_enumerator_next_files_async:
  * @enumerator: a #GFileEnumerator.
  * @num_files: the number of file info objects to request
- * @io_priority: the <link linkend="io-priority">io priority</link>
- *     of the request. 
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
  * Request information for a number of files from the enumerator asynchronously.
  * When all i/o for the operation is finished the @callback will be called with
  * the requested information. 
-
+ *
  * See the documentation of #GFileEnumerator for information about the
  * order of returned files.
  *
@@ -398,7 +398,7 @@ g_file_enumerator_next_files_async (GFileEnumerator     *enumerator,
  * 
  * Finishes the asynchronous operation started with g_file_enumerator_next_files_async().
  * 
- * Returns: (transfer full) (element-type Gio.FileInfo): a #GList of #GFileInfo<!---->s. You must free the list with 
+ * Returns: (transfer full) (element-type Gio.FileInfo): a #GList of #GFileInfos. You must free the list with 
  *     g_list_free() and unref the infos with g_object_unref() when you're 
  *     done with them.
  **/
@@ -438,9 +438,8 @@ close_async_callback_wrapper (GObject      *source_object,
 /**
  * g_file_enumerator_close_async:
  * @enumerator: a #GFileEnumerator.
- * @io_priority: the <link linkend="io-priority">I/O priority</link> 
- *     of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore. 
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -577,6 +576,126 @@ g_file_enumerator_set_pending (GFileEnumerator *enumerator,
 }
 
 /**
+ * g_file_enumerator_iterate:
+ * @direnum: an open #GFileEnumerator
+ * @out_info: (out) (transfer none) (optional): Output location for the next #GFileInfo, or %NULL
+ * @out_child: (out) (transfer none) (optional): Output location for the next #GFile, or %NULL
+ * @cancellable: a #GCancellable
+ * @error: a #GError
+ *
+ * This is a version of g_file_enumerator_next_file() that's easier to
+ * use correctly from C programs.  With g_file_enumerator_next_file(),
+ * the gboolean return value signifies "end of iteration or error", which
+ * requires allocation of a temporary #GError.
+ *
+ * In contrast, with this function, a %FALSE return from
+ * g_file_enumerator_iterate() *always* means
+ * "error".  End of iteration is signaled by @out_info or @out_child being %NULL.
+ *
+ * Another crucial difference is that the references for @out_info and
+ * @out_child are owned by @direnum (they are cached as hidden
+ * properties).  You must not unref them in your own code.  This makes
+ * memory management significantly easier for C code in combination
+ * with loops.
+ *
+ * Finally, this function optionally allows retrieving a #GFile as
+ * well.
+ *
+ * You must specify at least one of @out_info or @out_child.
+ *
+ * The code pattern for correctly using g_file_enumerator_iterate() from C
+ * is:
+ *
+ * |[
+ * direnum = g_file_enumerate_children (file, ...);
+ * while (TRUE)
+ *   {
+ *     GFileInfo *info;
+ *     if (!g_file_enumerator_iterate (direnum, &info, NULL, cancellable, error))
+ *       goto out;
+ *     if (!info)
+ *       break;
+ *     ... do stuff with "info"; do not unref it! ...
+ *   }
+ * 
+ * out:
+ *   g_object_unref (direnum); // Note: frees the last @info
+ * ]|
+ *
+ *
+ * Since: 2.44
+ */
+gboolean
+g_file_enumerator_iterate (GFileEnumerator  *direnum,
+                           GFileInfo       **out_info,
+                           GFile           **out_child,
+                           GCancellable     *cancellable,
+                           GError          **error)
+{
+  gboolean ret = FALSE;
+  GError *temp_error = NULL;
+  GFileInfo *ret_info = NULL;
+
+  static GQuark cached_info_quark;
+  static GQuark cached_child_quark;
+  static gsize quarks_initialized;
+
+  g_return_val_if_fail (direnum != NULL, FALSE);
+  g_return_val_if_fail (out_info != NULL || out_child != NULL, FALSE);
+
+  if (g_once_init_enter (&quarks_initialized))
+    {
+      cached_info_quark = g_quark_from_static_string ("g-cached-info");
+      cached_child_quark = g_quark_from_static_string ("g-cached-child");
+      g_once_init_leave (&quarks_initialized, 1);
+    }
+
+  ret_info = g_file_enumerator_next_file (direnum, cancellable, &temp_error);
+  if (temp_error != NULL)
+    {
+      g_propagate_error (error, temp_error);
+      goto out;
+    }
+
+  if (ret_info)
+    { 
+      if (out_child != NULL)
+        {
+          const char *name = g_file_info_get_name (ret_info);
+
+          if (G_UNLIKELY (name == NULL))
+            {
+              g_critical ("g_file_enumerator_iterate() created without standard::name");
+              g_return_val_if_reached (FALSE);
+            }
+          else
+            {
+              *out_child = g_file_get_child (g_file_enumerator_get_container (direnum), name);
+              g_object_set_qdata_full ((GObject*)direnum, cached_child_quark, *out_child, (GDestroyNotify)g_object_unref);
+            }
+        }
+      if (out_info != NULL)
+        {
+          g_object_set_qdata_full ((GObject*)direnum, cached_info_quark, ret_info, (GDestroyNotify)g_object_unref);
+          *out_info = ret_info;
+        }
+      else
+        g_object_unref (ret_info);
+    }
+  else
+    {
+      if (out_info)
+        *out_info = NULL;
+      if (out_child)
+        *out_child = NULL;
+    }
+
+  ret = TRUE;
+ out:
+  return ret;
+}
+
+/**
  * g_file_enumerator_get_container:
  * @enumerator: a #GFileEnumerator
  *
@@ -604,8 +723,11 @@ g_file_enumerator_get_container (GFileEnumerator *enumerator)
  * directory of @enumerator.  This function is primarily intended to be used
  * inside loops with g_file_enumerator_next_file().
  *
+ * To use this, %G_FILE_ATTRIBUTE_STANDARD_NAME must have been listed in the
+ * attributes list used when creating the #GFileEnumerator.
+ *
  * This is a convenience method that's equivalent to:
- * |[
+ * |[<!-- language="C" -->
  *   gchar *name = g_file_info_get_name (info);
  *   GFile *child = g_file_get_child (g_file_enumerator_get_container (enumr),
  *                                    name);
@@ -619,10 +741,20 @@ GFile *
 g_file_enumerator_get_child (GFileEnumerator *enumerator,
                              GFileInfo       *info)
 {
-  g_return_val_if_fail (G_IS_FILE_ENUMERATOR (enumerator), NULL);
+  const gchar *name;
 
-  return g_file_get_child (enumerator->priv->container,
-                           g_file_info_get_name (info));
+  g_return_val_if_fail (G_IS_FILE_ENUMERATOR (enumerator), NULL);
+  g_return_val_if_fail (G_IS_FILE_INFO (info), NULL);
+
+  name = g_file_info_get_name (info);
+
+  if (G_UNLIKELY (name == NULL))
+    {
+      g_critical ("GFileEnumerator created without standard::name");
+      g_return_val_if_reached (NULL);
+    }
+
+  return g_file_get_child (enumerator->priv->container, name);
 }
 
 static void
@@ -673,7 +805,10 @@ next_files_thread (GTask        *task,
     }
 
   if (error)
-    g_task_return_error (task, error);
+    {
+      g_list_free_full (files, g_object_unref);
+      g_task_return_error (task, error);
+    }
   else
     g_task_return_pointer (task, files, (GDestroyNotify)next_async_op_free);
 }
@@ -689,6 +824,7 @@ g_file_enumerator_real_next_files_async (GFileEnumerator     *enumerator,
   GTask *task;
 
   task = g_task_new (enumerator, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_file_enumerator_real_next_files_async);
   g_task_set_task_data (task, GINT_TO_POINTER (num_files), NULL);
   g_task_set_priority (task, io_priority);
 
@@ -735,6 +871,7 @@ g_file_enumerator_real_close_async (GFileEnumerator     *enumerator,
   GTask *task;
 
   task = g_task_new (enumerator, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_file_enumerator_real_close_async);
   g_task_set_priority (task, io_priority);
   
   g_task_run_in_thread (task, close_async_thread);

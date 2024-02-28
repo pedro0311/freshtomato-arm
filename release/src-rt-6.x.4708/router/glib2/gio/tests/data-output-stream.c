@@ -166,9 +166,11 @@ test_data_array (guchar *buffer, gsize len,
     case TEST_DATA_INT16:
     case TEST_DATA_UINT16:
       g_assert_cmpint (len % 2, ==, 0);
+      G_GNUC_FALLTHROUGH;
     case TEST_DATA_INT32:
     case TEST_DATA_UINT32:
       g_assert_cmpint (len % 4, ==, 0);
+      G_GNUC_FALLTHROUGH;
     case TEST_DATA_INT64:
     case TEST_DATA_UINT64:
       g_assert_cmpint (len % 8, ==, 0);
@@ -450,6 +452,7 @@ test_truncate (void)
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, len);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 0x01);
   g_assert_cmpint (stream_data[1], ==, 0x23);
   g_assert_cmpint (stream_data[2], ==, 0x45);
@@ -461,6 +464,7 @@ test_truncate (void)
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 4);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 0x01);
   g_assert_cmpint (stream_data[1], ==, 0x23);
   g_assert_cmpint (stream_data[2], ==, 0x45);
@@ -471,7 +475,8 @@ test_truncate (void)
   g_assert_no_error (error);
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 6);
-  g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 6);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 0x01);
   g_assert_cmpint (stream_data[1], ==, 0x23);
   g_assert_cmpint (stream_data[2], ==, 0x45);
@@ -483,6 +488,7 @@ test_truncate (void)
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 2);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 2);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 0x01);
   g_assert_cmpint (stream_data[1], ==, 0x23);
 

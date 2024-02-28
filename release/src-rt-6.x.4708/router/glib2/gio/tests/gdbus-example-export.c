@@ -28,7 +28,7 @@ enum
 };
 
 static GType my_object_get_type (void);
-G_DEFINE_TYPE (MyObject, my_object, G_TYPE_OBJECT);
+G_DEFINE_TYPE (MyObject, my_object, G_TYPE_OBJECT)
 
 static void
 my_object_finalize (GObject *object)
@@ -225,7 +225,8 @@ static const GDBusInterfaceVTable interface_vtable =
 {
   handle_method_call,
   handle_get_property,
-  handle_set_property
+  handle_set_property,
+  { 0 }
 };
 
 static void

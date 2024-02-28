@@ -4,10 +4,12 @@
  *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -34,6 +34,7 @@
 #include "gfileenumerator.h"
 #include "gfileinfo.h"
 #include "glibintl.h"
+#include "glib-private.h"
 
 
 /**
@@ -42,10 +43,14 @@
  * @include: gio/gio.h
  *
  * A content type is a platform specific string that defines the type
- * of a file. On UNIX it is a <ulink url="http://www.wikipedia.org/wiki/Internet_media_type">mime type</ulink> like "text/plain" or "image/png".
- * On Win32 it is an extension string like ".doc", ".txt" or a perceived
- * string like "audio". Such strings can be looked up in the registry at
- * HKEY_CLASSES_ROOT.
+ * of a file. On UNIX it is a
+ * [MIME type](http://www.wikipedia.org/wiki/Internet_media_type)
+ * like `text/plain` or `image/png`.
+ * On Win32 it is an extension string like `.doc`, `.txt` or a perceived
+ * string like `audio`. Such strings can be looked up in the registry at
+ * `HKEY_CLASSES_ROOT`.
+ * On macOS it is a [Uniform Type Identifier](https://en.wikipedia.org/wiki/Uniform_Type_Identifier)
+ * such as `com.apple.application`.
  **/
 
 #include <dirent.h>
@@ -53,7 +58,14 @@
 #define XDG_PREFIX _gio_xdg
 #include "xdgmime/xdgmime.h"
 
-/* We lock this mutex whenever we modify global state in this module.  */
+static void tree_magic_schedule_reload (void);
+
+/* We lock this mutex whenever we modify global state in this module.
+ * Taking and releasing this lock should always be associated with a pair of
+ * g_begin_ignore_leaks()/g_end_ignore_leaks() calls, as any call into xdgmime
+ * could trigger xdg_mime_init(), which makes a number of one-time allocations
+ * which GLib can never free as it doesn’t know when is suitable to call
+ * xdg_mime_shutdown(). */
 G_LOCK_DEFINE_STATIC (gio_xdgmime);
 
 gsize
@@ -62,7 +74,9 @@ _g_unix_content_type_get_sniff_len (void)
   gsize size;
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   size = xdg_mime_get_max_buffer_extents ();
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return size;
@@ -74,7 +88,9 @@ _g_unix_content_type_unalias (const gchar *type)
   gchar *res;
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   res = g_strdup (xdg_mime_unalias_mime_type (type));
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return res;
@@ -91,6 +107,7 @@ _g_unix_content_type_get_parents (const gchar *type)
   array = g_ptr_array_new ();
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
 
   umime = xdg_mime_unalias_mime_type (type);
 
@@ -102,11 +119,112 @@ _g_unix_content_type_get_parents (const gchar *type)
 
   free (parents);
 
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   g_ptr_array_add (array, NULL);
 
   return (gchar **)g_ptr_array_free (array, FALSE);
+}
+
+G_LOCK_DEFINE_STATIC (global_mime_dirs);
+static gchar **global_mime_dirs = NULL;
+
+static void
+_g_content_type_set_mime_dirs_locked (const char * const *dirs)
+{
+  g_clear_pointer (&global_mime_dirs, g_strfreev);
+
+  if (dirs != NULL)
+    {
+      global_mime_dirs = g_strdupv ((gchar **) dirs);
+    }
+  else
+    {
+      GPtrArray *mime_dirs = g_ptr_array_new_with_free_func (g_free);
+      const gchar * const *system_dirs = g_get_system_data_dirs ();
+
+      g_ptr_array_add (mime_dirs, g_build_filename (g_get_user_data_dir (), "mime", NULL));
+      for (; *system_dirs != NULL; system_dirs++)
+        g_ptr_array_add (mime_dirs, g_build_filename (*system_dirs, "mime", NULL));
+      g_ptr_array_add (mime_dirs, NULL);  /* NULL terminator */
+
+      global_mime_dirs = (gchar **) g_ptr_array_free (mime_dirs, FALSE);
+    }
+
+  xdg_mime_set_dirs ((const gchar * const *) global_mime_dirs);
+  tree_magic_schedule_reload ();
+}
+
+/**
+ * g_content_type_set_mime_dirs:
+ * @dirs: (array zero-terminated=1) (nullable): %NULL-terminated list of
+ *    directories to load MIME data from, including any `mime/` subdirectory,
+ *    and with the first directory to try listed first
+ *
+ * Set the list of directories used by GIO to load the MIME database.
+ * If @dirs is %NULL, the directories used are the default:
+ *
+ *  - the `mime` subdirectory of the directory in `$XDG_DATA_HOME`
+ *  - the `mime` subdirectory of every directory in `$XDG_DATA_DIRS`
+ *
+ * This function is intended to be used when writing tests that depend on
+ * information stored in the MIME database, in order to control the data.
+ *
+ * Typically, in case your tests use %G_TEST_OPTION_ISOLATE_DIRS, but they
+ * depend on the system’s MIME database, you should call this function
+ * with @dirs set to %NULL before calling g_test_init(), for instance:
+ *
+ * |[<!-- language="C" -->
+ *   // Load MIME data from the system
+ *   g_content_type_set_mime_dirs (NULL);
+ *   // Isolate the environment
+ *   g_test_init (&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
+ *
+ *   …
+ *
+ *   return g_test_run ();
+ * ]|
+ *
+ * Since: 2.60
+ */
+/*< private >*/
+void
+g_content_type_set_mime_dirs (const gchar * const *dirs)
+{
+  G_LOCK (global_mime_dirs);
+  _g_content_type_set_mime_dirs_locked (dirs);
+  G_UNLOCK (global_mime_dirs);
+}
+
+/**
+ * g_content_type_get_mime_dirs:
+ *
+ * Get the list of directories which MIME data is loaded from. See
+ * g_content_type_set_mime_dirs() for details.
+ *
+ * Returns: (transfer none) (array zero-terminated=1): %NULL-terminated list of
+ *    directories to load MIME data from, including any `mime/` subdirectory,
+ *    and with the first directory to try listed first
+ * Since: 2.60
+ */
+/*< private >*/
+const gchar * const *
+g_content_type_get_mime_dirs (void)
+{
+  const gchar * const *mime_dirs;
+
+  G_LOCK (global_mime_dirs);
+
+  if (global_mime_dirs == NULL)
+    _g_content_type_set_mime_dirs_locked (NULL);
+
+  mime_dirs = (const gchar * const *) global_mime_dirs;
+
+  G_UNLOCK (global_mime_dirs);
+
+  g_assert (mime_dirs != NULL);
+  return mime_dirs;
 }
 
 /**
@@ -129,7 +247,9 @@ g_content_type_equals (const gchar *type1,
   g_return_val_if_fail (type2 != NULL, FALSE);
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   res = xdg_mime_mime_type_equal (type1, type2);
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return res;
@@ -155,10 +275,32 @@ g_content_type_is_a (const gchar *type,
   g_return_val_if_fail (supertype != NULL, FALSE);
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   res = xdg_mime_mime_type_subclass (type, supertype);
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return res;
+}
+
+/**
+ * g_content_type_is_mime_type:
+ * @type: a content type string
+ * @mime_type: a mime type string
+ *
+ * Determines if @type is a subset of @mime_type.
+ * Convenience wrapper around g_content_type_is_a().
+ *
+ * Returns: %TRUE if @type is a kind of @mime_type,
+ *     %FALSE otherwise.
+ *
+ * Since: 2.52
+ */
+gboolean
+g_content_type_is_mime_type (const gchar *type,
+                             const gchar *mime_type)
+{
+  return g_content_type_is_a (type, mime_type);
 }
 
 /**
@@ -167,7 +309,8 @@ g_content_type_is_a (const gchar *type,
  *
  * Checks if the content type is the generic "unknown" type.
  * On UNIX this is the "application/octet-stream" mimetype,
- * while on win32 it is "*".
+ * while on win32 it is "*" and on OSX it is a dynamic type
+ * or octet-stream.
  *
  * Returns: %TRUE if the type is the unknown type.
  */
@@ -280,17 +423,19 @@ load_comment_for_mime_helper (const char *dir,
   GMarkupParser parser = {
     mime_info_start_element,
     mime_info_end_element,
-    mime_info_text
+    mime_info_text,
+    NULL,
+    NULL
   };
 
-  filename = g_build_filename (dir, "mime", basename, NULL);
+  filename = g_build_filename (dir, basename, NULL);
 
   res = g_file_get_contents (filename,  &data,  &len,  NULL);
   g_free (filename);
   if (!res)
     return NULL;
 
-  context = g_markup_parse_context_new   (&parser, 0, &parse_data, NULL);
+  context = g_markup_parse_context_new (&parser, G_MARKUP_DEFAULT_FLAGS, &parse_data, NULL);
   res = g_markup_parse_context_parse (context, data, len, NULL);
   g_free (data);
   g_markup_parse_context_free (context);
@@ -305,22 +450,14 @@ load_comment_for_mime_helper (const char *dir,
 static char *
 load_comment_for_mime (const char *mimetype)
 {
-  const char * const* dirs;
+  const char * const *dirs;
   char *basename;
   char *comment;
-  int i;
+  gsize i;
 
   basename = g_strdup_printf ("%s.xml", mimetype);
 
-  comment = load_comment_for_mime_helper (g_get_user_data_dir (), basename);
-  if (comment)
-    {
-      g_free (basename);
-      return comment;
-    }
-
-  dirs = g_get_system_data_dirs ();
-
+  dirs = g_content_type_get_mime_dirs ();
   for (i = 0; dirs[i] != NULL; i++)
     {
       comment = load_comment_for_mime_helper (dirs[i], basename);
@@ -348,32 +485,40 @@ gchar *
 g_content_type_get_description (const gchar *type)
 {
   static GHashTable *type_comment_cache = NULL;
+  gchar *type_copy = NULL;
   gchar *comment;
 
   g_return_val_if_fail (type != NULL, NULL);
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   type = xdg_mime_unalias_mime_type (type);
+  g_end_ignore_leaks ();
 
   if (type_comment_cache == NULL)
     type_comment_cache = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 
   comment = g_hash_table_lookup (type_comment_cache, type);
   comment = g_strdup (comment);
-  G_UNLOCK (gio_xdgmime);
 
   if (comment != NULL)
-    return comment;
+    {
+      G_UNLOCK (gio_xdgmime);
+      return g_steal_pointer (&comment);
+    }
 
-  comment = load_comment_for_mime (type);
+  type_copy = g_strdup (type);
 
+  G_UNLOCK (gio_xdgmime);
+  comment = load_comment_for_mime (type_copy);
   G_LOCK (gio_xdgmime);
+
   g_hash_table_insert (type_comment_cache,
-                       g_strdup (type),
+                       g_steal_pointer (&type_copy),
                        g_strdup (comment));
   G_UNLOCK (gio_xdgmime);
 
-  return comment;
+  return g_steal_pointer (&comment);
 }
 
 /**
@@ -382,8 +527,8 @@ g_content_type_get_description (const gchar *type)
  *
  * Gets the mime type for the content type, if one is registered.
  *
- * Returns: (allow-none): the registered mime type for the given @type,
- *     or %NULL if unknown.
+ * Returns: (nullable) (transfer full): the registered mime type for the
+ *     given @type, or %NULL if unknown; free with g_free().
  */
 char *
 g_content_type_get_mime_type (const char *type)
@@ -393,7 +538,6 @@ g_content_type_get_mime_type (const char *type)
   return g_strdup (type);
 }
 
-
 static GIcon *
 g_content_type_get_icon_internal (const gchar *type,
                                   gboolean     symbolic)
@@ -401,52 +545,48 @@ g_content_type_get_icon_internal (const gchar *type,
   char *mimetype_icon;
   char *generic_mimetype_icon = NULL;
   char *q;
-  char *xdg_mimetype_icon = NULL;
-  char *xdg_mimetype_generic_icon;
-  char *icon_names[3];
+  char *icon_names[6];
   int n = 0;
   GIcon *themed_icon;
-  const char *file_template;
   const char  *xdg_icon;
+  int i;
 
   g_return_val_if_fail (type != NULL, NULL);
 
-  if (symbolic)
-    {
-      file_template = "%s-symbolic";
-    }
-  else
-    {
-      file_template = "%s";
-    }
-
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   xdg_icon = xdg_mime_get_icon (type);
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
-  if (xdg_icon != NULL)
-    xdg_mimetype_icon = g_strdup_printf (file_template, xdg_icon);
 
-  if (xdg_mimetype_icon)
-    icon_names[n++] = xdg_mimetype_icon;
+  if (xdg_icon)
+    icon_names[n++] = g_strdup (xdg_icon);
 
-  mimetype_icon = g_strdup_printf (file_template, type);
+  mimetype_icon = g_strdup (type);
   while ((q = strchr (mimetype_icon, '/')) != NULL)
     *q = '-';
 
   icon_names[n++] = mimetype_icon;
 
-  xdg_mimetype_generic_icon = g_content_type_get_generic_icon_name (type);
-  if (xdg_mimetype_generic_icon)
-    generic_mimetype_icon = g_strdup_printf (file_template, xdg_mimetype_generic_icon);
+  generic_mimetype_icon = g_content_type_get_generic_icon_name (type);
   if (generic_mimetype_icon)
     icon_names[n++] = generic_mimetype_icon;
 
+  if (symbolic)
+    {
+      for (i = 0; i < n; i++)
+        {
+          icon_names[n + i] = icon_names[i];
+          icon_names[i] = g_strconcat (icon_names[i], "-symbolic", NULL);
+        }
+
+      n += n;
+    }
+
   themed_icon = g_themed_icon_new_from_names (icon_names, n);
 
-  g_free (xdg_mimetype_icon);
-  g_free (xdg_mimetype_generic_icon);
-  g_free (mimetype_icon);
-  g_free (generic_mimetype_icon);
+  for (i = 0; i < n; i++)
+    g_free (icon_names[i]);
 
   return themed_icon;
 }
@@ -489,10 +629,11 @@ g_content_type_get_symbolic_icon (const gchar *type)
  *
  * Gets the generic icon name for a content type.
  *
- * See the <ulink url="http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec">shared-mime-info</ulink>
+ * See the
+ * [shared-mime-info](http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec)
  * specification for more on the generic icon name.
  *
- * Returns: (allow-none): the registered generic icon name for the given @type,
+ * Returns: (nullable): the registered generic icon name for the given @type,
  *     or %NULL if unknown. Free with g_free()
  *
  * Since: 2.34
@@ -503,8 +644,12 @@ g_content_type_get_generic_icon_name (const gchar *type)
   const gchar *xdg_icon_name;
   gchar *icon_name;
 
+  g_return_val_if_fail (type != NULL, NULL);
+
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   xdg_icon_name = xdg_mime_get_generic_icon (type);
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   if (!xdg_icon_name)
@@ -575,8 +720,8 @@ looks_like_text (const guchar *data, gsize data_size)
  *
  * Tries to find a content type based on the mime type name.
  *
- * Returns: (allow-none): Newly allocated string with content type
- *     or %NULL. Free with g_free()
+ * Returns: (nullable): Newly allocated string with content type or
+ *     %NULL. Free with g_free()
  *
  * Since: 2.18
  **/
@@ -588,8 +733,10 @@ g_content_type_from_mime_type (const gchar *mime_type)
   g_return_val_if_fail (mime_type != NULL, NULL);
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
   /* mime type and content type are same on unixes */
   umime = g_strdup (xdg_mime_unalias_mime_type (mime_type));
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return umime;
@@ -597,10 +744,10 @@ g_content_type_from_mime_type (const gchar *mime_type)
 
 /**
  * g_content_type_guess:
- * @filename: (allow-none): a string, or %NULL
- * @data: (allow-none) (array length=data_size): a stream of data, or %NULL
+ * @filename: (nullable) (type filename): a path, or %NULL
+ * @data: (nullable) (array length=data_size): a stream of data, or %NULL
  * @data_size: the size of @data
- * @result_uncertain: (allow-none) (out): return location for the certainty
+ * @result_uncertain: (out) (optional): return location for the certainty
  *     of the result, or %NULL
  *
  * Guesses the content type based on example data. If the function is
@@ -636,11 +783,12 @@ g_content_type_guess (const gchar  *filename,
   g_return_val_if_fail (data_size != (gsize) -1, g_strdup (XDG_MIME_TYPE_UNKNOWN));
 
   G_LOCK (gio_xdgmime);
+  g_begin_ignore_leaks ();
 
   if (filename)
     {
       i = strlen (filename);
-      if (filename[i - 1] == '/')
+      if (i > 0 && filename[i - 1] == '/')
         {
           name_mimetypes[0] = "inode/directory";
           name_mimetypes[1] = NULL;
@@ -660,6 +808,7 @@ g_content_type_guess (const gchar  *filename,
   if (n_name_mimetypes == 1)
     {
       gchar *s = g_strdup (name_mimetypes[0]);
+      g_end_ignore_leaks ();
       G_UNLOCK (gio_xdgmime);
       return s;
     }
@@ -728,6 +877,7 @@ g_content_type_guess (const gchar  *filename,
         }
     }
 
+  g_end_ignore_leaks ();
   G_UNLOCK (gio_xdgmime);
 
   return mimetype;
@@ -763,10 +913,10 @@ enumerate_mimetypes_dir (const char *dir,
 {
   DIR *d;
   struct dirent *ent;
-  char *mimedir;
+  const char *mimedir;
   char *name;
 
-  mimedir = g_build_filename (dir, "mime", NULL);
+  mimedir = dir;
 
   d = opendir (mimedir);
   if (d)
@@ -783,8 +933,6 @@ enumerate_mimetypes_dir (const char *dir,
         }
       closedir (d);
     }
-
-  g_free (mimedir);
 }
 
 /**
@@ -792,27 +940,24 @@ enumerate_mimetypes_dir (const char *dir,
  *
  * Gets a list of strings containing all the registered content types
  * known to the system. The list and its data should be freed using
- * <programlisting>
- * g_list_free_full (list, g_free);
- * </programlisting>
+ * `g_list_free_full (list, g_free)`.
  *
- * Returns: (element-type utf8) (transfer full): #GList of the registered content types
+ * Returns: (element-type utf8) (transfer full): list of the registered
+ *     content types
  */
 GList *
 g_content_types_get_registered (void)
 {
-  const char * const* dirs;
+  const char * const *dirs;
   GHashTable *mimetypes;
   GHashTableIter iter;
   gpointer key;
-  int i;
+  gsize i;
   GList *l;
 
   mimetypes = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
 
-  enumerate_mimetypes_dir (g_get_user_data_dir (), mimetypes);
-  dirs = g_get_system_data_dirs ();
-
+  dirs = g_content_type_get_mime_dirs ();
   for (i = 0; dirs[i] != NULL; i++)
     enumerate_mimetypes_dir (dirs[i], mimetypes);
 
@@ -887,6 +1032,8 @@ parse_header (gchar *line)
 
   line[len - 1] = 0;
   s = strchr (line, ':');
+  if (s == NULL)
+    return NULL;
 
   match = g_slice_new0 (TreeMatch);
   match->priority = atoi (line + 1);
@@ -915,9 +1062,13 @@ parse_match_line (gchar *line,
     {
       *depth = atoi (line);
       s = strchr (line, '>');
+      if (s == NULL)
+        goto handle_error;
     }
   s += 2;
   p = strchr (s, '"');
+  if (p == NULL)
+    goto handle_error;
   *p = 0;
 
   matchlet->path = g_strdup (s);
@@ -948,6 +1099,10 @@ parse_match_line (gchar *line,
   g_strfreev (parts);
 
   return matchlet;
+
+handle_error:
+  g_slice_free (TreeMatchlet, matchlet);
+  return NULL;
 }
 
 static gint
@@ -1009,12 +1164,12 @@ read_tree_magic_from_directory (const gchar *prefix)
   gchar *text;
   gsize len;
   gchar **lines;
-  gint i;
+  gsize i;
   TreeMatch *match;
   TreeMatchlet *matchlet;
   gint depth;
 
-  filename = g_build_filename (prefix, "mime", "treemagic", NULL);
+  filename = g_build_filename (prefix, "treemagic", NULL);
 
   if (g_file_get_contents (filename, &text, &len, NULL))
     {
@@ -1024,22 +1179,31 @@ read_tree_magic_from_directory (const gchar *prefix)
           match = NULL;
           for (i = 0; lines[i] && lines[i][0]; i++)
             {
-              if (lines[i][0] == '[')
+              if (lines[i][0] == '[' && (match = parse_header (lines[i])) != NULL)
                 {
-                  match = parse_header (lines[i]);
                   insert_match (match);
+                }
+              else if (match != NULL)
+                {
+                  matchlet = parse_match_line (lines[i], &depth);
+                  if (matchlet == NULL)
+                    {
+                      g_warning ("%s: body corrupt; skipping", filename);
+                      break;
+                    }
+                  insert_matchlet (match, matchlet, depth);
                 }
               else
                 {
-                  matchlet = parse_match_line (lines[i], &depth);
-                  insert_matchlet (match, matchlet, depth);
+                  g_warning ("%s: header corrupt; skipping", filename);
+                  break;
                 }
             }
 
           g_strfreev (lines);
         }
       else
-        g_warning ("%s: header not found, skipping\n", filename);
+        g_warning ("%s: header not found, skipping", filename);
 
       g_free (text);
     }
@@ -1047,11 +1211,16 @@ read_tree_magic_from_directory (const gchar *prefix)
   g_free (filename);
 }
 
+static void
+tree_magic_schedule_reload (void)
+{
+  need_reload = TRUE;
+}
 
 static void
 xdg_mime_reload (void *user_data)
 {
-  need_reload = TRUE;
+  tree_magic_schedule_reload ();
 }
 
 static void
@@ -1065,9 +1234,7 @@ static void
 tree_magic_init (void)
 {
   static gboolean initialized = FALSE;
-  const gchar *dir;
-  const gchar * const * dirs;
-  int i;
+  gsize i;
 
   if (!initialized)
     {
@@ -1079,14 +1246,14 @@ tree_magic_init (void)
 
   if (need_reload)
     {
+      const char * const *dirs;
+
       need_reload = FALSE;
 
       tree_magic_shutdown ();
 
-      dir = g_get_user_data_dir ();
-      read_tree_magic_from_directory (dir);
-      dirs = g_get_system_data_dirs ();
-      for (i = 0; dirs[i]; i++)
+      dirs = g_content_type_get_mime_dirs ();
+      for (i = 0; dirs[i] != NULL; i++)
         read_tree_magic_from_directory (dirs[i]);
     }
 }
@@ -1322,7 +1489,8 @@ matchlet_match (TreeMatchlet *matchlet,
             result = FALSE;
         }
 
-      g_object_unref (info);
+      if (info)
+        g_object_unref (info);
       g_object_unref (file);
     }
   while (!result);
@@ -1372,7 +1540,8 @@ match_match (TreeMatch    *match,
  *
  * The types returned all have the form x-content/foo, e.g.
  * x-content/audio-cdda (for audio CDs) or x-content/image-dcf
- * (for a camera memory card). See the <ulink url="http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec">shared-mime-info</ulink>
+ * (for a camera memory card). See the
+ * [shared-mime-info](http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec)
  * specification for more on x-content types.
  *
  * This function is useful in the implementation of

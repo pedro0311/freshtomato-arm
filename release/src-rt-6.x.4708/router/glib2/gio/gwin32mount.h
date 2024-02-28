@@ -3,10 +3,12 @@
  * Copyright (C) 2006-2007 Red Hat, Inc.
  * Copyright (C) 2008 Hans Breuer
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  *         David Zeuthen <davidz@redhat.com>
@@ -35,6 +35,7 @@ G_BEGIN_DECLS
 #define G_WIN32_MOUNT_CLASS(k)    (G_TYPE_CHECK_CLASS_CAST((k), G_TYPE_WIN32_MOUNT, GWin32MountClass))
 #define G_IS_WIN32_MOUNT(o)       (G_TYPE_CHECK_INSTANCE_TYPE ((o), G_TYPE_WIN32_MOUNT))
 #define G_IS_WIN32_MOUNT_CLASS(k) (G_TYPE_CHECK_CLASS_TYPE ((k), G_TYPE_WIN32_MOUNT))
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(GWin32Mount, g_object_unref)
 
 typedef struct _GWin32MountClass GWin32MountClass;
 

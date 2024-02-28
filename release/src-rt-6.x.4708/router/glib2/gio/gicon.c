@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -85,7 +85,7 @@ g_icon_default_init (GIconInterface *iface)
 
 /**
  * g_icon_hash:
- * @icon: #gconstpointer to an icon object.
+ * @icon: (not nullable): #gconstpointer to an icon object.
  * 
  * Gets a hash for an icon.
  *
@@ -107,8 +107,8 @@ g_icon_hash (gconstpointer icon)
 
 /**
  * g_icon_equal:
- * @icon1: (allow-none): pointer to the first #GIcon.
- * @icon2: (allow-none): pointer to the second #GIcon.
+ * @icon1: (nullable): pointer to the first #GIcon.
+ * @icon2: (nullable): pointer to the second #GIcon.
  * 
  * Checks if two icons are equal.
  * 
@@ -140,7 +140,7 @@ g_icon_to_string_tokenized (GIcon *icon, GString *s)
   GPtrArray *tokens;
   gint version;
   GIconIface *icon_iface;
-  int i;
+  guint i;
 
   g_return_val_if_fail (icon != NULL, FALSE);
   g_return_val_if_fail (G_IS_ICON (icon), FALSE);
@@ -195,23 +195,18 @@ g_icon_to_string_tokenized (GIcon *icon, GString *s)
  * The encoding of the returned string is proprietary to #GIcon except
  * in the following two cases
  *
- * <itemizedlist>
- * <listitem><para>
- *     If @icon is a #GFileIcon, the returned string is a native path
- *     (such as <literal>/path/to/my icon.png</literal>) without escaping
- *     if the #GFile for @icon is a native file.  If the file is not
- *     native, the returned string is the result of g_file_get_uri()
- *     (such as <literal>sftp://path/to/my&percnt;20icon.png</literal>).
- * </para></listitem>
- * <listitem><para>
- *    If @icon is a #GThemedIcon with exactly one name, the encoding is
- *    simply the name (such as <literal>network-server</literal>).
- * </para></listitem>
- * </itemizedlist>
+ * - If @icon is a #GFileIcon, the returned string is a native path
+ *   (such as `/path/to/my icon.png`) without escaping
+ *   if the #GFile for @icon is a native file.  If the file is not
+ *   native, the returned string is the result of g_file_get_uri()
+ *   (such as `sftp://path/to/my%20icon.png`).
+ * 
+ * - If @icon is a #GThemedIcon with exactly one name and no fallbacks,
+ *   the encoding is simply the name (such as `network-server`).
  *
  * Virtual: to_tokens
- * Returns: An allocated NUL-terminated UTF8 string or %NULL if @icon can't
- * be serialized. Use g_free() to free.
+ * Returns: (nullable): An allocated NUL-terminated UTF8 string or
+ * %NULL if @icon can't be serialized. Use g_free() to free.
  *
  * Since: 2.20
  */
@@ -244,15 +239,23 @@ g_icon_to_string (GIcon *icon)
     }
   else if (G_IS_THEMED_ICON (icon))
     {
-      const char * const *names;
+      char     **names                 = NULL;
+      gboolean   use_default_fallbacks = FALSE;
 
-      names = g_themed_icon_get_names (G_THEMED_ICON (icon));
+      g_object_get (G_OBJECT (icon),
+                    "names",                 &names,
+                    "use-default-fallbacks", &use_default_fallbacks,
+                    NULL);
+      /* Themed icon initialized with a single name and no fallbacks. */
       if (names != NULL &&
 	  names[0] != NULL &&
 	  names[0][0] != '.' && /* Allowing icons starting with dot would break G_ICON_SERIALIZATION_MAGIC0 */
 	  g_utf8_validate (names[0], -1, NULL) && /* Only return utf8 strings */
-	  names[1] == NULL)
+          names[1] == NULL &&
+          ! use_default_fallbacks)
 	ret = g_strdup (names[0]);
+
+      g_strfreev (names);
     }
 
   if (ret == NULL)
@@ -465,7 +468,7 @@ g_icon_new_for_string (const gchar   *str,
     g_set_error_literal (error,
                          G_IO_ERROR,
                          G_IO_ERROR_INVALID_ARGUMENT,
-                         _("Can't handle the supplied version of the icon encoding"));
+                         _("Can’t handle the supplied version of the icon encoding"));
 
   return icon;
 }
@@ -557,11 +560,11 @@ g_icon_deserialize_emblemed (GVariant *value)
 
 /**
  * g_icon_deserialize:
- * @value: a #GVariant created with g_icon_serialize()
+ * @value: (transfer none): a #GVariant created with g_icon_serialize()
  *
  * Deserializes a #GIcon previously serialized using g_icon_serialize().
  *
- * Returns: (transfer full): a #GIcon, or %NULL when deserialization fails.
+ * Returns: (nullable) (transfer full): a #GIcon, or %NULL when deserialization fails.
  *
  * Since: 2.38
  */
@@ -652,7 +655,7 @@ g_icon_deserialize (GVariant *value)
  * makes sense to transfer the #GVariant between processes on the same machine,
  * (as opposed to over the network), and within the same file system namespace.
  *
- * Returns: (transfer full): a #GVariant, or %NULL when serialization fails.
+ * Returns: (nullable) (transfer full): a #GVariant, or %NULL when serialization fails. The #GVariant will not be floating.
  *
  * Since: 2.38
  */

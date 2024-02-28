@@ -2,20 +2,20 @@
  *
  * Copyright (C) 2011  Collabora Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
+ * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Stef Walter <stefw@collabora.co.uk>
  */
@@ -44,13 +44,15 @@
  * HMACs should be used when producing a cookie or hash based on data
  * and a key. Simple mechanisms for using SHA1 and other algorithms to
  * digest a key and data together are vulnerable to various security
- * issues. <ulink url="http://en.wikipedia.org/wiki/HMAC">HMAC</ulink>
+ * issues.
+ * [HMAC](http://en.wikipedia.org/wiki/HMAC)
  * uses algorithms like SHA1 in a secure way to produce a digest of a
  * key and data.
  *
  * Both the key and data are arbitrary byte arrays of bytes or characters.
  *
- * Support for HMAC Digests has been added in GLib 2.30.
+ * Support for HMAC Digests has been added in GLib 2.30, and support for SHA-512
+ * in GLib 2.42. Support for SHA-384 was added in GLib 2.52.
  */
 
 struct _GHmac
@@ -81,7 +83,10 @@ struct _GHmac
  * will be closed and it won't be possible to call g_hmac_update()
  * on it anymore.
  *
- * Return value: the newly created #GHmac, or %NULL.
+ * Support for digests of type %G_CHECKSUM_SHA512 has been added in GLib 2.42.
+ * Support for %G_CHECKSUM_SHA384 was added in GLib 2.52.
+ *
+ * Returns: the newly created #GHmac, or %NULL.
  *   Use g_hmac_unref() to free the memory allocated by it.
  *
  * Since: 2.30
@@ -97,6 +102,9 @@ g_hmac_new (GChecksumType  digest_type,
   guchar *pad;
   gsize i, len;
   gsize block_size;
+  gssize block_size_signed, key_len_signed;
+
+  g_return_val_if_fail (key_len <= G_MAXSSIZE, NULL);
 
   checksum = g_checksum_new (digest_type);
   g_return_val_if_fail (checksum != NULL, NULL);
@@ -108,7 +116,11 @@ g_hmac_new (GChecksumType  digest_type,
       block_size = 64; /* RFC 2104 */
       break;
     case G_CHECKSUM_SHA256:
-      block_size = 64; /* RFC draft-kelly-ipsec-ciph-sha2-01 */
+      block_size = 64; /* RFC 4868 */
+      break;
+    case G_CHECKSUM_SHA384:
+    case G_CHECKSUM_SHA512:
+      block_size = 128; /* RFC 4868 */
       break;
     default:
       g_return_val_if_reached (NULL);
@@ -120,16 +132,16 @@ g_hmac_new (GChecksumType  digest_type,
   hmac->digesti = checksum;
   hmac->digesto = g_checksum_new (digest_type);
 
-  buffer = g_alloca (block_size);
+  buffer = g_alloca0 (block_size);
   pad = g_alloca (block_size);
-
-  memset (buffer, 0, block_size);
 
   /* If the key is too long, hash it */
   if (key_len > block_size)
     {
       len = block_size;
-      g_checksum_update (hmac->digesti, key, key_len);
+      g_assert (key_len <= G_MAXSSIZE);
+      key_len_signed = key_len;
+      g_checksum_update (hmac->digesti, key, key_len_signed);
       g_checksum_get_digest (hmac->digesti, buffer, &len);
       g_checksum_reset (hmac->digesti);
     }
@@ -140,15 +152,19 @@ g_hmac_new (GChecksumType  digest_type,
       memcpy (buffer, key, key_len);
     }
 
+  /* g_checksum_update() accepts a signed length, so build and check that. */
+  g_assert (block_size <= G_MAXSSIZE);
+  block_size_signed = block_size;
+
   /* First pad */
   for (i = 0; i < block_size; i++)
     pad[i] = 0x36 ^ buffer[i]; /* ipad value */
-  g_checksum_update (hmac->digesti, pad, block_size);
+  g_checksum_update (hmac->digesti, pad, block_size_signed);
 
   /* Second pad */
   for (i = 0; i < block_size; i++)
     pad[i] = 0x5c ^ buffer[i]; /* opad value */
-  g_checksum_update (hmac->digesto, pad, block_size);
+  g_checksum_update (hmac->digesto, pad, block_size_signed);
 
   return hmac;
 }
@@ -161,7 +177,7 @@ g_hmac_new (GChecksumType  digest_type,
  * g_hmac_get_string() or g_hmac_get_digest(), the copied
  * HMAC will be closed as well.
  *
- * Return value: the copy of the passed #GHmac. Use g_hmac_unref()
+ * Returns: the copy of the passed #GHmac. Use g_hmac_unref()
  *   when finished using it.
  *
  * Since: 2.30
@@ -190,7 +206,7 @@ g_hmac_copy (const GHmac *hmac)
  *
  * This function is MT-safe and may be called from any thread.
  *
- * Return value: the passed in #GHmac.
+ * Returns: the passed in #GHmac.
  *
  * Since: 2.30
  **/
@@ -258,14 +274,14 @@ g_hmac_update (GHmac        *hmac,
  * g_hmac_get_string:
  * @hmac: a #GHmac
  *
- * Gets the HMAC as an hexadecimal string.
+ * Gets the HMAC as a hexadecimal string.
  *
  * Once this function has been called the #GHmac can no longer be
  * updated with g_hmac_update().
  *
  * The hexadecimal characters will be lower case.
  *
- * Return value: the hexadecimal representation of the HMAC. The
+ * Returns: the hexadecimal representation of the HMAC. The
  *   returned string is owned by the HMAC and should not be modified
  *   or freed.
  *
@@ -275,11 +291,17 @@ const gchar *
 g_hmac_get_string (GHmac *hmac)
 {
   guint8 *buffer;
+  gssize digest_len_signed;
   gsize digest_len;
 
   g_return_val_if_fail (hmac != NULL, NULL);
 
-  digest_len = g_checksum_type_get_length (hmac->digest_type);
+  /* It shouldn’t be possible for @digest_len_signed to be negative, as
+   * `hmac->digest_type` has already been validated as being supported. */
+  digest_len_signed = g_checksum_type_get_length (hmac->digest_type);
+  g_assert (digest_len_signed >= 0);
+  digest_len = digest_len_signed;
+
   buffer = g_alloca (digest_len);
 
   /* This is only called for its side-effect of updating hmac->digesto... */
@@ -293,8 +315,8 @@ g_hmac_get_string (GHmac *hmac)
 /**
  * g_hmac_get_digest:
  * @hmac: a #GHmac
- * @buffer: output buffer
- * @digest_len: an inout parameter. The caller initializes it to the
+ * @buffer: (array length=digest_len): output buffer
+ * @digest_len: (inout): an inout parameter. The caller initializes it to the
  *   size of @buffer. After the call it contains the length of the digest
  *
  * Gets the digest from @checksum as a raw binary array and places it
@@ -311,15 +333,24 @@ g_hmac_get_digest (GHmac  *hmac,
                    gsize  *digest_len)
 {
   gsize len;
+  gssize len_signed;
 
   g_return_if_fail (hmac != NULL);
 
-  len = g_checksum_type_get_length (hmac->digest_type);
+  /* It shouldn’t be possible for @len_signed to be negative, as
+   * `hmac->digest_type` has already been validated as being supported. */
+  len_signed = g_checksum_type_get_length (hmac->digest_type);
+  g_assert (len_signed >= 0);
+  len = len_signed;
+
+  /* @buffer must be long enough for the digest */
   g_return_if_fail (*digest_len >= len);
 
   /* Use the same buffer, because we can :) */
   g_checksum_get_digest (hmac->digesti, buffer, &len);
-  g_checksum_update (hmac->digesto, buffer, len);
+  g_assert (len <= G_MAXSSIZE);
+  len_signed = len;
+  g_checksum_update (hmac->digesto, buffer, len_signed);
   g_checksum_get_digest (hmac->digesto, buffer, digest_len);
 }
 
@@ -328,7 +359,7 @@ g_hmac_get_digest (GHmac  *hmac,
  * @digest_type: a #GChecksumType to use for the HMAC
  * @key: (array length=key_len): the key to use in the HMAC
  * @key_len: the length of the key
- * @data: binary blob to compute the HMAC of
+ * @data: (array length=length): binary blob to compute the HMAC of
  * @length: length of @data
  *
  * Computes the HMAC for a binary @data of @length. This is a
@@ -337,7 +368,7 @@ g_hmac_get_digest (GHmac  *hmac,
  *
  * The hexadecimal string returned will be in lower case.
  *
- * Return value: the HMAC of the binary data as a string in hexadecimal.
+ * Returns: the HMAC of the binary data as a string in hexadecimal.
  *   The returned string should be freed with g_free() when done using it.
  *
  * Since: 2.30
@@ -366,6 +397,42 @@ g_compute_hmac_for_data (GChecksumType  digest_type,
 }
 
 /**
+ * g_compute_hmac_for_bytes:
+ * @digest_type: a #GChecksumType to use for the HMAC
+ * @key: the key to use in the HMAC
+ * @data: binary blob to compute the HMAC of
+ *
+ * Computes the HMAC for a binary @data. This is a
+ * convenience wrapper for g_hmac_new(), g_hmac_get_string()
+ * and g_hmac_unref().
+ *
+ * The hexadecimal string returned will be in lower case.
+ *
+ * Returns: the HMAC of the binary data as a string in hexadecimal.
+ *   The returned string should be freed with g_free() when done using it.
+ *
+ * Since: 2.50
+ */
+gchar *
+g_compute_hmac_for_bytes (GChecksumType  digest_type,
+                          GBytes        *key,
+                          GBytes        *data)
+{
+  gconstpointer byte_data;
+  gsize length;
+  gconstpointer key_data;
+  gsize key_len;
+
+  g_return_val_if_fail (data != NULL, NULL);
+  g_return_val_if_fail (key != NULL, NULL);
+
+  byte_data = g_bytes_get_data (data, &length);
+  key_data = g_bytes_get_data (key, &key_len);
+  return g_compute_hmac_for_data (digest_type, key_data, key_len, byte_data, length);
+}
+
+
+/**
  * g_compute_hmac_for_string:
  * @digest_type: a #GChecksumType to use for the HMAC
  * @key: (array length=key_len): the key to use in the HMAC
@@ -377,7 +444,7 @@ g_compute_hmac_for_data (GChecksumType  digest_type,
  *
  * The hexadecimal string returned will be in lower case.
  *
- * Return value: the HMAC as a hexadecimal string.
+ * Returns: the HMAC as a hexadecimal string.
  *     The returned string should be freed with g_free()
  *     when done using it.
  *

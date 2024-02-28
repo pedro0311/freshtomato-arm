@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,20 +15,20 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
 
 #include "config.h"
+#include <string.h>
 #include "goutputstream.h"
 #include "gcancellable.h"
 #include "gasyncresult.h"
 #include "gtask.h"
 #include "ginputstream.h"
 #include "gioerror.h"
+#include "gioprivate.h"
 #include "glibintl.h"
 #include "gpollableoutputstream.h"
 
@@ -40,7 +42,10 @@
  * (g_output_stream_flush()). 
  *
  * To copy the content of an input stream to an output stream without 
- * manually handling the reads and writes, use g_output_stream_splice(). 
+ * manually handling the reads and writes, use g_output_stream_splice().
+ *
+ * See the documentation for #GIOStream for details of thread safety of
+ * streaming APIs.
  *
  * All of these functions have async variants too.
  **/
@@ -69,6 +74,23 @@ static void     g_output_stream_real_write_async   (GOutputStream             *s
 static gssize   g_output_stream_real_write_finish  (GOutputStream             *stream,
 						    GAsyncResult              *result,
 						    GError                   **error);
+static gboolean g_output_stream_real_writev        (GOutputStream             *stream,
+						    const GOutputVector       *vectors,
+						    gsize                      n_vectors,
+						    gsize                     *bytes_written,
+						    GCancellable              *cancellable,
+						    GError                   **error);
+static void     g_output_stream_real_writev_async  (GOutputStream             *stream,
+						    const GOutputVector       *vectors,
+						    gsize                      n_vectors,
+						    int                        io_priority,
+						    GCancellable              *cancellable,
+						    GAsyncReadyCallback        callback,
+						    gpointer                   data);
+static gboolean g_output_stream_real_writev_finish (GOutputStream             *stream,
+						    GAsyncResult              *result,
+						    gsize                     *bytes_written,
+						    GError                   **error);
 static void     g_output_stream_real_splice_async  (GOutputStream             *stream,
 						    GInputStream              *source,
 						    GOutputStreamSpliceFlags   flags,
@@ -95,9 +117,17 @@ static void     g_output_stream_real_close_async   (GOutputStream             *s
 static gboolean g_output_stream_real_close_finish  (GOutputStream             *stream,
 						    GAsyncResult              *result,
 						    GError                   **error);
-static gboolean _g_output_stream_close_internal    (GOutputStream             *stream,
+static gboolean g_output_stream_internal_close     (GOutputStream             *stream,
                                                     GCancellable              *cancellable,
                                                     GError                   **error);
+static void     g_output_stream_internal_close_async (GOutputStream           *stream,
+                                                      int                      io_priority,
+                                                      GCancellable            *cancellable,
+                                                      GAsyncReadyCallback      callback,
+                                                      gpointer                 data);
+static gboolean g_output_stream_internal_close_finish (GOutputStream          *stream,
+                                                       GAsyncResult           *result,
+                                                       GError                **error);
 
 static void
 g_output_stream_dispose (GObject *object)
@@ -123,6 +153,9 @@ g_output_stream_class_init (GOutputStreamClass *klass)
   
   klass->write_async = g_output_stream_real_write_async;
   klass->write_finish = g_output_stream_real_write_finish;
+  klass->writev_fn = g_output_stream_real_writev;
+  klass->writev_async = g_output_stream_real_writev_async;
+  klass->writev_finish = g_output_stream_real_writev_finish;
   klass->splice_async = g_output_stream_real_splice_async;
   klass->splice_finish = g_output_stream_real_splice_finish;
   klass->flush_async = g_output_stream_real_flush_async;
@@ -142,7 +175,7 @@ g_output_stream_init (GOutputStream *stream)
  * @stream: a #GOutputStream.
  * @buffer: (array length=count) (element-type guint8): the buffer containing the data to write. 
  * @count: the number of bytes to write
- * @cancellable: (allow-none): optional cancellable object
+ * @cancellable: (nullable): optional cancellable object
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to write @count bytes from @buffer into the stream. Will block
@@ -168,7 +201,7 @@ g_output_stream_init (GOutputStream *stream)
  * 
  * Virtual: write_fn
  *
- * Return value: Number of bytes written, or -1 on error
+ * Returns: Number of bytes written, or -1 on error
  **/
 gssize
 g_output_stream_write (GOutputStream  *stream,
@@ -198,7 +231,7 @@ g_output_stream_write (GOutputStream  *stream,
   if (class->write_fn == NULL) 
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-                           _("Output stream doesn't implement write"));
+                           _("Output stream doesn’t implement write"));
       return -1;
     }
   
@@ -223,9 +256,9 @@ g_output_stream_write (GOutputStream  *stream,
  * @stream: a #GOutputStream.
  * @buffer: (array length=count) (element-type guint8): the buffer containing the data to write. 
  * @count: the number of bytes to write
- * @bytes_written: (out): location to store the number of bytes that was 
+ * @bytes_written: (out) (optional): location to store the number of bytes that was
  *     written to the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to write @count bytes from @buffer into the stream. Will block
@@ -238,10 +271,17 @@ g_output_stream_write (GOutputStream  *stream,
  * is set to @count.
  * 
  * If there is an error during the operation %FALSE is returned and @error
- * is set to indicate the error status, @bytes_written is updated to contain
- * the number of bytes written into the stream before the error occurred.
+ * is set to indicate the error status.
  *
- * Return value: %TRUE on success, %FALSE if there was an error
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_written will be set to the number of bytes that were
+ * successfully written before the error was encountered.  This
+ * functionality is only available from C.  If you need it from another
+ * language then you must write your own loop around
+ * g_output_stream_write().
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
  **/
 gboolean
 g_output_stream_write_all (GOutputStream  *stream,
@@ -255,7 +295,7 @@ g_output_stream_write_all (GOutputStream  *stream,
   gssize res;
 
   g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
-  g_return_val_if_fail (buffer != NULL, FALSE);
+  g_return_val_if_fail (buffer != NULL || count == 0, FALSE);
 
   _bytes_written = 0;
   while (_bytes_written < count)
@@ -268,9 +308,7 @@ g_output_stream_write_all (GOutputStream  *stream,
 	    *bytes_written = _bytes_written;
 	  return FALSE;
 	}
-      
-      if (res == 0)
-	g_warning ("Write returned zero without error");
+      g_return_val_if_fail (res > 0, FALSE);
 
       _bytes_written += res;
     }
@@ -282,24 +320,27 @@ g_output_stream_write_all (GOutputStream  *stream,
 }
 
 /**
- * g_output_stream_write_bytes:
+ * g_output_stream_writev:
  * @stream: a #GOutputStream.
- * @bytes: the #GBytes to write
- * @cancellable: (allow-none): optional cancellable object
+ * @vectors: (array length=n_vectors): the buffer containing the #GOutputVectors to write.
+ * @n_vectors: the number of vectors to write
+ * @bytes_written: (out) (optional): location to store the number of bytes that were
+ *     written to the stream
+ * @cancellable: (nullable): optional cancellable object
  * @error: location to store the error occurring, or %NULL to ignore
  *
- * Tries to write the data from @bytes into the stream. Will block
- * during the operation.
+ * Tries to write the bytes contained in the @n_vectors @vectors into the
+ * stream. Will block during the operation.
  *
- * If @bytes is 0-length, returns 0 and does nothing. A #GBytes larger
- * than %G_MAXSSIZE will cause a %G_IO_ERROR_INVALID_ARGUMENT error.
+ * If @n_vectors is 0 or the sum of all bytes in @vectors is 0, returns 0 and
+ * does nothing.
  *
  * On success, the number of bytes written to the stream is returned.
  * It is not an error if this is not the same as the requested size, as it
  * can happen e.g. on a partial I/O error, or if there is not enough
  * storage in the stream. All writes block until at least one byte
  * is written or an error occurs; 0 is never returned (unless
- * the size of @bytes is 0).
+ * @n_vectors is 0 or the sum of all bytes in @vectors is 0).
  *
  * If @cancellable is not %NULL, then the operation can be cancelled by
  * triggering the cancellable object from another thread. If the operation
@@ -307,9 +348,292 @@ g_output_stream_write_all (GOutputStream  *stream,
  * operation was partially finished when the operation was cancelled the
  * partial result will be returned, without an error.
  *
- * On error -1 is returned and @error is set accordingly.
+ * Some implementations of g_output_stream_writev() may have limitations on the
+ * aggregate buffer size, and will return %G_IO_ERROR_INVALID_ARGUMENT if these
+ * are exceeded. For example, when writing to a local file on UNIX platforms,
+ * the aggregate buffer size must not exceed %G_MAXSSIZE bytes.
  *
- * Return value: Number of bytes written, or -1 on error
+ * Virtual: writev_fn
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.60
+ */
+gboolean
+g_output_stream_writev (GOutputStream        *stream,
+		        const GOutputVector  *vectors,
+		        gsize                 n_vectors,
+		        gsize                *bytes_written,
+		        GCancellable         *cancellable,
+		        GError              **error)
+{
+  GOutputStreamClass *class;
+  gboolean res;
+  gsize _bytes_written = 0;
+
+  if (bytes_written)
+    *bytes_written = 0;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (vectors != NULL || n_vectors == 0, FALSE);
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  if (n_vectors == 0)
+    return TRUE;
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+
+  g_return_val_if_fail (class->writev_fn != NULL, FALSE);
+
+  if (!g_output_stream_set_pending (stream, error))
+    return FALSE;
+
+  if (cancellable)
+    g_cancellable_push_current (cancellable);
+
+  res = class->writev_fn (stream, vectors, n_vectors, &_bytes_written, cancellable, error);
+
+  g_warn_if_fail (res || _bytes_written == 0);
+  g_warn_if_fail (res || (error == NULL || *error != NULL));
+
+  if (cancellable)
+    g_cancellable_pop_current (cancellable);
+
+  g_output_stream_clear_pending (stream);
+
+  if (bytes_written)
+    *bytes_written = _bytes_written;
+
+  return res;
+}
+
+/**
+ * g_output_stream_writev_all:
+ * @stream: a #GOutputStream.
+ * @vectors: (array length=n_vectors): the buffer containing the #GOutputVectors to write.
+ * @n_vectors: the number of vectors to write
+ * @bytes_written: (out) (optional): location to store the number of bytes that were
+ *     written to the stream
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @error: location to store the error occurring, or %NULL to ignore
+ *
+ * Tries to write the bytes contained in the @n_vectors @vectors into the
+ * stream. Will block during the operation.
+ *
+ * This function is similar to g_output_stream_writev(), except it tries to
+ * write as many bytes as requested, only stopping on an error.
+ *
+ * On a successful write of all @n_vectors vectors, %TRUE is returned, and
+ * @bytes_written is set to the sum of all the sizes of @vectors.
+ *
+ * If there is an error during the operation %FALSE is returned and @error
+ * is set to indicate the error status.
+ *
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_written will be set to the number of bytes that were
+ * successfully written before the error was encountered.  This
+ * functionality is only available from C. If you need it from another
+ * language then you must write your own loop around
+ * g_output_stream_write().
+ *
+ * The content of the individual elements of @vectors might be changed by this
+ * function.
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.60
+ */
+gboolean
+g_output_stream_writev_all (GOutputStream  *stream,
+			    GOutputVector  *vectors,
+			    gsize           n_vectors,
+			    gsize          *bytes_written,
+			    GCancellable   *cancellable,
+			    GError        **error)
+{
+  gsize _bytes_written = 0;
+  gsize i, to_be_written = 0;
+
+  if (bytes_written)
+    *bytes_written = 0;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (vectors != NULL || n_vectors == 0, FALSE);
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  /* We can't write more than G_MAXSIZE bytes overall, otherwise we
+   * would overflow the bytes_written counter */
+  for (i = 0; i < n_vectors; i++)
+    {
+       if (to_be_written > G_MAXSIZE - vectors[i].size)
+         {
+           g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+                        _("Sum of vectors passed to %s too large"), G_STRFUNC);
+           return FALSE;
+         }
+       to_be_written += vectors[i].size;
+    }
+
+  _bytes_written = 0;
+  while (n_vectors > 0 && to_be_written > 0)
+    {
+      gsize n_written = 0;
+      gboolean res;
+
+      res = g_output_stream_writev (stream, vectors, n_vectors, &n_written, cancellable, error);
+
+      if (!res)
+        {
+          if (bytes_written)
+            *bytes_written = _bytes_written;
+          return FALSE;
+        }
+
+      g_return_val_if_fail (n_written > 0, FALSE);
+      _bytes_written += n_written;
+
+      /* skip vectors that have been written in full */
+      while (n_vectors > 0 && n_written >= vectors[0].size)
+        {
+          n_written -= vectors[0].size;
+          ++vectors;
+          --n_vectors;
+        }
+      /* skip partially written vector data */
+      if (n_written > 0 && n_vectors > 0)
+        {
+          vectors[0].size -= n_written;
+          vectors[0].buffer = ((guint8 *) vectors[0].buffer) + n_written;
+        }
+    }
+
+  if (bytes_written)
+    *bytes_written = _bytes_written;
+
+  return TRUE;
+}
+
+/**
+ * g_output_stream_printf:
+ * @stream: a #GOutputStream.
+ * @bytes_written: (out) (optional): location to store the number of bytes that was
+ *     written to the stream
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @error: location to store the error occurring, or %NULL to ignore
+ * @format: the format string. See the printf() documentation
+ * @...: the parameters to insert into the format string
+ *
+ * This is a utility function around g_output_stream_write_all(). It
+ * uses g_strdup_vprintf() to turn @format and @... into a string that
+ * is then written to @stream.
+ *
+ * See the documentation of g_output_stream_write_all() about the
+ * behavior of the actual write operation.
+ *
+ * Note that partial writes cannot be properly checked with this
+ * function due to the variable length of the written string, if you
+ * need precise control over partial write failures, you need to
+ * create you own printf()-like wrapper around g_output_stream_write()
+ * or g_output_stream_write_all().
+ *
+ * Since: 2.40
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ **/
+gboolean
+g_output_stream_printf (GOutputStream  *stream,
+                        gsize          *bytes_written,
+                        GCancellable   *cancellable,
+                        GError        **error,
+                        const gchar    *format,
+                        ...)
+{
+  va_list  args;
+  gboolean success;
+
+  va_start (args, format);
+  success = g_output_stream_vprintf (stream, bytes_written, cancellable,
+                                     error, format, args);
+  va_end (args);
+
+  return success;
+}
+
+/**
+ * g_output_stream_vprintf:
+ * @stream: a #GOutputStream.
+ * @bytes_written: (out) (optional): location to store the number of bytes that was
+ *     written to the stream
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @error: location to store the error occurring, or %NULL to ignore
+ * @format: the format string. See the printf() documentation
+ * @args: the parameters to insert into the format string
+ *
+ * This is a utility function around g_output_stream_write_all(). It
+ * uses g_strdup_vprintf() to turn @format and @args into a string that
+ * is then written to @stream.
+ *
+ * See the documentation of g_output_stream_write_all() about the
+ * behavior of the actual write operation.
+ *
+ * Note that partial writes cannot be properly checked with this
+ * function due to the variable length of the written string, if you
+ * need precise control over partial write failures, you need to
+ * create you own printf()-like wrapper around g_output_stream_write()
+ * or g_output_stream_write_all().
+ *
+ * Since: 2.40
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ **/
+gboolean
+g_output_stream_vprintf (GOutputStream  *stream,
+                         gsize          *bytes_written,
+                         GCancellable   *cancellable,
+                         GError        **error,
+                         const gchar    *format,
+                         va_list         args)
+{
+  gchar    *text;
+  gboolean  success;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+  g_return_val_if_fail (format != NULL, FALSE);
+
+  text = g_strdup_vprintf (format, args);
+  success = g_output_stream_write_all (stream,
+                                       text, strlen (text),
+                                       bytes_written, cancellable, error);
+  g_free (text);
+
+  return success;
+}
+
+/**
+ * g_output_stream_write_bytes:
+ * @stream: a #GOutputStream.
+ * @bytes: the #GBytes to write
+ * @cancellable: (nullable): optional cancellable object
+ * @error: location to store the error occurring, or %NULL to ignore
+ *
+ * A wrapper function for g_output_stream_write() which takes a
+ * #GBytes as input.  This can be more convenient for use by language
+ * bindings or in other cases where the refcounted nature of #GBytes
+ * is helpful over a bare pointer interface.
+ *
+ * However, note that this function may still perform partial writes,
+ * just like g_output_stream_write().  If that occurs, to continue
+ * writing, you will need to create a new #GBytes containing just the
+ * remaining bytes, using g_bytes_new_from_bytes(). Passing the same
+ * #GBytes instance multiple times potentially can result in duplicated
+ * data in the output stream.
+ *
+ * Returns: Number of bytes written, or -1 on error
  **/
 gssize
 g_output_stream_write_bytes (GOutputStream  *stream,
@@ -331,7 +655,7 @@ g_output_stream_write_bytes (GOutputStream  *stream,
 /**
  * g_output_stream_flush:
  * @stream: a #GOutputStream.
- * @cancellable: (allow-none): optional cancellable object
+ * @cancellable: (nullable): optional cancellable object
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Forces a write of all user-space buffered data for the given
@@ -344,7 +668,7 @@ g_output_stream_write_bytes (GOutputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned.
  *
- * Return value: %TRUE on success, %FALSE on error
+ * Returns: %TRUE on success, %FALSE on error
  **/
 gboolean
 g_output_stream_flush (GOutputStream  *stream,
@@ -383,7 +707,7 @@ g_output_stream_flush (GOutputStream  *stream,
  * @stream: a #GOutputStream.
  * @source: a #GInputStream.
  * @flags: a set of #GOutputStreamSpliceFlags.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError location to store the error occurring, or %NULL to
  * ignore.
  *
@@ -450,7 +774,7 @@ g_output_stream_real_splice (GOutputStream             *stream,
   if (class->write_fn == NULL)
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-                           _("Output stream doesn't implement write"));
+                           _("Output stream doesn’t implement write"));
       res = FALSE;
       goto notsupported;
     }
@@ -501,7 +825,8 @@ g_output_stream_real_splice (GOutputStream             *stream,
   if (flags & G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET)
     {
       /* But write errors on close are bad! */
-      res = _g_output_stream_close_internal (stream, cancellable, error);
+      if (!g_output_stream_internal_close (stream, cancellable, error))
+        res = FALSE;
     }
 
   if (res)
@@ -513,9 +838,9 @@ g_output_stream_real_splice (GOutputStream             *stream,
 /* Must always be called inside
  * g_output_stream_set_pending()/g_output_stream_clear_pending(). */
 static gboolean
-_g_output_stream_close_internal (GOutputStream  *stream,
-                                 GCancellable   *cancellable,
-                                 GError        **error)
+g_output_stream_internal_close (GOutputStream  *stream,
+                                GCancellable   *cancellable,
+                                GError        **error)
 {
   GOutputStreamClass *class;
   gboolean res;
@@ -562,7 +887,7 @@ _g_output_stream_close_internal (GOutputStream  *stream,
 /**
  * g_output_stream_close:
  * @stream: A #GOutputStream.
- * @cancellable: (allow-none): optional cancellable object
+ * @cancellable: (nullable): optional cancellable object
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Closes the stream, releasing resources related to it.
@@ -595,7 +920,7 @@ _g_output_stream_close_internal (GOutputStream  *stream,
  * cancellation (as with any error) there is no guarantee that all written
  * data will reach the target. 
  *
- * Return value: %TRUE on success, %FALSE on failure
+ * Returns: %TRUE on success, %FALSE on failure
  **/
 gboolean
 g_output_stream_close (GOutputStream  *stream,
@@ -612,7 +937,7 @@ g_output_stream_close (GOutputStream  *stream,
   if (!g_output_stream_set_pending (stream, error))
     return FALSE;
 
-  res = _g_output_stream_close_internal (stream, cancellable, error);
+  res = g_output_stream_internal_close (stream, cancellable, error);
 
   g_output_stream_clear_pending (stream);
   
@@ -653,7 +978,7 @@ async_ready_write_callback_wrapper (GObject      *source_object,
  * @buffer: (array length=count) (element-type guint8): the buffer containing the data to write. 
  * @count: the number of bytes to write
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -681,13 +1006,18 @@ async_ready_write_callback_wrapper (GObject      *source_object,
  * value) will be executed before an outstanding request with lower 
  * priority. Default priority is %G_PRIORITY_DEFAULT.
  *
- * The asyncronous methods have a default fallback that uses threads 
+ * The asynchronous methods have a default fallback that uses threads
  * to implement asynchronicity, so they are optional for inheriting 
  * classes. However, if you override one you must override all.
  *
  * For the synchronous, blocking version of this function, see 
  * g_output_stream_write().
- **/
+ *
+ * Note that no copy of @buffer will be made, so it must stay valid
+ * until @callback is called. See g_output_stream_write_bytes_async()
+ * for a #GBytes version that will automatically hold a reference to
+ * the contents (without copying) for the duration of the call.
+ */
 void
 g_output_stream_write_async (GOutputStream       *stream,
 			     const void          *buffer,
@@ -763,6 +1093,512 @@ g_output_stream_write_finish (GOutputStream  *stream,
   return g_task_propagate_int (G_TASK (result), error);
 }
 
+typedef struct
+{
+  const guint8 *buffer;
+  gsize to_write;
+  gsize bytes_written;
+} AsyncWriteAll;
+
+static void
+free_async_write_all (gpointer data)
+{
+  g_slice_free (AsyncWriteAll, data);
+}
+
+static void
+write_all_callback (GObject      *stream,
+                    GAsyncResult *result,
+                    gpointer      user_data)
+{
+  GTask *task = user_data;
+  AsyncWriteAll *data = g_task_get_task_data (task);
+
+  if (result)
+    {
+      GError *error = NULL;
+      gssize nwritten;
+
+      nwritten = g_output_stream_write_finish (G_OUTPUT_STREAM (stream), result, &error);
+
+      if (nwritten == -1)
+        {
+          g_task_return_error (task, error);
+          g_object_unref (task);
+          return;
+        }
+
+      g_assert_cmpint (nwritten, <=, data->to_write);
+      g_warn_if_fail (nwritten > 0);
+
+      data->to_write -= nwritten;
+      data->bytes_written += nwritten;
+    }
+
+  if (data->to_write == 0)
+    {
+      g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+    }
+  else
+    g_output_stream_write_async (G_OUTPUT_STREAM (stream),
+                                 data->buffer + data->bytes_written,
+                                 data->to_write,
+                                 g_task_get_priority (task),
+                                 g_task_get_cancellable (task),
+                                 write_all_callback, task);
+}
+
+static void
+write_all_async_thread (GTask        *task,
+                        gpointer      source_object,
+                        gpointer      task_data,
+                        GCancellable *cancellable)
+{
+  GOutputStream *stream = source_object;
+  AsyncWriteAll *data = task_data;
+  GError *error = NULL;
+
+  if (g_output_stream_write_all (stream, data->buffer, data->to_write, &data->bytes_written,
+                                 g_task_get_cancellable (task), &error))
+    g_task_return_boolean (task, TRUE);
+  else
+    g_task_return_error (task, error);
+}
+
+/**
+ * g_output_stream_write_all_async:
+ * @stream: A #GOutputStream
+ * @buffer: (array length=count) (element-type guint8): the buffer containing the data to write
+ * @count: the number of bytes to write
+ * @io_priority: the io priority of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
+ * @callback: (scope async): callback to call when the request is satisfied
+ * @user_data: (closure): the data to pass to callback function
+ *
+ * Request an asynchronous write of @count bytes from @buffer into
+ * the stream. When the operation is finished @callback will be called.
+ * You can then call g_output_stream_write_all_finish() to get the result of the
+ * operation.
+ *
+ * This is the asynchronous version of g_output_stream_write_all().
+ *
+ * Call g_output_stream_write_all_finish() to collect the result.
+ *
+ * Any outstanding I/O request with higher priority (lower numerical
+ * value) will be executed before an outstanding request with lower
+ * priority. Default priority is %G_PRIORITY_DEFAULT.
+ *
+ * Note that no copy of @buffer will be made, so it must stay valid
+ * until @callback is called.
+ *
+ * Since: 2.44
+ */
+void
+g_output_stream_write_all_async (GOutputStream       *stream,
+                                 const void          *buffer,
+                                 gsize                count,
+                                 int                  io_priority,
+                                 GCancellable        *cancellable,
+                                 GAsyncReadyCallback  callback,
+                                 gpointer             user_data)
+{
+  AsyncWriteAll *data;
+  GTask *task;
+
+  g_return_if_fail (G_IS_OUTPUT_STREAM (stream));
+  g_return_if_fail (buffer != NULL || count == 0);
+
+  task = g_task_new (stream, cancellable, callback, user_data);
+  data = g_slice_new0 (AsyncWriteAll);
+  data->buffer = buffer;
+  data->to_write = count;
+
+  g_task_set_source_tag (task, g_output_stream_write_all_async);
+  g_task_set_task_data (task, data, free_async_write_all);
+  g_task_set_priority (task, io_priority);
+
+  /* If async writes are going to be handled via the threadpool anyway
+   * then we may as well do it with a single dispatch instead of
+   * bouncing in and out.
+   */
+  if (g_output_stream_async_write_is_via_threads (stream))
+    {
+      g_task_run_in_thread (task, write_all_async_thread);
+      g_object_unref (task);
+    }
+  else
+    write_all_callback (G_OBJECT (stream), NULL, task);
+}
+
+/**
+ * g_output_stream_write_all_finish:
+ * @stream: a #GOutputStream
+ * @result: a #GAsyncResult
+ * @bytes_written: (out) (optional): location to store the number of bytes that was written to the stream
+ * @error: a #GError location to store the error occurring, or %NULL to ignore.
+ *
+ * Finishes an asynchronous stream write operation started with
+ * g_output_stream_write_all_async().
+ *
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_written will be set to the number of bytes that were
+ * successfully written before the error was encountered.  This
+ * functionality is only available from C.  If you need it from another
+ * language then you must write your own loop around
+ * g_output_stream_write_async().
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.44
+ **/
+gboolean
+g_output_stream_write_all_finish (GOutputStream  *stream,
+                                  GAsyncResult   *result,
+                                  gsize          *bytes_written,
+                                  GError        **error)
+{
+  GTask *task;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
+
+  task = G_TASK (result);
+
+  if (bytes_written)
+    {
+      AsyncWriteAll *data = (AsyncWriteAll *)g_task_get_task_data (task);
+
+      *bytes_written = data->bytes_written;
+    }
+
+  return g_task_propagate_boolean (task, error);
+}
+
+/**
+ * g_output_stream_writev_async:
+ * @stream: A #GOutputStream.
+ * @vectors: (array length=n_vectors): the buffer containing the #GOutputVectors to write.
+ * @n_vectors: the number of vectors to write
+ * @io_priority: the I/O priority of the request.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (scope async): callback to call when the request is satisfied
+ * @user_data: (closure): the data to pass to callback function
+ *
+ * Request an asynchronous write of the bytes contained in @n_vectors @vectors into
+ * the stream. When the operation is finished @callback will be called.
+ * You can then call g_output_stream_writev_finish() to get the result of the
+ * operation.
+ *
+ * During an async request no other sync and async calls are allowed,
+ * and will result in %G_IO_ERROR_PENDING errors.
+ *
+ * On success, the number of bytes written will be passed to the
+ * @callback. It is not an error if this is not the same as the
+ * requested size, as it can happen e.g. on a partial I/O error,
+ * but generally we try to write as many bytes as requested.
+ *
+ * You are guaranteed that this method will never fail with
+ * %G_IO_ERROR_WOULD_BLOCK — if @stream can't accept more data, the
+ * method will just wait until this changes.
+ *
+ * Any outstanding I/O request with higher priority (lower numerical
+ * value) will be executed before an outstanding request with lower
+ * priority. Default priority is %G_PRIORITY_DEFAULT.
+ *
+ * The asynchronous methods have a default fallback that uses threads
+ * to implement asynchronicity, so they are optional for inheriting
+ * classes. However, if you override one you must override all.
+ *
+ * For the synchronous, blocking version of this function, see
+ * g_output_stream_writev().
+ *
+ * Note that no copy of @vectors will be made, so it must stay valid
+ * until @callback is called.
+ *
+ * Since: 2.60
+ */
+void
+g_output_stream_writev_async (GOutputStream             *stream,
+			      const GOutputVector       *vectors,
+			      gsize                      n_vectors,
+			      int                        io_priority,
+			      GCancellable              *cancellable,
+			      GAsyncReadyCallback        callback,
+			      gpointer                   user_data)
+{
+  GOutputStreamClass *class;
+
+  g_return_if_fail (G_IS_OUTPUT_STREAM (stream));
+  g_return_if_fail (vectors != NULL || n_vectors == 0);
+  g_return_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable));
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+  g_return_if_fail (class->writev_async != NULL);
+
+  class->writev_async (stream, vectors, n_vectors, io_priority, cancellable,
+                       callback, user_data);
+}
+
+/**
+ * g_output_stream_writev_finish:
+ * @stream: a #GOutputStream.
+ * @result: a #GAsyncResult.
+ * @bytes_written: (out) (optional): location to store the number of bytes that were written to the stream
+ * @error: a #GError location to store the error occurring, or %NULL to
+ * ignore.
+ *
+ * Finishes a stream writev operation.
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.60
+ */
+gboolean
+g_output_stream_writev_finish (GOutputStream  *stream,
+                               GAsyncResult   *result,
+                               gsize          *bytes_written,
+                               GError        **error)
+{
+  GOutputStreamClass *class;
+  gboolean res;
+  gsize _bytes_written = 0;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (G_IS_ASYNC_RESULT (result), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+  g_return_val_if_fail (class->writev_finish != NULL, FALSE);
+
+  res = class->writev_finish (stream, result, &_bytes_written, error);
+
+  g_warn_if_fail (res || _bytes_written == 0);
+  g_warn_if_fail (res || (error == NULL || *error != NULL));
+
+  if (bytes_written)
+    *bytes_written = _bytes_written;
+
+  return res;
+}
+
+typedef struct
+{
+  GOutputVector *vectors;
+  gsize n_vectors; /* (unowned) */
+  gsize bytes_written;
+} AsyncWritevAll;
+
+static void
+free_async_writev_all (gpointer data)
+{
+  g_slice_free (AsyncWritevAll, data);
+}
+
+static void
+writev_all_callback (GObject      *stream,
+                     GAsyncResult *result,
+                     gpointer      user_data)
+{
+  GTask *task = user_data;
+  AsyncWritevAll *data = g_task_get_task_data (task);
+  gint priority = g_task_get_priority (task);
+  GCancellable *cancellable = g_task_get_cancellable (task);
+
+  if (result)
+    {
+      GError *error = NULL;
+      gboolean res;
+      gsize n_written = 0;
+
+      res = g_output_stream_writev_finish (G_OUTPUT_STREAM (stream), result, &n_written, &error);
+
+      if (!res)
+        {
+          g_task_return_error (task, g_steal_pointer (&error));
+          g_object_unref (task);
+          return;
+        }
+
+      g_warn_if_fail (n_written > 0);
+      data->bytes_written += n_written;
+
+      /* skip vectors that have been written in full */
+      while (data->n_vectors > 0 && n_written >= data->vectors[0].size)
+        {
+          n_written -= data->vectors[0].size;
+          ++data->vectors;
+          --data->n_vectors;
+        }
+      /* skip partially written vector data */
+      if (n_written > 0 && data->n_vectors > 0)
+        {
+          data->vectors[0].size -= n_written;
+          data->vectors[0].buffer = ((guint8 *) data->vectors[0].buffer) + n_written;
+        }
+    }
+
+  if (data->n_vectors == 0)
+    {
+      g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+    }
+  else
+    g_output_stream_writev_async (G_OUTPUT_STREAM (stream),
+                                  data->vectors,
+                                  data->n_vectors,
+                                  priority,
+                                  cancellable,
+                                  writev_all_callback, g_steal_pointer (&task));
+}
+
+static void
+writev_all_async_thread (GTask        *task,
+                         gpointer      source_object,
+                         gpointer      task_data,
+                         GCancellable *cancellable)
+{
+  GOutputStream *stream = G_OUTPUT_STREAM (source_object);
+  AsyncWritevAll *data = task_data;
+  GError *error = NULL;
+
+  if (g_output_stream_writev_all (stream, data->vectors, data->n_vectors, &data->bytes_written,
+                                  g_task_get_cancellable (task), &error))
+    g_task_return_boolean (task, TRUE);
+  else
+    g_task_return_error (task, g_steal_pointer (&error));
+}
+
+/**
+ * g_output_stream_writev_all_async:
+ * @stream: A #GOutputStream
+ * @vectors: (array length=n_vectors): the buffer containing the #GOutputVectors to write.
+ * @n_vectors: the number of vectors to write
+ * @io_priority: the I/O priority of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
+ * @callback: (scope async): callback to call when the request is satisfied
+ * @user_data: (closure): the data to pass to callback function
+ *
+ * Request an asynchronous write of the bytes contained in the @n_vectors @vectors into
+ * the stream. When the operation is finished @callback will be called.
+ * You can then call g_output_stream_writev_all_finish() to get the result of the
+ * operation.
+ *
+ * This is the asynchronous version of g_output_stream_writev_all().
+ *
+ * Call g_output_stream_writev_all_finish() to collect the result.
+ *
+ * Any outstanding I/O request with higher priority (lower numerical
+ * value) will be executed before an outstanding request with lower
+ * priority. Default priority is %G_PRIORITY_DEFAULT.
+ *
+ * Note that no copy of @vectors will be made, so it must stay valid
+ * until @callback is called. The content of the individual elements
+ * of @vectors might be changed by this function.
+ *
+ * Since: 2.60
+ */
+void
+g_output_stream_writev_all_async (GOutputStream       *stream,
+                                  GOutputVector       *vectors,
+                                  gsize                n_vectors,
+                                  int                  io_priority,
+                                  GCancellable        *cancellable,
+                                  GAsyncReadyCallback  callback,
+                                  gpointer             user_data)
+{
+  AsyncWritevAll *data;
+  GTask *task;
+  gsize i, to_be_written = 0;
+
+  g_return_if_fail (G_IS_OUTPUT_STREAM (stream));
+  g_return_if_fail (vectors != NULL || n_vectors == 0);
+  g_return_if_fail (cancellable == NULL || G_IS_CANCELLABLE (cancellable));
+
+  task = g_task_new (stream, cancellable, callback, user_data);
+  data = g_slice_new0 (AsyncWritevAll);
+  data->vectors = vectors;
+  data->n_vectors = n_vectors;
+
+  g_task_set_source_tag (task, g_output_stream_writev_all_async);
+  g_task_set_task_data (task, data, free_async_writev_all);
+  g_task_set_priority (task, io_priority);
+
+  /* We can't write more than G_MAXSIZE bytes overall, otherwise we
+   * would overflow the bytes_written counter */
+  for (i = 0; i < n_vectors; i++)
+    {
+       if (to_be_written > G_MAXSIZE - vectors[i].size)
+         {
+           g_task_return_new_error (task, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+                                    _("Sum of vectors passed to %s too large"),
+                                    G_STRFUNC);
+           g_object_unref (task);
+           return;
+         }
+       to_be_written += vectors[i].size;
+    }
+
+  /* If async writes are going to be handled via the threadpool anyway
+   * then we may as well do it with a single dispatch instead of
+   * bouncing in and out.
+   */
+  if (g_output_stream_async_writev_is_via_threads (stream))
+    {
+      g_task_run_in_thread (task, writev_all_async_thread);
+      g_object_unref (task);
+    }
+  else
+    writev_all_callback (G_OBJECT (stream), NULL, g_steal_pointer (&task));
+}
+
+/**
+ * g_output_stream_writev_all_finish:
+ * @stream: a #GOutputStream
+ * @result: a #GAsyncResult
+ * @bytes_written: (out) (optional): location to store the number of bytes that were written to the stream
+ * @error: a #GError location to store the error occurring, or %NULL to ignore.
+ *
+ * Finishes an asynchronous stream write operation started with
+ * g_output_stream_writev_all_async().
+ *
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_written will be set to the number of bytes that were
+ * successfully written before the error was encountered.  This
+ * functionality is only available from C.  If you need it from another
+ * language then you must write your own loop around
+ * g_output_stream_writev_async().
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.60
+ */
+gboolean
+g_output_stream_writev_all_finish (GOutputStream  *stream,
+                                   GAsyncResult   *result,
+                                   gsize          *bytes_written,
+                                   GError        **error)
+{
+  GTask *task;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  task = G_TASK (result);
+
+  if (bytes_written)
+    {
+      AsyncWritevAll *data = (AsyncWritevAll *)g_task_get_task_data (task);
+
+      *bytes_written = data->bytes_written;
+    }
+
+  return g_task_propagate_boolean (task, error);
+}
+
 static void
 write_bytes_callback (GObject      *stream,
                       GAsyncResult *result,
@@ -786,33 +1622,20 @@ write_bytes_callback (GObject      *stream,
  * @stream: A #GOutputStream.
  * @bytes: The bytes to write
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
- * Request an asynchronous write of the data in @bytes to the stream.
- * When the operation is finished @callback will be called. You can
- * then call g_output_stream_write_bytes_finish() to get the result of
- * the operation.
+ * This function is similar to g_output_stream_write_async(), but
+ * takes a #GBytes as input.  Due to the refcounted nature of #GBytes,
+ * this allows the stream to avoid taking a copy of the data.
  *
- * During an async request no other sync and async calls are allowed,
- * and will result in %G_IO_ERROR_PENDING errors.
- *
- * A #GBytes larger than %G_MAXSSIZE will cause a
- * %G_IO_ERROR_INVALID_ARGUMENT error.
- *
- * On success, the number of bytes written will be passed to the
- * @callback. It is not an error if this is not the same as the
- * requested size, as it can happen e.g. on a partial I/O error,
- * but generally we try to write as many bytes as requested.
- *
- * You are guaranteed that this method will never fail with
- * %G_IO_ERROR_WOULD_BLOCK - if @stream can't accept more data, the
- * method will just wait until this changes.
- *
- * Any outstanding I/O request with higher priority (lower numerical
- * value) will be executed before an outstanding request with lower
- * priority. Default priority is %G_PRIORITY_DEFAULT.
+ * However, note that this function may still perform partial writes,
+ * just like g_output_stream_write_async(). If that occurs, to continue
+ * writing, you will need to create a new #GBytes containing just the
+ * remaining bytes, using g_bytes_new_from_bytes(). Passing the same
+ * #GBytes instance multiple times potentially can result in duplicated
+ * data in the output stream.
  *
  * For the synchronous, blocking version of this function, see
  * g_output_stream_write_bytes().
@@ -832,6 +1655,7 @@ g_output_stream_write_bytes_async (GOutputStream       *stream,
   data = g_bytes_get_data (bytes, &size);
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_output_stream_write_bytes_async);
   g_task_set_task_data (task, g_bytes_ref (bytes),
                         (GDestroyNotify) g_bytes_unref);
 
@@ -899,7 +1723,7 @@ async_ready_splice_callback_wrapper (GObject      *source_object,
  * @source: a #GInputStream. 
  * @flags: a set of #GOutputStreamSpliceFlags.
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore. 
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore. 
  * @callback: (scope async): a #GAsyncReadyCallback. 
  * @user_data: (closure): user data passed to @callback.
  * 
@@ -1015,7 +1839,7 @@ async_ready_flush_callback_wrapper (GObject      *source_object,
  * g_output_stream_flush_async:
  * @stream: a #GOutputStream.
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  * 
@@ -1055,6 +1879,7 @@ g_output_stream_flush_async (GOutputStream       *stream,
   
   if (class->flush_async == NULL)
     {
+      g_output_stream_clear_pending (stream);
       g_task_return_boolean (task, TRUE);
       g_object_unref (task);
       return;
@@ -1112,8 +1937,6 @@ async_ready_close_callback_wrapper (GObject      *source_object,
                            error ? NULL : &error);
     }
 
-  g_output_stream_clear_pending (stream);
-
   if (error != NULL)
     g_task_return_error (task, error);
   else
@@ -1149,11 +1972,33 @@ async_ready_close_flushed_callback_wrapper (GObject      *source_object,
                       async_ready_close_callback_wrapper, task);
 }
 
+static void
+real_close_async_cb (GObject      *source_object,
+                     GAsyncResult *res,
+                     gpointer      user_data)
+{
+  GOutputStream *stream = G_OUTPUT_STREAM (source_object);
+  GTask *task = user_data;
+  GError *error = NULL;
+  gboolean ret;
+
+  g_output_stream_clear_pending (stream);
+
+  ret = g_output_stream_internal_close_finish (stream, res, &error);
+
+  if (error != NULL)
+    g_task_return_error (task, error);
+  else
+    g_task_return_boolean (task, ret);
+
+  g_object_unref (task);
+}
+
 /**
  * g_output_stream_close_async:
  * @stream: A #GOutputStream.
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional cancellable object
+ * @cancellable: (nullable): optional cancellable object
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -1164,7 +2009,7 @@ async_ready_close_flushed_callback_wrapper (GObject      *source_object,
  *
  * For behaviour details see g_output_stream_close().
  *
- * The asyncronous methods have a default fallback that uses threads 
+ * The asynchronous methods have a default fallback that uses threads
  * to implement asynchronicity, so they are optional for inheriting 
  * classes. However, if you override one you must override all.
  **/
@@ -1175,7 +2020,6 @@ g_output_stream_close_async (GOutputStream       *stream,
                              GAsyncReadyCallback  callback,
                              gpointer             user_data)
 {
-  GOutputStreamClass *class;
   GTask *task;
   GError *error = NULL;
 
@@ -1185,6 +2029,34 @@ g_output_stream_close_async (GOutputStream       *stream,
   g_task_set_source_tag (task, g_output_stream_close_async);
   g_task_set_priority (task, io_priority);
 
+  if (!g_output_stream_set_pending (stream, &error))
+    {
+      g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  g_output_stream_internal_close_async (stream, io_priority, cancellable,
+                                        real_close_async_cb, task);
+}
+
+/* Must always be called inside
+ * g_output_stream_set_pending()/g_output_stream_clear_pending().
+ */
+void
+g_output_stream_internal_close_async (GOutputStream       *stream,
+                                      int                  io_priority,
+                                      GCancellable        *cancellable,
+                                      GAsyncReadyCallback  callback,
+                                      gpointer             user_data)
+{
+  GOutputStreamClass *class;
+  GTask *task;
+
+  task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_output_stream_internal_close_async);
+  g_task_set_priority (task, io_priority);
+
   if (stream->priv->closed)
     {
       g_task_return_boolean (task, TRUE);
@@ -1192,13 +2064,6 @@ g_output_stream_close_async (GOutputStream       *stream,
       return;
     }
 
-  if (!g_output_stream_set_pending (stream, &error))
-    {
-      g_task_return_error (task, error);
-      g_object_unref (task);
-      return;
-    }
-  
   class = G_OUTPUT_STREAM_GET_CLASS (stream);
   stream->priv->closing = TRUE;
 
@@ -1218,6 +2083,18 @@ g_output_stream_close_async (GOutputStream       *stream,
       class->flush_async (stream, io_priority, cancellable,
                           async_ready_close_flushed_callback_wrapper, task);
     }
+}
+
+static gboolean
+g_output_stream_internal_close_finish (GOutputStream  *stream,
+                                       GAsyncResult   *result,
+                                       GError        **error)
+{
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
+  g_return_val_if_fail (g_async_result_is_tagged (result, g_output_stream_internal_close_async), FALSE);
+
+  return g_task_propagate_boolean (G_TASK (result), error);
 }
 
 /**
@@ -1287,7 +2164,7 @@ g_output_stream_is_closing (GOutputStream *stream)
  * g_output_stream_has_pending:
  * @stream: a #GOutputStream.
  * 
- * Checks if an ouput stream has pending actions.
+ * Checks if an output stream has pending actions.
  * 
  * Returns: %TRUE if @stream has pending actions. 
  **/
@@ -1309,7 +2186,7 @@ g_output_stream_has_pending (GOutputStream *stream)
  * already set or @stream is closed, it will return %FALSE and set
  * @error.
  *
- * Return value: %TRUE if pending was previously unset and is now set.
+ * Returns: %TRUE if pending was previously unset and is now set.
  **/
 gboolean
 g_output_stream_set_pending (GOutputStream *stream,
@@ -1352,6 +2229,132 @@ g_output_stream_clear_pending (GOutputStream *stream)
   stream->priv->pending = FALSE;
 }
 
+/*< internal >
+ * g_output_stream_async_write_is_via_threads:
+ * @stream: a #GOutputStream.
+ *
+ * Checks if an output stream's write_async function uses threads.
+ *
+ * Returns: %TRUE if @stream's write_async function uses threads.
+ **/
+gboolean
+g_output_stream_async_write_is_via_threads (GOutputStream *stream)
+{
+  GOutputStreamClass *class;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+
+  return (class->write_async == g_output_stream_real_write_async &&
+      !(G_IS_POLLABLE_OUTPUT_STREAM (stream) &&
+        g_pollable_output_stream_can_poll (G_POLLABLE_OUTPUT_STREAM (stream))));
+}
+
+/*< internal >
+ * g_output_stream_async_writev_is_via_threads:
+ * @stream: a #GOutputStream.
+ *
+ * Checks if an output stream's writev_async function uses threads.
+ *
+ * Returns: %TRUE if @stream's writev_async function uses threads.
+ **/
+gboolean
+g_output_stream_async_writev_is_via_threads (GOutputStream *stream)
+{
+  GOutputStreamClass *class;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+
+  return (class->writev_async == g_output_stream_real_writev_async &&
+      !(G_IS_POLLABLE_OUTPUT_STREAM (stream) &&
+        g_pollable_output_stream_can_poll (G_POLLABLE_OUTPUT_STREAM (stream))));
+}
+
+/*< internal >
+ * g_output_stream_async_close_is_via_threads:
+ * @stream: output stream
+ *
+ * Checks if an output stream's close_async function uses threads.
+ *
+ * Returns: %TRUE if @stream's close_async function uses threads.
+ **/
+gboolean
+g_output_stream_async_close_is_via_threads (GOutputStream *stream)
+{
+  GOutputStreamClass *class;
+
+  g_return_val_if_fail (G_IS_OUTPUT_STREAM (stream), FALSE);
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+
+  return class->close_async == g_output_stream_real_close_async;
+}
+
+/********************************************
+ *   Default implementation of sync ops    *
+ ********************************************/
+static gboolean
+g_output_stream_real_writev (GOutputStream         *stream,
+                             const GOutputVector   *vectors,
+                             gsize                  n_vectors,
+                             gsize                 *bytes_written,
+                             GCancellable          *cancellable,
+                             GError               **error)
+{
+  GOutputStreamClass *class;
+  gsize _bytes_written = 0;
+  gsize i;
+  GError *err = NULL;
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+
+  if (bytes_written)
+    *bytes_written = 0;
+
+  for (i = 0; i < n_vectors; i++)
+    {
+      gssize res = 0;
+
+      /* Would we overflow here? In that case simply return and let the caller
+       * handle this like a short write */
+      if (_bytes_written > G_MAXSIZE - vectors[i].size)
+        break;
+
+      res = class->write_fn (stream, vectors[i].buffer, vectors[i].size, cancellable, &err);
+
+      if (res == -1)
+        {
+          /* If we already wrote something  we handle this like a short write
+           * and assume that on the next call the same error happens again, or
+           * everything finishes successfully without data loss then
+           */
+          if (_bytes_written > 0)
+            {
+              if (bytes_written)
+                *bytes_written = _bytes_written;
+
+              g_clear_error (&err);
+              return TRUE;
+            }
+
+          g_propagate_error (error, err);
+          return FALSE;
+        }
+
+      _bytes_written += res;
+      /* if we had a short write break the loop here */
+      if ((gsize) res < vectors[i].size)
+        break;
+    }
+
+  if (bytes_written)
+    *bytes_written = _bytes_written;
+
+  return TRUE;
+}
 
 /********************************************
  *   Default implementation of async ops    *
@@ -1456,8 +2459,7 @@ g_output_stream_real_write_async (GOutputStream       *stream,
   op->buffer = buffer;
   op->count_requested = count;
 
-  if (G_IS_POLLABLE_OUTPUT_STREAM (stream) &&
-      g_pollable_output_stream_can_poll (G_POLLABLE_OUTPUT_STREAM (stream)))
+  if (!g_output_stream_async_write_is_via_threads (stream))
     write_async_pollable (G_POLLABLE_OUTPUT_STREAM (stream), task);
   else
     g_task_run_in_thread (task, write_async_thread);
@@ -1475,15 +2477,347 @@ g_output_stream_real_write_finish (GOutputStream  *stream,
 }
 
 typedef struct {
+  const GOutputVector *vectors;
+  gsize                n_vectors; /* (unowned) */
+  gsize                bytes_written;
+} WritevData;
+
+static void
+free_writev_data (WritevData *op)
+{
+  g_slice_free (WritevData, op);
+}
+
+static void
+writev_async_thread (GTask        *task,
+                     gpointer      source_object,
+                     gpointer      task_data,
+                     GCancellable *cancellable)
+{
+  GOutputStream *stream = source_object;
+  WritevData *op = task_data;
+  GOutputStreamClass *class;
+  GError *error = NULL;
+  gboolean res;
+
+  class = G_OUTPUT_STREAM_GET_CLASS (stream);
+  res = class->writev_fn (stream, op->vectors, op->n_vectors,
+                          &op->bytes_written, cancellable, &error);
+
+  g_warn_if_fail (res || op->bytes_written == 0);
+  g_warn_if_fail (res || error != NULL);
+
+  if (!res)
+    g_task_return_error (task, g_steal_pointer (&error));
+  else
+    g_task_return_boolean (task, TRUE);
+}
+
+static void writev_async_pollable (GPollableOutputStream *stream,
+                                   GTask                 *task);
+
+static gboolean
+writev_async_pollable_ready (GPollableOutputStream *stream,
+			     gpointer               user_data)
+{
+  GTask *task = user_data;
+
+  writev_async_pollable (stream, task);
+  return G_SOURCE_REMOVE;
+}
+
+static void
+writev_async_pollable (GPollableOutputStream *stream,
+                       GTask                 *task)
+{
+  GError *error = NULL;
+  WritevData *op = g_task_get_task_data (task);
+  GPollableReturn res;
+  gsize bytes_written = 0;
+
+  if (g_task_return_error_if_cancelled (task))
+    return;
+
+  res = G_POLLABLE_OUTPUT_STREAM_GET_INTERFACE (stream)->
+    writev_nonblocking (stream, op->vectors, op->n_vectors, &bytes_written, &error);
+
+  switch (res)
+    {
+    case G_POLLABLE_RETURN_WOULD_BLOCK:
+        {
+          GSource *source;
+
+          g_warn_if_fail (error == NULL);
+          g_warn_if_fail (bytes_written == 0);
+
+          source = g_pollable_output_stream_create_source (stream,
+                                                           g_task_get_cancellable (task));
+          g_task_attach_source (task, source,
+                                (GSourceFunc) writev_async_pollable_ready);
+          g_source_unref (source);
+        }
+        break;
+      case G_POLLABLE_RETURN_OK:
+        g_warn_if_fail (error == NULL);
+        op->bytes_written = bytes_written;
+        g_task_return_boolean (task, TRUE);
+        break;
+      case G_POLLABLE_RETURN_FAILED:
+        g_warn_if_fail (bytes_written == 0);
+        g_warn_if_fail (error != NULL);
+        g_task_return_error (task, g_steal_pointer (&error));
+        break;
+      default:
+        g_assert_not_reached ();
+    }
+}
+
+static void
+g_output_stream_real_writev_async (GOutputStream        *stream,
+                                   const GOutputVector  *vectors,
+                                   gsize                 n_vectors,
+                                   int                   io_priority,
+                                   GCancellable         *cancellable,
+                                   GAsyncReadyCallback   callback,
+                                   gpointer              user_data)
+{
+  GTask *task;
+  WritevData *op;
+  GError *error = NULL;
+
+  op = g_slice_new0 (WritevData);
+  task = g_task_new (stream, cancellable, callback, user_data);
+  op->vectors = vectors;
+  op->n_vectors = n_vectors;
+
+  g_task_set_check_cancellable (task, FALSE);
+  g_task_set_source_tag (task, g_output_stream_writev_async);
+  g_task_set_priority (task, io_priority);
+  g_task_set_task_data (task, op, (GDestroyNotify) free_writev_data);
+
+  if (n_vectors == 0)
+    {
+      g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+      return;
+    }
+
+  if (!g_output_stream_set_pending (stream, &error))
+    {
+      g_task_return_error (task, g_steal_pointer (&error));
+      g_object_unref (task);
+      return;
+    }
+
+  if (!g_output_stream_async_writev_is_via_threads (stream))
+    writev_async_pollable (G_POLLABLE_OUTPUT_STREAM (stream), task);
+  else
+    g_task_run_in_thread (task, writev_async_thread);
+
+  g_object_unref (task);
+}
+
+static gboolean
+g_output_stream_real_writev_finish (GOutputStream   *stream,
+                                    GAsyncResult    *result,
+                                    gsize           *bytes_written,
+                                    GError         **error)
+{
+  GTask *task;
+
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
+  g_return_val_if_fail (g_async_result_is_tagged (result, g_output_stream_writev_async), FALSE);
+
+  g_output_stream_clear_pending (stream);
+
+  task = G_TASK (result);
+
+  if (bytes_written)
+    {
+      WritevData *op = g_task_get_task_data (task);
+
+      *bytes_written = op->bytes_written;
+    }
+
+  return g_task_propagate_boolean (task, error);
+}
+
+typedef struct {
   GInputStream *source;
   GOutputStreamSpliceFlags flags;
+  guint istream_closed : 1;
+  guint ostream_closed : 1;
+  gssize n_read;
+  gssize n_written;
+  gsize bytes_copied;
+  GError *error;
+  guint8 *buffer;
 } SpliceData;
 
 static void
 free_splice_data (SpliceData *op)
 {
+  g_clear_pointer (&op->buffer, g_free);
   g_object_unref (op->source);
+  g_clear_error (&op->error);
   g_free (op);
+}
+
+static void
+real_splice_async_complete_cb (GTask *task)
+{
+  SpliceData *op = g_task_get_task_data (task);
+
+  if (op->flags & G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE &&
+      !op->istream_closed)
+    return;
+
+  if (op->flags & G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET &&
+      !op->ostream_closed)
+    return;
+
+  if (op->error != NULL)
+    {
+      g_task_return_error (task, op->error);
+      op->error = NULL;
+    }
+  else
+    {
+      g_task_return_int (task, op->bytes_copied);
+    }
+
+  g_object_unref (task);
+}
+
+static void
+real_splice_async_close_input_cb (GObject      *source,
+                                  GAsyncResult *res,
+                                  gpointer      user_data)
+{
+  GTask *task = user_data;
+  SpliceData *op = g_task_get_task_data (task);
+
+  g_input_stream_close_finish (G_INPUT_STREAM (source), res, NULL);
+  op->istream_closed = TRUE;
+
+  real_splice_async_complete_cb (task);
+}
+
+static void
+real_splice_async_close_output_cb (GObject      *source,
+                                   GAsyncResult *res,
+                                   gpointer      user_data)
+{
+  GTask *task = G_TASK (user_data);
+  SpliceData *op = g_task_get_task_data (task);
+  GError **error = (op->error == NULL) ? &op->error : NULL;
+
+  g_output_stream_internal_close_finish (G_OUTPUT_STREAM (source), res, error);
+  op->ostream_closed = TRUE;
+
+  real_splice_async_complete_cb (task);
+}
+
+static void
+real_splice_async_complete (GTask *task)
+{
+  SpliceData *op = g_task_get_task_data (task);
+  gboolean done = TRUE;
+
+  if (op->flags & G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE)
+    {
+      done = FALSE;
+      g_input_stream_close_async (op->source, g_task_get_priority (task),
+                                  g_task_get_cancellable (task),
+                                  real_splice_async_close_input_cb, task);
+    }
+
+  if (op->flags & G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET)
+    {
+      done = FALSE;
+      g_output_stream_internal_close_async (g_task_get_source_object (task),
+                                            g_task_get_priority (task),
+                                            g_task_get_cancellable (task),
+                                            real_splice_async_close_output_cb,
+                                            task);
+    }
+
+  if (done)
+    real_splice_async_complete_cb (task);
+}
+
+static void real_splice_async_read_cb (GObject      *source,
+                                       GAsyncResult *res,
+                                       gpointer      user_data);
+
+static void
+real_splice_async_write_cb (GObject      *source,
+                            GAsyncResult *res,
+                            gpointer      user_data)
+{
+  GOutputStreamClass *class;
+  GTask *task = G_TASK (user_data);
+  SpliceData *op = g_task_get_task_data (task);
+  gssize ret;
+
+  class = G_OUTPUT_STREAM_GET_CLASS (g_task_get_source_object (task));
+
+  ret = class->write_finish (G_OUTPUT_STREAM (source), res, &op->error);
+
+  if (ret == -1)
+    {
+      real_splice_async_complete (task);
+      return;
+    }
+
+  op->n_written += ret;
+  op->bytes_copied += ret;
+  if (op->bytes_copied > G_MAXSSIZE)
+    op->bytes_copied = G_MAXSSIZE;
+
+  if (op->n_written < op->n_read)
+    {
+      class->write_async (g_task_get_source_object (task),
+                          op->buffer + op->n_written,
+                          op->n_read - op->n_written,
+                          g_task_get_priority (task),
+                          g_task_get_cancellable (task),
+                          real_splice_async_write_cb, task);
+      return;
+    }
+
+  g_input_stream_read_async (op->source, op->buffer, 8192,
+                             g_task_get_priority (task),
+                             g_task_get_cancellable (task),
+                             real_splice_async_read_cb, task);
+}
+
+static void
+real_splice_async_read_cb (GObject      *source,
+                           GAsyncResult *res,
+                           gpointer      user_data)
+{
+  GOutputStreamClass *class;
+  GTask *task = G_TASK (user_data);
+  SpliceData *op = g_task_get_task_data (task);
+  gssize ret;
+
+  class = G_OUTPUT_STREAM_GET_CLASS (g_task_get_source_object (task));
+
+  ret = g_input_stream_read_finish (op->source, res, &op->error);
+  if (ret == -1 || ret == 0)
+    {
+      real_splice_async_complete (task);
+      return;
+    }
+
+  op->n_read = ret;
+  op->n_written = 0;
+
+  class->write_async (g_task_get_source_object (task), op->buffer,
+                      op->n_read, g_task_get_priority (task),
+                      g_task_get_cancellable (task),
+                      real_splice_async_write_cb, task);
 }
 
 static void
@@ -1529,11 +2863,20 @@ g_output_stream_real_splice_async (GOutputStream             *stream,
   op->flags = flags;
   op->source = g_object_ref (source);
 
-  /* TODO: In the case where both source and destintion have
-     non-threadbased async calls we can use a true async copy here */
-  
-  g_task_run_in_thread (task, splice_async_thread);
-  g_object_unref (task);
+  if (g_input_stream_async_read_is_via_threads (source) &&
+      g_output_stream_async_write_is_via_threads (stream))
+    {
+      g_task_run_in_thread (task, splice_async_thread);
+      g_object_unref (task);
+    }
+  else
+    {
+      op->buffer = g_malloc (8192);
+      g_input_stream_read_async (op->source, op->buffer, 8192,
+                                 g_task_get_priority (task),
+                                 g_task_get_cancellable (task),
+                                 real_splice_async_read_cb, task);
+    }
 }
 
 static gssize
@@ -1617,7 +2960,7 @@ close_async_thread (GTask        *task,
       result = class->flush (stream, cancellable, &error);
     }
 
-  /* Auto handling of cancelation disabled, and ignore
+  /* Auto handling of cancellation disabled, and ignore
      cancellation, since we want to close things anyway, although
      possibly in a quick-n-dirty way. At least we never want to leak
      open handles */

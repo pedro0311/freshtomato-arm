@@ -276,7 +276,8 @@ static const GDBusInterfaceVTable interface_vtable =
 {
   handle_method_call,
   handle_get_property,
-  handle_set_property
+  handle_set_property,
+  { 0 }
 };
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -315,7 +316,7 @@ on_timeout_cb (gpointer user_data)
   g_assert_no_error (error);
 
 
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 /* ---------------------------------------------------------------------------------------------------- */

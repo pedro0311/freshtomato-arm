@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -129,6 +129,8 @@ static const GDBusInterfaceInfo foo2_interface_info =
   "org.example.Foo2",
   (GDBusMethodInfo **) &foo_method_info_pointers,
   (GDBusSignalInfo **) &foo_signal_info_pointers,
+  NULL,
+  NULL
 };
 
 static void
@@ -191,7 +193,7 @@ foo_set_property (GDBusConnection       *connection,
                G_DBUS_ERROR,
                G_DBUS_ERROR_SPAWN_FILE_INVALID,
                "Returning some error instead of writing the value '%s' to the property '%s'",
-               property_name, s);
+               s, property_name);
   g_free (s);
   return FALSE;
 }
@@ -200,7 +202,8 @@ static const GDBusInterfaceVTable foo_vtable =
 {
   foo_method_call,
   foo_get_property,
-  foo_set_property
+  foo_set_property,
+  { 0 },
 };
 
 /* -------------------- */
@@ -313,7 +316,8 @@ static const GDBusInterfaceVTable dyna_interface_vtable =
 {
   dyna_cyber,
   NULL,
-  NULL
+  NULL,
+  { 0 }
 };
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -337,6 +341,22 @@ introspect_callback (GDBusProxy   *proxy,
   g_variant_unref (result);
 
   g_main_loop_quit (loop);
+}
+
+static gint
+compare_strings (gconstpointer a,
+                 gconstpointer b)
+{
+  const gchar *sa = *(const gchar **) a;
+  const gchar *sb = *(const gchar **) b;
+
+  /* Array terminator must sort last */
+  if (sa == NULL)
+    return 1;
+  if (sb == NULL)
+    return -1;
+
+  return strcmp (sa, sb);
 }
 
 static gchar **
@@ -391,6 +411,9 @@ get_nodes_at (GDBusConnection  *c,
   g_object_unref (proxy);
   g_free (xml_data);
   g_dbus_node_info_unref (node_info);
+
+  /* Nodes are semantically unordered; sort array so tests can rely on order */
+  g_ptr_array_sort (p, compare_strings);
 
   return (gchar **) g_ptr_array_free (p, FALSE);
 }
@@ -581,20 +604,6 @@ on_subtree_unregistered (gpointer user_data)
   data->num_unregistered_subtree_calls++;
 }
 
-static gboolean
-_g_strv_has_string (const gchar* const * haystack,
-                    const gchar *needle)
-{
-  guint n;
-
-  for (n = 0; haystack != NULL && haystack[n] != NULL; n++)
-    {
-      if (g_strcmp0 (haystack[n], needle) == 0)
-        return TRUE;
-    }
-  return FALSE;
-}
-
 /* -------------------- */
 
 static gchar **
@@ -654,7 +663,7 @@ subtree_introspect (GDBusConnection       *connection,
       g_assert_not_reached ();
     }
 
-  return g_memdup (interfaces, 2 * sizeof (void *));
+  return g_memdup2 (interfaces, 2 * sizeof (void *));
 }
 
 static const GDBusInterfaceVTable *
@@ -676,7 +685,8 @@ static const GDBusSubtreeVTable subtree_vtable =
 {
   subtree_enumerate,
   subtree_introspect,
-  subtree_dispatch
+  subtree_dispatch,
+  { 0 }
 };
 
 /* -------------------- */
@@ -710,7 +720,7 @@ dynamic_subtree_introspect (GDBusConnection       *connection,
 {
   const GDBusInterfaceInfo *interfaces[2] = { &dyna_interface_info, NULL };
 
-  return g_memdup (interfaces, 2 * sizeof (void *));
+  return g_memdup2 (interfaces, 2 * sizeof (void *));
 }
 
 static const GDBusInterfaceVTable *
@@ -730,15 +740,23 @@ static const GDBusSubtreeVTable dynamic_subtree_vtable =
 {
   dynamic_subtree_enumerate,
   dynamic_subtree_introspect,
-  dynamic_subtree_dispatch
+  dynamic_subtree_dispatch,
+  { 0 }
 };
 
 /* -------------------- */
 
+typedef struct
+{
+  const gchar *object_path;
+  gboolean check_remote_errors;
+} TestDispatchThreadFuncArgs;
+
 static gpointer
 test_dispatch_thread_func (gpointer user_data)
 {
-  const gchar *object_path = user_data;
+  TestDispatchThreadFuncArgs *args = user_data;
+  const gchar *object_path = args->object_path;
   GDBusProxy *foo_proxy;
   GVariant *value;
   GVariant *inner;
@@ -808,7 +826,7 @@ test_dispatch_thread_func (gpointer user_data)
                                   NULL,
                                   &error);
   g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Type of message, '(s)', does not match expected type '()'");
+  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Type of message, “(s)”, does not match expected type “()”");
   g_error_free (error);
   g_assert (value == NULL);
 
@@ -821,7 +839,7 @@ test_dispatch_thread_func (gpointer user_data)
                                   NULL,
                                   &error);
   g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_UNKNOWN_METHOD);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.UnknownMethod: No such method 'NonExistantMethod'");
+  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.UnknownMethod: No such method “NonExistantMethod”");
   g_error_free (error);
   g_assert (value == NULL);
 
@@ -869,7 +887,7 @@ test_dispatch_thread_func (gpointer user_data)
                                   &error);
   g_assert (value == NULL);
   g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: No such property 'ThisDoesntExist'");
+  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: No such property “ThisDoesntExist”");
   g_error_free (error);
 
   error = NULL;
@@ -884,7 +902,7 @@ test_dispatch_thread_func (gpointer user_data)
                                   &error);
   g_assert (value == NULL);
   g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Property 'NotReadable' is not readable");
+  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Property “NotReadable” is not readable");
   g_error_free (error);
 
   error = NULL;
@@ -899,8 +917,13 @@ test_dispatch_thread_func (gpointer user_data)
                                   NULL,
                                   &error);
   g_assert (value == NULL);
-  g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_FILE_INVALID);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.Spawn.FileInvalid: Returning some error instead of writing the value 'NotReadable' to the property ''But Writable you are!''");
+  if (args->check_remote_errors)
+    {
+      /* _with_closures variant doesn't support customizing error data. */
+      g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_SPAWN_FILE_INVALID);
+      g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.Spawn.FileInvalid: Returning some error instead of writing the value ''But Writable you are!'' to the property 'NotReadable'");
+    }
+  g_assert (error != NULL && error->domain == G_DBUS_ERROR);
   g_error_free (error);
 
   error = NULL;
@@ -916,7 +939,7 @@ test_dispatch_thread_func (gpointer user_data)
                                   &error);
   g_assert (value == NULL);
   g_assert_error (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS);
-  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Property 'NotWritable' is not writable");
+  g_assert_cmpstr (error->message, ==, "GDBus.Error:org.freedesktop.DBus.Error.InvalidArgs: Property “NotWritable” is not writable");
   g_error_free (error);
 
   error = NULL;
@@ -943,14 +966,17 @@ test_dispatch_thread_func (gpointer user_data)
 }
 
 static void
-test_dispatch (const gchar *object_path)
+test_dispatch (const gchar *object_path,
+               gboolean     check_remote_errors)
 {
   GThread *thread;
+  
+  TestDispatchThreadFuncArgs args = {object_path, check_remote_errors};
 
   /* run this in a thread to avoid deadlocks */
   thread = g_thread_new ("test_dispatch",
                          test_dispatch_thread_func,
-                         (gpointer) object_path);
+                         (gpointer) &args);
   g_main_loop_run (loop);
   g_thread_join (thread);
 }
@@ -1201,7 +1227,7 @@ test_object_registration (void)
   num_successful_registrations++;
 
   /* now register a dynamic subtree, spawning objects as they are called */
-  dyna_data = g_ptr_array_new ();
+  dyna_data = g_ptr_array_new_with_free_func (g_free);
   dyna_subtree_registration_id = g_dbus_connection_register_subtree (c,
                                                                      "/foo/dyna",
                                                                      &dynamic_subtree_vtable,
@@ -1221,15 +1247,15 @@ test_object_registration (void)
 
   /* Install three nodes in the dynamic subtree via the dyna_data backdoor and
    * assert that they show up correctly in the introspection data */
-  g_ptr_array_add (dyna_data, "lol");
-  g_ptr_array_add (dyna_data, "cat");
-  g_ptr_array_add (dyna_data, "cheezburger");
+  g_ptr_array_add (dyna_data, g_strdup ("lol"));
+  g_ptr_array_add (dyna_data, g_strdup ("cat"));
+  g_ptr_array_add (dyna_data, g_strdup ("cheezburger"));
   nodes = get_nodes_at (c, "/foo/dyna");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 3);
-  g_assert_cmpstr (nodes[0], ==, "lol");
-  g_assert_cmpstr (nodes[1], ==, "cat");
-  g_assert_cmpstr (nodes[2], ==, "cheezburger");
+  g_assert_cmpstr (nodes[0], ==, "cat");
+  g_assert_cmpstr (nodes[1], ==, "cheezburger");
+  g_assert_cmpstr (nodes[2], ==, "lol");
   g_strfreev (nodes);
   g_assert_cmpint (count_interfaces (c, "/foo/dyna/lol"), ==, 4);
   g_assert_cmpint (count_interfaces (c, "/foo/dyna/cat"), ==, 4);
@@ -1240,14 +1266,14 @@ test_object_registration (void)
   nodes = get_nodes_at (c, "/foo/dyna");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 4);
-  g_assert_cmpstr (nodes[0], ==, "lol");
-  g_assert_cmpstr (nodes[1], ==, "cat");
-  g_assert_cmpstr (nodes[2], ==, "cheezburger");
-  g_assert_cmpstr (nodes[3], ==, "dynamicallycreated");
+  g_assert_cmpstr (nodes[0], ==, "cat");
+  g_assert_cmpstr (nodes[1], ==, "cheezburger");
+  g_assert_cmpstr (nodes[2], ==, "dynamicallycreated");
+  g_assert_cmpstr (nodes[3], ==, "lol");
   g_strfreev (nodes);
   g_assert_cmpint (count_interfaces (c, "/foo/dyna/dynamicallycreated"), ==, 4);
 
-  /* now check that the object hierarachy is properly generated... yes, it's a bit
+  /* now check that the object hierarchy is properly generated... yes, it's a bit
    * perverse that we round-trip to the bus to introspect ourselves ;-)
    */
   nodes = get_nodes_at (c, "/");
@@ -1268,11 +1294,11 @@ test_object_registration (void)
   nodes = get_nodes_at (c, "/foo/boss");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 5);
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "worker1"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "worker1p1"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "worker2"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "interns"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "executives"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "worker1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "worker1p1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "worker2"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "interns"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "executives"));
   g_strfreev (nodes);
   /* any registered object always implement org.freedesktop.DBus.[Peer,Introspectable,Properties] */
   g_assert_cmpint (count_interfaces (c, "/foo/boss"), ==, 5);
@@ -1284,7 +1310,7 @@ test_object_registration (void)
    */
   nodes = get_nodes_at (c, "/foo/boss/executives");
   g_assert (nodes != NULL);
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "non_subtree_object"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "non_subtree_object"));
   g_assert_cmpint (g_strv_length (nodes), ==, 1);
   g_strfreev (nodes);
   g_assert_cmpint (count_interfaces (c, "/foo/boss/executives"), ==, 0);
@@ -1294,11 +1320,11 @@ test_object_registration (void)
   nodes = get_nodes_at (c, "/foo/boss/executives");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 5);
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "non_subtree_object"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "vp0"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "vp1"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "evp0"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "evp1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "non_subtree_object"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "vp0"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "vp1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "evp0"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "evp1"));
   /* check that /foo/boss/executives/non_subtree_object is not handled by the
    * subtree handlers - we can do this because objects from subtree handlers
    * has exactly one interface and non_subtree_object has two
@@ -1320,13 +1346,13 @@ test_object_registration (void)
   nodes = get_nodes_at (c, "/foo/boss/executives");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 7);
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "non_subtree_object"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "vp0"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "vp1"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "vp2"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "evp0"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "evp1"));
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "evp2"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "non_subtree_object"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "vp0"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "vp1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "vp2"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "evp0"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "evp1"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "evp2"));
   g_strfreev (nodes);
 
   /* This is to check that a bug (rather, class of bugs) in gdbusconnection.c's
@@ -1346,8 +1372,8 @@ test_object_registration (void)
    * We do this for both a regular registered object (/foo/boss) and also for an object
    * registered through the subtree mechanism.
    */
-  test_dispatch ("/foo/boss");
-  test_dispatch ("/foo/boss/executives/vp0");
+  test_dispatch ("/foo/boss", TRUE);
+  test_dispatch ("/foo/boss/executives/vp0", TRUE);
 
   /* To prevent from exiting and attaching a D-Bus tool like D-Feet; uncomment: */
 #if 0
@@ -1363,7 +1389,7 @@ test_object_registration (void)
   nodes = get_nodes_at (c, "/foo/boss/executives");
   g_assert (nodes != NULL);
   g_assert_cmpint (g_strv_length (nodes), ==, 1);
-  g_assert (_g_strv_has_string ((const gchar* const *) nodes, "non_subtree_object"));
+  g_assert (g_strv_contains ((const gchar* const *) nodes, "non_subtree_object"));
   g_strfreev (nodes);
 
   g_assert (g_dbus_connection_unregister_object (c, boss_foo_reg_id));
@@ -1390,6 +1416,34 @@ test_object_registration (void)
   g_assert_cmpint (g_strv_length (nodes), ==, 0);
   g_strfreev (nodes);
 #endif
+
+  g_object_unref (c);
+}
+
+static void
+test_object_registration_with_closures (void)
+{
+  GError *error;
+  guint registration_id;
+
+  error = NULL;
+  c = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
+  g_assert_no_error (error);
+  g_assert (c != NULL);
+
+  registration_id = g_dbus_connection_register_object_with_closures (c,
+                                                                     "/foo/boss",
+                                                                     (GDBusInterfaceInfo *) &foo_interface_info,
+                                                                     g_cclosure_new (G_CALLBACK (foo_method_call), NULL, NULL),
+                                                                     g_cclosure_new (G_CALLBACK (foo_get_property), NULL, NULL),
+                                                                     g_cclosure_new (G_CALLBACK (foo_set_property), NULL, NULL),
+                                                                     &error);
+  g_assert_no_error (error);
+  g_assert (registration_id > 0);
+
+  test_dispatch ("/foo/boss", FALSE);
+
+  g_assert (g_dbus_connection_unregister_object (c, registration_id));
 
   g_object_unref (c);
 }
@@ -1460,13 +1514,13 @@ check_interfaces (GDBusConnection  *c,
 #if 0
   if (g_strv_length ((gchar**)interfaces) != i - 1)
     {
-      g_print ("expected ");
+      g_printerr ("expected ");
       for (i = 0; interfaces[i]; i++)
-        g_print ("%s ", interfaces[i]);
-      g_print ("\ngot ");
+        g_printerr ("%s ", interfaces[i]);
+      g_printerr ("\ngot ");
       for (i = 0; node_info->interfaces[i]; i++)
-        g_print ("%s ", node_info->interfaces[i]->name);
-      g_print ("\n");
+        g_printerr ("%s ", node_info->interfaces[i]->name);
+      g_printerr ("\n");
     }
 #endif
   g_assert_cmpint (g_strv_length ((gchar**)interfaces), ==, i - 1);
@@ -1669,7 +1723,7 @@ test_async_properties (void)
   GError *error = NULL;
   guint registration_id, registration_id2;
   static const GDBusInterfaceVTable vtable = {
-    test_async_method_call, NULL, NULL
+    test_async_method_call, NULL, NULL, { 0 }
   };
 
   c = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &error);
@@ -1726,6 +1780,184 @@ test_async_properties (void)
   g_object_unref (c);
 }
 
+typedef struct
+{
+  GDBusConnection *connection;  /* (owned) */
+  guint registration_id;
+  guint subtree_registration_id;
+} ThreadedUnregistrationData;
+
+static gpointer
+unregister_thread_cb (gpointer user_data)
+{
+  ThreadedUnregistrationData *data = user_data;
+
+  /* Sleeping here makes the race more likely to be hit, as it balances the
+   * time taken to set up the thread and unregister, with the time taken to
+   * make and handle the D-Bus call. This will likely change with future kernel
+   * versions, but there isn’t a more deterministic synchronisation point that
+   * I can think of to use instead. */
+  usleep (330);
+
+  if (data->registration_id > 0)
+    g_assert_true (g_dbus_connection_unregister_object (data->connection, data->registration_id));
+
+  if (data->subtree_registration_id > 0)
+    g_assert_true (g_dbus_connection_unregister_subtree (data->connection, data->subtree_registration_id));
+
+  return NULL;
+}
+
+static void
+async_result_cb (GObject      *source_object,
+                 GAsyncResult *result,
+                 gpointer      user_data)
+{
+  GAsyncResult **result_out = user_data;
+
+  *result_out = g_object_ref (result);
+  g_main_context_wakeup (NULL);
+}
+
+/* Returns %TRUE if this iteration resolved the race with the unregistration
+ * first, %FALSE if the call handler was invoked first. */
+static gboolean
+test_threaded_unregistration_iteration (gboolean subtree)
+{
+  ThreadedUnregistrationData data = { NULL, 0, 0 };
+  ObjectRegistrationData object_registration_data = { 0, 0, 2 };
+  GError *local_error = NULL;
+  GThread *unregister_thread = NULL;
+  const gchar *object_path;
+  GVariant *value = NULL;
+  const gchar *value_str;
+  GAsyncResult *call_result = NULL;
+  gboolean unregistration_was_first;
+
+  data.connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, &local_error);
+  g_assert_no_error (local_error);
+  g_assert_nonnull (data.connection);
+
+  /* Register an object or a subtree */
+  if (!subtree)
+    {
+      data.registration_id = g_dbus_connection_register_object (data.connection,
+                                                                "/foo/boss",
+                                                                (GDBusInterfaceInfo *) &foo_interface_info,
+                                                                &foo_vtable,
+                                                                &object_registration_data,
+                                                                on_object_unregistered,
+                                                                &local_error);
+      g_assert_no_error (local_error);
+      g_assert_cmpint (data.registration_id, >, 0);
+
+      object_path = "/foo/boss";
+    }
+  else
+    {
+      data.subtree_registration_id = g_dbus_connection_register_subtree (data.connection,
+                                                                         "/foo/boss/executives",
+                                                                         &subtree_vtable,
+                                                                         G_DBUS_SUBTREE_FLAGS_NONE,
+                                                                         &object_registration_data,
+                                                                         on_subtree_unregistered,
+                                                                         &local_error);
+      g_assert_no_error (local_error);
+      g_assert_cmpint (data.subtree_registration_id, >, 0);
+
+      object_path = "/foo/boss/executives/vp0";
+    }
+
+  /* Allow the registrations to go through. */
+  g_main_context_iteration (NULL, FALSE);
+
+  /* Spawn a thread to unregister the object/subtree. This will race with
+   * the call we subsequently make. */
+  unregister_thread = g_thread_new ("unregister-object",
+                                    unregister_thread_cb, &data);
+
+  /* Call a method on the object (or an object in the subtree). The callback
+   * will be invoked in this main context. */
+  g_dbus_connection_call (data.connection,
+                          g_dbus_connection_get_unique_name (data.connection),
+                          object_path,
+                          "org.example.Foo",
+                          "Method1",
+                          g_variant_new ("(s)", "winwinwin"),
+                          NULL,
+                          G_DBUS_CALL_FLAGS_NONE,
+                          -1,
+                          NULL,
+                          async_result_cb,
+                          &call_result);
+
+  while (call_result == NULL)
+    g_main_context_iteration (NULL, TRUE);
+
+  value = g_dbus_connection_call_finish (data.connection, call_result, &local_error);
+
+  /* The result of the method could either be an error (that the object doesn’t
+   * exist) or a valid result, depending on how the thread was scheduled
+   * relative to the call. */
+  unregistration_was_first = (value == NULL);
+  if (value != NULL)
+    {
+      g_assert_no_error (local_error);
+      g_assert_true (g_variant_is_of_type (value, G_VARIANT_TYPE ("(s)")));
+      g_variant_get (value, "(&s)", &value_str);
+      g_assert_cmpstr (value_str, ==, "You passed the string 'winwinwin'. Jolly good!");
+    }
+  else
+    {
+      g_assert_null (value);
+      g_assert_error (local_error, G_DBUS_ERROR, G_DBUS_ERROR_UNKNOWN_METHOD);
+    }
+
+  g_clear_pointer (&value, g_variant_unref);
+  g_clear_error (&local_error);
+
+  /* Tidy up. */
+  g_thread_join (g_steal_pointer (&unregister_thread));
+
+  g_clear_object (&call_result);
+  g_clear_object (&data.connection);
+
+  return unregistration_was_first;
+}
+
+static void
+test_threaded_unregistration (gconstpointer test_data)
+{
+  gboolean subtree = GPOINTER_TO_INT (test_data);
+  guint i;
+  guint n_iterations_unregistration_first = 0;
+  guint n_iterations_call_first = 0;
+
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/-/issues/2400");
+  g_test_summary ("Test that object/subtree unregistration from one thread "
+                  "doesn’t cause problems when racing with method callbacks "
+                  "in another thread for that object or subtree");
+
+  /* Run iterations of the test until it’s likely we’ve hit the race. Limit the
+   * number of iterations so the test doesn’t run forever if not. The choice of
+   * 100 is arbitrary. */
+  for (i = 0; i < 1000 && (n_iterations_unregistration_first < 100 || n_iterations_call_first < 100); i++)
+    {
+      if (test_threaded_unregistration_iteration (subtree))
+        n_iterations_unregistration_first++;
+      else
+        n_iterations_call_first++;
+    }
+
+  /* If the condition below is met, we probably failed to reproduce the race.
+   * Don’t fail the test, though, as we can’t always control whether we hit the
+   * race, and spurious test failures are annoying. */
+  if (n_iterations_unregistration_first < 100 ||
+      n_iterations_call_first < 100)
+    g_test_skip_printf ("Failed to reproduce race (%u iterations with unregistration first, %u with call first); skipping test",
+                        n_iterations_unregistration_first, n_iterations_call_first);
+}
+
 /* ---------------------------------------------------------------------------------------------------- */
 
 int
@@ -1739,19 +1971,19 @@ main (int   argc,
   /* all the tests rely on a shared main loop */
   loop = g_main_loop_new (NULL, FALSE);
 
-  session_bus_up ();
-
   g_test_add_func ("/gdbus/object-registration", test_object_registration);
+  g_test_add_func ("/gdbus/object-registration-with-closures", test_object_registration_with_closures);
   g_test_add_func ("/gdbus/registered-interfaces", test_registered_interfaces);
   g_test_add_func ("/gdbus/async-properties", test_async_properties);
+  g_test_add_data_func ("/gdbus/threaded-unregistration/object", GINT_TO_POINTER (FALSE), test_threaded_unregistration);
+  g_test_add_data_func ("/gdbus/threaded-unregistration/subtree", GINT_TO_POINTER (TRUE), test_threaded_unregistration);
 
   /* TODO: check that we spit out correct introspection data */
   /* TODO: check that registering a whole subtree works */
 
-  ret = g_test_run();
+  ret = session_bus_run ();
 
-  /* tear down bus */
-  session_bus_down ();
+  g_main_loop_unref (loop);
 
   return ret;
 }

@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2010 Collabora, Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Nicolas Dufresne <nicolas.dufresne@collabora.co.uk>
  */
@@ -39,7 +39,7 @@ static const gchar *info = NULL;
 static GCancellable *cancellable = NULL;
 static gint return_value = 0;
 
-static void G_GNUC_NORETURN
+static G_NORETURN void
 usage (void)
 {
   fprintf (stderr, "Usage: proxy [-s] (uri|host:port|ip:port|path|srv/protocol/domain)\n");
@@ -69,9 +69,9 @@ print_and_free_error (GError *error)
 }
 
 static void
-print_proxies (const gchar *info, gchar **proxies)
+print_proxies (const gchar *local_info, gchar **proxies)
 {
-  printf ("Proxies for URI '%s' are:\n", info);
+  printf ("Proxies for URI '%s' are:\n", local_info);
 
   if (proxies == NULL || proxies[0] == NULL)
     printf ("\tnone\n");

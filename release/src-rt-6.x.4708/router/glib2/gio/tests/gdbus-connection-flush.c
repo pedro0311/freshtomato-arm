@@ -3,10 +3,12 @@
  * Copyright (C) 2008-2010 Red Hat, Inc.
  * Copyright (C) 2011 Nokia Corporation
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Simon McVittie <simon.mcvittie@collabora.co.uk>
  */
@@ -45,9 +45,9 @@ G_LOCK_DEFINE_STATIC (write);
 typedef struct {
     GFilterOutputStream parent;
 
-    volatile gint started;
-    volatile gint finished;
-    volatile gint flushed;
+    gint started;  /* (atomic) */
+    gint finished;  /* (atomic) */
+    gint flushed;  /* (atomic) */
 
     GOutputStream *real_output;
 } MyOutputStream;
@@ -181,8 +181,8 @@ setup_client_cb (GObject      *source,
 
   f->client_conn = g_dbus_connection_new_finish (res, &f->error);
   g_assert_no_error (f->error);
-  g_assert (G_IS_DBUS_CONNECTION (f->client_conn));
-  g_assert (f->client_conn == G_DBUS_CONNECTION (source));
+  g_assert_true (G_IS_DBUS_CONNECTION (f->client_conn));
+  g_assert_true (f->client_conn == G_DBUS_CONNECTION (source));
 }
 
 static void
@@ -194,8 +194,8 @@ setup_server_cb (GObject      *source,
 
   f->server_conn = g_dbus_connection_new_finish (res, &f->error);
   g_assert_no_error (f->error);
-  g_assert (G_IS_DBUS_CONNECTION (f->server_conn));
-  g_assert (f->server_conn == G_DBUS_CONNECTION (source));
+  g_assert_true (G_IS_DBUS_CONNECTION (f->server_conn));
+  g_assert_true (f->server_conn == G_DBUS_CONNECTION (source));
 }
 
 static void
@@ -208,21 +208,21 @@ setup (Fixture       *f,
 
   ok = test_pipe (&f->server_istream, &f->client_real_ostream, &f->error);
   g_assert_no_error (f->error);
-  g_assert (G_IS_OUTPUT_STREAM (f->client_real_ostream));
-  g_assert (G_IS_INPUT_STREAM (f->server_istream));
-  g_assert (ok);
+  g_assert_true (G_IS_OUTPUT_STREAM (f->client_real_ostream));
+  g_assert_true (G_IS_INPUT_STREAM (f->server_istream));
+  g_assert_true (ok);
 
   f->client_ostream = g_object_new (MY_TYPE_OUTPUT_STREAM,
                                     "base-stream", f->client_real_ostream,
                                     "close-base-stream", TRUE,
                                     NULL);
-  g_assert (G_IS_OUTPUT_STREAM (f->client_ostream));
+  g_assert_true (G_IS_OUTPUT_STREAM (f->client_ostream));
 
   ok = test_pipe (&f->client_istream, &f->server_ostream, &f->error);
   g_assert_no_error (f->error);
-  g_assert (G_IS_OUTPUT_STREAM (f->server_ostream));
-  g_assert (G_IS_INPUT_STREAM (f->client_istream));
-  g_assert (ok);
+  g_assert_true (G_IS_OUTPUT_STREAM (f->server_ostream));
+  g_assert_true (G_IS_INPUT_STREAM (f->client_istream));
+  g_assert_true (ok);
 
   f->client_stream = test_io_stream_new (f->client_istream, f->client_ostream);
   f->server_stream = test_io_stream_new (f->server_istream, f->server_ostream);
@@ -246,13 +246,13 @@ flush_cb (GObject      *source,
   Fixture *f = user_data;
   gboolean ok;
 
-  g_assert (G_IS_DBUS_CONNECTION (source));
-  g_assert (G_IS_DBUS_CONNECTION (f->client_conn));
+  g_assert_true (G_IS_DBUS_CONNECTION (source));
+  g_assert_true (G_IS_DBUS_CONNECTION (f->client_conn));
   g_assert_cmpuint ((guintptr) f->client_conn, ==, (guintptr) G_DBUS_CONNECTION (source));
 
   ok = g_dbus_connection_flush_finish (f->client_conn, res, &f->error);
   g_assert_no_error (f->error);
-  g_assert (ok);
+  g_assert_true (ok);
 
   f->flushed = TRUE;
 }
@@ -272,7 +272,7 @@ test_flush_busy (Fixture       *f,
                                       "com.example.Foo", "SomeSignal", NULL,
                                       &f->error);
   g_assert_no_error (f->error);
-  g_assert (ok);
+  g_assert_true (ok);
 
   /* wait for at least part of the message to have started writing -
    * the write will block indefinitely in the worker thread
@@ -320,7 +320,7 @@ test_flush_idle (Fixture       *f,
                                       "com.example.Foo", "SomeSignal", NULL,
                                       &f->error);
   g_assert_no_error (f->error);
-  g_assert (ok);
+  g_assert_true (ok);
 
   /* wait for at least part of the message to have been written */
   do {
@@ -370,7 +370,7 @@ main (int   argc,
 {
   gint ret;
 
-  g_test_init (&argc, &argv, NULL);
+  g_test_init (&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
 
   g_test_add ("/gdbus/connection/flush/busy", Fixture, NULL,
               setup, test_flush_busy, teardown);

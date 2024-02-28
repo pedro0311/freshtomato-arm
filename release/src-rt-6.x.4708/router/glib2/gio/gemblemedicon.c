@@ -4,10 +4,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Matthias Clasen <mclasen@redhat.com>
  *         Clemens N. Buss <cebuzz@gmail.com>
@@ -145,7 +145,7 @@ g_emblemed_icon_init (GEmblemedIcon *emblemed)
 /**
  * g_emblemed_icon_new:
  * @icon: a #GIcon
- * @emblem: (allow-none): a #GEmblem, or %NULL
+ * @emblem: (nullable): a #GEmblem, or %NULL
  *
  * Creates a new emblemed icon for @icon with the emblem @emblem.
  *
@@ -198,7 +198,7 @@ g_emblemed_icon_get_icon (GEmblemedIcon *emblemed)
  * Gets the list of emblems for the @icon.
  *
  * Returns: (element-type Gio.Emblem) (transfer none): a #GList of
- *          #GEmblem <!-- -->s that is owned by @emblemed
+ *     #GEmblems that is owned by @emblemed
  *
  * Since: 2.18
  **/
@@ -252,7 +252,7 @@ g_emblem_comp (GEmblem *a,
  * @emblemed: a #GEmblemedIcon
  * @emblem: a #GEmblem
  *
- * Adds @emblem to the #GList of #GEmblem <!-- -->s.
+ * Adds @emblem to the #GList of #GEmblems.
  *
  * Since: 2.18
  **/
@@ -361,7 +361,7 @@ g_emblemed_icon_from_tokens (gchar  **tokens,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Can't handle version %d of GEmblemedIcon encoding"),
+                   _("Can’t handle version %d of GEmblemedIcon encoding"),
                    version);
       goto fail;
     }
@@ -433,7 +433,7 @@ g_emblemed_icon_serialize (GIcon *icon)
       icon_data = g_icon_serialize (node->data);
       if (icon_data)
         {
-          /* We know how emblems serialise, so do a tweak here to
+          /* We know how emblems serialize, so do a tweak here to
            * reduce some of the variant wrapping and redundant storage
            * of 'emblem' over and again...
            */

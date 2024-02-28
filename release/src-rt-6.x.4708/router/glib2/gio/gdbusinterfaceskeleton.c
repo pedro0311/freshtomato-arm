@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -29,6 +29,7 @@
 #include "gdbusprivate.h"
 #include "gdbusmethodinvocation.h"
 #include "gdbusconnection.h"
+#include "gmarshal-internal.h"
 #include "gtask.h"
 #include "gioerror.h"
 
@@ -99,7 +100,7 @@ g_dbus_interface_skeleton_finalize (GObject *object)
 {
   GDBusInterfaceSkeleton *interface = G_DBUS_INTERFACE_SKELETON (object);
 
-  /* Hold the lock just incase any code we call verifies that the lock is held */
+  /* Hold the lock just in case any code we call verifies that the lock is held */
   g_mutex_lock (&interface->priv->lock);
 
   /* unexport from all connections if we're exported anywhere */
@@ -210,11 +211,11 @@ g_dbus_interface_skeleton_class_init (GDBusInterfaceSkeletonClass *klass)
    *
    * Note that this signal is emitted in a thread dedicated to
    * handling the method call so handlers are allowed to perform
-   * blocking IO. This means that it is appropriate to call
-   * e.g. <ulink
-   * url="http://hal.freedesktop.org/docs/polkit/PolkitAuthority.html#polkit-authority-check-authorization-sync">polkit_authority_check_authorization_sync()</ulink>
-   * with the <ulink
-   * url="http://hal.freedesktop.org/docs/polkit/PolkitAuthority.html#POLKIT-CHECK-AUTHORIZATION-FLAGS-ALLOW-USER-INTERACTION:CAPS">POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION</ulink> flag set.
+   * blocking IO. This means that it is appropriate to call e.g.
+   * [polkit_authority_check_authorization_sync()](http://hal.freedesktop.org/docs/polkit/PolkitAuthority.html#polkit-authority-check-authorization-sync)
+   * with the
+   * [POLKIT_CHECK_AUTHORIZATION_FLAGS_ALLOW_USER_INTERACTION](http://hal.freedesktop.org/docs/polkit/PolkitAuthority.html#POLKIT-CHECK-AUTHORIZATION-FLAGS-ALLOW-USER-INTERACTION:CAPS)
+   * flag set.
    *
    * If %FALSE is returned then no further handlers are run and the
    * signal handler must take a reference to @invocation and finish
@@ -244,16 +245,19 @@ g_dbus_interface_skeleton_class_init (GDBusInterfaceSkeletonClass *klass)
    * Since: 2.30
    */
   signals[G_AUTHORIZE_METHOD_SIGNAL] =
-    g_signal_new ("g-authorize-method",
+    g_signal_new (I_("g-authorize-method"),
                   G_TYPE_DBUS_INTERFACE_SKELETON,
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (GDBusInterfaceSkeletonClass, g_authorize_method),
                   _g_signal_accumulator_false_handled,
                   NULL,
-                  NULL,
+                  _g_cclosure_marshal_BOOLEAN__OBJECT,
                   G_TYPE_BOOLEAN,
                   1,
                   G_TYPE_DBUS_METHOD_INVOCATION);
+  g_signal_set_va_marshaller (signals[G_AUTHORIZE_METHOD_SIGNAL],
+                              G_TYPE_FROM_CLASS (klass),
+                              _g_cclosure_marshal_BOOLEAN__OBJECTv);
 }
 
 static void
@@ -359,7 +363,9 @@ g_dbus_interface_skeleton_get_vtable (GDBusInterfaceSkeleton *interface_)
  *
  * Gets all D-Bus properties for @interface_.
  *
- * Returns: (transfer full): A #GVariant of type <link linkend="G-VARIANT-TYPE-VARDICT:CAPS">'a{sv}'</link>. Free with g_variant_unref().
+ * Returns: (transfer full): A #GVariant of type
+ * ['a{sv}'][G-VARIANT-TYPE-VARDICT:CAPS].
+ * Free with g_variant_unref().
  *
  * Since: 2.30
  */
@@ -381,7 +387,7 @@ g_dbus_interface_skeleton_get_properties (GDBusInterfaceSkeleton *interface_)
  *
  * For example, an exported D-Bus interface may queue up property
  * changes and emit the
- * <literal>org.freedesktop.DBus.Properties::PropertiesChanged</literal>
+ * `org.freedesktop.DBus.Properties.PropertiesChanged`
  * signal later (e.g. in an idle handler). This technique is useful
  * for collapsing multiple property changes into one.
  *
@@ -454,17 +460,19 @@ dbus_interface_interface_init (GDBusInterfaceIface *iface)
 
 typedef struct
 {
-  volatile gint ref_count;
-  GDBusInterfaceSkeleton       *interface;
+  gint ref_count;  /* (atomic) */
   GDBusInterfaceMethodCallFunc  method_call_func;
-  GDBusMethodInvocation        *invocation;
+  GDBusMethodInvocation        *invocation;  /* (owned) */
 } DispatchData;
 
 static void
 dispatch_data_unref (DispatchData *data)
 {
   if (g_atomic_int_dec_and_test (&data->ref_count))
-    g_slice_free (DispatchData, data);
+    {
+      g_clear_object (&data->invocation);
+      g_slice_free (DispatchData, data);
+    }
 }
 
 static DispatchData *
@@ -496,16 +504,17 @@ dispatch_in_thread_func (GTask        *task,
                          GCancellable *cancellable)
 {
   DispatchData *data = task_data;
+  GDBusInterfaceSkeleton *interface = g_task_get_source_object (task);
   GDBusInterfaceSkeletonFlags flags;
   GDBusObject *object;
   gboolean authorized;
 
-  g_mutex_lock (&data->interface->priv->lock);
-  flags = data->interface->priv->flags;
-  object = data->interface->priv->object;
+  g_mutex_lock (&interface->priv->lock);
+  flags = interface->priv->flags;
+  object = interface->priv->object;
   if (object != NULL)
     g_object_ref (object);
-  g_mutex_unlock (&data->interface->priv->lock);
+  g_mutex_unlock (&interface->priv->lock);
 
   /* first check on the enclosing object (if any), then the interface */
   authorized = TRUE;
@@ -513,13 +522,13 @@ dispatch_in_thread_func (GTask        *task,
     {
       g_signal_emit_by_name (object,
                              "authorize-method",
-                             data->interface,
+                             interface,
                              data->invocation,
                              &authorized);
     }
   if (authorized)
     {
-      g_signal_emit (data->interface,
+      g_signal_emit (interface,
                      signals[G_AUTHORIZE_METHOD_SIGNAL],
                      0,
                      data->invocation,
@@ -621,12 +630,13 @@ g_dbus_interface_method_dispatch_helper (GDBusInterfaceSkeleton       *interface
       DispatchData *data;
 
       data = g_slice_new0 (DispatchData);
-      data->interface = interface;
       data->method_call_func = method_call_func;
-      data->invocation = invocation;
+      data->invocation = g_object_ref (invocation);
       data->ref_count = 1;
 
       task = g_task_new (interface, NULL, NULL, NULL);
+      g_task_set_source_tag (task, g_dbus_interface_method_dispatch_helper);
+      g_task_set_name (task, "[gio] D-Bus interface method dispatch");
       g_task_set_task_data (task, data, (GDestroyNotify) dispatch_data_unref);
       g_task_run_in_thread (task, dispatch_in_thread_func);
       g_object_unref (task);
@@ -696,7 +706,7 @@ add_connection_locked (GDBusInterfaceSkeleton *interface_,
        * properly before building the hooked_vtable, so we create it
        * once at the last minute.
        */
-      interface_->priv->hooked_vtable = g_memdup (g_dbus_interface_skeleton_get_vtable (interface_), sizeof (GDBusInterfaceVTable));
+      interface_->priv->hooked_vtable = g_memdup2 (g_dbus_interface_skeleton_get_vtable (interface_), sizeof (GDBusInterfaceVTable));
       interface_->priv->hooked_vtable->method_call = skeleton_intercept_handle_method_call;
     }
 
@@ -761,7 +771,7 @@ set_object_path_locked (GDBusInterfaceSkeleton *interface_,
  *
  * Gets the first connection that @interface_ is exported on, if any.
  *
- * Returns: (transfer none): A #GDBusConnection or %NULL if @interface_ is
+ * Returns: (nullable) (transfer none): A #GDBusConnection or %NULL if @interface_ is
  * not exported anywhere. Do not free, the object belongs to @interface_.
  *
  * Since: 2.30
@@ -870,7 +880,7 @@ g_dbus_interface_skeleton_has_connection (GDBusInterfaceSkeleton     *interface_
  *
  * Gets the object path that @interface_ is exported on, if any.
  *
- * Returns: A string owned by @interface_ or %NULL if @interface_ is not exported
+ * Returns: (nullable): A string owned by @interface_ or %NULL if @interface_ is not exported
  * anywhere. Do not free, the string belongs to @interface_.
  *
  * Since: 2.30

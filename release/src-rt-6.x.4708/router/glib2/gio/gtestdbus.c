@@ -3,10 +3,12 @@
  * Copyright (C) 2008-2010 Red Hat, Inc.
  * Copyright (C) 2012 Collabora Ltd. <http://www.collabora.co.uk/>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: David Zeuthen <davidz@redhat.com>
  *          Xavier Claessens <xavier.claessens@collabora.co.uk>
@@ -26,12 +26,16 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <gstdio.h>
-#ifdef HAVE_UNISTD_H
+#ifdef G_OS_UNIX
 #include <unistd.h>
 #endif
 #ifdef G_OS_WIN32
 #include <io.h>
+#include <fcntl.h>
+#include <windows.h>
 #endif
 
 #include <glib.h>
@@ -44,8 +48,8 @@
 
 #include "glibintl.h"
 
-#ifdef G_OS_WIN32
-#include <windows.h>
+#ifdef G_OS_UNIX
+#include "glib-unix.h"
 #endif
 
 /* -------------------------------------------------------------------------- */
@@ -84,23 +88,27 @@ _g_object_unref_and_wait_weak_notify (gpointer object)
 
   g_object_weak_ref (object, (GWeakNotify) g_main_loop_quit, data.loop);
 
-  /* Drop the ref in an idle callback, this is to make sure the mainloop
-   * is already running when weak notify happens */
+  /* Drop the strong ref held by the caller in an idle callback. This is to
+   * make sure the mainloop is already running when weak notify happens (when
+   * all other strong ref holders have dropped theirs). */
   g_idle_add (unref_on_idle, object);
 
   /* Make sure we don't block forever */
-  timeout_id = g_timeout_add (30 * 1000, on_weak_notify_timeout, &data);
+  timeout_id = g_timeout_add_seconds (30, on_weak_notify_timeout, &data);
 
   g_main_loop_run (data.loop);
 
-  g_source_remove (timeout_id);
-
   if (data.timed_out)
     {
-      g_warning ("Weak notify timeout, object ref_count=%d\n",
+      g_warning ("Weak notify timeout, object ref_count=%d",
           G_OBJECT (object)->ref_count);
     }
+  else
+    {
+      g_source_remove (timeout_id);
+    }
 
+  g_main_loop_unref (data.loop);
   return data.timed_out;
 }
 
@@ -175,13 +183,13 @@ watch_parent (gint fd)
       if (num_events == 0)
         continue;
 
-      if (fds[0].revents == G_IO_HUP)
+      if (fds[0].revents & G_IO_HUP)
         {
           /* Parent quit, cleanup the mess and exit */
           for (n = 0; n < pids_to_kill->len; n++)
             {
               pid = g_array_index (pids_to_kill, guint, n);
-              g_print ("cleaning up pid %d\n", pid);
+              g_printerr ("cleaning up pid %d\n", pid);
               kill (pid, SIGTERM);
             }
 
@@ -233,6 +241,7 @@ watcher_init (void)
 {
   static gsize started = 0;
   static GIOChannel *channel = NULL;
+  int errsv;
 
   if (g_once_init_enter (&started))
     {
@@ -241,14 +250,26 @@ watcher_init (void)
       /* fork a child to clean up when we are killed */
       if (pipe (pipe_fds) != 0)
         {
-          g_warning ("pipe() failed: %m");
+          errsv = errno;
+          g_warning ("pipe() failed: %s", g_strerror (errsv));
           g_assert_not_reached ();
         }
+
+      /* flush streams to avoid buffers being duplicated in the child and
+       * flushed by both the child and parent later
+       *
+       * FIXME: This is a workaround for the fact that watch_parent() uses
+       * non-async-signal-safe API. See
+       * https://gitlab.gnome.org/GNOME/glib/-/issues/2322#note_1034330
+       */
+      fflush (stdout);
+      fflush (stderr);
 
       switch (fork ())
         {
         case -1:
-          g_warning ("fork() failed: %m");
+          errsv = errno;
+          g_warning ("fork() failed: %s", g_strerror (errsv));
           g_assert_not_reached ();
           break;
 
@@ -275,10 +296,13 @@ watcher_send_command (const gchar *command)
 {
   GIOChannel *channel;
   GError *error = NULL;
+  GIOStatus status;
 
   channel = watcher_init ();
 
-  g_io_channel_write_chars (channel, command, -1, NULL, &error);
+  do
+   status = g_io_channel_write_chars (channel, command, -1, NULL, &error);
+  while (status == G_IO_STATUS_AGAIN);
   g_assert_no_error (error);
 
   g_io_channel_flush (channel, &error);
@@ -319,80 +343,75 @@ _g_test_watcher_remove_pid (GPid pid)
  * A helper class for testing code which uses D-Bus without touching the user's
  * session bus.
  *
- * <refsect2 id="gio-D-Bus-Test-Scaffolding">
- *   <title>Creating unit tests using GTestDBus</title>
- *   <para>
- *     Testing of D-Bus services can be tricky because normally we only ever run
- *     D-Bus services over an existing instance of the D-Bus daemon thus we
- *     usually don't activate D-Bus services that are not yet installed into the
- *     target system. The #GTestDBus object makes this easier for us by taking care
- *     of the lower level tasks such as running a private D-Bus daemon and looking
- *     up uninstalled services in customizable locations, typically in your source code tree.
- *   </para>
- *   <para>
- *     The first thing you will need is a separate service description file for the
- *     D-Bus daemon. Typically a 'services' subdirectory of your 'tests' directory
- *     is a good place to put this file.
- *   </para>
- *   <para>
- *     The service file should list your service along with an absolute path to the
- *     uninstalled service executable in your source tree. Using autotools we would
- *     achieve this by adding a file such as 'my-server.service.in' in the services
- *     directory and have it processed by configure.
- *     <informalexample><programlisting>
+ * Note that #GTestDBus modifies the user’s environment, calling setenv().
+ * This is not thread-safe, so all #GTestDBus calls should be completed before
+ * threads are spawned, or should have appropriate locking to ensure no access
+ * conflicts to environment variables shared between #GTestDBus and other
+ * threads.
+ *
+ * ## Creating unit tests using GTestDBus
+ * 
+ * Testing of D-Bus services can be tricky because normally we only ever run
+ * D-Bus services over an existing instance of the D-Bus daemon thus we
+ * usually don't activate D-Bus services that are not yet installed into the
+ * target system. The #GTestDBus object makes this easier for us by taking care
+ * of the lower level tasks such as running a private D-Bus daemon and looking
+ * up uninstalled services in customizable locations, typically in your source
+ * code tree.
+ *
+ * The first thing you will need is a separate service description file for the
+ * D-Bus daemon. Typically a `services` subdirectory of your `tests` directory
+ * is a good place to put this file.
+ *
+ * The service file should list your service along with an absolute path to the
+ * uninstalled service executable in your source tree. Using autotools we would
+ * achieve this by adding a file such as `my-server.service.in` in the services
+ * directory and have it processed by configure.
+ * |[
  *     [D-BUS Service]
  *     Name=org.gtk.GDBus.Examples.ObjectManager
  *     Exec=@abs_top_builddir@/gio/tests/gdbus-example-objectmanager-server
- *     </programlisting></informalexample>
- *     You will also need to indicate this service directory in your test
- *     fixtures, so you will need to pass the path while compiling your
- *     test cases. Typically this is done with autotools with an added
- *     preprocessor flag specified to compile your tests such as:
- *     <informalexample><programlisting>
+ * ]|
+ * You will also need to indicate this service directory in your test
+ * fixtures, so you will need to pass the path while compiling your
+ * test cases. Typically this is done with autotools with an added
+ * preprocessor flag specified to compile your tests such as:
+ * |[
  *     -DTEST_SERVICES=\""$(abs_top_builddir)/tests/services"\"
- *     </programlisting></informalexample>
- *   </para>
- *   <para>
+ * ]|
  *     Once you have a service definition file which is local to your source tree,
- *     you can proceed to setup a GTest fixture using the GTestDBus scaffolding.
- *     <example id="gdbus-test-fixture">
- *       <title>Test Fixture for D-Bus services</title>
- *       <programlisting>
- *         <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" parse="text" href="../../../../gio/tests/gdbus-test-fixture.c">
- *           <xi:fallback>FIXME: MISSING XINCLUDE CONTENT</xi:fallback>
- *         </xi:include>
- *       </programlisting>
- *     </example>
- *   </para>
- *   <para>
- *     Note that these examples only deal with isolating the D-Bus aspect of your
- *     service. To successfully run isolated unit tests on your service you may need
- *     some additional modifications to your test case fixture. For example; if your
- *     service uses GSettings and installs a schema then it is important that your test service
- *     not load the schema in the ordinary installed location (chances are that your service
- *     and schema files are not yet installed, or worse; there is an older version of the
- *     schema file sitting in the install location).
- *   </para>
- *   <para>
- *     Most of the time we can work around these obstacles using the environment. Since the
- *     environment is inherited by the D-Bus daemon created by GTestDBus and then in turn
- *     inherited by any services the D-Bus daemon activates, using the setup routine for your
- *     fixture is a practical place to help sandbox your runtime environment. For the rather
- *     typical GSettings case we can work around this by setting GSETTINGS_SCHEMA_DIR to the
- *     in tree directory holding your schemas in the above fixture_setup() routine.
- *   </para>
- *   <para>
- *     The GSettings schemas need to be locally pre-compiled for this to work. This can be achieved
- *     by compiling the schemas locally as a step before running test cases, an autotools setup might
- *     do the following in the directory holding schemas:
- *     <informalexample><programlisting>
+ * you can proceed to set up a GTest fixture using the #GTestDBus scaffolding.
+ *
+ * An example of a test fixture for D-Bus services can be found
+ * here:
+ * [gdbus-test-fixture.c](https://gitlab.gnome.org/GNOME/glib/-/blob/HEAD/gio/tests/gdbus-test-fixture.c)
+ *
+ * Note that these examples only deal with isolating the D-Bus aspect of your
+ * service. To successfully run isolated unit tests on your service you may need
+ * some additional modifications to your test case fixture. For example; if your
+ * service uses GSettings and installs a schema then it is important that your test service
+ * not load the schema in the ordinary installed location (chances are that your service
+ * and schema files are not yet installed, or worse; there is an older version of the
+ * schema file sitting in the install location).
+ *
+ * Most of the time we can work around these obstacles using the
+ * environment. Since the environment is inherited by the D-Bus daemon
+ * created by #GTestDBus and then in turn inherited by any services the
+ * D-Bus daemon activates, using the setup routine for your fixture is
+ * a practical place to help sandbox your runtime environment. For the
+ * rather typical GSettings case we can work around this by setting
+ * `GSETTINGS_SCHEMA_DIR` to the in tree directory holding your schemas
+ * in the above fixture_setup() routine.
+ *
+ * The GSettings schemas need to be locally pre-compiled for this to work. This can be achieved
+ * by compiling the schemas locally as a step before running test cases, an autotools setup might
+ * do the following in the directory holding schemas:
+ * |[
  *     all-am:
  *             $(GLIB_COMPILE_SCHEMAS) .
  *
  *     CLEANFILES += gschemas.compiled
- *     </programlisting></informalexample>
- *   </para>
- * </refsect2>
+ * ]|
  */
 
 typedef struct _GTestDBusClass   GTestDBusClass;
@@ -513,14 +532,14 @@ g_test_dbus_class_init (GTestDBusClass *klass)
   /**
    * GTestDBus:flags:
    *
-   * #GTestDBusFlags specifying the behaviour of the dbus session
+   * #GTestDBusFlags specifying the behaviour of the D-Bus session.
    *
    * Since: 2.34
    */
   g_object_class_install_property (object_class, PROP_FLAGS,
     g_param_spec_flags ("flags",
-                        P_("dbus session flags"),
-                        P_("Flags specifying the behaviour of the dbus session"),
+                        P_("D-Bus session flags"),
+                        P_("Flags specifying the behaviour of the D-Bus session"),
                         G_TYPE_TEST_DBUS_FLAGS, G_TEST_DBUS_NONE,
                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
                         G_PARAM_STATIC_STRINGS));
@@ -552,10 +571,10 @@ write_config_file (GTestDBus *self)
 
   for (i = 0; i < self->priv->service_dirs->len; i++)
     {
-      const gchar *path = g_ptr_array_index (self->priv->service_dirs, i);
+      const gchar *dir_path = g_ptr_array_index (self->priv->service_dirs, i);
 
       g_string_append_printf (contents,
-          "  <servicedir>%s</servicedir>\n", path);
+          "  <servicedir>%s</servicedir>\n", dir_path);
     }
 
   g_string_append (contents,
@@ -569,23 +588,49 @@ write_config_file (GTestDBus *self)
       "  </policy>\n"
       "</busconfig>\n");
 
-  g_file_set_contents (path, contents->str, contents->len, &error);
+  close (fd);
+  g_file_set_contents_full (path, contents->str, contents->len,
+                            G_FILE_SET_CONTENTS_NONE,
+                            0600, &error);
   g_assert_no_error (error);
 
   g_string_free (contents, TRUE);
 
-  close (fd);
-
   return path;
+}
+
+static gboolean
+make_pipe (gint     pipe_fds[2],
+           GError **error)
+{
+#if defined(G_OS_UNIX)
+  return g_unix_open_pipe (pipe_fds, FD_CLOEXEC, error);
+#elif defined(G_OS_WIN32)
+  if (_pipe (pipe_fds, 4096, _O_BINARY) < 0)
+    {
+      int errsv = errno;
+
+      g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+                   _("Failed to create pipe for communicating with child process (%s)"),
+                   g_strerror (errsv));
+      return FALSE;
+    }
+  return TRUE;
+#else
+  g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+               _("Pipes are not supported in this platform"));
+  return FALSE;
+#endif
 }
 
 static void
 start_daemon (GTestDBus *self)
 {
-  gchar *argv[] = {"dbus-daemon", "--print-address", "--config-file=foo", NULL};
+  const gchar *argv[] = {"dbus-daemon", "--print-address", "--config-file=foo", NULL};
+  gint pipe_fds[2] = {-1, -1};
   gchar *config_path;
   gchar *config_arg;
-  gint stdout_fd;
+  gchar *print_address;
   GIOChannel *channel;
   gsize termpos;
   GError *error = NULL;
@@ -593,37 +638,48 @@ start_daemon (GTestDBus *self)
   if (g_getenv ("G_TEST_DBUS_DAEMON") != NULL)
     argv[0] = (gchar *)g_getenv ("G_TEST_DBUS_DAEMON");
 
+  make_pipe (pipe_fds, &error);
+  g_assert_no_error (error);
+
+  print_address = g_strdup_printf ("--print-address=%d", pipe_fds[1]);
+  argv[1] = print_address;
+  g_assert_no_error (error);
+
   /* Write config file and set its path in argv */
   config_path = write_config_file (self);
   config_arg = g_strdup_printf ("--config-file=%s", config_path);
   argv[2] = config_arg;
 
   /* Spawn dbus-daemon */
-  g_spawn_async_with_pipes (NULL,
-                            argv,
-                            NULL,
-#ifdef G_OS_WIN32
-                            /* We Need this to get the pid returned on win32 */
-                            G_SPAWN_DO_NOT_REAP_CHILD |
-#endif
-                            G_SPAWN_SEARCH_PATH,
-                            NULL,
-                            NULL,
-                            &self->priv->bus_pid,
-                            NULL,
-                            &stdout_fd,
-                            NULL,
-                            &error);
+  g_spawn_async_with_pipes_and_fds (NULL,
+                                    argv,
+                                    NULL,
+                                    /* We Need this to get the pid returned on win32 */
+                                    G_SPAWN_DO_NOT_REAP_CHILD |
+                                    G_SPAWN_SEARCH_PATH |
+                                    /* dbus-daemon will not abuse our descriptors, and
+                                     * passing this means we can use posix_spawn() for speed */
+                                    G_SPAWN_LEAVE_DESCRIPTORS_OPEN,
+                                    NULL, NULL,
+                                    -1, -1, -1,
+                                    &pipe_fds[1], &pipe_fds[1], 1,
+                                    &self->priv->bus_pid,
+                                    NULL, NULL, NULL,
+                                    &error);
   g_assert_no_error (error);
 
   _g_test_watcher_add_pid (self->priv->bus_pid);
 
-  /* Read bus address from daemon' stdout */
-  channel = g_io_channel_unix_new (stdout_fd);
+  /* Read bus address from pipe */
+  channel = g_io_channel_unix_new (pipe_fds[0]);
+  pipe_fds[0] = -1;
+  g_io_channel_set_close_on_unref (channel, TRUE);
   g_io_channel_read_line (channel, &self->priv->bus_address, NULL,
       &termpos, &error);
   g_assert_no_error (error);
   self->priv->bus_address[termpos] = '\0';
+  close (pipe_fds[1]);
+  pipe_fds[1] = -1;
 
   /* start dbus-monitor */
   if (g_getenv ("G_DBUS_MONITOR") != NULL)
@@ -647,6 +703,7 @@ start_daemon (GTestDBus *self)
   if (g_unlink (config_path) != 0)
     g_assert_not_reached ();
 
+  g_free (print_address);
   g_free (config_path);
   g_free (config_arg);
 }
@@ -688,7 +745,7 @@ g_test_dbus_new (GTestDBusFlags flags)
  * g_test_dbus_get_flags:
  * @self: a #GTestDBus
  *
- * Gets the flags of the #GTestDBus object.
+ * Get the flags of the #GTestDBus object.
  *
  * Returns: the value of #GTestDBus:flags property
  */
@@ -704,11 +761,11 @@ g_test_dbus_get_flags (GTestDBus *self)
  * g_test_dbus_get_bus_address:
  * @self: a #GTestDBus
  *
- * Get the address on which dbus-daemon is running. if g_test_dbus_up() has not
+ * Get the address on which dbus-daemon is running. If g_test_dbus_up() has not
  * been called yet, %NULL is returned. This can be used with
- * g_dbus_connection_new_for_address()
+ * g_dbus_connection_new_for_address().
  *
- * Returns: the address of the bus, or %NULL.
+ * Returns: (nullable): the address of the bus, or %NULL.
  */
 const gchar *
 g_test_dbus_get_bus_address (GTestDBus *self)
@@ -723,7 +780,7 @@ g_test_dbus_get_bus_address (GTestDBus *self)
  * @self: a #GTestDBus
  * @path: path to a directory containing .service files
  *
- * Add a path where dbus-daemon will lookup for .services files. This can't be
+ * Add a path where dbus-daemon will look up .service files. This can't be
  * called after g_test_dbus_up().
  */
 void
@@ -758,6 +815,7 @@ g_test_dbus_up (GTestDBus *self)
 
   start_daemon (self);
 
+  g_test_dbus_unset ();
   g_setenv ("DBUS_SESSION_BUS_ADDRESS", self->priv->bus_address, TRUE);
   self->priv->up = TRUE;
 }
@@ -790,7 +848,7 @@ g_test_dbus_stop (GTestDBus *self)
  * Stop the session bus started by g_test_dbus_up().
  *
  * This will wait for the singleton returned by g_bus_get() or g_bus_get_sync()
- * is destroyed. This is done to ensure that the next unit test won't get a
+ * to be destroyed. This is done to ensure that the next unit test won't get a
  * leaked singleton from this test.
  */
 void
@@ -811,7 +869,8 @@ g_test_dbus_down (GTestDBus *self)
   if (connection != NULL)
     _g_object_unref_and_wait_weak_notify (connection);
 
-  g_unsetenv ("DBUS_SESSION_BUS_ADDRESS");
+  g_test_dbus_unset ();
+  _g_bus_forget_singleton (G_BUS_TYPE_SESSION);
   self->priv->up = FALSE;
 }
 
@@ -830,4 +889,8 @@ g_test_dbus_unset (void)
 {
   g_unsetenv ("DISPLAY");
   g_unsetenv ("DBUS_SESSION_BUS_ADDRESS");
+  g_unsetenv ("DBUS_STARTER_ADDRESS");
+  g_unsetenv ("DBUS_STARTER_BUS_TYPE");
+  /* avoid using XDG_RUNTIME_DIR/bus */
+  g_unsetenv ("XDG_RUNTIME_DIR");
 }

@@ -17,33 +17,40 @@
   <refsect1 id="building">
     <title>Building the Library on UNIX</title>
     <para>
-      On UNIX, GLib uses the standard GNU build system,
-      using <application>autoconf</application> for package
-      configuration and resolving portability issues,
-      <application>automake</application> for building makefiles
-      that comply with the GNU Coding Standards, and
-      <application>libtool</application> for building shared
-      libraries on multiple platforms.  The normal sequence for
-      compiling and installing the GLib library is thus:
+      On UNIX, GLib uses the standard <application>Meson</application> build
+      system. The normal sequence for compiling and installing the GLib library
+      is thus:
 
       <literallayout>
-        <userinput>./configure</userinput>
-        <userinput>make</userinput>
-        <userinput>make install</userinput>
+        <userinput>meson _build</userinput>
+        <userinput>ninja -C _build</userinput>
+        <userinput>ninja -C _build install</userinput>
+      </literallayout>
+
+      On FreeBSD:
+      <literallayout>
+        <userinput>env CPPFLAGS="-I/usr/local/include" LDFLAGS="-L/usr/local/lib -Wl,--disable-new-dtags" meson -Dxattr=false -Dinstalled_tests=true -Db_lundef=false _build</userinput>
+        <userinput>ninja -C _build</userinput>
       </literallayout>
     </para>
 
     <para>
-      The standard options provided by <application>GNU
-      autoconf</application> may be passed to the
-      <command>configure</command> script.  Please see the
-      <application>autoconf</application> documentation or run
-      <command>./configure --help</command> for information about
+      The standard options provided by <application>Meson</application> may be
+      passed to the <command>meson</command> command.  Please see the
+      <application>Meson</application> documentation or run
+      <command>meson configure --help</command> for information about
       the standard options.
     </para>
     <para>
+      GLib is compiled with
+      <ulink url="https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-fstrict-aliasing">strict aliasing</ulink>
+      disabled. It is strongly recommended that this is not re-enabled by
+      overriding the compiler flags, as GLib has not been tested with strict
+      aliasing and cannot be guaranteed to work.
+    </para>
+    <para>
       The GTK+ documentation contains
-      <ulink url="../gtk/gtk-building.html">further details</ulink>
+      <ulink url="https://developer.gnome.org/gtk3/stable/gtk-building.html">further details</ulink>
       about the build process and ways to influence it.
     </para>
   </refsect1>
@@ -51,42 +58,30 @@
     <title>Dependencies</title>
     <para>
       Before you can compile the GLib library, you need to have
-      various other tools and libraries installed on your
-      system. The two tools needed during the build process (as
-      differentiated from the tools used in when creating GLib
-      mentioned above such as <application>autoconf</application>)
-      are <command>pkg-config</command> and GNU make.
+      various other tools and libraries installed on your system.
+      If you are building from a release archive, you will need
+      <ulink url="https://wiki.gnome.org/Projects/GLib/CompilerRequirements">a compliant C toolchain</ulink>,
+      <application>Meson</application>, and <application>pkg-config</application>;
+      the requirements are the same when building from a Git repository clone
+      of GLib.
     </para>
     <itemizedlist>
       <listitem>
         <para>
-          <ulink url="http://www.freedesktop.org/software/pkgconfig/">pkg-config</ulink>
+          <ulink url="https://www.freedesktop.org/wiki/Software/pkg-config/">pkg-config</ulink>
           is a tool for tracking the compilation flags needed for
           libraries that are used by the GLib library. (For each
           library, a small <literal>.pc</literal> text file is
           installed in a standard location that contains the compilation
           flags needed for that library along with version number
-          information.) The version of <command>pkg-config</command>
-          needed to build GLib is mirrored in the
-          <filename>dependencies</filename> directory
-          on the <ulink url="ftp://ftp.gtk.org/pub/gtk/v2.2/">GTK+ FTP
-          site.</ulink>
-        </para>
-      </listitem>
-      <listitem>
-        <para>
-          The GTK+ makefiles will mostly work with different versions
-          of <command>make</command>, however, there tends to be
-          a few incompatibilities, so the GTK+ team recommends
-          installing <ulink url="http://www.gnu.org/software/make">GNU
-          make</ulink> if you don't already have it on your system
-          and using it. (It may be called <command>gmake</command>
-          rather than <command>make</command>.)
+          information).
         </para>
       </listitem>
     </itemizedlist>
     <para>
-      GLib depends on a number of other libraries.
+      A UNIX build of GLib requires that the system implements at
+      least the original 1990 version of POSIX. Beyond this, it
+      depends on a number of other libraries.
     </para>
     <itemizedlist>
       <listitem>
@@ -103,16 +98,12 @@
         </para>
         <para>
           If your system has an <function>iconv()</function> implementation but
-          you want to use libiconv instead, you can pass the
-          --with-libiconv option to configure. This forces
-          libiconv to be used.
-        </para>
-        <para>
-          Note that if you have libiconv installed in your default include
-          search path (for instance, in <filename>/usr/local/</filename>), but
-          don't enable it, you will get an error while compiling GLib because
-          the <filename>iconv.h</filename> that libiconv installs hides the
-          system iconv.
+          you want to use libiconv instead, make sure it is installed to the
+          default compiler header/library search path (for instance, in
+          <filename>/usr/local/</filename>). The <filename>iconv.h</filename>
+          that libiconv installs hides the system iconv. Meson then detects
+          this, recognizes that the system iconv is unusable and the external
+          one is mandatory, and automatically forces it to be used.
         </para>
         <para>
           If you are using the native iconv implementation on Solaris
@@ -128,6 +119,16 @@
           using GNU libiconv for GLib, you'll need to use GNU libiconv
           for GNU gettext as well.) This probably applies to related
           operating systems as well.
+        </para>
+      </listitem>
+      <listitem>
+        <para>
+          Python 3.5 or newer is required. Your system Python must
+          conform to <ulink
+          url="https://www.python.org/dev/peps/pep-0394/">PEP 394
+          </ulink>
+          For FreeBSD, this means that the
+          <literal>lang/python3</literal> port must be installed.
         </para>
       </listitem>
       <listitem>
@@ -148,27 +149,25 @@
       <listitem>
         <para>
           GRegex uses the <ulink url="http://www.pcre.org/">PCRE library</ulink>
-          for regular expression matching. The default is to use the internal
-          version of PCRE that is patched to use GLib for memory management
-          and Unicode handling. If you prefer to use the system-supplied PCRE
-          library  you can pass the <option>--with-pcre=system</option> option
-          to, but it is not recommended.
+          for regular expression matching. The system version of PCRE is used,
+          unless not available (which is the case on Android), in which case a
+          fallback subproject is used.
         </para>
       </listitem>
       <listitem>
         <para>
           The optional extended attribute support in GIO requires the
-          getxattr() family of functions that may be provided by glibc or
-          by the standalone libattr library. To build GLib without extended
-          attribute support, use the <option>--disable-xattr</option>
-          option.
+          <function>getxattr()</function> family of functions that may be
+          provided by the C library or by the standalone libattr library. To
+          build GLib without extended attribute support, use the
+          <option>-Dxattr=false</option> option.
         </para>
       </listitem>
       <listitem>
         <para>
           The optional SELinux support in GIO requires libselinux.
           To build GLib without SELinux support, use the
-          <option>--disable-selinux</option> option.
+          <option>-Dselinux=disabled</option> option.
         </para>
       </listitem>
       <listitem>
@@ -176,15 +175,17 @@
           The optional support for DTrace requires the
           <filename>sys/sdt.h</filename> header, which is provided
           by SystemTap on Linux. To build GLib without DTrace, use
-          the <option>--disable-dtrace</option> configure option.
+          the <option>-Ddtrace=false</option> option.
         </para>
       </listitem>
       <listitem>
         <para>
           The optional support for
           <ulink url="http://sourceware.org/systemtap/">SystemTap</ulink>
-          can be disabled with the <option>--disable-systemtap</option>
-          configure option.
+          can be disabled with the <option>-Dsystemtap=false</option>
+          option. Additionally, you can control the location
+          where GLib installs the SystemTap probes, using the
+          <option>-Dtapset_install_dir=DIR</option> option.
         </para>
       </listitem>
     </itemizedlist>
@@ -194,239 +195,56 @@
     <title>Extra Configuration Options</title>
 
     <para>
-      In addition to the normal options, the
-      <command>configure</command> script in the GLib
-      library supports these additional arguments:
+      In addition to the normal options, these additional ones are supported
+      when configuring the GLib library:
     </para>
 
     <formalpara>
-      <title><systemitem>--enable-debug</systemitem></title>
+      <title><option>--buildtype</option></title>
 
       <para>
-        Turns on various amounts of debugging support. Setting this to 'no'
-        disables g_assert(), g_return_if_fail(), g_return_val_if_fail() and
-        all cast checks between different object types. Setting it to 'minimum'         disables only cast checks. Setting it to 'yes' enables
-        <link linkend="G-DEBUG:CAPS">runtime debugging</link>.
-        The default is 'minimum'.
-        Note that 'no' is fast, but dangerous as it tends to destabilize
-        even mostly bug-free software by changing the effect of many bugs
-        from simple warnings into fatal crashes. Thus
-        <option>--enable-debug=no</option> should <emphasis>not</emphasis>
-        be used for stable releases of GLib.
+        This is a standard <application>Meson</application> option which
+        specifies how much debugging and optimization to enable. If the build
+        type is <literal>debug</literal>,
+        <literal>G_ENABLE_DEBUG</literal> will be defined and GLib will be built
+        with additional debug code enabled. You can override this behavior using
+        <option>-Dglib_debug</option>.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-gc-friendly</systemitem> and
-        <systemitem>--enable-gc-friendly</systemitem></title>
+      <title><option>-Dforce_posix_threads=true</option></title>
 
       <para>
-        By default, and with <systemitem>--disable-gc-friendly</systemitem>
-        as well, Glib does not clear the memory for certain objects before
-        they are freed. For example, Glib may decide to recycle GList nodes
-        by putting them in a free list. However, memory profiling and debugging
-        tools like <ulink url="http://www.valgrind.org">Valgrind</ulink> work
-        better if an application does not keep dangling pointers to freed
-        memory (even though these pointers are no longer dereferenced), or
-        invalid pointers inside uninitialized memory.
-        The <systemitem>--enable-gc-friendly</systemitem> option makes Glib
-        clear memory in these situations:
-      </para>
-
-      <itemizedlist>
-        <listitem>
-          <para>
-            When shrinking a GArray, Glib will clear the memory no longer
-            available in the array: shrink an array from 10 bytes to 7, and
-            the last 3 bytes will be cleared. This includes removals of single
-            and multiple elements.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-            When growing a GArray, Glib will clear the new chunk of memory.
-            Grow an array from 7 bytes to 10 bytes, and the last 3 bytes will
-            be cleared.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-            The above applies to GPtrArray as well.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-            When freeing a node from a GHashTable, Glib will first clear
-            the node, which used to have pointers to the key and the value
-            stored at that node.
-          </para>
-        </listitem>
-        <listitem>
-          <para>
-            When destroying or removing a GTree node, Glib will clear the node,
-            which used to have pointers to the node's value, and the left and
-            right subnodes.
-          </para>
-        </listitem>
-      </itemizedlist>
-
-      <para>
-        Since clearing the memory has a cost,
-        <systemitem>--disable-gc-friendly</systemitem> is the default.
+        Normally, <application>Meson</application> should be able to work out
+        the correct thread implementation to use. This option forces POSIX
+        threads to be used even if the platform provides another threading API
+        (for example, on Windows).
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-mem-pools</systemitem> and
-        <systemitem>--enable-mem-pools</systemitem></title>
+      <title><option>-Dbsymbolic_functions=false</option> and
+        <option>-Dbsymbolic_functions=true</option></title>
 
       <para>
-        Many small chunks of memory are often allocated via collective pools
-        in GLib and are cached after release to speed up reallocations.
-        For sparse memory systems this behaviour is often inferior, so
-        memory pools can be disabled to avoid excessive caching and force
-        atomic maintenance of chunks through the <function>g_malloc()</function>
-        and <function>g_free()</function> functions. Code currently affected by
-        this:
-        <itemizedlist>
-          <listitem>
-            <para>
-              <structname>GMemChunk</structname>s become basically non-effective
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              <structname>GSignal</structname> disables all caching
-              (potentially very slow)
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              <structname>GType</structname> doesn't honour the
-              <structname>GTypeInfo</structname>
-              <structfield>n_preallocs</structfield> field anymore
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              the <structname>GBSearchArray</structname> flag
-              <literal>G_BSEARCH_ALIGN_POWER2</literal> becomes non-functional
-            </para>
-          </listitem>
-        </itemizedlist>
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--with-threads</systemitem></title>
-
-      <para>
-        Specify a thread implementation to use. Available options are
-        'posix' or 'win32'. Normally, <command>configure</command>
-        should be able to work out the system threads API on its own.
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--disable-regex</systemitem> and
-        <systemitem>--enable-regex</systemitem></title>
-
-      <para>
-        Do not compile GLib with regular expression support.
-        GLib will be smaller because it will not need the
-        PCRE library. This is however not recommended, as
-        programs may need GRegex.
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--with-pcre</systemitem></title>
-
-      <para>
-        Specify whether to use the internal or the system-supplied
-        PCRE library.
-        <itemizedlist>
-          <listitem>
-            <para>
-              'internal' means that GRegex will be compiled to use
-              the internal PCRE library.
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              'system' means that GRegex will be compiled to use
-              the system-supplied PCRE library.
-            </para>
-          </listitem>
-        </itemizedlist>
-        Using the internal PCRE is the preferred solution:
-        <itemizedlist>
-          <listitem>
-            <para>
-              System-supplied PCRE has a separated copy of the big tables
-              used for Unicode handling.
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              Some systems have PCRE libraries compiled without some needed
-              features, such as UTF-8 and Unicode support.
-            </para>
-          </listitem>
-          <listitem>
-            <para>
-              PCRE uses some global variables for memory management and
-              other features. In the rare case of a program using both
-              GRegex and PCRE (maybe indirectly through a library),
-              this variables could lead to problems when they are modified.
-            </para>
-          </listitem>
-        </itemizedlist>
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--disable-included-printf</systemitem> and
-        <systemitem>--enable-included-printf</systemitem></title>
-
-      <para>
-        By default the <command>configure</command> script will try
-        to auto-detect whether the C library provides a suitable set
-        of printf() functions. In detail, <command>configure</command>
-        checks that the semantics of snprintf() are as specified by C99
-        and that positional parameters as specified in the Single Unix
-        Specification are supported. If this not the case, GLib will
-        include an implementation of the printf() family.
-      </para>
-      <para>
-        These options can be used to explicitly control whether
-        an implementation of the printf() family should be included or not.
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--disable-Bsymbolic</systemitem> and
-        <systemitem>--enable-Bsymbolic</systemitem></title>
-
-      <para>
-        By default, GLib uses the -Bsymbolic-functions linker
-        flag to avoid intra-library PLT jumps. A side-effect
+        By default, GLib uses the <option>-Bsymbolic-functions</option>
+        linker flag to avoid intra-library PLT jumps. A side-effect
         of this is that it is no longer possible to override
         internal uses of GLib functions with
         <envar>LD_PRELOAD</envar>. Therefore, it may make
         sense to turn this feature off in some situations.
-        The <option>--disable-Bsymbolic</option> option allows
+        The <option>-Dbsymbolic_functions=false</option> option allows
         to do that.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-gtk-doc</systemitem> and
-        <systemitem>--enable-gtk-doc</systemitem></title>
+      <title><option>-Dgtk_doc=false</option> and
+        <option>-Dgtk_doc=true</option></title>
 
       <para>
-        By default the <command>configure</command> script will try
-        to auto-detect whether the
+        By default, GLib will detect whether the
         <application>gtk-doc</application> package is installed.
         If it is, then it will use it to extract and build the
         documentation for the GLib library. These options
@@ -439,13 +257,12 @@
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-man</systemitem> and
-        <systemitem>--enable-man</systemitem></title>
+      <title><option>-Dman=false</option> and
+        <option>-Dman=true</option></title>
 
       <para>
-        By default the <command>configure</command> script will try
-        to auto-detect whether <application>xsltproc</application>
-        and the necessary Docbook stylesheets are installed.
+        By default, GLib will detect whether <application>xsltproc</application>
+        and the necessary DocBook stylesheets are installed.
         If they are, then it will use them to rebuild the included
         man pages from the XML sources. These options can be used
         to explicitly control whether man pages should be rebuilt
@@ -455,69 +272,71 @@
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-xattr</systemitem> and
-        <systemitem>--enable-xattr</systemitem></title>
+      <title><option>-Dxattr=false</option> and
+        <option>-Dxattr=true</option></title>
 
       <para>
-        By default the <command>configure</command> script will try
-        to auto-detect whether the getxattr() family of functions
-        is available. If it is, then extended attribute support
-        will be included in GIO. These options can be used to
-        explicitly control whether extended attribute support
-        should be included or not. getxattr() and friends can
-        be provided by glibc or by the standalone libattr library.
+        By default, GLib will detect whether the
+        <function>getxattr()</function>
+        family of functions is available. If it is, then extended
+        attribute support will be included in GIO. These options can
+        be used to explicitly control whether extended attribute
+        support should be included or not. <function>getxattr()</function>
+        and friends can be provided by glibc or by the standalone
+        libattr library.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-selinux</systemitem> and
-        <systemitem>--enable-selinux</systemitem></title>
+      <title><option>-Dselinux=auto</option>,
+        <option>-Dselinux=enabled</option> or
+        <option>-Dselinux=disabled</option></title>
 
       <para>
-        By default the <command>configure</command> script will
-        auto-detect if libselinux is available and include
-        SELinux support in GIO if it is. These options can be
+        By default, GLib will detect if libselinux is available and
+        include SELinux support in GIO if it is. These options can be
         used to explicitly control whether SELinux support should
         be included.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-dtrace</systemitem> and
-        <systemitem>--enable-dtrace</systemitem></title>
+      <title><option>-Ddtrace=false</option> and
+        <option>-Ddtrace=true</option></title>
 
       <para>
-        By default the <command>configure</command> script will
-        detect if DTrace support is available, and use it.
+        By default, GLib will detect if DTrace support is available, and use it.
+        These options can be used to explicitly control whether DTrace support
+        is compiled into GLib.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--disable-systemtap</systemitem> and
-        <systemitem>--enable-systemtap</systemitem></title>
+      <title><option>-Dsystemtap=false</option> and
+        <option>-Dsystemtap=true</option></title>
 
       <para>
         This option requires DTrace support. If it is available, then
-        the <command>configure</command> script will also check for
-        the presence of SystemTap.
+        GLib will also check for the presence of SystemTap.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--enable-gcov</systemitem> and
-        <systemitem>--disable-gcov</systemitem></title>
+      <title><option>-Db_coverage=true</option> and
+        <option>-Db_coverage=false</option></title>
 
       <para>
         Enable the generation of coverage reports for the GLib tests.
         This requires the lcov frontend to gcov from the
         <ulink url="http://ltp.sourceforge.net">Linux Test Project</ulink>.
-        To generate a coverage report, use the lcov make target. The
-        report is placed in the <filename>glib-lcov</filename> directory.
+        To generate a coverage report, use
+        <command>ninja coverage-html</command>. The report is placed in the
+        <filename>meson-logs</filename> directory.
       </para>
     </formalpara>
 
     <formalpara>
-      <title><systemitem>--with-runtime-libdir=RELPATH</systemitem></title>
+      <title><option>-Druntime_libdir=RELPATH</option></title>
 
       <para>
         Allows specifying a relative path to where to install the runtime
@@ -525,21 +344,11 @@
         GLib applications). This can be used in operating system setups where
         programs using GLib needs to run before e.g. <filename>/usr</filename>
         is mounted.
-        For example, if LIBDIR is <filename>/usr/lib</filename> and
+        For example, if <varname>LIBDIR</varname> is <filename>/usr/lib</filename> and
         <filename>../../lib</filename> is passed to
-        <systemitem>--with-runtime-libdir</systemitem> then the
+        <option>-Druntime_libdir</option> then the
         runtime libraries are installed into <filename>/lib</filename> rather
         than <filename>/usr/lib</filename>.
-      </para>
-    </formalpara>
-
-    <formalpara>
-      <title><systemitem>--with-python</systemitem></title>
-
-      <para>
-        Allows specifying the Python interpreter to use, either as an absolute path,
-        or as a program name. GLib can be built with Python 2 (at least version 2.5)
-        or Python 3.
       </para>
     </formalpara>
   </refsect1>

@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __G_SETTINGS_SCHEMA_INTERNAL_H__
@@ -22,7 +22,7 @@
 
 #include "gsettingsschema.h"
 
-typedef struct
+struct _GSettingsSchemaKey
 {
   GSettingsSchema *schema;
   const gchar *name;
@@ -39,17 +39,21 @@ typedef struct
   const GVariantType *type;
   GVariant *minimum, *maximum;
   GVariant *default_value;
-} GSettingsSchemaKey;
+  GVariant *desktop_overrides;
+
+  gint ref_count;
+};
 
 const gchar *           g_settings_schema_get_gettext_domain            (GSettingsSchema  *schema);
 GVariantIter *          g_settings_schema_get_value                     (GSettingsSchema  *schema,
-                                                                         const gchar      *key);
-gboolean                g_settings_schema_has_key                       (GSettingsSchema  *schema,
                                                                          const gchar      *key);
 const GQuark *          g_settings_schema_list                          (GSettingsSchema  *schema,
                                                                          gint             *n_items);
 const gchar *           g_settings_schema_get_string                    (GSettingsSchema  *schema,
                                                                          const gchar      *key);
+
+GSettingsSchema *       g_settings_schema_get_child_schema              (GSettingsSchema *schema,
+                                                                         const gchar     *name);
 
 void                    g_settings_schema_key_init                      (GSettingsSchemaKey *key,
                                                                          GSettingsSchema    *schema,
@@ -57,11 +61,10 @@ void                    g_settings_schema_key_init                      (GSettin
 void                    g_settings_schema_key_clear                     (GSettingsSchemaKey *key);
 gboolean                g_settings_schema_key_type_check                (GSettingsSchemaKey *key,
                                                                          GVariant           *value);
-gboolean                g_settings_schema_key_range_check               (GSettingsSchemaKey *key,
-                                                                         GVariant           *value);
 GVariant *              g_settings_schema_key_range_fixup               (GSettingsSchemaKey *key,
                                                                          GVariant           *value);
 GVariant *              g_settings_schema_key_get_translated_default    (GSettingsSchemaKey *key);
+GVariant *              g_settings_schema_key_get_per_desktop_default   (GSettingsSchemaKey *key);
 
 gint                    g_settings_schema_key_to_enum                   (GSettingsSchemaKey *key,
                                                                          GVariant           *value);

@@ -455,7 +455,7 @@ of them fail, since there is no character to match.
 
 <para>
 For compatibility with Perl, \s does not match the VT character (code
-11). This makes it different from the the POSIX "space" class. The \s
+11). This makes it different from the POSIX "space" class. The \s
 characters are HT (9), LF (10), FF (12), CR (13), and space (32).
 </para>
 
@@ -2177,7 +2177,7 @@ written like this (ignore whitespace and line breaks):
 </programlisting>
 
 <para>
-The first part of the pattern is a DEFINE group inside which a another group
+The first part of the pattern is a DEFINE group inside which another group
 named "byte" is defined. This matches an individual component of an IPv4
 address (a number less than 256). When matching takes place, this part of the
 pattern is skipped because DEFINE acts like a false condition.
@@ -2313,7 +2313,7 @@ refer to them instead of the whole pattern. In a larger pattern, keeping
 track of parenthesis numbers can be tricky. It may be more convenient to
 use named parentheses instead.
 The Perl syntax for this is (?&amp;name); GRegex also supports the(?P>name)
-syntac. We could rewrite the above example as follows:
+syntax. We could rewrite the above example as follows:
 </para>
 
 <programlisting>
@@ -2441,52 +2441,6 @@ It matches "abcabc". It does not match "abcABC" because the change of
 processing option does not affect the called subpattern.
 </para>
 </refsect1>
-
-<!-- Callouts are not supported by GRegex
-<refsect1>
-<title>Callouts</title>
-<para>
-Perl has a feature whereby using the sequence (?{...}) causes arbitrary
-Perl code to be obeyed in the middle of matching a regular expression.
-This makes it possible, amongst other things, to extract different substrings that match the same pair of parentheses when there is a repetition.
-</para>
-
-<para>
-PCRE provides a similar feature, but of course it cannot obey arbitrary
-Perl code. The feature is called "callout". The caller of PCRE provides
-an external function by putting its entry point in the global variable
-pcre_callout. By default, this variable contains NULL, which disables
-all calling out.
-</para>
-
-<para>
-Within a regular expression, (?C) indicates the points at which the
-external function is to be called. If you want to identify different
-callout points, you can put a number less than 256 after the letter C.
-The default value is zero. For example, this pattern has two callout
-points:
-</para>
-
-<programlisting>
-(?C1)abc(?C2)def
-</programlisting>
-
-<para>
-If the PCRE_AUTO_CALLOUT flag is passed to pcre_compile(), callouts are
-automatically installed before each item in the pattern. They are all
-numbered 255.
-</para>
-
-<para>
-During matching, when PCRE reaches a callout point (and pcre_callout is
-set), the external function is called. It is provided with the number
-of the callout, the position in the pattern, and, optionally, one item
-of data originally supplied by the caller of pcre_exec(). The callout
-function may cause matching to proceed, to backtrack, or to fail altogether. A complete description of the interface to the callout function
-is given in the pcrecallout documentation.
-</para>
-</refsect1>
--->
 
 <refsect1>
 <title>Copyright</title>

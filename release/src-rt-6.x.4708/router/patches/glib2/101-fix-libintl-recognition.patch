@@ -1,0 +1,51 @@
+--- glib2/meson.build
++++ glib2/meson.build
+@@ -2108,8 +2108,9 @@
+ # FIXME: glib-gettext.m4 has much more checks to detect broken/uncompatible
+ # implementations. This could be extended if issues are found in some platforms.
+ libintl_deps = []
++libintl_prefix = '#include <libintl.h>'
+ libintl = dependency('intl', required: false)
+-if libintl.found()
++if libintl.found() and libintl.type_name() != 'internal'
+   # libintl supports different threading APIs, which may not
+   # require additional flags, but it defaults to using pthreads if
+   # found. Meson's "threads" dependency does not allow you to
+@@ -2119,22 +2120,29 @@
+   #
+   # Meson's builtin dependency lookup as of 0.60.0 doesn't check for
+   # pthread, so we do this manually here.
+-  if cc.has_function('ngettext', dependencies : libintl)
++  if cc.has_function('ngettext', dependencies : libintl, prefix: libintl_prefix)
+     libintl_deps += [libintl]
+   else
+-    libintl_pthread = cc.find_library('pthread', required : false)
+-    if libintl_pthread.found() and cc.has_function('ngettext', dependencies : [libintl, libintl_pthread])
+-      libintl_deps += [libintl, libintl_pthread]
++    libintl_iconv = cc.find_library('iconv', required : false)
++    if libintl_iconv.found() and cc.has_function('ngettext', args : osx_ldflags, dependencies : [libintl, libintl_iconv])
++      libintl_deps += [libintl, libintl_iconv]
+     else
+-      libintl = disabler()
++      libintl_pthread = cc.find_library('pthread', required : false)
++      if libintl_pthread.found() and cc.has_function('ngettext', dependencies : [libintl, libintl_pthread], prefix: libintl_prefix)
++        libintl_deps += [libintl, libintl_pthread]
++      else
++        libintl = disabler()
++      endif
+     endif
+   endif
+ endif
+ 
+-if libintl.found()
+-  have_bind_textdomain_codeset = cc.has_function('bind_textdomain_codeset', dependencies: libintl_deps)
++if libintl.found() and libintl.type_name() != 'internal'
++  have_bind_textdomain_codeset = cc.has_function('bind_textdomain_codeset', dependencies: libintl_deps, prefix: libintl_prefix)
+ else
+-  libintl = subproject('proxy-libintl').get_variable('intl_dep')
++  # using proxy-libintl fallback
++  libintl = dependency('intl', allow_fallback: true)
++  assert(libintl.type_name() == 'internal')
+   libintl_deps = [libintl]
+   have_bind_textdomain_codeset = true  # proxy-libintl supports it
+ endif

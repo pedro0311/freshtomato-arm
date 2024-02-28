@@ -4,10 +4,12 @@
  * GQueue: Double ended queue implementation, piggy backed on GList.
  * Copyright (C) 1998 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -31,15 +31,19 @@
  *
  * The #GQueue structure and its associated functions provide a standard
  * queue data structure. Internally, GQueue uses the same data structure
- * as #GList to store elements.
+ * as #GList to store elements with the same complexity over
+ * insertion/deletion (O(1)) and access/search (O(n)) operations.
  *
  * The data contained in each element can be either integer values, by
- * using one of the <link linkend="glib-Type-Conversion-Macros">Type
- * Conversion Macros</link>, or simply pointers to any type of data.
+ * using one of the [Type Conversion Macros][glib-Type-Conversion-Macros],
+ * or simply pointers to any type of data.
+ *
+ * As with all other GLib data structures, #GQueue is not thread-safe.
+ * For a thread-safe queue, use #GAsyncQueue.
  *
  * To create a new GQueue, use g_queue_new().
  *
- * To initialize a statically-allocated GQueue, use #G_QUEUE_INIT or
+ * To initialize a statically-allocated GQueue, use %G_QUEUE_INIT or
  * g_queue_init().
  *
  * To add elements, use g_queue_push_head(), g_queue_push_head_link(),
@@ -61,9 +65,9 @@
  *
  * Creates a new #GQueue.
  *
- * Returns: a new #GQueue.
+ * Returns: a newly allocated #GQueue
  **/
-GQueue*
+GQueue *
 g_queue_new (void)
 {
   return g_slice_new0 (GQueue);
@@ -71,17 +75,14 @@ g_queue_new (void)
 
 /**
  * g_queue_free:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
- * Frees the memory allocated for the #GQueue. Only call this function if
- * @queue was created with g_queue_new(). If queue elements contain
+ * Frees the memory allocated for the #GQueue. Only call this function
+ * if @queue was created with g_queue_new(). If queue elements contain
  * dynamically-allocated memory, they should be freed first.
  *
- * <note><para>
- * If queue elements contain dynamically-allocated memory,
- * you should either use g_queue_free_full() or free them manually
- * first.
- * </para></note>
+ * If queue elements contain dynamically-allocated memory, you should
+ * either use g_queue_free_full() or free them manually first.
  **/
 void
 g_queue_free (GQueue *queue)
@@ -97,14 +98,17 @@ g_queue_free (GQueue *queue)
  * @queue: a pointer to a #GQueue
  * @free_func: the function to be called to free each element's data
  *
- * Convenience method, which frees all the memory used by a #GQueue, and
- * calls the specified destroy function on every element's data.
+ * Convenience method, which frees all the memory used by a #GQueue,
+ * and calls the specified destroy function on every element's data.
+ *
+ * @free_func should not modify the queue (eg, by removing the freed
+ * element from it).
  *
  * Since: 2.32
  */
 void
-g_queue_free_full (GQueue         *queue,
-		  GDestroyNotify  free_func)
+g_queue_free_full (GQueue        *queue,
+                  GDestroyNotify  free_func)
 {
   g_queue_foreach (queue, (GFunc) free_func, NULL);
   g_queue_free (queue);
@@ -116,11 +120,11 @@ g_queue_free_full (GQueue         *queue,
  *
  * A statically-allocated #GQueue must be initialized with this function
  * before it can be used. Alternatively you can initialize it with
- * #G_QUEUE_INIT. It is not necessary to initialize queues created with
+ * %G_QUEUE_INIT. It is not necessary to initialize queues created with
  * g_queue_new().
  *
  * Since: 2.14
- **/
+ */
 void
 g_queue_init (GQueue *queue)
 {
@@ -149,13 +153,35 @@ g_queue_clear (GQueue *queue)
 }
 
 /**
+ * g_queue_clear_full:
+ * @queue: a pointer to a #GQueue
+ * @free_func: (nullable): the function to be called to free memory allocated
+ *
+ * Convenience method, which frees all the memory used by a #GQueue,
+ * and calls the provided @free_func on each item in the #GQueue.
+ *
+ * Since: 2.60
+ */
+void
+g_queue_clear_full (GQueue          *queue,
+                    GDestroyNotify  free_func)
+{
+  g_return_if_fail (queue != NULL);
+
+  if (free_func != NULL)
+    g_queue_foreach (queue, (GFunc) free_func, NULL);
+
+  g_queue_clear (queue);
+}
+
+/**
  * g_queue_is_empty:
  * @queue: a #GQueue.
  *
  * Returns %TRUE if the queue is empty.
  *
- * Returns: %TRUE if the queue is empty.
- **/
+ * Returns: %TRUE if the queue is empty
+ */
 gboolean
 g_queue_is_empty (GQueue *queue)
 {
@@ -170,10 +196,10 @@ g_queue_is_empty (GQueue *queue)
  * 
  * Returns the number of items in @queue.
  * 
- * Return value: The number of items in @queue.
+ * Returns: the number of items in @queue
  * 
  * Since: 2.4
- **/
+ */
 guint
 g_queue_get_length (GQueue *queue)
 {
@@ -189,7 +215,7 @@ g_queue_get_length (GQueue *queue)
  * Reverses the order of the items in @queue.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_reverse (GQueue *queue)
 {
@@ -207,10 +233,10 @@ g_queue_reverse (GQueue *queue)
  * queue consist of pointers to data, the pointers are copied, but the
  * actual data is not.
  * 
- * Return value: A copy of @queue
+ * Returns: a copy of @queue
  * 
  * Since: 2.4
- **/
+ */
 GQueue *
 g_queue_copy (GQueue *queue)
 {
@@ -236,12 +262,15 @@ g_queue_copy (GQueue *queue)
  * Calls @func for each element in the queue passing @user_data to the
  * function.
  * 
+ * It is safe for @func to remove the element from @queue, but it must
+ * not modify any part of the queue after that element.
+ *
  * Since: 2.4
- **/
+ */
 void
 g_queue_foreach (GQueue   *queue,
-		 GFunc     func,
-		 gpointer  user_data)
+                 GFunc     func,
+                 gpointer  user_data)
 {
   GList *list;
 
@@ -264,13 +293,13 @@ g_queue_foreach (GQueue   *queue,
  * 
  * Finds the first link in @queue which contains @data.
  * 
- * Return value: The first link in @queue which contains @data.
+ * Returns: the first link in @queue which contains @data
  * 
  * Since: 2.4
- **/
+ */
 GList *
 g_queue_find (GQueue        *queue,
-	      gconstpointer  data)
+              gconstpointer  data)
 {
   g_return_val_if_fail (queue != NULL, NULL);
 
@@ -282,7 +311,7 @@ g_queue_find (GQueue        *queue,
  * @queue: a #GQueue
  * @data: user data passed to @func
  * @func: a #GCompareFunc to call for each element. It should return 0
- * when the desired element is found
+ *     when the desired element is found
  *
  * Finds an element in a #GQueue, using a supplied function to find the
  * desired element. It iterates over the queue, calling the given function
@@ -290,14 +319,14 @@ g_queue_find (GQueue        *queue,
  * takes two gconstpointer arguments, the #GQueue element's data as the
  * first argument and the given user data as the second argument.
  * 
- * Return value: The found link, or %NULL if it wasn't found
+ * Returns: the found link, or %NULL if it wasn't found
  * 
  * Since: 2.4
- **/
+ */
 GList *
-g_queue_find_custom    (GQueue        *queue,
-			gconstpointer  data,
-			GCompareFunc   func)
+g_queue_find_custom (GQueue        *queue,
+                     gconstpointer  data,
+                     GCompareFunc   func)
 {
   g_return_val_if_fail (queue != NULL, NULL);
   g_return_val_if_fail (func != NULL, NULL);
@@ -317,11 +346,11 @@ g_queue_find_custom    (GQueue        *queue,
  * Sorts @queue using @compare_func. 
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_sort (GQueue           *queue,
-	      GCompareDataFunc  compare_func,
-	      gpointer          user_data)
+              GCompareDataFunc  compare_func,
+              gpointer          user_data)
 {
   g_return_if_fail (queue != NULL);
   g_return_if_fail (compare_func != NULL);
@@ -336,10 +365,10 @@ g_queue_sort (GQueue           *queue,
  * @data: the data for the new element.
  *
  * Adds a new element at the head of the queue.
- **/
+ */
 void
-g_queue_push_head (GQueue  *queue,
-		   gpointer data)
+g_queue_push_head (GQueue   *queue,
+                   gpointer  data)
 {
   g_return_if_fail (queue != NULL);
 
@@ -357,18 +386,18 @@ g_queue_push_head (GQueue  *queue,
  *     larger than the number of elements in the @queue, the element is
  *     added to the end of the queue.
  * 
- * Inserts a new element into @queue at the given position
+ * Inserts a new element into @queue at the given position.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_push_nth (GQueue   *queue,
-		  gpointer  data,
-		  gint      n)
+                  gpointer  data,
+                  gint      n)
 {
   g_return_if_fail (queue != NULL);
 
-  if (n < 0 || n >= queue->length)
+  if (n < 0 || (guint) n >= queue->length)
     {
       g_queue_push_tail (queue, data);
       return;
@@ -379,15 +408,14 @@ g_queue_push_nth (GQueue   *queue,
 
 /**
  * g_queue_push_head_link:
- * @queue: a #GQueue.
- * @link_: a single #GList element, <emphasis>not</emphasis> a list with
- *     more than one element.
+ * @queue: a #GQueue
+ * @link_: a single #GList element, not a list with more than one element
  *
  * Adds a new element at the head of the queue.
- **/
+ */
 void
 g_queue_push_head_link (GQueue *queue,
-			GList  *link)
+                        GList  *link)
 {
   g_return_if_fail (queue != NULL);
   g_return_if_fail (link != NULL);
@@ -405,14 +433,14 @@ g_queue_push_head_link (GQueue *queue,
 
 /**
  * g_queue_push_tail:
- * @queue: a #GQueue.
- * @data: the data for the new element.
+ * @queue: a #GQueue
+ * @data: the data for the new element
  *
  * Adds a new element at the tail of the queue.
- **/
+ */
 void
-g_queue_push_tail (GQueue  *queue,
-		   gpointer data)
+g_queue_push_tail (GQueue   *queue,
+                   gpointer  data)
 {
   g_return_if_fail (queue != NULL);
 
@@ -426,15 +454,14 @@ g_queue_push_tail (GQueue  *queue,
 
 /**
  * g_queue_push_tail_link:
- * @queue: a #GQueue.
- * @link_: a single #GList element, <emphasis>not</emphasis> a list with
- *   more than one element.
+ * @queue: a #GQueue
+ * @link_: a single #GList element, not a list with more than one element
  *
  * Adds a new element at the tail of the queue.
- **/
+ */
 void
 g_queue_push_tail_link (GQueue *queue,
-			GList  *link)
+                        GList  *link)
 {
   g_return_if_fail (queue != NULL);
   g_return_if_fail (link != NULL);
@@ -461,11 +488,11 @@ g_queue_push_tail_link (GQueue *queue,
  * Inserts @link into @queue at the given position.
  * 
  * Since: 2.4
- **/
+ */
 void
-g_queue_push_nth_link  (GQueue  *queue,
-			gint     n,
-			GList   *link_)
+g_queue_push_nth_link (GQueue *queue,
+                       gint    n,
+                       GList  *link_)
 {
   GList *next;
   GList *prev;
@@ -473,7 +500,7 @@ g_queue_push_nth_link  (GQueue  *queue,
   g_return_if_fail (queue != NULL);
   g_return_if_fail (link_ != NULL);
 
-  if (n < 0 || n >= queue->length)
+  if (n < 0 || (guint) n >= queue->length)
     {
       g_queue_push_tail_link (queue, link_);
       return;
@@ -495,21 +522,23 @@ g_queue_push_nth_link  (GQueue  *queue,
   if (queue->head->prev)
     queue->head = queue->head->prev;
 
-  if (queue->tail->next)
-    queue->tail = queue->tail->next;
+  /* The case where we’re pushing @link_ at the end of @queue is handled above
+   * using g_queue_push_tail_link(), so we should never have to manually adjust
+   * queue->tail. */
+  g_assert (queue->tail->next == NULL);
   
   queue->length++;
 }
 
 /**
  * g_queue_pop_head:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
- * Removes the first element of the queue.
+ * Removes the first element of the queue and returns its data.
  *
- * Returns: the data of the first element in the queue, or %NULL if the queue
- *   is empty.
- **/
+ * Returns: the data of the first element in the queue, or %NULL
+ *     if the queue is empty
+ */
 gpointer
 g_queue_pop_head (GQueue *queue)
 {
@@ -522,9 +551,9 @@ g_queue_pop_head (GQueue *queue)
 
       queue->head = node->next;
       if (queue->head)
-	queue->head->prev = NULL;
+        queue->head->prev = NULL;
       else
-	queue->tail = NULL;
+        queue->tail = NULL;
       g_list_free_1 (node);
       queue->length--;
 
@@ -536,14 +565,14 @@ g_queue_pop_head (GQueue *queue)
 
 /**
  * g_queue_pop_head_link:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
- * Removes the first element of the queue.
+ * Removes and returns the first element of the queue.
  *
- * Returns: the #GList element at the head of the queue, or %NULL if the queue
- *   is empty.
- **/
-GList*
+ * Returns: the #GList element at the head of the queue, or %NULL
+ *     if the queue is empty
+ */
+GList *
 g_queue_pop_head_link (GQueue *queue)
 {
   g_return_val_if_fail (queue != NULL, NULL);
@@ -554,12 +583,12 @@ g_queue_pop_head_link (GQueue *queue)
 
       queue->head = node->next;
       if (queue->head)
-	{
-	  queue->head->prev = NULL;
-	  node->next = NULL;
-	}
+        {
+          queue->head->prev = NULL;
+          node->next = NULL;
+        }
       else
-	queue->tail = NULL;
+        queue->tail = NULL;
       queue->length--;
 
       return node;
@@ -572,13 +601,13 @@ g_queue_pop_head_link (GQueue *queue)
  * g_queue_peek_head_link:
  * @queue: a #GQueue
  * 
- * Returns the first link in @queue
+ * Returns the first link in @queue.
  * 
- * Return value: the first link in @queue, or %NULL if @queue is empty
+ * Returns: the first link in @queue, or %NULL if @queue is empty
  * 
  * Since: 2.4
- **/
-GList*
+ */
+GList *
 g_queue_peek_head_link (GQueue *queue)
 {
   g_return_val_if_fail (queue != NULL, NULL);
@@ -590,13 +619,13 @@ g_queue_peek_head_link (GQueue *queue)
  * g_queue_peek_tail_link:
  * @queue: a #GQueue
  * 
- * Returns the last link @queue.
+ * Returns the last link in @queue.
  * 
- * Return value: the last link in @queue, or %NULL if @queue is empty
+ * Returns: the last link in @queue, or %NULL if @queue is empty
  * 
  * Since: 2.4
- **/
-GList*
+ */
+GList *
 g_queue_peek_tail_link (GQueue *queue)
 {
   g_return_val_if_fail (queue != NULL, NULL);
@@ -606,13 +635,13 @@ g_queue_peek_tail_link (GQueue *queue)
 
 /**
  * g_queue_pop_tail:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
- * Removes the last element of the queue.
+ * Removes the last element of the queue and returns its data.
  *
- * Returns: the data of the last element in the queue, or %NULL if the queue
- *   is empty.
- **/
+ * Returns: the data of the last element in the queue, or %NULL
+ *     if the queue is empty
+ */
 gpointer
 g_queue_pop_tail (GQueue *queue)
 {
@@ -625,9 +654,9 @@ g_queue_pop_tail (GQueue *queue)
 
       queue->tail = node->prev;
       if (queue->tail)
-	queue->tail->next = NULL;
+        queue->tail->next = NULL;
       else
-	queue->head = NULL;
+        queue->head = NULL;
       queue->length--;
       g_list_free_1 (node);
 
@@ -640,17 +669,17 @@ g_queue_pop_tail (GQueue *queue)
 /**
  * g_queue_pop_nth:
  * @queue: a #GQueue
- * @n: the position of the element.
+ * @n: the position of the element
  * 
- * Removes the @n'th element of @queue.
+ * Removes the @n'th element of @queue and returns its data.
  * 
- * Return value: the element's data, or %NULL if @n is off the end of @queue.
+ * Returns: the element's data, or %NULL if @n is off the end of @queue
  * 
  * Since: 2.4
- **/
+ */
 gpointer
 g_queue_pop_nth (GQueue *queue,
-		 guint   n)
+                 guint   n)
 {
   GList *nth_link;
   gpointer result;
@@ -670,14 +699,14 @@ g_queue_pop_nth (GQueue *queue,
 
 /**
  * g_queue_pop_tail_link:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
- * Removes the last element of the queue.
+ * Removes and returns the last element of the queue.
  *
- * Returns: the #GList element at the tail of the queue, or %NULL if the queue
- *   is empty.
- **/
-GList*
+ * Returns: the #GList element at the tail of the queue, or %NULL
+ *     if the queue is empty
+ */
+GList *
 g_queue_pop_tail_link (GQueue *queue)
 {
   g_return_val_if_fail (queue != NULL, NULL);
@@ -688,12 +717,12 @@ g_queue_pop_tail_link (GQueue *queue)
       
       queue->tail = node->prev;
       if (queue->tail)
-	{
-	  queue->tail->next = NULL;
-	  node->prev = NULL;
-	}
+        {
+          queue->tail->next = NULL;
+          node->prev = NULL;
+        }
       else
-	queue->head = NULL;
+        queue->head = NULL;
       queue->length--;
       
       return node;
@@ -709,13 +738,13 @@ g_queue_pop_tail_link (GQueue *queue)
  * 
  * Removes and returns the link at the given position.
  * 
- * Return value: The @n'th link, or %NULL if @n is off the end of @queue.
+ * Returns: the @n'th link, or %NULL if @n is off the end of @queue
  * 
  * Since: 2.4
- **/
+ */
 GList*
 g_queue_pop_nth_link (GQueue *queue,
-		      guint   n)
+                      guint   n)
 {
   GList *link;
   
@@ -737,17 +766,17 @@ g_queue_pop_nth_link (GQueue *queue,
  * 
  * Returns the link at the given position
  * 
- * Return value: The link at the @n'th position, or %NULL if @n is off the
- * end of the list
+ * Returns: the link at the @n'th position, or %NULL
+ *     if @n is off the end of the list
  * 
  * Since: 2.4
- **/
+ */
 GList *
 g_queue_peek_nth_link (GQueue *queue,
-		       guint   n)
+                       guint   n)
 {
   GList *link;
-  gint i;
+  guint i;
   
   g_return_val_if_fail (queue != NULL, NULL);
 
@@ -760,13 +789,13 @@ g_queue_peek_nth_link (GQueue *queue,
 
       link = queue->tail;
       for (i = 0; i < n; ++i)
-	link = link->prev;
+        link = link->prev;
     }
   else
     {
       link = queue->head;
       for (i = 0; i < n; ++i)
-	link = link->next;
+        link = link->next;
     }
 
   return link;
@@ -775,18 +804,18 @@ g_queue_peek_nth_link (GQueue *queue,
 /**
  * g_queue_link_index:
  * @queue: a #GQueue
- * @link_: A #GList link
+ * @link_: a #GList link
  * 
  * Returns the position of @link_ in @queue.
  * 
- * Return value: The position of @link_, or -1 if the link is
- * not part of @queue
+ * Returns: the position of @link_, or -1 if the link is
+ *     not part of @queue
  * 
  * Since: 2.4
- **/
+ */
 gint
 g_queue_link_index (GQueue *queue,
-		    GList  *link_)
+                    GList  *link_)
 {
   g_return_val_if_fail (queue != NULL, -1);
 
@@ -796,18 +825,18 @@ g_queue_link_index (GQueue *queue,
 /**
  * g_queue_unlink:
  * @queue: a #GQueue
- * @link_: a #GList link that <emphasis>must</emphasis> be part of @queue
+ * @link_: a #GList link that must be part of @queue
  *
- * Unlinks @link_ so that it will no longer be part of @queue. The link is
- * not freed.
+ * Unlinks @link_ so that it will no longer be part of @queue.
+ * The link is not freed.
  *
- * @link_ must be part of @queue,
+ * @link_ must be part of @queue.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_unlink (GQueue *queue,
-		GList  *link_)
+                GList  *link_)
 {
   g_return_if_fail (queue != NULL);
   g_return_if_fail (link_ != NULL);
@@ -822,17 +851,17 @@ g_queue_unlink (GQueue *queue,
 /**
  * g_queue_delete_link:
  * @queue: a #GQueue
- * @link_: a #GList link that <emphasis>must</emphasis> be part of @queue
+ * @link_: a #GList link that must be part of @queue
  *
  * Removes @link_ from @queue and frees it.
  *
  * @link_ must be part of @queue.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_delete_link (GQueue *queue,
-		     GList  *link_)
+                     GList  *link_)
 {
   g_return_if_fail (queue != NULL);
   g_return_if_fail (link_ != NULL);
@@ -843,13 +872,13 @@ g_queue_delete_link (GQueue *queue,
 
 /**
  * g_queue_peek_head:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
  * Returns the first element of the queue.
  *
- * Returns: the data of the first element in the queue, or %NULL if the queue
- *   is empty.
- **/
+ * Returns: the data of the first element in the queue, or %NULL
+ *     if the queue is empty
+ */
 gpointer
 g_queue_peek_head (GQueue *queue)
 {
@@ -860,13 +889,13 @@ g_queue_peek_head (GQueue *queue)
 
 /**
  * g_queue_peek_tail:
- * @queue: a #GQueue.
+ * @queue: a #GQueue
  *
  * Returns the last element of the queue.
  *
- * Returns: the data of the last element in the queue, or %NULL if the queue
- *   is empty.
- **/
+ * Returns: the data of the last element in the queue, or %NULL
+ *     if the queue is empty
+ */
 gpointer
 g_queue_peek_tail (GQueue *queue)
 {
@@ -878,18 +907,18 @@ g_queue_peek_tail (GQueue *queue)
 /**
  * g_queue_peek_nth:
  * @queue: a #GQueue
- * @n: the position of the element.
+ * @n: the position of the element
  * 
  * Returns the @n'th element of @queue. 
  * 
- * Return value: The data for the @n'th element of @queue, or %NULL if @n is
- *   off the end of @queue.
+ * Returns: the data for the @n'th element of @queue,
+ *     or %NULL if @n is off the end of @queue
  * 
  * Since: 2.4
- **/
+ */
 gpointer
 g_queue_peek_nth (GQueue *queue,
-		  guint   n)
+                  guint   n)
 {
   GList *link;
   
@@ -906,17 +935,18 @@ g_queue_peek_nth (GQueue *queue,
 /**
  * g_queue_index:
  * @queue: a #GQueue
- * @data: the data to find.
+ * @data: the data to find
  * 
  * Returns the position of the first element in @queue which contains @data.
  * 
- * Return value: The position of the first element in @queue which contains @data, or -1 if no element in @queue contains @data.
+ * Returns: the position of the first element in @queue which
+ *     contains @data, or -1 if no element in @queue contains @data
  * 
  * Since: 2.4
- **/
+ */
 gint
 g_queue_index (GQueue        *queue,
-	       gconstpointer  data)
+               gconstpointer  data)
 {
   g_return_val_if_fail (queue != NULL, -1);
 
@@ -926,17 +956,17 @@ g_queue_index (GQueue        *queue,
 /**
  * g_queue_remove:
  * @queue: a #GQueue
- * @data: data to remove.
+ * @data: the data to remove
  * 
  * Removes the first element in @queue that contains @data. 
  * 
- * Return value: %TRUE if @data was found and removed from @queue
+ * Returns: %TRUE if @data was found and removed from @queue
  *
  * Since: 2.4
- **/
+ */
 gboolean
 g_queue_remove (GQueue        *queue,
-		gconstpointer  data)
+                gconstpointer  data)
 {
   GList *link;
   
@@ -953,17 +983,17 @@ g_queue_remove (GQueue        *queue,
 /**
  * g_queue_remove_all:
  * @queue: a #GQueue
- * @data: data to remove
+ * @data: the data to remove
  * 
  * Remove all elements whose data equals @data from @queue.
  * 
- * Return value: the number of elements removed from @queue
+ * Returns: the number of elements removed from @queue
  *
  * Since: 2.4
- **/
+ */
 guint
 g_queue_remove_all (GQueue        *queue,
-		    gconstpointer  data)
+                    gconstpointer  data)
 {
   GList *list;
   guint old_length;
@@ -978,7 +1008,7 @@ g_queue_remove_all (GQueue        *queue,
       GList *next = list->next;
 
       if (list->data == data)
-	g_queue_delete_link (queue, list);
+        g_queue_delete_link (queue, list);
       
       list = next;
     }
@@ -989,51 +1019,131 @@ g_queue_remove_all (GQueue        *queue,
 /**
  * g_queue_insert_before:
  * @queue: a #GQueue
- * @sibling: a #GList link that <emphasis>must</emphasis> be part of @queue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the tail of the queue.
  * @data: the data to insert
  * 
  * Inserts @data into @queue before @sibling.
  *
- * @sibling must be part of @queue.
+ * @sibling must be part of @queue. Since GLib 2.44 a %NULL sibling pushes the
+ * data at the tail of the queue.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_insert_before (GQueue   *queue,
-		       GList    *sibling,
-		       gpointer  data)
+                       GList    *sibling,
+                       gpointer  data)
 {
   g_return_if_fail (queue != NULL);
-  g_return_if_fail (sibling != NULL);
 
-  queue->head = g_list_insert_before (queue->head, sibling, data);
-  queue->length++;
+  if (sibling == NULL)
+    {
+      /* We don't use g_list_insert_before() with a NULL sibling because it
+       * would be a O(n) operation and we would need to update manually the tail
+       * pointer.
+       */
+      g_queue_push_tail (queue, data);
+    }
+  else
+    {
+      queue->head = g_list_insert_before (queue->head, sibling, data);
+      queue->length++;
+    }
+}
+
+/**
+ * g_queue_insert_before_link:
+ * @queue: a #GQueue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the tail of the queue.
+ * @link_: a #GList link to insert which must not be part of any other list.
+ *
+ * Inserts @link_ into @queue before @sibling.
+ *
+ * @sibling must be part of @queue.
+ *
+ * Since: 2.62
+ */
+void
+g_queue_insert_before_link (GQueue   *queue,
+                            GList    *sibling,
+                            GList    *link_)
+{
+  g_return_if_fail (queue != NULL);
+  g_return_if_fail (link_ != NULL);
+  g_return_if_fail (link_->prev == NULL);
+  g_return_if_fail (link_->next == NULL);
+
+  if G_UNLIKELY (sibling == NULL)
+    {
+      /* We don't use g_list_insert_before_link() with a NULL sibling because it
+       * would be a O(n) operation and we would need to update manually the tail
+       * pointer.
+       */
+      g_queue_push_tail_link (queue, link_);
+    }
+  else
+    {
+      queue->head = g_list_insert_before_link (queue->head, sibling, link_);
+      queue->length++;
+    }
 }
 
 /**
  * g_queue_insert_after:
  * @queue: a #GQueue
- * @sibling: a #GList link that <emphasis>must</emphasis> be part of @queue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the head of the queue.
  * @data: the data to insert
  *
- * Inserts @data into @queue after @sibling
+ * Inserts @data into @queue after @sibling.
  *
- * @sibling must be part of @queue
+ * @sibling must be part of @queue. Since GLib 2.44 a %NULL sibling pushes the
+ * data at the head of the queue.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_insert_after (GQueue   *queue,
-		      GList    *sibling,
-		      gpointer  data)
+                      GList    *sibling,
+                      gpointer  data)
 {
   g_return_if_fail (queue != NULL);
-  g_return_if_fail (sibling != NULL);
 
-  if (sibling == queue->tail)
-    g_queue_push_tail (queue, data);
+  if (sibling == NULL)
+    g_queue_push_head (queue, data);
   else
     g_queue_insert_before (queue, sibling->next, data);
+}
+
+/**
+ * g_queue_insert_after_link:
+ * @queue: a #GQueue
+ * @sibling: (nullable): a #GList link that must be part of @queue, or %NULL to
+ *   push at the head of the queue.
+ * @link_: a #GList link to insert which must not be part of any other list.
+ *
+ * Inserts @link_ into @queue after @sibling.
+ *
+ * @sibling must be part of @queue.
+ *
+ * Since: 2.62
+ */
+void
+g_queue_insert_after_link (GQueue   *queue,
+                           GList    *sibling,
+                           GList    *link_)
+{
+  g_return_if_fail (queue != NULL);
+  g_return_if_fail (link_ != NULL);
+  g_return_if_fail (link_->prev == NULL);
+  g_return_if_fail (link_->next == NULL);
+
+  if G_UNLIKELY (sibling == NULL)
+    g_queue_push_head_link (queue, link_);
+  else
+    g_queue_insert_before_link (queue, sibling->next, link_);
 }
 
 /**
@@ -1045,17 +1155,17 @@ g_queue_insert_after (GQueue   *queue,
  *     return 0 if the elements are equal, a negative value if the first
  *     element comes before the second, and a positive value if the second
  *     element comes before the first.
- * @user_data: user data passed to @func.
+ * @user_data: user data passed to @func
  * 
  * Inserts @data into @queue using @func to determine the new position.
  * 
  * Since: 2.4
- **/
+ */
 void
 g_queue_insert_sorted (GQueue           *queue,
-		       gpointer          data,
-		       GCompareDataFunc  func,
-		       gpointer          user_data)
+                       gpointer          data,
+                       GCompareDataFunc  func,
+                       gpointer          user_data)
 {
   GList *list;
   
@@ -1065,8 +1175,5 @@ g_queue_insert_sorted (GQueue           *queue,
   while (list && func (list->data, data, user_data) < 0)
     list = list->next;
 
-  if (list)
-    g_queue_insert_before (queue, list, data);
-  else
-    g_queue_push_tail (queue, data);
+  g_queue_insert_before (queue, list, data);
 }

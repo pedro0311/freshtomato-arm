@@ -21,23 +21,27 @@
  */
 
 #include <config.h>
+#include <errno.h>
 
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #include <sys/types.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
 
-
 #include <glib.h>
 
-#ifndef G_OS_WIN32
+#include "glib/glib-private.h"
+
+#ifdef G_OS_UNIX
+#include <unistd.h>
 #include <sys/resource.h>
+#endif
+
+#ifdef THREADS_POSIX
+#include <pthread.h>
 #endif
 
 static gpointer
@@ -130,32 +134,44 @@ test_thread3 (void)
 static void
 test_thread4 (void)
 {
-#ifdef HAVE_PRLIMIT
+#ifdef _GLIB_ADDRESS_SANITIZER
+  g_test_incomplete ("FIXME: Leaks a GSystemThread's name, see glib#2308");
+#elif defined(HAVE_PRLIMIT)
   struct rlimit ol, nl;
   GThread *thread;
   GError *error;
-  gint ret;
-
-  /* Linux CAP_SYS_RESOURCE overrides RLIMIT_NPROC, and probably similar
-   * things are true on other systems.
-   */
-  if (getuid () == 0 || geteuid () == 0)
-    return;
 
   getrlimit (RLIMIT_NPROC, &nl);
   nl.rlim_cur = 1;
 
-  if ((ret = prlimit (getpid(), RLIMIT_NPROC, &nl, &ol)) != 0)
-    g_error ("prlimit failed: %s\n", g_strerror (ret));
+  if (prlimit (getpid (), RLIMIT_NPROC, &nl, &ol) != 0)
+    g_error ("prlimit failed: %s", g_strerror (errno));
 
   error = NULL;
   thread = g_thread_try_new ("a", thread1_func, NULL, &error);
-  g_assert (thread == NULL);
-  g_assert_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN);
-  g_error_free (error);
 
-  if ((ret = prlimit (getpid (), RLIMIT_NPROC, &ol, NULL)) != 0)
-    g_error ("resetting RLIMIT_NPROC failed: %s\n", g_strerror (ret));
+  if (thread != NULL)
+    {
+      gpointer result;
+
+      /* Privileged processes might be able to create new threads even
+       * though the rlimit is too low. There isn't much we can do about
+       * this; we just can't test this failure mode in this situation. */
+      g_test_skip ("Unable to test g_thread_try_new() failing with EAGAIN "
+                   "while privileged (CAP_SYS_RESOURCE, CAP_SYS_ADMIN or "
+                   "euid 0?)");
+      result = g_thread_join (thread);
+      g_assert_cmpint (GPOINTER_TO_INT (result), ==, 1);
+    }
+  else
+    {
+      g_assert (thread == NULL);
+      g_assert_error (error, G_THREAD_ERROR, G_THREAD_ERROR_AGAIN);
+      g_error_free (error);
+    }
+
+  if (prlimit (getpid (), RLIMIT_NPROC, &ol, NULL) != 0)
+    g_error ("resetting RLIMIT_NPROC failed: %s", g_strerror (errno));
 #endif
 }
 
@@ -173,14 +189,12 @@ test_thread5 (void)
 static gpointer
 thread6_func (gpointer data)
 {
-#ifdef HAVE_SYS_PRCTL_H
-#ifdef PR_GET_NAME
-  const gchar name[16];
+#if defined (HAVE_PTHREAD_SETNAME_NP_WITH_TID) && defined (HAVE_PTHREAD_GETNAME_NP)
+  char name[16];
 
-  prctl (PR_GET_NAME, name, 0, 0, 0, 0);
+  pthread_getname_np (pthread_self(), name, 16);
 
-  g_assert_cmpstr (name, ==, (gchar*)data);
-#endif
+  g_assert_cmpstr (name, ==, data);
 #endif
 
   return NULL;

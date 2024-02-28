@@ -1,10 +1,12 @@
 /*
  * Copyright © 2009 Ryan Lortie
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * See the included COPYING file for more information.
  */
@@ -13,6 +15,8 @@
 #include <gio/gio.h>
 #include <stdlib.h>
 #include <string.h>
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 
 static GObject      *got_source;
 static GAsyncResult *got_result;
@@ -119,12 +123,79 @@ test_simple_async (void)
   ensure_destroyed (b);
 }
 
+static void
+test_valid (void)
+{
+  GAsyncResult *result;
+  GObject *a, *b;
+
+  a = g_object_new (G_TYPE_OBJECT, NULL);
+  b = g_object_new (G_TYPE_OBJECT, NULL);
+
+  /* Without source or tag */
+  result = (GAsyncResult *) g_simple_async_result_new (NULL, NULL, NULL, NULL);
+  g_assert_true (g_simple_async_result_is_valid (result, NULL, NULL));
+  g_assert_true (g_simple_async_result_is_valid (result, NULL, test_valid));
+  g_assert_true (g_simple_async_result_is_valid (result, NULL, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, a, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, a, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, a, test_simple_async));
+  g_object_unref (result);
+
+  /* Without source, with tag */
+  result = (GAsyncResult *) g_simple_async_result_new (NULL, NULL, NULL, test_valid);
+  g_assert_true (g_simple_async_result_is_valid (result, NULL, NULL));
+  g_assert_true (g_simple_async_result_is_valid (result, NULL, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, a, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, a, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, a, test_simple_async));
+  g_object_unref (result);
+
+  /* With source, without tag */
+  result = (GAsyncResult *) g_simple_async_result_new (a, NULL, NULL, NULL);
+  g_assert_true (g_simple_async_result_is_valid (result, a, NULL));
+  g_assert_true (g_simple_async_result_is_valid (result, a, test_valid));
+  g_assert_true (g_simple_async_result_is_valid (result, a, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, b, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, b, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, b, test_simple_async));
+  g_object_unref (result);
+
+  /* With source and tag */
+  result = (GAsyncResult *) g_simple_async_result_new (a, NULL, NULL, test_valid);
+  g_assert_true (g_simple_async_result_is_valid (result, a, test_valid));
+  g_assert_true (g_simple_async_result_is_valid (result, a, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, a, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, test_simple_async));
+  g_assert_false (g_simple_async_result_is_valid (result, b, NULL));
+  g_assert_false (g_simple_async_result_is_valid (result, b, test_valid));
+  g_assert_false (g_simple_async_result_is_valid (result, b, test_simple_async));
+  g_object_unref (result);
+
+  /* Non-GSimpleAsyncResult */
+  result = (GAsyncResult *) g_task_new (NULL, NULL, NULL, NULL);
+  g_assert_false (g_simple_async_result_is_valid (result, NULL, NULL));
+  g_object_unref (result);
+
+  g_object_unref (a);
+  g_object_unref (b);
+}
+
 int
 main (int argc, char **argv)
 {
   g_test_init (&argc, &argv, NULL);
 
   g_test_add_func ("/gio/simple-async-result/test", test_simple_async);
+  g_test_add_func ("/gio/simple-async-result/valid", test_valid);
 
   return g_test_run();
 }
+
+G_GNUC_END_IGNORE_DEPRECATIONS

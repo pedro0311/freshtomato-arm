@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -27,9 +27,6 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 #include <stdlib.h>
 
 #include "gdummyfile.h"
@@ -131,7 +128,7 @@ g_dummy_file_get_basename (GFile *file)
   
   if (dummy->decoded_uri)
     return g_path_get_basename (dummy->decoded_uri->path);
-  return g_strdup (dummy->text_uri);
+  return NULL;
 }
 
 static char *
@@ -487,7 +484,7 @@ unescape_string (const gchar *escaped_string,
     }
   
   *out = '\0';
-  g_warn_if_fail (out - result <= strlen (escaped_string));
+  g_warn_if_fail ((gsize) (out - result) <= strlen (escaped_string));
   return result;
 }
 
@@ -688,7 +685,7 @@ g_string_append_encoded (GString    *string,
 			 const char *reserved_chars_allowed)
 {
   unsigned char c;
-  static const gchar hex[16] = "0123456789ABCDEF";
+  static const gchar hex[] = "0123456789ABCDEF";
 
   while ((c = *encoded) != 0)
     {

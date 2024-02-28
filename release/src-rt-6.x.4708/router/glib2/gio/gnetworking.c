@@ -4,10 +4,12 @@
  *
  * Copyright (C) 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -30,7 +30,7 @@
  * @short_description: System networking includes
  * @include: gio/gnetworking.h
  *
- * The <literal>gnetworking.h</literal> header can be included to get
+ * The `<gio/gnetworking.h>` header can be included to get
  * various low-level networking-related system headers, automatically
  * taking care of certain portability issues for you.
  *
@@ -43,11 +43,10 @@
  * want your code to work under both UNIX and Windows, you will need
  * to take these differences into account.
  *
- * Also, under glibc, certain non-portable functions are only visible
- * in the headers if you define <literal>_GNU_SOURCE</literal> before
- * including them. Note that this symbol must be defined before
- * including <emphasis>any</emphasis> headers, or it may not take
- * effect.
+ * Also, under GNU libc, certain non-portable functions are only visible
+ * in the headers if you define %_GNU_SOURCE before including them. Note
+ * that this symbol must be defined before including any headers, or it
+ * may not take effect.
  */
 
 /**
@@ -64,15 +63,15 @@ void
 g_networking_init (void)
 {
 #ifdef G_OS_WIN32
-  static volatile gsize inited = 0;
+  static gsize inited = 0;
 
   if (g_once_init_enter (&inited))
     {
       WSADATA wsadata;
 
       if (WSAStartup (MAKEWORD (2, 0), &wsadata) != 0)
-	g_error ("Windows Sockets could not be initialized");
-      
+        g_error ("Windows Sockets could not be initialized");
+
       g_once_init_leave (&inited, 1);
     }
 #endif

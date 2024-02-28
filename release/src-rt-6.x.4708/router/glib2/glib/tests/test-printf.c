@@ -24,6 +24,10 @@
 #include <string.h>
 #include "glib.h"
 #include "gstdio.h"
+#ifdef G_OS_WIN32
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 static void
 test_retval_and_trunc (void)
@@ -71,7 +75,6 @@ test_d (void)
 {
   gchar buf[128];
   gint res;
-  const gchar *fmt;
 
   /* %d basic formatting */
 
@@ -182,12 +185,24 @@ test_d (void)
   res = g_snprintf (buf, 128, "%03d", -5);
   g_assert_cmpint (res, ==, 3);
   g_assert_cmpstr (buf, ==, "-05");
+}
 
-  /* gcc emits warnings for the following formats, since the C spec
-   * says some of the flags must be ignored. (The " " in "% +d" and
-   * the "0" in "%-03d".) But we need to test that our printf gets
-   * those rules right. So we fool gcc into not warning.
-   */
+/* gcc emits warnings for the following formats, since the C spec
+ * says some of the flags must be ignored. (The " " in "% +d" and
+ * the "0" in "%-03d".) But we need to test that our printf gets
+ * those rules right. So we fool gcc into not warning.
+ *
+ * These have to be in a separate function in order to use #pragma.
+ */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"
+static void
+test_d_invalid (void)
+{
+  const gchar *fmt;
+  gchar buf[128];
+  gint res;
+
   fmt = "% +d";
   res = g_snprintf (buf, 128, fmt, 5);
   g_assert_cmpint (res, ==, 2);
@@ -198,6 +213,7 @@ test_d (void)
   g_assert_cmpint (res, ==, 3);
   g_assert_cmpstr (buf, ==, "-5 ");
 }
+#pragma GCC diagnostic pop
 
 static void
 test_o (void)
@@ -397,7 +413,7 @@ test_f (void)
   gchar buf[128];
   gint res;
 
-  /* %f, basic formattting */
+  /* %f, basic formatting */
 
   res = g_snprintf (buf, 128, "%f", G_PI);
   g_assert_cmpint (res, ==, 8);
@@ -548,11 +564,9 @@ test_s (void)
   g_assert_cmpint (res, ==, 5);
   g_assert_cmpstr (buf, ==, "  abc");
 
-#if 0 /* HP-UX doesn't get this right */
   res = g_snprintf (buf, 128, "%*s", -5, "abc");
   g_assert_cmpint (res, ==, 5);
   g_assert_cmpstr (buf, ==, "abc  ");
-#endif
 
   res = g_snprintf (buf, 128, "%*.*s", 5, 2, "abc");
   g_assert_cmpint (res, ==, 5);
@@ -609,24 +623,23 @@ test_positional_params (void)
 }
 
 static void
-test_positional_params2_subprocess (void)
-{
-  gint res;
-
-  res = g_printf ("%2$c %1$c\n", 'b', 'a');
-  g_assert_cmpint (res, ==, 4);
-
-  res = g_printf ("%1$*2$.*3$s\n", "abc", 5, 2);
-  g_assert_cmpint (res, ==, 6);
-
-  res = g_printf ("%1$s%1$s\n", "abc");
-  g_assert_cmpint (res, ==, 7);
-}
-
-static void
 test_positional_params2 (void)
 {
-  g_test_trap_subprocess ("/printf/test-positional-params/subprocess", 0, 0);
+  if (g_test_subprocess ())
+    {
+      gint res;
+
+      res = g_printf ("%2$c %1$c\n", 'b', 'a');
+      g_assert_cmpint (res, ==, 4);
+
+      res = g_printf ("%1$*2$.*3$s\n", "abc", 5, 2);
+      g_assert_cmpint (res, ==, 6);
+
+      res = g_printf ("%1$s%1$s\n", "abc");
+      g_assert_cmpint (res, ==, 7);
+      return;
+    }
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("a b\n   ab\nabcabc\n");
 }
@@ -651,18 +664,17 @@ test_positional_params3 (void)
 }
 
 static void
-test_percent2_subprocess (void)
-{
-  gint res;
-
-  res = g_printf ("%%");
-  g_assert_cmpint (res, ==, 1);
-}
-
-static void
 test_percent2 (void)
 {
-  g_test_trap_subprocess ("/printf/test-percent/subprocess", 0, 0);
+  if (g_test_subprocess ())
+    {
+      gint res;
+
+      res = g_printf ("%%");
+      g_assert_cmpint (res, ==, 1);
+      return;
+    }
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("*%*");
 }
@@ -716,7 +728,7 @@ test_64bit (void)
   /* However, gcc doesn't know about this, so we need to disable printf
    * format warnings...
    */
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#if G_GNUC_CHECK_VERSION(4, 6)
 _Pragma ("GCC diagnostic push")
 _Pragma ("GCC diagnostic ignored \"-Wformat\"")
 _Pragma ("GCC diagnostic ignored \"-Wformat-extra-args\"")
@@ -754,7 +766,7 @@ _Pragma ("GCC diagnostic ignored \"-Wformat-extra-args\"")
   g_assert_cmpint (res, ==, 5);
   g_assert_cmpstr (buf, ==, "1E240");
 
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#if G_GNUC_CHECK_VERSION(4, 6)
 _Pragma ("GCC diagnostic pop")
 #endif
 
@@ -807,7 +819,7 @@ test_64bit2_win32 (void)
   /* However, gcc doesn't know about this, so we need to disable printf
    * format warnings...
    */
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#if G_GNUC_CHECK_VERSION(4, 6)
 _Pragma ("GCC diagnostic push")
 _Pragma ("GCC diagnostic ignored \"-Wformat\"")
 _Pragma ("GCC diagnostic ignored \"-Wformat-extra-args\"")
@@ -837,7 +849,7 @@ _Pragma ("GCC diagnostic ignored \"-Wformat-extra-args\"")
   res = g_printf ("%" "ll" "X\n", (gint64)123456);
   g_assert_cmpint (res, ==, 6);
 
-#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
+#if G_GNUC_CHECK_VERSION(4, 6)
 _Pragma ("GCC diagnostic pop")
 #endif
 }
@@ -846,14 +858,15 @@ _Pragma ("GCC diagnostic pop")
 static void
 test_64bit2 (void)
 {
-  g_test_trap_subprocess ("/printf/test-64bit/subprocess/base", 0, 0);
+  g_test_trap_subprocess ("/printf/test-64bit/subprocess/base", 0,
+                          G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("123456\n-123456\n123456\n"
                              "361100\n0361100\n1e240\n"
                              "0x1e240\n1E240\n");
-
 #ifdef G_OS_WIN32
-  g_test_trap_subprocess ("/printf/test-64bit/subprocess/win32", 0, 0);
+  g_test_trap_subprocess ("/printf/test-64bit/subprocess/win32", 0,
+                          G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stdout ("123456\n-123456\n123456\n"
                              "361100\n0361100\n1e240\n"
@@ -884,14 +897,68 @@ test_upper_bound (void)
   g_assert_cmpint (res, ==, 20);
 }
 
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+static gint test_vasprintf_va (gchar       **string,
+                               const gchar  *format,
+                               ...) G_GNUC_PRINTF (2, 3);
+
+/* Wrapper around g_vasprintf() which takes varargs */
+static gint
+test_vasprintf_va (gchar       **string,
+                   const gchar  *format,
+                   ...)
+{
+  va_list args;
+  gint len;
+
+  va_start (args, format);
+  len = g_vasprintf (string, format, args);
+  va_end (args);
+
+  return len;
+}
+#endif  /* !defined(__APPLE__) && !defined(__FreeBSD__) */
+
+static void
+test_vasprintf_invalid_format_placeholder (void)
+{
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+  gint len = 0;
+  gchar *buf = "some non-null string";
+#endif
+
+  g_test_summary ("Test error handling for invalid format placeholder in g_vasprintf()");
+
+#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+#pragma GCC diagnostic ignored "-Wformat-extra-args"
+  len = test_vasprintf_va (&buf, "%l", "nope");
+#pragma GCC diagnostic pop
+
+  g_assert_cmpint (len, ==, -1);
+  g_assert_null (buf);
+#else
+  g_test_skip ("vasprintf() placeholder checks on BSDs are less strict");
+#endif
+}
+
 int
 main (int   argc,
       char *argv[])
 {
+#ifdef G_OS_WIN32
+  /* Ensure binary mode for stdout, this way
+   * tests produce \n line endings on Windows instead of the
+   * default \r\n.
+   */
+  _setmode (fileno (stdout), _O_BINARY);
+#endif
   g_test_init (&argc, &argv, NULL);
 
   g_test_add_func ("/snprintf/retval-and-trunc", test_retval_and_trunc);
   g_test_add_func ("/snprintf/%d", test_d);
+  g_test_add_func ("/snprintf/%d-invalid", test_d_invalid);
   g_test_add_func ("/snprintf/%o", test_o);
   g_test_add_func ("/snprintf/%u", test_u);
   g_test_add_func ("/snprintf/%x", test_x);
@@ -906,9 +973,7 @@ main (int   argc,
   g_test_add_func ("/snprintf/test-64bit", test_64bit);
 
   g_test_add_func ("/printf/test-percent", test_percent2);
-  g_test_add_func ("/printf/test-percent/subprocess", test_percent2_subprocess);
   g_test_add_func ("/printf/test-positional-params", test_positional_params2);
-  g_test_add_func ("/printf/test-positional-params/subprocess", test_positional_params2_subprocess);
   g_test_add_func ("/printf/test-64bit", test_64bit2);
   g_test_add_func ("/printf/test-64bit/subprocess/base", test_64bit2_base);
 #ifdef G_OS_WIN32
@@ -917,6 +982,8 @@ main (int   argc,
 
   g_test_add_func ("/sprintf/test-positional-params", test_positional_params3);
   g_test_add_func ("/sprintf/upper-bound", test_upper_bound);
+
+  g_test_add_func ("/vasprintf/invalid-format-placeholder", test_vasprintf_invalid_format_placeholder);
 
   return g_test_run();
 }

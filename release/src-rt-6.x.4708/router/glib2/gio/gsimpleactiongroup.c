@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -31,6 +31,7 @@
  * SECTION:gsimpleactiongroup
  * @title: GSimpleActionGroup
  * @short_description: A simple GActionGroup implementation
+ * @include: gio/gio.h
  *
  * #GSimpleActionGroup is a hash table filled with #GAction objects,
  * implementing the #GActionGroup and #GActionMap interfaces.
@@ -192,6 +193,13 @@ g_simple_action_group_add_action (GActionMap *action_map,
   GAction *old_action;
 
   action_name = g_action_get_name (action);
+  if (action_name == NULL)
+    {
+      g_critical ("The supplied action has no name. You must set the "
+                  "GAction:name property when creating an action.");
+      return;
+    }
+
   old_action = g_hash_table_lookup (simple->priv->table, action_name);
 
   if (old_action != action)

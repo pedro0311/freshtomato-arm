@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -91,6 +91,7 @@ static GSourceFuncs pollable_source_funcs =
   pollable_source_dispatch,
   pollable_source_finalize,
   (GSourceFunc)pollable_source_closure_callback,
+  NULL,
 };
 
 /**
@@ -103,7 +104,7 @@ static GSourceFuncs pollable_source_funcs =
  * anything on its own; use g_source_add_child_source() to add other
  * sources to it to cause it to trigger.
  *
- * Return value: (transfer full): the new #GSource.
+ * Returns: (transfer full): the new #GSource.
  *
  * Since: 2.28
  */
@@ -117,7 +118,7 @@ g_pollable_source_new (GObject *pollable_stream)
 			G_IS_POLLABLE_OUTPUT_STREAM (pollable_stream), NULL);
 
   source = g_source_new (&pollable_source_funcs, sizeof (GPollableSource));
-  g_source_set_name (source, "GPollableSource");
+  g_source_set_static_name (source, "GPollableSource");
   pollable_source = (GPollableSource *)source;
   pollable_source->stream = g_object_ref (pollable_stream);
 
@@ -128,15 +129,15 @@ g_pollable_source_new (GObject *pollable_stream)
  * g_pollable_source_new_full:
  * @pollable_stream: (type GObject): the stream associated with the
  *   new source
- * @child_source: (allow-none): optional child source to attach
- * @cancellable: (allow-none): optional #GCancellable to attach
+ * @child_source: (nullable): optional child source to attach
+ * @cancellable: (nullable): optional #GCancellable to attach
  *
  * Utility method for #GPollableInputStream and #GPollableOutputStream
  * implementations. Creates a new #GSource, as with
  * g_pollable_source_new(), but also attaching @child_source (with a
  * dummy callback), and @cancellable, if they are non-%NULL.
  *
- * Return value: (transfer full): the new #GSource.
+ * Returns: (transfer full): the new #GSource.
  *
  * Since: 2.34
  */
@@ -171,10 +172,11 @@ g_pollable_source_new_full (gpointer      pollable_stream,
 /**
  * g_pollable_stream_read:
  * @stream: a #GInputStream
- * @buffer: a buffer to read data into
+ * @buffer: (array length=count) (element-type guint8): a buffer to
+ *   read data into
  * @count: the number of bytes to read
  * @blocking: whether to do blocking I/O
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to read from @stream, as with g_input_stream_read() (if
@@ -220,7 +222,7 @@ g_pollable_stream_read (GInputStream   *stream,
  *   containing the data to write.
  * @count: the number of bytes to write
  * @blocking: whether to do blocking I/O
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to write to @stream, as with g_output_stream_write() (if
@@ -269,7 +271,7 @@ g_pollable_stream_write (GOutputStream   *stream,
  * @blocking: whether to do blocking I/O
  * @bytes_written: (out): location to store the number of bytes that was 
  *   written to the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to write @count bytes to @stream, as with
@@ -291,7 +293,7 @@ g_pollable_stream_write (GOutputStream   *stream,
  * behavior is undefined. If @blocking is %TRUE, then @stream does not
  * need to be a #GPollableOutputStream.
  *
- * Return value: %TRUE on success, %FALSE if there was an error
+ * Returns: %TRUE on success, %FALSE if there was an error
  *
  * Since: 2.34
  */

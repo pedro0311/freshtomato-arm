@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -39,6 +39,13 @@
  * interfaces.
  */
 
+/**
+ * GDBusObject:
+ *
+ * #GDBusObject is an opaque data structure and can only be accessed
+ * using the following functions.
+ */
+
 typedef GDBusObjectIface GDBusObjectInterface;
 G_DEFINE_INTERFACE (GDBusObject, g_dbus_object, G_TYPE_OBJECT)
 
@@ -54,13 +61,13 @@ g_dbus_object_default_init (GDBusObjectIface *iface)
    *
    * Since: 2.30
    */
-  g_signal_new ("interface-added",
+  g_signal_new (I_("interface-added"),
                 G_TYPE_FROM_INTERFACE (iface),
                 G_SIGNAL_RUN_LAST,
                 G_STRUCT_OFFSET (GDBusObjectIface, interface_added),
                 NULL,
                 NULL,
-                g_cclosure_marshal_VOID__OBJECT,
+                NULL,
                 G_TYPE_NONE,
                 1,
                 G_TYPE_DBUS_INTERFACE);
@@ -74,13 +81,13 @@ g_dbus_object_default_init (GDBusObjectIface *iface)
    *
    * Since: 2.30
    */
-  g_signal_new ("interface-removed",
+  g_signal_new (I_("interface-removed"),
                 G_TYPE_FROM_INTERFACE (iface),
                 G_SIGNAL_RUN_LAST,
                 G_STRUCT_OFFSET (GDBusObjectIface, interface_removed),
                 NULL,
                 NULL,
-                g_cclosure_marshal_VOID__OBJECT,
+                NULL,
                 G_TYPE_NONE,
                 1,
                 G_TYPE_DBUS_INTERFACE);
@@ -111,7 +118,7 @@ g_dbus_object_get_object_path (GDBusObject *object)
  *
  * Gets the D-Bus interfaces associated with @object.
  *
- * Returns: (element-type GDBusInterface) (transfer full) : A list of #GDBusInterface instances.
+ * Returns: (element-type GDBusInterface) (transfer full): A list of #GDBusInterface instances.
  *   The returned list must be freed by g_list_free() after each element has been freed
  *   with g_object_unref().
  *
@@ -132,7 +139,7 @@ g_dbus_object_get_interfaces (GDBusObject *object)
  * Gets the D-Bus interface with name @interface_name associated with
  * @object, if any.
  *
- * Returns: (transfer full): %NULL if not found, otherwise a
+ * Returns: (nullable) (transfer full): %NULL if not found, otherwise a
  *   #GDBusInterface that must be freed with g_object_unref().
  *
  * Since: 2.30

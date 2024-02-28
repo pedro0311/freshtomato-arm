@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2010 Collabora, Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Nicolas Dufresne <nicolas.dufresne@collabora.co.uk>
  */
@@ -32,6 +32,7 @@
 /**
  * SECTION:gproxyaddress
  * @short_description: An internet address with proxy information
+ * @include: gio/gio.h
  *
  * Support for proxied #GInetSocketAddress.
  */
@@ -40,6 +41,14 @@
  * GProxyAddress:
  *
  * A #GInetSocketAddress representing a connection via a proxy server
+ *
+ * Since: 2.26
+ **/
+
+/**
+ * GProxyAddressClass:
+ *
+ * Class structure for #GProxyAddress.
  *
  * Since: 2.26
  **/
@@ -226,7 +235,7 @@ g_proxy_address_class_init (GProxyAddressClass *klass)
   g_object_class_install_property (gobject_class,
 				   PROP_DESTINATION_PROTOCOL,
 				   g_param_spec_string ("destination-protocol",
-						       P_("Destionation Protocol"),
+						       P_("Destination Protocol"),
 						       P_("The proxy destination protocol"),
 						       NULL,
 						       G_PARAM_READWRITE |
@@ -265,7 +274,7 @@ g_proxy_address_class_init (GProxyAddressClass *klass)
 				   PROP_URI,
 				   g_param_spec_string ("uri",
 							P_("URI"),
-							P_("The proxy's URI"),
+							P_("The proxy’s URI"),
 							NULL,
 							G_PARAM_READWRITE |
 							G_PARAM_CONSTRUCT_ONLY |
@@ -290,9 +299,9 @@ g_proxy_address_init (GProxyAddress *proxy)
  * @protocol: The proxy protocol to support, in lower case (e.g. socks, http).
  * @dest_hostname: The destination hostname the proxy should tunnel to.
  * @dest_port: The destination port to tunnel to.
- * @username: (allow-none): The username to authenticate to the proxy server
+ * @username: (nullable): The username to authenticate to the proxy server
  *     (or %NULL).
- * @password: (allow-none): The password to authenticate to the proxy server
+ * @password: (nullable): The password to authenticate to the proxy server
  *     (or %NULL).
  *
  * Creates a new #GProxyAddress for @inetaddr with @protocol that should
@@ -402,7 +411,7 @@ g_proxy_address_get_destination_port (GProxyAddress *proxy)
  *
  * Gets @proxy's username.
  *
- * Returns: the @proxy's username
+ * Returns: (nullable): the @proxy's username
  *
  * Since: 2.26
  */
@@ -418,7 +427,7 @@ g_proxy_address_get_username (GProxyAddress *proxy)
  *
  * Gets @proxy's password.
  *
- * Returns: the @proxy's password
+ * Returns: (nullable): the @proxy's password
  *
  * Since: 2.26
  */
@@ -435,7 +444,7 @@ g_proxy_address_get_password (GProxyAddress *proxy)
  *
  * Gets the proxy URI that @proxy was constructed from.
  *
- * Returns: the @proxy's URI, or %NULL if unknown
+ * Returns: (nullable): the @proxy's URI, or %NULL if unknown
  *
  * Since: 2.34
  */

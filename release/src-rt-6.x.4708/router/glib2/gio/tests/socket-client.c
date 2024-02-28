@@ -34,7 +34,7 @@ static GOptionEntry cmd_entries[] = {
    "Time out reads after the specified number of seconds", NULL},
   {"tls", 'T', 0, G_OPTION_ARG_NONE, &tls,
    "Use TLS (SSL)", NULL},
-  {NULL}
+  G_OPTION_ENTRY_NULL
 };
 
 #include "socket-common.c"
@@ -173,7 +173,7 @@ make_connection (const char       *argument,
 
       if (g_socket_connect (*socket, *address, cancellable, &err))
         break;
-      g_message ("Connection to %s failed: %s, trying next\n", socket_address_to_string (*address), err->message);
+      g_message ("Connection to %s failed: %s, trying next", socket_address_to_string (*address), err->message);
       g_clear_error (&err);
 
       g_object_unref (*address);
@@ -249,15 +249,15 @@ int
 main (int argc,
       char *argv[])
 {
-  GSocket *socket;
-  GSocketAddress *address;
+  GSocket *socket = NULL;
+  GSocketAddress *address = NULL;
   GError *error = NULL;
   GOptionContext *context;
   GCancellable *cancellable;
-  GIOStream *connection;
-  GInputStream *istream;
-  GOutputStream *ostream;
-  GSocketAddress *src_address;
+  GIOStream *connection = NULL;
+  GInputStream *istream = NULL;
+  GOutputStream *ostream = NULL;
+  GSocketAddress *src_address = NULL;
   GTlsCertificate *certificate = NULL;
   gint i;
 
@@ -431,7 +431,7 @@ main (int argc,
     {
       if (!g_socket_close (socket, &error))
 	{
-	  g_printerr ("Error closing master socket: %s\n",
+	  g_printerr ("Error closing socket: %s\n",
 		      error->message);
 	  return 1;
 	}

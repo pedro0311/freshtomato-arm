@@ -4,10 +4,12 @@
  *
  * Copyright (C) 2008 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -54,7 +54,7 @@
  * address families.
  *
  * See #GSrvTarget for more information about SRV records, and see
- * #GSocketConnectable for and example of using the connectable
+ * #GSocketConnectable for an example of using the connectable
  * interface.
  */
 
@@ -91,6 +91,7 @@ static void g_network_service_get_property (GObject      *object,
 static void                      g_network_service_connectable_iface_init       (GSocketConnectableIface *iface);
 static GSocketAddressEnumerator *g_network_service_connectable_enumerate        (GSocketConnectable      *connectable);
 static GSocketAddressEnumerator *g_network_service_connectable_proxy_enumerate  (GSocketConnectable      *connectable);
+static gchar                    *g_network_service_connectable_to_string        (GSocketConnectable      *connectable);
 
 G_DEFINE_TYPE_WITH_CODE (GNetworkService, g_network_service, G_TYPE_OBJECT,
                          G_ADD_PRIVATE (GNetworkService)
@@ -161,6 +162,7 @@ g_network_service_connectable_iface_init (GSocketConnectableIface *connectable_i
 {
   connectable_iface->enumerate = g_network_service_connectable_enumerate;
   connectable_iface->proxy_enumerate = g_network_service_connectable_proxy_enumerate;
+  connectable_iface->to_string = g_network_service_connectable_to_string;
 }
 
 static void
@@ -243,7 +245,7 @@ g_network_service_get_property (GObject    *object,
  * @protocol, and @domain. This will initially be unresolved; use the
  * #GSocketConnectable interface to resolve it.
  *
- * Return value: (transfer full) (type GNetworkService): a new #GNetworkService
+ * Returns: (transfer full) (type GNetworkService): a new #GNetworkService
  *
  * Since: 2.22
  */
@@ -265,7 +267,7 @@ g_network_service_new (const gchar *service,
  *
  * Gets @srv's service name (eg, "ldap").
  *
- * Return value: @srv's service name
+ * Returns: @srv's service name
  *
  * Since: 2.22
  */
@@ -283,7 +285,7 @@ g_network_service_get_service (GNetworkService *srv)
  *
  * Gets @srv's protocol name (eg, "tcp").
  *
- * Return value: @srv's protocol name
+ * Returns: @srv's protocol name
  *
  * Since: 2.22
  */
@@ -302,7 +304,7 @@ g_network_service_get_protocol (GNetworkService *srv)
  * Gets the domain that @srv serves. This might be either UTF-8 or
  * ASCII-encoded, depending on what @srv was created with.
  *
- * Return value: @srv's domain name
+ * Returns: @srv's domain name
  *
  * Since: 2.22
  */
@@ -318,10 +320,10 @@ g_network_service_get_domain (GNetworkService *srv)
  * g_network_service_get_scheme:
  * @srv: a #GNetworkService
  *
- * Get's the URI scheme used to resolve proxies. By default, the service name
+ * Gets the URI scheme used to resolve proxies. By default, the service name
  * is used as scheme.
  *
- * Return value: @srv's scheme name
+ * Returns: @srv's scheme name
  *
  * Since: 2.26
  */
@@ -352,8 +354,7 @@ g_network_service_set_scheme (GNetworkService *srv,
 {
   g_return_if_fail (G_IS_NETWORK_SERVICE (srv));
 
-  if (srv->priv->scheme)
-    g_free (srv->priv->scheme);
+  g_free (srv->priv->scheme);
   srv->priv->scheme = g_strdup (scheme);
 
   g_object_notify (G_OBJECT (srv), "scheme");
@@ -446,7 +447,7 @@ g_network_service_address_enumerator_next (GSocketAddressEnumerator  *enumerator
     {
       if (srv_enum->addr_enum == NULL && srv_enum->t)
         {
-          GError *error = NULL;
+          GError *my_error = NULL;
           gchar *uri;
           gchar *hostname;
           GSocketConnectable *addr;
@@ -466,21 +467,27 @@ g_network_service_address_enumerator_next (GSocketAddressEnumerator  *enumerator
               continue;
             }
 
-          uri = _g_uri_from_authority (g_network_service_get_scheme (srv_enum->srv),
-                                       hostname,
-                                       g_srv_target_get_port (target),
-                                       NULL);
+          uri = g_uri_join (G_URI_FLAGS_NONE,
+                            g_network_service_get_scheme (srv_enum->srv),
+                            NULL,
+                            hostname,
+                            g_srv_target_get_port (target),
+                            "",
+                            NULL,
+                            NULL);
           g_free (hostname);
 
           addr = g_network_address_parse_uri (uri,
                                               g_srv_target_get_port (target),
-                                              &error);
+                                              &my_error);
           g_free (uri);
 
           if (addr == NULL)
             {
               if (srv_enum->error == NULL)
-                srv_enum->error = error;
+                srv_enum->error = my_error;
+              else
+                g_error_free (my_error);
               continue;
             }
 
@@ -493,18 +500,18 @@ g_network_service_address_enumerator_next (GSocketAddressEnumerator  *enumerator
 
       if (srv_enum->addr_enum)
         {
-          GError *error = NULL;
+          GError *my_error = NULL;
 
           ret = g_socket_address_enumerator_next (srv_enum->addr_enum,
                                                   cancellable,
-                                                  &error);
+                                                  &my_error);
 
-          if (error)
+          if (my_error)
             {
               if (srv_enum->error == NULL)
-                srv_enum->error = error;
+                srv_enum->error = my_error;
               else
-                g_error_free (error);
+                g_error_free (my_error);
             }
 
           if (!ret)
@@ -544,6 +551,7 @@ g_network_service_address_enumerator_next_async (GSocketAddressEnumerator  *enum
   GTask *task;
 
   task = g_task_new (enumerator, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_network_service_address_enumerator_next_async);
 
   /* If we haven't yet resolved srv, do that */
   if (!srv_enum->srv->priv->targets)
@@ -727,7 +735,7 @@ g_network_service_connectable_enumerate (GSocketConnectable *connectable)
   GNetworkServiceAddressEnumerator *srv_enum;
 
   srv_enum = g_object_new (G_TYPE_NETWORK_SERVICE_ADDRESS_ENUMERATOR, NULL);
-  srv_enum->srv = g_object_ref (connectable);
+  srv_enum->srv = g_object_ref (G_NETWORK_SERVICE (connectable));
   srv_enum->resolver = g_resolver_get_default ();
   srv_enum->use_proxy = FALSE;
 
@@ -745,4 +753,16 @@ g_network_service_connectable_proxy_enumerate (GSocketConnectable *connectable)
   srv_enum->use_proxy = TRUE;
 
   return addr_enum;
+}
+
+static gchar *
+g_network_service_connectable_to_string (GSocketConnectable *connectable)
+{
+  GNetworkService *service;
+
+  service = G_NETWORK_SERVICE (connectable);
+
+  return g_strdup_printf ("(%s, %s, %s, %s)", service->priv->service,
+                          service->priv->protocol, service->priv->domain,
+                          service->priv->scheme);
 }

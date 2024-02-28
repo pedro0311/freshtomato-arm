@@ -2,20 +2,20 @@
  *
  * Copyright (C) 2007  Emmanuele Bassi  <ebassi@gnome.org>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Library General Public
+ * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Library General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Library General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -54,7 +54,7 @@
  * Support for checksums has been added in GLib 2.16
  **/
 
-#define IS_VALID_TYPE(type)     ((type) >= G_CHECKSUM_MD5 && (type) <= G_CHECKSUM_SHA512)
+#define IS_VALID_TYPE(type)     ((type) >= G_CHECKSUM_MD5 && (type) <= G_CHECKSUM_SHA384)
 
 /* The fact that these are lower case characters is part of the ABI */
 static const gchar hex_digits[] = "0123456789abcdef";
@@ -102,14 +102,16 @@ typedef struct
   guchar digest[SHA256_DIGEST_LEN];
 } Sha256sum;
 
-#define SHA512_BLOCK_LEN       128 /* 1024 bits message block */
+/* SHA2 is common thing for SHA-384, SHA-512, SHA-512/224 and SHA-512/256 */
+#define SHA2_BLOCK_LEN         128 /* 1024 bits message block */
+#define SHA384_DIGEST_LEN       48
 #define SHA512_DIGEST_LEN       64
 
 typedef struct
 {
   guint64 H[8];
 
-  guint8 block[SHA512_BLOCK_LEN];
+  guint8 block[SHA2_BLOCK_LEN];
   guint8 block_len;
 
   guint64 data_len[2];
@@ -177,8 +179,7 @@ static gchar *
 digest_to_string (guint8 *digest,
                   gsize   digest_len)
 {
-  gint len = digest_len * 2;
-  gint i;
+  gsize i, len = digest_len * 2;
   gchar *retval;
 
   retval = g_new (gchar, len + 1);
@@ -235,7 +236,7 @@ static void
 md5_transform (guint32       buf[4],
                guint32 const in[16])
 {
-  register guint32 a, b, c, d;
+  guint32 a, b, c, d;
 
 /* The four core functions - F1 is optimized somewhat */
 #define F1(x, y, z)     (z ^ (x & (y ^ z)))
@@ -463,7 +464,7 @@ md5_sum_digest (Md5sum *md5,
 
 /* The following implementation comes from D-Bus dbus-sha.c. I've changed
  * it to use GLib types and to work more like the MD5 implementation above.
- * I left the comments to have an history of this code.
+ * I left the comments to have a history of this code.
  *      -- Emmanuele Bassi, ebassi@gnome.org
  */
 
@@ -1086,16 +1087,17 @@ sha256_sum_digest (Sha256sum *sha256,
 }
 
 /*
- * SHA-512 Checksum
+ * SHA-384, SHA-512, SHA-512/224 and SHA-512/256 Checksums
  *
- * Implemented following FIPS-180-2 standard at
- * http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf.
+ * Implemented following FIPS-180-4 standard at
+ * http://csrc.nist.gov/publications/fips/fips180-4/fips180-4.pdf.
  * References in the form [§x.y.z] map to sections in that document.
  *
- *   Author: Eduardo Lima Mitev <elima@igalia.com>
+ *   Author(s): Eduardo Lima Mitev <elima@igalia.com>
+ *              Igor Gnatenko <ignatenko@src.gnome.org>
  */
 
-/* SHA-384 and SHA-512 functions [§4.1.3] */
+/* SHA-384, SHA-512, SHA-512/224 and SHA-512/256 functions [§4.1.3] */
 #define Ch(x,y,z)  ((x & y) ^ (~x & z))
 #define Maj(x,y,z) ((x & y) ^ (x & z) ^ (y & z))
 #define SHR(n,x)   (x >> n)
@@ -1115,18 +1117,63 @@ sha256_sum_digest (Sha256sum *sha256,
     (b)[(i) + 6] = (guint8) (n >>  8);                   \
     (b)[(i) + 7] = (guint8) (n      ); } G_STMT_END
 
+/* SHA-384 and SHA-512 constants [§4.2.3] */
+static const guint64 SHA2_K[80] = {
+  G_GUINT64_CONSTANT (0x428a2f98d728ae22), G_GUINT64_CONSTANT (0x7137449123ef65cd),
+  G_GUINT64_CONSTANT (0xb5c0fbcfec4d3b2f), G_GUINT64_CONSTANT (0xe9b5dba58189dbbc),
+  G_GUINT64_CONSTANT (0x3956c25bf348b538), G_GUINT64_CONSTANT (0x59f111f1b605d019),
+  G_GUINT64_CONSTANT (0x923f82a4af194f9b), G_GUINT64_CONSTANT (0xab1c5ed5da6d8118),
+  G_GUINT64_CONSTANT (0xd807aa98a3030242), G_GUINT64_CONSTANT (0x12835b0145706fbe),
+  G_GUINT64_CONSTANT (0x243185be4ee4b28c), G_GUINT64_CONSTANT (0x550c7dc3d5ffb4e2),
+  G_GUINT64_CONSTANT (0x72be5d74f27b896f), G_GUINT64_CONSTANT (0x80deb1fe3b1696b1),
+  G_GUINT64_CONSTANT (0x9bdc06a725c71235), G_GUINT64_CONSTANT (0xc19bf174cf692694),
+  G_GUINT64_CONSTANT (0xe49b69c19ef14ad2), G_GUINT64_CONSTANT (0xefbe4786384f25e3),
+  G_GUINT64_CONSTANT (0x0fc19dc68b8cd5b5), G_GUINT64_CONSTANT (0x240ca1cc77ac9c65),
+  G_GUINT64_CONSTANT (0x2de92c6f592b0275), G_GUINT64_CONSTANT (0x4a7484aa6ea6e483),
+  G_GUINT64_CONSTANT (0x5cb0a9dcbd41fbd4), G_GUINT64_CONSTANT (0x76f988da831153b5),
+  G_GUINT64_CONSTANT (0x983e5152ee66dfab), G_GUINT64_CONSTANT (0xa831c66d2db43210),
+  G_GUINT64_CONSTANT (0xb00327c898fb213f), G_GUINT64_CONSTANT (0xbf597fc7beef0ee4),
+  G_GUINT64_CONSTANT (0xc6e00bf33da88fc2), G_GUINT64_CONSTANT (0xd5a79147930aa725),
+  G_GUINT64_CONSTANT (0x06ca6351e003826f), G_GUINT64_CONSTANT (0x142929670a0e6e70),
+  G_GUINT64_CONSTANT (0x27b70a8546d22ffc), G_GUINT64_CONSTANT (0x2e1b21385c26c926),
+  G_GUINT64_CONSTANT (0x4d2c6dfc5ac42aed), G_GUINT64_CONSTANT (0x53380d139d95b3df),
+  G_GUINT64_CONSTANT (0x650a73548baf63de), G_GUINT64_CONSTANT (0x766a0abb3c77b2a8),
+  G_GUINT64_CONSTANT (0x81c2c92e47edaee6), G_GUINT64_CONSTANT (0x92722c851482353b),
+  G_GUINT64_CONSTANT (0xa2bfe8a14cf10364), G_GUINT64_CONSTANT (0xa81a664bbc423001),
+  G_GUINT64_CONSTANT (0xc24b8b70d0f89791), G_GUINT64_CONSTANT (0xc76c51a30654be30),
+  G_GUINT64_CONSTANT (0xd192e819d6ef5218), G_GUINT64_CONSTANT (0xd69906245565a910),
+  G_GUINT64_CONSTANT (0xf40e35855771202a), G_GUINT64_CONSTANT (0x106aa07032bbd1b8),
+  G_GUINT64_CONSTANT (0x19a4c116b8d2d0c8), G_GUINT64_CONSTANT (0x1e376c085141ab53),
+  G_GUINT64_CONSTANT (0x2748774cdf8eeb99), G_GUINT64_CONSTANT (0x34b0bcb5e19b48a8),
+  G_GUINT64_CONSTANT (0x391c0cb3c5c95a63), G_GUINT64_CONSTANT (0x4ed8aa4ae3418acb),
+  G_GUINT64_CONSTANT (0x5b9cca4f7763e373), G_GUINT64_CONSTANT (0x682e6ff3d6b2b8a3),
+  G_GUINT64_CONSTANT (0x748f82ee5defb2fc), G_GUINT64_CONSTANT (0x78a5636f43172f60),
+  G_GUINT64_CONSTANT (0x84c87814a1f0ab72), G_GUINT64_CONSTANT (0x8cc702081a6439ec),
+  G_GUINT64_CONSTANT (0x90befffa23631e28), G_GUINT64_CONSTANT (0xa4506cebde82bde9),
+  G_GUINT64_CONSTANT (0xbef9a3f7b2c67915), G_GUINT64_CONSTANT (0xc67178f2e372532b),
+  G_GUINT64_CONSTANT (0xca273eceea26619c), G_GUINT64_CONSTANT (0xd186b8c721c0c207),
+  G_GUINT64_CONSTANT (0xeada7dd6cde0eb1e), G_GUINT64_CONSTANT (0xf57d4f7fee6ed178),
+  G_GUINT64_CONSTANT (0x06f067aa72176fba), G_GUINT64_CONSTANT (0x0a637dc5a2c898a6),
+  G_GUINT64_CONSTANT (0x113f9804bef90dae), G_GUINT64_CONSTANT (0x1b710b35131c471b),
+  G_GUINT64_CONSTANT (0x28db77f523047d84), G_GUINT64_CONSTANT (0x32caab7b40c72493),
+  G_GUINT64_CONSTANT (0x3c9ebe0a15c9bebc), G_GUINT64_CONSTANT (0x431d67c49c100d4c),
+  G_GUINT64_CONSTANT (0x4cc5d4becb3e42b6), G_GUINT64_CONSTANT (0x597f299cfc657e2a),
+  G_GUINT64_CONSTANT (0x5fcb6fab3ad6faec), G_GUINT64_CONSTANT (0x6c44198c4a475817)
+};
+
+
 static void
-sha512_sum_init (Sha512sum *sha512)
+sha384_sum_init (Sha512sum *sha512)
 {
   /* Initial Hash Value [§5.3.4] */
-  sha512->H[0] = 0x6a09e667f3bcc908;
-  sha512->H[1] = 0xbb67ae8584caa73b;
-  sha512->H[2] = 0x3c6ef372fe94f82b;
-  sha512->H[3] = 0xa54ff53a5f1d36f1;
-  sha512->H[4] = 0x510e527fade682d1;
-  sha512->H[5] = 0x9b05688c2b3e6c1f;
-  sha512->H[6] = 0x1f83d9abfb41bd6b;
-  sha512->H[7] = 0x5be0cd19137e2179;
+  sha512->H[0] = G_GUINT64_CONSTANT (0xcbbb9d5dc1059ed8);
+  sha512->H[1] = G_GUINT64_CONSTANT (0x629a292a367cd507);
+  sha512->H[2] = G_GUINT64_CONSTANT (0x9159015a3070dd17);
+  sha512->H[3] = G_GUINT64_CONSTANT (0x152fecd8f70e5939);
+  sha512->H[4] = G_GUINT64_CONSTANT (0x67332667ffc00b31);
+  sha512->H[5] = G_GUINT64_CONSTANT (0x8eb44a8768581511);
+  sha512->H[6] = G_GUINT64_CONSTANT (0xdb0c2e0d64f98fa7);
+  sha512->H[7] = G_GUINT64_CONSTANT (0x47b5481dbefa4fa4);
 
   sha512->block_len = 0;
 
@@ -1134,53 +1181,28 @@ sha512_sum_init (Sha512sum *sha512)
   sha512->data_len[1] = 0;
 }
 
-/* SHA-384 and SHA-512 constants [§4.2.3] */
-static const guint64 SHA512_K[80] = {
-  0x428a2f98d728ae22, 0x7137449123ef65cd,
-  0xb5c0fbcfec4d3b2f, 0xe9b5dba58189dbbc,
-  0x3956c25bf348b538, 0x59f111f1b605d019,
-  0x923f82a4af194f9b, 0xab1c5ed5da6d8118,
-  0xd807aa98a3030242, 0x12835b0145706fbe,
-  0x243185be4ee4b28c, 0x550c7dc3d5ffb4e2,
-  0x72be5d74f27b896f, 0x80deb1fe3b1696b1,
-  0x9bdc06a725c71235, 0xc19bf174cf692694,
-  0xe49b69c19ef14ad2, 0xefbe4786384f25e3,
-  0x0fc19dc68b8cd5b5, 0x240ca1cc77ac9c65,
-  0x2de92c6f592b0275, 0x4a7484aa6ea6e483,
-  0x5cb0a9dcbd41fbd4, 0x76f988da831153b5,
-  0x983e5152ee66dfab, 0xa831c66d2db43210,
-  0xb00327c898fb213f, 0xbf597fc7beef0ee4,
-  0xc6e00bf33da88fc2, 0xd5a79147930aa725,
-  0x06ca6351e003826f, 0x142929670a0e6e70,
-  0x27b70a8546d22ffc, 0x2e1b21385c26c926,
-  0x4d2c6dfc5ac42aed, 0x53380d139d95b3df,
-  0x650a73548baf63de, 0x766a0abb3c77b2a8,
-  0x81c2c92e47edaee6, 0x92722c851482353b,
-  0xa2bfe8a14cf10364, 0xa81a664bbc423001,
-  0xc24b8b70d0f89791, 0xc76c51a30654be30,
-  0xd192e819d6ef5218, 0xd69906245565a910,
-  0xf40e35855771202a, 0x106aa07032bbd1b8,
-  0x19a4c116b8d2d0c8, 0x1e376c085141ab53,
-  0x2748774cdf8eeb99, 0x34b0bcb5e19b48a8,
-  0x391c0cb3c5c95a63, 0x4ed8aa4ae3418acb,
-  0x5b9cca4f7763e373, 0x682e6ff3d6b2b8a3,
-  0x748f82ee5defb2fc, 0x78a5636f43172f60,
-  0x84c87814a1f0ab72, 0x8cc702081a6439ec,
-  0x90befffa23631e28, 0xa4506cebde82bde9,
-  0xbef9a3f7b2c67915, 0xc67178f2e372532b,
-  0xca273eceea26619c, 0xd186b8c721c0c207,
-  0xeada7dd6cde0eb1e, 0xf57d4f7fee6ed178,
-  0x06f067aa72176fba, 0x0a637dc5a2c898a6,
-  0x113f9804bef90dae, 0x1b710b35131c471b,
-  0x28db77f523047d84, 0x32caab7b40c72493,
-  0x3c9ebe0a15c9bebc, 0x431d67c49c100d4c,
-  0x4cc5d4becb3e42b6, 0x597f299cfc657e2a,
-  0x5fcb6fab3ad6faec, 0x6c44198c4a475817
-};
+static void
+sha512_sum_init (Sha512sum *sha512)
+{
+  /* Initial Hash Value [§5.3.5] */
+  sha512->H[0] = G_GUINT64_CONSTANT (0x6a09e667f3bcc908);
+  sha512->H[1] = G_GUINT64_CONSTANT (0xbb67ae8584caa73b);
+  sha512->H[2] = G_GUINT64_CONSTANT (0x3c6ef372fe94f82b);
+  sha512->H[3] = G_GUINT64_CONSTANT (0xa54ff53a5f1d36f1);
+  sha512->H[4] = G_GUINT64_CONSTANT (0x510e527fade682d1);
+  sha512->H[5] = G_GUINT64_CONSTANT (0x9b05688c2b3e6c1f);
+  sha512->H[6] = G_GUINT64_CONSTANT (0x1f83d9abfb41bd6b);
+  sha512->H[7] = G_GUINT64_CONSTANT (0x5be0cd19137e2179);
+
+  sha512->block_len = 0;
+
+  sha512->data_len[0] = 0;
+  sha512->data_len[1] = 0;
+}
 
 static void
 sha512_transform (guint64      H[8],
-                  guint8 const data[SHA512_BLOCK_LEN])
+                  guint8 const data[SHA2_BLOCK_LEN])
 {
   gint i;
   gint t;
@@ -1188,7 +1210,7 @@ sha512_transform (guint64      H[8],
   guint64 M[16];
   guint64 W[80];
 
-  /* SHA-512 hash computation [§6.3.2] */
+  /* SHA-512 hash computation [§6.4.2] */
 
   /* prepare the message schedule */
   for (i = 0; i < 16; i++)
@@ -1226,7 +1248,7 @@ sha512_transform (guint64      H[8],
     {
       guint64 T1, T2;
 
-      T1 = h + SIGMA1 (e) + Ch (e, f, g) + SHA512_K[t] + W[t];
+      T1 = h + SIGMA1 (e) + Ch (e, f, g) + SHA2_K[t] + W[t];
       T2 = SIGMA0 (a) + Maj (a, b, c);
       h = g;
       g = f;
@@ -1264,7 +1286,7 @@ sha512_sum_update (Sha512sum    *sha512,
     sha512->data_len[1]++;
 
   /* try to fill current block */
-  block_left = SHA512_BLOCK_LEN - sha512->block_len;
+  block_left = SHA2_BLOCK_LEN - sha512->block_len;
   if (block_left > 0)
     {
       gsize fill_len;
@@ -1275,7 +1297,7 @@ sha512_sum_update (Sha512sum    *sha512,
       length -= fill_len;
       offset += fill_len;
 
-      if (sha512->block_len == SHA512_BLOCK_LEN)
+      if (sha512->block_len == SHA2_BLOCK_LEN)
         {
           sha512_transform (sha512->H, sha512->block);
           sha512->block_len = 0;
@@ -1283,14 +1305,14 @@ sha512_sum_update (Sha512sum    *sha512,
     }
 
   /* process complete blocks */
-  while (length >= SHA512_BLOCK_LEN)
+  while (length >= SHA2_BLOCK_LEN)
     {
-      memcpy (sha512->block, buffer + offset, SHA512_BLOCK_LEN);
+      memcpy (sha512->block, buffer + offset, SHA2_BLOCK_LEN);
 
       sha512_transform (sha512->H, sha512->block);
 
-      length -= SHA512_BLOCK_LEN;
-      offset += SHA512_BLOCK_LEN;
+      length -= SHA2_BLOCK_LEN;
+      offset += SHA2_BLOCK_LEN;
     }
 
   /* keep remaining data for next block */
@@ -1306,7 +1328,7 @@ sha512_sum_close (Sha512sum *sha512)
 {
   guint l;
   gint zeros;
-  guint8 pad[SHA512_BLOCK_LEN * 2] = { 0, };
+  guint8 pad[SHA2_BLOCK_LEN * 2] = { 0, };
   guint pad_len = 0;
   gint i;
 
@@ -1324,6 +1346,7 @@ sha512_sum_close (Sha512sum *sha512)
   memset (pad + pad_len, 0x00, zeros / 8);
   pad_len += zeros / 8;
   zeros = zeros % 8;
+  (void) zeros;  /* don’t care about the dead store */
 
   /* put message bit length at the end of padding */
   PUT_UINT64 (sha512->data_len[1], pad, pad_len);
@@ -1341,9 +1364,22 @@ sha512_sum_close (Sha512sum *sha512)
 }
 
 static gchar *
+sha384_sum_to_string (Sha512sum *sha512)
+{
+  return digest_to_string (sha512->digest, SHA384_DIGEST_LEN);
+}
+
+static gchar *
 sha512_sum_to_string (Sha512sum *sha512)
 {
   return digest_to_string (sha512->digest, SHA512_DIGEST_LEN);
+}
+
+static void
+sha384_sum_digest (Sha512sum *sha512,
+                   guint8    *digest)
+{
+  memcpy (digest, sha512->digest, SHA384_DIGEST_LEN);
 }
 
 static void
@@ -1374,7 +1410,7 @@ sha512_sum_digest (Sha512sum *sha512,
  *
  * Gets the length in bytes of digests of type @checksum_type
  *
- * Return value: the checksum length, or -1 if @checksum_type is
+ * Returns: the checksum length, or -1 if @checksum_type is
  * not supported.
  *
  * Since: 2.16
@@ -1394,6 +1430,9 @@ g_checksum_type_get_length (GChecksumType checksum_type)
       break;
     case G_CHECKSUM_SHA256:
       len = SHA256_DIGEST_LEN;
+      break;
+    case G_CHECKSUM_SHA384:
+      len = SHA384_DIGEST_LEN;
       break;
     case G_CHECKSUM_SHA512:
       len = SHA512_DIGEST_LEN;
@@ -1424,7 +1463,7 @@ g_checksum_type_get_length (GChecksumType checksum_type)
  * will be closed and it won't be possible to call g_checksum_update()
  * on it anymore.
  *
- * Return value: (transfer full): the newly created #GChecksum, or %NULL.
+ * Returns: (transfer full) (nullable): the newly created #GChecksum, or %NULL.
  *   Use g_checksum_free() to free the memory allocated by it.
  *
  * Since: 2.16
@@ -1472,6 +1511,9 @@ g_checksum_reset (GChecksum *checksum)
     case G_CHECKSUM_SHA256:
       sha256_sum_init (&(checksum->sum.sha256));
       break;
+    case G_CHECKSUM_SHA384:
+      sha384_sum_init (&(checksum->sum.sha512));
+      break;
     case G_CHECKSUM_SHA512:
       sha512_sum_init (&(checksum->sum.sha512));
       break;
@@ -1489,8 +1531,8 @@ g_checksum_reset (GChecksum *checksum)
  * g_checksum_get_string() or g_checksum_get_digest(), the copied
  * checksum will be closed as well.
  *
- * Return value: the copy of the passed #GChecksum. Use g_checksum_free()
- *   when finished using it.
+ * Returns: (transfer full): the copy of the passed #GChecksum. Use
+ *   g_checksum_free() when finished using it.
  *
  * Since: 2.16
  */
@@ -1570,6 +1612,7 @@ g_checksum_update (GChecksum    *checksum,
     case G_CHECKSUM_SHA256:
       sha256_sum_update (&(checksum->sum.sha256), data, length);
       break;
+    case G_CHECKSUM_SHA384:
     case G_CHECKSUM_SHA512:
       sha512_sum_update (&(checksum->sum.sha512), data, length);
       break;
@@ -1583,14 +1626,14 @@ g_checksum_update (GChecksum    *checksum,
  * g_checksum_get_string:
  * @checksum: a #GChecksum
  *
- * Gets the digest as an hexadecimal string.
+ * Gets the digest as a hexadecimal string.
  *
  * Once this function has been called the #GChecksum can no longer be
  * updated with g_checksum_update().
  *
  * The hexadecimal characters will be lower case.
  *
- * Return value: the hexadecimal representation of the checksum. The
+ * Returns: the hexadecimal representation of the checksum. The
  *   returned string is owned by the checksum and should not be modified
  *   or freed.
  *
@@ -1620,6 +1663,10 @@ g_checksum_get_string (GChecksum *checksum)
       sha256_sum_close (&(checksum->sum.sha256));
       str = sha256_sum_to_string (&(checksum->sum.sha256));
       break;
+    case G_CHECKSUM_SHA384:
+      sha512_sum_close (&(checksum->sum.sha512));
+      str = sha384_sum_to_string (&(checksum->sum.sha512));
+      break;
     case G_CHECKSUM_SHA512:
       sha512_sum_close (&(checksum->sum.sha512));
       str = sha512_sum_to_string (&(checksum->sum.sha512));
@@ -1637,8 +1684,8 @@ g_checksum_get_string (GChecksum *checksum)
 /**
  * g_checksum_get_digest: (skip)
  * @checksum: a #GChecksum
- * @buffer: output buffer
- * @digest_len: an inout parameter. The caller initializes it to the size of @buffer.
+ * @buffer: (array length=digest_len): output buffer
+ * @digest_len: (inout): an inout parameter. The caller initializes it to the size of @buffer.
  *   After the call it contains the length of the digest.
  *
  * Gets the digest from @checksum as a raw binary vector and places it
@@ -1691,6 +1738,14 @@ g_checksum_get_digest (GChecksum  *checksum,
         }
       sha256_sum_digest (&(checksum->sum.sha256), buffer);
       break;
+    case G_CHECKSUM_SHA384:
+      if (checksum_open)
+        {
+          sha512_sum_close (&(checksum->sum.sha512));
+          str = sha384_sum_to_string (&(checksum->sum.sha512));
+        }
+      sha384_sum_digest (&(checksum->sum.sha512), buffer);
+      break;
     case G_CHECKSUM_SHA512:
       if (checksum_open)
         {
@@ -1722,8 +1777,10 @@ g_checksum_get_digest (GChecksum  *checksum,
  *
  * The hexadecimal string returned will be in lower case.
  *
- * Return value: the digest of the binary data as a string in hexadecimal.
- *   The returned string should be freed with g_free() when done using it.
+ * Returns: (transfer full) (nullable): the digest of the binary data as a
+ *   string in hexadecimal, or %NULL if g_checksum_new() fails for
+ *   @checksum_type. The returned string should be freed with g_free() when
+ *   done using it.
  *
  * Since: 2.16
  */
@@ -1735,7 +1792,6 @@ g_compute_checksum_for_data (GChecksumType  checksum_type,
   GChecksum *checksum;
   gchar *retval;
 
-  g_return_val_if_fail (IS_VALID_TYPE (checksum_type), NULL);
   g_return_val_if_fail (length == 0 || data != NULL, NULL);
 
   checksum = g_checksum_new (checksum_type);
@@ -1759,7 +1815,8 @@ g_compute_checksum_for_data (GChecksumType  checksum_type,
  *
  * The hexadecimal string returned will be in lower case.
  *
- * Return value: the checksum as a hexadecimal string. The returned string
+ * Returns: (transfer full) (nullable): the checksum as a hexadecimal string,
+ *   or %NULL if g_checksum_new() fails for @checksum_type. The returned string
  *   should be freed with g_free() when done using it.
  *
  * Since: 2.16
@@ -1769,7 +1826,6 @@ g_compute_checksum_for_string (GChecksumType  checksum_type,
                                const gchar   *str,
                                gssize         length)
 {
-  g_return_val_if_fail (IS_VALID_TYPE (checksum_type), NULL);
   g_return_val_if_fail (length == 0 || str != NULL, NULL);
 
   if (length < 0)
@@ -1789,8 +1845,10 @@ g_compute_checksum_for_string (GChecksumType  checksum_type,
  *
  * The hexadecimal string returned will be in lower case.
  *
- * Return value: the digest of the binary data as a string in hexadecimal.
- *   The returned string should be freed with g_free() when done using it.
+ * Returns: (transfer full) (nullable): the digest of the binary data as a
+ *   string in hexadecimal, or %NULL if g_checksum_new() fails for
+ *   @checksum_type. The returned string should be freed with g_free() when
+ *   done using it.
  *
  * Since: 2.34
  */
@@ -1801,7 +1859,6 @@ g_compute_checksum_for_bytes (GChecksumType  checksum_type,
   gconstpointer byte_data;
   gsize length;
 
-  g_return_val_if_fail (IS_VALID_TYPE (checksum_type), NULL);
   g_return_val_if_fail (data != NULL, NULL);
 
   byte_data = g_bytes_get_data (data, &length);

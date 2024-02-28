@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -114,7 +114,8 @@ pokee_method_call (GDBusConnection       *connection,
 static const GDBusInterfaceVTable pokee_vtable = {
   pokee_method_call,
   NULL, /* get_property */
-  NULL  /* set_property */
+  NULL, /* set_property */
+  { 0 }
 };
 
 /* Processes:
@@ -221,7 +222,7 @@ test_non_socket (void)
 
   /* This is #ifdef G_OS_UNIX anyway, so just use g_test_trap_fork() */
   G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
-  if (!g_test_trap_fork (0, 0))
+  if (!g_test_trap_fork (0, G_TEST_TRAP_DEFAULT))
     {
       /* parent */
       g_object_unref (streams[0]);
@@ -294,7 +295,7 @@ main (int   argc,
 {
   gint ret;
 
-  g_test_init (&argc, &argv, NULL);
+  g_test_init (&argc, &argv, G_TEST_OPTION_ISOLATE_DIRS, NULL);
 
   g_test_add_func ("/gdbus/non-socket", test_non_socket);
 

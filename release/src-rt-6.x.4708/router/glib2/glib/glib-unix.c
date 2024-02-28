@@ -3,10 +3,12 @@
  *
  * glib-unix.c: UNIX specific API wrappers and convenience functions
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Colin Walters <walters@verbum.org>
  */
@@ -32,6 +32,14 @@
 #include "gmain-internal.h"
 
 #include <string.h>
+#include <sys/types.h>
+#include <pwd.h>
+
+G_STATIC_ASSERT (sizeof (ssize_t) == GLIB_SIZEOF_SSIZE_T);
+G_STATIC_ASSERT (G_ALIGNOF (gssize) == G_ALIGNOF (ssize_t));
+
+G_STATIC_ASSERT (sizeof (GPid) == sizeof (pid_t));
+G_STATIC_ASSERT (G_ALIGNOF (GPid) == G_ALIGNOF (pid_t));
 
 /**
  * SECTION:gunix
@@ -42,7 +50,7 @@
  * Most of GLib is intended to be portable; in contrast, this set of
  * functions is designed for programs which explicitly target UNIX,
  * or are using it to build higher level abstractions which would be
- * conditionally compiled if the platform matches G_OS_UNIX.
+ * conditionally compiled if the platform matches %G_OS_UNIX.
  *
  * To use these functions, you must explicitly include the
  * "glib-unix.h" header.
@@ -64,20 +72,18 @@ g_unix_set_error_from_errno (GError **error,
 
 /**
  * g_unix_open_pipe:
- * @fds: Array of two integers
- * @flags: Bitfield of file descriptor flags, see "man 2 fcntl"
+ * @fds: (array fixed-size=2): Array of two integers
+ * @flags: Bitfield of file descriptor flags, as for fcntl()
  * @error: a #GError
  *
  * Similar to the UNIX pipe() call, but on modern systems like Linux
  * uses the pipe2() system call, which atomically creates a pipe with
- * the configured flags.  The only supported flag currently is
- * <literal>FD_CLOEXEC</literal>.  If for example you want to configure
- * <literal>O_NONBLOCK</literal>, that must still be done separately with
- * fcntl().
+ * the configured flags. The only supported flag currently is
+ * %FD_CLOEXEC. If for example you want to configure %O_NONBLOCK, that
+ * must still be done separately with fcntl().
  *
- * <note>This function does *not* take <literal>O_CLOEXEC</literal>, it takes
- * <literal>FD_CLOEXEC</literal> as if for fcntl(); these are
- * different on Linux/glibc.</note>
+ * This function does not take %O_CLOEXEC, it takes %FD_CLOEXEC as if
+ * for fcntl(); these are different on Linux/glibc.
  *
  * Returns: %TRUE on success, %FALSE if not (and errno will be set).
  *
@@ -140,8 +146,8 @@ g_unix_open_pipe (int     *fds,
  * @error: a #GError
  *
  * Control the non-blocking state of the given file descriptor,
- * according to @nonblock.  On most systems this uses <literal>O_NONBLOCK</literal>, but
- * on some older ones may use <literal>O_NDELAY</literal>.
+ * according to @nonblock. On most systems this uses %O_NONBLOCK, but
+ * on some older ones may use %O_NDELAY.
  *
  * Returns: %TRUE if successful
  *
@@ -189,23 +195,21 @@ g_unix_set_fd_nonblocking (gint       fd,
  * @signum: A signal number
  *
  * Create a #GSource that will be dispatched upon delivery of the UNIX
- * signal @signum.  In GLib versions before 2.36, only
- * <literal>SIGHUP</literal>, <literal>SIGINT</literal>,
- * <literal>SIGTERM</literal> can be monitored.  In GLib 2.36,
- * <literal>SIGUSR1</literal> and <literal>SIGUSR2</literal> were
- * added.
+ * signal @signum.  In GLib versions before 2.36, only `SIGHUP`, `SIGINT`,
+ * `SIGTERM` can be monitored.  In GLib 2.36, `SIGUSR1` and `SIGUSR2`
+ * were added. In GLib 2.54, `SIGWINCH` was added.
  *
  * Note that unlike the UNIX default, all sources which have created a
  * watch will be dispatched, regardless of which underlying thread
  * invoked g_unix_signal_source_new().
  *
- * For example, an effective use of this function is to handle <literal>SIGTERM</literal>
+ * For example, an effective use of this function is to handle `SIGTERM`
  * cleanly; flushing any outstanding files, and then calling
- * g_main_loop_quit ().  It is not safe to do any of this a regular
- * UNIX signal handler; your handler may be invoked while malloc() or
- * another library function is running, causing reentrancy if you
- * attempt to use it from the handler.  None of the GLib/GObject API
- * is safe against this kind of reentrancy.
+ * g_main_loop_quit().  It is not safe to do any of this from a regular
+ * UNIX signal handler; such a handler may be invoked while malloc() or
+ * another library function is running, causing reentrancy issues if the
+ * handler attempts to use those functions.  None of the GLib/GObject
+ * API is safe against this kind of reentrancy.
  *
  * The interaction of this source when combined with native UNIX
  * functions like sigprocmask() is not defined.
@@ -222,15 +226,16 @@ GSource *
 g_unix_signal_source_new (int signum)
 {
   g_return_val_if_fail (signum == SIGHUP || signum == SIGINT || signum == SIGTERM ||
-                        signum == SIGUSR1 || signum == SIGUSR2, NULL);
+                        signum == SIGUSR1 || signum == SIGUSR2 || signum == SIGWINCH,
+                        NULL);
 
   return _g_main_create_unix_signal_watch (signum);
 }
 
 /**
- * g_unix_signal_add_full:
+ * g_unix_signal_add_full: (rename-to g_unix_signal_add)
  * @priority: the priority of the signal source. Typically this will be in
- *            the range between #G_PRIORITY_DEFAULT and #G_PRIORITY_HIGH.
+ *            the range between %G_PRIORITY_DEFAULT and %G_PRIORITY_HIGH.
  * @signum: Signal number
  * @handler: Callback
  * @user_data: Data for @handler
@@ -242,7 +247,6 @@ g_unix_signal_source_new (int signum)
  *
  * Returns: An ID (greater than 0) for the event source
  *
- * Rename to: g_unix_signal_add
  * Since: 2.30
  */
 guint
@@ -307,7 +311,7 @@ g_unix_fd_source_dispatch (GSource     *source,
 
   if (!callback)
     {
-      g_warning ("GUnixFDSource dispatched without callback\n"
+      g_warning ("GUnixFDSource dispatched without callback. "
                  "You must call g_source_set_callback().");
       return FALSE;
     }
@@ -316,7 +320,7 @@ g_unix_fd_source_dispatch (GSource     *source,
 }
 
 GSourceFuncs g_unix_fd_source_funcs = {
-  NULL, NULL, g_unix_fd_source_dispatch, NULL
+  NULL, NULL, g_unix_fd_source_dispatch, NULL, NULL, NULL
 };
 
 /**
@@ -398,7 +402,7 @@ g_unix_fd_add_full (gint              priority,
  * g_unix_fd_add:
  * @fd: a file descriptor
  * @condition: IO conditions to watch for on @fd
- * @function: a #GPollFDFunc
+ * @function: a #GUnixFDSourceFunc
  * @user_data: data to pass to @function
  *
  * Sets a function to be called when the IO condition, as specified by
@@ -426,4 +430,119 @@ g_unix_fd_add (gint              fd,
                gpointer          user_data)
 {
   return g_unix_fd_add_full (G_PRIORITY_DEFAULT, fd, condition, function, user_data, NULL);
+}
+
+/**
+ * g_unix_get_passwd_entry:
+ * @user_name: the username to get the passwd file entry for
+ * @error: return location for a #GError, or %NULL
+ *
+ * Get the `passwd` file entry for the given @user_name using `getpwnam_r()`.
+ * This can fail if the given @user_name doesn’t exist.
+ *
+ * The returned `struct passwd` has been allocated using g_malloc() and should
+ * be freed using g_free(). The strings referenced by the returned struct are
+ * included in the same allocation, so are valid until the `struct passwd` is
+ * freed.
+ *
+ * This function is safe to call from multiple threads concurrently.
+ *
+ * You will need to include `pwd.h` to get the definition of `struct passwd`.
+ *
+ * Returns: (transfer full): passwd entry, or %NULL on error; free the returned
+ *    value with g_free()
+ * Since: 2.64
+ */
+struct passwd *
+g_unix_get_passwd_entry (const gchar  *user_name,
+                         GError      **error)
+{
+  struct passwd *passwd_file_entry;
+  struct
+    {
+      struct passwd pwd;
+      char string_buffer[];
+    } *buffer = NULL;
+  gsize string_buffer_size = 0;
+  GError *local_error = NULL;
+
+  g_return_val_if_fail (user_name != NULL, NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+#ifdef _SC_GETPW_R_SIZE_MAX
+    {
+      /* Get the recommended buffer size */
+      glong string_buffer_size_long = sysconf (_SC_GETPW_R_SIZE_MAX);
+      if (string_buffer_size_long > 0)
+        string_buffer_size = string_buffer_size_long;
+    }
+#endif /* _SC_GETPW_R_SIZE_MAX */
+
+  /* Default starting size. */
+  if (string_buffer_size == 0)
+    string_buffer_size = 64;
+
+  do
+    {
+      int retval;
+
+      g_free (buffer);
+      /* Allocate space for the `struct passwd`, and then a buffer for all its
+       * strings (whose size is @string_buffer_size, which increases in this
+       * loop until it’s big enough). Add 6 extra bytes to work around a bug in
+       * macOS < 10.3. See #156446.
+       */
+      buffer = g_malloc0 (sizeof (*buffer) + string_buffer_size + 6);
+
+      retval = getpwnam_r (user_name, &buffer->pwd, buffer->string_buffer,
+                           string_buffer_size, &passwd_file_entry);
+
+      /* Bail out if: the lookup was successful, or if the user id can't be
+       * found (should be pretty rare case actually), or if the buffer should be
+       * big enough and yet lookups are still not successful.
+       */
+      if (passwd_file_entry != NULL)
+        {
+          /* Success. */
+          break;
+        }
+      else if (retval == 0 ||
+          retval == ENOENT || retval == ESRCH ||
+          retval == EBADF || retval == EPERM)
+        {
+          /* Username not found. */
+          g_unix_set_error_from_errno (&local_error, retval);
+          break;
+        }
+      else if (retval == ERANGE)
+        {
+          /* Can’t allocate enough string buffer space. */
+          if (string_buffer_size > 32 * 1024)
+            {
+              g_unix_set_error_from_errno (&local_error, retval);
+              break;
+            }
+
+          string_buffer_size *= 2;
+          continue;
+        }
+      else
+        {
+          g_unix_set_error_from_errno (&local_error, retval);
+          break;
+        }
+    }
+  while (passwd_file_entry == NULL);
+
+  g_assert (passwd_file_entry == NULL ||
+            (gpointer) passwd_file_entry == (gpointer) buffer);
+
+  /* Success or error. */
+  if (local_error != NULL)
+    {
+      g_clear_pointer (&buffer, g_free);
+      g_propagate_error (error, g_steal_pointer (&local_error));
+    }
+
+  return (struct passwd *) g_steal_pointer (&buffer);
 }

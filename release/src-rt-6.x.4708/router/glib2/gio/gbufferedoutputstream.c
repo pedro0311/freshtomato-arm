@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Christian Kellner <gicmo@gnome.org> 
  */
@@ -210,7 +210,7 @@ g_buffered_output_stream_set_buffer_size (GBufferedOutputStream *stream,
 
   if (priv->buffer)
     {
-      size = MAX (size, priv->pos);
+      size = (priv->pos > 0) ? MAX (size, (gsize) priv->pos) : size;
 
       buffer = g_malloc (size);
       memcpy (buffer, priv->buffer, priv->pos);
@@ -431,7 +431,7 @@ flush_buffer (GBufferedOutputStream  *stream,
   count = priv->pos - bytes_written;
 
   if (count > 0)
-    g_memmove (priv->buffer, priv->buffer + bytes_written, count);
+    memmove (priv->buffer, priv->buffer + bytes_written, count);
   
   priv->pos -= bytes_written;
 
@@ -701,11 +701,12 @@ g_buffered_output_stream_flush_async (GOutputStream        *stream,
   GTask *task;
   FlushData *fdata;
 
-  fdata = g_slice_new (FlushData);
+  fdata = g_slice_new0 (FlushData);
   fdata->flush_stream = TRUE;
   fdata->close_stream = FALSE;
 
   task = g_task_new (stream, cancellable, callback, data);
+  g_task_set_source_tag (task, g_buffered_output_stream_flush_async);
   g_task_set_task_data (task, fdata, free_flush_data);
   g_task_set_priority (task, io_priority);
 
@@ -733,10 +734,11 @@ g_buffered_output_stream_close_async (GOutputStream        *stream,
   GTask *task;
   FlushData *fdata;
 
-  fdata = g_slice_new (FlushData);
+  fdata = g_slice_new0 (FlushData);
   fdata->close_stream = TRUE;
 
   task = g_task_new (stream, cancellable, callback, data);
+  g_task_set_source_tag (task, g_buffered_output_stream_close_async);
   g_task_set_task_data (task, fdata, free_flush_data);
   g_task_set_priority (task, io_priority);
 

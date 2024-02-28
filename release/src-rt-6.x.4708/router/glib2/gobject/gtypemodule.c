@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2000 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -28,30 +28,24 @@
 /**
  * SECTION:gtypemodule
  * @short_description: Type loading modules
- * @see_also:<variablelist>
- * <varlistentry>
- * <term>#GTypePlugin</term>
- * <listitem><para>The abstract type loader interface.</para></listitem>
- * </varlistentry>
- * <varlistentry>
- * <term>#GModule</term>
- * <listitem><para>Portable mechanism for dynamically loaded modules.</para></listitem>
- * </varlistentry>
- * </variablelist>
+ * @see_also: #GTypePlugin, #GModule
  * @title: GTypeModule
  *
  * #GTypeModule provides a simple implementation of the #GTypePlugin
- * interface. The model of #GTypeModule is a dynamically loaded module
- * which implements some number of types and interface
- * implementations. When the module is loaded, it registers its types
- * and interfaces using g_type_module_register_type() and
- * g_type_module_add_interface().  As long as any instances of these
- * types and interface implementations are in use, the module is kept
- * loaded. When the types and interfaces are gone, the module may be
- * unloaded. If the types and interfaces become used again, the module
- * will be reloaded. Note that the last unref cannot happen in module
- * code, since that would lead to the caller's code being unloaded before
- * g_object_unref() returns to it.
+ * interface.
+ *
+ * The model of #GTypeModule is a dynamically loaded module which
+ * implements some number of types and interface implementations.
+ *
+ * When the module is loaded, it registers its types and interfaces
+ * using g_type_module_register_type() and g_type_module_add_interface().
+ * As long as any instances of these types and interface implementations
+ * are in use, the module is kept loaded. When the types and interfaces
+ * are gone, the module may be unloaded. If the types and interfaces
+ * become used again, the module will be reloaded. Note that the last
+ * reference cannot be released from within the module code, since that
+ * would lead to the caller's code being unloaded before g_object_unref()
+ * returns to it.
  *
  * Keeping track of whether the module should be loaded or not is done by
  * using a use count - it starts at zero, and whenever it is greater than
@@ -68,7 +62,6 @@
  * derive from #GTypeModule and implement the load and unload functions
  * in #GTypeModuleClass.
  */
-
 
 typedef struct _ModuleTypeInfo ModuleTypeInfo;
 typedef struct _ModuleInterfaceInfo ModuleInterfaceInfo;
@@ -163,6 +156,7 @@ g_type_module_get_type (void)
         sizeof (GTypeModule),
         0,              /* n_preallocs */
         NULL,           /* instance_init */
+        NULL,           /* value_table */
       };
       const GInterfaceInfo iface_info = {
         (GInterfaceInitFunc) g_type_module_iface_init,
@@ -265,7 +259,7 @@ g_type_module_use (GTypeModule *module)
 	  ModuleTypeInfo *type_info = tmp_list->data;
 	  if (!type_info->loaded)
 	    {
-	      g_warning ("plugin '%s' failed to register type '%s'\n",
+	      g_warning ("plugin '%s' failed to register type '%s'",
 			 module->name ? module->name : "(unknown)",
 			 g_type_name (type_info->type));
 	      module->use_count--;
@@ -321,7 +315,7 @@ g_type_module_use_plugin (GTypePlugin *plugin)
 
   if (!g_type_module_use (module))
     {
-      g_warning ("Fatal error - Could not reload previously loaded plugin '%s'\n",
+      g_warning ("Fatal error - Could not reload previously loaded plugin '%s'",
 		 module->name ? module->name : "(unknown)");
       exit (1);
     }
@@ -356,7 +350,7 @@ g_type_module_complete_interface_info (GTypePlugin    *plugin,
 
 /**
  * g_type_module_register_type:
- * @module: a #GTypeModule
+ * @module: (nullable): a #GTypeModule
  * @parent_type: the type for the parent class
  * @type_name: name for the type
  * @type_info: type information structure
@@ -374,6 +368,9 @@ g_type_module_complete_interface_info (GTypePlugin    *plugin,
  * As long as any instances of the type exist, the type plugin will
  * not be unloaded.
  *
+ * Since 2.56 if @module is %NULL this will call g_type_register_static()
+ * instead. This can be used when making a static build of the module.
+ *
  * Returns: the new or existing type ID
  */
 GType
@@ -386,9 +383,21 @@ g_type_module_register_type (GTypeModule     *module,
   ModuleTypeInfo *module_type_info = NULL;
   GType type;
   
-  g_return_val_if_fail (module != NULL, 0);
   g_return_val_if_fail (type_name != NULL, 0);
   g_return_val_if_fail (type_info != NULL, 0);
+
+  if (module == NULL)
+    {
+      /* Cannot pass type_info directly to g_type_register_static() here because
+       * it has class_finalize != NULL and that's forbidden for static types */
+      return g_type_register_static_simple (parent_type,
+                                            type_name,
+                                            type_info->class_size,
+                                            type_info->class_init,
+                                            type_info->instance_size,
+                                            type_info->instance_init,
+                                            flags);
+    }
 
   type = g_type_from_name (type_name);
   if (type)
@@ -410,7 +419,7 @@ g_type_module_register_type (GTypeModule     *module,
 	{
 	  const gchar *parent_type_name = g_type_name (parent_type);
 	  
-	  g_warning ("Type '%s' recreated with different parent type.\n"
+	  g_warning ("Type '%s' recreated with different parent type."
 		     "(was '%s', now '%s')", type_name,
 		     g_type_name (module_type_info->parent_type),
 		     parent_type_name ? parent_type_name : "(unknown)");
@@ -433,7 +442,7 @@ g_type_module_register_type (GTypeModule     *module,
   module_type_info->loaded = TRUE;
   module_type_info->info = *type_info;
   if (type_info->value_table)
-    module_type_info->info.value_table = g_memdup (type_info->value_table,
+    module_type_info->info.value_table = g_memdup2 (type_info->value_table,
 						   sizeof (GTypeValueTable));
 
   return module_type_info->type;
@@ -441,7 +450,7 @@ g_type_module_register_type (GTypeModule     *module,
 
 /**
  * g_type_module_add_interface:
- * @module: a #GTypeModule
+ * @module: (nullable): a #GTypeModule
  * @instance_type: type to which to add the interface.
  * @interface_type: interface type to add
  * @interface_info: type information structure
@@ -452,6 +461,9 @@ g_type_module_register_type (GTypeModule     *module,
  *
  * As long as any instances of the type exist, the type plugin will
  * not be unloaded.
+ *
+ * Since 2.56 if @module is %NULL this will call g_type_add_interface_static()
+ * instead. This can be used when making a static build of the module.
  */
 void
 g_type_module_add_interface (GTypeModule          *module,
@@ -460,9 +472,14 @@ g_type_module_add_interface (GTypeModule          *module,
 			     const GInterfaceInfo *interface_info)
 {
   ModuleInterfaceInfo *module_interface_info = NULL;
-  
-  g_return_if_fail (module != NULL);
+
   g_return_if_fail (interface_info != NULL);
+
+  if (module == NULL)
+    {
+      g_type_add_interface_static (instance_type, interface_type, interface_info);
+      return;
+    }
 
   if (g_type_is_a (instance_type, interface_type))
     {
@@ -504,7 +521,7 @@ g_type_module_add_interface (GTypeModule          *module,
 
 /**
  * g_type_module_register_enum:
- * @module: a #GTypeModule
+ * @module: (nullable): a #GTypeModule
  * @name: name for the type
  * @const_static_values: an array of #GEnumValue structs for the
  *                       possible enumeration values. The array is
@@ -519,6 +536,9 @@ g_type_module_add_interface (GTypeModule          *module,
  * As long as any instances of the type exist, the type plugin will
  * not be unloaded.
  *
+ * Since 2.56 if @module is %NULL this will call g_type_register_static()
+ * instead. This can be used when making a static build of the module.
+ *
  * Since: 2.6
  *
  * Returns: the new or existing type ID
@@ -530,7 +550,7 @@ g_type_module_register_enum (GTypeModule      *module,
 {
   GTypeInfo enum_type_info = { 0, };
 
-  g_return_val_if_fail (G_IS_TYPE_MODULE (module), 0);
+  g_return_val_if_fail (module == NULL || G_IS_TYPE_MODULE (module), 0);
   g_return_val_if_fail (name != NULL, 0);
   g_return_val_if_fail (const_static_values != NULL, 0);
 
@@ -543,7 +563,7 @@ g_type_module_register_enum (GTypeModule      *module,
 
 /**
  * g_type_module_register_flags:
- * @module: a #GTypeModule
+ * @module: (nullable): a #GTypeModule
  * @name: name for the type
  * @const_static_values: an array of #GFlagsValue structs for the
  *                       possible flags values. The array is
@@ -558,6 +578,9 @@ g_type_module_register_enum (GTypeModule      *module,
  * As long as any instances of the type exist, the type plugin will
  * not be unloaded.
  *
+ * Since 2.56 if @module is %NULL this will call g_type_register_static()
+ * instead. This can be used when making a static build of the module.
+ *
  * Since: 2.6
  *
  * Returns: the new or existing type ID
@@ -569,7 +592,7 @@ g_type_module_register_flags (GTypeModule      *module,
 {
   GTypeInfo flags_type_info = { 0, };
 
-  g_return_val_if_fail (G_IS_TYPE_MODULE (module), 0);
+  g_return_val_if_fail (module == NULL || G_IS_TYPE_MODULE (module), 0);
   g_return_val_if_fail (name != NULL, 0);
   g_return_val_if_fail (const_static_values != NULL, 0);
 

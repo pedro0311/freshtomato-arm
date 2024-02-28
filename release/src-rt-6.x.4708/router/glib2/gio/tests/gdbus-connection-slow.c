@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -51,7 +51,7 @@ test_connection_flush_on_timeout (gpointer user_data)
   guint iteration = GPOINTER_TO_UINT (user_data);
   g_printerr ("Timeout waiting 1000 msec on iteration %d\n", iteration);
   g_assert_not_reached ();
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -86,19 +86,27 @@ test_connection_flush (void)
   for (n = 0; n < 50; n++)
     {
       gboolean ret;
-      gint exit_status;
+      gint wait_status;
       guint timeout_mainloop_id;
+      gchar *flush_helper_stdout = NULL;
+      gchar *flush_helper_stderr = NULL;
 
       error = NULL;
       ret = g_spawn_command_line_sync (flush_helper,
-                                       NULL, /* stdout */
-                                       NULL, /* stderr */
-                                       &exit_status,
-                                       &error);
+                                       &flush_helper_stdout,
+                                       &flush_helper_stderr,
+                                       &wait_status,
+                                       &error) &&
+            g_spawn_check_wait_status (wait_status, &error);
+      if (!ret)
+          g_test_message ("Child process ‘%s’ failed. stdout:\n%s\nstderr:\n%s",
+                          flush_helper, flush_helper_stdout, flush_helper_stderr);
+
+      g_free (flush_helper_stdout);
+      g_free (flush_helper_stderr);
+
       g_assert_no_error (error);
-      g_spawn_check_exit_status (exit_status, &error);
-      g_assert_no_error (error);
-      g_assert (ret);
+      g_assert_true (ret);
 
       timeout_mainloop_id = g_timeout_add (1000, test_connection_flush_on_timeout, GUINT_TO_POINTER (n));
       g_main_loop_run (loop);
@@ -125,9 +133,9 @@ large_message_timeout_cb (gpointer data)
 {
   (void)data;
 
-  g_error ("Error: timeout waiting for dbus name to appear\n");
+  g_error ("Error: timeout waiting for dbus name to appear");
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
@@ -215,6 +223,8 @@ int
 main (int   argc,
       char *argv[])
 {
+  gint ret;
+
   g_test_init (&argc, &argv, NULL);
 
   /* all the tests rely on a shared main loop */
@@ -224,5 +234,8 @@ main (int   argc,
 
   g_test_add_func ("/gdbus/connection/flush", test_connection_flush);
   g_test_add_func ("/gdbus/connection/large_message", test_connection_large_message);
-  return g_test_run();
+
+  ret = g_test_run();
+  g_main_loop_unref (loop);
+  return ret;
 }

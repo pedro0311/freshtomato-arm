@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008 Clemens N. Buss <cebuzz@gmail.com>
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <config.h>
@@ -122,7 +122,8 @@ g_emblem_finalize (GObject *object)
 {
   GEmblem *emblem = G_EMBLEM (object);
 
-  g_object_unref (emblem->icon);
+  if (emblem->icon)
+    g_object_unref (emblem->icon);
 
   (*G_OBJECT_CLASS (g_emblem_parent_class)->finalize) (object);
 }
@@ -139,7 +140,7 @@ g_emblem_class_init (GEmblemClass *klass)
   g_object_class_install_property (gobject_class,
                                    PROP_ORIGIN,
                                    g_param_spec_enum ("origin",
-                                                      P_("GEmblem's origin"),
+                                                      P_("GEmblem’s origin"),
                                                       P_("Tells which origin the emblem is derived from"),
                                                       G_TYPE_EMBLEM_ORIGIN,
                                                       G_EMBLEM_ORIGIN_UNKNOWN,
@@ -321,7 +322,7 @@ g_emblem_from_tokens (gchar  **tokens,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Can't handle version %d of GEmblem encoding"),
+                   _("Can’t handle version %d of GEmblem encoding"),
                    version);
       return NULL;
     }

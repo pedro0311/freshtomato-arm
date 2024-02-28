@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2001 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -185,15 +185,10 @@ static void
 value_transform_enum_string (const GValue *src_value,
                              GValue       *dest_value)
 {
-  GEnumClass *class = g_type_class_ref (G_VALUE_TYPE (src_value));
-  GEnumValue *enum_value = g_enum_get_value (class, src_value->data[0].v_long);
-  
-  if (enum_value)
-    dest_value->data[0].v_pointer = g_strdup (enum_value->value_name);
-  else
-    dest_value->data[0].v_pointer = g_strdup_printf ("%ld", src_value->data[0].v_long);
-  
-  g_type_class_unref (class);
+  gint v_enum = src_value->data[0].v_long;
+  gchar *str = g_enum_to_string (G_VALUE_TYPE (src_value), v_enum);
+
+  dest_value->data[0].v_pointer = str;
 }
 static void
 value_transform_flags_string (const GValue *src_value,
@@ -201,7 +196,10 @@ value_transform_flags_string (const GValue *src_value,
 {
   GFlagsClass *class = g_type_class_ref (G_VALUE_TYPE (src_value));
   GFlagsValue *flags_value = g_flags_get_first_value (class, src_value->data[0].v_ulong);
-  
+
+  /* Note: this does not use g_flags_to_string()
+   * to keep backwards compatibility.
+   */
   if (flags_value)
     {
       GString *gstring = g_string_new (NULL);
@@ -368,11 +366,8 @@ _g_value_transforms_init (void)
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_UINT64,          value_transform_uint64_uint64);
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_ENUM,            value_transform_uint64_long);
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_FLAGS,           value_transform_uint64_ulong);
-#ifndef _MSC_VER
-  /* required casts unsupported with msvc 5.0 */
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_FLOAT,           value_transform_uint64_float);
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_DOUBLE,          value_transform_uint64_double);
-#endif
   g_value_register_transform_func (G_TYPE_UINT64,       G_TYPE_STRING,          value_transform_uint64_string);
   g_value_register_transform_func (G_TYPE_ENUM,         G_TYPE_CHAR,            value_transform_long_s8);
   g_value_register_transform_func (G_TYPE_ENUM,         G_TYPE_UCHAR,           value_transform_long_u8);

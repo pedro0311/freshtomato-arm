@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2011 Collabora, Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Stef Walter <stefw@collabora.co.uk>
  */
@@ -112,7 +112,9 @@ g_tls_password_real_get_default_warning (GTlsPassword  *password)
   if (flags & G_TLS_PASSWORD_FINAL_TRY)
     return _("This is the last chance to enter the password correctly before your access is locked out.");
   if (flags & G_TLS_PASSWORD_MANY_TRIES)
-    return _("Several password entered have been incorrect, and your access will be locked out after further failures.");
+    /* Translators: This is not the 'This is the last chance' string. It is
+     * displayed when more than one attempt is allowed. */
+    return _("Several passwords entered have been incorrect, and your access will be locked out after further failures.");
   if (flags & G_TLS_PASSWORD_RETRY)
     return _("The password entered is incorrect.");
 
@@ -207,7 +209,7 @@ g_tls_password_class_init (GTlsPasswordClass *klass)
 				   g_param_spec_string ("description",
 							P_("Description"),
 							P_("Description of what the password is for"),
-							"",
+							NULL,
 							G_PARAM_READWRITE |
 							G_PARAM_STATIC_STRINGS));
 
@@ -215,7 +217,7 @@ g_tls_password_class_init (GTlsPasswordClass *klass)
 				   g_param_spec_string ("warning",
 							P_("Warning"),
 							P_("Warning about the password"),
-							"",
+							NULL,
 							G_PARAM_READWRITE |
 							G_PARAM_STATIC_STRINGS));
 
@@ -241,9 +243,9 @@ g_tls_password_new (GTlsPasswordFlags  flags,
 }
 
 /**
- * g_tls_password_get_value:
+ * g_tls_password_get_value: (virtual get_value)
  * @password: a #GTlsPassword object
- * @length: (allow-none): location to place the length of the password.
+ * @length: (optional): location to place the length of the password.
  *
  * Get the password value. If @length is not %NULL then it will be
  * filled in with the length of the password value. (Note that the
@@ -251,7 +253,7 @@ g_tls_password_new (GTlsPasswordFlags  flags,
  * for @length in contexts where you know the password will have a
  * certain fixed length.)
  *
- * Returns: The password value (owned by the password object).
+ * Returns: (array length=length): The password value (owned by the password object).
  *
  * Since: 2.30
  */
@@ -266,7 +268,7 @@ g_tls_password_get_value (GTlsPassword  *password,
 /**
  * g_tls_password_set_value:
  * @password: a #GTlsPassword object
- * @value: the new password value
+ * @value: (array length=length): the new password value
  * @length: the length of the password, or -1
  *
  * Set the value for this password. The @value will be copied by the password
@@ -287,17 +289,22 @@ g_tls_password_set_value (GTlsPassword  *password,
   g_return_if_fail (G_IS_TLS_PASSWORD (password));
 
   if (length < 0)
-    length = strlen ((gchar *)value);
+    {
+      /* FIXME: g_tls_password_set_value_full() doesn’t support unsigned gsize */
+      gsize length_unsigned = strlen ((gchar *) value);
+      g_return_if_fail (length_unsigned <= G_MAXSSIZE);
+      length = (gssize) length_unsigned;
+    }
 
-  g_tls_password_set_value_full (password, g_memdup (value, length), length, g_free);
+  g_tls_password_set_value_full (password, g_memdup2 (value, (gsize) length), length, g_free);
 }
 
 /**
  * g_tls_password_set_value_full:
  * @password: a #GTlsPassword object
- * @value: the value for the password
+ * @value: (array length=length): the value for the password
  * @length: the length of the password, or -1
- * @destroy: (allow-none): a function to use to free the password.
+ * @destroy: (nullable): a function to use to free the password.
  *
  * Provide the value for this password.
  *
@@ -329,7 +336,7 @@ g_tls_password_set_value_full (GTlsPassword   *password,
  *
  * Get flags about the password.
  *
- * Return value: The flags about the password.
+ * Returns: The flags about the password.
  *
  * Since: 2.30
  */
@@ -366,7 +373,7 @@ g_tls_password_set_flags (GTlsPassword      *password,
  *
  * Get a description string about what the password will be used for.
  *
- * Return value: The description of the password.
+ * Returns: The description of the password.
  *
  * Since: 2.30
  */
@@ -409,7 +416,7 @@ g_tls_password_set_description (GTlsPassword      *password,
  * representation of the password flags returned from
  * g_tls_password_get_flags().
  *
- * Return value: The warning.
+ * Returns: The warning.
  *
  * Since: 2.30
  */

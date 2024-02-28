@@ -6,7 +6,7 @@
 
 GMainLoop *loop;
 
-int port = 7777;
+int default_port = 7777;
 gboolean verbose = FALSE;
 gboolean dont_reuse_address = FALSE;
 gboolean non_blocking = FALSE;
@@ -18,7 +18,7 @@ gboolean unix_socket = FALSE;
 const char *tls_cert_file = NULL;
 
 static GOptionEntry cmd_entries[] = {
-  {"port", 'p', 0, G_OPTION_ARG_INT, &port,
+  {"port", 'p', 0, G_OPTION_ARG_INT, &default_port,
    "Local port to bind to", NULL},
   {"cancel", 'c', 0, G_OPTION_ARG_INT, &cancel_timeout,
    "Cancel any op after the specified amount of seconds", NULL},
@@ -40,7 +40,7 @@ static GOptionEntry cmd_entries[] = {
    "Time out reads after the specified number of seconds", NULL},
   {"tls", 'T', 0, G_OPTION_ARG_STRING, &tls_cert_file,
    "Use TLS (SSL) with indicated server certificate", "CERTFILE"},
-  {NULL}
+  G_OPTION_ENTRY_NULL
 };
 
 #include "socket-common.c"
@@ -51,7 +51,7 @@ main (int argc,
 {
   GSocket *socket, *new_socket, *recv_socket;
   GSocketAddress *src_address;
-  GSocketAddress *address;
+  GSocketAddress *address = NULL;
   GSocketType socket_type;
   GSocketFamily socket_family;
   GError *error = NULL;
@@ -140,7 +140,7 @@ main (int argc,
     }
   else
     {
-      src_address = g_inet_socket_address_new (g_inet_address_new_any (G_SOCKET_FAMILY_IPV4), port);
+      src_address = g_inet_socket_address_new (g_inet_address_new_any (G_SOCKET_FAMILY_IPV4), default_port);
     }
 
   if (!g_socket_bind (socket, src_address, !dont_reuse_address, &error))
@@ -356,7 +356,7 @@ main (int argc,
 
   if (!g_socket_close (socket, &error))
     {
-      g_printerr ("Error closing master socket: %s\n",
+      g_printerr ("Error closing socket: %s\n",
 		  error->message);
       return 1;
     }

@@ -1,10 +1,12 @@
 /* GLIB - Library of useful routines for C programming
  * Copyright (C) 1995-1997  Peter Mattis, Spencer Kimball and Josh MacDonald
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -39,6 +39,7 @@
 #include "gmessages.h"
 
 #include "gutils.h"
+#include "gutilsprivate.h"
 
 /**
  * SECTION:string_chunks
@@ -84,27 +85,6 @@ struct _GStringChunk
   gsize       default_size;
 };
 
-#define MY_MAXSIZE ((gsize)-1)
-
-static inline gsize
-nearest_power (gsize base,
-               gsize num)
-{
-  if (num > MY_MAXSIZE / 2)
-    {
-      return MY_MAXSIZE;
-    }
-  else
-    {
-      gsize n = base;
-
-      while (n < num)
-        n <<= 1;
-
-      return n;
-    }
-}
-
 /**
  * g_string_chunk_new:
  * @size: the default size of the blocks of memory which are
@@ -122,7 +102,7 @@ g_string_chunk_new (gsize size)
   GStringChunk *new_chunk = g_new (GStringChunk, 1);
   gsize actual_size = 1;
 
-  actual_size = nearest_power (1, size);
+  actual_size = g_nearest_pow (MAX (1, size));
 
   new_chunk->const_table  = NULL;
   new_chunk->storage_list = NULL;
@@ -144,17 +124,10 @@ g_string_chunk_new (gsize size)
 void
 g_string_chunk_free (GStringChunk *chunk)
 {
-  GSList *tmp_list;
-
   g_return_if_fail (chunk != NULL);
 
   if (chunk->storage_list)
-    {
-      for (tmp_list = chunk->storage_list; tmp_list; tmp_list = tmp_list->next)
-        g_free (tmp_list->data);
-
-      g_slist_free (chunk->storage_list);
-    }
+    g_slist_free_full (chunk->storage_list, g_free);
 
   if (chunk->const_table)
     g_hash_table_destroy (chunk->const_table);
@@ -175,16 +148,11 @@ g_string_chunk_free (GStringChunk *chunk)
 void
 g_string_chunk_clear (GStringChunk *chunk)
 {
-  GSList *tmp_list;
-
   g_return_if_fail (chunk != NULL);
 
   if (chunk->storage_list)
     {
-      for (tmp_list = chunk->storage_list; tmp_list; tmp_list = tmp_list->next)
-        g_free (tmp_list->data);
-
-      g_slist_free (chunk->storage_list);
+      g_slist_free_full (chunk->storage_list, g_free);
 
       chunk->storage_list = NULL;
       chunk->storage_next = chunk->default_size;
@@ -262,7 +230,7 @@ g_string_chunk_insert_const (GStringChunk *chunk,
   if (!lookup)
     {
       lookup = g_string_chunk_insert (chunk, string);
-      g_hash_table_insert (chunk->const_table, lookup, lookup);
+      g_hash_table_add (chunk->const_table, lookup);
     }
 
   return lookup;
@@ -285,7 +253,7 @@ g_string_chunk_insert_const (GStringChunk *chunk,
  * The characters in the returned string can be changed, if necessary,
  * though you should not change anything after the end of the string.
  *
- * Return value: a pointer to the copy of @string within the #GStringChunk
+ * Returns: a pointer to the copy of @string within the #GStringChunk
  *
  * Since: 2.4
  */
@@ -294,7 +262,7 @@ g_string_chunk_insert_len (GStringChunk *chunk,
                            const gchar  *string,
                            gssize        len)
 {
-  gssize size;
+  gsize size;
   gchar* pos;
 
   g_return_val_if_fail (chunk != NULL, NULL);
@@ -302,11 +270,16 @@ g_string_chunk_insert_len (GStringChunk *chunk,
   if (len < 0)
     size = strlen (string);
   else
-    size = len;
+    size = (gsize) len;
 
-  if ((chunk->storage_next + size + 1) > chunk->this_size)
+  if ((G_MAXSIZE - chunk->storage_next < size + 1) || (chunk->storage_next + size + 1) > chunk->this_size)
     {
-      gsize new_size = nearest_power (chunk->default_size, size + 1);
+      gsize new_size = g_nearest_pow (MAX (chunk->default_size, size + 1));
+
+      /* If size is bigger than G_MAXSIZE / 2 then store it in its own
+       * allocation instead of failing here */
+      if (new_size == 0)
+        new_size = size + 1;
 
       chunk->storage_list = g_slist_prepend (chunk->storage_list,
                                              g_new (gchar, new_size));

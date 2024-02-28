@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -32,24 +32,25 @@
 #include "gdbusaddress.h"
 #include "gdbuserror.h"
 #include "gioenumtypes.h"
+#include "glib-private.h"
 #include "gnetworkaddress.h"
 #include "gsocketclient.h"
 #include "giostream.h"
 #include "gasyncresult.h"
-#include "gsimpleasyncresult.h"
+#include "gtask.h"
 #include "glib-private.h"
 #include "gdbusprivate.h"
-#include "giomodule-priv.h"
-#include "gdbusdaemon.h"
+#include "gstdio.h"
 
-#ifdef G_OS_UNIX
-#include <gio/gunixsocketaddress.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
 #endif
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <gio/gunixsocketaddress.h>
 
 #ifdef G_OS_WIN32
 #include <windows.h>
-#include <io.h>
-#include <conio.h>
 #endif
 
 #include "glibintl.h"
@@ -61,11 +62,19 @@
  * @include: gio/gio.h
  *
  * Routines for working with D-Bus addresses. A D-Bus address is a string
- * like "unix:tmpdir=/tmp/my-app-name". The exact format of addresses
- * is explained in detail in the <link linkend="http://dbus.freedesktop.org/doc/dbus-specification.html&num;addresses">D-Bus specification</link>.
+ * like `unix:tmpdir=/tmp/my-app-name`. The exact format of addresses
+ * is explained in detail in the
+ * [D-Bus specification](http://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
+ *
+ * TCP D-Bus connections are supported, but accessing them via a proxy is
+ * currently not supported.
+ *
+ * Since GLib 2.72, `unix:` addresses are supported on Windows with `AF_UNIX`
+ * support (Windows 10).
  */
 
 static gchar *get_session_address_platform_specific (GError **error);
+static gchar *get_session_address_dbus_launch       (GError **error);
 
 /* ---------------------------------------------------------------------------------------------------- */
 
@@ -73,7 +82,8 @@ static gchar *get_session_address_platform_specific (GError **error);
  * g_dbus_is_address:
  * @string: A string.
  *
- * Checks if @string is a D-Bus address.
+ * Checks if @string is a
+ * [D-Bus address](https://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
  *
  * This doesn't check if @string is actually supported by #GDBusServer
  * or #GDBusConnection - use g_dbus_is_supported_address() to do more
@@ -123,12 +133,14 @@ is_valid_unix (const gchar  *address_entry,
   GList *keys;
   GList *l;
   const gchar *path;
+  const gchar *dir;
   const gchar *tmpdir;
   const gchar *abstract;
 
   ret = FALSE;
   keys = NULL;
   path = NULL;
+  dir = NULL;
   tmpdir = NULL;
   abstract = NULL;
 
@@ -138,57 +150,45 @@ is_valid_unix (const gchar  *address_entry,
       const gchar *key = l->data;
       if (g_strcmp0 (key, "path") == 0)
         path = g_hash_table_lookup (key_value_pairs, key);
+      else if (g_strcmp0 (key, "dir") == 0)
+        dir = g_hash_table_lookup (key_value_pairs, key);
       else if (g_strcmp0 (key, "tmpdir") == 0)
         tmpdir = g_hash_table_lookup (key_value_pairs, key);
       else if (g_strcmp0 (key, "abstract") == 0)
         abstract = g_hash_table_lookup (key_value_pairs, key);
-      else
+      else if (g_strcmp0 (key, "guid") != 0)
         {
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Unsupported key '%s' in address entry '%s'"),
+                       _("Unsupported key “%s” in address entry “%s”"),
                        key,
                        address_entry);
           goto out;
         }
     }
 
-  if (path != NULL)
+  /* Exactly one key must be set */
+  if ((path != NULL) + (dir != NULL) + (tmpdir != NULL) + (abstract != NULL) > 1)
     {
-      if (tmpdir != NULL || abstract != NULL)
-        goto meaningless;
+      g_set_error (error,
+             G_IO_ERROR,
+             G_IO_ERROR_INVALID_ARGUMENT,
+             _("Meaningless key/value pair combination in address entry “%s”"),
+             address_entry);
+      goto out;
     }
-  else if (tmpdir != NULL)
-    {
-      if (path != NULL || abstract != NULL)
-        goto meaningless;
-    }
-  else if (abstract != NULL)
-    {
-      if (path != NULL || tmpdir != NULL)
-        goto meaningless;
-    }
-  else
+  else if (path == NULL && dir == NULL && tmpdir == NULL && abstract == NULL)
     {
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Address '%s' is invalid (need exactly one of path, tmpdir or abstract keys)"),
+                   _("Address “%s” is invalid (need exactly one of path, dir, tmpdir, or abstract keys)"),
                    address_entry);
       goto out;
     }
 
-
-  ret= TRUE;
-  goto out;
-
- meaningless:
-  g_set_error (error,
-               G_IO_ERROR,
-               G_IO_ERROR_INVALID_ARGUMENT,
-               _("Meaningless key/value pair combination in address entry '%s'"),
-               address_entry);
+  ret = TRUE;
 
  out:
   g_list_free (keys);
@@ -230,12 +230,12 @@ is_valid_nonce_tcp (const gchar  *address_entry,
         family = g_hash_table_lookup (key_value_pairs, key);
       else if (g_strcmp0 (key, "noncefile") == 0)
         nonce_file = g_hash_table_lookup (key_value_pairs, key);
-      else
+      else if (g_strcmp0 (key, "guid") != 0)
         {
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Unsupported key '%s' in address entry '%s'"),
+                       _("Unsupported key “%s” in address entry “%s”"),
                        key,
                        address_entry);
           goto out;
@@ -250,8 +250,8 @@ is_valid_nonce_tcp (const gchar  *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error in address '%s' - the port attribute is malformed"),
-                       address_entry);
+                       _("Error in address “%s” — the “%s” attribute is malformed"),
+                       address_entry, "port");
           goto out;
         }
     }
@@ -261,8 +261,8 @@ is_valid_nonce_tcp (const gchar  *address_entry,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Error in address '%s' - the family attribute is malformed"),
-                   address_entry);
+                   _("Error in address “%s” — the “%s” attribute is malformed"),
+                   address_entry, "family");
       goto out;
     }
 
@@ -271,9 +271,17 @@ is_valid_nonce_tcp (const gchar  *address_entry,
       /* TODO: validate host */
     }
 
-  nonce_file = nonce_file; /* To avoid -Wunused-but-set-variable */
+  if (nonce_file != NULL && *nonce_file == '\0')
+    {
+      g_set_error (error,
+                   G_IO_ERROR,
+                   G_IO_ERROR_INVALID_ARGUMENT,
+                   _("Error in address “%s” — the “%s” attribute is malformed"),
+                   address_entry, "noncefile");
+      goto out;
+    }
 
-  ret= TRUE;
+  ret = TRUE;
 
  out:
   g_list_free (keys);
@@ -311,12 +319,12 @@ is_valid_tcp (const gchar  *address_entry,
         port = g_hash_table_lookup (key_value_pairs, key);
       else if (g_strcmp0 (key, "family") == 0)
         family = g_hash_table_lookup (key_value_pairs, key);
-      else
+      else if (g_strcmp0 (key, "guid") != 0)
         {
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Unsupported key '%s' in address entry '%s'"),
+                       _("Unsupported key “%s” in address entry “%s”"),
                        key,
                        address_entry);
           goto out;
@@ -331,8 +339,8 @@ is_valid_tcp (const gchar  *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error in address '%s' - the port attribute is malformed"),
-                       address_entry);
+                       _("Error in address “%s” — the “%s” attribute is malformed"),
+                       address_entry, "port");
           goto out;
         }
     }
@@ -342,8 +350,8 @@ is_valid_tcp (const gchar  *address_entry,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Error in address '%s' - the family attribute is malformed"),
-                   address_entry);
+                   _("Error in address “%s” — the “%s” attribute is malformed"),
+                   address_entry, "family");
       goto out;
     }
 
@@ -365,9 +373,10 @@ is_valid_tcp (const gchar  *address_entry,
  * @string: A string.
  * @error: Return location for error or %NULL.
  *
- * Like g_dbus_is_address() but also checks if the library suppors the
+ * Like g_dbus_is_address() but also checks if the library supports the
  * transports in @string and that key/value pairs for each transport
- * are valid.
+ * are valid. See the specification of the
+ * [D-Bus address format](https://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
  *
  * Returns: %TRUE if @string is a valid D-Bus address that is
  * supported by this library, %FALSE if @error is set.
@@ -409,6 +418,10 @@ g_dbus_is_supported_address (const gchar  *string,
         supported = is_valid_nonce_tcp (a[n], key_value_pairs, error);
       else if (g_strcmp0 (a[n], "autolaunch:") == 0)
         supported = TRUE;
+      else
+        g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+                     _("Unknown or unsupported transport “%s” for address “%s”"),
+                     transport_name, a[n]);
 
       g_free (transport_name);
       g_hash_table_unref (key_value_pairs);
@@ -451,7 +464,16 @@ _g_dbus_address_parse_entry (const gchar  *address_entry,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Address element '%s' does not contain a colon (:)"),
+                   _("Address element “%s” does not contain a colon (:)"),
+                   address_entry);
+      goto out;
+    }
+  else if (s == address_entry)
+    {
+      g_set_error (error,
+                   G_IO_ERROR,
+                   G_IO_ERROR_INVALID_ARGUMENT,
+                   _("Transport name in address element “%s” must not be empty"),
                    address_entry);
       goto out;
     }
@@ -460,7 +482,7 @@ _g_dbus_address_parse_entry (const gchar  *address_entry,
   key_value_pairs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
 
   kv_pairs = g_strsplit (s + 1, ",", 0);
-  for (n = 0; kv_pairs != NULL && kv_pairs[n] != NULL; n++)
+  for (n = 0; kv_pairs[n] != NULL; n++)
     {
       const gchar *kv_pair = kv_pairs[n];
       gchar *key;
@@ -472,7 +494,18 @@ _g_dbus_address_parse_entry (const gchar  *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Key/Value pair %d, '%s', in address element '%s' does not contain an equal sign"),
+                       _("Key/Value pair %d, “%s”, in address element “%s” does not contain an equal sign"),
+                       n,
+                       kv_pair,
+                       address_entry);
+          goto out;
+        }
+      else if (s == kv_pair)
+        {
+          g_set_error (error,
+                       G_IO_ERROR,
+                       G_IO_ERROR_INVALID_ARGUMENT,
+                       _("Key/Value pair %d, “%s”, in address element “%s” must not have an empty key"),
                        n,
                        kv_pair,
                        address_entry);
@@ -486,7 +519,7 @@ _g_dbus_address_parse_entry (const gchar  *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error unescaping key or value in Key/Value pair %d, '%s', in address element '%s'"),
+                       _("Error unescaping key or value in Key/Value pair %d, “%s”, in address element “%s”"),
                        n,
                        kv_pair,
                        address_entry);
@@ -500,24 +533,18 @@ _g_dbus_address_parse_entry (const gchar  *address_entry,
   ret = TRUE;
 
 out:
-  g_strfreev (kv_pairs);
   if (ret)
     {
       if (out_transport_name != NULL)
-        *out_transport_name = transport_name;
-      else
-        g_free (transport_name);
+        *out_transport_name = g_steal_pointer (&transport_name);
       if (out_key_value_pairs != NULL)
-        *out_key_value_pairs = key_value_pairs;
-      else if (key_value_pairs != NULL)
-        g_hash_table_unref (key_value_pairs);
+        *out_key_value_pairs = g_steal_pointer (&key_value_pairs);
     }
-  else
-    {
-      g_free (transport_name);
-      if (key_value_pairs != NULL)
-        g_hash_table_unref (key_value_pairs);
-    }
+
+  g_clear_pointer (&key_value_pairs, g_hash_table_unref);
+  g_free (transport_name);
+  g_strfreev (kv_pairs);
+
   return ret;
 }
 
@@ -549,11 +576,7 @@ g_dbus_address_connect (const gchar   *address_entry,
   ret = NULL;
   nonce_file = NULL;
 
-  if (FALSE)
-    {
-    }
-#ifdef G_OS_UNIX
-  else if (g_strcmp0 (transport_name, "unix") == 0)
+  if (g_strcmp0 (transport_name, "unix") == 0)
     {
       const gchar *path;
       const gchar *abstract;
@@ -564,8 +587,8 @@ g_dbus_address_connect (const gchar   *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error in address '%s' - the unix transport requires exactly one of the "
-                         "keys 'path' or 'abstract' to be set"),
+                       _("Error in address “%s” — the unix transport requires exactly one of the "
+                         "keys “path” or “abstract” to be set"),
                        address_entry);
         }
       else if (path != NULL)
@@ -583,7 +606,6 @@ g_dbus_address_connect (const gchar   *address_entry,
           g_assert_not_reached ();
         }
     }
-#endif
   else if (g_strcmp0 (transport_name, "tcp") == 0 || g_strcmp0 (transport_name, "nonce-tcp") == 0)
     {
       const gchar *s;
@@ -600,7 +622,7 @@ g_dbus_address_connect (const gchar   *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error in address '%s' - the host attribute is missing or malformed"),
+                       _("Error in address “%s” — the host attribute is missing or malformed"),
                        address_entry);
           goto out;
         }
@@ -614,7 +636,7 @@ g_dbus_address_connect (const gchar   *address_entry,
           g_set_error (error,
                        G_IO_ERROR,
                        G_IO_ERROR_INVALID_ARGUMENT,
-                       _("Error in address '%s' - the port attribute is missing or malformed"),
+                       _("Error in address “%s” — the port attribute is missing or malformed"),
                        address_entry);
           goto out;
         }
@@ -628,7 +650,7 @@ g_dbus_address_connect (const gchar   *address_entry,
               g_set_error (error,
                            G_IO_ERROR,
                            G_IO_ERROR_INVALID_ARGUMENT,
-                           _("Error in address '%s' - the noncefile attribute is missing or malformed"),
+                           _("Error in address “%s” — the noncefile attribute is missing or malformed"),
                            address_entry);
               goto out;
             }
@@ -640,7 +662,7 @@ g_dbus_address_connect (const gchar   *address_entry,
   else if (g_strcmp0 (address_entry, "autolaunch:") == 0)
     {
       gchar *autolaunch_address;
-      autolaunch_address = get_session_address_platform_specific (error);
+      autolaunch_address = get_session_address_dbus_launch (error);
       if (autolaunch_address != NULL)
         {
           ret = g_dbus_address_try_connect_one (autolaunch_address, NULL, cancellable, error);
@@ -657,7 +679,7 @@ g_dbus_address_connect (const gchar   *address_entry,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Unknown or unsupported transport '%s' for address '%s'"),
+                   _("Unknown or unsupported transport “%s” for address “%s”"),
                    transport_name,
                    address_entry);
     }
@@ -669,6 +691,13 @@ g_dbus_address_connect (const gchar   *address_entry,
 
       g_assert (ret == NULL);
       client = g_socket_client_new ();
+
+      /* Disable proxy support to prevent a deadlock on startup, since loading a
+       * proxy resolver causes the GIO modules to be loaded, and there will
+       * almost certainly be one of them which then tries to use GDBus.
+       * See: https://bugzilla.gnome.org/show_bug.cgi?id=792499 */
+      g_socket_client_set_enable_proxy (client, FALSE);
+
       connection = g_socket_client_connect (client,
                                             connectable,
                                             cancellable,
@@ -685,17 +714,19 @@ g_dbus_address_connect (const gchar   *address_entry,
           gchar nonce_contents[16 + 1];
           size_t num_bytes_read;
           FILE *f;
+          int errsv;
 
           /* be careful to read only 16 bytes - we also check that the file is only 16 bytes long */
           f = fopen (nonce_file, "rb");
+          errsv = errno;
           if (f == NULL)
             {
               g_set_error (error,
                            G_IO_ERROR,
                            G_IO_ERROR_INVALID_ARGUMENT,
-                           _("Error opening nonce file '%s': %s"),
+                           _("Error opening nonce file “%s”: %s"),
                            nonce_file,
-                           g_strerror (errno));
+                           g_strerror (errsv));
               g_object_unref (ret);
               ret = NULL;
               goto out;
@@ -704,6 +735,7 @@ g_dbus_address_connect (const gchar   *address_entry,
                                   sizeof (gchar),
                                   16 + 1,
                                   f);
+          errsv = errno;
           if (num_bytes_read != 16)
             {
               if (num_bytes_read == 0)
@@ -711,16 +743,16 @@ g_dbus_address_connect (const gchar   *address_entry,
                   g_set_error (error,
                                G_IO_ERROR,
                                G_IO_ERROR_INVALID_ARGUMENT,
-                               _("Error reading from nonce file '%s': %s"),
+                               _("Error reading from nonce file “%s”: %s"),
                                nonce_file,
-                               g_strerror (errno));
+                               g_strerror (errsv));
                 }
               else
                 {
                   g_set_error (error,
                                G_IO_ERROR,
                                G_IO_ERROR_INVALID_ARGUMENT,
-                               _("Error reading from nonce file '%s', expected 16 bytes, got %d"),
+                               _("Error reading from nonce file “%s”, expected 16 bytes, got %d"),
                                nonce_file,
                                (gint) num_bytes_read);
                 }
@@ -738,7 +770,7 @@ g_dbus_address_connect (const gchar   *address_entry,
                                           cancellable,
                                           error))
             {
-              g_prefix_error (error, _("Error writing contents of nonce file '%s' to stream:"), nonce_file);
+              g_prefix_error (error, _("Error writing contents of nonce file “%s” to stream:"), nonce_file);
               g_object_unref (ret);
               ret = NULL;
               goto out;
@@ -796,7 +828,6 @@ out:
 
 typedef struct {
   gchar *address;
-  GIOStream *stream;
   gchar *guid;
 } GetStreamData;
 
@@ -804,41 +835,41 @@ static void
 get_stream_data_free (GetStreamData *data)
 {
   g_free (data->address);
-  if (data->stream != NULL)
-    g_object_unref (data->stream);
   g_free (data->guid);
   g_free (data);
 }
 
 static void
-get_stream_thread_func (GSimpleAsyncResult *res,
-                        GObject            *object,
-                        GCancellable       *cancellable)
+get_stream_thread_func (GTask         *task,
+                        gpointer       source_object,
+                        gpointer       task_data,
+                        GCancellable  *cancellable)
 {
-  GetStreamData *data;
-  GError *error;
+  GetStreamData *data = task_data;
+  GIOStream *stream;
+  GError *error = NULL;
 
-  data = g_simple_async_result_get_op_res_gpointer (res);
-
-  error = NULL;
-  data->stream = g_dbus_address_get_stream_sync (data->address,
-                                                 &data->guid,
-                                                 cancellable,
-                                                 &error);
-  if (data->stream == NULL)
-    g_simple_async_result_take_error (res, error);
+  stream = g_dbus_address_get_stream_sync (data->address,
+                                           &data->guid,
+                                           cancellable,
+                                           &error);
+  if (stream)
+    g_task_return_pointer (task, stream, g_object_unref);
+  else
+    g_task_return_error (task, error);
 }
 
 /**
  * g_dbus_address_get_stream:
  * @address: A valid D-Bus address.
- * @cancellable: (allow-none): A #GCancellable or %NULL.
+ * @cancellable: (nullable): A #GCancellable or %NULL.
  * @callback: A #GAsyncReadyCallback to call when the request is satisfied.
  * @user_data: Data to pass to @callback.
  *
  * Asynchronously connects to an endpoint specified by @address and
  * sets up the connection so it is in a state to run the client-side
- * of the D-Bus authentication conversation.
+ * of the D-Bus authentication conversation. @address must be in the
+ * [D-Bus address format](https://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
  *
  * When the operation is finished, @callback will be invoked. You can
  * then call g_dbus_address_get_stream_finish() to get the result of
@@ -855,35 +886,31 @@ g_dbus_address_get_stream (const gchar         *address,
                            GAsyncReadyCallback  callback,
                            gpointer             user_data)
 {
-  GSimpleAsyncResult *res;
+  GTask *task;
   GetStreamData *data;
 
   g_return_if_fail (address != NULL);
 
-  res = g_simple_async_result_new (NULL,
-                                   callback,
-                                   user_data,
-                                   g_dbus_address_get_stream);
-  g_simple_async_result_set_check_cancellable (res, cancellable);
   data = g_new0 (GetStreamData, 1);
   data->address = g_strdup (address);
-  g_simple_async_result_set_op_res_gpointer (res,
-                                             data,
-                                             (GDestroyNotify) get_stream_data_free);
-  g_simple_async_result_run_in_thread (res,
-                                       get_stream_thread_func,
-                                       G_PRIORITY_DEFAULT,
-                                       cancellable);
-  g_object_unref (res);
+
+  task = g_task_new (NULL, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_dbus_address_get_stream);
+  g_task_set_task_data (task, data, (GDestroyNotify) get_stream_data_free);
+  g_task_run_in_thread (task, get_stream_thread_func);
+  g_object_unref (task);
 }
 
 /**
  * g_dbus_address_get_stream_finish:
  * @res: A #GAsyncResult obtained from the GAsyncReadyCallback passed to g_dbus_address_get_stream().
- * @out_guid: %NULL or return location to store the GUID extracted from @address, if any.
+ * @out_guid: (optional) (out) (nullable): %NULL or return location to store the GUID extracted from @address, if any.
  * @error: Return location for error or %NULL.
  *
  * Finishes an operation started with g_dbus_address_get_stream().
+ *
+ * A server is not required to set a GUID, so @out_guid may be set to %NULL
+ * even on success.
  *
  * Returns: (transfer full): A #GIOStream or %NULL if @error is set.
  *
@@ -894,39 +921,40 @@ g_dbus_address_get_stream_finish (GAsyncResult        *res,
                                   gchar              **out_guid,
                                   GError             **error)
 {
-  GSimpleAsyncResult *simple = G_SIMPLE_ASYNC_RESULT (res);
+  GTask *task;
   GetStreamData *data;
   GIOStream *ret;
 
-  g_return_val_if_fail (G_IS_ASYNC_RESULT (res), NULL);
+  g_return_val_if_fail (g_task_is_valid (res, NULL), NULL);
   g_return_val_if_fail (error == NULL || *error == NULL, NULL);
 
-  g_warn_if_fail (g_simple_async_result_get_source_tag (simple) == g_dbus_address_get_stream);
+  task = G_TASK (res);
+  ret = g_task_propagate_pointer (task, error);
 
-  ret = NULL;
+  if (ret != NULL && out_guid != NULL)
+    {
+      data = g_task_get_task_data (task);
+      *out_guid = data->guid;
+      data->guid = NULL;
+    }
 
-  data = g_simple_async_result_get_op_res_gpointer (simple);
-  if (g_simple_async_result_propagate_error (simple, error))
-    goto out;
-
-  ret = g_object_ref (data->stream);
-  if (out_guid != NULL)
-    *out_guid = g_strdup (data->guid);
-
- out:
   return ret;
 }
 
 /**
  * g_dbus_address_get_stream_sync:
  * @address: A valid D-Bus address.
- * @out_guid: %NULL or return location to store the GUID extracted from @address, if any.
- * @cancellable: (allow-none): A #GCancellable or %NULL.
+ * @out_guid: (optional) (out) (nullable): %NULL or return location to store the GUID extracted from @address, if any.
+ * @cancellable: (nullable): A #GCancellable or %NULL.
  * @error: Return location for error or %NULL.
  *
  * Synchronously connects to an endpoint specified by @address and
  * sets up the connection so it is in a state to run the client-side
- * of the D-Bus authentication conversation.
+ * of the D-Bus authentication conversation. @address must be in the
+ * [D-Bus address format](https://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
+ *
+ * A server is not required to set a GUID, so @out_guid may be set to %NULL
+ * even on success.
  *
  * This is a synchronous failable function. See
  * g_dbus_address_get_stream() for the asynchronous version.
@@ -953,7 +981,7 @@ g_dbus_address_get_stream_sync (const gchar   *address,
   last_error = NULL;
 
   addr_array = g_strsplit (address, ";", 0);
-  if (addr_array != NULL && addr_array[0] == NULL)
+  if (addr_array[0] == NULL)
     {
       last_error = g_error_new_literal (G_IO_ERROR,
                                         G_IO_ERROR_INVALID_ARGUMENT,
@@ -961,7 +989,7 @@ g_dbus_address_get_stream_sync (const gchar   *address,
       goto out;
     }
 
-  for (n = 0; addr_array != NULL && addr_array[n] != NULL; n++)
+  for (n = 0; addr_array[n] != NULL; n++)
     {
       const gchar *addr = addr_array[n];
       GError *this_error;
@@ -1002,6 +1030,49 @@ g_dbus_address_get_stream_sync (const gchar   *address,
 
 /* ---------------------------------------------------------------------------------------------------- */
 
+/*
+ * Return the address of XDG_RUNTIME_DIR/bus if it exists, belongs to
+ * us, and is a socket, and we are on Unix.
+ */
+static gchar *
+get_session_address_xdg (void)
+{
+#ifdef G_OS_UNIX
+  gchar *ret = NULL;
+  gchar *bus;
+  gchar *tmp;
+  GStatBuf buf;
+
+  bus = g_build_filename (g_get_user_runtime_dir (), "bus", NULL);
+
+  /* if ENOENT, EPERM, etc., quietly don't use it */
+  if (g_stat (bus, &buf) < 0)
+    goto out;
+
+  /* if it isn't ours, we have incorrectly inherited someone else's
+   * XDG_RUNTIME_DIR; silently don't use it
+   */
+  if (buf.st_uid != geteuid ())
+    goto out;
+
+  /* if it isn't a socket, silently don't use it */
+  if ((buf.st_mode & S_IFMT) != S_IFSOCK)
+    goto out;
+
+  tmp = g_dbus_address_escape_value (bus);
+  ret = g_strconcat ("unix:path=", tmp, NULL);
+  g_free (tmp);
+
+out:
+  g_free (bus);
+  return ret;
+#else
+  return NULL;
+#endif
+}
+
+/* ---------------------------------------------------------------------------------------------------- */
+
 #ifdef G_OS_UNIX
 static gchar *
 get_session_address_dbus_launch (GError **error)
@@ -1011,7 +1082,7 @@ get_session_address_dbus_launch (GError **error)
   gchar *command_line;
   gchar *launch_stdout;
   gchar *launch_stderr;
-  gint exit_status;
+  gint wait_status;
   gchar *old_dbus_verbose;
   gboolean restore_dbus_verbose;
 
@@ -1027,7 +1098,7 @@ get_session_address_dbus_launch (GError **error)
   if (GLIB_PRIVATE_CALL (g_check_setuid) ())
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-		   _("Cannot spawn a message bus when setuid"));
+                   _("Cannot spawn a message bus when AT_SECURE is set"));
       goto out;
     }
 
@@ -1035,6 +1106,13 @@ get_session_address_dbus_launch (GError **error)
   if (machine_id == NULL)
     {
       g_prefix_error (error, _("Cannot spawn a message bus without a machine-id: "));
+      goto out;
+    }
+
+  if (g_getenv ("DISPLAY") == NULL)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   _("Cannot autolaunch D-Bus without X11 $DISPLAY"));
       goto out;
     }
 
@@ -1068,15 +1146,15 @@ get_session_address_dbus_launch (GError **error)
   if (!g_spawn_command_line_sync (command_line,
                                   &launch_stdout,
                                   &launch_stderr,
-                                  &exit_status,
+                                  &wait_status,
                                   error))
     {
       goto out;
     }
 
-  if (!g_spawn_check_exit_status (exit_status, error))
+  if (!g_spawn_check_wait_status (wait_status, error))
     {
-      g_prefix_error (error, _("Error spawning command line '%s': "), command_line);
+      g_prefix_error (error, _("Error spawning command line “%s”: "), command_line);
       goto out;
     }
 
@@ -1128,309 +1206,27 @@ get_session_address_dbus_launch (GError **error)
   g_free (old_dbus_verbose);
   return ret;
 }
-#endif
 
-#ifdef G_OS_WIN32
-
-#define DBUS_DAEMON_ADDRESS_INFO "DBusDaemonAddressInfo"
-#define DBUS_DAEMON_MUTEX "DBusDaemonMutex"
-#define UNIQUE_DBUS_INIT_MUTEX "UniqueDBusInitMutex"
-#define DBUS_AUTOLAUNCH_MUTEX "DBusAutolaunchMutex"
-
-static void
-release_mutex (HANDLE mutex)
-{
-  ReleaseMutex (mutex);
-  CloseHandle (mutex);
-}
-
-static HANDLE
-acquire_mutex (const char *mutexname)
-{
-  HANDLE mutex;
-  DWORD res;
-
-  mutex = CreateMutexA (NULL, FALSE, mutexname);
-  if (!mutex)
-    return 0;
-
-  res = WaitForSingleObject (mutex, INFINITE);
-  switch (res)
-    {
-    case WAIT_ABANDONED:
-      release_mutex (mutex);
-      return 0;
-    case WAIT_FAILED:
-    case WAIT_TIMEOUT:
-      return 0;
-    }
-
-  return mutex;
-}
-
-static gboolean
-is_mutex_owned (const char *mutexname)
-{
-  HANDLE mutex;
-  gboolean res = FALSE;
-
-  mutex = CreateMutexA (NULL, FALSE, mutexname);
-  if (WaitForSingleObject (mutex, 10) == WAIT_TIMEOUT)
-    res = TRUE;
-  else
-    ReleaseMutex (mutex);
-  CloseHandle (mutex);
-
-  return res;
-}
-
-static char *
-read_shm (const char *shm_name)
-{
-  HANDLE shared_mem;
-  char *shared_data;
-  char *res;
-  int i;
-
-  res = NULL;
-
-  for (i = 0; i < 20; i++)
-    {
-      shared_mem = OpenFileMappingA (FILE_MAP_READ, FALSE, shm_name);
-      if (shared_mem != 0)
-	break;
-      Sleep (100);
-    }
-
-  if (shared_mem != 0)
-    {
-      shared_data = MapViewOfFile (shared_mem, FILE_MAP_READ, 0, 0, 0);
-      if (shared_data != NULL)
-	{
-	  res = g_strdup (shared_data);
-	  UnmapViewOfFile (shared_data);
-	}
-      CloseHandle (shared_mem);
-    }
-
-  return res;
-}
-
-static HANDLE
-set_shm (const char *shm_name, const char *value)
-{
-  HANDLE shared_mem;
-  char *shared_data;
-
-  shared_mem = CreateFileMappingA (INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE,
-				   0, strlen (value) + 1, shm_name);
-  if (shared_mem == 0)
-    return 0;
-
-  shared_data = MapViewOfFile (shared_mem, FILE_MAP_WRITE, 0, 0, 0 );
-  if (shared_data == NULL)
-    return 0;
-
-  strcpy (shared_data, value);
-
-  UnmapViewOfFile (shared_data);
-
-  return shared_mem;
-}
-
-/* These keep state between publish_session_bus and unpublish_session_bus */
-static HANDLE published_daemon_mutex;
-static HANDLE published_shared_mem;
-
-static gboolean
-publish_session_bus (const char *address)
-{
-  HANDLE init_mutex;
-
-  init_mutex = acquire_mutex (UNIQUE_DBUS_INIT_MUTEX);
-
-  published_daemon_mutex = CreateMutexA (NULL, FALSE, DBUS_DAEMON_MUTEX);
-  if (WaitForSingleObject (published_daemon_mutex, 10 ) != WAIT_OBJECT_0)
-    {
-      release_mutex (init_mutex);
-      CloseHandle (published_daemon_mutex);
-      published_daemon_mutex = NULL;
-      return FALSE;
-    }
-
-  published_shared_mem = set_shm (DBUS_DAEMON_ADDRESS_INFO, address);
-  if (!published_shared_mem)
-    {
-      release_mutex (init_mutex);
-      CloseHandle (published_daemon_mutex);
-      published_daemon_mutex = NULL;
-      return FALSE;
-    }
-
-  release_mutex (init_mutex);
-  return TRUE;
-}
-
-static void
-unpublish_session_bus (void)
-{
-  HANDLE init_mutex;
-
-  init_mutex = acquire_mutex (UNIQUE_DBUS_INIT_MUTEX);
-
-  CloseHandle (published_shared_mem);
-  published_shared_mem = NULL;
-
-  release_mutex (published_daemon_mutex);
-  published_daemon_mutex = NULL;
-
-  release_mutex (init_mutex);
-}
-
-static void
-wait_console_window (void)
-{
-  FILE *console = fopen ("CONOUT$", "w");
-
-  SetConsoleTitleW (L"gdbus-daemon output. Type any character to close this window.");
-  fprintf (console, _("(Type any character to close this window)\n"));
-  fflush (console);
-  _getch ();
-}
-
-static void
-open_console_window (void)
-{
-  if (((HANDLE) _get_osfhandle (fileno (stdout)) == INVALID_HANDLE_VALUE ||
-       (HANDLE) _get_osfhandle (fileno (stderr)) == INVALID_HANDLE_VALUE) && AllocConsole ())
-    {
-      if ((HANDLE) _get_osfhandle (fileno (stdout)) == INVALID_HANDLE_VALUE)
-        freopen ("CONOUT$", "w", stdout);
-
-      if ((HANDLE) _get_osfhandle (fileno (stderr)) == INVALID_HANDLE_VALUE)
-        freopen ("CONOUT$", "w", stderr);
-
-      SetConsoleTitleW (L"gdbus-daemon debug output.");
-
-      atexit (wait_console_window);
-    }
-}
-static void
-idle_timeout_cb (GDBusDaemon *daemon, gpointer user_data)
-{
-  GMainLoop *loop = user_data;
-  g_main_loop_quit (loop);
-}
-
-__declspec(dllexport) void CALLBACK g_win32_run_session_bus (HWND hwnd, HINSTANCE hinst, char *cmdline, int nCmdShow);
-
-__declspec(dllexport) void CALLBACK
-g_win32_run_session_bus (HWND hwnd, HINSTANCE hinst, char *cmdline, int nCmdShow)
-{
-  GDBusDaemon *daemon;
-  GMainLoop *loop;
-  const char *address;
-  GError *error = NULL;
-
-  if (g_getenv ("GDBUS_DAEMON_DEBUG") != NULL)
-    open_console_window ();
-
-  loop = g_main_loop_new (NULL, FALSE);
-
-  address = "nonce-tcp:";
-  daemon = _g_dbus_daemon_new (address, NULL, &error);
-  if (daemon == NULL)
-    {
-      g_printerr ("Can't init bus: %s\n", error->message);
-      return;
-    }
-
-  g_signal_connect (daemon, "idle-timeout", G_CALLBACK (idle_timeout_cb), loop);
-
-  if ( publish_session_bus (_g_dbus_daemon_get_address (daemon)))
-    {
-      g_main_loop_run (loop);
-
-      unpublish_session_bus ();
-    }
-
-  g_main_loop_unref (loop);
-  g_object_unref (daemon);
-}
+/* end of G_OS_UNIX case */
+#elif defined(G_OS_WIN32)
 
 static gchar *
 get_session_address_dbus_launch (GError **error)
 {
-  HANDLE autolaunch_mutex, init_mutex;
-  char *address = NULL;
-  wchar_t gio_path[MAX_PATH+1+200];
-
-  autolaunch_mutex = acquire_mutex (DBUS_AUTOLAUNCH_MUTEX);
-
-  init_mutex = acquire_mutex (UNIQUE_DBUS_INIT_MUTEX);
-
-  if (is_mutex_owned (DBUS_DAEMON_MUTEX))
-    address = read_shm (DBUS_DAEMON_ADDRESS_INFO);
-
-  release_mutex (init_mutex);
-
-  if (address == NULL)
-    {
-      gio_path[MAX_PATH] = 0;
-      if (GetModuleFileNameW (_g_io_win32_get_module (), gio_path, MAX_PATH))
-	{
-	  PROCESS_INFORMATION pi = { 0 };
-	  STARTUPINFOW si = { 0 };
-	  BOOL res;
-	  wchar_t gio_path_short[MAX_PATH];
-	  wchar_t rundll_path[MAX_PATH*2];
-	  wchar_t args[MAX_PATH*4];
-
-	  GetShortPathNameW (gio_path, gio_path_short, MAX_PATH);
-
-	  GetWindowsDirectoryW (rundll_path, MAX_PATH);
-	  wcscat (rundll_path, L"\\rundll32.exe");
-	  if (GetFileAttributesW (rundll_path) == INVALID_FILE_ATTRIBUTES)
-	    {
-	      GetSystemDirectoryW (rundll_path, MAX_PATH);
-	      wcscat (rundll_path, L"\\rundll32.exe");
-	    }
-
-	  wcscpy (args, L"\"");
-	  wcscat (args, rundll_path);
-	  wcscat (args, L"\" ");
-	  wcscat (args, gio_path_short);
-#ifdef _MSC_VER
-#if defined(_WIN64) || defined(_M_X64) || defined(_M_AMD64)
-	  wcscat (args, L",g_win32_run_session_bus");
-#else
-	  wcscat (args, L",_g_win32_run_session_bus@16");
-#endif
-#else
-	  wcscat (args, L",g_win32_run_session_bus@16");
-#endif
-
-	  res = CreateProcessW (rundll_path, args,
-				0, 0, FALSE,
-				NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW | DETACHED_PROCESS,
-				0, NULL /* TODO: Should be root */,
-				&si, &pi);
-	  if (res)
-	    address = read_shm (DBUS_DAEMON_ADDRESS_INFO);
-	}
-    }
-
-  release_mutex (autolaunch_mutex);
-
-  if (address == NULL)
-    g_set_error (error,
-		 G_IO_ERROR,
-		 G_IO_ERROR_FAILED,
-		 _("Session dbus not running, and autolaunch failed"));
-
-  return address;
+  return _g_dbus_win32_get_session_address_dbus_launch (error);
 }
-#endif
+
+#else /* neither G_OS_UNIX nor G_OS_WIN32 */
+static gchar *
+get_session_address_dbus_launch (GError **error)
+{
+  g_set_error (error,
+               G_IO_ERROR,
+               G_IO_ERROR_FAILED,
+               _("Cannot determine session bus address (not implemented for this OS)"));
+  return NULL;
+}
+#endif /* neither G_OS_UNIX nor G_OS_WIN32 */
 
 /* ---------------------------------------------------------------------------------------------------- */
 
@@ -1438,33 +1234,50 @@ static gchar *
 get_session_address_platform_specific (GError **error)
 {
   gchar *ret;
-#if defined (G_OS_UNIX) || defined(G_OS_WIN32)
-  /* need to handle OS X in a different way since 'dbus-launch --autolaunch' probably won't work there */
-  ret = get_session_address_dbus_launch (error);
-#else
-  /* TODO: implement for OS X */
-  ret = NULL;
-  g_set_error (error,
-               G_IO_ERROR,
-               G_IO_ERROR_FAILED,
-               _("Cannot determine session bus address (not implemented for this OS)"));
-#endif
-  return ret;
+
+  /* Use XDG_RUNTIME_DIR/bus if it exists and is suitable. This is appropriate
+   * for systems using the "a session is a user-session" model described in
+   * <http://lists.freedesktop.org/archives/dbus/2015-January/016522.html>,
+   * and implemented in dbus >= 1.9.14 and sd-bus.
+   *
+   * On systems following the more traditional "a session is a login-session"
+   * model, this will fail and we'll fall through to X11 autolaunching
+   * (dbus-launch) below.
+   */
+  ret = get_session_address_xdg ();
+
+  if (ret != NULL)
+    return ret;
+
+  /* TODO (#694472): try launchd on OS X, like
+   * _dbus_lookup_session_address_launchd() does, since
+   * 'dbus-launch --autolaunch' probably won't work there
+   */
+
+  /* As a last resort, try the "autolaunch:" transport. On Unix this means
+   * X11 autolaunching; on Windows this means a different autolaunching
+   * mechanism based on shared memory.
+   */
+  return get_session_address_dbus_launch (error);
 }
 
 /* ---------------------------------------------------------------------------------------------------- */
 
 /**
  * g_dbus_address_get_for_bus_sync:
- * @bus_type: A #GBusType.
- * @cancellable: (allow-none): A #GCancellable or %NULL.
- * @error: Return location for error or %NULL.
+ * @bus_type: a #GBusType
+ * @cancellable: (nullable): a #GCancellable or %NULL
+ * @error: return location for error or %NULL
  *
  * Synchronously looks up the D-Bus address for the well-known message
  * bus instance specified by @bus_type. This may involve using various
  * platform specific mechanisms.
  *
- * Returns: A valid D-Bus address string for @bus_type or %NULL if @error is set.
+ * The returned address will be in the
+ * [D-Bus address format](https://dbus.freedesktop.org/doc/dbus-specification.html#addresses).
+ *
+ * Returns: (transfer full): a valid D-Bus address string for @bus_type or
+ *     %NULL if @error is set
  *
  * Since: 2.26
  */
@@ -1473,7 +1286,8 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
                                  GCancellable  *cancellable,
                                  GError       **error)
 {
-  gchar *ret;
+  gboolean has_elevated_privileges = GLIB_PRIVATE_CALL (g_check_setuid) ();
+  gchar *ret, *s = NULL;
   const gchar *starter_bus;
   GError *local_error;
 
@@ -1486,8 +1300,10 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
     {
       guint n;
       _g_dbus_debug_print_lock ();
+      s = _g_dbus_enum_to_string (G_TYPE_BUS_TYPE, bus_type);
       g_print ("GDBus-debug:Address: In g_dbus_address_get_for_bus_sync() for bus type '%s'\n",
-               _g_dbus_enum_to_string (G_TYPE_BUS_TYPE, bus_type));
+               s);
+      g_free (s);
       for (n = 0; n < 3; n++)
         {
           const gchar *k;
@@ -1509,10 +1325,16 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
       _g_dbus_debug_print_unlock ();
     }
 
+  /* Don’t load the addresses from the environment if running as setuid, as they
+   * come from an unprivileged caller. */
   switch (bus_type)
     {
     case G_BUS_TYPE_SYSTEM:
-      ret = g_strdup (g_getenv ("DBUS_SYSTEM_BUS_ADDRESS"));
+      if (has_elevated_privileges)
+        ret = NULL;
+      else
+        ret = g_strdup (g_getenv ("DBUS_SYSTEM_BUS_ADDRESS"));
+
       if (ret == NULL)
         {
           ret = g_strdup ("unix:path=/var/run/dbus/system_bus_socket");
@@ -1520,7 +1342,11 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
       break;
 
     case G_BUS_TYPE_SESSION:
-      ret = g_strdup (g_getenv ("DBUS_SESSION_BUS_ADDRESS"));
+      if (has_elevated_privileges)
+        ret = NULL;
+      else
+        ret = g_strdup (g_getenv ("DBUS_SESSION_BUS_ADDRESS"));
+
       if (ret == NULL)
         {
           ret = get_session_address_platform_specific (&local_error);
@@ -1547,7 +1373,7 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
                            G_IO_ERROR,
                            G_IO_ERROR_FAILED,
                            _("Cannot determine bus address from DBUS_STARTER_BUS_TYPE environment variable"
-                             " - unknown value '%s'"),
+                             " — unknown value “%s”"),
                            starter_bus);
             }
           else
@@ -1574,18 +1400,18 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
   if (G_UNLIKELY (_g_dbus_debug_address ()))
     {
       _g_dbus_debug_print_lock ();
+      s = _g_dbus_enum_to_string (G_TYPE_BUS_TYPE, bus_type);
       if (ret != NULL)
         {
           g_print ("GDBus-debug:Address: Returning address '%s' for bus type '%s'\n",
-                   ret,
-                   _g_dbus_enum_to_string (G_TYPE_BUS_TYPE, bus_type));
+                   ret, s);
         }
       else
         {
           g_print ("GDBus-debug:Address: Cannot look-up address bus type '%s': %s\n",
-                   _g_dbus_enum_to_string (G_TYPE_BUS_TYPE, bus_type),
-                   local_error ? local_error->message : "");
+                   s, local_error ? local_error->message : "");
         }
+      g_free (s);
       _g_dbus_debug_print_unlock ();
     }
 
@@ -1598,18 +1424,18 @@ g_dbus_address_get_for_bus_sync (GBusType       bus_type,
 /**
  * g_dbus_address_escape_value:
  * @string: an unescaped string to be included in a D-Bus address
- *  as the value in a key-value pair
+ *     as the value in a key-value pair
  *
  * Escape @string so it can appear in a D-Bus address as the value
  * part of a key-value pair.
  *
- * For instance, if @string is <code>/run/bus-for-:0</code>,
- * this function would return <code>/run/bus-for-%3A0</code>,
+ * For instance, if @string is `/run/bus-for-:0`,
+ * this function would return `/run/bus-for-%3A0`,
  * which could be used in a D-Bus address like
- * <code>unix:nonce-tcp:host=127.0.0.1,port=42,noncefile=/run/bus-for-%3A0</code>.
+ * `unix:nonce-tcp:host=127.0.0.1,port=42,noncefile=/run/bus-for-%3A0`.
  *
  * Returns: (transfer full): a copy of @string with all
- *  non-optionally-escaped bytes escaped
+ *     non-optionally-escaped bytes escaped
  *
  * Since: 2.36
  */

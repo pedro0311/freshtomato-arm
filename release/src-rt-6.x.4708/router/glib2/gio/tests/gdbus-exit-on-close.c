@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -51,7 +51,7 @@ static const TestData cases[] = {
       { "true",     NULL,     EXPLICITLY_TRUE,  REMOTE },
       { "false",    NULL,     EXPLICITLY_FALSE, REMOTE },
       { "we-close", "662100", EXPLICITLY_TRUE,  LOCAL  },
-      { NULL }
+      { NULL, NULL, 0, 0 }
 };
 
 static gboolean
@@ -59,10 +59,8 @@ quit_later_cb (gpointer data G_GNUC_UNUSED)
 {
   g_main_loop_quit (loop);
 
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
-
-#define VANISHED_PATTERN "*Remote peer vanished with error: Underlying GIOStream returned 0 bytes on an async read (g-io-error-quark, 0). Exiting.*"
 
 static void
 closed_cb (GDBusConnection  *c G_GNUC_UNUSED,
@@ -190,15 +188,9 @@ test_exit_on_close (gconstpointer test_data)
 
   if (td->exit_on_close == EXPLICITLY_FALSE ||
       td->who_closes == LOCAL)
-    {
-      g_test_trap_assert_stdout_unmatched (VANISHED_PATTERN);
-      g_test_trap_assert_passed ();
-    }
+    g_test_trap_assert_passed ();
   else
-    {
-      g_test_trap_assert_stdout (VANISHED_PATTERN);
-      g_test_trap_assert_failed();
-    }
+    g_test_trap_assert_failed();
 }
 
 /* ---------------------------------------------------------------------------------------------------- */

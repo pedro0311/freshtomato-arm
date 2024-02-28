@@ -4,10 +4,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  *         David Zeuthen <davidz@redhat.com>
@@ -254,7 +254,7 @@ g_unix_volume_get_mount (GVolume *volume)
   GUnixVolume *unix_volume = G_UNIX_VOLUME (volume);
 
   if (unix_volume->mount != NULL)
-    return g_object_ref (unix_volume->mount);
+    return g_object_ref (G_MOUNT (unix_volume->mount));
 
   return NULL;
 }
@@ -267,159 +267,70 @@ _g_unix_volume_has_mount_path (GUnixVolume *volume,
   return strcmp (volume->mount_path, mount_path) == 0;
 }
 
-
-typedef struct {
-  GUnixVolume *unix_volume;
-  int error_fd;
-  GIOChannel *error_channel;
-  GSource *error_channel_source;
-  GString *error_string;
-} EjectMountOp;
-
 static void
-eject_mount_op_free (EjectMountOp *data)
+eject_mount_done (GObject      *source,
+                  GAsyncResult *result,
+                  gpointer      user_data)
 {
-  if (data->error_string != NULL)
-    g_string_free (data->error_string, TRUE);
-
-  if (data->error_channel != NULL)
-    g_io_channel_unref (data->error_channel);
-
-  if (data->error_channel_source)
-    {
-      g_source_destroy (data->error_channel_source);
-      g_source_unref (data->error_channel_source);
-    }
-
-  if (data->error_fd != -1)
-    close (data->error_fd);
-
-  g_free (data);
-}
-
-static void
-eject_mount_cb (GPid     pid,
-                gint     status,
-                gpointer user_data)
-{
+  GSubprocess *subprocess = G_SUBPROCESS (source);
   GTask *task = user_data;
-  EjectMountOp *data = g_task_get_task_data (task);
-  
-  if (WEXITSTATUS (status) != 0)
+  GError *error = NULL;
+  gchar *stderr_str;
+  GUnixVolume *unix_volume;
+
+  if (!g_subprocess_communicate_utf8_finish (subprocess, result, NULL, &stderr_str, &error))
     {
-      g_task_return_new_error (task,
-                               G_IO_ERROR, 
-                               G_IO_ERROR_FAILED,
-                               "%s", data->error_string->str);
+      g_task_return_error (task, error);
+      g_error_free (error);
     }
-  else
-    g_task_return_boolean (task, TRUE);
+  else /* successful communication */
+    {
+      if (!g_subprocess_get_successful (subprocess))
+        /* ...but bad exit code */
+        g_task_return_new_error (task, G_IO_ERROR, G_IO_ERROR_FAILED, "%s", stderr_str);
+      else
+        {
+          /* ...and successful exit code */
+          unix_volume = G_UNIX_VOLUME (g_task_get_source_object (task));
+          _g_unix_volume_monitor_update (G_UNIX_VOLUME_MONITOR (unix_volume->volume_monitor));
+          g_task_return_boolean (task, TRUE);
+        }
+
+      g_free (stderr_str);
+    }
+
   g_object_unref (task);
 }
 
-static gboolean
-eject_mount_read_error (GIOChannel   *channel,
-                        GIOCondition  condition,
-                        gpointer      user_data)
-{
-  GTask *task = user_data;
-  EjectMountOp *data = g_task_get_task_data (task);
-  char buf[BUFSIZ];
-  gsize bytes_read;
-  GError *error;
-  GIOStatus status;
-
-  error = NULL;
-read:
-  status = g_io_channel_read_chars (channel, buf, sizeof (buf), &bytes_read, &error);
-  if (status == G_IO_STATUS_NORMAL)
-   {
-     g_string_append_len (data->error_string, buf, bytes_read);
-     if (bytes_read == sizeof (buf))
-        goto read;
-   }
-  else if (status == G_IO_STATUS_EOF)
-    g_string_append_len (data->error_string, buf, bytes_read);
-  else if (status == G_IO_STATUS_ERROR)
-    {
-      if (data->error_string->len > 0)
-        g_string_append (data->error_string, "\n");
-
-      g_string_append (data->error_string, error->message);
-      g_error_free (error);
-
-      if (data->error_channel_source)
-        {
-          g_source_unref (data->error_channel_source);
-          data->error_channel_source = NULL;
-        }
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
 static void
-eject_mount_do (GVolume             *volume,
-                GCancellable        *cancellable,
-                GAsyncReadyCallback  callback,
-                gpointer             user_data,
-                char               **argv)
+eject_mount_do (GVolume              *volume,
+                GCancellable         *cancellable,
+                GAsyncReadyCallback   callback,
+                gpointer              user_data,
+                const gchar * const  *argv,
+                const gchar          *task_name)
 {
-  GUnixVolume *unix_volume = G_UNIX_VOLUME (volume);
+  GSubprocess *subprocess;
+  GError *error = NULL;
   GTask *task;
-  EjectMountOp *data;
-  GPid child_pid;
-  GSource *child_watch;
-  GError *error;
-  
-  data = g_new0 (EjectMountOp, 1);
-  data->unix_volume = unix_volume;
-  data->error_fd = -1;
-  
-  task = g_task_new (unix_volume, cancellable, callback, user_data);
-  g_task_set_task_data (task, data, (GDestroyNotify) eject_mount_op_free);
 
-  error = NULL;
-  if (!g_spawn_async_with_pipes (NULL,         /* working dir */
-                                 argv,
-                                 NULL,         /* envp */
-                                 G_SPAWN_DO_NOT_REAP_CHILD|G_SPAWN_SEARCH_PATH,
-                                 NULL,         /* child_setup */
-                                 NULL,         /* user_data for child_setup */
-                                 &child_pid,
-                                 NULL,           /* standard_input */
-                                 NULL,           /* standard_output */
-                                 &(data->error_fd),
-                                 &error))
+  task = g_task_new (volume, cancellable, callback, user_data);
+  g_task_set_source_tag (task, eject_mount_do);
+  g_task_set_name (task, task_name);
+
+  if (g_task_return_error_if_cancelled (task))
     {
-      g_assert (error != NULL);
-      goto handle_error;
-    }
-
-  data->error_string = g_string_new ("");
-
-  data->error_channel = g_io_channel_unix_new (data->error_fd);
-  g_io_channel_set_flags (data->error_channel, G_IO_FLAG_NONBLOCK, &error);
-  if (error != NULL)
-    goto handle_error;
-
-  data->error_channel_source = g_io_create_watch (data->error_channel, G_IO_IN);
-  g_task_attach_source (task, data->error_channel_source,
-                        (GSourceFunc) eject_mount_read_error);
-
-  child_watch = g_child_watch_source_new (child_pid);
-  g_task_attach_source (task, child_watch, (GSourceFunc) eject_mount_cb);
-  g_source_unref (child_watch);
-
-handle_error:
-  if (error != NULL)
-    {
-      g_task_return_error (task, error);
       g_object_unref (task);
+      return;
     }
-}
 
+  subprocess = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDOUT_SILENCE | G_SUBPROCESS_FLAGS_STDERR_PIPE, &error);
+  g_assert_no_error (error);
+
+  g_subprocess_communicate_utf8_async (subprocess, NULL,
+                                       g_task_get_cancellable (task),
+                                       eject_mount_done, task);
+}
 
 static void
 g_unix_volume_mount (GVolume            *volume,
@@ -430,14 +341,14 @@ g_unix_volume_mount (GVolume            *volume,
                      gpointer             user_data)
 {
   GUnixVolume *unix_volume = G_UNIX_VOLUME (volume);
-  char *argv[] = { "mount", NULL, NULL };
+  const gchar *argv[] = { "mount", NULL, NULL };
 
   if (unix_volume->mount_path != NULL)
     argv[1] = unix_volume->mount_path;
   else
     argv[1] = unix_volume->device_path;
 
-  eject_mount_do (volume, cancellable, callback, user_data, argv);
+  eject_mount_do (volume, cancellable, callback, user_data, argv, "[gio] mount volume");
 }
 
 static gboolean
@@ -445,7 +356,9 @@ g_unix_volume_mount_finish (GVolume        *volume,
                             GAsyncResult  *result,
                             GError       **error)
 {
-  return TRUE;
+  g_return_val_if_fail (g_task_is_valid (result, volume), FALSE);
+
+  return g_task_propagate_boolean (G_TASK (result), error);
 }
 
 static void
@@ -456,11 +369,11 @@ g_unix_volume_eject (GVolume             *volume,
                      gpointer             user_data)
 {
   GUnixVolume *unix_volume = G_UNIX_VOLUME (volume);
-  char *argv[] = { "eject", NULL, NULL };
+  const gchar *argv[] = { "eject", NULL, NULL };
 
   argv[1] = unix_volume->device_path;
 
-  eject_mount_do (volume, cancellable, callback, user_data, argv);
+  eject_mount_do (volume, cancellable, callback, user_data, argv, "[gio] eject volume");
 }
 
 static gboolean
@@ -468,7 +381,9 @@ g_unix_volume_eject_finish (GVolume       *volume,
                             GAsyncResult  *result,
                             GError       **error)
 {
-  return TRUE;
+  g_return_val_if_fail (g_task_is_valid (result, volume), FALSE);
+
+  return g_task_propagate_boolean (G_TASK (result), error);
 }
 
 static gchar *

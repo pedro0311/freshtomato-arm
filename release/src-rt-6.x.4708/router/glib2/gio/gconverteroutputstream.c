@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -26,7 +26,6 @@
 
 #include "gconverteroutputstream.h"
 #include "gpollableoutputstream.h"
-#include "gsimpleasyncresult.h"
 #include "gcancellable.h"
 #include "gioenumtypes.h"
 #include "gioerror.h"
@@ -303,9 +302,11 @@ grow_buffer (Buffer *buffer)
   data = g_malloc (size);
   in_buffer = buffer_data_size (buffer);
 
-  memcpy (data,
-	  buffer->data + buffer->start,
-	  in_buffer);
+  if (in_buffer != 0)
+    memcpy (data,
+            buffer->data + buffer->start,
+            in_buffer);
+
   g_free (buffer->data);
   buffer->data = data;
   buffer->end -= buffer->start;
@@ -486,7 +487,7 @@ write_internal (GOutputStream  *stream,
 
 	  if (converted_bytes > 0)
 	    {
-	      /* We got an conversion error, but we did convert some bytes before
+	      /* We got a conversion error, but we did convert some bytes before
 		 that, so handle those before reporting the error */
 	      g_error_free (my_error);
 	      break;
@@ -506,7 +507,7 @@ write_internal (GOutputStream  *stream,
 	      return count; /* consume everything */
 	    }
 
-	  /* Converted no data and got an normal error, return it */
+	  /* Converted no data and got a normal error, return it */
 	  g_propagate_error (error, my_error);
 	  return -1;
 	}
@@ -596,7 +597,7 @@ g_converter_output_stream_flush (GOutputStream  *stream,
 	  if (!is_closing &&
 	      res == G_CONVERTER_FLUSHED)
 	    {
-	      /* Should not have retured FLUSHED with input left */
+	      /* Should not have returned FLUSHED with input left */
 	      g_assert (buffer_data_size (&priv->output_buffer) == 0);
 	      flushed = TRUE;
 	    }

@@ -2,10 +2,12 @@
  * Copyright © 2010 Codethink Limited
  * Copyright © 2011 Canonical Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -32,11 +32,19 @@
  * SECTION:gdbusactiongroup
  * @title: GDBusActionGroup
  * @short_description: A D-Bus GActionGroup implementation
- * @see_also: <link linkend="gio-GActionGroup-exporter">GActionGroup exporter</link>
+ * @include: gio/gio.h
+ * @see_also: [GActionGroup exporter][gio-GActionGroup-exporter]
  *
  * #GDBusActionGroup is an implementation of the #GActionGroup
  * interface that can be used as a proxy for an action group
  * that is exported over D-Bus with g_dbus_connection_export_action_group().
+ */
+
+/**
+ * GDBusActionGroup:
+ *
+ * #GDBusActionGroup is an opaque data structure and can only be accessed
+ * using the following functions.
  */
 
 struct _GDBusActionGroup
@@ -469,7 +477,8 @@ g_dbus_action_group_iface_init (GActionGroupInterface *iface)
 /**
  * g_dbus_action_group_get:
  * @connection: A #GDBusConnection
- * @bus_name: the bus name which exports the action group
+ * @bus_name: (nullable): the bus name which exports the action
+ *     group or %NULL if @connection is not a message bus connection
  * @object_path: the object path at which the action group is exported
  *
  * Obtains a #GDBusActionGroup for the action group which is exported at
@@ -496,6 +505,8 @@ g_dbus_action_group_get (GDBusConnection *connection,
                          const gchar     *object_path)
 {
   GDBusActionGroup *group;
+
+  g_return_val_if_fail (bus_name != NULL || g_dbus_connection_get_unique_name (connection) == NULL, NULL);
 
   group = g_object_new (G_TYPE_DBUS_ACTION_GROUP, NULL);
   group->connection = g_object_ref (connection);

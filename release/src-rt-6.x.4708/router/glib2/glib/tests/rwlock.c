@@ -21,7 +21,9 @@
  */
 
 /* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include <glib.h>
 
@@ -125,7 +127,7 @@ acquire (gint nr)
   if (!g_rw_lock_writer_trylock (&locks[nr]))
     {
       if (g_test_verbose ())
-        g_print ("thread %p going to block on lock %d\n", self, nr);
+        g_printerr ("thread %p going to block on lock %d\n", self, nr);
 
       g_rw_lock_writer_lock (&locks[nr]);
     }

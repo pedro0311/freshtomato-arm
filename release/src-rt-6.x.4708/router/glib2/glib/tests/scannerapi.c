@@ -3,10 +3,12 @@
  * Copyright (C) 2007 Imendio AB
  * Authors: Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 #include <glib.h>
 #include <string.h>
@@ -59,20 +59,18 @@ test_scanner_warn (ScannerFixture *fix,
 }
 
 static void
-test_scanner_error_subprocess (ScannerFixture *fix,
-                               gconstpointer   test_data)
-{
-  int pe = fix->scanner->parse_errors;
-  g_scanner_error (fix->scanner, "scanner-error-message-test");
-  g_assert_cmpint (fix->scanner->parse_errors, ==, pe + 1);
-  exit (0);
-}
-
-static void
 test_scanner_error (ScannerFixture *fix,
                     gconstpointer   test_data)
 {
-  g_test_trap_subprocess ("/scanner/error/subprocess", 0, 0);
+  if (g_test_subprocess ())
+    {
+      int pe = fix->scanner->parse_errors;
+      g_scanner_error (fix->scanner, "scanner-error-message-test");
+      g_assert_cmpint (fix->scanner->parse_errors, ==, pe + 1);
+      exit (0);
+    }
+
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stderr ("*scanner-error-message-test*");
 }
@@ -115,8 +113,8 @@ test_scanner_tokens (ScannerFixture *fix,
   gchar buf[] = "(\t\n\r\\){}";
   const gint buflen = strlen (buf);
   gchar tokbuf[] = "(\\){}";
-  const gint tokbuflen = strlen (tokbuf);
-  guint i;
+  const gsize tokbuflen = strlen (tokbuf);
+  gsize i;
 
   g_scanner_input_text (fix->scanner, buf, buflen);
 
@@ -139,7 +137,6 @@ main (int   argc,
 
   g_test_add ("/scanner/warn", ScannerFixture, 0, scanner_fixture_setup, test_scanner_warn, scanner_fixture_teardown);
   g_test_add ("/scanner/error", ScannerFixture, 0, scanner_fixture_setup, test_scanner_error, scanner_fixture_teardown);
-  g_test_add ("/scanner/error/subprocess", ScannerFixture, 0, scanner_fixture_setup, test_scanner_error_subprocess, scanner_fixture_teardown);
   g_test_add ("/scanner/symbols", ScannerFixture, 0, scanner_fixture_setup, test_scanner_symbols, scanner_fixture_teardown);
   g_test_add ("/scanner/tokens", ScannerFixture, 0, scanner_fixture_setup, test_scanner_tokens, scanner_fixture_teardown);
 

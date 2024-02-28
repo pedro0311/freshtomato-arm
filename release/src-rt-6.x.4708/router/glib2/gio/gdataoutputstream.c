@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -234,7 +234,7 @@ g_data_output_stream_get_byte_order (GDataOutputStream *stream)
  * g_data_output_stream_put_byte:
  * @stream: a #GDataOutputStream.
  * @data: a #guchar.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts a byte into the output stream.
@@ -261,7 +261,7 @@ g_data_output_stream_put_byte (GDataOutputStream  *stream,
  * g_data_output_stream_put_int16:
  * @stream: a #GDataOutputStream.
  * @data: a #gint16.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts a signed 16-bit integer into the output stream.
@@ -301,7 +301,7 @@ g_data_output_stream_put_int16 (GDataOutputStream  *stream,
  * g_data_output_stream_put_uint16:
  * @stream: a #GDataOutputStream.
  * @data: a #guint16.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts an unsigned 16-bit integer into the output stream.
@@ -341,7 +341,7 @@ g_data_output_stream_put_uint16 (GDataOutputStream  *stream,
  * g_data_output_stream_put_int32:
  * @stream: a #GDataOutputStream.
  * @data: a #gint32.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts a signed 32-bit integer into the output stream.
@@ -381,7 +381,7 @@ g_data_output_stream_put_int32 (GDataOutputStream  *stream,
  * g_data_output_stream_put_uint32:
  * @stream: a #GDataOutputStream.
  * @data: a #guint32.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts an unsigned 32-bit integer into the stream.
@@ -421,7 +421,7 @@ g_data_output_stream_put_uint32 (GDataOutputStream  *stream,
  * g_data_output_stream_put_int64:
  * @stream: a #GDataOutputStream.
  * @data: a #gint64.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts a signed 64-bit integer into the stream.
@@ -461,7 +461,7 @@ g_data_output_stream_put_int64 (GDataOutputStream  *stream,
  * g_data_output_stream_put_uint64:
  * @stream: a #GDataOutputStream.
  * @data: a #guint64.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts an unsigned 64-bit integer into the stream.
@@ -501,7 +501,7 @@ g_data_output_stream_put_uint64 (GDataOutputStream  *stream,
  * g_data_output_stream_put_string:
  * @stream: a #GDataOutputStream.
  * @str: a string.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  * 
  * Puts a string into the output stream. 

@@ -22,9 +22,10 @@
 
 #include <errno.h>  /* errno */
 #include <glib.h>
-#ifndef _WIN32
+#ifdef G_OS_UNIX
 #include <unistd.h> /* pipe() */
-#else
+#endif
+#ifdef G_OS_WIN32
 #include <io.h>
 #include <fcntl.h>
 #define pipe(fds) _pipe(fds, 4096, _O_BINARY)
@@ -42,11 +43,8 @@ debug (void)
 static void
 info (void)
 {
-#ifdef g_info
-#error "rewrite this to use g_info()"
-#endif
   if (g_test_subprocess ())
-    g_log (G_LOG_DOMAIN, G_LOG_LEVEL_INFO, "this is a regular g_log(..., G_LOG_LEVEL_INFO, ...) from the test suite");
+    g_info ("this is a regular g_info from the test suite");
 }
 
 static void
@@ -102,7 +100,10 @@ test_message_cb1 (GIOChannel  * channel,
       g_test_log_buffer_push (user_data, read_bytes, buf);
     }
 
-  g_assert_cmpuint (status, ==, G_IO_STATUS_AGAIN);
+  if (status == G_IO_STATUS_EOF)
+    return FALSE;
+  else
+    g_assert_cmpuint (status, ==, G_IO_STATUS_AGAIN);
 
   return TRUE;
 }
@@ -124,9 +125,9 @@ test_message (void)
           (gchar*)argv0,
           NULL,
           "--GTestSubprocess",
-          "-p", "/glib/testing/protocol/debug",
-          "-p", "/glib/testing/protocol/message",
           "-p", "/glib/testing/protocol/gtest-message",
+          "-p", "/glib/testing/protocol/message",
+          "-p", "/glib/testing/protocol/debug",
           NULL
   };
   GTestLogBuffer* tlb;
@@ -135,7 +136,6 @@ test_message (void)
   GMainLoop     * loop;
   GError        * error = NULL;
   gulong          child_source;
-  gulong          io_source;
   GPid            pid = 0;
   int             pipes[2];
   int             passed = 0;
@@ -145,7 +145,8 @@ test_message (void)
 
   if (0 > pipe (pipes))
     {
-      g_error ("error creating pipe: %s", g_strerror (errno));
+      int errsv = errno;
+      g_error ("error creating pipe: %s", g_strerror (errsv));
     }
 
   argv[1] = g_strdup_printf ("--GTestLogFD=%u", pipes[1]);
@@ -160,10 +161,15 @@ test_message (void)
       g_error ("error spawning the test: %s", error->message);
     }
 
+  close (pipes[1]);
   tlb = g_test_log_buffer_new ();
   loop = g_main_loop_new (NULL, FALSE);
 
+#ifdef G_OS_WIN32
+  channel = g_io_channel_win32_new_fd (pipes[0]);
+#else
   channel = g_io_channel_unix_new (pipes[0]);
+#endif
   g_io_channel_set_close_on_unref (channel, TRUE);
   g_io_channel_set_encoding (channel, NULL, NULL);
   g_io_channel_set_buffered (channel, FALSE);
@@ -174,15 +180,20 @@ test_message (void)
   g_assert_cmpint (*line_term, ==, '\n');
   g_assert_cmpint (line_term_len, ==, 1);
 
-  io_source = g_io_add_watch (channel, G_IO_IN, test_message_cb1, tlb);
+  g_assert (g_io_channel_get_close_on_unref (channel));
+  g_assert (g_io_channel_get_encoding (channel) == NULL);
+  g_assert (!g_io_channel_get_buffered (channel));
+
+  g_io_add_watch (channel, G_IO_IN, test_message_cb1, tlb);
   child_source = g_child_watch_add (pid, test_message_cb2, loop);
 
   g_main_loop_run (loop);
 
   test_message_cb1 (channel, G_IO_IN, tlb);
 
+  g_test_expect_message ("GLib", G_LOG_LEVEL_CRITICAL, "Source ID*");
   g_assert (!g_source_remove (child_source));
-  g_assert (g_source_remove (io_source));
+  g_test_assert_expected_messages ();
   g_io_channel_unref (channel);
 
   for (msg = g_test_log_buffer_pop (tlb);
@@ -237,7 +248,7 @@ test_error (void)
           "/glib/testing/protocol/critical",
           "/glib/testing/protocol/error"
   };
-  gint i;
+  gsize i;
   int             messages = 0;
 
   for (i = 0; i < G_N_ELEMENTS (tests); i++)
@@ -255,13 +266,13 @@ test_error (void)
       GMainLoop     * loop;
       GError        * error = NULL;
       gulong          child_source;
-      gulong          io_source;
       GPid            pid = 0;
       int             pipes[2];
 
       if (0 > pipe (pipes))
         {
-          g_error ("error creating pipe: %s", g_strerror (errno));
+          int errsv = errno;
+          g_error ("error creating pipe: %s", g_strerror (errsv));
         }
 
       argv[1] = g_strdup_printf ("--GTestLogFD=%u", pipes[1]);
@@ -276,24 +287,30 @@ test_error (void)
           g_error ("error spawning the test: %s", error->message);
         }
 
+      close (pipes[1]);
       tlb = g_test_log_buffer_new ();
       loop = g_main_loop_new (NULL, FALSE);
 
+#ifdef G_OS_WIN32
+      channel = g_io_channel_win32_new_fd (pipes[0]);
+#else
       channel = g_io_channel_unix_new (pipes[0]);
+#endif
       g_io_channel_set_close_on_unref (channel, TRUE);
       g_io_channel_set_encoding (channel, NULL, NULL);
       g_io_channel_set_buffered (channel, FALSE);
       g_io_channel_set_flags (channel, G_IO_FLAG_NONBLOCK, NULL);
 
-      io_source = g_io_add_watch (channel, G_IO_IN, test_message_cb1, tlb);
+      g_io_add_watch (channel, G_IO_IN, test_message_cb1, tlb);
       child_source = g_child_watch_add (pid, test_message_cb2, loop);
 
       g_main_loop_run (loop);
 
       test_message_cb1 (channel, G_IO_IN, tlb);
 
+      g_test_expect_message ("GLib", G_LOG_LEVEL_CRITICAL, "Source ID*");
       g_assert (!g_source_remove (child_source));
-      g_assert (g_source_remove (io_source));
+      g_test_assert_expected_messages ();
       g_io_channel_unref (channel);
 
       for (msg = g_test_log_buffer_pop (tlb);

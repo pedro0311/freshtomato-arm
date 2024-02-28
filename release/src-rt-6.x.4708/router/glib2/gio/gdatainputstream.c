@@ -4,10 +4,12 @@
  * Copyright (C) 2007 Jürg Billeter
  * Copyright © 2009 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -78,9 +78,9 @@ g_data_input_stream_class_init (GDataInputStreamClass *klass)
   object_class->set_property = g_data_input_stream_set_property;
 
   /**
-   * GDataStream:byte-order:
+   * GDataInputStream:byte-order:
    *
-   * The ::byte-order property determines the byte ordering that
+   * The :byte-order property determines the byte ordering that
    * is used when reading multi-byte entities (such as integers)
    * from the stream.
    */ 
@@ -94,7 +94,7 @@ g_data_input_stream_class_init (GDataInputStreamClass *klass)
                                                       G_PARAM_READWRITE|G_PARAM_STATIC_NAME|G_PARAM_STATIC_BLURB));
 
   /**
-   * GDataStream:newline-type:
+   * GDataInputStream:newline-type:
    *
    * The :newline-type property determines what is considered
    * as a line ending when reading complete lines from the stream.
@@ -312,7 +312,7 @@ read_data (GDataInputStream  *stream,
   res = g_input_stream_read (G_INPUT_STREAM (stream),
 			     buffer, size,
 			     NULL, NULL);
-  g_warn_if_fail (res == size);
+  g_warn_if_fail (res >= 0 && (gsize) res == size);
   return TRUE;
 }
 
@@ -320,12 +320,12 @@ read_data (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_byte:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads an unsigned 8-bit/1-byte value from @stream.
  *
- * Returns: an unsigned 8-bit/1-byte value read from the @stream or %0 
+ * Returns: an unsigned 8-bit/1-byte value read from the @stream or `0`
  * if an error occurred.
  **/
 guchar
@@ -347,7 +347,7 @@ g_data_input_stream_read_byte (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_int16:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads a 16-bit/2-byte value from @stream.
@@ -355,7 +355,7 @@ g_data_input_stream_read_byte (GDataInputStream  *stream,
  * In order to get the correct byte order for this read operation, 
  * see g_data_input_stream_get_byte_order() and g_data_input_stream_set_byte_order().
  * 
- * Returns: a signed 16-bit/2-byte value read from @stream or %0 if 
+ * Returns: a signed 16-bit/2-byte value read from @stream or `0` if
  * an error occurred.
  **/
 gint16
@@ -391,7 +391,7 @@ g_data_input_stream_read_int16 (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_uint16:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  *
  * Reads an unsigned 16-bit/2-byte value from @stream.
@@ -399,7 +399,7 @@ g_data_input_stream_read_int16 (GDataInputStream  *stream,
  * In order to get the correct byte order for this read operation, 
  * see g_data_input_stream_get_byte_order() and g_data_input_stream_set_byte_order(). 
  * 
- * Returns: an unsigned 16-bit/2-byte value read from the @stream or %0 if 
+ * Returns: an unsigned 16-bit/2-byte value read from the @stream or `0` if
  * an error occurred. 
  **/
 guint16
@@ -435,7 +435,7 @@ g_data_input_stream_read_uint16 (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_int32:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads a signed 32-bit/4-byte value from @stream.
@@ -447,7 +447,7 @@ g_data_input_stream_read_uint16 (GDataInputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned. 
  *   
- * Returns: a signed 32-bit/4-byte value read from the @stream or %0 if 
+ * Returns: a signed 32-bit/4-byte value read from the @stream or `0` if
  * an error occurred. 
  **/
 gint32
@@ -483,7 +483,7 @@ g_data_input_stream_read_int32 (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_uint32:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads an unsigned 32-bit/4-byte value from @stream.
@@ -495,7 +495,7 @@ g_data_input_stream_read_int32 (GDataInputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned. 
  * 
- * Returns: an unsigned 32-bit/4-byte value read from the @stream or %0 if 
+ * Returns: an unsigned 32-bit/4-byte value read from the @stream or `0` if
  * an error occurred. 
  **/
 guint32
@@ -531,7 +531,7 @@ g_data_input_stream_read_uint32 (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_int64:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads a 64-bit/8-byte value from @stream.
@@ -543,7 +543,7 @@ g_data_input_stream_read_uint32 (GDataInputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned. 
  * 
- * Returns: a signed 64-bit/8-byte value read from @stream or %0 if 
+ * Returns: a signed 64-bit/8-byte value read from @stream or `0` if
  * an error occurred.  
  **/
 gint64
@@ -579,7 +579,7 @@ g_data_input_stream_read_int64 (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_uint64:
  * @stream: a given #GDataInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  * 
  * Reads an unsigned 64-bit/8-byte value from @stream.
@@ -591,7 +591,7 @@ g_data_input_stream_read_int64 (GDataInputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned. 
  * 
- * Returns: an unsigned 64-bit/8-byte read from @stream or %0 if 
+ * Returns: an unsigned 64-bit/8-byte read from @stream or `0` if
  * an error occurred. 
  **/
 guint64
@@ -633,7 +633,7 @@ scan_for_newline (GDataInputStream *stream,
   GDataInputStreamPrivate *priv;
   const char *buffer;
   gsize start, end, peeked;
-  int i;
+  gsize i;
   gssize found_pos;
   int newline_len;
   gsize available, checked;
@@ -725,8 +725,8 @@ scan_for_newline (GDataInputStream *stream,
 /**
  * g_data_input_stream_read_line:
  * @stream: a given #GDataInputStream.
- * @length: (out): a #gsize to get the length of the data read in.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  *
  * Reads a line from the data input stream.  Note that no encoding
@@ -737,12 +737,12 @@ scan_for_newline (GDataInputStream *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned.
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type guint8): a
- *  NUL terminated byte array with the line that was read in (without
- *  the newlines).  Set @length to a #gsize to get the length of the
- *  read line.  On an error, it will return %NULL and @error will be
- *  set. If there's no content to read, it will still return %NULL,
- *  but @error won't be set.
+ * Returns: (nullable) (transfer full) (array zero-terminated=1) (element-type guint8):
+ *  a NUL terminated byte array with the line that was read in
+ *  (without the newlines).  Set @length to a #gsize to get the length
+ *  of the read line.  On an error, it will return %NULL and @error
+ *  will be set. If there's no content to read, it will still return
+ *  %NULL, but @error won't be set.
  **/
 char *
 g_data_input_stream_read_line (GDataInputStream  *stream,
@@ -811,8 +811,8 @@ g_data_input_stream_read_line (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_line_utf8:
  * @stream: a given #GDataInputStream.
- * @length: (out): a #gsize to get the length of the data read in.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  *
  * Reads a UTF-8 encoded line from the data input stream.
@@ -821,12 +821,13 @@ g_data_input_stream_read_line (GDataInputStream  *stream,
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned.
  *
- * Returns: (transfer full): a NUL terminated UTF-8 string with the
- *  line that was read in (without the newlines).  Set @length to a
- *  #gsize to get the length of the read line.  On an error, it will
- *  return %NULL and @error will be set.  For UTF-8 conversion errors,
- *  the set error domain is %G_CONVERT_ERROR.  If there's no content to
- *  read, it will still return %NULL, but @error won't be set.
+ * Returns: (nullable) (transfer full): a NUL terminated UTF-8 string
+ *  with the line that was read in (without the newlines).  Set
+ *  @length to a #gsize to get the length of the read line.  On an
+ *  error, it will return %NULL and @error will be set.  For UTF-8
+ *  conversion errors, the set error domain is %G_CONVERT_ERROR.  If
+ *  there's no content to read, it will still return %NULL, but @error
+ *  won't be set.
  *
  * Since: 2.30
  **/
@@ -857,12 +858,12 @@ static gssize
 scan_for_chars (GDataInputStream *stream,
 		gsize            *checked_out,
 		const char       *stop_chars,
-                gssize            stop_chars_len)
+                gsize             stop_chars_len)
 {
   GBufferedInputStream *bstream;
   const char *buffer;
   gsize start, end, peeked;
-  int i;
+  gsize i;
   gsize available, checked;
   const char *stop_char;
   const char *stop_end;
@@ -896,8 +897,8 @@ scan_for_chars (GDataInputStream *stream,
  * g_data_input_stream_read_until:
  * @stream: a given #GDataInputStream.
  * @stop_chars: characters to terminate the read.
- * @length: (out): a #gsize to get the length of the data read in.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting.
  *
  * Reads a string from the data input stream, up to the first
@@ -916,6 +917,8 @@ scan_for_chars (GDataInputStream *stream,
  *     before encountering any of the stop characters. Set @length to
  *     a #gsize to get the length of the string. This function will
  *     return %NULL on an error.
+ * Deprecated: 2.56: Use g_data_input_stream_read_upto() instead, which has more
+ *     consistent behaviour regarding the stop character.
  */
 char *
 g_data_input_stream_read_until (GDataInputStream  *stream,
@@ -935,7 +938,7 @@ g_data_input_stream_read_until (GDataInputStream  *stream,
   /* If we're not at end of stream then we have a stop_char to consume. */
   if (result != NULL && g_buffered_input_stream_get_available (bstream) > 0)
     {
-      gsize res;
+      gsize res G_GNUC_UNUSED  /* when compiling with G_DISABLE_ASSERT */;
       gchar b;
 
       res = g_input_stream_read (G_INPUT_STREAM (stream), &b, 1, NULL, NULL);
@@ -951,7 +954,7 @@ typedef struct
   gsize checked;
 
   gchar *stop_chars;
-  gssize stop_chars_len;
+  gsize stop_chars_len;
   gsize length;
 } GDataInputStreamReadData;
 
@@ -1077,15 +1080,21 @@ g_data_input_stream_read_async (GDataInputStream    *stream,
 {
   GDataInputStreamReadData *data;
   GTask *task;
+  gsize stop_chars_len_unsigned;
 
   data = g_slice_new0 (GDataInputStreamReadData);
-  if (stop_chars_len == -1)
-    stop_chars_len = strlen (stop_chars);
-  data->stop_chars = g_memdup (stop_chars, stop_chars_len);
-  data->stop_chars_len = stop_chars_len;
+
+  if (stop_chars_len < 0)
+    stop_chars_len_unsigned = strlen (stop_chars);
+  else
+    stop_chars_len_unsigned = (gsize) stop_chars_len;
+
+  data->stop_chars = g_memdup2 (stop_chars, stop_chars_len_unsigned);
+  data->stop_chars_len = stop_chars_len_unsigned;
   data->last_saw_cr = FALSE;
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_data_input_stream_read_async);
   g_task_set_task_data (task, data, g_data_input_stream_read_data_free);
   g_task_set_priority (task, io_priority);
 
@@ -1116,9 +1125,8 @@ g_data_input_stream_read_finish (GDataInputStream  *stream,
 /**
  * g_data_input_stream_read_line_async:
  * @stream: a given #GDataInputStream.
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied.
  * @user_data: (closure): the data to pass to callback function.
  *
@@ -1149,9 +1157,8 @@ g_data_input_stream_read_line_async (GDataInputStream    *stream,
  * g_data_input_stream_read_until_async:
  * @stream: a given #GDataInputStream.
  * @stop_chars: characters to terminate the read.
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied.
  * @user_data: (closure): the data to pass to callback function.
  *
@@ -1172,6 +1179,8 @@ g_data_input_stream_read_line_async (GDataInputStream    *stream,
  * g_data_input_stream_read_upto_async() instead.
  *
  * Since: 2.20
+ * Deprecated: 2.56: Use g_data_input_stream_read_upto_async() instead, which
+ *     has more consistent behaviour regarding the stop character.
  */
 void
 g_data_input_stream_read_until_async (GDataInputStream    *stream,
@@ -1193,7 +1202,7 @@ g_data_input_stream_read_until_async (GDataInputStream    *stream,
  * g_data_input_stream_read_line_finish:
  * @stream: a given #GDataInputStream.
  * @result: the #GAsyncResult that was provided to the callback.
- * @length: (out): a #gsize to get the length of the data read in.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
  * @error: #GError for error reporting.
  *
  * Finish an asynchronous call started by
@@ -1201,12 +1210,12 @@ g_data_input_stream_read_until_async (GDataInputStream    *stream,
  * string encoding in g_data_input_stream_read_line() applies here as
  * well.
  *
- * Returns: (transfer full) (array zero-terminated=1) (element-type guint8):  a 
- *  NUL-terminated byte array with the line that was read in
- *  (without the newlines).  Set @length to a #gsize to get the
- *  length of the read line.  On an error, it will return %NULL and
- *  @error will be set. If there's no content to read, it will
- *  still return %NULL, but @error won't be set.
+ * Returns: (nullable) (transfer full) (array zero-terminated=1) (element-type guint8):
+ *  a NUL-terminated byte array with the line that was read in
+ *  (without the newlines).  Set @length to a #gsize to get the length
+ *  of the read line.  On an error, it will return %NULL and @error
+ *  will be set. If there's no content to read, it will still return
+ *  %NULL, but @error won't be set.
  *
  * Since: 2.20
  */
@@ -1225,18 +1234,18 @@ g_data_input_stream_read_line_finish (GDataInputStream  *stream,
  * g_data_input_stream_read_line_finish_utf8:
  * @stream: a given #GDataInputStream.
  * @result: the #GAsyncResult that was provided to the callback.
- * @length: (out): a #gsize to get the length of the data read in.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
  * @error: #GError for error reporting.
  *
  * Finish an asynchronous call started by
  * g_data_input_stream_read_line_async().
  *
- * Returns: (transfer full): a string with the line that was read in
- *  (without the newlines).  Set @length to a #gsize to get the length
- *  of the read line.  On an error, it will return %NULL and @error
- *  will be set. For UTF-8 conversion errors, the set error domain is
- *  %G_CONVERT_ERROR.  If there's no content to read, it will still
- *  return %NULL, but @error won't be set.
+ * Returns: (nullable) (transfer full): a string with the line that
+ *  was read in (without the newlines).  Set @length to a #gsize to
+ *  get the length of the read line.  On an error, it will return
+ *  %NULL and @error will be set. For UTF-8 conversion errors, the set
+ *  error domain is %G_CONVERT_ERROR.  If there's no content to read,
+ *  it will still return %NULL, but @error won't be set.
  *
  * Since: 2.30
  */
@@ -1267,7 +1276,7 @@ g_data_input_stream_read_line_finish_utf8 (GDataInputStream  *stream,
  * g_data_input_stream_read_until_finish:
  * @stream: a given #GDataInputStream.
  * @result: the #GAsyncResult that was provided to the callback.
- * @length: (out): a #gsize to get the length of the data read in.
+ * @length: (out) (optional): a #gsize to get the length of the data read in.
  * @error: #GError for error reporting.
  *
  * Finish an asynchronous call started by
@@ -1279,6 +1288,8 @@ g_data_input_stream_read_line_finish_utf8 (GDataInputStream  *stream,
  *     before encountering any of the stop characters. Set @length to
  *     a #gsize to get the length of the string. This function will
  *     return %NULL on an error.
+ * Deprecated: 2.56: Use g_data_input_stream_read_upto_finish() instead, which
+ *     has more consistent behaviour regarding the stop character.
  */
 gchar *
 g_data_input_stream_read_until_finish (GDataInputStream  *stream,
@@ -1297,20 +1308,22 @@ g_data_input_stream_read_until_finish (GDataInputStream  *stream,
  * @stop_chars: characters to terminate the read
  * @stop_chars_len: length of @stop_chars. May be -1 if @stop_chars is
  *     nul-terminated
- * @length: (out): a #gsize to get the length of the data read in
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @length: (out) (optional): a #gsize to get the length of the data read in
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @error: #GError for error reporting
  *
  * Reads a string from the data input stream, up to the first
  * occurrence of any of the stop characters.
  *
  * In contrast to g_data_input_stream_read_until(), this function
- * does <emphasis>not</emphasis> consume the stop character. You have
- * to use g_data_input_stream_read_byte() to get it before calling
+ * does not consume the stop character. You have to use
+ * g_data_input_stream_read_byte() to get it before calling
  * g_data_input_stream_read_upto() again.
  *
  * Note that @stop_chars may contain '\0' if @stop_chars_len is
  * specified.
+ *
+ * The returned string will always be nul-terminated on success.
  *
  * Returns: (transfer full): a string with the data that was read
  *     before encountering any of the stop characters. Set @length to
@@ -1332,17 +1345,20 @@ g_data_input_stream_read_upto (GDataInputStream  *stream,
   gssize found_pos;
   gssize res;
   char *data_until;
+  gsize stop_chars_len_unsigned;
 
   g_return_val_if_fail (G_IS_DATA_INPUT_STREAM (stream), NULL);
 
   if (stop_chars_len < 0)
-    stop_chars_len = strlen (stop_chars);
+    stop_chars_len_unsigned = strlen (stop_chars);
+  else
+    stop_chars_len_unsigned = (gsize) stop_chars_len;
 
   bstream = G_BUFFERED_INPUT_STREAM (stream);
 
   checked = 0;
 
-  while ((found_pos = scan_for_chars (stream, &checked, stop_chars, stop_chars_len)) == -1)
+  while ((found_pos = scan_for_chars (stream, &checked, stop_chars, stop_chars_len_unsigned)) == -1)
     {
       if (g_buffered_input_stream_get_available (bstream) ==
           g_buffered_input_stream_get_buffer_size (bstream))
@@ -1389,9 +1405,8 @@ g_data_input_stream_read_upto (GDataInputStream  *stream,
  * @stop_chars: characters to terminate the read
  * @stop_chars_len: length of @stop_chars. May be -1 if @stop_chars is
  *     nul-terminated
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -1399,8 +1414,8 @@ g_data_input_stream_read_upto (GDataInputStream  *stream,
  * It is an error to have two outstanding calls to this function.
  *
  * In contrast to g_data_input_stream_read_until(), this function
- * does <emphasis>not</emphasis> consume the stop character. You have
- * to use g_data_input_stream_read_byte() to get it before calling
+ * does not consume the stop character. You have to use
+ * g_data_input_stream_read_byte() to get it before calling
  * g_data_input_stream_read_upto() again.
  *
  * Note that @stop_chars may contain '\0' if @stop_chars_len is
@@ -1433,15 +1448,17 @@ g_data_input_stream_read_upto_async (GDataInputStream    *stream,
  * g_data_input_stream_read_upto_finish:
  * @stream: a #GDataInputStream
  * @result: the #GAsyncResult that was provided to the callback
- * @length: (out): a #gsize to get the length of the data read in
+ * @length: (out) (optional): a #gsize to get the length of the data read in
  * @error: #GError for error reporting
  *
  * Finish an asynchronous call started by
  * g_data_input_stream_read_upto_async().
  *
- * Note that this function does <emphasis>not</emphasis> consume the
- * stop character. You have to use g_data_input_stream_read_byte() to
- * get it before calling g_data_input_stream_read_upto_async() again.
+ * Note that this function does not consume the stop character. You
+ * have to use g_data_input_stream_read_byte() to get it before calling
+ * g_data_input_stream_read_upto_async() again.
+ *
+ * The returned string will always be nul-terminated on success.
  *
  * Returns: (transfer full): a string with the data that was read
  *     before encountering any of the stop characters. Set @length to

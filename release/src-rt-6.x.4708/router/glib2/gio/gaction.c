@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -31,6 +31,7 @@ G_DEFINE_INTERFACE (GAction, g_action, G_TYPE_OBJECT)
  * SECTION:gaction
  * @title: GAction
  * @short_description: An action interface
+ * @include: gio/gio.h
  *
  * #GAction represents a single named action.
  *
@@ -50,17 +51,24 @@ G_DEFINE_INTERFACE (GAction, g_action, G_TYPE_OBJECT)
  *
  * #GAction is merely the interface to the concept of an action, as
  * described above.  Various implementations of actions exist, including
- * #GSimpleAction and #GtkAction.
+ * #GSimpleAction.
  *
  * In all cases, the implementing class is responsible for storing the
  * name of the action, the parameter type, the enabled state, the
  * optional state type and the state and emitting the appropriate
- * signals when these change.  The implementor responsible for filtering
+ * signals when these change.  The implementor is responsible for filtering
  * calls to g_action_activate() and g_action_change_state() for type
  * safety and for the state being enabled.
  *
  * Probably the only useful thing to do with a #GAction is to put it
  * inside of a #GSimpleActionGroup.
+ **/
+
+/**
+ * GAction:
+ *
+ * #GAction is an opaque data structure and can only be accessed
+ * using the following functions.
  **/
 
 /**
@@ -87,7 +95,7 @@ g_action_default_init (GActionInterface *iface)
    * GAction:name:
    *
    * The name of the action.  This is mostly meaningful for identifying
-   * the action once it has been added to a #GActionGroup.
+   * the action once it has been added to a #GActionGroup. It is immutable.
    *
    * Since: 2.28
    **/
@@ -103,7 +111,8 @@ g_action_default_init (GActionInterface *iface)
    * GAction:parameter-type:
    *
    * The type of the parameter that must be given when activating the
-   * action.
+   * action. This is immutable, and may be %NULL if no parameter is needed when
+   * activating the action.
    *
    * Since: 2.28
    **/
@@ -137,7 +146,7 @@ g_action_default_init (GActionInterface *iface)
    * GAction:state-type:
    *
    * The #GVariantType of the state that the action has, or %NULL if the
-   * action is stateless.
+   * action is stateless. This is immutable.
    *
    * Since: 2.28
    **/
@@ -217,7 +226,7 @@ g_action_change_state (GAction  *action,
  * The return value (if non-%NULL) should be freed with
  * g_variant_unref() when it is no longer required.
  *
- * Returns: (transfer full): the current state of the action
+ * Returns: (nullable) (transfer full): the current state of the action
  *
  * Since: 2.28
  **/
@@ -262,7 +271,7 @@ g_action_get_name (GAction *action)
  * In the case that this function returns %NULL, you must not give any
  * #GVariant, but %NULL instead.
  *
- * Returns: (allow-none): the parameter type
+ * Returns: (nullable): the parameter type
  *
  * Since: 2.28
  **/
@@ -292,7 +301,7 @@ g_action_get_parameter_type (GAction *action)
  * then this function will return %NULL. In that case, g_action_get_state()
  * will return %NULL and you must not call g_action_change_state().
  *
- * Returns: (allow-none): the state type, if the action is stateful
+ * Returns: (nullable): the state type, if the action is stateful
  *
  * Since: 2.28
  **/
@@ -328,7 +337,7 @@ g_action_get_state_type (GAction *action)
  * The return value (if non-%NULL) should be freed with
  * g_variant_unref() when it is no longer required.
  *
- * Returns: (transfer full): the state range hint
+ * Returns: (nullable) (transfer full): the state range hint
  *
  * Since: 2.28
  **/
@@ -366,7 +375,7 @@ g_action_get_enabled (GAction *action)
 /**
  * g_action_activate:
  * @action: a #GAction
- * @parameter: (allow-none): the parameter to the activation
+ * @parameter: (nullable): the parameter to the activation
  *
  * Activates the action.
  *
@@ -396,7 +405,7 @@ g_action_activate (GAction  *action,
 
 /**
  * g_action_name_is_valid:
- * @action_name: an potential action name
+ * @action_name: a potential action name
  *
  * Checks if @action_name is valid.
  *
@@ -535,16 +544,15 @@ bad_fmt:
 /**
  * g_action_print_detailed_name:
  * @action_name: a valid action name
- * @target_value: (allow-none): a #GVariant target value, or %NULL
+ * @target_value: (nullable): a #GVariant target value, or %NULL
  *
  * Formats a detailed action name from @action_name and @target_value.
  *
  * It is an error to call this function with an invalid action name.
  *
- * This function is the opposite of
- * g_action_parse_detailed_action_name().  It will produce a string that
- * can be parsed back to the @action_name and @target_value by that
- * function.
+ * This function is the opposite of g_action_parse_detailed_name().
+ * It will produce a string that can be parsed back to the @action_name
+ * and @target_value by that function.
  *
  * See that function for the types of strings that will be printed by
  * this function.

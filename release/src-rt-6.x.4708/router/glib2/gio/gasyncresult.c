@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -38,13 +38,16 @@
  * which are chained together by a #GAsyncReadyCallback. To begin
  * an asynchronous operation, provide a #GAsyncReadyCallback to the
  * asynchronous function. This callback will be triggered when the
- * operation has completed, and will be passed a #GAsyncResult instance
- * filled with the details of the operation's success or failure, the
- * object the asynchronous function was started for and any error codes
- * returned. The asynchronous callback function is then expected to call
- * the corresponding "_finish()" function, passing the object the
- * function was called for, the #GAsyncResult instance, and (optionally)
- * an @error to grab any error conditions that may have occurred.
+ * operation has completed, and must be run in a later iteration of
+ * the [thread-default main context][g-main-context-push-thread-default]
+ * from where the operation was initiated. It will be passed a
+ * #GAsyncResult instance filled with the details of the operation's
+ * success or failure, the object the asynchronous function was
+ * started for and any error codes returned. The asynchronous callback
+ * function is then expected to call the corresponding "_finish()"
+ * function, passing the object the function was called for, the
+ * #GAsyncResult instance, and (optionally) an @error to grab any
+ * error conditions that may have occurred.
  *
  * The "_finish()" function for an operation takes the generic result
  * (of type #GAsyncResult) and returns the specific result that the
@@ -59,7 +62,7 @@
  * however, the "_finish()" function may be called at most once.
  *
  * Example of a typical asynchronous operation flow:
- * |[
+ * |[<!-- language="C" -->
  * void _theoretical_frobnitz_async (Theoretical         *t,
  *                                   GCancellable        *c,
  *                                   GAsyncReadyCallback  cb,
@@ -83,20 +86,20 @@
  *   else
  *     g_printf ("Uh oh!\n");
  *
- *   /<!-- -->* ... *<!-- -->/
+ *   ...
  *
  * }
  *
  * int main (int argc, void *argv[])
  * {
- *    /<!-- -->* ... *<!-- -->/
+ *    ...
  *
  *    _theoretical_frobnitz_async (theoretical_data,
  *                                 NULL,
  *                                 frobnitz_result_func,
  *                                 NULL);
  *
- *    /<!-- -->* ... *<!-- -->/
+ *    ...
  * }
  * ]|
  *
@@ -104,16 +107,16 @@
  * always called, even in the case of a cancelled operation. On cancellation
  * the result is a %G_IO_ERROR_CANCELLED error.
  *
- * <para id="io-priority"><indexterm><primary>I/O
- * priority</primary></indexterm> Many I/O-related asynchronous
- * operations have a priority parameter, which is used in certain
- * cases to determine the order in which operations are executed. They
- * are <emphasis>not</emphasis> used to determine system-wide I/O
- * scheduling. Priorities are integers, with lower numbers indicating
+ * ## I/O Priority # {#io-priority}
+ *
+ * Many I/O-related asynchronous operations have a priority parameter,
+ * which is used in certain cases to determine the order in which
+ * operations are executed. They are not used to determine system-wide
+ * I/O scheduling. Priorities are integers, with lower numbers indicating
  * higher priority. It is recommended to choose priorities between
- * %G_PRIORITY_LOW and %G_PRIORITY_HIGH, with %G_PRIORITY_DEFAULT as a
- * default. </para>
- **/
+ * %G_PRIORITY_LOW and %G_PRIORITY_HIGH, with %G_PRIORITY_DEFAULT
+ * as a default.
+ */
 
 typedef GAsyncResultIface GAsyncResultInterface;
 G_DEFINE_INTERFACE (GAsyncResult, g_async_result, G_TYPE_OBJECT)
@@ -149,8 +152,8 @@ g_async_result_get_user_data (GAsyncResult *res)
  *
  * Gets the source object from a #GAsyncResult.
  *
- * Returns: (transfer full): a new reference to the source object for the @res,
- *    or %NULL if there is none.
+ * Returns: (transfer full) (nullable): a new reference to the source
+ *    object for the @res, or %NULL if there is none.
  */
 GObject *
 g_async_result_get_source_object (GAsyncResult *res)
@@ -173,13 +176,12 @@ g_async_result_get_source_object (GAsyncResult *res)
  * g_simple_async_result_propagate_error(). Otherwise it returns
  * %FALSE.
  *
- * This can be used for legacy error handling in async
- * <literal>_finish ()</literal> wrapper functions that traditionally
- * handled #GSimpleAsyncResult error returns themselves rather than
- * calling into the virtual method. This should not be used in new
- * code; #GAsyncResult errors that are set by virtual methods should
- * also be extracted by virtual methods, to enable subclasses to chain
- * up correctly.
+ * This can be used for legacy error handling in async *_finish()
+ * wrapper functions that traditionally handled #GSimpleAsyncResult
+ * error returns themselves rather than calling into the virtual method.
+ * This should not be used in new code; #GAsyncResult errors that are
+ * set by virtual methods should also be extracted by virtual methods,
+ * to enable subclasses to chain up correctly.
  *
  * Returns: %TRUE if @error is has been filled in with an error from
  *   @res, %FALSE if not.
@@ -196,6 +198,7 @@ g_async_result_legacy_propagate_error (GAsyncResult  *res,
    * deprecation warnings in the future.)
    */
 
+  G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   if (G_IS_SIMPLE_ASYNC_RESULT (res))
     {
       return g_simple_async_result_propagate_error (G_SIMPLE_ASYNC_RESULT (res),
@@ -203,6 +206,7 @@ g_async_result_legacy_propagate_error (GAsyncResult  *res,
     }
   else
     return FALSE;
+  G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
 /**

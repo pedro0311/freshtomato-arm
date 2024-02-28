@@ -20,7 +20,9 @@
  */
 
 /* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -213,6 +215,44 @@ test_string_append (void)
   g_string_free (string, TRUE);
 }
 
+static void string_append_vprintf_va (GString     *string,
+                                      const gchar *format,
+                                      ...) G_GNUC_PRINTF (2, 3);
+
+/* Wrapper around g_string_append_vprintf() which takes varargs */
+static void
+string_append_vprintf_va (GString     *string,
+                          const gchar *format,
+                          ...)
+{
+  va_list args;
+
+  va_start (args, format);
+  g_string_append_vprintf (string, format, args);
+  va_end (args);
+}
+
+static void
+test_string_append_vprintf (void)
+{
+  GString *string;
+
+  /* append */
+  string = g_string_new ("firsthalf");
+
+  string_append_vprintf_va (string, "some %s placeholders", "format");
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat"
+#pragma GCC diagnostic ignored "-Wformat-extra-args"
+  string_append_vprintf_va (string, "%l", "invalid");
+#pragma GCC diagnostic pop
+
+  g_assert_cmpstr (string->str, ==, "firsthalfsome format placeholders");
+
+  g_string_free (string, TRUE);
+}
+
 static void
 test_string_prepend_c (void)
 {
@@ -336,6 +376,16 @@ test_string_insert_unichar (void)
   g_string_insert_unichar (string, -1, 0x1D100);
   g_assert_cmpstr (string->str, ==, "start\xF0\x9D\x84\x80");
   g_string_free (string, TRUE);
+
+  string = g_string_new ("start");
+  g_string_insert_unichar (string, -1, 0xFFD0);
+  g_assert_cmpstr (string->str, ==, "start\xEF\xBF\x90");
+  g_string_free (string, TRUE);
+
+  string = g_string_new ("start");
+  g_string_insert_unichar (string, -1, 0xFDD0);
+  g_assert_cmpstr (string->str, ==, "start\xEF\xB7\x90");
+  g_string_free (string, TRUE);
 }
 
 static void
@@ -423,13 +473,11 @@ test_string_nul_handling (void)
   g_assert (!g_string_equal (string1, string2));
   g_assert (string1->len == 8);
   g_string_append (string1, "yzzy");
-  g_assert (string1->len == 12);
-  g_assert (memcmp (string1->str, "fiddle\0xyzzy", 13) == 0);
+  g_assert_cmpmem (string1->str, string1->len + 1, "fiddle\0xyzzy", 13);
   g_string_insert (string1, 1, "QED");
-  g_assert (memcmp (string1->str, "fQEDiddle\0xyzzy", 16) == 0);
+  g_assert_cmpmem (string1->str, string1->len + 1, "fQEDiddle\0xyzzy", 16);
   g_string_printf (string1, "fiddle%cxyzzy", '\0');
-  g_assert (string1->len == 12);
-  g_assert (memcmp (string1->str, "fiddle\0xyzzy", 13) == 0);
+  g_assert_cmpmem (string1->str, string1->len + 1, "fiddle\0xyzzy", 13);
 
   g_string_free (string1, TRUE);
   g_string_free (string2, TRUE);
@@ -490,9 +538,72 @@ test_string_to_bytes (void)
 
   g_assert_cmpint (byte_len, ==, 7);
 
-  g_assert_cmpint (memcmp (byte_data, "foo-bar", byte_len), ==, 0);
+  g_assert_cmpmem (byte_data, byte_len, "foo-bar", 7);
 
   g_bytes_unref (bytes);
+}
+
+static void
+test_string_replace (void)
+{
+  static const struct
+  {
+    const char *string;
+    const char *original;
+    const char *replacement;
+    guint limit;
+    const char *expected;
+    guint expected_n;
+  }
+  tests[] =
+  {
+    { "foo bar foo baz foo bar foobarbaz", "bar", "baz", 0,
+      "foo baz foo baz foo baz foobazbaz", 3 },
+    { "foo baz foo baz foo baz foobazbaz", "baz", "bar", 3,
+      "foo bar foo bar foo bar foobazbaz", 3 },
+    { "foo bar foo bar foo bar foobazbaz", "foobar", "bar", 1,
+      "foo bar foo bar foo bar foobazbaz", 0 },
+    { "aaaaaaaa", "a", "abcdefghijkl", 0,
+      "abcdefghijklabcdefghijklabcdefghijklabcdefghijklabcdefghijklabcdefghijklabcdefghijklabcdefghijkl",
+      8 },
+    { "/usr/$LIB/libMangoHud.so", "$LIB", "lib32", 0,
+      "/usr/lib32/libMangoHud.so", 1 },
+    { "food for foals", "o", "", 0,
+      "fd fr fals", 4 },
+    { "aaa", "a", "aaa", 0,
+      "aaaaaaaaa", 3 },
+    { "aaa", "a", "", 0,
+      "", 3 },
+    { "aaa", "aa", "bb", 0,
+      "bba", 1 },
+    { "foo", "", "bar", 0,
+      "barfbarobarobar", 4 },
+    { "", "", "x", 0,
+      "x", 1 },
+    { "", "", "", 0,
+      "", 1 },
+  };
+  gsize i;
+
+  for (i = 0; i < G_N_ELEMENTS (tests); i++)
+    {
+      GString *s;
+      guint n;
+
+      s = g_string_new (tests[i].string);
+      g_test_message ("%" G_GSIZE_FORMAT ": Replacing \"%s\" with \"%s\" (limit %u) in \"%s\"",
+                      i, tests[i].original, tests[i].replacement,
+                      tests[i].limit, tests[i].string);
+      n = g_string_replace (s, tests[i].original, tests[i].replacement,
+                            tests[i].limit);
+      g_test_message ("-> %u replacements, \"%s\"",
+                      n, s->str);
+      g_assert_cmpstr (tests[i].expected, ==, s->str);
+      g_assert_cmpuint (strlen (tests[i].expected), ==, s->len);
+      g_assert_cmpuint (strlen (tests[i].expected) + 1, <=, s->allocated_len);
+      g_assert_cmpuint (tests[i].expected_n, ==, n);
+      g_string_free (s, TRUE);
+    }
 }
 
 int
@@ -508,6 +619,7 @@ main (int   argc,
   g_test_add_func ("/string/test-string-assign", test_string_assign);
   g_test_add_func ("/string/test-string-append-c", test_string_append_c);
   g_test_add_func ("/string/test-string-append", test_string_append);
+  g_test_add_func ("/string/test-string-append-vprintf", test_string_append_vprintf);
   g_test_add_func ("/string/test-string-prepend-c", test_string_prepend_c);
   g_test_add_func ("/string/test-string-prepend", test_string_prepend);
   g_test_add_func ("/string/test-string-insert", test_string_insert);
@@ -519,6 +631,7 @@ main (int   argc,
   g_test_add_func ("/string/test-string-up-down", test_string_up_down);
   g_test_add_func ("/string/test-string-set-size", test_string_set_size);
   g_test_add_func ("/string/test-string-to-bytes", test_string_to_bytes);
+  g_test_add_func ("/string/test-string-replace", test_string_replace);
 
   return g_test_run();
 }

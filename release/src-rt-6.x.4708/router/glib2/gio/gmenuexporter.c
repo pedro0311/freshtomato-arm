@@ -1,10 +1,12 @@
 /*
  * Copyright © 2011 Canonical Ltd.
  *
- *  This library is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU Lesser General Public License as
- *  published by the Free Software Foundation; either version 2 of the
- *  licence, or (at your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ *  This library is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU Lesser General Public
+ *  License as published by the Free Software Foundation; either
+ *  version 2.1 of the License, or (at your option) any later version.
  *
  *  This library is distributed in the hope that it will be useful, but
  *  WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  *  Lesser General Public License for more details.
  *
  *  You should have received a copy of the GNU Lesser General Public
- *  License along with this library; if not, write to the Free Software
- *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
- *  USA.
+ *  License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -28,10 +28,23 @@
 #include "gdbusnamewatching.h"
 #include "gdbuserror.h"
 
+/*
+ * G_MENU_EXPORTER_MAX_SECTION_SIZE:
+ *
+ * The maximum number of entries in a menu section supported by
+ * g_dbus_connection_export_menu_model().
+ *
+ * The exact value of the limit may change in future GLib versions.
+ *
+ * Since: 2.76
+ */
+#define G_MENU_EXPORTER_MAX_SECTION_SIZE 1000
+
 /**
  * SECTION:gmenuexporter
  * @title: GMenuModel exporter
  * @short_description: Export GMenuModels on D-Bus
+ * @include: gio/gio.h
  * @see_also: #GMenuModel, #GDBusMenuModel
  *
  * These functions support exporting a #GMenuModel on D-Bus.
@@ -45,7 +58,7 @@
 /* {{{1 D-Bus Interface description */
 
 /* For documentation of this interface, see
- * http://live.gnome.org/GTK+/GApplication-dbus-apis
+ * https://wiki.gnome.org/Projects/GLib/GApplication/DBusAPI
  */
 
 static GDBusInterfaceInfo *
@@ -73,7 +86,7 @@ org_gtk_Menus_get_interface (void)
                                            "  </interface>"
                                            "</node>", &error);
       if (info == NULL)
-        g_error ("%s\n", error->message);
+        g_error ("%s", error->message);
       interface_info = g_dbus_node_info_lookup_interface (info, "org.gtk.Menus");
       g_assert (interface_info != NULL);
       g_dbus_interface_info_ref (interface_info);
@@ -251,10 +264,17 @@ g_menu_exporter_menu_items_changed (GMenuModel *model,
   GMenuExporterMenu *menu = user_data;
   GSequenceIter *point;
   gint i;
+  gint n_items;
 
   g_assert (menu->model == model);
   g_assert (menu->item_links != NULL);
-  g_assert (position + removed <= g_sequence_get_length (menu->item_links));
+
+  n_items = g_sequence_get_length (menu->item_links);
+  g_assert (position >= 0 && position < G_MENU_EXPORTER_MAX_SECTION_SIZE);
+  g_assert (removed >= 0 && removed < G_MENU_EXPORTER_MAX_SECTION_SIZE);
+  g_assert (added < G_MENU_EXPORTER_MAX_SECTION_SIZE);
+  g_assert (position + removed <= n_items);
+  g_assert (n_items - removed + added < G_MENU_EXPORTER_MAX_SECTION_SIZE);
 
   point = g_sequence_get_iter_at_pos (menu->item_links, position + removed);
   g_sequence_remove_range (g_sequence_get_iter_at_pos (menu->item_links, position), point);
@@ -378,7 +398,7 @@ g_menu_exporter_group_subscribe (GMenuExporterGroup *group,
       guint id = GPOINTER_TO_INT (key);
       GMenuExporterMenu *menu = val;
 
-      if (g_sequence_get_length (menu->item_links))
+      if (!g_sequence_is_empty (menu->item_links))
         {
           g_variant_builder_open (builder, G_VARIANT_TYPE ("(uuaa{sv})"));
           g_variant_builder_add (builder, "u", group->id);
@@ -526,7 +546,9 @@ g_menu_exporter_remote_free (gpointer data)
       g_menu_exporter_group_unsubscribe (group, GPOINTER_TO_INT (val));
     }
 
-  g_bus_unwatch_name (remote->watch_id);
+  if (remote->watch_id > 0)
+    g_bus_unwatch_name (remote->watch_id);
+
   g_hash_table_unref (remote->watches);
 
   g_slice_free (GMenuExporterRemote, remote);
@@ -557,6 +579,7 @@ struct _GMenuExporter
   guint next_group_id;
 
   GMenuExporterMenu *root;
+  GMenuExporterRemote *peer_remote;
   GHashTable *remotes;
 };
 
@@ -583,16 +606,25 @@ g_menu_exporter_subscribe (GMenuExporter *exporter,
   GVariantIter iter;
   guint32 id;
 
-  remote = g_hash_table_lookup (exporter->remotes, sender);
+  if (sender != NULL)
+    remote = g_hash_table_lookup (exporter->remotes, sender);
+  else
+    remote = exporter->peer_remote;
 
   if (remote == NULL)
     {
-      guint watch_id;
+      if (sender != NULL)
+        {
+          guint watch_id;
 
-      watch_id = g_bus_watch_name_on_connection (exporter->connection, sender, G_BUS_NAME_WATCHER_FLAGS_NONE,
-                                                 NULL, g_menu_exporter_name_vanished, exporter, NULL);
-      remote = g_menu_exporter_remote_new (exporter, watch_id);
-      g_hash_table_insert (exporter->remotes, g_strdup (sender), remote);
+          watch_id = g_bus_watch_name_on_connection (exporter->connection, sender, G_BUS_NAME_WATCHER_FLAGS_NONE,
+                                                     NULL, g_menu_exporter_name_vanished, exporter, NULL);
+          remote = g_menu_exporter_remote_new (exporter, watch_id);
+          g_hash_table_insert (exporter->remotes, g_strdup (sender), remote);
+        }
+      else
+        remote = exporter->peer_remote =
+          g_menu_exporter_remote_new (exporter, 0);
     }
 
   g_variant_builder_init (&builder, G_VARIANT_TYPE ("(a(uuaa{sv}))"));
@@ -617,7 +649,10 @@ g_menu_exporter_unsubscribe (GMenuExporter *exporter,
   GVariantIter iter;
   guint32 id;
 
-  remote = g_hash_table_lookup (exporter->remotes, sender);
+  if (sender != NULL)
+    remote = g_hash_table_lookup (exporter->remotes, sender);
+  else
+    remote = exporter->peer_remote;
 
   if (remote == NULL)
     return;
@@ -627,7 +662,12 @@ g_menu_exporter_unsubscribe (GMenuExporter *exporter,
     g_menu_exporter_remote_unsubscribe (remote, id);
 
   if (!g_menu_exporter_remote_has_subscriptions (remote))
-    g_hash_table_remove (exporter->remotes, sender);
+    {
+      if (sender != NULL)
+        g_hash_table_remove (exporter->remotes, sender);
+      else
+        g_clear_pointer (&exporter->peer_remote, g_menu_exporter_remote_free);
+    }
 }
 
 static void
@@ -692,6 +732,7 @@ g_menu_exporter_free (gpointer user_data)
   GMenuExporter *exporter = user_data;
 
   g_menu_exporter_menu_free (exporter->root);
+  g_clear_pointer (&exporter->peer_remote, g_menu_exporter_remote_free);
   g_hash_table_unref (exporter->remotes);
   g_hash_table_unref (exporter->groups);
   g_object_unref (exporter->connection);
@@ -748,6 +789,10 @@ g_menu_exporter_method_call (GDBusConnection       *connection,
  * constraint is violated, the export will fail and 0 will be
  * returned (with @error set accordingly).
  *
+ * Exporting menus with sections containing more than
+ * 1000 items is not supported and results in
+ * undefined behavior.
+ *
  * You can unexport the menu model using
  * g_dbus_connection_unexport_menu_model() with the return value of
  * this function.
@@ -763,7 +808,7 @@ g_dbus_connection_export_menu_model (GDBusConnection  *connection,
                                      GError          **error)
 {
   const GDBusInterfaceVTable vtable = {
-    g_menu_exporter_method_call,
+    g_menu_exporter_method_call, NULL, NULL, { 0 }
   };
   GMenuExporter *exporter;
   guint id;

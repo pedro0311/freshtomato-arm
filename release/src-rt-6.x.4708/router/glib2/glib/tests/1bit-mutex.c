@@ -2,10 +2,12 @@
  * Copyright © 2008 Ryan Lortie
  * Copyright © 2010 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * See the included COPYING file for more information.
  */
@@ -76,7 +78,7 @@ acquire (int      nr,
         : g_bit_trylock (&locks[nr], bits[nr])))
     {
       if (g_test_verbose ())
-        g_print ("thread %p going to block on lock %d\n", self, nr);
+        g_printerr ("thread %p going to block on lock %d\n", self, nr);
 
       if (use_pointers)
         g_pointer_bit_lock (&ptrs[nr], bits[nr]);
@@ -129,7 +131,7 @@ testcase (gconstpointer data)
   #define SUFFIX "-emufutex"
 
   /* ensure that we are using the emulated futex by checking
-   * (at compile-time) for the existance of 'g_futex_address_list'
+   * (at compile-time) for the existence of 'g_futex_address_list'
    */
   g_assert (g_futex_address_list == NULL);
 #else

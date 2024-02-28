@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -30,6 +30,7 @@
 #include <gfileattribute-priv.h>
 #include <gfileinfo-priv.h>
 #include "gfile.h"
+#include "gfilemonitor.h"
 #include "gseekable.h"
 #include "gfileinputstream.h"
 #include "gfileinfo.h"
@@ -97,7 +98,7 @@ G_DEFINE_TYPE_WITH_CODE (GResourceFile, g_resource_file, G_TYPE_OBJECT,
 						g_resource_file_file_iface_init))
 
 #define g_resource_file_enumerator_get_type _g_resource_file_enumerator_get_type
-G_DEFINE_TYPE (GResourceFileEnumerator, g_resource_file_enumerator, G_TYPE_FILE_ENUMERATOR);
+G_DEFINE_TYPE (GResourceFileEnumerator, g_resource_file_enumerator, G_TYPE_FILE_ENUMERATOR)
 
 static GFileEnumerator *_g_resource_file_enumerator_new (GResourceFile *file,
 							 const char           *attributes,
@@ -139,69 +140,92 @@ g_resource_file_init (GResourceFile *resource)
 {
 }
 
-static char *
-canonicalize_filename (const char *filename)
+static inline gchar *
+scan_backwards (const gchar *begin,
+                const gchar *end,
+                gchar        c)
 {
-  char *canon, *start, *p, *q;
-
-  /* Skip multiple inital slashes */
-  while (filename[0] == '/' && filename[1] == '/')
-    filename++;
-
-  if (*filename != '/')
-    canon = g_strconcat ("/", filename, NULL);
-  else
-    canon = g_strdup (filename);
-
-  start = canon + 1;
-
-  p = start;
-  while (*p != 0)
+  while (end >= begin)
     {
-      if (p[0] == '.' && (p[1] == 0 || p[1] == '/'))
-	{
-	  memmove (p, p+1, strlen (p+1)+1);
-	}
-      else if (p[0] == '.' && p[1] == '.' && (p[2] == 0 || p[2] == '/'))
-	{
-	  q = p + 2;
-	  /* Skip previous separator */
-	  p = p - 2;
-	  if (p < start)
-	    p = start;
-	  while (p > start && *p != '/')
-	    p--;
-	  if (*p == '/')
-	    *p++ = '/';
-	  memmove (p, q, strlen (q)+1);
-	}
-      else
-	{
-	  /* Skip until next separator */
-	  while (*p != 0 && *p != '/')
-	    p++;
-
-	  if (*p != 0)
-	    {
-	      /* Canonicalize one separator */
-	      *p++ = '/';
-	    }
-	}
-
-      /* Remove additional separators */
-      q = p;
-      while (*q && *q == '/')
-	q++;
-
-      if (p != q)
-	memmove (p, q, strlen (q)+1);
+      if (*end == c)
+        return (gchar *)end;
+      end--;
     }
 
-  /* Remove trailing slashes */
-  if (p > start && *(p-1) == '/')
-    *(p-1) = 0;
+  return NULL;
+}
 
-  return canon;
+static inline void
+pop_to_previous_part (const gchar  *begin,
+                      gchar       **out)
+{
+  if (*out > begin)
+    *out = scan_backwards (begin, *out - 1, '/');
+}
+
+/*
+ * canonicalize_filename:
+ * @in: the path to be canonicalized
+ *
+ * The path @in may contain non-canonical path pieces such as "../"
+ * or duplicated "/". This will resolve those into a form that only
+ * contains a single / at a time and resolves all "../". The resulting
+ * path must also start with a /.
+ *
+ * Returns: the canonical form of the path
+ */
+static char *
+canonicalize_filename (const char *in)
+{
+  gchar *bptr;
+  char *out;
+
+  bptr = out = g_malloc (strlen (in) + 2);
+  *out = '/';
+
+  while (*in != 0)
+    {
+      g_assert (*out == '/');
+
+      /* move past slashes */
+      while (*in == '/')
+        in++;
+
+      /* Handle ./ ../ .\0 ..\0 */
+      if (*in == '.')
+        {
+          /* If this is ../ or ..\0 move up */
+          if (in[1] == '.' && (in[2] == '/' || in[2] == 0))
+            {
+              pop_to_previous_part (bptr, &out);
+              in += 2;
+              continue;
+            }
+
+          /* If this is ./ skip past it */
+          if (in[1] == '/' || in[1] == 0)
+            {
+              in += 1;
+              continue;
+            }
+        }
+
+      /* Scan to the next path piece */
+      while (*in != 0 && *in != '/')
+        *(++out) = *(in++);
+
+      /* Add trailing /, compress the rest on the next go round. */
+      if (*in == '/')
+        *(++out) = *(in++);
+    }
+
+  /* Trim trailing / from path */
+  if (out > bptr && *out == '/')
+    *out = 0;
+  else
+    *(++out) = 0;
+
+  return bptr;
 }
 
 static GFile *
@@ -425,8 +449,8 @@ g_resource_file_query_info (GFile                *file,
   GFileInfo *info;
   GFileAttributeMatcher *matcher;
   gboolean res;
-  gsize size;
-  guint32 resource_flags;
+  gsize size = 0;
+  guint32 resource_flags = 0;
   char **children;
   gboolean is_dir;
   char *base;
@@ -451,7 +475,7 @@ g_resource_file_query_info (GFile                *file,
 	  if (g_error_matches (my_error, G_RESOURCE_ERROR, G_RESOURCE_ERROR_NOT_FOUND))
 	    {
 	      g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-			   _("The resource at '%s' does not exist"),
+			   _("The resource at “%s” does not exist"),
 			   resource->path);
 	    }
 	  else
@@ -519,6 +543,28 @@ g_resource_file_query_info (GFile                *file,
   return info;
 }
 
+static GFileInfo *
+g_resource_file_query_filesystem_info (GFile         *file,
+                                       const char    *attributes,
+                                       GCancellable  *cancellable,
+                                       GError       **error)
+{
+  GFileInfo *info;
+  GFileAttributeMatcher *matcher;
+
+  info = g_file_info_new ();
+
+  matcher = g_file_attribute_matcher_new (attributes);
+  if (g_file_attribute_matcher_matches (matcher, G_FILE_ATTRIBUTE_FILESYSTEM_TYPE))
+    g_file_info_set_attribute_string (info, G_FILE_ATTRIBUTE_FILESYSTEM_TYPE, "resource");
+
+  if (g_file_attribute_matcher_matches (matcher, G_FILE_ATTRIBUTE_FILESYSTEM_READONLY))    g_file_info_set_attribute_boolean (info, G_FILE_ATTRIBUTE_FILESYSTEM_READONLY, TRUE);
+
+  g_file_attribute_matcher_unref (matcher);
+
+  return info;
+}
+
 static GFileAttributeInfoList *
 g_resource_file_query_settable_attributes (GFile         *file,
 					   GCancellable  *cancellable,
@@ -552,7 +598,7 @@ g_resource_file_read (GFile         *file,
       if (g_error_matches (my_error, G_RESOURCE_ERROR, G_RESOURCE_ERROR_NOT_FOUND))
 	{
 	  g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		       _("The resource at '%s' does not exist"),
+		       _("The resource at “%s” does not exist"),
 		       resource->path);
 	}
       else
@@ -565,6 +611,52 @@ g_resource_file_read (GFile         *file,
   res = _g_resource_file_input_stream_new (stream, file);
   g_object_unref (stream);
   return res;
+}
+
+typedef GFileMonitor GResourceFileMonitor;
+typedef GFileMonitorClass GResourceFileMonitorClass;
+
+GType g_resource_file_monitor_get_type (void);
+
+G_DEFINE_TYPE (GResourceFileMonitor, g_resource_file_monitor, G_TYPE_FILE_MONITOR)
+
+static gboolean
+g_resource_file_monitor_cancel (GFileMonitor *monitor)
+{
+  return TRUE;
+}
+
+static void
+g_resource_file_monitor_init (GResourceFileMonitor *monitor)
+{
+}
+
+static void
+g_resource_file_monitor_class_init (GResourceFileMonitorClass *class)
+{
+  class->cancel = g_resource_file_monitor_cancel;
+}
+
+static GFileMonitor *
+g_resource_file_monitor_file (GFile              *file,
+                              GFileMonitorFlags   flags,
+                              GCancellable       *cancellable,
+                              GError            **error)
+{
+  return g_object_new (g_resource_file_monitor_get_type (), NULL);
+}
+
+static GFile *
+g_resource_file_set_display_name (GFile         *file,
+                                  const char    *display_name,
+                                  GCancellable  *cancellable,
+                                  GError       **error)
+{
+  g_set_error_literal (error,
+                       G_IO_ERROR,
+                       G_IO_ERROR_NOT_SUPPORTED,
+                       _("Resource files cannot be renamed"));
+  return NULL;
 }
 
 static void
@@ -585,11 +677,14 @@ g_resource_file_file_iface_init (GFileIface *iface)
   iface->get_relative_path = g_resource_file_get_relative_path;
   iface->resolve_relative_path = g_resource_file_resolve_relative_path;
   iface->get_child_for_display_name = g_resource_file_get_child_for_display_name;
+  iface->set_display_name = g_resource_file_set_display_name;
   iface->enumerate_children = g_resource_file_enumerate_children;
   iface->query_info = g_resource_file_query_info;
+  iface->query_filesystem_info = g_resource_file_query_filesystem_info;
   iface->query_settable_attributes = g_resource_file_query_settable_attributes;
   iface->query_writable_namespaces = g_resource_file_query_writable_namespaces;
   iface->read_fn = g_resource_file_read;
+  iface->monitor_file = g_resource_file_monitor_file;
 
   iface->supports_thread_contexts = TRUE;
 }
@@ -650,11 +745,11 @@ _g_resource_file_enumerator_new (GResourceFile *file,
       res = g_resources_get_info (file->path, 0, NULL, NULL, NULL);
       if (res)
 	g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY,
-		     _("The resource at '%s' is not a directory"),
+		     _("The resource at “%s” is not a directory"),
 		     file->path);
       else
 	g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-		     _("The resource at '%s' does not exist"),
+		     _("The resource at “%s” does not exist"),
 		     file->path);
       return NULL;
     }
@@ -722,7 +817,7 @@ struct _GResourceFileInputStreamClass
 };
 
 #define g_resource_file_input_stream_get_type _g_resource_file_input_stream_get_type
-G_DEFINE_TYPE (GResourceFileInputStream, g_resource_file_input_stream, G_TYPE_FILE_INPUT_STREAM);
+G_DEFINE_TYPE (GResourceFileInputStream, g_resource_file_input_stream, G_TYPE_FILE_INPUT_STREAM)
 
 static gssize     g_resource_file_input_stream_read       (GInputStream      *stream,
 							   void              *buffer,
@@ -858,7 +953,7 @@ g_resource_file_input_stream_seek (GFileInputStream  *stream,
   if (!G_IS_SEEKABLE (file->stream))
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-			   _("Input stream doesn't implement seek"));
+			   _("Input stream doesn’t implement seek"));
       return FALSE;
     }
 

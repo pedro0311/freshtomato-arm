@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2001 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -35,7 +35,8 @@ GType
 g_io_condition_get_type (void)
 {
   static GType etype = 0;
-  if (etype == 0)
+
+  if (g_once_init_enter (&etype))
     {
       static const GFlagsValue values[] = {
 	{ G_IO_IN,   "G_IO_IN",   "in" },
@@ -46,7 +47,8 @@ g_io_condition_get_type (void)
 	{ G_IO_NVAL, "G_IO_NVAL", "nval" },
 	{ 0, NULL, NULL }
       };
-      etype = g_flags_register_static ("GIOCondition", values);
+      GType type_id = g_flags_register_static ("GIOCondition", values);
+      g_once_init_leave (&etype, type_id);
     }
   return etype;
 }
@@ -258,7 +260,7 @@ g_source_set_closure (GSource  *source,
       source->source_funcs != &g_timeout_funcs &&
       source->source_funcs != &g_idle_funcs)
     {
-      g_critical (G_STRLOC ": closure can not be set on closure without GSourceFuncs::closure_callback\n");
+      g_critical (G_STRLOC ": closure cannot be set on GSource without GSourceFuncs::closure_callback");
       return;
     }
 

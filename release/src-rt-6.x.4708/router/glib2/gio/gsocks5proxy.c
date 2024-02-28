@@ -3,10 +3,12 @@
  * Copyright (C) 2008, 2010 Collabora, Ltd.
  * Copyright (C) 2008 Nokia Corporation. All rights reserved.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author:  Youness Alaoui <youness.alaoui@collabora.co.uk
  *
@@ -172,8 +172,22 @@ parse_nego_reply (const guint8 *data,
 	*must_auth = TRUE;
 	break;
 
-      case SOCKS5_AUTH_GSSAPI:
       case SOCKS5_AUTH_NO_ACCEPT:
+        if (!has_auth)
+          {
+            /* The server has said it accepts none of our authentication methods,
+             * but given the slightly odd implementation of set_nego_msg(), we
+             * actually only gave it the choice of %SOCKS5_AUTH_NONE, since the
+             * caller specified no username or password.
+             * Return %G_IO_ERROR_PROXY_NEED_AUTH so the caller knows that if
+             * they specify a username and password and try again, authentication
+             * might succeed (since we’ll send %SOCKS5_AUTH_USR_PASS next time). */
+            g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PROXY_NEED_AUTH,
+                                 _("The SOCKSv5 proxy requires authentication."));
+            return FALSE;
+          }
+        G_GNUC_FALLTHROUGH;
+      case SOCKS5_AUTH_GSSAPI:
       default:
 	g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PROXY_AUTH_FAILED,
 			     _("The SOCKSv5 proxy requires an authentication "
@@ -207,7 +221,7 @@ set_auth_msg (guint8	  *msg,
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PROXY_FAILED,
 			   _("Username or password is too long for SOCKSv5 "
 			     "protocol."));
-      return FALSE;
+      return -1;
     }
 
   msg[len++] = SOCKS5_AUTH_VERSION;
@@ -231,7 +245,7 @@ set_auth_msg (guint8	  *msg,
 static gboolean
 check_auth_status (const guint8 *data, GError **error)
 {
-  if (data[0] != SOCKS5_VERSION
+  if (data[0] != SOCKS5_AUTH_VERSION
       || data[1] != SOCKS5_REP_SUCCEEDED)
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PROXY_AUTH_FAILED,
@@ -285,7 +299,7 @@ set_connect_msg (guint8       *msg,
       if (host_len > SOCKS5_MAX_LEN)
 	{
 	  g_set_error (error, G_IO_ERROR, G_IO_ERROR_PROXY_FAILED,
-		       _("Hostname '%s' is too long for SOCKSv5 protocol"),
+		       _("Hostname “%s” is too long for SOCKSv5 protocol"),
 		       hostname);
 	  return -1;
 	}
@@ -311,12 +325,12 @@ set_connect_msg (guint8       *msg,
  * +----+-----+-------+------+----------+----------+
  * | 1  |  1  | X'00' |  1   | Variable |    2     |
  * +----+-----+-------+------+----------+----------+
- * This reply need to be read by small part to determin size. Buffer
+ * This reply need to be read by small part to determine size. Buffer
  * size is determined in function of the biggest part to read.
  *
  * The parser only requires 4 bytes.
  */
-#define SOCKS5_CONN_REP_LEN	  255
+#define SOCKS5_CONN_REP_LEN	  257
 static gboolean
 parse_connect_reply (const guint8 *data, gint *atype, GError **error)
 {
@@ -385,7 +399,7 @@ parse_connect_reply (const guint8 *data, gint *atype, GError **error)
 
       case SOCKS5_REP_CMD_NOT_SUP:
 	g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_PROXY_FAILED,
-			     _("SOCKSv5 proxy does not support 'connect' command."));
+			     _("SOCKSv5 proxy does not support “connect” command."));
 	return FALSE;
 	break;
 
@@ -497,7 +511,7 @@ g_socks5_proxy_connect (GProxy            *proxy,
       guint8 data[SOCKS5_CONN_REP_LEN];
       gint atype;
 
-      if (!g_input_stream_read_all (in, data, 4, NULL,
+      if (!g_input_stream_read_all (in, data, 4 /* VER, REP, RSV, ATYP */, NULL,
 				    cancellable, error))
 	goto error;
 
@@ -507,23 +521,26 @@ g_socks5_proxy_connect (GProxy            *proxy,
       switch (atype)
 	{
 	  case SOCKS5_ATYP_IPV4:
-	    if (!g_input_stream_read_all (in, data, 6, NULL,
-					  cancellable, error))
+	    if (!g_input_stream_read_all (in, data,
+					  4 /* IPv4 length */ + 2 /* port */,
+					  NULL, cancellable, error))
 	      goto error;
 	    break;
 
 	  case SOCKS5_ATYP_IPV6:
-	    if (!g_input_stream_read_all (in, data, 18, NULL,
-					  cancellable, error))
+	    if (!g_input_stream_read_all (in, data,
+					  16 /* IPv6 length */ + 2 /* port */,
+					  NULL, cancellable, error))
 	      goto error;
 	    break;
 
 	  case SOCKS5_ATYP_DOMAINNAME:
-	    if (!g_input_stream_read_all (in, data, 1, NULL,
-					  cancellable, error))
+	    if (!g_input_stream_read_all (in, data, 1 /* domain name length */,
+					  NULL, cancellable, error))
 	      goto error;
-	    if (!g_input_stream_read_all (in, data, data[0] + 2, NULL,
-					  cancellable, error))
+	    if (!g_input_stream_read_all (in, data,
+					  data[0] /* domain name length */ + 2 /* port */,
+					  NULL, cancellable, error))
 	      goto error;
 	    break;
 	}
@@ -628,6 +645,7 @@ g_socks5_proxy_connect_async (GProxy               *proxy,
   data->io_stream = g_object_ref (io_stream);
 
   task = g_task_new (proxy, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_socks5_proxy_connect_async);
   g_task_set_task_data (task, data, (GDestroyNotify) free_connect_data);
 
   g_object_get (G_OBJECT (proxy_address),
@@ -704,11 +722,20 @@ nego_reply_read_cb (GObject      *source,
       return;
     }
 
+  if (read == 0)
+    {
+      g_task_return_new_error (task,
+                               G_IO_ERROR,
+                               G_IO_ERROR_CONNECTION_CLOSED,
+                               "Connection to SOCKSv5 proxy server lost");
+      g_object_unref (task);
+      return;
+    }
+
   data->offset += read;
   
   if (data->offset == data->length)
     {
-      GError *error = NULL;
       gboolean must_auth = FALSE;
       gboolean has_auth = data->username || data->password;
 
@@ -804,6 +831,16 @@ auth_reply_read_cb (GObject      *source,
   if (read < 0)
     {
       g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  if (read == 0)
+    {
+      g_task_return_new_error (task,
+                               G_IO_ERROR,
+                               G_IO_ERROR_CONNECTION_CLOSED,
+                               "Connection to SOCKSv5 proxy server lost");
       g_object_unref (task);
       return;
     }
@@ -910,6 +947,16 @@ connect_reply_read_cb (GObject       *source,
       return;
     }
 
+  if (read == 0)
+    {
+      g_task_return_new_error (task,
+                               G_IO_ERROR,
+                               G_IO_ERROR_CONNECTION_CLOSED,
+                               "Connection to SOCKSv5 proxy server lost");
+      g_object_unref (task);
+      return;
+    }
+
   data->offset += read;
 
   if (data->offset == data->length)
@@ -970,6 +1017,16 @@ connect_addr_len_read_cb (GObject      *source,
       return;
     }
 
+  if (read == 0)
+    {
+      g_task_return_new_error (task,
+                               G_IO_ERROR,
+                               G_IO_ERROR_CONNECTION_CLOSED,
+                               "Connection to SOCKSv5 proxy server lost");
+      g_object_unref (task);
+      return;
+    }
+
   data->length = data->buffer[0] + 2;
   data->offset = 0;
 
@@ -992,6 +1049,16 @@ connect_addr_read_cb (GObject      *source,
   if (read < 0)
     {
       g_task_return_error (task, error);
+      g_object_unref (task);
+      return;
+    }
+
+  if (read == 0)
+    {
+      g_task_return_new_error (task,
+                               G_IO_ERROR,
+                               G_IO_ERROR_CONNECTION_CLOSED,
+                               "Connection to SOCKSv5 proxy server lost");
       g_object_unref (task);
       return;
     }

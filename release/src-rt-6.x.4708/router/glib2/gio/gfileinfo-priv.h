@@ -3,10 +3,12 @@
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *               2009 Benjamin Otte
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Benjamin Otte <otte@gnome.org>
  */
@@ -45,6 +45,7 @@
 #define G_FILE_ATTRIBUTE_ID_STANDARD_TARGET_URI (1048576 + 17)
 #define G_FILE_ATTRIBUTE_ID_STANDARD_SORT_ORDER (1048576 + 18)
 #define G_FILE_ATTRIBUTE_ID_STANDARD_SYMBOLIC_ICON (1048576 + 19)
+#define G_FILE_ATTRIBUTE_ID_STANDARD_IS_VOLATILE (1048576 + 20)
 #define G_FILE_ATTRIBUTE_ID_ETAG_VALUE (2097152 + 1)
 #define G_FILE_ATTRIBUTE_ID_ID_FILE (3145728 + 1)
 #define G_FILE_ATTRIBUTE_ID_ID_FILESYSTEM (3145728 + 2)
@@ -74,6 +75,10 @@
 #define G_FILE_ATTRIBUTE_ID_TIME_CHANGED_USEC (6291456 + 6)
 #define G_FILE_ATTRIBUTE_ID_TIME_CREATED (6291456 + 7)
 #define G_FILE_ATTRIBUTE_ID_TIME_CREATED_USEC (6291456 + 8)
+#define G_FILE_ATTRIBUTE_ID_TIME_MODIFIED_NSEC (6291456 + 9)
+#define G_FILE_ATTRIBUTE_ID_TIME_ACCESS_NSEC (6291456 + 10)
+#define G_FILE_ATTRIBUTE_ID_TIME_CREATED_NSEC (6291456 + 11)
+#define G_FILE_ATTRIBUTE_ID_TIME_CHANGED_NSEC (6291456 + 12)
 #define G_FILE_ATTRIBUTE_ID_UNIX_DEVICE (7340032 + 1)
 #define G_FILE_ATTRIBUTE_ID_UNIX_INODE (7340032 + 2)
 #define G_FILE_ATTRIBUTE_ID_UNIX_MODE (7340032 + 3)
@@ -86,11 +91,14 @@
 #define G_FILE_ATTRIBUTE_ID_UNIX_IS_MOUNTPOINT (7340032 + 10)
 #define G_FILE_ATTRIBUTE_ID_DOS_IS_ARCHIVE (8388608 + 1)
 #define G_FILE_ATTRIBUTE_ID_DOS_IS_SYSTEM (8388608 + 2)
+#define G_FILE_ATTRIBUTE_ID_DOS_IS_MOUNTPOINT (8388608 + 3)
+#define G_FILE_ATTRIBUTE_ID_DOS_REPARSE_POINT_TAG (8388608 + 4)
 #define G_FILE_ATTRIBUTE_ID_OWNER_USER (9437184 + 1)
 #define G_FILE_ATTRIBUTE_ID_OWNER_USER_REAL (9437184 + 2)
 #define G_FILE_ATTRIBUTE_ID_OWNER_GROUP (9437184 + 3)
 #define G_FILE_ATTRIBUTE_ID_THUMBNAIL_PATH (10485760 + 1)
 #define G_FILE_ATTRIBUTE_ID_THUMBNAILING_FAILED (10485760 + 2)
+#define G_FILE_ATTRIBUTE_ID_THUMBNAIL_IS_VALID (10485760 + 3)
 #define G_FILE_ATTRIBUTE_ID_PREVIEW_ICON (11534336 + 1)
 #define G_FILE_ATTRIBUTE_ID_FILESYSTEM_SIZE (12582912 + 1)
 #define G_FILE_ATTRIBUTE_ID_FILESYSTEM_FREE (12582912 + 2)

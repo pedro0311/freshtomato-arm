@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -29,6 +29,7 @@
 #include "gdbusprivate.h"
 
 #include "glibintl.h"
+#include "gmarshal-internal.h"
 
 /**
  * SECTION:gdbusauthobserver
@@ -41,10 +42,41 @@
  * signals you are interested in. Note that new signals may be added
  * in the future
  *
- * For example, if you only want to allow D-Bus connections from
- * processes owned by the same uid as the server, you would use a
- * signal handler like the following:
- * <example id="auth-observer"><title>Controlling Authentication</title><programlisting>
+ * ## Controlling Authentication Mechanisms
+ *
+ * By default, a #GDBusServer or server-side #GDBusConnection will allow
+ * any authentication mechanism to be used. If you only
+ * want to allow D-Bus connections with the `EXTERNAL` mechanism,
+ * which makes use of credentials passing and is the recommended
+ * mechanism for modern Unix platforms such as Linux and the BSD family,
+ * you would use a signal handler like this:
+ *
+ * |[<!-- language="C" -->
+ * static gboolean
+ * on_allow_mechanism (GDBusAuthObserver *observer,
+ *                     const gchar       *mechanism,
+ *                     gpointer           user_data)
+ * {
+ *   if (g_strcmp0 (mechanism, "EXTERNAL") == 0)
+ *     {
+ *       return TRUE;
+ *     }
+ *
+ *   return FALSE;
+ * }
+ * ]|
+ *
+ * ## Controlling Authorization # {#auth-observer}
+ *
+ * By default, a #GDBusServer or server-side #GDBusConnection will accept
+ * connections from any successfully authenticated user (but not from
+ * anonymous connections using the `ANONYMOUS` mechanism). If you only
+ * want to allow D-Bus connections from processes owned by the same uid
+ * as the server, since GLib 2.68, you should use the
+ * %G_DBUS_SERVER_FLAGS_AUTHENTICATION_REQUIRE_SAME_USER flag. It’s equivalent
+ * to the following signal handler:
+ * 
+ * |[<!-- language="C" -->
  * static gboolean
  * on_authorize_authenticated_peer (GDBusAuthObserver *observer,
  *                                  GIOStream         *stream,
@@ -65,7 +97,7 @@
  *
  *   return authorized;
  * }
- * </programlisting></example>
+ * ]|
  */
 
 typedef struct _GDBusAuthObserverClass GDBusAuthObserverClass;
@@ -116,7 +148,7 @@ enum
 
 static guint signals[LAST_SIGNAL] = { 0 };
 
-G_DEFINE_TYPE (GDBusAuthObserver, g_dbus_auth_observer, G_TYPE_OBJECT);
+G_DEFINE_TYPE (GDBusAuthObserver, g_dbus_auth_observer, G_TYPE_OBJECT)
 
 /* ---------------------------------------------------------------------------------------------------- */
 
@@ -155,7 +187,7 @@ g_dbus_auth_observer_class_init (GDBusAuthObserverClass *klass)
    * GDBusAuthObserver::authorize-authenticated-peer:
    * @observer: The #GDBusAuthObserver emitting the signal.
    * @stream: A #GIOStream for the #GDBusConnection.
-   * @credentials: (allow-none): Credentials received from the peer or %NULL.
+   * @credentials: (nullable): Credentials received from the peer or %NULL.
    *
    * Emitted to check if a peer that is successfully authenticated
    * is authorized.
@@ -165,22 +197,25 @@ g_dbus_auth_observer_class_init (GDBusAuthObserverClass *klass)
    * Since: 2.26
    */
   signals[AUTHORIZE_AUTHENTICATED_PEER_SIGNAL] =
-    g_signal_new ("authorize-authenticated-peer",
+    g_signal_new (I_("authorize-authenticated-peer"),
                   G_TYPE_DBUS_AUTH_OBSERVER,
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (GDBusAuthObserverClass, authorize_authenticated_peer),
                   _g_signal_accumulator_false_handled,
                   NULL, /* accu_data */
-                  NULL,
+                  _g_cclosure_marshal_BOOLEAN__OBJECT_OBJECT,
                   G_TYPE_BOOLEAN,
                   2,
                   G_TYPE_IO_STREAM,
                   G_TYPE_CREDENTIALS);
+  g_signal_set_va_marshaller (signals[AUTHORIZE_AUTHENTICATED_PEER_SIGNAL],
+                              G_TYPE_FROM_CLASS (klass),
+                              _g_cclosure_marshal_BOOLEAN__OBJECT_OBJECTv);
 
   /**
    * GDBusAuthObserver::allow-mechanism:
    * @observer: The #GDBusAuthObserver emitting the signal.
-   * @mechanism: The name of the mechanism, e.g. <literal>DBUS_COOKIE_SHA1</literal>.
+   * @mechanism: The name of the mechanism, e.g. `DBUS_COOKIE_SHA1`.
    *
    * Emitted to check if @mechanism is allowed to be used.
    *
@@ -189,16 +224,19 @@ g_dbus_auth_observer_class_init (GDBusAuthObserverClass *klass)
    * Since: 2.34
    */
   signals[ALLOW_MECHANISM_SIGNAL] =
-    g_signal_new ("allow-mechanism",
+    g_signal_new (I_("allow-mechanism"),
                   G_TYPE_DBUS_AUTH_OBSERVER,
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (GDBusAuthObserverClass, allow_mechanism),
                   _g_signal_accumulator_false_handled,
                   NULL, /* accu_data */
-                  NULL,
+                  _g_cclosure_marshal_BOOLEAN__STRING,
                   G_TYPE_BOOLEAN,
                   1,
                   G_TYPE_STRING);
+  g_signal_set_va_marshaller (signals[ALLOW_MECHANISM_SIGNAL],
+                              G_TYPE_FROM_CLASS (klass),
+                              _g_cclosure_marshal_BOOLEAN__STRINGv);
 }
 
 static void
@@ -227,7 +265,7 @@ g_dbus_auth_observer_new (void)
  * g_dbus_auth_observer_authorize_authenticated_peer:
  * @observer: A #GDBusAuthObserver.
  * @stream: A #GIOStream for the #GDBusConnection.
- * @credentials: (allow-none): Credentials received from the peer or %NULL.
+ * @credentials: (nullable): Credentials received from the peer or %NULL.
  *
  * Emits the #GDBusAuthObserver::authorize-authenticated-peer signal on @observer.
  *
@@ -255,7 +293,7 @@ g_dbus_auth_observer_authorize_authenticated_peer (GDBusAuthObserver  *observer,
 /**
  * g_dbus_auth_observer_allow_mechanism:
  * @observer: A #GDBusAuthObserver.
- * @mechanism: The name of the mechanism, e.g. <literal>DBUS_COOKIE_SHA1</literal>.
+ * @mechanism: The name of the mechanism, e.g. `DBUS_COOKIE_SHA1`.
  *
  * Emits the #GDBusAuthObserver::allow-mechanism signal on @observer.
  *
@@ -277,4 +315,3 @@ g_dbus_auth_observer_allow_mechanism (GDBusAuthObserver  *observer,
                  &ret);
   return ret;
 }
-

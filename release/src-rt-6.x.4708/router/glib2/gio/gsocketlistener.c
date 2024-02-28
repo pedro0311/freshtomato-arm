@@ -4,10 +4,12 @@
  * Copyright © 2009 codethink
  * Copyright © 2009 Red Hat, Inc
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -28,6 +28,7 @@
 #include "config.h"
 #include "gsocketlistener.h"
 
+#include <gio/gioenumtypes.h>
 #include <gio/gtask.h>
 #include <gio/gcancellable.h>
 #include <gio/gsocketaddress.h>
@@ -37,21 +38,30 @@
 #include <gio/gsocketconnection.h>
 #include <gio/ginetsocketaddress.h>
 #include "glibintl.h"
+#include "gmarshal-internal.h"
 
 
 /**
  * SECTION:gsocketlistener
  * @title: GSocketListener
  * @short_description: Helper for accepting network client connections
+ * @include: gio/gio.h
  * @see_also: #GThreadedSocketService, #GSocketService.
  *
  * A #GSocketListener is an object that keeps track of a set
  * of server sockets and helps you accept sockets from any of the
  * socket, either sync or async.
  *
+ * Add addresses and ports to listen on using g_socket_listener_add_address()
+ * and g_socket_listener_add_inet_port(). These will be listened on until
+ * g_socket_listener_close() is called. Dropping your final reference to the
+ * #GSocketListener will not cause g_socket_listener_close() to be called
+ * implicitly, as some references to the #GSocketListener may be held
+ * internally.
+ *
  * If you want to implement a network server, also look at #GSocketService
- * and #GThreadedSocketService which are subclass of #GSocketListener
- * that makes this even easier.
+ * and #GThreadedSocketService which are subclasses of #GSocketListener
+ * that make this even easier.
  *
  * Since: 2.22
  */
@@ -62,6 +72,13 @@ enum
   PROP_LISTEN_BACKLOG
 };
 
+enum
+{
+  EVENT,
+  LAST_SIGNAL
+};
+
+static guint signals[LAST_SIGNAL] = { 0 };
 
 static GQuark source_quark = 0;
 
@@ -83,9 +100,11 @@ g_socket_listener_finalize (GObject *object)
   if (listener->priv->main_context)
     g_main_context_unref (listener->priv->main_context);
 
-  if (!listener->priv->closed)
-    g_socket_listener_close (listener);
-
+  /* Do not explicitly close the sockets. Instead, let them close themselves if
+   * their final reference is dropped, but keep them open if a reference is
+   * held externally to the GSocketListener (which is possible if
+   * g_socket_listener_add_socket() was used).
+   */
   g_ptr_array_free (listener->priv->sockets, TRUE);
 
   G_OBJECT_CLASS (g_socket_listener_parent_class)
@@ -130,7 +149,6 @@ g_socket_listener_set_property (GObject      *object,
     }
 }
 
-
 static void
 g_socket_listener_class_init (GSocketListenerClass *klass)
 {
@@ -147,6 +165,33 @@ g_socket_listener_class_init (GSocketListenerClass *klass)
                                                      2000,
                                                      10,
                                                      G_PARAM_CONSTRUCT | G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GSocketListener::event:
+   * @listener: the #GSocketListener
+   * @event: the event that is occurring
+   * @socket: the #GSocket the event is occurring on
+   *
+   * Emitted when @listener's activity on @socket changes state.
+   * Note that when @listener is used to listen on both IPv4 and
+   * IPv6, a separate set of signals will be emitted for each, and
+   * the order they happen in is undefined.
+   *
+   * Since: 2.46
+   */
+  signals[EVENT] =
+    g_signal_new (I_("event"),
+                  G_TYPE_FROM_CLASS (gobject_class),
+                  G_SIGNAL_RUN_LAST,
+                  G_STRUCT_OFFSET (GSocketListenerClass, event),
+                  NULL, NULL,
+                  _g_cclosure_marshal_VOID__ENUM_OBJECT,
+                  G_TYPE_NONE, 2,
+                  G_TYPE_SOCKET_LISTENER_EVENT,
+                  G_TYPE_SOCKET);
+  g_signal_set_va_marshaller (signals[EVENT],
+                              G_TYPE_FROM_CLASS (gobject_class),
+                              _g_cclosure_marshal_VOID__ENUM_OBJECTv);
 
   source_quark = g_quark_from_static_string ("g-socket-listener-source");
 }
@@ -195,7 +240,7 @@ check_listener (GSocketListener *listener,
  * g_socket_listener_add_socket:
  * @listener: a #GSocketListener
  * @socket: a listening #GSocket
- * @source_object: (allow-none): Optional #GObject identifying this source
+ * @source_object: (nullable): Optional #GObject identifying this source
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Adds @socket to the set of sockets that we try to accept
@@ -206,6 +251,11 @@ check_listener (GSocketListener *listener,
  * to accept to identify this particular source, which is
  * useful if you're listening on multiple addresses and do
  * different things depending on what address is connected to.
+ *
+ * The @socket will not be automatically closed when the @listener is finalized
+ * unless the listener held the final reference to the socket. Before GLib 2.42,
+ * the @socket was automatically closed on finalization of the @listener, even
+ * if references to it were held elsewhere.
  *
  * Returns: %TRUE on success, %FALSE on error.
  *
@@ -249,8 +299,8 @@ g_socket_listener_add_socket (GSocketListener  *listener,
  * @address: a #GSocketAddress
  * @type: a #GSocketType
  * @protocol: a #GSocketProtocol
- * @source_object: (allow-none): Optional #GObject identifying this source
- * @effective_address: (out) (allow-none): location to store the address that was bound to, or %NULL.
+ * @source_object: (nullable): Optional #GObject identifying this source
+ * @effective_address: (out) (optional): location to store the address that was bound to, or %NULL.
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Creates a socket of type @type and protocol @protocol, binds
@@ -272,6 +322,10 @@ g_socket_listener_add_socket (GSocketListener  *listener,
  * is helpful for determining the port number that was used for when
  * requesting a binding to port 0 (ie: "any port").  This address, if
  * requested, belongs to the caller and must be freed.
+ *
+ * Call g_socket_listener_close() to stop listening on @address; this will not
+ * be done automatically when you drop your final reference to @listener, as
+ * references may be held internally.
  *
  * Returns: %TRUE on success, %FALSE on error.
  *
@@ -300,12 +354,28 @@ g_socket_listener_add_address (GSocketListener  *listener,
 
   g_socket_set_listen_backlog (socket, listener->priv->listen_backlog);
 
-  if (!g_socket_bind (socket, address, TRUE, error) ||
-      !g_socket_listen (socket, error))
+  g_signal_emit (listener, signals[EVENT], 0,
+                 G_SOCKET_LISTENER_BINDING, socket);
+
+  if (!g_socket_bind (socket, address, TRUE, error))
     {
       g_object_unref (socket);
       return FALSE;
     }
+
+  g_signal_emit (listener, signals[EVENT], 0,
+                 G_SOCKET_LISTENER_BOUND, socket);
+  g_signal_emit (listener, signals[EVENT], 0,
+                 G_SOCKET_LISTENER_LISTENING, socket);
+
+  if (!g_socket_listen (socket, error))
+    {
+      g_object_unref (socket);
+      return FALSE;
+    }
+
+  g_signal_emit (listener, signals[EVENT], 0,
+                 G_SOCKET_LISTENER_LISTENED, socket);
 
   local_address = NULL;
   if (effective_address)
@@ -340,7 +410,7 @@ g_socket_listener_add_address (GSocketListener  *listener,
  * g_socket_listener_add_inet_port:
  * @listener: a #GSocketListener
  * @port: an IP port number (non-zero)
- * @source_object: (allow-none): Optional #GObject identifying this source
+ * @source_object: (nullable): Optional #GObject identifying this source
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Helper function for g_socket_listener_add_address() that
@@ -351,6 +421,10 @@ g_socket_listener_add_address (GSocketListener  *listener,
  * to accept to identify this particular source, which is
  * useful if you're listening on multiple addresses and do
  * different things depending on what address is connected to.
+ *
+ * Call g_socket_listener_close() to stop listening on @port; this will not
+ * be done automatically when you drop your final reference to @listener, as
+ * references may be held internally.
  *
  * Returns: %TRUE on success, %FALSE on error.
  *
@@ -386,7 +460,6 @@ g_socket_listener_add_inet_port (GSocketListener  *listener,
     {
       GInetAddress *inet_address;
       GSocketAddress *address;
-      gboolean result;
 
       inet_address = g_inet_address_new_any (G_SOCKET_FAMILY_IPV6);
       address = g_inet_socket_address_new (inet_address, port);
@@ -394,17 +467,31 @@ g_socket_listener_add_inet_port (GSocketListener  *listener,
 
       g_socket_set_listen_backlog (socket6, listener->priv->listen_backlog);
 
-      result = g_socket_bind (socket6, address, TRUE, error) &&
-               g_socket_listen (socket6, error);
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_BINDING, socket6);
+
+      if (!g_socket_bind (socket6, address, TRUE, error))
+        {
+          g_object_unref (address);
+          g_object_unref (socket6);
+          return FALSE;
+        }
 
       g_object_unref (address);
 
-      if (!result)
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_BOUND, socket6);
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENING, socket6);
+
+      if (!g_socket_listen (socket6, error))
         {
           g_object_unref (socket6);
-
           return FALSE;
         }
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENED, socket6);
 
       if (source_object)
         g_object_set_qdata_full (G_OBJECT (socket6), source_quark,
@@ -439,7 +526,6 @@ g_socket_listener_add_inet_port (GSocketListener  *listener,
         {
           GInetAddress *inet_address;
           GSocketAddress *address;
-          gboolean result;
 
           inet_address = g_inet_address_new_any (G_SOCKET_FAMILY_IPV4);
           address = g_inet_socket_address_new (inet_address, port);
@@ -448,20 +534,37 @@ g_socket_listener_add_inet_port (GSocketListener  *listener,
           g_socket_set_listen_backlog (socket4,
                                        listener->priv->listen_backlog);
 
-          result = g_socket_bind (socket4, address, TRUE, error) &&
-                   g_socket_listen (socket4, error);
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_BINDING, socket4);
 
-          g_object_unref (address);
-
-          if (!result)
+          if (!g_socket_bind (socket4, address, TRUE, error))
             {
+              g_object_unref (address);
               g_object_unref (socket4);
-
               if (socket6 != NULL)
                 g_object_unref (socket6);
 
               return FALSE;
             }
+
+          g_object_unref (address);
+
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_BOUND, socket4);
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_LISTENING, socket4);
+
+          if (!g_socket_listen (socket4, error))
+            {
+              g_object_unref (socket4);
+              if (socket6 != NULL)
+                g_object_unref (socket6);
+
+              return FALSE;
+            }
+
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_LISTENED, socket4);
 
           if (source_object)
             g_object_set_qdata_full (G_OBJECT (socket4), source_quark,
@@ -505,7 +608,7 @@ add_sources (GSocketListener   *listener,
   GSocket *socket;
   GSource *source;
   GList *sources;
-  int i;
+  guint i;
 
   sources = NULL;
   for (i = 0; i < listener->priv->sockets->len; i++)
@@ -558,8 +661,8 @@ accept_callback (GSocket      *socket,
 /**
  * g_socket_listener_accept_socket:
  * @listener: a #GSocketListener
- * @source_object: (out) (transfer none) (allow-none): location where #GObject pointer will be stored, or %NULL.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @source_object: (out) (transfer none) (optional) (nullable): location where #GObject pointer will be stored, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Blocks waiting for a client to connect to any of the sockets added
@@ -635,8 +738,8 @@ g_socket_listener_accept_socket (GSocketListener  *listener,
 /**
  * g_socket_listener_accept:
  * @listener: a #GSocketListener
- * @source_object: (out) (transfer none) (allow-none): location where #GObject pointer will be stored, or %NULL
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @source_object: (out) (transfer none) (optional) (nullable): location where #GObject pointer will be stored, or %NULL
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Blocks waiting for a client to connect to any of the sockets added
@@ -677,6 +780,19 @@ g_socket_listener_accept (GSocketListener  *listener,
   return connection;
 }
 
+typedef struct
+{
+  GList *sources;  /* (element-type GSource) */
+  gboolean returned_yet;
+} AcceptSocketAsyncData;
+
+static void
+accept_socket_async_data_free (AcceptSocketAsyncData *data)
+{
+  free_sources (data->sources);
+  g_free (data);
+}
+
 static gboolean
 accept_ready (GSocket      *accept_socket,
 	      GIOCondition  condition,
@@ -686,6 +802,12 @@ accept_ready (GSocket      *accept_socket,
   GError *error = NULL;
   GSocket *socket;
   GObject *source_object;
+  AcceptSocketAsyncData *data = g_task_get_task_data (task);
+
+  /* Don’t call g_task_return_*() multiple times if we have multiple incoming
+   * connections in the same #GMainContext iteration. */
+  if (data->returned_yet)
+    return G_SOURCE_REMOVE;
 
   socket = g_socket_accept (accept_socket, g_task_get_cancellable (task), &error);
   if (socket)
@@ -702,14 +824,16 @@ accept_ready (GSocket      *accept_socket,
       g_task_return_error (task, error);
     }
 
+  data->returned_yet = TRUE;
   g_object_unref (task);
-  return FALSE;
+
+  return G_SOURCE_REMOVE;
 }
 
 /**
  * g_socket_listener_accept_socket_async:
  * @listener: a #GSocketListener
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
@@ -728,10 +852,11 @@ g_socket_listener_accept_socket_async (GSocketListener     *listener,
 				       gpointer             user_data)
 {
   GTask *task;
-  GList *sources;
   GError *error = NULL;
+  AcceptSocketAsyncData *data = NULL;
 
   task = g_task_new (listener, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_socket_listener_accept_socket_async);
 
   if (!check_listener (listener, &error))
     {
@@ -740,19 +865,22 @@ g_socket_listener_accept_socket_async (GSocketListener     *listener,
       return;
     }
 
-  sources = add_sources (listener,
+  data = g_new0 (AcceptSocketAsyncData, 1);
+  data->returned_yet = FALSE;
+  data->sources = add_sources (listener,
 			 accept_ready,
 			 task,
 			 cancellable,
 			 g_main_context_get_thread_default ());
-  g_task_set_task_data (task, sources, (GDestroyNotify) free_sources);
+  g_task_set_task_data (task, g_steal_pointer (&data),
+                        (GDestroyNotify) accept_socket_async_data_free);
 }
 
 /**
  * g_socket_listener_accept_socket_finish:
  * @listener: a #GSocketListener
  * @result: a #GAsyncResult.
- * @source_object: (out) (transfer none) (allow-none): Optional #GObject identifying this source
+ * @source_object: (out) (transfer none) (optional) (nullable): Optional #GObject identifying this source
  * @error: a #GError location to store the error occurring, or %NULL to
  * ignore.
  *
@@ -780,14 +908,14 @@ g_socket_listener_accept_socket_finish (GSocketListener  *listener,
 /**
  * g_socket_listener_accept_async:
  * @listener: a #GSocketListener
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
  * This is the asynchronous version of g_socket_listener_accept().
  *
  * When the operation is finished @callback will be
- * called. You can then call g_socket_listener_accept_socket()
+ * called. You can then call g_socket_listener_accept_finish()
  * to get the result of the operation.
  *
  * Since: 2.22
@@ -808,7 +936,7 @@ g_socket_listener_accept_async (GSocketListener     *listener,
  * g_socket_listener_accept_finish:
  * @listener: a #GSocketListener
  * @result: a #GAsyncResult.
- * @source_object: (out) (transfer none) (allow-none): Optional #GObject identifying this source
+ * @source_object: (out) (transfer none) (optional) (nullable): Optional #GObject identifying this source
  * @error: a #GError location to store the error occurring, or %NULL to
  * ignore.
  *
@@ -844,7 +972,9 @@ g_socket_listener_accept_finish (GSocketListener  *listener,
  * @listener: a #GSocketListener
  * @listen_backlog: an integer
  *
- * Sets the listen backlog on the sockets in the listener.
+ * Sets the listen backlog on the sockets in the listener. This must be called
+ * before adding any sockets, addresses or ports to the #GSocketListener (for
+ * example, by calling g_socket_listener_add_inet_port()) to be effective.
  *
  * See g_socket_set_listen_backlog() for details
  *
@@ -855,7 +985,7 @@ g_socket_listener_set_backlog (GSocketListener *listener,
 			       int              listen_backlog)
 {
   GSocket *socket;
-  int i;
+  guint i;
 
   if (listener->priv->closed)
     return;
@@ -881,7 +1011,7 @@ void
 g_socket_listener_close (GSocketListener *listener)
 {
   GSocket *socket;
-  int i;
+  guint i;
 
   g_return_if_fail (G_IS_SOCKET_LISTENER (listener));
 
@@ -899,7 +1029,7 @@ g_socket_listener_close (GSocketListener *listener)
 /**
  * g_socket_listener_add_any_inet_port:
  * @listener: a #GSocketListener
- * @source_object: (allow-none): Optional #GObject identifying this source
+ * @source_object: (nullable): Optional #GObject identifying this source
  * @error: a #GError location to store the error occurring, or %NULL to
  * ignore.
  *
@@ -959,6 +1089,10 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
           inet_address = g_inet_address_new_any (G_SOCKET_FAMILY_IPV6);
           address = g_inet_socket_address_new (inet_address, 0);
           g_object_unref (inet_address);
+
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_BINDING, socket6);
+
           result = g_socket_bind (socket6, address, TRUE, error);
           g_object_unref (address);
 
@@ -969,6 +1103,9 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
               socket6 = NULL;
               break;
             }
+
+          g_signal_emit (listener, signals[EVENT], 0,
+                         G_SOCKET_LISTENER_BOUND, socket6);
 
           g_assert (G_IS_INET_SOCKET_ADDRESS (address));
           candidate_port =
@@ -998,6 +1135,10 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
       inet_address = g_inet_address_new_any (G_SOCKET_FAMILY_IPV4);
       address = g_inet_socket_address_new (inet_address, candidate_port);
       g_object_unref (inet_address);
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_BINDING, socket4);
+
       /* a note on the 'error' clause below:
        *
        * if candidate_port is 0 then we report the error right away
@@ -1023,8 +1164,11 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
 
           if (result)
             /* got our candidate port successfully */
-            break;
-
+            {
+              g_signal_emit (listener, signals[EVENT], 0,
+                             G_SOCKET_LISTENER_BOUND, socket4);
+              break;
+            }
           else
             /* we failed to bind to the specified port.  try again. */
             {
@@ -1054,6 +1198,9 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
               break;
             }
 
+            g_signal_emit (listener, signals[EVENT], 0,
+                           G_SOCKET_LISTENER_BOUND, socket4);
+
             g_assert (G_IS_INET_SOCKET_ADDRESS (address));
             candidate_port =
               g_inet_socket_address_get_port (G_INET_SOCKET_ADDRESS (address));
@@ -1077,6 +1224,10 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
   if (socket6 != NULL)
     {
       g_socket_set_listen_backlog (socket6, listener->priv->listen_backlog);
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENING, socket6);
+
       if (!g_socket_listen (socket6, error))
         {
           g_object_unref (socket6);
@@ -1085,6 +1236,9 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
 
           return 0;
         }
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENED, socket6);
 
       if (source_object)
         g_object_set_qdata_full (G_OBJECT (socket6), source_quark,
@@ -1097,6 +1251,10 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
    if (socket4 != NULL)
     {
       g_socket_set_listen_backlog (socket4, listener->priv->listen_backlog);
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENING, socket4);
+
       if (!g_socket_listen (socket4, error))
         {
           g_object_unref (socket4);
@@ -1105,6 +1263,9 @@ g_socket_listener_add_any_inet_port (GSocketListener  *listener,
 
           return 0;
         }
+
+      g_signal_emit (listener, signals[EVENT], 0,
+                     G_SOCKET_LISTENER_LISTENED, socket4);
 
       if (source_object)
         g_object_set_qdata_full (G_OBJECT (socket4), source_quark,

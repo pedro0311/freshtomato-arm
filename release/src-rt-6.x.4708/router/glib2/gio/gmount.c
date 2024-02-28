@@ -4,10 +4,12 @@
  * 
  * Copyright (C) 2006-2008 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  *         David Zeuthen <davidz@redhat.com>
@@ -56,9 +56,9 @@
  * g_mount_unmount_with_operation() with (at least) the #GMount instance and a
  * #GAsyncReadyCallback.  The callback will be fired when the
  * operation has resolved (either with success or failure), and a
- * #GAsyncReady structure will be passed to the callback.  That
+ * #GAsyncResult structure will be passed to the callback.  That
  * callback should then call g_mount_unmount_with_operation_finish() with the #GMount
- * and the #GAsyncReady data to see if the operation was completed
+ * and the #GAsyncResult data to see if the operation was completed
  * successfully.  If an @error is present when g_mount_unmount_with_operation_finish() 
  * is called, then it will be filled with any error information.
  **/
@@ -80,7 +80,7 @@ g_mount_default_init (GMountInterface *iface)
                 G_SIGNAL_RUN_LAST,
                 G_STRUCT_OFFSET (GMountIface, changed),
                 NULL, NULL,
-                g_cclosure_marshal_VOID__VOID,
+                NULL,
                 G_TYPE_NONE, 0);
 
   /**
@@ -97,14 +97,17 @@ g_mount_default_init (GMountInterface *iface)
                 G_SIGNAL_RUN_LAST,
                 G_STRUCT_OFFSET (GMountIface, unmounted),
                 NULL, NULL,
-                g_cclosure_marshal_VOID__VOID,
+                NULL,
                 G_TYPE_NONE, 0);
   /**
    * GMount::pre-unmount:
    * @mount: the object on which the signal is emitted
    *
-   * This signal is emitted when the #GMount is about to be
+   * This signal may be emitted when the #GMount is about to be
    * unmounted.
+   *
+   * This signal depends on the backend and is only emitted if
+   * GIO was used to unmount.
    *
    * Since: 2.22
    **/
@@ -113,7 +116,7 @@ g_mount_default_init (GMountInterface *iface)
                 G_SIGNAL_RUN_LAST,
                 G_STRUCT_OFFSET (GMountIface, pre_unmount),
                 NULL, NULL,
-                g_cclosure_marshal_VOID__VOID,
+                NULL,
                 G_TYPE_NONE, 0);
 }
 
@@ -254,7 +257,8 @@ g_mount_get_symbolic_icon (GMount *mount)
  * considered an opaque string. Returns %NULL if there is no UUID
  * available.
  * 
- * Returns: the UUID for @mount or %NULL if no UUID can be computed.
+ * Returns: (nullable) (transfer full): the UUID for @mount or %NULL if no UUID
+ *     can be computed.
  *     The returned string should be freed with g_free()
  *     when no longer needed.
  **/
@@ -275,8 +279,9 @@ g_mount_get_uuid (GMount *mount)
  * @mount: a #GMount.
  * 
  * Gets the volume for the @mount.
- * 
- * Returns: (transfer full): a #GVolume or %NULL if @mount is not associated with a volume.
+ *
+ * Returns: (transfer full) (nullable): a #GVolume or %NULL if @mount is not
+ *      associated with a volume.
  *      The returned object should be unreffed with 
  *      g_object_unref() when no longer needed.
  **/
@@ -301,7 +306,8 @@ g_mount_get_volume (GMount *mount)
  * This is a convenience method for getting the #GVolume and then
  * using that object to get the #GDrive.
  * 
- * Returns: (transfer full): a #GDrive or %NULL if @mount is not associated with a volume or a drive.
+ * Returns: (transfer full) (nullable): a #GDrive or %NULL if @mount is not
+ *      associated with a volume or a drive.
  *      The returned object should be unreffed with 
  *      g_object_unref() when no longer needed.
  **/
@@ -321,7 +327,7 @@ g_mount_get_drive (GMount *mount)
  * g_mount_can_unmount: 
  * @mount: a #GMount.
  * 
- * Checks if @mount can be mounted.
+ * Checks if @mount can be unmounted.
  * 
  * Returns: %TRUE if the @mount can be unmounted.
  **/
@@ -341,7 +347,7 @@ g_mount_can_unmount (GMount *mount)
  * g_mount_can_eject: 
  * @mount: a #GMount.
  * 
- * Checks if @mount can be eject.
+ * Checks if @mount can be ejected.
  * 
  * Returns: %TRUE if the @mount can be ejected.
  **/
@@ -361,8 +367,8 @@ g_mount_can_eject (GMount *mount)
  * g_mount_unmount:
  * @mount: a #GMount.
  * @flags: flags affecting the operation
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
- * @callback: (allow-none): a #GAsyncReadyCallback, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (nullable): a #GAsyncReadyCallback, or %NULL.
  * @user_data: user data passed to @callback.
  * 
  * Unmounts a mount. This is an asynchronous operation, and is 
@@ -392,7 +398,7 @@ g_mount_unmount (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement unmount. */
-                               _("mount doesn't implement \"unmount\""));
+                               _("mount doesn’t implement “unmount”"));
       return;
     }
   
@@ -437,8 +443,8 @@ g_mount_unmount_finish (GMount        *mount,
  * g_mount_eject:
  * @mount: a #GMount.
  * @flags: flags affecting the unmount if required for eject
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
- * @callback: (allow-none): a #GAsyncReadyCallback, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (nullable): a #GAsyncReadyCallback, or %NULL.
  * @user_data: user data passed to @callback.
  * 
  * Ejects a mount. This is an asynchronous operation, and is 
@@ -468,7 +474,7 @@ g_mount_eject (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement eject. */
-                               _("mount doesn't implement \"eject\""));
+                               _("mount doesn’t implement “eject”"));
       return;
     }
   
@@ -512,10 +518,10 @@ g_mount_eject_finish (GMount        *mount,
  * g_mount_unmount_with_operation:
  * @mount: a #GMount.
  * @flags: flags affecting the operation
- * @mount_operation: (allow-none): a #GMountOperation or %NULL to avoid
+ * @mount_operation: (nullable): a #GMountOperation or %NULL to avoid
  *     user interaction.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
- * @callback: (allow-none): a #GAsyncReadyCallback, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (nullable): a #GAsyncReadyCallback, or %NULL.
  * @user_data: user data passed to @callback.
  *
  * Unmounts a mount. This is an asynchronous operation, and is
@@ -546,7 +552,7 @@ g_mount_unmount_with_operation (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement any of unmount or unmount_with_operation. */
-                               _("mount doesn't implement \"unmount\" or \"unmount_with_operation\""));
+                               _("mount doesn’t implement “unmount” or “unmount_with_operation”"));
       return;
     }
 
@@ -597,10 +603,10 @@ g_mount_unmount_with_operation_finish (GMount        *mount,
  * g_mount_eject_with_operation:
  * @mount: a #GMount.
  * @flags: flags affecting the unmount if required for eject
- * @mount_operation: (allow-none): a #GMountOperation or %NULL to avoid
+ * @mount_operation: (nullable): a #GMountOperation or %NULL to avoid
  *     user interaction.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
- * @callback: (allow-none): a #GAsyncReadyCallback, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (nullable): a #GAsyncReadyCallback, or %NULL.
  * @user_data: user data passed to @callback.
  *
  * Ejects a mount. This is an asynchronous operation, and is
@@ -631,7 +637,7 @@ g_mount_eject_with_operation (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement any of eject or eject_with_operation. */
-                               _("mount doesn't implement \"eject\" or \"eject_with_operation\""));
+                               _("mount doesn’t implement “eject” or “eject_with_operation”"));
       return;
     }
 
@@ -681,10 +687,10 @@ g_mount_eject_with_operation_finish (GMount        *mount,
  * g_mount_remount:
  * @mount: a #GMount.
  * @flags: flags affecting the operation
- * @mount_operation: (allow-none): a #GMountOperation or %NULL to avoid
+ * @mount_operation: (nullable): a #GMountOperation or %NULL to avoid
  *     user interaction.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
- * @callback: (allow-none): a #GAsyncReadyCallback, or %NULL.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
+ * @callback: (nullable): a #GAsyncReadyCallback, or %NULL.
  * @user_data: user data passed to @callback.
  * 
  * Remounts a mount. This is an asynchronous operation, and is 
@@ -719,7 +725,7 @@ g_mount_remount (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement remount. */
-                               _("mount doesn't implement \"remount\""));
+                               _("mount doesn’t implement “remount”"));
       return;
     }
   
@@ -762,14 +768,15 @@ g_mount_remount_finish (GMount        *mount,
  * @mount: a #GMount
  * @force_rescan: Whether to force a rescan of the content. 
  *     Otherwise a cached result will be used if available
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @callback: a #GAsyncReadyCallback
  * @user_data: user data passed to @callback
  * 
  * Tries to guess the type of content stored on @mount. Returns one or
  * more textual identifiers of well-known content types (typically
  * prefixed with "x-content/"), e.g. x-content/image-dcf for camera 
- * memory cards. See the <ulink url="http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec">shared-mime-info</ulink>
+ * memory cards. See the 
+ * [shared-mime-info](http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec)
  * specification for more on x-content types.
  *
  * This is an asynchronous operation (see
@@ -800,7 +807,7 @@ g_mount_guess_content_type (GMount              *mount,
                                /* Translators: This is an error
                                 * message for mount objects that
                                 * don't implement content type guessing. */
-                               _("mount doesn't implement content type guessing"));
+                               _("mount doesn’t implement content type guessing"));
       return;
     }
   
@@ -849,17 +856,18 @@ g_mount_guess_content_type_finish (GMount        *mount,
  * @mount: a #GMount
  * @force_rescan: Whether to force a rescan of the content.
  *     Otherwise a cached result will be used if available
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @error: a #GError location to store the error occurring, or %NULL to
  *     ignore
  *
  * Tries to guess the type of content stored on @mount. Returns one or
  * more textual identifiers of well-known content types (typically
  * prefixed with "x-content/"), e.g. x-content/image-dcf for camera 
- * memory cards. See the <ulink url="http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec">shared-mime-info</ulink>
+ * memory cards. See the 
+ * [shared-mime-info](http://www.freedesktop.org/wiki/Specifications/shared-mime-info-spec)
  * specification for more on x-content types.
  *
- * This is an synchronous operation and as such may block doing IO;
+ * This is a synchronous operation and as such may block doing IO;
  * see g_mount_guess_content_type() for the asynchronous version.
  *
  * Returns: (transfer full) (element-type utf8): a %NULL-terminated array of content types or %NULL on error.
@@ -886,7 +894,7 @@ g_mount_guess_content_type_sync (GMount              *mount,
                            /* Translators: This is an error
                             * message for mount objects that
                             * don't implement content type guessing. */
-                           _("mount doesn't implement synchronous content type guessing"));
+                           _("mount doesn’t implement synchronous content type guessing"));
 
       return NULL;
     }
@@ -946,10 +954,10 @@ get_private (GMount *mount)
  * situation, a #GVolumeMonitor implementation would create two
  * #GVolume objects (for example, one for the camera functionality of
  * the device and one for a SD card reader on the device) with
- * activation URIs <literal>gphoto2://[usb:001,002]/store1/</literal>
- * and <literal>gphoto2://[usb:001,002]/store2/</literal>. When the
+ * activation URIs `gphoto2://[usb:001,002]/store1/`
+ * and `gphoto2://[usb:001,002]/store2/`. When the
  * underlying mount (with root
- * <literal>gphoto2://[usb:001,002]/</literal>) is mounted, said
+ * `gphoto2://[usb:001,002]/`) is mounted, said
  * #GVolumeMonitor implementation would create two #GMount objects
  * (each with their root matching the corresponding volume activation
  * root) that would shadow the original mount.
@@ -1034,7 +1042,7 @@ g_mount_unshadow (GMount *mount)
  *
  * Gets the sort key for @mount, if any.
  *
- * Returns: Sorting key for @mount or %NULL if no such key is available.
+ * Returns: (nullable): Sorting key for @mount or %NULL if no such key is available.
  *
  * Since: 2.32
  */

@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008 Christian Kellner, Samuel Cormier-Iijima
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -28,6 +28,7 @@
 #include "gsocketaddress.h"
 #include "ginetaddress.h"
 #include "ginetsocketaddress.h"
+#include "gnativesocketaddress.h"
 #include "gnetworkingprivate.h"
 #include "gproxyaddress.h"
 #include "gproxyaddressenumerator.h"
@@ -36,26 +37,28 @@
 #include "glibintl.h"
 #include "gioenumtypes.h"
 
-#ifdef G_OS_UNIX
 #include "gunixsocketaddress.h"
+
+#ifdef G_OS_WIN32
+#include "giowin32-afunix.h"
 #endif
 
 
 /**
  * SECTION:gsocketaddress
- * @short_description: Abstract base class representing endpoints for
- * socket communication
+ * @short_description: Abstract base class representing endpoints
+ *     for socket communication
+ * @include: gio/gio.h
  *
- * #GSocketAddress is the equivalent of <type>struct sockaddr</type>
- * in the BSD sockets API. This is an abstract class; use
- * #GInetSocketAddress for internet sockets, or #GUnixSocketAddress
- * for UNIX domain sockets.
+ * #GSocketAddress is the equivalent of struct sockaddr in the BSD
+ * sockets API. This is an abstract class; use #GInetSocketAddress
+ * for internet sockets, or #GUnixSocketAddress for UNIX domain sockets.
  */
 
 /**
  * GSocketAddress:
  *
- * A socket endpoint address, corresponding to <type>struct sockaddr</type>
+ * A socket endpoint address, corresponding to struct sockaddr
  * or one of its subtypes.
  */
 
@@ -79,7 +82,7 @@ G_DEFINE_ABSTRACT_TYPE_WITH_CODE (GSocketAddress, g_socket_address, G_TYPE_OBJEC
  *
  * Gets the socket family type of @address.
  *
- * Returns: the socket family type of @address.
+ * Returns: the socket family type of @address
  *
  * Since: 2.22
  */
@@ -130,6 +133,7 @@ g_socket_address_connectable_iface_init (GSocketConnectableIface *connectable_if
 {
   connectable_iface->enumerate  = g_socket_address_connectable_enumerate;
   connectable_iface->proxy_enumerate  = g_socket_address_connectable_proxy_enumerate;
+  /* to_string() is implemented by subclasses */
 }
 
 static void
@@ -142,11 +146,11 @@ g_socket_address_init (GSocketAddress *address)
  * g_socket_address_get_native_size:
  * @address: a #GSocketAddress
  *
- * Gets the size of @address's native <type>struct sockaddr</type>.
+ * Gets the size of @address's native struct sockaddr.
  * You can use this to allocate memory to pass to
  * g_socket_address_to_native().
  *
- * Returns: the size of the native <type>struct sockaddr</type> that
+ * Returns: the size of the native struct sockaddr that
  *     @address represents
  *
  * Since: 2.22
@@ -163,17 +167,16 @@ g_socket_address_get_native_size (GSocketAddress *address)
  * g_socket_address_to_native:
  * @address: a #GSocketAddress
  * @dest: a pointer to a memory location that will contain the native
- * <type>struct sockaddr</type>.
+ * struct sockaddr
  * @destlen: the size of @dest. Must be at least as large as
- * g_socket_address_get_native_size().
- * @error: #GError for error reporting, or %NULL to ignore.
+ *     g_socket_address_get_native_size()
+ * @error: #GError for error reporting, or %NULL to ignore
  *
- * Converts a #GSocketAddress to a native <type>struct
- * sockaddr</type>, which can be passed to low-level functions like
- * connect() or bind().
+ * Converts a #GSocketAddress to a native struct sockaddr, which can
+ * be passed to low-level functions like connect() or bind().
  *
- * If not enough space is available, a %G_IO_ERROR_NO_SPACE error is
- * returned. If the address type is not known on the system
+ * If not enough space is available, a %G_IO_ERROR_NO_SPACE error
+ * is returned. If the address type is not known on the system
  * then a %G_IO_ERROR_NOT_SUPPORTED error is returned.
  *
  * Returns: %TRUE if @dest was filled in, %FALSE on error
@@ -193,14 +196,14 @@ g_socket_address_to_native (GSocketAddress  *address,
 
 /**
  * g_socket_address_new_from_native:
- * @native: a pointer to a <type>struct sockaddr</type>
+ * @native: (not nullable): a pointer to a struct sockaddr
  * @len: the size of the memory location pointed to by @native
  *
  * Creates a #GSocketAddress subclass corresponding to the native
- * <type>struct sockaddr</type> @native.
+ * struct sockaddr @native.
  *
- * Returns: a new #GSocketAddress if @native could successfully be converted,
- * otherwise %NULL.
+ * Returns: a new #GSocketAddress if @native could successfully
+ *     be converted, otherwise %NULL
  *
  * Since: 2.22
  */
@@ -266,7 +269,6 @@ g_socket_address_new_from_native (gpointer native,
       return sockaddr;
     }
 
-#ifdef G_OS_UNIX
   if (family == AF_UNIX)
     {
       struct sockaddr_un *addr = (struct sockaddr_un *) native;
@@ -300,9 +302,8 @@ g_socket_address_new_from_native (gpointer native,
       else
 	return g_unix_socket_address_new (addr->sun_path);
     }
-#endif
 
-  return NULL;
+  return g_native_socket_address_new (native, len);
 }
 
 
@@ -376,7 +377,7 @@ g_socket_address_connectable_enumerate (GSocketConnectable *connectable)
   GSocketAddressAddressEnumerator *sockaddr_enum;
 
   sockaddr_enum = g_object_new (G_TYPE_SOCKET_ADDRESS_ADDRESS_ENUMERATOR, NULL);
-  sockaddr_enum->sockaddr = g_object_ref (connectable);
+  sockaddr_enum->sockaddr = g_object_ref (G_SOCKET_ADDRESS (connectable));
 
   return (GSocketAddressEnumerator *)sockaddr_enum;
 }
@@ -385,6 +386,8 @@ static GSocketAddressEnumerator *
 g_socket_address_connectable_proxy_enumerate (GSocketConnectable *connectable)
 {
   GSocketAddressEnumerator *addr_enum = NULL;
+
+  g_assert (connectable != NULL);
 
   if (G_IS_INET_SOCKET_ADDRESS (connectable) &&
       !G_IS_PROXY_ADDRESS (connectable))
@@ -397,7 +400,7 @@ g_socket_address_connectable_proxy_enumerate (GSocketConnectable *connectable)
       g_object_get (connectable, "address", &addr, "port", &port, NULL);
 
       ip = g_inet_address_to_string (addr);
-      uri = _g_uri_from_authority ("none", ip, port, NULL);
+      uri = g_uri_join (G_URI_FLAGS_NONE, "none", NULL, ip, port, "", NULL, NULL);
 
       addr_enum = g_object_new (G_TYPE_PROXY_ADDRESS_ENUMERATOR,
       	       	       	       	"connectable", connectable,

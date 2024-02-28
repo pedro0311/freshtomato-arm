@@ -3,10 +3,12 @@
  * Copyright (C) 2006-2007 Red Hat, Inc.
  * Copyright (C) 2007 Jürg Billeter
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Christian Kellner <gicmo@gnome.org>
  */
@@ -128,8 +128,6 @@ static gboolean g_buffered_input_stream_truncate            (GSeekable       *se
 							     goffset          offset,
 							     GCancellable    *cancellable,
 							     GError         **error);
-
-static void     g_buffered_input_stream_finalize            (GObject         *object);
 
 static void compact_buffer (GBufferedInputStream *stream);
 
@@ -373,7 +371,7 @@ g_buffered_input_stream_new_sized (GInputStream *base_stream,
  * g_buffered_input_stream_fill:
  * @stream: a #GBufferedInputStream
  * @count: the number of bytes that will be read from the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to read @count bytes from the stream into the buffer.
@@ -458,9 +456,8 @@ async_fill_callback_wrapper (GObject      *source_object,
  * g_buffered_input_stream_fill_async:
  * @stream: a #GBufferedInputStream
  * @count: the number of bytes that will be read from the stream
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the request
- * @cancellable: (allow-none): optional #GCancellable object
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): a #gpointer
  *
@@ -529,7 +526,7 @@ g_buffered_input_stream_fill_async (GBufferedInputStream *stream,
  *
  * Finishes an asynchronous read.
  *
- * Returns: a #gssize of the read stream, or %-1 on an error.
+ * Returns: a #gssize of the read stream, or `-1` on an error.
  */
 gssize
 g_buffered_input_stream_fill_finish (GBufferedInputStream  *stream,
@@ -641,7 +638,7 @@ compact_buffer (GBufferedInputStream *stream)
 
   current_size = priv->end - priv->pos;
 
-  g_memmove (priv->buffer, priv->buffer + priv->pos, current_size);
+  memmove (priv->buffer, priv->buffer + priv->pos, current_size);
 
   priv->pos = 0;
   priv->end = current_size;
@@ -666,10 +663,10 @@ g_buffered_input_stream_real_fill (GBufferedInputStream  *stream,
   in_buffer = priv->end - priv->pos;
 
   /* Never fill more than can fit in the buffer */
-  count = MIN (count, priv->len - in_buffer);
+  count = MIN ((gsize) count, priv->len - in_buffer);
 
   /* If requested length does not fit at end, compact */
-  if (priv->len - priv->end < count)
+  if (priv->len - priv->end < (gsize) count)
     compact_buffer (stream);
 
   base_stream = G_FILTER_INPUT_STREAM (stream)->base_stream;
@@ -901,7 +898,8 @@ g_buffered_input_stream_seek (GSeekable     *seekable,
   
   if (type == G_SEEK_CUR)
     {
-      if (offset <= priv->end - priv->pos && offset >= -priv->pos)
+      if (offset <= (goffset) (priv->end - priv->pos) &&
+          offset >= (goffset) -priv->pos)
 	{
 	  priv->pos += offset;
 	  return TRUE;
@@ -946,7 +944,7 @@ g_buffered_input_stream_truncate (GSeekable     *seekable,
 /**
  * g_buffered_input_stream_read_byte:
  * @stream: a #GBufferedInputStream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to read a single byte from the stream or the buffer. Will block
@@ -1077,13 +1075,14 @@ g_buffered_input_stream_real_fill_async (GBufferedInputStream *stream,
   in_buffer = priv->end - priv->pos;
 
   /* Never fill more than can fit in the buffer */
-  count = MIN (count, priv->len - in_buffer);
+  count = MIN ((gsize) count, priv->len - in_buffer);
 
   /* If requested length does not fit at end, compact */
-  if (priv->len - priv->end < count)
+  if (priv->len - priv->end < (gsize) count)
     compact_buffer (stream);
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_buffered_input_stream_real_fill_async);
 
   base_stream = G_FILTER_INPUT_STREAM (stream)->base_stream;
   g_input_stream_read_async (base_stream,
@@ -1107,8 +1106,8 @@ g_buffered_input_stream_real_fill_finish (GBufferedInputStream *stream,
 
 typedef struct
 {
-  gssize bytes_skipped;
-  gssize count;
+  gsize bytes_skipped;
+  gsize count;
 } SkipAsyncData;
 
 static void
@@ -1189,6 +1188,7 @@ skip_fill_buffer_callback (GObject      *source_object,
 	  priv->pos += data->count;
 	}
 
+      g_assert (data->bytes_skipped <= G_MAXSSIZE);
       g_task_return_int (task, data->bytes_skipped);
     }
 
@@ -1217,6 +1217,7 @@ g_buffered_input_stream_skip_async (GInputStream        *stream,
   data = g_slice_new (SkipAsyncData);
   data->bytes_skipped = 0;
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_buffered_input_stream_skip_async);
   g_task_set_task_data (task, data, free_skip_async_data);
 
   available = priv->end - priv->pos;
@@ -1245,9 +1246,12 @@ g_buffered_input_stream_skip_async (GInputStream        *stream,
   if (count > priv->len)
     {
       /* Large request, shortcut buffer */
-
       base_stream = G_FILTER_INPUT_STREAM (stream)->base_stream;
 
+      /* If 'count > G_MAXSSIZE then 'g_input_stream_skip_async()'
+       * will return an error anyway before calling this.
+       * Assert that this is never called for too big `count` for clarity. */
+      g_assert ((gssize) count >= 0);
       g_input_stream_skip_async (base_stream,
                                  count,
                                  io_priority, cancellable,

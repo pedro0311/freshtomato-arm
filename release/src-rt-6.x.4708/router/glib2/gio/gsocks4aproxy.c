@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2010 Collabora, Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Nicolas Dufresne <nicolas.dufresne@collabora.co.uk>
  */
@@ -117,7 +117,7 @@ set_connect_msg (guint8      *msg,
   if (addr_len != 4)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_PROXY_FAILED,
-		  _("SOCKSv4 does not support IPv6 address '%s'"),
+		  _("SOCKSv4 does not support IPv6 address “%s”"),
 		  ip);
       g_object_unref (addr);
       return -1;
@@ -152,7 +152,7 @@ set_connect_msg (guint8      *msg,
       if (host_len > SOCKS4_MAX_LEN)
 	{
 	  g_set_error (error, G_IO_ERROR, G_IO_ERROR_PROXY_FAILED,
-		       _("Hostname '%s' is too long for SOCKSv4 protocol"),
+		       _("Hostname “%s” is too long for SOCKSv4 protocol"),
 		       hostname);
 	  return -1;
 	}
@@ -318,6 +318,7 @@ g_socks4a_proxy_connect_async (GProxy               *proxy,
   data->io_stream = g_object_ref (io_stream);
 
   task = g_task_new (proxy, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_socks4a_proxy_connect_async);
   g_task_set_task_data (task, data, (GDestroyNotify) free_connect_data);
 
   hostname = g_proxy_address_get_destination_hostname (proxy_address);

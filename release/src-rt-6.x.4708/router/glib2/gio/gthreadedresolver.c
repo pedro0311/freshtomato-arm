@@ -3,11 +3,14 @@
 /* GIO - GLib Input, Output and Streaming Library
  *
  * Copyright (C) 2008 Red Hat, Inc.
+ * Copyright (C) 2018 Igalia S.L.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +18,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -65,7 +66,27 @@ g_resolver_error_from_addrinfo_error (gint err)
     }
 }
 
-static struct addrinfo addrinfo_hints;
+typedef struct {
+  char *hostname;
+  int address_family;
+} LookupData;
+
+static LookupData *
+lookup_data_new (const char *hostname,
+                 int         address_family)
+{
+  LookupData *data = g_new (LookupData, 1);
+  data->hostname = g_strdup (hostname);
+  data->address_family = address_family;
+  return data;
+}
+
+static void
+lookup_data_free (LookupData *data)
+{
+  g_free (data->hostname);
+  g_free (data);
+}
 
 static void
 do_lookup_by_name (GTask         *task,
@@ -73,11 +94,24 @@ do_lookup_by_name (GTask         *task,
                    gpointer       task_data,
                    GCancellable  *cancellable)
 {
-  const char *hostname = task_data;
+  LookupData *lookup_data = task_data;
+  const char *hostname = lookup_data->hostname;
   struct addrinfo *res = NULL;
   GList *addresses;
   gint retval;
+  struct addrinfo addrinfo_hints = { 0 };
 
+#ifdef AI_ADDRCONFIG
+  addrinfo_hints.ai_flags = AI_ADDRCONFIG;
+#endif
+  /* socktype and protocol don't actually matter, they just get copied into the
+  * returned addrinfo structures (and then we ignore them). But if
+  * we leave them unset, we'll get back duplicate answers.
+  */
+  addrinfo_hints.ai_socktype = SOCK_STREAM;
+  addrinfo_hints.ai_protocol = IPPROTO_TCP;
+
+  addrinfo_hints.ai_family = lookup_data->address_family;
   retval = getaddrinfo (hostname, NULL, &addrinfo_hints, &res);
 
   if (retval == 0)
@@ -90,25 +124,52 @@ do_lookup_by_name (GTask         *task,
       for (ai = res; ai; ai = ai->ai_next)
         {
           sockaddr = g_socket_address_new_from_native (ai->ai_addr, ai->ai_addrlen);
-          if (!sockaddr || !G_IS_INET_SOCKET_ADDRESS (sockaddr))
+          if (!sockaddr)
             continue;
+          if (!G_IS_INET_SOCKET_ADDRESS (sockaddr))
+            {
+              g_clear_object (&sockaddr);
+              continue;
+            }
 
           addr = g_object_ref (g_inet_socket_address_get_address ((GInetSocketAddress *)sockaddr));
           addresses = g_list_prepend (addresses, addr);
           g_object_unref (sockaddr);
         }
 
-      addresses = g_list_reverse (addresses);
-      g_task_return_pointer (task, addresses,
-                             (GDestroyNotify)g_resolver_free_addresses);
+      if (addresses != NULL)
+        {
+          addresses = g_list_reverse (addresses);
+          g_task_return_pointer (task, addresses,
+                                 (GDestroyNotify)g_resolver_free_addresses);
+        }
+      else
+        {
+          /* All addresses failed to be converted to GSocketAddresses. */
+          g_task_return_new_error (task,
+                                   G_RESOLVER_ERROR,
+                                   G_RESOLVER_ERROR_NOT_FOUND,
+                                   _("Error resolving “%s”: %s"),
+                                   hostname,
+                                   _("No valid addresses were found"));
+        }
     }
   else
     {
+#ifdef G_OS_WIN32
+      gchar *error_message = g_win32_error_message (WSAGetLastError ());
+#else
+      gchar *error_message = g_locale_to_utf8 (gai_strerror (retval), -1, NULL, NULL, NULL);
+      if (error_message == NULL)
+        error_message = g_strdup ("[Invalid UTF-8]");
+#endif
+
       g_task_return_new_error (task,
                                G_RESOLVER_ERROR,
                                g_resolver_error_from_addrinfo_error (retval),
-                               _("Error resolving '%s': %s"),
-                               hostname, gai_strerror (retval));
+                               _("Error resolving “%s”: %s"),
+                               hostname, error_message);
+      g_free (error_message);
     }
 
   if (res)
@@ -123,9 +184,55 @@ lookup_by_name (GResolver     *resolver,
 {
   GTask *task;
   GList *addresses;
+  LookupData *data;
 
+  data = lookup_data_new (hostname, AF_UNSPEC);
   task = g_task_new (resolver, cancellable, NULL, NULL);
-  g_task_set_task_data (task, g_strdup (hostname), g_free);
+  g_task_set_source_tag (task, lookup_by_name);
+  g_task_set_name (task, "[gio] resolver lookup");
+  g_task_set_task_data (task, data, (GDestroyNotify)lookup_data_free);
+  g_task_set_return_on_cancel (task, TRUE);
+  g_task_run_in_thread_sync (task, do_lookup_by_name);
+  addresses = g_task_propagate_pointer (task, error);
+  g_object_unref (task);
+
+  return addresses;
+}
+
+static int
+flags_to_family (GResolverNameLookupFlags flags)
+{
+  int address_family = AF_UNSPEC;
+
+  if (flags & G_RESOLVER_NAME_LOOKUP_FLAGS_IPV4_ONLY)
+    address_family = AF_INET;
+
+  if (flags & G_RESOLVER_NAME_LOOKUP_FLAGS_IPV6_ONLY)
+    {
+      address_family = AF_INET6;
+      /* You can only filter by one family at a time */
+      g_return_val_if_fail (!(flags & G_RESOLVER_NAME_LOOKUP_FLAGS_IPV4_ONLY), address_family);
+    }
+
+  return address_family;
+}
+
+static GList *
+lookup_by_name_with_flags (GResolver                 *resolver,
+                           const gchar               *hostname,
+                           GResolverNameLookupFlags   flags,
+                           GCancellable              *cancellable,
+                           GError                   **error)
+{
+  GTask *task;
+  GList *addresses;
+  LookupData *data;
+
+  data = lookup_data_new (hostname, flags_to_family (flags));
+  task = g_task_new (resolver, cancellable, NULL, NULL);
+  g_task_set_source_tag (task, lookup_by_name_with_flags);
+  g_task_set_name (task, "[gio] resolver lookup");
+  g_task_set_task_data (task, data, (GDestroyNotify)lookup_data_free);
   g_task_set_return_on_cancel (task, TRUE);
   g_task_run_in_thread_sync (task, do_lookup_by_name);
   addresses = g_task_propagate_pointer (task, error);
@@ -135,19 +242,39 @@ lookup_by_name (GResolver     *resolver,
 }
 
 static void
+lookup_by_name_with_flags_async (GResolver                *resolver,
+                                 const gchar              *hostname,
+                                 GResolverNameLookupFlags  flags,
+                                 GCancellable             *cancellable,
+                                 GAsyncReadyCallback       callback,
+                                 gpointer                  user_data)
+{
+  GTask *task;
+  LookupData *data;
+
+  data = lookup_data_new (hostname, flags_to_family (flags));
+  task = g_task_new (resolver, cancellable, callback, user_data);
+  g_task_set_source_tag (task, lookup_by_name_with_flags_async);
+  g_task_set_name (task, "[gio] resolver lookup");
+  g_task_set_task_data (task, data, (GDestroyNotify)lookup_data_free);
+  g_task_set_return_on_cancel (task, TRUE);
+  g_task_run_in_thread (task, do_lookup_by_name);
+  g_object_unref (task);
+}
+
+static void
 lookup_by_name_async (GResolver           *resolver,
                       const gchar         *hostname,
                       GCancellable        *cancellable,
                       GAsyncReadyCallback  callback,
                       gpointer             user_data)
 {
-  GTask *task;
-
-  task = g_task_new (resolver, cancellable, callback, user_data);
-  g_task_set_task_data (task, g_strdup (hostname), g_free);
-  g_task_set_return_on_cancel (task, TRUE);
-  g_task_run_in_thread (task, do_lookup_by_name);
-  g_object_unref (task);
+  lookup_by_name_with_flags_async (resolver,
+                                   hostname,
+                                   G_RESOLVER_NAME_LOOKUP_FLAGS_DEFAULT,
+                                   cancellable,
+                                   callback,
+                                   user_data);
 }
 
 static GList *
@@ -160,6 +287,15 @@ lookup_by_name_finish (GResolver     *resolver,
   return g_task_propagate_pointer (G_TASK (result), error);
 }
 
+static GList *
+lookup_by_name_with_flags_finish (GResolver     *resolver,
+                                  GAsyncResult  *result,
+                                  GError       **error)
+{
+  g_return_val_if_fail (g_task_is_valid (result, resolver), NULL);
+
+  return g_task_propagate_pointer (G_TASK (result), error);
+}
 
 static void
 do_lookup_by_address (GTask         *task,
@@ -168,19 +304,19 @@ do_lookup_by_address (GTask         *task,
                       GCancellable  *cancellable)
 {
   GInetAddress *address = task_data;
-  struct sockaddr_storage sockaddr;
-  gsize sockaddr_size;
+  struct sockaddr_storage sockaddr_address;
+  gsize sockaddr_address_size;
   GSocketAddress *gsockaddr;
   gchar name[NI_MAXHOST];
   gint retval;
 
   gsockaddr = g_inet_socket_address_new (address, 0);
-  g_socket_address_to_native (gsockaddr, (struct sockaddr *)&sockaddr,
-                              sizeof (sockaddr), NULL);
-  sockaddr_size = g_socket_address_get_native_size (gsockaddr);
+  g_socket_address_to_native (gsockaddr, (struct sockaddr *)&sockaddr_address,
+                              sizeof (sockaddr_address), NULL);
+  sockaddr_address_size = g_socket_address_get_native_size (gsockaddr);
   g_object_unref (gsockaddr);
 
-  retval = getnameinfo ((struct sockaddr *)&sockaddr, sockaddr_size,
+  retval = getnameinfo ((struct sockaddr *) &sockaddr_address, sockaddr_address_size,
                         name, sizeof (name), NULL, 0, NI_NAMEREQD);
   if (retval == 0)
     g_task_return_pointer (task, g_strdup (name), g_free);
@@ -188,14 +324,23 @@ do_lookup_by_address (GTask         *task,
     {
       gchar *phys;
 
+#ifdef G_OS_WIN32
+      gchar *error_message = g_win32_error_message (WSAGetLastError ());
+#else
+      gchar *error_message = g_locale_to_utf8 (gai_strerror (retval), -1, NULL, NULL, NULL);
+      if (error_message == NULL)
+        error_message = g_strdup ("[Invalid UTF-8]");
+#endif
+
       phys = g_inet_address_to_string (address);
       g_task_return_new_error (task,
                                G_RESOLVER_ERROR,
                                g_resolver_error_from_addrinfo_error (retval),
-                               _("Error reverse-resolving '%s': %s"),
+                               _("Error reverse-resolving “%s”: %s"),
                                phys ? phys : "(unknown)",
-                               gai_strerror (retval));
+                               error_message);
       g_free (phys);
+      g_free (error_message);
     }
 }
 
@@ -209,6 +354,8 @@ lookup_by_address (GResolver        *resolver,
   gchar *name;
 
   task = g_task_new (resolver, cancellable, NULL, NULL);
+  g_task_set_source_tag (task, lookup_by_address);
+  g_task_set_name (task, "[gio] resolver lookup");
   g_task_set_task_data (task, g_object_ref (address), g_object_unref);
   g_task_set_return_on_cancel (task, TRUE);
   g_task_run_in_thread_sync (task, do_lookup_by_address);
@@ -228,6 +375,8 @@ lookup_by_address_async (GResolver           *resolver,
   GTask *task;
 
   task = g_task_new (resolver, cancellable, callback, user_data);
+  g_task_set_source_tag (task, lookup_by_address_async);
+  g_task_set_name (task, "[gio] resolver lookup");
   g_task_set_task_data (task, g_object_ref (address), g_object_unref);
   g_task_set_return_on_cancel (task, TRUE);
   g_task_run_in_thread (task, do_lookup_by_address);
@@ -247,7 +396,7 @@ lookup_by_address_finish (GResolver     *resolver,
 
 #if defined(G_OS_UNIX)
 
-#ifdef __BIONIC__
+#if defined __BIONIC__ && !defined BIND_4_COMPAT
 /* Copy from bionic/libc/private/arpa_nameser_compat.h
  * and bionic/libc/private/arpa_nameser.h */
 typedef struct {
@@ -256,7 +405,7 @@ typedef struct {
 			/* fields in third byte */
 	unsigned	qr: 1;		/* response flag */
 	unsigned	opcode: 4;	/* purpose of message */
-	unsigned	aa: 1;		/* authoritive answer */
+	unsigned	aa: 1;		/* authoritative answer */
 	unsigned	tc: 1;		/* truncated message */
 	unsigned	rd: 1;		/* recursion desired */
 			/* fields in fourth byte */
@@ -270,7 +419,7 @@ typedef struct {
 			/* fields in third byte */
 	unsigned	rd :1;		/* recursion desired */
 	unsigned	tc :1;		/* truncated message */
-	unsigned	aa :1;		/* authoritive answer */
+	unsigned	aa :1;		/* authoritative answer */
 	unsigned	opcode :4;	/* purpose of message */
 	unsigned	qr :1;		/* response flag */
 			/* fields in fourth byte */
@@ -366,7 +515,7 @@ typedef enum __ns_type {
 	ns_t_cert = 37,		/* Certification record */
 	ns_t_a6 = 38,		/* IPv6 address (deprecates AAAA) */
 	ns_t_dname = 39,	/* Non-terminal DNAME (for IPv6) */
-	ns_t_sink = 40,		/* Kitchen sink (experimentatl) */
+	ns_t_sink = 40,		/* Kitchen sink (experimental) */
 	ns_t_opt = 41,		/* EDNS0 option (meta-RR) */
 	ns_t_apl = 42,		/* Address prefix list (RFC 3123) */
 	ns_t_tkey = 249,	/* Transaction key */
@@ -382,18 +531,56 @@ typedef enum __ns_type {
 
 #endif /* __BIONIC__ */
 
+/* Wrapper around dn_expand() which does associated length checks and returns
+ * errors as #GError. */
+static gboolean
+expand_name (const gchar   *rrname,
+             const guint8  *answer,
+             const guint8  *end,
+             const guint8 **p,
+             gchar         *namebuf,
+             gsize          namebuf_len,
+             GError       **error)
+{
+  int expand_result;
+
+  expand_result = dn_expand (answer, end, *p, namebuf, namebuf_len);
+  if (expand_result < 0 || end - *p < expand_result)
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                   _("Error parsing DNS %s record: malformed DNS packet"), rrname);
+      return FALSE;
+    }
+
+  *p += expand_result;
+
+  return TRUE;
+}
+
 static GVariant *
-parse_res_srv (guchar  *answer,
-               guchar  *end,
-               guchar **p)
+parse_res_srv (const guint8  *answer,
+               const guint8  *end,
+               const guint8 **p,
+               GError       **error)
 {
   gchar namebuf[1024];
   guint16 priority, weight, port;
 
+  if (end - *p < 6)
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                   _("Error parsing DNS %s record: malformed DNS packet"), "SRV");
+      return NULL;
+    }
+
   GETSHORT (priority, *p);
   GETSHORT (weight, *p);
   GETSHORT (port, *p);
-  *p += dn_expand (answer, end, *p, namebuf, sizeof (namebuf));
+
+  if (!expand_name ("SRV", answer, end, p, namebuf, sizeof (namebuf), error))
+    return NULL;
 
   return g_variant_new ("(qqqs)",
                         priority,
@@ -403,16 +590,28 @@ parse_res_srv (guchar  *answer,
 }
 
 static GVariant *
-parse_res_soa (guchar  *answer,
-               guchar  *end,
-               guchar **p)
+parse_res_soa (const guint8  *answer,
+               const guint8  *end,
+               const guint8 **p,
+               GError       **error)
 {
   gchar mnamebuf[1024];
   gchar rnamebuf[1024];
   guint32 serial, refresh, retry, expire, ttl;
 
-  *p += dn_expand (answer, end, *p, mnamebuf, sizeof (mnamebuf));
-  *p += dn_expand (answer, end, *p, rnamebuf, sizeof (rnamebuf));
+  if (!expand_name ("SOA", answer, end, p, mnamebuf, sizeof (mnamebuf), error))
+    return NULL;
+
+  if (!expand_name ("SOA", answer, end, p, rnamebuf, sizeof (rnamebuf), error))
+    return NULL;
+
+  if (end - *p < 20)
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                   _("Error parsing DNS %s record: malformed DNS packet"), "SOA");
+      return NULL;
+    }
 
   GETLONG (serial, *p);
   GETLONG (refresh, *p);
@@ -431,28 +630,40 @@ parse_res_soa (guchar  *answer,
 }
 
 static GVariant *
-parse_res_ns (guchar  *answer,
-              guchar  *end,
-              guchar **p)
+parse_res_ns (const guint8  *answer,
+              const guint8  *end,
+              const guint8 **p,
+              GError       **error)
 {
   gchar namebuf[1024];
 
-  *p += dn_expand (answer, end, *p, namebuf, sizeof (namebuf));
+  if (!expand_name ("NS", answer, end, p, namebuf, sizeof (namebuf), error))
+    return NULL;
 
   return g_variant_new ("(s)", namebuf);
 }
 
 static GVariant *
-parse_res_mx (guchar  *answer,
-              guchar  *end,
-              guchar **p)
+parse_res_mx (const guint8  *answer,
+              const guint8  *end,
+              const guint8 **p,
+              GError       **error)
 {
   gchar namebuf[1024];
   guint16 preference;
 
+  if (end - *p < 2)
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                   _("Error parsing DNS %s record: malformed DNS packet"), "MX");
+      return NULL;
+    }
+
   GETSHORT (preference, *p);
 
-  *p += dn_expand (answer, end, *p, namebuf, sizeof (namebuf));
+  if (!expand_name ("MX", answer, end, p, namebuf, sizeof (namebuf), error))
+    return NULL;
 
   return g_variant_new ("(qs)",
                         preference,
@@ -460,21 +671,37 @@ parse_res_mx (guchar  *answer,
 }
 
 static GVariant *
-parse_res_txt (guchar  *answer,
-               guchar  *end,
-               guchar **p)
+parse_res_txt (const guint8  *answer,
+               const guint8  *end,
+               const guint8 **p,
+               GError       **error)
 {
   GVariant *record;
   GPtrArray *array;
-  guchar *at = *p;
+  const guint8 *at = *p;
   gsize len;
+
+  if (end - *p == 0)
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                   _("Error parsing DNS %s record: malformed DNS packet"), "TXT");
+      return NULL;
+    }
 
   array = g_ptr_array_new_with_free_func (g_free);
   while (at < end)
     {
       len = *(at++);
-      if (len > at - end)
-        break;
+      if (len > (gsize) (end - at))
+        {
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       /* Translators: the placeholder is a DNS record type, such as ‘MX’ or ‘SRV’ */
+                       _("Error parsing DNS %s record: malformed DNS packet"), "TXT");
+          g_ptr_array_free (array, TRUE);
+          return NULL;
+        }
+
       g_ptr_array_add (array, g_strndup ((gchar *)at, len));
       at += len;
     }
@@ -486,7 +713,7 @@ parse_res_txt (guchar  *answer,
   return record;
 }
 
-static gint
+gint
 g_resolver_record_type_to_rrtype (GResolverRecordType type)
 {
   switch (type)
@@ -505,45 +732,54 @@ g_resolver_record_type_to_rrtype (GResolverRecordType type)
   g_return_val_if_reached (-1);
 }
 
-static GList *
+GList *
 g_resolver_records_from_res_query (const gchar      *rrname,
                                    gint              rrtype,
-                                   guchar           *answer,
-                                   gint              len,
+                                   const guint8     *answer,
+                                   gssize            len,
                                    gint              herr,
                                    GError          **error)
 {
-  gint count;
+  uint16_t count;
   gchar namebuf[1024];
-  guchar *end, *p;
+  const guint8 *end, *p;
   guint16 type, qclass, rdlength;
-  guint32 ttl;
-  HEADER *header;
+  const HEADER *header;
   GList *records;
   GVariant *record;
+  gsize len_unsigned;
+  GError *parsing_error = NULL;
 
   if (len <= 0)
     {
-      GResolverError errnum;
-      const gchar *format;
-
       if (len == 0 || herr == HOST_NOT_FOUND || herr == NO_DATA)
         {
-          errnum = G_RESOLVER_ERROR_NOT_FOUND;
-          format = _("No DNS record of the requested type for '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_NOT_FOUND,
+                       _("No DNS record of the requested type for “%s”"), rrname);
         }
       else if (herr == TRY_AGAIN)
         {
-          errnum = G_RESOLVER_ERROR_TEMPORARY_FAILURE;
-          format = _("Temporarily unable to resolve '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_TEMPORARY_FAILURE,
+                       _("Temporarily unable to resolve “%s”"), rrname);
         }
       else
         {
-          errnum = G_RESOLVER_ERROR_INTERNAL;
-          format = _("Error resolving '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       _("Error resolving “%s”"), rrname);
         }
 
-      g_set_error (error, G_RESOLVER_ERROR, errnum, format, rrname);
+      return NULL;
+    }
+
+  /* We know len ≥ 0 now. */
+  len_unsigned = (gsize) len;
+
+  if (len_unsigned < sizeof (HEADER))
+    {
+      g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                   /* Translators: the first placeholder is a domain name, the
+                    * second is an error message */
+                   _("Error resolving “%s”: %s"), rrname, _("Malformed DNS packet"));
       return NULL;
     }
 
@@ -551,14 +787,28 @@ g_resolver_records_from_res_query (const gchar      *rrname,
 
   header = (HEADER *)answer;
   p = answer + sizeof (HEADER);
-  end = answer + len;
+  end = answer + len_unsigned;
 
   /* Skip query */
   count = ntohs (header->qdcount);
   while (count-- && p < end)
     {
-      p += dn_expand (answer, end, p, namebuf, sizeof (namebuf));
-      p += 4;
+      int expand_result;
+
+      expand_result = dn_expand (answer, end, p, namebuf, sizeof (namebuf));
+      if (expand_result < 0 || end - p < expand_result + 4)
+        {
+          /* Not possible to recover parsing as the length of the rest of the
+           * record is unknown or is too short. */
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       /* Translators: the first placeholder is a domain name, the
+                        * second is an error message */
+                       _("Error resolving “%s”: %s"), rrname, _("Malformed DNS packet"));
+          return NULL;
+        }
+
+      p += expand_result;
+      p += 4;  /* skip TYPE and CLASS */
 
       /* To silence gcc warnings */
       namebuf[0] = namebuf[1];
@@ -568,12 +818,34 @@ g_resolver_records_from_res_query (const gchar      *rrname,
   count = ntohs (header->ancount);
   while (count-- && p < end)
     {
-      p += dn_expand (answer, end, p, namebuf, sizeof (namebuf));
+      int expand_result;
+
+      expand_result = dn_expand (answer, end, p, namebuf, sizeof (namebuf));
+      if (expand_result < 0 || end - p < expand_result + 10)
+        {
+          /* Not possible to recover parsing as the length of the rest of the
+           * record is unknown or is too short. */
+          g_set_error (&parsing_error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       /* Translators: the first placeholder is a domain name, the
+                        * second is an error message */
+                       _("Error resolving “%s”: %s"), rrname, _("Malformed DNS packet"));
+          break;
+        }
+
+      p += expand_result;
       GETSHORT (type, p);
       GETSHORT (qclass, p);
-      GETLONG  (ttl, p);
-      ttl = ttl; /* To avoid -Wunused-but-set-variable */
+      p += 4; /* ignore the ttl (type=long) value */
       GETSHORT (rdlength, p);
+
+      if (end - p < rdlength)
+        {
+          g_set_error (&parsing_error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       /* Translators: the first placeholder is a domain name, the
+                        * second is an error message */
+                       _("Error resolving “%s”: %s"), rrname, _("Malformed DNS packet"));
+          break;
+        }
 
       if (type != rrtype || qclass != C_IN)
         {
@@ -584,34 +856,43 @@ g_resolver_records_from_res_query (const gchar      *rrname,
       switch (rrtype)
         {
         case T_SRV:
-          record = parse_res_srv (answer, end, &p);
+          record = parse_res_srv (answer, p + rdlength, &p, &parsing_error);
           break;
         case T_MX:
-          record = parse_res_mx (answer, end, &p);
+          record = parse_res_mx (answer, p + rdlength, &p, &parsing_error);
           break;
         case T_SOA:
-          record = parse_res_soa (answer, end, &p);
+          record = parse_res_soa (answer, p + rdlength, &p, &parsing_error);
           break;
         case T_NS:
-          record = parse_res_ns (answer, end, &p);
+          record = parse_res_ns (answer, p + rdlength, &p, &parsing_error);
           break;
         case T_TXT:
-          record = parse_res_txt (answer, p + rdlength, &p);
+          record = parse_res_txt (answer, p + rdlength, &p, &parsing_error);
           break;
         default:
-          g_warn_if_reached ();
+          g_debug ("Unrecognised DNS record type %u", rrtype);
           record = NULL;
           break;
         }
 
       if (record != NULL)
         records = g_list_prepend (records, record);
+
+      if (parsing_error != NULL)
+        break;
     }
 
-  if (records == NULL)
+  if (parsing_error != NULL)
+    {
+      g_propagate_prefixed_error (error, parsing_error, _("Failed to parse DNS response for “%s”: "), rrname);
+      g_list_free_full (records, (GDestroyNotify)g_variant_unref);
+      return NULL;
+    }
+  else if (records == NULL)
     {
       g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_NOT_FOUND,
-                   _("No DNS record of the requested type for '%s'"), rrname);
+                   _("No DNS record of the requested type for “%s”"), rrname);
 
       return NULL;
     }
@@ -706,26 +987,22 @@ g_resolver_records_from_DnsQuery (const gchar  *rrname,
 
   if (status != ERROR_SUCCESS)
     {
-      GResolverError errnum;
-      const gchar *format;
-
       if (status == DNS_ERROR_RCODE_NAME_ERROR)
         {
-          errnum = G_RESOLVER_ERROR_NOT_FOUND;
-          format = _("No DNS record of the requested type for '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_NOT_FOUND,
+                       _("No DNS record of the requested type for “%s”"), rrname);
         }
       else if (status == DNS_ERROR_RCODE_SERVER_FAILURE)
         {
-          errnum = G_RESOLVER_ERROR_TEMPORARY_FAILURE;
-          format = _("Temporarily unable to resolve '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_TEMPORARY_FAILURE,
+                       _("Temporarily unable to resolve “%s”"), rrname);
         }
       else
         {
-          errnum = G_RESOLVER_ERROR_INTERNAL;
-          format = _("Error resolving '%s'");
+          g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                       _("Error resolving “%s”"), rrname);
         }
 
-      g_set_error (error, G_RESOLVER_ERROR, errnum, format, rrname);
       return NULL;
     }
 
@@ -763,7 +1040,7 @@ g_resolver_records_from_DnsQuery (const gchar  *rrname,
   if (records == NULL)
     {
       g_set_error (error, G_RESOLVER_ERROR, G_RESOLVER_ERROR_NOT_FOUND,
-                   _("No DNS record of the requested type for '%s'"), rrname);
+                   _("No DNS record of the requested type for “%s”"), rrname);
 
       return NULL;
     }
@@ -793,7 +1070,9 @@ free_records (GList *records)
 
 #if defined(G_OS_UNIX)
 #ifdef __BIONIC__
+#ifndef C_IN
 #define C_IN 1
+#endif
 int res_query(const char *, int, int, u_char *, int);
 #endif
 #endif
@@ -814,12 +1093,38 @@ do_lookup_records (GTask         *task,
   GByteArray *answer;
   gint rrtype;
 
+#ifdef HAVE_RES_NQUERY
+  /* Load the resolver state. This is done once per worker thread, and the
+   * #GResolver::reload signal is ignored (since we always reload). This could
+   * be improved by having an explicit worker thread pool, with each thread
+   * containing some state which is initialised at thread creation time and
+   * updated in response to #GResolver::reload.
+   *
+   * What we have currently is not particularly worse than using res_query() in
+   * worker threads, since it would transparently call res_init() for each new
+   * worker thread. (Although the workers would get reused by the
+   * #GThreadPool.)
+   *
+   * FreeBSD requires the state to be zero-filled before calling res_ninit(). */
+  struct __res_state res = { 0, };
+  if (res_ninit (&res) != 0)
+    {
+      g_task_return_new_error (task, G_RESOLVER_ERROR, G_RESOLVER_ERROR_INTERNAL,
+                               _("Error resolving “%s”"), lrd->rrname);
+      return;
+    }
+#endif
+
   rrtype = g_resolver_record_type_to_rrtype (lrd->record_type);
   answer = g_byte_array_new ();
   for (;;)
     {
       g_byte_array_set_size (answer, len * 2);
+#if defined(HAVE_RES_NQUERY)
+      len = res_nquery (&res, lrd->rrname, C_IN, rrtype, answer->data, answer->len);
+#else
       len = res_query (lrd->rrname, C_IN, rrtype, answer->data, answer->len);
+#endif
 
       /* If answer fit in the buffer then we're done */
       if (len < 0 || len < (gint)answer->len)
@@ -834,6 +1139,18 @@ do_lookup_records (GTask         *task,
   herr = h_errno;
   records = g_resolver_records_from_res_query (lrd->rrname, rrtype, answer->data, len, herr, &error);
   g_byte_array_free (answer, TRUE);
+
+#ifdef HAVE_RES_NQUERY
+
+#if defined(HAVE_RES_NDESTROY)
+  res_ndestroy (&res);
+#elif defined(HAVE_RES_NCLOSE)
+  res_nclose (&res);
+#elif defined(HAVE_RES_NINIT)
+#error "Your platform has res_ninit() but not res_nclose() or res_ndestroy(). Please file a bug at https://gitlab.gnome.org/GNOME/glib/issues/new"
+#endif
+
+#endif  /* HAVE_RES_NQUERY */
 
 #else
 
@@ -867,6 +1184,8 @@ lookup_records (GResolver              *resolver,
   LookupRecordsData *lrd;
 
   task = g_task_new (resolver, cancellable, NULL, NULL);
+  g_task_set_source_tag (task, lookup_records);
+  g_task_set_name (task, "[gio] resolver lookup records");
 
   lrd = g_slice_new (LookupRecordsData);
   lrd->rrname = g_strdup (rrname);
@@ -893,6 +1212,8 @@ lookup_records_async (GResolver           *resolver,
   LookupRecordsData *lrd;
 
   task = g_task_new (resolver, cancellable, callback, user_data);
+  g_task_set_source_tag (task, lookup_records_async);
+  g_task_set_name (task, "[gio] resolver lookup records");
 
   lrd = g_slice_new (LookupRecordsData);
   lrd->rrname = g_strdup (rrname);
@@ -920,24 +1241,16 @@ g_threaded_resolver_class_init (GThreadedResolverClass *threaded_class)
 {
   GResolverClass *resolver_class = G_RESOLVER_CLASS (threaded_class);
 
-  resolver_class->lookup_by_name           = lookup_by_name;
-  resolver_class->lookup_by_name_async     = lookup_by_name_async;
-  resolver_class->lookup_by_name_finish    = lookup_by_name_finish;
-  resolver_class->lookup_by_address        = lookup_by_address;
-  resolver_class->lookup_by_address_async  = lookup_by_address_async;
-  resolver_class->lookup_by_address_finish = lookup_by_address_finish;
-  resolver_class->lookup_records           = lookup_records;
-  resolver_class->lookup_records_async     = lookup_records_async;
-  resolver_class->lookup_records_finish    = lookup_records_finish;
-
-  /* Initialize _g_resolver_addrinfo_hints */
-#ifdef AI_ADDRCONFIG
-  addrinfo_hints.ai_flags |= AI_ADDRCONFIG;
-#endif
-  /* These two don't actually matter, they just get copied into the
-   * returned addrinfo structures (and then we ignore them). But if
-   * we leave them unset, we'll get back duplicate answers.
-   */
-  addrinfo_hints.ai_socktype = SOCK_STREAM;
-  addrinfo_hints.ai_protocol = IPPROTO_TCP;
+  resolver_class->lookup_by_name                   = lookup_by_name;
+  resolver_class->lookup_by_name_async             = lookup_by_name_async;
+  resolver_class->lookup_by_name_finish            = lookup_by_name_finish;
+  resolver_class->lookup_by_name_with_flags        = lookup_by_name_with_flags;
+  resolver_class->lookup_by_name_with_flags_async  = lookup_by_name_with_flags_async;
+  resolver_class->lookup_by_name_with_flags_finish = lookup_by_name_with_flags_finish;
+  resolver_class->lookup_by_address                = lookup_by_address;
+  resolver_class->lookup_by_address_async          = lookup_by_address_async;
+  resolver_class->lookup_by_address_finish         = lookup_by_address_finish;
+  resolver_class->lookup_records                   = lookup_records;
+  resolver_class->lookup_records_async             = lookup_records_async;
+  resolver_class->lookup_records_finish            = lookup_records_finish;
 }

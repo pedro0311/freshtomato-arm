@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,15 +15,15 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
 
 #include <gio/gio.h>
+#ifndef _MSC_VER
 #include <unistd.h>
+#endif
 
 #include "gdbus-tests.h"
 
@@ -48,7 +50,7 @@ on_property_notify_timeout (gpointer user_data)
   PropertyNotifyData *data = user_data;
   data->timed_out = TRUE;
   g_main_loop_quit (data->loop);
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 gboolean
@@ -79,6 +81,80 @@ _g_assert_property_notify_run (gpointer     object,
   return data.timed_out;
 }
 
+static gboolean
+_give_up (gpointer data)
+{
+  g_error ("%s", (const gchar *) data);
+  g_return_val_if_reached (G_SOURCE_CONTINUE);
+}
+
+typedef struct
+{
+  GMainContext *context;
+  gboolean name_appeared;
+  gboolean unwatch_complete;
+} WatchData;
+
+static void
+name_appeared_cb (GDBusConnection *connection,
+                  const gchar     *name,
+                  const gchar     *name_owner,
+                  gpointer         user_data)
+{
+  WatchData *data = user_data;
+
+  g_assert (name_owner != NULL);
+  data->name_appeared = TRUE;
+  g_main_context_wakeup (data->context);
+}
+
+static void
+watch_free_cb (gpointer user_data)
+{
+  WatchData *data = user_data;
+
+  data->unwatch_complete = TRUE;
+  g_main_context_wakeup (data->context);
+}
+
+void
+ensure_gdbus_testserver_up (GDBusConnection *connection,
+                            GMainContext    *context)
+{
+  GSource *timeout_source = NULL;
+  guint watch_id;
+  WatchData data = { context, FALSE, FALSE };
+
+  g_main_context_push_thread_default (context);
+
+  watch_id = g_bus_watch_name_on_connection (connection,
+                                             "com.example.TestService",
+                                             G_BUS_NAME_WATCHER_FLAGS_NONE,
+                                             name_appeared_cb,
+                                             NULL,
+                                             &data,
+                                             watch_free_cb);
+
+  timeout_source = g_timeout_source_new_seconds (60);
+  g_source_set_callback (timeout_source, _give_up,
+                         "waited more than ~ 60s for gdbus-testserver to take its bus name",
+                         NULL);
+  g_source_attach (timeout_source, context);
+
+  while (!data.name_appeared)
+    g_main_context_iteration (context, TRUE);
+
+  g_bus_unwatch_name (watch_id);
+
+  while (!data.unwatch_complete)
+    g_main_context_iteration (context, TRUE);
+
+  g_source_destroy (timeout_source);
+  g_source_unref (timeout_source);
+
+  g_main_context_pop_thread_default (context);
+}
+
 /* ---------------------------------------------------------------------------------------------------- */
 
 typedef struct
@@ -100,7 +176,7 @@ on_signal_received_timeout (gpointer user_data)
   SignalReceivedData *data = user_data;
   data->timed_out = TRUE;
   g_main_loop_quit (data->loop);
-  return TRUE;
+  return G_SOURCE_CONTINUE;
 }
 
 gboolean

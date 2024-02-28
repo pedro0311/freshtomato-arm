@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -42,7 +42,7 @@ enum {
 };
 
 /**
- * SECTION:gzdecompressor
+ * SECTION:gzlibdecompressor
  * @short_description: Zlib decompressor
  * @include: gio/gio.h
  *
@@ -97,7 +97,7 @@ g_zlib_decompressor_set_gzheader (GZlibDecompressor *decompressor)
   decompressor->header_data->gzheader.name_max = 256;
 
   if (inflateGetHeader (&decompressor->zstream, &decompressor->header_data->gzheader) != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", decompressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", decompressor->zstream.msg);
 #endif /* !G_OS_WIN32 || ZLIB >= 1.2.4 */
 }
 
@@ -207,7 +207,7 @@ g_zlib_decompressor_constructed (GObject *object)
     g_error ("GZlibDecompressor: Not enough memory for zlib use");
 
   if (res != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", decompressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", decompressor->zstream.msg);
 
   g_zlib_decompressor_set_gzheader (decompressor);
 }
@@ -284,7 +284,7 @@ g_zlib_decompressor_new (GZlibCompressorFormat format)
  * or the header data was not fully processed yet, or it not present in the
  * data stream at all.
  *
- * Returns: (transfer none): a #GFileInfo, or %NULL
+ * Returns: (nullable) (transfer none): a #GFileInfo, or %NULL
  *
  * Since: 2.26
  */
@@ -307,7 +307,7 @@ g_zlib_decompressor_reset (GConverter *converter)
 
   res = inflateReset (&decompressor->zstream);
   if (res != Z_OK)
-    g_warning ("unexpected zlib error: %s\n", decompressor->zstream.msg);
+    g_warning ("unexpected zlib error: %s", decompressor->zstream.msg);
 
   g_zlib_decompressor_set_gzheader (decompressor);
 }
@@ -391,6 +391,9 @@ g_zlib_decompressor_convert (GConverter *converter,
                                         data->gzheader.time);
       g_file_info_set_attribute_uint32 (data->file_info,
                                         G_FILE_ATTRIBUTE_TIME_MODIFIED_USEC,
+                                        0);
+      g_file_info_set_attribute_uint32 (data->file_info,
+                                        G_FILE_ATTRIBUTE_TIME_MODIFIED_NSEC,
                                         0);
 
       if (data->filename[0] != '\0')

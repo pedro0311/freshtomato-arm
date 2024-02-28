@@ -122,13 +122,15 @@ How to run and debug your GLib application
       <varlistentry>
         <term>fatal-warnings</term>
         <listitem><para>Causes GLib to abort the program at the first call
-           to g_warning() or g_critical().</para>
+           to g_warning() or g_critical().  Use of this flag is not
+           recommended except when debugging.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
         <term>fatal-criticals</term>
         <listitem><para>Causes GLib to abort the program at the first call
-           to g_critical().</para>
+           to g_critical().  This flag can be useful during debugging and
+           testing.</para>
         </listitem>
       </varlistentry>
       <varlistentry>
@@ -154,8 +156,8 @@ How to run and debug your GLib application
         </listitem>
       </varlistentry>
     </variablelist>
-    The special value all can be used to turn on all debug options.
-    The special value help can be used to print all available options.
+    The special value <literal>all</literal> can be used to turn on all debug options.
+    The special value <literal>help</literal> can be used to print all available options.
   </para>
 </formalpara>
 
@@ -199,14 +201,17 @@ How to run and debug your GLib application
           reproduced with <literal>G_SLICE=always-malloc</literal>, but will
           be caught by <literal>G_SLICE=debug-blocks</literal> is as follows:
           <programlisting>
-            void *slist = g_slist_alloc (); /* void* gives up type-safety */
-            g_list_free (slist);            /* corruption: sizeof (GSList) != sizeof (GList) */
+            /* void* gives up type-safety */
+            void *slist = g_slist_alloc ();
+
+            /* corruption: sizeof (GSList) != sizeof (GList) */
+            g_list_free (slist);
           </programlisting></para>
         </listitem>
       </varlistentry>
     </variablelist>
-    The special value all can be used to turn on all options.
-    The special value help can be used to print all available options.
+    The special value <literal>all</literal> can be used to turn on all options.
+    The special value <literal>help</literal> can be used to print all available options.
   </para>
 </formalpara>
 
@@ -244,6 +249,79 @@ How to run and debug your GLib application
   </para>
 </formalpara>
 
+<formalpara id="G_ENABLE_DIAGNOSTIC">
+  <title><envar>G_ENABLE_DIAGNOSTIC</envar></title>
+
+  <para>
+    If set to a non-zero value, this environment variable enables
+    diagnostic messages, like deprecation messages for GObject properties
+    and signals.
+  </para>
+</formalpara>
+
+<formalpara id="G_DEBUGGER">
+  <title><envar>G_DEBUGGER</envar></title>
+
+  <para>
+    When running on Windows, if set to a non-empty string, GLib will
+    try to interpret the contents of this environment variable as
+    a command line to a debugger, and run it if the process crashes.
+    The debugger command line should contain <literal>%p</literal> and <literal>%e</literal> substitution
+    tokens, which GLib will replace with the process ID of the crashing
+    process and a handle to an event that the debugger should signal
+    to let GLib know that the debugger successfully attached to the
+    process. If <literal>%e</literal> is absent, or if the debugger is not able to
+    signal events, GLib will resume execution after 60 seconds.
+    If <literal>%p</literal> is absent, the debugger won't know which process to attach to,
+    and GLib will also resume execution after 60 seconds.
+  </para>
+  <para>
+    Additionally, even if <envar>G_DEBUGGER</envar> is not set, GLib would still
+    try to print basic exception information (code and address) into
+    stderr.
+  </para>
+  <para>
+    By default the debugger gets a new console allocated for it.
+    Set the <envar>G_DEBUGGER_OLD_CONSOLE</envar> environment variable to any
+    non-empty string to make the debugger inherit the console of
+    the crashing process. Normally this is only used by the GLib
+    testsuite.
+  </para>
+  <para>
+    The exception handler is written with the aim of making it as
+    simple as possible, to minimize the risk of it invoking
+    buggy functions or running buggy code, which would result
+    in exceptions being raised recursively. Because of that
+    it lacks most of the amenities that one would expect of GLib.
+    Namely, it does not support Unicode, so it is highly advisable
+    to only use ASCII characters in <envar>G_DEBUGGER</envar>.
+  </para>
+  <para>
+    See also <link linkend="G_VEH_CATCH"><envar>G_VEH_CATCH</envar></link>.
+  </para>
+</formalpara>
+
+<formalpara id="G_VEH_CATCH">
+  <title><envar>G_VEH_CATCH</envar></title>
+
+  <para>
+    Catching some exceptions can break the program, since Windows
+    will sometimes use exceptions for execution flow control and
+    other purposes other than signalling a crash.
+  </para>
+  <para>
+    The <envar>G_VEH_CATCH</envar> environment variable augments
+    <ulink url="https://docs.microsoft.com/en-us/windows/desktop/debug/vectored-exception-handling">Vectored Exception Handling</ulink>
+    on Windows (see <link linkend="G_DEBUGGER"><envar>G_DEBUGGER</envar></link>), allowing GLib to catch more
+    exceptions. Set this variable to a comma-separated list of
+    hexadecimal exception codes that should additionally be caught.
+  </para>
+  <para>
+    By default GLib will only catch Access Violation, Stack Overflow and
+    Illegal Instruction <ulink url="https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_exception_record">exceptions</ulink>.
+  </para>
+</formalpara>
+
 </refsect2>
 
 <refsect2 id="setlocale">
@@ -274,60 +352,17 @@ returned by functions like <function>strftime()</function>.
 
 </refsect2>
 
-<refsect2>
-<title>Traps and traces</title>
-
 <para>
-<indexterm><primary>g_trap_free_size</primary></indexterm>
-<indexterm><primary>g_trap_realloc_size</primary></indexterm>
-<indexterm><primary>g_trap_malloc_size</primary></indexterm>
-Some code portions contain trap variables that can be set during debugging
-time if GLib has been configured with <option>--enable-debug=yes</option>.
-Such traps lead to immediate code halts to examine the current program state
-and backtrace.
-</para>
-
-<para>
-Currently, the following trap variables exist:
-<programlisting>
-static volatile gulong g_trap_free_size;
-static volatile gulong g_trap_realloc_size;
-static volatile gulong g_trap_malloc_size;
-</programlisting>
-If set to a size > 0, <link linkend="g-free">g_free</link>(),
-<link linkend="g-realloc">g_realloc</link>() and
-<link linkend="g-malloc">g_malloc</link>() will be intercepted if the size
-matches the size of the corresponding memory block. This will only work with
-<literal>g_mem_set_vtable (glib_mem_profiler_table)</literal> upon startup
-though, because memory profiling is required to match on the memory block sizes.
-</para>
-<para>
-Note that many modern debuggers support conditional breakpoints, which achieve
-pretty much the same. E.g. in gdb, you can do
-<programlisting>
-break g_malloc
-condition 1 n_bytes == 20
-</programlisting>
-to break only on g_malloc() calls where the size of the allocated memory block
-is 20.
-</para>
-</refsect2>
-
-<refsect2>
-<title>Gdb debugging macros</title>
-
-<para>
-glib ships with a set of python macros for the gdb debugger. These includes pretty
-printers for lists, hashtables and gobject types. It also has a backtrace filter
+GLib ships with a set of Python macros for the GDB debugger. These includes pretty
+printers for lists, hashtables and GObject types. It also has a backtrace filter
 that makes backtraces with signal emissions easier to read.
 </para>
 
 <para>
-To use this you need a recent enough gdb that supports python scripting. Gdb 7.0
-should be recent enough, but branches of the "archer" gdb tree as used in Fedora 11
-and Fedora 12 should work too. You then need to install glib in the same prefix as
-gdb so that the python gdb autoloaded files get installed in the right place for
-gdb to pick up.
+To use this you need a version of GDB that supports Python scripting; anything
+from 7.0 should be fine. You then need to install GLib in the same prefix as
+GDB so that the Python GDB autoloaded files get installed in the right place
+for GDB to pick up.
 </para>
 
 <para>
@@ -345,16 +380,15 @@ gforeach i in some_list_variable: print *(GtkWidget *)l
 Which would print the contents of each widget in a list of widgets.
 </para>
 
-</refsect2>
-
 <refsect2>
 <title>SystemTap</title>
 
 <para>
 <ulink url="http://sourceware.org/systemtap/">SystemTap</ulink> is a dynamic whole-system
-analysis toolkit.  GLib ships with a file <filename>glib.stp</filename> which defines a
+analysis toolkit.  GLib ships with a file <filename>libglib-2.0.so.*.stp</filename> which defines a
 set of probe points, which you can hook into with custom SystemTap scripts.
-See the files <filename>glib.stp</filename> and <filename>gobject.stp</filename> which
+See the files <filename>libglib-2.0.so.*.stp</filename>, <filename>libgobject-2.0.so.*.stp</filename>
+and <filename>libgio-2.0.so.*.stp</filename> which
 are in your shared SystemTap scripts directory.
 </para>
 

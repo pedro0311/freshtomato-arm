@@ -2,10 +2,12 @@
  * Copyright © 2009, 2010 Codethink Limited
  * Copyright © 2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  *          Matthias Clasen <mclasen@redhat.com>
@@ -39,8 +39,8 @@ typedef struct
   void (* keys_changed)          (GObject             *target,
                                   GSettingsBackend    *backend,
                                   const gchar         *prefix,
-                                  const gchar * const *names,
-                                  gpointer             origin_tag);
+                                  gpointer             origin_tag,
+                                  const gchar * const *names);
   void (* writable_changed)      (GObject             *target,
                                   GSettingsBackend    *backend,
                                   const gchar         *key);
@@ -62,6 +62,9 @@ GVariant *              g_settings_backend_read                         (GSettin
                                                                          const gchar                    *key,
                                                                          const GVariantType             *expected_type,
                                                                          gboolean                        default_value);
+GVariant *              g_settings_backend_read_user_value              (GSettingsBackend               *backend,
+                                                                         const gchar                    *key,
+                                                                         const GVariantType             *expected_type);
 gboolean                g_settings_backend_write                        (GSettingsBackend               *backend,
                                                                          const gchar                    *key,
                                                                          GVariant                       *value,
@@ -85,6 +88,8 @@ void                    g_settings_backend_sync_default                 (void);
 GType                   g_null_settings_backend_get_type                (void);
 
 GType                   g_memory_settings_backend_get_type              (void);
+
+GType                   g_keyfile_settings_backend_get_type             (void);
 
 #ifdef HAVE_COCOA
 GType                   g_nextstep_settings_backend_get_type            (void);

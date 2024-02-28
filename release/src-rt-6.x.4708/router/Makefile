@@ -144,7 +144,7 @@ ifeq ($(TCONFIG_BCMARM),y)
  export IPTABLES_TARGET := iptables-1.8.x
  export IPROUTE_TARGET := iproute2-3.x
  export IPSET_TARGET := ipset
- export PCRE_TARGET := pcre
+ export PCRE_TARGET := pcre2
  export PHP_TARGET := php
 else
  export IPTABLES_TARGET := iptables
@@ -440,6 +440,11 @@ obj-$(TCONFIG_NGINX) += libpng
 obj-$(TCONFIG_NGINX) += libjpeg-turbo
 obj-$(TCONFIG_NGINX) += mysql
 obj-$(TCONFIG_NGINX) += libzip
+ifeq ($(TCONFIG_BCMARM),y)
+ obj-$(TCONFIG_NGINX) += libffi
+ obj-$(TCONFIG_NGINX) += gettext-tiny
+ obj-$(TCONFIG_NGINX) += glib2
+endif
 obj-$(TCONFIG_NGINX) += $(PHP_TARGET)
 obj-$(TCONFIG_NGINX) += nginx
 ifeq ($(TCONFIG_BCMARM),y)
@@ -459,12 +464,14 @@ obj-$(TCONFIG_MDNS) += expat
 obj-$(TCONFIG_MDNS) += avahi
 obj-$(TCONFIG_ZFS) += zlib
 obj-$(TCONFIG_ZFS) += $(OPENSSLDIR)
+obj-$(TCONFIG_ZFS) += libiconv
 obj-$(TCONFIG_ZFS) += gettext-tiny
 obj-$(TCONFIG_ZFS) += util-linux
 obj-$(TCONFIG_ZFS) += zfs
 obj-$(TCONFIG_IRQBALANCE) += zlib
 obj-$(TCONFIG_IRQBALANCE) += libffi
 obj-$(TCONFIG_IRQBALANCE) += libiconv
+obj-$(TCONFIG_IRQBALANCE) += gettext-tiny
 obj-$(TCONFIG_IRQBALANCE) += $(PCRE_TARGET)
 obj-$(TCONFIG_IRQBALANCE) += glib2
 obj-$(TCONFIG_IRQBALANCE) += irqbalance
@@ -608,7 +615,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	fi
 	$(MAKE) -C $(LINUXDIR)/arch/mips/brcm-boards/bcm947xx/compressed srctree=$(LINUXDIR) TCONFIG_MIPSR2=$(TCONFIG_MIPSR2) $(PARALLEL_BUILD)
 else # TCONFIG_BCMARM
-	$(MAKE) compressed-clean #shibby
+	$(MAKE) compressed-clean
 	(echo '.NOTPARALLEL:' ; cat ${LINUXDIR}/Makefile) |\
 		$(MAKE) $(PARALLEL_BUILD) -C ${LINUXDIR} -f - $(SUBMAKE_SETTINGS) zImage
 	+$(MAKE) CONFIG_SQUASHFS=$(CONFIG_SQUASHFS) -C $(SRCBASE)/router/compressed ARCH=$(ARCH)
@@ -2390,13 +2397,17 @@ $(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/$(PCRE_TARGET)/staged install
 
 $(PCRE_TARGET)-install:
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-8.so.0.10.2 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.2
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.2
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-8.so.0.10.2 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.10.2 libpcre2-8.so
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-posix.so.3.0.0 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.0
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.0
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-posix.so.3.0.0 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.0 libpcre2-posix.so
+else
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
 	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.1 && ln -sf libpcre.so.1.2.13 libpcre.so
-ifeq ($(TCONFIG_BCMARM),y)
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcreposix.so.0.0.7 $(INSTALLDIR)/pcre/usr/lib/libpcreposix.so.0.0.7
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcreposix.so.0.0.7
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcreposix.so.0.0.7 libpcreposix.so.0 && ln -sf libpcreposix.so.0.0.7 libpcreposix.so
 endif
 
 $(PCRE_TARGET)-clean:
@@ -2549,6 +2560,7 @@ $(PHP_TARGET)/stamp-h1:
 			--with-libzip="$(TOP)/libzip/staged/usr" \
 			--with-pcre-dir="$(TOP)/$(PCRE_TARGET)/staged/usr" \
 			--with-pcre-regex="$(TOP)/$(PCRE_TARGET)/staged/usr" \
+			--with-external-pcre \
 			--enable-ctype \
 			--enable-fileinfo \
 			--enable-dom \
@@ -2606,6 +2618,8 @@ $(PHP_TARGET)/stamp-h1:
 			JPEG_LIBS="$(TOP)/libjpeg-turbo/staged/usr/lib -ljpeg" \
 			PNG_CFLAGS="(TOP)/libpng/staged/usr/include" \
 			PNG_LIBS="$(TOP)/libpng/staged/usr/lib -lpng16" \
+			PCRE2_CFLAGS="$(TOP)/$(PCRE_TARGET)/staged/usr/include" \
+			PCRE2_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8" \
 			OPENSSL_CFLAGS="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 			OPENSSL_LIBS="$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto" \
 			OPENSSL_LIBDIR="$(TOP)/$(OPENSSLDIR)"
@@ -3300,8 +3314,7 @@ tinc/build:
 		-Dsysconfdir=/etc \
 		-Dlocalstatedir=/var \
 		-Dpkg_config_path='$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/lzo/staged/usr/lib/pkgconfig:$(TOP)/lz4/staged/usr/lib/pkgconfig:$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig' \
-		-Doptimization=3 \
-		-Ddebug=false \
+		-Dbuildtype=release \
 		-Dc_std=gnu99 \
 		-Dwarning_level=1 \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/lzo/staged/usr/include -I$(TOP)/lz4/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
@@ -4130,53 +4143,75 @@ libffi-clean:
 	@rm -rf libffi/staged
 	@rm -f libffi/stamp-h1
 
-glib2/stamp-h1:
+glib2/build:
 	$(call patch_files,glib2)
-	cd glib2 && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
-			-I$(TOP)/glib2 $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
-		LDFLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib,) \
-			-ldl -lpthread -lz -liconv -lffi $(if $(TCONFIG_NGINX),-lpcre,)" \
-		LIBFFI_CFLAGS="-I$(TOP)/libffi/staged/usr/include" \
-		LIBFFI_LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so" \
-		$(if $(TCONFIG_NGINX),PCRE_CFLAGS="-I$(TOP)/$(PCRE_TARGET)/staged/usr/include" PCRE_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib/libpcre.so",) \
-		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so" \
-		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-debug=no --enable-man=no $(if $(TCONFIG_NGINX),--with-pcre=system,--with-pcre=internal) \
-			--disable-selinux --disable-fam --with-libiconv=gnu --disable-dependency-tracking
-	@touch $@
+	cd glib2 && \
+		$(call meson_CrossOptions, meson-cross.txt) && \
+		$(TOP)/meson/meson.py setup build \
+		--cross-file meson-cross.txt \
+		--prefix=/usr \
+		-Dpkg_config_path='$(TOP)/libiconv/staged/usr/lib/pkgconfig:$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/libffi/staged/usr/lib/pkgconfig:$(TOP)/gettext-tiny/staged/usr/include$(if $(TCONFIG_NGINX),:$(TOP)/$(PCRE_TARGET)/staged/usr/lib/pkgconfig,)' \
+		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
+			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
+			-L$(TOP)/gettext-tiny/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8,)" \
+		-Dcpp_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
+			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+		-Dcpp_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
+			-L$(TOP)/gettext-tiny/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8,)" \
+		-Dc_std=gnu99 \
+		-Dcpp_std=c++11 \
+		-Dwarning_level=1 \
+		-Doptimization=s \
+		-Ddebug=false \
+		-Ddefault_library=both \
+		-Dforce_posix_threads=true \
+		-Db_staticpic=true \
+		-Db_pie=true \
+		-Dbsymbolic_functions=true \
+		-Dglib_checks=true \
+		-Dglib_debug=disabled \
+		-Dlibmount=disabled \
+		-Dselinux=disabled \
+		-Dnls=disabled \
+		-Dlibelf=disabled \
+		-Dglib_assert=false \
+		-Dsystemtap=false \
+		-Dsysprof=disabled \
+		-Doss_fuzz=disabled \
+		-Dxattr=false \
+		-Ddtrace=false \
+		-Dgtk_doc=false \
+		-Dman=false \
+		-Dinstalled_tests=false \
+		-Dtests=false
 
-glib2: glib2/stamp-h1
+ glib2: glib2/build
 	@$(SEP)
-	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/glib2/staged install
-	@rm -f glib2/staged/usr/lib/libglib-2.0.la
+	$(TOP)/meson/meson.py compile -C $@/build $(PARALLEL_BUILD)
+	$(TOP)/meson/meson.py install -C $@/build --destdir=$(TOP)/$@/staged
 
-glib2-install: glib2
-	install -D glib2/glib/.libs/libglib-2.0.so.0.3707.0 $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.3707.0
-	$(STRIP) $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.3707.0
+glib2-install:
+	install -D glib2/staged/usr/lib/libglib-2.0.so.0.7400.7 $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.7400.7
+	$(STRIP) $(INSTALLDIR)/glib2/usr/lib/libglib-2.0.so.0.7400.7
 	-@rm -rf $(INSTALLDIR)/glib2/usr/share
-	cd $(INSTALLDIR)/glib2/usr/lib && \
-		ln -sf libglib-2.0.so.0.3707.0 libglib-2.0.so.0 && \
-		ln -sf libglib-2.0.so.0.3707.0 libglib-2.0.so
+	cd $(INSTALLDIR)/glib2/usr/lib && ln -sf libglib-2.0.so.0.7400.7 libglib-2.0.so.0 && ln -sf libglib-2.0.so.0.7400.7 libglib-2.0.so
 
 glib2-clean:
-	-@$(MAKE) -C glib2 distclean
-	@rm -rf glib2/staged
-	@rm -f glib2/stamp-h1
+	@rm -rf glib2/build
+	@rm -f glib2/meson-cross.txt
 	$(call unpatch_files,glib2)
 
 irqbalance/stamp-h1:
 	$(call patch_files,irqbalance)
 	cd irqbalance && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET),) -I$(TOP)/zlib/staged/usr/include" \
-		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/.libs,) -L$(TOP)/zlib/staged/usr/lib" \
-		LIBS="$(TOP)/libffi/staged/usr/lib/libffi.so $(TOP)/libiconv/staged/usr/lib/libiconv.so $(if $(TCONFIG_NGINX),$(TOP)/$(PCRE_TARGET)/.libs/libpcre.so,) $(TOP)/zlib/staged/usr/lib/libz.so" \
-		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2" \
+		CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CPPFLAGS="-I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+		LDFLAGS="-L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib,) -Wl,--gc-sections" \
+		LIBS="-lffi -liconv -lz $(if $(TCONFIG_NGINX),-lpcre2-8,)" \
+		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/glib2/staged/usr/include/glib-2.0" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
-		$(CONFIGURE) --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \
+		$(CONFIGURE) --target=arm-linux --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \
 			--with-systemd=no --without-irqbalance-ui --disable-numa --disable-dependency-tracking
 	@touch $@
 

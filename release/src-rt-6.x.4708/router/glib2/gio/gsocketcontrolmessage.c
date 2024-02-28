@@ -2,10 +2,12 @@
  *
  * Copyright © 2009 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * See the included COPYING file for more information.
  *
@@ -16,6 +18,7 @@
  * SECTION:gsocketcontrolmessage
  * @title: GSocketControlMessage
  * @short_description: A GSocket control message
+ * @include: gio/gio.h
  * @see_also: #GSocket.
  *
  * A #GSocketControlMessage is a special-purpose utility message that
@@ -24,7 +27,7 @@
  *
  * The message can represent some sort of special instruction to or
  * information from the socket or can represent a special kind of
- * transfer to the peer (for example, sending a file description over
+ * transfer to the peer (for example, sending a file descriptor over
  * a UNIX socket).
  *
  * These messages are sent with g_socket_send_message() and received
@@ -53,9 +56,7 @@
 #endif
 
 
-G_DEFINE_ABSTRACT_TYPE (GSocketControlMessage,
-                        g_socket_control_message,
-                        G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (GSocketControlMessage, g_socket_control_message, G_TYPE_OBJECT)
 
 /**
  * g_socket_control_message_get_size:
@@ -117,7 +118,7 @@ g_socket_control_message_get_msg_type (GSocketControlMessage *message)
 /**
  * g_socket_control_message_serialize:
  * @message: a #GSocketControlMessage
- * @data: A buffer to write data to
+ * @data: (not nullable): A buffer to write data to
  *
  * Converts the data in the message to bytes placed in the
  * message.
@@ -176,7 +177,7 @@ g_socket_control_message_deserialize (int      level,
   GSocketControlMessage *message;
   GType *message_types;
   guint n_message_types;
-  int i;
+  guint i;
 
   /* Ensure we know about the built in types */
 #ifndef G_OS_WIN32
@@ -205,7 +206,7 @@ g_socket_control_message_deserialize (int      level,
    * example, the control message may be be discarded if it is deemed
    * empty, see e.g.
    *
-   *  http://git.gnome.org/browse/glib/commit/?id=ec91ed00f14c70cca9749347b8ebc19d72d9885b
+   *  https://gitlab.gnome.org/GNOME/glib/commit/ec91ed00f14c70cca9749347b8ebc19d72d9885b
    *
    * Therefore, it's not appropriate to print a warning about not
    * being able to deserialize the message.

@@ -2,11 +2,14 @@
  *
  * Copyright © 2008, 2009 codethink
  * Copyright © 2009 Red Hat, Inc
+ * Copyright © 2018 Igalia S.L.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  *          Alexander Larsson <alexl@redhat.com>
@@ -25,6 +26,10 @@
 #include "config.h"
 #include "gsocketclient.h"
 
+#ifndef G_OS_WIN32
+#include <netinet/in.h>
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -32,6 +37,7 @@
 #include <gio/gsocketaddressenumerator.h>
 #include <gio/gsocketconnectable.h>
 #include <gio/gsocketconnection.h>
+#include <gio/gioprivate.h>
 #include <gio/gproxyaddressenumerator.h>
 #include <gio/gproxyaddress.h>
 #include <gio/gtask.h>
@@ -39,6 +45,7 @@
 #include <gio/gioerror.h>
 #include <gio/gsocket.h>
 #include <gio/gnetworkaddress.h>
+#include <gio/gnetworking.h>
 #include <gio/gnetworkservice.h>
 #include <gio/gproxy.h>
 #include <gio/gproxyresolver.h>
@@ -49,7 +56,12 @@
 #include <gio/gtlsclientconnection.h>
 #include <gio/ginetaddress.h>
 #include "glibintl.h"
+#include "gmarshal-internal.h"
 
+/* As recommended by RFC 8305 this is the time it waits
+ * on a connection before starting another concurrent attempt.
+ */
+#define HAPPY_EYEBALLS_CONNECTION_ATTEMPT_TIMEOUT_MS 250
 
 /**
  * SECTION:gsocketclient
@@ -137,6 +149,10 @@ create_socket (GSocketClient  *client,
 
   if (client->priv->local_address)
     {
+#ifdef IP_BIND_ADDRESS_NO_PORT
+      g_socket_set_option (socket, IPPROTO_IP, IP_BIND_ADDRESS_NO_PORT, 1, NULL);
+#endif
+
       if (!g_socket_bind (socket,
 			  client->priv->local_address,
 			  FALSE,
@@ -275,7 +291,9 @@ g_socket_client_get_property (GObject    *object,
 	break;
 
       case PROP_TLS_VALIDATION_FLAGS:
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	g_value_set_flags (value, g_socket_client_get_tls_validation_flags (client));
+G_GNUC_END_IGNORE_DEPRECATIONS
 	break;
 
       case PROP_PROXY_RESOLVER:
@@ -326,7 +344,9 @@ g_socket_client_set_property (GObject      *object,
       break;
 
     case PROP_TLS_VALIDATION_FLAGS:
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
       g_socket_client_set_tls_validation_flags (client, g_value_get_flags (value));
+G_GNUC_END_IGNORE_DEPRECATIONS
       break;
 
     case PROP_PROXY_RESOLVER:
@@ -453,7 +473,7 @@ g_socket_client_get_protocol (GSocketClient *client)
  * The sockets created by this object will use of the specified
  * protocol.
  *
- * If @protocol is %0 that means to use the default
+ * If @protocol is %G_SOCKET_PROTOCOL_DEFAULT that means to use the default
  * protocol for the socket family and type.
  *
  * Since: 2.22
@@ -477,7 +497,7 @@ g_socket_client_set_protocol (GSocketClient   *client,
  *
  * See g_socket_client_set_local_address() for details.
  *
- * Returns: (transfer none): a #GSocketAddress or %NULL. Do not free.
+ * Returns: (nullable) (transfer none): a #GSocketAddress or %NULL. Do not free.
  *
  * Since: 2.22
  */
@@ -490,7 +510,7 @@ g_socket_client_get_local_address (GSocketClient *client)
 /**
  * g_socket_client_set_local_address:
  * @client: a #GSocketClient.
- * @address: (allow-none): a #GSocketAddress, or %NULL
+ * @address: (nullable): a #GSocketAddress, or %NULL
  *
  * Sets the local address of the socket client.
  * The sockets created by this object will bound to the
@@ -665,9 +685,15 @@ g_socket_client_set_tls (GSocketClient *client,
  * Gets the TLS validation flags used creating TLS connections via
  * @client.
  *
+ * This function does not work as originally designed and is impossible
+ * to use correctly. See #GSocketClient:tls-validation-flags for more
+ * information.
+ *
  * Returns: the TLS validation flags
  *
  * Since: 2.28
+ *
+ * Deprecated: 2.72: Do not attempt to ignore validation errors.
  */
 GTlsCertificateFlags
 g_socket_client_get_tls_validation_flags (GSocketClient *client)
@@ -683,7 +709,13 @@ g_socket_client_get_tls_validation_flags (GSocketClient *client)
  * Sets the TLS validation flags used when creating TLS connections
  * via @client. The default value is %G_TLS_CERTIFICATE_VALIDATE_ALL.
  *
+ * This function does not work as originally designed and is impossible
+ * to use correctly. See #GSocketClient:tls-validation-flags for more
+ * information.
+ *
  * Since: 2.28
+ *
+ * Deprecated: 2.72: Do not attempt to ignore validation errors.
  */
 void
 g_socket_client_set_tls_validation_flags (GSocketClient        *client,
@@ -721,7 +753,7 @@ g_socket_client_get_proxy_resolver (GSocketClient *client)
 /**
  * g_socket_client_set_proxy_resolver:
  * @client: a #GSocketClient.
- * @proxy_resolver: (allow-none): a #GProxyResolver, or %NULL for the
+ * @proxy_resolver: (nullable): a #GProxyResolver, or %NULL for the
  *   default.
  *
  * Overrides the #GProxyResolver used by @client. You can call this if
@@ -768,92 +800,53 @@ g_socket_client_class_init (GSocketClientClass *class)
    * @client: the #GSocketClient
    * @event: the event that is occurring
    * @connectable: the #GSocketConnectable that @event is occurring on
-   * @connection: the current representation of the connection
+   * @connection: (nullable): the current representation of the connection
    *
    * Emitted when @client's activity on @connectable changes state.
    * Among other things, this can be used to provide progress
    * information about a network connection in the UI. The meanings of
    * the different @event values are as follows:
    *
-   * <variablelist>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_RESOLVING:</term>
-   *     <listitem><para>
-   *       @client is about to look up @connectable in DNS.
-   *       @connection will be %NULL.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_RESOLVED:</term>
-   *     <listitem><para>
-   *       @client has successfully resolved @connectable in DNS.
-   *       @connection will be %NULL.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_CONNECTING:</term>
-   *     <listitem><para>
-   *       @client is about to make a connection to a remote host;
-   *       either a proxy server or the destination server itself.
-   *       @connection is the #GSocketConnection, which is not yet
-   *       connected.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_CONNECTED:</term>
-   *     <listitem><para>
-   *       @client has successfully connected to a remote host.
-   *       @connection is the connected #GSocketConnection.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_PROXY_NEGOTIATING:</term>
-   *     <listitem><para>
-   *       @client is about to negotiate with a proxy to get it to
-   *       connect to @connectable. @connection is the
-   *       #GSocketConnection to the proxy server.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_PROXY_NEGOTIATED:</term>
-   *     <listitem><para>
-   *       @client has negotiated a connection to @connectable through
-   *       a proxy server. @connection is the stream returned from
-   *       g_proxy_connect(), which may or may not be a
-   *       #GSocketConnection.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_TLS_HANDSHAKING:</term>
-   *     <listitem><para>
-   *       @client is about to begin a TLS handshake. @connection is a
-   *       #GTlsClientConnection.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_TLS_HANDSHAKED:</term>
-   *     <listitem><para>
-   *       @client has successfully completed the TLS handshake.
-   *       @connection is a #GTlsClientConnection.
-   *     </para></listitem>
-   *   </varlistentry>
-   *   <varlistentry>
-   *     <term>%G_SOCKET_CLIENT_COMPLETE:</term>
-   *     <listitem><para>
-   *       @client has either successfully connected to @connectable
-   *       (in which case @connection is the #GSocketConnection that
-   *       it will be returning to the caller) or has failed (in which
-   *       case @connection is %NULL and the client is about to return
-   *       an error).
-   *     </para></listitem>
-   *   </varlistentry>
-   * </variablelist>
+   * - %G_SOCKET_CLIENT_RESOLVING: @client is about to look up @connectable
+   *   in DNS. @connection will be %NULL.
+   *
+   * - %G_SOCKET_CLIENT_RESOLVED:  @client has successfully resolved
+   *   @connectable in DNS. @connection will be %NULL.
+   *
+   * - %G_SOCKET_CLIENT_CONNECTING: @client is about to make a connection
+   *   to a remote host; either a proxy server or the destination server
+   *   itself. @connection is the #GSocketConnection, which is not yet
+   *   connected.  Since GLib 2.40, you can access the remote
+   *   address via g_socket_connection_get_remote_address().
+   *
+   * - %G_SOCKET_CLIENT_CONNECTED: @client has successfully connected
+   *   to a remote host. @connection is the connected #GSocketConnection.
+   *
+   * - %G_SOCKET_CLIENT_PROXY_NEGOTIATING: @client is about to negotiate
+   *   with a proxy to get it to connect to @connectable. @connection is
+   *   the #GSocketConnection to the proxy server.
+   *
+   * - %G_SOCKET_CLIENT_PROXY_NEGOTIATED: @client has negotiated a
+   *   connection to @connectable through a proxy server. @connection is
+   *   the stream returned from g_proxy_connect(), which may or may not
+   *   be a #GSocketConnection.
+   *
+   * - %G_SOCKET_CLIENT_TLS_HANDSHAKING: @client is about to begin a TLS
+   *   handshake. @connection is a #GTlsClientConnection.
+   *
+   * - %G_SOCKET_CLIENT_TLS_HANDSHAKED: @client has successfully completed
+   *   the TLS handshake. @connection is a #GTlsClientConnection.
+   *
+   * - %G_SOCKET_CLIENT_COMPLETE: @client has either successfully connected
+   *   to @connectable (in which case @connection is the #GSocketConnection
+   *   that it will be returning to the caller) or has failed (in which
+   *   case @connection is %NULL and the client is about to return an error).
    *
    * Each event except %G_SOCKET_CLIENT_COMPLETE may be emitted
    * multiple times (or not at all) for a given connectable (in
    * particular, if @client ends up attempting to connect to more than
    * one address). However, if @client emits the #GSocketClient::event
-   * signal at all for a given connectable, that it will always emit
+   * signal at all for a given connectable, then it will always emit
    * it with %G_SOCKET_CLIENT_COMPLETE when it is done.
    *
    * Note that there may be additional #GSocketClientEvent values in
@@ -867,11 +860,14 @@ g_socket_client_class_init (GSocketClientClass *class)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GSocketClientClass, event),
 		  NULL, NULL,
-		  NULL,
+		  _g_cclosure_marshal_VOID__ENUM_OBJECT_OBJECT,
 		  G_TYPE_NONE, 3,
 		  G_TYPE_SOCKET_CLIENT_EVENT,
 		  G_TYPE_SOCKET_CONNECTABLE,
 		  G_TYPE_IO_STREAM);
+  g_signal_set_va_marshaller (signals[EVENT],
+                              G_TYPE_FROM_CLASS (class),
+                              _g_cclosure_marshal_VOID__ENUM_OBJECT_OBJECTv);
 
   g_object_class_install_property (gobject_class, PROP_FAMILY,
 				   g_param_spec_enum ("family",
@@ -938,6 +934,29 @@ g_socket_client_class_init (GSocketClientClass *class)
 							 G_PARAM_CONSTRUCT |
 							 G_PARAM_READWRITE |
 							 G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GSocketClient:tls-validation-flags:
+   *
+   * The TLS validation flags used when creating TLS connections. The
+   * default value is %G_TLS_CERTIFICATE_VALIDATE_ALL.
+   *
+   * GLib guarantees that if certificate verification fails, at least one
+   * flag will be set, but it does not guarantee that all possible flags
+   * will be set. Accordingly, you may not safely decide to ignore any
+   * particular type of error. For example, it would be incorrect to mask
+   * %G_TLS_CERTIFICATE_EXPIRED if you want to allow expired certificates,
+   * because this could potentially be the only error flag set even if
+   * other problems exist with the certificate. Therefore, there is no
+   * safe way to use this property. This is not a horrible problem,
+   * though, because you should not be attempting to ignore validation
+   * errors anyway. If you really must ignore TLS certificate errors,
+   * connect to the #GSocketClient::event signal, wait for it to be
+   * emitted with %G_SOCKET_CLIENT_TLS_HANDSHAKING, and use that to
+   * connect to #GTlsConnection::accept-certificate.
+   *
+   * Deprecated: 2.72: Do not attempt to ignore validation errors.
+   */
   g_object_class_install_property (gobject_class, PROP_TLS_VALIDATION_FLAGS,
 				   g_param_spec_flags ("tls-validation-flags",
 						       P_("TLS validation flags"),
@@ -946,7 +965,8 @@ g_socket_client_class_init (GSocketClientClass *class)
 						       G_TLS_CERTIFICATE_VALIDATE_ALL,
 						       G_PARAM_CONSTRUCT |
 						       G_PARAM_READWRITE |
-						       G_PARAM_STATIC_STRINGS));
+						       G_PARAM_STATIC_STRINGS |
+						       G_PARAM_DEPRECATED));
 
   /**
    * GSocketClient:proxy-resolver:
@@ -967,7 +987,7 @@ g_socket_client_class_init (GSocketClientClass *class)
 
 static void
 g_socket_client_emit_event (GSocketClient       *client,
-			    GSocketClientEvent  event,
+			    GSocketClientEvent   event,
 			    GSocketConnectable  *connectable,
 			    GIOStream           *connection)
 {
@@ -975,11 +995,77 @@ g_socket_client_emit_event (GSocketClient       *client,
 		 event, connectable, connection);
 }
 
+/* Originally, GSocketClient returned whatever error occured last. Turns
+ * out this doesn't work well in practice. Consider the following case:
+ * DNS returns an IPv4 and IPv6 address. First we'll connect() to the
+ * IPv4 address, and say that succeeds, but TLS is enabled and the TLS
+ * handshake fails. Then we try the IPv6 address and receive ENETUNREACH
+ * because IPv6 isn't supported. We wind up returning NETWORK_UNREACHABLE
+ * even though the address can be pinged and a TLS error would be more
+ * appropriate. So instead, we now try to return the error corresponding
+ * to the latest attempted GSocketClientEvent in the connection process.
+ * TLS errors take precedence over proxy errors, which take precedence
+ * over connect() errors, which take precedence over DNS errors.
+ *
+ * Note that the example above considers a sync codepath, but this is an
+ * issue for the async codepath too, where events and errors may occur
+ * in confusing orders.
+ */
+typedef struct
+{
+  GError *tmp_error;
+  GError *best_error;
+  GSocketClientEvent best_error_event;
+} SocketClientErrorInfo;
+
+static SocketClientErrorInfo *
+socket_client_error_info_new (void)
+{
+  return g_new0 (SocketClientErrorInfo, 1);
+}
+
+static void
+socket_client_error_info_free (SocketClientErrorInfo *info)
+{
+  g_assert (info->tmp_error == NULL);
+  g_clear_error (&info->best_error);
+  g_free (info);
+}
+
+static void
+consider_tmp_error (SocketClientErrorInfo *info,
+                    GSocketClientEvent     event)
+{
+  if (info->tmp_error == NULL)
+    return;
+
+  /* If we ever add more GSocketClientEvents in the future, then we'll
+   * no longer be able to use >= for this comparison, because future
+   * events will compare greater than G_SOCKET_CLIENT_COMPLETE. Until
+   * then, this is convenient. Note G_SOCKET_CLIENT_RESOLVING is 0 so we
+   * need to use >= here or those errors would never be set. That means
+   * if we get two errors on the same GSocketClientEvent, we wind up
+   * preferring the last one, which is fine.
+   */
+  g_assert (event <= G_SOCKET_CLIENT_COMPLETE);
+  if (event >= info->best_error_event)
+    {
+      g_clear_error (&info->best_error);
+      info->best_error = info->tmp_error;
+      info->tmp_error = NULL;
+      info->best_error_event = event;
+    }
+  else
+    {
+      g_clear_error (&info->tmp_error);
+    }
+}
+
 /**
  * g_socket_client_connect:
  * @client: a #GSocketClient.
  * @connectable: a #GSocketConnectable specifying the remote address.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Tries to resolve the @connectable and make a network connection to it.
@@ -1013,9 +1099,10 @@ g_socket_client_connect (GSocketClient       *client,
 {
   GIOStream *connection = NULL;
   GSocketAddressEnumerator *enumerator = NULL;
-  GError *last_error, *tmp_error;
+  SocketClientErrorInfo *error_info;
+  gboolean ever_resolved = FALSE;
 
-  last_error = NULL;
+  error_info = socket_client_error_info_new ();
 
   if (can_use_proxy (client))
     {
@@ -1040,43 +1127,38 @@ g_socket_client_connect (GSocketClient       *client,
 
       if (g_cancellable_is_cancelled (cancellable))
 	{
-	  g_clear_error (error);
-	  g_cancellable_set_error_if_cancelled (cancellable, error);
+	  g_clear_error (&error_info->best_error);
+	  g_cancellable_set_error_if_cancelled (cancellable, &error_info->best_error);
 	  break;
 	}
 
-      tmp_error = NULL;
-      g_socket_client_emit_event (client, G_SOCKET_CLIENT_RESOLVING,
-				  connectable, NULL);
+      if (!ever_resolved)
+	{
+	  g_socket_client_emit_event (client, G_SOCKET_CLIENT_RESOLVING,
+				      connectable, NULL);
+	}
       address = g_socket_address_enumerator_next (enumerator, cancellable,
-	      					  &tmp_error);
+						  &error_info->tmp_error);
+      consider_tmp_error (error_info, G_SOCKET_CLIENT_RESOLVING);
+      if (!ever_resolved)
+	{
+	  g_socket_client_emit_event (client, G_SOCKET_CLIENT_RESOLVED,
+				      connectable, NULL);
+	  ever_resolved = TRUE;
+	}
 
       if (address == NULL)
 	{
-	  if (tmp_error)
-	    {
-	      g_clear_error (&last_error);
-	      g_propagate_error (error, tmp_error);
-	    }
-	  else if (last_error)
-	    {
-	      g_propagate_error (error, last_error);
-	    }
-	  else
-            g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                                 _("Unknown error on connect"));
+          /* Enumeration is finished. */
+          g_assert (&error_info->best_error != NULL);
 	  break;
 	}
-      g_socket_client_emit_event (client, G_SOCKET_CLIENT_RESOLVED,
-				  connectable, NULL);
 
       using_proxy = (G_IS_PROXY_ADDRESS (address) &&
 		     client->priv->enable_proxy);
 
-      /* clear error from previous attempt */
-      g_clear_error (&last_error);
-
-      socket = create_socket (client, address, &last_error);
+      socket = create_socket (client, address, &error_info->tmp_error);
+      consider_tmp_error (error_info, G_SOCKET_CLIENT_CONNECTING);
       if (socket == NULL)
 	{
 	  g_object_unref (address);
@@ -1084,16 +1166,19 @@ g_socket_client_connect (GSocketClient       *client,
 	}
 
       connection = (GIOStream *)g_socket_connection_factory_create_connection (socket);
+      g_socket_connection_set_cached_remote_address ((GSocketConnection*)connection, address);
       g_socket_client_emit_event (client, G_SOCKET_CLIENT_CONNECTING, connectable, connection);
 
       if (g_socket_connection_connect (G_SOCKET_CONNECTION (connection),
-				       address, cancellable, &last_error))
+				       address, cancellable, &error_info->tmp_error))
 	{
+          g_socket_connection_set_cached_remote_address ((GSocketConnection*)connection, NULL);
 	  g_socket_client_emit_event (client, G_SOCKET_CLIENT_CONNECTED, connectable, connection);
 	}
       else
 	{
-	  clarify_connect_error (last_error, connectable, address);
+	  clarify_connect_error (error_info->tmp_error, connectable, address);
+          consider_tmp_error (error_info, G_SOCKET_CLIENT_CONNECTING);
 	  g_object_unref (connection);
 	  connection = NULL;
 	}
@@ -1105,7 +1190,6 @@ g_socket_client_connect (GSocketClient       *client,
 	  GProxy *proxy;
 
 	  protocol = g_proxy_address_get_protocol (proxy_addr);
-	  proxy = g_proxy_get_default_for_protocol (protocol);
 
           /* The connection should not be anything else then TCP Connection,
            * but let's put a safety guard in case
@@ -1115,14 +1199,19 @@ g_socket_client_connect (GSocketClient       *client,
               g_critical ("Trying to proxy over non-TCP connection, this is "
                           "most likely a bug in GLib IO library.");
 
-              g_set_error_literal (&last_error,
+              g_set_error_literal (&error_info->tmp_error,
                   G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
                   _("Proxying over a non-TCP connection is not supported."));
+              consider_tmp_error (error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
 
 	      g_object_unref (connection);
 	      connection = NULL;
             }
-          else if (proxy)
+	  else if (g_hash_table_contains (client->priv->app_proxies, protocol))
+	    {
+	      application_proxy = TRUE;
+	    }
+          else if ((proxy = g_proxy_get_default_for_protocol (protocol)))
 	    {
 	      GIOStream *proxy_connection;
 
@@ -1131,7 +1220,9 @@ g_socket_client_connect (GSocketClient       *client,
 						  connection,
 						  proxy_addr,
 						  cancellable,
-						  &last_error);
+						  &error_info->tmp_error);
+	      consider_tmp_error (error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
+
 	      g_object_unref (connection);
 	      connection = proxy_connection;
 	      g_object_unref (proxy);
@@ -1139,18 +1230,14 @@ g_socket_client_connect (GSocketClient       *client,
 	      if (connection)
 		g_socket_client_emit_event (client, G_SOCKET_CLIENT_PROXY_NEGOTIATED, connectable, connection);
 	    }
-	  else if (!g_hash_table_lookup_extended (client->priv->app_proxies,
-						  protocol, NULL, NULL))
-	    {
-	      g_set_error (&last_error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-			   _("Proxy protocol '%s' is not supported."),
-			   protocol);
-	      g_object_unref (connection);
-	      connection = NULL;
-	    }
 	  else
 	    {
-	      application_proxy = TRUE;
+	      g_set_error (&error_info->tmp_error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			   _("Proxy protocol “%s” is not supported."),
+			   protocol);
+	      consider_tmp_error (error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
+	      g_object_unref (connection);
+	      connection = NULL;
 	    }
 	}
 
@@ -1158,26 +1245,33 @@ g_socket_client_connect (GSocketClient       *client,
 	{
 	  GIOStream *tlsconn;
 
-	  tlsconn = g_tls_client_connection_new (connection, connectable, &last_error);
+	  tlsconn = g_tls_client_connection_new (connection, connectable, &error_info->tmp_error);
 	  g_object_unref (connection);
 	  connection = tlsconn;
 
 	  if (tlsconn)
 	    {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	      g_tls_client_connection_set_validation_flags (G_TLS_CLIENT_CONNECTION (tlsconn),
                                                             client->priv->tls_validation_flags);
+G_GNUC_END_IGNORE_DEPRECATIONS
 	      g_socket_client_emit_event (client, G_SOCKET_CLIENT_TLS_HANDSHAKING, connectable, connection);
 	      if (g_tls_connection_handshake (G_TLS_CONNECTION (tlsconn),
-					      cancellable, &last_error))
+					      cancellable, &error_info->tmp_error))
 		{
 		  g_socket_client_emit_event (client, G_SOCKET_CLIENT_TLS_HANDSHAKED, connectable, connection);
 		}
 	      else
 		{
+		  consider_tmp_error (error_info, G_SOCKET_CLIENT_TLS_HANDSHAKING);
 		  g_object_unref (tlsconn);
 		  connection = NULL;
 		}
 	    }
+          else
+            {
+              consider_tmp_error (error_info, G_SOCKET_CLIENT_TLS_HANDSHAKING);
+            }
 	}
 
       if (connection && !G_IS_SOCKET_CONNECTION (connection))
@@ -1194,6 +1288,10 @@ g_socket_client_connect (GSocketClient       *client,
     }
   g_object_unref (enumerator);
 
+  if (!connection)
+    g_propagate_error (error, g_steal_pointer (&error_info->best_error));
+  socket_client_error_info_free (error_info);
+
   g_socket_client_emit_event (client, G_SOCKET_CLIENT_COMPLETE, connectable, connection);
   return G_SOCKET_CONNECTION (connection);
 }
@@ -1203,7 +1301,7 @@ g_socket_client_connect (GSocketClient       *client,
  * @client: a #GSocketClient
  * @host_and_port: the name and optionally port of the host to connect to
  * @default_port: the default port to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @error: a pointer to a #GError, or %NULL
  *
  * This is a helper function for g_socket_client_connect().
@@ -1267,7 +1365,7 @@ g_socket_client_connect_to_host (GSocketClient  *client,
  * @client: a #GSocketConnection
  * @domain: a domain name
  * @service: the name of the service to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @error: a pointer to a #GError, or %NULL
  *
  * Attempts to create a TCP connection to a service.
@@ -1310,7 +1408,7 @@ g_socket_client_connect_to_service (GSocketClient  *client,
  * @client: a #GSocketClient
  * @uri: A network URI
  * @default_port: the default port to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @error: a pointer to a #GError, or %NULL
  *
  * This is a helper function for g_socket_client_connect().
@@ -1362,52 +1460,160 @@ g_socket_client_connect_to_uri (GSocketClient  *client,
 
 typedef struct
 {
-  GTask *task;
+  GTask *task; /* unowned */
   GSocketClient *client;
 
   GSocketConnectable *connectable;
   GSocketAddressEnumerator *enumerator;
-  GProxyAddress *proxy_addr;
-  GSocketAddress *current_addr;
-  GSocket *current_socket;
-  GIOStream *connection;
+  GCancellable *enumeration_cancellable;
+  GCancellable *enumeration_parent_cancellable;  /* (nullable) (owned) */
+  gulong enumeration_cancelled_id;
 
-  GError *last_error;
+  GSList *connection_attempts;
+  GSList *successful_connections;
+  SocketClientErrorInfo *error_info;
+
+  gboolean enumerated_at_least_once;
+  gboolean enumeration_completed;
+  gboolean connection_in_progress;
+  gboolean completed;
 } GSocketClientAsyncConnectData;
+
+static void connection_attempt_unref (gpointer attempt);
 
 static void
 g_socket_client_async_connect_data_free (GSocketClientAsyncConnectData *data)
 {
+  data->task = NULL;
   g_clear_object (&data->connectable);
   g_clear_object (&data->enumerator);
-  g_clear_object (&data->proxy_addr);
-  g_clear_object (&data->current_addr);
-  g_clear_object (&data->current_socket);
-  g_clear_object (&data->connection);
 
-  g_clear_error (&data->last_error);
+  g_cancellable_disconnect (data->enumeration_parent_cancellable, data->enumeration_cancelled_id);
+  g_clear_object (&data->enumeration_parent_cancellable);
+  data->enumeration_cancelled_id = 0;
+  g_clear_object (&data->enumeration_cancellable);
+
+  g_slist_free_full (data->connection_attempts, connection_attempt_unref);
+  g_slist_free_full (data->successful_connections, connection_attempt_unref);
+
+  g_clear_pointer (&data->error_info, socket_client_error_info_free);
 
   g_slice_free (GSocketClientAsyncConnectData, data);
 }
 
-static void
-g_socket_client_async_connect_complete (GSocketClientAsyncConnectData *data)
+typedef struct
 {
-  g_assert (data->connection);
+  GSocketAddress *address;
+  GSocket *socket;
+  GIOStream *connection;
+  GProxyAddress *proxy_addr;
+  GSocketClientAsyncConnectData *data; /* unowned */
+  GSource *timeout_source;
+  GCancellable *cancellable;
+  GCancellable *task_cancellable;  /* (owned); this is equal to g_task_get_cancellable (ConnectionAttempt.data->task), but with a longer lifetime */
+  gulong cancelled_id;
+  grefcount ref;
+} ConnectionAttempt;
 
-  if (!G_IS_SOCKET_CONNECTION (data->connection))
+static ConnectionAttempt *
+connection_attempt_new (void)
+{
+  ConnectionAttempt *attempt = g_new0 (ConnectionAttempt, 1);
+  g_ref_count_init (&attempt->ref);
+  return attempt;
+}
+
+static ConnectionAttempt *
+connection_attempt_ref (ConnectionAttempt *attempt)
+{
+  g_ref_count_inc (&attempt->ref);
+  return attempt;
+}
+
+static void
+connection_attempt_unref (gpointer pointer)
+{
+  ConnectionAttempt *attempt = pointer;
+  if (g_ref_count_dec (&attempt->ref))
+    {
+      g_clear_object (&attempt->address);
+      g_clear_object (&attempt->socket);
+      g_clear_object (&attempt->connection);
+      g_cancellable_disconnect (attempt->task_cancellable, attempt->cancelled_id);
+      g_clear_object (&attempt->task_cancellable);
+      attempt->cancelled_id = 0;
+      g_clear_object (&attempt->cancellable);
+      g_clear_object (&attempt->proxy_addr);
+      if (attempt->timeout_source)
+        {
+          g_source_destroy (attempt->timeout_source);
+          g_source_unref (attempt->timeout_source);
+        }
+      g_free (attempt);
+    }
+}
+
+static void
+connection_attempt_remove (ConnectionAttempt *attempt)
+{
+  attempt->data->connection_attempts = g_slist_remove (attempt->data->connection_attempts, attempt);
+  connection_attempt_unref (attempt);
+}
+
+static void
+cancel_all_attempts (GSocketClientAsyncConnectData *data)
+{
+  GSList *l;
+
+  for (l = data->connection_attempts; l; l = g_slist_next (l))
+    {
+      ConnectionAttempt *attempt_entry = l->data;
+      g_cancellable_cancel (attempt_entry->cancellable);
+      connection_attempt_unref (attempt_entry);
+    }
+  g_slist_free (data->connection_attempts);
+  data->connection_attempts = NULL;
+
+  g_slist_free_full (data->successful_connections, connection_attempt_unref);
+  data->successful_connections = NULL;
+
+  g_cancellable_cancel (data->enumeration_cancellable);
+}
+
+static void
+g_socket_client_async_connect_complete (ConnectionAttempt *attempt)
+{
+  GSocketClientAsyncConnectData *data = attempt->data;
+  GError *error = NULL;
+  g_assert (attempt->connection);
+  g_assert (!data->completed);
+
+  if (!G_IS_SOCKET_CONNECTION (attempt->connection))
     {
       GSocketConnection *wrapper_connection;
 
-      wrapper_connection = g_tcp_wrapper_connection_new (data->connection,
-							 data->current_socket);
-      g_object_unref (data->connection);
-      data->connection = (GIOStream *)wrapper_connection;
+      wrapper_connection = g_tcp_wrapper_connection_new (attempt->connection, attempt->socket);
+      g_object_unref (attempt->connection);
+      attempt->connection = (GIOStream *)wrapper_connection;
     }
 
-  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_COMPLETE, data->connectable, data->connection);
-  g_task_return_pointer (data->task, data->connection, g_object_unref);
-  data->connection = NULL;
+  data->completed = TRUE;
+  cancel_all_attempts (data);
+
+  if (g_cancellable_set_error_if_cancelled (g_task_get_cancellable (data->task), &error))
+    {
+      g_debug ("GSocketClient: Connection cancelled!");
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_COMPLETE, data->connectable, NULL);
+      g_task_return_error (data->task, g_steal_pointer (&error));
+    }
+  else
+    {
+      g_debug ("GSocketClient: Connection successful!");
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_COMPLETE, data->connectable, attempt->connection);
+      g_task_return_pointer (data->task, g_steal_pointer (&attempt->connection), g_object_unref);
+    }
+
+  connection_attempt_unref (attempt);
   g_object_unref (data->task);
 }
 
@@ -1418,81 +1624,90 @@ g_socket_client_enumerator_callback (GObject      *object,
 				     gpointer      user_data);
 
 static void
-set_last_error (GSocketClientAsyncConnectData *data,
-		GError *error)
+enumerator_next_async (GSocketClientAsyncConnectData *data,
+                       gboolean                       add_task_ref)
 {
-  g_clear_error (&data->last_error);
-  data->last_error = error;
-}
+  /* Each enumeration takes a ref. This arg just avoids repeated unrefs when
+     an enumeration starts another enumeration */
+  if (add_task_ref)
+    g_object_ref (data->task);
 
-static void
-enumerator_next_async (GSocketClientAsyncConnectData *data)
-{
-  /* We need to cleanup the state */
-  g_clear_object (&data->current_socket);
-  g_clear_object (&data->current_addr);
-  g_clear_object (&data->proxy_addr);
-  g_clear_object (&data->connection);
-
-  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_RESOLVING, data->connectable, NULL);
+  if (!data->enumerated_at_least_once)
+    g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_RESOLVING, data->connectable, NULL);
+  g_debug ("GSocketClient: Starting new address enumeration");
   g_socket_address_enumerator_next_async (data->enumerator,
-					  g_task_get_cancellable (data->task),
+					  data->enumeration_cancellable,
 					  g_socket_client_enumerator_callback,
 					  data);
 }
+
+static void try_next_connection_or_finish (GSocketClientAsyncConnectData *, gboolean);
 
 static void
 g_socket_client_tls_handshake_callback (GObject      *object,
 					GAsyncResult *result,
 					gpointer      user_data)
 {
-  GSocketClientAsyncConnectData *data = user_data;
+  ConnectionAttempt *attempt = user_data;
+  GSocketClientAsyncConnectData *data = attempt->data;
 
   if (g_tls_connection_handshake_finish (G_TLS_CONNECTION (object),
 					 result,
-					 &data->last_error))
+					 &data->error_info->tmp_error))
     {
-      g_object_unref (data->connection);
-      data->connection = G_IO_STREAM (object);
+      g_object_unref (attempt->connection);
+      attempt->connection = G_IO_STREAM (object);
 
-      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_TLS_HANDSHAKED, data->connectable, data->connection);
-      g_socket_client_async_connect_complete (data);
+      g_debug ("GSocketClient: TLS handshake succeeded");
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_TLS_HANDSHAKED, data->connectable, attempt->connection);
+      g_socket_client_async_connect_complete (attempt);
     }
   else
     {
       g_object_unref (object);
-      enumerator_next_async (data);
+      connection_attempt_unref (attempt);
+
+      g_debug ("GSocketClient: TLS handshake failed: %s", data->error_info->tmp_error->message);
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_TLS_HANDSHAKING);
+      try_next_connection_or_finish (data, TRUE);
     }
 }
 
 static void
-g_socket_client_tls_handshake (GSocketClientAsyncConnectData *data)
+g_socket_client_tls_handshake (ConnectionAttempt *attempt)
 {
+  GSocketClientAsyncConnectData *data = attempt->data;
   GIOStream *tlsconn;
 
   if (!data->client->priv->tls)
     {
-      g_socket_client_async_connect_complete (data);
+      g_socket_client_async_connect_complete (attempt);
       return;
     }
 
-  tlsconn = g_tls_client_connection_new (data->connection,
+  g_debug ("GSocketClient: Starting TLS handshake");
+  tlsconn = g_tls_client_connection_new (attempt->connection,
 					 data->connectable,
-					 &data->last_error);
+					 &data->error_info->tmp_error);
   if (tlsconn)
     {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
       g_tls_client_connection_set_validation_flags (G_TLS_CLIENT_CONNECTION (tlsconn),
                                                     data->client->priv->tls_validation_flags);
+G_GNUC_END_IGNORE_DEPRECATIONS
       g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_TLS_HANDSHAKING, data->connectable, G_IO_STREAM (tlsconn));
       g_tls_connection_handshake_async (G_TLS_CONNECTION (tlsconn),
 					G_PRIORITY_DEFAULT,
 					g_task_get_cancellable (data->task),
 					g_socket_client_tls_handshake_callback,
-					data);
+					attempt);
     }
   else
     {
-      enumerator_next_async (data);
+      connection_attempt_unref (attempt);
+
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_TLS_HANDSHAKING);
+      try_next_connection_or_finish (data, TRUE);
     }
 }
 
@@ -1501,23 +1716,157 @@ g_socket_client_proxy_connect_callback (GObject      *object,
 					GAsyncResult *result,
 					gpointer      user_data)
 {
-  GSocketClientAsyncConnectData *data = user_data;
+  ConnectionAttempt *attempt = user_data;
+  GSocketClientAsyncConnectData *data = attempt->data;
 
-  g_object_unref (data->connection);
-  data->connection = g_proxy_connect_finish (G_PROXY (object),
-					     result,
-					     &data->last_error);
-  if (data->connection)
+  g_object_unref (attempt->connection);
+  attempt->connection = g_proxy_connect_finish (G_PROXY (object),
+                                                result,
+                                                &data->error_info->tmp_error);
+  if (attempt->connection)
     {
-      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_PROXY_NEGOTIATED, data->connectable, data->connection);
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_PROXY_NEGOTIATED, data->connectable, attempt->connection);
+      g_socket_client_tls_handshake (attempt);
     }
   else
     {
-      enumerator_next_async (data);
+      connection_attempt_unref (attempt);
+
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
+      try_next_connection_or_finish (data, TRUE);
+    }
+}
+
+static void
+complete_connection_with_error (GSocketClientAsyncConnectData *data,
+                                GError                        *error)
+{
+  g_debug ("GSocketClient: Connection failed: %s", error->message);
+  g_assert (!data->completed);
+
+  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_COMPLETE, data->connectable, NULL);
+  data->completed = TRUE;
+  cancel_all_attempts (data);
+  g_task_return_error (data->task, error);
+}
+
+static gboolean
+task_completed_or_cancelled (GSocketClientAsyncConnectData *data)
+{
+  GTask *task = data->task;
+  GCancellable *cancellable = g_task_get_cancellable (task);
+  GError *error = NULL;
+
+  if (data->completed)
+    return TRUE;
+  else if (g_cancellable_set_error_if_cancelled (cancellable, &error))
+    {
+      complete_connection_with_error (data, g_steal_pointer (&error));
+      return TRUE;
+    }
+  else
+    return FALSE;
+}
+
+static gboolean
+try_next_successful_connection (GSocketClientAsyncConnectData *data)
+{
+  ConnectionAttempt *attempt;
+  const gchar *protocol;
+  GProxy *proxy;
+
+  if (data->connection_in_progress)
+    return FALSE;
+
+  g_assert (data->successful_connections != NULL);
+  attempt = data->successful_connections->data;
+  g_assert (attempt != NULL);
+  data->successful_connections = g_slist_remove (data->successful_connections, attempt);
+  data->connection_in_progress = TRUE;
+
+  g_debug ("GSocketClient: Starting application layer connection");
+
+  if (!attempt->proxy_addr)
+    {
+      g_socket_client_tls_handshake (g_steal_pointer (&attempt));
+      return TRUE;
+    }
+
+  protocol = g_proxy_address_get_protocol (attempt->proxy_addr);
+
+  /* The connection should not be anything other than TCP,
+   * but let's put a safety guard in case
+   */
+  if (!G_IS_TCP_CONNECTION (attempt->connection))
+    {
+      g_critical ("Trying to proxy over non-TCP connection, this is "
+          "most likely a bug in GLib IO library.");
+
+      g_set_error_literal (&data->error_info->tmp_error,
+          G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+          _("Proxying over a non-TCP connection is not supported."));
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
+    }
+  else if (g_hash_table_contains (data->client->priv->app_proxies, protocol))
+    {
+      /* Simply complete the connection, we don't want to do TLS handshake
+       * as the application proxy handling may need proxy handshake first */
+      g_socket_client_async_connect_complete (g_steal_pointer (&attempt));
+      return TRUE;
+    }
+  else if ((proxy = g_proxy_get_default_for_protocol (protocol)))
+    {
+      GIOStream *connection = attempt->connection;
+      GProxyAddress *proxy_addr = attempt->proxy_addr;
+
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_PROXY_NEGOTIATING, data->connectable, attempt->connection);
+      g_debug ("GSocketClient: Starting proxy connection");
+      g_proxy_connect_async (proxy,
+                             connection,
+                             proxy_addr,
+                             g_task_get_cancellable (data->task),
+                             g_socket_client_proxy_connect_callback,
+                             g_steal_pointer (&attempt));
+      g_object_unref (proxy);
+      return TRUE;
+    }
+  else
+    {
+      g_set_error (&data->error_info->tmp_error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+          _("Proxy protocol “%s” is not supported."),
+          protocol);
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_PROXY_NEGOTIATING);
+    }
+
+  data->connection_in_progress = FALSE;
+  g_clear_pointer (&attempt, connection_attempt_unref);
+  return FALSE; /* All non-return paths are failures */
+}
+
+static void
+try_next_connection_or_finish (GSocketClientAsyncConnectData *data,
+                               gboolean                       end_current_connection)
+{
+  if (end_current_connection)
+    data->connection_in_progress = FALSE;
+
+  if (data->connection_in_progress)
+    return;
+
+  /* Keep trying successful connections until one works, each iteration pops one */
+  while (data->successful_connections)
+    {
+      if (try_next_successful_connection (data))
+        return;
+    }
+
+  if (!data->enumeration_completed)
+    {
+      enumerator_next_async (data, FALSE);
       return;
     }
 
-  g_socket_client_tls_handshake (data);
+  complete_connection_with_error (data, g_steal_pointer (&data->error_info->best_error));
 }
 
 static void
@@ -1525,79 +1874,83 @@ g_socket_client_connected_callback (GObject      *source,
 				    GAsyncResult *result,
 				    gpointer      user_data)
 {
-  GSocketClientAsyncConnectData *data = user_data;
-  GError *error = NULL;
-  GProxy *proxy;
-  const gchar *protocol;
+  ConnectionAttempt *attempt = user_data;
+  GSocketClientAsyncConnectData *data = attempt->data;
+
+  if (task_completed_or_cancelled (data) || g_cancellable_is_cancelled (attempt->cancellable))
+    {
+      g_object_unref (data->task);
+      connection_attempt_unref (attempt);
+      return;
+    }
+
+  if (attempt->timeout_source)
+    {
+      g_source_destroy (attempt->timeout_source);
+      g_clear_pointer (&attempt->timeout_source, g_source_unref);
+    }
 
   if (!g_socket_connection_connect_finish (G_SOCKET_CONNECTION (source),
-					   result, &error))
+					   result, &data->error_info->tmp_error))
     {
-      clarify_connect_error (error, data->connectable,
-			     data->current_addr);
-      set_last_error (data, error);
+      if (!g_cancellable_is_cancelled (attempt->cancellable))
+        {
+          g_debug ("GSocketClient: Connection attempt failed: %s", data->error_info->tmp_error->message);
+          clarify_connect_error (data->error_info->tmp_error, data->connectable, attempt->address);
+          consider_tmp_error (data->error_info, G_SOCKET_CLIENT_CONNECTING);
+          connection_attempt_remove (attempt);
+          connection_attempt_unref (attempt);
+          try_next_connection_or_finish (data, FALSE);
+        }
+      else /* Silently ignore cancelled attempts */
+        {
+          g_clear_error (&data->error_info->tmp_error);
+          g_object_unref (data->task);
+          connection_attempt_unref (attempt);
+        }
 
-      /* try next one */
-      enumerator_next_async (data);
       return;
     }
 
-  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_CONNECTED, data->connectable, data->connection);
+  g_socket_connection_set_cached_remote_address ((GSocketConnection*)attempt->connection, NULL);
+  g_debug ("GSocketClient: TCP connection successful");
+  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_CONNECTED, data->connectable, attempt->connection);
 
   /* wrong, but backward compatible */
-  g_socket_set_blocking (data->current_socket, TRUE);
+  g_socket_set_blocking (attempt->socket, TRUE);
 
-  if (!data->proxy_addr)
-    {
-      g_socket_client_tls_handshake (data);
-      return;
-    }
-
-  protocol = g_proxy_address_get_protocol (data->proxy_addr);
-  proxy = g_proxy_get_default_for_protocol (protocol);
-
-  /* The connection should not be anything other than TCP,
-   * but let's put a safety guard in case
+  /* This ends the parallel "happy eyeballs" portion of connecting.
+     Now that we have a successful tcp connection we will attempt to connect
+     at the TLS/Proxy layer. If those layers fail we will move on to the next
+     connection.
    */
-  if (!G_IS_TCP_CONNECTION (data->connection))
-    {
-      g_critical ("Trying to proxy over non-TCP connection, this is "
-          "most likely a bug in GLib IO library.");
+  connection_attempt_remove (attempt);
+  data->successful_connections = g_slist_append (data->successful_connections, g_steal_pointer (&attempt));
+  try_next_connection_or_finish (data, FALSE);
+}
 
-      g_set_error_literal (&data->last_error,
-          G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-          _("Proxying over a non-TCP connection is not supported."));
+static gboolean
+on_connection_attempt_timeout (gpointer data)
+{
+  ConnectionAttempt *attempt = data;
 
-      enumerator_next_async (data);
-    }
-  else if (proxy)
+  if (!attempt->data->enumeration_completed)
     {
-      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_PROXY_NEGOTIATING, data->connectable, data->connection);
-      g_proxy_connect_async (proxy,
-                             data->connection,
-                             data->proxy_addr,
-                             g_task_get_cancellable (data->task),
-                             g_socket_client_proxy_connect_callback,
-                             data);
-      g_object_unref (proxy);
+      g_debug ("GSocketClient: Timeout reached, trying another enumeration");
+      enumerator_next_async (attempt->data, TRUE);
     }
-  else if (!g_hash_table_lookup_extended (data->client->priv->app_proxies,
-					  protocol, NULL, NULL))
-    {
-      g_clear_error (&data->last_error);
 
-      g_set_error (&data->last_error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-          _("Proxy protocol '%s' is not supported."),
-          protocol);
+  g_clear_pointer (&attempt->timeout_source, g_source_unref);
+  return G_SOURCE_REMOVE;
+}
 
-      enumerator_next_async (data);
-    }
-  else
-    {
-      /* Simply complete the connection, we don't want to do TLS handshake
-       * as the application proxy handling may need proxy handshake first */
-      g_socket_client_async_connect_complete (data);
-    }
+static void
+on_connection_cancelled (GCancellable *cancellable,
+                         gpointer      data)
+{
+  GCancellable *linked_cancellable = G_CANCELLABLE (data);
+
+  g_cancellable_cancel (linked_cancellable);
 }
 
 static void
@@ -1608,71 +1961,114 @@ g_socket_client_enumerator_callback (GObject      *object,
   GSocketClientAsyncConnectData *data = user_data;
   GSocketAddress *address = NULL;
   GSocket *socket;
-  GError *error = NULL;
+  ConnectionAttempt *attempt;
 
-  if (g_task_return_error_if_cancelled (data->task))
-    return;
-
-  address = g_socket_address_enumerator_next_finish (data->enumerator,
-						     result, &error);
-  if (address == NULL)
+  if (task_completed_or_cancelled (data))
     {
-      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_COMPLETE, data->connectable, NULL);
-      if (!error)
-	{
-	  if (data->last_error)
-	    {
-	      error = data->last_error;
-	      data->last_error = NULL;
-	    }
-	  else
-	    {
-	      g_set_error_literal (&error, G_IO_ERROR, G_IO_ERROR_FAILED,
-				   _("Unknown error on connect"));
-	    }
-	}
-      g_task_return_error (data->task, error);
       g_object_unref (data->task);
       return;
     }
 
-  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_RESOLVED,
-			      data->connectable, NULL);
-
-  if (G_IS_PROXY_ADDRESS (address) &&
-      data->client->priv->enable_proxy)
-    data->proxy_addr = g_object_ref (G_PROXY_ADDRESS (address));
-
-  g_clear_error (&data->last_error);
-
-  socket = create_socket (data->client, address, &data->last_error);
-  if (socket == NULL)
+  address = g_socket_address_enumerator_next_finish (data->enumerator,
+						     result, &data->error_info->tmp_error);
+  if (address == NULL)
     {
-      g_object_unref (address);
-      enumerator_next_async (data);
+      if (G_UNLIKELY (data->enumeration_completed))
+        return;
+
+      data->enumeration_completed = TRUE;
+      g_debug ("GSocketClient: Address enumeration completed (out of addresses)");
+
+      /* As per API docs: We only care about error if it's the first call,
+         after that the enumerator is done.
+
+         Note that we don't care about cancellation errors because
+         task_completed_or_cancelled() above should handle that.
+
+         If this fails and nothing is in progress then we will complete task here.
+       */
+      if ((data->enumerated_at_least_once && !data->connection_attempts && !data->connection_in_progress) ||
+          !data->enumerated_at_least_once)
+        {
+          g_debug ("GSocketClient: Address enumeration failed: %s",
+                   data->error_info->tmp_error ? data->error_info->tmp_error->message : NULL);
+          consider_tmp_error (data->error_info, G_SOCKET_CLIENT_RESOLVING);
+          g_assert (data->error_info->best_error);
+          complete_connection_with_error (data, g_steal_pointer (&data->error_info->best_error));
+        }
+
+      /* Enumeration should never trigger again, drop our ref */
+      g_object_unref (data->task);
       return;
     }
 
-  data->current_socket = socket;
-  data->current_addr = address;
-  data->connection = (GIOStream *) g_socket_connection_factory_create_connection (socket);
+  g_debug ("GSocketClient: Address enumeration succeeded");
+  if (!data->enumerated_at_least_once)
+    {
+      g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_RESOLVED,
+				  data->connectable, NULL);
+      data->enumerated_at_least_once = TRUE;
+    }
 
-  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_CONNECTING, data->connectable, data->connection);
-  g_socket_connection_connect_async (G_SOCKET_CONNECTION (data->connection),
+  socket = create_socket (data->client, address, &data->error_info->tmp_error);
+  if (socket == NULL)
+    {
+      g_object_unref (address);
+      consider_tmp_error (data->error_info, G_SOCKET_CLIENT_CONNECTING);
+      enumerator_next_async (data, FALSE);
+      return;
+    }
+
+  attempt = connection_attempt_new ();
+  attempt->data = data;
+  attempt->socket = socket;
+  attempt->address = address;
+  attempt->cancellable = g_cancellable_new ();
+  attempt->connection = (GIOStream *)g_socket_connection_factory_create_connection (socket);
+  attempt->timeout_source = g_timeout_source_new (HAPPY_EYEBALLS_CONNECTION_ATTEMPT_TIMEOUT_MS);
+
+  if (G_IS_PROXY_ADDRESS (address) && data->client->priv->enable_proxy)
+    attempt->proxy_addr = g_object_ref (G_PROXY_ADDRESS (address));
+
+  g_source_set_callback (attempt->timeout_source, on_connection_attempt_timeout, attempt, NULL);
+  g_source_attach (attempt->timeout_source, g_task_get_context (data->task));
+  data->connection_attempts = g_slist_append (data->connection_attempts, attempt);
+
+  if (g_task_get_cancellable (data->task))
+    {
+      attempt->task_cancellable = g_object_ref (g_task_get_cancellable (data->task));
+      attempt->cancelled_id =
+          g_cancellable_connect (attempt->task_cancellable, G_CALLBACK (on_connection_cancelled),
+                                 g_object_ref (attempt->cancellable), g_object_unref);
+    }
+
+  g_socket_connection_set_cached_remote_address ((GSocketConnection *)attempt->connection, address);
+  g_debug ("GSocketClient: Starting TCP connection attempt");
+  g_socket_client_emit_event (data->client, G_SOCKET_CLIENT_CONNECTING, data->connectable, attempt->connection);
+  g_socket_connection_connect_async (G_SOCKET_CONNECTION (attempt->connection),
 				     address,
-				     g_task_get_cancellable (data->task),
-				     g_socket_client_connected_callback, data);
+				     attempt->cancellable,
+				     g_socket_client_connected_callback, connection_attempt_ref (attempt));
 }
 
 /**
  * g_socket_client_connect_async:
  * @client: a #GSocketClient
  * @connectable: a #GSocketConnectable specifying the remote address.
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
  * This is the asynchronous version of g_socket_client_connect().
+ *
+ * You may wish to prefer the asynchronous version even in synchronous
+ * command line programs because, since 2.60, it implements
+ * [RFC 8305](https://tools.ietf.org/html/rfc8305) "Happy Eyeballs"
+ * recommendations to work around long connection timeouts in networks
+ * where IPv6 is broken by performing an IPv4 connection simultaneously
+ * without waiting for IPv6 to time out, which is not supported by the
+ * synchronous call. (This is not an API guarantee, and may change in
+ * the future.)
  *
  * When the operation is finished @callback will be
  * called. You can then call g_socket_client_connect_finish() to get
@@ -1694,6 +2090,7 @@ g_socket_client_connect_async (GSocketClient       *client,
   data = g_slice_new0 (GSocketClientAsyncConnectData);
   data->client = client;
   data->connectable = g_object_ref (connectable);
+  data->error_info = socket_client_error_info_new ();
 
   if (can_use_proxy (client))
     {
@@ -1709,10 +2106,53 @@ g_socket_client_connect_async (GSocketClient       *client,
   else
     data->enumerator = g_socket_connectable_enumerate (connectable);
 
+  /* This function tries to match the behavior of g_socket_client_connect ()
+     which is simple enough but much of it is done in parallel to be as responsive
+     as possible as per Happy Eyeballs (RFC 8305). This complicates flow quite a
+     bit but we can describe it in 3 sections:
+
+     Firstly we have address enumeration (DNS):
+       - This may be triggered multiple times by enumerator_next_async().
+       - It also has its own cancellable (data->enumeration_cancellable).
+       - Enumeration is done lazily because GNetworkAddressAddressEnumerator
+         also does work in parallel and may lazily add new addresses.
+       - If the first enumeration errors then the task errors. Otherwise all enumerations
+         will potentially be used (until task or enumeration is cancelled).
+
+      Then we start attempting connections (TCP):
+        - Each connection is independent and kept in a ConnectionAttempt object.
+          - They each hold a ref on the main task and have their own cancellable.
+        - Multiple attempts may happen in parallel as per Happy Eyeballs.
+        - Upon failure or timeouts more connection attempts are made.
+          - If no connections succeed the task errors.
+        - Upon success they are kept in a list of successful connections.
+
+      Lastly we connect at the application layer (TLS, Proxies):
+        - These are done in serial.
+          - The reasoning here is that Happy Eyeballs is about making bad connections responsive
+            at the IP/TCP layers. Issues at the application layer are generally not due to
+            connectivity issues but rather misconfiguration.
+        - Upon failure it will try the next TCP connection until it runs out and
+          the task errors.
+        - Upon success it cancels everything remaining (enumeration and connections)
+          and returns the connection.
+  */
+
   data->task = g_task_new (client, cancellable, callback, user_data);
+  g_task_set_check_cancellable (data->task, FALSE); /* We handle this manually */
+  g_task_set_source_tag (data->task, g_socket_client_connect_async);
   g_task_set_task_data (data->task, data, (GDestroyNotify)g_socket_client_async_connect_data_free);
 
-  enumerator_next_async (data);
+  data->enumeration_cancellable = g_cancellable_new ();
+  if (cancellable)
+    {
+      data->enumeration_parent_cancellable = g_object_ref (cancellable);
+      data->enumeration_cancelled_id =
+          g_cancellable_connect (cancellable, G_CALLBACK (on_connection_cancelled),
+                                 g_object_ref (data->enumeration_cancellable), g_object_unref);
+    }
+
+  enumerator_next_async (data, FALSE);
 }
 
 /**
@@ -1720,7 +2160,7 @@ g_socket_client_connect_async (GSocketClient       *client,
  * @client: a #GSocketClient
  * @host_and_port: the name and optionally the port of the host to connect to
  * @default_port: the default port to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
@@ -1766,7 +2206,7 @@ g_socket_client_connect_to_host_async (GSocketClient        *client,
  * @client: a #GSocketClient
  * @domain: a domain name
  * @service: the name of the service to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
@@ -1797,7 +2237,7 @@ g_socket_client_connect_to_service_async (GSocketClient       *client,
  * @client: a #GSocketClient
  * @uri: a network uri
  * @default_port: the default port to connect to
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
@@ -1830,6 +2270,7 @@ g_socket_client_connect_to_uri_async (GSocketClient        *client,
     }
   else
     {
+      g_debug("g_socket_client_connect_to_uri_async");
       g_socket_client_connect_async (client,
 				     connectable, cancellable,
 				     callback, user_data);
@@ -1953,5 +2394,5 @@ void
 g_socket_client_add_application_proxy (GSocketClient *client,
 			               const gchar   *protocol)
 {
-  g_hash_table_insert (client->priv->app_proxies, g_strdup (protocol), NULL);
+  g_hash_table_add (client->priv->app_proxies, g_strdup (protocol));
 }

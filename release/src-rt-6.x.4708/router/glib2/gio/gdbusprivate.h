@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -78,8 +78,7 @@ gboolean     _g_dbus_worker_flush_sync   (GDBusWorker    *worker,
 
 /* can be called from any thread */
 void         _g_dbus_worker_close        (GDBusWorker         *worker,
-                                          GCancellable        *cancellable,
-                                          GSimpleAsyncResult  *result);
+                                          GTask               *task);
 
 /* ---------------------------------------------------------------------------------------------------- */
 
@@ -94,6 +93,7 @@ gboolean _g_dbus_debug_incoming (void);
 gboolean _g_dbus_debug_return (void);
 gboolean _g_dbus_debug_emission (void);
 gboolean _g_dbus_debug_address (void);
+gboolean _g_dbus_debug_proxy (void);
 
 void     _g_dbus_debug_print_lock (void);
 void     _g_dbus_debug_print_unlock (void);
@@ -111,6 +111,17 @@ gchar *_g_dbus_hexdump (const gchar *data, gsize len, guint indent);
 
 #ifdef G_OS_WIN32
 gchar *_g_dbus_win32_get_user_sid (void);
+
+#define _GDBUS_ARG_WIN32_RUN_SESSION_BUS "_win32_run_session_bus"
+/* The g_win32_run_session_bus is exported from libgio dll on win32,
+ * but still is NOT part of API/ABI since it is declared in private header
+ * and used only by tool built from same sources.
+ * Initially this function was introduces for usage with rundll,
+ * so the signature is kept rundll-compatible, though parameters aren't used.
+ */
+_GLIB_EXTERN void __stdcall
+g_win32_run_session_bus (void* hwnd, void* hinst, const char* cmdline, int cmdshow);
+gchar *_g_dbus_win32_get_session_address_dbus_launch (GError **error);
 #endif
 
 gchar *_g_dbus_get_machine_id (GError **error);
@@ -144,8 +155,12 @@ void _g_dbus_object_proxy_add_interface (GDBusObjectProxy *proxy,
 void _g_dbus_object_proxy_remove_interface (GDBusObjectProxy *proxy,
                                             const gchar      *interface_name);
 
+gchar *_g_dbus_hexencode (const gchar *str,
+                          gsize        str_len);
+
 /* Implemented in gdbusconnection.c */
 GDBusConnection *_g_bus_get_singleton_if_exists (GBusType bus_type);
+void             _g_bus_forget_singleton        (GBusType bus_type);
 
 G_END_DECLS
 

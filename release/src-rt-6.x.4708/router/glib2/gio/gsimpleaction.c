@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -30,6 +30,7 @@
  * SECTION:gsimpleaction
  * @title: GSimpleAction
  * @short_description: A simple GAction implementation
+ * @include: gio/gio.h
  *
  * A #GSimpleAction is the obvious simple implementation of the #GAction
  * interface. This is the easiest way to create an action for purposes of
@@ -37,6 +38,14 @@
  *
  * See also #GtkAction.
  */
+
+/**
+ * GSimpleAction:
+ *
+ * #GSimpleAction is an opaque data structure and can only be accessed
+ * using the following functions.
+ **/
+
 struct _GSimpleAction
 {
   GObject       parent_instance;
@@ -45,6 +54,8 @@ struct _GSimpleAction
   GVariantType *parameter_type;
   gboolean      enabled;
   GVariant     *state;
+  GVariant     *state_hint;
+  gboolean      state_set_already;
 };
 
 typedef GObjectClass GSimpleActionClass;
@@ -102,7 +113,12 @@ g_simple_action_get_state_type (GAction *action)
 static GVariant *
 g_simple_action_get_state_hint (GAction *action)
 {
-  return NULL;
+  GSimpleAction *simple = G_SIMPLE_ACTION (action);
+
+  if (simple->state_hint != NULL)
+    return g_variant_ref (simple->state_hint);
+  else
+    return NULL;
 }
 
 static gboolean
@@ -203,7 +219,28 @@ g_simple_action_activate (GAction  *action,
     g_variant_ref_sink (parameter);
 
   if (simple->enabled)
-    g_signal_emit (simple, g_simple_action_signals[SIGNAL_ACTIVATE], 0, parameter);
+    {
+      /* If the user connected a signal handler then they are responsible
+       * for handling activation.
+       */
+      if (g_signal_has_handler_pending (action, g_simple_action_signals[SIGNAL_ACTIVATE], 0, TRUE))
+        g_signal_emit (action, g_simple_action_signals[SIGNAL_ACTIVATE], 0, parameter);
+
+      /* If not, do some reasonable defaults for stateful actions. */
+      else if (simple->state)
+        {
+          /* If we have no parameter and this is a boolean action, toggle. */
+          if (parameter == NULL && g_variant_is_of_type (simple->state, G_VARIANT_TYPE_BOOLEAN))
+            {
+              gboolean was_enabled = g_variant_get_boolean (simple->state);
+              g_simple_action_change_state (action, g_variant_new_boolean (!was_enabled));
+            }
+
+          /* else, if the parameter and state type are the same, do a change-state */
+          else if (g_variant_is_of_type (simple->state, g_variant_get_type (parameter)))
+            g_simple_action_change_state (action, parameter);
+        }
+    }
 
   if (parameter != NULL)
     g_variant_unref (parameter);
@@ -232,7 +269,20 @@ g_simple_action_set_property (GObject    *object,
       break;
 
     case PROP_STATE:
-      action->state = g_value_dup_variant (value);
+      /* The first time we see this (during construct) we should just
+       * take the state as it was handed to us.
+       *
+       * After that, we should make sure we go through the same checks
+       * as the C API.
+       */
+      if (!action->state_set_already)
+        {
+          action->state = g_value_dup_variant (value);
+          action->state_set_already = TRUE;
+        }
+      else
+        g_simple_action_set_state (action, g_value_get_variant (value));
+
       break;
 
     default:
@@ -285,6 +335,8 @@ g_simple_action_finalize (GObject *object)
     g_variant_type_free (simple->parameter_type);
   if (simple->state)
     g_variant_unref (simple->state);
+  if (simple->state_hint)
+    g_variant_unref (simple->state_hint);
 
   G_OBJECT_CLASS (g_simple_action_parent_class)
     ->finalize (object);
@@ -321,12 +373,22 @@ g_simple_action_class_init (GSimpleActionClass *class)
   /**
    * GSimpleAction::activate:
    * @simple: the #GSimpleAction
-   * @parameter: (allow-none): the parameter to the activation
+   * @parameter: (nullable): the parameter to the activation, or %NULL if it has
+   *   no parameter
    *
    * Indicates that the action was just activated.
    *
-   * @parameter will always be of the expected type.  In the event that
-   * an incorrect type was given, no signal will be emitted.
+   * @parameter will always be of the expected type, i.e. the parameter type
+   * specified when the action was created. If an incorrect type is given when
+   * activating the action, this signal is not emitted.
+   *
+   * Since GLib 2.40, if no handler is connected to this signal then the
+   * default behaviour for boolean-stated actions with a %NULL parameter
+   * type is to toggle them via the #GSimpleAction::change-state signal.
+   * For stateful actions where the state type is equal to the parameter
+   * type, the default is to forward them directly to
+   * #GSimpleAction::change-state.  This should allow almost all users
+   * of #GSimpleAction to connect only one handler or the other.
    *
    * Since: 2.28
    */
@@ -335,30 +397,31 @@ g_simple_action_class_init (GSimpleActionClass *class)
                   G_TYPE_SIMPLE_ACTION,
                   G_SIGNAL_RUN_LAST | G_SIGNAL_MUST_COLLECT,
                   0, NULL, NULL,
-                  g_cclosure_marshal_VOID__VARIANT,
+                  NULL,
                   G_TYPE_NONE, 1,
                   G_TYPE_VARIANT);
 
   /**
    * GSimpleAction::change-state:
    * @simple: the #GSimpleAction
-   * @value: (allow-none): the requested value for the state
+   * @value: (nullable): the requested value for the state
    *
    * Indicates that the action just received a request to change its
    * state.
    *
-   * @value will always be of the correct state type.  In the event that
-   * an incorrect type was given, no signal will be emitted.
+   * @value will always be of the correct state type, i.e. the type of the
+   * initial state passed to g_simple_action_new_stateful(). If an incorrect
+   * type is given when requesting to change the state, this signal is not
+   * emitted.
    *
    * If no handler is connected to this signal then the default
    * behaviour is to call g_simple_action_set_state() to set the state
-   * to the requested value.  If you connect a signal handler then no
-   * default action is taken.  If the state should change then you must
+   * to the requested value. If you connect a signal handler then no
+   * default action is taken. If the state should change then you must
    * call g_simple_action_set_state() from the handler.
    *
-   * <example>
-   * <title>Example 'change-state' handler</title>
-   * <programlisting>
+   * An example of a 'change-state' handler:
+   * |[<!-- language="C" -->
    * static void
    * change_volume_state (GSimpleAction *action,
    *                      GVariant      *value,
@@ -372,11 +435,10 @@ g_simple_action_class_init (GSimpleActionClass *class)
    *   if (0 <= requested && requested <= 10)
    *     g_simple_action_set_state (action, value);
    * }
-   * </programlisting>
-   * </example>
+   * ]|
    *
-   * The handler need not set the state to the requested value.  It
-   * could set it to any value at all, or take some other action.
+   * The handler need not set the state to the requested value.
+   * It could set it to any value at all, or take some other action.
    *
    * Since: 2.30
    */
@@ -385,14 +447,14 @@ g_simple_action_class_init (GSimpleActionClass *class)
                   G_TYPE_SIMPLE_ACTION,
                   G_SIGNAL_RUN_LAST | G_SIGNAL_MUST_COLLECT,
                   0, NULL, NULL,
-                  g_cclosure_marshal_VOID__VARIANT,
+                  NULL,
                   G_TYPE_NONE, 1,
                   G_TYPE_VARIANT);
 
   /**
    * GSimpleAction:name:
    *
-   * The name of the action.  This is mostly meaningful for identifying
+   * The name of the action. This is mostly meaningful for identifying
    * the action once it has been added to a #GSimpleActionGroup.
    *
    * Since: 2.28
@@ -470,7 +532,7 @@ g_simple_action_class_init (GSimpleActionClass *class)
                                                          P_("The state the action is in"),
                                                          G_VARIANT_TYPE_ANY,
                                                          NULL,
-                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
                                                          G_PARAM_STATIC_STRINGS));
 }
 
@@ -503,14 +565,45 @@ g_simple_action_set_enabled (GSimpleAction *simple,
       g_object_notify (G_OBJECT (simple), "enabled");
     }
 }
+
+/**
+ * g_simple_action_set_state_hint:
+ * @simple: a #GSimpleAction
+ * @state_hint: (nullable): a #GVariant representing the state hint
+ *
+ * Sets the state hint for the action.
+ *
+ * See g_action_get_state_hint() for more information about
+ * action state hints.
+ *
+ * Since: 2.44
+ **/
+void
+g_simple_action_set_state_hint (GSimpleAction *simple,
+                                GVariant      *state_hint)
+{
+  g_return_if_fail (G_IS_SIMPLE_ACTION (simple));
+
+  if (simple->state_hint != NULL)
+    {
+      g_variant_unref (simple->state_hint);
+      simple->state_hint = NULL;
+    }
+
+  if (state_hint != NULL)
+    simple->state_hint = g_variant_ref (state_hint);
+}
+
 /**
  * g_simple_action_new:
  * @name: the name of the action
- * @parameter_type: (allow-none): the type of parameter to the activate function
+ * @parameter_type: (nullable): the type of parameter that will be passed to
+ *   handlers for the #GSimpleAction::activate signal, or %NULL for no parameter
  *
  * Creates a new action.
  *
- * The created action is stateless.  See g_simple_action_new_stateful().
+ * The created action is stateless. See g_simple_action_new_stateful() to create
+ * an action that has state.
  *
  * Returns: a new #GSimpleAction
  *
@@ -520,6 +613,8 @@ GSimpleAction *
 g_simple_action_new (const gchar        *name,
                      const GVariantType *parameter_type)
 {
+  g_return_val_if_fail (name != NULL, NULL);
+
   return g_object_new (G_TYPE_SIMPLE_ACTION,
                        "name", name,
                        "parameter-type", parameter_type,
@@ -529,15 +624,16 @@ g_simple_action_new (const gchar        *name,
 /**
  * g_simple_action_new_stateful:
  * @name: the name of the action
- * @parameter_type: (allow-none): the type of the parameter to the activate function
+ * @parameter_type: (nullable): the type of the parameter that will be passed to
+ *   handlers for the #GSimpleAction::activate signal, or %NULL for no parameter
  * @state: the initial state of the action
  *
  * Creates a new stateful action.
  *
- * @state is the initial state of the action.  All future state values
- * must have the same #GVariantType as the initial state.
+ * All future state values must have the same #GVariantType as the initial
+ * @state.
  *
- * If the @state GVariant is floating, it is consumed.
+ * If the @state #GVariant is floating, it is consumed.
  *
  * Returns: a new #GSimpleAction
  *

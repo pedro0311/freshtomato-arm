@@ -4,10 +4,12 @@
  * GHook: Callback maintenance functions
  * Copyright (C) 1998 Tim Janik
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -59,8 +59,7 @@
  *     The default behaviour is to call the hooks @destroy function
  * @dummy: unused
  *
- * The <structname>GHookList</structname> struct represents a
- * list of hook functions.
+ * The #GHookList struct represents a list of hook functions.
  */
 
 /**
@@ -94,7 +93,7 @@
  *
  * The position of the first bit which is not reserved for internal
  * use be the #GHook implementation, i.e.
- * <literal>1 &lt;&lt; G_HOOK_FLAG_USER_SHIFT</literal> is the first
+ * `1 << G_HOOK_FLAG_USER_SHIFT` is the first
  * bit which can be used for application-defined flags.
  */
 
@@ -102,7 +101,7 @@
  * G_HOOK:
  * @hook: a pointer
  *
- * Casts a pointer to a <literal>GHook*</literal>.
+ * Casts a pointer to a `GHook*`.
  */
 
 /**
@@ -139,7 +138,7 @@
  * @hook: a #GHook
  *
  * Returns %TRUE if the #GHook is not in a #GHookList.
- 
+ *
  * Returns: %TRUE if the #GHook is not in a #GHookList
  */
 
@@ -157,8 +156,7 @@
  * @destroy: the default @finalize_hook function of a #GHookList calls
  *     this member of the hook that is being finalized
  *
- * The <structname>GHook</structname> struct represents a single hook
- * function in a #GHookList.
+ * The #GHook struct represents a single hook function in a #GHookList.
  */
 
 /**
@@ -197,7 +195,7 @@ default_finalize_hook (GHookList *hook_list,
  * g_hook_list_init:
  * @hook_list: a #GHookList
  * @hook_size: the size of each element in the #GHookList,
- *     typically <literal>sizeof (GHook)</literal>
+ *     typically `sizeof (GHook)`.
  *
  * Initializes a #GHookList.
  * This must be called before the #GHookList is used.
@@ -457,7 +455,7 @@ g_hook_prepend (GHookList *hook_list,
 /**
  * g_hook_insert_before:
  * @hook_list: a #GHookList
- * @sibling: the #GHook to insert the new #GHook before
+ * @sibling: (nullable): the #GHook to insert the new #GHook before
  * @hook: the #GHook to insert
  *
  * Inserts a #GHook into a #GHookList, before a given #GHook.
@@ -586,7 +584,7 @@ g_hook_list_invoke_check (GHookList *hook_list,
 /**
  * GHookCheckMarshaller:
  * @hook: a #GHook
- * @marshal_data: user data
+ * @user_data: user data
  *
  * Defines the type of function used by g_hook_list_marshal_check().
  *
@@ -638,7 +636,7 @@ g_hook_list_marshal_check (GHookList	       *hook_list,
 /**
  * GHookMarshaller:
  * @hook: a #GHook
- * @marshal_data: user data
+ * @user_data: user data
  *
  * Defines the type of function used by g_hook_list_marshal().
  */
@@ -795,7 +793,7 @@ g_hook_get (GHookList *hook_list,
 /**
  * GHookFindFunc:
  * @hook: a #GHook
- * @data: user data passed to g_hook_find_func()
+ * @user_data: user data passed to g_hook_find_func()
  *
  * Defines the type of the function passed to g_hook_find().
  *
@@ -934,7 +932,7 @@ g_hook_find_func (GHookList *hook_list,
  * @hook_list: a #GHookList
  * @need_valids: %TRUE if #GHook elements which have been destroyed
  *     should be skipped
- * @func: the function to find
+ * @func: (not nullable): the function to find
  * @data: the data to find
  *
  * Finds a #GHook in a #GHookList with the given function and data.
@@ -977,7 +975,7 @@ g_hook_find_func_data (GHookList *hook_list,
  * Defines the type of function used to compare #GHook elements in
  * g_hook_insert_sorted().
  *
- * Returns: a value &lt;= 0 if @new_hook should be before @sibling
+ * Returns: a value <= 0 if @new_hook should be before @sibling
  */
 
 /**
@@ -1039,7 +1037,7 @@ g_hook_insert_sorted (GHookList	      *hook_list,
  * Compares the ids of two #GHook elements, returning a negative value
  * if the second id is greater than the first.
  *
- * Returns: a value &lt;= 0 if the id of @sibling is >= the id of @new_hook
+ * Returns: a value <= 0 if the id of @sibling is >= the id of @new_hook
  */
 gint
 g_hook_compare_ids (GHook *new_hook,

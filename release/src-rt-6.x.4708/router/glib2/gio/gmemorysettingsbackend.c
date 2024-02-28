@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -23,7 +23,7 @@
 
 #include "gsimplepermission.h"
 #include "gsettingsbackendinternal.h"
-#include "giomodule.h"
+#include "giomodule-priv.h"
 
 
 #define G_TYPE_MEMORY_SETTINGS_BACKEND  (g_memory_settings_backend_get_type())
@@ -41,6 +41,7 @@ typedef struct
 G_DEFINE_TYPE_WITH_CODE (GMemorySettingsBackend,
                          g_memory_settings_backend,
                          G_TYPE_SETTINGS_BACKEND,
+                         _g_io_modules_ensure_extension_points_registered ();
                          g_io_extension_point_implement (G_SETTINGS_BACKEND_EXTENSION_POINT_NAME,
                                                          g_define_type_id, "memory", 10))
 

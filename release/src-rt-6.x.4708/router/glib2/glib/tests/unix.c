@@ -24,7 +24,11 @@
 #include "config.h"
 
 #include "glib-unix.h"
+#include "gstdio.h"
+
 #include <string.h>
+#include <pwd.h>
+#include <unistd.h>
 
 static void
 test_pipe (void)
@@ -32,14 +36,14 @@ test_pipe (void)
   GError *error = NULL;
   int pipefd[2];
   char buf[1024];
-  ssize_t bytes_read;
+  gssize bytes_read;
   gboolean res;
 
   res = g_unix_open_pipe (pipefd, FD_CLOEXEC, &error);
   g_assert (res);
   g_assert_no_error (error);
 
-  write (pipefd[1], "hello", sizeof ("hello"));
+  g_assert_cmpint (write (pipefd[1], "hello", sizeof ("hello")), ==, sizeof ("hello"));
   memset (buf, 0, sizeof (buf));
   bytes_read = read (pipefd[0], buf, sizeof(buf) - 1);
   g_assert_cmpint (bytes_read, >, 0);
@@ -49,6 +53,43 @@ test_pipe (void)
   close (pipefd[1]);
 
   g_assert (g_str_has_prefix (buf, "hello"));
+}
+
+static void
+test_pipe_stdio_overwrite (void)
+{
+  GError *error = NULL;
+  int pipefd[2], ret;
+  gboolean res;
+  int stdin_fd;
+
+
+  g_test_summary ("Test that g_unix_open_pipe() will use the first available FD, even if it’s stdin/stdout/stderr");
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/-/issues/2795");
+
+  stdin_fd = dup (STDIN_FILENO);
+  g_assert_cmpint (stdin_fd, >, 0);
+
+  g_close (STDIN_FILENO, &error);
+  g_assert_no_error (error);
+
+  res = g_unix_open_pipe (pipefd, FD_CLOEXEC, &error);
+  g_assert_no_error (error);
+  g_assert_true (res);
+
+  g_assert_cmpint (pipefd[0], ==, STDIN_FILENO);
+
+  g_close (pipefd[0], &error);
+  g_assert_no_error (error);
+
+  g_close (pipefd[1], &error);
+  g_assert_no_error (error);
+
+  ret = dup2 (stdin_fd, STDIN_FILENO);
+  g_assert_cmpint (ret, >=, 0);
+
+  g_close (stdin_fd, &error);
+  g_assert_no_error (error);
 }
 
 static void
@@ -62,6 +103,38 @@ test_error (void)
   g_assert (!res);
   g_assert_error (error, G_UNIX_ERROR, 0);
   g_clear_error (&error);
+}
+
+static void
+test_nonblocking (void)
+{
+  GError *error = NULL;
+  int pipefd[2];
+  gboolean res;
+  int flags;
+
+  res = g_unix_open_pipe (pipefd, FD_CLOEXEC, &error);
+  g_assert (res);
+  g_assert_no_error (error);
+
+  res = g_unix_set_fd_nonblocking (pipefd[0], TRUE, &error);
+  g_assert (res);
+  g_assert_no_error (error);
+ 
+  flags = fcntl (pipefd[0], F_GETFL);
+  g_assert_cmpint (flags, !=, -1);
+  g_assert (flags & O_NONBLOCK);
+
+  res = g_unix_set_fd_nonblocking (pipefd[0], FALSE, &error);
+  g_assert (res);
+  g_assert_no_error (error);
+ 
+  flags = fcntl (pipefd[0], F_GETFL);
+  g_assert_cmpint (flags, !=, -1);
+  g_assert (!(flags & O_NONBLOCK));
+
+  close (pipefd[0]);
+  close (pipefd[1]);
 }
 
 static gboolean sig_received = FALSE;
@@ -183,6 +256,7 @@ nested_idle (gpointer data)
   source = g_unix_signal_source_new (SIGHUP);
   g_source_set_callback (source, on_sig_received, nested, NULL);
   g_source_attach (source, context);
+  g_source_unref (source);
 
   kill (getpid (), SIGHUP);
   g_main_loop_run (nested);
@@ -212,6 +286,90 @@ test_sighup_nested (void)
   g_main_loop_unref (mainloop);
 }
 
+static gboolean
+on_sigwinch_received (gpointer data)
+{
+  GMainLoop *loop = (GMainLoop *) data;
+
+  sig_counter ++;
+
+  if (sig_counter == 1)
+    kill (getpid (), SIGWINCH);
+  else if (sig_counter == 2)
+    g_main_loop_quit (loop);
+  else if (sig_counter > 2)
+    g_assert_not_reached ();
+
+  /* Increase the time window in which an issue could happen. */
+  g_usleep (G_USEC_PER_SEC);
+
+  return G_SOURCE_CONTINUE;
+}
+
+static void
+test_callback_after_signal (void)
+{
+  /* Checks that user signal callback is invoked *after* receiving a signal.
+   * In other words a new signal is never merged with the one being currently
+   * dispatched or whose dispatch had already finished. */
+
+  GMainLoop *mainloop;
+  GMainContext *context;
+  GSource *source;
+
+  sig_counter = 0;
+
+  context = g_main_context_new ();
+  mainloop = g_main_loop_new (context, FALSE);
+
+  source = g_unix_signal_source_new (SIGWINCH);
+  g_source_set_callback (source, on_sigwinch_received, mainloop, NULL);
+  g_source_attach (source, context);
+  g_source_unref (source);
+
+  g_assert_cmpint (sig_counter, ==, 0);
+  kill (getpid (), SIGWINCH);
+  g_main_loop_run (mainloop);
+  g_assert_cmpint (sig_counter, ==, 2);
+
+  g_main_loop_unref (mainloop);
+  g_main_context_unref (context);
+}
+
+static void
+test_get_passwd_entry_root (void)
+{
+  struct passwd *pwd;
+  GError *local_error = NULL;
+
+  g_test_summary ("Tests that g_unix_get_passwd_entry() works for a "
+                  "known-existing username.");
+
+  pwd = g_unix_get_passwd_entry ("root", &local_error);
+  g_assert_no_error (local_error);
+
+  g_assert_cmpstr (pwd->pw_name, ==, "root");
+  g_assert_cmpuint (pwd->pw_uid, ==, 0);
+
+  g_free (pwd);
+}
+
+static void
+test_get_passwd_entry_nonexistent (void)
+{
+  struct passwd *pwd;
+  GError *local_error = NULL;
+
+  g_test_summary ("Tests that g_unix_get_passwd_entry() returns an error for a "
+                  "nonexistent username.");
+
+  pwd = g_unix_get_passwd_entry ("thisusernamedoesntexist", &local_error);
+  g_assert_error (local_error, G_UNIX_ERROR, 0);
+  g_assert_null (pwd);
+
+  g_clear_error (&local_error);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -219,12 +377,17 @@ main (int   argc,
   g_test_init (&argc, &argv, NULL);
 
   g_test_add_func ("/glib-unix/pipe", test_pipe);
+  g_test_add_func ("/glib-unix/pipe-stdio-overwrite", test_pipe_stdio_overwrite);
   g_test_add_func ("/glib-unix/error", test_error);
+  g_test_add_func ("/glib-unix/nonblocking", test_nonblocking);
   g_test_add_func ("/glib-unix/sighup", test_sighup);
   g_test_add_func ("/glib-unix/sigterm", test_sigterm);
   g_test_add_func ("/glib-unix/sighup_again", test_sighup);
   g_test_add_func ("/glib-unix/sighup_add_remove", test_sighup_add_remove);
   g_test_add_func ("/glib-unix/sighup_nested", test_sighup_nested);
+  g_test_add_func ("/glib-unix/callback_after_signal", test_callback_after_signal);
+  g_test_add_func ("/glib-unix/get-passwd-entry/root", test_get_passwd_entry_root);
+  g_test_add_func ("/glib-unix/get-passwd-entry/nonexistent", test_get_passwd_entry_nonexistent);
 
   return g_test_run();
 }

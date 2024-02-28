@@ -4,20 +4,20 @@
  *
  *  Ray Strode <halfline@hawaii.rr.com>
  *
- * GLib is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * License, or (at your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
- * GLib is distributed in the hope that it will be useful,
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with GLib; see the file COPYING.LIB.  If not,
- * write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- *   Boston, MA 02111-1307, USA.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __G_KEY_FILE_H__
@@ -27,6 +27,7 @@
 #error "Only <glib.h> can be included directly."
 #endif
 
+#include <glib/gbytes.h>
 #include <glib/gerror.h>
 
 G_BEGIN_DECLS
@@ -77,6 +78,11 @@ gboolean  g_key_file_load_from_data         (GKeyFile             *key_file,
 					     gsize                 length,
 					     GKeyFileFlags         flags,
 					     GError              **error);
+GLIB_AVAILABLE_IN_2_50
+gboolean  g_key_file_load_from_bytes        (GKeyFile             *key_file,
+                                             GBytes               *bytes,
+                                             GKeyFileFlags         flags,
+                                             GError              **error);
 GLIB_AVAILABLE_IN_ALL
 gboolean g_key_file_load_from_dirs          (GKeyFile             *key_file,
 					     const gchar	  *file,
@@ -94,16 +100,20 @@ GLIB_AVAILABLE_IN_ALL
 gchar    *g_key_file_to_data                (GKeyFile             *key_file,
 					     gsize                *length,
 					     GError              **error) G_GNUC_MALLOC;
+GLIB_AVAILABLE_IN_2_40
+gboolean  g_key_file_save_to_file           (GKeyFile             *key_file,
+                                             const gchar          *filename,
+                                             GError              **error);
 GLIB_AVAILABLE_IN_ALL
 gchar    *g_key_file_get_start_group        (GKeyFile             *key_file) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 gchar   **g_key_file_get_groups             (GKeyFile             *key_file,
-					     gsize                *length) G_GNUC_MALLOC;
+					     gsize                *length);
 GLIB_AVAILABLE_IN_ALL
 gchar   **g_key_file_get_keys               (GKeyFile             *key_file,
 					     const gchar          *group_name,
 					     gsize                *length,
-					     GError              **error) G_GNUC_MALLOC;
+					     GError              **error);
 GLIB_AVAILABLE_IN_ALL
 gboolean  g_key_file_has_group              (GKeyFile             *key_file,
 					     const gchar          *group_name);
@@ -138,6 +148,11 @@ gchar    *g_key_file_get_locale_string      (GKeyFile             *key_file,
 					     const gchar          *key,
 					     const gchar          *locale,
 					     GError              **error) G_GNUC_MALLOC;
+GLIB_AVAILABLE_IN_2_56
+gchar    *g_key_file_get_locale_for_key     (GKeyFile             *key_file,
+                                             const gchar          *group_name,
+                                             const gchar          *key,
+                                             const gchar          *locale) G_GNUC_MALLOC;
 GLIB_AVAILABLE_IN_ALL
 void      g_key_file_set_locale_string      (GKeyFile             *key_file,
 					     const gchar          *group_name,
@@ -199,7 +214,7 @@ gchar   **g_key_file_get_string_list        (GKeyFile             *key_file,
 					     const gchar          *group_name,
 					     const gchar          *key,
 					     gsize                *length,
-					     GError              **error) G_GNUC_MALLOC;
+					     GError              **error);
 GLIB_AVAILABLE_IN_ALL
 void      g_key_file_set_string_list        (GKeyFile             *key_file,
 					     const gchar          *group_name,
@@ -212,7 +227,7 @@ gchar   **g_key_file_get_locale_string_list (GKeyFile             *key_file,
 					     const gchar          *key,
 					     const gchar          *locale,
 					     gsize                *length,
-					     GError              **error) G_GNUC_MALLOC;
+					     GError              **error);
 GLIB_AVAILABLE_IN_ALL
 void      g_key_file_set_locale_string_list (GKeyFile             *key_file,
 					     const gchar          *group_name,

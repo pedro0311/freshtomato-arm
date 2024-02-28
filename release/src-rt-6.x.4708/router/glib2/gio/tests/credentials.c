@@ -23,24 +23,37 @@
 #include "config.h"
 
 #include <gio/gio.h>
+#include <gio/gcredentialsprivate.h>
 
-#ifdef G_OS_UNIX
-# include "gio/gnetworkingprivate.h"
+#ifdef G_OS_WIN32
 
-# if (defined(__linux__) || \
-  defined(__FreeBSD__) || \
-  defined(__FreeBSD_kernel__) || \
-  defined(__OpenBSD__))
-#   define SHOULD_HAVE_CREDENTIALS
-# endif
-#endif
+static void
+test_basic (void)
+{
+  GCredentials *creds = g_credentials_new ();
+  gchar *stringified;
+  DWORD *pid;
+
+  stringified = g_credentials_to_string (creds);
+  g_test_message ("%s", stringified);
+  g_free (stringified);
+
+  pid = g_credentials_get_native (creds,
+                                  G_CREDENTIALS_TYPE_WIN32_PID);
+  g_assert_cmpuint (*pid, ==, GetCurrentProcessId ());
+
+  g_object_unref (creds);
+}
+
+#else
 
 static void
 test_basic (void)
 {
   GCredentials *creds = g_credentials_new ();
   GCredentials *other = g_credentials_new ();
-#ifdef SHOULD_HAVE_CREDENTIALS
+  gpointer bad_native_creds;
+#if G_CREDENTIALS_SUPPORTED
   GError *error = NULL;
   gboolean set;
   pid_t not_me;
@@ -51,7 +64,7 @@ test_basic (void)
   g_assert (creds != NULL);
   g_assert (other != NULL);
 
-#ifdef SHOULD_HAVE_CREDENTIALS
+#if G_CREDENTIALS_SUPPORTED
   g_assert (g_credentials_is_same_user (creds, other, &error));
   g_assert_no_error (error);
 
@@ -63,17 +76,34 @@ test_basic (void)
   g_assert_cmpuint (g_credentials_get_unix_user (creds, &error), ==,
       geteuid ());
   g_assert_no_error (error);
-  g_assert_cmpuint (g_credentials_get_unix_pid (creds, &error), ==,
+
+#if G_CREDENTIALS_HAS_PID
+  g_assert_cmpint (g_credentials_get_unix_pid (creds, &error), ==,
       getpid ());
   g_assert_no_error (error);
+#else
+  g_assert_cmpint (g_credentials_get_unix_pid (creds, &error), ==, -1);
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED);
+  g_clear_error (&error);
+#endif
 
   set = g_credentials_set_unix_user (other, not_me, &error);
+#if G_CREDENTIALS_SPOOFING_SUPPORTED
   g_assert_no_error (error);
   g_assert (set);
 
   g_assert_cmpuint (g_credentials_get_unix_user (other, &error), ==, not_me);
   g_assert (!g_credentials_is_same_user (creds, other, &error));
   g_assert_no_error (error);
+#else
+  g_assert_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED);
+  g_assert (!set);
+  g_clear_error (&error);
+
+  g_assert_cmpuint (g_credentials_get_unix_user (other, &error), ==, geteuid ());
+  g_assert (g_credentials_is_same_user (creds, other, &error));
+  g_assert_no_error (error);
+#endif
 
   stringified = g_credentials_to_string (creds);
   g_test_message ("%s", stringified);
@@ -83,7 +113,7 @@ test_basic (void)
   g_test_message ("%s", stringified);
   g_free (stringified);
 
-#if defined(__linux__)
+#if G_CREDENTIALS_USE_LINUX_UCRED
         {
           struct ucred *native = g_credentials_get_native (creds,
               G_CREDENTIALS_TYPE_LINUX_UCRED);
@@ -91,7 +121,15 @@ test_basic (void)
           g_assert_cmpuint (native->uid, ==, geteuid ());
           g_assert_cmpuint (native->pid, ==, getpid ());
         }
-#elif defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#elif G_CREDENTIALS_USE_APPLE_XUCRED
+        {
+          struct xucred *native = g_credentials_get_native (creds,
+              G_CREDENTIALS_TYPE_APPLE_XUCRED);
+
+          g_assert_cmpuint (native->cr_version, ==, XUCRED_VERSION);
+          g_assert_cmpuint (native->cr_uid, ==, geteuid ());
+        }
+#elif G_CREDENTIALS_USE_FREEBSD_CMSGCRED
         {
           struct cmsgcred *native = g_credentials_get_native (creds,
               G_CREDENTIALS_TYPE_FREEBSD_CMSGCRED);
@@ -99,7 +137,15 @@ test_basic (void)
           g_assert_cmpuint (native->cmcred_euid, ==, geteuid ());
           g_assert_cmpuint (native->cmcred_pid, ==, getpid ());
         }
-#elif defined(__OpenBSD__)
+#elif G_CREDENTIALS_USE_NETBSD_UNPCBID
+        {
+          struct unpcbid *native = g_credentials_get_native (creds,
+              G_CREDENTIALS_TYPE_NETBSD_UNPCBID);
+
+          g_assert_cmpuint (native->unp_euid, ==, geteuid ());
+          g_assert_cmpuint (native->unp_pid, ==, getpid ());
+        }
+#elif G_CREDENTIALS_USE_OPENBSD_SOCKPEERCRED
         {
           struct sockpeercred *native = g_credentials_get_native (creds,
               G_CREDENTIALS_TYPE_OPENBSD_SOCKPEERCRED);
@@ -107,13 +153,53 @@ test_basic (void)
           g_assert_cmpuint (native->uid, ==, geteuid ());
           g_assert_cmpuint (native->pid, ==, getpid ());
         }
+#elif G_CREDENTIALS_USE_SOLARIS_UCRED
+        {
+          ucred_t *native = g_credentials_get_native (creds,
+              G_CREDENTIALS_TYPE_SOLARIS_UCRED);
+
+          g_assert_cmpuint (ucred_geteuid (native), ==, geteuid ());
+          g_assert_cmpuint (ucred_getpid (native), ==, getpid ());
+        }
+#else
+#error "G_CREDENTIALS_SUPPORTED is set but there is no test for this platform"
 #endif
 
+
+#if G_CREDENTIALS_USE_LINUX_UCRED
+  g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+                         "*g_credentials_get_native: Trying to get*"
+                         "G_CREDENTIALS_TYPE_FREEBSD_CMSGCRED "
+                         "but only G_CREDENTIALS_TYPE_LINUX_UCRED*"
+                         "supported*");
+  bad_native_creds = g_credentials_get_native (creds, G_CREDENTIALS_TYPE_FREEBSD_CMSGCRED);
+  g_test_assert_expected_messages ();
+  g_assert_null (bad_native_creds);
+#else
+  g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+                         "*g_credentials_get_native: Trying to get*"
+                         "G_CREDENTIALS_TYPE_LINUX_UCRED "
+                         "but only G_CREDENTIALS_TYPE_*supported*");
+  bad_native_creds = g_credentials_get_native (creds, G_CREDENTIALS_TYPE_LINUX_UCRED);
+  g_test_assert_expected_messages ();
+  g_assert_null (bad_native_creds);
+#endif
+
+#else /* ! G_CREDENTIALS_SUPPORTED */
+
+  g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_WARNING,
+                         "*g_credentials_get_native: Trying to get "
+                         "credentials *but*no support*");
+  bad_native_creds = g_credentials_get_native (creds, G_CREDENTIALS_TYPE_LINUX_UCRED);
+  g_test_assert_expected_messages ();
+  g_assert_null (bad_native_creds);
 #endif
 
   g_object_unref (creds);
   g_object_unref (other);
 }
+
+#endif /* !G_OS_WIN32 */
 
 int
 main (int   argc,

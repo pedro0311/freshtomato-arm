@@ -4,10 +4,12 @@
  * giochannel.c: IO Channel abstraction
  * Copyright 1998 Owen Taylor
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -36,10 +36,6 @@
 #include <string.h>
 #include <errno.h>
 
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
 #include "giochannel.h"
 
 #include "gstrfuncs.h"
@@ -50,21 +46,15 @@
 /**
  * SECTION:iochannels
  * @title: IO Channels
- * @short_description: portable support for using files, pipes and
- *                     sockets
- * @see_also: <para> <variablelist> <varlistentry>
- *            <term>g_io_add_watch(), g_io_add_watch_full(),
- *            g_source_remove()</term> <listitem><para> Convenience
- *            functions for creating #GIOChannel instances and adding
- *            them to the <link linkend="glib-The-Main-Event-Loop">main
- *            event loop</link>. </para></listitem> </varlistentry>
- *            </variablelist> </para>
+ * @short_description: portable support for using files, pipes and sockets
+ * @see_also: g_io_add_watch(), g_io_add_watch_full(), g_source_remove(),
+ *     #GMainLoop
  *
  * The #GIOChannel data type aims to provide a portable method for
  * using file descriptors, pipes, and sockets, and integrating them
- * into the <link linkend="glib-The-Main-Event-Loop">main event
- * loop</link>. Currently full support is available on UNIX platforms,
- * support for Windows is only partially complete.
+ * into the [main event loop][glib-The-Main-Event-Loop]. Currently,
+ * full support is available on UNIX platforms, support for Windows
+ * is only partially complete.
  *
  * To create a new #GIOChannel on UNIX systems use
  * g_io_channel_unix_new(). This works for plain file descriptors,
@@ -76,14 +66,13 @@
  * g_io_channel_write_chars(), g_io_channel_seek_position(), and
  * g_io_channel_shutdown().
  *
- * To add a #GIOChannel to the <link
- * linkend="glib-The-Main-Event-Loop">main event loop</link> use
- * g_io_add_watch() or g_io_add_watch_full(). Here you specify which
+ * To add a #GIOChannel to the [main event loop][glib-The-Main-Event-Loop],
+ * use g_io_add_watch() or g_io_add_watch_full(). Here you specify which
  * events you are interested in on the #GIOChannel, and provide a
  * function to be called whenever these events occur.
  *
- * #GIOChannel instances are created with an initial reference count of
- * 1. g_io_channel_ref() and g_io_channel_unref() can be used to
+ * #GIOChannel instances are created with an initial reference count of 1.
+ * g_io_channel_ref() and g_io_channel_unref() can be used to
  * increment or decrement the reference count respectively. When the
  * reference count falls to 0, the #GIOChannel is freed. (Though it
  * isn't closed automatically, unless it was created using
@@ -116,7 +105,7 @@
  *            various functions such as g_io_channel_write_chars() to
  *            write raw bytes to the channel.  Encoding and buffering
  *            issues are dealt with at a higher level.
- * @io_seek: &lpar;optional&rpar; seeks the channel.  This is called from
+ * @io_seek: (optional) seeks the channel.  This is called from
  *           g_io_channel_seek() on channels that support it.
  * @io_close: closes the channel.  This is called from
  *            g_io_channel_close() after flushing the buffers.
@@ -148,7 +137,7 @@
  * @G_IO_STATUS_EOF: End of file.
  * @G_IO_STATUS_AGAIN: Resource temporarily unavailable.
  *
- * Stati returned by most of the #GIOFuncs functions.
+ * Statuses returned by most of the #GIOFuncs functions.
  **/
 
 /**
@@ -307,7 +296,7 @@ g_io_error_get_from_g_error (GIOStatus  status,
  * 
  * Reads data from a #GIOChannel. 
  * 
- * Return value: %G_IO_ERROR_NONE if the operation was successful. 
+ * Returns: %G_IO_ERROR_NONE if the operation was successful. 
  *
  * Deprecated:2.2: Use g_io_channel_read_chars() instead.
  **/
@@ -352,7 +341,7 @@ g_io_channel_read (GIOChannel *channel,
  * 
  * Writes data to a #GIOChannel. 
  * 
- * Return value:  %G_IO_ERROR_NONE if the operation was successful.
+ * Returns:  %G_IO_ERROR_NONE if the operation was successful.
  *
  * Deprecated:2.2: Use g_io_channel_write_chars() instead.
  **/
@@ -391,7 +380,7 @@ g_io_channel_write (GIOChannel  *channel,
  * Sets the current position in the #GIOChannel, similar to the standard 
  * library function fseek(). 
  * 
- * Return value: %G_IO_ERROR_NONE if the operation was successful.
+ * Returns: %G_IO_ERROR_NONE if the operation was successful.
  *
  * Deprecated:2.2: Use g_io_channel_seek_position() instead.
  **/
@@ -434,7 +423,7 @@ g_io_channel_seek (GIOChannel *channel,
 
 /**
  * g_io_channel_new_file:
- * @filename: A string containing the name of a file
+ * @filename: (type filename): A string containing the name of a file
  * @mode: One of "r", "w", "a", "r+", "w+", "a+". These have
  *        the same meaning as in fopen()
  * @error: A location to return an error of type %G_FILE_ERROR
@@ -445,7 +434,7 @@ g_io_channel_seek (GIOChannel *channel,
  * so will not cause problems, as long as no attempt is made to
  * access the channel after it is closed).
  *
- * Return value: A #GIOChannel on success, %NULL on failure.
+ * Returns: A #GIOChannel on success, %NULL on failure.
  **/
 
 /**
@@ -491,7 +480,7 @@ g_io_channel_close (GIOChannel *channel)
  * flushed if @flush is %TRUE. The channel will not be freed until the
  * last reference is dropped using g_io_channel_unref().
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  **/
 GIOStatus
 g_io_channel_shutdown (GIOChannel  *channel,
@@ -529,7 +518,7 @@ g_io_channel_shutdown (GIOChannel  *channel,
   if (channel->partial_write_buf[0] != '\0')
     {
       if (flush)
-        g_warning ("Partial character at end of write buffer not flushed.\n");
+        g_warning ("Partial character at end of write buffer not flushed.");
       channel->partial_write_buf[0] = '\0';
     }
 
@@ -594,7 +583,7 @@ g_io_channel_purge (GIOChannel *channel)
 
       if (channel->partial_write_buf[0] != '\0')
         {
-          g_warning ("Partial character at end of write buffer not flushed.\n");
+          g_warning ("Partial character at end of write buffer not flushed.");
           channel->partial_write_buf[0] = '\0';
         }
     }
@@ -606,8 +595,11 @@ g_io_channel_purge (GIOChannel *channel)
  * @condition: conditions to watch for
  *
  * Creates a #GSource that's dispatched when @condition is met for the 
- * given @channel. For example, if condition is #G_IO_IN, the source will 
+ * given @channel. For example, if condition is %G_IO_IN, the source will
  * be dispatched when there's data available for reading.
+ *
+ * The callback function invoked by the #GSource should be added with
+ * g_source_set_callback(), but it has type #GIOFunc (not #GSourceFunc).
  *
  * g_io_add_watch() is a simpler interface to this same functionality, for 
  * the case where you want to add the source to the default main loop context 
@@ -629,7 +621,7 @@ g_io_create_watch (GIOChannel   *channel,
 }
 
 /**
- * g_io_add_watch_full:
+ * g_io_add_watch_full: (rename-to g_io_add_watch)
  * @channel: a #GIOChannel
  * @priority: the priority of the #GIOChannel source
  * @condition: the condition to watch for
@@ -645,7 +637,6 @@ g_io_create_watch (GIOChannel   *channel,
  * You can do these steps manually if you need greater control.
  *
  * Returns: the event source id
- * Rename to: g_io_add_watch
  */
 guint 
 g_io_add_watch_full (GIOChannel    *channel,
@@ -688,7 +679,7 @@ g_io_add_watch_full (GIOChannel    *channel,
  * GIOFunc:
  * @source: the #GIOChannel event source
  * @condition: the condition which has been satisfied
- * @data: user data set in g_io_add_watch() or g_io_add_watch_full()
+ * @user_data: user data set in g_io_add_watch() or g_io_add_watch_full()
  *
  * Specifies the type of function passed to g_io_add_watch() or
  * g_io_add_watch_full(), which is called when the requested condition
@@ -727,7 +718,7 @@ g_io_add_watch (GIOChannel   *channel,
  * is data to be read/space to write data in the internal buffers in 
  * the #GIOChannel. Only the flags %G_IO_IN and %G_IO_OUT may be set.
  *
- * Return value: A #GIOCondition
+ * Returns: A #GIOCondition
  **/
 GIOCondition
 g_io_channel_get_buffer_condition (GIOChannel *channel)
@@ -753,11 +744,11 @@ g_io_channel_get_buffer_condition (GIOChannel *channel)
 
 /**
  * g_io_channel_error_from_errno:
- * @en: an <literal>errno</literal> error number, e.g. <literal>EINVAL</literal>
+ * @en: an `errno` error number, e.g. `EINVAL`
  *
- * Converts an <literal>errno</literal> error number to a #GIOChannelError.
+ * Converts an `errno` error number to a #GIOChannelError.
  *
- * Return value: a #GIOChannelError error number, e.g. 
+ * Returns: a #GIOChannelError error number, e.g. 
  *      %G_IO_CHANNEL_ERROR_INVAL.
  **/
 GIOChannelError
@@ -771,13 +762,13 @@ g_io_channel_error_from_errno (gint en)
     {
 #ifdef EBADF
     case EBADF:
-      g_warning("Invalid file descriptor.\n");
+      g_warning ("Invalid file descriptor.");
       return G_IO_CHANNEL_ERROR_FAILED;
 #endif
 
 #ifdef EFAULT
     case EFAULT:
-      g_warning("Buffer outside valid address space.\n");
+      g_warning ("Buffer outside valid address space.");
       return G_IO_CHANNEL_ERROR_FAILED;
 #endif
 
@@ -868,7 +859,7 @@ g_io_channel_set_buffer_size (GIOChannel *channel,
  *
  * Gets the buffer size.
  *
- * Return value: the size of the buffer.
+ * Returns: the size of the buffer.
  **/  
 gsize
 g_io_channel_get_buffer_size (GIOChannel *channel)
@@ -881,7 +872,7 @@ g_io_channel_get_buffer_size (GIOChannel *channel)
 /**
  * g_io_channel_set_line_term:
  * @channel: a #GIOChannel
- * @line_term: (allow-none): The line termination string. Use %NULL for
+ * @line_term: (nullable): The line termination string. Use %NULL for
  *             autodetect.  Autodetection breaks on "\n", "\r\n", "\r", "\0",
  *             and the Unicode paragraph separator. Autodetection should not be
  *             used for anything other than file-based channels.
@@ -897,17 +888,26 @@ g_io_channel_set_line_term (GIOChannel	*channel,
                             const gchar	*line_term,
 			    gint         length)
 {
+  guint length_unsigned;
+
   g_return_if_fail (channel != NULL);
   g_return_if_fail (line_term == NULL || length != 0); /* Disallow "" */
 
   if (line_term == NULL)
-    length = 0;
-  else if (length < 0)
-    length = strlen (line_term);
+    length_unsigned = 0;
+  else if (length >= 0)
+    length_unsigned = (guint) length;
+  else
+    {
+      /* FIXME: We’re constrained by line_term_len being a guint here */
+      gsize length_size = strlen (line_term);
+      g_return_if_fail (length_size <= G_MAXUINT);
+      length_unsigned = (guint) length_size;
+    }
 
   g_free (channel->line_term);
-  channel->line_term = line_term ? g_memdup (line_term, length) : NULL;
-  channel->line_term_len = length;
+  channel->line_term = line_term ? g_memdup2 (line_term, length_unsigned) : NULL;
+  channel->line_term_len = length_unsigned;
 }
 
 /**
@@ -919,7 +919,7 @@ g_io_channel_set_line_term (GIOChannel	*channel,
  * where in the file a line break occurs. A value of %NULL
  * indicates autodetection.
  *
- * Return value: The line termination string. This value
+ * Returns: The line termination string. This value
  *   is owned by GLib and must not be freed.
  **/
 const gchar *
@@ -942,42 +942,36 @@ g_io_channel_get_line_term (GIOChannel *channel,
  *
  * Sets the (writeable) flags in @channel to (@flags & %G_IO_FLAG_SET_MASK).
  *
- * Return value: the status of the operation. 
+ * Returns: the status of the operation. 
  **/
 /**
  * GIOFlags:
- * @G_IO_FLAG_APPEND: turns on append mode, corresponds to <literal>O_APPEND</literal>
- *                    (see the documentation of the UNIX open()
- *                    syscall).
+ * @G_IO_FLAG_NONE: no special flags set. Since: 2.74
+ * @G_IO_FLAG_APPEND: turns on append mode, corresponds to %O_APPEND
+ *     (see the documentation of the UNIX open() syscall)
  * @G_IO_FLAG_NONBLOCK: turns on nonblocking mode, corresponds to
- *                      <literal>O_NONBLOCK</literal>/<literal>O_NDELAY</literal>
- *                      (see the documentation of the UNIX open() syscall).
+ *     %O_NONBLOCK/%O_NDELAY (see the documentation of the UNIX open()
+ *     syscall)
  * @G_IO_FLAG_IS_READABLE: indicates that the io channel is readable.
- *                         This flag cannot be changed.
+ *     This flag cannot be changed.
  * @G_IO_FLAG_IS_WRITABLE: indicates that the io channel is writable.
- *                          This flag cannot be changed.
+ *     This flag cannot be changed.
+ * @G_IO_FLAG_IS_WRITEABLE: a misspelled version of @G_IO_FLAG_IS_WRITABLE
+ *     that existed before the spelling was fixed in GLib 2.30. It is kept
+ *     here for compatibility reasons. Deprecated since 2.30
  * @G_IO_FLAG_IS_SEEKABLE: indicates that the io channel is seekable,
- *                         i.e. that g_io_channel_seek_position() can
- *                         be used on it.  This flag cannot be changed.
+ *     i.e. that g_io_channel_seek_position() can be used on it.
+ *     This flag cannot be changed.
  * @G_IO_FLAG_MASK: the mask that specifies all the valid flags.
  * @G_IO_FLAG_GET_MASK: the mask of the flags that are returned from
- *                      g_io_channel_get_flags().
+ *     g_io_channel_get_flags()
  * @G_IO_FLAG_SET_MASK: the mask of the flags that the user can modify
- *                      with g_io_channel_set_flags().
+ *     with g_io_channel_set_flags()
  *
  * Specifies properties of a #GIOChannel. Some of the flags can only be
  * read with g_io_channel_get_flags(), but not changed with
  * g_io_channel_set_flags().
- **/
-/**
- * G_IO_FLAG_IS_WRITEABLE:
- *
- * This is a misspelled version of G_IO_FLAG_IS_WRITABLE that existed
- * before the spelling was fixed in GLib 2.30.  It is kept here for
- * compatibility reasons.
- *
- * Deprecated:2.30:Use G_IO_FLAG_IS_WRITABLE instead.
- **/
+ */
 GIOStatus
 g_io_channel_set_flags (GIOChannel  *channel,
                         GIOFlags     flags,
@@ -1006,7 +1000,7 @@ g_io_channel_set_flags (GIOChannel  *channel,
  * should immediately call g_io_channel_get_flags() to update
  * the internal values of these flags.
  *
- * Return value: the flags which are set on the channel
+ * Returns: the flags which are set on the channel
  **/
 GIOFlags
 g_io_channel_get_flags (GIOChannel *channel)
@@ -1033,12 +1027,14 @@ g_io_channel_get_flags (GIOChannel *channel)
  * g_io_channel_set_close_on_unref:
  * @channel: a #GIOChannel
  * @do_close: Whether to close the channel on the final unref of
- *            the GIOChannel data structure. The default value of
- *            this is %TRUE for channels created by g_io_channel_new_file (),
- *            and %FALSE for all other channels.
+ *            the GIOChannel data structure.
+ *
+ * Whether to close the channel on the final unref of the #GIOChannel
+ * data structure. The default value of this is %TRUE for channels
+ * created by g_io_channel_new_file (), and %FALSE for all other channels.
  *
  * Setting this flag to %TRUE for a channel you have already closed
- * can cause problems.
+ * can cause problems when the final reference to the #GIOChannel is dropped.
  **/
 void
 g_io_channel_set_close_on_unref	(GIOChannel *channel,
@@ -1058,8 +1054,7 @@ g_io_channel_set_close_on_unref	(GIOChannel *channel,
  * destroyed. The default value of this is %TRUE for channels created
  * by g_io_channel_new_file (), and %FALSE for all other channels.
  *
- * Return value: Whether the channel will be closed on the final unref of
- *               the GIOChannel data structure.
+ * Returns: %TRUE if the channel will be closed, %FALSE otherwise.
  **/
 gboolean
 g_io_channel_get_close_on_unref	(GIOChannel *channel)
@@ -1081,7 +1076,7 @@ g_io_channel_get_close_on_unref	(GIOChannel *channel)
  *
  * Replacement for g_io_channel_seek() with the new API.
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  **/
 /**
  * GSeekType:
@@ -1118,7 +1113,7 @@ g_io_channel_seek_position (GIOChannel  *channel,
                 && channel->encoded_read_buf->len > 0)
               {
                 g_warning ("Seek type G_SEEK_CUR not allowed for this"
-                  " channel's encoding.\n");
+                  " channel's encoding.");
                 return G_IO_STATUS_ERROR;
               }
           if (channel->read_buf)
@@ -1172,7 +1167,7 @@ g_io_channel_seek_position (GIOChannel  *channel,
 
       if (channel->partial_write_buf[0] != '\0')
         {
-          g_warning ("Partial character at end of write buffer not flushed.\n");
+          g_warning ("Partial character at end of write buffer not flushed.");
           channel->partial_write_buf[0] = '\0';
         }
     }
@@ -1187,9 +1182,9 @@ g_io_channel_seek_position (GIOChannel  *channel,
  *
  * Flushes the write buffer for the GIOChannel.
  *
- * Return value: the status of the operation: One of
- *   #G_IO_STATUS_NORMAL, #G_IO_STATUS_AGAIN, or
- *   #G_IO_STATUS_ERROR.
+ * Returns: the status of the operation: One of
+ *   %G_IO_STATUS_NORMAL, %G_IO_STATUS_AGAIN, or
+ *   %G_IO_STATUS_ERROR.
  **/
 GIOStatus
 g_io_channel_flush (GIOChannel	*channel,
@@ -1256,7 +1251,7 @@ g_io_channel_set_buffered (GIOChannel *channel,
   if (channel->encoding != NULL)
     {
       g_warning ("Need to have NULL encoding to set the buffering state of the "
-                 "channel.\n");
+                 "channel.");
       return;
     }
 
@@ -1285,7 +1280,7 @@ g_io_channel_get_buffered (GIOChannel *channel)
 /**
  * g_io_channel_set_encoding:
  * @channel: a #GIOChannel
- * @encoding: (allow-none): the encoding type
+ * @encoding: (nullable): the encoding type
  * @error: location to store an error of type #GConvertError
  *
  * Sets the encoding for the input/output of the channel. 
@@ -1296,51 +1291,44 @@ g_io_channel_get_buffered (GIOChannel *channel)
  *
  * The encoding can only be set if one of the following conditions
  * is true:
- * <itemizedlist>
- * <listitem><para>
- *    The channel was just created, and has not been written to or read 
- *    from yet.
- * </para></listitem>
- * <listitem><para>
- *    The channel is write-only.
- * </para></listitem>
- * <listitem><para>
- *    The channel is a file, and the file pointer was just
- *    repositioned by a call to g_io_channel_seek_position().
- *    (This flushes all the internal buffers.)
- * </para></listitem>
- * <listitem><para>
- *    The current encoding is %NULL or UTF-8.
- * </para></listitem>
- * <listitem><para>
- *    One of the (new API) read functions has just returned %G_IO_STATUS_EOF
- *    (or, in the case of g_io_channel_read_to_end(), %G_IO_STATUS_NORMAL).
- * </para></listitem>
- * <listitem><para>
- *    One of the functions g_io_channel_read_chars() or 
+ * 
+ * - The channel was just created, and has not been written to or read from yet.
+ *
+ * - The channel is write-only.
+ *
+ * - The channel is a file, and the file pointer was just repositioned
+ *   by a call to g_io_channel_seek_position(). (This flushes all the
+ *   internal buffers.)
+ *
+ * - The current encoding is %NULL or UTF-8.
+ *
+ * - One of the (new API) read functions has just returned %G_IO_STATUS_EOF
+ *   (or, in the case of g_io_channel_read_to_end(), %G_IO_STATUS_NORMAL).
+ * 
+ * -  One of the functions g_io_channel_read_chars() or 
  *    g_io_channel_read_unichar() has returned %G_IO_STATUS_AGAIN or 
  *    %G_IO_STATUS_ERROR. This may be useful in the case of 
  *    %G_CONVERT_ERROR_ILLEGAL_SEQUENCE.
  *    Returning one of these statuses from g_io_channel_read_line(),
  *    g_io_channel_read_line_string(), or g_io_channel_read_to_end()
- *    does <emphasis>not</emphasis> guarantee that the encoding can 
- *    be changed.
- * </para></listitem>
- * </itemizedlist>
+ *    does not guarantee that the encoding can be changed.
+ *
  * Channels which do not meet one of the above conditions cannot call
  * g_io_channel_seek_position() with an offset of %G_SEEK_CUR, and, if 
  * they are "seekable", cannot call g_io_channel_write_chars() after 
  * calling one of the API "read" functions.
  *
- * Return Value: %G_IO_STATUS_NORMAL if the encoding was successfully set.
- **/
+ * Return Value: %G_IO_STATUS_NORMAL if the encoding was successfully set
+ */
 GIOStatus
 g_io_channel_set_encoding (GIOChannel	*channel,
                            const gchar	*encoding,
 			   GError      **error)
 {
   GIConv read_cd, write_cd;
+#ifndef G_DISABLE_ASSERT
   gboolean did_encode;
+#endif
 
   g_return_val_if_fail (channel != NULL, G_IO_STATUS_ERROR);
   g_return_val_if_fail ((error == NULL) || (*error == NULL), G_IO_STATUS_ERROR);
@@ -1352,19 +1340,21 @@ g_io_channel_set_encoding (GIOChannel	*channel,
 
   if (!channel->use_buffer)
     {
-      g_warning ("Need to set the channel buffered before setting the encoding.\n");
-      g_warning ("Assuming this is what you meant and acting accordingly.\n");
+      g_warning ("Need to set the channel buffered before setting the encoding.");
+      g_warning ("Assuming this is what you meant and acting accordingly.");
 
       channel->use_buffer = TRUE;
     }
 
   if (channel->partial_write_buf[0] != '\0')
     {
-      g_warning ("Partial character at end of write buffer not flushed.\n");
+      g_warning ("Partial character at end of write buffer not flushed.");
       channel->partial_write_buf[0] = '\0';
     }
 
+#ifndef G_DISABLE_ASSERT
   did_encode = channel->do_encode;
+#endif
 
   if (!encoding || strcmp (encoding, "UTF8") == 0 || strcmp (encoding, "UTF-8") == 0)
     {
@@ -1411,11 +1401,11 @@ g_io_channel_set_encoding (GIOChannel	*channel,
 
           if (err == EINVAL)
             g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_NO_CONVERSION,
-                         _("Conversion from character set '%s' to '%s' is not supported"),
+                         _("Conversion from character set “%s” to “%s” is not supported"),
                          from_enc, to_enc);
           else
             g_set_error (error, G_CONVERT_ERROR, G_CONVERT_ERROR_FAILED,
-                         _("Could not open converter from '%s' to '%s': %s"),
+                         _("Could not open converter from “%s” to “%s”: %s"),
                          from_enc, to_enc, g_strerror (err));
 
           if (read_cd != (GIConv) -1)
@@ -1466,7 +1456,7 @@ g_io_channel_set_encoding (GIOChannel	*channel,
  * The internal encoding is always UTF-8. The encoding %NULL 
  * makes the channel safe for binary data.
  *
- * Return value: A string containing the encoding, this string is
+ * Returns: A string containing the encoding, this string is
  *   owned by GLib and must not be freed.
  **/
 const gchar *
@@ -1492,7 +1482,7 @@ g_io_channel_fill_buffer (GIOChannel  *channel,
     }
   if (channel->is_seekable && channel->partial_write_buf[0] != '\0')
     {
-      g_warning ("Partial character at end of write buffer not flushed.\n");
+      g_warning ("Partial character at end of write buffer not flushed.");
       channel->partial_write_buf[0] = '\0';
     }
 
@@ -1656,8 +1646,8 @@ reencode:
  *              line terminator. This data should be freed with g_free()
  *              when no longer needed. This is a nul-terminated string. 
  *              If a @length of zero is returned, this will be %NULL instead.
- * @length: (allow-none) (out): location to store length of the read data, or %NULL
- * @terminator_pos: (allow-none) (out): location to store position of line terminator, or %NULL
+ * @length: (out) (optional): location to store length of the read data, or %NULL
+ * @terminator_pos: (out) (optional): location to store position of line terminator, or %NULL
  * @error: A location to return an error of type #GConvertError
  *         or #GIOChannelError
  *
@@ -1666,7 +1656,7 @@ reencode:
  * @str_return will contain allocated memory if the return
  * is %G_IO_STATUS_NORMAL.
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  **/
 GIOStatus
 g_io_channel_read_line (GIOChannel  *channel,
@@ -1686,13 +1676,21 @@ g_io_channel_read_line (GIOChannel  *channel,
 
   status = g_io_channel_read_line_backend (channel, &got_length, terminator_pos, error);
 
-  if (length)
+  if (length && status != G_IO_STATUS_ERROR)
     *length = got_length;
 
   if (status == G_IO_STATUS_NORMAL)
     {
+      gchar *line;
+
+      /* Copy the read bytes (including any embedded nuls) and nul-terminate.
+       * `USE_BUF (channel)->str` is guaranteed to be nul-terminated as it’s a
+       * #GString, so it’s safe to call g_memdup2() with +1 length to allocate
+       * a nul-terminator. */
       g_assert (USE_BUF (channel));
-      *str_return = g_strndup (USE_BUF (channel)->str, got_length);
+      line = g_memdup2 (USE_BUF (channel)->str, got_length + 1);
+      line[got_length] = '\0';
+      *str_return = g_steal_pointer (&line);
       g_string_erase (USE_BUF (channel), 0, got_length);
     }
   else
@@ -1707,13 +1705,13 @@ g_io_channel_read_line (GIOChannel  *channel,
  * @buffer: a #GString into which the line will be written.
  *          If @buffer already contains data, the old data will
  *          be overwritten.
- * @terminator_pos: (allow-none): location to store position of line terminator, or %NULL
+ * @terminator_pos: (nullable): location to store position of line terminator, or %NULL
  * @error: a location to store an error of type #GConvertError
  *         or #GIOChannelError
  *
  * Reads a line from a #GIOChannel, using a #GString as a buffer.
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  **/
 GIOStatus
 g_io_channel_read_line_string (GIOChannel  *channel,
@@ -1760,7 +1758,7 @@ g_io_channel_read_line_backend (GIOChannel  *channel,
     {
       /* Can't do a raw read in read_line */
       g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_FAILED,
-                           _("Can't do a raw read in g_io_channel_read_line_string"));
+                           _("Can’t do a raw read in g_io_channel_read_line_string"));
       return G_IO_STATUS_ERROR;
     }
 
@@ -1868,7 +1866,7 @@ read_again:
                         goto done;
                       }
                     break;
-                  case '\0': /* Embeded null in input */
+                  case '\0': /* Embedded null in input */
                     line_length = nextchar - use_buf->str;
                     got_term_len = 1;
                     goto done;
@@ -1927,7 +1925,7 @@ done:
  *
  * Reads all the remaining data from the file.
  *
- * Return value: %G_IO_STATUS_NORMAL on success. 
+ * Returns: %G_IO_STATUS_NORMAL on success. 
  *     This function never returns %G_IO_STATUS_EOF.
  **/
 GIOStatus
@@ -1951,7 +1949,7 @@ g_io_channel_read_to_end (GIOChannel  *channel,
   if (!channel->use_buffer)
     {
       g_set_error_literal (error, G_CONVERT_ERROR, G_CONVERT_ERROR_FAILED,
-                           _("Can't do a raw read in g_io_channel_read_to_end"));
+                           _("Can’t do a raw read in g_io_channel_read_to_end"));
       return G_IO_STATUS_ERROR;
     }
 
@@ -2000,9 +1998,9 @@ g_io_channel_read_to_end (GIOChannel  *channel,
  * @buf: (out caller-allocates) (array length=count) (element-type guint8):
  *     a buffer to read data into
  * @count: (in): the size of the buffer. Note that the buffer may not be
- *     complelely filled even if there is data in the buffer if the
+ *     completely filled even if there is data in the buffer if the
  *     remaining data is not a complete character.
- * @bytes_read: (allow-none) (out): The number of bytes read. This may be
+ * @bytes_read: (out) (optional): The number of bytes read. This may be
  *     zero even on success if count < 6 and the channel's encoding
  *     is non-%NULL. This indicates that the next UTF-8 character is
  *     too wide for the buffer.
@@ -2011,7 +2009,7 @@ g_io_channel_read_to_end (GIOChannel  *channel,
  *
  * Replacement for g_io_channel_read() with the new API.
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  */
 GIOStatus
 g_io_channel_read_chars (GIOChannel  *channel,
@@ -2124,7 +2122,7 @@ g_io_channel_read_chars (GIOChannel  *channel,
  * Reads a Unicode character from @channel.
  * This function cannot be called on a channel with %NULL encoding.
  *
- * Return value: a #GIOStatus
+ * Returns: a #GIOStatus
  **/
 GIOStatus
 g_io_channel_read_unichar (GIOChannel  *channel,
@@ -2196,7 +2194,7 @@ g_io_channel_read_unichar (GIOChannel  *channel,
  * may only be made on a channel from which data has been read in the
  * cases described in the documentation for g_io_channel_set_encoding ().
  *
- * Return value: the status of the operation.
+ * Returns: the status of the operation.
  **/
 GIOStatus
 g_io_channel_write_chars (GIOChannel   *channel,
@@ -2205,6 +2203,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
 			  gsize        *bytes_written,
                           GError      **error)
 {
+  gsize count_unsigned;
   GIOStatus status;
   gssize wrote_bytes = 0;
 
@@ -2215,8 +2214,9 @@ g_io_channel_write_chars (GIOChannel   *channel,
 
   if ((count < 0) && buf)
     count = strlen (buf);
-  
-  if (count == 0)
+  count_unsigned = count;
+
+  if (count_unsigned == 0)
     {
       if (bytes_written)
         *bytes_written = 0;
@@ -2224,7 +2224,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
     }
 
   g_return_val_if_fail (buf != NULL, G_IO_STATUS_ERROR);
-  g_return_val_if_fail (count > 0, G_IO_STATUS_ERROR);
+  g_return_val_if_fail (count_unsigned > 0, G_IO_STATUS_ERROR);
 
   /* Raw write case */
 
@@ -2235,7 +2235,8 @@ g_io_channel_write_chars (GIOChannel   *channel,
       g_assert (!channel->write_buf || channel->write_buf->len == 0);
       g_assert (channel->partial_write_buf[0] == '\0');
       
-      status = channel->funcs->io_write (channel, buf, count, &tmp_bytes, error);
+      status = channel->funcs->io_write (channel, buf, count_unsigned,
+                                         &tmp_bytes, error);
 
       if (bytes_written)
 	*bytes_written = tmp_bytes;
@@ -2250,7 +2251,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
     {
       if (channel->do_encode && BUF_LEN (channel->encoded_read_buf) > 0)
         {
-          g_warning("Mixed reading and writing not allowed on encoded files");
+          g_warning ("Mixed reading and writing not allowed on encoded files");
           return G_IO_STATUS_ERROR;
         }
       status = g_io_channel_seek_position (channel, 0, G_SEEK_CUR, error);
@@ -2311,7 +2312,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
 
       if (!channel->encoding)
         {
-          gssize write_this = MIN (space_in_buf, count - wrote_bytes);
+          gssize write_this = MIN (space_in_buf, count_unsigned - wrote_bytes);
 
           g_string_append_len (channel->write_buf, buf, write_this);
           buf += write_this;
@@ -2331,7 +2332,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
               from_buf = channel->partial_write_buf;
               from_buf_old_len = strlen (channel->partial_write_buf);
               g_assert (from_buf_old_len > 0);
-              from_buf_len = MIN (6, from_buf_old_len + count);
+              from_buf_len = MIN (6, from_buf_old_len + count_unsigned);
 
               memcpy (channel->partial_write_buf + from_buf_old_len, buf,
                       from_buf_len - from_buf_old_len);
@@ -2339,7 +2340,7 @@ g_io_channel_write_chars (GIOChannel   *channel,
           else
             {
               from_buf = buf;
-              from_buf_len = count - wrote_bytes;
+              from_buf_len = count_unsigned - wrote_bytes;
               from_buf_old_len = 0;
             }
 
@@ -2352,7 +2353,7 @@ reconvert:
 
               /* UTF-8, just validate, emulate g_iconv */
 
-              if (!g_utf8_validate (from_buf, try_len, &badchar))
+              if (!g_utf8_validate_len (from_buf, try_len, &badchar))
                 {
                   gunichar try_char;
                   gsize incomplete_len = from_buf + try_len - badchar;
@@ -2385,7 +2386,7 @@ reconvert:
                       default:
                         g_assert_not_reached ();
                         err = (gsize) -1;
-                        errnum = 0; /* Don't confunse the compiler */
+                        errnum = 0; /* Don't confuse the compiler */
                     }
                 }
               else
@@ -2429,7 +2430,7 @@ reconvert:
                         memcpy (channel->partial_write_buf, from_buf, left_len);
                         channel->partial_write_buf[left_len] = '\0';
                         if (bytes_written)
-                          *bytes_written = count;
+                          *bytes_written = count_unsigned;
                         return G_IO_STATUS_NORMAL;
                       }
 
@@ -2441,12 +2442,12 @@ reconvert:
                          * less than a full character
                          */
 
-                        g_assert (count == from_buf_len - from_buf_old_len);
+                        g_assert (count_unsigned == from_buf_len - from_buf_old_len);
 
                         channel->partial_write_buf[from_buf_len] = '\0';
 
                         if (bytes_written)
-                          *bytes_written = count;
+                          *bytes_written = count_unsigned;
 
                         return G_IO_STATUS_NORMAL;
                       }
@@ -2472,7 +2473,7 @@ reconvert:
                       _("Invalid byte sequence in conversion input"));
                     if (from_buf_old_len > 0 && from_buf_len == left_len)
                       g_warning ("Illegal sequence due to partial character "
-                                 "at the end of a previous write.\n");
+                                 "at the end of a previous write.");
                     else
                       wrote_bytes += from_buf_len - left_len - from_buf_old_len;
                     if (bytes_written)
@@ -2508,7 +2509,7 @@ reconvert:
     }
 
   if (bytes_written)
-    *bytes_written = count;
+    *bytes_written = count_unsigned;
 
   return G_IO_STATUS_NORMAL;
 }
@@ -2523,7 +2524,7 @@ reconvert:
  * Writes a Unicode character to @channel.
  * This function cannot be called on a channel with %NULL encoding.
  *
- * Return value: a #GIOStatus
+ * Returns: a #GIOStatus
  **/
 GIOStatus
 g_io_channel_write_unichar (GIOChannel  *channel,
@@ -2544,7 +2545,7 @@ g_io_channel_write_unichar (GIOChannel  *channel,
 
   if (channel->partial_write_buf[0] != '\0')
     {
-      g_warning ("Partial charater written before writing unichar.\n");
+      g_warning ("Partial character written before writing unichar.");
       channel->partial_write_buf[0] = '\0';
     }
 
@@ -2558,11 +2559,6 @@ g_io_channel_write_unichar (GIOChannel  *channel,
   return status;
 }
 
-/**
- * g_io_channel_error_quark:
- *
- * Return value: the quark used as %G_IO_CHANNEL_ERROR
- **/
 /**
  * G_IO_CHANNEL_ERROR:
  *

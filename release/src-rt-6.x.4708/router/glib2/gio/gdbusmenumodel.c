@@ -1,10 +1,12 @@
 /*
  * Copyright © 2011 Canonical Ltd.
  *
- * This library is free software; you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2 of the
- * licence, or (at your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
- * USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -25,17 +25,28 @@
 
 #include "gmenumodel.h"
 
+/* Copied from gmenuexporter.c for the glib-2-74 backport */
+#define G_MENU_EXPORTER_MAX_SECTION_SIZE 1000
+
 /* Prelude {{{1 */
 
 /**
  * SECTION:gdbusmenumodel
  * @title: GDBusMenuModel
  * @short_description: A D-Bus GMenuModel implementation
- * @see_also: <link linkend="gio-GMenuModel-exporter">GMenuModel Exporter</link>
+ * @include: gio/gio.h
+ * @see_also: [GMenuModel Exporter][gio-GMenuModel-exporter]
  *
  * #GDBusMenuModel is an implementation of #GMenuModel that can be used
  * as a proxy for a menu model that is exported over D-Bus with
  * g_dbus_connection_export_menu_model().
+ */
+
+/**
+ * GDBusMenuModel:
+ *
+ * #GDBusMenuModel is an opaque data structure and can only be accessed
+ * using the following functions.
  */
 
 /*
@@ -197,7 +208,7 @@ path_identifier_equal (gconstpointer a,
   ConstPathIdentifier *id_b = b;
 
   return id_a->connection == id_b->connection &&
-         g_str_equal (id_a->bus_name, id_b->bus_name) &&
+         g_strcmp0 (id_a->bus_name, id_b->bus_name) == 0 &&
          g_str_equal (id_a->object_path, id_b->object_path);
 }
 
@@ -572,6 +583,8 @@ g_dbus_menu_group_deactivate (GDBusMenuGroup *group)
     }
 }
 
+/* @menu_id, @position, @removed and @added are all untrusted since they can
+ * come from an external process. */
 static void
 g_dbus_menu_group_changed (GDBusMenuGroup *group,
                            guint           menu_id,
@@ -585,6 +598,20 @@ g_dbus_menu_group_changed (GDBusMenuGroup *group,
   GSequence *items;
   GVariant *item;
   gint n_added;
+  gint n_items;
+
+  /* Caller has to check this. */
+  g_assert (g_variant_is_of_type (added, G_VARIANT_TYPE ("aa{sv}")));
+
+  n_added = g_variant_n_children (added);
+
+  if (position < 0 || position >= G_MENU_EXPORTER_MAX_SECTION_SIZE ||
+      removed < 0 || removed >= G_MENU_EXPORTER_MAX_SECTION_SIZE ||
+      n_added >= G_MENU_EXPORTER_MAX_SECTION_SIZE)
+    {
+      g_warning ("invalid arguments");
+      return;
+    }
 
   /* We could have signals coming to us when we're not active (due to
    * some other process having subscribed to this group) or when we're
@@ -603,9 +630,17 @@ g_dbus_menu_group_changed (GDBusMenuGroup *group,
       g_hash_table_insert (group->menus, GINT_TO_POINTER (menu_id), items);
     }
 
-  point = g_sequence_get_iter_at_pos (items, position + removed);
+  /* Don’t need to worry about overflow due to the low value of
+   * %G_MENU_EXPORTER_MAX_SECTION_SIZE. */
+  n_items = g_sequence_get_length (items);
+  if (position + removed > n_items ||
+      n_items - removed + n_added > G_MENU_EXPORTER_MAX_SECTION_SIZE)
+    {
+      g_warning ("invalid arguments");
+      return;
+    }
 
-  g_return_if_fail (point != NULL);
+  point = g_sequence_get_iter_at_pos (items, position + removed);
 
   if (removed)
     {
@@ -615,11 +650,11 @@ g_dbus_menu_group_changed (GDBusMenuGroup *group,
       g_sequence_remove_range (start, point);
     }
 
-  n_added = g_variant_iter_init (&iter, added);
+  g_variant_iter_init (&iter, added);
   while (g_variant_iter_loop (&iter, "@a{sv}", &item))
     g_sequence_insert_before (point, g_dbus_menu_group_create_item (item));
 
-  if (g_sequence_get_length (items) == 0)
+  if (g_sequence_is_empty (items))
     {
       g_hash_table_remove (group->menus, GINT_TO_POINTER (menu_id));
       items = NULL;
@@ -851,7 +886,8 @@ g_dbus_menu_model_get_from_group (GDBusMenuGroup *group,
 /**
  * g_dbus_menu_model_get:
  * @connection: a #GDBusConnection
- * @bus_name: the bus name which exports the menu model
+ * @bus_name: (nullable): the bus name which exports the menu model
+ *     or %NULL if @connection is not a message bus connection
  * @object_path: the object path at which the menu model is exported
  *
  * Obtains a #GDBusMenuModel for the menu model which is exported
@@ -876,6 +912,8 @@ g_dbus_menu_model_get (GDBusConnection *connection,
   GDBusMenuGroup *group;
   GDBusMenuModel *proxy;
   GMainContext *context;
+
+  g_return_val_if_fail (bus_name != NULL || g_dbus_connection_get_unique_name (connection) == NULL, NULL);
 
   context = g_main_context_get_thread_default ();
   if (context == NULL)

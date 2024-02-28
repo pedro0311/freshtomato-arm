@@ -1,11 +1,13 @@
 /* GIO - GLib Input, Output and Streaming Library
- * 
+ *
  * Copyright (C) 2008 Red Hat, Inc.
+ *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -24,8 +24,28 @@
 
 #include "gtask.h"
 
+/**
+ * SECTION:gsocketaddressenumerator
+ * @short_description: Enumerator for socket addresses
+ * @include: gio/gio.h
+ *
+ * #GSocketAddressEnumerator is an enumerator type for #GSocketAddress
+ * instances. It is returned by enumeration functions such as
+ * g_socket_connectable_enumerate(), which returns a #GSocketAddressEnumerator
+ * to list each #GSocketAddress which could be used to connect to that
+ * #GSocketConnectable.
+ *
+ * Enumeration is typically a blocking operation, so the asynchronous methods
+ * g_socket_address_enumerator_next_async() and
+ * g_socket_address_enumerator_next_finish() should be used where possible.
+ *
+ * Each #GSocketAddressEnumerator can only be enumerated once. Once
+ * g_socket_address_enumerator_next() has returned %NULL, further
+ * enumeration with that #GSocketAddressEnumerator is not possible, and it can
+ * be unreffed.
+ */
 
-G_DEFINE_ABSTRACT_TYPE (GSocketAddressEnumerator, g_socket_address_enumerator, G_TYPE_OBJECT);
+G_DEFINE_ABSTRACT_TYPE (GSocketAddressEnumerator, g_socket_address_enumerator, G_TYPE_OBJECT)
 
 static void            g_socket_address_enumerator_real_next_async  (GSocketAddressEnumerator  *enumerator,
 								     GCancellable              *cancellable,
@@ -50,7 +70,7 @@ g_socket_address_enumerator_class_init (GSocketAddressEnumeratorClass *enumerato
 /**
  * g_socket_address_enumerator_next:
  * @enumerator: a #GSocketAddressEnumerator
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError.
  *
  * Retrieves the next #GSocketAddress from @enumerator. Note that this
@@ -67,7 +87,7 @@ g_socket_address_enumerator_class_init (GSocketAddressEnumeratorClass *enumerato
  * internal errors (other than @cancellable being triggered) will be
  * ignored.
  *
- * Return value: (transfer full): a #GSocketAddress (owned by the caller), or %NULL on
+ * Returns: (transfer full) (nullable): a #GSocketAddress (owned by the caller), or %NULL on
  *     error (in which case *@error will be set) or if there are no
  *     more addresses.
  */
@@ -100,6 +120,7 @@ g_socket_address_enumerator_real_next_async (GSocketAddressEnumerator *enumerato
   GError *error = NULL;
 
   task = g_task_new (enumerator, NULL, callback, user_data);
+  g_task_set_source_tag (task, g_socket_address_enumerator_real_next_async);
 
   address = g_socket_address_enumerator_next (enumerator, cancellable, &error);
   if (error)
@@ -113,7 +134,7 @@ g_socket_address_enumerator_real_next_async (GSocketAddressEnumerator *enumerato
 /**
  * g_socket_address_enumerator_next_async:
  * @enumerator: a #GSocketAddressEnumerator
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): a #GAsyncReadyCallback to call when the request
  *     is satisfied
  * @user_data: (closure): the data to pass to callback function
@@ -121,6 +142,8 @@ g_socket_address_enumerator_real_next_async (GSocketAddressEnumerator *enumerato
  * Asynchronously retrieves the next #GSocketAddress from @enumerator
  * and then calls @callback, which must call
  * g_socket_address_enumerator_next_finish() to get the result.
+ *
+ * It is an error to call this multiple times before the previous callback has finished.
  */
 void
 g_socket_address_enumerator_next_async (GSocketAddressEnumerator *enumerator,
@@ -158,7 +181,7 @@ g_socket_address_enumerator_real_next_finish (GSocketAddressEnumerator  *enumera
  * g_socket_address_enumerator_next() for more information about
  * error handling.
  *
- * Return value: (transfer full): a #GSocketAddress (owned by the caller), or %NULL on
+ * Returns: (transfer full) (nullable): a #GSocketAddress (owned by the caller), or %NULL on
  *     error (in which case *@error will be set) or if there are no
  *     more addresses.
  */

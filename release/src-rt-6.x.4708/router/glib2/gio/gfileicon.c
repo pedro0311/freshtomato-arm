@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -114,13 +114,27 @@ g_file_icon_set_property (GObject      *object,
 }
 
 static void
+g_file_icon_constructed (GObject *object)
+{
+#ifndef G_DISABLE_ASSERT
+  GFileIcon *icon = G_FILE_ICON (object);
+#endif
+
+  G_OBJECT_CLASS (g_file_icon_parent_class)->constructed (object);
+
+  /* Must have be set during construction */
+  g_assert (icon->file != NULL);
+}
+
+static void
 g_file_icon_finalize (GObject *object)
 {
   GFileIcon *icon;
 
   icon = G_FILE_ICON (object);
 
-  g_object_unref (icon->file);
+  if (icon->file)
+    g_object_unref (icon->file);
 
   G_OBJECT_CLASS (g_file_icon_parent_class)->finalize (object);
 }
@@ -133,6 +147,7 @@ g_file_icon_class_init (GFileIconClass *klass)
   gobject_class->get_property = g_file_icon_get_property;
   gobject_class->set_property = g_file_icon_set_property;
   gobject_class->finalize = g_file_icon_finalize;
+  gobject_class->constructed = g_file_icon_constructed;
 
   /**
    * GFileIcon:file:
@@ -175,7 +190,7 @@ g_file_icon_new (GFile *file)
  * 
  * Gets the #GFile associated with the given @icon.
  * 
- * Returns: (transfer none): a #GFile, or %NULL.
+ * Returns: (transfer none): a #GFile.
  **/
 GFile *
 g_file_icon_get_file (GFileIcon *icon)
@@ -234,7 +249,7 @@ g_file_icon_from_tokens (gchar  **tokens,
       g_set_error (error,
                    G_IO_ERROR,
                    G_IO_ERROR_INVALID_ARGUMENT,
-                   _("Can't handle version %d of GFileIcon encoding"),
+                   _("Can’t handle version %d of GFileIcon encoding"),
                    version);
       goto out;
     }
@@ -323,6 +338,7 @@ g_file_icon_load_async (GLoadableIcon       *icon,
   GTask *task;
 
   task = g_task_new (icon, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_file_icon_load_async);
   
   g_file_read_async (file_icon->file, 0,
                      cancellable,

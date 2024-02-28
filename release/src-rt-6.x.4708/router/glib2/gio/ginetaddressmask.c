@@ -2,10 +2,12 @@
  *
  * Copyright 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <config.h>
@@ -33,6 +33,7 @@
 /**
  * SECTION:ginetaddressmask
  * @short_description: An IPv4/IPv6 address mask
+ * @include: gio/gio.h
  *
  * #GInetAddressMask represents a range of IPv4 or IPv6 addresses
  * described by a base address and a length indicating how many bits
@@ -298,7 +299,7 @@ g_inet_address_mask_new_from_string (const gchar  *mask_string,
 	{
 	parse_error:
 	  g_set_error (error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
-		       _("Could not parse '%s' as IP address mask"),
+		       _("Could not parse “%s” as IP address mask"),
 		       mask_string);
 	  return NULL;
 	}
@@ -331,7 +332,7 @@ g_inet_address_mask_new_from_string (const gchar  *mask_string,
  *
  * Converts @mask back to its corresponding string form.
  *
- * Return value: a string corresponding to @mask.
+ * Returns: a string corresponding to @mask.
  *
  * Since: 2.32
  */
@@ -359,7 +360,7 @@ g_inet_address_mask_to_string (GInetAddressMask *mask)
  *
  * Gets the #GSocketFamily of @mask's address
  *
- * Return value: the #GSocketFamily of @mask's address
+ * Returns: the #GSocketFamily of @mask's address
  *
  * Since: 2.32
  */
@@ -377,7 +378,7 @@ g_inet_address_mask_get_family (GInetAddressMask *mask)
  *
  * Gets @mask's base address
  *
- * Return value: (transfer none): @mask's base address
+ * Returns: (transfer none): @mask's base address
  *
  * Since: 2.32
  */
@@ -395,7 +396,7 @@ g_inet_address_mask_get_address (GInetAddressMask *mask)
  *
  * Gets @mask's length
  *
- * Return value: @mask's length
+ * Returns: @mask's length
  *
  * Since: 2.32
  */
@@ -414,7 +415,7 @@ g_inet_address_mask_get_length (GInetAddressMask *mask)
  *
  * Tests if @address falls within the range described by @mask.
  *
- * Return value: whether @address falls within the range described by
+ * Returns: whether @address falls within the range described by
  * @mask.
  *
  * Since: 2.32
@@ -458,7 +459,7 @@ g_inet_address_mask_matches (GInetAddressMask *mask,
  *
  * Tests if @mask and @mask2 are the same mask.
  *
- * Return value: whether @mask and @mask2 are the same mask
+ * Returns: whether @mask and @mask2 are the same mask
  *
  * Since: 2.32
  */
@@ -466,6 +467,9 @@ gboolean
 g_inet_address_mask_equal (GInetAddressMask  *mask,
 			   GInetAddressMask  *mask2)
 {
+  g_return_val_if_fail (G_IS_INET_ADDRESS_MASK (mask), FALSE);
+  g_return_val_if_fail (G_IS_INET_ADDRESS_MASK (mask2), FALSE);
+
   return ((mask->priv->length == mask2->priv->length) &&
 	  g_inet_address_equal (mask->priv->addr, mask2->priv->addr));
 }

@@ -4,10 +4,12 @@
  * giounix.c: IO Channels using unix file descriptors
  * Copyright 1998 Owen Taylor
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -109,7 +109,8 @@ GSourceFuncs g_io_watch_funcs = {
   g_io_unix_prepare,
   g_io_unix_check,
   g_io_unix_dispatch,
-  g_io_unix_finalize
+  g_io_unix_finalize,
+  NULL, NULL
 };
 
 static GIOFuncs unix_channel_funcs = {
@@ -159,7 +160,7 @@ g_io_unix_dispatch (GSource     *source,
 
   if (!func)
     {
-      g_warning ("IO watch dispatched without callback\n"
+      g_warning ("IO watch dispatched without callback. "
 		 "You must call g_source_connect().");
       return FALSE;
     }
@@ -349,7 +350,7 @@ g_io_unix_create_watch (GIOChannel   *channel,
 
 
   source = g_source_new (&g_io_watch_funcs, sizeof (GIOUnixWatch));
-  g_source_set_name (source, "GIOChannel (Unix)");
+  g_source_set_static_name (source, "GIOChannel (Unix)");
   watch = (GIOUnixWatch *)source;
   
   watch->channel = channel;
@@ -399,7 +400,7 @@ g_io_unix_set_flags (GIOChannel *channel,
 static GIOFlags
 g_io_unix_get_flags (GIOChannel *channel)
 {
-  GIOFlags flags = 0;
+  GIOFlags flags = G_IO_FLAG_NONE;
   glong fcntl_flags;
   GIOUnixChannel *unix_channel = (GIOUnixChannel *) channel;
 
@@ -408,7 +409,7 @@ g_io_unix_get_flags (GIOChannel *channel)
   if (fcntl_flags == -1)
     {
       int err = errno;
-      g_warning (G_STRLOC "Error while getting flags for FD: %s (%d)\n",
+      g_warning (G_STRLOC "Error while getting flags for FD: %s (%d)",
 		 g_strerror (err), err);
       return 0;
     }
@@ -478,7 +479,7 @@ g_io_channel_new_file (const gchar *filename,
         mode_num = MODE_A;
         break;
       default:
-        g_warning ("Invalid GIOFileMode %s.\n", mode);
+        g_warning ("Invalid GIOFileMode %s.", mode);
         return NULL;
     }
 
@@ -492,9 +493,9 @@ g_io_channel_new_file (const gchar *filename,
             mode_num |= MODE_PLUS;
             break;
           }
-        /* Fall through */
+        G_GNUC_FALLTHROUGH;
       default:
-        g_warning ("Invalid GIOFileMode %s.\n", mode);
+        g_warning ("Invalid GIOFileMode %s.", mode);
         return NULL;
     }
 
@@ -594,6 +595,8 @@ g_io_channel_new_file (const gchar *filename,
  * is reading output from a command using via pipe, you may need to set
  * the encoding to the encoding of the current locale (see
  * g_get_charset()) with the g_io_channel_set_encoding() function.
+ * By default, the fd passed will not be closed when the final reference
+ * to the #GIOChannel data structure is dropped.
  *
  * If you want to read raw binary data without interpretation, then
  * call the g_io_channel_set_encoding() function with %NULL for the

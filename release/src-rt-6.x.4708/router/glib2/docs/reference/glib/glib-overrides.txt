@@ -206,11 +206,6 @@ GCond *cond
 #define G_OS_WIN32
 </MACRO>
 
-<MACRO>
-<NAME>G_OS_BEOS</NAME>
-#define G_OS_BEOS
-</MACRO>
-
 # g_ascii_isxxx
 
 <FUNCTION>
@@ -292,10 +287,6 @@ gint *atomic
 <RETURNS>gboolean</RETURNS>
 gint *atomic
 </FUNCTION>
-
-<STRUCT>
-<NAME>GIConv</NAME>
-</STRUCT>
 
 <MACRO>
 <NAME>G_VA_COPY</NAME>

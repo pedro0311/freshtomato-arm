@@ -32,8 +32,20 @@
     <arg><option>--generate-c-code</option> <replaceable>OUTFILES</replaceable></arg>
     <arg><option>--c-namespace</option> <replaceable>YourProject</replaceable></arg>
     <arg><option>--c-generate-object-manager</option></arg>
+    <arg><option>--c-generate-autocleanup</option> none|objects|all</arg>
+    <arg><option>--output-directory</option> <replaceable>OUTDIR</replaceable></arg>
     <arg><option>--generate-docbook</option> <replaceable>OUTFILES</replaceable></arg>
+    <arg><option>--generate-rst</option> <replaceable>OUTFILES</replaceable></arg>
+    <arg><option>--pragma-once</option></arg>
     <arg><option>--xml-files</option> <replaceable>FILE</replaceable></arg>
+    <arg><option>--header</option></arg>
+    <arg><option>--body</option></arg>
+    <arg><option>--interface-info-header</option></arg>
+    <arg><option>--interface-info-body</option></arg>
+    <arg><option>--symbol-decorator</option> <replaceable>DECORATOR</replaceable></arg>
+    <arg><option>--symbol-decorator-header</option> <replaceable>HEADER</replaceable></arg>
+    <arg><option>--symbol-decorator-define</option> <replaceable>DEFINE</replaceable></arg>
+    <arg><option>--output</option> <replaceable>OUTFILE</replaceable></arg>
     <group choice="plain" rep="repeat">
       <arg>
         <option>--annotate</option>
@@ -42,6 +54,8 @@
         <replaceable>VALUE</replaceable>
       </arg>
     </group>
+    <arg><option>--glib-min-required</option> <replaceable>VERSION</replaceable></arg>
+    <arg><option>--glib-max-allowed</option> <replaceable>VERSION</replaceable></arg>
     <arg choice="plain">FILE</arg>
     <arg>
       <arg choice="plain" rep="repeat">FILE</arg>
@@ -53,13 +67,21 @@
   <title>Description</title>
   <para>
     <command>gdbus-codegen</command> is used to generate code and/or
-    documentation for one or more D-Bus interfaces. The tool reads
+    documentation for one or more D-Bus interfaces.
+  </para>
+  <para>
+    <command>gdbus-codegen</command> reads
     <ulink
     url="http://dbus.freedesktop.org/doc/dbus-specification.html#introspection-format">D-Bus
-    Introspection XML</ulink> files and generates output files. The
-    tool currently supports generating C code (via
-    <option>--generate-c-code</option>) and Docbook XML (via
-    <option>--generate-docbook</option>).
+    Introspection XML</ulink> from files passed as additional
+    arguments on the command line and generates output files.
+    It currently supports generating C source code (via
+    <option>--body</option>) or header (via <option>--header</option>)
+    and Docbook XML (via <option>--generate-docbook</option>). Alternatively,
+    more restricted C source code and headers can be generated, which just
+    contain the interface information (as <type>GDBusInterfaceInfo</type>
+    structures) using <option>--interface-info-body</option> and
+    <option>--interface-info-header</option>.
   </para>
 </refsect1>
 
@@ -69,7 +91,7 @@
     When generating C code, a
     #GInterface<!-- -->-derived type is generated for each D-Bus
     interface. Additionally, for every generated type,
-    <type>FooBar</type>, two concrete instantiable types,
+    <type>FooBar</type>, two concrete instantiatable types,
     <type>FooBarProxy</type> and <type>FooBarSkeleton</type>, implementing
     said interface are also generated. The former is derived from
     #GDBusProxy and intended for use on the client side
@@ -77,6 +99,23 @@
     #GDBusInterfaceSkeleton type making it easy to export on a
     #GDBusConnection either directly or via a
     #GDBusObjectManagerServer instance.
+  </para>
+  <para>
+    For C code generation either <option>--body</option> that
+    generates source code, <option>--header</option> that
+    generates headers, <option>--interface-info-body</option> that generates
+    interface information source code, or
+    <option>--interface-info-header</option> that generates interface information
+    headers, can be used. These options must be used along with
+    <option>--output</option>, which is used to specify the file to output to.
+  </para>
+  <para>
+    Both files can be generated at the same time by using
+    <option>--generate-c-code</option>, but this option is deprecated.
+    In this case <option>--output</option> cannot be used due to the
+    generation of multiple files. Instead pass
+    <option>--output-directory</option> to specify the directory to put
+    the output files in. By default the current directory will be used.
   </para>
   <para>
     The name of each generated C type is derived from the D-Bus
@@ -131,6 +170,16 @@
 </refsect1>
 
 <refsect1>
+  <title>Generating reStructuredText documentation</title>
+  <para>
+    Each generated reStructuredText file (see the
+    <option>--generate-rst</option> option for details) is a plain text
+    <ulink url="https://docutils.sourceforge.io/rst.html">reStructuredText</ulink>
+    document describing the D-Bus interface.
+  </para>
+</refsect1>
+
+<refsect1>
   <title>Options</title>
   <para>
     The following options are supported:
@@ -150,6 +199,7 @@
       <term><option>--xml-files</option> <replaceable>FILE</replaceable></term>
       <listitem>
         <para>
+          This option is deprecated; use positional arguments instead.
           The D-Bus introspection XML file.
         </para>
       </listitem>
@@ -173,9 +223,31 @@
       <listitem>
         <para>
           Generate Docbook Documentation for each D-Bus interface and
-          put it in <filename>OUTFILES-NAME.xml</filename> where
-          <literal>NAME</literal> is a place-holder for the interface
+          put it in <filename><replaceable>OUTFILES</replaceable>-<replaceable>NAME</replaceable>.xml</filename>
+          where <literal>NAME</literal> is a place-holder for the interface
           name, e.g. <literal>net.Corp.FooBar</literal> and so on.
+        </para>
+        <para>
+          Pass <option>--output-directory</option> to specify the directory
+          to put the output files in. By default the current directory
+          will be used.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--generate-rst</option> <replaceable>OUTFILES</replaceable></term>
+      <listitem>
+        <para>
+          Generate reStructuredText Documentation for each D-Bus interface and
+          put it in <filename><replaceable>OUTFILES</replaceable>-<replaceanle>NAME</replaceanle>.rst</filename>
+          where <literal>NAME</literal> is a place-holder for the interface
+          name, e.g. <literal>net.Corp.FooBar</literal> and so on.
+        </para>
+        <para>
+          Pass <option>--output-directory</option> to specify the directory
+          to put the output files in. By default the current directory
+          will be used.
         </para>
       </listitem>
     </varlistentry>
@@ -186,7 +258,12 @@
         <para>
           Generate C code for all D-Bus interfaces and put it in
           <filename>OUTFILES.c</filename> and
-          <filename>OUTFILES.h</filename>.
+          <filename>OUTFILES.h</filename> including any sub-directories. If you want the files to
+          be output in a different location use <option>--output-directory</option> as <filename>OUTFILES.h</filename>
+          including sub-directories will be referenced from <filename>OUTFILES.c</filename>.
+        </para>
+        <para>
+          The full paths would then be <literal>$(OUTDIR)/$(dirname $OUTFILES)/$(basename $OUTFILES).{c,h}</literal>.
         </para>
       </listitem>
     </varlistentry>
@@ -204,12 +281,189 @@
     </varlistentry>
 
     <varlistentry>
+      <term><option>--pragma-once</option></term>
+      <listitem>
+        <para>
+          If this option is passed, the
+          <ulink url="https://en.wikipedia.org/wiki/Pragma_once">&#35;pragma once</ulink>
+          preprocessor directive is used instead of include guards.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
       <term><option>--c-generate-object-manager</option></term>
       <listitem>
         <para>
           If this option is passed, suitable #GDBusObject,
           #GDBusObjectProxy, #GDBusObjectSkeleton and
           #GDBusObjectManagerClient subclasses are generated.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--c-generate-autocleanup</option> none|objects|all</term>
+      <listitem>
+        <para>
+          This option influences what types autocleanup functions are
+          generated for. 'none' means to not generate any autocleanup functions.
+          'objects' means to generate them for object types, and 'all' means to
+          generate them for object types and interfaces. The default is 'objects'
+          due to a corner case in backwards compatibility with a few projects,
+          but you should likely switch your project to use 'all'.
+          This option was added in GLib 2.50.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--output-directory</option> <replaceable>OUTDIR</replaceable></term>
+      <listitem>
+        <para>
+          Directory to output generated source to. Equivalent to changing directory before generation.
+        </para>
+        <para>
+          This option cannot be used with <option>--body</option>,
+          <option>--header</option>, <option>--interface-info-body</option> or
+          <option>--interface-info-header</option>; and
+          <option>--output</option> must be used.
+        </para>
+
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--header</option></term>
+      <listitem>
+        <para>
+          If this option is passed, it will generate the header code and write it to the disk by
+          using the path and file name provided by <option>--output</option>.
+        </para>
+        <para>
+          Using <option>--generate-c-code</option>, <option>--generate-docbook</option> or
+          <option>--output-directory</option> are not allowed to be used along with
+          <option>--header</option> and <option>--body</option> options, because these options
+          are used to generate only one file.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--body</option></term>
+      <listitem>
+        <para>
+          If this option is passed, it will generate the source code and write it to the disk by
+          using the path and file name provided by <option>--output</option>.
+        </para>
+        <para>
+          Using <option>--generate-c-code</option>, <option>--generate-docbook</option> or
+          <option>--output-directory</option> are not allowed to be used along with
+          <option>--header</option> and <option>--body</option> options, because these options
+          are used to generate only one file.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--interface-info-header</option></term>
+      <listitem>
+        <para>
+          If this option is passed, it will generate the header code for the
+          <type>GDBusInterfaceInfo</type> structures only and will write it to
+          the disk by using the path and file name provided by
+          <option>--output</option>.
+        </para>
+        <para>
+          Using <option>--generate-c-code</option>, <option>--generate-docbook</option> or
+          <option>--output-directory</option> are not allowed to be used along with
+          the <option>--interface-info-header</option> and
+          <option>--interface-info-body</option> options, because these options
+          are used to generate only one file.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--interface-info-body</option></term>
+      <listitem>
+        <para>
+          If this option is passed, it will generate the source code for the
+          <type>GDBusInterfaceInfo</type> structures only and will write it to
+          the disk by using the path and file name provided by
+          <option>--output</option>.
+        </para>
+        <para>
+          Using <option>--generate-c-code</option>, <option>--generate-docbook</option> or
+          <option>--output-directory</option> are not allowed to be used along with
+          the <option>--interface-info-header</option> and
+          <option>--interface-info-body</option> options, because these options
+          are used to generate only one file.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--symbol-decorator</option> <replaceable>DECORATOR</replaceable></term>
+      <listitem>
+        <para>
+          If a <literal>DECORATOR</literal> is passed in with this option, all the
+          generated function prototypes in the generated header will be marked with
+          <literal>DECORATOR</literal>. This can be used, for instance, to export
+          symbols from code generated with <command>gdbus-codegen</command>.
+          This option is added in GLib-2.66
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--symbol-decorator-header</option> <replaceable>HEADER</replaceable></term>
+      <listitem>
+        <para>
+          If a <literal>HEADER</literal> is passed in with this option, the
+          generated header will put a <literal>#include HEADER</literal> before the rest of the
+          items, except for the inclusion guards or <literal>#pragma once</literal>
+          (if <option>--pragma-once</option> is used).  This is used if using another header file is
+          needed for the decorator passed in via <option>--symbol-decorator</option> to be defined.
+          This option is added in GLib-2.66.
+        </para>
+        <para>
+          This option can only be used if <option>--symbol-decorator</option> is used.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--symbol-decorator-define</option> <replaceable>DEFINE</replaceable></term>
+      <listitem>
+        <para>
+          If a <literal>DEFINE</literal> is passed in with this option, the
+          generated source will add a <literal>#define DEFINE</literal> before the rest of the
+          items.  This is used if a particular macro is needed to ensure the decorator
+          passed in via <option>--symbol-decorator</option> uses the correct definition when the
+          generated source is being compiled. This option is added in GLib-2.66.
+        </para>
+        <para>
+          This option can only be used if <option>--symbol-decorator</option> is used.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--output</option> <replaceable>OUTFILE</replaceable></term>
+      <listitem>
+        <para>
+          The full path where the header (<option>--header</option>,
+          <option>--interface-info-header</option>) or the source code
+          (<option>--body</option>, <option>--interface-info-body</option>) will
+          be written, using the path and filename provided by
+          <option>--output</option>. The full path could be something like
+          <literal>$($OUTFILE).{c,h}</literal>.
+        </para>
+        <para>
+          Using <option>--generate-c-code</option>, <option>--generate-docbook</option> or
+          <option>--output-directory</option> is not allowed along with
+          <option>--output</option>, because the latter is used to generate only one file.
         </para>
       </listitem>
     </varlistentry>
@@ -241,6 +495,66 @@ gdbus-codegen --c-namespace MyApp                           \
 ]]></programlisting></informalexample>
         <para>
           Any UTF-8 string can be used for <replaceable>KEY</replaceable> and <replaceable>VALUE</replaceable>.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--glib-min-required</option> <replaceable>VERSION</replaceable></term>
+      <listitem>
+        <para>
+          Specifies the minimum version of GLib which the code generated by
+          <command>gdbus-codegen</command> can depend on. This may be used to
+          make backwards-incompatible changes in the output or behaviour of
+          <command>gdbus-codegen</command> in future, which users may opt in to
+          by increasing the value they pass for <option>--glib-min-required</option>.
+          If this option is not passed, the output from <command>gdbus-codegen</command>
+          is guaranteed to be compatible with all versions of GLib from 2.30
+          upwards, as that is when <command>gdbus-codegen</command> was first
+          released.
+        </para>
+        <para>
+          Note that some version parameters introduce incompatible changes: all callers
+          of the generated code might need to be updated, and if the generated code is part of
+          a library's API or ABI, then increasing the version parameter can result in an API
+          or ABI break.
+        </para>
+        <para>
+          The version number must be of the form
+          <literal><replaceable>MAJOR</replaceable>.<replaceable>MINOR</replaceable>.<replaceable>MICRO</replaceable></literal>,
+          where all parts are integers. <replaceable>MINOR</replaceable> and
+          <replaceable>MICRO</replaceable> are optional. The version number may not be smaller
+          than <literal>2.30</literal>.
+        </para>
+        <para>
+          If the version number is <literal>2.64</literal> or greater, the generated code will
+          have the following features: (1) If a method has <literal>h</literal> (file
+          descriptor) parameter(s), a <type>GUnixFDList</type> parameter will exist in the
+          generated code for it (whereas previously the annotation
+          <literal>org.gtk.GDBus.C.UnixFD</literal> was required), and (2) Method call functions will
+          have two additional arguments to allow the user to specify <type>GDBusCallFlags</type>
+          and a timeout value, as is possible when using <function>g_dbus_proxy_call()</function>.
+        </para>
+      </listitem>
+    </varlistentry>
+
+    <varlistentry>
+      <term><option>--glib-max-allowed</option> <replaceable>VERSION</replaceable></term>
+      <listitem>
+        <para>
+          Specifies the maximum version of GLib which the code generated by
+          <command>gdbus-codegen</command> can depend on. This may be used to
+          ensure that code generated by <command>gdbus-codegen</command> is
+          compilable with specific older versions of GLib that your software has
+          to support.
+        </para>
+        <para>
+          The version number must be of the form
+          <literal><replaceable>MAJOR</replaceable>.<replaceable>MINOR</replaceable>.<replaceable>MICRO</replaceable></literal>,
+          where all parts are integers. <replaceable>MINOR</replaceable> and
+          <replaceable>MICRO</replaceable> are optional. The version number must
+          be greater than or equal to that passed to <option>--glib-min-required</option>.
+          It defaults to the version of GLib which provides this <command>gdbus-codegen</command>.
         </para>
       </listitem>
     </varlistentry>
@@ -485,7 +799,7 @@ gdbus-codegen --generate-c-code myapp-generated       \
     <filename>myapp-generated.[ch]</filename> are
     generated. The files provide an abstract
     #GTypeInterface<!-- -->-derived type called
-    <type>MyAppFrobber</type> as well as two instantiable types with
+    <type>MyAppFrobber</type> as well as two instantiatable types with
     the same name but suffixed with <type>Proxy</type> and
     <type>Skeleton</type>. The generated file, roughly, contains the
     following facilities:
@@ -664,9 +978,9 @@ my_app_frobber_proxy_new_sync   (GDBusConnection     *connection,
       the generated methods such as
       <function>my_app_frobber_call_hello_world()</function> to invoke
       the <function>net.Corp.MyApp.Frobber.HelloWorld()</function>
-      D-Bus method, connect to the the
+      D-Bus method, connect to the
       <function>::notification</function> GObject signal to receive
-      the <function>net.Corp.MyApp.Frobber::Notication</function>
+      the <function>net.Corp.MyApp.Frobber::Notification</function>
       D-Bus signal and get/set the
       <parameter>net.Corp.MyApp.Frobber:Verbose</parameter> D-Bus
       Property using either the GObject property
@@ -694,7 +1008,7 @@ my_app_frobber_proxy_new_sync   (GDBusConnection     *connection,
       subclass. For example, to handle
       <function>HelloWorld()</function> method invocations, set the
       vfunc for <function>handle_hello_hello_world()</function> in the
-      <type>MyAppFrobberIface</type> structure. Similary, to handle
+      <type>MyAppFrobberIface</type> structure. Similarly, to handle
       the <parameter>net.Corp.MyApp.Frobber:Verbose</parameter>
       property override the <parameter>:verbose</parameter> #GObject
       property from the subclass. To emit a signal, use
@@ -766,7 +1080,7 @@ on_handle_hello_world (MyAppFrobber           *interface,
       received. The queue is drained in an idle handler (which is called from the
       <link linkend="g-main-context-push-thread-default">thread-default main loop</link>
       of the thread where the skeleton object was
-      contructed) and will cause emissions of the <ulink
+      constructed) and will cause emissions of the <ulink
       url="http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-properties">org.freedesktop.DBus.Properties::PropertiesChanged</ulink>
       signal with all the properties that have changed. Use
       g_dbus_interface_skeleton_flush() or
@@ -825,7 +1139,8 @@ on_handle_hello_world (MyAppFrobber           *interface,
     The generated C functions are guaranteed to not change their ABI
     that is, if a method, signal or property does not change its
     signature in the introspection XML, the generated C functions will
-    not change its C ABI either.
+    not change its C ABI either. The ABI of the generated instance and
+    class structures will be preserved as well.
   </para>
   <para>
     The ABI of the generated #GType<!-- -->s will be preserved only if
@@ -841,7 +1156,7 @@ on_handle_hello_world (MyAppFrobber           *interface,
   <para>
     The generated C code currently happens to be annotated with <ulink
     url="http://www.gtk.org/gtk-doc/">gtk-doc</ulink> / <ulink
-    url="https://live.gnome.org/GObjectIntrospection">GObject
+    url="https://wiki.gnome.org/Projects/GObjectIntrospection">GObject
     Introspection</ulink> comments / annotations. The layout and
     contents might change in the future so no guarantees about
     e.g. <literal>SECTION</literal> usage etc. is given.
@@ -850,6 +1165,11 @@ on_handle_hello_world (MyAppFrobber           *interface,
     While the generated Docbook for D-Bus interfaces isn't expected to
     change, no guarantees are given at this point.
   </para>
+  <para>
+    It is important to note that the generated code should not be
+    checked into revision control systems, nor it should be included
+    in distributed source archives.
+  </para>
 </refsect1>
 
 <refsect1>
@@ -857,7 +1177,7 @@ on_handle_hello_world (MyAppFrobber           *interface,
   <para>
     Please send bug reports to either the distribution bug tracker
     or the upstream bug tracker at
-    <ulink url="https://bugzilla.gnome.org/enter_bug.cgi?product=glib">https://bugzilla.gnome.org/enter_bug.cgi?product=glib</ulink>.
+    <ulink url="https://gitlab.gnome.org/GNOME/glib/issues/new">https://gitlab.gnome.org/GNOME/glib/issues/new</ulink>.
   </para>
 </refsect1>
 

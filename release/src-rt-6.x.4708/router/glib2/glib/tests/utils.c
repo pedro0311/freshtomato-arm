@@ -21,13 +21,22 @@
  * Author: Matthias Clasen
  */
 
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include "glib.h"
+#include "glib-private.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#ifdef G_OS_UNIX
+#include <sys/utsname.h>
+#endif
+#ifdef G_OS_WIN32
+#include <windows.h>
+#endif
 
 static gboolean
 strv_check (const gchar * const *strv, ...)
@@ -94,7 +103,7 @@ static void
 test_version (void)
 {
   if (g_test_verbose ())
-    g_print ("(header %d.%d.%d library %d.%d.%d) ",
+    g_printerr ("(header %d.%d.%d library %d.%d.%d) ",
               GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION,
               glib_major_version, glib_minor_version, glib_micro_version);
 
@@ -149,11 +158,199 @@ test_appname (void)
   g_assert_cmpstr (appname, ==, "appname");
 }
 
+static gpointer
+thread_prgname_check (gpointer data)
+{
+  gint *n_threads_got_prgname = (gint *) data;
+  const gchar *old_prgname;
+
+  old_prgname = g_get_prgname ();
+  g_assert_cmpstr (old_prgname, ==, "prgname");
+
+  g_atomic_int_inc (n_threads_got_prgname);
+
+  while (g_strcmp0 (g_get_prgname (), "prgname2") != 0);
+
+  return NULL;
+}
+
+static void
+test_prgname_thread_safety (void)
+{
+  gsize i;
+  gint n_threads_got_prgname;
+  GThread *threads[4];
+
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/-/issues/847");
+  g_test_summary ("Test that threads racing to get and set the program name "
+                  "always receive a valid program name.");
+
+  g_set_prgname ("prgname");
+  g_atomic_int_set (&n_threads_got_prgname, 0);
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    threads[i] = g_thread_new (NULL, thread_prgname_check, &n_threads_got_prgname);
+
+  while (g_atomic_int_get (&n_threads_got_prgname) != G_N_ELEMENTS (threads))
+    g_usleep (50);
+
+  g_set_prgname ("prgname2");
+
+  /* Wait for all the workers to exit. */
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    g_thread_join (threads[i]);
+
+  /* reset prgname */
+  g_set_prgname ("prgname");
+}
+
 static void
 test_tmpdir (void)
 {
-  g_test_bug ("627969");
+  g_test_bug ("https://bugzilla.gnome.org/show_bug.cgi?id=627969");
   g_assert_cmpstr (g_get_tmp_dir (), !=, "");
+}
+
+#if defined(__GNUC__) && (__GNUC__ >= 4)
+#define TEST_BUILTINS 1
+#else
+#define TEST_BUILTINS 0
+#endif
+
+#if TEST_BUILTINS
+static gint
+builtin_bit_nth_lsf1 (gulong mask, gint nth_bit)
+{
+  if (nth_bit >= 0)
+    {
+      if (G_LIKELY (nth_bit < GLIB_SIZEOF_LONG * 8 - 1))
+        mask &= -(1UL << (nth_bit + 1));
+      else
+        mask = 0;
+    }
+  return __builtin_ffsl (mask) - 1;
+}
+
+static gint
+builtin_bit_nth_lsf2 (gulong mask, gint nth_bit)
+{
+  if (nth_bit >= 0)
+    {
+      if (G_LIKELY (nth_bit < GLIB_SIZEOF_LONG * 8 - 1))
+        mask &= -(1UL << (nth_bit + 1));
+      else
+        mask = 0;
+    }
+  return mask ? __builtin_ctzl (mask) : -1;
+}
+
+static gint
+builtin_bit_nth_msf (gulong mask, gint nth_bit)
+{
+  if (nth_bit >= 0 && nth_bit < GLIB_SIZEOF_LONG * 8)
+    mask &= (1UL << nth_bit) - 1;
+  return mask ? GLIB_SIZEOF_LONG * 8 - 1 - __builtin_clzl (mask) : -1;
+}
+
+static guint
+builtin_bit_storage (gulong number)
+{
+  return number ? GLIB_SIZEOF_LONG * 8 - __builtin_clzl (number) : 1;
+}
+#endif
+
+static gint
+naive_bit_nth_lsf (gulong mask, gint nth_bit)
+{
+  if (G_UNLIKELY (nth_bit < -1))
+    nth_bit = -1;
+  while (nth_bit < ((GLIB_SIZEOF_LONG * 8) - 1))
+    {
+      nth_bit++;
+      if (mask & (1UL << nth_bit))
+        return nth_bit;
+    }
+  return -1;
+}
+
+static gint
+naive_bit_nth_msf (gulong mask, gint nth_bit)
+{
+  if (nth_bit < 0 || G_UNLIKELY (nth_bit > GLIB_SIZEOF_LONG * 8))
+    nth_bit = GLIB_SIZEOF_LONG * 8;
+  while (nth_bit > 0)
+    {
+      nth_bit--;
+      if (mask & (1UL << nth_bit))
+        return nth_bit;
+    }
+  return -1;
+}
+
+static guint
+naive_bit_storage (gulong number)
+{
+  guint n_bits = 0;
+
+  do
+    {
+      n_bits++;
+      number >>= 1;
+    }
+  while (number);
+  return n_bits;
+}
+
+static void
+test_basic_bits (void)
+{
+  gulong i;
+  gint nth_bit;
+
+  /* we loop like this: 0, -1, 1, -2, 2, -3, 3, ... */
+  for (i = 0; (glong) i < 1500; i = -(i + ((glong) i >= 0)))
+    {
+      guint naive_bit_storage_i = naive_bit_storage (i);
+
+      /* Test the g_bit_*() implementations against the compiler builtins (if
+       * available), and against a slow-but-correct ‘naive’ implementation.
+       * They should all agree.
+       *
+       * The macro and function versions of the g_bit_*() functions are tested,
+       * hence one call with the function name in brackets (to avoid it being
+       * expanded as a macro). */
+#if TEST_BUILTINS
+      g_assert_cmpint (naive_bit_storage_i, ==, builtin_bit_storage (i));
+#endif
+      g_assert_cmpint (naive_bit_storage_i, ==, g_bit_storage (i));
+      g_assert_cmpint (naive_bit_storage_i, ==, (g_bit_storage) (i));
+
+      for (nth_bit = -3; nth_bit <= 2 + GLIB_SIZEOF_LONG * 8; nth_bit++)
+        {
+          gint naive_bit_nth_lsf_i_nth_bit = naive_bit_nth_lsf (i, nth_bit);
+          gint naive_bit_nth_msf_i_nth_bit = naive_bit_nth_msf (i, nth_bit);
+
+#if TEST_BUILTINS
+          g_assert_cmpint (naive_bit_nth_lsf_i_nth_bit, ==,
+                           builtin_bit_nth_lsf1 (i, nth_bit));
+          g_assert_cmpint (naive_bit_nth_lsf_i_nth_bit, ==,
+                           builtin_bit_nth_lsf2 (i, nth_bit));
+#endif
+          g_assert_cmpint (naive_bit_nth_lsf_i_nth_bit, ==,
+                           g_bit_nth_lsf (i, nth_bit));
+          g_assert_cmpint (naive_bit_nth_lsf_i_nth_bit, ==,
+                           (g_bit_nth_lsf) (i, nth_bit));
+
+#if TEST_BUILTINS
+          g_assert_cmpint (naive_bit_nth_msf_i_nth_bit, ==,
+                           builtin_bit_nth_msf (i, nth_bit));
+#endif
+          g_assert_cmpint (naive_bit_nth_msf_i_nth_bit, ==,
+                           g_bit_nth_msf (i, nth_bit));
+          g_assert_cmpint (naive_bit_nth_msf_i_nth_bit, ==,
+                           (g_bit_nth_msf) (i, nth_bit));
+        }
+    }
 }
 
 static void
@@ -237,6 +434,11 @@ test_find_program (void)
   gchar *res;
 
 #ifdef G_OS_UNIX
+  gchar *relative_path;
+  gchar *absolute_path;
+  gchar *cwd;
+  gsize i;
+
   res = g_find_program_in_path ("sh");
   g_assert (res != NULL);
   g_free (res);
@@ -244,6 +446,27 @@ test_find_program (void)
   res = g_find_program_in_path ("/bin/sh");
   g_assert (res != NULL);
   g_free (res);
+
+  cwd = g_get_current_dir ();
+  absolute_path = g_find_program_in_path ("sh");
+  relative_path = g_strdup (absolute_path);
+  for (i = 0; cwd[i] != '\0'; i++)
+    {
+      if (cwd[i] == '/' && cwd[i + 1] != '\0')
+        {
+          gchar *relative_path_2 = g_strconcat ("../", relative_path, NULL);
+          g_free (relative_path);
+          relative_path = relative_path_2;
+        }
+    }
+  res = g_find_program_in_path (relative_path);
+  g_assert_nonnull (res);
+  g_assert_true (g_path_is_absolute (res));
+  g_free (cwd);
+  g_free (absolute_path);
+  g_free (relative_path);
+  g_free (res);
+
 #else
   /* There's not a lot we can search for that would reliably work both
    * on real Windows and mingw.
@@ -258,20 +481,6 @@ test_find_program (void)
 
   res = g_find_program_in_path ("/etc/passwd");
   g_assert (res == NULL);
-}
-
-static void
-test_debug_help (void)
-{
-  GDebugKey keys[] = {
-    { "key1", 1 },
-    { "key2", 2 },
-    { "key3", 4 },
-  };
-  guint res;
-
-  res = g_parse_debug_string ("help", keys, G_N_ELEMENTS (keys));
-  g_assert_cmpint (res, ==, 0);
 }
 
 static void
@@ -308,7 +517,13 @@ test_debug (void)
   res = g_parse_debug_string ("all", keys, G_N_ELEMENTS (keys));
   g_assert_cmpint (res, ==, 7);
 
-  g_test_trap_subprocess ("/utils/debug/subprocess/help", 0, 0);
+  if (g_test_subprocess ())
+    {
+      res = g_parse_debug_string ("help", keys, G_N_ELEMENTS (keys));
+      g_assert_cmpint (res, ==, 0);
+      return;
+    }
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
   g_test_trap_assert_passed ();
   g_test_trap_assert_stderr ("*Supported debug values: key1 key2 key3 all help*");
 }
@@ -328,14 +543,54 @@ test_codeset (void)
 }
 
 static void
-test_basename (void)
+test_codeset2 (void)
 {
-  const gchar *path = "/path/to/a/file/deep/down.sh";
-  const gchar *b;
+  if (g_test_subprocess ())
+    {
+      const gchar *c;
+      g_setenv ("CHARSET", "UTF-8", TRUE);
+      g_get_charset (&c);
+      g_assert_cmpstr (c, ==, "UTF-8");
+      return;
+    }
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_passed ();
+}
 
-  b = g_basename (path);
+static void
+test_console_charset (void)
+{
+  const gchar *c1;
+  const gchar *c2;
 
-  g_assert_cmpstr (b, ==, "down.sh");
+#ifdef G_OS_WIN32
+  /* store current environment and unset $LANG to make sure it does not interfere */
+  const unsigned int initial_cp = GetConsoleOutputCP ();
+  gchar *initial_lang = g_strdup (g_getenv ("LANG"));
+  g_unsetenv ("LANG");
+
+  /* set console output codepage to something specific (ISO-8859-1 aka CP28591) and query it */
+  SetConsoleOutputCP (28591);
+  g_get_console_charset (&c1);
+  g_assert_cmpstr (c1, ==, "ISO-8859-1");
+
+  /* set $LANG to something specific (should override the console output codepage) and query it */
+  g_setenv ("LANG", "de_DE.ISO-8859-15@euro", TRUE);
+  g_get_console_charset (&c2);
+  g_assert_cmpstr (c2, ==, "ISO-8859-15");
+
+  /* reset environment */
+  if (initial_cp)
+    SetConsoleOutputCP (initial_cp);
+  if (initial_lang)
+    g_setenv ("LANG", initial_lang, TRUE);
+  g_free (initial_lang);
+#else
+  g_get_charset (&c1);
+  g_get_console_charset (&c2);
+
+  g_assert_cmpstr (c1, ==, c2);
+#endif
 }
 
 extern const gchar *glib_pgettext (const gchar *msgidctxt, gsize msgidoffset);
@@ -383,6 +638,7 @@ test_hostname (void)
   name = g_get_host_name ();
 
   g_assert (name != NULL);
+  g_assert_true (g_utf8_validate (name, -1, NULL));
 }
 
 #ifdef G_OS_UNIX
@@ -421,6 +677,15 @@ test_xdg_dirs (void)
   g_assert_cmpstr (dir, ==, xdg);
   g_free (xdg);
 
+  xdg = g_strdup (g_getenv ("XDG_STATE_HOME"));
+  if (!xdg)
+    xdg = g_build_filename (g_get_home_dir (), ".local/state", NULL);
+
+  dir = g_get_user_state_dir ();
+
+  g_assert_cmpstr (dir, ==, xdg);
+  g_free (xdg);
+
   xdg = g_strdup (g_getenv ("XDG_RUNTIME_DIR"));
   if (!xdg)
     xdg = g_strdup (g_get_user_cache_dir ());
@@ -440,7 +705,6 @@ test_xdg_dirs (void)
 
   g_assert_cmpstr (s, ==, xdg);
 
-  g_strfreev ((gchar **)dirs);
   g_free (s);
 }
 #endif
@@ -471,6 +735,63 @@ test_desktop_special_dir (void)
 }
 
 static void
+test_os_info (void)
+{
+  gchar *name;
+  gchar *contents = NULL;
+#if defined (G_OS_UNIX) && !(defined (G_OS_WIN32) || defined (__APPLE__))
+  struct utsname info;
+#endif
+
+  /* Whether this is implemented or not, it must not crash */
+  name = g_get_os_info (G_OS_INFO_KEY_NAME);
+  g_test_message ("%s: %s",
+                  G_OS_INFO_KEY_NAME,
+                  name == NULL ? "(null)" : name);
+
+#if defined (G_OS_WIN32) || defined (__APPLE__)
+  /* These OSs have a special case so NAME should always succeed */
+  g_assert_nonnull (name);
+#elif defined (G_OS_UNIX)
+  if (g_file_get_contents ("/etc/os-release", &contents, NULL, NULL) ||
+      g_file_get_contents ("/usr/lib/os-release", &contents, NULL, NULL) ||
+      uname (&info) == 0)
+    g_assert_nonnull (name);
+  else
+    g_test_skip ("os-release(5) API not implemented on this platform");
+#else
+  g_test_skip ("g_get_os_info() not supported on this platform");
+#endif
+
+  g_free (name);
+  g_free (contents);
+}
+
+static void
+source_test (gpointer data)
+{
+  g_assert_not_reached ();
+}
+
+static void
+test_clear_source (void)
+{
+  guint id;
+
+  id = g_idle_add_once (source_test, NULL);
+  g_assert_cmpuint (id, >, 0);
+
+  g_clear_handle_id (&id, g_source_remove);
+  g_assert_cmpuint (id, ==, 0);
+
+  id = g_timeout_add_once (100, source_test, NULL);
+  g_assert_cmpuint (id, >, 0);
+
+  g_clear_handle_id (&id, g_source_remove);
+  g_assert_cmpuint (id, ==, 0);
+}
+
+static void
 test_clear_pointer (void)
 {
   gpointer a;
@@ -482,6 +803,86 @@ test_clear_pointer (void)
   a = g_malloc (5);
   (g_clear_pointer) (&a, g_free);
   g_assert (a == NULL);
+}
+
+/* Test that g_clear_pointer() works with a GDestroyNotify which contains a cast.
+ * See https://gitlab.gnome.org/GNOME/glib/issues/1425 */
+static void
+test_clear_pointer_cast (void)
+{
+  GHashTable *hash_table = NULL;
+
+  hash_table = g_hash_table_new (g_str_hash, g_str_equal);
+
+  g_assert_nonnull (hash_table);
+
+  g_clear_pointer (&hash_table, (void (*) (GHashTable *)) g_hash_table_destroy);
+
+  g_assert_null (hash_table);
+}
+
+/* Test that the macro version of g_clear_pointer() only evaluates its argument
+ * once, just like the function version would. */
+static void
+test_clear_pointer_side_effects (void)
+{
+  gchar **my_string_array, **i;
+
+  my_string_array = g_new0 (gchar*, 3);
+  my_string_array[0] = g_strdup ("hello");
+  my_string_array[1] = g_strdup ("there");
+  my_string_array[2] = NULL;
+
+  i = my_string_array;
+
+  g_clear_pointer (i++, g_free);
+
+  g_assert_true (i == &my_string_array[1]);
+  g_assert_null (my_string_array[0]);
+  g_assert_nonnull (my_string_array[1]);
+  g_assert_null (my_string_array[2]);
+
+  g_free (my_string_array[1]);
+  g_free (my_string_array[2]);
+  g_free (my_string_array);
+}
+
+static int obj_count;
+
+static void
+get_obj (gpointer *obj_out)
+{
+  gpointer obj = g_malloc (5);
+  obj_count++;
+
+  if (obj_out)
+    *obj_out = g_steal_pointer (&obj);
+
+  if (obj)
+    {
+      g_free (obj);
+      obj_count--;
+    }
+}
+
+static void
+test_take_pointer (void)
+{
+  gpointer a;
+  gpointer b;
+
+  get_obj (NULL);
+
+  get_obj (&a);
+  g_assert (a);
+
+  /* ensure that it works to skip the macro */
+  b = (g_steal_pointer) (&a);
+  g_assert (!a);
+  obj_count--;
+  g_free (b);
+
+  g_assert (!obj_count);
 }
 
 static void
@@ -503,6 +904,102 @@ test_misc_mem (void)
 }
 
 static void
+aligned_alloc_nz (void)
+{
+  gpointer a;
+
+  /* Test an alignment that’s zero */
+  a = g_aligned_alloc (16, sizeof(char), 0);
+  g_aligned_free (a);
+  exit (0);
+}
+
+static void
+aligned_alloc_npot (void)
+{
+  gpointer a;
+
+  /* Test an alignment that’s not a power of two */
+  a = g_aligned_alloc (16, sizeof(char), 15);
+  g_aligned_free (a);
+  exit (0);
+}
+
+static void
+aligned_alloc_nmov (void)
+{
+  gpointer a;
+
+  /* Test an alignment that’s not a multiple of sizeof(void*) */
+  a = g_aligned_alloc (16, sizeof(char), sizeof(void *) / 2);
+  g_aligned_free (a);
+  exit (0);
+}
+
+static void
+test_aligned_mem (void)
+{
+  gpointer a;
+
+  g_test_summary ("Aligned memory allocator");
+
+  a = g_aligned_alloc (0, sizeof(int), 8);
+  g_assert_null (a);
+
+  a = g_aligned_alloc0 (0, sizeof(int), 8);
+  g_assert_null (a);
+
+  a = g_aligned_alloc (16, 0, 8);
+  g_assert_null (a);
+
+#define CHECK_SUBPROCESS_FAIL(name,msg) do { \
+      if (g_test_undefined ()) \
+        { \
+          g_test_message (msg); \
+          g_test_trap_subprocess ("/utils/aligned-mem/subprocess/" #name, 0, \
+                                  G_TEST_SUBPROCESS_DEFAULT); \
+          g_test_trap_assert_failed (); \
+        } \
+    } while (0)
+
+  CHECK_SUBPROCESS_FAIL (aligned_alloc_nz, "Alignment must not be zero");
+  CHECK_SUBPROCESS_FAIL (aligned_alloc_npot, "Alignment must be a power of two");
+  CHECK_SUBPROCESS_FAIL (aligned_alloc_nmov, "Alignment must be a multiple of sizeof(void*)");
+}
+
+static void
+test_aligned_mem_alignment (void)
+{
+  gchar *p;
+
+  g_test_summary ("Check that g_aligned_alloc() returns a correctly aligned pointer");
+
+  p = g_aligned_alloc (5, sizeof (*p), 256);
+  g_assert_nonnull (p);
+  g_assert_cmpuint (((guintptr) p) % 256, ==, 0);
+
+  g_aligned_free (p);
+}
+
+static void
+test_aligned_mem_zeroed (void)
+{
+  gsize n_blocks = 10;
+  guint *p;
+  gsize i;
+
+  g_test_summary ("Check that g_aligned_alloc0() zeroes out its allocation");
+
+  p = g_aligned_alloc0 (n_blocks, sizeof (*p), 16);
+  g_assert_nonnull (p);
+
+  for (i = 0; i < n_blocks; i++)
+    g_assert_cmpuint (p[i], ==, 0);
+
+  g_aligned_free (p);
+}
+
+static void
 test_nullify (void)
 {
   gpointer p = &test_nullify;
@@ -512,6 +1009,112 @@ test_nullify (void)
   g_nullify_pointer (&p);
 
   g_assert (p == NULL);
+}
+
+static void
+atexit_func (void)
+{
+  g_print ("atexit called");
+}
+
+static void
+test_atexit (void)
+{
+  if (g_test_subprocess ())
+    {
+      g_atexit (atexit_func);
+      return;
+    }
+  g_test_trap_subprocess (NULL, 0, G_TEST_SUBPROCESS_DEFAULT);
+  g_test_trap_assert_passed ();
+  g_test_trap_assert_stdout ("*atexit called*");
+}
+
+static void
+test_check_setuid (void)
+{
+  gboolean res;
+
+  res = GLIB_PRIVATE_CALL(g_check_setuid) ();
+  g_assert (!res);
+}
+
+/* Test the defined integer limits are correct, as some compilers have had
+ * problems with signed/unsigned conversion in the past. These limits should not
+ * vary between platforms, compilers or architectures.
+ *
+ * Use string comparisons to avoid the same systematic problems with unary minus
+ * application in C++. See https://gitlab.gnome.org/GNOME/glib/issues/1663. */
+static void
+test_int_limits (void)
+{
+  gchar *str = NULL;
+
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/issues/1663");
+
+  str = g_strdup_printf ("%d %d %u\n"
+                         "%" G_GINT16_FORMAT " %" G_GINT16_FORMAT " %" G_GUINT16_FORMAT "\n"
+                         "%" G_GINT32_FORMAT " %" G_GINT32_FORMAT " %" G_GUINT32_FORMAT "\n"
+                         "%" G_GINT64_FORMAT " %" G_GINT64_FORMAT " %" G_GUINT64_FORMAT "\n",
+                         G_MININT8, G_MAXINT8, G_MAXUINT8,
+                         G_MININT16, G_MAXINT16, G_MAXUINT16,
+                         G_MININT32, G_MAXINT32, G_MAXUINT32,
+                         G_MININT64, G_MAXINT64, G_MAXUINT64);
+
+  g_assert_cmpstr (str, ==,
+                   "-128 127 255\n"
+                   "-32768 32767 65535\n"
+                   "-2147483648 2147483647 4294967295\n"
+                   "-9223372036854775808 9223372036854775807 18446744073709551615\n");
+  g_free (str);
+}
+
+static void
+test_clear_list (void)
+{
+    GList *list = NULL;
+
+    g_clear_list (&list, NULL);
+    g_assert_null (list);
+
+    list = g_list_prepend (list, "test");
+    g_assert_nonnull (list);
+
+    g_clear_list (&list, NULL);
+    g_assert_null (list);
+
+    g_clear_list (&list, g_free);
+    g_assert_null (list);
+
+    list = g_list_prepend (list, g_malloc (16));
+    g_assert_nonnull (list);
+
+    g_clear_list (&list, g_free);
+    g_assert_null (list);
+}
+
+static void
+test_clear_slist (void)
+{
+    GSList *slist = NULL;
+
+    g_clear_slist (&slist, NULL);
+    g_assert_null (slist);
+
+    slist = g_slist_prepend (slist, "test");
+    g_assert_nonnull (slist);
+
+    g_clear_slist (&slist, NULL);
+    g_assert_null (slist);
+
+    g_clear_slist (&slist, g_free);
+    g_assert_null (slist);
+
+    slist = g_slist_prepend (slist, g_malloc (16));
+    g_assert_nonnull (slist);
+
+    g_clear_slist (&slist, g_free);
+    g_assert_null (slist);
 }
 
 int
@@ -533,20 +1136,21 @@ main (int   argc,
   g_set_prgname (argv[0]);
 
   g_test_init (&argc, &argv, NULL);
-  g_test_bug_base ("http://bugzilla.gnome.org/");
 
   g_test_add_func ("/utils/language-names", test_language_names);
   g_test_add_func ("/utils/locale-variants", test_locale_variants);
   g_test_add_func ("/utils/version", test_version);
   g_test_add_func ("/utils/appname", test_appname);
+  g_test_add_func ("/utils/prgname-thread-safety", test_prgname_thread_safety);
   g_test_add_func ("/utils/tmpdir", test_tmpdir);
+  g_test_add_func ("/utils/basic_bits", test_basic_bits);
   g_test_add_func ("/utils/bits", test_bits);
   g_test_add_func ("/utils/swap", test_swap);
   g_test_add_func ("/utils/find-program", test_find_program);
   g_test_add_func ("/utils/debug", test_debug);
-  g_test_add_func ("/utils/debug/subprocess/help", test_debug_help);
   g_test_add_func ("/utils/codeset", test_codeset);
-  g_test_add_func ("/utils/basename", test_basename);
+  g_test_add_func ("/utils/codeset2", test_codeset2);
+  g_test_add_func ("/utils/console-charset", test_console_charset);
   g_test_add_func ("/utils/gettext", test_gettext);
   g_test_add_func ("/utils/username", test_username);
   g_test_add_func ("/utils/realname", test_realname);
@@ -556,9 +1160,25 @@ main (int   argc,
 #endif
   g_test_add_func ("/utils/specialdir", test_special_dir);
   g_test_add_func ("/utils/specialdir/desktop", test_desktop_special_dir);
+  g_test_add_func ("/utils/os-info", test_os_info);
   g_test_add_func ("/utils/clear-pointer", test_clear_pointer);
+  g_test_add_func ("/utils/clear-pointer-cast", test_clear_pointer_cast);
+  g_test_add_func ("/utils/clear-pointer/side-effects", test_clear_pointer_side_effects);
+  g_test_add_func ("/utils/take-pointer", test_take_pointer);
+  g_test_add_func ("/utils/clear-source", test_clear_source);
   g_test_add_func ("/utils/misc-mem", test_misc_mem);
+  g_test_add_func ("/utils/aligned-mem", test_aligned_mem);
+  g_test_add_func ("/utils/aligned-mem/subprocess/aligned_alloc_nz", aligned_alloc_nz);
+  g_test_add_func ("/utils/aligned-mem/subprocess/aligned_alloc_npot", aligned_alloc_npot);
+  g_test_add_func ("/utils/aligned-mem/subprocess/aligned_alloc_nmov", aligned_alloc_nmov);
+  g_test_add_func ("/utils/aligned-mem/alignment", test_aligned_mem_alignment);
+  g_test_add_func ("/utils/aligned-mem/zeroed", test_aligned_mem_zeroed);
   g_test_add_func ("/utils/nullify", test_nullify);
+  g_test_add_func ("/utils/atexit", test_atexit);
+  g_test_add_func ("/utils/check-setuid", test_check_setuid);
+  g_test_add_func ("/utils/int-limits", test_int_limits);
+  g_test_add_func ("/utils/clear-list", test_clear_list);
+  g_test_add_func ("/utils/clear-slist", test_clear_slist);
 
   return g_test_run ();
 }

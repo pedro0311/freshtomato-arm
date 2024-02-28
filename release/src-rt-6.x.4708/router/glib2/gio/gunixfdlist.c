@@ -2,10 +2,12 @@
  *
  * Copyright © 2009 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * See the included COPYING file for more information.
  *
@@ -23,17 +25,25 @@
  * descriptors that it contains, closing them when finalized.
  *
  * It may be wrapped in a #GUnixFDMessage and sent over a #GSocket in
- * the %G_SOCKET_ADDRESS_UNIX family by using g_socket_send_message()
+ * the %G_SOCKET_FAMILY_UNIX family by using g_socket_send_message()
  * and received using g_socket_receive_message().
  *
- * Note that <filename>&lt;gio/gunixfdlist.h&gt;</filename> belongs to
- * the UNIX-specific GIO interfaces, thus you have to use the
- * <filename>gio-unix-2.0.pc</filename> pkg-config file when using it.
+ * Before 2.74, `<gio/gunixfdlist.h>` belonged to the UNIX-specific GIO
+ * interfaces, thus you had to use the `gio-unix-2.0.pc` pkg-config file when
+ * using it.
+ *
+ * Since 2.74, the API is available for Windows.
  */
+
+/**
+ * GUnixFDList:
+ *
+ * #GUnixFDList is an opaque data structure and can only be accessed
+ * using the following functions.
+ **/
 
 #include "config.h"
 
-#include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
 #include <errno.h>
@@ -41,6 +51,12 @@
 #include "gunixfdlist.h"
 #include "gnetworking.h"
 #include "gioerror.h"
+#include "glib/glib-private.h"
+#include "glib/gstdio.h"
+
+#ifdef G_OS_WIN32
+#include <io.h>
+#endif
 
 struct _GUnixFDListPrivate
 {
@@ -63,7 +79,7 @@ g_unix_fd_list_finalize (GObject *object)
   gint i;
 
   for (i = 0; i < list->priv->nfd; i++)
-    close (list->priv->fds[i]);
+    g_close (list->priv->fds[i], NULL);
   g_free (list->priv->fds);
 
   G_OBJECT_CLASS (g_unix_fd_list_parent_class)
@@ -83,7 +99,9 @@ dup_close_on_exec_fd (gint     fd,
                       GError **error)
 {
   gint new_fd;
+#ifndef G_OS_WIN32
   gint s;
+#endif
 
 #ifdef F_DUPFD_CLOEXEC
   do
@@ -111,6 +129,9 @@ dup_close_on_exec_fd (gint     fd,
       return -1;
     }
 
+#ifdef G_OS_WIN32
+  new_fd = GLIB_PRIVATE_CALL (g_win32_reopen_noninherited) (new_fd, 0, error);
+#else
   do
     {
       s = fcntl (new_fd, F_GETFD);
@@ -127,10 +148,11 @@ dup_close_on_exec_fd (gint     fd,
       g_set_error (error, G_IO_ERROR,
                    g_io_error_from_errno (saved_errno),
                    "fcntl: %s", g_strerror (saved_errno));
-      close (new_fd);
+      g_close (new_fd, NULL);
 
       return -1;
     }
+#endif
 
   return new_fd;
 }
@@ -183,7 +205,8 @@ g_unix_fd_list_new_from_array (const gint *fds,
   list->priv->fds = g_new (gint, n_fds + 1);
   list->priv->nfd = n_fds;
 
-  memcpy (list->priv->fds, fds, sizeof (gint) * n_fds);
+  if (n_fds > 0)
+    memcpy (list->priv->fds, fds, sizeof (gint) * n_fds);
   list->priv->fds[n_fds] = -1;
 
   return list;
@@ -192,7 +215,7 @@ g_unix_fd_list_new_from_array (const gint *fds,
 /**
  * g_unix_fd_list_steal_fds:
  * @list: a #GUnixFDList
- * @length: (out) (allow-none): pointer to the length of the returned
+ * @length: (out) (optional): pointer to the length of the returned
  *     array, or %NULL
  *
  * Returns the array of file descriptors that is contained in this
@@ -248,7 +271,7 @@ g_unix_fd_list_steal_fds (GUnixFDList *list,
 /**
  * g_unix_fd_list_peek_fds:
  * @list: a #GUnixFDList
- * @length: (out) (allow-none): pointer to the length of the returned
+ * @length: (out) (optional): pointer to the length of the returned
  *     array, or %NULL
  *
  * Returns the array of file descriptors that is contained in this

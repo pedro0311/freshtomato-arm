@@ -1,10 +1,12 @@
 /*
  * Copyright © 2011 Canonical Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -160,11 +160,11 @@ g_wakeup_new (void)
 #endif
 
   if (!g_unix_open_pipe (wakeup->fds, FD_CLOEXEC, &error))
-    g_error ("Creating pipes for GWakeup: %s\n", error->message);
+    g_error ("Creating pipes for GWakeup: %s", error->message);
 
   if (!g_unix_set_fd_nonblocking (wakeup->fds[0], TRUE, &error) ||
       !g_unix_set_fd_nonblocking (wakeup->fds[1], TRUE, &error))
-    g_error ("Set pipes non-blocking for GWakeup: %s\n", error->message);
+    g_error ("Set pipes non-blocking for GWakeup: %s", error->message);
 
   return wakeup;
 }
@@ -229,19 +229,26 @@ g_wakeup_acknowledge (GWakeup *wakeup)
 void
 g_wakeup_signal (GWakeup *wakeup)
 {
-  guint64 one = 1;
   int res;
 
   if (wakeup->fds[1] == -1)
     {
+      guint64 one = 1;
+
+      /* eventfd() case. It requires a 64-bit counter increment value to be
+       * written. */
       do
         res = write (wakeup->fds[0], &one, sizeof one);
       while (G_UNLIKELY (res == -1 && errno == EINTR));
     }
   else
     {
+      guint8 one = 1;
+
+      /* Non-eventfd() case. Only a single byte needs to be written, and it can
+       * have an arbitrary value. */
       do
-        res = write (wakeup->fds[1], &one, 1);
+        res = write (wakeup->fds[1], &one, sizeof one);
       while (G_UNLIKELY (res == -1 && errno == EINTR));
     }
 }

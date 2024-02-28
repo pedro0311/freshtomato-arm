@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -46,7 +46,11 @@ _g_win32_overlap_wait_result (HANDLE           hfile,
   gboolean result = FALSE;
   gint num, npoll;
 
+#if GLIB_SIZEOF_VOID_P == 8
+  pollfd[0].fd = (gint64)overlap->hEvent;
+#else
   pollfd[0].fd = (gint)overlap->hEvent;
+#endif
   pollfd[0].events = G_IO_IN;
   num = 1;
 
@@ -65,7 +69,7 @@ loop:
        * current thread and since we're doing only sync operations,
        * this is safe.... */
       /* CancelIoEx is only Vista+. Since we have only one overlap
-       * operaton on this thread, we can just use: */
+       * operation on this thread, we can just use: */
       result = CancelIo (hfile);
       g_warn_if_fail (result);
     }

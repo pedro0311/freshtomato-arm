@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2001, 2003 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdlib.h>
@@ -381,7 +381,7 @@ derived_object_class_init (DerivedObjectClass *class)
   object_class->set_property = derived_object_set_property;
   object_class->get_property = derived_object_get_property;
 
-  /* Overriding a property that is itself overridding an interface property */
+  /* Overriding a property that is itself overriding an interface property */
   g_object_class_override_property (object_class, DERIVED_PROP3, "prop3");
 
   /* Overriding a property not from an interface */
@@ -620,7 +620,7 @@ test_not_overridden (void)
   if (!g_test_undefined ())
     return;
 
-  g_test_bug ("637738");
+  g_test_bug ("https://bugzilla.gnome.org/show_bug.cgi?id=637738");
 
   g_test_expect_message (G_LOG_DOMAIN, G_LOG_LEVEL_CRITICAL,
                          "*Base2Object doesn't implement property 'prop3' from interface 'TestIface'*");
@@ -634,7 +634,6 @@ int
 main (int argc, char *argv[])
 {
   g_test_init (&argc, &argv, NULL);
-  g_test_bug_base ("http://bugzilla.gnome.org/");
 
   g_test_add_func ("/interface/properties/set", test_set);
   g_test_add_func ("/interface/properties/notify", test_notify);

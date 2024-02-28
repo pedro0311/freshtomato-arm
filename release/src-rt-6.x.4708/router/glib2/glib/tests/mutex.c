@@ -21,7 +21,9 @@
  */
 
 /* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include <glib.h>
 
@@ -98,7 +100,7 @@ acquire (gint nr)
   if (!g_mutex_trylock (&locks[nr]))
     {
       if (g_test_verbose ())
-        g_print ("thread %p going to block on lock %d\n", self, nr);
+        g_printerr ("thread %p going to block on lock %d\n", self, nr);
 
       g_mutex_lock (&locks[nr]);
     }
@@ -155,7 +157,7 @@ test_mutex5 (void)
     g_assert (owners[i] == NULL);
 }
 
-#define COUNT_TO 100000000
+static gint count_to = 0;
 
 static gboolean
 do_addition (gint *value)
@@ -165,7 +167,7 @@ do_addition (gint *value)
 
   /* test performance of "good" cases (ie: short critical sections) */
   g_mutex_lock (&lock);
-  if ((more = *value != COUNT_TO))
+  if ((more = *value != count_to))
     if (*value != -1)
       (*value)++;
   g_mutex_unlock (&lock);
@@ -184,25 +186,29 @@ addition_thread (gpointer value)
 static void
 test_mutex_perf (gconstpointer data)
 {
-  gint n_threads = GPOINTER_TO_INT (data);
+  const guint n_threads = GPOINTER_TO_UINT (data);
   GThread *threads[THREADS];
   gint64 start_time;
   gdouble rate;
   gint x = -1;
-  gint i;
+  guint i;
 
-  for (i = 0; i < n_threads - 1; i++)
+  count_to = g_test_perf () ?  100000000 : 1;
+
+  g_assert (n_threads <= G_N_ELEMENTS (threads));
+
+  for (i = 0; n_threads > 0 && i < n_threads - 1; i++)
     threads[i] = g_thread_create (addition_thread, &x, TRUE, NULL);
 
   /* avoid measuring thread setup/teardown time */
   start_time = g_get_monotonic_time ();
   g_atomic_int_set (&x, 0);
   addition_thread (&x);
-  g_assert_cmpint (g_atomic_int_get (&x), ==, COUNT_TO);
+  g_assert_cmpint (g_atomic_int_get (&x), ==, count_to);
   rate = g_get_monotonic_time () - start_time;
   rate = x / rate;
 
-  for (i = 0; i < n_threads - 1; i++)
+  for (i = 0; n_threads > 0 && i < n_threads - 1; i++)
     g_thread_join (threads[i]);
 
   g_test_maximized_result (rate, "%f mips", rate);
@@ -219,17 +225,16 @@ main (int argc, char *argv[])
   g_test_add_func ("/thread/mutex4", test_mutex4);
   g_test_add_func ("/thread/mutex5", test_mutex5);
 
-  if (g_test_perf ())
     {
-      gint i;
+      guint i;
 
-      g_test_add_data_func ("/thread/mutex/perf/uncontended", NULL, test_mutex_perf);
+      g_test_add_data_func ("/thread/mutex/perf/uncontended", GUINT_TO_POINTER (0), test_mutex_perf);
 
       for (i = 1; i <= 10; i++)
         {
           gchar name[80];
-          sprintf (name, "/thread/mutex/perf/contended/%d", i);
-          g_test_add_data_func (name, GINT_TO_POINTER (i), test_mutex_perf);
+          sprintf (name, "/thread/mutex/perf/contended/%u", i);
+          g_test_add_data_func (name, GUINT_TO_POINTER (i), test_mutex_perf);
         }
     }
 

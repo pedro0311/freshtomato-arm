@@ -19,12 +19,16 @@
  * otherwise) arising in any way out of the use of this software, even
  * if advised of the possibility of such damage.
  */
+
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
+
 #include <glib.h>
 #include <glib-object.h>
 
-static volatile int mtsafe_call_counter = 0; /* multi thread safe call counter */
-static int          unsafe_call_counter = 0; /* single-threaded call counter */
+static int mtsafe_call_counter = 0; /* multi thread safe call counter, must be accessed atomically */
+static int unsafe_call_counter = 0; /* single-threaded call counter */
 static GCond sync_cond;
 static GMutex sync_mutex;
 
@@ -48,11 +52,11 @@ static void interface_per_class_init (void) { call_counter_init (NULL); }
 /* define 3 test interfaces */
 typedef GTypeInterface MyFace0Interface;
 static GType my_face0_get_type (void);
-G_DEFINE_INTERFACE (MyFace0, my_face0, G_TYPE_OBJECT);
+G_DEFINE_INTERFACE (MyFace0, my_face0, G_TYPE_OBJECT)
 static void my_face0_default_init (MyFace0Interface *iface) { call_counter_init (iface); }
 typedef GTypeInterface MyFace1Interface;
 static GType my_face1_get_type (void);
-G_DEFINE_INTERFACE (MyFace1, my_face1, G_TYPE_OBJECT);
+G_DEFINE_INTERFACE (MyFace1, my_face1, G_TYPE_OBJECT)
 static void my_face1_default_init (MyFace1Interface *iface) { call_counter_init (iface); }
 
 /* define 3 test objects, adding interfaces 0 & 1, and adding interface 2 after class initialization */
@@ -60,9 +64,8 @@ typedef GObject         MyTester0;
 typedef GObjectClass    MyTester0Class;
 static GType my_tester0_get_type (void);
 G_DEFINE_TYPE_WITH_CODE (MyTester0, my_tester0, G_TYPE_OBJECT,
-                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init);
-                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init);
-                         );
+                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init)
+                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init))
 static void my_tester0_init (MyTester0*t) {}
 static void my_tester0_class_init (MyTester0Class*c) { call_counter_init (c); }
 typedef GObject         MyTester1;
@@ -72,23 +75,21 @@ typedef GObjectClass    MyTester1Class;
 #if 0
 typedef GTypeInterface MyFace2Interface;
 static GType my_face2_get_type (void);
-G_DEFINE_INTERFACE (MyFace2, my_face2, G_TYPE_OBJECT);
+G_DEFINE_INTERFACE (MyFace2, my_face2, G_TYPE_OBJECT)
 static void my_face2_default_init (MyFace2Interface *iface) { call_counter_init (iface); }
 
 static GType my_tester1_get_type (void);
 G_DEFINE_TYPE_WITH_CODE (MyTester1, my_tester1, G_TYPE_OBJECT,
-                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init);
-                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init);
-                         );
+                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init)
+                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init))
 static void my_tester1_init (MyTester1*t) {}
 static void my_tester1_class_init (MyTester1Class*c) { call_counter_init (c); }
 typedef GObject         MyTester2;
 typedef GObjectClass    MyTester2Class;
 static GType my_tester2_get_type (void);
 G_DEFINE_TYPE_WITH_CODE (MyTester2, my_tester2, G_TYPE_OBJECT,
-                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init);
-                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init);
-                         );
+                         G_IMPLEMENT_INTERFACE (my_face0_get_type(), interface_per_class_init)
+                         G_IMPLEMENT_INTERFACE (my_face1_get_type(), interface_per_class_init))
 static void my_tester2_init (MyTester2*t) {}
 static void my_tester2_class_init (MyTester2Class*c) { call_counter_init (c); }
 
@@ -97,7 +98,7 @@ tester_init_thread (gpointer data)
 {
   const GInterfaceInfo face2_interface_info = { (GInterfaceInitFunc) interface_per_class_init, NULL, NULL };
   gpointer klass;
-  /* first, syncronize with other threads,
+  /* first, synchronize with other threads,
    * then run interface and class initializers,
    * using unsafe_call_counter concurrently
    */
@@ -117,31 +118,32 @@ tester_init_thread (gpointer data)
 static void
 test_threaded_class_init (void)
 {
-  GThread *thread;
+  GThread *t1, *t2, *t3;
 
   /* pause newly created threads */
   g_mutex_lock (&sync_mutex);
 
   /* create threads */
-  thread = g_thread_create (tester_init_thread, (gpointer) my_tester0_get_type(), TRUE, NULL);
-  g_thread_unref (thread);
-  thread = g_thread_create (tester_init_thread, (gpointer) my_tester1_get_type(), TRUE, NULL);
-  g_thread_unref (thread);
-  thread = g_thread_create (tester_init_thread, (gpointer) my_tester2_get_type(), TRUE, NULL);
-  g_thread_unref (thread);
+  t1 = g_thread_create (tester_init_thread, (gpointer) my_tester0_get_type(), TRUE, NULL);
+  t2 = g_thread_create (tester_init_thread, (gpointer) my_tester1_get_type(), TRUE, NULL);
+  t3 = g_thread_create (tester_init_thread, (gpointer) my_tester2_get_type(), TRUE, NULL);
 
   /* execute threads */
   g_mutex_unlock (&sync_mutex);
   while (g_atomic_int_get (&mtsafe_call_counter) < (3 + 3 + 3 * 3) * NUM_COUNTER_INCREMENTS)
     {
       if (g_test_verbose())
-        g_print ("Initializers counted: %u\n", g_atomic_int_get (&mtsafe_call_counter));
+        g_printerr ("Initializers counted: %u\n", g_atomic_int_get (&mtsafe_call_counter));
       g_usleep (50 * 1000); /* wait for threads to complete */
     }
   if (g_test_verbose())
-    g_print ("Total initializers: %u\n", g_atomic_int_get (&mtsafe_call_counter));
+    g_printerr ("Total initializers: %u\n", g_atomic_int_get (&mtsafe_call_counter));
   /* ensure non-corrupted counter updates */
   g_assert_cmpint (g_atomic_int_get (&mtsafe_call_counter), ==, unsafe_call_counter);
+
+  g_thread_join (t1);
+  g_thread_join (t2);
+  g_thread_join (t3);
 }
 #endif
 
@@ -151,13 +153,13 @@ typedef struct {
 } PropTester;
 typedef GObjectClass    PropTesterClass;
 static GType prop_tester_get_type (void);
-G_DEFINE_TYPE (PropTester, prop_tester, G_TYPE_OBJECT);
+G_DEFINE_TYPE (PropTester, prop_tester, G_TYPE_OBJECT)
 #define PROP_NAME 1
 static void
 prop_tester_init (PropTester* t)
 {
   if (t->name == NULL)
-    ; /* neds unit test framework initialization: g_test_bug ("race initializing properties"); */
+    { } /* needs unit test framework initialization: g_test_bug ("race initializing properties"); */
 }
 static void
 prop_tester_set_property (GObject        *object,
@@ -249,6 +251,12 @@ test_threaded_weak_ref (void)
   else
     n = NUM_COUNTER_INCREMENTS / 20;
 
+#ifdef G_OS_WIN32
+  /* On Windows usleep has millisecond resolution and gets rounded up
+   * leading to the test running for a long time. */
+  n /= 10;
+#endif
+
   for (i = 0; i < n; i++)
     {
       UnrefInThreadData data;
@@ -264,7 +272,7 @@ test_threaded_weak_ref (void)
       GError *error = NULL;
 
       if (g_test_verbose () && (i % (n/20)) == 0)
-        g_print ("%u%%\n", ((i * 100) / n));
+        g_printerr ("%u%%\n", ((i * 100) / n));
 
       /* Have an object and a weak ref to it */
       data.strong = g_object_new (my_tester0_get_type (), NULL);
@@ -331,8 +339,172 @@ test_threaded_weak_ref (void)
     }
 
   if (g_test_verbose ())
-    g_print ("Race won by get %u times, unref %u times\n",
+    g_printerr ("Race won by get %u times, unref %u times\n",
              get_wins, unref_wins);
+}
+
+typedef struct
+{
+  GObject *object;
+  GWeakRef *weak;
+  gint started; /* (atomic) */
+  gint finished; /* (atomic) */
+  gint disposing; /* (atomic) */
+} ThreadedWeakRefData;
+
+static void
+on_weak_ref_disposed (gpointer data,
+                      GObject *gobj)
+{
+  ThreadedWeakRefData *thread_data = data;
+
+  /* Wait until the thread has started */
+  while (!g_atomic_int_get (&thread_data->started))
+    continue;
+
+  g_atomic_int_set (&thread_data->disposing, 1);
+
+  /* Wait for the thread to act, so that the object is still valid */
+  while (!g_atomic_int_get (&thread_data->finished))
+    continue;
+
+  g_atomic_int_set (&thread_data->disposing, 0);
+}
+
+static gpointer
+on_other_thread_weak_ref (gpointer user_data)
+{
+  ThreadedWeakRefData *thread_data = user_data;
+  GObject *object = thread_data->object;
+
+  g_atomic_int_set (&thread_data->started, 1);
+
+  /* Ensure we've started disposal */
+  while (!g_atomic_int_get (&thread_data->disposing))
+    continue;
+
+  g_object_ref (object);
+  g_weak_ref_set (thread_data->weak, object);
+  g_object_unref (object);
+
+  g_assert_cmpint (thread_data->disposing, ==, 1);
+  g_atomic_int_set (&thread_data->finished, 1);
+
+  return NULL;
+}
+
+static void
+test_threaded_weak_ref_finalization (void)
+{
+  GObject *obj = g_object_new (G_TYPE_OBJECT, NULL);
+  GWeakRef weak = { { GUINT_TO_POINTER (0xDEADBEEFU) } };
+  ThreadedWeakRefData thread_data = {
+    .object = obj, .weak = &weak, .started = 0, .finished = 0
+  };
+
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/-/issues/2390");
+  g_test_summary ("Test that a weak ref added by another thread during dispose "
+                  "of a GObject is cleared during finalisation. "
+                  "Use on_weak_ref_disposed() to synchronize the other thread "
+                  "with the dispose vfunc.");
+
+  g_weak_ref_init (&weak, NULL);
+  g_object_weak_ref (obj, on_weak_ref_disposed, &thread_data);
+
+  g_assert_cmpint (obj->ref_count, ==, 1);
+  g_thread_unref (g_thread_new ("on_other_thread",
+                                on_other_thread_weak_ref,
+                                &thread_data));
+  g_object_unref (obj);
+
+  /* This is what this test is about: at this point the weak reference
+   * should have been unset (and not point to a dead object either). */
+  g_assert_null (g_weak_ref_get (&weak));
+}
+
+typedef struct
+{
+  GObject *object;
+  int done;    /* (atomic) */
+  int toggles; /* (atomic) */
+} ToggleNotifyThreadData;
+
+static gpointer
+on_reffer_thread (gpointer user_data)
+{
+  ToggleNotifyThreadData *thread_data = user_data;
+
+  while (!g_atomic_int_get (&thread_data->done))
+    {
+      g_object_ref (thread_data->object);
+      g_object_unref (thread_data->object);
+    }
+
+  return NULL;
+}
+
+static void
+on_toggle_notify (gpointer data,
+                  GObject *object,
+                  gboolean is_last_ref)
+{
+  /* Anything could be put here, but we don't care for this test.
+   * Actually having this empty made the bug to happen more frequently (being
+   * timing related).
+   */
+}
+
+static gpointer
+on_toggler_thread (gpointer user_data)
+{
+  ToggleNotifyThreadData *thread_data = user_data;
+
+  while (!g_atomic_int_get (&thread_data->done))
+    {
+      g_object_ref (thread_data->object);
+      g_object_remove_toggle_ref (thread_data->object, on_toggle_notify, thread_data);
+      g_object_add_toggle_ref (thread_data->object, on_toggle_notify, thread_data);
+      g_object_unref (thread_data->object);
+      g_atomic_int_add (&thread_data->toggles, 1);
+    }
+
+  return NULL;
+}
+
+static void
+test_threaded_toggle_notify (void)
+{
+  GObject *object = g_object_new (G_TYPE_OBJECT, NULL);
+  ToggleNotifyThreadData data = { object, FALSE, 0 };
+  GThread *threads[3];
+  gsize i;
+
+  g_test_bug ("https://gitlab.gnome.org/GNOME/glib/issues/2394");
+  g_test_summary ("Test that toggle reference notifications can be changed "
+                  "safely from another (the main) thread without causing the "
+                  "notifying thread to abort");
+
+  g_object_add_toggle_ref (object, on_toggle_notify, &data);
+  g_object_unref (object);
+
+  g_assert_cmpint (object->ref_count, ==, 1);
+  threads[0] = g_thread_new ("on_reffer_thread", on_reffer_thread, &data);
+  threads[1] = g_thread_new ("on_another_reffer_thread", on_reffer_thread, &data);
+  threads[2] = g_thread_new ("on_main_toggler_thread", on_toggler_thread, &data);
+
+  /* We need to wait here for the threads to run for a bit in order to make the
+   * race to happen, so we wait for an high number of toggle changes to be met
+   * so that we can be consistent on each platform.
+   */
+  while (g_atomic_int_get (&data.toggles) < 1000000)
+    ;
+  g_atomic_int_set (&data.done, TRUE);
+
+  for (i = 0; i < G_N_ELEMENTS (threads); i++)
+    g_thread_join (threads[i]);
+
+  g_assert_cmpint (object->ref_count, ==, 1);
+  g_clear_object (&object);
 }
 
 int
@@ -344,6 +516,10 @@ main (int   argc,
   /* g_test_add_func ("/GObject/threaded-class-init", test_threaded_class_init); */
   g_test_add_func ("/GObject/threaded-object-init", test_threaded_object_init);
   g_test_add_func ("/GObject/threaded-weak-ref", test_threaded_weak_ref);
+  g_test_add_func ("/GObject/threaded-weak-ref/on-finalization",
+                   test_threaded_weak_ref_finalization);
+  g_test_add_func ("/GObject/threaded-toggle-notify",
+                   test_threaded_toggle_notify);
 
   return g_test_run();
 }

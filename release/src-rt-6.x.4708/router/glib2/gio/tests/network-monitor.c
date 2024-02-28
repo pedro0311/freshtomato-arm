@@ -2,10 +2,12 @@
  *
  * Copyright 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "gio.h"
@@ -243,7 +243,8 @@ test_default (void)
   m = g_network_monitor_get_default ();
   g_assert (G_IS_NETWORK_MONITOR (m));
 
-  monitor = g_initable_new (G_TYPE_NETWORK_MONITOR_BASE, NULL, &error, NULL);
+  monitor = g_object_new (G_TYPE_NETWORK_MONITOR_BASE, NULL);
+  g_initable_init (G_INITABLE (monitor), NULL, &error);
   g_assert_no_error (error);
 
   /* In the default configuration, all addresses are reachable */
@@ -494,6 +495,22 @@ watch_network_changed (GNetworkMonitor *monitor,
 }
 
 static void
+watch_connectivity_changed (GNetworkMonitor *monitor,
+			    GParamSpec      *pspec,
+			    gpointer         user_data)
+{
+  g_print ("Connectivity is %d\n", g_network_monitor_get_connectivity (monitor));
+}
+
+static void
+watch_metered_changed (GNetworkMonitor *monitor,
+                       GParamSpec      *pspec,
+                       gpointer         user_data)
+{
+  g_print ("Metered is %d\n", g_network_monitor_get_network_metered (monitor));
+}
+
+static void
 do_watch_network (void)
 {
   GNetworkMonitor *monitor = g_network_monitor_get_default ();
@@ -503,7 +520,13 @@ do_watch_network (void)
 
   g_signal_connect (monitor, "network-changed",
                     G_CALLBACK (watch_network_changed), NULL);
+  g_signal_connect (monitor, "notify::connectivity",
+                    G_CALLBACK (watch_connectivity_changed), NULL);
+  g_signal_connect (monitor, "notify::network-metered",
+                    G_CALLBACK (watch_metered_changed), NULL);
   watch_network_changed (monitor, g_network_monitor_get_network_available (monitor), NULL);
+  watch_connectivity_changed (monitor, NULL, NULL);
+  watch_metered_changed (monitor, NULL, NULL);
 
   loop = g_main_loop_new (NULL, FALSE);
   g_main_loop_run (loop);
@@ -521,6 +544,16 @@ main (int argc, char **argv)
     }
 
   g_test_init (&argc, &argv, NULL);
+
+  /* GNetworkMonitor will resolve addresses through a proxy if one is set and a
+   * GIO module is available to handle it. In these tests we deliberately
+   * change the idea of a reachable network to exclude the proxy, which will
+   * lead to negative results. We're not trying to test the proxy-resolving
+   * functionality (that would be for e.g. glib-networking's testsuite), so
+   * let's just use the dummy proxy resolver, which always pretends the
+   * passed-in URL is directly resolvable.
+   */
+  g_setenv ("GIO_USE_PROXY_RESOLVER", "dummy", TRUE);
 
   init_test (&net127);
   init_test (&net10);

@@ -1,10 +1,12 @@
 /*
  * Copyright © 2010 Codethink Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -23,11 +23,13 @@
 #include "gactiongroup.h"
 #include "gaction.h"
 #include "glibintl.h"
+#include "gmarshal-internal.h"
 
 /**
  * SECTION:gactiongroup
  * @title: GActionGroup
  * @short_description: A group of actions
+ * @include: gio/gio.h
  * @see_also: #GAction
  *
  * #GActionGroup represents a group of actions. Actions can be used to
@@ -65,7 +67,7 @@
  * with actions.  'Internal' APIs (ie: ones meant only to be accessed by
  * the action group implementation) are found on subclasses.  This is
  * why you will find - for example - g_action_group_get_action_enabled()
- * but not an equivalent <function>set()</function> call.
+ * but not an equivalent set() call.
  *
  * Signals are emitted on the action group in response to state changes
  * on individual actions.
@@ -76,6 +78,13 @@
  * not be implemented - their "wrappers" are actually implemented with
  * calls to g_action_group_query_action().
  */
+
+/**
+ * GActionGroup:
+ *
+ * #GActionGroup is an opaque data structure and can only be accessed
+ * using the following functions.
+ **/
 
 /**
  * GActionGroupInterface:
@@ -254,7 +263,7 @@ g_action_group_default_init (GActionGroupInterface *iface)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   G_STRUCT_OFFSET (GActionGroupInterface, action_added),
                   NULL, NULL,
-                  g_cclosure_marshal_VOID__STRING,
+                  NULL,
                   G_TYPE_NONE, 1,
                   G_TYPE_STRING);
 
@@ -275,7 +284,7 @@ g_action_group_default_init (GActionGroupInterface *iface)
                   G_SIGNAL_RUN_LAST | G_SIGNAL_DETAILED,
                   G_STRUCT_OFFSET (GActionGroupInterface, action_removed),
                   NULL, NULL,
-                  g_cclosure_marshal_VOID__STRING,
+                  NULL,
                   G_TYPE_NONE, 1,
                   G_TYPE_STRING);
 
@@ -297,10 +306,13 @@ g_action_group_default_init (GActionGroupInterface *iface)
                   G_STRUCT_OFFSET (GActionGroupInterface,
                                    action_enabled_changed),
                   NULL, NULL,
-                  NULL,
+                  _g_cclosure_marshal_VOID__STRING_BOOLEAN,
                   G_TYPE_NONE, 2,
                   G_TYPE_STRING,
                   G_TYPE_BOOLEAN);
+  g_signal_set_va_marshaller (g_action_group_signals[SIGNAL_ACTION_ENABLED_CHANGED],
+                              G_TYPE_FROM_INTERFACE (iface),
+                              _g_cclosure_marshal_VOID__STRING_BOOLEANv);
 
   /**
    * GActionGroup::action-state-changed:
@@ -321,10 +333,13 @@ g_action_group_default_init (GActionGroupInterface *iface)
                   G_STRUCT_OFFSET (GActionGroupInterface,
                                    action_state_changed),
                   NULL, NULL,
-                  NULL,
+                  _g_cclosure_marshal_VOID__STRING_VARIANT,
                   G_TYPE_NONE, 2,
                   G_TYPE_STRING,
                   G_TYPE_VARIANT);
+  g_signal_set_va_marshaller (g_action_group_signals[SIGNAL_ACTION_STATE_CHANGED],
+                              G_TYPE_FROM_INTERFACE (iface),
+                              _g_cclosure_marshal_VOID__STRING_VARIANTv);
 }
 
 /**
@@ -337,7 +352,7 @@ g_action_group_default_init (GActionGroupInterface *iface)
  * it is no longer required.
  *
  * Returns: (transfer full): a %NULL-terminated array of the names of the
- * actions in the groupb
+ * actions in the group
  *
  * Since: 2.28
  **/
@@ -390,7 +405,7 @@ g_action_group_has_action (GActionGroup *action_group,
  * possible for an action to be removed and for a new action to be added
  * with the same name but a different parameter type.
  *
- * Return value: the parameter type
+ * Returns: (nullable): the parameter type
  *
  * Since: 2.28
  **/
@@ -426,7 +441,7 @@ g_action_group_get_action_parameter_type (GActionGroup *action_group,
  * possible for an action to be removed and for a new action to be added
  * with the same name but a different state type.
  *
- * Returns: (transfer full): the state type, if the action is stateful
+ * Returns: (nullable): the state type, if the action is stateful
  *
  * Since: 2.28
  **/
@@ -464,7 +479,7 @@ g_action_group_get_action_state_type (GActionGroup *action_group,
  * The return value (if non-%NULL) should be freed with
  * g_variant_unref() when it is no longer required.
  *
- * Return value: (transfer full): the state range hint
+ * Returns: (nullable) (transfer full): the state range hint
  *
  * Since: 2.28
  **/
@@ -488,7 +503,7 @@ g_action_group_get_action_state_hint (GActionGroup *action_group,
  * An action must be enabled in order to be activated or in order to
  * have its state changed from outside callers.
  *
- * Return value: whether or not the action is currently enabled
+ * Returns: whether or not the action is currently enabled
  *
  * Since: 2.28
  **/
@@ -516,7 +531,7 @@ g_action_group_get_action_enabled (GActionGroup *action_group,
  * The return value (if non-%NULL) should be freed with
  * g_variant_unref() when it is no longer required.
  *
- * Return value: (allow-none): the current state of the action
+ * Returns: (nullable) (transfer full): the current state of the action
  *
  * Since: 2.28
  **/
@@ -567,7 +582,7 @@ g_action_group_change_action_state (GActionGroup *action_group,
  * g_action_group_activate_action:
  * @action_group: a #GActionGroup
  * @action_name: the name of the action to activate
- * @parameter: (allow-none): parameters to the activation
+ * @parameter: (nullable): parameters to the activation
  *
  * Activate the named action within @action_group.
  *
@@ -575,6 +590,33 @@ g_action_group_change_action_state (GActionGroup *action_group,
  * parameter must be given as @parameter.  If the action is expecting no
  * parameters then @parameter must be %NULL.  See
  * g_action_group_get_action_parameter_type().
+ *
+ * If the #GActionGroup implementation supports asynchronous remote
+ * activation over D-Bus, this call may return before the relevant
+ * D-Bus traffic has been sent, or any replies have been received. In
+ * order to block on such asynchronous activation calls,
+ * g_dbus_connection_flush() should be called prior to the code, which
+ * depends on the result of the action activation. Without flushing
+ * the D-Bus connection, there is no guarantee that the action would
+ * have been activated.
+ *
+ * The following code which runs in a remote app instance, shows an
+ * example of a "quit" action being activated on the primary app
+ * instance over D-Bus. Here g_dbus_connection_flush() is called
+ * before `exit()`. Without g_dbus_connection_flush(), the "quit" action
+ * may fail to be activated on the primary instance.
+ *
+ * |[<!-- language="C" -->
+ * // call "quit" action on primary instance
+ * g_action_group_activate_action (G_ACTION_GROUP (app), "quit", NULL);
+ *
+ * // make sure the action is activated now
+ * g_dbus_connection_flush (...);
+ *
+ * g_debug ("application has been terminated. exiting.");
+ *
+ * exit (0);
+ * ]|
  *
  * Since: 2.28
  **/
@@ -699,10 +741,10 @@ g_action_group_action_state_changed (GActionGroup *action_group,
  * @action_group: a #GActionGroup
  * @action_name: the name of an action in the group
  * @enabled: (out): if the action is presently enabled
- * @parameter_type: (out) (allow-none): the parameter type, or %NULL if none needed
- * @state_type: (out) (allow-none): the state type, or %NULL if stateless
- * @state_hint: (out) (allow-none): the state hint, or %NULL if none
- * @state: (out) (allow-none): the current state, or %NULL if stateless
+ * @parameter_type: (out) (transfer none) (optional): the parameter type, or %NULL if none needed
+ * @state_type: (out) (transfer none) (optional): the state type, or %NULL if stateless
+ * @state_hint: (out) (optional): the state hint, or %NULL if none
+ * @state: (out) (optional): the current state, or %NULL if stateless
  *
  * Queries all aspects of the named action within an @action_group.
  *

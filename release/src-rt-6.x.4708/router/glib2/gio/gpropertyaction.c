@@ -1,10 +1,12 @@
 /*
  * Copyright © 2013 Canonical Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -31,6 +31,7 @@
  * SECTION:gpropertyaction
  * @title: GPropertyAction
  * @short_description: A GAction reflecting a GObject property
+ * @include: gio/gio.h
  *
  * A #GPropertyAction is a way to get a #GAction with a state value
  * reflecting and controlling the value of a #GObject property.
@@ -62,10 +63,9 @@
  * the property.
  *
  * The general idea here is to reduce the number of locations where a
- * particular piece of state is kept (and therefore has to be
- * synchronised between).  #GPropertyAction does not have a separate
- * state that is kept in sync with the property value -- its state
- * <em>is</em> the property value.
+ * particular piece of state is kept (and therefore has to be synchronised
+ * between). #GPropertyAction does not have a separate state that is kept
+ * in sync with the property value -- its state is the property value.
  *
  * For example, it might be useful to create a #GAction corresponding to
  * the "visible-child-name" property of a #GtkStack so that the current
@@ -95,6 +95,7 @@ struct _GPropertyAction
   gpointer            object;
   GParamSpec         *pspec;
   const GVariantType *state_type;
+  gboolean            invert_boolean;
 };
 
 /**
@@ -120,8 +121,17 @@ enum
   PROP_STATE_TYPE,
   PROP_STATE,
   PROP_OBJECT,
-  PROP_PROPERTY_NAME
+  PROP_PROPERTY_NAME,
+  PROP_INVERT_BOOLEAN
 };
+
+static gboolean
+g_property_action_get_invert_boolean (GAction *action)
+{
+  GPropertyAction *paction = G_PROPERTY_ACTION (action);
+
+  return paction->invert_boolean;
+}
 
 static const gchar *
 g_property_action_get_name (GAction *action)
@@ -150,6 +160,29 @@ g_property_action_get_state_type (GAction *action)
 static GVariant *
 g_property_action_get_state_hint (GAction *action)
 {
+  GPropertyAction *paction = G_PROPERTY_ACTION (action);
+
+  if (paction->pspec->value_type == G_TYPE_INT)
+    {
+      GParamSpecInt *pspec = (GParamSpecInt *)paction->pspec;
+      return g_variant_new ("(ii)", pspec->minimum, pspec->maximum);
+    }
+  else if (paction->pspec->value_type == G_TYPE_UINT)
+    {
+      GParamSpecUInt *pspec = (GParamSpecUInt *)paction->pspec;
+      return g_variant_new ("(uu)", pspec->minimum, pspec->maximum);
+    }
+  else if (paction->pspec->value_type == G_TYPE_FLOAT)
+    {
+      GParamSpecFloat *pspec = (GParamSpecFloat *)paction->pspec;
+      return g_variant_new ("(dd)", (double)pspec->minimum, (double)pspec->maximum);
+    }
+  else if (paction->pspec->value_type == G_TYPE_DOUBLE)
+    {
+      GParamSpecDouble *pspec = (GParamSpecDouble *)paction->pspec;
+      return g_variant_new ("(dd)", pspec->minimum, pspec->maximum);
+    }
+
   return NULL;
 }
 
@@ -167,6 +200,10 @@ g_property_action_set_state (GPropertyAction *paction,
 
   g_value_init (&value, paction->pspec->value_type);
   g_settings_get_mapping (&value, variant, NULL);
+
+  if (paction->pspec->value_type == G_TYPE_BOOLEAN && paction->invert_boolean)
+    g_value_set_boolean (&value, !g_value_get_boolean (&value));
+
   g_object_set_property (paction->object, paction->pspec->name, &value);
   g_value_unset (&value);
 }
@@ -191,6 +228,10 @@ g_property_action_get_state (GAction *action)
 
   g_value_init (&value, paction->pspec->value_type);
   g_object_get_property (paction->object, paction->pspec->name, &value);
+
+  if (paction->pspec->value_type == G_TYPE_BOOLEAN && paction->invert_boolean)
+    g_value_set_boolean (&value, !g_value_get_boolean (&value));
+
   result = g_settings_set_mapping (&value, paction->state_type, NULL);
   g_value_unset (&value);
 
@@ -318,6 +359,10 @@ g_property_action_set_property (GObject      *object,
       g_property_action_set_property_name (paction, g_value_get_string (value));
       break;
 
+    case PROP_INVERT_BOOLEAN:
+      paction->invert_boolean = g_value_get_boolean (value);
+      break;
+
     default:
       g_assert_not_reached ();
     }
@@ -351,6 +396,10 @@ g_property_action_get_property (GObject    *object,
 
     case PROP_STATE:
       g_value_take_variant (value, g_property_action_get_state (action));
+      break;
+
+    case PROP_INVERT_BOOLEAN:
+      g_value_set_boolean (value, g_property_action_get_invert_boolean (action));
       break;
 
     default:
@@ -517,12 +566,30 @@ g_property_action_class_init (GPropertyActionClass *class)
                                                         G_PARAM_WRITABLE |
                                                         G_PARAM_CONSTRUCT_ONLY |
                                                         G_PARAM_STATIC_STRINGS));
+
+  /**
+   * GPropertyAction:invert-boolean:
+   *
+   * If %TRUE, the state of the action will be the negation of the
+   * property value, provided the property is boolean.
+   *
+   * Since: 2.46
+   */
+  g_object_class_install_property (object_class, PROP_INVERT_BOOLEAN,
+                                   g_param_spec_boolean ("invert-boolean",
+                                                         P_("Invert boolean"),
+                                                         P_("Whether to invert the value of a boolean property"),
+                                                         FALSE,
+                                                         G_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT_ONLY |
+                                                         G_PARAM_STATIC_STRINGS));
 }
 
 /**
  * g_property_action_new:
  * @name: the name of the action to create
- * @object: the object that has the property to wrap
+ * @object: (type GObject.Object): the object that has the property
+ *   to wrap
  * @property_name: the name of the property
  *
  * Creates a #GAction corresponding to the value of property

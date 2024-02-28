@@ -14,11 +14,9 @@
 #    GNU General Public License for more details.
 
 #    You should have received a copy of the GNU General Public License
-#    along with this program; if not, write to the Free Software
-#    Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
-#    02111-1307, USA.
+#    along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-# Contributer(s):
+# Contributor(s):
 #   Andrew Taylor <andrew.taylor@montage.ca>
 
 # gen-unicode-tables.pl - Generate tables for libunicode from Unicode data.
@@ -121,8 +119,10 @@ $FOLDING_MAPPING = 2;
      'CJ' => "G_UNICODE_BREAK_CONDITIONAL_JAPANESE_STARTER",
      'CL' => "G_UNICODE_BREAK_CLOSE_PUNCTUATION",
      'CM' => "G_UNICODE_BREAK_COMBINING_MARK",
-     'CP' => "G_UNICODE_BREAK_CLOSE_PARANTHESIS",
+     'CP' => "G_UNICODE_BREAK_CLOSE_PARENTHESIS",
      'CR' => "G_UNICODE_BREAK_CARRIAGE_RETURN",
+     'EB' => "G_UNICODE_BREAK_EMOJI_BASE",
+     'EM' => "G_UNICODE_BREAK_EMOJI_MODIFIER",
      'EX' => "G_UNICODE_BREAK_EXCLAMATION",
      'GL' => "G_UNICODE_BREAK_NON_BREAKING_GLUE",
      'H2' => "G_UNICODE_BREAK_HANGUL_LV_SYLLABLE",
@@ -150,7 +150,8 @@ $FOLDING_MAPPING = 2;
      'SY' => "G_UNICODE_BREAK_SYMBOL",
      'WJ' => "G_UNICODE_BREAK_WORD_JOINER",
      'XX' => "G_UNICODE_BREAK_UNKNOWN",
-     'ZW' => "G_UNICODE_BREAK_ZERO_WIDTH_SPACE"
+     'ZW' => "G_UNICODE_BREAK_ZERO_WIDTH_SPACE",
+     'ZWJ' => "G_UNICODE_BREAK_ZERO_WIDTH_JOINER"
      );
 
 # Title case mappings.
@@ -163,8 +164,17 @@ my @special_cases;
 my @special_case_offsets;
 my $special_case_offset = 0;
 
+# Scripts
+
+my @scripts;
+
+# East asian widths
+
+my @eawidths;
+
 $do_decomp = 0;
 $do_props = 1;
+$do_scripts = 1;
 if (@ARGV && $ARGV[0] eq '-decomp')
 {
     $do_decomp = 1;
@@ -179,10 +189,11 @@ elsif (@ARGV && $ARGV[0] eq '-both')
 
 if (@ARGV != 2) {
     $0 =~ s@.*/@@;
-    die "\nUsage: $0 [-decomp | -both] UNICODE-VERSION DIRECTORY\n\n       DIRECTORY should contain the following Unicode data files:\n       UnicodeData.txt, LineBreak.txt, SpecialCasing.txt, CaseFolding.txt,\n       CompositionExclusions.txt\n\n";
+    die "\nUsage: $0 [-decomp | -both] UNICODE-VERSION DIRECTORY\n\n       DIRECTORY should contain the following Unicode data files:\n       UnicodeData.txt, LineBreak.txt, SpecialCasing.txt, CaseFolding.txt,\n       CompositionExclusions.txt Scripts.txt extracted/DerivedEastAsianWidth.txt \n\n";
 }
 
-my ($unicodedatatxt, $linebreaktxt, $specialcasingtxt, $casefoldingtxt, $compositionexclusionstxt);
+my ($unicodedatatxt, $linebreaktxt, $specialcasingtxt, $casefoldingtxt, $compositionexclusionstxt,
+    $scriptstxt, $derivedeastasianwidth);
 
 my $d = $ARGV[1];
 opendir (my $dir, $d) or die "Cannot open Unicode data dir $d: $!\n";
@@ -193,6 +204,14 @@ for my $f (readdir ($dir))
     $specialcasingtxt = "$d/$f" if ($f =~ /^SpecialCasing.*\.txt/);
     $casefoldingtxt = "$d/$f" if ($f =~ /^CaseFolding.*\.txt/);
     $compositionexclusionstxt = "$d/$f" if ($f =~ /^CompositionExclusions.*\.txt/);
+    $scriptstxt = "$d/$f" if ($f =~ /^Scripts.*\.txt/);
+}
+
+my $extd = $ARGV[1] . "/extracted";
+opendir (my $extdir, $extd) or die "Cannot open Unicode/extracted data dir $extd: $!\n";
+for my $f (readdir ($extdir))
+{
+    $derivedeastasianwidthtxt = "$extd/$f" if ($f =~ /^DerivedEastAsianWidth.*\.txt/);
 }
 
 defined $unicodedatatxt or die "Did not find UnicodeData file";
@@ -200,11 +219,13 @@ defined $linebreaktxt or die "Did not find LineBreak file";
 defined $specialcasingtxt or die "Did not find SpecialCasing file";
 defined $casefoldingtxt or die "Did not find CaseFolding file";
 defined $compositionexclusionstxt or die "Did not find CompositionExclusions file";
+defined $scriptstxt or die "Did not find Scripts file";
+defined $derivedeastasianwidthtxt or die "Did not find DerivedEastAsianWidth file";
 
 print "Creating decomp table\n" if ($do_decomp);
 print "Creating property table\n" if ($do_props);
 
-print "Composition exlusions from $compositionexclusionstxt\n";
+print "Composition exclusions from $compositionexclusionstxt\n";
 
 open (INPUT, "< $compositionexclusionstxt") || exit 1;
 
@@ -491,6 +512,51 @@ while (<INPUT>)
 
 close INPUT;
 
+print "Reading scripts\n";
+
+open (INPUT, "< $scriptstxt") || exit 1;
+
+while (<INPUT>) {
+    s/#.*//;
+    next if /^\s*$/;
+    if (!/^([0-9A-F]+)(?:\.\.([0-9A-F]+))?\s*;\s*([A-Za-z_]+)\s*$/) {
+	die "Cannot parse line: '$_'\n";
+    }
+
+    if (defined $2) {
+	push @scripts, [ hex $1, hex $2, uc $3 ];
+    } else {
+	push @scripts, [ hex $1, hex $1, uc $3 ];
+    }
+}
+
+close INPUT;
+
+print "Reading derived east asian widths\n";
+
+open (INPUT, "< $derivedeastasianwidthtxt") || exit 1;
+
+while (<INPUT>)
+{
+    my ($start_code, $end_code);
+    
+    chop;
+
+    s/#.*//;
+    next if /^\s*$/;
+    if (!/^([0-9A-F]+)(?:\.\.([0-9A-F]+))?\s*;\s*([A-Za-z_]+)\s*$/) {
+	die "Cannot parse line: '$_'\n";
+    }
+
+    if (defined $2) {
+	push @eawidths, [ hex $1, hex $2, $3 ];
+    } else {
+	push @eawidths, [ hex $1, hex $1, $3 ];
+    }
+}
+
+close INPUT;
+
 if ($do_props) {
     &print_tables ($last_code)
 }
@@ -498,8 +564,11 @@ if ($do_decomp) {
     &print_decomp ($last_code);
     &output_composition_table;
 }
-
 &print_line_break ($last_code);
+
+if ($do_scripts) {
+    &print_scripts
+}
 
 exit 0;
 
@@ -666,6 +735,11 @@ sub print_tables
     &output_special_case_table (\*OUT);
     &output_casefold_table (\*OUT);
 
+    #
+    # And the widths tables
+    #
+    &output_width_tables (\*OUT);
+
     print OUT "#endif /* CHARTABLES_H */\n";
 
     close (OUT);
@@ -721,13 +795,17 @@ sub print_row
     my ($column) = 4;
     for ($i = $start; $i < $start + 256; ++$i)
     {
-	print OUT ", "
+	print OUT ","
 	    if $i > $start;
 	my ($text) = $values[$i - $start];
 	if (length ($text) + $column + 2 > 78)
 	{
 	    print OUT "\n    ";
 	    $column = 4;
+	}
+	else
+	{
+	    print OUT " "
 	}
 	print OUT $text;
 	$column += length ($text) + 2;
@@ -1252,12 +1330,9 @@ sub output_composition_table
 		  
     # Output second singletons
 
-    print OUT "static const guint16 compose_second_single[][2] = {\n";
+    print OUT "static const gunichar compose_second_single[][2] = {\n";
     $i = 0;				     
     for $record (@second_singletons) {
-        if ($record->[1] > 0xFFFF or $record->[2] > 0xFFFF) {
-            die "time to switch compose_second_single to gunichar";
-        }
 	print OUT ",\n" if $i++ > 0;
 	printf OUT " { %#06x, %#06x }", $record->[1], $record->[2];
     }
@@ -1336,5 +1411,146 @@ EOT
    printf "Generated %d bytes for casefold table\n", $recordlen * @casefold;
 }
 
-			     
+sub output_one_width_table
+{
+    my ($out, $name, $wpe) = @_;
+    my $start;
+    my $end;
+    my $wp;
+    my $rex;
 
+    print $out "static const struct Interval g_unicode_width_table_${name}[] = {\n";
+
+    $rex = qr/$wpe/;
+
+    for (my $i = 0; $i <= $#eawidths; $i++) {
+        $start = $eawidths[$i]->[0];
+        $end = $eawidths[$i]->[1];
+        $wp = $eawidths[$i]->[2];
+
+        next if ($wp !~ $rex);
+
+        while ($i <= $#eawidths - 1 &&
+               $eawidths[$i + 1]->[0] == $end + 1 &&
+               ($eawidths[$i + 1]->[2] =~ $rex)) {
+            $i++;
+            $end = $eawidths[$i]->[1];
+        }
+        
+	printf $out "{0x%04X, 0x%04X},\n", $start, $end;
+    }
+
+    printf $out "};\n\n";
+}
+
+sub output_width_tables
+{
+    my $out = shift;
+
+    @eawidths = sort { $a->[0] <=> $b->[0] } @eawidths;
+
+    print $out <<EOT;
+
+struct Interval
+{
+  gunichar start, end;
+};
+
+EOT
+
+    &output_one_width_table ($out,"wide", "[FW]");
+    &output_one_width_table ($out, "ambiguous", "[A]");
+}
+
+sub print_scripts
+{
+    my $start;
+    my $end;
+    my $script;
+    my $easy_range;
+    my $i;
+
+    print STDERR "Writing gscripttable.h\n";
+
+    open OUT, ">gscripttable.h" or die "Cannot open gscripttable.h: $!\n";
+
+    print OUT<<EOT;
+/* This file is automatically generated.  DO NOT EDIT!
+   Instead, edit gen-unicode-tables.pl and re-run.  */
+
+#ifndef SCRIPTTABLES_H
+#define SCRIPTTABLES_H
+
+EOT
+
+    @scripts = sort { $a->[0] <=> $b->[0] } @scripts;
+
+    $easy_range = 0x2000;
+
+    print OUT<<EOT;
+#define G_EASY_SCRIPTS_RANGE $easy_range
+
+static const guchar g_script_easy_table[$easy_range] = {
+EOT
+        
+    $i = 0;
+    $end = -1;
+
+    for (my $c = 0; $c < $easy_range; $c++) {
+
+        if ($c % 3 == 0) {
+            printf OUT "\n ";
+        }
+
+        if ($c > $end) {
+            $start = $scripts[$i]->[0];
+            $end = $scripts[$i]->[1];
+            $script = $scripts[$i]->[2];
+            $i++;
+        }
+            
+        if ($c < $start) {
+            printf OUT " G_UNICODE_SCRIPT_UNKNOWN,";
+        } else {
+            printf OUT " G_UNICODE_SCRIPT_%s,", $script;
+        }
+    }
+
+    if ($end >= $easy_range) {
+        $i--;
+        $scripts[$i]->[0] = $easy_range;
+    }
+
+    print OUT<<EOT;
+
+};
+
+static const struct {
+    gunichar    start;
+    guint16     chars;
+    guint16     script;
+} g_script_table[] = { 
+EOT
+
+    for (; $i <= $#scripts; $i++) {
+        $start = $scripts[$i]->[0];
+        $end = $scripts[$i]->[1];
+        $script = $scripts[$i]->[2];
+
+        while ($i <= $#scripts - 1 &&
+               $scripts[$i + 1]->[0] == $end + 1 &&
+               $scripts[$i + 1]->[2] eq $script) {
+            $i++;
+            $end = $scripts[$i]->[1];
+        }
+        printf OUT " { %#06x, %5d, G_UNICODE_SCRIPT_%s },\n", $start, $end - $start + 1, $script;
+    }
+
+    printf OUT<<EOT;
+};
+
+#endif /* SCRIPTTABLES_H */
+EOT
+
+    close OUT;
+}

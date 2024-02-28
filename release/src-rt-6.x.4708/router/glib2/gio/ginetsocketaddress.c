@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008 Christian Kellner, Samuel Cormier-Iijima
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -28,6 +28,7 @@
 #include "ginetsocketaddress.h"
 #include "ginetaddress.h"
 #include "gnetworkingprivate.h"
+#include "gsocketconnectable.h"
 #include "gioerror.h"
 #include "glibintl.h"
 
@@ -35,6 +36,7 @@
 /**
  * SECTION:ginetsocketaddress
  * @short_description: Internet GSocketAddress
+ * @include: gio/gio.h
  *
  * An IPv4 or IPv6 socket address; that is, the combination of a
  * #GInetAddress and a port number.
@@ -43,8 +45,8 @@
 /**
  * GInetSocketAddress:
  *
- * An IPv4 or IPv6 socket address, corresponding to a <type>struct
- * sockaddr_in</type> or <type>struct sockaddr_in6</type>.
+ * An IPv4 or IPv6 socket address, corresponding to a struct
+ * sockaddr_in or struct sockaddr_in6.
  */
 
 struct _GInetSocketAddressPrivate
@@ -55,7 +57,13 @@ struct _GInetSocketAddressPrivate
   guint32       scope_id;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE (GInetSocketAddress, g_inet_socket_address, G_TYPE_SOCKET_ADDRESS)
+static void   g_inet_socket_address_connectable_iface_init (GSocketConnectableIface *iface);
+static gchar *g_inet_socket_address_connectable_to_string  (GSocketConnectable      *connectable);
+
+G_DEFINE_TYPE_WITH_CODE (GInetSocketAddress, g_inet_socket_address, G_TYPE_SOCKET_ADDRESS,
+                         G_ADD_PRIVATE (GInetSocketAddress)
+                         G_IMPLEMENT_INTERFACE (G_TYPE_SOCKET_CONNECTABLE,
+                                                g_inet_socket_address_connectable_iface_init))
 
 enum {
   PROP_0,
@@ -268,7 +276,7 @@ g_inet_socket_address_class_init (GInetSocketAddressClass *klass)
   /**
    * GInetSocketAddress:flowinfo:
    *
-   * The <literal>sin6_flowinfo</literal> field, for IPv6 addresses.
+   * The `sin6_flowinfo` field, for IPv6 addresses.
    *
    * Since: 2.32
    */
@@ -286,7 +294,7 @@ g_inet_socket_address_class_init (GInetSocketAddressClass *klass)
   /**
    * GInetSocketAddress:scope_id:
    *
-   * The <literal>sin6_scope_id</literal> field, for IPv6 addresses.
+   * The `sin6_scope_id` field, for IPv6 addresses.
    *
    * Since: 2.32
    */
@@ -300,6 +308,59 @@ g_inet_socket_address_class_init (GInetSocketAddressClass *klass)
                                                       G_PARAM_CONSTRUCT_ONLY |
                                                       G_PARAM_READWRITE |
                                                       G_PARAM_STATIC_STRINGS));
+}
+
+static void
+g_inet_socket_address_connectable_iface_init (GSocketConnectableIface *iface)
+{
+  GSocketConnectableIface *parent_iface = g_type_interface_peek_parent (iface);
+
+  iface->enumerate = parent_iface->enumerate;
+  iface->proxy_enumerate = parent_iface->proxy_enumerate;
+  iface->to_string = g_inet_socket_address_connectable_to_string;
+}
+
+static gchar *
+g_inet_socket_address_connectable_to_string (GSocketConnectable *connectable)
+{
+  GInetSocketAddress *sa;
+  GInetAddress *a;
+  gchar *a_string;
+  GString *out;
+  guint16 port;
+
+  sa = G_INET_SOCKET_ADDRESS (connectable);
+  a = g_inet_socket_address_get_address (sa);
+  out = g_string_new ("");
+
+  /* Address. */
+  a_string = g_inet_address_to_string (a);
+  g_string_append (out, a_string);
+  g_free (a_string);
+
+  /* Scope ID (IPv6 only). */
+  if (g_inet_address_get_family (a) == G_SOCKET_FAMILY_IPV6 &&
+      g_inet_socket_address_get_scope_id (sa) != 0)
+    {
+      g_string_append_printf (out, "%%%u",
+                              g_inet_socket_address_get_scope_id (sa));
+    }
+
+  /* Port. */
+  port = g_inet_socket_address_get_port (sa);
+  if (port != 0)
+    {
+      /* Disambiguate ports from IPv6 addresses using square brackets. */
+      if (g_inet_address_get_family (a) == G_SOCKET_FAMILY_IPV6)
+        {
+          g_string_prepend (out, "[");
+          g_string_append (out, "]");
+        }
+
+      g_string_append_printf (out, ":%u", port);
+    }
+
+  return g_string_free (out, FALSE);
 }
 
 static void
@@ -327,6 +388,82 @@ g_inet_socket_address_new (GInetAddress *address,
 		       "address", address,
 		       "port", port,
 		       NULL);
+}
+
+/**
+ * g_inet_socket_address_new_from_string:
+ * @address: the string form of an IP address
+ * @port: a port number
+ *
+ * Creates a new #GInetSocketAddress for @address and @port.
+ *
+ * If @address is an IPv6 address, it can also contain a scope ID
+ * (separated from the address by a `%`).
+ *
+ * Returns: (nullable) (transfer full): a new #GInetSocketAddress,
+ * or %NULL if @address cannot be parsed.
+ *
+ * Since: 2.40
+ */
+GSocketAddress *
+g_inet_socket_address_new_from_string (const char *address,
+                                       guint       port)
+{
+  static struct addrinfo *hints, hints_struct;
+  GSocketAddress *saddr;
+  GInetAddress *iaddr;
+  struct addrinfo *res;
+  gint status;
+
+  if (strchr (address, ':'))
+    {
+      /* IPv6 address (or it's invalid). We use getaddrinfo() because
+       * it will handle parsing a scope_id as well.
+       */
+
+      if (G_UNLIKELY (g_once_init_enter (&hints)))
+        {
+          hints_struct.ai_family = AF_UNSPEC;
+          hints_struct.ai_socktype = SOCK_STREAM;
+          hints_struct.ai_protocol = 0;
+          hints_struct.ai_flags = AI_NUMERICHOST;
+          g_once_init_leave (&hints, &hints_struct);
+        }
+
+      status = getaddrinfo (address, NULL, hints, &res);
+      if (status != 0)
+        return NULL;
+
+      if (res->ai_family == AF_INET6 &&
+          res->ai_addrlen == sizeof (struct sockaddr_in6))
+        {
+          ((struct sockaddr_in6 *)res->ai_addr)->sin6_port = g_htons (port);
+          saddr = g_socket_address_new_from_native (res->ai_addr, res->ai_addrlen);
+        }
+      else
+        saddr = NULL;
+
+      freeaddrinfo (res);
+    }
+  else
+    {
+      /* IPv4 (or invalid). We don't want to use getaddrinfo() here,
+       * because it accepts the stupid "IPv4 numbers-and-dots
+       * notation" addresses that are never used for anything except
+       * phishing. Since we don't have to worry about scope IDs for
+       * IPv4, we can just use g_inet_address_new_from_string().
+       */
+      iaddr = g_inet_address_new_from_string (address);
+      if (!iaddr)
+        return NULL;
+
+      g_warn_if_fail (g_inet_address_get_family (iaddr) == G_SOCKET_FAMILY_IPV4);
+
+      saddr = g_inet_socket_address_new (iaddr, port);
+      g_object_unref (iaddr);
+    }
+
+  return saddr;
 }
 
 /**
@@ -371,10 +508,10 @@ g_inet_socket_address_get_port (GInetSocketAddress *address)
  * g_inet_socket_address_get_flowinfo:
  * @address: a %G_SOCKET_FAMILY_IPV6 #GInetSocketAddress
  *
- * Gets the <literal>sin6_flowinfo</literal> field from @address,
+ * Gets the `sin6_flowinfo` field from @address,
  * which must be an IPv6 address.
  *
- * Return value: the flowinfo field
+ * Returns: the flowinfo field
  *
  * Since: 2.32
  */
@@ -391,10 +528,10 @@ g_inet_socket_address_get_flowinfo (GInetSocketAddress *address)
  * g_inet_socket_address_get_scope_id:
  * @address: a %G_SOCKET_FAMILY_IPV6 #GInetAddress
  *
- * Gets the <literal>sin6_scope_id</literal> field from @address,
+ * Gets the `sin6_scope_id` field from @address,
  * which must be an IPv6 address.
  *
- * Return value: the scope id field
+ * Returns: the scope id field
  *
  * Since: 2.32
  */

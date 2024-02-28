@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 2001 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -47,24 +47,22 @@
  * g_value_unset() as the clear function using g_array_set_clear_func(),
  * for instance, the following code:
  *
- * |[
+ * |[<!-- language="C" --> 
  *   GValueArray *array = g_value_array_new (10);
  * ]|
  *
  * can be replaced by:
  *
- * |[
+ * |[<!-- language="C" --> 
  *   GArray *array = g_array_sized_new (FALSE, TRUE, sizeof (GValue), 10);
  *   g_array_set_clear_func (array, (GDestroyNotify) g_value_unset);
  * ]|
+ *
+ * Deprecated: 2.32: Use #GArray instead, if possible for the given use case,
+ *    as described above.
  */
 
-
-#ifdef	DISABLE_MEM_POOLS
-#  define	GROUP_N_VALUES	(1)	/* power of 2 !! */
-#else
-#  define	GROUP_N_VALUES	(8)	/* power of 2 !! */
-#endif
+#define	GROUP_N_VALUES	(8)	/* power of 2 !! */
 
 
 /* --- functions --- */
@@ -110,18 +108,6 @@ value_array_grow (GValueArray *value_array,
     }
 }
 
-static inline void
-value_array_shrink (GValueArray *value_array)
-{
-#ifdef  DISABLE_MEM_POOLS
-  if (value_array->n_prealloced >= value_array->n_values + GROUP_N_VALUES)
-    {
-      value_array->n_prealloced = (value_array->n_values + GROUP_N_VALUES - 1) & ~(GROUP_N_VALUES - 1);
-      value_array->values = g_renew (GValue, value_array->values, value_array->n_prealloced);
-    }
-#endif
-}
-
 /**
  * g_value_array_new:
  * @n_prealloced: number of values to preallocate space for
@@ -149,7 +135,7 @@ g_value_array_new (guint n_prealloced)
 }
 
 /**
- * g_value_array_free:
+ * g_value_array_free: (skip)
  * @value_array: #GValueArray to free
  *
  * Free a #GValueArray including its contents.
@@ -212,7 +198,7 @@ g_value_array_copy (const GValueArray *value_array)
 /**
  * g_value_array_prepend:
  * @value_array: #GValueArray to add an element to
- * @value: (allow-none): #GValue to copy into #GValueArray, or %NULL
+ * @value: (nullable): #GValue to copy into #GValueArray, or %NULL
  *
  * Insert a copy of @value as first element of @value_array. If @value is
  * %NULL, an uninitialized value is prepended.
@@ -236,7 +222,7 @@ g_value_array_prepend (GValueArray  *value_array,
 /**
  * g_value_array_append:
  * @value_array: #GValueArray to add an element to
- * @value: (allow-none): #GValue to copy into #GValueArray, or %NULL
+ * @value: (nullable): #GValue to copy into #GValueArray, or %NULL
  *
  * Insert a copy of @value as last element of @value_array. If @value is
  * %NULL, an uninitialized value is appended.
@@ -259,8 +245,8 @@ g_value_array_append (GValueArray  *value_array,
 /**
  * g_value_array_insert:
  * @value_array: #GValueArray to add an element to
- * @index_: insertion position, must be &lt;= value_array-&gt;n_values
- * @value: (allow-none): #GValue to copy into #GValueArray, or %NULL
+ * @index_: insertion position, must be <= value_array->;n_values
+ * @value: (nullable): #GValue to copy into #GValueArray, or %NULL
  *
  * Insert a copy of @value at specified position into @value_array. If @value
  * is %NULL, an uninitialized value is inserted.
@@ -282,8 +268,8 @@ g_value_array_insert (GValueArray  *value_array,
   i = value_array->n_values;
   value_array_grow (value_array, value_array->n_values + 1, FALSE);
   if (index + 1 < value_array->n_values)
-    g_memmove (value_array->values + index + 1, value_array->values + index,
-	       (i - index) * sizeof (value_array->values[0]));
+    memmove (value_array->values + index + 1, value_array->values + index,
+             (i - index) * sizeof (value_array->values[0]));
   memset (value_array->values + index, 0, sizeof (value_array->values[0]));
   if (value)
     {
@@ -297,8 +283,7 @@ g_value_array_insert (GValueArray  *value_array,
  * g_value_array_remove:
  * @value_array: #GValueArray to remove an element from
  * @index_: position of value to remove, which must be less than
- *          <code>value_array-><link
- *          linkend="GValueArray.n-values">n_values</link></code>
+ *     @value_array->n_values
  *
  * Remove the value at position @index_ from @value_array.
  *
@@ -317,9 +302,8 @@ g_value_array_remove (GValueArray *value_array,
     g_value_unset (value_array->values + index);
   value_array->n_values--;
   if (index < value_array->n_values)
-    g_memmove (value_array->values + index, value_array->values + index + 1,
-	       (value_array->n_values - index) * sizeof (value_array->values[0]));
-  value_array_shrink (value_array);
+    memmove (value_array->values + index, value_array->values + index + 1,
+             (value_array->n_values - index) * sizeof (value_array->values[0]));
   if (value_array->n_prealloced > value_array->n_values)
     memset (value_array->values + value_array->n_values, 0, sizeof (value_array->values[0]));
 
@@ -356,7 +340,7 @@ g_value_array_sort (GValueArray *value_array,
 }
 
 /**
- * g_value_array_sort_with_data:
+ * g_value_array_sort_with_data: (rename-to g_value_array_sort)
  * @value_array: #GValueArray to sort
  * @compare_func: (scope call): function to compare elements
  * @user_data: (closure): extra data argument provided for @compare_func
@@ -367,7 +351,6 @@ g_value_array_sort (GValueArray *value_array,
  * The current implementation uses the same sorting algorithm as standard
  * C qsort() function.
  *
- * Rename to: g_value_array_sort
  * Returns: (transfer none): the #GValueArray passed in as @value_array
  *
  * Deprecated: 2.32: Use #GArray and g_array_sort_with_data().

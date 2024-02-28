@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -116,7 +116,7 @@ g_pollable_input_stream_is_readable (GPollableInputStream *stream)
 /**
  * g_pollable_input_stream_create_source:
  * @stream: a #GPollableInputStream.
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  *
  * Creates a #GSource that triggers when @stream can be read, or
  * @cancellable is triggered or an error occurs. The callback on the
@@ -161,10 +161,10 @@ g_pollable_input_stream_default_read_nonblocking (GPollableInputStream  *stream,
 /**
  * g_pollable_input_stream_read_nonblocking:
  * @stream: a #GPollableInputStream
- * @buffer: a buffer to read data into (which should be at least @count
- *     bytes long).
- * @count: the number of bytes you want to read
- * @cancellable: (allow-none): a #GCancellable, or %NULL
+ * @buffer: (array length=count) (element-type guint8) (out caller-allocates): a
+ *     buffer to read data into (which should be at least @count bytes long).
+ * @count: (in): the number of bytes you want to read
+ * @cancellable: (nullable): a #GCancellable, or %NULL
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Attempts to read up to @count bytes from @stream into @buffer, as
@@ -180,7 +180,7 @@ g_pollable_input_stream_default_read_nonblocking (GPollableInputStream  *stream,
  * to having been cancelled.
  *
  * Virtual: read_nonblocking
- * Return value: the number of bytes read, or -1 on error (including
+ * Returns: the number of bytes read, or -1 on error (including
  *   %G_IO_ERROR_WOULD_BLOCK).
  */
 gssize

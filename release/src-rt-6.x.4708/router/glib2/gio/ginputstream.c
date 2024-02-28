@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -25,6 +25,7 @@
 #include "glibintl.h"
 
 #include "ginputstream.h"
+#include "gioprivate.h"
 #include "gseekable.h"
 #include "gcancellable.h"
 #include "gasyncresult.h"
@@ -41,7 +42,10 @@
  * (g_input_stream_skip()). 
  *
  * To copy the content of an input stream to an output stream without 
- * manually handling the reads and writes, use g_output_stream_splice(). 
+ * manually handling the reads and writes, use g_output_stream_splice().
+ *
+ * See the documentation for #GIOStream for details of thread safety of
+ * streaming APIs.
  *
  * All of these functions have async variants too.
  **/
@@ -125,10 +129,10 @@ g_input_stream_init (GInputStream *stream)
 /**
  * g_input_stream_read:
  * @stream: a #GInputStream.
- * @buffer: (array length=count) (element-type guint8): a buffer to
- *     read data into (which should be at least count bytes long).
- * @count: the number of bytes that will be read from the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @buffer: (array length=count) (element-type guint8) (out caller-allocates):
+ *     a buffer to read data into (which should be at least count bytes long).
+ * @count: (in): the number of bytes that will be read from the stream
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to read @count bytes from the stream into the buffer starting at
@@ -142,6 +146,9 @@ g_input_stream_init (GInputStream *stream)
  * can happen e.g. near the end of a file. Zero is returned on end of file
  * (or if @count is zero),  but never otherwise.
  *
+ * The returned @buffer is not a nul-terminated string, it can contain nul bytes
+ * at any position, and this function doesn't nul-terminate the @buffer.
+ *
  * If @cancellable is not %NULL, then the operation can be cancelled by
  * triggering the cancellable object from another thread. If the operation
  * was cancelled, the error %G_IO_ERROR_CANCELLED will be returned. If an
@@ -150,7 +157,7 @@ g_input_stream_init (GInputStream *stream)
  *
  * On error -1 is returned and @error is set accordingly.
  * 
- * Return value: Number of bytes read, or -1 on error, or 0 on end of file.
+ * Returns: Number of bytes read, or -1 on error, or 0 on end of file.
  **/
 gssize
 g_input_stream_read  (GInputStream  *stream,
@@ -180,7 +187,7 @@ g_input_stream_read  (GInputStream  *stream,
   if (class->read_fn == NULL) 
     {
       g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-                           _("Input stream doesn't implement read"));
+                           _("Input stream doesn’t implement read"));
       return -1;
     }
 
@@ -203,11 +210,11 @@ g_input_stream_read  (GInputStream  *stream,
 /**
  * g_input_stream_read_all:
  * @stream: a #GInputStream.
- * @buffer: (array length=count) (element-type guint8): a buffer to
- *     read data into (which should be at least count bytes long).
- * @count: the number of bytes that will be read from the stream
+ * @buffer: (array length=count) (element-type guint8) (out caller-allocates):
+ *     a buffer to read data into (which should be at least count bytes long).
+ * @count: (in): the number of bytes that will be read from the stream
  * @bytes_read: (out): location to store the number of bytes that was read from the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to read @count bytes from the stream into the buffer starting at
@@ -221,10 +228,16 @@ g_input_stream_read  (GInputStream  *stream,
  * read into @buffer.
  * 
  * If there is an error during the operation %FALSE is returned and @error
- * is set to indicate the error status, @bytes_read is updated to contain
- * the number of bytes read into @buffer before the error occurred.
+ * is set to indicate the error status.
  *
- * Return value: %TRUE on success, %FALSE if there was an error
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_read will be set to the number of bytes that were successfully
+ * read before the error was encountered.  This functionality is only
+ * available from C.  If you need it from another language then you must
+ * write your own loop around g_input_stream_read().
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
  **/
 gboolean
 g_input_stream_read_all (GInputStream  *stream,
@@ -268,7 +281,7 @@ g_input_stream_read_all (GInputStream  *stream,
  * @stream: a #GInputStream.
  * @count: maximum number of bytes that will be read from the stream. Common
  * values include 4096 and 8192.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Like g_input_stream_read(), this tries to read @count bytes from
@@ -295,7 +308,9 @@ g_input_stream_read_all (GInputStream  *stream,
  *
  * On error %NULL is returned and @error is set accordingly.
  *
- * Return value: a new #GBytes, or %NULL on error
+ * Returns: (transfer full): a new #GBytes, or %NULL on error
+ *
+ * Since: 2.34
  **/
 GBytes *
 g_input_stream_read_bytes (GInputStream  *stream,
@@ -326,7 +341,7 @@ g_input_stream_read_bytes (GInputStream  *stream,
  * g_input_stream_skip:
  * @stream: a #GInputStream.
  * @count: the number of bytes that will be skipped from the stream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore. 
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore. 
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Tries to skip @count bytes from the stream. Will block during the operation.
@@ -344,7 +359,7 @@ g_input_stream_read_bytes (GInputStream  *stream,
  * operation was partially finished when the operation was cancelled the
  * partial result will be returned, without an error.
  *
- * Return value: Number of bytes skipped, or -1 on error
+ * Returns: Number of bytes skipped, or -1 on error
  **/
 gssize
 g_input_stream_skip (GInputStream  *stream,
@@ -398,12 +413,43 @@ g_input_stream_real_skip (GInputStream  *stream,
 
   if (G_IS_SEEKABLE (stream) && g_seekable_can_seek (G_SEEKABLE (stream)))
     {
+      GSeekable *seekable = G_SEEKABLE (stream);
+      goffset start, end;
+      gboolean success;
+
+      /* g_seekable_seek() may try to set pending itself */
+      stream->priv->pending = FALSE;
+
+      start = g_seekable_tell (seekable);
+
       if (g_seekable_seek (G_SEEKABLE (stream),
-			   count,
-			   G_SEEK_CUR,
-			   cancellable,
-			   NULL))
-	return count;
+                           0,
+                           G_SEEK_END,
+                           cancellable,
+                           NULL))
+        {
+          end = g_seekable_tell (seekable);
+          g_assert (start >= 0);
+          g_assert (end >= start);
+          if (start > (goffset) (G_MAXOFFSET - count) ||
+              (goffset) (start + count) > end)
+            {
+              stream->priv->pending = TRUE;
+              return end - start;
+            }
+
+          success = g_seekable_seek (G_SEEKABLE (stream),
+                                     start + count,
+                                     G_SEEK_SET,
+                                     cancellable,
+                                     error);
+          stream->priv->pending = TRUE;
+
+          if (success)
+            return count;
+          else
+            return -1;
+        }
     }
 
   /* If not seekable, or seek failed, fall back to reading data: */
@@ -442,7 +488,7 @@ g_input_stream_real_skip (GInputStream  *stream,
 /**
  * g_input_stream_close:
  * @stream: A #GInputStream.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Closes the stream, releasing resources related to it.
@@ -469,7 +515,7 @@ g_input_stream_real_skip (GInputStream  *stream,
  * Cancelling a close will still leave the stream closed, but some streams
  * can use a faster close that doesn't block to e.g. check errors. 
  *
- * Return value: %TRUE on success, %FALSE on failure
+ * Returns: %TRUE on success, %FALSE on failure
  **/
 gboolean
 g_input_stream_close (GInputStream  *stream,
@@ -537,12 +583,12 @@ async_ready_close_callback_wrapper (GObject      *source_object,
 /**
  * g_input_stream_read_async:
  * @stream: A #GInputStream.
- * @buffer: (array length=count) (element-type guint8): a buffer to
- *     read data into (which should be at least count bytes long).
- * @count: the number of bytes that will be read from the stream
- * @io_priority: the <link linkend="io-priority">I/O priority</link> 
+ * @buffer: (array length=count) (element-type guint8) (out caller-allocates):
+ *     a buffer to read data into (which should be at least count bytes long).
+ * @count: (in): the number of bytes that will be read from the stream
+ * @io_priority: the [I/O priority][io-priority]
  * of the request. 
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -566,7 +612,7 @@ async_ready_close_callback_wrapper (GObject      *source_object,
  * be executed before an outstanding request with lower priority. Default
  * priority is %G_PRIORITY_DEFAULT.
  *
- * The asyncronous methods have a default fallback that uses threads to implement
+ * The asynchronous methods have a default fallback that uses threads to implement
  * asynchronicity, so they are optional for inheriting classes. However, if you
  * override one you must override all.
  **/
@@ -651,6 +697,186 @@ g_input_stream_read_finish (GInputStream  *stream,
   return class->read_finish (stream, result, error);
 }
 
+typedef struct
+{
+  gchar *buffer;
+  gsize to_read;
+  gsize bytes_read;
+} AsyncReadAll;
+
+static void
+free_async_read_all (gpointer data)
+{
+  g_slice_free (AsyncReadAll, data);
+}
+
+static void
+read_all_callback (GObject      *stream,
+                   GAsyncResult *result,
+                   gpointer      user_data)
+{
+  GTask *task = user_data;
+  AsyncReadAll *data = g_task_get_task_data (task);
+  gboolean got_eof = FALSE;
+
+  if (result)
+    {
+      GError *error = NULL;
+      gssize nread;
+
+      nread = g_input_stream_read_finish (G_INPUT_STREAM (stream), result, &error);
+
+      if (nread == -1)
+        {
+          g_task_return_error (task, error);
+          g_object_unref (task);
+          return;
+        }
+
+      g_assert_cmpint (nread, <=, data->to_read);
+      data->to_read -= nread;
+      data->bytes_read += nread;
+      got_eof = (nread == 0);
+    }
+
+  if (got_eof || data->to_read == 0)
+    {
+      g_task_return_boolean (task, TRUE);
+      g_object_unref (task);
+    }
+
+  else
+    g_input_stream_read_async (G_INPUT_STREAM (stream),
+                               data->buffer + data->bytes_read,
+                               data->to_read,
+                               g_task_get_priority (task),
+                               g_task_get_cancellable (task),
+                               read_all_callback, task);
+}
+
+
+static void
+read_all_async_thread (GTask        *task,
+                       gpointer      source_object,
+                       gpointer      task_data,
+                       GCancellable *cancellable)
+{
+  GInputStream *stream = source_object;
+  AsyncReadAll *data = task_data;
+  GError *error = NULL;
+
+  if (g_input_stream_read_all (stream, data->buffer, data->to_read, &data->bytes_read,
+                               g_task_get_cancellable (task), &error))
+    g_task_return_boolean (task, TRUE);
+  else
+    g_task_return_error (task, error);
+}
+
+/**
+ * g_input_stream_read_all_async:
+ * @stream: A #GInputStream
+ * @buffer: (array length=count) (element-type guint8) (out caller-allocates):
+ *     a buffer to read data into (which should be at least count bytes long)
+ * @count: (in): the number of bytes that will be read from the stream
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
+ * @callback: (scope async): callback to call when the request is satisfied
+ * @user_data: (closure): the data to pass to callback function
+ *
+ * Request an asynchronous read of @count bytes from the stream into the
+ * buffer starting at @buffer.
+ *
+ * This is the asynchronous equivalent of g_input_stream_read_all().
+ *
+ * Call g_input_stream_read_all_finish() to collect the result.
+ *
+ * Any outstanding I/O request with higher priority (lower numerical
+ * value) will be executed before an outstanding request with lower
+ * priority. Default priority is %G_PRIORITY_DEFAULT.
+ *
+ * Since: 2.44
+ **/
+void
+g_input_stream_read_all_async (GInputStream        *stream,
+                               void                *buffer,
+                               gsize                count,
+                               int                  io_priority,
+                               GCancellable        *cancellable,
+                               GAsyncReadyCallback  callback,
+                               gpointer             user_data)
+{
+  AsyncReadAll *data;
+  GTask *task;
+
+  g_return_if_fail (G_IS_INPUT_STREAM (stream));
+  g_return_if_fail (buffer != NULL || count == 0);
+
+  task = g_task_new (stream, cancellable, callback, user_data);
+  data = g_slice_new0 (AsyncReadAll);
+  data->buffer = buffer;
+  data->to_read = count;
+
+  g_task_set_source_tag (task, g_input_stream_read_all_async);
+  g_task_set_task_data (task, data, free_async_read_all);
+  g_task_set_priority (task, io_priority);
+
+  /* If async reads are going to be handled via the threadpool anyway
+   * then we may as well do it with a single dispatch instead of
+   * bouncing in and out.
+   */
+  if (g_input_stream_async_read_is_via_threads (stream))
+    {
+      g_task_run_in_thread (task, read_all_async_thread);
+      g_object_unref (task);
+    }
+  else
+    read_all_callback (G_OBJECT (stream), NULL, task);
+}
+
+/**
+ * g_input_stream_read_all_finish:
+ * @stream: a #GInputStream
+ * @result: a #GAsyncResult
+ * @bytes_read: (out): location to store the number of bytes that was read from the stream
+ * @error: a #GError location to store the error occurring, or %NULL to ignore
+ *
+ * Finishes an asynchronous stream read operation started with
+ * g_input_stream_read_all_async().
+ *
+ * As a special exception to the normal conventions for functions that
+ * use #GError, if this function returns %FALSE (and sets @error) then
+ * @bytes_read will be set to the number of bytes that were successfully
+ * read before the error was encountered.  This functionality is only
+ * available from C.  If you need it from another language then you must
+ * write your own loop around g_input_stream_read_async().
+ *
+ * Returns: %TRUE on success, %FALSE if there was an error
+ *
+ * Since: 2.44
+ **/
+gboolean
+g_input_stream_read_all_finish (GInputStream  *stream,
+                                GAsyncResult  *result,
+                                gsize         *bytes_read,
+                                GError       **error)
+{
+  GTask *task;
+
+  g_return_val_if_fail (G_IS_INPUT_STREAM (stream), FALSE);
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
+
+  task = G_TASK (result);
+
+  if (bytes_read)
+    {
+      AsyncReadAll *data = g_task_get_task_data (task);
+
+      *bytes_read = data->bytes_read;
+    }
+
+  return g_task_propagate_boolean (task, error);
+}
+
 static void
 read_bytes_callback (GObject      *stream,
 		     GAsyncResult *result,
@@ -687,9 +913,8 @@ read_bytes_callback (GObject      *stream,
  * g_input_stream_read_bytes_async:
  * @stream: A #GInputStream.
  * @count: the number of bytes that will be read from the stream
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *   of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -713,6 +938,8 @@ read_bytes_callback (GObject      *stream,
  * Any outstanding I/O request with higher priority (lower numerical
  * value) will be executed before an outstanding request with lower
  * priority. Default priority is %G_PRIORITY_DEFAULT.
+ *
+ * Since: 2.34
  **/
 void
 g_input_stream_read_bytes_async (GInputStream          *stream,
@@ -726,6 +953,8 @@ g_input_stream_read_bytes_async (GInputStream          *stream,
   guchar *buf;
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_input_stream_read_bytes_async);
+
   buf = g_malloc (count);
   g_task_set_task_data (task, buf, NULL);
 
@@ -743,7 +972,9 @@ g_input_stream_read_bytes_async (GInputStream          *stream,
  *
  * Finishes an asynchronous stream read-into-#GBytes operation.
  *
- * Returns: the newly-allocated #GBytes, or %NULL on error
+ * Returns: (transfer full): the newly-allocated #GBytes, or %NULL on error
+ *
+ * Since: 2.34
  **/
 GBytes *
 g_input_stream_read_bytes_finish (GInputStream  *stream,
@@ -760,9 +991,8 @@ g_input_stream_read_bytes_finish (GInputStream  *stream,
  * g_input_stream_skip_async:
  * @stream: A #GInputStream.
  * @count: the number of bytes that will be skipped from the stream
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- * of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -848,7 +1078,7 @@ g_input_stream_skip_async (GInputStream        *stream,
  * 
  * Finishes a stream skip operation.
  * 
- * Returns: the size of the bytes skipped, or %-1 on error.
+ * Returns: the size of the bytes skipped, or `-1` on error.
  **/
 gssize
 g_input_stream_skip_finish (GInputStream  *stream,
@@ -872,9 +1102,8 @@ g_input_stream_skip_finish (GInputStream  *stream,
 /**
  * g_input_stream_close_async:
  * @stream: A #GInputStream.
- * @io_priority: the <link linkend="io-priority">I/O priority</link> 
- * of the request. 
- * @cancellable: (allow-none): optional cancellable object
+ * @io_priority: the [I/O priority][io-priority] of the request
+ * @cancellable: (nullable): optional cancellable object
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -885,7 +1114,7 @@ g_input_stream_skip_finish (GInputStream  *stream,
  *
  * For behaviour details see g_input_stream_close().
  *
- * The asyncronous methods have a default fallback that uses threads to implement
+ * The asynchronous methods have a default fallback that uses threads to implement
  * asynchronicity, so they are optional for inheriting classes. However, if you
  * override one you must override all.
  **/
@@ -999,7 +1228,7 @@ g_input_stream_has_pending (GInputStream *stream)
  * already set or @stream is closed, it will return %FALSE and set
  * @error.
  *
- * Return value: %TRUE if pending was previously unset and is now set.
+ * Returns: %TRUE if pending was previously unset and is now set.
  **/
 gboolean
 g_input_stream_set_pending (GInputStream *stream, GError **error)
@@ -1039,6 +1268,48 @@ g_input_stream_clear_pending (GInputStream *stream)
   g_return_if_fail (G_IS_INPUT_STREAM (stream));
   
   stream->priv->pending = FALSE;
+}
+
+/*< internal >
+ * g_input_stream_async_read_is_via_threads:
+ * @stream: input stream
+ *
+ * Checks if an input stream's read_async function uses threads.
+ *
+ * Returns: %TRUE if @stream's read_async function uses threads.
+ **/
+gboolean
+g_input_stream_async_read_is_via_threads (GInputStream *stream)
+{
+  GInputStreamClass *class;
+
+  g_return_val_if_fail (G_IS_INPUT_STREAM (stream), FALSE);
+
+  class = G_INPUT_STREAM_GET_CLASS (stream);
+
+  return (class->read_async == g_input_stream_real_read_async &&
+      !(G_IS_POLLABLE_INPUT_STREAM (stream) &&
+        g_pollable_input_stream_can_poll (G_POLLABLE_INPUT_STREAM (stream))));
+}
+
+/*< internal >
+ * g_input_stream_async_close_is_via_threads:
+ * @stream: input stream
+ *
+ * Checks if an input stream's close_async function uses threads.
+ *
+ * Returns: %TRUE if @stream's close_async function uses threads.
+ **/
+gboolean
+g_input_stream_async_close_is_via_threads (GInputStream *stream)
+{
+  GInputStreamClass *class;
+
+  g_return_val_if_fail (G_IS_INPUT_STREAM (stream), FALSE);
+
+  class = G_INPUT_STREAM_GET_CLASS (stream);
+
+  return class->close_async == g_input_stream_real_close_async;
 }
 
 /********************************************
@@ -1128,10 +1399,6 @@ read_async_pollable (GPollableInputStream *stream,
   /* g_input_stream_real_read_async() unrefs task */
 }
 
-#define CAN_DO_NONBLOCKING_READS(stream) \
-  (G_IS_POLLABLE_INPUT_STREAM (stream) && \
-   g_pollable_input_stream_can_poll (G_POLLABLE_INPUT_STREAM (stream)))
-
 
 static void
 g_input_stream_real_read_async (GInputStream        *stream,
@@ -1147,12 +1414,13 @@ g_input_stream_real_read_async (GInputStream        *stream,
   
   op = g_slice_new0 (ReadData);
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_input_stream_real_read_async);
   g_task_set_task_data (task, op, (GDestroyNotify) free_read_data);
   g_task_set_priority (task, io_priority);
   op->buffer = buffer;
   op->count = count;
 
-  if (CAN_DO_NONBLOCKING_READS (stream))
+  if (!g_input_stream_async_read_is_via_threads (stream))
     read_async_pollable (G_POLLABLE_INPUT_STREAM (stream), task);
   else
     g_task_run_in_thread (task, read_async_thread);
@@ -1258,10 +1526,10 @@ g_input_stream_real_skip_async (GInputStream        *stream,
   class = G_INPUT_STREAM_GET_CLASS (stream);
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_input_stream_real_skip_async);
   g_task_set_priority (task, io_priority);
 
-  if (class->read_async == g_input_stream_real_read_async &&
-      !CAN_DO_NONBLOCKING_READS (stream))
+  if (g_input_stream_async_read_is_via_threads (stream))
     {
       /* Read is thread-using async fallback.
        * Make skip use threads too, so that we can use a possible sync skip
@@ -1334,6 +1602,7 @@ g_input_stream_real_close_async (GInputStream        *stream,
   GTask *task;
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_input_stream_real_close_async);
   g_task_set_check_cancellable (task, FALSE);
   g_task_set_priority (task, io_priority);
   

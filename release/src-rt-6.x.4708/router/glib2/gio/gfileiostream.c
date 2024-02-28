@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -114,7 +114,7 @@ g_file_io_stream_init (GFileIOStream *stream)
  * g_file_io_stream_query_info:
  * @stream: a #GFileIOStream.
  * @attributes: a file attribute query string.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @error: a #GError, %NULL to ignore.
  *
  * Queries a file io stream for the given @attributes.
@@ -166,7 +166,7 @@ g_file_io_stream_query_info (GFileIOStream      *stream,
     info = class->query_info (stream, attributes, cancellable, error);
   else
     g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-                         _("Stream doesn't support query_info"));
+                         _("Stream doesn’t support query_info"));
 
   if (cancellable)
     g_cancellable_pop_current (cancellable);
@@ -193,9 +193,8 @@ async_ready_callback_wrapper (GObject *source_object,
  * g_file_io_stream_query_info_async:
  * @stream: a #GFileIOStream.
  * @attributes: a file attribute query string.
- * @io_priority: the <link linkend="gio-GIOScheduler">I/O priority</link>
- *     of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @io_priority: the [I/O priority][gio-GIOScheduler] of the request
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -280,7 +279,7 @@ g_file_io_stream_query_info_finish (GFileIOStream     *stream,
  * This must be called after the stream has been written
  * and closed, as the etag can change while writing.
  *
- * Returns: the entity tag for the stream.
+ * Returns: (nullable) (transfer full): the entity tag for the stream.
  *
  * Since: 2.22
  **/

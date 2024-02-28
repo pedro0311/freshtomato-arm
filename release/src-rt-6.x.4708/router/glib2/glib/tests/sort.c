@@ -1,10 +1,12 @@
 /*
  * Copyright (C) 2011 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <glib.h>
@@ -46,6 +46,30 @@ test_sort_basic (void)
     g_assert_cmpint (data[i -1], <=, data[i]);
 
   g_free (data);
+}
+
+static void
+test_sort_zero_elements (void)
+{
+  gint *data, *data_copy;
+  gsize i;
+
+  data = g_malloc (100 * sizeof (int));
+  data_copy = g_malloc (100 * sizeof (int));
+  for (i = 0; i < 100; i++)
+    {
+      data[i] = g_random_int ();
+      data_copy[i] = data[i];
+    }
+
+  /* 0 elements is a valid case */
+  g_qsort_with_data (data, 0, sizeof (int), int_compare_data, NULL);
+
+  for (i = 0; i < 100; i++)
+    g_assert_cmpint (data[i], ==, data_copy[i]);
+
+  g_free (data);
+  g_free (data_copy);
 }
 
 typedef struct {
@@ -122,9 +146,9 @@ main (int argc, char *argv[])
   g_test_init (&argc, &argv, NULL);
 
   g_test_add_func ("/sort/basic", test_sort_basic);
+  g_test_add_func ("/sort/zero-elements", test_sort_zero_elements);
   g_test_add_func ("/sort/stable", test_sort_stable);
   g_test_add_func ("/sort/big", test_sort_big);
 
   return g_test_run ();
 }
-

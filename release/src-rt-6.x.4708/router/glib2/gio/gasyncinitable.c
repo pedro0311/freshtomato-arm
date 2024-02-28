@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -49,7 +49,7 @@
  *
  * A typical implementation might look something like this:
  *
- * |[
+ * |[<!-- language="C" -->
  * enum {
  *    NOT_INITIALIZED,
  *    INITIALIZING,
@@ -89,6 +89,7 @@
  *   GTask *task;
  *
  *   task = g_task_new (initable, cancellable, callback, user_data);
+ *   g_task_set_name (task, G_STRFUNC);
  *
  *   switch (self->priv->state)
  *     {
@@ -158,8 +159,7 @@ g_async_initable_default_init (GAsyncInitableInterface *iface)
 /**
  * g_async_initable_init_async:
  * @initable: a #GAsyncInitable.
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the operation.
+ * @io_priority: the [I/O priority][io-priority] of the operation
  * @cancellable: optional #GCancellable object, %NULL to ignore.
  * @callback: a #GAsyncReadyCallback to call when the request is satisfied
  * @user_data: the data to pass to callback function
@@ -168,6 +168,9 @@ g_async_initable_default_init (GAsyncInitableInterface *iface)
  * interface. This must be done before any real use of the object after
  * initial construction. If the object also implements #GInitable you can
  * optionally call g_initable_init() instead.
+ *
+ * This method is intended for language bindings. If writing in C,
+ * g_async_initable_new_async() should typically be used instead.
  *
  * When the initialization is finished, @callback will be called. You can
  * then call g_async_initable_init_finish() to get the result of the
@@ -186,11 +189,11 @@ g_async_initable_default_init (GAsyncInitableInterface *iface)
  * have undefined behaviour. They will often fail with g_critical() or
  * g_warning(), but this must not be relied on.
  *
- * Implementations of this method must be idempotent: i.e. multiple calls
- * to this function with the same argument should return the same results.
- * Only the first call initializes the object; further calls return the result
- * of the first call. This is so that it's safe to implement the singleton
- * pattern in the GObject constructor function.
+ * Callers should not assume that a class which implements #GAsyncInitable can
+ * be initialized multiple times; for more information, see g_initable_init().
+ * If a class explicitly supports being initialized multiple times,
+ * implementation requires yielding all subsequent calls to init_async() on the
+ * results of the first call.
  *
  * For classes that also support the #GInitable interface, the default
  * implementation of this method will run the g_initable_init() function
@@ -275,6 +278,7 @@ g_async_initable_real_init_async (GAsyncInitable      *initable,
   g_return_if_fail (G_IS_INITABLE (initable));
 
   task = g_task_new (initable, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_async_initable_real_init_async);
   g_task_set_priority (task, io_priority);
   g_task_run_in_thread (task, async_init_thread);
   g_object_unref (task);
@@ -289,6 +293,7 @@ g_async_initable_real_init_finish (GAsyncInitable  *initable,
    * even though g_async_initable_real_init_async doesn't generate
    * them any more.
    */
+  G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   if (G_IS_SIMPLE_ASYNC_RESULT (res))
     {
       GSimpleAsyncResult *simple = G_SIMPLE_ASYNC_RESULT (res);
@@ -297,6 +302,7 @@ g_async_initable_real_init_finish (GAsyncInitable  *initable,
       else
         return TRUE;
     }
+  G_GNUC_END_IGNORE_DEPRECATIONS
 
   g_return_val_if_fail (g_task_is_valid (res, initable), FALSE);
 
@@ -306,13 +312,12 @@ g_async_initable_real_init_finish (GAsyncInitable  *initable,
 /**
  * g_async_initable_new_async:
  * @object_type: a #GType supporting #GAsyncInitable.
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the operation.
+ * @io_priority: the [I/O priority][io-priority] of the operation
  * @cancellable: optional #GCancellable object, %NULL to ignore.
  * @callback: a #GAsyncReadyCallback to call when the initialization is
  *     finished
  * @user_data: the data to pass to callback function
- * @first_property_name: (allow-none): the name of the first property, or %NULL if no
+ * @first_property_name: (nullable): the name of the first property, or %NULL if no
  *     properties
  * @...:  the value of the first property, followed by other property
  *    value pairs, and ended by %NULL.
@@ -350,8 +355,7 @@ g_async_initable_new_async (GType                object_type,
  * @object_type: a #GType supporting #GAsyncInitable.
  * @n_parameters: the number of parameters in @parameters
  * @parameters: the parameters to use to construct the object
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the operation.
+ * @io_priority: the [I/O priority][io-priority] of the operation
  * @cancellable: optional #GCancellable object, %NULL to ignore.
  * @callback: a #GAsyncReadyCallback to call when the initialization is
  *     finished
@@ -365,7 +369,10 @@ g_async_initable_new_async (GType                object_type,
  * for any errors.
  *
  * Since: 2.22
+ * Deprecated: 2.54: Use g_object_new_with_properties() and
+ * g_async_initable_init_async() instead. See #GParameter for more information.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void
 g_async_initable_newv_async (GType                object_type,
 			     guint                n_parameters,
@@ -384,7 +391,9 @@ g_async_initable_newv_async (GType                object_type,
   g_async_initable_init_async (G_ASYNC_INITABLE (obj),
 			       io_priority, cancellable,
 			       callback, user_data);
+  g_object_unref (obj); /* Passed ownership to async call */
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_async_initable_new_valist_async:
@@ -392,8 +401,7 @@ g_async_initable_newv_async (GType                object_type,
  * @first_property_name: the name of the first property, followed by
  * the value, and other property value pairs, and ended by %NULL.
  * @var_args: The var args list generated from @first_property_name.
- * @io_priority: the <link linkend="io-priority">I/O priority</link>
- *     of the operation.
+ * @io_priority: the [I/O priority][io-priority] of the operation
  * @cancellable: optional #GCancellable object, %NULL to ignore.
  * @callback: a #GAsyncReadyCallback to call when the initialization is
  *     finished
@@ -452,7 +460,7 @@ g_async_initable_new_finish (GAsyncInitable  *initable,
 			     GError         **error)
 {
   if (g_async_initable_init_finish (initable, res, error))
-    return g_object_ref (initable);
+    return g_object_ref (G_OBJECT (initable));
   else
     return NULL;
 }

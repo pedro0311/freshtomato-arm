@@ -3,10 +3,12 @@
  *
  * Copyright 2005 Matthias Clasen
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -25,14 +25,15 @@
 #include <sys/types.h> 
 #include <sys/stat.h> 
 #include <fcntl.h>
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
 #ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
 
 #include "glibconfig.h"
+
+#ifdef G_OS_UNIX
+#include <unistd.h>
+#endif
 
 #ifdef G_OS_WIN32
 #include <windows.h>
@@ -127,7 +128,7 @@ mapped_file_new_from_fd (int           fd,
       g_set_error (error,
                    G_FILE_ERROR,
                    g_file_error_from_errno (save_errno),
-                   _("Failed to get attributes of file '%s%s%s%s': fstat() failed: %s"),
+                   _("Failed to get attributes of file “%s%s%s%s”: fstat() failed: %s"),
 		   display_filename ? display_filename : "fd",
 		   display_filename ? "' " : "",
 		   display_filename ? display_filename : "",
@@ -151,7 +152,7 @@ mapped_file_new_from_fd (int           fd,
   file->contents = MAP_FAILED;
 
 #ifdef HAVE_MMAP
-  if (st.st_size > G_MAXSIZE)
+  if (sizeof (st.st_size) > sizeof (gsize) && st.st_size > (off_t) G_MAXSIZE)
     {
       errno = EINVAL;
     }
@@ -213,7 +214,8 @@ mapped_file_new_from_fd (int           fd,
 
 /**
  * g_mapped_file_new:
- * @filename: The path of the file to load, in the GLib filename encoding
+ * @filename: (type filename): The path of the file to load, in the GLib
+ *     filename encoding
  * @writable: whether the mapping should be writable
  * @error: return location for a #GError, or %NULL
  *
@@ -232,9 +234,9 @@ mapped_file_new_from_fd (int           fd,
  * If @filename is the name of an empty, regular file, the function
  * will successfully return an empty #GMappedFile. In other cases of
  * size 0 (e.g. device files such as /dev/null), @error will be set
- * to the #GFileError value #G_FILE_ERROR_INVAL.
+ * to the #GFileError value %G_FILE_ERROR_INVAL.
  *
- * Return value: a newly allocated #GMappedFile which must be unref'd
+ * Returns: a newly allocated #GMappedFile which must be unref'd
  *    with g_mapped_file_unref(), or %NULL if the mapping failed.
  *
  * Since: 2.8
@@ -259,7 +261,7 @@ g_mapped_file_new (const gchar  *filename,
       g_set_error (error,
                    G_FILE_ERROR,
                    g_file_error_from_errno (save_errno),
-                   _("Failed to open file '%s': open() failed: %s"),
+                   _("Failed to open file “%s”: open() failed: %s"),
                    display_filename,
 		   g_strerror (save_errno));
       g_free (display_filename);
@@ -292,7 +294,7 @@ g_mapped_file_new (const gchar  *filename,
  * will not be modified, or if all modifications of the file are done
  * atomically (e.g. using g_file_set_contents()).
  *
- * Return value: a newly allocated #GMappedFile which must be unref'd
+ * Returns: a newly allocated #GMappedFile which must be unref'd
  *    with g_mapped_file_unref(), or %NULL if the mapping failed.
  *
  * Since: 2.32
@@ -369,7 +371,7 @@ g_mapped_file_free (GMappedFile *file)
  * Increments the reference count of @file by one.  It is safe to call
  * this function from any thread.
  *
- * Return value: the passed in #GMappedFile.
+ * Returns: the passed in #GMappedFile.
  *
  * Since: 2.22
  **/

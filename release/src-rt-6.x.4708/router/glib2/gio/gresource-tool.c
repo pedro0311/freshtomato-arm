@@ -1,10 +1,12 @@
 /*
  * Copyright © 2012 Red Hat, Inc
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Matthias Clasen
  */
@@ -33,6 +33,9 @@
 #ifdef HAVE_LIBELF
 #include <libelf.h>
 #include <gelf.h>
+#endif
+
+#ifdef HAVE_MMAP
 #include <sys/mman.h>
 #endif
 
@@ -40,8 +43,10 @@
 #include <glib/gstdio.h>
 #include <gi18n.h>
 
-#ifdef G_OS_WIN32
 #include "glib/glib-private.h"
+
+#if defined(HAVE_LIBELF) && defined(HAVE_MMAP)
+#define USE_LIBELF
 #endif
 
 /* GResource functions {{{1 */
@@ -93,12 +98,15 @@ list_resource (GResource   *resource,
 
       len = MIN (strlen (child), strlen (prefix));
       if (strncmp (child, prefix, len) != 0)
-        continue;
+        {
+          g_free (child);
+          continue;
+        }
 
       if (g_resource_get_info (resource, child, 0, &size, &flags, NULL))
         {
           if (details)
-            g_print ("%s%s%6"G_GSIZE_FORMAT " %s %s\n", section, section[0] ? " " : "", size, flags & G_RESOURCE_FLAGS_COMPRESSED ? "c" : "u", child);
+            g_print ("%s%s%6"G_GSIZE_FORMAT " %s %s\n", section, section[0] ? " " : "", size, (flags & G_RESOURCE_FLAGS_COMPRESSED) ? "c" : "u", child);
           else
             g_print ("%s\n", child);
         }
@@ -128,15 +136,11 @@ extract_resource (GResource   *resource,
         g_printerr ("Data truncated\n");
       g_bytes_unref (bytes);
     }
-  else
-    {
-      g_printerr ("Can't find resource path %s\n", path);
-    }
 }
 
 /* Elf functions {{{1 */
 
-#ifdef HAVE_LIBELF
+#ifdef USE_LIBELF
 
 static Elf *
 get_elf (const gchar *file,
@@ -153,10 +157,18 @@ get_elf (const gchar *file,
 
   elf = elf_begin (*fd, ELF_C_READ, NULL);
   if (elf == NULL)
-    return NULL;
+    {
+      g_close (*fd, NULL);
+      *fd = -1;
+      return NULL;
+    }
 
   if (elf_kind (elf) != ELF_K_ELF)
-    return NULL;
+    {
+      g_close (*fd, NULL);
+      *fd = -1;
+      return NULL;
+    }
 
   return elf;
 }
@@ -170,17 +182,18 @@ elf_foreach_resource_section (Elf             *elf,
                               SectionCallback  callback,
                               gpointer         data)
 {
+  int ret G_GNUC_UNUSED  /* when compiling with G_DISABLE_ASSERT */;
   size_t shstrndx, shnum;
   size_t scnidx;
   Elf_Scn *scn;
   GElf_Shdr *shdr, shdr_mem;
   const gchar *section_name;
 
-  elf_getshdrstrndx (elf, &shstrndx);
-  g_assert (shstrndx >= 0);
+  ret = elf_getshdrstrndx (elf, &shstrndx);
+  g_assert (ret == 0);
 
-  elf_getshdrnum (elf, &shnum);
-  g_assert (shnum >= 0);
+  ret = elf_getshdrnum (elf, &shnum);
+  g_assert (ret == 0);
 
   for (scnidx = 1; scnidx < shnum; scnidx++)
     {
@@ -222,10 +235,16 @@ resource_from_section (GElf_Shdr *shdr,
   if (contents != MAP_FAILED)
     {
       GBytes *bytes;
+      GError *error = NULL;
 
       bytes = g_bytes_new_static (contents + page_offset, shdr->sh_size);
-      resource = g_resource_new_from_data (bytes, NULL);
+      resource = g_resource_new_from_data (bytes, &error);
       g_bytes_unref (bytes);
+      if (error)
+        {
+          g_printerr ("%s\n", error->message);
+          g_error_free (error);
+        }
     }
   else
     {
@@ -308,7 +327,10 @@ extract_resource_cb (GElf_Shdr   *shdr,
   extract_resource (resource, d->path);
   g_resource_unref (resource);
 
-  return FALSE;
+  if (d->section)
+    return FALSE;
+
+  return TRUE;
 }
 
 static void
@@ -339,7 +361,7 @@ print_section_name (GElf_Shdr   *shdr,
   return TRUE;
 }
 
-#endif /* HAVE_LIBELF */
+#endif /* USE_LIBELF */
 
   /* Toplevel commands {{{1 */
 
@@ -351,7 +373,7 @@ cmd_sections (const gchar *file,
 {
   GResource *resource;
 
-#ifdef HAVE_LIBELF
+#ifdef USE_LIBELF
 
   Elf *elf;
   gint fd;
@@ -374,7 +396,7 @@ cmd_sections (const gchar *file,
   else
     {
       g_printerr ("Don't know how to handle %s\n", file);
-#ifndef HAVE_LIBELF
+#ifndef USE_LIBELF
       g_printerr ("gresource is built without elf support\n");
 #endif
     }
@@ -388,8 +410,7 @@ cmd_list (const gchar *file,
 {
   GResource *resource;
 
-#ifdef HAVE_LIBELF
-
+#ifdef USE_LIBELF
   Elf *elf;
   int fd;
 
@@ -411,7 +432,7 @@ cmd_list (const gchar *file,
   else
     {
       g_printerr ("Don't know how to handle %s\n", file);
-#ifndef HAVE_LIBELF
+#ifndef USE_LIBELF
       g_printerr ("gresource is built without elf support\n");
 #endif
     }
@@ -425,7 +446,7 @@ cmd_extract (const gchar *file,
 {
   GResource *resource;
 
-#ifdef HAVE_LIBELF
+#ifdef USE_LIBELF
 
   Elf *elf;
   int fd;
@@ -448,7 +469,7 @@ cmd_extract (const gchar *file,
   else
     {
       g_printerr ("Don't know how to handle %s\n", file);
-#ifndef HAVE_LIBELF
+#ifndef USE_LIBELF
       g_printerr ("gresource is built without elf support\n");
 #endif
     }
@@ -458,8 +479,8 @@ static gint
 cmd_help (gboolean     requested,
           const gchar *command)
 {
-  const gchar *description;
-  const gchar *synopsis;
+  const gchar *description = NULL;
+  const gchar *synopsis = NULL;
   gchar *option;
   GString *string;
 
@@ -519,7 +540,7 @@ cmd_help (gboolean     requested,
     {
       g_string_append (string,
       _("Usage:\n"
-        "  gresource [--section SECTION] COMMAND [ARGS...]\n"
+        "  gresource [--section SECTION] COMMAND [ARGS…]\n"
         "\n"
         "Commands:\n"
         "  help                      Show this information\n"
@@ -528,7 +549,7 @@ cmd_help (gboolean     requested,
         "  details                   List resources with details\n"
         "  extract                   Extract a resource\n"
         "\n"
-        "Use 'gresource help COMMAND' to get detailed help.\n\n"));
+        "Use “gresource help COMMAND” to get detailed help.\n\n"));
     }
   else
     {
@@ -590,7 +611,7 @@ main (int argc, char *argv[])
   gchar *tmp;
 #endif
 
-  setlocale (LC_ALL, "");
+  setlocale (LC_ALL, GLIB_DEFAULT_LOCALE);
   textdomain (GETTEXT_PACKAGE);
 
 #ifdef G_OS_WIN32

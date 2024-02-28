@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1997-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -37,18 +37,23 @@
  *     other type
  * @see_also: The fundamental types which all support #GValue
  *     operations and thus can be used as a type initializer for
- *     g_value_init() are defined by a separate interface.  See the <link
- *     linkend="gobject-Standard-Parameter-and-Value-Types">Standard
- *     Values API</link> for details.
+ *     g_value_init() are defined by a separate interface.  See the
+ *     [standard values API][gobject-Standard-Parameter-and-Value-Types]
+ *     for details
  * @title: Generic values
  *
  * The #GValue structure is basically a variable container that consists
  * of a type identifier and a specific value of that type.
+ *
  * The type identifier within a #GValue structure always determines the
  * type of the associated value.
- * To create a undefined #GValue structure, simply create a zero-filled
+ *
+ * To create an undefined #GValue structure, simply create a zero-filled
  * #GValue structure. To initialize the #GValue, use the g_value_init()
- * function. A #GValue cannot be used until it is initialized.
+ * function. A #GValue cannot be used until it is initialized. Before 
+ * destruction you must always use g_value_unset() to make sure allocated
+ * memory is freed.
+ *
  * The basic type operations (such as freeing and copying) are determined
  * by the #GTypeValueTable associated with the type ID stored in the #GValue.
  * Other #GValue operations (such as converting values between types) are
@@ -57,8 +62,8 @@
  * The code in the example program below demonstrates #GValue's
  * features.
  *
- * |[
- * #include &lt;glib-object.h&gt;
+ * |[<!-- language="C" --> 
+ * #include <glib-object.h>
  *
  * static void
  * int2string (const GValue *src_value,
@@ -74,41 +79,69 @@
  * main (int   argc,
  *       char *argv[])
  * {
- *   /&ast; GValues must be initialized &ast;/
+ *   // GValues must be initialized
  *   GValue a = G_VALUE_INIT;
  *   GValue b = G_VALUE_INIT;
  *   const gchar *message;
  *
- *   /&ast; The GValue starts empty &ast;/
- *   g_assert (!G_VALUE_HOLDS_STRING (&amp;a));
+ *   // The GValue starts empty
+ *   g_assert (!G_VALUE_HOLDS_STRING (&a));
  *
- *   /&ast; Put a string in it &ast;/
- *   g_value_init (&amp;a, G_TYPE_STRING);
- *   g_assert (G_VALUE_HOLDS_STRING (&amp;a));
- *   g_value_set_static_string (&amp;a, "Hello, world!");
- *   g_printf ("%s\n", g_value_get_string (&amp;a));
+ *   // Put a string in it
+ *   g_value_init (&a, G_TYPE_STRING);
+ *   g_assert (G_VALUE_HOLDS_STRING (&a));
+ *   g_value_set_static_string (&a, "Hello, world!");
+ *   g_printf ("%s\n", g_value_get_string (&a));
  *
- *   /&ast; Reset it to its pristine state &ast;/
- *   g_value_unset (&amp;a);
+ *   // Reset it to its pristine state
+ *   g_value_unset (&a);
  *
- *   /&ast; It can then be reused for another type &ast;/
- *   g_value_init (&amp;a, G_TYPE_INT);
- *   g_value_set_int (&amp;a, 42);
+ *   // It can then be reused for another type
+ *   g_value_init (&a, G_TYPE_INT);
+ *   g_value_set_int (&a, 42);
  *
- *   /&ast; Attempt to transform it into a GValue of type STRING &ast;/
- *   g_value_init (&amp;b, G_TYPE_STRING);
+ *   // Attempt to transform it into a GValue of type STRING
+ *   g_value_init (&b, G_TYPE_STRING);
  *
- *   /&ast; An INT is transformable to a STRING &ast;/
+ *   // An INT is transformable to a STRING
  *   g_assert (g_value_type_transformable (G_TYPE_INT, G_TYPE_STRING));
  *
- *   g_value_transform (&amp;a, &amp;b);
- *   g_printf ("%s\n", g_value_get_string (&amp;b));
+ *   g_value_transform (&a, &b);
+ *   g_printf ("%s\n", g_value_get_string (&b));
  *
- *   /&ast; Attempt to transform it again using a custom transform function &ast;/
+ *   // Attempt to transform it again using a custom transform function
  *   g_value_register_transform_func (G_TYPE_INT, G_TYPE_STRING, int2string);
- *   g_value_transform (&amp;a, &amp;b);
- *   g_printf ("%s\n", g_value_get_string (&amp;b));
+ *   g_value_transform (&a, &b);
+ *   g_printf ("%s\n", g_value_get_string (&b));
  *   return 0;
+ * }
+ * ]|
+ *
+ * See also [gobject-Standard-Parameter-and-Value-Types] for more information on
+ * validation of #GValue.
+ *
+ * For letting a #GValue own (and memory manage) arbitrary types or pointers,
+ * they need to become a [boxed type][gboxed]. The example below shows how
+ * the pointer `mystruct` of type `MyStruct` is used as a [boxed type][gboxed].
+ *
+ * |[<!-- language="C" -->
+ * typedef struct { ... } MyStruct;
+ * G_DEFINE_BOXED_TYPE (MyStruct, my_struct, my_struct_copy, my_struct_free)
+ *
+ * // These two lines normally go in a public header. By GObject convention,
+ * // the naming scheme is NAMESPACE_TYPE_NAME:
+ * #define MY_TYPE_STRUCT (my_struct_get_type ())
+ * GType my_struct_get_type (void);
+ *
+ * void
+ * foo ()
+ * {
+ *   GValue *value = g_new0 (GValue, 1);
+ *   g_value_init (value, MY_TYPE_STRUCT);
+ *   g_value_set_boxed (value, mystruct);
+ *   // [... your code ....]
+ *   g_value_unset (value);
+ *   g_value_free (value);
  * }
  * ]|
  */
@@ -164,14 +197,15 @@ GValue*
 g_value_init (GValue *value,
 	      GType   g_type)
 {
+  GTypeValueTable *value_table;
   /* g_return_val_if_fail (G_TYPE_IS_VALUE (g_type), NULL);	be more elaborate below */
   g_return_val_if_fail (value != NULL, NULL);
   /* g_return_val_if_fail (G_VALUE_TYPE (value) == 0, NULL);	be more elaborate below */
 
-  if (G_TYPE_IS_VALUE (g_type) && G_VALUE_TYPE (value) == 0)
-    {
-      GTypeValueTable *value_table = g_type_value_table_peek (g_type);
+  value_table = g_type_value_table_peek (g_type);
 
+  if (value_table && G_VALUE_TYPE (value) == 0)
+    {
       /* setup and init */
       value_meminit (value, g_type);
       value_table->value_init (value);
@@ -183,11 +217,9 @@ g_value_init (GValue *value,
 	       g_type_name (G_VALUE_TYPE (value)));
   else /* !G_TYPE_IS_VALUE (g_type) */
     g_warning ("%s: cannot initialize GValue with type '%s', %s",
-	       G_STRLOC,
-	       g_type_name (g_type),
-	       g_type_value_table_peek (g_type) ?
-	       "this type is abstract with regards to GValue use, use a more specific (derived) type" :
-	       "this type has no GTypeValueTable implementation");
+               G_STRLOC,
+               g_type_name (g_type),
+               value_table ? "this type is abstract with regards to GValue use, use a more specific (derived) type" : "this type has no GTypeValueTable implementation");
   return value;
 }
 
@@ -202,14 +234,16 @@ void
 g_value_copy (const GValue *src_value,
 	      GValue       *dest_value)
 {
-  g_return_if_fail (G_IS_VALUE (src_value));
-  g_return_if_fail (G_IS_VALUE (dest_value));
+  g_return_if_fail (src_value);
+  g_return_if_fail (dest_value);
   g_return_if_fail (g_value_type_compatible (G_VALUE_TYPE (src_value), G_VALUE_TYPE (dest_value)));
   
   if (src_value != dest_value)
     {
       GType dest_type = G_VALUE_TYPE (dest_value);
       GTypeValueTable *value_table = g_type_value_table_peek (dest_type);
+
+      g_return_if_fail (value_table);
 
       /* make sure dest_value's value is free()d */
       if (value_table->value_free)
@@ -235,11 +269,12 @@ g_value_reset (GValue *value)
 {
   GTypeValueTable *value_table;
   GType g_type;
-  
-  g_return_val_if_fail (G_IS_VALUE (value), NULL);
-  
+
+  g_return_val_if_fail (value, NULL);
   g_type = G_VALUE_TYPE (value);
+
   value_table = g_type_value_table_peek (g_type);
+  g_return_val_if_fail (value_table, NULL);
 
   /* make sure value's value is free()d */
   if (value_table->value_free)
@@ -256,19 +291,23 @@ g_value_reset (GValue *value)
  * g_value_unset:
  * @value: An initialized #GValue structure.
  *
- * Clears the current value in @value and "unsets" the type,
- * this releases all resources associated with this GValue.
- * An unset value is the same as an uninitialized (zero-filled)
- * #GValue structure.
+ * Clears the current value in @value (if any) and "unsets" the type,
+ * this releases all resources associated with this GValue. An unset
+ * value is the same as an uninitialized (zero-filled) #GValue
+ * structure.
  */
 void
 g_value_unset (GValue *value)
 {
   GTypeValueTable *value_table;
   
-  g_return_if_fail (G_IS_VALUE (value));
+  if (value->g_type == 0)
+    return;
+
+  g_return_if_fail (value);
 
   value_table = g_type_value_table_peek (G_VALUE_TYPE (value));
+  g_return_if_fail (value_table);
 
   if (value_table->value_free)
     value_table->value_free (value);
@@ -289,30 +328,34 @@ g_value_fits_pointer (const GValue *value)
 {
   GTypeValueTable *value_table;
 
-  g_return_val_if_fail (G_IS_VALUE (value), FALSE);
+  g_return_val_if_fail (value, FALSE);
 
   value_table = g_type_value_table_peek (G_VALUE_TYPE (value));
+  g_return_val_if_fail (value_table, FALSE);
 
   return value_table->value_peek_pointer != NULL;
 }
 
 /**
  * g_value_peek_pointer:
- * @value: An initialized #GValue structure.
+ * @value: An initialized #GValue structure
  *
- * Returns: (transfer none): the value contents as pointer. This
- * function asserts that g_value_fits_pointer() returned %TRUE for the
- * passed in value.  This is an internal function introduced mainly
- * for C marshallers.
+ * Returns the value contents as pointer. This function asserts that
+ * g_value_fits_pointer() returned %TRUE for the passed in value.
+ * This is an internal function introduced mainly for C marshallers.
+ *
+ * Returns: (transfer none): the value contents as pointer
  */
 gpointer
 g_value_peek_pointer (const GValue *value)
 {
   GTypeValueTable *value_table;
 
-  g_return_val_if_fail (G_IS_VALUE (value), NULL);
+  g_return_val_if_fail (value, NULL);
 
   value_table = g_type_value_table_peek (G_VALUE_TYPE (value));
+  g_return_val_if_fail (value_table, NULL);
+
   if (!value_table->value_peek_pointer)
     {
       g_return_val_if_fail (g_value_fits_pointer (value) == TRUE, NULL);
@@ -325,7 +368,7 @@ g_value_peek_pointer (const GValue *value)
 /**
  * g_value_set_instance:
  * @value: An initialized #GValue structure.
- * @instance: (allow-none): the instance
+ * @instance: (nullable): the instance
  *
  * Sets @value from an instantiatable type via the
  * value_table's collect_value() function.
@@ -338,16 +381,17 @@ g_value_set_instance (GValue  *value,
   GTypeValueTable *value_table;
   GTypeCValue cvalue;
   gchar *error_msg;
-  
-  g_return_if_fail (G_IS_VALUE (value));
+
+  g_return_if_fail (value);
+  g_type = G_VALUE_TYPE (value);
+  value_table = g_type_value_table_peek (g_type);
+  g_return_if_fail (value_table);
+
   if (instance)
     {
       g_return_if_fail (G_TYPE_CHECK_INSTANCE (instance));
       g_return_if_fail (g_value_type_compatible (G_TYPE_FROM_INSTANCE (instance), G_VALUE_TYPE (value)));
     }
-  
-  g_type = G_VALUE_TYPE (value);
-  value_table = g_type_value_table_peek (g_type);
   
   g_return_if_fail (strcmp (value_table->collect_format, "p") == 0);
   
@@ -367,11 +411,85 @@ g_value_set_instance (GValue  *value,
       g_free (error_msg);
       
       /* we purposely leak the value here, it might not be
-       * in a sane state if an error condition occoured
+       * in a correct state if an error condition occurred
        */
       value_meminit (value, g_type);
       value_table->value_init (value);
     }
+}
+
+/**
+ * g_value_init_from_instance:
+ * @value: An uninitialized #GValue structure.
+ * @instance: (type GObject.TypeInstance): the instance
+ *
+ * Initializes and sets @value from an instantiatable type via the
+ * value_table's collect_value() function.
+ *
+ * Note: The @value will be initialised with the exact type of
+ * @instance.  If you wish to set the @value's type to a different GType
+ * (such as a parent class GType), you need to manually call
+ * g_value_init() and g_value_set_instance().
+ *
+ * Since: 2.42
+ */
+void
+g_value_init_from_instance (GValue  *value,
+                            gpointer instance)
+{
+  g_return_if_fail (value != NULL && G_VALUE_TYPE(value) == 0);
+
+  if (G_IS_OBJECT (instance))
+    {
+      /* Fast-path.
+       * If G_IS_OBJECT() succeeds we know:
+       * * that instance is present and valid
+       * * that it is a GObject, and therefore we can directly
+       *   use the collect implementation (g_object_ref) */
+      value_meminit (value, G_TYPE_FROM_INSTANCE (instance));
+      value->data[0].v_pointer = g_object_ref (instance);
+    }
+  else
+    {  
+      GType g_type;
+      GTypeValueTable *value_table;
+      GTypeCValue cvalue;
+      gchar *error_msg;
+
+      g_return_if_fail (G_TYPE_CHECK_INSTANCE (instance));
+
+      g_type = G_TYPE_FROM_INSTANCE (instance);
+      value_table = g_type_value_table_peek (g_type);
+      g_return_if_fail (strcmp (value_table->collect_format, "p") == 0);
+
+      memset (&cvalue, 0, sizeof (cvalue));
+      cvalue.v_pointer = instance;
+
+      /* setup and collect */
+      value_meminit (value, g_type);
+      value_table->value_init (value);
+      error_msg = value_table->collect_value (value, 1, &cvalue, 0);
+      if (error_msg)
+        {
+          g_warning ("%s: %s", G_STRLOC, error_msg);
+          g_free (error_msg);
+
+          /* we purposely leak the value here, it might not be
+           * in a correct state if an error condition occurred
+           */
+          value_meminit (value, g_type);
+          value_table->value_init (value);
+        }
+    }
+}
+
+static GType
+transform_lookup_get_parent_type (GType type)
+{
+  if (g_type_fundamental (type) == G_TYPE_INTERFACE)
+    return g_type_interface_instantiatable_prerequisite (type);
+
+  return g_type_parent (type);
 }
 
 static GValueTransform
@@ -396,11 +514,11 @@ transform_func_lookup (GType src_type,
 		  g_type_value_table_peek (entry.src_type) == g_type_value_table_peek (src_type))
 		return e->func;
 	    }
-	  entry.dest_type = g_type_parent (entry.dest_type);
+	  entry.dest_type = transform_lookup_get_parent_type (entry.dest_type);
 	}
       while (entry.dest_type);
       
-      entry.src_type = g_type_parent (entry.src_type);
+      entry.src_type = transform_lookup_get_parent_type (entry.src_type);
     }
   while (entry.src_type);
 
@@ -466,7 +584,9 @@ g_value_register_transform_func (GType           src_type,
  * @dest_type: Target type.
  *
  * Check whether g_value_transform() is able to transform values
- * of type @src_type into values of type @dest_type.
+ * of type @src_type into values of type @dest_type. Note that for
+ * the types to be transformable, they must be compatible or a
+ * transformation function must be registered.
  *
  * Returns: %TRUE if the transformation is possible, %FALSE otherwise.
  */
@@ -474,8 +594,8 @@ gboolean
 g_value_type_transformable (GType src_type,
 			    GType dest_type)
 {
-  g_return_val_if_fail (G_TYPE_IS_VALUE (src_type), FALSE);
-  g_return_val_if_fail (G_TYPE_IS_VALUE (dest_type), FALSE);
+  g_return_val_if_fail (src_type, FALSE);
+  g_return_val_if_fail (dest_type, FALSE);
 
   return (g_value_type_compatible (src_type, dest_type) ||
 	  transform_func_lookup (src_type, dest_type) != NULL);
@@ -495,8 +615,12 @@ gboolean
 g_value_type_compatible (GType src_type,
 			 GType dest_type)
 {
-  g_return_val_if_fail (G_TYPE_IS_VALUE (src_type), FALSE);
-  g_return_val_if_fail (G_TYPE_IS_VALUE (dest_type), FALSE);
+  g_return_val_if_fail (src_type, FALSE);
+  g_return_val_if_fail (dest_type, FALSE);
+
+  /* Fast path */
+  if (src_type == dest_type)
+    return TRUE;
 
   return (g_type_is_a (src_type, dest_type) &&
 	  g_type_value_table_peek (dest_type) == g_type_value_table_peek (src_type));
@@ -524,8 +648,8 @@ g_value_transform (const GValue *src_value,
 {
   GType dest_type;
 
-  g_return_val_if_fail (G_IS_VALUE (src_value), FALSE);
-  g_return_val_if_fail (G_IS_VALUE (dest_value), FALSE);
+  g_return_val_if_fail (src_value, FALSE);
+  g_return_val_if_fail (dest_value, FALSE);
 
   dest_type = G_VALUE_TYPE (dest_value);
   if (g_value_type_compatible (G_VALUE_TYPE (src_value), dest_type))

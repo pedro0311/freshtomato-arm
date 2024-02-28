@@ -21,7 +21,9 @@
  */
 
 /* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include <glib.h>
 
@@ -85,7 +87,7 @@ acquire (gint nr)
   if (!g_rec_mutex_trylock (&locks[nr]))
     {
       if (g_test_verbose ())
-        g_print ("thread %p going to block on lock %d\n", self, nr);
+        g_printerr ("thread %p going to block on lock %d\n", self, nr);
 
       g_rec_mutex_lock (&locks[nr]);
     }
@@ -100,7 +102,7 @@ acquire (gint nr)
   g_assert (owners[nr] == self);   /* hopefully this is still us... */
 
   if (g_test_verbose ())
-    g_print ("thread %p recursively taking lock %d\n", self, nr);
+    g_printerr ("thread %p recursively taking lock %d\n", self, nr);
 
   g_rec_mutex_lock (&locks[nr]);  /* we're recursive, after all */
 
@@ -155,8 +157,7 @@ test_rec_mutex4 (void)
     g_assert (owners[i] == NULL);
 }
 
-#define COUNT_TO 100000000
-
+static gint count_to = 0;
 static gint depth;
 
 static gboolean
@@ -170,7 +171,7 @@ do_addition (gint *value)
   for (i = 0; i < depth; i++)
     g_rec_mutex_lock (&lock);
 
-  if ((more = *value != COUNT_TO))
+  if ((more = *value != count_to))
     if (*value != -1)
       (*value)++;
 
@@ -201,6 +202,7 @@ test_mutex_perf (gconstpointer data)
 
   n_threads = c / 256;
   depth = c % 256;
+  count_to = g_test_perf () ? 100000000 : 1;
 
   for (i = 0; i < n_threads - 1; i++)
     threads[i] = g_thread_new ("test", addition_thread, &x);
@@ -209,7 +211,7 @@ test_mutex_perf (gconstpointer data)
   start_time = g_get_monotonic_time ();
   g_atomic_int_set (&x, 0);
   addition_thread (&x);
-  g_assert_cmpint (g_atomic_int_get (&x), ==, COUNT_TO);
+  g_assert_cmpint (g_atomic_int_get (&x), ==, count_to);
   rate = g_get_monotonic_time () - start_time;
   rate = x / rate;
 
@@ -230,7 +232,6 @@ main (int argc, char *argv[])
   g_test_add_func ("/thread/rec-mutex3", test_rec_mutex3);
   g_test_add_func ("/thread/rec-mutex4", test_rec_mutex4);
 
-  if (g_test_perf ())
     {
       gint i, j;
 

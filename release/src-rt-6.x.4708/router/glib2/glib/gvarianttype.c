@@ -2,10 +2,12 @@
  * Copyright © 2007, 2008 Ryan Lortie
  * Copyright © 2009, 2010 Codethink Limited
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  */
@@ -26,6 +26,7 @@
 
 #include <glib/gtestutils.h>
 #include <glib/gstrfuncs.h>
+#include <glib/gvariant-internal.h>
 
 #include <string.h>
 
@@ -36,18 +37,18 @@
  * @short_description: introduction to the GVariant type system
  * @see_also: #GVariantType, #GVariant
  *
- * This section introduces the GVariant type system.  It is based, in
- * large part, on the D-Bus type system, with two major changes and some minor
- * lifting of restrictions.  The <ulink
- * url='http://dbus.freedesktop.org/doc/dbus-specification.html'>DBus
- * specification</ulink>, therefore, provides a significant amount of
+ * This section introduces the GVariant type system. It is based, in
+ * large part, on the D-Bus type system, with two major changes and
+ * some minor lifting of restrictions. The
+ * [D-Bus specification](http://dbus.freedesktop.org/doc/dbus-specification.html),
+ * therefore, provides a significant amount of
  * information that is useful when working with GVariant.
  *
  * The first major change with respect to the D-Bus type system is the
  * introduction of maybe (or "nullable") types.  Any type in GVariant can be
  * converted to a maybe type, in which case, "nothing" (or "null") becomes a
  * valid value.  Maybe types have been added by introducing the
- * character "<literal>m</literal>" to type strings.
+ * character "m" to type strings.
  *
  * The second major change is that the GVariant type system supports the
  * concept of "indefinite types" -- types that are less specific than
@@ -55,8 +56,7 @@
  * of "an array of any type" in GVariant, where the D-Bus type system
  * would require you to speak of "an array of integers" or "an array of
  * strings".  Indefinite types have been added by introducing the
- * characters "<literal>*</literal>", "<literal>?</literal>" and
- * "<literal>r</literal>" to type strings.
+ * characters "*", "?" and "r" to type strings.
  *
  * Finally, all arbitrary restrictions relating to the complexity of
  * types are lifted along with the restriction that dictionary entries
@@ -64,7 +64,7 @@
  *
  * Just as in D-Bus, GVariant types are described with strings ("type
  * strings").  Subject to the differences mentioned above, these strings
- * are of the same form as those found in DBus.  Note, however: D-Bus
+ * are of the same form as those found in D-Bus.  Note, however: D-Bus
  * always works in terms of messages and therefore individual type
  * strings appear nowhere in its interface.  Instead, "signatures"
  * are a concatenation of the strings of the type of each argument in a
@@ -94,392 +94,96 @@
  * that the #GtkWindow is a #GtkBin (since #GtkWindow is a subclass of
  * #GtkBin).
  *
- * A detailed description of GVariant type strings is given here:
+ * ## GVariant Type Strings
  *
- * <refsect2 id='gvariant-typestrings'>
- *  <title>GVariant Type Strings</title>
- *  <para>
- *   A GVariant type string can be any of the following:
- *  </para>
- *  <itemizedlist>
- *   <listitem>
- *    <para>
- *     any basic type string (listed below)
- *    </para>
- *   </listitem>
- *   <listitem>
- *    <para>
- *     "<literal>v</literal>", "<literal>r</literal>" or
- *     "<literal>*</literal>"
- *    </para>
- *   </listitem>
- *   <listitem>
- *    <para>
- *     one of the characters '<literal>a</literal>' or
- *     '<literal>m</literal>', followed by another type string
- *    </para>
- *   </listitem>
- *   <listitem>
- *    <para>
- *     the character '<literal>(</literal>', followed by a concatenation
- *     of zero or more other type strings, followed by the character
- *     '<literal>)</literal>'
- *    </para>
- *   </listitem>
- *   <listitem>
- *    <para>
- *     the character '<literal>{</literal>', followed by a basic type
- *     string (see below), followed by another type string, followed by
- *     the character '<literal>}</literal>'
- *    </para>
- *   </listitem>
- *  </itemizedlist>
- *  <para>
- *   A basic type string describes a basic type (as per
- *   g_variant_type_is_basic()) and is always a single
- *   character in length.  The valid basic type strings are
- *   "<literal>b</literal>", "<literal>y</literal>",
- *   "<literal>n</literal>", "<literal>q</literal>",
- *   "<literal>i</literal>", "<literal>u</literal>",
- *   "<literal>x</literal>", "<literal>t</literal>",
- *   "<literal>h</literal>", "<literal>d</literal>",
- *   "<literal>s</literal>", "<literal>o</literal>",
- *   "<literal>g</literal>" and "<literal>?</literal>".
- *  </para>
- *  <para>
- *   The above definition is recursive to arbitrary depth.
- *   "<literal>aaaaai</literal>" and "<literal>(ui(nq((y)))s)</literal>"
- *   are both valid type strings, as is
- *   "<literal>a(aa(ui)(qna{ya(yd)}))</literal>".
- *  </para>
- *  <para>
- *   The meaning of each of the characters is as follows:
- *  </para>
- *  <informaltable>
- *   <tgroup cols='2'>
- *    <tbody>
- *     <row>
- *      <entry>
- *       <para>
- *        <emphasis role='strong'>Character</emphasis>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        <emphasis role='strong'>Meaning</emphasis>
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>b</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_BOOLEAN; a boolean value.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>y</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_BYTE; a byte.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>n</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_INT16; a signed 16 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>q</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_UINT16; an unsigned 16 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>i</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_INT32; a signed 32 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>u</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_UINT32; an unsigned 32 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>x</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_INT64; a signed 64 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>t</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_UINT64; an unsigned 64 bit
- *        integer.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>h</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_HANDLE; a signed 32 bit
- *        value that, by convention, is used as an index into an array
- *        of file descriptors that are sent alongside a D-Bus message.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>d</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_DOUBLE; a double precision
- *        floating point value.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>s</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_STRING; a string.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>o</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_OBJECT_PATH; a string in
- *        the form of a D-Bus object path.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>g</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_STRING; a string in the
- *        form of a D-Bus type signature.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>?</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_BASIC; an indefinite type
- *        that is a supertype of any of the basic types.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>v</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_VARIANT; a container type
- *        that contain any other type of value.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>a</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        used as a prefix on another type string to mean an array of
- *        that type; the type string "<literal>ai</literal>", for
- *        example, is the type of an array of 32 bit signed integers.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>m</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        used as a prefix on another type string to mean a "maybe", or
- *        "nullable", version of that type; the type string
- *        "<literal>ms</literal>", for example, is the type of a value
- *        that maybe contains a string, or maybe contains nothing.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>()</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        used to enclose zero or more other concatenated type strings
- *        to create a tuple type; the type string
- *        "<literal>(is)</literal>", for example, is the type of a pair
- *        of an integer and a string.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>r</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_TUPLE; an indefinite type
- *        that is a supertype of any tuple type, regardless of the
- *        number of items.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>{}</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        used to enclose a basic type string concatenated with another
- *        type string to create a dictionary entry type, which usually
- *        appears inside of an array to form a dictionary; the type
- *        string "<literal>a{sd}</literal>", for example, is the type of
- *        a dictionary that maps strings to double precision floating
- *        point values.
- *       </para>
- *       <para>
- *        The first type (the basic type) is the key type and the second
- *        type is the value type.  The reason that the first type is
- *        restricted to being a basic type is so that it can easily be
- *        hashed.
- *       </para>
- *      </entry>
- *     </row>
- *     <row>
- *      <entry>
- *       <para>
- *        <literal>*</literal>
- *       </para>
- *      </entry>
- *      <entry>
- *       <para>
- *        the type string of %G_VARIANT_TYPE_ANY; the indefinite type
- *        that is a supertype of all types.  Note that, as with all type
- *        strings, this character represents exactly one type.  It
- *        cannot be used inside of tuples to mean "any number of items".
- *       </para>
- *      </entry>
- *     </row>
- *    </tbody>
- *   </tgroup>
- *  </informaltable>
- *  <para>
- *   Any type string of a container that contains an indefinite type is,
- *   itself, an indefinite type.  For example, the type string
- *   "<literal>a*</literal>" (corresponding to %G_VARIANT_TYPE_ARRAY) is
- *   an indefinite type that is a supertype of every array type.
- *   "<literal>(*s)</literal>" is a supertype of all tuples that
- *   contain exactly two items where the second item is a string.
- *  </para>
- *  <para>
- *   "<literal>a{?*}</literal>" is an indefinite type that is a
- *   supertype of all arrays containing dictionary entries where the key
- *   is any basic type and the value is any type at all.  This is, by
- *   definition, a dictionary, so this type string corresponds to
- *   %G_VARIANT_TYPE_DICTIONARY.  Note that, due to the restriction that
- *   the key of a dictionary entry must be a basic type,
- *   "<literal>{**}</literal>" is not a valid type string.
- *  </para>
- * </refsect2>
+ * A GVariant type string can be any of the following:
+ *
+ * - any basic type string (listed below)
+ *
+ * - "v", "r" or "*"
+ *
+ * - one of the characters 'a' or 'm', followed by another type string
+ *
+ * - the character '(', followed by a concatenation of zero or more other
+ *   type strings, followed by the character ')'
+ *
+ * - the character '{', followed by a basic type string (see below),
+ *   followed by another type string, followed by the character '}'
+ *
+ * A basic type string describes a basic type (as per
+ * g_variant_type_is_basic()) and is always a single character in length.
+ * The valid basic type strings are "b", "y", "n", "q", "i", "u", "x", "t",
+ * "h", "d", "s", "o", "g" and "?".
+ *
+ * The above definition is recursive to arbitrary depth. "aaaaai" and
+ * "(ui(nq((y)))s)" are both valid type strings, as is
+ * "a(aa(ui)(qna{ya(yd)}))". In order to not hit memory limits, #GVariant
+ * imposes a limit on recursion depth of 65 nested containers. This is the
+ * limit in the D-Bus specification (64) plus one to allow a #GDBusMessage to
+ * be nested in a top-level tuple.
+ *
+ * The meaning of each of the characters is as follows:
+ * - `b`: the type string of %G_VARIANT_TYPE_BOOLEAN; a boolean value.
+ * - `y`: the type string of %G_VARIANT_TYPE_BYTE; a byte.
+ * - `n`: the type string of %G_VARIANT_TYPE_INT16; a signed 16 bit integer.
+ * - `q`: the type string of %G_VARIANT_TYPE_UINT16; an unsigned 16 bit integer.
+ * - `i`: the type string of %G_VARIANT_TYPE_INT32; a signed 32 bit integer.
+ * - `u`: the type string of %G_VARIANT_TYPE_UINT32; an unsigned 32 bit integer.
+ * - `x`: the type string of %G_VARIANT_TYPE_INT64; a signed 64 bit integer.
+ * - `t`: the type string of %G_VARIANT_TYPE_UINT64; an unsigned 64 bit integer.
+ * - `h`: the type string of %G_VARIANT_TYPE_HANDLE; a signed 32 bit value
+ *   that, by convention, is used as an index into an array of file
+ *   descriptors that are sent alongside a D-Bus message.
+ * - `d`: the type string of %G_VARIANT_TYPE_DOUBLE; a double precision
+ *   floating point value.
+ * - `s`: the type string of %G_VARIANT_TYPE_STRING; a string.
+ * - `o`: the type string of %G_VARIANT_TYPE_OBJECT_PATH; a string in the form
+ *   of a D-Bus object path.
+ * - `g`: the type string of %G_VARIANT_TYPE_SIGNATURE; a string in the form of
+ *   a D-Bus type signature.
+ * - `?`: the type string of %G_VARIANT_TYPE_BASIC; an indefinite type that
+ *   is a supertype of any of the basic types.
+ * - `v`: the type string of %G_VARIANT_TYPE_VARIANT; a container type that
+ *   contain any other type of value.
+ * - `a`: used as a prefix on another type string to mean an array of that
+ *   type; the type string "ai", for example, is the type of an array of
+ *   signed 32-bit integers.
+ * - `m`: used as a prefix on another type string to mean a "maybe", or
+ *   "nullable", version of that type; the type string "ms", for example,
+ *   is the type of a value that maybe contains a string, or maybe contains
+ *   nothing.
+ * - `()`: used to enclose zero or more other concatenated type strings to
+ *   create a tuple type; the type string "(is)", for example, is the type of
+ *   a pair of an integer and a string.
+ * - `r`: the type string of %G_VARIANT_TYPE_TUPLE; an indefinite type that is
+ *   a supertype of any tuple type, regardless of the number of items.
+ * - `{}`: used to enclose a basic type string concatenated with another type
+ *   string to create a dictionary entry type, which usually appears inside of
+ *   an array to form a dictionary; the type string "a{sd}", for example, is
+ *   the type of a dictionary that maps strings to double precision floating
+ *   point values.
+ *
+ *   The first type (the basic type) is the key type and the second type is
+ *   the value type. The reason that the first type is restricted to being a
+ *   basic type is so that it can easily be hashed.
+ * - `*`: the type string of %G_VARIANT_TYPE_ANY; the indefinite type that is
+ *   a supertype of all types.  Note that, as with all type strings, this
+ *   character represents exactly one type. It cannot be used inside of tuples
+ *   to mean "any number of items".
+ *
+ * Any type string of a container that contains an indefinite type is,
+ * itself, an indefinite type. For example, the type string "a*"
+ * (corresponding to %G_VARIANT_TYPE_ARRAY) is an indefinite type
+ * that is a supertype of every array type. "(*s)" is a supertype
+ * of all tuples that contain exactly two items where the second
+ * item is a string.
+ *
+ * "a{?*}" is an indefinite type that is a supertype of all arrays
+ * containing dictionary entries where the key is any basic type and
+ * the value is any type at all.  This is, by definition, a dictionary,
+ * so this type string corresponds to %G_VARIANT_TYPE_DICTIONARY. Note
+ * that, due to the restriction that the key of a dictionary entry must
+ * be a basic type, "{**}" is not a valid type string.
  */
 
 
@@ -496,11 +200,81 @@ g_variant_type_check (const GVariantType *type)
 #endif
 }
 
+static gboolean
+variant_type_string_scan_internal (const gchar  *string,
+                                   const gchar  *limit,
+                                   const gchar **endptr,
+                                   gsize        *depth,
+                                   gsize         depth_limit)
+{
+  gsize max_depth = 0, child_depth;
+
+  g_return_val_if_fail (string != NULL, FALSE);
+
+  if (string == limit || *string == '\0')
+    return FALSE;
+
+  switch (*string++)
+    {
+    case '(':
+      while (string == limit || *string != ')')
+        {
+          if (depth_limit == 0 ||
+              !variant_type_string_scan_internal (string, limit, &string,
+                                                  &child_depth,
+                                                  depth_limit - 1))
+            return FALSE;
+
+          max_depth = MAX (max_depth, child_depth + 1);
+        }
+
+      string++;
+      break;
+
+    case '{':
+      if (depth_limit == 0 ||
+          string == limit || *string == '\0' ||                                  /* { */
+          !strchr ("bynqihuxtdsog?", *string++) ||                               /* key */
+          !variant_type_string_scan_internal (string, limit, &string,
+                                              &child_depth, depth_limit - 1) ||  /* value */
+          string == limit || *string++ != '}')                                   /* } */
+        return FALSE;
+
+      max_depth = MAX (max_depth, child_depth + 1);
+      break;
+
+    case 'm': case 'a':
+      if (depth_limit == 0 ||
+          !variant_type_string_scan_internal (string, limit, &string,
+                                              &child_depth, depth_limit - 1))
+        return FALSE;
+
+      max_depth = MAX (max_depth, child_depth + 1);
+      break;
+
+    case 'b': case 'y': case 'n': case 'q': case 'i': case 'u':
+    case 'x': case 't': case 'd': case 's': case 'o': case 'g':
+    case 'v': case 'r': case '*': case '?': case 'h':
+      max_depth = MAX (max_depth, 1);
+      break;
+
+    default:
+      return FALSE;
+    }
+
+  if (endptr != NULL)
+    *endptr = string;
+  if (depth != NULL)
+    *depth = max_depth;
+
+  return TRUE;
+}
+
 /**
  * g_variant_type_string_scan:
  * @string: a pointer to any string
- * @limit: (allow-none): the end of @string, or %NULL
- * @endptr: (out) (allow-none): location to store the end pointer, or %NULL
+ * @limit: (nullable): the end of @string, or %NULL
+ * @endptr: (out) (optional): location to store the end pointer, or %NULL
  *
  * Scan for a single complete and valid GVariant type string in @string.
  * The memory pointed to by @limit (or bytes beyond it) is never
@@ -525,46 +299,37 @@ g_variant_type_string_scan (const gchar  *string,
                             const gchar  *limit,
                             const gchar **endptr)
 {
-  g_return_val_if_fail (string != NULL, FALSE);
+  return variant_type_string_scan_internal (string, limit, endptr, NULL,
+                                            G_VARIANT_MAX_RECURSION_DEPTH);
+}
 
-  if (string == limit || *string == '\0')
-    return FALSE;
+/* < private >
+ * g_variant_type_string_get_depth_:
+ * @type_string: a pointer to any string
+ *
+ * Get the maximum depth of the nested types in @type_string. A basic type will
+ * return depth 1, and a container type will return a greater value. The depth
+ * of a tuple is 1 plus the depth of its deepest child type.
+ *
+ * If @type_string is not a valid #GVariant type string, 0 will be returned.
+ *
+ * Returns: depth of @type_string, or 0 on error
+ * Since: 2.60
+ */
+gsize
+g_variant_type_string_get_depth_ (const gchar *type_string)
+{
+  const gchar *endptr;
+  gsize depth = 0;
 
-  switch (*string++)
-    {
-    case '(':
-      while (string == limit || *string != ')')
-        if (!g_variant_type_string_scan (string, limit, &string))
-          return FALSE;
+  g_return_val_if_fail (type_string != NULL, 0);
 
-      string++;
-      break;
+  if (!variant_type_string_scan_internal (type_string, NULL, &endptr, &depth,
+                                          G_VARIANT_MAX_RECURSION_DEPTH) ||
+      *endptr != '\0')
+    return 0;
 
-    case '{':
-      if (string == limit || *string == '\0' ||                    /* { */
-          !strchr ("bynqihuxtdsog?", *string++) ||                 /* key */
-          !g_variant_type_string_scan (string, limit, &string) ||  /* value */
-          string == limit || *string++ != '}')                     /* } */
-        return FALSE;
-
-      break;
-
-    case 'm': case 'a':
-      return g_variant_type_string_scan (string, limit, endptr);
-
-    case 'b': case 'y': case 'n': case 'q': case 'i': case 'u':
-    case 'x': case 't': case 'd': case 's': case 'o': case 'g':
-    case 'v': case 'r': case '*': case '?': case 'h':
-      break;
-
-    default:
-      return FALSE;
-    }
-
-  if (endptr != NULL)
-    *endptr = string;
-
-  return TRUE;
+  return depth;
 }
 
 /**
@@ -594,7 +359,7 @@ g_variant_type_string_is_valid (const gchar *type_string)
 
 /**
  * g_variant_type_free:
- * @type: (allow-none): a #GVariantType, or %NULL
+ * @type: (nullable): a #GVariantType, or %NULL
  *
  * Frees a #GVariantType that was allocated with
  * g_variant_type_copy(), g_variant_type_new() or one of the container
@@ -1321,12 +1086,16 @@ g_variant_type_key (const GVariantType *type)
 const GVariantType *
 g_variant_type_value (const GVariantType *type)
 {
+#ifndef G_DISABLE_ASSERT
   const gchar *type_string;
+#endif
 
   g_return_val_if_fail (g_variant_type_check (type), NULL);
 
+#ifndef G_DISABLE_ASSERT
   type_string = g_variant_type_peek_string (type);
   g_assert (type_string[0] == '{');
+#endif
 
   return g_variant_type_next (g_variant_type_key (type));
 }
@@ -1353,10 +1122,10 @@ g_variant_type_new_tuple_slow (const GVariantType * const *items,
 {
   /* the "slow" version is needed in case the static buffer of 1024
    * bytes is exceeded when running the normal version.  this will
-   * happen only in truly insane code, so it can be slow.
+   * happen only with very unusually large types, so it can be slow.
    */
   GString *string;
-  gsize i;
+  gint i;
 
   string = g_string_new ("(");
   for (i = 0; i < length; i++)
@@ -1382,16 +1151,19 @@ g_variant_type_new_tuple (const GVariantType * const *items,
   char buffer[1024];
   gsize offset;
   gsize i;
+  gsize length_unsigned;
 
   g_return_val_if_fail (length == 0 || items != NULL, NULL);
 
   if (length < 0)
-    for (length = 0; items[length] != NULL; length++);
+    for (length_unsigned = 0; items[length_unsigned] != NULL; length_unsigned++);
+  else
+    length_unsigned = (gsize) length;
 
   offset = 0;
   buffer[offset++] = '(';
 
-  for (i = 0; i < length; i++)
+  for (i = 0; i < length_unsigned; i++)
     {
       const GVariantType *type;
       gsize size;
@@ -1402,7 +1174,7 @@ g_variant_type_new_tuple (const GVariantType * const *items,
       size = g_variant_type_get_string_length (type);
 
       if (offset + size >= sizeof buffer) /* leave room for ')' */
-        return g_variant_type_new_tuple_slow (items, length);
+        return g_variant_type_new_tuple_slow (items, length_unsigned);
 
       memcpy (&buffer[offset], type, size);
       offset += size;
@@ -1411,7 +1183,7 @@ g_variant_type_new_tuple (const GVariantType * const *items,
   g_assert (offset < sizeof buffer);
   buffer[offset++] = ')';
 
-  return (GVariantType *) g_memdup (buffer, offset);
+  return (GVariantType *) g_memdup2 (buffer, offset);
 }
 
 /**

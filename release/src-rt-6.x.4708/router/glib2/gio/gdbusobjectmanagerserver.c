@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008-2010 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: David Zeuthen <davidz@redhat.com>
  */
@@ -32,6 +32,8 @@
 #include "gdbusmethodinvocation.h"
 #include "gdbuserror.h"
 
+#include "gioerror.h"
+
 #include "glibintl.h"
 
 /**
@@ -40,13 +42,22 @@
  * @include: gio/gio.h
  *
  * #GDBusObjectManagerServer is used to export #GDBusObject instances using
- * the standardized <ulink
- * url="http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager">org.freedesktop.DBus.ObjectManager</ulink>
+ * the standardized
+ * [org.freedesktop.DBus.ObjectManager](http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager)
  * interface. For example, remote D-Bus clients can get all objects
  * and properties in a single call. Additionally, any change in the
  * object hierarchy is broadcast using signals. This means that D-Bus
  * clients can keep caches up to date by only listening to D-Bus
  * signals.
+ *
+ * The recommended path to export an object manager at is the path form of the
+ * well-known name of a D-Bus service, or below. For example, if a D-Bus service
+ * is available at the well-known name `net.example.ExampleService1`, the object
+ * manager should typically be exported at `/net/example/ExampleService1`, or
+ * below (to allow for multiple object managers in a service).
+ *
+ * It is supported, but not recommended, to export an object manager at the root
+ * path, `/`.
  *
  * See #GDBusObjectManagerClient for the client-side code that is
  * intended to be used with #GDBusObjectManagerServer or any D-Bus
@@ -168,7 +179,10 @@ g_dbus_object_manager_server_set_property (GObject       *object,
       g_assert (manager->priv->object_path == NULL);
       g_assert (g_variant_is_object_path (g_value_get_string (value)));
       manager->priv->object_path = g_value_dup_string (value);
-      manager->priv->object_path_ending_in_slash = g_strdup_printf ("%s/", manager->priv->object_path);
+      if (g_str_equal (manager->priv->object_path, "/"))
+        manager->priv->object_path_ending_in_slash = g_strdup (manager->priv->object_path);
+      else
+        manager->priv->object_path_ending_in_slash = g_strdup_printf ("%s/", manager->priv->object_path);
       break;
 
     default:
@@ -242,8 +256,8 @@ g_dbus_object_manager_server_init (GDBusObjectManagerServer *manager)
  *
  * The returned server isn't yet exported on any connection. To do so,
  * use g_dbus_object_manager_server_set_connection(). Normally you
- * want to export all of your objects before doing so to avoid <ulink
- * url="http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager">InterfacesAdded</ulink>
+ * want to export all of your objects before doing so to avoid
+ * [InterfacesAdded](http://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager)
  * signals being emitted.
  *
  * Returns: A #GDBusObjectManagerServer object. Free with g_object_unref().
@@ -262,7 +276,7 @@ g_dbus_object_manager_server_new (const gchar     *object_path)
 /**
  * g_dbus_object_manager_server_set_connection:
  * @manager: A #GDBusObjectManagerServer.
- * @connection: (allow-none): A #GDBusConnection or %NULL.
+ * @connection: (nullable): A #GDBusConnection or %NULL.
  *
  * Exports all objects managed by @manager on @connection. If
  * @connection is %NULL, stops exporting objects.
@@ -306,7 +320,7 @@ g_dbus_object_manager_server_set_connection (GDBusObjectManagerServer  *manager,
  *
  * Gets the #GDBusConnection used by @manager.
  *
- * Returns: (transfer full): A #GDBusConnection object or %NULL if
+ * Returns: (transfer full) (nullable): A #GDBusConnection object or %NULL if
  *   @manager isn't exported on a connection. The returned object should
  *   be freed with g_object_unref().
  *
@@ -445,6 +459,34 @@ registration_data_free (RegistrationData *data)
   g_free (data);
 }
 
+/* Validate whether an object path is valid as a child of the manager. According
+ * to the specification:
+ * https://dbus.freedesktop.org/doc/dbus-specification.html#standard-interfaces-objectmanager
+ * this means that:
+ * > All returned object paths are children of the object path implementing this
+ * > interface, i.e. their object paths start with the ObjectManager's object
+ * > path plus '/'
+ *
+ * For example, if the manager is at `/org/gnome/Example`, children will be
+ * `/org/gnome/Example/(.+)`.
+ *
+ * It is permissible (but not encouraged) for the manager to be at `/`. If so,
+ * children will be `/(.+)`.
+ */
+static gboolean
+is_valid_child_object_path (GDBusObjectManagerServer *manager,
+                            const gchar              *child_object_path)
+{
+  /* Historically GDBus accepted @child_object_paths at `/` if the @manager
+   * itself is also at `/". This is not spec-compliant, but making GDBus enforce
+   * the spec more strictly would be an incompatible change.
+   *
+   * See https://gitlab.gnome.org/GNOME/glib/-/issues/2500 */
+  g_warn_if_fail (!g_str_equal (child_object_path, manager->priv->object_path_ending_in_slash));
+
+  return g_str_has_prefix (child_object_path, manager->priv->object_path_ending_in_slash);
+}
+
 /* ---------------------------------------------------------------------------------------------------- */
 
 static void
@@ -459,7 +501,7 @@ g_dbus_object_manager_server_export_unlocked (GDBusObjectManagerServer  *manager
 
   g_return_if_fail (G_IS_DBUS_OBJECT_MANAGER_SERVER (manager));
   g_return_if_fail (G_IS_DBUS_OBJECT (object));
-  g_return_if_fail (g_str_has_prefix (object_path, manager->priv->object_path_ending_in_slash));
+  g_return_if_fail (is_valid_child_object_path (manager, object_path));
 
   interface_names = g_ptr_array_new ();
 
@@ -543,10 +585,9 @@ g_dbus_object_manager_server_export (GDBusObjectManagerServer  *manager,
  * @object: An object.
  *
  * Like g_dbus_object_manager_server_export() but appends a string of
- * the form <literal>_N</literal> (with N being a natural number) to
- * @object<!-- -->'s object path if an object with the given path
- * already exists. As such, the #GDBusObjectProxy:g-object-path property
- * of @object may be modified.
+ * the form _N (with N being a natural number) to @object's object path
+ * if an object with the given path already exists. As such, the
+ * #GDBusObjectProxy:g-object-path property of @object may be modified.
  *
  * Since: 2.30
  */
@@ -554,16 +595,16 @@ void
 g_dbus_object_manager_server_export_uniquely (GDBusObjectManagerServer *manager,
                                               GDBusObjectSkeleton      *object)
 {
-  gchar *orig_object_path;
+  const gchar *orig_object_path;
   gchar *object_path;
   guint count;
   gboolean modified;
 
-  orig_object_path = g_strdup (g_dbus_object_get_object_path (G_DBUS_OBJECT (object)));
+  orig_object_path = g_dbus_object_get_object_path (G_DBUS_OBJECT (object));
 
   g_return_if_fail (G_IS_DBUS_OBJECT_MANAGER_SERVER (manager));
   g_return_if_fail (G_IS_DBUS_OBJECT (object));
-  g_return_if_fail (g_str_has_prefix (orig_object_path, manager->priv->object_path_ending_in_slash));
+  g_return_if_fail (is_valid_child_object_path (manager, orig_object_path));
 
   g_mutex_lock (&manager->priv->lock);
 
@@ -591,7 +632,6 @@ g_dbus_object_manager_server_export_uniquely (GDBusObjectManagerServer *manager,
     g_dbus_object_skeleton_set_object_path (G_DBUS_OBJECT_SKELETON (object), object_path);
 
   g_free (object_path);
-  g_free (orig_object_path);
 
 }
 
@@ -640,7 +680,7 @@ g_dbus_object_manager_server_unexport_unlocked (GDBusObjectManagerServer  *manag
 
   g_return_val_if_fail (G_IS_DBUS_OBJECT_MANAGER_SERVER (manager), FALSE);
   g_return_val_if_fail (g_variant_is_object_path (object_path), FALSE);
-  g_return_val_if_fail (g_str_has_prefix (object_path, manager->priv->object_path_ending_in_slash), FALSE);
+  g_return_val_if_fail (is_valid_child_object_path (manager, object_path), FALSE);
 
   ret = FALSE;
 
@@ -877,7 +917,8 @@ static const GDBusInterfaceVTable manager_interface_vtable =
 {
   manager_method_call, /* handle_method_call */
   NULL, /* get_property */
-  NULL  /* set_property */
+  NULL, /* set_property */
+  { 0 }
 };
 
 /* ---------------------------------------------------------------------------------------------------- */
@@ -930,7 +971,12 @@ g_dbus_object_manager_server_emit_interfaces_added (GDBusObjectManagerServer *ma
                                                 object_path,
                                                 &array_builder),
                                  &error);
-  g_assert_no_error (error);
+  if (error)
+    {
+      if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CLOSED))
+        g_warning ("Couldn't emit InterfacesAdded signal: %s", error->message);
+      g_error_free (error);
+    }
  out:
   ;
 }
@@ -963,7 +1009,12 @@ g_dbus_object_manager_server_emit_interfaces_removed (GDBusObjectManagerServer *
                                                 object_path,
                                                 &array_builder),
                                  &error);
-  g_assert_no_error (error);
+  if (error)
+    {
+      if (!g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CLOSED))
+        g_warning ("Couldn't emit InterfacesRemoved signal: %s", error->message);
+      g_error_free (error);
+    }
  out:
   ;
 }
@@ -1012,7 +1063,7 @@ g_dbus_object_manager_server_get_object (GDBusObjectManager *_manager,
   g_mutex_lock (&manager->priv->lock);
   data = g_hash_table_lookup (manager->priv->map_object_path_to_data, object_path);
   if (data != NULL)
-    ret = g_object_ref (data->object);
+    ret = g_object_ref (G_DBUS_OBJECT (data->object));
   g_mutex_unlock (&manager->priv->lock);
 
   return ret;

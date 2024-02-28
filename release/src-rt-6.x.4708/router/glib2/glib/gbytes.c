@@ -2,10 +2,12 @@
  * Copyright © 2009, 2010 Codethink Limited
  * Copyright © 2011 Collabora Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Ryan Lortie <desrt@desrt.ca>
  *         Stef Walter <stefw@collabora.co.uk>
@@ -32,14 +32,15 @@
 #include <glib/gtestutils.h>
 #include <glib/gmem.h>
 #include <glib/gmessages.h>
+#include <glib/grefcount.h>
 
 #include <string.h>
 
 /**
  * GBytes:
  *
- * A simple refcounted data type representing an immutable byte sequence
- * from an unspecified origin.
+ * A simple refcounted data type representing an immutable sequence of zero or
+ * more bytes from an unspecified origin.
  *
  * The purpose of a #GBytes is to keep the memory region that it holds
  * alive for as long as anyone holds a reference to the bytes.  When
@@ -66,24 +67,25 @@
  * Since: 2.32
  **/
 
+/* Keep in sync with glib/tests/bytes.c */
 struct _GBytes
 {
-  gconstpointer data;
-  gsize size;
-  gint ref_count;
+  gconstpointer data;  /* may be NULL iff (size == 0) */
+  gsize size;  /* may be 0 */
+  gatomicrefcount ref_count;
   GDestroyNotify free_func;
   gpointer user_data;
 };
 
 /**
  * g_bytes_new:
- * @data: (transfer none) (array length=size) (element-type guint8):
+ * @data: (transfer none) (array length=size) (element-type guint8) (nullable):
  *        the data to be used for the bytes
  * @size: the size of @data
  *
  * Creates a new #GBytes from @data.
  *
- * @data is copied.
+ * @data is copied. If @size is 0, @data may be %NULL.
  *
  * Returns: (transfer full): a new #GBytes
  *
@@ -93,13 +95,15 @@ GBytes *
 g_bytes_new (gconstpointer data,
              gsize         size)
 {
-  return g_bytes_new_take (g_memdup (data, size), size);
+  g_return_val_if_fail (data != NULL || size == 0, NULL);
+
+  return g_bytes_new_take (g_memdup2 (data, size), size);
 }
 
 /**
  * g_bytes_new_take:
- * @data: (transfer full) (array length=size) (element-type guint8):
-          the data to be used for the bytes
+ * @data: (transfer full) (array length=size) (element-type guint8) (nullable):
+ *        the data to be used for the bytes
  * @size: the size of @data
  *
  * Creates a new #GBytes from @data.
@@ -112,6 +116,8 @@ g_bytes_new (gconstpointer data,
  *
  * For creating #GBytes with memory from other allocators, see
  * g_bytes_new_with_free_func().
+ *
+ * @data may be %NULL if @size is 0.
  *
  * Returns: (transfer full): a new #GBytes
  *
@@ -127,13 +133,14 @@ g_bytes_new_take (gpointer data,
 
 /**
  * g_bytes_new_static: (skip)
- * @data: (transfer full) (array length=size) (element-type guint8):
-          the data to be used for the bytes
+ * @data: (transfer full) (array length=size) (element-type guint8) (nullable):
+ *        the data to be used for the bytes
  * @size: the size of @data
  *
  * Creates a new #GBytes from static data.
  *
- * @data must be static (ie: never modified or freed).
+ * @data must be static (ie: never modified or freed). It may be %NULL if @size
+ * is 0.
  *
  * Returns: (transfer full): a new #GBytes
  *
@@ -147,8 +154,9 @@ g_bytes_new_static (gconstpointer data,
 }
 
 /**
- * g_bytes_new_with_free_func:
- * @data: (array length=size): the data to be used for the bytes
+ * g_bytes_new_with_free_func: (skip)
+ * @data: (array length=size) (element-type guint8) (nullable):
+ *        the data to be used for the bytes
  * @size: the size of @data
  * @free_func: the function to call to release the data
  * @user_data: data to pass to @free_func
@@ -160,6 +168,8 @@ g_bytes_new_static (gconstpointer data,
  *
  * @data must not be modified after this call is made until @free_func has
  * been called to indicate that the bytes is no longer in use.
+ *
+ * @data may be %NULL if @size is 0.
  *
  * Returns: (transfer full): a new #GBytes
  *
@@ -173,12 +183,14 @@ g_bytes_new_with_free_func (gconstpointer  data,
 {
   GBytes *bytes;
 
+  g_return_val_if_fail (data != NULL || size == 0, NULL);
+
   bytes = g_slice_new (GBytes);
   bytes->data = data;
   bytes->size = size;
   bytes->free_func = free_func;
   bytes->user_data = user_data;
-  bytes->ref_count = 1;
+  g_atomic_ref_count_init (&bytes->ref_count);
 
   return (GBytes *)bytes;
 }
@@ -195,6 +207,12 @@ g_bytes_new_with_free_func (gconstpointer  data,
  * A reference to @bytes will be held by the newly created #GBytes until
  * the byte data is no longer needed.
  *
+ * Since 2.56, if @offset is 0 and @length matches the size of @bytes, then
+ * @bytes will be returned with the reference count incremented by 1. If @bytes
+ * is a slice of another #GBytes, then the resulting #GBytes will reference
+ * the same #GBytes instead of @bytes. This allows consumers to simplify the
+ * usage of #GBytes when asynchronously writing to streams.
+ *
  * Returns: (transfer full): a new #GBytes
  *
  * Since: 2.32
@@ -204,25 +222,49 @@ g_bytes_new_from_bytes (GBytes  *bytes,
                         gsize    offset,
                         gsize    length)
 {
+  gchar *base;
+
+  /* Note that length may be 0. */
   g_return_val_if_fail (bytes != NULL, NULL);
   g_return_val_if_fail (offset <= bytes->size, NULL);
   g_return_val_if_fail (offset + length <= bytes->size, NULL);
 
-  return g_bytes_new_with_free_func ((gchar *)bytes->data + offset, length,
+  /* Avoid an extra GBytes if all bytes were requested */
+  if (offset == 0 && length == bytes->size)
+    return g_bytes_ref (bytes);
+
+  base = (gchar *)bytes->data + offset;
+
+  /* Avoid referencing intermediate GBytes. In practice, this should
+   * only loop once.
+   */
+  while (bytes->free_func == (gpointer)g_bytes_unref)
+    bytes = bytes->user_data;
+
+  g_return_val_if_fail (bytes != NULL, NULL);
+  g_return_val_if_fail (base >= (gchar *)bytes->data, NULL);
+  g_return_val_if_fail (base <= (gchar *)bytes->data + bytes->size, NULL);
+  g_return_val_if_fail (base + length <= (gchar *)bytes->data + bytes->size, NULL);
+
+  return g_bytes_new_with_free_func (base, length,
                                      (GDestroyNotify)g_bytes_unref, g_bytes_ref (bytes));
 }
 
 /**
  * g_bytes_get_data:
  * @bytes: a #GBytes
- * @size: (out) (allow-none): location to return size of byte data
+ * @size: (out) (optional): location to return size of byte data
  *
  * Get the byte data in the #GBytes. This data should not be modified.
  *
  * This function will always return the same pointer for a given #GBytes.
  *
- * Returns: (transfer none) (array length=size) (type guint8): a pointer to the
- *          byte data
+ * %NULL may be returned if @size is 0. This is not guaranteed, as the #GBytes
+ * may represent an empty string with @data non-%NULL and @size as 0. %NULL will
+ * not be returned if @size is non-zero.
+ *
+ * Returns: (transfer none) (array length=size) (element-type guint8) (nullable):
+ *          a pointer to the byte data, or %NULL
  *
  * Since: 2.32
  */
@@ -271,17 +313,17 @@ g_bytes_ref (GBytes *bytes)
 {
   g_return_val_if_fail (bytes != NULL, NULL);
 
-  g_atomic_int_inc (&bytes->ref_count);
+  g_atomic_ref_count_inc (&bytes->ref_count);
 
   return bytes;
 }
 
 /**
  * g_bytes_unref:
- * @bytes: (allow-none): a #GBytes
+ * @bytes: (nullable): a #GBytes
  *
  * Releases a reference on @bytes.  This may result in the bytes being
- * freed.
+ * freed. If @bytes is %NULL, it will return immediately.
  *
  * Since: 2.32
  */
@@ -291,7 +333,7 @@ g_bytes_unref (GBytes *bytes)
   if (bytes == NULL)
     return;
 
-  if (g_atomic_int_dec_and_test (&bytes->ref_count))
+  if (g_atomic_ref_count_dec (&bytes->ref_count))
     {
       if (bytes->free_func != NULL)
         bytes->free_func (bytes->user_data);
@@ -325,7 +367,7 @@ g_bytes_equal (gconstpointer bytes1,
   g_return_val_if_fail (bytes2 != NULL, FALSE);
 
   return b1->size == b2->size &&
-         memcmp (b1->data, b2->data, b1->size) == 0;
+         (b1->size == 0 || memcmp (b1->data, b2->data, b1->size) == 0);
 }
 
 /**
@@ -334,7 +376,7 @@ g_bytes_equal (gconstpointer bytes1,
  *
  * Creates an integer hash code for the byte data in the #GBytes.
  *
- * This function can be passed to g_hash_table_new() as the @key_equal_func
+ * This function can be passed to g_hash_table_new() as the @key_hash_func
  * parameter, when using non-%NULL #GBytes pointers as keys in a #GHashTable.
  *
  * Returns: a hash value corresponding to the key.
@@ -363,10 +405,18 @@ g_bytes_hash (gconstpointer bytes)
  *
  * Compares the two #GBytes values.
  *
- * This function can be used to sort GBytes instances in lexographical order.
+ * This function can be used to sort GBytes instances in lexicographical order.
  *
- * Returns: a negative value if bytes2 is lesser, a positive value if bytes2 is
- *          greater, and zero if bytes2 is equal to bytes1
+ * If @bytes1 and @bytes2 have different length but the shorter one is a
+ * prefix of the longer one then the shorter one is considered to be less than
+ * the longer one. Otherwise the first byte where both differ is used for
+ * comparison. If @bytes1 has a smaller value at that position it is
+ * considered less, otherwise greater than @bytes2.
+ *
+ * Returns: a negative value if @bytes1 is less than @bytes2, a positive value
+ *          if @bytes1 is greater than @bytes2, and zero if @bytes1 is equal to
+ *          @bytes2
+ *
  *
  * Since: 2.32
  */
@@ -394,11 +444,12 @@ try_steal_and_unref (GBytes         *bytes,
 {
   gpointer result;
 
-  if (bytes->free_func != free_func || bytes->data == NULL)
+  if (bytes->free_func != free_func || bytes->data == NULL ||
+      bytes->user_data != bytes->data)
     return NULL;
 
   /* Are we the only reference? */
-  if (g_atomic_int_get (&bytes->ref_count) == 1)
+  if (g_atomic_ref_count_compare (&bytes->ref_count, 1))
     {
       *size = bytes->size;
       result = (gpointer)bytes->data;
@@ -413,7 +464,7 @@ try_steal_and_unref (GBytes         *bytes,
 /**
  * g_bytes_unref_to_data:
  * @bytes: (transfer full): a #GBytes
- * @size: location to place the length of the returned data
+ * @size: (out): location to place the length of the returned data
  *
  * Unreferences the bytes, and returns a pointer the same byte data
  * contents.
@@ -423,8 +474,9 @@ try_steal_and_unref (GBytes         *bytes,
  * g_bytes_new_take() or g_byte_array_free_to_bytes(). In all other cases the
  * data is copied.
  *
- * Returns: (transfer full): a pointer to the same byte data, which should
- *          be freed with g_free()
+ * Returns: (transfer full) (array length=size) (element-type guint8)
+ *          (not nullable): a pointer to the same byte data, which should be
+ *          freed with g_free()
  *
  * Since: 2.32
  */
@@ -449,7 +501,7 @@ g_bytes_unref_to_data (GBytes *bytes,
        * Copy: Non g_malloc (or compatible) allocator, or static memory,
        * so we have to copy, and then unref.
        */
-      result = g_memdup (bytes->data, bytes->size);
+      result = g_memdup2 (bytes->data, bytes->size);
       *size = bytes->size;
       g_bytes_unref (bytes);
     }
@@ -469,6 +521,10 @@ g_bytes_unref_to_data (GBytes *bytes,
  * g_bytes_new(), g_bytes_new_take() or g_byte_array_free_to_bytes(). In all
  * other cases the data is copied.
  *
+ * Do not use it if @bytes contains more than %G_MAXUINT
+ * bytes. #GByteArray stores the length of its data in #guint, which
+ * may be shorter than #gsize, that @bytes is using.
+ *
  * Returns: (transfer full): a new mutable #GByteArray containing the same byte data
  *
  * Since: 2.32
@@ -483,4 +539,76 @@ g_bytes_unref_to_array (GBytes *bytes)
 
   data = g_bytes_unref_to_data (bytes, &size);
   return g_byte_array_new_take (data, size);
+}
+
+/**
+ * g_bytes_get_region:
+ * @bytes: a #GBytes
+ * @element_size: a non-zero element size
+ * @offset: an offset to the start of the region within the @bytes
+ * @n_elements: the number of elements in the region
+ *
+ * Gets a pointer to a region in @bytes.
+ *
+ * The region starts at @offset many bytes from the start of the data
+ * and contains @n_elements many elements of @element_size size.
+ *
+ * @n_elements may be zero, but @element_size must always be non-zero.
+ * Ideally, @element_size is a static constant (eg: sizeof a struct).
+ *
+ * This function does careful bounds checking (including checking for
+ * arithmetic overflows) and returns a non-%NULL pointer if the
+ * specified region lies entirely within the @bytes. If the region is
+ * in some way out of range, or if an overflow has occurred, then %NULL
+ * is returned.
+ *
+ * Note: it is possible to have a valid zero-size region. In this case,
+ * the returned pointer will be equal to the base pointer of the data of
+ * @bytes, plus @offset.  This will be non-%NULL except for the case
+ * where @bytes itself was a zero-sized region.  Since it is unlikely
+ * that you will be using this function to check for a zero-sized region
+ * in a zero-sized @bytes, %NULL effectively always means "error".
+ *
+ * Returns: (nullable): the requested region, or %NULL in case of an error
+ *
+ * Since: 2.70
+ */
+gconstpointer
+g_bytes_get_region (GBytes *bytes,
+                    gsize   element_size,
+                    gsize   offset,
+                    gsize   n_elements)
+{
+  gsize total_size;
+  gsize end_offset;
+
+  g_return_val_if_fail (element_size > 0, NULL);
+
+  /* No other assertion checks here.  If something is wrong then we will
+   * simply crash (via NULL dereference or divide-by-zero).
+   */
+
+  if (!g_size_checked_mul (&total_size, element_size, n_elements))
+    return NULL;
+
+  if (!g_size_checked_add (&end_offset, offset, total_size))
+    return NULL;
+
+  /* We now have:
+   *
+   *   0 <= offset <= end_offset
+   *
+   * So we need only check that end_offset is within the range of the
+   * size of @bytes and we're good to go.
+   */
+
+  if (end_offset > bytes->size)
+    return NULL;
+
+  /* We now have:
+   *
+   *   0 <= offset <= end_offset <= bytes->size
+   */
+
+  return ((guchar *) bytes->data) + offset;
 }

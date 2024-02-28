@@ -3,10 +3,12 @@
  * Copyright © 2008 codethink
  * Copyright © 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -14,9 +16,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  *          Alexander Larsson <alexl@redhat.com>
@@ -28,6 +28,7 @@
 
 #include "giostream.h"
 #include "gasyncresult.h"
+#include "gioprivate.h"
 #include "gtask.h"
 
 /**
@@ -37,12 +38,12 @@
  * @see_also: #GInputStream, #GOutputStream
  *
  * GIOStream represents an object that has both read and write streams.
- * Generally the two streams acts as separate input and output streams,
+ * Generally the two streams act as separate input and output streams,
  * but they share some common resources and state. For instance, for
- * seekable streams they may use the same position in both streams.
+ * seekable streams, both streams may use the same position.
  *
- * Examples of #GIOStream objects are #GSocketConnection which represents
- * a two-way network connection, and #GFileIOStream which represent a
+ * Examples of #GIOStream objects are #GSocketConnection, which represents
+ * a two-way network connection; and #GFileIOStream, which represents a
  * file handle opened in read-write mode.
  *
  * To do the actual reading and writing you need to get the substreams
@@ -51,15 +52,37 @@
  * The #GIOStream object owns the input and the output streams, not the other
  * way around, so keeping the substreams alive will not keep the #GIOStream
  * object alive. If the #GIOStream object is freed it will be closed, thus
- * closing the substream, so even if the substreams stay alive they will
- * always just return a %G_IO_ERROR_CLOSED for all operations.
+ * closing the substreams, so even if the substreams stay alive they will
+ * always return %G_IO_ERROR_CLOSED for all operations.
  *
  * To close a stream use g_io_stream_close() which will close the common
  * stream object and also the individual substreams. You can also close
  * the substreams themselves. In most cases this only marks the
- * substream as closed, so further I/O on it fails. However, some streams
- * may support "half-closed" states where one direction of the stream
- * is actually shut down.
+ * substream as closed, so further I/O on it fails but common state in the
+ * #GIOStream may still be open. However, some streams may support
+ * "half-closed" states where one direction of the stream is actually shut down.
+ *
+ * Operations on #GIOStreams cannot be started while another operation on the
+ * #GIOStream or its substreams is in progress. Specifically, an application can
+ * read from the #GInputStream and write to the #GOutputStream simultaneously
+ * (either in separate threads, or as asynchronous operations in the same
+ * thread), but an application cannot start any #GIOStream operation while there
+ * is a #GIOStream, #GInputStream or #GOutputStream operation in progress, and
+ * an application can’t start any #GInputStream or #GOutputStream operation
+ * while there is a #GIOStream operation in progress.
+ *
+ * This is a product of individual stream operations being associated with a
+ * given #GMainContext (the thread-default context at the time the operation was
+ * started), rather than entire streams being associated with a single
+ * #GMainContext.
+ *
+ * GIO may run operations on #GIOStreams from other (worker) threads, and this
+ * may be exposed to application code in the behaviour of wrapper streams, such
+ * as #GBufferedInputStream or #GTlsConnection. With such wrapper APIs,
+ * application code may only run operations on the base (wrapped) stream when
+ * the wrapper stream is idle. Note that the semantics of such operations may
+ * not be well-defined due to the state the wrapper stream leaves the base
+ * stream in (though they are guaranteed not to crash).
  *
  * Since: 2.22
  */
@@ -75,7 +98,6 @@ enum
 struct _GIOStreamPrivate {
   guint closed : 1;
   guint pending : 1;
-  GAsyncReadyCallback outstanding_callback;
 };
 
 static gboolean g_io_stream_real_close        (GIOStream            *stream,
@@ -264,7 +286,7 @@ g_io_stream_has_pending (GIOStream *stream)
  * already set or @stream is closed, it will return %FALSE and set
  * @error.
  *
- * Return value: %TRUE if pending was previously unset and is now set.
+ * Returns: %TRUE if pending was previously unset and is now set.
  *
  * Since: 2.22
  */
@@ -335,11 +357,11 @@ g_io_stream_real_close (GIOStream     *stream,
 /**
  * g_io_stream_close:
  * @stream: a #GIOStream
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore
  * @error: location to store the error occurring, or %NULL to ignore
  *
  * Closes the stream, releasing resources related to it. This will also
- * closes the individual input and output streams, if they are not already
+ * close the individual input and output streams, if they are not already
  * closed.
  *
  * Once the stream is closed, all other operations will return
@@ -372,7 +394,7 @@ g_io_stream_real_close (GIOStream     *stream,
  * The default implementation of this method just calls close on the
  * individual input/output streams.
  *
- * Return value: %TRUE on success, %FALSE on failure
+ * Returns: %TRUE on success, %FALSE on failure
  *
  * Since: 2.22
  */
@@ -416,19 +438,32 @@ async_ready_close_callback_wrapper (GObject      *source_object,
                                     gpointer      user_data)
 {
   GIOStream *stream = G_IO_STREAM (source_object);
+  GIOStreamClass *klass = G_IO_STREAM_GET_CLASS (stream);
+  GTask *task = user_data;
+  GError *error = NULL;
+  gboolean success;
 
   stream->priv->closed = TRUE;
   g_io_stream_clear_pending (stream);
-  if (stream->priv->outstanding_callback)
-    (*stream->priv->outstanding_callback) (source_object, res, user_data);
-  g_object_unref (stream);
+
+  if (g_async_result_legacy_propagate_error (res, &error))
+    success = FALSE;
+  else
+    success = klass->close_finish (stream, res, &error);
+
+  if (error)
+    g_task_return_error (task, error);
+  else
+    g_task_return_boolean (task, success);
+
+  g_object_unref (task);
 }
 
 /**
  * g_io_stream_close_async:
  * @stream: a #GIOStream
  * @io_priority: the io priority of the request
- * @cancellable: (allow-none): optional cancellable object
+ * @cancellable: (nullable): optional cancellable object
  * @callback: (scope async): callback to call when the request is satisfied
  * @user_data: (closure): the data to pass to callback function
  *
@@ -454,15 +489,15 @@ g_io_stream_close_async (GIOStream           *stream,
 {
   GIOStreamClass *class;
   GError *error = NULL;
+  GTask *task;
 
   g_return_if_fail (G_IS_IO_STREAM (stream));
 
+  task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_io_stream_close_async);
+
   if (stream->priv->closed)
     {
-      GTask *task;
-
-      task = g_task_new (stream, cancellable, callback, user_data);
-      g_task_set_source_tag (task, g_io_stream_close_async);
       g_task_return_boolean (task, TRUE);
       g_object_unref (task);
       return;
@@ -470,17 +505,15 @@ g_io_stream_close_async (GIOStream           *stream,
 
   if (!g_io_stream_set_pending (stream, &error))
     {
-      g_task_report_error (stream, callback, user_data,
-                           g_io_stream_close_async,
-                           error);
+      g_task_return_error (task, error);
+      g_object_unref (task);
       return;
     }
 
   class = G_IO_STREAM_GET_CLASS (stream);
-  stream->priv->outstanding_callback = callback;
-  g_object_ref (stream);
+
   class->close_async (stream, io_priority, cancellable,
-		      async_ready_close_callback_wrapper, user_data);
+		      async_ready_close_callback_wrapper, task);
 }
 
 /**
@@ -501,18 +534,10 @@ g_io_stream_close_finish (GIOStream     *stream,
 			  GAsyncResult  *result,
 			  GError       **error)
 {
-  GIOStreamClass *class;
-
   g_return_val_if_fail (G_IS_IO_STREAM (stream), FALSE);
-  g_return_val_if_fail (G_IS_ASYNC_RESULT (result), FALSE);
+  g_return_val_if_fail (g_task_is_valid (result, stream), FALSE);
 
-  if (g_async_result_legacy_propagate_error (result, error))
-    return FALSE;
-  else if (g_async_result_is_tagged (result, g_io_stream_close_async))
-    return g_task_propagate_boolean (G_TASK (result), error);
-
-  class = G_IO_STREAM_GET_CLASS (stream);
-  return class->close_finish (stream, result, error);
+  return g_task_propagate_boolean (G_TASK (result), error);
 }
 
 
@@ -543,6 +568,53 @@ close_async_thread (GTask        *task,
   g_task_return_boolean (task, TRUE);
 }
 
+typedef struct
+{
+  GError *error;
+  gint pending;
+} CloseAsyncData;
+
+static void
+stream_close_complete (GObject      *source,
+                       GAsyncResult *result,
+                       gpointer      user_data)
+{
+  GTask *task = user_data;
+  CloseAsyncData *data;
+
+  data = g_task_get_task_data (task);
+  data->pending--;
+
+  if (G_IS_OUTPUT_STREAM (source))
+    {
+      GError *error = NULL;
+
+      /* Match behaviour with the sync route and give precedent to the
+       * error returned from closing the output stream.
+       */
+      g_output_stream_close_finish (G_OUTPUT_STREAM (source), result, &error);
+      if (error)
+        {
+          if (data->error)
+            g_error_free (data->error);
+          data->error = error;
+        }
+    }
+  else
+    g_input_stream_close_finish (G_INPUT_STREAM (source), result, data->error ? NULL : &data->error);
+
+  if (data->pending == 0)
+    {
+      if (data->error)
+        g_task_return_error (task, data->error);
+      else
+        g_task_return_boolean (task, TRUE);
+
+      g_slice_free (CloseAsyncData, data);
+      g_object_unref (task);
+    }
+}
+
 static void
 g_io_stream_real_close_async (GIOStream           *stream,
 			      int                  io_priority,
@@ -550,14 +622,42 @@ g_io_stream_real_close_async (GIOStream           *stream,
 			      GAsyncReadyCallback  callback,
 			      gpointer             user_data)
 {
+  GInputStream *input;
+  GOutputStream *output;
   GTask *task;
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_io_stream_real_close_async);
   g_task_set_check_cancellable (task, FALSE);
   g_task_set_priority (task, io_priority);
-  
-  g_task_run_in_thread (task, close_async_thread);
-  g_object_unref (task);
+
+  input = g_io_stream_get_input_stream (stream);
+  output = g_io_stream_get_output_stream (stream);
+
+  if (g_input_stream_async_close_is_via_threads (input) && g_output_stream_async_close_is_via_threads (output))
+    {
+      /* No sense in dispatching to the thread twice -- just do it all
+       * in one go.
+       */
+      g_task_run_in_thread (task, close_async_thread);
+      g_object_unref (task);
+    }
+  else
+    {
+      CloseAsyncData *data;
+
+      /* We should avoid dispatching to another thread in case either
+       * object that would not do it for itself because it may not be
+       * threadsafe.
+       */
+      data = g_slice_new (CloseAsyncData);
+      data->error = NULL;
+      data->pending = 2;
+
+      g_task_set_task_data (task, data, NULL);
+      g_input_stream_close_async (input, io_priority, cancellable, stream_close_complete, task);
+      g_output_stream_close_async (output, io_priority, cancellable, stream_close_complete, task);
+    }
 }
 
 static gboolean
@@ -728,11 +828,11 @@ splice_cancelled_cb (GCancellable *cancellable,
  * @stream2: a #GIOStream.
  * @flags: a set of #GIOStreamSpliceFlags.
  * @io_priority: the io priority of the request.
- * @cancellable: (allow-none): optional #GCancellable object, %NULL to ignore.
+ * @cancellable: (nullable): optional #GCancellable object, %NULL to ignore.
  * @callback: (scope async): a #GAsyncReadyCallback.
  * @user_data: (closure): user data passed to @callback.
  *
- * Asyncronously splice the output stream of @stream1 to the input stream of
+ * Asynchronously splice the output stream of @stream1 to the input stream of
  * @stream2, and splice the output stream of @stream2 to the input stream of
  * @stream1.
  *
@@ -774,6 +874,7 @@ g_io_stream_splice_async (GIOStream            *stream1,
   ctx->completed = 0;
 
   task = g_task_new (NULL, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_io_stream_splice_async);
   g_task_set_task_data (task, ctx, (GDestroyNotify) splice_context_free);
 
   if (cancellable != NULL)

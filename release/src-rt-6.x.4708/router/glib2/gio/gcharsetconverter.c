@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2009 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -205,9 +205,9 @@ g_charset_converter_init (GCharsetConverter *local)
  * Since: 2.24
  **/
 GCharsetConverter *
-g_charset_converter_new (const gchar  *to_charset,
-			 const gchar  *from_charset,
-			 GError       **error)
+g_charset_converter_new (const gchar *to_charset,
+			 const gchar *from_charset,
+			 GError      **error)
 {
   GCharsetConverter *conv;
 
@@ -236,15 +236,15 @@ g_charset_converter_reset (GConverter *converter)
 }
 
 static GConverterResult
-g_charset_converter_convert (GConverter *converter,
-			     const void *inbuf,
-			     gsize       inbuf_size,
-			     void       *outbuf,
-			     gsize       outbuf_size,
-			     GConverterFlags flags,
-			     gsize      *bytes_read,
-			     gsize      *bytes_written,
-			     GError    **error)
+g_charset_converter_convert (GConverter       *converter,
+			     const void       *inbuf,
+			     gsize             inbuf_size,
+			     void             *outbuf,
+			     gsize             outbuf_size,
+			     GConverterFlags   flags,
+			     gsize            *bytes_read,
+			     gsize            *bytes_written,
+			     GError          **error)
 {
   GCharsetConverter  *conv;
   gsize res;
@@ -430,11 +430,12 @@ g_charset_converter_iface_init (GConverterIface *iface)
 }
 
 static gboolean
-g_charset_converter_initable_init (GInitable *initable,
-				   GCancellable *cancellable,
-				   GError  **error)
+g_charset_converter_initable_init (GInitable     *initable,
+				   GCancellable  *cancellable,
+				   GError       **error)
 {
   GCharsetConverter  *conv;
+  int errsv;
 
   g_return_val_if_fail (G_IS_CHARSET_CONVERTER (initable), FALSE);
 
@@ -447,18 +448,18 @@ g_charset_converter_initable_init (GInitable *initable,
       return FALSE;
     }
 
-  conv->iconv =
-    g_iconv_open (conv->to, conv->from);
+  conv->iconv = g_iconv_open (conv->to, conv->from);
+  errsv = errno;
 
   if (conv->iconv == (GIConv)-1)
     {
-      if (errno == EINVAL)
+      if (errsv == EINVAL)
 	g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-		     _("Conversion from character set '%s' to '%s' is not supported"),
+		     _("Conversion from character set “%s” to “%s” is not supported"),
 		     conv->from, conv->to);
       else
 	g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-		     _("Could not open converter from '%s' to '%s'"),
+		     _("Could not open converter from “%s” to “%s”"),
 		     conv->from, conv->to);
       return FALSE;
     }

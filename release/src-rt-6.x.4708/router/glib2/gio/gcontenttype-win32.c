@@ -4,10 +4,12 @@
  *
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -61,7 +61,7 @@ get_registry_classes_key (const char    *subdir,
       if (key_type == REG_EXPAND_SZ)
         {
           wchar_t dummy[1];
-          int len = ExpandEnvironmentStringsW (wc_temp, dummy, 1);
+          DWORD len = ExpandEnvironmentStringsW (wc_temp, dummy, 1);
           if (len > 0)
             {
               wchar_t *wc_temp_expanded = g_new (wchar_t, len);
@@ -83,6 +83,21 @@ get_registry_classes_key (const char    *subdir,
     RegCloseKey (reg_key);
 
   return value_utf8;
+}
+
+/*< private >*/
+void
+g_content_type_set_mime_dirs (const gchar * const *dirs)
+{
+  /* noop on Windows */
+}
+
+/*< private >*/
+const gchar * const *
+g_content_type_get_mime_dirs (void)
+{
+  const gchar * const *mime_dirs = { NULL };
+  return mime_dirs;
 }
 
 gboolean
@@ -115,7 +130,8 @@ g_content_type_is_a (const gchar *type,
                      const gchar *supertype)
 {
   gboolean res;
-  char *value_utf8;
+  char *perceived_type;
+  char *perceived_supertype;
 
   g_return_val_if_fail (type != NULL, FALSE);
   g_return_val_if_fail (supertype != NULL, FALSE);
@@ -123,13 +139,33 @@ g_content_type_is_a (const gchar *type,
   if (g_content_type_equals (type, supertype))
     return TRUE;
 
-  res = FALSE;
-  value_utf8 = get_registry_classes_key (type, L"PerceivedType");
-  if (value_utf8 && strcmp (value_utf8, supertype) == 0)
-    res = TRUE;
-  g_free (value_utf8);
-  
+  perceived_type = get_registry_classes_key (type, L"PerceivedType");
+  perceived_supertype = get_registry_classes_key (supertype, L"PerceivedType");
+
+  res = perceived_type && perceived_supertype &&
+    strcmp (perceived_type, perceived_supertype) == 0;
+
+  g_free (perceived_type);
+  g_free (perceived_supertype);
+
   return res;
+}
+
+gboolean
+g_content_type_is_mime_type (const gchar *type,
+                             const gchar *mime_type)
+{
+  gchar *content_type;
+  gboolean ret;
+
+  g_return_val_if_fail (type != NULL, FALSE);
+  g_return_val_if_fail (mime_type != NULL, FALSE);
+
+  content_type = g_content_type_from_mime_type (mime_type);
+  ret = g_content_type_is_a (type, content_type);
+  g_free (content_type);
+
+  return ret;
 }
 
 gboolean
@@ -160,6 +196,7 @@ g_content_type_get_description (const gchar *type)
 
   if (g_content_type_is_unknown (type))
     return g_strdup (_("Unknown type"));
+
   return g_strdup_printf (_("%s filetype"), type);
 }
 
@@ -177,6 +214,8 @@ g_content_type_get_mime_type (const gchar *type)
     return g_strdup ("application/octet-stream");
   else if (*type == '.')
     return g_strdup_printf ("application/x-ext-%s", type+1);
+  else if (strcmp ("inode/directory", type) == 0)
+    return g_strdup (type);
   /* TODO: Map "image" to "image/ *", etc? */
 
   return g_strdup ("application/octet-stream");
@@ -226,19 +265,18 @@ g_content_type_get_icon (const gchar *type)
       g_free (key);
     }
 
-  /* icon-name similar to how it was with gtk-2-12 */
-  if (name)
+  if (!name)
     {
-      themed_icon = g_themed_icon_new (name);
-    }
-  else
-    {
-      /* if not found an icon fall back to gtk-builtins */
-      name = strcmp (type, "inode/directory") == 0 ? "gtk-directory" : 
-                           g_content_type_can_be_executable (type) ? "gtk-execute" : "gtk-file";
+      /* if no icon found, fall back to standard generic names */
+      if (strcmp (type, "inode/directory") == 0)
+        name = "folder";
+      else if (g_content_type_can_be_executable (type))
+        name = "system-run";
+      else
+        name = "text-x-generic";
       g_hash_table_insert (_type_icons, g_strdup (type), g_strdup (name));
-      themed_icon = g_themed_icon_new_with_default_fallbacks (name);
     }
+  themed_icon = g_themed_icon_new (name);
   G_UNLOCK (_type_icons);
 
   return G_ICON (themed_icon);
@@ -302,11 +340,16 @@ g_content_type_from_mime_type (const gchar *mime_type)
 
   g_return_val_if_fail (mime_type != NULL, NULL);
 
+  /* This is a hack to allow directories to have icons in filechooser */
+  if (strcmp ("inode/directory", mime_type) == 0)
+    return g_strdup (mime_type);
+
   key = g_strconcat ("MIME\\DataBase\\Content Type\\", mime_type, NULL);
   content_type = get_registry_classes_key (key, L"Extension");
   g_free (key);
 
-  return content_type;
+
+  return content_type ? g_steal_pointer (&content_type) : g_strdup ("*");
 }
 
 gchar *
@@ -318,6 +361,7 @@ g_content_type_guess (const gchar  *filename,
   char *basename;
   char *type;
   char *dot;
+  size_t i;
 
   type = NULL;
 
@@ -330,11 +374,21 @@ g_content_type_guess (const gchar  *filename,
 
   if (filename)
     {
-      basename = g_path_get_basename (filename);
-      dot = strrchr (basename, '.');
-      if (dot)
-        type = g_strdup (dot);
-      g_free (basename);
+      i = strlen (filename);
+      if (i > 0 && filename[i - 1] == G_DIR_SEPARATOR)
+        {
+          type = g_strdup ("inode/directory");
+          if (result_uncertain)
+            *result_uncertain = TRUE;
+        }
+      else
+        {
+          basename = g_path_get_basename (filename);
+          dot = strrchr (basename, '.');
+          if (dot)
+            type = g_strdup (dot);
+          g_free (basename);
+        }
     }
 
   if (type)

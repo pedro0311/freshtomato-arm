@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -70,7 +70,7 @@ struct _GFilenameCompleter {
   LoadBasenamesData *basename_loader;
 };
 
-G_DEFINE_TYPE (GFilenameCompleter, g_filename_completer, G_TYPE_OBJECT);
+G_DEFINE_TYPE (GFilenameCompleter, g_filename_completer, G_TYPE_OBJECT)
 
 static void cancel_load_basenames (GFilenameCompleter *completer);
 
@@ -107,7 +107,7 @@ g_filename_completer_class_init (GFilenameCompleterClass *klass)
 					  G_SIGNAL_RUN_LAST,
 					  G_STRUCT_OFFSET (GFilenameCompleterClass, got_completion_data),
 					  NULL, NULL,
-					  g_cclosure_marshal_VOID__VOID,
+					  NULL,
 					  G_TYPE_NONE, 0);
 }
 
@@ -280,7 +280,7 @@ got_enum (GObject *source_object,
 	g_object_unref (data->completer->basenames_dir);
       g_list_free_full (data->completer->basenames, g_free);
 
-      /* Mark uptodate with no basenames */
+      /* Mark up-to-date with no basenames */
       data->completer->basenames_dir = g_object_ref (data->dir);
       data->completer->basenames = NULL;
       data->completer->basenames_are_escaped = data->should_escape;
@@ -406,9 +406,9 @@ init_completion (GFilenameCompleter *completer,
  *
  * Obtains a completion for @initial_text from @completer.
  *  
- * Returns: a completed string, or %NULL if no completion exists. 
- *     This string is not owned by GIO, so remember to g_free() it 
- *     when finished.
+ * Returns: (nullable) (transfer full): a completed string, or %NULL if no
+ *     completion exists. This string is not owned by GIO, so remember to g_free()
+ *     it when finished.
  **/
 char *
 g_filename_completer_get_completion_suffix (GFilenameCompleter *completer,

@@ -21,7 +21,9 @@
  */
 
 /* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
 #define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
 
 #include <glib.h>
 
@@ -32,24 +34,21 @@
 static void
 test_private1 (void)
 {
-  GPrivate *private1;
+  static GPrivate private = G_PRIVATE_INIT (NULL);
   gpointer value;
 
-  private1 = g_private_new (NULL);
-
-  value = g_private_get (private1);
+  value = g_private_get (&private);
   g_assert (value == NULL);
 
-  g_private_set (private1, GINT_TO_POINTER(1));
-  value = g_private_get (private1);
+  g_private_set (&private, GINT_TO_POINTER(1));
+  value = g_private_get (&private);
   g_assert_cmpint (GPOINTER_TO_INT (value), ==, 1);
 
-  g_private_set (private1, GINT_TO_POINTER(2));
-  value = g_private_get (private1);
+  g_private_set (&private, GINT_TO_POINTER(2));
+  value = g_private_get (&private);
   g_assert_cmpint (GPOINTER_TO_INT (value), ==, 2);
 }
 
-static GPrivate *private2;
 static gint private2_destroy_count;
 
 static void
@@ -57,6 +56,8 @@ private2_destroy (gpointer data)
 {
   g_atomic_int_inc (&private2_destroy_count);
 }
+
+static GPrivate private2 = G_PRIVATE_INIT (private2_destroy);
 
 static gpointer
 private2_func (gpointer data)
@@ -68,9 +69,9 @@ private2_func (gpointer data)
   for (i = 0; i < 1000; i++)
     {
       v = value + (i % 5);
-      g_private_set (private2, GINT_TO_POINTER(v));
+      g_private_set (&private2, GINT_TO_POINTER (v));
       g_usleep (1000);
-      v2 = GPOINTER_TO_INT(g_private_get (private2));
+      v2 = GPOINTER_TO_INT (g_private_get (&private2));
       g_assert_cmpint (v, ==, v2);
     }
 
@@ -93,10 +94,8 @@ test_private2 (void)
   GThread *thread[10];
   gint i;
 
-  private2 = g_private_new (private2_destroy);
-
-  g_private_set (private2, GINT_TO_POINTER(234));
-  g_private_replace (private2, GINT_TO_POINTER(123));
+  g_private_set (&private2, GINT_TO_POINTER (234));
+  g_private_replace (&private2, GINT_TO_POINTER (123));
 
   for (i = 0; i < 10; i++)
     thread[i] = g_thread_create (private2_func, GINT_TO_POINTER (i), TRUE, NULL);
@@ -147,6 +146,19 @@ test_private3 (void)
     thread = (HANDLE) _beginthreadex (NULL, 0, private3_func, NULL, 0, &ignore);
     WaitForSingleObject (thread, INFINITE);
     CloseHandle (thread);
+
+    /* FIXME: with static compilation on Windows this test will fail because
+     * it is mixing up glib threads with Microsoft native thread API. See
+     * comment in gthread-win32.c for g_system_thread_exit() implementation.
+     * Fix is not straightforward, possible solution could be to use FLS
+     * functions (instead of TLS) as proposed in
+     * https://gitlab.gnome.org/GNOME/glib/-/merge_requests/1655
+     */
+    if (!private3_freed)
+      {
+        g_test_skip ("FIXME: GPrivate with native win32 thread");
+        return;
+      }
   }
 #else
   {
@@ -331,7 +343,7 @@ sp5_func (gpointer data)
   g_assert_cmpint (GPOINTER_TO_INT (value), ==, v);
 
   if (g_test_verbose ())
-    g_print ("thread %d set sp5\n", v);
+    g_printerr ("thread %d set sp5\n", v);
   g_mutex_lock (&m5);
   g_atomic_int_inc (&count5);
   g_cond_signal (&c5a);
@@ -339,7 +351,7 @@ sp5_func (gpointer data)
   g_mutex_unlock (&m5);
 
   if (g_test_verbose ())
-    g_print ("thread %d get sp5\n", v);
+    g_printerr ("thread %d get sp5\n", v);
   value = g_static_private_get (&sp5);
   g_assert (value == NULL);
 
@@ -362,7 +374,7 @@ test_static_private5 (void)
     g_cond_wait (&c5a, &m5);
 
   if (g_test_verbose ())
-    g_print ("sp5 gets nuked\n");
+    g_printerr ("sp5 gets nuked\n");
 
   g_static_private_free (&sp5);
 
@@ -371,10 +383,6 @@ test_static_private5 (void)
 
   for (i = 0; i < 10; i++)
     g_thread_join (thread[i]);
-
-  g_mutex_clear (&m5);
-  g_cond_clear (&c5a);
-  g_cond_clear (&c5b);
 }
 
 int

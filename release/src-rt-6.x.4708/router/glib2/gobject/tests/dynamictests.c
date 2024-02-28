@@ -93,7 +93,8 @@ static GType test_module_get_type (void)
 	NULL,
 	sizeof (TestModule),
 	0,
-	(GInstanceInitFunc)NULL
+        (GInstanceInitFunc)NULL,
+        NULL,
       };
     object_type = g_type_register_static (G_TYPE_TYPE_MODULE, "TestModule", &object_info, 0);
   }
@@ -130,7 +131,7 @@ struct _DynamicObjectClass
 };
 
 static GType dynamic_object_get_type (void);
-G_DEFINE_DYNAMIC_TYPE(DynamicObject, dynamic_object, G_TYPE_OBJECT);
+G_DEFINE_DYNAMIC_TYPE(DynamicObject, dynamic_object, G_TYPE_OBJECT)
 
 static void
 dynamic_object_class_init (DynamicObjectClass *class)
@@ -166,25 +167,25 @@ static gpointer
 ref_unref_thread (gpointer data)
 {
   gint i;
-  /* first, syncronize with other threads,
+  /* first, synchronize with other threads,
    */
   if (g_test_verbose())
-    g_print ("WAITING!\n");
+    g_printerr ("WAITING!\n");
   g_mutex_lock (&sync_mutex);
   g_mutex_unlock (&sync_mutex);
   if (g_test_verbose ())
-    g_print ("STARTING\n");
+    g_printerr ("STARTING\n");
 
   /* ref/unref the klass 10000000 times */
   for (i = N_REFS; i; i--) {
     if (g_test_verbose ())
       if (i % 10)
-	g_print ("%d\n", i);
+	g_printerr ("%d\n", i);
     g_type_class_unref (g_type_class_ref ((GType) data));
   }
 
   if (g_test_verbose())
-    g_print ("DONE !\n");
+    g_printerr ("DONE !\n");
 
   return NULL;
 }

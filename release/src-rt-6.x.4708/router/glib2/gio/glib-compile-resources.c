@@ -1,10 +1,12 @@
 /*
  * Copyright © 2011 Red Hat, Inc
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the licence, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -30,6 +30,9 @@
 #include <stdio.h>
 #include <locale.h>
 #include <errno.h>
+#ifdef G_OS_UNIX
+#include <unistd.h>
+#endif
 #ifdef G_OS_WIN32
 #include <io.h>
 #endif
@@ -38,18 +41,11 @@
 #include <gio/gzlibcompressor.h>
 #include <gio/gconverteroutputstream.h>
 
-#ifdef HAVE_UNISTD_H
-#include <unistd.h>
-#endif
-
 #include <glib.h>
 #include "gvdb/gvdb-builder.h"
 
 #include "gconstructor_as_data.h"
-
-#ifdef G_OS_WIN32
 #include "glib/glib-private.h"
-#endif
 
 typedef struct
 {
@@ -79,6 +75,7 @@ typedef struct
 
 static gchar **sourcedirs = NULL;
 static gchar *xmllint = NULL;
+static gchar *jsonformat = NULL;
 static gchar *gdk_pixbuf_pixdata = NULL;
 
 static void
@@ -191,7 +188,7 @@ find_file (const gchar *filename)
   /* search all the sourcedirs for the correct files in order */
   for (i = 0; sourcedirs[i] != NULL; i++)
     {
-	real_file = g_build_filename (sourcedirs[i], filename, NULL);
+	real_file = g_build_path ("/", sourcedirs[i], filename, NULL);
 	exists = g_file_test (real_file, G_FILE_TEST_EXISTS);
 	if (exists)
 	  return real_file;
@@ -217,11 +214,11 @@ end_element (GMarkupParseContext  *context,
 
   else if (strcmp (element_name, "file") == 0)
     {
-      gchar *file, *real_file;
+      gchar *file;
+      gchar *real_file = NULL;
       gchar *key;
-      FileData *data;
+      FileData *data = NULL;
       char *tmp_file = NULL;
-      char *tmp_file2 = NULL;
 
       file = state->string->str;
       key = file;
@@ -241,15 +238,13 @@ end_element (GMarkupParseContext  *context,
 	  return;
 	}
 
-      data = g_new0 (FileData, 1);
-
       if (sourcedirs != NULL)
         {
 	  real_file = find_file (file);
-	  if (real_file == NULL)
+	  if (real_file == NULL && state->collect_data)
 	    {
 		g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-			     _("Failed to locate '%s' in any source directory"), file);
+			     _("Failed to locate “%s” in any source directory"), file);
 		return;
 	    }
 	}
@@ -257,15 +252,18 @@ end_element (GMarkupParseContext  *context,
         {
 	  gboolean exists;
 	  exists = g_file_test (file, G_FILE_TEST_EXISTS);
-	  if (!exists)
+	  if (!exists && state->collect_data)
 	    {
 	      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-			   _("Failed to locate '%s' in current directory"), file);
+			   _("Failed to locate “%s” in current directory"), file);
 	      return;
 	    }
-	  real_file = g_strdup (file);
 	}
 
+      if (real_file == NULL)
+        real_file = g_strdup (file);
+
+      data = g_new0 (FileData, 1);
       data->filename = g_strdup (real_file);
       if (!state->collect_data)
         goto done;
@@ -275,6 +273,7 @@ end_element (GMarkupParseContext  *context,
           gchar **options;
           guint i;
           gboolean xml_stripblanks = FALSE;
+          gboolean json_stripblanks = FALSE;
           gboolean to_pixdata = FALSE;
 
           options = g_strsplit (state->preproc_options, ",", -1);
@@ -285,122 +284,172 @@ end_element (GMarkupParseContext  *context,
                 xml_stripblanks = TRUE;
               else if (!strcmp (options[i], "to-pixdata"))
                 to_pixdata = TRUE;
+              else if (!strcmp (options[i], "json-stripblanks"))
+                json_stripblanks = TRUE;
               else
                 {
                   g_set_error (error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
-                               _("Unknown processing option \"%s\""), options[i]);
+                               _("Unknown processing option “%s”"), options[i]);
                   g_strfreev (options);
                   goto cleanup;
                 }
             }
           g_strfreev (options);
 
-          if (xml_stripblanks && xmllint != NULL)
+          if (xml_stripblanks)
             {
-              gchar *argv[8];
-              int status, fd, argc;
-              gchar *stderr_child = NULL;
-
-              tmp_file = g_strdup ("resource-XXXXXXXX");
-              if ((fd = g_mkstemp (tmp_file)) == -1)
+              /* This is not fatal: pretty-printed XML is still valid XML */
+              if (xmllint == NULL)
                 {
-                  int errsv = errno;
+                  static gboolean xmllint_warned = FALSE;
 
-                  g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               _("Failed to create temp file: %s"),
-                              g_strerror (errsv));
-                  g_free (tmp_file);
-                  tmp_file = NULL;
-                  goto cleanup;
+                  if (!xmllint_warned)
+                    {
+                      /* Translators: the first %s is a gresource XML attribute,
+                       * the second %s is an environment variable, and the third
+                       * %s is a command line tool
+                       */
+                      char *warn = g_strdup_printf (_("%s preprocessing requested, but %s is not set, and %s is not in PATH"),
+                                                    "xml-stripblanks",
+                                                    "XMLLINT",
+                                                    "xmllint");
+                      g_printerr ("%s\n", warn);
+                      g_free (warn);
+
+                      /* Only warn once */
+                      xmllint_warned = TRUE;
+                    }
                 }
-              close (fd);
-
-              argc = 0;
-              argv[argc++] = (gchar *) xmllint;
-              argv[argc++] = "--nonet";
-              argv[argc++] = "--noblanks";
-              argv[argc++] = "--output";
-              argv[argc++] = tmp_file;
-              argv[argc++] = real_file;
-              argv[argc++] = NULL;
-              g_assert (argc <= G_N_ELEMENTS (argv));
-
-              if (!g_spawn_sync (NULL /* cwd */, argv, NULL /* envv */,
-                                 G_SPAWN_STDOUT_TO_DEV_NULL,
-                                 NULL, NULL, NULL, &stderr_child, &status, &my_error))
+              else
                 {
-                  g_propagate_error (error, my_error);
-                  goto cleanup;
-                }
-	      
-	      /* Ugly...we shoud probably just let stderr be inherited */
-	      if (!g_spawn_check_exit_status (status, NULL))
-                {
-                  g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                               _("Error processing input file with xmllint:\n%s"), stderr_child);
-                  g_free (stderr_child);
-                  goto cleanup;
-                }
+                  GSubprocess *proc;
+                  int fd;
 
-              g_free (stderr_child);
-              g_free (real_file);
-              real_file = g_strdup (tmp_file);
+                  fd = g_file_open_tmp ("resource-XXXXXXXX", &tmp_file, error);
+                  if (fd < 0)
+                    goto cleanup;
+
+                  close (fd);
+
+                  proc = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_SILENCE, error,
+                                           xmllint, "--nonet", "--noblanks", "--output", tmp_file, real_file, NULL);
+                  g_free (real_file);
+                  real_file = NULL;
+
+                  if (!proc)
+                    goto cleanup;
+
+                  if (!g_subprocess_wait_check (proc, NULL, error))
+                    {
+                      g_object_unref (proc);
+                      goto cleanup;
+                    }
+
+                  g_object_unref (proc);
+
+                  real_file = g_strdup (tmp_file);
+                }
+            }
+
+          if (json_stripblanks)
+            {
+              /* As above, this is not fatal: pretty-printed JSON is still
+               * valid JSON
+               */
+              if (jsonformat == NULL)
+                {
+                  static gboolean jsonformat_warned = FALSE;
+
+                  if (!jsonformat_warned)
+                    {
+                      /* Translators: the first %s is a gresource XML attribute,
+                       * the second %s is an environment variable, and the third
+                       * %s is a command line tool
+                       */
+                      char *warn = g_strdup_printf (_("%s preprocessing requested, but %s is not set, and %s is not in PATH"),
+                                                    "json-stripblanks",
+                                                    "JSON_GLIB_FORMAT",
+                                                    "json-glib-format");
+                      g_printerr ("%s\n", warn);
+                      g_free (warn);
+
+                      /* Only warn once */
+                      jsonformat_warned = TRUE;
+                    }
+                }
+              else
+                {
+                  GSubprocess *proc;
+                  int fd;
+
+                  fd = g_file_open_tmp ("resource-XXXXXXXX", &tmp_file, error);
+                  if (fd < 0)
+                    goto cleanup;
+
+                  close (fd);
+
+                  proc = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_SILENCE, error,
+                                           jsonformat, "--output", tmp_file, real_file, NULL);
+                  g_free (real_file);
+                  real_file = NULL;
+
+                  if (!proc)
+                    goto cleanup;
+
+                  if (!g_subprocess_wait_check (proc, NULL, error))
+                    {
+                      g_object_unref (proc);
+                      goto cleanup;
+                    }
+
+                  g_object_unref (proc);
+
+                  real_file = g_strdup (tmp_file);
+                }
             }
 
           if (to_pixdata)
             {
-              gchar *argv[4];
-              gchar *stderr_child = NULL;
-              int status, fd, argc;
+	      GSubprocess *proc;
+              int fd;
 
+              /* This is a fatal error: if to-pixdata is used it means that
+               * the code loading the GResource expects a specific data format
+               */
               if (gdk_pixbuf_pixdata == NULL)
                 {
-                  g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                                       "to-pixbuf preprocessing requested but GDK_PIXBUF_PIXDATA "
-                                       "not set and gdk-pixbuf-pixdata not found in path");
+                  /* Translators: the first %s is a gresource XML attribute,
+                   * the second %s is an environment variable, and the third
+                   * %s is a command line tool
+                   */
+                  g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                               _("%s preprocessing requested, but %s is not set, and %s is not in PATH"),
+                               "to-pixdata",
+                               "GDK_PIXBUF_PIXDATA",
+                               "gdk-pixbuf-pixdata");
                   goto cleanup;
                 }
 
-              tmp_file2 = g_strdup ("resource-XXXXXXXX");
-              if ((fd = g_mkstemp (tmp_file2)) == -1)
-                {
-                  int errsv = errno;
+              fd = g_file_open_tmp ("resource-XXXXXXXX", &tmp_file, error);
+              if (fd < 0)
+                goto cleanup;
 
-                  g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errsv),
-                               _("Failed to create temp file: %s"),
-			       g_strerror (errsv));
-                  g_free (tmp_file2);
-                  tmp_file2 = NULL;
-                  goto cleanup;
-                }
               close (fd);
 
-              argc = 0;
-              argv[argc++] = (gchar *) gdk_pixbuf_pixdata;
-              argv[argc++] = real_file;
-              argv[argc++] = tmp_file2;
-              argv[argc++] = NULL;
-              g_assert (argc <= G_N_ELEMENTS (argv));
-
-              if (!g_spawn_sync (NULL /* cwd */, argv, NULL /* envv */,
-                                 G_SPAWN_STDOUT_TO_DEV_NULL,
-                                 NULL, NULL, NULL, &stderr_child, &status, &my_error))
-                {
-                  g_propagate_error (error, my_error);
-                  goto cleanup;
-                }
-	      
-	      if (!g_spawn_check_exit_status (status, NULL))
-                {
-                  g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-			       _("Error processing input file with to-pixdata:\n%s"), stderr_child);
-                  g_free (stderr_child);
-                  goto cleanup;
-                }
-
-              g_free (stderr_child);
+              proc = g_subprocess_new (G_SUBPROCESS_FLAGS_STDOUT_SILENCE, error,
+                                       gdk_pixbuf_pixdata, real_file, tmp_file, NULL);
               g_free (real_file);
-              real_file = g_strdup (tmp_file2);
+              real_file = NULL;
+
+	      if (!g_subprocess_wait_check (proc, NULL, error))
+		{
+		  g_object_unref (proc);
+                  goto cleanup;
+		}
+
+	      g_object_unref (proc);
+
+              real_file = g_strdup (tmp_file);
             }
 	}
 
@@ -429,11 +478,14 @@ end_element (GMarkupParseContext  *context,
 	      g_set_error (error, G_MARKUP_ERROR, G_MARKUP_ERROR_INVALID_CONTENT,
 			   _("Error compressing file %s"),
 			   real_file);
-	      goto cleanup;
+              g_object_unref (compressor);
+              g_object_unref (out);
+              g_object_unref (out2);
+              goto cleanup;
 	    }
 
 	  g_free (data->content);
-	  data->content_size = g_memory_output_stream_get_size (G_MEMORY_OUTPUT_STREAM (out));
+	  data->content_size = g_memory_output_stream_get_data_size (G_MEMORY_OUTPUT_STREAM (out));
 	  data->content = g_memory_output_stream_steal_data (G_MEMORY_OUTPUT_STREAM (out));
 
 	  g_object_unref (compressor);
@@ -443,9 +495,9 @@ end_element (GMarkupParseContext  *context,
 	  data->flags |= G_RESOURCE_FLAGS_COMPRESSED;
 	}
 
-    done:
-
+done:
       g_hash_table_insert (state->table, key, data);
+      data = NULL;
 
     cleanup:
       /* Cleanup */
@@ -465,11 +517,8 @@ end_element (GMarkupParseContext  *context,
           g_free (tmp_file);
         }
 
-      if (tmp_file2)
-        {
-          unlink (tmp_file2);
-          g_free (tmp_file2);
-        }
+      if (data != NULL)
+        file_data_free (data);
     }
 }
 
@@ -500,9 +549,10 @@ text (GMarkupParseContext  *context,
 
 static GHashTable *
 parse_resource_file (const gchar *filename,
-                     gboolean collect_data)
+                     gboolean     collect_data,
+                     GHashTable  *files)
 {
-  GMarkupParser parser = { start_element, end_element, text };
+  GMarkupParser parser = { start_element, end_element, text, NULL, NULL };
   ParseState state = { 0, };
   GMarkupParseContext *context;
   GError *error = NULL;
@@ -517,8 +567,8 @@ parse_resource_file (const gchar *filename,
       return NULL;
     }
 
-  state.table = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify)file_data_free);
   state.collect_data = collect_data;
+  state.table = g_hash_table_ref (files);
 
   context = g_markup_parse_context_new (&parser,
 					G_MARKUP_TREAT_CDATA_AS_TEXT |
@@ -531,7 +581,7 @@ parse_resource_file (const gchar *filename,
       g_printerr ("%s: %s.\n", filename, error->message);
       g_clear_error (&error);
     }
-  else if (collect_data)
+  else
     {
       GHashTableIter iter;
       const char *key;
@@ -571,10 +621,6 @@ parse_resource_file (const gchar *filename,
 			       g_variant_builder_end (&builder));
 	}
     }
-  else
-    {
-      table = g_hash_table_ref (state.table);
-    }
 
   g_hash_table_unref (state.table);
   g_markup_parse_context_free (context);
@@ -597,12 +643,163 @@ write_to_file (GHashTable   *table,
   return success;
 }
 
+static gboolean
+extension_in_set (const char *str,
+                  ...)
+{
+  va_list list;
+  const char *ext, *value;
+  gboolean rv = FALSE;
+
+  ext = strrchr (str, '.');
+  if (ext == NULL)
+    return FALSE;
+
+  ext++;
+  va_start (list, str);
+  while ((value = va_arg (list, const char *)) != NULL)
+    {
+      if (g_ascii_strcasecmp (ext, value) != 0)
+        continue;
+
+      rv = TRUE;
+      break;
+    }
+
+  va_end (list);
+  return rv;
+}
+
+/*
+ * We must escape any characters that `make` finds significant.
+ * This is largely a duplicate of the logic in gcc's `mkdeps.c:munge()`.
+ */
+static char *
+escape_makefile_string (const char *string)
+{
+  GString *str;
+  const char *p, *q;
+
+  str = g_string_sized_new (strlen (string) + 1);
+  for (p = string; *p != '\0'; ++p)
+    {
+      switch (*p)
+        {
+        case ' ':
+        case '\t':
+          /* GNU make uses a weird quoting scheme for white space.
+             A space or tab preceded by 2N+1 backslashes represents
+             N backslashes followed by space; a space or tab
+             preceded by 2N backslashes represents N backslashes at
+             the end of a file name; and backslashes in other
+             contexts should not be doubled.  */
+          for (q = p - 1; string <= q && *q == '\\';  q--)
+            g_string_append_c (str, '\\');
+          g_string_append_c (str, '\\');
+          break;
+
+        case '$':
+          g_string_append_c (str, '$');
+          break;
+
+        case '#':
+          g_string_append_c (str, '\\');
+          break;
+        }
+      g_string_append_c (str, *p);
+    }
+
+  return g_string_free (str, FALSE);
+}
+
+typedef enum {
+  COMPILER_GCC,
+  COMPILER_CLANG,
+  COMPILER_MSVC,
+  COMPILER_UNKNOWN
+} CompilerType;
+
+/* Get the compiler id from the platform, environment, or command line
+ *
+ * Keep compiler IDs consistent with https://mesonbuild.com/Reference-tables.html#compiler-ids
+ * for simplicity
+ */
+static CompilerType
+get_compiler_id (const char *compiler)
+{
+  char *base, *ext_p;
+  CompilerType compiler_type;
+
+  if (compiler == NULL)
+    {
+#ifdef G_OS_UNIX
+      const char *compiler_env = g_getenv ("CC");
+
+# ifdef __APPLE__
+      if (compiler_env == NULL || *compiler_env == '\0')
+        compiler = "clang";
+      else
+        compiler = compiler_env;
+# elif __linux__
+      if (compiler_env == NULL || *compiler_env == '\0')
+        compiler = "gcc";
+      else
+        compiler = compiler_env;
+# else
+      if (compiler_env == NULL || *compiler_env == '\0')
+        compiler = "unknown";
+      else
+        compiler = compiler_env;
+# endif
+#endif
+
+#ifdef G_OS_WIN32
+      if (g_getenv ("MSYSTEM") != NULL)
+        {
+          const char *compiler_env = g_getenv ("CC");
+
+          if (compiler_env == NULL || *compiler_env == '\0')
+            compiler = "gcc";
+          else
+            compiler = compiler_env;
+        }
+      else
+        compiler = "msvc";
+#endif
+    }
+
+  base = g_path_get_basename (compiler);
+  ext_p = strrchr (base, '.');
+  if (ext_p != NULL)
+    {
+      gsize offset = ext_p - base;
+      base[offset] = '\0';
+    }
+
+  compiler = base;
+
+  if (g_strcmp0 (compiler, "gcc") == 0)
+    compiler_type = COMPILER_GCC;
+  else if (g_strcmp0 (compiler, "clang") == 0)
+    compiler_type = COMPILER_CLANG;
+  else if (g_strcmp0 (compiler, "msvc") == 0)
+    compiler_type = COMPILER_MSVC;
+  else
+    compiler_type = COMPILER_UNKNOWN;
+
+  g_free (base);
+
+  return compiler_type;
+}
+
 int
 main (int argc, char **argv)
 {
   GError *error;
   GHashTable *table;
+  GHashTable *files;
   gchar *srcfile;
+  gboolean show_version_and_exit = FALSE;
   gchar *target = NULL;
   gchar *binary_target = NULL;
   gboolean generate_automatic = FALSE;
@@ -610,29 +807,39 @@ main (int argc, char **argv)
   gboolean generate_header = FALSE;
   gboolean manual_register = FALSE;
   gboolean internal = FALSE;
+  gboolean external_data = FALSE;
   gboolean generate_dependencies = FALSE;
+  gboolean generate_phony_targets = FALSE;
+  char *dependency_file = NULL;
   char *c_name = NULL;
   char *c_name_no_underscores;
   const char *linkage = "extern";
+  char *compiler = NULL;
+  CompilerType compiler_type = COMPILER_GCC;
   GOptionContext *context;
   GOptionEntry entries[] = {
-    { "target", 0, 0, G_OPTION_ARG_FILENAME, &target, N_("name of the output file"), N_("FILE") },
-    { "sourcedir", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &sourcedirs, N_("The directories where files are to be read from (default to current directory)"), N_("DIRECTORY") },
+    { "version", 0, 0, G_OPTION_ARG_NONE, &show_version_and_exit, N_("Show program version and exit"), NULL },
+    { "target", 0, 0, G_OPTION_ARG_FILENAME, &target, N_("Name of the output file"), N_("FILE") },
+    { "sourcedir", 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &sourcedirs, N_("The directories to load files referenced in FILE from (default: current directory)"), N_("DIRECTORY") },
     { "generate", 0, 0, G_OPTION_ARG_NONE, &generate_automatic, N_("Generate output in the format selected for by the target filename extension"), NULL },
     { "generate-header", 0, 0, G_OPTION_ARG_NONE, &generate_header, N_("Generate source header"), NULL },
-    { "generate-source", 0, 0, G_OPTION_ARG_NONE, &generate_source, N_("Generate sourcecode used to link in the resource file into your code"), NULL },
+    { "generate-source", 0, 0, G_OPTION_ARG_NONE, &generate_source, N_("Generate source code used to link in the resource file into your code"), NULL },
     { "generate-dependencies", 0, 0, G_OPTION_ARG_NONE, &generate_dependencies, N_("Generate dependency list"), NULL },
-    { "manual-register", 0, 0, G_OPTION_ARG_NONE, &manual_register, N_("Don't automatically create and register resource"), NULL },
-    { "internal", 0, 0, G_OPTION_ARG_NONE, &internal, N_("Don't export functions; declare them G_GNUC_INTERNAL"), NULL },
+    { "dependency-file", 0, 0, G_OPTION_ARG_FILENAME, &dependency_file, N_("Name of the dependency file to generate"), N_("FILE") },
+    { "generate-phony-targets", 0, 0, G_OPTION_ARG_NONE, &generate_phony_targets, N_("Include phony targets in the generated dependency file"), NULL },
+    { "manual-register", 0, 0, G_OPTION_ARG_NONE, &manual_register, N_("Don’t automatically create and register resource"), NULL },
+    { "internal", 0, 0, G_OPTION_ARG_NONE, &internal, N_("Don’t export functions; declare them G_GNUC_INTERNAL"), NULL },
+    { "external-data", 0, 0, G_OPTION_ARG_NONE, &external_data, N_("Don’t embed resource data in the C file; assume it's linked externally instead"), NULL },
     { "c-name", 0, 0, G_OPTION_ARG_STRING, &c_name, N_("C identifier name used for the generated source code"), NULL },
-    { NULL }
+    { "compiler", 'C', 0, G_OPTION_ARG_STRING, &compiler, N_("The target C compiler (default: the CC environment variable)"), NULL },
+    G_OPTION_ENTRY_NULL
   };
 
 #ifdef G_OS_WIN32
   gchar *tmp;
 #endif
 
-  setlocale (LC_ALL, "");
+  setlocale (LC_ALL, GLIB_DEFAULT_LOCALE);
   textdomain (GETTEXT_PACKAGE);
 
 #ifdef G_OS_WIN32
@@ -664,22 +871,34 @@ main (int argc, char **argv)
 
   g_option_context_free (context);
 
+  if (show_version_and_exit)
+    {
+      g_print (PACKAGE_VERSION "\n");
+      return 0;
+    }
+
   if (argc != 2)
     {
       g_printerr (_("You should give exactly one file name\n"));
+      g_free (c_name);
       return 1;
     }
 
   if (internal)
     linkage = "G_GNUC_INTERNAL";
 
+  compiler_type = get_compiler_id (compiler);
+  g_free (compiler);
+
   srcfile = argv[1];
 
   xmllint = g_strdup (g_getenv ("XMLLINT"));
   if (xmllint == NULL)
     xmllint = g_find_program_in_path ("xmllint");
-  if (xmllint == NULL)
-    g_printerr ("XMLLINT not set and xmllint not found in path; skipping xml preprocessing.\n");
+
+  jsonformat = g_strdup (g_getenv ("JSON_GLIB_FORMAT"));
+  if (jsonformat == NULL)
+    jsonformat = g_find_program_in_path ("json-glib-format");
 
   gdk_pixbuf_pixdata = g_strdup (g_getenv ("GDK_PIXBUF_PIXDATA"));
   if (gdk_pixbuf_pixdata == NULL)
@@ -699,6 +918,12 @@ main (int argc, char **argv)
 	    base[strlen(base) - strlen (".gresource")] = 0;
 	  target_basename = g_strconcat (base, ".c", NULL);
 	}
+      else if (generate_header)
+        {
+          if (g_str_has_suffix (base, ".gresource"))
+            base[strlen(base) - strlen (".gresource")] = 0;
+          target_basename = g_strconcat (base, ".h", NULL);
+        }
       else
 	{
 	  if (g_str_has_suffix (base, ".gresource"))
@@ -714,18 +939,97 @@ main (int argc, char **argv)
     }
   else if (generate_automatic)
     {
-      if (g_str_has_suffix (target, ".c"))
+      if (extension_in_set (target, "c", "cc", "cpp", "cxx", "c++", NULL))
         generate_source = TRUE;
-      else if (g_str_has_suffix (target, ".h"))
+      else if (extension_in_set (target, "h", "hh", "hpp", "hxx", "h++", NULL))
         generate_header = TRUE;
-      else if (g_str_has_suffix (target, ".gresource"))
-        ;
+      else if (extension_in_set (target, "gresource", NULL))
+        { }
     }
 
-  if ((table = parse_resource_file (srcfile, !generate_dependencies)) == NULL)
+  files = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, (GDestroyNotify)file_data_free);
+
+  if ((table = parse_resource_file (srcfile, !generate_dependencies, files)) == NULL)
     {
       g_free (target);
+      g_free (c_name);
+      g_hash_table_unref (files);
       return 1;
+    }
+
+  /* This can be used in the same invocation
+     as other generate commands */
+  if (dependency_file != NULL)
+    {
+      /* Generate a .d file that describes the dependencies for
+       * build tools, gcc -M -MF style */
+      GString *dep_string;
+      GHashTableIter iter;
+      gpointer key, data;
+      FileData *file_data;
+      char *escaped;
+
+      g_hash_table_iter_init (&iter, files);
+
+      dep_string = g_string_new (NULL);
+      escaped = escape_makefile_string (srcfile);
+      g_string_printf (dep_string, "%s:", escaped);
+      g_free (escaped);
+
+      /* First rule: foo.xml: resource1 resource2.. */
+      while (g_hash_table_iter_next (&iter, &key, &data))
+        {
+          file_data = data;
+          if (!g_str_equal (file_data->filename, srcfile))
+            {
+              escaped = escape_makefile_string (file_data->filename);
+              g_string_append_printf (dep_string, " %s", escaped);
+              g_free (escaped);
+            }
+        }
+
+      g_string_append (dep_string, "\n");
+
+      /* Optionally include phony targets as it silences `make` but
+       * isn't supported on `ninja` at the moment. See also: `gcc -MP`
+       */
+      if (generate_phony_targets)
+        {
+					g_string_append (dep_string, "\n");
+
+          /* One rule for every resource: resourceN: */
+          g_hash_table_iter_init (&iter, files);
+          while (g_hash_table_iter_next (&iter, &key, &data))
+            {
+              file_data = data;
+              if (!g_str_equal (file_data->filename, srcfile))
+                {
+                  escaped = escape_makefile_string (file_data->filename);
+                  g_string_append_printf (dep_string, "%s:\n\n", escaped);
+                  g_free (escaped);
+                }
+            }
+        }
+
+      if (g_str_equal (dependency_file, "-"))
+        {
+          g_print ("%s\n", dep_string->str);
+        }
+      else
+        {
+          if (!g_file_set_contents (dependency_file, dep_string->str, dep_string->len, &error))
+            {
+              g_printerr ("Error writing dependency file: %s\n", error->message);
+              g_string_free (dep_string, TRUE);
+              g_free (dependency_file);
+              g_error_free (error);
+              g_hash_table_unref (files);
+              return 1;
+            }
+        }
+
+      g_string_free (dep_string, TRUE);
+      g_free (dependency_file);
     }
 
   if (generate_dependencies)
@@ -734,11 +1038,13 @@ main (int argc, char **argv)
       gpointer key, data;
       FileData *file_data;
 
-      g_hash_table_iter_init (&iter, table);
+      g_hash_table_iter_init (&iter, files);
+
+      /* Generate list of files for direct use as dependencies in a Makefile */
       while (g_hash_table_iter_next (&iter, &key, &data))
         {
           file_data = data;
-          g_print ("%s\n",file_data->filename);
+          g_print ("%s\n", file_data->filename);
         }
     }
   else if (generate_source || generate_header)
@@ -749,6 +1055,8 @@ main (int argc, char **argv)
 	  if (fd == -1)
 	    {
 	      g_printerr ("Can't open temp file\n");
+	      g_free (c_name);
+              g_hash_table_unref (files);
 	      return 1;
 	    }
 	  close (fd);
@@ -772,13 +1080,14 @@ main (int argc, char **argv)
 	    {
 	      const char *first = G_CSET_A_2_Z G_CSET_a_2_z "_";
 	      const char *rest = G_CSET_A_2_Z G_CSET_a_2_z G_CSET_DIGITS "_";
-	      if (strchr ((i == 0) ? first : rest, base[i]) != NULL)
+	      if (strchr ((s->len == 0) ? first : rest, base[i]) != NULL)
 		g_string_append_c (s, base[i]);
 	      else if (base[i] == '-')
 		g_string_append_c (s, '_');
 
 	    }
 
+	  g_free (base);
 	  c_name = g_string_free (s, FALSE);
 	}
     }
@@ -794,6 +1103,8 @@ main (int argc, char **argv)
     {
       g_printerr ("%s\n", error->message);
       g_free (target);
+      g_free (c_name);
+      g_hash_table_unref (files);
       return 1;
     }
 
@@ -805,10 +1116,12 @@ main (int argc, char **argv)
       if (file == NULL)
 	{
 	  g_printerr ("can't write to file %s", target);
+	  g_free (c_name);
+          g_hash_table_unref (files);
 	  return 1;
 	}
 
-      fprintf (file,
+      g_fprintf (file,
 	       "#ifndef __RESOURCE_%s_H__\n"
 	       "#define __RESOURCE_%s_H__\n"
 	       "\n"
@@ -818,14 +1131,14 @@ main (int argc, char **argv)
 	       c_name, c_name, linkage, c_name);
 
       if (manual_register)
-	fprintf (file,
+	g_fprintf (file,
 		 "\n"
 		 "%s void %s_register_resource (void);\n"
 		 "%s void %s_unregister_resource (void);\n"
 		 "\n",
 		 linkage, c_name, linkage, c_name);
 
-      fprintf (file,
+      g_fprintf (file,
 	       "#endif\n");
 
       fclose (file);
@@ -836,11 +1149,14 @@ main (int argc, char **argv)
       guint8 *data;
       gsize data_size;
       gsize i;
+      const char *export = "G_MODULE_EXPORT";
 
       if (!g_file_get_contents (binary_target, (char **)&data,
 				&data_size, NULL))
 	{
 	  g_printerr ("can't read back temporary file");
+	  g_free (c_name);
+          g_hash_table_unref (files);
 	  return 1;
 	}
       g_unlink (binary_target);
@@ -849,10 +1165,15 @@ main (int argc, char **argv)
       if (file == NULL)
 	{
 	  g_printerr ("can't write to file %s", target);
+	  g_free (c_name);
+          g_hash_table_unref (files);
 	  return 1;
 	}
 
-      fprintf (file,
+      if (internal)
+        export = "G_GNUC_INTERNAL";
+
+      g_fprintf (file,
 	       "#include <gio/gio.h>\n"
 	       "\n"
 	       "#if defined (__ELF__) && ( __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 6))\n"
@@ -860,79 +1181,120 @@ main (int argc, char **argv)
 	       "#else\n"
 	       "# define SECTION\n"
 	       "#endif\n"
+	       "\n",
+	       c_name_no_underscores);
+
+      if (external_data)
+        {
+          g_fprintf (file,
+                     "extern const %s SECTION union { const guint8 data[%" G_GSIZE_FORMAT "]; const double alignment; void * const ptr;}  %s_resource_data;"
+                     "\n",
+                     export, data_size, c_name);
+        }
+      else
+        {
+          if (compiler_type == COMPILER_MSVC || compiler_type == COMPILER_UNKNOWN)
+            {
+              /* For Visual Studio builds: Avoid surpassing the 65535-character limit for a string, GitLab issue #1580 */
+              g_fprintf (file,
+                         "static const SECTION union { const guint8 data[%"G_GSIZE_FORMAT"]; const double alignment; void * const ptr;}  %s_resource_data = { {\n",
+                         data_size + 1 /* nul terminator */, c_name);
+
+              for (i = 0; i < data_size; i++)
+                {
+                  if (i % 16 == 0)
+                    g_fprintf (file, "  ");
+                  g_fprintf (file, "0%3.3o", (int)data[i]);
+                  if (i != data_size - 1)
+                    g_fprintf (file, ", ");
+                  if (i % 16 == 15 || i == data_size - 1)
+                     g_fprintf (file, "\n");
+                }
+
+              g_fprintf (file, "} };\n");
+            }
+          else
+            {
+              g_fprintf (file,
+                         "static const SECTION union { const guint8 data[%"G_GSIZE_FORMAT"]; const double alignment; void * const ptr;}  %s_resource_data = {\n  \"",
+                         data_size + 1 /* nul terminator */, c_name);
+
+              for (i = 0; i < data_size; i++)
+                {
+                  g_fprintf (file, "\\%3.3o", (int)data[i]);
+                  if (i % 16 == 15)
+                    g_fprintf (file, "\"\n  \"");
+                }
+
+              g_fprintf (file, "\" };\n");
+            }
+        }
+
+      g_fprintf (file,
 	       "\n"
-	       "static const SECTION union { const guint8 data[%"G_GSIZE_FORMAT"]; const double alignment; void * const ptr;}  %s_resource_data = { {\n",
-	       c_name_no_underscores, data_size, c_name);
-
-      for (i = 0; i < data_size; i++) {
-	if (i % 8 == 0)
-	  fprintf (file, "  ");
-	fprintf (file, "0x%2.2x", (int)data[i]);
-	if (i != data_size - 1)
-	  fprintf (file, ", ");
-	if ((i % 8 == 7) || (i == data_size - 1))
-	  fprintf (file, "\n");
-      }
-
-      fprintf (file, "} };\n");
-
-      fprintf (file,
+	       "static GStaticResource static_resource = { %s_resource_data.data, sizeof (%s_resource_data.data)%s, NULL, NULL, NULL };\n"
 	       "\n"
-	       "static GStaticResource static_resource = { %s_resource_data.data, sizeof (%s_resource_data.data), NULL, NULL, NULL };\n"
-	       "%s GResource *%s_get_resource (void);\n"
+	       "%s\n"
+	       "GResource *%s_get_resource (void);\n"
 	       "GResource *%s_get_resource (void)\n"
 	       "{\n"
 	       "  return g_static_resource_get_resource (&static_resource);\n"
 	       "}\n",
-	       c_name, c_name, linkage, c_name, c_name);
+	       c_name, c_name, (external_data ? "" : " - 1 /* nul terminator */"),
+	       export, c_name, c_name);
 
 
       if (manual_register)
 	{
-	  fprintf (file,
+	  g_fprintf (file,
 		   "\n"
-		   "%s void %s_unregister_resource (void);\n"
+		   "%s\n"
+		   "void %s_unregister_resource (void);\n"
 		   "void %s_unregister_resource (void)\n"
 		   "{\n"
 		   "  g_static_resource_fini (&static_resource);\n"
 		   "}\n"
 		   "\n"
-		   "%s void %s_register_resource (void);\n"
+		   "%s\n"
+		   "void %s_register_resource (void);\n"
 		   "void %s_register_resource (void)\n"
 		   "{\n"
 		   "  g_static_resource_init (&static_resource);\n"
 		   "}\n",
-		   linkage, c_name, c_name, linkage, c_name, c_name);
+		   export, c_name, c_name,
+		   export, c_name, c_name);
 	}
       else
 	{
-	  fprintf (file, "%s", gconstructor_code);
-	  fprintf (file,
+	  g_fprintf (file, "%s", gconstructor_code);
+	  g_fprintf (file,
 		   "\n"
 		   "#ifdef G_HAS_CONSTRUCTORS\n"
 		   "\n"
 		   "#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA\n"
-		   "#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(resource_constructor)\n"
+		   "#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(%sresource_constructor)\n"
 		   "#endif\n"
-		   "G_DEFINE_CONSTRUCTOR(resource_constructor)\n"
+		   "G_DEFINE_CONSTRUCTOR(%sresource_constructor)\n"
 		   "#ifdef G_DEFINE_DESTRUCTOR_NEEDS_PRAGMA\n"
-		   "#pragma G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(resource_destructor)\n"
+		   "#pragma G_DEFINE_DESTRUCTOR_PRAGMA_ARGS(%sresource_destructor)\n"
 		   "#endif\n"
-		   "G_DEFINE_DESTRUCTOR(resource_destructor)\n"
+		   "G_DEFINE_DESTRUCTOR(%sresource_destructor)\n"
 		   "\n"
 		   "#else\n"
 		   "#warning \"Constructor not supported on this compiler, linking in resources will not work\"\n"
 		   "#endif\n"
 		   "\n"
-		   "static void resource_constructor (void)\n"
+		   "static void %sresource_constructor (void)\n"
 		   "{\n"
 		   "  g_static_resource_init (&static_resource);\n"
 		   "}\n"
 		   "\n"
-		   "static void resource_destructor (void)\n"
+		   "static void %sresource_destructor (void)\n"
 		   "{\n"
 		   "  g_static_resource_fini (&static_resource);\n"
-		   "}\n");
+		   "}\n",
+           c_name, c_name, c_name,
+           c_name, c_name, c_name);
 	}
 
       fclose (file);
@@ -944,6 +1306,9 @@ main (int argc, char **argv)
   g_free (target);
   g_hash_table_destroy (table);
   g_free (xmllint);
+  g_free (jsonformat);
+  g_free (c_name);
+  g_hash_table_unref (files);
 
   return 0;
 }

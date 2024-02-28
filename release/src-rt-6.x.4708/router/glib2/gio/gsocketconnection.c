@@ -4,10 +4,12 @@
  *           © 2008 codethink
  * Copyright © 2009 Red Hat, Inc
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -31,6 +31,7 @@
 
 #include "gsocketoutputstream.h"
 #include "gsocketinputstream.h"
+#include "gioprivate.h"
 #include <gio/giostream.h>
 #include <gio/gtask.h>
 #include "gunixconnection.h"
@@ -57,6 +58,10 @@
  * custom socket connection types for specific combination of socket
  * family/type/protocol using g_socket_connection_factory_register_type().
  *
+ * To close a #GSocketConnection, use g_io_stream_close(). Closing both
+ * substreams of the #GIOStream separately will not close the underlying
+ * #GSocket.
+ *
  * Since: 2.22
  */
 
@@ -71,6 +76,8 @@ struct _GSocketConnectionPrivate
   GSocket       *socket;
   GInputStream  *input_stream;
   GOutputStream *output_stream;
+
+  GSocketAddress *cached_remote_address;
 
   gboolean       in_dispose;
 };
@@ -134,7 +141,7 @@ g_socket_connection_is_connected (GSocketConnection  *connection)
  * g_socket_connection_connect:
  * @connection: a #GSocketConnection
  * @address: a #GSocketAddress specifying the remote address.
- * @cancellable: (allow-none): a %GCancellable or %NULL
+ * @cancellable: (nullable): a %GCancellable or %NULL
  * @error: #GError for error reporting, or %NULL to ignore.
  *
  * Connect @connection to the specified remote address.
@@ -164,7 +171,7 @@ static gboolean g_socket_connection_connect_callback (GSocket      *socket,
  * g_socket_connection_connect_async:
  * @connection: a #GSocketConnection
  * @address: a #GSocketAddress specifying the remote address.
- * @cancellable: (allow-none): a %GCancellable or %NULL
+ * @cancellable: (nullable): a %GCancellable or %NULL
  * @callback: (scope async): a #GAsyncReadyCallback
  * @user_data: (closure): user data for the callback
  *
@@ -191,6 +198,7 @@ g_socket_connection_connect_async (GSocketConnection   *connection,
   g_return_if_fail (G_IS_SOCKET_ADDRESS (address));
 
   task = g_task_new (connection, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_socket_connection_connect_async);
 
   g_socket_set_blocking (connection->priv->socket, FALSE);
 
@@ -267,7 +275,7 @@ g_socket_connection_connect_finish (GSocketConnection  *connection,
  * This can be useful if you want to do something unusual on it
  * not supported by the #GSocketConnection APIs.
  *
- * Returns: (transfer none): a #GSocketAddress or %NULL on error.
+ * Returns: (transfer none): a #GSocket or %NULL on error.
  *
  * Since: 2.22
  */
@@ -305,6 +313,13 @@ g_socket_connection_get_local_address (GSocketConnection  *connection,
  *
  * Try to get the remote address of a socket connection.
  *
+ * Since GLib 2.40, when used with g_socket_client_connect() or
+ * g_socket_client_connect_async(), during emission of
+ * %G_SOCKET_CLIENT_CONNECTING, this function will return the remote
+ * address that will be used for the connection.  This allows
+ * applications to print e.g. "Connecting to example.com
+ * (10.42.77.3)...".
+ *
  * Returns: (transfer full): a #GSocketAddress or %NULL on error.
  *     Free the returned object with g_object_unref().
  *
@@ -314,7 +329,25 @@ GSocketAddress *
 g_socket_connection_get_remote_address (GSocketConnection  *connection,
 					GError            **error)
 {
+  if (!g_socket_is_connected (connection->priv->socket))
+    {
+      return connection->priv->cached_remote_address ?
+        g_object_ref (connection->priv->cached_remote_address) : NULL;
+    }
   return g_socket_get_remote_address (connection->priv->socket, error);
+}
+
+/* Private API allowing applications to retrieve the resolved address
+ * now, before we start connecting.
+ *
+ * https://bugzilla.gnome.org/show_bug.cgi?id=712547
+ */
+void
+g_socket_connection_set_cached_remote_address (GSocketConnection *connection,
+                                               GSocketAddress    *address)
+{
+  g_clear_object (&connection->priv->cached_remote_address);
+  connection->priv->cached_remote_address = address ? g_object_ref (address) : NULL;
 }
 
 static void
@@ -358,7 +391,9 @@ g_socket_connection_set_property (GObject      *object,
 static void
 g_socket_connection_constructed (GObject *object)
 {
+#ifndef G_DISABLE_ASSERT
   GSocketConnection *connection = G_SOCKET_CONNECTION (object);
+#endif
 
   g_assert (connection->priv->socket != NULL);
 }
@@ -369,6 +404,8 @@ g_socket_connection_dispose (GObject *object)
   GSocketConnection *connection = G_SOCKET_CONNECTION (object);
 
   connection->priv->in_dispose = TRUE;
+
+  g_clear_object (&connection->priv->cached_remote_address);
 
   G_OBJECT_CLASS (g_socket_connection_parent_class)
     ->dispose (object);
@@ -469,6 +506,7 @@ g_socket_connection_close_async (GIOStream           *stream,
   class = G_IO_STREAM_GET_CLASS (stream);
 
   task = g_task_new (stream, cancellable, callback, user_data);
+  g_task_set_source_tag (task, g_socket_connection_close_async);
 
   /* socket close is not blocked, just do it! */
   error = NULL;
@@ -579,9 +617,7 @@ g_socket_connection_factory_register_type (GType         g_type,
 static void
 init_builtin_types (void)
 {
-#ifndef G_OS_WIN32
   g_type_ensure (G_TYPE_UNIX_CONNECTION);
-#endif
   g_type_ensure (G_TYPE_TCP_CONNECTION);
 }
 

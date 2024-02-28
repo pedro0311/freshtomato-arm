@@ -2,10 +2,12 @@
  * 
  * Copyright (C) 2006-2007 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Alexander Larsson <alexl@redhat.com>
  */
@@ -27,6 +27,7 @@
 #include "gmountoperation.h"
 #include "gioenumtypes.h"
 #include "glibintl.h"
+#include "gmarshal-internal.h"
 
 
 /**
@@ -49,6 +50,12 @@
  * #GtkMountOperation. If no user interaction is desired (for example
  * when automounting filesystems at login time), usually %NULL can be
  * passed, see each method taking a #GMountOperation for details.
+ *
+ * The term ‘TCRYPT’ is used to mean ‘compatible with TrueCrypt and VeraCrypt’.
+ * [TrueCrypt](https://en.wikipedia.org/wiki/TrueCrypt) is a discontinued system for
+ * encrypting file containers, partitions or whole disks, typically used with Windows.
+ * [VeraCrypt](https://www.veracrypt.fr/) is a maintained fork of TrueCrypt with various
+ * improvements and auditing fixes.
  */
 
 enum {
@@ -70,6 +77,9 @@ struct _GMountOperationPrivate {
   gboolean anonymous;
   GPasswordSave password_save;
   int choice;
+  gboolean hidden_volume;
+  gboolean system_volume;
+  guint pim;
 };
 
 enum {
@@ -79,7 +89,10 @@ enum {
   PROP_ANONYMOUS,
   PROP_DOMAIN,
   PROP_PASSWORD_SAVE,
-  PROP_CHOICE
+  PROP_CHOICE,
+  PROP_IS_TCRYPT_HIDDEN_VOLUME,
+  PROP_IS_TCRYPT_SYSTEM_VOLUME,
+  PROP_PIM
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE (GMountOperation, g_mount_operation, G_TYPE_OBJECT)
@@ -126,6 +139,21 @@ g_mount_operation_set_property (GObject      *object,
                                     g_value_get_int (value));
       break;
 
+    case PROP_IS_TCRYPT_HIDDEN_VOLUME:
+      g_mount_operation_set_is_tcrypt_hidden_volume (operation,
+                                                     g_value_get_boolean (value));
+      break;
+
+    case PROP_IS_TCRYPT_SYSTEM_VOLUME:
+      g_mount_operation_set_is_tcrypt_system_volume (operation,
+                                                     g_value_get_boolean (value));
+      break;
+
+    case PROP_PIM:
+        g_mount_operation_set_pim (operation,
+                                   g_value_get_uint (value));
+        break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -169,6 +197,18 @@ g_mount_operation_get_property (GObject    *object,
 
     case PROP_CHOICE:
       g_value_set_int (value, priv->choice);
+      break;
+
+    case PROP_IS_TCRYPT_HIDDEN_VOLUME:
+      g_value_set_boolean (value, priv->hidden_volume);
+      break;
+
+    case PROP_IS_TCRYPT_SYSTEM_VOLUME:
+      g_value_set_boolean (value, priv->system_volume);
+      break;
+
+    case PROP_PIM:
+      g_value_set_uint (value, priv->pim);
       break;
 
     default:
@@ -284,9 +324,12 @@ g_mount_operation_class_init (GMountOperationClass *klass)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GMountOperationClass, ask_password),
 		  NULL, NULL,
-		  NULL,
+		  _g_cclosure_marshal_VOID__STRING_STRING_STRING_FLAGS,
 		  G_TYPE_NONE, 4,
 		  G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_ASK_PASSWORD_FLAGS);
+  g_signal_set_va_marshaller (signals[ASK_PASSWORD],
+                              G_TYPE_FROM_CLASS (object_class),
+                              _g_cclosure_marshal_VOID__STRING_STRING_STRING_FLAGSv);
 		  
   /**
    * GMountOperation::ask-question:
@@ -307,9 +350,12 @@ g_mount_operation_class_init (GMountOperationClass *klass)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GMountOperationClass, ask_question),
 		  NULL, NULL,
-		  NULL,
+		  _g_cclosure_marshal_VOID__STRING_BOXED,
 		  G_TYPE_NONE, 2,
 		  G_TYPE_STRING, G_TYPE_STRV);
+  g_signal_set_va_marshaller (signals[ASK_QUESTION],
+                              G_TYPE_FROM_CLASS (object_class),
+                              _g_cclosure_marshal_VOID__STRING_BOXEDv);
 		  
   /**
    * GMountOperation::reply:
@@ -324,7 +370,7 @@ g_mount_operation_class_init (GMountOperationClass *klass)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GMountOperationClass, reply),
 		  NULL, NULL,
-		  g_cclosure_marshal_VOID__ENUM,
+		  NULL,
 		  G_TYPE_NONE, 1,
 		  G_TYPE_MOUNT_OPERATION_RESULT);
 
@@ -345,7 +391,7 @@ g_mount_operation_class_init (GMountOperationClass *klass)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GMountOperationClass, aborted),
 		  NULL, NULL,
-		  g_cclosure_marshal_VOID__VOID,
+		  NULL,
 		  G_TYPE_NONE, 0);
 
   /**
@@ -377,14 +423,17 @@ g_mount_operation_class_init (GMountOperationClass *klass)
 		  G_SIGNAL_RUN_LAST,
 		  G_STRUCT_OFFSET (GMountOperationClass, show_processes),
 		  NULL, NULL,
-		  NULL,
+		  _g_cclosure_marshal_VOID__STRING_BOXED_BOXED,
 		  G_TYPE_NONE, 3,
 		  G_TYPE_STRING, G_TYPE_ARRAY, G_TYPE_STRV);
+  g_signal_set_va_marshaller (signals[SHOW_PROCESSES],
+                              G_TYPE_FROM_CLASS (object_class),
+                              _g_cclosure_marshal_VOID__STRING_BOXED_BOXEDv);
 
   /**
    * GMountOperation::show-unmount-progress:
    * @op: a #GMountOperation:
-   * @message: string containing a mesage to display to the user
+   * @message: string containing a message to display to the user
    * @time_left: the estimated time left before the operation completes,
    *     in microseconds, or -1
    * @bytes_left: the amount of bytes to be written before the operation
@@ -415,9 +464,13 @@ g_mount_operation_class_init (GMountOperationClass *klass)
                   G_TYPE_FROM_CLASS (object_class),
                   G_SIGNAL_RUN_LAST,
                   G_STRUCT_OFFSET (GMountOperationClass, show_unmount_progress),
-                  NULL, NULL, NULL,
+                  NULL, NULL,
+                  _g_cclosure_marshal_VOID__STRING_INT64_INT64,
                   G_TYPE_NONE, 3,
                   G_TYPE_STRING, G_TYPE_INT64, G_TYPE_INT64);
+  g_signal_set_va_marshaller (signals[SHOW_UNMOUNT_PROGRESS],
+                              G_TYPE_FROM_CLASS (object_class),
+                              _g_cclosure_marshal_VOID__STRING_INT64_INT64v);
 
   /**
    * GMountOperation:username:
@@ -506,6 +559,60 @@ g_mount_operation_class_init (GMountOperationClass *klass)
                                                      0, G_MAXINT, 0,
                                                      G_PARAM_READWRITE|
                                                      G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
+
+  /**
+   * GMountOperation:is-tcrypt-hidden-volume:
+   *
+   * Whether the device to be unlocked is a TCRYPT hidden volume.
+   * See [the VeraCrypt documentation](https://www.veracrypt.fr/en/Hidden%20Volume.html).
+   *
+   * Since: 2.58
+   */
+  g_object_class_install_property (object_class,
+                                   PROP_IS_TCRYPT_HIDDEN_VOLUME,
+                                   g_param_spec_boolean ("is-tcrypt-hidden-volume",
+                                                         P_("TCRYPT Hidden Volume"),
+                                                         P_("Whether to unlock a TCRYPT hidden volume. See https://www.veracrypt.fr/en/Hidden%20Volume.html."),
+                                                         FALSE,
+                                                         G_PARAM_READWRITE|
+                                                         G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
+
+  /**
+  * GMountOperation:is-tcrypt-system-volume:
+  *
+  * Whether the device to be unlocked is a TCRYPT system volume.
+  * In this context, a system volume is a volume with a bootloader
+  * and operating system installed. This is only supported for Windows
+  * operating systems. For further documentation, see
+  * [the VeraCrypt documentation](https://www.veracrypt.fr/en/System%20Encryption.html).
+  *
+  * Since: 2.58
+  */
+  g_object_class_install_property (object_class,
+                                   PROP_IS_TCRYPT_SYSTEM_VOLUME,
+                                   g_param_spec_boolean ("is-tcrypt-system-volume",
+                                                         P_("TCRYPT System Volume"),
+                                                         P_("Whether to unlock a TCRYPT system volume. Only supported for unlocking Windows system volumes. See https://www.veracrypt.fr/en/System%20Encryption.html."),
+                                                         FALSE,
+                                                         G_PARAM_READWRITE|
+                                                         G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
+
+  /**
+  * GMountOperation:pim:
+  *
+  * The VeraCrypt PIM value, when unlocking a VeraCrypt volume. See
+  * [the VeraCrypt documentation](https://www.veracrypt.fr/en/Personal%20Iterations%20Multiplier%20(PIM).html).
+  *
+  * Since: 2.58
+  */
+  g_object_class_install_property (object_class,
+                                   PROP_PIM,
+                                   g_param_spec_uint ("pim",
+                                                      P_("PIM"),
+                                                      P_("The VeraCrypt PIM value"),
+                                                      0, G_MAXUINT, 0,
+                                                      G_PARAM_READWRITE|
+                                                      G_PARAM_STATIC_NAME|G_PARAM_STATIC_NICK|G_PARAM_STATIC_BLURB));
 }
 
 static void
@@ -533,7 +640,7 @@ g_mount_operation_new (void)
  * 
  * Get the user name from the mount operation.
  *
- * Returns: a string containing the user name.
+ * Returns: (nullable): a string containing the user name.
  **/
 const char *
 g_mount_operation_get_username (GMountOperation *op)
@@ -545,7 +652,7 @@ g_mount_operation_get_username (GMountOperation *op)
 /**
  * g_mount_operation_set_username:
  * @op: a #GMountOperation.
- * @username: input username.
+ * @username: (nullable): input username.
  *
  * Sets the user name within @op to @username.
  **/
@@ -565,7 +672,7 @@ g_mount_operation_set_username (GMountOperation *op,
  *
  * Gets a password from the mount operation. 
  *
- * Returns: a string containing the password within @op.
+ * Returns: (nullable): a string containing the password within @op.
  **/
 const char *
 g_mount_operation_get_password (GMountOperation *op)
@@ -577,7 +684,7 @@ g_mount_operation_get_password (GMountOperation *op)
 /**
  * g_mount_operation_set_password:
  * @op: a #GMountOperation.
- * @password: password to set.
+ * @password: (nullable): password to set.
  * 
  * Sets the mount operation's password to @password.  
  *
@@ -636,7 +743,7 @@ g_mount_operation_set_anonymous (GMountOperation *op,
  * 
  * Gets the domain of the mount operation.
  * 
- * Returns: a string set to the domain. 
+ * Returns: (nullable): a string set to the domain.
  **/
 const char *
 g_mount_operation_get_domain (GMountOperation *op)
@@ -648,7 +755,7 @@ g_mount_operation_get_domain (GMountOperation *op)
 /**
  * g_mount_operation_set_domain:
  * @op: a #GMountOperation.
- * @domain: the domain to set.
+ * @domain: (nullable): the domain to set.
  * 
  * Sets the mount operation's domain. 
  **/  
@@ -708,7 +815,7 @@ g_mount_operation_set_password_save (GMountOperation *op,
  * Gets a choice from the mount operation.
  *
  * Returns: an integer containing an index of the user's choice from 
- * the choice's list, or %0.
+ * the choice's list, or `0`.
  **/
 int
 g_mount_operation_get_choice (GMountOperation *op)
@@ -735,6 +842,130 @@ g_mount_operation_set_choice (GMountOperation *op,
     {
       priv->choice = choice;
       g_object_notify (G_OBJECT (op), "choice");
+    }
+}
+
+/**
+ * g_mount_operation_get_is_tcrypt_hidden_volume:
+ * @op: a #GMountOperation.
+ *
+ * Check to see whether the mount operation is being used
+ * for a TCRYPT hidden volume.
+ *
+ * Returns: %TRUE if mount operation is for hidden volume.
+ *
+ * Since: 2.58
+ **/
+gboolean
+g_mount_operation_get_is_tcrypt_hidden_volume (GMountOperation *op)
+{
+  g_return_val_if_fail (G_IS_MOUNT_OPERATION (op), FALSE);
+  return op->priv->hidden_volume;
+}
+
+/**
+ * g_mount_operation_set_is_tcrypt_hidden_volume:
+ * @op: a #GMountOperation.
+ * @hidden_volume: boolean value.
+ *
+ * Sets the mount operation to use a hidden volume if @hidden_volume is %TRUE.
+ *
+ * Since: 2.58
+ **/
+void
+g_mount_operation_set_is_tcrypt_hidden_volume (GMountOperation *op,
+                                               gboolean hidden_volume)
+{
+  GMountOperationPrivate *priv;
+  g_return_if_fail (G_IS_MOUNT_OPERATION (op));
+  priv = op->priv;
+
+  if (priv->hidden_volume != hidden_volume)
+    {
+      priv->hidden_volume = hidden_volume;
+      g_object_notify (G_OBJECT (op), "is-tcrypt-hidden-volume");
+    }
+}
+
+/**
+ * g_mount_operation_get_is_tcrypt_system_volume:
+ * @op: a #GMountOperation.
+ *
+ * Check to see whether the mount operation is being used
+ * for a TCRYPT system volume.
+ *
+ * Returns: %TRUE if mount operation is for system volume.
+ *
+ * Since: 2.58
+ **/
+gboolean
+g_mount_operation_get_is_tcrypt_system_volume (GMountOperation *op)
+{
+  g_return_val_if_fail (G_IS_MOUNT_OPERATION (op), FALSE);
+  return op->priv->system_volume;
+}
+
+/**
+ * g_mount_operation_set_is_tcrypt_system_volume:
+ * @op: a #GMountOperation.
+ * @system_volume: boolean value.
+ *
+ * Sets the mount operation to use a system volume if @system_volume is %TRUE.
+ *
+ * Since: 2.58
+ **/
+void
+g_mount_operation_set_is_tcrypt_system_volume (GMountOperation *op,
+                                               gboolean system_volume)
+{
+  GMountOperationPrivate *priv;
+  g_return_if_fail (G_IS_MOUNT_OPERATION (op));
+  priv = op->priv;
+
+  if (priv->system_volume != system_volume)
+    {
+      priv->system_volume = system_volume;
+      g_object_notify (G_OBJECT (op), "is-tcrypt-system-volume");
+    }
+}
+
+/**
+ * g_mount_operation_get_pim:
+ * @op: a #GMountOperation.
+ *
+ * Gets a PIM from the mount operation.
+ *
+ * Returns: The VeraCrypt PIM within @op.
+ *
+ * Since: 2.58
+ **/
+guint
+g_mount_operation_get_pim (GMountOperation *op)
+{
+  g_return_val_if_fail (G_IS_MOUNT_OPERATION (op), 0);
+  return op->priv->pim;
+}
+
+/**
+ * g_mount_operation_set_pim:
+ * @op: a #GMountOperation.
+ * @pim: an unsigned integer.
+ *
+ * Sets the mount operation's PIM to @pim.
+ *
+ * Since: 2.58
+ **/
+void
+g_mount_operation_set_pim (GMountOperation *op,
+                           guint pim)
+{
+  GMountOperationPrivate *priv;
+  g_return_if_fail (G_IS_MOUNT_OPERATION (op));
+  priv = op->priv;
+  if (priv->pim != pim)
+    {
+      priv->pim = pim;
+      g_object_notify (G_OBJECT (op), "pim");
     }
 }
 

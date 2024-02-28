@@ -8,7 +8,7 @@ test_write (void)
   GError *error;
   const gchar buffer[] = "abcdefghijklmnopqrstuvwxyz";
 
-  base = g_memory_output_stream_new (g_malloc0 (20), 20, g_realloc, g_free);
+  base = g_memory_output_stream_new (g_malloc0 (20), 20, NULL, g_free);
   out = g_buffered_output_stream_new (base);
 
   g_assert_cmpint (g_buffered_output_stream_get_buffer_size (G_BUFFERED_OUTPUT_STREAM (out)), ==, 4096);
@@ -128,7 +128,7 @@ test_seek (void)
   gboolean ret;
   const gchar buffer[] = "abcdefghijklmnopqrstuvwxyz";
 
-  base = G_MEMORY_OUTPUT_STREAM (g_memory_output_stream_new (g_malloc0 (30), 30, g_realloc, g_free));
+  base = G_MEMORY_OUTPUT_STREAM (g_memory_output_stream_new (g_malloc0 (30), 30, NULL, g_free));
   out = g_buffered_output_stream_new_sized (G_OUTPUT_STREAM (base), 8);
   seekable = G_SEEKABLE (out);
   error = NULL;
@@ -270,6 +270,7 @@ test_truncate(void)
 
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, len);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 'a');
   g_assert_cmpint (stream_data[1], ==, 'b');
   g_assert_cmpint (stream_data[2], ==, 'c');
@@ -281,6 +282,7 @@ test_truncate(void)
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 4);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 'a');
   g_assert_cmpint (stream_data[1], ==, 'b');
   g_assert_cmpint (stream_data[2], ==, 'c');
@@ -291,7 +293,8 @@ test_truncate(void)
   g_assert_no_error (error);
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 6);
-  g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 4);
+  g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 6);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 'a');
   g_assert_cmpint (stream_data[1], ==, 'b');
   g_assert_cmpint (stream_data[2], ==, 'c');
@@ -303,6 +306,7 @@ test_truncate(void)
   g_assert (res);
   g_assert_cmpint (g_memory_output_stream_get_size (base_stream), ==, 2);
   g_assert_cmpint (g_memory_output_stream_get_data_size (base_stream), ==, 2);
+  stream_data = g_memory_output_stream_get_data (base_stream);
   g_assert_cmpint (stream_data[0], ==, 'a');
   g_assert_cmpint (stream_data[1], ==, 'b');
 

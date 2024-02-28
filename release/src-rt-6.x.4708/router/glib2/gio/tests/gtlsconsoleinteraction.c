@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2011 Collabora, Ltd.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Author: Stef Walter <stefw@collabora.co.uk>
  */
@@ -34,11 +34,11 @@
 
 /*
  * WARNING: This is not the example you're looking for [slow hand wave]. This
- * is not industrial strength, it's just for testing. It uses embarassing
+ * is not industrial strength, it's just for testing. It uses embarrassing
  * functions like getpass() and does lazy things with threads.
  */
 
-G_DEFINE_TYPE (GTlsConsoleInteraction, g_tls_console_interaction, G_TYPE_TLS_INTERACTION);
+G_DEFINE_TYPE (GTlsConsoleInteraction, g_tls_console_interaction, G_TYPE_TLS_INTERACTION)
 
 #if defined(G_OS_WIN32) || defined(__BIONIC__)
 /* win32 doesn't have getpass() */

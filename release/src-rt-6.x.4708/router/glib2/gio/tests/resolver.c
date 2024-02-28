@@ -4,10 +4,12 @@
  * 
  * Copyright (C) 2008 Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -15,9 +17,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "config.h"
@@ -28,7 +28,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef G_OS_UNIX
 #include <unistd.h>
+#endif
 
 #include <gio/gio.h>
 
@@ -40,16 +42,16 @@ static gboolean synchronous = FALSE;
 static guint connectable_count = 0;
 static GResolverRecordType record_type = 0;
 
-static void G_GNUC_NORETURN
+static G_NORETURN void
 usage (void)
 {
 	fprintf (stderr, "Usage: resolver [-s] [hostname | IP | service/protocol/domain ] ...\n");
-	fprintf (stderr, "Usage: resolver [-s] [-t MX|TXT|NS|SOA] rrname ...\n");
+	fprintf (stderr, "Usage: resolver [-s] [-t MX|TXT|NS|SOA|SRV] rrname ...\n");
 	fprintf (stderr, "       resolver [-s] -c NUMBER [hostname | IP | service/protocol/domain ]\n");
 	fprintf (stderr, "       Use -s to do synchronous lookups.\n");
 	fprintf (stderr, "       Use -c NUMBER (and only a single resolvable argument) to test GSocketConnectable.\n");
 	fprintf (stderr, "       The given NUMBER determines how many times the connectable will be enumerated.\n");
-	fprintf (stderr, "       Use -t with MX, TXT, NS or SOA to lookup DNS records of those types.\n");
+	fprintf (stderr, "       Use -t with MX, TXT, NS, SOA or SRV to look up DNS records of those types.\n");
 	exit (1);
 }
 
@@ -222,7 +224,48 @@ print_resolved_txt (const char *rrname,
           for (i = 0; contents[i] != NULL; i++)
             printf ("%s\n", contents[i]);
           g_variant_unref (t->data);
+          g_free (contents);
         }
+      g_list_free (records);
+    }
+  printf ("\n");
+
+  done_lookup ();
+  G_UNLOCK (response);
+}
+
+static void
+print_resolved_srv (const char *rrname,
+                    GList      *records,
+                    GError     *error)
+{
+  G_LOCK (response);
+  printf ("Domain: %s\n", rrname);
+  if (error)
+    {
+      printf ("Error: %s\n", error->message);
+      g_error_free (error);
+    }
+  else if (!records)
+    {
+      printf ("no SRV records\n");
+    }
+  else
+    {
+      GList *t;
+
+      for (t = records; t != NULL; t = t->next)
+        {
+          guint16 priority, weight, port;
+          const gchar *target;
+
+          g_variant_get (t->data, "(qqq&s)", &priority, &weight, &port, &target);
+
+          printf ("%s (priority %u, weight %u, port %u)\n",
+                  target, (guint) priority, (guint) weight, (guint) port);
+          g_variant_unref (t->data);
+        }
+
       g_list_free (records);
     }
   printf ("\n");
@@ -329,6 +372,9 @@ lookup_one_sync (const char *arg)
           break;
         case G_RESOLVER_RECORD_TXT:
           print_resolved_txt (arg, records, error);
+          break;
+        case G_RESOLVER_RECORD_SRV:
+          print_resolved_srv (arg, records, error);
           break;
         default:
           g_warn_if_reached ();
@@ -447,6 +493,9 @@ lookup_records_callback (GObject      *source,
       break;
     case G_RESOLVER_RECORD_TXT:
       print_resolved_txt (arg, records, error);
+      break;
+    case G_RESOLVER_RECORD_SRV:
+      print_resolved_srv (arg, records, error);
       break;
     default:
       g_warn_if_reached ();
@@ -569,7 +618,7 @@ do_async_connectable (GSocketAddressEnumerator *enumerator)
 }
 
 static void
-do_connectable (const char *arg, gboolean synchronous, guint count)
+do_connectable (const char *arg, gboolean synch, guint count)
 {
   char **parts;
   GSocketConnectable *connectable;
@@ -613,7 +662,7 @@ do_connectable (const char *arg, gboolean synchronous, guint count)
     {
       enumerator = g_socket_connectable_enumerate (connectable);
 
-      if (synchronous)
+      if (synch)
         do_sync_connectable (enumerator);
       else
         do_async_connectable (enumerator);
@@ -658,9 +707,11 @@ record_type_arg (const gchar *option_name,
     record_type = G_RESOLVER_RECORD_SOA;
   } else if (g_ascii_strcasecmp (value, "NS") == 0) {
     record_type = G_RESOLVER_RECORD_NS;
+  } else if (g_ascii_strcasecmp (value, "SRV") == 0) {
+    record_type = G_RESOLVER_RECORD_SRV;
   } else {
       g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_BAD_VALUE,
-                   "Specify MX, TXT, NS or SOA for the special record lookup types");
+                   "Specify MX, TXT, NS, SOA or SRV for the special record lookup types");
       return FALSE;
   }
 
@@ -671,7 +722,7 @@ static const GOptionEntry option_entries[] = {
   { "synchronous", 's', 0, G_OPTION_ARG_NONE, &synchronous, "Synchronous connections", NULL },
   { "connectable", 'c', 0, G_OPTION_ARG_INT, &connectable_count, "Connectable count", "C" },
   { "special-type", 't', 0, G_OPTION_ARG_CALLBACK, record_type_arg, "Record type like MX, TXT, NS or SOA", "RR" },
-  { NULL },
+  G_OPTION_ENTRY_NULL,
 };
 
 int
@@ -739,6 +790,7 @@ main (int argc, char **argv)
   g_source_remove (watch);
 #endif
   g_object_unref (cancellable);
+  g_option_context_free (context);
 
   return 0;
 }

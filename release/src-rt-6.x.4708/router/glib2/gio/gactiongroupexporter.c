@@ -2,10 +2,12 @@
  * Copyright © 2010 Codethink Limited
  * Copyright © 2011 Canonical Limited
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published
- * by the Free Software Foundation; either version 2 of the licence or (at
- * your option) any later version.
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Ryan Lortie <desrt@desrt.ca>
  */
@@ -34,6 +34,7 @@
 /**
  * SECTION:gactiongroupexporter
  * @title: GActionGroup exporter
+ * @include: gio/gio.h
  * @short_description: Export GActionGroups on D-Bus
  * @see_also: #GActionGroup, #GDBusActionGroup
  *
@@ -86,7 +87,7 @@ g_action_group_describe_action (GActionGroup *action_group,
  * It's also a lot easier to read. :)
  *
  * For documentation of this interface, see
- * http://live.gnome.org/GTK+/GApplication-dbus-apis
+ * https://wiki.gnome.org/Projects/GLib/GApplication/DBusAPI
  */
 const char org_gtk_Actions_xml[] =
   "<node>"
@@ -209,6 +210,17 @@ g_action_group_exporter_dispatch_events (gpointer user_data)
   return FALSE;
 }
 
+static void
+g_action_group_exporter_flush_queue (GActionGroupExporter *exporter)
+{
+  if (exporter->pending_source)
+    {
+      g_source_destroy (exporter->pending_source);
+      g_action_group_exporter_dispatch_events (exporter);
+      g_assert (exporter->pending_source == NULL);
+    }
+}
+
 static guint
 g_action_group_exporter_get_events (GActionGroupExporter *exporter,
                                     const gchar          *name)
@@ -239,6 +251,7 @@ g_action_group_exporter_set_events (GActionGroupExporter *exporter,
       source = g_idle_source_new ();
       exporter->pending_source = source;
       g_source_set_callback (source, g_action_group_exporter_dispatch_events, exporter, NULL);
+      g_source_set_static_name (source, "[gio] g_action_group_exporter_dispatch_events");
       g_source_attach (source, exporter->context);
       g_source_unref (source);
     }
@@ -365,6 +378,8 @@ org_gtk_Actions_method_call (GDBusConnection       *connection,
   GActionGroupExporter *exporter = user_data;
   GVariant *result = NULL;
 
+  g_action_group_exporter_flush_queue (exporter);
+
   if (g_str_equal (method_name, "List"))
     {
       gchar **list;
@@ -380,6 +395,14 @@ org_gtk_Actions_method_call (GDBusConnection       *connection,
       GVariant *desc;
 
       g_variant_get (parameters, "(&s)", &name);
+
+      if (!g_action_group_has_action (exporter->action_group, name))
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "The named action ('%s') does not exist.", name);
+          return;
+        }
+
       desc = g_action_group_describe_action (exporter->action_group, name);
       result = g_variant_new ("(@(bgav))", desc);
     }
@@ -410,10 +433,36 @@ org_gtk_Actions_method_call (GDBusConnection       *connection,
       GVariant *platform_data;
       GVariantIter *iter;
       const gchar *name;
+      const GVariantType *parameter_type = NULL;
 
       g_variant_get (parameters, "(&sav@a{sv})", &name, &iter, &platform_data);
       g_variant_iter_next (iter, "v", &parameter);
       g_variant_iter_free (iter);
+
+      /* Check the action exists and the parameter type matches. */
+      if (!g_action_group_query_action (exporter->action_group,
+                                        name, NULL, &parameter_type,
+                                        NULL, NULL, NULL))
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "Unknown action ‘%s’", name);
+          g_clear_pointer (&parameter, g_variant_unref);
+          g_variant_unref (platform_data);
+          return;
+        }
+
+      if (!((parameter_type == NULL && parameter == NULL) ||
+            (parameter_type != NULL && parameter != NULL && g_variant_is_of_type (parameter, parameter_type))))
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "Invalid parameter for action ‘%s’: expected type %s but got type %s",
+                                                 name,
+                                                 (parameter_type != NULL) ? (const gchar *) parameter_type : "()",
+                                                 (parameter != NULL) ? g_variant_get_type_string (parameter) : "()");
+          g_clear_pointer (&parameter, g_variant_unref);
+          g_variant_unref (platform_data);
+          return;
+        }
 
       if (G_IS_REMOTE_ACTION_GROUP (exporter->action_group))
         g_remote_action_group_activate_action_full (G_REMOTE_ACTION_GROUP (exporter->action_group),
@@ -432,8 +481,42 @@ org_gtk_Actions_method_call (GDBusConnection       *connection,
       GVariant *platform_data;
       const gchar *name;
       GVariant *state;
+      const GVariantType *state_type = NULL;
 
       g_variant_get (parameters, "(&sv@a{sv})", &name, &state, &platform_data);
+
+      /* Check the action exists and the state type matches. */
+      if (!g_action_group_query_action (exporter->action_group,
+                                        name, NULL, NULL,
+                                        &state_type, NULL, NULL))
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "Unknown action ‘%s’", name);
+          g_variant_unref (state);
+          g_variant_unref (platform_data);
+          return;
+        }
+
+      if (state_type == NULL)
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "Cannot change state of action ‘%s’ as it is stateless", name);
+          g_variant_unref (state);
+          g_variant_unref (platform_data);
+          return;
+        }
+
+      if (!g_variant_is_of_type (state, state_type))
+        {
+          g_dbus_method_invocation_return_error (invocation, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
+                                                 "Invalid state for action ‘%s’: expected type %s but got type %s",
+                                                 name,
+                                                 (const gchar *) state_type,
+                                                 g_variant_get_type_string (state));
+          g_variant_unref (state);
+          g_variant_unref (platform_data);
+          return;
+        }
 
       if (G_IS_REMOTE_ACTION_GROUP (exporter->action_group))
         g_remote_action_group_change_action_state_full (G_REMOTE_ACTION_GROUP (exporter->action_group),
@@ -517,19 +600,19 @@ g_dbus_connection_export_action_group (GDBusConnection  *connection,
                                        GError          **error)
 {
   const GDBusInterfaceVTable vtable = {
-    org_gtk_Actions_method_call
+    org_gtk_Actions_method_call, NULL, NULL, { 0 }
   };
   GActionGroupExporter *exporter;
   guint id;
 
   if G_UNLIKELY (org_gtk_Actions == NULL)
     {
-      GError *error = NULL;
+      GError *my_error = NULL;
       GDBusNodeInfo *info;
 
-      info = g_dbus_node_info_new_for_xml (org_gtk_Actions_xml, &error);
+      info = g_dbus_node_info_new_for_xml (org_gtk_Actions_xml, &my_error);
       if G_UNLIKELY (info == NULL)
-        g_error ("%s", error->message);
+        g_error ("%s", my_error->message);
       org_gtk_Actions = g_dbus_node_info_lookup_interface (info, "org.gtk.Actions");
       g_assert (org_gtk_Actions != NULL);
       g_dbus_interface_info_ref (org_gtk_Actions);

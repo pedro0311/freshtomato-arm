@@ -2,10 +2,12 @@
  * Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007
  * Soeren Sandmann (sandmann@daimi.au.dk)
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
+ * License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef __G_SEQUENCE_H__
@@ -34,7 +34,7 @@ typedef struct _GSequenceNode  GSequenceIter;
 
 typedef gint (* GSequenceIterCompareFunc) (GSequenceIter *a,
                                            GSequenceIter *b,
-                                           gpointer       data);
+                                           gpointer       user_data);
 
 
 /* GSequence */
@@ -61,6 +61,8 @@ GLIB_AVAILABLE_IN_ALL
 void           g_sequence_sort_iter          (GSequence                *seq,
                                               GSequenceIterCompareFunc  cmp_func,
                                               gpointer                  cmp_data);
+GLIB_AVAILABLE_IN_2_48
+gboolean       g_sequence_is_empty           (GSequence                *seq);
 
 
 /* Getting iters */

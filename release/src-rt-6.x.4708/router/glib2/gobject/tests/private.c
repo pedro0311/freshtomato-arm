@@ -1,3 +1,8 @@
+/* We are testing some deprecated APIs here */
+#ifndef GLIB_DISABLE_DEPRECATION_WARNINGS
+#define GLIB_DISABLE_DEPRECATION_WARNINGS
+#endif
+
 #include <glib-object.h>
 
 typedef struct {
@@ -29,7 +34,7 @@ test_object_init (TestObject *self)
   TestObjectPrivate *priv = test_object_get_instance_private (self);
 
   if (g_test_verbose ())
-    g_print ("Offset of %sPrivate for type '%s': %d\n",
+    g_printerr ("Offset of %sPrivate for type '%s': %d\n",
              G_OBJECT_TYPE_NAME (self),
              G_OBJECT_TYPE_NAME (self),
              TestObject_private_offset);
@@ -93,7 +98,7 @@ test_derived_init (TestDerived *self)
   TestDerivedPrivate *priv = test_derived_get_instance_private (self);
 
   if (g_test_verbose ())
-    g_print ("Offset of %sPrivate for type '%s': %d\n",
+    g_printerr ("Offset of %sPrivate for type '%s': %d\n",
              G_OBJECT_TYPE_NAME (self),
              G_OBJECT_TYPE_NAME (self),
              TestDerived_private_offset);
@@ -128,7 +133,9 @@ G_DEFINE_TYPE (TestMixed, test_mixed, test_object_get_type ())
 static void
 test_mixed_class_init (TestMixedClass *klass)
 {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
   g_type_class_add_private (klass, sizeof (TestMixedPrivate));
+G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
 static void
@@ -137,7 +144,7 @@ test_mixed_init (TestMixed *self)
   TestMixedPrivate *priv = G_TYPE_INSTANCE_GET_PRIVATE (self, test_mixed_get_type (), TestMixedPrivate);
 
   if (g_test_verbose ())
-    g_print ("Offset of %sPrivate for type '%s': %d\n",
+    g_printerr ("Offset of %sPrivate for type '%s': %d\n",
              G_OBJECT_TYPE_NAME (self),
              G_OBJECT_TYPE_NAME (self),
              TestMixed_private_offset);
@@ -181,7 +188,7 @@ test_mixed_derived_init (TestMixedDerived *self)
   TestMixedDerivedPrivate *priv = test_mixed_derived_get_instance_private (self);
 
   if (g_test_verbose ())
-    g_print ("Offset of %sPrivate for type '%s': %d\n",
+    g_printerr ("Offset of %sPrivate for type '%s': %d\n",
              G_OBJECT_TYPE_NAME (self),
              G_OBJECT_TYPE_NAME (self),
              TestMixedDerived_private_offset);
@@ -201,9 +208,17 @@ static void
 private_instance (void)
 {
   TestObject *obj = g_object_new (test_object_get_type (), NULL);
+  gpointer class;
+  gint offset;
 
   g_assert_cmpint (test_object_get_dummy_0 (obj), ==, 42);
   g_assert_cmpfloat (test_object_get_dummy_1 (obj), ==, 3.14159f);
+
+  class = g_type_class_ref (test_object_get_type ());
+  offset = g_type_class_get_instance_private_offset (class);
+  g_type_class_unref (class);
+
+  g_assert (offset == TestObject_private_offset);
 
   g_object_unref (obj);
 }

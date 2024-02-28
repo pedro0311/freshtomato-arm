@@ -2,10 +2,12 @@
  *
  * Copyright (C) 2008 Christian Kellner, Samuel Cormier-Iijima
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,9 +15,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  *
  * Authors: Christian Kellner <gicmo@gnome.org>
  *          Samuel Cormier-Iijima <sciyoshi@gmail.com>
@@ -38,13 +38,16 @@ struct _GInetAddressPrivate
   GSocketFamily family;
   union {
     struct in_addr ipv4;
+#ifdef HAVE_IPV6
     struct in6_addr ipv6;
+#endif
   } addr;
 };
 
 /**
  * SECTION:ginetaddress
  * @short_description: An IPv4/IPv6 address
+ * @include: gio/gio.h
  *
  * #GInetAddress represents an IPv4 or IPv6 internet address. Use
  * g_resolver_lookup_by_name() or g_resolver_lookup_by_name_async() to
@@ -100,10 +103,16 @@ g_inet_address_set_property (GObject      *object,
       break;
 
     case PROP_BYTES:
+#ifdef HAVE_IPV6
       memcpy (&address->priv->addr, g_value_get_pointer (value),
 	      address->priv->family == AF_INET ?
 	      sizeof (address->priv->addr.ipv4) :
 	      sizeof (address->priv->addr.ipv6));
+#else
+      g_assert (address->priv->family == AF_INET);
+      memcpy (&address->priv->addr, g_value_get_pointer (value),
+              sizeof (address->priv->addr.ipv4));
+#endif
       break;
 
     default:
@@ -376,23 +385,21 @@ g_inet_address_init (GInetAddress *address)
  *
  * Parses @string as an IP address and creates a new #GInetAddress.
  *
- * Returns: a new #GInetAddress corresponding to @string, or %NULL if
- * @string could not be parsed.
+ * Returns: (nullable) (transfer full): a new #GInetAddress corresponding
+ * to @string, or %NULL if @string could not be parsed.
+ *     Free the returned object with g_object_unref().
  *
  * Since: 2.22
  */
 GInetAddress *
 g_inet_address_new_from_string (const gchar *string)
 {
-#ifdef G_OS_WIN32
-  struct sockaddr_storage sa;
-  struct sockaddr_in *sin = (struct sockaddr_in *)&sa;
-  struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&sa;
-  gint len;
-#else /* !G_OS_WIN32 */
   struct in_addr in_addr;
+#ifdef HAVE_IPV6
   struct in6_addr in6_addr;
 #endif
+
+  g_return_val_if_fail (string != NULL, NULL);
 
   /* If this GInetAddress is the first networking-related object to be
    * created, then we won't have called g_networking_init() yet at
@@ -400,32 +407,9 @@ g_inet_address_new_from_string (const gchar *string)
    */
   g_networking_init ();
 
-#ifdef G_OS_WIN32
-  /* We need to make sure to not pass a string of the form
-   * "IPv4addr:port" or "[IPv6addr]:port" to WSAStringToAddress(),
-   * since it would accept them (returning both the address and the
-   * port), but we only want to accept standalone IP addresses. (In
-   * the IPv6 case, WINE actually only checks for the ']', not the
-   * '[', which is why we do the same here.)
-   */
-  if (!strchr (string, ':'))
-    {
-      len = sizeof (sa);
-      if (WSAStringToAddress ((LPTSTR) string, AF_INET, NULL, (LPSOCKADDR) &sa, &len) == 0)
-        return g_inet_address_new_from_bytes ((guint8 *)&sin->sin_addr, AF_INET);
-    }
-
-  if (!strchr (string, ']'))
-    {
-      len = sizeof (sa);
-      if (WSAStringToAddress ((LPTSTR) string, AF_INET6, NULL, (LPSOCKADDR) &sa, &len) == 0)
-        return g_inet_address_new_from_bytes ((guint8 *)&sin6->sin6_addr, AF_INET6);
-    }
-
-#else /* !G_OS_WIN32 */
-
   if (inet_pton (AF_INET, string, &in_addr) > 0)
     return g_inet_address_new_from_bytes ((guint8 *)&in_addr, AF_INET);
+#ifdef HAVE_IPV6
   else if (inet_pton (AF_INET6, string, &in6_addr) > 0)
     return g_inet_address_new_from_bytes ((guint8 *)&in6_addr, AF_INET6);
 #endif
@@ -445,6 +429,7 @@ g_inet_address_new_from_string (const gchar *string)
  * %G_SOCKET_FAMILY_IPV6.
  *
  * Returns: a new #GInetAddress corresponding to @family and @bytes.
+ *     Free the returned object with g_object_unref().
  *
  * Since: 2.22
  */
@@ -468,6 +453,7 @@ g_inet_address_new_from_bytes (const guint8         *bytes,
  *
  * Returns: a new #GInetAddress corresponding to the loopback address
  * for @family.
+ *     Free the returned object with g_object_unref().
  *
  * Since: 2.22
  */
@@ -483,7 +469,11 @@ g_inet_address_new_loopback (GSocketFamily family)
       return g_inet_address_new_from_bytes (addr, family);
     }
   else
+#ifdef HAVE_IPV6
     return g_inet_address_new_from_bytes (in6addr_loopback.s6_addr, family);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -495,6 +485,7 @@ g_inet_address_new_loopback (GSocketFamily family)
  *
  * Returns: a new #GInetAddress corresponding to the "any" address
  * for @family.
+ *     Free the returned object with g_object_unref().
  *
  * Since: 2.22
  */
@@ -510,7 +501,11 @@ g_inet_address_new_any (GSocketFamily family)
       return g_inet_address_new_from_bytes (addr, family);
     }
   else
+#ifdef HAVE_IPV6
     return g_inet_address_new_from_bytes (in6addr_any.s6_addr, family);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 
@@ -529,42 +524,23 @@ gchar *
 g_inet_address_to_string (GInetAddress *address)
 {
   gchar buffer[INET6_ADDRSTRLEN];
-#ifdef G_OS_WIN32
-  DWORD buflen = sizeof (buffer), addrlen;
-  struct sockaddr_storage sa;
-  struct sockaddr_in *sin = (struct sockaddr_in *)&sa;
-  struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&sa;
-#endif
 
   g_return_val_if_fail (G_IS_INET_ADDRESS (address), NULL);
 
-#ifdef G_OS_WIN32
-  memset (&sa, 0, sizeof (sa));
-  sa.ss_family = address->priv->family;
   if (address->priv->family == AF_INET)
     {
-      addrlen = sizeof (*sin);
-      memcpy (&sin->sin_addr, &address->priv->addr.ipv4,
-	      sizeof (sin->sin_addr));
+      inet_ntop (AF_INET, &address->priv->addr.ipv4, buffer, sizeof (buffer));
+      return g_strdup (buffer);
     }
   else
     {
-      addrlen = sizeof (*sin6);
-      memcpy (&sin6->sin6_addr, &address->priv->addr.ipv6,
-	      sizeof (sin6->sin6_addr));
-    }
-  if (WSAAddressToString ((LPSOCKADDR) &sa, addrlen, NULL, buffer, &buflen) != 0)
-    return NULL;
-
-#else /* !G_OS_WIN32 */
-
-  if (address->priv->family == AF_INET)
-    inet_ntop (AF_INET, &address->priv->addr.ipv4, buffer, sizeof (buffer));
-  else
-    inet_ntop (AF_INET6, &address->priv->addr.ipv6, buffer, sizeof (buffer));
+#ifdef HAVE_IPV6
+      inet_ntop (AF_INET6, &address->priv->addr.ipv6, buffer, sizeof (buffer));
+      return g_strdup (buffer);
+#else
+      g_assert_not_reached ();
 #endif
-
-  return g_strdup (buffer);
+    }
 }
 
 /**
@@ -603,7 +579,11 @@ g_inet_address_get_native_size (GInetAddress *address)
 {
   if (address->priv->family == AF_INET)
     return sizeof (address->priv->addr.ipv4);
+#ifdef HAVE_IPV6
   return sizeof (address->priv->addr.ipv6);
+#else
+  g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -646,7 +626,11 @@ g_inet_address_get_is_any (GInetAddress *address)
       return addr4 == INADDR_ANY;
     }
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_UNSPECIFIED (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -672,7 +656,11 @@ g_inet_address_get_is_loopback (GInetAddress *address)
       return ((addr4 & 0xff000000) == 0x7f000000);
     }
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_LOOPBACK (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -700,7 +688,11 @@ g_inet_address_get_is_link_local (GInetAddress *address)
       return ((addr4 & 0xffff0000) == 0xa9fe0000);
     }
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_LINKLOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -731,7 +723,11 @@ g_inet_address_get_is_site_local (GInetAddress *address)
 	      (addr4 & 0xffff0000) == 0xc0a80000);
     }
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_SITELOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -756,7 +752,11 @@ g_inet_address_get_is_multicast (GInetAddress *address)
       return IN_MULTICAST (addr4);
     }
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MULTICAST (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -777,7 +777,11 @@ g_inet_address_get_is_mc_global (GInetAddress *address)
   if (address->priv->family == AF_INET)
     return FALSE;
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MC_GLOBAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -798,7 +802,11 @@ g_inet_address_get_is_mc_link_local (GInetAddress *address)
   if (address->priv->family == AF_INET)
     return FALSE;
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MC_LINKLOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -819,7 +827,11 @@ g_inet_address_get_is_mc_node_local (GInetAddress *address)
   if (address->priv->family == AF_INET)
     return FALSE;
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MC_NODELOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -840,7 +852,11 @@ g_inet_address_get_is_mc_org_local  (GInetAddress *address)
   if (address->priv->family == AF_INET)
     return FALSE;
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MC_ORGLOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**
@@ -861,7 +877,11 @@ g_inet_address_get_is_mc_site_local (GInetAddress *address)
   if (address->priv->family == AF_INET)
     return FALSE;
   else
+#ifdef HAVE_IPV6
     return IN6_IS_ADDR_MC_SITELOCAL (&address->priv->addr.ipv6);
+#else
+    g_assert_not_reached ();
+#endif
 }
 
 /**

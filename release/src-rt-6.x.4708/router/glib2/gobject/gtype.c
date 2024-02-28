@@ -1,10 +1,12 @@
 /* GObject - GLib Type, Object, Parameter and Signal Library
  * Copyright (C) 1998-1999, 2000-2001 Tim Janik and Red Hat, Inc.
  *
+ * SPDX-License-Identifier: LGPL-2.1-or-later
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -12,9 +14,7 @@
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General
- * Public License along with this library; if not, write to the
- * Free Software Foundation, Inc., 59 Temple Place, Suite 330,
- * Boston, MA 02111-1307, USA.
+ * Public License along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -23,19 +23,26 @@
 
 #include "config.h"
 
-#include "../glib/valgrind.h"
+#include "../glib/gvalgrind.h"
 #include <string.h>
 
 #include "gtype.h"
 #include "gtype-private.h"
 #include "gtypeplugin.h"
 #include "gvaluecollector.h"
-#include "gbsearcharray.h"
 #include "gatomicarray.h"
 #include "gobject_trace.h"
 
+#include "glib-private.h"
 #include "gconstructor.h"
 
+#ifdef G_OS_WIN32
+#include <windows.h>
+#endif
+
+#ifdef	G_ENABLE_DEBUG
+#define	IF_DEBUG(debug_type)	if (_g_type_debug_flags & G_TYPE_DEBUG_ ## debug_type)
+#endif
 
 /**
  * SECTION:gtype
@@ -43,7 +50,7 @@
  *     management system
  * @title:Type Information
  *
- * The GType API is the foundation of the GObject system.  It provides the
+ * The GType API is the foundation of the GObject system. It provides the
  * facilities for registering and managing all fundamental data types,
  * user-defined object and interface types.
  *
@@ -52,15 +59,18 @@
  * unloaded at run-time as dynamic types may be.  Static types are created
  * with g_type_register_static() that gets type specific information passed
  * in via a #GTypeInfo structure.
+ *
  * Dynamic types are created with g_type_register_dynamic() which takes a
  * #GTypePlugin structure instead. The remaining type information (the
  * #GTypeInfo structure) is retrieved during runtime through #GTypePlugin
  * and the g_type_plugin_*() API.
+ *
  * These registration functions are usually called only once from a
  * function whose only purpose is to return the type identifier for a
  * specific class.  Once the type (or class or interface) is registered,
  * it may be instantiated, inherited, or implemented depending on exactly
  * what sort of type it is.
+ *
  * There is also a third registration function for registering fundamental
  * types called g_type_register_fundamental() which requires both a #GTypeInfo
  * structure and a #GTypeFundamentalInfo structure but it is seldom used
@@ -68,16 +78,15 @@
  *
  * Type instance and class structs are limited to a total of 64 KiB,
  * including all parent types. Similarly, type instances' private data
- * (as created by g_type_class_add_private()) are limited to a total of
+ * (as created by G_ADD_PRIVATE()) are limited to a total of
  * 64 KiB. If a type instance needs a large static buffer, allocate it
  * separately (typically by using #GArray or #GPtrArray) and put a pointer
  * to the buffer in the structure.
  *
- * A final word about type names.
- * Such an identifier needs to be at least three characters long. There is no
- * upper length limit. The first character needs to be a letter (a-z or A-Z)
- * or an underscore '_'. Subsequent characters can be letters, numbers or
- * any of '-_+'.
+ * As mentioned in the [GType conventions][gtype-conventions], type names must
+ * be at least three characters long. There is no upper length limit. The first
+ * character must be a letter (a–z or A–Z) or an underscore (‘_’). Subsequent
+ * characters can be letters, numbers or any of ‘-_+’.
  */
 
 
@@ -132,20 +141,11 @@
 #define g_assert_type_system_initialized() \
   g_assert (static_quark_type_flags)
 
-#ifdef  G_ENABLE_DEBUG
-#define DEBUG_CODE(debug_type, code_block)  G_STMT_START {    \
-    if (_g_type_debug_flags & G_TYPE_DEBUG_ ## debug_type) \
-      { code_block; }                                     \
-} G_STMT_END
-#else /* !G_ENABLE_DEBUG */
-#define DEBUG_CODE(debug_type, code_block)  /* code_block */
-#endif  /* G_ENABLE_DEBUG */
-
 #define TYPE_FUNDAMENTAL_FLAG_MASK (G_TYPE_FLAG_CLASSED | \
 				    G_TYPE_FLAG_INSTANTIATABLE | \
 				    G_TYPE_FLAG_DERIVABLE | \
 				    G_TYPE_FLAG_DEEP_DERIVABLE)
-#define	TYPE_FLAG_MASK		   (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT)
+#define	TYPE_FLAG_MASK		   (G_TYPE_FLAG_ABSTRACT | G_TYPE_FLAG_VALUE_ABSTRACT | G_TYPE_FLAG_FINAL)
 #define	SIZEOF_FUNDAMENTAL_INFO	   ((gssize) MAX (MAX (sizeof (GTypeFundamentalInfo), \
 						       sizeof (gpointer)), \
                                                   sizeof (glong)))
@@ -223,7 +223,10 @@ typedef enum
 /* --- structures --- */
 struct _TypeNode
 {
-  guint volatile ref_count;
+  guint        ref_count;  /* (atomic) */
+#ifdef G_ENABLE_DEBUG
+  guint        instance_count;  /* (atomic) */
+#endif
   GTypePlugin *plugin;
   guint        n_children; /* writable with lock */
   guint        n_supers : 8;
@@ -232,7 +235,7 @@ struct _TypeNode
   guint        is_instantiatable : 1;
   guint        mutatable_check_cache : 1;	/* combines some common path checks */
   GType       *children; /* writable with lock */
-  TypeData * volatile data;
+  TypeData    *data;
   GQuark       qname;
   GData       *global_gdata;
   union {
@@ -245,7 +248,7 @@ struct _TypeNode
 
 #define SIZEOF_BASE_TYPE_NODE()			(G_STRUCT_OFFSET (TypeNode, supers))
 #define MAX_N_SUPERS				(255)
-#define MAX_N_CHILDREN				(4095)
+#define MAX_N_CHILDREN				(G_MAXUINT)
 #define	MAX_N_INTERFACES			(255) /* Limited by offsets being 8 bits */
 #define	MAX_N_PREREQUISITES			(511)
 #define NODE_TYPE(node)				(node->supers[0])
@@ -285,7 +288,7 @@ struct _IFaceEntry
 };
 
 struct _IFaceEntries {
-  guint offset_index;
+  gsize offset_index;
   IFaceEntry entry[1];
 };
 
@@ -321,7 +324,7 @@ struct _ClassData
   CommonData         common;
   guint16            class_size;
   guint16            class_private_size;
-  int volatile       init_state; /* atomic - g_type_class_ref reads it unlocked */
+  int                init_state;  /* (atomic) - g_type_class_ref reads it unlocked */
   GBaseInitFunc      class_init_base;
   GBaseFinalizeFunc  class_finalize_base;
   GClassInitFunc     class_init;
@@ -335,7 +338,7 @@ struct _InstanceData
   CommonData         common;
   guint16            class_size;
   guint16            class_private_size;
-  int volatile       init_state; /* atomic - g_type_class_ref reads it unlocked */
+  int                init_state;  /* (atomic) - g_type_class_ref reads it unlocked */
   GBaseInitFunc      class_init_base;
   GBaseFinalizeFunc  class_finalize_base;
   GClassInitFunc     class_init;
@@ -379,7 +382,10 @@ static GQuark          static_quark_type_flags = 0;
 static GQuark          static_quark_iface_holder = 0;
 static GQuark          static_quark_dependants_array = 0;
 static guint           type_registration_serial = 0;
+
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 GTypeDebugFlags	       _g_type_debug_flags = 0;
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /* --- type nodes --- */
 static GHashTable       *static_type_nodes_ht = NULL;
@@ -387,7 +393,7 @@ static TypeNode		*static_fundamental_type_nodes[(G_TYPE_FUNDAMENTAL_MAX >> G_TYP
 static GType		 static_fundamental_next = G_TYPE_RESERVED_USER_FIRST;
 
 static inline TypeNode*
-lookup_type_node_I (register GType utype)
+lookup_type_node_I (GType utype)
 {
   if (utype > G_TYPE_FUNDAMENTAL_MAX)
     return (TypeNode*) (utype & ~TYPE_ID_MASK);
@@ -398,15 +404,15 @@ lookup_type_node_I (register GType utype)
 /**
  * g_type_get_type_registration_serial:
  *
- * Returns an opaque serial number that represents the state of the set of
- * registered types. Any time a type is registered this serial changes,
+ * Returns an opaque serial number that represents the state of the set
+ * of registered types. Any time a type is registered this serial changes,
  * which means you can cache information based on type lookups (such as
  * g_type_from_name()) and know if the cache is still valid at a later
  * time by comparing the current serial with the one at the type lookup.
  *
  * Since: 2.36
  *
- * Returns: An unsigned int, representing the state of type registrations.
+ * Returns: An unsigned int, representing the state of type registrations
  */
 guint
 g_type_get_type_registration_serial (void)
@@ -438,6 +444,10 @@ type_node_any_new_W (TypeNode             *pnode,
       node = G_STRUCT_MEMBER_P (node, SIZEOF_FUNDAMENTAL_INFO);
       static_fundamental_type_nodes[ftype >> G_TYPE_FUNDAMENTAL_SHIFT] = node;
       type = ftype;
+
+#if ENABLE_VALGRIND
+      VALGRIND_MALLOCLIKE_BLOCK (node, node_size - SIZEOF_FUNDAMENTAL_INFO, FALSE, TRUE);
+#endif
     }
   else
     type = (GType) node;
@@ -507,7 +517,6 @@ type_node_any_new_W (TypeNode             *pnode,
   node->data = NULL;
   node->qname = g_quark_from_string (name);
   node->global_gdata = NULL;
-  
   g_hash_table_insert (static_type_nodes_ht,
 		       (gpointer) g_quark_to_string (node->qname),
 		       (gpointer) type);
@@ -566,13 +575,13 @@ type_node_new_W (TypeNode    *pnode,
 }
 
 static inline IFaceEntry*
-lookup_iface_entry_I (volatile IFaceEntries *entries,
-		      TypeNode *iface_node)
+lookup_iface_entry_I (IFaceEntries *entries,
+                      TypeNode     *iface_node)
 {
   guint8 *offsets;
-  guint offset_index;
+  gsize offset_index;
   IFaceEntry *check;
-  int index;
+  gsize index;
   IFaceEntry *entry;
 
   if (entries == NULL)
@@ -797,6 +806,13 @@ check_derivation_I (GType        parent_type,
 		 NODE_NAME (pnode));
       return FALSE;
     }
+  if ((G_TYPE_FLAG_FINAL & GPOINTER_TO_UINT (type_get_qdata_L (pnode, static_quark_type_flags))) == G_TYPE_FLAG_FINAL)
+    {
+      g_warning ("cannot derive '%s' from final parent type '%s'",
+                 type_name,
+                 NODE_NAME (pnode));
+      return FALSE;
+    }
   
   return TRUE;
 }
@@ -1007,12 +1023,7 @@ check_add_interface_L (GType instance_type,
     {
       g_warning ("attempting to add an interface (%s) to class (%s) after class_init",
                  NODE_NAME (iface), NODE_NAME (node));
-
-      /* See https://bugzilla.gnome.org/show_bug.cgi?id=697229,
-       * https://bugzilla.gnome.org/show_bug.cgi?id=687659
-       */
-      if (!g_str_has_prefix (NODE_NAME (node), "gtkmm__CustomObject_") && !strstr (NODE_NAME (node), "_gtksharp_"))
-        return FALSE;
+      return FALSE;
     }
   tnode = lookup_type_node_I (NODE_PARENT_TYPE (iface));
   if (NODE_PARENT_TYPE (tnode) && !type_lookup_iface_entry_L (node, tnode))
@@ -1029,7 +1040,7 @@ check_add_interface_L (GType instance_type,
   if (entry && entry->vtable == NULL && !type_iface_peek_holder_L (iface, NODE_TYPE (node)))
     {
       /* ok, we do conform to this interface already, but the interface vtable was not
-       * yet intialized, and we just conform to the interface because it got added to
+       * yet initialized, and we just conform to the interface because it got added to
        * one of our parents. so we allow overriding of holder info here.
        */
       return TRUE;
@@ -1098,7 +1109,8 @@ type_data_make_W (TypeNode              *node,
 	vtable = pnode->data->common.value_table;
       else
 	{
-	  static const GTypeValueTable zero_vtable = { NULL, };
+          static const GTypeValueTable zero_vtable =
+            { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL };
 	  
 	  value_table = &zero_vtable;
 	}
@@ -1137,11 +1149,7 @@ type_data_make_W (TypeNode              *node,
       data->instance.class_private_size = 0;
       if (pnode)
         data->instance.class_private_size = pnode->data->instance.class_private_size;
-#ifdef	DISABLE_MEM_POOLS
-      data->instance.n_preallocs = 0;
-#else	/* !DISABLE_MEM_POOLS */
       data->instance.n_preallocs = MIN (info->n_preallocs, 1024);
-#endif	/* !DISABLE_MEM_POOLS */
       data->instance.instance_init = info->instance_init;
     }
   else if (node->is_classed) /* only classed */
@@ -1282,7 +1290,7 @@ type_data_ref_U (TypeNode *node)
 
 static gboolean
 iface_node_has_available_offset_L (TypeNode *iface_node,
-				   int offset,
+				   gsize offset,
 				   int for_index)
 {
   guint8 *offsets;
@@ -1301,27 +1309,29 @@ iface_node_has_available_offset_L (TypeNode *iface_node,
   return FALSE;
 }
 
-static int
+static gsize
 find_free_iface_offset_L (IFaceEntries *entries)
 {
   IFaceEntry *entry;
   TypeNode *iface_node;
-  int offset;
+  gsize offset;
   int i;
   int n_entries;
 
   n_entries = IFACE_ENTRIES_N_ENTRIES (entries);
-  offset = -1;
+  offset = 0;
   do
     {
-      offset++;
       for (i = 0; i < n_entries; i++)
 	{
 	  entry = &entries->entry[i];
 	  iface_node = lookup_type_node_I (entry->iface_type);
 
 	  if (!iface_node_has_available_offset_L (iface_node, offset, i))
-	    break;
+            {
+              offset++;
+              break;
+            }
 	}
     }
   while (i != n_entries);
@@ -1331,12 +1341,12 @@ find_free_iface_offset_L (IFaceEntries *entries)
 
 static void
 iface_node_set_offset_L (TypeNode *iface_node,
-			 int offset,
+			 gsize offset,
 			 int index)
 {
   guint8 *offsets, *old_offsets;
-  int new_size, old_size;
-  int i;
+  gsize new_size, old_size;
+  gsize i;
 
   old_offsets = G_ATOMIC_ARRAY_GET_LOCKED (&iface_node->_prot.offsets, guint8);
   if (old_offsets == NULL)
@@ -1371,7 +1381,7 @@ type_node_add_iface_entry_W (TypeNode   *node,
   IFaceEntry *entry;
   TypeNode *iface_node;
   guint i, j;
-  int num_entries;
+  guint num_entries;
 
   g_assert (node->is_instantiatable);
 
@@ -1421,7 +1431,7 @@ type_node_add_iface_entry_W (TypeNode   *node,
 
   if (parent_entry)
     {
-      if (node->data && node->data->class.init_state >= BASE_IFACE_INIT)
+      if (node->data && g_atomic_int_get (&node->data->class.init_state) >= BASE_IFACE_INIT)
         {
           entries->entry[i].init_state = INITIALIZED;
           entries->entry[i].vtable = parent_entry->vtable;
@@ -1476,18 +1486,18 @@ type_add_interface_Wm (TypeNode             *node,
   iholder->next = iface_node_get_holders_L (iface);
   iface_node_set_holders_W (iface, iholder);
   iholder->instance_type = NODE_TYPE (node);
-  iholder->info = info ? g_memdup (info, sizeof (*info)) : NULL;
+  iholder->info = info ? g_memdup2 (info, sizeof (*info)) : NULL;
   iholder->plugin = plugin;
 
   /* create an iface entry for this type */
   type_node_add_iface_entry_W (node, NODE_TYPE (iface), NULL);
   
   /* if the class is already (partly) initialized, we may need to base
-   * initalize and/or initialize the new interface.
+   * initialize and/or initialize the new interface.
    */
   if (node->data)
     {
-      InitState class_state = node->data->class.init_state;
+      InitState class_state = g_atomic_int_get (&node->data->class.init_state);
       
       if (class_state >= BASE_IFACE_INIT)
         type_iface_vtable_base_init_Wm (iface, node);
@@ -1525,8 +1535,8 @@ type_iface_add_prerequisite_W (TypeNode *iface,
 					      IFACE_NODE_PREREQUISITES (iface),
 					      IFACE_NODE_N_PREREQUISITES (iface));
   prerequisites = IFACE_NODE_PREREQUISITES (iface);
-  g_memmove (prerequisites + i + 1, prerequisites + i,
-	     sizeof (prerequisites[0]) * (IFACE_NODE_N_PREREQUISITES (iface) - i - 1));
+  memmove (prerequisites + i + 1, prerequisites + i,
+           sizeof (prerequisites[0]) * (IFACE_NODE_N_PREREQUISITES (iface) - i - 1));
   prerequisites[i] = prerequisite_type;
   
   /* we want to get notified when prerequisites get added to prerequisite_node */
@@ -1550,8 +1560,8 @@ type_iface_add_prerequisite_W (TypeNode *iface,
 
 /**
  * g_type_interface_add_prerequisite:
- * @interface_type: #GType value of an interface type.
- * @prerequisite_type: #GType value of an interface or instantiatable type.
+ * @interface_type: #GType value of an interface type
+ * @prerequisite_type: #GType value of an interface or instantiatable type
  *
  * Adds @prerequisite_type to the list of prerequisites of @interface_type.
  * This means that any type implementing @interface_type must also implement
@@ -1610,7 +1620,7 @@ g_type_interface_add_prerequisite (GType interface_type,
 	    }
 	}
       
-      for (i = 0; i < prerequisite_node->n_supers + 1; i++)
+      for (i = 0; i < prerequisite_node->n_supers + 1u; i++)
 	type_iface_add_prerequisite_W (iface, lookup_type_node_I (prerequisite_node->supers[i]));
       G_WRITE_UNLOCK (&type_rw_lock);
     }
@@ -1637,16 +1647,16 @@ g_type_interface_add_prerequisite (GType interface_type,
 /**
  * g_type_interface_prerequisites:
  * @interface_type: an interface type
- * @n_prerequisites: (out) (allow-none): location to return the number
- *                   of prerequisites, or %NULL
+ * @n_prerequisites: (out) (optional): location to return the number
+ *     of prerequisites, or %NULL
  *
  * Returns the prerequisites of an interfaces type.
  *
  * Since: 2.2
  *
  * Returns: (array length=n_prerequisites) (transfer full): a
- *          newly-allocated zero-terminated array of #GType containing
- *          the prerequisites of @interface_type
+ *     newly-allocated zero-terminated array of #GType containing
+ *     the prerequisites of @interface_type
  */
 GType*
 g_type_interface_prerequisites (GType  interface_type,
@@ -1695,6 +1705,54 @@ g_type_interface_prerequisites (GType  interface_type,
     }
 }
 
+/**
+ * g_type_interface_instantiatable_prerequisite:
+ * @interface_type: an interface type
+ *
+ * Returns the most specific instantiatable prerequisite of an
+ * interface type. If the interface type has no instantiatable
+ * prerequisite, %G_TYPE_INVALID is returned.
+ *
+ * See g_type_interface_add_prerequisite() for more information
+ * about prerequisites.
+ *
+ * Returns: the instantiatable prerequisite type or %G_TYPE_INVALID if none
+ *
+ * Since: 2.68
+ **/
+GType
+g_type_interface_instantiatable_prerequisite (GType interface_type)
+{
+  TypeNode *inode = NULL;
+  TypeNode *iface;
+  guint i;
+
+  g_return_val_if_fail (G_TYPE_IS_INTERFACE (interface_type), G_TYPE_INVALID);
+
+  iface = lookup_type_node_I (interface_type);
+  if (iface == NULL)
+    return G_TYPE_INVALID;
+
+  G_READ_LOCK (&type_rw_lock);
+
+  for (i = 0; i < IFACE_NODE_N_PREREQUISITES (iface); i++)
+    {
+      GType prerequisite = IFACE_NODE_PREREQUISITES (iface)[i];
+      TypeNode *node = lookup_type_node_I (prerequisite);
+      if (node->is_instantiatable)
+        {
+          if (!inode || type_node_is_a_L (node, inode))
+            inode = node;
+        }
+    }
+
+  G_READ_UNLOCK (&type_rw_lock);
+
+  if (inode)
+    return NODE_TYPE (inode);
+  else
+    return G_TYPE_INVALID;
+}
 
 static IFaceHolder*
 type_iface_peek_holder_L (TypeNode *iface,
@@ -1737,7 +1795,7 @@ type_iface_retrieve_holder_info_Wm (TypeNode *iface,
         INVALID_RECURSION ("g_type_plugin_*", iholder->plugin, NODE_NAME (iface));
       
       check_interface_info_I (iface, instance_type, &tmp_info);
-      iholder->info = g_memdup (&tmp_info, sizeof (tmp_info));
+      iholder->info = g_memdup2 (&tmp_info, sizeof (tmp_info));
     }
   
   return iholder;	/* we don't modify write lock upon returning NULL */
@@ -1768,24 +1826,27 @@ type_iface_blow_holder_info_Wm (TypeNode *iface,
 
 /**
  * g_type_create_instance: (skip)
- * @type: An instantiatable type to create an instance for.
+ * @type: an instantiatable type to create an instance for
  *
  * Creates and initializes an instance of @type if @type is valid and
  * can be instantiated. The type system only performs basic allocation
  * and structure setups for instances: actual instance creation should
  * happen through functions supplied by the type's fundamental type
  * implementation.  So use of g_type_create_instance() is reserved for
- * implementators of fundamental types only. E.g. instances of the
- * #GObject hierarchy should be created via g_object_new() and
- * <emphasis>never</emphasis> directly through
- * g_type_create_instance() which doesn't handle things like singleton
- * objects or object construction.  Note: Do <emphasis>not</emphasis>
- * use this function, unless you're implementing a fundamental
- * type. Also language bindings should <emphasis>not</emphasis> use
- * this function but g_object_new() instead.
+ * implementers of fundamental types only. E.g. instances of the
+ * #GObject hierarchy should be created via g_object_new() and never
+ * directly through g_type_create_instance() which doesn't handle things
+ * like singleton objects or object construction.
  *
- * Returns: An allocated and initialized instance, subject to further
- *  treatment by the fundamental type implementation.
+ * The extended members of the returned instance are guaranteed to be filled
+ * with zeros.
+ *
+ * Note: Do not use this function, unless you're implementing a
+ * fundamental type. Also language bindings should not use this
+ * function, but g_object_new() instead.
+ *
+ * Returns: an allocated and initialized instance, subject to further
+ *     treatment by the fundamental type implementation
  */
 GTypeInstance*
 g_type_create_instance (GType type)
@@ -1799,13 +1860,13 @@ g_type_create_instance (GType type)
   guint i;
 
   node = lookup_type_node_I (type);
-  if (!node || !node->is_instantiatable)
+  if (G_UNLIKELY (!node || !node->is_instantiatable))
     {
       g_error ("cannot create new instance of invalid (non-instantiatable) type '%s'",
 		 type_descriptive_name_I (type));
     }
   /* G_TYPE_IS_ABSTRACT() is an external call: _U */
-  if (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (type))
+  if (G_UNLIKELY (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (type)))
     {
       g_error ("cannot create instance of abstract (non-instantiatable) type '%s'",
 		 type_descriptive_name_I (type));
@@ -1833,7 +1894,8 @@ g_type_create_instance (GType type)
   private_size = node->data->instance.private_size;
   ivar_size = node->data->instance.instance_size;
 
-  if (private_size && RUNNING_ON_VALGRIND)
+#ifdef ENABLE_VALGRIND
+  if (G_UNLIKELY (private_size && RUNNING_ON_VALGRIND))
     {
       private_size += ALIGN_STRUCT (1);
 
@@ -1847,6 +1909,7 @@ g_type_create_instance (GType type)
       VALGRIND_MALLOCLIKE_BLOCK (allocated + ALIGN_STRUCT (1), private_size - ALIGN_STRUCT (1), 0, TRUE);
     }
   else
+#endif
     allocated = g_slice_alloc0 (private_size + ivar_size);
 
   instance = (GTypeInstance *) (allocated + private_size);
@@ -1867,6 +1930,13 @@ g_type_create_instance (GType type)
   if (node->data->instance.instance_init)
     node->data->instance.instance_init (instance, class);
 
+#ifdef	G_ENABLE_DEBUG
+  IF_DEBUG (INSTANCE_COUNT)
+    {
+      g_atomic_int_inc ((int *) &node->instance_count);
+    }
+#endif
+
   TRACE(GOBJECT_OBJECT_NEW(instance, type));
 
   return instance;
@@ -1874,7 +1944,7 @@ g_type_create_instance (GType type)
 
 /**
  * g_type_free_instance:
- * @instance: an instance of a type.
+ * @instance: an instance of a type
  *
  * Frees an instance of a type, returning it to the instance pool for
  * the type, if there is one.
@@ -1895,14 +1965,14 @@ g_type_free_instance (GTypeInstance *instance)
   
   class = instance->g_class;
   node = lookup_type_node_I (class->g_type);
-  if (!node || !node->is_instantiatable || !node->data || node->data->class.class != (gpointer) class)
+  if (G_UNLIKELY (!node || !node->is_instantiatable || !node->data || node->data->class.class != (gpointer) class))
     {
       g_warning ("cannot free instance of invalid (non-instantiatable) type '%s'",
 		 type_descriptive_name_I (class->g_type));
       return;
     }
   /* G_TYPE_IS_ABSTRACT() is an external call: _U */
-  if (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (NODE_TYPE (node)))
+  if (G_UNLIKELY (!node->mutatable_check_cache && G_TYPE_IS_ABSTRACT (NODE_TYPE (node))))
     {
       g_warning ("cannot free instance of abstract (non-instantiatable) type '%s'",
 		 NODE_NAME (node));
@@ -1918,10 +1988,11 @@ g_type_free_instance (GTypeInstance *instance)
   memset (allocated, 0xaa, ivar_size + private_size);
 #endif
 
+#ifdef ENABLE_VALGRIND
   /* See comment in g_type_create_instance() about what's going on here.
    * We're basically unwinding what we put into motion there.
    */
-  if (private_size && RUNNING_ON_VALGRIND)
+  if (G_UNLIKELY (private_size && RUNNING_ON_VALGRIND))
     {
       private_size += ALIGN_STRUCT (1);
       allocated -= ALIGN_STRUCT (1);
@@ -1935,7 +2006,15 @@ g_type_free_instance (GTypeInstance *instance)
       VALGRIND_FREELIKE_BLOCK (instance, 0);
     }
   else
+#endif
     g_slice_free1 (private_size + ivar_size, allocated);
+
+#ifdef	G_ENABLE_DEBUG
+  IF_DEBUG (INSTANCE_COUNT)
+    {
+      g_atomic_int_add ((int *) &node->instance_count, -1);
+    }
+#endif
 
   g_type_class_unref (class);
 }
@@ -2001,10 +2080,10 @@ type_iface_vtable_base_init_Wm (TypeNode *iface,
       IFaceEntry *pentry = type_lookup_iface_entry_L (pnode, iface);
       
       if (pentry)
-	vtable = g_memdup (pentry->vtable, iface->data->iface.vtable_size);
+	vtable = g_memdup2 (pentry->vtable, iface->data->iface.vtable_size);
     }
   if (!vtable)
-    vtable = g_memdup (iface->data->iface.dflt_vtable, iface->data->iface.vtable_size);
+    vtable = g_memdup2 (iface->data->iface.dflt_vtable, iface->data->iface.vtable_size);
   entry->vtable = vtable;
   vtable->g_type = NODE_TYPE (iface);
   vtable->g_instance_type = NODE_TYPE (node);
@@ -2106,13 +2185,13 @@ type_class_init_Wm (TypeNode   *node,
   TypeNode *bnode, *pnode;
   guint i;
   
-  /* Accessing data->class will work for instantiable types
+  /* Accessing data->class will work for instantiatable types
    * too because ClassData is a subset of InstanceData
    */
   g_assert (node->is_classed && node->data &&
 	    node->data->class.class_size &&
 	    !node->data->class.class &&
-	    node->data->class.init_state == UNINITIALIZED);
+	    g_atomic_int_get (&node->data->class.init_state) == UNINITIALIZED);
   if (node->data->class.class_private_size)
     class = g_malloc0 (ALIGN_STRUCT (node->data->class.class_size) + node->data->class.class_private_size);
   else
@@ -2122,8 +2201,8 @@ type_class_init_Wm (TypeNode   *node,
   
   if (pclass)
     {
-      TypeNode *pnode = lookup_type_node_I (pclass->g_type);
-      
+      pnode = lookup_type_node_I (pclass->g_type);
+
       memcpy (class, pclass, pnode->data->class.class_size);
       memcpy (G_STRUCT_MEMBER_P (class, ALIGN_STRUCT (node->data->class.class_size)), G_STRUCT_MEMBER_P (pclass, ALIGN_STRUCT (pnode->data->class.class_size)), pnode->data->class.class_private_size);
 
@@ -2227,7 +2306,7 @@ type_class_init_Wm (TypeNode   *node,
    * inherited interfaces are already init_state == INITIALIZED, because
    * they either got setup in the above base_init loop, or during
    * class_init from within type_add_interface_Wm() for this or
-   * an anchestor type.
+   * an ancestor type.
    */
   i = 0;
   while ((entries = CLASSED_NODE_IFACES_ENTRIES_LOCKED (node)) != NULL)
@@ -2495,9 +2574,9 @@ g_type_remove_class_cache_func (gpointer            cache_data,
 	static_class_cache_funcs[i].cache_func == cache_func)
       {
 	static_n_class_cache_funcs--;
-	g_memmove (static_class_cache_funcs + i,
-		   static_class_cache_funcs + i + 1,
-		   sizeof (static_class_cache_funcs[0]) * (static_n_class_cache_funcs - i));
+	memmove (static_class_cache_funcs + i,
+                 static_class_cache_funcs + i + 1,
+                 sizeof (static_class_cache_funcs[0]) * (static_n_class_cache_funcs - i));
 	static_class_cache_funcs = g_renew (ClassCacheFunc, static_class_cache_funcs, static_n_class_cache_funcs);
 	found_it = TRUE;
 	break;
@@ -2514,14 +2593,14 @@ g_type_remove_class_cache_func (gpointer            cache_data,
  * g_type_add_interface_check: (skip)
  * @check_data: data to pass to @check_func
  * @check_func: function to be called after each interface
- *              is initialized.
+ *     is initialized
  *
  * Adds a function to be called after an interface vtable is
- * initialized for any class (i.e. after the @interface_init member of
- * #GInterfaceInfo has been called).
+ * initialized for any class (i.e. after the @interface_init
+ * member of #GInterfaceInfo has been called).
  *
- * This function is useful when you want to check an invariant that
- * depends on the interfaces of a class. For instance, the
+ * This function is useful when you want to check an invariant
+ * that depends on the interfaces of a class. For instance, the
  * implementation of #GObject uses this facility to check that an
  * object implements all of the properties that are defined on its
  * interfaces.
@@ -2569,9 +2648,9 @@ g_type_remove_interface_check (gpointer                check_data,
 	static_iface_check_funcs[i].check_func == check_func)
       {
 	static_n_iface_check_funcs--;
-	g_memmove (static_iface_check_funcs + i,
-		   static_iface_check_funcs + i + 1,
-		   sizeof (static_iface_check_funcs[0]) * (static_n_iface_check_funcs - i));
+	memmove (static_iface_check_funcs + i,
+                 static_iface_check_funcs + i + 1,
+                 sizeof (static_iface_check_funcs[0]) * (static_n_iface_check_funcs - i));
 	static_iface_check_funcs = g_renew (IFaceCheckFunc, static_iface_check_funcs, static_n_iface_check_funcs);
 	found_it = TRUE;
 	break;
@@ -2586,21 +2665,21 @@ g_type_remove_interface_check (gpointer                check_data,
 /* --- type registration --- */
 /**
  * g_type_register_fundamental:
- * @type_id: A predefined type identifier.
- * @type_name: 0-terminated string used as the name of the new type.
- * @info: The #GTypeInfo structure for this type.
- * @finfo: The #GTypeFundamentalInfo structure for this type.
- * @flags: Bitwise combination of #GTypeFlags values.
+ * @type_id: a predefined type identifier
+ * @type_name: 0-terminated string used as the name of the new type
+ * @info: #GTypeInfo structure for this type
+ * @finfo: #GTypeFundamentalInfo structure for this type
+ * @flags: bitwise combination of #GTypeFlags values
  *
  * Registers @type_id as the predefined identifier and @type_name as the
- * name of a fundamental type. If @type_id is already registered, or a type
- * named @type_name is already registered, the behaviour is undefined. The type
- * system uses the information contained in the #GTypeInfo structure pointed to
- * by @info and the #GTypeFundamentalInfo structure pointed to by @finfo to
- * manage the type and its instances. The value of @flags determines additional
- * characteristics of the fundamental type.
+ * name of a fundamental type. If @type_id is already registered, or a
+ * type named @type_name is already registered, the behaviour is undefined.
+ * The type system uses the information contained in the #GTypeInfo structure
+ * pointed to by @info and the #GTypeFundamentalInfo structure pointed to by
+ * @finfo to manage the type and its instances. The value of @flags determines
+ * additional characteristics of the fundamental type.
  *
- * Returns: The predefined type identifier.
+ * Returns: the predefined type identifier
  */
 GType
 g_type_register_fundamental (GType                       type_id,
@@ -2656,13 +2735,13 @@ g_type_register_fundamental (GType                       type_id,
 
 /**
  * g_type_register_static_simple: (skip)
- * @parent_type: Type from which this type will be derived.
- * @type_name: 0-terminated string used as the name of the new type.
- * @class_size: Size of the class structure (see #GTypeInfo)
- * @class_init: Location of the class initialization function (see #GTypeInfo)
- * @instance_size: Size of the instance structure (see #GTypeInfo)
- * @instance_init: Location of the instance initialization function (see #GTypeInfo)
- * @flags: Bitwise combination of #GTypeFlags values.
+ * @parent_type: type from which this type will be derived
+ * @type_name: 0-terminated string used as the name of the new type
+ * @class_size: size of the class structure (see #GTypeInfo)
+ * @class_init: location of the class initialization function (see #GTypeInfo)
+ * @instance_size: size of the instance structure (see #GTypeInfo)
+ * @instance_init: location of the instance initialization function (see #GTypeInfo)
+ * @flags: bitwise combination of #GTypeFlags values
  *
  * Registers @type_name as the name of a new static type derived from
  * @parent_type.  The value of @flags determines the nature (e.g.
@@ -2671,7 +2750,7 @@ g_type_register_fundamental (GType                       type_id,
  *
  * Since: 2.12
  *
- * Returns: The new type identifier.
+ * Returns: the new type identifier
  */
 GType
 g_type_register_static_simple (GType             parent_type,
@@ -2706,18 +2785,18 @@ g_type_register_static_simple (GType             parent_type,
 
 /**
  * g_type_register_static:
- * @parent_type: Type from which this type will be derived.
- * @type_name: 0-terminated string used as the name of the new type.
- * @info: The #GTypeInfo structure for this type.
- * @flags: Bitwise combination of #GTypeFlags values.
+ * @parent_type: type from which this type will be derived
+ * @type_name: 0-terminated string used as the name of the new type
+ * @info: #GTypeInfo structure for this type
+ * @flags: bitwise combination of #GTypeFlags values
  *
  * Registers @type_name as the name of a new static type derived from
- * @parent_type.  The type system uses the information contained in the
+ * @parent_type. The type system uses the information contained in the
  * #GTypeInfo structure pointed to by @info to manage the type and its
- * instances (if not abstract).  The value of @flags determines the nature
+ * instances (if not abstract). The value of @flags determines the nature
  * (e.g. abstract or not) of the type.
  *
- * Returns: The new type identifier.
+ * Returns: the new type identifier
  */
 GType
 g_type_register_static (GType            parent_type,
@@ -2761,10 +2840,10 @@ g_type_register_static (GType            parent_type,
 
 /**
  * g_type_register_dynamic:
- * @parent_type: Type from which this type will be derived.
- * @type_name: 0-terminated string used as the name of the new type.
- * @plugin: The #GTypePlugin structure to retrieve the #GTypeInfo from.
- * @flags: Bitwise combination of #GTypeFlags values.
+ * @parent_type: type from which this type will be derived
+ * @type_name: 0-terminated string used as the name of the new type
+ * @plugin: #GTypePlugin structure to retrieve the #GTypeInfo from
+ * @flags: bitwise combination of #GTypeFlags values
  *
  * Registers @type_name as the name of a new dynamic type derived from
  * @parent_type.  The type system uses the information contained in the
@@ -2772,7 +2851,7 @@ g_type_register_static (GType            parent_type,
  * instances (if not abstract).  The value of @flags determines the nature
  * (e.g. abstract or not) of the type.
  *
- * Returns: The new type identifier or #G_TYPE_INVALID if registration failed.
+ * Returns: the new type identifier or %G_TYPE_INVALID if registration failed
  */
 GType
 g_type_register_dynamic (GType        parent_type,
@@ -2805,14 +2884,14 @@ g_type_register_dynamic (GType        parent_type,
 
 /**
  * g_type_add_interface_static:
- * @instance_type: #GType value of an instantiable type.
- * @interface_type: #GType value of an interface type.
- * @info: The #GInterfaceInfo structure for this
- *        (@instance_type, @interface_type) combination.
+ * @instance_type: #GType value of an instantiatable type
+ * @interface_type: #GType value of an interface type
+ * @info: #GInterfaceInfo structure for this
+ *        (@instance_type, @interface_type) combination
  *
- * Adds the static @interface_type to @instantiable_type.  The
- * information contained in the #GInterfaceInfo structure pointed to by
- * @info is used to manage the relationship.
+ * Adds @interface_type to the static @instance_type.
+ * The information contained in the #GInterfaceInfo structure
+ * pointed to by @info is used to manage the relationship.
  */
 void
 g_type_add_interface_static (GType                 instance_type,
@@ -2842,11 +2921,11 @@ g_type_add_interface_static (GType                 instance_type,
 
 /**
  * g_type_add_interface_dynamic:
- * @instance_type: the #GType value of an instantiable type.
- * @interface_type: the #GType value of an interface type.
- * @plugin: the #GTypePlugin structure to retrieve the #GInterfaceInfo from.
+ * @instance_type: #GType value of an instantiatable type
+ * @interface_type: #GType value of an interface type
+ * @plugin: #GTypePlugin structure to retrieve the #GInterfaceInfo from
  *
- * Adds the dynamic @interface_type to @instantiable_type. The information
+ * Adds @interface_type to the dynamic @instance_type. The information
  * contained in the #GTypePlugin structure pointed to by @plugin
  * is used to manage the relationship.
  */
@@ -2880,14 +2959,14 @@ g_type_add_interface_dynamic (GType        instance_type,
 /* --- public API functions --- */
 /**
  * g_type_class_ref:
- * @type: Type ID of a classed type.
+ * @type: type ID of a classed type
  *
  * Increments the reference count of the class structure belonging to
  * @type. This function will demand-create the class if it doesn't
  * exist already.
  *
- * Returns: (type GObject.TypeClass) (transfer none): The #GTypeClass
- *  structure for the given type ID.
+ * Returns: (type GObject.TypeClass) (transfer none): the #GTypeClass
+ *     structure for the given type ID
  */
 gpointer
 g_type_class_ref (GType type)
@@ -2946,8 +3025,7 @@ g_type_class_ref (GType type)
 
 /**
  * g_type_class_unref:
- * @g_class: (type GObject.TypeClass): The #GTypeClass structure to
- *  unreference.
+ * @g_class: (type GObject.TypeClass): a #GTypeClass structure to unref
  *
  * Decrements the reference count of the class structure being passed in.
  * Once the last reference count of a class has been released, classes
@@ -2972,12 +3050,11 @@ g_type_class_unref (gpointer g_class)
 
 /**
  * g_type_class_unref_uncached: (skip)
- * @g_class: (type GObject.TypeClass): The #GTypeClass structure to
- *  unreference.
+ * @g_class: (type GObject.TypeClass): a #GTypeClass structure to unref
  *
  * A variant of g_type_class_unref() for use in #GTypeClassCacheFunc
  * implementations. It unreferences a class without consulting the chain
- * of #GTypeClassCacheFunc<!-- -->s, avoiding the recursion which would occur
+ * of #GTypeClassCacheFuncs, avoiding the recursion which would occur
  * otherwise.
  */
 void
@@ -2998,16 +3075,17 @@ g_type_class_unref_uncached (gpointer g_class)
 
 /**
  * g_type_class_peek:
- * @type: Type ID of a classed type.
+ * @type: type ID of a classed type
  *
- * This function is essentially the same as g_type_class_ref(), except that
- * the classes reference count isn't incremented. As a consequence, this function
- * may return %NULL if the class of the type passed in does not currently
- * exist (hasn't been referenced before).
+ * This function is essentially the same as g_type_class_ref(),
+ * except that the classes reference count isn't incremented.
+ * As a consequence, this function may return %NULL if the class
+ * of the type passed in does not currently exist (hasn't been
+ * referenced before).
  *
- * Returns: (type GObject.TypeClass) (transfer none): The #GTypeClass
- *  structure for the given type ID or %NULL if the class does not
- *  currently exist.
+ * Returns: (type GObject.TypeClass) (transfer none): the #GTypeClass
+ *     structure for the given type ID or %NULL if the class does not
+ *     currently exist
  */
 gpointer
 g_type_class_peek (GType type)
@@ -3028,15 +3106,16 @@ g_type_class_peek (GType type)
 
 /**
  * g_type_class_peek_static:
- * @type: Type ID of a classed type.
+ * @type: type ID of a classed type
  *
  * A more efficient version of g_type_class_peek() which works only for
  * static types.
  * 
+ * Returns: (type GObject.TypeClass) (transfer none): the #GTypeClass
+ *     structure for the given type ID or %NULL if the class does not
+ *     currently exist or is dynamically loaded
+ *
  * Since: 2.4
- * Returns: (type GObject.TypeClass) (transfer none): The #GTypeClass
- *  structure for the given type ID or %NULL if the class does not
- *  currently exist or is dynamically loaded.
  */
 gpointer
 g_type_class_peek_static (GType type)
@@ -3058,22 +3137,20 @@ g_type_class_peek_static (GType type)
 
 /**
  * g_type_class_peek_parent:
- * @g_class: (type GObject.TypeClass): The #GTypeClass structure to
- *  retrieve the parent class for.
+ * @g_class: (type GObject.TypeClass): the #GTypeClass structure to
+ *     retrieve the parent class for
  *
  * This is a convenience function often needed in class initializers.
  * It returns the class structure of the immediate parent type of the
  * class passed in.  Since derived classes hold a reference count on
  * their parent classes as long as they are instantiated, the returned
- * class will always exist. This function is essentially equivalent
- * to:
+ * class will always exist.
  *
- * <programlisting>
- * g_type_class_peek (g_type_parent (G_TYPE_FROM_CLASS (g_class)));
- * </programlisting>
+ * This function is essentially equivalent to:
+ * g_type_class_peek (g_type_parent (G_TYPE_FROM_CLASS (g_class)))
  *
- * Returns: (type GObject.TypeClass) (transfer none): The parent class
- *  of @g_class.
+ * Returns: (type GObject.TypeClass) (transfer none): the parent class
+ *     of @g_class
  */
 gpointer
 g_type_class_peek_parent (gpointer g_class)
@@ -3084,11 +3161,14 @@ g_type_class_peek_parent (gpointer g_class)
   g_return_val_if_fail (g_class != NULL, NULL);
   
   node = lookup_type_node_I (G_TYPE_FROM_CLASS (g_class));
+
+  g_return_val_if_fail (node != NULL, NULL);
+
   /* We used to acquire a read lock here. That is not necessary, since 
    * parent->data->class.class is constant as long as the derived class
    * exists. 
    */
-  if (node && node->is_classed && node->data && NODE_PARENT_TYPE (node))
+  if (node->is_classed && node->data && NODE_PARENT_TYPE (node))
     {
       node = lookup_type_node_I (NODE_PARENT_TYPE (node));
       class = node->data->class.class;
@@ -3101,15 +3181,15 @@ g_type_class_peek_parent (gpointer g_class)
 
 /**
  * g_type_interface_peek:
- * @instance_class: (type GObject.TypeClass): A #GTypeClass structure.
- * @iface_type: An interface ID which this class conforms to.
+ * @instance_class: (type GObject.TypeClass): a #GTypeClass structure
+ * @iface_type: an interface ID which this class conforms to
  *
  * Returns the #GTypeInterface structure of an interface to which the
  * passed in class conforms.
  *
- * Returns: (type GObject.TypeInterface) (transfer none): The GTypeInterface
- *  structure of iface_type if implemented by @instance_class, %NULL
- *  otherwise
+ * Returns: (type GObject.TypeInterface) (transfer none): the #GTypeInterface
+ *     structure of @iface_type if implemented by @instance_class, %NULL
+ *     otherwise
  */
 gpointer
 g_type_interface_peek (gpointer instance_class,
@@ -3134,17 +3214,17 @@ g_type_interface_peek (gpointer instance_class,
 
 /**
  * g_type_interface_peek_parent:
- * @g_iface: (type GObject.TypeInterface): A #GTypeInterface structure.
+ * @g_iface: (type GObject.TypeInterface): a #GTypeInterface structure
  *
  * Returns the corresponding #GTypeInterface structure of the parent type
  * of the instance type to which @g_iface belongs. This is useful when
  * deriving the implementation of an interface from the parent type and
  * then possibly overriding some methods.
  *
- * Returns: (transfer none) (type GObject.TypeInterface): The
- *  corresponding #GTypeInterface structure of the parent type of the
- *  instance type to which @g_iface belongs, or %NULL if the parent
- *  type doesn't conform to the interface.
+ * Returns: (transfer none) (type GObject.TypeInterface): the
+ *     corresponding #GTypeInterface structure of the parent type of the
+ *     instance type to which @g_iface belongs, or %NULL if the parent
+ *     type doesn't conform to the interface
  */
 gpointer
 g_type_interface_peek_parent (gpointer g_iface)
@@ -3176,10 +3256,9 @@ g_type_interface_peek_parent (gpointer g_iface)
  * and returns the default interface vtable for the type.
  *
  * If the type is not currently in use, then the default vtable
- * for the type will be created and initalized by calling
+ * for the type will be created and initialized by calling
  * the base interface init and default vtable init functions for
- * the type (the @<structfield>base_init</structfield>
- * and <structfield>class_init</structfield> members of #GTypeInfo).
+ * the type (the @base_init and @class_init members of #GTypeInfo).
  * Calling g_type_default_interface_ref() is useful when you
  * want to make sure that signals and properties for an interface
  * have been installed.
@@ -3187,8 +3266,8 @@ g_type_interface_peek_parent (gpointer g_iface)
  * Since: 2.4
  *
  * Returns: (type GObject.TypeInterface) (transfer none): the default
- *  vtable for the interface; call g_type_default_interface_unref()
- *  when you are done using the interface.
+ *     vtable for the interface; call g_type_default_interface_unref()
+ *     when you are done using the interface.
  */
 gpointer
 g_type_default_interface_ref (GType g_type)
@@ -3237,8 +3316,8 @@ g_type_default_interface_ref (GType g_type)
  * Since: 2.4
  *
  * Returns: (type GObject.TypeInterface) (transfer none): the default
- *  vtable for the interface, or %NULL if the type is not currently in
- *  use.
+ *     vtable for the interface, or %NULL if the type is not currently
+ *     in use
  */
 gpointer
 g_type_default_interface_peek (GType g_type)
@@ -3258,15 +3337,13 @@ g_type_default_interface_peek (GType g_type)
 /**
  * g_type_default_interface_unref:
  * @g_iface: (type GObject.TypeInterface): the default vtable
- *  structure for a interface, as returned by
- *  g_type_default_interface_ref()
+ *     structure for an interface, as returned by g_type_default_interface_ref()
  *
  * Decrements the reference count for the type corresponding to the
  * interface default vtable @g_iface. If the type is dynamic, then
  * when no one is using the interface and all references have
  * been released, the finalize function for the interface's default
- * vtable (the <structfield>class_finalize</structfield> member of
- * #GTypeInfo) will be called.
+ * vtable (the @class_finalize member of #GTypeInfo) will be called.
  *
  * Since: 2.4
  */
@@ -3288,7 +3365,7 @@ g_type_default_interface_unref (gpointer g_iface)
 
 /**
  * g_type_name:
- * @type: Type to return name for.
+ * @type: type to return name for
  *
  * Get the unique name that is assigned to a type ID.  Note that this
  * function (like all other GType API) cannot cope with invalid type
@@ -3296,7 +3373,7 @@ g_type_default_interface_unref (gpointer g_iface)
  * other validly registered type ID, but randomized type IDs should
  * not be passed in and will most likely lead to a crash.
  *
- * Returns: Static type name or %NULL.
+ * Returns: static type name or %NULL
  */
 const gchar *
 g_type_name (GType type)
@@ -3312,11 +3389,11 @@ g_type_name (GType type)
 
 /**
  * g_type_qname:
- * @type: Type to return quark of type name for.
+ * @type: type to return quark of type name for
  *
  * Get the corresponding quark of the type IDs name.
  *
- * Returns: The type names quark or 0.
+ * Returns: the type names quark or 0
  */
 GQuark
 g_type_qname (GType type)
@@ -3330,14 +3407,14 @@ g_type_qname (GType type)
 
 /**
  * g_type_from_name:
- * @name: Type name to lookup.
+ * @name: type name to look up
  *
- * Lookup the type ID from a given type name, returning 0 if no type
+ * Look up the type ID from a given type name, returning 0 if no type
  * has been registered under this name (this is the preferred method
  * to find out by name whether a specific type has been registered
  * yet).
  *
- * Returns: Corresponding type ID or 0.
+ * Returns: corresponding type ID or 0
  */
 GType
 g_type_from_name (const gchar *name)
@@ -3355,12 +3432,12 @@ g_type_from_name (const gchar *name)
 
 /**
  * g_type_parent:
- * @type: The derived type.
+ * @type: the derived type
  *
- * Return the direct parent type of the passed in type.  If the passed
+ * Return the direct parent type of the passed in type. If the passed
  * in type has no parent, i.e. is a fundamental type, 0 is returned.
  *
- * Returns: The parent type.
+ * Returns: the parent type
  */
 GType
 g_type_parent (GType type)
@@ -3374,12 +3451,12 @@ g_type_parent (GType type)
 
 /**
  * g_type_depth:
- * @type: A #GType value.
+ * @type: a #GType
  *
  * Returns the length of the ancestry of the passed in type. This
  * includes the type itself, so that e.g. a fundamental type has depth 1.
  *
- * Returns: The depth of @type.
+ * Returns: the depth of @type
  */
 guint
 g_type_depth (GType type)
@@ -3393,18 +3470,18 @@ g_type_depth (GType type)
 
 /**
  * g_type_next_base:
- * @leaf_type: Descendant of @root_type and the type to be returned.
- * @root_type: Immediate parent of the returned type.
+ * @leaf_type: descendant of @root_type and the type to be returned
+ * @root_type: immediate parent of the returned type
  *
  * Given a @leaf_type and a @root_type which is contained in its
- * anchestry, return the type that @root_type is the immediate parent
- * of.  In other words, this function determines the type that is
+ * ancestry, return the type that @root_type is the immediate parent
+ * of. In other words, this function determines the type that is
  * derived directly from @root_type which is also a base class of
  * @leaf_type.  Given a root type and a leaf type, this function can
  * be used to determine the types and order in which the leaf type is
  * descended from the root type.
  *
- * Returns: Immediate child of @root_type and anchestor of @leaf_type.
+ * Returns: immediate child of @root_type and ancestor of @leaf_type
  */
 GType
 g_type_next_base (GType type,
@@ -3491,21 +3568,25 @@ type_node_conforms_to_U (TypeNode *node,
 
 /**
  * g_type_is_a:
- * @type: Type to check anchestry for.
- * @is_a_type: Possible anchestor of @type or interface @type could conform to.
+ * @type: type to check ancestry for
+ * @is_a_type: possible ancestor of @type or interface that @type
+ *     could conform to
  *
  * If @is_a_type is a derivable type, check whether @type is a
- * descendant of @is_a_type.  If @is_a_type is an interface, check
+ * descendant of @is_a_type. If @is_a_type is an interface, check
  * whether @type conforms to it.
  *
- * Returns: %TRUE if @type is_a @is_a_type holds true.
+ * Returns: %TRUE if @type is a @is_a_type
  */
 gboolean
-g_type_is_a (GType type,
-	     GType iface_type)
+(g_type_is_a) (GType type,
+	       GType iface_type)
 {
   TypeNode *node, *iface_node;
   gboolean is_a;
+
+  if (type == iface_type)
+    return TRUE;
   
   node = lookup_type_node_I (type);
   iface_node = lookup_type_node_I (iface_type);
@@ -3516,15 +3597,15 @@ g_type_is_a (GType type,
 
 /**
  * g_type_children:
- * @type: The parent type.
- * @n_children: (out) (allow-none): Optional #guint pointer to contain
- *              the number of child types.
+ * @type: the parent type
+ * @n_children: (out) (optional): location to store the length of
+ *     the returned array, or %NULL
  *
- * Return a newly allocated and 0-terminated array of type IDs, listing the
- * child types of @type. The return value has to be g_free()ed after use.
+ * Return a newly allocated and 0-terminated array of type IDs, listing
+ * the child types of @type.
  *
  * Returns: (array length=n_children) (transfer full): Newly allocated
- *          and 0-terminated array of child types.
+ *     and 0-terminated array of child types, free with g_free()
  */
 GType*
 g_type_children (GType  type,
@@ -3539,7 +3620,8 @@ g_type_children (GType  type,
       
       G_READ_LOCK (&type_rw_lock);	/* ->children is relocatable */
       children = g_new (GType, node->n_children + 1);
-      memcpy (children, node->children, sizeof (GType) * node->n_children);
+      if (node->n_children != 0)
+        memcpy (children, node->children, sizeof (GType) * node->n_children);
       children[node->n_children] = 0;
       
       if (n_children)
@@ -3559,16 +3641,15 @@ g_type_children (GType  type,
 
 /**
  * g_type_interfaces:
- * @type: The type to list interface types for.
- * @n_interfaces: (out) (allow-none): Optional #guint pointer to
- *                contain the number of interface types.
+ * @type: the type to list interface types for
+ * @n_interfaces: (out) (optional): location to store the length of
+ *     the returned array, or %NULL
  *
- * Return a newly allocated and 0-terminated array of type IDs, listing the
- * interface types that @type conforms to. The return value has to be
- * g_free()ed after use.
+ * Return a newly allocated and 0-terminated array of type IDs, listing
+ * the interface types that @type conforms to.
  *
- * Returns: (array length=n_interfaces) (transfer full): Newly
- *          allocated and 0-terminated array of interface types.
+ * Returns: (array length=n_interfaces) (transfer full): Newly allocated
+ *     and 0-terminated array of interface types, free with g_free()
  */
 GType*
 g_type_interfaces (GType  type,
@@ -3724,7 +3805,7 @@ type_set_qdata_W (TypeNode *node,
   for (i = 0; i < gdata->n_qdatas - 1; i++)
     if (qdata[i].quark > quark)
       break;
-  g_memmove (qdata + i + 1, qdata + i, sizeof (qdata[0]) * (gdata->n_qdatas - i - 1));
+  memmove (qdata + i + 1, qdata + i, sizeof (qdata[0]) * (gdata->n_qdatas - i - 1));
   qdata[i].quark = quark;
   qdata[i].data = data;
 }
@@ -3775,9 +3856,9 @@ type_add_flags_W (TypeNode  *node,
 
 /**
  * g_type_query:
- * @type: the #GType value of a static, classed type.
- * @query: (out caller-allocates): A user provided structure that is
- *         filled in with constant values upon success.
+ * @type: #GType of a static, classed type
+ * @query: (out caller-allocates): a user provided structure that is
+ *     filled in with constant values upon success
  *
  * Queries the type system for information about a specific type.
  * This function will fill in a user-provided structure to hold
@@ -3812,6 +3893,34 @@ g_type_query (GType       type,
     }
 }
 
+/**
+ * g_type_get_instance_count:
+ * @type: a #GType
+ *
+ * Returns the number of instances allocated of the particular type;
+ * this is only available if GLib is built with debugging support and
+ * the instance_count debug flag is set (by setting the GOBJECT_DEBUG
+ * variable to include instance-count).
+ *
+ * Returns: the number of instances allocated of the given type;
+ *   if instance counts are not available, returns 0.
+ *
+ * Since: 2.44
+ */
+int
+g_type_get_instance_count (GType type)
+{
+#ifdef G_ENABLE_DEBUG
+  TypeNode *node;
+
+  node = lookup_type_node_I (type);
+  g_return_val_if_fail (node != NULL, 0);
+
+  return g_atomic_int_get (&node->instance_count);
+#else
+  return 0;
+#endif
+}
 
 /* --- implementation details --- */
 gboolean
@@ -3853,13 +3962,12 @@ g_type_test_flags (GType type,
 
 /**
  * g_type_get_plugin:
- * @type: The #GType to retrieve the plugin for.
+ * @type: #GType to retrieve the plugin for
  *
- * Returns the #GTypePlugin structure for @type or
- * %NULL if @type does not have a #GTypePlugin structure.
+ * Returns the #GTypePlugin structure for @type.
  *
- * Returns: (transfer none): The corresponding plugin if @type is a
- *          dynamic type, %NULL otherwise.
+ * Returns: (transfer none): the corresponding plugin
+ *     if @type is a dynamic type, %NULL otherwise
  */
 GTypePlugin*
 g_type_get_plugin (GType type)
@@ -3873,16 +3981,16 @@ g_type_get_plugin (GType type)
 
 /**
  * g_type_interface_get_plugin:
- * @instance_type: the #GType value of an instantiatable type.
- * @interface_type: the #GType value of an interface type.
+ * @instance_type: #GType of an instantiatable type
+ * @interface_type: #GType of an interface type
  *
  * Returns the #GTypePlugin structure for the dynamic interface
- * @interface_type which has been added to @instance_type, or %NULL if
- * @interface_type has not been added to @instance_type or does not
- * have a #GTypePlugin structure. See g_type_add_interface_dynamic().
+ * @interface_type which has been added to @instance_type, or %NULL
+ * if @interface_type has not been added to @instance_type or does
+ * not have a #GTypePlugin structure. See g_type_add_interface_dynamic().
  *
  * Returns: (transfer none): the #GTypePlugin for the dynamic
- *          interface @interface_type of @instance_type.
+ *     interface @interface_type of @instance_type
  */
 GTypePlugin*
 g_type_interface_get_plugin (GType instance_type,
@@ -3928,8 +4036,8 @@ g_type_interface_get_plugin (GType instance_type,
  * The returned type ID represents the highest currently registered
  * fundamental type identifier.
  *
- * Returns: The nextmost fundamental type ID to be registered,
- *          or 0 if the type system ran out of fundamental type IDs.
+ * Returns: the next available fundamental type ID to be registered,
+ *     or 0 if the type system ran out of fundamental type IDs
  */
 GType
 g_type_fundamental_next (void)
@@ -3948,7 +4056,7 @@ g_type_fundamental_next (void)
  * @type_id: valid type ID
  * 
  * Internal function, used to extract the fundamental type ID portion.
- * use G_TYPE_FUNDAMENTAL() instead.
+ * Use G_TYPE_FUNDAMENTAL() instead.
  * 
  * Returns: fundamental type ID
  */
@@ -3975,6 +4083,17 @@ g_type_check_instance_is_a (GTypeInstance *type_instance,
   check = node && node->is_instantiatable && iface && type_node_conforms_to_U (node, iface, TRUE, FALSE);
   
   return check;
+}
+
+gboolean
+g_type_check_instance_is_fundamentally_a (GTypeInstance *type_instance,
+                                          GType          fundamental_type)
+{
+  TypeNode *node;
+  if (!type_instance || !type_instance->g_class)
+    return FALSE;
+  node = lookup_type_node_I (type_instance->g_class->g_type);
+  return node && (NODE_FUNDAMENTAL_TYPE(node) == fundamental_type);
 }
 
 gboolean
@@ -4062,12 +4181,12 @@ g_type_check_class_cast (GTypeClass *type_class,
 
 /**
  * g_type_check_instance:
- * @instance: A valid #GTypeInstance structure.
+ * @instance: a valid #GTypeInstance structure
  *
- * Private helper function to aid implementation of the G_TYPE_CHECK_INSTANCE()
- * macro.
+ * Private helper function to aid implementation of the
+ * G_TYPE_CHECK_INSTANCE() macro.
  *
- * Returns: %TRUE if @instance is valid, %FALSE otherwise.
+ * Returns: %TRUE if @instance is valid, %FALSE otherwise
  */
 gboolean
 g_type_check_instance (GTypeInstance *type_instance)
@@ -4144,29 +4263,30 @@ g_type_check_is_value_type (GType type)
 }
 
 gboolean
-g_type_check_value (GValue *value)
+g_type_check_value (const GValue *value)
 {
   return value && type_check_is_value_type_U (value->g_type);
 }
 
 gboolean
-g_type_check_value_holds (GValue *value,
-			  GType   type)
+g_type_check_value_holds (const GValue *value,
+			  GType         type)
 {
   return value && type_check_is_value_type_U (value->g_type) && g_type_is_a (value->g_type, type);
 }
 
 /**
  * g_type_value_table_peek: (skip)
- * @type: A #GType value.
+ * @type: a #GType
  *
  * Returns the location of the #GTypeValueTable associated with @type.
- * <emphasis>Note that this function should only be used from source code
- * that implements or has internal knowledge of the implementation of
- * @type.</emphasis>
  *
- * Returns: Location of the #GTypeValueTable associated with @type or
- *  %NULL if there is no #GTypeValueTable associated with @type.
+ * Note that this function should only be used from source code
+ * that implements or has internal knowledge of the implementation of
+ * @type.
+ *
+ * Returns: location of the #GTypeValueTable associated with @type or
+ *     %NULL if there is no #GTypeValueTable associated with @type
  */
 GTypeValueTable*
 g_type_value_table_peek (GType type)
@@ -4270,8 +4390,8 @@ _g_type_boxed_init (GType          type,
 /* --- initialization --- */
 /**
  * g_type_init_with_debug_flags:
- * @debug_flags: Bitwise combination of #GTypeDebugFlags values for
- *               debugging purposes.
+ * @debug_flags: bitwise combination of #GTypeDebugFlags values for
+ *     debugging purposes
  *
  * This function used to initialise the type system with debugging
  * flags.  Since GLib 2.36, the type system is initialised automatically
@@ -4282,6 +4402,7 @@ _g_type_boxed_init (GType          type,
  *
  * Deprecated: 2.36: the type system is now initialised automatically
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void
 g_type_init_with_debug_flags (GTypeDebugFlags debug_flags)
 {
@@ -4290,6 +4411,7 @@ g_type_init_with_debug_flags (GTypeDebugFlags debug_flags)
   if (debug_flags)
     g_message ("g_type_init_with_debug_flags() is no longer supported.  Use the GOBJECT_DEBUG environment variable.");
 }
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * g_type_init:
@@ -4306,22 +4428,18 @@ g_type_init (void)
   g_assert_type_system_initialized ();
 }
 
-#if defined (G_HAS_CONSTRUCTORS)
-#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
-#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(gobject_init_ctor)
-#endif
-G_DEFINE_CONSTRUCTOR(gobject_init_ctor)
-#else
-# error Your platform/compiler is missing constructor support
-#endif
-
 static void
-gobject_init_ctor (void)
+gobject_init (void)
 {
   const gchar *env_string;
   GTypeInfo info;
   TypeNode *node;
-  GType type;
+  GType type G_GNUC_UNUSED  /* when compiling with G_DISABLE_ASSERT */;
+
+  /* Ensure GLib is initialized first, see
+   * https://bugzilla.gnome.org/show_bug.cgi?id=756139
+   */
+  GLIB_PRIVATE_CALL (glib_init) ();
 
   G_WRITE_LOCK (&type_rw_lock);
 
@@ -4331,30 +4449,31 @@ gobject_init_ctor (void)
     {
       GDebugKey debug_keys[] = {
         { "objects", G_TYPE_DEBUG_OBJECTS },
+        { "instance-count", G_TYPE_DEBUG_INSTANCE_COUNT },
         { "signals", G_TYPE_DEBUG_SIGNALS },
       };
 
       _g_type_debug_flags = g_parse_debug_string (env_string, debug_keys, G_N_ELEMENTS (debug_keys));
     }
-  
+
   /* quarks */
   static_quark_type_flags = g_quark_from_static_string ("-g-type-private--GTypeFlags");
   static_quark_iface_holder = g_quark_from_static_string ("-g-type-private--IFaceHolder");
   static_quark_dependants_array = g_quark_from_static_string ("-g-type-private--dependants-array");
-  
+
   /* type qname hash table */
   static_type_nodes_ht = g_hash_table_new (g_str_hash, g_str_equal);
-  
+
   /* invalid type G_TYPE_INVALID (0)
    */
   static_fundamental_type_nodes[0] = NULL;
-  
+
   /* void type G_TYPE_NONE
    */
   node = type_node_fundamental_new_W (G_TYPE_NONE, g_intern_static_string ("void"), 0);
   type = NODE_TYPE (node);
   g_assert (type == G_TYPE_NONE);
-  
+
   /* interface fundamental type G_TYPE_INTERFACE (!classed)
    */
   memset (&info, 0, sizeof (info));
@@ -4362,59 +4481,151 @@ gobject_init_ctor (void)
   type = NODE_TYPE (node);
   type_data_make_W (node, &info, NULL);
   g_assert (type == G_TYPE_INTERFACE);
-  
+
   G_WRITE_UNLOCK (&type_rw_lock);
-  
+
   _g_value_c_init ();
 
   /* G_TYPE_TYPE_PLUGIN
    */
   g_type_ensure (g_type_plugin_get_type ());
-  
+
   /* G_TYPE_* value types
    */
   _g_value_types_init ();
-  
+
   /* G_TYPE_ENUM & G_TYPE_FLAGS
    */
   _g_enum_types_init ();
-  
+
   /* G_TYPE_BOXED
    */
   _g_boxed_type_init ();
-  
+
   /* G_TYPE_PARAM
    */
   _g_param_type_init ();
-  
+
   /* G_TYPE_OBJECT
    */
   _g_object_type_init ();
-  
+
   /* G_TYPE_PARAM_* pspec types
    */
   _g_param_spec_types_init ();
-  
+
   /* Value Transformations
    */
   _g_value_transforms_init ();
-  
+
   /* Signal system
    */
   _g_signal_init ();
 }
 
+#ifdef G_PLATFORM_WIN32
+
+void gobject_win32_init (void);
+
+void
+gobject_win32_init (void)
+{
+  /* May be called more than once in static compilation mode */
+  static gboolean win32_already_init = FALSE;
+  if (!win32_already_init)
+    {
+      win32_already_init = TRUE;
+      gobject_init ();
+    }
+}
+
+#ifndef GLIB_STATIC_COMPILATION
+
+BOOL WINAPI DllMain (HINSTANCE hinstDLL,
+                     DWORD     fdwReason,
+                     LPVOID    lpvReserved);
+
+BOOL WINAPI
+DllMain (HINSTANCE hinstDLL,
+         DWORD     fdwReason,
+         LPVOID    lpvReserved)
+{
+  switch (fdwReason)
+    {
+    case DLL_PROCESS_ATTACH:
+      gobject_win32_init ();
+      break;
+
+    default:
+      /* do nothing */
+      ;
+    }
+
+  return TRUE;
+}
+
+#elif defined(G_HAS_CONSTRUCTORS) /* && G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION */
+extern void glib_win32_init (void);
+
+#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(gobject_init_ctor)
+#endif
+
+G_DEFINE_CONSTRUCTOR(gobject_init_ctor)
+
+static void
+gobject_init_ctor (void)
+{
+  /* When built dynamically, module initialization is done through DllMain
+   * function which is called when the dynamic library is loaded by the glib
+   * module. So, in dynamic configuration glib is always initialized BEFORE
+   * gobject.
+   *
+   * When built statically, initialization mechanism relies on hooking
+   * functions to the CRT section directly at compilation time. As we don't
+   * control how each compilation unit will be built and in which order, we
+   * obtain the same kind of issue as the "static initialization order fiasco".
+   * In this case, we must ensure explicitly that glib is always well
+   * initialized BEFORE gobject.
+   */
+  glib_win32_init ();
+  gobject_win32_init ();
+}
+
+#else /* G_PLATFORM_WIN32 && GLIB_STATIC_COMPILATION && !G_HAS_CONSTRUCTORS */
+# error Your platform/compiler is missing constructor support
+#endif /* GLIB_STATIC_COMPILATION */
+
+#elif defined(G_HAS_CONSTRUCTORS) /* && !G_PLATFORM_WIN32 */
+
+#ifdef G_DEFINE_CONSTRUCTOR_NEEDS_PRAGMA
+#pragma G_DEFINE_CONSTRUCTOR_PRAGMA_ARGS(gobject_init_ctor)
+#endif
+
+G_DEFINE_CONSTRUCTOR (gobject_init_ctor)
+
+static void
+gobject_init_ctor (void)
+{
+  gobject_init ();
+}
+
+#else /* !G_PLATFORM_WIN32 && !G_HAS_CONSTRUCTORS */
+#error Your platform/compiler is missing constructor support
+#endif /* G_PLATFORM_WIN32 */
+
 /**
  * g_type_class_add_private:
- * @g_class: class structure for an instantiatable type
- * @private_size: size of private structure.
+ * @g_class: (type GObject.TypeClass): class structure for an instantiatable
+ *    type
+ * @private_size: size of private structure
  *
  * Registers a private structure for an instantiatable type.
  *
  * When an object is allocated, the private structures for
  * the type and all of its parent types are allocated
  * sequentially in the same memory block as the public
- * structures.
+ * structures, and are zero-filled.
  *
  * Note that the accumulated size of the private structures of
  * a type and all its parent types cannot exceed 64 KiB.
@@ -4424,14 +4635,13 @@ gobject_init_ctor (void)
  * G_TYPE_INSTANCE_GET_PRIVATE() macro.
  *
  * The following example shows attaching a private structure
- * <structname>MyObjectPrivate</structname> to an object
- * <structname>MyObject</structname> defined in the standard GObject
- * fashion.
- * type's class_init() function.
+ * MyObjectPrivate to an object MyObject defined in the standard
+ * GObject fashion in the type's class_init() function.
+ *
  * Note the use of a structure member "priv" to avoid the overhead
  * of repeatedly calling MY_OBJECT_GET_PRIVATE().
  *
- * |[
+ * |[<!-- language="C" --> 
  * typedef struct _MyObject        MyObject;
  * typedef struct _MyObjectPrivate MyObjectPrivate;
  *
@@ -4457,6 +4667,7 @@ gobject_init_ctor (void)
  *   my_object->priv = G_TYPE_INSTANCE_GET_PRIVATE (my_object,
  *                                                  MY_TYPE_OBJECT,
  *                                                  MyObjectPrivate);
+ *   // my_object->priv->some_field will be automatically initialised to 0
  * }
  *
  * static int
@@ -4473,6 +4684,8 @@ gobject_init_ctor (void)
  * ]|
  *
  * Since: 2.4
+ * Deprecated: 2.58: Use the G_ADD_PRIVATE() macro with the `G_DEFINE_*`
+ *   family of macros to add instance private data to a type
  */
 void
 g_type_class_add_private (gpointer g_class,
@@ -4548,7 +4761,7 @@ g_type_add_instance_private (GType class_gtype,
    * register the private data size in the get_type() implementation and we
    * hide it behind a macro. the function will return the private size, instead
    * of the offset, which will be stored inside a static variable defined by
-   * the G_DEFINE_TYPE_EXTENDED macro. the G_DEFINE_TYPE_EXTENDED macro will
+   * the G_DEFINE_TYPE_EXTENDED() macro. the G_DEFINE_TYPE_EXTENDED() macro will
    * check the variable and call g_type_class_add_instance_private(), which
    * will use the data size and actually register the private data, then
    * return the computed offset of the private data, which will be stored
@@ -4638,7 +4851,7 @@ g_type_instance_get_private (GTypeInstance *instance,
 
 /**
  * g_type_class_get_instance_private_offset: (skip)
- * @g_class: a #GTypeClass
+ * @g_class: (type GObject.TypeClass): a #GTypeClass
  *
  * Gets the offset of the private data for instances of @g_class.
  *
@@ -4686,14 +4899,16 @@ g_type_class_get_instance_private_offset (gpointer g_class)
 
 /**
  * g_type_add_class_private:
- * @class_type: GType of an classed type.
- * @private_size: size of private structure.
+ * @class_type: GType of a classed type
+ * @private_size: size of private structure
  *
  * Registers a private class structure for a classed type;
  * when the class is allocated, the private structures for
  * the class and all of its parent types are allocated
  * sequentially in the same memory block as the public
- * structures. This function should be called in the
+ * structures, and are zero-filled.
+ *
+ * This function should be called in the
  * type's get_type() function after the type is registered.
  * The private structure can be retrieved using the
  * G_TYPE_CLASS_GET_PRIVATE() macro.
@@ -4782,7 +4997,7 @@ g_type_class_get_private (GTypeClass *klass,
 
 /**
  * g_type_ensure:
- * @type: a #GType.
+ * @type: a #GType
  *
  * Ensures that the indicated @type has been registered with the
  * type system, and its _class_init() method has been run.
@@ -4808,14 +5023,4 @@ g_type_ensure (GType type)
    */
   if (G_UNLIKELY (type == (GType)-1))
     g_error ("can't happen");
-}
-
-gboolean
-g_type_is_in_init (GType type)
-{
-  TypeNode *node;
-
-  node = lookup_type_node_I (type);
-
-  return node->data->class.init_state != INITIALIZED;
 }

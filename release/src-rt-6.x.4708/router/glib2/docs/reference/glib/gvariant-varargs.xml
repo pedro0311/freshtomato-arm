@@ -62,7 +62,7 @@
    </listitem>
    <listitem>
     <para>
-     a sequence of zero or more format strings strings, concatenated and enclosed in parentheses
+     a sequence of zero or more format strings, concatenated and enclosed in parentheses
     </para>
    </listitem>
    <listitem>
@@ -221,7 +221,8 @@
       </entry>
       <entry colsep='1' rowsep='1'>
        <para>
-        Used as a prefix on a GVariant type string (not format string).  Denotes that a pointer to a
+        Used as a prefix for a GVariant type string (not a prefix for a format string, so <literal>@as</literal> is
+        a valid format string but <literal>@^as</literal> is not).  Denotes that a pointer to a
         <link linkend='GVariant'>GVariant</link> should be used in place of the normal C type or types.  For
         <link linkend='g-variant-new'><function>g_variant_new()</function></link> this means that you must pass a
         non-<link linkend='NULL:CAPS'><literal>NULL</literal></link> <code>(<link linkend='GVariant'>GVariant</link>
@@ -260,7 +261,9 @@
       </entry>
       <entry colsep='1' rowsep='1'>
        <para>
-        Used as a prefix on a GVariant type string (not format string).  Denotes that a C pointer to serialised data
+        Used as a prefix for a GVariant type string (not a prefix for a format string, so <literal>&amp;s</literal> is
+        a valid format string but <literal>&amp;@s</literal> is not).
+        Denotes that a C pointer to serialized data
         should be used in place of the normal C type.  See
         <link linkend='gvariant-format-strings-pointers'>Pointers</link> below.
        </para>
@@ -466,11 +469,12 @@
     </tgroup>
    </informaltable>
 
+   <anchor id='gvariant-varargs'/>
    <para>
     Note that in C, small integer types in variable argument lists are promoted up to <link
     linkend='gint'><type>int</type></link> or <link linkend='guint'><type>unsigned int</type></link> as appropriate, and
     read back accordingly.  <link linkend='gint'><type>int</type></link> is 32 bits on every platform on which GLib is
-    currently suported.  This means that you can use C expressions of type <link linkend='gint'><type>int</type></link>
+    currently supported.  This means that you can use C expressions of type <link linkend='gint'><type>int</type></link>
     with <link linkend='g-variant-new'><function>g_variant_new()</function></link> and format characters
     '<literal>b</literal>', '<literal>y</literal>', '<literal>n</literal>', '<literal>q</literal>',
     '<literal>i</literal>', '<literal>u</literal>' and '<literal>h</literal>'.  Specifically, you can use integer
@@ -526,9 +530,10 @@ value4 = g_variant_new ("x", G_GINT64_CONSTANT (998877665544332211));
     '<literal>s</literal>', '<literal>o</literal>' or '<literal>g</literal>' in a format string,
     <link linkend='g-variant-new'><function>g_variant_new()</function></link> takes a <code>(const
     <link linkend='gchar'>gchar</link> *)</code> and makes a copy of it.
-    <link linkend='NULL:CAPS'><literal>NULL</literal></link> is not a valid string.  If the '<literal>o</literal>' or
-    '<literal>g</literal>' characters are used, care must be taken to ensure that the passed string is a valid DBus
-    object path or DBus type signature, respectively.
+    <link linkend='NULL:CAPS'><literal>NULL</literal></link> is not a valid string; use
+    <link linkend='gvariant-format-strings-maybe-types'>maybe types</link> to encode that.  If the '<literal>o</literal>' or
+    '<literal>g</literal>' characters are used, care must be taken to ensure that the passed string is a valid D-Bus
+    object path or D-Bus type signature, respectively.
    </para>
    <para>
     Upon encounting '<literal>s</literal>', '<literal>o</literal>' or '<literal>g</literal>', <link
@@ -653,6 +658,7 @@ g_variant_builder_unref (builder);
   gchar *str;
 
   g_variant_get (value, "as", &iter);
+  /* No need to free 'str' unless breaking out of the loop */
   while (g_variant_iter_loop (iter, "s", &str))
     g_print ("%s\n", str);
   g_variant_iter_free (iter);
@@ -685,7 +691,7 @@ g_variant_unref (value);]]></programlisting></informalexample>
     <link linkend='g-variant-get'><function>g_variant_get()</function></link> returns (by reference) a
     non-<link linkend='NULL:CAPS'><literal>NULL</literal></link> pointer.  When any of these format strings are
     prefixed with an '<literal>m</literal>', the type of arguments that are collected does not change in any way, but
-    <link linkend='NULL:CAPS'><literal>NULL</literal></link> becomes a permissable value, to indicate the Nothing case.
+    <link linkend='NULL:CAPS'><literal>NULL</literal></link> becomes a permissible value, to indicate the Nothing case.
    </para>
    <para>
     Note that the "special exception" introduced in the array section for constructing empty arrays is ignored
@@ -812,31 +818,6 @@ value2 = g_variant_new ("()");
    </refsect3>
   </refsect2>
 
-  <refsect2 id='gvariant-format-strings-dictionaries'>
-   <title>Dictionaries</title>
-   <para>
-    <emphasis role='strong'>
-     Characters: <code>{}</code>
-    </emphasis>
-   </para>
-
-   <para>
-    Dictionary entries are handled by handling first the key, then the value.  Each is handled in the usual way.
-   </para>
-
-   <refsect3>
-    <title>Examples</title>
-    <informalexample><programlisting>
-<![CDATA[GVariantBuilder *b;
-GVariant *dict;
-
-b = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
-g_variant_builder_add (b, "{sv}", "name", g_variant_new_string ("foo"));
-g_variant_builder_add (b, "{sv}", "timeout", g_variant_new_int32 (10));
-dict = g_variant_builder_end (b);]]></programlisting></informalexample>
-   </refsect3>
-  </refsect2>
-
   <refsect2 id='gvariant-format-strings-gvariant'>
    <title>GVariant *</title>
    <para>
@@ -898,8 +879,68 @@ value2 = g_variant_new ("(@(iii)*)", value1, g_variant_new_string ("foo"));
   g_variant_get (value2, "(rs)", NULL, &string); /* or "(@(iii)s)" */
   g_print ("i only got the string: %s\n", string);
   g_free (string);
+}
+
+/* no need to free 'value1' as 'value2' has consumed its floating reference */
+g_variant_unref (value2);]]></programlisting></informalexample>
+   </refsect3>
+  </refsect2>
+
+  <refsect2 id='gvariant-format-strings-dictionaries'>
+   <title>Dictionaries</title>
+   <para>
+    <emphasis role='strong'>
+     Characters: <code>{}</code>
+    </emphasis>
+   </para>
+
+   <para>
+    Dictionary entries are handled by handling first the key, then the value.  Each is handled in the usual way.
+   </para>
+
+   <refsect3>
+    <title>Examples</title>
+    <informalexample><programlisting>
+<![CDATA[GVariantBuilder *b;
+GVariant *dict;
+
+b = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
+g_variant_builder_add (b, "{sv}", "name", g_variant_new_string ("foo"));
+g_variant_builder_add (b, "{sv}", "timeout", g_variant_new_int32 (10));
+dict = g_variant_builder_end (b);]]></programlisting></informalexample>
+   </refsect3>
+
+   <para>
+    To extract data from nested dictionaries you can go through a vardict.
+   </para>
+
+   <refsect3>
+    <title>Examples</title>
+    <informalexample><programlisting>
+<![CDATA[GVariant *data;
+gint value = 1;
+gint max = 3;
+
+/* type (oa{sa{sv}}) */
+data = g_variant_new_parsed ("(%o, {'brightness': {'value': <%i>, 'max': <%i>}})",
+                             "/object/path", value, max);
+{
+  GVariant *params;
+  GVariant *p_brightness;
+  gchar *obj
+  gint p_max;
+
+  g_variant_get (data, "(o@a{?*})", &obj, &params);
+  g_print ("object_path: %s\n", obj);
+  g_free (obj);
+
+  p_brightness = g_variant_lookup_value (params, "brightness", G_VARIANT_TYPE_VARDICT);
+  g_variant_lookup (p_brightness, "max", "i", &p_max);
+  g_print ("max: %d\n", p_max);
+  g_variant_unref (params);
 }]]></programlisting></informalexample>
    </refsect3>
+
   </refsect2>
 
   <refsect2 id='gvariant-format-strings-pointers'>
@@ -911,7 +952,7 @@ value2 = g_variant_new ("(@(iii)*)", value1, g_variant_new_string ("foo"));
    </para>
 
    <para>
-    The '<code>&amp;</code>' character is used to indicate that serialised data should be directly exchanged via a
+    The '<code>&amp;</code>' character is used to indicate that serialized data should be directly exchanged via a
     pointer.
    </para>
    <para>
@@ -919,7 +960,7 @@ value2 = g_variant_new ("(@(iii)*)", value1, g_variant_new_string ("foo"));
     '<literal>&amp;o</literal>' or '<code>&amp;g</code>').  For
     <link linkend='g-variant-new'><function>g_variant_new()</function></link> this has absolutely no effect.  The string
     is collected and duplicated normally.  For <link linkend='g-variant-get'><function>g_variant_get()</function></link>
-    it means that instead of creating a newly allocated copy of the string, a pointer to the serialised data is
+    it means that instead of creating a newly allocated copy of the string, a pointer to the serialized data is
     returned.  This pointer should not be freed.  Validity checks are performed to ensure that the string data will
     always be properly nul-terminated.
    </para>
@@ -932,7 +973,7 @@ value2 = g_variant_new ("(@(iii)*)", value1, g_variant_new_string ("foo"));
   GVariant *value;
 
   value = g_variant_new ("&s", "hello world");
-  str = g_variant_get (value, "&s", &str);
+  g_variant_get (value, "&s", &str);
   g_print ("string is: %s\n", str);
   /* no need to free str */
 }]]></programlisting></informalexample>
@@ -949,7 +990,7 @@ value2 = g_variant_new ("(@(iii)*)", value1, g_variant_new_string ("foo"));
 
    <para>
     The '<literal>^</literal>' character currently supports conversion to and from bytestrings or to and from arrays
-    of strings or bytestrings.  It has a number of forms.
+    of strings or bytestrings.  It does not support byte arrays.  It has a number of forms.
    </para>
 
    <para>
