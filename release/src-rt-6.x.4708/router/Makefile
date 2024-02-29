@@ -2444,11 +2444,13 @@ libxml2-clean:
 	$(call unpatch_files,libxml2)
 
 libpng/stamp-h1:
+	$(call patch_files,libpng)
 	cd libpng && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(TOP)/zlib/staged/usr/include" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib" \
-		$(CONFIGURE) --prefix=/usr --enable-static --enable-shared
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -Wl,--gc-sections" \
+		LIBS="-lz" \
+		$(CONFIGURE) --prefix=/usr --enable-static --enable-shared --disable-tests --disable-tools --enable-hardware-optimizations=$(if $(TCONFIG_BCMARM),yes,no) --disable-dependency-tracking
 	@touch $@
 
 libpng: libpng/stamp-h1
@@ -2459,16 +2461,15 @@ libpng: libpng/stamp-h1
 	@rm -f $(TOP)/libpng/staged/usr/lib/libpng12.la
 
 libpng-install:
-	install -D libpng/.libs/libpng16.so.16.41.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.41.0
-	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.41.0
-	cd $(INSTALLDIR)/libpng/usr/lib && \
-		ln -sf libpng16.so.16.41.0 libpng16.so && \
-		ln -sf libpng16.so.16.41.0 libpng16.so.16
+	install -D libpng/.libs/libpng16.so.16.43.0 $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.43.0
+	$(STRIP) $(INSTALLDIR)/libpng/usr/lib/libpng16.so.16.43.0
+	cd $(INSTALLDIR)/libpng/usr/lib && ln -sf libpng16.so.16.43.0 libpng16.so && ln -sf libpng16.so.16.43.0 libpng16.so.16
 
 libpng-clean:
 	-@$(MAKE) -C libpng clean
 	@rm -f libpng/stamp-h1
 	@rm -rf libpng/staged
+	$(call unpatch_files,libpng)
 
 libzip/build/Makefile:
 	@rm -rf libzip/build && mkdir -p libzip/build
