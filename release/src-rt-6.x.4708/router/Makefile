@@ -2005,8 +2005,7 @@ libjpeg-turbo/build/Makefile:
 			-DWITH_JPEG8=TRUE \
 			-DENABLE_SHARED=TRUE \
 			-DENABLE_STATIC=TRUE \
-			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DCMAKE_MODULE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DCMAKE_SHARED_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
@@ -2064,11 +2063,10 @@ ifneq ($(TCONFIG_BCMARM),y)
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
-			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DBUILD_SHARED_LIBS=FALSE \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
@@ -2079,11 +2077,10 @@ endif
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
-			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
@@ -2355,6 +2352,7 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(call unpatch_files,glib)
 endif
 
+# TODO: get rid of this ancient package!
 nocat/stamp-h1:
 	cd nocat && \
 		NC_CONF_PATH="/" \
@@ -2419,8 +2417,8 @@ $(PCRE_TARGET)-clean:
 libxml2/stamp-h1:
 	$(call patch_files,libxml2)
 	cd libxml2 && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
 			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
 	@touch $@
@@ -2433,9 +2431,7 @@ libxml2: libxml2/stamp-h1
 libxml2-install:
 	install -D libxml2/.libs/libxml2.so.2.12.5 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.5
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.5
-	cd $(INSTALLDIR)/libxml2/usr/lib && \
-		ln -sf libxml2.so.2.12.5 libxml2.so.2 && \
-		ln -sf libxml2.so.2.12.5 libxml2.so
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.12.5 libxml2.so.2 && ln -sf libxml2.so.2.12.5 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
@@ -2477,9 +2473,8 @@ libzip/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS) -I$(TOP)/zlib/staged/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lssl -lcrypto -lpthread" \
-			-DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \
 			-DENABLE_GNUTLS=FALSE \
 			-DENABLE_COMMONCRYPTO=FALSE \
 			-DENABLE_MBEDTLS=FALSE \
@@ -2776,8 +2771,8 @@ mysql/target/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr -DINSTALL_MYSQLSHAREDIR=share/mysql \
 			-DCMAKE_BUILD_TYPE=$(if $(TCONFIG_BCMARM),Release,MinSizeRel) -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fno-delete-null-pointer-checks -funit-at-a-time -ffunction-sections -fdata-sections -fPIC" \
+			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
 			-DDISABLE_SHARED=FALSE \
@@ -3112,8 +3107,8 @@ transmission/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
-			-DCMAKE_CXX_FLAGS="-Wall $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600" \
+			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
 					-ffunction-sections -fdata-sections -fPIC --param large-function-growth=800 --param max-inline-insns-single=3600 -fno-exceptions -fno-rtti" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC" \
@@ -3486,7 +3481,7 @@ getdns/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections -std=gnu99 $(EXTRACFLAGS)" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -std=gnu99 -ffunction-sections -fdata-sections" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections $(if $(TCONFIG_OPENSSL11),-lpthread,)" \
 			-DENABLE_STATIC=TRUE -DENABLE_SHARED=FALSE -DENABLE_GOST=FALSE \
 			-DBUILD_GETDNS_QUERY=FALSE \
@@ -3625,7 +3620,7 @@ libjson-c/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 			-DBUILD_TESTING=FALSE \
 			-DBUILD_SHARED_LIBS=FALSE \
@@ -3653,7 +3648,7 @@ libubox/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libjson-c -std=gnu99 -D_GNU_SOURCE $(if $(TCONFIG_BCMARM),-DTCONFIG_BCMARM,)" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/libjson-c -std=gnu99 -D_GNU_SOURCE $(if $(TCONFIG_BCMARM),-DTCONFIG_BCMARM,)" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections" \
 			-DBUILD_LUA=FALSE \
 			-Djson="$(TOP)/libjson-c/build/libjson-c.a" \
@@ -3677,7 +3672,7 @@ uqmi/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -lm" \
 			-DBUILD_STATIC=TRUE \
 			-Djson_include_dir="$(TOP)/libjson-c" \
@@ -4133,11 +4128,9 @@ libffi: libffi/stamp-h1
 	@rm -f libffi/staged/usr/lib/libffi.la
 
 libffi-install:
-	install -D $(TOP)/libffi/.libs/libffi.so.8.1.2 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.2
-	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.2
-	cd $(INSTALLDIR)/libffi/usr/lib && \
-		ln -sf libffi.so.8.1.2 libffi.so.8 && \
-		ln -sf libffi.so.8.1.2 libffi.so
+	install -D $(TOP)/libffi/.libs/libffi.so.8.1.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
+	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
+	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.1.4 libffi.so.8 && ln -sf libffi.so.8.1.4 libffi.so
 
 libffi-clean:
 	-@$(MAKE) -C libffi distclean
