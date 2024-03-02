@@ -1,32 +1,32 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare
-CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared
-LDFLAGS	=
-LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
+CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
+LIBS    = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 
 ifeq ($(TCONFIG_BCMARM),y)
-LIBS += -lgcc_s
-endif
-
-ifeq ($(TOMATO_EXPERIMENTAL),1)
-export CFLAGS += -DDEBUG_LOGMSG
+ LIBS   += -lgcc_s
 endif
 
 ifneq ($(TCONFIG_HTTPS),)
-CFLAGS += -I$(TOP)/$(OPENSSLDIR)/staged/usr/include
-LIBS += -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto
-ifeq ($(TCONFIG_OPENSSL11),y)
-LIBS += $(if $(TCONFIG_BCMARM),-lpthread,)
-endif
+ CFLAGS += -I$(TOP)/$(OPENSSLDIR)/staged/usr/include
+ LIBS   += -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto
+ ifeq ($(TCONFIG_OPENSSL11),y)
+  LIBS   += $(if $(TCONFIG_BCMARM),-lpthread,)
+ endif
 endif
 
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BBT),$(TCONFIG_NGINX)),y)
-CFLAGS += -DUSE_LIBCURL -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libcurl/staged/usr/include
-LIBS += -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libcurl/lib/.libs -lcurl -lpthread
+ CFLAGS += -DUSE_LIBCURL -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libcurl/staged/usr/include
+ LIBS   += -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libcurl/lib/.libs -lz -lcurl -lpthread
 else
-CFLAGS+= -I$(TOP)/mssl
-LIBS += -L$(TOP)/mssl -lmssl
+ CFLAGS += -I$(TOP)/mssl
+ LIBS   += -L$(TOP)/mssl -lmssl
+endif
+
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+ export CFLAGS += -DDEBUG_LOGMSG
 endif
 
 OBJS = mdu.o
@@ -35,16 +35,15 @@ all: mdu
 
 mdu: $(OBJS)
 	@echo " [mdu] CC -o $@"
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
-
-	$(SIZECHECK)
-	$(CPTMP)
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	@$(SIZECHECK)
+	@$(CPTMP)
 
 install: all
-	@echo " [mdu] Installing..."
-	install -D mdu $(INSTALLDIR)/bin/mdu
-	$(STRIP) $(INSTALLDIR)/bin/mdu
-	chmod 0500 $(INSTALLDIR)/bin/mdu
+	@echo " [mdu] Installing as $(INSTALLDIR)/bin/mdu"
+	@install -D mdu $(INSTALLDIR)/bin/mdu
+	@$(STRIP) $(INSTALLDIR)/bin/mdu
+	@chmod 0500 $(INSTALLDIR)/bin/mdu
 
 clean:
 	rm -f mdu *.o .*.depend

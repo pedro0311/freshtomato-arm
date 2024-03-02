@@ -1,161 +1,157 @@
 include ../common.mak
 
-CFLAGS = -Wall -Os $(EXTRACFLAGS) -Wsign-compare
+CFLAGS = -Wall -Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
 CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
-CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 ifeq ($(TCONFIG_DPSTA),y)
-CFLAGS += -I$(TOP)/dpsta
+ CFLAGS += -I$(TOP)/dpsta
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
-LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
-CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
-CFLAGS += -I$(SRCBASE)/common/include
-LDFLAGS += -L$(TOP)/libbcm -lbcm
-LDFLAGS += -lgcc_s
+ CFLAGS  += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
+ CFLAGS  += -I$(SRCBASE)/common/include
+ LDFLAGS += -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
+ LDFLAGS += -L$(TOP)/libbcm -lbcm
+ LDFLAGS += -lgcc_s
 else
-LDFLAGS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared -lcrypt
+ LDFLAGS += -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared -lcrypt
 endif
 
-LDFLAGS += -ffunction-sections -fdata-sections -Wl,--gc-sections
 ifeq ($(STATIC),1)
-LDFLAGS += -static
+ LDFLAGS += -static
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
-LDFLAGS += $(EXTRA_LDFLAGS)
+ LDFLAGS += $(EXTRA_LDFLAGS)
 endif
 
 ifeq ($(TCONFIG_BCMSMP),y)
-CFLAGS += -DSMP
+ CFLAGS += -DSMP
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
-CFLAGS += -DDEBUG_LOGMSG
+ CFLAGS += -DDEBUG_LOGMSG
 endif
 
 OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
-        firewall.o ppp.o telssh.o wnas.o \
-        listen.o redial.o led.o qos.o forward.o misc.o mtd.o \
-        buttons.o restrict.o gpio.o sched.o \
-        bwlimit.o arpbind.o \
-        tomatoanon.o
+        firewall.o ppp.o telssh.o wnas.o listen.o redial.o \
+        led.o qos.o forward.o misc.o mtd.o buttons.o restrict.o \
+        gpio.o sched.o bwlimit.o arpbind.o tomatoanon.o
 
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),y)
-OBJS += blink.o
-OBJS += blink_br.o
+ OBJS += blink.o
+ OBJS += blink_br.o
 endif
 
 ifeq ($(TCONFIG_ROAM),y)
-OBJS += roamast.o
+ OBJS += roamast.o
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
-OBJS += bcmutils.o
+ OBJS += bcmutils.o
 endif
 
 ifeq ($(TCONFIG_BCMWL6),y)
-OBJS += arpreq.o
+ OBJS += arpreq.o
 endif
 
 ifeq ($(TCONFIG_FANCTRL),y)
-OBJS += phy_tempsense.o
+ OBJS += phy_tempsense.o
 endif
 
 # dualwan / multiwan
 OBJS += mwan.o pbr.o
 
 ifeq ($(TCONFIG_USB),y)
-OBJS += usb.o
+ OBJS += usb.o
 endif
 
 ifeq ($(TCONFIG_DDNS),y)
-OBJS += ddns.o
+ OBJS += ddns.o
 endif
 
 ifeq ($(TCONFIG_CIFS),y)
-OBJS += cifs.o
+ OBJS += cifs.o
 endif
 
 ifeq ($(TCONFIG_JFFS2),y)
-OBJS += jffs2.o
+ OBJS += jffs2.o
 endif
 
 ifeq ($(TCONFIG_SAMBASRV),y)
-OBJS += samba.o
+ OBJS += samba.o
 endif
 
 ifeq ($(TCONFIG_FTP),y)
-OBJS += ftpd.o
+ OBJS += ftpd.o
 endif
 
 ifeq ($(TCONFIG_OPENVPN),y)
-OBJS += openvpn.o
+ OBJS += openvpn.o
 endif
 
 ifeq ($(TCONFIG_WIREGUARD),y)
-OBJS += wireguard.o
-OBJS += curve25519.o
+ OBJS += wireguard.o
+ OBJS += curve25519.o
 endif
 
 ifeq ($(TCONFIG_TINC),y)
-OBJS += tinc.o
+ OBJS += tinc.o
 endif
 
 ifeq ($(TCONFIG_PPTPD),y)
-OBJS += pptpd.o
-OBJS += pptp_client.o
+ OBJS += pptpd.o
+ OBJS += pptp_client.o
 endif
 
 ifeq ($(TCONFIG_NOCAT),y)
-OBJS += nocat.o
+ OBJS += nocat.o
 endif
 
 ifeq ($(TCONFIG_NGINX),y)
-OBJS += nginx.o
-OBJS += mysql.o
+ OBJS += nginx.o
+ OBJS += mysql.o
 endif
 
 ifeq ($(TCONFIG_BT),y)
-OBJS += transmission.o
+ OBJS += transmission.o
 endif
 
 ifeq ($(TCONFIG_NFS),y)
-OBJS += nfs.o
+ OBJS += nfs.o
 endif
 
 ifeq ($(TCONFIG_SNMP),y)
-OBJS += snmp.o
+ OBJS += snmp.o
 endif
 
 ifeq ($(TCONFIG_SDHC),y)
-OBJS += mmc.o
+ OBJS += mmc.o
 endif
 
 ifeq ($(TCONFIG_UPS),y)
-OBJS += ups.o
+ OBJS += ups.o
 endif
 
 ifeq ($(TCONFIG_TOR),y)
-OBJS += tor.o
+ OBJS += tor.o
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
-vpath %.c $(SRCBASE)/shared
+ vpath %.c $(SRCBASE)/shared
 endif
 
 all: rc
 
 rc: $(OBJS)
 	@echo " [rc] CC $@"
-	@$(CC) -o $@ $^ $(LDFLAGS)
-
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	$(SIZECHECK)
 	$(CPTMP)
 
 install: all
-	@echo "[rc] Installing..."
+	@echo " [rc] Installing as $(INSTALLDIR)/sbin/rc"
 	@install -D rc $(INSTALLDIR)/sbin/rc
 	@$(STRIP) $(INSTALLDIR)/sbin/rc
 	@chmod 0500 $(INSTALLDIR)/sbin/rc
@@ -230,19 +226,11 @@ endif
 clean:
 	rm -f rc *.o .*.depend
 
-size: rc
-	mipsel-uclibc-nm --print-size --size-sort rc
-
 %.o: %.c .%.depend
 	@echo " [rc] CC $@"
-	@$(CC) $(CFLAGS) -c $<
+	@$(CC) $(CFLAGS) -o $@ -c $<
 
 .%.depend: %.c
 	@$(CC) $(CFLAGS) -M $< > $@
 
 -include $(OBJS:%.o=.%.depend)
-
-pswatch: pswatch.c
-	$(CC) -o $@ $^
-	$(STRIP) $@
-	$(CPTMP)

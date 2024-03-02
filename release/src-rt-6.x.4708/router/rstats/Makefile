@@ -1,15 +1,16 @@
 include ../common.mak
 
-CFLAGS	= -Os -Wall $(EXTRACFLAGS) -Wsign-compare
-CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -ffunction-sections -fdata-sections
-LDFLAGS	= -ffunction-sections -fdata-sections -Wl,--gc-sections
-
-ifeq ($(TOMATO_EXPERIMENTAL),1)
-export CFLAGS += -DDEBUG_LOGMSG
-endif
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
+CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared -ffunction-sections -fdata-sections
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
+LIBS    =
 
 ifeq ($(TCONFIG_BCMARM),y)
-LIBS += -lgcc_s
+ LIBS   += -lgcc_s
+endif
+
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+ export CFLAGS += -DDEBUG_LOGMSG
 endif
 
 OBJS = rstats.o
@@ -18,24 +19,18 @@ all: rstats
 
 rstats: $(OBJS)
 	@echo " [rstats] CC -o $@"
-ifeq ($(TCONFIG_BCMARM),y)
-	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) -L../nvram${BCMEX} -lnvram -L../shared -lshared $(LIBS)
-else
-	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJS) -L../nvram -lnvram -L../shared -lshared
-endif
-
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) -L../nvram${BCMEX} -lnvram -L../shared -lshared $(LIBS)
 	$(SIZECHECK)
 	$(CPTMP)
 
 clean:
-	rm -f rstats .*.depend
-	rm -f *.o
+	rm -f rstats *.o .*.depend
 
 install: all
-	@echo " [rstats] Installing..."
-	install -D rstats $(INSTALLDIR)/bin/rstats
-	$(STRIP) $(INSTALLDIR)/bin/rstats
-	chmod 0500 $(INSTALLDIR)/bin/rstats
+	@echo " [rstats] Installing as $(INSTALLDIR)/bin/rstats"
+	@install -D rstats $(INSTALLDIR)/bin/rstats
+	@$(STRIP) $(INSTALLDIR)/bin/rstats
+	@chmod 0500 $(INSTALLDIR)/bin/rstats
 
 %.o: %.c .%.depend
 	@echo " [rstats] CC $@"

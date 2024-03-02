@@ -20,38 +20,44 @@
 
 include ../common.mak
 
-CFLAGS	+= -I. -I$(SRCBASE)/include -Wall -fPIC
-#CFLAGS	+= -g -DDEBUG
-CFLAGS	+= -s
-ifeq ($(CONFIG_TR_OPTIMIZE_SIZE),y)
-CFLAGS  += -Os
-else
-CFLAGS  += -O2
-endif
-LDFLAGS += -L. -L$(TOP)/shared -lshared
+CFLAGS  += -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
+#CFLAGS += -g -DDEBUG
+CFLAGS  += -I$(TOP)/shared -I$(SRCBASE)/include -I.
+LDFLAGS += -L. -L$(TOP)/shared -lshared -fPIC -Wl,--gc-sections
 
-CFLAGS += -I$(TOP)/shared
 ifeq ($(TCONFIG_BCMARM),y)
-CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
-LDFLAGS += -lgcc_s
+ CFLAGS += -O2 -s
+else
+ CFLAGS += -Os
 endif
 
+ifeq ($(TCONFIG_BCMARM),y)
+ CFLAGS  += -I$(SRCBASE)/shared/bcmwifi/include
+ LDFLAGS += -lgcc_s
+endif
 
 vpath %.c $(SRCBASE)/shared/nvram
 
 all: libnvram.so nvram
 
-install: all
-	install -D libnvram.so $(INSTALLDIR)/usr/lib/libnvram.so
-	$(STRIP) $(INSTALLDIR)/usr/lib/libnvram.so
-	install -D nvram $(INSTALLDIR)/bin/nvram
-	$(STRIP) $(INSTALLDIR)/bin/nvram
-
-clean:
-	rm -f *.o *.a *.so nvram
-
 libnvram.so: nvram_linux.o
-	$(LD) -shared -o $@ $^
+	@echo " [nvram] LD $@"
+	@$(LD) -shared -o $@ $^
 
 nvram: main.o libnvram.so
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) -lnvram
+	@echo " [nvram] CC $@"
+	@$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS) -lnvram
+	$(SIZECHECK)
+	$(CPTMP)
+
+install: all
+	@echo " [nvram] Installing as $(INSTALLDIR)/usr/lib/libnvram.so"
+	@install -D libnvram.so $(INSTALLDIR)/usr/lib/libnvram.so
+	@$(STRIP) $(INSTALLDIR)/usr/lib/libnvram.so
+	@echo " [nvram] Installing as $(INSTALLDIR)/bin/nvram"
+	@install -D nvram $(INSTALLDIR)/bin/nvram
+	@$(STRIP) $(INSTALLDIR)/bin/nvram
+	@chmod 0555 $(INSTALLDIR)/bin/nvram
+
+clean:
+	rm -f *.o *.so nvram
