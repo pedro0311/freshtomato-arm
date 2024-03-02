@@ -4144,15 +4144,15 @@ glib2/build:
 		$(TOP)/meson/meson.py setup build \
 		--cross-file meson-cross.txt \
 		--prefix=/usr \
-		-Dpkg_config_path='$(TOP)/libiconv/staged/usr/lib/pkgconfig:$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/libffi/staged/usr/lib/pkgconfig:$(TOP)/gettext-tiny/staged/usr/include$(if $(TCONFIG_NGINX),:$(TOP)/$(PCRE_TARGET)/staged/usr/lib/pkgconfig,)' \
+		-Dpkg_config_path="$(TOP)/libiconv/staged/usr/lib/pkgconfig:$(TOP)/zlib/staged/usr/lib/pkgconfig:$(TOP)/libffi/staged/usr/lib/pkgconfig:$(TOP)/$(PCRE_TARGET)/staged/usr/lib/pkgconfig:$(TOP)/gettext-tiny/staged/usr/include" \
 		-Dc_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
-			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include" \
 		-Dc_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
-			-L$(TOP)/gettext-tiny/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8,)" \
+			-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8 -L$(TOP)/gettext-tiny/staged/usr/lib" \
 		-Dcpp_args="$(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include -I$(TOP)/zlib/staged/usr/include \
-			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
+			-I$(TOP)/libffi/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/gettext-tiny/staged/usr/include" \
 		-Dcpp_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
-			-L$(TOP)/gettext-tiny/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8,)" \
+			-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8 -L$(TOP)/gettext-tiny/staged/usr/lib" \
 		-Dc_std=gnu99 \
 		-Dcpp_std=c++11 \
 		-Dwarning_level=1 \
@@ -4180,7 +4180,7 @@ glib2/build:
 		-Dinstalled_tests=false \
 		-Dtests=false
 
- glib2: glib2/build
+glib2: glib2/build
 	@$(SEP)
 	$(TOP)/meson/meson.py compile -C $@/build $(PARALLEL_BUILD)
 	$(TOP)/meson/meson.py install -C $@/build --destdir=$(TOP)/$@/staged
@@ -4200,9 +4200,9 @@ irqbalance/stamp-h1:
 	$(call patch_files,irqbalance)
 	cd irqbalance && ./autogen.sh && \
 		CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_NGINX),-I$(TOP)/$(PCRE_TARGET)/staged/usr/include,)" \
-		LDFLAGS="-L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_NGINX),-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib,) -Wl,--gc-sections" \
-		LIBS="-lffi -liconv -lz $(if $(TCONFIG_NGINX),-lpcre2-8,)" \
+		CPPFLAGS="-I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -Wl,--gc-sections" \
+		LIBS="-lffi -liconv -lz -lpcre2-8" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/glib2/staged/usr/include/glib-2.0" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
 		$(CONFIGURE) --target=arm-linux --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \
