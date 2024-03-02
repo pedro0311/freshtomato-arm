@@ -49,7 +49,7 @@
  				break; /* poll was interrupted by a signal */
  
 -			if (G.cur_time - G.last_script_run > 11*60) {
-+			if (G.cur_time - G.last_script_run > 5) {
++			if (G.cur_time - G.last_script_run > 60) {
  				/* Useful for updating battery-backed RTC and such */
  				run_script("periodic", G.last_update_offset);
  				gettime1900d(); /* sets G.cur_time */
