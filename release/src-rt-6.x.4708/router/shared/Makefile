@@ -50,7 +50,7 @@ ifeq ($(TCONFIG_USB),y)
         $(TOP)/busybox/util-linux/volume_id/fat.o \
         $(TOP)/busybox/util-linux/volume_id/ntfs.o
  ifeq ($(TCONFIG_BCMARM),y)
-  OBJS + = $(TOP)/busybox/util-linux/volume_id/exfat.o
+  OBJS += $(TOP)/busybox/util-linux/volume_id/exfat.o
  endif
  ifeq ($(TCONFIG_HFS),y)
   CFLAGS += -DHFS
