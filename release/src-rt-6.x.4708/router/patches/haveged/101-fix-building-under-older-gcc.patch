@@ -1,0 +1,45 @@
+--- haveged/src/havegecollect.c
++++ haveged/src/havegecollect.c
+@@ -335,8 +335,10 @@
+    }
+ #endif
+ 
++#if defined(__GNUC__) && __GNUC__ >= 5
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wpedantic"
++#endif
+ 
+ loop_enter:
+ LOOP(40,39)
+@@ -421,7 +423,9 @@
+    #include "oneiteration.h"
+ LOOP(0,0)
+    (void)havege_cp(h_ctxt, i,0,LOOP_PT(0));
++#if defined(__GNUC__) && __GNUC__ >= 5
+ #pragma GCC diagnostic pop
++#endif
+ 
+ loop_exit:
+    return ANDPT==0? 0 : 1;
+--- haveged/src/Makefile.am
++++ haveged/src/Makefile.am
+@@ -6,7 +6,7 @@
+ sbin_PROGRAMS = haveged
+ endif
+ 
+-AM_CFLAGS=-Wall -Wextra -Wpedantic -I..
++AM_CFLAGS=-Wall -Wextra -I..
+ 
+ ####nolibtool_start##
+ ##haveged_SOURCES = haveged.c havege.c havegetune.c havegecollect.c havegetest.c havegecmd.c \
+--- haveged/src/Makefile.in
++++ haveged/src/Makefile.in
+@@ -325,7 +325,7 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-AM_CFLAGS = -Wall -Wextra -Wpedantic -I..
++AM_CFLAGS = -Wall -Wextra -I..
+ 
+ ####nolibtool_start##
+ ####nolibtool_end##
