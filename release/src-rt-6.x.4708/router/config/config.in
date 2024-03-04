@@ -395,3 +395,7 @@ config TCONFIG_TRXKEY
 config TCONFIG_PROXY
 	bool "udpxy and igmpproxy"
 	default n
+
+config TCONFIG_HAVEGED
+	bool "Haveged, an entrophy daemon"
+	default n

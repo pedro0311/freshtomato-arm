@@ -274,6 +274,9 @@ obj-y += $(IPSET_TARGET)
 obj-$(TCONFIG_BCMARM) += taskset
 obj-$(TCONFIG_IPERF) += iperf
 obj-$(TCONFIG_BCMBSD) += bsd
+ifeq ($(TCONFIG_HAVEGED),y)
+ obj-y += haveged
+endif
 
 ifneq ($(TCONFIG_HTTPS),)
  ifeq ($(TCONFIG_OPENSSL11),y)
@@ -308,7 +311,6 @@ obj-y += dnsmasq
 obj-y += mssl
 obj-y += httpd
 obj-y += wanuptime
-#obj-y += haveged
 obj-$(TCONFIG_DNSCRYPT) += zlib
 obj-$(TCONFIG_DNSCRYPT) += libsodium
 obj-$(TCONFIG_DNSCRYPT) += dnscrypt
