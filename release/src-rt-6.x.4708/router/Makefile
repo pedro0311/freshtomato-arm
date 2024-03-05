@@ -1452,7 +1452,7 @@ iptables-1.8.x/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
 		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnetfilter_conntrack/include,)" \
 		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink $(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnetfilter_conntrack/src/.libs,)" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
 			--with-kernel=$(LINUXDIR) --with-xt-lock-name=/var/lock/xtables.lock \
@@ -1587,7 +1587,7 @@ vsftpd-install:
 vsftpd-clean:
 	$(call unpatch_files,vsftpd)
 
-ufsd: kernel_header kernel
+ufsd:
 	@$(MAKE) -C $@ all
 
 ufsd-install: ufsd
@@ -1818,7 +1818,7 @@ iproute2:
 	$(call patch_files,iproute2)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
 		EXTRACFLAGS="$(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) $(OPTSIZE_FLAG)" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/$(IPTABLES_TARGET)/iptables" \
+		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
 		$(PARALLEL_BUILD)
 
 iproute2-install:
@@ -1831,12 +1831,12 @@ iproute2-clean:
 	-@$(MAKE) -C iproute2 clean
 	$(call unpatch_files,iproute2)
 
-iproute2-3.x: kernel_header
+iproute2-3.x:
 	@$(SEP)
 	$(call patch_files,iproute2-3.x)
 	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
 		EXTRACFLAGS="$(EXTRACFLAGS)" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/$(IPTABLES_TARGET)/iptables" \
+		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
 		$(PARALLEL_BUILD)
 
 iproute2-3.x-install:
@@ -3982,7 +3982,7 @@ libnetfilter_conntrack/stamp-h1:
 	cd libnetfilter_conntrack && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -4011,7 +4011,7 @@ libnetfilter_log/stamp-h1:
 	cd libnetfilter_log && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOOLCHAIN)/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib -L$(TOP)/libnfnetlink/src/.libs" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -4038,7 +4038,7 @@ libnetfilter_queue/stamp-h1:
 	cd libnetfilter_queue && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -4067,7 +4067,7 @@ conntrack-tools/stamp-h1:
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
 			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(PKG_CONFIG_PATH):$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
 	@touch $@
 
@@ -4089,7 +4089,7 @@ conntrack-tools-clean:
 eapd$(BCMEX)-clean:
 	-@cd eapd$(BCMEX)/linux && make clean
 
-ufsd-asus: kernel_header kernel
+ufsd-asus:
 	@$(MAKE) -C $@ all
 
 ufsd-asus-install:
