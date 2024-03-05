@@ -11,11 +11,11 @@ endif
 ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS  += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
  CFLAGS  += -I$(SRCBASE)/common/include
- LDFLAGS += -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
+ LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram${BCMEX} -lnvram -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
  LDFLAGS += -L$(TOP)/libbcm -lbcm
  LDFLAGS += -lgcc_s
 else
- LDFLAGS += -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared -lcrypt
+ LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram -lnvram -lcrypt
 endif
 
 ifeq ($(STATIC),1)
@@ -139,7 +139,7 @@ ifeq ($(TCONFIG_TOR),y)
 endif
 
 ifeq ($(TCONFIG_BCMARM),y)
- vpath %.c $(SRCBASE)/shared
+	vpath %.c $(SRCBASE)/shared
 endif
 
 all: rc

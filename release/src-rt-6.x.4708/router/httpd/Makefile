@@ -3,7 +3,7 @@ include ../common.mak
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
 LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
-LIBS    = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+LIBS    = -L$(TOP)/shared -lshared -L$(TOP)/nvram${BCMEX} -lnvram
 
 ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
