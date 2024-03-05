@@ -595,6 +595,12 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 			/* Reserve for PLC */
 			bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x1000, mtd->erasesize);
 #endif
+			/* Netgear EX7000 - Reserve space for board_data */
+			if (nvram_match("boardnum", "679") &&
+			    nvram_match("boardtype", "0x0646") &&
+			    nvram_match("boardrev", "0x1100")) {
+				bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x10000, mtd->erasesize); /* 64K */
+			}
 #ifdef BCMCONFMTD
 			bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
 #endif
@@ -602,13 +608,20 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 #else
 
 		bcm947xx_flash_parts[nparts].size = mtd->size - vmlz_off;
-		
+
 #ifdef PLC
 		/* Reserve for PLC */
 		bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x1000, mtd->erasesize);
 #endif
 		/* Reserve for NVRAM */
 		bcm947xx_flash_parts[nparts].size -= ROUNDUP(nvram_space, mtd->erasesize);
+		
+		/* Netgear EX7000 - Reserve space for board_data */
+		if (nvram_match("boardnum", "679") &&
+		    nvram_match("boardtype", "0x0646") &&
+		    nvram_match("boardrev", "0x1100")) {
+			bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x10000, mtd->erasesize); /* 64K */
+		}
 
 #ifdef BCMCONFMTD
 		bcm947xx_flash_parts[nparts].size -= (mtd->erasesize *4);
@@ -620,7 +633,6 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 		    nvram_match("boardrev", "0x1301") && nvram_match("model", "R1D")) {
 			bcm947xx_flash_parts[nparts].size -= ROUNDUP(0x10000, mtd->erasesize);
 		}
-
 
 #ifdef CONFIG_CRASHLOG
 		if ((bcm947xx_flash_parts[nparts].size - trx_size) >=
@@ -737,6 +749,34 @@ init_mtd_partitions(hndsflash_t *sfl_info, struct mtd_info *mtd, size_t size)
 		bcm947xx_flash_parts[nparts].size = ROUNDUP(0x10000, mtd->erasesize);
 		bcm947xx_flash_parts[nparts].offset = 0xFE0000;
 		nparts++;
+	}
+
+	/* Netgear EX7000 - Setup board_data partition */
+	if (nvram_match("boardnum", "679") &&
+	    nvram_match("boardtype", "0x0646") &&
+	    nvram_match("boardrev", "0x1100")) {
+		bcm947xx_flash_parts[nparts].name = "board_data";
+		bcm947xx_flash_parts[nparts].size = ROUNDUP(0x10000, mtd->erasesize); /* 64K */
+		bcm947xx_flash_parts[nparts].offset = size - ROUNDUP(nvram_space, mtd->erasesize) - bcm947xx_flash_parts[nparts].size;
+		nparts++;
+		/*
+		 * bcmsflash: squash filesystem found at block 35
+		 * Creating 13 MTD partitions on "bcmsflash":
+		 * 0x000000000000-0x000000040000 : "boot"
+		 * 0x000000040000-0x000000f60000 : "linux"
+		 * 0x000000239380-0x000000f60000 : "rootfs"
+		 * 0x000000f60000-0x000000f70000 : "ML1"
+		 * 0x000000f70000-0x000000f80000 : "ML2"
+		 * 0x000000f80000-0x000000f90000 : "ML3"
+		 * 0x000000f90000-0x000000fa0000 : "ML4"
+		 * 0x000000fa0000-0x000000fb0000 : "ML5"
+		 * 0x000000fb0000-0x000000fc0000 : "ML6"
+		 * 0x000000fc0000-0x000000fd0000 : "ML7"
+		 * 0x000000fd0000-0x000000fe0000 : "POT"
+		 * 0x000000fe0000-0x000000ff0000 : "board_data"
+		 * 0x000000ff0000-0x000001000000 : "nvram"
+		 * Note: For FT - keep board_data partition -> used for WL parameters! ML1 to ML7 and POT not needed
+		 */
 	}
 
 	/* Setup nvram MTD partition */
