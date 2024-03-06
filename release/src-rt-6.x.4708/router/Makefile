@@ -89,9 +89,8 @@ export PARALLEL_BUILD := -j$(shell grep -c '^processor' /proc/cpuinfo)
 export HAVE_TOMATO := y
 comma := ,
 
-MEDIA_SERVER_STATIC =
-export INSTALL_ZLIB := $(if $(or $(TCONFIG_BBT)$(TCONFIG_TOR)$(TCONFIG_NGINX)$(TCONFIG_TINC)$(TCONFIG_ZFS)$(TCONFIG_IRQBALANCE)$(TCONFIG_SAMBASRV),$(if $(TCONFIG_MEDIA_SERVER),$(if $(MEDIA_SERVER_STATIC),,y),)),y,)
-export INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(if $(TCONFIG_MEDIA_SERVER),$(if $(MEDIA_SERVER_STATIC),,y),)),y,)
+export INSTALL_ZLIB := $(if $(or $(TCONFIG_DNSCRYPT),$(TCONFIG_NFS),$(TCONFIG_SAMBASRV),$(TCONFIG_BBT),$(TCONFIG_MEDIA_SERVER),$(TCONFIG_TOR),$(TCONFIG_TINC),$(TCONFIG_NGINX),$(TCONFIG_BCMARM),$(TCONFIG_ZFS),$(TCONFIG_IRQBALANCE)),y)
+export INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
 
 ifeq ($(TCONFIG_BCMWL6),y)
  export CFLAGS += -DTRAFFIC_MGMT
@@ -1959,11 +1958,8 @@ libogg: libogg/stamp-h1
 	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
 
 libogg-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libogg/src/.libs/libogg.so.0 $(INSTALLDIR)/libogg/usr/lib/libogg.so.0
 	$(STRIP) $(INSTALLDIR)/libogg/usr/lib/libogg.so.0
-endif
-	@true
 
 libogg-clean:
 	-@$(MAKE) -C libogg clean
@@ -1988,12 +1984,9 @@ flac: flac/stamp-h1
 	@$(MAKE) -C flac/src/libFLAC all $(PARALLEL_BUILD)
 
 flac-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D flac/src/libFLAC/.libs/libFLAC.so.12.1.0 $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
 	$(STRIP) $(INSTALLDIR)/flac/usr/lib/libFLAC.so.12.1.0
 	cd $(INSTALLDIR)/flac/usr/lib/ && ln -sf libFLAC.so.12.1.0 libFLAC.so.12
-endif
-	@true
 
 flac-clean:
 	-@$(MAKE) -C flac clean
@@ -2022,15 +2015,12 @@ libjpeg-turbo: libjpeg-turbo/build/Makefile
 	@$(MAKE) -C libjpeg-turbo/build DESTDIR=$(TOP)/libjpeg-turbo/staged install
 
 libjpeg-turbo-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
 	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
-endif
 ifeq ($(TCONFIG_NGINX),y)
 	install -D libjpeg-turbo/build/libjpeg.so.8.3.2 $(INSTALLDIR)/libjpeg-turbo/usr/lib/libjpeg.so.8.3.2
 	cd $(INSTALLDIR)/libjpeg-turbo/usr/lib/ && $(STRIP) libjpeg.so.8.3.2 && ln -sf libjpeg.so.8.3.2 libjpeg.so && ln -sf libjpeg.so.8.3.2 libjpeg.so.8
 endif
-	@true
 
 libjpeg-turbo-clean:
 	@rm -rf libjpeg-turbo/build
@@ -2050,11 +2040,8 @@ libexif: libexif/stamp-h1
 	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
 
 libexif-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libexif/libexif/.libs/libexif.so.12 $(INSTALLDIR)/libexif/usr/lib/libexif.so.12
 	$(STRIP) $(INSTALLDIR)/libexif/usr/lib/libexif.so.12
-endif
-	@true
 
 libexif-clean:
 	-@$(MAKE) -C libexif clean
@@ -2097,11 +2084,8 @@ endif
 	$(MAKE) -C libid3tag/build all $(PARALLEL_BUILD)
 
 libid3tag-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libid3tag/build/libid3tag.so.0.16.3 $(INSTALLDIR)/libid3tag/usr/lib/libid3tag.so.0.16.3
 	cd $(INSTALLDIR)/libid3tag/usr/lib/ && $(STRIP) libid3tag.so.0.16.3 && ln -sf libid3tag.so.0.16.3 libid3tag.so && ln -sf libid3tag.so.0.16.3 libid3tag.so.0
-endif
-	@true
 
 libid3tag-clean:
 ifneq ($(TCONFIG_BCMARM),y)
@@ -2124,11 +2108,8 @@ libvorbis: libvorbis/stamp-h1
 	@$(MAKE) -C libvorbis/lib all $(PARALLEL_BUILD)
 
 libvorbis-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D libvorbis/lib/.libs/libvorbis.so.0 $(INSTALLDIR)/libvorbis/usr/lib/libvorbis.so.0
 	$(STRIP) $(INSTALLDIR)/libvorbis/usr/lib/libvorbis.so.0
-endif
-	@true
 
 libvorbis-clean:
 	-@$(MAKE) -C libvorbis clean
@@ -2160,15 +2141,12 @@ ffmpeg: ffmpeg/stamp-h1
 	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
 
 ffmpeg-install:
-ifneq ($(MEDIA_SERVER_STATIC),y)
 	install -D ffmpeg/libavformat/libavformat.so.54 $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.54
 	install -D ffmpeg/libavcodec/libavcodec.so.54 $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.54
 	install -D ffmpeg/libavutil/libavutil.so.51 $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.51
 	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavformat.so.54
 	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavcodec.so.54
 	$(STRIP) $(INSTALLDIR)/ffmpeg/usr/lib/libavutil.so.51
-endif
-	@true
 
 ffmpeg-clean:
 	-@$(MAKE) -C ffmpeg clean
@@ -2185,12 +2163,12 @@ minidlna/stamp-h1:
 			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/build -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
-			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" $(if $(MEDIA_SERVER_STATIC),--enable-static,) --enable-tivo --disable-dependency-tracking
+			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" --enable-tivo --disable-dependency-tracking
 	@touch $@
 
 minidlna: minidlna/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ $(if $(MEDIA_SERVER_STATIC),STATIC=1,) $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 minidlna-install:
 	install -D minidlna/minidlnad $(INSTALLDIR)/minidlna/usr/sbin/minidlna
