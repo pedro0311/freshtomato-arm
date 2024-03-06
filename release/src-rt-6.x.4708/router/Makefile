@@ -1076,7 +1076,7 @@ rmconf: config/mconf
 roldconf: config/conf
 	@config/conf -o $(CONFIG_IN)
 	@$(MAKE) shared-clean rc-clean nvram$(BCMEX)-clean httpd-clean prebuilt-clean libbcmcrypto-clean dhcpv6-clean
-	@$(MAKE) dnsmasq-clean iproute2-clean
+	@$(MAKE) dnsmasq-clean $(IPROUTE_TARGET)-clean
 ifeq ($(TCONFIG_BCMARM),y)
 	@$(MAKE) compressed-clean
 endif
