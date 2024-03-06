@@ -2066,10 +2066,10 @@ ifneq ($(TCONFIG_BCMARM),y)
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
 			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
-					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
 			-DBUILD_SHARED_LIBS=FALSE \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
@@ -2080,10 +2080,10 @@ endif
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections" \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -fPIC -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
 			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
-					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC" \
-			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections" \
+					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
+			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
