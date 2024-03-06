@@ -61,8 +61,14 @@ For the following **ARM** routers: **Asus** N18U, AC56S, AC56U/AC56R, N66U C1, A
     $ sudo apt-get install re2c texlive libelf1 nodejs zip mc cmake ninja-build curl libglib2.0-dev-bin libglib2.0-dev
     $ sudo apt-get install linux-headers-$(uname -r)
     ```
-     and for Debian 9/10: ```$ sudo apt-get install sqlite gconf-editor```
-     but for Debian 11: ```$ sudo apt-get install sqlite3 dconf-editor```
+     and for Debian 9/10:
+	```sh
+	$ sudo apt-get install sqlite gconf-editor
+	```
+     but for Debian 11/12:
+	```sh
+	$ sudo apt-get install sqlite3 dconf-editor
+	```
   
 8. Clone/download repository:
     ```sh
