@@ -1502,6 +1502,49 @@ iptables-1.8.x-clean:
 	@rm -f iptables-1.8.x/stamp-h1
 	$(call unpatch_files,iptables-1.8.x)
 
+iproute2:
+	@$(SEP)
+	$(call patch_files,iproute2)
+	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
+		EXTRACFLAGS="$(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) $(OPTSIZE_FLAG)" \
+		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
+		$(PARALLEL_BUILD)
+
+iproute2-install:
+	install -D iproute2/tc/tc $(INSTALLDIR)/iproute2/usr/sbin/tc
+	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/tc
+	install -D iproute2/ip/ip $(INSTALLDIR)/iproute2/usr/sbin/ip
+	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/ip
+
+iproute2-clean:
+	-@$(MAKE) -C iproute2 clean
+	$(call unpatch_files,iproute2)
+
+iproute2-3.x:
+	@$(SEP)
+	$(call patch_files,iproute2-3.x)
+	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
+		EXTRACFLAGS="$(EXTRACFLAGS)" \
+		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
+		IPT_LIB_DIR="/usr/lib/xtables" \
+		$(PARALLEL_BUILD)
+
+iproute2-3.x-install:
+	install -D iproute2-3.x/tc/tc $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
+	$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
+	install -D iproute2-3.x/ip/ip $(INSTALLDIR)/iproute2-3.x/usr/sbin/ip
+	$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/sbin/ip
+	@if [ -e iproute2-3.x/tc/m_xt.so ] ; then \
+		install -D iproute2-3.x/tc/m_xt.so $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/m_xt.so ; \
+		ln -sf m_xt.so $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/m_ipt.so ; \
+		$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/*.so ; \
+	fi
+
+iproute2-3.x-clean:
+	-@$(MAKE) -C iproute2-3.x clean
+	-rm -f iproute2-3.x/Config
+	$(call unpatch_files,iproute2-3.x)
+
 rp-pppoe/src/stamp-h1: rp-pppoe/src/Makefile.in
 	$(call patch_files,rp-pppoe)
 	cd rp-pppoe/src && \
@@ -1555,7 +1598,7 @@ miniupnpd/stamp-h1:
 	$(call patch_files,miniupnpd)
 	cd miniupnpd && \
 		PKG_CONFIG_LIBDIR="" \
-		./configure --leasefile --vendorcfg --portinuse $(if $(TCONFIG_IPV6),--ipv6,) --iptablespath=$(TOP)/$(IPTABLES_TARGET)
+		./configure --leasefile --vendorcfg --portinuse --firewall=iptables --iptablespath=$(TOP)/$(IPTABLES_TARGET) $(if $(TCONFIG_IPV6),--ipv6,)
 	@touch $@
 
 miniupnpd: miniupnpd/stamp-h1
@@ -1812,48 +1855,6 @@ libbcm:
 libbcm-install:
 	install -D libbcm/libbcm.so $(INSTALLDIR)/libbcm/usr/lib/libbcm.so
 	$(STRIP) $(INSTALLDIR)/libbcm/usr/lib/libbcm.so
-
-iproute2:
-	@$(SEP)
-	$(call patch_files,iproute2)
-	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) $(OPTSIZE_FLAG)" \
-		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
-		$(PARALLEL_BUILD)
-
-iproute2-install:
-	install -D iproute2/tc/tc $(INSTALLDIR)/iproute2/usr/sbin/tc
-	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/tc
-	install -D iproute2/ip/ip $(INSTALLDIR)/iproute2/usr/sbin/ip
-	$(STRIP) $(INSTALLDIR)/iproute2/usr/sbin/ip
-
-iproute2-clean:
-	-@$(MAKE) -C iproute2 clean
-	$(call unpatch_files,iproute2)
-
-iproute2-3.x:
-	@$(SEP)
-	$(call patch_files,iproute2-3.x)
-	@$(MAKE) -C $@ KERNEL_INCLUDE=$(LINUXDIR)/include \
-		EXTRACFLAGS="$(EXTRACFLAGS)" \
-		PKG_CONFIG_PATH="$(TOP)/$(IPTABLES_TARGET)/iptables" \
-		$(PARALLEL_BUILD)
-
-iproute2-3.x-install:
-	install -D iproute2-3.x/tc/tc $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
-	$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/sbin/tc
-	install -D iproute2-3.x/ip/ip $(INSTALLDIR)/iproute2-3.x/usr/sbin/ip
-	$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/sbin/ip
-	@if [ -e iproute2-3.x/tc/m_xt.so ] ; then \
-		install -D iproute2-3.x/tc/m_xt.so $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/m_xt.so ; \
-		ln -sf m_xt.so $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/m_ipt.so ; \
-		$(STRIP) $(INSTALLDIR)/iproute2-3.x/usr/lib/tc/*.so ; \
-	fi
-
-iproute2-3.x-clean:
-	-@$(MAKE) -C iproute2-3.x clean
-	-rm -f iproute2-3.x/Config
-	$(call unpatch_files,iproute2-3.x)
 
 dropbear/config.h:
 	$(call patch_files,dropbear)

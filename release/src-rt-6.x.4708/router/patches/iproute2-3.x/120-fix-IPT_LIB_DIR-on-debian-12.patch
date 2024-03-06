@@ -1,0 +1,14 @@
+--- iproute2-3.x/configure
++++ iproute2-3.x/configure
+@@ -177,6 +177,11 @@
+ 
+ check_ipt_lib_dir()
+ {
++	if [ -n "$IPT_LIB_DIR" ]; then
++		echo $IPT_LIB_DIR
++		echo "IPT_LIB_DIR:=$IPT_LIB_DIR" >> Config
++		return
++	fi
+ 	IPT_LIB_DIR=$(${PKG_CONFIG} --variable=xtlibdir xtables)
+ 	if [ -n "$IPT_LIB_DIR" ]; then
+ 		echo $IPT_LIB_DIR
