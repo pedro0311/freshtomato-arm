@@ -3059,7 +3059,7 @@ libevent/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_HTTPS),-I$(TOP)/$(OPENSSLDIR)/staged/usr/include,)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_HTTPS),-pthread -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib,)" \
-		$(CONFIGURE) $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
+		$(CONFIGURE) --prefix=/usr $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
 			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
 
@@ -3119,8 +3119,8 @@ transmission/build/Makefile:
 			-DENABLE_NLS=FALSE -DINSTALL_DOC=FALSE -DUSE_SYSTEM_UTP=FALSE -DUSE_SYSTEM_DHT=FALSE -DUSE_SYSTEM_B64=FALSE -DWITH_SYSTEMD=FALSE \
 			-DCURL_INCLUDE_DIR=$(TOP)/libcurl/include \
 			-DCURL_LIBRARY=$(TOP)/libcurl/lib/.libs/libcurl.so \
-			-DEVENT2_INCLUDE_DIR=$(TOP)/libevent/staged/usr/local/include \
-			-DEVENT2_LIBRARY=$(TOP)/libevent/staged/usr/local/lib/libevent.so \
+			-DEVENT2_INCLUDE_DIR=$(TOP)/libevent/staged/usr/include \
+			-DEVENT2_LIBRARY=$(TOP)/libevent/staged/usr/lib/libevent.so \
 			-DOPENSSL_INCLUDE_DIR=$(TOP)/$(OPENSSLDIR)/staged/usr/include \
 			-DOPENSSL_CRYPTO_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so \
 			-DOPENSSL_SSL_LIBRARY=$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so \
@@ -3244,10 +3244,8 @@ endif
 		CPPFLAGS="-Os $(EXTRACFLAGS)" \
 		CFLAGS="-Os -Wall -fno-delete-null-pointer-checks -funit-at-a-time -pipe -ffunction-sections -fdata-sections \
 			$(if $(TCONFIG_BCMARM),-marm -march=armv7-a -mtune=cortex-a9,$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) \
-			-I$(TOP)/libevent/staged/usr/local/include \
-			-I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/libevent/staged/usr/local/lib \
-			-L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+			-I$(TOP)/libevent/staged/usr/include -I$(TOP)/libnfsidmap/staged/usr/include -ffunction-sections -fdata-sections" \
+		LDFLAGS="-L$(TOP)/libevent/staged/usr/lib -L$(TOP)/libnfsidmap/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 			knfsd_cv_bsd_signals=no \
 		CC_FOR_BUILD=$(CC) $(CONFIGURE) \
 			--disable-gss --without-tcp-wrappers --disable-nfsv4 --disable-ipv6 --disable-uuid --disable-mount \
@@ -3521,7 +3519,7 @@ tor/stamp-h1:
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O3,-Os) -Wall $(EXTRACFLAGS) -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -ffunction-sections -fdata-sections $(if $(TCONFIG_KEYGEN),,-DOPENSSL_NO_ENGINE)" \
 		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/staged/usr" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr/local \
+		$(CONFIGURE) --prefix=/usr --with-libevent-dir=$(TOP)/libevent/staged/usr \
 			--with-openssl-dir=$(TOP)/$(OPENSSLDIR)/staged/usr --with-zlib-dir=$(TOP)/zlib/staged/usr \
 			--disable-asciidoc --disable-tool-name-check --disable-unittests --disable-lzma \
 			--disable-seccomp --disable-libscrypt --disable-zstd-advanced-apis \
