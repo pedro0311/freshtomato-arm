@@ -746,7 +746,7 @@ define KernelConfig
 		echo "# CONFIG_EEPROM_AT25 is not set" >>$(1); \
 		echo "# CONFIG_SERIAL_MAX3100 is not set" >>$(1); \
 		echo "# CONFIG_SERIAL_MAX3107 is not set" >>$(1); \
-		echo "CONFIG_SPI=y" >>$(1); \
+		sed -i "s/# CONFIG_SPI is not set/CONFIG_SPI=y/g" $(1); \
 		echo "CONFIG_SPI_MASTER=y" >>$(1); \
 		echo "# SPI Master Controller Drivers" >>$(1); \
 		echo "# CONFIG_SPI_BITBANG is not set" >>$(1); \
