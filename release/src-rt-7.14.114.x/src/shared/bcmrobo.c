@@ -1301,6 +1301,15 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 		mii_wreg(robo, PAGE_CTRL, REG_CTRL_SRST, &srst_ctrl, sizeof(uint8));
 	}
 
+	if (ROBO_IS_BCM5301X(robo->devid)) {
+		int port;
+
+		for (port = 0; port < MAX_NO_PHYS; port++) {
+			bcm_robo_gphy_config(robo, port);
+		}
+		ET_MSG(("%s: GPHY config done\n", __FUNCTION__));
+	}
+
 	/* Enable switch leds */
 	if (sih->chip == BCM5356_CHIP_ID) {
 		if (PMUCTL_ENAB(sih)) {
