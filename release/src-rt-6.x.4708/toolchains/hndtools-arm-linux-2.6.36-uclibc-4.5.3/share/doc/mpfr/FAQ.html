@@ -2,8 +2,8 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <!--
-Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
-Contributed by the Arenaire and Cacao projects, INRIA.
+Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Free Software Foundation, Inc.
+Contributed by the AriC and Caramel projects, INRIA.
 
 This file is part of the GNU MPFR Library.
 
@@ -23,10 +23,6 @@ http://www.gnu.org/licenses/ or write to the Free Software Foundation, Inc.,
 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
 -->
 
-<!--
-    Do not modify directly! Regenerate this file with:
-      xsltproc -\-nodtdattr faq-web.xsl faq.xhtml
-  -->
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 
 <head><meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
@@ -189,9 +185,9 @@ infinities, not-a-number (NaN).</p></li>
 
 <dd><p>You need to add <q><code>r</code></q> to the function names, and to
 specify the rounding mode (<code>MPFR_RNDN</code> for rounding to nearest,
-<code>MPFR_RNDZ</code> for rounding towards zero, <code>MPFR_RNDU</code>
-for rounding towards plus infinity, <code>MPFR_RNDD</code> for rounding
-towards minus infinity). You can also define macros as follows:
+<code>MPFR_RNDZ</code> for rounding toward zero, <code>MPFR_RNDU</code>
+for rounding toward plus infinity, <code>MPFR_RNDD</code> for rounding
+toward minus infinity). You can also define macros as follows:
 <code class="block-code">#define mpf_add(a, b, c) mpfr_add(a, b, c, MPFR_RNDN)</code></p>
 <p>The header file <samp>mpf2mpfr.h</samp> from the
 <cite><acronym>MPFR</acronym></cite> distribution automatically
@@ -213,8 +209,12 @@ the <cite><acronym>GMP</acronym></cite> library could not be found
 (as it is not in the provided library search paths) or because the
 <cite><acronym>GMP</acronym></cite> library that was found does not have
 the expected <acronym title="Application Binary Interface">ABI</acronym>
-(<abbr>e.g.</abbr> 32-bit <abbr>vs</abbr> 64-bit). The latter problem can
-have several causes:</p>
+(<abbr>e.g.</abbr> 32-bit <abbr>vs</abbr> 64-bit). The former problem can be
+due to the fact that a static build of <cite><acronym>MPFR</acronym></cite>
+was requested while only a shared <cite><acronym>GMP</acronym></cite> library
+is installed (or the opposite, but another error can also show up in this
+case, see the <a href="#fpic">question about <samp>-fPIC</samp></a>). The
+latter problem can have several causes:</p>
 <ul>
 <li>A wrong libgmp library has been picked up. This can occur if you have
 several <cite><acronym>GMP</acronym></cite> versions installed on the

@@ -7,7 +7,7 @@
 #define __UCLIBC_SUBLEVEL__ 33
 /* Automatically generated make config: don't edit */
 /* Version: 0.9.33.2 */
-/* Sun Jun  5 11:50:42 2022 */
+/* Thu Mar  7 21:29:04 2024 */
 #undef __TARGET_alpha__
 #define __TARGET_arm__ 1
 #undef __TARGET_avr32__
@@ -56,7 +56,7 @@
 #define __DO_C99_MATH__ 1
 #undef __DO_XSI_MATH__
 #undef __UCLIBC_HAS_FENV__
-#define __KERNEL_HEADERS__ "/home/pedro/hndtools/output/toolchain/linux/include"
+#define __KERNEL_HEADERS__ "/home/pedro/buildroot-2012.02-ARM/output/toolchain/linux/include"
 #define __HAVE_DOT_CONFIG__ 1
 
 /* General Library Settings */
@@ -234,7 +234,7 @@
 #define __UCLIBC_BUILD_NOEXECSTACK__ 1
 
 /* Development/debugging options */
-#define __CROSS_COMPILER_PREFIX__ "/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/arm-brcm-linux-uclibcgnueabi-"
+#define __CROSS_COMPILER_PREFIX__ "/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin/arm-brcm-linux-uclibcgnueabi-"
 #define __UCLIBC_EXTRA_CFLAGS__ ""
 #undef __DODEBUG__
 #define __DOSTRIP__ 1

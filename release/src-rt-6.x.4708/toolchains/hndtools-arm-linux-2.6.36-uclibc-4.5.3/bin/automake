@@ -31,7 +31,7 @@ package Language;
 
 BEGIN
 {
-  my $perllibdir = $ENV{'perllibdir'} || '/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
+  my $perllibdir = $ENV{'perllibdir'} || '/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/automake-1.11';
   unshift @INC, (split ':', $perllibdir);
 
   # Override SHELL.  This is required on DJGPP so that system() uses

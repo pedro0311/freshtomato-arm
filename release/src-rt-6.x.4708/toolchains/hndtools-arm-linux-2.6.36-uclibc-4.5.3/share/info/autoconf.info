@@ -1,7 +1,7 @@
-This is autoconf.info, produced by makeinfo version 6.5 from
+This is autoconf.info, produced by makeinfo version 6.8 from
 autoconf.texi.
 
-This manual (5 June 2022) is for GNU Autoconf (version 2.65), a package
+This manual (7 March 2024) is for GNU Autoconf (version 2.65), a package
 for creating scripts to configure source code packages using templates
 and an M4 macro package.
 
@@ -51,7 +51,7 @@ File: autoconf.info,  Node: Top,  Next: Introduction,  Up: (dir)
 Autoconf
 ********
 
-This manual (5 June 2022) is for GNU Autoconf (version 2.65), a package
+This manual (7 March 2024) is for GNU Autoconf (version 2.65), a package
 for creating scripts to configure source code packages using templates
 and an M4 macro package.
 
@@ -295,7 +295,7 @@ Writing Autoconf Macros
 * Reporting Messages::          Notifying 'autoconf' users
 * Dependencies Between Macros::  What to do when macros depend on other macros
 * Obsoleting Macros::           Warning about old ways of doing things
-* Coding Style::                Writing Autoconf macros a` la Autoconf
+* Coding Style::                Writing Autoconf macros à la Autoconf
 
 Dependencies Between Macros
 
@@ -1005,7 +1005,7 @@ therefore it must be quoted twice:
 
      AC_COMPILE_IFELSE([[char b[10];]], [], [AC_MSG_ERROR([you lose])])
 
-Voila`, you actually produce 'char b[10];' this time!
+Voilà, you actually produce 'char b[10];' this time!
 
    On the other hand, descriptions (e.g., the last parameter of
 'AC_DEFINE' or 'AS_HELP_STRING') are not literals--they are subject to
@@ -3372,7 +3372,7 @@ this:
 'AC_ARG_VAR', for more details.
 
  -- Macro: AC_CHECK_PROG (VARIABLE, PROG-TO-CHECK-FOR, VALUE-IF-FOUND,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'], [REJECT])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH], [REJECT])
      Check whether program PROG-TO-CHECK-FOR exists in PATH.  If it is
      found, set VARIABLE to VALUE-IF-FOUND, otherwise to
      VALUE-IF-NOT-FOUND, if given.  Always pass over REJECT (an absolute
@@ -3384,7 +3384,7 @@ this:
      variable or the cache variable 'ac_cv_prog_VARIABLE'.
 
  -- Macro: AC_CHECK_PROGS (VARIABLE, PROGS-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Check for each program in the blank-separated list
      PROGS-TO-CHECK-FOR existing in the PATH.  If one is found, set
      VARIABLE to the name of that program.  Otherwise, continue checking
@@ -3396,7 +3396,7 @@ this:
      variable 'ac_cv_prog_VARIABLE'.
 
  -- Macro: AC_CHECK_TARGET_TOOL (VARIABLE, PROG-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_PROG', but first looks for PROG-TO-CHECK-FOR with a
      prefix of the target type as determined by 'AC_CANONICAL_TARGET',
      followed by a dash (*note Canonicalizing::).  If the tool cannot be
@@ -3412,7 +3412,7 @@ this:
      executables_.
 
  -- Macro: AC_CHECK_TOOL (VARIABLE, PROG-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_PROG', but first looks for PROG-TO-CHECK-FOR with a
      prefix of the host type as specified by '--host', followed by a
      dash.  For example, if the user runs 'configure --build=x86_64-gnu
@@ -3427,7 +3427,7 @@ this:
      see *note Specifying Target Triplets::.
 
  -- Macro: AC_CHECK_TARGET_TOOLS (VARIABLE, PROGS-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_TARGET_TOOL', each of the tools in the list
      PROGS-TO-CHECK-FOR are checked with a prefix of the target type as
      determined by 'AC_CANONICAL_TARGET', followed by a dash (*note
@@ -3440,7 +3440,7 @@ this:
      'AC_SUBST' for VARIABLE.
 
  -- Macro: AC_CHECK_TOOLS (VARIABLE, PROGS-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_TOOL', each of the tools in the list
      PROGS-TO-CHECK-FOR are checked with a prefix of the host type as
      determined by 'AC_CANONICAL_HOST', followed by a dash (*note
@@ -3456,14 +3456,14 @@ this:
      see *note Specifying Target Triplets::.
 
  -- Macro: AC_PATH_PROG (VARIABLE, PROG-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_PROG', but set VARIABLE to the absolute name of
      PROG-TO-CHECK-FOR if found.  The result of this test can be
      overridden by setting the VARIABLE variable.  A positive result of
      this test is cached in the 'ac_cv_path_VARIABLE' variable.
 
  -- Macro: AC_PATH_PROGS (VARIABLE, PROGS-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_PROGS', but if any of PROGS-TO-CHECK-FOR are found,
      set VARIABLE to the absolute name of the program found.  The result
      of this test can be overridden by setting the VARIABLE variable.  A
@@ -3471,7 +3471,7 @@ this:
      variable.
 
  -- Macro: AC_PATH_PROGS_FEATURE_CHECK (VARIABLE, PROGS-TO-CHECK-FOR,
-          FEATURE-TEST, [ACTION-IF-NOT-FOUND], [PATH = '$PATH'])
+          FEATURE-TEST, [ACTION-IF-NOT-FOUND], [PATH = $PATH])
      This macro was introduced in Autoconf 2.62.  If VARIABLE is not
      empty, then set the cache variable 'ac_cv_path_VARIABLE' to its
      value.  Otherwise, check for each program in the blank-separated
@@ -3507,12 +3507,12 @@ this:
           AC_SUBST([M4], [$ac_cv_path_M4])
 
  -- Macro: AC_PATH_TARGET_TOOL (VARIABLE, PROG-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_TARGET_TOOL', but set VARIABLE to the absolute name
      of the program if it is found.
 
  -- Macro: AC_PATH_TOOL (VARIABLE, PROG-TO-CHECK-FOR,
-          [VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+          [VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Like 'AC_CHECK_TOOL', but set VARIABLE to the absolute name of the
      program if it is found.
 
@@ -4926,7 +4926,7 @@ These macros are used to find declarations not covered by the
 "particular" test macros.
 
  -- Macro: AC_CHECK_DECL (SYMBOL, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      If SYMBOL (a function, variable, or constant) is not declared in
      INCLUDES and a declaration is needed, run the shell commands
      ACTION-IF-NOT-FOUND, otherwise ACTION-IF-FOUND.  INCLUDES is a
@@ -4944,7 +4944,7 @@ These macros are used to find declarations not covered by the
      to underscores.
 
  -- Macro: AC_CHECK_DECLS (SYMBOLS, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      For each of the SYMBOLS (_comma_-separated list), define
      'HAVE_DECL_SYMBOL' (in all capitals) to '1' if SYMBOL is declared,
      otherwise to '0'.  If ACTION-IF-NOT-FOUND is given, it is
@@ -5072,7 +5072,7 @@ These macros are used to find structure members not covered by the
 "particular" test macros.
 
  -- Macro: AC_CHECK_MEMBER (AGGREGATE.MEMBER, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      Check whether MEMBER is a member of the aggregate AGGREGATE.  If no
      INCLUDES are specified, the default includes are used (*note
      Default Includes::).
@@ -5090,7 +5090,7 @@ These macros are used to find structure members not covered by the
      to underscores.
 
  -- Macro: AC_CHECK_MEMBERS (MEMBERS, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      Check for the existence of each 'AGGREGATE.MEMBER' of MEMBERS using
      the previous macro.  When MEMBER belongs to AGGREGATE, define
      'HAVE_AGGREGATE_MEMBER' (in all capitals, with spaces and dots
@@ -5298,7 +5298,7 @@ These macros are used to check for types not covered by the "particular"
 test macros.
 
  -- Macro: AC_CHECK_TYPE (TYPE, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      Check whether TYPE is defined.  It may be a compiler builtin type
      or defined by the INCLUDES.  INCLUDES is a series of include
      directives, defaulting to 'AC_INCLUDES_DEFAULT' (*note Default
@@ -5314,7 +5314,7 @@ test macros.
      variable name mapped to underscores.
 
  -- Macro: AC_CHECK_TYPES (TYPES, [ACTION-IF-FOUND],
-          [ACTION-IF-NOT-FOUND], [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+          [ACTION-IF-NOT-FOUND], [INCLUDES = AC_INCLUDES_DEFAULT])
      For each TYPE of the TYPES that is defined, define 'HAVE_TYPE' (in
      all capitals).  Each TYPE must follow the rules of 'AC_CHECK_TYPE'.
      If no INCLUDES are specified, the default includes are used (*note
@@ -5396,7 +5396,7 @@ File: autoconf.info,  Node: Generic Compiler Characteristics,  Next: C Compiler,
 ---------------------------------------
 
  -- Macro: AC_CHECK_SIZEOF (TYPE-OR-EXPR, [UNUSED], [INCLUDES =
-          'AC_INCLUDES_DEFAULT'])
+          AC_INCLUDES_DEFAULT])
      Define 'SIZEOF_TYPE-OR-EXPR' (*note Standard Symbols::) to be the
      size in bytes of TYPE-OR-EXPR, which may be either a type or an
      expression returning a value that has a size.  If the expression
@@ -5418,7 +5418,7 @@ File: autoconf.info,  Node: Generic Compiler Characteristics,  Next: C Compiler,
      variable, with '*' mapped to 'p' and other characters not suitable
      for a variable name mapped to underscores.
 
- -- Macro: AC_CHECK_ALIGNOF (TYPE, [INCLUDES = 'AC_INCLUDES_DEFAULT'])
+ -- Macro: AC_CHECK_ALIGNOF (TYPE, [INCLUDES = AC_INCLUDES_DEFAULT])
      Define 'ALIGNOF_TYPE' (*note Standard Symbols::) to be the
      alignment in bytes of TYPE.  'TYPE y;' must be valid as a structure
      member declaration.  If 'type' is unknown, the result is 0.  If no
@@ -5430,7 +5430,7 @@ File: autoconf.info,  Node: Generic Compiler Characteristics,  Next: C Compiler,
      for a variable name mapped to underscores.
 
  -- Macro: AC_COMPUTE_INT (VAR, EXPRESSION, [INCLUDES =
-          'AC_INCLUDES_DEFAULT'], [ACTION-IF-FAILS])
+          AC_INCLUDES_DEFAULT], [ACTION-IF-FAILS])
      Store into the shell variable VAR the value of the integer
      EXPRESSION.  The value should fit in an initializer in a C variable
      of type 'signed long'.  To support cross compilation (in which
@@ -5972,7 +5972,7 @@ File: autoconf.info,  Node: Erlang Compiler and Interpreter,  Next: Fortran Comp
 Autoconf defines the following macros for determining paths to the
 essential Erlang/OTP programs:
 
- -- Macro: AC_ERLANG_PATH_ERLC ([VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+ -- Macro: AC_ERLANG_PATH_ERLC ([VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Determine an Erlang compiler to use.  If 'ERLC' is not already set
      in the environment, check for 'erlc'.  Set output variable 'ERLC'
      to the complete path of the compiler command found.  In addition,
@@ -5986,12 +5986,12 @@ essential Erlang/OTP programs:
 
           AC_ERLANG_PATH_ERLC([not found], [/usr/lib/erlang/bin])
 
- -- Macro: AC_ERLANG_NEED_ERLC ([PATH = '$PATH'])
+ -- Macro: AC_ERLANG_NEED_ERLC ([PATH = $PATH])
      A simplified variant of the 'AC_ERLANG_PATH_ERLC' macro, that
      prints an error message and exits the 'configure' script if the
      'erlc' program is not found.
 
- -- Macro: AC_ERLANG_PATH_ERL ([VALUE-IF-NOT-FOUND], [PATH = '$PATH'])
+ -- Macro: AC_ERLANG_PATH_ERL ([VALUE-IF-NOT-FOUND], [PATH = $PATH])
      Determine an Erlang interpreter to use.  If 'ERL' is not already
      set in the environment, check for 'erl'.  Set output variable 'ERL'
      to the complete path of the interpreter command found.
@@ -6003,7 +6003,7 @@ essential Erlang/OTP programs:
 
           AC_ERLANG_PATH_ERL([not found], [/usr/lib/erlang/bin])
 
- -- Macro: AC_ERLANG_NEED_ERL ([PATH = '$PATH'])
+ -- Macro: AC_ERLANG_NEED_ERL ([PATH = $PATH])
      A simplified variant of the 'AC_ERLANG_PATH_ERL' macro, that prints
      an error message and exits the 'configure' script if the 'erl'
      program is not found.
@@ -7791,7 +7791,7 @@ Diagnostic Macros::.
      This macro prints nothing if 'configure' is run with the '--quiet'
      or '--silent' option.
 
- -- Macro: AC_MSG_ERROR (ERROR-DESCRIPTION, [EXIT-STATUS = '$?/1'])
+ -- Macro: AC_MSG_ERROR (ERROR-DESCRIPTION, [EXIT-STATUS = $?/1])
      Notify the user of an error that prevents 'configure' from
      completing.  This macro prints an error message to the standard
      error output and exits 'configure' with EXIT-STATUS ('$?' by
@@ -9000,7 +9000,7 @@ When macros statically diagnose abnormal situations, benign or fatal,
 they should report them using these macros.  For issuing dynamic issues,
 i.e., when 'configure' is run, see *note Printing Messages::.
 
- -- Macro: m4_assert (EXPRESSION, [EXIT-STATUS = '1'])
+ -- Macro: m4_assert (EXPRESSION, [EXIT-STATUS = 1])
      Assert that the arithmetic EXPRESSION evaluates to non-zero.
      Otherwise, issue a fatal error, and exit 'autom4te' with
      EXIT-STATUS.
@@ -9474,7 +9474,7 @@ can be used to generate lists.  For example,
           list_add_x([1], list)
           =>2,3,4
 
- -- Macro: m4_map_args_pair (MACRO, [MACRO-END = 'macro'], ARG...)
+ -- Macro: m4_map_args_pair (MACRO, [MACRO-END = macro], ARG...)
      For every pair of arguments ARG, invoke MACRO with two arguments.
      If there is an odd number of arguments, invoke MACRO-END, which
      defaults to MACRO, with the remaining argument.
@@ -9919,7 +9919,7 @@ double.
      Backslash-escape all characters in STRING that are active in
      regexps.
 
- -- Macro: m4_split (STRING, [REGEXP = '[\t ]+'])
+ -- Macro: m4_split (STRING, [REGEXP = [\t ]+])
      Split STRING into an M4 list of elements quoted by '[' and ']',
      while keeping white space at the beginning and at the end.  If
      REGEXP is given, use it instead of '[\t ]+' for splitting.  If
@@ -9933,7 +9933,7 @@ double.
      consider 'm4_flatten', or do it all at once with 'm4_normalize'.
      To quickly test if STRING has only whitespace, use 'm4_ifblank'.
 
- -- Macro: m4_text_box (MESSAGE, [FRAME = '-'])
+ -- Macro: m4_text_box (MESSAGE, [FRAME = -])
      Add a text box around MESSAGE, using FRAME as the border character
      above and below the message.  The frame correctly accounts for the
      subsequent expansion of MESSAGE.  For example:
@@ -9946,8 +9946,8 @@ double.
      The MESSAGE must contain balanced quotes and parentheses, although
      quadrigraphs can be used to work around this.
 
- -- Macro: m4_text_wrap (STRING, [PREFIX], [PREFIX1 = 'PREFIX'], [WIDTH
-          = '79'])
+ -- Macro: m4_text_wrap (STRING, [PREFIX], [PREFIX1 = PREFIX], [WIDTH =
+          79])
      Break STRING into a series of whitespace-separated words, then
      output those words separated by spaces, and wrapping lines any time
      the output would exceed WIDTH columns.  If given, PREFIX1 begins
@@ -10071,7 +10071,7 @@ anything that can be parsed by 'm4_eval'.
           =>1
 
  -- Macro: m4_version_prereq (VERSION, [IF-NEW-ENOUGH], [IF-OLD =
-          'm4_fatal'])
+          m4_fatal])
      Compares VERSION against the version of Autoconf currently running.
      If the running version is at VERSION or newer, expand
      IF-NEW-ENOUGH, but if VERSION is larger than the version currently
@@ -10436,7 +10436,7 @@ that unfortunately are not portable in practice.
      contains "\".  Redirections can be placed outside the macro
      invocation.
 
- -- Macro: AS_ESCAPE (STRING, [CHARS = '`\"$'])
+ -- Macro: AS_ESCAPE (STRING, [CHARS = `\"$])
      Expands to STRING, with any characters in CHARS escaped with a
      backslash ('\').  CHARS should be at most four bytes long, and only
      contain characters from the set '`\"$'; however, characters may be
@@ -10476,7 +10476,7 @@ that unfortunately are not portable in practice.
 
           m4_bpatsubst([[STRING]], ['], ['\\''])
 
- -- Macro: AS_EXIT ([STATUS = '$?'])
+ -- Macro: AS_EXIT ([STATUS = $?])
      Emit code to exit the shell with STATUS, defaulting to '$?'.  This
      macro works around shells that see the exit status of the command
      prior to 'exit' inside a 'trap 0' handler (*note Limitations of
@@ -10869,7 +10869,7 @@ Here are some instructions and guidelines for writing Autoconf macros.
 * Reporting Messages::          Notifying 'autoconf' users
 * Dependencies Between Macros::  What to do when macros depend on other macros
 * Obsoleting Macros::           Warning about old ways of doing things
-* Coding Style::                Writing Autoconf macros a` la Autoconf
+* Coding Style::                Writing Autoconf macros à la Autoconf
 
 
 File: autoconf.info,  Node: Macro Definitions,  Next: Macro Names,  Up: Writing Autoconf Macros
@@ -16717,7 +16717,7 @@ just like the standard Autoconf 'help strings' do.  This is the purpose
 of the 'AS_HELP_STRING' macro.
 
  -- Macro: AS_HELP_STRING (LEFT-HAND-SIDE, RIGHT-HAND-SIDE
-          [INDENT-COLUMN = '26'], [WRAP-COLUMN = '79'])
+          [INDENT-COLUMN = 26], [WRAP-COLUMN = 79])
 
      Expands into a help string that looks pretty when the user executes
      'configure --help'.  It is typically used in 'AC_ARG_WITH' (*note
@@ -19358,9 +19358,9 @@ diagnostics.
      contents must end with an end of line.  FILE must be a single shell
      word that expands into a single file name.
 
- -- Macro: AT_CHECK (COMMANDS, [STATUS = '0'], [STDOUT], [STDERR],
+ -- Macro: AT_CHECK (COMMANDS, [STATUS = 0], [STDOUT], [STDERR],
           [RUN-IF-FAIL], [RUN-IF-PASS])
- -- Macro: AT_CHECK_UNQUOTED (COMMANDS, [STATUS = '0'], [STDOUT],
+ -- Macro: AT_CHECK_UNQUOTED (COMMANDS, [STATUS = 0], [STDOUT],
           [STDERR], [RUN-IF-FAIL], [RUN-IF-PASS])
      Execute a test by performing given shell COMMANDS.  COMMANDS is
      output as-is, so shell expansions are honored.  These commands
@@ -19641,7 +19641,7 @@ things to do.
 
    - Invoke 'AC_CONFIG_TESTDIR'.
 
-      -- Macro: AC_CONFIG_TESTDIR (DIRECTORY, [TEST-PATH = 'directory'])
+      -- Macro: AC_CONFIG_TESTDIR (DIRECTORY, [TEST-PATH = directory])
           An Autotest test suite is to be configured in DIRECTORY.  This
           macro requires the instantiation of 'DIRECTORY/atconfig' from
           'DIRECTORY/atconfig.in', and sets the default 'AUTOTEST_PATH'
@@ -20150,7 +20150,7 @@ multiple macro invocations at the top level of 'configure.ac':
 
 but that was getting complex, so the author wanted to offload some of
 the text into a new macro in another file included via 'aclocal.m4'.
-The nai"ve approach merely wraps the text in a new macro:
+The naïve approach merely wraps the text in a new macro:
 
      AC_DEFUN([FOO], [AC_COMPILE_IFELSE([...])])
      AC_DEFUN([BAR], [
@@ -20419,7 +20419,7 @@ shortened it to Autoconf.
 after the Holy Grail of portability (er, that is, alpha testers) to give
 me feedback as I encapsulated pieces of my handwritten scripts in M4
 macros and continued to add features and improve the techniques used in
-the checks.  Prominent among the testers were Franc,ois Pinard, who came
+the checks.  Prominent among the testers were François Pinard, who came
 up with the idea of making an Autoconf shell script to run M4 and check
 for unresolved macro calls; Richard Pixley, who suggested running the
 compiler instead of searching the file system to find include files and
@@ -20456,7 +20456,7 @@ provide everything we need.
 
    More development occurred as people put Autoconf under more stresses
 (and to uses I hadn't anticipated).  Karl Berry added checks for X11.
-david zuhn contributed C++ support.  Franc,ois Pinard made it diagnose
+david zuhn contributed C++ support.  François Pinard made it diagnose
 invalid arguments.  Jim Blandy bravely coerced it into configuring GNU
 Emacs, laying the groundwork for several later improvements.  Roland
 McGrath got it to configure the GNU C Library, wrote the 'autoheader'
@@ -20503,16 +20503,15 @@ quality of the program.  I made the messages showing results of the
 checks less ambiguous, always printing a result.  I regularized the
 names of the macros and cleaned up coding style inconsistencies.  I
 added some auxiliary utilities that I had developed to help convert
-source code packages to use Autoconf.  With the help of Franc,ois
-Pinard, I made the macros not interrupt each others' messages.  (That
-feature revealed some performance bottlenecks in GNU M4, which he
-hastily corrected!)  I reorganized the documentation around problems
-people want to solve.  And I began a test suite, because experience had
-shown that Autoconf has a pronounced tendency to regress when we change
-it.
+source code packages to use Autoconf.  With the help of François Pinard,
+I made the macros not interrupt each others' messages.  (That feature
+revealed some performance bottlenecks in GNU M4, which he hastily
+corrected!)  I reorganized the documentation around problems people want
+to solve.  And I began a test suite, because experience had shown that
+Autoconf has a pronounced tendency to regress when we change it.
 
    Again, several alpha testers gave invaluable feedback, especially
-Franc,ois Pinard, Jim Meyering, Karl Berry, Rob Savoye, Ken Raeburn, and
+François Pinard, Jim Meyering, Karl Berry, Rob Savoye, Ken Raeburn, and
 Mark Eichin.
 
    Finally, version 2.0 was ready.  And there was much rejoicing.  (And
@@ -23390,370 +23389,375 @@ introduced in this document.
 
 
 Tag Table:
-Node: Top2283
-Node: Introduction21212
-Node: The GNU Build System27716
-Node: Automake28695
-Node: Gnulib30643
-Node: Libtool31952
-Node: Pointers33373
-Ref: Pointers-Footnote-134673
-Node: Making configure Scripts34833
-Node: Writing Autoconf Input37870
-Node: Shell Script Compiler39333
-Node: Autoconf Language41694
-Node: Autoconf Input Layout48422
-Node: autoscan Invocation49830
-Node: ifnames Invocation52386
-Node: autoconf Invocation53586
-Node: autoreconf Invocation58870
-Node: Setup63627
-Node: Initializing configure64949
-Ref: AC_INIT65454
-Node: Versioning67738
-Node: Notices69599
-Node: Input70775
-Ref: AC_CONFIG_SRCDIR70916
-Node: Output73858
-Ref: AC_OUTPUT74293
-Ref: AC_PROG_MAKE_SET75912
-Node: Configuration Actions76337
-Node: Configuration Files81629
-Ref: AC_CONFIG_FILES81890
-Node: Makefile Substitutions83109
-Node: Preset Output Variables84848
-Node: Installation Directory Variables94189
-Node: Changed Directory Variables102027
-Node: Build Directories104621
-Node: Automatic Remaking106476
-Node: Configuration Headers108644
-Node: Header Templates111940
-Node: autoheader Invocation114674
-Node: Autoheader Macros118319
-Node: Configuration Commands120583
-Ref: AC_CONFIG_COMMANDS121095
-Node: Configuration Links122380
-Ref: AC_CONFIG_LINKS122831
-Node: Subdirectories123804
-Node: Default Prefix126260
-Ref: AC_PREFIX_PROGRAM127151
-Node: Existing Tests127682
-Node: Common Behavior129484
-Node: Standard Symbols130123
-Node: Default Includes130704
-Node: Alternative Programs132958
-Node: Particular Programs133644
-Ref: AC_PROG_LEX139265
-Ref: AC_PROG_LN_S141871
-Node: Generic Programs143489
-Ref: AC_CHECK_PROG144460
+Node: Top2284
+Node: Introduction21214
+Node: The GNU Build System27718
+Node: Automake28697
+Node: Gnulib30645
+Node: Libtool31954
+Node: Pointers33375
+Ref: Pointers-Footnote-134675
+Node: Making configure Scripts34835
+Node: Writing Autoconf Input37872
+Node: Shell Script Compiler39335
+Node: Autoconf Language41696
+Node: Autoconf Input Layout48424
+Node: autoscan Invocation49832
+Node: ifnames Invocation52388
+Node: autoconf Invocation53588
+Node: autoreconf Invocation58872
+Node: Setup63629
+Node: Initializing configure64951
+Ref: AC_INIT65456
+Node: Versioning67740
+Node: Notices69601
+Node: Input70777
+Ref: AC_CONFIG_SRCDIR70918
+Node: Output73860
+Ref: AC_OUTPUT74295
+Ref: AC_PROG_MAKE_SET75914
+Node: Configuration Actions76339
+Node: Configuration Files81631
+Ref: AC_CONFIG_FILES81892
+Node: Makefile Substitutions83111
+Node: Preset Output Variables84850
+Node: Installation Directory Variables94191
+Node: Changed Directory Variables102029
+Node: Build Directories104623
+Node: Automatic Remaking106478
+Node: Configuration Headers108646
+Node: Header Templates111942
+Node: autoheader Invocation114676
+Node: Autoheader Macros118321
+Node: Configuration Commands120585
+Ref: AC_CONFIG_COMMANDS121097
+Node: Configuration Links122382
+Ref: AC_CONFIG_LINKS122833
+Node: Subdirectories123806
+Node: Default Prefix126262
+Ref: AC_PREFIX_PROGRAM127153
+Node: Existing Tests127684
+Node: Common Behavior129486
+Node: Standard Symbols130125
+Node: Default Includes130706
+Node: Alternative Programs132960
+Node: Particular Programs133646
+Ref: AC_PROG_LEX139267
+Ref: AC_PROG_LN_S141873
+Node: Generic Programs143491
+Ref: AC_CHECK_PROG144462
 Ref: AC_CHECK_PROGS145186
-Ref: AC_PATH_PROG149186
-Ref: AC_PATH_PROGS149560
-Node: Files152638
-Node: Libraries153838
-Ref: AC_CHECK_LIB154075
-Ref: AC_SEARCH_LIBS156334
-Node: Library Functions157510
-Node: Function Portability158133
-Node: Particular Functions167360
-Ref: AC_FUNC_ALLOCA167691
-Ref: AC_FUNC_CLOSEDIR_VOID169831
-Ref: AC_FUNC_FORK171692
-Ref: AC_FUNC_GETLOADAVG173496
-Ref: AC_FUNC_GETMNTENT175061
-Ref: AC_FUNC_MMAP179058
-Ref: AC_FUNC_STRCOLL181913
-Ref: AC_FUNC_STRFTIME182883
-Ref: AC_FUNC_UTIME_NULL184043
-Ref: AC_FUNC_VPRINTF184391
-Node: Generic Functions185607
-Ref: AC_CHECK_FUNC186133
-Ref: AC_CHECK_FUNCS186762
-Node: Header Files191388
-Node: Header Portability192021
-Node: Particular Headers194890
-Ref: AC_HEADER_DIRENT195438
-Ref: AC_HEADER_MAJOR196968
-Ref: AC_HEADER_STAT197753
-Ref: AC_HEADER_STDC199011
-Ref: AC_HEADER_TIME203745
-Node: Generic Headers205132
-Ref: AC_CHECK_HEADER205532
-Ref: AC_CHECK_HEADERS207405
-Node: Declarations209970
-Node: Particular Declarations210566
-Node: Generic Declarations210790
-Ref: AC_CHECK_DECLS211936
-Node: Structures214335
-Node: Particular Structures214950
-Ref: AC_STRUCT_ST_BLOCKS216019
-Ref: AC_STRUCT_TIMEZONE216715
-Node: Generic Structures217044
-Ref: AC_CHECK_MEMBERS218036
-Node: Types218869
-Node: Particular Types219389
-Ref: AC_TYPE_GETGROUPS219832
-Ref: AC_TYPE_MODE_T222868
-Ref: AC_TYPE_OFF_T223051
-Ref: AC_TYPE_PID_T223231
-Ref: AC_TYPE_SIZE_T223411
-Ref: AC_TYPE_UID_T223780
-Node: Generic Types225425
-Node: Compilers and Preprocessors227573
-Node: Specific Compiler Characteristics228806
-Node: Generic Compiler Characteristics229911
-Ref: AC_CHECK_SIZEOF230151
-Node: C Compiler234749
-Ref: AC_PROG_CC_C_O239007
-Ref: AC_C_BIGENDIAN242815
-Ref: AC_C_CONST244657
-Ref: AC_C_INLINE247975
-Ref: AC_C_CHAR_UNSIGNED248198
-Ref: AC_PROG_GCC_TRADITIONAL250821
-Node: C++ Compiler251232
-Node: Objective C Compiler253431
-Node: Objective C++ Compiler254804
-Node: Erlang Compiler and Interpreter256254
-Node: Fortran Compiler258299
-Node: System Services272694
-Ref: AC_PATH_X272939
-Ref: AC_PATH_XTRA273933
-Ref: AC_SYS_INTERPRETER274509
-Ref: AC_SYS_LONG_FILE_NAMES275921
-Node: Posix Variants276298
-Ref: AC_USE_SYSTEM_EXTENSIONS276598
-Node: Erlang Libraries277675
-Node: Writing Tests282675
-Node: Language Choice284699
-Ref: AC_LANG285196
-Ref: AC_LANG_PUSH286862
-Ref: Language Choice-Footnote-1288684
-Node: Writing Test Programs288840
-Node: Guidelines289418
-Node: Test Functions291678
-Node: Generating Sources293076
-Node: Running the Preprocessor297708
-Ref: AC_PREPROC_IFELSE298435
-Ref: AC_EGREP_HEADER300264
-Ref: AC_EGREP_CPP300593
-Node: Running the Compiler301019
-Node: Running the Linker302673
-Ref: AC_LINK_IFELSE303813
-Node: Runtime304585
-Ref: AC_RUN_IFELSE305360
-Node: Systemology309364
-Node: Multiple Cases311713
-Node: Results313414
-Node: Defining Symbols314233
-Node: Setting Output Variables319125
-Node: Special Chars in Variables325017
-Node: Caching Results326277
-Node: Cache Variable Names329995
-Node: Cache Files331645
-Node: Cache Checkpointing333623
-Node: Printing Messages334997
-Ref: AC_MSG_RESULT336511
-Ref: AC_MSG_NOTICE337013
-Ref: AC_MSG_ERROR337377
-Ref: AC_MSG_WARN338210
-Node: Programming in M4338633
-Node: M4 Quotation339438
-Node: Active Characters340407
-Ref: Active Characters-Footnote-1341794
-Node: One Macro Call341816
-Node: Quoting and Parameters343371
-Node: Quotation and Nested Macros345707
-Node: Changequote is Evil348717
-Node: Quadrigraphs351246
-Node: Balancing Parentheses353922
-Node: Quotation Rule Of Thumb358017
-Node: Using autom4te360915
-Ref: Using autom4te-Footnote-1361566
-Node: autom4te Invocation361615
-Node: Customizing autom4te370133
-Node: Programming in M4sugar371414
-Node: Redefined M4 Macros372595
-Node: Diagnostic Macros380444
-Ref: m4_fatal381197
-Ref: m4_warn381436
-Node: Diversion support382207
-Node: Conditional constructs387644
-Node: Looping constructs394342
-Ref: m4_foreach_w397953
-Node: Evaluation Macros405301
-Node: Text processing Macros413990
-Node: Number processing Macros423610
-Ref: m4_version_compare425561
-Node: Set manipulation Macros427867
-Node: Forbidden Patterns436974
-Node: Debugging via autom4te438465
-Node: Programming in M4sh440282
-Node: Common Shell Constructs441656
-Node: Polymorphic Variables448750
-Node: Initialization Macros456760
-Node: File Descriptor Macros460993
-Ref: AS_MESSAGE_LOG_FD462144
-Node: Writing Autoconf Macros463646
-Node: Macro Definitions464451
-Node: Macro Names468112
-Node: Reporting Messages471863
-Node: Dependencies Between Macros473707
-Node: Prerequisite Macros474402
-Node: Suggested Ordering480477
-Node: One-Shot Macros482020
-Node: Obsoleting Macros483373
-Ref: AU_DEFUN484126
-Node: Coding Style485155
-Node: Portable Shell492935
-Node: Shellology497115
-Node: Here-Documents501576
-Node: File Descriptors504220
-Node: File System Conventions508821
-Node: Shell Pattern Matching514633
-Node: Shell Substitutions515197
-Node: Assignments525906
-Node: Parentheses527795
-Node: Slashes528625
-Node: Special Shell Variables529477
-Node: Shell Functions541253
-Node: Limitations of Builtins544230
-Ref: case548252
-Ref: echo552807
-Ref: export559771
-Ref: if562021
-Ref: set565688
-Ref: trap575010
-Ref: unset578567
-Node: Limitations of Usual Tools579518
-Ref: grep597325
-Ref: mkdir602571
-Ref: sed608235
-Ref: touch617183
-Node: Portable Make619528
-Node: $< in Ordinary Make Rules620914
-Node: Failure in Make Rules621380
-Node: Special Chars in Names622408
-Node: Backslash-Newline-Newline623382
-Node: Backslash-Newline Comments624009
-Node: Long Lines in Makefiles624900
-Node: Macros and Submakes625275
-Node: The Make Macro MAKEFLAGS627569
-Node: The Make Macro SHELL628454
-Node: Parallel Make630955
-Ref: Parallel Make-Footnote-1632593
-Node: Comments in Make Rules632723
-Node: obj/ and Make633202
-Node: make -k Status633841
-Node: VPATH and Make634463
-Node: Variables listed in VPATH635787
-Node: VPATH and Double-colon636326
-Node: $< in Explicit Rules636732
-Node: Automatic Rule Rewriting637199
-Node: Tru64 Directory Magic643128
-Node: Make Target Lookup643954
-Node: Single Suffix Rules648396
-Node: Timestamps and Make649742
-Node: Portable C and C++650960
-Node: Varieties of Unportability652601
-Node: Integer Overflow654698
-Node: Integer Overflow Basics655715
-Node: Signed Overflow Examples657463
-Node: Optimization and Wraparound660965
-Node: Signed Overflow Advice663927
-Node: Signed Integer Division666601
-Node: Preprocessor Arithmetic667212
-Node: Null Pointers667961
-Node: Buffer Overruns668595
-Node: Volatile Objects671384
-Node: Floating Point Portability677062
-Node: Exiting Portably677569
-Node: Manual Configuration679045
-Node: Specifying Target Triplets679878
-Ref: Specifying Names680051
-Node: Canonicalizing682745
-Node: Using System Type685012
-Node: Site Configuration687813
-Node: Help Formatting688785
-Node: External Software689729
-Ref: AC_ARG_WITH691275
-Node: Package Options695588
-Ref: AC_ARG_ENABLE697043
-Node: Pretty Help Strings698187
-Ref: AS_HELP_STRING698773
-Node: Option Checking701115
-Node: Site Details702844
-Node: Transforming Names704073
-Node: Transformation Options705155
-Node: Transformation Examples705632
-Node: Transformation Rules707354
-Node: Site Defaults708900
-Node: Running configure Scripts714187
-Node: Basic Installation715252
-Node: Compilers and Options719349
-Node: Multiple Architectures720003
-Node: Installation Names721583
-Node: Optional Features724479
-Node: Particular Systems725833
-Node: System Type727046
-Node: Sharing Defaults728374
-Node: Defining Variables729013
-Node: configure Invocation729905
-Node: config.status Invocation731611
-Ref: CONFIG_SHELL735353
-Node: Obsolete Constructs736745
-Node: Obsolete config.status Use737708
-Node: acconfig Header739486
-Node: autoupdate Invocation741509
-Node: Obsolete Macros743375
-Ref: AC_FUNC_SETVBUF_REVERSED751017
-Ref: AC_TYPE_SIGNAL767544
-Node: Autoconf 1770521
-Node: Changed File Names771587
-Node: Changed Makefiles772337
-Node: Changed Macros773425
-Node: Changed Results774678
-Node: Changed Macro Writing776801
-Node: Autoconf 2.13778081
-Node: Changed Quotation779289
-Node: New Macros781207
-Node: Hosts and Cross-Compilation783002
-Node: AC_LIBOBJ vs LIBOBJS787300
-Node: AC_ACT_IFELSE vs AC_TRY_ACT788915
-Ref: AC_FOO_IFELSE vs AC_TRY_FOO789104
-Node: Using Autotest790918
-Node: Using an Autotest Test Suite793322
-Node: testsuite Scripts793613
-Node: Autotest Logs798100
-Node: Writing Testsuites800441
-Node: testsuite Invocation814521
-Node: Making testsuite Scripts819065
-Node: FAQ823979
-Node: Distributing824839
-Node: Why GNU M4825886
-Node: Bootstrapping826755
-Node: Why Not Imake827365
-Node: Defining Directories832105
-Node: Autom4te Cache834084
-Node: Present But Cannot Be Compiled835922
-Node: Expanded Before Required839639
-Node: Debugging844538
-Node: History848999
-Node: Genesis849796
-Node: Exodus850974
-Node: Leviticus854020
-Node: Numbers855548
-Node: Deuteronomy857463
-Node: GNU Free Documentation License860133
-Node: Indices885279
-Node: Environment Variable Index885998
-Node: Output Variable Index896784
-Node: Preprocessor Symbol Index913733
-Node: Cache Variable Index932357
-Node: Autoconf Macro Index941119
-Node: M4 Macro Index974507
-Node: Autotest Macro Index994567
-Node: Program & Function Index996751
-Node: Concept Index1018161
+Ref: AC_PATH_PROG149176
+Ref: AC_PATH_PROGS149548
+Node: Files152618
+Node: Libraries153818
+Ref: AC_CHECK_LIB154055
+Ref: AC_SEARCH_LIBS156314
+Node: Library Functions157490
+Node: Function Portability158113
+Node: Particular Functions167340
+Ref: AC_FUNC_ALLOCA167671
+Ref: AC_FUNC_CLOSEDIR_VOID169811
+Ref: AC_FUNC_FORK171672
+Ref: AC_FUNC_GETLOADAVG173476
+Ref: AC_FUNC_GETMNTENT175041
+Ref: AC_FUNC_MMAP179038
+Ref: AC_FUNC_STRCOLL181893
+Ref: AC_FUNC_STRFTIME182863
+Ref: AC_FUNC_UTIME_NULL184023
+Ref: AC_FUNC_VPRINTF184371
+Node: Generic Functions185587
+Ref: AC_CHECK_FUNC186113
+Ref: AC_CHECK_FUNCS186742
+Node: Header Files191368
+Node: Header Portability192001
+Node: Particular Headers194870
+Ref: AC_HEADER_DIRENT195418
+Ref: AC_HEADER_MAJOR196948
+Ref: AC_HEADER_STAT197733
+Ref: AC_HEADER_STDC198991
+Ref: AC_HEADER_TIME203725
+Node: Generic Headers205112
+Ref: AC_CHECK_HEADER205512
+Ref: AC_CHECK_HEADERS207385
+Node: Declarations209950
+Node: Particular Declarations210546
+Node: Generic Declarations210770
+Ref: AC_CHECK_DECLS211914
+Node: Structures214311
+Node: Particular Structures214926
+Ref: AC_STRUCT_ST_BLOCKS215995
+Ref: AC_STRUCT_TIMEZONE216691
+Node: Generic Structures217020
+Ref: AC_CHECK_MEMBERS218010
+Node: Types218841
+Node: Particular Types219361
+Ref: AC_TYPE_GETGROUPS219804
+Ref: AC_TYPE_MODE_T222840
+Ref: AC_TYPE_OFF_T223023
+Ref: AC_TYPE_PID_T223203
+Ref: AC_TYPE_SIZE_T223383
+Ref: AC_TYPE_UID_T223752
+Node: Generic Types225397
+Node: Compilers and Preprocessors227541
+Node: Specific Compiler Characteristics228774
+Node: Generic Compiler Characteristics229879
+Ref: AC_CHECK_SIZEOF230119
+Node: C Compiler234711
+Ref: AC_PROG_CC_C_O238969
+Ref: AC_C_BIGENDIAN242777
+Ref: AC_C_CONST244619
+Ref: AC_C_INLINE247937
+Ref: AC_C_CHAR_UNSIGNED248160
+Ref: AC_PROG_GCC_TRADITIONAL250783
+Node: C++ Compiler251194
+Node: Objective C Compiler253393
+Node: Objective C++ Compiler254766
+Node: Erlang Compiler and Interpreter256216
+Node: Fortran Compiler258253
+Node: System Services272648
+Ref: AC_PATH_X272893
+Ref: AC_PATH_XTRA273887
+Ref: AC_SYS_INTERPRETER274463
+Ref: AC_SYS_LONG_FILE_NAMES275875
+Node: Posix Variants276252
+Ref: AC_USE_SYSTEM_EXTENSIONS276552
+Node: Erlang Libraries277629
+Node: Writing Tests282629
+Node: Language Choice284653
+Ref: AC_LANG285150
+Ref: AC_LANG_PUSH286816
+Ref: Language Choice-Footnote-1288638
+Node: Writing Test Programs288794
+Node: Guidelines289372
+Node: Test Functions291632
+Node: Generating Sources293030
+Node: Running the Preprocessor297662
+Ref: AC_PREPROC_IFELSE298389
+Ref: AC_EGREP_HEADER300218
+Ref: AC_EGREP_CPP300547
+Node: Running the Compiler300973
+Node: Running the Linker302627
+Ref: AC_LINK_IFELSE303767
+Node: Runtime304539
+Ref: AC_RUN_IFELSE305314
+Node: Systemology309318
+Node: Multiple Cases311667
+Node: Results313368
+Node: Defining Symbols314187
+Node: Setting Output Variables319079
+Node: Special Chars in Variables324971
+Node: Caching Results326231
+Node: Cache Variable Names329949
+Node: Cache Files331599
+Node: Cache Checkpointing333577
+Node: Printing Messages334951
+Ref: AC_MSG_RESULT336465
+Ref: AC_MSG_NOTICE336967
+Ref: AC_MSG_ERROR337331
+Ref: AC_MSG_WARN338162
+Node: Programming in M4338585
+Node: M4 Quotation339390
+Node: Active Characters340359
+Ref: Active Characters-Footnote-1341746
+Node: One Macro Call341768
+Node: Quoting and Parameters343323
+Node: Quotation and Nested Macros345659
+Node: Changequote is Evil348669
+Node: Quadrigraphs351198
+Node: Balancing Parentheses353874
+Node: Quotation Rule Of Thumb357969
+Node: Using autom4te360867
+Ref: Using autom4te-Footnote-1361518
+Node: autom4te Invocation361567
+Node: Customizing autom4te370085
+Node: Programming in M4sugar371366
+Node: Redefined M4 Macros372547
+Node: Diagnostic Macros380396
+Ref: m4_fatal381147
+Ref: m4_warn381386
+Node: Diversion support382157
+Node: Conditional constructs387594
+Node: Looping constructs394292
+Ref: m4_foreach_w397903
+Node: Evaluation Macros405249
+Node: Text processing Macros413938
+Node: Number processing Macros423550
+Ref: m4_version_compare425501
+Node: Set manipulation Macros427805
+Node: Forbidden Patterns436912
+Node: Debugging via autom4te438403
+Node: Programming in M4sh440220
+Node: Common Shell Constructs441594
+Node: Polymorphic Variables448684
+Node: Initialization Macros456694
+Node: File Descriptor Macros460927
+Ref: AS_MESSAGE_LOG_FD462078
+Node: Writing Autoconf Macros463580
+Node: Macro Definitions464385
+Node: Macro Names468046
+Node: Reporting Messages471797
+Node: Dependencies Between Macros473641
+Node: Prerequisite Macros474336
+Node: Suggested Ordering480411
+Node: One-Shot Macros481954
+Node: Obsoleting Macros483307
+Ref: AU_DEFUN484060
+Node: Coding Style485089
+Node: Portable Shell492869
+Node: Shellology497049
+Node: Here-Documents501510
+Node: File Descriptors504154
+Node: File System Conventions508755
+Node: Shell Pattern Matching514567
+Node: Shell Substitutions515131
+Node: Assignments525840
+Node: Parentheses527729
+Node: Slashes528559
+Node: Special Shell Variables529411
+Node: Shell Functions541187
+Node: Limitations of Builtins544164
+Ref: case548186
+Ref: echo552741
+Ref: export559705
+Ref: if561955
+Ref: set565622
+Ref: trap574944
+Ref: unset578501
+Node: Limitations of Usual Tools579452
+Ref: grep597259
+Ref: mkdir602505
+Ref: sed608169
+Ref: touch617117
+Node: Portable Make619462
+Node: $< in Ordinary Make Rules620848
+Node: Failure in Make Rules621314
+Node: Special Chars in Names622342
+Node: Backslash-Newline-Newline623316
+Node: Backslash-Newline Comments623943
+Node: Long Lines in Makefiles624834
+Node: Macros and Submakes625209
+Node: The Make Macro MAKEFLAGS627503
+Node: The Make Macro SHELL628388
+Node: Parallel Make630889
+Ref: Parallel Make-Footnote-1632527
+Node: Comments in Make Rules632657
+Node: obj/ and Make633136
+Node: make -k Status633775
+Node: VPATH and Make634397
+Node: Variables listed in VPATH635721
+Node: VPATH and Double-colon636260
+Node: $< in Explicit Rules636666
+Node: Automatic Rule Rewriting637133
+Node: Tru64 Directory Magic643062
+Node: Make Target Lookup643888
+Node: Single Suffix Rules648330
+Node: Timestamps and Make649676
+Node: Portable C and C++650894
+Node: Varieties of Unportability652535
+Node: Integer Overflow654632
+Node: Integer Overflow Basics655649
+Node: Signed Overflow Examples657397
+Node: Optimization and Wraparound660899
+Node: Signed Overflow Advice663861
+Node: Signed Integer Division666535
+Node: Preprocessor Arithmetic667146
+Node: Null Pointers667895
+Node: Buffer Overruns668529
+Node: Volatile Objects671318
+Node: Floating Point Portability676996
+Node: Exiting Portably677503
+Node: Manual Configuration678979
+Node: Specifying Target Triplets679812
+Ref: Specifying Names679985
+Node: Canonicalizing682679
+Node: Using System Type684946
+Node: Site Configuration687747
+Node: Help Formatting688719
+Node: External Software689663
+Ref: AC_ARG_WITH691209
+Node: Package Options695522
+Ref: AC_ARG_ENABLE696977
+Node: Pretty Help Strings698121
+Ref: AS_HELP_STRING698707
+Node: Option Checking701045
+Node: Site Details702774
+Node: Transforming Names704003
+Node: Transformation Options705085
+Node: Transformation Examples705562
+Node: Transformation Rules707284
+Node: Site Defaults708830
+Node: Running configure Scripts714117
+Node: Basic Installation715182
+Node: Compilers and Options719279
+Node: Multiple Architectures719933
+Node: Installation Names721513
+Node: Optional Features724409
+Node: Particular Systems725763
+Node: System Type726976
+Node: Sharing Defaults728304
+Node: Defining Variables728943
+Node: configure Invocation729835
+Node: config.status Invocation731541
+Ref: CONFIG_SHELL735283
+Node: Obsolete Constructs736675
+Node: Obsolete config.status Use737638
+Node: acconfig Header739416
+Node: autoupdate Invocation741439
+Node: Obsolete Macros743305
+Ref: AC_FUNC_SETVBUF_REVERSED750947
+Ref: AC_TYPE_SIGNAL767474
+Node: Autoconf 1770451
+Node: Changed File Names771517
+Node: Changed Makefiles772267
+Node: Changed Macros773355
+Node: Changed Results774608
+Node: Changed Macro Writing776731
+Node: Autoconf 2.13778011
+Node: Changed Quotation779219
+Node: New Macros781137
+Node: Hosts and Cross-Compilation782932
+Node: AC_LIBOBJ vs LIBOBJS787230
+Node: AC_ACT_IFELSE vs AC_TRY_ACT788845
+Ref: AC_FOO_IFELSE vs AC_TRY_FOO789034
+Node: Using Autotest790848
+Node: Using an Autotest Test Suite793252
+Node: testsuite Scripts793543
+Node: Autotest Logs798030
+Node: Writing Testsuites800371
+Node: testsuite Invocation814447
+Node: Making testsuite Scripts818991
+Node: FAQ823903
+Node: Distributing824763
+Node: Why GNU M4825810
+Node: Bootstrapping826679
+Node: Why Not Imake827289
+Node: Defining Directories832029
+Node: Autom4te Cache834008
+Node: Present But Cannot Be Compiled835846
+Node: Expanded Before Required839563
+Node: Debugging844462
+Node: History848923
+Node: Genesis849720
+Node: Exodus850898
+Node: Leviticus853944
+Node: Numbers855472
+Node: Deuteronomy857387
+Node: GNU Free Documentation License860057
+Node: Indices885203
+Node: Environment Variable Index885922
+Node: Output Variable Index896708
+Node: Preprocessor Symbol Index913657
+Node: Cache Variable Index932281
+Node: Autoconf Macro Index941043
+Node: M4 Macro Index974431
+Node: Autotest Macro Index994491
+Node: Program & Function Index996675
+Node: Concept Index1018085
 
 End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:

@@ -948,11 +948,11 @@ seen_ltdl=false
 ltdl_mode=
 
 # Locations for important files:
-prefix=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3
-datadir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share
-pkgdatadir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
-pkgltdldir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
-aclocaldir=/home/pedro/hndtools/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal
+prefix=/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3
+datadir=/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share
+pkgdatadir=/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
+pkgltdldir=/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/libtool
+aclocaldir=/home/pedro/buildroot-2012.02-ARM/output/host/hndtools-arm-linux-2.6.36-uclibc-4.5.3/share/aclocal
 auxdir=
 macrodir=
 ltdldir=
