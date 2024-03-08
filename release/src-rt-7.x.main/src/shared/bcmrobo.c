@@ -732,13 +732,13 @@ static dev_ops_t mdcmdio = {
  */
 
 #ifdef ROBO_SRAB
-#define SRAB_ENAB(sih)	((sih)->ccrev == 42)
+#define SRAB_ENAB()	(1)
 #define NS_CHIPCB_SRAB		0x18007000	/* NorthStar Chip Common B SRAB base */
 #define SET_ROBO_SRABREGS(robo)	((robo)->srabregs = \
 	(srabregs_t *)REG_MAP(NS_CHIPCB_SRAB, SI_CORE_SIZE))
 #define SET_ROBO_SRABOPS(robo)	((robo)->ops = &srab)
 #else
-#define SRAB_ENAB(sih)	(0)
+#define SRAB_ENAB()	(0)
 #define SET_ROBO_SRABREGS(robo)
 #define SET_ROBO_SRABOPS(robo)
 #endif /* ROBO_SRAB */
@@ -1130,7 +1130,7 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 	robo->miiwr = miiwr;
 	robo->page = -1;
 
-	if (SRAB_ENAB(sih) && BCM4707_CHIP(sih->chip)) {
+	if (SRAB_ENAB() && BCM4707_CHIP(sih->chip)) {
 		SET_ROBO_SRABREGS(robo);
 	}
 
@@ -1181,7 +1181,7 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 			 */
 			robo->corerev = 3;
 		}
-		else if (SRAB_ENAB(sih) && BCM4707_CHIP(sih->chip)) {
+		else if (SRAB_ENAB() && BCM4707_CHIP(sih->chip)) {
 			srab_interface_reset(robo);
 			rc = srab_rreg(robo, PAGE_MMR, REG_VERSION_ID, &robo->corerev, 1);
 		}
@@ -1192,7 +1192,7 @@ bcm_robo_attach(si_t *sih, void *h, char *vars, miird_f miird, miiwr_f miiwr)
 		ET_MSG(("%s: Internal robo rev %d\n", __FUNCTION__, robo->corerev));
 	}
 
-	if (SRAB_ENAB(sih) && BCM4707_CHIP(sih->chip)) {
+	if (SRAB_ENAB() && BCM4707_CHIP(sih->chip)) {
 		rc = srab_rreg(robo, PAGE_MMR, REG_DEVICE_ID, &robo->devid, sizeof(uint32));
 
 		ET_MSG(("%s: devid read %ssuccesfully via srab: 0x%x\n",
@@ -1443,7 +1443,7 @@ error:
 void
 bcm_robo_detach(robo_info_t *robo)
 {
-	if (SRAB_ENAB(robo->sih) && robo->srabregs)
+	if (SRAB_ENAB() && robo->srabregs)
 		REG_UNMAP(robo->srabregs);
 
 	MFREE(si_osh(robo->sih), robo, sizeof(robo_info_t));
@@ -2035,7 +2035,7 @@ bcm_robo_config_vlan(robo_info_t *robo, uint8 *mac_addr)
 		pdesc = pdesc97;
 		pdescsz = sizeof(pdesc97) / sizeof(pdesc_t);
 
-		if ((SRAB_ENAB(robo->sih) && ROBO_IS_BCM5301X(robo->devid)) ||
+		if ((SRAB_ENAB() && ROBO_IS_BCM5301X(robo->devid)) ||
 		    (BCM53573_CHIP(robo->sih->chip) && robo->sih->chippkg == BCM47189_PKG_ID)) {
 			robo_cpu_port_upd(robo, pdesc97, pdescsz);
 		}
@@ -2510,7 +2510,7 @@ bcm_robo_enable_switch(robo_info_t *robo)
 		}
 	}
 
-	if (SRAB_ENAB(robo->sih) && ROBO_IS_BCM5301X(robo->devid)) {
+	if (SRAB_ENAB() && ROBO_IS_BCM5301X(robo->devid)) {
 		int pdescsz = sizeof(pdesc97) / sizeof(pdesc_t);
 
 		/*
@@ -2807,7 +2807,7 @@ robo_dump_regs(robo_info_t *robo, struct bcmstrbuf *b)
 		bcm_bprintf(b, "(0x34,0x%02x)Port %d Tag: 0x%04x\n", pdesc[i].ptagr, i, val16);
 	}
 
-	if (SRAB_ENAB(robo->sih) && ROBO_IS_BCM5301X(robo->devid)) {
+	if (SRAB_ENAB() && ROBO_IS_BCM5301X(robo->devid)) {
 		robo->ops->read_reg(robo, PAGE_CTRL, REG_CTRL_PORT5_GMIIPO, &val8, sizeof(val8));
 		bcm_bprintf(b, "(0x%02x,0x%02x)Port 5 States Override: 0x%02x\n",
 			PAGE_CTRL, REG_CTRL_PORT5_GMIIPO, val8);
