@@ -1640,7 +1640,7 @@ ntfs-3g/Makefile:
 	cd ntfs-3g && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC $(OPTSIZE_FLAG)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --enable-shared=no --enable-static=no \
+		$(CONFIGURE) $(if $(TCONFIG_BCMARM),,ac_cv_func_utimensat=no) --enable-shared=no --enable-static=no \
 			--disable-library --disable-ldconfig --disable-mount-helper --with-fuse=internal \
 			--disable-ntfsprogs --disable-crypto --without-uuid \
 			--disable-posix-acls --disable-nfconv --disable-dependency-tracking
