@@ -1,6 +1,6 @@
 include ../common.mak
 
-CFLAGS = -Os -Wall $(EXTRACFLAGS)
+CFLAGS = -Os -Wall $(EXTRACFLAGS) -fPIC
 CFLAGS += -I$(SRCBASE)/include -I$(TOP)/$(OPENSSLDIR)/include $(if $(TCONFIG_BCMARM),-I$(TOP)/openvpn/include,$(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-I$(TOP)/openvpn-2.4/include,-I$(TOP)/openvpn-2.5/include))
 
 ifeq ($(TCONFIG_BCMARM),y)
