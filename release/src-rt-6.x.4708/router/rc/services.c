@@ -435,7 +435,7 @@ void start_dnsmasq()
 
 	/* instruct clients like Firefox to not auto-enable DoH */
 	if (nvram_get_int("dns_priv_override")) {
-		fprintf(f, "address=/use-application-dns.net/\n"
+		fprintf(f, "address=/use-application-dns.net/mask.icloud.com/mask-h2.icloud.com/\n"
 		           "address=/_dns.resolver.arpa/\n");
 	}
 
