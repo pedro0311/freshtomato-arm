@@ -614,8 +614,6 @@ define BusyboxOptions
 			echo "CONFIG_MKFS_VFAT=y" >>$(1); \
 			sed -i "/CONFIG_MKSWAP/d" $(1); \
 			echo "CONFIG_MKSWAP=y" >>$(1); \
-			sed -i "/CONFIG_FLOCK/d" $(1); \
-			echo "CONFIG_FLOCK=y" >>$(1); \
 			sed -i "/CONFIG_FSYNC/d" $(1); \
 			echo "CONFIG_FSYNC=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_VOLUMEID_EXFAT/d" $(1); \
