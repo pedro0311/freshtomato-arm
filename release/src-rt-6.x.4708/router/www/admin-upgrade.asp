@@ -35,7 +35,7 @@ function upgrade() {
 
 	name = fixFile(fom.file.value);
 	if (name.search(/\.(bin|trx|chk)$/i) == -1) {
-		alert('Expecting a ".bin" or ".trx" file.');
+		alert('Expecting a ".bin" or ".trx" file');
 		return;
 	}
 	if (!confirm('Are you sure you want to upgrade using '+name+'?'))
@@ -55,16 +55,11 @@ function upgrade() {
 	fom.action += '?_reset='+(E('f_reset').checked ? 1 : 0);
 	form.addIdAction(fom);
 
-	localStorage.clear();
 	fom.submit();
 }
 
 function earlyInit() {
-	if (nvram.remote_upgrade == 1)
-		E('upgradenotice').style.display = 'none';
-	else
-		E('upgradenotice').style.display = 'block';
-
+	E('upgradenotice').style.display = (nvram.remote_upgrade == 1 ? 'none' : 'block');
 	E('afu-size').innerHTML = '&nbsp; '+scaleSize(sysinfo.totalfreeram)+'&nbsp; <small>(aprox. size that can be buffered completely in RAM)<\/small>';
 /* JFFS2-BEGIN */
 	if (nvram.jffs2_on != 0 && nvram.jffs2_auto_unmount == 0) {
