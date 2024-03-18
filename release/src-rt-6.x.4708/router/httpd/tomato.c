@@ -1158,7 +1158,6 @@ static const nvset_t nvset_list[] = {
 	{ "script_usbmount", 		V_TEXT(0, 2048)			},
 	{ "script_usbumount", 		V_TEXT(0, 2048)			},
 	{ "idle_enable",		V_01				},
-	{ "usb_3g",			V_01				},
 #endif /* TCONFIG_USB */
 
 /* nas-ftp */
