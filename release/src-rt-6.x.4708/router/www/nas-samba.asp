@@ -272,8 +272,10 @@ function init() {
 		var lan_arr = nvram.smbd_ifnames.split(' ');
 		var smbd_lan = [0,0,0,0];
 		for (var i = 0; i <= MAX_BRIDGE_ID; ++i) {
-			if (lan_arr[i] == 'br'+i.toString())
-				smbd_lan[i] = 1;
+			for (var j = 0; j < lan_arr.length; ++j) {
+				if (lan_arr[j] == 'br'+i.toString())
+					smbd_lan[i] = 1;
+			}
 		}
 
 		createFieldTable('', [
