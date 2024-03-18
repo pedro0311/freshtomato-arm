@@ -2191,8 +2191,10 @@ function genStdTimeList(id, zero, min) {
 				b.push('1 minute');
 			else if (v > 60)
 				b.push((v / 60)+' minutes');
+			else if (v == 1)
+				b.push(v +' second');
 			else
-				b.push(v +'seconds');
+				b.push(v +' seconds');
 		}
 		b.push('</select> ');
 	}
