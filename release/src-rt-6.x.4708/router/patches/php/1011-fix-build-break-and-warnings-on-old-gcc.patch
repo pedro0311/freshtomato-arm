@@ -33,7 +33,7 @@
  fi
 --- php/ext/opcache/config.m4
 +++ php/ext/opcache/config.m4
-@@ -311,7 +311,7 @@
+@@ -315,7 +315,7 @@
  	shared_alloc_mmap.c \
  	shared_alloc_posix.c \
  	$ZEND_JIT_SRC,
