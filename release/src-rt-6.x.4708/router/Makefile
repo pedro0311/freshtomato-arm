@@ -3759,7 +3759,6 @@ libdaemon-clean:
 	@rm -f libdaemon/stamp-h1
 
 expat/stamp-h1:
-	$(call patch_files,expat)
 	cd expat && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
@@ -3781,7 +3780,6 @@ expat-clean:
 	-@$(MAKE) -C expat clean
 	@rm -rf expat/staged
 	@rm -f expat/stamp-h1
-	$(call unpatch_files,expat)
 
 avahi/stamp-h1:
 	$(call patch_files,avahi)
