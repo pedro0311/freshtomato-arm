@@ -13,11 +13,14 @@ bar_x = custom_target(
   capture: true,
 )
 
+foo_h = import('fs').copyfile('foo.x', 'foo.h')
+
 dep = declare_dependency(compile_args: '-DPLOP=0')
 
 pp_files = cc.preprocess('foo.c', bar_x, 'math.c',
   output: '@PLAINNAME@.c',
   dependencies: dep,
+  depends: foo_h,
   compile_args: ['-DBAZ=0'],
 )
 

@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2015-2022 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 from collections import defaultdict
@@ -691,6 +680,8 @@ class PkgConfigModule(NewExtensionModule):
             reserved = ['prefix', 'libdir', 'includedir']
             variables = []
             for name, value in vardict.items():
+                if not value:
+                    FeatureNew.single_use('empty variable value in pkg.generate', '1.4.0', state.subproject, location=state.current_node)
                 if not dataonly and name in reserved:
                     raise mesonlib.MesonException(f'Variable "{name}" is reserved')
                 variables.append((name, value))

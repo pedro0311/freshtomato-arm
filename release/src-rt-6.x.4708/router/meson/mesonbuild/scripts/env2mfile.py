@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2022 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 import sys, os, subprocess, shutil
@@ -248,7 +238,7 @@ def write_machine_file(infos: MachineInfo, ofilename: str, write_system_info: bo
             write_args_line(ofile, exename, exe)
         ofile.write('\n')
 
-        ofile.write('[properties]\n')
+        ofile.write('[built-in options]\n')
         all_langs = list(set(infos.compile_args.keys()).union(set(infos.link_args.keys())))
         all_langs.sort()
         for lang in all_langs:
@@ -256,6 +246,9 @@ def write_machine_file(infos: MachineInfo, ofilename: str, write_system_info: bo
                 write_args_line(ofile, lang + '_args', infos.compile_args[lang])
             if lang in infos.link_args:
                 write_args_line(ofile, lang + '_link_args', infos.link_args[lang])
+        ofile.write('\n')
+
+        ofile.write('[properties]\n')
         for k, v in infos.properties.items():
             write_args_line(ofile, k, v)
         ofile.write('\n')

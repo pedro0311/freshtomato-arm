@@ -1,16 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2014-2016 The Meson development team
+# Copyright © 2023 Intel Corporation
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 import itertools
@@ -30,7 +21,14 @@ from .ast import AstIDGenerator, IntrospectionInterpreter
 from .mesonlib import MachineChoice, OptionKey
 
 if T.TYPE_CHECKING:
+    from typing_extensions import Protocol
     import argparse
+
+    class CMDOptions(coredata.SharedCMDOptions, Protocol):
+
+        builddir: str
+        clearcache: bool
+        pager: bool
 
     # cannot be TV_Loggable, because non-ansidecorators do direct string concat
     LOGLINE = T.Union[str, mlog.AnsiDecorator]
@@ -303,7 +301,7 @@ class Conf:
         for m in mismatching:
             mlog.log(f'{m[0]:21}{m[1]:10}{m[2]:10}')
 
-def run_impl(options: argparse.Namespace, builddir: str) -> int:
+def run_impl(options: CMDOptions, builddir: str) -> int:
     print_only = not options.cmd_line_options and not options.clearcache
     c = None
     try:
@@ -335,7 +333,7 @@ def run_impl(options: argparse.Namespace, builddir: str) -> int:
         pass
     return 0
 
-def run(options: argparse.Namespace) -> int:
+def run(options: CMDOptions) -> int:
     coredata.parse_cmd_line_options(options)
     builddir = os.path.abspath(os.path.realpath(options.builddir))
     return run_impl(options, builddir)

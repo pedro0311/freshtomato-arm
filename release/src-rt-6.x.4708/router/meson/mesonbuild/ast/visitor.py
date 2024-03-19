@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2019 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 # This class contains the basic functionality needed to run any interpreter
 # or an interpreter-based tool
@@ -43,7 +32,7 @@ class AstVisitor:
     def visit_FormatStringNode(self, node: mparser.FormatStringNode) -> None:
         self.visit_default_func(node)
 
-    def visit_MultilineStringNode(self, node: mparser.StringNode) -> None:
+    def visit_MultilineStringNode(self, node: mparser.MultilineFormatStringNode) -> None:
         self.visit_default_func(node)
 
     def visit_FormatMultilineStringNode(self, node: mparser.FormatStringNode) -> None:
@@ -149,7 +138,7 @@ class AstVisitor:
         node.condition.accept(self)
         node.block.accept(self)
 
-    def visit_ElseNode(self, node: mparser.IfNode) -> None:
+    def visit_ElseNode(self, node: mparser.ElseNode) -> None:
         self.visit_default_func(node)
         node.block.accept(self)
 

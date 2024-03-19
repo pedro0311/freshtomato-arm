@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2020 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 """A library of random helper functionality."""
 
@@ -1509,9 +1499,9 @@ def partition(pred: T.Callable[[_T], object], iterable: T.Iterable[_T]) -> T.Tup
 
 
 def Popen_safe(args: T.List[str], write: T.Optional[str] = None,
-               stdin: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.DEVNULL,
-               stdout: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
-               stderr: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
+               stdin: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.DEVNULL,
+               stdout: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
+               stderr: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
                **kwargs: T.Any) -> T.Tuple['subprocess.Popen[str]', str, str]:
     import locale
     encoding = locale.getpreferredencoding()
@@ -1541,9 +1531,9 @@ def Popen_safe(args: T.List[str], write: T.Optional[str] = None,
 
 
 def Popen_safe_legacy(args: T.List[str], write: T.Optional[str] = None,
-                      stdin: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.DEVNULL,
-                      stdout: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
-                      stderr: T.Union[T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
+                      stdin: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.DEVNULL,
+                      stdout: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
+                      stderr: T.Union[None, T.TextIO, T.BinaryIO, int] = subprocess.PIPE,
                       **kwargs: T.Any) -> T.Tuple['subprocess.Popen[str]', str, str]:
     p = subprocess.Popen(args, universal_newlines=False, close_fds=False,
                          stdin=stdin, stdout=stdout, stderr=stderr, **kwargs)

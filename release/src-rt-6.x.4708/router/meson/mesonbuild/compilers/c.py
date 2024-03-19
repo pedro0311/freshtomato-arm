@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2020 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 import os.path
@@ -56,7 +46,7 @@ if T.TYPE_CHECKING:
 else:
     CompilerMixinBase = object
 
-_ALL_STDS = ['c89', 'c9x', 'c90', 'c99', 'c1x', 'c11', 'c17', 'c18', 'c2x']
+_ALL_STDS = ['c89', 'c9x', 'c90', 'c99', 'c1x', 'c11', 'c17', 'c18', 'c2x', 'c23']
 _ALL_STDS += [f'gnu{std[1:]}' for std in _ALL_STDS]
 _ALL_STDS += ['iso9899:1990', 'iso9899:199409', 'iso9899:1999', 'iso9899:2011', 'iso9899:2017', 'iso9899:2018']
 
@@ -123,6 +113,7 @@ class _ClangCStds(CompilerMixinBase):
     _C17_VERSION = '>=6.0.0'
     _C18_VERSION = '>=8.0.0'
     _C2X_VERSION = '>=9.0.0'
+    _C23_VERSION = '>=18.0.0'
 
     def get_options(self) -> 'MutableKeyedOptionDictType':
         opts = super().get_options()
@@ -135,6 +126,8 @@ class _ClangCStds(CompilerMixinBase):
             stds += ['c18']
         if version_compare(self.version, self._C2X_VERSION):
             stds += ['c2x']
+        if version_compare(self.version, self._C23_VERSION):
+            stds += ['c23']
         std_opt = opts[OptionKey('std', machine=self.for_machine, lang=self.language)]
         assert isinstance(std_opt, coredata.UserStdOption), 'for mypy'
         std_opt.set_versions(stds, gnu=True)
@@ -263,6 +256,7 @@ class GnuCCompiler(GnuCompiler, CCompiler):
 
     _C18_VERSION = '>=8.0.0'
     _C2X_VERSION = '>=9.0.0'
+    _C23_VERSION = '>=14.0.0'
     _INVALID_PCH_VERSION = ">=3.4.0"
 
     def __init__(self, ccache: T.List[str], exelist: T.List[str], version: str, for_machine: MachineChoice, is_cross: bool,
@@ -290,6 +284,8 @@ class GnuCCompiler(GnuCompiler, CCompiler):
             stds += ['c17', 'c18']
         if version_compare(self.version, self._C2X_VERSION):
             stds += ['c2x']
+        if version_compare(self.version, self._C23_VERSION):
+            stds += ['c23']
         key = OptionKey('std', machine=self.for_machine, lang=self.language)
         std_opt = opts[key]
         assert isinstance(std_opt, coredata.UserStdOption), 'for mypy'

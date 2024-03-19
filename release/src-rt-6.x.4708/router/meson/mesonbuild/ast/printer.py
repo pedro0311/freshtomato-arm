@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2019 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 # This class contains the basic functionality needed to run any interpreter
 # or an interpreter-based tool
@@ -76,8 +65,9 @@ class AstPrinter(AstVisitor):
         node.lineno = self.curr_line or node.lineno
 
     def escape(self, val: str) -> str:
-        return val.translate(str.maketrans({'\'': '\\\'',
-                                            '\\': '\\\\'}))
+        return val.translate(str.maketrans(T.cast(
+            'T.Dict[str, T.Union[str, int]]',
+            {'\'': '\\\'', '\\': '\\\\'})))
 
     def visit_StringNode(self, node: mparser.StringNode) -> None:
         assert isinstance(node.value, str)
@@ -89,7 +79,7 @@ class AstPrinter(AstVisitor):
         self.append("f'" + self.escape(node.value) + "'", node)
         node.lineno = self.curr_line or node.lineno
 
-    def visit_MultilineStringNode(self, node: mparser.StringNode) -> None:
+    def visit_MultilineStringNode(self, node: mparser.MultilineFormatStringNode) -> None:
         assert isinstance(node.value, str)
         self.append("'''" + node.value + "'''", node)
         node.lineno = self.curr_line or node.lineno
@@ -133,7 +123,7 @@ class AstPrinter(AstVisitor):
 
     def visit_ComparisonNode(self, node: mparser.ComparisonNode) -> None:
         node.left.accept(self)
-        self.append_padded(node.ctype, node)
+        self.append_padded(node.ctype if node.ctype != 'notin' else 'not in', node)
         node.lineno = self.curr_line or node.lineno
         node.right.accept(self)
 
@@ -203,6 +193,7 @@ class AstPrinter(AstVisitor):
             i.accept(self)
         if not isinstance(node.elseblock, mparser.EmptyNode):
             self.append('else', node)
+            self.newline()
             node.elseblock.accept(self)
         self.append('endif', node)
 
@@ -252,21 +243,22 @@ class AstPrinter(AstVisitor):
 
 class RawPrinter(AstVisitor):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.result = ''
 
-    def visit_default_func(self, node: mparser.BaseNode):
-        self.result += node.value
+    def visit_default_func(self, node: mparser.BaseNode) -> None:
+        # XXX: this seems like it could never actually be reached...
+        self.result += node.value  # type: ignore[attr-defined]
         if node.whitespaces:
             node.whitespaces.accept(self)
 
-    def visit_unary_operator(self, node: mparser.UnaryOperatorNode):
+    def visit_unary_operator(self, node: mparser.UnaryOperatorNode) -> None:
         node.operator.accept(self)
         node.value.accept(self)
         if node.whitespaces:
             node.whitespaces.accept(self)
 
-    def visit_binary_operator(self, node: mparser.BinaryOperatorNode):
+    def visit_binary_operator(self, node: mparser.BinaryOperatorNode) -> None:
         node.left.accept(self)
         node.operator.accept(self)
         node.right.accept(self)

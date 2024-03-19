@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2016 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 # This class contains the basic functionality needed to run any interpreter
 # or an interpreter-based tool.
@@ -60,7 +49,7 @@ from ..mparser import (
 if T.TYPE_CHECKING:
     from .visitor import AstVisitor
     from ..interpreter import Interpreter
-    from ..interpreterbase import TYPE_nkwargs, TYPE_nvar
+    from ..interpreterbase import SubProject, TYPE_nkwargs, TYPE_var
     from ..mparser import (
         AndNode,
         ComparisonNode,
@@ -95,8 +84,9 @@ REMOVE_SOURCE = 1
 _T = T.TypeVar('_T')
 _V = T.TypeVar('_V')
 
+
 class AstInterpreter(InterpreterBase):
-    def __init__(self, source_root: str, subdir: str, subproject: str, visitors: T.Optional[T.List[AstVisitor]] = None):
+    def __init__(self, source_root: str, subdir: str, subproject: SubProject, visitors: T.Optional[T.List[AstVisitor]] = None):
         super().__init__(source_root, subdir, subproject)
         self.visitors = visitors if visitors is not None else []
         self.processed_buildfiles: T.Set[str] = set()
@@ -170,7 +160,7 @@ class AstInterpreter(InterpreterBase):
     def _holderify(self, res: _T) -> _T:
         return res
 
-    def func_do_nothing(self, node: BaseNode, args: T.List[TYPE_nvar], kwargs: T.Dict[str, TYPE_nvar]) -> bool:
+    def func_do_nothing(self, node: BaseNode, args: T.List[TYPE_var], kwargs: T.Dict[str, TYPE_var]) -> bool:
         return True
 
     def load_root_meson_file(self) -> None:
@@ -178,7 +168,7 @@ class AstInterpreter(InterpreterBase):
         for i in self.visitors:
             self.ast.accept(i)
 
-    def func_subdir(self, node: BaseNode, args: T.List[TYPE_nvar], kwargs: T.Dict[str, TYPE_nvar]) -> None:
+    def func_subdir(self, node: BaseNode, args: T.List[TYPE_var], kwargs: T.Dict[str, TYPE_var]) -> None:
         args = self.flatten_args(args)
         if len(args) != 1 or not isinstance(args[0], str):
             sys.stderr.write(f'Unable to evaluate subdir({args}) in AstInterpreter --> Skipping\n')
@@ -221,7 +211,7 @@ class AstInterpreter(InterpreterBase):
         assert isinstance(node, mparser.FormatStringNode)
         return node.value
 
-    def evaluate_arraystatement(self, cur: mparser.ArrayNode) -> TYPE_nvar:
+    def evaluate_arraystatement(self, cur: mparser.ArrayNode) -> TYPE_var:
         return self.reduce_arguments(cur.args)[0]
 
     def evaluate_arithmeticstatement(self, cur: ArithmeticNode) -> int:
@@ -272,9 +262,9 @@ class AstInterpreter(InterpreterBase):
                 args: mparser.ArgumentNode,
                 key_resolver: T.Callable[[mparser.BaseNode], str] = default_resolve_key,
                 duplicate_key_error: T.Optional[str] = None,
-            ) -> T.Tuple[T.List[TYPE_nvar], TYPE_nkwargs]:
+            ) -> T.Tuple[T.List[TYPE_var], TYPE_nkwargs]:
         if isinstance(args, ArgumentNode):
-            kwargs: T.Dict[str, TYPE_nvar] = {}
+            kwargs: T.Dict[str, TYPE_var] = {}
             for key, val in args.kwargs.items():
                 kwargs[key_resolver(key)] = val
             if args.incorrect_order():
@@ -383,7 +373,7 @@ class AstInterpreter(InterpreterBase):
         elif isinstance(node, MethodNode):
             src = quick_resolve(node.source_object)
             margs = self.flatten_args(node.args.arguments, include_unknown_args, id_loop_detect)
-            mkwargs: T.Dict[str, TYPE_nvar] = {}
+            mkwargs: T.Dict[str, TYPE_var] = {}
             method_name = node.name.value
             try:
                 if isinstance(src, str):
@@ -403,7 +393,7 @@ class AstInterpreter(InterpreterBase):
         if isinstance(result, BaseNode):
             result = self.resolve_node(result, include_unknown_args, id_loop_detect)
         elif isinstance(result, list):
-            new_res: T.List[TYPE_nvar] = []
+            new_res: T.List[TYPE_var] = []
             for i in result:
                 if isinstance(i, BaseNode):
                     resolved = self.resolve_node(i, include_unknown_args, id_loop_detect)
@@ -415,14 +405,14 @@ class AstInterpreter(InterpreterBase):
 
         return result
 
-    def flatten_args(self, args_raw: T.Union[TYPE_nvar, T.Sequence[TYPE_nvar]], include_unknown_args: bool = False, id_loop_detect: T.Optional[T.List[str]] = None) -> T.List[TYPE_nvar]:
+    def flatten_args(self, args_raw: T.Union[TYPE_var, T.Sequence[TYPE_var]], include_unknown_args: bool = False, id_loop_detect: T.Optional[T.List[str]] = None) -> T.List[TYPE_var]:
         # Make sure we are always dealing with lists
         if isinstance(args_raw, list):
             args = args_raw
         else:
             args = [args_raw]
 
-        flattened_args: T.List[TYPE_nvar] = []
+        flattened_args: T.List[TYPE_var] = []
 
         # Resolve the contents of args
         for i in args:
@@ -436,7 +426,7 @@ class AstInterpreter(InterpreterBase):
                 flattened_args += [i]
         return flattened_args
 
-    def flatten_kwargs(self, kwargs: T.Dict[str, TYPE_nvar], include_unknown_args: bool = False) -> T.Dict[str, TYPE_nvar]:
+    def flatten_kwargs(self, kwargs: T.Dict[str, TYPE_var], include_unknown_args: bool = False) -> T.Dict[str, TYPE_var]:
         flattened_kwargs = {}
         for key, val in kwargs.items():
             if isinstance(val, BaseNode):

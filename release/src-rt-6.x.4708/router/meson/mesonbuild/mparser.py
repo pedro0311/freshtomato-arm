@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2014-2017 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 from dataclasses import dataclass, field
 import re
@@ -106,6 +96,10 @@ class Token(T.Generic[TV_TokenTypes]):
 
 class Lexer:
     def __init__(self, code: str):
+        if code.startswith(codecs.BOM_UTF8.decode('utf-8')):
+            line, *_ = code.split('\n', maxsplit=1)
+            raise ParseException('Builder file must be encoded in UTF-8 (with no BOM)', line, lineno=0, colno=0)
+
         self.code = code
         self.keywords = {'true', 'false', 'if', 'else', 'elif',
                          'endif', 'and', 'or', 'not', 'foreach', 'endforeach',
@@ -613,7 +607,6 @@ class IfClauseNode(BaseNode):
         super().__init__(linenode.lineno, linenode.colno, linenode.filename)
         self.ifs = []
         self.elseblock = EmptyNode(linenode.lineno, linenode.colno, linenode.filename)
-        self.endif = None
 
 @dataclass(unsafe_hash=True)
 class TestCaseClauseNode(BaseNode):

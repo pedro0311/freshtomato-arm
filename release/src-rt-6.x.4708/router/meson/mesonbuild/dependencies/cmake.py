@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2013-2021 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from .base import ExternalDependency, DependencyException, DependencyTypeName
@@ -104,10 +94,6 @@ class CMakeDependency(ExternalDependency):
         super().__init__(DependencyTypeName('cmake'), environment, kwargs, language=language)
         self.name = name
         self.is_libtool = False
-        # Store a copy of the CMake path on the object itself so it is
-        # stored in the pickled coredata and recovered.
-        self.cmakebin:  T.Optional[CMakeExecutor] = None
-        self.cmakeinfo: T.Optional[CMakeInfo] = None
 
         # Where all CMake "build dirs" are located
         self.cmake_root_dir = environment.scratch_dir
@@ -115,14 +101,12 @@ class CMakeDependency(ExternalDependency):
         # T.List of successfully found modules
         self.found_modules: T.List[str] = []
 
-        # Initialize with None before the first return to avoid
-        # AttributeError exceptions in derived classes
-        self.traceparser: T.Optional[CMakeTraceParser] = None
-
+        # Store a copy of the CMake path on the object itself so it is
+        # stored in the pickled coredata and recovered.
+        #
         # TODO further evaluate always using MachineChoice.BUILD
         self.cmakebin = CMakeExecutor(environment, CMakeDependency.class_cmake_version, self.for_machine, silent=self.silent)
         if not self.cmakebin.found():
-            self.cmakebin = None
             msg = f'CMake binary for machine {self.for_machine} not found. Giving up.'
             if self.required:
                 raise DependencyException(msg)
@@ -136,9 +120,10 @@ class CMakeDependency(ExternalDependency):
         cm_args = check_cmake_args(cm_args)
         if CMakeDependency.class_cmakeinfo[self.for_machine] is None:
             CMakeDependency.class_cmakeinfo[self.for_machine] = self._get_cmake_info(cm_args)
-        self.cmakeinfo = CMakeDependency.class_cmakeinfo[self.for_machine]
-        if self.cmakeinfo is None:
+        cmakeinfo = CMakeDependency.class_cmakeinfo[self.for_machine]
+        if cmakeinfo is None:
             raise self._gen_exception('Unable to obtain CMake system information')
+        self.cmakeinfo = cmakeinfo
 
         package_version = kwargs.get('cmake_package_version', '')
         if not isinstance(package_version, str):

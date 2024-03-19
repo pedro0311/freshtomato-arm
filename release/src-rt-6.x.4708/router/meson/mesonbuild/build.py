@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2017 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 from collections import defaultdict, OrderedDict
@@ -575,16 +564,17 @@ class Target(HoldableObject, metaclass=abc.ABCMeta):
             return NotImplemented
         return self.get_id() >= other.get_id()
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         raise NotImplementedError
 
     def get_custom_install_dir(self) -> T.List[T.Union[str, Literal[False]]]:
         raise NotImplementedError
 
-    def get_install_dir(self) -> T.Tuple[T.List[T.Union[str, Literal[False]]], str, Literal[False]]:
+    def get_install_dir(self) -> T.Tuple[T.List[T.Union[str, Literal[False]]], T.List[T.Optional[str]], bool]:
         # Find the installation directory.
         default_install_dir, default_install_dir_name = self.get_default_install_dir()
-        outdirs = self.get_custom_install_dir()
+        outdirs: T.List[T.Union[str, Literal[False]]] = self.get_custom_install_dir()
+        install_dir_names: T.List[T.Optional[str]]
         if outdirs and outdirs[0] != default_install_dir and outdirs[0] is not True:
             # Either the value is set to a non-default value, or is set to
             # False (which means we want this specific output out of many
@@ -898,7 +888,7 @@ class BuildTarget(Target):
                 removed = True
         return removed
 
-    def process_compilers_late(self):
+    def process_compilers_late(self) -> None:
         """Processes additional compilers after kwargs have been evaluated.
 
         This can add extra compilers that might be required by keyword
@@ -1113,7 +1103,7 @@ class BuildTarget(Target):
             result.update(i.get_link_dep_subdirs())
         return result
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_libdir(), '{libdir}'
 
     def get_custom_install_dir(self) -> T.List[T.Union[str, Literal[False]]]:
@@ -1305,8 +1295,6 @@ class BuildTarget(Target):
         for t in self.link_targets:
             if t in result:
                 continue
-            if t.rust_crate_type == 'proc-macro':
-                continue
             if include_internals or not t.is_internal():
                 result.add(t)
             if isinstance(t, StaticLibrary):
@@ -1493,7 +1481,7 @@ class BuildTarget(Target):
         if not self.uses_rust() and links_with_rust_abi:
             raise InvalidArguments(f'Try to link Rust ABI library {t.name!r} with a non-Rust target {self.name!r}')
         if self.for_machine is not t.for_machine and (not links_with_rust_abi or t.rust_crate_type != 'proc-macro'):
-            msg = f'Tried to mix libraries for machines {self.for_machine} and {t.for_machine} in target {self.name!r}'
+            msg = f'Tried to tied to mix a {t.for_machine} library ("{t.name}") with a {self.for_machine} target "{self.name}"'
             if self.environment.is_cross_build():
                 raise InvalidArguments(msg + ' This is not possible in a cross build.')
             else:
@@ -1774,12 +1762,12 @@ class Generator(HoldableObject):
                  *,
                  depfile: T.Optional[str] = None,
                  capture: bool = False,
-                 depends: T.Optional[T.List[T.Union[BuildTarget, 'CustomTarget']]] = None,
+                 depends: T.Optional[T.List[T.Union[BuildTarget, 'CustomTarget', 'CustomTargetIndex']]] = None,
                  name: str = 'Generator'):
         self.exe = exe
         self.depfile = depfile
         self.capture = capture
-        self.depends: T.List[T.Union[BuildTarget, 'CustomTarget']] = depends or []
+        self.depends: T.List[T.Union[BuildTarget, 'CustomTarget', 'CustomTargetIndex']] = depends or []
         self.arglist = arguments
         self.outputs = output
         self.name = name
@@ -1811,8 +1799,11 @@ class Generator(HoldableObject):
 
     @staticmethod
     def is_parent_path(parent: str, trial: str) -> bool:
-        relpath = pathlib.PurePath(trial).relative_to(parent)
-        return relpath.parts[0] != '..' # For subdirs we can only go "down".
+        try:
+            common = os.path.commonpath((parent, trial))
+        except ValueError: # Windows on different drives
+            return False
+        return pathlib.PurePath(common) == pathlib.PurePath(parent)
 
     def process_files(self, files: T.Iterable[T.Union[str, File, 'CustomTarget', 'CustomTargetIndex', 'GeneratedList']],
                       state: T.Union['Interpreter', 'ModuleState'],
@@ -2037,7 +2028,7 @@ class Executable(BuildTarget):
         if self.rust_crate_type != 'bin':
             raise InvalidArguments('Invalid rust_crate_type: must be "bin" for executables.')
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_bindir(), '{bindir}'
 
     def description(self):
@@ -2148,7 +2139,7 @@ class StaticLibrary(BuildTarget):
     def get_link_deps_mapping(self, prefix: str) -> T.Mapping[str, str]:
         return {}
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_static_lib_dir(), '{libdir_static}'
 
     def type_suffix(self):
@@ -2239,7 +2230,7 @@ class SharedLibrary(BuildTarget):
         mappings.update(result)
         return mappings
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_shared_lib_dir(), '{libdir_shared}'
 
     def determine_filenames(self):
@@ -2475,7 +2466,7 @@ class SharedModule(SharedLibrary):
         # to build targets, see: https://github.com/mesonbuild/meson/issues/9492
         self.force_soname = False
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_shared_module_dir(), '{moduledir_shared}'
 
 class BothLibraries(SecondLevelHolder):
@@ -2614,7 +2605,7 @@ class CustomTarget(Target, CustomTargetBase, CommandBase):
         # Whether to use absolute paths for all files on the commandline
         self.absolute_paths = absolute_paths
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return None, None
 
     def __repr__(self):
@@ -2774,7 +2765,8 @@ class CompileTarget(BuildTarget):
                  backend: Backend,
                  compile_args: T.List[str],
                  include_directories: T.List[IncludeDirs],
-                 dependencies: T.List[dependencies.Dependency]):
+                 dependencies: T.List[dependencies.Dependency],
+                 depends: T.List[T.Union[BuildTarget, CustomTarget, CustomTargetIndex]]):
         compilers = {compiler.get_language(): compiler}
         kwargs = {
             'build_by_default': False,
@@ -2789,6 +2781,7 @@ class CompileTarget(BuildTarget):
         self.output_templ = output_templ
         self.outputs = []
         self.sources_map: T.Dict[File, str] = {}
+        self.depends = list(depends or [])
         for f in self.sources:
             self._add_output(f)
         for gensrc in self.generated:
@@ -2810,6 +2803,11 @@ class CompileTarget(BuildTarget):
         self.outputs.append(o)
         self.sources_map[f] = o
 
+    def get_generated_headers(self) -> T.List[File]:
+        gen_headers: T.List[File] = []
+        for dep in self.depends:
+            gen_headers += [File(True, dep.subdir, o) for o in dep.get_outputs()]
+        return gen_headers
 
 class RunTarget(Target, CommandBase):
 
@@ -2925,7 +2923,7 @@ class Jar(BuildTarget):
             return ['-cp', os.pathsep.join(cp_paths)]
         return []
 
-    def get_default_install_dir(self) -> T.Tuple[str, str]:
+    def get_default_install_dir(self) -> T.Union[T.Tuple[str, str], T.Tuple[None, None]]:
         return self.environment.get_jar_dir(), '{jardir}'
 
 @dataclass(eq=False)

@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2020 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from pathlib import Path
@@ -75,8 +65,6 @@ class ExternalProject(NewExtensionModule):
         self.project_version = state.project_version
         self.subproject = state.subproject
         self.env = state.environment
-        self.build_machine = state.build_machine
-        self.host_machine = state.host_machine
         self.configure_command = configure_command
         self.configure_options = configure_options
         self.cross_configure_options = cross_configure_options
@@ -136,9 +124,10 @@ class ExternalProject(NewExtensionModule):
         configure_cmd += self._format_options(self.configure_options, d)
 
         if self.env.is_cross_build():
-            host = '{}-{}-{}'.format(self.host_machine.cpu_family,
-                                     self.build_machine.system,
-                                     self.host_machine.system)
+            host = '{}-{}-{}'.format(state.environment.machines.host.cpu,
+                                     'pc' if state.environment.machines.host.cpu_family in {"x86", "x86_64"}
+                                     else 'unknown',
+                                     state.environment.machines.host.system)
             d = [('HOST', None, host)]
             configure_cmd += self._format_options(self.cross_configure_options, d)
 

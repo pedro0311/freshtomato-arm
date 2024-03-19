@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2022 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 import functools
@@ -21,7 +11,7 @@ import typing as T
 
 from .. import coredata
 from ..mesonlib import EnvironmentException, MesonException, Popen_safe_logged, OptionKey
-from .compilers import Compiler, rust_buildtype_args, clike_debug_args
+from .compilers import Compiler, clike_debug_args
 
 if T.TYPE_CHECKING:
     from ..coredata import MutableKeyedOptionDictType, KeyedOptionDictType
@@ -124,9 +114,6 @@ class RustCompiler(Compiler):
     def get_dependency_gen_args(self, outtarget: str, outfile: str) -> T.List[str]:
         return ['--dep-info', outfile]
 
-    def get_buildtype_args(self, buildtype: str) -> T.List[str]:
-        return rust_buildtype_args[buildtype]
-
     def get_sysroot(self) -> str:
         cmd = self.get_exelist(ccache=False) + ['--print', 'sysroot']
         p, stdo, stde = Popen_safe_logged(cmd)
@@ -219,9 +206,6 @@ class RustCompiler(Compiler):
     def get_warn_args(self, level: str) -> T.List[str]:
         # TODO: I'm not really sure what to put here, Rustc doesn't have warning
         return self._WARNING_LEVELS[level]
-
-    def get_no_warn_args(self) -> T.List[str]:
-        return self._WARNING_LEVELS["0"]
 
     def get_pic_args(self) -> T.List[str]:
         # relocation-model=pic is rustc's default already.

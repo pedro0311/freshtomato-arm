@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2016 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from os import path
@@ -22,7 +12,7 @@ from .. import build
 from .. import mesonlib
 from .. import mlog
 from ..interpreter.type_checking import CT_BUILD_BY_DEFAULT, CT_INPUT_KW, INSTALL_TAG_KW, OUTPUT_KW, INSTALL_DIR_KW, INSTALL_KW, NoneType, in_set_validator
-from ..interpreterbase import FeatureNew
+from ..interpreterbase import FeatureNew, InvalidArguments
 from ..interpreterbase.decorators import ContainerTypeInfo, KwargInfo, noPosargs, typed_kwargs, typed_pos_args
 from ..programs import ExternalProgram
 from ..scripts.gettext import read_linguas
@@ -165,6 +155,9 @@ class I18nModule(ExtensionModule):
         KwargInfo('type', str, default='xml', validator=in_set_validator({'xml', 'desktop'})),
     )
     def merge_file(self, state: 'ModuleState', args: T.List['TYPE_var'], kwargs: 'MergeFile') -> ModuleReturnValue:
+        if kwargs['install'] and not kwargs['install_dir']:
+            raise InvalidArguments('i18n.merge_file: "install_dir" keyword argument must be set when "install" is true.')
+
         if self.tools['msgfmt'] is None or not self.tools['msgfmt'].found():
             self.tools['msgfmt'] = state.find_program('msgfmt', for_machine=mesonlib.MachineChoice.BUILD)
         if isinstance(self.tools['msgfmt'], ExternalProgram):
@@ -349,6 +342,9 @@ class I18nModule(ExtensionModule):
         KwargInfo('mo_targets', ContainerTypeInfo(list, build.CustomTarget), required=True),
     )
     def itstool_join(self, state: 'ModuleState', args: T.List['TYPE_var'], kwargs: 'ItsJoinFile') -> ModuleReturnValue:
+        if kwargs['install'] and not kwargs['install_dir']:
+            raise InvalidArguments('i18n.itstool_join: "install_dir" keyword argument must be set when "install" is true.')
+
         if self.tools['itstool'] is None:
             self.tools['itstool'] = state.find_program('itstool', for_machine=mesonlib.MachineChoice.BUILD)
         mo_targets = kwargs['mo_targets']

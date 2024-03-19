@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2015-2016 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 '''This module provides helper functions for Gnome/GLib related
 functionality such as gobject-introspection, gresources and gtk-doc'''
@@ -459,7 +448,10 @@ class GnomeModule(ExtensionModule):
         # Always include current directory, but after paths set by user
         source_dirs.append(os.path.join(state.build_to_src, state.subdir))
 
-        for source_dir in OrderedSet(source_dirs):
+        # Clean up duplicate directories
+        source_dirs = list(OrderedSet(os.path.normpath(dir) for dir in source_dirs))
+
+        for source_dir in source_dirs:
             cmd += ['--sourcedir', source_dir]
 
         if kwargs['c_name']:
@@ -518,6 +510,7 @@ class GnomeModule(ExtensionModule):
             install_dir=[kwargs['install_dir']] if kwargs['install_dir'] else [],
             install_tag=['runtime'],
         )
+        target_c.source_dirs = source_dirs
 
         if gresource: # Only one target for .gresource files
             return ModuleReturnValue(target_c, [target_c])

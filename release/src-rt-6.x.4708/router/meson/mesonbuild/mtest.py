@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2016-2017 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 # A tool to run tests in many different ways.
 from __future__ import annotations
@@ -1419,11 +1408,13 @@ class SingleTestRunner:
 
         # Sanitizers do not default to aborting on error. This is counter to
         # expectations when using -Db_sanitize and has led to confusion in the wild
-        # in CI. Set our own values of {ASAN,UBSAN}_OPTOINS to rectify this, but
+        # in CI. Set our own values of {ASAN,UBSAN}_OPTIONS to rectify this, but
         # only if the user has not defined them.
         if ('ASAN_OPTIONS' not in env or not env['ASAN_OPTIONS']):
             env['ASAN_OPTIONS'] = 'halt_on_error=1:abort_on_error=1:print_summary=1'
         if ('UBSAN_OPTIONS' not in env or not env['UBSAN_OPTIONS']):
+            env['UBSAN_OPTIONS'] = 'halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1'
+        if ('MSAN_OPTIONS' not in env or not env['MSAN_OPTIONS']):
             env['UBSAN_OPTIONS'] = 'halt_on_error=1:abort_on_error=1:print_summary=1:print_stacktrace=1'
 
         if self.options.gdb or self.test.timeout is None or self.test.timeout <= 0:
@@ -1467,6 +1458,11 @@ class SingleTestRunner:
                            'found. Please check the command and/or add it to PATH.')
                     raise TestException(msg.format(self.test.exe_wrapper.name))
                 return self.test.exe_wrapper.get_command() + self.test.fname
+        elif self.test.cmd_is_built and not self.test.cmd_is_exe and is_windows():
+            test_cmd = ExternalProgram._shebang_to_cmd(self.test.fname[0])
+            if test_cmd is not None:
+                test_cmd += self.test.fname[1:]
+            return test_cmd
         return self.test.fname
 
     def _get_cmd(self) -> T.Optional[T.List[str]]:

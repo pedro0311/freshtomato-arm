@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2021 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import json
 import os
@@ -286,3 +275,22 @@ class PlatformAgnosticTests(BasePlatformTests):
         self.assertIn('first statement must be a call to project()', out)
         # provide guidance diagnostics by finding a file whose first AST statement is project()
         self.assertIn(f'Did you mean to run meson from the directory: "{testdir}"?', out)
+
+    def test_reconfigure_base_options(self):
+        testdir = os.path.join(self.unit_test_dir, '122 reconfigure base options')
+        out = self.init(testdir, extra_args=['-Db_ndebug=true'])
+        self.assertIn('\nMessage: b_ndebug: true\n', out)
+        self.assertIn('\nMessage: c_std: c89\n', out)
+
+        out = self.init(testdir, extra_args=['--reconfigure', '-Db_ndebug=if-release', '-Dsub:b_ndebug=false', '-Dc_std=c99', '-Dsub:c_std=c11'])
+        self.assertIn('\nMessage: b_ndebug: if-release\n', out)
+        self.assertIn('\nMessage: c_std: c99\n', out)
+        self.assertIn('\nsub| Message: b_ndebug: false\n', out)
+        self.assertIn('\nsub| Message: c_std: c11\n', out)
+
+    def test_setup_with_unknown_option(self):
+        testdir = os.path.join(self.common_test_dir, '1 trivial')
+
+        for option in ('not_an_option', 'b_not_an_option'):
+            out = self.init(testdir, extra_args=['--wipe', f'-D{option}=1'], allow_fail=True)
+            self.assertIn(f'ERROR: Unknown options: "{option}"', out)

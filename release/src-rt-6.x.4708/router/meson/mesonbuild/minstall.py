@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2013-2014 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from glob import glob
@@ -710,11 +700,11 @@ class Installer:
             try:
                 rc = self.run_exe(i, localenv)
             except OSError:
-                print(f'FAILED: install script \'{name}\' could not be run, stopped')
+                print(f'FAILED: install script \'{name}\' could not be run.')
                 # POSIX shells return 127 when a command could not be found
                 sys.exit(127)
             if rc != 0:
-                print(f'FAILED: install script \'{name}\' exit code {rc}, stopped')
+                print(f'FAILED: install script \'{name}\' failed with exit code {rc}.')
                 sys.exit(rc)
 
     def install_targets(self, d: InstallData, dm: DirMaker, destdir: str, fullprefix: str) -> None:

@@ -1,16 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2014-2016 The Meson development team
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 from __future__ import annotations
 import copy
@@ -236,29 +225,29 @@ class Vs2010Backend(backends.Backend):
         # Check for (currently) unexpected capture arg use cases -
         if capture:
             raise MesonBugException('We do not expect any vs backend to generate with \'capture = True\'')
-        target_machine = self.interpreter.builtin['target_machine'].cpu_family_method(None, None)
-        if target_machine in {'64', 'x86_64'}:
+        host_machine = self.environment.machines.host.cpu_family
+        if host_machine in {'64', 'x86_64'}:
             # amd64 or x86_64
-            target_system = self.interpreter.builtin['target_machine'].system_method(None, None)
+            target_system = self.environment.machines.host.system
             if detect_microsoft_gdk(target_system):
                 self.platform = target_system
             else:
                 self.platform = 'x64'
-        elif target_machine == 'x86':
+        elif host_machine == 'x86':
             # x86
             self.platform = 'Win32'
-        elif target_machine in {'aarch64', 'arm64'}:
-            target_cpu = self.interpreter.builtin['target_machine'].cpu_method(None, None)
+        elif host_machine in {'aarch64', 'arm64'}:
+            target_cpu = self.environment.machines.host.cpu
             if target_cpu == 'arm64ec':
                 self.platform = 'arm64ec'
             else:
                 self.platform = 'arm64'
-        elif 'arm' in target_machine.lower():
+        elif 'arm' in host_machine.lower():
             self.platform = 'ARM'
         else:
-            raise MesonException('Unsupported Visual Studio platform: ' + target_machine)
+            raise MesonException('Unsupported Visual Studio platform: ' + host_machine)
 
-        build_machine = self.interpreter.builtin['build_machine'].cpu_family_method(None, None)
+        build_machine = self.environment.machines.build.cpu_family
         if build_machine in {'64', 'x86_64'}:
             # amd64 or x86_64
             self.build_platform = 'x64'
@@ -266,7 +255,7 @@ class Vs2010Backend(backends.Backend):
             # x86
             self.build_platform = 'Win32'
         elif build_machine in {'aarch64', 'arm64'}:
-            target_cpu = self.interpreter.builtin['build_machine'].cpu_method(None, None)
+            target_cpu = self.environment.machines.build.cpu
             if target_cpu == 'arm64ec':
                 self.build_platform = 'arm64ec'
             else:
@@ -695,6 +684,8 @@ class Vs2010Backend(backends.Backend):
             if target_ext:
                 ET.SubElement(direlem, 'TargetExt').text = target_ext
 
+            ET.SubElement(direlem, 'EmbedManifest').text = 'false'
+
         return (root, type_config)
 
     def gen_run_target_vcxproj(self, target: build.RunTarget, ofname: str, guid: str) -> None:
@@ -1114,9 +1105,8 @@ class Vs2010Backend(backends.Backend):
         return (target_args, file_args), (target_defines, file_defines), (target_inc_dirs, file_inc_dirs)
 
     @staticmethod
-    def get_build_args(compiler, buildtype: str, optimization_level: str, debug: bool, sanitize: str) -> T.List[str]:
-        build_args = compiler.get_buildtype_args(buildtype)
-        build_args += compiler.get_optimization_args(optimization_level)
+    def get_build_args(compiler, optimization_level: str, debug: bool, sanitize: str) -> T.List[str]:
+        build_args = compiler.get_optimization_args(optimization_level)
         build_args += compiler.get_debug_args(debug)
         build_args += compiler.sanitizer_compile_args(sanitize)
 
@@ -1278,7 +1268,7 @@ class Vs2010Backend(backends.Backend):
             file_args
             ) -> None:
         compiler = self._get_cl_compiler(target)
-        buildtype_link_args = compiler.get_buildtype_linker_args(self.buildtype)
+        buildtype_link_args = compiler.get_optimization_link_args(self.optimization)
 
         # Prefix to use to access the build root from the vcxproj dir
         down = self.target_to_build_root(target)
@@ -1392,10 +1382,7 @@ class Vs2010Backend(backends.Backend):
         # Linker options
         link = ET.SubElement(compiles, 'Link')
         extra_link_args = compiler.compiler_args()
-        # FIXME: Can these buildtype linker args be added as tags in the
-        # vcxproj file (similar to buildtype compiler args) instead of in
-        # AdditionalOptions?
-        extra_link_args += compiler.get_buildtype_linker_args(self.buildtype)
+        extra_link_args += compiler.get_optimization_link_args(self.optimization)
         # Generate Debug info
         if self.debug:
             self.generate_debug_information(link)
@@ -1461,12 +1448,10 @@ class Vs2010Backend(backends.Backend):
                                 extra_link_args.append(path[:-len(gen_src_ext)] + '.obj')
 
                     for src in l.srclist:
-                        obj_basename = None
                         if self.environment.is_source(src):
-                            obj_basename = self.object_filename_from_source(t, src)
                             target_private_dir = self.relpath(self.get_target_private_dir(t),
                                                               self.get_target_dir(t))
-                            rel_obj = os.path.join(target_private_dir, obj_basename)
+                            rel_obj = self.object_filename_from_source(t, src, target_private_dir)
                             extra_link_args.append(rel_obj)
 
                     extra_link_args.extend(self.flatten_object_list(t))
@@ -1623,7 +1608,7 @@ class Vs2010Backend(backends.Backend):
         gen_hdrs += custom_hdrs
 
         compiler = self._get_cl_compiler(target)
-        build_args = Vs2010Backend.get_build_args(compiler, self.buildtype, self.optimization, self.debug, self.sanitize)
+        build_args = Vs2010Backend.get_build_args(compiler, self.optimization, self.debug, self.sanitize)
 
         assert isinstance(target, (build.Executable, build.SharedLibrary, build.StaticLibrary, build.SharedModule)), 'for mypy'
         # Prefix to use to access the build root from the vcxproj dir

@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2022 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from ..mesonlib import (
@@ -111,12 +101,12 @@ def compiler_from_language(env: 'Environment', lang: str, for_machine: MachineCh
     }
     return lang_map[lang](env, for_machine) if lang in lang_map else None
 
-def detect_compiler_for(env: 'Environment', lang: str, for_machine: MachineChoice, skip_sanity_check: bool) -> T.Optional[Compiler]:
+def detect_compiler_for(env: 'Environment', lang: str, for_machine: MachineChoice, skip_sanity_check: bool, subproject: str) -> T.Optional[Compiler]:
     comp = compiler_from_language(env, lang, for_machine)
     if comp is None:
         return comp
     assert comp.for_machine == for_machine
-    env.coredata.process_new_compiler(lang, comp, env)
+    env.coredata.process_compiler_options(lang, comp, env, subproject)
     if not skip_sanity_check:
         comp.sanity_check(env.get_scratch_dir(), env)
     env.coredata.compilers[comp.for_machine][lang] = comp
@@ -181,7 +171,11 @@ def detect_static_linker(env: 'Environment', compiler: Compiler) -> StaticLinker
             trials = [defaults['gcc_static_linker']] + default_linkers
         elif compiler.id == 'clang':
             # Use llvm-ar if available; needed for LTO
-            trials = [defaults['clang_static_linker']] + default_linkers
+            llvm_ar = defaults['clang_static_linker']
+            # Extract the version major of the compiler to use as a suffix
+            suffix = compiler.version.split('.')[0]
+            # Prefer suffixed llvm-ar first, then unsuffixed then the defaults
+            trials = [[f'{llvm_ar[0]}-{suffix}'], llvm_ar] + default_linkers
         elif compiler.language == 'd':
             # Prefer static linkers over linkers used by D compilers
             if is_windows():
@@ -204,8 +198,6 @@ def detect_static_linker(env: 'Environment', compiler: Compiler) -> StaticLinker
 
         if any(os.path.basename(x) in {'lib', 'lib.exe', 'llvm-lib', 'llvm-lib.exe', 'xilib', 'xilib.exe'} for x in linker):
             arg = '/?'
-        elif linker_name in {'ar2000', 'ar2000.exe', 'ar430', 'ar430.exe', 'armar', 'armar.exe'}:
-            arg = '?'
         else:
             arg = '--version'
         try:
@@ -234,7 +226,7 @@ def detect_static_linker(env: 'Environment', compiler: Compiler) -> StaticLinker
             return linkers.CcrxLinker(linker)
         if out.startswith('GNU ar') and 'xc16-ar' in linker_name:
             return linkers.Xc16Linker(linker)
-        if 'Texas Instruments Incorporated' in out:
+        if "-->  error: bad option 'e'" in err: # TI
             if 'ar2000' in linker_name:
                 return linkers.C2000Linker(linker)
             else:

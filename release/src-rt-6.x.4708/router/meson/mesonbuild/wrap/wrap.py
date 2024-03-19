@@ -1,16 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
 # Copyright 2015 The Meson development team
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 from __future__ import annotations
 
 from .. import mlog
@@ -35,6 +25,7 @@ import json
 from base64 import b64encode
 from netrc import netrc
 from pathlib import Path, PurePath
+from functools import lru_cache
 
 from . import WrapMode
 from .. import coredata
@@ -111,6 +102,7 @@ def get_releases_data(allow_insecure: bool) -> bytes:
     url = open_wrapdburl('https://wrapdb.mesonbuild.com/v2/releases.json', allow_insecure, True)
     return url.read()
 
+@lru_cache(maxsize=None)
 def get_releases(allow_insecure: bool) -> T.Dict[str, T.Any]:
     data = get_releases_data(allow_insecure)
     return T.cast('T.Dict[str, T.Any]', json.loads(data.decode()))
@@ -359,7 +351,7 @@ class Resolver:
             self.wrapdb_provided_deps.update({i: name for i in info.get('dependency_names', [])})
             self.wrapdb_provided_programs.update({i: name for i in info.get('program_names', [])})
 
-    def get_from_wrapdb(self, subp_name: str) -> PackageDefinition:
+    def get_from_wrapdb(self, subp_name: str) -> T.Optional[PackageDefinition]:
         info = self.wrapdb.get(subp_name)
         if not info:
             return None
@@ -410,14 +402,12 @@ class Resolver:
         return None
 
     def resolve(self, packagename: str, force_method: T.Optional[Method] = None) -> T.Tuple[str, Method]:
-        self.packagename = packagename
-        self.directory = packagename
-        self.wrap = self.wraps.get(packagename)
-        if not self.wrap:
-            self.wrap = self.get_from_wrapdb(packagename)
-        if not self.wrap:
-            m = f'Neither a subproject directory nor a {self.packagename}.wrap file was found.'
-            raise WrapNotFoundException(m)
+        wrap = self.wraps.get(packagename)
+        if wrap is None:
+            wrap = self.get_from_wrapdb(packagename)
+            if wrap is None:
+                raise WrapNotFoundException(f'Neither a subproject directory nor a {packagename}.wrap file was found.')
+        self.wrap = wrap
         self.directory = self.wrap.directory
 
         if self.wrap.has_wrap:
@@ -488,19 +478,19 @@ class Resolver:
             if os.path.isdir(cached_directory):
                 self.copy_tree(cached_directory, self.dirname)
             elif self.wrap.type == 'file':
-                self.get_file()
+                self._get_file(packagename)
             else:
                 self.check_can_download()
                 if self.wrap.type == 'git':
-                    self.get_git()
+                    self._get_git(packagename)
                 elif self.wrap.type == "hg":
-                    self.get_hg()
+                    self._get_hg()
                 elif self.wrap.type == "svn":
-                    self.get_svn()
+                    self._get_svn()
                 else:
                     raise WrapException(f'Unknown wrap type {self.wrap.type!r}')
             try:
-                self.apply_patch()
+                self.apply_patch(packagename)
                 self.apply_diff_files()
             except Exception:
                 windows_proof_rmtree(self.dirname)
@@ -562,8 +552,8 @@ class Resolver:
             return False
         raise WrapException(f'Unknown git submodule output: {out!r}')
 
-    def get_file(self) -> None:
-        path = self.get_file_internal('source')
+    def _get_file(self, packagename: str) -> None:
+        path = self._get_file_internal('source', packagename)
         extract_dir = self.subdir_root
         # Some upstreams ship packages that do not have a leading directory.
         # Create one for them.
@@ -575,9 +565,9 @@ class Resolver:
         except OSError as e:
             raise WrapException(f'failed to unpack archive with error: {str(e)}') from e
 
-    def get_git(self) -> None:
+    def _get_git(self, packagename: str) -> None:
         if not GIT:
-            raise WrapException(f'Git program not found, cannot download {self.packagename}.wrap via git.')
+            raise WrapException(f'Git program not found, cannot download {packagename}.wrap via git.')
         revno = self.wrap.get('revision')
         checkout_cmd = ['-c', 'advice.detachedHead=false', 'checkout', revno, '--']
         is_shallow = False
@@ -640,7 +630,7 @@ class Resolver:
             result = all(ch in '0123456789AaBbCcDdEeFf' for ch in revno)
         return result
 
-    def get_hg(self) -> None:
+    def _get_hg(self) -> None:
         revno = self.wrap.get('revision')
         hg = shutil.which('hg')
         if not hg:
@@ -651,7 +641,7 @@ class Resolver:
             subprocess.check_call([hg, 'checkout', revno],
                                   cwd=self.dirname)
 
-    def get_svn(self) -> None:
+    def _get_svn(self) -> None:
         revno = self.wrap.get('revision')
         svn = shutil.which('svn')
         if not svn:
@@ -750,10 +740,10 @@ class Resolver:
                 time.sleep(d)
         return self.get_data(urlstring)
 
-    def download(self, what: str, ofname: str, fallback: bool = False) -> None:
+    def _download(self, what: str, ofname: str, packagename: str, fallback: bool = False) -> None:
         self.check_can_download()
         srcurl = self.wrap.get(what + ('_fallback_url' if fallback else '_url'))
-        mlog.log('Downloading', mlog.bold(self.packagename), what, 'from', mlog.bold(srcurl))
+        mlog.log('Downloading', mlog.bold(packagename), what, 'from', mlog.bold(srcurl))
         try:
             dhash, tmpfile = self.get_data_with_backoff(srcurl)
             expected = self.wrap.get(what + '_hash').lower()
@@ -763,24 +753,24 @@ class Resolver:
         except WrapException:
             if not fallback:
                 if what + '_fallback_url' in self.wrap.values:
-                    return self.download(what, ofname, fallback=True)
+                    return self._download(what, ofname, packagename, fallback=True)
                 mlog.log('A fallback URL could be specified using',
                          mlog.bold(what + '_fallback_url'), 'key in the wrap file')
             raise
         os.rename(tmpfile, ofname)
 
-    def get_file_internal(self, what: str) -> str:
+    def _get_file_internal(self, what: str, packagename: str) -> str:
         filename = self.wrap.get(what + '_filename')
         if what + '_url' in self.wrap.values:
             cache_path = os.path.join(self.cachedir, filename)
 
             if os.path.exists(cache_path):
                 self.check_hash(what, cache_path)
-                mlog.log('Using', mlog.bold(self.packagename), what, 'from cache.')
+                mlog.log('Using', mlog.bold(packagename), what, 'from cache.')
                 return cache_path
 
             os.makedirs(self.cachedir, exist_ok=True)
-            self.download(what, cache_path)
+            self._download(what, cache_path, packagename)
             return cache_path
         else:
             path = Path(self.wrap.filesdir) / filename
@@ -791,12 +781,12 @@ class Resolver:
 
             return path.as_posix()
 
-    def apply_patch(self) -> None:
+    def apply_patch(self, packagename: str) -> None:
         if 'patch_filename' in self.wrap.values and 'patch_directory' in self.wrap.values:
             m = f'Wrap file {self.wrap.basename!r} must not have both "patch_filename" and "patch_directory"'
             raise WrapException(m)
         if 'patch_filename' in self.wrap.values:
-            path = self.get_file_internal('patch')
+            path = self._get_file_internal('patch', packagename)
             try:
                 shutil.unpack_archive(path, self.subdir_root)
             except Exception:
