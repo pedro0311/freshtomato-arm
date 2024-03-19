@@ -43,9 +43,8 @@ void wi_upgrade(char *url, int len, char *boundary)
 	uint8 buf[1024];
 	char *tmp;
 	pid_t pid = -1;
-	int fd;
+	int fd, m;
 	unsigned int reset;
-	size_t m;
 	const char *error = "Error reading file";
 #ifdef TCONFIG_BCMARM
 	char *args[] = { "mtd-write2", fifo, "linux", NULL };
@@ -130,9 +129,6 @@ void wi_upgrade(char *url, int len, char *boundary)
 	error = NULL;
 
 ERROR2:
-	if (buf[0])
-		free(buf);
-
 	if (f)
 		fclose(f);
 
