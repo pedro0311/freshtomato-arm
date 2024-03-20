@@ -32,7 +32,7 @@ ALL_TOOLS=msgfmt msgmerge xgettext autopoint
 ALL_M4S=$(sort $(wildcard m4/*.m4))
 ALL_DATA=$(sort $(wildcard data/*))
 
-CFLAGS=-O0 -fPIC
+CFLAGS  ?= -O0 -fPIC
 
 AR      ?= $(CROSS_COMPILE)ar
 RANLIB  ?= $(CROSS_COMPILE)ranlib
@@ -42,7 +42,7 @@ INSTALL ?= ./install.sh
 
 -include config.mak
 
-LDLIBS:=$(shell echo "int main(){}" | $(CC) -liconv -x c - >/dev/null 2>&1 && printf %s -liconv)
+LDLIBS:=$(shell echo "int main(){}" | $(CC) $(CFLAGS) $(LDFLAGS) -liconv -x c - >/dev/null 2>&1 && printf %s -liconv)
 
 BUILDCFLAGS=$(CFLAGS)
 
