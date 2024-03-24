@@ -1,4 +1,4 @@
-FROM debian:10
+FROM debian:12
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -15,7 +15,7 @@ RUN apt-get update \
   flex \
   g++ \
   libtool \
-  sqlite \
+  sqlite3 \
   gcc \
   binutils \
   patch \
@@ -39,7 +39,6 @@ RUN apt-get update \
   autogen \
   mtd-utils \
   gcc-multilib \
-  gconf-editor \
   lib32z1-dev \
   pkg-config \
   libssl-dev \
