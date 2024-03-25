@@ -115,9 +115,9 @@ void iptraffic_conntrack_init() {
 	Node tmp;
 	Node *ptr;
 
-	unsigned long rip[4];
-	unsigned long lan[4];
-	unsigned long mask[4];
+	unsigned long rip[BRIDGE_COUNT];
+	unsigned long lan[BRIDGE_COUNT];
+	unsigned long mask[BRIDGE_COUNT];
 	unsigned short int br;
 
 	for(br = 0; br < BRIDGE_COUNT; br++) {

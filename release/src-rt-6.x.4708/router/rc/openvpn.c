@@ -808,7 +808,7 @@ void start_ovpn_server(int unit)
 	int nvi, i, ip[4], nm[4];
 	int c2c = 0;
 	int dont_push_active = 0;
-	int push_lan[4] = {0};
+	int push_lan[BRIDGE_COUNT] = {0};
 #endif
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];

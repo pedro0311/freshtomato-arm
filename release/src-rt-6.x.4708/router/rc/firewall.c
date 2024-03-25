@@ -20,7 +20,7 @@
  *
  * Modified for Tomato Firmware
  * Portions, Copyright (C) 2006-2009 Jonathan Zarate
- * Fixes/updates (C) 2018 - 2023 pedro
+ * Fixes/updates (C) 2018 - 2024 pedro
  *
  */
 
@@ -1352,7 +1352,7 @@ static void filter_forward(void)
 			ipt_write("-A FORWARD -i %s%s -o %s%s %s %s -j ACCEPT\n", "br", sbr, "br", dbr, src, dst);
 
 			if ((strcmp(src, "") == 0) && (strcmp(dst, "") == 0))
-				lanAccess[((*sbr - 48) + (*dbr - 48) * 4)] = '1';
+				lanAccess[((*sbr - 48) + (*dbr - 48) * BRIDGE_COUNT)] = '1';
 
 		}
 	}
@@ -1428,7 +1428,7 @@ static void filter_forward(void)
 				if (br == br2)
 					continue;
 
-				if (lanAccess[((br)+(br2)*4)] == '1')
+				if (lanAccess[((br)+(br2) * BRIDGE_COUNT)] == '1')
 					continue;
 
 				char bridge2[2] = "0";

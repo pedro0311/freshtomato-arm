@@ -650,7 +650,7 @@ function verifyFields(focused, quiet) {
 	}
 
 	for (i = 0; i < tabs.length; ++i) {
-		for (j = 0; j <= 3; ++j) {
+		for (j = 0; j <= MAX_BRIDGE_ID; ++j) {
 			t = (j == 0 ? '' : j);
 
 			if (eval('nvram.lan'+t+'_ifname.length') < 1) {
