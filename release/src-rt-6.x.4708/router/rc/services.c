@@ -1310,6 +1310,9 @@ void stop_phy_tempsense()
 
 void start_adblock(int update)
 {
+	if (nvram_get_int("g_upgrade") || nvram_get_int("g_reboot"))
+		return;
+
 	if (!nvram_get_int("adblock_enable"))
 		return;
 
@@ -3465,7 +3468,6 @@ TOP:
 #ifdef TCONFIG_TOR
 			stop_tor();
 #endif
-			stop_adblock();
 			killall("rstats", SIGTERM);
 			killall("cstats", SIGTERM);
 			killall("buttons", SIGTERM);
@@ -3476,7 +3478,9 @@ TOP:
 				stop_dnsmasq();
 				killall("udhcpc", SIGTERM);
 				stop_wan();
-			}
+			} else
+				stop_adblock();
+
 			stop_ntpd();
 			stop_tomatoanon();
 			remove_conntrack();
