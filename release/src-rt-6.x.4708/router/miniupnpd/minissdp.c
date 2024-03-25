@@ -1,8 +1,8 @@
-/* $Id: minissdp.c,v 1.106 2023/06/29 09:45:18 nanard Exp $ */
+/* $Id: minissdp.c,v 1.107 2024/01/15 00:20:21 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2023 Thomas Bernard
+ * (c) 2006-2024 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -524,11 +524,10 @@ SendSSDPResponse(int s, const struct sockaddr * addr,
 	 * uppercase is recommended.
 	 * DATE: is recommended
 	 * SERVER: OS/ver UPnP/1.0 miniupnpd/1.0
-	 * - check what to put in the 'Cache-Control' header
-	 *
-	 * have a look at the document "UPnP Device Architecture v1.1 */
+	 * CACHE-CONTROL: Should be greater than or equal to 1800 seconds
+	 */
 	l = snprintf(buf, sizeof(buf), "HTTP/1.1 200 OK\r\n"
-		"CACHE-CONTROL: max-age=120\r\n"
+		"CACHE-CONTROL: max-age=1800\r\n"
 #ifdef ENABLE_HTTP_DATE
 		"DATE: %s\r\n"
 #endif

@@ -1,9 +1,9 @@
-/* $Id: options.h,v 1.34 2021/12/01 22:50:08 nanard Exp $ */
+/* $Id: options.h,v 1.35 2024/03/11 23:17:56 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
  * author: Ryan Wagoner
- * (c) 2006-2021 Thomas Bernard
+ * (c) 2006-2024 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -62,6 +62,7 @@ enum upnpconfigoptions {
 	UPNPFORWARDCHAIN,
 	UPNPNATCHAIN,
 	UPNPNATPOSTCHAIN,
+	UPNPNFFAMILYSPLIT,
 #endif
 #ifdef USE_PF
 	UPNPANCHOR,				/* anchor */

@@ -1,8 +1,8 @@
-/* $Id: miniupnpd.c,v 1.257 2023/05/27 16:49:17 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.261 2024/03/11 23:28:19 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2023 Thomas Bernard
+ * (c) 2006-2024 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -99,10 +99,6 @@
 #ifdef USE_NETFILTER
 void init_iptpinhole(void);
 #endif
-#endif
-
-#ifndef DEFAULT_CONFIG
-#define DEFAULT_CONFIG "/etc/miniupnpd.conf"
 #endif
 
 #ifdef USE_MINIUPNPDCTL
@@ -903,7 +899,7 @@ struct runtime_vars {
 	int notify_interval;	/* seconds between SSDP announces */
 	/* unused rules cleaning related variables : */
 	int clean_ruleset_threshold;	/* threshold for removing unused rules */
-	int clean_ruleset_interval;		/* (minimum) interval between checks */
+	int clean_ruleset_interval;		/* (minimum) interval between checks. 0=disabled */
 };
 
 /* parselanaddr()
@@ -1098,9 +1094,9 @@ int update_ext_ip_addr_from_stun(int init)
 
 	if ((init || disable_port_forwarding) && !restrictive_nat) {
 		if (addr_is_reserved(&if_addr))
-			syslog(LOG_INFO, "STUN: ext interface %s with IP address %s is now behind unrestricted full-cone NAT 1:1 with public IP address %s and firewall does not block incoming connections set by miniunnpd", ext_if_name, if_addr_str, ext_addr_str);
+			syslog(LOG_INFO, "STUN: ext interface %s with IP address %s is now behind unrestricted full-cone NAT 1:1 with public IP address %s and firewall does not block incoming connections set by miniupnpd", ext_if_name, if_addr_str, ext_addr_str);
 		else
-			syslog(LOG_INFO, "STUN: ext interface %s has now public IP address %s and firewall does not block incoming connections set by miniunnpd", ext_if_name, if_addr_str);
+			syslog(LOG_INFO, "STUN: ext interface %s has now public IP address %s and firewall does not block incoming connections set by miniupnpd", ext_if_name, if_addr_str);
 		syslog(LOG_INFO, "Port forwarding is now enabled");
 	} else if ((init || !disable_port_forwarding) && restrictive_nat) {
 		if (addr_is_reserved(&if_addr)) {
@@ -1357,6 +1353,9 @@ init(int argc, char * * argv, struct runtime_vars * v)
 			case UPNPNATPOSTCHAIN:
 				set_rdr_name(RDR_NAT_POSTROUTING_CHAIN_NAME, ary_options[i].value);
 				break;
+			case UPNPNFFAMILYSPLIT:
+				set_rdr_name(RDR_FAMILY_SPLIT, ary_options[i].value);
+				break;
 #endif    /* USE_NETFILTER */
 			case UPNPNOTIFY_INTERVAL:
 				v->notify_interval = atoi(ary_options[i].value);
@@ -1414,12 +1413,14 @@ init(int argc, char * * argv, struct runtime_vars * v)
 #ifdef ENABLE_PCP
 			case UPNPPCPMINLIFETIME:
 					min_lifetime = atoi(ary_options[i].value);
-					if (min_lifetime > 120 ) {
+					/* RFC6887 15. the minimum value SHOULD be 120 seconds */
+					if (min_lifetime < 120 ) {
 						min_lifetime = 120;
 					}
 				break;
 			case UPNPPCPMAXLIFETIME:
 					max_lifetime = atoi(ary_options[i].value);
+					/* maximum is 24 hours */
 					if (max_lifetime > 86400 ) {
 						max_lifetime = 86400;
 					}
