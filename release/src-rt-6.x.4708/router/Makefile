@@ -1371,9 +1371,6 @@ gmp-clean:
 	$(call unpatch_files,gmp)
 
 nettle/stamp-h1:
-ifneq ($(TCONFIG_BCMARM),y)
-	$(call patch_files,nettle)
-endif
 	cd nettle && \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,-Os) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-I$(TOP)/gmp -fPIC" \
@@ -1390,9 +1387,6 @@ nettle-clean:
 	-@$(MAKE) -C nettle clean
 	@rm -f nettle/stamp-h1
 	@rm -rf nettle/include nettle/lib nettle/bin nettle/share
-ifneq ($(TCONFIG_BCMARM),y)
-	$(call unpatch_files,nettle)
-endif
 
 dnsmasq:
 	@$(SEP)
