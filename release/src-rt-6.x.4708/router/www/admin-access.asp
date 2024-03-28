@@ -138,9 +138,8 @@ function verifyFields(focused, quiet) {
 	elem.display(PR('_http_lanport'), (a.value == 1) || (a.value == 3));
 	elem.display(PR('_f_http_wireless'), a.value != 0);
 
-	elem.display(PR('_f_http_lan1_listener'), (nvram.lan1_ifname == 'br1') && (a.value != 0));
-	elem.display(PR('_f_http_lan2_listener'), (nvram.lan2_ifname == 'br2') && (a.value != 0));
-	elem.display(PR('_f_http_lan3_listener'), (nvram.lan3_ifname == 'br3') && (a.value != 0));
+	for (i = 1; i <= MAX_BRIDGE_ID; i++)
+		elem.display(PR('_f_http_lan'+i+'_listener'), (eval('nvram.lan'+i+'_ifname') == 'br'+i+'') && (a.value != 0));
 
 /* IPV6-BEGIN */
 	elem.display(PR('_f_http_ipv6'), (!nvram.ipv6_service == '') && (a.value != 0));
@@ -246,14 +245,9 @@ function save() {
 /* HTTPS-END */
 
 	fom.http_lan_listeners.value = 0; /* init with 0 and check */
-		if (fom._f_http_lan1_listener.checked)
-			fom.http_lan_listeners.value = fom.http_lan_listeners.value | 0x01; /* set bit 0, listener enabled for LAN1 */
-
-		if (fom._f_http_lan2_listener.checked)
-			fom.http_lan_listeners.value = fom.http_lan_listeners.value | 0x02; /* set bit 1, listener enabled for LAN2 */
-
-		if (fom._f_http_lan3_listener.checked)
-			fom.http_lan_listeners.value = fom.http_lan_listeners.value | 0x04; /* set bit 2, listener enabled for LAN3 */
+	for (i = 1; i <= MAX_BRIDGE_ID; i++)
+		if (eval('fom._f_http_lan'+i+'_listener.checked'))
+			fom.http_lan_listeners.value = fom.http_lan_listeners.value | (2 ** (i - 1)); /* set hex value bit, listener enabled for LAN(i) */
 
 /* IPV6-BEGIN */
 	fom.http_ipv6.value = fom._f_http_ipv6.checked ? 1 : 0;
@@ -427,9 +421,6 @@ function init() {
 				      ((nvram.https_enable != 0) ? 2 : 0) |
 /* HTTPS-END */
 				      ((nvram.http_enable != 0) ? 1 : 0) },
-				{ title: 'Listen on LAN1 (br1)', name: 'f_http_lan1_listener', type: 'checkbox', value: (nvram.http_lan_listeners & 0x01) },
-				{ title: 'Listen on LAN2 (br2)', name: 'f_http_lan2_listener', type: 'checkbox', value: (nvram.http_lan_listeners & 0x02) },
-				{ title: 'Listen on LAN3 (br3)', name: 'f_http_lan3_listener', type: 'checkbox', value: (nvram.http_lan_listeners & 0x04) },
 /* IPV6-BEGIN */
 				{ title: 'Listen on IPv6', name: 'f_http_ipv6', type: 'checkbox', value: nvram.http_ipv6 == 1 },
 /* IPV6-END */
@@ -478,6 +469,9 @@ function init() {
 			null,
 			{ title: 'Open Menus' }
 		];
+
+		for (i = 1; i <= MAX_BRIDGE_ID; i++)
+			m.splice(i+3, 0, { title: 'Listen on LAN'+i+' (br'+i+')', name: 'f_http_lan'+i+'_listener', type: 'checkbox', value: (nvram.http_lan_listeners & (2 ** (i - 1)))},);
 
 		var webmx = get_config('web_mx', '').toLowerCase();
 		for (var i = 0; i < xmenus.length; ++i)
