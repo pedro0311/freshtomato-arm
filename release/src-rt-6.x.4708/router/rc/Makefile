@@ -1,8 +1,9 @@
 include ../common.mak
 
-CFLAGS = -Wall -Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
-CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
-LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
+CFLAGS += -I. -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include -I$(TOP)/shared -I$(TOP)/nvram$(BCMEX)
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared -L$(TOP)/nvram$(BCMEX)
+LIBS    = -lshared -lnvram -lcrypt $(EXTRALIBS)
 
 ifeq ($(TCONFIG_DPSTA),y)
  CFLAGS += -I$(TOP)/dpsta
@@ -11,19 +12,8 @@ endif
 ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS  += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
  CFLAGS  += -I$(SRCBASE)/common/include
- LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram${BCMEX} -lnvram -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
- LDFLAGS += -L$(TOP)/libbcm -lbcm
- LDFLAGS += -lgcc_s
-else
- LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram -lnvram -lcrypt
-endif
-
-ifeq ($(STATIC),1)
- LDFLAGS += -static
-endif
-
-ifeq ($(TCONFIG_BCMARM),y)
- LDFLAGS += $(EXTRA_LDFLAGS)
+ LDFLAGS += -L$(TOP)/libbcmcrypto -L$(TOP)/libbcm
+ LIBS    += -lbcmcrypto -lbcm
 endif
 
 ifeq ($(TCONFIG_BCMSMP),y)
@@ -34,14 +24,13 @@ ifeq ($(TOMATO_EXPERIMENTAL),1)
  CFLAGS += -DDEBUG_LOGMSG
 endif
 
-OBJS := rc.o init.o interface.o network.o wan.o services.o dhcp.o \
-        firewall.o ppp.o telssh.o wnas.o listen.o redial.o \
-        led.o qos.o forward.o misc.o mtd.o buttons.o restrict.o \
-        gpio.o sched.o bwlimit.o arpbind.o tomatoanon.o
+OBJS = rc.o init.o interface.o network.o wan.o services.o dhcp.o \
+       firewall.o ppp.o telssh.o wnas.o listen.o redial.o \
+       led.o qos.o forward.o misc.o mtd.o buttons.o restrict.o \
+       gpio.o sched.o bwlimit.o arpbind.o tomatoanon.o mwan.o pbr.o
 
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),y)
- OBJS += blink.o
- OBJS += blink_br.o
+ OBJS += blink.o blink_br.o
 endif
 
 ifeq ($(TCONFIG_ROAM),y)
@@ -59,9 +48,6 @@ endif
 ifeq ($(TCONFIG_FANCTRL),y)
  OBJS += phy_tempsense.o
 endif
-
-# dualwan / multiwan
-OBJS += mwan.o pbr.o
 
 ifeq ($(TCONFIG_USB),y)
  OBJS += usb.o
@@ -92,8 +78,7 @@ ifeq ($(TCONFIG_OPENVPN),y)
 endif
 
 ifeq ($(TCONFIG_WIREGUARD),y)
- OBJS += wireguard.o
- OBJS += curve25519.o
+ OBJS += wireguard.o curve25519.o
 endif
 
 ifeq ($(TCONFIG_TINC),y)
@@ -101,8 +86,7 @@ ifeq ($(TCONFIG_TINC),y)
 endif
 
 ifeq ($(TCONFIG_PPTPD),y)
- OBJS += pptpd.o
- OBJS += pptp_client.o
+ OBJS += pptpd.o pptp_client.o
 endif
 
 ifeq ($(TCONFIG_NOCAT),y)
@@ -110,8 +94,7 @@ ifeq ($(TCONFIG_NOCAT),y)
 endif
 
 ifeq ($(TCONFIG_NGINX),y)
- OBJS += nginx.o
- OBJS += mysql.o
+ OBJS += nginx.o mysql.o
 endif
 
 ifeq ($(TCONFIG_BT),y)
@@ -144,9 +127,13 @@ endif
 
 all: rc
 
+%.o: %.c
+	@echo " [rc] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 rc: $(OBJS)
 	@echo " [rc] CC $@"
-	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)
 	$(CPTMP)
 
@@ -224,13 +211,4 @@ ifeq ($(TCONFIG_ROAM),y)
 endif
 
 clean:
-	rm -f rc *.o .*.depend
-
-%.o: %.c .%.depend
-	@echo " [rc] CC $@"
-	@$(CC) $(CFLAGS) -o $@ -c $<
-
-.%.depend: %.c
-	@$(CC) $(CFLAGS) -M $< > $@
-
--include $(OBJS:%.o=.%.depend)
+	@rm -f rc *.o

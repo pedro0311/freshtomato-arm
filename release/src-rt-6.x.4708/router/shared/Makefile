@@ -1,7 +1,7 @@
 include ../common.mak
 
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
-CFLAGS += -I$(TOP)/shared -I$(SRCBASE)/include -I$(LINUXDIR)/include
+CFLAGS += -I. -I$(SRCBASE)/include
 LDFLAGS = -fPIC --gc-sections
 
 ifeq ($(TCONFIG_BCMWL6),y)
@@ -12,10 +12,8 @@ ifeq (2_6_36,$(LINUX_VERSION))
  CFLAGS += -DAUTOFW_PORT_DEPRECATED
 endif
 
-ifeq ($(TCONFIG_BCMWL6),y)
+ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include -I$(SRCBASE)/common/include
-else
- CFLAGS += -I$(SRCBASE)/shared
 endif
 
 ifeq ($(TCONFIG_BCMSMP),y)
@@ -61,21 +59,29 @@ ifeq ($(TCONFIG_USB),y)
 endif
 
 ifeq ($(CONFIG_BCMWL5),y)
- OBJS += wlif_utils.o UdpLib.o bcmutils.o
- OBJS += bcmwifi_channels.o
+ OBJS += wlif_utils.o UdpLib.o
+ ifeq ($(TCONFIG_BCMARM),y)
+  OBJS += bcmutils.o bcmwifi_channels.o
+ endif
 endif
 
 ifeq ($(TCONFIG_BCM7),y)
- OBJS += et_linux.o bcmwifi_channels.o
+ OBJS += et_linux.o
 endif
 
+ifeq ($(TCONFIG_BCMARM),y)
 vpath %.c $(SRCBASE)/shared/ $(SRCBASE)/shared/bcmwifi/src $(WLAN_ComponentSrcDirs)
+endif
 
 all: libshared.so
 
+%.o: %.c
+	@echo " [shared] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 libshared.so: $(OBJS)
 	@echo " [shared] LD $@"
-	@$(LD) $(LDFLAGS) -shared -o $@ $^
+	@$(LD) -shared -o $@ $^ $(LDFLAGS)
 	$(SIZECHECK)
 	$(CPTMP)
 
@@ -86,4 +92,4 @@ install: all
 	@$(STRIP) $(INSTALLDIR)/usr/lib/libshared.so
 
 clean:
-	rm -f *.o *.so
+	@rm -f *.o *.so

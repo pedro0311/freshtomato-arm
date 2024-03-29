@@ -1,16 +1,16 @@
 include ../common.mak
 
-CFLAGS  = -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare -I$(TOP)/shared
-LDFLAGS = -fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections
-LIBS    =
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
+CFLAGS += -I$(TOP)/shared
+LDFLAGS = -fPIC -ffunction-sections -fdata-sections --gc-sections -L$(TOP)/shared
+LIBS    = -lshared
 
 ifneq ($(TCONFIG_HTTPS),)
+ CFLAGS  += -DUSE_OPENSSL -I$(TOP)/$(OPENSSLDIR)/include
+ LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
+ LIBS    += -lssl -lcrypto
  ifeq ($(TCONFIG_OPENSSL11),y)
-  CFLAGS += -I$(TOP)/openssl-1.1/include -DUSE_OPENSSL -DUSE_OPENSSL11
-  LIBS   += -L$(TOP)/openssl-1.1 -lssl -lcrypto
- else
-  CFLAGS += -I$(TOP)/openssl/include -DUSE_OPENSSL
-  LIBS   += -L$(TOP)/openssl -lssl -lcrypto
+  CFLAGS += -DUSE_OPENSSL11
  endif
 else
  CFLAGS += -I$(TOP)/cyassl/include -I$(TOP)/cyassl/ctaocrypt/include
@@ -18,7 +18,7 @@ else
 endif
 
 ifneq ($(TCONFIG_BCMARM),y)
- LIBS   += -lpthread
+ LIBS += -lpthread
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
@@ -29,23 +29,21 @@ OBJS = mssl.o
 
 all: libmssl.so
 
-libmssl.so: $(OBJS)
-ifeq ($(TCONFIG_BCMARM),y)
-	@echo " [mssl] LD $@"
-	@$(LD) $(LIBS) -shared -o $@ $^
-else
+%.o: %.c
 	@echo " [mssl] CC $@"
-	@$(CC) $(CFLAGS) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
-endif
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
+libmssl.so: $(OBJS)
+	@echo " [mssl] LD $@"
+	@$(LD) -shared -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)
-#	$(STRIP) $@
 	$(CPTMP)
 
 install: all
 	@echo " [mssl] Installing as $(INSTALLDIR)/usr/lib/libmssl.so"
-	@install -D libmssl.so $(INSTALLDIR)/usr/lib/libmssl.so
+	@install -d $(INSTALLDIR)/usr/lib
 	@install -m 755 libmssl.so $(INSTALLDIR)/usr/lib
 	@$(STRIP) $(INSTALLDIR)/usr/lib/libmssl.so
 
 clean:
-	rm -f *.o *.so
+	@rm -f *.o *.so

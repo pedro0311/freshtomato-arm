@@ -260,8 +260,8 @@ obj-y += etc
 obj-y += pppd
 obj-y += rp-pppoe
 obj-y += utils$(BCMEX)
-obj-y += rstats
 obj-y += cstats
+obj-y += rstats
 obj-$(TCONFIG_PROXY) += udpxy
 obj-y += hotplug2
 obj-y += udevtrigger
@@ -289,20 +289,12 @@ else
  obj-y += cyassl
 endif
 
-DNSSEC_BACKEND :=
-DNSSEC_OPENSSL :=
 DNSSEC_NETTLE :=
 ifeq ($(TCONFIG_DNSSEC),y)
  ifneq ($(TCONFIG_HTTPS),)
-  #ifneq ($(TCONFIG_OPENSSL11),)
-   #DNSSEC_BACKEND := $(OPENSSLDIR)
-   #DNSSEC_OPENSSL := y
-  #else
-   obj-y += gmp
-   obj-y += nettle
-   DNSSEC_BACKEND := nettle
-   DNSSEC_NETTLE := y
-  #endif
+  obj-y += gmp
+  obj-y += nettle
+  DNSSEC_NETTLE := y
  endif
 endif
 
@@ -543,8 +535,7 @@ ifeq ($(TCONFIG_BCMARM),y)
  WLAN_ComponentsInUse := bcmwifi clm ppr olpc
  include $(SRCBASE)/makefiles/WLAN_Common.mk
  export BASEDIR := $(WLAN_TreeBaseA)
- export EXTRALDFLAGS = -lgcc_s
- export EXTRALDFLAGS2 = -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared
+ export EXTRALIBS = -lgcc_s
  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
 
  ifeq (2_6_36,$(LINUX_VERSION))
@@ -1355,7 +1346,7 @@ gmp/stamp-h1:
 	cd gmp && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE)
+		$(CONFIGURE) --enable-static --disable-shared --without-readline --disable-fft
 	@touch $@
 
 gmp: gmp/stamp-h1
@@ -1394,14 +1385,11 @@ dnsmasq:
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_ID -DNO_GMP -DUSE_IPSET $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-DNO_LOOP,) $(if $(TCONFIG_BCMARM),,-DNO_INOTIFY -DNO_DUMPFILE) \
 		$(if $(TCONFIG_USB_EXTRAS),,-DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_INOTIFY) \
-		$(if $(DNSSEC_OPENSSL),-I$(TOP)/$(OPENSSLDIR)/staged/usr/include -DHAVE_DNSSEC,) \
 		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
 	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections $(EXTRACFLAGS) -std=gnu99 $(OPTSIZE_MORE_FLAG)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
-		$(if $(DNSSEC_OPENSSL),-pthread -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib,) \
 		$(if $(DNSSEC_NETTLE),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
-	$(if $(DNSSEC_OPENSSL),PKG_CONFIG_PATH="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/pkgconfig" CRYPTO=openssl,) \
 	$(if $(DNSSEC_NETTLE),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
 
 dnsmasq-install:
@@ -1699,10 +1687,9 @@ usbmodeswitch-install:
 
 dhcpv6/stamp-h1:
 	@cd dhcpv6 && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(SRCBASE)/include -I$(TOP)/shared -DTOMATO \
-			$(if $(TCONFIG_BCMARM),-DHAVE_CLOEXEC,) \
-			$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),-DNEED_DEBUG,)" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/nvram$(BCMEX) -lnvram $(if $(TCONFIG_BCMARM),,-L$(TOP)/shared -lshared)" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -D_GNU_SOURCE -ffunction-sections -fdata-sections -DTOMATO -I$(SRCBASE)/include -I$(TOP)/shared \
+			$(if $(TCONFIG_BCMARM),-DHAVE_CLOEXEC,) $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_BLINK)),-DNEED_DEBUG,)" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections $(if $(TCONFIG_BCMARM),,-L$(TOP)/shared -lshared) -L$(TOP)/nvram$(BCMEX) -lnvram" \
 		ac_cv_func_setpgrp_void=yes \
 		$(CONFIGURE) --prefix= --with-localdbdir=/var
 	@$(MAKE) -C dhcpv6 clean
@@ -1889,7 +1876,7 @@ zlib/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		CPPLAGS="-Os -Wall -fPIC -ffunction-sections -fdata-sections" \
 		LDFLAGS="-fPIC -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		LDSHAREDLIBC="$(EXTRALDFLAGS)" \
+		LDSHAREDLIBC="$(EXTRALIBS)" \
 		./configure --prefix=/usr --shared --libdir=/usr/lib
 	@touch $@
 
@@ -2151,9 +2138,9 @@ minidlna/stamp-h1:
 	$(call patch_files,minidlna)
 	cd minidlna && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include -I$(TOP)/sqlite -I$(TOP)/libjpeg-turbo \
-			-I$(TOP)/libexif -I$(TOP)/libid3tag/build -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/shared" \
-		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
+		CPPFLAGS="-I$(TOP)/shared -I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat -I$(TOP)/ffmpeg -I$(TOP)/flac/include -I$(TOP)/sqlite \
+			-I$(TOP)/libjpeg-turbo -I$(TOP)/libexif -I$(TOP)/libid3tag/build -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/shared -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
 			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/build -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
 		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
@@ -2231,17 +2218,6 @@ endif
 
 igs$(BCMEX)-clean:
 	-@$(MAKE) -C $(if $(TCONFIG_BCMARM),,$(SRCBASE)/)emf$(BCMEX)/igsconf clean
-
-wanuptime:
-	@$(SEP)
-	@$(MAKE) -C $@
-
-wanuptime-install:
-	install -D wanuptime/wanuptime $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
-	$(STRIP) $(INSTALLDIR)/wanuptime/usr/sbin/wanuptime
-
-wanuptime-clean:
-	-@$(MAKE) -C wanuptime clean
 
 ebtables/stamp-h1: dummy
 ifeq ($(TCONFIG_IPV6),y)
@@ -2679,7 +2655,7 @@ nginx-clean:
 libncurses/stamp-h1:
 	cd libncurses && \
 		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="$(EXTRACFLAGS) -Os -fPIC" \
+		CPPFLAGS="-Os $(EXTRACFLAGS) -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		LIBS="-lstdc++" \
 		$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs \
@@ -3732,7 +3708,7 @@ libdaemon/stamp-h1:
 	cd libdaemon && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --disable-dependency-tracking ac_cv_func_setpgrp_void=yes
+		$(CONFIGURE) --prefix=/usr ac_cv_func_setpgrp_void=yes --disable-lynx --disable-examples --disable-dependency-tracking
 	touch $@
 
 libdaemon: libdaemon/stamp-h1
@@ -3779,9 +3755,9 @@ avahi/stamp-h1:
 	$(call patch_files,avahi)
 	cd avahi && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/expat/staged/usr/include" \
-		LDFLAGS="-L$(TOP)/expat/staged/usr/lib -ldl -lpthread -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/expat/staged/usr/lib -ldl -lpthread" \
 		LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" \
-		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon $(EXTRALDFLAGS2)" \
+		LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc localstatedir=/var --with-distro=none \
 			--enable-introspection=no \
 			--disable-nls --disable-glib --disable-libevent --disable-gobject \

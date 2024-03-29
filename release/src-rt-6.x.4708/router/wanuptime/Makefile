@@ -1,24 +1,25 @@
 include ../common.mak
 
-CFLAGS = -Os -Wall $(EXTRACFLAGS)
-CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
+CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared -I$(TOP)/nvram$(BCMEX)
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared -L$(TOP)/nvram$(BCMEX)
+LIBS    = -lshared -lnvram $(EXTRALIBS)
 
-LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
-
-ifeq ($(TCONFIG_BCMARM),y)
-LIBS += -lgcc_s
-endif
-
-EXE = wanuptime
 OBJS = wanuptime.o
 
-default: $(EXE)
+all: wanuptime
 
-$(EXE): $(OBJS)
-	@$(CC) $(CFLAGS) -o $@ $(OBJS) $(LIBS)
+wanuptime: $(OBJS)
+	@echo " [wanuptime] CC -o $@"
+	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(SIZECHECK)
+	$(CPTMP)
 
-%.o: %.c
-	@$(CC) $(CFLAGS) -o $@ -c $<
+install:
+	@echo " [wanuptime] Installing as $(INSTALLDIR)/usr/sbin/wanuptime"
+	@install -d $(INSTALLDIR)/usr/sbin
+	@install -m 755 wanuptime $(INSTALLDIR)/usr/sbin/wanuptime
+	$(STRIP) $(INSTALLDIR)/usr/sbin/wanuptime
 
 clean:
-	rm -f $(EXE) $(OBJS)
+	@rm -f wanuptime *.o

@@ -1,27 +1,24 @@
 include ../common.mak
 
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
-CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared
-LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
-LIBS    = -L$(TOP)/shared -lshared -L$(TOP)/nvram${BCMEX} -lnvram
+CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared -I$(TOP)/nvram$(BCMEX)
+LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared -L$(TOP)/nvram$(BCMEX)
+LIBS    = -lshared -lnvram $(EXTRALIBS)
 
 ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
  CFLAGS += -I$(SRCBASE)/common/include
- LIBS   += -lgcc_s
 endif
 
 ifneq ($(TCONFIG_HTTPS),)
- LIBS   += -L$(TOP)/mssl -lmssl
+ CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
+ LDFLAGS += -L$(TOP)/mssl -L$(TOP)/$(OPENSSLDIR)
+ LIBS    += -lmssl -lssl -lcrypto
  ifeq ($(TCONFIG_OPENSSL11),y)
-  CFLAGS += -I$(TOP)/openssl-1.1/include -DUSE_OPENSSL11
-  LIBS   += -L$(TOP)/openssl-1.1 -lssl -lcrypto
+  CFLAGS += -DUSE_OPENSSL11
   ifeq ($(TCONFIG_BCMARM),y)
-   LIBS   += -lpthread
+   LIBS  += -lpthread
   endif
- else
-  CFLAGS += -I$(TOP)/openssl/include
-  LIBS   += -L$(TOP)/openssl -lssl -lcrypto
  endif
 endif
 
@@ -29,10 +26,10 @@ ifeq ($(TOMATO_EXPERIMENTAL),1)
  export CFLAGS += -DDEBUG_LOGMSG
 endif
 
-OBJS    = httpd.o cgi.o tomato.o version.o misc.o dhcp.o upgrade.o \
-          traceping.o parser.o upnp.o ctnf.o nvram.o log.o webio.o \
-          wl.o devlist.o ddns.o config.o bwm.o blackhole.o utf8.o \
-          cpuinfo.o iptraffic.o
+OBJS = httpd.o cgi.o tomato.o version.o misc.o dhcp.o upgrade.o \
+       traceping.o parser.o upnp.o ctnf.o nvram.o log.o webio.o \
+       wl.o devlist.o ddns.o config.o bwm.o utf8.o cpuinfo.o \
+       iptraffic.o #blackhole.o
 
 ifeq ($(TCONFIG_USB),y)
  OBJS   += usb.o
@@ -61,6 +58,10 @@ endif
 
 all: httpd
 
+%.o: %.c
+	@echo " [httpd] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 httpd: $(OBJS)
 	@echo " [httpd] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
@@ -74,13 +75,4 @@ install:
 	@chmod 0500 $(INSTALLDIR)/usr/sbin/httpd
 
 clean:
-	rm -f httpd *.o .*.depend
-
-%.o: %.c .%.depend
-	@echo " [httpd] CC $@"
-	@$(CC) $(CFLAGS) -o $@ -c $<
-
-.%.depend: %.c
-	@$(CC) $(CFLAGS) -M $< > $@
-
--include $(OBJS:%.o=.%.depend)
+	@rm -f httpd *.o
