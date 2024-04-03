@@ -364,7 +364,7 @@ void start_dnsmasq()
 	char *mac, *ip, *name, *bind;
 	char *nve, *nvp;
 	unsigned char ea[ETHER_ADDR_LEN];
-	int n;
+	int i, n;
 	int dhcp_lease;
 	int do_dhcpd, do_dns, do_dhcpd_hosts = 0;
 #ifdef TCONFIG_IPV6
@@ -456,13 +456,14 @@ void start_dnsmasq()
 	if ((nvram_get_int("tor_enable")) && (nvram_get_int("dnsmasq_onion_support"))) {
 		char *t_ip = nvram_safe_get("lan_ipaddr");
 
-		if (nvram_match("tor_iface", "br1"))
-			t_ip = nvram_safe_get("lan1_ipaddr");
-		if (nvram_match("tor_iface", "br2"))
-			t_ip = nvram_safe_get("lan2_ipaddr");
-		if (nvram_match("tor_iface", "br3"))
-			t_ip = nvram_safe_get("lan3_ipaddr");
-
+		for(i = 1; i < BRIDGE_COUNT; i++ ) {
+			snprintf(buf, sizeof(buf), "br%d", i);
+			if (nvram_match("tor_iface", buf)) {
+				snprintf(buf, sizeof(buf), "lan%d_ipaddr", i);
+				t_ip = nvram_safe_get(buf);
+				break;
+			}
+		}
 		fprintf(f, "server=/onion/%s#%s\n", t_ip, nvram_safe_get("tor_dnsport"));
 	}
 #endif
@@ -503,14 +504,11 @@ void start_dnsmasq()
 	}
 
 	/* ignore DHCP requests from unknown devices for given LAN */
-	if (nvram_get_int("dhcpd_ostatic"))
-		fprintf(f, "dhcp-ignore=tag:br0,tag:!known\n");
-	if (nvram_get_int("dhcpd1_ostatic"))
-		fprintf(f, "dhcp-ignore=tag:br1,tag:!known\n");
-	if (nvram_get_int("dhcpd2_ostatic"))
-		fprintf(f, "dhcp-ignore=tag:br2,tag:!known\n");
-	if (nvram_get_int("dhcpd3_ostatic"))
-		fprintf(f, "dhcp-ignore=tag:br3,tag:!known\n");
+	for (i = 0; i < BRIDGE_COUNT; i++) {
+		snprintf(buf, sizeof(buf), (i == 0 ? "dhcpd_ostatic" : "dhcpd%d_ostatic"), i);
+		if (nvram_get_int(buf))
+			fprintf(f, "dhcp-ignore=tag:br%d,tag:!known\n", i);
+	}
 
 	if ((n = nvram_get_int("dnsmasq_q"))) { /* process quiet flags */
 		if (n & 1)
@@ -886,14 +884,14 @@ void start_dnsmasq()
 		           "tftp-root=%s\n",
 		           nvram_safe_get("dnsmasq_tftp_path"));
 
-		if (nvram_get_int("dnsmasq_pxelan0") && strlen(nvram_safe_get("lan_ifname")) > 0)
-			fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get("lan_ipaddr"));
-		if (nvram_get_int("dnsmasq_pxelan1") && strlen(nvram_safe_get("lan1_ifname")) > 0)
-			fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get("lan1_ipaddr"));
-		if (nvram_get_int("dnsmasq_pxelan2") && strlen(nvram_safe_get("lan2_ifname")) > 0)
-			fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get("lan2_ipaddr"));
-		if (nvram_get_int("dnsmasq_pxelan3") && strlen(nvram_safe_get("lan3_ifname")) > 0)
-			fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get("lan3_ipaddr"));
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			snprintf(buf, sizeof(buf), "dnsmasq_pxelan%d", i);
+			snprintf(tmp, sizeof(tmp), (i == 0 ? "lan_ifname" : "lan%d_ifname"), i);
+			if (nvram_get_int(buf) && strlen(nvram_safe_get(tmp)) > 0) {
+				snprintf(tmp, sizeof(tmp), (i == 0 ? "lan_ipaddr" : "lan%d_ipaddr"), i);
+				fprintf(f, "dhcp-boot=pxelinux.0,,%s\n", nvram_safe_get(tmp));
+			}
+		}
 	}
 #endif /* TCONFIG_USB_EXTRAS */
 
@@ -2253,6 +2251,7 @@ void start_igmp_proxy(void)
 	char wan_prefix[] = "wanXX";
 	int wan_unit, mwan_num, count = 0;
 	int ret = 1;
+	int i, enabled_interface;
 
 	mwan_num = nvram_get_int("mwan_num");
 	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
@@ -2274,7 +2273,12 @@ void start_igmp_proxy(void)
 		 * see https://github.com/pali/igmpproxy/commit/b55e0125c79fc9dbc95c6d6ab1121570f0c6f80f and
 		 * see https://github.com/pali/igmpproxy/blob/master/igmpproxy.conf
 		 */
-		if ((!nvram_get_int("multicast_lan")) && (!nvram_get_int("multicast_lan1")) && (!nvram_get_int("multicast_lan2")) && (!nvram_get_int("multicast_lan3"))) {
+		enabled_interface=0;
+		for (i = 0; i < BRIDGE_COUNT; i++) {
+			snprintf(igmp_buffer, sizeof(igmp_buffer), (i == 0 ? "multicast_lan" : "multicast_lan%d"), i);
+			enabled_interface += nvram_get_int(igmp_buffer);
+		}
+		if (!enabled_interface) {
 			fprintf(fp, "%s\n", nvram_safe_get("multicast_custom"));
 			fclose(fp);
 			ret = eval("igmpproxy", IGMP_CONF);
