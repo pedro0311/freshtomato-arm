@@ -1,19 +1,19 @@
 /*
  * Dropbear - a SSH2 server
- * 
+ *
  * Copyright (c) 2002,2003 Matt Johnston
  * All rights reserved.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -55,15 +55,15 @@ typedef struct runopts {
 #endif
 
 #if DROPBEAR_USER_ALGO_LIST
-	char *cipher_list;
-	char *mac_list;
+	const char *cipher_list;
+	const char *mac_list;
 #endif
 
 } runopts;
 
 extern runopts opts;
 
-int readhostkey(const char * filename, sign_key * hostkey, 
+int readhostkey(const char * filename, sign_key * hostkey,
 	enum signkey_type *type);
 void load_all_hostkeys(void);
 
@@ -97,7 +97,7 @@ typedef struct svr_runopts {
 	int norootlogin;
 
 #ifdef HAVE_GETGROUPLIST
-	/* restrict_group is the group name if group restriction was enabled, 
+	/* restrict_group is the group name if group restriction was enabled,
 	NULL otherwise */
 	char *restrict_group;
 	/* restrict_group_gid is only valid if restrict_group is set */
@@ -113,7 +113,7 @@ typedef struct svr_runopts {
 #if DROPBEAR_SVR_REMOTETCPFWD
 	int noremotetcp;
 #endif
-#if DROPBEAR_SVR_LOCALTCPFWD
+#if DROPBEAR_SVR_LOCALANYFWD
 	int nolocaltcp;
 #endif
 
@@ -130,7 +130,7 @@ typedef struct svr_runopts {
 	char * forced_command;
 	char* interface;
 
-#if DROPBEAR_PLUGIN 
+#if DROPBEAR_PLUGIN
 	/* malloced */
 	char *pubkey_plugin;
 	/* points into pubkey_plugin */
@@ -147,10 +147,12 @@ void svr_getopts(int argc, char ** argv);
 void loadhostkeys(void);
 
 typedef struct cli_runopts {
+	/* All non-const strings are malloced */
 
-	char *progname;
+	const char *progname;
 	char *remotehost;
-	const char *remoteport;
+	int remotehostfixed;
+	char *remoteport;
 
 	char *own_user;
 	char *username;
@@ -159,6 +161,7 @@ typedef struct cli_runopts {
 	int wantpty;
 	int always_accept_key;
 	int no_hostkey_check;
+	int ask_hostkey;
 	int no_cmd;
 	int quiet;
 	int backgrounded;
@@ -170,6 +173,11 @@ typedef struct cli_runopts {
 	int exit_on_fwd_failure;
 #endif
 	int disable_trivial_auth;
+	/** Use a password authentication or a key auth only.
+	For a BatchMode it's always -o PasswordAuthentication=no */
+	int password_authentication;
+	/* -o BatchMode=yes, suppress interactive questions */
+	int batch_mode;
 #if DROPBEAR_CLI_REMOTETCPFWD
 	m_list * remotefwds;
 #endif
@@ -178,7 +186,7 @@ typedef struct cli_runopts {
 #endif
 #if DROPBEAR_CLI_AGENTFWD
 	int agent_fwd;
-	int agent_keys_loaded; /* whether pubkeys has been populated with a 
+	int agent_keys_loaded; /* whether pubkeys has been populated with a
 							  list of keys held by the agent */
 	int agent_fd; /* The agent fd is only set during authentication. Forwarded
 	                 agent sessions have their own file descriptors */
@@ -191,8 +199,10 @@ typedef struct cli_runopts {
 #if DROPBEAR_CLI_PROXYCMD
 	char *proxycmd;
 #endif
+	const char *bind_arg;
 	char *bind_address;
 	char *bind_port;
+	const char *keepalive_arg;
 } cli_runopts;
 
 extern cli_runopts cli_opts;
@@ -205,5 +215,13 @@ void parse_ciphers_macs(void);
 void print_version(void);
 void parse_recv_window(const char* recv_window_arg);
 int split_address_port(const char* spec, char **first, char ** second);
+
+#if DROPBEAR_CLI_PUBKEY_AUTH
+void loadidentityfile(const char* filename, int warnfail);
+#endif
+
+#if DROPBEAR_USE_SSH_CONFIG
+void read_config_file(char* filename, FILE* config_file, cli_runopts* options);
+#endif
 
 #endif /* DROPBEAR_RUNOPTS_H_ */

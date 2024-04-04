@@ -87,6 +87,8 @@ jobs:
           - name: nondefault options
             nondefault: 1
             configure_flags: --enable-pam
+            localoptions: |
+              #define DROPBEAR_USE_SSH_CONFIG 1
 
           - name: most options disabled
             configure_flags: --disable-harden --disable-zlib --disable-openpty --disable-lastlog
@@ -168,7 +170,7 @@ jobs:
           sudo apt-get -y update
           sudo apt-get -y install zlib1g-dev libtomcrypt-dev libtommath-dev mercurial python3-venv libpam0g-dev $CC
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: configure
         run: ./configure $CONFIGURE_FLAGS CFLAGS="-O2 -Wall -Wno-pointer-sign $EXTRACFLAGS" --prefix="$HOME/inst" || (cat config.log; exit 1)

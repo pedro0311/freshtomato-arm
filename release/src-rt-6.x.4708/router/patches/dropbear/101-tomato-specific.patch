@@ -26,7 +26,7 @@
 --- dropbear/src/sysoptions.h
 +++ dropbear/src/sysoptions.h
 @@ -7,7 +7,9 @@
- #define DROPBEAR_VERSION "2022.83"
+ #define DROPBEAR_VERSION "2024.84"
  #endif
  
 +#ifndef LOCAL_IDENT
@@ -35,7 +35,7 @@
  #define PROGNAME "dropbear"
  
  #ifndef DROPBEAR_CLIENT
-@@ -360,7 +362,7 @@
+@@ -372,7 +374,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__

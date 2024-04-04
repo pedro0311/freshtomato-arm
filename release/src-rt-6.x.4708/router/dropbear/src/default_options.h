@@ -3,11 +3,13 @@
 /*
                      > > > Read This < < <
 
-default_options.h  documents compile-time options, and provides default values.
+default_options.h documents compile-time options, and provides default values.
 
 Local customisation should be added to localoptions.h which is
 used if it exists in the build directory. Options defined there will override
 any options in this file.
+
+Customisations will also be taken from src/distoptions.h if it exists.
 
 Options can also be defined with -DDROPBEAR_XXX=[0,1] in Makefile CFLAGS
 
@@ -71,6 +73,7 @@ IMPORTANT: Some options will require "make clean" after changes */
 
 #define DROPBEAR_SVR_LOCALTCPFWD 1
 #define DROPBEAR_SVR_REMOTETCPFWD 1
+#define DROPBEAR_SVR_LOCALSTREAMFWD 1
 
 /* Enable Authentication Agent Forwarding */
 #define DROPBEAR_SVR_AGENTFWD 1
@@ -167,7 +170,7 @@ IMPORTANT: Some options will require "make clean" after changes */
 /* ECDSA defaults to largest size configured, usually 521 */
 /* Ed25519 is always 256 */
 
-/* Add runtime flag "-R" to generate hostkeys as-needed when the first 
+/* Add runtime flag "-R" to generate hostkeys as-needed when the first
    connection using that key type occurs.
    This avoids the need to otherwise run "dropbearkey" and avoids some problems
    with badly seeded /dev/urandom when systems first boot. */
@@ -183,7 +186,7 @@ IMPORTANT: Some options will require "make clean" after changes */
  * curve25519 - elliptic curve DH
  * ecdh - NIST elliptic curve DH (256, 384, 521)
  *
- * group1 is too small for security though is necessary if you need 
+ * group1 is too small for security though is necessary if you need
      compatibility with some implementations such as Dropbear versions < 0.53
  * group14 is supported by most implementations.
  * group16 provides a greater strength level but is slower and increases binary size
@@ -213,7 +216,7 @@ group1 in Dropbear server too */
  * windowBits=8 will use 129kB for compression.
  * Both modes will use ~35kB for decompression (using windowBits=15 for
  * interoperability) */
-#define DROPBEAR_ZLIB_WINDOW_BITS 15 
+#define DROPBEAR_ZLIB_WINDOW_BITS 15
 
 /* Whether to do reverse DNS lookups. */
 #define DO_HOST_LOOKUP 0
@@ -221,6 +224,7 @@ group1 in Dropbear server too */
 /* Whether to print the message of the day (MOTD). */
 #define DO_MOTD 1
 #define MOTD_FILENAME "/etc/motd"
+#define MOTD_MAXSIZE 2000
 
 /* Authentication Types - at least one required.
    RFC Draft requires pubkey auth, and recommends password */
@@ -238,7 +242,7 @@ group1 in Dropbear server too */
  * You must define DROPBEAR_SVR_PUBKEY_AUTH in order to use plugins. */
 #define DROPBEAR_SVR_PUBKEY_AUTH 1
 
-/* Whether to take public key options in 
+/* Whether to take public key options in
  * authorized_keys file into account */
 #define DROPBEAR_SVR_PUBKEY_OPTIONS 1
 
@@ -256,6 +260,10 @@ group1 in Dropbear server too */
  */
 #define DROPBEAR_DEFAULT_CLI_AUTHKEY "~/.ssh/id_dropbear"
 
+/* Per client configuration file
+*/
+#define DROPBEAR_USE_SSH_CONFIG 0
+
 /* Allow specifying the password for dbclient via the DROPBEAR_PASSWORD
  * environment variable. */
 #define DROPBEAR_USE_PASSWORD_ENV 1
@@ -268,8 +276,8 @@ group1 in Dropbear server too */
 #define DROPBEAR_CLI_ASKPASS_HELPER 0
 
 /* Save a network roundtrip by sendng a real auth request immediately after
- * sending a query for the available methods. This is not yet enabled by default 
- since it could cause problems with non-compliant servers */ 
+ * sending a query for the available methods. This is not yet enabled by default
+ since it could cause problems with non-compliant servers */
 #define DROPBEAR_CLI_IMMEDIATE_AUTH 0
 
 /* Set this to use PRNGD or EGD instead of /dev/urandom */
@@ -281,7 +289,7 @@ group1 in Dropbear server too */
 /* The first setting is per-IP, to avoid denial of service */
 #define MAX_UNAUTH_PER_IP 5
 
-/* And then a global limit to avoid chewing memory if connections 
+/* And then a global limit to avoid chewing memory if connections
  * come from many IPs */
 #define MAX_UNAUTH_CLIENTS 30
 
@@ -291,7 +299,7 @@ group1 in Dropbear server too */
 
 /* Delay introduced before closing an unauthenticated session (seconds).
    Disabled by default, can be set to say 30 seconds to reduce the speed
-   of password brute forcing. Note that there is a risk of denial of 
+   of password brute forcing. Note that there is a risk of denial of
    service by setting this */
 #define UNAUTH_CLOSE_DELAY 0
 
@@ -318,8 +326,8 @@ group1 in Dropbear server too */
  * not using the Dropbear client, you'll need to change it */
 #define DROPBEAR_PATH_SSH_PROGRAM "/usr/bin/dbclient"
 
-/* Whether to log commands executed by a client. This only logs the 
- * (single) command sent to the server, not what a user did in a 
+/* Whether to log commands executed by a client. This only logs the
+ * (single) command sent to the server, not what a user did in a
  * shell/sftp session etc. */
 #define LOG_COMMANDS 0
 

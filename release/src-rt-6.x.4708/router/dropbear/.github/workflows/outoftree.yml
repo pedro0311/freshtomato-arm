@@ -11,14 +11,14 @@ jobs:
     runs-on: 'ubuntu-22.04'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: build
         run: |
           mkdir build
           cd build
           ../configure --enable-fuzz --enable-bundled-libtom --prefix=$PWD/inst
-          make -d -j3
+          make -j3
           make -j3 fuzzstandalone
           make install
           test -x inst/bin/dbclient

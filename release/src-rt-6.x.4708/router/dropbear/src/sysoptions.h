@@ -4,7 +4,7 @@
  *******************************************************************/
 
 #ifndef DROPBEAR_VERSION
-#define DROPBEAR_VERSION "2022.83"
+#define DROPBEAR_VERSION "2024.84"
 #endif
 
 #define LOCAL_IDENT "SSH-2.0-dropbear_" DROPBEAR_VERSION
@@ -68,6 +68,11 @@
 #define MAX_BANNER_SIZE 2050 /* this is 25*80 chars, any more is foolish */
 #define MAX_BANNER_LINES 20 /* How many lines the client will display */
 
+/* Define maxsize for motd information (80 x 25) */
+#ifndef MOTD_MAXSIZE
+#define MOTD_MAXSIZE 2000
+#endif
+
 /* the number of NAME=VALUE pairs to malloc for environ, if we don't have
  * the clearenv() function */
 #define ENV_SIZE 100
@@ -103,6 +108,10 @@
 #define DROPBEAR_FAILURE -1
 
 #define DROPBEAR_PASSWORD_ENV "DROPBEAR_PASSWORD"
+
+/* Default per client configuration file.
+*/
+#define DROPBEAR_DEFAULT_SSH_CONFIG "~/.ssh/dropbear_config"
 
 #define DROPBEAR_NGROUP_MAX 1024
 
@@ -257,9 +266,12 @@
 
 #define DROPBEAR_TCP_ACCEPT ((DROPBEAR_CLI_LOCALTCPFWD) || (DROPBEAR_SVR_REMOTETCPFWD))
 
+/* TCP and stream local fwds share the same restrictions */
+#define DROPBEAR_SVR_LOCALANYFWD ((DROPBEAR_SVR_LOCALTCPFWD) || (DROPBEAR_SVR_LOCALSTREAMFWD))
+
 #define DROPBEAR_LISTENERS \
    ((DROPBEAR_CLI_REMOTETCPFWD) || (DROPBEAR_CLI_LOCALTCPFWD) || \
-	(DROPBEAR_SVR_REMOTETCPFWD) || (DROPBEAR_SVR_LOCALTCPFWD) || \
+	(DROPBEAR_SVR_REMOTETCPFWD) || (DROPBEAR_SVR_LOCALANYFWD) || \
 	(DROPBEAR_SVR_AGENTFWD) || (DROPBEAR_X11FWD))
 
 #define DROPBEAR_CLI_MULTIHOP ((DROPBEAR_CLI_NETCAT) && (DROPBEAR_CLI_PROXYCMD))
@@ -393,6 +405,12 @@
 #undef DROPBEAR_DSS
 #endif
 #define DROPBEAR_DSS 1
+
+#if defined(DROPBEAR_USE_SSH_CONFIG)
+#undef DROPBEAR_USE_SSH_CONFIG
 #endif
+#define DROPBEAR_USE_SSH_CONFIG 1
+
+#endif /* DROPBEAR_FUZZ */
 
 /* no include guard for this file */

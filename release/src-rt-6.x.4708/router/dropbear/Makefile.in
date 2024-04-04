@@ -27,10 +27,11 @@ ifeq (@BUNDLED_LIBTOM@, 1)
 	LIBTOM_LIBS=$(STATIC_LTC) $(STATIC_LTM)
 endif
 
-OPTION_HEADERS = default_options_guard.h $(srcdir)/sysoptions.h
 ifneq ($(wildcard ./localoptions.h),)
 	CPPFLAGS+=-DLOCALOPTIONS_H_EXISTS
-	OPTION_HEADERS += ./localoptions.h
+endif
+ifneq ($(wildcard $(srcdir)/distrooptions.h),)
+	CPPFLAGS+=-DDISTROOPTIONS_H_EXISTS
 endif
 
 OBJ_DIR=./obj
@@ -56,7 +57,7 @@ SVROBJS = $(patsubst %,$(OBJ_DIR)/%,$(_SVROBJS))
 _CLIOBJS=cli-main.o cli-auth.o cli-authpasswd.o cli-kex.o \
 		cli-session.o cli-runopts.o cli-chansession.o \
 		cli-authpubkey.o cli-tcpfwd.o cli-channel.o cli-authinteract.o \
-		cli-agentfwd.o
+		cli-agentfwd.o cli-readconf.o
 CLIOBJS = $(patsubst %,$(OBJ_DIR)/%,$(_CLIOBJS))
 
 _CLISVROBJS=common-session.o packet.o common-algo.o common-kex.o \
@@ -159,7 +160,7 @@ endif
 all: $(TARGETS)
 
 # for simplicity assume all source depends on all headers
-HEADERS=$(wildcard $(srcdir)/*.h *.h) $(OPTION_HEADERS)
+HEADERS=$(wildcard $(srcdir)/*.h *.h) default_options_guard.h
 
 $(OBJ_DIR):
 	mkdir -p $@
@@ -250,10 +251,10 @@ link%:
 	-rm -f $*$(EXEEXT)
 	-ln -s dropbearmulti$(EXEEXT) $*$(EXEEXT)
 
-$(STATIC_LTC): $(OPTION_HEADERS)
+$(STATIC_LTC): $(HEADERS)
 	$(MAKE) -C libtomcrypt
 
-$(STATIC_LTM): $(OPTION_HEADERS)
+$(STATIC_LTM): $(HEADERS)
 	$(MAKE) -C libtommath
 
 .PHONY : clean sizes thisclean distclean tidy ltc-clean ltm-clean lint check
@@ -294,7 +295,7 @@ check: lint
 # list of fuzz targets
 FUZZ_TARGETS=fuzzer-preauth fuzzer-pubkey fuzzer-verify fuzzer-preauth_nomaths \
 	fuzzer-kexdh fuzzer-kexecdh fuzzer-kexcurve25519 fuzzer-client fuzzer-client_nomaths \
-	fuzzer-postauth_nomaths
+	fuzzer-postauth_nomaths fuzzer-cliconf
 
 FUZZER_OPTIONS = $(addsuffix .options, $(FUZZ_TARGETS))
 FUZZ_OBJS = $(addprefix fuzz/,$(addsuffix .o,$(FUZZ_TARGETS))) \
