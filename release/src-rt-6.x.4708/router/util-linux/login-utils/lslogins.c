@@ -64,7 +64,7 @@
  * column description
  */
 struct lslogins_coldesc {
-	const char *name;
+	const char * const name;
 	const char *help;
 	const char *pretty_name;
 
@@ -492,7 +492,7 @@ static int parse_utmpx(const char *path, size_t *nrecords, struct utmpx **record
 	 * just fallback only */
 	if (stat(path, &st) == 0 && (size_t) st.st_size >= sizeof(struct utmpx)) {
 		imax = st.st_size / sizeof(struct utmpx);
-		ary = xmalloc(imax * sizeof(struct utmpx));
+		ary = xreallocarray(NULL, imax, sizeof(struct utmpx));
 	}
 
 	for (i = 0; ; i++) {
@@ -505,7 +505,7 @@ static int parse_utmpx(const char *path, size_t *nrecords, struct utmpx **record
 			break;
 		}
 		if (i == imax)
-			ary = xrealloc(ary, (imax *= 2) * sizeof(struct utmpx));
+			ary = xreallocarray(ary, imax *= 2, sizeof(struct utmpx));
 		ary[i] = *u;
 	}
 
@@ -993,7 +993,7 @@ static int get_ulist(struct lslogins_control *ctl, char *logins, char *groups)
 			(*ar)[i++] = xstrdup(u);
 
 			if (i == *arsiz)
-				*ar = xrealloc(*ar, sizeof(char *) * (*arsiz += 32));
+				*ar = xreallocarray(*ar, *arsiz += 32, sizeof(char *));
 		}
 		ctl->ulist_on = 1;
 	}
@@ -1018,7 +1018,7 @@ static int get_ulist(struct lslogins_control *ctl, char *logins, char *groups)
 				(*ar)[i++] = xstrdup(u);
 
 				if (i == *arsiz)
-					*ar = xrealloc(*ar, sizeof(char *) * (*arsiz += 32));
+					*ar = xreallocarray(*ar, *arsiz += 32, sizeof(char *));
 			}
 		}
 		ctl->ulist_on = 1;
@@ -1470,13 +1470,13 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_("     --btmp-file <path>   set an alternate path for btmp\n"), out);
 	fputs(_("     --lastlog <path>     set an alternate path for lastlog\n"), out);
 	fputs(USAGE_SEPARATOR, out);
-	printf(USAGE_HELP_OPTIONS(26));
+	fprintf(out, USAGE_HELP_OPTIONS(26));
 
 	fputs(USAGE_COLUMNS, out);
 	for (i = 0; i < ARRAY_SIZE(coldescs); i++)
 		fprintf(out, " %14s  %s\n", coldescs[i].name, _(coldescs[i].help));
 
-	printf(USAGE_MAN_TAIL("lslogins(1)"));
+	fprintf(out, USAGE_MAN_TAIL("lslogins(1)"));
 
 	exit(EXIT_SUCCESS);
 }

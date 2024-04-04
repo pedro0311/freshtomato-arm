@@ -113,8 +113,8 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -d, --debug             run in debugging mode\n"), out);
 	fputs(_(" -q, --quiet             turn on quiet mode\n"), out);
 	fputs(USAGE_SEPARATOR, out);
-	printf(USAGE_HELP_OPTIONS(25));
-	printf(USAGE_MAN_TAIL("uuidd(8)"));
+	fprintf(out, USAGE_HELP_OPTIONS(25));
+	fprintf(out, USAGE_MAN_TAIL("uuidd(8)"));
 	exit(EXIT_SUCCESS);
 }
 
@@ -441,15 +441,6 @@ static void server_loop(const char *socket_path, const char *pidfile_path,
 	pfd[POLLFD_SIGNAL].fd = sigfd;
 	pfd[POLLFD_SOCKET].fd = s;
 	pfd[POLLFD_SIGNAL].events = pfd[POLLFD_SOCKET].events = POLLIN | POLLERR | POLLHUP;
-
-	num = 1;
-	if (uuidd_cxt->cont_clock_offset) {
-		/* trigger initialization */
-		(void) __uuid_generate_time_cont(uu, &num, uuidd_cxt->cont_clock_offset);
-		if (uuidd_cxt->debug)
-			fprintf(stderr, _("max_clock_offset = %u sec\n"),
-				uuidd_cxt->cont_clock_offset);
-	}
 
 	while (1) {
 		ret = poll(pfd, ARRAY_SIZE(pfd),

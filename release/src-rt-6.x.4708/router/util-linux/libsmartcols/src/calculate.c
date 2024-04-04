@@ -12,19 +12,19 @@ static void dbg_column(struct libscols_table *tb, struct libscols_column *cl)
 
 	st = &cl->wstat;
 
-	DBG(COL, ul_debugobj(cl, "%15s seq=%zu, width=%zd, "
-				 "hint=%d, max=%zu, min=%zu, "
+	DBG(COL, ul_debugobj(cl, "#%zu %12s: width=%zd "
+				 "hint=%d max=%zu min=%zu "
 				 "0x04%x [%s%s%s]",
 
-		cl->header.data, cl->seqnum, cl->width,
+		cl->seqnum, cl->header.data, cl->width,
 		cl->width_hint >= 1.0 ? (int) cl->width_hint :
 				     (int) (cl->width_hint * tb->termwidth),
 		st->width_max,
 		st->width_min,
 		cl->flags,
-		cl->flags & SCOLS_FL_TRUNC ? "trunc" : "",
-		scols_column_is_right(cl) ? " right" : "",
-		scols_column_is_noextremes(cl) ? " noextrem" : ""));
+		cl->flags & SCOLS_FL_TRUNC ? "trunc " : "",
+		scols_column_is_right(cl) ? "right " : "",
+		scols_column_is_noextremes(cl) ? "noextrem " : ""));
 }
 
 static void dbg_columns(struct libscols_table *tb)
@@ -42,41 +42,38 @@ static int count_cell_width(struct libscols_table *tb,
 		struct libscols_column *cl,
 		struct ul_buffer *buf)
 {
-	size_t len;
-	char *data;
-	int rc;
+	size_t len = 0;
+	int rc = 0;
 	struct libscols_cell *ce;
-	struct libscols_wstat *st;
-
-	rc = __cell_to_buffer(tb, ln, cl, buf);
-	if (rc)
-		return rc;
-
-	data = ul_buffer_get_data(buf, NULL, NULL);
-	if (!data)
-		len = 0;
-	else if (scols_column_is_customwrap(cl))
-		len = cl->wrap_chunksize(cl, data, cl->wrapfunc_data);
-	else if (scols_table_is_noencoding(tb))
-		len = mbs_width(data);
-	else
-		len = mbs_safe_width(data);
-
-	if (len == (size_t) -1)		/* ignore broken multibyte strings */
-		len = 0;
+	char *data;
 
 	ce = scols_line_get_cell(ln, cl->seqnum);
-	ce->width = len;
+	scols_table_set_cursor(tb, ln, cl, ce);
 
-	st = &cl->wstat;
-	st->width_max = max(len, st->width_max);
+	rc = __cursor_to_buffer(tb, buf, 1);
+	if (rc)
+		goto done;
+
+	data = ul_buffer_get_data(buf, NULL, NULL);
+	if (data) {
+		len = scols_table_is_noencoding(tb) ?
+			mbs_width(data) :
+			mbs_safe_width(data);
+
+		if (len == (size_t) -1)		/* ignore broken multibyte strings */
+			len = 0;
+	}
 
 	if (scols_column_is_tree(cl)) {
 		size_t treewidth = ul_buffer_get_safe_pointer_width(buf, SCOLS_BUFPTR_TREEEND);
 		cl->width_treeart = max(cl->width_treeart, treewidth);
 	}
 
-	return 0;
+	ce->width = len;
+	cl->wstat.width_max = max(len, cl->wstat.width_max);
+done:
+	scols_table_reset_cursor(tb);
+	return rc;
 }
 
 static int walk_count_cell_width(struct libscols_table *tb,
@@ -121,7 +118,7 @@ static void count_column_deviation(struct libscols_table *tb, struct libscols_co
 	}
 
 	if (n)
-		st->width_avg = sum / n;
+		st->width_avg = (double) sum / (double) n;
 
 	/* count deviation */
 	if (n > 1) {
@@ -136,7 +133,7 @@ static void count_column_deviation(struct libscols_table *tb, struct libscols_co
 			st->width_sqr_sum += diff * diff;	/* aka pow(x, 2) */
 		}
 
-		variance = st->width_sqr_sum / (n - 1);
+		variance = st->width_sqr_sum / (double) (n - 1);
 		st->width_deviation = sqrtroot(variance);
 	}
 
@@ -175,8 +172,9 @@ static int count_column_width(struct libscols_table *tb,
 	}
 
 	/* set minimal width according to header width */
-	data = scols_cell_get_data(&cl->header);
-	if (data) {
+	if (!scols_table_is_noheadings(tb) &&
+	    (data = scols_cell_get_data(&cl->header))) {
+
 		size_t len = scols_table_is_noencoding(tb) ?
 				mbs_width(data) : mbs_safe_width(data);
 
@@ -242,8 +240,8 @@ static int cmp_deviation(struct list_head *a, struct list_head *b,
 	struct libscols_column *ca = list_entry(a, struct libscols_column, cl_columns);
 	struct libscols_column *cb = list_entry(b, struct libscols_column, cl_columns);
 
-	double xa = ca->wstat.width_avg + (3*ca->wstat.width_deviation);
-	double xb = cb->wstat.width_avg + (3*cb->wstat.width_deviation);
+	double xa = ca->wstat.width_avg + (3.0 * ca->wstat.width_deviation);
+	double xb = cb->wstat.width_avg + (3.0 * cb->wstat.width_deviation);
 
 	return cmp_numbers(xa, xb);
 }
@@ -282,9 +280,15 @@ static void reduce_to_68(struct libscols_column *cl, size_t wanted)
 	if (st->width_deviation < 1.0)
 		return;
 
-	new = st->width_avg + st->width_deviation;
+	new = (size_t) (st->width_avg + st->width_deviation);
+
 	if (new < st->width_min)
 		new = st->width_min;
+	else if (new > st->width_max)
+		new = st->width_max;
+
+	if (new >= cl->width)
+		return;
 
 	if (cl->width - new > wanted)
 		cl->width -= wanted;
@@ -509,6 +513,8 @@ int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf)
 
 	/* enlarge */
 	if (width < tb->termwidth) {
+		DBG(TAB, ul_debugobj(tb, " enlarge (extreme, avalable %zu)",
+					tb->termwidth - width));
 		if (ignore_extremes) {
 			if (!sorted) {
 				sort_columns(tb, cmp_deviation);
@@ -523,14 +529,17 @@ int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf)
 					continue;
 				if (cl->wstat.width_min == 0 && cl->width == 0)
 					continue;
+				if (cl->width >= cl->wstat.width_max)
+					continue;
 
 				add = tb->termwidth - width;
-				if (add && cl->wstat.width_max &&
-				    cl->width + add > cl->wstat.width_max)
+				if (add && cl->wstat.width_max
+				    && cl->width + add > cl->wstat.width_max)
 					add = cl->wstat.width_max - cl->width;
+
 				if (!add)
 					continue;
-				DBG(TAB, ul_debugobj(tb, " add +%zd (extreme %s)",
+				DBG(COL, ul_debugobj(cl, "  add +%zd (%s)",
 							add, cl->header.data));
 				cl->width += add;
 				width += add;
@@ -541,7 +550,8 @@ int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf)
 		}
 
 		if (width < tb->termwidth && scols_table_is_maxout(tb)) {
-			DBG(TAB, ul_debugobj(tb, " enlarge width (max-out)"));
+			DBG(TAB, ul_debugobj(tb, " enlarge (max-out, avalable %zu)",
+						tb->termwidth - width));
 
 			/* try enlarging all columns */
 			while (width < tb->termwidth) {
@@ -549,7 +559,7 @@ int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf)
 				while (scols_table_next_column(tb, &itr, &cl) == 0) {
 					if (scols_column_is_hidden(cl))
 						continue;
-					DBG(TAB, ul_debugobj(tb, " enlarge (max-out %s)",
+					DBG(COL, ul_debugobj(cl, "  add +1 (%s)",
 								cl->header.data));
 					cl->width++;
 					width++;
@@ -559,9 +569,13 @@ int __scols_calculate(struct libscols_table *tb, struct ul_buffer *buf)
 			}
 		} else if (width < tb->termwidth) {
 			/* enlarge the last column */
-			DBG(TAB, ul_debugobj(tb, " enlarge width (last column)"));
+			DBG(TAB, ul_debugobj(tb, " enlarge (last column, avalable %zu)",
+						tb->termwidth - width));
 
 			if (!scols_column_is_right(last_cl)) {
+				DBG(COL, ul_debugobj(last_cl, "  add +%zu (%s)",
+							tb->termwidth - width,
+							last_cl->header.data));
 				last_cl->width += tb->termwidth - width;
 				width = tb->termwidth;
 			}

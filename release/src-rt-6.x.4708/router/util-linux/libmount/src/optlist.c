@@ -46,6 +46,7 @@ struct libmnt_opt {
 
 	unsigned int external : 1,	/* visible for external helpers only */
 		     recursive : 1,	/* recursive flag */
+		     sepnodata : 1,	/* value separator, but without data ("name=") */
 		     is_linux : 1,	/* defined in ls->linux_map (VFS attr) */
 		     quoted : 1;	/* name="value" */
 };
@@ -438,6 +439,10 @@ static struct libmnt_opt *optlist_new_opt(struct libmnt_optlist *ls,
 		opt->value = strndup(value, valsz);
 		if (!opt->value)
 			goto fail;
+
+	} else if (value) {
+		/* separator specified, but empty value ("name=") */
+		opt->sepnodata = 1;
 	}
 	if (namesz) {
 		opt->name = strndup(name, namesz);
@@ -957,7 +962,8 @@ int mnt_optlist_strdup_optstr(struct libmnt_optlist *ls, char **optstr,
 			continue;
 		rc = mnt_buffer_append_option(&buf,
 					opt->name, strlen(opt->name),
-					opt->value,
+					opt->value ? opt->value :
+						     opt->sepnodata ? "" : NULL,
 					opt->value ? strlen(opt->value) : 0,
 					opt->quoted);
 		if (rc)
@@ -1043,6 +1049,7 @@ struct libmnt_optlist *mnt_copy_optlist(struct libmnt_optlist *ls)
 			no->src = opt->src;
 			no->external = opt->external;
 			no->quoted = opt->quoted;
+			no->sepnodata = opt->sepnodata;
 		}
 	}
 
@@ -1184,6 +1191,11 @@ int mnt_opt_is_external(struct libmnt_opt *opt)
 	return opt && opt->external ? 1 : 0;
 }
 
+int mnt_opt_is_sepnodata(struct libmnt_opt *opt)
+{
+	return opt->sepnodata;
+}
+
 
 #ifdef TEST_PROGRAM
 
@@ -1241,7 +1253,8 @@ static inline unsigned long str2flg(const char *str)
 	return (unsigned long) strtox64_or_err(str, "connt convert string to flags");
 }
 
-static int test_append_str(struct libmnt_test *ts, int argc, char *argv[])
+static int test_append_str(struct libmnt_test *ts __attribute__((unused)),
+			   int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	int rc;
@@ -1257,7 +1270,8 @@ static int test_append_str(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_prepend_str(struct libmnt_test *ts, int argc, char *argv[])
+static int test_prepend_str(struct libmnt_test *ts __attribute__((unused)),
+			    int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	int rc;
@@ -1273,7 +1287,8 @@ static int test_prepend_str(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_set_str(struct libmnt_test *ts, int argc, char *argv[])
+static int test_set_str(struct libmnt_test *ts __attribute__((unused)),
+			int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	int rc;
@@ -1289,7 +1304,8 @@ static int test_set_str(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_append_flg(struct libmnt_test *ts, int argc, char *argv[])
+static int test_append_flg(struct libmnt_test *ts __attribute__((unused)),
+			   int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	int rc;
@@ -1305,7 +1321,8 @@ static int test_append_flg(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_set_flg(struct libmnt_test *ts, int argc, char *argv[])
+static int test_set_flg(struct libmnt_test *ts __attribute__((unused)),
+			int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	int rc;
@@ -1321,7 +1338,8 @@ static int test_set_flg(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_get_str(struct libmnt_test *ts, int argc, char *argv[])
+static int test_get_str(struct libmnt_test *ts __attribute__((unused)),
+			int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	const struct libmnt_optmap *map;
@@ -1380,7 +1398,8 @@ done:
 	return rc;
 }
 
-static int test_get_flg(struct libmnt_test *ts, int argc, char *argv[])
+static int test_get_flg(struct libmnt_test *ts __attribute__((unused)),
+			int argc, char *argv[])
 {
 	struct libmnt_optlist *ol;
 	unsigned long flags = 0;
@@ -1397,6 +1416,36 @@ static int test_get_flg(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
+static int test_split(struct libmnt_test *ts __attribute__((unused)),
+		      int argc, char *argv[])
+{
+	struct libmnt_optlist *ol;
+	int rc;
+	struct libmnt_iter itr;
+	struct libmnt_opt *opt;
+	const char *name, *value;
+
+	if (argc != 2)
+		return -EINVAL;
+	rc = mk_optlist(&ol, argv[1]);
+	if (rc)
+		goto done;
+
+	mnt_reset_iter(&itr, MNT_ITER_FORWARD);
+
+	while (mnt_optlist_next_opt(ol, &itr, &opt) == 0) {
+		name = mnt_opt_get_name(opt);
+		value = mnt_opt_get_value(opt);
+
+		printf("%s = %s\n", name, value ?: "(null)");
+	}
+
+done:
+	mnt_unref_optlist(ol);
+	return rc;
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct libmnt_test tss[] = {
@@ -1407,6 +1456,7 @@ int main(int argc, char *argv[])
 		{ "--set-flg",     test_set_flg,     "<list> <flg>  linux|user   set to the list" },
 		{ "--get-str",     test_get_str,     "<list> [linux|user]        all options in string" },
 		{ "--get-flg",     test_get_flg,     "<list>  linux|user         all options by flags" },
+		{ "--split",       test_split,       "<list>                     split options into key-value pairs"},
 
 		{ NULL }
 	};

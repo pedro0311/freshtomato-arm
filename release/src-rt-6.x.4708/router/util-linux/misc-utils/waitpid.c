@@ -41,9 +41,6 @@
 
 #define TIMEOUT_SOCKET_IDX UINT64_MAX
 
-#define err_nosys(exitcode, ...) \
-	err(errno == ENOSYS ? EXIT_NOTSUPP : exitcode, __VA_ARGS__)
-
 static bool verbose = false;
 static struct timespec timeout;
 static bool allow_exited = false;
@@ -67,7 +64,8 @@ static int *open_pidfds(size_t n_pids, pid_t *pids)
 		pidfds[i] = pidfd_open(pids[i], 0);
 		if (pidfds[i] == -1) {
 			if (allow_exited && errno == ESRCH) {
-				warnx(_("PID %d has exited, skipping"), pids[i]);
+				if (verbose)
+					warnx(_("PID %d has exited, skipping"), pids[i]);
 				continue;
 			}
 			err_nosys(EXIT_FAILURE, _("could not open pid %u"), pids[i]);

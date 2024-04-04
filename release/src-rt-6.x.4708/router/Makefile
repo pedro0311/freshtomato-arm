@@ -3842,6 +3842,7 @@ util-linux/stamp-h1:
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) \
 			--prefix=/usr \
+			--disable-year2038 \
 			--disable-all-programs \
 			--enable-libuuid \
 			--enable-libblkid \

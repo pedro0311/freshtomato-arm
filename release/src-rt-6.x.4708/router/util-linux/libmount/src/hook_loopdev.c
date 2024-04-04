@@ -140,10 +140,6 @@ static int setup_loopdev(struct libmnt_context *cxt,
 
 	DBG(LOOP, ul_debugobj(cxt, "trying to setup device for %s", backing_file));
 
-	ol = mnt_context_get_optlist(cxt);
-	if (!ol)
-		return -ENOMEM;
-
 	if (mnt_optlist_is_rdonly(ol)) {
 		DBG(LOOP, ul_debugobj(cxt, "enabling READ-ONLY flag"));
 		lo_flags |= LO_FLAGS_READ_ONLY;
@@ -356,15 +352,19 @@ success:
 			 */
 			mnt_optlist_append_flags(ol, MS_RDONLY, cxt->map_linux);
 
-		/* we have to keep the device open until mount(1),
-		 * otherwise it will be auto-cleared by kernel
+		/*
+		 * We have to keep the device open until mount(1), otherwise it
+		 * will be auto-cleared by kernel. However we don't want to
+		 * keep writeable fd as kernel wants to block all writers to
+		 * the device being mounted (in the more hardened
+		 * configurations). So grab read-only fd instead.
 		 */
-		hd->loopdev_fd = loopcxt_get_fd(&lc);
+		hd->loopdev_fd = open(lc.device, O_RDONLY | O_CLOEXEC);
 		if (hd->loopdev_fd < 0) {
-			DBG(LOOP, ul_debugobj(cxt, "failed to get loopdev FD"));
+			DBG(LOOP,
+			    ul_debugobj(cxt, "failed to reopen loopdev FD"));
 			rc = -errno;
-		} else
-			loopcxt_set_fd(&lc, -1, 0);
+		}
 	}
 done:
 	loopcxt_deinit(&lc);

@@ -107,7 +107,7 @@ void mnt_free_context(struct libmnt_context *cxt)
 	mnt_unref_optlist(cxt->optlist_saved);
 	mnt_unref_optlist(cxt->optlist);
 
-	mnt_free_lock(cxt->lock);
+	mnt_unref_lock(cxt->lock);
 	mnt_free_update(cxt->update);
 
 	mnt_context_set_target_ns(cxt, NULL);
@@ -313,6 +313,8 @@ int mnt_context_reset_status(struct libmnt_context *cxt)
 {
 	if (!cxt)
 		return -EINVAL;
+
+	reset_syscall_status(cxt);
 
 	cxt->syscall_status = 1;		/* means not called yet */
 	cxt->helper_exec_status = 1;
@@ -549,10 +551,10 @@ int mnt_context_enable_onlyonce(struct libmnt_context *cxt, int enable)
 }
 
 /**
- * mnt_context_is_lazy:
+ * mnt_context_is_onlyonce:
  * @cxt: mount context
  *
- * Returns: 1 if lazy umount is enabled or 0
+ * Returns: 1 if only-once mount is enabled or 0
  */
 int mnt_context_is_onlyonce(struct libmnt_context *cxt)
 {
@@ -2179,6 +2181,10 @@ int mnt_context_prepare_update(struct libmnt_context *cxt)
 		rc = mnt_update_set_fs(cxt->update, flags,
 					NULL, cxt->fs);
 
+	if (mnt_update_is_ready(cxt->update)) {
+		DBG(CXT, ul_debugobj(cxt, "update is ready"));
+		mnt_update_start(cxt->update);
+	}
 	return rc < 0 ? rc : 0;
 }
 
@@ -2207,9 +2213,9 @@ int mnt_context_update_tabs(struct libmnt_context *cxt)
 	    && mnt_context_get_helper_status(cxt) == 0
 	    && mnt_context_utab_writable(cxt)) {
 
-		if (mnt_update_already_done(cxt->update, cxt->lock)) {
+		if (mnt_update_already_done(cxt->update)) {
 			DBG(CXT, ul_debugobj(cxt, "don't update: error evaluate or already updated"));
-			goto end;
+			goto emit;
 		}
 	} else if (cxt->helper) {
 		DBG(CXT, ul_debugobj(cxt, "don't update: external helper"));
@@ -2225,8 +2231,13 @@ int mnt_context_update_tabs(struct libmnt_context *cxt)
 	}
 
 	rc = mnt_update_table(cxt->update, cxt->lock);
+emit:
+	if (rc == 0 && !mnt_context_within_helper(cxt))
+		mnt_update_emit_event(cxt->update);
 
 end:
+	mnt_update_end(cxt->update);
+
 	if (!mnt_context_switch_ns(cxt, ns_old))
 		return -MNT_ERR_NAMESPACE;
 	return rc;
@@ -2737,7 +2748,6 @@ int mnt_context_get_excode(
 	return rc;
 }
 
-
 /**
  * mnt_context_init_helper
  * @cxt: mount context
@@ -2771,6 +2781,14 @@ int mnt_context_init_helper(struct libmnt_context *cxt, int action,
 
 	DBG(CXT, ul_debugobj(cxt, "initialized for [u]mount.<type> helper [rc=%d]", rc));
 	return rc;
+}
+
+/*
+ * libmount used in /sbin/[u]mount.<type> helper
+ */
+int mnt_context_within_helper(struct libmnt_context *cxt)
+{
+	return cxt && (cxt->flags & MNT_FL_HELPER);
 }
 
 /**
@@ -2850,7 +2868,7 @@ static int mnt_context_add_child(struct libmnt_context *cxt, pid_t pid)
 	if (!cxt)
 		return -EINVAL;
 
-	pids = realloc(cxt->children, sizeof(pid_t) * cxt->nchildren + 1);
+	pids = reallocarray(cxt->children, cxt->nchildren + 1, sizeof(pid_t));
 	if (!pids)
 		return -ENOMEM;
 
@@ -3166,7 +3184,8 @@ struct libmnt_ns *mnt_context_switch_target_ns(struct libmnt_context *cxt)
 
 #ifdef TEST_PROGRAM
 
-static int test_search_helper(struct libmnt_test *ts, int argc, char *argv[])
+static int test_search_helper(struct libmnt_test *ts __attribute__((unused)),
+			      int argc, char *argv[])
 {
 	struct libmnt_context *cxt;
 	const char *type;
@@ -3200,7 +3219,8 @@ static void lock_fallback(void)
 		mnt_unlock_file(lock);
 }
 
-static int test_mount(struct libmnt_test *ts, int argc, char *argv[])
+static int test_mount(struct libmnt_test *ts __attribute__((unused)),
+		      int argc, char *argv[])
 {
 	int idx = 1, rc = 0;
 	struct libmnt_context *cxt;
@@ -3250,7 +3270,8 @@ static int test_mount(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_umount(struct libmnt_test *ts, int argc, char *argv[])
+static int test_umount(struct libmnt_test *ts __attribute__((unused)),
+		       int argc, char *argv[])
 {
 	int idx = 1, rc = 0;
 	struct libmnt_context *cxt;
@@ -3305,7 +3326,8 @@ err:
 	return rc;
 }
 
-static int test_flags(struct libmnt_test *ts, int argc, char *argv[])
+static int test_flags(struct libmnt_test *ts __attribute__((unused)),
+		      int argc, char *argv[])
 {
 	int idx = 1, rc = 0;
 	struct libmnt_context *cxt;
@@ -3343,7 +3365,8 @@ static int test_flags(struct libmnt_test *ts, int argc, char *argv[])
 	return rc;
 }
 
-static int test_cxtsync(struct libmnt_test *ts, int argc, char *argv[])
+static int test_cxtsync(struct libmnt_test *ts __attribute__((unused)),
+			int argc, char *argv[])
 {
 	struct libmnt_context *cxt;
 	struct libmnt_fs *fs;
@@ -3387,7 +3410,8 @@ static int test_cxtsync(struct libmnt_test *ts, int argc, char *argv[])
 	return 0;
 }
 
-static int test_mountall(struct libmnt_test *ts, int argc, char *argv[])
+static int test_mountall(struct libmnt_test *ts __attribute__((unused)),
+			 int argc, char *argv[])
 {
 	struct libmnt_context *cxt;
 	struct libmnt_iter *itr;
@@ -3405,10 +3429,8 @@ static int test_mountall(struct libmnt_test *ts, int argc, char *argv[])
 			mnt_context_set_options_pattern(cxt, argv[idx + 1]);
 			idx += 2;
 		}
-		if (argv[idx] && !strcmp(argv[idx], "-t")) {
+		if (argv[idx] && !strcmp(argv[idx], "-t"))
 			mnt_context_set_fstype_pattern(cxt, argv[idx + 1]);
-			idx += 2;
-		}
 	}
 
 	while (mnt_context_next_mount(cxt, itr, &fs, &mntrc, &ignored) == 0) {
