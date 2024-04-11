@@ -22,14 +22,6 @@
 <script>
 //	<% nvram("dhcp_lease,dhcpd_startip,dhcpd_endip,lan_dhcp,lan_gateway,lan_ipaddr,lan_netmask,lan_proto,lan_state,lan_desc,lan_invert,wl_security_mode,wl_wds_enable,wl_channel,wl_closed,wl_crypto,wl_key,wl_key1,wl_key2,wl_key3,wl_key4,wl_clap_hwaddr,wl_lazywds,wl_mode,wl_net_mode,wl_passphrase,wl_radio,wl_radius_ipaddr,wl_radius_port,wl_ssid,wl_wds,wl_wep_bit,wl_wpa_gtk_rekey,wl_wpa_psk,wl_radius_key,wl_auth,wl_hwaddr,t_features,wl_nbw_cap,wl_nctrlsb,wl_nband,wl_phytype,lan_ifname,lan_stp,lan1_ifname,lan1_ipaddr,lan1_netmask,lan1_proto,lan1_stp,dhcp1_lease,dhcpd1_startip,dhcpd1_endip,lan2_ifname,lan2_ipaddr,lan2_netmask,lan2_proto,lan2_stp,dhcp2_lease,dhcpd2_startip,dhcpd2_endip,lan3_ifname,lan3_ipaddr,lan3_netmask,lan3_proto,lan3_stp,dhcp3_lease,dhcpd3_startip,dhcpd3_endip,cstats_enable,wan_proto,wan_weight,wan_modem_type,wan_modem_pin,wan_modem_dev,wan_modem_init,wan_modem_apn,wan_modem_speed,wan_modem_band,wan_modem_roam,wan_ppp_username,wan_ppp_passwd,wan_ppp_service,wan_l2tp_server_ip,wan_pptp_dhcp,wan_ipaddr,wan_netmask,wan_gateway,wan_pptp_server_ip,wan_ppp_custom,wan_ppp_demand,wan_ppp_idletime,wan_ppp_demand_dnsip,wan_ppp_redialperiod,wan_pppoe_lei,wan_pppoe_lef,wan_mtu_enable,wan_mtu,wan_ppp_mlppp,wan_modem_ipaddr,wan_sta,wan_dns,wan_dns_auto,wan_ifnameX,wan_ckmtd,wan_ck_pause,wan2_proto,wan2_weight,wan2_modem_type,wan2_modem_pin,wan2_modem_dev,wan2_modem_init,wan2_modem_apn,wan2_modem_speed,wan2_modem_band,wan2_modem_roam,wan2_ppp_username,wan2_ppp_passwd,wan2_ppp_service,wan2_l2tp_server_ip,wan2_pptp_dhcp,wan2_ipaddr,wan2_netmask,wan2_gateway,wan2_pptp_server_ip,wan2_ppp_custom,wan2_ppp_demand,wan2_ppp_idletime,wan2_ppp_demand_dnsip,wan2_ppp_redialperiod,wan2_pppoe_lei,wan2_pppoe_lef,wan2_mtu_enable,wan2_mtu,wan2_ppp_mlppp,wan2_modem_ipaddr,wan2_sta,wan2_dns,wan2_dns_auto,wan2_ifnameX,wan2_ckmtd,wan2_ck_pause,wan3_proto,wan3_weight,wan3_modem_type,wan3_modem_pin,wan3_modem_dev,wan3_modem_init,wan3_modem_apn,wan3_modem_speed,wan3_modem_band,wan3_modem_roam,wan3_ppp_username,wan3_ppp_passwd,wan3_ppp_service,wan3_l2tp_server_ip,wan3_pptp_dhcp,wan3_ipaddr,wan3_netmask,wan3_gateway,wan3_pptp_server_ip,wan3_ppp_custom,wan3_ppp_demand,wan3_ppp_idletime,wan3_ppp_demand_dnsip,wan3_ppp_redialperiod,wan3_pppoe_lei,wan3_pppoe_lef,wan3_mtu_enable,wan3_mtu,wan3_ppp_mlppp,wan3_modem_ipaddr,wan3_sta,wan3_dns,wan3_dns_auto,wan3_ifnameX,wan3_ckmtd,wan3_ck_pause,wan4_proto,wan4_weight,wan4_modem_type,wan4_modem_pin,wan4_modem_dev,wan4_modem_init,wan4_modem_apn,wan4_modem_speed,wan4_modem_band,wan4_modem_roam,wan4_ppp_username,wan4_ppp_passwd,wan4_ppp_service,wan4_l2tp_server_ip,wan4_pptp_dhcp,wan4_ipaddr,wan4_netmask,wan4_gateway,wan4_pptp_server_ip,wan4_ppp_custom,wan4_ppp_demand,wan4_ppp_idletime,wan4_ppp_demand_dnsip,wan4_ppp_redialperiod,wan4_pppoe_lei,wan4_pppoe_lef,wan4_mtu_enable,wan4_mtu,wan4_ppp_mlppp,wan4_modem_ipaddr,wan4_sta,wan4_dns,wan4_dns_auto,wan4_ifnameX,wan4_ckmtd,wan4_ck_pause,mwan_num,mwan_cktime,mwan_ckdst,mwan_tune_gc,wan_hilink_ip,wan2_hilink_ip,wan3_hilink_ip,wan4_hilink_ip,wan_status_script,wan2_status_script,wan3_status_script,wan4_status_script,smart_connect_x,dnscrypt_proxy,dnscrypt_priority,stubby_proxy,stubby_priority,dhcp_moveip"); %>
 
-/* DUALWAN-BEGIN */
-maxwan_num = 2;
-/* DUALWAN-END */
-
-/* MULTIWAN-BEGIN */
-maxwan_num = 4;
-/* MULTIWAN-END */
-
 var sta_list = [];
 function refresh_sta_list() {
 	var u;
@@ -446,7 +438,7 @@ function verifyFields(focused, quiet) {
 		_lan_gateway: 1
 	};
 
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		if (uidx <= curr_mwan_num) {
 			vis['_wan'+u+'_proto'] = 1;
@@ -668,7 +660,7 @@ function verifyFields(focused, quiet) {
 				E('_mwan_num').value = 1;
 				E('_mwan_cktime').value = 0;
 				elem.display('mwan-title', 'mwan-section', 0);
-				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
+				for (wan_uidx = 1; wan_uidx <= MAXWAN_NUM; ++wan_uidx) {
 					u = (wan_uidx > 1) ? wan_uidx : '';
 					vis['_wan'+u+'_proto'] = 0;
 					E('_wan'+u+'_proto').value = 'disabled';
@@ -689,7 +681,7 @@ function verifyFields(focused, quiet) {
 		}
 	}
 
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		switch (wanproto[uidx - 1]) {
 		case 'disabled':
@@ -1092,7 +1084,7 @@ REMOVE-END */
 		PR(b).style.display = (c ? 'table-row' : 'none');
 	}
 
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		if (wanproto[uidx - 1] == 'static') {
 			E('_wan'+u+'_dns_auto').value = '0';
@@ -1138,7 +1130,7 @@ REMOVE-END */
 
 	/* --- verify --- */
 
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		ferror.clear('_wan'+u+'_proto');
 	}
@@ -1489,7 +1481,7 @@ function save() {
 			    || (wmode == 'psta')
 /* BCMWL6-END */
 			   ) {
-				for (wan_uidx = 1; wan_uidx <= maxwan_num; ++wan_uidx) {
+				for (wan_uidx = 1; wan_uidx <= MAXWAN_NUM; ++wan_uidx) {
 					d = (wan_uidx > 1) ? wan_uidx : '';
 					E('_wan'+d+'_proto').disabled = 0;
 					E('_wan'+d+'_proto').value = 'disabled';
@@ -1685,7 +1677,7 @@ REMOVE-END */
 		return;
 	}
 
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		fom['wan'+u+'_mtu'].value = fom['f_wan'+u+'_mtu'].value;
 		fom['wan'+u+'_mtu'].disabled = fom['f_wan'+u+'_mtu'].disabled;
@@ -1718,7 +1710,7 @@ REMOVE-END */
 	e = E('sta_reset');
 	e.innerHTML = ''; /* first wipe all possible contents */
 	c = '';
-	for (uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		u = (uidx > 1) ? uidx : '';
 		if ((E('_wan'+u+'_sta').disabled == 1) || (E(PR('_wan'+u+'_sta')).style.display == 'none'))
 			c += '<input type="hidden" name="wan'+u+'_sta" value="">';
@@ -1848,7 +1840,7 @@ function init() {
 <script>
 	function refreshWanSection() {
 		var curr_mwan_num = E('_mwan_num').value;
-		for (uidx = maxwan_num; uidx > 1; --uidx) {
+		for (uidx = MAXWAN_NUM; uidx > 1; --uidx) {
 			var u = (uidx > 1) ? uidx : '';
 			elem.display('wan'+u+'-title', 'sesdiv_wan'+u, curr_mwan_num >= uidx);
 		}
@@ -1880,7 +1872,7 @@ function init() {
 
 <script>
 	refresh_sta_list();
-	for (var uidx = 1; uidx <= maxwan_num; ++uidx) {
+	for (var uidx = 1; uidx <= MAXWAN_NUM; ++uidx) {
 		var u = (uidx > 1) ? uidx : '';
 		dns = nvram['wan'+u+'_dns'].split(/\s+/);
 		W('<input type="hidden" name="wan'+u+'_mtu">');
