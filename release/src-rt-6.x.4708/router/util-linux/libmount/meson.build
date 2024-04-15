@@ -83,7 +83,7 @@ lib_mount_static = static_library(
 
 lib__mount_deps = [
   lib_selinux,
-  cryptsetup_dlopen ? lib_dl : lib_cryptsetup,
+  get_option('cryptsetup-dlopen').enabled() ? lib_dl : lib_cryptsetup,
   realtime_libs
 ]
 lib_mount = library(
@@ -116,7 +116,6 @@ libmount_tests = [
   'context',
   'lock',
   'optstr',
-  'optlist',
   'tab',
   'tab_diff',
   'monitor',
@@ -130,22 +129,20 @@ libmount_test_src_override = {
   'debug': 'init',
 }
 
-if program_tests
-  foreach libmount_test: libmount_tests
-    test_name = 'test_mount_' + libmount_test
-    exe = executable(
-      test_name,
-      'src/' + libmount_test_src_override.get(libmount_test, libmount_test) + '.c',
-      include_directories : [dir_include, dir_libblkid],
-      link_with : [lib__mount, lib_common, lib_blkid_static],
-      dependencies : lib__mount_deps,
-      c_args : ['-DTEST_PROGRAM'],
-    )
-    # the test-setup expects the helpers in the toplevel build-directory
-    link = meson.project_build_root() / test_name
-    run_command('ln', '-srf', exe.full_path(), link,
-      check : true)
-  endforeach
-endif
+foreach libmount_test: libmount_tests
+  test_name = 'test_mount_' + libmount_test
+  exe = executable(
+    test_name,
+    'src/' + libmount_test_src_override.get(libmount_test, libmount_test) + '.c',
+    include_directories : [dir_include, dir_libblkid],
+    link_with : [lib__mount, lib_common, lib_blkid_static],
+    dependencies : lib__mount_deps,
+    c_args : ['-DTEST_PROGRAM'],
+  )
+  # the test-setup expects the helpers in the toplevel build-directory
+  link = meson.project_build_root() / test_name
+  run_command('ln', '-srf', exe.full_path(), link,
+    check : true)
+endforeach
 
 subdir('python')

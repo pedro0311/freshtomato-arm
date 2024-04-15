@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Karel Zak <kzak@redhat.com>
- * Copyright (C) 2018-2024 Milan Broz <gmazyland@gmail.com>
+ * Copyright (C) 2018 Milan Broz <gmazyland@gmail.com>
  *
  * Inspired by libvolume_id by
  *     Kay Sievers <kay.sievers@vrfy.org>
@@ -15,7 +15,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include <stdint.h>
-#include <stdbool.h>
 
 #include "superblocks.h"
 
@@ -97,19 +96,6 @@ static int luks_attributes(blkid_probe pr, struct luks2_phdr *header, uint64_t o
 	return BLKID_PROBE_OK;
 }
 
-static bool luks_valid(struct luks2_phdr *header, const char *magic, uint64_t offset)
-{
-	if (memcmp(header->magic, magic, LUKS_MAGIC_L))
-		return false;
-
-	/* LUKS2 header is not at expected offset */
-	if (be16_to_cpu(header->version) == 2 &&
-	    be64_to_cpu(header->hdr_offset) != offset)
-		return false;
-
-	return true;
-}
-
 static int probe_luks(blkid_probe pr, const struct blkid_idmag *mag __attribute__((__unused__)))
 {
 	struct luks2_phdr *header;
@@ -119,7 +105,7 @@ static int probe_luks(blkid_probe pr, const struct blkid_idmag *mag __attribute_
 	if (!header)
 		return errno ? -errno : BLKID_PROBE_NONE;
 
-	if (luks_valid(header, LUKS_MAGIC, 0)) {
+	if (!memcmp(header->magic, LUKS_MAGIC, LUKS_MAGIC_L)) {
 		/* LUKS primary header was found. */
 		return luks_attributes(pr, header, 0);
 	}
@@ -132,7 +118,7 @@ static int probe_luks(blkid_probe pr, const struct blkid_idmag *mag __attribute_
 		if (!header)
 			return errno ? -errno : BLKID_PROBE_NONE;
 
-		if (luks_valid(header, LUKS_MAGIC_2, secondary_offsets[i]))
+		if (!memcmp(header->magic, LUKS_MAGIC_2, LUKS_MAGIC_L))
 			return luks_attributes(pr, header, secondary_offsets[i]);
 	}
 

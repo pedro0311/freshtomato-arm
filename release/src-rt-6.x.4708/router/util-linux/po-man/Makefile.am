@@ -63,6 +63,8 @@ all: gen-mans
 
 clean-local:
 	rm -f *~ *.bak
+
+distclean-local:
 	rm -rf $(PO_LANGS) *.stamp
 
 install-data-local: gen-mans

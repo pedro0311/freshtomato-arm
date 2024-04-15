@@ -1,6 +1,4 @@
 /*
- * SPDX-License-Identifier: GPL-2.0-or-later
- *
  * lsns(8) - list system namespaces
  *
  * Copyright (C) 2015 Karel Zak <kzak@redhat.com>
@@ -9,6 +7,15 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it would be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdio.h>
 #include <string.h>
@@ -1295,13 +1302,13 @@ static void __attribute__((__noreturn__)) usage(void)
 	fputs(_(" -T, --tree <rel>       use tree format (parent, owner, or process)\n"), out);
 
 	fputs(USAGE_SEPARATOR, out);
-	fprintf(out, USAGE_HELP_OPTIONS(24));
+	printf(USAGE_HELP_OPTIONS(24));
 
 	fputs(USAGE_COLUMNS, out);
 	for (i = 0; i < ARRAY_SIZE(infos); i++)
 		fprintf(out, " %11s  %s\n", infos[i].name, _(infos[i].help));
 
-	fprintf(out, USAGE_MAN_TAIL("lsns(8)"));
+	printf(USAGE_MAN_TAIL("lsns(8)"));
 
 	exit(EXIT_SUCCESS);
 }

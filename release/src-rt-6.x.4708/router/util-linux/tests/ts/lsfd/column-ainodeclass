@@ -38,11 +38,11 @@ for C in pidfd inotify; do
 	    ${TS_CMD_LSFD} -n -o ASSOC,STTYPE,AINODECLASS -p "${PID}" -Q "${EXPR}"
 	    echo "$C"':ASSOC,STTYPE,AINODECLASS': $?
 
-	    echo DONE >&"${MKFDS[1]}"
+	    kill -CONT "${PID}"
 	fi
 	wait "${MKFDS_PID}"
     } > "$TS_OUTPUT" 2>&1
-    if [ "$C-$?" == "pidfd-$TS_EXIT_NOTSUPP" ]; then
+    if [ "$C-$?" == "pidfd-$ENOSYS" ]; then
 	ts_skip_subtest "pidfd_open(2) is not available"
 	continue
     fi

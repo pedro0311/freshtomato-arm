@@ -1571,12 +1571,6 @@ int mnt_context_get_mount_excode(
 	 */
 	syserr = mnt_context_get_syscall_errno(cxt);
 
-	if (buf && cxt->syscall_errmsg) {
-		snprintf(buf, bufsz, _("%s system call failed: %s"),
-					cxt->syscall_name ? : "mount",
-					cxt->syscall_errmsg);
-		return MNT_EX_FAIL;
-	}
 
 	switch(syserr) {
 	case EPERM:
@@ -1623,8 +1617,10 @@ int mnt_context_get_mount_excode(
 				return MNT_EX_SUCCESS;
 			if (buf)
 				snprintf(buf, bufsz, _("special device %s does not exist"), src);
-		} else
-			goto generic_error;
+		} else if (buf) {
+			errno = syserr;
+			snprintf(buf, bufsz, _("mount(2) system call failed: %m"));
+		}
 		break;
 
 	case ENOTDIR:
@@ -1637,8 +1633,10 @@ int mnt_context_get_mount_excode(
 			if (buf)
 				snprintf(buf, bufsz, _("special device %s does not exist "
 					 "(a path prefix is not a directory)"), src);
-		} else
-			goto generic_error;
+		} else if (buf) {
+			errno = syserr;
+			snprintf(buf, bufsz, _("mount(2) system call failed: %m"));
+		}
 		break;
 
 	case EINVAL:
@@ -1719,8 +1717,10 @@ int mnt_context_get_mount_excode(
 			snprintf(buf, bufsz, _("cannot remount %s read-write, is write-protected"), src);
 		else if (mflags & MS_BIND)
 			snprintf(buf, bufsz, _("bind %s failed"), src);
-		else
-			goto generic_error;
+		else {
+			errno = syserr;
+			snprintf(buf, bufsz, _("mount(2) system call failed: %m"));
+		}
 		break;
 
 	case ENOMEDIUM:
@@ -1740,11 +1740,9 @@ int mnt_context_get_mount_excode(
 		/* fallthrough */
 
 	default:
-	generic_error:
 		if (buf) {
 			errno = syserr;
-			snprintf(buf, bufsz, _("%s system call failed: %m"),
-					cxt->syscall_name ? : "mount");
+			snprintf(buf, bufsz, _("mount(2) system call failed: %m"));
 		}
 		break;
 	}
@@ -1754,8 +1752,7 @@ int mnt_context_get_mount_excode(
 
 #ifdef TEST_PROGRAM
 
-static int test_perms(struct libmnt_test *ts __attribute__((unused)),
-		      int argc, char *argv[])
+static int test_perms(struct libmnt_test *ts, int argc, char *argv[])
 {
 	struct libmnt_context *cxt;
 	struct libmnt_optlist *ls;
@@ -1798,8 +1795,7 @@ static int test_perms(struct libmnt_test *ts __attribute__((unused)),
 	return 0;
 }
 
-static int test_fixopts(struct libmnt_test *ts __attribute__((unused)),
-			int argc, char *argv[])
+static int test_fixopts(struct libmnt_test *ts, int argc, char *argv[])
 {
 	struct libmnt_context *cxt;
 	struct libmnt_optlist *ls;

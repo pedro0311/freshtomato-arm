@@ -85,9 +85,7 @@ static int start_command(struct child_process *cmd)
 			close(cmd->in);
 		}
 
-		if (cmd->preexec_cb)
-			cmd->preexec_cb();
-
+		cmd->preexec_cb();
 		execvp(cmd->argv[0], (char *const*) cmd->argv);
 		errexec(cmd->argv[0]);
 	}
@@ -142,7 +140,7 @@ static int finish_command(struct child_process *cmd)
 	return wait_or_whine(cmd->pid);
 }
 
-static void pager_preexec_less(void)
+static void pager_preexec(void)
 {
 	/*
 	 * Work around bug in "less" by not starting it until we
@@ -180,45 +178,35 @@ static void wait_for_pager_signal(int signo)
 static int has_command(const char *cmd)
 {
 	const char *path;
-	char *b, *c, *p, *s;
+	char *p, *s;
 	int rc = 0;
 
 	if (!cmd)
 		goto done;
-
-	c = xstrdup(cmd);
-	if (!c)
+	if (*cmd == '/') {
+		rc = access(cmd, X_OK) == 0;
 		goto done;
-	b = strtok(c, " ");	/* cmd may contain options */
-	if (!b)
-		goto cleanup;
-
-	if (*b == '/') {
-		rc = access(b, X_OK) == 0;
-		goto cleanup;
 	}
 
 	path = getenv("PATH");
 	if (!path)
-		goto cleanup;
+		goto done;
 	p = xstrdup(path);
 	if (!p)
-		goto cleanup;
+		goto done;
 
-	for (s = strtok(p, ":"); s; s = strtok(NULL, ":")) {
+	for(s = strtok(p, ":"); s; s = strtok(NULL, ":")) {
 		int fd = open(s, O_RDONLY|O_CLOEXEC);
 		if (fd < 0)
 			continue;
-		rc = faccessat(fd, b, X_OK, 0) == 0;
+		rc = faccessat(fd, cmd, X_OK, 0) == 0;
 		close(fd);
 		if (rc)
 			break;
 	}
 	free(p);
-cleanup:
-	free(c);
 done:
-	/*fprintf(stderr, "has PAGER '%s': rc=%d\n", cmd, rc);*/
+	/*fprintf(stderr, "has PAGER %s rc=%d\n", cmd, rc);*/
 	return rc;
 }
 
@@ -242,11 +230,7 @@ static void __setup_pager(void)
 	pager_argv[2] = pager;
 	pager_process.argv = pager_argv;
 	pager_process.in = -1;
-
-	if (!strncmp(pager, "less", 4))
-		pager_process.preexec_cb = pager_preexec_less;
-	else
-		pager_process.preexec_cb = NULL;
+	pager_process.preexec_cb = pager_preexec;
 
 	if (start_command(&pager_process))
 		return;
