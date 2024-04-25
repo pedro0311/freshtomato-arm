@@ -26,7 +26,7 @@
 --- dropbear/src/sysoptions.h
 +++ dropbear/src/sysoptions.h
 @@ -7,7 +7,9 @@
- #define DROPBEAR_VERSION "2024.84"
+ #define DROPBEAR_VERSION "2024.85"
  #endif
  
 +#ifndef LOCAL_IDENT
