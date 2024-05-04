@@ -1110,7 +1110,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	int wanup;
 	int mwan_num;
 
-	char wantime_file[64];
 	char tmp[100];
 
 	int is_primary;
@@ -1123,9 +1122,9 @@ void start_wan_done(char *wan_ifname, char *prefix)
 	if ((mwan_num < 1) || (mwan_num > MWAN_MAX))
 		mwan_num = 1;
 
-	memset(wantime_file, 0, sizeof(wantime_file));
-	snprintf(wantime_file, sizeof(wantime_file), "/var/lib/misc/%s_time", prefix);
-	f_write(wantime_file, &si.uptime, sizeof(si.uptime), 0, 0);
+	memset(tmp, 0, sizeof(tmp));
+	snprintf(tmp, sizeof(tmp), "/var/lib/misc/%s_time", prefix);
+	f_write(tmp, &si.uptime, sizeof(si.uptime), 0, 0);
 
 	proto = get_wanx_proto(prefix);
 
@@ -1329,7 +1328,6 @@ void stop_wan_if(char *prefix)
 	int wan_proto;
 
 	char tmp[100];
-	char wannotice_file[64];
 
 	int mwan_num = nvram_get_int("mwan_num");
 
@@ -1374,9 +1372,9 @@ void stop_wan_if(char *prefix)
 	foreach(name, nvram_safe_get(strlcat_r(prefix, "_ifnames", tmp, sizeof(tmp))), next)
 		ifconfig(name, 0, "0.0.0.0", NULL);
 
-	memset(wannotice_file, 0, sizeof(wannotice_file));
-	snprintf(wannotice_file, sizeof(wannotice_file), "/var/notice/%s", prefix);
-	unlink(wannotice_file);
+	memset(tmp, 0, sizeof(tmp));
+	snprintf(tmp, sizeof(tmp), "/var/notice/%s", prefix);
+	unlink(tmp);
 
 	do_connect_file(0, prefix);
 
