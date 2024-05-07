@@ -1222,13 +1222,6 @@ void start_wan_done(char *wan_ifname, char *prefix)
 				first_ntp_sync = 1;
 				stop_ntpd();
 				start_ntpd();
-				/*
-				 * sometimes ntpd does not start - more precisely: it starts but does not synchronize the time until its restart;
-				 * it looks weird but it helps, probably ntpd has binding issues and restarting fixes it
-				 */
-				sleep(1);
-				stop_ntpd();
-				start_ntpd();
 			}
 		}
 
