@@ -29,7 +29,7 @@ PACKAGE_VERSION_RELEASE=$(echo $PACKAGE_VERSION | awk -F. '{
 
 dnl libblkid version
 LIBBLKID_VERSION="$PACKAGE_VERSION_MAJOR.$PACKAGE_VERSION_MINOR.$PACKAGE_VERSION_RELEASE"
-LIBBLKID_DATE="04-Dec-2023"
+LIBBLKID_DATE="04-Apr-2024"
 LIBBLKID_LT_MAJOR=1
 LIBBLKID_LT_MINOR=1
 LIBBLKID_LT_MICRO=0
@@ -1877,6 +1877,19 @@ UL_BUILD_INIT([waitpid])
 UL_REQUIRES_LINUX([waitpid])
 UL_REQUIRES_SYSCALL_CHECK([waitpid], [UL_CHECK_SYSCALL([pidfd_open])], [pidfd_open])
 AM_CONDITIONAL([BUILD_WAITPID], [test "x$build_waitpid" = xyes])
+
+UL_BUILD_INIT([test_enosys], [check])
+UL_REQUIRES_LINUX([test_enosys])
+AS_IF([test "x$build_test_enosys" = xyes], [
+  AC_MSG_CHECKING([for valid audit arch])
+  AC_COMPILE_IFELSE(
+    [AC_LANG_PROGRAM([[#include "${srcdir}/include/audit-arch.h"]])],
+    [AC_MSG_RESULT([yes])],
+    [AC_MSG_RESULT([no])
+     build_test_enosys=no
+    ])
+])
+AM_CONDITIONAL([BUILD_TEST_ENOSYS], [test "x$build_test_enosys" = xyes])
 
 UL_BUILD_INIT([getopt], [yes])
 AM_CONDITIONAL([BUILD_GETOPT], [test "x$build_getopt" = xyes])

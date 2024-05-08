@@ -135,7 +135,7 @@ static struct group_workspace *init_group_workspace(const char *group)
 
 	buf->requested_group = get_group_gid(group);
 	buf->ngroups = sysconf(_SC_NGROUPS_MAX) + 1;  /* room for the primary gid */
-	buf->groups = xcalloc(sizeof(*buf->groups), buf->ngroups);
+	buf->groups = xcalloc(buf->ngroups, sizeof(*buf->groups));
 
 	return buf;
 }
@@ -328,7 +328,7 @@ static char *makemsg(char *fname, char **mvec, int mvecsz,
 		int i;
 
 		for (i = 0; i < mvecsz; i++) {
-			fputs(mvec[i], fs);
+			fputs_careful(mvec[i], fs, '^', true, TERM_WIDTH);
 			if (i < mvecsz - 1)
 				fputc(' ', fs);
 		}

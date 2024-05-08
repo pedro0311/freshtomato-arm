@@ -3,10 +3,11 @@ project('util-linux', 'c',
         meson_version: '>=0.57.0',
         license : 'GPLv2+')
 
+fs = import('fs')
 pkgconfig = import('pkgconfig')
 
 libblkid_version = '1.1.0'
-libblkid_date = '01-Jun-2021'
+libblkid_date = '04-Apr-2024'
 libuuid_version = '1.3.0'
 libmount_version = '1.1.0'
 libsmartcols_version = '1.1.0'
@@ -3285,11 +3286,13 @@ if LINUX
   exes += exe
 endif
 
-exe = executable(
-  'test_enosys',
-  'tests/helpers/test_enosys.c',
-  include_directories : includes)
-exes += exe
+if cc.compiles(fs.read('include/audit-arch.h'), name : 'has AUDIT_ARCH_NATIVE')
+  exe = executable(
+    'test_enosys',
+    'tests/helpers/test_enosys.c',
+    include_directories : includes)
+  exes += exe
+endif
 
 ############################################################
 
@@ -3325,6 +3328,15 @@ endif
 exe = executable(
   'sample-scols-continuous',
   'libsmartcols/samples/continuous.c',
+  include_directories : includes,
+  link_with : [lib_smartcols, lib_common])
+if not is_disabler(exe)
+  exes += exe
+endif
+
+exe = executable(
+  'sample-scols-continuous-json',
+  'libsmartcols/samples/continuous-json.c',
   include_directories : includes,
   link_with : [lib_smartcols, lib_common])
 if not is_disabler(exe)
