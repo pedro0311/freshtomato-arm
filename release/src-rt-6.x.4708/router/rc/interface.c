@@ -52,7 +52,7 @@ int _ifconfig(const char *name, int flags, const char *addr, const char *netmask
 	struct ifreq ifr;
 	struct in_addr in_addr, in_netmask, in_broadaddr;
 
-	logmsg(LOG_DEBUG, "*** %s: name=%s flags=%04x %s addr=%s netmask=%s mtu=%d\n", __FUNCTION__, name ? : "", flags, (flags & IFUP) ? "IFUP" : "", addr ? : "", netmask ? : "", mtu ? : 0);
+	logmsg(LOG_DEBUG, "*** %s: name=[%s] flags=[%04x] %s addr=[%s] netmask=[%s] mtu=[%d]", __FUNCTION__, name ? : "", flags, (flags & IFUP) ? "IFUP" : "", addr ? : "", netmask ? : "", mtu ? : 0);
 
 	if (!name)
 		return -1;
@@ -135,7 +135,7 @@ static int route_manip(int cmd, char *name, int metric, char *dst, char *gateway
 	int s, err = 0;
 	struct rtentry rt;
 
-	logmsg(LOG_DEBUG, "*** %s: cmd=%s name=%s addr=%s netmask=%s gateway=%s metric=%d\n", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
+	logmsg(LOG_DEBUG, "*** %s: cmd=[%s] name=[%s] addr=[%s] netmask=[%s] gateway=[%s] metric=[%d]", __FUNCTION__, cmd == SIOCADDRT ? "ADD" : "DEL", name, dst, genmask, gateway, metric);
 
 	/* open a raw socket to the kernel */
 	if ((s = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
