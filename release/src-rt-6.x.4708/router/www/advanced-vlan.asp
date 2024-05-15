@@ -684,9 +684,11 @@ function save() {
 	if (vlg.isEditing())
 		return;
 
+	var i, j, p, d, e, v = '', k = 0;
+
 	var fom = E('t_fom');
 	/* wipe out relevant fields just in case this is not the first time we try to submit */
-	for (var i = 0 ; i <= MAX_VLAN_ID ; i++) {
+	for (i = 0 ; i <= MAX_VLAN_ID ; i++) {
 		fom['vlan'+i+'ports'].value = '';
 		fom['vlan'+i+'hwname'].value = '';
 		fom['vlan'+i+'vid'].value = '';
@@ -702,11 +704,10 @@ function save() {
 	fom['wan4_ifnameX'].value = '';
 /* MULTIWAN-END */
 
-	var v = '';
-	var d = vlg.getAllData();
+	d = vlg.getAllData();
 
-	for (var i = 0; i < d.length; ++i) {
-		var p = '';
+	for (i = 0; i < d.length; ++i) {
+		p = '';
 		p += (d[i][COL_P0].toString() != '0') ? COL_P0N : '';
 		p += ((trunk_vlan_supported) && (d[i][COL_P0T].toString() != '0')) ? 't' : '';
 		p += trailingSpace(p);
@@ -762,6 +763,14 @@ REMOVE-END */
 /* MULTIWAN-END */
 	}
 
+	for (i = 1; i <= MAXWAN_NUM; ++i) {
+		j = (i > 1) ? i : '';
+		if (fom['wan'+j+'_ifnameX'].value.length > 0)
+			k++;
+	}
+	if (k < 1) k = 1;
+	fom.mwan_num.value = k;
+
 	for (var uidx = 0; uidx < wl_ifaces.length; ++uidx) {
 		var wlan = E('_f_bridge_wlan'+uidx+'_to');
 /* REMOVE-BEGIN
@@ -797,7 +806,7 @@ REMOVE-END */
 	/* Prevent vlan reset to default at init */
 	fom['manual_boot_nv'].value = 1;
 
-	var e = E('footer-msg');
+	e = E('footer-msg');
 
 	if (vlg.countWan() != 1) {
 		e.innerHTML = 'Cannot proceed: one VID must be assigned to WAN.';
@@ -925,6 +934,7 @@ function init() {
 <input type="hidden" name="wan3_ifnameX">
 <input type="hidden" name="wan4_ifnameX">
 <!-- MULTIWAN-END -->
+<input type="hidden" name="mwan_num">
 <input type="hidden" name="manual_boot_nv">
 <input type="hidden" name="lan_ifnames">
 <input type="hidden" name="lan1_ifnames">
