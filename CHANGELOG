@@ -5,6 +5,119 @@ FreshTomato-ARM Changelog
 
 
 
+2024.2          2024.05.19
+---------------------------
+
+- SDK: nand: Adjust/fix Winbond manufacturer ID
+- SDK: small update for Broadcom 53xx RoboSwitch device driver
+- SDK: bcmrobo.c: simplify Switch Register Access Bridge Registers SRAB_ENAB()
+- SDK6: update PCI-Express driver
+- kernel: mtd: nand: add Macronix manufacturer
+- kernel: mtd: nand: Add Winbond manufacturer
+- toolchain: refresh toolchain on Debian 12 with newer version of gmp, m4 and mpfr
+- zlib: update to 1.3.1
+- libcurl: update to 8.7.1
+- libpng: update to 1.6.43
+- libxml2: update to 2.12.6
+- tinc: update to d9e42fa (2024-04-07) snapshot
+- dnsmasq: update to b8ff4bb (2024-02-22) snapshot
+- expat: update to 2.6.2
+- busybox: updates from the upstream
+- spawn-fcgi: update to 1.6.5
+- php: update to 8.3.6
+- nginx: update to 1.26.0
+- meson: update to 1.4.0
+- libffi: update to 3.4.6
+- openvpn: update to 2.6.10
+- tor: update to 0.4.7.16 - the last one that actually compiles on our ancient toolset
+- sqlite: update to 3.45.3
+- irqbalance: update to 1.9.4
+- gettext-tiny: update to 86d9b99 (2024-01-21) snapshot
+- miniupnpd: update to 2.3.6
+- dropbear: update to 2024.85
+- libcap-ng: update to 0.8.5
+- libsodium: update to latest 1.0.19-stable
+- util-linux: update to 2.39.4
+- build: add Netgear EX7000 support [WIP]
+- build: Makefile: use libzip for php compilation
+- build: Makefile: tune libcurl recipe (remove not used stuff - smaller size)
+- build: Makefile: tune apcupsd recipe (smaller size)
+- build: Makefile: mysql: at last build it with system zlib; do not waste time for mysql-test, support-files, sql-bench and man subdirs
+- build: Makefile: minidlna: disable NLS support
+- build: Makefile: clean more targets before every compilation
+- build: Makefile: util-linux: disable nls
+- build: switch to php-8.3.1
+- build: add pcre2-10.37 to the tree
+- build: update glib to 2.74.7 with openwrt patches; add/change recipes; integrate updated/added glib and pcre2
+- build: add haveged-1.9.18 to the tree
+- build: implement haveged
+- build: add TOR again to the o (Custom) target
+- build: Update Dockerfile to Debian 12
+- GUI: Administration: Admin Access: exclude ports 80 and 443 for remote GUI access for security reasons
+- GUI: Administration: Admin Access: fix preparing url of redirect page in case of remote connection
+- GUI: admin-access.asp - Add option to enable/disable httpd listening on IPv6 and VLAN interfaces
+- GUI: basic-network.asp - fix saving in case wl radio order is not ascending (ex. normal order wl0, wl1, wl2, ... )
+- GUI: tools-survey.asp - fix Wireless Site Survey if SSID contains a single quote (fix #323)
+- GUI: VPN: OpenVPN Client: add note about strict Kill Switch
+- GUI: Status: Overview: fix Watchdog status display
+- GUI: USB and NAS: Media Server: fix behaviour of the LAN boxes
+- busybox: always add flock applet
+- DHCPC: optionally prevent classless routes. Since this is used for iptv it cannot be disabled by default; recommended to turn it off when not using iptv, see CVE-2024-3661
+- getdns: fix for broken trust anchor files are silently ignored
+- openssl-1.1: add patches for CVE-2023-5678 and CVE-2024-0727
+- php8: use php-fpm instead of spawn-fcgi
+- udpxy: Fixed uninitialized source address 
+- DDNS: multiWAN aware (fix #65)
+- ddns: increase the number of errors allowed before entering standby from 3 to 10
+- discobery.sh: supports for any CIDR (no dependency to /24 any more) - network and broadcast IPs are now always excluded from the polling - works when brX IP address is not the first in the subnet
+- httpd: config.c: do not close temp file created by mkstemp before using it
+- httpd: upgrade.c: use mkstemp instead of dangerous mktemp; check for available memory first; correct argument in waitpid(); fix a few other issues
+- httpd: etherstates - detect port info in one sscanf
+- httpd: httpd.c - fix/add IPv6 listeners for MultiLAN setups (do not try to add IPv4 listeners twice)
+- httpd: devlist.c: Loop through dhcp enabled interfaces using BRIDGE_COUNT
+- httpd: wl.c - Add central channel for future updates to the GUI Wireless Survey
+- httpd: wl.c - Add 802.11N+AC BSS capabilities for future updates to the GUI Wireless Survey
+- mdu: in case of curl, also use a while loop to use more than one IP checker during a failed host check
+- mdu: use getaddrinfo instead of the deprecated gethostbyname when building without libcurl
+- mdu: also test for IP change if "Force next update" is checked
+- mdu: support special case, when ifname is set to 'none' or proto is 'disabled' - use default WAN
+- mdu: remove ieserver.net from the list of available services (down)
+- mdu: remove DyNS from the list of available services (down)
+- nvram: fix behavior of 'convert' option
+- ntpd: try to monitor and restart it when it dies or doesn't start at all
+- others: sysinfo: fix WL adapter name for 3rd wireless
+- others: improve cru locking to prevent concurrent updates
+- others: switch4: fix PIN status recognition on some modems
+- others: switch4g: correct checking of CPIN status
+- others: switch3g: fix PIN checker
+- patches: nginx: fix little endian recognition, solve other issues
+- rc: always enable 3G modem support and remove that option from the GUI
+- rc: arpbind.c: stop_arpbind(): Skip header of /proc/net/arp
+- rc: buttons.c: Limit WLAN button maximum duration to 120 seconds
+- rc: bwlimit.c: refactor code to loop using BRIDGE_COUNT
+- rc: firewall.c: fix remote administration (www/ssh) when DMZ is enabled 
+- rc: firewall.c: Use BRIDGE_COUNT to iterate throuh interfaces
+- rc: ftpd.c: close fp before bailing when f fails to open
+- rc: init.c: do not run remove_usb_module() [remove_usb_all_modules() now] on halt/reboot; some changes in order of removed services
+- rc: nfs.c: Also free(buf) when returning on failed fopen
+- rc: nginx.c: always try to kill php-cgi at nginx stop
+- rc: openvpn.c: start_ovpn_client(): Initialize route_mode variable
+- rc: services.c: start_ipv6_tunnel(): Fix undefined behavior in snprintf
+- rc: services.s: use get_wanface() to properly check WAN ifaces in generate_mdns_config()
+- rc: services.c: block Apple private relay
+- rc: tor.c: refactor code to loop using BRIDGE_COUNT
+- rc: usb.c: do not run remove_usb_modem_modules() by default - it may cause kernel panic (at least on MIPS RT-AC), enable it by setting 'remove_modem_modules' nvram variable
+- rc: wan.c: restart DDNS not only on primary WAN
+- rom: update CA bundle to 2024-03-11
+- www: advanced-vlan.asp: wipe out relevant fields for inactive or just disabled WAN - needed in various places for the proper operation of FW
+- www: advanced-vlan.asp: after editing, just reset mwan_num to 1 to avoid problems
+- www: adminer.php: fix error message "Trying to access array offset on null" on php 8
+- www: basic-time.asp: Show ntp info
+- www: qos-{ctrate,qos-detailed}: Additional filter options
+- www: tools-survey.asp - v1.01 - 11/05/24 - rs232
+- Asus RT-AC5300: allow to disable/shut down broken wireless radios
+
+
 2024.1          2024.02.14
 ---------------------------
 
