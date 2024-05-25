@@ -77,7 +77,6 @@ config TCONFIG_ZFS
 	bool "zfs"
 	default n
 
-# !!TB
 config TCONFIG_IPV6
 	bool "IPv6 Support"
 	default n
@@ -328,8 +327,13 @@ config TCONFIG_TINC
 	bool "TINC"
 	default n
 
+config TCONFIG_OPENSSL30
+	bool "OpenSSL 3.0.x"
+	default n
+
 config TCONFIG_OPENSSL11
 	bool "OpenSSL 1.1.x"
+	depends on !TCONFIG_OPENSSL30
 	default n
 
 config TCONFIG_FANCTRL

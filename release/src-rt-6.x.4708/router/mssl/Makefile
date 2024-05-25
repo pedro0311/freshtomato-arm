@@ -9,7 +9,7 @@ ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -DUSE_OPENSSL -I$(TOP)/$(OPENSSLDIR)/include
  LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lssl -lcrypto
- ifeq ($(TCONFIG_OPENSSL11),y)
+ ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
   CFLAGS += -DUSE_OPENSSL11
  endif
 else

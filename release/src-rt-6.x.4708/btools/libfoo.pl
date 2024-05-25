@@ -602,9 +602,13 @@ if ($openssldir eq "openssl") {
 	genSO("${root}/usr/lib/libcrypto.so.1.0.0", "${router}/${openssldir}/libcrypto.a");
 	genSO("${root}/usr/lib/libssl.so.1.0.0", "${router}/${openssldir}/libssl.a", "${stripshared}", "-L${router}/${openssldir}");
 }
-else {
+elsif ($openssldir eq "openssl-1.1") {
 	genSO("${root}/usr/lib/libcrypto.so.1.1", "${router}/${openssldir}/libcrypto.a");
 #	genSO("${root}/usr/lib/libssl.so.1.1", "${router}/${openssldir}/libssl.a", "${stripshared}", "-L${router}/${openssldir}");
+}
+else {
+	genSO("${root}/usr/lib/libcrypto.so.3", "${router}/${openssldir}/libcrypto.a");
+#	genSO("${root}/usr/lib/libssl.so.3", "${router}/${openssldir}/libssl.a", "${stripshared}", "-L${router}/${openssldir}");
 }
 
 genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a");

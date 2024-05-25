@@ -1,0 +1,11 @@
+--- openssl-3.0/Configurations/10-main.conf
++++ openssl-3.0/Configurations/10-main.conf
+@@ -704,7 +704,7 @@
+     },
+     "linux-latomic" => {
+         inherit_from     => [ "linux-generic32" ],
+-        ex_libs          => add(threads("-latomic")),
++    #   ex_libs          => add(threads("-latomic")),
+     },
+     "linux-generic64" => {
+         inherit_from     => [ "linux-generic32" ],

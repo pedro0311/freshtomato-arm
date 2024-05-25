@@ -14,7 +14,7 @@ ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
  LDFLAGS += -L$(TOP)/mssl -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lmssl -lssl -lcrypto
- ifeq ($(TCONFIG_OPENSSL11),y)
+ ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
   CFLAGS += -DUSE_OPENSSL11
   ifeq ($(TCONFIG_BCMARM),y)
    LIBS  += -lpthread
