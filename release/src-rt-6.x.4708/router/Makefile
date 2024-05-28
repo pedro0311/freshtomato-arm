@@ -670,13 +670,13 @@ install package: countInstallSteps $(obj-install) $(LINUXDIR)/.config
 		DEPMOD=/bin/true INSTALL_MOD_PATH=$(TARGETDIR)
 
 ifneq ($(TCONFIG_BCMARM),y)
-ifneq ($(CONFIG_BCMWL6)$(TCONFIG_BLINK),)
-ifneq ($(TCONFIG_USBAP),y)
+ ifneq ($(CONFIG_BCMWL6)$(TCONFIG_BLINK),)
+  ifneq ($(TCONFIG_USBAP),y)
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv diag/* . && rm -rf diag
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et.4702/* . && rm -rf et.4702 || true
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv usb/* . && rm -rf usb
-endif
-endif
+  endif
+ endif
 else
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv diag/* . && rm -rf diag
 	-cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et.4702/* . && rm -rf et.4702 || true
@@ -777,18 +777,18 @@ endif
 	install $(LIBDIR)/libnsl.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
 ifeq ($(TCONFIG_USB),y)
-ifneq ($(TCONFIG_BCMARM),y)
+ ifneq ($(TCONFIG_BCMARM),y)
 	install $(LIBDIR)/librt-0.9.30.1.so $(TARGETDIR)/lib/librt.so.0
-else
+ else
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
-endif
+ endif
 endif # TCONFIG_USB
 ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
-ifneq ($(TCONFIG_BCMARM),y)
+ ifneq ($(TCONFIG_BCMARM),y)
 	install $(LIBDIR)/libstdc++.so.6 $(TARGETDIR)/lib/libstdc++.so.6
-else
+ else
 	install $(LIBDIR)/../arm-linux/lib/libstdc++.so.6 $(TARGETDIR)/lib/libstdc++.so.6
-endif # TCONFIG_BCMARM
+ endif # TCONFIG_BCMARM
 	cd $(TARGETDIR)/lib && ln -sf libstdc++.so.6 libstdc++.so
 	$(STRIP) $(TARGETDIR)/lib/libstdc++.so.6
 endif # TCONFIG_NGINX TCONFIG_NANO
@@ -802,17 +802,15 @@ endif
 ifneq ($(TCONFIG_BBT)$(TCONFIG_SAMBASRV),yy)
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_usr_share
 else
-ifeq ($(TCONFIG_TOR),y)
+ ifeq ($(TCONFIG_TOR),y)
 	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh ln_tor_geoip
-endif
+ endif
 endif
 
 	@echo ---
 
 ifeq ($(TCONFIG_OPTIMIZE_SHARED_LIBS),y)
-ifneq ($(TCONFIG_BCMARM),y)
 	@$(SRCBASE)/btools/libfoo.pl
-endif
 else
 	@$(SRCBASE)/btools/libfoo.pl --noopt
 endif
@@ -2077,8 +2075,7 @@ libexif-clean:
 	-@$(MAKE) -C libexif clean
 	@rm -f libexif/stamp-h1
 
-libid3tag/build/Makefile:
-ifneq ($(TCONFIG_BCMARM),y)
+libid3tag/static/Makefile:
 	@rm -rf libid3tag/static && mkdir -p libid3tag/static
 	cd libid3tag/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -2088,11 +2085,12 @@ ifneq ($(TCONFIG_BCMARM),y)
 			-DCMAKE_CXX_FLAGS="-Wall -DNDEBUG $(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time \
 					$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32)) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
 			-DCMAKE_EXE_LINKER_FLAGS="-fPIC -Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
-			-DBUILD_SHARED_LIBS=FALSE \
+			-DBUILD_SHARED_LIBS=OFF \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
-endif
+
+libid3tag/build/Makefile:
 	@rm -rf libid3tag/build && mkdir -p libid3tag/build
 	cd libid3tag/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -2106,7 +2104,7 @@ endif
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
 
-libid3tag: libid3tag/build/Makefile
+libid3tag: $(if $(TCONFIG_BCMARM),,libid3tag/static/Makefile) libid3tag/build/Makefile
 	@$(SEP)
 ifneq ($(TCONFIG_BCMARM),y)
 	$(MAKE) -C libid3tag/static all $(PARALLEL_BUILD)
