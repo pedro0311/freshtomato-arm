@@ -2273,7 +2273,7 @@ else
 endif
 	$(call patch_files,ebtables)
 	cd ebtables && ./autogen.sh && \
-		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib --enable-static=yes \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --sysconfdir=/etc --libdir=/usr/lib \
 			CFLAGS="-Os $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),,-DEBT_MIN_ALIGN=4 -D_GNU_SOURCE) -ffunction-sections -fdata-sections -fPIC $(OPTSIZE_FLAG)" \
 			LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 			LOCKFILE="/var/lock/ebtables"
