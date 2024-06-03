@@ -3971,7 +3971,7 @@ libmnl/stamp-h1:
 	cd libmnl && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr
+		$(CONFIGURE) --prefix=/usr --enable-static
 	@touch $@
 
 libmnl: libmnl/stamp-h1
