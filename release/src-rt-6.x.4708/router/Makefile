@@ -2397,9 +2397,11 @@ ifeq ($(TCONFIG_BCMARM),y)
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-8.so.0.10.2 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.2
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.2
 	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-8.so.0.10.2 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.10.2 libpcre2-8.so
+ ifeq ($(TCONFIG_AIO),y)
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-posix.so.3.0.0 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.0
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.0
 	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-posix.so.3.0.0 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.0 libpcre2-posix.so
+ endif
 else
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
 	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
