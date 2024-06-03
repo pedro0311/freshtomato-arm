@@ -810,7 +810,9 @@ endif
 	@echo ---
 
 ifeq ($(TCONFIG_OPTIMIZE_SHARED_LIBS),y)
+ ifneq ($(TCONFIG_BCMARM),y)
 	@$(SRCBASE)/btools/libfoo.pl
+ endif
 else
 	@$(SRCBASE)/btools/libfoo.pl --noopt
 endif
