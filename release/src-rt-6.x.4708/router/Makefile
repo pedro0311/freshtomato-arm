@@ -2107,11 +2107,9 @@ libid3tag/build/Makefile:
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
 
-libid3tag: $(if $(TCONFIG_BCMARM),,libid3tag/static/Makefile) libid3tag/build/Makefile
+libid3tag: libid3tag/static/Makefile libid3tag/build/Makefile
 	@$(SEP)
-ifneq ($(TCONFIG_BCMARM),y)
 	$(MAKE) -C libid3tag/static all $(PARALLEL_BUILD)
-endif
 	$(MAKE) -C libid3tag/build all $(PARALLEL_BUILD)
 
 libid3tag-install:
@@ -2119,9 +2117,7 @@ libid3tag-install:
 	cd $(INSTALLDIR)/libid3tag/usr/lib/ && $(STRIP) libid3tag.so.0.16.3 && ln -sf libid3tag.so.0.16.3 libid3tag.so && ln -sf libid3tag.so.0.16.3 libid3tag.so.0
 
 libid3tag-clean:
-ifneq ($(TCONFIG_BCMARM),y)
 	@rm -rf libid3tag/static
-endif
 	@rm -rf libid3tag/build
 
 libvorbis/stamp-h1:
