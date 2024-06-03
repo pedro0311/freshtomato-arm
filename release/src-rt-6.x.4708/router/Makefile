@@ -4161,6 +4161,7 @@ glib2/build:
 		-Dnls=disabled \
 		-Dlibelf=disabled \
 		-Dglib_assert=false \
+		-Ddefault_library=shared \
 		-Dsystemtap=false \
 		-Dsysprof=disabled \
 		-Doss_fuzz=disabled \
