@@ -2465,6 +2465,34 @@ libpng-clean:
 	@rm -rf libpng/staged
 	$(call unpatch_files,libpng)
 
+libzip/static/Makefile:
+	@rm -rf libzip/static && mkdir -p libzip/static
+	cd libzip/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lssl -lcrypto -lpthread" \
+			-DBUILD_SHARED_LIBS=FALSE \
+			-DENABLE_GNUTLS=FALSE \
+			-DENABLE_COMMONCRYPTO=FALSE \
+			-DENABLE_MBEDTLS=FALSE \
+			-DENABLE_BZIP2=FALSE \
+			-DENABLE_LZMA=FALSE \
+			-DENABLE_ZSTD=FALSE \
+			-DENABLE_WINDOWS_CRYPTO=FALSE \
+			-DENABLE_OPENSSL=TRUE \
+			-DBUILD_TOOLS=FALSE \
+			-DBUILD_REGRESS=FALSE \
+			-DBUILD_EXAMPLES=FALSE \
+			-DBUILD_DOC=FALSE \
+			-DOPENSSL_CRYPTO_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so" \
+			-DOPENSSL_SSL_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so" \
+			-DOPENSSL_INCLUDE_DIR="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+
 libzip/build/Makefile:
 	@rm -rf libzip/build && mkdir -p libzip/build
 	cd libzip/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
@@ -2492,8 +2520,9 @@ libzip/build/Makefile:
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
 
-libzip: libzip/build/Makefile
+libzip: libzip/static/Makefile libzip/build/Makefile
 	@$(SEP)
+	@$(MAKE) -C libzip/static all $(PARALLEL_BUILD)
 	@$(MAKE) -C libzip/build all $(PARALLEL_BUILD)
 	@$(MAKE) -C libzip/build DESTDIR=$(TOP)/libzip/staged install
 
@@ -2502,6 +2531,7 @@ libzip-install:
 	cd $(INSTALLDIR)/libzip/usr/lib/ && $(STRIP) libzip.so.5.5 && ln -sf libzip.so.5.5 libzip.so && ln -sf libzip.so.5.5 libzip.so.5
 
 libzip-clean:
+	@rm -rf libzip/static
 	@rm -rf libzip/build
 	@rm -rf libzip/staged
 
