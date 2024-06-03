@@ -4197,7 +4197,7 @@ irqbalance/stamp-h1:
 		LIBS="-lffi -liconv -lz -lpcre2-8" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/glib2/staged/usr/include/glib-2.0" \
 		GLIB2_LIBS="-L$(TOP)/glib2/staged/usr/lib -lglib-2.0" \
-		$(CONFIGURE) --target=arm-linux --prefix=/usr --enable-static=glib2 --with-libcap_ng=no \
+		$(CONFIGURE) --target=arm-linux --prefix=/usr --with-libcap_ng=no \
 			--with-systemd=no --without-irqbalance-ui --disable-numa --disable-dependency-tracking
 	@touch $@
 
