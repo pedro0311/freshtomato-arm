@@ -2759,17 +2759,7 @@ libncurses-install:
 	cd $(INSTALLDIR)/libncurses/usr/lib && ln -sf ../share/terminfo terminfo
 	install libncurses/lib/libncurses.so.6.4 $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
 	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libncurses.so.6
-	install libncurses/lib/libpanel.so.6.4 $(INSTALLDIR)/libncurses/usr/lib/libpanel.so.6
-	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libpanel.so.6
-	install libncurses/lib/libform.so.6.4 $(INSTALLDIR)/libncurses/usr/lib/libform.so.6
-	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libform.so.6
-	install libncurses/lib/libmenu.so.6.4 $(INSTALLDIR)/libncurses/usr/lib/libmenu.so.6
-	$(STRIP) $(INSTALLDIR)/libncurses/usr/lib/libmenu.so.6
-	cd $(INSTALLDIR)/libncurses/usr/lib/ && \
-		ln -sf libncurses.so.6 libncurses.so && \
-		ln -sf libpanel.so.6 libpanel.so && \
-		ln -sf libform.so.6 libform.so && \
-		ln -sf libmenu.so.6 libmenu.so
+	cd $(INSTALLDIR)/libncurses/usr/lib/ && ln -sf libncurses.so.6 libncurses.so
 
 libncurses-clean:
 	-@$(MAKE) -C libncurses clean
