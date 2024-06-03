@@ -153,7 +153,7 @@ else
  export PHP_TARGET := php7
 endif
 
-# IPv6?
+# IPv6
 ifeq ($(TCONFIG_IPV6),y)
  export TCONFIG_IPV6 := y
 else
@@ -273,7 +273,6 @@ obj-y += rstats
 obj-$(TCONFIG_PROXY) += udpxy
 obj-y += hotplug2
 obj-y += udevtrigger
-obj-$(TCONFIG_BCMARM) += libnfnetlink
 obj-y += libusb10
 obj-y += usbmodeswitch
 obj-$(TCONFIG_BCMARM) += libmnl
@@ -384,6 +383,7 @@ obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
 obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
 obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
 obj-$(TCONFIG_MEDIA_SERVER) += minidlna
+obj-$(TCONFIG_CONNTRACK_TOOL) += libnfnetlink
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_conntrack
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_log
 obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_queue
@@ -1478,11 +1478,12 @@ iptables-1.8.x/stamp-h1:
 	$(call patch_files,iptables-1.8.x)
 	cd iptables-1.8.x && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
-		CPPFLAGS="-Os -Wall -I$(TOP)/libnfnetlink/include $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnetfilter_conntrack/include,)" \
-		LDFLAGS="-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink $(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnetfilter_conntrack/src/.libs,)" \
-		PKG_CONFIG_PATH="$(TOP)/libnfnetlink$(if $(TCONFIG_CONNTRACK_TOOL),:$(TOP)/libnetfilter_conntrack,)" \
+		CPPFLAGS="-Os -Wall $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnfnetlink/include -I$(TOP)/libnetfilter_conntrack/include,)" \
+		LDFLAGS="$(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink -L$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libmnl/staged/usr/lib,)" \
+		PKG_CONFIG_PATH="$(if $(TCONFIG_CONNTRACK_TOOL),$(TOP)/libnfnetlink:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
+			$(if $(TCONFIG_CONNTRACK_TOOL),,--disable-connlabel) \
 			--with-kernel=$(LINUXDIR) --with-xt-lock-name=/var/lock/xtables.lock \
 			--disable-nftables --disable-dependency-tracking
 	@touch $@
@@ -3975,8 +3976,8 @@ libmnl-clean:
 libnetfilter_conntrack/stamp-h1:
 	cd libnetfilter_conntrack && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -3999,7 +4000,6 @@ libnetfilter_conntrack-clean:
 	-@$(MAKE) -C libnetfilter_conntrack clean
 	@rm -f libnetfilter_conntrack/stamp-h1 libnetfilter_conntrack/Makefile
 	@rm -rf libnetfilter_conntrack/staged
-
 
 libnetfilter_log/stamp-h1:
 	cd libnetfilter_log && \
@@ -4031,8 +4031,8 @@ libnetfilter_log-clean:
 libnetfilter_queue/stamp-h1:
 	cd libnetfilter_queue && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -4059,9 +4059,9 @@ conntrack-tools/stamp-h1:
 	cd conntrack-tools && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include \
 			-I$(TOP)/libnetfilter_conntrack/staged/usr/include -I$(TOP)/libnetfilter_log/staged/usr/include -I$(TOP)/libnetfilter_queue/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl \
 			-L$(TOP)/libnetfilter_conntrack/staged/usr/lib -L$(TOP)/libnetfilter_log/staged/usr/lib -L$(TOP)/libnetfilter_queue/staged/usr/lib" \
-		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_log/staged/usr/lib/pkgconfig:$(TOP)/libnetfilter_queue/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr --disable-cthelper --disable-cttimeout
 	@touch $@
 
@@ -4198,7 +4198,7 @@ irqbalance/stamp-h1:
 	$(call patch_files,irqbalance)
 	cd irqbalance && ./autogen.sh && \
 		CFLAGS="-Os -Wall -std=gnu99 $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/lib/libffi-3.2.1/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include" \
+		CPPFLAGS="-I$(TOP)/libiconv/staged/usr/include -I$(TOP)/libffi/staged/usr/include -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include" \
 		LDFLAGS="-L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libffi/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -Wl,--gc-sections" \
 		LIBS="-lffi -liconv -lz -lpcre2-8" \
 		GLIB2_CFLAGS="-I$(TOP)/glib2/staged/usr/lib/glib-2.0/include -I$(TOP)/glib2/staged/usr/include/glib-2.0" \
