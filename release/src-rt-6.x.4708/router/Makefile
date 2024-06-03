@@ -4146,9 +4146,12 @@ libffi: libffi/stamp-h1
 	@rm -f libffi/staged/usr/lib/libffi.la
 
 libffi-install:
+ifeq ($(TCONFIG_IRQBALANCE),y)
 	install -D $(TOP)/libffi/.libs/libffi.so.8.1.4 $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
 	$(STRIP) $(INSTALLDIR)/libffi/usr/lib/libffi.so.8.1.4
 	cd $(INSTALLDIR)/libffi/usr/lib && ln -sf libffi.so.8.1.4 libffi.so.8 && ln -sf libffi.so.8.1.4 libffi.so
+endif
+	@true
 
 libffi-clean:
 	-@$(MAKE) -C libffi distclean
