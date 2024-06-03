@@ -543,14 +543,14 @@
 +
 +
 +/* utility functions necessary for module to work across multiple iptables versions */
-+static void param_problem_exit_error(char* msg);
++//static void param_problem_exit_error(char* msg);
 +
 +
-+void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info);
++static void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info);
 +
-+char** split_on_separators(char* line, char* separators, int num_separators, int max_pieces, int include_remainder_at_max);
-+char* trim_flanking_whitespace(char* str);
-+unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length);
++static char** split_on_separators(char* line, char* separators, int num_separators, int max_pieces, int include_remainder_at_max);
++static char* trim_flanking_whitespace(char* str);
++static unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length);
 +
 +#define DEFAULT_MAX      300
 +
@@ -790,13 +790,13 @@
 +#endif
 +
 +
-+static void param_problem_exit_error(char* msg)
++/*static void param_problem_exit_error(char* msg)
 +{
 +	xtables_error(PARAMETER_PROBLEM, msg);
-+}
++}*/
 +
 +
-+void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info)
++static void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info)
 +{
 +	char** addr_parts = split_on_separators(addr_str, ",", 1, -1, 0);
 +
@@ -942,7 +942,7 @@
 + * result is dynamically allocated, MUST be freed after call-- even if 
 + * line is empty (you still get a valid char** pointer to to a NULL char*)
 + */
-+char** split_on_separators(char* line_str, char* separators, int num_separators, int max_pieces, int include_remainder_at_max)
++static char** split_on_separators(char* line_str, char* separators, int num_separators, int max_pieces, int include_remainder_at_max)
 +{
 +	char** split;
 +
@@ -1061,7 +1061,7 @@
 +
 +
 +
-+char* trim_flanking_whitespace(char* str)
++static char* trim_flanking_whitespace(char* str)
 +{
 +	int new_start = 0;
 +	int new_length = 0;
@@ -1113,7 +1113,7 @@
 +}
 +
 +
-+unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length)
++static unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length)
 +{
 +	int max_read_size = read_block_size;
 +	unsigned char* read_string = (unsigned char*)malloc(max_read_size+1);
@@ -3999,14 +3999,14 @@
 +
 +
 +/* utility functions necessary for module to work across multiple iptables versions */
-+static void param_problem_exit_error(char* msg);
++//static void param_problem_exit_error(char* msg);
 +
 +
-+void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info);
++static void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info);
 +
-+char** split_on_separators(char* line, char* separators, int num_separators, int max_pieces, int include_remainder_at_max);
-+char* trim_flanking_whitespace(char* str);
-+unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length);
++static char** split_on_separators(char* line, char* separators, int num_separators, int max_pieces, int include_remainder_at_max);
++static char* trim_flanking_whitespace(char* str);
++static unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length);
 +
 +#define DEFAULT_MAX      300
 +
@@ -4294,17 +4294,17 @@
 +
 +
 +
-+static void param_problem_exit_error(char* msg)
++/*static void param_problem_exit_error(char* msg)
 +{
 +	#ifdef xtables_error
 +		xtables_error(PARAMETER_PROBLEM, msg);
 +	#else
 +		exit_error(PARAMETER_PROBLEM, msg);
 +	#endif
-+}
++}*/
 +
 +
-+void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info)
++static void parse_ips_and_ranges(char* addr_str, struct ipt_webmon_info *info)
 +{
 +	char** addr_parts = split_on_separators(addr_str, ",", 1, -1, 0);
 +
@@ -4450,7 +4450,7 @@
 + * result is dynamically allocated, MUST be freed after call-- even if 
 + * line is empty (you still get a valid char** pointer to to a NULL char*)
 + */
-+char** split_on_separators(char* line_str, char* separators, int num_separators, int max_pieces, int include_remainder_at_max)
++static char** split_on_separators(char* line_str, char* separators, int num_separators, int max_pieces, int include_remainder_at_max)
 +{
 +	char** split;
 +
@@ -4569,7 +4569,7 @@
 +
 +
 +
-+char* trim_flanking_whitespace(char* str)
++static char* trim_flanking_whitespace(char* str)
 +{
 +	int new_start = 0;
 +	int new_length = 0;
@@ -4621,7 +4621,7 @@
 +}
 +
 +
-+unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length)
++static unsigned char* read_entire_file(FILE* in, unsigned long read_block_size, unsigned long *length)
 +{
 +	int max_read_size = read_block_size;
 +	unsigned char* read_string = (unsigned char*)malloc(max_read_size+1);
