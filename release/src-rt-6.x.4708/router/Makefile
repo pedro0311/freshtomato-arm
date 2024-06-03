@@ -1953,7 +1953,7 @@ sqlite/stamp-h1:
 	cd sqlite && autoreconf -fsi && \
 		CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -fPIC -std=gnu99 -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
+		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static=no \
 			--disable-readline --enable-dynamic-extensions=no --enable-threadsafe
 	@touch $@
 
@@ -2866,7 +2866,7 @@ libcap-ng/stamp-h1:
 	cd libcap-ng && ./autogen.sh && \
 		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr --enable-shared --bindir=/usr/sbin --libdir=/usr/lib
+		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static=no --bindir=/usr/sbin --libdir=/usr/lib
 	@touch $@
 
 libcap-ng: libcap-ng/stamp-h1
