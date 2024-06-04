@@ -2,11 +2,17 @@
 #define _LIBIPULOG_H
 
 #include <errno.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/types.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* FIXME: glibc sucks */
-#ifndef MSG_TRUNC 
+#ifndef MSG_TRUNC
 #define MSG_TRUNC	0x20
 #endif
 
@@ -32,9 +38,9 @@ typedef struct ulog_packet_msg {
 struct ipulog_handle;
 extern int ipulog_errno;
 
-u_int32_t ipulog_group2gmask(u_int32_t group);
+uint32_t ipulog_group2gmask(uint32_t group);
 
-struct ipulog_handle *ipulog_create_handle(u_int32_t gmask, u_int32_t rmem);
+struct ipulog_handle *ipulog_create_handle(uint32_t gmask, uint32_t rmem);
 
 void ipulog_destroy_handle(struct ipulog_handle *h);
 
@@ -49,7 +55,7 @@ const char *ipulog_strerror(int errcode);
 
 void ipulog_perror(const char *s);
 
-enum 
+enum
 {
 	IPULOG_ERR_NONE = 0,
 	IPULOG_ERR_IMPL,
@@ -65,5 +71,8 @@ enum
 };
 #define IPULOG_MAXERR IPULOG_ERR_INVNL
 
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
 
 #endif /* _LIBIPULOG_H */

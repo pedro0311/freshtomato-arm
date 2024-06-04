@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <net/if.h>
 #include <netinet/in.h>
 #include <libnfnetlink/libnfnetlink.h>
 #include <libnetfilter_log/libnetfilter_log.h>
@@ -20,7 +21,7 @@ struct ipulog_handle
 	struct nlmsghdr *last_nlh;
 #if 0
 	int fd;
-	u_int8_t blocking;
+	uint8_t blocking;
 	struct sockaddr_nl local;
 	struct sockaddr_nl peer;
 #endif
@@ -31,7 +32,7 @@ static const struct ipulog_errmap_t
 {
 	int errcode;
 	const char *message;
-} ipulog_errmap[] = 
+} ipulog_errmap[] =
 {
 	{ IPULOG_ERR_NONE, "No error" },
 	{ IPULOG_ERR_IMPL, "Not implemented yet" },
@@ -72,7 +73,7 @@ const char *ipulog_strerror(int errcode)
 }
 
 /* convert a netlink group (1-32) to a group_mask suitable for create_handle */
-u_int32_t ipulog_group2gmask(u_int32_t group)
+uint32_t ipulog_group2gmask(uint32_t group)
 {
 	if (group < 1 || group > 32)
 	{
@@ -83,23 +84,22 @@ u_int32_t ipulog_group2gmask(u_int32_t group)
 }
 
 /* create a ipulog handle for the reception of packets sent to gmask */
-struct ipulog_handle *ipulog_create_handle(u_int32_t gmask, 
-					   u_int32_t rcvbufsize)
+struct ipulog_handle *ipulog_create_handle(uint32_t gmask,
+					   uint32_t rcvbufsize)
 {
 	int rv;
 	struct ipulog_handle *h;
 	unsigned int group = gmask2group(gmask);
 
-	h = malloc(sizeof(*h)+PAYLOAD_SIZE);
+	h = calloc(1, sizeof(*h)+PAYLOAD_SIZE);
 	if (! h) {
 		ipulog_errno = IPULOG_ERR_HANDLE;
 		return NULL;
 	}
-	memset(h, 0, sizeof(*h));
 	h->nfulh = nflog_open();
 	if (!h->nfulh)
 		goto out_free;
-	
+
 	/* bind_pf returns EEXIST if we are already registered */
 	rv = nflog_bind_pf(h->nfulh, AF_INET);
 	if (rv < 0 && rv != -EEXIST)
@@ -146,7 +146,7 @@ next_msg:	printf("next\n");
 
 	nfnl_parse_attr(tb, NFULA_MAX, NFM_NFA(NLMSG_DATA(nlh)),
 			NFM_PAYLOAD(nlh));
-	
+
 	if (!tb[NFULA_PACKET_HDR-1])
 		goto next_msg;
 
@@ -155,25 +155,34 @@ next_msg:	printf("next\n");
 	h->upmsg.hook = hdr->hook;
 
 	if (tb[NFULA_MARK-1])
-		h->upmsg.mark = ntohl(*(u_int32_t *)NFA_DATA(tb[NFULA_MARK-1]));
+		h->upmsg.mark = ntohl(*(uint32_t *)NFA_DATA(tb[NFULA_MARK-1]));
 	else
 		h->upmsg.mark = 0;
 
-	if (tb[NFULA_TIMESTAMP]) {
-		/* FIXME: 64bit network-to-host */
-		h->upmsg.timestamp_sec = h->upmsg.timestamp_usec = 0;
+	if (tb[NFULA_TIMESTAMP-1]) {
+		struct nfulnl_msg_packet_timestamp *ts;
+		ts = NFA_DATA(tb[NFULA_TIMESTAMP-1]);
+
+		h->upmsg.timestamp_sec  = __be64_to_cpu(ts->sec);
+		h->upmsg.timestamp_usec = __be64_to_cpu(ts->usec);
 	} else
 		h->upmsg.timestamp_sec = h->upmsg.timestamp_usec = 0;
 
 	if (tb[NFULA_IFINDEX_INDEV-1]) {
-		/* FIXME: ifindex lookup */	
-		h->upmsg.indev_name[0] = '\0';
+		void *indev_ptr = NFA_DATA(tb[NFULA_IFINDEX_INDEV-1]);
+		uint32_t indev_idx = ntohl(*(uint32_t *)indev_ptr);
+
+		if (!if_indextoname(indev_idx, h->upmsg.indev_name))
+			h->upmsg.indev_name[0] = '\0';
 	} else
 		h->upmsg.indev_name[0] = '\0';
 
 	if (tb[NFULA_IFINDEX_OUTDEV-1]) {
-		/* FIXME: ifindex lookup */	
-		h->upmsg.outdev_name[0] = '\0';
+		void *outdev_ptr = NFA_DATA(tb[NFULA_IFINDEX_OUTDEV-1]);
+		uint32_t outdev_idx = ntohl(*(uint32_t *)outdev_ptr);
+
+		if (!if_indextoname(outdev_idx, h->upmsg.outdev_name))
+			h->upmsg.outdev_name[0] = '\0';
 	} else
 		h->upmsg.outdev_name[0] = '\0';
 
@@ -198,7 +207,7 @@ next_msg:	printf("next\n");
 		h->upmsg.data_len = NFA_PAYLOAD(tb[NFULA_PAYLOAD-1]);
 	} else
 		h->upmsg.data_len = 0;
-	
+
 	return &h->upmsg;
 }
 
@@ -223,4 +232,3 @@ void ipulog_perror(const char *s)
 		fprintf(stderr, ": %s", strerror(errno));
 	fputc('\n', stderr);
 }
-

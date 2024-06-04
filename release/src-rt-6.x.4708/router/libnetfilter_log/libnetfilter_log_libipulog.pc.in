@@ -1,0 +1,16 @@
+# libnetfilter_log_libipulog pkg-config file
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libnetfilter_log_libipulog
+Description: Netfilter ULOG userspace compat library
+URL: http://netfilter.org/projects/libnetfilter_log/
+Version: @VERSION@
+Requires.private: libnetfilter_log >= @VERSION@, \
+                  libnfnetlink >= @LIBNFNETLINK_MIN_VERSION@
+Conflicts:
+Libs: -L${libdir} -lnetfilter_log_libipulog
+Cflags: -I${includedir}

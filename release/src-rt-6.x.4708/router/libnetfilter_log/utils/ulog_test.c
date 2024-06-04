@@ -22,12 +22,19 @@ void handle_packet(ulog_packet_msg_t *pkt)
 {
 	unsigned char *p;
 	int i;
-	
+
 	printf("Hook=%u Mark=%lu len=%zu ",
 	       pkt->hook, pkt->mark, pkt->data_len);
 	if (strlen(pkt->prefix))
 		printf("Prefix=%s ", pkt->prefix);
-	
+	if (strlen(pkt->indev_name))
+		printf("Input device=%s ", pkt->indev_name);
+	if (strlen(pkt->outdev_name))
+		printf("Output device=%s ", pkt->outdev_name);
+	if (pkt->timestamp_sec || pkt->timestamp_usec)
+		printf("Timestamp=%ld.%06lds ",
+		       pkt->timestamp_sec, pkt->timestamp_usec);
+
 	if (pkt->mac_len)
 	{
 		printf("mac=");
@@ -56,7 +63,7 @@ int main(int argc, char *argv[])
 	buf = malloc(MYBUFSIZ);
 	if (!buf)
 		exit(1);
-	
+
 	/* create ipulog handle */
 	h = ipulog_create_handle(ipulog_group2gmask(atoi(argv[2])), 65535);
 	if (!h)
@@ -80,7 +87,7 @@ int main(int argc, char *argv[])
 			handle_packet(upkt);
 		}
 	}
-	
+
 	/* just to give it a cleaner look */
 	ipulog_destroy_handle(h);
 	return 0;
