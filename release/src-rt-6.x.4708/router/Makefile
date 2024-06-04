@@ -1180,7 +1180,7 @@ ifneq ($(wildcard $(SRCBASE_DHD)/dhd/exe),)
 	install $(SRCBASE_DHD)/dhd/exe/dhd $(INSTALLDIR)/dhd/usr/sbin/dhd
 	$(STRIP) $(INSTALLDIR)/dhd/usr/sbin/dhd
 endif
-endif	# TCONFIG_DHDAP
+endif # TCONFIG_DHDAP
 
 busybox: dummy
 	@$(SEP)
@@ -3277,12 +3277,12 @@ lz4:
 
 lz4-install:
 ifeq ($(TCONFIG_OPENVPN),y)
-ifeq ($(TCONFIG_BCMARM),y)
+ ifeq ($(TCONFIG_BCMARM),y)
 	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1
 	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so
-endif
+ endif
 endif
 	@true
 
@@ -3979,12 +3979,12 @@ libnetfilter_conntrack: libnetfilter_conntrack/stamp-h1
 
 libnetfilter_conntrack-install:
 	install -d $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/
-	install libnetfilter_conntrack/src/.libs/libnetfilter_conntrack.so.3.7.0 \
-	$(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.7.0
-	$(STRIP) $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.7.0
+	install libnetfilter_conntrack/src/.libs/libnetfilter_conntrack.so.3.8.0 \
+	$(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.8.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/libnetfilter_conntrack.so.3.8.0
 	cd $(INSTALLDIR)/libnetfilter_conntrack/usr/lib/ && \
-		ln -sf libnetfilter_conntrack.so.3.7.0 libnetfilter_conntrack.so.3 && \
-		ln -sf libnetfilter_conntrack.so.3.7.0 libnetfilter_conntrack.so
+		ln -sf libnetfilter_conntrack.so.3.8.0 libnetfilter_conntrack.so.3 && \
+		ln -sf libnetfilter_conntrack.so.3.8.0 libnetfilter_conntrack.so
 
 libnetfilter_conntrack-clean:
 	-@$(MAKE) -C libnetfilter_conntrack clean
@@ -3993,9 +3993,9 @@ libnetfilter_conntrack-clean:
 
 libnetfilter_log/stamp-h1:
 	cd libnetfilter_log && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOOLCHAIN)/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib -L$(TOP)/libnfnetlink/src/.libs" \
-		PKG_CONFIG_PATH="$(TOP)/libnfnetlink" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOOLCHAIN)/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
+		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr
 	@touch $@
 
@@ -4006,12 +4006,12 @@ libnetfilter_log: libnetfilter_log/stamp-h1
 
 libnetfilter_log-install:
 	install -d $(INSTALLDIR)/libnetfilter_log/usr/lib/
-	install libnetfilter_log/src/.libs/libnetfilter_log.so.1.1.0 \
-	$(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.1.0
-	$(STRIP) $(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.1.0
+	install libnetfilter_log/src/.libs/libnetfilter_log.so.1.2.0 \
+	$(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.2.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_log/usr/lib/libnetfilter_log.so.1.2.0
 	cd $(INSTALLDIR)/libnetfilter_log/usr/lib/ && \
-		ln -sf libnetfilter_log.so.1.1.0 libnetfilter_log.so.1 && \
-		ln -sf libnetfilter_log.so.1.1.0 libnetfilter_log.so
+		ln -sf libnetfilter_log.so.1.2.0 libnetfilter_log.so.1 && \
+		ln -sf libnetfilter_log.so.1.2.0 libnetfilter_log.so
 
 libnetfilter_log-clean:
 	-@$(MAKE) -C libnetfilter_log clean
@@ -4033,12 +4033,12 @@ libnetfilter_queue: libnetfilter_queue/stamp-h1
 
 libnetfilter_queue-install:
 	install -d $(INSTALLDIR)/libnetfilter_queue/usr/lib/
-	install libnetfilter_queue/src/.libs/libnetfilter_queue.so.1.4.0 \
-	$(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.4.0
-	$(STRIP) $(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.4.0
+	install libnetfilter_queue/src/.libs/libnetfilter_queue.so.1.5.0 \
+	$(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.5.0
+	$(STRIP) $(INSTALLDIR)/libnetfilter_queue/usr/lib/libnetfilter_queue.so.1.5.0
 	cd $(INSTALLDIR)/libnetfilter_queue/usr/lib/ && \
-		ln -sf libnetfilter_queue.so.1.4.0 libnetfilter_queue.so.1 && \
-		ln -sf libnetfilter_queue.so.1.4.0 libnetfilter_queue.so
+		ln -sf libnetfilter_queue.so.1.5.0 libnetfilter_queue.so.1 && \
+		ln -sf libnetfilter_queue.so.1.5.0 libnetfilter_queue.so
 
 libnetfilter_queue-clean:
 	-@$(MAKE) -C libnetfilter_queue clean
