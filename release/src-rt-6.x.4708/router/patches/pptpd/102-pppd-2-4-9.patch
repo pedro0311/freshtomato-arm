@@ -6,7 +6,8 @@
  #include <string.h>
 -#include <linux/if.h>
 -#include <linux/limits.h>
- #include <pppd/pppd.h>
+-#include <pppd/pppd.h>
++#include "pppd/pppd.h"
 -#include <pppd/options.h>
  
 -char pppd_version[] = PPPD_VERSION;
