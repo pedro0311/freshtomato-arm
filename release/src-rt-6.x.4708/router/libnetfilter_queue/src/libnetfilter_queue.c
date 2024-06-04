@@ -4,7 +4,7 @@
  * (C) 2005, 2008-2010 by Pablo Neira Ayuso <pablo@netfilter.org>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 
+ *  it under the terms of the GNU General Public License version 2
  *  as published by the Free Software Foundation (or any later at your option)
  *
  *  This program is distributed in the hope that it will be useful,
@@ -39,49 +39,60 @@
  *
  * libnetfilter_queue is a userspace library providing an API to packets that
  * have been queued by the kernel packet filter. It is is part of a system that
- * deprecates the old ip_queue / libipq mechanism.
+ * replaces the old ip_queue / libipq mechanism (withdrawn in kernel 3.5).
  *
  * libnetfilter_queue homepage is:
- * 	http://netfilter.org/projects/libnetfilter_queue/
+ * 	https://netfilter.org/projects/libnetfilter_queue/
  *
- * \section Dependencies
- * libnetfilter_queue requires libnfnetlink and a kernel that includes the
- * nfnetlink_queue subsystem (i.e. 2.6.14 or later).
+ * \section deps Dependencies
+ * libnetfilter_queue requires libmnl, libnfnetlink and a kernel that includes
+ * the Netfilter NFQUEUE over NFNETLINK interface (i.e. 2.6.14 or later).
  *
- * \section Main Features
+ * \section features Main Features
  *  - receiving queued packets from the kernel nfnetlink_queue subsystem
- *  - issuing verdicts and/or reinjecting altered packets to the kernel
+ *  - issuing verdicts and possibly reinjecting altered packets to the kernel
  *  nfnetlink_queue subsystem
  *
- * The cinematic is the following: When an iptables rules with target NFQUEUE
- * matches, the kernel en-queued the packet in a chained list. It then format
- * a nfnetlink message and sends the information (packet data , packet id and
- * metadata) via a socket to the software connected to the queue. The software
- * can then read the message.
+ * The cinematic is the following: When an nft rule with action **queue**
+ * matches, the kernel terminates the current nft chain and enqueues the packet
+ * in a chained list. It then formats and sends an nfnetlink message containing
+ * the packet id and whatever information the userspace program configured to
+ * receive (packet data and/or metadata) via a socket to the userspace program.
  *
- * To remove the packet from the queue, the userspace software must issue a
- * verdict asking kernel to accept or drop the packet. Userspace can also alter
- * the packet. Verdict can be done in asynchronous manner, as the only needed
- * information is the packet id.
+ * The userspace program must issue a verdict advising the kernel to **accept**
+ * or **drop** the packet. Either verdict takes the packet off the queue:
+ * **drop** discards the packet while
+ * **accept** passes it on to the next chain.
+ * Userspace can also alter packet contents or metadata (e.g. packet mark,
+ * contrack mark). Verdict can be done in asynchronous manner, as the only
+ * needed information is the packet id.
  *
- * When a queue is full, packets that should have been en-queued are dropped by
- * kernel instead of being en-queued.
+ * When a queue is full, packets that should have been enqueued are dropped by
+ * kernel instead of being enqueued.
  *
- * \section Git Tree
- * The current development version of libnetfilter_queue can be accessed
- * at https://git.netfilter.org/cgi-bin/gitweb.cgi?p=libnetfilter_queue.git;a=summary.
+ * \section git Git Tree
+ * The current development version of libnetfilter_queue can be accessed at
+ * https://git.netfilter.org/libnetfilter_queue.
  *
- * \section Privileges
+ * \section privs Privileges
  * You need the CAP_NET_ADMIN capability in order to allow your application
  * to receive from and to send packets to kernel-space.
  *
- * \section Using libnetfilter_queue
- * 
- * To write your own program using libnetfilter_queue, you should start by reading
- * the doxygen documentation (start by \link LibrarySetup \endlink page) and
- * nf-queue.c source file.
+ * \section using Using libnetfilter_queue
  *
- * Another source of information on libnetfilter_queue usage is the following
+ * To write your own program using libnetfilter_queue, you should start by
+ * reading (or, if feasible, compiling and stepping through with *gdb*)
+ * nf-queue.c source file.
+ * Simple compile line:
+ * \verbatim
+gcc -g3 -ggdb -Wall -lmnl -lnetfilter_queue -o nf-queue nf-queue.c
+\endverbatim
+ * The doxygen documentation \link LibrarySetup \endlink is Deprecated and
+ * incompatible with non-deprecated functions. It is hoped to produce a
+ * corresponding non-deprecated (*Current*) topic soon.
+ *
+ * Somewhat outdated but possibly providing some insight into
+ * libnetfilter_queue usage is the following
  * article:
  *  https://home.regit.org/netfilter-en/using-nfqueue-and-libnetfilter_queue/
  *
@@ -133,11 +144,10 @@ struct nfq_data {
 	struct nfattr **data;
 };
 
-int nfq_errno;
-EXPORT_SYMBOL(nfq_errno);
+EXPORT_SYMBOL int nfq_errno;
 
 /***********************************************************************
- * low level stuff 
+ * low level stuff
  ***********************************************************************/
 
 static void del_qh(struct nfq_q_handle *qh)
@@ -218,22 +228,22 @@ static int __nfq_rcv_pkt(struct nlmsghdr *nlh, struct nfattr *nfa[],
 
 /* public interface */
 
+EXPORT_SYMBOL
 struct nfnl_handle *nfq_nfnlh(struct nfq_handle *h)
 {
 	return h->nfnlh;
 }
-EXPORT_SYMBOL(nfq_nfnlh);
 
 /**
  *
  * \defgroup Queue Queue handling [DEPRECATED]
  *
- * Once libnetfilter_queue library has been initialised (See 
+ * Once libnetfilter_queue library has been initialised (See
  * \link LibrarySetup \endlink), it is possible to bind the program to a
  * specific queue. This can be done by using nfq_create_queue().
  *
  * The queue can then be tuned via nfq_set_mode() or nfq_set_queue_maxlen().
- * 
+ *
  * Here's a little code snippet that create queue numbered 0:
  * \verbatim
 	printf("binding this socket to queue '0'\n");
@@ -294,11 +304,11 @@ EXPORT_SYMBOL(nfq_nfnlh);
  * over the netlink connection associated with the given queue connection
  * handle.
  */
+EXPORT_SYMBOL
 int nfq_fd(struct nfq_handle *h)
 {
 	return nfnl_fd(nfq_nfnlh(h));
 }
-EXPORT_SYMBOL(nfq_fd);
 /**
  * @}
  */
@@ -308,7 +318,7 @@ EXPORT_SYMBOL(nfq_fd);
  *
  * Library initialisation is made in two steps.
  *
- * First step is to call nfq_open() to open a NFQUEUE handler. 
+ * First step is to call nfq_open() to open a NFQUEUE handler.
  *
  * Second step is to tell the kernel that userspace queueing is handle by
  * NFQUEUE for the selected protocol. This is made by calling nfq_unbind_pf()
@@ -349,6 +359,7 @@ EXPORT_SYMBOL(nfq_fd);
  *
  * \return a pointer to a new queue handle or NULL on failure.
  */
+EXPORT_SYMBOL
 struct nfq_handle *nfq_open(void)
 {
 	struct nfnl_handle *nfnlh = nfnl_open();
@@ -366,7 +377,6 @@ struct nfq_handle *nfq_open(void)
 
 	return qh;
 }
-EXPORT_SYMBOL(nfq_open);
 
 /**
  * @}
@@ -377,11 +387,12 @@ EXPORT_SYMBOL(nfq_open);
  * \param nfnlh Netfilter netlink connection handle obtained by calling nfnl_open()
  *
  * This function obtains a netfilter queue connection handle using an existing
- * netlink connection. This function is used internally to implement 
+ * netlink connection. This function is used internally to implement
  * nfq_open(), and should typically not be called directly.
  *
  * \return a pointer to a new queue handle or NULL on failure.
  */
+EXPORT_SYMBOL
 struct nfq_handle *nfq_open_nfnl(struct nfnl_handle *nfnlh)
 {
 	struct nfnl_callback pkt_cb = {
@@ -398,7 +409,7 @@ struct nfq_handle *nfq_open_nfnl(struct nfnl_handle *nfnlh)
 	memset(h, 0, sizeof(*h));
 	h->nfnlh = nfnlh;
 
-	h->nfnlssh = nfnl_subsys_open(h->nfnlh, NFNL_SUBSYS_QUEUE, 
+	h->nfnlssh = nfnl_subsys_open(h->nfnlh, NFNL_SUBSYS_QUEUE,
 				      NFQNL_MSG_MAX, 0);
 	if (!h->nfnlssh) {
 		/* FIXME: nfq_errno */
@@ -419,7 +430,6 @@ out_free:
 	free(h);
 	return NULL;
 }
-EXPORT_SYMBOL(nfq_open_nfnl);
 
 /**
  * \addtogroup LibrarySetup
@@ -436,18 +446,18 @@ EXPORT_SYMBOL(nfq_open_nfnl);
  *
  * This function closes the nfqueue handler and free associated resources.
  *
- * \return 0 on success, non-zero on failure. 
+ * \return 0 on success, non-zero on failure.
  */
+EXPORT_SYMBOL
 int nfq_close(struct nfq_handle *h)
 {
 	int ret;
-	
+
 	ret = nfnl_close(h->nfnlh);
 	if (ret == 0)
 		free(h);
 	return ret;
 }
-EXPORT_SYMBOL(nfq_close);
 
 /**
  * nfq_bind_pf - bind a nfqueue handler to a given protocol family
@@ -460,11 +470,11 @@ EXPORT_SYMBOL(nfq_close);
  *
  * \return integer inferior to 0 in case of failure
  */
+EXPORT_SYMBOL
 int nfq_bind_pf(struct nfq_handle *h, uint16_t pf)
 {
 	return __build_send_cfg_msg(h, NFQNL_CFG_CMD_PF_BIND, 0, pf);
 }
-EXPORT_SYMBOL(nfq_bind_pf);
 
 /**
  * nfq_unbind_pf - unbind nfqueue handler from a protocol family
@@ -476,11 +486,11 @@ EXPORT_SYMBOL(nfq_bind_pf);
  *
  * This call is obsolete, Linux kernels from 3.8 onwards ignore it.
  */
+EXPORT_SYMBOL
 int nfq_unbind_pf(struct nfq_handle *h, uint16_t pf)
 {
 	return __build_send_cfg_msg(h, NFQNL_CFG_CMD_PF_UNBIND, 0, pf);
 }
-EXPORT_SYMBOL(nfq_unbind_pf);
 
 
 /**
@@ -503,15 +513,15 @@ EXPORT_SYMBOL(nfq_unbind_pf);
  * \return a nfq_q_handle pointing to the newly created queue
  *
  * Creates a new queue handle, and returns it.  The new queue is identified by
- * #num, and the callback specified by #cb will be called for each enqueued
- * packet.  The #data argument will be passed unchanged to the callback.  If
- * a queue entry with id #num already exists, this function will return failure
- * and the existing entry is unchanged.
+ * \b num, and the callback specified by \b cb will be called for each enqueued
+ * packet.  The \b data argument will be passed unchanged to the callback.  If
+ * a queue entry with id \b num already exists,
+ * this function will return failure and the existing entry is unchanged.
  *
  * The nfq_callback type is defined in libnetfilter_queue.h as:
  * \verbatim
 typedef int nfq_callback(struct nfq_q_handle *qh,
-		    	 struct nfgenmsg *nfmsg,
+			 struct nfgenmsg *nfmsg,
 			 struct nfq_data *nfad, void *data);
 \endverbatim
  *
@@ -524,10 +534,9 @@ typedef int nfq_callback(struct nfq_q_handle *qh,
  * The callback should return < 0 to stop processing.
  */
 
-struct nfq_q_handle *nfq_create_queue(struct nfq_handle *h, 
-		uint16_t num,
-		nfq_callback *cb,
-		void *data)
+EXPORT_SYMBOL
+struct nfq_q_handle *nfq_create_queue(struct nfq_handle *h, uint16_t num,
+				      nfq_callback *cb, void *data)
 {
 	int ret;
 	struct nfq_q_handle *qh;
@@ -555,7 +564,6 @@ struct nfq_q_handle *nfq_create_queue(struct nfq_handle *h,
 	add_qh(qh);
 	return qh;
 }
-EXPORT_SYMBOL(nfq_create_queue);
 
 /**
  * @}
@@ -573,6 +581,7 @@ EXPORT_SYMBOL(nfq_create_queue);
  * Removes the binding for the specified queue handle. This call also unbind
  * from the nfqueue handler, so you don't have to call nfq_unbind_pf.
  */
+EXPORT_SYMBOL
 int nfq_destroy_queue(struct nfq_q_handle *qh)
 {
 	int ret = __build_send_cfg_msg(qh->h, NFQNL_CFG_CMD_UNBIND, qh->id, 0);
@@ -583,7 +592,6 @@ int nfq_destroy_queue(struct nfq_q_handle *qh)
 
 	return ret;
 }
-EXPORT_SYMBOL(nfq_destroy_queue);
 
 /**
  * nfq_handle_packet - handle a packet received from the nfqueue subsystem
@@ -597,11 +605,11 @@ EXPORT_SYMBOL(nfq_destroy_queue);
  *
  * \return 0 on success, non-zero on failure.
  */
+EXPORT_SYMBOL
 int nfq_handle_packet(struct nfq_handle *h, char *buf, int len)
 {
 	return nfnl_handle_packet(h->nfnlh, buf, len);
 }
-EXPORT_SYMBOL(nfq_handle_packet);
 
 /**
  * nfq_set_mode - set the amount of packet data that nfqueue copies to userspace
@@ -618,8 +626,8 @@ EXPORT_SYMBOL(nfq_handle_packet);
  *
  * \return -1 on error; >=0 otherwise.
  */
-int nfq_set_mode(struct nfq_q_handle *qh,
-		uint8_t mode, uint32_t range)
+EXPORT_SYMBOL
+int nfq_set_mode(struct nfq_q_handle *qh, uint8_t mode, uint32_t range)
 {
 	union {
 		char buf[NFNL_HEADER_LEN
@@ -638,13 +646,12 @@ int nfq_set_mode(struct nfq_q_handle *qh,
 
 	return nfnl_query(qh->h->nfnlh, &u.nmh);
 }
-EXPORT_SYMBOL(nfq_set_mode);
 
 /**
  * nfq_set_queue_flags - set flags (options) for the kernel queue
  * \param qh Netfilter queue handle obtained by call to nfq_create_queue().
  * \param mask specifies which flag bits to modify
- * \param flag bitmask of flags
+ * \param flags bitmask of flags
  *
  * Existing flags, that you may want to combine, are:
  *
@@ -708,8 +715,8 @@ EXPORT_SYMBOL(nfq_set_mode);
  *
  * \return -1 on error with errno set appropriately; =0 otherwise.
  */
-int nfq_set_queue_flags(struct nfq_q_handle *qh,
-			uint32_t mask, uint32_t flags)
+EXPORT_SYMBOL
+int nfq_set_queue_flags(struct nfq_q_handle *qh, uint32_t mask, uint32_t flags)
 {
 	union {
 		char buf[NFNL_HEADER_LEN
@@ -729,7 +736,6 @@ int nfq_set_queue_flags(struct nfq_q_handle *qh,
 
 	return nfnl_query(qh->h->nfnlh, &u.nmh);
 }
-EXPORT_SYMBOL(nfq_set_queue_flags);
 
 /**
  * nfq_set_queue_maxlen - Set kernel queue maximum length parameter
@@ -742,8 +748,8 @@ EXPORT_SYMBOL(nfq_set_queue_flags);
  *
  * \return -1 on error; >=0 otherwise.
  */
-int nfq_set_queue_maxlen(struct nfq_q_handle *qh,
-				uint32_t queuelen)
+EXPORT_SYMBOL
+int nfq_set_queue_maxlen(struct nfq_q_handle *qh, uint32_t queuelen)
 {
 	union {
 		char buf[NFNL_HEADER_LEN
@@ -760,7 +766,6 @@ int nfq_set_queue_maxlen(struct nfq_q_handle *qh,
 
 	return nfnl_query(qh->h->nfnlh, &u.nmh);
 }
-EXPORT_SYMBOL(nfq_set_queue_maxlen);
 
 /**
  * @}
@@ -825,19 +830,19 @@ static int __set_verdict(struct nfq_q_handle *qh, uint32_t id,
  */
 
 /**
- * nfq_set_verdict - issue a verdict on a packet 
+ * nfq_set_verdict - issue a verdict on a packet
  * \param qh Netfilter queue handle obtained by call to nfq_create_queue().
  * \param id	ID assigned to packet by netfilter.
  * \param verdict verdict to return to netfilter (NF_ACCEPT, NF_DROP)
- * \param data_len number of bytes of data pointed to by #buf
+ * \param data_len number of bytes of data pointed to by \b buf
  * \param buf the buffer that contains the packet data
  *
- * Can be obtained by: 
+ * Can be obtained by:
  * \verbatim
 	int id;
 	struct nfqnl_msg_packet_hdr *ph = nfq_get_msg_packet_hdr(tb);
 	if (ph)
- 		id = ntohl(ph->packet_id);
+		id = ntohl(ph->packet_id);
 \endverbatim
  *
  * Notifies netfilter of the userspace verdict for the given packet.  Every
@@ -847,14 +852,14 @@ static int __set_verdict(struct nfq_q_handle *qh, uint32_t id,
  *
  * \return -1 on error; >= 0 otherwise.
  */
+EXPORT_SYMBOL
 int nfq_set_verdict(struct nfq_q_handle *qh, uint32_t id,
-		uint32_t verdict, uint32_t data_len,
-		const unsigned char *buf)
+		    uint32_t verdict, uint32_t data_len,
+		    const unsigned char *buf)
 {
 	return __set_verdict(qh, id, verdict, 0, 0, data_len, buf,
 						NFQNL_MSG_VERDICT);
 }
-EXPORT_SYMBOL(nfq_set_verdict);
 
 /**
  * nfq_set_verdict2 - like nfq_set_verdict, but you can set the mark.
@@ -862,9 +867,10 @@ EXPORT_SYMBOL(nfq_set_verdict);
  * \param id	ID assigned to packet by netfilter.
  * \param verdict verdict to return to netfilter (NF_ACCEPT, NF_DROP)
  * \param mark mark to put on packet
- * \param data_len number of bytes of data pointed to by #buf
+ * \param data_len number of bytes of data pointed to by \b buf
  * \param buf the buffer that contains the packet data
  */
+EXPORT_SYMBOL
 int nfq_set_verdict2(struct nfq_q_handle *qh, uint32_t id,
 		     uint32_t verdict, uint32_t mark,
 		     uint32_t data_len, const unsigned char *buf)
@@ -872,7 +878,6 @@ int nfq_set_verdict2(struct nfq_q_handle *qh, uint32_t id,
 	return __set_verdict(qh, id, verdict, htonl(mark), 1, data_len,
 						buf, NFQNL_MSG_VERDICT);
 }
-EXPORT_SYMBOL(nfq_set_verdict2);
 
 /**
  * nfq_set_verdict_batch - issue verdicts on several packets at once
@@ -881,18 +886,18 @@ EXPORT_SYMBOL(nfq_set_verdict2);
  * \param verdict verdict to return to netfilter (NF_ACCEPT, NF_DROP)
  *
  * Unlike nfq_set_verdict, the verdict is applied to all queued packets
- * whose packet id is smaller or equal to #id.
+ * whose packet id is smaller or equal to \b id.
  *
  * batch support was added in Linux 3.1.
  * These functions will fail silently on older kernels.
  */
+EXPORT_SYMBOL
 int nfq_set_verdict_batch(struct nfq_q_handle *qh, uint32_t id,
-					  uint32_t verdict)
+			  uint32_t verdict)
 {
 	return __set_verdict(qh, id, verdict, 0, 0, 0, NULL,
 					NFQNL_MSG_VERDICT_BATCH);
 }
-EXPORT_SYMBOL(nfq_set_verdict_batch);
 
 /**
  * nfq_set_verdict_batch2 - like nfq_set_verdict_batch, but you can set a mark.
@@ -901,13 +906,13 @@ EXPORT_SYMBOL(nfq_set_verdict_batch);
  * \param verdict verdict to return to netfilter (NF_ACCEPT, NF_DROP)
  * \param mark mark to put on packet
  */
+EXPORT_SYMBOL
 int nfq_set_verdict_batch2(struct nfq_q_handle *qh, uint32_t id,
-		     uint32_t verdict, uint32_t mark)
+			   uint32_t verdict, uint32_t mark)
 {
 	return __set_verdict(qh, id, verdict, htonl(mark), 1, 0,
 				NULL, NFQNL_MSG_VERDICT_BATCH);
 }
-EXPORT_SYMBOL(nfq_set_verdict_batch2);
 
 /**
  * nfq_set_verdict_mark - like nfq_set_verdict, but you can set the mark.
@@ -915,7 +920,7 @@ EXPORT_SYMBOL(nfq_set_verdict_batch2);
  * \param id	ID assigned to packet by netfilter.
  * \param verdict verdict to return to netfilter (NF_ACCEPT, NF_DROP)
  * \param mark the mark to put on the packet, in network byte order.
- * \param data_len number of bytes of data pointed to by #buf
+ * \param data_len number of bytes of data pointed to by \b buf
  * \param buf the buffer that contains the packet data
  *
  * \return -1 on error; >= 0 otherwise.
@@ -923,14 +928,14 @@ EXPORT_SYMBOL(nfq_set_verdict_batch2);
  * This function is deprecated since it is broken, its use is highly
  * discouraged. Please, use nfq_set_verdict2 instead.
  */
+EXPORT_SYMBOL
 int nfq_set_verdict_mark(struct nfq_q_handle *qh, uint32_t id,
-		uint32_t verdict, uint32_t mark,
-		uint32_t data_len, const unsigned char *buf)
+			 uint32_t verdict, uint32_t mark,
+			 uint32_t data_len, const unsigned char *buf)
 {
 	return __set_verdict(qh, id, verdict, mark, 1, data_len, buf,
 						NFQNL_MSG_VERDICT);
 }
-EXPORT_SYMBOL(nfq_set_verdict_mark);
 
 /**
  * @}
@@ -939,7 +944,7 @@ EXPORT_SYMBOL(nfq_set_verdict_mark);
 
 
 /*************************************************************
- * Message parsing functions 
+ * Message parsing functions
  *************************************************************/
 
 /**
@@ -965,12 +970,12 @@ EXPORT_SYMBOL(nfq_set_verdict_mark);
 	} __attribute__ ((packed));
 \endverbatim
  */
+EXPORT_SYMBOL
 struct nfqnl_msg_packet_hdr *nfq_get_msg_packet_hdr(struct nfq_data *nfad)
 {
 	return nfnl_get_pointer_to_data(nfad->data, NFQA_PACKET_HDR,
 					struct nfqnl_msg_packet_hdr);
 }
-EXPORT_SYMBOL(nfq_get_msg_packet_hdr);
 
 /**
  * nfq_get_nfmark - get the packet mark
@@ -978,11 +983,11 @@ EXPORT_SYMBOL(nfq_get_msg_packet_hdr);
  *
  * \return the netfilter mark currently assigned to the given queued packet.
  */
+EXPORT_SYMBOL
 uint32_t nfq_get_nfmark(struct nfq_data *nfad)
 {
 	return ntohl(nfnl_get_data(nfad->data, NFQA_MARK, uint32_t));
 }
-EXPORT_SYMBOL(nfq_get_nfmark);
 
 /**
  * nfq_get_timestamp - get the packet timestamp
@@ -993,6 +998,7 @@ EXPORT_SYMBOL(nfq_get_nfmark);
  *
  * \return 0 on success, non-zero on failure.
  */
+EXPORT_SYMBOL
 int nfq_get_timestamp(struct nfq_data *nfad, struct timeval *tv)
 {
 	struct nfqnl_msg_packet_timestamp *qpt;
@@ -1006,7 +1012,6 @@ int nfq_get_timestamp(struct nfq_data *nfad, struct timeval *tv)
 
 	return 0;
 }
-EXPORT_SYMBOL(nfq_get_timestamp);
 
 /**
  * nfq_get_indev - get the interface that the packet was received through
@@ -1019,11 +1024,11 @@ EXPORT_SYMBOL(nfq_get_timestamp);
  * \warning all nfq_get_dev() functions return 0 if not set, since linux
  * only allows ifindex >= 1, see net/core/dev.c:2600  (in 2.6.13.1)
  */
+EXPORT_SYMBOL
 uint32_t nfq_get_indev(struct nfq_data *nfad)
 {
 	return ntohl(nfnl_get_data(nfad->data, NFQA_IFINDEX_INDEV, uint32_t));
 }
-EXPORT_SYMBOL(nfq_get_indev);
 
 /**
  * nfq_get_physindev - get the physical interface that the packet was received
@@ -1033,11 +1038,11 @@ EXPORT_SYMBOL(nfq_get_indev);
  * If the returned index is 0, the packet was locally generated or the
  * physical input interface is no longer known (ie. POSTROUTING?).
  */
+EXPORT_SYMBOL
 uint32_t nfq_get_physindev(struct nfq_data *nfad)
 {
 	return ntohl(nfnl_get_data(nfad->data, NFQA_IFINDEX_PHYSINDEV, uint32_t));
 }
-EXPORT_SYMBOL(nfq_get_physindev);
 
 /**
  * nfq_get_outdev - gets the interface that the packet will be routed out
@@ -1047,11 +1052,11 @@ EXPORT_SYMBOL(nfq_get_physindev);
  * returned index is 0, the packet is destined for localhost or the output
  * interface is not yet known (ie. PREROUTING?).
  */
+EXPORT_SYMBOL
 uint32_t nfq_get_outdev(struct nfq_data *nfad)
 {
 	return ntohl(nfnl_get_data(nfad->data, NFQA_IFINDEX_OUTDEV, uint32_t));
 }
-EXPORT_SYMBOL(nfq_get_outdev);
 
 /**
  * nfq_get_physoutdev - get the physical interface that the packet output
@@ -1060,14 +1065,14 @@ EXPORT_SYMBOL(nfq_get_outdev);
  * The index of the physical device the queued packet will be sent out.
  * If the returned index is 0, the packet is destined for localhost or the
  * physical output interface is not yet known (ie. PREROUTING?).
- * 
+ *
  * \return The index of physical interface that the packet output will be routed out.
  */
+EXPORT_SYMBOL
 uint32_t nfq_get_physoutdev(struct nfq_data *nfad)
 {
 	return ntohl(nfnl_get_data(nfad->data, NFQA_IFINDEX_PHYSOUTDEV, uint32_t));
 }
-EXPORT_SYMBOL(nfq_get_physoutdev);
 
 /**
  * nfq_get_indev_name - get the name of the interface the packet
@@ -1076,44 +1081,44 @@ EXPORT_SYMBOL(nfq_get_physoutdev);
  * \param nfad Netlink packet data handle passed to callback function
  * \param name pointer to the buffer to receive the interface name;
  *  not more than \c IFNAMSIZ bytes will be copied to it.
- * \return -1 in case of error, >0 if it succeed. 
+ * \return -1 in case of error, >0 if it succeed.
  *
  * To use a nlif_handle, You need first to call nlif_open() and to open
- * an handler. Don't forget to store the result as it will be used 
+ * an handler. Don't forget to store the result as it will be used
  * during all your program life:
  * \verbatim
 	h = nlif_open();
- 	if (h == NULL) {
- 		perror("nlif_open");
- 		exit(EXIT_FAILURE);
- 	}
+	if (h == NULL) {
+		perror("nlif_open");
+		exit(EXIT_FAILURE);
+	}
 \endverbatim
  * Once the handler is open, you need to fetch the interface table at a
  * whole via a call to nlif_query.
  * \verbatim
-  	nlif_query(h);
+	nlif_query(h);
 \endverbatim
  * libnfnetlink is able to update the interface mapping when a new interface
  * appears. To do so, you need to call nlif_catch() on the handler after each
  * interface related event. The simplest way to get and treat event is to run
- * a select() or poll() against the nlif file descriptor. To get this file 
+ * a select() or poll() against the nlif file descriptor. To get this file
  * descriptor, you need to use nlif_fd:
  * \verbatim
- 	if_fd = nlif_fd(h);
+	if_fd = nlif_fd(h);
 \endverbatim
  * Don't forget to close the handler when you don't need the feature anymore:
  * \verbatim
- 	nlif_close(h);
+	nlif_close(h);
 \endverbatim
  *
  */
+EXPORT_SYMBOL
 int nfq_get_indev_name(struct nlif_handle *nlif_handle,
-			struct nfq_data *nfad, char *name)
+		       struct nfq_data *nfad, char *name)
 {
 	uint32_t ifindex = nfq_get_indev(nfad);
 	return nlif_index2name(nlif_handle, ifindex, name);
 }
-EXPORT_SYMBOL(nfq_get_indev_name);
 
 /**
  * nfq_get_physindev_name - get the name of the physical interface the
@@ -1125,15 +1130,15 @@ EXPORT_SYMBOL(nfq_get_indev_name);
  *
  * See nfq_get_indev_name() documentation for nlif_handle usage.
  *
- * \return  -1 in case of error, > 0 if it succeed. 
+ * \return  -1 in case of error, > 0 if it succeed.
  */
+EXPORT_SYMBOL
 int nfq_get_physindev_name(struct nlif_handle *nlif_handle,
 			   struct nfq_data *nfad, char *name)
 {
 	uint32_t ifindex = nfq_get_physindev(nfad);
 	return nlif_index2name(nlif_handle, ifindex, name);
 }
-EXPORT_SYMBOL(nfq_get_physindev_name);
 
 /**
  * nfq_get_outdev_name - get the name of the physical interface the
@@ -1145,15 +1150,15 @@ EXPORT_SYMBOL(nfq_get_physindev_name);
  *
  * See nfq_get_indev_name() documentation for nlif_handle usage.
  *
- * \return  -1 in case of error, > 0 if it succeed. 
+ * \return  -1 in case of error, > 0 if it succeed.
  */
+EXPORT_SYMBOL
 int nfq_get_outdev_name(struct nlif_handle *nlif_handle,
 			struct nfq_data *nfad, char *name)
 {
 	uint32_t ifindex = nfq_get_outdev(nfad);
 	return nlif_index2name(nlif_handle, ifindex, name);
 }
-EXPORT_SYMBOL(nfq_get_outdev_name);
 
 /**
  * nfq_get_physoutdev_name - get the name of the interface the
@@ -1165,21 +1170,21 @@ EXPORT_SYMBOL(nfq_get_outdev_name);
  *
  * See nfq_get_indev_name() documentation for nlif_handle usage.
  *
- * \return  -1 in case of error, > 0 if it succeed. 
+ * \return  -1 in case of error, > 0 if it succeed.
  */
 
+EXPORT_SYMBOL
 int nfq_get_physoutdev_name(struct nlif_handle *nlif_handle,
 			    struct nfq_data *nfad, char *name)
 {
 	uint32_t ifindex = nfq_get_physoutdev(nfad);
 	return nlif_index2name(nlif_handle, ifindex, name);
 }
-EXPORT_SYMBOL(nfq_get_physoutdev_name);
 
 /**
  * nfq_get_packet_hw
  *
- * get hardware address 
+ * get hardware address
  *
  * \param nfad Netlink packet data handle passed to callback function
  *
@@ -1198,16 +1203,48 @@ EXPORT_SYMBOL(nfq_get_physoutdev_name);
 	} __attribute__ ((packed));
 \endverbatim
  */
+EXPORT_SYMBOL
 struct nfqnl_msg_packet_hw *nfq_get_packet_hw(struct nfq_data *nfad)
 {
 	return nfnl_get_pointer_to_data(nfad->data, NFQA_HWADDR,
 					struct nfqnl_msg_packet_hw);
 }
-EXPORT_SYMBOL(nfq_get_packet_hw);
+
+/**
+ * nfq_get_skbinfo - return the NFQA_SKB_INFO meta information
+ * \param nfad Netlink packet data handle passed to callback function
+ *
+ * This can be used to obtain extra information about a packet by testing
+ * the returned integer for any of the following bit flags:
+ *
+ * - NFQA_SKB_CSUMNOTREADY
+ *   packet header checksums will be computed by hardware later on, i.e.
+ *   tcp/ip checksums in the packet must not be validated, application
+ *   should pretend they are correct.
+ * - NFQA_SKB_GSO
+ *   packet is an aggregated super-packet.  It exceeds device mtu and will
+ *   be (re-)split on transmit by hardware.
+ * - NFQA_SKB_CSUM_NOTVERIFIED
+ *   packet checksum was not yet verified by the kernel/hardware, for
+ *   example because this is an incoming packet and the NIC does not
+ *   perform checksum validation at hardware level.
+ *
+ * \return the skbinfo value
+ * \sa __nfq_set_queue_flags__(3)
+ */
+EXPORT_SYMBOL
+uint32_t nfq_get_skbinfo(struct nfq_data *nfad)
+{
+	if (!nfnl_attr_present(nfad->data, NFQA_SKB_INFO))
+		return 0;
+
+	return ntohl(nfnl_get_data(nfad->data, NFQA_SKB_INFO, uint32_t));
+}
 
 /**
  * nfq_get_uid - get the UID of the user the packet belongs to
  * \param nfad Netlink packet data handle passed to callback function
+ * \param uid Set to UID on return
  *
  * \warning If the NFQA_CFG_F_GSO flag is not set, then fragmented packets
  * may be pushed into the queue. In this case, only one fragment will have the
@@ -1215,6 +1252,7 @@ EXPORT_SYMBOL(nfq_get_packet_hw);
  *
  * \return 1 if there is a UID available, 0 otherwise.
  */
+EXPORT_SYMBOL
 int nfq_get_uid(struct nfq_data *nfad, uint32_t *uid)
 {
 	if (!nfnl_attr_present(nfad->data, NFQA_UID))
@@ -1223,11 +1261,11 @@ int nfq_get_uid(struct nfq_data *nfad, uint32_t *uid)
 	*uid = ntohl(nfnl_get_data(nfad->data, NFQA_UID, uint32_t));
 	return 1;
 }
-EXPORT_SYMBOL(nfq_get_uid);
 
 /**
  * nfq_get_gid - get the GID of the user the packet belongs to
  * \param nfad Netlink packet data handle passed to callback function
+ * \param gid Set to GID on return
  *
  * \warning If the NFQA_CFG_F_GSO flag is not set, then fragmented packets
  * may be pushed into the queue. In this case, only one fragment will have the
@@ -1235,6 +1273,7 @@ EXPORT_SYMBOL(nfq_get_uid);
  *
  * \return 1 if there is a GID available, 0 otherwise.
  */
+EXPORT_SYMBOL
 int nfq_get_gid(struct nfq_data *nfad, uint32_t *gid)
 {
 	if (!nfnl_attr_present(nfad->data, NFQA_GID))
@@ -1243,7 +1282,6 @@ int nfq_get_gid(struct nfq_data *nfad, uint32_t *gid)
 	*gid = ntohl(nfnl_get_data(nfad->data, NFQA_GID, uint32_t));
 	return 1;
 }
-EXPORT_SYMBOL(nfq_get_gid);
 
 /**
  * nfq_get_secctx - get the security context for this packet
@@ -1256,6 +1294,7 @@ EXPORT_SYMBOL(nfq_get_gid);
  *
  * \return -1 on error, otherwise > 0
  */
+EXPORT_SYMBOL
 int nfq_get_secctx(struct nfq_data *nfad, unsigned char **secdata)
 {
 	if (!nfnl_attr_present(nfad->data, NFQA_SECCTX))
@@ -1269,10 +1308,9 @@ int nfq_get_secctx(struct nfq_data *nfad, unsigned char **secdata)
 
 	return 0;
 }
-EXPORT_SYMBOL(nfq_get_secctx);
 
 /**
- * nfq_get_payload - get payload 
+ * nfq_get_payload - get payload
  * \param nfad Netlink packet data handle passed to callback function
  * \param data Pointer of pointer that will be pointed to the payload
  *
@@ -1282,6 +1320,7 @@ EXPORT_SYMBOL(nfq_get_secctx);
  *
  * \return -1 on error, otherwise > 0.
  */
+EXPORT_SYMBOL
 int nfq_get_payload(struct nfq_data *nfad, unsigned char **data)
 {
 	*data = (unsigned char *)
@@ -1291,7 +1330,6 @@ int nfq_get_payload(struct nfq_data *nfad, unsigned char **data)
 
 	return -1;
 }
-EXPORT_SYMBOL(nfq_get_payload);
 
 /**
  * @}
@@ -1336,6 +1374,7 @@ do {								\
  * would have been printed into the buffer (in case that there is enough
  * room in it). See snprintf() return value for more information.
  */
+EXPORT_SYMBOL
 int nfq_snprintf_xml(char *buf, size_t rem, struct nfq_data *tb, int flags)
 {
 	struct nfqnl_msg_packet_hdr *ph;
@@ -1489,7 +1528,6 @@ int nfq_snprintf_xml(char *buf, size_t rem, struct nfq_data *tb, int flags)
 
 	return len;
 }
-EXPORT_SYMBOL(nfq_snprintf_xml);
 
 /**
  * @}

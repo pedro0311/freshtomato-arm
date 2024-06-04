@@ -26,16 +26,21 @@
  */
 
 /**
- * nfq_ip_get_hdr - get IPv4 header
- * \param pktb: pointer to network packet buffer
+ * nfq_ip_get_hdr - get the IPv4 header
+ * \param pktb: Pointer to user-space network packet buffer
+ * \returns validated pointer to the IPv4 header or NULL if IP is malformed or
+ * not version 4
  *
- * This funcion returns NULL if the IPv4 is malformed or the protocol version
- * is not 4. On success, it returns a valid pointer to the IPv4 header.
+ * Many programs will not need to call this function. A possible use is to
+ * determine the layer 4 protocol. The validation is that the buffer is big
+ * enough for the declared lengths in the header, i.e. an extra check for packet
+ * truncation.
  */
+EXPORT_SYMBOL
 struct iphdr *nfq_ip_get_hdr(struct pkt_buff *pktb)
 {
 	struct iphdr *iph;
-	unsigned int pktlen = pktb->tail - pktb->network_header;
+	unsigned int pktlen = pktb_tail(pktb) - pktb->network_header;
 
 	/* Not enough room for IPv4 header. */
 	if (pktlen < sizeof(struct iphdr))
@@ -53,13 +58,18 @@ struct iphdr *nfq_ip_get_hdr(struct pkt_buff *pktb)
 
 	return iph;
 }
-EXPORT_SYMBOL(nfq_ip_get_hdr);
 
 /**
- * nfq_ip_set_transport_header - set transport header
- * \param pktb: pointer to network packet buffer
- * \param iph: pointer to the IPv4 header
+ * nfq_ip_set_transport_header - set the \b transport_header field in \b pktb
+ * \param pktb: Pointer to user-space network packet buffer
+ * \param iph: Pointer to the IPv4 header
+ * \returns 0 on success or -1 if a minimal validation check fails
+ * \note
+ * Most programs should call __nfq_ip_set_transport_header__ as soon as
+ * possible, since most layer 4 helper functions assume the
+ * \b transport_header field is valid.
  */
+EXPORT_SYMBOL
 int nfq_ip_set_transport_header(struct pkt_buff *pktb, struct iphdr *iph)
 {
 	int doff = iph->ihl * 4;
@@ -71,15 +81,24 @@ int nfq_ip_set_transport_header(struct pkt_buff *pktb, struct iphdr *iph)
 	pktb->transport_header = pktb->network_header + doff;
 	return 0;
 }
-EXPORT_SYMBOL(nfq_ip_set_transport_header);
+
+/**
+ * \defgroup ip_internals Internal IP functions
+ *
+ * Most user-space programs will never need these.
+ *
+ * @{
+ */
 
 /**
  * nfq_ip_set_checksum - set IPv4 checksum
- * \param iph: pointer to the IPv4 header
- *
- * \note Call to this function if you modified the IPv4 header to update the
- * checksum.
+ * \param iph: Pointer to the IPv4 header
+ * \note
+ * nfq_ip_mangle() invokes this function.
+ * As long as developers always use the appropriate mangler for the layer being
+ * mangled, there is no need to call __nfq_ip_set_checksum__.
  */
+EXPORT_SYMBOL
 void nfq_ip_set_checksum(struct iphdr *iph)
 {
 	uint32_t iph_len = iph->ihl * 4;
@@ -87,47 +106,50 @@ void nfq_ip_set_checksum(struct iphdr *iph)
 	iph->check = 0;
 	iph->check = nfq_checksum(0, (uint16_t *)iph, iph_len);
 }
-EXPORT_SYMBOL(nfq_ip_set_checksum);
+
+/**
+ * @}
+ */
 
 /**
  * nfq_ip_mangle - mangle IPv4 packet buffer
- * \param pktb: pointer to network packet buffer
- * \param dataoff: offset to layer 4 header
- * \param match_offset: offset to content that you want to mangle
- * \param match_len: length of the existing content you want to mangle
- * \param rep_buffer: pointer to data you want to use to replace current content
- * \param rep_len: length of data you want to use to replace current content
- *
- * \note This function recalculates the IPv4 checksum (if needed).
+ * \param pktb: Pointer to user-space network packet buffer
+ * \param dataoff: Offset to layer 4 header, or zero to mangle IP header
+ * \param match_offset: Offset to content that you want to mangle
+ * \param match_len: Length of the existing content you want to mangle
+ * \param rep_buffer: Pointer to data you want to use to replace current content
+ * \param rep_len: Length of data you want to use to replace current content
+ * \returns 1 for success and 0 for failure. See pktb_mangle() for failure case
+ * \note This function updates the IPv4 length if necessary and recalculates the
+ * IPv4 checksum.
  */
-int nfq_ip_mangle(struct pkt_buff *pkt, unsigned int dataoff,
+EXPORT_SYMBOL
+int nfq_ip_mangle(struct pkt_buff *pktb, unsigned int dataoff,
 		  unsigned int match_offset, unsigned int match_len,
 		  const char *rep_buffer, unsigned int rep_len)
 {
-	struct iphdr *iph = (struct iphdr *) pkt->network_header;
+	struct iphdr *iph = (struct iphdr *) pktb->network_header;
 
-	if (!pktb_mangle(pkt, dataoff, match_offset, match_len,
-						rep_buffer, rep_len))
+	if (!pktb_mangle(pktb, dataoff, match_offset, match_len, rep_buffer,
+			 rep_len))
 		return 0;
 
 	/* fix IP hdr checksum information */
-	iph->tot_len = htons(pkt->len);
+	iph->tot_len = htons(pktb_tail(pktb) - pktb->network_header);
 	nfq_ip_set_checksum(iph);
 
 	return 1;
 }
-EXPORT_SYMBOL(nfq_ip_mangle);
 
 /**
  * nfq_pkt_snprintf_ip - print IPv4 header into buffer in iptables LOG format
- * \param buf: pointer to buffer that will be used to print the header
- * \param size: size of the buffer (or remaining room in it)
- * \param ip: pointer to a valid IPv4 header
- *
- * This function returns the number of bytes that would have been written in
- * case that there is enough room in the buffer. Read snprintf manpage for more
- * information to know more about this strange behaviour.
+ * \param buf: Pointer to buffer that will be used to print the header
+ * \param size: Size of the buffer (or remaining room in it)
+ * \param iph: Pointer to a valid IPv4 header
+ * \returns same as snprintf
+ * \sa **snprintf**(3)
  */
+EXPORT_SYMBOL
 int nfq_ip_snprintf(char *buf, size_t size, const struct iphdr *iph)
 {
 	int ret;
@@ -147,7 +169,6 @@ int nfq_ip_snprintf(char *buf, size_t size, const struct iphdr *iph)
 
 	return ret;
 }
-EXPORT_SYMBOL(nfq_ip_snprintf);
 
 /**
  * @}

@@ -28,39 +28,39 @@
 
 /**
  * nfq_ip6_get_hdr - get IPv6 header
- * \param pktb: pointer to user-space network packet buffer
+ * \param pktb: Pointer to user-space network packet buffer
  *
- * This funcion returns NULL if an invalid header is found. On sucess, it
- * returns a valid pointer to the header.
+ * \returns pointer to IPv6 header if a valid header found, else NULL.
  */
+EXPORT_SYMBOL
 struct ip6_hdr *nfq_ip6_get_hdr(struct pkt_buff *pktb)
 {
 	struct ip6_hdr *ip6h;
-	unsigned int pktlen = pktb->tail - pktb->network_header;
+	unsigned int pktlen = pktb_tail(pktb) - pktb->network_header;
 
-	/* Not enough room for IPv4 header. */
+	/* Not enough room for IPv6 header. */
 	if (pktlen < sizeof(struct ip6_hdr))
 		return NULL;
 
 	ip6h = (struct ip6_hdr *)pktb->network_header;
 
 	/* Not IPv6 packet. */
-	if (ip6h->ip6_flow != 0x60)
+	if ((*(uint8_t *)ip6h & 0xf0) != 0x60)
 		return NULL;
 
 	return ip6h;
 }
-EXPORT_SYMBOL(nfq_ip6_get_hdr);
 
 /**
  * nfq_ip6_set_transport_header - set transport header pointer for IPv6 packet
- * \param pktb: pointer to user-space network packet buffer
- * \param ip6h: pointer to IPv6 header
- * \param target: protocol number to find transport header (ie. IPPROTO_*)
+ * \param pktb: Pointer to user-space network packet buffer
+ * \param ip6h: Pointer to IPv6 header
+ * \param target: Protocol number to find transport header (ie. IPPROTO_*)
  *
- * This function returns 1 if the protocol has been found and the transport
- * header has been set. Otherwise, it returns 0.
+ * \returns 1 if the protocol has been found and the transport
+ * header has been set, else 0.
  */
+EXPORT_SYMBOL
 int nfq_ip6_set_transport_header(struct pkt_buff *pktb, struct ip6_hdr *ip6h,
 				 uint8_t target)
 {
@@ -77,7 +77,7 @@ int nfq_ip6_set_transport_header(struct pkt_buff *pktb, struct ip6_hdr *ip6h,
 			break;
 		}
 		/* No room for extension, bad packet. */
-		if (pktb->tail - cur < sizeof(struct ip6_ext)) {
+		if (pktb_tail(pktb) - cur < sizeof(struct ip6_ext)) {
 			cur = NULL;
 			break;
 		}
@@ -87,7 +87,7 @@ int nfq_ip6_set_transport_header(struct pkt_buff *pktb, struct ip6_hdr *ip6h,
 			uint16_t *frag_off;
 
 			/* No room for full fragment header, bad packet. */
-			if (pktb->tail - cur < sizeof(struct ip6_frag)) {
+			if (pktb_tail(pktb) - cur < sizeof(struct ip6_frag)) {
 				cur = NULL;
 				break;
 			}
@@ -115,15 +115,46 @@ int nfq_ip6_set_transport_header(struct pkt_buff *pktb, struct ip6_hdr *ip6h,
 	pktb->transport_header = cur;
 	return cur ? 1 : 0;
 }
-EXPORT_SYMBOL(nfq_ip6_set_transport_header);
+
+/**
+ * nfq_ip6_mangle - mangle IPv6 packet buffer
+ * \param pktb: Pointer to user-space network packet buffer
+ * \param dataoff: Offset to layer 4 header
+ * \param match_offset: Offset to content that you want to mangle
+ * \param match_len: Length of the existing content you want to mangle
+ * \param rep_buffer: Pointer to data you want to use to replace current content
+ * \param rep_len: Length of data you want to use to replace current content
+ * \returns 1 for success and 0 for failure. See pktb_mangle() for failure case
+ * \note This function updates the IPv6 length (if necessary)
+ */
+EXPORT_SYMBOL
+int nfq_ip6_mangle(struct pkt_buff *pktb, unsigned int dataoff,
+		   unsigned int match_offset, unsigned int match_len,
+		   const char *rep_buffer, unsigned int rep_len)
+{
+	struct ip6_hdr *ip6h = (struct ip6_hdr *)pktb->network_header;
+
+	if (!pktb_mangle(pktb, dataoff, match_offset, match_len, rep_buffer,
+			 rep_len))
+		return 0;
+
+	/* Fix IPv6 hdr length information */
+	ip6h->ip6_plen =
+		htons(pktb_tail(pktb) - pktb->network_header - sizeof *ip6h);
+
+	return 1;
+}
 
 /**
  * nfq_ip6_snprintf - print IPv6 header into one buffer in iptables LOG format
- * \param buf: pointer to buffer that is used to print the object
- * \param size: size of the buffer (or remaining room in it).
- * \param ip6_hdr: pointer to a valid IPv6 header.
+ * \param buf: Pointer to buffer that is used to print the object
+ * \param size: Size of the buffer (or remaining room in it).
+ * \param ip6h: Pointer to a valid IPv6 header.
+ * \returns same as snprintf
+ * \sa **snprintf**(3)
  *
  */
+EXPORT_SYMBOL
 int nfq_ip6_snprintf(char *buf, size_t size, const struct ip6_hdr *ip6h)
 {
 	int ret;
@@ -133,7 +164,7 @@ int nfq_ip6_snprintf(char *buf, size_t size, const struct ip6_hdr *ip6h)
 	inet_ntop(AF_INET6, &ip6h->ip6_src, src, INET6_ADDRSTRLEN);
 	inet_ntop(AF_INET6, &ip6h->ip6_dst, dst, INET6_ADDRSTRLEN);
 
-	ret = snprintf(buf, size, "SRC=%s DST=%s LEN=%Zu TC=0x%X "
+	ret = snprintf(buf, size, "SRC=%s DST=%s LEN=%zu TC=0x%X "
 				  "HOPLIMIT=%u FLOWLBL=%u ",
 			src, dst,
 			ntohs(ip6h->ip6_plen) + sizeof(struct ip6_hdr),
@@ -143,7 +174,6 @@ int nfq_ip6_snprintf(char *buf, size_t size, const struct ip6_hdr *ip6h)
 
 	return ret;
 }
-EXPORT_SYMBOL(nfq_ip6_snprintf);
 
 /**
  * @}

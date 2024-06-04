@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to create configure.
 
-AC_INIT([libnetfilter_queue], [1.0.3])
+AC_INIT([libnetfilter_queue], [1.0.5])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_HOST
 AC_CONFIG_MACRO_DIR([m4])
@@ -33,5 +33,19 @@ dnl Output the makefiles
 AC_CONFIG_FILES([Makefile src/Makefile utils/Makefile examples/Makefile
         libnetfilter_queue.pc doxygen.cfg
 	include/Makefile include/libnetfilter_queue/Makefile
+	doxygen/Makefile
 	include/linux/Makefile include/linux/netfilter/Makefile])
+
+AC_ARG_WITH([doxygen], [AS_HELP_STRING([--with-doxygen],
+	    [create doxygen documentation [default=no]])],
+	    [], [with_doxygen=no])
+AS_IF([test "x$with_doxygen" = xyes], [
+	AC_CHECK_PROGS([DOXYGEN], [doxygen])
+])
+
+AM_CONDITIONAL([HAVE_DOXYGEN], [test -n "$DOXYGEN"])
 AC_OUTPUT
+
+echo "
+libnetfilter_queue configuration:
+  doxygen:                      ${with_doxygen}"
