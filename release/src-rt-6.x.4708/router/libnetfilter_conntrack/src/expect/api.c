@@ -795,8 +795,9 @@ int nfexp_catch(struct nfct_handle *h)
  * 	- NFEXP_O_LAYER: include layer 3 information in the output, this is
  * 			*only* required by NFEXP_O_DEFAULT.
  * 
- * On error, -1 is returned and errno is set appropiately. Otherwise,
- * 0 is returned.
+ * On error, -1 is returned and errno is set appropiately. Otherwise the
+ * size of what _would_ be written is returned, even if the size of the
+ * buffer is insufficient. This behaviour is similar to snprintf.
  */
 int nfexp_snprintf(char *buf,
 		  unsigned int size,

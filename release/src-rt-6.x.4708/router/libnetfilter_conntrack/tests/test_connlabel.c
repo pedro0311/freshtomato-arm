@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -60,6 +61,13 @@ int main(void)
 	l = nfct_labelmap_new("qa-connlabel.conf");
 	if (!l)
 		l = nfct_labelmap_new("tests/qa-connlabel.conf");
+	if (!l) {
+		char testconf[PATH_MAX];
+
+		snprintf(testconf, PATH_MAX,
+			 "%s/qa-connlabel.conf", getenv("srcdir"));
+		l = nfct_labelmap_new(testconf);
+	}
 	assert(l);
 	puts("qa-connlabel.conf:");
 	dump_map(l);

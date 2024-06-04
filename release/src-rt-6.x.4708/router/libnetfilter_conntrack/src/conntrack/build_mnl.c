@@ -73,8 +73,7 @@ nfct_build_tuple_proto(struct nlmsghdr *nlh, const struct __nfct_tuple *t)
 		mnl_attr_put_u16(nlh, CTA_PROTO_ICMPV6_ID, t->l4src.icmp.id);
 		break;
 	default:
-		mnl_attr_nest_cancel(nlh, nest);
-		return -1;
+		break;
 	}
 	mnl_attr_nest_end(nlh, nest);
 	return 0;
@@ -496,10 +495,7 @@ nfct_nlmsg_build(struct nlmsghdr *nlh, const struct nf_conntrack *ct)
 	    test_bit(ATTR_REPL_PORT_DST, ct->head.set) ||
 	    test_bit(ATTR_REPL_L3PROTO, ct->head.set) ||
 	    test_bit(ATTR_REPL_L4PROTO, ct->head.set) ||
-	    test_bit(ATTR_REPL_ZONE, ct->head.set) ||
-	    test_bit(ATTR_ICMP_TYPE, ct->head.set) ||
-	    test_bit(ATTR_ICMP_CODE, ct->head.set) ||
-	    test_bit(ATTR_ICMP_ID, ct->head.set)) {
+	    test_bit(ATTR_REPL_ZONE, ct->head.set)) {
 		const struct __nfct_tuple *t = &ct->repl;
 		struct nlattr *nest;
 
@@ -595,6 +591,28 @@ nfct_nlmsg_build(struct nlmsghdr *nlh, const struct nf_conntrack *ct)
 	    test_bit(ATTR_SYNPROXY_ITS, ct->head.set) &&
 	    test_bit(ATTR_SYNPROXY_TSOFF, ct->head.set))
 		nfct_build_synproxy(nlh, ct);
+
+	return 0;
+}
+
+int nfct_nlmsg_build_filter(struct nlmsghdr *nlh,
+			    const struct nfct_filter_dump *filter_dump)
+{
+	struct nfgenmsg *nfg;
+
+	if (filter_dump->set & (1 << NFCT_FILTER_DUMP_MARK)) {
+		mnl_attr_put_u32(nlh, CTA_MARK, htonl(filter_dump->mark.val));
+		mnl_attr_put_u32(nlh, CTA_MARK_MASK, htonl(filter_dump->mark.mask));
+	}
+	if (filter_dump->set & (1 << NFCT_FILTER_DUMP_L3NUM)) {
+		nfg = mnl_nlmsg_get_payload(nlh);
+		nfg->nfgen_family = filter_dump->l3num;
+	}
+	if (filter_dump->set & (1 << NFCT_FILTER_DUMP_STATUS)) {
+		mnl_attr_put_u32(nlh, CTA_STATUS, htonl(filter_dump->status.val));
+		mnl_attr_put_u32(nlh, CTA_STATUS_MASK,
+				 htonl(filter_dump->status.mask));
+	}
 
 	return 0;
 }

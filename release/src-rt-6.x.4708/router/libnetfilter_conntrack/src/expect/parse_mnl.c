@@ -10,6 +10,7 @@
  */
 
 #include "internal/internal.h"
+#include <assert.h>
 #include <libmnl/libmnl.h>
 
 static int nlmsg_parse_expection_attr_cb(const struct nlattr *attr, void *data)
@@ -139,10 +140,8 @@ int nfexp_nlmsg_parse(const struct nlmsghdr *nlh, struct nf_expect *exp)
 		set_bit(ATTR_EXP_FLAGS, exp->set);
 	}
 	if (tb[CTA_EXPECT_HELP_NAME]) {
-		strncpy(exp->helper_name,
-			mnl_attr_get_str(tb[CTA_EXPECT_HELP_NAME]),
-			NFCT_HELPER_NAME_MAX);
-		exp->helper_name[NFCT_HELPER_NAME_MAX - 1] = '\0';
+		snprintf(exp->helper_name, NFCT_HELPER_NAME_MAX, "%s",
+			 mnl_attr_get_str(tb[CTA_EXPECT_HELP_NAME]));
 		set_bit(ATTR_EXP_HELPER_NAME, exp->set);
 	}
 	if (tb[CTA_EXPECT_CLASS]) {
@@ -153,9 +152,11 @@ int nfexp_nlmsg_parse(const struct nlmsghdr *nlh, struct nf_expect *exp)
 		nfexp_nlmsg_parse_nat(nfg, tb[CTA_EXPECT_NAT], exp);
 
 	if (tb[CTA_EXPECT_FN]) {
-		strncpy(exp->expectfn, mnl_attr_get_payload(tb[CTA_EXPECT_FN]),
-			__NFCT_EXPECTFN_MAX);
-		exp->expectfn[__NFCT_EXPECTFN_MAX - 1] = '\0';
+		int len = mnl_attr_get_payload_len(tb[CTA_EXPECT_FN]);
+		/* the kernel doesn't impose a max length on this str */
+		assert(len <= __NFCT_EXPECTFN_MAX);
+		snprintf(exp->expectfn, __NFCT_EXPECTFN_MAX, "%s",
+			 (char *)mnl_attr_get_payload(tb[CTA_EXPECT_FN]));
 		set_bit(ATTR_EXP_FN, exp->set);
 	}
 

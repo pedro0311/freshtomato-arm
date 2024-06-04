@@ -831,6 +831,9 @@ __build_query_ct(struct nfnl_subsys_handle *ssh,
 		nfct_fill_hdr(req, IPCTNL_MSG_CT_DELETE, NLM_F_ACK, *family,
 			      NFNETLINK_V0);
 		break;
+	case NFCT_Q_FLUSH_FILTER:
+		nfct_fill_hdr(req, IPCTNL_MSG_CT_DELETE, NLM_F_ACK, *family, 1);
+		break;
 	case NFCT_Q_DUMP:
 		nfct_fill_hdr(req, IPCTNL_MSG_CT_GET, NLM_F_DUMP, *family,
 			      NFNETLINK_V0);
@@ -1099,9 +1102,9 @@ int nfct_catch(struct nfct_handle *h)
  * print the message just after you receive the destroy event. If you want
  * more accurate timestamping, use NFCT_OF_TIMESTAMP.
  *
- * This function returns the size of the information that _would_ have been 
- * written to the buffer, even if there was no room for it. Thus, the
- * behaviour is similar to snprintf.
+ * On error, -1 is returned and errno is set appropiately. Otherwise the
+ * size of what _would_ be written is returned, even if the size of the
+ * buffer is insufficient. This behaviour is similar to snprintf.
  */
 int nfct_snprintf(char *buf,
 		  unsigned int size,

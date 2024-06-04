@@ -27,6 +27,7 @@
 #include "internal/types.h"
 #include "internal/extern.h"
 #include "internal/bitops.h"
+#include "internal/proto.h"
 
 #ifndef IPPROTO_SCTP
 #define IPPROTO_SCTP 132
@@ -40,7 +41,11 @@
 #define IPPROTO_DCCP 33
 #endif
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
+
 #define BUFFER_SIZE(ret, size, len, offset)		\
+	if (ret < 0)					\
+		return -1;				\
 	size += ret;					\
 	if (ret > len)					\
 		ret = len;				\

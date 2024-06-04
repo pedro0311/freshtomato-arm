@@ -690,9 +690,8 @@ nfct_parse_helper(const struct nlattr *attr, struct nf_conntrack *ct)
 	if (!tb[CTA_HELP_NAME])
 		return 0;
 
-	strncpy(ct->helper_name, mnl_attr_get_str(tb[CTA_HELP_NAME]),
-		NFCT_HELPER_NAME_MAX);
-	ct->helper_name[NFCT_HELPER_NAME_MAX-1] = '\0';
+	snprintf(ct->helper_name, NFCT_HELPER_NAME_MAX, "%s",
+		 mnl_attr_get_str(tb[CTA_HELP_NAME]));
 	set_bit(ATTR_HELPER_NAME, ct->head.set);
 
 	if (!tb[CTA_HELP_INFO])

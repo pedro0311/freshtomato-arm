@@ -60,7 +60,11 @@ int main(void)
 	nfct_set_attr_u8(ct, ATTR_TCP_STATE, TCP_CONNTRACK_SYN_SENT);
 	nfct_set_attr_u32(ct, ATTR_TIMEOUT, 100);
 
-	nfct_nlmsg_build(nlh, ct);
+	ret = nfct_nlmsg_build(nlh, ct);
+	if (ret == -1) {
+		perror("nfct_nlmsg_build");
+		exit(EXIT_FAILURE);
+	}
 
 	ret = mnl_socket_sendto(nl, nlh, nlh->nlmsg_len);
 	if (ret == -1) {

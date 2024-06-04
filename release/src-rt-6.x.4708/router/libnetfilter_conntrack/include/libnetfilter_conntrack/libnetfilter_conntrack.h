@@ -137,11 +137,11 @@ enum nf_conntrack_attr {
 	ATTR_HELPER_INFO,			/* variable length */
 	ATTR_CONNLABELS,			/* variable length */
 	ATTR_CONNLABELS_MASK,			/* variable length */
-	ATTR_ORIG_ZONE,				/* u16 bits */
+	ATTR_ORIG_ZONE = 68,			/* u16 bits */
 	ATTR_REPL_ZONE,				/* u16 bits */
 	ATTR_SNAT_IPV6,				/* u128 bits */
 	ATTR_DNAT_IPV6,				/* u128 bits */
-	ATTR_SYNPROXY_ISN,			/* u32 bits */
+	ATTR_SYNPROXY_ISN = 72,			/* u32 bits */
 	ATTR_SYNPROXY_ITS,			/* u32 bits */
 	ATTR_SYNPROXY_TSOFF,			/* u32 bits */
 	ATTR_MAX
@@ -452,6 +452,7 @@ enum nf_conntrack_query {
 	NFCT_Q_CREATE_UPDATE,
 	NFCT_Q_DUMP_FILTER,
 	NFCT_Q_DUMP_FILTER_RESET,
+	NFCT_Q_FLUSH_FILTER,
 };
 
 extern int nfct_query(struct nfct_handle *h,
@@ -545,6 +546,7 @@ struct nfct_filter_dump_mark {
 enum nfct_filter_dump_attr {
 	NFCT_FILTER_DUMP_MARK = 0,	/* struct nfct_filter_dump_mark */
 	NFCT_FILTER_DUMP_L3NUM,		/* uint8_t */
+	NFCT_FILTER_DUMP_STATUS,	/* struct nfct_filter_dump_mark */
 	NFCT_FILTER_DUMP_MAX
 };
 
@@ -585,6 +587,7 @@ int nfct_build_query(struct nfnl_subsys_handle *ssh,
 /* New low level API: netlink functions */
 
 extern int nfct_nlmsg_build(struct nlmsghdr *nlh, const struct nf_conntrack *ct);
+extern int nfct_nlmsg_build_filter(struct nlmsghdr *nlh, const struct nfct_filter_dump *filter_dump);
 extern int nfct_nlmsg_parse(const struct nlmsghdr *nlh, struct nf_conntrack *ct);
 extern int nfct_payload_parse(const void *payload, size_t payload_len, uint16_t l3num, struct nf_conntrack *ct);
 

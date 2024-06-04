@@ -74,7 +74,11 @@ int main(void)
 	nfct_set_attr_u16(ct, ATTR_PORT_SRC, htons(20));
 	nfct_set_attr_u16(ct, ATTR_PORT_DST, htons(10));
 
-	nfct_nlmsg_build(nlh, ct);
+	ret = nfct_nlmsg_build(nlh, ct);
+	if (ret == -1) {
+		perror("nfct_nlmsg_build");
+		exit(EXIT_FAILURE);
+	}
 
 	ret = mnl_socket_sendto(nl, nlh, nlh->nlmsg_len);
 	if (ret == -1) {

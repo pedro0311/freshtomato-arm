@@ -8,6 +8,7 @@
  */
 
 #include "internal/internal.h"
+#include <libmnl/libmnl.h>
 
 static void
 set_filter_dump_attr_mark(struct nfct_filter_dump *filter_dump,
@@ -20,6 +21,16 @@ set_filter_dump_attr_mark(struct nfct_filter_dump *filter_dump,
 }
 
 static void
+set_filter_dump_attr_status(struct nfct_filter_dump *filter_dump,
+			    const void *value)
+{
+	const struct nfct_filter_dump_mark *this = value;
+
+	filter_dump->status.val = this->val;
+	filter_dump->status.mask = this->mask;
+}
+
+static void
 set_filter_dump_attr_family(struct nfct_filter_dump *filter_dump,
 			    const void *value)
 {
@@ -29,19 +40,11 @@ set_filter_dump_attr_family(struct nfct_filter_dump *filter_dump,
 const set_filter_dump_attr set_filter_dump_attr_array[NFCT_FILTER_DUMP_MAX] = {
 	[NFCT_FILTER_DUMP_MARK]		= set_filter_dump_attr_mark,
 	[NFCT_FILTER_DUMP_L3NUM]	= set_filter_dump_attr_family,
+	[NFCT_FILTER_DUMP_STATUS]	= set_filter_dump_attr_status,
 };
 
 void __build_filter_dump(struct nfnlhdr *req, size_t size,
 			 const struct nfct_filter_dump *filter_dump)
 {
-	if (filter_dump->set & (1 << NFCT_FILTER_DUMP_MARK)) {
-		nfnl_addattr32(&req->nlh, size, CTA_MARK,
-				htonl(filter_dump->mark.val));
-		nfnl_addattr32(&req->nlh, size, CTA_MARK_MASK,
-				htonl(filter_dump->mark.mask));
-	}
-	if (filter_dump->set & (1 << NFCT_FILTER_DUMP_L3NUM)) {
-		struct nfgenmsg *nfg = NLMSG_DATA(&req->nlh);
-		nfg->nfgen_family = filter_dump->l3num;
-	}
+	nfct_nlmsg_build_filter(&req->nlh, filter_dump);
 }

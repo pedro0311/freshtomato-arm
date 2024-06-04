@@ -48,6 +48,8 @@ const char *const sctp_states[SCTP_CONNTRACK_MAX] = {
 	[SCTP_CONNTRACK_SHUTDOWN_SENT]	= "SHUTDOWN_SENT",
 	[SCTP_CONNTRACK_SHUTDOWN_RECD]	= "SHUTDOWN_RECD",
 	[SCTP_CONNTRACK_SHUTDOWN_ACK_SENT] = "SHUTDOWN_ACK_SENT",
+	[SCTP_CONNTRACK_HEARTBEAT_SENT] = "HEARTBEAT_SENT",
+	[SCTP_CONNTRACK_HEARTBEAT_ACKED]  = "HEARTBEAT_ACKED",
 };
 
 const char *const dccp_states[DCCP_CONNTRACK_MAX] = {
@@ -84,6 +86,9 @@ int __snprintf_conntrack(char *buf,
 		errno = ENOENT;
 		return -1;
 	}
+
+	if (size < 0)
+		return size;
 
 	/* NULL terminated string */
 	buf[size+1 > len ? len-1 : size] = '\0';

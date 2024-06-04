@@ -55,12 +55,28 @@
 
 const char *__proto2str(uint8_t protonum)
 {
-	return proto2str[protonum] ? proto2str[protonum] : "unknown";
+	const char *str = NULL;
+
+	if (protonum < ARRAY_SIZE(proto2str))
+		str = proto2str[protonum];
+
+	if (str == NULL)
+		str = "unknown";
+
+	return str;
 }
 
 const char *__l3proto2str(uint8_t protonum)
 {
-	return l3proto2str[protonum] ? l3proto2str[protonum] : "unknown";
+	const char *str = NULL;
+
+	if (protonum < ARRAY_SIZE(l3proto2str))
+		str = l3proto2str[protonum];
+
+	if (str == NULL)
+		str = "unknown";
+
+	return str;
 }
 
 static int __snprintf_ipv4_xml(char *buf,

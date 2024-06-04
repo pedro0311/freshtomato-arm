@@ -1,9 +1,9 @@
 dnl Process this file with autoconf to create configure.
 
-AC_INIT([libnetfilter_conntrack], [1.0.8])
+AC_INIT([libnetfilter_conntrack], [1.0.9])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CANONICAL_HOST
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 
 AM_INIT_AUTOMAKE([-Wall foreign subdir-objects
@@ -14,8 +14,7 @@ dnl kernel style compile messages
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_PROG_CC
-AC_DISABLE_STATIC
-AM_PROG_LIBTOOL
+LT_INIT([disable-static])
 AC_PROG_INSTALL
 AC_PROG_LN_S
 

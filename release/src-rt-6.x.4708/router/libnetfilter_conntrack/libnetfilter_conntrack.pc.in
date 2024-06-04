@@ -12,5 +12,5 @@ Version: @VERSION@
 Requires: libnfnetlink
 Conflicts:
 Libs: -L${libdir} -lnetfilter_conntrack
-Libs.private: @LIBNFNETLINK_LIBS@
+Libs.private: @LIBNFNETLINK_LIBS@ @LIBMNL_LIBS@
 Cflags: -I${includedir}

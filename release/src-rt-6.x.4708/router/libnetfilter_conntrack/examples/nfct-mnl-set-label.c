@@ -19,6 +19,7 @@ static void set_label(struct nf_conntrack *ct, struct callback_args *cbargs)
 	char buf[MNL_SOCKET_BUFFER_SIZE];
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfh;
+	int ret;
 
 	if (b) {
 		if (bit < 0)
@@ -55,7 +56,11 @@ static void set_label(struct nf_conntrack *ct, struct callback_args *cbargs)
 	nfh->version = NFNETLINK_V0;
 	nfh->res_id = 0;
 
-	nfct_nlmsg_build(nlh, ct);
+	ret = nfct_nlmsg_build(nlh, ct);
+	if (ret == -1) {
+		perror("nfct_nlmsg_build");
+		exit(EXIT_FAILURE);
+	}
 
 	if (mnl_socket_sendto(cbargs->nl, nlh, nlh->nlmsg_len) < 0)
 		perror("mnl_socket_sendto");

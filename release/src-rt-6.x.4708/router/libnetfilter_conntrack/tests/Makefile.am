@@ -3,6 +3,10 @@ include $(top_srcdir)/Make_global.am
 check_PROGRAMS = test_api test_filter test_connlabel ct_stress \
 	ct_events_reliable
 
+EXTRA_DIST = qa-connlabel.conf
+
+TESTS = test_api test_filter test_connlabel
+
 test_api_SOURCES = test_api.c
 test_api_LDADD = ../src/libnetfilter_conntrack.la
 
