@@ -2,6 +2,7 @@
 #
 # libfoo.pl
 # Copyright (C) 2006-2008 Jonathan Zarate
+# Fixes/updates (C) 2018 - 2024 pedro
 #
 # - strip un-needed objects
 # - create xref of symbols used
@@ -35,7 +36,7 @@ sub load
 
 	if ((-l $fname) ||
 		($fname =~ /\/lib\/modules\/\d+\.\d+\.\d+/) ||
-		($fname =~ /\.(asp|gif|png|svg|js|jsx|css|txt|pat|sh)$/)) {
+		($fname =~ /\.(asp|html|gif|png|ico|svg|js|jsx|jsz|css|txt|pat|sh|conf|cnf|csv|gcom|crt|rules|dat|fw|sql)$/)) {
 		return;
 	}
 
@@ -101,7 +102,7 @@ sub load
 	while (<$f>) {
 		print LOG;
 
-		if (/\s+(WEAK|GLOBAL)\s+(?:DEFAULT|VISIBLE)\s+(\w+)\s+(\w+)/) {
+		if (/\s+(WEAK|GLOBAL)\s+(?:DEFAULT|VISIBLE|PROTECTED)\s+(\w+)\s+(\w+)/) {
 			$s = $3;
 			if ($2 eq 'UND') {
 				if ($1 eq 'GLOBAL') {
@@ -178,10 +179,8 @@ sub fixDyn
 
 	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
 	fixDynDep("transmission-daemon", "libcurl.so.4.8.0");
-#	fixDynDep("transmission-daemon", "libiconv.so.2.6.1");
 	fixDynDep("transmission-remote", "libevent-2.1.so.7");
 	fixDynDep("transmission-remote", "libcurl.so.4.8.0");
-#	fixDynDep("transmission-remote", "libiconv.so.2.6.1");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
@@ -348,15 +347,19 @@ sub fixDyn
 	fixDynDep("xtables-legacy-multi", "libxtables.so");
 	fixDynDep("xtables-legacy-multi", "libip4tc.so");
 	fixDynDep("xtables-legacy-multi", "libip6tc.so");
-	fixDynDep("conntrack", "libnetfilter_conntrack.so.3.7.0");
+
+	fixDynDep("libnetfilter_queue.so.1.5.0", "libmnl.so.0.2.0");
+	fixDynDep("libnetfilter_queue.so.1.5.0", "libnfnetlink.so.0.2.0");
+	fixDynDep("libnetfilter_conntrack.so.3.8.0", "libnfnetlink.so.0.2.0");
+	fixDynDep("libnetfilter_log.so.1.2.0", "libnfnetlink.so.0.2.0");
+	fixDynDep("libnetfilter_log.so.1.2.0", "libmnl.so.0.2.0");
 	fixDynDep("conntrack", "libmnl.so.0.2.0");
+	fixDynDep("conntrack", "libnetfilter_conntrack.so.3.8.0");
+	fixDynDep("libxt_connlabel.so", "libnetfilter_conntrack.so.3.8.0");
+
 	fixDynDep("irqbalance", "libglib-1.2.so.0.0.10");
 	fixDynDep("irqbalance", "libglib-2.0.so.0.7400.7");
-	fixDynDep("libnetfilter_queue.so.1.4.0", "libmnl.so.0.2.0");
-	fixDynDep("libnetfilter_queue.so.1.4.0", "libnfnetlink.so.0.2.0");
-	fixDynDep("libnetfilter_conntrack.so.3.7.0", "libnfnetlink.so.0.2.0");
-	fixDynDep("libnetfilter_log.so.1.1.0", "libnfnetlink.so.0.2.0");
-	fixDynDep("libxt_connlabel.so", "libnetfilter_conntrack.so.3.7.0");
+
 	fixDynDep("libipset.so.11.1.0", "libmnl.so.0.2.0");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libiconv.so.2.6.1");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-8.so.0.10.2");
@@ -472,7 +475,7 @@ sub genXref
 	my $s;
 	my @u;
 
-	print "Generating Xref Report...\n";
+	print "Generating Xref Report...\n\n";
 
 	open($f, ">libfoo_xref.txt");
 	foreach $fname (sort keys %elf_type) {
@@ -622,27 +625,8 @@ if ($ARGV[0] eq "--noopt") {
 	$stripshared = "no";
 }
 
-if ($is_arm eq "y") {
-	genSO("${root}/lib/libc.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/lib/libc.so.0", "", "-Wl,-init=__uClibc_init");
-	genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.so", "${stripshared}");
-	genSO("${root}/lib/libresolv.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libresolv.a", "${stripshared}");
-	genSO("${root}/lib/libcrypt.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libcrypt.a", "${stripshared}");
-	genSO("${root}/lib/libm.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libm.a", "${stripshared}");
-	genSO("${root}/lib/libpthread.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libpthread.a", "${stripshared}", "-u pthread_mutexattr_init -Wl,-init=__pthread_initialize_minimal_internal");
-	genSO("${root}/lib/libutil.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libutil.a", "${stripshared}");
-	genSO("${root}/lib/libdl.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libdl.so", "${stripshared}");
-	#genSO("${root}/lib/libnsl.so.0", "${uclibc}/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib/libnsl.a", "${stripshared}");
-	genSO("${root}/lib/libstdc++.so.6", "${uclibc}/arm-brcm-linux-uclibcgnueabi/lib/libstdc++.a", "${stripshared}");
-
-	genSO("${root}/usr/lib/libid3tag.so.0.16.3", "${router}/libid3tag/build/libid3tag.so.0.16.3", "${stripshared}", "-L${router}/zlib");
-	genSO("${root}/usr/lib/libexif.so.12", "${router}/libexif/libexif/.libs/libexif.so.12", "${stripshared}");
-	genSO("${root}/usr/lib/libavcodec.so.54", "${router}/ffmpeg//libavcodec/libavcodec.so.54", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/zlib");
-	genSO("${root}/usr/lib/libavformat.so.54", "${router}/ffmpeg/libavformat/libavformat.so.54", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/ffmpeg/libavcodec -L${router}/zlib");
-	genSO("${root}/usr/lib/libexpat.so.1.9.2", "${router}/expat/lib/.libs/libexpat.so.1.9.2", "${stripshared}");
-}
-else {
+if ($is_arm ne "y") { # MIPS only
 	genSO("${root}/lib/libc.so.0", "${uclibc}/lib/libc.a", "", "-Wl,-init=__uClibc_init ${uclibc}/lib/optinfo/interp.os");
-	genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a");
 	genSO("${root}/lib/libresolv.so.0", "${uclibc}/lib/libresolv.a", "${stripshared}");
 	genSO("${root}/lib/libcrypt.so.0", "${uclibc}/lib/libcrypt.a", "${stripshared}");
 	genSO("${root}/lib/libm.so.0", "${uclibc}/lib/libm.a");
@@ -650,73 +634,71 @@ else {
 	genSO("${root}/lib/libutil.so.0", "${uclibc}/lib/libutil.a", "${stripshared}");
 	#genSO("${root}/lib/libdl.so.0", "${uclibc}/lib/libdl.a", "${stripshared}");
 	#genSO("${root}/lib/libnsl.so.0", "${uclibc}/lib/libnsl.a", "${stripshared}");
-
-	genSO("${root}/usr/lib/libid3tag.so.0.16.3", "${router}/libid3tag/static/libid3tag.a", "${stripshared}", "-L${router}/zlib");
-	genSO("${root}/usr/lib/libexif.so.12", "${router}/libexif/libexif/.libs/libexif.a", "${stripshared}");
-	genSO("${root}/usr/lib/libavcodec.so.54", "${router}/ffmpeg/libavcodec/libavcodec.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/zlib");
-	genSO("${root}/usr/lib/libavformat.so.54", "${router}/ffmpeg/libavformat/libavformat.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/ffmpeg/libavcodec -L${router}/zlib");
-	genSO("${root}/usr/lib/libexpat.so.1.9.2", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");
+	genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a");
 }
 
 if ($openssldir eq "openssl") {
-	genSO("${root}/usr/lib/libcrypto.so.1.0.0", "${router}/${openssldir}/libcrypto.a");
+	genSO("${root}/usr/lib/libcrypto.so.1.0.0", "${router}/${openssldir}/libcrypto.a", "${stripshared}");
 	genSO("${root}/usr/lib/libssl.so.1.0.0", "${router}/${openssldir}/libssl.a", "${stripshared}", "-L${router}/${openssldir}");
 }
 elsif ($openssldir eq "openssl-1.1") {
-	genSO("${root}/usr/lib/libcrypto.so.1.1", "${router}/${openssldir}/libcrypto.a");
-	if ($is_arm ne "y") {
-		genSO("${root}/usr/lib/libssl.so.1.1", "${router}/${openssldir}/libssl.so.1.1", "${stripshared}", "-L${router}/${openssldir}");
+	if ($is_arm ne "y") { # ARM - error (TBCH)
+		genSO("${root}/usr/lib/libcrypto.so.1.1", "${router}/${openssldir}/libcrypto.a", "${stripshared}");
 	}
+	# libssl - bigger
 }
 elsif ($openssldir eq "openssl-3.0") {
-	genSO("${root}/usr/lib/libcrypto.so.3", "${router}/${openssldir}/libcrypto.so.3");
-	genSO("${root}/usr/lib/libssl.so.3", "${router}/${openssldir}/libssl.so.3", "${stripshared}", "-L${router}/${openssldir}");
+	if ($is_arm ne "y") { # ARM - error (TBCH)
+		genSO("${root}/usr/lib/libcrypto.so.3", "${router}/${openssldir}/libcrypto.a", "${stripshared}");
+	}
+	# libssl - bigger
 }
 
-genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a");
-genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a");
+if ($is_arm ne "y") { # MIPS only (ARM - bigger)
+	genSO("${root}/usr/lib/libexpat.so.1.9.2", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");
+	genSO("${root}/usr/lib/libid3tag.so.0.16.3", "${router}/libid3tag/static/libid3tag.a", "${stripshared}", "-L${router}/zlib");
+	genSO("${root}/usr/lib/libexif.so.12", "${router}/libexif/libexif/.libs/libexif.a", "${stripshared}");
+	genSO("${root}/usr/lib/libavcodec.so.54", "${router}/ffmpeg//libavcodec/libavcodec.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/zlib");
+	genSO("${root}/usr/lib/libavformat.so.54", "${router}/ffmpeg/libavformat/libavformat.a", "${stripshared}", "-L${router}/ffmpeg/libavutil -L${router}/ffmpeg/libavcodec -L${router}/zlib");
+}
+
+genSO("${root}/usr/lib/libavutil.so.51", "${router}/ffmpeg/libavutil/libavutil.a", "${stripshared}", "-L${router}/zlib");
+genSO("${root}/usr/lib/libzebra.so", "${router}/zebra/lib/libzebra.a", "${stripshared}");
+genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a", "${stripshared}");
+genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a", "${stripshared}");
+genSO("${root}/usr/lib/libmnl.so.0.2.0", "${router}/libmnl/src/.libs/libmnl.a", "${stripshared}");
 genSO("${root}/usr/lib/libjpeg.so.8.3.2", "${router}/libjpeg-turbo/build/libjpeg.a", "${stripshared}");
-genSO("${root}/usr/lib/libsqlite3.so.0.8.6", "${router}/sqlite/.libs/libsqlite3.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libvorbis.so.0", "${router}/libvorbis/lib/.libs/libvorbis.a", "${stripshared}", "-L${router}/libogg/src/.libs");
 genSO("${root}/usr/lib/libFLAC.so.12.1.0", "${router}/flac/src/libFLAC/.libs/libFLAC.a", "${stripshared}", "-L${router}/libogg/src/.libs");
-genSO("${root}/usr/lib/libavutil.so.51", "${router}/ffmpeg/libavutil/libavutil.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libogg.so.0", "${router}/libogg/src/.libs/libogg.a", "${stripshared}");
-
-genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a");
-#genSO("${root}/usr/lib/libiptc.so", "${router}/iptables/libiptc/libiptc.a");
-#genSO("${root}/usr/lib/libshared.so", "${router}/shared/libshared.a");
-#genSO("${root}/usr/lib/libnvram.so", "${router}/nvram/libnvram.a");
-#genSO("${root}/usr/lib/libusb-1.0.so.0.2.0", "${router}/libusb10/libusb/.libs/libusb-1.0.a");
-
-genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "", "-L${router}/zlib -L${router}/${openssldir}");
-genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a");
-genSO("${root}/usr/lib/libdaemon.so.0.5.0", "${router}/libdaemon/libdaemon/.libs/libdaemon.a");
-genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a");
-genSO("${root}/usr/lib/libnfnetlink.so.0.2.0", "${router}/libnfnetlink/src/.libs/libnfnetlink.a");
+genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a", "${stripshared}");
+genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a", "${stripshared}");
+genSO("${root}/usr/lib/liblz4.so.1.9.4", "${router}/lz4/lib/liblz4.a", "${stripshared}");
+genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "${stripshared}", "-L${router}/zlib -L${router}/${openssldir}");
+genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a", "${stripshared}");
+genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a", "${stripshared}");
 genSO("${root}/usr/lib/libpng16.so.16.43.0", "${router}/libpng/.libs/libpng16.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libxml2.so.2.12.7", "${router}/libxml2/.libs/libxml2.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
 genSO("${root}/usr/lib/libpcre2-8.so.0.10.2", "${router}/pcre2/.libs/libpcre2-8.a", "${stripshared}");
-#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.0", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}");
-genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a", "${stripshared}");
+#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.0", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}"); # (deleted)
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a", "${stripshared}");
+genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a", "${stripshared}");
+genSO("${root}/usr/lib/libatomic_ops.so.1.0.3", "${router}/libatomic_ops/src/.libs/libatomic_ops.a");
+
+genSO("${root}/usr/lib/libavahi-common.so.3.5.4", "${router}/avahi/avahi-common/.libs/libavahi-common.a", "${stripshared}");
+genSO("${root}/usr/lib/libavahi-core.so.7.1.0", "${router}/avahi/avahi-core/.libs/libavahi-core.a", "${stripshared}", "-L${router}/avahi/avahi-common/.libs");
+
 genSO("${root}/usr/lib/libext2fs.so.2.4", "${router}/e2fsprogs/lib/libext2fs.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libuuid.so.1.2", "${router}/e2fsprogs/lib/libuuid.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libblkid.so.1.0", "${router}/e2fsprogs/lib/libblkid.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libe2p.so.2.3", "${router}/e2fsprogs/lib/libe2p.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 genSO("${root}/usr/lib/libcom_err.so.2.1", "${router}/e2fsprogs/lib/libcom_err.a", "${stripshared}", "-L${router}/e2fsprogs/lib");
 
-# -----------------
-genSO("${root}/usr/lib/libglib-1.2.so.0.0.10", "${router}/glib/.libs/libglib-1.2.so.0.0.10", "${stripshared}");
-genSO("${root}/usr/lib/libebtc.so.0.0.0", "${router}/ebtables/.libs/libebtc.so.0.0.0", "${stripshared}");
-genSO("${root}/usr/lib/libmssl.so", "${router}/mssl/libmssl.so", "${stripshared}", "-L${router}/${openssldir} -L${router}/shared");
-genSO("${root}/usr/lib/libnetfilter_conntrack.so.3.7.0", "${router}/libnetfilter_conntrack/src/.libs/libnetfilter_conntrack.so.3.7.0", "${stripshared}", "-L${router}/libnfnetlink/src/.libs -L${router}/libmnl/src/.libs");
-genSO("${root}/usr/lib/libxtables.so", "${router}/iptables-1.8.x/libxtables/.libs/libxtables.so.12.6.0", "${stripshared}", "-L${router}/libnfnetlink/src/.libs");
-genSO("${root}/usr/lib/libavahi-common.so.3.5.4", "${router}/avahi/avahi-common/.libs/libavahi-common.a", "${stripshared}");
-genSO("${root}/usr/lib/libavahi-core.so.7.1.0", "${router}/avahi/avahi-core/.libs/libavahi-core.a", "${stripshared}", "-L${router}/avahi/avahi-common/.libs");
-genSO("${root}/usr/lib/libip4tc.so", "${router}/iptables-1.8.x/libiptc/.libs/libip4tc.so.2.0.0", "${stripshared}", "-L${router}/libnfnetlink/src/.libs");
-genSO("${root}/usr/lib/libip6tc.so", "${router}/iptables-1.8.x/libiptc/.libs/libip6tc.so.2.0.0", "${stripshared}", "-L${router}/libnfnetlink/src/.libs");
-genSO("${root}/usr/lib/libmnl.so.0.2.0", "${router}/libmnl/src/.libs/libmnl.so.0.2.0", "${stripshared}");
+#genSO("${root}/usr/lib/libipset.so.11.1.0", "${router}/ipset/lib/.libs/libipset.a", "${stripshared}"); # (deleted)
+#genSO("${root}/usr/lib/libffi.so.8.1.4", "${router}/libffi/.libs/libffi.a", "${stripshared}"); # (deleted)
+
+# do not add (!): libcap-ng, libzip, libsqlite3, libebtc, libiptc, libxtables, libip4tc, libip6tc, libglib-1, libglib-2, ...
 
 
 print "\n--- end ---\n\n";
