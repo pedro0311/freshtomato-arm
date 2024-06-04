@@ -1,11 +1,12 @@
-AC_INIT(pptpmanager.c)
+AC_INIT([pptpd],[1.5.0])
+AC_CONFIG_SRCDIR([pptpmanager.c])
 
-AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(pptpd,1.4.0)
+AC_CONFIG_HEADERS([config.h])
+AM_INIT_AUTOMAKE
 
 # check common command line options early
 
-AC_DEFINE(PPP_BINARY, "/usr/sbin/pppd")
+AC_DEFINE([PPP_BINARY], "/usr/sbin/pppd", [Where is my pppd?])
 AC_MSG_CHECKING(command line for use of BSD PPP)
 AC_ARG_WITH(bsdppp,
 	[  --with-bsdppp           Use BSD user-space ppp ],
@@ -13,7 +14,7 @@ AC_ARG_WITH(bsdppp,
 	    case "$withval" in
 		yes)
 		    AC_MSG_RESULT(BSD user-space ppp)
-		    AC_DEFINE(BSDUSER_PPP)
+		    AC_DEFINE(BSDUSER_PPP, 1, [Use BSD User land PPP?])
 		    BSDUSER_PPP=$with_bsdppp
 		    AC_DEFINE(PPP_BINARY, "/usr/sbin/ppp")
 		    break;
@@ -36,7 +37,7 @@ AC_ARG_WITH(slirp,
 	    case "$withval" in
 		yes)
 		    AC_MSG_RESULT(yes)
-		    AC_DEFINE(SLIRP)
+		    AC_DEFINE(SLIRP, 1, [Use SLIRP?])
 		    SLIRP=$with_slirp
 		    AC_DEFINE(PPP_BINARY, "/bin/slirp")
 		    break;
@@ -57,11 +58,11 @@ AC_ARG_ENABLE(facility,
     [  --enable-facility=name    Use another syslog facility, default LOG_DAEMON ],
     [
 	AC_MSG_RESULT($enableval)
-	AC_DEFINE_UNQUOTED(PPTP_FACILITY, $enableval)
+	AC_DEFINE_UNQUOTED(PPTP_FACILITY, $enableval, [Syslog Facility to use?  See openlog(3).])
 	],
     [
 	AC_MSG_RESULT(default LOG_DAEMON)
-	AC_DEFINE_UNQUOTED(PPTP_FACILITY, LOG_DAEMON)
+	AC_DEFINE_UNQUOTED(PPTP_FACILITY, LOG_DAEMON, [Syslog Facility to use?  See openlog(3).])
     ])
 
 AC_MSG_CHECKING(command line for bcrelay build)
@@ -71,7 +72,7 @@ AC_ARG_ENABLE(bcrelay,
 	    case "$enableval" in
 		yes)
 		    AC_MSG_RESULT(yes)
-		    AC_DEFINE(BCRELAY)
+		    AC_DEFINE(BCRELAY, 1, [Enable Broadcast Relay?])
 		    BCRELAY=$enableval
 		    break;
 		    ;;
@@ -146,7 +147,7 @@ AC_CACHE_CHECK(for socklen_t, ac_cv_type_socklen_t, [
     ac_cv_type_socklen_t=no)
 ])
 if test $ac_cv_type_socklen_t = no; then
-  AC_DEFINE(socklen_t, int)
+  AC_DEFINE(socklen_t, int, [Just #define to int if it's not defined])
 fi
 
 dnl Check for libwrap (black magic check)
@@ -157,22 +158,16 @@ AC_ARG_WITH(libwrap,
  XYZZY_LIBS="$LIBS"
  AC_MSG_CHECKING(for libwrap alone)
  LIBS="$XYZZY_LIBS -lwrap"
- AC_TRY_LINK([ int allow_severity, deny_severity; ],
-	     [ hosts_access(); ],
-	     [ AC_MSG_RESULT(yes)
-	       AC_DEFINE(HAVE_LIBWRAP)
+ AC_LINK_IFELSE([AC_LANG_PROGRAM([[ int allow_severity, deny_severity; ]], [[ hosts_access(); ]])],[ AC_MSG_RESULT(yes)
+	       AC_DEFINE(HAVE_LIBWRAP, 1, [Have libwrap?])
 	       LIBWRAP="yes"
-	       XTRALIBS_MGR="-lwrap" ],
-	     [ AC_MSG_RESULT(no)
+	       XTRALIBS_MGR="-lwrap" ],[ AC_MSG_RESULT(no)
    LIBS="$XYZZY_LIBS -lwrap -lnsl"
    AC_MSG_CHECKING(for libwrap with libnsl)
-   AC_TRY_LINK([ int allow_severity, deny_severity; ],
-	       [ hosts_access(); ],
-	       [ AC_MSG_RESULT(yes)
-	         AC_DEFINE(HAVE_LIBWRAP)
+   AC_LINK_IFELSE([AC_LANG_PROGRAM([[ int allow_severity, deny_severity; ]], [[ hosts_access(); ]])],[ AC_MSG_RESULT(yes)
+	         AC_DEFINE(HAVE_LIBWRAP, 1, [Have libwrap?])
 		 LIBWRAP="yes"
-	         XTRALIBS_MGR="-lwrap -lnsl" ],
-	       [ AC_MSG_RESULT(no) ])
+	         XTRALIBS_MGR="-lwrap -lnsl" ],[ AC_MSG_RESULT(no) ])
  ])
  LIBS="$XYZZY_LIBS"
  fi
@@ -209,10 +204,10 @@ if test "$ac_cv_lib_c_gethostbyname" = no; then
   fi
 fi
 if test "$ac_cv_lib_c_openpty" = yes; then
-  AC_DEFINE(HAVE_OPENPTY)
+  AC_DEFINE(HAVE_OPENPTY, 1, [Define if you have an openpty() (non-standard check)])
 else
   if test "$ac_cv_lib_util_openpty" = yes; then
-    AC_DEFINE(HAVE_OPENPTY)
+    AC_DEFINE(HAVE_OPENPTY 1, [Define if you have an openpty() (non-standard check)])
     XTRALIBS_CTRL="-lutil"
   fi
 fi
@@ -237,7 +232,7 @@ if test "$BCRELAY" = "yes"; then
 fi
 
 if test "$VRF" = "yes"; then
-	AC_CHECKING([for vrf Library and Header files])
+	AS_MESSAGE([checking for vrf Library and Header files...])
 	AC_CHECK_HEADER(vrf.h, ,
 		AC_MSG_ERROR([vrf headers were not found])
 	)
@@ -293,4 +288,5 @@ else
 fi
 
 AC_CACHE_SAVE
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

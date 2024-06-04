@@ -4,7 +4,6 @@ AUTOMAKE_OPTIONS = no-dependencies foreign
 @SET_MAKE@
 
 export LIBDIR=$(libdir)/pptpd
-INCLUDES = -I.
 ## Change this if you don't have gcc
 ## -pedantic removed for now (OpenBSD header files).
 ## -Werror removed for now (getopt stuff on OSF/1 throws a

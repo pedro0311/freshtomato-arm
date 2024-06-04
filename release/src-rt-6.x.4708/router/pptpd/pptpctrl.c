@@ -151,9 +151,9 @@ int main(int argc, char **argv)
         GETARG_VALUE(speed);
         GETARG_VALUE(pppLocal);
         GETARG_VALUE(pppRemote);
-        if (arg < argc) GETARG_INT(unique_call_id);
-        if (arg < argc) GETARG_STRING(ppp_binary);
-        if (arg < argc) GETARG_INT(pptp_logwtmp);
+        if (arg < argc) { GETARG_INT(unique_call_id); }
+        if (arg < argc) { GETARG_STRING(ppp_binary); }
+        if (arg < argc) { GETARG_INT(pptp_logwtmp); }
 
 #ifdef VRF
         if (!*vrf) {

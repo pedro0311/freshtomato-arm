@@ -12,7 +12,7 @@
 
 Summary:        PoPToP Point to Point Tunneling Server
 Name:           pptpd
-Version:        1.4.0
+Version:        1.5.0
 Release:        1%{?dist}
 License:        GPL
 Group:          Applications/Internet
@@ -119,6 +119,9 @@ fi
 %config(noreplace) /etc/ppp/options.pptpd
 
 %changelog
+* Sat May 18 2024 James Cameron <quozl@laptop.org> - 1.5.0-1
+- Untested
+
 * Wed Oct 23 2013 John Lauro <john.lauro@covenanteyes.com> - 1.4.0-1
 - Update to 1.4.0
 - Bring .spec and bcrelay in sync with configure option

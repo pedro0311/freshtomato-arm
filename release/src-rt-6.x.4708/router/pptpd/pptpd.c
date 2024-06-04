@@ -88,7 +88,7 @@ static void showusage(char *prog)
         printf("Usage: pptpd [options], where options are:\n\n");
 #ifdef BCRELAY
 #define OPT_BCRELAY "b"
-        printf(" [-b] [--bcrelay if]       Use broadcast relay for broadcasts comming from.\n");
+        printf(" [-b] [--bcrelay if]       Use broadcast relay for broadcasts coming from.\n");
         printf("                           the specified interface (default is eth1).\n");
 #else
 #define OPT_BCRELAY ""
