@@ -56,6 +56,7 @@ extern int in4_pton(const char *src, int srclen, uint8_t *dst, int delim, const 
 extern int in6_pton(const char *src, int srclen, uint8_t *dst, int delim, const char **end);
 
 extern void helper_register(struct ctd_helper *helper);
+struct ctd_helper *__helper_find(const char *helper_name, uint8_t l4proto);
 struct ctd_helper *helper_find(const char *libdir_path, const char *name, uint8_t l4proto, int flags);
 
 #define min_t(type, x, y) ({			\

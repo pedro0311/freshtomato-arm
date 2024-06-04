@@ -55,6 +55,7 @@ hashtable_create(int hashsize, int limit,
 
 void hashtable_destroy(struct hashtable *h)
 {
+	hashtable_flush(h);
 	free(h);
 }
 

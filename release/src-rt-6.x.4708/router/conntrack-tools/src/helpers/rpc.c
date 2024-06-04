@@ -35,25 +35,17 @@
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#include <linux/netfilter/nfnetlink_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue_tcp.h>
 #include <libnetfilter_queue/pktbuff.h>
 #include <linux/netfilter.h>
 
+#include "helpers/rpc.h"
+
 /* RFC 1050: RPC: Remote Procedure Call Protocol Specification Version 2 */
 /* RFC 1014: XDR: External Data Representation Standard */
 #define SUPPORTED_RPC_VERSION	2
-
-struct rpc_info {
-	/* XID */
-	uint32_t xid;
-	/* program */
-	uint32_t pm_prog;
-	/* program version */
-	uint32_t pm_vers;
-	/* transport protocol: TCP|UDP */
-	uint32_t pm_prot;
-};
 
 /* So, this packet has hit the connection tracking matching code.
    Mangle it, and change the expectation to match the new version. */

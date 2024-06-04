@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
 
 	umask(0177);
 
-	if ((ret = init_config(config_file)) == -1) {
+	if (init_config(config_file) == -1) {
 		dlog(LOG_ERR, "can't open config file `%s'", config_file);
 		exit(EXIT_FAILURE);
 	}

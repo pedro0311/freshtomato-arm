@@ -69,12 +69,12 @@ struct cache *cache_create(const char *name, enum cache_type type,
 
 	memcpy(c->feature_type, feature_type, sizeof(feature_type));
 
-	c->features = malloc(sizeof(struct cache_feature) * j);
+	c->features = malloc(sizeof(struct cache_feature *) * j);
 	if (!c->features) {
 		free(c);
 		return NULL;
 	}
-	memcpy(c->features, feature_array, sizeof(struct cache_feature) * j);
+	memcpy(c->features, feature_array, sizeof(struct cache_feature *) * j);
 	c->num_features = j;
 
 	c->extra_offset = size;

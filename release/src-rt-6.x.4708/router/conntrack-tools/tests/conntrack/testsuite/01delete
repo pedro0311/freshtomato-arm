@@ -2,8 +2,22 @@
 -I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 10 --dport 20 --state LISTEN -u SEEN_REPLY -t 50 ; OK
 # delete bad source
 -D -s 2.2.2.2 -p tcp --sport 10 --dport 20 ; BAD
+# delete bad destination
+-D -d 1.1.1.1 -p tcp --sport 10 --dport 20 ; BAD
+# delete bad source port
+-I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 20 --dport 20 ; BAD
+# delete bad destination port
+-I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 10 --dport 10 ; BAD
 # delete by source
 -D -s 1.1.1.1 ; OK
+# re-create dummy with mark
+-I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 10 --dport 20 --state LISTEN -u SEEN_REPLY -t 50 -m 20 ; OK
+# delete bad mark
+-D -m 10 ; BAD
+# delete by mark
+-D -m 20 ; OK
+# delete by mark (does not exist anymore)
+-D -m 20 ; BAD
 # re-create dummy
 -I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 10 --dport 20 --state LISTEN -u SEEN_REPLY -t 50 ; OK
 # delete by netmask
@@ -14,3 +28,10 @@
 -I -s 1.1.1.1 -d 2.2.2.2 -p tcp --sport 10 --dport 20 --state LISTEN -u SEEN_REPLY -t 50 ; OK
 # try same command again but with CIDR
 -D -s 1.1.1.0/24 -d 2.2.2.0/24 ; OK
+# try same command again but with CIDR (no matching found)
+-D -s 1.1.1.0/24 -d 2.2.2.0/24 ; BAD
+# try to delete mismatching address family
+-D -s ::1 -d 2.2.2.2 ; BAD
+# try to delete IPv6 address without specifying IPv6 family
+-I -s ::1 -d ::2 -p tcp --sport 20 --dport 10 --state LISTEN -u SEEN_REPLY -t 40 ; OK
+-D -s ::1 ; OK

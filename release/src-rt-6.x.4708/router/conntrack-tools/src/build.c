@@ -66,7 +66,14 @@ ct_build_u32(const struct nf_conntrack *ct, int a, struct nethdr *n, int b)
 }
 
 static inline void
-ct_build_u128(const struct nf_conntrack *ct, int a, struct nethdr *n, int b)
+ct_build_be32(const struct nf_conntrack *ct, int a, struct nethdr *n, int b)
+{
+	uint32_t data = nfct_get_attr_u32(ct, a);
+	addattr(n, b, &data, sizeof(uint32_t));
+}
+
+static inline void
+ct_build_be128(const struct nf_conntrack *ct, int a, struct nethdr *n, int b)
 {
 	const char *data = nfct_get_attr(ct, a);
 	addattr(n, b, data, sizeof(uint32_t) * 4);
@@ -126,11 +133,12 @@ static enum nf_conntrack_attr nat_type[] =
 /* ICMP, UDP and TCP are always loaded with nf_conntrack_ipv4 */
 static void build_l4proto_tcp(const struct nf_conntrack *ct, struct nethdr *n)
 {
+	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
+		       sizeof(struct nfct_attr_grp_port));
+
 	if (!nfct_attr_is_set(ct, ATTR_TCP_STATE))
 		return;
 
-	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
-		      sizeof(struct nfct_attr_grp_port));
 	ct_build_u8(ct, ATTR_TCP_STATE, n, NTA_TCP_STATE);
 	if (CONFIG(sync).tcp_window_tracking) {
 		ct_build_u8(ct, ATTR_TCP_WSCALE_ORIG, n, NTA_TCP_WSCALE_ORIG);
@@ -140,12 +148,13 @@ static void build_l4proto_tcp(const struct nf_conntrack *ct, struct nethdr *n)
 
 static void build_l4proto_sctp(const struct nf_conntrack *ct, struct nethdr *n)
 {
+	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
+		       sizeof(struct nfct_attr_grp_port));
+
 	/* SCTP is optional, make sure nf_conntrack_sctp is loaded */
 	if (!nfct_attr_is_set(ct, ATTR_SCTP_STATE))
 		return;
 
-	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
-		      sizeof(struct nfct_attr_grp_port));
 	ct_build_u8(ct, ATTR_SCTP_STATE, n, NTA_SCTP_STATE);
 	ct_build_u32(ct, ATTR_SCTP_VTAG_ORIG, n, NTA_SCTP_VTAG_ORIG);
 	ct_build_u32(ct, ATTR_SCTP_VTAG_REPL, n, NTA_SCTP_VTAG_REPL);
@@ -153,12 +162,13 @@ static void build_l4proto_sctp(const struct nf_conntrack *ct, struct nethdr *n)
 
 static void build_l4proto_dccp(const struct nf_conntrack *ct, struct nethdr *n)
 {
+	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
+		       sizeof(struct nfct_attr_grp_port));
+
 	/* DCCP is optional, make sure nf_conntrack_dccp is loaded */
 	if (!nfct_attr_is_set(ct, ATTR_DCCP_STATE))
 		return;
 
-	ct_build_group(ct, ATTR_GRP_ORIG_PORT, n, NTA_PORT,
-		      sizeof(struct nfct_attr_grp_port));
 	ct_build_u8(ct, ATTR_DCCP_STATE, n, NTA_DCCP_STATE);
 	ct_build_u8(ct, ATTR_DCCP_ROLE, n, NTA_DCCP_ROLE);
 }
@@ -279,18 +289,18 @@ void ct2msg(const struct nf_conntrack *ct, struct nethdr *n)
 	switch (nfct_get_attr_u8(ct, ATTR_ORIG_L3PROTO)) {
 	case AF_INET:
 		if (nfct_getobjopt(ct, NFCT_GOPT_IS_SNAT))
-			ct_build_u32(ct, ATTR_REPL_IPV4_DST, n, NTA_SNAT_IPV4);
+			ct_build_be32(ct, ATTR_REPL_IPV4_DST, n, NTA_SNAT_IPV4);
 		if (nfct_getobjopt(ct, NFCT_GOPT_IS_DNAT))
-			ct_build_u32(ct, ATTR_REPL_IPV4_SRC, n, NTA_DNAT_IPV4);
+			ct_build_be32(ct, ATTR_REPL_IPV4_SRC, n, NTA_DNAT_IPV4);
 		break;
 	case AF_INET6:
 		if (nfct_getobjopt(ct, NFCT_GOPT_IS_SNAT)) {
-			ct_build_u128(ct, ATTR_REPL_IPV6_DST, n,
-				      NTA_SNAT_IPV6);
+			ct_build_be128(ct, ATTR_REPL_IPV6_DST, n,
+				       NTA_SNAT_IPV6);
 		}
 		if (nfct_getobjopt(ct, NFCT_GOPT_IS_DNAT)) {
-			ct_build_u128(ct, ATTR_REPL_IPV6_SRC, n,
-				      NTA_DNAT_IPV6);
+			ct_build_be128(ct, ATTR_REPL_IPV6_SRC, n,
+				       NTA_DNAT_IPV6);
 		}
 		break;
 	default:
@@ -315,6 +325,9 @@ void ct2msg(const struct nf_conntrack *ct, struct nethdr *n)
 	    nfct_attr_is_set(ct, ATTR_SYNPROXY_ITS) &&
 	    nfct_attr_is_set(ct, ATTR_SYNPROXY_TSOFF))
 		ct_build_synproxy(ct, n);
+
+	if (nfct_attr_is_set(ct, ATTR_ZONE))
+	    ct_build_u16(ct, ATTR_ZONE, n, NTA_ZONE);
 }
 
 static void

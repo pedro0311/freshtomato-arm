@@ -67,7 +67,7 @@ void killer(int signo)
 	close_log();
 
 	sd_ct_stop();
-	exit(0);
+	_exit(0);
 }
 
 static void child(int foo)

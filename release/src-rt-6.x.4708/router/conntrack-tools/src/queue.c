@@ -69,12 +69,12 @@ void queue_stats_show(int fd)
 	int size = 0;
 	char buf[512];
 
-	size += snprintf(buf+size, sizeof(buf),
+	size += snprintf(buf + size, sizeof(buf) - size,
 			 "allocated queue nodes:\t\t%12u\n\n",
 			 qobjects_num);
 
 	list_for_each_entry(this, &queue_list, list) {
-		size += snprintf(buf+size, sizeof(buf),
+		size += snprintf(buf + size, sizeof(buf) - size,
 				 "queue %s:\n"
 				 "current elements:\t\t%12u\n"
 				 "maximum elements:\t\t%12u\n"

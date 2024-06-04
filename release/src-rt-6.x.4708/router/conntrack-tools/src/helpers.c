@@ -26,8 +26,7 @@ void helper_register(struct ctd_helper *helper)
 	list_add(&helper->head, &helper_list);
 }
 
-static struct ctd_helper *
-__helper_find(const char *helper_name, uint8_t l4proto)
+struct ctd_helper *__helper_find(const char *helper_name, uint8_t l4proto)
 {
 	struct ctd_helper *cur, *helper = NULL;
 

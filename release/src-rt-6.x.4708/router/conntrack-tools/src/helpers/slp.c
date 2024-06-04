@@ -28,6 +28,7 @@
 #include "myct.h"
 #include "log.h"
 
+#include <linux/netfilter/nfnetlink_queue.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
 #include <linux/netfilter.h>
 

@@ -1,0 +1,187 @@
+= Setting up active-active load-sharing hash-based stateful firewall =
+	by Pablo Neira Ayuso <pablo@netfilter.org> in 2010
+
+If you want to know more about this configuration and other firewall
+architectures, please read:
+
+* Demystifying cluster-based fault-tolerant firewalls.
+  IEEE Internet Computing, 13(6):31-38, December 2009.
+  Available at: https://perso.ens-lyon.fr/laurent.lefevre/pdf/IC2009_Neira_Gasca_Lefevre.pdf
+
+== 0x0 intro ==
+
+Under this directory you can find a script that allows you to setup a simple
+active-active hash-based load-sharing firewall cluster based on the iptables'
+cluster match.
+
+== 0x1 testbed ==
+
+My testbed looks like the following:
+
+                ---------- eth1        eth2  ----------
+ client A ------|        |--- firewall 1 ----|        |
+ (192.168.0.2)  | switch | (.0.5)    (.1.5)  | switch |--- server
+                |        |                   |        |   (192.168.1.2)
+ client B ------|        |--- firewall 2 ----|        |
+ (192.168.0.11) ---------- (.0.5)    (.1.5)  ----------
+                            eth1      eth2
+
+The firewalls perform SNAT to masquerade clients. Note that both cluster
+firewall have the same IP addresses. For administrative purposes, it is
+a good idea that each firewall has its one IP address to SSH them, make
+sure you add the appropriate rule to skip the cluster match rule-set!
+More comments: although the picture shows two switches, I'm actually
+using one and I separated the clients and the server in two different
+VLANs.
+
+The script also sets a multicast MAC address that is the same for both
+firewalls so that the switch floods the same packets to both firewalls.
+Using a multicast MAC address is a RFC violation [1], since network node
+must not include multicast MAC address in ARP replies, but:
+
+ a) it is the only way I found so far to obtain the behaviour from my
+    HP procurve switches.
+
+ b) the VRRP MAC address range is not supported appropritely by switch
+    vendors, at least by my HP procurve switches. If switch vendors
+    support this MAC address range appropriately, they will handle them
+    as multicast MAC address. As of 2011 I did not find any switch handling
+    VRRP MAC address range as multicast ports (they still handle them as
+    normal unicast MAC addresses, therefore my solution does not work with
+    two nodes with the same VRRP MAC address).
+
+The cluster match relies upon the Connection Tracking System (conntrack).
+Thus, traffic coming in the reply direction which does not belong this node
+is labeled as INVALID for TCP and ICMP protocols. The scripts add a rule to
+drop this traffic to avoid possible packet duplication. For UDP traffic,
+you will have to add a rule to drop NEW traffic in the reply direction
+because conntrack considers it valid. If you don't do this, both nodes
+may accept reply traffic, thus, sending duplicated packets to the client,
+which is not what you want.
+
+During my last experiments, I was using the Linux kernel 2.6.37 in the
+firewalls and the server. Everything you need to setup this configuration
+is available in stock Linux kernels. No external patches with new features
+are required.
+
+== 0x2 running scripts ==
+
+Copy the script to each node, then adjust the script variables to your
+configuration.
+
+On firewall 1:
+firewall1# ./clusterip-node1.sh start
+
+On firewall 2:
+firewall2# ./clusterip-node2.sh start
+
+== 0x3 trouble-shooting ==
+
+Some troubleshooting may help to understand how this setup works. Check
+the following if you experience problems:
+
+1) Check that Multicast MAC address are assigned to the NICs:
+
+firewall1$ ip maddr
+[...]
+2:      eth1
+[...]
+        link  01:00:5e:00:01:01 static
+3:      eth2
+[...]
+        link  01:00:5e:00:01:02 static
+
+The scripts add the multicast MAC addresses to the NICs, if this
+is not done the traffic will be discarded by the firewalls'
+networking stack.
+
+2) ICMP ping the server from one the clients:
+
+client$ ping -c 1 192.168.1.2
+PING 192.168.1.2 (192.168.1.2) 56(84) bytes of data.
+64 bytes from 192.168.1.2: icmp_seq=1 ttl=63 time=0.220 ms
+
+--- 192.168.1.2 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.220/0.220/0.220/0.000 ms
+
+If this does not work, make sure the firewalls are including the
+multicast MAC address in their ARP replies, you can check this
+by looking at the neigbour cache:
+
+client$ ip neighbour
+[...]
+192.168.0.5 dev eth1 lladdr 01:00:5e:00:01:01 REACHABLE
+
+server$ ip neighbour
+[...]
+192.168.1.5 dev eth1 lladdr 01:00:5e:00:01:02 REACHABLE
+
+firewall$ ip neighbour
+[...]
+192.168.0.5 dev eth1 lladdr 01:00:5e:00:01:01 REACHABLE
+192.168.1.5 dev eth2 lladdr 01:00:5e:00:01:02 REACHABLE
+
+3) Test TCP connections: you can use netcat to start simple connections
+between the client and the server.
+
+You can also use intensive HTTP traffic generation to test performance
+like injectX.c and httpterm from Willy Tarreau:
+
+http://1wt.eu/tools/inject/
+http://1wt.eu/tools/httpterm/
+
+clientA:~/http-client-benchmark# ./client -t 60 -u 200 -G 192.168.1.2:8000
+#  hits  hits/s  ^h/s  ^bytes   kB/s  errs   rst  tout  mhtime
+ 266926 26692 26766   3881270   3779     0     0     0   0.237
+ 294067 26733 27141   3935621   3785     0     0     0   0.176
+
+clientB~/http-client-benchmark# ./client -t 30 -u 40 -G 192.168.1.2:8020
+#  hits  hits/s  ^h/s  ^bytes   kB/s  errs   rst  tout  mhtime
+  53250 17750 17368   2518448   2513     0     0     0   0.240
+  70766 17691 17516   2539907   2505     0     0     0   0.297
+
+^h/s is the current number of HTTP petitions per second. This means
+that you get ~45000 HTTP petitions per second. In my setup, with only
+one firewall active I get ~27000 HTTP petitions per second. We obtain
+extra performance of ~66%, not that bad 8-).
+
+I have configured httpterm to send object of 0 bytes over HTTP
+to obtain the maximum number of HTTP flows. This is the worst case
+scenario in firewall load.
+
+I forgot to mention that I set CPU affinity for NICs IRQs. I've got
+two cores, one for each firewall NIC.
+
+== 0x4 report sucessful setups ==
+
+My testbed is composed of low-cost basic five years old HP proliant
+systems, you can see that the numbers are not great. I like knowing
+about numbers, I'd appreciate if you drop me a line to tell me the
+numbers that you get and your experience.
+
+== 0x5 conclusions and future works ==
+
+The cluster match allows to setup load-sharing hash-based stateful
+firewalls that is a way to avoid having a spare backup firewall as
+it happens in classical Primary-Backup setups.
+
+Still, there is some pending work to fully integrate conntrackd and HA
+managers with it (in case that you want high availability, of course).
+
+-o-
+
+[1] More specifically, it's a RFC 1812 (section 3.3.2) violation.
+It's been reported that this is a problem for CISCO routers:
+http://marc.info/?l=netfilter&m=128810399113170&w=2
+
+Michele Codutti: "The problem is the multicast MAC address that these
+routers doesn't "like". They discard any incoming packet with MAC
+multicast address to be compliant with RFC1812. The only documented
+(by Cisco) workaround is to put a fixed arp entry with the multicast
+address that maps the clustered IP in the router."
+
+If you keep reading the mailing thread, the reported problem affected
+Cisco 7200 VXR.
+
+--02/02/2010

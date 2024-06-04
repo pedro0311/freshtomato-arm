@@ -23,5 +23,13 @@ conntrack -L --mark 0/0xffffffff; OK
 conntrack -L -s 1.1.1.0 --mask-src 255.255.255.0 -d 2.0.0.0 --mask-dst 255.0.0.0 ; OK
 conntrack -L -s 1.1.1.4/24 -d 2.3.4.5/8 ; OK
 conntrack -L -s 1.1.2.0/24 -d 2.3.4.5/8 ; OK
+# filter filter mismatching address family
+conntrack -L -s 2.2.2.2 -d ::1 ; BAD
+# filter by IPv6 address, it implicitly sets IPv6 family
+conntrack -L -s ::1 ; OK
+# filter by IPv6 address mask, it implicitly sets IPv6 family
+conntrack -L -s abcd:abcd:abcd:: --mask-src ffff:ffff:ffff:: ; OK
+# filter filter mismatching address family
+conntrack -L --mask-src ffff:ffff:ffff:: --mask-dst 255.0.0.0 ; BAD
 # delete dummy
 conntrack -D -d 2.2.2.2 ; OK

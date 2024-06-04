@@ -1,0 +1,100 @@
+- name: empty
+  start:
+    - ":"
+  stop:
+    - ":"
+- name: simple_stats
+  start:
+    - rm -f /var/lock/conntrack.lock
+    - |
+      cat << EOF > /tmp/conntrackd_test_simple_stats
+      General {
+        HashSize 8192
+        LockFile /var/lock/conntrack.lock
+        UNIX { Path /var/run/conntrackd.ctl }
+      }
+      Stats {
+        LogFile on
+      }
+      EOF
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -d
+  stop:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -k
+    - rm -f /var/lock/conntrack.lock
+    - rm -f /tmp/conntrackd_test_simple_stats
+
+- name: basic_2_peer_network_tcp_notrack
+  start:
+    - scenarios/basic/./network-setup.sh start
+    - |
+      cat << EOF > /tmp/ruleset.nft
+      table ip filter {
+        chain postrouting {
+          type nat hook postrouting priority srcnat; policy accept;
+            oif veth0 masquerade
+        }
+      }
+      EOF
+    - ip netns exec nsr1 nft -f /tmp/ruleset.nft
+    - |
+      cat << EOF > /tmp/nsr1.conf
+      Sync {
+        Mode NOTRACK {
+          DisableExternalCache on
+          DisableInternalCache on
+        }
+        TCP {
+          IPv4_address 192.168.100.2
+          IPv4_Destination_Address 192.168.100.3
+          Interface veth2
+          Port 3780
+        }
+      }
+      General {
+        LogFile on
+        LockFile /var/lock/conntrack-nsr1.lock
+        UNIX { Path /var/run/conntrackd-nsr1.ctl }
+      }
+      EOF
+    - |
+      cat << EOF > /tmp/nsr2.conf
+      Sync {
+        Mode NOTRACK {
+          DisableExternalCache on
+          DisableInternalCache on
+        }
+        TCP {
+          IPv4_address 192.168.100.3
+          IPv4_Destination_Address 192.168.100.2
+          Interface veth0
+          Port 3780
+        }
+      }
+      General {
+        LogFile on
+        LockFile /var/lock/conntrack-nsr2.lock
+        UNIX { Path /var/run/conntrackd-nsr2.ctl }
+      }
+      EOF
+    # finally run the daemons
+    - ip netns exec nsr1 $CONNTRACKD -C /tmp/nsr1.conf -d
+    - ip netns exec nsr2 $CONNTRACKD -C /tmp/nsr2.conf -d
+    # make sure they are alive and connected before considering the scenario started
+    - timeout 5 bash -c -- '
+      while ! ip netns exec nsr1 $CONNTRACKD -C /tmp/nsr1.conf -s | grep -q "server=connected"
+      ; do sleep 0.5 ; done'
+    - timeout 5 bash -c -- '
+      while ! ip netns exec nsr1 $CONNTRACKD -C /tmp/nsr1.conf -s | grep -q "client=connected"
+      ; do sleep 0.5 ; done'
+    - timeout 5 bash -c -- '
+      while ! ip netns exec nsr2 $CONNTRACKD -C /tmp/nsr2.conf -s | grep -q "server=connected"
+      ; do sleep 0.5 ; done'
+    - timeout 5 bash -c -- '
+      while ! ip netns exec nsr2 $CONNTRACKD -C /tmp/nsr2.conf -s | grep -q "client=connected"
+      ; do sleep 0.5 ; done'
+  stop:
+    - $CONNTRACKD -C /tmp/nsr1.conf -k 2>/dev/null
+    - $CONNTRACKD -C /tmp/nsr2.conf -k 2>/dev/null
+    - rm -f /tmp/ruleset.nft /tmp/nsr2.conf /tmp/nsr1.conf
+    - rm -f /var/lock/conntrack-nsr1.lock /var/lock/conntrack-nsr2.lock
+    - scenarios/basic/./network-setup.sh stop

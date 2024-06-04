@@ -30,22 +30,15 @@
 
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#include <linux/netfilter/nfnetlink_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue_tcp.h>
 #include <libnetfilter_queue/pktbuff.h>
 #include <linux/netfilter.h>
 
+#include "helpers/ftp.h"
+
 static bool loose; /* XXX: export this as config option. */
-
-#define NUM_SEQ_TO_REMEMBER 2
-
-/* This structure exists only once per master */
-struct ftp_info {
-	/* Valid seq positions for cmd matching after newline */
-	uint32_t seq_aft_nl[MYCT_DIR_MAX][NUM_SEQ_TO_REMEMBER];
-	/* 0 means seq_match_aft_nl not set */
-	int seq_aft_nl_num[MYCT_DIR_MAX];
-};
 
 enum nf_ct_ftp_type {
 	/* PORT command from client */
@@ -339,23 +332,21 @@ static int nf_nat_ftp_fmt_cmd(enum nf_ct_ftp_type type,
 			      char *buffer, size_t buflen,
 			      uint32_t addr, uint16_t port)
 {
+	union {
+		unsigned char c[4];
+		uint32_t d;
+	} tmp;
+
+	tmp.d = addr;
 	switch (type) {
 	case NF_CT_FTP_PORT:
 	case NF_CT_FTP_PASV:
 		return snprintf(buffer, buflen, "%u,%u,%u,%u,%u,%u",
-				((unsigned char *)&addr)[0],
-				((unsigned char *)&addr)[1],
-				((unsigned char *)&addr)[2],
-				((unsigned char *)&addr)[3],
-				port >> 8,
-				port & 0xFF);
+				tmp.c[0], tmp.c[1], tmp.c[2], tmp.c[3],
+				port >> 8, port & 0xFF);
 	case NF_CT_FTP_EPRT:
 		return snprintf(buffer, buflen, "|1|%u.%u.%u.%u|%u|",
-				((unsigned char *)&addr)[0],
-				((unsigned char *)&addr)[1],
-				((unsigned char *)&addr)[2],
-				((unsigned char *)&addr)[3],
-				port);
+				tmp.c[0], tmp.c[1], tmp.c[2], tmp.c[3], port);
 	case NF_CT_FTP_EPSV:
 		return snprintf(buffer, buflen, "|||%u|", port);
 	}

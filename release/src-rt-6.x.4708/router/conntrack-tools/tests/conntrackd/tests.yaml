@@ -1,0 +1,83 @@
+- name: stats_general
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: general
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s | grep -q "cache stats"
+
+- name: stats_network
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: network (no output)
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s network
+
+- name: stats_runtime
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: runtime
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s runtime | grep -q uptime
+
+- name: stats_process
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: process (no output)
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s process
+
+- name: stats_queue
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: queue (no output)
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s queue
+
+- name: stats_ct
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: ct
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s ct | grep -q traffic
+
+- name: stats_expect
+  scenario: simple_stats
+  # check that we can obtain stats via unix socket: expect (no output)
+  test:
+    - $CONNTRACKD -C /tmp/conntrackd_test_simple_stats -s expect
+
+- name: tcp_notrack_replicate_icmp
+  scenario: basic_2_peer_network_tcp_notrack
+  # check that we can replicate a ICMP conntrack entry in a 2 conntrackd TCP/NOTRACK setup
+  test:
+    # PING should inject an ICMP conntrack entry in nsr1
+    - ip netns exec ns1 ping -c1 10.0.1.2 >/dev/null
+    # verify conntrack entry is then replicated to nsr2, wait up to 5 seconds
+    - timeout 5 bash -c -- '
+      while ! ip netns exec nsr2 $CONNTRACK -L -p icmp 2>/dev/null | grep -q icmp
+      ; do sleep 0.5 ; done'
+
+- name: hash_defaults_segfault
+  scenario: empty
+  test:
+    - rm -f /var/lock/conntrack.lock
+    - |
+      cat << EOF > /tmp/conntrackd_notrack_hash_defaults
+      Sync {
+        Mode NOTRACK { }
+        Multicast {
+          IPv4_address 225.0.0.50
+          Group 3780
+          IPv4_interface 127.0.0.1
+          Interface lo
+          SndSocketBuffer 1249280
+          RcvSocketBuffer 1249280
+          Checksum on
+        }
+      }
+      General {
+        LogFile on
+        Syslog on
+        LockFile /var/lock/conntrackd.lock
+        UNIX { Path /var/run/conntrackd.sock }
+        NetlinkBufferSize 2097152
+        NetlinkBufferSizeMaxGrowth 8388608
+      }
+      EOF
+    - $CONNTRACKD -C /tmp/conntrackd_notrack_hash_defaults -d
+    - $CONNTRACKD -C /tmp/conntrackd_notrack_hash_defaults -s | grep -q "cache"
+    - $CONNTRACKD -C /tmp/conntrackd_notrack_hash_defaults -k

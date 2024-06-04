@@ -34,13 +34,14 @@
 static uint32_t
 cache_hash4_ct(const struct nf_conntrack *ct, const struct hashtable *table)
 {
-	uint32_t a[4] = {
+	uint32_t a[5] = {
 		[0]	= nfct_get_attr_u32(ct, ATTR_IPV4_SRC),
 		[1]	= nfct_get_attr_u32(ct, ATTR_IPV4_DST),
 		[2]	= nfct_get_attr_u8(ct, ATTR_L3PROTO) << 16 |
 			  nfct_get_attr_u8(ct, ATTR_L4PROTO),
 		[3]	= nfct_get_attr_u16(ct, ATTR_PORT_SRC) << 16 |
 			  nfct_get_attr_u16(ct, ATTR_PORT_DST),
+		[4]	= nfct_get_attr_u16(ct, ATTR_ZONE),
 	};
 
 	/*
@@ -50,13 +51,13 @@ cache_hash4_ct(const struct nf_conntrack *ct, const struct hashtable *table)
 	 * but using a multiply, less expensive than a divide. See:
 	 * http://www.mail-archive.com/netdev@vger.kernel.org/msg56623.html
 	 */
-	return ((uint64_t)jhash2(a, 4, 0) * table->hashsize) >> 32;
+	return ((uint64_t)jhash2(a, 5, 0) * table->hashsize) >> 32;
 }
 
 static uint32_t
 cache_hash6_ct(const struct nf_conntrack *ct, const struct hashtable *table)
 {
-	uint32_t a[10];
+	uint32_t a[11];
 
 	memcpy(&a[0], nfct_get_attr(ct, ATTR_IPV6_SRC), sizeof(uint32_t)*4);
 	memcpy(&a[4], nfct_get_attr(ct, ATTR_IPV6_DST), sizeof(uint32_t)*4);
@@ -64,8 +65,9 @@ cache_hash6_ct(const struct nf_conntrack *ct, const struct hashtable *table)
 	       nfct_get_attr_u8(ct, ATTR_ORIG_L4PROTO);
 	a[9] = nfct_get_attr_u16(ct, ATTR_ORIG_PORT_SRC) << 16 |
 	       nfct_get_attr_u16(ct, ATTR_ORIG_PORT_DST);
+	a[10] = nfct_get_attr_u16(ct, ATTR_ZONE);
 
-	return ((uint64_t)jhash2(a, 10, 0) * table->hashsize) >> 32;
+	return ((uint64_t)jhash2(a, 11, 0) * table->hashsize) >> 32;
 }
 
 static uint32_t
@@ -88,21 +90,12 @@ cache_ct_hash(const void *data, const struct hashtable *table)
 	return ret;
 }
 
-/* master conntrack of expectations have no ID */
-static inline int
-cache_ct_cmp_id(const struct nf_conntrack *ct1, const struct nf_conntrack *ct2)
-{
-	return nfct_attr_is_set(ct2, ATTR_ID) ?
-	       nfct_get_attr_u32(ct1, ATTR_ID) == nfct_get_attr_u32(ct2, ATTR_ID) : 1;
-}
-
 static int cache_ct_cmp(const void *data1, const void *data2)
 {
 	const struct cache_object *obj = data1;
 	const struct nf_conntrack *ct = data2;
 
-	return nfct_cmp(obj->ptr, ct, NFCT_CMP_ORIG) &&
-	       cache_ct_cmp_id(obj->ptr, ct);
+	return nfct_cmp(obj->ptr, ct, NFCT_CMP_ORIG);
 }
 
 static void *cache_ct_alloc(void)

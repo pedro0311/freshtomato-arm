@@ -28,6 +28,23 @@ int main()
 	struct dirent *dent;
 	char file[1024];
 	int i,n;
+	char cmd_buf[1024 * 8];
+	int i_cmd_buf = 0;
+	char cmd, cur_cmd = 0;
+	char *cmd_opt;
+
+#define cmd_strappend(_s) do { \
+	char * pos = stpncpy(cmd_buf + i_cmd_buf, _s, sizeof(cmd_buf) - i_cmd_buf); \
+	i_cmd_buf = pos - cmd_buf; \
+	if (i_cmd_buf == sizeof(cmd_buf)) { \
+		printf("buffer full!\n"); \
+		exit(EXIT_FAILURE); \
+	} \
+} while (0)
+
+#define cmd_reset() do { \
+		i_cmd_buf = 0; \
+} while (0)
 
 	n = scandir("testsuite", &dents, NULL, alphasort);
 
@@ -48,9 +65,7 @@ int main()
 		}
 
 		while (fgets(buf, sizeof(buf), fp)) {
-			char tmp[1024] = CT_PROG, *res;
-			tmp[strlen(CT_PROG)] = ' ';
-
+			char *res;
 			line++;
 
 			if (buf[0] == '#' || buf[0] == ' ')
@@ -63,27 +78,72 @@ int main()
 				exit(EXIT_FAILURE);
 			}
 			*res = '\0';
-			res+=2;
+			res++;
+			for (; *res == ' ' || *res == '\t'; res++);
+			cmd = res[0];
+			cmd_opt = &res[1];
+			for (; *cmd_opt == ' ' || *cmd_opt == '\t'; cmd_opt++);
+			res = strchr(cmd_opt, '\n');
+			if (res)
+				*res = '\0';
 
-			strcpy(tmp + strlen(CT_PROG) + 1, buf);
-			printf("(%d) Executing: %s\n", line, tmp);
+			if (cur_cmd && cmd != cur_cmd) {
+				/* complete current multi-line command */
+				switch (cur_cmd) {
+				case '\n':
+					cmd_strappend("\" | ");
+					break;
+				default:
+					printf("Internal Error: unexpected multiline command %c",
+							cur_cmd);
+					exit(EXIT_FAILURE);
+					break;
+				}
+
+				cur_cmd = 0;
+			}
+
+			switch (cmd) {
+			case '\n':
+				if (!cur_cmd) {
+					cmd_strappend("echo \"");
+					cur_cmd = cmd;
+				} else
+					cmd_strappend("\n");
+				cmd_strappend(buf);
+				continue;
+			default:
+				cmd_strappend(CT_PROG);
+				cmd_strappend(" ");
+				cmd_strappend(buf);
+				if (cmd == '|') {
+					cmd_strappend(" | ");
+					if (cmd_opt[0]) {
+						cmd_strappend("sed \"");
+						cmd_strappend(cmd_opt);
+						cmd_strappend("\" | ");
+					}
+					continue;
+				}
+				cmd_reset();
+				break;
+			}
+
+			printf("(%d) Executing: %s\n", line, cmd_buf);
 
 			fflush(stdout);
-			ret = system(tmp);
+			ret = system(cmd_buf);
 
 			if (WIFEXITED(ret) &&
 			    WEXITSTATUS(ret) == EXIT_SUCCESS) {
-			    	if (res[0] == 'O' &&
-				    res[1] == 'K')
+				if (cmd == 'O')
 					ok++;
 				else {
 					bad++;
 					printf("^----- BAD\n");
 				}
 			} else {
-				if (res[0] == 'B' &&
-				    res[1] == 'A' &&
-				    res[2] == 'D')
+				if (cmd == 'B')
 					ok++;
 				else {
 					bad++;

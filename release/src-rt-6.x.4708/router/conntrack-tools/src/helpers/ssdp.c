@@ -48,12 +48,12 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
-#include <netinet/ip.h>
 #define _GNU_SOURCE
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <libmnl/libmnl.h>
 #include <libnetfilter_conntrack/libnetfilter_conntrack.h>
+#include <linux/netfilter/nfnetlink_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue.h>
 #include <libnetfilter_queue/libnetfilter_queue_tcp.h>
 #include <libnetfilter_queue/pktbuff.h>
@@ -158,11 +158,9 @@ static int handle_ssdp_new(struct pkt_buff *pkt, uint32_t protoff,
 {
 	int ret = NF_ACCEPT;
 	union nfct_attr_grp_addr daddr, saddr, taddr;
-	struct iphdr *net_hdr = (struct iphdr *)pktb_network_header(pkt);
 	int good_packet = 0;
 	struct nf_expect *exp;
 	uint16_t port;
-	unsigned int dataoff;
 	void *sb_ptr;
 
 	cthelper_get_addr_dst(myct->ct, MYCT_DIR_ORIG, &daddr);
@@ -200,13 +198,12 @@ static int handle_ssdp_new(struct pkt_buff *pkt, uint32_t protoff,
 	}
 
 	/* No data? Ignore */
-	dataoff = net_hdr->ihl*4 + sizeof(struct udphdr);
-	if (dataoff >= pktb_len(pkt)) {
+	if (protoff + sizeof(struct udphdr) >= pktb_len(pkt)) {
 		pr_debug("ssdp_help: UDP payload too small for M-SEARCH; ignoring\n");
 		return NF_ACCEPT;
 	}
 
-	sb_ptr = pktb_network_header(pkt) + dataoff;
+	sb_ptr = pktb_network_header(pkt) + protoff + sizeof(struct udphdr);
 
 	if (memcmp(sb_ptr, SSDP_M_SEARCH, SSDP_M_SEARCH_SIZE) != 0) {
 		pr_debug("ssdp_help: UDP payload does not begin with 'M-SEARCH'; ignoring\n");
@@ -259,7 +256,6 @@ static int find_hdr(const char *name, const uint8_t *data, int data_len,
 		data += i+2;
 	}
 
-	data_len -= name_len;
 	data += name_len;
 	if (pos)
 		*pos = data;

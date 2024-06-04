@@ -386,6 +386,10 @@ static int cthelper_setup(struct ctd_helper_instance *cur)
 	nfct_helper_attr_set_u32(t, NFCTH_ATTR_QUEUE_NUM, cur->queue_num);
 	nfct_helper_attr_set_u16(t, NFCTH_ATTR_PROTO_L3NUM, cur->l3proto);
 	nfct_helper_attr_set_u8(t, NFCTH_ATTR_PROTO_L4NUM, cur->l4proto);
+	if (CONFIG(cthelper).setup) {
+		nfct_helper_attr_set_u32(t, NFCTH_ATTR_PRIV_DATA_LEN,
+					 cur->helper->priv_data_len);
+	}
 	nfct_helper_attr_set_u32(t, NFCTH_ATTR_STATUS,
 					NFCT_HELPER_STATUS_ENABLED);
 

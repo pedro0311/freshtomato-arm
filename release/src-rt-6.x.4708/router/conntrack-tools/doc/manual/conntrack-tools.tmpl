@@ -19,7 +19,7 @@
   </authorgroup>
 
   <copyright>
-   <year>2008-2012</year>
+   <year>2008-2020</year>
    <holder>Pablo Neira Ayuso</holder>
   </copyright>
 
@@ -35,10 +35,8 @@
   </legalnotice>
 
   <releaseinfo>
-  This document details how to install and configure the
-  <ulink url="http://conntrack-tools.netfilter.org">conntrack-tools</ulink>
-  &gt;= 1.4.0. This document will evolve in the future to cover new features
-  and changes.</releaseinfo>
+  This document details how to install and to configure the <ulink url="http://conntrack-tools.netfilter.org">conntrack-tools</ulink>.
+  </releaseinfo>
 
  </bookinfo>
 
@@ -46,44 +44,36 @@
 
  <chapter id="introduction"><title>Introduction</title>
 
-  <para>This document should be a kick-off point to install and configure the 
-  <ulink url="http://conntrack-tools.netfilter.org">conntrack-tools</ulink>.
-  If you find any error or imprecision in this document, please send an email
-  to the author, it will be appreciated.</para>
+<para>This documentation provides a description on how to install and to configure the <ulink url="http://conntrack-tools.netfilter.org">conntrack-tools</ulink>.</para>
 
-  <para>In this document, the author assumes that the reader is familiar with firewalling concepts and iptables in general. If this is not your case, I suggest you to read the iptables documentation before going ahead. Moreover, the reader must also understand the difference between <emphasis>stateful</emphasis> and <emphasis>stateless</emphasis> firewalls. If this is not your case, I strongly suggest you to read the article <ulink url="http://people.netfilter.org/pablo/docs/login.pdf">Netfilter's Connection Tracking System</ulink> published in <emphasis>:login; the USENIX magazine</emphasis>. That document contains a general description that should help to clarify the concepts.</para>
-
-<para>If you do not fulfill the previous requirements, this documentation is likely to be a source of frustration. Probably, you wonder why I'm insisting on these prerequisites too much, the fact is that if your iptables rule-set is <emphasis>stateless</emphasis>, it is very likely that the <emphasis>conntrack-tools</emphasis> will not be of any help for you. You have been warned!</para>
+<para>This documentation assumes that the reader is familiar with basic firewalling and Netfilter concepts. You also must understand the difference between <emphasis>stateless</emphasis> and <emphasis>stateful</emphasis> firewalls. Otherwise, please read <ulink url="http://people.netfilter.org/pablo/docs/login.pdf">Netfilter's Connection Tracking System</ulink> published in <emphasis>:login; the USENIX magazine</emphasis> for a quick reference.</para>
 
  </chapter>
  <chapter id="what"><title>What are the conntrack-tools?</title>
-
-  <para>The conntrack-tools are a set of free software tools for GNU/Linux that allow system administrators interact, from user-space, with the in-kernel <ulink url="http://people.netfilter.org/pablo/docs/login.pdf">Connection Tracking System</ulink>, which is the module that enables stateful packet inspection for iptables. Probably, you did not hear about this module so far. However, if any of the rules of your rule-set use the <emphasis>state</emphasis> or <emphasis>ctstate</emphasis> iptables matches, you are indeed using it.
-  
-  </para>
 
 <para>The <ulink url="http://conntrack-tools.netfilter.org">conntrack-tools</ulink> package contains two programs:</para>
 
   <itemizedlist>
    <listitem>
-  	<para><emphasis>conntrack</emphasis> is command line interface conntrack provides a more flexible interface to the connnection tracking system than /proc/net/ip_conntrack. With conntrack, you can show, delete and update the existing state entries; and you can also listen to flow events.</para>
+	<para><emphasis>conntrack</emphasis> provides a full featured command line utility to interact with the connection tracking system. The <emphasis>conntrack</emphasis> utility provides a replacement for the limited /proc/net/nf_conntrack interface. With <emphasis>conntrack</emphasis>, you can list, update and delete the existing flow entries; you can also listen to flow events.</para>
    </listitem>
    <listitem>
   	<para><emphasis>conntrackd</emphasis> is the user-space connection tracking daemon. This daemon can be used to deploy fault-tolerant GNU/Linux firewalls but you can also use it to collect flow-based statistics of the firewall use.</para>
    </listitem>
   </itemizedlist>
 
-  <para>Although the name of both tools is very similar - and you can blame me for that, I'm not a marketing guy - they are used for very different tasks.</para>
+<para>Mind the trailing <emphasis>d</emphasis> that refers to either the command line utility or the daemon.</para>
 
  </chapter>
 
  <chapter id="requirements"><title>Requirements</title>
 
-  <para>You have to install the following software in order to get the <emphasis>conntrack-tools</emphasis> working. Make sure that you have installed them correctly before going ahead:</para>
+<para>If you are using the Linux kernel that your distribution provides, then you most likely can skip this.</para>
 
-  <itemizedlist>
-   <listitem>
-  	<para><ulink url="http://www.kernel.org">Linux kernel</ulink> version &gt;= 2.6.18 that, at least, has support for:</para>
+<para>If you compile your own Linux kernel, then please make sure the following options are enabled.</para>
+
+<para>You require a <ulink url="http://www.kernel.org">Linux kernel</ulink> version &gt;= 2.6.18.</para>
+
 	<itemizedlist>
 	 <listitem>
 	 	<para>Connection Tracking System.</para>
@@ -124,19 +114,47 @@
 		</itemizedlist>
 	 </listitem>
 	</itemizedlist>
-   <note><title>Verifying kernel support</title>
-    <para>
-     Make sure you have loaded <emphasis>nf_conntrack</emphasis>, <emphasis>nf_conntrack_ipv4</emphasis> (if your setup also supports IPv6, <emphasis>nf_conntrack_ipv6</emphasis>) and <emphasis>nf_conntrack_netlink</emphasis>.
-    </para>
-   </note>
+
+<note><title>Validating Linux kernel support</title>
+<para>You can validate that your Linux kernel support for the <emphasis>conntrack-tools</emphasis> through <emphasis>modinfo</emphasis>.</para>
+
+ <programlisting>
+ # modinfo nf_conntrack
+filename:       /lib/modules/5.2.0/kernel/net/netfilter/nf_conntrack.ko
+license:        GPL
+alias:          nf_conntrack-10
+alias:          nf_conntrack-2
+alias:          ip_conntrack
+depends:        nf_defrag_ipv6,libcrc32c,nf_defrag_ipv4
+retpoline:      Y
+intree:         Y
+name:           nf_conntrack
+vermagic:       5.7.0+ SMP preempt mod_unload modversions 
+parm:           tstamp:Enable connection tracking flow timestamping. (bool)
+parm:           acct:Enable connection tracking flow accounting. (bool)
+parm:           nf_conntrack_helper:Enable automatic conntrack helper assignment (default 0) (bool)
+parm:           expect_hashsize:uint
+parm:           enable_hooks:Always enable conntrack hooks (bool)
+</programlisting>
+
+<para>Make sure <emphasis>nf_conntrack_netlink</emphasis> is also available.</para>
+</note>
+
+<para>You also need to install the following library dependencies:</para>
+
+  <itemizedlist>
+   <listitem>
+   	<para>libnfnetlink: the netfilter netlink library use the official release available in <ulink url="http://www.netfilter.org/projects/libnfnetlink">netfilter.org</ulink></para>
    </listitem>
    <listitem>
-   	<para>libnfnetlink: the netfilter netlink library use the official release available in <ulink url="http://www.netfilter.org">netfilter.org</ulink></para>
-   </listitem>
-   <listitem>
-   	<para>libnetfilter_conntrack: the netfilter netlink library use the official release available in <ulink url="http://www.netfilter.org">netfilter.org</ulink></para>
+   	<para>libnetfilter_conntrack: the netfilter netlink library use the official release available in <ulink url="http://www.netfilter.org/projects/libnetfilter_conntrack">netfilter.org</ulink></para>
    </listitem>
   </itemizedlist>
+
+<note><title>Installing library dependencies</title>
+<para>Your distribution most likely also provides packages for this software, so you do not have to compile it yourself.</para>
+</note>
+
  </chapter>
 
  <chapter id="Installation"><title>Installation</title>
@@ -149,67 +167,62 @@
 	(non-root)$ make
 	(root)    # make install</programlisting>
 
-<note><title>Fedora Users</title>
-  <para>If you are installing the libraries in /usr/local/, do not forget to do the following things:</para>
-   <itemizedlist>
-     <listitem><para>PKG_CONFIG_PATH=/usr/local/lib/pkgconfig; export PKG_CONFIG_PATH</para></listitem>
-     <listitem><para>Add `/usr/local/lib' to your /etc/ld.so.conf file and run `ldconfig'</para></listitem>
-   </itemizedlist>
-   <para>Check `ldd' for trouble-shooting, read <ulink url="http://tldp.org/HOWTO/Program-Library-HOWTO/shared-libraries.html">this</ulink> for more information on how libraries work.</para>
-</note>
-
-<note><title>Verifying kernel support</title>
- <para>To check that the modules are enabled in the kernel, run <emphasis>`conntrack -E'</emphasis> and generate traffic, you should see flow events reporting new connections and updates.
- </para>
+<note><title>Installing conntrack and conntrackd</title>
+<para>Your distribution most likely also provides packages for this software, so you do not have to compile it yourself.</para>
 </note>
 
  </chapter>
 
  <chapter id="conntrack"><title>Using conntrack: the command line interface</title>
 
- <para>The <emphasis>/proc/net/ip_conntrack</emphasis> interface is very limited as it only allows you to display the existing flows, their state and other information:</para>
+ <para>The <emphasis>/proc/net/nf_conntrack</emphasis> interface is very limited as it only allows you to display the existing flows, their state and metadata such the flow mark:</para>
 
  <programlisting>
- # cat /proc/net/ip_conntrack
- tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 secmark=0 use=1
- tcp      6 431698 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34849 dport=993 packets=244 bytes=18723 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34849 packets=203 bytes=144731 [ASSURED] mark=0 secmark=0 use=1
+ # cat /proc/net/nf_conntrack
+ tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 use=1
+ tcp      6 431698 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34849 dport=993 packets=244 bytes=18723 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34849 packets=203 bytes=144731 [ASSURED] mark=0 use=1
  </programlisting>
 
-<para>The command line tool <emphasis>conntrack</emphasis> can be used to display the same information:</para>
+<para>You can list the existing flows using the <emphasis>conntrack</emphasis> utility via <emphasis>-L</emphasis> command:</para>
  <programlisting>
  # conntrack -L
- tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 secmark=0 use=1
- tcp      6 431698 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34849 dport=993 packets=244 bytes=18723 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34849 packets=203 bytes=144731 [ASSURED] mark=0 secmark=0 use=1
-conntrack v0.9.7 (conntrack-tools): 2 flow entries have been shown.
+ tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 use=1
+ tcp      6 431698 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34849 dport=993 packets=244 bytes=18723 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34849 packets=203 bytes=144731 [ASSURED] mark=0 use=1
+conntrack v1.4.6 (conntrack-tools): 2 flow entries have been shown.
  </programlisting>
 
-<para>You can natively filter the output without using <emphasis>grep</emphasis>:</para>
+ <para>The <emphasis>conntrack</emphasis> syntax is similar to <emphasis>iptables</emphasis>.</para>
+
+<para>You can filter out the listing without using <emphasis>grep</emphasis>:</para>
 <programlisting>
- # conntrack -L -p tcp --dport 34856
- tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 secmark=0 use=1
-conntrack v0.9.7 (conntrack-tools): 1 flow entries have been shown.
+ # conntrack -L -p tcp --dport 993
+ tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=0 use=1
+conntrack v1.4.6 (conntrack-tools): 1 flow entries have been shown.
  </programlisting>
 
-<para>Update the mark based on a selection, this allows you to change the mark of an entry without using the CONNMARK target:</para>
+<para>You can update the ct mark, extending the previous example:</para>
 <programlisting>
- # conntrack -U -p tcp --dport 3486 --mark 10
- tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=1 secmark=0 use=1
-conntrack v0.9.7 (conntrack-tools): 1 flow entries has been updated.
+ # conntrack -U -p tcp --dport 993 --mark 10
+ tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=10 use=1
+conntrack v1.4.6 (conntrack-tools): 1 flow entries have been updated.
  </programlisting>
 
-<para>Delete one entry, this can be used to block traffic if:</para>
+<para>You can also delete entries</para>
+
+<programlisting>
+ # conntrack -D -p tcp --dport 993
+ tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=10 use=1
+conntrack v1.4.6 (conntrack-tools): 1 flow entries have been deleted.
+ </programlisting>
+
+<para>
+This allows you to block TCP traffic if:</para>
 <itemizedlist>
- <listitem><para>You have a stateful rule-set that blocks traffic in INVALID state.</para></listitem>
- <listitem><para>You have set <emphasis>/proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_loose</emphasis> or <emphasis>/proc/sys/net/netfilter/nf_conntrack_tcp_loose</emphasis>, depending on your kernel version, to zero.</para></listitem>
+ <listitem><para>You have a stateful rule-set that drops traffic in INVALID state.</para></listitem>
+ <listitem><para>You set <emphasis>/proc/sys/net/netfilter/nf_conntrack_tcp_loose</emphasis> to zero.</para></listitem>
 </itemizedlist>
 
-<programlisting>
- # conntrack -D -p tcp --dport 3486
- tcp      6 431982 ESTABLISHED src=192.168.2.100 dst=123.59.27.117 sport=34846 dport=993 packets=169 bytes=14322 src=123.59.27.117 dst=192.168.2.100 sport=993 dport=34846 packets=113 bytes=34787 [ASSURED] mark=1 secmark=0 use=1
-conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
- </programlisting>
-
-<para>Display the connection tracking events:</para>
+<para>You can also listen to the connection tracking events:</para>
 <programlisting>
  # conntrack -E
      [NEW] udp      17 30 src=192.168.2.100 dst=192.168.2.1 sport=57767 dport=53 [UNREPLIED] src=192.168.2.1 dst=192.168.2.100 sport=53 dport=57767
@@ -219,20 +232,23 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
   [UPDATE] tcp      6 432000 ESTABLISHED src=192.168.2.100 dst=66.102.9.104 sport=33379 dport=80 src=66.102.9.104 dst=192.168.2.100 sport=80 dport=33379 [ASSURED]
 </programlisting>
 
-<para>You can also display the existing flows in XML format, filter the output based on the NAT handling applied, etc.</para>
+<para>There are many options, including support for XML output, more advanced filters, and so on. Please check the manpage for more information.</para>
 
 </chapter>
 
  <chapter id="settingup"><title>Setting up conntrackd: the daemon</title>
 
- <para>The daemon <emphasis>conntrackd</emphasis> supports two working modes:</para>
+ <para>The <emphasis>conntrackd</emphasis> daemon supports three modes:</para>
 
- <itemizedlist> 
+ <itemizedlist>
   <listitem>
-   <para><emphasis>State table synchronization</emphasis>: the daemon can be used to synchronize the connection tracking state table between several firewall replicas. This can be used to deploy fault-tolerant stateful firewalls. This is the main feature of the daemon.</para>
+   <para><emphasis>State table synchronization</emphasis>, to synchronize the connection tracking state table between several firewalls in High Availability (HA) scenarios.</para>
   </listitem>
   <listitem>
-   <para><emphasis>Flow-based statistics collection</emphasis>: the daemon can be used to collect flow-based statistics. This feature is similar to what <ulink url="http://www.netfilter.org/projects/ulogd/">ulogd-2.x</ulink> provides.</para>
+  <para><emphasis>Userspace connection tracking helpers</emphasis>, for layer 7 Application Layer Gateway (ALG) such as DHCPv6, MDNS, RPC, SLP and Oracle TNS. As an alternative to the in-kernel connection tracking helpers that are available in the Linux kernel.</para>
+  </listitem>
+  <listitem>
+   <para><emphasis>Flow-based statistics collection</emphasis>, to collect flow-based statistics as an alternative to <ulink url="http://www.netfilter.org/projects/ulogd/">ulogd2</ulink>, although <emphasis>ulogd2</emphasis> allows for more flexible statistics collection.</para>
   </listitem>
  </itemizedlist>
 
@@ -240,15 +256,12 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
 
  <sect2 id="sync-requirements"><title>Requirements</title>
 
- <para>In order to get <emphasis>conntrackd</emphasis> working in synchronization mode, you have to fulfill the following requirements:</para>
+ <para>If you would like to configure <emphasis>conntrackd</emphasis> to work in state synchronization mode, then you require:</para>
 
  <orderedlist>
  <listitem>
- <para>A <emphasis>high availability manager</emphasis> like <ulink url="http://www.keepalived.org">keepalived</ulink> that manages the virtual IPs of the 
- firewall cluster, detects errors, and decide when to migrate the virtual IPs
- from one firewall replica to another. Without it, <emphasis>conntrackd</emphasis> will not work appropriately.</para>
 
- <para>The state synchronization setup requires a working installation of <ulink url="http://www.keepalived.org">keepalived</ulink>, preferibly a recent version. Check if your distribution comes with a recent packaged version. Otherwise, you may compile it from the sources.
+ <para>A working installation of <ulink url="http://www.keepalived.org">keepalived</ulink>, preferibly a recent version. Check if your distribution comes with a recent packaged version. Otherwise, you may compile it from the sources.
  </para>
 
  <para>
@@ -283,7 +296,7 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
   <para>If your Linux kernel is &lt; 2.6.22, you have to disable TCP window
   tracking:
    <programlisting>
-    # echo 1 > /proc/sys/net/ipv4/netfilter/ip_conntrack_tcp_be_liberal
+    # echo 1 > /proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal
    </programlisting>
   </para>
  </listitem>
@@ -343,7 +356,7 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
 
 </sect2>
 
-<sect2 id="sync-pb"><title>Active-Backup setup</title>
+<sect2 id="sync-pb"><title>Active-Backup setups</title>
 
  <note><title>Stateful firewall architectures</title>
   <para>A good reading to extend the information about firewall architectures is <ulink url="http://1984.lsi.us.es/~pablo/docs/intcomp09.pdf">Demystifying cluster-based fault-tolerant firewalls</ulink> published in IEEE Internet Computing magazine.
@@ -381,19 +394,19 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
 
 </sect2>
 
-<sect2 id="sync-aa"><title>Active-Active setup</title>
+<sect2 id="sync-aa"><title>Active-Active setups</title>
 
  <para>The Active-Active setup consists of having more than one stateful
- firewall replicas actively filtering traffic. Thus, we reduce the resource
- waste that implies to have a backup firewall which does nothing.</para>
+ firewall actively filtering traffic. Thus, we reduce the resource
+ waste that implies to have a backup firewall which is spare.</para>
 
  <para>We can classify the type of Active-Active setups in several
  families:</para>
 
  <itemizedlist>
   <listitem>
-   <para><emphasis>Symmetric path routing</emphasis>: The stateful firewall
-   replicas share the workload in terms of flows, ie. the packets that are
+   <para><emphasis>Symmetric path routing</emphasis>: The stateful firewalls
+   share the workload in terms of flows, ie. the packets that are
    part of a flow are always filtered by the same firewall.</para>
    </listitem>
    <listitem>
@@ -407,24 +420,20 @@ conntrack v0.9.7 (conntrack-tools): 1 flow entries has been deleted.
   </listitem>
  </itemizedlist>
 
- <para>As for 0.9.8, the design of <emphasis>conntrackd</emphasis> allows you
- to deploy an symmetric Active-Active setup based on a static approach. 
- For example, assume that you have two virtual IPs, vIP1 and vIP2, and two
- firewall replicas, FW1 and FW2. You can give the virtual vIP1 to the
- firewall FW1 and the vIP2 to the FW2.
+ <para><emphasis>conntrackd</emphasis> allows you to deploy an symmetric
+Active-Active setup based on a static approach. For example, assume that you
+have two virtual IPs, vIP1 and vIP2, and two firewall replicas, FW1 and FW2.
+You can give the virtual vIP1 to the firewall FW1 and the vIP2 to the FW2.
  </para>
 
- <para>Unfortunately, you will have to wait for the support for the
- Active-Active setup based on dynamic approach, ie. a workload sharing setup
- without directors that allow the stateful firewall share the filtering.</para>
-
- <para>On the other hand, the asymmetric scenario may work if your setup 
- fulfills several strong assumptions. However, in the opinion of the author
- of this work, the asymmetric setup goes against the design of stateful
- firewalls and <emphasis>conntrackd</emphasis>. Therefore, you have two
- choices here: you can deploy an Active-Backup setup or go back to your
- old stateless rule-set (in that case, the conntrack-tools will not be
- of any help anymore, of course).</para>
+ <para>The asymmetric path scenario is hard: races might occurs between state
+ synchronization and packet forwarding. If you would like to deploy an
+ Active-Active setup with an assymmetic multi-path routing configuration,
+ then, make sure the same firewall <emphasis>forwards</emphasis> packets
+ coming in the original and the reply directions. If you cannot guarantee
+ this and you still would like to deply an Active-Active setup, then you
+ might have to consider downgrading your firewall ruleset policy to stateless
+filtering.</para>
 
 </sect2>
 
@@ -896,32 +905,13 @@ maintainance.</para></listitem>
 <para>The following steps describe how to enable the RPC portmapper helper for NFSv3 (this is similar for other helpers):</para>
 
 <orderedlist>
-<listitem><para>Register user-space helper:
-
-<programlisting>
-nfct add helper rpc inet udp
-nfct add helper rpc inet tcp
-</programlisting>
-
-This registers the portmapper helper for both UDP and TCP (NFSv3 traffic goes both over TCP and UDP).
-</para></listitem>
-
-<listitem><para>Add iptables rule using the CT target:
-
-<programlisting>
-# iptables -I OUTPUT -t raw -p udp --dport 111 -j CT --helper rpc
-# iptables -I OUTPUT -t raw -p tcp --dport 111 -j CT --helper rpc
-</programlisting>
-
-With this, packets matching port TCP/UDP/111 are passed to user-space for
-inspection. If there is no instance of conntrackd configured to support
-user-space helpers, no inspection happens and packets are not sent to
-user-space.</para></listitem>
 
 <listitem><para>Add configuration to conntrackd.conf:
 
 <programlisting>
 Helper {
+        Setup yes
+
         Type rpc inet udp {
                 QueueNum 1
 		QueueLen 10240
@@ -952,6 +942,25 @@ for inspection to user-space</para>
    </note>
 
 </listitem>
+
+<listitem><para>Run conntrackd:
+<programlisting>
+# conntrackd -d -C /path/to/conntrackd.conf
+</programlisting>
+</para>
+</listitem>
+
+<listitem><para>Add iptables rule using the CT target:
+
+<programlisting>
+# iptables -I OUTPUT -t raw -p udp --dport 111 -j CT --helper rpc
+# iptables -I OUTPUT -t raw -p tcp --dport 111 -j CT --helper rpc
+</programlisting>
+
+With this, packets matching port TCP/UDP/111 are passed to user-space for
+inspection. If there is no instance of conntrackd configured to support
+user-space helpers, no inspection happens and packets are not sent to
+user-space.</para></listitem>
 
 </orderedlist>
 

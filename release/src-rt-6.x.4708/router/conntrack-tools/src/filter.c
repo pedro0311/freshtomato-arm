@@ -476,7 +476,7 @@ struct exp_filter *exp_filter_create(void)
 
 struct exp_filter_item {
 	struct list_head	head;
-	char			helper_name[NFCT_HELPER_NAME_MAX];
+	char			helper_name[NFCT_HELPER_NAME_MAX + 1];
 };
 
 /* this is ugly, but it simplifies read_config_yy.y */

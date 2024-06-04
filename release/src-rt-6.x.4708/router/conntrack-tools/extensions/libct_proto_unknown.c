@@ -21,10 +21,21 @@ static void help(void)
 	fprintf(stdout, "  no options (unsupported)\n");
 }
 
+static void final_check(unsigned int flags,
+		        unsigned int cmd,
+		        struct nf_conntrack *ct)
+{
+	if (nfct_attr_is_set(ct, ATTR_REPL_L3PROTO) &&
+	    nfct_attr_is_set(ct, ATTR_L4PROTO) &&
+	    !nfct_attr_is_set(ct, ATTR_REPL_L4PROTO))
+		nfct_set_attr_u8(ct, ATTR_REPL_L4PROTO, nfct_get_attr_u8(ct, ATTR_L4PROTO));
+}
+
 struct ctproto_handler ct_proto_unknown = {
 	.name 		= "unknown",
 	.help		= help,
 	.opts		= opts,
+	.final_check	= final_check,
 	.version	= VERSION,
 };
 

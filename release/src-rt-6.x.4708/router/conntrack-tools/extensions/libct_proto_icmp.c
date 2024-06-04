@@ -40,22 +40,23 @@ static const char *icmp_optflags[ICMP_NUMBER_OF_OPT] = {
 static char icmp_commands_v_options[NUMBER_OF_CMD][ICMP_NUMBER_OF_OPT] =
 /* Well, it's better than "Re: Maradona vs Pele" */
 {
-		/* 1 2 3 */
-/*CT_LIST*/	  {2,2,2},
-/*CT_CREATE*/	  {1,1,2},
-/*CT_UPDATE*/	  {2,2,2},
-/*CT_DELETE*/	  {2,2,2},
-/*CT_GET*/	  {1,1,2},
-/*CT_FLUSH*/	  {0,0,0},
-/*CT_EVENT*/	  {2,2,2},
-/*CT_VERSION*/	  {0,0,0},
-/*CT_HELP*/	  {0,0,0},
-/*EXP_LIST*/	  {0,0,0},
-/*EXP_CREATE*/	  {0,0,0},
-/*EXP_DELETE*/	  {0,0,0},
-/*EXP_GET*/	  {0,0,0},
-/*EXP_FLUSH*/	  {0,0,0},
-/*EXP_EVENT*/	  {0,0,0},
+				/* 1 2 3 */
+	[CT_LIST_BIT]		= {2,2,2},
+	[CT_CREATE_BIT]		= {1,1,2},
+	[CT_UPDATE_BIT]		= {2,2,2},
+	[CT_DELETE_BIT]		= {2,2,2},
+	[CT_GET_BIT]		= {1,1,2},
+	[CT_FLUSH_BIT]		= {0,0,0},
+	[CT_EVENT_BIT]		= {2,2,2},
+	[CT_VERSION_BIT]	= {0,0,0},
+	[CT_HELP_BIT]		= {0,0,0},
+	[EXP_LIST_BIT]		= {0,0,0},
+	[EXP_CREATE_BIT]	= {0,0,0},
+	[EXP_DELETE_BIT]	= {0,0,0},
+	[EXP_GET_BIT]		= {0,0,0},
+	[EXP_FLUSH_BIT]		= {0,0,0},
+	[EXP_EVENT_BIT]		= {0,0,0},
+	[CT_ADD_BIT]		= {1,1,2},
 };
 
 static void help(void)
@@ -78,23 +79,36 @@ static int parse(char c,
 			tmp = atoi(optarg);
 			nfct_set_attr_u8(ct, ATTR_ICMP_TYPE, tmp);
 			nfct_set_attr_u8(ct, ATTR_L4PROTO, IPPROTO_ICMP);
+			if (nfct_attr_is_set(ct, ATTR_REPL_L3PROTO))
+				nfct_set_attr_u8(ct, ATTR_REPL_L4PROTO, IPPROTO_ICMP);
 			*flags |= CT_ICMP_TYPE;
 			break;
 		case '2':
 			tmp = atoi(optarg);
 			nfct_set_attr_u8(ct, ATTR_ICMP_CODE, tmp);
 			nfct_set_attr_u8(ct, ATTR_L4PROTO, IPPROTO_ICMP);
+			if (nfct_attr_is_set(ct, ATTR_REPL_L3PROTO))
+				nfct_set_attr_u8(ct, ATTR_REPL_L4PROTO, IPPROTO_ICMP);
 			*flags |= CT_ICMP_CODE;
 			break;
 		case '3':
 			id = htons(atoi(optarg));
 			nfct_set_attr_u16(ct, ATTR_ICMP_ID, id);
 			nfct_set_attr_u8(ct, ATTR_L4PROTO, IPPROTO_ICMP);
+			if (nfct_attr_is_set(ct, ATTR_REPL_L3PROTO))
+				nfct_set_attr_u8(ct, ATTR_REPL_L4PROTO, IPPROTO_ICMP);
 			*flags |= CT_ICMP_ID;
 			break;
 	}
 	return 1;
 }
+
+static const struct ct_print_opts icmp_print_opts[] = {
+	{ "--icmp-type", ATTR_ICMP_TYPE, CT_ATTR_TYPE_U8, 0, 0 },
+	{ "--icmp-code", ATTR_ICMP_CODE, CT_ATTR_TYPE_U8, 0, 0 },
+	{ "--icmp-id", ATTR_ICMP_ID, CT_ATTR_TYPE_BE16, 0, 0 },
+	{}
+};
 
 static void final_check(unsigned int flags,
 		        unsigned int cmd,
@@ -111,6 +125,7 @@ static struct ctproto_handler icmp = {
 	.protonum	= IPPROTO_ICMP,
 	.parse_opts	= parse,
 	.final_check	= final_check,
+	.print_opts	= icmp_print_opts,
 	.help		= help,
 	.opts		= opts,
 	.version	= VERSION,

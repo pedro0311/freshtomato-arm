@@ -29,7 +29,8 @@
 static void ct_parse_u8(struct nf_conntrack *ct, int attr, void *data);
 static void ct_parse_u16(struct nf_conntrack *ct, int attr, void *data);
 static void ct_parse_u32(struct nf_conntrack *ct, int attr, void *data);
-static void ct_parse_u128(struct nf_conntrack *ct, int attr, void *data);
+static void ct_parse_be32(struct nf_conntrack *ct, int attr, void *data);
+static void ct_parse_be128(struct nf_conntrack *ct, int attr, void *data);
 static void ct_parse_str(struct nf_conntrack *ct,
 			 const struct netattr *, void *data);
 static void ct_parse_group(struct nf_conntrack *ct, int attr, void *data);
@@ -108,12 +109,12 @@ static struct ct_parser h[NTA_MAX] = {
 		.size	= NTA_SIZE(sizeof(struct nfct_attr_grp_port)),
 	},
 	[NTA_SNAT_IPV4]	= {
-		.parse	= ct_parse_u32,
+		.parse	= ct_parse_be32,
 		.attr	= ATTR_SNAT_IPV4,
 		.size	= NTA_SIZE(sizeof(uint32_t)),
 	},
 	[NTA_DNAT_IPV4] = {
-		.parse	= ct_parse_u32,
+		.parse	= ct_parse_be32,
 		.attr	= ATTR_DNAT_IPV4,
 		.size	= NTA_SIZE(sizeof(uint32_t)),
 	},
@@ -192,18 +193,23 @@ static struct ct_parser h[NTA_MAX] = {
 		.max_size = NTA_SIZE(NTA_LABELS_MAX_SIZE),
 	},
 	[NTA_SNAT_IPV6]	= {
-		.parse	= ct_parse_u128,
+		.parse	= ct_parse_be128,
 		.attr	= ATTR_SNAT_IPV6,
 		.size	= NTA_SIZE(sizeof(uint32_t) * 4),
 	},
 	[NTA_DNAT_IPV6] = {
-		.parse	= ct_parse_u128,
+		.parse	= ct_parse_be128,
 		.attr	= ATTR_DNAT_IPV6,
 		.size	= NTA_SIZE(sizeof(uint32_t) * 4),
 	},
 	[NTA_SYNPROXY] = {
 		.parse	= ct_parse_synproxy,
 		.size	= NTA_SIZE(sizeof(struct nta_attr_synproxy)),
+	},
+	[NTA_ZONE] = {
+		.parse	= ct_parse_u16,
+		.attr	= ATTR_ZONE,
+		.size	= NTA_SIZE(sizeof(uint16_t)),
 	},
 };
 
@@ -229,7 +235,14 @@ ct_parse_u32(struct nf_conntrack *ct, int attr, void *data)
 }
 
 static void
-ct_parse_u128(struct nf_conntrack *ct, int attr, void *data)
+ct_parse_be32(struct nf_conntrack *ct, int attr, void *data)
+{
+	uint32_t *value = (uint32_t *) data;
+	nfct_set_attr_u32(ct, h[attr].attr, *value);
+}
+
+static void
+ct_parse_be128(struct nf_conntrack *ct, int attr, void *data)
 {
 	nfct_set_attr(ct, h[attr].attr, data);
 }

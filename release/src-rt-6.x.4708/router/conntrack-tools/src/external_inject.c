@@ -76,12 +76,14 @@ retry:
 				}
 			}
 			external_inject_stat.add_fail++;
-			dlog(LOG_ERR, "inject-add1: %s", strerror(errno));
+			dlog(LOG_WARNING,
+			     "could not add new ct entry, even when deleting it first: %s",
+			     strerror(errno));
 			dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 			return;
 		}
 		external_inject_stat.add_fail++;
-		dlog(LOG_ERR, "inject-add2: %s", strerror(errno));
+		dlog(LOG_WARNING, "could not add new ct entry: %s", strerror(errno));
 		dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 	} else {
 		external_inject_stat.add_ok++;
@@ -102,7 +104,9 @@ static void external_inject_ct_upd(struct nf_conntrack *ct)
 	if (errno == ENOENT) {
 		if (nl_create_conntrack(inject, ct, 0) == -1) {
 			external_inject_stat.upd_fail++;
-			dlog(LOG_ERR, "inject-upd1: %s", strerror(errno));
+			dlog(LOG_WARNING,
+			     "could not update ct entry, even if creating it instead: %s",
+			     strerror(errno));
 			dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 		} else {
 			external_inject_stat.upd_ok++;
@@ -117,7 +121,9 @@ static void external_inject_ct_upd(struct nf_conntrack *ct)
 	if (ret == 0 || (ret == -1 && errno == ENOENT)) {
 		if (nl_create_conntrack(inject, ct, 0) == -1) {
 			external_inject_stat.upd_fail++;
-			dlog(LOG_ERR, "inject-upd2: %s", strerror(errno));
+			dlog(LOG_WARNING,
+			     "could not update ct entry, even when deleting it first: %s",
+			     strerror(errno));
 			dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 		} else {
 			external_inject_stat.upd_ok++;
@@ -125,7 +131,7 @@ static void external_inject_ct_upd(struct nf_conntrack *ct)
 		return;
 	}
 	external_inject_stat.upd_fail++;
-	dlog(LOG_ERR, "inject-upd3: %s", strerror(errno));
+	dlog(LOG_WARNING, "could not update ct entry: %s", strerror(errno));
 	dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 }
 
@@ -134,7 +140,7 @@ static void external_inject_ct_del(struct nf_conntrack *ct)
 	if (nl_destroy_conntrack(inject, ct) == -1) {
 		if (errno != ENOENT) {
 			external_inject_stat.del_fail++;
-			dlog(LOG_ERR, "inject-del: %s", strerror(errno));
+			dlog(LOG_WARNING, "could not destroy ct entry: %s", strerror(errno));
 			dlog_ct(STATE(log), ct, NFCT_O_PLAIN);
 		}
 	} else {
@@ -200,12 +206,15 @@ retry:
 				}
 			}
 			exp_external_inject_stat.add_fail++;
-			dlog(LOG_ERR, "inject-add1: %s", strerror(errno));
+			dlog(LOG_WARNING,
+			     "could not add new exp entry, even when deleting it first: %s",
+			     strerror(errno));
 			dlog_exp(STATE(log), exp, NFCT_O_PLAIN);
 			return;
 		}
 		exp_external_inject_stat.add_fail++;
-		dlog(LOG_ERR, "inject-add2: %s", strerror(errno));
+		dlog(LOG_WARNING,
+		     "could not add new exp entry: %s", strerror(errno));
 		dlog_exp(STATE(log), exp, NFCT_O_PLAIN);
 	} else {
 		exp_external_inject_stat.add_ok++;
@@ -217,7 +226,8 @@ static void external_inject_exp_del(struct nf_expect *exp)
 	if (nl_destroy_expect(inject, exp) == -1) {
 		if (errno != ENOENT) {
 			exp_external_inject_stat.del_fail++;
-			dlog(LOG_ERR, "inject-del: %s", strerror(errno));
+			dlog(LOG_WARNING,
+                             "could not delete exp entry: %s", strerror(errno));
 			dlog_exp(STATE(log), exp, NFCT_O_PLAIN);
 		}
 	} else {

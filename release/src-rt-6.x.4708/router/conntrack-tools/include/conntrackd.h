@@ -138,6 +138,7 @@ struct ct_conf {
 	} stats;
 	struct {
 		struct list_head list;
+		bool setup;
 	} cthelper;
 };
 

@@ -1,4 +1,4 @@
-SUBDIRS = linux
+SUBDIRS = linux helpers
 
 noinst_HEADERS = alarm.h jhash.h cache.h linux_list.h linux_rbtree.h \
 		 sync.h conntrackd.h local.h udp.h tcp.h \

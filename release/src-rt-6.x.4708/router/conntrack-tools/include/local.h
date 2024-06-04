@@ -7,12 +7,12 @@
 
 struct local_conf {
 	int reuseaddr;
-	char path[UNIX_PATH_MAX + 1];
+	char path[UNIX_PATH_MAX];
 };
 
 struct local_server {
 	int fd;
-	char path[UNIX_PATH_MAX + 1];
+	char path[UNIX_PATH_MAX];
 };
 
 /* callback return values */

@@ -11,7 +11,7 @@ pkglib_LTLIBRARIES = ct_helper_amanda.la \
 		     ct_helper_slp.la	\
 		     ct_helper_ssdp.la
 
-HELPER_LDFLAGS = -avoid-version -module $(LIBNETFILTER_CONNTRACK_LIBS) $(LAZY_LDFLAGS)
+HELPER_LDFLAGS = -avoid-version -module $(LIBNETFILTER_CONNTRACK_LIBS)
 HELPER_CFLAGS = $(AM_CFLAGS) $(LIBNETFILTER_CONNTRACK_CFLAGS)
 
 ct_helper_amanda_la_SOURCES = amanda.c

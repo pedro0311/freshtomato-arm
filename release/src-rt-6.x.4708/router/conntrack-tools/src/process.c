@@ -84,7 +84,7 @@ void fork_process_dump(int fd)
 	int size = 0;
 
 	list_for_each_entry(this, &process_list, head) {
-		size += snprintf(buf+size, sizeof(buf),
+		size += snprintf(buf + size, sizeof(buf) - size,
 				 "PID=%u type=%s\n",
 				 this->pid,
 				 this->type < CTD_PROC_MAX ?

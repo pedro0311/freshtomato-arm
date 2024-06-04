@@ -113,7 +113,7 @@ void nethdr_track_update_seq(uint32_t seq)
 	STATE_SYNC(last_seq_recv) = seq;
 }
 
-int nethdr_track_is_seq_set()
+int nethdr_track_is_seq_set(void)
 {
 	return local_seq_set;
 }

@@ -180,7 +180,7 @@ static int nfct_cmd_helper_add(struct mnl_socket *nl, int argc, char *argv[])
 		return -1;
 	}
 
-	helper = helper_find(CONNTRACKD_LIB_DIR, argv[3], l4proto, RTLD_LAZY);
+	helper = __helper_find(argv[3], l4proto);
 	if (helper == NULL) {
 		nfct_perror("that helper is not supported");
 		return -1;
@@ -430,7 +430,7 @@ nfct_cmd_helper_disable(struct mnl_socket *nl, int argc, char *argv[])
 		return -1;
 	}
 
-	helper = helper_find(CONNTRACKD_LIB_DIR, argv[3], l4proto, RTLD_LAZY);
+	helper = __helper_find(argv[3], l4proto);
 	if (helper == NULL) {
 		nfct_perror("that helper is not supported");
 		return -1;
@@ -468,7 +468,187 @@ static struct nfct_extension helper = {
 	.parse_params	= nfct_helper_parse_params,
 };
 
+/*
+ * supported helpers: to set up helpers via nfct, the following definitions are
+ * provided for backward compatibility reasons since conntrackd does not depend
+ * on nfct anymore to set up the userspace helpers.
+ */
+
+static struct ctd_helper amanda_helper = {
+	.name		= "amanda",
+	.l4proto	= IPPROTO_UDP,
+	.policy		= {
+		[0] = {
+			.name			= "amanda",
+			.expect_max		= 3,
+			.expect_timeout		= 180,
+		},
+	},
+};
+
+static struct ctd_helper dhcpv6_helper = {
+	.name		= "dhcpv6",
+	.l4proto	= IPPROTO_UDP,
+	.policy		= {
+		[0] = {
+			.name			= "dhcpv6",
+			.expect_max		= 1,
+			.expect_timeout		= 300,
+		},
+	},
+};
+
+#include "helpers/ftp.h"
+
+static struct ctd_helper ftp_helper = {
+	.name		= "ftp",
+	.l4proto	= IPPROTO_TCP,
+	.priv_data_len	= sizeof(struct ftp_info),
+	.policy		= {
+		[0] = {
+			.name			= "ftp",
+			.expect_max		= 1,
+			.expect_timeout		= 300,
+		},
+	},
+};
+
+static struct ctd_helper mdns_helper = {
+	.name		= "mdns",
+	.l4proto	= IPPROTO_UDP,
+	.priv_data_len	= 0,
+	.policy		= {
+		[0] = {
+			.name		= "mdns",
+			.expect_max	= 8,
+			.expect_timeout = 30,
+		},
+	},
+};
+
+#include "helpers/rpc.h"
+
+static struct ctd_helper rpc_helper_tcp = {
+	.name		= "rpc",
+	.l4proto	= IPPROTO_TCP,
+	.priv_data_len	= sizeof(struct rpc_info),
+	.policy		= {
+		{
+			.name			= "rpc",
+			.expect_max		= 1,
+			.expect_timeout		= 300,
+		},
+	},
+};
+
+static struct ctd_helper rpc_helper_udp = {
+	.name		= "rpc",
+	.l4proto	= IPPROTO_UDP,
+	.priv_data_len	= sizeof(struct rpc_info),
+	.policy		= {
+		{
+			.name			= "rpc",
+			.expect_max		= 1,
+			.expect_timeout		= 300,
+		},
+	},
+};
+
+#include "helpers/sane.h"
+
+static struct ctd_helper sane_helper = {
+	.name		= "sane",
+	.l4proto	= IPPROTO_TCP,
+	.priv_data_len	= sizeof(struct nf_ct_sane_master),
+	.policy		= {
+		[0] = {
+			.name			= "sane",
+			.expect_max		= 1,
+			.expect_timeout		= 5 * 60,
+		},
+	},
+};
+
+static struct ctd_helper slp_helper = {
+	.name		= "slp",
+	.l4proto	= IPPROTO_UDP,
+	.priv_data_len	= 0,
+	.policy		= {
+		[0] = {
+			.name		= "slp",
+			.expect_max	= 8,
+			.expect_timeout = 16, /* default CONFIG_MC_MAX + 1 */
+		},
+	},
+};
+
+static struct ctd_helper ssdp_helper_udp = {
+	.name		= "ssdp",
+	.l4proto	= IPPROTO_UDP,
+	.priv_data_len	= 0,
+	.policy		= {
+		[0] = {
+			.name		= "ssdp",
+			.expect_max	= 8,
+			.expect_timeout = 5 * 60,
+		},
+	},
+};
+
+static struct ctd_helper ssdp_helper_tcp = {
+	.name		= "ssdp",
+	.l4proto	= IPPROTO_TCP,
+	.priv_data_len	= 0,
+	.policy		= {
+		[0] = {
+			.name		= "ssdp",
+			.expect_max	= 8,
+			.expect_timeout = 5 * 60,
+		},
+	},
+};
+
+static struct ctd_helper tftp_helper = {
+	.name		= "tftp",
+	.l4proto	= IPPROTO_UDP,
+	.policy		= {
+		[0] = {
+			.name			= "tftp",
+			.expect_max		= 1,
+			.expect_timeout		= 5 * 60,
+		},
+	},
+};
+
+#include "helpers/tns.h"
+
+static struct ctd_helper tns_helper = {
+	.name		= "tns",
+	.l4proto	= IPPROTO_TCP,
+	.priv_data_len	= sizeof(struct tns_info),
+	.policy		= {
+		[0] = {
+			.name		= "tns",
+			.expect_max	= 1,
+			.expect_timeout = 300,
+		},
+	},
+};
+
 static void __init helper_init(void)
 {
+	helper_register(&amanda_helper);
+	helper_register(&dhcpv6_helper);
+	helper_register(&ftp_helper);
+	helper_register(&mdns_helper);
+	helper_register(&rpc_helper_tcp);
+	helper_register(&rpc_helper_udp);
+	helper_register(&sane_helper);
+	helper_register(&slp_helper);
+	helper_register(&ssdp_helper_udp);
+	helper_register(&ssdp_helper_tcp);
+	helper_register(&tftp_helper);
+	helper_register(&tns_helper);
+
 	nfct_extension_register(&helper);
 }

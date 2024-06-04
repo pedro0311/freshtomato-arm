@@ -232,6 +232,7 @@ enum nta_attr {
 	NTA_SNAT_IPV6,		/* uint32_t * 4 */
 	NTA_DNAT_IPV6,		/* uint32_t * 4 */
 	NTA_SYNPROXY,		/* struct nft_attr_synproxy */
+	NTA_ZONE,		/* uint16_t */
 	NTA_MAX
 };
 
