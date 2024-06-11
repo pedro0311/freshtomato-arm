@@ -323,7 +323,16 @@ obj-$(TCONFIG_NFS) += libevent
 obj-$(TCONFIG_NFS) += portmap
 obj-$(TCONFIG_NFS) += libnfsidmap
 obj-$(TCONFIG_NFS) += nfs-utils
-obj-$(TCONFIG_NOCAT) += glib
+ifeq ($(TCONFIG_BCMARM),y)
+ obj-$(TCONFIG_NOCAT) += zlib
+ obj-$(TCONFIG_NOCAT) += libffi
+ obj-$(TCONFIG_NOCAT) += libiconv
+ obj-$(TCONFIG_NOCAT) += gettext-tiny
+ obj-$(TCONFIG_NOCAT) += $(PCRE_TARGET)
+ obj-$(TCONFIG_NOCAT) += glib2
+else
+ obj-$(TCONFIG_NOCAT) += glib
+endif
 obj-$(TCONFIG_NOCAT) += nocat
 obj-$(TCONFIG_USB) += e2fsprogs
 obj-$(TCONFIG_USB) += p910nd
@@ -2348,21 +2357,23 @@ ifneq ($(TCONFIG_BCMARM),y)
 	$(call unpatch_files,glib)
 endif
 
-# TODO: get rid of this ancient package!
 nocat/stamp-h1:
 	cd nocat && \
 		NC_CONF_PATH="/" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_BCMARM),-I$(TOP)/glib2/staged/usr/include/glib-2.0 -I$(TOP)/glib2/staged/usr/lib/glib-2.0/include,)" \
 		LDFLAGS="-Wl,--gc-sections" \
-		$(CONFIGURE) --localstatedir=/var --sysconfdir=/etc --with-firewall=iptables --with-glib-prefix="$(INSTALLDIR)/glib/usr" --disable-dependency-tracking
+		LIBS="$(if $(TCONFIG_BCMARM),-L$(TOP)/glib2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lglib-2.0 -liconv -lpcre2-8,)" \
+		$(CONFIGURE) --localstatedir=/var --sysconfdir=/etc --with-firewall=iptables --with-glib-prefix="$(if $(TCONFIG_BCMARM),$(TOP)/glib2/staged,$(INSTALLDIR)/glib/usr)" --disable-dependency-tracking
 	@touch $@
 
 nocat: nocat/stamp-h1
 	@$(SEP)
+ifneq ($(TCONFIG_BCMARM),y)
 	@echo --- Integrate glib to nocat installdir ---
 	install -D glib/.libs/libglib-1.2.so.0.0.10 $(INSTALLDIR)/nocat/usr/lib/libglib-1.2.so.0.0.10
 	cd $(INSTALLDIR)/nocat/usr/lib && ln -s libglib-1.2.so.0.0.10 libglib-1.2.so.0
 	$(STRIP) $(INSTALLDIR)/nocat/usr/lib/libglib-1.2.so.0.0.10
+endif
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 nocat-install:
@@ -4145,11 +4156,10 @@ glib2/build:
 		-Dcpp_link_args="-Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv -L$(TOP)/zlib/staged/usr/lib -lz -L$(TOP)/libffi/staged/usr/lib -lffi \
 			-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8 -L$(TOP)/gettext-tiny/staged/usr/lib" \
 		-Dc_std=gnu99 \
-		-Dcpp_std=c++11 \
+		-Dcpp_std=$(if $(TCONFIG_BCMARM),c++11,c++98) \
 		-Dwarning_level=1 \
 		-Doptimization=s \
 		-Ddebug=false \
-		-Ddefault_library=both \
 		-Dforce_posix_threads=true \
 		-Db_staticpic=true \
 		-Db_pie=true \

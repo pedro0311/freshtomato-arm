@@ -303,6 +303,7 @@ sub fixDyn
 
 # NocatSplash
 	fixDynDep("splashd", "libglib-1.2.so.0.0.10");
+	fixDynDep("splashd", "libglib-2.0.so.0.7400.7");
 
 # iperf
 	fixDynDep("iperf", "libiperf.so.0.0.0");
