@@ -44,6 +44,7 @@ class RustCompiler(Compiler):
         '1': [],
         '2': [],
         '3': ['-W', 'warnings'],
+        'everything': ['-W', 'warnings'],
     }
 
     # Those are static libraries, but we use dylib= here as workaround to avoid
@@ -216,7 +217,7 @@ class RustCompiler(Compiler):
         # pic is on by rustc
         return []
 
-    def get_assert_args(self, disable: bool) -> T.List[str]:
+    def get_assert_args(self, disable: bool, env: 'Environment') -> T.List[str]:
         action = "no" if disable else "yes"
         return ['-C', f'debug-assertions={action}', '-C', 'overflow-checks=no']
 

@@ -188,6 +188,7 @@ def get_llvm_tool_names(tool: str) -> T.List[str]:
     # unless it becomes a stable release.
     suffixes = [
         '', # base (no suffix)
+        '-18.1', '18.1',
         '-18',  '18',
         '-17',  '17',
         '-16',  '16',
@@ -208,7 +209,7 @@ def get_llvm_tool_names(tool: str) -> T.List[str]:
         '-3.7', '37',
         '-3.6', '36',
         '-3.5', '35',
-        '-15',    # Debian development snapshot
+        '-19',    # Debian development snapshot
         '-devel', # FreeBSD development snapshot
     ]
     names: T.List[str] = []

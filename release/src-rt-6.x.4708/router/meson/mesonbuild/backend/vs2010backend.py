@@ -613,7 +613,8 @@ class Vs2010Backend(backends.Backend):
                              guid,
                              conftype='Utility',
                              target_ext=None,
-                             target_platform=None) -> T.Tuple[ET.Element, ET.Element]:
+                             target_platform=None,
+                             gen_manifest=True) -> T.Tuple[ET.Element, ET.Element]:
         root = ET.Element('Project', {'DefaultTargets': "Build",
                                       'ToolsVersion': '4.0',
                                       'xmlns': 'http://schemas.microsoft.com/developer/msbuild/2003'})
@@ -685,13 +686,16 @@ class Vs2010Backend(backends.Backend):
                 ET.SubElement(direlem, 'TargetExt').text = target_ext
 
             ET.SubElement(direlem, 'EmbedManifest').text = 'false'
+            if not gen_manifest:
+                ET.SubElement(direlem, 'GenerateManifest').text = 'false'
 
         return (root, type_config)
 
     def gen_run_target_vcxproj(self, target: build.RunTarget, ofname: str, guid: str) -> None:
         (root, type_config) = self.create_basic_project(target.name,
                                                         temp_dir=target.get_id(),
-                                                        guid=guid)
+                                                        guid=guid,
+                                                        gen_manifest=self.get_gen_manifest(target))
         depend_files = self.get_target_depend_files(target)
 
         if not target.command:
@@ -726,7 +730,8 @@ class Vs2010Backend(backends.Backend):
         (root, type_config) = self.create_basic_project(target.name,
                                                         temp_dir=target.get_id(),
                                                         guid=guid,
-                                                        target_platform=platform)
+                                                        target_platform=platform,
+                                                        gen_manifest=self.get_gen_manifest(target))
         # We need to always use absolute paths because our invocation is always
         # from the target dir, not the build root.
         target.absolute_paths = True
@@ -766,7 +771,8 @@ class Vs2010Backend(backends.Backend):
         (root, type_config) = self.create_basic_project(target.name,
                                                         temp_dir=target.get_id(),
                                                         guid=guid,
-                                                        target_platform=platform)
+                                                        target_platform=platform,
+                                                        gen_manifest=self.get_gen_manifest(target))
         ET.SubElement(root, 'Import', Project=r'$(VCTargetsPath)\Microsoft.Cpp.targets')
         target.generated = [self.compile_target_to_generator(target)]
         target.sources = []
@@ -984,7 +990,7 @@ class Vs2010Backend(backends.Backend):
         for l, comp in target.compilers.items():
             if l in file_args:
                 file_args[l] += compilers.get_base_compile_args(
-                    target.get_options(), comp)
+                    target.get_options(), comp, self.environment)
                 file_args[l] += comp.get_option_compile_args(
                     target.get_options())
 
@@ -1598,7 +1604,8 @@ class Vs2010Backend(backends.Backend):
                                                         guid=guid,
                                                         conftype=conftype,
                                                         target_ext=tfilename[1],
-                                                        target_platform=platform)
+                                                        target_platform=platform,
+                                                        gen_manifest=self.get_gen_manifest(target))
 
         generated_files, custom_target_output_files, generated_files_include_dirs = self.generate_custom_generator_commands(
             target, root)
@@ -2077,3 +2084,25 @@ class Vs2010Backend(backends.Backend):
 
     def generate_lang_standard_info(self, file_args: T.Dict[str, CompilerArgs], clconf: ET.Element) -> None:
         pass
+
+    # Returns if a target generates a manifest or not.
+    def get_gen_manifest(self, target):
+        if not isinstance(target, build.BuildTarget):
+            return True
+
+        compiler = self._get_cl_compiler(target)
+        link_args = compiler.compiler_args()
+        if not isinstance(target, build.StaticLibrary):
+            link_args += self.build.get_project_link_args(compiler, target.subproject, target.for_machine)
+            link_args += self.build.get_global_link_args(compiler, target.for_machine)
+            link_args += self.environment.coredata.get_external_link_args(
+                target.for_machine, compiler.get_language())
+            link_args += target.link_args
+
+        for arg in reversed(link_args):
+            arg = arg.upper()
+            if arg == '/MANIFEST:NO':
+                return False
+            if arg == '/MANIFEST' or arg.startswith('/MANIFEST:'):
+                break
+        return True

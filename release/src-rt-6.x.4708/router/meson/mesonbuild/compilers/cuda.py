@@ -384,8 +384,11 @@ class CudaCompiler(Compiler):
                 # This is ambiguously either an MVSC-style /switch or an absolute path
                 # to a file. For some magical reason the following works acceptably in
                 # both cases.
+                # We only want to prefix arguments that are NOT static archives, since
+                # the latter could contain relocatable device code (-dc/-rdc=true).
+                prefix = '' if flag.endswith('.a') else f'-X{phase.value}='
                 wrap = '"' if ',' in flag else ''
-                xflags.append(f'-X{phase.value}={wrap}{flag}{wrap}')
+                xflags.append(f'{prefix}{wrap}{flag}{wrap}')
                 continue
             elif len(flag) >= 2 and flag[0] == '-' and flag[1] in 'IDULlmOxmte':
                 # This is a single-letter short option. These options (with the
@@ -766,7 +769,7 @@ class CudaCompiler(Compiler):
 
     def find_library(self, libname: str, env: 'Environment', extra_dirs: T.List[str],
                      libtype: LibType = LibType.PREFER_SHARED, lib_prefix_warning: bool = True) -> T.Optional[T.List[str]]:
-        return ['-l' + libname] # FIXME
+        return self.host_compiler.find_library(libname, env, extra_dirs, libtype, lib_prefix_warning)
 
     def get_crt_compile_args(self, crt_val: str, buildtype: str) -> T.List[str]:
         return self._to_host_flags(self.host_compiler.get_crt_compile_args(crt_val, buildtype))
@@ -803,5 +806,5 @@ class CudaCompiler(Compiler):
     def get_profile_use_args(self) -> T.List[str]:
         return ['-Xcompiler=' + x for x in self.host_compiler.get_profile_use_args()]
 
-    def get_assert_args(self, disable: bool) -> T.List[str]:
-        return self.host_compiler.get_assert_args(disable)
+    def get_assert_args(self, disable: bool, env: 'Environment') -> T.List[str]:
+        return self.host_compiler.get_assert_args(disable, env)

@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright 2012-2017 The Meson development team
+# Copyright © 2023-2024 Intel Corporation
 
 from __future__ import annotations
 
@@ -480,6 +481,18 @@ class NinjaBackend(backends.Backend):
         self.created_llvm_ir_rule = PerMachine(False, False)
         self.rust_crates: T.Dict[str, RustCrate] = {}
         self.implicit_meson_outs = []
+        # nvcc chokes on thin archives:
+        #   nvlink fatal   : Could not open input file 'libfoo.a.p'
+        #   nvlink fatal   : elfLink internal error
+        # hence we disable them if 'cuda' is enabled globally. See also
+        # - https://github.com/mesonbuild/meson/pull/9453
+        # - https://github.com/mesonbuild/meson/issues/9479#issuecomment-953485040
+        self.allow_thin_archives = PerMachine[bool](True, True)
+        if self.environment:
+            for for_machine in MachineChoice:
+                if 'cuda' in self.environment.coredata.compilers[for_machine]:
+                    mlog.debug('cuda enabled globally, disabling thin archives for {}, since nvcc/nvlink cannot handle thin archives natively'.format(for_machine))
+                    self.allow_thin_archives[for_machine] = False
 
     def create_phony_target(self, dummy_outfile: str, rulename: str, phony_infilename: str) -> NinjaBuildElement:
         '''
@@ -1871,7 +1884,7 @@ class NinjaBackend(backends.Backend):
         base_proxy = target.get_options()
         args = rustc.compiler_args()
         # Compiler args for compiling this target
-        args += compilers.get_base_compile_args(base_proxy, rustc)
+        args += compilers.get_base_compile_args(base_proxy, rustc, self.environment)
         self.generate_generator_list_rules(target)
 
         # dependencies need to cause a relink, they're not just for ordering
@@ -2746,18 +2759,24 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
         else:
             return compiler.get_compile_debugfile_args(objfile, pch=False)
 
-    def get_link_debugfile_name(self, linker, target) -> T.Optional[str]:
-        return linker.get_link_debugfile_name(self.get_target_debug_filename(target))
+    def get_link_debugfile_name(self, linker: T.Union[Compiler, StaticLinker], target: build.BuildTarget) -> T.Optional[str]:
+        filename = self.get_target_debug_filename(target)
+        if filename:
+            return linker.get_link_debugfile_name(filename)
+        return None
 
-    def get_link_debugfile_args(self, linker, target):
-        return linker.get_link_debugfile_args(self.get_target_debug_filename(target))
+    def get_link_debugfile_args(self, linker: T.Union[Compiler, StaticLinker], target: build.BuildTarget) -> T.List[str]:
+        filename = self.get_target_debug_filename(target)
+        if filename:
+            return linker.get_link_debugfile_args(filename)
+        return []
 
     def generate_llvm_ir_compile(self, target, src):
         base_proxy = target.get_options()
         compiler = get_compiler_for_source(target.compilers.values(), src)
         commands = compiler.compiler_args()
         # Compiler args for compiling this target
-        commands += compilers.get_base_compile_args(base_proxy, compiler)
+        commands += compilers.get_base_compile_args(base_proxy, compiler, self.environment)
         if isinstance(src, File):
             if src.is_built:
                 src_filename = os.path.join(src.subdir, src.fname)
@@ -2822,7 +2841,7 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
         # options passed on the command-line, in default_options, etc.
         # These have the lowest priority.
         commands += compilers.get_base_compile_args(base_proxy,
-                                                    compiler)
+                                                    compiler, self.environment)
         return commands
 
     @lru_cache(maxsize=None)
@@ -3233,7 +3252,8 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
             if target.import_filename:
                 commands += linker.gen_import_library_args(self.get_import_filename(target))
         elif isinstance(target, build.StaticLibrary):
-            commands += linker.get_std_link_args(self.environment, not target.should_install())
+            produce_thin_archive = self.allow_thin_archives[target.for_machine] and not target.should_install()
+            commands += linker.get_std_link_args(self.environment, produce_thin_archive)
         else:
             raise RuntimeError('Unknown build target type.')
         return commands

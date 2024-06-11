@@ -974,6 +974,9 @@ test cases/common/153 wrap file should not failed/subprojects/foo-1.0/foo.c
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0/meson.build
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchdir/foo.c
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchdir/meson.build
+test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/.meson-subproject-wrap-hash.txt
+test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/foo.c
+test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/meson.build
 test cases/common/153 wrap file should not failed/subprojects/packagecache/foo-1.0-patch.tar.xz
 test cases/common/153 wrap file should not failed/subprojects/packagecache/foo-1.0.tar.xz
 test cases/common/153 wrap file should not failed/subprojects/packagecache/zlib-1.2.8-8-wrap.zip
@@ -1479,6 +1482,7 @@ test cases/common/256 subproject extracted objects/subprojects/myobjects/meson.b
 test cases/common/257 generated header dep/foo.c
 test cases/common/257 generated header dep/meson.build
 test cases/common/258 subsubproject inplace/meson.build
+test cases/common/258 subsubproject inplace/subprojects/subsub.wrap
 test cases/common/258 subsubproject inplace/subprojects/sub/meson.build
 test cases/common/258 subsubproject inplace/subprojects/sub/subprojects/subsub.wrap
 test cases/common/258 subsubproject inplace/subprojects/sub/subprojects/subsub-1.0/meson.build
@@ -1542,6 +1546,8 @@ test cases/common/273 customtarget exe for test/generate.py
 test cases/common/273 customtarget exe for test/meson.build
 test cases/common/274 environment/meson.build
 test cases/common/274 environment/testenv.py
+test cases/common/276 generator custom_tgt subdir/meson.build
+test cases/common/276 generator custom_tgt subdir/include/meson.build
 test cases/common/28 try compile/foo.h.in
 test cases/common/28 try compile/invalid.c
 test cases/common/28 try compile/meson.build
@@ -1997,6 +2003,10 @@ test cases/cuda/15 sanitizer/prog.cu
 test cases/cuda/16 multistd/lib.cu
 test cases/cuda/16 multistd/main.cu
 test cases/cuda/16 multistd/meson.build
+test cases/cuda/17 separate compilation linking/b.cu
+test cases/cuda/17 separate compilation linking/b.h
+test cases/cuda/17 separate compilation linking/main.cu
+test cases/cuda/17 separate compilation linking/meson.build
 test cases/cuda/2 split/lib.cu
 test cases/cuda/2 split/main.cpp
 test cases/cuda/2 split/meson.build
@@ -3374,12 +3384,9 @@ test cases/rust/17 staticlib link staticlib/leaf.rs
 test cases/rust/17 staticlib link staticlib/meson.build
 test cases/rust/17 staticlib link staticlib/prog.c
 test cases/rust/17 staticlib link staticlib/test.json
-test cases/rust/18 proc-macro/lib.rs
 test cases/rust/18 proc-macro/meson.build
 test cases/rust/18 proc-macro/proc.rs
-test cases/rust/18 proc-macro/transitive-proc-macro.rs
 test cases/rust/18 proc-macro/use.rs
-test cases/rust/18 proc-macro/subdir/meson.build
 test cases/rust/19 structured sources/gen.py
 test cases/rust/19 structured sources/main-gen-copy.rs
 test cases/rust/19 structured sources/meson.build
@@ -4140,6 +4147,7 @@ test cases/vala/28 generated ui file/TestBox.ui.in
 test cases/vala/28 generated ui file/meson.build
 test cases/vala/28 generated ui file/test.gresource.xml
 test cases/vala/28 generated ui file/test.vala
+test cases/vala/29 compiler.links/meson.build
 test cases/vala/3 dep/gioprog.vala
 test cases/vala/3 dep/meson.build
 test cases/vala/4 config/config.vapi

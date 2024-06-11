@@ -166,8 +166,11 @@ project_meson_versions: T.DefaultDict[str, str] = collections.defaultdict(str)
 
 from glob import glob
 
-if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-    # using a PyInstaller bundle, e.g. the MSI installed executable
+if getattr(sys, 'frozen', False):
+    # Using e.g. a PyInstaller bundle, such as the MSI installed executable.
+    # It is conventional for freeze programs to set this attribute to indicate
+    # that the program is self hosted, and for example there is no associated
+    # "python" executable.
     python_command = [sys.executable, 'runpython']
 else:
     python_command = [sys.executable]
@@ -1565,7 +1568,7 @@ def Popen_safe_logged(args: T.List[str], msg: str = 'Called', **kwargs: T.Any) -
         mlog.debug(f'{msg}: `{join_args(args)}` -> {excp}')
         raise
 
-    rc, out, err = p.returncode, o.strip(), e.strip()
+    rc, out, err = p.returncode, o.strip() if o else None, e.strip() if e else None
     mlog.debug('-----------')
     mlog.debug(f'{msg}: `{join_args(args)}` -> {rc}')
     if out:
@@ -1908,14 +1911,14 @@ class OrderedSet(T.MutableSet[_T]):
         for item in iterable:
             self.discard(item)
 
-def relpath(path: str, start: str) -> str:
+def relpath(path: T.Union[str, Path], start: T.Union[str, Path]) -> str:
     # On Windows a relative path can't be evaluated for paths on two different
     # drives (i.e. c:\foo and f:\bar).  The only thing left to do is to use the
     # original absolute path.
     try:
         return os.path.relpath(path, start)
     except (TypeError, ValueError):
-        return path
+        return str(path)
 
 def path_is_in_root(path: Path, root: Path, resolve: bool = False) -> bool:
     # Check whether a path is within the root directory root
