@@ -3850,8 +3850,9 @@ gettext-tiny/stamp-h1:
 	$(MAKE) -C gettext-tiny \
 		prefix=/usr \
 		LIBINTL=NOOP \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv" \
+		LIBS="-L$(TOP)/libiconv/staged/usr/lib -liconv"
 	@touch $@
 
 gettext-tiny: gettext-tiny/stamp-h1
@@ -3860,8 +3861,9 @@ gettext-tiny: gettext-tiny/stamp-h1
 		prefix=/usr \
 		LIBINTL=NOOP \
 		DESTDIR=$(TOP)/$@/staged \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libiconv/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libiconv/staged/usr/lib -liconv" \
+		LIBS="-L$(TOP)/libiconv/staged/usr/lib -liconv" \
 		install
 
 gettext-tiny-install:
