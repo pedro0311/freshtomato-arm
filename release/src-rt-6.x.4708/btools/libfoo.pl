@@ -257,8 +257,8 @@ sub fixDyn
 
 	fixDynDep("nginx", "libpcre.so.1.2.13");
 	fixDynDep("nginx", "libpcreposix.so.0.0.7");
-	fixDynDep("nginx", "libpcre2-8.so.0.10.2");
-	fixDynDep("nginx", "libpcre2-posix.so.3.0.0");
+	fixDynDep("nginx", "libpcre2-8.so.0.10.4");
+	fixDynDep("nginx", "libpcre2-posix.so.3.0.1");
 	fixDynDep("php-cgi", "libxml2.so.2.12.7");
 	fixDynDep("php-cgi", "libpng16.so.16.43.0");
 	fixDynDep("php-cgi", "libiconv.so.2.6.1");
@@ -267,8 +267,8 @@ sub fixDyn
 	fixDynDep("php-cgi", "libjpeg.so.8.3.2");
 	fixDynDep("php-cgi", "libpcre.so.1.2.13");
 	fixDynDep("php-cgi", "libpcreposix.so.0.0.7");
-	fixDynDep("php-cgi", "libpcre2-8.so.0.10.2");
-	fixDynDep("php-cgi", "libpcre2-posix.so.3.0.0");
+	fixDynDep("php-cgi", "libpcre2-8.so.0.10.4");
+	fixDynDep("php-cgi", "libpcre2-posix.so.3.0.1");
 	fixDynDep("php-cgi", "libzip.so.5.5");
 	fixDynDep("php-cli", "libxml2.so.2.12.7");
 	fixDynDep("php-cli", "libpng16.so.16.43.0");
@@ -278,8 +278,8 @@ sub fixDyn
 	fixDynDep("php-cli", "libjpeg.so.8.3.2");
 	fixDynDep("php-cli", "libpcre.so.1.2.13");
 	fixDynDep("php-cli", "libpcreposix.so.0.0.7");
-	fixDynDep("php-cli", "libpcre2-8.so.0.10.2");
-	fixDynDep("php-cli", "libpcre2-posix.so.3.0.0");
+	fixDynDep("php-cli", "libpcre2-8.so.0.10.4");
+	fixDynDep("php-cli", "libpcre2-posix.so.3.0.1");
 	fixDynDep("php-cli", "libzip.so.5.5");
 	fixDynDep("php-fpm", "libxml2.so.2.12.7");
 	fixDynDep("php-fpm", "libpng16.so.16.43.0");
@@ -287,8 +287,8 @@ sub fixDyn
 	fixDynDep("php-fpm", "libsqlite3.so.0.8.6");
 	fixDynDep("php-fpm", "libcurl.so.4.8.0");
 	fixDynDep("php-fpm", "libjpeg.so.8.3.2");
-	fixDynDep("php-fpm", "libpcre2-8.so.0.10.2");
-	fixDynDep("php-fpm", "libpcre2-posix.so.3.0.0");
+	fixDynDep("php-fpm", "libpcre2-8.so.0.10.4");
+	fixDynDep("php-fpm", "libpcre2-posix.so.3.0.1");
 	fixDynDep("php-fpm", "libzip.so.5.5");
 
 	fixDynDep("curl", "libcurl.so.4.8.0");
@@ -362,8 +362,8 @@ sub fixDyn
 
 	fixDynDep("libipset.so.11.1.0", "libmnl.so.0.2.0");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libiconv.so.2.6.1");
-	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-8.so.0.10.2");
-	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-posix.so.3.0.0");
+	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-8.so.0.10.4");
+	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-posix.so.3.0.1");
 }
 
 sub usersOf
@@ -680,8 +680,8 @@ genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libicon
 genSO("${root}/usr/lib/libpng16.so.16.43.0", "${router}/libpng/.libs/libpng16.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libxml2.so.2.12.7", "${router}/libxml2/.libs/libxml2.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
-genSO("${root}/usr/lib/libpcre2-8.so.0.10.2", "${router}/pcre2/.libs/libpcre2-8.a", "${stripshared}");
-#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.0", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}"); # (deleted)
+genSO("${root}/usr/lib/libpcre2-8.so.0.10.4", "${router}/pcre2/.libs/libpcre2-8.a", "${stripshared}");
+#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.1", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}"); # (deleted)
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a", "${stripshared}");
 genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a", "${stripshared}");
 genSO("${root}/usr/lib/libatomic_ops.so.1.0.3", "${router}/libatomic_ops/src/.libs/libatomic_ops.a");
