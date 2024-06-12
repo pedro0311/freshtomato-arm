@@ -194,30 +194,31 @@ FFMPEG_CONFIGURE_DECODERS := $(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG
 FFMPEG_CONFIGURE_PROTOCOLS := $(call FFMPEG_FILTER_CONFIG,enable-protocol,$(FFMPEG_PROTOCOLS))
 
 # openssl stuff
-OPENSSL_CIPHERS := no-ssl3 no-gost no-err no-unit-test no-tests no-comp no-sse2 no-afalgeng no-devcryptoeng
-ifeq ($(TCONFIG_OPENSSL30),)
- OPENSSL_CIPHERS += no-ssl2 no-heartbeats
-else
- OPENSSL_CIPHERS += no-crypto-mdebug no-fuzz-libfuzzer no-fuzz-afl no-nextprotoneg no-pinshared no-fips no-fips-securitychecks no-padlockeng
+OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-err
+ifneq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
+ OPENSSL_OPTIONS +=  no-npn
 endif
-# remove on MIPS if built without KEYGEN
-ifeq ($(TCONFIG_BCMARM),)
- ifeq ($(TCONFIG_KEYGEN),)
-  OPENSSL_CIPHERS += no-camellia no-seed no-mdc2 no-rmd160 no-ts no-capieng no-rfc3779 no-zlib no-ssl-trace no-dtls1 no-psk no-md2
-  ifeq ($(TCONFIG_OPENSSL30),)
-   OPENSSL_CIPHERS += no-hw
-  endif
-  ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
-   OPENSSL_CIPHERS += no-idea no-rc2 no-cast no-md4 no-cms no-ocsp no-srp no-ocb no-unit-test no-ui-console no-whirlpool no-blake2 no-cmac \
-                      no-multiblock no-nextprotoneg no-ct no-scrypt no-sctp no-engine no-siphash no-ubsan no-rc5 no-rdrand no-devcryptoeng no-dgram no-dtls
-  else
-   OPENSSL_CIPHERS += no-sha0 no-smime no-krb5 no-ripemd no-gms no-gmp no-jpake no-engines no-libunbound no-store enable-rc5
-  endif # TCONFIG_OPENSSL30 || TCONFIG_OPENSSL11
- endif # !TCONFIG_KEYGEN
- ifeq ($(TCONFIG_BBT),)
-  OPENSSL_CIPHERS += no-rc4
+ifeq ($(TCONFIG_OPENSSL30),)
+ OPENSSL_OPTIONS += no-ssl2 no-heartbeats
+else
+ OPENSSL_OPTIONS += no-crypto-mdebug no-fuzz-libfuzzer no-fuzz-afl no-fips no-fips-securitychecks no-padlockeng
+endif
+# remove when built without KEYGEN
+ifeq ($(TCONFIG_KEYGEN),)
+ OPENSSL_OPTIONS += no-camellia no-rmd160 no-rfc3779 no-md2 no-zlib no-ssl-trace no-psk no-ui-console no-filenames no-dso
+ ifeq ($(TCONFIG_OPENSSL30),)
+  OPENSSL_OPTIONS += no-hw
  endif
-endif # !TCONFIG_BCMARM
+ ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
+  OPENSSL_OPTIONS += no-engine no-rc2 no-cast no-md4 no-cmac no-scrypt no-siphash no-rc5 no-dtls no-dtls1 no-dtls1_2 \
+                     no-ts no-cms no-ocsp no-multiblock no-ct no-sctp no-ubsan no-rdrand no-dgram
+ else
+  OPENSSL_OPTIONS += no-engines no-sha0 no-smime no-krb5 no-ripemd no-gms no-gmp no-jpake no-libunbound no-store no-dtls1 enable-rc5
+ endif # TCONFIG_OPENSSL30 || TCONFIG_OPENSSL11
+endif # !TCONFIG_KEYGEN
+ifeq ($(TCONFIG_BBT),)
+ OPENSSL_OPTIONS += no-rc4
+endif
 
 # libcurl flag
 ifeq ($(TCONFIG_STUBBY),y)
@@ -1245,7 +1246,7 @@ endif # !TCONFIG_BCMARM
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,-Os) --prefix=/usr --openssldir=/etc/ssl -DOPENSSL_NO_BUF_FREELISTS \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-			shared $(OPENSSL_CIPHERS)
+			shared $(OPENSSL_OPTIONS)
 
 ifeq ($(TCONFIG_BCMARM),)
 	cd openssl && mkdir -p include/openssl && \
@@ -1312,7 +1313,7 @@ endif # !TCONFIG_BCMARM
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-			shared $(OPENSSL_CIPHERS) --api=1.0.0 \
+			shared $(OPENSSL_OPTIONS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 \
 			-DOPENSSL_PREFER_CHACHA_OVER_GCM
 	@$(MAKE) -C openssl-1.1 clean
@@ -1350,7 +1351,7 @@ openssl-3.0/stamp-h1:
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
 		./Configure $(HOSTCONFIG)-freshtomato $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
-			shared $(OPENSSL_CIPHERS) --api=1.0.0 \
+			shared $(OPENSSL_OPTIONS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 no-cmp \
 			-DOPENSSL_PREFER_CHACHA_OVER_GCM
 	@$(MAKE) -C openssl-3.0 clean
