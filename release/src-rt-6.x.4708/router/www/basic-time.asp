@@ -183,11 +183,9 @@ function init() {
 
 		createFieldTable('', [
 			{ title: 'Router Time', text: '<span id="clock">'+isup.time+'<\/span>' },
-			null,
 			{ title: 'NTP Info', text: '<span id="ntp" style="white-space: pre-line">'+isup.ntp+'<\/span>' },
 			null,
-			{ title: '', text: '<div class="section-title">Time Zone<\/div>' },			
-			{ title: 'UTC offsets', name: 'tm_sel', indent: 2, type: 'select', options: [
+			{ title: 'Time Zone', name: 'tm_sel', type: 'select', options: [
 				['custom','Custom...'],
 				['UTC12','UTC-12:00 Kwajalein'],
 				['UTC11','UTC-11:00 Midway Island, Samoa'],
@@ -243,21 +241,18 @@ function init() {
 				['UTC-12','UTC+12:00 Fiji'],
 				['NZST-12NZDT,M9.5.0/2,M4.1.0/3','UTC+12:00 New Zealand']
 			], value: nvram.tm_sel },
-				{ title: 'Auto Daylight Savings', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != 0 },
+				{ title: 'Auto Daylight Savings Time', indent: 2, name: 'f_tm_dst', type: 'checkbox', value: nvram.tm_dst != 0 },
 				{ title: 'Custom TZ String', indent: 2, name: 'f_tm_tz', type: 'text', maxlen: 32, size: 34, value: nvram.tm_tz || '' },
 			null,
-			null,
-			{ title: '', text: '<div class="section-title">NTP Client<\/div>' },
-			{ title: 'Enable', indent: 2, name: 'ntp_updates', type: 'select', options: [[-1,'Off'],[0,'On & Sync at startup'],[1,'On & Sync periodically']], value: nvram.ntp_updates },
-			{ title: 'Upstream Server', indent: 2, name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
+			{ title: 'Auto Update Time', name: 'ntp_updates', type: 'select', options: [[-1,'Never'],[0,'Only at startup'],[1,'Auto interval']], value: nvram.ntp_updates },
+			{ title: 'NTP Time Server', name: 'f_ntp_server', type: 'select', options: ntpList, value: ntpSel },
 			{ title: '&nbsp;', text: '<small><span id="ntp-preset">xx<\/span><\/small>', hidden: 1 },
-			{ title: '', name: 'f_ntp_1', type: 'text', maxlen: 48, size: 34, value: ntp[0] || 'pool.ntp.org', hidden: 1 },
-			{ title: '', name: 'f_ntp_2', type: 'text', maxlen: 48, size: 34, value: ntp[1] || '', hidden: 1 },
-			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 34, value: ntp[2] || '', hidden: 1 },
+			{ title: '', name: 'f_ntp_1', type: 'text', maxlen: 48, size: 50, value: ntp[0] || 'pool.ntp.org', hidden: 1 },
+			{ title: '', name: 'f_ntp_2', type: 'text', maxlen: 48, size: 50, value: ntp[1] || '', hidden: 1 },
+			{ title: '', name: 'f_ntp_3', type: 'text', maxlen: 48, size: 50, value: ntp[2] || '', hidden: 1 },
 			null,
-			{ title: '', text: '<div class="section-title">NTP Server<\/div>' },
-			{ title: 'Enable', name: 'f_ntpd_enable', indent: 2, type: 'select', options: [[0,'Off'],[1,'LAN'],[2,'LAN & WAN']], value: nvram.ntpd_enable },
-				{ title: 'Intercept NTP Requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', suffix: ' <small>LAN clients only<\/small>', value: nvram.ntpd_server_redir != 0 }
+			{ title: 'Internal NTP server', name: 'f_ntpd_enable', type: 'select', options: [[0,'Disabled'],[1,'LAN only'],[2,'LAN & WAN']], value: nvram.ntpd_enable },
+				{ title: 'Intercept LAN client NTP requests', indent: 2, name: 'f_ntpd_server_redir', type: 'checkbox', value: nvram.ntpd_server_redir != 0 }
 		]);
 	</script>
 </div>
