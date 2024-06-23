@@ -2518,18 +2518,18 @@ $(PHP_TARGET)/stamp-h1:
 		PKG_CONFIG_LIBDIR="" \
 		PROF_FLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
 			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
-			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libcurl/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
+			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
 			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
 		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED $(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib \
-			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
+			-L$(TOP)/libpng/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		LIBS="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/sqlite/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libxml2/staged/usr/lib -L$(TOP)/libiconv/staged/usr/lib -L$(TOP)/libpng/staged/usr/lib \
-			-L$(TOP)/libcurl/staged/usr/lib -L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
-			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -lcurl -ljpeg -lzip -lssl -lcrypto" \
+			-L$(TOP)/libjpeg-turbo/staged/usr/lib -L$(TOP)/libzip/staged/usr/lib \
+			-lz -lsqlite3 -ldl -lpthread -liconv -lxml2 -lstdc++ -ljpeg -lzip" \
 		ac_cv_func_memcmp_working=yes \
 		ac_cv_c_bigendian_php=no \
 		php_cv_cc_rpath=no \
@@ -2551,7 +2551,6 @@ $(PHP_TARGET)/stamp-h1:
 			--with-zlib-dir="$(TOP)/zlib/staged/usr" \
 			--with-jpeg-dir="$(TOP)/libjpeg-turbo/staged/usr" \
 			--with-jpeg="$(TOP)/libjpeg-turbo/staged/usr" \
-			--with-curl="$(TOP)/libcurl/staged/usr" \
 			--with-png-dir="$(TOP)/libpng/staged/usr" \
 			--with-iconv="$(TOP)/libiconv/staged/usr" \
 			--with-iconv-dir="$(TOP)/libiconv/staged/usr" \
@@ -2592,6 +2591,9 @@ $(PHP_TARGET)/stamp-h1:
 			--without-gmp \
 			--without-ldap \
 			--without-openssl \
+			--without-imap \
+			--without-snmp \
+			--without-curl \
 			--disable-pcntl \
 			--without-pdo-pgsql \
 			--without-pgsql \
@@ -2611,8 +2613,6 @@ $(PHP_TARGET)/stamp-h1:
 			SQLITE_LIBS="$(TOP)/sqlite/staged/usr/lib -lsqlite3" \
 			ZLIB_CFLAGS="$(TOP)/zlib/staged/usr/include" \
 			ZLIB_LIBS="$(TOP)/zlib/staged/usr/lib -lz" \
-			CURL_CFLAGS="$(TOP)/libcurl/staged/usr/include" \
-			CURL_LIBS="$(TOP)/libcurl/staged/usr/lib -lcurl" \
 			LIBZIP_CFLAGS="$(TOP)/libzip/staged/usr/include" \
 			LIBZIP_LIBS="$(TOP)/libzip/staged/usr/lib -lzip" \
 			JPEG_CFLAGS="$(TOP)/libjpeg-turbo/staged/usr/include" \
@@ -2620,10 +2620,7 @@ $(PHP_TARGET)/stamp-h1:
 			PNG_CFLAGS="(TOP)/libpng/staged/usr/include" \
 			PNG_LIBS="$(TOP)/libpng/staged/usr/lib -lpng16" \
 			PCRE2_CFLAGS="$(TOP)/$(PCRE_TARGET)/staged/usr/include" \
-			PCRE2_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8" \
-			OPENSSL_CFLAGS="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-			OPENSSL_LIBS="$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lssl -lcrypto" \
-			OPENSSL_LIBDIR="$(TOP)/$(OPENSSLDIR)"
+			PCRE2_LIBS="$(TOP)/$(PCRE_TARGET)/staged/usr/lib -lpcre2-8"
 	@touch $@
 
 $(PHP_TARGET): $(PHP_TARGET)/stamp-h1
