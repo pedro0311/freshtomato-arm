@@ -1644,7 +1644,7 @@ miniupnpd: miniupnpd/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD) \
 		EXTRACFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed $(if $(TCONFIG_HTTPS),-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -pthread) \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -Wl,--as-needed \
 			$(if $(TCONFIG_BCMARM),-L$(TOP)/shared,-Wl$(comma)--allow-multiple-definition)"
 
 miniupnpd-install:
