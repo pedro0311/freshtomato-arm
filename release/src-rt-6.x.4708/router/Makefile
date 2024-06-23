@@ -2481,23 +2481,20 @@ libzip/build/Makefile:
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
 			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
-			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include -fPIC -pthread" \
-			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lz -lssl -lcrypto -lpthread" \
-			-DENABLE_GNUTLS=FALSE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include -fPIC -pthread" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib -lz -lpthread" \
 			-DENABLE_COMMONCRYPTO=FALSE \
+			-DENABLE_GNUTLS=FALSE \
+			-DENABLE_OPENSSL=FALSE \
 			-DENABLE_MBEDTLS=FALSE \
 			-DENABLE_BZIP2=FALSE \
 			-DENABLE_LZMA=FALSE \
 			-DENABLE_ZSTD=FALSE \
 			-DENABLE_WINDOWS_CRYPTO=FALSE \
-			-DENABLE_OPENSSL=TRUE \
 			-DBUILD_TOOLS=FALSE \
 			-DBUILD_REGRESS=FALSE \
 			-DBUILD_EXAMPLES=FALSE \
 			-DBUILD_DOC=FALSE \
-			-DOPENSSL_CRYPTO_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libcrypto.so" \
-			-DOPENSSL_SSL_LIBRARY="$(TOP)/$(OPENSSLDIR)/staged/usr/lib/libssl.so" \
-			-DOPENSSL_INCLUDE_DIR="$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
 			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
 			..
