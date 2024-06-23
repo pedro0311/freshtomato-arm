@@ -3054,9 +3054,9 @@ libcurl-clean:
 libevent/stamp-h1:
 	cd libevent && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include $(if $(TCONFIG_HTTPS),-I$(TOP)/$(OPENSSLDIR)/staged/usr/include,)" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_HTTPS),-pthread -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib,)" \
-		$(CONFIGURE) --prefix=/usr $(if $(TCONFIG_HTTPS),,--disable-openssl) --disable-doxygen-html \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/zlib/staged/usr/include" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/zlib/staged/usr/lib" \
+		$(CONFIGURE) --prefix=/usr --disable-openssl --disable-doxygen-html \
 			--disable-debug-mode --disable-samples --disable-dependency-tracking
 	@touch $@
 
