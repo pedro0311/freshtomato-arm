@@ -99,6 +99,14 @@ ifeq ($(ASUS_TRX),NETGEAR2)
  endif
 endif
 
+SDK7WL_DESC =
+ifeq ($(BCM7WL2020),y)
+ SDK7WL_DESC = "-WL20"
+endif
+ifeq ($(BCM7WL2021),y)
+ SDK7WL_DESC = "-WL21"
+endif
+
 -include tomato_profile.mak
 
 # This could be simpler by just using $(TOMATO_PROFILE_NAME) like it used to be,
@@ -707,6 +715,18 @@ define extrawlConfig
 		cp -f $(SRCBASE)/router/dpsta/arm/dpsta.h $(SRCBASE)/router/dpsta/dpsta.h ; \
 		cp -f $(SRCBASE)/router/dpsta/arm/dpsta_linux.h $(SRCBASE)/router/dpsta/dpsta_linux.h ; \
 		cp -f $(SRCBASE)/router/dpsta/arm/dpsta.o $(SRCBASE)/router/dpsta/linux/dpsta.o ; \
+		if [ "$(CONFIG_BCM7)" = "y" ]; then \
+			if [ "$(BCM7WL2020)" = "y" ]; then \
+				echo "Using SDK7 WL Driver - Year 2020"; \
+				cp -f $(SRCBASE)/router/dhd/linux/2020/dhd.o $(SRCBASE)/router/dhd/linux/dhd.o ; \
+			elif [ "$(BCM7WL2021)" = "y" ]; then \
+				echo "Using SDK7 WL Driver - Year 2021"; \
+				cp -f $(SRCBASE)/router/dhd/linux/2021/dhd.o $(SRCBASE)/router/dhd/linux/dhd.o ; \
+			else \
+				echo "Using SDK7 WL Driver - Year 2023 (default)"; \
+				cp -f $(SRCBASE)/router/dhd/linux/2023/dhd.o $(SRCBASE)/router/dhd/linux/dhd.o ; \
+			fi; \
+		fi; \
 	fi; \
 	)
 endef
@@ -1151,7 +1171,7 @@ setprofile:
 	echo '#define TOMATO_PROFILE PROFILE_$(N)' >> router/shared/tomato_profile.h
 	echo '#define TOMATO_PROFILE_NAME "$(N)"' >> router/shared/tomato_profile.h
 	echo '#define TOMATO_BUILD_NAME "$(B)"' >> router/shared/tomato_profile.h
-	echo '#define TOMATO_BUILD_DESC "$(DESC)$(EXTRA_64KDESC)$(NOSMP_DESC)"' >> router/shared/tomato_profile.h
+	echo '#define TOMATO_BUILD_DESC "$(DESC)$(EXTRA_64KDESC)$(NOSMP_DESC)$(SDK7WL_DESC)"' >> router/shared/tomato_profile.h
 	echo '#ifndef CONFIG_NVRAM_SIZE' >> router/shared/tomato_profile.h
 	echo '#define CONFIG_NVRAM_SIZE $(NVRAM_SIZE)' >> router/shared/tomato_profile.h
 	echo '#endif' >> router/shared/tomato_profile.h
@@ -1164,7 +1184,7 @@ setprofile:
 	echo 'TOMATO_PROFILE_NAME = "$(N)"' >> tomato_profile.mak
 	echo 'TOMATO_BUILD = "$(B)"' >> tomato_profile.mak
 	echo 'TOMATO_BUILD_NAME = "$(B)"' >> tomato_profile.mak
-	echo 'TOMATO_BUILD_DESC = "$(DESC)$(EXTRA_64KDESC)$(NOSMP_DESC)"' >> tomato_profile.mak
+	echo 'TOMATO_BUILD_DESC = "$(DESC)$(EXTRA_64KDESC)$(NOSMP_DESC)$(SDK7WL_DESC)"' >> tomato_profile.mak
 	echo 'TOMATO_PROFILE_L = $(lowercase_N)' >> tomato_profile.mak
 	echo 'TOMATO_PROFILE_U = $(uppercase_N)' >> tomato_profile.mak
 	echo 'TOMATO_BUILD_USB = "$(USB)"' >> tomato_profile.mak
