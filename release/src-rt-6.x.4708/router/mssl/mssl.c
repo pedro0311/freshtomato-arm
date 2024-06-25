@@ -24,17 +24,17 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
+#ifdef USE_OPENSSL
 #include <openssl/ssl.h>
 #include <openssl/err.h>
-
-#ifdef USE_OPENSSL
 #include <openssl/rsa.h>
 #include <openssl/ec.h>
 #include <openssl/crypto.h>
 #include <openssl/x509.h>
 #include <openssl/pem.h>
-#else
-/* CyaSSL */
+#elif USE_CYASSL
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <cyassl_error.h>
 #endif
 
@@ -42,17 +42,21 @@
 
 /* refer https://ssl-config.mozilla.org/ w/o DES ciphers */
 #ifdef USE_OPENSSL
-#define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
-#else
-#define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"
+ #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
+#elif USE_CYASSL
+ #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
-/* use reasonable defaults */
-#define CLIENT_CIPHERS NULL
-#else
-#define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
-#endif
+#ifdef USE_OPENSSL
+ #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+  /* use reasonable defaults */
+  #define CLIENT_CIPHERS NULL
+ #else
+  #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
+ #endif
+#elif USE_CYASSL
+ #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
+#endif /* USE_OPENSSL */
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -70,7 +74,7 @@ static inline void mssl_print_err(SSL* ssl)
 {
 #ifdef USE_OPENSSL
 	ERR_print_errors_fp(stderr);
-#else
+#elif USE_CYASSL
 	logmsg(LOG_DEBUG, "*** [mssl] error %d", ssl ? SSL_get_error(ssl, 0) : -1);
 #endif
 }
@@ -207,7 +211,7 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 
 	if (client) {
 		/* Setup SNI */
-#if OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)
+ #if OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)
 		if (name && *name) {
 			struct addrinfo *res, hint = { .ai_flags = AI_NUMERICHOST };
 			if (getaddrinfo(name, NULL, &hint, &res) == 0)
@@ -218,9 +222,9 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 				goto ERROR;
 			}
 		}
-#endif
+ #endif
 	}
-#endif
+#endif /* USE_OPENSSL */
 	/* Bind the socket to SSL structure
 	 * kuki->ssl : SSL structure
 	 * kuki->sd  : socket_fd
@@ -277,8 +281,8 @@ FILE *ssl_client_fopen_name(int sd, const char *name)
 	return _ssl_fopen(sd, 1, name);
 }
 
-#ifndef SSL_OP_NO_RENEGOTIATION
-#if OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
+#if defined(USE_OPENSSL) && !defined(SSL_OP_NO_RENEGOTIATION)
+ #if OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
 static void ssl_info_cb(const SSL *ssl, int where, int ret)
 {
 	if ((where & SSL_CB_HANDSHAKE_DONE) != 0 && SSL_is_server((SSL *) ssl)) {
@@ -286,8 +290,8 @@ static void ssl_info_cb(const SSL *ssl, int where, int ret)
 		ssl->s3->flags |= SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS;
 	}
 }
-#endif
-#endif
+ #endif
+#endif /* USE_OPENSSL && !SSL_OP_NO_RENEGOTIATION */
 
 int mssl_init_ex(char *cert, char *priv, char *ciphers)
 {
@@ -307,11 +311,15 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 	 * If server=1, use TLSv1_server_method() or SSLv23_server_method()
 	 * else 	use TLSv1_client_method() or SSLv23_client_method()
 	 */
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifdef USE_OPENSSL
+ #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	ctx = SSL_CTX_new(server ? TLS_server_method() : TLS_client_method());
-#else
+ #else
 	ctx = SSL_CTX_new(server ? SSLv23_server_method() : SSLv23_client_method());
-#endif
+ #endif
+#elif USE_CYASSL
+	ctx = SSL_CTX_new(server ? SSLv23_server_method() : SSLv23_client_method());
+#endif /* USE_OPENSSL */
 	if (!ctx) {
 		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_new() failed");
 		mssl_print_err(NULL);
@@ -321,36 +329,36 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 #ifdef USE_OPENSSL
 	/* Setup common modes */
 	SSL_CTX_set_mode(ctx,
-#ifdef SSL_MODE_RELEASE_BUFFERS
+ #ifdef SSL_MODE_RELEASE_BUFFERS
 				 SSL_MODE_RELEASE_BUFFERS |
-#endif
+ #endif
 				 SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
 	/* Setup common options */
 	SSL_CTX_set_options(ctx, SSL_OP_ALL |
-#ifdef SSL_OP_NO_TICKET
+ #ifdef SSL_OP_NO_TICKET
 				 SSL_OP_NO_TICKET |
-#endif
-#ifdef SSL_OP_NO_COMPRESSION
+ #endif
+ #ifdef SSL_OP_NO_COMPRESSION
 				 SSL_OP_NO_COMPRESSION |
-#endif
-#ifdef SSL_OP_SINGLE_DH_USE
+ #endif
+ #ifdef SSL_OP_SINGLE_DH_USE
 				 SSL_OP_SINGLE_DH_USE |
-#endif
+ #endif
 				 SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3);
-#endif
 
 	/* Setup EC support */
-#ifdef NID_X9_62_prime256v1
+ #ifdef NID_X9_62_prime256v1
 	EC_KEY *ecdh = NULL;
 	if ((ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != NULL) {
 		SSL_CTX_set_tmp_ecdh(ctx, ecdh);
 		EC_KEY_free(ecdh);
-#ifdef SSL_OP_SINGLE_ECDH_USE
+  #ifdef SSL_OP_SINGLE_ECDH_USE
 		SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
-#endif
+  #endif
 	}
-#endif
+ #endif
+#endif /* USE_OPENSSL */
 
 	/* Setup available ciphers */
 	ciphers = server ? SERVER_CIPHERS : CLIENT_CIPHERS;
@@ -361,14 +369,15 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 	}
 
 	if (server) {
-#ifdef USE_OPENSSL11
+#ifdef USE_OPENSSL
+ #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 		/* Disable TLS 1.0 & 1.1 */
 		SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
-#endif
-#ifdef USE_OPENSSL
+ #endif
 		/* Enforce server cipher order */
 		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
-#endif
+#endif /* USE_OPENSSL */
+
 		/* Set the certificate to be used */
 		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_certificate_chain_file(%s)", cert);
 		if (SSL_CTX_use_certificate_chain_file(ctx, cert) <= 0) {
@@ -383,6 +392,7 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 			mssl_cleanup(1);
 			return 0;
 		}
+
 #ifdef USE_OPENSSL
 		/* Make sure the key and certificate file match */
 		if (!SSL_CTX_check_private_key(ctx)) {
@@ -393,11 +403,13 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 #endif
 
 		/* Disable renegotiation */
-#ifdef SSL_OP_NO_RENGOTIATION
+#ifdef USE_OPENSSL
+ #ifdef SSL_OP_NO_RENGOTIATION
 		SSL_CTX_set_options(ctx, SSL_OP_NO_RENGOTIATION);
-#elif OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
+ #elif OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
 		SSL_CTX_set_info_callback(ctx, ssl_info_cb);
-#endif
+ #endif
+#endif /* USE_OPENSSL */
 	}
 
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
@@ -412,7 +424,7 @@ int mssl_init(char *cert, char *priv)
 	return mssl_init_ex(cert, priv, NULL);
 }
 
-#ifdef USE_OPENSSL11
+#if defined(USE_OPENSSL) && OPENSSL_VERSION_NUMBER >= 0x10100000L
 static int mssl_f_exists(const char *path)
 {
 	struct stat st;
@@ -573,4 +585,4 @@ end:
 
 	return ret;
 }
-#endif /* USE_OPENSSL11 */
+#endif /* USE_OPENSSL && OPENSSL_VERSION_NUMBER >= 0x10100000L */

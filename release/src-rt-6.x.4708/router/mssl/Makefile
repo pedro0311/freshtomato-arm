@@ -3,22 +3,15 @@ include ../common.mak
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections -Wsign-compare
 CFLAGS += -I$(TOP)/shared
 LDFLAGS = -fPIC -ffunction-sections -fdata-sections --gc-sections -L$(TOP)/shared
-LIBS    = -lshared
+LIBS    = -lshared -lpthread
 
 ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -DUSE_OPENSSL -I$(TOP)/$(OPENSSLDIR)/include
  LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lssl -lcrypto
- ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
-  CFLAGS += -DUSE_OPENSSL11
- endif
 else
- CFLAGS += -I$(TOP)/cyassl/include -I$(TOP)/cyassl/ctaocrypt/include
+ CFLAGS += -DUSE_CYASSL -I$(TOP)/cyassl/include -I$(TOP)/cyassl/ctaocrypt/include
  LIBS   += $(TOP)/cyassl/src/.libs/libcyassl.a
-endif
-
-ifneq ($(TCONFIG_BCMARM),y)
- LIBS += -lpthread
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
