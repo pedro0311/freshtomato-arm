@@ -3,23 +3,18 @@ include ../common.mak
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
 CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared -I$(TOP)/nvram$(BCMEX)
 LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared -L$(TOP)/nvram$(BCMEX)
-LIBS    = -lshared -lnvram $(EXTRALIBS)
+LIBS    = -lshared -lnvram -lpthread $(EXTRALIBS)
 
 ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
  LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lssl -lcrypto
- ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
-  ifeq ($(TCONFIG_BCMARM),y)
-   LIBS += -lpthread
-  endif
- endif
 endif
 
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BBT),$(TCONFIG_NGINX)),y)
  CFLAGS  += -DUSE_LIBCURL -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libcurl/staged/usr/include
  LDFLAGS += -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/libcurl/lib/.libs
- LIBS    += -lz -lcurl -lpthread
+ LIBS    += -lz -lcurl
 else
  CFLAGS  += -I$(TOP)/mssl
  LDFLAGS += -L$(TOP)/mssl
