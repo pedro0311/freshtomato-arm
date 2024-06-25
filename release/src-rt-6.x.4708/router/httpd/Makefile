@@ -3,7 +3,7 @@ include ../common.mak
 CFLAGS  = -Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -Wsign-compare
 CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared -I$(TOP)/nvram$(BCMEX)
 LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared -L$(TOP)/nvram$(BCMEX)
-LIBS    = -lshared -lnvram $(EXTRALIBS)
+LIBS    = -lshared -lnvram -lpthread $(EXTRALIBS)
 
 ifeq ($(TCONFIG_BCMARM),y)
  CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
@@ -14,12 +14,6 @@ ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
  LDFLAGS += -L$(TOP)/mssl -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lmssl -lssl -lcrypto
- ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
-  CFLAGS += -DUSE_OPENSSL11
-  ifeq ($(TCONFIG_BCMARM),y)
-   LIBS  += -lpthread
-  endif
- endif
 endif
 
 ifeq ($(TOMATO_EXPERIMENTAL),1)
