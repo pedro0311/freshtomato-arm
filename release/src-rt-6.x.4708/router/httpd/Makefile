@@ -12,6 +12,7 @@ endif
 
 ifneq ($(TCONFIG_HTTPS),)
  CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
+ CFLAGS  += -I$(TOP)/mssl -DUSE_OPENSSL
  LDFLAGS += -L$(TOP)/mssl -L$(TOP)/$(OPENSSLDIR)
  LIBS    += -lmssl -lssl -lcrypto
 endif
