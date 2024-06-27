@@ -194,7 +194,7 @@ FFMPEG_CONFIGURE_DECODERS := $(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG
 FFMPEG_CONFIGURE_PROTOCOLS := $(call FFMPEG_FILTER_CONFIG,enable-protocol,$(FFMPEG_PROTOCOLS))
 
 # openssl stuff
-OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-err no-rc4
+OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-err no-rc4 no-cms
 ifneq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
  OPENSSL_OPTIONS +=  no-npn
 endif
@@ -211,7 +211,7 @@ ifeq ($(TCONFIG_KEYGEN),)
  endif
  ifeq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
   OPENSSL_OPTIONS += no-engine no-rc2 no-cast no-md4 no-cmac no-scrypt no-siphash no-rc5 no-dtls no-dtls1 no-dtls1_2 \
-                     no-ts no-cms no-ocsp no-multiblock no-ct no-sctp no-ubsan no-rdrand no-dgram
+                     no-ts no-ocsp no-multiblock no-ct no-sctp no-ubsan no-rdrand no-dgram
  else
   OPENSSL_OPTIONS += no-engines no-sha0 no-smime no-krb5 no-ripemd no-gms no-gmp no-jpake no-libunbound no-store no-dtls1 enable-rc5
  endif # TCONFIG_OPENSSL30 || TCONFIG_OPENSSL11
