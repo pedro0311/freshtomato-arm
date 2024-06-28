@@ -685,7 +685,7 @@ genSO("${root}/usr/lib/libpcre2-8.so.0.10.4", "${router}/pcre2/.libs/libpcre2-8.
 #genSO("${root}/usr/lib/libpcre2-posix.so.3.0.1", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}"); # (deleted)
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a", "${stripshared}");
 genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a", "${stripshared}");
-genSO("${root}/usr/lib/libatomic_ops.so.1.0.3", "${router}/libatomic_ops/src/.libs/libatomic_ops.a");
+genSO("${root}/usr/lib/libatomic_ops.so.1.0.4", "${router}/libatomic_ops/src/.libs/libatomic_ops.a");
 
 genSO("${root}/usr/lib/libavahi-common.so.3.5.4", "${router}/avahi/avahi-common/.libs/libavahi-common.a", "${stripshared}");
 genSO("${root}/usr/lib/libavahi-core.so.7.1.0", "${router}/avahi/avahi-core/.libs/libavahi-core.a", "${stripshared}", "-L${router}/avahi/avahi-common/.libs");
