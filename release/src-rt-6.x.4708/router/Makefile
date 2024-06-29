@@ -2953,13 +2953,13 @@ openvpn/Makefile:
 		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lcrypto -lssl" \
 		LIBCAPNG_CFLAGS="-I$(TOP)/libcap-ng/src" \
 		LIBCAPNG_LIBS="-L$(TOP)/libcap-ng/src/.libs -lcap-ng" \
-		LZO_CFLAGS="-I$(TOP)/lzo/include" \
-		LZO_LIBS="-L$(TOP)/lzo/src/.libs -llzo2" \
-		LZ4_CFLAGS="-I$(TOP)/lz4/lib" \
-		LZ4_LIBS="-L$(TOP)/lz4/lib -llz4" \
+		LZO_CFLAGS="-I$(TOP)/lzo/staged/usr/include" \
+		LZO_LIBS="-L$(TOP)/lzo/staged/usr/lib -llzo2" \
+		LZ4_CFLAGS="-I$(TOP)/lz4/staged/usr/include" \
+		LZ4_LIBS="-L$(TOP)/lz4/staged/usr/lib -llz4" \
 		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(TCONFIG_BCMARM),-I$(TOP)/libcap-ng/src,)" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -Wl,--gc-sections" \
-		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
+		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/staged/usr/lib -Wl,--gc-sections" \
+		CPPFLAGS="-I$(TOP)/lzo/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
 			--disable-selinux --disable-systemd --disable-plugins --disable-pkcs11 \
@@ -3266,25 +3266,20 @@ endif
 lz4:
 	@$(SEP)
 	cd lz4 && \
-		CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CPPFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		CXXFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		PREFIX=/usr \
 		LIBDIR=/usr/lib \
-		$(MAKE) \
-		LN_S="ln -sf" \
-		BUILD_SHARED=no \
-		install \
-		DESTDIR=$(TOP)/lz4/staged
+		$(MAKE) LN_S="ln -sf" install DESTDIR=$(TOP)/lz4/staged
 
 lz4-install:
 ifeq ($(TCONFIG_OPENVPN),y)
  ifeq ($(TCONFIG_BCMARM),y)
 	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
-	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1
-	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so
+	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1 && ln -sf liblz4.so.1.9.4 liblz4.so
  endif
 endif
 	@true
