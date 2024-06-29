@@ -90,7 +90,6 @@ export HAVE_TOMATO := y
 comma := ,
 
 export INSTALL_ZLIB := $(if $(or $(TCONFIG_DNSCRYPT),$(TCONFIG_NFS),$(TCONFIG_SAMBASRV),$(TCONFIG_BBT),$(TCONFIG_MEDIA_SERVER),$(TCONFIG_TOR),$(TCONFIG_TINC),$(TCONFIG_NGINX),$(TCONFIG_BCMARM),$(TCONFIG_ZFS),$(TCONFIG_IRQBALANCE)),y)
-export INSTALL_SQLITE := $(if $(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
 
 ifeq ($(TCONFIG_BCMWL6),y)
  export CFLAGS += -DTRAFFIC_MGMT
@@ -413,6 +412,7 @@ ifeq ($(TCONFIG_OPENVPN),y)
    obj-y += lz4
    obj-y += libcap-ng
    obj-y += openvpn
+   export INSTALL_LZ4 := y
   else
    obj-y += openvpn-2.5
   endif
@@ -1968,7 +1968,7 @@ sqlite: sqlite/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/sqlite/staged install
 
 sqlite-install:
-ifeq ($(INSTALL_SQLITE),y)
+ifeq ($(or $(TCONFIG_NGINX),$(TCONFIG_MEDIA_SERVER)),y)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
 	cd $(INSTALLDIR)/sqlite/usr/lib/ && \
@@ -3275,12 +3275,10 @@ lz4:
 		$(MAKE) LN_S="ln -sf" install DESTDIR=$(TOP)/lz4/staged
 
 lz4-install:
-ifeq ($(TCONFIG_OPENVPN),y)
- ifeq ($(TCONFIG_BCMARM),y)
+ifeq ($(or $(INSTALL_LZ4),$(TCONFIG_TINC)),y)
 	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
 	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1 && ln -sf liblz4.so.1.9.4 liblz4.so
- endif
 endif
 	@true
 

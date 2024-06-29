@@ -183,6 +183,7 @@ sub fixDyn
 	fixDynDep("transmission-remote", "libcurl.so.4.8.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
+	fixDynDep("tincd", "liblz4.so.1.9.4");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "libcap-ng.so.0.0.0");
 	fixDynDep("openvpn", "liblz4.so.1.9.4");
