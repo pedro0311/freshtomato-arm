@@ -2645,7 +2645,7 @@ $(PHP_TARGET)-clean:
 libatomic_ops/stamp-h1:
 	cd libatomic_ops && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
-		$(CONFIGURE) --prefix=/usr --enable-static --enable-shared
+		$(CONFIGURE) --prefix=/usr --enable-static --disable-shared
 	@touch $@
 
 libatomic_ops: libatomic_ops/stamp-h1
