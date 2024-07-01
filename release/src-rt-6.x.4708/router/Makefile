@@ -3885,6 +3885,23 @@ util-linux/stamp-h1:
 			--without-btrfs \
 			--without-systemd \
 			--without-python \
+			--without-util \
+			--without-selinux \
+			--without-audit \
+			--without-udev \
+			--without-ncursesw \
+			--without-ncurses \
+			--without-slang \
+			--without-tinfo \
+			--without-readline \
+			--without-utempter \
+			--without-cap-ng \
+			--without-libz \
+			--without-libmagic \
+			--without-user \
+			--without-smack \
+			--without-econf \
+			--without-cryptsetup \
 			--disable-hwclock \
 			--disable-hwclock-cmos \
 			--disable-shared
