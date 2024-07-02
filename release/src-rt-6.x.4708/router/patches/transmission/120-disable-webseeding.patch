@@ -1,0 +1,13 @@
+It causes 100% CPU usage in certain situations. Just disable it.
+
+--- transmission/libtransmission/webseed.c
++++ transmission/libtransmission/webseed.c
+@@ -510,8 +510,6 @@ static void webseed_timer_func(evutil_so
+         ++w->retry_tickcount;
+     }
+ 
+-    on_idle(w);
+-
+     tr_timerAddMsec(w->timer, TR_IDLE_TIMER_MSEC);
+ }
+ 

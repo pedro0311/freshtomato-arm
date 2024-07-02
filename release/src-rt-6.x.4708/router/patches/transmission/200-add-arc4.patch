@@ -1,6 +1,6 @@
 --- transmission/CMakeLists.txt
 +++ transmission/CMakeLists.txt
-@@ -334,6 +334,8 @@
+@@ -348,6 +348,8 @@
  
  tr_add_external_auto_library(B64 libb64 b64)
  
