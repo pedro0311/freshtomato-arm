@@ -2905,7 +2905,8 @@ openvpn-2.4/Makefile:
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl \
 			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-dependency-tracking \
-			--disable-lz4 --enable-small --disable-server --enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
+			--disable-lz4 --enable-small --disable-server
 	@touch openvpn-2.4/.conf
 
 openvpn-2.4: openvpn-2.4/Makefile
@@ -2933,7 +2934,8 @@ openvpn-2.5/Makefile:
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
 			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-dependency-tracking \
-			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
+			$(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
 	@touch openvpn-2.5/.conf
 
 openvpn-2.5: openvpn-2.5/Makefile
@@ -2968,7 +2970,8 @@ openvpn/Makefile:
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
 			--disable-selinux --disable-systemd --disable-plugins --disable-pkcs11 --disable-dco \
 			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
-			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
+			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
+			$(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
 	@touch openvpn/.conf
 
 openvpn: openvpn/Makefile
