@@ -412,11 +412,11 @@ ifeq ($(TCONFIG_OPENVPN),y)
  ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
   obj-y += openvpn-2.4
  else
+  obj-y += lz4
+  export INSTALL_LZ4 := y
   ifeq ($(TCONFIG_BCMARM),y)
-   obj-y += lz4
    obj-y += libcap-ng
    obj-y += openvpn
-   export INSTALL_LZ4 := y
   else
    obj-y += openvpn-2.5
   endif
@@ -2903,8 +2903,8 @@ openvpn-2.4/Makefile:
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
-		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-			--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl \
+			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-dependency-tracking \
 			--disable-lz4 --enable-small --disable-server --enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn-2.4/.conf
 
@@ -2931,8 +2931,8 @@ openvpn-2.5/Makefile:
 		LDFLAGS="-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib -lpthread -ldl -L$(TOP)/lzo/src/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
-		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
-			--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
+			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-dependency-tracking \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn-2.5/.conf
 
@@ -2966,8 +2966,8 @@ openvpn/Makefile:
 		CPPFLAGS="-I$(TOP)/lzo/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
-			--disable-selinux --disable-systemd --disable-plugins --disable-pkcs11 \
-			--enable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
+			--disable-selinux --disable-systemd --disable-plugins --disable-pkcs11 --disable-dco \
+			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-dependency-tracking \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no
 	@touch openvpn/.conf
 
