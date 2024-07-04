@@ -193,7 +193,7 @@ FFMPEG_CONFIGURE_DECODERS := $(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG
 FFMPEG_CONFIGURE_PROTOCOLS := $(call FFMPEG_FILTER_CONFIG,enable-protocol,$(FFMPEG_PROTOCOLS))
 
 # openssl stuff
-OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-err no-rc4 no-cms no-ec2m
+OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-rc4 no-cms no-ec2m
 ifneq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
  OPENSSL_OPTIONS +=  no-npn
 endif
@@ -215,6 +215,10 @@ ifeq ($(TCONFIG_KEYGEN),)
   OPENSSL_OPTIONS += no-engines no-sha0 no-smime no-krb5 no-ripemd no-gms no-gmp no-jpake no-libunbound no-store no-dtls1 enable-rc5
  endif # TCONFIG_OPENSSL30 || TCONFIG_OPENSSL11
 endif # !TCONFIG_KEYGEN
+# build with err only for beta
+ifneq ($(TOMATO_EXPERIMENTAL),1)
+ OPENSSL_OPTIONS += no-err
+endif
 
 # libcurl flag
 ifeq ($(TCONFIG_STUBBY),y)
