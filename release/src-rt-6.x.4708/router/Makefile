@@ -2916,7 +2916,7 @@ openvpn-2.4: openvpn-2.4/Makefile
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 openvpn-2.4-install:
-	install -D openvpn-2.4/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
+	install -D openvpn-2.4/src/openvpn/openvpn $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
 	$(STRIP) -s $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
 	chmod 0500 $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
 
@@ -2939,7 +2939,7 @@ openvpn-2.5/Makefile:
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl --with-openssl-engine=no \
 			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-unit-tests --disable-dependency-tracking \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
-			--disable-lzo $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
+			--disable-lzo $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),--disable-lz4,) $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
 	@touch openvpn-2.5/.conf
 
 openvpn-2.5: openvpn-2.5/Makefile
@@ -2947,7 +2947,7 @@ openvpn-2.5: openvpn-2.5/Makefile
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
 
 openvpn-2.5-install:
-	install -D openvpn-2.5/src/openvpn/.libs/openvpn $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
+	install -D openvpn-2.5/src/openvpn/openvpn $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
 	$(STRIP) -s $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
 	chmod 0500 $(INSTALLDIR)/openvpn-2.5/usr/sbin/openvpn
 
@@ -2973,7 +2973,7 @@ openvpn/Makefile:
 			--disable-selinux --disable-systemd --disable-plugins --disable-pkcs11 --disable-dco \
 			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-unit-tests --disable-dependency-tracking \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
-			--disable-lzo $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
+			--disable-lzo $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),--disable-lz4,) $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
 	@touch openvpn/.conf
 
 openvpn: openvpn/Makefile
