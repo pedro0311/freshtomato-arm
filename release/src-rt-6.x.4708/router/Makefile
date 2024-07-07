@@ -408,17 +408,13 @@ obj-$(TCONFIG_ZEBRA) += zebra
 
 ifeq ($(TCONFIG_OPENVPN),y)
  obj-y += $(OPENSSLDIR)
- ifeq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
-  obj-y += openvpn-2.4
+ obj-y += lz4
+ export INSTALL_LZ4 := y
+ ifeq ($(TCONFIG_BCMARM),y)
+  obj-y += libcap-ng
+  obj-y += openvpn
  else
-  obj-y += lz4
-  export INSTALL_LZ4 := y
-  ifeq ($(TCONFIG_BCMARM),y)
-   obj-y += libcap-ng
-   obj-y += openvpn
-  else
-   obj-y += openvpn-2.5
-  endif
+  obj-y += openvpn-2.5
  endif
  obj-y += openvpn_plugin_auth_nvram
 endif
@@ -2895,35 +2891,6 @@ endif
 libcap-ng-clean:
 	$(MAKE) -C libcap-ng clean
 	@rm -f libcap-ng/configure
-
-openvpn-2.4/Makefile:
-	$(call patch_files,openvpn-2.4)
-	cd openvpn-2.4 && autoreconf -fsi && \
-		OPENSSL_CFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
-		OPENSSL_LIBS="-L$(TOP)/$(OPENSSLDIR) -lcrypto -lssl" \
-		CFLAGS="$(if $(TCONFIG_BCMARM),-O2,$(CFLAG_OPTIMIZE)) -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/$(OPENSSLDIR) -lpthread -ldl -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		CPPFLAGS="-I$(TOP)/$(OPENSSLDIR)/include" \
-		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
-		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib --with-crypto-library=openssl \
-			--disable-management --disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-dependency-tracking \
-			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
-			--disable-lzo --disable-lz4 --enable-small --disable-server
-	@touch openvpn-2.4/.conf
-
-openvpn-2.4: openvpn-2.4/Makefile
-	@$(SEP)
-	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-
-openvpn-2.4-install:
-	install -D openvpn-2.4/src/openvpn/openvpn $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
-	$(STRIP) -s $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
-	chmod 0500 $(INSTALLDIR)/openvpn-2.4/usr/sbin/openvpn
-
-openvpn-2.4-clean:
-	-@$(MAKE) -C openvpn-2.4 clean
-	@rm -f openvpn-2.4/Makefile
-	$(call unpatch_files,openvpn-2.4)
 
 openvpn-2.5/Makefile:
 	$(call patch_files,openvpn-2.5)
