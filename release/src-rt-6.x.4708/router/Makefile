@@ -408,8 +408,10 @@ obj-$(TCONFIG_ZEBRA) += zebra
 
 ifeq ($(TCONFIG_OPENVPN),y)
  obj-y += $(OPENSSLDIR)
- obj-y += lz4
- export INSTALL_LZ4 := y
+ ifneq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
+  obj-y += lz4
+  export INSTALL_LZ4 := y
+ endif
  ifeq ($(TCONFIG_BCMARM),y)
   obj-y += libcap-ng
   obj-y += openvpn
