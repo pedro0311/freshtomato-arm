@@ -3029,7 +3029,6 @@ void stop_services(void)
 {
 	stop_dhcpc_lan(); /* stop very early */
 	clear_resolv();
-	stop_ntpd();
 	stop_rstats();
 	stop_cstats();
 #ifdef TCONFIG_FANCTRL
@@ -3481,7 +3480,6 @@ TOP:
 			} else
 				stop_adblock();
 
-			stop_ntpd();
 			stop_tomatoanon();
 			remove_conntrack();
 #ifdef TCONFIG_ZEBRA
