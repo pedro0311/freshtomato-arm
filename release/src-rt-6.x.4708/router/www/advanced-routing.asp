@@ -217,7 +217,7 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">Miscellaneous</div>
+<div class="section-title">WAN Miscellaneous</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
