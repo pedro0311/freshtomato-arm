@@ -3089,9 +3089,9 @@ libevent: libevent/stamp-h1
 	$(MAKE) -C $@ DESTDIR=$(TOP)/libevent/staged install
 
 libevent-install:
-	install -d $(INSTALLDIR)/libevent/usr/lib
-	install libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+	install -D libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
+	cd $(INSTALLDIR)/libevent/usr/lib/ && ln -sf libevent-2.1.so.7 libevent.so
 
 libevent-clean:
 	-@$(MAKE) -C libevent clean
