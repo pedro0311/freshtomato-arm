@@ -187,6 +187,7 @@ sub fixDyn
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "libcap-ng.so.0.0.0");
 	fixDynDep("openvpn", "liblz4.so.1.9.4");
+	fixDynDep("openvpn", "libwolfssl.so.42.1.0");
 	fixDynDep("usb_modeswitch", "libusb-1.0.so");
 	fixDynDep("libpcreposix.so.0.0.7", "libpcre.so.1.2.13");
 	fixDynDep("libjpeg.so.8.3.2", "libc.so.0");
