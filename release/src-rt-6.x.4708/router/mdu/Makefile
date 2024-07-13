@@ -6,9 +6,15 @@ LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/shared 
 LIBS    = -lshared -lnvram -lpthread $(EXTRALIBS)
 
 ifneq ($(TCONFIG_HTTPS),)
- CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
- LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
- LIBS    += -lssl -lcrypto
+ ifeq ($(TCONFIG_WOLFSSL),y)
+  CFLAGS  += -DUSE_WOLFSSL -I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl
+  LDFLAGS += -L$(TOP)/wolfssl/staged/usr/lib
+  LIBS    += -lwolfssl
+ else
+  CFLAGS  += -I$(TOP)/$(OPENSSLDIR)/include
+  LDFLAGS += -L$(TOP)/$(OPENSSLDIR)
+  LIBS    += -lssl -lcrypto
+ endif
 endif
 
 ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_BBT),$(TCONFIG_NGINX)),y)
