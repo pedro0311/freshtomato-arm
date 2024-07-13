@@ -241,13 +241,6 @@ ifneq ($(TOMATO_EXPERIMENTAL),1)
  OPENSSL_OPTIONS += no-err
 endif
 
-# libcurl flag
-ifeq ($(TCONFIG_STUBBY),y)
- CACERT:=--with-ca-fallback
-else
- CACERT:=
-endif
-
 
 #
 # packages
@@ -3048,18 +3041,18 @@ libcurl/stamp-h1:
 		CFLAGS="-Os -Wall -pipe -ffunction-sections -fdata-sections -std=gnu99 -fPIC \
 			$(if $(TCONFIG_BCMARM),-fno-strict-aliasing -fno-delete-null-pointer-checks -marm -march=armv7-a -mtune=cortex-a9,-funit-at-a-time -Wno-pointer-sign \
 				$(if $(TCONFIG_MIPSR2),-march=mips32r2 -mips32r2 -mtune=mips32r2,-march=mips32 -mips32 -mtune=mips32))" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC -I$(TOP)/$(OPENSSLDIR)/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC $(if $(TCONFIG_WOLFSSL),-I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl,-I$(TOP)/$(OPENSSLDIR)/staged/usr/include)" \
+		LDFLAGS="-Wl,--gc-sections -fPIC $(if $(TCONFIG_WOLFSSL),-Wl$(comma)-rpath$(comma)$(TOP)/wolfssl/staged/usr/lib,-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib)" \
 		LIBS="-lpthread" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			--enable-shared --enable-static --enable-cookies --enable-file --enable-ftp --enable-http --enable-tftp $(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
-			--with-openssl="$(TOP)/$(OPENSSLDIR)/staged/usr" --with-zlib="$(TOP)/zlib/staged/usr" \
+			--with-zlib=$(TOP)/zlib/staged/usr $(if $(TCONFIG_WOLFSSL),--with-wolfssl=$(TOP)/wolfssl/staged/usr,--with-openssl=$(TOP)/$(OPENSSLDIR)/staged/usr $(if $(TCONFIG_STUBBY),--with-ca-fallback,)) \
 			--disable-dict --disable-debug --disable-gopher --disable-pthreads --disable-threaded-resolver --disable-progress-meter --disable-dateparse --disable-dnsshuffle \
 			--disable-ldap --disable-manual --disable-telnet --disable-verbose --disable-doh --disable-mime --disable-netrc --disable-socketpair --disable-headers-api \
 			--without-gnutls --without-libidn2 --without-libpsl $(if $(TCONFIG_BCMARM),,--disable-tls-srp) --without-ngtcp2 --without-nghttp3 --without-quiche --without-msh3 \
 			--without-brotli --without-nghttp2 --without-zstd --without-librtmp --disable-versioned-symbols --enable-symbol-hiding --disable-proxy --disable-ntlm \
-			--disable-ntlm-wb --disable-websockets --disable-alt-svc --disable-ares disable-libcurl-option --without-libgsasl --disable-dependency-tracking \
-			$(CACERT)
+			--disable-ntlm-wb --disable-websockets --disable-alt-svc --disable-ares disable-libcurl-option --without-libgsasl --disable-docs --disable-dependency-tracking \
+			--without-ca-path $(if $(TCONFIG_STUBBY),--with-ca-bundle=/etc/ssl/certs/ca-certificates.crt,)
 	@touch $@
 
 libcurl: libcurl/stamp-h1

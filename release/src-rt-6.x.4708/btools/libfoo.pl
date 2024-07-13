@@ -176,6 +176,7 @@ sub fixDyn
 	fixDynDep("pppd", "rp-pppoe.so");
 
 	fixDynDep("libcrypto.so.1.0.0", "libssl.so.1.0.0");
+	fixDynDep("libcurl.so.4.8.0", "libwolfssl.so.42.1.0");
 
 	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
 	fixDynDep("transmission-daemon", "libcurl.so.4.8.0");
@@ -682,7 +683,7 @@ genSO("${root}/usr/lib/libogg.so.0", "${router}/libogg/src/.libs/libogg.a", "${s
 genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a", "${stripshared}");
 genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a", "${stripshared}");
 genSO("${root}/usr/lib/liblz4.so.1.9.4", "${router}/lz4/lib/liblz4.a", "${stripshared}");
-genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "${stripshared}", "-L${router}/zlib -L${router}/${openssldir}");
+genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "${stripshared}", "-L${router}/zlib -L${router}/${openssldir} -L${router}/wolfssl/staged/usr/lib");
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a", "${stripshared}");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a", "${stripshared}");
 genSO("${root}/usr/lib/libpng16.so.16.43.0", "${router}/libpng/.libs/libpng16.a", "${stripshared}", "-L${router}/zlib");
