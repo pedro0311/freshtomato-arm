@@ -368,6 +368,7 @@ sub fixDyn
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-posix.so.3.0.1");
 
 	fixDynDep("benchmark", "libwolfssl.so.42.1.0");
+	fixDynDep("libmssl.so", "libwolfssl.so.42.1.0");
 }
 
 sub usersOf

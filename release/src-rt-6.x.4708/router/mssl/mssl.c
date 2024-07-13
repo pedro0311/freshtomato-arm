@@ -1,12 +1,13 @@
 /*
-
-	Minimal CyaSSL/OpenSSL Helper
-	Copyright (C) 2006-2009 Jonathan Zarate
-	Copyright (C) 2010 Fedor Kozhevnikov
-
-	Licensed under GNU GPL v2 or later
-
-*/
+ *
+ * Minimal CyaSSL/OpenSSL/WolfSSL Helper
+ * Copyright (C) 2006-2009 Jonathan Zarate
+ * Copyright (C) 2010 Fedor Kozhevnikov
+ * Fixes/updates (C) 2018 - 2024 pedro
+ *
+ * Licensed under GNU GPL v2 or later
+ *
+ */
 
 
 #define _GNU_SOURCE
@@ -24,39 +25,37 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#ifdef USE_OPENSSL
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/rsa.h>
-#include <openssl/ec.h>
-#include <openssl/crypto.h>
-#include <openssl/x509.h>
-#include <openssl/pem.h>
-#elif USE_CYASSL
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <cyassl_error.h>
-#endif
-
+#include "mssl.h"
 #include "shared.h"
 
 /* refer https://ssl-config.mozilla.org/ w/o DES ciphers */
-#ifdef USE_OPENSSL
+#ifdef USE_WOLFSSL
+ #ifdef USE_WOLFSSLMIN
+  #define SERVER_CIPHERS "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
+ #else
+  #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
+ #endif
+#elif USE_OPENSSL
  #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:!DSS"
 #elif USE_CYASSL
  #define SERVER_CIPHERS "ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA:ECDHE-RSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA256:DHE-RSA-AES256-SHA:ECDHE-ECDSA-DES-CBC3-SHA:ECDHE-RSA-DES-CBC3-SHA:EDH-RSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:DES-CBC3-SHA:!DSS"
 #endif
 
-#ifdef USE_OPENSSL
- #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#ifndef USE_LIBCURL
+ #ifdef USE_WOLFSSL
   /* use reasonable defaults */
   #define CLIENT_CIPHERS NULL
- #else
+ #elif USE_OPENSSL
+  #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+   /* use reasonable defaults */
+   #define CLIENT_CIPHERS NULL
+  #else
+   #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
+  #endif
+ #elif USE_CYASSL
   #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
  #endif
-#elif USE_CYASSL
- #define CLIENT_CIPHERS "ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH"
-#endif /* USE_OPENSSL */
+#endif /* !USE_LIBCURL */
 
 /* needed by logmsg() */
 #define LOGMSG_DISABLE	DISABLE_SYSLOG_OSM
@@ -64,16 +63,36 @@
 
 
 typedef struct {
+#ifdef USE_WOLFSSL
+	WOLFSSL* ssl;
+#else
 	SSL* ssl;
+#endif
 	int sd;
 } mssl_cookie_t;
 
+#ifdef USE_WOLFSSL
+static WOLFSSL_CTX* ctx;
+#else
 static SSL_CTX* ctx;
+#endif
 
-static inline void mssl_print_err(SSL* ssl)
+#ifdef USE_WOLFSSL
+static inline void mssl_print_err(WOLFSSL* ssl, int err)
+#else
+static inline void mssl_print_err(SSL* ssl, int err)
+#endif
 {
-#ifdef USE_OPENSSL
-	ERR_print_errors_fp(stderr);
+#ifdef USE_WOLFSSL
+	char buf[80];
+	memset(buf, 0, sizeof(buf));
+	wolfSSL_ERR_error_string(err, buf);
+	logmsg(LOG_DEBUG, "*** [mssl] error %s", ssl ? buf : "-1");
+#elif USE_OPENSSL
+	char buf[256];
+	memset(buf, 0, sizeof(buf));
+	ERR_error_string((unsigned long)err, buf);
+	logmsg(LOG_DEBUG, "*** [mssl] error %s", ssl ? buf : "-1");
 #elif USE_CYASSL
 	logmsg(LOG_DEBUG, "*** [mssl] error %d", ssl ? SSL_get_error(ssl, 0) : -1);
 #endif
@@ -81,8 +100,14 @@ static inline void mssl_print_err(SSL* ssl)
 
 static inline void mssl_cleanup(int err)
 {
-	if (err) mssl_print_err(NULL);
+	if (err)
+		mssl_print_err(NULL, 0);
+
+#ifdef USE_WOLFSSL
+	wolfSSL_CTX_free(ctx);
+#else
 	SSL_CTX_free(ctx);
+#endif
 	ctx = NULL;
 }
 
@@ -95,10 +120,18 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 	int n, err;
 
 	do {
+#ifdef USE_WOLFSSL
+		n = wolfSSL_read(kuki->ssl, &(buf[total]), len - total);
+#else
 		n = SSL_read(kuki->ssl, &(buf[total]), len - total);
+#endif
 		logmsg(LOG_DEBUG, "*** [mssl] SSL_read(max=%d) returned %d", len - total, n);
 
+#ifdef USE_WOLFSSL
+		err = wolfSSL_get_error(kuki->ssl, n);
+#else
 		err = SSL_get_error(kuki->ssl, n);
+#endif
 		switch (err) {
 		case SSL_ERROR_NONE:
 			total += n;
@@ -111,11 +144,16 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 			break;
 		default:
 			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error %d", __FUNCTION__, err);
-			mssl_print_err(kuki->ssl);
-			if (total == 0) total = -1;
+			mssl_print_err(kuki->ssl, err);
+			if (total == 0)
+				total = -1;
 			goto OUT;
 		}
+#ifdef USE_WOLFSSL
+	} while ((len - total > 0) && wolfSSL_pending(kuki->ssl));
+#else
 	} while ((len - total > 0) && SSL_pending(kuki->ssl));
+#endif
 
 OUT:
 	logmsg(LOG_DEBUG, "*** [mssl] %s: returns %d", __FUNCTION__, total);
@@ -131,9 +169,19 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 	int n, err;
 
 	while (total < len) {
+#ifdef USE_WOLFSSL
+		n = wolfSSL_write(kuki->ssl, &(buf[total]), len - total);
+#else
 		n = SSL_write(kuki->ssl, &(buf[total]), len - total);
+#endif
+
 		logmsg(LOG_DEBUG, "*** [mssl] SSL_write(max=%d) returned %d", len - total, n);
+
+#ifdef USE_WOLFSSL
+		err = wolfSSL_get_error(kuki->ssl, n);
+#else
 		err = SSL_get_error(kuki->ssl, n);
+#endif
 		switch (err) {
 		case SSL_ERROR_NONE:
 			total += n;
@@ -146,14 +194,17 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 			break;
 		default:
 			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error %d", __FUNCTION__, err);
-			mssl_print_err(kuki->ssl);
-			if (total == 0) total = -1;
+			mssl_print_err(kuki->ssl, err);
+			if (total == 0)
+				total = -1;
+
 			goto OUT;
 		}
 	}
 
 OUT:
 	logmsg(LOG_DEBUG, "*** [mssl] %s returns %d", __FUNCTION__, total);
+
 	return total;
 }
 
@@ -161,6 +212,7 @@ static int mssl_seek(void *cookie, off64_t *pos, int whence)
 {
 	logmsg(LOG_DEBUG, "*** [mssl] %s IN", __FUNCTION__);
 	errno = EIO;
+
 	return -1;
 }
 
@@ -169,14 +221,21 @@ static int mssl_close(void *cookie)
 	logmsg(LOG_DEBUG, "*** [mssl] %s IN", __FUNCTION__);
 
 	mssl_cookie_t *kuki = cookie;
-	if (!kuki) return 0;
+	if (!kuki)
+		return 0;
 
 	if (kuki->ssl) {
+#ifdef USE_WOLFSSL
+		wolfSSL_shutdown(kuki->ssl);
+		wolfSSL_free(kuki->ssl);
+#else
 		SSL_shutdown(kuki->ssl);
 		SSL_free(kuki->ssl);
+#endif
 	}
 
 	free(kuki);
+
 	return 0;
 }
 
@@ -186,7 +245,7 @@ static const cookie_io_functions_t mssl = {
 
 static FILE *_ssl_fopen(int sd, int client, const char *name)
 {
-	int r = 0;
+	int err, r = 0;
 	mssl_cookie_t *kuki;
 	FILE *f;
 
@@ -194,59 +253,109 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 
 	if ((kuki = calloc(1, sizeof(*kuki))) == NULL) {
 		errno = ENOMEM;
+		logmsg(LOG_DEBUG, "*** [mssl] %s: calloc failed", __FUNCTION__);
 		return NULL;
 	}
 	kuki->sd = sd;
 
 	/* Create new SSL object */
+#ifdef USE_WOLFSSL
+	if ((kuki->ssl = wolfSSL_new(ctx)) == NULL) {
+#else
 	if ((kuki->ssl = SSL_new(ctx)) == NULL) {
+#endif
 		logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_new failed", __FUNCTION__);
 		goto ERROR;
 	}
 
 	/* SSL structure for client authenticate after SSL_new() */
-#ifdef USE_OPENSSL
+#if defined(USE_OPENSSL) || defined(USE_WOLFSSL)
+ #ifdef USE_WOLFSSL
+	wolfSSL_set_verify(kuki->ssl, WOLFSSL_VERIFY_NONE, NULL);
+ #else
 	SSL_set_verify(kuki->ssl, SSL_VERIFY_NONE, NULL);
 	SSL_set_mode(kuki->ssl, SSL_MODE_AUTO_RETRY);
+ #endif
+#endif /* USE_OPENSSL || USE_WOLFSSL */
 
+#ifndef USE_LIBCURL
+ #if defined(USE_OPENSSL) || defined(USE_WOLFSSL)
 	if (client) {
 		/* Setup SNI */
- #if OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)
+  #if (OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)) || (defined(USE_WOLFSSL) && defined(HAVE_SNI))
 		if (name && *name) {
 			struct addrinfo *res, hint = { .ai_flags = AI_NUMERICHOST };
 			if (getaddrinfo(name, NULL, &hint, &res) == 0)
 				freeaddrinfo(res);
+   #ifdef USE_WOLFSSL
+			else if (wolfSSL_set_tlsext_host_name(kuki->ssl, name) != 1) {
+   #else
 			else if (SSL_set_tlsext_host_name(kuki->ssl, name) != 1) {
+   #endif
 				logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_set_tlsext_host_name failed", __FUNCTION__);
-				mssl_print_err(kuki->ssl);
+				mssl_print_err(kuki->ssl, 0);
 				goto ERROR;
 			}
 		}
- #endif
+  #endif
 	}
-#endif /* USE_OPENSSL */
+ #endif
+#endif /* !USE_LIBCURL */
+
 	/* Bind the socket to SSL structure
 	 * kuki->ssl : SSL structure
 	 * kuki->sd  : socket_fd
 	 */
+#ifdef USE_WOLFSSL
+	r = wolfSSL_set_fd(kuki->ssl, kuki->sd);
+#else
 	r = SSL_set_fd(kuki->ssl, kuki->sd);
-
-	if (!client) {
-		/* Do the SSL Handshake */
-		r = SSL_accept(kuki->ssl);
-	} else {
-		/* Connect to the server, SSL layer */
-		r = SSL_connect(kuki->ssl);
-	}
-	/* r = 0 show unknown CA, but we don't have any CA, so ignore */
-	if (r < 0) {
-		/* Check error in connect or accept */
-		logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_%s failed", __FUNCTION__, (client ? "connect" : "accept"));
-		mssl_print_err(kuki->ssl);
+#endif
+	if (r == 0) {
+#ifdef USE_WOLFSSL
+		err = wolfSSL_get_error(kuki->ssl, r);
+#else
+		err = SSL_get_error(kuki->ssl, r);
+#endif
+		logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_set_fd failed", __FUNCTION__);
+		mssl_print_err(kuki->ssl, err);
 		goto ERROR;
 	}
 
-#ifdef USE_OPENSSL
+	if (!client) {
+		/* Do the SSL Handshake */
+#ifdef USE_WOLFSSL
+		r = wolfSSL_accept(kuki->ssl);
+#else
+		r = SSL_accept(kuki->ssl);
+#endif
+	}
+#ifndef USE_LIBCURL
+	else {
+ #ifdef USE_WOLFSSL
+		r = wolfSSL_connect(kuki->ssl);
+ #else
+		r = SSL_connect(kuki->ssl);
+ #endif
+	}
+#endif /* !USE_LIBCURL */
+
+	/* r = 0 show unknown CA, but we don't have any CA, so ignore */
+	if (r < 0) {
+		/* Check error in connect or accept */
+#ifdef USE_WOLFSSL
+		err = wolfSSL_get_error(kuki->ssl, r);
+#else
+		err = SSL_get_error(kuki->ssl, r);
+#endif
+		logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_%s failed", __FUNCTION__, (client ? "connect" : "accept"));
+		mssl_print_err(kuki->ssl, err);
+		goto ERROR;
+	}
+
+#ifdef USE_WOLFSSL
+	logmsg(LOG_DEBUG, "*** [mssl] SSL connection using %s cipher", wolfSSL_get_cipher_name(kuki->ssl));
+#elif USE_OPENSSL
 	logmsg(LOG_DEBUG, "*** [mssl] SSL connection using %s cipher", SSL_get_cipher(kuki->ssl));
 #endif
 
@@ -260,26 +369,26 @@ static FILE *_ssl_fopen(int sd, int client, const char *name)
 
 ERROR:
 	mssl_close(kuki);
+
 	return NULL;
 }
 
 FILE *ssl_server_fopen(int sd)
 {
-	logmsg(LOG_DEBUG, "*** [mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 0, NULL);
 }
 
+#ifndef USE_LIBCURL
 FILE *ssl_client_fopen(int sd)
 {
-	logmsg(LOG_DEBUG, "*** [mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 1, NULL);
 }
 
 FILE *ssl_client_fopen_name(int sd, const char *name)
 {
-	logmsg(LOG_DEBUG, "*** [mssl] %s IN", __FUNCTION__);
 	return _ssl_fopen(sd, 1, name);
 }
+#endif
 
 #if defined(USE_OPENSSL) && !defined(SSL_OP_NO_RENEGOTIATION)
  #if OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
@@ -301,41 +410,72 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 
 	server = (cert != NULL);
 
-#ifdef USE_OPENSSL
-	/* Register error strings for libcrypto and libssl functions */
+#ifdef USE_WOLFSSL
+	wolfSSL_Init();
+	wolfSSL_add_all_algorithms();
+#elif USE_OPENSSL
 	SSL_load_error_strings();
 	SSLeay_add_ssl_algorithms();
 #endif
 
 	/* Create the new CTX with the method 
-	 * If server=1, use TLSv1_server_method() or SSLv23_server_method()
-	 * else 	use TLSv1_client_method() or SSLv23_client_method()
+	 * use TLSv1_server_method() / SSLv23_server_method() / wolfTLSv1_2_server_method
+	 * or
+	 *     TLSv1_client_method() / SSLv23_client_method() / wolfTLSv1_2_client_method
 	 */
-#ifdef USE_OPENSSL
+	if (server) {
+#ifdef USE_WOLFSSL
+		ctx = wolfSSL_CTX_new(wolfTLSv1_2_server_method());
+#elif USE_OPENSSL
  #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-	ctx = SSL_CTX_new(server ? TLS_server_method() : TLS_client_method());
+		ctx = SSL_CTX_new(TLS_server_method());
  #else
-	ctx = SSL_CTX_new(server ? SSLv23_server_method() : SSLv23_client_method());
+		ctx = SSL_CTX_new(SSLv23_server_method());
  #endif
 #elif USE_CYASSL
-	ctx = SSL_CTX_new(server ? SSLv23_server_method() : SSLv23_client_method());
-#endif /* USE_OPENSSL */
+		ctx = SSL_CTX_new(SSLv23_server_method());
+#endif /* USE_WOLFSSL */
+	}
+#ifndef USE_LIBCURL
+	else {
+ #ifdef USE_WOLFSSL
+		ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method());
+ #elif USE_OPENSSL
+  #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		ctx = SSL_CTX_new(TLS_client_method());
+  #else
+		ctx = SSL_CTX_new(SSLv23_client_method());
+  #endif
+ #elif USE_CYASSL
+		ctx = SSL_CTX_new(SSLv23_client_method());
+ #endif /* USE_WOLFSSL */
+	}
+#endif /* !USE_LIBCURL */
+
 	if (!ctx) {
 		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_new() failed");
-		mssl_print_err(NULL);
+		mssl_print_err(NULL, 0);
 		return 0;
 	}
 
-#ifdef USE_OPENSSL
+#if defined(USE_OPENSSL) || defined(USE_WOLFSSL)
 	/* Setup common modes */
+ #ifdef USE_WOLFSSL
+	wolfSSL_CTX_set_mode(ctx,
+ #else
 	SSL_CTX_set_mode(ctx,
+ #endif
  #ifdef SSL_MODE_RELEASE_BUFFERS
 				 SSL_MODE_RELEASE_BUFFERS |
  #endif
 				 SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
 
 	/* Setup common options */
+ #ifdef USE_WOLFSSL
+	wolfSSL_CTX_set_options(ctx, SSL_OP_ALL |
+ #else
 	SSL_CTX_set_options(ctx, SSL_OP_ALL |
+ #endif
  #ifdef SSL_OP_NO_TICKET
 				 SSL_OP_NO_TICKET |
  #endif
@@ -350,69 +490,111 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 	/* Setup EC support */
  #ifdef NID_X9_62_prime256v1
 	EC_KEY *ecdh = NULL;
+  #ifdef USE_WOLFSSL
+	if ((ecdh = wolfSSL_EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != NULL) {
+		wolfSSL_SSL_CTX_set_tmp_ecdh(ctx, ecdh);
+		wolfSSL_EC_KEY_free(ecdh);
+  #else
 	if ((ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1)) != NULL) {
 		SSL_CTX_set_tmp_ecdh(ctx, ecdh);
 		EC_KEY_free(ecdh);
+  #endif
   #ifdef SSL_OP_SINGLE_ECDH_USE
+   #ifdef USE_WOLFSSL
+		wolfSSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
+   #else
 		SSL_CTX_set_options(ctx, SSL_OP_SINGLE_ECDH_USE);
+   #endif
   #endif
 	}
  #endif
-#endif /* USE_OPENSSL */
+#endif /* USE_OPENSSL || USE_WOLFSSL */
 
 	/* Setup available ciphers */
+#ifndef USE_LIBCURL
 	ciphers = server ? SERVER_CIPHERS : CLIENT_CIPHERS;
+#else
+	ciphers = SERVER_CIPHERS;
+#endif
+
+#ifdef USE_WOLFSSL
+	if (ciphers && wolfSSL_CTX_set_cipher_list(ctx, ciphers) != 1) {
+#else
 	if (ciphers && SSL_CTX_set_cipher_list(ctx, ciphers) != 1) {
+#endif
 		logmsg(LOG_DEBUG, "*** [mssl] %s: SSL_CTX_set_cipher_list failed", __FUNCTION__);
 		mssl_cleanup(1);
 		return 0;
 	}
 
 	if (server) {
-#ifdef USE_OPENSSL
- #if OPENSSL_VERSION_NUMBER >= 0x10100000L
-		/* Disable TLS 1.0 & 1.1 */
-		SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
- #endif
-		/* Enforce server cipher order */
-		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
-#endif /* USE_OPENSSL */
-
 		/* Set the certificate to be used */
-		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_certificate_chain_file(%s)", cert);
+		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_certificate_chain_file (%s)", cert);
+#ifdef USE_WOLFSSL
+		if (wolfSSL_CTX_use_certificate_chain_file(ctx, cert) != WOLFSSL_SUCCESS) {
+#else
 		if (SSL_CTX_use_certificate_chain_file(ctx, cert) <= 0) {
+#endif
 			logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_certificate_chain_file() failed");
 			mssl_cleanup(1);
 			return 0;
 		}
 		/* Indicate the key file to be used */
-		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_PrivateKey_file(%s)", priv);
+		logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_PrivateKey_file (%s)", priv);
+#ifdef USE_WOLFSSL
+		if (wolfSSL_CTX_use_PrivateKey_file(ctx, priv, WOLFSSL_FILETYPE_PEM) != WOLFSSL_SUCCESS) {
+#else
 		if (SSL_CTX_use_PrivateKey_file(ctx, priv, SSL_FILETYPE_PEM) <= 0) {
+#endif
 			logmsg(LOG_DEBUG, "*** [mssl] SSL_CTX_use_PrivateKey_file() failed");
 			mssl_cleanup(1);
 			return 0;
 		}
 
-#ifdef USE_OPENSSL
+#if defined(USE_OPENSSL) || defined(USE_WOLFSSL)
 		/* Make sure the key and certificate file match */
+#ifdef USE_WOLFSSL
+		if (!wolfSSL_CTX_check_private_key(ctx)) {
+#else
 		if (!SSL_CTX_check_private_key(ctx)) {
+#endif
 			logmsg(LOG_DEBUG, "*** [mssl] Private key does not match the certificate public key");
 			mssl_cleanup(0);
 			return 0;
 		}
 #endif
 
+#ifdef USE_WOLFSSL
+		/* Enforce server cipher order */
+		wolfSSL_CTX_set_options(ctx, WOLFSSL_OP_CIPHER_SERVER_PREFERENCE);
+#elif USE_OPENSSL
+ #if OPENSSL_VERSION_NUMBER >= 0x10100000L
+		/* Disable TLS 1.0 & 1.1 */
+		SSL_CTX_set_options(ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+ #endif
+		/* Enforce server cipher order */
+		SSL_CTX_set_options(ctx, SSL_OP_CIPHER_SERVER_PREFERENCE);
+#endif /* USE_WOLFSSL */
+
 		/* Disable renegotiation */
-#ifdef USE_OPENSSL
- #ifdef SSL_OP_NO_RENGOTIATION
-		SSL_CTX_set_options(ctx, SSL_OP_NO_RENGOTIATION);
+#if defined(USE_OPENSSL) || defined(USE_WOLFSSL)
+ #if defined(SSL_OP_NO_RENEGOTIATION) || defined(WOLFSSL_OP_NO_RENEGOTIATION)
+  #ifdef USE_WOLFSSL
+		wolfSSL_CTX_set_options(ctx, WOLFSSL_OP_NO_RENEGOTIATION);
+  #else
+		SSL_CTX_set_options(ctx, SSL_OP_NO_RENEGOTIATION);
+  #endif
  #elif OPENSSL_VERSION_NUMBER < 0x10100000L && defined(SSL3_FLAGS_NO_RENEGOTIATE_CIPHERS)
 		SSL_CTX_set_info_callback(ctx, ssl_info_cb);
  #endif
-#endif /* USE_OPENSSL */
+#endif /* USE_OPENSSL || USE_WOLFSSL */
 	}
 
+#ifdef USE_WOLFSSL
+	wolfSSL_CTX_set_verify(ctx, WOLFSSL_VERIFY_NONE, NULL);
+#else
 	SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+#endif
 
 	logmsg(LOG_DEBUG, "*** [mssl] %s success", __FUNCTION__);
 
