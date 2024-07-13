@@ -72,7 +72,7 @@
 #include <wlutils.h>
 #include "tomato.h"
 #ifdef TCONFIG_HTTPS
-#include "../mssl/mssl.h"
+#include "mssl.h"
  #ifdef USE_OPENSSL
   #include <openssl/opensslv.h>
  #endif
