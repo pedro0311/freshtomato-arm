@@ -366,6 +366,8 @@ sub fixDyn
 	fixDynDep("libglib-2.0.so.0.7400.7", "libiconv.so.2.6.1");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-8.so.0.10.4");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-posix.so.3.0.1");
+
+	fixDynDep("benchmark", "libwolfssl.so.42.1.0");
 }
 
 sub usersOf
@@ -655,6 +657,8 @@ elsif ($openssldir eq "openssl-3.0") {
 	}
 	# libssl - bigger
 }
+
+genSO("${root}/usr/lib/libwolfssl.so.42.1.0", "${router}/wolfssl/src/.libs/libwolfssl.a", "${stripshared}");
 
 if ($is_arm ne "y") { # MIPS only (ARM - bigger)
 	genSO("${root}/usr/lib/libexpat.so.1.9.2", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");

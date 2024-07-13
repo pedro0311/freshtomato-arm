@@ -192,7 +192,28 @@ FFMPEG_CONFIGURE_PARSERS :=
 FFMPEG_CONFIGURE_DECODERS := $(call FFMPEG_FILTER_CONFIG,enable-decoder,$(FFMPEG_DECODERS))
 FFMPEG_CONFIGURE_PROTOCOLS := $(call FFMPEG_FILTER_CONFIG,enable-protocol,$(FFMPEG_PROTOCOLS))
 
-# openssl stuff
+# wolfssl options
+WOLFSSL_FLAGS := -fomit-frame-pointer -DFP_MAX_BITS=8192
+WOLFSSL_OPTIONS :=
+ifeq ($(TCONFIG_WOLFSSLMIN),y)
+ WOLFSSL_FLAGS   += -DUSE_SLOW_SHA -DUSE_SLOW_SHA256 -DUSE_SLOW_SHA512 -DWOLFSSL_AES_NO_UNROLL -DWOLFSSL_AES_SMALL_TABLES -DRSA_LOW_MEM -DCURVE25519_SMALL -DED25519_SMALL -DWOLFSSL_SMALL_CERT_VERIFY
+ WOLFSSL_OPTIONS += --enable-opensslextra --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,--disable-poly1305 --disable-chacha --disable-md5 --disable-tls13 $(if $(TCONFIG_BBT),,--disable-sha)) --enable-session-ticket \
+                    --disable-oldtls --enable-aesgcm=small --enable-certgen --enable-fastmath \
+                    --disable-examples --disable-sslv3 --disable-arc4 --disable-dtls
+else
+ WOLFSSL_FLAGS   += -DWOLFSSL_ALT_NAMES
+ WOLFSSL_OPTIONS += --enable-opensslextra --enable-opensslall --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,) $(if $(TCONFIG_NGINX),--enable-nginx,) $(if $(TCONFIG_SNMP),--enable-net-snmp,) --enable-session-ticket \
+                    --enable-sni --enable-altcertchains --enable-certgen \
+                    --enable-curve25519 --enable-tlsv10 --enable-wpas --enable-fortress --enable-fastmath \
+                    --disable-examples --disable-sslv3 --disable-arc4
+endif
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+ WOLFSSL_OPTIONS += --enable-crypttests --enable-debug
+else
+ WOLFSSL_OPTIONS += --disable-crypttests --disable-errorstrings
+endif
+
+# openssl options
 OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-rc4 no-cms no-ec2m
 ifneq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
  OPENSSL_OPTIONS +=  no-npn
@@ -286,16 +307,20 @@ ifeq ($(TCONFIG_HAVEGED),y)
 endif
 
 ifneq ($(TCONFIG_HTTPS),)
- ifeq ($(TCONFIG_OPENSSL30),y)
-  export OPENSSLDIR = openssl-3.0
+ ifeq ($(TCONFIG_WOLFSSL),y)
+  obj-y += wolfssl
  else
-  ifeq ($(TCONFIG_OPENSSL11),y)
-   export OPENSSLDIR = openssl-1.1
+  ifeq ($(TCONFIG_OPENSSL30),y)
+   export OPENSSLDIR = openssl-3.0
   else
-   export OPENSSLDIR = openssl
+   ifeq ($(TCONFIG_OPENSSL11),y)
+    export OPENSSLDIR = openssl-1.1
+   else
+    export OPENSSLDIR = openssl
+   endif
   endif
+  obj-y += $(OPENSSLDIR)
  endif
- obj-y += $(OPENSSLDIR)
 else
  obj-y += cyassl
 endif
@@ -1377,6 +1402,35 @@ openssl-3.0-clean:
 	@rm -f openssl-3.0/stamp-h1
 	@rm -rf openssl-3.0/staged
 	$(call unpatch_files,openssl-3.0)
+
+wolfssl/stamp-h1:
+	$(call patch_files,wolfssl)
+	cd wolfssl && ./autogen.sh && \
+		CFLAGS="$(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) -Wall $(EXTRACFLAGS) -fPIC $(WOLFSSL_FLAGS) -ffunction-sections -fdata-sections" \
+		LDFLAGS="-Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --enable-static $(WOLFSSL_OPTIONS) $(if $(TCONFIG_BCMARM),,--disable-threadlocal) --disable-dependency-tracking
+	@touch $@
+
+wolfssl: wolfssl/stamp-h1
+	$(SEP)
+	$(MAKE) -C $@
+	$(MAKE) -C $@ DESTDIR=$(TOP)/$@/staged install
+
+wolfssl-install:
+	install -D wolfssl/src/.libs/libwolfssl.so.42.1.0 $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.1.0
+	$(STRIP) $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.1.0
+	cd $(INSTALLDIR)/wolfssl/usr/lib && ln -sf libwolfssl.so.42.1.0 libwolfssl.so.42 && ln -sf libwolfssl.so.42.1.0 libwolfssl.so
+	# && ln -sf libwolfssl.so.42.1.0 libcyassl.so
+ifeq ($(TOMATO_EXPERIMENTAL),1)
+	install -D wolfssl/wolfcrypt/benchmark/.libs/benchmark $(INSTALLDIR)/wolfssl/usr/sbin/benchmark
+	$(STRIP) $(INSTALLDIR)/wolfssl/usr/sbin/benchmark
+endif
+
+wolfssl-clean:
+	-@$(MAKE) -C wolfssl clean
+	@rm -f wolfssl/stamp-h1
+	@rm -rf wolfssl/staged
+	$(call unpatch_files,wolfssl)
 
 bridge/Makefile:
 	cd bridge && autoreconf -fsi && \
