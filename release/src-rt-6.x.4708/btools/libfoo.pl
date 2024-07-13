@@ -180,8 +180,10 @@ sub fixDyn
 
 	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
 	fixDynDep("transmission-daemon", "libcurl.so.4.8.0");
+	fixDynDep("transmission-daemon", "libwolfssl.so.42.1.0");
 	fixDynDep("transmission-remote", "libevent-2.1.so.7");
 	fixDynDep("transmission-remote", "libcurl.so.4.8.0");
+	fixDynDep("transmission-remote", "libwolfssl.so.42.1.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
 	fixDynDep("tincd", "liblz4.so.1.9.4");

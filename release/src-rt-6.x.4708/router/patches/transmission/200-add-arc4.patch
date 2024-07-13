@@ -214,15 +214,15 @@
  
 --- transmission/libtransmission/crypto-utils-cyassl.c
 +++ transmission/libtransmission/crypto-utils-cyassl.c
-@@ -19,7 +19,6 @@
- #define API_VERSION_HEX LIBCYASSL_VERSION_HEX
+@@ -20,7 +20,6 @@
  #endif
  
+ #include API_HEADER(options.h)
 -#include API_HEADER_CRYPT(arc4.h)
  #include API_HEADER_CRYPT(dh.h)
  #include API_HEADER_CRYPT(error-crypt.h)
  #include API_HEADER_CRYPT(random.h)
-@@ -164,43 +163,6 @@
+@@ -165,43 +164,6 @@
  }
  
  /***
