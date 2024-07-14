@@ -60,7 +60,7 @@ static void wolfSSL_liboqsGetRandomData(uint8_t* buffer, size_t numOfBytes)
         ret = wc_RNG_GenerateBlock(liboqsCurrentRNG, buffer,
                                    numOfBytes_word32);
         if (ret != 0) {
-            /* ToDo: liboqs exits programm if RNG fails,
+            /* ToDo: liboqs exits program if RNG fails,
              * not sure what to do here
              */
             WOLFSSL_MSG_EX(
@@ -119,14 +119,14 @@ int wolfSSL_liboqsRngMutexLock(WC_RNG* rng)
 
 int wolfSSL_liboqsRngMutexUnlock(void)
 {
-    int ret = BAD_MUTEX_E;
-
     liboqsCurrentRNG = &liboqsDefaultRNG;
 
     if (liboqs_init) {
-        ret = wc_UnLockMutex(&liboqsRNGMutex);
+        return wc_UnLockMutex(&liboqsRNGMutex);
     }
-    return ret;
+    else {
+        return BAD_MUTEX_E;
+    }
 }
 
 #endif /* HAVE_LIBOQS */

@@ -176,21 +176,21 @@ sub fixDyn
 	fixDynDep("pppd", "rp-pppoe.so");
 
 	fixDynDep("libcrypto.so.1.0.0", "libssl.so.1.0.0");
-	fixDynDep("libcurl.so.4.8.0", "libwolfssl.so.42.1.0");
+	fixDynDep("libcurl.so.4.8.0", "libwolfssl.so.42.2.0");
 
 	fixDynDep("transmission-daemon", "libevent-2.1.so.7");
 	fixDynDep("transmission-daemon", "libcurl.so.4.8.0");
-	fixDynDep("transmission-daemon", "libwolfssl.so.42.1.0");
+	fixDynDep("transmission-daemon", "libwolfssl.so.42.2.0");
 	fixDynDep("transmission-remote", "libevent-2.1.so.7");
 	fixDynDep("transmission-remote", "libcurl.so.4.8.0");
-	fixDynDep("transmission-remote", "libwolfssl.so.42.1.0");
+	fixDynDep("transmission-remote", "libwolfssl.so.42.2.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
 	fixDynDep("tincd", "liblz4.so.1.9.4");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "libcap-ng.so.0.0.0");
 	fixDynDep("openvpn", "liblz4.so.1.9.4");
-	fixDynDep("openvpn", "libwolfssl.so.42.1.0");
+	fixDynDep("openvpn", "libwolfssl.so.42.2.0");
 	fixDynDep("usb_modeswitch", "libusb-1.0.so");
 	fixDynDep("libpcreposix.so.0.0.7", "libpcre.so.1.2.13");
 	fixDynDep("libjpeg.so.8.3.2", "libc.so.0");
@@ -371,8 +371,8 @@ sub fixDyn
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-8.so.0.10.4");
 	fixDynDep("libglib-2.0.so.0.7400.7", "libpcre2-posix.so.3.0.1");
 
-	fixDynDep("benchmark", "libwolfssl.so.42.1.0");
-	fixDynDep("libmssl.so", "libwolfssl.so.42.1.0");
+	fixDynDep("benchmark", "libwolfssl.so.42.2.0");
+	fixDynDep("libmssl.so", "libwolfssl.so.42.2.0");
 }
 
 sub usersOf
@@ -663,7 +663,7 @@ elsif ($openssldir eq "openssl-3.0") {
 	# libssl - bigger
 }
 
-genSO("${root}/usr/lib/libwolfssl.so.42.1.0", "${router}/wolfssl/src/.libs/libwolfssl.a", "${stripshared}");
+#genSO("${root}/usr/lib/libwolfssl.so.42.2.0", "${router}/wolfssl/src/.libs/libwolfssl.a", "${stripshared}");
 
 if ($is_arm ne "y") { # MIPS only (ARM - bigger)
 	genSO("${root}/usr/lib/libexpat.so.1.9.2", "${router}/expat/lib/.libs/libexpat.a", "${stripshared}");

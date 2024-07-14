@@ -114,6 +114,16 @@ $(obj)/wolfcrypt/src/aes_xts_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU
 $(obj)/wolfcrypt/src/aes_xts_asm.o: OBJECT_FILES_NON_STANDARD := y
 $(obj)/wolfcrypt/src/sp_x86_64_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
 $(obj)/wolfcrypt/src/sp_x86_64_asm.o: OBJECT_FILES_NON_STANDARD := y
+$(obj)/wolfcrypt/src/sha256_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
+$(obj)/wolfcrypt/src/sha256_asm.o: OBJECT_FILES_NON_STANDARD := y
+$(obj)/wolfcrypt/src/sha512_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
+$(obj)/wolfcrypt/src/sha512_asm.o: OBJECT_FILES_NON_STANDARD := y
+$(obj)/wolfcrypt/src/sha3_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
+$(obj)/wolfcrypt/src/sha3_asm.o: OBJECT_FILES_NON_STANDARD := y
+$(obj)/wolfcrypt/src/chacha_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
+$(obj)/wolfcrypt/src/chacha_asm.o: OBJECT_FILES_NON_STANDARD := y
+$(obj)/wolfcrypt/src/poly1305_asm.o: asflags-y = $(WOLFSSL_ASFLAGS) $(ASFLAGS_FPU_DISABLE_SIMD_ENABLE)
+$(obj)/wolfcrypt/src/poly1305_asm.o: OBJECT_FILES_NON_STANDARD := y
 
 ifeq "$(ENABLED_LINUXKM_PIE)" "yes"
 
@@ -162,14 +172,14 @@ ifneq "$(quiet)" "silent_"
 	@echo '  wolfCrypt .{text,data,rodata} sections containerized to .{text,data,rodata}.wolfcrypt'
 endif
 
-$(src)/linuxkm/module_exports.c: rename-pie-text-and-data-sections
+$(obj)/linuxkm/module_exports.c: rename-pie-text-and-data-sections
 
 endif
 
 
 # auto-generate the exported symbol list, leveraging the WOLFSSL_API visibility tags.
 # exclude symbols that don't match wc_* or wolf*.
-$(src)/linuxkm/module_exports.c: $(src)/linuxkm/module_exports.c.template $(WOLFSSL_OBJ_TARGETS)
+$(obj)/linuxkm/module_exports.c: $(src)/module_exports.c.template $(WOLFSSL_OBJ_TARGETS)
 	@cp $< $@
 	@readelf --symbols --wide $(WOLFSSL_OBJ_TARGETS) |				\
 		awk '/^ *[0-9]+: / {							\
@@ -180,4 +190,4 @@ $(src)/linuxkm/module_exports.c: $(src)/linuxkm/module_exports.c.template $(WOLF
 		}' >> $@
 	@echo -e '#ifndef NO_CRYPT_TEST\nEXPORT_SYMBOL_NS_GPL(wolfcrypt_test, WOLFSSL);\n#endif' >> $@
 
-clean-files := module_exports.c linuxkm src wolfcrypt/src wolfcrypt/test wolfcrypt
+clean-files := linuxkm src wolfcrypt

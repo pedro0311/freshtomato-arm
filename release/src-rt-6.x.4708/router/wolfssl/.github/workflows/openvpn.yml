@@ -1,7 +1,16 @@
 name: OpenVPN Tests
 
+# START OF COMMON SECTION
 on:
-  workflow_call:
+  push:
+    branches: [ 'master', 'main', 'release/**' ]
+  pull_request:
+    branches: [ '*' ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+# END OF COMMON SECTION
 
 jobs:
   build_wolfssl:
@@ -34,7 +43,7 @@ jobs:
     name: ${{ matrix.ref }}
     runs-on: ubuntu-latest
     # This should be a safe limit for the tests to run.
-    timeout-minutes: 6
+    timeout-minutes: 10
     needs: build_wolfssl
     steps:
       - name: Download lib

@@ -138,6 +138,7 @@ dist_example_DATA=
 
 ACLOCAL_AMFLAGS= -I m4
 
+EXTRA_DIST+= .cyignore
 EXTRA_DIST+= wolfssl.vcproj
 EXTRA_DIST+= wolfssl.vcxproj
 EXTRA_DIST+= wolfssl64.sln
@@ -309,3 +310,8 @@ merge-clean:
 	@find ./ | $(GREP) \.BASE | xargs rm -f
 	@find ./ | $(GREP) \~$$ | xargs rm -f
 
+%.o: %.cu
+	$(NVCC) -dc $(CUDAFLAGS) -o $@ $<
+
+.cu.lo:
+	$(LIBTOOL) --tag=CC --mode=compile $(COMPILE) --compile -o $@ $< -static

@@ -1410,10 +1410,10 @@ wolfssl: wolfssl/stamp-h1
 	$(MAKE) -C $@ DESTDIR=$(TOP)/$@/staged install
 
 wolfssl-install:
-	install -D wolfssl/src/.libs/libwolfssl.so.42.1.0 $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.1.0
-	$(STRIP) $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.1.0
-	cd $(INSTALLDIR)/wolfssl/usr/lib && ln -sf libwolfssl.so.42.1.0 libwolfssl.so.42 && ln -sf libwolfssl.so.42.1.0 libwolfssl.so
-	# && ln -sf libwolfssl.so.42.1.0 libcyassl.so
+	install -D wolfssl/src/.libs/libwolfssl.so.42.2.0 $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.2.0
+	$(STRIP) $(INSTALLDIR)/wolfssl/usr/lib/libwolfssl.so.42.2.0
+	cd $(INSTALLDIR)/wolfssl/usr/lib && ln -sf libwolfssl.so.42.2.0 libwolfssl.so.42 && ln -sf libwolfssl.so.42.2.0 libwolfssl.so
+	# && ln -sf libwolfssl.so.42.2.0 libcyassl.so
 ifeq ($(TOMATO_EXPERIMENTAL),1)
 	install -D wolfssl/wolfcrypt/benchmark/.libs/benchmark $(INSTALLDIR)/wolfssl/usr/sbin/benchmark
 	$(STRIP) $(INSTALLDIR)/wolfssl/usr/sbin/benchmark
