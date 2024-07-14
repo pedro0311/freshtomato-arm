@@ -349,8 +349,6 @@ define RouterOptions
 		echo "# TCONFIG_MULTIWAN is not set" >>$(1); \
 	fi; \
 	if [ "$(OPENVPN)" = "y" ]; then \
-		sed -i "/TCONFIG_LZO/d" $(1); \
-		echo "TCONFIG_LZO=y" >>$(1); \
 		sed -i "/# TCONFIG_OPENVPN is not set/d" $(1); \
 		echo "TCONFIG_OPENVPN=y" >>$(1); \
 		sed -i "/TCONFIG_FTP_SSL/d" $(1); \

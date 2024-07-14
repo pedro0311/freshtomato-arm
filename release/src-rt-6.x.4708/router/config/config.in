@@ -60,10 +60,6 @@ config TCONFIG_L7PAT
 	depends on TCONFIG_L7
 	default y
 
-config TCONFIG_LZO
-	bool "LZO Compression"
-	default n
-
 config TCONFIG_OPENVPN
 	bool "OpenVPN"
 	depends on TCONFIG_LZO
