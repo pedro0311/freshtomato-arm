@@ -199,7 +199,6 @@ sub fixDyn
 	fixDynDep("minidlna", "libz.so.1");
 	fixDynDep("minidlna", "libstdc.so.6");
 	fixDynDep("minidlna", "libiconv.so.2.6.1");
-#	fixDynDep("minidlna", "libssl.so.1.0.0");
 	fixDynDep("minidlna", "libjpeg.so.8.3.2");
 	fixDynDep("minidlna", "libogg.so.0");
 	fixDynDep("minidlna", "libvorbis.so.0");
@@ -264,6 +263,7 @@ sub fixDyn
 	fixDynDep("nginx", "libpcreposix.so.0.0.7");
 	fixDynDep("nginx", "libpcre2-8.so.0.10.4");
 	fixDynDep("nginx", "libpcre2-posix.so.3.0.1");
+	fixDynDep("nginx", "libwolfssl.so.42.2.0");
 	fixDynDep("php-cgi", "libxml2.so.2.12.7");
 	fixDynDep("php-cgi", "libpng16.so.16.43.0");
 	fixDynDep("php-cgi", "libiconv.so.2.6.1");

@@ -51,7 +51,24 @@
      ngx_feature_libs=
 --- nginx/auto/endianness
 +++ nginx/auto/endianness
-@@ -26,18 +26,18 @@
+@@ -12,6 +12,16 @@
+ 
+ END
+ 
++if [ "${CONFIG_BIG_ENDIAN}" != "y" ]; then
++    echo " little endian"
++    have=NGX_HAVE_LITTLE_ENDIAN . auto/have
++else
++    echo " big endian"
++fi
++
++return
++
++
+ 
+ cat << END > $NGX_AUTOTEST.c
+ 
+@@ -26,7 +36,7 @@
  
  END
  
@@ -60,21 +77,6 @@
            -o $NGX_AUTOTEST $NGX_AUTOTEST.c $NGX_LD_OPT $ngx_feature_libs"
  
  eval "$ngx_test >> $NGX_AUTOCONF_ERR 2>&1"
- 
- if [ -x $NGX_AUTOTEST ]; then
--    if $NGX_AUTOTEST >/dev/null 2>&1; then
-+#    if $NGX_AUTOTEST >/dev/null 2>&1; then
-         echo " little endian"
-         have=NGX_HAVE_LITTLE_ENDIAN . auto/have
--    else
--        echo " big endian"
--    fi
-+#    else
-+#        echo " big endian"
-+#    fi
- 
-     rm -rf $NGX_AUTOTEST*
- 
 --- nginx/auto/feature
 +++ nginx/auto/feature
 @@ -39,7 +39,7 @@
@@ -104,14 +106,23 @@
  cat << END                                                     > $NGX_MAKEFILE
  
 -CC =	$CC
-+CC =	$CC -ffunction-sections -fdata-sections
++CC =	$CC -ffunction-sections -fdata-sections $WOLFSSL_CFLAGS
  CFLAGS = $CFLAGS
  CPP =	$CPP
 -LINK =	$LINK
-+LINK =	$LINK $NGX_LD_OPT -ffunction-sections -fdata-sections -Wl,--gc-sections
++LINK =	$LINK -ffunction-sections -fdata-sections -Wl,--gc-sections
  
  END
  
+@@ -623,7 +623,7 @@
+ modules:	$ngx_obj
+ 
+ $ngx_obj:	$ngx_deps$ngx_spacer
+-	\$(LINK) $ngx_long_start$ngx_binout$ngx_obj$ngx_long_cont$ngx_objs$ngx_libs$ngx_link$ngx_module_link
++	\$(LINK) $ngx_pic_opt $ngx_long_start$ngx_binout$ngx_obj$ngx_long_cont$ngx_objs$ngx_libs$ngx_link$ngx_module_link
+ $ngx_long_end
+ 
+ $ngx_modules_obj:	\$(CORE_DEPS)$ngx_cont$ngx_modules_c
 --- nginx/auto/lib/libatomic/conf
 +++ nginx/auto/lib/libatomic/conf
 @@ -7,8 +7,8 @@
@@ -140,17 +151,6 @@
  
  if [ $USE_PERL != NO ]; then
      . auto/lib/perl/make
---- nginx/auto/lib/pcre/make
-+++ nginx/auto/lib/pcre/make
-@@ -155,7 +155,7 @@
- 	cd $PCRE \\
- 	&& if [ -f Makefile ]; then \$(MAKE) distclean; fi \\
- 	&& CC="\$(CC)" CFLAGS="$PCRE_OPT" \\
--	./configure --disable-shared $PCRE_CONF_OPT
-+	./configure --host=$HOST --disable-shared $PCRE_CONF_OPT
- 
- $PCRE/.libs/libpcre.a:	$PCRE/Makefile
- 	cd $PCRE \\
 --- nginx/auto/os/linux
 +++ nginx/auto/os/linux
 @@ -36,7 +36,7 @@
@@ -200,7 +200,7 @@
  ngx_feature_libs=
 --- nginx/auto/types/sizeof
 +++ nginx/auto/types/sizeof
-@@ -25,8 +25,13 @@
+@@ -25,8 +25,14 @@
  $NGX_INCLUDE_INTTYPES_H
  $NGX_INCLUDE_AUTO_CONFIG_H
  
@@ -212,6 +212,7 @@
 +
  int main(void) {
 -    printf("%d", (int) sizeof($ngx_type));
++    printf("dummy use of object_code_block to avoid gc-section: %c", object_code_block[0]);
      return 0;
  }
  

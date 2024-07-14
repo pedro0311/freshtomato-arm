@@ -2712,8 +2712,8 @@ nginx/stamp-h1:
 	cd nginx && \
 		./configure --crossbuild=Linux::$(ARCH) \
 			--with-cc="$(CC)" \
-			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -I$(TOP)/$(OPENSSLDIR)/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib" \
-			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/$(OPENSSLDIR)/staged/usr/lib" \
+			--with-cc-opt="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/zlib $(if $(TCONFIG_WOLFSSL),,-I$(TOP)/$(OPENSSLDIR)/include)" \
+			--with-ld-opt="-L$(TOP)/$(PCRE_TARGET)/staged/usr/lib -L$(TOP)/zlib/staged/usr/lib $(if $(TCONFIG_WOLFSSL),-L$(TOP)/wolfssl/staged/usr/lib,-L$(TOP)/$(OPENSSLDIR)/staged/usr/lib)" \
 			--prefix=/usr \
 			--sbin-path=/usr/sbin \
 			--conf-path=/etc/nginx/nginx.conf \
@@ -2732,13 +2732,16 @@ nginx/stamp-h1:
 			--with-http_gzip_static_module \
 			--with-http_v2_module \
 			--with-http_realip_module \
+			--without-http_upstream_zone_module \
+			$(if $(TCONFIG_WOLFSSL),--with-wolfssl=$(TOP)/wolfssl/staged/usr,) \
 			$(if $(TCONFIG_BCMARM),,--with-libatomic=$(TOP)/libatomic_ops) \
 			$(if $(TCONFIG_IPV6),--with-ipv6,)
 	@touch $@
 
 nginx: nginx/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -ffunction-sections -fdata-sections -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/$(OPENSSLDIR)/include" $(PARALLEL_BUILD)
+	@$(MAKE) -C $@ CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -D_GNU_SOURCE -I$(TOP)/zlib -I$(TOP)/$(PCRE_TARGET)/staged/usr/include \
+		$(if $(TCONFIG_WOLFSSL),-I$(TOP)/wolfssl,-I$(TOP)/$(OPENSSLDIR)/include)" $(PARALLEL_BUILD)
 
 nginx-install:
 	install -D nginx/objs/nginx $(INSTALLDIR)/nginx/usr/sbin/nginx && chmod 0755 $(INSTALLDIR)/nginx/usr/sbin/nginx
