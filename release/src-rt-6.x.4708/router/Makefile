@@ -202,7 +202,7 @@ ifeq ($(TCONFIG_WOLFSSLMIN),y)
                     --disable-examples --disable-sslv3 --disable-arc4 --disable-dtls
 else
  WOLFSSL_FLAGS   += -DWOLFSSL_ALT_NAMES
- WOLFSSL_OPTIONS += --enable-opensslextra --enable-opensslall --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,) $(if $(TCONFIG_NGINX),--enable-nginx,) $(if $(TCONFIG_SNMP),--enable-net-snmp,) --enable-session-ticket \
+ WOLFSSL_OPTIONS += --enable-opensslextra --enable-opensslall --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,) $(if $(TCONFIG_NGINX),--enable-nginx,) --enable-session-ticket \
                     --enable-sni --enable-altcertchains --enable-certgen \
                     --enable-curve25519 --enable-tlsv10 --enable-wpas --enable-fortress --enable-fastmath \
                     --disable-examples --disable-sslv3 --disable-arc4
