@@ -62,7 +62,6 @@ config TCONFIG_L7PAT
 
 config TCONFIG_OPENVPN
 	bool "OpenVPN"
-	depends on TCONFIG_LZO
 	default n
 
 config TCONFIG_WIREGUARD
