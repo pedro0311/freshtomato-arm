@@ -12,7 +12,7 @@ endif
 
 ifneq ($(TCONFIG_HTTPS),)
  ifeq ($(TCONFIG_WOLFSSL),y)
-  CFLAGS  += -DUSE_WOLFSSL -I$(TOP)/mssl -I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl
+  CFLAGS  += -DUSE_WOLFSSL -I$(TOP)/mssl -I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl -I$(TOP)/wolfssl
   LDFLAGS += -L$(TOP)/mssl -L$(TOP)/wolfssl/staged/usr/lib
   LIBS    += -lmssl -lwolfssl
  else

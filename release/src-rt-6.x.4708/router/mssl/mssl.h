@@ -13,8 +13,7 @@
 #define __MSSL_H__
 
 #ifdef USE_WOLFSSL
- #define SIZEOF_LONG 4
- #define SIZEOF_LONG_LONG 8
+ #include <config.h>
  #include <wolfssl/options.h>
  #include <wolfssl/wolfcrypt/settings.h>
  #include <wolfssl/ssl.h>
