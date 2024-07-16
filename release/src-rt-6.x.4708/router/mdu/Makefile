@@ -7,7 +7,7 @@ LIBS    = -lshared -lnvram -lpthread $(EXTRALIBS)
 
 ifneq ($(TCONFIG_HTTPS),)
  ifeq ($(TCONFIG_WOLFSSL),y)
-  CFLAGS  += -DUSE_WOLFSSL -I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl
+  CFLAGS  += -DUSE_WOLFSSL -I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl -I$(TOP)/wolfssl
   LDFLAGS += -L$(TOP)/wolfssl/staged/usr/lib
   LIBS    += -lwolfssl
  else
