@@ -1,0 +1,14 @@
+--- wolfssl/wolfcrypt/src/wc_lms_impl.c
++++ wolfssl/wolfcrypt/src/wc_lms_impl.c
+@@ -37,6 +37,11 @@
+  *   Enable when memory is limited.
+  */
+ 
++#ifdef HAVE_CONFIG_H
++    #include <config.h>
++#endif
++
++#include <wolfssl/wolfcrypt/settings.h>
+ #include <wolfssl/wolfcrypt/wc_lms.h>
+ #include <wolfssl/wolfcrypt/error-crypt.h>
+ 
