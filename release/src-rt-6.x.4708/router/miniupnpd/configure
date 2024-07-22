@@ -1,5 +1,5 @@
 #! /bin/sh
-# $Id: configure,v 1.126 2024/03/02 10:47:03 nanard Exp $
+# $Id: configure,v 1.130 2024/06/22 19:20:10 nanard Exp $
 # vim: tabstop=4 shiftwidth=4 noexpandtab
 #
 # miniupnp daemon
@@ -18,6 +18,7 @@ UPNP_VERSION_MINOR=1
 # PORTINUSE, REGEX, DISABLEPPPCONN, FW, IPTABLESPATH, TARGET_OPENWRT,
 # PKG_CONFIG, NO_BACKGROUND_NO_PIDFILE, DYNAMIC_OS_VERSION
 # OS_NAME, OS_VERSION, OS_MACHINE, V6SOCKETS_ARE_V6ONLY
+# USE_LIBPFCTL
 
 if [ -z "$DYNAMIC_OS_VERSION" ] ; then
   DYNAMIC_OS_VERSION=1
@@ -47,6 +48,7 @@ case "$argv" in
 	--disable-fork) NO_BACKGROUND_NO_PIDFILE=1 ;;
 	--firewall=*)
 	    FW=$(echo $argv | cut -d= -f2) ;;
+	--libpfctl) USE_LIBPFCTL=1 ;;
 	--iptablespath=*)
 		IPTABLESPATH=$(echo $argv | cut -d= -f2) ;;
 	--getifaddrs) GETIFADDRS=1 ;;
@@ -58,7 +60,7 @@ case "$argv" in
 	--host-machine=*)
 		OS_MACHINE=$(echo $argv | cut -d= -f2) ;;
 	--help|-h)
-		echo "Usage : $0 [options]"
+		echo "Usage: $0 [options]"
 		echo " --help                Show this help"
 		echo " --ipv6                Enable IPv6"
 		echo " --igd2                Build an IGDv2 instead of an IGDv1"
@@ -72,6 +74,7 @@ case "$argv" in
 		echo " --uda-version=x.x     Set advertised UPnP version (default to ${UPNP_VERSION_MAJOR}.${UPNP_VERSION_MINOR})"
 		echo " --disable-pppconn     Disable WANPPPConnection"
 		echo " --firewall=<name>     Force firewall type (nftables, iptables, pf, ipf, ipfw)"
+		echo " --libpfctl            Use libpfctl"
 		echo " --iptablespath=/path  Use a specific version of iptables"
 		echo " --disable-fork        Do not go to background and do not write pid file"
 		echo " --getifaddrs          Force use getifaddrs() to obtain interface addresses"
@@ -102,7 +105,11 @@ fi
 
 MINIUPNPD_DATE=`date +"%Y%m%d"`
 if [ -n "$SOURCE_DATE_EPOCH" ]; then
-	MINIUPNPD_DATE=`date --utc --date="@$SOURCE_DATE_EPOCH" +"%Y%m%d"`
+	if date --version 2>&1 | grep -q GNU; then
+		MINIUPNPD_DATE=`date --utc --date="@$SOURCE_DATE_EPOCH" +"%Y%m%d"`
+	else
+		MINIUPNPD_DATE=`TZ=UTC date -j -f %s $SOURCE_DATE_EPOCH +%Y%m%d`
+	fi
 fi
 
 # Facility to syslog
@@ -256,10 +263,16 @@ case $OS_NAME in
 			if [ $VER -ge 700049 ]; then
 				echo "#define PFRULE_INOUT_COUNTS" >> ${CONFIGFILE}
 			fi
+			if [ $VER -ge 1500000 ]; then
+				USE_LIBPFCTL=1
+			fi
 		else
 			VER=`echo $OS_VERSION | cut -d. -f1`
 			if [ $VER -ge 7 ]; then
 				echo "#define PFRULE_INOUT_COUNTS" >> ${CONFIGFILE}
+			fi
+			if [ $VER -ge 15 ]; then
+				USE_LIBPFCTL=1
 			fi
 		fi
 		HAVE_IP_MREQN=1
@@ -401,6 +414,10 @@ case $OS_NAME in
 				OS_NAME=`${LSB_RELEASE} -i -s`
 				OS_VERSION=`${LSB_RELEASE} -r -s`
 				case $OS_NAME in
+					Chimera)
+						OS_URL=https://chimera-linux.org/
+						OS_VERSION=`uname -r`
+						;;
 					Debian)
 						OS_URL=https://www.debian.org/
 						OS_VERSION=`${LSB_RELEASE} -c -s`
@@ -492,6 +509,9 @@ esac
 case $FW in
 	pf)
 		echo "#define USE_PF 1" >> ${CONFIGFILE}
+		if [ "$USE_LIBPFCTL" = "1" ] ; then
+			echo "#define USE_LIBPFCTL 1" >> ${CONFIGFILE}
+		fi
 		;;
 	ipf)
 		echo "#define USE_IPF 1" >> ${CONFIGFILE}
@@ -633,6 +653,11 @@ if [ "$MAKEFILE" = "Makefile.bsd" ] || [ "$OS_NAME" = "Darwin" ] || [ "$OS_NAME"
 	echo "FWNAME = $FW" > bsdmake.inc
 	echo "SRCDIR = ${BASEDIR}" >> bsdmake.inc
 	echo "CPPFLAGS += -I." >> bsdmake.inc
+	if [ "$USE_LIBPFCTL" = "1" ] ; then
+		echo "CPPFLAGS += -I/usr/local/include/" >> bsdmake.inc
+		echo "LDFLAGS += -L/usr/local/lib" >> bsdmake.inc
+		echo "LIBS += -lpfctl" >> bsdmake.inc
+	fi
 fi
 if [ "$MAKEFILE" ] ; then
 	cp "${BASEDIR}/${MAKEFILE}" Makefile && echo "${BASEDIR}/${MAKEFILE} -> Makefile"
@@ -658,12 +683,12 @@ if [ -z "$V6SOCKETS_ARE_V6ONLY" ] ; then
 	V6SOCKETS_ARE_V6ONLY=0
 fi
 
-echo "Configuring compilation for [$OS_NAME] [$OS_VERSION] with [$FW] firewall software."
+echo "Configuring compilation for [$OS_NAME] [$OS_VERSION] [$OS_MACHINE] with [$FW] firewall software."
 echo "Please edit config.h for more compilation options."
 
 # define SUPPORT_REMOTEHOST if the FW related code really supports setting
 # a RemoteHost
-if [ \( "$FW" = "netfilter" \) -o \( "$FW" = "pf" \) -o \( "$FW" = "ipfw" \) ] ; then
+if [ \( "$FW" = "nftables" \) -o \( "$FW" = "iptables" \) -o \( "$FW" = "pf" \) -o \( "$FW" = "ipfw" \) ] ; then
 	echo "#define SUPPORT_REMOTEHOST" >> ${CONFIGFILE}
 fi
 

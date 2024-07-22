@@ -1,4 +1,17 @@
-$Id: Changelog.txt,v 1.514 2024/03/19 23:35:53 nanard Exp $
+$Id: Changelog.txt,v 1.517 2024/06/22 16:48:51 nanard Exp $
+
+VERSION 2.3.7 : released on 2024/06/22
+
+2024/06/17:
+  FreeBSD: use libpfctl (FreeBSD 15+ or --libpfctl)
+
+2024/06/09:
+  default NOTIFY interval of 900s minus a random value
+
+2024/04/29:
+  ipv6: prefer globally routable addresses
+
+VERSION 2.3.6 : released on 2024/03/20
 
 2024/03/05:
   NFTables: rewrite rule parsing code to fix source/dest address parsing.

@@ -1,6 +1,6 @@
 --- miniupnpd/miniupnpd.c
 +++ miniupnpd/miniupnpd.c
-@@ -1010,11 +1010,13 @@ 
+@@ -1018,11 +1018,13 @@ 
  				INIT_PRINT_ERR("Error parsing address : %s\n", lan_addr->ext_ip_str);
  				return -1;
  			}
@@ -14,7 +14,7 @@
  		}
  	}
  #else
-@@ -1859,10 +1861,12 @@ 
+@@ -1867,10 +1869,12 @@ 
  			INIT_PRINT_ERR("Error: option ext_ip contains invalid address %s\n", use_ext_ip_addr);
  			return 1;
  		}

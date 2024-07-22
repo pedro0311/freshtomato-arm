@@ -1,6 +1,6 @@
 --- miniupnpd/configure
 +++ miniupnpd/configure
-@@ -137,11 +137,11 @@
+@@ -144,11 +144,11 @@
  	OS_VERSION=$(cat ./os.astlinux)
  fi
  
@@ -15,7 +15,7 @@
  fi
  
  # OpenEmbedded special case
-@@ -451,8 +451,8 @@
+@@ -468,8 +468,8 @@
  		FW=iptables
  		;;
  	Tomato)
@@ -26,7 +26,7 @@
  		echo "" >> ${CONFIGFILE}
  		echo "#ifndef TOMATO" >> ${CONFIGFILE}
  		echo "#define TOMATO" >> ${CONFIGFILE}
-@@ -464,6 +464,7 @@
+@@ -481,6 +481,7 @@
  		echo "#ifdef TCONFIG_IPV6" >> ${CONFIGFILE}
  		echo "#define ENABLE_IPV6" >> ${CONFIGFILE}
  		echo "#endif" >> ${CONFIGFILE}
@@ -34,7 +34,7 @@
  		FW=iptables
  		;;
  	Darwin)
-@@ -550,8 +551,14 @@
+@@ -570,8 +571,14 @@
  				fi
  				if [ "$IPTABLES_143" = "1" ] ; then
  					echo "LDLIBS += ${IPTABLESPATH}/libiptc/.libs/libip4tc.o" >> config.mk

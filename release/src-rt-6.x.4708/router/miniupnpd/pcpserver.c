@@ -1,4 +1,4 @@
-/* $Id: pcpserver.c,v 1.57 2022/10/21 19:44:59 nanard Exp $ */
+/* $Id: pcpserver.c,v 1.58 2024/06/04 23:08:01 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * Website : http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -1159,10 +1159,10 @@ static void DeletePCPMap(pcp_info_t *pcp_msg_info)
 	}
 	if (r >= 0) {
 		syslog(LOG_INFO, "PCP: %s port %hu mapping removed",
-		       proto2==IPPROTO_TCP?"TCP":"UDP", eport2);
+		       proto==IPPROTO_TCP?"TCP":"UDP", (pcp_msg_info->is_fw ? iport : eport2));
 	} else {
 		syslog(LOG_ERR, "Failed to remove PCP mapping to %s:%hu %s",
-		       pcp_msg_info->mapped_str, iport, (pcp_msg_info->protocol == IPPROTO_TCP)?"TCP":"UDP");
+		       pcp_msg_info->mapped_str, iport, (proto == IPPROTO_TCP)?"TCP":"UDP");
 		pcp_msg_info->result_code = PCP_ERR_NO_RESOURCES;
 	}
 }

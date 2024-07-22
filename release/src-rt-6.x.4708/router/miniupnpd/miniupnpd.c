@@ -1,4 +1,4 @@
-/* $Id: miniupnpd.c,v 1.261 2024/03/11 23:28:19 nanard Exp $ */
+/* $Id: miniupnpd.c,v 1.264 2024/06/22 18:14:08 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
@@ -302,6 +302,14 @@ tomato_helper(void)
 }
 #endif  /* 1 (tomato) */
 #endif	/* TOMATO */
+
+static int gen_current_notify_interval(int notify_interval) {
+	/* if possible, remove a random number of seconds between 1 and 64 */
+	if (notify_interval > 65)
+		return notify_interval - 1 - (random() & 0x3f);
+	else
+		return notify_interval;
+}
 
 /* OpenAndConfHTTPSocket() :
  * setup the socket used to handle incoming HTTP connections. */
@@ -896,7 +904,7 @@ struct runtime_vars {
 #ifdef ENABLE_HTTPS
 	int https_port;	/* HTTPS Port */
 #endif
-	int notify_interval;	/* seconds between SSDP announces */
+	int notify_interval;	/* seconds between SSDP announces. Should be >= 900s */
 	/* unused rules cleaning related variables : */
 	int clean_ruleset_threshold;	/* threshold for removing unused rules */
 	int clean_ruleset_interval;		/* (minimum) interval between checks. 0=disabled */
@@ -1220,7 +1228,7 @@ init(int argc, char * * argv, struct runtime_vars * v)
 #ifdef ENABLE_HTTPS
 	v->https_port = -1;
 #endif
-	v->notify_interval = 30;	/* seconds between SSDP announces */
+	v->notify_interval = 900;	/* seconds between SSDP announces */
 	v->clean_ruleset_threshold = 20;
 	v->clean_ruleset_interval = 0;	/* interval between ruleset check. 0=disabled */
 #ifndef DISABLE_CONFIG_FILE
@@ -2054,7 +2062,7 @@ print_usage:
 #endif
 			"\n"
 	        "\nNotes:\n\tThere can be one or several listening_ips.\n"
-	        "\tNotify interval is in seconds. Default is 30 seconds.\n"
+	        "\tNotify interval is in seconds. Default is 900 seconds.\n"
 #ifndef NO_BACKGROUND_NO_PIDFILE
 			"\tDefault pid file is '%s'.\n"
 #endif
@@ -2147,6 +2155,7 @@ main(int argc, char * * argv)
 	fd_set readset;	/* for select() */
 	fd_set writeset;
 	struct timeval timeout, timeofday, lasttimeofday = {0, 0};
+	int current_notify_interval;	/* with random variation */
 	int max_fd = -1;
 #ifdef USE_MINIUPNPDCTL
 	int sctl = -1;
@@ -2233,6 +2242,7 @@ main(int argc, char * * argv)
 	memset(&v, 0, sizeof(v));
 	if(init(argc, argv, &v) != 0)
 		return 1;
+	current_notify_interval = gen_current_notify_interval(v.notify_interval);
 #ifdef ENABLE_HTTPS
 	if(init_ssl() < 0)
 		return 1;
@@ -2420,6 +2430,28 @@ main(int argc, char * * argv)
 		                "messages. EXITING");
 			return 1;
 		}
+
+#if defined(UPNP_STRICT) && defined(IGD_V2)
+		/* WANIPConnection:2 Service p9 :
+		 * Upon startup, UPnP IGD DCP MUST broadcast an ssdp:byebye before
+		 * sending the initial ssdp:alive onto the local network. Sending an
+		 * ssdp:byebye as part of the normal start up process for a UPnP
+		 * device ensures that UPnP control points with information about the
+		 * previous device instance will safely discard state information
+		 * about the previous device instance before communicating with the
+		 * new device instance. */
+		if (GETFLAG(ENABLEUPNPMASK))
+		{
+#ifndef ENABLE_IPV6
+			if(SendSSDPGoodbye(snotify, addr_count) < 0)
+#else
+			if(SendSSDPGoodbye(snotify, addr_count * 2) < 0)
+#endif
+			{
+				syslog(LOG_WARNING, "Failed to broadcast good-bye notifications");
+			}
+		}
+#endif /* UPNP_STRICT */
 
 #ifdef USE_IFACEWATCHER
 		/* open socket for kernel notifications about new network interfaces */
@@ -2636,13 +2668,13 @@ main(int argc, char * * argv)
 		if(upnp_gettimeofday(&timeofday) < 0)
 		{
 			syslog(LOG_ERR, "gettimeofday(): %m");
-			timeout.tv_sec = v.notify_interval;
+			timeout.tv_sec = current_notify_interval;
 			timeout.tv_usec = 0;
 		}
 		else
 		{
 			/* the comparaison is not very precise but who cares ? */
-			if(timeofday.tv_sec >= (lasttimeofday.tv_sec + v.notify_interval))
+			if(timeofday.tv_sec >= (lasttimeofday.tv_sec + current_notify_interval))
 			{
 				if (GETFLAG(ENABLEUPNPMASK))
 					SendSSDPNotifies2(snotify,
@@ -2651,13 +2683,14 @@ main(int argc, char * * argv)
 					              (unsigned short)v.https_port,
 #endif
 				                  v.notify_interval << 1);
+				current_notify_interval = gen_current_notify_interval(v.notify_interval);
 				memcpy(&lasttimeofday, &timeofday, sizeof(struct timeval));
-				timeout.tv_sec = v.notify_interval;
+				timeout.tv_sec = current_notify_interval;
 				timeout.tv_usec = 0;
 			}
 			else
 			{
-				timeout.tv_sec = lasttimeofday.tv_sec + v.notify_interval
+				timeout.tv_sec = lasttimeofday.tv_sec + current_notify_interval
 				                 - timeofday.tv_sec;
 				if(timeofday.tv_usec > lasttimeofday.tv_usec)
 				{

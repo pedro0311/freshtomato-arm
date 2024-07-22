@@ -1,8 +1,8 @@
-/* $Id: upnppinhole.c,v 1.16 2023/01/28 16:04:01 nanard Exp $ */
+/* $Id: upnppinhole.c,v 1.17 2024/04/28 23:32:21 nanard Exp $ */
 /* vim: tabstop=4 shiftwidth=4 noexpandtab
  * MiniUPnP project
  * http://miniupnp.free.fr/ or https://miniupnp.tuxfamily.org/
- * (c) 2006-2023 Thomas Bernard
+ * (c) 2006-2024 Thomas Bernard
  * This software is subject to the conditions detailed
  * in the LICENCE file provided within the distribution */
 
@@ -158,6 +158,12 @@ lease_file6_add(const char * rem_client,
 	/* convert our time to unix time */
 	if (timestamp != 0) {
 		timestamp -= upnp_time();
+	}
+	if (rem_client == NULL) {
+		rem_client = "";
+	}
+	if (desc == NULL) {
+		desc = "";
 	}
 
 	fprintf(fd, "%s;%s;%hu;%s;%hu;%u;%u;%s\n",
