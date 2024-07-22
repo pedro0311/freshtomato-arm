@@ -1,7 +1,7 @@
 /**************************************************************************
  *   browser.c  --  This file is part of GNU nano.                        *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2016, 2020, 2022 Benno Schulenberg                *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -182,11 +182,11 @@ void browser_refresh(void)
 			if (stat(filelist[index], &state) == -1 || !S_ISDIR(state.st_mode))
 				info = copy_of("--");
 			else
-				/* TRANSLATORS: Try to keep this at most 7 characters. */
+				/* TRANSLATORS: Anything more than 7 cells gets clipped. */
 				info = copy_of(_("(dir)"));
 		} else if (S_ISDIR(state.st_mode)) {
 			if (strcmp(thename, "..") == 0) {
-				/* TRANSLATORS: Try to keep this at most 12 characters. */
+				/* TRANSLATORS: Anything more than 12 cells gets clipped. */
 				info = copy_of(_("(parent dir)"));
 				infomaxlen = 12;
 			} else
@@ -215,7 +215,7 @@ void browser_refresh(void)
 			if (result < (1 << 10))
 				sprintf(info, "%4ju %cB", (intmax_t)result, modifier);
 			else
-				/* TRANSLATORS: Try to keep this at most 7 characters.
+				/* TRANSLATORS: Anything more than 7 cells gets clipped.
 				 * If necessary, you can leave out the parentheses. */
 				info = mallocstrcpy(info, _("(huge)"));
 		}
@@ -436,7 +436,10 @@ char *browse(char *path)
 
 	titlebar(path);
 
-	while (TRUE) {
+	if (list_length == 0) {
+		statusline(ALERT, _("No entries"));
+		napms(1200);
+	} else while (TRUE) {
 		functionptrtype function;
 		int kbinput;
 

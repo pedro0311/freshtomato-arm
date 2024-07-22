@@ -1,4 +1,4 @@
-/* Copyright (C) 1991-2023 Free Software Foundation, Inc.
+/* Copyright (C) 1991-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdckdint.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <assert.h>
@@ -182,16 +183,17 @@ convert_dirent64 (const struct dirent64 *source)
 #endif
 
 #ifndef _LIBC
-/* The results of opendir() in this file are not used with dirfd and fchdir,
-   and we do not leak fds to any single-threaded code that could use stdio,
-   therefore save some unnecessary recursion in fchdir.c and opendir_safer.c.
-   FIXME - if the kernel ever adds support for multi-thread safety for
-   avoiding standard fds, then we should use opendir_safer.  */
-# ifdef GNULIB_defined_opendir
-#  undef opendir
-# endif
-# ifdef GNULIB_defined_closedir
-#  undef closedir
+/* The results of opendir() in this file are used with dirfd.  But they are
+   not used with fchdir, and we do not leak fds to any single-threaded code
+   that could use stdio, therefore save some unnecessary recursion in
+   fchdir.c and opendir_safer.c.  */
+# ifndef GNULIB_defined_DIR
+#  ifdef GNULIB_defined_opendir
+#   undef opendir
+#  endif
+#  ifdef GNULIB_defined_closedir
+#   undef closedir
+#  endif
 # endif
 
 /* Just use malloc.  */
@@ -217,26 +219,11 @@ glob_lstat (glob_t *pglob, int flags, const char *fullname)
                             AT_SYMLINK_NOFOLLOW));
 }
 
-/* Set *R = A + B.  Return true if the answer is mathematically
-   incorrect due to overflow; in this case, *R is the low order
-   bits of the correct answer.  */
-
-static bool
-size_add_wrapv (size_t a, size_t b, size_t *r)
-{
-#if 7 <= __GNUC__ && !defined __ICC
-  return __builtin_add_overflow (a, b, r);
-#else
-  *r = a + b;
-  return *r < a;
-#endif
-}
-
 static bool
 glob_use_alloca (size_t alloca_used, size_t len)
 {
   size_t size;
-  return (!size_add_wrapv (alloca_used, len, &size)
+  return (!ckd_add (&size, alloca_used, len)
           && __libc_use_alloca (size));
 }
 
@@ -1318,7 +1305,7 @@ glob_in_dir (const char *pattern, const char *directory, int flags,
       size_t patlen = strlen (pattern);
       size_t fullsize;
       bool alloca_fullname
-        = (! size_add_wrapv (dirlen + 1, patlen + 1, &fullsize)
+        = (!ckd_add (&fullsize, dirlen + 1, patlen + 1)
            && glob_use_alloca (alloca_used, fullsize));
       char *fullname;
       if (alloca_fullname)

@@ -1,7 +1,7 @@
 /**************************************************************************
  *   files.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -73,7 +73,7 @@ void make_new_buffer(void)
 	openfile->current = openfile->filetop;
 	openfile->current_x = 0;
 	openfile->placewewant = 0;
-	openfile->current_y = 0;
+	openfile->cursor_row = 0;
 
 	openfile->edittop = openfile->filetop;
 	openfile->firstcolumn = 0;
@@ -535,7 +535,8 @@ void mention_name_and_linecount(void)
 	if (ISSET(MINIBAR)) {
 		report_size = TRUE;
 		return;
-	}
+	} else if (ISSET(ZERO))
+		return;
 
 	if (openfile->fmt > NIX_FILE)
 		/* TRANSLATORS: First %s is file name, second %s is file format. */
@@ -829,18 +830,20 @@ void read_file(FILE *f, int fd, const char *filename, bool undoable)
 
 	if (!writable)
 		statusline(ALERT, _("File '%s' is unwritable"), filename);
+	else if ((ISSET(ZERO) || ISSET(MINIBAR)) && !(we_are_running && undoable))
+		;  /* No blurb for new buffers with --zero or --mini. */
 #ifndef NANO_TINY
 	else if (format == MAC_FILE)
 		/* TRANSLATORS: Keep the next three messages at most 78 characters. */
-		statusline(REMARK, P_("Read %zu line (Converted from Mac format)",
-						"Read %zu lines (Converted from Mac format)",
+		statusline(REMARK, P_("Read %zu line (converted from Mac format)",
+						"Read %zu lines (converted from Mac format)",
 						num_lines), num_lines);
 	else if (format == DOS_FILE)
-		statusline(REMARK, P_("Read %zu line (Converted from DOS format)",
-						"Read %zu lines (Converted from DOS format)",
+		statusline(REMARK, P_("Read %zu line (converted from DOS format)",
+						"Read %zu lines (converted from DOS format)",
 						num_lines), num_lines);
 #endif
-	else if ((!ISSET(MINIBAR) && !ISSET(ZERO)) || (we_are_running && undoable))
+	else
 		statusline(REMARK, P_("Read %zu line", "Read %zu lines",
 						num_lines), num_lines);
 
@@ -1012,7 +1015,7 @@ void send_data(const linestruct *line, int fd)
 /* Execute the given command in a shell. */
 void execute_command(const char *command)
 {
-#if defined(HAVE_FORK) && defined(HAVE_PIPE) && defined(HAVE_WAIT)
+#if defined(HAVE_FORK) && defined(HAVE_PIPE) && defined(HAVE_WAITPID)
 	int from_fd[2], to_fd[2];
 		/* The pipes through which text will be written and read. */
 	struct sigaction oldaction, newaction = {{0}};
@@ -1760,6 +1763,8 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 #endif
 	char *realname = real_dir_from_tilde(name);
 		/* The filename after tilde expansion. */
+	int descriptor = 0;
+		/* The descriptor that gets assigned when opening the file. */
 	char *tempname = NULL;
 		/* The name of the temporary file we use when prepending. */
 	linestruct *line = openfile->filetop;
@@ -1843,7 +1848,6 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 	 * For an emergency file, access is restricted to just the owner. */
 	if (thefile == NULL) {
 		mode_t permissions = (normal ? RW_FOR_ALL : S_IRUSR|S_IWUSR);
-		int fd;
 
 #ifndef NANO_TINY
 		block_sigwinch(TRUE);
@@ -1852,7 +1856,7 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 #endif
 
 		/* Now open the file.  Use O_EXCL for an emergency file. */
-		fd = open(realname, O_WRONLY | O_CREAT | ((method == APPEND) ?
+		descriptor = open(realname, O_WRONLY | O_CREAT | ((method == APPEND) ?
 					O_APPEND : (normal ? O_TRUNC : O_EXCL)), permissions);
 
 #ifndef NANO_TINY
@@ -1862,7 +1866,7 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 #endif
 
 		/* If we couldn't open the file, give up. */
-		if (fd == -1) {
+		if (descriptor < 0) {
 			if (errno == EINTR || errno == 0)
 				statusline(ALERT, _("Interrupted"));
 			else
@@ -1874,11 +1878,11 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 			goto cleanup_and_exit;
 		}
 
-		thefile = fdopen(fd, (method == APPEND) ? "ab" : "wb");
+		thefile = fdopen(descriptor, (method == APPEND) ? "ab" : "wb");
 
 		if (thefile == NULL) {
 			statusline(ALERT, _("Error writing %s: %s"), realname, strerror(errno));
-			close(fd);
+			close(descriptor);
 			goto cleanup_and_exit;
 		}
 	}
@@ -1967,6 +1971,16 @@ bool write_file(const char *name, FILE *thefile, bool normal,
 			fclose(thefile);
 			goto cleanup_and_exit;
 		}
+#endif
+
+#if !defined(NANO_TINY) && defined(HAVE_CHMOD) && defined(HAVE_CHOWN)
+	/* Change permissions and owner of an emergency save file to the values
+	 * of the original file, but ignore any failure as we are in a hurry. */
+	if (method == EMERGENCY && descriptor && openfile->statinfo) {
+		IGNORE_CALL_RESULT(fchmod(descriptor, openfile->statinfo->st_mode));
+		IGNORE_CALL_RESULT(fchown(descriptor, openfile->statinfo->st_uid,
+											openfile->statinfo->st_gid));
+	}
 #endif
 
 	if (fclose(thefile) != 0) {
@@ -2182,7 +2196,7 @@ int write_it_out(bool exiting, bool withprompt)
 		given = mallocstrcpy(given, answer);
 
 #ifdef ENABLE_BROWSER
-		if (function == to_files) {
+		if (function == to_files && !ISSET(RESTRICTED)) {
 			char *chosen = browse_in(answer);
 
 			if (chosen == NULL)
@@ -2199,10 +2213,10 @@ int write_it_out(bool exiting, bool withprompt)
 		} else if (function == mac_format) {
 			openfile->fmt = (openfile->fmt == MAC_FILE) ? NIX_FILE : MAC_FILE;
 			continue;
-		} else if (function == back_it_up) {
+		} else if (function == back_it_up && !ISSET(RESTRICTED)) {
 			TOGGLE(MAKE_BACKUP);
 			continue;
-		} else if (function == prepend_it || function == append_it) {
+		} else if ((function == prepend_it || function == append_it) && !ISSET(RESTRICTED)) {
 			if (function == prepend_it)
 				method = (method == PREPEND) ? OVERWRITE : PREPEND;
 			else

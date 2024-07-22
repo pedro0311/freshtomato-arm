@@ -1,5 +1,6 @@
-# frexpl.m4 serial 22
-dnl Copyright (C) 2007-2023 Free Software Foundation, Inc.
+# frexpl.m4
+# serial 24
+dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -23,7 +24,7 @@ AC_DEFUN([gl_FUNC_FREXPL],
       AC_CACHE_CHECK([whether frexpl() can be used with libm],
         [gl_cv_func_frexpl_in_libm],
         [
-          save_LIBS="$LIBS"
+          saved_LIBS="$LIBS"
           LIBS="$LIBS -lm"
           AC_LINK_IFELSE(
             [AC_LANG_PROGRAM(
@@ -32,7 +33,7 @@ AC_DEFUN([gl_FUNC_FREXPL],
                [[int e; return frexpl (x, &e) > 0;]])],
             [gl_cv_func_frexpl_in_libm=yes],
             [gl_cv_func_frexpl_in_libm=no])
-          LIBS="$save_LIBS"
+          LIBS="$saved_LIBS"
         ])
       if test $gl_cv_func_frexpl_in_libm = yes; then
         FREXPL_LIBM=-lm
@@ -40,10 +41,10 @@ AC_DEFUN([gl_FUNC_FREXPL],
     fi
     if test $gl_cv_func_frexpl_no_libm = yes \
        || test $gl_cv_func_frexpl_in_libm = yes; then
-      save_LIBS="$LIBS"
+      saved_LIBS="$LIBS"
       LIBS="$LIBS $FREXPL_LIBM"
       gl_FUNC_FREXPL_WORKS
-      LIBS="$save_LIBS"
+      LIBS="$saved_LIBS"
       case "$gl_cv_func_frexpl_works" in
         *yes) gl_func_frexpl=yes ;;
         *)    gl_func_frexpl=no; REPLACE_FREXPL=1 ;;
@@ -223,7 +224,7 @@ int main()
         [
 changequote(,)dnl
          case "$host_os" in
-           aix | aix[3-6]* | beos* | darwin* | irix* | mingw* | pw*)
+           aix | aix[3-6]* | beos* | darwin* | irix* | mingw* | windows* | pw*)
               gl_cv_func_frexpl_works="guessing no";;
            *) gl_cv_func_frexpl_works="guessing yes";;
          esac

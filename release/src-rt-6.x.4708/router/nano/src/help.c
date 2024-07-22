@@ -1,7 +1,7 @@
 /**************************************************************************
  *   help.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 2000-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2000-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2017 Rishabh Dave                                      *
  *   Copyright (C) 2014-2019 Benno Schulenberg                            *
  *                                                                        *
@@ -50,7 +50,7 @@ void help_init(void)
 	char *ptr;
 
 	/* First, set up the initial help text for the current function. */
-	if (currmenu & (MWHEREIS|MREPLACE|MREPLACEWITH)) {
+	if (currmenu & (MWHEREIS|MREPLACE)) {
 		htx[0] = N_("Search Command Help Text\n\n "
 				"Enter the words or characters you would like to "
 				"search for, and then press Enter.  If there is a "
@@ -64,6 +64,13 @@ void help_init(void)
 				"search to replace, only matches in the selected text "
 				"will be replaced.\n\n The following function keys are "
 				"available in Search mode:\n\n");
+		htx[2] = NULL;
+	} else if (currmenu == MREPLACEWITH) {
+		htx[0] = N_("=== Replacement ===\n\n "
+				"Type the characters that should replace what you "
+				"typed at the previous prompt, and press Enter.\n\n");
+		htx[1] = N_(" The following function keys "
+				"are available at this prompt:\n\n");
 		htx[2] = NULL;
 	} else if (currmenu == MGOTOLINE) {
 		htx[0] = N_("Go To Line Help Text\n\n "
@@ -126,8 +133,8 @@ void help_init(void)
 				"shown in brackets after the search prompt.  Hitting "
 				"Enter without entering any text will perform the "
 				"previous search.\n\n");
-		htx[1] = N_(" The following function keys are available in "
-				"Browser Search mode:\n\n");
+		htx[1] = N_(" The following function keys "
+				"are available at this prompt:\n\n");
 		htx[2] = NULL;
 	} else if (currmenu == MGOTODIR) {
 		htx[0] = N_("Browser Go To Directory Help Text\n\n "
@@ -167,8 +174,8 @@ void help_init(void)
 		htx[1] = N_("If you just need another blank buffer, do not enter any "
 				"command.\n\n You can also pick one of four tools, or cut a "
 				"large piece of the buffer, or put the editor to sleep.\n\n");
-		htx[2] = N_(" The following function keys are "
-				"available in Execute Command mode:\n\n");
+		htx[2] = N_(" The following function keys "
+				"are available at this prompt:\n\n");
 	} else if (currmenu == MLINTER) {
 		htx[0] = N_("=== Linter ===\n\n "
 				"In this mode, the status bar shows an error message or "
@@ -318,7 +325,7 @@ void help_init(void)
 void wrap_help_text_into_buffer(void)
 {
 	/* Avoid overtight and overwide paragraphs in the introductory text. */
-	size_t wrapping_point = ((COLS < 40) ? 40 : (COLS > 74) ? 74 : COLS) - thebar;
+	size_t wrapping_point = ((COLS < 40) ? 40 : (COLS > 74) ? 74 : COLS) - sidebar;
 	const char *ptr = start_of_body;
 	size_t sum = 0;
 
@@ -337,7 +344,7 @@ void wrap_help_text_into_buffer(void)
 		char *oneline;
 
 		if (ptr == end_of_intro)
-			wrapping_point = ((COLS < 40) ? 40 : COLS) - thebar;
+			wrapping_point = ((COLS < 40) ? 40 : COLS) - sidebar;
 
 		if (ptr < end_of_intro || *(ptr - 1) == '\n') {
 			length = break_line(ptr, wrapping_point, TRUE);
@@ -345,7 +352,7 @@ void wrap_help_text_into_buffer(void)
 			shim = (*(ptr + length - 1) == ' ') ? 0 : 1;
 			snprintf(oneline, length + shim, "%s", ptr);
 		} else {
-			length = break_line(ptr, ((COLS < 40) ? 22 : COLS - 18) - thebar, TRUE);
+			length = break_line(ptr, ((COLS < 40) ? 22 : COLS - 18) - sidebar, TRUE);
 			oneline = nmalloc(length + 5);
 			snprintf(oneline, length + 5, "\t\t  %s", ptr);
 		}
@@ -426,7 +433,7 @@ void show_help(void)
 	UNSET(WHITESPACE_DISPLAY);
 
 #ifdef ENABLE_LINENUMBERS
-	editwincols = COLS - thebar;
+	editwincols = COLS - sidebar;
 	margin = 0;
 #endif
 	tabsize = 8;
@@ -470,7 +477,9 @@ void show_help(void)
 #ifndef NANO_TINY
 		spotlighted = FALSE;
 
-		if (bracketed_paste || kbinput == BRACKETED_PASTE_MARKER) {
+		while (bracketed_paste)
+			kbinput = get_kbinput(midwin, BLIND);
+		if (kbinput == BRACKETED_PASTE_MARKER) {
 			beep();
 			continue;
 		}
@@ -532,7 +541,7 @@ void show_help(void)
 
 #ifdef ENABLE_LINENUMBERS
 	margin = was_margin;
-	editwincols = COLS - margin - thebar;
+	editwincols = COLS - margin - sidebar;
 #endif
 	tabsize = was_tabsize;
 #ifdef ENABLE_COLOR

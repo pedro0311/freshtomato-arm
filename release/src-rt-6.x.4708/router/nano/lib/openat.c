@@ -1,5 +1,5 @@
 /* provide a replacement openat function
-   Copyright (C) 2004-2023 Free Software Foundation, Inc.
+   Copyright (C) 2004-2024 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -35,9 +35,13 @@ orig_openat (int fd, char const *filename, int flags, mode_t mode)
 }
 #endif
 
+#ifdef __osf__
 /* Write "fcntl.h" here, not <fcntl.h>, otherwise OSF/1 5.1 DTK cc eliminates
    this include because of the preliminary #include <fcntl.h> above.  */
-#include "fcntl.h"
+# include "fcntl.h"
+#else
+# include <fcntl.h>
+#endif
 
 #include "openat.h"
 

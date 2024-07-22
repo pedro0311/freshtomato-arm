@@ -1,6 +1,6 @@
 /* glob.h -- Find a path matching a pattern.
 
-   Copyright (C) 2005-2007, 2009-2023 Free Software Foundation, Inc.
+   Copyright (C) 2005-2007, 2009-2024 Free Software Foundation, Inc.
 
    Written by Derek Price <derek@ximbiot.com> & Paul Eggert <eggert@CS.UCLA.EDU>
 
@@ -31,6 +31,11 @@
 
 #ifndef _@GUARD_PREFIX@_GLOB_H
 #define _@GUARD_PREFIX@_GLOB_H
+
+/* This file uses GNULIB_POSIXCHECK, HAVE_RAW_DECL_*.  */
+#if !_GL_CONFIG_H_INCLUDED
+ #error "Please include config.h first."
+#endif
 
 /* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */
 
@@ -120,7 +125,9 @@ _GL_CXXALIAS_SYS (glob, int, (const char *_Restrict_ __pattern, int __flags,
                               _gl_glob_errfunc_fn __errfunc,
                               glob_t *_Restrict_ __pglob));
 # endif
+# if __GLIBC__ >= 2
 _GL_CXXALIASWARN (glob);
+# endif
 #elif defined GNULIB_POSIXCHECK
 # undef glob
 # if HAVE_RAW_DECL_GLOB

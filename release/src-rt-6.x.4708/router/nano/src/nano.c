@@ -1,7 +1,7 @@
 /**************************************************************************
  *   nano.c  --  This file is part of GNU nano.                           *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -303,7 +303,7 @@ void do_exit(void)
 
 	/* When unmodified, simply close.  Else, when doing automatic saving
 	 * and the file has a name, simply save.  Otherwise, ask the user. */
-	if (!openfile->modified)
+	if (!openfile->modified || ISSET(VIEW_MODE))
 		choice = NO;
 	else if (ISSET(SAVE_ON_EXIT) && openfile->filename[0] != '\0')
 		choice = YES;
@@ -337,18 +337,8 @@ void emergency_save(const char *filename)
 
 	if (*targetname == '\0')
 		fprintf(stderr, _("\nToo many .save files\n"));
-	else if (write_file(targetname, NULL, SPECIAL, OVERWRITE, NONOTES)) {
+	else if (write_file(targetname, NULL, SPECIAL, EMERGENCY, NONOTES))
 		fprintf(stderr, _("\nBuffer written to %s\n"), targetname);
-#if !defined(NANO_TINY) && defined(HAVE_CHMOD) && defined(HAVE_CHOWN)
-		/* Try to chmod/chown the saved file to the values of the original file,
-		 * but ignore any failure as we are in a hurry to get out. */
-		if (openfile->statinfo) {
-			IGNORE_CALL_RESULT(chmod(targetname, openfile->statinfo->st_mode));
-			IGNORE_CALL_RESULT(chown(targetname, openfile->statinfo->st_uid,
-													openfile->statinfo->st_gid));
-		}
-#endif
-	}
 
 	free(targetname);
 	free(plainname);
@@ -420,8 +410,9 @@ void window_init(void)
 		midwin = newwin(editwinrows, COLS, 0, 0);
 		footwin = newwin(1, COLS, LINES - 1, 0);
 	} else {
-		int toprows = ((ISSET(EMPTY_LINE) && LINES > 6) ? 2 : 1);
-		int bottomrows = ((ISSET(NO_HELP) || LINES < 6) ? 1 : 3);
+		int minimum = (ISSET(ZERO) ? 3 : ISSET(MINIBAR) ? 4 : 5);
+		int toprows = ((ISSET(EMPTY_LINE) && LINES > minimum) ? 2 : 1);
+		int bottomrows = ((ISSET(NO_HELP) || LINES < minimum) ? 1 : 3);
 
 		if (ISSET(MINIBAR) || ISSET(ZERO))
 			toprows = 0;
@@ -583,8 +574,7 @@ void usage(void)
 					N_("Which other characters are word parts"));
 #endif
 #ifdef ENABLE_COLOR
-	if (!ISSET(RESTRICTED))
-		print_opt(_("-Y <name>"), _("--syntax=<name>"),
+	print_opt(_("-Y <name>"), _("--syntax=<name>"),
 					N_("Syntax definition to use for coloring"));
 #endif
 #ifndef NANO_TINY
@@ -651,14 +641,19 @@ void usage(void)
 #ifndef NANO_TINY
 	print_opt("-y", "--afterends", N_("Make Ctrl+Right stop at word ends"));
 #endif
+#ifdef ENABLE_COLOR
+	print_opt("-z", "--listsyntaxes", N_("List the names of available syntaxes"));
+#endif
 #ifdef HAVE_LIBMAGIC
 	print_opt("-!", "--magic", N_("Also try magic to determine syntax"));
 #endif
 #ifndef NANO_TINY
+	print_opt("-@", "--colonparsing", N_("Accept 'filename:linenumber' notation"));
 	print_opt("-%", "--stateflags", N_("Show some states on the title bar"));
 	print_opt("-_", "--minibar", N_("Show a feedback bar at the bottom"));
 	print_opt("-0", "--zero", N_("Hide all bars, use whole terminal"));
 #endif
+	print_opt("-/", "--modernbindings", N_("Use better-known key bindings"));
 }
 
 /* Display the version number of this nano, a copyright notice, some contact
@@ -672,7 +667,7 @@ void version(void)
 #endif
 #ifndef NANO_TINY
 	/* TRANSLATORS: The %s is the year of the latest release. */
-	printf(_(" (C) %s the Free Software Foundation and various contributors\n"), "2023");
+	printf(_(" (C) %s the Free Software Foundation and various contributors\n"), "2024");
 #endif
 	printf(_(" Compiled options:"));
 
@@ -803,6 +798,27 @@ void version(void)
 	printf("\n");
 }
 
+#ifdef ENABLE_COLOR
+/* List the names of the available syntaxes. */
+void list_syntax_names(void)
+{
+	int width = 0;
+
+	printf(_("Available syntaxes:\n"));
+
+	for (syntaxtype *sntx = syntaxes; sntx != NULL; sntx = sntx->next) {
+		if (width > 45) {
+			printf("\n");
+			width = 0;
+		}
+		printf(" %s", sntx->name);
+		width += wideness(sntx->name, 45 * 4);
+	}
+
+	printf("\n");
+}
+#endif
+
 /* Register that Ctrl+C was pressed during some system call. */
 void make_a_note(int signal)
 {
@@ -870,9 +886,9 @@ bool scoop_stdin(void)
 	/* Set up a signal handler so that ^C will stop the reading. */
 	install_handler_for_Ctrl_C();
 
-	/* Read the input into a new buffer. */
+	/* Read the input into a new buffer, undoably. */
 	make_new_buffer();
-	read_file(stream, 0, "stdin", TRUE);
+	read_file(stream, 0, "stdin", FALSE);
 #ifdef ENABLE_COLOR
 	find_and_prime_applicable_syntax();
 #endif
@@ -1046,10 +1062,10 @@ void regenerate_screen(void)
 	endwin();
 	refresh();
 
-	thebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
+	sidebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
 	bardata = nrealloc(bardata, LINES * sizeof(int));
 
-	editwincols = COLS - margin - thebar;
+	editwincols = COLS - margin - sidebar;
 
 	/* Put the terminal in the desired state again, and
 	 * recreate the subwindows with their (new) sizes. */
@@ -1077,7 +1093,7 @@ void toggle_this(int flag)
 			draw_all_subwindows();
 			return;
 		case NO_HELP:
-			if (LINES < 6) {
+			if (LINES < (ISSET(ZERO) ? 3 : ISSET(MINIBAR) ? 4 : 5)) {
 				statusline(AHEM, _("Too tiny"));
 				TOGGLE(flag);
 				return;
@@ -1086,9 +1102,12 @@ void toggle_this(int flag)
 			draw_all_subwindows();
 			break;
 		case CONSTANT_SHOW:
-			if (ISSET(ZERO) || LINES == 1) {
-				statusline(AHEM, _("Not possible"));
+			if (LINES == 1) {
+				statusline(AHEM, _("Too tiny"));
 				TOGGLE(flag);
+			} else if (ISSET(ZERO)) {
+				SET(CONSTANT_SHOW);
+				toggle_this(ZERO);
 			} else if (!ISSET(MINIBAR))
 				wipe_statusbar();
 			return;
@@ -1107,7 +1126,7 @@ void toggle_this(int flag)
 			refresh_needed = TRUE;
 			break;
 		case TABS_TO_SPACES:
-			if (openfile->syntax && openfile->syntax->tab) {
+			if (openfile->syntax && openfile->syntax->tabstring) {
 				statusline(AHEM, _("Current syntax determines Tab"));
 				TOGGLE(flag);
 				return;
@@ -1259,7 +1278,7 @@ void confirm_margin(void)
 		bool keep_focus = (margin > 0) && focusing;
 
 		margin = needed_margin;
-		editwincols = COLS - margin - thebar;
+		editwincols = COLS - margin - sidebar;
 
 #ifndef NANO_TINY
 		/* Ensure a proper starting column for the first screen row. */
@@ -1329,13 +1348,11 @@ int do_mouse(void)
 
 	/* If the click was in the edit window, put the cursor in that spot. */
 	if (wmouse_trafo(midwin, &click_row, &click_col, FALSE)) {
-		linestruct *current_save = openfile->current;
-		ssize_t row_count = click_row - openfile->current_y;
+		linestruct *was_current = openfile->current;
+		ssize_t row_count = click_row - openfile->cursor_row;
 		size_t leftedge;
 #ifndef NANO_TINY
-		size_t current_x_save = openfile->current_x;
-		bool sameline = (click_row == openfile->current_y);
-			/* Whether the click was on the row where the cursor is. */
+		size_t was_x = openfile->current_x;
 
 		if (ISSET(SOFTWRAP))
 			leftedge = leftedge_for(xplustabs(), openfile->current);
@@ -1353,9 +1370,8 @@ int do_mouse(void)
 								actual_last_column(leftedge, click_col));
 
 #ifndef NANO_TINY
-		/* Clicking where the cursor is toggles the mark, as does clicking
-		 * beyond the line length with the cursor at the end of the line. */
-		if (sameline && openfile->current_x == current_x_save) {
+		/* Clicking there where the cursor is toggles the mark. */
+		if (row_count == 0 && openfile->current_x == was_x) {
 			do_mark();
 			if (ISSET(STATEFLAGS))
 				titlebar(NULL);
@@ -1364,7 +1380,7 @@ int do_mouse(void)
 			/* The cursor moved; clean the cutbuffer on the next cut. */
 			keep_cutbuffer = FALSE;
 
-		edit_redraw(current_save, CENTERING);
+		edit_redraw(was_current, CENTERING);
 	}
 
 	/* No more handling is needed. */
@@ -1463,7 +1479,7 @@ void inject(char *burst, size_t count)
 	size_t old_amount = 0;
 
 	if (ISSET(SOFTWRAP)) {
-		if (openfile->current_y == editwinrows - 1)
+		if (openfile->cursor_row == editwinrows - 1)
 			original_row = chunk_for(xplustabs(), thisline);
 		old_amount = extra_chunks_in(thisline);
 	}
@@ -1491,10 +1507,6 @@ void inject(char *burst, size_t count)
 	strncpy(thisline->data + openfile->current_x, burst, count);
 
 #ifndef NANO_TINY
-	/* When the mark is to the right of the cursor, compensate its position. */
-	if (thisline == openfile->mark && openfile->current_x < openfile->mark_x)
-		openfile->mark_x += count;
-
 	/* When the cursor is on the top row and not on the first chunk
 	 * of a line, adding text there might change the preceding chunk
 	 * and thus require an adjustment of firstcolumn. */
@@ -1502,18 +1514,28 @@ void inject(char *burst, size_t count)
 		ensure_firstcolumn_is_aligned();
 		refresh_needed = TRUE;
 	}
+
+	/* When the mark is to the right of the cursor, compensate its position. */
+	if (thisline == openfile->mark && openfile->current_x < openfile->mark_x)
+		openfile->mark_x += count;
 #endif
-	/* If text was added to the magic line, create a new magic line. */
-	if (thisline == openfile->filebot && !ISSET(NO_NEWLINES)) {
-		new_magicline();
-		if (margin > 0)
-			refresh_needed = TRUE;
-	}
 
 	openfile->current_x += count;
 
 	openfile->totsize += mbstrlen(burst);
 	set_modified();
+
+	/* If text was added to the magic line, create a new magic line. */
+	if (thisline == openfile->filebot && !ISSET(NO_NEWLINES)) {
+		new_magicline();
+#ifdef ENABLE_COLOR
+		if (margin || (openfile->syntax && openfile->syntax->multiscore))
+#else
+		if (margin)
+#endif
+			if (openfile->cursor_row < editwinrows - 1)
+				update_line(thisline->next, 0);
+	}
 
 #ifndef NANO_TINY
 	update_undo(ADD);
@@ -1524,19 +1546,19 @@ void inject(char *burst, size_t count)
 		do_wrap();
 #endif
 
+	openfile->placewewant = xplustabs();
+
 #ifndef NANO_TINY
 	/* When softwrapping and the number of chunks in the current line changed,
 	 * or we were on the last row of the edit window and moved to a new chunk,
 	 * we need a full refresh. */
 	if (ISSET(SOFTWRAP) && (extra_chunks_in(openfile->current) != old_amount ||
-					(openfile->current_y == editwinrows - 1 &&
-					chunk_for(xplustabs(), openfile->current) > original_row))) {
+					(openfile->cursor_row == editwinrows - 1 &&
+					chunk_for(openfile->placewewant, openfile->current) > original_row))) {
 		refresh_needed = TRUE;
 		focusing = FALSE;
 	}
 #endif
-
-	openfile->placewewant = xplustabs();
 
 #ifdef ENABLE_COLOR
 	if (!refresh_needed)
@@ -1621,6 +1643,11 @@ void process_a_keystroke(void)
 		depth = 0;
 	}
 
+#ifndef NANO_TINY
+	if (function != do_cycle)
+		cycling_aim = 0;
+#endif
+
 	if (!function) {
 		pletion_line = NULL;
 		keep_cutbuffer = FALSE;
@@ -1640,9 +1667,9 @@ void process_a_keystroke(void)
 		give_a_hint = FALSE;
 
 	/* When not cutting or copying text, drop the cutbuffer the next time. */
-	if (function != cut_text) {
+	if (function != cut_text && function != copy_text) {
 #ifndef NANO_TINY
-		if (function != copy_text && function != zap_text)
+		if (function != zap_text)
 #endif
 			keep_cutbuffer = FALSE;
 	}
@@ -1774,6 +1801,10 @@ int main(int argc, char **argv)
 		{"nowrap", 0, NULL, 'w'},
 #endif
 		{"nohelp", 0, NULL, 'x'},
+#ifdef ENABLE_COLOR
+		{"listsyntaxes", 0, NULL, 'z'},
+#endif
+		{"modernbindings", 0, NULL, '/'},
 #ifndef NANO_TINY
 		{"smarthome", 0, NULL, 'A'},
 		{"backup", 0, NULL, 'B'},
@@ -1800,6 +1831,7 @@ int main(int argc, char **argv)
 		{"indicator", 0, NULL, 'q'},
 		{"unix", 0, NULL, 'u'},
 		{"afterends", 0, NULL, 'y'},
+		{"colonparsing", 0, NULL, '@'},
 		{"stateflags", 0, NULL, '%'},
 		{"minibar", 0, NULL, '_'},
 		{"zero", 0, NULL, '0'},
@@ -1848,8 +1880,8 @@ int main(int argc, char **argv)
 	if (*(tail(argv[0])) == 'r')
 		SET(RESTRICTED);
 
-	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RS$T:UVWX:Y:Z"
-				"abcdef:ghijklmno:pqr:s:tuvwxy!%_0", long_options, NULL)) != -1) {
+	while ((optchr = getopt_long(argc, argv, "ABC:DEFGHIJ:KLMNOPQ:RST:UVWX:Y:Z"
+				"abcdef:ghijklmno:pqr:s:tuvwxyz!@%_0/", long_options, NULL)) > 0) {
 		switch (optchr) {
 #ifndef NANO_TINY
 			case 'A':
@@ -1935,7 +1967,6 @@ int main(int argc, char **argv)
 				break;
 #ifndef NANO_TINY
 			case 'S':
-			case '$':  /* Deprecated; remove in 2024. */
 				SET(SOFTWRAP);
 				break;
 			case 'T':
@@ -2082,12 +2113,23 @@ int main(int argc, char **argv)
 				SET(AFTER_ENDS);
 				break;
 #endif
+#ifdef ENABLE_COLOR
+			case 'z':
+				if (!ignore_rcfiles)
+					do_rcfiles();
+				if (syntaxes)
+					list_syntax_names();
+				exit(0);
+#endif
 #ifdef HAVE_LIBMAGIC
 			case '!':
 				SET(USE_MAGIC);
 				break;
 #endif
 #ifndef NANO_TINY
+			case '@':
+				SET(COLON_PARSING);
+				break;
 			case '%':
 				SET(STATEFLAGS);
 				break;
@@ -2098,6 +2140,9 @@ int main(int argc, char **argv)
 				SET(ZERO);
 				break;
 #endif
+			case '/':
+				SET(MODERN_BINDINGS);
+				break;
 			default:
 				printf(_("Type '%s -h' for a list of available options.\n"), argv[0]);
 				exit(1);
@@ -2204,9 +2249,7 @@ int main(int argc, char **argv)
 			free(alt_speller);
 			alt_speller = alt_speller_cmdline;
 		}
-		/* Strip leading whitespace from the speller command, if any. */
-		while (alt_speller && *alt_speller && isblank(*alt_speller))
-			memmove(alt_speller, alt_speller + 1, strlen(alt_speller));
+		strip_leading_blanks_from(alt_speller);
 #endif
 
 		/* If an rcfile undid the default setting, copy it to the new flag. */
@@ -2243,6 +2286,10 @@ int main(int argc, char **argv)
 	/* When getting untranslated escape sequences, the mouse cannot be used. */
 	if (ISSET(RAW_SEQUENCES))
 		UNSET(USE_MOUSE);
+
+	/* When --modernbindings is used, ^Q and ^S need to be functional. */
+	if (ISSET(MODERN_BINDINGS))
+		UNSET(PRESERVE);
 
 	/* When suppressing title bar or minibar, suppress also the help lines. */
 	if (ISSET(ZERO))
@@ -2375,10 +2422,10 @@ int main(int argc, char **argv)
 	curs_set(0);
 
 #ifndef NANO_TINY
-	thebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
+	sidebar = (ISSET(INDICATOR) && LINES > 5 && COLS > 9) ? 1 : 0;
 	bardata = nrealloc(bardata, LINES * sizeof(int));
 #endif
-	editwincols = COLS - thebar;
+	editwincols = COLS - sidebar;
 
 	/* Set up the signal handlers. */
 	signal_init();
@@ -2416,6 +2463,8 @@ int main(int argc, char **argv)
 	altup = get_keycode("kUP3", ALT_UP);
 	altdown = get_keycode("kDN3", ALT_DOWN);
 
+	althome = get_keycode("kHOM3", ALT_HOME);
+	altend = get_keycode("kEND3", ALT_END);
 	altpageup = get_keycode("kPRV3", ALT_PAGEUP);
 	altpagedown = get_keycode("kNXT3", ALT_PAGEDOWN);
 	altinsert = get_keycode("kIC3", ALT_INSERT);
@@ -2426,6 +2475,11 @@ int main(int argc, char **argv)
 	shiftaltup = get_keycode("kUP4", SHIFT_ALT_UP);
 	shiftaltdown = get_keycode("kDN4", SHIFT_ALT_DOWN);
 #endif
+	mousefocusin = get_keycode("kxIN", FOCUS_IN);
+	mousefocusout = get_keycode("kxOUT", FOCUS_OUT);
+
+	/* Disable the type-ahead checking that ncurses normally does. */
+	typeahead(-1);
 
 #ifdef HAVE_SET_ESCDELAY
 	/* Tell ncurses to pass the Esc key quickly. */
@@ -2443,7 +2497,7 @@ int main(int argc, char **argv)
 #ifndef NANO_TINY
 			int n = 1;
 
-			while (isalpha(argv[optind][n])) {
+			while (isalpha((unsigned char)argv[optind][n])) {
 				switch (argv[optind][n++]) {
 					case 'c': SET(CASE_SENSITIVE); break;
 					case 'C': UNSET(CASE_SENSITIVE); break;
@@ -2482,8 +2536,37 @@ int main(int argc, char **argv)
 				continue;
 		} else
 #endif
-		 if (!open_buffer(argv[optind++], TRUE))
-			continue;
+		{
+			char *filename = argv[optind++];
+#ifndef NANO_TINY
+			struct stat fileinfo;
+
+			/* If the filename contains a colon and this file does not exist,
+			 * then check if the filename ends with digits preceded by a colon
+			 * (possibly preceded by more digits and a colon).  If there is or
+			 * are such trailing numbers, chop the colons plus numbers off.
+			 * The number is later used to place the cursor on that line. */
+			if (ISSET(COLON_PARSING) && !givenline && strchr(filename, ':') &&
+									!givencol && stat(filename, &fileinfo) < 0) {
+				char *coda = filename + strlen(filename);
+  maybe_two:
+				while (--coda > filename + 1 && ('0' <= *coda && *coda <= '9'))
+					;
+				if (*coda == ':' && ('0' <= *(coda + 1) && *(coda + 1) <= '9')) {
+					*coda = '\0';
+					if (stat(filename, &fileinfo) < 0) {
+						*coda = ':';
+						/* If this was the first colon, look for a second one. */
+						if (!strchr(coda + 1, ':'))
+							goto maybe_two;
+					} else if (!parse_line_column(coda + 1, &givenline, &givencol))
+						die(_("Invalid number\n"));
+				}
+			}
+#endif
+			if (!open_buffer(filename, TRUE))
+				continue;
+		}
 
 		/* If a position was given on the command line, go there. */
 		if (givenline != 0 || givencol != 0)
@@ -2547,7 +2630,7 @@ int main(int argc, char **argv)
 
 #ifdef ENABLE_NANORC
 	if (startup_problem != NULL)
-		statusline(ALERT, startup_problem);
+		statusline(ALERT, "%s", startup_problem);
 
 #define NOTREBOUND  first_sc_for(MMAIN, do_help) && \
 						first_sc_for(MMAIN, do_help)->keycode == 0x07
@@ -2601,7 +2684,7 @@ int main(int argc, char **argv)
 		/* In barless mode, either redraw a relevant status message,
 		 * or overwrite a minor, redundant one. */
 		if (ISSET(ZERO) && lastmessage > HUSH) {
-			if (openfile->current_y == editwinrows - 1 && LINES > 1) {
+			if (openfile->cursor_row == editwinrows - 1 && LINES > 1) {
 				edit_scroll(FORWARD);
 				wnoutrefresh(midwin);
 			}

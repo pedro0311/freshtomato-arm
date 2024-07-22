@@ -1,5 +1,6 @@
-# glob.m4 serial 27
-dnl Copyright (C) 2005-2007, 2009-2023 Free Software Foundation, Inc.
+# glob.m4
+# serial 30
+dnl Copyright (C) 2005-2007, 2009-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -12,9 +13,13 @@ AC_DEFUN([gl_GLOB],
 [
   AC_REQUIRE([gl_GLOB_H])
 
-  AC_CHECK_FUNCS_ONCE([glob glob_pattern_p])
+  AC_CHECK_FUNCS_ONCE([glob_pattern_p])
+  gl_CHECK_FUNCS_ANDROID([glob], [[#include <glob.h>]])
   if test $ac_cv_func_glob = no; then
     HAVE_GLOB=0
+    case "$gl_cv_onwards_func_glob" in
+      future*) REPLACE_GLOB=1 ;;
+    esac
   else
 
     AC_CACHE_CHECK([for GNU glob interface version 1 or 2],
@@ -126,5 +131,5 @@ AC_DEFUN([gl_PREREQ_GLOB],
   AC_REQUIRE([gl_CHECK_TYPE_STRUCT_DIRENT_D_TYPE])
   AC_CHECK_HEADERS_ONCE([unistd.h])
   gl_CHECK_FUNCS_ANDROID([getlogin_r], [[#include <unistd.h>]])
-  AC_CHECK_FUNCS_ONCE([getpwnam_r])
+  gl_CHECK_FUNCS_ANDROID([getpwnam_r], [[#include <pwd.h>]])
 ])

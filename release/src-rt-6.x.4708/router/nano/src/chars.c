@@ -1,7 +1,7 @@
 /**************************************************************************
  *   chars.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 2001-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 2001-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2016-2021 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -98,10 +98,10 @@ bool is_blank_char(const char *c)
 bool is_cntrl_char(const char *c)
 {
 #ifdef ENABLE_UTF8
-	if (use_utf8) {
+	if (use_utf8)
 		return ((c[0] & 0xE0) == 0 || c[0] == DEL_CODE ||
 				((signed char)c[0] == -62 && (signed char)c[1] < -96));
-	} else
+	else
 #endif
 		return ((*c & 0x60) == 0 || *c == DEL_CODE);
 }
@@ -654,3 +654,12 @@ bool white_string(const char *string)
 
 	return !*string;
 }
+
+#if defined(ENABLE_SPELLER) || defined(ENABLE_COLOR)
+/* Remove leading whitespace from the given string. */
+void strip_leading_blanks_from(char *string)
+{
+	while (string && (*string == ' ' || *string == '\t'))
+		memmove(string, string + 1, strlen(string));
+}
+#endif

@@ -1,7 +1,7 @@
 /**************************************************************************
  *   winio.c  --  This file is part of GNU nano.                          *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2022 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -60,7 +60,7 @@ static bool reveal_cursor = FALSE;
 		/* Whether the cursor should be shown when waiting for input. */
 static bool linger_after_escape = FALSE;
 		/* Whether to give ncurses some time to get the next code. */
-static int statusblank = 0;
+static int countdown = 0;
 		/* The number of keystrokes left before we blank the status bar. */
 static size_t from_x = 0;
 		/* From where in the relevant line the current row is drawn. */
@@ -79,6 +79,8 @@ static int *macro_buffer = NULL;
 		/* A buffer where the recorded key codes are stored. */
 static size_t macro_length = 0;
 		/* The current length of the macro. */
+static size_t milestone = 0;
+		/* Where the last burst of recorded keystrokes started. */
 
 /* Add the given code to the macro buffer. */
 void add_to_macrobuffer(int code)
@@ -86,14 +88,6 @@ void add_to_macrobuffer(int code)
 	macro_length++;
 	macro_buffer = nrealloc(macro_buffer, macro_length * sizeof(int));
 	macro_buffer[macro_length - 1] = code;
-}
-
-/* Remove the last key code plus any leading Esc codes from macro buffer. */
-void snip_last_keystroke(void)
-{
-	macro_length--;
-	while (macro_length > 0 && macro_buffer[macro_length - 1] == '\x1b')
-		macro_length--;
 }
 
 /* Start or stop the recording of keystrokes. */
@@ -105,7 +99,8 @@ void record_macro(void)
 		macro_length = 0;
 		statusline(REMARK, _("Recording a macro..."));
 	} else {
-		snip_last_keystroke();
+		/* Snip the keystroke that invoked this function. */
+		macro_length = milestone;
 		statusline(REMARK, _("Stopped recording"));
 	}
 
@@ -119,12 +114,12 @@ void run_macro(void)
 {
 	if (recording) {
 		statusline(AHEM, _("Cannot run macro while recording"));
-		snip_last_keystroke();
+		macro_length = milestone;
 		return;
 	}
 
 	if (macro_length == 0) {
-		statusline(REMARK, _("Macro is empty"));
+		statusline(AHEM, _("Macro is empty"));
 		return;
 	}
 
@@ -279,6 +274,9 @@ void read_keys_from(WINDOW *frame)
 	/* If we got a SIGWINCH, get out as the frame argument is no longer valid. */
 	if (input == KEY_WINCH)
 		return;
+
+	/* Remember where the recording of this keystroke (or burst of them) started. */
+	milestone = macro_length;
 #endif
 
 	/* Read in any remaining key codes using non-blocking input. */
@@ -350,7 +348,7 @@ void implant(const char *string)
 }
 
 /* Continue processing an expansion string.  Returns either an error code,
- * a plain keycode, or a placeholder for a command shortcut. */
+ * a plain character byte, or a placeholder for a command shortcut. */
 int get_code_from_plantation(void)
 {
 	if (*plants_pointer == '{') {
@@ -380,9 +378,10 @@ int get_code_from_plantation(void)
 		if (*plants_pointer != '\0')
 			put_back(MORE_PLANTS);
 
-		return PLANTED_COMMAND;
+		return PLANTED_A_COMMAND;
 	} else {
 		char *opening = strchr(plants_pointer, '{');
+		unsigned char firstbyte = *plants_pointer;
 		int length;
 
 		if (opening) {
@@ -391,12 +390,12 @@ int get_code_from_plantation(void)
 		} else
 			length = strlen(plants_pointer);
 
-		for (int index = length - 1; index >= 0; index--)
+		for (int index = length - 1; index > 0; index--)
 			put_back((unsigned char)plants_pointer[index]);
 
 		plants_pointer += length;
 
-		return ERR;
+		return (firstbyte) ? firstbyte : ERR;
 	}
 }
 #endif
@@ -410,7 +409,7 @@ int get_input(WINDOW *frame)
 	else if (frame)
 		read_keys_from(frame);
 
-	if (waiting_codes > 0) {
+	if (waiting_codes) {
 		waiting_codes--;
 #ifdef ENABLE_NANORC
 		if (*nextcodes == MORE_PLANTS) {
@@ -631,6 +630,10 @@ int convert_CSI_sequence(const int *seq, size_t length, int *consumed)
 								return ALT_RIGHT;
 							case 'D': /* Esc [ 1 ; 3 D == Alt-Left on xterm. */
 								return ALT_LEFT;
+							case 'F': /* Esc [ 1 ; 3 F == Alt-End on xterm. */
+								return ALT_END;
+							case 'H': /* Esc [ 1 ; 3 H == Alt-Home on xterm. */
+								return ALT_HOME;
 						}
 						break;
 					case '4':
@@ -698,6 +701,16 @@ int convert_CSI_sequence(const int *seq, size_t length, int *consumed)
 						return KEY_F(11);
 					case '4': /* Esc [ 2 4 ~ == F12 on the same. */
 						return KEY_F(12);
+#ifdef ENABLE_NANORC
+					case '5': /* Esc [ 2 5 ~ == F13 on the same. */
+						return KEY_F(13);
+					case '6': /* Esc [ 2 6 ~ == F14 on the same. */
+						return KEY_F(14);
+					case '8': /* Esc [ 2 8 ~ == F15 on the same. */
+						return KEY_F(15);
+					case '9': /* Esc [ 2 9 ~ == F16 on the same. */
+						return KEY_F(16);
+#endif
 				}
 			} else if (length > 1 && seq[1] == '~')
 				/* Esc [ 2 ~ == Insert on VT220/VT320/
@@ -710,8 +723,7 @@ int convert_CSI_sequence(const int *seq, size_t length, int *consumed)
 				if (seq[2] == '3')
 					return ALT_INSERT;
 #endif
-			}
-			else if (length > 4 && seq[2] == ';' && seq[4] == '~')
+			} else if (length > 4 && seq[2] == ';' && seq[4] == '~')
 				/* Esc [ 2 n ; 2 ~ == F21...F24 on some terminals. */
 				*consumed = 5;
 #ifndef NANO_TINY
@@ -726,6 +738,12 @@ int convert_CSI_sequence(const int *seq, size_t length, int *consumed)
 					bracketed_paste = FALSE;
 					return BRACKETED_PASTE_MARKER;
 				}
+			} else {
+				/* When invalid, assume it's a truncated end-of-paste sequence,
+				 * in order to avoid a hang -- https://sv.gnu.org/bugs/?64996. */
+				bracketed_paste = FALSE;
+				*consumed = length;
+				return ERR;
 			}
 #endif
 			break;
@@ -1156,6 +1174,10 @@ int parse_kbinput(WINDOW *frame)
 		return ALT_UP;
 	else if (keycode == altdown)
 		return ALT_DOWN;
+	else if (keycode == althome)
+		return ALT_HOME;
+	else if (keycode == altend)
+		return ALT_END;
 	else if (keycode == altpageup)
 		return ALT_PAGEUP;
 	else if (keycode == altpagedown)
@@ -1199,11 +1221,13 @@ int parse_kbinput(WINDOW *frame)
 			if (!meta_key)
 				shift_held = TRUE;
 		}
-		/* Is Alt being held? */
+		/* Is only Alt being held? */
 		if (modifiers == 0x08) {
 			switch (keycode) {
 				case KEY_UP:    return ALT_UP;
 				case KEY_DOWN:  return ALT_DOWN;
+				case KEY_HOME:  return ALT_HOME;
+				case KEY_END:   return ALT_END;
 				case KEY_PPAGE: return ALT_PAGEUP;
 				case KEY_NPAGE: return ALT_PAGEDOWN;
 				case KEY_DC:    return ALT_DELETE;
@@ -1237,12 +1261,9 @@ int parse_kbinput(WINDOW *frame)
 	}
 #endif /* __linux__ */
 
-#ifndef NANO_TINY
-	/* When <Tab> is pressed while the mark is on, do an indent. */
-	if (keycode == '\t' && openfile->mark && currmenu == MMAIN &&
-				!bracketed_paste && openfile->mark != openfile->current)
-		return INDENT_KEY;
-#endif
+	/* Spurious codes from VTE -- see https://sv.gnu.org/bugs/?64578. */
+	if (keycode == mousefocusin || keycode == mousefocusout)
+		return ERR;
 
 	switch (keycode) {
 		case KEY_SLEFT:
@@ -1353,9 +1374,9 @@ int get_kbinput(WINDOW *frame, bool showcursor)
 	while (kbinput == ERR)
 		kbinput = parse_kbinput(frame);
 
-	/* If we read from the edit window, blank the status bar if needed. */
+	/* If we read from the edit window, blank the status bar when it's time. */
 	if (frame == midwin)
-		check_statusblank();
+		blank_it_when_expired();
 
 	return kbinput;
 }
@@ -1519,7 +1540,7 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
 
 	/* If the byte is invalid in the current mode, discard it;
 	 * if it is an incomplete Unicode sequence, stuff it back. */
-	if (input != NULL) {
+	if (input && *count) {
 		if (*input >= 0x80 && *count == 1) {
 			put_back(*input);
 			*count = 999;
@@ -1564,9 +1585,9 @@ char *get_verbatim_kbinput(WINDOW *frame, size_t *count)
  * TRUE, releasing/clicking on a visible shortcut will put back the
  * keystroke associated with that shortcut.  If ncurses supports them,
  * we also handle presses of the fourth mouse button (upward rolls of
- * the mouse wheel) by putting back keystrokes to move up, and presses
+ * the mouse wheel) by putting back keystrokes to scroll up, and presses
  * of the fifth mouse button (downward rolls of the mouse wheel) by
- * putting back keystrokes to move down.  We also store the coordinates
+ * putting back keystrokes to scroll down.  We also store the coordinates
  * of a mouse event that needs further handling in mouse_x and mouse_y.
  * Return -1 on error, 0 if the mouse event needs to be handled, 1 if it's
  * been handled by putting back keystrokes, or 2 if it's been ignored. */
@@ -1664,11 +1685,11 @@ int get_mouseinput(int *mouse_y, int *mouse_x, bool allow_shortcuts)
 			wmouse_trafo(footwin, mouse_y, mouse_x, FALSE);
 
 		if (in_middle || (in_footer && *mouse_y == 0)) {
-			int keycode = (event.bstate & BUTTON4_PRESSED) ? KEY_UP : KEY_DOWN;
+			int keycode = (event.bstate & BUTTON4_PRESSED) ? ALT_UP : ALT_DOWN;
 
-			/* One roll of the mouse wheel should move three lines. */
-			for (int count = 3; count > 0; count--)
-				put_back(keycode);
+			/* One bump of the mouse wheel should scroll two lines. */
+			put_back(keycode);
+			put_back(keycode);
 
 			return 1;
 		} else
@@ -1730,12 +1751,12 @@ void blank_bottombars(void)
 }
 
 /* When some number of keystrokes has been reached, wipe the status bar. */
-void check_statusblank(void)
+void blank_it_when_expired(void)
 {
-	if (statusblank == 0)
+	if (countdown == 0)
 		return;
 
-	if (--statusblank == 0)
+	if (--countdown == 0)
 		wipe_statusbar();
 
 	/* When windows overlap, make sure to show the edit window now. */
@@ -1748,7 +1769,7 @@ void check_statusblank(void)
 /* Ensure that the status bar will be wiped upon the next keystroke. */
 void set_blankdelay_to_one(void)
 {
-	statusblank = 1;
+	countdown = 1;
 }
 
 /* Convert text into a string that can be displayed on screen.  The caller
@@ -2188,8 +2209,12 @@ void minibar(void)
 	if (report_size && COLS > 35) {
 		size_t count = openfile->filebot->lineno - (openfile->filebot->data[0] == '\0');
 
-		number_of_lines = nmalloc(44);
-		sprintf(number_of_lines, P_(" (%zu line)", " (%zu lines)", count), count);
+		number_of_lines = nmalloc(49);
+		if (openfile->fmt == NIX_FILE || openfile->fmt == UNSPECIFIED)
+			sprintf(number_of_lines, P_(" (%zu line)", " (%zu lines)", count), count);
+		else
+			sprintf(number_of_lines, P_(" (%zu line, %s)", " (%zu lines, %s)", count),
+								count, (openfile->fmt == DOS_FILE) ? "DOS" : "Mac");
 		tallywidth = breadth(number_of_lines);
 		if (namewidth + tallywidth + 11 < COLS)
 			waddstr(footwin, number_of_lines);
@@ -2287,6 +2312,10 @@ void statusline(message_type importance, const char *msg, ...)
 	int colorpair;
 	va_list ap;
 
+	/* Drop all waiting keystrokes upon any kind of "error". */
+	if (importance >= AHEM)
+		waiting_codes = 0;
+
 	/* Ignore a message with an importance that is lower than the last one. */
 	if (importance < lastmessage && lastmessage > NOTICE)
 		return;
@@ -2376,7 +2405,7 @@ void statusline(message_type importance, const char *msg, ...)
 	free(message);
 
 	/* When requested, wipe the status bar after just one keystroke. */
-	statusblank = (ISSET(QUICK_BLANK) ? 1 : 20);
+	countdown = (ISSET(QUICK_BLANK) ? 1 : 20);
 }
 
 /* Display a normal message on the status bar, quietly. */
@@ -2426,7 +2455,7 @@ void bottombars(int menu)
 	/* Set the global variable to the given menu. */
 	currmenu = menu;
 
-	if (ISSET(NO_HELP) || LINES < 6)
+	if (ISSET(NO_HELP) || LINES < (ISSET(ZERO) ? 3 : ISSET(MINIBAR) ? 4 : 5))
 		return;
 
 	/* Determine how many shortcuts must be shown. */
@@ -2472,8 +2501,8 @@ void bottombars(int menu)
 	wrefresh(footwin);
 }
 
-/* Redetermine current_y from the position of current relative to edittop,
- * and put the cursor in the edit window at (current_y, "current_x"). */
+/* Redetermine `cursor_row` from the position of current relative to edittop,
+ * and put the cursor in the edit window at (cursor_row, "current_x"). */
 void place_the_cursor(void)
 {
 	ssize_t row = 0;
@@ -2509,7 +2538,11 @@ void place_the_cursor(void)
 		statusline(ALERT, "Misplaced cursor -- please report a bug");
 #endif
 
-	openfile->current_y = row;
+#ifdef _CURSES_H_
+	wnoutrefresh(midwin);  /* Only needed for NetBSD curses. */
+#endif
+
+	openfile->cursor_row = row;
 }
 
 /* The number of bytes after which to stop painting, to avoid major slowdowns. */
@@ -2556,7 +2589,7 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		wclrtoeol(midwin);
 
 #ifndef NANO_TINY
-	if (thebar)
+	if (sidebar)
 		mvwaddch(midwin, row, COLS - 1, bardata[row]);
 #endif
 
@@ -2566,8 +2599,8 @@ void draw_row(int row, const char *converted, linestruct *line, size_t from_col)
 		const colortype *varnish = openfile->syntax->color;
 
 		/* If there are multiline regexes, make sure this line has a cache. */
-		if (openfile->syntax->nmultis > 0 && line->multidata == NULL)
-			line->multidata = nmalloc(openfile->syntax->nmultis * sizeof(short));
+		if (openfile->syntax->multiscore > 0 && line->multidata == NULL)
+			line->multidata = nmalloc(openfile->syntax->multiscore * sizeof(short));
 
 		/* Iterate through all the coloring regexes. */
 		for (; varnish != NULL; varnish = varnish->next) {
@@ -2834,7 +2867,7 @@ int update_line(linestruct *line, size_t index)
 	}
 	if (has_more) {
 		wattron(midwin, hilite_attribute);
-		mvwaddch(midwin, row, COLS - 1 - thebar, '>');
+		mvwaddch(midwin, row, COLS - 1 - sidebar, '>');
 		wattroff(midwin, hilite_attribute);
 	}
 
@@ -2879,11 +2912,8 @@ int update_softwrapped_line(linestruct *line)
 	}
 
 	/* If the first chunk is offscreen, don't even try to display it. */
-	if (row < 0 || row >= editwinrows) {
-		statusline(ALERT, "Badness: tried to display a chunk on row %i"
-								" -- please report a bug", row);
+	if (row < 0 || row >= editwinrows)
 		return 0;
-	}
 
 	starting_row = row;
 
@@ -3019,7 +3049,7 @@ bool less_than_a_screenful(size_t was_lineno, size_t was_leftedge)
 }
 
 #ifndef NANO_TINY
-/* Draw a scroll bar on the righthand side of the screen. */
+/* Draw a "scroll bar" on the righthand side of the edit window. */
 void draw_scrollbar(void)
 {
 	int fromline = openfile->edittop->lineno - 1;
@@ -3041,7 +3071,7 @@ void draw_scrollbar(void)
 	int lowest = (fromline * editwinrows) / totallines;
 	int highest = lowest + (editwinrows * coveredlines) / totallines;
 
-	if (editwinrows > totallines)
+	if (editwinrows > totallines && !ISSET(SOFTWRAP))
 		highest = editwinrows;
 
 	for (int row = 0; row < editwinrows; row++) {
@@ -3085,7 +3115,7 @@ void edit_scroll(bool direction)
 		go_forward_chunks(editwinrows - nrows, &line, &leftedge);
 
 #ifndef NANO_TINY
-	if (thebar)
+	if (sidebar)
 		draw_scrollbar();
 
 	if (ISSET(SOFTWRAP)) {
@@ -3120,9 +3150,9 @@ size_t get_softwrap_breakpoint(const char *linedata, size_t leftedge,
 		/* Pointer at the current character in this line's data. */
 	static size_t column;
 		/* Column position that corresponds to the above pointer. */
-	size_t goal_column = leftedge + editwincols;
+	size_t rightside = leftedge + editwincols;
 		/* The place at or before which text must be broken. */
-	size_t breaking_col = goal_column;
+	size_t breaking_col = rightside;
 		/* The column where text can be broken, when there's no better. */
 	size_t last_blank_col = 0;
 		/* The column position of the last seen whitespace character. */
@@ -3141,35 +3171,39 @@ size_t get_softwrap_breakpoint(const char *linedata, size_t leftedge,
 		text += advance_over(text, &column);
 
 	/* Now find the place in text where this chunk should end. */
-	while (*text != '\0' && column <= goal_column) {
+	while (*text != '\0' && column <= rightside) {
 		/* When breaking at blanks, do it *before* the target column. */
-		if (ISSET(AT_BLANKS) && is_blank_char(text) && column < goal_column) {
+		if (ISSET(AT_BLANKS) && is_blank_char(text) && column < rightside) {
 			farthest_blank = text;
 			last_blank_col = column;
 		}
 
-		breaking_col = (*text == '\t' ? goal_column : column);
+		breaking_col = (*text == '\t' ? rightside : column);
 		text += advance_over(text, &column);
 	}
 
 	/* If we didn't overshoot the limit, we've found a breaking point;
 	 * and we've reached EOL if we didn't even *reach* the limit. */
-	if (column <= goal_column) {
-		*end_of_line = (column < goal_column);
+	if (column <= rightside) {
+		*end_of_line = (column < rightside);
 		return column;
 	}
 
 	/* If we're softwrapping at blanks and we found at least one blank, break
 	 * after that blank -- if it doesn't overshoot the screen's edge. */
 	if (farthest_blank != NULL) {
-		advance_over(farthest_blank, &last_blank_col);
+		size_t aftertheblank = last_blank_col;
+		size_t onestep = advance_over(farthest_blank, &aftertheblank);
 
-		if (last_blank_col <= goal_column)
-			return last_blank_col;
+		if (aftertheblank <= rightside) {
+			text = farthest_blank + onestep;
+			column = aftertheblank;
+			return aftertheblank;
+		}
 
 		/* If it's a tab that overshoots, break at the screen's edge. */
 		if (*farthest_blank == '\t')
-			breaking_col = goal_column;
+			breaking_col = rightside;
 	}
 
 	/* Otherwise, break at the last character that doesn't overshoot. */
@@ -3358,10 +3392,17 @@ void edit_refresh(void)
 	linestruct *line;
 	int row = 0;
 
+	/* If the current line is out of view, get it back on screen. */
+	if (current_is_offscreen())
+		adjust_viewport((focusing || ISSET(JUMPY_SCROLLING)) ? CENTERING : FLOWING);
+
 #ifdef ENABLE_COLOR
 	/* When needed and useful, initialize the colors for the current syntax. */
 	if (openfile->syntax && !have_palette && !ISSET(NO_SYNTAX) && has_colors())
 		prepare_palette();
+
+	/* When the line above the viewport does not have multidata, recalculate all. */
+	recook |= ISSET(SOFTWRAP) && openfile->edittop->prev && !openfile->edittop->prev->multidata;
 
 	if (recook) {
 		precalc_multicolorinfo();
@@ -3370,12 +3411,8 @@ void edit_refresh(void)
 	}
 #endif
 
-	/* If the current line is out of view, get it back on screen. */
-	if (current_is_offscreen())
-		adjust_viewport((focusing || ISSET(JUMPY_SCROLLING)) ? CENTERING : FLOWING);
-
 #ifndef NANO_TINY
-	if (thebar)
+	if (sidebar)
 		draw_scrollbar();
 #endif
 
@@ -3388,17 +3425,14 @@ void edit_refresh(void)
 	line = openfile->edittop;
 
 	while (row < editwinrows && line != NULL) {
-		if (line == openfile->current)
-			row += update_line(line, openfile->current_x);
-		else
-			row += update_line(line, 0);
+		row += update_line(line, (line == openfile->current) ? openfile->current_x : 0);
 		line = line->next;
 	}
 
 	while (row < editwinrows) {
 		blank_row(midwin, row);
 #ifndef NANO_TINY
-		if (thebar)
+		if (sidebar)
 			mvwaddch(midwin, row, COLS - 1, bardata[row]);
 #endif
 		row++;
@@ -3409,6 +3443,7 @@ void edit_refresh(void)
 #endif
 
 	place_the_cursor();
+
 	wnoutrefresh(midwin);
 
 	refresh_needed = FALSE;
@@ -3424,7 +3459,7 @@ void adjust_viewport(update_type manner)
 	int goal = 0;
 
 	if (manner == STATIONARY)
-		goal = openfile->current_y;
+		goal = openfile->cursor_row;
 	else if (manner == CENTERING)
 		goal = editwinrows / 2;
 	else if (!current_is_above_screen())
@@ -3517,7 +3552,7 @@ void spotlight(size_t from_col, size_t to_col)
 	wattron(midwin, interface_color_pair[SPOTLIGHTED]);
 	waddnstr(midwin, word, actual_x(word, to_col));
 	if (overshoots)
-		mvwaddch(midwin, openfile->current_y, COLS - 1 - thebar, '>');
+		mvwaddch(midwin, openfile->cursor_row, COLS - 1 - sidebar, '>');
 	wattroff(midwin, interface_color_pair[SPOTLIGHTED]);
 
 	free(word);
@@ -3535,7 +3570,7 @@ void spotlight_softwrapped(size_t from_col, size_t to_col)
 	char *word;
 
 	place_the_cursor();
-	row = openfile->current_y;
+	row = openfile->cursor_row;
 
 	while (row < editwinrows) {
 		break_col = get_softwrap_breakpoint(openfile->current->data,
@@ -3632,7 +3667,7 @@ void do_credits(void)
 		NULL,                /* "Thank you for using nano!" */
 		"",
 		"",
-		"(C) 2023",
+		"(C) 2024",
 		"Free Software Foundation, Inc.",
 		"",
 		"",

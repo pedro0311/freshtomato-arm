@@ -1,5 +1,6 @@
-# frexp.m4 serial 16
-dnl Copyright (C) 2007-2023 Free Software Foundation, Inc.
+# frexp.m4
+# serial 20
+dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -13,7 +14,7 @@ AC_DEFUN([gl_FUNC_FREXP],
     AC_CACHE_CHECK([whether frexp() can be used with libm],
       [gl_cv_func_frexp_in_libm],
       [
-        save_LIBS="$LIBS"
+        saved_LIBS="$LIBS"
         LIBS="$LIBS -lm"
         AC_LINK_IFELSE(
           [AC_LANG_PROGRAM(
@@ -22,7 +23,7 @@ AC_DEFUN([gl_FUNC_FREXP],
              [[int e; return frexp (x, &e) > 0;]])],
           [gl_cv_func_frexp_in_libm=yes],
           [gl_cv_func_frexp_in_libm=no])
-        LIBS="$save_LIBS"
+        LIBS="$saved_LIBS"
       ])
     if test $gl_cv_func_frexp_in_libm = yes; then
       FREXP_LIBM=-lm
@@ -30,10 +31,10 @@ AC_DEFUN([gl_FUNC_FREXP],
   fi
   if test $gl_cv_func_frexp_no_libm = yes \
      || test $gl_cv_func_frexp_in_libm = yes; then
-    save_LIBS="$LIBS"
+    saved_LIBS="$LIBS"
     LIBS="$LIBS $FREXP_LIBM"
     gl_FUNC_FREXP_WORKS
-    LIBS="$save_LIBS"
+    LIBS="$saved_LIBS"
     case "$gl_cv_func_frexp_works" in
       *yes) gl_func_frexp=yes ;;
       *)    gl_func_frexp=no; REPLACE_FREXP=1; FREXP_LIBM= ;;
@@ -156,7 +157,8 @@ int main()
   {
     int exp;
     double y = frexp (x, &exp);
-    if (memcmp (&y, &x, sizeof x))
+    double x1 = x;
+    if (memcmp (&y, &x1, sizeof x1))
       result |= 4;
   }
   return result;
@@ -165,7 +167,11 @@ int main()
         [gl_cv_func_frexp_works=no],
         [case "$host_os" in
            netbsd* | irix*) gl_cv_func_frexp_works="guessing no" ;;
-           mingw*) # Guess yes with MSVC, no with mingw.
+           # Guess yes with MSVC, no with mingw.
+           windows*-msvc*)
+             gl_cv_func_frexp_works="guessing yes"
+             ;;
+           mingw* | windows*)
              AC_EGREP_CPP([Good], [
 #ifdef _MSC_VER
  Good

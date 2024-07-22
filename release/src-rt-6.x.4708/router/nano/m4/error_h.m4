@@ -1,23 +1,36 @@
-# error_h.m4 serial 1
-dnl Copyright (C) 1996-2023 Free Software Foundation, Inc.
+# error_h.m4
+# serial 4
+dnl Copyright (C) 1996-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
 
 dnl From Bruno Haible.
-dnl Provide a working "error.h".
+dnl Provide a working <error.h>.
 
 AC_DEFUN_ONCE([gl_ERROR_H],
 [
   AC_REQUIRE([AC_CANONICAL_HOST]) dnl for cross-compiles
+
+  gl_CHECK_NEXT_HEADERS([error.h])
+  if test $ac_cv_header_error_h = yes; then
+    HAVE_ERROR_H=1
+  else
+    HAVE_ERROR_H=0
+  fi
+  AC_SUBST([HAVE_ERROR_H])
+
+  REPLACE_ERROR=0
 
   gl_CHECK_FUNCS_ANDROID([error], [[#include <error.h>]])
   if test $ac_cv_func_error = yes; then
     HAVE_ERROR=1
   else
     HAVE_ERROR=0
+    case "$gl_cv_onwards_func_error" in
+      future*) REPLACE_ERROR=1 ;;
+    esac
   fi
-  REPLACE_ERROR=0
 
   dnl We don't use AC_FUNC_ERROR_AT_LINE any more, because it is no longer
   dnl maintained in Autoconf and because it invokes AC_LIBOBJ.
@@ -100,10 +113,9 @@ AC_DEFUN_ONCE([gl_ERROR_H],
 
   if test $HAVE_ERROR = 0 || test $REPLACE_ERROR = 1 \
      || test $HAVE_ERROR_AT_LINE = 0 || test $REPLACE_ERROR_AT_LINE = 1; then
-    dnl Provide a substitute <error.h> file.
-    GL_GENERATE_ERROR_H=true
+    COMPILE_ERROR_C=1
   else
-    GL_GENERATE_ERROR_H=false
+    COMPILE_ERROR_C=0
   fi
 
   AC_SUBST([HAVE_ERROR])

@@ -1,7 +1,7 @@
 /**************************************************************************
  *   prompt.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2016, 2018, 2020, 2022 Benno Schulenberg               *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -392,6 +392,7 @@ void draw_the_promptbar(void)
 
 	/* Place the cursor at the right spot. */
 	wmove(footwin, 0, column - the_page);
+
 	wnoutrefresh(footwin);
 }
 
@@ -603,7 +604,11 @@ int do_prompt(int menu, const char *provided, linestruct **history_list,
 
 	/* Restore a possible previous prompt and maybe the typing position. */
 	prompt = saved_prompt;
-	if (function == do_cancel || function == do_enter)
+	if (function == do_cancel || function == do_enter ||
+#ifdef ENABLE_BROWSER
+				function == to_first_file || function == to_last_file ||
+#endif
+				function == to_first_line || function == to_last_line)
 		typing_x = was_typing_x;
 
 	/* Set the proper return value for Cancel and Enter. */
@@ -752,8 +757,9 @@ int ask_user(bool withall, const char *question)
 			focusing = TRUE;
 		}
 #endif
-		/* Interpret ^N and ^Q as "No", to allow exiting in anger. */
-		else if (kbinput == '\x0E' || kbinput == '\x11')
+		/* Interpret ^N as "No", to allow exiting in anger, and ^Q or ^X too. */
+		else if (kbinput == '\x0E' || (kbinput == '\x11' && !ISSET(MODERN_BINDINGS)) ||
+									  (kbinput == '\x18' && ISSET(MODERN_BINDINGS)))
 			choice = NO;
 		/* And interpret ^Y as "Yes". */
 		else if (kbinput == '\x19')

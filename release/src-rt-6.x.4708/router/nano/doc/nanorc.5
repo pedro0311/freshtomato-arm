@@ -1,4 +1,4 @@
-.\" Copyright (C) 2003-2011, 2013-2023 Free Software Foundation, Inc.
+.\" Copyright (C) 2003-2011, 2013-2024 Free Software Foundation, Inc.
 .\"
 .\" This document is dual-licensed.  You may distribute and/or modify it
 .\" under the terms of either of the following licenses:
@@ -16,21 +16,41 @@
 .\"   Documentation License along with this program.  If not, see
 .\"   <https://www.gnu.org/licenses/>.
 .\"
-.TH NANORC 5 "version 7.2" "January 2023"
+.TH NANORC 5 "version 8.1" "July 2024"
 
 .SH NAME
 nanorc \- GNU nano's configuration file
 
 .SH DESCRIPTION
 The \fInanorc\fP files contain the default settings for \fBnano\fP,
-a small and friendly editor.  During startup, if \fB\-\-rcfile\fR
-is not given, \fBnano\fR will read two files: first the
-system-wide settings, from \fI/etc/nanorc\fP (the exact path might be
-different on your system), and then the user-specific settings, either
-from \fI~/.nanorc\fR or from \fI$XDG_CONFIG_HOME/nano/nanorc\fR
-or from \fI~/.config/nano/nanorc\fR, whichever is encountered first.
-If \fB\-\-rcfile\fR is given, \fBnano\fR will read just the specified
-settings file.
+a small and friendly text editor.  During startup, if \fB\-\-rcfile\fR
+is not given, \fBnano\fR reads two files: first the system-wide settings,
+from \fI/etc/nanorc\fP (the exact path might be different on your system),
+and then the user-specific settings, either from \fI~/.nanorc\fR or from
+\fI$XDG_CONFIG_HOME/nano/nanorc\fR or from \fI~/.config/nano/nanorc\fR,
+whichever is encountered first.  If \fB\-\-rcfile\fR is given,
+\fBnano\fR reads just the specified settings file.
+
+.SH NOTICE
+Since version 8.0, to be newcomer friendly, \fB^F\fR starts a forward search,
+\fB^B\fR starts a backward search, \fBM\-F\fR searches the next occurrence
+forward, and \fBM\-B\fR searches the next occurrence backward.  If you want
+those keystrokes to do what they did before version 8.0, add the following
+lines at the end of your \fInanorc\fR file:
+.sp
+.RS 4
+.B bind ^F forward main
+.br
+.B bind ^B back main
+.br
+.B bind M\-F formatter main
+.br
+.B bind M\-B linter main
+.RE
+.sp
+
+.\" Never hyphenate these:
+.hw ncurses terminfo
 
 .SH OPTIONS
 The configuration file accepts a series of \fBset\fP and \fBunset\fP
@@ -80,10 +100,11 @@ with \fBset backup\fR or \fB\-\-backup\fR or \fB\-B\fR.
 The uniquely numbered files are stored in the specified \fIdirectory\fR.
 .TP
 .B set boldtext
-Use bold instead of reverse video for the title bar, status bar, key combos,
-function tags, line numbers, and selected text.  This can be overridden by
-setting the options \fBtitlecolor\fP, \fBstatuscolor\fP, \fBkeycolor\fP,
-\fBfunctioncolor\fP, \fBnumbercolor\fP, and \fBselectedcolor\fP.
+Use bold instead of reverse video for the title bar, status bar,
+prompt bar, mini bar, key combos, line numbers, and selected text.
+This can be overridden by setting the options
+\fBtitlecolor\fP, \fBstatuscolor\fP, \fBpromptcolor\fP, \fBminicolor\fP,
+\fBkeycolor\fP, \fBnumbercolor\fP, and/or \fBselectedcolor\fP.
 .TP
 .B set bookstyle
 When justifying, treat any line that starts with whitespace as the
@@ -100,6 +121,16 @@ Automatically hard-wrap the current line when it becomes overlong.
 .TP
 .B set casesensitive
 Do case-sensitive searches by default.
+.TP
+.B set colonparsing
+When a filename given on the command line ends in a colon plus digits
+and this filename does not exist, then snip the colon plus digits and
+understand the digits as a line number.  If the trimmed filename does
+not exist either, then repeat the process and understand the obtained
+two numbers as line and column number.  But if the doubly trimmed
+filename does not exist either, then forget the trimming and accept
+the original filename as is.  To disable this colon parsing for some
+file, use \fB+1\fR or similar before the relevant filename.
 .TP
 .B set constantshow
 Constantly display the cursor position in the status bar.
@@ -118,7 +149,7 @@ See \fBset titlecolor\fR for valid color names.
 .TP
 .B set fill \fInumber\fR
 Set the target width for justifying and automatic hard-wrapping at this
-\fInumber\fR of columns.  If the value is 0 or less, wrapping will occur
+\fInumber\fR of columns.  If the value is 0 or less, wrapping occurs
 at the width of the screen minus \fInumber\fR columns, allowing the wrap
 point to vary along with the width of the screen if the screen is resized.
 The default value is \fB\-8\fR.
@@ -171,7 +202,7 @@ The default value is "\fB(<[{)>]}\fP".
 .B set minibar
 Suppress the title bar and instead show information about
 the current buffer at the bottom of the screen, in the space
-for the status bar.  In this "minibar" the filename is shown
+for the status bar.  In this "mini bar" the filename is shown
 on the left, followed by an asterisk if the buffer has been modified.
 On the right are displayed the current line and column number, the
 code of the character under the cursor (in Unicode format: U+xxxx),
@@ -186,14 +217,14 @@ The line plus column numbers and the character code are displayed only when
 The state flags are displayed only when \fBset stateflags\fR is used.
 .TP
 .B set minicolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
-Use this color combination for the minibar.
+Use this color combination for the mini bar.
 (When this option is not specified, the colors of the title bar are used.)
 See \fBset titlecolor\fR for more details.
 .TP
 .B set mouse
-Enable mouse support, if available for your system.  When enabled, mouse
-clicks can be used to place the cursor, set the mark (with a double
-click), and execute shortcuts.  The mouse will work in the X Window
+Enable mouse support, if available for your system.  When enabled,
+mouse clicks can be used to place the cursor, set the mark (with two
+clicks), and execute shortcuts.  The mouse works in the X Window
 System, and on the console when gpm is running.  Text can still be
 selected through dragging by holding down the Shift key.
 .TP
@@ -219,7 +250,7 @@ Use this color combination for line numbers.
 See \fBset titlecolor\fR for more details.
 .TP
 .B set operatingdir "\fIdirectory\fP"
-\fBnano\fP will only read and write files inside \fIdirectory\fP and its
+\fBnano\fP only reads and writes files inside \fIdirectory\fP and its
 subdirectories.  Also, the current directory is changed to here, so
 files are inserted from this directory.  By default, the operating
 directory feature is turned off.
@@ -229,7 +260,8 @@ Save the cursor position of files between editing sessions.
 The cursor position is remembered for the 200 most-recently edited files.
 .TP
 .B set preserve
-Preserve the XON and XOFF keys (\fB^Q\fR and \fB^S\fR).
+Preserve the XOFF and XON sequences (\fB^S\fR and \fB^Q\fR) so that
+they are caught by the terminal (stopping and resuming the output).
 .TP
 .B set promptcolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the prompt bar.
@@ -239,7 +271,7 @@ See \fBset titlecolor\fR for more details.
 .BI "set punct """ characters """
 Set the characters treated as closing punctuation when justifying
 paragraphs.  This may not include blank characters.  Only the
-specfified closing punctuation, optionally followed by closing brackets
+specified closing punctuation, optionally followed by closing brackets
 (see \fBbrackets\fP), can end sentences.  The default value is "\fB!.?\fP".
 .TP
 .B set quickblank
@@ -259,7 +291,7 @@ email, and to rewrap blocks of line comments when writing source code.
 .B set rawsequences
 Interpret escape sequences directly, instead of asking \fBncurses\fR
 to translate them.  (If you need this option to get some keys to work
-properly, it means that the terminfo terminal description that is used
+properly, it means that the \fBterminfo\fR terminal description that is used
 does not fully match the actual behavior of your terminal.  This can
 happen when you ssh into a BSD machine, for example.)
 Using this option disables \fBnano\fR's mouse support.
@@ -278,8 +310,6 @@ Save a changed buffer automatically on exit (\fB^X\fR); don't prompt.
 .TP
 .B set scrollercolor \fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the indicator alias "scrollbar".
-(On terminal emulators that link to a libvte older than version 0.55,
-using a background color here does not work correctly.)
 See \fBset titlecolor\fR for more details.
 .TP
 .B set selectedcolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
@@ -293,10 +323,9 @@ poor vision.
 .TP
 .B set smarthome
 Make the Home key smarter.  When Home is pressed anywhere but at the
-very beginning of non-whitespace characters on a line, the cursor will
-jump to that beginning (either forwards or backwards).  If the cursor is
-already at that position, it will jump to the true beginning of the
-line.
+very beginning of non-whitespace characters on a line, the cursor jumps
+to that beginning (either forwards or backwards).  If the cursor is
+already at that position, it jumps to the true beginning of the line.
 .TP
 .B set softwrap
 Display lines that exceed the screen's width over multiple screen lines.
@@ -335,6 +364,7 @@ greater than 0.  The default value is \fB8\fR.
 .B set tabstospaces
 Convert each typed tab to spaces -- to the number of spaces
 that a tab at that position would take up.
+(Note: pasted tabs are not converted.)
 .TP
 .B set titlecolor \fR[\fBbold,\fR][\fBitalic,\fR]\fIfgcolor\fB,\fIbgcolor\fR
 Use this color combination for the title bar.
@@ -345,6 +375,8 @@ Each of these eight names may be prefixed with the word \fBlight\fR
 to get a brighter version of that color.
 The word \fBgrey\fR or \fBgray\fR may be used
 as a synonym for \fBlightblack\fR.
+On a Linux console, \fBlight\fR does not have
+any effect for a background color.
 On terminal emulators that can do at least 256 colors,
 other valid (but unprefixable) color names are:
 .BR pink ", " purple ", " mauve ", " lagoon ", " mint ", "
@@ -398,12 +430,6 @@ and disappears after 1.5 seconds or upon the next keystroke.
 With \fBM\-Z\fR the title bar plus status bar can be toggled.
 With \fBM\-X\fR the help lines.
 
-.SH NOTES
-Option \fBset suspendable\fR has been removed.
-Suspension is enabled by default, reachable via \fB^T^Z\fR.
-(If you want a plain \fB^Z\fR to suspend nano,
-add \fBbind ^Z suspend main\fR to your nanorc.)
-
 .SH SYNTAX HIGHLIGHTING
 Coloring the different syntactic elements of a file
 is done via regular expressions (see the \fBcolor\fR command below).
@@ -440,13 +466,14 @@ via the following commands:
 .BI syntax " name \fR[" """" fileregex """ " \fR...]
 Start the definition of a syntax with this \fIname\fR.
 All subsequent \fBcolor\fR and other such commands
-will be added to this syntax, until a new \fBsyntax\fR
+are added to this syntax, until a new \fBsyntax\fR
 command is encountered.
 .sp
-When \fBnano\fR is run, this syntax will be automatically
-activated if the current filename matches the extended regular
-expression \fIfileregex\fR.  Or the syntax can be explicitly
-activated by using the \fB\-Y\fR or \fB\-\-syntax\fR
+When \fBnano\fR is run, this syntax is automatically
+activated (for the relevant buffer) if the absolute filename
+matches the extended regular expression \fIfileregex\fR.
+Or the syntax can be explicitly activated (for all buffers)
+by using the \fB\-Y\fR or \fB\-\-syntax\fR
 command-line option followed by the \fIname\fR.
 .sp
 The syntax \fBdefault\fP is special: it takes no \fIfileregex\fR,
@@ -464,8 +491,8 @@ If no \fIfileregex\fR matched and no \fBheader\fR regex matched
 either, then compare this \fIregex\fR (or regexes) against the
 result of querying the \fBmagic\fP database about the current
 file, to determine whether this syntax should be used for it.
-(This functionality only works when \fBlibmagic\fP is installed on the
-system and will be silently ignored otherwise.)
+(This querying is done only when \fBlibmagic\fR is actually installed
+on the system and \fB\-\-magic\fR or \fBset magic\fR was given.)
 .TP
 .BI formatter " program " \fR[ "argument " \fR...]
 Run the given \fIprogram\fR on the full contents of the current buffer.
@@ -499,6 +526,8 @@ Each of these eight names may be prefixed with the word \fBlight\fR
 to get a brighter version of that color.
 The word \fBgrey\fR or \fBgray\fR may be used
 as a synonym for \fBlightblack\fR.
+On a Linux console, \fBlight\fR does not have
+any effect for a background color.
 On terminal emulators that can do at least 256 colors,
 other valid (but unprefixable) color names are:
 .BR pink ", " purple ", " mauve ", " lagoon ", " mint ", "
@@ -528,7 +557,7 @@ Paint all pieces of text whose start matches extended regular expression
 with the given foreground and background colors,
 at least one of which must be specified.  This means that, after an
 initial instance of \fIfromrx\fP, all text until the first instance of
-\fItorx\fP will be colored.  This allows syntax highlighting to span
+\fItorx\fP is colored.  This allows syntax highlighting to span
 multiple lines.
 .TP
 .BI "icolor \fR[\fBbold,\fR][\fBitalic,\fR]" fgcolor , bgcolor " start=""" fromrx """ end=""" torx """
@@ -560,7 +589,7 @@ Rebinds the given \fIkey\fP to the given \fIfunction\fP in the given \fImenu\fP
 Makes the given \fIkey\fR produce the given \fIstring\fR in the given
 \fImenu\fR (or in all menus where the key exists when \fBall\fR is used).
 Besides literal text and/or control codes, the \fIstring\fR may contain
-function names between braces.  These functions will be invoked when
+function names between braces.  These functions are invoked when
 the key is typed.  To include a literal opening brace, use \fB{{}\fR.
 .TP
 .BI unbind " key menu"
@@ -570,9 +599,9 @@ menus where the key exists when \fBall\fP is used).
 .sp
 Note that \fBbind \fIkey\fR \fB"{\fIfunction\fB}"\fR \fImenu\fR is equivalent
 to \fBbind \fIkey\fR \fIfunction\fR \fImenu\fR, except that for the latter form
-\fBnano\fR will check the availabilty of the \fIfunction\fR in the given \fImenu\fR
+\fBnano\fR checks the availability of the \fIfunction\fR in the given \fImenu\fR
 at startup time (and report an error if it does not exist there), whereas for the
-first form \fBnano\fR will check at execution time that the \fIfunction\fR exists
+first form \fBnano\fR checks at execution time that the \fIfunction\fR exists
 but not whether it makes any sense in the current menu.  The user has to take care
 that a function name between braces (or any sequence of them) is appropriate.
 Strange behavior can result when it is not.
@@ -608,8 +637,8 @@ Example: F10.
 Rebinding \fB^M\fR (Enter) or \fB^I\fR (Tab) is probably not a good idea.
 Rebinding \fB^[\fR (Esc) is not possible, because its keycode
 is the starter byte of Meta keystrokes and escape sequences.
-Rebinding any of the dedicated cursor-moving keys (the arrows, Home, End,
-PageUp and PageDown) is not possible.
+Rebinding any of the dedicated cursor-moving keys (the arrows,
+Home, End, PageUp and PageDown) is not possible.
 On some terminals it's not possible to rebind \fB^H\fR (unless \fB\-\-raw\fR
 is used) because its keycode is identical to that of the Backspace key.
 
@@ -693,7 +722,7 @@ Counts and reports on the status bar the number of lines, words,
 and characters in the current buffer (or in the marked region).
 .TP
 .B execute
-Prompts for a program to execute.  The program's output will be inserted
+Prompts for a program to execute.  The program's output is inserted
 into the current buffer (or into a new buffer when \fBM\-F\fR is toggled).
 .TP
 .B speller
@@ -709,7 +738,7 @@ the contents of the buffer.)
 .B linter
 Invokes a syntax-checking program (if the active syntax defines one).
 If this program produces lines of the form "filename:linenum:charnum:
-some message", then the cursor will be put at the indicated position
+some message", then the cursor is put at the indicated position
 in the mentioned file while showing "some message" on the status bar.
 You can move from message to message with <PgUp> and <PgDn>,
 and leave linting mode with \fB^C\fR or <Enter>.
@@ -764,7 +793,11 @@ while keeping the cursor in the same text position, if possible.
 (This function is bound by default to <Alt+Down>.)
 .TP
 .B center
-Scrolls the line with the cursor to the middle of the screen.
+Scrolls the line with the cursor to the middle of the viewport.
+.TP
+.B cycle
+Scrolls the line with the cursor first to the middle of the viewport,
+then to the top, then to the bottom.
 .TP
 .B prevword
 Moves the cursor to the beginning of the previous word.
@@ -790,6 +823,12 @@ Moves the cursor to the beginning of the current or preceding block of text.
 .TP
 .B nextblock
 Moves the cursor to the beginning of the next block of text.
+.TP
+.B toprow
+Moves the cursor to the first row in the viewport.
+.TP
+.B bottomrow
+Moves the cursor to the last row in the viewport.
 .TP
 .B pageup
 Goes up one screenful.
@@ -886,7 +925,7 @@ Toggles between searching for something and replacing something.
 Toggles between searching for text and targeting a line number.
 .TP
 .B flipexecute
-Toggles between inserting a file and executing a command.
+Switches from inserting a file to executing a command.
 .TP
 .B flippipe
 When executing a command, toggles whether the current buffer (or marked
@@ -966,15 +1005,14 @@ whitespace as the preceding line -- or as the next line if the preceding line
 is the beginning of a paragraph.
 .TP
 .B cutfromcursor
-Toggles whether cutting text will cut the whole line or just from the current cursor
+Toggles whether cutting text cuts the whole line or just from the current cursor
 position to the end of the line.
 .TP
 .B breaklonglines
-Toggles whether long lines will be hard-wrapped to the next line.
-(The old name of this function, 'nowrap', is deprecated.)
+Toggles whether the overlong part of a line is hard-wrapped to the next line.
 .TP
 .B tabstospaces
-Toggles whether typed tabs will be converted to spaces.
+Toggles whether typed tabs are converted to spaces.
 .TP
 .B mouse
 Toggles mouse support.
@@ -1037,6 +1075,20 @@ A special name that encompasses all menus.
 For \fBbind\fR it means all menus where the specified \fIfunction\fR exists;
 for \fBunbind\fR it means all menus where the specified \fIkey\fR exists.
 .RE
+
+.SH EXAMPLES
+To make \fBCtrl+Z\fR suspend nano:
+.sp
+.RS
+.B bind ^Z suspend main
+.RE
+.sp
+To make \fBShift+Alt+C\fR copy the marked region to the system's clipboard:
+.sp
+.RS
+.B bind Sh-M-C """{execute}| xsel -ib {enter}{undo}""" main
+.RE
+.sp
 
 .SH FILES
 .TP

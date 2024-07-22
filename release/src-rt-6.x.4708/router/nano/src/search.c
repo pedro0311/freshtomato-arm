@@ -1,7 +1,7 @@
 /**************************************************************************
  *   search.c  --  This file is part of GNU nano.                         *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2015-2020, 2022 Benno Schulenberg                      *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -162,7 +162,9 @@ void search_init(bool replacing, bool retain_answer)
 			break;
 	}
 
-	tidy_up_after_search();
+	if (!inhelp)
+		tidy_up_after_search();
+
 	free(thedefault);
 }
 
@@ -381,7 +383,8 @@ void do_research(void)
 
 	go_looking();
 
-	tidy_up_after_search();
+	if (!inhelp)
+		tidy_up_after_search();
 }
 
 /* Search in the backward direction for the next occurrence. */
@@ -678,11 +681,6 @@ ssize_t do_replace_loop(const char *needle, bool whole_word_only,
 	openfile->mark = was_mark;
 #endif
 
-	/* If "automatic newline" is enabled, and text has been added to the
-	 * magic line, make a new magic line. */
-	if (!ISSET(NO_NEWLINES) && openfile->filebot->data[0] != '\0')
-		new_magicline();
-
 	return numreplaced;
 }
 
@@ -704,10 +702,16 @@ void ask_for_and_do_replacements(void)
 	size_t was_firstcolumn = openfile->firstcolumn;
 	linestruct *beginline = openfile->current;
 	size_t begin_x = openfile->current_x;
+	char *replacee = copy_of(last_search);
 	ssize_t numreplaced;
+
 	int response = do_prompt(MREPLACEWITH, "", &replace_history,
 							/* TRANSLATORS: This is a prompt. */
 							edit_refresh, _("Replace with"));
+
+	/* Set the string to be searched, as it might have changed at the prompt. */
+	free(last_search);
+	last_search = replacee;
 
 #ifdef ENABLE_HISTORIES
 	/* When not "", add the replace string to the replace history list. */
@@ -857,7 +861,7 @@ void goto_line_and_column(ssize_t line, ssize_t column, bool retain_answer,
 		 * line or chunk on the bottom line of the screen; otherwise, just
 		 * center the target line. */
 		if (rows_from_tail < editwinrows / 2 && !ISSET(JUMPY_SCROLLING)) {
-			openfile->current_y = editwinrows - 1 - rows_from_tail;
+			openfile->cursor_row = editwinrows - 1 - rows_from_tail;
 			adjust_viewport(STATIONARY);
 		} else
 			adjust_viewport(CENTERING);

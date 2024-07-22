@@ -1,7 +1,7 @@
 /**************************************************************************
  *   definitions.h  --  This file is part of GNU nano.                    *
  *                                                                        *
- *   Copyright (C) 1999-2011, 2013-2023 Free Software Foundation, Inc.    *
+ *   Copyright (C) 1999-2011, 2013-2024 Free Software Foundation, Inc.    *
  *   Copyright (C) 2014-2017 Benno Schulenberg                            *
  *                                                                        *
  *   GNU nano is free software: you can redistribute it and/or modify     *
@@ -195,6 +195,8 @@
 #define ALT_RIGHT     0x422
 #define ALT_UP        0x423
 #define ALT_DOWN      0x424
+#define ALT_HOME      0x425
+#define ALT_END       0x426
 #define ALT_PAGEUP    0x427
 #define ALT_PAGEDOWN  0x428
 #define ALT_INSERT    0x42C
@@ -214,16 +216,16 @@
 #define SHIFT_DELETE    0x45D
 #define SHIFT_TAB       0x45F
 
+#define FOCUS_IN	0x491
+#define FOCUS_OUT	0x499
+
 /* Special keycodes for when a string bind has been partially implanted
  * or has an unpaired opening brace, or when a function in a string bind
  * needs execution or a specified function name is invalid. */
 #define MORE_PLANTS       0x4EA
 #define MISSING_BRACE     0x4EB
-#define PLANTED_COMMAND   0x4EC
+#define PLANTED_A_COMMAND 0x4EC
 #define NO_SUCH_FUNCTION  0x4EF
-
-/* A special keycode for when <Tab> is pressed while the mark is on. */
-#define INDENT_KEY  0x4F1
 
 /* A special keycode to signal the beginning and end of a bracketed paste. */
 #define BRACKETED_PASTE_MARKER  0x4FB
@@ -283,7 +285,7 @@ typedef enum {
 } message_type;
 
 typedef enum {
-	OVERWRITE, APPEND, PREPEND
+	OVERWRITE, APPEND, PREPEND, EMERGENCY
 } kind_of_writing_type;
 
 typedef enum {
@@ -368,10 +370,12 @@ enum {
 	EMPTY_LINE,
 	INDICATOR,
 	BOOKSTYLE,
+	COLON_PARSING,
 	STATEFLAGS,
 	USE_MAGIC,
 	MINIBAR,
-	ZERO
+	ZERO,
+	MODERN_BINDINGS
 };
 
 /* Structure types. */
@@ -432,7 +436,7 @@ typedef struct syntaxtype {
 		/* The command with which to lint this type of file. */
 	char *formatter;
 		/* The command with which to format/modify/arrange this type of file. */
-	char *tab;
+	char *tabstring;
 		/* What the Tab key should produce; NULL for default behavior. */
 #ifdef ENABLE_COMMENT
 	char *comment;
@@ -440,7 +444,7 @@ typedef struct syntaxtype {
 #endif
 	colortype *color;
 		/* The colors and their regexes used in this syntax. */
-	short nmultis;
+	short multiscore;
 		/* How many multiline regex strings this syntax has. */
 	struct syntaxtype *next;
 		/* Next syntax. */
@@ -555,8 +559,8 @@ typedef struct openfilestruct {
 		/* The file's x-coordinate position. */
 	size_t placewewant;
 		/* The file's x position we would like. */
-	ssize_t current_y;
-		/* The file's y-coordinate position. */
+	ssize_t cursor_row;
+		/* The row in the edit window that the cursor is on. */
 	struct stat *statinfo;
 		/* The file's stat information from when it was opened or last saved. */
 #ifdef ENABLE_WRAPPING

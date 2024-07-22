@@ -1,5 +1,6 @@
-# isnanf.m4 serial 18
-dnl Copyright (C) 2007-2023 Free Software Foundation, Inc.
+# isnanf.m4
+# serial 21
+dnl Copyright (C) 2007-2024 Free Software Foundation, Inc.
 dnl This file is free software; the Free Software Foundation
 dnl gives unlimited permission to copy and/or distribute it,
 dnl with or without modifications, as long as this notice is preserved.
@@ -18,12 +19,11 @@ AC_DEFUN([gl_FUNC_ISNANF],
     fi
   fi
   dnl The variable gl_func_isnanf set here is used by isnan.m4.
-  if test $gl_cv_func_isnanf_no_libm = yes \
-     || test $gl_cv_func_isnanf_in_libm = yes; then
-    save_LIBS="$LIBS"
+  if test $gl_cv_func_isnanf_no_libm = yes || test -n "$ISNANF_LIBM"; then
+    saved_LIBS="$LIBS"
     LIBS="$LIBS $ISNANF_LIBM"
     gl_ISNANF_WORKS
-    LIBS="$save_LIBS"
+    LIBS="$saved_LIBS"
     case "$gl_cv_func_isnanf_works" in
       *yes) gl_func_isnanf=yes ;;
       *)    gl_func_isnanf=no; ISNANF_LIBM= ;;
@@ -94,7 +94,7 @@ AC_DEFUN([gl_HAVE_ISNANF_IN_LIBM],
   AC_CACHE_CHECK([whether isnan(float) can be used with libm],
     [gl_cv_func_isnanf_in_libm],
     [
-      save_LIBS="$LIBS"
+      saved_LIBS="$LIBS"
       LIBS="$LIBS -lm"
       AC_LINK_IFELSE(
         [AC_LANG_PROGRAM(
@@ -110,7 +110,7 @@ AC_DEFUN([gl_HAVE_ISNANF_IN_LIBM],
            [[return isnanf (x);]])],
         [gl_cv_func_isnanf_in_libm=yes],
         [gl_cv_func_isnanf_in_libm=no])
-      LIBS="$save_LIBS"
+      LIBS="$saved_LIBS"
     ])
 ])
 
@@ -181,7 +181,7 @@ int main()
         [gl_cv_func_isnanf_works=no],
         [case "$host_os" in
            irix* | solaris*) gl_cv_func_isnanf_works="guessing no" ;;
-           mingw*) # Guess yes on mingw, no on MSVC.
+           mingw* | windows*) # Guess yes on mingw, no on MSVC.
              AC_EGREP_CPP([Known], [
 #ifdef __MINGW32__
  Known

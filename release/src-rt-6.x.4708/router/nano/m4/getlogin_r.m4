@@ -1,10 +1,9 @@
-#serial 14
-
-# Copyright (C) 2005-2007, 2009-2023 Free Software Foundation, Inc.
-#
-# This file is free software; the Free Software Foundation
-# gives unlimited permission to copy and/or distribute it,
-# with or without modifications, as long as this notice is preserved.
+# getlogin_r.m4
+# serial 15
+dnl Copyright (C) 2005-2007, 2009-2024 Free Software Foundation, Inc.
+dnl This file is free software; the Free Software Foundation
+dnl gives unlimited permission to copy and/or distribute it,
+dnl with or without modifications, as long as this notice is preserved.
 
 dnl From Derek Price
 dnl
@@ -28,6 +27,9 @@ AC_DEFUN([gl_FUNC_GETLOGIN_R],
   gl_CHECK_FUNCS_ANDROID([getlogin_r], [[#include <unistd.h>]])
   if test $ac_cv_func_getlogin_r = no; then
     HAVE_GETLOGIN_R=0
+    case "$gl_cv_onwards_func_getlogin_r" in
+      future*) REPLACE_GETLOGIN_R=1 ;;
+    esac
   else
     HAVE_GETLOGIN_R=1
     dnl On Mac OS X 10.13 and OSF/1 5.1, getlogin_r returns a truncated result
