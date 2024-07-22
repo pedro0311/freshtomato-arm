@@ -143,7 +143,7 @@ static ssize_t mssl_read(void *cookie, char *buf, size_t len)
 		case SSL_ERROR_WANT_READ:
 			break;
 		default:
-			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error %d", __FUNCTION__, err);
+			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error: %d", __FUNCTION__, err);
 			mssl_print_err(kuki->ssl, err);
 			if (total == 0)
 				total = -1;
@@ -193,7 +193,7 @@ static ssize_t mssl_write(void *cookie, const char *buf, size_t len)
 		case SSL_ERROR_WANT_READ:
 			break;
 		default:
-			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error %d", __FUNCTION__, err);
+			logmsg(LOG_DEBUG, "*** [mssl] %s: SSL error: %d", __FUNCTION__, err);
 			mssl_print_err(kuki->ssl, err);
 			if (total == 0)
 				total = -1;
@@ -414,6 +414,7 @@ int mssl_init_ex(char *cert, char *priv, char *ciphers)
 	wolfSSL_Init();
 	wolfSSL_add_all_algorithms();
 #elif USE_OPENSSL
+	SSL_library_init();
 	SSL_load_error_strings();
 	SSLeay_add_ssl_algorithms();
 #endif
