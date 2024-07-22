@@ -2433,41 +2433,74 @@ nocat-clean:
 	-@$(MAKE) -C nocat clean
 	@rm -f nocat/stamp-h1
 
-$(PCRE_TARGET)/stamp-h1:
-	$(call patch_files,$(PCRE_TARGET))
-	cd $(PCRE_TARGET) && autoreconf -fsi && \
+pcre/stamp-h1:
+	$(call patch_files,pcre)
+	cd pcre && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --enable-utf8 --enable-unicode-properties --disable-cpp --disable-pcretest-libreadline --disable-dependency-tracking
-	[ -d $(PCRE_TARGET)/m4 ] || mkdir $(PCRE_TARGET)/m4
+		$(CONFIGURE) --prefix=/usr --disable-cpp --disable-jit --disable-pcregrep-jit --disable-pcretest-libreadline \
+			--enable-utf8 --enable-unicode-properties --disable-dependency-tracking
+	[ -d pcre/m4 ] || mkdir pcre/m4
 	@touch $@
 
-$(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
+pcre: pcre/stamp-h1
 	@$(SEP)
 	@$(MAKE) -C $@ $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/$(PCRE_TARGET)/staged install
+	@$(MAKE) -C $@ DESTDIR=$(TOP)/pcre/staged install
 
-$(PCRE_TARGET)-install:
-ifeq ($(TCONFIG_BCMARM),y)
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-8.so.0.13.0 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.13.0
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.13.0
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so
- ifeq ($(TCONFIG_AIO),y)
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-posix.so.3.0.5 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.5
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.5
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so
- endif
-else
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.1 && ln -sf libpcre.so.1.2.13 libpcre.so
+pcre-install:
+	install -D pcre/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
+	$(STRIP) -s $(INSTALLDIR)/pcre/usr/lib/libpcre.so.1.2.13
+	cd $(INSTALLDIR)/pcre/usr/lib/ && ln -sf libpcre.so.1.2.13 libpcre.so.1 && ln -sf libpcre.so.1.2.13 libpcre.so
+
+pcre-clean:
+	-@$(MAKE) -C pcre clean
+	@rm -f pcre/stamp-h1
+	@rm -rf pcre/staged
+	$(call unpatch_files,pcre)
+
+pcre2/build/Makefile:
+	@rm -rf pcre2/build && mkdir -p pcre2/build
+	cd pcre2/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
+			-DBUILD_SHARED_LIBS=ON \
+			-DPCRE2_BUILD_PCRE2_8=ON \
+			-DPCRE2_BUILD_PCRE2_16=OFF \
+			-DPCRE2_BUILD_PCRE2_32=OFF \
+			-DPCRE2_DEBUG=OFF \
+			-DPCRE2_DISABLE_PERCENT_ZT=ON \
+			-DPCRE2_SUPPORT_JIT=OFF \
+			-DPCRE2_BUILD_PCRE2GREP=OFF \
+			-DPCRE2GREP_SUPPORT_JIT=OFF \
+			-DPCRE2GREP_SUPPORT_CALLOUT=OFF \
+			-DPCRE2GREP_SUPPORT_CALLOUT_FORK=OFF \
+			-DPCRE2_BUILD_TESTS=OFF \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+
+pcre2: pcre2/build/Makefile
+	@$(SEP)
+	@$(MAKE) -C pcre2/build all $(PARALLEL_BUILD)
+	@$(MAKE) -C pcre2/build DESTDIR=$(TOP)/pcre2/staged install
+
+pcre2-install:
+	install -D pcre2/staged/usr/lib/libpcre2-8.so.0.13.0 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.13.0
+	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-8.so.0.13.0
+	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so
+ifeq ($(TCONFIG_AIO),y)
+	install -D pcre2/staged/usr/lib/libpcre2-posix.so.3.0.5 $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.5
+	$(STRIP) -s $(INSTALLDIR)/pcre2/usr/lib/libpcre2-posix.so.3.0.5
+	cd $(INSTALLDIR)/pcre2/usr/lib/ && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so
 endif
 
-$(PCRE_TARGET)-clean:
-	-@$(MAKE) -C $(PCRE_TARGET) clean
-	@rm -f $(PCRE_TARGET)/stamp-h1
-	@rm -rf $(PCRE_TARGET)/staged
-	$(call unpatch_files,$(PCRE_TARGET))
+pcre2-clean:
+	@rm -rf pcre2/build
+	@rm -rf pcre2/staged
 
 libxml2/stamp-h1:
 	cd libxml2 && autoreconf -fsi && \

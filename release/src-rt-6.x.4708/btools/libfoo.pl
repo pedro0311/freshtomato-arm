@@ -691,8 +691,8 @@ genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libicon
 genSO("${root}/usr/lib/libpng16.so.16.43.0", "${router}/libpng/.libs/libpng16.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libxml2.so.2.13.2", "${router}/libxml2/.libs/libxml2.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
-genSO("${root}/usr/lib/libpcre2-8.so.0.13.0", "${router}/pcre2/.libs/libpcre2-8.a", "${stripshared}");
-#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.5", "${router}/pcre2/.libs/libpcre2-posix.a", "${stripshared}"); # (deleted)
+genSO("${root}/usr/lib/libpcre2-8.so.0.13.0", "${router}/pcre2/staged/usr/lib/libpcre2-8.a", "${stripshared}");
+#genSO("${root}/usr/lib/libpcre2-posix.so.3.0.5", "${router}/pcre2/staged/usr/lib/libpcre2-posix.a", "${stripshared}"); # (deleted)
 genSO("${root}/usr/lib/libiperf.so.0.0.0", "${router}/iperf/src/.libs/libiperf.a", "${stripshared}");
 genSO("${root}/usr/lib/libncurses.so.6", "${router}/libncurses/lib/libncurses.a", "${stripshared}");
 
