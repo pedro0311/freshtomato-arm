@@ -2449,13 +2449,13 @@ $(PCRE_TARGET): $(PCRE_TARGET)/stamp-h1
 
 $(PCRE_TARGET)-install:
 ifeq ($(TCONFIG_BCMARM),y)
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-8.so.0.10.4 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.4
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.10.4
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-8.so.0.10.4 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.10.4 libpcre2-8.so
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-8.so.0.13.0 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.13.0
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-8.so.0.13.0
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so.0 && ln -sf libpcre2-8.so.0.13.0 libpcre2-8.so
  ifeq ($(TCONFIG_AIO),y)
-	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-posix.so.3.0.1 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.1
-	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.1
-	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-posix.so.3.0.1 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.1 libpcre2-posix.so
+	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre2-posix.so.3.0.5 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.5
+	$(STRIP) -s $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre2-posix.so.3.0.5
+	cd $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/ && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so.3 && ln -sf libpcre2-posix.so.3.0.5 libpcre2-posix.so
  endif
 else
 	install -D $(PCRE_TARGET)/staged/usr/lib/libpcre.so.1.2.13 $(INSTALLDIR)/$(PCRE_TARGET)/usr/lib/libpcre.so.1.2.13
@@ -2483,9 +2483,9 @@ libxml2: libxml2/stamp-h1
 	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.12.7 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.7
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.12.7
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.12.7 libxml2.so.2 && ln -sf libxml2.so.2.12.7 libxml2.so
+	install -D libxml2/.libs/libxml2.so.2.13.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.2
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.2
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.2 libxml2.so.2 && ln -sf libxml2.so.2.13.2 libxml2.so
 
 libxml2-clean:
 	-@$(MAKE) -C libxml2 clean
