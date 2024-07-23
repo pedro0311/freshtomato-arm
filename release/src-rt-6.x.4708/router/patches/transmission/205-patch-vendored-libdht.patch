@@ -1,0 +1,11 @@
+--- transmission/third-party/dht/dht.c
++++ transmission/third-party/dht/dht.c
+@@ -2706,7 +2706,7 @@ send_closest_nodes(const struct sockaddr
+     int numnodes = 0, numnodes6 = 0;
+     struct bucket *b;
+ 
+-    if(want < 0)
++    if(want <= 0)
+         want = sa->sa_family == AF_INET ? WANT4 : WANT6;
+ 
+     if((want & WANT4)) {
