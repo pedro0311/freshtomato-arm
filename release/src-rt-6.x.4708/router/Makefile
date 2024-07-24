@@ -247,61 +247,41 @@ endif
 #
 
 
+obj-y				+= $(if $(TCONFIG_BCM7),libbcm,lzma-loader) busybox shared nvram$(BCMEX) $(if $(TCONFIG_BCMARM),eapd$(BCMEX)/linux,et) \
+				   libbcmcrypto wlconf$(BCMEX) $(if $(TCONFIG_BCMARM),nas$(BCMEX)) prebuilt
+obj-$(TCONFIG_EMF)		+= emf$(BCMEX) igs$(BCMEX)
+obj-$(TCONFIG_DPSTA)		+= dpsta
+obj-$(TCONFIG_DHDAP)		+= dhd $(if $(TCONFIG_BCM714),,$(if $(TCONFIG_BCM7),pciefd))
+obj-$(TCONFIG_DPSTA)		+= dpsta
+obj-$(TCONFIG_DHDAP)		+= $(if $(TCONFIG_BCM714),dhd$(BCMEX),dhd) $(if $(TCONFIG_BCM714),,$(if $(TCONFIG_BCM7),pciefd))
+
 ifeq ($(TCONFIG_BCMARM),y)
- obj-y += libbcm
-else
- obj-y += lzma-loader
+ ifeq ($(CONFIG_BCMWL6),y)
+  ifeq ($(TCONFIG_TUXERA),y)
+   obj-y			+= tuxera
+  else
+   obj-$(TCONFIG_NTFS)		+= $(if $(TCONFIG_UFSDA),ufsd-asus)
+  endif
+ endif
 endif
 
-obj-y += busybox
-obj-y += shared
-obj-y += nvram$(BCMEX)
-obj-$(TCONFIG_BCMARM) += eapd$(BCMEX)/linux
-ifneq ($(TCONFIG_BCMARM),y)
- obj-y += et
-endif
-obj-y += libbcmcrypto
-obj-y += wlconf$(BCMEX)
-obj-$(TCONFIG_BCMARM) += nas$(BCMEX)
-obj-y += prebuilt
-obj-$(TCONFIG_EMF) += emf$(BCMEX)
-obj-$(TCONFIG_EMF) += igs$(BCMEX)
-ifeq ($(TCONFIG_BCM714),y)
-obj-$(TCONFIG_DPSTA) += dpsta$(BCMEX)
-obj-$(TCONFIG_DHDAP) += dhd$(BCMEX)
+ifeq ($(CONFIG_BCMWL6),y)
+ obj-$(TCONFIG_NTFS)		+= $(if $(TCONFIG_UFSD),ufsd,ntfs-3g)
 else
-obj-$(TCONFIG_DPSTA) += dpsta
-obj-$(TCONFIG_DHDAP) += dhd $(if $(TCONFIG_BCM7),pciefd)
-endif # TCONFIG_BCM714
-obj-$(TCONFIG_PROXY) += igmpproxy
-obj-y += rc
-obj-y += rom
-obj-y += others
-obj-y += www
-obj-y += bridge
-obj-y += etc
-obj-y += pppd
-obj-y += rp-pppoe
-obj-y += utils$(BCMEX)
-obj-y += cstats
-obj-y += rstats
-obj-$(TCONFIG_PROXY) += udpxy
-obj-y += hotplug2
-obj-y += udevtrigger
-obj-y += libusb10
-obj-y += usbmodeswitch
-obj-$(TCONFIG_BCMARM) += libmnl
-obj-y += $(IPSET_TARGET)
-obj-$(TCONFIG_BCMARM) += taskset
-obj-$(TCONFIG_IPERF) += iperf
-obj-$(TCONFIG_BCMBSD) += bsd
-ifeq ($(TCONFIG_HAVEGED),y)
- obj-y += haveged
+ obj-$(TCONFIG_NTFS)		+= ntfs-3g
 endif
+
+obj-$(TCONFIG_BCMARM)		+= taskset
+obj-y				+= rc wanuptime rom others www bridge etc pppd rp-pppoe utils$(BCMEX) cstats rstats hotplug2 udevtrigger libusb10 usbmodeswitch
+obj-y				+= $(if $(TCONFIG_BCMARM),libmnl) $(IPSET_TARGET)
+obj-$(TCONFIG_PROXY)		+= igmpproxy udpxy
+obj-$(TCONFIG_IPERF)		+= iperf
+obj-$(TCONFIG_BCMBSD)		+= bsd
+obj-$(TCONFIG_HAVEGED)		+= haveged
 
 ifneq ($(TCONFIG_HTTPS),)
  ifeq ($(TCONFIG_WOLFSSL),y)
-  obj-y += wolfssl
+  export SSL_TARGET = wolfssl
  else
   ifeq ($(TCONFIG_OPENSSL30),y)
    export OPENSSLDIR = openssl-3.0
@@ -312,200 +292,62 @@ ifneq ($(TCONFIG_HTTPS),)
     export OPENSSLDIR = openssl
    endif
   endif
-  obj-y += $(OPENSSLDIR)
+  export SSL_TARGET = $(OPENSSLDIR)
  endif
+ obj-y				+= $(SSL_TARGET)
 else
- obj-y += cyassl
+ obj-y				+= cyassl
 endif
-
-DNSSEC_NETTLE :=
-ifeq ($(TCONFIG_DNSSEC),y)
- ifneq ($(TCONFIG_HTTPS),)
-  obj-y += gmp
-  obj-y += nettle
-  DNSSEC_NETTLE := y
- endif
-endif
-
-obj-y += dnsmasq
-obj-y += mssl
-obj-y += httpd
-obj-y += wanuptime
-obj-$(TCONFIG_DNSCRYPT) += zlib
-obj-$(TCONFIG_DNSCRYPT) += libsodium
-obj-$(TCONFIG_DNSCRYPT) += dnscrypt
-obj-$(TCONFIG_SNMP) += snmp
-obj-$(TCONFIG_RAID) += mdadm
-obj-$(TCONFIG_NFS) += e2fsprogs
-obj-$(TCONFIG_NFS) += zlib
-obj-$(TCONFIG_NFS) += libevent
-obj-$(TCONFIG_NFS) += portmap
-obj-$(TCONFIG_NFS) += libnfsidmap
-obj-$(TCONFIG_NFS) += nfs-utils
-ifeq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_NOCAT) += zlib
- obj-$(TCONFIG_NOCAT) += libffi
- obj-$(TCONFIG_NOCAT) += libiconv
- obj-$(TCONFIG_NOCAT) += gettext-tiny
- obj-$(TCONFIG_NOCAT) += $(PCRE_TARGET)
- obj-$(TCONFIG_NOCAT) += glib2
-else
- obj-$(TCONFIG_NOCAT) += glib
-endif
-obj-$(TCONFIG_NOCAT) += nocat
-obj-$(TCONFIG_USB) += e2fsprogs
-obj-$(TCONFIG_USB) += p910nd
-obj-$(TCONFIG_USB) += comgt
-obj-$(TCONFIG_USB) += libjson-c
-obj-$(TCONFIG_USB) += libubox
-obj-$(TCONFIG_USB) += uqmi
-obj-$(TCONFIG_USB) += sd-idle
-obj-$(TCONFIG_UPS) += apcupsd
-ifneq ($(TCONFIG_BCMARM)$(TCONFIG_NGINX),)
- obj-$(TCONFIG_SAMBASRV) += libiconv
-endif
-obj-$(TCONFIG_SAMBASRV) += zlib
-obj-$(TCONFIG_SAMBASRV) += samba3
-obj-$(TCONFIG_SAMBASRV) += wsdd2
-
-ifeq ($(TCONFIG_BCMARM),y)
- ifeq ($(CONFIG_BCMWL6),y)
-  ifeq ($(TCONFIG_TUXERA),y)
-   obj-y += tuxera
-  else
-   ifeq ($(TCONFIG_UFSDA),y)
-    obj-$(TCONFIG_NTFS) += ufsd-asus
-   endif
-  endif
- endif
-endif
-
-ifeq ($(CONFIG_BCMWL6),y)
- ifeq ($(TCONFIG_UFSD),y)
-  obj-$(TCONFIG_NTFS) += ufsd
- else
-  obj-$(TCONFIG_NTFS) += ntfs-3g
- endif
-else
- obj-$(TCONFIG_NTFS) += ntfs-3g
-endif
-
-obj-$(TCONFIG_EBTABLES) += ebtables
-obj-$(TCONFIG_IPV6) += dhcpv6
-
-obj-$(TCONFIG_BBT) += zlib
-obj-$(TCONFIG_BBT) += libevent
-obj-$(TCONFIG_BBT) += $(OPENSSLDIR)
-obj-$(TCONFIG_BBT) += libcurl
-obj-$(TCONFIG_BBT) += transmission
-obj-$(TCONFIG_MEDIA_SERVER) += zlib
-obj-$(TCONFIG_MEDIA_SERVER) += sqlite
-ifeq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_MEDIA_SERVER) += libiconv
-endif
-obj-$(TCONFIG_MEDIA_SERVER) += libogg
-obj-$(TCONFIG_MEDIA_SERVER) += flac
-obj-$(TCONFIG_MEDIA_SERVER) += libjpeg-turbo
-obj-$(TCONFIG_MEDIA_SERVER) += libexif
-obj-$(TCONFIG_MEDIA_SERVER) += libid3tag
-obj-$(TCONFIG_MEDIA_SERVER) += libvorbis
-obj-$(TCONFIG_MEDIA_SERVER) += ffmpeg
-obj-$(TCONFIG_MEDIA_SERVER) += minidlna
-obj-$(TCONFIG_CONNTRACK_TOOL) += libnfnetlink
-obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_conntrack
-obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_log
-obj-$(TCONFIG_CONNTRACK_TOOL) += libnetfilter_queue
-obj-$(TCONFIG_CONNTRACK_TOOL) += conntrack-tools
-obj-y += $(IPTABLES_TARGET)
-obj-y += $(IPROUTE_TARGET)
-obj-$(TCONFIG_L2TP) += xl2tpd
-obj-$(TCONFIG_PPTP) += accel-pptp
-obj-$(TCONFIG_PPTPD) += pptpd
-obj-$(TCONFIG_SSH) += dropbear
-obj-$(TCONFIG_ZEBRA) += zebra
 
 ifeq ($(TCONFIG_OPENVPN),y)
- obj-y += $(OPENSSLDIR)
+ obj-y				+= $(SSL_TARGET)
  ifneq ($(TCONFIG_OPTIMIZE_SIZE_MORE),y)
-  obj-y += lz4
+  obj-y				+= lz4
   export INSTALL_LZ4 := y
  endif
  ifeq ($(TCONFIG_BCMARM),y)
-  obj-y += libcap-ng
-  obj-y += openvpn
+  obj-y				+= libcap-ng openvpn
  else
-  obj-y += openvpn-2.5
+  obj-y				+= openvpn-2.5
  endif
- obj-y += openvpn_plugin_auth_nvram
+ obj-y				+= openvpn_plugin_auth_nvram
 endif
 
-obj-$(TCONFIG_TOR) += zlib
-obj-$(TCONFIG_TOR) += libevent
-obj-$(TCONFIG_TOR) += $(OPENSSLDIR)
-obj-$(TCONFIG_TOR) += tor
-obj-$(TCONFIG_STUBBY) += $(OPENSSLDIR)
-obj-$(TCONFIG_STUBBY) += libyaml
-obj-$(TCONFIG_STUBBY) += getdns
-obj-$(TCONFIG_FTP_SSL) += $(OPENSSLDIR)
-obj-$(TCONFIG_FTP) += vsftpd
-obj-$(TCONFIG_TINC) += zlib
-obj-$(TCONFIG_TINC) += $(OPENSSLDIR)
-obj-$(TCONFIG_TINC) += lzo
-obj-$(TCONFIG_TINC) += lz4
-obj-$(TCONFIG_TINC) += tinc
-obj-$(TCONFIG_NGINX) += zlib
-obj-$(TCONFIG_NGINX) += sqlite
-obj-$(TCONFIG_NGINX) += $(OPENSSLDIR)
-obj-$(TCONFIG_NGINX) += libcurl
-ifneq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_NGINX) += spawn-fcgi
-endif
-obj-$(TCONFIG_NGINX) += $(PCRE_TARGET)
-obj-$(TCONFIG_NGINX) += libncurses
-ifneq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_NGINX) += libatomic_ops
-endif
-obj-$(TCONFIG_NGINX) += libiconv
-obj-$(TCONFIG_NGINX) += libxml2
-obj-$(TCONFIG_NGINX) += libpng
-obj-$(TCONFIG_NGINX) += libjpeg-turbo
-obj-$(TCONFIG_NGINX) += mysql
-obj-$(TCONFIG_NGINX) += libzip
-ifeq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_NGINX) += libffi
- obj-$(TCONFIG_NGINX) += gettext-tiny
- obj-$(TCONFIG_NGINX) += glib2
-endif
-obj-$(TCONFIG_NGINX) += $(PHP_TARGET)
-obj-$(TCONFIG_NGINX) += nginx
-ifeq ($(TCONFIG_BCMARM),y)
- obj-$(TCONFIG_HFS) += $(OPENSSLDIR)
- obj-$(TCONFIG_HFS) += diskdev_cmds-332.25
-endif
-obj-$(TCONFIG_SDHC) += mmc
-obj-$(TCONFIG_NANO) += libncurses
-obj-$(TCONFIG_NANO) += nano
-obj-y += miniupnpd
-obj-$(TCONFIG_BCMARM) += zlib
-obj-$(TCONFIG_BCMARM) += libcurl
-obj-y += mdu
-obj-$(TCONFIG_WIREGUARD) += wireguard-tools
-obj-$(TCONFIG_MDNS) += libdaemon
-obj-$(TCONFIG_MDNS) += expat
-obj-$(TCONFIG_MDNS) += avahi
-obj-$(TCONFIG_ZFS) += zlib
-obj-$(TCONFIG_ZFS) += $(OPENSSLDIR)
-obj-$(TCONFIG_ZFS) += libiconv
-obj-$(TCONFIG_ZFS) += gettext-tiny
-obj-$(TCONFIG_ZFS) += util-linux
-obj-$(TCONFIG_ZFS) += zfs
-obj-$(TCONFIG_IRQBALANCE) += zlib
-obj-$(TCONFIG_IRQBALANCE) += libffi
-obj-$(TCONFIG_IRQBALANCE) += libiconv
-obj-$(TCONFIG_IRQBALANCE) += gettext-tiny
-obj-$(TCONFIG_IRQBALANCE) += $(PCRE_TARGET)
-obj-$(TCONFIG_IRQBALANCE) += glib2
-obj-$(TCONFIG_IRQBALANCE) += irqbalance
+obj-y				+= $(SSL_TARGET) mssl httpd
+obj-y				+= $(if $(TCONFIG_BCMARM),zlib libcurl) mdu
+obj-y				+= $(if $(TCONFIG_DNSSEC),$(if $(TCONFIG_HTTPS),gmp nettle)) dnsmasq
+obj-$(TCONFIG_SSH)		+= dropbear
+obj-$(TCONFIG_DNSCRYPT)		+= zlib libsodium dnscrypt
+obj-$(TCONFIG_STUBBY)		+= $(SSL_TARGET) libyaml getdns
+obj-$(TCONFIG_FTP)		+= $(if $(TCONFIG_FTP_SSL),$(SSL_TARGET)) vsftpd
+obj-$(TCONFIG_SDHC)		+= mmc
+obj-$(TCONFIG_L2TP)		+= xl2tpd
+obj-$(TCONFIG_PPTP)		+= accel-pptp
+obj-$(TCONFIG_PPTPD)		+= pptpd
+obj-$(TCONFIG_RAID)		+= mdadm
+obj-$(TCONFIG_NFS)		+= e2fsprogs zlib libevent portmap libnfsidmap nfs-utils
+obj-$(TCONFIG_USB)		+= e2fsprogs p910nd comgt libjson-c libubox uqmi sd-idle apcupsd
+obj-$(TCONFIG_NOCAT)		+= $(if $(TCONFIG_BCMARM),zlib libffi libiconv gettext-tiny $(PCRE_TARGET) glib2,glib) nocat
+obj-$(TCONFIG_SAMBASRV)		+= $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),libiconv,) zlib samba3 wsdd2
+obj-$(TCONFIG_IPV6)		+= dhcpv6
+obj-$(TCONFIG_BBT)		+= zlib libevent libcurl transmission
+obj-$(TCONFIG_MEDIA_SERVER)	+= zlib sqlite $(if $(TCONFIG_BCMARM),libiconv) libogg flac libjpeg-turbo libexif libid3tag libvorbis ffmpeg minidlna
+obj-$(TCONFIG_CONNTRACK_TOOL)	+= libmnl libnfnetlink libnetfilter_conntrack libnetfilter_log libnetfilter_queue conntrack-tools
+obj-y				+= $(IPTABLES_TARGET) $(IPROUTE_TARGET) # iptables <- conntrack-tools for ARM!
+obj-y				+= $(IPTABLES_TARGET) miniupnpd # iptables <- conntrack-tools for ARM!
+obj-$(TCONFIG_EBTABLES)		+= ebtables
+obj-$(TCONFIG_NANO)		+= libncurses nano
+obj-$(TCONFIG_ZEBRA)		+= zebra
+obj-$(TCONFIG_SNMP)		+= snmp
+obj-$(TCONFIG_WIREGUARD)	+= wireguard-tools
+obj-$(TCONFIG_HFS)		+= $(if $(TCONFIG_BCMARM),$(SSL_TARGET) diskdev_cmds-332.25)
+obj-$(TCONFIG_TOR)		+= zlib libevent $(SSL_TARGET) tor
+obj-$(TCONFIG_TINC)		+= zlib $(SSL_TARGET) lzo lz4 tinc
+obj-$(TCONFIG_NGINX)		+= zlib $(SSL_TARGET) sqlite libcurl $(if $(TCONFIG_BCMARM),,spawn-fcgi) $(PCRE_TARGET) libncurses $(if $(TCONFIG_BCMARM),,libatomic_ops) \
+				   libiconv libxml2 libpng libjpeg-turbo mysql libzip $(if $(TCONFIG_BCMARM),libffi gettext-tiny glib2) $(PHP_TARGET) nginx
+obj-$(TCONFIG_MDNS)		+= libdaemon expat avahi
+obj-$(TCONFIG_ZFS)		+= zlib $(SSL_TARGET) libiconv gettext-tiny util-linux zfs
+obj-$(TCONFIG_IRQBALANCE)	+= zlib libffi libiconv gettext-tiny $(PCRE_TARGET) glib2 irqbalance
 
 
 #
@@ -517,20 +359,20 @@ obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
 
 ifeq ($(TCONFIG_BCMARM),y)
- LINUX_VERSION=2_6_36
- LINUX_KERNEL=2.6.36
+ LINUX_VERSION = 2_6_36
+ LINUX_KERNEL = 2.6.36
  export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
  ifeq ($(TCONFIG_BCM714),y)
-  export BCMSRC=src-rt-7.14.114.x/src
+  export BCMSRC = src-rt-7.14.114.x/src
 
   ifeq ($(TCONFIG_DHDAP),y)
-   export CONFIG_DHDAP=y
-   export CFLAGS += -D__CONFIG_DHDAP__
-   export SRCBASE_DHD := $(SRCBASE)/../dhd/src
-   export SRCBASE_DHD24 := $(SRCBASE)/../dhd24/src
-   export SRCBASE_FW := $(SRCBASE)/../4365/src
-   export SRCBASE_SYS := $(SRCBASE_DHD)
+   export CONFIG_DHDAP		 = y
+   export CFLAGS		+= -D__CONFIG_DHDAP__
+   export SRCBASE_DHD		:= $(SRCBASE)/../dhd/src
+   export SRCBASE_DHD24		:= $(SRCBASE)/../dhd24/src
+   export SRCBASE_FW		:= $(SRCBASE)/../4365/src
+   export SRCBASE_SYS		:= $(SRCBASE_DHD)
    include Makefile.fw
   endif # TCONFIG_DHDAP
 
@@ -539,25 +381,25 @@ ifeq ($(TCONFIG_BCMARM),y)
   endif
 
  else ifeq ($(TCONFIG_BCM7),y)
-  export BCMSRC=src-rt-7.x.main/src
+  export BCMSRC = src-rt-7.x.main/src
 
   ifeq ($(TCONFIG_DHDAP),y)
-   export CONFIG_DHDAP=y
-   export CFLAGS += -D__CONFIG_DHDAP__
+   export CONFIG_DHDAP		 = y
+   export CFLAGS		+= -D__CONFIG_DHDAP__
    export DHDAP_USE_SEPARATE_CHECKOUTS := 1
-   export SRCBASE_DHD := $(SRCBASE)/router
-   export SRCBASE_FW  := $(SRCBASE)/../../43602/src
-   PCIEFD_TARGETS_LIST	:= 43602a1-roml
+   export SRCBASE_DHD		:= $(SRCBASE)/router
+   export SRCBASE_FW		:= $(SRCBASE)/../../43602/src
+   PCIEFD_TARGETS_LIST		:= 43602a1-roml
 
    ifeq ($(WLTEST),1)
-    PCIEFD_TARGET_NAME	:= pcie-ag-splitrx-fdap-mbss-mfgtest-seqcmds-phydbg-txbf-pktctx-amsdutx-ampduretry-chkd2hdma
+    PCIEFD_TARGET_NAME := pcie-ag-splitrx-fdap-mbss-mfgtest-seqcmds-phydbg-txbf-pktctx-amsdutx-ampduretry-chkd2hdma
    else
-    PCIEFD_TARGET_NAME	:= pcie-ag-splitrx-fdap-mbss-mfp-wl11k-wl11u-txbf-pktctx-amsdutx-ampduretry-chkd2hdma-proptxstatus
+    PCIEFD_TARGET_NAME := pcie-ag-splitrx-fdap-mbss-mfp-wl11k-wl11u-txbf-pktctx-amsdutx-ampduretry-chkd2hdma-proptxstatus
    endif
 
-   PCIEFD_EMBED_HEADER_TEMPLATE := $(SRCBASE_DHD)/shared/rtecdc_router.h.in
-   PCIEFD_EMBED_HEADER	:= $(SRCBASE_DHD)/shared/rtecdc_router.h
-   obj-pciefd		:= $(patsubst %,%-obj,$(PCIEFD_TARGETS_LIST))
+   PCIEFD_EMBED_HEADER_TEMPLATE	:= $(SRCBASE_DHD)/shared/rtecdc_router.h.in
+   PCIEFD_EMBED_HEADER		:= $(SRCBASE_DHD)/shared/rtecdc_router.h
+   obj-pciefd			:= $(patsubst %,%-obj,$(PCIEFD_TARGETS_LIST))
    install-pciefd		:= $(patsubst %,%-install,$(PCIEFD_TARGETS_LIST))
   endif # TCONFIG_DHDAP
 
@@ -566,7 +408,7 @@ ifeq ($(TCONFIG_BCMARM),y)
   endif
 
  else # SDK6
-  export BCMSRC=src-rt-6.x.4708
+  export BCMSRC = src-rt-6.x.4708
  endif # TCONFIG_BCM714
 
  WLAN_ComponentsInUse := bcmwifi clm ppr olpc
@@ -600,7 +442,7 @@ ifeq ($(TCONFIG_BCMARM),y)
 
  export MKSYM :=
 
- obj-prelibs =$(filter nvram$(BCMEX) libbcmcrypto shared netconf libupnp libz libbcm, $(obj-y))
+ obj-prelibs = $(filter nvram$(BCMEX) libbcmcrypto shared netconf libupnp libz libbcm, $(obj-y))
  obj-postlibs := $(filter-out $(obj-prelibs), $(obj-y))
 
  ifeq ($(TCONFIG_BCMWL6),y)
@@ -1487,12 +1329,12 @@ dnsmasq:
 	$(MAKE) -C dnsmasq $(PARALLEL_BUILD) \
 	COPTS="-DHAVE_BROKEN_RTC -DHAVE_TOMATO -DNO_ID -DNO_GMP -DUSE_IPSET $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),-DNO_LOOP,) $(if $(TCONFIG_BCMARM),,-DNO_INOTIFY -DNO_DUMPFILE) \
 		$(if $(TCONFIG_USB_EXTRAS),,-DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_INOTIFY) \
-		$(if $(DNSSEC_NETTLE),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST,) \
+		$(if $(TCONFIG_DNSSEC),$(if $(TCONFIG_HTTPS),-I$(TOP)/nettle/include -I$(TOP)/gmp -DHAVE_DNSSEC -DHAVE_DNSSEC_STATIC -DNO_GOST)) \
 		$(if $(TCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6)" \
 	CFLAGS="-Os -Wall -ffunction-sections -fdata-sections $(EXTRACFLAGS) -std=gnu99 $(OPTSIZE_MORE_FLAG)" \
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections \
-		$(if $(DNSSEC_NETTLE),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs,)" \
-	$(if $(DNSSEC_NETTLE),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig",)
+		$(if $(TCONFIG_DNSSEC),$(if $(TCONFIG_HTTPS),-L$(TOP)/nettle/lib -L$(TOP)/gmp/.libs))" \
+	$(if $(TCONFIG_DNSSEC),$(if $(TCONFIG_HTTPS),PKG_CONFIG_PATH="$(TOP)/nettle/lib/pkgconfig"))
 
 dnsmasq-install:
 	install -D dnsmasq/src/dnsmasq $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
