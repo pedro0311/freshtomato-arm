@@ -27,6 +27,7 @@
  */
 
 #define _GNU_SOURCE
+#define VERSION		"1.5.0"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,30 +38,26 @@
 #include <string.h>
 #include <ctype.h>
 
+
 static void show_usage(const char *cmd)
 {
-	fprintf(stderr, "taskset version " "VERSION" "\n");
-	fprintf(stderr, "usage: %s [options] [mask | cpu-list] [pid |"\
-		" cmd [args...]]\n", cmd);
-	fprintf(stderr, "set or get the affinity of a process\n\n");
-	fprintf(stderr, "  -p, --pid                  "
-		"operate on existing given pid\n");
-        fprintf(stderr, "  -c, --cpu-list             "\
-		"display and specify cpus in list format\n");
-	fprintf(stderr, "  -h, --help                 display this help\n");
-	fprintf(stderr, "  -v, --version              "\
-		"output version information\n\n");
-	fprintf(stderr, "The default behavior is to run a new command:\n");
-	fprintf(stderr, "  %s 03 sshd -b 1024\n", cmd);
-	fprintf(stderr, "You can retrieve the mask of an existing task:\n");
-	fprintf(stderr, "  %s -p 700\n", cmd);
-	fprintf(stderr, "Or set it:\n");
-	fprintf(stderr, "  %s -p 03 700\n", cmd);
-	fprintf(stderr, "List format uses a comma-separated list instead"\
-			" of a mask:\n");
-	fprintf(stderr, "  %s -pc 0,3,7-11 700\n", cmd);
-	fprintf(stderr, "Ranges in list format can take a stride argument:\n");
-	fprintf(stderr, "  e.g. 0-31:2 is equivalent to mask 0x55555555\n\n");
+	fprintf(stderr, "taskset version "VERSION"\n"
+	                "usage: %s [options] [mask | cpu-list] [pid | cmd [args...]]\n"
+	                "set or get the affinity of a process\n\n"
+	                "  -p, --pid                  operate on existing given pid\n"
+	                "  -c, --cpu-list             display and specify cpus in list format\n"
+	                "  -h, --help                 display this help\n"
+	                "  -v, --version              output version information\n\n"
+	                "The default behavior is to run a new command:\n"
+	                "  %s 03 sshd -b 1024\n"
+	                "You can retrieve the mask of an existing task:\n"
+	                "  %s -p 700\n"
+	                "Or set it:\n"
+	                "  %s -p 03 700\n"
+	                "List format uses a comma-separated list instead of a mask:\n"
+	                "  %s -pc 0,3,7-11 700\n"
+	                "Ranges in list format can take a stride argument:\n"
+	                "  e.g. 0-31:2 is equivalent to mask 0x55555555\n\n", cmd, cmd, cmd, cmd, cmd);
 }
 
 static inline int val_to_char(int v)
@@ -94,6 +91,7 @@ static char * cpuset_to_str(cpu_set_t *mask, char *str)
 		*ptr++ = val_to_char(val);
 	}
 	*ptr = 0;
+
 	return ret ? ret : ptr - 1;
 }
 
@@ -183,6 +181,7 @@ static const char *nexttoken(const char *q,  int sep)
 		q = strchr(q, sep);
 	if (q)
 		q++;
+
 	return q;
 }
 
@@ -218,7 +217,7 @@ static int cstr_to_cpuset(cpu_set_t *mask, const char* str)
 		if (!(a <= b))
 			return 1;
 		while (a <= b) {
-			CPU_SET(a, mask);			
+			CPU_SET(a, mask);
 			a += s;
 		}
 	}
@@ -254,7 +253,7 @@ int main(int argc, char *argv[])
 			c_opt = 1;
 			break;
 		case 'V':
-			printf("taskset version " "VERSION" "\n");
+			printf("taskset version "VERSION"\n");
 			return 0;
 		case 'h':
 			ret = 0;

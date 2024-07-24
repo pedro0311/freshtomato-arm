@@ -18,24 +18,30 @@
 # $Id: $
 #
 
-ver = "1.5.0"
 
-CFLAGS	+= -I. -I$(TOP)/shared -I$(SRCBASE)/include -Wall
-#CFLAGS	+= -g -DDEBUG
-CFLAGS	+= -s -O2
+include ../common.mak
 
+CFLAGS  = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 
-OBJS := taskset.o
+OBJS = taskset.o
 
 all: taskset
 
-clean:
-	rm -f *.o taskset
-
-install: all
-	install -d $(INSTALLDIR)/usr/bin
-	install taskset $(INSTALLDIR)/usr/bin
-	$(STRIP) $(INSTALLDIR)/usr/bin/taskset
+%.o: %.c
+	@echo " [taskset] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
 
 taskset: $(OBJS)
-	$(CC) -DVERSION=\"$(ver)\" -o $@ $^
+	@echo " [taskset] CC $@"
+	@$(CC) $(CFLAGS) -o $@ $^
+	$(SIZECHECK)
+	$(CPTMP)
+
+install: all
+	@echo " [taskset] Installing as $(INSTALLDIR)/usr/bin/taskset"
+	@install -d $(INSTALLDIR)/usr/bin
+	@install taskset $(INSTALLDIR)/usr/bin
+	@$(STRIP) $(INSTALLDIR)/usr/bin/taskset
+
+clean:
+	rm -f taskset *.o
