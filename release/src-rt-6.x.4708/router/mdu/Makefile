@@ -35,8 +35,12 @@ OBJS = mdu.o
 
 all: mdu
 
+%.o: %.c
+	@echo " [mdu] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 mdu: $(OBJS)
-	@echo " [mdu] CC -o $@"
+	@echo " [mdu] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	@$(SIZECHECK)
 	@$(CPTMP)

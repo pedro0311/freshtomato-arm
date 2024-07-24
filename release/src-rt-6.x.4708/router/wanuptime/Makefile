@@ -9,8 +9,12 @@ OBJS = wanuptime.o
 
 all: wanuptime
 
+%.o: %.c
+	@echo " [wanuptime] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 wanuptime: $(OBJS)
-	@echo " [wanuptime] CC -o $@"
+	@echo " [wanuptime] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)
 	$(CPTMP)

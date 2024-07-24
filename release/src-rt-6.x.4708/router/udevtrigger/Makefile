@@ -1,32 +1,26 @@
-CFLAGS	= -Os -Wall $(EXTRACFLAGS)
+include ../common.mak
+
+CFLAGS = -Os -Wall $(EXTRACFLAGS) -Wsign-compare
 
 OBJS = udevtrigger.o
 
 all: udevtrigger
 
-udevtrigger: $(OBJS)
-	@echo " [udevtrigger] CC -o $@"
-	@$(CC) $(LDFLAGS) -o $@ $(OBJS)
+%.o: %.c
+	@echo " [udevtrigger] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
 
+udevtrigger: $(OBJS)
+	@echo " [udevtrigger] CC $@"
+	@$(CC) $(CFLAGS) -o $@ $^
 	$(SIZECHECK)
 	$(CPTMP)
 
 install: all
-	install -D udevtrigger $(INSTALLDIR)/sbin/udevtrigger
-	$(STRIP) $(INSTALLDIR)/sbin/udevtrigger
-	chmod 0500 $(INSTALLDIR)/sbin/udevtrigger
+	@echo " [udevtrigger] Installing as $(INSTALLDIR)/sbin/udevtrigger"
+	@install -D udevtrigger $(INSTALLDIR)/sbin/udevtrigger
+	@$(STRIP) $(INSTALLDIR)/sbin/udevtrigger
+	@chmod 0500 $(INSTALLDIR)/sbin/udevtrigger
 
 clean:
-	rm -f udevtrigger .*.depend *.o
-
-%.o: %.c .%.depend
-	@echo " [udevtrigger] CC $@"
-	@$(CC) $(CFLAGS) -c $<
-
-.depend: $(OBJS:%.o=%.c)
-	@$(CC) $(CFLAGS) -M $^ > .depend
-
-.%.depend: %.c
-	@$(CC) $(CFLAGS) -M $< > $@
-
--include $(OBJS:%.o=.%.depend)
+	rm -f udevtrigger *.o

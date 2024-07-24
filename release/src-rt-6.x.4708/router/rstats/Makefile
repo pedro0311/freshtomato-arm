@@ -13,8 +13,12 @@ OBJS = rstats.o
 
 all: rstats
 
+%.o: %.c
+	@echo " [rstats] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 rstats: $(OBJS)
-	@echo " [rstats] CC -o $@"
+	@echo " [rstats] CC $@"
 	@$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	$(SIZECHECK)
 	$(CPTMP)

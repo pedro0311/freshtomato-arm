@@ -21,6 +21,10 @@ endif
 
 all: libnvram.so nvram
 
+%.o: %.c
+	@echo " [nvram$(BCMEX)] CC $@"
+	@$(CC) $(CFLAGS) -o $@ -c $<
+
 libnvram.so: nvram_linux.o $(if $(TCONFIG_BCMARM),,nvram_convert.o)
 	@echo " [nvram$(BCMEX)] LD $@"
 	@$(LD) -shared -o $@ $^
