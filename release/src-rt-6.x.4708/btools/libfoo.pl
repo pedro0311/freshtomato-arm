@@ -689,7 +689,7 @@ genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a", "${stripshared}");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a", "${stripshared}");
 genSO("${root}/usr/lib/libpng16.so.16.43.0", "${router}/libpng/.libs/libpng16.a", "${stripshared}", "-L${router}/zlib");
-genSO("${root}/usr/lib/libxml2.so.2.13.2", "${router}/libxml2/.libs/libxml2.a", "${stripshared}", "-L${router}/zlib");
+genSO("${root}/usr/lib/libxml2.so.2.13.2", "${router}/libxml2/staged/usr/lib/libxml2.a", "${stripshared}", "-L${router}/zlib");
 genSO("${root}/usr/lib/libpcre.so.1.2.13", "${router}/pcre/.libs/libpcre.a", "${stripshared}");
 genSO("${root}/usr/lib/libpcre2-8.so.0.13.0", "${router}/pcre2/staged/usr/lib/libpcre2-8.a", "${stripshared}");
 #genSO("${root}/usr/lib/libpcre2-posix.so.3.0.5", "${router}/pcre2/staged/usr/lib/libpcre2-posix.a", "${stripshared}"); # (deleted)

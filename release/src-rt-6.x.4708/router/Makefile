@@ -2344,27 +2344,118 @@ pcre2-clean:
 	@rm -rf pcre2/build
 	@rm -rf pcre2/staged
 
-libxml2/stamp-h1:
-	cd libxml2 && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		LDFLAGS="-L$(TOP)/zlib/staged/usr/lib -lz -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --without-python --enable-static --enable-shared --with-zlib="$(TOP)/zlib/staged/usr" \
-			--includedir="$(TOP)/libxml2/include" --without-lzma --disable-dependency-tracking
-	@touch $@
+libxml2/static/Makefile:
+	@rm -rf libxml2/static && mkdir -p libxml2/static
+	cd libxml2/static && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
+			-DBUILD_SHARED_LIBS=OFF \
+			-DHAVE_LIBHISTORY=OFF \
+			-DHAVE_LIBREADLINE=OFF \
+			-DLIBXML2_WITH_C14N=ON \
+			-DLIBXML2_WITH_CATALOG=OFF \
+			-DLIBXML2_WITH_DEBUG=OFF \
+			-DLIBXML2_WITH_FTP=OFF \
+			-DLIBXML2_WITH_HTML=ON \
+			-DLIBXML2_WITH_HTTP=OFF \
+			-DLIBXML2_WITH_ICONV=OFF \
+			-DLIBXML2_WITH_ICU=OFF \
+			-DLIBXML2_WITH_ISO8859X=OFF \
+			-DLIBXML2_WITH_LEGACY=OFF \
+			-DLIBXML2_WITH_LZMA=OFF \
+			-DLIBXML2_WITH_MODULES=OFF \
+			-DLIBXML2_WITH_OUTPUT=ON \
+			-DLIBXML2_WITH_PATTERN=ON \
+			-DLIBXML2_WITH_PROGRAMS=OFF \
+			-DLIBXML2_WITH_PUSH=ON \
+			-DLIBXML2_WITH_PYTHON=OFF \
+			-DLIBXML2_WITH_READER=ON \
+			-DLIBXML2_WITH_REGEXPS=ON \
+			-DLIBXML2_WITH_SAX1=ON \
+			-DLIBXML2_WITH_SCHEMAS=ON \
+			-DLIBXML2_WITH_SCHEMATRON=OFF \
+			-DLIBXML2_WITH_TESTS=OFF \
+			-DLIBXML2_WITH_THREADS=ON \
+			-DLIBXML2_WITH_THREAD_ALLOC=OFF \
+			-DLIBXML2_WITH_TREE=ON \
+			-DLIBXML2_WITH_VALID=ON \
+			-DLIBXML2_WITH_WRITER=ON \
+			-DLIBXML2_WITH_XINCLUDE=ON \
+			-DLIBXML2_WITH_XPATH=ON \
+			-DLIBXML2_WITH_XPTR=ON \
+			-DLIBXML2_WITH_XPTR_LOCS=OFF \
+			-DLIBXML2_WITH_TLS=O$(if $(TCONFIG_BCMARM),N,FF) \
+			-DLIBXML2_WITH_ZLIB=ON \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
 
-libxml2: libxml2/stamp-h1
+libxml2/build/Makefile:
+	@rm -rf libxml2/build && mkdir -p libxml2/build
+	cd libxml2/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
+		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
+			-DCMAKE_INSTALL_PREFIX=/usr \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
+			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
+			-DBUILD_SHARED_LIBS=ON \
+			-DHAVE_LIBHISTORY=OFF \
+			-DHAVE_LIBREADLINE=OFF \
+			-DLIBXML2_WITH_C14N=ON \
+			-DLIBXML2_WITH_CATALOG=OFF \
+			-DLIBXML2_WITH_DEBUG=OFF \
+			-DLIBXML2_WITH_FTP=OFF \
+			-DLIBXML2_WITH_HTML=ON \
+			-DLIBXML2_WITH_HTTP=OFF \
+			-DLIBXML2_WITH_ICONV=OFF \
+			-DLIBXML2_WITH_ICU=OFF \
+			-DLIBXML2_WITH_ISO8859X=OFF \
+			-DLIBXML2_WITH_LEGACY=OFF \
+			-DLIBXML2_WITH_LZMA=OFF \
+			-DLIBXML2_WITH_MODULES=OFF \
+			-DLIBXML2_WITH_OUTPUT=ON \
+			-DLIBXML2_WITH_PATTERN=ON \
+			-DLIBXML2_WITH_PROGRAMS=OFF \
+			-DLIBXML2_WITH_PUSH=ON \
+			-DLIBXML2_WITH_PYTHON=OFF \
+			-DLIBXML2_WITH_READER=ON \
+			-DLIBXML2_WITH_REGEXPS=ON \
+			-DLIBXML2_WITH_SAX1=ON \
+			-DLIBXML2_WITH_SCHEMAS=ON \
+			-DLIBXML2_WITH_SCHEMATRON=OFF \
+			-DLIBXML2_WITH_TESTS=OFF \
+			-DLIBXML2_WITH_THREADS=ON \
+			-DLIBXML2_WITH_THREAD_ALLOC=OFF \
+			-DLIBXML2_WITH_TREE=ON \
+			-DLIBXML2_WITH_VALID=ON \
+			-DLIBXML2_WITH_WRITER=ON \
+			-DLIBXML2_WITH_XINCLUDE=ON \
+			-DLIBXML2_WITH_XPATH=ON \
+			-DLIBXML2_WITH_XPTR=ON \
+			-DLIBXML2_WITH_XPTR_LOCS=OFF \
+			-DLIBXML2_WITH_TLS=O$(if $(TCONFIG_BCMARM),N,FF) \
+			-DLIBXML2_WITH_ZLIB=ON \
+			-DZLIB_INCLUDE_DIR="$(TOP)/zlib/staged/usr/include" \
+			-DZLIB_LIBRARY="$(TOP)/zlib/staged/usr/lib/libz.so" \
+			..
+
+libxml2: libxml2/static/Makefile libxml2/build/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@ all $(PARALLEL_BUILD)
-	@$(MAKE) -C $@ DESTDIR=$(TOP)/libxml2/staged install
+	@$(MAKE) -C libxml2/static all $(PARALLEL_BUILD)
+	@$(MAKE) -C libxml2/build all $(PARALLEL_BUILD)
+	@$(MAKE) -C libxml2/static DESTDIR=$(TOP)/libxml2/staged install
+	@$(MAKE) -C libxml2/build DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/.libs/libxml2.so.2.13.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.2
+	install -D libxml2/staged/usr/lib/libxml2.so.2.13.2 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.2
 	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.2
 	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.2 libxml2.so.2 && ln -sf libxml2.so.2.13.2 libxml2.so
 
 libxml2-clean:
-	-@$(MAKE) -C libxml2 clean
-	@rm -f libxml2/stamp-h1
+	@rm -rf libxml2/build
 	@rm -rf libxml2/staged
 
 libpng/stamp-h1:
@@ -2437,10 +2528,10 @@ $(PHP_TARGET)/stamp-h1:
 	cd $(PHP_TARGET) && touch configure.ac && autoconf && \
 		PKG_CONFIG_LIBDIR="" \
 		PROF_FLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/staged/usr/include -I$(TOP)/libxml2/staged/usr/include/libxml2 -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/usr/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
 			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
-		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/include/libxml -I$(TOP)/libxml2/include -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
+		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED -I$(TOP)/zlib/staged/usr/include -I$(TOP)/libxml2/staged/usr/include -I$(TOP)/libxml2/staged/usr/include/libxml2 -I$(TOP)/libxml2/staged/usr/include/libxml2 -I$(TOP)/$(PCRE_TARGET)/staged/usr/include -I$(TOP)/libiconv/staged/usr/include \
 			-I$(TOP)/libpng/staged/usr/include -I$(TOP)/libjpeg-turbo/staged/use/include -I$(TOP)/sqlite/staged/usr/include -I$(TOP)/libzip/staged/usr/include \
 			$(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
 		CXXFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -DZIP_DISABLE_DEPRECATED $(if $(TCONFIG_BCMARM),-fno-builtin,) -ffunction-sections -fdata-sections" \
