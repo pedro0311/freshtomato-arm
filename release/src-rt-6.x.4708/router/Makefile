@@ -2455,6 +2455,7 @@ libxml2-install:
 	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.2 libxml2.so.2 && ln -sf libxml2.so.2.13.2 libxml2.so
 
 libxml2-clean:
+	@rm -rf libxml2/static
 	@rm -rf libxml2/build
 	@rm -rf libxml2/staged
 
