@@ -1,0 +1,14 @@
+--- ebtables/libebtc.c
++++ ebtables/libebtc.c
+@@ -38,6 +38,11 @@
+ #include <errno.h>
+ #include <libgen.h>
+ 
++#ifndef O_CLOEXEC
++#define O_CLOEXEC	02000000	/* set close_on_exec */
++#endif
++
++
+ static void decrease_chain_jumps(struct ebt_u_replace *replace);
+ static int iterate_entries(struct ebt_u_replace *replace, int type);
+ 
