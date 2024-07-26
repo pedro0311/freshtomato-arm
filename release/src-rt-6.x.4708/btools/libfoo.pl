@@ -9,11 +9,17 @@
 #
 
 
-$root = $ENV{"TARGETDIR"};
-$uclibc = $ENV{"TOOLCHAIN"};
-$router = $ENV{"SRCBASE"} . "/router";
-$openssldir = $ENV{"OPENSSLDIR"};
-$is_arm = $ENV{"CONFIG_BCMWL6A"};
+#use strict;
+#use warnings;
+
+
+my $root = $ENV{"TARGETDIR"};
+my $router = $ENV{"SRCBASE"} . "/router";
+my $openssldir = $ENV{"OPENSSLDIR"};
+my $is_arm = $ENV{"CONFIG_BCMWL6A"};
+my $uclibc_lib = $ENV{"TOOLCHAIN"} . "/lib";
+my $uclibc_bin = $ENV{"TOOLCHAIN"} . "/bin";
+my $stripshared;
 
 sub error
 {
@@ -53,7 +59,6 @@ sub load
 		return;
 	}
 
-
 	my $f;
 	my $base;
 	my $ok;
@@ -63,10 +68,10 @@ sub load
 	print LOG "\n\nreadelf $base:\n";
 
 	if ($is_arm eq "y") {
-		open($f, "arm-brcm-linux-uclibcgnueabi-readelf -WhsdD ${fname} 2>&1 |") || error("readelf - $!\n");
+		open($f, $uclibc_bin . "/arm-brcm-linux-uclibcgnueabi-readelf -WhsdD ${fname} 2>&1 |") || error("readelf - $!\n");
 	}
 	else {
-		open($f, "mipsel-linux-readelf -WhsdD ${fname} 2>&1 |") || error("readelf - $!\n");
+		open($f, $uclibc_bin . "/mipsel-linux-readelf -WhsdD ${fname} 2>&1 |") || error("readelf - $!\n");
 	}
 
 	while (<$f>) {
@@ -84,13 +89,13 @@ sub load
 		return;
 	}
 
-	print "$elf_type{$base} $base", " " x 30, "\r";
+	print "$elf_type{$base} $base", " " x 30, "\n";
 
 	push(@elfs, $base);
 
 	while (<$f>) {
 		print LOG;
-		
+
 		if (/\(NEEDED\)\s+Shared library: \[(.+)\]/) {
 			push(@{$elf_lib{$base}}, $1);
 		}
@@ -143,8 +148,6 @@ sub fixDynDep
 
 sub fixDyn
 {
-	my $s;
-
 	foreach (@elfs) {
 		if (/^libipt_.+\.so$/) {
 			fixDynDep("iptables", $_);
@@ -447,7 +450,7 @@ sub fillGaps
 						$found = 1;
 					}
 				}
-				
+
 				if ($found == 0) {
 					print "Unable to resolve $sym used by $name\n", @users;
 					exit 1;
@@ -559,10 +562,10 @@ sub genSO
 	print LOG "\n\n${base}\n";
 
 	if ($is_arm eq "y") {
-		$cmd = "arm-brcm-linux-uclibcgnueabi-gcc -shared -nostdlib -Wl,-s,-z,combreloc -Wl,--warn-common -Wl,--fatal-warnings -Wl,--gc-sections ${opt} -Wl,-soname=${name} -o ${so}";
+		$cmd = $uclibc_bin . "/arm-brcm-linux-uclibcgnueabi-gcc -shared -nostdlib -Wl,-s,-z,combreloc -Wl,--warn-common -Wl,--gc-sections ${opt} -Wl,-soname=${name} -o ${so}";
 	}
 	else {
-		$cmd = "mipsel-uclibc-gcc -shared -nostdlib -Wl,-s,-z,combreloc -Wl,--warn-common -Wl,--fatal-warnings -Wl,--gc-sections ${opt} -Wl,-soname=${name} -o ${so}";
+		$cmd = $uclibc_bin . "/mipsel-uclibc-gcc -shared -nostdlib -Wl,-s,-z,combreloc -Wl,--warn-common -Wl,--fatal-warnings -Wl,--gc-sections ${opt} -Wl,-soname=${name} -o ${so}";
 	}
 
 	foreach (@{$elf_lib{$name}}) {
@@ -612,7 +615,7 @@ print "\nlibfoo.pl - fooify shared libraries\n";
 print "Copyright (C) 2006-2007 Jonathan Zarate\n";
 print "Fixes/updates (C) 2018 - 2024 pedro\n\n";
 
-if ((!-d $root) || (!-d $uclibc) || (!-d $router)) {
+if ((!-d $root) || (!-d $router) || (!-d $uclibc_bin) || (!-d $uclibc_lib)) {
 	print "Missing or invalid environment variables\n";
 	exit(1);
 }
@@ -620,13 +623,12 @@ if ((!-d $root) || (!-d $uclibc) || (!-d $router)) {
 #open(LOG, ">libfoo.debug");
 open(LOG, ">/dev/null");
 
-print "\r--- Loading files... ---\r\r";
+print "\n--- Loading files... ---\n\n";
 load($root);
-print "\r--- Finished loading files. ---\r\r";
+print "\n--- Finished loading files. ---\n\n";
 
 fixDyn();
 fillGaps();
-
 genXref();
 
 $stripshared = "yes";
@@ -635,14 +637,14 @@ if ($ARGV[0] eq "--noopt") {
 }
 
 if ($is_arm ne "y") { # MIPS only
-	genSO("${root}/lib/libc.so.0", "${uclibc}/lib/libc.a", "", "-Wl,-init=__uClibc_init ${uclibc}/lib/optinfo/interp.os");
-	genSO("${root}/lib/libresolv.so.0", "${uclibc}/lib/libresolv.a", "${stripshared}");
-	genSO("${root}/lib/libcrypt.so.0", "${uclibc}/lib/libcrypt.a", "${stripshared}");
-	genSO("${root}/lib/libm.so.0", "${uclibc}/lib/libm.a");
-	genSO("${root}/lib/libpthread.so.0", "${uclibc}/lib/libpthread.a", "${stripshared}", "-u pthread_mutexattr_init -Wl,-init=__pthread_initialize_minimal_internal");
-	genSO("${root}/lib/libutil.so.0", "${uclibc}/lib/libutil.a", "${stripshared}");
-	#genSO("${root}/lib/libdl.so.0", "${uclibc}/lib/libdl.a", "${stripshared}");
-	#genSO("${root}/lib/libnsl.so.0", "${uclibc}/lib/libnsl.a", "${stripshared}");
+	genSO("${root}/lib/libc.so.0", "${uclibc_lib}/libc.a", "", "-Wl,-init=__uClibc_init ${uclibc_lib}/optinfo/interp.os");
+	genSO("${root}/lib/libresolv.so.0", "${uclibc_lib}/libresolv.a", "${stripshared}");
+	genSO("${root}/lib/libcrypt.so.0", "${uclibc_lib}/libcrypt.a", "${stripshared}");
+	genSO("${root}/lib/libm.so.0", "${uclibc_lib}/libm.a");
+	genSO("${root}/lib/libpthread.so.0", "${uclibc_lib}/libpthread.a", "${stripshared}", "-u pthread_mutexattr_init -Wl,-init=__pthread_initialize_minimal_internal");
+	genSO("${root}/lib/libutil.so.0", "${uclibc_lib}/libutil.a", "${stripshared}");
+	#genSO("${root}/lib/libdl.so.0", "${uclibc_lib}/libdl.a", "${stripshared}");
+	#genSO("${root}/lib/libnsl.so.0", "${uclibc_lib}/libnsl.a", "${stripshared}");
 	genSO("${root}/usr/lib/libbcmcrypto.so", "${router}/libbcmcrypto/libbcmcrypto.a");
 }
 
