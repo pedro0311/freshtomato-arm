@@ -3059,9 +3059,12 @@ libevent: libevent/stamp-h1
 	$(MAKE) -C $@ DESTDIR=$(TOP)/libevent/staged install
 
 libevent-install:
+ifeq ($(or $(TCONFIG_BBT),$(TCONFIG_TOR)),y)
 	install -D libevent/.libs/libevent-2.1.so.7.0.1 $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	$(STRIP) -s $(INSTALLDIR)/libevent/usr/lib/libevent-2.1.so.7
 	cd $(INSTALLDIR)/libevent/usr/lib/ && ln -sf libevent-2.1.so.7 libevent.so
+endif
+	@true
 
 libevent-clean:
 	-@$(MAKE) -C libevent clean
@@ -3154,7 +3157,7 @@ libnfsidmap/stamp-h1:
 		CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
 		ac_cv_func_malloc_0_nonnull=yes \
 		ac_cv_func_realloc_0_nonnull=yes \
-		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static
+		$(CONFIGURE) --prefix=/usr --disable-shared --enable-static
 	@touch $@
 
 libnfsidmap: libnfsidmap/stamp-h1
