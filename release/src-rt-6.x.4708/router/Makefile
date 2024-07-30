@@ -358,10 +358,12 @@ obj-$(TCONFIG_IRQBALANCE)	+= zlib libffi libiconv gettext-tiny $(PCRE_TARGET) gl
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
 
+export PLATFORM LIBDIR USRLIBDIR
+
 ifeq ($(TCONFIG_BCMARM),y)
  LINUX_VERSION = 2_6_36
  LINUX_KERNEL = 2.6.36
- export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
+ export LINUX_VERSION
 
  ifeq ($(TCONFIG_BCM714),y)
   export BCMSRC = src-rt-7.14.114.x/src
@@ -3430,10 +3432,10 @@ libsodium-clean:
 
 dnscrypt/stamp-h1:
 	cd dnscrypt && autoreconf && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs -L$(TOP)/zlib/staged/usr/lib" \
-		$(CONFIGURE) --prefix=/usr --disable-ssp --disable-dependency-tracking
+		$(CONFIGURE) --prefix=/usr --disable-ssp --disable-plugins --disable-dependency-tracking
 	@touch $@
 
 dnscrypt: dnscrypt/stamp-h1
