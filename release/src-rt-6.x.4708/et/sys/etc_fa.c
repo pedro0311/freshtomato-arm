@@ -1629,14 +1629,25 @@ fa_process_rx(fa_t *fa, void *p)
 	}
 
 	bhdr.word = NTOH32(*((uint32 *)PKTDATA(si_osh(fai->sih), p)));
-	if (bhdr.oc10.op_code == 0x2) {
-		uint32 nid = (bhdr.oc10.napt_flow_id * CTF_MAX_BUCKET_INDEX) + bhdr.oc10.bkt_id;
+/*	if (bhdr.oc10.op_code == 0x2) {
+		uint32 nid;
+		nid = (bhdr.oc10.napt_flow_id * CTF_MAX_BUCKET_INDEX) + bhdr.oc10.bkt_id;
 
 		if (bhdr.oc10.all_bkts_full) {
 			ET_ERROR(("%s All bkts full, leave to SW CTF\n", __FUNCTION__));
 			nid = BCM_FA_INVALID_IDX_VAL;
 		}
 		PKTSETFAHIDX(p, nid);
+	} */
+
+	if (bhdr.oc10.op_code == 0x2) {
+		if (bhdr.oc10.all_bkts_full) {
+			ET_ERROR(("%s All bkts full, leave to SW CTF\n", __FUNCTION__));
+			PKTSETFAHIDX(p, BCM_FA_INVALID_IDX_VAL);
+		}
+		else {
+			PKTSETFAHIDX(p,(bhdr.oc10.napt_flow_id * CTF_MAX_BUCKET_INDEX) + bhdr.oc10.bkt_id);
+		}
 	}
 
 	if (bhdr.oc10.op_code == 0x1) {

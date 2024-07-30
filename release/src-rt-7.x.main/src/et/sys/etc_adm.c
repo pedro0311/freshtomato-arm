@@ -108,14 +108,11 @@ adm_detach(adm_info_t *adm)
 static void
 adm_enable(adm_info_t *adm)
 {
-	void *regs;
-
 	/* Save current core index */
 	adm->coreidx = si_coreidx(adm->sih);
 
 	/* Switch to GPIO core for faster access */
-	regs = si_gpiosetcore(adm->sih);
-	ASSERT(regs);
+	ASSERT(si_gpiosetcore(adm->sih));
 }
 
 /* Disable register access to the chip */

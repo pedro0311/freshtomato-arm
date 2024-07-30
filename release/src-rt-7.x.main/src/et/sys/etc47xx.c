@@ -175,7 +175,7 @@ chipattach(etc_info_t *etc, void *osh, void *regsva)
 	bcmenetregs_t *regs;
 	char name[16];
 	char *var;
-	uint boardflags, boardtype;
+	uint boardflags;
 
 	ET_TRACE(("et%d: chipattach: regsva 0x%lx\n", etc->unit, (ulong)regsva));
 
@@ -224,7 +224,6 @@ chipattach(etc_info_t *etc, void *osh, void *regsva)
 	etc->boardflags = getintvar(ch->vars, "boardflags");
 
 	boardflags = etc->boardflags;
-	boardtype = ch->sih->boardtype;
 
 	/* Backplane clock ticks per microsecs: used by gptimer, intrecvlazy */
 	etc->bp_ticks_usec = si_clock(ch->sih) / 1000000;

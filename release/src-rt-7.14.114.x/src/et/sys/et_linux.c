@@ -3426,12 +3426,14 @@ void BCMFASTPATH
 et_sendup(et_info_t *et, struct sk_buff *skb, int dataoff)
 {
 	etc_info_t *etc;
-	void *rxh;
 
 	etc = et->etc;
 
+#if !defined(BCM_GMAC3)
+	void *rxh;
 	/* packet buffer starts with rxhdr */
 	rxh = skb->data;
+#endif
 
 	/* strip off rxhdr */
 	__skb_pull(skb, dataoff);

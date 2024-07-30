@@ -556,9 +556,10 @@ etc_ioctl(etc_info_t *etc, int cmd, void *arg)
 
 	case ETCPHYRD2:
 		if (vec) {
-			uint phyaddr, reg;
+			uint phyaddr;
 			phyaddr = vec[0] >> 16;
 			if (phyaddr < MAXEPHY) {
+				uint reg;
 				reg = vec[0] & 0xffff;
 				vec[1] = (*etc->chops->phyrd)(etc->ch, phyaddr, reg);
 				ET_TRACE(("etc_ioctl: ETCPHYRD2 of phy 0x%x, reg 0x%x => 0x%x\n",
@@ -576,9 +577,10 @@ etc_ioctl(etc_info_t *etc, int cmd, void *arg)
 
 	case ETCPHYWR2:
 		if (vec) {
-			uint phyaddr, reg;
+			uint phyaddr;
 			phyaddr = vec[0] >> 16;
 			if (phyaddr < MAXEPHY) {
+				uint reg;
 				reg = vec[0] & 0xffff;
 				(*etc->chops->phywr)(etc->ch, phyaddr, reg, (uint16)vec[1]);
 				ET_TRACE(("etc_ioctl: ETCPHYWR2 to phy 0x%x, reg 0x%x <= 0x%x\n",
@@ -614,12 +616,12 @@ etc_ioctl(etc_info_t *etc, int cmd, void *arg)
 
 	case ETCROBOWR:
 		if (etc->robo && vec) {
-			uint page, reg;
+			uint page;
 			uint64 val;
 			robo_info_t *robo = (robo_info_t *)etc->robo;
 			int len = 2;
 			page = vec[0] >> 16;
-			reg = vec[0] & 0xffff;
+			/* uint reg = vec[0] & 0xffff; */
 			if ((vec[1] >= 1) && (vec[1] <= 8))
 				len = vec[1];
 			/* For SPI mode, the length can only be 1, 2, and 4 bytes */
@@ -630,7 +632,7 @@ etc_ioctl(etc_info_t *etc, int cmd, void *arg)
 			val = *((unsigned long long *)&vec[2]);
 			robo->ops->write_reg(etc->robo, page, vec[0], &val, len);
 			ET_TRACE(("etc_ioctl: ETCROBOWR to page 0x%x, reg 0x%x <= 0x%016llX\n",
-			          page, reg, val));
+			          page, vec[0] & 0xffff, val));
 
 			bcm_robo_check_gphy_reset(robo, page, vec[0], &val, len);
 		}

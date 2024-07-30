@@ -2397,7 +2397,7 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 	uint16 vlan_tag;
 	struct ethervlan_header *n_evh;
 #ifdef ET_MULTI_VLAN_IN_LAN
-	struct net_device *odev, *vdev;
+	struct net_device *odev = NULL, *vdev = NULL;
 	int cnt = 0, bytes = 0;
 #endif /* ET_MULTI_VLAN_IN_LAN */
 
@@ -2486,6 +2486,8 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 	}
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 static void BCMFASTPATH
 et_sendup_chain(et_info_t *et, void *h)
 {
@@ -2550,6 +2552,7 @@ et_sendup_chain(et_info_t *et, void *h)
 #endif /* ! ET_MULTI_VLAN_IN_LAN */
 	et_sendup_chain_error_handler(et, skb, sz, err);
 }
+#pragma GCC diagnostic pop
 #endif /* PKTC */
 
 #ifdef ET_INGRESS_QOS
