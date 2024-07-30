@@ -10,6 +10,11 @@
  * architectures, so that you can override them.
  */
 
+#ifndef __kernel_long_t
+typedef long		__kernel_long_t;
+typedef unsigned long	__kernel_ulong_t;
+#endif
+
 #ifndef __kernel_ino_t
 typedef unsigned long	__kernel_ino_t;
 #endif
