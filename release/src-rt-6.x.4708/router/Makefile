@@ -247,7 +247,7 @@ endif
 #
 
 
-obj-y				+= $(if $(TCONFIG_BCM7),libbcm,lzma-loader) busybox shared nvram$(BCMEX) $(if $(TCONFIG_BCMARM),eapd$(BCMEX)/linux,et) \
+obj-y				+= $(if $(TCONFIG_BCMARM),libbcm,lzma-loader) busybox shared nvram$(BCMEX) $(if $(TCONFIG_BCMARM),eapd$(BCMEX)/linux,et) \
 				   libbcmcrypto wlconf$(BCMEX) $(if $(TCONFIG_BCMARM),nas$(BCMEX)) prebuilt
 obj-$(TCONFIG_EMF)		+= emf$(BCMEX) igs$(BCMEX)
 obj-$(TCONFIG_DPSTA)		+= dpsta
