@@ -186,10 +186,10 @@ sub fixDyn
 	fixDynDep("transmission-remote", "libwolfssl.so.42.2.0");
 	fixDynDep("miniupnpd", "libnfnetlink.so.0.2.0");
 	fixDynDep("tincd", "liblzo2.so.2.0.0");
-	fixDynDep("tincd", "liblz4.so.1.9.4");
+	fixDynDep("tincd", "liblz4.so.1.10.0");
 	fixDynDep("openvpn", "liblzo2.so.2.0.0");
 	fixDynDep("openvpn", "libcap-ng.so.0.0.0");
-	fixDynDep("openvpn", "liblz4.so.1.9.4");
+	fixDynDep("openvpn", "liblz4.so.1.10.0");
 	fixDynDep("openvpn", "libwolfssl.so.42.2.0");
 	fixDynDep("usb_modeswitch", "libusb-1.0.so");
 	fixDynDep("libpcreposix.so.0.0.7", "libpcre.so.1.2.13");
@@ -684,7 +684,7 @@ genSO("${root}/usr/lib/libFLAC.so.12.1.0", "${router}/flac/src/libFLAC/.libs/lib
 genSO("${root}/usr/lib/libogg.so.0", "${router}/libogg/src/.libs/libogg.a", "${stripshared}");
 genSO("${root}/usr/lib/libz.so.1", "${router}/zlib/libz.a", "${stripshared}");
 genSO("${root}/usr/lib/liblzo2.so.2.0.0", "${router}/lzo/src/.libs/liblzo2.a", "${stripshared}");
-genSO("${root}/usr/lib/liblz4.so.1.9.4", "${router}/lz4/lib/liblz4.a", "${stripshared}");
+genSO("${root}/usr/lib/liblz4.so.1.10.0", "${router}/lz4/lib/liblz4.a", "${stripshared}");
 genSO("${root}/usr/lib/libcurl.so.4.8.0", "${router}/libcurl/lib/.libs/libcurl.a", "${stripshared}", "-L${router}/zlib -L${router}/${openssldir} -L${router}/wolfssl/staged/usr/lib");
 genSO("${root}/usr/lib/libevent-2.1.so.7", "${router}/libevent/.libs/libevent.a", "${stripshared}");
 genSO("${root}/usr/lib/libiconv.so.2.6.1", "${router}/libiconv/lib/.libs/libiconv.a", "${stripshared}");

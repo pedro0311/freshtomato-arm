@@ -3286,9 +3286,9 @@ lz4:
 
 lz4-install:
 ifeq ($(or $(INSTALL_LZ4),$(TCONFIG_TINC)),y)
-	install -D lz4/lib/liblz4.so.1.9.4 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
-	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.9.4
-	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.9.4 liblz4.so.1 && ln -sf liblz4.so.1.9.4 liblz4.so
+	install -D lz4/lib/liblz4.so.1.10.0 $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.10.0
+	$(STRIP) $(INSTALLDIR)/lz4/usr/lib/liblz4.so.1.10.0
+	cd $(INSTALLDIR)/lz4/usr/lib && ln -sf liblz4.so.1.10.0 liblz4.so.1 && ln -sf liblz4.so.1.10.0 liblz4.so
 endif
 	@true
 
