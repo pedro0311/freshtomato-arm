@@ -7,6 +7,7 @@
 from __future__ import annotations
 from pathlib import Path
 import argparse
+import ast
 import enum
 import sys
 import stat
@@ -129,6 +130,7 @@ __all__ = [
     'iter_regexin_iter',
     'join_args',
     'listify',
+    'listify_array_value',
     'partition',
     'path_is_in_root',
     'pickle_load',
@@ -1180,24 +1182,21 @@ def do_replacement(regex: T.Pattern[str], line: str,
                    variable_format: Literal['meson', 'cmake', 'cmake@'],
                    confdata: T.Union[T.Dict[str, T.Tuple[str, T.Optional[str]]], 'ConfigurationData']) -> T.Tuple[str, T.Set[str]]:
     missing_variables: T.Set[str] = set()
-    if variable_format == 'cmake':
-        start_tag = '${'
-        backslash_tag = '\\${'
-    else:
-        start_tag = '@'
-        backslash_tag = '\\@'
 
     def variable_replace(match: T.Match[str]) -> str:
-        # Pairs of escape characters before '@' or '\@'
+        # Pairs of escape characters before '@', '\@', '${' or '\${'
         if match.group(0).endswith('\\'):
             num_escapes = match.end(0) - match.start(0)
             return '\\' * (num_escapes // 2)
-        # Single escape character and '@'
-        elif match.group(0) == backslash_tag:
-            return start_tag
-        # Template variable to be replaced
+        # Handle cmake escaped \${} tags
+        elif variable_format == 'cmake' and match.group(0) == '\\${':
+            return '${'
+        # \@escaped\@ variables
+        elif match.groupdict().get('escaped') is not None:
+            return match.group('escaped')[1:-2]+'@'
         else:
-            varname = match.group(1)
+            # Template variable to be replaced
+            varname = match.group('variable')
             var_str = ''
             if varname in confdata:
                 var, _ = confdata.get(varname)
@@ -1278,11 +1277,23 @@ def do_define(regex: T.Pattern[str], line: str, confdata: 'ConfigurationData',
 
 def get_variable_regex(variable_format: Literal['meson', 'cmake', 'cmake@'] = 'meson') -> T.Pattern[str]:
     # Only allow (a-z, A-Z, 0-9, _, -) as valid characters for a define
-    # Also allow escaping '@' with '\@'
     if variable_format in {'meson', 'cmake@'}:
-        regex = re.compile(r'(?:\\\\)+(?=\\?@)|\\@|@([-a-zA-Z0-9_]+)@')
+        # Also allow escaping pairs of '@' with '\@'
+        regex = re.compile(r'''
+            (?:\\\\)+(?=\\?@)  # Matches multiple backslashes followed by an @ symbol
+            |                  # OR
+            (?<!\\)@(?P<variable>[-a-zA-Z0-9_]+)@  # Match a variable enclosed in @ symbols and capture the variable name; no matches beginning with '\@'
+            |                  # OR
+            (?P<escaped>\\@[-a-zA-Z0-9_]+\\@)  # Match an escaped variable enclosed in @ symbols
+        ''', re.VERBOSE)
     else:
-        regex = re.compile(r'(?:\\\\)+(?=\\?\$)|\\\${|\${([-a-zA-Z0-9_]+)}')
+        regex = re.compile(r'''
+            (?:\\\\)+(?=\\?\$)  # Match multiple backslashes followed by a dollar sign
+            |                  # OR
+            \\\${              # Match a backslash followed by a dollar sign and an opening curly brace
+            |                  # OR
+            \${(?P<variable>[-a-zA-Z0-9_]+)}  # Match a variable enclosed in curly braces and capture the variable name
+        ''', re.VERBOSE)
     return regex
 
 def do_conf_str(src: str, data: T.List[str], confdata: 'ConfigurationData',
@@ -1438,6 +1449,26 @@ def listify(item: T.Any, flatten: bool = True) -> T.List[T.Any]:
             result.append(i)
     return result
 
+def listify_array_value(value: T.Union[str, T.List[str]], shlex_split_args: bool = False) -> T.List[str]:
+    if isinstance(value, str):
+        if value.startswith('['):
+            try:
+                newvalue = ast.literal_eval(value)
+            except ValueError:
+                raise MesonException(f'malformed value {value}')
+        elif value == '':
+            newvalue = []
+        else:
+            if shlex_split_args:
+                newvalue = split_args(value)
+            else:
+                newvalue = [v.strip() for v in value.split(',')]
+    elif isinstance(value, list):
+        newvalue = value
+    else:
+        raise MesonException(f'"{value}" should be a string array, but it is not')
+    assert isinstance(newvalue, list)
+    return newvalue
 
 def extract_as_list(dict_object: T.Dict[_T, _U], key: _T, pop: bool = False) -> T.List[_U]:
     '''
@@ -1722,6 +1753,8 @@ def get_filenames_templates_dict(inputs: T.List[str], outputs: T.List[str]) -> T
     If there is more than one input file, the following keys are also created:
 
     @INPUT0@, @INPUT1@, ... one for each input file
+    @PLAINNAME0@, @PLAINNAME1@, ... one for each input file
+    @BASENAME0@, @BASENAME1@, ... one for each input file
 
     If there is more than one output file, the following keys are also created:
 
@@ -1735,6 +1768,9 @@ def get_filenames_templates_dict(inputs: T.List[str], outputs: T.List[str]) -> T
         for (ii, vv) in enumerate(inputs):
             # Write out @INPUT0@, @INPUT1@, ...
             values[f'@INPUT{ii}@'] = vv
+            plain = os.path.basename(vv)
+            values[f'@PLAINNAME{ii}@'] = plain
+            values[f'@BASENAME{ii}@'] = os.path.splitext(plain)[0]
         if len(inputs) == 1:
             # Just one value, substitute @PLAINNAME@ and @BASENAME@
             values['@PLAINNAME@'] = plain = os.path.basename(inputs[0])

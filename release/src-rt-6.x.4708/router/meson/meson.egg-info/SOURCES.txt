@@ -29,6 +29,7 @@ cross/metrowerks.lcf
 cross/msp430.txt
 cross/none.txt
 cross/ownstdlib.txt
+cross/ti-c6000.txt
 cross/tvos.txt
 cross/ubuntu-armhf.json
 cross/ubuntu-armhf.txt
@@ -112,6 +113,7 @@ mesonbuild/coredata.py
 mesonbuild/depfile.py
 mesonbuild/envconfig.py
 mesonbuild/environment.py
+mesonbuild/machinefile.py
 mesonbuild/mcompile.py
 mesonbuild/mconf.py
 mesonbuild/mdevenv.py
@@ -119,6 +121,7 @@ mesonbuild/mdist.py
 mesonbuild/mesondata.py
 mesonbuild/mesonlib.py
 mesonbuild/mesonmain.py
+mesonbuild/mformat.py
 mesonbuild/minit.py
 mesonbuild/minstall.py
 mesonbuild/mintro.py
@@ -129,6 +132,7 @@ mesonbuild/msubprojects.py
 mesonbuild/mtest.py
 mesonbuild/munstable_coredata.py
 mesonbuild/optinterpreter.py
+mesonbuild/options.py
 mesonbuild/programs.py
 mesonbuild/rewriter.py
 mesonbuild/ast/__init__.py
@@ -185,6 +189,7 @@ mesonbuild/compilers/rust.py
 mesonbuild/compilers/swift.py
 mesonbuild/compilers/vala.py
 mesonbuild/compilers/mixins/__init__.py
+mesonbuild/compilers/mixins/apple.py
 mesonbuild/compilers/mixins/arm.py
 mesonbuild/compilers/mixins/ccrx.py
 mesonbuild/compilers/mixins/clang.py
@@ -254,6 +259,7 @@ mesonbuild/linkers/base.py
 mesonbuild/linkers/detect.py
 mesonbuild/linkers/linkers.py
 mesonbuild/modules/__init__.py
+mesonbuild/modules/_qt.py
 mesonbuild/modules/cmake.py
 mesonbuild/modules/cuda.py
 mesonbuild/modules/dlang.py
@@ -269,7 +275,6 @@ mesonbuild/modules/modtest.py
 mesonbuild/modules/pkgconfig.py
 mesonbuild/modules/python.py
 mesonbuild/modules/python3.py
-mesonbuild/modules/qt.py
 mesonbuild/modules/qt4.py
 mesonbuild/modules/qt5.py
 mesonbuild/modules/qt6.py
@@ -974,9 +979,6 @@ test cases/common/153 wrap file should not failed/subprojects/foo-1.0/foo.c
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0/meson.build
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchdir/foo.c
 test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchdir/meson.build
-test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/.meson-subproject-wrap-hash.txt
-test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/foo.c
-test cases/common/153 wrap file should not failed/subprojects/foo-1.0-patchfile/meson.build
 test cases/common/153 wrap file should not failed/subprojects/packagecache/foo-1.0-patch.tar.xz
 test cases/common/153 wrap file should not failed/subprojects/packagecache/foo-1.0.tar.xz
 test cases/common/153 wrap file should not failed/subprojects/packagecache/zlib-1.2.8-8-wrap.zip
@@ -1482,7 +1484,6 @@ test cases/common/256 subproject extracted objects/subprojects/myobjects/meson.b
 test cases/common/257 generated header dep/foo.c
 test cases/common/257 generated header dep/meson.build
 test cases/common/258 subsubproject inplace/meson.build
-test cases/common/258 subsubproject inplace/subprojects/subsub.wrap
 test cases/common/258 subsubproject inplace/subprojects/sub/meson.build
 test cases/common/258 subsubproject inplace/subprojects/sub/subprojects/subsub.wrap
 test cases/common/258 subsubproject inplace/subprojects/sub/subprojects/subsub-1.0/meson.build
@@ -1494,6 +1495,7 @@ test cases/common/259 preprocess/meson.build
 test cases/common/259 preprocess/src/file.map.in
 test cases/common/259 preprocess/src/meson.build
 test cases/common/26 find program/meson.build
+test cases/common/26 find program/print-version-custom-argument.py
 test cases/common/26 find program/print-version-with-prefix.py
 test cases/common/26 find program/print-version.py
 test cases/common/26 find program/source.in
@@ -1546,8 +1548,13 @@ test cases/common/273 customtarget exe for test/generate.py
 test cases/common/273 customtarget exe for test/meson.build
 test cases/common/274 environment/meson.build
 test cases/common/274 environment/testenv.py
+test cases/common/275 required keyword in compiles functions/invalid.c
+test cases/common/275 required keyword in compiles functions/meson.build
+test cases/common/275 required keyword in compiles functions/meson_options.txt
+test cases/common/275 required keyword in compiles functions/valid.c
 test cases/common/276 generator custom_tgt subdir/meson.build
 test cases/common/276 generator custom_tgt subdir/include/meson.build
+test cases/common/277 custom target private dir/meson.build
 test cases/common/28 try compile/foo.h.in
 test cases/common/28 try compile/invalid.c
 test cases/common/28 try compile/meson.build
@@ -2120,6 +2127,11 @@ test cases/d/9 features/extra.d
 test cases/d/9 features/meson.build
 test cases/d/9 features/data/food.txt
 test cases/d/9 features/data/people.txt
+test cases/darwin/1 rpath removal on install/bar.c
+test cases/darwin/1 rpath removal on install/meson.build
+test cases/darwin/1 rpath removal on install/foo/foo.c
+test cases/darwin/1 rpath removal on install/foo/foo.h
+test cases/darwin/1 rpath removal on install/foo/meson.build
 test cases/failing build/1 hidden symbol/bob.c
 test cases/failing build/1 hidden symbol/bob.h
 test cases/failing build/1 hidden symbol/bobuser.c
@@ -2551,6 +2563,35 @@ test cases/failing/99 bool in combo/meson.build
 test cases/failing/99 bool in combo/meson_options.txt
 test cases/failing/99 bool in combo/nativefile.ini
 test cases/failing/99 bool in combo/test.json
+test cases/format/1 default/crazy_comments.meson
+test cases/format/1 default/gh13242.meson
+test cases/format/1 default/indentation.meson
+test cases/format/1 default/meson.build
+test cases/format/2 muon/crazy_comments.meson
+test cases/format/2 muon/indentation.meson
+test cases/format/2 muon/meson.build
+test cases/format/2 muon/muon.ini
+test cases/format/3 editorconfig/.editorconfig
+test cases/format/3 editorconfig/crazy_comments.meson
+test cases/format/3 editorconfig/indentation.meson
+test cases/format/3 editorconfig/meson.build
+test cases/format/3 editorconfig/options.ini
+test cases/format/4 config/crazy_comments.meson
+test cases/format/4 config/indentation.meson
+test cases/format/4 config/meson.build
+test cases/format/4 config/meson.format
+test cases/format/5 transform/default.expected.meson
+test cases/format/5 transform/default.ini
+test cases/format/5 transform/file_compare.py
+test cases/format/5 transform/genexpected.cmd
+test cases/format/5 transform/meson.build
+test cases/format/5 transform/meson.options
+test cases/format/5 transform/muon.expected.meson
+test cases/format/5 transform/muon.ini
+test cases/format/5 transform/options.expected.meson
+test cases/format/5 transform/options.ini
+test cases/format/5 transform/source.meson
+test cases/format/5 transform/test.json
 test cases/fortran/1 basic/meson.build
 test cases/fortran/1 basic/simple.f90
 test cases/fortran/10 find library/gzip.f90
@@ -3116,6 +3157,9 @@ test cases/nasm/2 asm language/meson.build
 test cases/nasm/3 nasm only/dummy.asm
 test cases/nasm/3 nasm only/dummy.def
 test cases/nasm/3 nasm only/meson.build
+test cases/nasm/4 through configure/dummy.asm.in
+test cases/nasm/4 through configure/dummy.def
+test cases/nasm/4 through configure/meson.build
 test cases/native/1 trivial/meson.build
 test cases/native/1 trivial/trivial.c
 test cases/native/2 global arg/meson.build
@@ -3169,10 +3213,16 @@ test cases/objc/4 c++ project objc subproject/master.cpp
 test cases/objc/4 c++ project objc subproject/meson.build
 test cases/objc/4 c++ project objc subproject/subprojects/foo/foo.m
 test cases/objc/4 c++ project objc subproject/subprojects/foo/meson.build
+test cases/objc/5 objfw/SimpleTest.m
+test cases/objc/5 objfw/TestApplication.m
+test cases/objc/5 objfw/meson.build
 test cases/objcpp/1 simple/meson.build
 test cases/objcpp/1 simple/prog.mm
 test cases/objcpp/2 objc++ args/meson.build
 test cases/objcpp/2 objc++ args/prog.mm
+test cases/objcpp/3 objfw/SimpleTest.mm
+test cases/objcpp/3 objfw/TestApplication.mm
+test cases/objcpp/3 objfw/meson.build
 test cases/osx/1 basic/main.c
 test cases/osx/1 basic/meson.build
 test cases/osx/10 global variable ar/libfile.c
@@ -3202,6 +3252,7 @@ test cases/osx/7 bitcode/libbar.mm
 test cases/osx/7 bitcode/libfile.c
 test cases/osx/7 bitcode/libfoo.m
 test cases/osx/7 bitcode/meson.build
+test cases/osx/7 bitcode/test.json
 test cases/osx/7 bitcode/vis.h
 test cases/osx/8 pie/main.c
 test cases/osx/8 pie/meson.build
@@ -3265,6 +3316,7 @@ test cases/python/9 extmodule limited api/limited.c
 test cases/python/9 extmodule limited api/meson.build
 test cases/python/9 extmodule limited api/not_limited.c
 test cases/python/9 extmodule limited api/test.json
+test cases/python/9 extmodule limited api/test_limited.py
 test cases/python3/1 basic/meson.build
 test cases/python3/1 basic/prog.py
 test cases/python3/1 basic/gluon/__init__.py
@@ -3384,9 +3436,12 @@ test cases/rust/17 staticlib link staticlib/leaf.rs
 test cases/rust/17 staticlib link staticlib/meson.build
 test cases/rust/17 staticlib link staticlib/prog.c
 test cases/rust/17 staticlib link staticlib/test.json
+test cases/rust/18 proc-macro/lib.rs
 test cases/rust/18 proc-macro/meson.build
 test cases/rust/18 proc-macro/proc.rs
+test cases/rust/18 proc-macro/transitive-proc-macro.rs
 test cases/rust/18 proc-macro/use.rs
+test cases/rust/18 proc-macro/subdir/meson.build
 test cases/rust/19 structured sources/gen.py
 test cases/rust/19 structured sources/main-gen-copy.rs
 test cases/rust/19 structured sources/meson.build
@@ -3428,16 +3483,16 @@ test cases/rust/21 transitive dependencies/libb/lib.rs
 test cases/rust/21 transitive dependencies/libb/meson.build
 test cases/rust/22 cargo subproject/main.c
 test cases/rust/22 cargo subproject/meson.build
-test cases/rust/22 cargo subproject/subprojects/bar-rs.wrap
-test cases/rust/22 cargo subproject/subprojects/foo-rs.wrap
-test cases/rust/22 cargo subproject/subprojects/bar-rs/Cargo.toml
-test cases/rust/22 cargo subproject/subprojects/bar-rs/src/lib.rs
-test cases/rust/22 cargo subproject/subprojects/extra-dep-rs/lib.c
-test cases/rust/22 cargo subproject/subprojects/extra-dep-rs/meson.build
-test cases/rust/22 cargo subproject/subprojects/extra-dep-rs/meson_options.txt
-test cases/rust/22 cargo subproject/subprojects/foo-rs/Cargo.toml
-test cases/rust/22 cargo subproject/subprojects/foo-rs/lib.rs
-test cases/rust/22 cargo subproject/subprojects/foo-rs/meson/meson.build
+test cases/rust/22 cargo subproject/subprojects/bar-0.1-rs.wrap
+test cases/rust/22 cargo subproject/subprojects/foo-0-rs.wrap
+test cases/rust/22 cargo subproject/subprojects/bar-0.1-rs/Cargo.toml
+test cases/rust/22 cargo subproject/subprojects/bar-0.1-rs/src/lib.rs
+test cases/rust/22 cargo subproject/subprojects/extra-dep-1-rs/lib.c
+test cases/rust/22 cargo subproject/subprojects/extra-dep-1-rs/meson.build
+test cases/rust/22 cargo subproject/subprojects/extra-dep-1-rs/meson_options.txt
+test cases/rust/22 cargo subproject/subprojects/foo-0-rs/Cargo.toml
+test cases/rust/22 cargo subproject/subprojects/foo-0-rs/lib.rs
+test cases/rust/22 cargo subproject/subprojects/foo-0-rs/meson/meson.build
 test cases/rust/23 crt-static/lib.c
 test cases/rust/23 crt-static/main.rs
 test cases/rust/23 crt-static/meson.build
@@ -3445,6 +3500,9 @@ test cases/rust/23 crt-static/test.json
 test cases/rust/24 system deps/main.rs
 test cases/rust/24 system deps/meson.build
 test cases/rust/24 system deps/wrapper.rs
+test cases/rust/25 cargo lock/Cargo.lock
+test cases/rust/25 cargo lock/meson.build
+test cases/rust/25 cargo lock/subprojects/packagecache/bar-0.1.tar.gz
 test cases/rust/3 staticlib/meson.build
 test cases/rust/3 staticlib/other.rs
 test cases/rust/3 staticlib/prog.rs
@@ -4150,6 +4208,7 @@ test cases/vala/28 generated ui file/test.vala
 test cases/vala/29 compiler.links/meson.build
 test cases/vala/3 dep/gioprog.vala
 test cases/vala/3 dep/meson.build
+test cases/vala/30 dependencies for compiler.links/meson.build
 test cases/vala/4 config/config.vapi
 test cases/vala/4 config/meson-something-else.vapi
 test cases/vala/4 config/meson.build
@@ -4310,6 +4369,10 @@ test cases/windows/20 vs install static lib with generated obj deps/static_lib_s
 test cases/windows/20 vs install static lib with generated obj deps/test.json
 test cases/windows/21 masm/hello.masm
 test cases/windows/21 masm/meson.build
+test cases/windows/22 msvc library argument order/meson.build
+test cases/windows/22 msvc library argument order/nativefile.ini.in
+test cases/windows/22 msvc library argument order/source.c
+test cases/windows/22 msvc library argument order/lib/.gitignore
 test cases/windows/3 cpp/meson.build
 test cases/windows/3 cpp/prog.cpp
 test cases/windows/4 winmaincpp/meson.build
@@ -4367,3 +4430,5 @@ unittests/rewritetests.py
 unittests/subprojectscommandtests.py
 unittests/taptests.py
 unittests/windowstests.py
+unittests/machinefiles/constant1.txt
+unittests/machinefiles/constant2.txt

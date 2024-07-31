@@ -478,8 +478,11 @@ class GnomeModule(ExtensionModule):
             else:
                 raise MesonException('Compiling GResources into code is only supported in C and C++ projects')
 
-        if kwargs['install'] and not gresource:
-            raise MesonException('The install kwarg only applies to gresource bundles, see install_header')
+        if kwargs['install']:
+            if not gresource:
+                raise MesonException('The install kwarg only applies to gresource bundles, see install_header')
+            elif not kwargs['install_dir']:
+                raise MesonException('gnome.compile_resources: "install_dir" keyword argument must be set when "install" is true.')
 
         install_header = kwargs['install_header']
         if install_header and gresource:
@@ -906,7 +909,7 @@ class GnomeModule(ExtensionModule):
             if state.project_args.get(lang):
                 cflags += state.project_args[lang]
             if mesonlib.OptionKey('b_sanitize') in compiler.base_options:
-                sanitize = state.environment.coredata.options[mesonlib.OptionKey('b_sanitize')].value
+                sanitize = state.environment.coredata.optstore.get_value('b_sanitize')
                 cflags += compiler.sanitizer_compile_args(sanitize)
                 sanitize = sanitize.split(',')
                 # These must be first in ldflags
@@ -1875,20 +1878,21 @@ class GnomeModule(ExtensionModule):
             GType
             {func_prefix}@enum_name@_get_type (void)
             {{
-            static gsize gtype_id = 0;
-            static const G@Type@Value values[] = {{'''))
+                static gsize gtype_id = 0;
+                static const G@Type@Value values[] = {{'''))
 
-        c_cmd.extend(['--vprod', '    { C_@TYPE@(@VALUENAME@), "@VALUENAME@", "@valuenick@" },'])
+        c_cmd.extend(['--vprod', '        { C_@TYPE@ (@VALUENAME@), "@VALUENAME@", "@valuenick@" },'])
 
         c_cmd.append('--vtail')
         c_cmd.append(textwrap.dedent(
-            '''    { 0, NULL, NULL }
-            };
-            if (g_once_init_enter (&gtype_id)) {
-                GType new_type = g_@type@_register_static (g_intern_static_string ("@EnumName@"), values);
-                g_once_init_leave (&gtype_id, new_type);
-            }
-            return (GType) gtype_id;
+            '''\
+                    { 0, NULL, NULL }
+                };
+                if (g_once_init_enter (&gtype_id)) {
+                    GType new_type = g_@type@_register_static (g_intern_static_string ("@EnumName@"), values);
+                    g_once_init_leave (&gtype_id, new_type);
+                }
+                return (GType) gtype_id;
             }'''))
         c_cmd.append('@INPUT@')
 
@@ -1897,13 +1901,16 @@ class GnomeModule(ExtensionModule):
         # .h file generation
         h_cmd = cmd.copy()
 
+        if header_prefix and not header_prefix.endswith('\n'):
+            header_prefix += '\n'  # Extra trailing newline for style
+
         h_cmd.append('--fhead')
         h_cmd.append(textwrap.dedent(
-            f'''#pragma once
+            f'''\
+            #pragma once
 
             #include <glib-object.h>
             {header_prefix}
-
             G_BEGIN_DECLS
             '''))
 
@@ -1913,9 +1920,13 @@ class GnomeModule(ExtensionModule):
             /* enumerations from "@basename@" */
             '''))
 
+        extra_newline = ''
+        if decl_decorator:
+            extra_newline = '\n'  # Extra leading newline for style
+
         h_cmd.append('--vhead')
-        h_cmd.append(textwrap.dedent(
-            f'''
+        h_cmd.append(extra_newline + textwrap.dedent(
+            f'''\
             {decl_decorator}
             GType {func_prefix}@enum_name@_get_type (void);
             #define @ENUMPREFIX@_TYPE_@ENUMSHORT@ ({func_prefix}@enum_name@_get_type())'''))
@@ -1989,7 +2000,7 @@ class GnomeModule(ExtensionModule):
 
         new_genmarshal = mesonlib.version_compare(self._get_native_glib_version(state), '>= 2.53.3')
 
-        cmd: T.List[T.Union['ToolType', str]] = [self._find_tool(state, 'glib-genmarshal')]
+        cmd: T.List[T.Union['ToolType', str]] = [self._find_tool(state, 'glib-genmarshal'), '--quiet']
         if kwargs['prefix']:
             cmd.extend(['--prefix', kwargs['prefix']])
         if kwargs['extra_args']:

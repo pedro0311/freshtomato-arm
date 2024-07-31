@@ -18,20 +18,22 @@ import json
 import os
 import shutil
 import collections
+import urllib.parse
 import typing as T
 
 from . import builder
 from . import version
 from ..mesonlib import MesonException, Popen_safe, OptionKey
-from .. import coredata
+from .. import coredata, options, mlog
+from ..wrap.wrap import PackageDefinition
 
 if T.TYPE_CHECKING:
     from types import ModuleType
+    from typing import Any
 
     from . import manifest
     from .. import mparser
     from ..environment import Environment
-    from ..coredata import KeyedOptionDictType
 
 # tomllib is present in python 3.11, before that it is a pypi module called tomli,
 # we try to import tomllib, then tomli,
@@ -151,6 +153,7 @@ class Dependency:
 
     """Representation of a Cargo Dependency Entry."""
 
+    name: dataclasses.InitVar[str]
     version: T.List[str]
     registry: T.Optional[str] = None
     git: T.Optional[str] = None
@@ -158,16 +161,33 @@ class Dependency:
     rev: T.Optional[str] = None
     path: T.Optional[str] = None
     optional: bool = False
-    package: T.Optional[str] = None
+    package: str = ''
     default_features: bool = True
     features: T.List[str] = dataclasses.field(default_factory=list)
+    api: str = dataclasses.field(init=False)
+
+    def __post_init__(self, name: str) -> None:
+        self.package = self.package or name
+        # Extract wanted API version from version constraints.
+        api = set()
+        for v in self.version:
+            if v.startswith(('>=', '==')):
+                api.add(_version_to_api(v[2:].strip()))
+            elif v.startswith('='):
+                api.add(_version_to_api(v[1:].strip()))
+        if not api:
+            self.api = '0'
+        elif len(api) == 1:
+            self.api = api.pop()
+        else:
+            raise MesonException(f'Cannot determine minimum API version from {self.version}.')
 
     @classmethod
-    def from_raw(cls, raw: manifest.DependencyV) -> Dependency:
+    def from_raw(cls, name: str, raw: manifest.DependencyV) -> Dependency:
         """Create a dependency from a raw cargo dictionary"""
         if isinstance(raw, str):
-            return cls(version.convert(raw))
-        return cls(**_fixup_raw_mappings(raw))
+            return cls(name, version.convert(raw))
+        return cls(name, **_fixup_raw_mappings(raw))
 
 
 @dataclasses.dataclass
@@ -290,16 +310,16 @@ def _convert_manifest(raw_manifest: manifest.Manifest, subdir: str, path: str = 
 
     return Manifest(
         Package(**pkg),
-        {k: Dependency.from_raw(v) for k, v in raw_manifest.get('dependencies', {}).items()},
-        {k: Dependency.from_raw(v) for k, v in raw_manifest.get('dev-dependencies', {}).items()},
-        {k: Dependency.from_raw(v) for k, v in raw_manifest.get('build-dependencies', {}).items()},
+        {k: Dependency.from_raw(k, v) for k, v in raw_manifest.get('dependencies', {}).items()},
+        {k: Dependency.from_raw(k, v) for k, v in raw_manifest.get('dev-dependencies', {}).items()},
+        {k: Dependency.from_raw(k, v) for k, v in raw_manifest.get('build-dependencies', {}).items()},
         Library(**lib),
         [Binary(**_fixup_raw_mappings(b)) for b in raw_manifest.get('bin', {})],
         [Test(**_fixup_raw_mappings(b)) for b in raw_manifest.get('test', {})],
         [Benchmark(**_fixup_raw_mappings(b)) for b in raw_manifest.get('bench', {})],
         [Example(**_fixup_raw_mappings(b)) for b in raw_manifest.get('example', {})],
         raw_manifest.get('features', {}),
-        {k: {k2: Dependency.from_raw(v2) for k2, v2 in v.get('dependencies', {}).items()}
+        {k: {k2: Dependency.from_raw(k2, v2) for k2, v2 in v.get('dependencies', {}).items()}
          for k, v in raw_manifest.get('target', {}).items()},
         subdir,
         path,
@@ -347,8 +367,21 @@ def _load_manifests(subdir: str) -> T.Dict[str, Manifest]:
     return manifests
 
 
-def _dependency_name(package_name: str) -> str:
-    return package_name if package_name.endswith('-rs') else f'{package_name}-rs'
+def _version_to_api(version: str) -> str:
+    # x.y.z -> x
+    # 0.x.y -> 0.x
+    # 0.0.x -> 0
+    vers = version.split('.')
+    if int(vers[0]) != 0:
+        return vers[0]
+    elif len(vers) >= 2 and int(vers[1]) != 0:
+        return f'0.{vers[1]}'
+    return '0'
+
+
+def _dependency_name(package_name: str, api: str) -> str:
+    basename = package_name[:-3] if package_name.endswith('-rs') else package_name
+    return f'{basename}-{api}-rs'
 
 
 def _dependency_varname(package_name: str) -> str:
@@ -480,8 +513,6 @@ def _create_features(cargo: Manifest, build: builder.Builder) -> T.List[mparser.
 def _create_dependencies(cargo: Manifest, build: builder.Builder) -> T.List[mparser.BaseNode]:
     ast: T.List[mparser.BaseNode] = []
     for name, dep in cargo.dependencies.items():
-        package_name = dep.package or name
-
         # xxx_options += {'feature-default': true, ...}
         extra_options: T.Dict[mparser.BaseNode, mparser.BaseNode] = {
             build.string(_option_name('default')): build.bool(dep.default_features),
@@ -515,20 +546,20 @@ def _create_dependencies(cargo: Manifest, build: builder.Builder) -> T.List[mpar
             build.assign(
                 build.function(
                     'dependency',
-                    [build.string(_dependency_name(package_name))],
+                    [build.string(_dependency_name(dep.package, dep.api))],
                     kw,
                 ),
-                _dependency_varname(package_name),
+                _dependency_varname(dep.package),
             ),
             # if xxx_dep.found()
-            build.if_(build.method('found', build.identifier(_dependency_varname(package_name))), build.block([
+            build.if_(build.method('found', build.identifier(_dependency_varname(dep.package))), build.block([
                 # actual_features = xxx_dep.get_variable('features', default_value : '').split(',')
                 build.assign(
                     build.method(
                         'split',
                         build.method(
                             'get_variable',
-                            build.identifier(_dependency_varname(package_name)),
+                            build.identifier(_dependency_varname(dep.package)),
                             [build.string('features')],
                             {'default_value': build.string('')}
                         ),
@@ -557,7 +588,7 @@ def _create_dependencies(cargo: Manifest, build: builder.Builder) -> T.List[mpar
                     build.if_(build.not_in(build.identifier('f'), build.identifier('actual_features')), build.block([
                         build.function('error', [
                             build.string('Dependency'),
-                            build.string(_dependency_name(package_name)),
+                            build.string(_dependency_name(dep.package, dep.api)),
                             build.string('previously configured with features'),
                             build.identifier('actual_features'),
                             build.string('but need'),
@@ -593,10 +624,9 @@ def _create_lib(cargo: Manifest, build: builder.Builder, crate_type: manifest.CR
     dependencies: T.List[mparser.BaseNode] = []
     dependency_map: T.Dict[mparser.BaseNode, mparser.BaseNode] = {}
     for name, dep in cargo.dependencies.items():
-        package_name = dep.package or name
-        dependencies.append(build.identifier(_dependency_varname(package_name)))
-        if name != package_name:
-            dependency_map[build.string(fixup_meson_varname(package_name))] = build.string(name)
+        dependencies.append(build.identifier(_dependency_varname(dep.package)))
+        if name != dep.package:
+            dependency_map[build.string(fixup_meson_varname(dep.package))] = build.string(name)
 
     rust_args: T.List[mparser.BaseNode] = [
         build.identifier('features_args'),
@@ -665,15 +695,16 @@ def _create_lib(cargo: Manifest, build: builder.Builder, crate_type: manifest.CR
             'override_dependency',
             build.identifier('meson'),
             [
-                build.string(_dependency_name(cargo.package.name)),
+                build.string(_dependency_name(cargo.package.name, _version_to_api(cargo.package.version))),
                 build.identifier('dep'),
             ],
         ),
     ]
 
 
-def interpret(subp_name: str, subdir: str, env: Environment) -> T.Tuple[mparser.CodeBlockNode, KeyedOptionDictType]:
-    package_name = subp_name[:-3] if subp_name.endswith('-rs') else subp_name
+def interpret(subp_name: str, subdir: str, env: Environment) -> T.Tuple[mparser.CodeBlockNode,  dict[OptionKey, options.UserOption[Any]]]:
+    # subp_name should be in the form "foo-0.1-rs"
+    package_name = subp_name.rsplit('-', 2)[0]
     manifests = _load_manifests(os.path.join(env.source_dir, subdir))
     cargo = manifests.get(package_name)
     if not cargo:
@@ -683,11 +714,11 @@ def interpret(subp_name: str, subdir: str, env: Environment) -> T.Tuple[mparser.
     build = builder.Builder(filename)
 
     # Generate project options
-    options: T.Dict[OptionKey, coredata.UserOption] = {}
+    project_options: T.Dict[OptionKey, options.UserOption] = {}
     for feature in cargo.features:
         key = OptionKey(_option_name(feature), subproject=subp_name)
         enabled = feature == 'default'
-        options[key] = coredata.UserBooleanOption(f'Cargo {feature} feature', enabled)
+        project_options[key] = options.UserBooleanOption(key.name, f'Cargo {feature} feature', enabled)
 
     ast = _create_project(cargo, build)
     ast += [build.assign(build.function('import', [build.string('rust')]), 'rust')]
@@ -701,4 +732,49 @@ def interpret(subp_name: str, subdir: str, env: Environment) -> T.Tuple[mparser.
         for crate_type in cargo.lib.crate_type:
             ast.extend(_create_lib(cargo, build, crate_type))
 
-    return build.block(ast), options
+    return build.block(ast), project_options
+
+
+def load_wraps(source_dir: str, subproject_dir: str) -> T.List[PackageDefinition]:
+    """ Convert Cargo.lock into a list of wraps """
+
+    wraps: T.List[PackageDefinition] = []
+    filename = os.path.join(source_dir, 'Cargo.lock')
+    if os.path.exists(filename):
+        cargolock = T.cast('manifest.CargoLock', load_toml(filename))
+        for package in cargolock['package']:
+            name = package['name']
+            version = package['version']
+            subp_name = _dependency_name(name, _version_to_api(version))
+            source = package.get('source')
+            if source is None:
+                # This is project's package, or one of its workspace members.
+                pass
+            elif source == 'registry+https://github.com/rust-lang/crates.io-index':
+                checksum = package.get('checksum')
+                if checksum is None:
+                    checksum = cargolock['metadata'][f'checksum {name} {version} ({source})']
+                url = f'https://crates.io/api/v1/crates/{name}/{version}/download'
+                directory = f'{name}-{version}'
+                wraps.append(PackageDefinition.from_values(subp_name, subproject_dir, 'file', {
+                    'directory': directory,
+                    'source_url': url,
+                    'source_filename': f'{directory}.tar.gz',
+                    'source_hash': checksum,
+                    'method': 'cargo',
+                }))
+            elif source.startswith('git+'):
+                parts = urllib.parse.urlparse(source[4:])
+                query = urllib.parse.parse_qs(parts.query)
+                branch = query['branch'][0] if 'branch' in query else ''
+                revision = parts.fragment or branch
+                url = urllib.parse.urlunparse(parts._replace(params='', query='', fragment=''))
+                wraps.append(PackageDefinition.from_values(subp_name, subproject_dir, 'git', {
+                    'directory': name,
+                    'url': url,
+                    'revision': revision,
+                    'method': 'cargo',
+                }))
+            else:
+                mlog.warning(f'Unsupported source URL in {filename}: {source}')
+    return wraps

@@ -62,7 +62,7 @@ class StaticLinker:
     def thread_link_flags(self, env: 'Environment') -> T.List[str]:
         return []
 
-    def openmp_flags(self) -> T.List[str]:
+    def openmp_flags(self, env: Environment) -> T.List[str]:
         return []
 
     def get_option_link_args(self, options: 'KeyedOptionDictType') -> T.List[str]:
@@ -492,6 +492,9 @@ class C2000Linker(TILinker):
     # Required for backwards compat with projects created before ti-cgt support existed
     id = 'ar2000'
 
+class C6000Linker(TILinker):
+    id = 'ar6000'
+
 
 class AIXArLinker(ArLikeLinker, StaticLinker):
     id = 'aixar'
@@ -816,20 +819,25 @@ class AppleDynamicLinker(PosixDynamicLinkerMixin, DynamicLinker):
         if not rpath_paths and not install_rpath and not build_rpath:
             return ([], set())
         args: T.List[str] = []
+        rpath_dirs_to_remove: T.Set[bytes] = set()
         # @loader_path is the equivalent of $ORIGIN on macOS
         # https://stackoverflow.com/q/26280738
         origin_placeholder = '@loader_path'
         processed_rpaths = prepare_rpaths(rpath_paths, build_dir, from_dir)
         all_paths = mesonlib.OrderedSet([os.path.join(origin_placeholder, p) for p in processed_rpaths])
         if build_rpath != '':
-            all_paths.add(build_rpath)
+            all_paths.update(build_rpath.split(':'))
         for rp in all_paths:
+            rpath_dirs_to_remove.add(rp.encode('utf8'))
             args.extend(self._apply_prefix('-rpath,' + rp))
 
-        return (args, set())
+        return (args, rpath_dirs_to_remove)
 
     def get_thinlto_cache_args(self, path: str) -> T.List[str]:
         return ["-Wl,-cache_path_lto," + path]
+
+    def export_dynamic_args(self, env: 'Environment') -> T.List[str]:
+        return self._apply_prefix('-export_dynamic')
 
 
 class LLVMLD64DynamicLinker(AppleDynamicLinker):
@@ -882,13 +890,34 @@ class LLVMDynamicLinker(GnuLikeDynamicLinkerMixin, PosixDynamicLinkerMixin, Dyna
         super().__init__(exelist, for_machine, prefix_arg, always_args, version=version)
 
         # Some targets don't seem to support this argument (windows, wasm, ...)
-        _, _, e = mesonlib.Popen_safe(self.exelist + always_args + self._apply_prefix('--allow-shlib-undefined'))
-        # Versions < 9 do not have a quoted argument
-        self.has_allow_shlib_undefined = ('unknown argument: --allow-shlib-undefined' not in e) and ("unknown argument: '--allow-shlib-undefined'" not in e)
+        self.has_allow_shlib_undefined = self._supports_flag('--allow-shlib-undefined', always_args)
+        # These aren't supported by TI Arm Clang
+        self.has_as_needed = self._supports_flag('--as-needed', always_args)
+        self.has_no_undefined = self._supports_flag('--no-undefined', always_args)
+
+    def _supports_flag(self, flag: str, always_args: T.List[str]) -> bool:
+        _, _, e = mesonlib.Popen_safe(self.exelist + always_args + self._apply_prefix(flag))
+        return (
+            # Versions < 9 do not have a quoted argument
+            (f'unknown argument: {flag}' not in e) and
+            (f"unknown argument: '{flag}'" not in e) and
+            # TI Arm Clang uses a different message
+            (f'invalid option:  {flag}' not in e)
+        )
 
     def get_allow_undefined_args(self) -> T.List[str]:
         if self.has_allow_shlib_undefined:
             return self._apply_prefix('--allow-shlib-undefined')
+        return []
+
+    def get_asneeded_args(self) -> T.List[str]:
+        if self.has_as_needed:
+            return self._apply_prefix('--as-needed')
+        return []
+
+    def no_undefined_args(self) -> T.List[str]:
+        if self.has_no_undefined:
+            return self._apply_prefix('--no-undefined')
         return []
 
     def get_thinlto_cache_args(self, path: str) -> T.List[str]:
@@ -1093,6 +1122,9 @@ class TIDynamicLinker(DynamicLinker):
 class C2000DynamicLinker(TIDynamicLinker):
     # Required for backwards compat with projects created before ti-cgt support existed
     id = 'cl2000'
+
+class C6000DynamicLinker(TIDynamicLinker):
+    id = 'cl6000'
 
 
 class ArmDynamicLinker(PosixDynamicLinkerMixin, DynamicLinker):

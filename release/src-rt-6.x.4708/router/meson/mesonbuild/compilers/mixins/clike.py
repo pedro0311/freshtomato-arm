@@ -26,7 +26,7 @@ from ... import arglist
 from ... import mesonlib
 from ... import mlog
 from ...linkers.linkers import GnuLikeDynamicLinkerMixin, SolarisDynamicLinker, CompCertDynamicLinker
-from ...mesonlib import LibType, OptionKey
+from ...mesonlib import LibType
 from .. import compilers
 from ..compilers import CompileCheckMode
 from .visualstudio import VisualStudioLikeCompiler
@@ -36,7 +36,6 @@ if T.TYPE_CHECKING:
     from ..._typing import ImmutableListProtocol
     from ...environment import Environment
     from ...compilers.compilers import Compiler
-    from ...programs import ExternalProgram
 else:
     # This is a bit clever, for mypy we pretend that these mixins descend from
     # Compiler, so we get all of the methods and attributes defined for us, but
@@ -133,15 +132,9 @@ class CLikeCompiler(Compiler):
     find_framework_cache: T.Dict[T.Tuple[T.Tuple[str, ...], str, T.Tuple[str, ...], bool], T.Optional[T.List[str]]] = {}
     internal_libs = arglist.UNIXY_COMPILER_INTERNAL_LIBS
 
-    def __init__(self, exe_wrapper: T.Optional['ExternalProgram'] = None):
+    def __init__(self) -> None:
         # If a child ObjC or CPP class has already set it, don't set it ourselves
         self.can_compile_suffixes.add('h')
-        # If the exe wrapper was not found, pretend it wasn't set so that the
-        # sanity check is skipped and compiler checks use fallbacks.
-        if not exe_wrapper or not exe_wrapper.found() or not exe_wrapper.get_command():
-            self.exe_wrapper = None
-        else:
-            self.exe_wrapper = exe_wrapper
         # Lazy initialized in get_preprocessor()
         self.preprocessor: T.Optional[Compiler] = None
 
@@ -285,7 +278,7 @@ class CLikeCompiler(Compiler):
         mode = CompileCheckMode.LINK
         if self.is_cross:
             binname += '_cross'
-            if self.exe_wrapper is None:
+            if not environment.has_exe_wrapper():
                 # Linking cross built C/C++ apps is painful. You can't really
                 # tell if you should use -nostdlib or not and for example
                 # on OSX the compiler binary is the same but you need
@@ -316,10 +309,10 @@ class CLikeCompiler(Compiler):
             raise mesonlib.EnvironmentException(f'Compiler {self.name_string()} cannot compile programs.')
         # Run sanity check
         if self.is_cross:
-            if self.exe_wrapper is None:
+            if not environment.has_exe_wrapper():
                 # Can't check if the binaries run so we have to assume they do
                 return
-            cmdlist = self.exe_wrapper.get_command() + [binary_name]
+            cmdlist = environment.exe_wrapper.get_command() + [binary_name]
         else:
             cmdlist = [binary_name]
         mlog.debug('Running test binary command: ', mesonlib.join_args(cmdlist))
@@ -383,8 +376,8 @@ class CLikeCompiler(Compiler):
             # linking with static libraries since MSVC won't select a CRT for
             # us in that case and will error out asking us to pick one.
             try:
-                crt_val = env.coredata.options[OptionKey('b_vscrt')].value
-                buildtype = env.coredata.options[OptionKey('buildtype')].value
+                crt_val = env.coredata.optstore.get_value('b_vscrt')
+                buildtype = env.coredata.optstore.get_value('buildtype')
                 cargs += self.get_crt_compile_args(crt_val, buildtype)
             except (KeyError, AttributeError):
                 pass
@@ -447,43 +440,23 @@ class CLikeCompiler(Compiler):
 
         ca, la = self._get_basic_compiler_args(env, mode)
         cargs += ca
-        largs += la
 
         cargs += self.get_compiler_check_args(mode)
 
         # on MSVC compiler and linker flags must be separated by the "/link" argument
         # at this point, the '/link' argument may already be part of extra_args, otherwise, it is added here
-        if self.linker_to_compiler_args([]) == ['/link'] and largs != [] and '/link' not in extra_args:
-            extra_args += ['/link']
+        largs += [l for l in self.linker_to_compiler_args(la) if l != '/link']
+
+        if self.linker_to_compiler_args([]) == ['/link']:
+            if largs != [] and '/link' not in extra_args:
+                extra_args += ['/link']
+            # all linker flags must be converted now, otherwise the reordering
+            # of arglist will apply and -L flags will be reordered into
+            # breaking form. See arglist._should_prepend
+            largs = self.unix_args_to_native(largs)
 
         args = cargs + extra_args + largs
         return args
-
-    def run(self, code: 'mesonlib.FileOrString', env: 'Environment', *,
-            extra_args: T.Union[T.List[str], T.Callable[[CompileCheckMode], T.List[str]], None] = None,
-            dependencies: T.Optional[T.List['Dependency']] = None) -> compilers.RunResult:
-        need_exe_wrapper = env.need_exe_wrapper(self.for_machine)
-        if need_exe_wrapper and self.exe_wrapper is None:
-            raise compilers.CrossNoRunException('Can not run test applications in this cross environment.')
-        with self._build_wrapper(code, env, extra_args, dependencies, mode=CompileCheckMode.LINK, want_output=True) as p:
-            if p.returncode != 0:
-                mlog.debug(f'Could not compile test file {p.input_name}: {p.returncode}\n')
-                return compilers.RunResult(False)
-            if need_exe_wrapper:
-                cmdlist = self.exe_wrapper.get_command() + [p.output_name]
-            else:
-                cmdlist = [p.output_name]
-            try:
-                pe, so, se = mesonlib.Popen_safe(cmdlist)
-            except Exception as e:
-                mlog.debug(f'Could not run: {cmdlist} (error: {e})\n')
-                return compilers.RunResult(False)
-
-        mlog.debug('Program stdout:\n')
-        mlog.debug(so)
-        mlog.debug('Program stderr:\n')
-        mlog.debug(se)
-        return compilers.RunResult(True, pe.returncode, so, se)
 
     def _compile_int(self, expression: str, prefix: str, env: 'Environment',
                      extra_args: T.Union[None, T.List[str], T.Callable[[CompileCheckMode], T.List[str]]],
@@ -652,9 +625,17 @@ class CLikeCompiler(Compiler):
             raise mesonlib.EnvironmentException('Could not compile alignment test.')
         if res.returncode != 0:
             raise mesonlib.EnvironmentException('Could not run alignment test binary.')
-        align = int(res.stdout)
+
+        align: int
+        try:
+            align = int(res.stdout)
+        except ValueError:
+            # If we get here, the user is most likely using a script that is
+            # pretending to be a compiler.
+            raise mesonlib.EnvironmentException('Could not run alignment test binary.')
         if align == 0:
             raise mesonlib.EnvironmentException(f'Could not determine alignment of {typename}. Sorry. You might want to file a bug.')
+
         return align, res.cached
 
     def get_define(self, dname: str, prefix: str, env: 'Environment',
@@ -1052,6 +1033,10 @@ class CLikeCompiler(Compiler):
         elif env.machines[self.for_machine].is_cygwin():
             shlibext = ['dll', 'dll.a']
             prefixes = ['cyg'] + prefixes
+        elif self.id.lower() == 'c6000' or self.id.lower() == 'ti':
+            # TI C6000 compiler can use both extensions for static or dynamic libs.
+            stlibext = ['a', 'lib']
+            shlibext = ['dll', 'so']
         else:
             # Linux/BSDs
             shlibext = ['so']

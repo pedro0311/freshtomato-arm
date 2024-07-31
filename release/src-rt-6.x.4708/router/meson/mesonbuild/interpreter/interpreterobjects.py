@@ -8,7 +8,7 @@ import textwrap
 from pathlib import Path, PurePath
 
 from .. import mesonlib
-from .. import coredata
+from .. import options
 from .. import build
 from .. import mlog
 
@@ -24,7 +24,7 @@ from ..interpreterbase import (
 from ..interpreter.type_checking import NoneType, ENV_KW, ENV_SEPARATOR_KW, PKGCONFIG_DEFINE_KW
 from ..dependencies import Dependency, ExternalLibrary, InternalDependency
 from ..programs import ExternalProgram
-from ..mesonlib import HoldableObject, OptionKey, listify, Popen_safe
+from ..mesonlib import HoldableObject, listify, Popen_safe
 
 import typing as T
 
@@ -52,7 +52,7 @@ def extract_required_kwarg(kwargs: 'kwargs.ExtractRequired',
     disabled = False
     required = False
     feature: T.Optional[str] = None
-    if isinstance(val, coredata.UserFeatureOption):
+    if isinstance(val, options.UserFeatureOption):
         if not feature_check:
             feature_check = FeatureNew('User option "feature"', '0.47.0')
         feature_check.use(subproject)
@@ -85,12 +85,12 @@ def extract_search_dirs(kwargs: 'kwargs.ExtractSearchDirs') -> T.List[str]:
             raise InvalidCode(f'Search directory {d} is not an absolute path.')
     return [str(s) for s in search_dirs]
 
-class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
-    def __init__(self, option: coredata.UserFeatureOption, interpreter: 'Interpreter'):
+class FeatureOptionHolder(ObjectHolder[options.UserFeatureOption]):
+    def __init__(self, option: options.UserFeatureOption, interpreter: 'Interpreter'):
         super().__init__(option, interpreter)
         if option and option.is_auto():
             # TODO: we need to cast here because options is not a TypedDict
-            auto = T.cast('coredata.UserFeatureOption', self.env.coredata.options[OptionKey('auto_features')])
+            auto = T.cast('options.UserFeatureOption', self.env.coredata.optstore.get_value_object('auto_features'))
             self.held_object = copy.copy(auto)
             self.held_object.name = option.name
         self.methods.update({'enabled': self.enabled_method,
@@ -108,12 +108,12 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
     def value(self) -> str:
         return 'disabled' if not self.held_object else self.held_object.value
 
-    def as_disabled(self) -> coredata.UserFeatureOption:
+    def as_disabled(self) -> options.UserFeatureOption:
         disabled = copy.deepcopy(self.held_object)
         disabled.value = 'disabled'
         return disabled
 
-    def as_enabled(self) -> coredata.UserFeatureOption:
+    def as_enabled(self) -> options.UserFeatureOption:
         enabled = copy.deepcopy(self.held_object)
         enabled.value = 'enabled'
         return enabled
@@ -139,7 +139,7 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
     def auto_method(self, args: T.List[TYPE_var], kwargs: TYPE_kwargs) -> bool:
         return self.value == 'auto'
 
-    def _disable_if(self, condition: bool, message: T.Optional[str]) -> coredata.UserFeatureOption:
+    def _disable_if(self, condition: bool, message: T.Optional[str]) -> options.UserFeatureOption:
         if not condition:
             return copy.deepcopy(self.held_object)
 
@@ -156,7 +156,7 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
         'feature_option.require',
         _ERROR_MSG_KW,
     )
-    def require_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> coredata.UserFeatureOption:
+    def require_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> options.UserFeatureOption:
         return self._disable_if(not args[0], kwargs['error_message'])
 
     @FeatureNew('feature_option.disable_if()', '1.1.0')
@@ -165,7 +165,7 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
         'feature_option.disable_if',
         _ERROR_MSG_KW,
     )
-    def disable_if_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> coredata.UserFeatureOption:
+    def disable_if_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> options.UserFeatureOption:
         return self._disable_if(args[0], kwargs['error_message'])
 
     @FeatureNew('feature_option.enable_if()', '1.1.0')
@@ -174,7 +174,7 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
         'feature_option.enable_if',
         _ERROR_MSG_KW,
     )
-    def enable_if_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> coredata.UserFeatureOption:
+    def enable_if_method(self, args: T.Tuple[bool], kwargs: 'kwargs.FeatureOptionRequire') -> options.UserFeatureOption:
         if not args[0]:
             return copy.deepcopy(self.held_object)
 
@@ -188,13 +188,13 @@ class FeatureOptionHolder(ObjectHolder[coredata.UserFeatureOption]):
     @FeatureNew('feature_option.disable_auto_if()', '0.59.0')
     @noKwargs
     @typed_pos_args('feature_option.disable_auto_if', bool)
-    def disable_auto_if_method(self, args: T.Tuple[bool], kwargs: TYPE_kwargs) -> coredata.UserFeatureOption:
+    def disable_auto_if_method(self, args: T.Tuple[bool], kwargs: TYPE_kwargs) -> options.UserFeatureOption:
         return copy.deepcopy(self.held_object) if self.value != 'auto' or not args[0] else self.as_disabled()
 
     @FeatureNew('feature_option.enable_auto_if()', '1.1.0')
     @noKwargs
     @typed_pos_args('feature_option.enable_auto_if', bool)
-    def enable_auto_if_method(self, args: T.Tuple[bool], kwargs: TYPE_kwargs) -> coredata.UserFeatureOption:
+    def enable_auto_if_method(self, args: T.Tuple[bool], kwargs: TYPE_kwargs) -> options.UserFeatureOption:
         return self.as_enabled() if self.value == 'auto' and args[0] else copy.deepcopy(self.held_object)
 
 
@@ -379,7 +379,7 @@ class ConfigurationDataHolder(ObjectHolder[build.ConfigurationData], MutableInte
         # We already have typed_pos_args checking that this is either a bool or
         # an int.
         if not isinstance(args[1], bool):
-            mlog.deprecation('configuration_data.set10 with number. the `set10` '
+            mlog.deprecation('configuration_data.set10 with number. The `set10` '
                              'method should only be used with booleans',
                              location=self.interpreter.current_node)
             if args[1] < 0:
@@ -638,6 +638,7 @@ class ExternalLibraryHolder(ObjectHolder[ExternalLibrary]):
         self.methods.update({'found': self.found_method,
                              'type_name': self.type_name_method,
                              'partial_dependency': self.partial_dependency_method,
+                             'name': self.name_method,
                              })
 
     @noPosargs
@@ -656,6 +657,13 @@ class ExternalLibraryHolder(ObjectHolder[ExternalLibrary]):
     def partial_dependency_method(self, args: T.List[TYPE_nvar], kwargs: 'kwargs.DependencyMethodPartialDependency') -> Dependency:
         pdep = self.held_object.get_partial_dependency(**kwargs)
         return pdep
+
+    @FeatureNew('dependency.name', '1.5.0')
+    @noPosargs
+    @noKwargs
+    def name_method(self, args: T.List[TYPE_var], kwargs: TYPE_kwargs) -> str:
+        return self.held_object.name
+
 
 # A machine that's statically known from the cross file
 class MachineHolder(ObjectHolder['MachineInfo']):

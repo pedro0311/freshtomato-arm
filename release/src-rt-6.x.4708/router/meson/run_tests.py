@@ -33,7 +33,8 @@ from mesonbuild import mesonmain
 from mesonbuild import mtest
 from mesonbuild import mlog
 from mesonbuild.environment import Environment, detect_ninja, detect_machine_info
-from mesonbuild.coredata import backendlist, version as meson_version
+from mesonbuild.coredata import version as meson_version
+from mesonbuild.options import backendlist
 from mesonbuild.mesonlib import OptionKey, setup_vsenv
 
 if T.TYPE_CHECKING:
@@ -150,7 +151,7 @@ def get_fake_env(sdir='', bdir=None, prefix='', opts=None):
     if opts is None:
         opts = get_fake_options(prefix)
     env = Environment(sdir, bdir, opts)
-    env.coredata.options[OptionKey('args', lang='c')] = FakeCompilerOptions()
+    env.coredata.optstore.set_value_object(OptionKey('args', lang='c'),  FakeCompilerOptions())
     env.machines.host.cpu_family = 'x86_64' # Used on macOS inside find_library
     # Invalidate cache when using a different Environment object.
     clear_meson_configure_class_caches()
@@ -382,7 +383,7 @@ def main():
         else:
             print(mlog.bold('Running unittests.'))
             print(flush=True)
-            cmd = mesonlib.python_command + ['run_unittests.py', '-v'] + backend_flags
+            cmd = mesonlib.python_command + ['run_unittests.py'] + backend_flags
             if options.failfast:
                 cmd += ['--failfast']
             returncode += subprocess_call(cmd, env=env)

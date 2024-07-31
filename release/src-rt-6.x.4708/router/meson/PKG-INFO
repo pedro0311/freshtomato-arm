@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: meson
-Version: 1.4.1
+Version: 1.5.1
 Summary: A high performance build system
 Home-page: https://mesonbuild.com
 Author: Jussi Pakkanen
@@ -26,9 +26,13 @@ Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Topic :: Software Development :: Build Tools
 Requires-Python: >=3.7
-Provides-Extra: ninja
-Provides-Extra: progress
-Provides-Extra: typing
 License-File: COPYING
+Provides-Extra: ninja
+Requires-Dist: ninja>=1.8.2; extra == "ninja"
+Provides-Extra: progress
+Requires-Dist: tqdm; extra == "progress"
+Provides-Extra: typing
+Requires-Dist: mypy; extra == "typing"
+Requires-Dist: typing_extensions; python_version < "3.8" and extra == "typing"
 
 Meson is a cross-platform build system designed to be both as fast and as user friendly as possible. It supports many languages and compilers, including GCC, Clang, PGI, Intel, and Visual Studio. Its build definitions are written in a simple non-Turing complete DSL.

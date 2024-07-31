@@ -98,10 +98,11 @@ def get_rsp_threshold() -> int:
         # and that has a limit of 8k.
         limit = 8192
     else:
-        # On Linux, ninja always passes the commandline as a single
-        # big string to /bin/sh, and the kernel limits the size of a
-        # single argument; see MAX_ARG_STRLEN
-        limit = 131072
+        # Unix-like OSes usualy have very large command line limits, (On Linux,
+        # for example, this is limited by the kernel's MAX_ARG_STRLEN). However,
+        # some programs place much lower limits, notably Wine which enforces a
+        # 32k limit like Windows. Therefore, we limit the command line to 32k.
+        limit = 32768
     # Be conservative
     limit = limit // 2
     return int(os.environ.get('MESON_RSP_THRESHOLD', limit))
@@ -135,10 +136,23 @@ Please report this error with a test case to the Meson bug tracker.'''
         raise MesonException(errmsg)
     return quote_re.sub(r'$\g<0>', text)
 
+
+@dataclass
 class TargetDependencyScannerInfo:
-    def __init__(self, private_dir: str, source2object: T.Dict[str, str]):
-        self.private_dir = private_dir
-        self.source2object = source2object
+
+    """Information passed to the depscanner about a target.
+
+    :param private_dir: The private scratch directory for the target.
+    :param source2object: A mapping of source file names to the objects that
+        will be created from them.
+    :param sources: a list of sources mapping them to the language rules to use
+        to scan them.
+    """
+
+    private_dir: str
+    source2object: T.Dict[str, str]
+    sources: T.List[T.Tuple[str, Literal['cpp', 'fortran']]]
+
 
 @unique
 class Quoting(Enum):
@@ -186,7 +200,9 @@ class NinjaRule:
                 # shell constructs shouldn't be shell quoted
                 return NinjaCommandArg(c, Quoting.notShell)
             if c.startswith('$'):
-                var = re.search(r'\$\{?(\w*)\}?', c).group(1)
+                varp = re.match(r'\$\{?(\w*)\}?', c)
+                assert varp is not None, 'for mypy'
+                var: str = varp.group(1)
                 if var not in raw_names:
                     # ninja variables shouldn't be ninja quoted, and their value
                     # is already shell quoted
@@ -214,26 +230,25 @@ class NinjaRule:
             self.depfile += '_UNQUOTED'
 
     @staticmethod
-    def _quoter(x, qf = quote_func):
-        if isinstance(x, NinjaCommandArg):
-            if x.quoting == Quoting.none:
-                return x.s
-            elif x.quoting == Quoting.notNinja:
-                return qf(x.s)
-            elif x.quoting == Quoting.notShell:
-                return ninja_quote(x.s)
-            # fallthrough
+    def _quoter(x: NinjaCommandArg, qf: T.Callable[[str], str] = quote_func) -> str:
+        if x.quoting == Quoting.none:
+            return x.s
+        elif x.quoting == Quoting.notNinja:
+            return qf(x.s)
+        elif x.quoting == Quoting.notShell:
+            return ninja_quote(x.s)
         return ninja_quote(qf(str(x)))
 
     def write(self, outfile: T.TextIO) -> None:
         rspfile_args = self.args
+        rspfile_quote_func: T.Callable[[str], str]
         if self.rspfile_quote_style is RSPFileSyntax.MSVC:
             rspfile_quote_func = cmd_quote
             rspfile_args = [NinjaCommandArg('$in_newline', arg.quoting) if arg.s == '$in' else arg for arg in rspfile_args]
         else:
             rspfile_quote_func = gcc_rsp_quote
 
-        def rule_iter():
+        def rule_iter() -> T.Iterable[str]:
             if self.refcount:
                 yield ''
             if self.rsprefcount:
@@ -259,25 +274,25 @@ class NinjaRule:
                     outfile.write('\n')
             outfile.write('\n')
 
-    def length_estimate(self, infiles, outfiles, elems):
+    def length_estimate(self, infiles: str, outfiles: str,
+                        elems: T.List[T.Tuple[str, T.List[str]]]) -> int:
         # determine variables
         # this order of actions only approximates ninja's scoping rules, as
         # documented at: https://ninja-build.org/manual.html#ref_scope
-        ninja_vars = {}
-        for e in elems:
-            (name, value) = e
-            ninja_vars[name] = value
-        ninja_vars['deps'] = self.deps
-        ninja_vars['depfile'] = self.depfile
-        ninja_vars['in'] = infiles
-        ninja_vars['out'] = outfiles
+        ninja_vars = dict(elems)
+        if self.deps is not None:
+            ninja_vars['deps'] = [self.deps]
+        if self.depfile is not None:
+            ninja_vars['depfile'] = [self.depfile]
+        ninja_vars['in'] = [infiles]
+        ninja_vars['out'] = [outfiles]
 
         # expand variables in command
         command = ' '.join([self._quoter(x) for x in self.command + self.args])
         estimate = len(command)
         for m in re.finditer(r'(\${\w+}|\$\w+)?[^$]*', command):
             if m.start(1) != -1:
-                estimate -= m.end(1) - m.start(1) + 1
+                estimate -= m.end(1) - m.start(1)
                 chunk = m.group(1)
                 if chunk[1] == '{':
                     chunk = chunk[2:-1]
@@ -481,6 +496,7 @@ class NinjaBackend(backends.Backend):
         self.created_llvm_ir_rule = PerMachine(False, False)
         self.rust_crates: T.Dict[str, RustCrate] = {}
         self.implicit_meson_outs = []
+        self._uses_dyndeps = False
         # nvcc chokes on thin archives:
         #   nvlink fatal   : Could not open input file 'libfoo.a.p'
         #   nvlink fatal   : elfLink internal error
@@ -578,7 +594,7 @@ class NinjaBackend(backends.Backend):
 
         raise MesonException(f'Could not determine vs dep dependency prefix string. output: {stderr} {stdout}')
 
-    def generate(self, capture: bool = False, vslite_ctx: dict = None) -> T.Optional[dict]:
+    def generate(self, capture: bool = False, vslite_ctx: T.Optional[T.Dict] = None) -> T.Optional[T.Dict]:
         if vslite_ctx:
             # We don't yet have a use case where we'd expect to make use of this,
             # so no harm in catching and reporting something unexpected.
@@ -608,7 +624,7 @@ class NinjaBackend(backends.Backend):
             outfile.write('# Do not edit by hand.\n\n')
             outfile.write('ninja_required_version = 1.8.2\n\n')
 
-            num_pools = self.environment.coredata.options[OptionKey('backend_max_links')].value
+            num_pools = self.environment.coredata.optstore.get_value('backend_max_links')
             if num_pools > 0:
                 outfile.write(f'''pool link_pool
   depth = {num_pools}
@@ -641,8 +657,8 @@ class NinjaBackend(backends.Backend):
             self.generate_dist()
             mlog.log_timestamp("Dist generated")
             key = OptionKey('b_coverage')
-            if (key in self.environment.coredata.options and
-                    self.environment.coredata.options[key].value):
+            if (key in self.environment.coredata.optstore and
+                    self.environment.coredata.optstore.get_value(key)):
                 gcovr_exe, gcovr_version, lcov_exe, lcov_version, genhtml_exe, llvm_cov_exe = environment.find_coverage_tools(self.environment.coredata)
                 mlog.debug(f'Using {gcovr_exe} ({gcovr_version}), {lcov_exe} and {llvm_cov_exe} for code coverage')
                 if gcovr_exe or (lcov_exe and genhtml_exe):
@@ -668,7 +684,8 @@ class NinjaBackend(backends.Backend):
         os.replace(tempfilename, outfilename)
         mlog.cmd_ci_include(outfilename)  # For CI debugging
         # Refresh Ninja's caches. https://github.com/ninja-build/ninja/pull/1685
-        if mesonlib.version_compare(self.ninja_version, '>=1.10.0') and os.path.exists(os.path.join(self.environment.build_dir, '.ninja_log')):
+        # Cannot use when running with dyndeps: https://github.com/ninja-build/ninja/issues/1952
+        if mesonlib.version_compare(self.ninja_version, '>=1.10.0') and os.path.exists(os.path.join(self.environment.build_dir, '.ninja_log')) and not self._uses_dyndeps:
             subprocess.call(self.ninja_command + ['-t', 'restat'], cwd=self.environment.build_dir)
             subprocess.call(self.ninja_command + ['-t', 'cleandead'], cwd=self.environment.build_dir)
         self.generate_compdb()
@@ -848,17 +865,14 @@ class NinjaBackend(backends.Backend):
             tgt[lnk_hash] = lnk_block
 
     def generate_target(self, target):
-        try:
-            if isinstance(target, build.BuildTarget):
-                os.makedirs(self.get_target_private_dir_abs(target))
-        except FileExistsError:
-            pass
+        if isinstance(target, build.BuildTarget):
+            os.makedirs(self.get_target_private_dir_abs(target), exist_ok=True)
         if isinstance(target, build.CustomTarget):
             self.generate_custom_target(target)
         if isinstance(target, build.RunTarget):
             self.generate_run_target(target)
-        compiled_sources = []
-        source2object = {}
+        compiled_sources: T.List[str] = []
+        source2object: T.Dict[str, str] = {}
         name = target.get_id()
         if name in self.processed_targets:
             return
@@ -941,7 +955,7 @@ class NinjaBackend(backends.Backend):
         # this target's sources (generated sources and preexisting sources).
         # This will be set as dependencies of all the target's sources. At the
         # same time, also deal with generated sources that need to be compiled.
-        generated_source_files = []
+        generated_source_files: T.List[File] = []
         for rel_src in generated_sources.keys():
             raw_src = File.from_built_relative(rel_src)
             if self.environment.is_source(rel_src):
@@ -1086,48 +1100,53 @@ class NinjaBackend(backends.Backend):
             return False
         return True
 
-    def generate_dependency_scan_target(self, target: build.BuildTarget, compiled_sources, source2object, generated_source_files: T.List[mesonlib.File],
+    def generate_dependency_scan_target(self, target: build.BuildTarget,
+                                        compiled_sources: T.List[str],
+                                        source2object: T.Dict[str, str],
+                                        generated_source_files: T.List[mesonlib.File],
                                         object_deps: T.List['mesonlib.FileOrString']) -> None:
         if not self.should_use_dyndeps_for_target(target):
             return
+        self._uses_dyndeps = True
         depscan_file = self.get_dep_scan_file_for(target)
         pickle_base = target.name + '.dat'
         pickle_file = os.path.join(self.get_target_private_dir(target), pickle_base).replace('\\', '/')
         pickle_abs = os.path.join(self.get_target_private_dir_abs(target), pickle_base).replace('\\', '/')
-        json_abs = os.path.join(self.get_target_private_dir_abs(target), f'{target.name}-deps.json').replace('\\', '/')
         rule_name = 'depscan'
-        scan_sources = self.select_sources_to_scan(compiled_sources)
+        scan_sources = list(self.select_sources_to_scan(compiled_sources))
 
-        # Dump the sources as a json list. This avoids potential problems where
-        # the number of sources passed to depscan exceeds the limit imposed by
-        # the OS.
-        with open(json_abs, 'w', encoding='utf-8') as f:
-            json.dump(scan_sources, f)
-        elem = NinjaBuildElement(self.all_outputs, depscan_file, rule_name, json_abs)
-        elem.add_item('picklefile', pickle_file)
+        scaninfo = TargetDependencyScannerInfo(
+            self.get_target_private_dir(target), source2object, scan_sources)
+
+        write = True
+        if os.path.exists(pickle_abs):
+            with open(pickle_abs, 'rb') as p:
+                old = pickle.load(p)
+            write = old != scaninfo
+
+        if write:
+            with open(pickle_abs, 'wb') as p:
+                pickle.dump(scaninfo, p)
+
+        elem = NinjaBuildElement(self.all_outputs, depscan_file, rule_name, pickle_file)
         # Add any generated outputs to the order deps of the scan target, so
         # that those sources are present
         for g in generated_source_files:
             elem.orderdeps.add(g.relative_name())
         elem.orderdeps.update(object_deps)
-        scaninfo = TargetDependencyScannerInfo(self.get_target_private_dir(target), source2object)
-        with open(pickle_abs, 'wb') as p:
-            pickle.dump(scaninfo, p)
         self.add_build(elem)
 
-    def select_sources_to_scan(self, compiled_sources):
+    def select_sources_to_scan(self, compiled_sources: T.List[str]
+                               ) -> T.Iterable[T.Tuple[str, Literal['cpp', 'fortran']]]:
         # in practice pick up C++ and Fortran files. If some other language
         # requires scanning (possibly Java to deal with inner class files)
         # then add them here.
-        all_suffixes = set(compilers.lang_suffixes['cpp']) | set(compilers.lang_suffixes['fortran'])
-        selected_sources = []
         for source in compiled_sources:
             ext = os.path.splitext(source)[1][1:]
-            if ext != 'C':
-                ext = ext.lower()
-            if ext in all_suffixes:
-                selected_sources.append(source)
-        return selected_sources
+            if ext.lower() in compilers.lang_suffixes['cpp'] or ext == 'C':
+                yield source, 'cpp'
+            elif ext.lower() in compilers.lang_suffixes['fortran']:
+                yield source, 'fortran'
 
     def process_target_dependencies(self, target):
         for t in target.get_dependencies():
@@ -1391,7 +1410,6 @@ class NinjaBackend(backends.Backend):
         outname_rel = os.path.join(self.get_target_dir(target), fname)
         src_list = target.get_sources()
         resources = target.get_java_resources()
-        class_list = []
         compiler = target.compilers['java']
         c = 'c'
         m = 'm'
@@ -1409,10 +1427,8 @@ class NinjaBackend(backends.Backend):
             if rel_src.endswith('.java'):
                 gen_src_list.append(raw_src)
 
-        compile_args = self.determine_single_java_compile_args(target, compiler)
-        for src in src_list + gen_src_list:
-            plain_class_path = self.generate_single_java_compile(src, target, compiler, compile_args)
-            class_list.append(plain_class_path)
+        compile_args = self.determine_java_compile_args(target, compiler)
+        class_list = self.generate_java_compile(src_list + gen_src_list, target, compiler, compile_args)
         class_dep_list = [os.path.join(self.get_target_private_dir(target), i) for i in class_list]
         manifest_path = os.path.join(self.get_target_private_dir(target), 'META-INF', 'MANIFEST.MF')
         manifest_fullpath = os.path.join(self.environment.get_build_dir(), manifest_path)
@@ -1471,9 +1487,8 @@ class NinjaBackend(backends.Backend):
         compiler = target.compilers['cs']
         rel_srcs = [os.path.normpath(s.rel_to_builddir(self.build_to_src)) for s in src_list]
         deps = []
-        commands = compiler.compiler_args(target.extra_args['cs'])
-        commands += compiler.get_optimization_args(target.get_option(OptionKey('optimization')))
-        commands += compiler.get_debug_args(target.get_option(OptionKey('debug')))
+        commands = self.generate_basic_compiler_args(target, compiler)
+        commands += target.extra_args['cs']
         if isinstance(target, build.Executable):
             commands.append('-target:exe')
         elif isinstance(target, build.SharedLibrary):
@@ -1501,8 +1516,6 @@ class NinjaBackend(backends.Backend):
 
         for dep in target.get_external_deps():
             commands.extend_direct(dep.get_link_args())
-        commands += self.build.get_project_args(compiler, target.subproject, target.for_machine)
-        commands += self.build.get_global_args(compiler, target.for_machine)
 
         elem = NinjaBuildElement(self.all_outputs, outputs, self.compiler_to_rule_name(compiler), rel_srcs + generated_rel_srcs)
         elem.add_dep(deps)
@@ -1512,10 +1525,9 @@ class NinjaBackend(backends.Backend):
         self.generate_generator_list_rules(target)
         self.create_target_source_introspection(target, compiler, commands, rel_srcs, generated_rel_srcs)
 
-    def determine_single_java_compile_args(self, target, compiler):
+    def determine_java_compile_args(self, target, compiler):
         args = []
-        args += self.build.get_global_args(compiler, target.for_machine)
-        args += self.build.get_project_args(compiler, target.subproject, target.for_machine)
+        args = self.generate_basic_compiler_args(target, compiler)
         args += target.get_java_args()
         args += compiler.get_output_args(self.get_target_private_dir(target))
         args += target.get_classpath_args()
@@ -1528,20 +1540,30 @@ class NinjaBackend(backends.Backend):
         args += ['-sourcepath', sourcepath]
         return args
 
-    def generate_single_java_compile(self, src, target, compiler, args):
+    def generate_java_compile(self, srcs, target, compiler, args):
         deps = [os.path.join(self.get_target_dir(l), l.get_filename()) for l in target.link_targets]
         generated_sources = self.get_target_generated_sources(target)
         for rel_src in generated_sources.keys():
             if rel_src.endswith('.java'):
                 deps.append(rel_src)
-        rel_src = src.rel_to_builddir(self.build_to_src)
-        plain_class_path = src.fname[:-4] + 'class'
-        rel_obj = os.path.join(self.get_target_private_dir(target), plain_class_path)
-        element = NinjaBuildElement(self.all_outputs, rel_obj, self.compiler_to_rule_name(compiler), rel_src)
+
+        rel_srcs = []
+        plain_class_paths = []
+        rel_objs = []
+        for src in srcs:
+            rel_src = src.rel_to_builddir(self.build_to_src)
+            rel_srcs.append(rel_src)
+
+            plain_class_path = src.fname[:-4] + 'class'
+            plain_class_paths.append(plain_class_path)
+            rel_obj = os.path.join(self.get_target_private_dir(target), plain_class_path)
+            rel_objs.append(rel_obj)
+        element = NinjaBuildElement(self.all_outputs, rel_objs, self.compiler_to_rule_name(compiler), rel_srcs)
         element.add_dep(deps)
         element.add_item('ARGS', args)
+        element.add_item('FOR_JAR', self.get_target_filename(target))
         self.add_build(element)
-        return plain_class_path
+        return plain_class_paths
 
     def generate_java_link(self):
         rule = 'java_LINKER'
@@ -1967,7 +1989,7 @@ class NinjaBackend(backends.Backend):
                 buildtype = target.get_option(OptionKey('buildtype'))
                 crt = target.get_option(OptionKey('b_vscrt'))
                 args += rustc.get_crt_link_args(crt, buildtype)
-            except KeyError:
+            except (KeyError, AttributeError):
                 pass
 
         if mesonlib.version_compare(rustc.version, '>= 1.67.0'):
@@ -2186,12 +2208,9 @@ class NinjaBackend(backends.Backend):
             else:
                 raise InvalidArguments(f'Swift target {target.get_basename()} contains a non-swift source file.')
         os.makedirs(self.get_target_private_dir_abs(target), exist_ok=True)
-        compile_args = swiftc.get_compile_only_args()
-        compile_args += swiftc.get_optimization_args(target.get_option(OptionKey('optimization')))
-        compile_args += swiftc.get_debug_args(target.get_option(OptionKey('debug')))
+        compile_args = self.generate_basic_compiler_args(target, swiftc)
+        compile_args += swiftc.get_compile_only_args()
         compile_args += swiftc.get_module_args(module_name)
-        compile_args += self.build.get_project_args(swiftc, target.subproject, target.for_machine)
-        compile_args += self.build.get_global_args(swiftc, target.for_machine)
         for i in reversed(target.get_include_dirs()):
             basedir = i.get_curdir()
             for d in i.get_incdirs():
@@ -2274,7 +2293,7 @@ class NinjaBackend(backends.Backend):
         return options
 
     def generate_static_link_rules(self):
-        num_pools = self.environment.coredata.options[OptionKey('backend_max_links')].value
+        num_pools = self.environment.coredata.optstore.get_value('backend_max_links')
         if 'java' in self.environment.coredata.compilers.host:
             self.generate_java_link()
         for for_machine in MachineChoice:
@@ -2322,7 +2341,7 @@ class NinjaBackend(backends.Backend):
             self.add_rule(NinjaRule(rule, cmdlist, args, description, **options, extra=pool))
 
     def generate_dynamic_link_rules(self):
-        num_pools = self.environment.coredata.options[OptionKey('backend_max_links')].value
+        num_pools = self.environment.coredata.optstore.get_value('backend_max_links')
         for for_machine in MachineChoice:
             complist = self.environment.coredata.compilers[for_machine]
             for langname, compiler in complist.items():
@@ -2363,7 +2382,7 @@ class NinjaBackend(backends.Backend):
     def generate_java_compile_rule(self, compiler):
         rule = self.compiler_to_rule_name(compiler)
         command = compiler.get_exelist() + ['$ARGS', '$in']
-        description = 'Compiling Java object $in'
+        description = 'Compiling Java sources for $FOR_JAR'
         self.add_rule(NinjaRule(rule, command, [], description))
 
     def generate_cs_compile_rule(self, compiler: 'CsCompiler') -> None:
@@ -2771,7 +2790,7 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
             return linker.get_link_debugfile_args(filename)
         return []
 
-    def generate_llvm_ir_compile(self, target, src):
+    def generate_llvm_ir_compile(self, target, src: mesonlib.FileOrString):
         base_proxy = target.get_options()
         compiler = get_compiler_for_source(target.compilers.values(), src)
         commands = compiler.compiler_args()
@@ -2790,10 +2809,11 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
         rel_obj = os.path.join(self.get_target_private_dir(target), obj_basename)
         rel_obj += '.' + self.environment.machines[target.for_machine].get_object_suffix()
         commands += self.get_compile_debugfile_args(compiler, target, rel_obj)
-        if isinstance(src, File) and src.is_built:
-            rel_src = src.fname
-        elif isinstance(src, File):
-            rel_src = src.rel_to_builddir(self.build_to_src)
+        if isinstance(src, File):
+            if src.is_built:
+                rel_src = src.fname
+            else:
+                rel_src = src.rel_to_builddir(self.build_to_src)
         else:
             raise InvalidArguments(f'Invalid source type: {src!r}')
         # Write the Ninja build command
@@ -2932,7 +2952,8 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
                                 is_generated: bool = False, header_deps=None,
                                 order_deps: T.Optional[T.List['mesonlib.FileOrString']] = None,
                                 extra_args: T.Optional[T.List[str]] = None,
-                                unity_sources: T.Optional[T.List[mesonlib.FileOrString]] = None) -> None:
+                                unity_sources: T.Optional[T.List[mesonlib.FileOrString]] = None,
+                                ) -> T.Tuple[str, str]:
         """
         Compiles C/C++, ObjC/ObjC++, Fortran, and D sources
         """
@@ -3582,7 +3603,7 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
 
     def get_user_option_args(self):
         cmds = []
-        for (k, v) in self.environment.coredata.options.items():
+        for k, v in self.environment.coredata.optstore.items():
             if k.is_project():
                 cmds.append('-D' + str(k) + '=' + (v.value if isinstance(v.value, str) else str(v.value).lower()))
         # The order of these arguments must be the same between runs of Meson
@@ -3711,8 +3732,8 @@ https://gcc.gnu.org/bugzilla/show_bug.cgi?id=47485'''))
         if ctlist:
             elem.add_dep(self.generate_custom_target_clean(ctlist))
 
-        if OptionKey('b_coverage') in self.environment.coredata.options and \
-           self.environment.coredata.options[OptionKey('b_coverage')].value:
+        if OptionKey('b_coverage') in self.environment.coredata.optstore and \
+           self.environment.coredata.optstore.get_value('b_coverage'):
             self.generate_gcov_clean()
             elem.add_dep('clean-gcda')
             elem.add_dep('clean-gcno')

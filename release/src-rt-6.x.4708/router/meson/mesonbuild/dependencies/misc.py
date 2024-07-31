@@ -95,50 +95,47 @@ class OpenMPDependency(SystemDependency):
             # No macro defined for OpenMP, but OpenMP 3.1 is supported.
             self.version = '3.1'
             self.is_found = True
-            self.compile_args = self.link_args = self.clib_compiler.openmp_flags()
+            self.compile_args = self.link_args = self.clib_compiler.openmp_flags(environment)
             return
         if self.clib_compiler.get_id() == 'pgi':
             # through at least PGI 19.4, there is no macro defined for OpenMP, but OpenMP 3.1 is supported.
             self.version = '3.1'
             self.is_found = True
-            self.compile_args = self.link_args = self.clib_compiler.openmp_flags()
+            self.compile_args = self.link_args = self.clib_compiler.openmp_flags(environment)
+            return
+
+        # Set these now so they're available for the following compiler checks
+        try:
+            self.compile_args.extend(self.clib_compiler.openmp_flags(environment))
+            self.link_args.extend(self.clib_compiler.openmp_link_flags(environment))
+        except mesonlib.MesonException as e:
+            mlog.warning('OpenMP support not available because:', str(e), fatal=False)
             return
 
         try:
             openmp_date = self.clib_compiler.get_define(
-                '_OPENMP', '', self.env, self.clib_compiler.openmp_flags(), [self], disable_cache=True)[0]
+                '_OPENMP', '', self.env, [], [self], disable_cache=True)[0]
         except mesonlib.EnvironmentException as e:
             mlog.debug('OpenMP support not available in the compiler')
             mlog.debug(e)
-            openmp_date = None
+            return
 
-        if openmp_date:
-            try:
-                self.version = self.VERSIONS[openmp_date]
-            except KeyError:
-                mlog.debug(f'Could not find an OpenMP version matching {openmp_date}')
-                if openmp_date == '_OPENMP':
-                    mlog.debug('This can be caused by flags such as gcc\'s `-fdirectives-only`, which affect preprocessor behavior.')
-                return
+        try:
+            self.version = self.VERSIONS[openmp_date]
+        except KeyError:
+            mlog.debug(f'Could not find an OpenMP version matching {openmp_date}')
+            if openmp_date == '_OPENMP':
+                mlog.debug('This can be caused by flags such as gcc\'s `-fdirectives-only`, which affect preprocessor behavior.')
+            return
 
-            if self.clib_compiler.get_id() == 'clang-cl':
-                # this is necessary for clang-cl, see https://github.com/mesonbuild/meson/issues/5298
-                clangcl_openmp_link_args = self.clib_compiler.find_library("libomp", self.env, [])
-                if not clangcl_openmp_link_args:
-                    mlog.log(mlog.yellow('WARNING:'), 'OpenMP found but libomp for clang-cl missing.')
-                    return
-                self.link_args.extend(clangcl_openmp_link_args)
-
-            # Flang has omp_lib.h
-            header_names = ('omp.h', 'omp_lib.h')
-            for name in header_names:
-                if self.clib_compiler.has_header(name, '', self.env, dependencies=[self], disable_cache=True)[0]:
-                    self.is_found = True
-                    self.compile_args.extend(self.clib_compiler.openmp_flags())
-                    self.link_args.extend(self.clib_compiler.openmp_link_flags())
-                    break
-            if not self.is_found:
-                mlog.log(mlog.yellow('WARNING:'), 'OpenMP found but omp.h missing.')
+        # Flang has omp_lib.h
+        header_names = ('omp.h', 'omp_lib.h')
+        for name in header_names:
+            if self.clib_compiler.has_header(name, '', self.env, dependencies=[self], disable_cache=True)[0]:
+                self.is_found = True
+                break
+        else:
+            mlog.warning('OpenMP found but omp.h missing.', fatal=False)
 
 packages['openmp'] = OpenMPDependency
 
@@ -473,6 +470,30 @@ class OpensslSystemDependency(SystemDependency):
                     self.link_args.extend(sublib)
 
 
+class ObjFWDependency(ConfigToolDependency):
+
+    tools = ['objfw-config']
+    tool_name = 'objfw-config'
+
+    def __init__(self, environment: 'Environment', kwargs: T.Dict[str, T.Any]):
+        super().__init__('objfw', environment, kwargs)
+        self.feature_since = ('1.5.0', '')
+        if not self.is_found:
+            return
+
+        # TODO: Expose --reexport
+        # TODO: Expose --framework-libs
+        extra_flags = []
+
+        for module in mesonlib.stringlistify(mesonlib.extract_as_list(kwargs, 'modules')):
+            extra_flags.append('--package')
+            extra_flags.append(module)
+
+        # TODO: Once Meson supports adding flags per language, only add --objcflags to ObjC
+        self.compile_args = self.get_config_value(['--cppflags', '--cflags', '--objcflags'] + extra_flags, 'compile_args')
+        self.link_args = self.get_config_value(['--ldflags', '--libs'] + extra_flags, 'link_args')
+
+
 @factory_methods({DependencyMethods.PKGCONFIG, DependencyMethods.CONFIG_TOOL, DependencyMethods.SYSTEM})
 def curses_factory(env: 'Environment',
                    for_machine: 'mesonlib.MachineChoice',
@@ -615,3 +636,5 @@ packages['libssl'] = libssl_factory = DependencyFactory(
     system_class=OpensslSystemDependency,
     cmake_class=CMakeDependencyFactory('OpenSSL', modules=['OpenSSL::SSL']),
 )
+
+packages['objfw'] = ObjFWDependency

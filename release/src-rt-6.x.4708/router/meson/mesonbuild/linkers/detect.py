@@ -64,7 +64,7 @@ def guess_win_linker(env: 'Environment', compiler: T.List[str], comp_class: T.Ty
 
     p, o, _ = Popen_safe(compiler + check_args)
     if 'LLD' in o.split('\n', maxsplit=1)[0]:
-        if '(compatible with GNU linkers)' in o:
+        if 'compatible with GNU linkers' in o:
             return linkers.LLVMDynamicLinker(
                 compiler, for_machine, comp_class.LINKER_PREFIX,
                 override, version=search_version(o))
@@ -141,7 +141,7 @@ def guess_nix_linker(env: 'Environment', compiler: T.List[str], comp_class: T.Ty
 
     v = search_version(o + e)
     linker: DynamicLinker
-    if 'LLD' in o.split('\n', maxsplit=1)[0]:
+    if 'LLD' in o.split('\n', maxsplit=1)[0] or 'tiarmlnk' in e:
         if isinstance(comp_class.LINKER_PREFIX, str):
             cmd = compiler + override + [comp_class.LINKER_PREFIX + '-v'] + extra_args
         else:

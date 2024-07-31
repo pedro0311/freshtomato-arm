@@ -287,7 +287,7 @@ class Backend:
     # 'vslite_ctx' is only provided when
     # we expect this backend setup/generation to make use of previously captured
     # compile args (as is the case when using '--genvslite').
-    def generate(self, capture: bool = False, vslite_ctx: dict = None) -> T.Optional[dict]:
+    def generate(self, capture: bool = False, vslite_ctx: T.Optional[T.Dict] = None) -> T.Optional[T.Dict]:
         raise RuntimeError(f'generate is not implemented in {type(self).__name__}')
 
     def get_target_filename(self, t: T.Union[build.Target, build.CustomTargetIndex], *, warn_multi_output: bool = True) -> str:
@@ -570,11 +570,11 @@ class Backend:
 
         is_cross_built = not self.environment.machines.matches_build_machine(exe_for_machine)
         if is_cross_built and self.environment.need_exe_wrapper():
-            exe_wrapper = self.environment.get_exe_wrapper()
-            if not exe_wrapper or not exe_wrapper.found():
+            if not self.environment.has_exe_wrapper():
                 msg = 'An exe_wrapper is needed but was not found. Please define one ' \
                       'in cross file and check the command and/or add it to PATH.'
                 raise MesonException(msg)
+            exe_wrapper = self.environment.get_exe_wrapper()
         else:
             if exe_cmd[0].endswith('.jar'):
                 exe_cmd = ['java', '-jar'] + exe_cmd
@@ -628,7 +628,7 @@ class Backend:
         # It's also overridden for a few conditions that can't be handled
         # inside a command line
 
-        can_use_env = not force_serialize
+        can_use_env = env.can_use_env and not force_serialize
         force_serialize = force_serialize or bool(reasons)
 
         if capture:
@@ -963,7 +963,7 @@ class Backend:
     def target_uses_pch(self, target: build.BuildTarget) -> bool:
         try:
             return T.cast('bool', target.get_option(OptionKey('b_pch')))
-        except KeyError:
+        except (KeyError, AttributeError):
             return False
 
     @staticmethod
@@ -1170,7 +1170,7 @@ class Backend:
 
     def determine_windows_extra_paths(
             self, target: T.Union[build.BuildTarget, build.CustomTarget, build.CustomTargetIndex, programs.ExternalProgram, mesonlib.File, str],
-            extra_bdeps: T.Sequence[T.Union[build.BuildTarget, build.CustomTarget]]) -> T.List[str]:
+            extra_bdeps: T.Sequence[T.Union[build.BuildTarget, build.CustomTarget, build.CustomTargetIndex]]) -> T.List[str]:
         """On Windows there is no such thing as an rpath.
 
         We must determine all locations of DLLs that this exe
@@ -1230,7 +1230,7 @@ class Backend:
             exe_wrapper = self.environment.get_exe_wrapper()
             machine = self.environment.machines[exe.for_machine]
             if machine.is_windows() or machine.is_cygwin():
-                extra_bdeps: T.List[T.Union[build.BuildTarget, build.CustomTarget]] = []
+                extra_bdeps: T.List[T.Union[build.BuildTarget, build.CustomTarget, build.CustomTargetIndex]] = []
                 if isinstance(exe, build.CustomTarget):
                     extra_bdeps = list(exe.get_transitive_build_target_deps())
                 extra_paths = self.determine_windows_extra_paths(exe, extra_bdeps)
@@ -1264,12 +1264,16 @@ class Backend:
 
             t_env = copy.deepcopy(t.env)
             if not machine.is_windows() and not machine.is_cygwin() and not machine.is_darwin():
-                ld_lib_path: T.Set[str] = set()
+                ld_lib_path_libs: T.Set[build.SharedLibrary] = set()
                 for d in depends:
                     if isinstance(d, build.BuildTarget):
                         for l in d.get_all_link_deps():
                             if isinstance(l, build.SharedLibrary):
-                                ld_lib_path.add(os.path.join(self.environment.get_build_dir(), l.get_subdir()))
+                                ld_lib_path_libs.add(l)
+
+                env_build_dir = self.environment.get_build_dir()
+                ld_lib_path: T.Set[str] = set(os.path.join(env_build_dir, l.get_subdir()) for l in ld_lib_path_libs)
+
                 if ld_lib_path:
                     t_env.prepend('LD_LIBRARY_PATH', list(ld_lib_path), ':')
 
@@ -1423,7 +1427,7 @@ class Backend:
                     continue
                 result[arg.get_id()] = arg
             for dep in t.depends:
-                assert isinstance(dep, (build.CustomTarget, build.BuildTarget))
+                assert isinstance(dep, (build.CustomTarget, build.BuildTarget, build.CustomTargetIndex))
                 result[dep.get_id()] = dep
         return result
 
@@ -1575,9 +1579,9 @@ class Backend:
                     dfilename = os.path.join(outdir, target.depfile)
                     i = i.replace('@DEPFILE@', dfilename)
                 if '@PRIVATE_DIR@' in i:
-                    if target.absolute_paths:
-                        pdir = self.get_target_private_dir_abs(target)
-                    else:
+                    pdir = self.get_target_private_dir_abs(target)
+                    os.makedirs(pdir, exist_ok=True)
+                    if not target.absolute_paths:
                         pdir = self.get_target_private_dir(target)
                     i = i.replace('@PRIVATE_DIR@', pdir)
             else:
@@ -2023,6 +2027,34 @@ class Backend:
             env.prepend('PATH', list(extra_paths))
         return env
 
+    def compiler_to_generator_args(self, target: build.BuildTarget,
+                                   compiler: 'Compiler', output: str = '@OUTPUT@',
+                                   depfile: T.Union[str, None] = '@DEPFILE@',
+                                   extras: T.Union[T.List[str], None] = None,
+                                   input: str = '@INPUT@') -> CompilerArgs:
+        '''
+        The VS and Xcode backends need the full set of arguments for making a
+        custom build rule. This is a convenience method to convert a Compiler
+        to its arguments, for later concatenation.
+        '''
+        # FIXME: There are many other args missing
+        commands = self.generate_basic_compiler_args(target, compiler)
+        if depfile:
+            commands += compiler.get_dependency_gen_args(output, depfile)
+        commands += compiler.get_output_args(output)
+        commands += self.get_source_dir_include_args(target, compiler)
+        commands += self.get_build_dir_include_args(target, compiler)
+        commands += compiler.get_compile_only_args()
+        # Add per-target compile args, f.ex, `c_args : ['-DFOO']`. We set these
+        # near the end since these are supposed to override everything else.
+        commands += self.escape_extra_args(target.get_extra_args(compiler.get_language()))
+        # Do not escape this one, it is interpreted by the build system
+        # (Xcode considers these as variables to expand at build time)
+        if extras is not None:
+            commands += extras
+        commands += [input]
+        return commands
+
     def compiler_to_generator(self, target: build.BuildTarget,
                               compiler: 'Compiler',
                               sources: _ALL_SOURCES_TYPE,
@@ -2036,16 +2068,7 @@ class Backend:
         exelist = compiler.get_exelist()
         exe = programs.ExternalProgram(exelist[0])
         args = exelist[1:]
-        # FIXME: There are many other args missing
-        commands = self.generate_basic_compiler_args(target, compiler)
-        commands += compiler.get_dependency_gen_args('@OUTPUT@', '@DEPFILE@')
-        commands += compiler.get_output_args('@OUTPUT@')
-        commands += compiler.get_compile_only_args() + ['@INPUT@']
-        commands += self.get_source_dir_include_args(target, compiler)
-        commands += self.get_build_dir_include_args(target, compiler)
-        # Add per-target compile args, f.ex, `c_args : ['-DFOO']`. We set these
-        # near the end since these are supposed to override everything else.
-        commands += self.escape_extra_args(target.get_extra_args(compiler.get_language()))
+        commands = self.compiler_to_generator_args(target, compiler)
         generator = build.Generator(exe, args + commands.to_native(),
                                     [output_templ], depfile='@PLAINNAME@.d',
                                     depends=depends)

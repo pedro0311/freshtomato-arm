@@ -78,6 +78,7 @@ class BasePlatformTests(TestCase):
         self.linuxlike_test_dir = os.path.join(src_root, 'test cases/linuxlike')
         self.objc_test_dir = os.path.join(src_root, 'test cases/objc')
         self.objcpp_test_dir = os.path.join(src_root, 'test cases/objcpp')
+        self.darwin_test_dir = os.path.join(src_root, 'test cases/darwin')
 
         # Misc stuff
         self.orig_env = os.environ.copy()
@@ -289,9 +290,11 @@ class BasePlatformTests(TestCase):
         '''
         return self.build(target=target, override_envvars=override_envvars)
 
-    def setconf(self, arg, will_build=True):
-        if not isinstance(arg, list):
+    def setconf(self, arg: T.Sequence[str], will_build: bool = True) -> None:
+        if isinstance(arg, str):
             arg = [arg]
+        else:
+            arg = list(arg)
         self._run(self.mconf_command + arg + [self.builddir])
 
     def getconf(self, optname: str):
