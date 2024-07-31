@@ -91,7 +91,7 @@ resolver_to_proxy_cb(evutil_socket_t proxy_resolver_handle, short ev_flags,
 {
     uint8_t                  dns_reply[DNS_MAX_PACKET_SIZE_UDP];
     ProxyContext            *proxy_context = proxy_context_;
-    UDPRequest              *scanned_udp_request = NULL;
+    UDPRequest              *scanned_udp_request;
     UDPRequest              *udp_request = NULL;
     struct sockaddr_storage  resolver_sockaddr;
     ev_socklen_t             resolver_sockaddr_len = sizeof resolver_sockaddr;

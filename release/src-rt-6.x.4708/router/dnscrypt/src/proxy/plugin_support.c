@@ -326,8 +326,8 @@ plugin_support_context_remove(DCPluginSupportContext * const dcps_context,
 int
 plugin_support_context_reload(DCPluginSupportContext * const dcps_context)
 {
-    DCPluginSupport *dcps = NULL;
-    DCPluginSupport *dcps_tmp = NULL;
+    DCPluginSupport *dcps;
+    DCPluginSupport *dcps_tmp;
     int              ret = 0;
     int              ret_ = 0;
 
@@ -343,8 +343,8 @@ plugin_support_context_reload(DCPluginSupportContext * const dcps_context)
 void
 plugin_support_context_free(DCPluginSupportContext * const dcps_context)
 {
-    DCPluginSupport *dcps = NULL;
-    DCPluginSupport *dcps_tmp = NULL;
+    DCPluginSupport *dcps;
+    DCPluginSupport *dcps_tmp;
 
     SLIST_FOREACH_SAFE(dcps, &dcps_context->dcps_list, next, dcps_tmp) {
         plugin_support_free(dcps);
@@ -358,7 +358,7 @@ plugin_support_context_free(DCPluginSupportContext * const dcps_context)
 int
 plugin_support_context_load(DCPluginSupportContext * const dcps_context)
 {
-    DCPluginSupport *dcps = NULL;
+    DCPluginSupport *dcps;
     _Bool            failed = 0;
 
     assert(dcps_context != NULL);
@@ -409,7 +409,7 @@ DCPluginSyncFilterResult
 plugin_support_context_apply_sync_post_filters(DCPluginSupportContext *dcps_context,
                                                DCPluginDNSPacket *dcp_packet)
 {
-    DCPluginSupport          *dcps = NULL;
+    DCPluginSupport          *dcps;
     const size_t              dns_packet_max_len = dcp_packet->dns_packet_max_len;
     DCPluginSyncFilterResult  result = DCP_SYNC_FILTER_RESULT_OK;
     DCPluginSyncFilterResult  result_dcps;
@@ -433,7 +433,7 @@ DCPluginSyncFilterResult
 plugin_support_context_apply_sync_pre_filters(DCPluginSupportContext *dcps_context,
                                               DCPluginDNSPacket *dcp_packet)
 {
-    DCPluginSupport          *dcps = NULL;
+    DCPluginSupport          *dcps;
     const size_t              dns_packet_max_len = dcp_packet->dns_packet_max_len;
     DCPluginSyncFilterResult  result = DCP_SYNC_FILTER_RESULT_OK;
     DCPluginSyncFilterResult  result_dcps;

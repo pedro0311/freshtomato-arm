@@ -3429,7 +3429,8 @@ libsodium-clean:
 	@rm -f libsodium/stamp-h1
 
 dnscrypt/stamp-h1:
-	cd dnscrypt && autoreconf && \
+	$(call patch_files,dnscrypt)
+	cd dnscrypt && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-Os -Wall $(EXTRACFLAGS) -I$(TOP)/libsodium/src/libsodium/include -I$(TOP)/zlib/staged/usr/include -ffunction-sections -fdata-sections" \
 		LDFLAGS="-Wl,--gc-sections -L$(TOP)/libsodium/src/libsodium/.libs -L$(TOP)/zlib/staged/usr/lib" \
@@ -3450,6 +3451,7 @@ dnscrypt-clean:
 	-@$(MAKE) -C dnscrypt clean
 	@rm -f dnscrypt/stamp-h1 dnscrypt/Makefile
 	@rm -rf dnscrypt/src/proxy/.deps
+	$(call unpatch_files,dnscrypt)
 
 libyaml/stamp-h1:
 	cd libyaml && autoreconf -fsi && \

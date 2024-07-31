@@ -1,8 +1,14 @@
-[![Build Status](https://travis-ci.org/jedisct1/dnscrypt-proxy.png?branch=master)](https://travis-ci.org/jedisct1/dnscrypt-proxy?branch=master)
-[![Make a donation to support this project](https://img.shields.io/badge/donate-PayPal-green.svg?style=flat)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=paypalrecovery-a@pureftpd.org&lc=US&item_name=Donation+to+the+DNSCrypt+project)
+![image](https://github.com/dyne/dnscrypt-proxy/assets/148059/4b242442-e1cf-4d0e-9ff7-d599ba3b6e81)
 
-[![DNSCrypt](https://raw.github.com/jedisct1/dnscrypt-proxy/master/dnscrypt-small.png)](https://dnscrypt.org)
-============
+## Status of the project
+
+The DNScrypt v2 C++ implementation was taken offline by its creator and maintainer Frank Denis on the 6th December 2017, after announcing in November 2017 that [the project needs a new maintainer](https://twitter.com/jedisct1/status/928942292202860544).
+
+The [dnscrypt.org](https://dnscrypt.org) webpage lists a good number of end-user resources built from a new implementation written in Go.  
+
+At Dyne.org we rely on the v2 of the DNScrypt protocol and this older but still working C++ implementation of dnscrypt-proxy for our [Dowse.eu](https://dyne.org/software/dowse) project and we keep maintaining the C++ implementation of dnscrypt-proxy.
+
+## What is DNSCrypt
 
 DNSCrypt is a protocol for securing communications between a client
 and a DNS resolver, using high-speed high-security elliptic-curve
@@ -12,31 +18,15 @@ While not providing end-to-end security, it protects the local network, which
 is often the weakest point of the chain, against man-in-the-middle attacks.
 
 `dnscrypt-proxy` is a client-implementation of the protocol. It
-requires a [DNSCrypt server](https://www.dnscrypt.org/#dnscrypt-server) on
-the other end.
-
-Online documentation
---------------------
-
-* [dnscrypt-proxy documentation](https://github.com/jedisct1/dnscrypt-proxy/wiki/)
-* [dnscrypt website](https://dnscrypt.org).
-
-Download and integrity check
-----------------------------
-
-dnscrypt-proxy can be downloaded here:
-[dnscrypt-proxy download](https://download.dnscrypt.org/dnscrypt-proxy/).
-
-Signatures can be verified with [Minisign](https://jedisct1.github.io/minisign/):
-
-    $ minisign -VP RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3 -m dnscrypt-proxy-1.9.5.tar.bz2
+requires a DNS server made available by the [DNSCrypt](https://github.com/DNSCrypt/) project.
 
 Plugins
 -------
 
-Aside from implementing the protocol, dnscrypt-proxy can be extended
+Aside from implementing the DNSCrypt v2 protocol, the C++ dnscrypt-proxy can be extended
 with plug-ins, and gives a lot of control on the local DNS traffic:
 
+- Provide nifty real-time traffic visualization using the Dowse plugin.
 - Review the DNS traffic originating from your network in real time,
 and detect compromised hosts and applications phoning home.
 - Locally block ads, trackers, malware, spam, and any website whose
