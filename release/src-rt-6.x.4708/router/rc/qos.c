@@ -115,7 +115,6 @@ void ipt_qos(void)
 	unsigned long min;
 	unsigned long max;
 	unsigned long prev_max;
-	int process_size_groups;
 	const char *qface;
 	int sizegroup;
 	int class_flag;
@@ -137,7 +136,6 @@ void ipt_qos(void)
 
 	inuse = 0;
 	class_flag = 0;
-	process_size_groups = 1;
 	sizegroup = 0;
 	prev_max = 0;
 	rule_num = 0;
