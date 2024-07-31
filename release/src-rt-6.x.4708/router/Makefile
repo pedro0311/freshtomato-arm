@@ -251,8 +251,6 @@ obj-y				+= $(if $(TCONFIG_BCMARM),libbcm,lzma-loader) busybox shared nvram$(BCM
 				   libbcmcrypto wlconf$(BCMEX) $(if $(TCONFIG_BCMARM),nas$(BCMEX)) prebuilt
 obj-$(TCONFIG_EMF)		+= emf$(BCMEX) igs$(BCMEX)
 obj-$(TCONFIG_DPSTA)		+= dpsta
-obj-$(TCONFIG_DHDAP)		+= dhd $(if $(TCONFIG_BCM714),,$(if $(TCONFIG_BCM7),pciefd))
-obj-$(TCONFIG_DPSTA)		+= dpsta
 obj-$(TCONFIG_DHDAP)		+= $(if $(TCONFIG_BCM714),dhd$(BCMEX),dhd) $(if $(TCONFIG_BCM714),,$(if $(TCONFIG_BCM7),pciefd))
 
 ifeq ($(TCONFIG_BCMARM),y)
