@@ -5,6 +5,114 @@ FreshTomato-ARM Changelog
 
 
 
+2024.3          2024.08.04
+---------------------------
+
+- SDK7: allow to build images with older wl drivers (Year 2020 & 2021) - deault is current Year 2023 wl driver (no change) [M_ars]
+- php: update to 8.3.9
+- libjpeg-turbo: update to 3.0.3
+- libxml2: update to 2.13.3
+- sqlite: update to 3.46.0
+- libcurl: update to 8.9.1
+- libsodium: update to latest 1.0.20-stable
+- nginx: update to 1.27.0
+- e2fsprogs: update to 1.47.1
+- pptpd: update to 1.5.0
+- libnetfilter_conntrack: update to 1.0.9
+- libnetfilter_log: update to 1.0.2
+- libnetfilter_queue: update to 1.0.5
+- conntrack-tools: update to 1.4.8
+- openssl-3.0: update to 3.0.14
+- meson: update to 1.5.1
+- openvpn: update to 2.6.12
+- wolfssl: update to 5.7.2-stable
+- nano: update to 8.1
+- nettle: update to 3.10
+- miniupnpd: update to 2.3.7
+- pcre2: update to 10.44
+- lz4: update to 1.10.0
+- dnscrypt-proxy: update to latest git (security fix, fix usage with latest libsodium, ref: https://github.com/dyne/dnscrypt-proxy)
+- adminer: update to 4.8.4
+- build: add OpenSSL 3.0.13 to the tree
+- build: add OpenSSL 3.0.x recipes, add patches and update needed scripts
+- build: switch to openssl 3.0
+- build: add wolfSSL 5.7.0 to the tree
+- build: wolfSSL: add recipe, needed patches and configuration
+- build: add wolfssl support for mssl
+- build: add wolfssl support for httpd
+- build: add wolfssl support for mdu
+- build: add wolfssl support for openvpn
+- build: add wolfssl support for libcurl
+- build: add wolfssl support for transmission
+- build: add wolfssl support for nginx
+- build: openvpn_plugin_auth_nvram: add wolfssl support
+- build: compile nocat with glib2 instead of glib
+- build: update libfoo.pl and Makefile to latest OpenSSL 3.0.x; also adapt libfoo.pl to be one version for ARM and MIPS - use it also on ARM
+- build: Makefile: libnfnetlink: is only needed when target is built with CONNTRACK_TOOLS
+- build: Makefile: libpcre2-posix: add library to image only for AIO target
+- build: Makefile: libffi library is only needed when target is built with IRQBALANCE
+- build: Makefile/www: tune openssl options
+- build: Makefile: libevent: we don't need ssl here, so let's remove it from the recipe
+- build: Makefile: libcurl: use default value for 'with-random'
+- build: Makefile: libzip: do not add insecure support for in-php AES zip encryption
+- build: Makefile: openssl: always compile with no-cms
+- build: Makefile: openssl: always compile with no-ec2m
+- build: Makefile: openvpn: disable unit tests (2.5, 2.6), add lz4 flags (2.5)
+- build: Makefile: openvpn (2.5, 2.6): enable smaller executable size (disable OCC, usage message, and verb 4 parm list) for non-AIO MIPS targets
+- build: openvpn (all): do not compile with lzo support (security)
+- build: Makefile: php: remove curl support
+- build: Makefile: tincd is now built using the shared liblz4 library
+- build: Makefile: transmission: add gnu99 std to CFLAGS
+- build: Makefile: do not compile lz4 for the smallest targets
+- build: Makefile: use cmake for pcre2 recipe
+- build: Makefile: use cmake in libxml2 recipe
+- build: Makefile: libevent: only install shared library if target built with BBT or TOR
+- build: remove unneeded libnetfilter_cttimeout package from the tree
+- build: stubby: fix log level (see: https://www.linksysinfo.org/index.php?threads/stubby-doesnt-log.78729/)
+- build: transmission: patches: add ARC4 implementation inside transmission, disable it in openssl
+- build: transmission: patches: disable webseeding, it causes 100% CPU usage in certain situations; apply DSCP to UDP sockets too - backport patch from the upstream
+- build: wolfssl: add patch to fix compilation of 5.7.2 on MIPS
+- GUI: advanced-ctnf.asp: refined page layout [rs232]
+- GUI: Basic: DDNS: move Service dropdown to top
+- GUI: Basic: Network: only display the wireless connection (WAN) types that are available for a given branch (fix ARM #328)
+- GUI: basic-network.asp: fix saving in case wl radio order is not ascending (ex. normal order wl0, wl1, wl2, ... ) [Version 2] [M_ars]
+- GUI: Basic: Time: layout improvement and some renaming [rs232]
+- GUI: QoS: Classification: Adaptation for CAKE [rs232]
+- GUI: QoS: Classification: Display warning on the qos-classify page if classification has been nvram disabled, where QoS is enabled and set to HTB mode [rs232]
+- GUI: QoS: Basic Settings: Cleaning and CAKE tweaking [rs232]
+- GUI: Status: Overview: fix Signal Quality icon in wireless client mode
+- GUI: Tools: Wireless Survey: Discouraging certain WiFi security protocols [rs232]
+- GUI: Tools: Wireless Survey: Changed default table sorting by RSSI Descending (strongest to weakest) [rs232]
+- GUI: Tools: Wireless Survey: Added SNR (Signal to Noise) to the table [rs232]
+- GUI: Tools: Wireless Survey: added filter by frequency [rs232]
+- GUI: VPN: Wireguard: fix layout for advanced themes
+- adblock-v2: add internet connectivity test as a running condition [rs232]
+- adblock-v2: use Internet test target from nvram mwan_chdst content if this contains any usable FQDN; if not default to google.com [rs232]
+- adblock-v2: skip Internet test if no lists are defined (covers the case where domains are only defined locally) [rs232]
+- adblock-v2: further improvement to the Internet test: running condition: also check if at least one list is enabled [rs232]
+- httpd: openvpn.c: initialize buffer before use; also log static/dhparam key creation
+- nvram_ops: add centralised console font & background color definition [rs232]
+- nvram_ops: added ${reset} and corrected typo [rs232]
+- rc: ddns.c: enable DDNS client 3 & 4
+- rc: network.c: set the wireless virtual interface hwaddr according to nvram and wait up to 100 ms to check the result [M_ars]
+- rc: nginx.c: fix permissions for socket in case when run as 'nobody'
+- rc: nocat.c: touch lease file if it doesn't exist yet
+- rc: nocat.c: Use BRIDGE_COUNT to iterate through the lans [lancethepants]
+- rc: service.c: miniupnpd: follow changes in config naming, also change default upnp_ssdp_interval to 900s
+- rc: services.c: stop_services(): do not stop ntpd during router restart/upgrade
+- rom: remove authorityKeyIdentifier from the Server cert generation [lancethepants]
+- rom: also remove authorityKeyIdentifier for usr_cert [lancethepants]
+- rom: update CA bundle to 2024-07-02
+- transmission: dht: fix incorrect handling of want in find_closest_nodes
+- www: add rel version to each .js script call
+- www: add rel version to each .jsz script call
+- www: add rel version to each .css script call
+- www: advanced-ctnf.asp: fix appearance on advanced themes
+- www: basic-ddns.asp: fix availability of external IP checker when using WET/Media Bridge/etc WAN mode
+- www: tomato.css: tweaks centrally indent 1 & 2 (no need to add manually indent: 2 to every page now) and adds options for indent 3 & 4 [rs232]
+- www: Makefile: fix display of QR Code when image is build without wireguard
+
+
 2024.2          2024.05.19
 ---------------------------
 
