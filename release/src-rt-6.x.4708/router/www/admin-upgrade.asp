@@ -96,7 +96,7 @@ function earlyInit() {
 			</form>
 			<form name="form_reset" action="javascript:{}">
 				<div class="afu-form">
-					<input type="checkbox" id="f_reset">&nbsp; After flashing, erase all data in NVRAM memory
+					<input type="checkbox" id="f_reset">&nbsp; Erase NVRAM configuration and restore firmware defaults
 				</div>
 			</form>
 
