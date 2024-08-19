@@ -551,7 +551,7 @@ else
 endif # !TCONFIG_BCMARM
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv et/* . && rm -rf et || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/drivers/net && mv wl/* . && rm -rf wl || true
-	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv cifs/* . && rm -rf cifs
+	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv cifs/* . && rm -rf cifs || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jffs2/* . && rm -rf jffs2 || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/fs && mv jffs/* . && rm -rf jffs || true
 	cd $(TARGETDIR)/lib/modules/*/kernel/lib && mv zlib_inflate/* . && rm -rf zlib_inflate || true
@@ -2083,7 +2083,7 @@ minidlna/stamp-h1:
 			-I$(TOP)/libjpeg-turbo -I$(TOP)/libexif -I$(TOP)/libid3tag/build -I$(TOP)/libogg/include -I$(TOP)/libvorbis/include -I$(TOP)/zlib/staged/usr/include" \
 		LDFLAGS="-Wl,--gc-sections -ffunction-sections -fdata-sections -L$(TOP)/shared -L$(TOP)/libvorbis/lib/.libs -L$(TOP)/libogg/src/.libs -L$(TOP)/sqlite/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/libjpeg-turbo/build \
 			-L$(TOP)/flac/src/libFLAC/.libs -L$(TOP)/libid3tag/build -L$(TOP)/zlib/staged/usr/lib -L$(TOP)/ffmpeg/libavformat -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavutil" \
-		LIBS="-lvorbis -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lz -lavformat -lavcodec -lavutil -lpthread -lm" \
+		LIBS="-lm -lpthread -lgcc_s -lvorbis -lz -logg -lsqlite3 -lexif -ljpeg -lFLAC -lid3tag -lavformat -lavcodec -lavutil" \
 		$(CONFIGURE) --prefix=/usr --libdir=/usr/lib --with-db-path=/tmp/minidlna --with-log-path=/var/log --with-os-name="FreshTomato" --with-os-url="https://freshtomato.org/" \
 			--with-os-version="Linux/2.6.$(if $(TCONFIG_BCMARM),36.4brcmarm,22.19)" --enable-tivo --disable-nls --disable-dependency-tracking
 	@touch $@
@@ -2726,7 +2726,7 @@ libncurses/stamp-h1:
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		LIBS="-lstdc++" \
 		$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs \
-			--without-tests --without-cxx --without-cxx-bindings --with-build-cppflags=-D_GNU_SOURCE
+			--without-tests --without-cxx --without-cxx-bindings --with-build-cppflags=-D_GNU_SOURCE --disable-rpath --disable-rpath-hack
 	@touch $@
 
 libncurses: libncurses/stamp-h1
@@ -3075,7 +3075,7 @@ libiconv/stamp-h1:
 	cd libiconv && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -std=gnu99 -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
-		$(CONFIGURE) --prefix=/usr --disable-nls --enable-static --enable-shared
+		$(CONFIGURE) --prefix=/usr --disable-nls --disable-rpath --enable-static --enable-shared
 	@touch $@
 
 libiconv: libiconv/stamp-h1
@@ -3726,6 +3726,7 @@ iperf/stamp-h1:
 	$(call patch_files,iperf)
 	cd iperf && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" \
+		LIBS="-lgcc_s" \
 		ac_cv_func_clock_gettime="no" \
 		ac_cv_func_daemon="no" \
 		$(CONFIGURE) --prefix=/usr --disable-profiling --without-openssl
@@ -4019,11 +4020,11 @@ libnetfilter_conntrack-clean:
 	@rm -rf libnetfilter_conntrack/staged
 
 libnetfilter_log/stamp-h1:
-	cd libnetfilter_log && \
+	cd libnetfilter_log && autoreconf -fsi && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOOLCHAIN)/arm-brcm-linux-uclibcgnueabi/sysroot/usr/lib -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
+		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOOLCHAIN)/lib -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
 		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig" \
-		$(CONFIGURE) --prefix=/usr
+		$(CONFIGURE) --prefix=/usr --without-ipulog
 	@touch $@
 
 libnetfilter_log: libnetfilter_log/stamp-h1
@@ -4047,7 +4048,7 @@ libnetfilter_log-clean:
 
 libnetfilter_queue/stamp-h1:
 	cd libnetfilter_queue && autoreconf -fsi && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -I$(TOP)/libnfnetlink/include -I$(TOP)/libmnl/staged/usr/include -D_GNU_SOURCE=1" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -L$(TOP)/libnfnetlink/src/.libs -L$(TOP)/libmnl/staged/usr/lib -lmnl" \
 		PKG_CONFIG_PATH="$(TOP)/libnfnetlink:$(TOP)/libmnl/staged/usr/lib/pkgconfig" \
 		$(CONFIGURE) --prefix=/usr
@@ -4200,6 +4201,8 @@ glib2/build:
 
 glib2: glib2/build
 	@$(SEP)
+	# workaround for new toolchain
+	@cd $(SRCBASE) && mkdir -p usr/include
 	$(TOP)/meson/meson.py compile -C $@/build $(PARALLEL_BUILD)
 	$(TOP)/meson/meson.py install -C $@/build --destdir=$(TOP)/$@/staged
 
