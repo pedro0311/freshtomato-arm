@@ -1347,7 +1347,6 @@ dnsmasq-clean:
 iptables:
 	@$(SEP)
 	$(call patch_files,iptables)
-	cp -f iptables/extensions/libipt_ipp2p_K26.c iptables/extensions/libipt_ipp2p.c
 	$(MAKE) -C $@ PREFIX=/usr BINDIR=/usr/sbin LIBDIR=/usr/lib KERNEL_DIR=$(LINUXDIR) COPT_FLAGS="-Os $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE $(OPTSIZE_FLAG)" $(PARALLEL_BUILD)
 
 iptables-install:
