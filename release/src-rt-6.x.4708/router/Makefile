@@ -1102,7 +1102,7 @@ endif # !TCONFIG_BCMARM
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O2,-Os) --prefix=/usr --openssldir=/etc/ssl -DOPENSSL_NO_BUF_FREELISTS \
+		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_BCMARM),-O3,-Os) --prefix=/usr --openssldir=/etc/ssl -DOPENSSL_NO_BUF_FREELISTS \
 			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
 			shared $(OPENSSL_OPTIONS)
 
@@ -1169,8 +1169,8 @@ endif # !TCONFIG_BCMARM
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG) $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
-			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+		./Configure $(HOSTCONFIG)-freshtomato $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections \
 			shared $(OPENSSL_OPTIONS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 \
 			-DOPENSSL_PREFER_CHACHA_OVER_GCM
@@ -1207,8 +1207,8 @@ openssl-3.0/stamp-h1:
 		AR=$(AR:$(CROSS_COMPILE)%=%) \
 		NM=$(NM:$(CROSS_COMPILE)%=%) \
 		RANLIB=$(RANLIB:$(CROSS_COMPILE)%=%) \
-		./Configure $(HOSTCONFIG)-freshtomato $(EXTRACFLAGS) $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
-			-ffunction-sections -fdata-sections -Wl,--gc-sections -fomit-frame-pointer \
+		./Configure $(HOSTCONFIG)-freshtomato $(if $(TCONFIG_OPTIMIZE_SIZE),-Os,-O3) --prefix=/usr --openssldir=/etc/ssl \
+			-ffunction-sections -fdata-sections -Wl,--gc-sections \
 			shared $(OPENSSL_OPTIONS) --api=1.0.0 \
 			no-async no-aria no-sm2 no-sm3 no-sm4 no-cmp \
 			-DOPENSSL_PREFER_CHACHA_OVER_GCM

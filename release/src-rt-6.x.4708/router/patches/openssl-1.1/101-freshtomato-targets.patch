@@ -1,0 +1,19 @@
+--- openssl-1.1/Configurations/10-main.conf
++++ openssl-1.1/Configurations/10-main.conf
+@@ -767,6 +767,16 @@ my %targets = (
+         inherit_from     => [ "linux-generic64"],
+         perlasm_scheme   => "linux64",
+     },
++    "linux-armv4-freshtomato" => {
++        inherit_from    => [ "linux-armv4" ],
++        CFLAGS           => add(picker(release => "-fomit-frame-pointer \$(EXTRACFLAGS)")),
++    },
++    "linux-mipsel-freshtomato" => {
++        inherit_from     => [ "linux-mips32" ],
++        CFLAGS           => add(picker(release => "-fomit-frame-pointer \$(EXTRACFLAGS)")),
++        cppflags         => add("-D_XOPEN_SOURCE=500"),
++        lib_cppflags     => add("-DL_ENDIAN"),
++    },
+ 
+     #### IA-32 targets...
+     #### These two targets are a bit aged and are to be used on older Linux

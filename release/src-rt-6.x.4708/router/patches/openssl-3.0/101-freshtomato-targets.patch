@@ -1,20 +1,19 @@
 --- /dev/null
 +++ openssl-3.0/Configurations/25-freshtomato.conf
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,22 @@
 +## FreshTomato "CONFIG_ARCH" matching targets.
 +
 +
 +my %targets = (
 +    "freshtomato" => {
 +        template        => 1,
-+        CFLAGS          => add("\$(EXTRACFLAGS)"),
++        CFLAGS          => add(picker(release => "-fomit-frame-pointer \$(EXTRACFLAGS)")),
 +    },
 +    "linux-armv4-freshtomato" => {
 +        inherit_from    => [ "linux-armv4", "freshtomato" ],
 +    },
 +    "linux-mipsel-freshtomato" => {
 +        inherit_from    => [ "linux-mips32", "freshtomato" ],
-+        CFLAGS          => add(picker(release => "-fomit-frame-pointer")),
 +        cppflags        => add("-D_XOPEN_SOURCE=500"),
 +        lib_cppflags    => add("-DL_ENDIAN"),
 +    },

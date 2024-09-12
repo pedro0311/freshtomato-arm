@@ -1,0 +1,128 @@
+--- openssl-1.1/apps/build.info
++++ openssl-1.1/apps/build.info
+@@ -1,11 +1,11 @@
+ {- our @apps_openssl_src =
+        qw(openssl.c
+-          asn1pars.c ca.c ciphers.c cms.c crl.c crl2p7.c dgst.c
+-          enc.c errstr.c
+-          genpkey.c nseq.c passwd.c pkcs7.c pkcs8.c
+-          pkey.c pkeyparam.c pkeyutl.c prime.c rand.c req.c
+-          s_client.c s_server.c s_time.c sess_id.c smime.c speed.c spkac.c
+-          verify.c version.c x509.c rehash.c storeutl.c);
++          cms.c
++          enc.c
++          genpkey.c
++          req.c
++          s_client.c
++          version.c x509.c);
+    our @apps_lib_src =
+        ( qw(apps.c opt.c s_cb.c s_socket.c app_rand.c bf_prefix.c),
+          split(/\s+/, $target{apps_aux_src}) );
+--- openssl-1.1/apps/openssl.c
++++ openssl-1.1/apps/openssl.c
+@@ -313,9 +313,11 @@ static void list_missing_help(void)
+                 if (o->helpstr == NULL)
+                     BIO_printf(bio_out, "%s %s\n", fp->name, o->name);
+             }
++#if 0
+         } else if (fp->func != dgst_main) {
+             /* If not aliased to the dgst command, */
+             BIO_printf(bio_out, "%s *\n", fp->name);
++#endif /* 0 */
+         }
+     }
+ }
+@@ -554,11 +556,14 @@ static int do_cmd(LHASH_OF(FUNCTION) *pr
+     f.name = argv[0];
+     fp = lh_FUNCTION_retrieve(prog, &f);
+     if (fp == NULL) {
++#if 0
+         if (EVP_get_digestbyname(argv[0])) {
+             f.type = FT_md;
+             f.func = dgst_main;
+             fp = &f;
+-        } else if (EVP_get_cipherbyname(argv[0])) {
++        } else
++#endif /* 0 */
++        if (EVP_get_cipherbyname(argv[0])) {
+             f.type = FT_cipher;
+             f.func = enc_main;
+             fp = &f;
+--- openssl-1.1/apps/progs.pl
++++ openssl-1.1/apps/progs.pl
+@@ -104,30 +104,6 @@ foreach my $cmd ( @ARGV ) {
+     }
+ }
+ 
+-my %md_disabler = (
+-    blake2b512 => "blake2",
+-    blake2s256 => "blake2",
+-);
+-foreach my $cmd (
+-    "md2", "md4", "md5",
+-    "gost",
+-    "sha1", "sha224", "sha256", "sha384",
+-    "sha512", "sha512-224", "sha512-256",
+-    "sha3-224", "sha3-256", "sha3-384", "sha3-512",
+-    "shake128", "shake256",
+-    "mdc2", "rmd160", "blake2b512", "blake2s256",
+-    "sm3"
+-) {
+-    my $str = "    {FT_md, \"$cmd\", dgst_main},\n";
+-    if (grep { $cmd eq $_ } @disablables) {
+-        print "#ifndef OPENSSL_NO_" . uc($cmd) . "\n${str}#endif\n";
+-    } elsif (my $disabler = $md_disabler{$cmd}) {
+-        print "#ifndef OPENSSL_NO_" . uc($disabler) . "\n${str}#endif\n";
+-    } else {
+-        print $str;
+-    }
+-}
+-
+ my %cipher_disabler = (
+     des3  => "des",
+     desx  => "des",
+@@ -137,32 +113,7 @@ foreach my $cmd (
+     "aes-128-cbc", "aes-128-ecb",
+     "aes-192-cbc", "aes-192-ecb",
+     "aes-256-cbc", "aes-256-ecb",
+-    "aria-128-cbc", "aria-128-cfb",
+-    "aria-128-ctr", "aria-128-ecb", "aria-128-ofb",
+-    "aria-128-cfb1", "aria-128-cfb8",
+-    "aria-192-cbc", "aria-192-cfb",
+-    "aria-192-ctr", "aria-192-ecb", "aria-192-ofb",
+-    "aria-192-cfb1", "aria-192-cfb8",
+-    "aria-256-cbc", "aria-256-cfb",
+-    "aria-256-ctr", "aria-256-ecb", "aria-256-ofb",
+-    "aria-256-cfb1", "aria-256-cfb8",
+-    "camellia-128-cbc", "camellia-128-ecb",
+-    "camellia-192-cbc", "camellia-192-ecb",
+-    "camellia-256-cbc", "camellia-256-ecb",
+-    "base64", "zlib",
+-    "des", "des3", "desx", "idea", "seed", "rc4", "rc4-40",
+-    "rc2", "bf", "cast", "rc5",
+-    "des-ecb", "des-ede", "des-ede3",
+-    "des-cbc", "des-ede-cbc","des-ede3-cbc",
+-    "des-cfb", "des-ede-cfb","des-ede3-cfb",
+-    "des-ofb", "des-ede-ofb","des-ede3-ofb",
+-    "idea-cbc","idea-ecb", "idea-cfb", "idea-ofb",
+-    "seed-cbc","seed-ecb", "seed-cfb", "seed-ofb",
+-    "rc2-cbc", "rc2-ecb", "rc2-cfb","rc2-ofb", "rc2-64-cbc", "rc2-40-cbc",
+-    "bf-cbc", "bf-ecb", "bf-cfb", "bf-ofb",
+-    "cast5-cbc","cast5-ecb", "cast5-cfb","cast5-ofb",
+-    "cast-cbc", "rc5-cbc", "rc5-ecb", "rc5-cfb", "rc5-ofb",
+-    "sm4-cbc", "sm4-ecb", "sm4-cfb", "sm4-ofb", "sm4-ctr"
++    "bf-cbc", "bf-ecb"
+ ) {
+     my $str = "    {FT_cipher, \"$cmd\", enc_main, enc_options},\n";
+     (my $algo = $cmd) =~ s/-.*//g;
+--- openssl-1.1/apps/s_client.c
++++ openssl-1.1/apps/s_client.c
+@@ -76,6 +76,8 @@ static int ocsp_resp_cb(SSL *s, void *ar
+ static int ldap_ExtendedResponse_parse(const char *buf, long rem);
+ static int is_dNS_name(const char *host);
+ 
++char *psk_key = NULL;           /* by default PSK is not used */
++
+ static int saved_errno;
+ 
+ static void save_errno(void)
