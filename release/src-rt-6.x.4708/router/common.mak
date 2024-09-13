@@ -50,6 +50,9 @@ endif # BCM714
 export EXTRA_FLAG := -lgcc_s
 export ARCH := arm
 export HOST := arm-linux
+export TOOLCHAIN := $(shell cd $(dir $(shell which $(CROSS_COMPILE)strip))/.. && pwd -P)
+export LIBDIR := $(TOOLCHAIN)/$(ARCH)-brcm-linux-uclibcgnueabi/sysroot/lib
+export USRLIBDIR := $(TOOLCHAIN)/$(ARCH)-brcm-linux-uclibcgnueabi/sysroot/usr/lib
 else
 export PLATFORM := mipsel-uclibc
 export CROSS_COMPILE := mipsel-uclibc-
@@ -58,10 +61,12 @@ export CONFIGURE := ./configure --host=mipsel-linux --build=$(BUILD)
 export HOSTCONFIG := linux-mipsel
 export ARCH := mips
 export HOST := mipsel-linux
+export TOOLCHAIN := $(shell cd $(dir $(shell which $(CROSS_COMPILE)strip))/.. && pwd -P)
+export LIBDIR := $(TOOLCHAIN)/lib
+export USRLIBDIR := $(TOOLCHAIN)/usr/lib
 endif
 
 export PLT := $(ARCH)
-export TOOLCHAIN := $(shell cd $(dir $(shell which $(CROSS_COMPILE)strip))/.. && pwd -P)
 
 export CC := $(CROSS_COMPILE)gcc
 export CXX := $(CROSS_COMPILE)g++
@@ -100,9 +105,6 @@ ifeq ($(LINUX_KERNEL),)
 LINUX_KERNEL=$(call kver,utsrelease.h)
 endif
 endif # TCONFIG_BCMARM
-
-export LIBDIR := $(TOOLCHAIN)/lib
-export USRLIBDIR := $(TOOLCHAIN)/usr/lib
 
 export PLATFORMDIR := $(TOP)/$(PLATFORM)
 export INSTALLDIR := $(PLATFORMDIR)/install
