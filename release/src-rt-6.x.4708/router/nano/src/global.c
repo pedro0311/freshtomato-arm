@@ -392,6 +392,7 @@ int keycode_from_string(const char *keystring)
 }
 
 #if defined(ENABLE_EXTRA) && defined(NCURSES_VERSION_PATCH)
+/* Report the version of ncurses that nano is linked against. */
 void show_curses_version(void)
 {
 	statusline(INFO, "ncurses-%i.%i, patch %li", NCURSES_VERSION_MAJOR,
@@ -1571,6 +1572,7 @@ void shortcut_init(void)
 #endif
 #ifndef NANO_TINY
 	add_to_sclist((MMOST & ~MMAIN) | MYESNO, "", KEY_CANCEL, do_cancel, 0);
+	add_to_sclist(MMAIN, "", KEY_CENTER, do_center, 0);
 	add_to_sclist(MMAIN, "", KEY_SIC, do_insertfile, 0);
 	/* Catch and ignore bracketed paste marker keys. */
 	add_to_sclist(MMOST|MBROWSER|MHELP|MYESNO, "", BRACKETED_PASTE_MARKER, do_nothing, 0);

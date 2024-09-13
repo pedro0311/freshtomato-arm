@@ -572,8 +572,6 @@ void do_undo(void)
 		break;
 	case REPLACE:
 		undidmsg = _("replacement");
-		if ((u->xflags & INCLUDED_LAST_LINE) && !ISSET(NO_NEWLINES))
-			remove_magicline();
 		data = u->strdata;
 		u->strdata = line->data;
 		line->data = data;
@@ -751,8 +749,6 @@ void do_redo(void)
 		break;
 	case REPLACE:
 		redidmsg = _("replacement");
-		if ((u->xflags & INCLUDED_LAST_LINE) && !ISSET(NO_NEWLINES))
-			new_magicline();
 		data = u->strdata;
 		u->strdata = line->data;
 		line->data = data;
@@ -1037,8 +1033,6 @@ void add_undo(undo_type action, const char *message)
 		break;
 	case REPLACE:
 		u->strdata = copy_of(thisline->data);
-		if (thisline == openfile->filebot && answer[0] != '\0')
-			u->xflags |= INCLUDED_LAST_LINE;
 		break;
 #ifdef ENABLE_WRAPPING
 	case SPLIT_BEGIN:
@@ -1588,8 +1582,7 @@ void concat_paragraph(linestruct *line, size_t count)
 			line->data[line_len] = '\0';
 		}
 
-		line->data = nrealloc(line->data,
-								line_len + next_line_len - next_lead_len + 1);
+		line->data = nrealloc(line->data, line_len + next_line_len - next_lead_len + 1);
 		strcat(line->data, next_line->data + next_lead_len);
 #ifndef NANO_TINY
 		line->has_anchor |= next_line->has_anchor;
@@ -2877,7 +2870,7 @@ void do_linter(void)
 		kbinput = get_kbinput(footwin, VISIBLE);
 
 #ifndef NANO_TINY
-		if (kbinput == KEY_WINCH)
+		if (kbinput == THE_WINDOW_RESIZED)
 			continue;
 #endif
 		function = func_from_key(kbinput);

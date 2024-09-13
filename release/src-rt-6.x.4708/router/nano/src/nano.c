@@ -1075,7 +1075,8 @@ void regenerate_screen(void)
 	/* If we have an open buffer, redraw the contents of the subwindows. */
 	if (openfile) {
 		ensure_firstcolumn_is_aligned();
-		draw_all_subwindows();
+		if (currmenu & ~(MBROWSER|MWHEREISFILE|MGOTODIR))
+			draw_all_subwindows();
 	}
 }
 
@@ -1592,7 +1593,7 @@ void process_a_keystroke(void)
 	lastmessage = VACUUM;
 
 #ifndef NANO_TINY
-	if (input == KEY_WINCH)
+	if (input == THE_WINDOW_RESIZED)
 		return;
 #endif
 #ifdef ENABLE_MOUSE
