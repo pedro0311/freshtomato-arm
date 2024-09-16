@@ -2719,12 +2719,13 @@ nginx-clean:
 	$(call unpatch_files,nginx)
 
 libncurses/stamp-h1:
+	$(call patch_files,libncurses)
 	cd libncurses && \
 		CFLAGS="-Os -Wall -ffunction-sections -fdata-sections -fPIC" \
 		CPPFLAGS="-Os $(EXTRACFLAGS) -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -fPIC" \
 		LIBS="-lstdc++" \
-		$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs \
+		$(CONFIGURE) --prefix=/usr --with-shared --with-normal --disable-debug --without-ada --without-manpages --without-progs --without-profile --disable-big-core \
 			--without-tests --without-cxx --without-cxx-bindings --with-build-cppflags=-D_GNU_SOURCE --disable-rpath --disable-rpath-hack
 	@touch $@
 
@@ -2753,6 +2754,7 @@ libncurses-clean:
 	-@$(MAKE) -C libncurses clean
 	@rm -f libncurses/stamp-h1 libncurses/Makefile
 	@rm -rf libncurses/staged
+	$(call unpatch_files,libncurses)
 
 mysql/target/Makefile:
 	@mkdir -p mysql/host
