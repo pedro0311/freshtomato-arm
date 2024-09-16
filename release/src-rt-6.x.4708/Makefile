@@ -18,14 +18,20 @@ export SRCBASE := $(shell pwd)
 export SRCBASEDIR := $(shell pwd | sed 's/.*release\///g')
 RELEASEDIR := $(shell (cd $(SRCBASE)/.. && pwd -P))
 PATH := $(RELEASEDIR)/tools:$(PATH)
-export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin
-export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
+
+include target.mak
+
+ifeq ($(CONFIG_TOOLCHAIN53),)
+ export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin
+ export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
+else
+ export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-uclibc-5.3/usr/bin
+ export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+endif
 
 CTAGS_EXCLUDE_OPT := --exclude=kernel_header --exclude=$(PLATFORM)
 CTAGS_DEFAULT_DIRS := $(SRCBASE)/router/rc $(SRCBASE)/router/httpd $(SRCBASE)/src/router/shared $(SRCBASE)/src/router/www
 KERNEL_BINARY = $(LINUXDIR)/arch/arm/boot/zImage
-
-include target.mak
 
 export TPROFILE := N
 V1 ?= "--def"

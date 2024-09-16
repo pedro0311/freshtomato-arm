@@ -415,8 +415,11 @@ ifeq ($(TCONFIG_BCMARM),y)
  include $(SRCBASE)/makefiles/WLAN_Common.mk
  export BASEDIR := $(WLAN_TreeBaseA)
  export EXTRALIBS = -lgcc_s
- export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
-
+ ifeq ($(CONFIG_TOOLCHAIN53),)
+  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
+ else
+  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+ endif
  ifeq (2_6_36,$(LINUX_VERSION))
   ifeq ($(TCONFIG_BCM7),y)
    export LINUXDIR := $(SRCBASE)/linux/linux-2.6.36
@@ -2127,8 +2130,9 @@ endif
 
 hotplug2:
 	@$(SEP)
+	$(call patch_files,hotplug2)
 	$(MAKE) -C $@ \
-		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(CONFIG_TOOLCHAIN53),-DCONFIG_TOOLCHAIN53,)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 hotplug2-install:
@@ -2137,6 +2141,7 @@ hotplug2-install:
 
 hotplug2-clean:
 	-@$(MAKE) -C hotplug2
+	$(call unpatch_files,hotplug2)
 
 emf$(BCMEX):
 	$(MAKE) -C $(if $(TCONFIG_BCMARM),,$(SRCBASE)/)emf$(BCMEX)/emfconf CROSS=$(CROSS_COMPILE)

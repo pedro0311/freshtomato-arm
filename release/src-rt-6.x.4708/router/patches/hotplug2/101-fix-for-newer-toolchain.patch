@@ -1,0 +1,52 @@
+--- hotplug2/hotplug2_utils.c
++++ hotplug2/hotplug2_utils.c
+@@ -19,7 +19,11 @@
+  *
+  * Returns: Seqnum as read from sysfs
+  */
++#ifndef CONFIG_TOOLCHAIN53
+ inline event_seqnum_t get_kernel_seqnum() {
++#else
++extern inline event_seqnum_t get_kernel_seqnum() {
++#endif
+ 	FILE *fp;
+ 	
+ 	char filename[64];
+@@ -44,7 +48,11 @@
+  *
+  * Returns: Socket fd if succesful, -1 otherwise.
+  */
++#ifndef CONFIG_TOOLCHAIN53
+ inline int init_netlink_socket(int type) {
++#else
++extern inline int init_netlink_socket(int type) {
++#endif
+ 	int netlink_socket;
+ 	struct sockaddr_nl snl;
+ 	int buffersize = 16 * 1024 * 1024;
+--- hotplug2/mem_utils.c
++++ hotplug2/mem_utils.c
+@@ -16,7 +16,11 @@
+  *
+  * Returns: Pointer to freshly allocated memory
+  */
++#ifndef CONFIG_TOOLCHAIN53
+ inline void *xmalloc(size_t size) {
++#else
++extern inline void *xmalloc(size_t size) {
++#endif
+ 	void *ptr;
+ 	ptr = malloc(size);
+ 	if (ptr == NULL) {
+@@ -34,7 +38,11 @@
+  *
+  * Returns: Pointer to reallocated memory
+  */
++#ifndef CONFIG_TOOLCHAIN53
+ inline void *xrealloc(void *inptr, size_t size) {
++#else
++extern inline void *xrealloc(void *inptr, size_t size) {
++#endif
+ 	void *ptr;
+ 	ptr = realloc(inptr, size);
+ 	if (ptr == NULL) {
