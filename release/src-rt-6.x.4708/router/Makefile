@@ -2135,6 +2135,9 @@ hotplug2-install:
 	$(MAKE) -C hotplug2 PREFIX=$(INSTALLDIR)/hotplug2 SUBDIRS="" install
 	$(MAKE) -C hotplug2/examples PREFIX=$(INSTALLDIR)/hotplug2/rom KERNELVER=$(LINUX_KERNEL) install
 
+hotplug2-clean:
+	-@$(MAKE) -C hotplug2
+
 emf$(BCMEX):
 	$(MAKE) -C $(if $(TCONFIG_BCMARM),,$(SRCBASE)/)emf$(BCMEX)/emfconf CROSS=$(CROSS_COMPILE)
 
