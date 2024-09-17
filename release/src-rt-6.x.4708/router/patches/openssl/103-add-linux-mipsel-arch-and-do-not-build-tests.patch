@@ -1,0 +1,100 @@
+--- openssl/Configure
++++ openssl/Configure
+@@ -469,6 +469,7 @@ my %table=(
+ "linux-alpha+bwx-gcc","gcc:-O3 -DL_ENDIAN::-D_REENTRANT::-ldl:SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_RISC1 DES_UNROLL:${alpha_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ "linux-alpha-ccc","ccc:-fast -readonly_strings -DL_ENDIAN::-D_REENTRANT:::SIXTY_FOUR_BIT_LONG RC4_CHUNK DES_INT DES_PTR DES_RISC1 DES_UNROLL:${alpha_asm}",
+ "linux-alpha+bwx-ccc","ccc:-fast -readonly_strings -DL_ENDIAN::-D_REENTRANT:::SIXTY_FOUR_BIT_LONG RC4_CHAR RC4_CHUNK DES_INT DES_PTR DES_RISC1 DES_UNROLL:${alpha_asm}",
++"linux-mipsel", "gcc:-DL_ENDIAN -DTERMIO -Os \$(EXTRACFLAGS) -DOPENSSL_SMALL_FOOTPRINT -fomit-frame-pointer -Wall::-D_REENTRANT::-ldl:BN_LLONG RC4_CHAR RC4_CHUNK DES_INT DES_UNROLL BF_PTR:${mips32_asm}:o32:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+ 
+ # Android: linux-* but without pointers to headers and libs.
+ "android","gcc:-mandroid -I\$(ANDROID_DEV)/include -B\$(ANDROID_DEV)/lib -O3 -fomit-frame-pointer -Wall::-D_REENTRANT::-ldl:BN_LLONG RC4_CHAR RC4_CHUNK DES_INT DES_UNROLL BF_PTR:${no_asm}:dlfcn:linux-shared:-fPIC::.so.\$(SHLIB_MAJOR).\$(SHLIB_MINOR)",
+--- openssl/Makefile
++++ openssl/Makefile
+@@ -275,8 +275,7 @@ reflect:
+ 	@[ -n "$(THIS)" ] && $(CLEARENV) && $(MAKE) $(THIS) -e $(BUILDENV)
+ 
+ sub_all: build_all
+-
+-build_all: build_libs build_apps build_tests build_tools
++build_all: build_libs build_apps build_tools
+ 
+ build_libs: build_libcrypto build_libssl openssl.pc
+ 
+--- openssl/Makefile.org
++++ openssl/Makefile.org
+@@ -137,7 +137,7 @@ FIPSCANLIB=
+ 
+ BASEADDR=
+ 
+-DIRS=   crypto ssl engines apps test tools
++DIRS=   crypto ssl apps
+ ENGDIRS= ccgost
+ SHLIBDIRS= crypto ssl
+ 
+@@ -148,7 +148,7 @@ SDIRS=  \
+ 	des aes rc2 rc4 rc5 idea bf cast camellia seed modes \
+ 	bn ec rsa dsa ecdsa dh ecdh dso engine \
+ 	buffer bio stack lhash rand err \
+-	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp ui krb5 \
++	evp asn1 pem x509 x509v3 conf txt_db pkcs7 pkcs12 comp ocsp ui \
+ 	cms pqueue ts jpake srp store cmac
+ # keep in mind that the above list is adjusted by ./Configure
+ # according to no-xxx arguments...
+@@ -169,7 +169,7 @@ SHELL=/bin/sh
+ 
+ TOP=    .
+ ONEDIRS=out tmp
+-EDIRS=  times doc bugs util include certs ms shlib mt demos perl sf dep VMS
++EDIRS=  times bugs util include certs ms shlib mt demos perl sf dep VMS
+ WDIRS=  windows
+ LIBS=   libcrypto.a libssl.a
+ SHARED_CRYPTO=libcrypto$(SHLIB_EXT)
+@@ -273,8 +273,7 @@ reflect:
+ 	@[ -n "$(THIS)" ] && $(CLEARENV) && $(MAKE) $(THIS) -e $(BUILDENV)
+ 
+ sub_all: build_all
+-
+-build_all: build_libs build_apps build_tests build_tools
++build_all: build_libs build_apps build_tools
+ 
+ build_libs: build_libcrypto build_libssl openssl.pc
+ 
+@@ -404,11 +403,6 @@ openssl.pc: Makefile
+ 	    echo 'Version: '$(VERSION); \
+ 	    echo 'Requires: libssl libcrypto' ) > openssl.pc
+ 
+-Makefile: Makefile.org Configure config
+-	@echo "Makefile is older than Makefile.org, Configure or config."
+-	@echo "Reconfigure the source tree (via './config' or 'perl Configure'), please."
+-	@false
+-
+ libclean:
+ 	rm -f *.map *.so *.so.* *.dylib *.dll engines/*.so engines/*.dll engines/*.dylib *.a engines/*.a */lib */*/lib
+ 
+@@ -540,7 +534,7 @@ dist:
+ 	@$(MAKE) SDIRS='$(SDIRS)' clean
+ 	@$(MAKE) TAR='$(TAR)' TARFLAGS='$(TARFLAGS)' $(DISTTARVARS) tar
+ 
+-install: all install_docs install_sw
++install: all install_sw
+ 
+ install_sw:
+ 	@$(PERL) $(TOP)/util/mkdir-p.pl $(INSTALL_PREFIX)$(INSTALLTOP)/bin \
+--- openssl/Makefile.shared
++++ openssl/Makefile.shared
+@@ -95,7 +95,6 @@ LINK_APP=	\
+     LDCMD="$${LDCMD:-$(CC)}"; LDFLAGS="$${LDFLAGS:-$(CFLAGS)}"; \
+     LIBPATH=`for x in $$LIBDEPS; do echo $$x; done | sed -e 's/^ *-L//;t' -e d | uniq`; \
+     LIBPATH=`echo $$LIBPATH | sed -e 's/ /:/g'`; \
+-    LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
+     $${LDCMD} $${LDFLAGS} -o $${APPNAME:=$(APPNAME)} $(OBJECTS) $${LIBDEPS} )
+ 
+ LINK_SO=	\
+@@ -105,7 +104,6 @@ LINK_SO=	\
+     SHAREDFLAGS="$${SHAREDFLAGS:-$(CFLAGS) $(SHARED_LDFLAGS)}"; \
+     LIBPATH=`for x in $$LIBDEPS; do echo $$x; done | sed -e 's/^ *-L//;t' -e d | uniq`; \
+     LIBPATH=`echo $$LIBPATH | sed -e 's/ /:/g'`; \
+-    LD_LIBRARY_PATH=$$LIBPATH:$$LD_LIBRARY_PATH \
+     $${SHAREDCMD} $${SHAREDFLAGS} \
+ 	-o $$SHLIB$$SHLIB_SOVER$$SHLIB_SUFFIX \
+ 	$$ALLSYMSFLAGS $$SHOBJECTS $$NOALLSYMSFLAGS $$LIBDEPS \

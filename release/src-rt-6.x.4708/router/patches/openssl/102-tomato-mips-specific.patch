@@ -1,0 +1,254 @@
+--- openssl/apps/Makefile
++++ openssl/apps/Makefile
+@@ -50,21 +50,26 @@ S_SRC=	s_cb.c s_socket.c
+ RAND_OBJ=app_rand.o
+ RAND_SRC=app_rand.c
+ 
+-E_OBJ=	verify.o asn1pars.o req.o dgst.o dh.o dhparam.o enc.o passwd.o gendh.o errstr.o \
+-	ca.o pkcs7.o crl2p7.o crl.o \
+-	rsa.o rsautl.o dsa.o dsaparam.o ec.o ecparam.o \
+-	x509.o genrsa.o gendsa.o genpkey.o s_server.o s_client.o speed.o \
+-	s_time.o $(A_OBJ) $(S_OBJ) $(RAND_OBJ) version.o sess_id.o \
+-	ciphers.o nseq.o pkcs12.o pkcs8.o pkey.o pkeyparam.o pkeyutl.o \
+-	spkac.o smime.o cms.o rand.o engine.o ocsp.o prime.o ts.o srp.o
++# Tomato
+ 
+-E_SRC=	verify.c asn1pars.c req.c dgst.c dh.c enc.c passwd.c gendh.c errstr.c ca.c \
+-	pkcs7.c crl2p7.c crl.c \
+-	rsa.c rsautl.c dsa.c dsaparam.c ec.c ecparam.c \
+-	x509.c genrsa.c gendsa.c genpkey.c s_server.c s_client.c speed.c \
+-	s_time.c $(A_SRC) $(S_SRC) $(RAND_SRC) version.c sess_id.c \
+-	ciphers.c nseq.c pkcs12.c pkcs8.c pkey.c pkeyparam.c pkeyutl.c \
+-	spkac.c smime.c cms.c rand.c engine.c ocsp.c prime.c ts.c srp.c
++E_OBJ= req.o genpkey.o rsa.o x509.o $(A_OBJ) $(RAND_OBJ) enc.o $(S_OBJ) s_client.o ec.o ecparam.o
++E_SRC= req.c genpkey.c rsa.c x509.c $(A_SRC) $(RAND_SRC) enc.c $(S_SRC) s_client.c ec.c ecparam.c
++
++#E_OBJ=	verify.o asn1pars.o req.o dgst.o dh.o dhparam.o enc.o passwd.o gendh.o errstr.o \
++#	ca.o pkcs7.o crl2p7.o crl.o \
++#	rsa.o rsautl.o dsa.o dsaparam.o ec.o ecparam.o \
++#	x509.o genrsa.o gendsa.o genpkey.o s_server.o s_client.o speed.o \
++#	s_time.o $(A_OBJ) $(S_OBJ) $(RAND_OBJ) version.o sess_id.o \
++#	ciphers.o nseq.o pkcs12.o pkcs8.o pkey.o pkeyparam.o pkeyutl.o \
++#	spkac.o smime.o cms.o rand.o engine.o ocsp.o prime.o ts.o srp.o
++
++#E_SRC=	verify.c asn1pars.c req.c dgst.c dh.c enc.c passwd.c gendh.c errstr.c ca.c \
++#	pkcs7.c crl2p7.c crl.c \
++#	rsa.c rsautl.c dsa.c dsaparam.c ec.c ecparam.c \
++#	x509.c genrsa.c gendsa.c genpkey.c s_server.c s_client.c speed.c \
++#	s_time.c $(A_SRC) $(S_SRC) $(RAND_SRC) version.c sess_id.c \
++#	ciphers.c nseq.c pkcs12.c pkcs8.c pkey.c pkeyparam.c pkeyutl.c \
++#	spkac.c smime.c cms.c rand.c engine.c ocsp.c prime.c ts.c srp.c
+ 
+ SRC=$(E_SRC)
+ 
+@@ -159,12 +164,11 @@ $(EXE): progs.h $(E_OBJ) $(PROGRAM).o $(
+ 	elif [ -n "$(FIPSCANLIB)" ]; then \
+ 	  FIPSLD_CC="$(CC)"; CC=$(FIPSDIR)/bin/fipsld; export CC FIPSLD_CC; \
+ 	fi; \
+-	LIBRARIES="$(LIBSSL) $(LIBKRB5) $(LIBCRYPTO)" ; \
++	LIBRARIES="$(LIBSSL) $(LIBCRYPTO)" ; \
+ 	$(MAKE) -f $(TOP)/Makefile.shared -e \
+ 		APPNAME=$(EXE) OBJECTS="$(PROGRAM).o $(E_OBJ)" \
+ 		LIBDEPS="$(PEX_LIBS) $$LIBRARIES $(EX_LIBS)" \
+ 		link_app.$${shlib_target}
+-	@(cd ..; $(MAKE) rehash)
+ 
+ progs.h: progs.pl
+ 	$(PERL) progs.pl $(E_EXE) >progs.h
+--- openssl/apps/openssl.c
++++ openssl/apps/openssl.c
+@@ -463,11 +463,15 @@ int main(int Argc, char *ARGV[])
+     f.name = argv[0];
+     fp = lh_FUNCTION_retrieve(prog, &f);
+     if (fp == NULL) {
++#if 0
+         if (EVP_get_digestbyname(argv[0])) {
+             f.type = FUNC_TYPE_MD;
+             f.func = dgst_main;
+             fp = &f;
+-        } else if (EVP_get_cipherbyname(argv[0])) {
++        }
++          else
++#endif // 0
++        if (EVP_get_cipherbyname(argv[0])) {
+             f.type = FUNC_TYPE_CIPHER;
+             f.func = enc_main;
+             fp = &f;
+--- openssl/apps/progs.h
++++ openssl/apps/progs.h
+@@ -63,9 +63,49 @@ typedef struct {
+ DECLARE_LHASH_OF(FUNCTION);
+ 
+ FUNCTION functions[] = {
++    {FUNC_TYPE_GENERAL,"req",req_main},
++    {FUNC_TYPE_GENERAL, "genpkey", genpkey_main},
++#ifndef OPENSSL_NO_RSA
++    {FUNC_TYPE_GENERAL,"rsa",rsa_main},
++#endif
++    {FUNC_TYPE_GENERAL,"x509",x509_main},
++    {FUNC_TYPE_GENERAL,"enc",enc_main},
++#ifndef OPENSSL_NO_BF
++    {FUNC_TYPE_CIPHER,"bf-cbc",enc_main},
++#endif
++#ifndef OPENSSL_NO_BF
++    {FUNC_TYPE_CIPHER,"bf-ecb",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-128-cbc",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-128-ecb",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-192-cbc",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-192-ecb",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-256-cbc",enc_main},
++#endif
++#ifndef OPENSSL_NO_AES
++    {FUNC_TYPE_CIPHER,"aes-256-ecb",enc_main},
++#endif
++#if !defined(OPENSSL_NO_SOCK)
++    {FUNC_TYPE_GENERAL,"s_client",s_client_main},
++#endif
++#ifndef OPENSSL_NO_EC
++    {FUNC_TYPE_GENERAL, "ecparam", ecparam_main},
++#endif
++
++
++#if 0
++
+     {FUNC_TYPE_GENERAL, "verify", verify_main},
+     {FUNC_TYPE_GENERAL, "asn1parse", asn1parse_main},
+-    {FUNC_TYPE_GENERAL, "req", req_main},
+     {FUNC_TYPE_GENERAL, "dgst", dgst_main},
+ #ifndef OPENSSL_NO_DH
+     {FUNC_TYPE_GENERAL, "dh", dh_main},
+@@ -73,7 +113,6 @@ FUNCTION functions[] = {
+ #ifndef OPENSSL_NO_DH
+     {FUNC_TYPE_GENERAL, "dhparam", dhparam_main},
+ #endif
+-    {FUNC_TYPE_GENERAL, "enc", enc_main},
+     {FUNC_TYPE_GENERAL, "passwd", passwd_main},
+ #ifndef OPENSSL_NO_DH
+     {FUNC_TYPE_GENERAL, "gendh", gendh_main},
+@@ -82,9 +121,6 @@ FUNCTION functions[] = {
+     {FUNC_TYPE_GENERAL, "ca", ca_main},
+     {FUNC_TYPE_GENERAL, "crl", crl_main},
+ #ifndef OPENSSL_NO_RSA
+-    {FUNC_TYPE_GENERAL, "rsa", rsa_main},
+-#endif
+-#ifndef OPENSSL_NO_RSA
+     {FUNC_TYPE_GENERAL, "rsautl", rsautl_main},
+ #endif
+ #ifndef OPENSSL_NO_DSA
+@@ -93,26 +129,15 @@ FUNCTION functions[] = {
+ #ifndef OPENSSL_NO_DSA
+     {FUNC_TYPE_GENERAL, "dsaparam", dsaparam_main},
+ #endif
+-#ifndef OPENSSL_NO_EC
+-    {FUNC_TYPE_GENERAL, "ec", ec_main},
+-#endif
+-#ifndef OPENSSL_NO_EC
+-    {FUNC_TYPE_GENERAL, "ecparam", ecparam_main},
+-#endif
+-    {FUNC_TYPE_GENERAL, "x509", x509_main},
+ #ifndef OPENSSL_NO_RSA
+     {FUNC_TYPE_GENERAL, "genrsa", genrsa_main},
+ #endif
+ #ifndef OPENSSL_NO_DSA
+     {FUNC_TYPE_GENERAL, "gendsa", gendsa_main},
+ #endif
+-    {FUNC_TYPE_GENERAL, "genpkey", genpkey_main},
+ #if !defined(OPENSSL_NO_SOCK)
+     {FUNC_TYPE_GENERAL, "s_server", s_server_main},
+ #endif
+-#if !defined(OPENSSL_NO_SOCK)
+-    {FUNC_TYPE_GENERAL, "s_client", s_client_main},
+-#endif
+ #ifndef OPENSSL_NO_SPEED
+     {FUNC_TYPE_GENERAL, "speed", speed_main},
+ #endif
+@@ -172,24 +200,6 @@ FUNCTION functions[] = {
+ #ifndef OPENSSL_NO_RMD160
+     {FUNC_TYPE_MD, "rmd160", dgst_main},
+ #endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-128-cbc", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-128-ecb", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-192-cbc", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-192-ecb", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-256-cbc", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_AES
+-    {FUNC_TYPE_CIPHER, "aes-256-ecb", enc_main},
+-#endif
+ #ifndef OPENSSL_NO_CAMELLIA
+     {FUNC_TYPE_CIPHER, "camellia-128-cbc", enc_main},
+ #endif
+@@ -324,12 +334,6 @@ FUNCTION functions[] = {
+     {FUNC_TYPE_CIPHER, "rc2-40-cbc", enc_main},
+ #endif
+ #ifndef OPENSSL_NO_BF
+-    {FUNC_TYPE_CIPHER, "bf-cbc", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_BF
+-    {FUNC_TYPE_CIPHER, "bf-ecb", enc_main},
+-#endif
+-#ifndef OPENSSL_NO_BF
+     {FUNC_TYPE_CIPHER, "bf-cfb", enc_main},
+ #endif
+ #ifndef OPENSSL_NO_BF
+@@ -362,5 +366,8 @@ FUNCTION functions[] = {
+ #ifndef OPENSSL_NO_RC5
+     {FUNC_TYPE_CIPHER, "rc5-ofb", enc_main},
+ #endif
++
++#endif // 0
++
+     {0, NULL, NULL}
+ };
+--- openssl/apps/x509.c
++++ openssl/apps/x509.c
+@@ -218,7 +218,9 @@ int MAIN(int argc, char **argv)
+     char *checkhost = NULL;
+     char *checkemail = NULL;
+     char *checkip = NULL;
++#ifndef OPENSSL_NO_ENGINE	/* Tomato (#ifndef/#endif) */
+     char *engine = NULL;
++#endif				/* end Tomato */
+ 
+     reqfile = 0;
+ 
+@@ -499,7 +501,10 @@ int MAIN(int argc, char **argv)
+             BIO_printf(bio_err, "%s", *pp);
+         goto end;
+     }
++
++#ifndef OPENSSL_NO_ENGINE	/* Tomato (#ifndef/#endif) */
+     e = setup_engine(bio_err, engine, 0);
++#endif				/* end Tomato */
+ 
+     if (need_rand)
+         app_RAND_load_file(NULL, bio_err, 0);
+@@ -1036,7 +1041,9 @@ int MAIN(int argc, char **argv)
+     ASN1_INTEGER_free(sno);
+     sk_ASN1_OBJECT_pop_free(trust, ASN1_OBJECT_free);
+     sk_ASN1_OBJECT_pop_free(reject, ASN1_OBJECT_free);
++#ifndef OPENSSL_NO_ENGINE	/* Tomato (#ifndef/#endif) */
+     release_engine(e);
++#endif				/* end Tomato */
+     if (passin)
+         OPENSSL_free(passin);
+     apps_shutdown();
