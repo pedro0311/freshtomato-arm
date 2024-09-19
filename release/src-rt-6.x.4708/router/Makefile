@@ -4276,6 +4276,138 @@ haveged-clean:
 	@rm -f haveged/stamp-h1
 	$(call unpatch_files,haveged)
 
+samba3/source3/Makefile:
+#	$(call patch_files,samba3)
+	cd samba3/source3 && \
+	ac_cv_file__proc_sys_kernel_core_pattern=yes \
+	ac_cv_header_libunwind_h=no \
+	ac_cv_lib_resolv_dn_expand=no \
+	ac_cv_lib_resolv__dn_expand=no \
+	ac_cv_lib_resolv___dn_expand=no \
+	samba_cv_CC_NEGATIVE_ENUM_VALUES=yes \
+	samba_cv_linux_getgrouplist_ok=no \
+	samba_cv_HAVE_BROKEN_FCNTL64_LOCKS=no \
+	samba_cv_HAVE_BROKEN_GETGROUPS=no \
+	$(if $(TCONFIG_BCMARM),samba_cv_HAVE_SENDFILE=yes,samba_cv_HAVE_SENDFILE=no) \
+	$(if $(TCONFIG_IPV6),,libreplace_cv_HAVE_IPV6=no libreplace_cv_HAVE_IPV6_V6ONLY=no) \
+	samba_cv_HAVE_BROKEN_LINUX_SENDFILE=yes \
+	samba_cv_HAVE_BROKEN_READDIR_NAME=no \
+	samba_cv_HAVE_DEV64_T=no \
+	samba_cv_HAVE_DEVICE_MAJOR_FN=yes \
+	samba_cv_HAVE_DEVICE_MINOR_FN=yes \
+	samba_cv_HAVE_EXPLICIT_LARGEFILE_SUPPORT=yes \
+	samba_cv_HAVE_FCNTL_LOCK=yes \
+	samba_cv_HAVE_FTRUNCATE_EXTEND=yes \
+	samba_cv_HAVE_INO64_T=yes \
+	samba_cv_HAVE_KERNEL_CHANGE_NOTIFY=yes \
+	samba_cv_HAVE_KERNEL_OPLOCKS_LINUX=yes \
+	samba_cv_HAVE_KERNEL_SHARE_MODES=yes \
+	samba_cv_HAVE_MAKEDEV=yes \
+	samba_cv_HAVE_NATIVE_ICONV=no \
+	samba_cv_HAVE_OFF64_T=yes \
+	samba_cv_HAVE_SECURE_MKSTEMP=yes \
+	samba_cv_HAVE_STRUCT_FLOCK64=yes \
+	samba_cv_HAVE_TRUNCATED_SALT=no \
+	samba_cv_HAVE_UNSIGNED_CHAR=no \
+	samba_cv_HAVE_WRFILE_KEYTAB=no \
+	samba_cv_HAVE_Werror=yes \
+	samba_cv_REALPATH_TAKES_NULL=yes \
+	samba_cv_SIZEOF_DEV_T=yes \
+	samba_cv_SIZEOF_INO_T=yes \
+	samba_cv_SIZEOF_OFF_T=yes \
+	samba_cv_SIZEOF_TIME_T=no \
+	samba_cv_have_longlong=yes \
+	samba_cv_have_setresuid=yes \
+	samba_cv_have_setresgid=yes \
+	samba_cv_USE_SETRESUID=yes \
+	samba_cv_USE_SETREUID=yes \
+	libreplace_cv_HAVE_C99_VSNPRINTF=yes \
+	LINUX_LFS_SUPPORT=yes \
+	ac_cv_path_PYTHON="" \
+	ac_cv_path_PYTHON_CONFIG="" \
+	CFLAGS="$(EXTRACFLAGS) $(CFLAG_OPTIMIZE) $(if $(TCONFIG_BCMARM),-DBCMARM,) $(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-I$(TOP)/libiconv/staged/usr/include,) -I$(TOP)/zlib/staged/usr/include \
+		-DMAX_DEBUG_LEVEL="-1" -D__location__=\\\"\\\" -ffunction-sections -fdata-sections" \
+	CPPFLAGS="-DNDEBUG -DSHMEM_SIZE=524288 -Dfcntl=fcntl64" \
+	LDFLAGS="$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),-L$(TOP)/libiconv/staged/usr/lib,) -L$(TOP)/zlib/staged/usr/lib -Wl,--gc-sections" \
+	$(CONFIGURE) \
+		--prefix=/usr \
+		--bindir=/usr/bin \
+		--sbindir=/usr/sbin \
+		--libdir=/etc \
+		--localstatedir=/var \
+		--enable-largefile \
+		--disable-avahi \
+		--disable-cups \
+		--disable-debug \
+		--disable-developer \
+		--disable-dmalloc \
+		--disable-external-libtalloc \
+		--disable-external-libtdb \
+		--disable-external-libtevent \
+		--disable-fam \
+		--disable-iprint \
+		--disable-krb5developer \
+		--disable-pie \
+		--disable-relro \
+		--disable-static \
+		--disable-swat \
+		--disable-shared-libs \
+		--with-configdir=/etc/samba \
+		--with-rootsbindir=/usr/sbin \
+		--with-piddir=/var/run/samba \
+		--with-privatedir=/etc/samba \
+		--with-lockdir=/var/lock \
+		--with-syslog \
+		--with-included-popt=no \
+		--with-krb5=no \
+		--with-shared-modules=MODULES \
+		--with-included-iniparser \
+		--with-logfilebase=/var/log \
+		--with-nmbdsocketdir=/var/nmbd \
+		$(if $(TCONFIG_BCMARM),--with-sendfile-support,) \
+		$(if $(TCONFIG_BCMARM),--with-codepagedir=/usr/share/samba/codepages,) \
+		$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_NGINX)),--with-libiconv=$(TOP)/libiconv/staged/usr,) \
+		--without-acl-support \
+		--without-ads \
+		--without-cluster-support \
+		--without-dnsupdate \
+		--without-krb5 \
+		--without-ldap \
+		--without-libaddns \
+		--without-libtdb \
+		--without-libnetapi \
+		--without-libsmbclient \
+		--without-libsmbsharemodes \
+		--without-libtalloc \
+		--without-libtevent \
+		--without-pam \
+		--without-quotas \
+		--without-sys-quotas \
+		--without-utmp \
+		--without-winbind
+	mkdir -p samba3/source3/bin
+
+samba3: samba3/source3/Makefile
+	@$(SEP)
+	$(MAKE) -C samba3/source3 all $(PARALLEL_BUILD)
+
+samba3-install:
+	@install -D samba3/source3/bin/samba_multicall $(INSTALLDIR)/samba3/usr/bin/samba_multicall
+	@install -d $(INSTALLDIR)/samba3/usr/sbin/
+	cd $(INSTALLDIR)/samba3/usr/sbin && ln -sf ../bin/samba_multicall smbd && ln -sf ../bin/samba_multicall nmbd
+	cd $(INSTALLDIR)/samba3/usr/bin && ln -sf samba_multicall smbpasswd
+ifeq ($(TCONFIG_BCMARM),y)
+	install -D samba3/codepages/lowcase.dat $(INSTALLDIR)/samba3/usr/share/samba/codepages/lowcase.dat
+	install -D samba3/codepages/upcase.dat $(INSTALLDIR)/samba3/usr/share/samba/codepages/upcase.dat
+endif
+	$(STRIP) -s $(INSTALLDIR)/samba3/usr/bin/samba_multicall
+
+samba3-clean:
+	-$(MAKE) -C samba3/source3 distclean
+	@rm -f samba3/source3/auth/*.o
+	@rm -f samba3/source3/Makefile
+#	$(call unpatch_files,samba3)
+
 
 #
 # Generic rules
