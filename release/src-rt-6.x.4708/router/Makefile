@@ -4277,7 +4277,7 @@ haveged-clean:
 	$(call unpatch_files,haveged)
 
 samba3/source3/Makefile:
-#	$(call patch_files,samba3)
+	$(call patch_files,samba3)
 	cd samba3/source3 && \
 	ac_cv_file__proc_sys_kernel_core_pattern=yes \
 	ac_cv_header_libunwind_h=no \
@@ -4406,7 +4406,7 @@ samba3-clean:
 	-$(MAKE) -C samba3/source3 distclean
 	@rm -f samba3/source3/auth/*.o
 	@rm -f samba3/source3/Makefile
-#	$(call unpatch_files,samba3)
+	$(call unpatch_files,samba3)
 
 
 #
