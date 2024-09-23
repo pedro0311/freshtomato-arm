@@ -2895,7 +2895,7 @@ lzo-clean:
 
 libcap-ng/stamp-h1:
 	cd libcap-ng && ./autogen.sh && \
-		CFLAGS="-O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+		CFLAGS="-O3 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-Wl,--gc-sections -fPIC" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static=no --bindir=/usr/sbin --libdir=/usr/lib --without-python --without-python3 \
 		ac_cv_prog_swig_found=no
