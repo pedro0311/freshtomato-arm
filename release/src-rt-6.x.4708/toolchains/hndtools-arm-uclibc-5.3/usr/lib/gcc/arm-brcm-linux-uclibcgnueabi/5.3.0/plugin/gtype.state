@@ -20145,14 +20145,14 @@
   nil 0 nil nil )
  
  (!type user_struct 1357 nil  gc_unused "hash_table<loc_list_hasher>"
-  (!srcfileloc  "dwarf2out.c" 24510)
+  (!srcfileloc  "dwarf2out.c" 24512)
   (!fields 1 
    (!pair  "loc_list_hasher"
     (!type struct 1358 nil  gc_unused "loc_list_hasher"
-     (!srcfileloc  "dwarf2out.c" 24510)
+     (!srcfileloc  "dwarf2out.c" 24512)
      (!fields 0 )
      nil 1023 nil nil )
-    (!srcfileloc  "dwarf2out.c" 24510)
+    (!srcfileloc  "dwarf2out.c" 24512)
     nil )
   )
  )
@@ -20164,14 +20164,14 @@
   nil 0 nil nil )
  
  (!type user_struct 1360 nil  gc_unused "hash_table<macinfo_entry_hasher>"
-  (!srcfileloc  "dwarf2out.c" 22300)
+  (!srcfileloc  "dwarf2out.c" 22302)
   (!fields 1 
    (!pair  "macinfo_entry_hasher"
     (!type struct 1361 nil  gc_unused "macinfo_entry_hasher"
-     (!srcfileloc  "dwarf2out.c" 22300)
+     (!srcfileloc  "dwarf2out.c" 22302)
      (!fields 0 )
      nil 1023 nil nil )
-    (!srcfileloc  "dwarf2out.c" 22300)
+    (!srcfileloc  "dwarf2out.c" 22302)
     nil )
   )
  )
@@ -26099,27 +26099,27 @@
   nil )
  (!pair  "loc_list_hash_type"
   (!type already_seen 1357)
-  (!srcfileloc  "dwarf2out.c" 24510)
+  (!srcfileloc  "dwarf2out.c" 24512)
   nil )
  (!pair  "loc_list_hasher"
   (!type already_seen 1358)
-  (!srcfileloc  "dwarf2out.c" 24510)
+  (!srcfileloc  "dwarf2out.c" 24512)
   nil )
  (!pair  "hash_table<loc_list_hasher>"
   (!type already_seen 1357)
-  (!srcfileloc  "dwarf2out.c" 24510)
+  (!srcfileloc  "dwarf2out.c" 24512)
   nil )
  (!pair  "macinfo_hash_type"
   (!type already_seen 1360)
-  (!srcfileloc  "dwarf2out.c" 22300)
+  (!srcfileloc  "dwarf2out.c" 22302)
   nil )
  (!pair  "macinfo_entry_hasher"
   (!type already_seen 1361)
-  (!srcfileloc  "dwarf2out.c" 22300)
+  (!srcfileloc  "dwarf2out.c" 22302)
   nil )
  (!pair  "hash_table<macinfo_entry_hasher>"
   (!type already_seen 1360)
-  (!srcfileloc  "dwarf2out.c" 22300)
+  (!srcfileloc  "dwarf2out.c" 22302)
   nil )
  (!pair  "dchar_p"
   (!type already_seen 16)

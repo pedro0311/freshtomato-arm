@@ -38,4 +38,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/home/pedro/buildroot-2016.02-ARM/output/hndtools-arm-uclibc-5.3/usr/lib/../lib'
+libdir='/home/pedro/buildroot-2016.02-ARM/output/hndtools-arm-uclibc-5.3/usr/lib'
