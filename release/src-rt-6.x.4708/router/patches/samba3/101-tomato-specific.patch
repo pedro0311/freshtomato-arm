@@ -2331,6 +2331,13 @@ diff -daurN samba3/librpc/ndr/libndr.h samba3/librpc/ndr/libndr.h
  void ndr_print_union_debug(ndr_print_fn_t fn, const char *name, uint32_t level, void *ptr);
  void ndr_print_function_debug(ndr_print_function_t fn, const char *name, int flags, void *ptr);
  char *ndr_print_struct_string(TALLOC_CTX *mem_ctx, ndr_print_fn_t fn, const char *name, void *ptr);
+@@ -603,5 +662,6 @@
+ _PUBLIC_ enum ndr_err_code ndr_push_enum_uint1632(struct ndr_push *ndr, int ndr_flags, uint16_t v);
+ 
+ _PUBLIC_ void ndr_print_bool(struct ndr_print *ndr, const char *name, const bool b);
++_PUBLIC_ void ndr_print_disabled(struct ndr_print *ndr, const char *name, int flags, void *r);
+ 
+ #endif /* __LIBNDR_H__ */
 diff -daurN samba3/librpc/ndr/ndr_basic.c samba3/librpc/ndr/ndr_basic.c
 --- samba3/librpc/ndr/ndr_basic.c	2015-02-22 15:11:32.000000000 +0100
 +++ samba3/librpc/ndr/ndr_basic.c	2024-08-04 17:52:53.000000000 +0200
