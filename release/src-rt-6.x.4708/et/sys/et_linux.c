@@ -2486,8 +2486,10 @@ et_sendup_chain_error_handler(et_info_t *et, struct sk_buff *skb, uint sz, int32
 	}
 }
 
+#if defined(__GNUC__) && __GNUC__ >= 5
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 static void BCMFASTPATH
 et_sendup_chain(et_info_t *et, void *h)
 {
@@ -2552,7 +2554,9 @@ et_sendup_chain(et_info_t *et, void *h)
 #endif /* ! ET_MULTI_VLAN_IN_LAN */
 	et_sendup_chain_error_handler(et, skb, sz, err);
 }
+#if defined(__GNUC__) && __GNUC__ >= 5
 #pragma GCC diagnostic pop
+#endif
 #endif /* PKTC */
 
 #ifdef ET_INGRESS_QOS
