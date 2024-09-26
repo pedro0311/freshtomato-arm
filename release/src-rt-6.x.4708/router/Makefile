@@ -3198,10 +3198,11 @@ e2fsprogs/stamp-h1:
 	$(call patch_files,e2fsprogs)
 	cd e2fsprogs && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
-		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
-		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --disable-tls --disable-defrag $(if $(TCONFIG_BCMARM),ac_cv_lib_pthread_sem_init=no,) \
-			--disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-e2initrd-helper \
-			--disable-nls --disable-debugfs --disable-imager --disable-resizer --disable-uuidd --disable-rpath
+		LDFLAGS="-Wl,--gc-sections" \
+		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --with-crond-dir=no \
+			--disable-tls --disable-nls --disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-uuidd \
+			--disable-debugfs --disable-imager --disable-resizer --disable-defrag --disable-fuse2fs --disable-e2initrd-helper --disable-rpath \
+			$(if $(TCONFIG_BCMARM),ac_cv_lib_pthread_sem_init=no,) ac_cv_lib_dl_dlopen=no
 	@touch $@
 
 e2fsprogs: e2fsprogs/stamp-h1
@@ -3212,10 +3213,8 @@ e2fsprogs-install:
 	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/usr/sbin/e2fsck
 	install -D e2fsprogs/misc/mke2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/mke2fs
 	install -D e2fsprogs/misc/tune2fs $(INSTALLDIR)/e2fsprogs/usr/sbin/tune2fs
-ifneq ($(TCONFIG_BCMARM),y)
-ifeq ($(TCONFIG_AIO),y)
+ifeq ($(or $(TCONFIG_BCMARM),$(TCONFIG_AIO)),y)
 	install -D e2fsprogs/misc/badblocks $(INSTALLDIR)/e2fsprogs/usr/sbin/badblocks
-endif
 endif
 	$(STRIP) -s $(INSTALLDIR)/e2fsprogs/usr/sbin/*
 	install -D e2fsprogs/lib/libblkid.so.1.0 $(INSTALLDIR)/e2fsprogs/usr/lib/libblkid.so.1.0
