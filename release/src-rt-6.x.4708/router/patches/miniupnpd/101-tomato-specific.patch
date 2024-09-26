@@ -51,22 +51,34 @@
  				# OpenWrt
 --- miniupnpd/Makefile.linux
 +++ miniupnpd/Makefile.linux
-@@ -29,11 +29,13 @@
- CFLAGS += -fno-common
- CFLAGS += -fstack-protector -fPIE
- CFLAGS += -D_FORTIFY_SOURCE=2
--CPPFLAGS += -D_GNU_SOURCE
-+CFLAGS += -D_GNU_SOURCE
+@@ -21,27 +21,29 @@
+ # ./configure them and build them then miniupnpd will build using :
+ # $ IPTABLESPATH=/path/to/iptables-1.4.1 make
+ #
++include ../common.mak
++
+ CONFIG_OPTIONS ?= $(cat .configure.cache)
+ CONFIG_OPTIONS += --firewall=iptables
+ #CFLAGS = -O -g -DDEBUG
+ CFLAGS ?= -Os
+-CFLAGS += -fno-strict-aliasing
+-CFLAGS += -fno-common
+-CFLAGS += -fstack-protector -fPIE
+-CFLAGS += -D_FORTIFY_SOURCE=2
++#CFLAGS += -fno-strict-aliasing
++#CFLAGS += -fno-common
++#CFLAGS += -fstack-protector -fPIE
++#CFLAGS += -D_FORTIFY_SOURCE=2
+ CPPFLAGS += -D_GNU_SOURCE
  CFLAGS += -Wall
  CFLAGS += -Wextra -Wstrict-prototypes -Wdeclaration-after-statement
  #CFLAGS += -Wno-missing-field-initializers
  #CFLAGS += -ansi	# iptables headers does use typeof which is a gcc extension
-+CFLAGS += $(EXTRACFLAGS)
-+CPPFLAGS += -I$(TOP)/shared
- LDFLAGS += -Wl,-z,now -Wl,-z,relro -pie
+-LDFLAGS += -Wl,-z,now -Wl,-z,relro -pie
++LDFLAGS ?= -Wl,-z,now -Wl,-z,relro -pie
  CC ?= gcc
  RM = rm -f
-@@ -41,7 +43,7 @@
+ INSTALL = install
  STRIP ?= strip
  PKG_CONFIG ?= pkg-config
  CP = cp
@@ -84,9 +96,12 @@
  include $(SRCDIR)/objects.mk
  
  # sources in netfilter/ directory
-@@ -87,12 +89,12 @@
+@@ -85,14 +87,14 @@
+ 
+ # OpenWrt packager disables https server for IGD v2 and hardcodes libuuid support
  ifeq ($(TARGET_OPENWRT),)
- LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libssl)
+-LDLIBS += $(shell $(PKG_CONFIG) --static --libs-only-l libssl)
++LDLIBS += $(if $(TCONFIG_HTTPS),$(shell $(PKG_CONFIG) --static --libs-only-l libssl))
  
 -TEST := $(shell $(PKG_CONFIG) --exists uuid && echo 1)
 -ifeq ($(TEST),1)
@@ -118,4 +133,51 @@
 +#              testssdppktgen testminissdp
  
  .PHONY:	all clean install depend dox
+ 
+--- miniupnpd/netfilter/iptcrdr.c
++++ miniupnpd/netfilter/iptcrdr.c
+@@ -14,8 +14,12 @@
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ #include <dlfcn.h>
++#ifdef BCMARM
+ #include <xtables.h>
++#else
++#include <iptables.h>
++#endif
+ #include <linux/netfilter/xt_DSCP.h>
+ #include <libiptc/libiptc.h>
+ 
+ #include <linux/version.h>
+@@ -33,7 +37,7 @@
+ #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]) + __must_be_array(arr))
+ #define LIST_POISON2  ((void *) 0x00200200 )
+ 
+-#if 0
++#ifndef BCMARM
+ #include <linux/netfilter/nf_nat.h>
+ #else
+ #include "tiny_nf_nat.h"
+@@ -46,7 +46,7 @@
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,22)
+ #include <linux/netfilter_ipv4/ip_nat.h>
+ #else
+-#if 0
++#ifndef BCMARM
+ #include <linux/netfilter/nf_nat.h>
+ #else
+ #include "tiny_nf_nat.h"
+--- miniupnpd/netfilter/iptpinhole.c
++++ miniupnpd/netfilter/iptpinhole.c
+@@ -20,7 +20,11 @@
+ 
+ #ifdef ENABLE_UPNPPINHOLE
+ 
++#ifdef BCMARM
+ #include <xtables.h>
++#else
++#include <iptables.h>
++#endif
+ #include <libiptc/libip6tc.h>
+ #include "tiny_nf_nat.h"
  
