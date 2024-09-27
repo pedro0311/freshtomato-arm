@@ -1533,7 +1533,7 @@ miniupnpd: miniupnpd/stamp-h1
 	@$(SEP)
 	$(MAKE) -C $@ $(PARALLEL_BUILD) \
 		CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -D_FORTIFY_SOURCE=2 $(if $(TCONFIG_BCMARM),-DBCMARM -fstack-protector)" \
-		LDFLAGS="-Wl,--gc-sections -Wl,--as-needed"
+		LDFLAGS="-Wl,--gc-sections -Wl,--as-needed $(if $(TCONFIG_BCMARM),,-Wl$(comma)--allow-multiple-definition)"
 
 miniupnpd-install:
 	install -D miniupnpd/miniupnpd $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
