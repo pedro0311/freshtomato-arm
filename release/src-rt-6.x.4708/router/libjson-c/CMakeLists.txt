@@ -3,24 +3,11 @@
 #   and many OpenWRT packages require, much newer CMake packages.
 #  We're stopping before 3.10 because that version starts requiring
 #   c++11, which isn't available on e.g HPUX.
-cmake_minimum_required(VERSION 3.9)
-
-# The project() command manages VERSION variables.
-cmake_policy(SET CMP0048 NEW)
+cmake_minimum_required(VERSION 3.9...3.12)
 
 # JSON-C library is C only project.
 # PROJECT_VERSION{,_MAJOR,_MINOR,_PATCH} set by project():
-project(json-c LANGUAGES C VERSION 0.17)
-
-# Targets may not link directly to themselves.
-cmake_policy(SET CMP0038 NEW)
-
-# MACOSX_RPATH is enabled by default.
-# We set it explicitly to avoid the warning
-cmake_policy(SET CMP0042 NEW)
-
-# Only interpret if() arguments as variables or keywords when unquoted.
-cmake_policy(SET CMP0054 NEW)
+project(json-c LANGUAGES C VERSION 0.18)
 
 # set default build type if not specified by user
 if(NOT CMAKE_BUILD_TYPE)
@@ -28,13 +15,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} -O2")
-
-# Include file check macros honor CMAKE_REQUIRED_LIBRARIES
-# i.e. the check_include_file() calls will include -lm when checking.
-# New in version 3.12.
-if(POLICY CMP0075)
-	cmake_policy(SET CMP0075 NEW)
-endif()
 
 include(CTest)
 
@@ -197,9 +177,10 @@ endif()
 
 # uClibc *intentionally* crashes in duplocale(), at least as of:
 # https://github.com/ffainelli/uClibc/blob/266bdc1/libc/misc/locale/locale.c#L1322
-# So, if it looks like we're compiling for a system like that just disable 
+# So, if it looks like we're compiling for a system like that just disable
 # locale handling entirely.
-exec_program(${CMAKE_C_COMPILER} ARGS -dumpmachine OUTPUT_VARIABLE CMAKE_GNU_C_MACHINE)
+execute_process (COMMAND ${CMAKE_C_COMPILER} -dumpmachine ERROR_QUIET OUTPUT_VARIABLE CMAKE_GNU_C_MACHINE)
+
 if (CMAKE_GNU_C_MACHINE MATCHES "uclibc")
 	message(STATUS "Detected uClibc compiler, disabling locale handling")
 	set(HAVE_SETLOCALE 0)
@@ -295,7 +276,24 @@ message(STATUS "Wrote ${PROJECT_BINARY_DIR}/config.h")
 configure_file(${PROJECT_SOURCE_DIR}/cmake/json_config.h.in   ${PROJECT_BINARY_DIR}/json_config.h)
 message(STATUS "Wrote ${PROJECT_BINARY_DIR}/json_config.h")
 
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+if (NOT DEFINED CMAKE_C_COMPILER_FRONTEND_VARIANT OR "${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "")  # only available in cmake 3.14+
+	if ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+		set(CMAKE_C_COMPILER_FRONTEND_VARIANT "MSVC")
+	elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+		set(CMAKE_C_COMPILER_FRONTEND_VARIANT "GNU")
+	elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+		# Detect clang-cl.exe, it is Clang but with MSVC compatible command line arguments
+		execute_process (COMMAND ${CMAKE_C_COMPILER} -? ERROR_QUIET OUTPUT_QUIET RESULT_VARIABLE _clang_result)
+		if (_clang_result EQUAL 0)
+			set(CMAKE_C_COMPILER_FRONTEND_VARIANT "MSVC")
+		else()
+			set(CMAKE_C_COMPILER_FRONTEND_VARIANT "GNU")
+			message(STATUS, "clang result is NOT 0")
+		endif()
+	endif()
+endif()
+
+if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "Clang")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections")
 	if ("${DISABLE_WERROR}" STREQUAL "OFF")
 	    set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Werror")
@@ -312,11 +310,11 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_C_COMPILER_ID}" STREQUAL
 
     add_definitions(-D_GNU_SOURCE)
 
-    if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+    if ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "Clang")
         # Remove this for 1.0 when we can bump the ABI and actually fix these warnings.
         set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} -Wno-shorten-64-to-32")
     endif()
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+elseif ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /DEBUG")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4100")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4996")
@@ -327,7 +325,7 @@ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     set(CMAKE_C_FLAGS           "${CMAKE_C_FLAGS} /wd4701")
 endif()
 
-if (NOT ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC"))
+if (NOT ("${CMAKE_C_COMPILER_FRONTEND_VARIANT}" STREQUAL "MSVC"))
 	check_c_source_compiles(
 	"
 	/* uClibc toolchains without threading barf when _REENTRANT is defined */
@@ -472,7 +470,7 @@ add_library(${PROJECT_NAME}
     ${JSON_C_HEADERS}
 )
 set_target_properties(${PROJECT_NAME} PROPERTIES
-    VERSION 5.3.0
+    VERSION 5.4.0
     SOVERSION 5)
 list(APPEND CMAKE_TARGETS ${PROJECT_NAME})
 # If json-c is used as subroject it set to target correct interface -I flags and allow
@@ -545,7 +543,6 @@ install(
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}
 )
 
-if (UNIX OR MINGW OR CYGWIN)
     SET(prefix ${CMAKE_INSTALL_PREFIX})
     # exec_prefix is prefix by default and CMake does not have the
     # concept.
@@ -573,7 +570,6 @@ if (UNIX OR MINGW OR CYGWIN)
     configure_file(json-c.pc.in json-c.pc @ONLY)
     set(INSTALL_PKGCONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/pkgconfig" CACHE PATH "Installation directory for pkgconfig (.pc) files")
     install(FILES ${PROJECT_BINARY_DIR}/json-c.pc DESTINATION "${INSTALL_PKGCONFIG_DIR}")
-endif ()
 
 install(FILES ${JSON_C_PUBLIC_HEADERS} DESTINATION ${CMAKE_INSTALL_FULL_INCLUDEDIR}/json-c)
 
@@ -589,4 +585,3 @@ if (NOT MSVC)  # cmd line apps don't built on Windows currently.
 add_subdirectory(apps)
 endif()
 endif()
-

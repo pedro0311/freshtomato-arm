@@ -226,7 +226,10 @@ struct json_object *json_tokener_parse_verbose(const char *str, enum json_tokene
 
 	tok = json_tokener_new();
 	if (!tok)
+	{
+		*error = json_tokener_error_memory;
 		return NULL;
+	}
 	obj = json_tokener_parse_ex(tok, str, -1);
 	*error = tok->err;
 	if (tok->err != json_tokener_success
@@ -338,9 +341,15 @@ struct json_object *json_tokener_parse_ex(struct json_tokener *tok, const char *
 #ifdef HAVE_USELOCALE
 	{
 		locale_t duploc = duplocale(oldlocale);
+		if (duploc == NULL && errno == ENOMEM)
+		{
+			tok->err = json_tokener_error_memory;
+			return NULL;
+		}
 		newloc = newlocale(LC_NUMERIC_MASK, "C", duploc);
 		if (newloc == NULL)
 		{
+			tok->err = json_tokener_error_memory;
 			freelocale(duploc);
 			return NULL;
 		}
@@ -359,7 +368,10 @@ struct json_object *json_tokener_parse_ex(struct json_tokener *tok, const char *
 		{
 			oldlocale = strdup(tmplocale);
 			if (oldlocale == NULL)
+			{
+				tok->err = json_tokener_error_memory;
 				return NULL;
+			}
 		}
 		setlocale(LC_NUMERIC, "C");
 	}
@@ -665,6 +677,12 @@ struct json_object *json_tokener_parse_ex(struct json_tokener *tok, const char *
 					saved_state = json_tokener_state_string;
 					state = json_tokener_state_string_escape;
 					break;
+				}
+				else if ((tok->flags & JSON_TOKENER_STRICT) && c <= 0x1f)
+				{
+					// Disallow control characters in strict mode
+					tok->err = json_tokener_error_parse_string;
+					goto out;
 				}
 				if (!ADVANCE_CHAR(str, tok) || !PEEK_CHAR(c, tok))
 				{
@@ -1254,7 +1272,11 @@ struct json_object *json_tokener_parse_ex(struct json_tokener *tok, const char *
 			goto redo_char;
 
 		case json_tokener_state_object_value_add:
-			json_object_object_add(current, obj_field_name, obj);
+			if (json_object_object_add(current, obj_field_name, obj) != 0)
+			{
+				tok->err = json_tokener_error_memory;
+				goto out;
+			}
 			free(obj_field_name);
 			obj_field_name = NULL;
 			saved_state = json_tokener_state_object_sep;
