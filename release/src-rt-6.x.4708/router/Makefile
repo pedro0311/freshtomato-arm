@@ -647,13 +647,11 @@ endif
 	install $(LIBDIR)/libm.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libnsl.so.0 $(TARGETDIR)/lib/
 	install $(LIBDIR)/libutil.so.0 $(TARGETDIR)/lib/
-ifeq ($(TCONFIG_USB),y)
- ifneq ($(TCONFIG_BCMARM),y)
+ifneq ($(TCONFIG_BCMARM),y)
 	install $(LIBDIR)/librt-0.9.30.1.so $(TARGETDIR)/lib/librt.so.0
- else
+else
 	install $(LIBDIR)/librt.so.0 $(TARGETDIR)/lib/librt.so.0
- endif
-endif # TCONFIG_USB
+endif
 ifneq ($(TCONFIG_NGINX)$(TCONFIG_NANO),)
  ifneq ($(TCONFIG_BCMARM),y)
 	install $(LIBDIR)/libstdc++.so.6 $(TARGETDIR)/lib/libstdc++.so.6
