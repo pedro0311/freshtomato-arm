@@ -2282,6 +2282,8 @@ test cases/failing/130 utf8 with bom subdir/subdir/meson.build
 test cases/failing/131 utf8 with bom options/meson.build
 test cases/failing/131 utf8 with bom options/meson.options
 test cases/failing/131 utf8 with bom options/test.json
+test cases/failing/132 module use inside project decl/meson.build
+test cases/failing/132 module use inside project decl/test.json
 test cases/failing/14 invalid option name/meson.build
 test cases/failing/14 invalid option name/meson_options.txt
 test cases/failing/14 invalid option name/test.json
@@ -2567,6 +2569,7 @@ test cases/format/1 default/crazy_comments.meson
 test cases/format/1 default/gh13242.meson
 test cases/format/1 default/indentation.meson
 test cases/format/1 default/meson.build
+test cases/format/1 default/meson.options
 test cases/format/2 muon/crazy_comments.meson
 test cases/format/2 muon/indentation.meson
 test cases/format/2 muon/meson.build
@@ -2576,6 +2579,8 @@ test cases/format/3 editorconfig/crazy_comments.meson
 test cases/format/3 editorconfig/indentation.meson
 test cases/format/3 editorconfig/meson.build
 test cases/format/3 editorconfig/options.ini
+test cases/format/3 editorconfig/subdir/.editorconfig
+test cases/format/3 editorconfig/subdir/sub.meson
 test cases/format/4 config/crazy_comments.meson
 test cases/format/4 config/indentation.meson
 test cases/format/4 config/meson.build
@@ -3150,9 +3155,11 @@ test cases/linuxlike/8 subproject library install/subprojects/sublib/meson.build
 test cases/linuxlike/8 subproject library install/subprojects/sublib/sublib.c
 test cases/linuxlike/8 subproject library install/subprojects/sublib/include/subdefs.h
 test cases/linuxlike/9 compiler checks with dependencies/meson.build
-test cases/nasm/1 configure file/hello.asm
+test cases/nasm/1 configure file/hello-x86.asm
+test cases/nasm/1 configure file/hello-x86_64.asm
 test cases/nasm/1 configure file/meson.build
-test cases/nasm/2 asm language/hello.asm
+test cases/nasm/2 asm language/hello-x86.asm
+test cases/nasm/2 asm language/hello-x86_64.asm
 test cases/nasm/2 asm language/meson.build
 test cases/nasm/3 nasm only/dummy.asm
 test cases/nasm/3 nasm only/dummy.def
