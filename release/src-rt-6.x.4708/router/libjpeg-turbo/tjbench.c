@@ -679,7 +679,7 @@ static int decompTest(char *fileName)
   subsamp = tj3Get(handle, TJPARAM_SUBSAMP);
   precision = tj3Get(handle, TJPARAM_PRECISION);
   if (tj3Get(handle, TJPARAM_PROGRESSIVE) == 1)
-    printf("JPEG image uses progressive entropy coding\n\n");
+    printf("JPEG image is progressive\n\n");
   if (tj3Get(handle, TJPARAM_ARITHMETIC) == 1)
     printf("JPEG image uses arithmetic entropy coding\n\n");
   if (tj3Set(handle, TJPARAM_PROGRESSIVE, progressive) == -1)
@@ -738,6 +738,15 @@ static int decompTest(char *fileName)
       THROW_UNIX("allocating JPEG size array");
     memset(jpegSizes, 0, sizeof(size_t) * ntilesw * ntilesh);
 
+    tsubsamp = (xformOpt & TJXOPT_GRAY) ? TJSAMP_GRAY : subsamp;
+    if (xformOp == TJXOP_TRANSPOSE || xformOp == TJXOP_TRANSVERSE ||
+        xformOp == TJXOP_ROT90 || xformOp == TJXOP_ROT270) {
+      if (tsubsamp == TJSAMP_422) tsubsamp = TJSAMP_440;
+      else if (tsubsamp == TJSAMP_440) tsubsamp = TJSAMP_422;
+      else if (tsubsamp == TJSAMP_411) tsubsamp = TJSAMP_441;
+      else if (tsubsamp == TJSAMP_441) tsubsamp = TJSAMP_411;
+    }
+
     if (noRealloc &&
         (doTile || xformOp != TJXOP_NONE || xformOpt != 0 || customFilter)) {
       for (i = 0; i < ntilesw * ntilesh; i++) {
@@ -745,9 +754,9 @@ static int decompTest(char *fileName)
 
         if (xformOp == TJXOP_TRANSPOSE || xformOp == TJXOP_TRANSVERSE ||
             xformOp == TJXOP_ROT90 || xformOp == TJXOP_ROT270)
-          jpegBufSize = tj3JPEGBufSize(tileh, tilew, subsamp);
+          jpegBufSize = tj3JPEGBufSize(tileh, tilew, tsubsamp);
         else
-          jpegBufSize = tj3JPEGBufSize(tilew, tileh, subsamp);
+          jpegBufSize = tj3JPEGBufSize(tilew, tileh, tsubsamp);
         if (jpegBufSize == 0)
           THROW_TJG();
         if ((jpegBufs[i] = tj3Alloc(jpegBufSize)) == NULL)
@@ -767,7 +776,6 @@ static int decompTest(char *fileName)
       printf("%-5d  %-5d   ", CROPPED_WIDTH(tilew), CROPPED_HEIGHT(tileh));
     }
 
-    tsubsamp = subsamp;
     if (doTile || xformOp != TJXOP_NONE || xformOpt != 0 || customFilter) {
       if ((t = (tjtransform *)malloc(sizeof(tjtransform) * ntilesw *
                                      ntilesh)) == NULL)
@@ -782,25 +790,14 @@ static int decompTest(char *fileName)
           subsamp == TJSAMP_UNKNOWN)
         THROW("transforming",
               "Could not determine subsampling level of JPEG image");
-      if (xformOpt & TJXOPT_GRAY) tsubsamp = TJSAMP_GRAY;
-      if (xformOp == TJXOP_HFLIP || xformOp == TJXOP_ROT180)
+      if (xformOp == TJXOP_HFLIP || xformOp == TJXOP_TRANSVERSE ||
+          xformOp == TJXOP_ROT90 || xformOp == TJXOP_ROT180)
         tw = tw - (tw % tjMCUWidth[tsubsamp]);
-      if (xformOp == TJXOP_VFLIP || xformOp == TJXOP_ROT180)
+      if (xformOp == TJXOP_VFLIP || xformOp == TJXOP_TRANSVERSE ||
+          xformOp == TJXOP_ROT180 || xformOp == TJXOP_ROT270)
         th = th - (th % tjMCUHeight[tsubsamp]);
-      if (xformOp == TJXOP_TRANSVERSE || xformOp == TJXOP_ROT90)
-        tw = tw - (tw % tjMCUHeight[tsubsamp]);
-      if (xformOp == TJXOP_TRANSVERSE || xformOp == TJXOP_ROT270)
-        th = th - (th % tjMCUWidth[tsubsamp]);
       tntilesw = (tw + ttilew - 1) / ttilew;
       tntilesh = (th + ttileh - 1) / ttileh;
-
-      if (xformOp == TJXOP_TRANSPOSE || xformOp == TJXOP_TRANSVERSE ||
-          xformOp == TJXOP_ROT90 || xformOp == TJXOP_ROT270) {
-        if (tsubsamp == TJSAMP_422) tsubsamp = TJSAMP_440;
-        else if (tsubsamp == TJSAMP_440) tsubsamp = TJSAMP_422;
-        else if (tsubsamp == TJSAMP_411) tsubsamp = TJSAMP_441;
-        else if (tsubsamp == TJSAMP_441) tsubsamp = TJSAMP_411;
-      }
 
       for (row = 0, tile = 0; row < tntilesh; row++) {
         for (col = 0; col < tntilesw; col++, tile++) {
@@ -918,11 +915,11 @@ static void usage(char *progName)
   printf("-componly = Stop after running compression tests.  Do not test decompression.\n");
   printf("-lossless = Generate lossless JPEG images when compressing (implies\n");
   printf("     -subsamp 444).  PSV is the predictor selection value (1-7).\n");
-  printf("-maxmemory = Memory limit (in megabytes) for intermediate buffers used with\n");
-  printf("     progressive JPEG compression and decompression, optimized baseline entropy\n");
-  printf("     coding, lossless JPEG compression, and lossless transformation\n");
+  printf("-maxmemory N = Memory limit (in megabytes) for intermediate buffers used with\n");
+  printf("     progressive JPEG compression and decompression, Huffman table\n");
+  printf("     optimization, lossless JPEG compression, and lossless transformation\n");
   printf("     [default = no limit]\n");
-  printf("-maxpixels = Input image size limit (in pixels) [default = no limit]\n");
+  printf("-maxpixels N = Input image size limit (in pixels) [default = no limit]\n");
   printf("-nowrite = Do not write reference or output images (improves consistency of\n");
   printf("     benchmark results)\n");
   printf("-rgb, -bgr, -rgbx, -bgrx, -xbgr, -xrgb =\n");
@@ -934,10 +931,9 @@ static void usage(char *progName)
   printf("     default = 8; if N is 16, then -lossless must also be specified]\n");
   printf("     (-precision 12 implies -optimize unless -arithmetic is also specified)\n");
   printf("-quiet = Output results in tabular rather than verbose format\n");
-  printf("-restart N = When compressing, add a restart marker every N MCU rows (lossy) or\n");
-  printf("     N sample rows (lossless) [default = 0 (no restart markers)].  Append 'B'\n");
-  printf("     to specify the restart marker interval in MCU blocks (lossy) or samples\n");
-  printf("     (lossless).\n");
+  printf("-restart N = When compressing, add a restart marker every N MCU rows\n");
+  printf("     [default = 0 (no restart markers)].  Append 'B' to specify the restart\n");
+  printf("     marker interval in MCUs (lossy only.)\n");
   printf("-stoponwarning = Immediately discontinue the current\n");
   printf("     compression/decompression/transform operation if a warning (non-fatal\n");
   printf("     error) occurs\n");
@@ -955,14 +951,14 @@ static void usage(char *progName)
   printf("     and H are the width and height of the region (0 = maximum possible width\n");
   printf("     or height) and X and Y are the left and upper boundary of the region, all\n");
   printf("     specified relative to the scaled image dimensions.  X must be divible by\n");
-  printf("     the scaled MCU width.\n");
+  printf("     the scaled iMCU width.\n");
   printf("-fastdct = Use the fastest DCT/IDCT algorithm available\n");
   printf("-fastupsample = Use the fastest chrominance upsampling algorithm available\n");
-  printf("-optimize = Use optimized baseline entropy coding in JPEG images generated by\n");
+  printf("-optimize = Compute optimal Huffman tables for JPEG images generated by\n");
   printf("     compession and transform operations\n");
-  printf("-progressive = Use progressive entropy coding in JPEG images generated by\n");
-  printf("     compression and transform operations (can be combined with -arithmetic;\n");
-  printf("     implies -optimize unless -arithmetic is also specified)\n");
+  printf("-progressive = Generate progressive JPEG images when compressing or\n");
+  printf("     transforming (can be combined with -arithmetic; implies -optimize unless\n");
+  printf("     -arithmetic is also specified)\n");
   printf("-limitscans = Refuse to decompress or transform progressive JPEG images that\n");
   printf("     have an unreasonably large number of scans\n");
   printf("-scale M/N = When decompressing, scale the width/height of the JPEG image by a\n");
@@ -985,7 +981,7 @@ static void usage(char *progName)
   printf("     prior to decompression (these operations are mutually exclusive)\n");
   printf("-grayscale = Transform the input image into a grayscale JPEG image prior to\n");
   printf("     decompression (can be combined with the other transform operations above)\n");
-  printf("-copynone = Do not copy any extra markers (including EXIF and ICC profile data)\n");
+  printf("-copynone = Do not copy any extra markers (including Exif and ICC profile data)\n");
   printf("     when transforming the input image\n");
   printf("-yuv = Compress from/decompress to intermediate planar YUV images\n");
   printf("     ** 8-bit data precision only **\n");
@@ -1047,21 +1043,19 @@ int main(int argc, char *argv[])
         printf("Using fastest DCT/IDCT algorithm\n\n");
         fastDCT = 1;
       } else if (!strcasecmp(argv[i], "-optimize")) {
-        printf("Using optimized baseline entropy coding\n\n");
         optimize = 1;
         xformOpt |= TJXOPT_OPTIMIZE;
       } else if (!strcasecmp(argv[i], "-progressive")) {
-        printf("Using progressive entropy coding\n\n");
+        printf("Generating progressive JPEG images\n\n");
         progressive = 1;
         xformOpt |= TJXOPT_PROGRESSIVE;
       } else if (!strcasecmp(argv[i], "-arithmetic")) {
         printf("Using arithmetic entropy coding\n\n");
         arithmetic = 1;
         xformOpt |= TJXOPT_ARITHMETIC;
-      } else if (!strcasecmp(argv[i], "-lossless")) {
+      } else if (!strcasecmp(argv[i], "-lossless"))
         lossless = 1;
-        subsamp = TJSAMP_444;
-      } else if (!strcasecmp(argv[i], "-rgb"))
+      else if (!strcasecmp(argv[i], "-rgb"))
         pf = TJPF_RGB;
       else if (!strcasecmp(argv[i], "-rgbx"))
         pf = TJPF_RGBX;
@@ -1086,8 +1080,9 @@ int main(int argc, char *argv[])
 
         if (sscanf(argv[++i], "%d/%d", &temp1, &temp2) == 2) {
           for (j = 0; j < nsf; j++) {
-            if (temp1 == scalingFactors[j].num &&
-                temp2 == scalingFactors[j].denom) {
+            if ((double)temp1 / (double)temp2 ==
+                (double)scalingFactors[j].num /
+                (double)scalingFactors[j].denom) {
               sf = scalingFactors[j];
               match = 1;  break;
             }
@@ -1098,8 +1093,8 @@ int main(int argc, char *argv[])
         int temp1 = -1, temp2 = -1, temp3 = -1, temp4 = -1;
 
         if (sscanf(argv[++i], "%dx%d+%d+%d", &temp1, &temp2, &temp3,
-                   &temp4) == 4 && temp1 >= 0 && temp2 >= 0 && temp3 >= 0 &&
-                   temp4 >= 0) {
+                   &temp4) == 4 &&
+            temp1 >= 0 && temp2 >= 0 && temp3 >= 0 && temp4 >= 0) {
           cr.w = temp1;  cr.h = temp2;  cr.x = temp3;  cr.y = temp4;
         } else usage(argv[0]);
       } else if (!strcasecmp(argv[i], "-hflip"))
@@ -1196,6 +1191,12 @@ int main(int argc, char *argv[])
       else usage(argv[0]);
     }
   }
+
+  if (optimize && !progressive && !arithmetic && !lossless && precision != 12)
+    printf("Computing optimal Huffman tables\n\n");
+
+  if (lossless)
+    subsamp = TJSAMP_444;
 
   if (precision == 16 && !lossless) {
     printf("ERROR: -lossless must be specified along with -precision 16\n");
