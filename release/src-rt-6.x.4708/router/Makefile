@@ -2454,9 +2454,9 @@ libxml2: libxml2/static/Makefile libxml2/build/Makefile
 	@$(MAKE) -C libxml2/build DESTDIR=$(TOP)/libxml2/staged install
 
 libxml2-install:
-	install -D libxml2/staged/usr/lib/libxml2.so.2.13.3 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.3
-	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.3
-	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.3 libxml2.so.2 && ln -sf libxml2.so.2.13.3 libxml2.so
+	install -D libxml2/staged/usr/lib/libxml2.so.2.13.4 $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.4
+	$(STRIP) $(INSTALLDIR)/libxml2/usr/lib/libxml2.so.2.13.4
+	cd $(INSTALLDIR)/libxml2/usr/lib && ln -sf libxml2.so.2.13.4 libxml2.so.2 && ln -sf libxml2.so.2.13.4 libxml2.so
 
 libxml2-clean:
 	@rm -rf libxml2/static
