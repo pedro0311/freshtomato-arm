@@ -2469,7 +2469,7 @@ libpng/build/Makefile:
 	cd libpng/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
 			-DCMAKE_INSTALL_PREFIX=/usr \
-			-DCMAKE_BUILD_TYPE=Release -DCMAKE_SKIP_RPATH=TRUE \
+			-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_SKIP_RPATH=TRUE \
 			-DCMAKE_C_FLAGS="-Wall $(EXTRACFLAGS) -DNDEBUG -ffunction-sections -fdata-sections -I$(TOP)/zlib/staged/usr/include" \
 			-DCMAKE_EXE_LINKER_FLAGS="-Wl,--gc-sections -L$(TOP)/zlib/staged/usr/lib -lz" \
 			-DPNG_SHARED=on \
