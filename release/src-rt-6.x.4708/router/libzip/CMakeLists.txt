@@ -6,8 +6,12 @@ if (${CMAKE_VERSION} VERSION_LESS "3.17.0")
 endif()
 
 project(libzip
-  VERSION 1.10.1
+  VERSION 1.11.1
   LANGUAGES C)
+
+if(NOT libzip_VERSION_PATCH)
+  set(libzip_VERSION_PATCH 0)
+endif()
 
 option(ENABLE_COMMONCRYPTO "Enable use of CommonCrypto" ON)
 option(ENABLE_GNUTLS "Enable use of GnuTLS" ON)
@@ -23,6 +27,7 @@ option(ENABLE_FDOPEN "Enable zip_fdopen, which is not allowed in Microsoft CRT s
 
 option(BUILD_TOOLS "Build tools in the src directory (zipcmp, zipmerge, ziptool)" ON)
 option(BUILD_REGRESS "Build regression tests" ON)
+option(BUILD_OSSFUZZ "Build fuzzers for ossfuzz" ON)
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_DOC "Build documentation" ON)
 
@@ -242,7 +247,7 @@ if(ENABLE_ZSTD)
   find_package(zstd 1.3.6)
   if(zstd_FOUND)
     set(HAVE_LIBZSTD 1)
-    if(TARGET zstd::libzstd_shared)
+    if(TARGET zstd::libzstd_shared AND BUILD_SHARED_LIBS)
       set(zstd_TARGET zstd::libzstd_shared)
     else()
       set(zstd_TARGET zstd::libzstd_static)
@@ -323,6 +328,10 @@ if(BUILD_REGRESS)
   add_subdirectory(regress)
 endif()
 
+if(BUILD_OSSFUZZ)
+  add_subdirectory(ossfuzz)
+endif()
+
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
@@ -349,7 +358,7 @@ endforeach()
 STRING(CONCAT zlib_link_name "-l" ${ZLIB_LINK_LIBRARY_NAME})
 string(REGEX REPLACE "-lBZip2::BZip2" "-lbz2" LIBS ${LIBS})
 string(REGEX REPLACE "-lLibLZMA::LibLZMA" "-llzma" LIBS ${LIBS})
-if(ENABLE_ZSTD)
+if(zstd_TARGET)
   string(REGEX REPLACE "-l${zstd_TARGET}" "-lzstd" LIBS ${LIBS})
 endif()
 string(REGEX REPLACE "-lOpenSSL::Crypto" "-lssl -lcrypto" LIBS ${LIBS})
