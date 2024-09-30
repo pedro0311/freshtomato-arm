@@ -208,10 +208,7 @@ void start_samba(int force)
 	            mode == 2 ? "" : "map to guest = Bad User",
 	            mode == 2 ? "no" : "yes"); /* guest ok */
 
-	fprintf(fp, " load printers = no\n" /* add for Samba printcap issue */
-	            " printing = bsd\n"
-	            " printcap name = /dev/null\n"
-	            " map archive = no\n"
+	fprintf(fp, " map archive = no\n"
 	            " map hidden = no\n"
 	            " map read only = no\n"
 	            " map system = no\n"
