@@ -21,9 +21,11 @@
 #ifndef LIBUSB_USBFS_H
 #define LIBUSB_USBFS_H
 
+#include <linux/magic.h>
 #include <linux/types.h>
 
-#define SYSFS_DEVICE_PATH "/sys/bus/usb/devices"
+#define SYSFS_MOUNT_PATH	"/sys"
+#define SYSFS_DEVICE_PATH	SYSFS_MOUNT_PATH "/bus/usb/devices"
 
 struct usbfs_ctrltransfer {
 	/* keep in sync with usbdevice_fs.h:usbdevfs_ctrltransfer */
@@ -125,6 +127,14 @@ struct usbfs_streams {
 	unsigned char eps[0];
 };
 
+#define USBFS_SPEED_UNKNOWN			0
+#define USBFS_SPEED_LOW				1
+#define USBFS_SPEED_FULL			2
+#define USBFS_SPEED_HIGH			3
+#define USBFS_SPEED_WIRELESS			4
+#define USBFS_SPEED_SUPER			5
+#define USBFS_SPEED_SUPER_PLUS			6
+
 #define IOCTL_USBFS_CONTROL		_IOWR('U', 0, struct usbfs_ctrltransfer)
 #define IOCTL_USBFS_SETINTERFACE	_IOR('U', 4, struct usbfs_setinterface)
 #define IOCTL_USBFS_SETCONFIGURATION	_IOR('U', 5, unsigned int)
@@ -144,6 +154,8 @@ struct usbfs_streams {
 #define IOCTL_USBFS_DISCONNECT_CLAIM	_IOR('U', 27, struct usbfs_disconnect_claim)
 #define IOCTL_USBFS_ALLOC_STREAMS	_IOR('U', 28, struct usbfs_streams)
 #define IOCTL_USBFS_FREE_STREAMS	_IOR('U', 29, struct usbfs_streams)
+#define IOCTL_USBFS_DROP_PRIVILEGES	_IOW('U', 30, __u32)
+#define IOCTL_USBFS_GET_SPEED		_IO('U', 31)
 
 extern usbi_mutex_static_t linux_hotplug_lock;
 

@@ -30,11 +30,30 @@
 
 #include <stdbool.h>
 
-#if defined(__CYGWIN__ )
+/*
+ * Workaround for the mess that exists with the DWORD and ULONG types.
+ * Visual Studio unconditionally defines these types as 'unsigned long'
+ * and a long is always 32-bits, even on 64-bit builds. GCC on the other
+ * hand varies the width of a long, matching it to the build. To make
+ * matters worse, the platform headers for these GCC builds define a
+ * DWORD/ULONG to be 'unsigned long' on 32-bit builds and 'unsigned int'
+ * on 64-bit builds. This creates a great deal of warnings for compilers
+ * that support printf format checking since it will never actually be
+ * an unsigned long.
+ */
+#if defined(_MSC_VER)
+#define ULONG_CAST(x)	(x)
+#else
+#define ULONG_CAST(x)	((unsigned long)(x))
+#endif
+
+#if defined(__CYGWIN__)
 #define _stricmp strcasecmp
 #define _strdup strdup
 // _beginthreadex is MSVCRT => unavailable for cygwin. Fallback to using CreateThread
 #define _beginthreadex(a, b, c, d, e, f) CreateThread(a, b, (LPTHREAD_START_ROUTINE)c, d, e, (LPDWORD)f)
+#else
+#include <process.h>
 #endif
 
 #define safe_free(p) do {if (p != NULL) {free((void *)p); p = NULL;}} while (0)
@@ -43,29 +62,29 @@
  * API macros - leveraged from libusb-win32 1.x
  */
 #define DLL_STRINGIFY(s) #s
-#define DLL_LOAD_LIBRARY(name) LoadLibraryA(DLL_STRINGIFY(name))
 
 /*
  * Macros for handling DLL themselves
  */
 #define DLL_HANDLE_NAME(name) __dll_##name##_handle
 
-#define DLL_DECLARE_HANDLE(name)				\
-	static HMODULE DLL_HANDLE_NAME(name) = NULL
+#define DLL_DECLARE_HANDLE(name)					\
+	static HMODULE DLL_HANDLE_NAME(name)
 
-#define DLL_GET_HANDLE(name)					\
-	do {							\
-		DLL_HANDLE_NAME(name) = DLL_LOAD_LIBRARY(name);	\
-		if (!DLL_HANDLE_NAME(name))			\
-			return FALSE;				\
+#define DLL_GET_HANDLE(ctx, name)					\
+	do {								\
+		DLL_HANDLE_NAME(name) = load_system_library(ctx,	\
+				DLL_STRINGIFY(name));			\
+		if (!DLL_HANDLE_NAME(name))				\
+			return false;					\
 	} while (0)
 
-#define DLL_FREE_HANDLE(name)					\
-	do {							\
-		if (DLL_HANDLE_NAME(name)) {			\
-			FreeLibrary(DLL_HANDLE_NAME(name));	\
-			DLL_HANDLE_NAME(name) = NULL;		\
-		}						\
+#define DLL_FREE_HANDLE(name)						\
+	do {								\
+		if (DLL_HANDLE_NAME(name)) {				\
+			FreeLibrary(DLL_HANDLE_NAME(name));		\
+			DLL_HANDLE_NAME(name) = NULL;			\
+		}							\
 	} while (0)
 
 /*
@@ -75,7 +94,7 @@
 
 #define DLL_DECLARE_FUNC_PREFIXNAME(api, ret, prefixname, name, args)	\
 	typedef ret (api * DLL_FUNC_NAME(name))args;			\
-	static DLL_FUNC_NAME(name) prefixname = NULL
+	static DLL_FUNC_NAME(name) prefixname
 
 #define DLL_DECLARE_FUNC(api, ret, name, args)				\
 	DLL_DECLARE_FUNC_PREFIXNAME(api, ret, name, name, args)
@@ -98,7 +117,7 @@
 		if (prefixname)						\
 			break;						\
 		if (ret_on_failure)					\
-			return FALSE;					\
+			return false;					\
 	} while (0)
 
 #define DLL_LOAD_FUNC(dll, name, ret_on_failure)			\
@@ -112,10 +131,16 @@ typedef LONG USBD_STATUS;
 
 #define USBD_SUCCESS(Status)		((USBD_STATUS)(Status) >= 0)
 
+#define USBD_STATUS_STALL_PID		((USBD_STATUS)0xC0000004L)
 #define USBD_STATUS_ENDPOINT_HALTED	((USBD_STATUS)0xC0000030L)
 #define USBD_STATUS_TIMEOUT		((USBD_STATUS)0xC0006000L)
 #define USBD_STATUS_DEVICE_GONE		((USBD_STATUS)0xC0007000L)
 #define USBD_STATUS_CANCELED		((USBD_STATUS)0xC0010000L)
+#endif
+
+// error code added with Windows SDK 10.0.18362
+#ifndef ERROR_NO_SUCH_DEVICE
+#define ERROR_NO_SUCH_DEVICE	433L
 #endif
 
 /* Windows versions */
@@ -129,7 +154,8 @@ enum windows_version {
 	WINDOWS_8,
 	WINDOWS_8_1,
 	WINDOWS_10,
-	WINDOWS_11_OR_LATER
+	WINDOWS_11,
+	WINDOWS_12_OR_LATER
 };
 
 extern enum windows_version windows_version;
@@ -207,7 +233,7 @@ typedef struct USB_DK_TRANSFER_REQUEST {
 } USB_DK_TRANSFER_REQUEST, *PUSB_DK_TRANSFER_REQUEST;
 
 struct usbdk_device_priv {
-	USB_DK_DEVICE_INFO info;
+	USB_DK_DEVICE_ID ID;
 	PUSB_CONFIGURATION_DESCRIPTOR *config_descriptors;
 	HANDLE redirector_handle;
 	HANDLE system_handle;
@@ -232,15 +258,28 @@ struct winusb_device_priv {
 		int current_altsetting;
 		bool restricted_functionality;  // indicates if the interface functionality is restricted
 						// by Windows (eg. HID keyboards or mice cannot do R/W)
+		uint8_t num_associated_interfaces; // If non-zero, the interface is part of a grouped
+		                                   // set of associated interfaces (defined by an IAD)
+						   // and this is the number of interfaces within the
+						   // associated group (bInterfaceCount in IAD).
+		uint8_t first_associated_interface; // For associated interfaces, this is the index of
+						    // the first interface (bFirstInterface in IAD) for
+		                                    // the grouped set of associated interfaces.
 	} usb_interface[USB_MAXINTERFACES];
 	struct hid_device_priv *hid;
-	USB_DEVICE_DESCRIPTOR dev_descriptor;
 	PUSB_CONFIGURATION_DESCRIPTOR *config_descriptor; // list of pointers to the cached config descriptors
+	GUID class_guid; // checked for change during re-enumeration
 };
 
 struct usbdk_device_handle_priv {
 	// Not currently used
 	char dummy;
+};
+ 
+enum WINUSB_ZLP {
+	WINUSB_ZLP_UNSET = 0,
+	WINUSB_ZLP_OFF = 1,
+	WINUSB_ZLP_ON = 2
 };
 
 struct winusb_device_handle_priv {
@@ -248,22 +287,20 @@ struct winusb_device_handle_priv {
 	struct {
 		HANDLE dev_handle; // WinUSB needs an extra handle for the file
 		HANDLE api_handle; // used by the API to communicate with the device
+		uint8_t zlp[USB_MAXENDPOINTS]; // Current per-endpoint SHORT_PACKET_TERMINATE status (enum WINUSB_ZLP)
 	} interface_handle[USB_MAXINTERFACES];
 	int autoclaim_count[USB_MAXINTERFACES]; // For auto-release
 };
 
 struct usbdk_transfer_priv {
 	USB_DK_TRANSFER_REQUEST request;
-	struct winfd pollable_fd;
-	HANDLE system_handle;
 	PULONG64 IsochronousPacketsArray;
 	PUSB_DK_ISO_TRANSFER_RESULT IsochronousResultsArray;
 };
 
 struct winusb_transfer_priv {
-	struct winfd pollable_fd;
-	HANDLE handle;
 	uint8_t interface_number;
+
 	uint8_t *hid_buffer; // 1 byte extended data buffer, required for HID
 	uint8_t *hid_dest;   // transfer buffer destination, required for HID
 	size_t hid_expected_size;
@@ -285,19 +322,18 @@ struct windows_backend {
 		struct discovered_devs **discdevs);
 	int (*open)(struct libusb_device_handle *dev_handle);
 	void (*close)(struct libusb_device_handle *dev_handle);
-	int (*get_device_descriptor)(struct libusb_device *device, unsigned char *buffer);
 	int (*get_active_config_descriptor)(struct libusb_device *device,
-		unsigned char *buffer, size_t len);
+		void *buffer, size_t len);
 	int (*get_config_descriptor)(struct libusb_device *device,
-		uint8_t config_index, unsigned char *buffer, size_t len);
+		uint8_t config_index, void *buffer, size_t len);
 	int (*get_config_descriptor_by_value)(struct libusb_device *device,
-		uint8_t bConfigurationValue, unsigned char **buffer);
-	int (*get_configuration)(struct libusb_device_handle *dev_handle, int *config);
-	int (*set_configuration)(struct libusb_device_handle *dev_handle, int config);
-	int (*claim_interface)(struct libusb_device_handle *dev_handle, int interface_number);
-	int (*release_interface)(struct libusb_device_handle *dev_handle, int interface_number);
+		uint8_t bConfigurationValue, void **buffer);
+	int (*get_configuration)(struct libusb_device_handle *dev_handle, uint8_t *config);
+	int (*set_configuration)(struct libusb_device_handle *dev_handle, uint8_t config);
+	int (*claim_interface)(struct libusb_device_handle *dev_handle, uint8_t interface_number);
+	int (*release_interface)(struct libusb_device_handle *dev_handle, uint8_t interface_number);
 	int (*set_interface_altsetting)(struct libusb_device_handle *dev_handle,
-		int interface_number, int altsetting);
+		uint8_t interface_number, uint8_t altsetting);
 	int (*clear_halt)(struct libusb_device_handle *dev_handle,
 		unsigned char endpoint);
 	int (*reset_device)(struct libusb_device_handle *dev_handle);
@@ -305,14 +341,13 @@ struct windows_backend {
 	int (*submit_transfer)(struct usbi_transfer *itransfer);
 	int (*cancel_transfer)(struct usbi_transfer *itransfer);
 	void (*clear_transfer_priv)(struct usbi_transfer *itransfer);
-	int (*copy_transfer_data)(struct usbi_transfer *itransfer, uint32_t io_size);
-	int (*get_transfer_fd)(struct usbi_transfer *itransfer);
-	void (*get_overlapped_result)(struct usbi_transfer *itransfer,
-		DWORD *io_result, DWORD *io_size);
+	enum libusb_transfer_status (*copy_transfer_data)(struct usbi_transfer *itransfer, DWORD length);
 };
 
 struct windows_context_priv {
 	const struct windows_backend *backend;
+	HANDLE completion_port;
+	HANDLE completion_port_thread;
 };
 
 union windows_device_priv {
@@ -320,21 +355,67 @@ union windows_device_priv {
 	struct winusb_device_priv winusb_priv;
 };
 
-union windows_device_handle_priv {
-	struct usbdk_device_handle_priv usbdk_priv;
-	struct winusb_device_handle_priv winusb_priv;
+struct windows_device_handle_priv {
+	struct list_head active_transfers;
+	union {
+		struct usbdk_device_handle_priv usbdk_priv;
+		struct winusb_device_handle_priv winusb_priv;
+	};
 };
 
-union windows_transfer_priv {
-	struct usbdk_transfer_priv usbdk_priv;
-	struct winusb_transfer_priv winusb_priv;
+struct windows_transfer_priv {
+	OVERLAPPED overlapped;
+	HANDLE handle;
+	struct list_head list;
+	union {
+		struct usbdk_transfer_priv usbdk_priv;
+		struct winusb_transfer_priv winusb_priv;
+	};
 };
+
+static inline struct usbdk_device_handle_priv *get_usbdk_device_handle_priv(struct libusb_device_handle *dev_handle)
+{
+	struct windows_device_handle_priv *handle_priv = usbi_get_device_handle_priv(dev_handle);
+	return &handle_priv->usbdk_priv;
+}
+
+static inline struct winusb_device_handle_priv *get_winusb_device_handle_priv(struct libusb_device_handle *dev_handle)
+{
+	struct windows_device_handle_priv *handle_priv = usbi_get_device_handle_priv(dev_handle);
+	return &handle_priv->winusb_priv;
+}
+
+static inline OVERLAPPED *get_transfer_priv_overlapped(struct usbi_transfer *itransfer)
+{
+	struct windows_transfer_priv *transfer_priv = usbi_get_transfer_priv(itransfer);
+	return &transfer_priv->overlapped;
+}
+
+static inline void set_transfer_priv_handle(struct usbi_transfer *itransfer, HANDLE handle)
+{
+	struct windows_transfer_priv *transfer_priv = usbi_get_transfer_priv(itransfer);
+	transfer_priv->handle = handle;
+}
+
+static inline struct usbdk_transfer_priv *get_usbdk_transfer_priv(struct usbi_transfer *itransfer)
+{
+	struct windows_transfer_priv *transfer_priv = usbi_get_transfer_priv(itransfer);
+	return &transfer_priv->usbdk_priv;
+}
+
+static inline struct winusb_transfer_priv *get_winusb_transfer_priv(struct usbi_transfer *itransfer)
+{
+	struct windows_transfer_priv *transfer_priv = usbi_get_transfer_priv(itransfer);
+	return &transfer_priv->winusb_priv;
+}
 
 extern const struct windows_backend usbdk_backend;
 extern const struct windows_backend winusb_backend;
 
+HMODULE load_system_library(struct libusb_context *ctx, const char *name);
 unsigned long htab_hash(const char *str);
-void windows_force_sync_completion(OVERLAPPED *overlapped, ULONG size);
+enum libusb_transfer_status usbd_status_to_libusb_transfer_status(USBD_STATUS status);
+void windows_force_sync_completion(struct usbi_transfer *itransfer, ULONG size);
 
 #if defined(ENABLE_LOGGING)
 const char *windows_error_str(DWORD error_code);

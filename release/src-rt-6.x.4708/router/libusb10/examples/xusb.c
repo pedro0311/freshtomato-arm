@@ -220,7 +220,7 @@ static int display_ps3_status(libusb_device_handle *handle)
 			printf("\tRIGHT 3 pressed\n");
 			break;
 		case 0x08:
-			printf("\tSTART presed\n");
+			printf("\tSTART pressed\n");
 			break;
 		case 0x10:
 			printf("\tUP pressed\n");
@@ -246,7 +246,7 @@ static int display_ps3_status(libusb_device_handle *handle)
 			printf("\tLEFT 1 pressed\n");
 			break;
 		case 0x08:
-			printf("\tRIGHT 1 presed\n");
+			printf("\tRIGHT 1 pressed\n");
 			break;
 		case 0x10:
 			printf("\tTRIANGLE pressed\n");
@@ -465,20 +465,23 @@ static int test_mass_storage(libusb_device_handle *handle, uint8_t endpoint_in, 
 	unsigned char *data;
 	FILE *fd;
 
-	printf("Reading Max LUN:\n");
+	printf("\nReading Max LUN:\n");
 	r = libusb_control_transfer(handle, LIBUSB_ENDPOINT_IN|LIBUSB_REQUEST_TYPE_CLASS|LIBUSB_RECIPIENT_INTERFACE,
 		BOMS_GET_MAX_LUN, 0, 0, &lun, 1, 1000);
 	// Some devices send a STALL instead of the actual value.
 	// In such cases we should set lun to 0.
-	if (r == 0) {
+	if (r == LIBUSB_ERROR_PIPE) {
 		lun = 0;
+		printf("   Stalled, setting Max LUN to 0\n");
 	} else if (r < 0) {
-		perr("   Failed: %s", libusb_strerror((enum libusb_error)r));
+		perr("   Failed.\n");
+		return r;
+	} else {
+		printf("   Max LUN = %d\n", lun);
 	}
-	printf("   Max LUN = %d\n", lun);
 
 	// Send Inquiry
-	printf("Sending Inquiry:\n");
+	printf("\nSending Inquiry:\n");
 	memset(buffer, 0, sizeof(buffer));
 	memset(cdb, 0, sizeof(cdb));
 	cdb[0] = 0x12;	// Inquiry
@@ -502,7 +505,7 @@ static int test_mass_storage(libusb_device_handle *handle, uint8_t endpoint_in, 
 	}
 
 	// Read capacity
-	printf("Reading Capacity:\n");
+	printf("\nReading Capacity:\n");
 	memset(buffer, 0, sizeof(buffer));
 	memset(cdb, 0, sizeof(cdb));
 	cdb[0] = 0x25;	// Read Capacity
@@ -526,7 +529,7 @@ static int test_mass_storage(libusb_device_handle *handle, uint8_t endpoint_in, 
 	}
 
 	// Send Read
-	printf("Attempting to read %u bytes:\n", block_size);
+	printf("\nAttempting to read %u bytes:\n", block_size);
 	memset(cdb, 0, sizeof(cdb));
 
 	cdb[0] = 0x28;	// Read(10)
@@ -789,6 +792,20 @@ static void print_device_cap(struct libusb_bos_dev_capability_descriptor *dev_ca
 		}
 		break;
 	}
+	case LIBUSB_BT_PLATFORM_DESCRIPTOR: {
+		struct libusb_platform_descriptor *platform_descriptor = NULL;
+		libusb_get_platform_descriptor(NULL, dev_cap, &platform_descriptor);
+		if (platform_descriptor) {
+			printf("    Platform descriptor:\n");
+			printf("      bLength                : %d\n", platform_descriptor->bLength);
+			printf("      PlatformCapabilityUUID : %s\n", uuid_to_string(platform_descriptor->PlatformCapabilityUUID));
+			display_buffer_hex(&platform_descriptor->CapabilityData[0], platform_descriptor->bLength - 20);
+			printf("\n");
+			libusb_free_platform_descriptor(platform_descriptor);
+		}
+		break;
+
+	}
 	default:
 		printf("    Unknown BOS device capability %02x:\n", dev_cap->bDevCapabilityType);
 	}
@@ -863,6 +880,8 @@ static int test_device(uint16_t vid, uint16_t pid)
 
 	printf("\nReading first configuration descriptor:\n");
 	CALL_CHECK_CLOSE(libusb_get_config_descriptor(dev, 0, &conf_desc), handle);
+	printf("              total length: %d\n", conf_desc->wTotalLength);
+	printf("         descriptor length: %d\n", conf_desc->bLength);
 	nb_ifaces = conf_desc->bNumInterfaces;
 	printf("             nb interfaces: %d\n", nb_ifaces);
 	if (nb_ifaces > 0)
@@ -914,10 +933,25 @@ static int test_device(uint16_t vid, uint16_t pid)
 	libusb_set_auto_detach_kernel_driver(handle, 1);
 	for (iface = 0; iface < nb_ifaces; iface++)
 	{
+		int ret;
+
+		printf("\nKernel driver attached for interface %d: ", iface);
+		ret = libusb_kernel_driver_active(handle, iface);
+		if (ret == 0)
+			printf("none\n");
+		else if (ret == 1)
+			printf("yes\n");
+		else if (ret == LIBUSB_ERROR_NOT_SUPPORTED)
+			printf("(not supported)\n");
+		else
+			perr("\n   Failed (error %d) %s\n", ret,
+			     libusb_strerror((enum libusb_error) ret));
+
 		printf("\nClaiming interface %d...\n", iface);
 		r = libusb_claim_interface(handle, iface);
 		if (r != LIBUSB_SUCCESS) {
-			perr("   Failed.\n");
+			perr("   Failed (error %d) %s\n", ret,
+			     libusb_strerror((enum libusb_error) ret));
 		}
 	}
 
@@ -930,12 +964,42 @@ static int test_device(uint16_t vid, uint16_t pid)
 			printf("   String (0x%02X): \"%s\"\n", string_index[i], string);
 		}
 	}
-	// Read the OS String Descriptor
+
+	printf("\nReading OS string descriptor:");
 	r = libusb_get_string_descriptor(handle, MS_OS_DESC_STRING_INDEX, 0, (unsigned char*)string, MS_OS_DESC_STRING_LENGTH);
 	if (r == MS_OS_DESC_STRING_LENGTH && memcmp(ms_os_desc_string, string, sizeof(ms_os_desc_string)) == 0) {
 		// If this is a Microsoft OS String Descriptor,
 		// attempt to read the WinUSB extended Feature Descriptors
+		printf("\n");
 		read_ms_winsub_feature_descriptors(handle, string[MS_OS_DESC_VENDOR_CODE_OFFSET], first_iface);
+	} else {
+		printf(" no descriptor\n");
+	}
+
+	// Read IADs
+	printf("\nReading interface association descriptors (IADs) for first configuration:\n");
+	struct libusb_interface_association_descriptor_array *iad_array;
+	r = libusb_get_interface_association_descriptors(dev, 0, &iad_array);
+	if (r == LIBUSB_SUCCESS) {
+		printf("    nb IADs: %d\n", iad_array->length);
+		for (i=0; i<iad_array->length;i++) {
+			const struct libusb_interface_association_descriptor *iad = &iad_array->iad[i];
+			printf("      IAD %d:\n", i);
+			printf("            bFirstInterface: %u\n", iad->bFirstInterface);
+			printf("            bInterfaceCount: %u\n", iad->bInterfaceCount);
+			printf("             bFunctionClass: %02X\n", iad->bFunctionClass);
+			printf("          bFunctionSubClass: %02X\n", iad->bFunctionSubClass);
+			printf("          bFunctionProtocol: %02X\n", iad->bFunctionProtocol);
+			if (iad->iFunction) {
+				if (libusb_get_string_descriptor_ascii(handle, iad->iFunction, (unsigned char*)string, sizeof(string)) > 0)
+					printf("                  iFunction: %u (%s)\n", iad->iFunction, string);
+				else
+					printf("                  iFunction: %u (libusb_get_string_descriptor_ascii failed!)\n", iad->iFunction);
+			}
+			else
+				printf("                  iFunction: 0\n");
+		}
+		libusb_free_interface_association_descriptors(iad_array);
 	}
 
 	switch(test_mode) {
@@ -1094,17 +1158,17 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	// xusb is commonly used as a debug tool, so it's convenient to have debug output during libusb_init(),
-	// but since we can't call on libusb_set_option() before libusb_init(), we use the env variable method
-	old_dbg_str = getenv("LIBUSB_DEBUG");
-	if (debug_mode) {
-		if (putenv("LIBUSB_DEBUG=4") != 0)	// LIBUSB_LOG_LEVEL_DEBUG
-			printf("Unable to set debug level\n");
-	}
-
 	version = libusb_get_version();
 	printf("Using libusb v%d.%d.%d.%d\n\n", version->major, version->minor, version->micro, version->nano);
-	r = libusb_init(NULL);
+
+	// xusb is commonly used as a debug tool, so it's convenient to have debug output during libusb_init_context().
+	if (debug_mode) {
+		const struct libusb_init_option options = {.option = LIBUSB_OPTION_LOG_LEVEL, .value = {.ival = LIBUSB_LOG_LEVEL_DEBUG}};
+		r = libusb_init_context(/*ctx=*/NULL, /*options=*/&options, /*num_options=*/1);
+	} else {
+		r = libusb_init_context(/*ctx=*/NULL, /*options=*/NULL, /*num_options=*/0);
+	}
+
 	if (r < 0)
 		return r;
 
