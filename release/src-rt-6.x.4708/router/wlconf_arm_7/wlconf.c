@@ -2900,15 +2900,15 @@ wlconf(char *name)
 		val = 11;
 
 	/* it is band-blind. try both band */
-	error_bg = wl_iovar_setint(name, "bg_rate", val);
-	error_a = wl_iovar_setint(name, "a_rate", val);
+	error_bg = wl_iovar_setint(name, "2g_rate", val);
+	error_a = wl_iovar_setint(name, "5g_rate", val);
 
 	if (error_bg && error_a) {
 		/* both failed. Try default rate (card may have changed) */
 		val = 0;
 
-		error_bg = wl_iovar_setint(name, "bg_rate", val);
-		error_a = wl_iovar_setint(name, "a_rate", val);
+		error_bg = wl_iovar_setint(name, "2g_rate", val);
+		error_a = wl_iovar_setint(name, "5g_rate", val);
 
 		snprintf(buf, sizeof(buf), "%d", val);
 		nvram_set(strlcat_r(prefix, "rate", tmp, sizeof(tmp)), buf);
