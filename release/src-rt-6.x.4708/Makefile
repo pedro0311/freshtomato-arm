@@ -597,12 +597,6 @@ endef
 
 define BusyboxOptions
 	@( \
-	sed -i "/CONFIG_FEATURE_LSMOD_PRETTY_2_6_OUTPUT/d" $(1); \
-	echo "CONFIG_FEATURE_LSMOD_PRETTY_2_6_OUTPUT=y" >>$(1); \
-	sed -i "/CONFIG_FEATURE_DEVFS/d" $(1); \
-	echo "# CONFIG_FEATURE_DEVFS is not set" >>$(1); \
-	sed -i "/CONFIG_MKNOD/d" $(1); \
-	echo "CONFIG_MKNOD=y" >>$(1); \
 	if [ "$(NO_CIFS)" = "y" ]; then \
 		sed -i "/CONFIG_FEATURE_MOUNT_CIFS/d" $(1); \
 		echo "# CONFIG_FEATURE_MOUNT_CIFS is not set" >>$(1); \
@@ -633,20 +627,28 @@ define BusyboxOptions
 			echo "CONFIG_FDISK=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_FDISK_WRITABLE/d" $(1); \
 			echo "CONFIG_FEATURE_FDISK_WRITABLE=y" >>$(1); \
+			sed -i "/CONFIG_FDISK_SUPPORT_LARGE_DISKS/d" $(1); \
+			echo "CONFIG_FDISK_SUPPORT_LARGE_DISKS=y" >>$(1); \
+			sed -i "/CONFIG_FEATURE_GPT_LABEL/d" $(1); \
+			echo "CONFIG_FEATURE_GPT_LABEL=y" >>$(1); \
 			sed -i "/CONFIG_MKFS_VFAT/d" $(1); \
 			echo "CONFIG_MKFS_VFAT=y" >>$(1); \
 			sed -i "/CONFIG_MKSWAP/d" $(1); \
 			echo "CONFIG_MKSWAP=y" >>$(1); \
+			sed -i "/CONFIG_FEATURE_MKSWAP_UUID/d" $(1); \
+			echo "CONFIG_FEATURE_MKSWAP_UUID=y" >>$(1); \
 			sed -i "/CONFIG_FSYNC/d" $(1); \
 			echo "CONFIG_FSYNC=y" >>$(1); \
+			sed -i "/CONFIG_LSUSB/d" $(1); \
+			echo "CONFIG_LSUSB=y" >>$(1); \
+			sed -i "/CONFIG_FEATURE_VERBOSE_USAGE/d" $(1); \
+			echo "CONFIG_FEATURE_VERBOSE_USAGE=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_VOLUMEID_EXFAT/d" $(1); \
 			echo "CONFIG_FEATURE_VOLUMEID_EXFAT=y" >>$(1); \
 		fi; \
 	else \
 		sed -i "/CONFIG_FEATURE_MOUNT_LOOP/d" $(1); \
 		echo "# CONFIG_FEATURE_MOUNT_LOOP is not set" >>$(1); \
-		sed -i "/CONFIG_FEATURE_DEVFS/d" $(1); \
-		echo "# CONFIG_FEATURE_DEVFS is not set" >>$(1); \
 		sed -i "/CONFIG_FEATURE_MOUNT_LABEL/d" $(1); \
 		echo "# CONFIG_FEATURE_MOUNT_LABEL is not set" >>$(1); \
 		sed -i "/CONFIG_FEATURE_MOUNT_FSTAB/d" $(1); \
@@ -669,6 +671,8 @@ define BusyboxOptions
 	if [ "$(IPV6SUPP)" = "y" ]; then \
 		sed -i "/CONFIG_FEATURE_IPV6/d" $(1); \
 		echo "CONFIG_FEATURE_IPV6=y" >>$(1); \
+		sed -i "/CONFIG_FEATURE_PREFER_IPV4_ADDRESS/d" $(1); \
+		echo "CONFIG_FEATURE_PREFER_IPV4_ADDRESS=y" >>$(1); \
 		sed -i "/CONFIG_PING6/d" $(1); \
 		echo "CONFIG_PING6=y" >>$(1); \
 		sed -i "/CONFIG_TRACEROUTE6/d" $(1); \
