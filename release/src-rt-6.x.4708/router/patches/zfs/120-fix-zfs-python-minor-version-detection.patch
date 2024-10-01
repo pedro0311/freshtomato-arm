@@ -1,0 +1,17 @@
+--- zfs/configure
++++ zfs/configure
+@@ -16356,12 +16356,8 @@
+   fi
+ 
+ 
+-	if test -z "$PYTHON_VERSION"; then :
+-
+-		PYTHON_VERSION=$(basename $PYTHON | tr -cd 0-9.)
+-
+-fi
+-	PYTHON_MINOR=${PYTHON_VERSION#*\.}
++	PYTHON_VERSION=$($PYTHON --version | cut -d' ' -f2)
++	PYTHON_MINOR=$(echo $PYTHON_VERSION | cut -d'.' -f2)
+ 
+ 	case $PYTHON_VERSION in #(
+   2.*) :
