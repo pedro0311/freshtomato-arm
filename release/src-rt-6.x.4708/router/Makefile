@@ -3700,10 +3700,10 @@ uqmi/build/Makefile:
 
 uqmi: uqmi/build/Makefile
 	@$(SEP)
-	$(MAKE) -C uqmi/build $(PARALLEL_BUILD)
+	@$(MAKE) -C uqmi/build $(PARALLEL_BUILD)
 
 uqmi-install:
-	install -D uqmi/build/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
+	install -D uqmi/build/uqmi/uqmi $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 	$(STRIP) $(INSTALLDIR)/uqmi/usr/sbin/uqmi
 
 uqmi-clean:
