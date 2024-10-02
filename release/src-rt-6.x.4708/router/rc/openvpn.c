@@ -326,6 +326,8 @@ void start_ovpn_client(int unit)
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
 	int cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (cpu_num < 0)
+		cpu_num = 0;
 #endif
 
 	memset(buffer, 0, BUF_SIZE);
@@ -730,10 +732,6 @@ void start_ovpn_client(int unit)
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread clients on cpu 1,0 or 1,2,3,0 (in that order) */
-	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
-	if (cpu_num < 0)
-		cpu_num = 0;
-
 	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
@@ -813,6 +811,8 @@ void start_ovpn_server(int unit)
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	char cpulist[2];
 	int cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
+	if (cpu_num < 0)
+		cpu_num = 0;
 #endif
 
 	memset(buffer, 0, BUF_SIZE);
@@ -1346,10 +1346,6 @@ void start_ovpn_server(int unit)
 
 #if defined(TCONFIG_BCMARM) && defined(TCONFIG_BCMSMP)
 	/* Spread servers on cpu 1,0 or 1,2 (in that order) */
-	cpu_num = sysconf(_SC_NPROCESSORS_CONF) - 1;
-	if (cpu_num < 0)
-		cpu_num = 0;
-
 	snprintf(cpulist, sizeof(cpulist), "%d", (unit & cpu_num));
 	taskset_ret = cpu_eval(NULL, cpulist, buffer, "--cd", buffer2, "--config", "config.ovpn");
 
