@@ -1,0 +1,14 @@
+--- libzip/lib/zip.h
++++ libzip/lib/zip.h
+@@ -59,8 +59,10 @@
+ #endif
+ 
+ #ifndef ZIP_DEPRECATED
+-#if defined(__GNUC__) || defined(__clang__)
++#if (defined(__GNUC__) && __GNUC__ > 4) || defined(__clang__)
+ #define ZIP_DEPRECATED(x) __attribute__((deprecated(x)))
++#elif defined(__GNUC__) && __GNUC__ >= 3
++#define ZIP_DEPRECATED(x) __attribute__((deprecated))
+ #elif defined(_MSC_VER)
+ #define ZIP_DEPRECATED(x) __declspec(deprecated(x))
+ #else

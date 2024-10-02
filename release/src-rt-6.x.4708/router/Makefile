@@ -2500,6 +2500,7 @@ libpng-clean:
 	$(call unpatch_files,libpng)
 
 libzip/build/Makefile:
+	$(call patch_files,libzip)
 	@rm -rf libzip/build && mkdir -p libzip/build
 	cd libzip/build && $(call CMAKE_CrossOptions, crosscompiled.cmake) && \
 		cmake -DCMAKE_TOOLCHAIN_FILE=crosscompiled.cmake \
@@ -2535,6 +2536,7 @@ libzip-install:
 libzip-clean:
 	@rm -rf libzip/build
 	@rm -rf libzip/staged
+	$(call unpatch_files,libzip)
 
 $(PHP_TARGET)/stamp-h1:
 	$(call patch_files,$(PHP_TARGET))
