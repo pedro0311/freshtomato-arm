@@ -415,10 +415,14 @@ ifeq ($(TCONFIG_BCMARM),y)
  include $(SRCBASE)/makefiles/WLAN_Common.mk
  export BASEDIR := $(WLAN_TreeBaseA)
  export EXTRALIBS = -lgcc_s
- ifeq ($(CONFIG_TOOLCHAIN53),)
+ ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),)
   export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
  else
-  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+  ifeq ($(CONFIG_TOOLCHAIN73),y)
+   export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-7.3/usr/lib
+  else
+   export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+  endif
  endif
  ifeq (2_6_36,$(LINUX_VERSION))
   ifeq ($(TCONFIG_BCM7),y)
@@ -1374,7 +1378,7 @@ iptables-clean:
 iptables-1.8.x/stamp-h1:
 	$(call patch_files,iptables-1.8.x)
 	cd iptables-1.8.x && ./autogen.sh && \
-		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE" \
+		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73,)" \
 		CPPFLAGS="-Os -Wall $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnfnetlink/include -I$(TOP)/libnetfilter_conntrack/include,)" \
 		LDFLAGS="$(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink -L$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libmnl/staged/usr/lib,)" \
 		PKG_CONFIG_PATH="$(if $(TCONFIG_CONNTRACK_TOOL),$(TOP)/libnfnetlink:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig,)" \
@@ -2129,7 +2133,7 @@ hotplug2:
 	@$(SEP)
 	$(call patch_files,hotplug2)
 	$(MAKE) -C $@ \
-		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(CONFIG_TOOLCHAIN53),-DCONFIG_TOOLCHAIN53,)" \
+		EXTRACFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections $(if $(CONFIG_TOOLCHAIN53),-DCONFIG_TOOLCHAIN53) $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73)" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 hotplug2-install:

@@ -1,0 +1,44 @@
+--- glib2/gio/gunixconnection.c
++++ glib2/gio/gunixconnection.c
+@@ -147,6 +147,10 @@
+  *
+  * Since: 2.22
+  **/
++#if defined(__GNUC__) && __GNUC__ >= 5
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++#endif
+ gint
+ g_unix_connection_receive_fd (GUnixConnection  *connection,
+                               GCancellable     *cancellable,
+@@ -241,6 +245,9 @@
+   return -1;
+ #endif
+ }
++#if defined(__GNUC__) && __GNUC__ >= 5
++#pragma GCC diagnostic pop
++#endif
+ 
+ static void
+ g_unix_connection_init (GUnixConnection *connection)
+@@ -493,6 +500,10 @@
+  *
+  * Since: 2.26
+  */
++#if defined(__GNUC__) && __GNUC__ >= 5
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wformat-nonliteral"
++#endif
+ GCredentials *
+ g_unix_connection_receive_credentials (GUnixConnection      *connection,
+                                        GCancellable         *cancellable,
+@@ -662,6 +673,9 @@
+   g_object_unref (socket);
+   return ret;
+ }
++#if defined(__GNUC__) && __GNUC__ >= 5
++#pragma GCC diagnostic pop
++#endif
+ 
+ static void
+ receive_credentials_async_thread (GTask         *task,

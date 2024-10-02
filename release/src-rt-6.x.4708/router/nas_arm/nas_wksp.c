@@ -1245,9 +1245,9 @@ nas_get_wsec(nas_wksp_t *nwksp, uint8 *mac, char *osifname)
             itr = itr->ai_next;
         }
     }
-    if (addr_ok != 1)
+    if (addr_ok != 1) {
         printf ("\n func=%s, line=%d, get radius addr error:%s", __FUNCTION__, __LINE__, info.radius_addr);
-
+    }
 	((struct sockaddr_in *)&(nwcb->nas.server))->sin_port = info.radius_port;
 }
 #else

@@ -21,12 +21,17 @@ PATH := $(RELEASEDIR)/tools:$(PATH)
 
 include target.mak
 
-ifeq ($(CONFIG_TOOLCHAIN53),)
+ifeq ($(CONFIG_TOOLCHAIN53)$(CONFIG_TOOLCHAIN73),)
  export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/bin
  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib
 else
- export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-uclibc-5.3/usr/bin
- export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+ ifeq ($(CONFIG_TOOLCHAIN73),y)
+  export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-uclibc-7.3/usr/bin
+  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-7.3/usr/lib
+ else
+  export PATH := $(PATH):$(PWD)/toolchains/hndtools-arm-uclibc-5.3/usr/bin
+  export LD_LIBRARY_PATH := $(SRCBASE)/toolchains/hndtools-arm-uclibc-5.3/usr/lib
+ endif
 endif
 
 CTAGS_EXCLUDE_OPT := --exclude=kernel_header --exclude=$(PLATFORM)

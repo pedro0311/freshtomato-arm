@@ -1149,7 +1149,7 @@
 +
 --- iptables-1.8.x/extensions/libipt_account.c
 +++ iptables-1.8.x/extensions/libipt_account.c
-@@ -0,0 +1,366 @@
+@@ -0,0 +1,374 @@
 +/* Copyright (c) 2004-2009 Piotr 'QuakeR' Gasidlo <quaker@barbara.eu.org>
 + *
 + * This program is free software; you can redistribute it and/or modify
@@ -1325,7 +1325,11 @@
 +}
 +
 +/* validate netmask */
++#ifndef CONFIG_TOOLCHAIN73
 +inline int valid_netmask(u_int32_t netmask) {
++#else
++int valid_netmask(u_int32_t netmask) {
++#endif
 +  while (netmask & 0x80000000)
 +    netmask <<= 1;
 +  if (netmask != 0)
@@ -1334,7 +1338,11 @@
 +}
 +
 +/* validate network/netmask pair */
++#ifndef CONFIG_TOOLCHAIN73
 +inline int valid_network_and_netmask(struct t_ipt_account_info *info) {
++#else
++int valid_network_and_netmask(struct t_ipt_account_info *info) {
++#endif
 +  if (!valid_netmask(info->netmask))
 +    return 0;
 +  if ((info->network & info->netmask) != info->network)
