@@ -1380,7 +1380,8 @@ iptables-1.8.x/stamp-h1:
 	cd iptables-1.8.x && ./autogen.sh && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -U CONFIG_NVRAM_SIZE $(if $(CONFIG_TOOLCHAIN73),-DCONFIG_TOOLCHAIN73,)" \
 		CPPFLAGS="-Os -Wall $(if $(TCONFIG_CONNTRACK_TOOL),-I$(TOP)/libnfnetlink/include -I$(TOP)/libnetfilter_conntrack/include,)" \
-		LDFLAGS="$(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink -L$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libmnl/staged/usr/lib,)" \
+		LDFLAGS="$(if $(TCONFIG_CONNTRACK_TOOL),-L$(TOP)/libnfnetlink/src/.libs -lnfnetlink -L$(TOP)/libnetfilter_conntrack/src/.libs -Wl$(comma)-rpath$(comma)$(TOP)/libnetfilter_conntrack/src/.libs \
+			-Wl$(comma)-rpath$(comma)$(TOP)/libmnl/staged/usr/lib,) -lrt" \
 		PKG_CONFIG_PATH="$(if $(TCONFIG_CONNTRACK_TOOL),$(TOP)/libnfnetlink:$(TOP)/libnetfilter_conntrack/staged/usr/lib/pkgconfig,)" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib \
 			$(if $(TCONFIG_IPV6),--enable-ipv6,--disable-ipv6) \
