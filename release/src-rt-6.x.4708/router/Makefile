@@ -199,22 +199,25 @@ ifeq ($(TCONFIG_WOLFSSLMIN),y)
  WOLFSSL_FLAGS   += -DUSE_SLOW_SHA -DUSE_SLOW_SHA256 -DUSE_SLOW_SHA512 -DWOLFSSL_AES_NO_UNROLL -DWOLFSSL_AES_SMALL_TABLES -DRSA_LOW_MEM -DCURVE25519_SMALL -DED25519_SMALL -DWOLFSSL_SMALL_CERT_VERIFY
  WOLFSSL_OPTIONS += --enable-opensslextra --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,--disable-poly1305 --disable-chacha --disable-md5 --disable-tls13 $(if $(TCONFIG_BBT),,--disable-sha)) --enable-session-ticket \
                     --disable-oldtls --enable-aesgcm=small --enable-certgen --enable-fastmath \
-                    --disable-examples --disable-sslv3 --disable-arc4 --disable-dtls
+                    --disable-examples --disable-sslv3 --disable-dtls
 else
  WOLFSSL_FLAGS   += -DWOLFSSL_ALT_NAMES
  WOLFSSL_OPTIONS += --enable-opensslextra --enable-opensslall --enable-stunnel $(if $(TCONFIG_OPENVPN),--enable-openvpn,) $(if $(TCONFIG_NGINX),--enable-nginx,) --enable-session-ticket \
                     --enable-sni --enable-altcertchains --enable-certgen \
                     --enable-curve25519 --enable-tlsv10 --enable-wpas --enable-fortress --enable-fastmath \
-                    --disable-examples --disable-sslv3 --disable-arc4
+                    --disable-examples --disable-sslv3
 endif
 ifeq ($(TOMATO_EXPERIMENTAL),1)
  WOLFSSL_OPTIONS += --enable-crypttests --enable-debug
 else
  WOLFSSL_OPTIONS += --disable-crypttests --disable-errorstrings
 endif
+ifeq ($(TCONFIG_BBT),)
+ WOLFSSL_OPTIONS += --disable-arc4
+endif
 
 # openssl options
-OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-rc4 no-cms no-ec2m
+OPENSSL_OPTIONS := no-tests no-unit-test no-sse2 no-ssl3 no-comp no-gost no-afalgeng no-devcryptoeng no-nextprotoneg no-capieng no-blake2 no-idea no-mdc2 no-ocb no-seed no-whirlpool no-srp no-cms no-ec2m
 ifneq ($(or $(TCONFIG_OPENSSL30),$(TCONFIG_OPENSSL11)),y)
  OPENSSL_OPTIONS +=  no-npn
 endif
@@ -239,6 +242,9 @@ endif # !TCONFIG_KEYGEN
 # build with err only for beta
 ifneq ($(TOMATO_EXPERIMENTAL),1)
  OPENSSL_OPTIONS += no-err
+endif
+ifeq ($(TCONFIG_BBT),)
+ OPENSSL_OPTIONS += no-rc4
 endif
 
 
