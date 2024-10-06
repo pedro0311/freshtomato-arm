@@ -3221,6 +3221,7 @@ e2fsprogs/stamp-h1:
 	cd e2fsprogs && \
 		CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC -ffunction-sections -fdata-sections" \
 		LDFLAGS="-Wl,--gc-sections" \
+		LIBS="-lgcc_s" \
 		$(CONFIGURE) --prefix=/usr --sysconfdir=/etc --enable-elf-shlibs --with-crond-dir=no \
 			--disable-tls --disable-nls --disable-jbd-debug --disable-blkid-debug --disable-testio-debug --disable-backtrace --disable-uuidd \
 			--disable-debugfs --disable-imager --disable-resizer --disable-defrag --disable-fuse2fs --disable-e2initrd-helper --disable-rpath \
