@@ -722,6 +722,14 @@ define BusyboxOptions
 		sed -i "/CONFIG_RENICE/d" $(1); \
 		echo "CONFIG_RENICE=y" >>$(1); \
 	fi; \
+	if [ "$(WIREGUARD)" = "y" ]; then \
+		sed -i "s/# CONFIG_MKTEMP is not set/CONFIG_MKTEMP=y/g" $(1); \
+		sed -i "s/# CONFIG_READLINK is not set/CONFIG_READLINK=y/g" $(1); \
+		sed -i "s/# CONFIG_FEATURE_READLINK_FOLLOW is not set/CONFIG_FEATURE_READLINK_FOLLOW=y/g" $(1); \
+		sed -i "s/# CONFIG_FEATURE_TR_CLASSES is not set/CONFIG_FEATURE_TR_CLASSES=y/g" $(1); \
+		sed -i "s/# CONFIG_STAT is not set/CONFIG_STAT=y/g" $(1); \
+		sed -i "s/# CONFIG_FEATURE_STAT_FORMAT is not set/CONFIG_FEATURE_STAT_FORMAT=y/g" $(1); \
+	fi; \
 	)
 endef
 
