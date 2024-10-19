@@ -53,11 +53,15 @@ static inline int udp_sock_create(struct net *net,
 				  struct udp_port_cfg *cfg,
 				  struct socket **sockp)
 {
-	if (cfg->family == AF_INET)
+	if (cfg->family == AF_INET) {
+		printk(KERN_DEBUG "udp_sock_create: switch to udp_sock_create4\n"); /* FreshTomato Toolchain 5.3 correction */
 		return udp_sock_create4(net, cfg, sockp);
+	}
 
-	if (cfg->family == AF_INET6)
+	if (cfg->family == AF_INET6) {
+		printk(KERN_DEBUG "udp_sock_create: switch to udp_sock_create6\n"); /* FreshTomato Toolchain 5.3 correction */
 		return udp_sock_create6(net, cfg, sockp);
+	}
 
 	return -EPFNOSUPPORT;
 }
