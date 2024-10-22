@@ -11,7 +11,7 @@
 <head>
 <meta http-equiv="content-type" content="text/html;charset=utf-8">
 <meta name="robots" content="noindex,nofollow">
-<title>[<% ident(); %>] Forwarding: UPnP / NAT-PMP</title>
+<title>[<% ident(); %>] Forwarding: UPnP IGD &amp; PCP/NAT-PMP</title>
 <link rel="stylesheet" type="text/css" href="tomato.css?rel=<% version(); %>">
 <% css(); %>
 <script src="isup.jsz?rel=<% version(); %>"></script>
@@ -53,7 +53,7 @@ function upnpNvramAdd() {
 	if ((sb = E('save-button')) != null) sb.disabled = 1;
 	if ((cb = E('cancel-button')) != null) cb.disabled = 1;
 
-	if (!confirm("Add UPNP to nvram?"))
+	if (!confirm("Enable autonomous port mapping service by adding UPNP to nvram?"))
 		return;
 
 	if (xob)
@@ -233,7 +233,7 @@ function verifyFields(focused, quiet) {
 
 	if ((enable) && (!E('_f_upnp_lan').checked) && (!E('_f_upnp_lan1').checked) && (!E('_f_upnp_lan2').checked) && (!E('_f_upnp_lan3').checked)) {
 		if ((E('_f_enable_natpmp').checked) || (E('_f_enable_upnp').checked)) {
-			var m = 'NAT-PMP or UPnP should be enabled on at least one LAN bridge. You can continue, but be sure to configure access to the UPnP service in Custom Configuration, otherwise miniupnpd will not run';
+			var m = 'UPnP IGD and/or PCP/NAT-PMP should be enabled on at least one LAN bridge.';
 			ferror.set('_f_enable_natpmp', m, quiet);
 			ferror.set('_f_enable_upnp', m, 1);
 			ferror.set('_f_upnp_lan', m, 1);
@@ -335,16 +335,16 @@ function init() {
 
 <!-- / / / -->
 
-<div class="section-title">UPnP / NAT-PMP Settings</div>
+<div class="section-title">UPnP IGD &amp; PCP/NAT-PMP Settings</div>
 <div class="section">
 	<script>
 		createFieldTable('', [
-			{ title: 'Enable UPnP', name: 'f_enable_upnp', type: 'checkbox', value: (nvram.upnp_enable & 1) },
-			{ title: 'Enable NAT-PMP', name: 'f_enable_natpmp', type: 'checkbox', value: (nvram.upnp_enable & 2) },
+			{ title: 'Enable UPnP IGD', name: 'f_enable_upnp', type: 'checkbox', value: (nvram.upnp_enable & 1) },
+			{ title: 'Enable PCP/NAT-PMP', name: 'f_enable_natpmp', type: 'checkbox', value: (nvram.upnp_enable & 2) },
 			{ title: 'Inactive Rules Cleaning', name: 'f_upnp_clean', type: 'checkbox', value: (nvram.upnp_clean == '1') },
 				{ title: 'Cleaning Interval', indent: 2, name: 'upnp_clean_interval', type: 'text', maxlen: 5, size: 7, suffix: ' <small>seconds<\/small>', value: nvram.upnp_clean_interval },
-				{ title: 'Cleaning Threshold', indent: 2, name: 'upnp_clean_threshold', type: 'text', maxlen: 4, size: 7, suffix: ' <small>redirections<\/small>', value: nvram.upnp_clean_threshold },
-			{ title: 'Secure Mode', name: 'f_upnp_secure', type: 'checkbox', suffix: ' <small>when enabled, UPnP clients are allowed to add mappings only to their IP<\/small>', value: (nvram.upnp_secure == '1') },
+				{ title: 'Cleaning Threshold', indent: 2, name: 'upnp_clean_threshold', type: 'text', maxlen: 4, size: 7, suffix: ' <small>port forwards<\/small>', value: nvram.upnp_clean_threshold },
+			{ title: 'Secure Mode', name: 'f_upnp_secure', type: 'checkbox', suffix: ' <small>when enabled, UPnP IGD clients are allowed to add port forwards only to their IP<\/small>', value: (nvram.upnp_secure == '1') },
 			{ title: 'Enabled on' },
 				{ title: 'LAN0', indent: 2, name: 'f_upnp_lan', type: 'checkbox', value: (nvram.upnp_lan == '1') },
 				{ title: 'LAN1', indent: 2, name: 'f_upnp_lan1', type: 'checkbox', value: (nvram.upnp_lan1 == '1') },
@@ -352,7 +352,7 @@ function init() {
 				{ title: 'LAN3', indent: 2, name: 'f_upnp_lan3', type: 'checkbox', value: (nvram.upnp_lan3 == '1') },
 			{ title: 'Show In My Network Places',  name: 'f_upnp_mnp',  type: 'checkbox',  value: (nvram.upnp_mnp == '1')},
 			null,
-			{ title: 'Miniupnpd<\/a><br>Custom configuration', name: 'upnp_custom', type: 'textarea', value: nvram.upnp_custom }
+			{ title: 'Custom configuration', name: 'upnp_custom', type: 'textarea', value: nvram.upnp_custom }
 		]);
 	</script>
 </div>
