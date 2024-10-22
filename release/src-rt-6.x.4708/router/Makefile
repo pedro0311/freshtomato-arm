@@ -2961,7 +2961,7 @@ openvpn-2.5/Makefile:
 		CPPFLAGS="$(if $(TCONFIG_WOLFSSL),-I$(TOP)/wolfssl/staged/usr/include -I$(TOP)/wolfssl/staged/usr/include/wolfssl,-I$(TOP)/$(OPENSSLDIR)/staged/usr/include)" \
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib $(if $(TCONFIG_WOLFSSL),--with-crypto-library=wolfssl,--with-crypto-library=openssl --with-openssl-engine=no) \
-			--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-unit-tests --disable-dependency-tracking \
+			$(if $(TOMATO_EXPERIMENTAL),,--disable-debug) --disable-plugin-auth-pam --disable-plugin-down-root --disable-pf --disable-unit-tests --disable-dependency-tracking \
 			$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_AIO)),--enable-management,--disable-management) \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
 			--disable-lzo $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),--disable-lz4,) $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
@@ -2999,7 +2999,7 @@ openvpn/Makefile:
 		PLUGINDIR="/lib" IPROUTE="/usr/sbin/ip" \
 		$(CONFIGURE) --prefix=/usr --bindir=/usr/sbin --libdir=/usr/lib $(if $(TCONFIG_WOLFSSL),--with-crypto-library=wolfssl,--with-crypto-library=openssl --with-openssl-engine=no) \
 			--disable-selinux --disable-systemd --disable-pkcs11 --disable-dco \
-			--disable-debug --disable-plugin-auth-pam --disable-plugin-down-root --disable-unit-tests --disable-dependency-tracking \
+			$(if $(TOMATO_EXPERIMENTAL),,--disable-debug) --disable-plugin-auth-pam --disable-plugin-down-root --disable-unit-tests --disable-dependency-tracking \
 			$(if $(or $(TCONFIG_BCMARM),$(TCONFIG_AIO)),--enable-management,--disable-management) \
 			--enable-iproute2 ac_cv_lib_resolv_gethostbyname=no \
 			--disable-lzo $(if $(TCONFIG_OPTIMIZE_SIZE_MORE),--disable-lz4,) $(if $(TCONFIG_BCMARM),,$(if $(TCONFIG_AIO),,--enable-small))
