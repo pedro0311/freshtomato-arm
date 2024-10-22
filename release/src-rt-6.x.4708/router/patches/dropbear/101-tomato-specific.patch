@@ -25,17 +25,17 @@
 +#define AUTH_TIMEOUT 60      /* default 300 */
 --- dropbear/src/sysoptions.h
 +++ dropbear/src/sysoptions.h
-@@ -7,7 +7,9 @@
- #define DROPBEAR_VERSION "2024.85"
+@@ -11,7 +11,9 @@
+ #ifndef IDENT_VERSION_PART
+ #define IDENT_VERSION_PART "_" DROPBEAR_VERSION
  #endif
- 
 +#ifndef LOCAL_IDENT
- #define LOCAL_IDENT "SSH-2.0-dropbear_" DROPBEAR_VERSION
+ #define LOCAL_IDENT "SSH-2.0-dropbear" IDENT_VERSION_PART
 +#endif
  #define PROGNAME "dropbear"
  
  #ifndef DROPBEAR_CLIENT
-@@ -372,7 +374,7 @@
+@@ -376,7 +378,7 @@
   * Currently server is enabled but client is disabled by default until there
   * is further compatibility testing */
  #ifdef __linux__
