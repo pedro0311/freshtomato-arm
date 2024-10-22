@@ -16,7 +16,7 @@ import typing as T
 
 from ... import mesonlib
 from ... import mlog
-from ...mesonlib import OptionKey
+from ...options import OptionKey
 from mesonbuild.compilers.compilers import CompileCheckMode
 
 if T.TYPE_CHECKING:
@@ -420,7 +420,8 @@ class GnuLikeCompiler(Compiler, metaclass=abc.ABCMeta):
         # For other targets, discard the .def file.
         return []
 
-    def get_argument_syntax(self) -> str:
+    @staticmethod
+    def get_argument_syntax() -> str:
         return 'gcc'
 
     def get_profile_generate_args(self) -> T.List[str]:

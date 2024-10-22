@@ -23,7 +23,8 @@ import typing as T
 
 from . import builder
 from . import version
-from ..mesonlib import MesonException, Popen_safe, OptionKey
+from ..mesonlib import MesonException, Popen_safe
+from ..options import OptionKey
 from .. import coredata, options, mlog
 from ..wrap.wrap import PackageDefinition
 
@@ -105,7 +106,7 @@ def _fixup_raw_mappings(d: T.Union[manifest.BuildTarget, manifest.LibTarget, man
     This does the following:
     * replaces any `-` with `_`, cargo likes the former, but python dicts make
       keys with `-` in them awkward to work with
-    * Convert Dependndency versions from the cargo format to something meson
+    * Convert Dependency versions from the cargo format to something meson
       understands
 
     :param d: The mapping to fix
@@ -731,7 +732,7 @@ def interpret(subp_name: str, subdir: str, env: Environment) -> T.Tuple[mparser.
     ast += _create_meson_subdir(cargo, build)
 
     # Libs are always auto-discovered and there's no other way to handle them,
-    # which is unfortunate for reproducability
+    # which is unfortunate for reproducibility
     if os.path.exists(os.path.join(env.source_dir, cargo.subdir, cargo.path, cargo.lib.path)):
         for crate_type in cargo.lib.crate_type:
             ast.extend(_create_lib(cargo, build, crate_type))

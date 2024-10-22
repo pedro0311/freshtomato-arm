@@ -8,11 +8,12 @@ import typing as T
 
 from .. import mlog
 from .. import mesonlib
-from ..mesonlib import EnvironmentException, version_compare, LibType, OptionKey
+from ..mesonlib import EnvironmentException, version_compare, LibType
+from ..options import OptionKey
 from .compilers import CompileCheckMode, Compiler
-from ..arglist import CompilerArgs
 
 if T.TYPE_CHECKING:
+    from ..arglist import CompilerArgs
     from ..coredata import KeyedOptionDictType
     from ..envconfig import MachineInfo
     from ..environment import Environment

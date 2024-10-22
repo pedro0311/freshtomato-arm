@@ -31,6 +31,7 @@ from ..interpreterbase.decorators import typed_pos_args
 from ..mesonlib import (
     MachineChoice, MesonException, OrderedSet, Popen_safe, join_args, quote_arg
 )
+from ..options import OptionKey
 from ..programs import OverrideProgram
 from ..scripts.gettext import read_linguas
 
@@ -519,7 +520,7 @@ class GnomeModule(ExtensionModule):
         if gresource: # Only one target for .gresource files
             return ModuleReturnValue(target_c, [target_c])
 
-        install_dir = kwargs['install_dir'] or state.environment.coredata.get_option(mesonlib.OptionKey('includedir'))
+        install_dir = kwargs['install_dir'] or state.environment.coredata.get_option(OptionKey('includedir'))
         assert isinstance(install_dir, str), 'for mypy'
         target_h = GResourceHeaderTarget(
             f'{target_name}_h',
@@ -908,7 +909,7 @@ class GnomeModule(ExtensionModule):
                 cflags += state.global_args[lang]
             if state.project_args.get(lang):
                 cflags += state.project_args[lang]
-            if mesonlib.OptionKey('b_sanitize') in compiler.base_options:
+            if OptionKey('b_sanitize') in compiler.base_options:
                 sanitize = state.environment.coredata.optstore.get_value('b_sanitize')
                 cflags += compiler.sanitizer_compile_args(sanitize)
                 sanitize = sanitize.split(',')
@@ -1334,15 +1335,18 @@ class GnomeModule(ExtensionModule):
             for i, m in enumerate(media):
                 m_dir = os.path.dirname(m)
                 m_install_dir = os.path.join(l_install_dir, m_dir)
+                try:
+                    m_file: T.Optional[mesonlib.File] = mesonlib.File.from_source_file(state.environment.source_dir, l_subdir, m)
+                except MesonException:
+                    m_file = None
+
                 l_data: T.Union[build.Data, build.SymlinkData]
-                if symlinks:
+                if symlinks and not m_file:
                     link_target = os.path.join(os.path.relpath(c_install_dir, start=m_install_dir), m)
                     l_data = build.SymlinkData(link_target, os.path.basename(m),
                                                m_install_dir, state.subproject, install_tag='doc')
                 else:
-                    try:
-                        m_file = mesonlib.File.from_source_file(state.environment.source_dir, l_subdir, m)
-                    except MesonException:
+                    if not m_file:
                         m_file = media_files[i]
                     l_data = build.Data([m_file], m_install_dir, m_install_dir,
                                         mesonlib.FileMode(), state.subproject, install_tag='doc')
@@ -1645,7 +1649,7 @@ class GnomeModule(ExtensionModule):
 
         targets = []
         install_header = kwargs['install_header']
-        install_dir = kwargs['install_dir'] or state.environment.coredata.get_option(mesonlib.OptionKey('includedir'))
+        install_dir = kwargs['install_dir'] or state.environment.coredata.get_option(OptionKey('includedir'))
         assert isinstance(install_dir, str), 'for mypy'
 
         output = namebase + '.c'
@@ -1957,7 +1961,7 @@ class GnomeModule(ExtensionModule):
             ) -> build.CustomTarget:
         real_cmd: T.List[T.Union[str, 'ToolType']] = [self._find_tool(state, 'glib-mkenums')]
         real_cmd.extend(cmd)
-        _install_dir = install_dir or state.environment.coredata.get_option(mesonlib.OptionKey('includedir'))
+        _install_dir = install_dir or state.environment.coredata.get_option(OptionKey('includedir'))
         assert isinstance(_install_dir, str), 'for mypy'
 
         return CustomTarget(
@@ -2169,7 +2173,7 @@ class GnomeModule(ExtensionModule):
                 cmd.append(gir_file)
 
         vapi_output = library + '.vapi'
-        datadir = state.environment.coredata.get_option(mesonlib.OptionKey('datadir'))
+        datadir = state.environment.coredata.get_option(OptionKey('datadir'))
         assert isinstance(datadir, str), 'for mypy'
         install_dir = kwargs['install_dir'] or os.path.join(datadir, 'vala', 'vapi')
 

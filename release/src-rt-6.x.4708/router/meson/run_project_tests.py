@@ -278,6 +278,7 @@ class TestDef:
         self.stdout: T.List[T.Dict[str, str]] = []
         self.skip_category = skip_category
         self.skip_expected = False
+        self.cleanup: T.List[str] = []
 
         # Always print a stack trace for Meson exceptions
         self.env['MESON_FORCE_BACKTRACE'] = '1'
@@ -550,9 +551,14 @@ def validate_output(test: TestDef, stdo: str, stde: str) -> str:
 def clear_internal_caches() -> None:
     import mesonbuild.interpreterbase
     from mesonbuild.dependencies.cmake import CMakeDependency
+    from mesonbuild.dependencies.pkgconfig import PkgConfigInterface
     from mesonbuild.mesonlib import PerMachine
     mesonbuild.interpreterbase.FeatureNew.feature_registry = {}
     CMakeDependency.class_cmakeinfo = PerMachine(None, None)
+    PkgConfigInterface.class_impl = PerMachine(False, False)
+    PkgConfigInterface.class_cli_impl = PerMachine(False, False)
+    PkgConfigInterface.pkg_bin_per_machine = PerMachine(None, None)
+
 
 def run_test_inprocess(testdir: str) -> T.Tuple[int, str, str, str]:
     old_stdout = sys.stdout
@@ -839,6 +845,8 @@ def load_test_json(t: TestDef, stdout_mandatory: bool, skip_category: bool = Fal
 
     (t.skip, t.skip_expected) = _skip_keys(test_def)
 
+    cleanup = test_def.get('cleanup', [])
+
     # Skip tests if the tool requirements are not met
     if 'tools' in test_def:
         assert isinstance(test_def['tools'], dict)
@@ -854,6 +862,7 @@ def load_test_json(t: TestDef, stdout_mandatory: bool, skip_category: bool = Fal
         t.installed_files = installed
         t.do_not_set_opts = do_not_set_opts
         t.stdout = stdout
+        t.cleanup = cleanup
         return [t]
 
     new_opt_list: T.List[T.List[T.Tuple[str, str, bool, bool]]]
@@ -923,6 +932,8 @@ def load_test_json(t: TestDef, stdout_mandatory: bool, skip_category: bool = Fal
         test.do_not_set_opts = do_not_set_opts
         test.stdout = stdout
         test.skip_expected = skip_expected or t.skip_expected
+        test.cleanup = cleanup
+
         all_tests.append(test)
 
     return all_tests
@@ -1075,6 +1086,7 @@ def detect_tests_to_run(only: T.Dict[str, T.List[str]], use_tmp: bool) -> T.List
     """
 
     skip_fortran = not(shutil.which('gfortran') or
+                       shutil.which('flang-new') or
                        shutil.which('flang') or
                        shutil.which('pgfortran') or
                        shutil.which('nagfor') or
@@ -1388,6 +1400,13 @@ def _run_tests(all_tests: T.List[T.Tuple[str, T.List[TestDef], bool]],
         else:
             f.update_log(TestStatus.OK)
             passing_tests += 1
+            for cleanup_path in t.cleanup:
+                assert not os.path.isabs(cleanup_path)
+                abspath = t.path / cleanup_path
+                if abspath.is_file():
+                    mesonlib.windows_proof_rm(abspath)
+                else:
+                    mesonlib.windows_proof_rmtree(abspath)
         conf_time += result.conftime
         build_time += result.buildtime
         test_time += result.testtime
@@ -1495,7 +1514,7 @@ class ToolInfo(T.NamedTuple):
     regex: T.Pattern
     match_group: int
 
-def print_tool_versions() -> None:
+def detect_tools(report: bool = True) -> None:
     tools: T.List[ToolInfo] = [
         ToolInfo(
             'ninja',
@@ -1535,6 +1554,11 @@ def print_tool_versions() -> None:
 
         return f'{exe} (unknown)'
 
+    if not report:
+        for tool in tools:
+            get_version(tool)
+        return
+
     print()
     print('tools')
     print()
@@ -1544,12 +1568,23 @@ def print_tool_versions() -> None:
         print('{0:<{2}}: {1}'.format(tool.tool, get_version(tool), max_width))
     print()
 
-tmpdir = list(Path('.').glob('test cases/**/*install functions and follow symlinks'))
-assert(len(tmpdir) == 1)
-symlink_test_dir = tmpdir[0]
-symlink_file1 = symlink_test_dir / 'foo/link1'
-symlink_file2 = symlink_test_dir / 'foo/link2.h'
-del tmpdir
+symlink_test_dir1 = None
+symlink_test_dir2 = None
+symlink_file1 = None
+symlink_file2 = None
+symlink_file3 = None
+
+def scan_test_data_symlinks() -> None:
+    global symlink_test_dir1, symlink_test_dir2, symlink_file1, symlink_file2, symlink_file3
+    tmpdir1 = list(Path('.').glob('test cases/**/*install functions and follow symlinks'))
+    tmpdir2 = list(Path('.').glob('test cases/frameworks/*boost symlinks'))
+    assert len(tmpdir1) == 1
+    assert len(tmpdir2) == 1
+    symlink_test_dir1 = tmpdir1[0]
+    symlink_test_dir2 = tmpdir2[0] / 'boost/include'
+    symlink_file1 = symlink_test_dir1 / 'foo/link1'
+    symlink_file2 = symlink_test_dir1 / 'foo/link2.h'
+    symlink_file3 = symlink_test_dir2 / 'boost'
 
 def clear_transitive_files() -> None:
     a = Path('test cases/common')
@@ -1559,11 +1594,19 @@ def clear_transitive_files() -> None:
         else:
             mesonlib.windows_proof_rm(str(d))
     try:
-        symlink_file1.unlink()
+        if symlink_file1 is not None:
+            symlink_file1.unlink()
     except FileNotFoundError:
         pass
     try:
-        symlink_file2.unlink()
+        if symlink_file2 is not None:
+            symlink_file2.unlink()
+    except FileNotFoundError:
+        pass
+    try:
+        if symlink_file3 is not None:
+            symlink_file3.unlink()
+            symlink_test_dir2.rmdir()
     except FileNotFoundError:
         pass
 
@@ -1571,6 +1614,8 @@ def setup_symlinks() -> None:
     try:
         symlink_file1.symlink_to('file1')
         symlink_file2.symlink_to('file1')
+        symlink_test_dir2.mkdir(parents=True, exist_ok=True)
+        symlink_file3.symlink_to('../Cellar/boost/0.3.0/include/boost')
     except OSError:
         print('symlinks are not supported on this system')
 
@@ -1579,7 +1624,6 @@ if __name__ == '__main__':
         raise SystemExit('Running under CI but $MESON_CI_JOBNAME is not set (set to "thirdparty" if you are running outside of the github org)')
 
     setup_vsenv()
-
     try:
         # This fails in some CI environments for unknown reasons.
         num_workers = multiprocessing.cpu_count()
@@ -1618,8 +1662,11 @@ if __name__ == '__main__':
     if options.native_file:
         options.extra_args += ['--native-file', options.native_file]
 
+    if not mesonlib.is_windows():
+        scan_test_data_symlinks()
     clear_transitive_files()
-    setup_symlinks()
+    if not mesonlib.is_windows():
+        setup_symlinks()
     mesonlib.set_meson_command(get_meson_script())
 
     print('Meson build system', meson_version, 'Project Tests')
@@ -1628,7 +1675,7 @@ if __name__ == '__main__':
         print('VSCMD version', os.environ['VSCMD_VER'])
     setup_commands(options.backend)
     detect_system_compiler(options)
-    print_tool_versions()
+    detect_tools()
     script_dir = os.path.split(__file__)[0]
     if script_dir != '':
         os.chdir(script_dir)

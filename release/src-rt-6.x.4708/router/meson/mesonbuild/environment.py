@@ -17,9 +17,10 @@ CmdLineFileParser = machinefile.CmdLineFileParser
 
 from .mesonlib import (
     MesonException, MachineChoice, Popen_safe, PerMachine,
-    PerMachineDefaultable, PerThreeMachineDefaultable, split_args, quote_arg, OptionKey,
+    PerMachineDefaultable, PerThreeMachineDefaultable, split_args, quote_arg,
     search_version, MesonBugException
 )
+from .options import OptionKey
 from . import mlog
 from .programs import ExternalProgram
 
@@ -109,13 +110,13 @@ def detect_llvm_cov(suffix: T.Optional[str] = None):
             tool = 'llvm-cov'
         else:
             tool = f'llvm-cov-{suffix}'
-        if mesonlib.exe_exists([tool, '--version']):
+        if shutil.which(tool) is not None:
             return tool
     else:
         # Otherwise guess in the dark
         tools = get_llvm_tool_names('llvm-cov')
         for tool in tools:
-            if mesonlib.exe_exists([tool, '--version']):
+            if shutil.which(tool):
                 return tool
     return None
 
@@ -139,7 +140,7 @@ def compute_llvm_suffix(coredata: coredata.CoreData):
 
 def detect_lcov_genhtml(lcov_exe: str = 'lcov', genhtml_exe: str = 'genhtml'):
     lcov_exe, lcov_version = detect_lcov(lcov_exe)
-    if not mesonlib.exe_exists([genhtml_exe, '--version']):
+    if shutil.which(genhtml_exe) is None:
         genhtml_exe = None
 
     return lcov_exe, lcov_version, genhtml_exe
@@ -156,7 +157,7 @@ def find_coverage_tools(coredata: coredata.CoreData) -> T.Tuple[T.Optional[str],
 
     return gcovr_exe, gcovr_version, lcov_exe, lcov_version, genhtml_exe, llvm_cov_exe
 
-def detect_ninja(version: str = '1.8.2', log: bool = False) -> T.List[str]:
+def detect_ninja(version: str = '1.8.2', log: bool = False) -> T.Optional[T.List[str]]:
     r = detect_ninja_command_and_version(version, log)
     return r[0] if r else None
 
@@ -274,6 +275,32 @@ def detect_clangformat() -> T.List[str]:
             return [path]
     return []
 
+def detect_clangtidy() -> T.List[str]:
+    """ Look for clang-tidy binary on build platform
+
+    Return: a single-element list of the found clang-tidy binary ready to be
+        passed to Popen()
+    """
+    tools = get_llvm_tool_names('clang-tidy')
+    for tool in tools:
+        path = shutil.which(tool)
+        if path is not None:
+            return [path]
+    return []
+
+def detect_clangapply() -> T.List[str]:
+    """ Look for clang-apply-replacements binary on build platform
+
+    Return: a single-element list of the found clang-apply-replacements binary
+        ready to be passed to Popen()
+    """
+    tools = get_llvm_tool_names('clang-apply-replacements')
+    for tool in tools:
+        path = shutil.which(tool)
+        if path is not None:
+            return [path]
+    return []
+
 def detect_windows_arch(compilers: CompilersDict) -> str:
     """
     Detecting the 'native' architecture of Windows is not a trivial task. We
@@ -308,7 +335,7 @@ def detect_windows_arch(compilers: CompilersDict) -> str:
     for compiler in compilers.values():
         if compiler.id == 'msvc' and (compiler.target in {'x86', '80x86'}):
             return 'x86'
-        if compiler.id == 'clang-cl' and compiler.target == 'x86':
+        if compiler.id == 'clang-cl' and (compiler.target in {'x86', 'i686'}):
             return 'x86'
         if compiler.id == 'gcc' and compiler.has_builtin_define('__i386__'):
             return 'x86'
@@ -328,7 +355,7 @@ def detect_cpu_family(compilers: CompilersDict) -> str:
     """
     Python is inconsistent in its platform module.
     It returns different values for the same cpu.
-    For x86 it might return 'x86', 'i686' or somesuch.
+    For x86 it might return 'x86', 'i686' or some such.
     Do some canonicalization.
     """
     if mesonlib.is_windows():
@@ -465,7 +492,7 @@ def detect_kernel(system: str) -> T.Optional[str]:
             raise MesonException('Failed to run "/usr/bin/uname -o"')
         out = out.lower().strip()
         if out not in {'illumos', 'solaris'}:
-            mlog.warning(f'Got an unexpected value for kernel on a SunOS derived platform, expcted either "illumos" or "solaris", but got "{out}".'
+            mlog.warning(f'Got an unexpected value for kernel on a SunOS derived platform, expected either "illumos" or "solaris", but got "{out}".'
                          "Please open a Meson issue with the OS you're running and the value detected for your kernel.")
             return None
         return out
@@ -695,7 +722,7 @@ class Environment:
                     key = OptionKey.from_string(k)
                     # If we're in the cross file, and there is a `build.foo` warn about that. Later we'll remove it.
                     if machine is MachineChoice.HOST and key.machine is not machine:
-                        mlog.deprecation('Setting build machine options in cross files, please use a native file instead, this will be removed in meson 0.60', once=True)
+                        mlog.deprecation('Setting build machine options in cross files, please use a native file instead, this will be removed in meson 2.0', once=True)
                     if key.subproject:
                         raise MesonException('Do not set subproject options in [built-in options] section, use [subproject:built-in options] instead.')
                     self.options[key.evolve(subproject=subproject, machine=machine)] = v
@@ -747,14 +774,12 @@ class Environment:
                 # if it changes on future invocations.
                 if self.first_invocation:
                     if keyname == 'ldflags':
-                        key = OptionKey('link_args', machine=for_machine, lang='c')  # needs a language to initialize properly
                         for lang in compilers.compilers.LANGUAGES_USING_LDFLAGS:
-                            key = key.evolve(lang=lang)
+                            key = OptionKey(name=f'{lang}_link_args', machine=for_machine)
                             env_opts[key].extend(p_list)
                     elif keyname == 'cppflags':
-                        key = OptionKey('env_args', machine=for_machine, lang='c')
                         for lang in compilers.compilers.LANGUAGES_USING_CPPFLAGS:
-                            key = key.evolve(lang=lang)
+                            key = OptionKey(f'{lang}_env_args', machine=for_machine)
                             env_opts[key].extend(p_list)
                     else:
                         key = OptionKey.from_string(keyname).evolve(machine=for_machine)
@@ -774,7 +799,8 @@ class Environment:
                             # We still use the original key as the base here, as
                             # we want to inherit the machine and the compiler
                             # language
-                            key = key.evolve('env_args')
+                            lang = key.name.split('_', 1)[0]
+                            key = key.evolve(f'{lang}_env_args')
                         env_opts[key].extend(p_list)
 
         # Only store options that are not already in self.options,

@@ -27,8 +27,10 @@ from .. import mlog
 from ..compilers import LANGUAGES_USING_LDFLAGS, detect
 from ..mesonlib import (
     File, MachineChoice, MesonException, OrderedSet,
-    ExecutableSerialisation, classify_unity_sources, OptionKey
+    ExecutableSerialisation, classify_unity_sources,
 )
+from ..options import OptionKey
+
 
 if T.TYPE_CHECKING:
     from .._typing import ImmutableListProtocol
@@ -595,7 +597,7 @@ class Backend:
                              feed: T.Optional[str] = None,
                              force_serialize: bool = False,
                              env: T.Optional[mesonlib.EnvironmentVariables] = None,
-                             verbose: bool = False) -> T.Tuple[T.Sequence[T.Union[str, File, build.Target, programs.ExternalProgram]], str]:
+                             verbose: bool = False) -> T.Tuple[T.List[str], str]:
         '''
         Serialize an executable for running with a generator or a custom target
         '''
@@ -1133,7 +1135,7 @@ class Backend:
 
         if p.is_file():
             p = p.parent
-        # Heuristic: replace *last* occurence of '/lib'
+        # Heuristic: replace *last* occurrence of '/lib'
         binpath = Path('/bin'.join(p.as_posix().rsplit('/lib', maxsplit=1)))
         for _ in binpath.glob('*.dll'):
             return str(binpath)
@@ -1259,6 +1261,8 @@ class Backend:
                     cmd_args.append(a)
                 elif isinstance(a, (build.Target, build.CustomTargetIndex)):
                     cmd_args.extend(self.construct_target_rel_paths(a, t.workdir))
+                elif isinstance(a, programs.ExternalProgram):
+                    cmd_args.extend(a.get_command())
                 else:
                     raise MesonException('Bad object in test command.')
 
@@ -1678,7 +1682,7 @@ class Backend:
         bindir = Path(prefix, self.environment.get_bindir())
         libdir = Path(prefix, self.environment.get_libdir())
         incdir = Path(prefix, self.environment.get_includedir())
-        _ldir = self.environment.coredata.get_option(mesonlib.OptionKey('localedir'))
+        _ldir = self.environment.coredata.get_option(OptionKey('localedir'))
         assert isinstance(_ldir, str), 'for mypy'
         localedir = Path(prefix, _ldir)
         dest_path = Path(prefix, outdir, Path(fname).name) if outdir else Path(prefix, fname)

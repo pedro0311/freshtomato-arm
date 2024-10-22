@@ -86,7 +86,7 @@ class RustModule(ExtensionModule):
     def test(self, state: ModuleState, args: T.Tuple[str, BuildTarget], kwargs: FuncTest) -> ModuleReturnValue:
         """Generate a rust test target from a given rust target.
 
-        Rust puts it's unitests inside it's main source files, unlike most
+        Rust puts its unitests inside its main source files, unlike most
         languages that put them in external files. This means that normally
         you have to define two separate targets with basically the same
         arguments to get tests:
@@ -207,7 +207,7 @@ class RustModule(ExtensionModule):
         DEPENDENCIES_KW.evolve(since='1.0.0'),
     )
     def bindgen(self, state: ModuleState, args: T.List, kwargs: FuncBindgen) -> ModuleReturnValue:
-        """Wrapper around bindgen to simplify it's use.
+        """Wrapper around bindgen to simplify its use.
 
         The main thing this simplifies is the use of `include_directory`
         objects, instead of having to pass a plethora of `-I` arguments.
@@ -269,7 +269,7 @@ class RustModule(ExtensionModule):
                 raise InterpreterException(f'Unknown file type extension for: {name}')
 
         # We only want include directories and defines, other things may not be valid
-        cargs = state.get_option('args', state.subproject, lang=language)
+        cargs = state.get_option(f'{language}_args', state.subproject)
         assert isinstance(cargs, list), 'for mypy'
         for a in itertools.chain(state.global_args.get(language, []), state.project_args.get(language, []), cargs):
             if a.startswith(('-I', '/I', '-D', '/D', '-U', '/U')):
@@ -280,7 +280,7 @@ class RustModule(ExtensionModule):
 
         # Add the C++ standard to the clang arguments. Attempt to translate VS
         # extension versions into the nearest standard version
-        std = state.get_option('std', lang=language)
+        std = state.get_option(f'{language}_std')
         assert isinstance(std, str), 'for mypy'
         if std.startswith('vc++'):
             if std.endswith('latest'):

@@ -13,6 +13,7 @@ from . import ModuleReturnValue
 from .. import build
 from .. import dependencies
 from .. import mesonlib
+from ..options import OptionKey
 from .. import mlog
 from ..options import BUILTIN_DIR_OPTIONS
 from ..dependencies.pkgconfig import PkgConfigDependency, PkgConfigInterface
@@ -126,7 +127,7 @@ class DependenciesHelper:
                          'to generate() method instead of first positional '
                          'argument.', 'Adding', mlog.bold(data.display_name),
                          'to "Requires" field, but this is a deprecated '
-                         'behaviour that will change in a future version '
+                         'behaviour that will change in version 2.0 '
                          'of Meson. Please report the issue if this '
                          'warning cannot be avoided in your case.',
                          location=data.location)
@@ -194,6 +195,13 @@ class DependenciesHelper:
                 if obj.found():
                     if obj.objects:
                         raise mesonlib.MesonException('.pc file cannot refer to individual object files.')
+
+                    # Ensure BothLibraries are resolved:
+                    if self.pub_libs and isinstance(self.pub_libs[0], build.StaticLibrary):
+                        obj = obj.get_as_static(recursive=True)
+                    else:
+                        obj = obj.get_as_shared(recursive=True)
+
                     processed_libs += obj.get_link_args()
                     processed_cflags += obj.get_compile_args()
                     self._add_lib_dependencies(obj.libraries, obj.whole_libraries, obj.ext_deps, public, private_external_deps=True)
@@ -482,7 +490,7 @@ class PkgConfigModule(NewExtensionModule):
             srcdir = PurePath(state.environment.get_source_dir())
         else:
             outdir = state.environment.scratch_dir
-            prefix = PurePath(_as_str(coredata.get_option(mesonlib.OptionKey('prefix'))))
+            prefix = PurePath(_as_str(coredata.get_option(OptionKey('prefix'))))
             if pkgroot:
                 pkgroot_ = PurePath(pkgroot)
                 if not pkgroot_.is_absolute():
@@ -499,7 +507,7 @@ class PkgConfigModule(NewExtensionModule):
                     if optname == 'prefix':
                         ofile.write('prefix={}\n'.format(self._escape(prefix)))
                     else:
-                        dirpath = PurePath(_as_str(coredata.get_option(mesonlib.OptionKey(optname))))
+                        dirpath = PurePath(_as_str(coredata.get_option(OptionKey(optname))))
                         ofile.write('{}={}\n'.format(optname, self._escape('${prefix}' / dirpath)))
             if uninstalled and not dataonly:
                 ofile.write('srcdir={}\n'.format(self._escape(srcdir)))
@@ -694,15 +702,15 @@ class PkgConfigModule(NewExtensionModule):
         pkgroot = pkgroot_name = kwargs['install_dir'] or default_install_dir
         if pkgroot is None:
             if mesonlib.is_freebsd():
-                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(mesonlib.OptionKey('prefix'))), 'libdata', 'pkgconfig')
+                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(OptionKey('prefix'))), 'libdata', 'pkgconfig')
                 pkgroot_name = os.path.join('{prefix}', 'libdata', 'pkgconfig')
             elif mesonlib.is_haiku():
-                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(mesonlib.OptionKey('prefix'))), 'develop', 'lib', 'pkgconfig')
+                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(OptionKey('prefix'))), 'develop', 'lib', 'pkgconfig')
                 pkgroot_name = os.path.join('{prefix}', 'develop', 'lib', 'pkgconfig')
             else:
-                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(mesonlib.OptionKey('libdir'))), 'pkgconfig')
+                pkgroot = os.path.join(_as_str(state.environment.coredata.get_option(OptionKey('libdir'))), 'pkgconfig')
                 pkgroot_name = os.path.join('{libdir}', 'pkgconfig')
-        relocatable = state.get_option('relocatable', module='pkgconfig')
+        relocatable = state.get_option('pkgconfig.relocatable')
         self._generate_pkgconfig_file(state, deps, subdirs, name, description, url,
                                       version, pcfile, conflicts, variables,
                                       unescaped_variables, False, dataonly,

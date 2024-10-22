@@ -19,8 +19,9 @@ from .. import mlog
 from .. import compilers
 from .. import mesonlib
 from ..mesonlib import (
-    File, MesonBugException, MesonException, replace_if_different, OptionKey, version_compare, MachineChoice
+    File, MesonBugException, MesonException, replace_if_different, version_compare, MachineChoice
 )
+from ..options import OptionKey
 from ..environment import Environment, build_filename
 from .. import coredata
 
@@ -878,7 +879,7 @@ class Vs2010Backend(backends.Backend):
                 ET.SubElement(parent_node, 'PreprocessorDefinitions', Condition=condition).text = defs
                 ET.SubElement(parent_node, 'AdditionalIncludeDirectories', Condition=condition).text = paths
                 ET.SubElement(parent_node, 'AdditionalOptions', Condition=condition).text = opts
-        else: # Can't find bespoke nmake defs/dirs/opts fields for this extention, so just reference the project's fields
+        else: # Can't find bespoke nmake defs/dirs/opts fields for this extension, so just reference the project's fields
             ET.SubElement(parent_node, 'PreprocessorDefinitions').text = '$(NMakePreprocessorDefinitions)'
             ET.SubElement(parent_node, 'AdditionalIncludeDirectories').text = '$(NMakeIncludeSearchPath)'
             ET.SubElement(parent_node, 'AdditionalOptions').text = '$(AdditionalOptions)'
@@ -1010,8 +1011,8 @@ class Vs2010Backend(backends.Backend):
                 file_args[l] += args
         # Compile args added from the env or cross file: CFLAGS/CXXFLAGS, etc. We want these
         # to override all the defaults, but not the per-target compile args.
-        for l in file_args.keys():
-            file_args[l] += target.get_option(OptionKey('args', machine=target.for_machine, lang=l))
+        for lang in file_args.keys():
+            file_args[lang] += target.get_option(OptionKey(f'{lang}_args', machine=target.for_machine))
         for args in file_args.values():
             # This is where Visual Studio will insert target_args, target_defines,
             # etc, which are added later from external deps (see below).
@@ -1339,7 +1340,7 @@ class Vs2010Backend(backends.Backend):
         # Exception handling has to be set in the xml in addition to the "AdditionalOptions" because otherwise
         # cl will give warning D9025: overriding '/Ehs' with cpp_eh value
         if 'cpp' in target.compilers:
-            eh = target.get_option(OptionKey('eh', machine=target.for_machine, lang='cpp'))
+            eh = target.get_option(OptionKey('cpp_eh', machine=target.for_machine))
             if eh == 'a':
                 ET.SubElement(clconf, 'ExceptionHandling').text = 'Async'
             elif eh == 's':
@@ -1541,7 +1542,7 @@ class Vs2010Backend(backends.Backend):
     # the solution's configurations.  Similarly, 'ItemGroup' also doesn't support 'Condition'.  So, without knowing
     # a better (simple) alternative, for now, we'll repoint these generated sources (which will be incorrectly
     # pointing to non-existent files under our '[builddir]_vs' directory) to the appropriate location under one of
-    # our buildtype build directores (e.g. '[builddir]_debug').
+    # our buildtype build directories (e.g. '[builddir]_debug').
     # This will at least allow the user to open the files of generated sources listed in the solution explorer,
     # once a build/compile has generated these sources.
     #

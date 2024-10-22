@@ -15,7 +15,8 @@ from .. import coredata as cdata
 from ..build import Executable, Jar, SharedLibrary, SharedModule, StaticLibrary
 from ..compilers import detect_compiler_for
 from ..interpreterbase import InvalidArguments, SubProject
-from ..mesonlib import MachineChoice, OptionKey
+from ..mesonlib import MachineChoice
+from ..options import OptionKey
 from ..mparser import BaseNode, ArithmeticNode, ArrayNode, ElementaryNode, IdNode, FunctionNode, StringNode
 from .interpreter import AstInterpreter
 
@@ -92,20 +93,36 @@ class IntrospectionInterpreter(AstInterpreter):
         if len(args) < 1:
             raise InvalidArguments('Not enough arguments to project(). Needs at least the project name.')
 
+        def _str_list(node: T.Any) -> T.Optional[T.List[str]]:
+            if isinstance(node, ArrayNode):
+                r = []
+                for v in node.args.arguments:
+                    if not isinstance(v, StringNode):
+                        return None
+                    r.append(v.value)
+                return r
+            if isinstance(node, StringNode):
+                return [node.value]
+            return None
+
         proj_name = args[0]
         proj_vers = kwargs.get('version', 'undefined')
-        proj_langs = self.flatten_args(args[1:])
         if isinstance(proj_vers, ElementaryNode):
             proj_vers = proj_vers.value
         if not isinstance(proj_vers, str):
             proj_vers = 'undefined'
-        self.project_data = {'descriptive_name': proj_name, 'version': proj_vers}
+        proj_langs = self.flatten_args(args[1:])
+        # Match the value returned by ``meson.project_license()`` when
+        # no ``license`` argument is specified in the ``project()`` call.
+        proj_license = _str_list(kwargs.get('license', None)) or ['unknown']
+        proj_license_files = _str_list(kwargs.get('license_files', None)) or []
+        self.project_data = {'descriptive_name': proj_name, 'version': proj_vers, 'license': proj_license, 'license_files': proj_license_files}
 
         optfile = os.path.join(self.source_root, self.subdir, 'meson.options')
         if not os.path.exists(optfile):
             optfile = os.path.join(self.source_root, self.subdir, 'meson_options.txt')
         if os.path.exists(optfile):
-            oi = optinterpreter.OptionInterpreter(self.subproject)
+            oi = optinterpreter.OptionInterpreter(self.coredata.optstore, self.subproject)
             oi.process(optfile)
             assert isinstance(proj_name, str), 'for mypy'
             self.coredata.update_project_options(oi.options, T.cast('SubProject', proj_name))
@@ -130,7 +147,7 @@ class IntrospectionInterpreter(AstInterpreter):
                         self.do_subproject(SubProject(i))
 
         self.coredata.init_backend_options(self.backend)
-        options = {k: v for k, v in self.environment.options.items() if k.is_backend()}
+        options = {k: v for k, v in self.environment.options.items() if self.environment.coredata.optstore.is_backend_option(k)}
 
         self.coredata.set_options(options)
         self._add_languages(proj_langs, True, MachineChoice.HOST)

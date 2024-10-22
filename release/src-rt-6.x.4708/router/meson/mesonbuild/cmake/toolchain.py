@@ -198,6 +198,8 @@ class CMakeToolchain:
         if compiler.get_argument_syntax() == 'msvc':
             return arg.startswith('/')
         else:
+            if compiler.exelist[0] == 'zig' and arg in {'ar', 'cc', 'c++', 'dlltool', 'lib', 'ranlib', 'objcopy', 'rc'}:
+                return True
             return arg.startswith('-')
 
     def update_cmake_compiler_state(self) -> None:
@@ -210,7 +212,7 @@ class CMakeToolchain:
         languages = list(self.compilers.keys())
         lang_ids = [language_map.get(x, x.upper()) for x in languages]
         cmake_content = dedent(f'''
-            cmake_minimum_required(VERSION 3.7)
+            cmake_minimum_required(VERSION 3.10)
             project(CompInfo {' '.join(lang_ids)})
         ''')
 

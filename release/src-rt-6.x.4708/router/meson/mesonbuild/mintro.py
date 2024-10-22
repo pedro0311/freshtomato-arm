@@ -25,7 +25,7 @@ from .backend import backends
 from .dependencies import Dependency
 from . import environment
 from .interpreterbase import ObjectHolder
-from .mesonlib import OptionKey
+from .options import OptionKey
 from .mparser import FunctionNode, ArrayNode, ArgumentNode, StringNode
 
 if T.TYPE_CHECKING:
@@ -131,6 +131,7 @@ def list_install_plan(installdata: backends.InstallData) -> T.Dict[str, T.Dict[s
                 'destination': target.out_name,
                 'tag': target.tag or None,
                 'subproject': target.subproject or None,
+                'install_rpath': target.install_rpath or None
             }
             for target in installdata.targets
         },
@@ -298,7 +299,7 @@ def list_buildoptions(coredata: cdata.CoreData, subprojects: T.Optional[T.List[s
             dir_options[k] = v
         elif k in test_option_names:
             test_options[k] = v
-        elif k.is_builtin():
+        elif coredata.optstore.is_builtin_option(k):
             core_options[k] = v
             if not v.yielding:
                 for s in subprojects:
@@ -328,14 +329,14 @@ def list_buildoptions(coredata: cdata.CoreData, subprojects: T.Optional[T.List[s
             optlist.append(optdict)
 
     add_keys(core_options, 'core')
-    add_keys({k: v for k, v in coredata.optstore.items() if k.is_backend()}, 'backend')
-    add_keys({k: v for k, v in coredata.optstore.items() if k.is_base()}, 'base')
+    add_keys({k: v for k, v in coredata.optstore.items() if coredata.optstore.is_backend_option(k)}, 'backend')
+    add_keys({k: v for k, v in coredata.optstore.items() if coredata.optstore.is_base_option(k)}, 'base')
     add_keys(
-        {k: v for k, v in sorted(coredata.optstore.items(), key=lambda i: i[0].machine) if k.is_compiler()},
+        {k: v for k, v in sorted(coredata.optstore.items(), key=lambda i: i[0].machine) if coredata.optstore.is_compiler_option(k)},
         'compiler',
     )
     add_keys(dir_options, 'directory')
-    add_keys({k: v for k, v in coredata.optstore.items() if k.is_project()}, 'user')
+    add_keys({k: v for k, v in coredata.optstore.items() if coredata.optstore.is_project_option(k)}, 'user')
     add_keys(test_options, 'test')
     return optlist
 
@@ -469,10 +470,12 @@ def list_machines(builddata: build.Build) -> T.Dict[str, T.Dict[str, T.Union[str
         machines[m]['object_suffix'] = machine.get_object_suffix()
     return machines
 
-def list_projinfo(builddata: build.Build) -> T.Dict[str, T.Union[str, T.List[T.Dict[str, str]]]]:
-    result: T.Dict[str, T.Union[str, T.List[T.Dict[str, str]]]] = {
+def list_projinfo(builddata: build.Build) -> T.Dict[str, T.Union[str, T.List[str], T.List[T.Dict[str, str]]]]:
+    result: T.Dict[str, T.Union[str, T.List[str], T.List[T.Dict[str, str]]]] = {
         'version': builddata.project_version,
         'descriptive_name': builddata.project_name,
+        'license': builddata.dep_manifest[builddata.project_name].license,
+        'license_files': [f[1].fname for f in builddata.dep_manifest[builddata.project_name].license_files],
         'subproject_dir': builddata.subproject_dir,
     }
     subprojects = []

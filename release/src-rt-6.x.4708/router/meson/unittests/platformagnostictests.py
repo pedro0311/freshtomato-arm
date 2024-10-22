@@ -18,6 +18,7 @@ from .helpers import is_ci
 from mesonbuild.mesonlib import EnvironmentVariables, ExecutableSerialisation, MesonException, is_linux, python_command, windows_proof_rmtree
 from mesonbuild.mformat import Formatter, match_path
 from mesonbuild.optinterpreter import OptionInterpreter, OptionException
+from mesonbuild.options import OptionStore
 from run_tests import Backend
 
 @skipIf(is_ci() and not is_linux(), "Run only on fast platforms")
@@ -31,11 +32,12 @@ class PlatformAgnosticTests(BasePlatformTests):
         Tests that find_program() with a relative path does not find the program
         in current workdir.
         '''
-        testdir = os.path.join(self.unit_test_dir, '101 relative find program')
+        testdir = os.path.join(self.unit_test_dir, '100 relative find program')
         self.init(testdir, workdir=testdir)
 
     def test_invalid_option_names(self):
-        interp = OptionInterpreter('')
+        store = OptionStore()
+        interp = OptionInterpreter(store, '')
 
         def write_file(code: str):
             with tempfile.NamedTemporaryFile('w', dir=self.builddir, encoding='utf-8', delete=False) as f:
@@ -68,7 +70,8 @@ class PlatformAgnosticTests(BasePlatformTests):
 
     def test_option_validation(self):
         """Test cases that are not catch by the optinterpreter itself."""
-        interp = OptionInterpreter('')
+        store = OptionStore()
+        interp = OptionInterpreter(store, '')
 
         def write_file(code: str):
             with tempfile.NamedTemporaryFile('w', dir=self.builddir, encoding='utf-8', delete=False) as f:
@@ -88,11 +91,11 @@ class PlatformAgnosticTests(BasePlatformTests):
                                interp.process, fname)
 
     def test_python_dependency_without_pkgconfig(self):
-        testdir = os.path.join(self.unit_test_dir, '103 python without pkgconfig')
+        testdir = os.path.join(self.unit_test_dir, '102 python without pkgconfig')
         self.init(testdir, override_envvars={'PKG_CONFIG': 'notfound'})
 
     def test_debug_function_outputs_to_meson_log(self):
-        testdir = os.path.join(self.unit_test_dir, '105 debug function')
+        testdir = os.path.join(self.unit_test_dir, '104 debug function')
         log_msg = 'This is an example debug output, should only end up in debug log'
         output = self.init(testdir)
 

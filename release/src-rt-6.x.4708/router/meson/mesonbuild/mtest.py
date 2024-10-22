@@ -35,8 +35,9 @@ from . import environment
 from . import mlog
 from .coredata import MesonVersionMismatchException, major_versions_differ
 from .coredata import version as coredata_version
-from .mesonlib import (MesonException, OptionKey, OrderedSet, RealPathAction,
+from .mesonlib import (MesonException, OrderedSet, RealPathAction,
                        get_wine_shortpath, join_args, split_args, setup_vsenv)
+from .options import OptionKey
 from .mintro import get_infodir, load_info_file
 from .programs import ExternalProgram
 from .backend.backends import TestProtocol, TestSerialisation
@@ -98,13 +99,17 @@ def uniwidth(s: str) -> int:
 
 def determine_worker_count() -> int:
     varname = 'MESON_TESTTHREADS'
+    num_workers = 0
     if varname in os.environ:
         try:
             num_workers = int(os.environ[varname])
+            if num_workers < 0:
+                raise ValueError
         except ValueError:
             print(f'Invalid value in {varname}, using 1 thread.')
             num_workers = 1
-    else:
+
+    if num_workers == 0:
         try:
             # Fails in some weird environments such as Debian
             # reproducible build.
@@ -1193,7 +1198,7 @@ async def read_decode(reader: asyncio.StreamReader,
             except asyncio.LimitOverrunError as e:
                 line_bytes = await reader.readexactly(e.consumed)
             if line_bytes:
-                line = decode(line_bytes)
+                line = decode(line_bytes).replace('\r\n', '\n')
                 stdo_lines.append(line)
                 if console_mode is ConsoleUser.STDOUT:
                     print(line, end='', flush=True)
