@@ -35,6 +35,10 @@ void wo_defaults(char *url)
 			parse_asp("reboot.asp");
 			web_close();
 
+			/* Give the browser time to request linked reboot page assets. */
+			sleep(2);
+			finalize_upgrade();
+
 			if (mode == 1) {
 				nvram_set("restore_defaults", "1");
 				nvram_commit();
@@ -45,12 +49,6 @@ void wo_defaults(char *url)
 #else
 				eval("mtd-erase", "-d", "nvram");
 #endif
-
-			if (nvram_get_int("remote_upgrade")) {
-				killall("xl2tpd", SIGTERM);
-				killall("pppd", SIGTERM);
-			}
-			sleep(2);
 
 			set_action(ACT_REBOOT);
 			sync();
@@ -223,12 +221,9 @@ void wo_restore(char *url)
 		parse_asp("reboot.asp");
 		web_close();
 
-		if (nvram_get_int("remote_upgrade")) {
-			killall("xl2tpd", SIGTERM);
-			killall("pppd", SIGTERM);
-		}
-
+		/* Give the browser time to request linked reboot page assets. */
 		sleep(2);
+		finalize_upgrade();
 
 		reboot(RB_AUTOBOOT);
 
